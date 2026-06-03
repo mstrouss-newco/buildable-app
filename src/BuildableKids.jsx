@@ -2122,19 +2122,19 @@ export default function BuildableKids() {
     const map = {
       type: "welcome",
       character: "type",
-      heroDraw: "character",
+      heroPick: "character",
       heroDescribe: "character",
       weapon: "character",
       boss: gameType === "flying" ? "weapon" : "character",
-      bossDraw: "boss",
+      bossPick: "boss",
       bossDescribe: "boss",
       world: "boss",
       goal: "world",
-      question: null,      // mid-flow — no back
+      question: null,
       pickUnlock: null,
       play: null,
       generating: null,
-      complete: null,      // has its own Build Another button
+      complete: null,
     };
     return map[s] ?? null;
   };
@@ -2156,13 +2156,12 @@ export default function BuildableKids() {
           )}
           {screen === "character" && (
             <CharacterPicker
-              onPickPreset={(id) => { setHero({ kind: "preset", charId: id }); afterHero(); }}
-              onDraw={() => setScreen("heroDraw")}
-              onDescribe={() => setScreen("heroDescribe")} />
+              onDescribe={() => setScreen("heroDescribe")}
+              onPickElements={() => setScreen("heroPick")} />
           )}
-          {screen === "heroDraw" && (
-            <DrawScreen title="Draw your hero!" color="#2ECC71"
-              onDone={(dataURL) => { setHero({ kind: "drawn", dataURL }); afterHero(); }} />
+          {screen === "heroPick" && (
+            <PickElementsScreen kind="hero"
+              onDone={(picks) => { setHero({ kind: "described", ...picks }); afterHero(); }} />
           )}
           {screen === "heroDescribe" && (
             <DescribeScreen kind="hero"
@@ -2172,12 +2171,13 @@ export default function BuildableKids() {
             <WeaponPicker onPick={(id) => { setWeapon(id); afterWeapon(); }} />
           )}
           {screen === "boss" && (
-            <BossBuilderIntro onDraw={() => setScreen("bossDraw")}
-              onDescribe={() => setScreen("bossDescribe")} />
+            <BossBuilderIntro
+              onDescribe={() => setScreen("bossDescribe")}
+              onPickElements={() => setScreen("bossPick")} />
           )}
-          {screen === "bossDraw" && (
-            <DrawScreen title="Draw your bad guy!" color="#EF4444"
-              onDone={(dataURL) => { setBoss({ kind: "drawn", dataURL }); afterBoss(); }} />
+          {screen === "bossPick" && (
+            <PickElementsScreen kind="boss"
+              onDone={(picks) => { setBoss({ kind: "described", ...picks }); afterBoss(); }} />
           )}
           {screen === "bossDescribe" && (
             <DescribeScreen kind="boss"
@@ -2309,37 +2309,34 @@ function GameTypeScreen({ onPick }) {
   );
 }
 
-function CharacterPicker({ onPickPreset, onDraw, onDescribe }) {
+function CharacterPicker({ onDescribe, onPickElements }) {
   return (
     <div className="text-center anim-slide-up">
-        <h2 className="f-display text-5xl md:text-6xl mb-2" style={{ color: "#1a1a3a" }}>Pick your hero</h2>
-        <p className="text-xl mb-8" style={{ color: "#4a3a6a" }}>Or make your own below!</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {CHARACTERS.map((c, i) => (
-            <button key={c.id} onClick={() => onPickPreset(c.id)}
-              className="bg-white p-6 rounded-3xl card-3d flex flex-col items-center gap-2 anim-slide-up"
-              style={{ animationDelay: `${i * 0.05}s` }}>
-              <div className="text-6xl anim-float">{c.emoji}</div>
-              <div className="f-display text-2xl" style={{ color: "#1a1a3a" }}>{c.name}</div>
-            </button>
-          ))}
+      <h2 className="f-display text-5xl md:text-6xl mb-2" style={{ color: "#1a1a3a" }}>Make your hero!</h2>
+      <p className="text-xl mb-8" style={{ color: "#4a3a6a" }}>Two ways to build — pick whichever feels easier!</p>
+
+      {/* Primary path: describe in words (the "talk to AI" experience) */}
+      <button onClick={onDescribe}
+        className="w-full p-6 md:p-8 rounded-3xl card-3d flex flex-col md:flex-row items-center gap-4 anim-slide-up text-white text-left"
+        style={{ background: "linear-gradient(135deg, #A855F7 0%, #EC4899 100%)" }}>
+        <div className="text-7xl md:text-8xl anim-float">💬</div>
+        <div className="flex-1 text-center md:text-left">
+          <div className="f-display text-3xl md:text-4xl">Describe it in words</div>
+          <div className="text-base md:text-lg opacity-95 mt-1">Type whatever you want — just like talking to an AI!</div>
+          <div className="text-sm opacity-80 mt-2">Try: "a tiny fluffy pink dragon with sparkly wings"</div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <button onClick={onDraw}
-            className="p-6 rounded-3xl card-3d flex flex-col items-center gap-2 anim-slide-up text-white"
-            style={{ background: "linear-gradient(135deg, #FF6B9D 0%, #FFD93D 50%, #3DB8FF 100%)" }}>
-            <div className="text-6xl anim-wiggle">✏️</div>
-            <div className="f-display text-2xl">Draw your own!</div>
-            <div className="text-sm opacity-95">Make any hero you want</div>
-          </button>
-          <button onClick={onDescribe}
-            className="p-6 rounded-3xl card-3d flex flex-col items-center gap-2 anim-slide-up text-white"
-            style={{ background: "linear-gradient(135deg, #A855F7 0%, #EC4899 100%)" }}>
-            <div className="text-6xl anim-float">💬</div>
-            <div className="f-display text-2xl">Describe it!</div>
-            <div className="text-sm opacity-95">Build a hero from words</div>
-          </button>
+      </button>
+
+      {/* Secondary path: pick from chips (faster for stuck kids) */}
+      <button onClick={onPickElements}
+        className="w-full p-5 md:p-6 mt-4 rounded-3xl card-3d flex items-center gap-4 anim-slide-up text-white text-left"
+        style={{ background: "linear-gradient(135deg, #3DB8FF 0%, #2ECC71 100%)", animationDelay: "0.08s" }}>
+        <div className="text-6xl anim-wiggle">🎨</div>
+        <div className="flex-1">
+          <div className="f-display text-2xl md:text-3xl">Pick from pictures</div>
+          <div className="text-sm md:text-base opacity-95 mt-1">Tap a color, a creature, and a power — done!</div>
         </div>
+      </button>
     </div>
   );
 }
@@ -2364,32 +2361,37 @@ function WeaponPicker({ onPick }) {
   );
 }
 
-function BossBuilderIntro({ onDraw, onDescribe }) {
+function BossBuilderIntro({ onDescribe, onPickElements }) {
   return (
     <div className="text-center anim-slide-up">
-        <h2 className="f-display text-5xl md:text-6xl mb-2" style={{ color: "#1a1a3a" }}>Build your bad guy!</h2>
-        <p className="text-xl mb-4" style={{ color: "#4a3a6a" }}>
-          They'll show up at the end of Level 2. You have to beat them!
-        </p>
-        <div className="flex justify-center mb-8 text-4xl gap-2 anim-wiggle">
-          <span>😈</span><span>👾</span><span>🐉</span>
+      <h2 className="f-display text-5xl md:text-6xl mb-2" style={{ color: "#1a1a3a" }}>Make your bad guy!</h2>
+      <p className="text-xl mb-4" style={{ color: "#4a3a6a" }}>
+        They'll show up at the end of Level 2. You have to beat them!
+      </p>
+      <div className="flex justify-center mb-6 text-4xl gap-2 anim-wiggle">
+        <span>😈</span><span>👾</span><span>🐉</span>
+      </div>
+
+      <button onClick={onDescribe}
+        className="w-full p-6 md:p-8 rounded-3xl card-3d flex flex-col md:flex-row items-center gap-4 anim-slide-up text-white text-left"
+        style={{ background: "linear-gradient(135deg, #7C2D12 0%, #A855F7 100%)" }}>
+        <div className="text-7xl md:text-8xl anim-float">💬</div>
+        <div className="flex-1 text-center md:text-left">
+          <div className="f-display text-3xl md:text-4xl">Describe it in words</div>
+          <div className="text-base md:text-lg opacity-95 mt-1">Type your scariest monster!</div>
+          <div className="text-sm opacity-80 mt-2">Try: "a tough green dragon with fiery breath"</div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-          <button onClick={onDraw}
-            className="p-8 rounded-3xl card-3d flex flex-col items-center gap-3 anim-slide-up text-white"
-            style={{ background: "linear-gradient(135deg, #EF4444 0%, #F97316 100%)" }}>
-            <div className="text-7xl anim-wiggle">✏️</div>
-            <div className="f-display text-3xl">Draw it!</div>
-            <div className="text-sm opacity-95">Scribble your scariest monster</div>
-          </button>
-          <button onClick={onDescribe}
-            className="p-8 rounded-3xl card-3d flex flex-col items-center gap-3 anim-slide-up text-white"
-            style={{ background: "linear-gradient(135deg, #7C2D12 0%, #A855F7 100%)" }}>
-            <div className="text-7xl anim-float">💬</div>
-            <div className="f-display text-3xl">Describe it!</div>
-            <div className="text-sm opacity-95">Build it from words</div>
-          </button>
+      </button>
+
+      <button onClick={onPickElements}
+        className="w-full p-5 md:p-6 mt-4 rounded-3xl card-3d flex items-center gap-4 anim-slide-up text-white text-left"
+        style={{ background: "linear-gradient(135deg, #EF4444 0%, #F97316 100%)", animationDelay: "0.08s" }}>
+        <div className="text-6xl anim-wiggle">🎨</div>
+        <div className="flex-1">
+          <div className="f-display text-2xl md:text-3xl">Pick from pictures</div>
+          <div className="text-sm md:text-base opacity-95 mt-1">Tap a color, a creature, a feature, and a power!</div>
         </div>
+      </button>
     </div>
   );
 }
@@ -2485,6 +2487,180 @@ function DrawScreen({ title, color, onDone }) {
 // New prompt-based describe flow. Kid types words into blanks.
 // Each blank validates against SAFE_WORDS allowlist.
 // Suggestions below each blank let a stuck kid tap-to-fill.
+// Chip-based picker — the alternative to DescribeScreen for kids who prefer
+// tapping over typing. Produces the same entity shape so downstream code
+// (stats, rendering, save state) works identically.
+function PickElementsScreen({ kind, onDone }) {
+  const isBoss = kind === "boss";
+  const [picks, setPicks] = useState({
+    color: null,
+    body: null,
+    feature: null,
+    power: null,
+    accessory: null,
+    style: null,
+  });
+
+  // Hero needs color + body. Boss needs color + body + feature + power.
+  const complete = picks.color && picks.body && (!isBoss || (picks.feature && picks.power));
+
+  const handleDone = () => {
+    if (!complete) return;
+    onDone(picks);
+  };
+
+  const setPick = (bucket, id) => {
+    setPicks(p => ({ ...p, [bucket]: p[bucket] === id ? null : id }));
+  };
+
+  // Accessory chips (small inline list — same canonical ids as ACCESSORY_INDEX)
+  const ACCESSORY_CHIPS = [
+    { id: "cape",  emoji: "🦸",  label: "a cape" },
+    { id: "wings", emoji: "🦋",  label: "wings"  },
+    { id: "hat",   emoji: "🎩",  label: "a hat"  },
+    { id: "sword", emoji: "⚔️",  label: "a sword"},
+  ];
+
+  // Style chips
+  const STYLE_CHIPS = [
+    { id: "tiny",    emoji: "🐭", label: "tiny"   },
+    { id: "big",     emoji: "🦣", label: "big"    },
+    { id: "fluffy",  emoji: "☁️", label: "fluffy" },
+    { id: "spiky",   emoji: "🌵", label: "spiky"  },
+    { id: "stripey", emoji: "🐅", label: "stripey"},
+    { id: "silly",   emoji: "🤪", label: "silly"  },
+  ];
+
+  const previewEntity = picks.body ? picks : null;
+
+  return (
+    <div className="text-center anim-slide-up">
+      <h2 className="f-display text-4xl md:text-5xl mb-1" style={{ color: "#1a1a3a" }}>
+        {isBoss ? "Build your bad guy!" : "Build your hero!"}
+      </h2>
+      <p className="text-base mb-5" style={{ color: "#4a3a6a" }}>
+        Tap to pick. You can change your mind anytime!
+      </p>
+
+      <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto items-start mb-4">
+        <div className="md:col-span-2 bg-white rounded-3xl p-4 card-3d text-left space-y-4">
+          {/* Creature chips */}
+          <ChipPickSection
+            title="Pick a creature"
+            chips={BODY_CHIPS}
+            selected={picks.body}
+            onPick={(id) => setPick("body", id)}
+            renderChip={(c) => <><span className="text-2xl">{c.emoji}</span><span className="ml-1">{c.label}</span></>}
+          />
+
+          {/* Color chips — color swatches */}
+          <ChipPickSection
+            title="Pick a color"
+            chips={COLOR_CHIPS}
+            selected={picks.color}
+            onPick={(id) => setPick("color", id)}
+            renderChip={(c) => (
+              <>
+                <span style={{
+                  display:"inline-block", width:18, height:18, borderRadius:"50%",
+                  background: c.id === "rainbow"
+                    ? "conic-gradient(#EF4444,#F97316,#FACC15,#22C55E,#3B82F6,#A855F7,#EC4899,#EF4444)"
+                    : c.tint,
+                  verticalAlign:"middle", marginRight:6,
+                }} />
+                <span>{c.label}</span>
+              </>
+            )}
+          />
+
+          {/* Feature chips — optional for hero, required for boss */}
+          <ChipPickSection
+            title={isBoss ? "Pick a magic power" : "Pick a magic power (optional)"}
+            chips={FEATURE_CHIPS}
+            selected={picks.feature}
+            onPick={(id) => setPick("feature", id)}
+            renderChip={(c) => <><span className="text-2xl">{c.emoji}</span><span className="ml-1">{c.label}</span></>}
+          />
+
+          {/* Power chips — boss only */}
+          {isBoss && (
+            <ChipPickSection
+              title="How tough are they?"
+              chips={POWER_CHIPS}
+              selected={picks.power}
+              onPick={(id) => setPick("power", id)}
+              renderChip={(c) => <><span className="text-2xl">{c.emoji}</span><span className="ml-1">{c.label}</span></>}
+            />
+          )}
+
+          {/* Accessory chips — optional */}
+          <ChipPickSection
+            title="Add an accessory (optional)"
+            chips={ACCESSORY_CHIPS}
+            selected={picks.accessory}
+            onPick={(id) => setPick("accessory", id)}
+            renderChip={(c) => <><span className="text-2xl">{c.emoji}</span><span className="ml-1">{c.label}</span></>}
+          />
+
+          {/* Style chips — optional */}
+          <ChipPickSection
+            title="How does it look? (optional)"
+            chips={STYLE_CHIPS}
+            selected={picks.style}
+            onPick={(id) => setPick("style", id)}
+            renderChip={(c) => <><span className="text-2xl">{c.emoji}</span><span className="ml-1">{c.label}</span></>}
+          />
+        </div>
+
+        {/* Live preview */}
+        <div className="flex justify-center">
+          <div className="bg-white rounded-3xl p-4 card-3d flex items-center justify-center sticky top-4"
+               style={{ width: 160, height: 160 }}>
+            {previewEntity
+              ? <CreatureSVG entity={previewEntity} size={130} />
+              : <span className="f-display text-5xl opacity-30">?</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <button onClick={handleDone} disabled={!complete}
+          className="f-display text-2xl text-white px-10 py-4 rounded-full btn-chunky disabled:opacity-40"
+          style={{ background: isBoss ? "#EF4444" : "#2ECC71" }}>
+          {complete ? "Bring it to life! ✨" : isBoss ? "Pick a creature, color, power, and toughness" : "Pick a creature and color"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Single section of chip picker: title + a row of tappable chips.
+// Selected chip is highlighted; tapping again deselects.
+function ChipPickSection({ title, chips, selected, onPick, renderChip }) {
+  return (
+    <div>
+      <div className="f-display text-base mb-2" style={{ color: "#1a1a3a" }}>{title}</div>
+      <div className="flex flex-wrap gap-2">
+        {chips.map(c => {
+          const isSelected = selected === c.id;
+          return (
+            <button key={c.id} onClick={() => onPick(c.id)}
+              className="f-display text-sm px-3 py-2 rounded-full btn-chunky transition"
+              style={{
+                background: isSelected ? "#FFD93D" : "white",
+                color: "#1a1a3a",
+                border: `2px solid ${isSelected ? "#854D0E" : "#E5E7EB"}`,
+                transform: isSelected ? "scale(1.05)" : "scale(1)",
+              }}>
+              {renderChip(c)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function DescribeScreen({ kind, onDone }) {
   const isBoss = kind === "boss";
   const [text, setText] = useState("");
