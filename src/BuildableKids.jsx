@@ -1,13 +1,113 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ============================================================
-// BUILDABLE KIDS — MVP v4
-// New:
-//  - Back buttons on every setup screen
-//  - Hero can be: preset | drawn | DESCRIBED (chip-based prompt builder)
-//  - Boss builder (draw OR describe) — custom boss appears in Level 2
-//    across all four games with distinct mechanics
+// BUILDABLE KIDS — MVP
 // ============================================================
+// Architecture: single-file React component. iPad-first experience.
+// AI integration (Claude for quizzes, image gen for creatures) lands via
+// Vercel serverless functions in /api/* (added in T19).
+//
+// All API calls go through buildableApi below. Today they fall back to
+// procedural rendering / hardcoded quizzes if the server-side functions
+// aren't wired up yet, so the app stays working through Sprint 3.
+// ============================================================
+
+// API client — single place where the React app talks to the backend.
+// All methods return graceful fallbacks if the backend isn't reachable,
+// so the app works offline and during deployment transitions.
+const buildableApi = {
+  // Generate a creature image from a kid's entity (color/body/feature/...).
+  // Returns: { url: string } | null. null means fall back to procedural SVG.
+  async generateCreatureImage(entity) {
+    try {
+      const res = await fetch("/api/generate-creature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entity }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.url ? { url: data.url } : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // Generate a quiz question for a given age + level + game type.
+  // Returns: { type, question, choices, correctIndex, image?: emoji } | null
+  async generateQuiz({ age, level, gameType, quizType }) {
+    try {
+      const res = await fetch("/api/generate-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ age, level, gameType, quizType }),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // Save a game (hero/boss/world/goal combo) for the current anonymous device.
+  // Returns: { gameId } | null
+  async saveGame(payload) {
+    try {
+      const res = await fetch("/api/save-game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, deviceId: getDeviceId() }),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // List saved games for this device.
+  async listMyGames() {
+    try {
+      const res = await fetch(`/api/list-games?deviceId=${encodeURIComponent(getDeviceId())}`);
+      if (!res.ok) return [];
+      return (await res.json()).games || [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  // Load a single game by ID — used for remix flow (kid opens a shared URL).
+  async loadGame(gameId) {
+    try {
+      const res = await fetch(`/api/load-game?id=${encodeURIComponent(gameId)}`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  },
+};
+
+// Anonymous device ID for save state. Generated once per browser, stored
+// in localStorage with a graceful fallback to in-memory if storage blocked.
+// (This is the ONLY localStorage use in the app; everything else is in-memory.)
+let __memoryDeviceId = null;
+function getDeviceId() {
+  if (__memoryDeviceId) return __memoryDeviceId;
+  try {
+    let id = window.localStorage.getItem("bk_device_id");
+    if (!id) {
+      id = "d_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      window.localStorage.setItem("bk_device_id", id);
+    }
+    __memoryDeviceId = id;
+    return id;
+  } catch (e) {
+    // localStorage blocked (private mode, etc) — use in-memory ID for this session
+    __memoryDeviceId = "d_session_" + Math.random().toString(36).slice(2);
+    return __memoryDeviceId;
+  }
+}
 
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;900&display=swap');
@@ -1483,10 +1583,47 @@ function CreatureSVG({ entity, size = 120 }) {
 
 // Thin wrapper that preserves the existing DescribedAvatar interface.
 // All callers (live preview, boss HUD, maze cell, complete screen) keep working.
+// In-memory cache of API-generated creature image URLs keyed by entity hash.
+// Survives between renders but not page reloads. Persistent cache happens
+// server-side via Supabase.
+const __aiCreatureCache = new Map();
+
 function DescribedAvatar({ entity, size = 72 }) {
+  const [aiUrl, setAiUrl] = useState(null);
+  const key = entity ? creatureCacheKey(entity) : null;
+
+  useEffect(() => {
+    if (!key) return;
+    // Cache hit — use it
+    if (__aiCreatureCache.has(key)) {
+      setAiUrl(__aiCreatureCache.get(key));
+      return;
+    }
+    // Mark "in flight" so we don't double-fetch
+    __aiCreatureCache.set(key, null);
+    // Fire and forget — fall back to procedural while loading
+    let cancelled = false;
+    buildableApi.generateCreatureImage(entity).then(result => {
+      if (cancelled) return;
+      if (result && result.url) {
+        __aiCreatureCache.set(key, result.url);
+        setAiUrl(result.url);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [key]);
+
   return (
-    <div style={{ width: size, height: size }}>
-      <CreatureSVG entity={entity} size={size} />
+    <div style={{ width: size, height: size, position: "relative" }}>
+      {aiUrl ? (
+        <img src={aiUrl} alt=""
+          style={{
+            width: size, height: size, objectFit: "contain",
+            borderRadius: "50%", display: "block",
+          }} />
+      ) : (
+        <CreatureSVG entity={entity} size={size} />
+      )}
     </div>
   );
 }
@@ -2223,6 +2360,7 @@ export default function BuildableKids() {
 // SETUP SCREENS
 // ============================================================
 function WelcomeScreen({ age, setAge, kidName, setKidName, onNext }) {
+  const device = useDeviceClass();
   // Keep input kid-safe: letters + spaces + apostrophes/hyphens only, max 12 chars.
   // Name stays in local React state — never leaves the device.
   const handleNameChange = (e) => {
@@ -2230,13 +2368,18 @@ function WelcomeScreen({ age, setAge, kidName, setKidName, onNext }) {
     setKidName(cleaned);
   };
   const trimmed = kidName.trim();
-  // Blocklist check — if the typed name hits the blocklist, don't let
-  // "Let's build" proceed. The greeting below also falls back to neutral.
   const nameBlocked = trimmed.length > 0 && containsInappropriate(trimmed);
   const showGreeting = trimmed.length > 0 && !nameBlocked;
   const canProceed = !nameBlocked && age > 0;
   return (
     <div className="flex flex-col items-center text-center gap-6 anim-slide-up">
+      {device.ready && device.isPhone && (
+        <div className="w-full max-w-md bg-white/80 rounded-2xl px-4 py-3 text-sm flex items-center gap-2 card-3d"
+             style={{ color: "#4a3a6a" }}>
+          <span className="text-xl">📱</span>
+          <span>Tip: Buildable Kids works best on iPad! Phone works too — just turn it sideways.</span>
+        </div>
+      )}
       <div className="anim-wiggle text-8xl">🎮</div>
       <div>
         <h1 className="f-display text-6xl md:text-7xl" style={{ color: "#1a1a3a" }}>Buildable Kids</h1>
@@ -3197,7 +3340,64 @@ function CompleteScreen({ score, unlocks, hero, boss, kidName, worldObj, gtObj, 
 // ============================================================
 // PLAY ROUTER + SHARED HELPERS
 // ============================================================
+
+// Device detection. We treat the experience as iPad-first; phones get a
+// gentle "best on iPad" hint but can play in landscape if they insist.
+function useDeviceClass() {
+  const [info, setInfo] = useState({ isPhone: false, isPortrait: false, ready: false });
+  useEffect(() => {
+    const check = () => {
+      const w = window.innerWidth, h = window.innerHeight;
+      const shortest = Math.min(w, h);
+      // Phones <= 500px on shortest side. iPad mini (744) and up are tablets.
+      const isPhone = shortest <= 500;
+      const isPortrait = h > w;
+      setInfo({ isPhone, isPortrait, ready: true });
+    };
+    check();
+    window.addEventListener("resize", check);
+    window.addEventListener("orientationchange", check);
+    return () => {
+      window.removeEventListener("resize", check);
+      window.removeEventListener("orientationchange", check);
+    };
+  }, []);
+  return info;
+}
+
+function RotateToPlayPrompt({ onPlayAnyway }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center anim-slide-up py-12">
+      <div className="text-8xl mb-4" style={{
+        animation: "rotateHint 2s ease-in-out infinite",
+        transformOrigin: "center",
+      }}>📱</div>
+      <style>{`@keyframes rotateHint { 0%, 100% { transform: rotate(-15deg); } 50% { transform: rotate(75deg); } }`}</style>
+      <h2 className="f-display text-3xl mb-2" style={{ color: "#1a1a3a" }}>
+        Rotate your phone!
+      </h2>
+      <p className="text-lg mb-2" style={{ color: "#4a3a6a" }}>
+        Turn it sideways to play the game 👉
+      </p>
+      <p className="text-sm mt-4 mb-6" style={{ color: "#8a7a9a" }}>
+        Buildable Kids works best on iPad.
+      </p>
+      {onPlayAnyway && (
+        <button onClick={onPlayAnyway}
+          className="f-display text-base bg-white/80 px-4 py-2 rounded-full btn-chunky"
+          style={{ color: "#1a1a3a" }}>Play anyway →</button>
+      )}
+    </div>
+  );
+}
+
 function PlayScreen(props) {
+  const device = useDeviceClass();
+  const [forcePlay, setForcePlay] = useState(false);
+  // Only block on phone-portrait. Allow override.
+  if (device.ready && device.isPhone && device.isPortrait && !forcePlay) {
+    return <RotateToPlayPrompt onPlayAnyway={() => setForcePlay(true)} />;
+  }
   if (props.gameType === "maze")   return <MazeGame {...props} />;
   if (props.gameType === "flying") return <FlyingGame {...props} />;
   if (props.gameType === "puzzle") return <Match3Game {...props} />;
@@ -3243,12 +3443,12 @@ function GoalBanner({ goalId, goalTextShort, goalCfg, starsCollected, treasureFo
 function GameHUD({ level, gameName, unlocks, weaponObj, bossName, bossHP, bossMaxHP }) {
   return (
     <div className="flex items-center justify-between w-full max-w-[720px] px-2 flex-wrap gap-2">
-      <div className="f-display text-2xl" style={{ color: "#1a1a3a" }}>Level {level} · {gameName}</div>
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="f-display text-base md:text-2xl" style={{ color: "#1a1a3a" }}>Level {level} · {gameName}</div>
+      <div className="flex items-center gap-2 md:gap-3 flex-wrap">
         {bossName && bossMaxHP > 0 && (
-          <div className="flex items-center gap-2 bg-white rounded-full px-3 py-1 card-3d">
-            <span className="text-lg">👹</span>
-            <div style={{ width: 80, height: 8, background: "#1a1a3a", borderRadius: 4, overflow: "hidden" }}>
+          <div className="flex items-center gap-2 bg-white rounded-full px-2 md:px-3 py-1 card-3d">
+            <span className="text-base md:text-lg">👹</span>
+            <div style={{ width: 60, height: 8, background: "#1a1a3a", borderRadius: 4, overflow: "hidden" }}>
               <div style={{
                 height: "100%", background: "#EF4444", transition: "width 0.25s ease",
                 width: `${Math.max(0, (bossHP / bossMaxHP) * 100)}%`,
@@ -3256,10 +3456,10 @@ function GameHUD({ level, gameName, unlocks, weaponObj, bossName, bossHP, bossMa
             </div>
           </div>
         )}
-        {weaponObj && <span className="text-2xl" title={weaponObj.name}>{weaponObj.emoji}</span>}
+        {weaponObj && <span className="text-xl md:text-2xl" title={weaponObj.name}>{weaponObj.emoji}</span>}
         {unlocks.map(u => {
           const un = UNLOCKS.find(x => x.id === u);
-          return <span key={u} title={un.name} className="text-2xl">{un.emoji}</span>;
+          return <span key={u} title={un.name} className="text-xl md:text-2xl">{un.emoji}</span>;
         })}
       </div>
     </div>
@@ -4034,7 +4234,9 @@ function FlyingGame({ level, hero, boss, worldObj, weaponObj, unlocks, onComplet
         <canvas ref={canvasRef} width={720} height={320} style={{ display:"block", width:"100%", maxWidth:720 }} />
       </div>
       <div className="flex items-center gap-4 w-full max-w-[720px] justify-center flex-wrap">
-        <div className="grid grid-cols-3 gap-2" style={{ userSelect: "none" }}>
+        {/* Hide d-pad on phones — drag-anywhere on canvas is enough, and
+            d-pad eats vertical screen real estate on portrait phones. */}
+        <div className="hidden md:grid grid-cols-3 gap-2" style={{ userSelect: "none" }}>
           <div></div>
           <button onClick={() => nudgeY(-1)}
             className="f-display text-2xl text-white w-14 h-14 rounded-2xl btn-chunky"
