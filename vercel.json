@@ -1,11 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/demo",
-      "permanent": false
-    }
-  ],
   "rewrites": [
     {
       "source": "/demo",
