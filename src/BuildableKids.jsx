@@ -18,7 +18,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const buildableApi = {
   // Generate a creature image from a kid's entity (color/body/feature/...).
   // Returns: { url: string } | null. null means fall back to procedural SVG.
-  async generateCreatureImage(entity)     try {
+  async generateCreatureImage(entity) {
+    try {
       const res = await fetch("/api/generate-creature", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
