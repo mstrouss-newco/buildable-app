@@ -2218,7 +2218,7 @@ export default function BuildableKids() {
   const gtObj     = GAME_TYPES.find(g => g.id === gameType);
   const weaponObj = WEAPONS.find(w => w.id === weapon);
 
-  const afterHero = () => setScreen(gameType === "flying" ? "weapon" : "boss");
+  const afterHero = () => setScreen("heroReveal");
   const afterWeapon = () => setScreen("boss");
   const afterBoss = () => setScreen("world");
 
@@ -2303,6 +2303,10 @@ export default function BuildableKids() {
           {screen === "heroDescribe" && (
             <DescribeScreen kind="hero"
               onDone={(picks) => { setHero({ kind: "described", ...picks }); afterHero(); }} />
+          )}
+          {screen === "heroReveal" && (
+            <CreatureRevealScreen entity={hero} isBoss={false}
+              onNext={() => setScreen(gameType === "flying" ? "weapon" : "boss")} />
           )}
           {screen === "weapon" && (
             <WeaponPicker onPick={(id) => { setWeapon(id); afterWeapon(); }} />
@@ -2800,6 +2804,81 @@ function ChipPickSection({ title, chips, selected, onPick, renderChip }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+
+// ============================================================
+// HERO / BOSS REVEAL SCREEN
+// Shows after "Bring it to life!" — loads DALL-E image with
+// an animated reveal so kids get an exciting moment.
+// ============================================================
+function CreatureRevealScreen({ entity, isBoss, onNext }) {
+  const [phase, setPhase] = useState("loading"); // "loading" | "revealed"
+  const [imgUrl, setImgUrl] = useState(null);
+  const label = isBoss ? "your bad guy" : "your hero";
+  const emoji = isBoss ? "💀" : "🌟";
+  const btnColor = isBoss ? "#EF4444" : "#2ECC71";
+
+  useEffect(() => {
+    if (!entity) return;
+    // Try to get AI image; fall back gracefully
+    buildableApi.generateCreatureImage(entity).then(result => {
+      if (result && result.url) setImgUrl(result.url);
+      setPhase("revealed");
+    }).catch(() => setPhase("revealed"));
+    // Safety timeout — never stay loading forever
+    const t = setTimeout(() => setPhase("revealed"), 12000);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (phase === "loading") {
+    return (
+      <div className="text-center flex flex-col items-center gap-6 anim-slide-up">
+        <div style={{ fontSize: 80 }} className="anim-bounce">✨</div>
+        <h2 className="f-display text-4xl md:text-5xl" style={{ color: "#1a1a3a" }}>
+          Creating {label}…
+        </h2>
+        <p className="text-xl" style={{ color: "#4a3a6a" }}>
+          The AI is painting it now — hold tight!
+        </p>
+        <div className="flex gap-3 justify-center mt-2">
+          {[0,1,2].map(i => (
+            <div key={i} className="rounded-full" style={{
+              width: 16, height: 16, background: btnColor,
+              animation: `bounce 0.7s ease-in-out ${i * 0.2}s infinite alternate`,
+            }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-center flex flex-col items-center gap-5 anim-slide-up">
+      <div style={{ fontSize: 48 }}>{emoji}</div>
+      <h2 className="f-display text-4xl md:text-5xl" style={{ color: "#1a1a3a" }}>
+        Meet {label}!
+      </h2>
+      {entity?.description && (
+        <p className="f-display text-xl italic" style={{ color: "#4a3a6a", maxWidth: 400 }}>
+          "{entity.description}"
+        </p>
+      )}
+      <div className="bg-white rounded-3xl p-6 card-3d anim-pop" style={{ width: 240, height: 240, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {imgUrl ? (
+          <img src={imgUrl} alt={entity?.description || label}
+            style={{ width: 210, height: 210, objectFit: "contain", borderRadius: 16 }} />
+        ) : (
+          <CreatureSVG entity={entity} size={200} />
+        )}
+      </div>
+      <button onClick={onNext}
+        className="f-display text-2xl text-white px-10 py-4 rounded-full btn-chunky mt-2"
+        style={{ background: btnColor }}>
+        {isBoss ? "Let's play! 🎮" : "Next up: your bad guy! →"}
+      </button>
     </div>
   );
 }
