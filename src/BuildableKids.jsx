@@ -2823,14 +2823,18 @@ function CreatureRevealScreen({ entity, isBoss, onNext }) {
 
   useEffect(() => {
     if (!entity) return;
-    // Try to get AI image; fall back gracefully
-    buildableApi.generateCreatureImage(entity).then(result => {
+    let cancelled = false;
+    // Minimum loading time so kids see the anticipation animation
+    const minDelay = new Promise(res => setTimeout(res, 2000));
+    const imgFetch = buildableApi.generateCreatureImage(entity).catch(() => null);
+    Promise.all([minDelay, imgFetch]).then(([, result]) => {
+      if (cancelled) return;
       if (result && result.url) setImgUrl(result.url);
       setPhase("revealed");
-    }).catch(() => setPhase("revealed"));
-    // Safety timeout — never stay loading forever
-    const t = setTimeout(() => setPhase("revealed"), 12000);
-    return () => clearTimeout(t);
+    });
+    // Hard cap — never stay loading > 15s
+    const t = setTimeout(() => { if (!cancelled) setPhase("revealed"); }, 15000);
+    return () => { cancelled = true; clearTimeout(t); };
   }, []);
 
   if (phase === "loading") {
