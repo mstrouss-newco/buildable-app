@@ -2914,21 +2914,14 @@ function DescribeScreen({ kind, onDone }) {
           Stuck? Tap a word to add it:
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
-          {[
-            isBoss ? "sneaky" : "fluffy",
-            isBoss ? "spiky" : "sparkly",
-            isBoss ? "dark" : "glowing",
-            "tiny", "giant", "striped", "spotted",
-            isBoss ? "shadow" : "rainbow",
-            "golden", "icy", "fire",
-            isBoss ? "wings" : "crown",
-            "claws", "tail", "eyes",
-            isBoss ? "fierce" : "friendly",
-            "magical", "bouncy",
+          {["fluffy", "tiny", "giant", "sparkly", "magical",
+            "rainbow", "golden", "icy", "fire", "striped",
+            "spotted", "glowing", "bouncy", "friendly"
           ].map(w => (
             <button key={w} onClick={() => pickSuggestion(w)}
               className="f-display bg-white px-3 py-1 rounded-full btn-chunky text-base"
-              style={{ color: "#1a3a3a" }}>{w}
+              style={{ color: "#1a3a3a" }}>
+              {w}
             </button>
           ))}
         </div>
