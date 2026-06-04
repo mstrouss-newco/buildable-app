@@ -1,8 +1,8 @@
 {
-    "routes": [
-          { "src": "/demo/assets/(.*)", "dest": "/demo/assets/$1" },
-          { "src": "/demo/(.*)", "dest": "/index.html" },
-          { "src": "/demo", "dest": "/index.html" },
-          { "src": "/(.*)", "dest": "/landing.html" }
-    ]
+      "routes": [
+              { "src": "/demo/assets/(.*)", "dest": "/assets/$1" },
+              { "src": "/demo/(.*)", "dest": "/index.html" },
+              { "src": "/demo", "dest": "/index.html" },
+              { "src": "/(.*)", "dest": "/landing.html" }
+      ]
 }
