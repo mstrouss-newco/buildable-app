@@ -2825,9 +2825,7 @@ function DescribeScreen({ kind, onDone }) {
   // Hero needs color + body (feature is optional — some creatures don't need magic).
   // Boss needs color + body + feature + power (needs the full set for stats).
   // Style and accessory are always optional cosmetic extras.
-  const complete = resolved.color && resolved.body
-                   && (!isBoss || (resolved.feature && resolved.power))
-                   && !parsed.hasBlocked;
+  const complete = text.trim().length >= 3 && !parsed.hasBlocked;
 
   const handleChange = (e) => {
     // Kid-safe input hygiene: letters, spaces, basic punctuation. No digits, no
@@ -2840,6 +2838,7 @@ function DescribeScreen({ kind, onDone }) {
   const handleDone = () => {
     if (!complete) return;
     onDone({
+      description: text,
       color: resolved.color,
       body: resolved.body,
       feature: resolved.feature,
@@ -2856,7 +2855,7 @@ function DescribeScreen({ kind, onDone }) {
     setText(next);
   };
 
-  const previewEntity = resolved.body ? {
+  const previewEntity = text.trim().length > 0 ? {
     description: text,
     color: resolved.color, body: resolved.body,
     feature: resolved.feature, style: resolved.style,
@@ -2895,28 +2894,6 @@ function DescribeScreen({ kind, onDone }) {
               color: "#1a1a3a",
             }}
           />
-          {/* Word-by-word feedback. Two pill states after the blocklist:
-              - mapped: green ✓ (affects the visual)
-              - extra:  teal ✓ (accepted but no visual mapping)
-              Stop words and blocklisted words are filtered out — blocklisted
-              words are intentionally NOT echoed back to avoid amplifying
-              inappropriate input. */}
-          {parsed.tokens.filter(t => t.state === "mapped" || t.state === "extra").length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {parsed.tokens.filter(t => t.state === "mapped" || t.state === "extra").map((tok, i) => {
-                const style = tok.state === "mapped"
-                  ? { bg: "#DCFCE7", text: "#166534", border: "#22C55E", mark: "✓" }
-                  : { bg: "#CCFBF1", text: "#115E59", border: "#14B8A6", mark: "✓" };
-                return (
-                  <span key={i}
-                    className="f-display text-sm px-2 py-1 rounded-full"
-                    style={{ background: style.bg, color: style.text, border: `1.5px solid ${style.border}` }}>
-                    {style.mark} {tok.word}
-                  </span>
-                );
-              })}
-            </div>
-          )}
           {/* Blocklist banner — shown when any typed word hits the blocklist.
               We don't say WHICH word, just that some words need changing. */}
           {parsed.hasBlocked && (
@@ -2925,41 +2902,37 @@ function DescribeScreen({ kind, onDone }) {
               Let's try different words — pick kind, fun ones! 😊
             </div>
           )}
-          {/* Missing-slot hints — tells kid what AI still needs */}
-          {text.length > 0 && !complete && !parsed.hasBlocked && (
+          {/* Missing-slot hints — only shown when text is very short */}
+          {text.trim().length > 0 && text.trim().length < 3 && (
             <p className="text-sm mt-3" style={{ color: "#4a3a6a" }}>
-              {!resolved.color && <span>✨ add a <b>color</b> · </span>}
-              {!resolved.body && <span>✨ add a <b>creature</b> · </span>}
-              {isBoss && !resolved.feature && <span>✨ add a <b>feature</b> · </span>}
-              {isBoss && !resolved.power && <span>✨ add a <b>power</b></span>}
+              ✨ add a <b>color</b> · add a <b>creature</b> · add a <b>power</b>
             </p>
           )}
-        </div>
-        <div className="flex justify-center">
-          <div className="bg-white rounded-3xl p-4 card-3d flex items-center justify-center" style={{ width: 150, height: 150 }}>
-            {previewEntity
-              ? <CreatureSVG entity={previewEntity} size={120} />
-              : <span className="f-display text-5xl opacity-30">?</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* Rotating suggestions: tap to append */}
+          {/* Rotating suggestions: tap to append */}
       <div className="max-w-3xl mx-auto mb-4">
         <div className="f-display text-sm mb-2" style={{ color: "#4a3a6a" }}>
           Stuck? Tap a word to add it:
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
-          {suggestionsForState(resolved, isBoss).map(w => (
+          {[
+            isBoss ? "sneaky" : "fluffy",
+            isBoss ? "spiky" : "sparkly",
+            isBoss ? "dark" : "glowing",
+            "tiny", "giant", "striped", "spotted",
+            isBoss ? "shadow" : "rainbow",
+            "golden", "icy", "fire",
+            isBoss ? "wings" : "crown",
+            "claws", "tail", "eyes",
+            isBoss ? "fierce" : "friendly",
+            "magical", "bouncy",
+          ].map(w => (
             <button key={w} onClick={() => pickSuggestion(w)}
               className="f-display bg-white px-3 py-1 rounded-full btn-chunky text-base"
-              style={{ color: "#1a1a3a" }}>
-              {w}
+              style={{ color: "#1a3a3a" }}>{w}
             </button>
           ))}
         </div>
       </div>
-
       <div className="mt-4">
         <button onClick={handleDone} disabled={!complete}
           className="f-display text-2xl text-white px-10 py-4 rounded-full btn-chunky disabled:opacity-40"
