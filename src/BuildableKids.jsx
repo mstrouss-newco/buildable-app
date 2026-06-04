@@ -2220,7 +2220,7 @@ export default function BuildableKids() {
 
   const afterHero = () => setScreen("heroReveal");
   const afterWeapon = () => setScreen("boss");
-  const afterBoss = () => setScreen("world");
+  const afterBoss = () => setScreen("bossReveal");
 
   const startQuestion = () => {
     const q = nextQuestion(age);
@@ -2325,6 +2325,10 @@ export default function BuildableKids() {
               onDone={(picks) => { setBoss({ kind: "described", ...picks }); afterBoss(); }} />
           )}
           {screen === "world" && (
+          {screen === "bossReveal" && (
+            <CreatureRevealScreen entity={boss} isBoss={true}
+              onNext={() => setScreen("world")} />
+          )}
             <PickerScreen title="Pick your world" subtitle="Where does the story happen?"
               items={WORLDS} big
               onPick={(id) => { setWorld(id); setScreen("goal"); }} />
@@ -2838,15 +2842,32 @@ function CreatureRevealScreen({ entity, isBoss, onNext }) {
   }, []);
 
   if (phase === "loading") {
+    const questions = isBoss ? [
+      { q: "What would you name your bad guy?", emoji: "😈" },
+      { q: "What's your bad guy's weakest spot?", emoji: "🎯" },
+      { q: "Can your bad guy fly or does it stomp?", emoji: "🦶" },
+      { q: "Would you want your bad guy as a friend?", emoji: "🤔" },
+    ] : [
+      { q: "What's your hero's superpower?", emoji: "⚡" },
+      { q: "Would your hero rather fly or run super fast?", emoji: "🚀" },
+      { q: "What's your hero's biggest fear?", emoji: "😬" },
+      { q: "Does your hero have a sidekick?", emoji: "🤝" },
+    ];
+    const qIndex = Math.floor(Date.now() / 3500) % questions.length;
+    const currentQ = questions[qIndex];
     return (
       <div className="text-center flex flex-col items-center gap-6 anim-slide-up">
         <div style={{ fontSize: 80 }} className="anim-bounce">✨</div>
         <h2 className="f-display text-4xl md:text-5xl" style={{ color: "#1a1a3a" }}>
           Creating {label}…
         </h2>
-        <p className="text-xl" style={{ color: "#4a3a6a" }}>
-          The AI is painting it now — hold tight!
-        </p>
+        <div className="bg-white rounded-3xl p-6 card-3d anim-pop" style={{ maxWidth: 380, width: "100%" }}>
+          <div style={{ fontSize: 36 }} className="mb-2">{currentQ.emoji}</div>
+          <p className="f-display text-xl md:text-2xl" style={{ color: "#1a1a3a" }}>
+            {currentQ.q}
+          </p>
+          <p className="text-sm mt-3" style={{ color: "#8a7a9a" }}>Think about it while the AI draws!</p>
+        </div>
         <div className="flex gap-3 justify-center mt-2">
           {[0,1,2].map(i => (
             <div key={i} className="rounded-full" style={{
@@ -2938,12 +2959,6 @@ function DescribeScreen({ kind, onDone }) {
     setText(next);
   };
 
-  const previewEntity = text.trim().length > 0 ? {
-    description: text,
-    color: resolved.color, body: resolved.body,
-    feature: resolved.feature, style: resolved.style,
-    power: resolved.power, accessory: resolved.accessory,
-  } : null;
 
   return (
     <div className="text-center anim-slide-up">
@@ -2953,13 +2968,10 @@ function DescribeScreen({ kind, onDone }) {
       <p className="text-base mb-2" style={{ color: "#4a3a6a" }}>
         Type whatever you want — just like talking to an AI!
       </p>
-      <p className="text-sm mb-5" style={{ color: "#8a7a9a" }}>
-        💡 AI tip: add more words to make the picture better.
-      </p>
 
-      {/* Main textbox + live preview */}
-      <div className="grid md:grid-cols-3 gap-4 items-start mb-4 max-w-3xl mx-auto">
-        <div className="md:col-span-2 bg-white rounded-3xl p-5 card-3d text-left">
+      {/* Main textbox */}
+      <div className="max-w-3xl mx-auto mb-4">
+        <div className="bg-white rounded-3xl p-5 card-3d text-left">
           <textarea
             value={text}
             onChange={handleChange}
@@ -2977,16 +2989,8 @@ function DescribeScreen({ kind, onDone }) {
               color: "#1a1a3a",
             }}
           />
-          </div>
-          <div className="flex justify-center">
-            <div className="bg-white rounded-3xl p-4 card-3d flex items-center justify-center" style={{ width: 150, height: 150 }}>
-              {previewEntity
-                ? <CreatureSVG entity={previewEntity} size={120} />
-                : <span className="f-display text-5xl opacity-30">?</span>}
-            </div>
-          </div>
         </div>
-          {/* Blocklist banner — shown when any typed word hits the blocklist.
+      </div>
               We don't say WHICH word, just that some words need changing. */}
           {parsed.hasBlocked && (
             <div className="mt-3 p-3 rounded-xl f-display text-sm"
