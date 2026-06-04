@@ -2894,6 +2894,15 @@ function DescribeScreen({ kind, onDone }) {
               color: "#1a1a3a",
             }}
           />
+          </div>
+          <div className="flex justify-center">
+            <div className="bg-white rounded-3xl p-4 card-3d flex items-center justify-center" style={{ width: 150, height: 150 }}>
+              {previewEntity
+                ? <CreatureSVG entity={previewEntity} size={120} />
+                : <span className="f-display text-5xl opacity-30">?</span>}
+            </div>
+          </div>
+        </div>
           {/* Blocklist banner — shown when any typed word hits the blocklist.
               We don't say WHICH word, just that some words need changing. */}
           {parsed.hasBlocked && (
