@@ -4,7 +4,6 @@ import crypto from "crypto";
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
 const DALLE_COST_PER_IMAGE = 0.04;
 
-// Character name generation
 const CHARACTER_ADJECTIVES = ['Zappy', 'Wobbly', 'Sparkly', 'Bouncy', 'Zippy', 'Giggly', 'Fuzzy', 'Speedy', 'Silly', 'Twirly', 'Snappy', 'Chirpy', 'Wiggly', 'Jolly', 'Tickly', 'Mighty', 'Brave', 'Swift', 'Clever', 'Wild'];
 const CHARACTER_NOUNS = ['McSparkle', 'Fang', 'Wings', 'Zoom', 'Bounce', 'Whirl', 'Dash', 'Splash', 'Thunder', 'Whisker', 'Fluff', 'Spark', 'Bolt', 'Claw', 'Stripe', 'Spot', 'Flame', 'Frost', 'Storm', 'Breeze'];
 
@@ -125,6 +124,48 @@ async function logToCommunity(supabaseUrl, supabaseKey, name, description, image
   return null;
 }
 
+// Try gpt-image-1 (b64), dall-e-3 (url), dall-e-2 (url) in sequence.
+async function generateImage(prompt, openaiKey, timeoutMs = 55000) {
+  const attempt = async (body) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        const data = await res.json();
+        const b64 = data.data?.[0]?.b64_json;
+        const url = data.data?.[0]?.url;
+        return { url: b64 ? `data:image/png;base64,${b64}` : (url || null), error: null };
+      }
+      const errText = await res.text();
+      return { url: null, error: `${res.status}: ${errText.slice(0, 200)}` };
+    } catch (e) {
+      clearTimeout(timer);
+      return { url: null, error: e.message };
+    }
+  };
+
+  const r1 = await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024" });
+  if (r1.url) return r1.url;
+  console.error("gpt-image-1 failed:", r1.error);
+
+  const r2 = await attempt({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" });
+  if (r2.url) return r2.url;
+  console.error("dall-e-3 failed:", r2.error);
+
+  const r3 = await attempt({ model: "dall-e-2", prompt: prompt.slice(0, 1000), n: 1, size: "1024x1024" });
+  if (r3.url) return r3.url;
+  console.error("dall-e-2 failed:", r3.error);
+
+  return null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   const { entity, deviceId } = req.body || {};
@@ -149,25 +190,11 @@ export default async function handler(req, res) {
 
   try {
     const prompt = buildPrompt(entity);
-    let imageUrl = null;
+    const imageUrl = await generateImage(prompt, openaiKey);
 
-    // Use dall-e-3 (no response_format param — url is the default)
-    const oaiRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" })
-    });
-
-    if (oaiRes.ok) {
-      const oaiData = await oaiRes.json();
-      imageUrl = oaiData.data?.[0]?.url || null;
-    } else {
-      const errText = await oaiRes.text();
-      console.error("OpenAI image generation failed:", oaiRes.status, errText.substring(0, 300));
+    if (!imageUrl) {
       return res.status(200).json({ url: null, error: "image_gen_failed" });
     }
-
-    if (!imageUrl) return res.status(200).json({ url: null });
 
     const characterName = generateCharacterName(entity.description, Math.floor(Math.random() * 10000));
 
