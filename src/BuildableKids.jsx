@@ -2,7 +2,7 @@
 // Main app flow: intro -> pick game -> make character -> build world -> play.
 // Now with: a top navigation bar, auto-saving of every character/world
 // to "My Stuff", and the ability to reuse saved creations.
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CharacterCreatorScreen, LevelCreatorScreen } from "./CreatorScreen";
 import MyStuffScreen from "./MyStuff";
 import { saveCharacter, saveLevel, libraryCounts } from "./store";
@@ -285,6 +285,74 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
 
 // ============ PLAY GAME SCREEN COMPONENT ============
 function PlayGameScreen({ gameData, onBack, onMyStuff }) {
+  const [gameHtml, setGameHtml] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [dots, setDots] = useState(".");
+  const iframeRef = useRef(null);
+
+  // Animate the loading dots
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setDots((d) => (d.length >= 3 ? "." : d + "."));
+    }, 500);
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  // Auto-generate the game on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    const generateGame = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch("/api/generate-game", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameData }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (cancelled) return;
+
+        if (data.html) {
+          setGameHtml(data.html);
+        } else {
+          setError("Couldn't generate the game. Try again!");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Game generation error:", err);
+          setError("Something went wrong building your game. Try again!");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    generateGame();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Inject the generated HTML into the iframe
+  useEffect(() => {
+    if (gameHtml && iframeRef.current) {
+      const iframe = iframeRef.current;
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(gameHtml);
+        doc.close();
+      }
+    }
+  }, [gameHtml]);
+
   return (
     <div style={styles.container}>
       <div style={styles.topBar}>
@@ -292,9 +360,15 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
         <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
       </div>
 
-      <h1 style={styles.heading}>Your Game is Ready! 🎮</h1>
-      <p style={styles.savedNote}>✓ Saved to My Stuff — your character and world are kept!</p>
+      <h1 style={styles.heading}>
+        {loading ? "Building your game" + dots : gameHtml ? "🎮 " + (gameData.level?.name || "Your Game") + "!" : "Uh oh!"}
+      </h1>
 
+      {!loading && !error && (
+        <p style={styles.savedNote}>✓ Saved to My Stuff — your character and world are kept!</p>
+      )}
+
+      {/* Character + World preview cards */}
       <div style={styles.gamePreview}>
         <div style={styles.previewCard}>
           <h3>Your Character</h3>
@@ -313,34 +387,64 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
             <img src={gameData.level.image} alt="Your level" style={styles.previewImage} />
           )}
           <p>{gameData.level?.name || gameData.level?.theme || gameData.level?.description}</p>
-          {gameData.level?.layers && <p style={{fontSize: '12px', color: '#666'}}>({gameData.level.layers.length} layers)</p>}
+          {gameData.level?.layers && (
+            <p style={{ fontSize: "12px", color: "#666" }}>({gameData.level.layers.length} layers)</p>
+          )}
         </div>
       </div>
 
-      <div style={styles.layerDisplay}>
-        {gameData.level?.layers && gameData.level.layers.length > 0 && (
-          <div>
-            <h3 style={{textAlign: 'center', color: 'white', marginTop: '20px'}}>World Layers</h3>
-            <div style={{display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap'}}>
-              {gameData.level.layers.map((layer, i) => (
-                <div key={i} style={{backgroundColor: 'rgba(255,255,255,0.9)', padding: '10px', borderRadius: '6px', textAlign: 'center', fontSize: '12px'}}>
-                  <strong>{layer.layerType}</strong>
-                  <p style={{margin: '4px 0', fontSize: '11px', color: '#666'}}>speed: {layer.parallaxSpeed}</p>
-                </div>
-              ))}
-            </div>
+      {/* World layers */}
+      {gameData.level?.layers && gameData.level.layers.length > 0 && (
+        <div style={styles.layerDisplay}>
+          <h3 style={{ textAlign: "center", color: "white", marginTop: "20px" }}>World Layers</h3>
+          <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+            {gameData.level.layers.map((layer, i) => (
+              <div key={i} style={{ backgroundColor: "rgba(255,255,255,0.9)", padding: "10px", borderRadius: "6px", textAlign: "center", fontSize: "12px" }}>
+                <strong>{layer.layerType}</strong>
+                <p style={{ margin: "4px 0", fontSize: "11px", color: "#666" }}>speed: {layer.parallaxSpeed}</p>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div style={styles.placeholderGame}>
-        <p style={{ fontSize: "20px" }}>
-          🎮 Game Engine Loading... 🎮<br />
-          <small>Your {gameData.gameType} game will appear here!</small>
-        </p>
-      </div>
+      {/* Game area */}
+      {loading && (
+        <div style={styles.loadingGame}>
+          <div style={styles.loadingSpinner} />
+          <p style={{ fontSize: "22px", fontWeight: "bold", color: "#1a1a3e", margin: "20px 0 8px" }}>
+            🎮 Building your game{dots}
+          </p>
+          <p style={{ fontSize: "15px", color: "#555" }}>
+            Claude is writing custom game code for {gameData.character?.name || "your hero"} right now!
+          </p>
+        </div>
+      )}
 
-      <button onClick={onBack} style={styles.primaryButton}>
+      {error && (
+        <div style={styles.errorGame}>
+          <p style={{ fontSize: "20px", color: "#c0392b" }}>😕 {error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ ...styles.primaryButton, marginTop: "20px", maxWidth: "300px" }}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {gameHtml && !loading && (
+        <div style={styles.iframeWrapper}>
+          <iframe
+            ref={iframeRef}
+            title="Your Game"
+            style={styles.gameIframe}
+            sandbox="allow-scripts allow-same-origin"
+          />
+        </div>
+      )}
+
+      <button onClick={onBack} style={{ ...styles.primaryButton, marginTop: "30px" }}>
         Create a New Game
       </button>
     </div>
@@ -401,7 +505,7 @@ const styles = {
     boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
   },
   heading: {
-    fontSize: "48px",
+    fontSize: "40px",
     fontWeight: "900",
     color: "#1a1a3e",
     textAlign: "center",
@@ -535,9 +639,9 @@ const styles = {
     marginBottom: "15px",
   },
   layerDisplay: {
-    marginBottom: "30px",
+    marginBottom: "20px",
   },
-  placeholderGame: {
+  loadingGame: {
     backgroundColor: "white",
     padding: "60px 40px",
     borderRadius: "16px",
@@ -546,6 +650,41 @@ const styles = {
     maxWidth: "800px",
     width: "100%",
     marginBottom: "30px",
-    color: "#666",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  loadingSpinner: {
+    width: "60px",
+    height: "60px",
+    border: "6px solid #f3f3f3",
+    borderTop: "6px solid #ff9500",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+  },
+  errorGame: {
+    backgroundColor: "white",
+    padding: "40px",
+    borderRadius: "16px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    textAlign: "center",
+    maxWidth: "800px",
+    width: "100%",
+    marginBottom: "30px",
+  },
+  iframeWrapper: {
+    maxWidth: "860px",
+    width: "100%",
+    borderRadius: "16px",
+    overflow: "hidden",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+    marginBottom: "30px",
+    background: "#111",
+  },
+  gameIframe: {
+    width: "100%",
+    height: "440px",
+    border: "none",
+    display: "block",
   },
 };
