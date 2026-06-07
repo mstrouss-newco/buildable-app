@@ -325,10 +325,31 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
       setLoading(true);
       setError(null);
       try {
+        // Strip heavy base64 images before sending — the server only needs
+        // text (names/descriptions/theme). Sending full images blows past
+        // Vercel's hard 4.5MB request-body limit and causes a 413.
+        const slimGameData = {
+          playerName: gameData.playerName,
+          gameType: gameData.gameType,
+          character: gameData.character
+            ? { ...gameData.character, image: undefined }
+            : gameData.character,
+          level: gameData.level
+            ? {
+                ...gameData.level,
+                image: undefined,
+                previewImage: undefined,
+                layers: gameData.level.layers
+                  ? gameData.level.layers.map((l) => ({ ...l, image: undefined }))
+                  : gameData.level.layers,
+              }
+            : gameData.level,
+        };
+
         const response = await fetch("/api/generate-game", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ gameData }),
+          body: JSON.stringify({ gameData: slimGameData }),
         });
 
         if (!response.ok) {
