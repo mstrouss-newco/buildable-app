@@ -7,7 +7,7 @@ import { CharacterCreatorScreen, LevelCreatorScreen } from "./CreatorScreen";
 import MyStuffScreen from "./MyStuff";
 import AdminDashboard from "./AdminDashboard";
 import LoadingGames from "./LoadingGames";
-import { saveCharacter, saveLevel, libraryCounts } from "./store";
+import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
 
 // Screens
 const SCREEN_INTRO = "intro";
@@ -173,7 +173,12 @@ export default function BuildableKids() {
 
 // ============ TOP NAVIGATION BAR ============
 function TopNav({ onBack, onHome, onMyStuff }) {
-  const counts = libraryCounts();
+  const [counts, setCounts] = useState(libraryCounts());
+  useEffect(() => {
+    const refresh = () => setCounts(libraryCounts());
+    refresh();
+    return onLibraryChange(refresh);
+  }, []);
   const total = counts.characters + counts.levels + counts.sounds;
   return (
     <div style={styles.navInner}>

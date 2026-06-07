@@ -2,40 +2,124 @@
 // -------------------------------------------------------------
 // "My Stuff" save layer for Buildable Kids.
 //
-// Right now this saves a child's characters, levels, and sounds
-// on THIS device (no login needed), so anything they make is kept
+// Saves a child's characters, levels (with their layers), and sounds
+// on THIS device — no login needed — so anything they make is kept
 // and can be reused.
 //
-// Later, once the parent login is connected, the marked spots
-// below are where we'll also push/pull these to Supabase so the
-// creations follow the account across devices.
+// Storage uses IndexedDB, which holds hundreds of MB. (The old version
+// used localStorage, which caps at ~5 MB — and since each AI character
+// image is ~2 MB of base64, two characters filled it up and levels
+// silently failed to save. IndexedDB fixes that.)
+//
+// An in-memory cache keeps reads instant/synchronous for the UI, while
+// writes are persisted to IndexedDB in the background. Components can
+// subscribe with onLibraryChange() to refresh once data has loaded.
+//
+// Later, when a parent login is connected, persist() is the single spot
+// to also push these to Supabase so creations follow the account.
 // -------------------------------------------------------------
 
-const KEYS = {
-  characters: "bk_characters",
-  levels: "bk_levels",
-  sounds: "bk_sounds",
-};
+const DB_NAME = "buildable_kids";
+const STORE = "library";
+const KINDS = ["characters", "levels", "sounds"];
+const LEGACY_KEYS = { characters: "bk_characters", levels: "bk_levels", sounds: "bk_sounds" };
 
-function read(key) {
-  try {
-    return JSON.parse(localStorage.getItem(key)) || [];
-  } catch {
-    return [];
+// In-memory cache — the source of truth for synchronous reads.
+const cache = { characters: [], levels: [], sounds: [] };
+let ready = false;
+const listeners = new Set();
+
+function emit() {
+  listeners.forEach((cb) => { try { cb(); } catch {} });
+}
+
+// Subscribe to changes (data loaded, saved, or deleted). Returns an unsubscribe fn.
+export function onLibraryChange(cb) {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}
+
+export function isLibraryReady() {
+  return ready;
+}
+
+// ---------------- IndexedDB plumbing ----------------
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") return reject(new Error("no-indexeddb"));
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGet(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const r = tx.objectStore(STORE).get(key);
+    r.onsuccess = () => resolve(r.result || []);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+async function idbSet(key, value) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// Persist one kind's array to IndexedDB (background; never throws to caller).
+function persist(kind) {
+  return idbSet(kind, cache[kind]).catch(() => {});
+}
+
+// One-time rescue of anything saved under the old localStorage layout.
+function migrateFromLocalStorage() {
+  let migrated = false;
+  for (const kind of KINDS) {
+    try {
+      const raw = localStorage.getItem(LEGACY_KEYS[kind]);
+      if (raw && cache[kind].length === 0) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length) { cache[kind] = arr; migrated = true; }
+      }
+    } catch {}
+  }
+  if (migrated) {
+    KINDS.forEach((k) => persist(k));
+    // Free the old localStorage space the base64 images were hogging.
+    try { Object.values(LEGACY_KEYS).forEach((k) => localStorage.removeItem(k)); } catch {}
   }
 }
 
-function write(key, items) {
+// Load everything from IndexedDB into the cache at startup.
+async function hydrate() {
   try {
-    localStorage.setItem(key, JSON.stringify(items));
+    for (const kind of KINDS) {
+      const arr = await idbGet(kind);
+      cache[kind] = Array.isArray(arr) ? arr : [];
+    }
+    const empty = !cache.characters.length && !cache.levels.length && !cache.sounds.length;
+    if (empty) migrateFromLocalStorage();
   } catch {
-    // device storage full or unavailable — fail quietly
+    // IndexedDB unavailable (rare) — pull whatever localStorage had.
+    migrateFromLocalStorage();
   }
-  // ---- CLOUD SYNC (later) ----
-  // When logged in: also upsert `items` to the matching Supabase
-  // table (characters / levels / sounds) for this account here.
+  ready = true;
+  emit();
 }
+hydrate();
 
+// ---------------- Helpers ----------------
 function makeId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -48,14 +132,13 @@ function autoName(desc) {
 
 // ---------------- Characters ----------------
 export function listCharacters() {
-  return read(KEYS.characters);
+  return cache.characters;
 }
 
 export function saveCharacter(character) {
-  const items = read(KEYS.characters);
-  // skip if it's an exact repeat of the most recent save
-  if (items[0] && character.image && items[0].image === character.image) {
-    return items[0];
+  // Skip if it's an exact repeat of the most recent save.
+  if (cache.characters[0] && character.image && cache.characters[0].image === character.image) {
+    return cache.characters[0];
   }
   const item = {
     id: makeId(),
@@ -64,24 +147,26 @@ export function saveCharacter(character) {
     description: character.description || "",
     image: character.image || null,
   };
-  const next = [item, ...items];
-  write(KEYS.characters, next);
+  cache.characters = [item, ...cache.characters];
+  persist("characters");
+  emit();
   return item;
 }
 
 export function deleteCharacter(id) {
-  write(KEYS.characters, read(KEYS.characters).filter((c) => c.id !== id));
+  cache.characters = cache.characters.filter((c) => c.id !== id);
+  persist("characters");
+  emit();
 }
 
-// ---------------- Levels ----------------
+// ---------------- Levels (with their layers) ----------------
 export function listLevels() {
-  return read(KEYS.levels);
+  return cache.levels;
 }
 
 export function saveLevel(level) {
-  const items = read(KEYS.levels);
-  if (items[0] && level.previewImage && items[0].previewImage === level.previewImage) {
-    return items[0];
+  if (cache.levels[0] && level.previewImage && cache.levels[0].previewImage === level.previewImage) {
+    return cache.levels[0];
   }
   const item = {
     id: makeId(),
@@ -91,24 +176,26 @@ export function saveLevel(level) {
     difficulty: level.difficulty || "",
     description: level.description || "",
     previewImage: level.previewImage || level.image || null,
-    layers: level.layers || [], // NEW: store reusable layers
+    layers: level.layers || [], // reusable layers saved with the level
   };
-  const next = [item, ...items];
-  write(KEYS.levels, next);
+  cache.levels = [item, ...cache.levels];
+  persist("levels");
+  emit();
   return item;
 }
 
 export function deleteLevel(id) {
-  write(KEYS.levels, read(KEYS.levels).filter((l) => l.id !== id));
+  cache.levels = cache.levels.filter((l) => l.id !== id);
+  persist("levels");
+  emit();
 }
 
 // ---------------- Sounds (for later) ----------------
 export function listSounds() {
-  return read(KEYS.sounds);
+  return cache.sounds;
 }
 
 export function saveSound(sound) {
-  const items = read(KEYS.sounds);
   const item = {
     id: makeId(),
     createdAt: Date.now(),
@@ -116,20 +203,23 @@ export function saveSound(sound) {
     kind: sound.kind || "sound-effect",
     url: sound.url || null,
   };
-  const next = [item, ...items];
-  write(KEYS.sounds, next);
+  cache.sounds = [item, ...cache.sounds];
+  persist("sounds");
+  emit();
   return item;
 }
 
 export function deleteSound(id) {
-  write(KEYS.sounds, read(KEYS.sounds).filter((s) => s.id !== id));
+  cache.sounds = cache.sounds.filter((s) => s.id !== id);
+  persist("sounds");
+  emit();
 }
 
 // ---------------- Helpers ----------------
 export function libraryCounts() {
   return {
-    characters: read(KEYS.characters).length,
-    levels: read(KEYS.levels).length,
-    sounds: read(KEYS.sounds).length,
+    characters: cache.characters.length,
+    levels: cache.levels.length,
+    sounds: cache.sounds.length,
   };
 }

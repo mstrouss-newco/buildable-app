@@ -1,20 +1,42 @@
 // /src/MyStuff.jsx
 // The "My Stuff" library: shows everything a child has saved
 // (characters, levels, and later sounds) so they can reuse it.
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   listCharacters,
   deleteCharacter,
   listLevels,
   deleteLevel,
   listSounds,
+  onLibraryChange,
 } from "./store";
+
+const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
+const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const PAGE_BG =
+  "radial-gradient(circle at 12% -10%, rgba(155,126,221,0.28), transparent 42%)," +
+  "radial-gradient(circle at 88% 112%, rgba(214,90,123,0.24), transparent 42%)," +
+  "#0a0a14";
+const CARD_BG = "rgba(255,255,255,0.05)";
+const CARD_BORDER = "1px solid rgba(155,126,221,0.22)";
 
 export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHome, initialTab }) {
   const [tab, setTab] = useState(initialTab || "characters");
   const [characters, setCharacters] = useState(listCharacters());
   const [levels, setLevels] = useState(listLevels());
-  const [sounds] = useState(listSounds());
+  const [sounds, setSounds] = useState(listSounds());
+
+  // Refresh when the saved library finishes loading or anything is saved/deleted.
+  useEffect(() => {
+    const refresh = () => {
+      setCharacters([...listCharacters()]);
+      setLevels([...listLevels()]);
+      setSounds([...listSounds()]);
+    };
+    refresh();
+    return onLibraryChange(refresh);
+  }, []);
 
   const removeCharacter = (id) => {
     deleteCharacter(id);
@@ -48,8 +70,9 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
             onClick={() => setTab(t.id)}
             style={{
               ...s.tab,
-              backgroundColor: tab === t.id ? "#1a1a3e" : "white",
-              color: tab === t.id ? "white" : "#1a1a3e",
+              background: tab === t.id ? GRAD : "rgba(255,255,255,0.06)",
+              color: "#fff",
+              boxShadow: tab === t.id ? "0 6px 18px rgba(155,126,221,0.45)" : "none",
             }}
           >
             {t.icon} {t.label} ({t.count})
@@ -136,9 +159,10 @@ function Empty({ text }) {
 const s = {
   container: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #ffc107 0%, #ff9500 100%)",
-    padding: "20px",
-    fontFamily: "system-ui, -apple-system, sans-serif",
+    background: PAGE_BG,
+    padding: "24px 20px 60px",
+    fontFamily: NUN,
+    color: "#fff",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -148,29 +172,34 @@ const s = {
     maxWidth: "1000px",
     display: "flex",
     gap: "10px",
-    marginBottom: "20px",
+    marginBottom: "22px",
   },
   navBtn: {
-    padding: "10px 20px",
-    backgroundColor: "white",
-    border: "none",
-    borderRadius: "20px",
-    fontWeight: "600",
+    padding: "11px 20px",
+    background: "rgba(255,255,255,0.06)",
+    color: "#fff",
+    border: "1px solid rgba(255,255,255,0.16)",
+    borderRadius: "14px",
+    fontWeight: "700",
+    fontFamily: NUN,
     cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    backdropFilter: "blur(8px)",
   },
   heading: {
+    fontFamily: FRED,
     fontSize: "44px",
-    fontWeight: "900",
-    color: "#1a1a3e",
+    fontWeight: "700",
+    color: "#fff",
     textAlign: "center",
-    marginBottom: "10px",
+    marginBottom: "8px",
+    textShadow: "0 0 34px rgba(155,126,221,0.55)",
   },
   tagline: {
     fontSize: "18px",
-    color: "#333",
+    color: "#b8b3d0",
     textAlign: "center",
-    marginBottom: "25px",
+    marginBottom: "26px",
+    fontWeight: "600",
   },
   tabRow: {
     display: "flex",
@@ -180,13 +209,13 @@ const s = {
     marginBottom: "30px",
   },
   tab: {
-    padding: "12px 20px",
+    padding: "12px 22px",
     borderRadius: "30px",
-    border: "none",
-    fontWeight: "700",
+    border: "1px solid rgba(155,126,221,0.25)",
+    fontWeight: "800",
     fontSize: "15px",
     cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    fontFamily: NUN,
   },
   grid: {
     display: "grid",
@@ -196,18 +225,20 @@ const s = {
     width: "100%",
   },
   card: {
-    backgroundColor: "white",
-    borderRadius: "16px",
+    background: CARD_BG,
+    border: CARD_BORDER,
+    borderRadius: "20px",
     overflow: "hidden",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    boxShadow: "0 16px 44px rgba(0,0,0,0.45)",
     display: "flex",
     flexDirection: "column",
+    backdropFilter: "blur(12px)",
   },
   cardImage: {
     width: "100%",
     aspectRatio: "1",
     objectFit: "cover",
-    backgroundColor: "#f5f5f5",
+    background: "rgba(0,0,0,0.3)",
   },
   noImage: {
     width: "100%",
@@ -216,18 +247,19 @@ const s = {
     alignItems: "center",
     justifyContent: "center",
     fontSize: "60px",
-    backgroundColor: "#f5f5f5",
+    background: "rgba(0,0,0,0.25)",
   },
   cardTitle: {
-    fontSize: "18px",
-    fontWeight: "bold",
-    color: "#1a1a3e",
-    margin: "12px 14px 4px",
+    fontFamily: FRED,
+    fontSize: "19px",
+    fontWeight: "600",
+    color: "#fff",
+    margin: "14px 16px 4px",
   },
   cardDesc: {
     fontSize: "13px",
-    color: "#666",
-    margin: "0 14px 12px",
+    color: "#aaa4c4",
+    margin: "0 16px 12px",
     flex: 1,
     display: "-webkit-box",
     WebkitLineClamp: 3,
@@ -237,38 +269,42 @@ const s = {
   cardActions: {
     display: "flex",
     gap: "8px",
-    padding: "0 14px 14px",
+    padding: "0 16px 16px",
   },
   useBtn: {
     flex: 1,
-    padding: "10px",
-    backgroundColor: "#4CAF50",
-    color: "white",
+    padding: "11px",
+    background: GRAD,
+    color: "#fff",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "12px",
+    fontWeight: "800",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontFamily: NUN,
+    boxShadow: "0 6px 16px rgba(155,126,221,0.4)",
+  },
+  deleteBtn: {
+    padding: "11px 15px",
+    background: "rgba(255,255,255,0.06)",
+    color: "#ff9a9a",
+    border: "1px solid rgba(214,90,123,0.3)",
+    borderRadius: "12px",
     fontWeight: "700",
     cursor: "pointer",
     fontSize: "14px",
-  },
-  deleteBtn: {
-    padding: "10px 14px",
-    backgroundColor: "#f5f5f5",
-    color: "#d32f2f",
-    border: "none",
-    borderRadius: "10px",
-    fontWeight: "600",
-    cursor: "pointer",
-    fontSize: "14px",
+    fontFamily: NUN,
   },
   empty: {
-    backgroundColor: "white",
-    borderRadius: "16px",
+    background: CARD_BG,
+    border: CARD_BORDER,
+    borderRadius: "20px",
     padding: "50px 30px",
     textAlign: "center",
-    color: "#666",
+    color: "#b8b3d0",
     fontSize: "17px",
     maxWidth: "600px",
     width: "100%",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    boxShadow: "0 16px 44px rgba(0,0,0,0.45)",
   },
 };
