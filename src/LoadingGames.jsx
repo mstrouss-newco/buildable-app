@@ -8,20 +8,23 @@ export default function LoadingGames({ isLoading, onComplete, operationType = 'c
   const [gameType, setGameType] = useState('numbers');
   const [gameState, setGameState] = useState('playing');
   const [score, setScore] = useState(0);
+const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     if (!isLoading && gameState === 'playing') {
       // Render complete - show result
       setGameState('complete');
       setTimeout(() => {
-        onComplete?.();
-      }, 1500); // Show result for 1.5s then close
+onComplete?.();
+setDismissed(true);
+}, 1500); // Show result for 1.5s then close
     }
   }, [isLoading]);
 
-  if (!isLoading && gameState !== 'complete') {
-    return null;
-  }
+  if (dismissed) return null;
+if (!isLoading && gameState !== 'complete') {
+return null;
+}
 
   return (
     <div className="loading-games-overlay">
