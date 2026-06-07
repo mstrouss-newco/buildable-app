@@ -1,0 +1,19 @@
+{
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/demo/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/demo/(.*)", "dest": "/index.html" },
+    { "src": "/demo", "dest": "/index.html" },
+    { "src": "/games-library.html", "dest": "/games-library.html" },
+    { "src": "/games", "dest": "/games-library.html" },
+    { "src": "/library", "dest": "/games-library.html" },
+    { "src": "/croctot.html", "dest": "/croctot.html" },
+    { "src": "/rileys-garden.html", "dest": "/rileys-garden.html" },
+    { "src": "/(.*)", "dest": "/landing.html" }
+  ]
+}
