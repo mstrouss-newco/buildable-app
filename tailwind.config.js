@@ -5,7 +5,13 @@ export default {
         "./src/**/*.{js,ts,jsx,tsx}",
       ],
       theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        fredoka: ['Fredoka', 'sans-serif'],
+        nunito: ['Nunito', 'sans-serif'],
+        sans: ['Nunito', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
     }
