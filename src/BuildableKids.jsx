@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { CharacterCreatorScreen, LevelCreatorScreen } from "./CreatorScreen";
 import MyStuffScreen from "./MyStuff";
 import AdminDashboard from "./AdminDashboard";
+import LoadingGames from "./LoadingGames";
 import { saveCharacter, saveLevel, libraryCounts } from "./store";
 
 // Screens
@@ -210,7 +211,7 @@ function IntroScreen({ onComplete, onMyStuff, onAdmin }) {
       </div>
 
       <div style={styles.gameIcon}>🎮</div>
-      <h1 style={styles.heading}>Buildable Kids</h1>
+      <h1 style={styles.logo}>buildablekids.</h1>
       <p style={styles.tagline}>Build your own game in 3 minutes!</p>
 
       <div style={styles.formCard}>
@@ -235,8 +236,10 @@ function IntroScreen({ onComplete, onMyStuff, onAdmin }) {
               onClick={() => setAge(a)}
               style={{
                 ...styles.ageButton,
-                backgroundColor: age === a ? "#ff9500" : "#e0e0e0",
-                color: age === a ? "white" : "#333",
+                background: age === a ? GRAD : "rgba(255,255,255,0.07)",
+                color: age === a ? "#fff" : "#cfc9e6",
+                boxShadow: age === a ? "0 6px 18px rgba(155,126,221,0.5)" : "none",
+                transform: age === a ? "scale(1.08)" : "none",
               }}
             >
               {a}
@@ -364,6 +367,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
 
   return (
     <div style={styles.container}>
+      <LoadingGames isLoading={loading} operationType="game" onComplete={() => {}} />
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
         <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
@@ -397,7 +401,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
           )}
           <p>{gameData.level?.name || gameData.level?.theme || gameData.level?.description}</p>
           {gameData.level?.layers && (
-            <p style={{ fontSize: "12px", color: "#666" }}>({gameData.level.layers.length} layers)</p>
+            <p style={{ fontSize: "12px", color: "#9c97b8" }}>({gameData.level.layers.length} layers)</p>
           )}
         </div>
       </div>
@@ -421,10 +425,10 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
       {loading && (
         <div style={styles.loadingGame}>
           <div style={styles.loadingSpinner} />
-          <p style={{ fontSize: "22px", fontWeight: "bold", color: "#1a1a3e", margin: "20px 0 8px" }}>
+          <p style={{ fontSize: "22px", fontWeight: "bold", color: "#fff", margin: "20px 0 8px" }}>
             🎮 Building your game{dots}
           </p>
-          <p style={{ fontSize: "15px", color: "#555" }}>
+          <p style={{ fontSize: "15px", color: "#b0abc8" }}>
             Claude is writing custom game code for {gameData.character?.name || "your hero"} right now!
           </p>
         </div>
@@ -432,7 +436,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
 
       {error && (
         <div style={styles.errorGame}>
-          <p style={{ fontSize: "20px", color: "#c0392b" }}>😕 {error}</p>
+          <p style={{ fontSize: "20px", color: "#ff9a9a" }}>😕 {error}</p>
           <button
             onClick={() => window.location.reload()}
             style={{ ...styles.primaryButton, marginTop: "20px", maxWidth: "300px" }}
@@ -461,19 +465,30 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
 }
 
 // ============ STYLES ============
+const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
+const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const PAGE_BG =
+  "radial-gradient(circle at 12% -10%, rgba(155,126,221,0.28), transparent 42%)," +
+  "radial-gradient(circle at 88% 112%, rgba(214,90,123,0.24), transparent 42%)," +
+  "#0a0a14";
+const CARD_BG = "rgba(255,255,255,0.05)";
+const CARD_BORDER = "1px solid rgba(155,126,221,0.22)";
+
 const styles = {
   container: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #ffc107 0%, #ff9500 100%)",
-    padding: "20px",
-    fontFamily: "system-ui, -apple-system, sans-serif",
+    background: PAGE_BG,
+    padding: "24px 20px 60px",
+    fontFamily: NUN,
+    color: "#fff",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
   },
   topBar: {
     width: "100%",
-    maxWidth: "1200px",
+    maxWidth: "1100px",
     display: "flex",
     justifyContent: "space-between",
     marginBottom: "30px",
@@ -481,93 +496,122 @@ const styles = {
   },
   navInner: {
     width: "100%",
-    maxWidth: "1200px",
+    maxWidth: "1100px",
     display: "flex",
     justifyContent: "space-between",
-    marginBottom: "20px",
+    marginBottom: "24px",
     gap: "10px",
   },
   introTopBar: {
     width: "100%",
-    maxWidth: "1200px",
+    maxWidth: "1100px",
     display: "flex",
     justifyContent: "flex-end",
-    marginBottom: "10px",
+    gap: "10px",
+    marginBottom: "24px",
   },
   backButton: {
-    padding: "10px 20px",
-    backgroundColor: "white",
-    border: "none",
-    borderRadius: "20px",
-    fontWeight: "600",
+    padding: "11px 20px",
+    background: "rgba(255,255,255,0.06)",
+    color: "#fff",
+    border: "1px solid rgba(255,255,255,0.16)",
+    borderRadius: "14px",
+    fontWeight: "700",
+    fontSize: "15px",
+    fontFamily: NUN,
     cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    backdropFilter: "blur(8px)",
   },
   myStuffButton: {
-    padding: "10px 20px",
-    backgroundColor: "#1a1a3e",
-    color: "white",
+    padding: "11px 22px",
+    background: GRAD,
+    color: "#fff",
     border: "none",
-    borderRadius: "20px",
-    fontWeight: "700",
+    borderRadius: "14px",
+    fontWeight: "800",
+    fontSize: "15px",
+    fontFamily: NUN,
     cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    boxShadow: "0 6px 22px rgba(155,126,221,0.45)",
+  },
+  logo: {
+    fontFamily: FRED,
+    fontSize: "clamp(44px, 9vw, 72px)",
+    fontWeight: "700",
+    background: "linear-gradient(90deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+    letterSpacing: "-2px",
+    textAlign: "center",
+    margin: "0 0 6px",
+    lineHeight: 1.05,
   },
   heading: {
-    fontSize: "40px",
-    fontWeight: "900",
-    color: "#1a1a3e",
+    fontFamily: FRED,
+    fontSize: "44px",
+    fontWeight: "700",
+    color: "#fff",
     textAlign: "center",
-    marginBottom: "15px",
-    textShadow: "2px 2px 4px rgba(0,0,0,0.1)",
+    marginBottom: "14px",
+    textShadow: "0 0 34px rgba(155,126,221,0.55)",
   },
   tagline: {
-    fontSize: "20px",
-    color: "#333",
+    fontSize: "19px",
+    color: "#b8b3d0",
     textAlign: "center",
-    marginBottom: "40px",
+    marginBottom: "38px",
+    fontWeight: "600",
   },
   savedNote: {
     fontSize: "15px",
-    color: "#1a6b2e",
-    backgroundColor: "rgba(255,255,255,0.7)",
-    padding: "8px 16px",
-    borderRadius: "20px",
-    marginBottom: "25px",
-    fontWeight: "600",
+    color: "#7ee6a6",
+    background: "rgba(80,220,130,0.12)",
+    border: "1px solid rgba(80,220,130,0.3)",
+    padding: "10px 20px",
+    borderRadius: "30px",
+    marginBottom: "26px",
+    fontWeight: "700",
   },
   gameIcon: {
-    fontSize: "60px",
+    fontSize: "64px",
     textAlign: "center",
-    marginBottom: "20px",
+    marginBottom: "6px",
+    filter: "drop-shadow(0 8px 22px rgba(155,126,221,0.5))",
   },
   formCard: {
-    backgroundColor: "white",
-    padding: "30px",
-    borderRadius: "20px",
-    marginBottom: "20px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    background: CARD_BG,
+    border: CARD_BORDER,
+    padding: "28px",
+    borderRadius: "24px",
+    marginBottom: "18px",
+    boxShadow: "0 16px 44px rgba(0,0,0,0.45)",
     maxWidth: "500px",
     width: "100%",
+    backdropFilter: "blur(12px)",
   },
   formHeading: {
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#1a1a3e",
-    marginBottom: "15px",
+    fontFamily: FRED,
+    fontSize: "23px",
+    fontWeight: "600",
+    color: "#fff",
+    marginBottom: "16px",
   },
   textInput: {
     width: "100%",
-    padding: "15px",
+    padding: "16px",
     fontSize: "16px",
-    border: "3px solid #ffb700",
-    borderRadius: "12px",
+    background: "rgba(0,0,0,0.28)",
+    border: "2px solid rgba(155,126,221,0.4)",
+    borderRadius: "16px",
     boxSizing: "border-box",
     fontFamily: "inherit",
+    color: "#fff",
+    outline: "none",
   },
   helpText: {
     fontSize: "13px",
-    color: "#666",
+    color: "#8e89a8",
     marginTop: "10px",
   },
   ageButtons: {
@@ -577,84 +621,95 @@ const styles = {
     justifyContent: "center",
   },
   ageButton: {
-    width: "50px",
-    height: "50px",
+    width: "52px",
+    height: "52px",
     fontSize: "18px",
-    fontWeight: "bold",
+    fontWeight: "800",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "14px",
     cursor: "pointer",
     transition: "all 0.2s",
+    fontFamily: NUN,
   },
   primaryButton: {
-    padding: "16px 40px",
-    fontSize: "18px",
-    fontWeight: "bold",
-    backgroundColor: "#1a1a3e",
-    color: "white",
+    padding: "18px 44px",
+    fontSize: "19px",
+    fontWeight: "800",
+    fontFamily: FRED,
+    background: GRAD,
+    color: "#fff",
     border: "none",
-    borderRadius: "12px",
+    borderRadius: "18px",
     cursor: "pointer",
     transition: "all 0.2s",
     maxWidth: "500px",
     width: "100%",
+    boxShadow: "0 12px 32px rgba(155,126,221,0.5)",
+    letterSpacing: "0.3px",
   },
   gameGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
     gap: "20px",
     maxWidth: "1000px",
     width: "100%",
     marginBottom: "30px",
   },
   gameCard: {
-    padding: "30px 20px",
-    backgroundColor: "white",
-    border: "none",
-    borderRadius: "16px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    padding: "32px 22px",
+    background: CARD_BG,
+    border: CARD_BORDER,
+    borderRadius: "22px",
+    boxShadow: "0 16px 44px rgba(0,0,0,0.45)",
     cursor: "pointer",
-    transition: "all 0.3s",
     fontSize: "16px",
+    textAlign: "center",
+    color: "#fff",
+    backdropFilter: "blur(12px)",
   },
   gameCardTitle: {
-    fontSize: "20px",
-    fontWeight: "bold",
-    color: "#1a1a3e",
-    margin: "15px 0 10px 0",
+    fontFamily: FRED,
+    fontSize: "21px",
+    fontWeight: "600",
+    color: "#fff",
+    margin: "14px 0 8px 0",
   },
   gameCardDescription: {
     fontSize: "14px",
-    color: "#666",
+    color: "#b0abc8",
     margin: 0,
   },
   gamePreview: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "30px",
-    maxWidth: "800px",
+    gap: "20px",
+    maxWidth: "760px",
     width: "100%",
-    marginBottom: "30px",
+    marginBottom: "26px",
   },
   previewCard: {
-    backgroundColor: "white",
+    background: CARD_BG,
+    border: CARD_BORDER,
     padding: "20px",
-    borderRadius: "16px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    borderRadius: "20px",
+    boxShadow: "0 16px 44px rgba(0,0,0,0.45)",
+    color: "#fff",
+    backdropFilter: "blur(12px)",
   },
   previewImage: {
     width: "100%",
-    borderRadius: "8px",
-    marginBottom: "15px",
+    borderRadius: "14px",
+    marginBottom: "12px",
   },
   layerDisplay: {
     marginBottom: "20px",
   },
   loadingGame: {
-    backgroundColor: "white",
-    padding: "60px 40px",
-    borderRadius: "16px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    background: CARD_BG,
+    border: CARD_BORDER,
+    padding: "56px 40px",
+    borderRadius: "24px",
+    boxShadow: "0 16px 44px rgba(0,0,0,0.45)",
     textAlign: "center",
     maxWidth: "800px",
     width: "100%",
@@ -662,33 +717,38 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    color: "#fff",
+    backdropFilter: "blur(12px)",
   },
   loadingSpinner: {
     width: "60px",
     height: "60px",
-    border: "6px solid #f3f3f3",
-    borderTop: "6px solid #ff9500",
+    border: "6px solid rgba(255,255,255,0.12)",
+    borderTop: "6px solid #9b7edd",
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
   },
   errorGame: {
-    backgroundColor: "white",
+    background: CARD_BG,
+    border: "1px solid rgba(214,90,123,0.4)",
     padding: "40px",
-    borderRadius: "16px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    borderRadius: "24px",
+    boxShadow: "0 16px 44px rgba(0,0,0,0.45)",
     textAlign: "center",
     maxWidth: "800px",
     width: "100%",
     marginBottom: "30px",
+    color: "#fff",
   },
   iframeWrapper: {
     maxWidth: "860px",
     width: "100%",
-    borderRadius: "16px",
+    borderRadius: "20px",
     overflow: "hidden",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+    boxShadow: "0 16px 50px rgba(155,126,221,0.3)",
+    border: "1px solid rgba(155,126,221,0.3)",
     marginBottom: "30px",
-    background: "#111",
+    background: "#0a0a14",
   },
   gameIframe: {
     width: "100%",
