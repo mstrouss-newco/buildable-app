@@ -340,7 +340,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
                 image: undefined,
                 previewImage: undefined,
                 layers: gameData.level.layers
-                  ? gameData.level.layers.map((l) => ({ ...l, image: undefined }))
+                  ? gameData.level.layers.map((l) => ({ ...l, image: undefined, imageUrl: undefined }))
                   : gameData.level.layers,
               }
             : gameData.level,
