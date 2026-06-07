@@ -80,20 +80,21 @@ async function logSpend(supabaseUrl, supabaseKey, cost) {
 }
 
 // Generates one image via dall-e-3. Returns { url, error } where url is null on failure.
-async function generateImage(prompt, openaiKey, timeoutMs = 45000) {
+async function generateImage(prompt, openaiKey, timeoutMs = 55000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard", response_format: "url" }),
+      body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" }),
       signal: ctrl.signal
     });
     clearTimeout(timer);
     if (res.ok) {
       const data = await res.json();
-      return { url: data.data?.[0]?.url || null, error: null };
+      const url = data.data?.[0]?.url || null;
+      return { url, error: null };
     }
     const errText = await res.text();
     console.error(`generateImage failed ${res.status}: ${errText.slice(0, 300)}`);
