@@ -301,16 +301,36 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
           {gameData.character?.image && (
             <img src={gameData.character.image} alt="Your character" style={styles.previewImage} />
           )}
-          <p>{gameData.character?.description}</p>
+          <p>{gameData.character?.name || gameData.character?.description}</p>
         </div>
 
         <div style={styles.previewCard}>
           <h3>Your World</h3>
-          {gameData.level?.image && (
+          {gameData.level?.previewImage && (
+            <img src={gameData.level.previewImage} alt="Your level" style={styles.previewImage} />
+          )}
+          {gameData.level?.image && !gameData.level?.previewImage && (
             <img src={gameData.level.image} alt="Your level" style={styles.previewImage} />
           )}
-          <p>{gameData.level?.theme || gameData.level?.description}</p>
+          <p>{gameData.level?.name || gameData.level?.theme || gameData.level?.description}</p>
+          {gameData.level?.layers && <p style={{fontSize: '12px', color: '#666'}}>({gameData.level.layers.length} layers)</p>}
         </div>
+      </div>
+
+      <div style={styles.layerDisplay}>
+        {gameData.level?.layers && gameData.level.layers.length > 0 && (
+          <div>
+            <h3 style={{textAlign: 'center', color: 'white', marginTop: '20px'}}>World Layers</h3>
+            <div style={{display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap'}}>
+              {gameData.level.layers.map((layer, i) => (
+                <div key={i} style={{backgroundColor: 'rgba(255,255,255,0.9)', padding: '10px', borderRadius: '6px', textAlign: 'center', fontSize: '12px'}}>
+                  <strong>{layer.layerType}</strong>
+                  <p style={{margin: '4px 0', fontSize: '11px', color: '#666'}}>speed: {layer.parallaxSpeed}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={styles.placeholderGame}>
@@ -513,6 +533,9 @@ const styles = {
     width: "100%",
     borderRadius: "8px",
     marginBottom: "15px",
+  },
+  layerDisplay: {
+    marginBottom: "30px",
   },
   placeholderGame: {
     backgroundColor: "white",

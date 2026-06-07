@@ -80,7 +80,7 @@ export function listLevels() {
 
 export function saveLevel(level) {
   const items = read(KEYS.levels);
-  if (items[0] && level.image && items[0].image === level.image) {
+  if (items[0] && level.previewImage && items[0].previewImage === level.previewImage) {
     return items[0];
   }
   const item = {
@@ -90,7 +90,8 @@ export function saveLevel(level) {
     theme: level.theme || "",
     difficulty: level.difficulty || "",
     description: level.description || "",
-    image: level.image || null,
+    previewImage: level.previewImage || level.image || null,
+    layers: level.layers || [], // NEW: store reusable layers
   };
   const next = [item, ...items];
   write(KEYS.levels, next);

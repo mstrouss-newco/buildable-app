@@ -1,12 +1,36 @@
 // /api/generate-creature.js
 import crypto from "crypto";
+
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
 const DALLE_COST_PER_IMAGE = 0.04;
+
+// Character name generation
+const CHARACTER_ADJECTIVES = ['Zappy', 'Wobbly', 'Sparkly', 'Bouncy', 'Zippy', 'Giggly', 'Fuzzy', 'Speedy', 'Silly', 'Twirly', 'Snappy', 'Chirpy', 'Wiggly', 'Jolly', 'Tickly', 'Mighty', 'Brave', 'Swift', 'Clever', 'Wild'];
+const CHARACTER_NOUNS = ['McSparkle', 'Fang', 'Wings', 'Zoom', 'Bounce', 'Whirl', 'Dash', 'Splash', 'Thunder', 'Whisker', 'Fluff', 'Spark', 'Bolt', 'Claw', 'Stripe', 'Spot', 'Flame', 'Frost', 'Storm', 'Breeze'];
+
+function hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash);
+}
+
+function generateCharacterName(description = '', existingCount = 0) {
+    const hash = hashString(description + existingCount.toString());
+    const adjIdx = hash % CHARACTER_ADJECTIVES.length;
+    const nounIdx = (hash >> 8) % CHARACTER_NOUNS.length;
+    return `${CHARACTER_ADJECTIVES[adjIdx]} ${CHARACTER_NOUNS[nounIdx]}`;
+}
+
 function entityHash(entity) {
     // Include description in the hash so free-text descriptions get unique images
     const stable = JSON.stringify({description: entity.description || "",color: entity.color || "",body: entity.body || "",feature: entity.feature || "",style: entity.style || "",accessory: entity.accessory || ""});
     return crypto.createHash("sha256").update(stable).digest("hex").slice(0, 16);
 }
+
 function buildPrompt(entity) {
     // If the kid typed a free-text description, use it directly as the main subject
   if (entity.description && entity.description.trim().length > 3) {
@@ -31,6 +55,7 @@ function buildPrompt(entity) {
     const features = featureBits.join(", ");
     return `A cute, friendly cartoon ${style}${color} ${body} ${features}, child-friendly storybook illustration, bright colors, simple shapes, white background, centered, no text, no scary features, suitable for ages 5-12, kawaii style`.trim();
 }
+
 async function checkBudget(supabaseUrl, supabaseKey) {
     if (!supabaseUrl || !supabaseKey) return true;
     try {
@@ -42,6 +67,7 @@ async function checkBudget(supabaseUrl, supabaseKey) {
           return total < DAILY_BUDGET_USD;
     } catch (e) { return true; }
 }
+
 async function logSpend(supabaseUrl, supabaseKey, cost) {
     if (!supabaseUrl || !supabaseKey) return;
     try {
@@ -49,6 +75,7 @@ async function logSpend(supabaseUrl, supabaseKey, cost) {
           await fetch(`${supabaseUrl}/rest/v1/usage_log`, {method: "POST",headers: {"apikey": supabaseKey,"Authorization": `Bearer ${supabaseKey}`,"Content-Type": "application/json"},body: JSON.stringify({date: today, cost_usd: cost, kind: "image"})});
     } catch (e) {}
 }
+
 async function checkCache(supabaseUrl, supabaseKey, hash) {
     try {
           const r = await fetch(`${supabaseUrl}/rest/v1/creature_cache?select=image_url&hash=eq.${hash}`, {headers: {"apikey": supabaseKey,"Authorization": `Bearer ${supabaseKey}`}});
@@ -57,14 +84,40 @@ async function checkCache(supabaseUrl, supabaseKey, hash) {
           return rows[0]?.image_url || null;
     } catch (e) { return null; }
 }
+
 async function saveCache(supabaseUrl, supabaseKey, hash, url, entity) {
     try {
           await fetch(`${supabaseUrl}/rest/v1/creature_cache`, {method: "POST",headers: {"apikey": supabaseKey,"Authorization": `Bearer ${supabaseKey}`,"Content-Type": "application/json","Prefer": "resolution=merge-duplicates"},body: JSON.stringify({hash, image_url: url, color: entity.color, body: entity.body, feature: entity.feature, description: entity.description || null})});
     } catch (e) {}
 }
+
+// Log creature to community library
+async function logToCommunity(supabaseUrl, supabaseKey, name, description, imageUrl, deviceId) {
+    if (!supabaseUrl || !supabaseKey) return null;
+    try {
+        const r = await fetch(`${supabaseUrl}/rest/v1/community_characters`, {
+            method: "POST",
+            headers: {"apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json", "Prefer": "return=representation"},
+            body: JSON.stringify({
+                name,
+                description,
+                image_url: imageUrl,
+                created_by_device_id: deviceId,
+                moderation_status: "approved"
+            })
+        });
+        if (r.ok) {
+            const data = await r.json();
+            return data[0]?.id || null;
+        }
+    } catch (e) {
+        console.error('Failed to log to community:', e);
+    }
+    return null;
+}
 export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).json({error: "POST only"});
-    const { entity } = req.body || {};
+    const { entity, deviceId } = req.body || {};
     if (!entity || (!entity.body && !entity.description)) return res.status(400).json({error: "entity.body or entity.description required"});
     const hash = entityHash(entity);
     const openaiKey = process.env.OPENAI_API_KEY;
@@ -73,7 +126,11 @@ export default async function handler(req, res) {
     if (!openaiKey) return res.status(200).json({url: null});
     if (supabaseUrl && supabaseKey) {
           const cached = await checkCache(supabaseUrl, supabaseKey, hash);
-          if (cached) return res.status(200).json({url: cached, cached: true});
+          if (cached) {
+              // Generate name for cached image too
+              const characterName = generateCharacterName(entity.description, Math.floor(Math.random() * 10000));
+              return res.status(200).json({url: cached, cached: true, characterName});
+          }
           const inBudget = await checkBudget(supabaseUrl, supabaseKey);
           if (!inBudget) return res.status(200).json({url: null, reason: "daily_budget_reached"});
     }
@@ -111,11 +168,17 @@ export default async function handler(req, res) {
         }
         
         if (!imageUrl) return res.status(200).json({url: null});
+        
+        // Auto-generate character name
+        const characterName = generateCharacterName(entity.description, Math.floor(Math.random() * 10000));
+        
         if (supabaseUrl && supabaseKey) {
             await saveCache(supabaseUrl, supabaseKey, hash, imageUrl, entity);
             await logSpend(supabaseUrl, supabaseKey, DALLE_COST_PER_IMAGE);
+            // Log to community library
+            await logToCommunity(supabaseUrl, supabaseKey, characterName, entity.description || '', imageUrl, deviceId || 'anonymous');
         }
-        return res.status(200).json({url: imageUrl, cached: false});
+        return res.status(200).json({url: imageUrl, cached: false, characterName});
     } catch (e) {
         console.error("generate-creature error:", e);
         return res.status(200).json({url: null, error: e.message});

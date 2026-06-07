@@ -4,6 +4,7 @@ import { useState } from "react";
 export function CharacterCreatorScreen({ onCharacterCreated }) {
   const [description, setDescription] = useState("a fluffy pink dragon with sparkly wings");
   const [characterImage, setCharacterImage] = useState(null);
+  const [characterName, setCharacterName] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -11,6 +12,7 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
     setLoading(true);
     setError(null);
     try {
+      const deviceId = localStorage.getItem('deviceId') || `device_${Date.now()}`;
       const response = await fetch("/api/generate-creature", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -18,13 +20,15 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
           entity: {
             description: description,
             body: "creature"
-          }
+          },
+          deviceId
         })
       });
 
       const data = await response.json();
       if (data.url) {
         setCharacterImage(data.url);
+        setCharacterName(data.characterName || "Mystery Creature");
       } else {
         setError(data.reason === "daily_budget_reached" 
           ? "Daily image budget reached. Please try again tomorrow!" 
@@ -40,6 +44,7 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
 
   const handleContinue = () => {
     onCharacterCreated({
+      name: characterName,
       description,
       image: characterImage
     });
@@ -93,6 +98,7 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
           {characterImage ? (
             <>
               <img src={characterImage} alt="Your character" style={styles.previewImage} />
+              {characterName && <p style={{textAlign: 'center', fontWeight: 'bold', marginTop: '10px'}}>{characterName}</p>}
               <button onClick={generateCharacter} style={styles.regenerateButton}>
                 Regenerate
               </button>
@@ -119,6 +125,8 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
   const [theme, setTheme] = useState("forest");
   const [difficulty, setDifficulty] = useState("easy");
   const [levelImage, setLevelImage] = useState(null);
+  const [levelLayers, setLevelLayers] = useState(null);
+  const [levelName, setLevelName] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -126,6 +134,7 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
     setLoading(true);
     setError(null);
     try {
+      const deviceId = localStorage.getItem('deviceId') || `device_${Date.now()}`;
       const response = await fetch("/api/generate-level", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -134,13 +143,16 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
             description: description,
             theme: theme,
             difficulty: difficulty
-          }
+          },
+          deviceId
         })
       });
 
       const data = await response.json();
-      if (data.url) {
-        setLevelImage(data.url);
+      if (data.previewUrl) {
+        setLevelImage(data.previewUrl);
+        setLevelLayers(data.layers || []);
+        setLevelName(data.levelName || "Unnamed World");
       } else {
         setError(data.reason === "daily_budget_reached" 
           ? "Daily image budget reached. Please try again tomorrow!" 
@@ -156,10 +168,12 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
 
   const handleContinue = () => {
     onLevelCreated({
+      name: levelName,
       description,
       theme,
       difficulty,
-      image: levelImage,
+      previewImage: levelImage,
+      layers: levelLayers,
       character: characterData
     });
   };
@@ -244,6 +258,8 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
           {levelImage ? (
             <>
               <img src={levelImage} alt="Your level" style={styles.previewImage} />
+              {levelName && <p style={{textAlign: 'center', fontWeight: 'bold', marginTop: '10px'}}>{levelName}</p>}
+              {levelLayers && <p style={{textAlign: 'center', fontSize: '12px', color: '#666'}}>{levelLayers.length} layers</p>}
               <button onClick={generateLevel} style={styles.regenerateButton}>
                 Regenerate
               </button>
