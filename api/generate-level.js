@@ -191,17 +191,24 @@ export default async function handler(req, res) {
     const sUrl = process.env.SUPABASE_URL;
     const sKey = process.env.SUPABASE_SERVICE_KEY;
     const theme = req.query.theme || "Forest";
-    const out = { build: "reuse-v1", hasOpenAI: !!process.env.OPENAI_API_KEY, hasSupabase: !!(sUrl && sKey) };
+    const out = { build: "reuse-v2", hasOpenAI: !!process.env.OPENAI_API_KEY, hasSupabase: !!(sUrl && sKey) };
     if (sUrl && sKey) {
+      const H = { apikey: sKey, Authorization: `Bearer ${sKey}`, "Content-Type": "application/json" };
+      // 1) Read status of each table
+      for (const t of ["community_layers", "creature_cache", "community_levels"]) {
+        try {
+          const r = await fetch(`${sUrl}/rest/v1/${t}?select=*&limit=3`, { headers: H });
+          const body = await r.text();
+          out[t] = { status: r.status, rows: (body.startsWith("[") ? JSON.parse(body).length : null), err: r.ok ? null : body.slice(0, 160) };
+        } catch (e) { out[t] = { err: String(e).slice(0, 160) }; }
+      }
+      // 2) Try a test insert into community_layers to surface schema errors
       try {
-        const all = await fetch(`${sUrl}/rest/v1/community_layers?select=layer_type,theme_tags&limit=200`, { headers: { apikey: sKey, Authorization: `Bearer ${sKey}` } });
-        const rows = all.ok ? await all.json() : [];
-        out.totalLayers = Array.isArray(rows) ? rows.length : 0;
-        out.sampleTags = Array.isArray(rows) ? [...new Set(rows.flatMap(r => r.theme_tags || []))].slice(0, 20) : [];
-        const matches = await findReusableLayers(sUrl, sKey, "sky", theme);
-        out.skyMatchesFor = theme;
-        out.skyMatchCount = matches.length;
-      } catch (e) { out.dbError = String(e).slice(0, 200); }
+        const testRow = { asset_id: "diag_test_" + Date.now(), layer_type: "sky", category: "sky", image_url: "data:test", parallax_speed: 0.15, theme_tags: ["DiagTest"], prompt_used: "diagnostic", has_transparency: true, reusable: true, created_by_device_id: "diagnostic", moderation_status: "approved" };
+        const ins = await fetch(`${sUrl}/rest/v1/community_layers`, { method: "POST", headers: { ...H, Prefer: "return=representation" }, body: JSON.stringify(testRow) });
+        const insBody = await ins.text();
+        out.testInsert = { status: ins.status, ok: ins.ok, body: insBody.slice(0, 220) };
+      } catch (e) { out.testInsert = { err: String(e).slice(0, 200) }; }
     }
     return res.status(200).json(out);
   }
