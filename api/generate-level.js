@@ -3,7 +3,7 @@
 import crypto from "crypto";
 
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
-const LAYER_COST = 0.04; // dall-e-3 standard 1024x1024
+const LAYER_COST = 0.04;
 const PREVIEW_COST = 0.04;
 
 const LEVEL_ADJECTIVES = ['Enchanted', 'Magical', 'Secret', 'Hidden', 'Mysterious', 'Ancient', 'Floating', 'Crystal', 'Golden', 'Silver', 'Emerald', 'Ruby', 'Moonlit', 'Sunny', 'Starry'];
@@ -79,31 +79,50 @@ async function logSpend(supabaseUrl, supabaseKey, cost) {
   } catch (e) {}
 }
 
-// Generates one image via dall-e-3. Returns { url, error } where url is null on failure.
+// Try image models in order: gpt-image-1 (b64), dall-e-3 (url), dall-e-2 (url).
+// Returns { url, error }.
 async function generateImage(prompt, openaiKey, timeoutMs = 55000) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" }),
-      signal: ctrl.signal
-    });
-    clearTimeout(timer);
-    if (res.ok) {
-      const data = await res.json();
-      const url = data.data?.[0]?.url || null;
-      return { url, error: null };
+  const attempt = async (body) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        const data = await res.json();
+        const b64 = data.data?.[0]?.b64_json;
+        const url = data.data?.[0]?.url;
+        return { url: b64 ? `data:image/png;base64,${b64}` : (url || null), error: null };
+      }
+      const errText = await res.text();
+      return { url: null, error: `${res.status}: ${errText.slice(0, 300)}` };
+    } catch (e) {
+      clearTimeout(timer);
+      return { url: null, error: e.message };
     }
-    const errText = await res.text();
-    console.error(`generateImage failed ${res.status}: ${errText.slice(0, 300)}`);
-    return { url: null, error: `${res.status}: ${errText.slice(0, 200)}` };
-  } catch (e) {
-    clearTimeout(timer);
-    console.error('generateImage exception:', e.message);
-    return { url: null, error: e.message };
-  }
+  };
+
+  // 1. Try gpt-image-1 (returns b64_json)
+  const r1 = await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024" });
+  if (r1.url) return r1;
+  console.error("gpt-image-1 failed:", r1.error);
+
+  // 2. Try dall-e-3 (returns url, no response_format param)
+  const r2 = await attempt({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" });
+  if (r2.url) return r2;
+  console.error("dall-e-3 failed:", r2.error);
+
+  // 3. Try dall-e-2 (smallest / most permissive)
+  const r3 = await attempt({ model: "dall-e-2", prompt: prompt.slice(0, 1000), n: 1, size: "1024x1024" });
+  if (r3.url) return r3;
+  console.error("dall-e-2 failed:", r3.error);
+
+  return { url: null, error: `All models failed. gpt-image-1: ${r1.error} | dall-e-3: ${r2.error} | dall-e-2: ${r3.error}` };
 }
 
 async function saveLayerToDb(supabaseUrl, supabaseKey, layer) {
@@ -177,7 +196,6 @@ export default async function handler(req, res) {
 
   if (!openaiKey) return res.status(200).json({ previewUrl: null, error: "no_openai_key" });
 
-  // Check budget
   const totalCost = (LAYER_COST * 4) + PREVIEW_COST;
   if (supabaseUrl && supabaseKey) {
     const inBudget = await checkBudget(supabaseUrl, supabaseKey, totalCost);
@@ -200,7 +218,6 @@ export default async function handler(req, res) {
         return { id: pick.id, assetId: pick.asset_id, layerType, imageUrl: pick.image_url, parallaxSpeed: parallaxSpeeds[layerType], reused: true };
       }
 
-      // Generate fresh
       const { url: imageUrl, error: imgErr } = await generateImage(buildLayerPrompt(layerType, entity), openaiKey);
       if (imageUrl) {
         const assetId = `${layerType}_${(entity.theme || 'generic').toLowerCase().replace(/\s+/g, '_')}_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
@@ -221,8 +238,7 @@ export default async function handler(req, res) {
         return { id: layerId, assetId, layerType, imageUrl, parallaxSpeed: parallaxSpeeds[layerType], reused: false, fresh: true };
       }
 
-      console.error(`Layer ${layerType} generation failed: ${imgErr}`);
-      // Fallback to library
+      console.error(`Layer ${layerType} all models failed: ${imgErr}`);
       if (pool.length > 0) {
         const pick = pool[Math.floor(Math.random() * pool.length)];
         return { id: pick.id, assetId: pick.asset_id, layerType, imageUrl: pick.image_url, parallaxSpeed: parallaxSpeeds[layerType], reused: true, fallback: true };
