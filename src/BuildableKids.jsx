@@ -1,7 +1,11 @@
-// /src/BuildableKidsUpdated.jsx
-// This shows the new flow with Character Creator and Level Creator wired together
+// /src/BuildableKids.jsx
+// Main app flow: intro -> pick game -> make character -> build world -> play.
+// Now with: a top navigation bar, auto-saving of every character/world
+// to "My Stuff", and the ability to reuse saved creations.
 import { useState } from "react";
 import { CharacterCreatorScreen, LevelCreatorScreen } from "./CreatorScreen";
+import MyStuffScreen from "./MyStuff";
+import { saveCharacter, saveLevel, libraryCounts } from "./store";
 
 // Screens
 const SCREEN_INTRO = "intro";
@@ -9,25 +13,69 @@ const SCREEN_GAME_TYPE = "game_type";
 const SCREEN_CHARACTER_CREATOR = "character_creator";
 const SCREEN_LEVEL_CREATOR = "level_creator";
 const SCREEN_PLAY = "play";
+const SCREEN_MY_STUFF = "my_stuff";
 
 export default function BuildableKids() {
   const [screen, setScreen] = useState(SCREEN_INTRO);
+  const [returnTo, setReturnTo] = useState(SCREEN_INTRO);
   const [gameData, setGameData] = useState({
     playerName: "",
     age: null,
     gameType: null,
     character: null,
-    level: null
+    level: null,
   });
+
+  const goHome = () => setScreen(SCREEN_INTRO);
+  const openMyStuff = (from) => {
+    setReturnTo(from);
+    setScreen(SCREEN_MY_STUFF);
+  };
+
+  // When a child reuses a saved character from My Stuff
+  const useSavedCharacter = (c) => {
+    setGameData((prev) => ({
+      ...prev,
+      playerName: prev.playerName || "Friend",
+      gameType: prev.gameType || "runner",
+      character: { description: c.description, image: c.image },
+    }));
+    setScreen(SCREEN_LEVEL_CREATOR);
+  };
+
+  // When a child reuses a saved world from My Stuff
+  const useSavedLevel = (l) => {
+    setGameData((prev) => ({
+      ...prev,
+      playerName: prev.playerName || "Friend",
+      gameType: prev.gameType || "runner",
+      level: {
+        description: l.description,
+        theme: l.theme,
+        difficulty: l.difficulty,
+        image: l.image,
+      },
+    }));
+    // need a character before playing
+    setScreen(gameData.character ? SCREEN_PLAY : SCREEN_CHARACTER_CREATOR);
+  };
+
+  const myStuffNav = {
+    onUseCharacter: useSavedCharacter,
+    onUseLevel: useSavedLevel,
+    onBack: () => setScreen(returnTo || SCREEN_INTRO),
+    onHome: goHome,
+  };
 
   // ============ INTRO SCREEN ============
   if (screen === SCREEN_INTRO) {
     return (
       <IntroScreen
         onComplete={(name, age) => {
-          setGameData(prev => ({ ...prev, playerName: name, age }));
+          setGameData((prev) => ({ ...prev, playerName: name, age }));
           setScreen(SCREEN_GAME_TYPE);
         }}
+        onMyStuff={() => openMyStuff(SCREEN_INTRO)}
       />
     );
   }
@@ -38,10 +86,11 @@ export default function BuildableKids() {
       <GameTypeScreen
         playerName={gameData.playerName}
         onGameSelected={(gameType) => {
-          setGameData(prev => ({ ...prev, gameType }));
+          setGameData((prev) => ({ ...prev, gameType }));
           setScreen(SCREEN_CHARACTER_CREATOR);
         }}
         onBack={() => setScreen(SCREEN_INTRO)}
+        onMyStuff={() => openMyStuff(SCREEN_GAME_TYPE)}
       />
     );
   }
@@ -49,25 +98,41 @@ export default function BuildableKids() {
   // ============ CHARACTER CREATOR ============
   if (screen === SCREEN_CHARACTER_CREATOR) {
     return (
-      <CharacterCreatorScreen
-        onCharacterCreated={(character) => {
-          setGameData(prev => ({ ...prev, character }));
-          setScreen(SCREEN_LEVEL_CREATOR);
-        }}
-      />
+      <div style={styles.container}>
+        <TopNav
+          onBack={() => setScreen(SCREEN_GAME_TYPE)}
+          onHome={goHome}
+          onMyStuff={() => openMyStuff(SCREEN_CHARACTER_CREATOR)}
+        />
+        <CharacterCreatorScreen
+          onCharacterCreated={(character) => {
+            saveCharacter(character); // auto-save to My Characters
+            setGameData((prev) => ({ ...prev, character }));
+            setScreen(SCREEN_LEVEL_CREATOR);
+          }}
+        />
+      </div>
     );
   }
 
   // ============ LEVEL CREATOR ============
   if (screen === SCREEN_LEVEL_CREATOR) {
     return (
-      <LevelCreatorScreen
-        characterData={gameData.character}
-        onLevelCreated={(level) => {
-          setGameData(prev => ({ ...prev, level }));
-          setScreen(SCREEN_PLAY);
-        }}
-      />
+      <div style={styles.container}>
+        <TopNav
+          onBack={() => setScreen(SCREEN_CHARACTER_CREATOR)}
+          onHome={goHome}
+          onMyStuff={() => openMyStuff(SCREEN_LEVEL_CREATOR)}
+        />
+        <LevelCreatorScreen
+          characterData={gameData.character}
+          onLevelCreated={(level) => {
+            saveLevel(level); // auto-save to My Levels
+            setGameData((prev) => ({ ...prev, level }));
+            setScreen(SCREEN_PLAY);
+          }}
+        />
+      </div>
     );
   }
 
@@ -82,17 +147,44 @@ export default function BuildableKids() {
             age: null,
             gameType: null,
             character: null,
-            level: null
+            level: null,
           });
           setScreen(SCREEN_INTRO);
         }}
+        onMyStuff={() => openMyStuff(SCREEN_PLAY)}
       />
     );
   }
+
+  // ============ MY STUFF LIBRARY ============
+  if (screen === SCREEN_MY_STUFF) {
+    return <MyStuffScreen {...myStuffNav} />;
+  }
+}
+
+// ============ TOP NAVIGATION BAR ============
+function TopNav({ onBack, onHome, onMyStuff }) {
+  const counts = libraryCounts();
+  const total = counts.characters + counts.levels + counts.sounds;
+  return (
+    <div style={styles.navInner}>
+      <div style={{ display: "flex", gap: "10px" }}>
+        {onBack && (
+          <button onClick={onBack} style={styles.backButton}>← Back</button>
+        )}
+        {onHome && (
+          <button onClick={onHome} style={styles.backButton}>🏠 Home</button>
+        )}
+      </div>
+      <button onClick={onMyStuff} style={styles.myStuffButton}>
+        📦 My Stuff{total ? ` (${total})` : ""}
+      </button>
+    </div>
+  );
 }
 
 // ============ INTRO SCREEN COMPONENT ============
-function IntroScreen({ onComplete }) {
+function IntroScreen({ onComplete, onMyStuff }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState(7);
 
@@ -104,6 +196,10 @@ function IntroScreen({ onComplete }) {
 
   return (
     <div style={styles.container}>
+      <div style={styles.introTopBar}>
+        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+      </div>
+
       <div style={styles.gameIcon}>🎮</div>
       <h1 style={styles.heading}>Buildable Kids</h1>
       <p style={styles.tagline}>Build your own game in 3 minutes!</p>
@@ -131,7 +227,7 @@ function IntroScreen({ onComplete }) {
               style={{
                 ...styles.ageButton,
                 backgroundColor: age === a ? "#ff9500" : "#e0e0e0",
-                color: age === a ? "white" : "#333"
+                color: age === a ? "white" : "#333",
               }}
             >
               {a}
@@ -146,7 +242,7 @@ function IntroScreen({ onComplete }) {
         style={{
           ...styles.primaryButton,
           opacity: !name.trim() ? 0.6 : 1,
-          cursor: !name.trim() ? "not-allowed" : "pointer"
+          cursor: !name.trim() ? "not-allowed" : "pointer",
         }}
       >
         Let's build! →
@@ -156,39 +252,19 @@ function IntroScreen({ onComplete }) {
 }
 
 // ============ GAME TYPE PICKER COMPONENT ============
-function GameTypeScreen({ playerName, onGameSelected, onBack }) {
+function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
   const games = [
-    {
-      id: "runner",
-      name: "Runner",
-      icon: "🏃",
-      description: "Jump and duck through obstacles!"
-    },
-    {
-      id: "flying",
-      name: "Flying",
-      icon: "🚀",
-      description: "Blast enemies while you fly!"
-    },
-    {
-      id: "maze",
-      name: "Maze",
-      icon: "🗺️",
-      description: "Find keys, unlock doors, get treasure!"
-    },
-    {
-      id: "match",
-      name: "Match Magic",
-      icon: "✨",
-      description: "Match 3 or more to make them POP!"
-    }
+    { id: "runner", name: "Runner", icon: "🏃", description: "Jump and duck through obstacles!" },
+    { id: "flying", name: "Flying", icon: "🚀", description: "Blast enemies while you fly!" },
+    { id: "maze", name: "Maze", icon: "🗺️", description: "Find keys, unlock doors, get treasure!" },
+    { id: "match", name: "Match Magic", icon: "✨", description: "Match 3 or more to make them POP!" },
   ];
 
   return (
     <div style={styles.container}>
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
-        <button style={styles.resetButton}>↻ Start Over</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
       </div>
 
       <h1 style={styles.heading}>Pick your game</h1>
@@ -196,11 +272,7 @@ function GameTypeScreen({ playerName, onGameSelected, onBack }) {
 
       <div style={styles.gameGrid}>
         {games.map((game) => (
-          <button
-            key={game.id}
-            onClick={() => onGameSelected(game.id)}
-            style={styles.gameCard}
-          >
+          <button key={game.id} onClick={() => onGameSelected(game.id)} style={styles.gameCard}>
             <div style={styles.gameIcon}>{game.icon}</div>
             <h3 style={styles.gameCardTitle}>{game.name}</h3>
             <p style={styles.gameCardDescription}>{game.description}</p>
@@ -212,24 +284,22 @@ function GameTypeScreen({ playerName, onGameSelected, onBack }) {
 }
 
 // ============ PLAY GAME SCREEN COMPONENT ============
-function PlayGameScreen({ gameData, onBack }) {
+function PlayGameScreen({ gameData, onBack, onMyStuff }) {
   return (
     <div style={styles.container}>
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
       </div>
 
       <h1 style={styles.heading}>Your Game is Ready! 🎮</h1>
+      <p style={styles.savedNote}>✓ Saved to My Stuff — your character and world are kept!</p>
 
       <div style={styles.gamePreview}>
         <div style={styles.previewCard}>
           <h3>Your Character</h3>
           {gameData.character?.image && (
-            <img
-              src={gameData.character.image}
-              alt="Your character"
-              style={styles.previewImage}
-            />
+            <img src={gameData.character.image} alt="Your character" style={styles.previewImage} />
           )}
           <p>{gameData.character?.description}</p>
         </div>
@@ -237,11 +307,7 @@ function PlayGameScreen({ gameData, onBack }) {
         <div style={styles.previewCard}>
           <h3>Your World</h3>
           {gameData.level?.image && (
-            <img
-              src={gameData.level.image}
-              alt="Your level"
-              style={styles.previewImage}
-            />
+            <img src={gameData.level.image} alt="Your level" style={styles.previewImage} />
           )}
           <p>{gameData.level?.theme || gameData.level?.description}</p>
         </div>
@@ -270,7 +336,7 @@ const styles = {
     fontFamily: "system-ui, -apple-system, sans-serif",
     display: "flex",
     flexDirection: "column",
-    alignItems: "center"
+    alignItems: "center",
   },
   topBar: {
     width: "100%",
@@ -278,7 +344,22 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     marginBottom: "30px",
-    gap: "10px"
+    gap: "10px",
+  },
+  navInner: {
+    width: "100%",
+    maxWidth: "1200px",
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "20px",
+    gap: "10px",
+  },
+  introTopBar: {
+    width: "100%",
+    maxWidth: "1200px",
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: "10px",
   },
   backButton: {
     padding: "10px 20px",
@@ -287,16 +368,17 @@ const styles = {
     borderRadius: "20px",
     fontWeight: "600",
     cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
   },
-  resetButton: {
+  myStuffButton: {
     padding: "10px 20px",
-    backgroundColor: "white",
+    backgroundColor: "#1a1a3e",
+    color: "white",
     border: "none",
     borderRadius: "20px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
   },
   heading: {
     fontSize: "48px",
@@ -304,18 +386,27 @@ const styles = {
     color: "#1a1a3e",
     textAlign: "center",
     marginBottom: "15px",
-    textShadow: "2px 2px 4px rgba(0,0,0,0.1)"
+    textShadow: "2px 2px 4px rgba(0,0,0,0.1)",
   },
   tagline: {
     fontSize: "20px",
     color: "#333",
     textAlign: "center",
-    marginBottom: "40px"
+    marginBottom: "40px",
+  },
+  savedNote: {
+    fontSize: "15px",
+    color: "#1a6b2e",
+    backgroundColor: "rgba(255,255,255,0.7)",
+    padding: "8px 16px",
+    borderRadius: "20px",
+    marginBottom: "25px",
+    fontWeight: "600",
   },
   gameIcon: {
     fontSize: "60px",
     textAlign: "center",
-    marginBottom: "20px"
+    marginBottom: "20px",
   },
   formCard: {
     backgroundColor: "white",
@@ -324,13 +415,13 @@ const styles = {
     marginBottom: "20px",
     boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
     maxWidth: "500px",
-    width: "100%"
+    width: "100%",
   },
   formHeading: {
     fontSize: "24px",
     fontWeight: "bold",
     color: "#1a1a3e",
-    marginBottom: "15px"
+    marginBottom: "15px",
   },
   textInput: {
     width: "100%",
@@ -339,18 +430,18 @@ const styles = {
     border: "3px solid #ffb700",
     borderRadius: "12px",
     boxSizing: "border-box",
-    fontFamily: "inherit"
+    fontFamily: "inherit",
   },
   helpText: {
     fontSize: "13px",
     color: "#666",
-    marginTop: "10px"
+    marginTop: "10px",
   },
   ageButtons: {
     display: "flex",
     flexWrap: "wrap",
     gap: "10px",
-    justifyContent: "center"
+    justifyContent: "center",
   },
   ageButton: {
     width: "50px",
@@ -360,7 +451,7 @@ const styles = {
     border: "none",
     borderRadius: "10px",
     cursor: "pointer",
-    transition: "all 0.2s"
+    transition: "all 0.2s",
   },
   primaryButton: {
     padding: "16px 40px",
@@ -373,7 +464,7 @@ const styles = {
     cursor: "pointer",
     transition: "all 0.2s",
     maxWidth: "500px",
-    width: "100%"
+    width: "100%",
   },
   gameGrid: {
     display: "grid",
@@ -381,7 +472,7 @@ const styles = {
     gap: "20px",
     maxWidth: "1000px",
     width: "100%",
-    marginBottom: "30px"
+    marginBottom: "30px",
   },
   gameCard: {
     padding: "30px 20px",
@@ -391,18 +482,18 @@ const styles = {
     boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
     cursor: "pointer",
     transition: "all 0.3s",
-    fontSize: "16px"
+    fontSize: "16px",
   },
   gameCardTitle: {
     fontSize: "20px",
     fontWeight: "bold",
     color: "#1a1a3e",
-    margin: "15px 0 10px 0"
+    margin: "15px 0 10px 0",
   },
   gameCardDescription: {
     fontSize: "14px",
     color: "#666",
-    margin: 0
+    margin: 0,
   },
   gamePreview: {
     display: "grid",
@@ -410,18 +501,18 @@ const styles = {
     gap: "30px",
     maxWidth: "800px",
     width: "100%",
-    marginBottom: "30px"
+    marginBottom: "30px",
   },
   previewCard: {
     backgroundColor: "white",
     padding: "20px",
     borderRadius: "16px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
   },
   previewImage: {
     width: "100%",
     borderRadius: "8px",
-    marginBottom: "15px"
+    marginBottom: "15px",
   },
   placeholderGame: {
     backgroundColor: "white",
@@ -432,6 +523,6 @@ const styles = {
     maxWidth: "800px",
     width: "100%",
     marginBottom: "30px",
-    color: "#666"
-  }
+    color: "#666",
+  },
 };
