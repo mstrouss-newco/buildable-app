@@ -162,6 +162,29 @@ async function saveLevelToDb(supabaseUrl, supabaseKey, level) {
   return null;
 }
 
+// How often to still generate a brand-new layer even when reusable ones exist,
+// so the shared library keeps growing in variety instead of freezing.
+const REFRESH_CHANCE = 0.25;
+
+// Look up already-rendered, approved, reusable layers for this theme + layer type.
+// This is what lets us SKIP DALL-E when the community has already made the art.
+async function findReusableLayers(supabaseUrl, supabaseKey, layerType, theme) {
+  if (!supabaseUrl || !supabaseKey || !theme) return [];
+  try {
+    const q = `${supabaseUrl}/rest/v1/community_layers?select=id,asset_id,image_url,parallax_speed`
+      + `&layer_type=eq.${encodeURIComponent(layerType)}`
+      + `&reusable=eq.true&moderation_status=eq.approved`
+      + `&theme_tags=cs.{${encodeURIComponent(theme)}}`
+      + `&limit=30`;
+    const r = await fetch(q, { headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` } });
+    if (!r.ok) return [];
+    const rows = await r.json();
+    return Array.isArray(rows) ? rows.filter((x) => x && x.image_url) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
@@ -190,11 +213,21 @@ export default async function handler(req, res) {
     const categories = { sky: 'sky', midground: 'plants', platforms: 'ground', foreground: 'plants' };
     let totalSpent = 0;
 
-    // Kick off ALL images at once — 4 layers + the preview — so nothing waits in series.
-    const layerJobs = layerTypes.map((layerType) =>
-      generateImage(buildLayerPrompt(layerType, entity), openaiKey)
-        .then(async (imageUrl) => {
-          if (!imageUrl) return null;
+    // For each layer: try the shared library FIRST, only call DALL-E if needed.
+    const layerJobs = layerTypes.map((layerType) => (async () => {
+      const pool = await findReusableLayers(supabaseUrl, supabaseKey, layerType, entity.theme);
+      const hasCustom = !!(entity.description && entity.description.trim());
+      // Reuse instantly when we have a match and aren't intentionally refreshing.
+      // A custom typed description biases toward fresh art so it matches their words.
+      const wantFresh = pool.length === 0 || hasCustom || Math.random() < REFRESH_CHANCE;
+      if (pool.length > 0 && !wantFresh) {
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        return { id: pick.id, assetId: pick.asset_id, layerType, imageUrl: pick.image_url, parallaxSpeed: parallaxSpeeds[layerType], reused: true };
+      }
+      // Generate a fresh layer and add it to the shared library for next time.
+      try {
+        const imageUrl = await generateImage(buildLayerPrompt(layerType, entity), openaiKey);
+        if (imageUrl) {
           const assetId = `${layerType}_${(entity.theme || 'generic').toLowerCase().replace(/\s+/g, '_')}_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
           const layerData = {
             asset_id: assetId,
@@ -210,23 +243,41 @@ export default async function handler(req, res) {
             moderation_status: 'approved'
           };
           const layerId = supabaseUrl && supabaseKey ? await saveLayerToDb(supabaseUrl, supabaseKey, layerData) : null;
-          return { id: layerId, assetId, layerType, imageUrl, parallaxSpeed: parallaxSpeeds[layerType] };
-        })
-        .catch(() => null)
-    );
-    const previewJob = generateImage(buildLayerPrompt('preview', entity), openaiKey).catch(() => null);
+          return { id: layerId, assetId, layerType, imageUrl, parallaxSpeed: parallaxSpeeds[layerType], reused: false, fresh: true };
+        }
+      } catch (e) {
+        // fall through to library fallback
+      }
+      // Generation failed (or was skipped) — fall back to the library if possible.
+      if (pool.length > 0) {
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        return { id: pick.id, assetId: pick.asset_id, layerType, imageUrl: pick.image_url, parallaxSpeed: parallaxSpeeds[layerType], reused: true, fallback: true };
+      }
+      return null;
+    })());
 
-    const [layerResults, previewResult] = await Promise.all([Promise.allSettled(layerJobs), previewJob]);
+    const layerResults = await Promise.allSettled(layerJobs);
     const validLayers = layerResults
       .map((r) => (r.status === "fulfilled" ? r.value : null))
       .filter(Boolean);
 
+    const freshCount = validLayers.filter((l) => l.fresh).length;
+    const reusedCount = validLayers.filter((l) => l.reused).length;
+
+    // Only spend on a preview image if we actually made fresh art this time.
+    // If everything was reused, just use the first layer as the preview (free + instant).
+    let previewUrl = null;
+    let previewWasFresh = false;
+    if (freshCount > 0) {
+      previewUrl = await generateImage(buildLayerPrompt('preview', entity), openaiKey).catch(() => null);
+      previewWasFresh = !!previewUrl;
+    }
+
     // Be forgiving: as long as we got at least one image, we can show a world.
-    let previewUrl = previewResult || (validLayers[0] && validLayers[0].imageUrl) || null;
+    if (!previewUrl) previewUrl = (validLayers[0] && validLayers[0].imageUrl) || null;
     if (!previewUrl && validLayers.length === 0) {
       return res.status(200).json({ previewUrl: null, error: "Couldn't make the world art this time — tap Generate to try again!" });
     }
-    if (!previewUrl) previewUrl = validLayers[0].imageUrl;
 
     // Save level record (best effort).
     const levelIds = validLayers.map((l) => l.id).filter(Boolean);
@@ -243,8 +294,9 @@ export default async function handler(req, res) {
 
     const levelId = supabaseUrl && supabaseKey ? await saveLevelToDb(supabaseUrl, supabaseKey, levelData) : null;
 
-    totalSpent = (LAYER_COST * validLayers.length) + (previewResult ? PREVIEW_COST : 0);
-    if (supabaseUrl && supabaseKey) {
+    // Only count what we actually paid DALL-E for.
+    totalSpent = (LAYER_COST * freshCount) + (previewWasFresh ? PREVIEW_COST : 0);
+    if (supabaseUrl && supabaseKey && totalSpent > 0) {
       await logSpend(supabaseUrl, supabaseKey, totalSpent);
     }
 
@@ -253,7 +305,9 @@ export default async function handler(req, res) {
       levelName,
       previewUrl,
       layers: validLayers,
-      cached: false,
+      cached: freshCount === 0,
+      reusedCount,
+      freshCount,
       costUsd: totalSpent
     });
   } catch (e) {
