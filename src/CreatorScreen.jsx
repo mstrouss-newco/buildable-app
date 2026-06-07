@@ -1,6 +1,10 @@
 // /src/CreatorScreen.jsx
 import { useState } from "react";
 
+const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
+const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
 export function CharacterCreatorScreen({ onCharacterCreated }) {
   const [description, setDescription] = useState("a fluffy pink dragon with sparkly wings");
   const [characterImage, setCharacterImage] = useState(null);
@@ -198,8 +202,9 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
                   onClick={() => setTheme(t)}
                   style={{
                     ...styles.themeButton,
-                    backgroundColor: theme === t ? "#ff9500" : "#e0e0e0",
-                    color: theme === t ? "white" : "black"
+                    background: theme === t ? GRAD : "rgba(255,255,255,0.07)",
+                    color: theme === t ? "#fff" : "#cfc9e6",
+                    boxShadow: theme === t ? "0 6px 16px rgba(155,126,221,0.45)" : "none"
                   }}
                 >
                   {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -218,8 +223,9 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
                   onClick={() => setDifficulty(d)}
                   style={{
                     ...styles.difficultyButton,
-                    backgroundColor: difficulty === d ? "#4CAF50" : "#e0e0e0",
-                    color: difficulty === d ? "white" : "black"
+                    background: difficulty === d ? GRAD : "rgba(255,255,255,0.07)",
+                    color: difficulty === d ? "#fff" : "#cfc9e6",
+                    boxShadow: difficulty === d ? "0 6px 16px rgba(155,126,221,0.45)" : "none"
                   }}
                 >
                   {d.charAt(0).toUpperCase() + d.slice(1)}
@@ -259,7 +265,7 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
             <>
               <img src={levelImage} alt="Your level" style={styles.previewImage} />
               {levelName && <p style={{textAlign: 'center', fontWeight: 'bold', marginTop: '10px'}}>{levelName}</p>}
-              {levelLayers && <p style={{textAlign: 'center', fontSize: '12px', color: '#666'}}>{levelLayers.length} layers</p>}
+              {levelLayers && <p style={{textAlign: 'center', fontSize: '12px', color: '#9c97b8'}}>{levelLayers.length} layers</p>}
               <button onClick={generateLevel} style={styles.regenerateButton}>
                 Regenerate
               </button>
@@ -283,64 +289,69 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
 
 const styles = {
   container: {
-    maxWidth: "1200px",
+    maxWidth: "1100px",
     margin: "0 auto",
-    padding: "30px 20px",
-    fontFamily: "system-ui, -apple-system, sans-serif"
+    padding: "10px 0 30px",
+    fontFamily: NUN,
+    color: "#fff"
   },
   heading: {
+    fontFamily: FRED,
     fontSize: "40px",
-    fontWeight: "bold",
+    fontWeight: "700",
     textAlign: "center",
-    marginBottom: "10px",
-    color: "#1a1a3e"
+    marginBottom: "8px",
+    color: "#fff",
+    textShadow: "0 0 30px rgba(155,126,221,0.5)"
   },
   subtext: {
     fontSize: "18px",
     textAlign: "center",
-    color: "#666",
-    marginBottom: "30px"
+    color: "#b8b3d0",
+    marginBottom: "30px",
+    fontWeight: "600"
   },
   contentArea: {
     display: "flex",
-    gap: "30px",
-    marginBottom: "30px",
-    "@media (max-width: 900px)": {
-      flexDirection: "column"
-    }
+    gap: "26px",
+    marginBottom: "26px",
+    flexWrap: "wrap"
   },
   inputSection: {
-    flex: 1,
+    flex: "1 1 320px",
     display: "flex",
     flexDirection: "column",
-    gap: "20px"
+    gap: "18px"
   },
   previewSection: {
-    flex: 1,
+    flex: "1 1 280px",
     display: "flex",
     flexDirection: "column",
-    gap: "15px"
+    gap: "12px"
   },
   textarea: {
-    padding: "15px",
+    padding: "16px",
     fontSize: "16px",
-    borderRadius: "12px",
-    border: "3px solid #ffb700",
+    borderRadius: "16px",
+    border: "2px solid rgba(155,126,221,0.4)",
     fontFamily: "inherit",
     resize: "vertical",
-    minHeight: "100px",
-    backgroundColor: "white"
+    minHeight: "110px",
+    background: "rgba(0,0,0,0.28)",
+    color: "#fff",
+    outline: "none"
   },
   suggestedLabel: {
     fontSize: "14px",
-    fontWeight: "600",
-    color: "#1a1a3e",
+    fontWeight: "700",
+    color: "#cfc9e6",
     marginBottom: "10px"
   },
   suggestedWords: {
-    backgroundColor: "#f5f5f5",
-    padding: "15px",
-    borderRadius: "12px"
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(155,126,221,0.2)",
+    padding: "16px",
+    borderRadius: "18px"
   },
   wordButtons: {
     display: "flex",
@@ -348,16 +359,15 @@ const styles = {
     gap: "8px"
   },
   wordButton: {
-    padding: "6px 14px",
+    padding: "7px 15px",
     borderRadius: "20px",
-    border: "none",
-    backgroundColor: "white",
-    color: "#1a1a3e",
-    fontWeight: "600",
+    border: "1px solid rgba(155,126,221,0.3)",
+    background: "rgba(255,255,255,0.08)",
+    color: "#e9e6f5",
+    fontWeight: "700",
     cursor: "pointer",
     fontSize: "13px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-    transition: "all 0.2s"
+    fontFamily: NUN
   },
   selectorGroup: {
     display: "flex",
@@ -366,8 +376,8 @@ const styles = {
   },
   label: {
     fontSize: "16px",
-    fontWeight: "600",
-    color: "#1a1a3e"
+    fontWeight: "700",
+    color: "#fff"
   },
   buttonGroup: {
     display: "flex",
@@ -376,84 +386,92 @@ const styles = {
   },
   themeButton: {
     padding: "10px 16px",
-    borderRadius: "8px",
+    borderRadius: "12px",
     border: "none",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
     fontSize: "14px",
-    transition: "all 0.2s"
+    fontFamily: NUN
   },
   difficultyButton: {
     padding: "10px 16px",
-    borderRadius: "8px",
+    borderRadius: "12px",
     border: "none",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
     fontSize: "14px",
-    transition: "all 0.2s"
+    fontFamily: NUN
   },
   generateButton: {
-    padding: "14px 24px",
-    backgroundColor: "#4CAF50",
-    color: "white",
-    fontSize: "16px",
-    fontWeight: "bold",
-    borderRadius: "12px",
+    padding: "16px 24px",
+    background: GRAD,
+    color: "#fff",
+    fontSize: "17px",
+    fontWeight: "800",
+    fontFamily: FRED,
+    borderRadius: "16px",
     border: "none",
     cursor: "pointer",
-    transition: "all 0.2s"
+    boxShadow: "0 10px 28px rgba(155,126,221,0.45)"
   },
   continueButton: {
-    padding: "16px 32px",
-    backgroundColor: "#1a1a3e",
-    color: "white",
-    fontSize: "18px",
-    fontWeight: "bold",
-    borderRadius: "12px",
+    padding: "18px 32px",
+    background: GRAD,
+    color: "#fff",
+    fontSize: "19px",
+    fontWeight: "800",
+    fontFamily: FRED,
+    borderRadius: "18px",
     border: "none",
     cursor: "pointer",
     textAlign: "center",
-    transition: "all 0.2s"
+    boxShadow: "0 12px 32px rgba(155,126,221,0.5)",
+    display: "block",
+    margin: "0 auto",
+    maxWidth: "420px",
+    width: "100%"
   },
   regenerateButton: {
-    padding: "10px 16px",
-    backgroundColor: "#ffb700",
-    color: "white",
+    padding: "11px 18px",
+    background: "rgba(255,255,255,0.08)",
+    color: "#fff",
+    border: "1px solid rgba(255,255,255,0.18)",
     fontSize: "14px",
-    fontWeight: "bold",
-    borderRadius: "8px",
-    border: "none",
+    fontWeight: "700",
+    borderRadius: "12px",
     cursor: "pointer",
-    transition: "all 0.2s"
+    fontFamily: NUN
   },
   previewImage: {
     width: "100%",
-    borderRadius: "12px",
-    backgroundColor: "#f5f5f5",
-    objectFit: "cover"
+    borderRadius: "18px",
+    background: "rgba(0,0,0,0.3)",
+    objectFit: "cover",
+    border: "1px solid rgba(155,126,221,0.25)"
   },
   placeholderBox: {
     width: "100%",
     aspectRatio: "1",
-    backgroundColor: "#f5f5f5",
-    borderRadius: "12px",
+    background: "rgba(255,255,255,0.04)",
+    borderRadius: "18px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    border: "3px dashed #ccc"
+    border: "2px dashed rgba(155,126,221,0.35)"
   },
   placeholderText: {
     fontSize: "60px",
-    color: "#ccc",
+    color: "rgba(155,126,221,0.5)",
     margin: 0
   },
   error: {
-    color: "#d32f2f",
+    color: "#ff9a9a",
     fontSize: "14px",
     marginTop: "10px",
-    padding: "10px",
-    backgroundColor: "#ffebee",
-    borderRadius: "8px"
+    padding: "12px",
+    background: "rgba(214,90,123,0.12)",
+    border: "1px solid rgba(214,90,123,0.3)",
+    borderRadius: "12px"
   }
 };
 

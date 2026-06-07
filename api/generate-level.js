@@ -80,27 +80,42 @@ async function logSpend(supabaseUrl, supabaseKey, cost) {
   } catch (e) {}
 }
 
-async function generateImage(prompt, openaiKey) {
+async function generateImage(prompt, openaiKey, timeoutMs = 35000) {
+  const withTimeout = (p) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    return { signal: ctrl.signal, done: () => clearTimeout(timer) };
+  };
   try {
-    // Try gpt-image-1 first
-    const oaiRes1 = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {"Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json"},
-      body: JSON.stringify({model: "gpt-image-1", prompt, n: 1, size: "1024x1024"})
-    });
-    if (oaiRes1.ok) {
+    // Try gpt-image-1 first (with a hard timeout)
+    const t1 = withTimeout();
+    let oaiRes1;
+    try {
+      oaiRes1 = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {"Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json"},
+        body: JSON.stringify({model: "gpt-image-1", prompt, n: 1, size: "1024x1024"}),
+        signal: t1.signal
+      });
+    } finally { t1.done(); }
+    if (oaiRes1 && oaiRes1.ok) {
       const oai1 = await oaiRes1.json();
       const b64 = oai1.data?.[0]?.b64_json;
       if (b64) return `data:image/png;base64,${b64}`;
     }
-    
-    // Fall back to dall-e-3
-    const oaiRes2 = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {"Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json"},
-      body: JSON.stringify({model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard", response_format: "url"})
-    });
-    if (oaiRes2.ok) {
+
+    // Fall back to dall-e-3 (also time-boxed)
+    const t2 = withTimeout();
+    let oaiRes2;
+    try {
+      oaiRes2 = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {"Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json"},
+        body: JSON.stringify({model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard", response_format: "url"}),
+        signal: t2.signal
+      });
+    } finally { t2.done(); }
+    if (oaiRes2 && oaiRes2.ok) {
       const oai2 = await oaiRes2.json();
       return oai2.data?.[0]?.url || null;
     }
@@ -171,58 +186,50 @@ export default async function handler(req, res) {
   try {
     const levelName = generateLevelName(entity.description, entity.theme, Math.floor(Math.random() * 10000));
     const layerTypes = ['sky', 'midground', 'platforms', 'foreground'];
-    const layerIds = [];
+    const parallaxSpeeds = { sky: 0.15, midground: 0.6, platforms: 0.75, foreground: 1.0 };
+    const categories = { sky: 'sky', midground: 'plants', platforms: 'ground', foreground: 'plants' };
     let totalSpent = 0;
 
-    // Generate all layers in parallel
-    const layerPromises = layerTypes.map(async (layerType) => {
-      const prompt = buildLayerPrompt(layerType, entity);
-      const imageUrl = await generateImage(prompt, openaiKey);
-      
-      if (!imageUrl) return null;
+    // Kick off ALL images at once — 4 layers + the preview — so nothing waits in series.
+    const layerJobs = layerTypes.map((layerType) =>
+      generateImage(buildLayerPrompt(layerType, entity), openaiKey)
+        .then(async (imageUrl) => {
+          if (!imageUrl) return null;
+          const assetId = `${layerType}_${(entity.theme || 'generic').toLowerCase().replace(/\s+/g, '_')}_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+          const layerData = {
+            asset_id: assetId,
+            layer_type: layerType,
+            category: categories[layerType],
+            image_url: imageUrl,
+            parallax_speed: parallaxSpeeds[layerType],
+            theme_tags: [entity.theme].filter(Boolean),
+            prompt_used: buildLayerPrompt(layerType, entity),
+            has_transparency: layerType !== 'platforms',
+            reusable: true,
+            created_by_device_id: deviceId || 'anonymous',
+            moderation_status: 'approved'
+          };
+          const layerId = supabaseUrl && supabaseKey ? await saveLayerToDb(supabaseUrl, supabaseKey, layerData) : null;
+          return { id: layerId, assetId, layerType, imageUrl, parallaxSpeed: parallaxSpeeds[layerType] };
+        })
+        .catch(() => null)
+    );
+    const previewJob = generateImage(buildLayerPrompt('preview', entity), openaiKey).catch(() => null);
 
-      const parallaxSpeeds = { sky: 0.15, midground: 0.6, platforms: 0.75, foreground: 1.0 };
-      const categories = { sky: 'sky', midground: 'plants', platforms: 'ground', foreground: 'plants' };
+    const [layerResults, previewResult] = await Promise.all([Promise.allSettled(layerJobs), previewJob]);
+    const validLayers = layerResults
+      .map((r) => (r.status === "fulfilled" ? r.value : null))
+      .filter(Boolean);
 
-      const assetId = `${layerType}_${(entity.theme || 'generic').toLowerCase().replace(/\s+/g, '_')}_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-
-      const layerData = {
-        asset_id: assetId,
-        layer_type: layerType,
-        category: categories[layerType],
-        image_url: imageUrl,
-        parallax_speed: parallaxSpeeds[layerType],
-        theme_tags: [entity.theme].filter(Boolean),
-        prompt_used: prompt,
-        has_transparency: layerType !== 'platforms',
-        reusable: true,
-        created_by_device_id: deviceId || 'anonymous',
-        moderation_status: 'approved'
-      };
-
-      // Save to database if Supabase is available
-      const layerId = supabaseUrl && supabaseKey ? await saveLayerToDb(supabaseUrl, supabaseKey, layerData) : null;
-      
-      return { id: layerId, assetId, layerType, imageUrl, parallaxSpeed: parallaxSpeeds[layerType] };
-    });
-
-    const layers = await Promise.all(layerPromises);
-    const validLayers = layers.filter(Boolean);
-
-    if (validLayers.length < 4) {
-      return res.status(200).json({ previewUrl: null, error: "Failed to generate all layers" });
+    // Be forgiving: as long as we got at least one image, we can show a world.
+    let previewUrl = previewResult || (validLayers[0] && validLayers[0].imageUrl) || null;
+    if (!previewUrl && validLayers.length === 0) {
+      return res.status(200).json({ previewUrl: null, error: "Couldn't make the world art this time — tap Generate to try again!" });
     }
+    if (!previewUrl) previewUrl = validLayers[0].imageUrl;
 
-    // Generate preview image
-    const previewPrompt = buildLayerPrompt('preview', entity);
-    const previewUrl = await generateImage(previewPrompt, openaiKey);
-
-    if (!previewUrl) {
-      return res.status(200).json({ previewUrl: null, error: "Failed to generate preview" });
-    }
-
-    // Save level record
-    const levelIds = validLayers.map(l => l.id).filter(Boolean);
+    // Save level record (best effort).
+    const levelIds = validLayers.map((l) => l.id).filter(Boolean);
     const levelData = {
       name: levelName,
       description: entity.description || '',
@@ -236,7 +243,7 @@ export default async function handler(req, res) {
 
     const levelId = supabaseUrl && supabaseKey ? await saveLevelToDb(supabaseUrl, supabaseKey, levelData) : null;
 
-    totalSpent = (LAYER_COST * 4) + PREVIEW_COST;
+    totalSpent = (LAYER_COST * validLayers.length) + (previewResult ? PREVIEW_COST : 0);
     if (supabaseUrl && supabaseKey) {
       await logSpend(supabaseUrl, supabaseKey, totalSpent);
     }
