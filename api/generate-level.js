@@ -186,6 +186,25 @@ async function findReusableLayers(supabaseUrl, supabaseKey, layerType, theme) {
 }
 
 export default async function handler(req, res) {
+  // Temporary diagnostic: GET /api/generate-level?debug=1&theme=Forest
+  if (req.method === "GET" && req.query && req.query.debug) {
+    const sUrl = process.env.SUPABASE_URL;
+    const sKey = process.env.SUPABASE_SERVICE_KEY;
+    const theme = req.query.theme || "Forest";
+    const out = { build: "reuse-v1", hasOpenAI: !!process.env.OPENAI_API_KEY, hasSupabase: !!(sUrl && sKey) };
+    if (sUrl && sKey) {
+      try {
+        const all = await fetch(`${sUrl}/rest/v1/community_layers?select=layer_type,theme_tags&limit=200`, { headers: { apikey: sKey, Authorization: `Bearer ${sKey}` } });
+        const rows = all.ok ? await all.json() : [];
+        out.totalLayers = Array.isArray(rows) ? rows.length : 0;
+        out.sampleTags = Array.isArray(rows) ? [...new Set(rows.flatMap(r => r.theme_tags || []))].slice(0, 20) : [];
+        const matches = await findReusableLayers(sUrl, sKey, "sky", theme);
+        out.skyMatchesFor = theme;
+        out.skyMatchCount = matches.length;
+      } catch (e) { out.dbError = String(e).slice(0, 200); }
+    }
+    return res.status(200).json(out);
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
   const { entity, deviceId } = req.body || {};
