@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { CharacterCreatorScreen, LevelCreatorScreen } from "./CreatorScreen";
 import MyStuffScreen from "./MyStuff";
+import AdminDashboard from "./AdminDashboard";
 import { saveCharacter, saveLevel, libraryCounts } from "./store";
 
 // Screens
@@ -14,6 +15,7 @@ const SCREEN_CHARACTER_CREATOR = "character_creator";
 const SCREEN_LEVEL_CREATOR = "level_creator";
 const SCREEN_PLAY = "play";
 const SCREEN_MY_STUFF = "my_stuff";
+const SCREEN_ADMIN = "admin";
 
 export default function BuildableKids() {
   const [screen, setScreen] = useState(SCREEN_INTRO);
@@ -76,6 +78,7 @@ export default function BuildableKids() {
           setScreen(SCREEN_GAME_TYPE);
         }}
         onMyStuff={() => openMyStuff(SCREEN_INTRO)}
+        onAdmin={() => setScreen(SCREEN_ADMIN)}
       />
     );
   }
@@ -160,6 +163,11 @@ export default function BuildableKids() {
   if (screen === SCREEN_MY_STUFF) {
     return <MyStuffScreen {...myStuffNav} />;
   }
+
+  // ============ ADMIN DASHBOARD ============
+  if (screen === SCREEN_ADMIN) {
+    return <AdminDashboard onExit={() => setScreen(SCREEN_INTRO)} />;
+  }
 }
 
 // ============ TOP NAVIGATION BAR ============
@@ -184,7 +192,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 }
 
 // ============ INTRO SCREEN COMPONENT ============
-function IntroScreen({ onComplete, onMyStuff }) {
+function IntroScreen({ onComplete, onMyStuff, onAdmin }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState(7);
 
@@ -197,6 +205,7 @@ function IntroScreen({ onComplete, onMyStuff }) {
   return (
     <div style={styles.container}>
       <div style={styles.introTopBar}>
+        <button onClick={onAdmin} style={styles.myStuffButton}>🔐 Admin</button>
         <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
       </div>
 

@@ -1,0 +1,364 @@
+/* src/loading-games.css */
+/* Mini-games while rendering - keeps kids engaged */
+
+/* ============================================================================
+   OVERLAY & CONTAINER
+   ============================================================================ */
+
+.loading-games-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: linear-gradient(135deg, #5B21B6 0%, #7C5CFC 50%, #FF6B6B 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.loading-games-container {
+  background: var(--ink2);
+  border: 2px solid var(--purple2);
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+/* ============================================================================
+   GAME CONTENT
+   ============================================================================ */
+
+.game-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+.game-content h3 {
+  font-family: Nunito, sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0;
+  text-align: center;
+}
+
+.game-instruction {
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+  min-height: 20px;
+}
+
+.game-score {
+  font-family: Nunito, sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--purple2);
+  text-align: center;
+}
+
+/* ============================================================================
+   TAP NUMBERS GAME
+   ============================================================================ */
+
+.numbers-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.number-button {
+  aspect-ratio: 1;
+  font-family: Nunito, sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  border: 2px solid var(--purple);
+  background: rgba(122, 92, 252, 0.1);
+  color: var(--purple2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.number-button:hover:not(:disabled) {
+  background: rgba(122, 92, 252, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(122, 92, 252, 0.4);
+}
+
+.number-button.next {
+  border-color: var(--mint);
+  background: rgba(0, 196, 140, 0.15);
+  color: var(--mint2);
+  box-shadow: 0 0 20px rgba(0, 196, 140, 0.3);
+}
+
+.number-button.done {
+  border-color: var(--coral);
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--coral2);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ============================================================================
+   MEMORY MATCH GAME
+   ============================================================================ */
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.memory-card {
+  aspect-ratio: 1;
+  font-size: 32px;
+  font-weight: 900;
+  border: 2px solid var(--purple);
+  background: linear-gradient(135deg, rgba(122, 92, 252, 0.1), rgba(122, 92, 252, 0.05));
+  color: #ffffff;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.memory-card:hover:not(:disabled) {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(122, 92, 252, 0.3);
+}
+
+.memory-card.flipped {
+  background: linear-gradient(135deg, var(--purple), var(--purple2));
+  border-color: var(--purple2);
+  box-shadow: 0 8px 20px rgba(122, 92, 252, 0.4);
+}
+
+.memory-card:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+
+/* ============================================================================
+   PATTERN GAME
+   ============================================================================ */
+
+.pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.pattern-shape {
+  aspect-ratio: 1;
+  font-size: 60px;
+  border: 2px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pattern-shape:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.05);
+}
+
+.pattern-shape.active {
+  border-color: var(--mint);
+  background: rgba(0, 196, 140, 0.3);
+  box-shadow: 0 0 30px rgba(0, 196, 140, 0.5), inset 0 0 20px rgba(0, 196, 140, 0.2);
+  transform: scale(0.95);
+}
+
+/* ============================================================================
+   GAME TABS
+   ============================================================================ */
+
+.game-tabs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+
+.game-tab {
+  font-family: "Nunito Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.game-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.game-tab.active {
+  background: var(--purple);
+  color: #ffffff;
+}
+
+/* ============================================================================
+   GAME COMPLETE STATE
+   ============================================================================ */
+
+.game-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.complete-emoji {
+  font-size: 64px;
+  animation: bounce 0.6s ease-out;
+}
+
+@keyframes bounce {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(10px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.game-complete h2 {
+  font-family: Nunito, sans-serif;
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--mint);
+  margin: 0;
+}
+
+.complete-score {
+  font-size: 18px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.complete-score strong {
+  font-family: Nunito, sans-serif;
+  font-size: 24px;
+  color: var(--purple2);
+}
+
+.complete-message {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.complete-dots {
+  display: flex;
+  gap: 8px;
+  font-size: 24px;
+  color: var(--mint);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 600px) {
+  .loading-games-container {
+    padding: 24px;
+    border-radius: 20px;
+  }
+
+  .numbers-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+
+  .number-button {
+    font-size: 18px;
+  }
+
+  .memory-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .memory-card {
+    font-size: 24px;
+  }
+
+  .pattern-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .pattern-shape {
+    font-size: 44px;
+    border-radius: 12px;
+  }
+
+  .game-content h3 {
+    font-size: 22px;
+  }
+}
