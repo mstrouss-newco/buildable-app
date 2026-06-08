@@ -17,6 +17,33 @@ export const config = {
 
 const sbHeaders = (key) => ({ "apikey": key, "Authorization": "Bearer " + key });
 
+// Call the Anthropic Messages API with automatic retry on rate-limit (429) and
+// overload (529). max_tokens is kept UNDER the org output-tokens-per-minute cap
+// so a single request cannot exceed the whole per-minute budget. Honors the
+// Retry-After header when present; otherwise uses exponential backoff.
+const CLAUDE_MAX_TOKENS = 7000; // keep below the org's output tokens/min limit
+async function fetchClaudeWithRetry(claudeKey, prompt, attempts) {
+  const max = attempts || 3;
+  let lastResp = null;
+  for (let i = 0; i < max; i++) {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: CLAUDE_MAX_TOKENS, messages: [{ role: "user", content: prompt }] }),
+    });
+    lastResp = resp;
+    // Only retry on transient rate-limit / overload responses.
+    if (resp.status !== 429 && resp.status !== 529) return resp;
+    if (i === max - 1) return resp; // out of attempts; let caller handle fallback
+    // Respect Retry-After (seconds) if the API provides it, else backoff.
+    const ra = parseFloat(resp.headers.get("retry-after"));
+    const waitMs = (!isNaN(ra) && ra > 0) ? Math.min(ra * 1000, 15000) : (800 * Math.pow(2, i));
+    console.error("generate-game: Claude " + resp.status + " (rate/overload); retry " + (i + 1) + "/" + (max - 1) + " in " + waitMs + "ms");
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+  return lastResp;
+}
+
 // Subjects we try to source from the sprite library for a game.
 const WANTED_SUBJECTS = ["coin", "gem", "star", "heart", "chest", "spike", "cloud_platform", "key", "orb"];
 
@@ -214,11 +241,7 @@ export default async function handler(req, res) {
 
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 16000, messages: [{ role: "user", content: prompt }] }),
-    });
+    const response = await fetchClaudeWithRetry(claudeKey, prompt);
 
     if (!response.ok) {
       console.error("Claude API error:", response.status, await response.text());
