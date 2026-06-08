@@ -889,3 +889,31 @@ cloud_platform/key/orb) loaded from the library. No console errors; Vite build i
   are named as expected if you want them reflected (levels/published/mechanics all populated).
 - To grow real spend history, have the generators INSERT a `usage_log` row per AI call
   (kind + cost_usd + model + meta); admin-stats already reads it.
+
+
+### 2026-06-08 — Usage logging wired into all generators (admin cost/volume)
+
+Goal: make the Admin Dashboard's spend numbers grow automatically from real
+AI calls instead of only when a DALL-E gap-fill happens.
+
+- `api/generate-game.js`: added a best-effort `logUsage()` helper (matches
+  `db/create-usage-log.sql`: kind / cost_usd / model / device_id / meta; `created_at`
+  defaults to now()). Every successful library build now writes one `usage_log`
+  row (`kind:"game"`, cost $0 — library assembly is free — with meta: gameType,
+  theme, spritesUsed, spriteGaps, mechanic). This gives the admin real build VOLUME.
+- `api/generate-creature.js`: existing `logSpend()` now tags rows `kind:"character"`
+  + `model:"image"` (was `kind:"image"`) so the per-kind cost breakdown is accurate.
+  Image generations are the main cost driver ($0.04/image) and were already logged.
+- `api/generate-level.js`: DALL-E gap-fill `logSpend()` rows now tagged `kind:"level"`
+  + `model:"image"`. Library level builds remain $0 and unlogged (no AI call).
+
+Verified live: POST /api/generate-game returned 200, source=library, valid 26.9KB
+HTML, mechanic + 9 sprites (build ~125s) — so the success path incl. logUsage ran.
+/api/admin-stats stays healthy, cost source=usage_log (today $0.56, month $1.48).
+Game rows log $0 so the $ total is unchanged by design; activity rows now accrue.
+
+Owner notes still open:
+- Set `ADMIN_API_TOKEN` in Vercel env + paste it into the admin Settings tab to lock
+  /api/admin-stats and /api/admin-list-games (currently readable without a token).
+- `counts.games` reads the `saved_games` table (separate from usage_log) and shows 0;
+  confirm whether saved games are stored there or under a different table/name.
