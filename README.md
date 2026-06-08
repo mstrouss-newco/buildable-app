@@ -569,3 +569,35 @@ cause is **not** the Breakout code — it is the production deployment:
 
 Until the deploy/key is sorted, the app stays playable (the fallback game still runs),
 but it serves the simple fallback instead of rich library-driven games.
+
+
+---
+
+## Session update — root cause CONFIRMED via live probes (429 → truncation)
+
+After deploying the rate-limit fix (`max_tokens` 16000 → 7000 + retry/backoff on
+429/529), live probes against the production `/api/generate-game` were re-run.
+
+**What the probes showed:**
+- The **429 rate_limit_error is gone** — the retry/backoff is working and we are no
+  longer exceeding the org's 8,000 output-tokens/min cap.
+- BUT the response now falls back with `fallbackReason: "truncated"` (was `"429"`).
+  The game HTML is being cut off mid-script because **7000 output tokens is too small
+  to hold a complete game**, so the validator correctly rejects the unbalanced/partial
+  output and serves the simple fallback.
+
+**Conclusion:** there is a hard tension on **Tier 1**:
+- `max_tokens` high enough for a full game (~12–16k)  ->  hits the 8k/min **429 cap**.
+- `max_tokens` low enough to stay under the cap (7k)   ->  game gets **truncated**.
+
+**Fix path (in progress):** upgrade the Anthropic org to **Tier 2** (raises the
+output-tokens/min limit). Once Tier 2 is active, raise `max_tokens` back up
+(target ~12000–14000) so games generate completely AND stay under the higher cap.
+Until then the app stays playable on the fallback game.
+
+**Verification checklist once Tier 2 is live + `max_tokens` raised:**
+1. Platformer probe returns `source: "claude"` (not `library`/fallback), htmlLen ~20KB+,
+   contains `raw.githubusercontent` sprite URLs, `fallbackReason` absent.
+2. Breakout probe (`gameData.gameType = "breakout"`) returns a real paddle/ball/brick
+   game and the `gameType` field is echoed back.
+3. Run `qa/game-qa-harness.html` for the 4-layer QA pass.
