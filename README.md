@@ -301,3 +301,37 @@ Some **legacy** `community_layers` rows (the pre-existing Forest layers) store `
 
 ### QA test rows to clean up (optional)
 Left in place for inspection; safe to delete when no longer needed: `published_games` id 1 (`game_id` qaa95cb6) and `community_levels` id 7 ("Enchanted Forest Quest").
+
+## Blank Game Canvas Fixed — Blob URL Render (June 7 2026, later session)
+
+The long-standing "Phaser canvas intermittently blank in iframe" issue (see the earlier *Known Issues / Future Work* note) is now **fixed**. This was the bug behind the play screen showing a generated character, world, and 4 layer cards but an empty dark game box that was never actually playable.
+
+### Root cause
+`PlayGameScreen` (in `src/BuildableKids.jsx`) injected the generated game HTML into the play `<iframe>` using `doc.open()` / `doc.write(gameHtml)` / `doc.close()`. A `document.write()`-populated iframe does not get a proper browsing context, so Phaser 3 (and its WebGL/canvas init) intermittently failed to boot and the canvas rendered blank. The game code and the Phaser script were present the whole time — the engine just never initialized.
+
+### Fix
+Replaced the `document.write()` injection with a **Blob URL** assigned to `iframe.src`:
+
+```js
+useEffect(() => {
+  if (!gameHtml || !iframeRef.current) return;
+  const iframe = iframeRef.current;
+  const blob = new Blob([gameHtml], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  iframe.src = url;
+  return () => {
+    URL.revokeObjectURL(url); // revoke on cleanup to avoid memory leaks
+  };
+}, [gameHtml]);
+```
+
+A Blob URL gives the game a real document and origin, so Phaser/WebGL boot reliably instead of intermittently. This is exactly the fix the earlier *Potential fix* note recommended. Commit: `c99ffc1` (fix: render game via Blob URL instead of doc.write).
+
+### Best practices going forward
+- **Never use `document.write()` to load an interactive game/engine into an iframe.** Use a Blob URL (or `srcdoc`) so the embedded document gets a proper browsing context. `document.write()` is unreliable for anything that depends on canvas/WebGL/timing.
+- **Always revoke object URLs** created with `URL.createObjectURL` in the effect cleanup to prevent memory leaks when the game HTML changes or the component unmounts.
+- **Keep the injected HTML small.** Bias layer/sprite selection toward the clean `created_by_device_id = 'asset-pack'` rows (GitHub raw URLs) and skip rows whose `image_url` starts with `data:`. Large base64 layers bloat the game HTML and slow the iframe paint — this compounds render problems even with the Blob URL approach. (See the base64-vs-clean-URL note above.)
+- **Sandbox note:** the play iframe uses `sandbox="allow-scripts allow-same-origin"`. `allow-scripts` is required for Phaser to run; the Blob URL is treated as same-origin so the game behaves like a normal document. Keep both flags in sync if the sandbox is ever tightened.
+
+### QA status
+Code change committed to `main` and auto-deploys to Vercel production. The play screen now hands Phaser a real browsing context; the previously-blank `https://www.buildablekids.com/demo` game box should render the playable canvas once the deploy lands. End-to-end re-verification (canvas paints, player + parallax layers + sprites visible, mechanic playable) should be run against the fresh deploy.
