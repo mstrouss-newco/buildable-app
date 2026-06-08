@@ -18,10 +18,11 @@ export const config = {
 const sbHeaders = (key) => ({ "apikey": key, "Authorization": "Bearer " + key });
 
 // Call the Anthropic Messages API with automatic retry on rate-limit (429) and
-// overload (529). max_tokens is kept UNDER the org output-tokens-per-minute cap
-// so a single request cannot exceed the whole per-minute budget. Honors the
+// overload (529). max_tokens is sized to fit a complete game on Tier 2 while staying under the
+// per-minute cap (raised from 7000 -> 13000 after the Tier 1 upgrade; 7000 was too
+// small and truncated games mid-script). Honors the
 // Retry-After header when present; otherwise uses exponential backoff.
-const CLAUDE_MAX_TOKENS = 7000; // keep below the org's output tokens/min limit
+const CLAUDE_MAX_TOKENS = 13000; // keep below the org's output tokens/min limit
 async function fetchClaudeWithRetry(claudeKey, prompt, attempts) {
   const max = attempts || 3;
   let lastResp = null;
