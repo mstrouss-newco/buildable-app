@@ -72,6 +72,7 @@ async function fetchMechanic(supabaseUrl, supabaseKey, preferredSlug) {
 }
 
 export default async function handler(req, res) {
+  try {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
   const { gameData } = req.body || {};
@@ -137,6 +138,17 @@ export default async function handler(req, res) {
     "For any object with no library image, fall back to a simple emoji or Phaser shape so the game still runs.",
     "Use the background layer images from the level data if provided; otherwise use theme colors for the " + levelTheme + " theme.",
     "",
+    "=== VISUAL COHERENCE RULES (HARD CONSTRAINTS — follow exactly) ===",
+    "The canvas is 800 wide by 400 tall. Keep the game readable and uncluttered:",
+    "- GROUND: a single flat ground line at y=360. The hero and all ground enemies stand ON this line (their bottom edge at y=360). Do not scatter platforms randomly.",
+    "- HERO: draw/scale the hero to about 40 wide by 52 tall. Spawn the hero at x=100, resting on the ground (y so its feet are at y=360). Never spawn the hero off-screen or overlapping the HUD.",
+    "- COLLECTIBLES (coin/gem/star/heart/orb/key): scale every collectible sprite to 32x32 pixels via setDisplaySize(32,32). Space them at least 90px apart horizontally. Float them between y=200 and y=320.",
+    "- ENEMIES/HAZARDS (spike/chest etc.): scale to about 40x40 via setDisplaySize. Never overlap the hero spawn (keep the first 250px clear).",
+    "- BACKGROUND DECOR (cloud_platform, clouds): keep in the top third (y < 160) and behind gameplay (low depth). Do not let decor overlap the hero, score, or collectibles.",
+    "- HUD-SAFE ZONE: reserve the top-left 220x40 region for the score and the area above the hero for its name label. No sprites in those zones.",
+    "- SCALING: every loaded library image MUST get an explicit setDisplaySize(...) so source PNGs of any resolution render at the sizes above. Never display a raw, unscaled imported image.",
+    "- DEPTH ORDER (back to front): background decor < ground < collectibles/enemies < hero < HUD/labels. Set .setDepth() accordingly so nothing important is hidden.",
+    "",
     "=== MECHANICS POLISH (tested patterns) ===",
     "Enemies with named movement patterns (linear, patrol, zigzag, swoop dive-bomb). Auto-aim/auto-fire helper so young kids don't have to aim. Collectibles where some are power-ups charging a meter. Difficulty ramp (count/speed up, harder patterns later). Gentle game-over + Play Again.",
     "Put all skinnable values (hero look, theme colors, sprite keys/urls, enemy defs, the mechanic params) in a clearly-marked CONFIG object near the top, separate from the engine.",
@@ -197,6 +209,13 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error("generate-game error:", e);
     return res.status(200).json({ html: fallbackGame(safeGameData), source: "library", mechanic, spriteGaps: gaps });
+  }
+  } catch (fatalErr) {
+    // Catch-all: any unexpected error must still return a playable game,
+    // never an HTTP 500 (which renders a blank canvas for the kid).
+    console.error("generate-game fatal error:", fatalErr);
+    var safeFb = (req && req.body && req.body.gameData) ? req.body.gameData : {};
+    return res.status(200).json({ html: fallbackGame(safeFb), source: "fallback", fallbackReason: "fatal-error" });
   }
 }
 
