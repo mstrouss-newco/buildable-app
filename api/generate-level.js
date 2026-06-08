@@ -104,7 +104,7 @@ async function logSpend(supabaseUrl, supabaseKey, cost) {
     await fetch(supabaseUrl + "/rest/v1/usage_log", {
       method: "POST",
       headers: { ...sbHeaders(supabaseKey), "Content-Type": "application/json" },
-      body: JSON.stringify({ date: today, cost_usd: cost, kind: "image" }),
+      body: JSON.stringify({ date: today, cost_usd: cost, kind: "level", model: "image" }),
     });
   } catch (e) {}
 }
