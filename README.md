@@ -54,7 +54,16 @@ Stores generated level configurations.
 ### `community_characters`
 Stores generated character images and metadata.
 
-All three tables have Row Level Security enabled.
+### `community_sprites`
+Reusable game-object sprites (coin, gem, star, heart, chest, spike, cloud_platform, key, orb) per theme, transparent PNGs. Same column shape as `community_layers` plus a `subject` column. Pulled by `generate-game` to place objects (mix-and-match across themes).
+
+### `game_mechanics`
+Reusable gameplay rules. Columns: `slug` (unique), `name`, `description`, `rule` (jsonb params), `tags` (text[]), `enabled` (bool), `created_at`. The generator picks an enabled mechanic at build time. Add new rows to grow the library.
+
+### `published_games`
+Kid-published games shown in the PUBLIC gallery. Columns: `game_id` (unique short id), `title`, `html` (the finished self-contained game), `theme`, `mechanic_slug`/`mechanic_name`, `character_name`, `creator_name`, `device_id`, `layer_ids`/`sprite_ids` (jsonb), `preview_image_url`, `play_count`, `moderation_status` (default 'approved'), `created_at`. Written by `/api/publish-game`, read by `/api/list-published-games`.
+
+All community/published tables are accessed by the API via the Supabase service key (RLS is not relied on for app reads).
 
 ---
 
@@ -65,6 +74,8 @@ All three tables have Row Level Security enabled.
 | `/api/generate-creature` | POST | Generate character image + metadata via OpenAI |
 | `/api/generate-level` | POST | Generate world layers (4 parallax layers) via OpenAI |
 | `/api/generate-game` | POST | Generate Phaser 3 game code via Anthropic Claude |
+| `/api/publish-game` | POST | Publish a finished kid-made game to the public gallery (published_games); returns a share id |
+| `/api/list-published-games` | GET | Public gallery list; `?gameId=ID` returns one full game (html) to play; `?deviceId=D` lists a device's games |
 
 ### Image Generation Fallback Chain
 Both `generate-creature.js` and `generate-level.js` try models in order:
@@ -246,3 +257,14 @@ Capitalized theme tags: Forest, Castle, Underwater, Space, Desert, Volcano, Cand
 ### Known issue / bug found
 
 **Asset PNGs in `/upload` are empty placeholders.** All 91 files are correctly named (7 themes x 4 layers + 9 sprites = 91, 0 missing/misnamed) but each file is only ~8 bytes (just the PNG signature, no image data). The real artwork did not make it into the GitHub commit. **Action needed:** re-upload the real PNG binaries to `/upload` (replace the stubs). Once real files are present, the 91 rows can be loaded into the `buildable-assets` bucket + `community_layers`/`community_sprites` and the end-to-end verification completed. The schema, bucket, mechanic library, and generator code are already in place and waiting on the real art.
+
+
+## Kid Publish Flow (June 7 2026)
+
+Kids can now create a game and publish it for others to play.
+
+Flow: intro -> pick game -> create character -> build world -> **Play** (game is assembled from the libraries, no DALL-E) -> tap **"🚀 Publish my game!"** on the play screen. Publishing POSTs the finished game HTML plus metadata (title, theme, chosen mechanic, character/creator names, layer ids, preview image) to `/api/publish-game`, which stores a row in `published_games` and returns a share link (`/play/<gameId>`). The UI then shows a success message with the shareable link.
+
+The public gallery reads from `/api/list-published-games` (light list without the heavy html column); a single shared game is fetched with `?gameId=` which includes the html so it can be played.
+
+New files: `api/publish-game.js`, `api/list-published-games.js`. Edited: `src/BuildableKids.jsx` (PlayGameScreen gained publish state, a publishGame() handler, the Publish button, and a published/share-link card; also added the previously-missing `styles.error` entry the error message already referenced).
