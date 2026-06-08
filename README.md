@@ -335,3 +335,27 @@ A Blob URL gives the game a real document and origin, so Phaser/WebGL boot relia
 
 ### QA status
 Code change committed to `main` and auto-deploys to Vercel production. The play screen now hands Phaser a real browsing context; the previously-blank `https://www.buildablekids.com/demo` game box should render the playable canvas once the deploy lands. End-to-end re-verification (canvas paints, player + parallax layers + sprites visible, mechanic playable) should be run against the fresh deploy.
+
+## Generated Game Validation + Truncation Guard (June 7 2026, later session)
+
+After the Blob URL render fix, end-to-end QA against the live demo showed games **still** rendering a blank canvas — but for a different reason. Inspecting the play iframe directly: the Blob URL loaded fine, Phaser 3.60.0 loaded from CDN, and the ~19KB inline game script was injected — but **no `<canvas>` was ever created**. Evaluating the inline script threw `SyntaxError: missing ) after argument list`. The generated code had unbalanced brackets (e.g. 344 `(` vs 343 `)`, 75 `{` vs 73 `}`) and contained **no `new Phaser.Game(...)` call at all**.
+
+### Root cause
+The Claude call in `api/generate-game.js` used `max_tokens: 8000`. A full, polished game (the prompt asks for enemies, power-ups, a difficulty ramp, and a separate CONFIG block) routinely needs more than that, so the response was **truncated mid-script**. The only validation gate was `html.includes("<!DOCTYPE")` — a truncated file still starts with `<!DOCTYPE html>`, so the broken code passed the check and was served as-is. `fallbackGame()` never triggered because its trigger condition did not detect *malformed* output, only a missing/empty response.
+
+### Fix (`api/generate-game.js`)
+1. **Raised `max_tokens` from 8000 to 16000** so a complete game fits in one response.
+2. **Truncation guard:** if Claude returns `stop_reason: "max_tokens"`, treat it as a generation failure and serve `fallbackGame()` instead of the partial output.
+3. **Added `validateGameHtml(html)`** which is now run before any generated game is served. It rejects output that: is empty / not HTML, has no closing `</html>`, has no `new Phaser.Game` / `Phaser.Game(` bootstrap, or has unbalanced `()`, `{}`, or `[]` in its `<script>` bodies. On failure it falls back to the known-good `fallbackGame()`.
+4. **Observability:** the API response now includes a `fallbackReason` field (`"truncated"`, `"no-phaser-game"`, `"unbalanced-braces"`, etc.) so future bad generations are diagnosable from the network tab.
+
+Commit: `fcd50f2` (fix: validate generated game + raise max_tokens).
+
+### Best practices going forward
+- **Never serve LLM-generated executable code without validating it first.** At minimum check that it parses / has balanced brackets and contains the expected entry point (here, the Phaser bootstrap). A partial response can look valid at the top and be broken at the bottom.
+- **Always check the completion `stop_reason`.** `max_tokens` means the answer was cut off — do not use it. Size `max_tokens` to the realistic worst-case output, not the average.
+- **Make the fallback trigger on *quality*, not just *presence*.** The old fallback only caught "no response"; it must also catch "malformed response."
+- **Return a machine-readable failure reason** (`fallbackReason`) so silent fallbacks are observable in QA and production logs.
+
+### QA status
+Code change committed to `main`; Vercel will redeploy. Re-verification needed on the fresh deploy: build a game and confirm the iframe now contains a live `<canvas>` (i.e. `validateGameHtml` passed a real generated game), and if a generation is ever truncated, confirm the playable `fallbackGame()` is served instead of a blank box. The two render-path pieces (Blob URL injection + generation validation) together should close out the "blank/unplayable game" issue.
