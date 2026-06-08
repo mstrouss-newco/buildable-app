@@ -446,3 +446,67 @@ All four changes committed to `main` and auto-deploy to Vercel. Verified on the 
 a generated game renders a live 800x400 Phaser canvas with the player, score, and library
 sprites. Re-run `qa/game-qa-harness.html` against the fresh deploy to confirm Layers 0-2 pass
 and to spot-check Layer 3 coherence on new generations.
+
+## Game Types: Breakout added (Path B) + Multi-Genre Roadmap (Path A — planned)
+
+Until now the generator only produced a single genre: a side-scrolling
+**platformer** (run-and-jump hero, gravity, parallax layers, collectible/spike
+sprites). Tetris and brick/Breakout games are a fundamentally different category
+(grid / paddle-and-ball, no jumping hero, no parallax scroll), so they cannot be
+produced just by adding art or a mechanic row — the generator prompt has to change.
+
+### Path B (DONE): Breakout game type
+`api/generate-game.js` now reads `gameData.gameType` (default `"platformer"`).
+When `gameType === "breakout"`, a dedicated **Breakout / brick-breaker** prompt is
+used instead of the platformer prompt:
+
+- **Reuses the SAME library sprites as bricks** (coin/gem/star/heart/chest/etc.)
+  arranged in a grid — so it ships with **zero new art required**. Missing subjects
+  fall back to solid colored rectangle bricks.
+- Paddle (themed after the character) + ball, **no-gravity** arcade physics.
+- Controls: LEFT/RIGHT arrows + mouse/touch X to move the paddle; click/tap or SPACE
+  to launch the ball.
+- Win = clear all bricks; lose = run out of lives (starts at 3); **anti-soft-lock**
+  failsafe nudges the ball angle if it gets stuck moving horizontally.
+- Same VISUAL COHERENCE hard-constraints approach as the platformer (fixed brick
+  grid region, brick/paddle/ball sizes via `setDisplaySize`, HUD-safe zone, depth order).
+
+The existing platformer path is **unchanged**; the two prompts are selected by a single
+`const prompt = gameType === "breakout" ? breakoutPrompt : platformerPrompt;` line. The
+API response now also reports `gameType`. Commit: `bf4d759`.
+
+**To trigger Breakout:** POST to `/api/generate-game` with `gameData.gameType =
+"breakout"`. (The UI does not yet expose a game-type picker on the create screen — that
+is part of Path A below. For now it can be set programmatically / via the API.)
+
+**Suggested mechanic row** (add to `game_mechanics` so it can be picked as a hint):
+```json
+{
+  "slug": "breakout-clear-all-bricks",
+  "name": "Clear all the bricks",
+  "description": "Bounce the ball off the paddle to break every brick to win; don't let the ball fall.",
+  "rule": { "lives": 3, "rows": 4, "cols": 8, "ballSpeed": 220, "speedUpEvery": 8, "speedUpBy": 20 },
+  "tags": ["breakout", "paddle", "ball", "arcade"],
+  "enabled": true
+}
+```
+
+### Path A (PLANNED, not yet built): full multi-genre generator
+Breakout proves the multi-genre pattern with one extra prompt. The longer-term plan is to
+make game type a **first-class concept** end to end:
+
+- A **game-type picker on the create screen** (Platformer / Breakout / Tetris / ...), with
+  `gameType` flowing through `BuildableKids.jsx` into the generate-game payload.
+- A **prompt template per genre** in `generate-game.js` (extract the current inline prompts
+  into named builders, e.g. `platformerPrompt()`, `breakoutPrompt()`, `tetrisPrompt()`).
+- **Per-genre asset slots**: each genre declares which library subjects it needs (platformer
+  uses collectibles/spikes; Breakout uses bricks; Tetris would need block textures), so the
+  sprite-gap audit is genre-aware.
+- **Per-genre QA expectations** in `qa/game-qa-harness.html` (e.g. Breakout: ball+paddle+bricks
+  exist and a brick can be destroyed; Tetris: pieces fall, rotate, and lines clear).
+- **Tetris last:** it is the most brittle to generate (rotation, line-clearing, grid collision
+  are exactly where LLM-generated code tends to have subtle bugs), so it should follow once the
+  per-genre scaffolding from Breakout is proven.
+
+> Design note: this keeps the "skin vs engine" principle but adds a third axis — **genre**.
+> A game = genre (engine template) + skin (theme/sprites) + mechanic (rule params).
