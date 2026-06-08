@@ -303,6 +303,10 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
 // ============ PLAY GAME SCREEN COMPONENT ============
 function PlayGameScreen({ gameData, onBack, onMyStuff }) {
   const [gameHtml, setGameHtml] = useState(null);
+const [gameMechanic, setGameMechanic] = useState(null);
+const [publishing, setPublishing] = useState(false);
+const [publishedUrl, setPublishedUrl] = useState(null);
+const [publishError, setPublishError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dots, setDots] = useState(".");
@@ -361,6 +365,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
 
         if (data.html) {
           setGameHtml(data.html);
+          if (data.mechanic) setGameMechanic(data.mechanic);
         } else {
           setError("Couldn't generate the game. Try again!");
         }
@@ -377,6 +382,48 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
     generateGame();
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Publish the finished game to the PUBLIC gallery.
+  const publishGame = async () => {
+    if (!gameHtml || publishing) return;
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const deviceId = localStorage.getItem("deviceId") || (`device_${Date.now()}`);
+      localStorage.setItem("deviceId", deviceId);
+      const title = (gameData.level && (gameData.level.name || gameData.level.theme)) || "My Game";
+      const layerIds = (gameData.level && gameData.level.layers)
+        ? gameData.level.layers.map((l) => l.id).filter(Boolean)
+        : null;
+      const response = await fetch("/api/publish-game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deviceId,
+          html: gameHtml,
+          title,
+          theme: gameData.level && gameData.level.theme,
+          mechanicSlug: gameMechanic && gameMechanic.slug,
+          mechanicName: gameMechanic && gameMechanic.name,
+          characterName: gameData.character && (gameData.character.name || gameData.character.description),
+          creatorName: gameData.playerName,
+          layerIds,
+          previewImageUrl: (gameData.level && (gameData.level.previewImage || gameData.level.image)) || null,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.shareUrl) {
+        setPublishedUrl(data.shareUrl);
+      } else {
+        setPublishError("Couldn't publish your game. Try again!");
+      }
+    } catch (err) {
+      console.error("publish error:", err);
+      setPublishError("Something went wrong publishing. Try again!");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   // Inject the generated HTML into the iframe
   useEffect(() => {
@@ -480,6 +527,31 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
             style={styles.gameIframe}
             sandbox="allow-scripts allow-same-origin"
           />
+        </div>
+      )}
+
+      {/* Publish to the public gallery */}
+      {gameHtml && !loading && (
+        <div style={styles.publishCard}>
+          {!publishedUrl ? (
+            <>
+              <p style={styles.publishHeading}>Love it? Share it with everyone!</p>
+              <button
+                onClick={publishGame}
+                disabled={publishing}
+                style={{ ...styles.primaryButton, opacity: publishing ? 0.6 : 1, cursor: publishing ? "not-allowed" : "pointer" }}
+              >
+                {publishing ? "Publishing... ✨" : "🚀 Publish my game!"}
+              </button>
+              {publishError && <p style={styles.error}>{publishError}</p>}
+            </>
+          ) : (
+            <div style={styles.publishedBox}>
+              <p style={styles.publishedTitle}>🎉 Published! Anyone can play it now.</p>
+              <p style={styles.shareLabel}>Share link:</p>
+              <code style={styles.shareLink}>{(typeof window !== "undefined" ? window.location.origin : "") + publishedUrl}</code>
+            </div>
+          )}
         </div>
       )}
 
@@ -781,5 +853,54 @@ const styles = {
     height: "440px",
     border: "none",
     display: "block",
+  },
+  publishCard: {
+    background: CARD_BG,
+    border: CARD_BORDER,
+    padding: "26px",
+    borderRadius: "22px",
+    boxShadow: "0 16px 44px rgba(0,0,0,0.45)",
+    maxWidth: "560px",
+    width: "100%",
+    textAlign: "center",
+    marginBottom: "10px",
+    backdropFilter: "blur(12px)",
+  },
+  publishHeading: {
+    fontFamily: FRED,
+    fontSize: "20px",
+    fontWeight: "600",
+    color: "#fff",
+    marginBottom: "16px",
+  },
+  publishedBox: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px",
+  },
+  publishedTitle: {
+    fontSize: "18px",
+    fontWeight: "800",
+    color: "#7ee6a6",
+  },
+  shareLabel: {
+    fontSize: "13px",
+    color: "#b0abc8",
+    margin: 0,
+  },
+  shareLink: {
+    fontSize: "14px",
+    color: "#cbb8f5",
+    background: "rgba(0,0,0,0.3)",
+    border: "1px solid rgba(155,126,221,0.35)",
+    borderRadius: "10px",
+    padding: "8px 12px",
+    wordBreak: "break-all",
+  },
+  error: {
+    color: "#ff9a9a",
+    marginTop: "12px",
+    fontWeight: "700",
   },
 };
