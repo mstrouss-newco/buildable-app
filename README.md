@@ -359,3 +359,90 @@ Commit: `fcd50f2` (fix: validate generated game + raise max_tokens).
 
 ### QA status
 Code change committed to `main`; Vercel will redeploy. Re-verification needed on the fresh deploy: build a game and confirm the iframe now contains a live `<canvas>` (i.e. `validateGameHtml` passed a real generated game), and if a generation is ever truncated, confirm the playable `fallbackGame()` is served instead of a blank box. The two render-path pieces (Blob URL injection + generation validation) together should close out the "blank/unplayable game" issue.
+
+## Loading-Screen Auto-Progress + QA Framework + Visual Coherence (June 7 2026, later session)
+
+This session improved the wait experience, hardened the generate-game endpoint against
+500s, added an automated QA harness, and tightened the generator prompt so games come out
+visually coherent. The play-screen game now renders a live Phaser canvas (verified on the
+live demo: 800x400 canvas, player label, score, library sprites).
+
+### 1. Loading screen now auto-cycles mini-games + shows it is waiting on the game
+**Files:** `src/LoadingGames.jsx`, `src/loading-games.css`
+
+**Problem:** the kid had to *manually choose / tap to progress* through the loading
+mini-games, and there was no signal that the system was still rendering their game.
+
+**Fix:** the mini-games now **auto-cycle** (numbers -> memory -> pattern, ~9s each) with no
+manual choice required. The clickable tabs were replaced by a non-interactive status banner
+("Building your game... keep playing while we finish!") plus highlighted "coming up" pills
+so it is obvious more mini-games are queued AND that the build is still in progress.
+**Commits:** `1fb2e49` (LoadingGames auto-cycle + waiting status), `93bda79` (status/pill CSS).
+
+### 2. Generated games: visual coherence rules (Layer 3 QA)
+**File:** `api/generate-game.js`
+
+**Problem:** the first real generated game rendered, but sprites were chaotic — mis-scaled,
+overlapping, and crowding the score/name HUD. The prompt set sizes loosely, so Claude
+displayed raw, differently-sized library PNGs on top of each other.
+
+**Fix:** added a **VISUAL COHERENCE RULES (HARD CONSTRAINTS)** block to the Claude prompt:
+a single ground line at y=360; hero ~40x52 spawned at x=100 on the ground; collectibles
+scaled to 32x32 and spaced >=90px; enemies ~40x40 kept clear of the first 250px; background
+decor confined to the top third behind gameplay; a top-left 220x40 HUD-safe zone; an explicit
+`setDisplaySize(...)` required on every loaded image; and a back-to-front depth order.
+**Commit:** `b6e46f0`.
+
+### 3. `/api/generate-game` never returns HTTP 500 (catch-all fallback)
+**File:** `api/generate-game.js`
+
+**Problem:** an intermittent 500 was observed when probing the endpoint directly. A 500
+gives the iframe nothing to render -> blank box. Only the Claude call was wrapped in
+try/catch; setup code before it (payload shaping, prompt assembly) could still throw.
+
+**Fix:** wrapped the **entire handler body** in a try/catch. Any unexpected error now logs
+and returns the known-good `fallbackGame()` with `status 200` and `source: "fallback"`,
+`fallbackReason: "fatal-error"`, so the kid always gets a playable game instead of a 500.
+**Commit:** `b6e46f0`. (Root cause of the original 500 still warrants a look at Vercel
+function logs, but the endpoint is now fail-safe regardless.)
+
+### 4. Automated QA harness
+**File:** `qa/game-qa-harness.html` (standalone — open in a browser, no build step)
+
+A self-contained page that loads a generated game in a **sandboxed iframe** and asserts:
+- **Layer 0 — API:** `/api/generate-game` returns 200 (never 500), non-empty html, and is
+  not a silent fallback (`source !== "fallback"`).
+- **Layer 1 — Boots:** has doctype + closing `</html>`, bootstraps Phaser, has balanced
+  `{}`/`[]` in its scripts, and uses `setDisplaySize` (coherence signal).
+- **Layer 2 — Playable:** a `<canvas>` mounts at non-zero size, the Phaser global is present,
+  jump input (space/click) dispatches without error, and a win/lose/restart anti-soft-lock
+  path exists.
+
+Click **"Fetch from /api/generate-game"** to test a fresh generation, or paste game HTML.
+**Commit:** `224a9b7`.
+
+### The 4-layer "is this game functional?" QA framework
+A reusable way to QA any generated game, cheapest checks first:
+1. **Layer 1 — Does it boot?** (automated) doctype, Phaser bootstrap, balanced brackets,
+   canvas mounts. Enforced in `validateGameHtml` (server) + the harness (client).
+2. **Layer 2 — Is it playable?** (automated) input moves/responds, a win condition and a
+   lose condition are both reachable, no soft-lock.
+3. **Layer 3 — Is it coherent?** (prompt-enforced) sprites correctly sized/positioned, no
+   overlap, HUD readable — see the VISUAL COHERENCE RULES above.
+4. **Layer 4 — Is it fun?** (human / kid testing) the only layer a machine cannot judge.
+
+### Best practices going forward
+- **Auto-advance waiting UX; never make the kid tap to progress** while a background job runs,
+  and always show the system is still working.
+- **Constrain LLM-generated layout with hard numeric rules** (exact sizes, spawn coords,
+  safe zones) rather than adjectives like "nicely arranged" — models comply far better.
+- **Make serverless endpoints fail-safe:** wrap the whole handler so a thrown error returns a
+  usable 200 fallback, not a 500 the client cannot render.
+- **Keep an automated QA gate next to the generator** so regressions in boot/playability are
+  caught before a human ever sees them.
+
+### QA status
+All four changes committed to `main` and auto-deploy to Vercel. Verified on the live demo that
+a generated game renders a live 800x400 Phaser canvas with the player, score, and library
+sprites. Re-run `qa/game-qa-harness.html` against the fresh deploy to confirm Layers 0-2 pass
+and to spot-check Layer 3 coherence on new generations.
