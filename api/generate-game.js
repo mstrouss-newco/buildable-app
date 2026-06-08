@@ -17,6 +17,28 @@ export const config = {
 
 const sbHeaders = (key) => ({ "apikey": key, "Authorization": "Bearer " + key });
 
+// Write one row to usage_log per AI call so the Admin Dashboard shows real
+// activity volume and spend over time. Matches db/create-usage-log.sql:
+// (kind, cost_usd, model, device_id, meta). created_at defaults to now().
+// Best-effort and non-blocking: never throws into the request path.
+async function logUsage(supabaseUrl, supabaseKey, entry) {
+  if (!supabaseUrl || !supabaseKey) return;
+  try {
+    await fetch(supabaseUrl + "/rest/v1/usage_log", {
+      method: "POST",
+      headers: { "apikey": supabaseKey, "Authorization": "Bearer " + supabaseKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: entry.kind,
+        cost_usd: entry.costUsd || 0,
+        model: entry.model || null,
+        device_id: entry.deviceId || null,
+        meta: entry.meta || null,
+      }),
+    });
+  } catch (e) { /* best-effort: logging must never break generation */ }
+}
+
+
 // Call the Anthropic Messages API with automatic retry on rate-limit (429) and
 // overload (529). max_tokens is sized to fit a complete game on Tier 2 while staying under the
 // per-minute cap (raised from 7000 -> 13000 after the Tier 1 upgrade; 7000 was too
@@ -283,6 +305,15 @@ export default async function handler(req, res) {
       return res.status(200).json({ html: fallbackGame(safeGameData), source: "library", mechanic, spriteGaps: gaps, fallbackReason: validation.reason });
     }
 
+    // Record this build in usage_log (library builds cost $0 but we log the
+    // activity so the Admin Dashboard shows real volume over time).
+    logUsage(supabaseUrl, supabaseKey, {
+      kind: "game",
+      costUsd: 0,
+      model: "claude-sonnet-4-6",
+      deviceId: (gameData && gameData.deviceId) || null,
+      meta: { gameType, theme: levelTheme, spritesUsed: sprites.map((s) => s.subject), spriteGaps: gaps, mechanic: mechanic ? mechanic.slug : null },
+    });
     return res.status(200).json({
       html,
       source: "library",
