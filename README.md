@@ -212,3 +212,37 @@ const blob = new Blob([gameHtml], { type: 'text/html' });
 iframe.src = URL.createObjectURL(blob);
 ```
 This gives Phaser a proper browsing context and should fix the intermittent blank canvas.
+
+
+---
+
+## Asset Libraries + Library-Driven Generator (June 7 2026)
+
+The game generator no longer makes new art with DALL-E on every build. A game is now assembled by mixing and matching from three reusable libraries:
+
+- **LEVEL library** -> `community_layers` (background layers: sky, midground, platforms, foreground; per theme)
+- **SPRITE library** -> `community_sprites` (game objects: coin, gem, star, heart, chest, spike, cloud_platform, key, orb; per theme)
+- **MECHANIC library** -> `game_mechanics` (reusable gameplay rules; built to grow over time)
+
+### New Supabase objects (project: mstrouss-newco's Project)
+
+- **Storage bucket `buildable-assets`** (public) - holds the asset PNGs so each gets a permanent public URL.
+- **Table `community_sprites`** - mirrors the `community_layers` contract: `asset_id, subject, category, image_url, theme_tags[], prompt_used, has_transparency, reusable, created_by_device_id, moderation_status, created_at`. RLS enabled; read via service key (same pattern as `community_layers`). Indexes: `(subject, moderation_status, reusable)` + GIN on `theme_tags`.
+- **Table `game_mechanics`** - `slug (unique), name, description, rule (jsonb), tags[], enabled, created_at`. RLS enabled. Add new mechanics by inserting a row; the generator picks from `enabled=true`.
+
+### Theme tag convention
+
+Capitalized theme tags: Forest, Castle, Underwater, Space, Desert, Volcano, Candy kingdom. (Note: some legacy `community_layers` rows use lowercase, e.g. `forest`; the generator matches themes case-insensitively to cover both.)
+
+### Generator changes
+
+- `api/generate-level.js` - rewritten to pull layers from `community_layers` by theme (case-insensitive), mix-and-match across themes (via optional `entity.layerThemes`), and **no longer generates or randomly refreshes art with DALL-E**. DALL-E is kept ONLY as a last-resort gap-filler when no library layer exists for a requested type; every such gap is returned under `gaps` in the response so the library can be filled. Response also reports `fromLibrary` / `gapFilled` counts and `costUsd` (0 when fully library-sourced).
+- `api/generate-game.js` - now fetches sprites from `community_sprites` (mix-and-match, theme-biased with cross-theme fallback) and selects a mechanic from `game_mechanics` (or by `gameData.mechanicSlug`), injecting both into the Claude prompt. **No image generation in the game-creation path** (`costUsd: 0`). Missing sprite subjects are flagged under `spriteGaps`.
+
+### Starter mechanics seeded
+
+`run-jump-platformer`, `collect-all-coins`, `avoid-the-spikes`, `reach-the-chest`, `timed-run` (each with a small `rule` JSON for win/lose params).
+
+### Known issue / bug found
+
+**Asset PNGs in `/upload` are empty placeholders.** All 91 files are correctly named (7 themes x 4 layers + 9 sprites = 91, 0 missing/misnamed) but each file is only ~8 bytes (just the PNG signature, no image data). The real artwork did not make it into the GitHub commit. **Action needed:** re-upload the real PNG binaries to `/upload` (replace the stubs). Once real files are present, the 91 rows can be loaded into the `buildable-assets` bucket + `community_layers`/`community_sprites` and the end-to-end verification completed. The schema, bucket, mechanic library, and generator code are already in place and waiting on the real art.
