@@ -160,3 +160,24 @@ aggressive dive-bombers in the dark → boss finale.
 Claude composes each game from these named mechanics (choose patterns per enemy, a win
 condition, a difficulty ramp, the THEME/LEVELS split) instead of inventing physics
 each time. Keep this file and that prompt in sync.
+
+
+---
+
+## 8. Now backed by a database table: `game_mechanics`
+
+This catalog is the design reference. The mechanics are also stored as rows in the **`game_mechanics`** Supabase table so the generator can pick from them at build time and the set can grow over time without code changes:
+
+- Columns: `slug (unique), name, description, rule (jsonb), tags[], enabled, created_at`.
+- `api/generate-game.js` selects an `enabled=true` mechanic (random, or by `gameData.mechanicSlug`) and injects its name/description/`rule` JSON into the Claude prompt.
+- **To add a mechanic:** insert a row (give it a `slug`, `name`, `description`, and a small `rule` JSON of params). It becomes available to the generator immediately. Keep this file in sync with new entries.
+
+### Seeded starter mechanics
+
+| slug | name |
+|------|------|
+| `run-jump-platformer` | Run and jump platformer |
+| `collect-all-coins` | Collect all coins to win |
+| `avoid-the-spikes` | Avoid the spikes |
+| `reach-the-chest` | Reach the chest at the end |
+| `timed-run` | Simple timed run |
