@@ -174,6 +174,7 @@ export default async function handler(req, res) {
     "The canvas is 800 wide by 400 tall. Keep the game readable and uncluttered:",
     "- GROUND: a single flat ground line at y=360. The hero and all ground enemies stand ON this line (their bottom edge at y=360). Do not scatter platforms randomly.",
     "- HERO: draw/scale the hero to about 40 wide by 52 tall. Spawn the hero at x=100, resting on the ground (y so its feet are at y=360). Never spawn the hero off-screen or overlapping the HUD.",
+    "- WORLD & CAMERA (HARD CONSTRAINT - the player must travel THROUGH the world, not run in place): build a level WIDER than the screen (worldWidth about 3200px). Call this.physics.world.setBounds(0,0,worldWidth,400) and this.cameras.main.setBounds(0,0,worldWidth,400), give the hero setCollideWorldBounds(true), and this.cameras.main.startFollow(hero, true, 0.1, 0.1). Spread the ground, collectibles, enemies and the goal across the FULL worldWidth so moving right reveals new ground. The world must NOT stop scrolling when the hero reaches the right edge of the canvas - the camera follows the hero across the whole level. Backgrounds use setScrollFactor for parallax. Reaching the right end / the goal is the win for distance-style mechanics.",
     "- COLLECTIBLES (coin/gem/star/heart/orb/key): scale every collectible sprite to 32x32 pixels via setDisplaySize(32,32). Space them at least 90px apart horizontally. Float them between y=200 and y=320.",
     "- ENEMIES/HAZARDS (spike/chest etc.): scale to about 40x40 via setDisplaySize. Never overlap the hero spawn (keep the first 250px clear).",
     "- BACKGROUND DECOR (cloud_platform, clouds): keep in the top third (y < 160) and behind gameplay (low depth). Do not let decor overlap the hero, score, or collectibles.",
@@ -182,11 +183,13 @@ export default async function handler(req, res) {
     "- DEPTH ORDER (back to front): background decor < ground < collectibles/enemies < hero < HUD/labels. Set .setDepth() accordingly so nothing important is hidden.",
     "",
     "=== MECHANICS POLISH (tested patterns) ===",
+    "- LIVES (HARD CONSTRAINT): the player has 3 lives. Show them as hearts in the top-right HUD. Touching a hazard/enemy removes ONE life, briefly makes the hero flash/invulnerable for ~1s, and respawns control (do NOT end the game on the first hit). Only when lives reach 0 is it Game Over. This applies to runner/distance mechanics too - a runner is NOT one-hit; it has 3 lives.",
     "Enemies with named movement patterns (linear, patrol, zigzag, swoop dive-bomb). Auto-aim/auto-fire helper so young kids don't have to aim. Collectibles where some are power-ups charging a meter. Difficulty ramp (count/speed up, harder patterns later). Gentle game-over + Play Again.",
     "Put all skinnable values (hero look, theme colors, sprite keys/urls, enemy defs, the mechanic params) in a clearly-marked CONFIG object near the top, separate from the engine.",
     "",
     "Technical requirements:",
     "1. Load Phaser 3 from CDN: https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js",
+    "1b. CRISP PIXEL-ART RENDERING (HARD CONSTRAINT - sprites currently look blurry/over-smoothed): in the Phaser game config set render: { pixelArt: true, antialias: false, roundPixels: true } (and type: Phaser.AUTO). Scale every loaded library PNG to the target size with whole-number-friendly setDisplaySize/ setScale so pixel art stays sharp, and never upscale a small sprite blurrily. Set the canvas CSS image-rendering to pixelated.",
     "2. Draw the hero and enemies with Phaser graphics or emoji; load the object sprites listed above from their URLs.",
     "3. CONTROLS (HARD CONSTRAINTS - implement ALL of these):",
     "   a) MOVEMENT: LEFT/RIGHT arrow keys AND A/D keys move the hero left and right. In update(), if left is down set hero velocityX to -moveSpeed (about 220), if right is down set it to +moveSpeed, otherwise set velocityX to 0. The hero MUST be able to walk both directions - do not make it a fixed-position auto-runner.",
@@ -326,28 +329,68 @@ function validateGameHtml(html) {
 
 // Built-in fallback game when Claude is unavailable.
 function fallbackGame(gameData) {
-  const charName = gameData?.character?.name || "Hero";
-  const levelName = gameData?.level?.name || "Mystery World";
-  const playerName = gameData?.playerName || "Player";
-  const theme = gameData?.level?.theme || "forest";
+  const charName = (gameData && gameData.character && gameData.character.name) || "Hero";
+  const levelName = (gameData && gameData.level && gameData.level.name) || "Mystery World";
+  const playerName = (gameData && gameData.playerName) || "Player";
+  const theme = (gameData && gameData.level && gameData.level.theme) || "forest";
 
-  const bgColors = { forest: "#1a4a1a", castle: "#2a2a4a", underwater: "#0a3a5a", space: "#050510", desert: "#8a6020", volcano: "#5a1a05", "candy kingdom": "#8a2060", candy: "#8a2060" };
-  const platformColors = { forest: 0x228b22, castle: 0x888888, underwater: 0x006994, space: 0x4b0082, desert: 0xc2955d, volcano: 0x8b0000, "candy kingdom": 0xff69b4, candy: 0xff69b4 };
-  const bg = bgColors[theme] || "#1a4a1a";
+  const bgColors = { forest: "#1a4a1a", castle: "#2a2a4a", underwater: "#0a3a5a", space: "#050510", desert: "#8a6020", volcano: "#5a1a05", "candy kingdom": "#3a1a3a" };
+  const platformColors = { forest: 0x228b22, castle: 0x888888, underwater: 0x006994, space: 0x4b0082, desert: 0xc2955d, volcano: 0x8b0000, "candy kingdom": 0xff69b4 };
+  const bg = bgColors[theme] || "#1a1a2e";
   const platColor = platformColors[theme] || 0x228b22;
-  const platHex = platColor.toString(16).padStart(6, "0");
 
-  return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>" + levelName + " - " + charName + " Runner</title>"
-    + "<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;gap:10px}#info{color:rgba(255,255,255,0.7);font-size:13px;letter-spacing:1px}</style></head><body>"
-    + "<div id=\"info\">" + playerName + " &middot; " + levelName + "</div>"
-    + "<script src=\"https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js\"><\/script><script>"
-    + "const W=800,H=400;class Main extends Phaser.Scene{constructor(){super('Main')}create(){this.alive=true;this.jumpCount=0;this.scrollSpeed=3;this.dist=0;this.add.rectangle(W/2,H/2,W,H,0x" + bg.slice(1) + ");"
-    + "this.plats=this.physics.add.staticGroup();const g=this.make.graphics({x:0,y:0,add:false});g.fillStyle(0x" + platHex + ");g.fillRect(0,0,W+100,40);g.generateTexture('plat',W+100,40);g.destroy();const p=this.plats.create(W/2+50,H-20,'plat');p.refreshBody();"
-    + "const h=this.make.graphics({x:0,y:0,add:false});h.fillStyle(0xff6b6b);h.fillRoundedRect(5,20,30,30,6);h.fillStyle(0xffd93d);h.fillCircle(20,12,12);h.generateTexture('hero',40,52);h.destroy();this.hero=this.physics.add.sprite(100,H-100,'hero');this.physics.add.collider(this.hero,this.plats);"
-    + "this.nameTag=this.add.text(0,0,'" + charName + "',{fontSize:'13px',fill:'#fff',stroke:'#000',strokeThickness:3}).setOrigin(0.5,1);"
-    + "this.hud=this.add.text(16,16,'Score: 0',{fontSize:'20px',fill:'#fff',stroke:'#000',strokeThickness:3});this.keys=this.input.keyboard.addKeys({up:Phaser.Input.Keyboard.KeyCodes.UP,space:Phaser.Input.Keyboard.KeyCodes.SPACE});this.cursors=this.input.keyboard.createCursorKeys();this.input.on('pointerdown',()=>this.tryJump())}"
-    + "tryJump(){if(this.jumpCount<2){this.hero.setVelocityY(-570);this.jumpCount++}}"
-    + "update(){if(!this.alive)return;this.dist+=this.scrollSpeed*0.02;this.hud.setText('Score: '+Math.floor(this.dist));if(this.hero.body.blocked.down)this.jumpCount=0;const j=Phaser.Input.Keyboard.JustDown(this.cursors.up)||Phaser.Input.Keyboard.JustDown(this.keys.space)||Phaser.Input.Keyboard.JustDown(this.keys.up);if(j)this.tryJump();this.nameTag.setPosition(this.hero.x,this.hero.y-26)}}"
-    + "new Phaser.Game({type:Phaser.AUTO,width:W,height:H,backgroundColor:'" + bg + "',physics:{default:'arcade',arcade:{gravity:{y:820},debug:false}},scene:Main,parent:document.body});"
-    + "<\/script></body></html>";
+  const cfg = JSON.stringify({ charName: charName, levelName: levelName, playerName: playerName, bg: bg, platColor: platColor });
+
+  const game = [
+    "const CFG=" + cfg + ";",
+    "const W=800,H=400,WORLD_W=3200,GROUND_Y=360;",
+    "class Main extends Phaser.Scene{",
+    "  constructor(){super('Main');}",
+    "  create(){",
+    "    this.physics.world.setBounds(0,0,WORLD_W,H);",
+    "    this.cameras.main.setBounds(0,0,WORLD_W,H);",
+    "    this.lives=3;this.score=0;this.over=false;this.invuln=0;this.jumps=0;",
+    "    this.add.rectangle(W/2,H/2,W,H,Phaser.Display.Color.HexStringToColor(CFG.bg).color).setScrollFactor(0).setDepth(-10);",
+    "    for(var i=0;i<24;i++){this.add.circle(i*180+40,70+(i%3)*40,14,0xffffff,0.08).setScrollFactor(0.3).setDepth(-9);}",
+    "    this.ground=this.physics.add.staticGroup();",
+    "    for(var gx=0;gx<WORLD_W;gx+=80){var g=this.add.rectangle(gx+40,GROUND_Y+20,80,40,CFG.platColor);this.physics.add.existing(g,true);this.ground.add(g);}",
+    "    this.hero=this.add.rectangle(100,GROUND_Y-26,40,52,0xffcc00);this.physics.add.existing(this.hero);this.hero.body.setCollideWorldBounds(true);this.physics.add.collider(this.hero,this.ground);",
+    "    this.nameTag=this.add.text(100,GROUND_Y-58,CFG.charName,{fontSize:'13px',fill:'#fff',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(40);",
+    "    this.cameras.main.startFollow(this.hero,true,0.12,0.12);",
+    "    this.coins=this.physics.add.group({allowGravity:false});this.spikes=this.physics.add.staticGroup();",
+    "    for(var cx=420;cx<WORLD_W-200;cx+=260){var c=this.add.circle(cx,GROUND_Y-90-((Math.round(cx/260))%2)*60,12,0xffd700);this.physics.add.existing(c);c.body.setAllowGravity(false);this.coins.add(c);}",
+    "    for(var sx=600;sx<WORLD_W-300;sx+=540){var s=this.add.triangle(sx,GROUND_Y-14,0,28,14,0,28,28,0xcc3355);this.physics.add.existing(s,true);this.spikes.add(s);}",
+    "    this.physics.add.overlap(this.hero,this.coins,this.grab,null,this);",
+    "    this.physics.add.overlap(this.hero,this.spikes,this.hit,null,this);",
+    "    this.goal=this.add.rectangle(WORLD_W-80,GROUND_Y-50,18,80,0x00e676);this.physics.add.existing(this.goal,true);this.physics.add.overlap(this.hero,this.goal,this.win,null,this);",
+    "    this.scoreText=this.add.text(12,12,'Score: 0',{fontSize:'20px',fill:'#fff',stroke:'#000',strokeThickness:4}).setScrollFactor(0).setDepth(50);",
+    "    this.hearts=[];for(var hi=0;hi<3;hi++){this.hearts.push(this.add.text(W-90+hi*26,12,'\u2665',{fontSize:'22px',fill:'#ff4d6d',stroke:'#000',strokeThickness:3}).setScrollFactor(0).setDepth(50));}",
+    "    this.cursors=this.input.keyboard.createCursorKeys();this.keys=this.input.keyboard.addKeys('A,D,W,SPACE');",
+    "    this.input.keyboard.on('keydown-SPACE',this.jump,this);this.input.keyboard.on('keydown-UP',this.jump,this);this.input.keyboard.on('keydown-W',this.jump,this);",
+    "    this.moveLeft=false;this.moveRight=false;this.makeButtons();",
+    "    this.input.on('pointerdown',function(p){if(p.y<H-90)this.jump();},this);",
+    "  }",
+    "  makeButtons(){",
+    "    var self=this;var mk=function(x,label){var b=self.add.rectangle(x,H-44,72,72,0x000000,0.35).setScrollFactor(0).setDepth(60).setInteractive();self.add.text(x,H-44,label,{fontSize:'30px',fill:'#fff'}).setOrigin(0.5).setScrollFactor(0).setDepth(61);return b;};",
+    "    var l=mk(50,'\u25C0'),r=mk(132,'\u25B6'),j=mk(W-50,'\u25B2');",
+    "    l.on('pointerdown',function(){self.moveLeft=true;});l.on('pointerup',function(){self.moveLeft=false;});l.on('pointerout',function(){self.moveLeft=false;});",
+    "    r.on('pointerdown',function(){self.moveRight=true;});r.on('pointerup',function(){self.moveRight=false;});r.on('pointerout',function(){self.moveRight=false;});",
+    "    j.on('pointerdown',function(){self.jump();});",
+    "  }",
+    "  jump(){if(this.over)return;if(this.hero.body.blocked.down){this.jumps=0;}if(this.jumps<2){this.hero.body.setVelocityY(-560);this.jumps++;}}",
+    "  grab(h,c){c.destroy();this.score+=10;this.scoreText.setText('Score: '+this.score);}",
+    "  hit(h,s){if(this.invuln>0||this.over)return;this.invuln=1000;this.lives--;if(this.hearts[this.lives])this.hearts[this.lives].setFill('#444');this.hero.setFillStyle(0xff6666);this.hero.body.setVelocity(-120,-200);if(this.lives<=0){this.end(false);}}",
+    "  win(){if(!this.over)this.end(true);}",
+    "  end(won){this.over=true;this.physics.pause();var cx=this.cameras.main.midPoint.x;var msg=won?('You Win, '+CFG.playerName+'!'):'Game Over';this.add.text(cx,150,msg,{fontSize:'34px',fill:won?'#ffd700':'#ff5555',stroke:'#000',strokeThickness:5}).setOrigin(0.5).setDepth(70);var self=this;var pa=this.add.text(cx,210,'\u25B6 Play Again',{fontSize:'24px',fill:'#fff',backgroundColor:'#2a9d8f',padding:{x:16,y:8}}).setOrigin(0.5).setDepth(70).setInteractive();pa.on('pointerdown',function(){self.scene.restart();});}",
+    "  update(t,dt){if(this.over)return;if(this.invuln>0){this.invuln-=dt;if(this.invuln<=0)this.hero.setFillStyle(0xffcc00);}",
+    "    var spd=220,vx=0;if(this.cursors.left.isDown||this.keys.A.isDown||this.moveLeft)vx=-spd;else if(this.cursors.right.isDown||this.keys.D.isDown||this.moveRight)vx=spd;this.hero.body.setVelocityX(vx);",
+    "    this.nameTag.x=this.hero.x;this.nameTag.y=this.hero.y-32;",
+    "    if(this.hero.y>H+80)this.hit(this.hero,null);}",
+    "}",
+    "new Phaser.Game({type:Phaser.AUTO,width:W,height:H,backgroundColor:CFG.bg,render:{pixelArt:true,antialias:false,roundPixels:true},scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},scene:Main,parent:document.body});",
+  ].join("");
+
+  return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" + levelName + " - " + charName + "</title>"
+    + "<style>*{margin:0;padding:0;box-sizing:border-box}html,body{background:" + bg + ";height:100%;overflow:hidden;touch-action:none}canvas{image-rendering:pixelated;image-rendering:crisp-edges}</style></head><body>"
+    + "<script src=\"https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js\"><\/script><script>" + game + "<\/script></body></html>";
 }
