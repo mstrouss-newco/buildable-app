@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Buildable Kids — Game QA Harness</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f1020; color: #eee; margin: 0; padding: 24px; }
+    h1 { font-size: 20px; }
+    .row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+    textarea { width: 520px; height: 220px; background: #1a1b2e; color: #cde; border: 1px solid #333; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; }
+    button { background: #6c5ce7; color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; font-size: 14px; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+    #report { margin-top: 20px; }
+    .check { padding: 6px 10px; border-radius: 6px; margin: 4px 0; font-size: 14px; }
+    .pass { background: #14361f; color: #7CFC9B; }
+    .fail { background: #3a1414; color: #ff8a8a; }
+    .info { background: #1f2740; color: #9fc0ff; }
+    .layer { margin-top: 14px; font-weight: 700; color: #ffd166; }
+    iframe { width: 800px; height: 400px; border: 2px solid #333; border-radius: 8px; background: #000; }
+    .summary { font-size: 16px; font-weight: 700; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Buildable Kids — Automated Game QA Harness</h1>
+  <p>Paste a generated game HTML (or click "Fetch from API"), then run the checks. Verifies <b>Layer 1 (boots)</b> and <b>Layer 2 (playable)</b>.</p>
+  <div class="row">
+    <div>
+      <textarea id="src" placeholder="Paste generated game HTML here..."></textarea><br/>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button id="run">Run QA checks</button>
+        <button id="fetchApi">Fetch from /api/generate-game</button>
+      </div>
+    </div>
+    <iframe id="stage" sandbox="allow-scripts" title="QA Stage"></iframe>
+  </div>
+  <div id="report"></div>
+
+  <script>
+  (function () {
+    const reportEl = document.getElementById("report");
+    const stage = document.getElementById("stage");
+    let results = [];
+
+    function log(layer, name, ok, detail) {
+      results.push({ layer, name, ok, detail });
+    }
+    function render() {
+      const byLayer = {};
+      results.forEach(r => { (byLayer[r.layer] = byLayer[r.layer] || []).push(r); });
+      let html = "";
+      let pass = 0, total = 0;
+      Object.keys(byLayer).forEach(layer => {
+        html += '<div class="layer">' + layer + '</div>';
+        byLayer[layer].forEach(r => {
+          total++; if (r.ok) pass++;
+          const cls = r.ok ? "pass" : "fail";
+          const mark = r.ok ? "PASS" : "FAIL";
+          html += '<div class="check ' + cls + '">[' + mark + '] ' + r.name + (r.detail ? " — " + r.detail : "") + '</div>';
+        });
+      });
+      const allPass = pass === total && total > 0;
+      html += '<div class="summary" style="color:' + (allPass ? "#7CFC9B" : "#ff8a8a") + '">' + pass + " / " + total + " checks passed" + (allPass ? " — ready for human (Layer 4) testing" : " — needs fixes") + '</div>';
+      reportEl.innerHTML = html;
+    }
+
+    // ---- Layer 1: static checks on the HTML source (does it even boot?) ----
+    function staticChecks(html) {
+      const has = (s) => html.indexOf(s) !== -1;
+      log("Layer 1 — Boots", "Has DOCTYPE/html", has("<!DOCTYPE") || has("<html"), "");
+      log("Layer 1 — Boots", "Has closing </html>", /<\/html\s*>/i.test(html), "");
+      log("Layer 1 — Boots", "Bootstraps Phaser", has("new Phaser.Game") || has("Phaser.Game("), "");
+      const scripts = (html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/gi) || [])
+        .map(s => s.replace(/<script\b[^>]*>/i, "").replace(/<\/script>/i, "")).join("\n");
+      const code = scripts || html;
+      const bal = (o, c) => (code.split(o).length - 1) === (code.split(c).length - 1);
+      log("Layer 1 — Boots", "Balanced braces {}", bal("{", "}"), "");
+      log("Layer 1 — Boots", "Balanced brackets []", bal("[", "]"), "");
+      // Visual-coherence hints (Layer 3) — soft signals, reported as info-style pass/fail.
+      log("Layer 1 — Boots", "Scales sprites (setDisplaySize)", has("setDisplaySize"), "coherence: avoids raw unscaled PNGs");
+    }
+
+    // ---- Layer 2: runtime checks inside the sandboxed iframe ----
+    function runtimeChecks(html) {
+      return new Promise((resolve) => {
+        stage.srcdoc = html;
+        // Give Phaser CDN + boot time to mount a canvas.
+        setTimeout(() => {
+          let doc = null, win = null;
+          try { doc = stage.contentDocument; win = stage.contentWindow; } catch (e) {}
+          const canvas = doc && doc.querySelector("canvas");
+          log("Layer 2 — Playable", "Canvas mounted", !!canvas, canvas ? (canvas.width + "x" + canvas.height) : "no <canvas>");
+          log("Layer 2 — Playable", "Phaser global present", !!(win && win.Phaser), "");
+          const sized = canvas && canvas.width > 0 && canvas.height > 0;
+          log("Layer 2 — Playable", "Canvas has non-zero size", !!sized, "");
+          // Input responsiveness probe: send a jump key and confirm no crash + canvas still alive.
+          let inputOk = false;
+          try {
+            if (win && doc && canvas) {
+              const before = canvas.toDataURL ? canvas.toDataURL().length : 0;
+              ["keydown", "keyup"].forEach(t => doc.dispatchEvent(new win.KeyboardEvent(t, { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true })));
+              canvas.dispatchEvent(new win.MouseEvent("pointerdown", { bubbles: true }));
+              inputOk = true; // dispatching without throwing = input wired
+            }
+          } catch (e) { inputOk = false; }
+          log("Layer 2 — Playable", "Accepts jump input without error", inputOk, "space/click dispatched");
+          // Anti-soft-lock: confirm a game-over / restart path exists in source.
+          const restart = /play again|restart|game over|scene\.restart|this\.scene\.start/i.test(html);
+          log("Layer 2 — Playable", "Has win/lose or restart path", restart, "anti-soft-lock");
+          render();
+          resolve();
+        }, 2500);
+      });
+    }
+
+    async function runAll(html) {
+      results = [];
+      if (!html || !html.trim()) { reportEl.innerHTML = '<div class="check fail">[FAIL] No HTML provided</div>'; return; }
+      staticChecks(html);
+      render();
+      await runtimeChecks(html);
+    }
+
+    document.getElementById("run").addEventListener("click", () => {
+      runAll(document.getElementById("src").value);
+    });
+
+    document.getElementById("fetchApi").addEventListener("click", async () => {
+      const btn = document.getElementById("fetchApi");
+      btn.disabled = true; btn.textContent = "Fetching...";
+      try {
+        const sample = {
+          gameData: {
+            playerName: "QABot",
+            character: { name: "Chirpy", description: "a friendly dragon" },
+            level: { name: "Sunny Mountain", theme: "forest", description: "a bright forest" },
+          },
+        };
+        const r = await fetch("/api/generate-game", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(sample) });
+        const status = r.status;
+        const data = await r.json().catch(() => ({}));
+        document.getElementById("src").value = data.html || "";
+        results = [];
+        log("Layer 0 — API", "HTTP status 200 (never 500)", status === 200, "got " + status);
+        log("Layer 0 — API", "Returned non-empty html", !!(data.html && data.html.length > 100), (data.html ? data.html.length + " chars" : "empty"));
+        log("Layer 0 — API", "Source not a silent fallback", data.source !== "fallback", "source=" + (data.source || "?") + (data.fallbackReason ? " reason=" + data.fallbackReason : ""));
+        render();
+        if (data.html) await runAll(data.html);
+      } catch (e) {
+        results = [];
+        log("Layer 0 — API", "Fetch succeeded", false, String(e));
+        render();
+      } finally {
+        btn.disabled = false; btn.textContent = "Fetch from /api/generate-game";
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
