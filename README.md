@@ -66,6 +66,38 @@ inline — poll a `window` global. (4) Watch for the duplicate file copies noted
 authoritative record of what changed and why. **Add a dated entry there for every change
 you make**, and keep this top section accurate if architecture/conventions shift.
 
+## Next session — start here (owner's queued work)
+
+The owner pointed the next agent here. These are the things to work on next, roughly in
+priority order. Read the "Notes for AI tools / agents" section above first, confirm scope
+with the owner before large changes, commit to `main`, and log every change in the dated
+session log below. **Never click "Create a New Game" / "Publish my game" in the live UI,
+and never handle API keys / billing — surface those to the owner.**
+
+1. **Path A — full multi-genre generator (the big one).** Today the engine only does
+   `platformer` and `breakout` (see "Game Types" section below for the Path A/B plan).
+   Goal: a real multi-genre generator — next target genre is **Tetris**, then generalize
+   so new genres are easy to add. Tetris is a different engine model (grid + falling
+   pieces + line-clear) from the platformer, so plan the architecture, not just a prompt.
+
+2. **Use the uploaded character sprites for the hero.** Right now the hero is drawn with
+   Phaser graphics primitives, NOT loaded from a sprite image — so the DALL-E character
+   art the owner uploads is not actually used by the engine. Wire the generator/engine to
+   load the hero from a character sprite (with a graphics fallback if none exists).
+
+3. **Generator tweak: clean sprite URLs, not base64.** See "base64 vs clean URL"
+   note below — prefer referencing the GitHub raw library URLs over inlining base64 so
+   game HTML stays small and within the token budget.
+
+4. **Now that we're on Tier 2, consider richer games.** `CLAUDE_MAX_TOKENS` is 13000
+   with headroom under the new cap. There is room to push game richness (more mechanics,
+   more detail) — but re-probe for truncation/429 after any bump, and keep the
+   validate-before-serve fallback guard intact.
+
+5. **Housekeeping: clean up QA test rows in Supabase.** A few test games/rows were
+   created during QA (see "QA test rows to clean up" note below). Deletions are
+   destructive — get the owner to confirm exactly which rows before removing anything.
+
 ## Tech Stack
 
 | Layer | Service |
