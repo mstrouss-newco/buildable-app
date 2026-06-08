@@ -746,3 +746,20 @@ The **breakout** prompt already specifies a real win (clear all bricks) / lose (
 ### Follow-ups for the owner
 - Re-run `qa/game-qa-harness.html` against the fresh deploy and generate a new platformer to confirm: hero walks both ways, jumps/double-jumps, on-screen buttons work, win requires all stars, and timeout = lose.
 - Decide whether to regenerate existing saved platformer games (their HTML predates this fix).
+
+## Runner Mechanics: multiple lives + crisp pixel-art + scrolling world (June 8 2026)
+
+Follow-up to the controls/win fix. The runner had three gameplay problems: it was **one-hit** (no lives), the graphics were **blurry/over-smoothed**, and the player **ran in place** (only the background scrolled, so you couldn't travel through the world). Fixed in `api/generate-game.js` (commit d3665ef) in two places: the **fallback runner** (`fallbackGame()`) was rewritten, and the same constraints were added to the **platformer prompt** so Claude-generated games inherit them.
+
+### What changed
+- **Multiple lives (3).** Hearts HUD in the top-right. Hazard/enemy contact removes ONE life and gives ~1s of invulnerability (hero flashes); only at 0 lives is it Game Over. A runner is no longer one-hit. (Prompt rule added under MECHANICS POLISH; implemented directly in the fallback.)
+- **Crisp pixel-art rendering.** Phaser config now uses `render:{ pixelArt:true, antialias:false, roundPixels:true }` and the canvas CSS uses `image-rendering:pixelated`. Library PNGs should be scaled with whole-number-friendly `setDisplaySize`/`setScale`. (New tech-requirement `1b` in the platformer prompt; applied in the fallback config.)
+- **Move THROUGH the world (camera follow).** The fallback now builds a **3200px-wide world** with `physics.world.setBounds` + `cameras.main.setBounds` and `cameras.main.startFollow(hero)`, with ground/coins/spikes/goal spread across the full width and the hero given `setCollideWorldBounds(true)`. The camera tracks the hero across the whole level instead of the world stopping at the canvas edge. Left/right via arrows + A/D + on-screen buttons, double-jump, win by reaching the goal flag at the far right. (New `WORLD & CAMERA` hard rule in the platformer prompt.)
+
+### Verification
+Rendered the new fallback in an iframe and inspected the live Phaser scene: `lives === 3`, world width 3200, 10 coins / 5 spikes / goal present, 3 hearts, `pixelArt` + `roundPixels` true, `scaleMode` FIT. Drove the hero right and confirmed it travels through the world — **hero x went 100 -> 1647 and camera scrollX 0 -> 1239** — and that running into 3 spikes greyed out all 3 hearts before Game Over (lives system working). Generated game HTML parses and brackets balance within `<script>` (passes `validateGameHtml`).
+
+### Notes / follow-ups
+- These behaviors are now driven by the **prompt + fallback**, so newly generated games get them. The `game_mechanics` DB rows still carry old hint values (e.g. a `timed-run` rule with `lives:1`); the prompt's hard LIVES rule overrides that, but the DB rows could be updated to `lives:3` for consistency (DB change, not done here).
+- Already-saved games keep their old HTML until regenerated.
+- Consider tuning auto-run vs. full manual control per mechanic; the fallback is full manual (walk left/right + jump), which is the most kid-friendly and the most clearly "moving through the world."
