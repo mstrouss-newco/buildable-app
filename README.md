@@ -103,6 +103,17 @@ buildable-app/
 
 ---
 
+## Game Mechanics Library (gameplay quality)
+
+Early generated games were thin because the generator prompt only asked for a bare "run and jump over gaps" game — no enemies, power-ups, win condition, or difficulty design. To fix this, gameplay is now driven by a reusable **mechanics library** extracted from a finished, shipped game (*Riley's Garden*, croctot.com/riley).
+
+- **[`MECHANICS.md`](./MECHANICS.md)** documents the reusable primitives: named enemy movement patterns (`linear`, `patrol`, `random`, `zigzag`, `swoop` dive-bomb, `swirl`), collectibles/power-ups, win-and-lose conditions (with an anti-soft-lock failsafe), a difficulty-curve recipe, and kid-friendly polish (auto-aim helper, emoji sprites).
+- **`api/generate-game.js`** now injects a condensed version of that library into the Claude prompt, so each generated game is *assembled from proven mechanics* (enemies with patterns, an auto-firing helper, power-ups, a difficulty ramp) instead of being improvised. The prompt also asks Claude to emit a clearly-marked `CONFIG` block separate from the engine, so games stay **remixable**.
+
+> Design principle (from Riley): separate **skin** (theme, characters, items) from **engine** (loop, physics, scoring). A new game = new skin + same mechanics; a remix = tweak the config. Keep `MECHANICS.md` and the `generate-game.js` prompt in sync.
+
+---
+
 ## QA Session Log — June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
