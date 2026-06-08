@@ -274,6 +274,7 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
     { id: "flying", name: "Flying", icon: "🚀", description: "Blast enemies while you fly!" },
     { id: "maze", name: "Maze", icon: "🗺️", description: "Find keys, unlock doors, get treasure!" },
     { id: "match", name: "Match Magic", icon: "✨", description: "Match 3 or more to make them POP!" },
+    { id: "breakout", name: "Brick Breaker", icon: "🧱", description: "Bounce the ball to smash all the bricks!" },
   ];
 
   return (
@@ -284,7 +285,7 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
       </div>
 
       <h1 style={styles.heading}>Pick your game</h1>
-      <p style={styles.tagline}>Four totally different ways to play!</p>
+      <p style={styles.tagline}>Five totally different ways to play!</p>
 
       <div style={styles.gameGrid}>
         {games.map((game) => (
