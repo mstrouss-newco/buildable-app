@@ -510,3 +510,62 @@ make game type a **first-class concept** end to end:
 
 > Design note: this keeps the "skin vs engine" principle but adds a third axis — **genre**.
 > A game = genre (engine template) + skin (theme/sprites) + mechanic (rule params).
+
+## Sprite Coverage Audit + Breakout QA + Deploy Finding (June 7 2026, later session)
+
+Batch of four improvements: UI game-type picker, Breakout QA probe, a full
+sprite-coverage audit across all 7 themes, and the Breakout mechanic seed.
+
+### Brick Breaker reachable in the UI
+Added a 5th card (`id: "breakout"`, "Brick Breaker") to `GameTypeScreen` in
+`src/BuildableKids.jsx`. `gameType` already flows through to `/api/generate-game`,
+so picking it routes to the Breakout prompt (commit `bf4d759`). UI commit: `0498b37`.
+
+### Breakout mechanic seed
+`db/seed-breakout-mechanic.sql` — idempotent upsert that adds
+`breakout-clear-all-bricks` to `game_mechanics` (rule: 3 lives, 4x8 grid, ball
+speed 220, speed-up every 8 bricks). Run it in the Supabase SQL editor. Commit: `94db6fa`.
+
+### Sprite coverage audit — RESULT: 100% complete, ZERO gaps
+Probed `/api/generate-game` for every theme and read `spriteGaps`. Every one of the
+7 themes returned all 9 sprite subjects with **no gaps**:
+
+| Theme | Sprites present | Gaps |
+|-------|-----------------|------|
+| Forest | 9 / 9 | none |
+| Castle | 9 / 9 | none |
+| Underwater | 9 / 9 | none |
+| Space | 9 / 9 | none |
+| Desert | 9 / 9 | none |
+| Volcano | 9 / 9 | none |
+| Candy kingdom | 9 / 9 | none |
+
+**No new sprite art is needed** — the library fully covers all 7 themes x 9 subjects.
+(If new genres are added later via Path A, e.g. Tetris block textures, those would be
+new subjects and the audit should be re-run per genre.)
+
+### Breakout QA probe — BLOCKED by a production deploy / API-key issue (needs attention)
+The live Breakout probe came back as the small built-in `fallbackGame()` (~2.3KB,
+platformer-style, no paddle/ball/bricks) rather than a real generated Breakout. Root
+cause is **not** the Breakout code — it is the production deployment:
+
+- The API response is **missing the new `gameType` field** that the current `main` code
+  adds, so production is still running an **older build** (the Breakout + catch-all
+  commits have not gone live yet).
+- More importantly, even plain platformer requests now return a **~2.3KB fallback with
+  `source: "library"`, `fallbackReason: null`, and `spritesUsed: null`**. That exact
+  signature matches the old code path `if (!claudeKey) return fallbackGame(...)` —
+  i.e. **`ANTHROPIC_API_KEY` is not set / not readable** on the currently-live function.
+  (Earlier today the same endpoint returned full ~23KB Claude-generated games, so the
+  key was working before — something changed in the env/deploy since.)
+
+**Action needed (owner, in Vercel dashboard — cannot be done from the app):**
+1. Confirm `ANTHROPIC_API_KEY` is set on the Production environment and not expired.
+2. Trigger / confirm a redeploy of latest `main` so the Breakout + catch-all + UI
+   commits go live.
+3. Then re-run `qa/game-qa-harness.html` (it has a "Fetch from /api/generate-game"
+   button) and a Breakout probe to confirm a real paddle/ball/brick game renders and
+   that responses include `gameType`.
+
+Until the deploy/key is sorted, the app stays playable (the fallback game still runs),
+but it serves the simple fallback instead of rich library-driven games.
