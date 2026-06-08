@@ -719,3 +719,30 @@ change again** (too high = 429, too low = truncated mid-script).
   (architecture, run/build/deploy, services + env var names, key files/data shapes,
   rules, gotchas; points here to the dated log as source of truth).
 - New root **`AGENTS.md`** pointing any AI assistant to that section in `./README.md`.
+
+## Platformer Controls + Win-Condition Fix — frozen hero / 0-star auto-win / no mobile controls (June 8 2026)
+
+End-to-end QA of the live demo (a saved platformer, "Floating Valley Quest") found the generated game was **unplayable**: the hero never moved or jumped, and the game declared **"You Win — All Stars Collected! Score: 0"** when the timer ran out with 0/2 stars. Root cause was traced to the **platformer prompt** in `api/generate-game.js`, not the engine/render path.
+
+### Root causes (all in the platformer prompt's Technical requirements)
+- **No horizontal movement.** The `Controls` line only said "SPACE or UP to jump, double-jump allowed. Touch/click also jumps" — it never told Claude to implement LEFT/RIGHT walking. Generated heroes had no `setVelocityX` path, so they were frozen in place (looked like a broken auto-runner).
+- **Auto-win on timeout.** The win/lose instruction was loose ("keep a clear win/lose condition and an anti-soft-lock failsafe"), with no rule that winning requires collecting the objectives. The failsafe ended up firing a WIN when the countdown hit 0 — even with score 0 / 0 stars.
+- **Not playable on iPad/iPhone.** No on-screen touch controls were specified. "Touch/click also jumps" gave a jump but no way to steer left/right by thumb, so the game could not be played on a tablet/phone (no keyboard).
+
+### Fix (`api/generate-game.js`, commit 9c0dd6e)
+Replaced the single loose `Controls` line with explicit HARD CONSTRAINTS in the platformer prompt:
+- **MOVEMENT:** LEFT/RIGHT arrows + A/D drive `velocityX` in both directions (explicitly "not a fixed-position auto-runner").
+- **JUMP:** SPACE/UP/W with double-jump, jump count reset on floor.
+- **MOBILE/TOUCH (required):** three large on-screen buttons (LEFT / RIGHT / JUMP) drawn with `setScrollFactor(0)` + high depth, wired via `setInteractive()` + `pointerdown`/`pointerup` to the SAME move flags the keyboard uses; tap-anywhere-to-jump; `Scale.FIT` + autoCenter; `touch-action:none` on the body.
+- **WIN/LOSE:** win ONLY when `collected >= required` (never on score 0); a countdown reaching 0 before the goal is a **LOSE**, not a win; hazard contact is a lose; always render a Play Again button (anti-soft-lock preserved).
+Also renumbered the trailing technical-requirement list (5–8) and added Scale.FIT to the canvas requirement.
+
+### Scope / known limitation
+This fixes the **generator prompt**, so **newly generated** platformers will move, jump, be winnable only by collecting the goal, and be playable on touch devices. **Already-saved games keep their old (broken) HTML** — the live "Floating Valley Quest" demo will only be correct if regenerated. Consider a one-time regen/migration of saved platformer games if the old HTML needs to be retired.
+
+### Not changed (intentionally)
+The **breakout** prompt already specifies a real win (clear all bricks) / lose (out of lives) condition and paddle control via LEFT/RIGHT + mouse/touch-X, so it was left as-is. If we later want parity, add explicit on-screen touch buttons to breakout too.
+
+### Follow-ups for the owner
+- Re-run `qa/game-qa-harness.html` against the fresh deploy and generate a new platformer to confirm: hero walks both ways, jumps/double-jumps, on-screen buttons work, win requires all stars, and timeout = lose.
+- Decide whether to regenerate existing saved platformer games (their HTML predates this fix).
