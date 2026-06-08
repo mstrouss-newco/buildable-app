@@ -155,7 +155,7 @@ export default async function handler(req, res) {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 8000, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 16000, messages: [{ role: "user", content: prompt }] }),
     });
 
     if (!response.ok) {
@@ -169,8 +169,21 @@ export default async function handler(req, res) {
     if (html.slice(0,3) === fence) { html = html.replace(/^[a-zA-Z]*\n?/, ""); }
     html = html.split(fence).join("").trim();
 
-    if (!html.includes("<!DOCTYPE") && !html.includes("<html")) {
-      return res.status(200).json({ html: fallbackGame(safeGameData), source: "library", mechanic, spriteGaps: gaps });
+    // If Claude hit the output-token limit the HTML is truncated mid-code
+    // (unbalanced brackets, no Phaser.Game call). Serving that gives a blank
+    // canvas, so treat a non-"end_turn" stop as a generation failure.
+    const stopReason = data.stop_reason || (data.content && "end_turn");
+    if (stopReason === "max_tokens") {
+      console.error("generate-game: Claude response truncated (max_tokens). Using fallback.");
+      return res.status(200).json({ html: fallbackGame(safeGameData), source: "library", mechanic, spriteGaps: gaps, fallbackReason: "truncated" });
+    }
+
+    // Validate the generated game before serving it. A truncated or malformed
+    // game (unbalanced (){}, or missing the Phaser bootstrap) renders blank.
+    const validation = validateGameHtml(html);
+    if (!validation.ok) {
+      console.error("generate-game: generated HTML failed validation (" + validation.reason + "). Using fallback.");
+      return res.status(200).json({ html: fallbackGame(safeGameData), source: "library", mechanic, spriteGaps: gaps, fallbackReason: validation.reason });
     }
 
     return res.status(200).json({
@@ -185,6 +198,28 @@ export default async function handler(req, res) {
     console.error("generate-game error:", e);
     return res.status(200).json({ html: fallbackGame(safeGameData), source: "library", mechanic, spriteGaps: gaps });
   }
+}
+
+// Validate a generated Phaser game before serving it. Catches the common
+// failure mode where Claude's output was truncated mid-script: unbalanced
+// brackets and/or a missing Phaser bootstrap, which renders a blank canvas.
+function validateGameHtml(html) {
+  if (!html || typeof html !== "string") return { ok: false, reason: "empty" };
+  if (!html.includes("<!DOCTYPE") && !html.includes("<html")) return { ok: false, reason: "not-html" };
+  if (!/<\/html\s*>/i.test(html)) return { ok: false, reason: "no-closing-html" };
+  // Must actually bootstrap a Phaser game.
+  if (!html.includes("new Phaser.Game") && !html.includes("Phaser.Game(")) return { ok: false, reason: "no-phaser-game" };
+  // Extract the script bodies and check bracket balance (ignores strings only
+  // loosely, but a truncated file is almost always badly unbalanced).
+  const scripts = (html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/gi) || [])
+    .map((s) => s.replace(/<script\b[^>]*>/i, "").replace(/<\/script>/i, ""))
+    .join("\n");
+  const code = scripts || html;
+  const bal = (open, close) => (code.split(open).length - 1) === (code.split(close).length - 1);
+  if (!bal("(", ")")) return { ok: false, reason: "unbalanced-parens" };
+  if (!bal("{", "}")) return { ok: false, reason: "unbalanced-braces" };
+  if (!bal("[", "]")) return { ok: false, reason: "unbalanced-brackets" };
+  return { ok: true, reason: "ok" };
 }
 
 // Built-in fallback game when Claude is unavailable.
