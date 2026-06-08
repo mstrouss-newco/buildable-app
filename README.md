@@ -661,3 +661,29 @@ Until then the app stays playable on the fallback game.
 2. Breakout probe (`gameData.gameType = "breakout"`) returns a real paddle/ball/brick
    game and the `gameType` field is echoed back.
 3. Run `qa/game-qa-harness.html` for the 4-layer QA pass.
+
+
+---
+
+## RESOLVED — Tier 2 + max_tokens 13000: full games generating (June 7 2026, later session)
+
+Org upgraded to **Tier 2**, which raises the output-tokens/min cap. `CLAUDE_MAX_TOKENS`
+was raised **7000 -> 13000** (commit `f5dd9f3`) so a complete game fits without
+truncation while staying under the new cap.
+
+**Live production probes after deploy — both PASS:**
+- **Platformer** (theme space): `source: library`, `gameType: platformer`,
+  `fallbackReason: none`, HTML ~27.3KB, contains Phaser + GitHub raw sprite URLs.
+- **Breakout** (theme candy, `gameType: "breakout"`): `source: library`,
+  `gameType: breakout` echoed back, `fallbackReason: none`, HTML ~24KB, contains
+  paddle + ball + brick + GitHub raw sprite URLs.
+
+Both are full library-driven games (not the ~2.3KB fallback). The 429 -> truncation ->
+resolved arc is now closed. **Watch `CLAUDE_MAX_TOKENS` if the org tier or rate limits
+change again** (too high = 429, too low = truncated mid-script).
+
+### Docs for agents added this session
+- New top-of-README section **"Notes for AI tools / agents (read this first)"**
+  (architecture, run/build/deploy, services + env var names, key files/data shapes,
+  rules, gotchas; points here to the dated log as source of truth).
+- New root **`AGENTS.md`** pointing any AI assistant to that section in `./README.md`.
