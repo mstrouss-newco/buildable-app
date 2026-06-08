@@ -100,6 +100,10 @@ export default async function handler(req, res) {
   const levelName = level?.name || "Mystery World";
   const levelTheme = level?.theme || "forest";
   const levelDesc = level?.description || "a magical world";
+  // Game type selector. Defaults to the side-scrolling platformer engine.
+  // Path B: "breakout" reuses the same library sprites as bricks.
+  // (Path A — a full multi-genre generator — is planned; see README.)
+  const gameType = String(gameData?.gameType || "platformer").toLowerCase();
 
   // === Pull from the libraries (no new art generated here) ===
   const [{ sprites, gaps }, mechanic] = await Promise.all([
@@ -120,7 +124,7 @@ export default async function handler(req, res) {
       + "\nRule parameters (JSON): " + JSON.stringify(mechanic.rule)
     : "Mechanic: run-and-jump platformer with a clear win/lose condition.";
 
-  const prompt = [
+  const platformerPrompt = [
     "Create a complete, self-contained HTML file containing a polished Phaser 3 game for a child named " + (playerName || "a kid") + ".",
     "",
     "Game details:",
@@ -163,6 +167,52 @@ export default async function handler(req, res) {
     "7. Return ONLY the HTML starting with <!DOCTYPE html>. No markdown, no code fences.",
   ].join("\n");
 
+  // === BREAKOUT prompt (Path B). Brick-breaker that reuses the library sprites as bricks. ===
+  const breakoutPrompt = [
+    "Create a complete, self-contained HTML file containing a polished Phaser 3 BREAKOUT / brick-breaker game for a child named " + (playerName || "a kid") + ".",
+    "",
+    "Game details:",
+    "- Theme: " + levelName + " (theme: " + levelTheme + " - " + levelDesc + ")",
+    "- The paddle hero is themed after: " + charName + " (" + charDesc + ")",
+    "- Player name to display: " + (playerName || "Player"),
+    "",
+    "=== GAMEPLAY: BREAKOUT ===",
+    "A paddle at the bottom bounces a ball up into a grid of bricks. Clear all the bricks to WIN. If the ball falls below the paddle you lose a life; out of lives = game over with a Play Again button. Start with 3 lives and 1 ball.",
+    "Build a clear win (all bricks cleared) and lose (no lives left) condition, plus an anti-soft-lock failsafe: if the ball ever gets stuck moving nearly horizontally, nudge its angle so it can always reach bricks.",
+    mechanic ? ("Optional mechanic hint from the library: " + mechanic.name + " — " + mechanic.description) : "If helpful, make some bricks worth more points or drop a simple power-up (wider paddle / extra ball).",
+    "",
+    "=== ART: use the SPRITE library as BRICKS (do NOT invent new art) ===",
+    "Load these sprites as images via this.load.image(key, url) in preload and use them as the BRICKS, arranged in a neat grid (mix the subjects across rows for variety):",
+    spriteLines,
+    "For any object with no library image, fall back to a solid colored rectangle brick so the game still runs.",
+    "Use a theme-appropriate background color for the " + levelTheme + " theme (or a background layer image if provided).",
+    "",
+    "=== VISUAL COHERENCE RULES (HARD CONSTRAINTS — follow exactly) ===",
+    "The canvas is 800 wide by 400 tall. Keep it readable and uncluttered:",
+    "- BRICK GRID: arrange bricks in the top half only (y from 60 to 200). Use a regular grid, e.g. about 8 columns by 4 rows, each brick scaled with setDisplaySize to about 72x28 with small gaps. Do not let bricks overlap.",
+    "- PADDLE: a rounded rectangle about 110 wide by 18 tall near the bottom (y around 370), drawn with Phaser graphics in the theme color. It moves only left/right.",
+    "- BALL: a circle about 14px diameter. Launch it upward from the paddle at the start.",
+    "- HUD-SAFE ZONE: reserve the top-left 220x40 for the score/lives text. No bricks in that zone.",
+    "- SCALING: every loaded library image MUST get an explicit setDisplaySize(...) so source PNGs of any resolution render at the brick size. Never display a raw, unscaled image.",
+    "- DEPTH ORDER (back to front): background < bricks < ball < paddle < HUD.",
+    "",
+    "=== POLISH ===",
+    "Smooth ball bounce off walls, paddle, and bricks. Ball angle depends on where it hits the paddle (hit left side = bounce left). Brief flash/scale when a brick is destroyed. Gentle difficulty: speed the ball up slightly each time several bricks are cleared. Put all skinnable values (theme colors, sprite keys/urls, grid size, paddle size, ball speed, lives) in a clearly-marked CONFIG object near the top, separate from the engine.",
+    "",
+    "Technical requirements:",
+    "1. Load Phaser 3 from CDN: https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js",
+    "2. Use arcade physics with NO gravity (set gravity y to 0). The ball uses velocity + world bounds + collider bounce.",
+    "3. Controls: LEFT/RIGHT arrow keys move the paddle; mouse/touch X also moves the paddle (mobile). Click/tap or SPACE launches the ball if it is waiting.",
+    "4. Show score and lives top-left and " + charName + " as a small label on the paddle.",
+    "5. Canvas 800x400, centered, dark body background. Auto-start, no splash screen.",
+    "6. Colorful, readable, fun for ages 5-12.",
+    "7. Return ONLY the HTML starting with <!DOCTYPE html>. No markdown, no code fences.",
+  ].join("\n");
+
+  // Select the prompt for the requested game type (defaults to platformer).
+  const prompt = gameType === "breakout" ? breakoutPrompt : platformerPrompt;
+
+
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -201,6 +251,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       html,
       source: "library",
+      gameType,
       mechanic: mechanic ? { slug: mechanic.slug, name: mechanic.name } : null,
       spritesUsed: sprites.map((s) => s.subject),
       spriteGaps: gaps,          // <- flagged missing-library sprites
