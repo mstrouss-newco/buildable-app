@@ -17,7 +17,6 @@ const SCREEN_LEVEL_CREATOR = "level_creator";
 const SCREEN_PLAY = "play";
 const SCREEN_MY_STUFF = "my_stuff";
 const SCREEN_ADMIN = "admin";
-
 export default function BuildableKids() {
   const [screen, setScreen] = useState(SCREEN_INTRO);
   const [returnTo, setReturnTo] = useState(SCREEN_INTRO);
@@ -303,10 +302,10 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
 // ============ PLAY GAME SCREEN COMPONENT ============
 function PlayGameScreen({ gameData, onBack, onMyStuff }) {
   const [gameHtml, setGameHtml] = useState(null);
-const [gameMechanic, setGameMechanic] = useState(null);
-const [publishing, setPublishing] = useState(false);
-const [publishedUrl, setPublishedUrl] = useState(null);
-const [publishError, setPublishError] = useState(null);
+  const [gameMechanic, setGameMechanic] = useState(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState(null);
+  const [publishError, setPublishError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dots, setDots] = useState(".");
@@ -425,17 +424,22 @@ const [publishError, setPublishError] = useState(null);
     }
   };
 
-  // Inject the generated HTML into the iframe
+  // Inject the generated HTML into the iframe.
+  // NOTE: we deliberately use a Blob URL (iframe.src) instead of the old
+  // doc.open()/doc.write()/doc.close() approach. document.write() does not
+  // give the iframe a proper browsing context, so Phaser 3 would
+  // intermittently fail to initialize and the canvas rendered blank.
+  // A Blob URL gives the game a real document + origin so Phaser/WebGL
+  // boot reliably. The object URL is revoked on cleanup to avoid leaks.
   useEffect(() => {
-    if (gameHtml && iframeRef.current) {
-      const iframe = iframeRef.current;
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (doc) {
-        doc.open();
-        doc.write(gameHtml);
-        doc.close();
-      }
-    }
+    if (!gameHtml || !iframeRef.current) return;
+    const iframe = iframeRef.current;
+    const blob = new Blob([gameHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    iframe.src = url;
+    return () => {
+      URL.revokeObjectURL(url);
+    };
   }, [gameHtml]);
 
   return (
@@ -677,6 +681,7 @@ const styles = {
     marginBottom: "6px",
     filter: "drop-shadow(0 8px 22px rgba(155,126,221,0.5))",
   },
+
   formCard: {
     background: CARD_BG,
     border: CARD_BORDER,
@@ -802,6 +807,7 @@ const styles = {
   layerDisplay: {
     marginBottom: "20px",
   },
+
   loadingGame: {
     background: CARD_BG,
     border: CARD_BORDER,
