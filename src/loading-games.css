@@ -362,3 +362,63 @@
     font-size: 22px;
   }
 }
+
+
+/* ===== Loading status banner + "coming up" mini-game progress ===== */
+.loading-status {
+  margin-top: 18px;
+  text-align: center;
+}
+.loading-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.loading-spinner-dot {
+  width: 16px;
+  height: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: lg-spin 0.8s linear infinite;
+  flex: 0 0 auto;
+}
+@keyframes lg-spin {
+  to { transform: rotate(360deg); }
+}
+.loading-status-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+.loading-status-sub {
+  margin: 12px 0 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.game-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.game-progress-pill {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.25s ease;
+}
+.game-progress-pill.active {
+  background: linear-gradient(135deg, #9b7edd, #d65a7b);
+  color: #fff;
+  border-color: transparent;
+  transform: scale(1.06);
+  box-shadow: 0 4px 14px rgba(155, 126, 221, 0.5);
+}
