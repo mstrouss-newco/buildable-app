@@ -21,6 +21,21 @@ setDismissed(true);
     }
   }, [isLoading]);
 
+  // Auto-rotate through the mini-games while we wait for the REAL game to
+  // finish rendering. The kid never has to choose — we cycle numbers ->
+  // memory -> pattern so it's obvious more is coming and we're still working.
+  const GAME_ORDER = ['numbers', 'memory', 'pattern'];
+  useEffect(() => {
+    if (!isLoading || gameState !== 'playing') return;
+    const rotate = setInterval(() => {
+      setGameType((prev) => {
+        const i = GAME_ORDER.indexOf(prev);
+        return GAME_ORDER[(i + 1) % GAME_ORDER.length];
+      });
+    }, 9000); // ~9s per mini-game, then advance to the next automatically
+    return () => clearInterval(rotate);
+  }, [isLoading, gameState]);
+
   if (dismissed) return null;
 if (!isLoading && gameState !== 'complete') {
 return null;
@@ -56,25 +71,29 @@ return null;
         )}
 
         {gameState === 'playing' && (
-          <div className="game-tabs">
-            <button
-              onClick={() => setGameType('numbers')}
-              className={`game-tab ${gameType === 'numbers' ? 'active' : ''}`}
-            >
-              Numbers
-            </button>
-            <button
-              onClick={() => setGameType('memory')}
-              className={`game-tab ${gameType === 'memory' ? 'active' : ''}`}
-            >
-              Memory
-            </button>
-            <button
-              onClick={() => setGameType('pattern')}
-              className={`game-tab ${gameType === 'pattern' ? 'active' : ''}`}
-            >
-              Pattern
-            </button>
+          <div className="loading-status">
+            <div className="loading-status-row">
+              <span className="loading-spinner-dot" />
+              <span className="loading-status-text">
+                {operationType === 'character'
+                  ? 'Drawing your character…'
+                  : operationType === 'game'
+                  ? 'Building your game…'
+                  : 'Building your world…'}
+                {' '}Hang tight — keep playing while we finish!
+              </span>
+            </div>
+            <p className="loading-status-sub">More mini-games coming up while you wait:</p>
+            <div className="game-progress" aria-hidden="true">
+              {['numbers', 'memory', 'pattern'].map((g) => (
+                <span
+                  key={g}
+                  className={`game-progress-pill ${gameType === g ? 'active' : ''}`}
+                >
+                  {g === 'numbers' ? '🔢 Numbers' : g === 'memory' ? '🃏 Memory' : '🔷 Pattern'}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
