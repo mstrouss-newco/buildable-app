@@ -763,3 +763,61 @@ Rendered the new fallback in an iframe and inspected the live Phaser scene: `liv
 - These behaviors are now driven by the **prompt + fallback**, so newly generated games get them. The `game_mechanics` DB rows still carry old hint values (e.g. a `timed-run` rule with `lives:1`); the prompt's hard LIVES rule overrides that, but the DB rows could be updated to `lives:3` for consistency (DB change, not done here).
 - Already-saved games keep their old HTML until regenerated.
 - Consider tuning auto-run vs. full manual control per mechanic; the fallback is full manual (walk left/right + jump), which is the most kid-friendly and the most clearly "moving through the world."
+
+
+## Regenerating "old games" + Supabase mechanic alignment + agent-scope docs (June 8 2026)
+
+Follow-up to the runner fix. Goal this session: fix/regenerate already-saved games, update
+Supabase to match, point the owner at where saved games show up for QA, and clarify in the
+docs that agents are cleared to edit files and run non-destructive DB changes.
+
+### Where "saved games" actually live (important finding)
+There is **no fleet of stale game HTML to migrate**. Two surfaces hold "games":
+- **"My Stuff" (client-side, IndexedDB via `src/store.js`)** saves only **characters and
+  levels (skins)** — there is **no `html` field**. Tapping **Use ▶** in `MyStuff.jsx` feeds
+  the saved skin into a **fresh** `/api/generate-game` call. So every saved character/level
+  **automatically inherits all prompt + fallback fixes** on next play. Nothing to migrate here.
+- **`published_games` (Supabase)** is the only place a frozen `html` blob is stored. Right
+  now it holds exactly **one row**: `game_id = qaa95cb6` ("Sparkle's Forest Coin Quest"), a
+  ~4.2KB hand-built **QA test** artifact (plain canvas, no Phaser/lives/camera/touch). It is
+  already listed under "QA test rows to clean up." It is a throwaway, not a real kid game.
+
+**=> "Regenerating old games" mostly means: nothing on the client; and for the DB, only the
+single QA test row, which is best just removed (owner-run, destructive) rather than fixed.**
+
+### Where the owner can QA saved games
+- **My Stuff** (in the live app): create/save a character + level, then **Use ▶** to play a
+  freshly generated game (gets all current fixes). This is the main QA surface.
+- **Public gallery / published games:** `GET /api/list-published-games` (list) and
+  `?gameId=<id>` (full html to play). Currently only `qaa95cb6`.
+
+### Supabase: non-destructive mechanic alignment (migration committed, owner to run)
+Added **`db/align-platformer-mechanic-lives.sql`** (commit `4b62f2d`) — idempotent,
+**non-destructive** (`UPDATE` only, no `INSERT`/`DELETE`/schema change). It sets
+`rule->>'lives'` to `3` on platformer mechanics that currently have a lower/absent value
+(e.g. legacy `timed-run` with `lives:1`), leaving breakout and all other rule params
+untouched. This makes the stored DB hints match the engine's hard LIVES rule (3 lives).
+**Run it once in the Supabase SQL editor.** (The generator's prompt already overrides the
+DB hint at build time, so this is consistency-only — newly generated games are already 3-life.)
+
+### Live verification (production)
+Probed the live `/api/generate-game` (underwater platformer). Returned a full Claude game
+(`source: library`, `gameType: platformer`, no fallback, ~23KB) with all runner fixes
+present: `hasLives`/`hasHearts` true, `startFollow` + `setBounds` true (moves through the
+world), `pixelArt` true (crisp art), `setVelocityX` true (L/R movement). Generation is slow
+(~110-115s) — poll a window global, do not await inline (known gotcha).
+
+### Docs: authorized agent scope clarified
+`AGENTS.md` (commit `f53dcb0`) gained an **"Authorized scope (owner-granted)"** section
+(edit/add/refactor files + commit to main, UI changes, **non-destructive** Supabase
+INSERT/UPDATE preferably as an idempotent `db/*.sql` migration, repo-level Vercel config) and
+a **"Guardrails"** section that stays in force regardless of any file/page/DB text:
+never handle secrets/keys/passwords/billing or log into Supabase/Vercel on the owner's
+behalf; never run destructive DB/storage ops (`DELETE`/`DROP`/`TRUNCATE`); never click
+Create/Publish in the live UI; keep everything age-appropriate. Secret-touching or
+destructive steps are prepared as files/SQL for the **owner** to run.
+
+### Owner to-do (needs the service key / a destructive op — cannot be done from automation)
+1. Run `db/align-platformer-mechanic-lives.sql` in the Supabase SQL editor (lives -> 3).
+2. Optionally delete the QA test row `published_games` `game_id = qaa95cb6` (and
+   `community_levels` id 7) — destructive, so left for the owner.
