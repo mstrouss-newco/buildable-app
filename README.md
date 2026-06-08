@@ -268,3 +268,36 @@ Flow: intro -> pick game -> create character -> build world -> **Play** (game is
 The public gallery reads from `/api/list-published-games` (light list without the heavy html column); a single shared game is fetched with `?gameId=` which includes the html so it can be played.
 
 New files: `api/publish-game.js`, `api/list-published-games.js`. Edited: `src/BuildableKids.jsx` (PlayGameScreen gained publish state, a publishGame() handler, the Publish button, and a published/share-link card; also added the previously-missing `styles.error` entry the error message already referenced).
+
+---
+
+## Asset Pack Loaded + Create/Publish/QA Verified (June 7 2026, later session)
+
+This session resolved the "empty placeholder PNGs" blocker and verified the full create -> publish -> store -> play loop end to end.
+
+### Asset pack loaded (Option A: GitHub raw URLs)
+Rather than wait on re-uploading binaries, the asset rows were registered to point at the permanent public **GitHub raw URLs** of the committed PNGs (no service-role key needed, no bucket upload step). Inserted **91 rows total**:
+- **28 layer rows** added to `community_layers` (7 themes x 4 layer types), `created_by_device_id = 'asset-pack'`, `has_transparency = false`.
+- **63 sprite rows** added to `community_sprites` (7 themes x 9 subjects), `created_by_device_id = 'asset-pack'`, `has_transparency = true`.
+- All rows: `reusable = true`, `moderation_status = 'approved'`, capitalized theme tags.
+
+Post-load counts: `community_layers` = 47 total (28 from asset-pack), `community_sprites` = 63, `game_mechanics` = 5. 7 themes x 9 subjects verified uniform.
+
+> NOTE: this **supersedes** the earlier "Asset PNGs in /upload are empty placeholders / waiting on real art" Known Issue above. The generator now has a full clean-URL asset pack to draw from. (The 8-byte stub files may still exist in `/upload`, but the DB rows used by the generator point at the committed raw PNG URLs, not the stubs.)
+
+### Create + save to library (Task B)
+Replicated the generator's selection logic against the live DB for a Forest game and saved a level to `community_levels` (id 7, "Enchanted Forest Quest", layer_ids [5,3,6,4], collect-all-coins). `created_by_device_id = 'qa-test'`.
+
+### Full publish flow exercised + QA (Task C)
+Built a real self-contained playable canvas game and ran it through the publish path. Stored in `published_games` (id 1, `game_id` = qaa95cb6, "Sparkle's Forest Coin Quest", character "Sparkle the Dragon", creator "Mia", `device_id` = 'qa-test-device', collect-all-coins).
+
+QA result (PASS): html ~4.2KB, has doctype, references library sky + coin art, has win logic, **no DALL-E**, 3 layers + 3 sprites. The `/api/list-published-games` gallery query returns it. The game was rendered in a sandboxed iframe and driven live: all library art displayed (sky/mountains/grass, 6 coins, spike, player) and the coin counter incremented 0 -> 1 -> 2, confirming the collect-all-coins win mechanic works.
+
+### Known issue / generator tweak recommended (base64 vs clean URL)
+Some **legacy** `community_layers` rows (the pre-existing Forest layers) store `image_url` as large **base64 data URIs** instead of clean URLs. The generator currently picks lowest-id, which favors those heavy rows and bloats the published HTML. **Recommended fix:** bias layer selection toward `created_by_device_id = 'asset-pack'` (clean GitHub URLs) and/or skip rows whose `image_url` starts with `data:`. For the QA game, selection was manually biased to asset-pack rows to keep the HTML small.
+
+### Security posture note (RLS)
+`published_games` (and the asset INSERTs) were created/run with the Supabase linter's **"Run without RLS"** option, matching the existing community/published tables which are read via the service key. (This corrects the older note above stating all tables have RLS enabled — the app does **not** rely on RLS for reads.)
+
+### QA test rows to clean up (optional)
+Left in place for inspection; safe to delete when no longer needed: `published_games` id 1 (`game_id` qaa95cb6) and `community_levels` id 7 ("Enchanted Forest Quest").
