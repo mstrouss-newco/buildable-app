@@ -821,3 +821,71 @@ destructive steps are prepared as files/SQL for the **owner** to run.
 1. Run `db/align-platformer-mechanic-lives.sql` in the Supabase SQL editor (lives -> 3).
 2. Optionally delete the QA test row `published_games` `game_id = qaa95cb6` (and
    `community_levels` id 7) — destructive, so left for the owner.
+
+
+## Admin live data + all-games view + visual creator pickers (June 8 2026)
+
+Three features wired up this session: real cost/usage visibility in the Admin Dashboard,
+an admin view of every game for QA, and a kid-facing visual element picker in the creator
+screens (tap art instead of typing). All committed to main; backend verified live.
+
+### 1. Admin Dashboard now shows REAL data (was 100% mock)
+The dashboard's overview was hardcoded ($175.60, "45% used", fake counts, "TODO: Fetch
+from Supabase"). Added two admin endpoints and wired the UI to them:
+- **`api/admin-stats.js`** — aggregates live counts (community_characters / community_levels
+  / saved_games / published_games / game_mechanics) and cost. Cost comes from the
+  `usage_log` table when present; otherwise falls back to an estimate (counts × unit cost).
+  Reads DAILY_BUDGET_USD for budget %.
+- **`api/admin-list-games.js`** — returns ALL games (saved_games + published_games) with
+  light metadata, normalized into one shape, newest-first.
+- **`AdminDashboard.jsx`** rewritten: Overview reads /api/admin-stats (real counts + cost,
+  estimate flagged); new **🎮 Games tab** lists every game with a Play/QA link and an
+  all/published/saved filter; Characters/Levels show live counts; Settings explains envs are
+  Vercel-managed and lets the operator stash an admin API token locally.
+- **Auth:** admin endpoints accept an optional `x-admin-token` header matched against
+  `ADMIN_API_TOKEN` (env, by name only). If unset, they stay read-only-open for dev. The
+  token can be saved in the admin Settings tab (localStorage). No secrets are returned.
+
+**Live probe after deploy:** /api/admin-stats returned real data — counts (13 levels, 1
+published game, 5 mechanics) and **cost source `usage_log`** (today $0.56, month $1.48,
+budget $10, 6% used). /api/admin-list-games returned the 1 published game normalized.
+
+### 2. Real cost tracking table
+**`db/create-usage-log.sql`** — idempotent `create table if not exists usage_log`
+(kind, cost_usd, model, device_id, meta jsonb, created_at) + indexes. admin-stats reads it
+for true today/month spend; estimate is the fallback until rows exist. (Observed already
+populated in prod — cost source came back as usage_log.) Generation endpoints can insert one
+row per AI call to grow the history. Run once in the Supabase SQL editor (already effective).
+
+### 3. Visual creator pickers (tap art, not words)
+Kids previously had to TYPE a description. Now they tap pictures:
+- **`api/list-assets.js`** — returns the real library art (community_layers + community_sprites)
+  with their actual image_url values, by theme (`?theme=forest`). Skips heavy base64 rows.
+  Verified: forest returns 4 layers + 9 sprites with working GitHub raw PNG URLs (note the
+  sprite path is `sprite_<subject>_<theme>_001.png`, not `<subject>_...`).
+- **`CreatorScreen.jsx`** rewritten with visual pickers:
+  - **Character screen:** "Make your hero!" — tappable emoji trait chips (fluffy/sparkly/fire/…)
+    that build the description automatically, PLUS an "Add a friend or item from our world"
+    row showing the real sprite art (coin/gem/star/heart/chest/spike/cloud_platform/key/orb).
+    A collapsible "Or type your own words" keeps the text path for kids who want it.
+  - **Level screen:** "Build your world!" — each theme is a card showing that theme's real
+    SKY art (`ThemeCard` loads /api/list-assets per theme); difficulty is colored buttons; the
+    preview pane shows the chosen world's art before generating.
+  - Generation logic + payloads unchanged, so the backend contract is identical.
+
+**Live UI verified on the deployed app:** character screen renders the trait chips (sparkly+fire
+toggle to selected gradient) and the real sprite tiles (coin/gem/star/heart/chest/spike/
+cloud_platform/key/orb) loaded from the library. No console errors; Vite build is healthy.
+
+### Commits
+`95cc6ad` admin-stats · `db3e2c9` admin-list-games · `487e676` usage_log migration ·
+`88b6b73` AdminDashboard live wiring + Games tab · `76d8b9e` list-assets ·
+`9e62722` CreatorScreen visual pickers.
+
+### Owner notes / follow-ups
+- Set **`ADMIN_API_TOKEN`** in Vercel to lock the admin endpoints (then paste it into the admin
+  Settings tab so the dashboard sends it). Until set, endpoints are readable without a token.
+- `saved_games` and `community_characters` counts came back 0 — confirm those tables exist /
+  are named as expected if you want them reflected (levels/published/mechanics all populated).
+- To grow real spend history, have the generators INSERT a `usage_log` row per AI call
+  (kind + cost_usd + model + meta); admin-stats already reads it.
