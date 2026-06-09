@@ -17,6 +17,11 @@ function adminHeaders() {
 }
 async function fetchAdmin(path) {
   const r = await fetch(path, { headers: adminHeaders() });
+  if (r.status === 401) {
+    const e = new Error('Admin session expired or not authorized. Please log out and sign in again to refresh your access.');
+    e.code = 401;
+    throw e;
+  }
   if (!r.ok) throw new Error('request failed: ' + r.status);
   return r.json();
 }
@@ -49,20 +54,37 @@ export default function AdminDashboard({ onExit }) {
     }
   }, []);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      localStorage.setItem('adminSession', 'true');
-      localStorage.setItem('adminSessionTime', Date.now().toString());
-      setPassword(''); setError('');
-    } else { setError('Incorrect password'); setPassword(''); }
+    if (password !== ADMIN_PASSWORD) { setError('Incorrect password'); setPassword(''); return; }
+    // Local password OK. Now ask the server to mint a short-lived signed admin
+    // session token so locked admin API endpoints accept us. The raw
+    // ADMIN_API_TOKEN never reaches the browser -- we only store the signed token.
+    try {
+      const r = await fetch('/api/admin-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (r.ok) {
+        const d = await r.json().catch(() => ({}));
+        if (d && d.token) localStorage.setItem('adminApiToken', d.token);
+        else localStorage.removeItem('adminApiToken'); // endpoints not locked
+      }
+      // If the call fails we still let the operator in; the API may be open in dev
+      // and the dashboard will surface a clear banner if a request is rejected.
+    } catch { /* network issue -- proceed; API calls will report if unauthorized */ }
+    setIsAuthenticated(true);
+    localStorage.setItem('adminSession', 'true');
+    localStorage.setItem('adminSessionTime', Date.now().toString());
+    setPassword(''); setError('');
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('adminSession');
     localStorage.removeItem('adminSessionTime');
+    localStorage.removeItem('adminApiToken');
   };
 
   if (!isAuthenticated) {
