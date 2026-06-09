@@ -32,6 +32,48 @@ async function sb(url, key, path) {
   return { rows, count };
 }
 
+// Element inventory: how many layers + sprites we have, per theme, and how many
+// are clean GitHub-raw URLs (asset-pack) vs heavy legacy base64 (data: URIs).
+async function fetchInventory(url, key) {
+  async function rows(table, cols) {
+    const r = await fetch(`${url}/rest/v1/${table}?select=${cols}&limit=2000`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!r.ok) return [];
+    return r.json().catch(() => []);
+  }
+  const norm = (t) => {
+    const s2 = String(t || "").toLowerCase();
+    if (s2.includes("candy")) return "candy";
+    return s2.trim();
+  };
+  const themeOf = (row) => {
+    const tags = row.theme_tags || row.category || [];
+    const arr = Array.isArray(tags) ? tags : [tags];
+    return norm(arr[0]);
+  };
+  const isBase64 = (u) => typeof u === "string" && u.startsWith("data:");
+  const [layers, sprites] = await Promise.all([
+    rows("community_layers", "image_url,theme_tags,category"),
+    rows("community_sprites", "image_url,theme_tags,subject"),
+  ]);
+  const byTheme = {};
+  const bump = (theme, kind, base64) => {
+    if (!byTheme[theme]) byTheme[theme] = { layers: 0, sprites: 0, layersBase64: 0, spritesBase64: 0 };
+    byTheme[theme][kind] += 1;
+    if (base64) byTheme[theme][kind === "layers" ? "layersBase64" : "spritesBase64"] += 1;
+  };
+  for (const l of layers) bump(themeOf(l), "layers", isBase64(l.image_url));
+  for (const sp of sprites) bump(themeOf(sp), "sprites", isBase64(sp.image_url));
+  const totals = {
+    layers: layers.length,
+    sprites: sprites.length,
+    layersClean: layers.filter((l) => !isBase64(l.image_url)).length,
+    spritesClean: sprites.filter((sp) => !isBase64(sp.image_url)).length,
+  };
+  return { totals, byTheme };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
 
@@ -71,13 +113,18 @@ export default async function handler(req, res) {
       mechanics: mechanics.count,
     };
 
+    // Library element inventory (layers + sprites per theme; clean vs base64).
+    let inventory = null;
+    try { inventory = await fetchInventory(url, key); } catch (e) { inventory = { error: e.message }; }
+
     // --- real spend from usage_log, if the table exists ---
     let today = 0, month = 0, source = "estimate";
+    const byKind = {}; // kind -> { count, total } from usage_log
     const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
     const startOfMonth = new Date(); startOfMonth.setUTCDate(1); startOfMonth.setUTCHours(0, 0, 0, 0);
 
     const usageProbe = await fetch(
-      `${url}/rest/v1/usage_log?select=cost_usd,created_at&created_at=gte.${startOfMonth.toISOString()}`,
+      `${url}/rest/v1/usage_log?select=cost_usd,created_at,kind&created_at=gte.${startOfMonth.toISOString()}`,
       { headers: { apikey: key, Authorization: `Bearer ${key}` } }
     );
     if (usageProbe.ok) {
@@ -88,6 +135,10 @@ export default async function handler(req, res) {
           const c = parseFloat(row.cost_usd) || 0;
           month += c;
           if (new Date(row.created_at) >= startOfDay) today += c;
+          const k = row.kind || "other";
+          if (!byKind[k]) byKind[k] = { count: 0, total: 0 };
+          byKind[k].count += 1;
+          byKind[k].total += c;
         }
       }
     }
@@ -104,9 +155,19 @@ export default async function handler(req, res) {
     const budgetUsedPct = dailyBudget > 0 ? Math.round((today / dailyBudget) * 100) : 0;
     const monthlyEstimate = source === "usage_log" && today > 0 ? Math.round(today * 30 * 100) / 100 : Math.round(month * 100) / 100;
 
+    // Per-type cost summary (count + total + average).
+    const perType = Object.keys(byKind).map((k) => ({
+      kind: k,
+      count: byKind[k].count,
+      total: Math.round(byKind[k].total * 10000) / 10000,
+      avg: byKind[k].count ? Math.round((byKind[k].total / byKind[k].count) * 10000) / 10000 : 0,
+    })).sort((a, b) => b.total - a.total);
+
     return res.status(200).json({
       configured: true,
       counts,
+      perType,
+      inventory,
       cost: {
         today: Math.round(today * 100) / 100,
         month: Math.round(month * 100) / 100,
