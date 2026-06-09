@@ -1004,3 +1004,29 @@ Findings: `generate-game.js` and `generate-level.js` DO pull from `community_spr
 ### Guardrails for this work (unchanged)
 No secrets/keys/billing; no destructive DB ops (DELETE/DROP); any DB changes shipped as idempotent `db/*.sql` for the owner to run; never click Create/Publish in the live kid UI; keep everything age-appropriate. Code + idempotent SQL committed to main; Vercel auto-deploys.
 
+
+## DONE — cost-per-type, element inventory, character dedup, library-before-DALL-E (June 9 2026, later session)
+
+All four queued items above were implemented, committed to main, and verified on live production. Guardrails respected (no secrets/billing, no destructive DB ops; the one DB cleanup is left for the owner).
+
+### 1. Cost per type — DONE
+`/api/admin-stats` now aggregates `usage_log` by `kind` into a `perType` array (count, total, average $). The Admin Overview shows a new "💸 Cost per type" table. Live verify: image generations = 25 calls, avg ~$0.0592, total $1.48; library games/levels correctly log $0 (so they don't inflate cost). Image generation is confirmed as the only real cost driver so far.
+
+### 2. Level-element inventory — DONE
+`/api/admin-stats` now returns an `inventory` object (layers + sprites per theme, clean-URL vs legacy base64). New "🧱 Level elements (library)" card on the Overview. Live ground truth: **layers 28 clean / 47 total** (19 legacy base64), **sprites 63 clean / 63 total**, with a per-theme table. Finding surfaced: 19 base64 layer rows are the bloat source, and `/api/list-assets` was hiding ALL layers from the kid world-builder because they were base64-only.
+
+### 3. Characters not saving ("kid with jetpack" duplicates) — DONE (client) + scoped
+Root cause was client-side: `store.js` `saveCharacter()` had no dedup. Fixed: it now keys on normalized (trim+lowercase) name+description; a repeat save UPDATES the existing character in place and moves it to the front (with `updatedAt`) instead of adding a duplicate. Verified the dedup logic is live in the deployed bundle. Note: the kid demo flow does NOT call `/api/generate-creature` at all (it only calls `/api/generate-game`), so there was no DALL-E character regeneration to stop — the duplication was purely the local save. `generate-creature.js` (unused by the demo) was left as-is; if it is ever wired in, add the same reuse-before-DALL-E guard there.
+
+### 4. Use our elements before DALL-E (+ candy theme bug) — DONE
+Two fixes across the asset path:
+- **Theme normalization (`normTheme`)**: added to `api/list-assets.js`, `api/generate-game.js`, and `api/generate-level.js` so the UI's short label "candy" matches the library's "Candy kingdom" tags (case-insensitive). Before: `/api/list-assets?theme=candy` returned 0 sprites (→ all gaps → DALL-E). After (live): candy returns **4 layers + 9 sprites**, and a live candy game generation returns `source: library`, **spriteGaps: [] (zero)**, all 9 sprites used.
+- **Clean-before-base64 bias**: both generators now sort their sprite/layer candidates so `image_url` starting with `data:` (heavy legacy base64) is used last, preferring clean GitHub-raw asset-pack URLs. Live candy game verify: `usesBase64: false`, `usesGithubRaw: true`, html ~28KB. This keeps generated games small/fast and maximizes library reuse before any DALL-E gap-fill.
+
+### Live verification summary (all PASS)
+Admin Overview shows real Cost-per-type + Level-elements cards. `/api/list-assets?theme=candy` = 4 layers / 9 sprites. Candy platformer generation = library source, 0 sprite gaps, clean URLs, no base64. Character dedup present in the deployed bundle.
+
+### Still on the owner (optional, needs service key / destructive)
+- Replace the 19 legacy base64 layer rows in `community_layers` with clean GitHub-raw URLs (or delete the base64 dupes) so the world-builder shows background layers to kids and clean-bias has clean layers to pick. This is a DB data change — left for the owner.
+- A stray `diagtest` theme shows up in the inventory (leftover QA rows) and the earlier `qaa95cb6` / `community_levels` QA rows are still flagged for optional cleanup (destructive — owner-run).
+
