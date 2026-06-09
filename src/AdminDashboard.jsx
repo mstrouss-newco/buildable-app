@@ -104,7 +104,7 @@ function AdminLoginPage({ onLogin, password, setPassword, error }) {
   return (
     <div className="admin-login">
       <div className="admin-login__container">
-        <h1 className="admin-login__title">🔐 Admin Dashboard</h1>
+        <h1 className="admin-login__title">ð Admin Dashboard</h1>
         <p className="admin-login__subtitle">Buildable Kids Control Center</p>
         <form onSubmit={onLogin} className="admin-login__form">
           <div className="admin-login__field">
@@ -115,7 +115,7 @@ function AdminLoginPage({ onLogin, password, setPassword, error }) {
           {error && <div className="admin-login__error">{error}</div>}
           <button type="submit" className="btn-primary" style={{width: '100%'}}>Sign In</button>
         </form>
-        <p className="admin-login__hint">🔒 Secure access only</p>
+        <p className="admin-login__hint">ð Secure access only</p>
       </div>
     </div>
   );
@@ -124,11 +124,11 @@ function AdminLoginPage({ onLogin, password, setPassword, error }) {
 function AdminHeader({ onLogout, onExit }) {
   return (
     <div className="admin-header">
-      <div className="admin-header__left"><div className="admin-logo">⚙️ Admin Dashboard</div></div>
+      <div className="admin-header__left"><div className="admin-logo">âï¸ Admin Dashboard</div></div>
       <div className="admin-header__right">
-        <span className="admin-status">✅ System Online</span>
+        <span className="admin-status">â System Online</span>
         <button onClick={onLogout} className="btn-ghost" style={{padding: '10px 16px', fontSize: '13px'}}>Logout</button>
-        <button onClick={onExit} className="btn-ghost" style={{padding: '10px 16px', fontSize: '13px'}}>← Back</button>
+        <button onClick={onExit} className="btn-ghost" style={{padding: '10px 16px', fontSize: '13px'}}>â Back</button>
       </div>
     </div>
   );
@@ -136,12 +136,13 @@ function AdminHeader({ onLogout, onExit }) {
 
 function AdminTabs({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'overview', label: '📊 Overview' },
-    { id: 'games', label: '🎮 Games' },
-    { id: 'characters', label: '👥 Characters' },
-    { id: 'levels', label: '🗺️ Levels' },
-    { id: 'performance', label: '⚡ Performance' },
-    { id: 'settings', label: '⚙️ Settings' },
+    { id: 'overview', label: 'ð Overview' },
+    { id: 'games', label: 'ð® Games' },
+    { id: 'characters', label: 'ð¥ Characters' },
+    { id: 'levels', label: 'ðºï¸ Levels' },
+    { id: 'performance', label: 'â¡ Performance' },
+    { id: 'settings', label: 'âï¸ Settings' },
+    { id: 'maintenance', label: '🧹 Maintenance' },
   ];
   return (
     <div className="admin-tabs">
@@ -160,6 +161,7 @@ function AdminContent({ activeTab }) {
     case 'characters': return <CharacterLibrary />;
     case 'levels': return <LevelLibrary />;
     case 'performance': return <PerformanceMetrics />;
+    case 'maintenance': return <AdminMaintenance />;
     case 'settings': return <AdminSettings />;
     default: return <AdminOverview />;
   }
@@ -168,6 +170,81 @@ function AdminContent({ activeTab }) {
 // ============================================================================
 // OVERVIEW (live data)
 // ============================================================================
+function AdminMaintenance() {
+  const [busy, setBusy] = useState('');
+  const [base64Info, setBase64Info] = useState(null);
+  const [qaInfo, setQaInfo] = useState(null);
+  const [msg, setMsg] = useState('');
+
+  async function run(task, action) {
+    setBusy(task + ':' + action);
+    setMsg('');
+    try {
+      const r = await fetch('/api/admin-cleanup', {
+        method: 'POST',
+        headers: { ...adminHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task, action }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setMsg('Error: ' + (d.error || r.status)); return null; }
+      setMsg(d.message || 'Done.');
+      return d;
+    } catch (e) {
+      setMsg('Error: ' + (e.message || e));
+      return null;
+    } finally {
+      setBusy('');
+    }
+  }
+
+  return (
+    <div className="admin-panel admin-maintenance">
+      <h2>🧹 Maintenance</h2>
+      <p className="muted">One-click database cleanups. Preview first to see what will change, then Apply.</p>
+
+      <div className="maint-card">
+        <h3>Remove duplicate base64 layers</h3>
+        <p className="muted">Deletes legacy embedded-image layer rows that already have a clean URL copy. Nothing unique is removed.</p>
+        <div className="maint-actions">
+          <button disabled={!!busy} onClick={async () => { const d = await run('base64-layers', 'preview'); if (d) setBase64Info(d); }}>
+            {busy === 'base64-layers:preview' ? 'Checking...' : 'Preview'}
+          </button>
+          <button className="danger" disabled={!!busy || !base64Info} onClick={async () => {
+            if (!window.confirm('Remove ' + (base64Info?.removable ?? '') + ' duplicate base64 rows? This cannot be undone.')) return;
+            const d = await run('base64-layers', 'apply'); if (d) setBase64Info(null);
+          }}>
+            {busy === 'base64-layers:apply' ? 'Removing...' : 'Apply'}
+          </button>
+        </div>
+        {base64Info && (
+          <p className="maint-result">{base64Info.message}</p>
+        )}
+      </div>
+
+      <div className="maint-card">
+        <h3>Clear QA / test rows</h3>
+        <p className="muted">Removes leftover diagnostic and test rows (e.g. "diagtest" theme) from the community tables.</p>
+        <div className="maint-actions">
+          <button disabled={!!busy} onClick={async () => { const d = await run('qa-rows', 'preview'); if (d) setQaInfo(d); }}>
+            {busy === 'qa-rows:preview' ? 'Checking...' : 'Preview'}
+          </button>
+          <button className="danger" disabled={!!busy || !qaInfo} onClick={async () => {
+            if (!window.confirm('Remove ' + (qaInfo?.total ?? '') + ' QA/test rows? This cannot be undone.')) return;
+            const d = await run('qa-rows', 'apply'); if (d) setQaInfo(null);
+          }}>
+            {busy === 'qa-rows:apply' ? 'Removing...' : 'Apply'}
+          </button>
+        </div>
+        {qaInfo && (
+          <p className="maint-result">{qaInfo.message}</p>
+        )}
+      </div>
+
+      {msg && <p className="maint-status">{msg}</p>}
+    </div>
+  );
+}
+
 function AdminOverview() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
@@ -181,7 +258,7 @@ function AdminOverview() {
     return () => { alive = false; };
   }, []);
 
-  if (loading) return <div className="admin-content"><h2>System Overview</h2><p>Loading live data…</p></div>;
+  if (loading) return <div className="admin-content"><h2>System Overview</h2><p>Loading live dataâ¦</p></div>;
   if (err) return <div className="admin-content"><h2>System Overview</h2><p style={{color:'var(--coral)'}}>Couldn't load stats: {err}</p></div>;
 
   const c = data.counts || {};
@@ -192,17 +269,17 @@ function AdminOverview() {
     <div className="admin-content">
       <h2>System Overview</h2>
       <div className="admin-stat-grid">
-        <StatCard icon="👥" label="Characters Created" value={c.characters ?? 0} trend="in library" />
-        <StatCard icon="🗺️" label="Levels Created" value={c.levels ?? 0} trend="in library" />
-        <StatCard icon="🎮" label="Games" value={(c.games ?? 0) + (c.publishedGames ?? 0)} trend={`${c.publishedGames ?? 0} published`} />
-        <StatCard icon="🧩" label="Mechanics" value={c.mechanics ?? 0} trend="enabled rules" />
+        <StatCard icon="ð¥" label="Characters Created" value={c.characters ?? 0} trend="in library" />
+        <StatCard icon="ðºï¸" label="Levels Created" value={c.levels ?? 0} trend="in library" />
+        <StatCard icon="ð®" label="Games" value={(c.games ?? 0) + (c.publishedGames ?? 0)} trend={`${c.publishedGames ?? 0} published`} />
+        <StatCard icon="ð§©" label="Mechanics" value={c.mechanics ?? 0} trend="enabled rules" />
       </div>
 
       <div className="admin-grid">
         <div className="admin-card">
-          <h3>💰 Cost Summary {estimate && <span style={{fontSize:'12px',color:'var(--muted)'}}>(estimate)</span>}</h3>
+          <h3>ð° Cost Summary {estimate && <span style={{fontSize:'12px',color:'var(--muted)'}}>(estimate)</span>}</h3>
           <div className="admin-cost-summary">
-            <div className="cost-item"><span>Today:</span><strong>{estimate ? '—' : money(cost.today)}</strong></div>
+            <div className="cost-item"><span>Today:</span><strong>{estimate ? 'â' : money(cost.today)}</strong></div>
             <div className="cost-item"><span>This Month:</span><strong>{money(cost.month)}</strong></div>
             <div className="cost-item"><span>Monthly Estimate:</span><strong>{money(cost.monthlyEstimate)}</strong></div>
             <div className="cost-item"><span>Daily Budget:</span><strong>{money(cost.dailyBudget)}</strong></div>
@@ -211,12 +288,12 @@ function AdminOverview() {
             </div>
           </div>
           {estimate && <p style={{fontSize:'12px',color:'var(--muted)',marginTop:'10px'}}>
-            Showing an estimate from library counts × unit cost. Run <code>db/create-usage-log.sql</code> and log per-call costs for exact spend.
+            Showing an estimate from library counts Ã unit cost. Run <code>db/create-usage-log.sql</code> and log per-call costs for exact spend.
           </p>}
         </div>
 
         <div className="admin-card">
-          <h3>📈 System Health</h3>
+          <h3>ð System Health</h3>
           <div className="admin-health">
             <HealthItem label="API Status" status={data.health?.api === 'operational' ? 'operational' : 'down'} />
             <HealthItem label="Database" status={data.health?.db === 'operational' ? 'operational' : 'down'} />
@@ -246,7 +323,7 @@ function StatCard({ icon, label, value, trend }) {
 function HealthItem({ label, status, labelOverride }) {
   const ok = status === 'operational';
   const statusColor = ok ? 'var(--mint)' : 'var(--coral)';
-  const statusEmoji = ok ? '✅' : '⚠️';
+  const statusEmoji = ok ? 'â' : 'â ï¸';
   const text = labelOverride || (ok ? 'Operational' : 'Attention');
   return (
     <div className="health-item">
@@ -257,14 +334,14 @@ function HealthItem({ label, status, labelOverride }) {
 }
 
 // ============================================================================
-// GAMES LIBRARY (live — all saved + published games)
+// GAMES LIBRARY (live â all saved + published games)
 // ============================================================================
 function CostPerType({ perType }) {
   const rows = Array.isArray(perType) ? perType : [];
-  const label = { character: '👤 Character', level: '🗺️ Level', game: '🎮 Game', quiz: '🧩 Quiz', image: '🖼️ Image' };
+  const label = { character: 'ð¤ Character', level: 'ðºï¸ Level', game: 'ð® Game', quiz: 'ð§© Quiz', image: 'ð¼ï¸ Image' };
   return (
     <div className="admin-card" style={{ marginTop: '20px' }}>
-      <h3>💸 Cost per type {rows.length === 0 && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>(no usage_log rows yet)</span>}</h3>
+      <h3>ð¸ Cost per type {rows.length === 0 && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>(no usage_log rows yet)</span>}</h3>
       {rows.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: '13px' }}>
           Once the generators log per-call costs to <code>usage_log</code>, the average $/character, $/level, $/game and $/quiz will show here.
@@ -272,12 +349,12 @@ function CostPerType({ perType }) {
       ) : (
         <div className="admin-cost-summary">
           <div className="cost-item" style={{ opacity: 0.7, fontSize: '12px' }}>
-            <span><strong>Type</strong></span><strong>avg · count · total</strong>
+            <span><strong>Type</strong></span><strong>avg Â· count Â· total</strong>
           </div>
           {rows.map((r) => (
             <div className="cost-item" key={r.kind}>
               <span>{label[r.kind] || r.kind}</span>
-              <strong>{money(r.avg)} · {r.count} · {money(r.total)}</strong>
+              <strong>{money(r.avg)} Â· {r.count} Â· {money(r.total)}</strong>
             </div>
           ))}
         </div>
@@ -297,14 +374,14 @@ function ElementInventory({ inventory }) {
   if (inv.error) {
     return (
       <div className="admin-card" style={{ marginTop: '20px' }}>
-        <h3>🧱 Level elements</h3>
+        <h3>ð§± Level elements</h3>
         <p style={{ color: 'var(--coral)' }}>Couldn't load inventory: {inv.error}</p>
       </div>
     );
   }
   return (
     <div className="admin-card" style={{ marginTop: '20px' }}>
-      <h3>🧱 Level elements (library)</h3>
+      <h3>ð§± Level elements (library)</h3>
       <div className="admin-cost-summary" style={{ marginBottom: '12px' }}>
         <div className="cost-item"><span>Background layers (clean / total):</span><strong>{totals.layersClean ?? 0} / {totals.layers ?? 0}</strong></div>
         <div className="cost-item"><span>Sprites (clean / total):</span><strong>{totals.spritesClean ?? 0} / {totals.sprites ?? 0}</strong></div>
@@ -331,7 +408,7 @@ function ElementInventory({ inventory }) {
         </div>
       )}
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px' }}>
-        "Clean" = GitHub-raw asset-pack URLs (fast). "Base64" = heavy legacy <code>data:</code> rows that bloat games and should be replaced. Generators are biased to prefer clean rows before falling back to DALL·E.
+        "Clean" = GitHub-raw asset-pack URLs (fast). "Base64" = heavy legacy <code>data:</code> rows that bloat games and should be replaced. Generators are biased to prefer clean rows before falling back to DALLÂ·E.
       </p>
     </div>
   );
@@ -370,7 +447,7 @@ function GamesLibrary() {
         </div>
       </div>
 
-      {loading && <p>Loading games…</p>}
+      {loading && <p>Loading gamesâ¦</p>}
       {err && <p style={{color:'var(--coral)'}}>Couldn't load games: {err}</p>}
       {!loading && !err && shown.length === 0 && <p style={{color:'var(--muted)'}}>No games yet.</p>}
 
@@ -386,10 +463,10 @@ function GamesLibrary() {
           </div>
           {shown.map((g) => (
             <div key={g.source + ':' + g.gameId} className="table-row">
-              <div className="col-name"><strong>{g.title}</strong>{g.characterName ? <span style={{color:'var(--muted)'}}> · {g.characterName}</span> : null}</div>
-              <div className="col-theme">{g.theme || '—'}</div>
-              <div className="col-difficulty">{g.mechanicName || g.gameType || '—'}</div>
-              <div className="col-device">{g.source === 'published' ? `🌍 published` : '💾 saved'}</div>
+              <div className="col-name"><strong>{g.title}</strong>{g.characterName ? <span style={{color:'var(--muted)'}}> Â· {g.characterName}</span> : null}</div>
+              <div className="col-theme">{g.theme || 'â'}</div>
+              <div className="col-difficulty">{g.mechanicName || g.gameType || 'â'}</div>
+              <div className="col-device">{g.source === 'published' ? `ð published` : 'ð¾ saved'}</div>
               <div className="col-created">{timeAgo(g.createdAt)}</div>
               <div className="col-actions">
                 <a href={g.playUrl} target="_blank" rel="noreferrer" className="btn-pill-purple" style={{marginRight:'8px', textDecoration:'none'}}>Play / QA</a>
@@ -400,7 +477,7 @@ function GamesLibrary() {
       )}
       <p style={{fontSize:'12px',color:'var(--muted)',marginTop:'14px'}}>
         Tip: use "Play / QA" to open any game in a new tab. To tune mechanics, edit the rules in
-        the <code>game_mechanics</code> library — new games pick them up on next generation.
+        the <code>game_mechanics</code> library â new games pick them up on next generation.
       </p>
     </div>
   );
@@ -416,7 +493,7 @@ function CharacterLibrary() {
     <div className="admin-content">
       <div className="admin-header-bar"><h2>Character Library{count!=null?` (${count})`:''}</h2></div>
       <p style={{color:'var(--muted)'}}>
-        {count == null ? 'Loading…' : `${count} characters in community_characters.`} Characters are stored per device and
+        {count == null ? 'Loadingâ¦' : `${count} characters in community_characters.`} Characters are stored per device and
         reused by the generator. Manage individual rows in Supabase (community_characters).
       </p>
     </div>
@@ -430,7 +507,7 @@ function LevelLibrary() {
     <div className="admin-content">
       <div className="admin-header-bar"><h2>Level Library{count!=null?` (${count})`:''}</h2></div>
       <p style={{color:'var(--muted)'}}>
-        {count == null ? 'Loading…' : `${count} levels in community_levels.`} Levels are assembled from the
+        {count == null ? 'Loadingâ¦' : `${count} levels in community_levels.`} Levels are assembled from the
         community_layers art library. Manage rows in Supabase.
       </p>
     </div>
@@ -442,9 +519,9 @@ function PerformanceMetrics() {
     <div className="admin-content">
       <h2>Performance Metrics</h2>
       <div className="admin-card">
-        <h3>⚡ Notes</h3>
+        <h3>â¡ Notes</h3>
         <p style={{color:'var(--muted)'}}>
-          Generation takes ~60–115s (Claude) and is library-driven (no per-build DALL·E).
+          Generation takes ~60â115s (Claude) and is library-driven (no per-build DALLÂ·E).
           Real render/latency metrics will populate here once usage_log captures timing.
         </p>
       </div>
@@ -457,7 +534,7 @@ function AdminSettings() {
     <div className="admin-content">
       <h2>Settings</h2>
       <div className="admin-card">
-        <h3>🔧 Configuration</h3>
+        <h3>ð§ Configuration</h3>
         <p style={{color:'var(--muted)'}}>
           Budgets and API keys are configured as environment variables in Vercel
           (DAILY_BUDGET_USD, ANTHROPIC_API_KEY, OPENAI_API_KEY, SUPABASE_*). They are not editable here for security.
