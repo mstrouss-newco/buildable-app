@@ -140,10 +140,19 @@ Also cap level length (Riley uses 45s normal / 90s boss) so a level can't run fo
 Give EVERY level a (mini)boss, scaling boss HP per level (Riley: miniboss 8 HP, final boss 15 HP). Why this is better than plain `clearAll`: the end state depends on a monotonically increasing counter, not on the engine successfully cleaning up every stray enemy, so it cannot hang. Still keep the failsafe + time cap below as belt-and-suspenders (Riley also arms the boss at `minDuration + buffer` as a fallback).
 
 ```
-rule: { type: 'killThenBoss', killGoal: 15, bossHp: 8, finalBossHp: 15, minDurationMs: 30000, fallbackBufferMs: 8000 }
+rule: { type: 'killThenBoss', killGoal: 15, bossHp: 8, finalBossHp: 15,
+        endOnBossDefeat: true, minibossSprite: 'levelEnemy', waveEveryMs: 3500,
+        minDurationMs: 30000, fallbackBufferMs: 8000 }
 ```
 
 Implementation lesson from Riley: read the current level’s config via a global index (`LEVELS[idx]`) anywhere outside the level-builder — a per-build local `lv` is not in scope in the win-check/boss-spawn code, and referencing it throws and makes levels unwinnable. The QA agent (below) catches exactly this.
+
+**Refinements proven in Riley (recommended):**
+
+- **Distinct miniboss per level.** Don’t reuse one boss sprite everywhere. Give Lv1–Lv(n-1) a miniboss that is a *giant version of that level’s own enemy* (`minibossSprite: 'levelEnemy'` — enemy emoji/art + a crown + an angry aura) so each miniboss feels native to its level, and reserve the unique “final boss” art for the last level. Scale HP (miniboss `8`, final boss `15`).
+- **End the level the instant the boss dies** (`endOnBossDefeat: true`). Once the boss has spawned and is beaten, finish immediately — don’t also wait out the minimum duration. (Keep the clear-enemies + min-duration rule only for the pre-boss phase.)
+- **Tune enemy throughput so `killGoal` is reachable.** Spawn waves often enough (Riley: `waveEveryMs: 3500`) that the player can actually reach 15 kills within the level; otherwise the time-based fallback ends up being the real trigger.
+- **Closure-scoping for QA.** If level state (current index, current-level config) is closure-scoped, expose a `startLevel(idx)`-style hook so the QA agent can drive a specific level — you can’t set a closure variable from outside the game.
 
 ## 5. Difficulty curve
 
