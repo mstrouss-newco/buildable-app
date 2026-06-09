@@ -224,6 +224,8 @@ function AdminOverview() {
           </div>
         </div>
       </div>
+      <CostPerType perType={data.perType} />
+      <ElementInventory inventory={data.inventory} />
     </div>
   );
 }
@@ -257,6 +259,84 @@ function HealthItem({ label, status, labelOverride }) {
 // ============================================================================
 // GAMES LIBRARY (live — all saved + published games)
 // ============================================================================
+function CostPerType({ perType }) {
+  const rows = Array.isArray(perType) ? perType : [];
+  const label = { character: '👤 Character', level: '🗺️ Level', game: '🎮 Game', quiz: '🧩 Quiz', image: '🖼️ Image' };
+  return (
+    <div className="admin-card" style={{ marginTop: '20px' }}>
+      <h3>💸 Cost per type {rows.length === 0 && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>(no usage_log rows yet)</span>}</h3>
+      {rows.length === 0 ? (
+        <p style={{ color: 'var(--muted)', fontSize: '13px' }}>
+          Once the generators log per-call costs to <code>usage_log</code>, the average $/character, $/level, $/game and $/quiz will show here.
+        </p>
+      ) : (
+        <div className="admin-cost-summary">
+          <div className="cost-item" style={{ opacity: 0.7, fontSize: '12px' }}>
+            <span><strong>Type</strong></span><strong>avg · count · total</strong>
+          </div>
+          {rows.map((r) => (
+            <div className="cost-item" key={r.kind}>
+              <span>{label[r.kind] || r.kind}</span>
+              <strong>{money(r.avg)} · {r.count} · {money(r.total)}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px' }}>
+        Library-assembled games &amp; levels log $0 (no AI image call). Character/image generations are the real cost driver.
+      </p>
+    </div>
+  );
+}
+
+function ElementInventory({ inventory }) {
+  const inv = inventory || {};
+  const totals = inv.totals || {};
+  const byTheme = inv.byTheme || {};
+  const themes = Object.keys(byTheme).sort();
+  if (inv.error) {
+    return (
+      <div className="admin-card" style={{ marginTop: '20px' }}>
+        <h3>🧱 Level elements</h3>
+        <p style={{ color: 'var(--coral)' }}>Couldn't load inventory: {inv.error}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="admin-card" style={{ marginTop: '20px' }}>
+      <h3>🧱 Level elements (library)</h3>
+      <div className="admin-cost-summary" style={{ marginBottom: '12px' }}>
+        <div className="cost-item"><span>Background layers (clean / total):</span><strong>{totals.layersClean ?? 0} / {totals.layers ?? 0}</strong></div>
+        <div className="cost-item"><span>Sprites (clean / total):</span><strong>{totals.spritesClean ?? 0} / {totals.sprites ?? 0}</strong></div>
+      </div>
+      {themes.length > 0 && (
+        <div className="admin-table" style={{ marginTop: '8px' }}>
+          <div className="table-header">
+            <div className="col-name">Theme</div>
+            <div className="col-theme">Layers</div>
+            <div className="col-difficulty">Sprites</div>
+            <div className="col-device">Base64 (legacy)</div>
+          </div>
+          {themes.map((t) => {
+            const r = byTheme[t];
+            return (
+              <div className="table-row" key={t}>
+                <div className="col-name"><strong>{t}</strong></div>
+                <div className="col-theme">{(r.layers - r.layersBase64)} clean / {r.layers}</div>
+                <div className="col-difficulty">{(r.sprites - r.spritesBase64)} clean / {r.sprites}</div>
+                <div className="col-device">{r.layersBase64 + r.spritesBase64}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '10px' }}>
+        "Clean" = GitHub-raw asset-pack URLs (fast). "Base64" = heavy legacy <code>data:</code> rows that bloat games and should be replaced. Generators are biased to prefer clean rows before falling back to DALL·E.
+      </p>
+    </div>
+  );
+}
+
 function GamesLibrary() {
   const [games, setGames] = useState([]);
   const [counts, setCounts] = useState({ published: 0, saved: 0 });
