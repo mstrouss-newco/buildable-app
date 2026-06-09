@@ -1,16 +1,16 @@
 // /api/admin-cleanup.js
 // One-click database maintenance for the Admin Dashboard so the owner never has to
-// run SQL by hand. Admin-token gated (same session-token auth as the other admin
-// endpoints). Runs server-side using the Supabase service key.
+// run SQL by hand. Admin-token gated. Runs server-side using the Supabase service key.
 //
 // POST JSON: { task, action }
 //   task:   'base64-layers' | 'qa-rows'
-//   action: 'preview' (read-only, returns counts) | 'apply' (performs the cleanup)
+//   action: 'preview' (read-only counts) | 'apply' (performs the cleanup)
 //
-// 'base64-layers': removes legacy data: rows from community_layers, but ONLY when a
-//   clean-URL sibling (same subject+theme) exists, so no art is lost.
-// 'qa-rows': removes diagtest / qaa95cb6 / QA-test leftovers from community_layers,
-//   community_sprites and community_levels.
+// Schema note (from list-assets.js):
+//   community_layers:  asset_id, layer_type, category, image_url, theme_tags (text[])
+//   community_sprites: asset_id, subject, category, image_url, theme_tags (text[])
+//   community_levels:  id, theme (and other cols); QA rows tagged via theme.
+//   Display theme = theme_tags[0]. Rows are keyed/deleted by asset_id.
 
 import { isAdminAuthorized } from './_adminAuth.js';
 
@@ -31,7 +31,8 @@ async function selectRows(query) {
   return r.json();
 }
 
-async function deleteRows(table, filter) {
+async function deleteWhere(table, col, value) {
+  const filter = `${col}=eq.${encodeURIComponent(value)}`;
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
     method: 'DELETE',
     headers: headers({ Prefer: 'return=representation' }),
@@ -41,10 +42,12 @@ async function deleteRows(table, filter) {
   return Array.isArray(data) ? data.length : 0;
 }
 
+const isB64 = (u) => typeof u === 'string' && u.startsWith('data:');
+const themeOf = (r) => (Array.isArray(r.theme_tags) && r.theme_tags[0]) || r.category || '';
+
 async function base64Plan() {
-  const rows = await selectRows('community_layers?select=id,subject,theme,image_url');
-  const isB64 = (u) => typeof u === 'string' && u.startsWith('data:');
-  const key = (r) => `${r.subject || ''}|||${r.theme || ''}`;
+  const rows = await selectRows('community_layers?select=asset_id,layer_type,category,image_url,theme_tags');
+  const key = (r) => `${r.layer_type || r.category || ''}|||${themeOf(r)}`;
   const cleanKeys = new Set(rows.filter(r => !isB64(r.image_url)).map(key));
   const base64 = rows.filter(r => isB64(r.image_url));
   const removable = base64.filter(r => cleanKeys.has(key(r)));
@@ -52,19 +55,29 @@ async function base64Plan() {
   return { base64, removable, orphans };
 }
 
-const QA_FILTER_LS = 'or=(theme.eq.diagtest,theme.ilike.qaa95cb6*,subject.ilike.qa*test*)';
-const QA_FILTER_LV = 'or=(theme.eq.diagtest,theme.ilike.qaa95cb6*)';
+const isQa = (r) => {
+  const tags = Array.isArray(r.theme_tags) ? r.theme_tags : [];
+  const theme = (r.theme || '').toLowerCase();
+  const subject = (r.subject || '').toLowerCase();
+  const tagHit = tags.some(t => {
+    const s = String(t).toLowerCase();
+    return s === 'diagtest' || s.startsWith('qaa95cb6');
+  });
+  const themeHit = theme === 'diagtest' || theme.startsWith('qaa95cb6');
+  const subjHit = /^qa.*test/.test(subject);
+  return tagHit || themeHit || subjHit;
+};
 
 async function qaPlan() {
   const [layers, sprites, levels] = await Promise.all([
-    selectRows(`community_layers?select=id&${QA_FILTER_LS}`),
-    selectRows(`community_sprites?select=id&${QA_FILTER_LS}`),
-    selectRows(`community_levels?select=id&${QA_FILTER_LV}`),
+    selectRows('community_layers?select=asset_id,subject,category,theme_tags'),
+    selectRows('community_sprites?select=asset_id,subject,category,theme_tags'),
+    selectRows('community_levels?select=*'),
   ]);
   return {
-    community_layers: layers.length,
-    community_sprites: sprites.length,
-    community_levels: levels.length,
+    layers: layers.filter(isQa),
+    sprites: sprites.filter(isQa),
+    levels: levels.filter(isQa),
   };
 }
 
@@ -75,9 +88,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  if (!isAdminAuthorized(req)) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!isAdminAuthorized(req)) return res.status(401).json({ error: 'Unauthorized' });
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
     return res.status(500).json({ error: 'Supabase env not configured' });
   }
@@ -97,35 +108,31 @@ export default async function handler(req, res) {
           base64Total: plan.base64.length,
           removable: plan.removable.length,
           orphans: plan.orphans.length,
-          orphanSample: plan.orphans.slice(0, 20).map(r => ({ id: r.id, subject: r.subject, theme: r.theme })),
-          message: `${plan.removable.length} duplicate base64 rows can be safely removed; ${plan.orphans.length} have no clean copy and will be kept.`,
+          message: `${plan.removable.length} duplicate base64 layer rows can be safely removed; ${plan.orphans.length} have no clean copy and will be kept.`,
         });
       }
       if (action === 'apply') {
         let removed = 0;
-        for (const r of plan.removable) {
-          removed += await deleteRows('community_layers', `id=eq.${encodeURIComponent(r.id)}`);
-        }
+        for (const r of plan.removable) removed += await deleteWhere('community_layers', 'asset_id', r.asset_id);
         return res.status(200).json({ task, action, removed, keptOrphans: plan.orphans.length,
           message: `Removed ${removed} duplicate base64 layer rows. Kept ${plan.orphans.length} with no clean copy.` });
       }
     }
 
     if (task === 'qa-rows') {
-      const counts = await qaPlan();
-      const total = counts.community_layers + counts.community_sprites + counts.community_levels;
+      const plan = await qaPlan();
+      const total = plan.layers.length + plan.sprites.length + plan.levels.length;
       if (action === 'preview') {
-        return res.status(200).json({ task, action, counts, total,
-          message: `${total} QA/test rows found (${counts.community_layers} layers, ${counts.community_sprites} sprites, ${counts.community_levels} levels).` });
+        return res.status(200).json({ task, action, total,
+          counts: { community_layers: plan.layers.length, community_sprites: plan.sprites.length, community_levels: plan.levels.length },
+          message: `${total} QA/test rows found (${plan.layers.length} layers, ${plan.sprites.length} sprites, ${plan.levels.length} levels).` });
       }
       if (action === 'apply') {
-        const removedLayers = await deleteRows('community_layers', QA_FILTER_LS);
-        const removedSprites = await deleteRows('community_sprites', QA_FILTER_LS);
-        const removedLevels = await deleteRows('community_levels', QA_FILTER_LV);
-        const removed = removedLayers + removedSprites + removedLevels;
-        return res.status(200).json({ task, action, removed,
-          detail: { community_layers: removedLayers, community_sprites: removedSprites, community_levels: removedLevels },
-          message: `Removed ${removed} QA/test rows.` });
+        let removed = 0;
+        for (const r of plan.layers)  removed += await deleteWhere('community_layers',  'asset_id', r.asset_id);
+        for (const r of plan.sprites) removed += await deleteWhere('community_sprites', 'asset_id', r.asset_id);
+        for (const r of plan.levels)  removed += await deleteWhere('community_levels',  'id', r.id);
+        return res.status(200).json({ task, action, removed, message: `Removed ${removed} QA/test rows.` });
       }
     }
 
