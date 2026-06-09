@@ -958,3 +958,30 @@ After deploy: `POST /api/admin-session {password}` -> 200 `locked:true` + signed
 - Centralize endpoint auth in one shared helper (`_adminAuth.js`) so every protected route stays consistent and back-compatible.
 - Translate raw HTTP 401s into actionable UI ("log out and back in") so a locked endpoint never looks like a generic crash.
 
+
+## Owner's queued work — cost-per-type, element inventory, character reuse, library-before-DALL-E (June 9 2026)
+
+Owner asked for four things this session. Diagnosis below was confirmed by reading the code and probing the live API; work is in progress.
+
+### 1. "How much does a game / character / level cost to make?" — per-TYPE cost breakdown
+
+Today `usage_log` already stores a per-call `kind` ('character' | 'level' | 'game' | 'quiz') and `cost_usd`, but `/api/admin-stats` only sums them into one today/month total — there is no per-type view. PLAN: aggregate `usage_log` by `kind` in admin-stats (count + total + avg cost per kind) and show a "Cost per type" table on the Admin Overview, so the owner can see e.g. avg $/character vs $/game. (Library-driven games/levels log $0; image generations are the real cost.)
+
+### 2. "How many level elements do we have?" — element inventory
+
+Findings from the live `/api/list-assets`: the CLEAN (non-base64) library currently exposes **0 background layers** and **9 sprites per theme** for 6 themes; the layer rows that exist are all legacy base64 and are filtered out, so the visual world-builder shows kids NO background-layer choices. Sprite subjects = coin, gem, star, heart, chest, spike, cloud_platform, key, orb. PLAN: add a "Level Elements / Library" inventory to the Admin Dashboard showing layers + sprites per theme and clean-URL vs base64 counts, so we can see coverage and gaps at a glance.
+
+### 3. "Why aren't characters saving? 'kid with jetpack' makes a new version every time."
+
+Root cause (two layers, both confirmed):
+- Client: `store.js` `saveCharacter()` has NO dedup — no find/findIndex/name match. It just prepends a new item with a fresh id on every call, and `BuildableKids.jsx` auto-saves a character after each creation without first checking `listCharacters()` for an existing match. So each "kid with jetpack" creation = a brand-new saved entry.
+- Server: `api/generate-creature.js` never SELECTs `community_characters` for an existing match before generating — it always calls OpenAI (2-model fallback) and INSERTs a new row. So the same prompt regenerates (and re-pays for) fresh art every time.
+PLAN: (a) make `saveCharacter()` dedupe by normalized name+description (update in place / move-to-front instead of adding a duplicate); (b) in the create flow, reuse an existing matching character (skip regeneration) when one is already saved; (c) optionally have `generate-creature.js` reuse a recent community_characters row for the same subject/theme before paying DALL-E. This fixes both the "won't save" feel and the wasted image cost.
+
+### 4. "Make sure the game uses elements we created/uploaded BEFORE using DALL-E (to speed things up)."
+
+Findings: `generate-game.js` and `generate-level.js` DO pull from `community_sprites`/`community_layers` and only use DALL-E as a gap-filler — good — but neither biases selection toward the clean `created_by_device_id = 'asset-pack'` rows nor skips `image_url` starting with `data:`, despite the README repeatedly recommending it. So heavy legacy base64 rows get picked, bloating game HTML and slowing the iframe. ALSO a theme-tag bug: sprites are tagged "Candy kingdom" but the UI passes "candy" — `/api/list-assets?theme=candy` returns 0 sprites while `theme=candy kingdom` returns 9, so candy-themed builds get nothing from the library and fall back to DALL-E. PLAN: (a) bias layer/sprite selection to asset-pack / clean-URL rows and skip `data:` rows in both generators; (b) normalize theme tags (map 'candy' <-> 'Candy kingdom', case-insensitive) across list-assets + generators so every theme actually hits the library before DALL-E.
+
+### Guardrails for this work (unchanged)
+No secrets/keys/billing; no destructive DB ops (DELETE/DROP); any DB changes shipped as idempotent `db/*.sql` for the owner to run; never click Create/Publish in the live kid UI; keep everything age-appropriate. Code + idempotent SQL committed to main; Vercel auto-deploys.
+
