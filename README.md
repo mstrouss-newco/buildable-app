@@ -217,6 +217,25 @@ Early generated games were thin because the generator prompt only asked for a ba
 
 ---
 
+## QA Agent — automated “does every level end?” checks
+
+Generated games occasionally ship a level that can never be completed (an enemy drifts off-screen, a win condition is unreachable, a boss never spawns). Because games run as generated HTML inside a sandboxed iframe, we can QA them the same way: load the game in an iframe and **drive its real game loop programmatically**, asserting that every level reaches a completed state.
+
+**Reference implementation:** the sibling Riley game ships `riley/qa-harness.html` (in the `croc-tot` repo), a single static page that loads the game in an iframe, fast-forwards the loop across all levels with a synthetic “perfect player,” and asserts per-level invariants:
+
+1. **boots** — game globals are reachable.
+2. **inBounds** — no enemy sits far outside the playfield.
+3. **killGoal** — the kill counter reaches its goal (for `killThenBoss`, 15).
+4. **bossSpawns** — a miniboss/boss actually spawns.
+5. **ends** — the level reaches the level-complete state within a budget.
+6. **noOverrun** — the level never blows past its hard cap.
+
+**Why it pays off:** when the `killThenBoss` mechanic was added to Riley, the harness immediately caught a regression (`ReferenceError: lv is not defined` — the win-check referenced a per-build local instead of the global `LEVELS[idx]`) that made every level unwinnable, before any player saw it.
+
+**For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that game’s Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so “unwinnable level” bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` — generated games that use it should pass by construction.
+
+---
+
 ## QA Session Log — June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
