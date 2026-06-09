@@ -136,21 +136,41 @@ export function listCharacters() {
 }
 
 export function saveCharacter(character) {
-  // Skip if it's an exact repeat of the most recent save.
-  if (cache.characters[0] && character.image && cache.characters[0].image === character.image) {
+  const name = character.name || autoName(character.description);
+  const description = character.description || "";
+  const image = character.image || null;
+
+  // Dedup: if a character with the same (case/space-insensitive) name+description
+  // already exists, UPDATE it in place and move it to the front instead of adding
+  // a duplicate. This stops e.g. "kid with jetpack" creating a new entry every time.
+  const key = (n, d) => (String(n || "").trim().toLowerCase() + "|" + String(d || "").trim().toLowerCase());
+  const wantKey = key(name, description);
+  const existingIdx = cache.characters.findIndex((c) => key(c.name, c.description) === wantKey);
+
+  if (existingIdx !== -1) {
+    const existing = cache.characters[existingIdx];
+    const updated = {
+      ...existing,
+      name,
+      description,
+      image: image || existing.image || null,
+      updatedAt: Date.now(),
+    };
+    cache.characters = [updated, ...cache.characters.filter((_, i) => i !== existingIdx)];
+    persist("characters");
     return cache.characters[0];
   }
+
   const item = {
     id: makeId(),
     createdAt: Date.now(),
-    name: character.name || autoName(character.description),
-    description: character.description || "",
-    image: character.image || null,
+    name,
+    description,
+    image,
   };
   cache.characters = [item, ...cache.characters];
   persist("characters");
-  emit();
-  return item;
+  return cache.characters[0];
 }
 
 export function deleteCharacter(id) {
