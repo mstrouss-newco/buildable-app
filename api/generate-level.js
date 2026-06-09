@@ -46,12 +46,12 @@ async function findLayers(supabaseUrl, supabaseKey, layerType, theme) {
       + "&reusable=eq.true&moderation_status=eq.approved&limit=200";
     const r = await fetch(q, { headers: sbHeaders(supabaseKey) });
     if (!r.ok) return [];
-    const rows = await r.json();
+    const rows = (await r.json()).sort((a, b) => (String(a.image_url || '').startsWith('data:') ? 1 : 0) - (String(b.image_url || '').startsWith('data:') ? 1 : 0));
     if (!Array.isArray(rows)) return [];
-    const want = String(theme).toLowerCase();
+    const want = normTheme(theme);
     return rows.filter((x) => x && x.image_url
       && Array.isArray(x.theme_tags)
-      && x.theme_tags.some((t) => String(t).toLowerCase() === want));
+      && x.theme_tags.some((t) => normTheme(t) === want));
   } catch (e) { return []; }
 }
 
@@ -125,6 +125,14 @@ async function saveLevelToDb(supabaseUrl, supabaseKey, level) {
 function gapPrompt(layerType, theme) {
   return "A " + layerType + " background layer for a " + (theme || "forest")
     + " platformer game. Bright colors, storybook illustration style, no text, suitable for ages 5-12.";
+}
+
+// Normalize a theme to a canonical key so short UI labels ("candy") match the
+// library's tags ("Candy kingdom"), case-insensitively, before any DALL-E gap-fill.
+function normTheme(t) {
+  const x = String(t || "").trim().toLowerCase();
+  if (x.startsWith("candy")) return "candy";
+  return x;
 }
 
 export default async function handler(req, res) {
