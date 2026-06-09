@@ -7,6 +7,8 @@
 // Auth: same as admin-stats -- if ADMIN_API_TOKEN is set, an "x-admin-token" header
 // must match. Otherwise responds read-only so dev works.
 
+import { isAdminAuthorized } from './_adminAuth.js';
+
 async function sbGet(url, key, path) {
   const r = await fetch(`${url}/rest/v1/${path}`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
@@ -18,8 +20,7 @@ async function sbGet(url, key, path) {
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
 
-  const adminToken = process.env.ADMIN_API_TOKEN;
-  if (adminToken && req.headers["x-admin-token"] !== adminToken) {
+  if (!isAdminAuthorized(req)) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
