@@ -21,6 +21,14 @@ async function sbGet(url, key, path) {
 
 const cleanUrl = (u) => typeof u === "string" && u.length > 0 && !u.startsWith("data:");
 
+// Normalize a theme string to a single canonical key so the UI's short labels
+// (e.g. "candy") match the library's tags (e.g. "Candy kingdom"), case-insensitively.
+function normTheme(t) {
+  const x = String(t || "").trim().toLowerCase();
+  if (x.startsWith("candy")) return "candy";          // candy / Candy kingdom
+  return x;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
 
@@ -42,7 +50,8 @@ export default async function handler(req, res) {
       if (!theme) return true;
       const tags = (row.theme_tags || []).map((t) => String(t).toLowerCase());
       const cat = String(row.category || "").toLowerCase();
-      return tags.includes(theme.toLowerCase()) || cat.includes(theme.toLowerCase());
+      const wt = normTheme(theme);
+      return tags.some((t) => normTheme(t) === wt) || normTheme(cat) === wt;
     };
 
     const layers = (Array.isArray(layerRows) ? layerRows : [])
