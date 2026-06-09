@@ -79,9 +79,9 @@ async function fetchSprites(supabaseUrl, supabaseKey, theme) {
       + "&reusable=eq.true&moderation_status=eq.approved&limit=1000";
     const r = await fetch(q, { headers: sbHeaders(supabaseKey) });
     if (!r.ok) return { sprites: [], gaps: WANTED_SUBJECTS.slice() };
-    const rows = (await r.json()).filter((x) => x && x.image_url);
-    const want = String(theme || "").toLowerCase();
-    const matchTheme = (x) => Array.isArray(x.theme_tags) && x.theme_tags.some((t) => String(t).toLowerCase() === want);
+    const rows = (await r.json()).filter((x) => x && x.image_url).sort((a, b) => (String(a.image_url || '').startsWith('data:') ? 1 : 0) - (String(b.image_url || '').startsWith('data:') ? 1 : 0));
+    const want = normTheme(theme);
+    const matchTheme = (x) => Array.isArray(x.theme_tags) && x.theme_tags.some((t) => normTheme(t) === want);
 
     const chosen = [];
     const gaps = [];
@@ -119,6 +119,14 @@ async function fetchMechanic(supabaseUrl, supabaseKey, preferredSlug) {
     }
     return rows[Math.floor(Math.random() * rows.length)];
   } catch (e) { return null; }
+}
+
+// Normalize a theme to a canonical key so short UI labels ("candy") match the
+// library's tags ("Candy kingdom"), case-insensitively, before any DALL-E fallback.
+function normTheme(t) {
+  const x = String(t || "").trim().toLowerCase();
+  if (x.startsWith("candy")) return "candy";
+  return x;
 }
 
 export default async function handler(req, res) {
