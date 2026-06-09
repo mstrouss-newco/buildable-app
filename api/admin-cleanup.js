@@ -70,7 +70,7 @@ const isQa = (r) => {
 
 async function qaPlan() {
   const [layers, sprites, levels] = await Promise.all([
-    selectRows('community_layers?select=asset_id,subject,category,theme_tags'),
+    selectRows('community_layers?select=asset_id,category,theme_tags'),
     selectRows('community_sprites?select=asset_id,subject,category,theme_tags'),
     selectRows('community_levels?select=*'),
   ]);
