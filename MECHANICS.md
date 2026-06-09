@@ -129,6 +129,22 @@ Also cap level length (Riley uses 45s normal / 90s boss) so a level can't run fo
 
 ---
 
+### killThenBoss — guaranteed level-end (recommended default)
+
+**This is the most robust way to make a level always end, and the recommended default for generated games.** Proven in Riley (2026-06-09). Instead of ending a level on “defeat EVERY enemy” (fragile — one unreachable enemy soft-locks the level), drive the ending off a **kill counter the player controls**:
+
+1. Track `kills`, incremented at the single point where any enemy dies.
+2. When `kills >= killGoal` (Riley uses **15**), stop normal spawns and spawn a **boss/miniboss**.
+3. The level ends **only when the boss is defeated** (plus an optional minimum-duration gate).
+
+Give EVERY level a (mini)boss, scaling boss HP per level (Riley: miniboss 8 HP, final boss 15 HP). Why this is better than plain `clearAll`: the end state depends on a monotonically increasing counter, not on the engine successfully cleaning up every stray enemy, so it cannot hang. Still keep the failsafe + time cap below as belt-and-suspenders (Riley also arms the boss at `minDuration + buffer` as a fallback).
+
+```
+rule: { type: 'killThenBoss', killGoal: 15, bossHp: 8, finalBossHp: 15, minDurationMs: 30000, fallbackBufferMs: 8000 }
+```
+
+Implementation lesson from Riley: read the current level’s config via a global index (`LEVELS[idx]`) anywhere outside the level-builder — a per-build local `lv` is not in scope in the win-check/boss-spawn code, and referencing it throws and makes levels unwinnable. The QA agent (below) catches exactly this.
+
 ## 5. Difficulty curve
 
 Per-level, scale these up gradually rather than randomly:
@@ -181,3 +197,4 @@ This catalog is the design reference. The mechanics are also stored as rows in t
 | `avoid-the-spikes` | Avoid the spikes |
 | `reach-the-chest` | Reach the chest at the end |
 | `timed-run` | Simple timed run |
+| `kill-then-boss` | Kill 15 bad guys, then beat the (mini)boss to end the level (guaranteed level-end) |
