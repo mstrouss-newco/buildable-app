@@ -2,20 +2,22 @@
 // Aggregates REAL admin metrics from Supabase for the Admin Dashboard overview.
 // Replaces the previously-hardcoded mock numbers.
 //
-// Auth: if ADMIN_API_TOKEN is set in the environment, requests must send a
-// matching "x-admin-token" header. If it is not set, the endpoint still responds
-// (read-only aggregate data only) so local/dev works -- set the env var in
-// production to lock it down. No secrets are ever returned to the client.
+// Auth: handled by ./_adminAuth.js. Accepts a short-lived signed session token
+// (minted by /api/admin-session after admin-password login) OR the legacy raw
+// ADMIN_API_TOKEN as x-admin-token. If ADMIN_API_TOKEN is unset, stays open for
+// local/dev. No secrets are ever returned to the client.
 //
 // Cost: real per-call spend is read from the optional "usage_log" table (see
 // db/create-usage-log.sql). Until that table has data, an ESTIMATE is computed
 // from row counts x known unit costs so the dashboard is never blank.
 
+import { isAdminAuthorized } from './_adminAuth.js';
+
 const UNIT_COST = {
   // rough per-call USD, used only for the estimate fallback
   character: 0.04, // OpenAI image (gpt-image-1 / dall-e)
-  level: 0.20,     // 4 layers, mostly library now so usually ~0
-  game: 0.00,      // library-driven assembly; Claude text only
+  level: 0.20, // 4 layers, mostly library now so usually ~0
+  game: 0.00, // library-driven assembly; Claude text only
 };
 
 async function sb(url, key, path) {
@@ -33,8 +35,7 @@ async function sb(url, key, path) {
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
 
-  const adminToken = process.env.ADMIN_API_TOKEN;
-  if (adminToken && req.headers["x-admin-token"] !== adminToken) {
+  if (!isAdminAuthorized(req)) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
