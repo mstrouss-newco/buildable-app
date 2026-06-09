@@ -917,3 +917,44 @@ Owner notes still open:
   /api/admin-stats and /api/admin-list-games (currently readable without a token).
 - `counts.games` reads the `saved_games` table (separate from usage_log) and shows 0;
   confirm whether saved games are stored there or under a different table/name.
+
+
+## Admin Dashboard 401 fixed — session-token auth (no raw secret in the browser) (June 9 2026)
+
+Owner report this session: "admin isn't working ... we just set this up ... we may need more pipes to connect." Reproduced and fixed.
+
+### Symptom
+
+Opening the Admin Dashboard on the live demo (buildablekids.com/demo -> 🔐 Admin -> Overview) showed **"Couldn't load stats: request failed: 401"**; the Games / Characters / Levels tabs failed the same way. Direct probes confirmed both `/api/admin-stats` and `/api/admin-list-games` returned HTTP 401 `{"error":"unauthorized"}` — even when sending an `x-admin-token` header.
+
+### Root cause
+
+This is the second half of the previously-open owner to-do ("Set ADMIN_API_TOKEN in Vercel + paste it into the admin Settings tab"). The env var `ADMIN_API_TOKEN` **is now set on the server**, so the admin endpoints correctly require a matching `x-admin-token` header (`/api/admin-session` reports `locked: true`). But the dashboard only sent that header if the operator had manually pasted the raw token into Settings -> localStorage(`adminApiToken`), which was empty. So the front end and the now-locked API were disconnected — the missing "pipe." (The Supabase data layer was healthy the whole time.)
+
+### Fix (Option B — session token, chosen over "just paste the secret")
+
+Rather than require the raw `ADMIN_API_TOKEN` secret to live in the browser's localStorage (fragile + poor hygiene for a kids' product), admin auth is now session-based: a correct admin-password login mints a short-lived **signed** token server-side; the raw secret never leaves the server.
+
+- **New `api/_adminAuth.js`** — shared verifier. `isAdminAuthorized(req)` accepts EITHER (a) a signed session token (HMAC-SHA256 of an expiry timestamp using `ADMIN_API_TOKEN` as the signing secret, verified with `timingSafeEqual` + not-expired check), OR (b) the legacy raw `ADMIN_API_TOKEN` as `x-admin-token` (back-compat). If `ADMIN_API_TOKEN` is unset, stays open for local dev. Also exports `mintSessionToken(secret, ttlMs)`.
+- **New `api/admin-session.js`** — `POST { password }`. Verifies the password against `ADMIN_PASSWORD` env (falls back to the same default the client uses) and returns a 30-min signed token + `exp` (`locked: true`). On wrong password -> 401. The real secret is used only to sign; it is never returned.
+- **`api/admin-stats.js` + `api/admin-list-games.js`** — inline auth block replaced with `if (!isAdminAuthorized(req)) return 401`.
+- **`src/AdminDashboard.jsx`** — `handleLogin` is now async: after the local password check it POSTs to `/api/admin-session`, stores the returned **signed** token (not the raw secret) in localStorage(`adminApiToken`), and sends it as `x-admin-token` on admin calls. `handleLogout` clears it. `fetchAdmin` now turns a 401 into a clear, actionable banner ("Admin session expired or not authorized. Please log out and sign in again…") instead of a raw "request failed: 401". The manual token field in Settings is kept as an override/fallback.
+
+Commits: `_adminAuth.js`, `admin-session.js`, the two endpoint refactors, and the AdminDashboard wiring (all committed to main; Vercel auto-deployed).
+
+### Verification (live production, PASS)
+
+After deploy: `POST /api/admin-session {password}` -> 200 `locked:true` + signed token. That token authorizes `/api/admin-stats` -> 200 (real data: 13 levels, 5 mechanics, 1 published game, cost source `usage_log`, month $1.48) and `/api/admin-list-games` -> 200 (1 published game). In the UI, logging into the dashboard now loads the **Overview** (real counts + cost + health: API/DB operational, cost source usage_log) and the **Games** tab (lists "Sparkle's Forest Coin Quest") instead of the 401 error.
+
+### Still on the owner (only if you want to change defaults)
+
+- The admin **password** still defaults to the built-in `buildable123`. To change it, set `ADMIN_PASSWORD` in Vercel (server) and `VITE_ADMIN_PASSWORD` (client build) to the same value. Until then the default works.
+- No need to paste `ADMIN_API_TOKEN` into Settings anymore — login mints the token automatically. (The Settings field remains as a manual override.)
+- Session TTL is 30 min (matches the existing client session window); bump `ttlMs` in `api/admin-session.js` if you want longer admin sessions.
+
+### Best practices going forward
+
+- Don't require a long-lived API secret to be stored in the browser; mint a short-lived signed token from the server after an auth step and store that instead.
+- Centralize endpoint auth in one shared helper (`_adminAuth.js`) so every protected route stays consistent and back-compatible.
+- Translate raw HTTP 401s into actionable UI ("log out and back in") so a locked endpoint never looks like a generic crash.
+
