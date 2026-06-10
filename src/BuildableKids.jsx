@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { CharacterCreatorScreen, LevelCreatorScreen } from "./CreatorScreen";
 import MyStuffScreen from "./MyStuff";
+import MusicMaker from "./MusicMaker";
 import AdminDashboard from "./AdminDashboard";
 import LoadingGames from "./LoadingGames";
 import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
@@ -17,6 +18,7 @@ const SCREEN_LEVEL_CREATOR = "level_creator";
 const SCREEN_PLAY = "play";
 const SCREEN_MY_STUFF = "my_stuff";
 const SCREEN_ADMIN = "admin";
+const SCREEN_MUSIC = "music";
 export default function BuildableKids() {
   const [screen, setScreen] = useState(SCREEN_INTRO);
   const [returnTo, setReturnTo] = useState(SCREEN_INTRO);
@@ -78,6 +80,7 @@ export default function BuildableKids() {
           setScreen(SCREEN_GAME_TYPE);
         }}
         onMyStuff={() => openMyStuff(SCREEN_INTRO)}
+          onMusic={() => setScreen(SCREEN_MUSIC)}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
       />
     );
@@ -160,7 +163,14 @@ export default function BuildableKids() {
   }
 
   // ============ MY STUFF LIBRARY ============
-  if (screen === SCREEN_MY_STUFF) {
+  if ({screen === SCREEN_MUSIC && (
+        <MusicMaker
+          playerName={session.playerName}
+          onHome={() => setScreen(SCREEN_INTRO)}
+          onBack={() => setScreen(returnTo || SCREEN_INTRO)}
+        />
+      )}
+      screen === SCREEN_MY_STUFF) {
     return <MyStuffScreen {...myStuffNav} />;
   }
 
@@ -189,7 +199,8 @@ function TopNav({ onBack, onHome, onMyStuff }) {
           <button onClick={onHome} style={styles.backButton}>🏠 Home</button>
         )}
       </div>
-      <button onClick={onMyStuff} style={styles.myStuffButton}>
+      <button onClick={onMusic} style={styles.myStuffButton}>🎵 Music</button>
+          <button onClick={onMyStuff} style={styles.myStuffButton}>
         📦 My Stuff{total ? ` (${total})` : ""}
       </button>
     </div>
@@ -197,7 +208,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 }
 
 // ============ INTRO SCREEN COMPONENT ============
-function IntroScreen({ onComplete, onMyStuff, onAdmin }) {
+function IntroScreen({ onComplete, onMyStuff, onAdmin, onMusic }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState(7);
 
