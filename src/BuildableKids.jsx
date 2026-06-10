@@ -145,6 +145,7 @@ export default function BuildableKids() {
   // ============ PLAY GAME ============
   if (screen === SCREEN_PLAY) {
     return (
+      <>
       <PlayGameScreen
         gameData={gameData}
         onBack={() => {
@@ -159,6 +160,8 @@ export default function BuildableKids() {
         }}
         onMyStuff={() => openMyStuff(SCREEN_PLAY)}
       />
+      <GameMusicPicker />
+      </>
     );
   }
 
@@ -315,6 +318,138 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
 }
 
 // ============ PLAY GAME SCREEN COMPONENT ============
+function GameMusicPicker() {
+  const [open, setOpen] = useState(false);
+  const [songs, setSongs] = useState([]);
+  const [current, setCurrent] = useState(null);
+  const audioRef = useRef(null);
+
+  function getDeviceId() {
+    try {
+      let id = localStorage.getItem("deviceId");
+      if (!id) {
+        id = "dev_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+        localStorage.setItem("deviceId", id);
+      }
+      return id;
+    } catch {
+      return "dev_anon";
+    }
+  }
+
+  useEffect(() => {
+    const deviceId = getDeviceId();
+    fetch("/api/list-songs?deviceId=" + encodeURIComponent(deviceId))
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && Array.isArray(d.songs)) setSongs(d.songs);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (current && current.audio_url) {
+      a.src = current.audio_url;
+      a.loop = true;
+      a.volume = 0.5;
+      a.play().catch(() => {});
+    } else {
+      a.pause();
+    }
+  }, [current]);
+
+  if (songs.length === 0) return <audio ref={audioRef} style={{ display: "none" }} />;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        right: 16,
+        bottom: 16,
+        zIndex: 9999,
+        fontFamily: "inherit",
+      }}
+    >
+      <audio ref={audioRef} style={{ display: "none" }} />
+      {open && (
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.22)",
+            padding: 14,
+            width: 240,
+            marginBottom: 10,
+            maxHeight: 320,
+            overflowY: "auto",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 8, color: "#5b3fa6" }}>
+            Background music
+          </div>
+          <button
+            onClick={() => setCurrent(null)}
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              padding: "8px 10px",
+              marginBottom: 6,
+              borderRadius: 10,
+              border: current ? "1px solid #eee" : "2px solid #7c5cd6",
+              background: current ? "#fafafa" : "#f1ecff",
+              cursor: "pointer",
+            }}
+          >
+            Off
+          </button>
+          {songs.map((s) => (
+            <button
+              key={s.song_id}
+              onClick={() => setCurrent(s)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 10px",
+                marginBottom: 6,
+                borderRadius: 10,
+                border:
+                  current && current.song_id === s.song_id
+                    ? "2px solid #7c5cd6"
+                    : "1px solid #eee",
+                background:
+                  current && current.song_id === s.song_id ? "#f1ecff" : "#fafafa",
+                cursor: "pointer",
+              }}
+            >
+              {s.title || "My song"}
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          background: "#7c5cd6",
+          color: "#fff",
+          border: "none",
+          borderRadius: 999,
+          padding: "12px 18px",
+          fontSize: 15,
+          fontWeight: 700,
+          boxShadow: "0 4px 14px rgba(124,92,214,0.5)",
+          cursor: "pointer",
+        }}
+      >
+        {current ? "Music: " + (current.title || "On") : "Add music"}
+      </button>
+    </div>
+  );
+}
+
 function PlayGameScreen({ gameData, onBack, onMyStuff }) {
   const [gameHtml, setGameHtml] = useState(null);
   const [gameMechanic, setGameMechanic] = useState(null);
