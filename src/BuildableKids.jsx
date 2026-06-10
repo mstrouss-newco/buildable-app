@@ -202,8 +202,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
           <button onClick={onHome} style={styles.backButton}>🏠 Home</button>
         )}
       </div>
-      <button onClick={onMusic} style={styles.myStuffButton}>🎵 Music</button>
-          <button onClick={onMyStuff} style={styles.myStuffButton}>
+      <button onClick={onMyStuff} style={styles.myStuffButton}>
         📦 My Stuff{total ? ` (${total})` : ""}
       </button>
     </div>
@@ -225,7 +224,8 @@ function IntroScreen({ onComplete, onMyStuff, onAdmin, onMusic }) {
     <div style={styles.container}>
       <div style={styles.introTopBar}>
         <button onClick={onAdmin} style={styles.myStuffButton}>🔐 Admin</button>
-        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+        <button onClick={onMusic} style={styles.myStuffButton}>🎵 Music</button>
+          <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
       </div>
 
       <div style={styles.gameIcon}>🎮</div>
