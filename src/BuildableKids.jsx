@@ -165,7 +165,7 @@ export default function BuildableKids() {
   // ============ MY STUFF LIBRARY ============
   if ({screen === SCREEN_MUSIC && (
         <MusicMaker
-          playerName={session.playerName}
+          playerName={gameData.playerName}
           onHome={() => setScreen(SCREEN_INTRO)}
           onBack={() => setScreen(returnTo || SCREEN_INTRO)}
         />
