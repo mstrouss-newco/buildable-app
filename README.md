@@ -1099,3 +1099,39 @@ MAY perform database operations for this project. Preferred routes, in order:
 
 Note: the `admin-cleanup` deletes are permanent in the database (no soft-undo), which is
 why the UI requires a Preview + an explicit confirmation before Apply.
+
+
+---
+
+## NEW FEATURE: Music Maker (kids create & store up to 10 AI songs) — June 9 2026
+
+A music version of Buildable Kids. Kids pick a vibe + world, describe a song, generate it,
+listen, and keep up to **10 songs** tied to their device/parent profile so the songs can be
+reused (e.g. as background music in games). Built provider-agnostic so we can plug in any
+music API later; ships today with a working demo tone so the create→listen→keep flow is usable now.
+
+### What shipped
+- **db/create-saved-songs.sql** — `saved_songs` table (per-kid via `device_id`, 10-song cap, reusable). Idempotent.
+- **api/generate-song.js** — provider-agnostic generator. Reads `MUSIC_PROVIDER` env (default "demo").
+  Demo mode returns a short playable WAV so nothing is blocked. Stubs for ElevenLabs + Replicate.
+- **api/save-song.js** — saves a song; enforces the 10-per-kid cap server-side (friendly "you have 10 songs" message).
+- **api/list-songs.js** — returns a kid's songs (by `device_id`), newest first.
+- **api/delete-song.js** — removes ONE of the kid's own songs (scoped by song_id AND device_id).
+- **src/MusicMaker.jsx** — kid UI: vibe picker, world chips, prompt, "Make my song!", player, "Keep it!", "My Songs" library with delete + counter.
+- **src/BuildableKids.jsx** — wired in: `SCREEN_MUSIC`, an early-return render, and a "🎵 Music" button in the intro nav.
+
+### TO TURN ON REAL SONGS (owner action — pick a provider, add a key in Vercel; never in code)
+We do NOT have a Suno official API. Recommended options, all with real developer APIs:
+- **ElevenLabs Music** (closest to Suno, songs with vocals): set `MUSIC_PROVIDER=elevenlabs` and `ELEVENLABS_API_KEY=...`
+- **Replicate / MusicGen** (instrumental, cheap, rock-solid for game music): set `MUSIC_PROVIDER=replicate` and `REPLICATE_API_TOKEN=...`
+Then fill in the matching adapter in api/generate-song.js (marked with TODO). No other code changes needed.
+
+### OWNER STILL TO DO (so saving works)
+1. Run **db/create-saved-songs.sql** ONCE in the Supabase SQL editor (creates the `saved_songs` table).
+   Until then, generation + playback work, but "Keep it!" shows "Couldn't save — try again."
+2. (Optional) Choose a music provider and add its key in Vercel env as above.
+
+### Notes
+- The 10-song cap is enforced in api/save-song.js (not just the UI).
+- Songs are stored centrally (Supabase) so they persist and are reusable across games/projects.
+- Verified live: vibe/world/prompt → generate → playable audio → graceful save error (table pending). Vercel build green.
