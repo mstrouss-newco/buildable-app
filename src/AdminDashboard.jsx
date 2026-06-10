@@ -141,7 +141,7 @@ function AdminTabs({ activeTab, setActiveTab }) {
     { id: 'characters', label: 'Characters' },
     { id: 'levels', label: 'Levels' },
     { id: 'performance', label: 'Performance' },
-    { id: 'settings', label: 'Settings' },
+    { id: 'songs', label: 'Songs' }, { id: 'settings', label: 'Settings' },
     { id: 'maintenance', label: 'Maintenance' },
   ];
   return (
@@ -162,6 +162,7 @@ function AdminContent({ activeTab }) {
     case 'levels': return <LevelLibrary />;
     case 'performance': return <PerformanceMetrics />;
     case 'maintenance': return <AdminMaintenance />;
+    case 'songs': return <AdminSongs />;
     case 'settings': return <AdminSettings />;
     default: return <AdminOverview />;
   }
@@ -524,6 +525,129 @@ function PerformanceMetrics() {
           Generation takes ~60115s (Claude) and is library-driven (no per-build DALLE).
           Real render/latency metrics will populate here once usage_log captures timing.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function AdminSongs() {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/admin-songs')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive) return;
+        if (d.error) setErr(d.error);
+        else setData(d);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setErr(String(e));
+        setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="admin-card">
+        <p className="muted">Loading songs...</p>
+      </div>
+    );
+  }
+
+  if (err) {
+    return (
+      <div className="admin-card">
+        <h3>Songs</h3>
+        <p className="muted">
+          Couldn't load songs: {err}. If the table doesn't exist yet, run
+          db/create-saved-songs.sql in Supabase, then refresh.
+        </p>
+      </div>
+    );
+  }
+
+  const songs = (data && data.songs) || [];
+  const kids = (data && data.kids) || [];
+  const total = data ? data.total : 0;
+
+  return (
+    <div>
+      <div className="admin-stat-grid">
+        <StatCard icon="" label="Songs Saved" value={total} trend="across all kids" />
+        <StatCard icon="" label="Kid Profiles" value={kids.length} trend="with at least one song" />
+      </div>
+
+      {kids.length > 0 && (
+        <div className="admin-card">
+          <h3>Songs per kid</h3>
+          <div className="admin-table">
+            <div className="table-header">
+              <div className="col-name">Kid</div>
+              <div className="col-device">Device</div>
+              <div className="col-actions">Songs</div>
+            </div>
+            {kids.map((k, i) => (
+              <div className="table-row" key={i}>
+                <div className="col-name">{k.kid_name}</div>
+                <div className="col-device">{(k.device_id || '').slice(0, 12) || '-'}</div>
+                <div className="col-actions">{k.count} / 10</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="admin-card">
+        <h3>All songs</h3>
+        {songs.length === 0 ? (
+          <p className="muted">No songs saved yet.</p>
+        ) : (
+          <div className="admin-table">
+            <div className="table-header">
+              <div className="col-name">Title</div>
+              <div className="col-device">Kid</div>
+              <div className="col-theme">Vibe / Theme</div>
+              <div className="col-created">Created</div>
+              <div className="col-actions">Play</div>
+            </div>
+            {songs.map((s) => (
+              <div className="table-row" key={s.song_id}>
+                <div className="col-name">{s.title || 'Untitled'}</div>
+                <div className="col-device">{s.kid_name || 'Unknown'}</div>
+                <div className="col-theme">{(s.vibe || '-') + ' / ' + (s.theme || '-')}</div>
+                <div className="col-created">{s.created_at ? new Date(s.created_at).toLocaleDateString() : '-'}</div>
+                <div className="col-actions">
+                  {s.audio_url ? (
+                    <button className="btn-ghost" onClick={() => setPlaying(playing === s.song_id ? null : s.song_id)}>
+                      {playing === s.song_id ? 'Hide' : 'Play'}
+                    </button>
+                  ) : (
+                    <span className="muted">-</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {playing &&
+          (() => {
+            const s = songs.find((x) => x.song_id === playing);
+            return s && s.audio_url ? (
+              <div style={{ marginTop: 14 }}>
+                <audio controls src={s.audio_url} style={{ width: '100%' }} />
+              </div>
+            ) : null;
+          })()}
       </div>
     </div>
   );
