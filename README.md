@@ -1135,3 +1135,28 @@ Then fill in the matching adapter in api/generate-song.js (marked with TODO). No
 - The 10-song cap is enforced in api/save-song.js (not just the UI).
 - Songs are stored centrally (Supabase) so they persist and are reusable across games/projects.
 - Verified live: vibe/world/prompt → generate → playable audio → graceful save error (table pending). Vercel build green.
+
+## NEW FEATURE: Music in Admin + reuse as game background music — June 10 2026
+
+This builds on the Music Maker (June 9). Two follow-ons plus a deploy note.
+
+### Admin "Songs" tab
+- New admin endpoint `api/admin-songs.js` (read-only, server-side service key). Lists ALL saved songs across every kid/device, newest first, plus a per-kid summary (`{ total, kids: [{ kid_name, device_id, count }], songs: [...] }`).
+- New "Songs" tab in `src/AdminDashboard.jsx` (between Performance and Settings). Shows two StatCards (Songs Saved, Kid Profiles), a per-kid table (with the 10-song cap shown as `count / 10`), and an all-songs table with inline audio playback. Styled with the existing white/business admin theme (admin-card, admin-stat-grid, admin-table, table-header/table-row/col-*).
+- Until `db/create-saved-songs.sql` is run in Supabase, the tab shows a friendly "run the SQL" message instead of an error (verified live: returns a clean 502 PGRST205 "table not found" today).
+- This satisfies the original "tie to admin" requirement with a real admin UI, not just DB-level visibility.
+
+### Use a saved song as game background music
+- New `GameMusicPicker` component in `src/BuildableKids.jsx`, rendered alongside `PlayGameScreen` (the play screen invocation is now wrapped in a fragment, so PlayGameScreen itself was not modified).
+- It resolves the same on-device profile (localStorage `deviceId`, identical logic to Music Maker), fetches the kid's songs via `/api/list-songs`, and shows a floating "Add music" button while playing. Picking a song plays it on loop at 50% volume as background music; "Off" stops it.
+- Because it shares the same deviceId, songs made in Music Maker appear here automatically — closing the create → reuse loop the owner asked for.
+- It renders nothing (just a hidden audio element) when the kid has no saved songs yet, so it never clutters the play screen.
+
+### Vercel deploy-failure emails (investigated)
+- The failure emails received the night of June 9/10 came from two intermediate broken commits during Music Maker wiring: `2e3bd9b` (referenced a non-existent `session` var) and `4406468` (used inline JSX conditional instead of the app's early-return routing). Both were superseded within minutes by green builds (`f21738d`, `d8f2ac0`, `1ac7ebb`).
+- HEAD of `main` has been green since; today's three commits (`api/admin-songs.js`, the Admin Songs tab, and GameMusicPicker) all deployed successfully. No active or lingering failure.
+- Note for future: each push triggers a Vercel build, and any commit that fails `vite build` sends a failure email even if the very next commit fixes it. To avoid the noise, validate the build locally (or batch fixes) before pushing.
+
+### Owner TODO (unchanged, still required for songs to fully work)
+- Run `db/create-saved-songs.sql` once in the Supabase SQL editor (enables saving, the Admin Songs tab data, and the in-game picker).
+- Pick a music provider and add its key in Vercel env (`MUSIC_PROVIDER` + `ELEVENLABS_API_KEY` or `REPLICATE_API_TOKEN`); then the `api/generate-song.js` adapter TODO can be filled in. Until then, generation uses the demo fallback tone.
