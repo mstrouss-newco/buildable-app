@@ -163,14 +163,17 @@ export default function BuildableKids() {
   }
 
   // ============ MY STUFF LIBRARY ============
-  if ({screen === SCREEN_MUSIC && (
-        <MusicMaker
-          playerName={gameData.playerName}
-          onHome={() => setScreen(SCREEN_INTRO)}
-          onBack={() => setScreen(returnTo || SCREEN_INTRO)}
-        />
-      )}
-      screen === SCREEN_MY_STUFF) {
+  if (screen === SCREEN_MUSIC) {
+    return (
+      <MusicMaker
+        playerName={gameData.playerName}
+        onHome={() => setScreen(SCREEN_INTRO)}
+        onBack={() => setScreen(returnTo || SCREEN_INTRO)}
+      />
+    );
+  }
+
+  if (screen === SCREEN_MY_STUFF) {
     return <MyStuffScreen {...myStuffNav} />;
   }
 
