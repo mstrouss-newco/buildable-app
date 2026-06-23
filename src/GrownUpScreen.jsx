@@ -4,17 +4,20 @@
 //
 // This screen is a guided, multi-STEP flow (not a single cramped panel):
 //
-//   STEP "choose"   -> pick a lane: create/sign in to a parent account,
-//                       or continue without an account (guest, this device).
-//   STEP "auth"     -> parent signs up or signs in (Supabase Auth).
+//   STEP "choose"   -> pick a lane: Continue with Google (preferred), use
+//                       email instead, or continue without an account.
+//   STEP "auth"     -> parent signs up or signs in (Google or email).
 //   STEP "kids"     -> create + manage kid profiles (tap-a-tile, no kid
 //                       passwords). Choosing a tile starts play for that kid.
 //   STEP "projects" -> assign existing creations (songs/games) to a kid so
 //                       a parent can keep each child's stuff organized.
 //
+// Google sign-in (preferred): signInWithGoogle() redirects to Supabase ->
+// Google -> back here with tokens in the URL hash; completeOAuthRedirect()
+// (run on mount) finishes the sign-in. The agent never types passwords.
+//
 // All data access goes through src/lib/accounts.js, which branches between
-// the guest (device) store and the account (Supabase) store. The agent
-// never creates accounts or types passwords -- the grown-up does that.
+// the guest (device) store and the account (Supabase) store.
 //
 // Props: { onBack, onProfileChosen } -- unchanged contract so the parent
 // route in BuildableKids.jsx needs no edits.
@@ -25,6 +28,7 @@ import {
   listKidProfiles, createKidProfile, renameKidProfile, deleteKidProfile,
   setActiveKid, getActiveKid,
   listFamilyProjects, assignProjectToKid,
+  signInWithGoogle, completeOAuthRedirect,
 } from "./lib/accounts";
 
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
@@ -34,6 +38,19 @@ const CARD_BG = "rgba(255,255,255,0.05)";
 const CARD_BORDER = "1px solid rgba(155,126,221,0.22)";
 
 const AVATARS = ["🦄", "🐯", "🐸", "🐙", "🐵", "🦊", "🐶", "🐼", "🐢", "🐝", "🌟", "🚀"];
+
+// Inline Google "G" mark so the button needs no external asset.
+function GoogleG() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"
+      style={{ display: "block" }}>
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>
+      <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3.01-2.33z"/>
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.47.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+    </svg>
+  );
+}
 
 export default function GrownUpScreen({ onBack, onProfileChosen }) {
   // Flow steps. Start on the kid picker when already signed in (returning
@@ -62,6 +79,22 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
 
   const configured = isConfigured();
 
+  // If we just came back from a Google sign-in, finish it: pull the tokens
+  // out of the URL hash, save the session, and jump to the kid picker.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const done = await completeOAuthRedirect();
+        if (done && !cancelled) {
+          setSignedIn(true);
+          setStep("kids");
+        }
+      } catch (e) { /* ignore -- normal load with no redirect */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   async function refreshKids() {
     setLoadingKids(true);
     try { setKids(await listKidProfiles()); }
@@ -78,7 +111,14 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     finally { setLoadingProjects(false); }
   }
 
-  // ---- auth ----
+  // ---- Google (preferred) ----
+  function handleGoogle() {
+    setError(null);
+    try { signInWithGoogle(); }
+    catch (err) { setError((err && err.message) || "Could not start Google sign-in"); }
+  }
+
+  // ---- email auth ----
   async function handleAuth(e) {
     e.preventDefault();
     setError(null); setNotice(null); setBusy(true);
@@ -184,11 +224,6 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     finally { setBusy(false); }
   }
 
-  function kidName(id) {
-    const k = kids.find((x) => x.id === id);
-    return k ? (k.avatar ? k.avatar + " " : "") + k.display_name : "Unassigned";
-  }
-
   // -------------------------------------------------------------
   // RENDER
   // -------------------------------------------------------------
@@ -214,13 +249,12 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
                 guest below; a grown-up can enable accounts in the site settings.
               </p>
             )}
-            <button style={S.primaryBig} disabled={!configured}
-              onClick={() => { setMode("signup"); setStep("auth"); }}>
-              ✨ Create a parent account
+            <button style={S.googleBtn} disabled={!configured} onClick={handleGoogle}>
+              <GoogleG /> <span style={{ marginLeft: 10 }}>Continue with Google</span>
             </button>
-            <button style={S.secondaryBig} disabled={!configured}
-              onClick={() => { setMode("signin"); setStep("auth"); }}>
-              I already have an account
+            <button style={S.linkBtn} disabled={!configured}
+              onClick={() => { setMode("signup"); setStep("auth"); }}>
+              Use email instead
             </button>
             <div style={S.divider}><span style={S.dividerText}>or</span></div>
             <button style={S.ghostBig} onClick={() => setStep("kids")}>
@@ -234,16 +268,15 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
         </>
       )}
 
-      {/* STEP: parent auth --------------------------------------- */}
+      {/* STEP: parent auth (email) ------------------------------- */}
       {step === "auth" && !signedIn && (
         <>
           <h1 style={S.title}>{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
           <div style={S.card}>
-            <p style={S.lead}>
-              {mode === "signup"
-                ? "One grown-up login for the whole family. Kids never need a password."
-                : "Sign in to load your kids' profiles and creations."}
-            </p>
+            <button style={S.googleBtn} disabled={!configured} onClick={handleGoogle}>
+              <GoogleG /> <span style={{ marginLeft: 10 }}>Continue with Google</span>
+            </button>
+            <div style={S.divider}><span style={S.dividerText}>or use email</span></div>
             <form onSubmit={handleAuth} style={S.form}>
               <label style={S.label}>Email
                 <input style={S.input} type="email" autoComplete="email" required
@@ -395,6 +428,12 @@ const S = {
   warn: {
     fontSize: 13, lineHeight: 1.4, background: "rgba(255,210,120,0.14)",
     border: "1px solid rgba(255,210,120,0.4)", borderRadius: 12, padding: "10px 12px", margin: "0 0 14px",
+  },
+  googleBtn: {
+    width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+    background: "#fff", color: "#3c4043", border: "none", borderRadius: 16,
+    padding: "14px 18px", fontSize: 16, fontWeight: 800, cursor: "pointer",
+    fontFamily: NUN, marginTop: 4, boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
   },
   primaryBig: {
     width: "100%", background: "#fff", color: "#b3477a", border: "none",
