@@ -41,6 +41,7 @@ export default async function handler(req, res) {
 
   const body = await readBody(req);
   const deviceId = (body.deviceId || "").toString().trim();
+  const kidProfileId = (body.kidProfileId || "").toString().trim() || null;
   const title = (body.title || "").toString().trim().slice(0, 120);
   const audioUrl = (body.audioUrl || "").toString().trim();
 
@@ -73,6 +74,7 @@ export default async function handler(req, res) {
     const row = {
       song_id: songId,
       device_id: deviceId,
+      kid_profile_id: kidProfileId,
       kid_name: (body.kidName || "").toString().trim().slice(0, 60) || null,
       title,
       prompt: (body.prompt || "").toString().slice(0, 500) || null,
