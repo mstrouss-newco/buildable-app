@@ -2,6 +2,45 @@
 
 _Working log kept in-repo so context survives a dropped browser session._
 
+## LATEST — parent accounts RESTORED (reverses the zero-auth change)
+Owner clarified: "it was a mistake to remove parent accounts — 'we can't create
+accounts' meant the feature was BROKEN, not unwanted." So accounts are back, because
+songs must FOLLOW a kid across devices, which needs a stable DB-backed profile id.
+
+Commits:
+- `4814de5` restore(accounts): parent Supabase Auth login + kid profiles. FIXED a real
+  bug: kid_profiles DB column is `name` (not `display_name`). Old code inserted/selected
+  `display_name`, which doesn't exist as a column and silently failed -- a likely cause of
+  the original "couldn't add a profile" symptom (on top of not being signed in). Now:
+  insert { name }, read with alias select `display_name:name`. Added renameKidProfile
+  (PATCH name) + deleteKidProfile so the ✏️/🗑️ tile buttons work.
+- `3f25f9e` restore(grownup): brought back the email/password sign-in + "Who's playing?"
+  picker, and kept the ✏️ rename / 🗑️ remove buttons on each kid tile.
+
+How songs now follow across devices:
+- save-song.js stores kid_profile_id; list-songs.js lists by kid_profile_id when set.
+- MusicMaker reads the active kid (localStorage bk_active_kid_v1) and sends it as
+  kidProfileId. The profile id itself lives in the DB, so signing in on Device B and
+  picking the same kid tile shows the same songs. (Verified the wiring; needs a live
+  end-to-end test by the owner.)
+
+Env check (Vercel): VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_URL, service key,
+MUSIC_PROVIDER, ELEVENLABS_API_KEY all PRESENT. isConfigured() will be true. Nothing to add.
+
+Deploy: 4814de5 Ready, 3f25f9e Ready + live Production. Build green.
+
+### OWNER TO-DO (must be done by you — I can't create accounts or type passwords)
+1. On buildablekids.com/demo → Grown-ups, click "Make a new account", create your parent
+   account (email + password) and sign in. (I never do this step for you.)
+2. Add a kid profile (should now succeed — the column bug is fixed).
+3. Make a song under that kid.
+4. On a SECOND device/browser: go to Grown-ups, sign in with the SAME account, tap the
+   same kid tile, open Music → the song should be there. That confirms songs follow.
+5. If adding a profile still errors, tell me the exact message; the likely remaining cause
+   would be a Supabase RLS/policy detail, which I'd diagnose and hand you any SQL to run.
+
+---
+
 ## Latest session result (zero-auth) — DONE
 All committed to `main`; Vercel auto-deploys. Commits this session:
 - `769bc21` feat(accounts): zero-auth device-local kid profiles (no Supabase Auth/Bearer)
