@@ -102,11 +102,16 @@ export async function signUpParent(email, password) {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+  // If Supabase is set to auto-confirm, signup returns a session right away.
   if (data.access_token) {
     saveSession({ access_token: data.access_token, refresh_token: data.refresh_token });
     await ensureParentRow();
+    return { signedIn: true };
   }
-  return data;
+  // No token => the project requires email confirmation before issuing a
+  // session. The grown-up must click the link in their inbox, then sign in.
+  // (Caller shows a friendly "check your email" message instead of failing.)
+  return { signedIn: false, needsEmailConfirmation: true };
 }
 
 export async function signInParent(email, password) {
