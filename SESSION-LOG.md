@@ -28,6 +28,13 @@ All committed to `main`; Vercel auto-deploys. Commits this session:
 - MusicMaker.jsx committed @9ac52cd: 471 lines, braces+parens balanced, no corruption,
   has renameSong fn + renameBtn style + rename JSX; deleteSong intact.
 
+## Vercel deploy status (verified this session)
+- Live Production = latest commit, Status **Ready**. All code commits built green:
+  7e5c841 (GrownUpScreen) Ready, 9ac52cd (MusicMaker) Ready, df89ccb (log) Ready.
+- One intermediate build, 769bc21 (accounts.js), shows **Error** but errored at ~4s and
+  its identical accounts.js code shipped green in the very next build (7e5c841). Treated as
+  a transient/superseded build, not a code fault. No action needed; mentioning for the record.
+
 ## Owner to-do when awake (nothing blocking)
 1. Open buildablekids.com/demo → Grown-ups: confirm you can add a kid profile with NO login
    and that the "valid Bearer token" error is gone.
