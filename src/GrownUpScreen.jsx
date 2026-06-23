@@ -1,18 +1,23 @@
 // /src/GrownUpScreen.jsx
 // -------------------------------------------------------------
-// "Who's playing?" — ZERO-AUTH profile picker.
+// "Grown-ups" area: a parent/teacher signs in (or makes an account)
+// THEMSELVES, then sees the kid-profile picker ("Who's playing?").
+// Kids never see a password -- they tap a tile to become the active
+// profile, and from then on their songs/games are saved to that
+// profile and FOLLOW them across devices (the profile + its songs live
+// in the database, not just on one device).
 //
-// This build has NO accounts and NO login. Earlier this screen gated
-// everything behind a parent email/password sign-in, and adding a kid
-// hit Supabase Auth, which failed with "This endpoint requires a valid
-// Bearer token." That gate is gone.
+// All real auth + data access goes through src/lib/accounts.js, which
+// uses Supabase Auth + RLS. If Supabase env vars are not set yet, the
+// screen shows a friendly "not connected yet" message instead of
+// breaking the app.
 //
-// Now: kids are shown the profile picker straight away. Profiles are
-// stored on the device (src/lib/accounts.js, localStorage). Songs/games
-// still save to the central library via the existing service-key API.
+// The agent never creates accounts or types passwords -- the grown-up
+// does that here themselves.
 // -------------------------------------------------------------
 import { useState, useEffect } from "react";
 import {
+  isConfigured, isSignedIn, signInParent, signUpParent, signOut,
   listKidProfiles, createKidProfile, renameKidProfile, deleteKidProfile,
   setActiveKid, getActiveKid,
 } from "./lib/accounts";
@@ -26,11 +31,16 @@ const CARD_BORDER = "1px solid rgba(155,126,221,0.22)";
 const AVATARS = ["🦄", "🐯", "🐸", "🐙", "🐵", "🦊", "🐶", "🐼", "🐢", "🐝", "🌟", "🚀"];
 
 export default function GrownUpScreen({ onBack, onProfileChosen }) {
+  const [mode, setMode] = useState("signin"); // 'signin' | 'signup'
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [signedIn, setSignedIn] = useState(isSignedIn());
 
+  // profile picker state
   const [kids, setKids] = useState([]);
-  const [loadingKids, setLoadingKids] = useState(true);
+  const [loadingKids, setLoadingKids] = useState(false);
   const [newName, setNewName] = useState("");
   const [newAvatar, setNewAvatar] = useState(AVATARS[0]);
   const [active, setActive] = useState(getActiveKid());
@@ -42,7 +52,19 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     finally { setLoadingKids(false); }
   }
 
-  useEffect(() => { refreshKids(); }, []);
+  useEffect(() => { if (signedIn) refreshKids(); }, [signedIn]);
+
+  async function handleAuth(e) {
+    e.preventDefault();
+    setError(null); setBusy(true);
+    try {
+      if (mode === "signup") await signUpParent(email.trim(), password);
+      else await signInParent(email.trim(), password);
+      setSignedIn(true);
+      setPassword("");
+    } catch (err) { setError(err.message || "Could not sign in"); }
+    finally { setBusy(false); }
+  }
 
   async function handleAddKid(e) {
     e.preventDefault();
@@ -76,8 +98,8 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     finally { setBusy(false); }
   }
 
-  async function handleDelete(kid) {
-    const ok = window.confirm("Remove " + (kid.display_name || "this profile") + " from this device? Their saved songs stay in the library.");
+  async function handleDeleteKid(kid) {
+    const ok = window.confirm("Remove " + (kid.display_name || "this profile") + "? Their saved songs stay in the library.");
     if (!ok) return;
     setBusy(true); setError(null);
     try {
@@ -88,56 +110,90 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     finally { setBusy(false); }
   }
 
+  function handleSignOut() {
+    signOut();
+    setSignedIn(false);
+    setKids([]); setActive(null);
+  }
+
   return (
     <div style={S.container}>
       <div style={S.topRow}>
         <button onClick={onBack} style={S.backBtn}>← Back</button>
+        {signedIn && <button onClick={handleSignOut} style={S.backBtn}>Sign out</button>}
       </div>
 
       <div style={S.iconBig}>👨‍👩‍👧</div>
-      <h1 style={S.title}>Who's playing?</h1>
+      <h1 style={S.title}>Grown-ups</h1>
 
-      <div style={S.card}>
-        <p style={S.muted}>
-          Pick your tile to start. Your songs and games are saved for you on this
-          device — no login needed.
-        </p>
-
-        {loadingKids && <p style={S.muted}>Loading profiles…</p>}
-
-        <div style={S.kidGrid}>
-          {kids.map((k) => (
-            <div key={k.id} style={S.kidWrap}>
-              <button onClick={() => chooseKid(k)}
-                style={{ ...S.kidTile, ...(active && active.id === k.id ? S.kidTileActive : {}) }}>
-                <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
-                <span style={S.kidName}>{k.display_name}</span>
-              </button>
-              <div style={S.kidActions}>
-                <button type="button" style={S.miniBtn} title="Rename"
-                  onClick={() => handleRename(k)}>✏️</button>
-                <button type="button" style={S.miniBtn} title="Remove"
-                  onClick={() => handleDelete(k)}>🗑️</button>
-              </div>
-            </div>
-          ))}
+      {!isConfigured() && (
+        <div style={S.card}>
+          <p style={S.muted}>
+            Accounts aren't connected yet. A grown-up needs to finish the Supabase
+            setup (run the SQL + add the keys) and then this is where you'll sign in
+            so your child's creations follow them across devices.
+          </p>
         </div>
+      )}
 
-        <form onSubmit={handleAddKid} style={S.addBox}>
-          <h3 style={S.h3}>Add a kid profile</h3>
-          <div style={S.avatarRow}>
-            {AVATARS.map((a) => (
-              <button type="button" key={a}
-                onClick={() => setNewAvatar(a)}
-                style={{ ...S.avatarPick, ...(newAvatar === a ? S.avatarPickActive : {}) }}>{a}</button>
+      {isConfigured() && !signedIn && (
+        <form onSubmit={handleAuth} style={S.card}>
+          <h2 style={S.h2}>{mode === "signup" ? "Make a grown-up account" : "Grown-up sign in"}</h2>
+          <p style={S.muted}>This keeps your child's songs &amp; games safe and synced. Only a grown-up signs in here.</p>
+          <input style={S.input} type="email" placeholder="Your email" value={email}
+            onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+          <input style={S.input} type="password" placeholder="Password" value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"} />
+          {error && <p style={S.error}>{error}</p>}
+          <button style={S.primary} type="submit" disabled={busy}>
+            {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
+          </button>
+          <button type="button" style={S.linkBtn}
+            onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(null); }}>
+            {mode === "signup" ? "I already have an account" : "Make a new account"}
+          </button>
+        </form>
+      )}
+
+      {isConfigured() && signedIn && (
+        <div style={S.card}>
+          <h2 style={S.h2}>Who's playing?</h2>
+          {loadingKids && <p style={S.muted}>Loading profiles…</p>}
+          <div style={S.kidGrid}>
+            {kids.map((k) => (
+              <div key={k.id} style={S.kidWrap}>
+                <button onClick={() => chooseKid(k)}
+                  style={{ ...S.kidTile, ...(active && active.id === k.id ? S.kidTileActive : {}) }}>
+                  <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
+                  <span style={S.kidName}>{k.display_name}</span>
+                </button>
+                <div style={S.kidActions}>
+                  <button type="button" style={S.miniBtn} title="Rename"
+                    onClick={() => handleRename(k)}>✏️</button>
+                  <button type="button" style={S.miniBtn} title="Remove"
+                    onClick={() => handleDeleteKid(k)}>🗑️</button>
+                </div>
+              </div>
             ))}
           </div>
-          <input style={S.input} placeholder="Kid's first name" value={newName}
-            onChange={(e) => setNewName(e.target.value)} />
-          {error && <p style={S.error}>{error}</p>}
-          <button style={S.primary} type="submit" disabled={busy}>Add profile</button>
-        </form>
-      </div>
+
+          <form onSubmit={handleAddKid} style={S.addBox}>
+            <h3 style={S.h3}>Add a kid profile</h3>
+            <div style={S.avatarRow}>
+              {AVATARS.map((a) => (
+                <button type="button" key={a}
+                  onClick={() => setNewAvatar(a)}
+                  style={{ ...S.avatarPick, ...(newAvatar === a ? S.avatarPickActive : {}) }}>{a}</button>
+              ))}
+            </div>
+            <input style={S.input} placeholder="Kid's first name" value={newName}
+              onChange={(e) => setNewName(e.target.value)} />
+            {error && <p style={S.error}>{error}</p>}
+            <button style={S.primary} type="submit" disabled={busy}>Add profile</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
