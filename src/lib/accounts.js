@@ -1,4 +1,4 @@
-null// /src/lib/accounts.js
+// /src/lib/accounts.js
 // -------------------------------------------------------------
 // Parent/Teacher auth + kid-profile layer for Buildable Kids.
 //
