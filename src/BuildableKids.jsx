@@ -24,6 +24,7 @@ const SCREEN_MUSIC = "music";
 const SCREEN_GROWNUP = "grownup";
 export default function BuildableKids() {
   const [screen, setScreen] = useState(SCREEN_INTRO);
+  const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_INTRO);
   const [gameData, setGameData] = useState({
     playerName: "",
@@ -207,7 +208,6 @@ export default function BuildableKids() {
 // ============ TOP NAVIGATION BAR ============
 function TopNav({ onBack, onHome, onMyStuff }) {
   const [counts, setCounts] = useState(libraryCounts());
-  const [activeKid, setActiveKidState] = useState(getActiveKid());
   useEffect(() => {
     const refresh = () => setCounts(libraryCounts());
     refresh();
