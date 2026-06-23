@@ -222,6 +222,33 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
     }
   }
 
+  async function renameSong(song) {
+    const current = song.title || "";
+    const next = window.prompt("Rename this song", current);
+    if (next == null) return;
+    const title = next.trim().slice(0, 120);
+    if (!title || title === current) return;
+    try {
+      const res = await fetch("/api/rename-song", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deviceId: getDeviceId(),
+          kidProfileId: getKidProfileId(),
+          songId: song.song_id,
+          title,
+        }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || "Could not rename");
+      }
+      refresh();
+    } catch (err) {
+      alert(err.message || "Could not rename song");
+    }
+  }
+
   async function deleteSong(songId) {
     try {
       await fetch("/api/delete-song", {
@@ -385,6 +412,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
                   </div>
                   <audio controls src={s.audio_url} style={S.audioSmall} />
                 </div>
+                <button style={S.renameBtn} onClick={() => renameSong(s)} title="Rename">✏️</button>
                 <button style={S.deleteBtn} onClick={() => deleteSong(s.song_id)} title="Delete">✕</button>
               </div>
             ))}
@@ -437,6 +465,7 @@ const S = {
   songTitle: { fontWeight: 800, fontSize: 15, marginBottom: 2 },
   songMeta: { fontSize: 12, color: "#aaa", marginBottom: 6, textTransform: "capitalize" },
   audioSmall: { width: "100%", height: 32 },
-  deleteBtn: { background: "#2a2a3a", color: "#ff8080", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0 },
+  renameBtn: { background: "#2a2a3a", color: "#e7e7f5", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0 },
+    deleteBtn: { background: "#2a2a3a", color: "#ff8080", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0 },
   fullNote: { marginTop: 14, textAlign: "center", color: "#FF8FB1", fontWeight: 700 },
 };
