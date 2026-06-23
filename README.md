@@ -1175,3 +1175,19 @@ Reusability: every hero a kid generates is already saved to `community_character
 New endpoint: `api/list-characters.js` — pulls up to 200 approved rows, shuffles, and returns a random assortment (default 12). Note: most saved characters currently have base64 (`data:`) image_urls (gpt-image-1 returns b64; see the existing base64-vs-clean-URL note), so the endpoint prefers clean hosted URLs but backfills with a capped number of base64 images (MAX_BASE64 = 8) so the library is not empty. Follow-up: once `generate-creature` persists hosted URLs instead of base64, the cap can be relaxed.
 
 Verified live on the demo: the hero picker renders a random assortment (e.g. Sparkly Breeze, Giggly Flame, Twirly Flame, Snappy Fluff…), and tapping one advances to "Build your world!".
+
+## Music Maker — Richer Visual Inputs (June 23 2026)
+
+The "Make a Song" tab (`src/MusicMaker.jsx`) previously only had vibe + world + a text prompt. It now has a full set of tap-driven, emoji-tile pickers so kids can shape the song without typing:
+- Music style / genre: Pop, Country, Hip Hop, Rock, Disco, Sleepy Time, Marching, Reggae (plus "Surprise").
+- Who sings: No Singer, Boy, Girl, Group, Both.
+- Drums: Big Drums, Soft Beat, Marching, Bongos (plus Auto).
+- Guitar: Electric, Acoustic, Twangy, No Guitar (plus Auto).
+- Strings: Violin, Big Cello, Harp, No Strings (plus Auto).
+- Speed: Slow, Medium, Fast (plus Auto).
+
+All pickers are config-driven arrays (VIBES/GENRES/SINGERS/DRUMS/GUITARS/STRINGS/SPEEDS) rendered by a small reusable `TileRow` component, so adding an option is a one-line edit. The selections are bundled by `buildChoices()` and posted to `/api/generate-song`; saving a song is unchanged (still capped at 10).
+
+API (`api/generate-song.js`): the handler now reads genre/singer/drums/guitar/strings/speed and folds them into `buildBrief` (the provider prompt) via per-choice description maps (GENRE_DESC/SINGER_DESC/DRUM_DESC/GUITAR_DESC/STRING_DESC/SPEED_DESC). A new `makeRecipe` returns a friendly one-liner (e.g. "🎵 Chill · soft sleepy-time lullaby · a girl singing · soft gentle beats + acoustic guitar + gentle harp") shown on the draft card and stored in `meta.recipe`; the raw `meta.choices` are saved too. In demo mode the tone now varies with speed (slow=4s, fast=2s) and adds a low harmonic when drums/strings are chosen, so different picks sound a little different today. When a real MUSIC_PROVIDER is wired up, these choices already flow into the brief with no further UI work.
+
+Verified live on the demo: all pickers render and highlight, generation returns a draft with an accurate recipe, and the API echoes every field. No console errors.
