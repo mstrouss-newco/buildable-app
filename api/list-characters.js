@@ -10,8 +10,9 @@
 // GET /api/list-characters          -> a random assortment (default limit 12)
 // GET /api/list-characters?limit=N  -> up to N characters
 //
-// Public read (no admin token): only approved rows with a clean image URL are
-// returned. Heavy base64 image_urls are skipped to keep the picker light.
+// Public read (no admin token): only approved rows with an image are returned.
+// Clean hosted URLs are preferred; base64 (data:) images are still included so
+// the library is not empty, but they are capped to keep the payload light.
 
 async function sbGet(url, key, path) {
   const r = await fetch(`${url}/rest/v1/${path}`, {
@@ -21,10 +22,8 @@ async function sbGet(url, key, path) {
   return r.json().catch(() => []);
 }
 
-// Prefer clean hosted URLs (asset-pack / DALL-E / GitHub raw) over inlined
-// base64 so the picker stays light and fast.
-const cleanUrl = (u) =>
-  typeof u === "string" && u.length > 0 && !u.startsWith("data:");
+const hasImage = (u) => typeof u === "string" && u.length > 0;
+const isClean = (u) => hasImage(u) && !u.startsWith("data:");
 
 // Fisher-Yates shuffle for a fresh random assortment on every load.
 function shuffle(arr) {
@@ -35,6 +34,9 @@ function shuffle(arr) {
   }
   return a;
 }
+
+// Cap how many heavy base64 images we return so the picker payload stays light.
+const MAX_BASE64 = 8;
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
@@ -55,8 +57,8 @@ export default async function handler(req, res) {
       "community_characters?select=id,name,description,image_url,created_at&moderation_status=eq.approved&order=created_at.desc&limit=200"
     );
 
-    const pool = (Array.isArray(rows) ? rows : [])
-      .filter((r) => cleanUrl(r.image_url))
+    const all = (Array.isArray(rows) ? rows : [])
+      .filter((r) => hasImage(r.image_url))
       .map((r) => ({
         id: r.id,
         name: r.name || "Mystery Hero",
@@ -64,7 +66,11 @@ export default async function handler(req, res) {
         image: r.image_url,
       }));
 
-    const characters = shuffle(pool).slice(0, limit);
+    // Prefer clean hosted URLs; backfill with a capped number of base64 images
+    // so the library is populated even before hosted-URL art exists.
+    const clean = shuffle(all.filter((c) => isClean(c.image)));
+    const base64 = shuffle(all.filter((c) => !isClean(c.image))).slice(0, MAX_BASE64);
+    const characters = shuffle([...clean, ...base64]).slice(0, limit);
 
     return res.status(200).json({
       configured: true,
