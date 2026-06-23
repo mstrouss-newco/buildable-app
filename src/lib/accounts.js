@@ -273,3 +273,62 @@ export async function assignProjectToKid(kind, projectId, kidProfileId) {
         );
     return rows && rows[0];
 }
+
+// ---- GOOGLE OAUTH (preferred sign-in) -----------------------------
+// No SDK: we use Supabase's hosted authorize endpoint. Clicking "Continue
+// with Google" sends the browser to Supabase, which bounces to Google and
+// back to our app with the session tokens in the URL hash. On return,
+// completeOAuthRedirect() picks up those tokens and signs the parent in.
+//
+// SETUP (owner, one-time): enable the Google provider in Supabase Auth and
+// add this site's URL to the allowed redirect URLs. Until that's done the
+// button still renders but Google returns an error.
+
+// Where Google/Supabase should send the user back to. We strip any existing
+// hash/query so the token fragment lands on a clean URL.
+function oauthRedirectTarget() {
+  try {
+    const u = new URL(window.location.href);
+    u.hash = "";
+    u.search = "";
+    return u.toString();
+  } catch (e) {
+    return window.location.origin + window.location.pathname;
+  }
+}
+
+// Start the Google sign-in. This NAVIGATES AWAY (full redirect), which is the
+// most reliable flow inside the app's hosting. Returns nothing useful because
+// the page unloads; the result is handled by completeOAuthRedirect() on return.
+export function signInWithGoogle() {
+  if (!isConfigured()) throw new Error("Accounts aren't switched on yet");
+  const redirectTo = encodeURIComponent(oauthRedirectTarget());
+  const url =
+    SUPABASE_URL + "/auth/v1/authorize?provider=google&redirect_to=" + redirectTo;
+  window.location.assign(url);
+}
+
+// Call once on app/screen load. If we just came back from Google, the tokens
+// are in location.hash (#access_token=...&refresh_token=...). Save the session,
+// make sure the parent row exists, then clean the tokens out of the URL.
+// Returns true if a sign-in was completed, false otherwise.
+export async function completeOAuthRedirect() {
+  let hash = "";
+  try { hash = window.location.hash || ""; } catch (e) { return false; }
+  if (!hash || hash.indexOf("access_token") === -1) {
+    // Supabase can also return an error in the hash (e.g. provider not enabled).
+    if (hash && hash.indexOf("error") !== -1) {
+      try { history.replaceState(null, "", oauthRedirectTarget()); } catch (e) {}
+    }
+    return false;
+  }
+  const params = new URLSearchParams(hash.replace(/^#/, ""));
+  const access_token = params.get("access_token");
+  const refresh_token = params.get("refresh_token");
+  if (!access_token) return false;
+  saveSession({ access_token, refresh_token });
+  try { await ensureParentRow(); } catch (e) { /* best-effort */ }
+  // Remove the tokens from the address bar so they aren't bookmarked/shared.
+  try { history.replaceState(null, "", oauthRedirectTarget()); } catch (e) {}
+  return true;
+}
