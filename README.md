@@ -142,6 +142,35 @@ account + key to Vercel env, then the agent wires `api/generate-audio.js` + play
    created during QA (see "QA test rows to clean up" note below). Deletions are
    destructive Ã¢ÂÂ get the owner to confirm exactly which rows before removing anything.
 
+## Google OAuth sign-in (preferred lane) (June 23 2026)
+
+**What & why.** Owner wants Google sign-in as the primary login, with email as a
+fallback. Added Google OAuth to the parent account flow using Supabase's hosted
+authorize endpoint (no SDK).
+
+**Changes (committed to `main`):**
+- `src/lib/accounts.js` — added `signInWithGoogle()` (redirects to
+`{SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=<clean app url>`) and
+`completeOAuthRedirect()` (on return, reads `#access_token`/`#refresh_token` from the
+URL hash, saves the session, ensures the parent row, then strips the tokens from the
+address bar). Email/password flow unchanged.
+- `src/GrownUpScreen.jsx` — "Continue with Google" is now the primary button on both
+the lane chooser and the email step; "Use email instead" is secondary. Runs
+`completeOAuthRedirect()` on mount so a returning Google user lands on the kid picker.
+Inline Google "G" SVG so no external asset is needed.
+
+**OWNER TO-DO to make Google actually work (agent cannot — keys + dashboards):**
+1. Google Cloud Console — configure the OAuth consent screen, then create an OAuth
+2.0 Client ID (type: Web application). Copy the Client ID + Client secret. Add the
+Supabase callback URL as an Authorized redirect URI:
+`https://mhxxkujnawncahztifvg.supabase.co/auth/v1/callback`.
+2. Supabase -> Authentication -> Providers -> Google: enable it, paste the Client ID +
+secret, save.
+3. Supabase -> Authentication -> URL Configuration: add the site URL
+`https://www.buildablekids.com` to the allowed Redirect URLs.
+
+Until those are done the button renders but Google returns an error.
+
 ## Dedicated parent account flow + assign-creations-to-kids (June 23 2026)
 
 **What & why.** The "Grown-ups" area previously mixed guest play, sign-in, and
