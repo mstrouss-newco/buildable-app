@@ -25,14 +25,19 @@ export default async function handler(req, res) {
   }
 
   const deviceId = (req.query.deviceId || req.query.device_id || "").toString().trim();
-  if (!deviceId) {
-    return res.status(400).json({ error: "deviceId is required" });
+  const kidProfileId = (req.query.kidProfileId || req.query.kid_profile_id || "").toString().trim();
+  // When a kid is signed in under a parent, list by kid_profile_id so songs
+  // follow the child across devices. Otherwise fall back to the device lane.
+  if (!deviceId && !kidProfileId) {
+    return res.status(400).json({ error: "deviceId or kidProfileId is required" });
   }
 
   try {
+    const filter = kidProfileId
+      ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId)
+      : "device_id=eq." + encodeURIComponent(deviceId);
     const q =
-      "saved_songs?device_id=eq." +
-      encodeURIComponent(deviceId) +
+      "saved_songs?" + filter +
       "&select=song_id,title,prompt,vibe,theme,audio_url,cover_color,duration_sec,provider,created_at" +
       "&order=created_at.desc&limit=10";
     const r = await sb(q);
