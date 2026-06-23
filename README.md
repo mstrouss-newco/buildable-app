@@ -103,10 +103,12 @@ so they follow the child across devices. Row Level Security scopes every row to 
   accept + store/filter by kid_profile_id; device lane unchanged when it's absent.
 
 **OWNER TO-DO (only a grown-up can do these — agent cannot create accounts / handle keys):**
-1. In the Supabase SQL editor, run `db/create-accounts.sql`, then `db/create-accounts-rls.sql`.
-2. In Supabase Auth, enable the Email provider (and decide on email confirmation).
-3. In Vercel env, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (the PUBLIC anon
-   key — NOT the service key). Redeploy. The "Grown-ups" area then goes live.
+1. ✅ DONE (June 23 2026) — SQL run in Supabase (project mhxxkujnawncahztifvg):
+   create-accounts.sql (tables) then create-accounts-rls.sql (family RLS policies), both succeeded.
+2. ✅ DONE — Supabase Auth Email provider is enabled (email confirmation is ON).
+3. ⏳ REMAINING — In Vercel env, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (the
+   PUBLIC anon key — NOT the service key). Redeploy. The "Grown-ups" area then goes live.
+   This is the ONLY step left to switch the account lane on.
 
 **Compliance (must keep before public ship):** verifiable parental consent before storing
 a child's identifiable data; data minimization (store song recipes, not voice/audio blobs;
@@ -951,6 +953,27 @@ cloud_platform/key/orb) loaded from the library. No console errors; Vite build i
 - To grow real spend history, have the generators INSERT a `usage_log` row per AI call
   (kind + cost_usd + model + meta); admin-stats already reads it.
 
+
+### 2026-06-23 — Supabase accounts went live + schema reconciliation
+
+Ran the parent/kid accounts setup in Supabase (project mhxxkujnawncahztifvg) and
+reconciled the repo to what was actually built.
+
+- **Discovery: `saved_songs` never existed.** The DB had `saved_games` and the
+  community tables but no `saved_songs`, so song-saving had been silently failing.
+  Folded `create table saved_songs` (columns matched to /api/save-song.js +
+  /api/list-songs.js) into create-accounts.sql so Step 1 runs clean.
+- **Step 1 + 2 SQL run successfully:** parent_accounts, kid_profiles, kid_profile_id
+  columns on saved_songs/saved_games, indexes, and family RLS policies all applied.
+- **Step 3:** Supabase Auth Email provider confirmed enabled.
+- **Schema reconciliation (Option A):** the original files assumed a separate
+  `auth_user_id` column + `account_type`; the live tables use `parent_accounts.id`
+  AS the auth user id (id = auth.uid()). Updated `src/lib/accounts.js` (queries +
+  insert now use `id`, dropped `account_type`), `db/create-accounts.sql`, and
+  `db/create-accounts-rls.sql` to match. RLS family checks simplified to
+  `parent_id = auth.uid()`.
+- **Only remaining step to switch accounts on:** owner adds VITE_SUPABASE_URL +
+  VITE_SUPABASE_ANON_KEY (public anon key) to Vercel env and redeploys.
 
 ### 2026-06-08 Ã¢ÂÂ Usage logging wired into all generators (admin cost/volume)
 
