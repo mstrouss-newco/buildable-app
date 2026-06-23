@@ -359,7 +359,9 @@ function GameMusicPicker() {
 
   useEffect(() => {
     const deviceId = getDeviceId();
-    fetch("/api/list-songs?deviceId=" + encodeURIComponent(deviceId))
+    const ak = getActiveKid();
+    const kpId = ak && ak.id ? ak.id : null;
+    fetch("/api/list-songs?deviceId=" + encodeURIComponent(deviceId) + (kpId ? "&kidProfileId=" + encodeURIComponent(kpId) : ""))
       .then((r) => r.json())
       .then((d) => {
         if (d && Array.isArray(d.songs)) setSongs(d.songs);
