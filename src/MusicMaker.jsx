@@ -105,8 +105,21 @@ function getDeviceId() {
   }
 }
 
+// The active kid profile (set in the Grown-ups area) makes a child's songs
+// follow them across devices. Null when no grown-up/kid is signed in -- then
+// saves use the device lane exactly as before.
+function getKidProfileId() {
+  try {
+    const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
+    return k && k.id ? k.id : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function MusicMaker({ onBack, onHome, playerName }) {
   const deviceId = getDeviceId();
+  const kidProfileId = getKidProfileId();
   const [vibe, setVibe] = useState("happy");
   const [genre, setGenre] = useState("");
   const [singer, setSinger] = useState("none");
@@ -128,7 +141,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
 
   async function refresh() {
     try {
-      const r = await fetch("/api/list-songs?deviceId=" + encodeURIComponent(deviceId));
+      const r = await fetch("/api/list-songs?deviceId=" + encodeURIComponent(deviceId) + (kidProfileId ? "&kidProfileId=" + encodeURIComponent(kidProfileId) : ""));
       const j = await r.json();
       if (j && j.configured && Array.isArray(j.songs)) {
         setSongs(j.songs);
@@ -179,6 +192,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           deviceId,
+          kidProfileId,
           kidName: playerName || "",
           title: draft.title,
           audioUrl: draft.audioUrl,
