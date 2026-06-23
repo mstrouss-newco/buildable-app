@@ -1317,3 +1317,12 @@ All pickers are config-driven arrays (VIBES/GENRES/SINGERS/DRUMS/GUITARS/STRINGS
 API (`api/generate-song.js`): the handler now reads genre/singer/drums/guitar/strings/speed and folds them into `buildBrief` (the provider prompt) via per-choice description maps (GENRE_DESC/SINGER_DESC/DRUM_DESC/GUITAR_DESC/STRING_DESC/SPEED_DESC). A new `makeRecipe` returns a friendly one-liner (e.g. "🎵 Chill · soft sleepy-time lullaby · a girl singing · soft gentle beats + acoustic guitar + gentle harp") shown on the draft card and stored in `meta.recipe`; the raw `meta.choices` are saved too. In demo mode the tone now varies with speed (slow=4s, fast=2s) and adds a low harmonic when drums/strings are chosen, so different picks sound a little different today. When a real MUSIC_PROVIDER is wired up, these choices already flow into the brief with no further UI work.
 
 Verified live on the demo: all pickers render and highlight, generation returns a draft with an accurate recipe, and the API echoes every field. No console errors.
+
+
+## Session log — 2026-06-23 (Google OAuth setup completed + live verified)
+
+Owner completed the Google sign-in setup that the previous session shipped in code. Steps done by the owner: created a Web-application OAuth client ("Buildable Kids Web") in Google Cloud with the Supabase redirect URI `https://mhxxkujnawncahztifvg.supabase.co/auth/v1/callback`; copied the Client ID + Client secret into Supabase → Authentication → Providers → Google (provider enabled); set the Supabase Site URL to `https://www.buildablekids.com`.
+
+Verified live on the demo Grown-ups screen: "Continue with Google" (primary) launches the Google account chooser pointed at the correct Supabase project (`mhxxkujnawncahztifvg.supabase.co`), confirming the full chain (app → Google OAuth → Supabase) is wired correctly. The order on screen is Google (primary) → "Use email instead" (secondary) → "Continue without an account" (guest). Agent stopped at the account-chooser and did not sign in (no account actions on owner's behalf).
+
+Still open / owner-owned: (1) the OAuth consent screen is in Testing mode, so only added Test users can sign in until the owner publishes it; (2) email confirmation is still ON in Supabase, so email sign-ups must click the confirmation link before logging in (owner can toggle off for instant test sign-up if desired). No code changes this session; no Vercel redeploy needed.
