@@ -1160,3 +1160,18 @@ This builds on the Music Maker (June 9). Two follow-ons plus a deploy note.
 ### Owner TODO (unchanged, still required for songs to fully work)
 - Run `db/create-saved-songs.sql` once in the Supabase SQL editor (enables saving, the Admin Songs tab data, and the in-game picker).
 - Pick a music provider and add its key in Vercel env (`MUSIC_PROVIDER` + `ELEVENLABS_API_KEY` or `REPLICATE_API_TOKEN`); then the `api/generate-song.js` adapter TODO can be filled in. Until then, generation uses the demo fallback tone.
+
+## Hero Selection — Choose from Library or Build Your Own (June 23 2026)
+
+The character creator (`src/CreatorScreen.jsx`, `CharacterCreatorScreen`) used to show a "Add a friend or item from our world" picker built from `community_sprites` (coin, gem, star, heart, chest, spike, etc.). Those are game-object sprites, not hero parts, so tapping them to "build a hero" looked out of place and confused the meaning of the screen.
+
+Changes:
+- Removed the "Add a friend or item from our world" sprite picker from the character creator (dropped the `useAssets("")`/`elementTiles` usage there). The level creator still uses `useAssets(theme)` for background art, unchanged.
+- Added a "Choose a hero" section that loads a random assortment from the shared Buildable Kids hero library (`community_characters`) via a new `GET /api/list-characters` endpoint. Tapping a hero selects it directly (skips image generation) and continues to the world step. The card hides itself gracefully when the library is empty.
+- Kept "build your own" intact (trait chips + optional text box + "Make my character!"). Subtext now reads "Choose a hero from our library — or build your own…".
+
+Reusability: every hero a kid generates is already saved to `community_characters` (approved) by `api/generate-creature.js` (`logToCommunity`), and `onCharacterCreated` also auto-saves to local "My Stuff". So newly created heroes are reusable both for the same kid and across kids/devices via the new endpoint.
+
+New endpoint: `api/list-characters.js` — pulls up to 200 approved rows, shuffles, and returns a random assortment (default 12). Note: most saved characters currently have base64 (`data:`) image_urls (gpt-image-1 returns b64; see the existing base64-vs-clean-URL note), so the endpoint prefers clean hosted URLs but backfills with a capped number of base64 images (MAX_BASE64 = 8) so the library is not empty. Follow-up: once `generate-creature` persists hosted URLs instead of base64, the cap can be relaxed.
+
+Verified live on the demo: the hero picker renders a random assortment (e.g. Sparkly Breeze, Giggly Flame, Twirly Flame, Snappy Fluff…), and tapping one advances to "Build your world!".
