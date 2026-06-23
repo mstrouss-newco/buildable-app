@@ -1,5 +1,41 @@
 # Buildable Kids — Session Log
 
+
+## Account creation fix — email confirmation (Option B)
+
+### Root cause (confirmed by probing live Supabase auth endpoint)
+- The publishable/anon key, Supabase URL, and auth endpoint are all VALID
+  (/auth/v1/settings -> 200). Code logic was fine. No secret key leaked in
+  the browser bundle (verified).
+- The Supabase project has `mailer_autoconfirm: false` -> email confirmation
+  is REQUIRED. So /auth/v1/signup returns a user but NO access_token; it
+  sends a confirmation email instead.
+- Old signUpParent only saved a session `if (data.access_token)`, so it
+  silently did nothing. UI flipped to "signed in" with no Bearer token ->
+  the kid-profile REST call failed with "This endpoint requires a valid
+  Bearer token" (the screenshot error).
+- Also observed: Supabase's built-in email sender is rate-limited
+  ("over_email_send_rate_limit" / 429), so confirmation emails may not
+  arrive reliably on the default sender.
+
+### Fix shipped (Option B)
+- accounts.js (commit 4b0abbf): signUpParent now returns
+  { signedIn: true } OR { signedIn: false, needsEmailConfirmation: true }.
+- GrownUpScreen.jsx (commit 7faf815): handleAuth shows a friendly
+  "Check <email> for a confirmation link, then sign in" notice (new green
+  S.notice style) and switches to sign-in mode instead of failing. Auth
+  errors are translated: rate limit -> "wait a few minutes", already
+  registered -> "try signing in", confirm -> "confirm your email first".
+- Both deployed green; 7faf815 is live Production.
+
+### Owner follow-ups (cannot be done by the agent)
+- FASTEST UNBLOCK: In Supabase -> Authentication -> turn OFF "Confirm email"
+  (enable auto-confirm). Signup then returns a session immediately and works
+  with no email step. (Tradeoff: no email verification.)
+- For reliable confirmation emails (if keeping confirmation ON): add a
+  custom SMTP provider in Supabase -> Auth -> SMTP Settings. The default
+  built-in sender is heavily throttled.
+
 ## LATEST — guest mode added, now the DEFAULT (easiest path)
 Owner: "add in 0auth so it's easier; default to this, and have 'use email instead'
 be a smaller option." Done.
