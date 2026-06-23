@@ -219,3 +219,57 @@ export async function deleteKidProfile(id) {
   if (active && active.id === id) setActiveKid(null);
   return true;
 }
+
+// ---- FAMILY PROJECTS (account mode only) --------------------------
+// List every saved creation in the family (songs + games), with which
+// kid each is currently linked to (kid_profile_id may be null = unassigned).
+// Account mode only: reads go through the parent JWT and RLS scopes rows
+// to this family. The guest/device lane has no cross-kid view, so we
+// return [] there. Shape: { kind:'song'|'game', projectId, title, kidProfileId }.
+export async function listFamilyProjects() {
+    if (!isSignedIn()) return [];
+    const out = [];
+    try {
+          const songs = await restFetch(
+                  "saved_songs?select=song_id,title,kid_profile_id,created_at&order=created_at.desc&limit=100",
+            { method: "GET" }
+                );
+          if (Array.isArray(songs)) {
+                  for (const s of songs) {
+                            out.push({ kind: "song", projectId: s.song_id, title: s.title || "Untitled song", kidProfileId: s.kid_profile_id || null });
+                  }
+          }
+    } catch (e) { /* songs table optional */ }
+    try {
+          const games = await restFetch(
+                  "saved_games?select=game_id,title,kid_profile_id,created_at&order=created_at.desc&limit=100",
+            { method: "GET" }
+                );
+          if (Array.isArray(games)) {
+                  for (const g of games) {
+                            out.push({ kind: "game", projectId: g.game_id, title: g.title || "Untitled game", kidProfileId: g.kid_profile_id || null });
+                  }
+          }
+    } catch (e) { /* games table optional */ }
+    return out;
+}
+
+// Assign (or unassign) an existing creation to a kid profile. Updates the
+// nullable kid_profile_id link the schema already defines (db/create-accounts.sql).
+// kind: 'song' | 'game'. Pass kidProfileId = null to unassign.
+// Account mode only -- the device lane has no per-kid ownership to edit.
+export async function assignProjectToKid(kind, projectId, kidProfileId) {
+    if (!isSignedIn()) throw new Error("Sign in to organize creations");
+    if (!projectId) throw new Error("Missing project id");
+    const table = kind === "game" ? "saved_games" : "saved_songs";
+    const idCol = kind === "game" ? "game_id" : "song_id";
+    const rows = await restFetch(
+          table + "?" + idCol + "=eq." + encodeURIComponent(projectId) +
+            "&select=" + idCol + ",kid_profile_id",
+      {
+              method: "PATCH",
+              body: JSON.stringify({ kid_profile_id: kidProfileId || null }),
+      }
+        );
+    return rows && rows[0];
+}

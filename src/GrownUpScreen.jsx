@@ -1,24 +1,30 @@
 // /src/GrownUpScreen.jsx
 // -------------------------------------------------------------
-// "Who's playing?" — guest-first, with optional grown-up account.
+// Grown-ups area: a proper, dedicated account flow.
 //
-// DEFAULT (easiest): no login. Kids tap a tile and play immediately.
-// Profiles are stored on the device; songs save to the central library.
-// Guest songs live on this device and do NOT follow to another device.
+// This screen is a guided, multi-STEP flow (not a single cramped panel):
 //
-// "Use email instead" (small link): a grown-up signs in / makes an
-// account (Supabase Auth). Then profiles live in the database and a
-// child's songs FOLLOW them to any device the grown-up signs in on.
+//   STEP "choose"   -> pick a lane: create/sign in to a parent account,
+//                       or continue without an account (guest, this device).
+//   STEP "auth"     -> parent signs up or signs in (Supabase Auth).
+//   STEP "kids"     -> create + manage kid profiles (tap-a-tile, no kid
+//                       passwords). Choosing a tile starts play for that kid.
+//   STEP "projects" -> assign existing creations (songs/games) to a kid so
+//                       a parent can keep each child's stuff organized.
 //
-// All data access goes through src/lib/accounts.js, which auto-branches
-// between the guest store and the account (Supabase) store. The agent
+// All data access goes through src/lib/accounts.js, which branches between
+// the guest (device) store and the account (Supabase) store. The agent
 // never creates accounts or types passwords -- the grown-up does that.
+//
+// Props: { onBack, onProfileChosen } -- unchanged contract so the parent
+// route in BuildableKids.jsx needs no edits.
 // -------------------------------------------------------------
 import { useState, useEffect } from "react";
 import {
   isConfigured, isSignedIn, signInParent, signUpParent, signOut,
   listKidProfiles, createKidProfile, renameKidProfile, deleteKidProfile,
   setActiveKid, getActiveKid,
+  listFamilyProjects, assignProjectToKid,
 } from "./lib/accounts";
 
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
@@ -30,9 +36,12 @@ const CARD_BORDER = "1px solid rgba(155,126,221,0.22)";
 const AVATARS = ["🦄", "🐯", "🐸", "🐙", "🐵", "🦊", "🐶", "🐼", "🐢", "🐝", "🌟", "🚀"];
 
 export default function GrownUpScreen({ onBack, onProfileChosen }) {
-  // "showAuth" reveals the email/password form. Default = guest (hidden).
-  const [showAuth, setShowAuth] = useState(false);
-  const [mode, setMode] = useState("signin"); // 'signin' | 'signup'
+  // Flow steps. Start on the kid picker when already signed in (returning
+  // parent); otherwise start on the lane chooser.
+  const [step, setStep] = useState(isSignedIn() ? "kids" : "choose");
+
+  // auth form
+  const [mode, setMode] = useState("signup"); // 'signup' | 'signin'
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,12 +49,18 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
   const [notice, setNotice] = useState(null);
   const [signedIn, setSignedIn] = useState(isSignedIn());
 
-  // profile picker state
+  // kid profiles
   const [kids, setKids] = useState([]);
   const [loadingKids, setLoadingKids] = useState(true);
   const [newName, setNewName] = useState("");
   const [newAvatar, setNewAvatar] = useState(AVATARS[0]);
   const [active, setActive] = useState(getActiveKid());
+
+  // projects (assign-to-kid)
+  const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  const configured = isConfigured();
 
   async function refreshKids() {
     setLoadingKids(true);
@@ -54,9 +69,16 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     finally { setLoadingKids(false); }
   }
 
-  // Load profiles for whichever mode we're in (guest or signed-in).
   useEffect(() => { refreshKids(); }, [signedIn]);
 
+  async function refreshProjects() {
+    setLoadingProjects(true);
+    try { setProjects(await listFamilyProjects()); }
+    catch (e) { setError(e.message); }
+    finally { setLoadingProjects(false); }
+  }
+
+  // ---- auth ----
   async function handleAuth(e) {
     e.preventDefault();
     setError(null); setNotice(null); setBusy(true);
@@ -64,8 +86,8 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
       if (mode === "signup") {
         const res = await signUpParent(email.trim(), password);
         if (res && res.needsEmailConfirmation) {
-          // Account made, but no session yet -- a confirmation email was sent.
-          setNotice("Almost there! Check " + (email.trim() || "your email") + " for a confirmation link, then come back and sign in.");
+          setNotice("Almost there! Check " + (email.trim() || "your email") +
+            " for a confirmation link, then come back and sign in.");
           setMode("signin");
           setPassword("");
           return;
@@ -74,7 +96,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
         await signInParent(email.trim(), password);
       }
       setSignedIn(true);
-      setShowAuth(false);
+      setStep("kids");
       setPassword("");
     } catch (err) {
       const m = (err && err.message) || "Could not sign in";
@@ -82,6 +104,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
         setError("Too many tries just now. Please wait a few minutes and try again.");
       } else if (/already registered|already been registered/i.test(m)) {
         setError("That email already has an account. Try signing in instead.");
+        setMode("signin");
       } else if (/confirm/i.test(m)) {
         setError("Please confirm your email first (check your inbox), then sign in.");
       } else {
@@ -90,6 +113,15 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     } finally { setBusy(false); }
   }
 
+  async function handleSignOut() {
+    signOut();
+    setSignedIn(false);
+    setActive(null);
+    setStep("choose");
+    await refreshKids();
+  }
+
+  // ---- kid profiles ----
   async function handleAddKid(e) {
     e.preventDefault();
     if (!newName.trim()) return;
@@ -97,6 +129,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     try {
       await createKidProfile(newName.trim(), newAvatar);
       setNewName("");
+      setNewAvatar(AVATARS[0]);
       await refreshKids();
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
@@ -123,7 +156,8 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
   }
 
   async function handleDeleteKid(kid) {
-    const ok = window.confirm("Remove " + (kid.display_name || "this profile") + "? Their saved songs stay in the library.");
+    const ok = window.confirm("Remove " + (kid.display_name || "this profile") +
+      "? Their saved creations stay in the library.");
     if (!ok) return;
     setBusy(true); setError(null);
     try {
@@ -134,144 +168,307 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     finally { setBusy(false); }
   }
 
-  async function handleSignOut() {
-    signOut();
-    setSignedIn(false);
-    setShowAuth(false);
-    setActive(null);
-    await refreshKids();
+  // ---- projects ----
+  function goProjects() {
+    setStep("projects");
+    setError(null);
+    refreshProjects();
   }
 
+  async function handleAssign(project, kidProfileId) {
+    setBusy(true); setError(null);
+    try {
+      await assignProjectToKid(project.kind, project.projectId, kidProfileId || null);
+      await refreshProjects();
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  }
+
+  function kidName(id) {
+    const k = kids.find((x) => x.id === id);
+    return k ? (k.avatar ? k.avatar + " " : "") + k.display_name : "Unassigned";
+  }
+
+  // -------------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------------
   return (
     <div style={S.container}>
       <div style={S.topRow}>
-        <button onClick={onBack} style={S.backBtn}>← Back</button>
+        <button onClick={step === "choose" || !signedIn ? onBack : () => setStep("kids")}
+          style={S.backBtn}>← Back</button>
         {signedIn && <button onClick={handleSignOut} style={S.backBtn}>Sign out</button>}
       </div>
 
       <div style={S.iconBig}>👨‍👩‍👧</div>
-      <h1 style={S.title}>Who's playing?</h1>
 
-      <div style={S.card}>
-        {!signedIn && (
-          <p style={S.muted}>
-            Pick a tile to start — no login needed. Songs are saved on this device.
-          </p>
-        )}
-        {signedIn && (
-          <p style={S.muted}>Signed in — your kids' songs follow them on any device.</p>
-        )}
-
-        {loadingKids && <p style={S.muted}>Loading profiles…</p>}
-
-        <div style={S.kidGrid}>
-          {kids.map((k) => (
-            <div key={k.id} style={S.kidWrap}>
-              <button onClick={() => chooseKid(k)}
-                style={{ ...S.kidTile, ...(active && active.id === k.id ? S.kidTileActive : {}) }}>
-                <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
-                <span style={S.kidName}>{k.display_name}</span>
-              </button>
-              <div style={S.kidActions}>
-                <button type="button" style={S.miniBtn} title="Rename"
-                  onClick={() => handleRename(k)}>✏️</button>
-                <button type="button" style={S.miniBtn} title="Remove"
-                  onClick={() => handleDeleteKid(k)}>🗑️</button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <form onSubmit={handleAddKid} style={S.addBox}>
-          <h3 style={S.h3}>Add a kid profile</h3>
-          <div style={S.avatarRow}>
-            {AVATARS.map((a) => (
-              <button type="button" key={a}
-                onClick={() => setNewAvatar(a)}
-                style={{ ...S.avatarPick, ...(newAvatar === a ? S.avatarPickActive : {}) }}>{a}</button>
-            ))}
+      {/* STEP: choose a lane ------------------------------------- */}
+      {step === "choose" && !signedIn && (
+        <>
+          <h1 style={S.title}>Grown-ups</h1>
+          <div style={S.card}>
+            <p style={S.lead}>Set up the family — your kids' creations follow them on any device.</p>
+            {!configured && (
+              <p style={S.warn}>
+                Accounts aren't switched on for this site yet. You can still play as a
+                guest below; a grown-up can enable accounts in the site settings.
+              </p>
+            )}
+            <button style={S.primaryBig} disabled={!configured}
+              onClick={() => { setMode("signup"); setStep("auth"); }}>
+              ✨ Create a parent account
+            </button>
+            <button style={S.secondaryBig} disabled={!configured}
+              onClick={() => { setMode("signin"); setStep("auth"); }}>
+              I already have an account
+            </button>
+            <div style={S.divider}><span style={S.dividerText}>or</span></div>
+            <button style={S.ghostBig} onClick={() => setStep("kids")}>
+              Continue without an account
+            </button>
+            <p style={S.fineprint}>
+              Guest mode keeps profiles on this device only. No login, nothing leaves
+              this device's library.
+            </p>
           </div>
-          <input style={S.input} placeholder="Kid's first name" value={newName}
-            onChange={(e) => setNewName(e.target.value)} />
-          {error && <p style={S.error}>{error}</p>}
-          <button style={S.primary} type="submit" disabled={busy}>Add profile</button>
-        </form>
-      </div>
-
-      {/* Small opt-in: grown-up account so songs follow across devices. */}
-      {isConfigured() && !signedIn && !showAuth && (
-        <button type="button" style={S.smallLink} onClick={() => { setShowAuth(true); setError(null); }}>
-          Use email instead (sync across devices)
-        </button>
+        </>
       )}
 
-      {isConfigured() && !signedIn && showAuth && (
-        <form onSubmit={handleAuth} style={S.authCard}>
-          <h2 style={S.h2}>{mode === "signup" ? "Make a grown-up account" : "Grown-up sign in"}</h2>
-          <p style={S.muted}>Optional. Signing in lets your child's songs follow them to any device.</p>
-          <input style={S.input} type="email" placeholder="Your email" value={email}
-            onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-          <input style={S.input} type="password" placeholder="Password" value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"} />
-          {error && <p style={S.error}>{error}</p>}
-        {notice && <p style={S.notice}>{notice}</p>}
-          <button style={S.primary} type="submit" disabled={busy}>
-            {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
-          </button>
-          <button type="button" style={S.linkBtn}
-            onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(null); }}>
-            {mode === "signup" ? "I already have an account" : "Make a new account"}
-          </button>
-          <button type="button" style={S.linkBtn} onClick={() => { setShowAuth(false); setError(null); }}>
-            Keep playing without an account
-          </button>
-        </form>
+      {/* STEP: parent auth --------------------------------------- */}
+      {step === "auth" && !signedIn && (
+        <>
+          <h1 style={S.title}>{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
+          <div style={S.card}>
+            <p style={S.lead}>
+              {mode === "signup"
+                ? "One grown-up login for the whole family. Kids never need a password."
+                : "Sign in to load your kids' profiles and creations."}
+            </p>
+            <form onSubmit={handleAuth} style={S.form}>
+              <label style={S.label}>Email
+                <input style={S.input} type="email" autoComplete="email" required
+                  value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com" />
+              </label>
+              <label style={S.label}>Password
+                <input style={S.input} type="password"
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  required minLength={6} value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters" />
+              </label>
+              {error && <p style={S.error}>{error}</p>}
+              {notice && <p style={S.noticeBox}>{notice}</p>}
+              <button type="submit" style={S.primaryBig} disabled={busy}>
+                {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
+              </button>
+            </form>
+            <button style={S.linkBtn}
+              onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(null); setNotice(null); }}>
+              {mode === "signup" ? "Already have an account? Sign in" : "Need an account? Create one"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* STEP: kid profiles -------------------------------------- */}
+      {(step === "kids" || (signedIn && step === "auth")) && (
+        <>
+          <h1 style={S.title}>Who's playing?</h1>
+          <div style={S.card}>
+            <p style={S.lead}>
+              {signedIn
+                ? "Signed in — your kids' creations follow them on any device."
+                : "Pick a tile to start — no login needed. Saved on this device."}
+            </p>
+
+            {loadingKids && <p style={S.muted}>Loading profiles…</p>}
+
+            <div style={S.kidGrid}>
+              {kids.map((k) => (
+                <div key={k.id} style={S.kidWrap}>
+                  <button onClick={() => chooseKid(k)}
+                    style={{ ...S.kidTile, ...(active && active.id === k.id ? S.kidTileActive : {}) }}>
+                    <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
+                    <span style={S.kidName}>{k.display_name}</span>
+                  </button>
+                  <div style={S.kidActions}>
+                    <button type="button" style={S.miniBtn} title="Rename"
+                      onClick={() => handleRename(k)}>✏️</button>
+                    <button type="button" style={S.miniBtn} title="Remove"
+                      onClick={() => handleDeleteKid(k)}>🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {!loadingKids && kids.length === 0 && (
+              <p style={S.muted}>No profiles yet — add your first child below.</p>
+            )}
+
+            <form onSubmit={handleAddKid} style={S.addRow}>
+              <input style={S.input} value={newName} maxLength={40}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Add a child's name" />
+              <div style={S.avatarRow}>
+                {AVATARS.map((a) => (
+                  <button type="button" key={a}
+                    onClick={() => setNewAvatar(a)}
+                    style={{ ...S.avatarPick, ...(newAvatar === a ? S.avatarPickActive : {}) }}>
+                    {a}
+                  </button>
+                ))}
+              </div>
+              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>
+                ＋ Add child
+              </button>
+            </form>
+
+            {error && <p style={S.error}>{error}</p>}
+
+            {signedIn && (
+              <button style={S.linkBtn} onClick={goProjects}>
+                🎵 Organize creations by child →
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* STEP: assign projects to kids --------------------------- */}
+      {step === "projects" && signedIn && (
+        <>
+          <h1 style={S.title}>Organize creations</h1>
+          <div style={S.card}>
+            <p style={S.lead}>Link each saved song or game to the child who made it.</p>
+            {loadingProjects && <p style={S.muted}>Loading creations…</p>}
+            {!loadingProjects && projects.length === 0 && (
+              <p style={S.muted}>No saved creations yet. They'll appear here once kids make some.</p>
+            )}
+            <div style={S.projList}>
+              {projects.map((p) => (
+                <div key={p.kind + ":" + p.projectId} style={S.projRow}>
+                  <span style={S.projIcon}>{p.kind === "game" ? "🎮" : "🎵"}</span>
+                  <span style={S.projTitle}>{p.title}</span>
+                  <select style={S.select} disabled={busy}
+                    value={p.kidProfileId || ""}
+                    onChange={(e) => handleAssign(p, e.target.value || null)}>
+                    <option value="">Unassigned</option>
+                    {kids.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {(k.avatar ? k.avatar + " " : "") + k.display_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            {error && <p style={S.error}>{error}</p>}
+            <button style={S.ghostBig} onClick={() => setStep("kids")}>← Back to profiles</button>
+          </div>
+        </>
       )}
     </div>
   );
 }
 
 const S = {
-  container: { minHeight: "100vh", padding: "24px 20px 60px", fontFamily: NUN, color: "#fff",
-    display: "flex", flexDirection: "column", alignItems: "center" },
-  topRow: { width: "100%", maxWidth: "520px", display: "flex", justifyContent: "space-between", marginBottom: "10px" },
-  backBtn: { background: CARD_BG, border: CARD_BORDER, color: "#fff", borderRadius: "12px",
-    padding: "8px 14px", fontFamily: NUN, fontWeight: 700, cursor: "pointer" },
-  iconBig: { fontSize: "56px", marginTop: "8px" },
-  title: { fontFamily: FRED, fontSize: "34px", margin: "6px 0 18px" },
-  card: { width: "100%", maxWidth: "440px", background: CARD_BG, border: CARD_BORDER,
-    borderRadius: "20px", padding: "22px", display: "flex", flexDirection: "column", gap: "12px" },
-  authCard: { width: "100%", maxWidth: "440px", marginTop: "14px", background: CARD_BG, border: CARD_BORDER,
-    borderRadius: "20px", padding: "22px", display: "flex", flexDirection: "column", gap: "12px" },
-  h2: { fontFamily: FRED, fontSize: "22px", margin: 0 },
-  h3: { fontFamily: FRED, fontSize: "18px", margin: "4px 0" },
-  muted: { color: "rgba(255,255,255,0.7)", fontSize: "14px", lineHeight: 1.5, margin: 0 },
-  input: { padding: "12px 14px", borderRadius: "12px", border: CARD_BORDER,
-    background: "rgba(0,0,0,0.25)", color: "#fff", fontFamily: NUN, fontSize: "16px" },
-  primary: { background: GRAD, border: "none", color: "#fff", borderRadius: "14px",
-    padding: "13px", fontFamily: FRED, fontSize: "17px", fontWeight: 700, cursor: "pointer" },
-  linkBtn: { background: "none", border: "none", color: "#c9b3ff", cursor: "pointer",
-    fontFamily: NUN, fontWeight: 700, fontSize: "14px" },
-  smallLink: { background: "none", border: "none", color: "rgba(201,179,255,0.85)", cursor: "pointer",
-    fontFamily: NUN, fontWeight: 600, fontSize: "13px", marginTop: "14px", textDecoration: "underline" },
-  error: { color: "#ff9bb0", fontSize: "14px", margin: 0 },
-  notice: { color: "#9be3b4", fontSize: "14px", lineHeight: 1.5, margin: 0 },
-  kidGrid: { display: "flex", flexWrap: "wrap", gap: "12px" },
-  kidWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" },
-  kidTile: { width: "92px", height: "104px", borderRadius: "18px", background: "rgba(0,0,0,0.25)",
-    border: CARD_BORDER, color: "#fff", cursor: "pointer", display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "center", gap: "6px" },
-  kidTileActive: { border: "2px solid #d65a7b", background: "rgba(214,90,123,0.18)" },
-  kidAvatar: { fontSize: "34px" },
-  kidName: { fontFamily: NUN, fontWeight: 700, fontSize: "14px" },
-  kidActions: { display: "flex", gap: "6px" },
-  miniBtn: { background: "rgba(0,0,0,0.25)", border: CARD_BORDER, color: "#fff", borderRadius: "10px",
-    width: "34px", height: "30px", cursor: "pointer", fontSize: "13px", flexShrink: 0 },
-  addBox: { marginTop: "6px", paddingTop: "14px", borderTop: CARD_BORDER,
-    display: "flex", flexDirection: "column", gap: "10px" },
-  avatarRow: { display: "flex", flexWrap: "wrap", gap: "8px" },
-  avatarPick: { fontSize: "24px", width: "44px", height: "44px", borderRadius: "12px",
-    background: "rgba(0,0,0,0.25)", border: CARD_BORDER, cursor: "pointer" },
-  avatarPickActive: { border: "2px solid #d65a7b", background: "rgba(214,90,123,0.18)" },
+  container: {
+    minHeight: "100vh", background: GRAD, color: "#fff",
+    fontFamily: NUN, padding: "20px 16px 60px", boxSizing: "border-box",
+  },
+  topRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  backBtn: {
+    background: "rgba(255,255,255,0.12)", color: "#fff", border: "none",
+    borderRadius: 14, padding: "8px 16px", fontSize: 15, fontWeight: 700,
+    cursor: "pointer", fontFamily: NUN,
+  },
+  iconBig: { fontSize: 56, textAlign: "center", marginTop: 8 },
+  title: { fontFamily: FRED, fontSize: 30, fontWeight: 700, textAlign: "center", margin: "6px 0 14px" },
+  card: {
+    maxWidth: 460, margin: "0 auto", background: CARD_BG, border: CARD_BORDER,
+    borderRadius: 22, padding: 22,
+  },
+  lead: { fontSize: 16, lineHeight: 1.45, textAlign: "center", margin: "0 0 16px", opacity: 0.95 },
+  muted: { fontSize: 14, textAlign: "center", opacity: 0.7, margin: "12px 0" },
+  fineprint: { fontSize: 12, textAlign: "center", opacity: 0.6, margin: "12px 0 0", lineHeight: 1.4 },
+  warn: {
+    fontSize: 13, lineHeight: 1.4, background: "rgba(255,210,120,0.14)",
+    border: "1px solid rgba(255,210,120,0.4)", borderRadius: 12, padding: "10px 12px", margin: "0 0 14px",
+  },
+  primaryBig: {
+    width: "100%", background: "#fff", color: "#b3477a", border: "none",
+    borderRadius: 16, padding: "14px 18px", fontSize: 17, fontWeight: 800,
+    cursor: "pointer", fontFamily: FRED, marginTop: 8,
+  },
+  secondaryBig: {
+    width: "100%", background: "rgba(255,255,255,0.16)", color: "#fff",
+    border: "1px solid rgba(255,255,255,0.3)", borderRadius: 16, padding: "13px 18px",
+    fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: NUN, marginTop: 10,
+  },
+  ghostBig: {
+    width: "100%", background: "transparent", color: "#fff",
+    border: "1px solid rgba(255,255,255,0.35)", borderRadius: 16, padding: "12px 18px",
+    fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: NUN, marginTop: 10,
+  },
+  divider: { display: "flex", alignItems: "center", margin: "16px 0", opacity: 0.6 },
+  dividerText: {
+    margin: "0 auto", fontSize: 13, textTransform: "uppercase", letterSpacing: 1,
+  },
+  form: { display: "flex", flexDirection: "column", gap: 12 },
+  label: { display: "flex", flexDirection: "column", gap: 6, fontSize: 14, fontWeight: 700 },
+  input: {
+    width: "100%", boxSizing: "border-box", borderRadius: 12, border: "none",
+    padding: "12px 14px", fontSize: 16, fontFamily: NUN, color: "#333",
+  },
+  linkBtn: {
+    display: "block", width: "100%", background: "none", color: "#fff",
+    border: "none", textDecoration: "underline", fontSize: 14, fontWeight: 700,
+    cursor: "pointer", marginTop: 14, fontFamily: NUN, opacity: 0.95,
+  },
+  error: {
+    color: "#ffd7d7", background: "rgba(180,40,40,0.25)", borderRadius: 10,
+    padding: "8px 12px", fontSize: 14, margin: "10px 0 0",
+  },
+  noticeBox: {
+    color: "#eafff0", background: "rgba(40,160,90,0.22)", borderRadius: 10,
+    padding: "8px 12px", fontSize: 14, margin: "10px 0 0", lineHeight: 1.4,
+  },
+  kidGrid: {
+    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
+    gap: 12, margin: "6px 0 16px",
+  },
+  kidWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4 },
+  kidTile: {
+    width: "100%", aspectRatio: "1", display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center", gap: 4,
+    background: "rgba(255,255,255,0.1)", border: "2px solid transparent",
+    borderRadius: 18, cursor: "pointer", color: "#fff", fontFamily: NUN,
+  },
+  kidTileActive: { border: "2px solid #fff", background: "rgba(255,255,255,0.22)" },
+  kidAvatar: { fontSize: 34 },
+  kidName: { fontSize: 13, fontWeight: 700, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  kidActions: { display: "flex", gap: 6 },
+  miniBtn: {
+    background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8,
+    padding: "2px 6px", fontSize: 13, cursor: "pointer",
+  },
+  addRow: { display: "flex", flexDirection: "column", gap: 10, marginTop: 6 },
+  avatarRow: { display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" },
+  avatarPick: {
+    background: "rgba(255,255,255,0.1)", border: "2px solid transparent",
+    borderRadius: 10, padding: "4px 6px", fontSize: 20, cursor: "pointer",
+  },
+  avatarPickActive: { border: "2px solid #fff", background: "rgba(255,255,255,0.22)" },
+  projList: { display: "flex", flexDirection: "column", gap: 8, margin: "6px 0 14px" },
+  projRow: {
+    display: "flex", alignItems: "center", gap: 10,
+    background: "rgba(255,255,255,0.08)", borderRadius: 12, padding: "8px 10px",
+  },
+  projIcon: { fontSize: 20 },
+  projTitle: { flex: 1, fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  select: {
+    borderRadius: 10, border: "none", padding: "6px 8px", fontSize: 13,
+    fontFamily: NUN, color: "#333", maxWidth: 150,
+  },
 };

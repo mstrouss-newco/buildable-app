@@ -142,6 +142,38 @@ account + key to Vercel env, then the agent wires `api/generate-audio.js` + play
    created during QA (see "QA test rows to clean up" note below). Deletions are
    destructive Ã¢ÂÂ get the owner to confirm exactly which rows before removing anything.
 
+## Dedicated parent account flow + assign-creations-to-kids (June 23 2026)
+
+**What & why.** The "Grown-ups" area previously mixed guest play, sign-in, and
+account creation on one cramped "Who's playing?" panel, which read as confusing.
+Refactored `src/GrownUpScreen.jsx` into a proper, dedicated, guided multi-step
+flow and exposed the per-kid project linking the schema already supported but had
+no UI for. The proven backend (`src/lib/accounts.js`, `db/create-accounts*.sql`,
+the save/list API endpoints) is unchanged in contract; the no-login device lane is
+untouched.
+
+**Steps in the new flow:** (1) *choose a lane* — create a parent account, sign in,
+or continue as a guest (this device only); (2) *parent auth* — sign up / sign in via
+Supabase Auth on its own clean screen (the agent never types passwords — the grown-up
+does); (3) *kid profiles* — tap-a-tile picker with add / rename / remove (no kid
+passwords); (4) *organize creations* — assign each saved song/game to a child.
+
+**Changes (branch `feat/parent-account-flow`, PR to `main`):**
+- `src/lib/accounts.js` — added `listFamilyProjects()` (RLS-scoped read of the
+family's `saved_songs` + `saved_games` with their `kid_profile_id`) and
+`assignProjectToKid(kind, projectId, kidProfileId)` (PATCHes the nullable
+`kid_profile_id` link from `db/create-accounts.sql`). Account-mode only — additive,
+non-destructive; the service-key device lane is not touched.
+- `src/GrownUpScreen.jsx` — rewritten as the multi-step flow above. Same
+`{ onBack, onProfileChosen }` prop contract, so `BuildableKids.jsx` needs no edits.
+Shows a friendly "accounts aren't switched on yet" state when env vars are absent.
+
+**Still owner-only to switch the lane on (unchanged from prior entry):** add
+`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (PUBLIC anon key, not service key) in
+Vercel and redeploy. Optional UX: toggle OFF "Confirm email" in Supabase Auth for
+instant sign-up (today it shows a "check your email" step). Agent cannot do these —
+they touch keys / the Supabase + Vercel dashboards.
+
 ## Tech Stack
 
 | Layer | Service |
