@@ -1,5 +1,37 @@
 # Buildable Kids — Session Log
 
+## LATEST — guest mode added, now the DEFAULT (easiest path)
+Owner: "add in 0auth so it's easier; default to this, and have 'use email instead'
+be a smaller option." Done.
+
+Commits:
+- `495fd04` feat(accounts): added a GUEST profile store (device-local, no login).
+  All profile helpers (list/create/rename/delete) now auto-branch on isSignedIn():
+  signed in -> Supabase (DB), else -> guest localStorage. One API, two backends.
+- `ea4a83e` feat(grownup): the screen now DEFAULTS to the guest "Who's playing?"
+  picker (instant, no login). A small underlined "Use email instead (sync across
+  devices)" link reveals the parent sign-in form. Signing in upgrades to the account
+  store; "Keep playing without an account" backs out.
+
+Behaviour summary (IMPORTANT tradeoff):
+- GUEST (default): instant play, profiles on the device, songs saved to the central
+  library by device_id. Guest songs DO NOT follow to another device (no account links
+  devices). This is the cost of "no login."
+- ACCOUNT (opt-in via the small link): profiles live in the DB; songs FOLLOW the kid
+  to any device the grown-up signs in on. Use this when cross-device sync matters.
+- UI copy makes the distinction explicit ("saved on this device" vs "follow them on
+  any device") so a parent isn't surprised.
+
+Deploy: 495fd04 Ready, ea4a83e Ready + live Production. Build green.
+
+### Owner notes
+- Nothing required to use guest mode — it just works now.
+- To test cross-device sync, still use the email path: tap "Use email instead", make a
+  grown-up account + sign in, then sign in on a 2nd device and pick the same kid tile.
+- (I never create accounts or type passwords — the grown-up does that step.)
+
+---
+
 _Working log kept in-repo so context survives a dropped browser session._
 
 ## LATEST — parent accounts RESTORED (reverses the zero-auth change)
