@@ -1,32 +1,36 @@
 // /src/lib/accounts.js
 // -------------------------------------------------------------
-// Parent/Teacher auth + kid-profile layer for Buildable Kids.
+// Two ways to play, one API:
 //
-// ONE real credentialed login belongs to a grown-up (parent/teacher).
-// Kids pick a profile by tapping a tile -- they never see a password.
-// Because profiles + songs live in the database keyed to the profile,
-// a child's creations FOLLOW them to any device the grown-up signs in on.
+//  1) GUEST (default, no login): kid profiles are stored on the DEVICE
+//     (localStorage). Instant, no account, no Bearer token. Songs/games
+//     still save to the central library via the service-key API, keyed by
+//     device_id. NOTE: guest songs do NOT follow to another device --
+//     there is no account to link devices.
 //
-// We talk to Supabase Auth + REST directly over fetch (no Supabase SDK),
-// using the PUBLIC anon key. The anon key is safe in the browser; Row
-// Level Security (db/create-accounts-rls.sql) protects each family's data.
+//  2) PARENT ACCOUNT (opt-in via "Use email instead"): a grown-up signs in
+//     with Supabase Auth; kid profiles live in the database. Because the
+//     profile id is shared, a child's songs FOLLOW them to any device the
+//     grown-up signs in on.
+//
+// The profile helpers below branch on isSignedIn(): signed in -> Supabase,
+// otherwise -> the local guest store. Callers don't need to know which.
 //
 // Env (set in Vercel -> owner does this):
 //   VITE_SUPABASE_URL        e.g. https://xxxx.supabase.co
 //   VITE_SUPABASE_ANON_KEY   the PUBLIC anon key (NOT the service key)
 //
-// SCHEMA NOTE: the kid_profiles table column is `name` (see
-// db/create-accounts.sql). The UI uses `display_name`, so reads alias it
-// (display_name:name) and writes send { name }. Earlier code wrote
-// display_name directly, which does not exist as a column and silently
-// failed -- fixed here.
+// SCHEMA NOTE: kid_profiles DB column is `name` (db/create-accounts.sql).
+// The UI uses `display_name`, so account-mode reads alias display_name:name
+// and writes send { name }.
 // -------------------------------------------------------------
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
-const SESSION_KEY = "bk_parent_session_v1"; // adult JWT + refresh
-const ACTIVE_KID_KEY = "bk_active_kid_v1";  // which kid tile is selected
+const SESSION_KEY = "bk_parent_session_v1";   // adult JWT + refresh
+const ACTIVE_KID_KEY = "bk_active_kid_v1";     // which kid tile is selected
+const GUEST_KIDS_KEY = "bk_guest_kid_profiles_v1"; // device-local profiles
 
 export function isConfigured() {
   return Boolean(SUPABASE_URL && ANON_KEY);
@@ -53,7 +57,13 @@ export function setActiveKid(kid) {
   else localStorage.removeItem(ACTIVE_KID_KEY);
 }
 
-// ---- low-level fetch helpers --------------------------------------
+function makeId() {
+  try { if (crypto && crypto.randomUUID) return crypto.randomUUID(); }
+  catch (e) { /* fall through */ }
+  return "kid_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+// ---- low-level fetch helpers (account mode) -----------------------
 function authHeaders(useUserToken) {
   const s = loadSession();
   const bearer = useUserToken && s?.access_token ? s.access_token : ANON_KEY;
@@ -84,10 +94,9 @@ async function restFetch(path, init) {
   return data;
 }
 
-// ---- AUTH (grown-up only) -----------------------------------------
-// NOTE: account *creation* and password entry are owner/parent actions.
-// These helpers exist so the parent signs in/up THEMSELVES in the UI;
-// the agent never auto-creates accounts or types passwords.
+// ---- AUTH (grown-up only; opt-in) ---------------------------------
+// The agent never auto-creates accounts or types passwords; the grown-up
+// does that in the UI.
 export async function signUpParent(email, password) {
   const data = await authFetch("signup", {
     method: "POST",
@@ -115,63 +124,92 @@ export function signOut() {
   setActiveKid(null);
 }
 
-// Make sure a parent_accounts row exists for this auth user (idempotent
-// via the primary key id = auth user id; RLS scopes it to this user).
 async function ensureParentRow() {
   try {
     const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
     if (!me?.id) return;
     const existing = await restFetch(`parent_accounts?id=eq.${me.id}&select=id`, { method: "GET" });
     if (Array.isArray(existing) && existing.length) return;
-    await restFetch("parent_accounts", {
-      method: "POST",
-      body: JSON.stringify({ id: me.id }),
-    });
-  } catch (e) { /* best-effort; surfaced on next call if it really failed */ }
+    await restFetch("parent_accounts", { method: "POST", body: JSON.stringify({ id: me.id }) });
+  } catch (e) { /* best-effort */ }
 }
 
-// ---- KID PROFILES --------------------------------------------------
-// Read: alias DB column `name` -> `display_name` for the UI.
+// ---- GUEST profile store (device-local) ---------------------------
+function loadGuestKids() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(GUEST_KIDS_KEY) || "[]");
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function saveGuestKids(arr) {
+  localStorage.setItem(GUEST_KIDS_KEY, JSON.stringify(arr || []));
+}
+
+// ---- KID PROFILES (branch: account -> Supabase, else -> guest) ----
 export async function listKidProfiles() {
-  return restFetch(
-    "kid_profiles?select=id,display_name:name,avatar,created_at&order=created_at.asc",
-    { method: "GET" }
-  );
+  if (isSignedIn()) {
+    return restFetch(
+      "kid_profiles?select=id,display_name:name,avatar,created_at&order=created_at.asc",
+      { method: "GET" }
+    );
+  }
+  return loadGuestKids();
 }
 
 export async function createKidProfile(displayName, avatar) {
   const name = (displayName || "").trim();
   if (!name) throw new Error("Please enter a name");
-  // parent_id is resolved from the signed-in user's parent_accounts row.
-  const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
-  const parent = await restFetch(`parent_accounts?id=eq.${me.id}&select=id`, { method: "GET" });
-  const parentId = parent?.[0]?.id;
-  if (!parentId) throw new Error("No parent account found");
-  const rows = await restFetch("kid_profiles?select=id,display_name:name,avatar,created_at", {
-    method: "POST",
-    body: JSON.stringify({ parent_id: parentId, name: name.slice(0, 40), avatar: avatar || "🙂" }),
-  });
-  return rows?.[0];
+
+  if (isSignedIn()) {
+    const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
+    const parent = await restFetch(`parent_accounts?id=eq.${me.id}&select=id`, { method: "GET" });
+    const parentId = parent?.[0]?.id;
+    if (!parentId) throw new Error("No parent account found");
+    const rows = await restFetch("kid_profiles?select=id,display_name:name,avatar,created_at", {
+      method: "POST",
+      body: JSON.stringify({ parent_id: parentId, name: name.slice(0, 40), avatar: avatar || "🙂" }),
+    });
+    return rows?.[0];
+  }
+
+  const kids = loadGuestKids();
+  const kid = { id: makeId(), display_name: name.slice(0, 40), avatar: avatar || "🙂", created_at: new Date().toISOString() };
+  kids.push(kid);
+  saveGuestKids(kids);
+  return kid;
 }
 
-// Rename a profile (writes DB `name`; RLS keeps it scoped to this family).
 export async function renameKidProfile(id, displayName) {
   const name = (displayName || "").trim();
   if (!name) throw new Error("Please enter a name");
-  const rows = await restFetch(`kid_profiles?id=eq.${id}&select=id,display_name:name,avatar,created_at`, {
-    method: "PATCH",
-    body: JSON.stringify({ name: name.slice(0, 40) }),
-  });
-  const updated = rows?.[0];
+
+  if (isSignedIn()) {
+    const rows = await restFetch(`kid_profiles?id=eq.${id}&select=id,display_name:name,avatar,created_at`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: name.slice(0, 40) }),
+    });
+    const updated = rows?.[0];
+    const active = getActiveKid();
+    if (active && active.id === id && updated) setActiveKid(updated);
+    return updated;
+  }
+
+  const kids = loadGuestKids();
+  const k = kids.find((x) => x.id === id);
+  if (!k) throw new Error("Profile not found");
+  k.display_name = name.slice(0, 40);
+  saveGuestKids(kids);
   const active = getActiveKid();
-  if (active && active.id === id && updated) setActiveKid(updated);
-  return updated;
+  if (active && active.id === id) setActiveKid(k);
+  return k;
 }
 
-// Remove a profile. Songs already saved keep their kid_profile_id row in
-// the central library; RLS scopes this delete to the family.
 export async function deleteKidProfile(id) {
-  await restFetch(`kid_profiles?id=eq.${id}`, { method: "DELETE" });
+  if (isSignedIn()) {
+    await restFetch(`kid_profiles?id=eq.${id}`, { method: "DELETE" });
+  } else {
+    saveGuestKids(loadGuestKids().filter((x) => x.id !== id));
+  }
   const active = getActiveKid();
   if (active && active.id === id) setActiveKid(null);
   return true;
