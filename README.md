@@ -74,6 +74,46 @@ with the owner before large changes, commit to `main`, and log every change in t
 session log below. **Never click "Create a New Game" / "Publish my game" in the live UI,
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
+
+### 🎯 ACTIVE GOAL (queued June 23 2026) — Parent/Kid accounts + persistent "my stuff" (songs, heroes, games)
+
+**Owner asked for this explicitly. If the browser/session resets, RESUME HERE.**
+
+**Goal:** Add a parent/teacher login layer so a child's creations (songs, heroes,
+worlds) follow the child across devices instead of being device-local or anonymized-only.
+This is the COPPA-standard "one adult account, lightweight kid profiles under it" model
+(like Netflix Kids / Khan Academy Kids profiles): the only real credentialed login belongs
+to a **parent or teacher**; kids pick a profile by tapping an avatar — no kid credentials.
+
+**Design (agreed with owner):**
+- **One adult (parent/teacher) account** holds the real login, email, consent, billing.
+- **Kid profiles** are sub-records under that adult account. Kids "log in" by tapping
+  their name/avatar, NOT by entering a password.
+- **Creations (songs, heroes, games) are tied to a kid profile id** so they follow the
+  child across devices once the adult signs in.
+- Auth provider: **Supabase Auth** (already using Supabase) for the adult account.
+- New tables (planned): `parent_accounts` (or reuse Supabase auth.users), `kid_profiles`
+  (id, parent_id, display_name, avatar), and add `kid_profile_id` FK to saved creations.
+- **Compliance guardrails (must keep):** verifiable parental consent before storing a
+  child's identifiable data; data minimization (store song *recipes*, not big audio blobs;
+  do NOT capture/store a child's real voice without explicit parental consent); deletion
+  support. A real privacy policy + legal review is needed before public ship — owner owns this.
+
+**Hard constraints (Claude cannot do these — owner must):**
+- Creating accounts, entering passwords, handling API keys / billing — owner does these.
+- Modifying access controls / sharing — owner does these.
+- Claude builds the schema, endpoints, and UI scaffolding only.
+
+**Sequencing plan:**
+1. Schema: `kid_profiles` + add `kid_profile_id` to saved-creation tables.
+2. Supabase Auth wiring for the adult account (sign-in UI scaffold; owner completes real auth/keys).
+3. Profile picker UI ("Who's playing?") after adult sign-in.
+4. Save/load creations scoped by `kid_profile_id`; migrate the existing anonymized save path.
+5. THEN layer ElevenLabs audio gen (owner provides ElevenLabs account + key in Vercel env).
+
+**Status:** Just logged (this entry). No code written yet. Next concrete step: read
+`src/store.js`, `src/BuildableKids.jsx`, and the save endpoints to plan the schema change.
+
 1. **Path A Ã¢ÂÂ full multi-genre generator (the big one).** Today the engine only does
    `platformer` and `breakout` (see "Game Types" section below for the Path A/B plan).
    Goal: a real multi-genre generator Ã¢ÂÂ next target genre is **Tetris**, then generalize
