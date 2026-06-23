@@ -1,4 +1,4 @@
-// /src/lib/accounts.js
+null// /src/lib/accounts.js
 // -------------------------------------------------------------
 // Parent/Teacher auth + kid-profile layer for Buildable Kids.
 //
@@ -110,16 +110,16 @@ export function signOut() {
 }
 
 // Make sure a parent_accounts row exists for this auth user (idempotent
-// via the unique auth_user_id constraint; RLS scopes it to this user).
+// via the primary key (id = auth user id); RLS scopes it to this user).
 async function ensureParentRow() {
   try {
     const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
     if (!me?.id) return;
-    const existing = await restFetch(`parent_accounts?auth_user_id=eq.${me.id}&select=id`, { method: "GET" });
+    const existing = await restFetch(`parent_accounts?id=eq.${me.id}&select=id`, { method: "GET" });
     if (Array.isArray(existing) && existing.length) return;
     await restFetch("parent_accounts", {
       method: "POST",
-      body: JSON.stringify({ auth_user_id: me.id, account_type: "parent" }),
+      body: JSON.stringify({ id: me.id }),
     });
   } catch (e) { /* best-effort; surfaced on next call if it really failed */ }
 }
@@ -132,7 +132,7 @@ export async function listKidProfiles() {
 export async function createKidProfile(displayName, avatar) {
   // parent_id is resolved from the signed-in user's parent_accounts row.
   const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
-  const parent = await restFetch(`parent_accounts?auth_user_id=eq.${me.id}&select=id`, { method: "GET" });
+  const parent = await restFetch(`parent_accounts?id=eq.${me.id}&select=id`, { method: "GET" });
   const parentId = parent?.[0]?.id;
   if (!parentId) throw new Error("No parent account found");
   const rows = await restFetch("kid_profiles", {
