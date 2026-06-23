@@ -37,6 +37,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [signedIn, setSignedIn] = useState(isSignedIn());
 
   // profile picker state
@@ -58,15 +59,35 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
 
   async function handleAuth(e) {
     e.preventDefault();
-    setError(null); setBusy(true);
+    setError(null); setNotice(null); setBusy(true);
     try {
-      if (mode === "signup") await signUpParent(email.trim(), password);
-      else await signInParent(email.trim(), password);
+      if (mode === "signup") {
+        const res = await signUpParent(email.trim(), password);
+        if (res && res.needsEmailConfirmation) {
+          // Account made, but no session yet -- a confirmation email was sent.
+          setNotice("Almost there! Check " + (email.trim() || "your email") + " for a confirmation link, then come back and sign in.");
+          setMode("signin");
+          setPassword("");
+          return;
+        }
+      } else {
+        await signInParent(email.trim(), password);
+      }
       setSignedIn(true);
       setShowAuth(false);
       setPassword("");
-    } catch (err) { setError(err.message || "Could not sign in"); }
-    finally { setBusy(false); }
+    } catch (err) {
+      const m = (err && err.message) || "Could not sign in";
+      if (/rate limit/i.test(m)) {
+        setError("Too many tries just now. Please wait a few minutes and try again.");
+      } else if (/already registered|already been registered/i.test(m)) {
+        setError("That email already has an account. Try signing in instead.");
+      } else if (/confirm/i.test(m)) {
+        setError("Please confirm your email first (check your inbox), then sign in.");
+      } else {
+        setError(m);
+      }
+    } finally { setBusy(false); }
   }
 
   async function handleAddKid(e) {
@@ -194,6 +215,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={mode === "signup" ? "new-password" : "current-password"} />
           {error && <p style={S.error}>{error}</p>}
+        {notice && <p style={S.notice}>{notice}</p>}
           <button style={S.primary} type="submit" disabled={busy}>
             {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
           </button>
@@ -234,6 +256,7 @@ const S = {
   smallLink: { background: "none", border: "none", color: "rgba(201,179,255,0.85)", cursor: "pointer",
     fontFamily: NUN, fontWeight: 600, fontSize: "13px", marginTop: "14px", textDecoration: "underline" },
   error: { color: "#ff9bb0", fontSize: "14px", margin: 0 },
+  notice: { color: "#9be3b4", fontSize: "14px", lineHeight: 1.5, margin: 0 },
   kidGrid: { display: "flex", flexWrap: "wrap", gap: "12px" },
   kidWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" },
   kidTile: { width: "92px", height: "104px", borderRadius: "18px", background: "rgba(0,0,0,0.25)",
