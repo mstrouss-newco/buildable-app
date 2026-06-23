@@ -39,13 +39,60 @@ function makeTitle(vibe, theme, prompt) {
   return theme ? `${v} ${theme} Song` : `${v} Song`;
 }
 
-function buildBrief({ vibe, theme, prompt }) {
-  const v = VIBES[vibe] || VIBES.happy;
-  const parts = [v.mood, v.tempo];
-  if (theme) parts.push(`themed around a ${theme} world`);
-  if (prompt) parts.push(`about: ${prompt}`);
-  parts.push("instrumental, kid-friendly, around 20-30 seconds, no explicit content");
+// Human-readable descriptions for each kid choice, used to build the music
+// "brief" we hand to the provider and the friendly recipe we show the kid.
+const GENRE_DESC = {
+  pop: "pop", country: "country with a twang", hiphop: "hip hop with a beat",
+  rock: "rock", disco: "funky disco", sleepy: "soft sleepy-time lullaby",
+  marching: "marching-band style", reggae: "laid-back reggae",
+};
+const SINGER_DESC = {
+  none: "instrumental (no singer)", boy: "a boy singing",
+  girl: "a girl singing", group: "a group of kids singing together",
+  both: "boy and girl singing together",
+};
+const DRUM_DESC = {
+  big: "big booming drums", soft: "soft gentle beats",
+  marching: "marching drums", bongos: "bongo drums",
+};
+const GUITAR_DESC = {
+  electric: "electric guitar", acoustic: "acoustic guitar",
+  twangy: "twangy country guitar", none: "no guitar",
+};
+const STRING_DESC = {
+  violin: "violin", cello: "deep cello strings", harp: "gentle harp", none: "no strings",
+};
+const SPEED_DESC = { slow: "slow", medium: "medium-paced", fast: "fast and energetic" };
+
+function buildBrief(c) {
+  const v = VIBES[c.vibe] || VIBES.happy;
+  const parts = [v.mood, c.speed ? SPEED_DESC[c.speed] || v.tempo : v.tempo];
+  if (c.genre && GENRE_DESC[c.genre]) parts.push(GENRE_DESC[c.genre] + " style");
+  if (c.singer && SINGER_DESC[c.singer]) parts.push(SINGER_DESC[c.singer]);
+  const instruments = [];
+  if (c.drums && DRUM_DESC[c.drums]) instruments.push(DRUM_DESC[c.drums]);
+  if (c.guitar && GUITAR_DESC[c.guitar]) instruments.push(GUITAR_DESC[c.guitar]);
+  if (c.strings && STRING_DESC[c.strings]) instruments.push(STRING_DESC[c.strings]);
+  if (instruments.length) parts.push("featuring " + instruments.join(", "));
+  if (c.theme) parts.push(`themed around a ${c.theme} world`);
+  if (c.prompt) parts.push(`about: ${c.prompt}`);
+  parts.push("kid-friendly, around 20-30 seconds, no explicit content");
   return parts.join(", ");
+}
+
+// A short, friendly one-liner describing what the kid built (shown on the draft).
+function makeRecipe(c) {
+  const bits = [];
+  const vibeLabel = c.vibe ? c.vibe.charAt(0).toUpperCase() + c.vibe.slice(1) : "Happy";
+  bits.push(vibeLabel);
+  if (c.genre && GENRE_DESC[c.genre]) bits.push(GENRE_DESC[c.genre]);
+  if (c.singer && c.singer !== "none" && SINGER_DESC[c.singer]) bits.push(SINGER_DESC[c.singer]);
+  const inst = [];
+  if (c.drums && DRUM_DESC[c.drums]) inst.push(DRUM_DESC[c.drums]);
+  if (c.guitar && c.guitar !== "none" && GUITAR_DESC[c.guitar]) inst.push(GUITAR_DESC[c.guitar]);
+  if (c.strings && c.strings !== "none" && STRING_DESC[c.strings]) inst.push(STRING_DESC[c.strings]);
+  if (inst.length) bits.push(inst.join(" + "));
+  return "🎵 " + bits.join(" · ");
 }
 
 // --- The single dispatch point. Returns { audioUrl, durationSec, provider, meta }.
@@ -63,19 +110,26 @@ async function generateMusic(brief, opts) {
 
 // DEMO: returns a tiny WAV data URL (a pleasant chord) so the flow is playable now.
 function generateDemo(brief, opts) {
-  const seconds = 3;
+  const o = opts || {};
+  // Speed changes how long + how lively the demo tone feels.
+  const speed = o.speed || "";
+  const seconds = speed === "slow" ? 4 : speed === "fast" ? 2 : 3;
   const rate = 8000;
   const n = seconds * rate;
   const freqs = { happy: [523, 659, 784], epic: [392, 523, 659], spooky: [330, 392, 466],
                   silly: [587, 740, 880], chill: [349, 440, 523], dance: [440, 554, 659] };
-  const f = freqs[(opts && opts.vibe) || "happy"] || freqs.happy;
+  const f = freqs[o.vibe || "happy"] || freqs.happy;
+  // A gentle low harmonic when the kid added drums/strings, for a fuller demo.
+  const addBass = !!(o.drums || o.strings);
   const data = new Int16Array(n);
   for (let i = 0; i < n; i++) {
     const t = i / rate;
     let s = 0;
     for (const hz of f) s += Math.sin(2 * Math.PI * hz * t);
+    if (addBass) s += 0.5 * Math.sin(2 * Math.PI * (f[0] / 2) * t);
     const env = Math.min(1, t * 4) * Math.max(0, 1 - t / seconds);
-    data[i] = Math.max(-1, Math.min(1, (s / f.length) * env)) * 32767 * 0.6;
+    const div = f.length + (addBass ? 0.5 : 0);
+    data[i] = Math.max(-1, Math.min(1, (s / div) * env)) * 32767 * 0.6;
   }
   const wav = encodeWav(data, rate);
   const b64 = Buffer.from(wav).toString("base64");
@@ -139,27 +193,43 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   const body = await readBody(req);
-  const vibe = (body.vibe || "happy").toString().toLowerCase().slice(0, 20);
-  const theme = (body.theme || "").toString().slice(0, 40);
-  const prompt = (body.prompt || "").toString().slice(0, 300);
+  const clean = (x, n) => (x || "").toString().toLowerCase().slice(0, n);
+  const choices = {
+    vibe:    clean(body.vibe, 20) || "happy",
+    genre:   clean(body.genre, 20),
+    singer:  clean(body.singer, 20),
+    drums:   clean(body.drums, 20),
+    guitar:  clean(body.guitar, 20),
+    strings: clean(body.strings, 20),
+    speed:   clean(body.speed, 20),
+    theme:   (body.theme || "").toString().slice(0, 40),
+    prompt:  (body.prompt || "").toString().slice(0, 300),
+  };
 
-  const title = makeTitle(vibe, theme, prompt);
-  const brief = buildBrief({ vibe, theme, prompt });
-  const v = VIBES[vibe] || VIBES.happy;
+  const title = makeTitle(choices.vibe, choices.theme, choices.prompt);
+  const brief = buildBrief(choices);
+  const recipe = makeRecipe(choices);
+  const v = VIBES[choices.vibe] || VIBES.happy;
 
   try {
-    const result = await generateMusic(brief, { vibe, theme, prompt });
+    const result = await generateMusic(brief, { ...choices, recipe });
     return res.status(200).json({
       ok: true,
       title,
-      vibe,
-      theme: theme || null,
-      prompt: prompt || null,
+      vibe: choices.vibe,
+      genre: choices.genre || null,
+      singer: choices.singer || null,
+      drums: choices.drums || null,
+      guitar: choices.guitar || null,
+      strings: choices.strings || null,
+      speed: choices.speed || null,
+      theme: choices.theme || null,
+      prompt: choices.prompt || null,
       coverColor: v.color,
       audioUrl: result.audioUrl,
       durationSec: result.durationSec || null,
       provider: result.provider,
-      meta: result.meta || null,
+      meta: { ...(result.meta || {}), recipe, choices },
     });
   } catch (e) {
     return res.status(500).json({ error: "generation failed", detail: String((e && e.message) || e).slice(0, 200) });
