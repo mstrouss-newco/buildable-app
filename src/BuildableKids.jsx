@@ -7,8 +7,10 @@ import { CharacterCreatorScreen, LevelCreatorScreen } from "./CreatorScreen";
 import MyStuffScreen from "./MyStuff";
 import MusicMaker from "./MusicMaker";
 import AdminDashboard from "./AdminDashboard";
+import GrownUpScreen from "./GrownUpScreen";
 import LoadingGames from "./LoadingGames";
 import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
+import { getActiveKid } from "./lib/accounts";
 
 // Screens
 const SCREEN_INTRO = "intro";
@@ -19,6 +21,7 @@ const SCREEN_PLAY = "play";
 const SCREEN_MY_STUFF = "my_stuff";
 const SCREEN_ADMIN = "admin";
 const SCREEN_MUSIC = "music";
+const SCREEN_GROWNUP = "grownup";
 export default function BuildableKids() {
   const [screen, setScreen] = useState(SCREEN_INTRO);
   const [returnTo, setReturnTo] = useState(SCREEN_INTRO);
@@ -82,6 +85,8 @@ export default function BuildableKids() {
         onMyStuff={() => openMyStuff(SCREEN_INTRO)}
           onMusic={() => setScreen(SCREEN_MUSIC)}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
+        onGrownUp={() => setScreen(SCREEN_GROWNUP)}
+        activeKid={activeKid}
       />
     );
   }
@@ -181,6 +186,19 @@ export default function BuildableKids() {
   }
 
   // ============ ADMIN DASHBOARD ============
+  // ──────── GROWN-UPS (parent sign-in + kid profile picker) ────────
+  if (screen === SCREEN_GROWNUP) {
+    return (
+      <GrownUpScreen
+        onBack={() => setScreen(SCREEN_INTRO)}
+        onProfileChosen={(kid) => {
+          setActiveKidState(kid);
+          setScreen(SCREEN_INTRO);
+        }}
+      />
+    );
+  }
+
   if (screen === SCREEN_ADMIN) {
     return <AdminDashboard onExit={() => setScreen(SCREEN_INTRO)} />;
   }
@@ -189,6 +207,7 @@ export default function BuildableKids() {
 // ============ TOP NAVIGATION BAR ============
 function TopNav({ onBack, onHome, onMyStuff }) {
   const [counts, setCounts] = useState(libraryCounts());
+  const [activeKid, setActiveKidState] = useState(getActiveKid());
   useEffect(() => {
     const refresh = () => setCounts(libraryCounts());
     refresh();
@@ -213,7 +232,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 }
 
 // ============ INTRO SCREEN COMPONENT ============
-function IntroScreen({ onComplete, onMyStuff, onAdmin, onMusic }) {
+function IntroScreen({ onComplete, onMyStuff, onAdmin, onMusic, onGrownUp, activeKid }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState(7);
 
@@ -229,6 +248,7 @@ function IntroScreen({ onComplete, onMyStuff, onAdmin, onMusic }) {
         <button onClick={onAdmin} style={styles.myStuffButton}>🔐 Admin</button>
         <button onClick={onMusic} style={styles.myStuffButton}>🎵 Music</button>
           <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+        <button onClick={onGrownUp} style={styles.myStuffButton}>{activeKid ? `${activeKid.avatar || "🙂"} ${activeKid.display_name}` : "👨‍👩‍👧 Grown-ups"}</button>
       </div>
 
       <div style={styles.gameIcon}>🎮</div>
