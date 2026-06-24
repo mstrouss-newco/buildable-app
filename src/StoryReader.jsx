@@ -47,27 +47,38 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const page = pages[idx] || {};
   const words = wordsOf(page.text);
 
-  // BACKGROUND PRE-GENERATION: the moment the book opens, kick off all page
-  // images in parallel. The child reads page 1 over the illustrated scene while
-  // every page is being painted, so by the time they tap ahead the art is ready.
-  // (gpt-image-1 is ~30-40s/image but they run concurrently, not back-to-back.)
+  // BACKGROUND PRE-GENERATION with a small CONCURRENCY LIMIT (2 at a time).
+  // Firing all 6 at once trips gpt-image-1's per-minute rate limit (only the first
+  // couple succeed). A 2-wide worker pool paints every page in order without bursting;
+  // the server also retries on 429. The child reads page 1 over the scene meanwhile.
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
     let cancelled = false;
+    const queue = [];
     pages.forEach((p, i) => {
-      if (p.art_url) { setArt((a) => ({ ...a, [i]: p.art_url })); return; }
-      setArt((a) => ({ ...a, [i]: "loading" }));
-      const ctrl = new AbortController();
-      const to = setTimeout(() => ctrl.abort(), 60000);
-      fetch("/api/generate-story-art", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }), signal: ctrl.signal,
-      })
-        .then((r) => r.json())
-        .then((j) => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: j && j.url ? j.url : null })); })
-        .catch(() => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: null })); });
+      if (p.art_url) setArt((a) => ({ ...a, [i]: p.art_url }));
+      else { setArt((a) => ({ ...a, [i]: "loading" })); queue.push(i); }
     });
+    const CONCURRENCY = 2;
+    let active = 0, qi = 0;
+    const pump = () => {
+      while (!cancelled && active < CONCURRENCY && qi < queue.length) {
+        const i = queue[qi++]; active++;
+        const p = pages[i];
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 70000);
+        fetch("/api/generate-story-art", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }), signal: ctrl.signal,
+        })
+          .then((r) => r.json())
+          .then((j) => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: j && j.url ? j.url : null })); })
+          .catch(() => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: null })); })
+          .finally(() => { active--; if (!cancelled) pump(); });
+      }
+    };
+    pump();
     return () => { cancelled = true; };
   }, []);
 
