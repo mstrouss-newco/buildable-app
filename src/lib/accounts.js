@@ -291,9 +291,10 @@ function oauthRedirectTarget() {
     const u = new URL(window.location.href);
     u.hash = "";
     u.search = "";
+    u.pathname = "/app";
     return u.toString();
   } catch (e) {
-    return window.location.origin + window.location.pathname;
+    return window.location.origin + "/app";
   }
 }
 

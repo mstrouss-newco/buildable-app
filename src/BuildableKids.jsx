@@ -10,7 +10,7 @@ import AdminDashboard from "./AdminDashboard";
 import GrownUpScreen from "./GrownUpScreen";
 import LoadingGames from "./LoadingGames";
 import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
-import { getActiveKid, isSignedIn } from "./lib/accounts";
+import { getActiveKid, isSignedIn, completeOAuthRedirect } from "./lib/accounts";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -34,6 +34,18 @@ export default function BuildableKids() {
     character: null,
     level: null,
   });
+
+  // Finish a Google sign-in no matter which screen we land on: if the return
+  // tokens are in the URL, complete the session and go straight to "Who's playing?".
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const h = window.location.hash || "";
+    if (h.indexOf("access_token") !== -1) {
+      completeOAuthRedirect().then((done) => {
+        if (done) { setActiveKidState(getActiveKid()); setScreen(SCREEN_GROWNUP); }
+      });
+    }
+  }, []);
 
   const goHome = () => setScreen(SCREEN_HOME);
   const openMyStuff = (from) => {
@@ -288,11 +300,26 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onMyStuff, onGrown
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.introTopBar, justifyContent: "flex-end" }}>
-        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
-        <button onClick={onGrownUp} style={styles.myStuffButton}>
-          {activeKid ? `${activeKid.avatar || "🙂"} ${activeKid.display_name}` : "👨‍👩‍👧 Grown-ups"}
-        </button>
+      <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          {activeKid && (
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: "8px",
+              background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)",
+              borderRadius: "999px", padding: "8px 16px", fontFamily: NUN, fontWeight: 800,
+              fontSize: "15px", color: "#fff",
+            }}>
+              <span style={{ fontSize: "20px" }}>{activeKid.avatar || "🙂"}</span>
+              Playing as {activeKid.display_name}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+          <button onClick={onGrownUp} style={styles.myStuffButton}>
+            {activeKid ? "🔄 Switch kid" : "👨‍👩‍👧 Grown-ups"}
+          </button>
+        </div>
       </div>
 
       <div style={styles.gameIcon}>🎮</div>
