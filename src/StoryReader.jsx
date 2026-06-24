@@ -39,6 +39,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const [art, setArt] = useState({});            // pageIndex -> url | "loading" | null
   const [spoken, setSpoken] = useState(-1);      // highlighted word index
   const [playing, setPlaying] = useState(false);
+  const startedRef = useRef(false);
   const palette = WORLD_PALETTE[story && story.world] || ["#3a2c63", "#7a4a86"];
   const made = (story && story.created_with) || {};
   const heroEmoji = HERO_EMOJI[made.hero] || "🐰";
@@ -46,33 +47,31 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const page = pages[idx] || {};
   const words = wordsOf(page.text);
 
-  // Lazy page-art: fetch current page (and prefetch the next) if not present.
+  // BACKGROUND PRE-GENERATION: the moment the book opens, kick off all page
+  // images in parallel. The child reads page 1 over the illustrated scene while
+  // every page is being painted, so by the time they tap ahead the art is ready.
+  // (gpt-image-1 is ~30-40s/image but they run concurrently, not back-to-back.)
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
     let cancelled = false;
-    async function ensureArt(i) {
-      if (i < 0 || i >= pages.length) return;
-      const p = pages[i];
-      if (p.art_url) { setArt((a) => (a[i] ? a : { ...a, [i]: p.art_url })); return; }
-      setArt((a) => {
-        if (a[i] !== undefined) return a;          // already fetching/fetched
-        const ctrl = new AbortController();
-        const to = setTimeout(() => ctrl.abort(), 45000);
-        fetch("/api/generate-story-art", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }), signal: ctrl.signal,
-        })
-          .then((r) => r.json())
-          .then((j) => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: j && j.url ? j.url : null })); })
-          .catch(() => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: null })); });
-        return { ...a, [i]: "loading" };
-      });
-    }
-    ensureArt(idx);
-    ensureArt(idx + 1);
+    pages.forEach((p, i) => {
+      if (p.art_url) { setArt((a) => ({ ...a, [i]: p.art_url })); return; }
+      setArt((a) => ({ ...a, [i]: "loading" }));
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 60000);
+      fetch("/api/generate-story-art", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }), signal: ctrl.signal,
+      })
+        .then((r) => r.json())
+        .then((j) => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: j && j.url ? j.url : null })); })
+        .catch(() => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: null })); });
+    });
     return () => { cancelled = true; };
-  }, [idx, pages, story]);
+  }, []);
 
-  // Stop any narration when leaving a page or unmounting.
+    // Stop any narration when leaving a page or unmounting.
   useEffect(() => {
     stopSpeech();
     setSpoken(-1); setPlaying(false);
@@ -104,6 +103,18 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
     window.speechSynthesis.speak(u);
   }
   function toggleRead() { if (playing) { stopSpeech(); setPlaying(false); setSpoken(-1); } else { readAloud(); } }
+
+  // How many pages have finished painting (for a gentle progress hint).
+  const readyCount = pages.reduce((n, _p, i) => n + (art[i] && art[i] !== "loading" ? 1 : 0), 0);
+  const stillPainting = pages.some((_p, i) => art[i] === "loading");
+  function persistableArt(i, fallback) {
+    const u = art[i];
+    if (typeof u === "string" && u !== "loading" && !u.startsWith("data:") && u.length < 600) return u; // short external URL only
+    return fallback || null; // skip heavy inline data: blobs (Vercel body limit) — regenerated on re-read
+  }
+  function enrichedStory() {
+    return { ...story, pages: pages.map((p, i) => ({ ...p, art_url: persistableArt(i, p.art_url) })) };
+  }
 
   const isLast = idx === pages.length - 1;
   const artUrl = art[idx] && art[idx] !== "loading" ? art[idx] : null;
@@ -141,11 +152,14 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
         )}
       </div>
 
-      <p style={s.pageNum}>Page {idx + 1} of {pages.length}</p>
+      <p style={s.pageNum}>
+        Page {idx + 1} of {pages.length}
+        {stillPainting && <span style={{ opacity: 0.7 }}>{"  ·  🎨 painting your book… " + readyCount + "/" + pages.length}</span>}
+      </p>
 
       {isLast && (
         <div style={s.endRow}>
-          <button style={s.saveBtn} disabled={saving} onClick={onSave}>
+          <button style={s.saveBtn} disabled={saving} onClick={() => onSave(enrichedStory())}>
             {saving ? "Saving…" : "💾 Save to my library"}
           </button>
           {savedMsg && <p style={s.savedMsg}>{savedMsg}</p>}
