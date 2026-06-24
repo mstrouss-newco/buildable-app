@@ -77,13 +77,13 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
     } catch { setError("Hmm, that didn't work. Try again!"); setView("build"); }
   }
 
-  async function saveStory() {
+  async function saveStory(enriched) {
     if (!story) return;
     setSaving(true); setSavedMsg("");
     try {
       const r = await fetch("/api/save-story", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ story, deviceId, kidProfileId, kidName: heroName || playerName || "", coverColor: "#7a4a86" }),
+        body: JSON.stringify({ story: toSave, deviceId, kidProfileId, kidName: heroName || playerName || "", coverColor: "#7a4a86" }),
       });
       const j = await r.json();
       if (r.ok && j.ok) { setSavedMsg("Saved to your library! 📚"); loadSaved(); }

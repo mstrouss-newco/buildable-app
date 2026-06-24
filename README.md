@@ -1387,3 +1387,32 @@ for no MVP benefit. Revisit Phaser only if pages later need interactive/physics 
 
 ### Preserved
 Games builder and Music Maker untouched; production build green.
+
+## Stories: art reliability + background pre-generation — June 24 2026
+
+Follow-on to the Buildable Stories MVP (same day).
+
+### Finding: DALL·E is retired; gpt-image-1 is the only image model
+A live probe showed the OpenAI account returns "model does not exist" for both
+`dall-e-3` and `dall-e-2` — OpenAI **retired the DALL·E models (Mar 4 2026)**. The
+only available image model is `gpt-image-1` (also used by games). `generate-story-art.js`
+now calls `gpt-image-1` (quality:"low" for speed/cost) directly; the dall-e entries
+remain only as harmless fallbacks for other accounts.
+
+### Background pre-generation (hides gpt-image-1's ~30-40s latency)
+`StoryReader` now fires ALL page-art requests **in parallel on mount** (not lazily per
+page). The child reads page 1 over the illustrated scene while every page is painted
+concurrently, so art is ready by the time they tap ahead. A subtle "painting your
+book… N/6" hint shows progress. Per-request timeout 60s; the scene fallback covers any
+page that doesn't finish.
+
+### Persisting art on save (guarded)
+Saving folds resolved art back into the story JSON — but **only short external URLs**;
+giant inline `data:` blobs from gpt-image-1 are stripped so save bodies stay under
+Vercel's ~4.5MB limit (re-reads regenerate art via the same background flow).
+NEXT: upload page art to Supabase Storage and persist the returned URLs for instant
+re-reads without regeneration.
+
+### Diagnostics left in place (safe)
+`GET /api/generate-story-art` returns booleans only (`hasOpenAI`/`hasAnthropic`/
+`hasSupabase`) — no secret values — for quick env checks.
