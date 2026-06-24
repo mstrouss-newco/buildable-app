@@ -13,6 +13,7 @@ import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./stor
 import { getActiveKid } from "./lib/accounts";
 
 // Screens
+const SCREEN_HOME = "home";
 const SCREEN_INTRO = "intro";
 const SCREEN_GAME_TYPE = "game_type";
 const SCREEN_CHARACTER_CREATOR = "character_creator";
@@ -23,9 +24,9 @@ const SCREEN_ADMIN = "admin";
 const SCREEN_MUSIC = "music";
 const SCREEN_GROWNUP = "grownup";
 export default function BuildableKids() {
-  const [screen, setScreen] = useState(SCREEN_INTRO);
+  const [screen, setScreen] = useState(SCREEN_HOME);
   const [activeKid, setActiveKidState] = useState(getActiveKid());
-  const [returnTo, setReturnTo] = useState(SCREEN_INTRO);
+  const [returnTo, setReturnTo] = useState(SCREEN_HOME);
   const [gameData, setGameData] = useState({
     playerName: "",
     age: null,
@@ -34,7 +35,7 @@ export default function BuildableKids() {
     level: null,
   });
 
-  const goHome = () => setScreen(SCREEN_INTRO);
+  const goHome = () => setScreen(SCREEN_HOME);
   const openMyStuff = (from) => {
     setReturnTo(from);
     setScreen(SCREEN_MY_STUFF);
@@ -75,6 +76,21 @@ export default function BuildableKids() {
     onHome: goHome,
   };
 
+  // ============ HOME HUB ============
+  if (screen === SCREEN_HOME) {
+    return (
+      <HomeScreen
+        activeKid={activeKid}
+        onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
+        onGames={() => setScreen(SCREEN_INTRO)}
+        onStories={() => {}}
+        onMyStuff={() => openMyStuff(SCREEN_HOME)}
+        onGrownUp={() => setScreen(SCREEN_GROWNUP)}
+        onAdmin={() => setScreen(SCREEN_ADMIN)}
+      />
+    );
+  }
+
   // ============ INTRO SCREEN ============
   if (screen === SCREEN_INTRO) {
     return (
@@ -83,10 +99,8 @@ export default function BuildableKids() {
           setGameData((prev) => ({ ...prev, playerName: name, age }));
           setScreen(SCREEN_GAME_TYPE);
         }}
+        onHome={goHome}
         onMyStuff={() => openMyStuff(SCREEN_INTRO)}
-          onMusic={() => setScreen(SCREEN_MUSIC)}
-        onAdmin={() => setScreen(SCREEN_ADMIN)}
-        onGrownUp={() => setScreen(SCREEN_GROWNUP)}
         activeKid={activeKid}
       />
     );
@@ -176,8 +190,8 @@ export default function BuildableKids() {
     return (
       <MusicMaker
         playerName={gameData.playerName}
-        onHome={() => setScreen(SCREEN_INTRO)}
-        onBack={() => setScreen(returnTo || SCREEN_INTRO)}
+        onHome={() => setScreen(SCREEN_HOME)}
+        onBack={() => setScreen(returnTo || SCREEN_HOME)}
       />
     );
   }
@@ -191,17 +205,17 @@ export default function BuildableKids() {
   if (screen === SCREEN_GROWNUP) {
     return (
       <GrownUpScreen
-        onBack={() => setScreen(SCREEN_INTRO)}
+        onBack={() => setScreen(SCREEN_HOME)}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
-          setScreen(SCREEN_INTRO);
+          setScreen(SCREEN_HOME);
         }}
       />
     );
   }
 
   if (screen === SCREEN_ADMIN) {
-    return <AdminDashboard onExit={() => setScreen(SCREEN_INTRO)} />;
+    return <AdminDashboard onExit={() => setScreen(SCREEN_HOME)} />;
   }
 }
 
@@ -232,7 +246,87 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 }
 
 // ============ INTRO SCREEN COMPONENT ============
-function IntroScreen({ onComplete, onMyStuff, onAdmin, onMusic, onGrownUp, activeKid }) {
+// ============ HOME HUB COMPONENT ============
+// The new front door. Segments the three experiences (Music live, Games in
+// beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
+function HomeScreen({ activeKid, onMusic, onGames, onStories, onMyStuff, onGrownUp, onAdmin }) {
+  const ExperienceCard = ({ emoji, title, desc, badge, badgeColor, onClick, featured, disabled }) => (
+    <button
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      style={{
+        position: "relative",
+        textAlign: "left",
+        padding: "26px 24px",
+        borderRadius: "22px",
+        border: featured ? "1px solid rgba(192,107,153,0.55)" : CARD_BORDER,
+        background: featured ? GRAD : CARD_BG,
+        color: "#fff",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1,
+        boxShadow: featured ? "0 14px 40px rgba(155,126,221,0.45)" : "none",
+        fontFamily: NUN,
+        transition: "transform 0.12s ease",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        minHeight: "150px",
+      }}
+    >
+      <span style={{
+        position: "absolute", top: "16px", right: "16px",
+        fontSize: "12px", fontWeight: 800, letterSpacing: "0.5px",
+        textTransform: "uppercase",
+        padding: "5px 11px", borderRadius: "999px",
+        background: badgeColor, color: "#1a1330",
+      }}>{badge}</span>
+      <div style={{ fontSize: "44px", lineHeight: 1 }}>{emoji}</div>
+      <div style={{ fontFamily: FRED, fontSize: "26px", fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: "15px", color: featured ? "rgba(255,255,255,0.92)" : "#cfc9e6" }}>{desc}</div>
+    </button>
+  );
+
+  return (
+    <div style={styles.container}>
+      <div style={{ ...styles.introTopBar, justifyContent: "flex-end" }}>
+        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+        <button onClick={onGrownUp} style={styles.myStuffButton}>
+          {activeKid ? `${activeKid.avatar || "🙂"} ${activeKid.display_name}` : "👨‍👩‍👧 Grown-ups"}
+        </button>
+      </div>
+
+      <div style={styles.gameIcon}>🎮</div>
+      <h1 style={styles.logo}>buildablekids.</h1>
+      <p style={styles.tagline}>What do you want to make today?</p>
+
+      <div style={{
+        width: "100%", maxWidth: "920px", marginTop: "26px",
+        display: "grid", gap: "18px",
+        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+      }}>
+        <ExperienceCard
+          emoji="🎵" title="Music" desc="Make your own song. Ready to play right now!"
+          badge="Ready" badgeColor="#7CF6B0" onClick={onMusic} featured
+        />
+        <ExperienceCard
+          emoji="🕹️" title="Games" desc="Build a game with your own hero and world."
+          badge="Beta" badgeColor="#FFD66B" onClick={onGames}
+        />
+        <ExperienceCard
+          emoji="📖" title="Stories" desc="Create your own story adventure. Coming soon!"
+          badge="Soon" badgeColor="#C9C3E6" disabled
+        />
+      </div>
+
+      <button onClick={onAdmin} style={{
+        marginTop: "30px", background: "transparent", border: "none",
+        color: "#6f688f", fontSize: "13px", fontFamily: NUN, cursor: "pointer",
+      }}>🔐 Admin</button>
+    </div>
+  );
+}
+
+function IntroScreen({ onComplete, onHome, onMyStuff, activeKid }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState(7);
 
@@ -244,15 +338,13 @@ function IntroScreen({ onComplete, onMyStuff, onAdmin, onMusic, onGrownUp, activ
 
   return (
     <div style={styles.container}>
-      <div style={styles.introTopBar}>
-        <button onClick={onAdmin} style={styles.myStuffButton}>🔐 Admin</button>
-        <button onClick={onMusic} style={styles.myStuffButton}>🎵 Music</button>
-          <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
-        <button onClick={onGrownUp} style={styles.myStuffButton}>{activeKid ? `${activeKid.avatar || "🙂"} ${activeKid.display_name}` : "👨‍👩‍👧 Grown-ups"}</button>
+      <div style={{ ...styles.introTopBar, justifyContent: "space-between" }}>
+        <button onClick={onHome} style={styles.backButton}>← Home</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
       </div>
 
       <div style={styles.gameIcon}>🎮</div>
-      <h1 style={styles.logo}>buildablekids.</h1>
+      <h1 style={styles.logo}>Make a game</h1>
       <p style={styles.tagline}>Build your own game in 3 minutes!</p>
 
       <div style={styles.formCard}>
