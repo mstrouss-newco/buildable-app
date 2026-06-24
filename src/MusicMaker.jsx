@@ -215,10 +215,10 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
         setStatus(j.message || "You already have 10 songs!");
         setTab("library");
       } else {
-        setStatus("Couldn't save — try again.");
+        setStatus("Couldn't save — " + (j.detail || j.error || ("error " + r.status)));
       }
-    } catch {
-      setStatus("Couldn't save — try again.");
+    } catch (e) {
+      setStatus("Couldn't save — " + ((e && e.message) || "network error"));
     }
   }
 

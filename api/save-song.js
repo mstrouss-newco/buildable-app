@@ -94,6 +94,26 @@ export default async function handler(req, res) {
     });
     if (!insRes.ok) {
       const detail = await insRes.text();
+      // Resilience: a stale/guest kid_profile_id that isn't in the database
+      // triggers a foreign-key error. Retry once without the profile link so the
+      // song still saves (device lane) instead of hard-failing.
+      if (kidProfileId) {
+        const retry = await sb("saved_songs", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({ ...row, kid_profile_id: null }),
+        });
+        if (retry.ok) {
+          const savedRetry = await retry.json();
+          return res.status(200).json({
+            ok: true,
+            song: Array.isArray(savedRetry) ? savedRetry[0] : savedRetry,
+            count: current + 1, max: MAX_SONGS, note: "saved to device",
+          });
+        }
+        const detail2 = await retry.text();
+        return res.status(502).json({ error: "save failed", status: retry.status, detail: (detail2 || detail).slice(0, 300) });
+      }
       return res.status(502).json({ error: "save failed", status: insRes.status, detail: detail.slice(0, 300) });
     }
     const saved = await insRes.json();
