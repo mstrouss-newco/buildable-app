@@ -79,6 +79,26 @@ async function generateImage(prompt, openaiKey, timeoutMs = 28000) {
 export default async function handler(req, res) {
   // Safe diagnostic (booleans only, never secret values): GET /api/generate-story-art
   if (req.method === "GET") {
+    // ?probe=art runs ONE real image call and reports success + any error text
+    // (no secret values) so we can confirm the account can actually generate art.
+    if (req.query && req.query.probe === "art") {
+      const key = process.env.OPENAI_API_KEY;
+      if (!key) return res.status(200).json({ ok: true, probe: true, gotImage: false, reason: "no_openai_key" });
+      const out = {};
+      for (const model of ["dall-e-3", "gpt-image-1", "dall-e-2"]) {
+        try {
+          const r = await fetch("https://api.openai.com/v1/images/generations", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model, prompt: "a friendly cartoon star, storybook", n: 1, size: "1024x1024" }),
+          });
+          if (r.ok) { out[model] = "ok"; return res.status(200).json({ ok: true, probe: true, gotImage: true, worked: model, results: out }); }
+          const t = await r.text();
+          out[model] = `${r.status}: ${t.slice(0, 160)}`;
+        } catch (e) { out[model] = "err: " + String((e && e.message) || e).slice(0, 120); }
+      }
+      return res.status(200).json({ ok: true, probe: true, gotImage: false, results: out });
+    }
     return res.status(200).json({
       ok: true,
       hasOpenAI: Boolean(process.env.OPENAI_API_KEY),
