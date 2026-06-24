@@ -56,7 +56,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
       setArt((a) => {
         if (a[i] !== undefined) return a;          // already fetching/fetched
         const ctrl = new AbortController();
-        const to = setTimeout(() => ctrl.abort(), 22000);
+        const to = setTimeout(() => ctrl.abort(), 45000);
         fetch("/api/generate-story-art", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }), signal: ctrl.signal,
