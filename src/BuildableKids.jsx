@@ -47,6 +47,13 @@ export default function BuildableKids() {
     }
   }, []);
 
+  // Allow opening the admin dashboard directly by URL: /admin or /admin.html
+  useEffect(() => {
+    if (typeof window !== "undefined" && /\/admin(\.html)?\/?$/i.test(window.location.pathname)) {
+      setScreen(SCREEN_ADMIN);
+    }
+  }, []);
+
   const goHome = () => setScreen(SCREEN_HOME);
   const openMyStuff = (from) => {
     setReturnTo(from);
@@ -345,10 +352,6 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onMyStuff, onGrown
         />
       </div>
 
-      <button onClick={onAdmin} style={{
-        marginTop: "30px", background: "transparent", border: "none",
-        color: "#6f688f", fontSize: "13px", fontFamily: NUN, cursor: "pointer",
-      }}>🔐 Admin</button>
     </div>
   );
 }

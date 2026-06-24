@@ -22,6 +22,18 @@
       "dest": "/index.html"
     },
     {
+      "src": "/admin/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/admin.html",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/admin",
+      "dest": "/index.html"
+    },
+    {
       "src": "/demo/assets/(.*)",
       "dest": "/assets/$1"
     },
