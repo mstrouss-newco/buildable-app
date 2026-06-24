@@ -55,7 +55,7 @@ function GoogleG() {
 export default function GrownUpScreen({ onBack, onProfileChosen }) {
   // Flow steps. Start on the kid picker when already signed in (returning
   // parent); otherwise start on the lane chooser.
-  const [step, setStep] = useState(isSignedIn() ? "kids" : "choose");
+  const [step, setStep] = useState(isSignedIn() ? "picker" : "choose");
 
   // auth form
   const [mode, setMode] = useState("signup"); // 'signup' | 'signin'
@@ -71,6 +71,21 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
   const [loadingKids, setLoadingKids] = useState(true);
   const [newName, setNewName] = useState("");
   const [newAvatar, setNewAvatar] = useState(AVATARS[0]);
+
+  // grown-up gate (simple check so kids can't wander into the Parents area)
+  const [gateA] = useState(() => 3 + Math.floor(Math.random() * 7));
+  const [gateB] = useState(() => 3 + Math.floor(Math.random() * 7));
+  const [gateInput, setGateInput] = useState("");
+  const [gateError, setGateError] = useState(null);
+  function openParents() {
+    if (!kids || kids.length === 0) { setStep("parents"); return; }
+    setGateInput(""); setGateError(null); setStep("gate");
+  }
+  function submitGate(e) {
+    e.preventDefault();
+    if (parseInt(gateInput, 10) === gateA * gateB) { setGateError(null); setStep("parents"); }
+    else { setGateError("Not quite — ask a grown-up to help."); }
+  }
   const [active, setActive] = useState(getActiveKid());
 
   // projects (assign-to-kid)
@@ -88,7 +103,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
         const done = await completeOAuthRedirect();
         if (done && !cancelled) {
           setSignedIn(true);
-          setStep("kids");
+          setStep("picker");
         }
       } catch (e) { /* ignore -- normal load with no redirect */ }
     })();
@@ -136,7 +151,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
         await signInParent(email.trim(), password);
       }
       setSignedIn(true);
-      setStep("kids");
+      setStep("picker");
       setPassword("");
     } catch (err) {
       const m = (err && err.message) || "Could not sign in";
@@ -230,7 +245,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
   return (
     <div style={S.container}>
       <div style={S.topRow}>
-        <button onClick={step === "choose" || !signedIn ? onBack : () => setStep("kids")}
+        <button onClick={(step === "choose" || step === "picker" || !signedIn) ? onBack : () => setStep("picker")}
           style={S.backBtn}>← Back</button>
         {signedIn && <button onClick={handleSignOut} style={S.backBtn}>Sign out</button>}
       </div>
@@ -257,7 +272,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
               Use email instead
             </button>
             <div style={S.divider}><span style={S.dividerText}>or</span></div>
-            <button style={S.ghostBig} onClick={() => setStep("kids")}>
+            <button style={S.ghostBig} onClick={() => setStep("picker")}>
               Continue without an account
             </button>
             <p style={S.fineprint}>
@@ -304,66 +319,100 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
         </>
       )}
 
-      {/* STEP: kid profiles -------------------------------------- */}
-      {(step === "kids" || (signedIn && step === "auth")) && (
+      {/* STEP: profile picker — "Who's playing?" (clean: tap to choose) */}
+      {(step === "picker" || (signedIn && step === "auth")) && (
         <>
           <h1 style={S.title}>Who's playing?</h1>
           <div style={S.card}>
-            <p style={S.lead}>
-              {signedIn
-                ? "Signed in — your kids' creations follow them on any device."
-                : "Pick a tile to start — no login needed. Saved on this device."}
-            </p>
-
             {loadingKids && <p style={S.muted}>Loading profiles…</p>}
 
-            <div style={S.kidGrid}>
-              {kids.map((k) => (
-                <div key={k.id} style={S.kidWrap}>
-                  <button onClick={() => chooseKid(k)}
-                    style={{ ...S.kidTile, ...(active && active.id === k.id ? S.kidTileActive : {}) }}>
-                    <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
-                    <span style={S.kidName}>{k.display_name}</span>
-                  </button>
-                  <div style={S.kidActions}>
-                    <button type="button" style={S.miniBtn} title="Rename"
-                      onClick={() => handleRename(k)}>✏️</button>
-                    <button type="button" style={S.miniBtn} title="Remove"
-                      onClick={() => handleDeleteKid(k)}>🗑️</button>
-                  </div>
+            {!loadingKids && kids.length === 0 ? (
+              <>
+                <p style={S.lead}>Let's set up your first child's profile.</p>
+                <button style={S.primaryBig} onClick={() => setStep("parents")}>＋ Add your first child</button>
+              </>
+            ) : (
+              <>
+                <div style={S.kidGrid}>
+                  {kids.map((k) => (
+                    <button key={k.id} onClick={() => chooseKid(k)} style={S.kidTile}>
+                      <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
+                      <span style={S.kidName}>{k.display_name}</span>
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
+                <p style={S.fineprint}>
+                  {signedIn ? "Signed in — creations follow your kids on any device." : "Saved on this device."}
+                </p>
+              </>
+            )}
 
-            {!loadingKids && kids.length === 0 && (
-              <p style={S.muted}>No profiles yet — add your first child below.</p>
+            {error && <p style={S.error}>{error}</p>}
+            <button style={S.ghostBig} onClick={openParents}>👨‍👩‍👧 Parents</button>
+          </div>
+        </>
+      )}
+
+      {/* STEP: grown-up gate ------------------------------------- */}
+      {step === "gate" && (
+        <>
+          <h1 style={S.title}>Grown-ups only</h1>
+          <div style={S.card}>
+            <p style={S.lead}>Quick check — what is {gateA} × {gateB}?</p>
+            <form onSubmit={submitGate} style={S.form}>
+              <input style={S.input} type="number" inputMode="numeric" autoFocus
+                value={gateInput} onChange={(e) => setGateInput(e.target.value)}
+                placeholder="Type the answer" />
+              {gateError && <p style={S.error}>{gateError}</p>}
+              <button type="submit" style={S.primaryBig}>Enter</button>
+            </form>
+            <button style={S.ghostBig} onClick={() => setStep("picker")}>← Back</button>
+          </div>
+        </>
+      )}
+
+      {/* STEP: parents management (add/edit kids + organize) ----- */}
+      {step === "parents" && (
+        <>
+          <h1 style={S.title}>Parents</h1>
+          <div style={S.card}>
+            <p style={S.lead}>Add or edit your kids, and organize what they've made.</p>
+
+            {kids.length > 0 && (
+              <div style={S.kidGrid}>
+                {kids.map((k) => (
+                  <div key={k.id} style={S.kidWrap}>
+                    <div style={S.kidTile}>
+                      <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
+                      <span style={S.kidName}>{k.display_name}</span>
+                    </div>
+                    <div style={S.kidActions}>
+                      <button type="button" style={S.miniBtn} title="Rename" onClick={() => handleRename(k)}>✏️</button>
+                      <button type="button" style={S.miniBtn} title="Remove" onClick={() => handleDeleteKid(k)}>🗑️</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             <form onSubmit={handleAddKid} style={S.addRow}>
               <input style={S.input} value={newName} maxLength={40}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Add a child's name" />
+                onChange={(e) => setNewName(e.target.value)} placeholder="Add a child's name" />
               <div style={S.avatarRow}>
                 {AVATARS.map((a) => (
-                  <button type="button" key={a}
-                    onClick={() => setNewAvatar(a)}
-                    style={{ ...S.avatarPick, ...(newAvatar === a ? S.avatarPickActive : {}) }}>
-                    {a}
-                  </button>
+                  <button type="button" key={a} onClick={() => setNewAvatar(a)}
+                    style={{ ...S.avatarPick, ...(newAvatar === a ? S.avatarPickActive : {}) }}>{a}</button>
                 ))}
               </div>
-              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>
-                ＋ Add child
-              </button>
+              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>＋ Add child</button>
             </form>
 
             {error && <p style={S.error}>{error}</p>}
 
             {signedIn && (
-              <button style={S.linkBtn} onClick={goProjects}>
-                🎵 Organize creations by child →
-              </button>
+              <button style={S.linkBtn} onClick={goProjects}>🎵 Organize creations by child →</button>
             )}
+            <button style={S.ghostBig} onClick={() => setStep("picker")}>← Done</button>
           </div>
         </>
       )}
@@ -397,7 +446,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
               ))}
             </div>
             {error && <p style={S.error}>{error}</p>}
-            <button style={S.ghostBig} onClick={() => setStep("kids")}>← Back to profiles</button>
+            <button style={S.ghostBig} onClick={() => setStep("parents")}>← Back</button>
           </div>
         </>
       )}

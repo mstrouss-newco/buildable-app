@@ -10,7 +10,7 @@ import AdminDashboard from "./AdminDashboard";
 import GrownUpScreen from "./GrownUpScreen";
 import LoadingGames from "./LoadingGames";
 import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
-import { getActiveKid } from "./lib/accounts";
+import { getActiveKid, isSignedIn } from "./lib/accounts";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -24,7 +24,7 @@ const SCREEN_ADMIN = "admin";
 const SCREEN_MUSIC = "music";
 const SCREEN_GROWNUP = "grownup";
 export default function BuildableKids() {
-  const [screen, setScreen] = useState(SCREEN_HOME);
+  const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
   const [gameData, setGameData] = useState({
