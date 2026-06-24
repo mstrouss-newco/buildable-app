@@ -8,6 +8,7 @@ import MyStuffScreen from "./MyStuff";
 import MusicMaker from "./MusicMaker";
 import AdminDashboard from "./AdminDashboard";
 import GrownUpScreen from "./GrownUpScreen";
+import StoryMaker from "./StoryMaker";
 import LoadingGames from "./LoadingGames";
 import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
 import { getActiveKid, isSignedIn, completeOAuthRedirect } from "./lib/accounts";
@@ -23,6 +24,7 @@ const SCREEN_MY_STUFF = "my_stuff";
 const SCREEN_ADMIN = "admin";
 const SCREEN_MUSIC = "music";
 const SCREEN_GROWNUP = "grownup";
+const SCREEN_STORY = "story";
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
   const [activeKid, setActiveKidState] = useState(getActiveKid());
@@ -102,7 +104,7 @@ export default function BuildableKids() {
         activeKid={activeKid}
         onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
         onGames={() => setScreen(SCREEN_INTRO)}
-        onStories={() => {}}
+        onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
         onGrownUp={() => setScreen(SCREEN_GROWNUP)}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
@@ -209,6 +211,16 @@ export default function BuildableKids() {
     return (
       <MusicMaker
         playerName={gameData.playerName}
+        onHome={() => setScreen(SCREEN_HOME)}
+        onBack={() => setScreen(returnTo || SCREEN_HOME)}
+      />
+    );
+  }
+
+  if (screen === SCREEN_STORY) {
+    return (
+      <StoryMaker
+        playerName={(activeKid && activeKid.display_name) || gameData.playerName}
         onHome={() => setScreen(SCREEN_HOME)}
         onBack={() => setScreen(returnTo || SCREEN_HOME)}
       />
@@ -347,8 +359,8 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onMyStuff, onGrown
           badge="Beta" badgeColor="#FFD66B" onClick={onGames}
         />
         <ExperienceCard
-          emoji="📖" title="Stories" desc="Create your own story adventure. Coming soon!"
-          badge="Soon" badgeColor="#C9C3E6" disabled
+          emoji="📖" title="Stories" desc="Turn your ideas into a living picture book."
+          badge="New" badgeColor="#7CF6B0" onClick={onStories}
         />
       </div>
 
