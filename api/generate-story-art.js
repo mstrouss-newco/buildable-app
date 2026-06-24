@@ -84,20 +84,21 @@ export default async function handler(req, res) {
     if (req.query && req.query.probe === "art") {
       const key = process.env.OPENAI_API_KEY;
       if (!key) return res.status(200).json({ ok: true, probe: true, gotImage: false, reason: "no_openai_key" });
-      const out = {};
-      for (const model of ["dall-e-3", "gpt-image-1", "dall-e-2"]) {
-        try {
-          const r = await fetch("https://api.openai.com/v1/images/generations", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model, prompt: "a friendly cartoon star, storybook", n: 1, size: "1024x1024" }),
-          });
-          if (r.ok) { out[model] = "ok"; return res.status(200).json({ ok: true, probe: true, gotImage: true, worked: model, results: out }); }
-          const t = await r.text();
-          out[model] = `${r.status}: ${t.slice(0, 160)}`;
-        } catch (e) { out[model] = "err: " + String((e && e.message) || e).slice(0, 120); }
+      const model = (req.query.model || "dall-e-3").toString();
+      try {
+        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 24000);
+        const r = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST", signal: ctrl.signal,
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model, prompt: "a friendly cartoon star, storybook", n: 1, size: "1024x1024" }),
+        });
+        clearTimeout(t);
+        if (r.ok) return res.status(200).json({ ok: true, probe: true, model, gotImage: true });
+        const txt = await r.text();
+        return res.status(200).json({ ok: true, probe: true, model, gotImage: false, status: r.status, error: txt.slice(0, 220) });
+      } catch (e) {
+        return res.status(200).json({ ok: true, probe: true, model, gotImage: false, error: String((e && e.message) || e).slice(0, 160) });
       }
-      return res.status(200).json({ ok: true, probe: true, gotImage: false, results: out });
     }
     return res.status(200).json({
       ok: true,
