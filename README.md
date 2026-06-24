@@ -1326,3 +1326,64 @@ Owner completed the Google sign-in setup that the previous session shipped in co
 Verified live on the demo Grown-ups screen: "Continue with Google" (primary) launches the Google account chooser pointed at the correct Supabase project (`mhxxkujnawncahztifvg.supabase.co`), confirming the full chain (app → Google OAuth → Supabase) is wired correctly. The order on screen is Google (primary) → "Use email instead" (secondary) → "Continue without an account" (guest). Agent stopped at the account-chooser and did not sign in (no account actions on owner's behalf).
 
 Still open / owner-owned: (1) the OAuth consent screen is in Testing mode, so only added Test users can sign in until the owner publishes it; (2) email confirmation is still ON in Supabase, so email sign-ups must click the confirmation link before logging in (owner can toggle off for instant test sign-up if desired). No code changes this session; no Vercel redeploy needed.
+
+## NEW PRODUCT MODE: Buildable Stories (AI living picture books) — June 24 2026
+
+A third kid-facing mode alongside Games and Music: a child builds a story through a
+guided tap-choice flow (hero, name, world, problem, helper, tone, ending, optional
+twist), and the app turns it into a 6-page "living" picture book — generated art,
+ambient page animations, and read-aloud with word highlighting.
+
+### What shipped (MVP foundation)
+- **Front door:** the Home hub "Stories" card is now live (badge "New") -> `SCREEN_STORY`.
+- **`src/StoryMaker.jsx`** — guided Mad-Libs builder (controlled tap choices = tiny
+  moderation surface) + the child's saved-stories library (open / delete). Calls
+  `/api/generate-story`, then opens the reader.
+- **`src/StoryReader.jsx`** — the living picture book. Per page: lazy-loaded art
+  (calm gradient placeholder until it arrives, so it never blocks), an ambient effect,
+  and word-by-word highlighting during read-aloud. Narration is the browser Web Speech
+  API for the MVP (zero keys/cost); `onboundary` events drive accurate word highlight.
+- **`src/lib/storyEffects.jsx`** — the SAFE living-page system. The AI may only pick an
+  effect by id from `STORY_EFFECTS`; this renderer maps each id to a fixed, hand-written
+  CSS/SVG animation. Unknown ids -> `soft_glow`. Respects `prefers-reduced-motion`.
+  Presets: fireplace_flicker, snow_outside_window, twinkling_stars, candle_glow,
+  gentle_rain, drifting_clouds, magic_sparkles, character_blink, soft_glow, floating_dust.
+- **`/api/generate-story.js`** — Claude Haiku (cheap/fast, text only) -> strict JSON
+  validation -> safe **fallback story** if malformed/over-budget/no key. Daily budget
+  guard + `usage_log` (kind:"story"). Optional free-text twist is blocklist-moderated.
+- **`/api/generate-story-art.js`** — one storybook illustration per page, on demand
+  (current page first, prefetch next). OpenAI image chain (gpt-image-1 -> dall-e-3 ->
+  dall-e-2) -> `{ placeholder:true }` fallback. Budget guard + `usage_log` (kind:"story-art").
+- **`/api/narrate-story-page.js`** — STUB. Returns `{ configured:false }` until
+  `ELEVENLABS_API_KEY` is set; documents the premium-narration upgrade path.
+- **Persistence:** `/api/save-story`, `/api/list-stories`, `/api/delete-story` mirror the
+  songs pattern (device lane + optional `kid_profile_id`; cap 20; device-lane fallback on
+  a stale profile link). Full structured story stored as JSONB.
+
+### Story JSON shape (stored in `saved_stories.story`)
+`{ schema, title, world, pages: [ { n, text, art_prompt, art_url, effect, audio_url, word_timings } ], created_with }`
+`art_url`/`audio_url`/`word_timings` are filled progressively (art) or later (ElevenLabs).
+
+### Architecture decision: React/CSS for the "living page" (not Phaser) for MVP
+Ambient, looping, non-interactive effects layered over a single image are exactly what
+CSS does cheaply and safely. Phaser would add a heavy runtime + an arbitrary-code surface
+for no MVP benefit. Revisit Phaser only if pages later need interactive/physics scenes.
+
+### OWNER TODO (so Stories fully works)
+1. **Run `db/create-saved-stories.sql`** in the Supabase SQL editor (creates `saved_stories`).
+   It's also appended to the owner's `buildable-kids-setup.sql`.
+2. **Page art** uses the existing `OPENAI_API_KEY` + `DAILY_BUDGET_USD` (already set). With
+   no key/over budget, pages show the gradient placeholder — flow still works.
+3. **Premium narration (optional, later):** add `ELEVENLABS_API_KEY` in Vercel and implement
+   `/api/narrate-story-page.js` (TTS + word timings). Until then, browser read-aloud works.
+4. Optional cost tuning env vars (names only; defaults are fine): `STORY_COST_USD` (0.02),
+   `STORY_ART_COST_USD` (0.04).
+
+### Roadmap
+- **Next:** "My Stories" tab in My Stuff; ElevenLabs narration with real word timings;
+  character art consistency (seed/reference across pages); deeper output-text moderation pass.
+- **Later (magical):** parallax/interactive pages, per-character blink anchored to art,
+  background music per scene (reuse Music Maker), choose-your-own-ending branches.
+
+### Preserved
+Games builder and Music Maker untouched; production build green.
