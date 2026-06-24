@@ -116,7 +116,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
         <span style={{ width: 70 }} />
       </div>
 
-      <LivingPage artUrl={artUrl} effect={page.effect} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} style={s.page}>
+      <LivingPage artUrl={artUrl} effect={page.effect} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
         {art[idx] === "loading" && !artUrl && (
           <div style={s.artLoading}>✨ adding a picture…</div>
         )}

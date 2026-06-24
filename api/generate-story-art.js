@@ -77,6 +77,15 @@ async function generateImage(prompt, openaiKey, timeoutMs = 28000) {
 }
 
 export default async function handler(req, res) {
+  // Safe diagnostic (booleans only, never secret values): GET /api/generate-story-art
+  if (req.method === "GET") {
+    return res.status(200).json({
+      ok: true,
+      hasOpenAI: Boolean(process.env.OPENAI_API_KEY),
+      hasAnthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+      hasSupabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY),
+    });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const body = await readBody(req);
   const artPrompt = (body.artPrompt || "").toString().slice(0, 320).trim();
