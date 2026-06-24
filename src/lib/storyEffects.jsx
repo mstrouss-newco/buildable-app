@@ -42,6 +42,8 @@ function injectKeyframes() {
 @keyframes bk-rise { 0%{transform:translateY(20%);opacity:0} 20%{opacity:.9} 100%{transform:translateY(-30%);opacity:0} }
 @keyframes bk-pulse { 0%,100%{opacity:.25} 50%{opacity:.6} }
 @keyframes bk-blink { 0%,92%,100%{transform:scaleY(1)} 96%{transform:scaleY(.1)} }
+@keyframes bk-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes bk-sway { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
 @keyframes bk-sparkle { 0%{opacity:0;transform:scale(.4) rotate(0)} 50%{opacity:1;transform:scale(1) rotate(45deg)} 100%{opacity:0;transform:scale(.4) rotate(90deg)} }
 `;
   const el = document.createElement("style");
@@ -187,26 +189,41 @@ function LivingLayer({ effect }) {
   }
 }
 
-// A friendly fallback "scene" when page art hasn't generated yet (or is off).
-// Uses a calm gradient from the world palette so the page is never blank.
-function PlaceholderArt({ palette }) {
-  const [a, b] = palette && palette.length >= 2 ? palette : ["#3a2c63", "#7a4a86"];
+// A friendly illustrated fallback "scene" for when AI page art hasn't arrived (or
+// is off). It is NEVER blank: a world-tinted sky, simple layered scenery, and the
+// hero (+ helper) shown as a big, gently-bobbing character so every page has life.
+function PlaceholderScene({ palette, world, heroEmoji, helperEmoji }) {
+  const [sky, ground] = palette && palette.length >= 2 ? palette : ["#3a2c63", "#7a4a86"];
+  const night = ["outer_space", "snowy_forest", "cloud_castle"].indexOf(world) === -1 ? false : true;
   return (
-    <div style={{
-      position: "absolute", inset: 0, borderRadius: "inherit",
-      background: `linear-gradient(160deg, ${a} 0%, ${b} 100%)`,
-    }} />
+    <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
+      background: `linear-gradient(180deg, ${sky} 0%, ${ground} 100%)` }} aria-hidden="true">
+      {/* sun or moon */}
+      <div style={{ position: "absolute", top: "12%", right: "16%", width: 64, height: 64, borderRadius: "50%",
+        background: night ? "radial-gradient(circle,#fdf6c4,#f2e89a)" : "radial-gradient(circle,#fff4c2,#ffd86b)",
+        boxShadow: night ? "0 0 40px rgba(253,246,196,0.6)" : "0 0 50px rgba(255,216,107,0.7)" }} />
+      {/* rolling ground / hills */}
+      <svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: "42%" }}>
+        <path d="M0 14 Q 25 4 50 12 T 100 10 L100 30 L0 30 Z" fill="rgba(0,0,0,0.18)" />
+        <path d="M0 20 Q 30 12 60 18 T 100 16 L100 30 L0 30 Z" fill="rgba(0,0,0,0.28)" />
+      </svg>
+      {/* hero (and helper) characters */}
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: "30%", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 18 }}>
+        <span style={{ fontSize: 88, filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.45))", animation: "bk-bob 3.4s ease-in-out infinite" }}>{heroEmoji || "🐰"}</span>
+        {helperEmoji && <span style={{ fontSize: 52, filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))", animation: "bk-bob 3.4s ease-in-out 0.6s infinite" }}>{helperEmoji}</span>}
+      </div>
+    </div>
   );
 }
 
 // The full living page: art (or placeholder) + ambient effect overlay.
-export function LivingPage({ artUrl, effect, palette, children, style }) {
+export function LivingPage({ artUrl, effect, palette, world, heroEmoji, helperEmoji, children, style }) {
   useEffect(() => { injectKeyframes(); }, []);
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
       {artUrl
         ? <img src={artUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
-        : <PlaceholderArt palette={palette} />}
+        : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} />}
       <LivingLayer effect={effect} />
       {children}
     </div>
