@@ -48,7 +48,7 @@ async function logCost(cost, model) {
   } catch { /* best-effort */ }
 }
 
-async function generateImage(prompt, openaiKey, timeoutMs = 28000) {
+async function generateImage(prompt, openaiKey, timeoutMs = 42000) {
   const attempt = async (b) => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -69,9 +69,9 @@ async function generateImage(prompt, openaiKey, timeoutMs = 28000) {
     } catch { clearTimeout(timer); return null; }
   };
   return (
-    (await attempt({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "low" })) ||
     (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024" })) ||
-    (await attempt({ model: "dall-e-2", prompt: prompt.slice(0, 1000), n: 1, size: "1024x1024" })) ||
+    (await attempt({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" })) ||
     null
   );
 }
@@ -84,13 +84,13 @@ export default async function handler(req, res) {
     if (req.query && req.query.probe === "art") {
       const key = process.env.OPENAI_API_KEY;
       if (!key) return res.status(200).json({ ok: true, probe: true, gotImage: false, reason: "no_openai_key" });
-      const model = (req.query.model || "dall-e-3").toString();
+      const model = (req.query.model || "gpt-image-1").toString();
       try {
         const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 24000);
         const r = await fetch("https://api.openai.com/v1/images/generations", {
           method: "POST", signal: ctrl.signal,
           headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model, prompt: "a friendly cartoon star, storybook", n: 1, size: "1024x1024" }),
+          body: JSON.stringify({ model, prompt: "a friendly cartoon star, storybook", n: 1, size: "1024x1024", quality: "low" }),
         });
         clearTimeout(t);
         if (r.ok) return res.status(200).json({ ok: true, probe: true, model, gotImage: true });
