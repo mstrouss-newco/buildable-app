@@ -49,7 +49,7 @@ async function logCost(cost, model) {
 }
 
 async function generateImage(prompt, openaiKey, timeoutMs = 42000) {
-  const attempt = async (b) => {
+  const once = async (b) => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
@@ -63,10 +63,21 @@ async function generateImage(prompt, openaiKey, timeoutMs = 42000) {
         const data = await res.json();
         const b64 = data.data?.[0]?.b64_json;
         const url = data.data?.[0]?.url;
-        return b64 ? `data:image/png;base64,${b64}` : (url || null);
+        return { url: b64 ? `data:image/png;base64,${b64}` : (url || null), status: 200 };
       }
-      return null;
-    } catch { clearTimeout(timer); return null; }
+      return { url: null, status: res.status };
+    } catch { clearTimeout(timer); return { url: null, status: 0 }; }
+  };
+  // Retry up to twice on 429 (rate limit) with backoff — the throttled client still
+  // bursts a little, and gpt-image-1 per-minute limits are low on smaller tiers.
+  const attempt = async (b) => {
+    for (let tries = 0; tries < 3; tries++) {
+      const r = await once(b);
+      if (r.url) return r.url;
+      if (r.status !== 429) return null;
+      await new Promise((res) => setTimeout(res, 4000 + tries * 3000));
+    }
+    return null;
   };
   return (
     (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "low" })) ||
