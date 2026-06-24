@@ -189,41 +189,77 @@ function LivingLayer({ effect }) {
   }
 }
 
-// A friendly illustrated fallback "scene" for when AI page art hasn't arrived (or
-// is off). It is NEVER blank: a world-tinted sky, simple layered scenery, and the
-// hero (+ helper) shown as a big, gently-bobbing character so every page has life.
-function PlaceholderScene({ palette, world, heroEmoji, helperEmoji }) {
-  const [sky, ground] = palette && palette.length >= 2 ? palette : ["#3a2c63", "#7a4a86"];
-  const night = ["outer_space", "snowy_forest", "cloud_castle"].indexOf(world) === -1 ? false : true;
+// A friendly illustrated fallback "scene". NEVER blank and VARIES per page: the
+// sky hue rotates by page number, the sun/moon + extra scenery are chosen from the
+// page's ambient effect, and the hero (+ helper) appear as big bobbing characters.
+function hexToHsl(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
+  if (!m) return [260, 40, 35];
+  let r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, sR = 0, l = (mx + mn) / 2;
+  if (mx !== mn) { const d = mx - mn; sR = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+  return [h, sR * 100, l * 100];
+}
+function hsl(h, sP, l) { return `hsl(${((h % 360) + 360) % 360}, ${Math.max(0, Math.min(100, sP))}%, ${Math.max(0, Math.min(100, l))}%)`; }
+
+const NIGHT_EFFECTS = new Set(["twinkling_stars", "candle_glow", "fireplace_flicker", "magic_sparkles"]);
+
+function PlaceholderScene({ palette, world, heroEmoji, helperEmoji, effect, pageIndex = 0 }) {
+  const [skyHex, groundHex] = palette && palette.length >= 2 ? palette : ["#3a2c63", "#7a4a86"];
+  const [h0, s0, l0] = hexToHsl(skyHex);
+  const [h1, s1, l1] = hexToHsl(groundHex);
+  const shift = pageIndex * 16;                 // each page gets its own hue
+  const night = NIGHT_EFFECTS.has(effect);
+  const lift = night ? -8 : 8;                  // night a touch darker, day lighter
+  const skyTop = hsl(h0 + shift, s0, l0 + lift);
+  const skyBot = hsl(h1 + shift, s1, l1 + lift + 6);
+  const celestialSun = !night;
+  const isForest = world === "enchanted_woods" || world === "snowy_forest";
+  const isUnderwater = world === "underwater";
+  const showClouds = effect === "drifting_clouds" || world === "cloud_castle";
+
   return (
     <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
-      background: `linear-gradient(180deg, ${sky} 0%, ${ground} 100%)` }} aria-hidden="true">
-      {/* sun or moon */}
-      <div style={{ position: "absolute", top: "12%", right: "16%", width: 64, height: 64, borderRadius: "50%",
-        background: night ? "radial-gradient(circle,#fdf6c4,#f2e89a)" : "radial-gradient(circle,#fff4c2,#ffd86b)",
-        boxShadow: night ? "0 0 40px rgba(253,246,196,0.6)" : "0 0 50px rgba(255,216,107,0.7)" }} />
+      background: `linear-gradient(180deg, ${skyTop} 0%, ${skyBot} 100%)` }} aria-hidden="true">
+      {/* sun or moon (position shifts per page) */}
+      <div style={{ position: "absolute", top: `${10 + (pageIndex % 3) * 6}%`, [pageIndex % 2 ? "left" : "right"]: "16%",
+        width: 60, height: 60, borderRadius: "50%",
+        background: celestialSun ? "radial-gradient(circle,#fff4c2,#ffd86b)" : "radial-gradient(circle,#fdf6c4,#e9e09a)",
+        boxShadow: celestialSun ? "0 0 50px rgba(255,216,107,0.7)" : "0 0 40px rgba(253,246,196,0.55)" }} />
+      {showClouds && [0, 1, 2].map((i) => (
+        <div key={i} style={{ position: "absolute", top: `${14 + i * 12}%`, left: `${(i * 33 + pageIndex * 12) % 80}%`,
+          width: 90, height: 30, borderRadius: 999, background: "rgba(255,255,255,0.45)", filter: "blur(5px)" }} />
+      ))}
       {/* rolling ground / hills */}
       <svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: "42%" }}>
         <path d="M0 14 Q 25 4 50 12 T 100 10 L100 30 L0 30 Z" fill="rgba(0,0,0,0.18)" />
-        <path d="M0 20 Q 30 12 60 18 T 100 16 L100 30 L0 30 Z" fill="rgba(0,0,0,0.28)" />
+        <path d="M0 20 Q 30 12 60 18 T 100 16 L100 30 L0 30 Z" fill="rgba(0,0,0,0.30)" />
       </svg>
+      {isForest && [18, 78, 90].map((x, i) => (
+        <div key={i} style={{ position: "absolute", bottom: "26%", left: `${x}%`, fontSize: 30 + (i % 2) * 10, filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.4))" }}>🌲</div>
+      ))}
+      {isUnderwater && [0, 1, 2, 3, 4].map((i) => (
+        <div key={i} style={{ position: "absolute", bottom: `${10 + (i * 13) % 50}%`, left: `${(i * 21 + pageIndex * 9) % 90}%`,
+          width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.35)" }} />
+      ))}
       {/* hero (and helper) characters */}
       <div style={{ position: "absolute", left: 0, right: 0, bottom: "30%", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 18 }}>
         <span style={{ fontSize: 88, filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.45))", animation: "bk-bob 3.4s ease-in-out infinite" }}>{heroEmoji || "🐰"}</span>
-        {helperEmoji && <span style={{ fontSize: 52, filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))", animation: "bk-bob 3.4s ease-in-out 0.6s infinite" }}>{helperEmoji}</span>}
+        {helperEmoji && <span style={{ fontSize: 50, filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))", animation: "bk-bob 3.4s ease-in-out 0.6s infinite" }}>{helperEmoji}</span>}
       </div>
     </div>
   );
 }
 
 // The full living page: art (or placeholder) + ambient effect overlay.
-export function LivingPage({ artUrl, effect, palette, world, heroEmoji, helperEmoji, children, style }) {
+export function LivingPage({ artUrl, effect, palette, world, heroEmoji, helperEmoji, pageIndex, children, style }) {
   useEffect(() => { injectKeyframes(); }, []);
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
       {artUrl
         ? <img src={artUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
-        : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} />}
+        : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} effect={effect} pageIndex={pageIndex} />}
       <LivingLayer effect={effect} />
       {children}
     </div>
