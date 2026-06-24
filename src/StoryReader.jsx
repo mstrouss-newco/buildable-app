@@ -19,6 +19,9 @@ const PAGE_BG =
   "radial-gradient(circle at 88% 112%, rgba(214,90,123,0.24), transparent 42%),#0a0a14";
 
 // World -> a calm 2-color palette for the placeholder "scene".
+const HERO_EMOJI = { bunny:"🐰", dragon:"🐲", robot:"🤖", kitten:"🐱", astronaut:"🧑‍🚀", mermaid:"🧜", fox:"🦊", knight:"🛡️" };
+const HELPER_EMOJI = { wise_owl:"🦉", talking_map:"🗺️", glowing_firefly:"✨", old_turtle:"🐢", friendly_ghost:"👻", singing_bird:"🐦" };
+
 const WORLD_PALETTE = {
   snowy_forest: ["#2b3a55", "#5d7a9e"], outer_space: ["#1b1240", "#5b3a86"],
   underwater: ["#0d3b53", "#1f8aa6"], candy_land: ["#7a2f5f", "#d4789e"],
@@ -37,6 +40,9 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const [spoken, setSpoken] = useState(-1);      // highlighted word index
   const [playing, setPlaying] = useState(false);
   const palette = WORLD_PALETTE[story && story.world] || ["#3a2c63", "#7a4a86"];
+  const made = (story && story.created_with) || {};
+  const heroEmoji = HERO_EMOJI[made.hero] || "🐰";
+  const helperEmoji = HELPER_EMOJI[made.helper] || "";
   const page = pages[idx] || {};
   const words = wordsOf(page.text);
 
@@ -49,13 +55,15 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
       if (p.art_url) { setArt((a) => (a[i] ? a : { ...a, [i]: p.art_url })); return; }
       setArt((a) => {
         if (a[i] !== undefined) return a;          // already fetching/fetched
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 22000);
         fetch("/api/generate-story-art", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }),
+          body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }), signal: ctrl.signal,
         })
           .then((r) => r.json())
-          .then((j) => { if (!cancelled) setArt((prev) => ({ ...prev, [i]: j && j.url ? j.url : null })); })
-          .catch(() => { if (!cancelled) setArt((prev) => ({ ...prev, [i]: null })); });
+          .then((j) => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: j && j.url ? j.url : null })); })
+          .catch(() => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: null })); });
         return { ...a, [i]: "loading" };
       });
     }
@@ -108,9 +116,9 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
         <span style={{ width: 70 }} />
       </div>
 
-      <LivingPage artUrl={artUrl} effect={page.effect} palette={palette} style={s.page}>
+      <LivingPage artUrl={artUrl} effect={page.effect} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} style={s.page}>
         {art[idx] === "loading" && !artUrl && (
-          <div style={s.artLoading}>painting this page…</div>
+          <div style={s.artLoading}>✨ adding a picture…</div>
         )}
         <div style={s.textPanel}>
           <p style={s.text}>

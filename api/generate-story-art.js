@@ -48,7 +48,7 @@ async function logCost(cost, model) {
   } catch { /* best-effort */ }
 }
 
-async function generateImage(prompt, openaiKey, timeoutMs = 45000) {
+async function generateImage(prompt, openaiKey, timeoutMs = 28000) {
   const attempt = async (b) => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -69,8 +69,8 @@ async function generateImage(prompt, openaiKey, timeoutMs = 45000) {
     } catch { clearTimeout(timer); return null; }
   };
   return (
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024" })) ||
     (await attempt({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024" })) ||
     (await attempt({ model: "dall-e-2", prompt: prompt.slice(0, 1000), n: 1, size: "1024x1024" })) ||
     null
   );
@@ -83,16 +83,15 @@ export default async function handler(req, res) {
   if (!artPrompt) return res.status(400).json({ error: "artPrompt is required" });
 
   const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey || !(await underBudget())) {
-    return res.status(200).json({ ok: true, placeholder: true });
-  }
+  if (!openaiKey) return res.status(200).json({ ok: true, placeholder: true, reason: "no_openai_key" });
+  if (!(await underBudget())) return res.status(200).json({ ok: true, placeholder: true, reason: "over_daily_budget" });
   try {
     const prompt = `${artPrompt}. ${STYLE}`;
     const url = await generateImage(prompt, openaiKey);
-    if (!url) return res.status(200).json({ ok: true, placeholder: true });
+    if (!url) return res.status(200).json({ ok: true, placeholder: true, reason: "image_provider_failed" });
     await logCost(ART_COST_USD, "image");
     return res.status(200).json({ ok: true, url });
-  } catch {
-    return res.status(200).json({ ok: true, placeholder: true });
+  } catch (e) {
+    return res.status(200).json({ ok: true, placeholder: true, reason: "error", detail: String((e && e.message) || e).slice(0, 120) });
   }
 }
