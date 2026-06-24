@@ -21,11 +21,50 @@ const PAGE_BG =
 const CARD_BG = "rgba(255,255,255,0.05)";
 const CARD_BORDER = "1px solid rgba(155,126,221,0.22)";
 
+function getDeviceId() {
+  try {
+    let id = localStorage.getItem("deviceId");
+    if (!id) {
+      id = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem("deviceId", id);
+    }
+    return id;
+  } catch { return "dev_anon"; }
+}
+function getKidProfileId() {
+  try {
+    const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
+    return k && k.id ? k.id : null;
+  } catch { return null; }
+}
+
 export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHome, initialTab }) {
   const [tab, setTab] = useState(initialTab || "characters");
   const [characters, setCharacters] = useState(listCharacters());
   const [levels, setLevels] = useState(listLevels());
   const [sounds, setSounds] = useState(listSounds());
+  const [songs, setSongs] = useState([]);
+
+  async function loadSongs() {
+    try {
+      const deviceId = getDeviceId();
+      const kid = getKidProfileId();
+      const r = await fetch("/api/list-songs?deviceId=" + encodeURIComponent(deviceId) +
+        (kid ? "&kidProfileId=" + encodeURIComponent(kid) : ""));
+      const j = await r.json();
+      setSongs(Array.isArray(j.songs) ? j.songs : []);
+    } catch { /* ignore */ }
+  }
+  async function removeSong(songId) {
+    try {
+      await fetch("/api/delete-song", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: getDeviceId(), songId }),
+      });
+      setSongs((prev) => prev.filter((x) => x.song_id !== songId));
+    } catch { /* ignore */ }
+  }
+  useEffect(() => { loadSongs(); }, []);
 
   // Refresh when the saved library finishes loading or anything is saved/deleted.
   useEffect(() => {
@@ -50,7 +89,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
   const tabs = [
     { id: "characters", label: "My Characters", icon: "🦸", count: characters.length },
     { id: "levels", label: "My Levels", icon: "🌍", count: levels.length },
-    { id: "sounds", label: "My Sounds", icon: "🎵", count: sounds.length },
+    { id: "songs", label: "My Songs", icon: "🎵", count: songs.length },
   ];
 
   return (
@@ -140,9 +179,25 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
         )
       )}
 
-      {/* ---------- Sounds (coming soon) ---------- */}
-      {tab === "sounds" && (
-        <Empty text="🎵 Music and sounds are coming soon! You'll be able to save them here too." />
+      {/* ---------- Songs ---------- */}
+      {tab === "songs" && (
+        songs.length === 0 ? (
+          <Empty text="No songs yet! Make one in Music and it'll show up here." />
+        ) : (
+          <div style={s.grid}>
+            {songs.map((sg) => (
+              <div key={sg.song_id} style={s.card}>
+                <div style={{ ...s.noImage, background: sg.cover_color || "rgba(155,126,221,0.25)" }}>🎵</div>
+                <h3 style={s.cardTitle}>{sg.title}</h3>
+                <p style={s.cardDesc}>{[sg.vibe, sg.theme].filter(Boolean).join(" · ")}</p>
+                <audio controls src={sg.audio_url} style={{ width: "92%", margin: "0 auto 12px" }} />
+                <div style={s.cardActions}>
+                  <button style={s.deleteBtn} onClick={() => removeSong(sg.song_id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );
