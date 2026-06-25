@@ -72,6 +72,10 @@
       "dest": "/rileys-garden.html"
     },
     {
+      "src": "/qa-expr.html",
+      "dest": "/qa-expr.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
