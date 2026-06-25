@@ -103,6 +103,10 @@ async function cachePut(key, b64) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
   try { await fetch(`${SUPABASE_URL}/rest/v1/narration_cache`, { method: "POST", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates" }, body: JSON.stringify({ cache_key: key, audio_b64: b64, word_timings: null }) }); } catch {}
 }
+async function cacheDel(key) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
+  try { await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}`, { method: "DELETE", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }); } catch {}
+}
 
 async function genImage(prompt, transparent, openaiKey, timeoutMs = 44000) {
   const once = async (b) => {
@@ -183,12 +187,13 @@ export default async function handler(req, res) {
     const item = findItem(kind, slug);
     if (!item) return res.status(400).json({ ok: false, error: "unknown asset" });
     const key = cacheKey(kind, slug, style);
-    const have = await cacheGet(key);
-    if (have) return res.status(200).json({ ok: true, kind, slug, style, cached: true });
+    const force = !!q.force;
+    if (!force) { const have = await cacheGet(key); if (have) return res.status(200).json({ ok: true, kind, slug, style, cached: true }); }
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
     const b64 = await genImage(promptFor(kind, item, style), kind === "character", openaiKey);
     if (!b64) return res.status(200).json({ ok: true, kind, slug, style, failed: true });
+    if (force) await cacheDel(key);
     await cachePut(key, b64);
     return res.status(200).json({ ok: true, kind, slug, style, generated: true });
   }
@@ -201,13 +206,15 @@ export default async function handler(req, res) {
     const item = findItem("character", slug);
     if (!item || !EMOS[emo]) return res.status(400).json({ ok: false, error: "bad slug or emo" });
     const ekey = exprKey(slug, style, emo);
-    if (await cacheGet(ekey)) return res.status(200).json({ ok: true, slug, style, emo, cached: true });
+    const force = !!q.force;
+    if (!force && await cacheGet(ekey)) return res.status(200).json({ ok: true, slug, style, emo, cached: true });
     const base = await cacheGet(cacheKey("character", slug, style));
     if (!base) return res.status(200).json({ ok: true, slug, style, emo, needBase: true });
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
     const b64 = await genExpression(base, exprPrompt(item, emo), openaiKey);
     if (!b64) return res.status(200).json({ ok: true, slug, style, emo, failed: true });
+    if (force) await cacheDel(ekey);
     await cachePut(ekey, b64);
     return res.status(200).json({ ok: true, slug, style, emo, generated: true });
   }
