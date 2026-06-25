@@ -33,7 +33,7 @@ function wordsOf(text) {
   return (text || "").trim().split(/\s+/).filter(Boolean);
 }
 
-export default function StoryReader({ story, deviceId, kidProfileId, onExit, onSave, saving, savedMsg }) {
+export default function StoryReader({ story, deviceId, kidProfileId, onExit, onSave, saving, savedMsg, onNewAdventure }) {
   const pages = (story && story.pages) || [];
   const [idx, setIdx] = useState(0);
   const [art, setArt] = useState({});            // pageIndex -> url | "loading" | null
@@ -243,6 +243,9 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
           <button style={s.saveBtn} disabled={saving} onClick={() => onSave(enrichedStory())}>
             {saving ? "Saving…" : "💾 Save to my library"}
           </button>
+          {onNewAdventure && (
+            <button style={s.againBtn} onClick={() => onNewAdventure(story)}>✨ New adventure with {(story.created_with && story.created_with.heroName) || "the same friends"}</button>
+          )}
           {savedMsg && <p style={s.savedMsg}>{savedMsg}</p>}
         </div>
       )}
@@ -269,4 +272,5 @@ const s = {
   endRow: { marginTop: 8, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
   saveBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "#fff", color: "#b3477a", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
   savedMsg: { fontSize: 14, color: "#bdf5cf", fontWeight: 700 },
+  againBtn: { padding: "12px 24px", borderRadius: 16, border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
 };
