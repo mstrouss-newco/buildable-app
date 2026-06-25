@@ -102,7 +102,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   function readAloudBrowser() {
     if (typeof window === "undefined" || !window.speechSynthesis) { setPlaying(false); return; }
     const u = new SpeechSynthesisUtterance(page.text || "");
-    u.rate = 0.92; u.pitch = 1.05;
+    u.rate = 0.82; u.pitch = 1.05;
     const starts = [];
     let acc = 0;
     words.forEach((w) => { const at = (page.text || "").indexOf(w, acc); starts.push(at); acc = at + w.length; });
@@ -122,6 +122,8 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
     const el = audioRef.current;
     if (!el) { readAloudBrowser(); return; }
     el.src = audioUrl;
+    try { el.preservesPitch = true; el.mozPreservesPitch = true; el.webkitPreservesPitch = true; } catch {}
+    el.playbackRate = 0.9;
     if (Array.isArray(wordTimings) && wordTimings.length) {
       hlTimerRef.current = setInterval(() => {
         const t = el.currentTime || 0;
@@ -176,20 +178,19 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
         <span style={{ width: 70 }} />
       </div>
 
-      <LivingPage artUrl={artUrl} effect={page.effect} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
+      <LivingPage artUrl={artUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
         {art[idx] === "loading" && !artUrl && (
           <div style={s.artLoading}>✨ adding a picture…</div>
         )}
-        <div style={s.textPanel}>
-          <p style={s.text}>
-            {words.map((w, i) => (
-              <span key={i} style={{
-                ...(i === spoken ? s.wordOn : s.word),
-              }}>{w} </span>
-            ))}
-          </p>
-        </div>
       </LivingPage>
+
+      <div style={s.textPanel}>
+        <p style={s.text}>
+          {words.map((w, i) => (
+            <span key={i} style={{ ...(i === spoken ? s.wordOn : s.word) }}>{w} </span>
+          ))}
+        </p>
+      </div>
 
       <div style={s.controls}>
         <button style={s.circleBtn} disabled={idx === 0} onClick={() => setIdx((i) => Math.max(0, i - 1))}>‹</button>
@@ -225,11 +226,11 @@ const s = {
   topBar: { width: "100%", maxWidth: 760, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
   navBtn: { padding: "10px 18px", background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer" },
   counter: { fontFamily: FRED, fontSize: 18, fontWeight: 700, textAlign: "center", flex: 1, padding: "0 8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  page: { width: "100%", maxWidth: 760, aspectRatio: "4 / 3", borderRadius: 24, border: "1px solid rgba(155,126,221,0.3)", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", display: "flex" },
+  page: { width: "100%", maxWidth: 760, aspectRatio: "3 / 2", borderRadius: 24, border: "1px solid rgba(155,126,221,0.3)", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" },
   artLoading: { position: "absolute", top: 14, left: 0, right: 0, textAlign: "center", fontSize: 14, opacity: 0.8 },
-  textPanel: { position: "absolute", left: 0, right: 0, bottom: 0, padding: "24px 22px", background: "linear-gradient(transparent, rgba(0,0,0,0.78) 38%)", borderRadius: "0 0 24px 24px" },
-  text: { fontFamily: FRED, fontSize: "clamp(18px, 3.6vw, 26px)", lineHeight: 1.5, margin: 0, textShadow: "0 2px 10px rgba(0,0,0,0.6)" },
-  word: { color: "#fff", transition: "color 0.1s, background 0.1s", borderRadius: 6, padding: "0 1px" },
+  textPanel: { width: "100%", maxWidth: 760, marginTop: 14, padding: "16px 22px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(155,126,221,0.22)", borderRadius: 18, boxSizing: "border-box" },
+  text: { fontFamily: FRED, fontSize: "clamp(17px, 2.6vw, 22px)", lineHeight: 1.55, margin: 0, color: "#fff", textAlign: "center" },
+  word: { color: "#efeaff", transition: "color 0.1s, background 0.1s", borderRadius: 6, padding: "0 1px" },
   wordOn: { color: "#1a1330", background: "#ffe08a", borderRadius: 6, padding: "0 3px", boxShadow: "0 0 0 2px #ffe08a" },
   controls: { display: "flex", alignItems: "center", gap: 14, marginTop: 18 },
   circleBtn: { width: 52, height: 52, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 26, cursor: "pointer", fontFamily: FRED },

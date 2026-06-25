@@ -21,6 +21,9 @@ export const STORY_EFFECTS = [
   "character_blink",
   "soft_glow",
   "floating_dust",
+  "sun_pulse",
+  "water_shimmer",
+  "gentle_waves",
 ];
 
 const EFFECT_SET = new Set(STORY_EFFECTS);
@@ -44,6 +47,9 @@ function injectKeyframes() {
 @keyframes bk-blink { 0%,92%,100%{transform:scaleY(1)} 96%{transform:scaleY(.1)} }
 @keyframes bk-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @keyframes bk-sway { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
+@keyframes bk-sunpulse { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.85;transform:scale(1.12)} }
+@keyframes bk-shimmer { 0%,100%{opacity:.15;transform:translateX(0)} 50%{opacity:.7;transform:translateX(6px)} }
+@keyframes bk-wave { 0%,100%{transform:translateX(-8px)} 50%{transform:translateX(8px)} }
 @keyframes bk-sparkle { 0%{opacity:0;transform:scale(.4) rotate(0)} 50%{opacity:1;transform:scale(1) rotate(45deg)} 100%{opacity:0;transform:scale(.4) rotate(90deg)} }
 `;
   const el = document.createElement("style");
@@ -179,6 +185,36 @@ function LivingLayer({ effect }) {
           }} />
         </div>
       );
+    case "sun_pulse":
+      // Warm glow that breathes — sun/moon usually sits in the upper area.
+      return (
+        <div style={base} aria-hidden="true">
+          <div style={{ position: "absolute", top: "4%", left: "8%", right: "8%", height: "44%",
+            background: "radial-gradient(circle at 50% 30%, rgba(255,220,130,0.55), transparent 60%)",
+            animation: "bk-sunpulse 3.6s ease-in-out infinite" }} />
+        </div>
+      );
+    case "water_shimmer":
+      // Sparkles along the lower third (where water usually is).
+      return (
+        <div style={base} aria-hidden="true">
+          {seedNodes(22, (i) => (
+            <span key={i} style={{
+              position: "absolute", bottom: `${4 + Math.random() * 26}%`, left: `${Math.random() * 100}%`,
+              width: 5, height: 5, borderRadius: "50%", background: "rgba(220,240,255,0.95)",
+              boxShadow: "0 0 6px rgba(180,220,255,0.9)",
+              animation: `bk-twinkle ${1.4 + Math.random() * 2}s ease-in-out ${Math.random() * 2.5}s infinite` }} />
+          ))}
+        </div>
+      );
+    case "gentle_waves":
+      return (
+        <div style={base} aria-hidden="true">
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "30%",
+            background: "linear-gradient(transparent, rgba(120,180,220,0.18))",
+            animation: "bk-wave 5s ease-in-out infinite" }} />
+        </div>
+      );
     case "soft_glow":
     default:
       return (
@@ -253,14 +289,15 @@ function PlaceholderScene({ palette, world, heroEmoji, helperEmoji, effect, page
 }
 
 // The full living page: art (or placeholder) + ambient effect overlay.
-export function LivingPage({ artUrl, effect, palette, world, heroEmoji, helperEmoji, pageIndex, children, style }) {
+export function LivingPage({ artUrl, effect, effects, palette, world, heroEmoji, helperEmoji, pageIndex, children, style }) {
+  const layers = Array.isArray(effects) && effects.length ? effects.slice(0, 3) : [effect];
   useEffect(() => { injectKeyframes(); }, []);
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
       {artUrl
         ? <img src={artUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
         : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} effect={effect} pageIndex={pageIndex} />}
-      <LivingLayer effect={effect} />
+      {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
       {children}
     </div>
   );

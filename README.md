@@ -1477,3 +1477,21 @@ not to say). It's passed as `choices.gender` to `generate-story`, which instruct
 to use she/her, he/him, or they/them consistently (fallback story is pronoun-aware too).
 Fixes stories calling a girl "him." NOTE: this is per-story for now; storing gender on the
 kid profile so it's remembered is a possible follow-up.
+
+## Stories: text layout, calmer narration, livelier pages — June 24 2026
+
+Three reader improvements from feedback:
+1. **Text moved BELOW the art** (its own card) instead of overlaying the bottom ~40% of
+   the picture, so the illustration is fully visible. Word highlighting unchanged.
+2. **Calmer, more natural narration.** Default ElevenLabs model -> `eleven_multilingual_v2`
+   (warmer/expressive vs robotic turbo) with expressive voice_settings; client plays audio
+   at 0.9x with pitch preserved for a slower read. Model is now part of the narration cache
+   key. NOTE: multilingual_v2 costs ~$0.10/1k chars vs turbo's $0.05 (override via
+   ELEVENLABS_MODEL_ID to go back to turbo).
+3. **Scene-matched living effects.** New presets `sun_pulse`, `water_shimmer`,
+   `gentle_waves`; pages can now run 1-2 effects; the generator returns an `effects` array
+   and is guided to match the scene (sun->sun_pulse, ocean->water_shimmer+gentle_waves,
+   night->twinkling_stars, etc.). The renderer stacks multiple layers.
+
+STILL TODO (next): location-based ambient SOUND per world (forest birds, ocean waves,
+space hum) — likely a small set of looped ambiences keyed by world, cached.

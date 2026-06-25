@@ -21,7 +21,7 @@ const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
 const EFFECTS = [
   "fireplace_flicker", "snow_outside_window", "twinkling_stars", "candle_glow",
   "gentle_rain", "drifting_clouds", "magic_sparkles", "character_blink",
-  "soft_glow", "floating_dust",
+  "soft_glow", "floating_dust", "sun_pulse", "water_shimmer", "gentle_waves",
 ];
 const EFFECT_SET = new Set(EFFECTS);
 
@@ -126,7 +126,9 @@ function validateStory(obj, choices) {
   pages = pages.slice(0, 8).map((p, i) => {
     const text = clampText(p && p.text, 260);
     const scene = clampText(p && p.art_prompt, 300) || (title + " storybook scene");
-    const effect = EFFECT_SET.has(p && p.effect) ? p.effect : "soft_glow";
+    let effects = Array.isArray(p && p.effects) ? p.effects.filter((e) => EFFECT_SET.has(e)).slice(0, 2) : [];
+    if (!effects.length) effects = [EFFECT_SET.has(p && p.effect) ? p.effect : "soft_glow"];
+    const effect = effects[0];
     if (!text) return null;
     // Drive the image from THIS PAGE'S TEXT so the picture depicts what the words
     // say (places, objects, characters), with the character sheet keeping the hero
@@ -136,7 +138,7 @@ function validateStory(obj, choices) {
       (sheet ? "The recurring characters always look like: " + sheet + ". " : "") +
       (scene ? "Extra detail: " + scene + ". " : "") +
       "Depict the specific places, objects, and characters named in the sentence. No text or words in the image.";
-    return { n: i + 1, text, art_prompt, effect, art_url: null, audio_url: null, word_timings: null };
+    return { n: i + 1, text, art_prompt, effect, effects, art_url: null, audio_url: null, word_timings: null };
   });
   if (pages.some((p) => p === null) || pages.length < 4) return null;
   return { schema: 1, title, world: choices.world, character_sheet: sheet, pages, created_with: choices };
@@ -150,7 +152,7 @@ function fallbackStory(c) {
   const name = clampText(c.heroName, 24) || "Pip";
   const g = GENDERS[c.gender] || GENDERS.neutral;
   const sheet = "The hero is " + name + ", " + hero + " (always drawn with the same look, colors, and outfit on every page)" + (helper ? "; the helper is " + helper + ", drawn the same each time" : "") + ".";
-  const P = (text, effect, art) => ({ n: 0, text, effect,
+  const P = (text, effect, art) => ({ n: 0, text, effect, effects: [effect],
     art_prompt: "Children's storybook watercolor illustration of this exact moment: \"" + text + "\". The recurring characters always look like: " + sheet + ". Depict the specific places, objects, and characters named in the sentence. No text in the image.",
     art_url: null, audio_url: null, word_timings: null });
   const pages = [

@@ -15,7 +15,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
 const DEFAULT_VOICE = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // "Rachel" — clear, friendly
-const MODEL_ID = process.env.ELEVENLABS_MODEL_ID || "eleven_turbo_v2_5";
+const MODEL_ID = process.env.ELEVENLABS_MODEL_ID || "eleven_multilingual_v2"; // more natural/expressive for storytelling
 
 function readBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
@@ -48,8 +48,8 @@ async function logCost(cost) {
   } catch { /* best-effort */ }
 }
 
-function cacheKey(voiceId, text) {
-  return crypto.createHash("sha1").update(voiceId + ":" + text).digest("hex");
+function cacheKey(voiceId, model, text) {
+  return crypto.createHash("sha1").update(voiceId + ":" + model + ":" + text).digest("hex");
 }
 async function cacheGet(key) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
   const voiceId = (body.voiceId || DEFAULT_VOICE).toString();
 
   // Cache hit -> return instantly, no ElevenLabs call, no cost.
-  const key = cacheKey(voiceId, text);
+  const key = cacheKey(voiceId, MODEL_ID, text);
   const hit = await cacheGet(key);
   if (hit && hit.audio_b64) {
     return res.status(200).json({ ok: true, configured: true, cached: true,
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/with-timestamps`, {
       method: "POST",
       headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ text, model_id: MODEL_ID, voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
+      body: JSON.stringify({ text, model_id: MODEL_ID, voice_settings: { stability: 0.4, similarity_boost: 0.8, style: 0.35, use_speaker_boost: true } }),
     });
     if (!r.ok) {
       const detail = await r.text();
