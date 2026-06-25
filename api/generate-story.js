@@ -52,6 +52,11 @@ const TONES = {
   cozy: "cozy and warm", funny: "silly and funny", adventurous: "exciting and adventurous",
   magical: "dreamy and magical", brave: "brave and heartwarming",
 };
+const GENDERS = {
+  girl: { s: "she", o: "her", p: "her", desc: "a girl" },
+  boy: { s: "he", o: "him", p: "his", desc: "a boy" },
+  neutral: { s: "they", o: "them", p: "their", desc: "" },
+};
 const ENDINGS = {
   happy: "a happy, satisfying ending", surprise: "a gentle, delightful surprise ending",
   friendship: "an ending all about friendship", cozy_sleep: "a calm, sleepy bedtime ending",
@@ -143,6 +148,7 @@ function fallbackStory(c) {
   const world = pick(WORLDS, c.world, "enchanted_woods");
   const helper = pick(HELPERS, c.helper, "wise_owl");
   const name = clampText(c.heroName, 24) || "Pip";
+  const g = GENDERS[c.gender] || GENDERS.neutral;
   const sheet = "The hero is " + name + ", " + hero + " (always drawn with the same look, colors, and outfit on every page)" + (helper ? "; the helper is " + helper + ", drawn the same each time" : "") + ".";
   const P = (text, effect, art) => ({ n: 0, text, effect,
     art_prompt: "Children's storybook watercolor illustration of this exact moment: \"" + text + "\". The recurring characters always look like: " + sheet + ". Depict the specific places, objects, and characters named in the sentence. No text in the image.",
@@ -150,8 +156,8 @@ function fallbackStory(c) {
   const pages = [
     P(`Once upon a time, ${name}, ${hero}, lived in ${world}.`, "soft_glow", `${hero} in ${world}, soft storybook illustration`),
     P(`One morning, ${name} discovered something was wrong and set off to help.`, "drifting_clouds", `${hero} setting off on a path, storybook`),
-    P(`Along the way, ${name} met ${helper}, who offered to come along.`, "twinkling_stars", `${hero} meeting ${helper}, warm storybook`),
-    P(`Together they were brave and kind, and they thought of a clever plan.`, "magic_sparkles", `${hero} and ${helper} making a plan, cozy storybook`),
+    P(`Along the way, ${name} met ${helper}, who offered to come along with ${g.o}.`, "twinkling_stars", `${hero} meeting ${helper}, warm storybook`),
+    P(`Together they were brave and kind, and ${g.s} thought of a clever plan.`, "magic_sparkles", `${hero} and ${helper} making a plan, cozy storybook`),
     P(`With a little courage and a lot of friendship, everything turned out wonderfully.`, "candle_glow", `${hero} happy ending in ${world}, glowing storybook`),
     P(`And ${name} went home with a happy heart. The End.`, "fireplace_flicker", `${hero} cozy at home, warm storybook`),
   ].map((p, i) => ({ ...p, n: i + 1 }));
@@ -166,11 +172,13 @@ function buildPrompt(c, age) {
   const tone = pick(TONES, c.tone, "cozy");
   const ending = pick(ENDINGS, c.ending, "happy");
   const name = clampText(c.heroName, 24) || "the hero";
+  const g = GENDERS[c.gender] || GENDERS.neutral;
   const twist = twistIsSafe(c.twist) ? clampText(c.twist, 120) : "";
   return [
     `You are a beloved children's picture-book author writing for a child age ${age || 6}.`,
     `Write a gentle, wholesome, age-appropriate story. Absolutely NO violence, scary peril, romance, or anything a parent wouldn't want a young child to hear.`,
-    `Hero: ${name}, ${hero}. World: ${world}. The problem: ${problem}. A helper appears: ${helper}. Tone: ${tone}. Ending: ${ending}.`,
+    `Hero: ${name}, ${hero}${g.desc ? " (" + g.desc + ")" : ""}. Refer to ${name} using ${g.s}/${g.o}/${g.p} pronouns consistently throughout — never the wrong gender.`,
+    `World: ${world}. The problem: ${problem}. A helper appears: ${helper}. Tone: ${tone}. Ending: ${ending}.`,
     twist ? `Gently weave in this idea if it is wholesome: "${twist}".` : ``,
     `Return ONLY raw JSON (no markdown fences) of this exact shape:`,
     `{"character_sheet": string (1-2 sentences fixing the hero's EXACT look — species, colors, distinctive features, outfit — and any recurring helper, so an illustrator draws them IDENTICALLY on every page), "title": string (max 6 words), "pages": [ {"text": string (1-2 short simple sentences a ${age || 6}-year-old can follow), "art_prompt": string (describe ONLY the SCENE/action for this page — do NOT redescribe the characters' appearance, that comes from character_sheet; NO text/words in the image), "effect": one of ${JSON.stringify(EFFECTS)} } ]}`,

@@ -1469,3 +1469,11 @@ Two fixes from live feedback (narration confirmed working same session).
    opening page has real art instead of the placeholder. Pages 3-6 still background-paint
    while the child reads (concurrency 2). Tradeoff: the create screen is a bit longer
    (~30s) since it waits on the first image; gpt-image-1 latency is the constraint.
+
+## Stories: hero gender / pronouns — June 24 2026
+
+The story builder now has a "Is the hero a girl or a boy?" pick (girl / boy / prefer
+not to say). It's passed as `choices.gender` to `generate-story`, which instructs Claude
+to use she/her, he/him, or they/them consistently (fallback story is pronoun-aware too).
+Fixes stories calling a girl "him." NOTE: this is per-story for now; storing gender on the
+kid profile so it's remembered is a possible follow-up.

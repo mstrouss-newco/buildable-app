@@ -23,6 +23,7 @@ const PROBLEMS = [["lost_friend","🔍","A lost friend"],["missing_star","⭐","
 const HELPERS = [["wise_owl","🦉","Wise owl"],["talking_map","🗺️","Talking map"],["glowing_firefly","✨","Firefly"],["old_turtle","🐢","Clever turtle"],["friendly_ghost","👻","Friendly ghost"],["singing_bird","🐦","Singing bird"]];
 const TONES = [["cozy","🔥","Cozy"],["funny","😄","Funny"],["adventurous","🗺️","Adventurous"],["magical","🪄","Magical"],["brave","🦁","Brave"]];
 const ENDINGS = [["happy","🎉","Happy"],["surprise","🎁","Surprise"],["friendship","💞","Friendship"],["cozy_sleep","🌙","Sleepy"]];
+const GENDERS = [["girl","👧","Girl"],["boy","👦","Boy"],["neutral","🙂","Prefer not to say"]];
 
 function getDeviceId() {
   try {
@@ -42,6 +43,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const [view, setView] = useState("build");   // build | generating | reading
   const [hero, setHero] = useState("bunny");
   const [heroName, setHeroName] = useState(playerName || "");
+  const [gender, setGender] = useState("girl");
   const [world, setWorld] = useState("snowy_forest");
   const [problem, setProblem] = useState("lost_friend");
   const [helper, setHelper] = useState("wise_owl");
@@ -90,7 +92,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
     try {
       const r = await fetch("/api/generate-story", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ choices: { hero, heroName, world, problem, helper, tone, ending, twist }, age: 6, deviceId, kidProfileId }),
+        body: JSON.stringify({ choices: { hero, heroName, gender, world, problem, helper, tone, ending, twist }, age: 6, deviceId, kidProfileId }),
       });
       const j = await r.json();
       if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("build"); return; }
@@ -191,6 +193,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
           <h3 style={s.sectionTitle}>What's their name? (optional)</h3>
           <input style={s.input} value={heroName} maxLength={24} placeholder="e.g. Pip" onChange={(e) => setHeroName(e.target.value)} />
         </div>
+        <Picker label="Is the hero a girl or a boy?" options={GENDERS} value={gender} set={setGender} />
         <Picker label="Where does it happen?" options={WORLDS} value={world} set={setWorld} />
         <Picker label="What's the problem?" options={PROBLEMS} value={problem} set={setProblem} />
         <Picker label="Who helps out?" options={HELPERS} value={helper} set={setHelper} />
