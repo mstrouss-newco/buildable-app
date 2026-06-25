@@ -47,6 +47,9 @@ function injectKeyframes() {
 @keyframes bk-blink { 0%,92%,100%{transform:scaleY(1)} 96%{transform:scaleY(.1)} }
 @keyframes bk-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @keyframes bk-sway { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
+@keyframes bk-cfloat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-3.2%) scale(1.012)} }
+@keyframes bk-csway { 0%,100%{transform:translateY(0) rotate(-1.6deg)} 50%{transform:translateY(-2.4%) rotate(1.6deg)} }
+@keyframes bk-cbob { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-2%) scale(1.025)} }
 @keyframes bk-charfloat { 0%,100%{transform:translateX(-50%) translateY(0) scale(1)} 50%{transform:translateX(-50%) translateY(-14px) scale(1.012)} }
 @keyframes bk-parallax { 0%,100%{transform:translateX(-4px)} 50%{transform:translateX(4px)} }
 @keyframes bk-sweep { 0%{background-position:200% 0} 100%{background-position:-120% 0} }
@@ -318,7 +321,32 @@ const FG_BY_WORLD = {
   cloud_castle: "drifting_clouds", pirate_cove: "water_shimmer",
 };
 
-export function LayeredPage({ bgUrl, charUrl, effect, effects, palette, world, heroEmoji, helperEmoji, pageIndex, children, style }) {
+// Each character has a natural on-page size so a bear isn't the same size as a
+// hedgehog. 1.0 = the baseline; tune per critter.
+const CHAR_SCALE = {
+  bunny:0.86, fox:0.92, bear:1.18, penguin:0.84, dragon:1.12, owl:0.82,
+  turtle:0.80, hedgehog:0.74, koala:0.94, tiger:1.10, fawn:1.00, otter:0.88,
+  wizard:1.00, fairy:0.78, robot:0.86, mermaid:0.96,
+};
+// Six placements the character cycles through across pages, so it never sits in
+// the same spot/size twice in a row — position, facing (flip), size nudge, motion.
+const PLACEMENTS = [
+  { x:50, s:1.00, flip:1,  b:0, anim:"bk-cfloat" },
+  { x:71, s:0.90, flip:-1, b:3, anim:"bk-csway"  },
+  { x:30, s:0.96, flip:1,  b:1, anim:"bk-cbob"   },
+  { x:62, s:0.86, flip:-1, b:5, anim:"bk-cfloat" },
+  { x:37, s:1.05, flip:1,  b:0, anim:"bk-csway"  },
+  { x:50, s:0.92, flip:1,  b:2, anim:"bk-cbob"   },
+];
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+function placeChar(pageIndex, charSlug) {
+  const p = PLACEMENTS[(pageIndex || 0) % PLACEMENTS.length];
+  const natural = CHAR_SCALE[charSlug] != null ? CHAR_SCALE[charSlug] : 1;
+  const width = clamp(30 * natural * p.s, 15, 38); // % of stage width
+  return { leftPct: p.x, bottomPct: p.b, widthPct: width, flip: p.flip, anim: p.anim, delay: ((pageIndex || 0) % 4) * 0.4 };
+}
+
+export function LayeredPage({ bgUrl, charUrl, charSlug, effect, effects, palette, world, heroEmoji, helperEmoji, pageIndex, children, style }) {
   useEffect(() => { injectKeyframes(); }, []);
   const layers = Array.isArray(effects) && effects.length ? effects.slice(0, 3) : [effect];
   const origin = ["50% 45%", "30% 40%", "70% 40%"][(pageIndex || 0) % 3];
@@ -327,11 +355,14 @@ export function LayeredPage({ bgUrl, charUrl, effect, effects, palette, world, h
       {bgUrl
         ? <img src={bgUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 20s ease-in-out infinite alternate" }} />
         : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} effect={effect} pageIndex={pageIndex} />}
-      {charUrl && (
-        <div style={{ position: "absolute", left: "50%", bottom: "0%", width: "40%", animation: "bk-parallax 9s ease-in-out infinite" }}>
-          <img src={charUrl} alt="" style={{ width: "100%", display: "block", filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.45))", transformOrigin: "50% 100%", animation: "bk-charfloat 4.5s ease-in-out infinite" }} />
-        </div>
-      )}
+      {charUrl && (() => {
+        const pc = placeChar(pageIndex, charSlug);
+        return (
+          <div style={{ position: "absolute", left: pc.leftPct + "%", bottom: pc.bottomPct + "%", width: pc.widthPct + "%", transform: `translateX(-50%) scaleX(${pc.flip})`, transformOrigin: "50% 100%" }}>
+            <img src={charUrl} alt="" style={{ width: "100%", display: "block", filter: "drop-shadow(0 10px 16px rgba(0,0,0,0.4))", transformOrigin: "50% 100%", animation: `${pc.anim} 4.6s ease-in-out ${pc.delay}s infinite` }} />
+          </div>
+        );
+      })()}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
       {/* foreground moving things (in front of the character) */}
       <LivingLayer effect={FG_BY_WORLD[world] || "floating_dust"} />

@@ -239,7 +239,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
           <video src={pageVideo[idx]} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 24 }} />
         </div>
       ) : (
-        <LayeredPage bgUrl={bgUrl} charUrl={charUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
+        <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={story.character_slug || (story.character_sheet && story.character_sheet.slug)} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
           {!bgUrl && bgs[idx] === "loading" && (<div style={s.artLoading}>✨ setting the scene…</div>)}
         </LayeredPage>
       )}
