@@ -47,6 +47,8 @@ function injectKeyframes() {
 @keyframes bk-blink { 0%,92%,100%{transform:scaleY(1)} 96%{transform:scaleY(.1)} }
 @keyframes bk-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @keyframes bk-sway { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
+@keyframes bk-sweep { 0%{background-position:200% 0} 100%{background-position:-120% 0} }
+@keyframes bk-kenburns { 0%{transform:scale(1.04)} 100%{transform:scale(1.16)} }
 @keyframes bk-sunpulse { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.85;transform:scale(1.12)} }
 @keyframes bk-shimmer { 0%,100%{opacity:.15;transform:translateX(0)} 50%{opacity:.7;transform:translateX(6px)} }
 @keyframes bk-wave { 0%,100%{transform:translateX(-8px)} 50%{transform:translateX(8px)} }
@@ -82,11 +84,11 @@ function LivingLayer({ effect }) {
     case "snow_outside_window":
       return (
         <div style={base} aria-hidden="true">
-          {seedNodes(26, (i) => (
+          {seedNodes(46, (i) => (
             <span key={i} style={{
               position: "absolute", top: `${-10 + Math.random() * 10}%`, left: `${Math.random() * 100}%`,
-              width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.9)",
-              filter: "blur(0.4px)", animation: `bk-fall ${5 + Math.random() * 5}s linear ${Math.random() * 4}s infinite`,
+              width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.95)",
+              filter: "blur(0.3px)", animation: `bk-fall ${4 + Math.random() * 4}s linear ${Math.random() * 4}s infinite`,
             }} />
           ))}
         </div>
@@ -106,10 +108,10 @@ function LivingLayer({ effect }) {
     case "twinkling_stars":
       return (
         <div style={base} aria-hidden="true">
-          {seedNodes(34, (i) => (
+          {seedNodes(46, (i) => (
             <span key={i} style={{
               position: "absolute", top: `${Math.random() * 70}%`, left: `${Math.random() * 100}%`,
-              width: 4, height: 4, borderRadius: "50%", background: "#fff",
+              width: 5, height: 5, borderRadius: "50%", background: "#fff",
               boxShadow: "0 0 6px rgba(255,255,255,0.9)",
               animation: `bk-twinkle ${1.5 + Math.random() * 2.5}s ease-in-out ${Math.random() * 3}s infinite`,
             }} />
@@ -131,12 +133,12 @@ function LivingLayer({ effect }) {
     case "drifting_clouds":
       return (
         <div style={base} aria-hidden="true">
-          {seedNodes(4, (i) => (
+          {seedNodes(6, (i) => (
             <span key={i} style={{
-              position: "absolute", top: `${6 + i * 16}%`, left: 0,
-              width: `${80 + Math.random() * 80}px`, height: `${28 + Math.random() * 20}px`,
-              borderRadius: "999px", background: "rgba(255,255,255,0.5)", filter: "blur(6px)",
-              animation: `bk-drift ${26 + i * 8}s linear ${i * 3}s infinite`,
+              position: "absolute", top: `${4 + i * 12}%`, left: 0,
+              width: `${110 + Math.random() * 110}px`, height: `${34 + Math.random() * 26}px`,
+              borderRadius: "999px", background: "rgba(255,255,255,0.7)", filter: "blur(7px)",
+              animation: `bk-drift ${20 + i * 6}s linear ${i * 2}s infinite`,
             }} />
           ))}
         </div>
@@ -195,10 +197,13 @@ function LivingLayer({ effect }) {
         </div>
       );
     case "water_shimmer":
-      // Sparkles along the lower third (where water usually is).
+      // A sweeping light band + sparkles along the lower third (the water).
       return (
         <div style={base} aria-hidden="true">
-          {seedNodes(22, (i) => (
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "34%",
+            background: "linear-gradient(105deg, transparent 30%, rgba(220,240,255,0.28) 50%, transparent 70%)",
+            backgroundSize: "220% 100%", animation: "bk-sweep 4.5s linear infinite" }} />
+          {seedNodes(28, (i) => (
             <span key={i} style={{
               position: "absolute", bottom: `${4 + Math.random() * 26}%`, left: `${Math.random() * 100}%`,
               width: 5, height: 5, borderRadius: "50%", background: "rgba(220,240,255,0.95)",
@@ -292,10 +297,12 @@ function PlaceholderScene({ palette, world, heroEmoji, helperEmoji, effect, page
 export function LivingPage({ artUrl, effect, effects, palette, world, heroEmoji, helperEmoji, pageIndex, children, style }) {
   const layers = Array.isArray(effects) && effects.length ? effects.slice(0, 3) : [effect];
   useEffect(() => { injectKeyframes(); }, []);
+  const ORIGINS = ["50% 45%", "25% 35%", "75% 35%", "30% 70%", "70% 65%", "50% 25%"];
+  const origin = ORIGINS[(pageIndex || 0) % ORIGINS.length];
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
       {artUrl
-        ? <img src={artUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+        ? <img src={artUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 26s ease-in-out infinite alternate" }} />
         : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} effect={effect} pageIndex={pageIndex} />}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
       {children}
