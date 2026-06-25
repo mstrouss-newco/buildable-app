@@ -22,6 +22,17 @@ const PAGE_BG =
 const HERO_EMOJI = { bunny:"🐰", dragon:"🐲", robot:"🤖", kitten:"🐱", astronaut:"🧑‍🚀", mermaid:"🧜", fox:"🦊", knight:"🛡️" };
 const HELPER_EMOJI = { wise_owl:"🦉", talking_map:"🗺️", glowing_firefly:"✨", old_turtle:"🐢", friendly_ghost:"👻", singing_bird:"🐦" };
 
+const WORLD_SCENE = {
+  snowy_forest: "a cozy snowy pine forest with a little log cabin and a big moon",
+  outer_space: "a sparkly outer-space scene with planets and bright stars",
+  underwater: "a colorful underwater coral kingdom with seaweed",
+  candy_land: "a sweet candy land with lollipops and gumdrop hills",
+  enchanted_woods: "an enchanted glowing woodland with big friendly mushrooms",
+  desert_oasis: "a sunny desert oasis with palm trees and a blue pool",
+  cloud_castle: "a magical castle floating in fluffy pink clouds",
+  pirate_cove: "a friendly pirate cove with a little sailing ship",
+};
+
 const WORLD_PALETTE = {
   snowy_forest: ["#2b3a55", "#5d7a9e"], outer_space: ["#1b1240", "#5b3a86"],
   underwater: ["#0d3b53", "#1f8aa6"], candy_land: ["#7a2f5f", "#d4789e"],
@@ -46,6 +57,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const ambienceRef = useRef(null);
   const [soundOn, setSoundOn] = useState(true);
   const [layers, setLayers] = useState({}); // pageIndex -> {bg,char} | "loading"
+  const charRef = useRef(null); // the story's ONE character cutout (reused on every page)
   const palette = WORLD_PALETTE[story && story.world] || ["#3a2c63", "#7a4a86"];
   const made = (story && story.created_with) || {};
   const heroEmoji = HERO_EMOJI[made.hero] || "🐰";
@@ -106,18 +118,30 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
 
   // PROTOTYPE: split the current page into a background + a transparent character layer
   // and parallax them for real motion (like the games' layered scenes).
+  // Generate the story's ONE character cutout (reused on every page); cached server-side.
+  async function ensureChar() {
+    if (charRef.current) return charRef.current;
+    const charSheet = story.character_sheet || "a friendly little hero";
+    const charPrompt = charSheet + ". Full body, standing, friendly, facing forward, centered, on a plain solid background, no scenery, no ground, simple.";
+    try {
+      const r = await fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: charPrompt, world: story.world, style: story.art_style, transparent: true }) }).then((x) => x.json());
+      charRef.current = r && r.url ? r.url : null;
+    } catch { charRef.current = null; }
+    return charRef.current;
+  }
+  // A page's background is a REUSABLE LIBRARY scene (deterministic per world+style+variant
+  // -> cached after first generation), so only the character is ever made per story.
   async function makeLayers() {
     if (layers[idx] === "loading") return;
     setLayers((m) => ({ ...m, [idx]: "loading" }));
-    const bgPrompt = "Storybook BACKGROUND SETTING ONLY — absolutely NO characters, NO animals, NO people, an empty scene — for this moment: \"" + (page.text || "") + "\".";
-    const charSheet = (story.character_sheet || "a friendly little hero");
-    const charPrompt = charSheet + ". Full body, standing, friendly, facing forward, centered, on a plain solid background, no scenery, no ground, simple.";
+    const scene = WORLD_SCENE[story.world] || "a magical storybook place";
+    const bgPrompt = "Storybook BACKGROUND SETTING ONLY — NO characters, NO animals, NO people, an empty wide scene of " + scene + ". Variation " + (idx % 3) + ".";
     try {
-      const [bgR, chR] = await Promise.all([
+      const [bgR, char] = await Promise.all([
         fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: bgPrompt, world: story.world, style: story.art_style }) }).then((r) => r.json()),
-        fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: charPrompt, world: story.world, style: story.art_style, transparent: true }) }).then((r) => r.json()),
+        ensureChar(),
       ]);
-      setLayers((m) => ({ ...m, [idx]: { bg: bgR && bgR.url ? bgR.url : null, char: chR && chR.url ? chR.url : null } }));
+      setLayers((m) => ({ ...m, [idx]: { bg: bgR && bgR.url ? bgR.url : null, char } }));
     } catch { setLayers((m) => ({ ...m, [idx]: null })); }
   }
 

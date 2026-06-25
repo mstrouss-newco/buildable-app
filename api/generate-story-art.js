@@ -7,6 +7,8 @@
 //
 // Mirrors the image fallback chain + usage_log cost pattern in generate-creature.js.
 
+import crypto from "crypto";
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ART_COST_USD = parseFloat(process.env.STORY_ART_COST_USD || "0.04");
@@ -98,6 +100,15 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
   );
 }
 
+async function imgCacheGet(key) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
+  try { const r = await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}&select=audio_b64&limit=1`, { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }); if (!r.ok) return null; const rows = await r.json(); return Array.isArray(rows) && rows[0] ? rows[0].audio_b64 : null; } catch { return null; }
+}
+async function imgCachePut(key, b64) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
+  try { await fetch(`${SUPABASE_URL}/rest/v1/narration_cache`, { method: "POST", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates" }, body: JSON.stringify({ cache_key: key, audio_b64: b64, word_timings: null }) }); } catch {}
+}
+
 export default async function handler(req, res) {
   // Safe diagnostic (booleans only, never secret values): GET /api/generate-story-art
   if (req.method === "GET") {
@@ -118,7 +129,11 @@ export default async function handler(req, res) {
   if (!(await underBudget())) return res.status(200).json({ ok: true, placeholder: true, reason: "over_daily_budget" });
   try {
     const prompt = `${artPrompt}. ${styleFor(body.style)}`;
+    const cacheKey = "img:" + crypto.createHash("sha1").update(prompt + (body.transparent ? "|t" : "")).digest("hex");
+    const cached = await imgCacheGet(cacheKey);
+    if (cached) return res.status(200).json({ ok: true, url: "data:image/png;base64," + cached, cached: true });
     const url = await generateImage(prompt, openaiKey, { transparent: !!body.transparent });
+    if (url && typeof url === "string" && url.startsWith("data:")) { try { await imgCachePut(cacheKey, url.split(",")[1]); } catch {} }
     if (!url) return res.status(200).json({ ok: true, placeholder: true, reason: "image_provider_failed" });
     await logCost(ART_COST_USD, "image");
     return res.status(200).json({ ok: true, url });
