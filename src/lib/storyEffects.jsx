@@ -48,7 +48,7 @@ function injectKeyframes() {
 @keyframes bk-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @keyframes bk-sway { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
 @keyframes bk-sweep { 0%{background-position:200% 0} 100%{background-position:-120% 0} }
-@keyframes bk-kenburns { 0%{transform:scale(1.04)} 100%{transform:scale(1.16)} }
+@keyframes bk-kenburns { 0%{transform:scale(1.05) translate(0%,0%)} 100%{transform:scale(1.20) translate(-2.5%,-1.5%)} }
 @keyframes bk-sunpulse { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.85;transform:scale(1.12)} }
 @keyframes bk-shimmer { 0%,100%{opacity:.15;transform:translateX(0)} 50%{opacity:.7;transform:translateX(6px)} }
 @keyframes bk-wave { 0%,100%{transform:translateX(-8px)} 50%{transform:translateX(8px)} }
@@ -99,7 +99,7 @@ function LivingLayer({ effect }) {
           {seedNodes(30, (i) => (
             <span key={i} style={{
               position: "absolute", top: `${-20 + Math.random() * 10}%`, left: `${Math.random() * 100}%`,
-              width: 2, height: 16, background: "linear-gradient(rgba(180,210,255,0),rgba(180,210,255,0.8))",
+              width: 2, height: 16, background: "linear-gradient(rgba(180,210,255,0),rgba(180,210,255,0.45))",
               animation: `bk-rain ${0.7 + Math.random() * 0.6}s linear ${Math.random() * 2}s infinite`,
             }} />
           ))}
@@ -133,12 +133,12 @@ function LivingLayer({ effect }) {
     case "drifting_clouds":
       return (
         <div style={base} aria-hidden="true">
-          {seedNodes(6, (i) => (
+          {seedNodes(3, (i) => (
             <span key={i} style={{
-              position: "absolute", top: `${4 + i * 12}%`, left: 0,
-              width: `${110 + Math.random() * 110}px`, height: `${34 + Math.random() * 26}px`,
-              borderRadius: "999px", background: "rgba(255,255,255,0.7)", filter: "blur(7px)",
-              animation: `bk-drift ${20 + i * 6}s linear ${i * 2}s infinite`,
+              position: "absolute", top: `${6 + i * 9}%`, left: "-25%",
+              width: `${120 + Math.random() * 70}px`, height: `${26 + Math.random() * 14}px`,
+              borderRadius: "999px", background: "rgba(255,255,255,0.16)", filter: "blur(11px)",
+              animation: `bk-drift ${28 + i * 7}s linear ${i * 6}s infinite`,
             }} />
           ))}
         </div>
@@ -160,7 +160,7 @@ function LivingLayer({ effect }) {
         <div style={base} aria-hidden="true">
           <div style={{
             position: "absolute", inset: 0,
-            background: "radial-gradient(ellipse at 50% 92%, rgba(255,140,40,0.55), transparent 55%)",
+            background: "radial-gradient(ellipse at 50% 92%, rgba(255,140,40,0.35), transparent 55%)",
             animation: "bk-flicker 1.4s ease-in-out infinite",
           }} />
         </div>
@@ -170,7 +170,7 @@ function LivingLayer({ effect }) {
         <div style={base} aria-hidden="true">
           <div style={{
             position: "absolute", inset: 0,
-            background: "radial-gradient(circle at 50% 60%, rgba(255,200,120,0.5), transparent 45%)",
+            background: "radial-gradient(circle at 50% 60%, rgba(255,200,120,0.32), transparent 45%)",
             animation: "bk-flicker 2.2s ease-in-out infinite",
           }} />
         </div>
@@ -192,7 +192,7 @@ function LivingLayer({ effect }) {
       return (
         <div style={base} aria-hidden="true">
           <div style={{ position: "absolute", top: "4%", left: "8%", right: "8%", height: "44%",
-            background: "radial-gradient(circle at 50% 30%, rgba(255,220,130,0.55), transparent 60%)",
+            background: "radial-gradient(circle at 50% 30%, rgba(255,220,130,0.38), transparent 60%)",
             animation: "bk-sunpulse 3.6s ease-in-out infinite" }} />
         </div>
       );
@@ -302,7 +302,7 @@ export function LivingPage({ artUrl, effect, effects, palette, world, heroEmoji,
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
       {artUrl
-        ? <img src={artUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 26s ease-in-out infinite alternate" }} />
+        ? <img src={artUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 18s ease-in-out infinite alternate" }} />
         : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} effect={effect} pageIndex={pageIndex} />}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
       {children}
