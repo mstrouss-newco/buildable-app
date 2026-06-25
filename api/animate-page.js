@@ -63,8 +63,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, model: MODEL, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, error: sub.ok ? undefined : sub.raw.slice(0, 220) });
     }
     if (req.query.probe === "check" && req.query.id) {
-      const result = await falResult(req.query.id.toString());
-      return res.status(200).json({ ok: true, videoUrl: videoUrlFrom(result), result_keys: Object.keys(result || {}), error: result && result.error });
+      const base = "https://queue.fal.run/" + MODEL + "/requests/" + req.query.id.toString();
+      const sr = await fetch(base + "/status", { headers: { Authorization: "Key " + process.env.FAL_KEY } });
+      const sj = await sr.json().catch(() => ({}));
+      if (sj.status !== "COMPLETED") return res.status(200).json({ ok: true, status: sj.status || "unknown", queue_position: sj.queue_position });
+      const rr = await fetch(base, { headers: { Authorization: "Key " + process.env.FAL_KEY } });
+      const result = await rr.json().catch(() => ({}));
+      return res.status(200).json({ ok: true, status: "COMPLETED", videoUrl: videoUrlFrom(result), result_keys: Object.keys(result || {}) });
     }
     return res.status(200).json({ ok: true, hasFal: true, model: MODEL });
   }
