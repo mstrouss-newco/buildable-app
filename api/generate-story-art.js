@@ -12,7 +12,17 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ART_COST_USD = parseFloat(process.env.STORY_ART_COST_USD || "0.04");
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
 
-const STYLE = "soft children's picture-book illustration, warm gentle colors, rounded friendly shapes, storybook watercolor, no text, no words, age 4-8, wholesome";
+// A few distinct storybook "looks" the kid can choose from.
+const STYLES = {
+  watercolor: "soft children's picture-book WATERCOLOR illustration, gentle washes, warm colors, rounded friendly shapes, hand-painted storybook",
+  modern3d:   "modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded characters, vibrant, glossy",
+  papercut:   "layered CUT-PAPER COLLAGE illustration (Eric Carle style), textured construction-paper shapes, bold bright colors, visible paper edges",
+  crayon:     "bright CRAYON and colored-pencil children's drawing, playful hand-drawn doodle look, paper texture",
+  comic:      "bold flat CARTOON COMIC style, clean black outlines, vibrant flat colors, cel-shaded",
+  claymation: "cute CLAYMATION plasticine stop-motion look, soft studio lighting, rounded clay characters, tactile",
+};
+const STYLE_SUFFIX = "no text, no words, age 4-8, wholesome, child-friendly";
+function styleFor(id) { return (STYLES[id] || STYLES.watercolor) + ", " + STYLE_SUFFIX; }
 
 function readBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
@@ -106,7 +116,7 @@ export default async function handler(req, res) {
   if (!openaiKey) return res.status(200).json({ ok: true, placeholder: true, reason: "no_openai_key" });
   if (!(await underBudget())) return res.status(200).json({ ok: true, placeholder: true, reason: "over_daily_budget" });
   try {
-    const prompt = `${artPrompt}. ${STYLE}`;
+    const prompt = `${artPrompt}. ${styleFor(body.style)}`;
     const url = await generateImage(prompt, openaiKey);
     if (!url) return res.status(200).json({ ok: true, placeholder: true, reason: "image_provider_failed" });
     await logCost(ART_COST_USD, "image");
