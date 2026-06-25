@@ -2,6 +2,7 @@
 // The "My Stuff" library: shows everything a child has saved
 // (characters, levels, and later sounds) so they can reuse it.
 import { useState, useEffect } from "react";
+import { shareCreation } from "./lib/shareSheet";
 import {
   listCharacters,
   deleteCharacter,
@@ -192,6 +193,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
                 <p style={s.cardDesc}>{[sg.vibe, sg.theme].filter(Boolean).join(" · ")}</p>
                 <audio controls src={sg.audio_url} style={{ width: "92%", margin: "0 auto 12px" }} />
                 <div style={s.cardActions}>
+                  <button style={s.useBtn} onClick={() => shareCreation({ kind: "song", id: sg.song_id, title: sg.title })}>🔗 Share</button>
                   <button style={s.deleteBtn} onClick={() => removeSong(sg.song_id)}>Delete</button>
                 </div>
               </div>

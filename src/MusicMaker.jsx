@@ -14,6 +14,7 @@
 // is config-driven (the arrays below) so adding a new option is a one-line edit.
 
 import { useState, useEffect, useRef } from "react";
+import { shareCreation } from "./lib/shareSheet";
 
 const MAX_SONGS = 10;
 
@@ -412,6 +413,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
                   </div>
                   <audio controls src={s.audio_url} style={S.audioSmall} />
                 </div>
+                <button style={S.shareBtn} onClick={() => shareCreation({ kind: "song", id: s.song_id, title: s.title })} title="Share">🔗</button>
                 <button style={S.renameBtn} onClick={() => renameSong(s)} title="Rename">✏️</button>
                 <button style={S.deleteBtn} onClick={() => deleteSong(s.song_id)} title="Delete">✕</button>
               </div>
@@ -465,6 +467,7 @@ const S = {
   songTitle: { fontWeight: 800, fontSize: 15, marginBottom: 2 },
   songMeta: { fontSize: 12, color: "#aaa", marginBottom: 6, textTransform: "capitalize" },
   audioSmall: { width: "100%", height: 32 },
+  shareBtn: { background: "rgba(124,108,255,0.25)", color: "#cfc8ff", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0 },
   renameBtn: { background: "#2a2a3a", color: "#e7e7f5", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0 },
     deleteBtn: { background: "#2a2a3a", color: "#ff8080", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0 },
   fullNote: { marginTop: 14, textAlign: "center", color: "#FF8FB1", fontWeight: 700 },

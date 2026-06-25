@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A Buildable Kids song</title>
+<meta property="og:title" content="A song made on Buildable Kids" />
+<meta property="og:description" content="Listen to this song a kid made — then make your own, free." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Nunito',-apple-system,sans-serif;color:#fff;
+    background:radial-gradient(circle at 15% -10%,rgba(124,92,252,.30),transparent 45%),
+    radial-gradient(circle at 85% 110%,rgba(255,107,107,.24),transparent 45%),#0a0a14;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px 16px 40px}
+  .brand{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .brand .logo{font-family:'Fredoka';font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px}
+  .brand .free{background:#fff;color:#5B21B6;border:none;border-radius:999px;padding:9px 16px;font-weight:800;font-size:13px;cursor:pointer;text-decoration:none}
+  .player{width:100%;max-width:520px;background:rgba(255,255,255,.06);border:1px solid rgba(155,126,221,.25);
+    border-radius:28px;padding:26px;text-align:center}
+  .cover{width:200px;height:200px;max-width:70vw;max-height:70vw;border-radius:28px;margin:0 auto 20px;
+    display:flex;align-items:center;justify-content:center;font-size:84px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+  .song-title{font-family:'Fredoka';font-weight:700;font-size:clamp(22px,5vw,30px);margin-bottom:6px}
+  .song-meta{color:#cfc8e8;font-weight:800;text-transform:capitalize;margin-bottom:20px}
+  audio{width:100%;margin-top:6px}
+  .cta{margin-top:28px;width:100%;max-width:520px;text-align:center}
+  .cta h2{font-family:'Fredoka';font-weight:700;font-size:20px;margin-bottom:6px}
+  .cta p{color:#cfc8e8;font-weight:700;margin-bottom:16px}
+  .cta a{display:inline-block;background:linear-gradient(135deg,#7C5CFC,#FF6B6B);color:#fff;text-decoration:none;
+    border-radius:16px;padding:14px 30px;font-weight:900;font-size:16px}
+  .state{margin-top:60px;text-align:center;max-width:520px}
+  .state h1{font-family:'Fredoka';font-size:26px;margin-bottom:10px}
+  .state p{color:#cfc8e8;font-weight:700;margin-bottom:20px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+  <div class="brand">
+    <div class="logo">🌟 Buildable Kids</div>
+    <a class="free" href="/">✨ Make your own — free</a>
+  </div>
+
+  <div id="loading" class="state"><h1>🎵 Loading the song…</h1></div>
+
+  <div id="missing" class="state hidden">
+    <h1>This song isn't available 🙈</h1>
+    <p>The link may be old or the song was removed. Make your own tune in a minute — it's free!</p>
+    <a class="free" style="padding:14px 30px;font-size:16px" href="/">🎶 Make your own song</a>
+  </div>
+
+  <div id="player" class="player hidden">
+    <div class="cover" id="cover">🎵</div>
+    <div class="song-title" id="title"></div>
+    <div class="song-meta" id="meta"></div>
+    <audio id="audio" controls preload="auto"></audio>
+  </div>
+
+  <div id="cta" class="cta hidden">
+    <h2>Made by a kid on Buildable Kids ✨</h2>
+    <p>Your child can make their own songs, stories &amp; games — free to start.</p>
+    <a href="/">Make your own — free</a>
+  </div>
+
+<script>
+  var VIBE_EMOJI={happy:"😀",epic:"🐉",spooky:"👻",silly:"🤣",chill:"😎",dance:"🕺"};
+  function show(id){["loading","missing","player"].forEach(function(x){document.getElementById(x).classList.toggle("hidden",x!==id);});
+    document.getElementById("cta").classList.toggle("hidden",id!=="player");}
+  function getId(){
+    var q=new URLSearchParams(location.search).get("id");if(q)return q;
+    var m=location.pathname.match(/\/p\/([^\/?#]+)/);return m?decodeURIComponent(m[1]):"";}
+
+  function render(song){
+    if(!song||!song.audio_url){show("missing");return;}
+    var color=song.cover_color||"#7C5CFC";
+    var cover=document.getElementById("cover");
+    cover.style.background="linear-gradient(150deg,"+color+",#1a1330)";
+    cover.textContent=VIBE_EMOJI[song.vibe]||"🎵";
+    document.getElementById("title").textContent=song.title||"My Song";
+    var meta=[song.vibe,song.theme].filter(Boolean).join(" · ");
+    document.getElementById("meta").textContent=meta||"a song I made";
+    document.getElementById("audio").src=song.audio_url;
+    show("player");
+  }
+
+  if(window.__PREVIEW_SONG){render(window.__PREVIEW_SONG);}
+  else{
+    var id=getId();
+    if(!id){show("missing");}
+    else{
+      fetch("/api/shared-song?id="+encodeURIComponent(id))
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(j){if(j&&j.song)render(j.song);else show("missing");})
+        .catch(function(){show("missing");});
+    }
+  }
+</script>
+</body>
+</html>

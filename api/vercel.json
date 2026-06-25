@@ -5,15 +5,61 @@
     }
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/demo/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/demo/(.*)", "dest": "/index.html" },
-    { "src": "/demo", "dest": "/index.html" },
-    { "src": "/games-library.html", "dest": "/games-library.html" },
-    { "src": "/games", "dest": "/games-library.html" },
-    { "src": "/library", "dest": "/games-library.html" },
-    { "src": "/croctot.html", "dest": "/croctot.html" },
-    { "src": "/rileys-garden.html", "dest": "/rileys-garden.html" },
-    { "src": "/(.*)", "dest": "/landing.html" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/demo/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/demo/(.*)",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/demo",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/games-library.html",
+      "dest": "/games-library.html"
+    },
+    {
+      "src": "/games",
+      "dest": "/games-library.html"
+    },
+    {
+      "src": "/library",
+      "dest": "/games-library.html"
+    },
+    {
+      "src": "/croctot.html",
+      "dest": "/croctot.html"
+    },
+    {
+      "src": "/rileys-garden.html",
+      "dest": "/rileys-garden.html"
+    },
+    {
+      "src": "/story.html",
+      "dest": "/story.html"
+    },
+    {
+      "src": "/song.html",
+      "dest": "/song.html"
+    },
+    {
+      "src": "/s/([^/]+)",
+      "dest": "/story.html?id=$1"
+    },
+    {
+      "src": "/p/([^/]+)",
+      "dest": "/song.html?id=$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/landing.html"
+    }
   ]
 }

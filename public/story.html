@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A Buildable Kids story</title>
+<meta property="og:title" content="A story made on Buildable Kids" />
+<meta property="og:description" content="Read this picture book a kid made — then make your own, free." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--violet:#5B21B6;--purple:#7C5CFC;--coral:#FF6B6B;--cream:#FDFAF5;--ink:#0a0a14}
+  body{font-family:'Nunito',-apple-system,sans-serif;color:#fff;
+    background:radial-gradient(circle at 12% -10%,rgba(155,126,221,.28),transparent 42%),
+    radial-gradient(circle at 88% 112%,rgba(214,90,123,.24),transparent 42%),#0a0a14;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px 16px 40px}
+  .brand{width:100%;max-width:780px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .brand .logo{font-family:'Fredoka';font-weight:700;font-size:18px;color:#fff;display:flex;align-items:center;gap:8px}
+  .brand .free{background:#fff;color:#5B21B6;border:none;border-radius:999px;padding:9px 16px;font-weight:800;font-size:13px;cursor:pointer;text-decoration:none;font-family:'Nunito'}
+  .title{font-family:'Fredoka';font-weight:700;font-size:clamp(20px,4vw,28px);text-align:center;margin:4px 0 14px;max-width:780px}
+  .page{width:100%;max-width:780px;aspect-ratio:3/2;border-radius:24px;border:1px solid rgba(155,126,221,.3);
+    box-shadow:0 20px 60px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+  .page img{width:100%;height:100%;object-fit:cover}
+  .scene{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:clamp(64px,16vw,120px)}
+  .textpanel{width:100%;max-width:780px;margin-top:14px;padding:16px 22px;background:rgba(255,255,255,.06);
+    border:1px solid rgba(155,126,221,.22);border-radius:18px}
+  .text{font-family:'Fredoka';font-size:clamp(17px,2.6vw,22px);line-height:1.55;text-align:center}
+  .word.on{color:#1a1330;background:#ffe08a;border-radius:6px;padding:0 3px;box-shadow:0 0 0 2px #ffe08a}
+  .controls{display:flex;align-items:center;gap:14px;margin-top:18px}
+  .circle{width:52px;height:52px;border-radius:50%;border:none;background:rgba(255,255,255,.12);color:#fff;font-size:26px;cursor:pointer;font-family:'Fredoka')}
+  .circle:disabled{opacity:.3;cursor:default}
+  .read{padding:13px 26px;border-radius:16px;border:none;background:linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b);color:#fff;font-size:17px;font-weight:800;font-family:'Fredoka';cursor:pointer;box-shadow:0 6px 20px rgba(155,126,221,.45)}
+  .pagenum{margin-top:12px;font-size:14px;opacity:.65}
+  .cta{margin-top:30px;width:100%;max-width:780px;background:rgba(255,255,255,.06);border:1px solid rgba(155,126,221,.25);
+    border-radius:22px;padding:26px 20px;text-align:center}
+  .cta h2{font-family:'Fredoka';font-weight:700;font-size:22px;margin-bottom:6px}
+  .cta p{color:#cfc8e8;font-weight:700;margin-bottom:16px}
+  .cta a{display:inline-block;background:linear-gradient(135deg,#7C5CFC,#FF6B6B);color:#fff;text-decoration:none;
+    border-radius:16px;padding:14px 30px;font-weight:900;font-size:16px}
+  .state{margin-top:60px;text-align:center;max-width:520px}
+  .state h1{font-family:'Fredoka';font-size:26px;margin-bottom:10px}
+  .state p{color:#cfc8e8;font-weight:700;margin-bottom:20px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+  <div class="brand">
+    <div class="logo">🌟 Buildable Kids</div>
+    <a class="free" href="/">✨ Make your own — free</a>
+  </div>
+
+  <div id="loading" class="state"><h1>📖 Opening the book…</h1></div>
+
+  <div id="missing" class="state hidden">
+    <h1>This story isn't available 🙈</h1>
+    <p>The link may be old or the story was removed. But you can make your own in minutes — it's free!</p>
+    <a class="free" style="padding:14px 30px;font-size:16px" href="/">✨ Make your own story</a>
+  </div>
+
+  <div id="book" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center">
+    <h1 class="title" id="bookTitle"></h1>
+    <div class="page" id="pageArt"></div>
+    <div class="textpanel"><p class="text" id="pageText"></p></div>
+    <div class="controls">
+      <button class="circle" id="prev">‹</button>
+      <button class="read" id="read">▶ Read to me</button>
+      <button class="circle" id="next">›</button>
+    </div>
+    <p class="pagenum" id="pageNum"></p>
+
+    <div class="cta">
+      <h2>Made by a kid on Buildable Kids ✨</h2>
+      <p>Your child can make their own stories, songs &amp; games — free to start.</p>
+      <a href="/">Make your own — free</a>
+    </div>
+  </div>
+
+<script>
+  // ---- world look (matches the app's calm placeholder scenes) ----
+  var PALETTE={snowy_forest:["#2b3a55","#5d7a9e"],outer_space:["#1b1240","#5b3a86"],underwater:["#0d3b53","#1f8aa6"],
+    candy_land:["#7a2f5f","#d4789e"],enchanted_woods:["#1f3d2f","#4a7a55"],desert_oasis:["#6b4a1f","#caa05a"],
+    cloud_castle:["#3a4a86","#8aa0d4"],pirate_cove:["#2a3d4a","#5a86a0"],space:["#1b1240","#5b3a86"],
+    forest:["#1f3d2f","#4a7a55"],desert:["#6b4a1f","#caa05a"],castle:["#3a4a86","#8aa0d4"],
+    candy:["#7a2f5f","#d4789e"],volcano:["#5a1f1f","#c2502f"]};
+  var SCENE={snowy_forest:"🌲",outer_space:"🚀",space:"🚀",underwater:"🐠",candy_land:"🍭",candy:"🍭",
+    enchanted_woods:"🍄",forest:"🌳",desert_oasis:"🌵",desert:"🌵",cloud_castle:"🏰",castle:"🏰",
+    pirate_cove:"⛵",volcano:"🌋"};
+
+  var state={pages:[],idx:0,world:"",speaking:false};
+
+  function getId(){
+    var q=new URLSearchParams(location.search).get("id");
+    if(q) return q;
+    var m=location.pathname.match(/\/s\/([^\/?#]+)/); // pretty /s/ID links
+    return m?decodeURIComponent(m[1]):"";
+  }
+
+  function show(id){["loading","missing","book"].forEach(function(x){document.getElementById(x).classList.toggle("hidden",x!==id);});}
+
+  function renderPage(){
+    var p=state.pages[state.idx]||{};
+    var art=document.getElementById("pageArt");
+    if(p.art_url){art.innerHTML='<img alt="" src="'+p.art_url+'">';}
+    else{
+      var pal=PALETTE[state.world]||["#3a2a5e","#7c5cfc"];
+      var emoji=SCENE[state.world]||"📖";
+      art.innerHTML='<div class="scene" style="background:linear-gradient(160deg,'+pal[0]+','+pal[1]+')">'+emoji+'</div>';
+    }
+    // word spans (for read-aloud highlight)
+    var words=(p.text||"").trim().split(/\s+/).filter(Boolean);
+    document.getElementById("pageText").innerHTML=words.map(function(w,i){return '<span class="word" data-i="'+i+'">'+w+' </span>';}).join("");
+    document.getElementById("pageNum").textContent="Page "+(state.idx+1)+" of "+state.pages.length;
+    document.getElementById("prev").disabled=state.idx===0;
+    document.getElementById("next").disabled=state.idx===state.pages.length-1;
+    stopRead();
+  }
+
+  function go(d){var n=state.idx+d;if(n<0||n>=state.pages.length)return;state.idx=n;renderPage();}
+
+  // Read-aloud with the free browser voice + word highlight.
+  function stopRead(){try{speechSynthesis.cancel();}catch(e){}state.speaking=false;document.getElementById("read").textContent="▶ Read to me";clearHi();}
+  function clearHi(){document.querySelectorAll(".word.on").forEach(function(el){el.classList.remove("on");});}
+  function toggleRead(){
+    if(state.speaking){stopRead();return;}
+    var p=state.pages[state.idx]||{};var text=p.text||"";if(!text)return;
+    var spans=[].slice.call(document.querySelectorAll(".word"));
+    var starts=[],acc=0;spans.forEach(function(el){var w=el.textContent.trim();var at=text.indexOf(w,acc);starts.push(at);acc=at+w.length;});
+    var u=new SpeechSynthesisUtterance(text);u.rate=.95;
+    u.onboundary=function(ev){if(ev.name&&ev.name!=="word")return;var ci=ev.charIndex;var hi=0;for(var i=0;i<starts.length;i++){if(starts[i]<=ci)hi=i;}clearHi();if(spans[hi])spans[hi].classList.add("on");};
+    u.onend=function(){stopRead();};
+    state.speaking=true;document.getElementById("read").textContent="⏸ Pause";
+    try{speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){stopRead();}
+  }
+
+  function render(data){
+    var s=(data&&data.story)||{};
+    var book=s.story||s; // accept {story:{...}} row or raw story
+    state.pages=(book&&book.pages)||[];
+    state.world=(book&&book.world)||s.world||"";
+    state.idx=0;
+    if(!state.pages.length){show("missing");return;}
+    document.getElementById("bookTitle").textContent=(book&&book.title)||s.title||"My Story";
+    show("book");renderPage();
+  }
+
+  document.getElementById("prev").onclick=function(){go(-1);};
+  document.getElementById("next").onclick=function(){go(1);};
+  document.getElementById("read").onclick=toggleRead;
+
+  // Preview hook: window.__PREVIEW_STORY lets us render without a server.
+  if(window.__PREVIEW_STORY){render({story:window.__PREVIEW_STORY});}
+  else{
+    var id=getId();
+    if(!id){show("missing");}
+    else{
+      fetch("/api/shared-story?id="+encodeURIComponent(id))
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(j){if(j&&j.story)render(j);else show("missing");})
+        .catch(function(){show("missing");});
+    }
+  }
+</script>
+</body>
+</html>

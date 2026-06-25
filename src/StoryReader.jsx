@@ -11,6 +11,7 @@
 // <audio> element driven by wordTimings (the highlight loop already keys off an index).
 import { useState, useEffect, useRef } from "react";
 import { LivingPage, LayeredPage } from "./lib/storyEffects";
+import { shareCreation } from "./lib/shareSheet";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -44,7 +45,7 @@ function wordsOf(text) {
   return (text || "").trim().split(/\s+/).filter(Boolean);
 }
 
-export default function StoryReader({ story, deviceId, kidProfileId, onExit, onSave, saving, savedMsg, onNewAdventure }) {
+export default function StoryReader({ story, storyId, deviceId, kidProfileId, onExit, onSave, saving, savedMsg, onNewAdventure }) {
   const pages = (story && story.pages) || [];
   const [idx, setIdx] = useState(0);
   const [bgs, setBgs] = useState({});            // pageIndex -> library bg url | "loading" | null
@@ -230,7 +231,10 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
       <div style={s.topBar}>
         <button style={s.navBtn} onClick={onExit}>← Back</button>
         <span style={s.counter}>{story.title}</span>
-        <button style={s.soundBtn} onClick={toggleSound} title="Background sounds" aria-label="Toggle background sounds">{soundOn ? "🔊" : "🔇"}</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={s.soundBtn} onClick={() => shareCreation({ kind: "story", id: storyId, title: story.title })} title="Share this story" aria-label="Share this story">🔗</button>
+          <button style={s.soundBtn} onClick={toggleSound} title="Background sounds" aria-label="Toggle background sounds">{soundOn ? "🔊" : "🔇"}</button>
+        </div>
       </div>
       <audio ref={ambienceRef} style={{ display: "none" }} />
 

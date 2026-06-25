@@ -7,6 +7,7 @@
 // free text is the (optional, pre-filled) hero name. The generator/reader are unchanged.
 import { useState, useEffect, useRef } from "react";
 import StoryReader from "./StoryReader";
+import { shareCreation } from "./lib/shareSheet";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -56,6 +57,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const [saved, setSaved] = useState([]);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+  const [currentStoryId, setCurrentStoryId] = useState(null);
 
   const STEPS = [
     { key: "hero",    q: "Who is your hero?",                 opts: HEROES,   val: hero,     set: setHero },
@@ -114,7 +116,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const j = await r.json();
       if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("reading"); return; }
       const sNew = j.story; sNew.art_style = (prev && prev.art_style) || artStyle;
-      setStory(sNew); setSavedMsg(""); setView("reading");
+      setStory(sNew); setSavedMsg(""); setCurrentStoryId(null); setView("reading");
     } catch { setError("Hmm, that didn't work. Try again!"); setView("reading"); }
   }
 
@@ -125,7 +127,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const j = await r.json();
       if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("wizard"); return; }
       const s = j.story; s.art_style = artStyle;
-      setStory(s); setSavedMsg(""); setView("reading");
+      setStory(s); setSavedMsg(""); setCurrentStoryId(null); setView("reading");
     } catch { setError("Hmm, that didn't work. Try again!"); setView("wizard"); }
   }
 
@@ -136,7 +138,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
     try {
       const r = await fetch("/api/save-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ story: toSave, deviceId, kidProfileId, kidName: heroName || playerName || "", coverColor: "#7a4a86" }) });
       const j = await r.json();
-      if (r.ok && j.ok) { setSavedMsg("Saved to your library! 📚"); loadSaved(); }
+      if (r.ok && j.ok) { setSavedMsg("Saved to your library! 📚"); if (j.story && j.story.story_id) setCurrentStoryId(j.story.story_id); loadSaved(); }
       else if (r.status === 409) setSavedMsg(j.message || "Your library is full!");
       else setSavedMsg("Couldn't save — " + (j.detail || j.error || ("error " + r.status)));
     } catch (e) { setSavedMsg("Couldn't save — " + ((e && e.message) || "network error")); }
@@ -144,7 +146,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   }
 
   async function openSaved(storyId) {
-    try { const r = await fetch("/api/list-stories?storyId=" + encodeURIComponent(storyId)); const j = await r.json(); if (j && j.story && j.story.story) { setStory(j.story.story); setSavedMsg(""); setView("reading"); } } catch {}
+    try { const r = await fetch("/api/list-stories?storyId=" + encodeURIComponent(storyId)); const j = await r.json(); if (j && j.story && j.story.story) { setStory(j.story.story); setSavedMsg(""); setCurrentStoryId(storyId); setView("reading"); } } catch {}
   }
   async function deleteSaved(storyId) {
     try { await fetch("/api/delete-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId, storyId }) }); setSaved((p) => p.filter((x) => x.story_id !== storyId)); } catch {}
@@ -152,7 +154,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
 
   // ---------- READING ----------
   if (view === "reading" && story) {
-    return <StoryReader story={story} deviceId={deviceId} kidProfileId={kidProfileId}
+    return <StoryReader story={story} storyId={currentStoryId} deviceId={deviceId} kidProfileId={kidProfileId}
       onExit={() => setView("landing")} onSave={saveStory} saving={saving} savedMsg={savedMsg} onNewAdventure={makeSequel} />;
   }
 
@@ -233,6 +235,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
             {saved.map((st) => (
               <div key={st.story_id} style={s.savedCard}>
                 <button style={s.savedOpen} onClick={() => openSaved(st.story_id)}>📖 {st.title}</button>
+                <button style={s.savedShare} onClick={() => shareCreation({ kind: "story", id: st.story_id, title: st.title })} title="Share">🔗</button>
                 <button style={s.savedDel} onClick={() => deleteSaved(st.story_id)}>🗑️</button>
               </div>
             ))}
@@ -276,5 +279,6 @@ const s = {
   savedRow: { display: "flex", flexWrap: "wrap", gap: 10 },
   savedCard: { display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", borderRadius: 14, padding: "6px 8px 6px 6px" },
   savedOpen: { background: "rgba(255,255,255,0.1)", color: "#fff", border: "none", borderRadius: 10, padding: "10px 14px", fontWeight: 700, fontFamily: NUN, cursor: "pointer", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  savedShare: { background: "rgba(124,92,252,0.22)", border: "none", borderRadius: 8, padding: "8px", cursor: "pointer" },
   savedDel: { background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 8, padding: "8px", cursor: "pointer" },
 };

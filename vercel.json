@@ -76,6 +76,22 @@
       "dest": "/qa-expr.html"
     },
     {
+      "src": "/story.html",
+      "dest": "/story.html"
+    },
+    {
+      "src": "/song.html",
+      "dest": "/song.html"
+    },
+    {
+      "src": "/s/([^/]+)",
+      "dest": "/story.html?id=$1"
+    },
+    {
+      "src": "/p/([^/]+)",
+      "dest": "/song.html?id=$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
