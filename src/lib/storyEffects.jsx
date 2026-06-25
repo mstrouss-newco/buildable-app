@@ -312,6 +312,12 @@ export function LivingPage({ artUrl, effect, effects, palette, world, heroEmoji,
   );
 }
 
+const FG_BY_WORLD = {
+  snowy_forest: "snow_outside_window", outer_space: "twinkling_stars", underwater: "floating_dust",
+  candy_land: "magic_sparkles", enchanted_woods: "floating_dust", desert_oasis: "floating_dust",
+  cloud_castle: "drifting_clouds", pirate_cove: "water_shimmer",
+};
+
 export function LayeredPage({ bgUrl, charUrl, effect, effects, palette, world, heroEmoji, helperEmoji, pageIndex, children, style }) {
   useEffect(() => { injectKeyframes(); }, []);
   const layers = Array.isArray(effects) && effects.length ? effects.slice(0, 3) : [effect];
@@ -322,11 +328,13 @@ export function LayeredPage({ bgUrl, charUrl, effect, effects, palette, world, h
         ? <img src={bgUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 20s ease-in-out infinite alternate" }} />
         : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} effect={effect} pageIndex={pageIndex} />}
       {charUrl && (
-        <div style={{ position: "absolute", left: "50%", bottom: "-2%", width: "62%", animation: "bk-parallax 9s ease-in-out infinite" }}>
-          <img src={charUrl} alt="" style={{ width: "100%", display: "block", filter: "drop-shadow(0 10px 16px rgba(0,0,0,0.4))", transformOrigin: "50% 100%", animation: "bk-charfloat 4.5s ease-in-out infinite" }} />
+        <div style={{ position: "absolute", left: "50%", bottom: "0%", width: "40%", animation: "bk-parallax 9s ease-in-out infinite" }}>
+          <img src={charUrl} alt="" style={{ width: "100%", display: "block", filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.45))", transformOrigin: "50% 100%", animation: "bk-charfloat 4.5s ease-in-out infinite" }} />
         </div>
       )}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
+      {/* foreground moving things (in front of the character) */}
+      <LivingLayer effect={FG_BY_WORLD[world] || "floating_dust"} />
       {children}
     </div>
   );
