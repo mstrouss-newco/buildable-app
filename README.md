@@ -1515,3 +1515,17 @@ plan to add `story.mode` ("linear" | "branching") and, on a page, an optional
 single "next" and jump to `goToPage`; `generate-story` would emit a small branch tree
 (e.g., 1-2 choice points). Persistence (`saved_stories.story` jsonb) already stores the
 whole structure, so no schema change is needed — only generator + reader additions.
+
+## Stories: dynamic environment + selectable art styles — June 24 2026
+
+Two changes.
+1. **Living/moving environment.** Every page image now has a slow Ken Burns camera drift
+   (26s zoom toward a per-page focal point) so the scene is always gently moving — works on
+   ANY page regardless of effect. Ambient effects were also strengthened (denser snow,
+   bigger/brighter stars, more drifting clouds, a sweeping water-shimmer band) so motion
+   reads clearly instead of a faint sparkle.
+2. **Selectable storybook art styles.** New "What should the pictures look like?" pick in
+   the builder: watercolor (classic), modern 3D (Pixar-ish), paper cut-out (Eric Carle),
+   crayon, comic, clay. Chosen id rides on `story.art_style`; `generate-story-art` maps it
+   to a distinct look (`STYLES` map) appended to each page prompt. Reader + first-page
+   prefetch both pass it through.

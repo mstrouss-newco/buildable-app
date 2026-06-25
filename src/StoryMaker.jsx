@@ -24,6 +24,7 @@ const HELPERS = [["wise_owl","🦉","Wise owl"],["talking_map","🗺️","Talkin
 const TONES = [["cozy","🔥","Cozy"],["funny","😄","Funny"],["adventurous","🗺️","Adventurous"],["magical","🪄","Magical"],["brave","🦁","Brave"]];
 const ENDINGS = [["happy","🎉","Happy"],["surprise","🎁","Surprise"],["friendship","💞","Friendship"],["cozy_sleep","🌙","Sleepy"]];
 const GENDERS = [["girl","👧","Girl"],["boy","👦","Boy"],["neutral","🙂","Prefer not to say"]];
+const STYLES = [["watercolor","🎨","Watercolor"],["modern3d","🧸","Modern 3D"],["papercut","✂️","Paper cut-out"],["crayon","🖍️","Crayon"],["comic","💥","Comic"],["claymation","🪅","Clay"]];
 
 function getDeviceId() {
   try {
@@ -44,6 +45,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const [hero, setHero] = useState("bunny");
   const [heroName, setHeroName] = useState(playerName || "");
   const [gender, setGender] = useState("girl");
+  const [artStyle, setArtStyle] = useState("watercolor");
   const [world, setWorld] = useState("snowy_forest");
   const [problem, setProblem] = useState("lost_friend");
   const [helper, setHelper] = useState("wise_owl");
@@ -78,7 +80,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
         const to = setTimeout(() => ctrl.abort(), 42000);
         const r = await fetch("/api/generate-story-art", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }), signal: ctrl.signal,
+          body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world, style: story.art_style }), signal: ctrl.signal,
         });
         const j = await r.json();
         clearTimeout(to);
@@ -97,6 +99,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const j = await r.json();
       if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("build"); return; }
       const story = j.story;
+      story.art_style = artStyle;
       // Paint the first two pages before opening so the book starts with real art.
       setGenMsg("Painting your first pages…");
       await prefetchArt(story, [0, 1]);
@@ -194,6 +197,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
           <input style={s.input} value={heroName} maxLength={24} placeholder="e.g. Pip" onChange={(e) => setHeroName(e.target.value)} />
         </div>
         <Picker label="Is the hero a girl or a boy?" options={GENDERS} value={gender} set={setGender} />
+        <Picker label="What should the pictures look like?" options={STYLES} value={artStyle} set={setArtStyle} />
         <Picker label="Where does it happen?" options={WORLDS} value={world} set={setWorld} />
         <Picker label="What's the problem?" options={PROBLEMS} value={problem} set={setProblem} />
         <Picker label="Who helps out?" options={HELPERS} value={helper} set={setHelper} />
