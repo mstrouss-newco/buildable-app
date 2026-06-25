@@ -123,8 +123,14 @@ function validateStory(obj, choices) {
     const scene = clampText(p && p.art_prompt, 300) || (title + " storybook scene");
     const effect = EFFECT_SET.has(p && p.effect) ? p.effect : "soft_glow";
     if (!text) return null;
-    // Prepend the fixed character sheet to every page so the hero looks identical.
-    const art_prompt = (sheet ? "CHARACTERS (draw EXACTLY the same every page): " + sheet + " " : "") + "SCENE: " + scene;
+    // Drive the image from THIS PAGE'S TEXT so the picture depicts what the words
+    // say (places, objects, characters), with the character sheet keeping the hero
+    // consistent and Claude's scene note as extra detail.
+    const art_prompt =
+      "Children's storybook watercolor illustration of this exact moment: \"" + text + "\". " +
+      (sheet ? "The recurring characters always look like: " + sheet + ". " : "") +
+      (scene ? "Extra detail: " + scene + ". " : "") +
+      "Depict the specific places, objects, and characters named in the sentence. No text or words in the image.";
     return { n: i + 1, text, art_prompt, effect, art_url: null, audio_url: null, word_timings: null };
   });
   if (pages.some((p) => p === null) || pages.length < 4) return null;
@@ -139,7 +145,7 @@ function fallbackStory(c) {
   const name = clampText(c.heroName, 24) || "Pip";
   const sheet = "The hero is " + name + ", " + hero + " (always drawn with the same look, colors, and outfit on every page)" + (helper ? "; the helper is " + helper + ", drawn the same each time" : "") + ".";
   const P = (text, effect, art) => ({ n: 0, text, effect,
-    art_prompt: "CHARACTERS (draw EXACTLY the same every page): " + sheet + " SCENE: " + art,
+    art_prompt: "Children's storybook watercolor illustration of this exact moment: \"" + text + "\". The recurring characters always look like: " + sheet + ". Depict the specific places, objects, and characters named in the sentence. No text in the image.",
     art_url: null, audio_url: null, word_timings: null });
   const pages = [
     P(`Once upon a time, ${name}, ${hero}, lived in ${world}.`, "soft_glow", `${hero} in ${world}, soft storybook illustration`),

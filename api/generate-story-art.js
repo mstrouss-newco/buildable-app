@@ -99,7 +99,7 @@ export default async function handler(req, res) {
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const body = await readBody(req);
-  const artPrompt = (body.artPrompt || "").toString().slice(0, 320).trim();
+  const artPrompt = (body.artPrompt || "").toString().slice(0, 1200).trim();
   if (!artPrompt) return res.status(400).json({ error: "artPrompt is required" });
 
   const openaiKey = process.env.OPENAI_API_KEY;
