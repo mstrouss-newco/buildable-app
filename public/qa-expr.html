@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>QA — expressions</title>
+<style>
+  body{margin:0;background:#fff;color:#111;font-family:-apple-system,sans-serif;padding:14px}
+  h2{font-size:14px;margin:14px 0 6px}
+  .faces{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:760px}
+  .cell{border:1px solid #ccc;border-radius:8px;overflow:hidden;background:repeating-conic-gradient(#eee 0% 25%, #ddd 0% 50%) 0/16px 16px}
+  .cell img{width:100%;aspect-ratio:1/1;object-fit:contain;display:block}
+  .cap{font-size:10px;text-align:center;padding:3px 0;background:#f4f4f4;text-transform:capitalize}
+</style>
+<div id="root"></div>
+<script>
+  const EMOS=["happy","surprised","scared","sad","sleepy"];
+  const CHARS=[["bunny","Bunny"],["fox","Fox"],["bear","Bear"],["penguin","Penguin"],["dragon","Dragon"],["owl","Owl"],["turtle","Turtle"],["hedgehog","Hedgehog"],["koala","Koala"],["tiger","Tiger"],["fawn","Fawn"],["otter","Otter"],["wizard","Wizard"],["fairy","Fairy"],["robot","Robot"],["mermaid","Mermaid"]];
+  const img=(s,e)=>`/api/story-library?img=character:${s}&style=watercolor&emo=${e}`;
+  const root=document.getElementById("root");
+  for(const [slug,name] of CHARS){
+    let cells="";
+    for(const emo of EMOS) cells+=`<div class="cell"><img src="${img(slug,emo)}"><div class="cap">${name} · ${emo}</div></div>`;
+    const h=document.createElement("h2"); h.textContent=name; root.appendChild(h);
+    const g=document.createElement("div"); g.className="faces"; g.innerHTML=cells; root.appendChild(g);
+  }
+</script>
