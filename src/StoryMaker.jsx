@@ -50,6 +50,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const [twist, setTwist] = useState("");
   const [story, setStory] = useState(null);
   const [error, setError] = useState(null);
+  const [genMsg, setGenMsg] = useState("Writing your story…");
 
   const [saved, setSaved] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -64,16 +65,40 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   }
   useEffect(() => { loadSaved(); }, []);
 
+  // Paint specific pages' art up-front (used before opening the reader so the book
+  // never opens on a blank/placeholder page). Times out so it can't hang.
+  async function prefetchArt(story, indices) {
+    await Promise.all(indices.map(async (i) => {
+      const p = story.pages[i];
+      if (!p || p.art_url) return;
+      try {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 42000);
+        const r = await fetch("/api/generate-story-art", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world }), signal: ctrl.signal,
+        });
+        const j = await r.json();
+        clearTimeout(to);
+        if (j && j.url) p.art_url = j.url;
+      } catch { /* leave null -> reader shows the scene, then fills in */ }
+    }));
+  }
+
   async function makeStory() {
-    setError(null); setView("generating");
+    setError(null); setGenMsg("Writing your story…"); setView("generating");
     try {
       const r = await fetch("/api/generate-story", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ choices: { hero, heroName, world, problem, helper, tone, ending, twist }, age: 6, deviceId, kidProfileId }),
       });
       const j = await r.json();
-      if (j && j.ok && j.story) { setStory(j.story); setSavedMsg(""); setView("reading"); }
-      else { setError("Hmm, that didn't work. Try again!"); setView("build"); }
+      if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("build"); return; }
+      const story = j.story;
+      // Paint the first two pages before opening so the book starts with real art.
+      setGenMsg("Painting your first pages…");
+      await prefetchArt(story, [0, 1]);
+      setStory(story); setSavedMsg(""); setView("reading");
     } catch { setError("Hmm, that didn't work. Try again!"); setView("build"); }
   }
 
@@ -116,8 +141,8 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
     return (
       <div style={{ ...s.container, justifyContent: "center" }}>
         <div style={s.spinner}>📖</div>
-        <h2 style={s.genTitle}>Writing your story…</h2>
-        <p style={s.genSub}>Dreaming up your hero, your world, and a happy ending.</p>
+        <h2 style={s.genTitle}>{genMsg}</h2>
+        <p style={s.genSub}>Dreaming up your hero, your world, and painting the pictures.</p>
       </div>
     );
   }

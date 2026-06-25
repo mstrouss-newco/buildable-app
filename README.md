@@ -1454,3 +1454,18 @@ misses generate once, store the audio + word timings, then serve. Re-reading a s
 story (or another kid reading the same generated line) costs nothing. Cache ops are
 best-effort, so narration still works before the table exists (just uncached).
 OWNER TODO: run `db/create-narration-cache.sql` (also in buildable-kids-setup.sql).
+
+## Stories: image↔text match + no-blank-open — June 24 2026
+
+Two fixes from live feedback (narration confirmed working same session).
+1. **Art matches the page text.** Each page's image prompt is now built from the page's
+   own sentence ("...illustration of this exact moment: '<text>'..."), with the character
+   sheet keeping the hero consistent and Claude's scene note as extra detail. Previously
+   art was driven by the generic character sheet, so a page about coral towers + a closed
+   door could render as just the hero + helper. `generate-story-art` prompt cap raised to
+   1200 chars so the full text+sheet survives.
+2. **Book never opens blank.** `StoryMaker` now paints the first two pages (parallel, 42s
+   timeout) DURING the "Painting your first pages…" screen, then opens the reader — so the
+   opening page has real art instead of the placeholder. Pages 3-6 still background-paint
+   while the child reads (concurrency 2). Tradeoff: the create screen is a bit longer
+   (~30s) since it waits on the first image; gpt-image-1 latency is the constraint.
