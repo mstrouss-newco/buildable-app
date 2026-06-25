@@ -1,0 +1,150 @@
+// /api/story-library.js
+// Curated, reusable library of WORLDS (full backgrounds) and CHARACTERS
+// (transparent cutouts). Built ONCE, cached forever, reused by every story —
+// so per-story art cost is ~$0. Stories are assembled by layering a character
+// cutout over a world background with the living-page motion effects.
+//
+//   GET                              -> manifest JSON (worlds, characters, styles)
+//   GET ?build=1&kind=&slug=&style=  -> generate that one asset if missing (cached)
+//   GET ?img=<kind>:<slug>&style=    -> serve the cached PNG bytes (short URL)
+// Env (owner, by name only): OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY.
+import crypto from "crypto";
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+// The handful of storybook "looks" a kid can filter by.
+const STYLES = {
+  watercolor: "soft children's picture-book WATERCOLOR illustration, gentle washes, warm colors, rounded friendly shapes, hand-painted storybook",
+  modern3d:   "modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded characters, vibrant, glossy",
+  papercut:   "layered CUT-PAPER COLLAGE illustration (Eric Carle style), textured construction-paper shapes, bold bright colors, visible paper edges",
+};
+const SAFE = "no text, no words, age 4-8, wholesome, child-friendly";
+
+const WORLDS = [
+  ["snowy-village",   "Snowy Pine Village", "A cozy snowy mountain village at dusk, little wooden cabins with warm glowing windows, snow-covered pine trees, soft falling snow, gentle northern lights in the sky"],
+  ["coral-reef",      "Coral Reef Kingdom", "A bright underwater coral reef kingdom, colorful coral, swaying seaweed, sun rays shining through clear blue water, a tiny treasure chest on the sandy seafloor"],
+  ["enchanted-forest","Enchanted Forest",   "A magical enchanted forest clearing, ancient mossy trees, glowing mushrooms, floating fireflies, soft shafts of golden light, a winding little path"],
+  ["dragon-mountain", "Dragon Mountain",    "A friendly fantasy mountain landscape with rocky peaks, a winding path up to a small castle, a warm glowing cave entrance, dramatic colorful sky"],
+  ["dino-jungle",     "Dino Jungle",        "A lush prehistoric jungle, giant ferns and leafy plants, a gentle steaming volcano in the distance, a calm winding river, warm sunlight"],
+  ["space-station",   "Starlight Space",    "A friendly outer-space scene, colorful planets and ringed worlds, a swirl of twinkling stars, a drifting little asteroid, deep blue space"],
+  ["desert-oasis",    "Golden Desert Oasis","A golden desert at warm sunset, rolling sand dunes, a small palm-tree oasis with a clear blue pool, distant ancient stone ruins"],
+  ["candy-land",      "Candy Cloud Land",   "A whimsical candy land, pastel pink and blue sky, lollipop trees, fluffy marshmallow clouds, a winding candy path over gentle frosting hills"],
+];
+
+const CHARACTERS = [
+  ["bunny",   "Bramble the Bunny",  "a cute fluffy grey baby bunny wearing a cozy red scarf, big friendly eyes, standing, full body"],
+  ["fox",     "Pip the Fox",        "a cute little orange fox cub with a fluffy white-tipped tail, friendly smile, standing, full body"],
+  ["bear",    "Biscuit the Bear",   "a cute round brown bear cub, soft fur, friendly, standing, full body"],
+  ["penguin", "Waddle the Penguin", "a cute little penguin chick with a tiny blue bowtie, friendly, full body"],
+  ["dragon",  "Ember the Dragon",   "a cute friendly baby dragon, soft green with little wings, big happy eyes, standing, full body"],
+  ["owl",     "Professor Owl",      "a cute small wise owl with big round glasses, fluffy feathers, friendly, full body"],
+  ["turtle",  "Shelby the Turtle",  "a cute tiny turtle with a patterned green shell, smiling, full body"],
+  ["hedgehog","Quill the Hedgehog", "a cute little hedgehog with soft rounded spikes, tiny nose, standing, full body"],
+  ["koala",   "Coco the Koala",     "a cute grey koala with big fluffy ears, friendly, full body"],
+  ["tiger",   "Tilly the Tiger",    "a cute little tiger cub with soft orange stripes, playful, standing, full body"],
+  ["fawn",    "Willow the Fawn",    "a cute baby deer fawn with white spots, gentle eyes, standing, full body"],
+  ["otter",   "Ollie the Otter",    "a cute river otter holding a tiny shell, whiskers, sitting up, full body"],
+  ["wizard",  "Milo the Wizard",    "a cute little child wizard in a starry blue robe and pointy hat, holding a small glowing wand, friendly, full body"],
+  ["fairy",   "Petal the Fairy",    "a cute little flower fairy with delicate sparkly wings and a petal dress, friendly, full body"],
+  ["robot",   "Bolt the Robot",     "a cute small friendly round robot with big glowing eyes and a little antenna, full body"],
+  ["mermaid", "Marina the Mermaid", "a cute little mermaid child with a shimmering teal tail and a seashell top, friendly, full body"],
+];
+
+function styleId(s) { return STYLES[s] ? s : "watercolor"; }
+function findItem(kind, slug) {
+  const list = kind === "world" ? WORLDS : CHARACTERS;
+  return list.find((x) => x[0] === slug) || null;
+}
+function promptFor(kind, item, style) {
+  const look = STYLES[styleId(style)];
+  if (kind === "world") {
+    // Full-bleed scene, NO characters in it (the cutout goes on top later).
+    return `${item[2]}. Wide storybook background scene, no people, no animals, no characters. ${look}, ${SAFE}`;
+  }
+  // Character: clean centered cutout on plain background (we strip it transparent).
+  return `${item[2]}. A single character, centered, full body, simple plain background. ${look}, ${SAFE}`;
+}
+function cacheKey(kind, slug, style) {
+  return "lib:" + crypto.createHash("sha1").update(kind + "|" + slug + "|" + styleId(style)).digest("hex");
+}
+
+async function cacheGet(key) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}&select=audio_b64&limit=1`, { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows[0] ? rows[0].audio_b64 : null;
+  } catch { return null; }
+}
+async function cachePut(key, b64) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
+  try { await fetch(`${SUPABASE_URL}/rest/v1/narration_cache`, { method: "POST", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates" }, body: JSON.stringify({ cache_key: key, audio_b64: b64, word_timings: null }) }); } catch {}
+}
+
+async function genImage(prompt, transparent, openaiKey, timeoutMs = 44000) {
+  const once = async (b) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch("https://api.openai.com/v1/images/generations", { method: "POST", headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" }, body: JSON.stringify(b), signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) return { b64: null, status: res.status };
+      const data = await res.json();
+      return { b64: data.data?.[0]?.b64_json || null, status: 200 };
+    } catch { clearTimeout(timer); return { b64: null, status: 0 }; }
+  };
+  const tx = transparent ? { background: "transparent", output_format: "png" } : {};
+  for (let t = 0; t < 3; t++) {
+    const r = await once({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "low", ...tx });
+    if (r.b64) return r.b64;
+    if (r.status !== 429) break;
+    await new Promise((res) => setTimeout(res, 4000 + t * 3000));
+  }
+  return null;
+}
+
+export default async function handler(req, res) {
+  const q = req.query || {};
+
+  // --- serve a cached image as real PNG bytes (short URL for <img src>) ---
+  if (q.img) {
+    const [kind, slug] = q.img.toString().split(":");
+    const style = styleId(q.style);
+    const b64 = await cacheGet(cacheKey(kind, slug, style));
+    if (!b64) { res.status(404).json({ ok: false, missing: true }); return; }
+    const buf = Buffer.from(b64, "base64");
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.status(200).send(buf);
+    return;
+  }
+
+  // --- build one asset (idempotent; cached) ---
+  if (q.build) {
+    const kind = (q.kind || "").toString();
+    const slug = (q.slug || "").toString();
+    const style = styleId(q.style);
+    const item = findItem(kind, slug);
+    if (!item) return res.status(400).json({ ok: false, error: "unknown asset" });
+    const key = cacheKey(kind, slug, style);
+    const have = await cacheGet(key);
+    if (have) return res.status(200).json({ ok: true, kind, slug, style, cached: true });
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
+    const b64 = await genImage(promptFor(kind, item, style), kind === "character", openaiKey);
+    if (!b64) return res.status(200).json({ ok: true, kind, slug, style, failed: true });
+    await cachePut(key, b64);
+    return res.status(200).json({ ok: true, kind, slug, style, generated: true });
+  }
+
+  // --- manifest ---
+  return res.status(200).json({
+    ok: true,
+    styles: Object.keys(STYLES),
+    worlds: WORLDS.map(([slug, name]) => ({ slug, name })),
+    characters: CHARACTERS.map(([slug, name]) => ({ slug, name })),
+    imgUrl: "/api/story-library?img=<kind>:<slug>&style=<style>",
+  });
+}
