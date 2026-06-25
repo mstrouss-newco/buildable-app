@@ -1529,3 +1529,13 @@ Two changes.
    crayon, comic, clay. Chosen id rides on `story.art_style`; `generate-story-art` maps it
    to a distinct look (`STYLES` map) appended to each page prompt. Reader + first-page
    prefetch both pass it through.
+
+## Stories: art-style examples on the creator — June 24 2026
+
+The style picker in the builder now shows a REAL sample thumbnail per style via
+`/api/story-style-sample?style=<id>` — a fixed sample scene (bunny+owl+snowy cabin)
+rendered in that style, generated once and cached (narration_cache key "stylesample:<id>"
++ a 1-year immutable CDN header), so it's ~one-time cost (~$0.04/style) and instant
+thereafter. Falls back to a labeled colored SVG swatch if no OpenAI key / off budget, so
+the picker is never empty. Pre-warm by GETting each style once (done post-deploy) so the
+CDN caches the real images before kids see the picker.

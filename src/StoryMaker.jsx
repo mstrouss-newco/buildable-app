@@ -197,7 +197,17 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
           <input style={s.input} value={heroName} maxLength={24} placeholder="e.g. Pip" onChange={(e) => setHeroName(e.target.value)} />
         </div>
         <Picker label="Is the hero a girl or a boy?" options={GENDERS} value={gender} set={setGender} />
-        <Picker label="What should the pictures look like?" options={STYLES} value={artStyle} set={setArtStyle} />
+        <div style={s.section}>
+          <h3 style={s.sectionTitle}>What should the pictures look like?</h3>
+          <div style={s.tileRow}>
+            {STYLES.map(([id, emoji, name]) => (
+              <button key={id} onClick={() => setArtStyle(id)} style={{ ...s.styleTile, ...(artStyle === id ? s.tileOn : {}) }}>
+                <img src={"/api/story-style-sample?style=" + id} alt={name} style={s.styleThumb} loading="lazy" />
+                <span style={s.tileLabel}>{emoji} {name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <Picker label="Where does it happen?" options={WORLDS} value={world} set={setWorld} />
         <Picker label="What's the problem?" options={PROBLEMS} value={problem} set={setProblem} />
         <Picker label="Who helps out?" options={HELPERS} value={helper} set={setHelper} />
@@ -228,6 +238,8 @@ const s = {
   tile: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 84, padding: "12px 10px", borderRadius: 16, border: "2px solid transparent", background: "rgba(255,255,255,0.07)", color: "#fff", cursor: "pointer", fontFamily: NUN },
   tileOn: { border: "2px solid #fff", background: "rgba(255,255,255,0.2)", boxShadow: "0 6px 18px rgba(155,126,221,0.4)" },
   tileEmoji: { fontSize: 28 },
+  styleTile: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 8, width: 104, borderRadius: 16, border: "2px solid transparent", background: "rgba(255,255,255,0.07)", color: "#fff", cursor: "pointer", fontFamily: NUN },
+  styleThumb: { width: 84, height: 84, borderRadius: 12, objectFit: "cover", background: "rgba(255,255,255,0.06)" },
   tileLabel: { fontSize: 13, fontWeight: 700 },
   input: { width: "100%", boxSizing: "border-box", borderRadius: 12, border: "none", padding: "12px 14px", fontSize: 16, fontFamily: NUN, color: "#333" },
   makeBtn: { padding: "18px", borderRadius: 18, border: "none", background: GRAD, color: "#fff", fontSize: 22, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 10px 30px rgba(155,126,221,0.5)" },
