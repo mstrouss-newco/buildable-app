@@ -10,7 +10,7 @@ import crypto from "crypto";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const MODEL = process.env.FAL_VIDEO_MODEL || "fal-ai/kling-video/v1.6/standard/image-to-video";
+const MODEL = process.env.FAL_VIDEO_MODEL || "fal-ai/ltx-video/image-to-video";
 const MOTION = "very gentle, subtle ambient motion only — soft breathing, slight sway, drifting particles, shimmering light; keep the character and scene stable and on-model; smooth seamless loop; no big movements, no warping";
 
 async function cacheGet(key) {
@@ -25,8 +25,8 @@ function readBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
   return new Promise((resolve) => { let raw = ""; req.on("data", (c) => (raw += c)); req.on("end", () => { try { resolve(JSON.parse(raw || "{}")); } catch { resolve({}); } }); });
 }
-async function falSubmit(input) {
-  const r = await fetch("https://queue.fal.run/" + MODEL, { method: "POST", headers: { Authorization: "Key " + process.env.FAL_KEY, "Content-Type": "application/json" }, body: JSON.stringify(input) });
+async function falSubmit(model, input) {
+  const r = await fetch("https://queue.fal.run/" + model, { method: "POST", headers: { Authorization: "Key " + process.env.FAL_KEY, "Content-Type": "application/json" }, body: JSON.stringify(input) });
   const t = await r.text();
   let j = {}; try { j = JSON.parse(t); } catch {}
   return { ok: r.ok, status: r.status, body: j, raw: t };
@@ -58,11 +58,12 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     if (!process.env.FAL_KEY) return res.status(200).json({ ok: true, hasFal: false });
     if (req.query.probe === "submit") {
-      const sub = await falSubmit({ image_url: "https://picsum.photos/seed/bk/768/512", prompt: MOTION });
-      return res.status(200).json({ ok: true, model: MODEL, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, status_url: sub.body && sub.body.status_url, response_url: sub.body && sub.body.response_url, error: sub.ok ? undefined : sub.raw.slice(0, 220) });
+      const m = (req.query.model || MODEL).toString();
+      const sub = await falSubmit(m, { image_url: "https://picsum.photos/seed/bk/768/512", prompt: MOTION });
+      return res.status(200).json({ ok: true, model: m, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, error: sub.ok ? undefined : sub.raw.slice(0, 220) });
     }
     if (req.query.probe === "check" && req.query.id) {
-      const base = "https://queue.fal.run/" + MODEL.split("/").slice(0, 2).join("/") + "/requests/" + req.query.id.toString();
+      const base = "https://queue.fal.run/" + (req.query.model || MODEL).toString().split("/").slice(0, 2).join("/") + "/requests/" + req.query.id.toString();
       const sr = await fetch(base + "/status", { headers: { Authorization: "Key " + process.env.FAL_KEY } });
       const sj = await sr.json().catch(() => ({}));
       if (sj.status !== "COMPLETED") return res.status(200).json({ ok: true, status: sj.status || "unknown", queue_position: sj.queue_position });
@@ -87,12 +88,13 @@ export default async function handler(req, res) {
   const imageUrl = (body.imageUrl || "").toString();
   if (!imageUrl) return res.status(400).json({ error: "imageUrl required" });
   const prompt = (body.prompt || MOTION).toString();
-  const key = "vid:" + crypto.createHash("sha1").update((body.cacheKey || imageUrl) + "|" + MODEL).digest("hex");
+  const model = (body.model || MODEL).toString();
+  const key = "vid:" + crypto.createHash("sha1").update((body.cacheKey || imageUrl) + "|" + model).digest("hex");
   const hit = await cacheGet(key);
   if (hit) return res.status(200).json({ ok: true, videoUrl: hit, cached: true });
 
   try {
-    const sub = await falSubmit({ image_url: imageUrl, prompt });
+    const sub = await falSubmit(model, { image_url: imageUrl, prompt });
     if (!sub.ok || !(sub.body && sub.body.status_url)) return res.status(200).json({ ok: true, configured: true, failed: true, status: sub.status, detail: sub.raw.slice(0, 200) });
     const result = await falPoll(sub.body.status_url, sub.body.response_url);
     const url = videoUrlFrom(result);
