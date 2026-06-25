@@ -114,8 +114,6 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const j = await r.json();
       if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("reading"); return; }
       const sNew = j.story; sNew.art_style = (prev && prev.art_style) || artStyle;
-      setGenMsg("Painting your first pages…");
-      await prefetchArt(sNew, [0, 1]);
       setStory(sNew); setSavedMsg(""); setView("reading");
     } catch { setError("Hmm, that didn't work. Try again!"); setView("reading"); }
   }
@@ -127,8 +125,6 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const j = await r.json();
       if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("wizard"); return; }
       const s = j.story; s.art_style = artStyle;
-      setGenMsg("Painting your first pages…");
-      await prefetchArt(s, [0, 1]);
       setStory(s); setSavedMsg(""); setView("reading");
     } catch { setError("Hmm, that didn't work. Try again!"); setView("wizard"); }
   }
