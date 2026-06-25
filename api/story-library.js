@@ -21,6 +21,21 @@ const STYLES = {
 };
 const SAFE = "no text, no words, age 4-8, wholesome, child-friendly";
 
+// Face/expression variants. Each is generated FROM the base character cutout so
+// it stays the exact same character — only the face + body language changes.
+const EMOS = {
+  happy:     "a big happy joyful smile and bright cheerful eyes",
+  surprised: "a surprised expression: wide open eyes, a small round open mouth, eyebrows raised",
+  scared:    "a scared, frightened expression: worried wide eyes, a nervous shrinking pose",
+  sleepy:    "a sleepy, drowsy expression: half-closed eyes and a gentle little yawn",
+  sad:       "a sad expression: a downturned mouth and big watery eyes",
+  excited:   "an excited, thrilled expression: sparkling wide eyes, open happy mouth, bouncy energetic pose",
+  angry:     "a grumpy, pouty expression: gently furrowed brows (cartoonish and cute, never scary)",
+  curious:   "a curious, inquisitive expression: head tilted, one eyebrow up, intrigued",
+  proud:     "a proud, confident expression: chin up and a satisfied little smile",
+};
+const EMO_LIST = Object.keys(EMOS);
+
 const WORLDS = [
   ["snowy-village",   "Snowy Pine Village", "A cozy snowy mountain village at dusk, little wooden cabins with warm glowing windows, snow-covered pine trees, soft falling snow, gentle northern lights in the sky"],
   ["coral-reef",      "Coral Reef Kingdom", "A bright underwater coral reef kingdom, colorful coral, swaying seaweed, sun rays shining through clear blue water, a tiny treasure chest on the sandy seafloor"],
@@ -68,6 +83,12 @@ function promptFor(kind, item, style) {
 function cacheKey(kind, slug, style) {
   return "lib:" + crypto.createHash("sha1").update(kind + "|" + slug + "|" + styleId(style)).digest("hex");
 }
+function exprKey(slug, style, emo) {
+  return "libx:" + crypto.createHash("sha1").update("char|" + slug + "|" + styleId(style) + "|" + emo).digest("hex");
+}
+function exprPrompt(item, emo) {
+  return `Keep this the EXACT same character — identical colors, outfit, shapes and art style. Change only the face and body language to show ${EMOS[emo]}. A single character, centered, full body, plain background.`;
+}
 
 async function cacheGet(key) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
@@ -105,6 +126,37 @@ async function genImage(prompt, transparent, openaiKey, timeoutMs = 44000) {
   return null;
 }
 
+async function genExpression(baseB64, prompt, openaiKey, timeoutMs = 44000) {
+  const attempt = async (useFidelity) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const fd = new FormData();
+      fd.append("model", "gpt-image-1");
+      fd.append("prompt", prompt);
+      fd.append("size", "1024x1024");
+      fd.append("quality", "low");
+      fd.append("background", "transparent");
+      fd.append("output_format", "png");
+      if (useFidelity) fd.append("input_fidelity", "high");
+      fd.append("image", new Blob([Buffer.from(baseB64, "base64")], { type: "image/png" }), "base.png");
+      const res = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: { Authorization: `Bearer ${openaiKey}` }, body: fd, signal: ctrl.signal });
+      clearTimeout(timer);
+      if (res.ok) { const data = await res.json(); return { b64: data.data?.[0]?.b64_json || null, status: 200 }; }
+      return { b64: null, status: res.status };
+    } catch { clearTimeout(timer); return { b64: null, status: 0 }; }
+  };
+  // Try with input_fidelity (best identity match); fall back without it; retry once on 429.
+  for (let t = 0; t < 3; t++) {
+    let r = await attempt(true);
+    if (!r.b64 && r.status === 400) r = await attempt(false);
+    if (r.b64) return r.b64;
+    if (r.status !== 429) break;
+    await new Promise((res) => setTimeout(res, 4000 + t * 3000));
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   const q = req.query || {};
 
@@ -112,7 +164,9 @@ export default async function handler(req, res) {
   if (q.img) {
     const [kind, slug] = q.img.toString().split(":");
     const style = styleId(q.style);
-    const b64 = await cacheGet(cacheKey(kind, slug, style));
+    const emo = (q.emo || "").toString();
+    const key = (kind === "character" && emo && emo !== "base" && EMOS[emo]) ? exprKey(slug, style, emo) : cacheKey(kind, slug, style);
+    const b64 = await cacheGet(key);
     if (!b64) { res.status(404).json({ ok: false, missing: true }); return; }
     const buf = Buffer.from(b64, "base64");
     res.setHeader("Content-Type", "image/png");
@@ -139,10 +193,30 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, kind, slug, style, generated: true });
   }
 
+  // --- build one EXPRESSION (edited from the base character cutout) ---
+  if (q.expr) {
+    const slug = (q.slug || "").toString();
+    const style = styleId(q.style);
+    const emo = (q.emo || "").toString();
+    const item = findItem("character", slug);
+    if (!item || !EMOS[emo]) return res.status(400).json({ ok: false, error: "bad slug or emo" });
+    const ekey = exprKey(slug, style, emo);
+    if (await cacheGet(ekey)) return res.status(200).json({ ok: true, slug, style, emo, cached: true });
+    const base = await cacheGet(cacheKey("character", slug, style));
+    if (!base) return res.status(200).json({ ok: true, slug, style, emo, needBase: true });
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
+    const b64 = await genExpression(base, exprPrompt(item, emo), openaiKey);
+    if (!b64) return res.status(200).json({ ok: true, slug, style, emo, failed: true });
+    await cachePut(ekey, b64);
+    return res.status(200).json({ ok: true, slug, style, emo, generated: true });
+  }
+
   // --- manifest ---
   return res.status(200).json({
     ok: true,
     styles: Object.keys(STYLES),
+    expressions: EMO_LIST,
     worlds: WORLDS.map(([slug, name]) => ({ slug, name })),
     characters: CHARACTERS.map(([slug, name]) => ({ slug, name })),
     imgUrl: "/api/story-library?img=<kind>:<slug>&style=<style>",
