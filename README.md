@@ -1495,3 +1495,23 @@ Three reader improvements from feedback:
 
 STILL TODO (next): location-based ambient SOUND per world (forest birds, ocean waves,
 space hum) — likely a small set of looped ambiences keyed by world, cached.
+
+## Stories: location-based ambient sound — June 24 2026
+
+Each story WORLD now has a gentle looping soundbed (forest birds, ocean waves + bubbles,
+space hum, crackling-cozy, etc.). `/api/story-ambience?world=<id>` generates it once per
+world via ElevenLabs Sound Effects (loop:true, ~18s) and caches it in `narration_cache`
+(key `ambience:<world>`), so it's a one-time ~$0.12 per world reused across every story.
+GET so the CDN caches it too. `StoryReader` plays it on loop at low volume (0.2) under the
+narration, with a 🔊/🔇 toggle in the top bar; it (re)starts on the first "Read to me" tap
+to satisfy browser autoplay rules. Falls back to silence if the key lacks Sound Effects
+permission or no key. OWNER: the ElevenLabs key needs the **Sound Effects** permission;
+run `db/create-narration-cache.sql` so ambience (and narration) are cached.
+
+## ROADMAP NOTE: choose-your-own-adventure (keep the model ready)
+Stories are linear today. The story JSON is intentionally extensible for branching later:
+plan to add `story.mode` ("linear" | "branching") and, on a page, an optional
+`choices: [{ label, goToPage }]`. The reader would render choice buttons instead of a
+single "next" and jump to `goToPage`; `generate-story` would emit a small branch tree
+(e.g., 1-2 choice points). Persistence (`saved_stories.story` jsonb) already stores the
+whole structure, so no schema change is needed — only generator + reader additions.

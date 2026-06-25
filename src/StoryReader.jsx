@@ -43,6 +43,8 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const audioRef = useRef(null);
   const narrCacheRef = useRef({});   // pageIndex -> {audioUrl, wordTimings} | "none"
   const hlTimerRef = useRef(null);
+  const ambienceRef = useRef(null);
+  const [soundOn, setSoundOn] = useState(true);
   const palette = WORLD_PALETTE[story && story.world] || ["#3a2c63", "#7a4a86"];
   const made = (story && story.created_with) || {};
   const heroEmoji = HERO_EMOJI[made.hero] || "🐰";
@@ -84,6 +86,31 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
     pump();
     return () => { cancelled = true; };
   }, []);
+
+  // World ambience: fetch once (deterministic per world), loop quietly underneath.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/story-ambience?world=" + encodeURIComponent((story && story.world) || ""))
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled || !j || !j.configured || !j.audioUrl) return;
+        const el = ambienceRef.current;
+        if (!el) return;
+        el.src = j.audioUrl; el.loop = true; el.volume = 0.2;
+        if (soundOn) el.play().catch(() => {}); // may need a user gesture; retried on Read
+      })
+      .catch(() => {});
+    return () => { cancelled = true; try { ambienceRef.current && ambienceRef.current.pause(); } catch {} };
+  }, []);
+
+  function toggleSound() {
+    setSoundOn((v) => {
+      const next = !v;
+      const el = ambienceRef.current;
+      if (el) { if (next) el.play().catch(() => {}); else el.pause(); }
+      return next;
+    });
+  }
 
     // Stop any narration when leaving a page or unmounting.
   useEffect(() => {
@@ -138,6 +165,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
 
   async function narratePage() {
     setPlaying(true); setSpoken(-1);
+    if (soundOn && ambienceRef.current && ambienceRef.current.src && ambienceRef.current.paused) ambienceRef.current.play().catch(() => {});
     let cached = narrCacheRef.current[idx];
     if (cached === undefined) {
       try {
@@ -175,8 +203,9 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
       <div style={s.topBar}>
         <button style={s.navBtn} onClick={onExit}>← Back</button>
         <span style={s.counter}>{story.title}</span>
-        <span style={{ width: 70 }} />
+        <button style={s.soundBtn} onClick={toggleSound} title="Background sounds" aria-label="Toggle background sounds">{soundOn ? "🔊" : "🔇"}</button>
       </div>
+      <audio ref={ambienceRef} style={{ display: "none" }} />
 
       <LivingPage artUrl={artUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
         {art[idx] === "loading" && !artUrl && (
@@ -224,6 +253,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
 const s = {
   container: { minHeight: "100vh", background: PAGE_BG, color: "#fff", fontFamily: NUN, padding: "20px 16px 50px", display: "flex", flexDirection: "column", alignItems: "center" },
   topBar: { width: "100%", maxWidth: 760, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  soundBtn: { width: 44, height: 44, borderRadius: 12, border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.08)", color: "#fff", fontSize: 18, cursor: "pointer" },
   navBtn: { padding: "10px 18px", background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer" },
   counter: { fontFamily: FRED, fontSize: 18, fontWeight: 700, textAlign: "center", flex: 1, padding: "0 8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   page: { width: "100%", maxWidth: 760, aspectRatio: "3 / 2", borderRadius: 24, border: "1px solid rgba(155,126,221,0.3)", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" },
