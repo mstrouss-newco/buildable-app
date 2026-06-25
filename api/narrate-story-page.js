@@ -69,21 +69,6 @@ function toWordTimings(text, alignment) {
 export default async function handler(req, res) {
   // Safe diagnostic (boolean only, no secret value): GET /api/narrate-story-page
   if (req.method === "GET") {
-    if (req.query && req.query.probe === "tts") {
-      const k = process.env.ELEVENLABS_API_KEY;
-      if (!k) return res.status(200).json({ ok: true, gotAudio: false, reason: "no_key" });
-      const keyInfo = { keyLen: k.length, trimmedLen: k.trim().length, deployedAt: process.env.VERCEL_DEPLOYMENT_ID ? "set" : "n/a" };
-      const vid = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
-      try {
-        const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${vid}/with-timestamps`, {
-          method: "POST", headers: { "xi-api-key": k, "Content-Type": "application/json" },
-          body: JSON.stringify({ text: "Hello there!", model_id: process.env.ELEVENLABS_MODEL_ID || "eleven_turbo_v2_5" }),
-        });
-        if (r.ok) { const d = await r.json(); return res.status(200).json({ ok: true, gotAudio: Boolean(d.audio_base64), hasTimings: Boolean(d.alignment), ...keyInfo }); }
-        const t = await r.text();
-        return res.status(200).json({ ok: true, gotAudio: false, status: r.status, error: t.slice(0, 200), ...keyInfo });
-      } catch (e) { return res.status(200).json({ ok: true, gotAudio: false, error: String((e && e.message) || e).slice(0, 160) }); }
-    }
     return res.status(200).json({ ok: true, hasElevenLabs: Boolean(process.env.ELEVENLABS_API_KEY) });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
