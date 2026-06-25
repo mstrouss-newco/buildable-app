@@ -63,6 +63,23 @@ export default async function handler(req, res) {
       const sub = await falSubmit(m, { image_url: img, prompt: MOTION });
       return res.status(200).json({ ok: true, model: m, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, error: sub.ok ? undefined : sub.raw.slice(0, 220) });
     }
+    if (req.query.probe === "demo") {
+      // One fixed bunny still (cached by generate-story-art), submitted to any
+      // model — so every model animates the EXACT same image. For A/B testing.
+      const m = (req.query.model || MODEL).toString();
+      const proto = (req.headers["x-forwarded-proto"] || "https").toString();
+      const host = (req.headers.host || "").toString();
+      const artPrompt = "A cute fluffy grey baby bunny wearing a cozy red scarf, sitting in soft fresh snow in front of a little wooden cabin, snowy pine trees, warm golden winter light";
+      let img = null, reason = null;
+      try {
+        const ar = await fetch(proto + "://" + host + "/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt, style: "watercolor" }) });
+        const aj = await ar.json().catch(() => ({}));
+        img = aj.url; reason = aj.reason || null;
+      } catch (e) { reason = String((e && e.message) || e).slice(0, 80); }
+      if (!img) return res.status(200).json({ ok: true, demo: true, noimg: true, reason });
+      const sub = await falSubmit(m, { image_url: img, prompt: MOTION });
+      return res.status(200).json({ ok: true, model: m, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, error: sub.ok ? undefined : sub.raw.slice(0, 200) });
+    }
     if (req.query.probe === "check" && req.query.id) {
       const base = "https://queue.fal.run/" + (req.query.model || MODEL).toString().split("/").slice(0, 2).join("/") + "/requests/" + req.query.id.toString();
       const sr = await fetch(base + "/status", { headers: { Authorization: "Key " + process.env.FAL_KEY } });
