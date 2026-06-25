@@ -59,7 +59,8 @@ export default async function handler(req, res) {
     if (!process.env.FAL_KEY) return res.status(200).json({ ok: true, hasFal: false });
     if (req.query.probe === "submit") {
       const m = (req.query.model || MODEL).toString();
-      const sub = await falSubmit(m, { image_url: "https://picsum.photos/seed/bk/768/512", prompt: MOTION });
+      const img = (req.query.image || "https://picsum.photos/seed/bk/768/512").toString();
+      const sub = await falSubmit(m, { image_url: img, prompt: MOTION });
       return res.status(200).json({ ok: true, model: m, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, error: sub.ok ? undefined : sub.raw.slice(0, 220) });
     }
     if (req.query.probe === "check" && req.query.id) {
@@ -96,6 +97,7 @@ export default async function handler(req, res) {
   try {
     const sub = await falSubmit(model, { image_url: imageUrl, prompt });
     if (!sub.ok || !(sub.body && sub.body.status_url)) return res.status(200).json({ ok: true, configured: true, failed: true, status: sub.status, detail: sub.raw.slice(0, 200) });
+    if (body.submitOnly) return res.status(200).json({ ok: true, submitted: true, model, request_id: sub.body.request_id });
     const result = await falPoll(sub.body.status_url, sub.body.response_url);
     const url = videoUrlFrom(result);
     if (!url) return res.status(200).json({ ok: true, configured: true, failed: true, detail: (result && (result.error || JSON.stringify(result).slice(0, 200))) });
