@@ -9,6 +9,8 @@
 //   ELEVENLABS_VOICE_ID  (optional; defaults to a warm, clear voice)
 //   ELEVENLABS_MODEL_ID  (optional; defaults to eleven_turbo_v2_5 — fast + cheap)
 
+import crypto from "crypto";
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
@@ -46,6 +48,31 @@ async function logCost(cost) {
   } catch { /* best-effort */ }
 }
 
+function cacheKey(voiceId, text) {
+  return crypto.createHash("sha1").update(voiceId + ":" + text).digest("hex");
+}
+async function cacheGet(key) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}&select=audio_b64,word_timings&limit=1`, {
+      headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch { return null; }
+}
+async function cachePut(key, audio_b64, word_timings) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/narration_cache`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates" },
+      body: JSON.stringify({ cache_key: key, audio_b64, word_timings }),
+    });
+  } catch { /* best-effort */ }
+}
+
 // Convert ElevenLabs char-level alignment to WORD-level timings the reader needs.
 function toWordTimings(text, alignment) {
   try {
@@ -72,19 +99,29 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, hasElevenLabs: Boolean(process.env.ELEVENLABS_API_KEY) });
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  const key = process.env.ELEVENLABS_API_KEY;
-  if (!key) return res.status(200).json({ ok: true, configured: false });
-  if (!(await underBudget())) return res.status(200).json({ ok: true, configured: false, reason: "over_daily_budget" });
+  const elKey = process.env.ELEVENLABS_API_KEY;
+  if (!elKey) return res.status(200).json({ ok: true, configured: false });
 
   const body = await readBody(req);
   const text = (body.text || "").toString().slice(0, 600).trim();
   if (!text) return res.status(400).json({ error: "text is required" });
   const voiceId = (body.voiceId || DEFAULT_VOICE).toString();
 
+  // Cache hit -> return instantly, no ElevenLabs call, no cost.
+  const key = cacheKey(voiceId, text);
+  const hit = await cacheGet(key);
+  if (hit && hit.audio_b64) {
+    return res.status(200).json({ ok: true, configured: true, cached: true,
+      audioUrl: "data:audio/mpeg;base64," + hit.audio_b64, wordTimings: hit.word_timings || null });
+  }
+
+  // Budget guard only applies to a real (paid) generation.
+  if (!(await underBudget())) return res.status(200).json({ ok: true, configured: false, reason: "over_daily_budget" });
+
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/with-timestamps`, {
       method: "POST",
-      headers: { "xi-api-key": key, "Content-Type": "application/json" },
+      headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
       body: JSON.stringify({ text, model_id: MODEL_ID, voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
     });
     if (!r.ok) {
@@ -95,9 +132,10 @@ export default async function handler(req, res) {
     const audio = data.audio_base64;
     if (!audio) return res.status(200).json({ ok: true, configured: false, reason: "no_audio" });
     const wordTimings = toWordTimings(text, data.alignment || data.normalized_alignment || {});
+    await cachePut(key, audio, wordTimings);
     await logCost(parseFloat(process.env.NARRATION_COST_USD || "0.01")); // rough per-page estimate
     return res.status(200).json({
-      ok: true, configured: true,
+      ok: true, configured: true, cached: false,
       audioUrl: "data:audio/mpeg;base64," + audio,
       wordTimings,
     });

@@ -1444,3 +1444,13 @@ Budget-guarded + `usage_log` (kind:"narration").
 
 OWNER TODO (optional, to enable premium narration): add `ELEVENLABS_API_KEY` in Vercel
 (optionally `ELEVENLABS_VOICE_ID` / `ELEVENLABS_MODEL_ID`). No code change needed.
+
+## Stories: narration cache — June 24 2026
+
+ElevenLabs narration is now cached in Supabase (`narration_cache`, keyed by
+sha1(voiceId + page text)). On "Read to me", `/api/narrate-story-page` checks the cache
+first and returns instantly with NO ElevenLabs call (no character spend) on a hit;
+misses generate once, store the audio + word timings, then serve. Re-reading a saved
+story (or another kid reading the same generated line) costs nothing. Cache ops are
+best-effort, so narration still works before the table exists (just uncached).
+OWNER TODO: run `db/create-narration-cache.sql` (also in buildable-kids-setup.sql).
