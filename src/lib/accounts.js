@@ -48,6 +48,38 @@ function saveSession(s) {
 export function getSession() { return loadSession(); }
 export function isSignedIn() { return Boolean(loadSession()?.access_token); }
 
+// ---- token refresh (Supabase access tokens expire ~1h) --------------
+function tokenExpiringSoon(jwt) {
+  try {
+    const payload = JSON.parse(atob((jwt.split(".")[1] || "").replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload.exp) return false;
+    return payload.exp * 1000 - Date.now() < 60000; // within 60s of expiry
+  } catch { return true; } // unparseable -> refresh to be safe
+}
+// Exchange the refresh_token for a new access_token. On failure, sign out so
+// the UI falls back to the lane chooser instead of looping on an expired token.
+export async function refreshSession() {
+  const sx = loadSession();
+  if (!sx?.refresh_token) return null;
+  try {
+    const data = await authFetch("token?grant_type=refresh_token", {
+      method: "POST", body: JSON.stringify({ refresh_token: sx.refresh_token }),
+    });
+    if (data && data.access_token) {
+      saveSession({ access_token: data.access_token, refresh_token: data.refresh_token || sx.refresh_token });
+      return data.access_token;
+    }
+  } catch { saveSession(null); }
+  return null;
+}
+// Call on app load: proactively refresh if the saved token is expired/expiring.
+export async function ensureFreshToken() {
+  const sx = loadSession();
+  if (!sx?.access_token) return false;
+  if (tokenExpiringSoon(sx.access_token)) return Boolean(await refreshSession());
+  return true;
+}
+
 export function getActiveKid() {
   try { return JSON.parse(localStorage.getItem(ACTIVE_KID_KEY) || "null"); }
   catch { return null; }
@@ -85,10 +117,16 @@ async function authFetch(path, init) {
 }
 
 async function restFetch(path, init) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  const doFetch = () => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
     headers: { ...authHeaders(true), Prefer: "return=representation", ...(init && init.headers) },
   });
+  let r = await doFetch();
+  if (r.status === 401) {
+    // Access token likely expired mid-session — refresh once and retry.
+    const t = await refreshSession();
+    if (t) r = await doFetch();
+  }
   const data = await r.json().catch(() => ([]));
   if (!r.ok) throw new Error((data && data.message) || "Request failed");
   return data;

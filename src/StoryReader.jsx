@@ -40,6 +40,9 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const [spoken, setSpoken] = useState(-1);      // highlighted word index
   const [playing, setPlaying] = useState(false);
   const startedRef = useRef(false);
+  const audioRef = useRef(null);
+  const narrCacheRef = useRef({});   // pageIndex -> {audioUrl, wordTimings} | "none"
+  const hlTimerRef = useRef(null);
   const palette = WORLD_PALETTE[story && story.world] || ["#3a2c63", "#7a4a86"];
   const made = (story && story.created_with) || {};
   const heroEmoji = HERO_EMOJI[made.hero] || "🐰";
@@ -84,24 +87,25 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
 
     // Stop any narration when leaving a page or unmounting.
   useEffect(() => {
-    stopSpeech();
+    stopAll();
     setSpoken(-1); setPlaying(false);
-    return () => stopSpeech();
+    return () => stopAll();
   }, [idx]);
 
-  function stopSpeech() {
+  function stopAll() {
     try { if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel(); } catch {}
+    try { if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; } } catch {}
+    if (hlTimerRef.current) { clearInterval(hlTimerRef.current); hlTimerRef.current = null; }
   }
 
-  function readAloud() {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    stopSpeech();
+  // Browser built-in speech (fallback when ElevenLabs isn't configured).
+  function readAloudBrowser() {
+    if (typeof window === "undefined" || !window.speechSynthesis) { setPlaying(false); return; }
     const u = new SpeechSynthesisUtterance(page.text || "");
     u.rate = 0.92; u.pitch = 1.05;
-    // Map character offset -> word index for accurate highlighting.
     const starts = [];
     let acc = 0;
-    words.forEach((w, i) => { const at = (page.text || "").indexOf(w, acc); starts.push(at); acc = at + w.length; });
+    words.forEach((w) => { const at = (page.text || "").indexOf(w, acc); starts.push(at); acc = at + w.length; });
     u.onboundary = (e) => {
       if (e.name && e.name !== "word") return;
       let wi = 0;
@@ -110,10 +114,44 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
     };
     u.onend = () => { setSpoken(-1); setPlaying(false); };
     u.onerror = () => { setSpoken(-1); setPlaying(false); };
-    setPlaying(true);
     window.speechSynthesis.speak(u);
   }
-  function toggleRead() { if (playing) { stopSpeech(); setPlaying(false); setSpoken(-1); } else { readAloud(); } }
+
+  // Premium narration: play the ElevenLabs audio and highlight words by their timings.
+  function playWithAudio(audioUrl, wordTimings) {
+    const el = audioRef.current;
+    if (!el) { readAloudBrowser(); return; }
+    el.src = audioUrl;
+    if (Array.isArray(wordTimings) && wordTimings.length) {
+      hlTimerRef.current = setInterval(() => {
+        const t = el.currentTime || 0;
+        let wi = -1;
+        for (let i = 0; i < wordTimings.length; i++) { if (t >= (wordTimings[i].start || 0)) wi = i; }
+        setSpoken(wi);
+      }, 80);
+    }
+    el.onended = () => { setSpoken(-1); setPlaying(false); if (hlTimerRef.current) { clearInterval(hlTimerRef.current); hlTimerRef.current = null; } };
+    el.play().catch(() => { setPlaying(false); });
+  }
+
+  async function narratePage() {
+    setPlaying(true); setSpoken(-1);
+    let cached = narrCacheRef.current[idx];
+    if (cached === undefined) {
+      try {
+        const r = await fetch("/api/narrate-story-page", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: page.text }),
+        });
+        const j = await r.json();
+        cached = (j && j.configured && j.audioUrl) ? { audioUrl: j.audioUrl, wordTimings: j.wordTimings } : "none";
+      } catch { cached = "none"; }
+      narrCacheRef.current[idx] = cached;
+    }
+    if (cached && cached !== "none") playWithAudio(cached.audioUrl, cached.wordTimings);
+    else readAloudBrowser();
+  }
+  function toggleRead() { if (playing) { stopAll(); setPlaying(false); setSpoken(-1); } else { narratePage(); } }
 
   // How many pages have finished painting (for a gentle progress hint).
   const readyCount = pages.reduce((n, _p, i) => n + (art[i] && art[i] !== "loading" ? 1 : 0), 0);
@@ -167,6 +205,8 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
         Page {idx + 1} of {pages.length}
         {stillPainting && <span style={{ opacity: 0.7 }}>{"  ·  🎨 painting your book… " + readyCount + "/" + pages.length}</span>}
       </p>
+
+      <audio ref={audioRef} style={{ display: "none" }} />
 
       {isLast && (
         <div style={s.endRow}>

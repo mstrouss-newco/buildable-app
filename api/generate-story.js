@@ -115,17 +115,20 @@ function validateStory(obj, choices) {
   if (!obj || typeof obj !== "object") return null;
   const title = clampText(obj.title, 70);
   if (!title) return null;
+  const sheet = clampText(obj.character_sheet, 240);
   let pages = Array.isArray(obj.pages) ? obj.pages : null;
   if (!pages || pages.length < 4) return null;
   pages = pages.slice(0, 8).map((p, i) => {
     const text = clampText(p && p.text, 260);
-    const art_prompt = clampText(p && p.art_prompt, 320);
+    const scene = clampText(p && p.art_prompt, 300) || (title + " storybook scene");
     const effect = EFFECT_SET.has(p && p.effect) ? p.effect : "soft_glow";
     if (!text) return null;
-    return { n: i + 1, text, art_prompt: art_prompt || (title + " storybook scene"), effect, art_url: null, audio_url: null, word_timings: null };
+    // Prepend the fixed character sheet to every page so the hero looks identical.
+    const art_prompt = (sheet ? "CHARACTERS (draw EXACTLY the same every page): " + sheet + " " : "") + "SCENE: " + scene;
+    return { n: i + 1, text, art_prompt, effect, art_url: null, audio_url: null, word_timings: null };
   });
   if (pages.some((p) => p === null) || pages.length < 4) return null;
-  return { schema: 1, title, world: choices.world, pages, created_with: choices };
+  return { schema: 1, title, world: choices.world, character_sheet: sheet, pages, created_with: choices };
 }
 
 // Hand-written safe fallback so the flow never dead-ends.
@@ -134,7 +137,10 @@ function fallbackStory(c) {
   const world = pick(WORLDS, c.world, "enchanted_woods");
   const helper = pick(HELPERS, c.helper, "wise_owl");
   const name = clampText(c.heroName, 24) || "Pip";
-  const P = (text, effect, art) => ({ n: 0, text, effect, art_prompt: art, art_url: null, audio_url: null, word_timings: null });
+  const sheet = "The hero is " + name + ", " + hero + " (always drawn with the same look, colors, and outfit on every page)" + (helper ? "; the helper is " + helper + ", drawn the same each time" : "") + ".";
+  const P = (text, effect, art) => ({ n: 0, text, effect,
+    art_prompt: "CHARACTERS (draw EXACTLY the same every page): " + sheet + " SCENE: " + art,
+    art_url: null, audio_url: null, word_timings: null });
   const pages = [
     P(`Once upon a time, ${name}, ${hero}, lived in ${world}.`, "soft_glow", `${hero} in ${world}, soft storybook illustration`),
     P(`One morning, ${name} discovered something was wrong and set off to help.`, "drifting_clouds", `${hero} setting off on a path, storybook`),
@@ -143,7 +149,7 @@ function fallbackStory(c) {
     P(`With a little courage and a lot of friendship, everything turned out wonderfully.`, "candle_glow", `${hero} happy ending in ${world}, glowing storybook`),
     P(`And ${name} went home with a happy heart. The End.`, "fireplace_flicker", `${hero} cozy at home, warm storybook`),
   ].map((p, i) => ({ ...p, n: i + 1 }));
-  return { schema: 1, title: `${name} and the ${pick(TONES, c.tone, "magical").split(" ")[0]} Day`, world: c.world, pages, created_with: c, fallback: true };
+  return { schema: 1, title: `${name} and the ${pick(TONES, c.tone, "magical").split(" ")[0]} Day`, world: c.world, character_sheet: sheet, pages, created_with: c, fallback: true };
 }
 
 function buildPrompt(c, age) {
@@ -161,8 +167,8 @@ function buildPrompt(c, age) {
     `Hero: ${name}, ${hero}. World: ${world}. The problem: ${problem}. A helper appears: ${helper}. Tone: ${tone}. Ending: ${ending}.`,
     twist ? `Gently weave in this idea if it is wholesome: "${twist}".` : ``,
     `Return ONLY raw JSON (no markdown fences) of this exact shape:`,
-    `{"title": string (max 6 words), "pages": [ {"text": string (1-2 short, simple sentences a ${age || 6}-year-old can follow), "art_prompt": string (a vivid storybook illustration description; consistent characters; NO text/words in the image), "effect": one of ${JSON.stringify(EFFECTS)} } ]}`,
-    `Use 6 pages. Choose the single best-fitting "effect" id for each page from that list. Keep every page kind and clear.`,
+    `{"character_sheet": string (1-2 sentences fixing the hero's EXACT look — species, colors, distinctive features, outfit — and any recurring helper, so an illustrator draws them IDENTICALLY on every page), "title": string (max 6 words), "pages": [ {"text": string (1-2 short simple sentences a ${age || 6}-year-old can follow), "art_prompt": string (describe ONLY the SCENE/action for this page — do NOT redescribe the characters' appearance, that comes from character_sheet; NO text/words in the image), "effect": one of ${JSON.stringify(EFFECTS)} } ]}`,
+    `Use 6 pages. Keep the hero's appearance 100% consistent via character_sheet. Choose the single best-fitting "effect" id per page. Keep every page kind and clear.`,
   ].filter(Boolean).join("\n");
 }
 
@@ -187,7 +193,7 @@ export default async function handler(req, res) {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1400, messages: [{ role: "user", content: buildPrompt(c, age) }] }),
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1600, messages: [{ role: "user", content: buildPrompt(c, age) }] }),
     });
     if (!resp.ok) {
       return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c) });

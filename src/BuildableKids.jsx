@@ -11,7 +11,7 @@ import GrownUpScreen from "./GrownUpScreen";
 import StoryMaker from "./StoryMaker";
 import LoadingGames from "./LoadingGames";
 import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
-import { getActiveKid, isSignedIn, completeOAuthRedirect } from "./lib/accounts";
+import { getActiveKid, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -48,6 +48,9 @@ export default function BuildableKids() {
       });
     }
   }, []);
+
+  // Keep the signed-in session alive: refresh an expired token on load.
+  useEffect(() => { ensureFreshToken(); }, []);
 
   // Allow opening the admin dashboard directly by URL: /admin or /admin.html
   useEffect(() => {
