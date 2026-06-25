@@ -67,6 +67,10 @@ function toWordTimings(text, alignment) {
 }
 
 export default async function handler(req, res) {
+  // Safe diagnostic (boolean only, no secret value): GET /api/narrate-story-page
+  if (req.method === "GET") {
+    return res.status(200).json({ ok: true, hasElevenLabs: Boolean(process.env.ELEVENLABS_API_KEY) });
+  }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) return res.status(200).json({ ok: true, configured: false });
