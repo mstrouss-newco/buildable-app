@@ -58,6 +58,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const [soundOn, setSoundOn] = useState(true);
   const [charUrl, setCharUrl] = useState(null);  // the story's ONE character cutout (reused everywhere)
   const charRef = useRef(null);
+  const [pageVideo, setPageVideo] = useState({}); // idx -> mp4 url | "loading" | null
   const palette = WORLD_PALETTE[story && story.world] || ["#3a2c63", "#7a4a86"];
   const made = (story && story.created_with) || {};
   const heroEmoji = HERO_EMOJI[made.hero] || "🐰";
@@ -123,6 +124,19 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
     } catch { charRef.current = null; }
     return charRef.current;
   }
+  // PROTOTYPE: animate THIS page into a looping video (real motion) via fal.ai.
+  async function bringToLife() {
+    if (pageVideo[idx] === "loading") return;
+    setPageVideo((m) => ({ ...m, [idx]: "loading" }));
+    try {
+      const stillR = await fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: page.art_prompt, world: story.world, style: story.art_style }) }).then((r) => r.json());
+      const still = stillR && stillR.url;
+      if (!still) { setPageVideo((m) => ({ ...m, [idx]: null })); return; }
+      const vidR = await fetch("/api/animate-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl: still, cacheKey: page.art_prompt }) }).then((r) => r.json());
+      setPageVideo((m) => ({ ...m, [idx]: vidR && vidR.videoUrl ? vidR.videoUrl : null }));
+    } catch { setPageVideo((m) => ({ ...m, [idx]: null })); }
+  }
+
   function toggleSound() {
     setSoundOn((v) => {
       const next = !v;
@@ -220,9 +234,19 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
       </div>
       <audio ref={ambienceRef} style={{ display: "none" }} />
 
-      <LayeredPage bgUrl={bgUrl} charUrl={charUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
-        {!bgUrl && bgs[idx] === "loading" && (<div style={s.artLoading}>✨ setting the scene…</div>)}
-      </LayeredPage>
+      {pageVideo[idx] && pageVideo[idx] !== "loading" ? (
+        <div style={{ ...s.page, overflow: "hidden", position: "relative" }}>
+          <video src={pageVideo[idx]} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 24 }} />
+        </div>
+      ) : (
+        <LayeredPage bgUrl={bgUrl} charUrl={charUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
+          {!bgUrl && bgs[idx] === "loading" && (<div style={s.artLoading}>✨ setting the scene…</div>)}
+        </LayeredPage>
+      )}
+
+      <button style={s.liveBtn} onClick={bringToLife} disabled={pageVideo[idx] === "loading"}>
+        {pageVideo[idx] === "loading" ? "🎬 bringing to life… (~1–2 min)" : pageVideo[idx] ? "🎬 living video" : "🎬 Bring this page to life"}
+      </button>
 
       <div style={s.textPanel}>
         <p style={s.text}>
@@ -279,6 +303,7 @@ const s = {
   controls: { display: "flex", alignItems: "center", gap: 14, marginTop: 18 },
   circleBtn: { width: 52, height: 52, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 26, cursor: "pointer", fontFamily: FRED },
   readBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b)", color: "#fff", fontSize: 17, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 6px 20px rgba(155,126,221,0.45)" },
+  liveBtn: { marginTop: 12, padding: "11px 22px", borderRadius: 999, border: "1px solid rgba(124,246,176,0.5)", background: "rgba(124,246,176,0.14)", color: "#bdf5cf", fontFamily: FRED, fontSize: 15, fontWeight: 700, cursor: "pointer" },
   pageNum: { marginTop: 12, fontSize: 14, opacity: 0.65 },
   endRow: { marginTop: 8, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
   saveBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "#fff", color: "#b3477a", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
