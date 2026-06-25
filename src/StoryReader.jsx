@@ -47,7 +47,7 @@ function wordsOf(text) {
 export default function StoryReader({ story, deviceId, kidProfileId, onExit, onSave, saving, savedMsg, onNewAdventure }) {
   const pages = (story && story.pages) || [];
   const [idx, setIdx] = useState(0);
-  const [art, setArt] = useState({});            // pageIndex -> url | "loading" | null
+  const [bgs, setBgs] = useState({});            // pageIndex -> library bg url | "loading" | null
   const [spoken, setSpoken] = useState(-1);      // highlighted word index
   const [playing, setPlaying] = useState(false);
   const startedRef = useRef(false);
@@ -56,8 +56,8 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const hlTimerRef = useRef(null);
   const ambienceRef = useRef(null);
   const [soundOn, setSoundOn] = useState(true);
-  const [layers, setLayers] = useState({}); // pageIndex -> {bg,char} | "loading"
-  const charRef = useRef(null); // the story's ONE character cutout (reused on every page)
+  const [charUrl, setCharUrl] = useState(null);  // the story's ONE character cutout (reused everywhere)
+  const charRef = useRef(null);
   const palette = WORLD_PALETTE[story && story.world] || ["#3a2c63", "#7a4a86"];
   const made = (story && story.created_with) || {};
   const heroEmoji = HERO_EMOJI[made.hero] || "🐰";
@@ -65,34 +65,28 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const page = pages[idx] || {};
   const words = wordsOf(page.text);
 
-  // BACKGROUND PRE-GENERATION with a small CONCURRENCY LIMIT (2 at a time).
-  // Firing all 6 at once trips gpt-image-1's per-minute rate limit (only the first
-  // couple succeed). A 2-wide worker pool paints every page in order without bursting;
-  // the server also retries on 429. The child reads page 1 over the scene meanwhile.
+  // AUTO LAYERED PAGES: generate the ONE character cutout, then pull a reusable library
+  // background per page (deterministic per world+style+variant -> cached). Every page is
+  // layered + moving by default; no button. Concurrency-limited to respect rate limits.
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
     let cancelled = false;
-    const queue = [];
-    pages.forEach((p, i) => {
-      if (p.art_url) setArt((a) => ({ ...a, [i]: p.art_url }));
-      else { setArt((a) => ({ ...a, [i]: "loading" })); queue.push(i); }
-    });
-    const CONCURRENCY = 2;
+    (async () => { const c = await ensureChar(); if (!cancelled) setCharUrl(c); })();
+    const scene = WORLD_SCENE[story.world] || "a magical storybook place";
+    const queue = pages.map((_p, i) => i);
+    pages.forEach((_p, i) => setBgs((m) => ({ ...m, [i]: "loading" })));
     let active = 0, qi = 0;
     const pump = () => {
-      while (!cancelled && active < CONCURRENCY && qi < queue.length) {
+      while (!cancelled && active < 2 && qi < queue.length) {
         const i = queue[qi++]; active++;
-        const p = pages[i];
+        const bgPrompt = "Storybook BACKGROUND SETTING ONLY — NO characters, NO animals, NO people, an empty wide scene of " + scene + ". Variation " + (i % 3) + ".";
         const ctrl = new AbortController();
         const to = setTimeout(() => ctrl.abort(), 70000);
-        fetch("/api/generate-story-art", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ artPrompt: p.art_prompt, world: story.world, style: story.art_style }), signal: ctrl.signal,
-        })
+        fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: bgPrompt, world: story.world, style: story.art_style }), signal: ctrl.signal })
           .then((r) => r.json())
-          .then((j) => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: j && j.url ? j.url : null })); })
-          .catch(() => { clearTimeout(to); if (!cancelled) setArt((prev) => ({ ...prev, [i]: null })); })
+          .then((j) => { clearTimeout(to); if (!cancelled) setBgs((prev) => ({ ...prev, [i]: j && j.url ? j.url : null })); })
+          .catch(() => { clearTimeout(to); if (!cancelled) setBgs((prev) => ({ ...prev, [i]: null })); })
           .finally(() => { active--; if (!cancelled) pump(); });
       }
     };
@@ -129,22 +123,6 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
     } catch { charRef.current = null; }
     return charRef.current;
   }
-  // A page's background is a REUSABLE LIBRARY scene (deterministic per world+style+variant
-  // -> cached after first generation), so only the character is ever made per story.
-  async function makeLayers() {
-    if (layers[idx] === "loading") return;
-    setLayers((m) => ({ ...m, [idx]: "loading" }));
-    const scene = WORLD_SCENE[story.world] || "a magical storybook place";
-    const bgPrompt = "Storybook BACKGROUND SETTING ONLY — NO characters, NO animals, NO people, an empty wide scene of " + scene + ". Variation " + (idx % 3) + ".";
-    try {
-      const [bgR, char] = await Promise.all([
-        fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: bgPrompt, world: story.world, style: story.art_style }) }).then((r) => r.json()),
-        ensureChar(),
-      ]);
-      setLayers((m) => ({ ...m, [idx]: { bg: bgR && bgR.url ? bgR.url : null, char } }));
-    } catch { setLayers((m) => ({ ...m, [idx]: null })); }
-  }
-
   function toggleSound() {
     setSoundOn((v) => {
       const next = !v;
@@ -226,19 +204,12 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   function toggleRead() { if (playing) { stopAll(); setPlaying(false); setSpoken(-1); } else { narratePage(); } }
 
   // How many pages have finished painting (for a gentle progress hint).
-  const readyCount = pages.reduce((n, _p, i) => n + (art[i] && art[i] !== "loading" ? 1 : 0), 0);
-  const stillPainting = pages.some((_p, i) => art[i] === "loading");
-  function persistableArt(i, fallback) {
-    const u = art[i];
-    if (typeof u === "string" && u !== "loading" && !u.startsWith("data:") && u.length < 600) return u; // short external URL only
-    return fallback || null; // skip heavy inline data: blobs (Vercel body limit) — regenerated on re-read
-  }
-  function enrichedStory() {
-    return { ...story, pages: pages.map((p, i) => ({ ...p, art_url: persistableArt(i, p.art_url) })) };
-  }
+  const readyCount = pages.reduce((n, _p, i) => n + (bgs[i] && bgs[i] !== "loading" ? 1 : 0), 0);
+  const stillPainting = pages.some((_p, i) => bgs[i] === "loading") || !charUrl;
+  function enrichedStory() { return { ...story }; } // backgrounds/character are cached server-side; re-reads regenerate instantly
 
   const isLast = idx === pages.length - 1;
-  const artUrl = art[idx] && art[idx] !== "loading" ? art[idx] : null;
+  const bgUrl = bgs[idx] && bgs[idx] !== "loading" ? bgs[idx] : null;
 
   return (
     <div style={s.container}>
@@ -249,17 +220,9 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
       </div>
       <audio ref={ambienceRef} style={{ display: "none" }} />
 
-      {layers[idx] && layers[idx] !== "loading" ? (
-        <LayeredPage bgUrl={layers[idx].bg} charUrl={layers[idx].char} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page} />
-      ) : (
-        <LivingPage artUrl={artUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
-          {art[idx] === "loading" && !artUrl && (<div style={s.artLoading}>✨ adding a picture…</div>)}
-        </LivingPage>
-      )}
-
-      <button style={s.moveBtn} onClick={makeLayers} disabled={layers[idx] === "loading"}>
-        {layers[idx] === "loading" ? "✨ Bringing it to life…" : layers[idx] ? "✨ Living scene" : "✨ Make it move"}
-      </button>
+      <LayeredPage bgUrl={bgUrl} charUrl={charUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
+        {!bgUrl && bgs[idx] === "loading" && (<div style={s.artLoading}>✨ setting the scene…</div>)}
+      </LayeredPage>
 
       <div style={s.textPanel}>
         <p style={s.text}>
@@ -316,7 +279,6 @@ const s = {
   controls: { display: "flex", alignItems: "center", gap: 14, marginTop: 18 },
   circleBtn: { width: 52, height: 52, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 26, cursor: "pointer", fontFamily: FRED },
   readBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b)", color: "#fff", fontSize: 17, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 6px 20px rgba(155,126,221,0.45)" },
-  moveBtn: { marginTop: 12, padding: "10px 20px", borderRadius: 999, border: "1px solid rgba(255,214,107,0.5)", background: "rgba(255,214,107,0.14)", color: "#ffe08a", fontFamily: FRED, fontSize: 15, fontWeight: 700, cursor: "pointer" },
   pageNum: { marginTop: 12, fontSize: 14, opacity: 0.65 },
   endRow: { marginTop: 8, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
   saveBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "#fff", color: "#b3477a", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
