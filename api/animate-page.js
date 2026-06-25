@@ -61,6 +61,15 @@ export default async function handler(req, res) {
       const sub = await falSubmit({ image_url: "https://picsum.photos/seed/bk/768/512", prompt: MOTION });
       return res.status(200).json({ ok: true, model: MODEL, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, status_url: sub.body && sub.body.status_url, response_url: sub.body && sub.body.response_url, error: sub.ok ? undefined : sub.raw.slice(0, 220) });
     }
+    if (req.query.probe === "check" && req.query.id) {
+      const base = "https://queue.fal.run/" + MODEL.split("/").slice(0, 2).join("/") + "/requests/" + req.query.id.toString();
+      const sr = await fetch(base + "/status", { headers: { Authorization: "Key " + process.env.FAL_KEY } });
+      const sj = await sr.json().catch(() => ({}));
+      if (sj.status !== "COMPLETED") return res.status(200).json({ ok: true, status: sj.status || "unknown", queue_position: sj.queue_position });
+      const rr = await fetch(base, { headers: { Authorization: "Key " + process.env.FAL_KEY } });
+      const result = await rr.json().catch(() => ({}));
+      return res.status(200).json({ ok: true, status: "COMPLETED", videoUrl: videoUrlFrom(result), result_keys: Object.keys(result || {}) });
+    }
     if (req.query.probe === "poll" && req.query.s) {
       const sr = await fetch(req.query.s.toString(), { headers: { Authorization: "Key " + process.env.FAL_KEY } });
       const sj = await sr.json().catch(() => ({}));
