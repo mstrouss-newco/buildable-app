@@ -1539,3 +1539,22 @@ rendered in that style, generated once and cached (narration_cache key "stylesam
 thereafter. Falls back to a labeled colored SVG swatch if no OpenAI key / off budget, so
 the picker is never empty. Pre-warm by GETting each style once (done post-deploy) so the
 CDN caches the real images before kids see the picker.
+
+## Stories: quiz-wizard creator + "new adventure" — June 24 2026
+
+Reimagined the story creator from a long scroll into a **one-question-at-a-time quiz
+wizard** (`StoryMaker.jsx`):
+- Big illustrated tiles, one decision per screen; tapping a choice speaks its name and
+  auto-advances. Steps: hero, gender, world, problem, helper, feeling, ending, art style.
+- **Talking owl guide** reads each question aloud and speaks an option when tapped, via the
+  browser speech engine (OUTPUT only — never records the child). 🔊/🔇 toggle. (We
+  deliberately did NOT add voice INPUT, to avoid recording kids.)
+- **"Story so far" strip** fills in with the chosen pictures as you go (live preview).
+- Landing shows the saved-stories library + a big "Make a new story" button.
+- Name is pre-filled from the active kid; the free-text "twist" was dropped from the flow
+  to keep it fully tap-based for pre-readers.
+- **#5 New adventure with the same characters:** the reader's last page has a button that
+  generates a fresh story reusing the prior hero/name/gender/helper/world/art-style AND the
+  saved `character_sheet` (so the cast looks identical), with a new randomized problem.
+  `generate-story` accepts `priorCharacterSheet` and is told to write a different adventure
+  for the same characters.

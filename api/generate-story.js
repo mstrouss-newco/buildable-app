@@ -116,11 +116,11 @@ async function logCost(cost, model) {
 function clampText(t, max) {
   return String(t || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
-function validateStory(obj, choices) {
+function validateStory(obj, choices, priorSheet) {
   if (!obj || typeof obj !== "object") return null;
   const title = clampText(obj.title, 70);
   if (!title) return null;
-  const sheet = clampText(obj.character_sheet, 240);
+  const sheet = (priorSheet && priorSheet.length ? priorSheet : clampText(obj.character_sheet, 240));
   let pages = Array.isArray(obj.pages) ? obj.pages : null;
   if (!pages || pages.length < 4) return null;
   pages = pages.slice(0, 8).map((p, i) => {
@@ -145,13 +145,13 @@ function validateStory(obj, choices) {
 }
 
 // Hand-written safe fallback so the flow never dead-ends.
-function fallbackStory(c) {
+function fallbackStory(c, priorSheet) {
   const hero = pick(HEROES, c.hero, "bunny");
   const world = pick(WORLDS, c.world, "enchanted_woods");
   const helper = pick(HELPERS, c.helper, "wise_owl");
   const name = clampText(c.heroName, 24) || "Pip";
   const g = GENDERS[c.gender] || GENDERS.neutral;
-  const sheet = "The hero is " + name + ", " + hero + " (always drawn with the same look, colors, and outfit on every page)" + (helper ? "; the helper is " + helper + ", drawn the same each time" : "") + ".";
+  const sheet = (priorSheet && priorSheet.length) ? priorSheet : "The hero is " + name + ", " + hero + " (always drawn with the same look, colors, and outfit on every page)" + (helper ? "; the helper is " + helper + ", drawn the same each time" : "") + ".";
   const P = (text, effect, art) => ({ n: 0, text, effect, effects: [effect],
     art_prompt: "Children's storybook watercolor illustration of this exact moment: \"" + text + "\". The recurring characters always look like: " + sheet + ". Depict the specific places, objects, and characters named in the sentence. No text in the image.",
     art_url: null, audio_url: null, word_timings: null });
@@ -166,7 +166,7 @@ function fallbackStory(c) {
   return { schema: 1, title: `${name} and the ${pick(TONES, c.tone, "magical").split(" ")[0]} Day`, world: c.world, character_sheet: sheet, pages, created_with: c, fallback: true };
 }
 
-function buildPrompt(c, age) {
+function buildPrompt(c, age, priorSheet) {
   const hero = pick(HEROES, c.hero, "bunny");
   const world = pick(WORLDS, c.world, "enchanted_woods");
   const problem = pick(PROBLEMS, c.problem, "lost_friend");
@@ -193,26 +193,27 @@ export default async function handler(req, res) {
   const body = await readBody(req);
   const c = (body.choices && typeof body.choices === "object") ? body.choices : {};
   const age = Math.max(3, Math.min(12, parseInt(body.age || 6, 10) || 6));
+  const priorSheet = (body.priorCharacterSheet || "").toString().slice(0, 240).trim();
 
   // Moderation: reject an unsafe free-text twist outright (controlled choices are safe by construction).
   if (!twistIsSafe(c.twist)) {
-    return res.status(200).json({ ok: true, moderated: true, story: fallbackStory(c) });
+    return res.status(200).json({ ok: true, moderated: true, story: fallbackStory(c, priorSheet) });
   }
 
   const claudeKey = process.env.ANTHROPIC_API_KEY;
   // If no key or over budget -> serve the safe fallback story (still magical, $0).
   if (!claudeKey || !(await underBudget())) {
-    return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c) });
+    return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c, priorSheet) });
   }
 
   try {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1600, messages: [{ role: "user", content: buildPrompt(c, age) }] }),
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1600, messages: [{ role: "user", content: buildPrompt(c, age, priorSheet) }] }),
     });
     if (!resp.ok) {
-      return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c) });
+      return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c, priorSheet) });
     }
     const data = await resp.json();
     let txt = (data && data.content && data.content[0] && data.content[0].text) || "";
@@ -221,11 +222,11 @@ export default async function handler(req, res) {
     const first = txt.indexOf("{"), last = txt.lastIndexOf("}");
     let parsed = null;
     if (first !== -1 && last !== -1) { try { parsed = JSON.parse(txt.slice(first, last + 1)); } catch { parsed = null; } }
-    const story = validateStory(parsed, c);
+    const story = validateStory(parsed, c, priorSheet);
     await logCost(STORY_COST_USD, CLAUDE_MODEL);
-    if (!story) return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c) });
+    if (!story) return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c, priorSheet) });
     return res.status(200).json({ ok: true, source: "ai", story });
   } catch (e) {
-    return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c) });
+    return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c, priorSheet) });
   }
 }
