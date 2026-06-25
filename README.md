@@ -1416,3 +1416,31 @@ re-reads without regeneration.
 ### Diagnostics left in place (safe)
 `GET /api/generate-story-art` returns booleans only (`hasOpenAI`/`hasAnthropic`/
 `hasSupabase`) — no secret values — for quick env checks.
+
+## Stories: character consistency, session refresh, ElevenLabs narration — June 24 2026
+
+Three follow-ons after live QA of Buildable Stories.
+
+### 1. Character consistency across pages
+gpt-image-1 generates each page independently, so the hero's look used to drift
+(grey kitten -> child -> orange kitten). `generate-story.js` now asks Claude for a
+`character_sheet` — a fixed visual description of the hero (+ recurring helper) — and
+prepends it to EVERY page's art prompt ("CHARACTERS (draw EXACTLY the same every
+page): … SCENE: …"). Page art_prompts now describe only the scene/action. The fallback
+story builds a character sheet too. Keeps full parallel generation (no serialization).
+
+### 2. Session token auto-refresh (fixes "JWT expired")
+Supabase access tokens expire ~1h; the app stored them but never refreshed, so signed-in
+families got bounced to "add your first child." `accounts.js` now has `refreshSession()`
+(exchanges the saved refresh_token) and `ensureFreshToken()` (called on app load); and
+`restFetch` retries once after refreshing on any 401. Signed-in sessions now persist.
+
+### 3. ElevenLabs narration (premium read-aloud + word timings)
+`/api/narrate-story-page.js` is now implemented: ElevenLabs text-to-speech WITH
+timestamps -> returns audio + WORD-LEVEL timings. `StoryReader` plays that audio and
+highlights each word exactly in sync; if `ELEVENLABS_API_KEY` is absent it returns
+{configured:false} and the reader falls back to the browser speech engine (unchanged).
+Budget-guarded + `usage_log` (kind:"narration").
+
+OWNER TODO (optional, to enable premium narration): add `ELEVENLABS_API_KEY` in Vercel
+(optionally `ELEVENLABS_VOICE_ID` / `ELEVENLABS_MODEL_ID`). No code change needed.
