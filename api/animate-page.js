@@ -31,14 +31,13 @@ async function falSubmit(input) {
   let j = {}; try { j = JSON.parse(t); } catch {}
   return { ok: r.ok, status: r.status, body: j, raw: t };
 }
-async function falResult(requestId) {
-  // poll status, then fetch the result
-  const base = "https://queue.fal.run/" + MODEL + "/requests/" + requestId;
-  for (let i = 0; i < 90; i++) {
-    const sr = await fetch(base + "/status", { headers: { Authorization: "Key " + process.env.FAL_KEY } });
+async function falPoll(statusUrl, responseUrl) {
+  // Use the exact URLs fal returns on submit (correct for nested model paths).
+  for (let i = 0; i < 100; i++) {
+    const sr = await fetch(statusUrl, { headers: { Authorization: "Key " + process.env.FAL_KEY } });
     const sj = await sr.json().catch(() => ({}));
     if (sj.status === "COMPLETED") {
-      const rr = await fetch(base, { headers: { Authorization: "Key " + process.env.FAL_KEY } });
+      const rr = await fetch(responseUrl, { headers: { Authorization: "Key " + process.env.FAL_KEY } });
       return await rr.json().catch(() => ({}));
     }
     if (sj.status && sj.status !== "IN_QUEUE" && sj.status !== "IN_PROGRESS") return { error: "bad_status", status: sj.status, detail: sj.error };
@@ -60,14 +59,13 @@ export default async function handler(req, res) {
     if (!process.env.FAL_KEY) return res.status(200).json({ ok: true, hasFal: false });
     if (req.query.probe === "submit") {
       const sub = await falSubmit({ image_url: "https://picsum.photos/seed/bk/768/512", prompt: MOTION });
-      return res.status(200).json({ ok: true, model: MODEL, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, error: sub.ok ? undefined : sub.raw.slice(0, 220) });
+      return res.status(200).json({ ok: true, model: MODEL, accepted: sub.ok, status: sub.status, request_id: sub.body && sub.body.request_id, status_url: sub.body && sub.body.status_url, response_url: sub.body && sub.body.response_url, error: sub.ok ? undefined : sub.raw.slice(0, 220) });
     }
-    if (req.query.probe === "check" && req.query.id) {
-      const base = "https://queue.fal.run/" + MODEL + "/requests/" + req.query.id.toString();
-      const sr = await fetch(base + "/status", { headers: { Authorization: "Key " + process.env.FAL_KEY } });
+    if (req.query.probe === "poll" && req.query.s) {
+      const sr = await fetch(req.query.s.toString(), { headers: { Authorization: "Key " + process.env.FAL_KEY } });
       const sj = await sr.json().catch(() => ({}));
       if (sj.status !== "COMPLETED") return res.status(200).json({ ok: true, status: sj.status || "unknown", queue_position: sj.queue_position });
-      const rr = await fetch(base, { headers: { Authorization: "Key " + process.env.FAL_KEY } });
+      const rr = await fetch((req.query.r || "").toString(), { headers: { Authorization: "Key " + process.env.FAL_KEY } });
       const result = await rr.json().catch(() => ({}));
       return res.status(200).json({ ok: true, status: "COMPLETED", videoUrl: videoUrlFrom(result), result_keys: Object.keys(result || {}) });
     }
@@ -86,8 +84,8 @@ export default async function handler(req, res) {
 
   try {
     const sub = await falSubmit({ image_url: imageUrl, prompt });
-    if (!sub.ok || !(sub.body && sub.body.request_id)) return res.status(200).json({ ok: true, configured: true, failed: true, status: sub.status, detail: sub.raw.slice(0, 200) });
-    const result = await falResult(sub.body.request_id);
+    if (!sub.ok || !(sub.body && sub.body.status_url)) return res.status(200).json({ ok: true, configured: true, failed: true, status: sub.status, detail: sub.raw.slice(0, 200) });
+    const result = await falPoll(sub.body.status_url, sub.body.response_url);
     const url = videoUrlFrom(result);
     if (!url) return res.status(200).json({ ok: true, configured: true, failed: true, detail: (result && (result.error || JSON.stringify(result).slice(0, 200))) });
     await cachePut(key, url);
