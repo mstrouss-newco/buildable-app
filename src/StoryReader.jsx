@@ -10,7 +10,7 @@
 // { audioUrl, wordTimings } for premium narration — swap the speak() call for an
 // <audio> element driven by wordTimings (the highlight loop already keys off an index).
 import { useState, useEffect, useRef } from "react";
-import { LivingPage } from "./lib/storyEffects";
+import { LivingPage, LayeredPage } from "./lib/storyEffects";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -45,6 +45,7 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
   const hlTimerRef = useRef(null);
   const ambienceRef = useRef(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [layers, setLayers] = useState({}); // pageIndex -> {bg,char} | "loading"
   const palette = WORLD_PALETTE[story && story.world] || ["#3a2c63", "#7a4a86"];
   const made = (story && story.created_with) || {};
   const heroEmoji = HERO_EMOJI[made.hero] || "🐰";
@@ -102,6 +103,23 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
       .catch(() => {});
     return () => { cancelled = true; try { ambienceRef.current && ambienceRef.current.pause(); } catch {} };
   }, []);
+
+  // PROTOTYPE: split the current page into a background + a transparent character layer
+  // and parallax them for real motion (like the games' layered scenes).
+  async function makeLayers() {
+    if (layers[idx] === "loading") return;
+    setLayers((m) => ({ ...m, [idx]: "loading" }));
+    const bgPrompt = "Storybook BACKGROUND SETTING ONLY — absolutely NO characters, NO animals, NO people, an empty scene — for this moment: \"" + (page.text || "") + "\".";
+    const charSheet = (story.character_sheet || "a friendly little hero");
+    const charPrompt = charSheet + ". Full body, standing, friendly, facing forward, centered, on a plain solid background, no scenery, no ground, simple.";
+    try {
+      const [bgR, chR] = await Promise.all([
+        fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: bgPrompt, world: story.world, style: story.art_style }) }).then((r) => r.json()),
+        fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: charPrompt, world: story.world, style: story.art_style, transparent: true }) }).then((r) => r.json()),
+      ]);
+      setLayers((m) => ({ ...m, [idx]: { bg: bgR && bgR.url ? bgR.url : null, char: chR && chR.url ? chR.url : null } }));
+    } catch { setLayers((m) => ({ ...m, [idx]: null })); }
+  }
 
   function toggleSound() {
     setSoundOn((v) => {
@@ -207,11 +225,17 @@ export default function StoryReader({ story, deviceId, kidProfileId, onExit, onS
       </div>
       <audio ref={ambienceRef} style={{ display: "none" }} />
 
-      <LivingPage artUrl={artUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
-        {art[idx] === "loading" && !artUrl && (
-          <div style={s.artLoading}>✨ adding a picture…</div>
-        )}
-      </LivingPage>
+      {layers[idx] && layers[idx] !== "loading" ? (
+        <LayeredPage bgUrl={layers[idx].bg} charUrl={layers[idx].char} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page} />
+      ) : (
+        <LivingPage artUrl={artUrl} effects={page.effects || [page.effect]} palette={palette} world={story.world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} pageIndex={idx} style={s.page}>
+          {art[idx] === "loading" && !artUrl && (<div style={s.artLoading}>✨ adding a picture…</div>)}
+        </LivingPage>
+      )}
+
+      <button style={s.moveBtn} onClick={makeLayers} disabled={layers[idx] === "loading"}>
+        {layers[idx] === "loading" ? "✨ Bringing it to life…" : layers[idx] ? "✨ Living scene" : "✨ Make it move"}
+      </button>
 
       <div style={s.textPanel}>
         <p style={s.text}>
@@ -268,6 +292,7 @@ const s = {
   controls: { display: "flex", alignItems: "center", gap: 14, marginTop: 18 },
   circleBtn: { width: 52, height: 52, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 26, cursor: "pointer", fontFamily: FRED },
   readBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b)", color: "#fff", fontSize: 17, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 6px 20px rgba(155,126,221,0.45)" },
+  moveBtn: { marginTop: 12, padding: "10px 20px", borderRadius: 999, border: "1px solid rgba(255,214,107,0.5)", background: "rgba(255,214,107,0.14)", color: "#ffe08a", fontFamily: FRED, fontSize: 15, fontWeight: 700, cursor: "pointer" },
   pageNum: { marginTop: 12, fontSize: 14, opacity: 0.65 },
   endRow: { marginTop: 8, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
   saveBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "#fff", color: "#b3477a", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },

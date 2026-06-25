@@ -47,6 +47,8 @@ function injectKeyframes() {
 @keyframes bk-blink { 0%,92%,100%{transform:scaleY(1)} 96%{transform:scaleY(.1)} }
 @keyframes bk-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @keyframes bk-sway { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)} }
+@keyframes bk-charfloat { 0%,100%{transform:translateX(-50%) translateY(0) scale(1)} 50%{transform:translateX(-50%) translateY(-14px) scale(1.012)} }
+@keyframes bk-parallax { 0%,100%{transform:translateX(-4px)} 50%{transform:translateX(4px)} }
 @keyframes bk-sweep { 0%{background-position:200% 0} 100%{background-position:-120% 0} }
 @keyframes bk-kenburns { 0%{transform:scale(1.05) translate(0%,0%)} 100%{transform:scale(1.20) translate(-2.5%,-1.5%)} }
 @keyframes bk-sunpulse { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.85;transform:scale(1.12)} }
@@ -304,6 +306,26 @@ export function LivingPage({ artUrl, effect, effects, palette, world, heroEmoji,
       {artUrl
         ? <img src={artUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 18s ease-in-out infinite alternate" }} />
         : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} effect={effect} pageIndex={pageIndex} />}
+      {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
+      {children}
+    </div>
+  );
+}
+
+export function LayeredPage({ bgUrl, charUrl, effect, effects, palette, world, heroEmoji, helperEmoji, pageIndex, children, style }) {
+  useEffect(() => { injectKeyframes(); }, []);
+  const layers = Array.isArray(effects) && effects.length ? effects.slice(0, 3) : [effect];
+  const origin = ["50% 45%", "30% 40%", "70% 40%"][(pageIndex || 0) % 3];
+  return (
+    <div style={{ position: "relative", overflow: "hidden", ...style }}>
+      {bgUrl
+        ? <img src={bgUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 20s ease-in-out infinite alternate" }} />
+        : <PlaceholderScene palette={palette} world={world} heroEmoji={heroEmoji} helperEmoji={helperEmoji} effect={effect} pageIndex={pageIndex} />}
+      {charUrl && (
+        <div style={{ position: "absolute", left: "50%", bottom: "-2%", width: "62%", animation: "bk-parallax 9s ease-in-out infinite" }}>
+          <img src={charUrl} alt="" style={{ width: "100%", display: "block", filter: "drop-shadow(0 10px 16px rgba(0,0,0,0.4))", transformOrigin: "50% 100%", animation: "bk-charfloat 4.5s ease-in-out infinite" }} />
+        </div>
+      )}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
       {children}
     </div>

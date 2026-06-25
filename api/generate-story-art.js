@@ -58,7 +58,7 @@ async function logCost(cost, model) {
   } catch { /* best-effort */ }
 }
 
-async function generateImage(prompt, openaiKey, timeoutMs = 42000) {
+async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
   const once = async (b) => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -89,10 +89,11 @@ async function generateImage(prompt, openaiKey, timeoutMs = 42000) {
     }
     return null;
   };
+  const tx = opts.transparent ? { background: "transparent", output_format: "png" } : {};
   return (
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "low" })) ||
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024" })) ||
-    (await attempt({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "low", ...tx })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", ...tx })) ||
+    (opts.transparent ? null : await attempt({ model: "dall-e-3", prompt, n: 1, size: "1024x1024", quality: "standard" })) ||
     null
   );
 }
@@ -117,7 +118,7 @@ export default async function handler(req, res) {
   if (!(await underBudget())) return res.status(200).json({ ok: true, placeholder: true, reason: "over_daily_budget" });
   try {
     const prompt = `${artPrompt}. ${styleFor(body.style)}`;
-    const url = await generateImage(prompt, openaiKey);
+    const url = await generateImage(prompt, openaiKey, { transparent: !!body.transparent });
     if (!url) return res.status(200).json({ ok: true, placeholder: true, reason: "image_provider_failed" });
     await logCost(ART_COST_USD, "image");
     return res.status(200).json({ ok: true, url });
