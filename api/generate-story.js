@@ -61,6 +61,32 @@ const CHARACTERS = {
 const EMOS = ["happy", "surprised", "scared", "sad", "sleepy"];
 const EMO_SET = new Set(EMOS);
 
+// Optional flavor the kid picks (all have safe defaults).
+const QUESTS = {
+  lost_friend:     "find a lost friend",
+  hidden_treasure: "search for a hidden treasure",
+  missing_star:    "find a star that has gone missing",
+  magic_door:      "open a magical door that won't budge",
+  help_creature:   "help a small creature who needs a hand",
+  big_storm:       "get everyone safely through a big (cozy, never scary) storm",
+};
+const MOODS = {
+  cozy: "cozy and warm", silly: "silly and giggly", brave: "brave and adventurous",
+  magical: "dreamy and magical", spooky: "a tiny bit spooky but always safe and friendly",
+};
+const ENDINGS = {
+  happy: "a happy ending", surprise: "a delightful surprise ending",
+  friendship: "an ending all about friendship", sleepy: "a calm, sleepy bedtime ending",
+};
+// Quietly woven in — never named to the child.
+const LESSONS = [
+  "being kind to others", "sharing", "being brave even when you feel scared",
+  "never giving up and trying again", "telling the truth", "being grateful",
+  "working together as a team", "taking slow deep breaths to feel calm",
+];
+const BLOCKED = ["kill","blood","gun","knife","sexy","naked","drug","hate","die","dead","stupid","weapon"];
+function sparkSafe(t){ const low=String(t||"").toLowerCase(); return !BLOCKED.some(w=>low.includes(w)); }
+
 function readBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
   return new Promise((resolve) => { let raw = ""; req.on("data", (c) => (raw += c)); req.on("end", () => { try { resolve(JSON.parse(raw || "{}")); } catch { resolve({}); } }); });
@@ -90,7 +116,15 @@ function normalizeInput(body) {
   const characterSlug = CHARACTERS[body.characterSlug] ? body.characterSlug : "bunny";
   const worldSlug = WORLDS[body.worldSlug] ? body.worldSlug : "enchanted-forest";
   const characterName = clampText(body.characterName, 28) || CHARACTERS[characterSlug].name;
-  return { style, characterSlug, worldSlug, characterName };
+  const quest = QUESTS[body.quest] ? body.quest : "";
+  const mood = MOODS[body.mood] ? body.mood : "";
+  const ending = ENDINGS[body.ending] ? body.ending : "";
+  let spark = clampText(body.spark, 140); if (!sparkSafe(spark)) spark = "";
+  const favColor = clampText(body.favColor, 24);
+  const favFood = clampText(body.favFood, 24);
+  const petName = clampText(body.petName, 24);
+  const lesson = LESSONS[Math.floor(Math.random() * LESSONS.length)];
+  return { style, characterSlug, worldSlug, characterName, quest, mood, ending, spark, favColor, favFood, petName, lesson };
 }
 
 function buildPrompt(inp, age) {
@@ -103,12 +137,18 @@ function buildPrompt(inp, age) {
     `The hero is ${inp.characterName}, ${ch.desc}. The story BEGINS in ${w.name} (${w.desc}).`,
     `The story may move between these library worlds (use the exact slug): ${worldList}.`,
     `For EACH page choose the single emotion the hero feels, from EXACTLY this list: ${JSON.stringify(EMOS)}.`,
+    inp.quest ? `The adventure: ${inp.characterName} must ${QUESTS[inp.quest]}.` : ``,
+    inp.mood ? `Overall feeling: ${MOODS[inp.mood]}.` : ``,
+    inp.ending ? `End with ${ENDINGS[inp.ending]}.` : ``,
+    inp.spark ? `Gently build the story around this idea from the child (if wholesome): "${inp.spark}".` : ``,
+    (inp.favColor || inp.favFood || inp.petName) ? `Where it fits NATURALLY (don't force it), sprinkle in the child's favorites: ${[inp.favColor && ("favorite color " + inp.favColor), inp.favFood && ("favorite food " + inp.favFood), inp.petName && ("a pet named " + inp.petName)].filter(Boolean).join(", ")}.` : ``,
+    `Quietly teach a gentle lesson about ${inp.lesson} through what the characters DO — never state the lesson outright, never be preachy; it should just be felt.`,
     `Shape a simple arc across the 6 pages: cozy/curious beginning, a surprise, a worry or scary moment, a low point, then it works out, and a calm ending — so the emotions vary naturally (e.g. happy, surprised, scared, sad, happy, sleepy).`,
     `Also choose one ambient "effect" per page from EXACTLY this list: ${JSON.stringify(EFFECTS)}.`,
     `Return ONLY raw JSON (no markdown), shape:`,
     `{"title": string (max 6 words), "pages": [ {"text": string (1-2 short simple sentences a ${age}-year-old can follow; refer to the hero as ${inp.characterName}), "world_slug": one of the world slugs above, "emotion": one of ${JSON.stringify(EMOS)}, "effect": one of the effect ids above } ]}`,
     `Use exactly 6 pages. Page 1 must use world_slug "${inp.worldSlug}". Keep every page kind and clear.`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function validateStory(obj, inp) {
@@ -133,7 +173,7 @@ function wrap(title, pages, inp) {
     schema: 2, title, style: inp.style,
     character_slug: inp.characterSlug, character_name: inp.characterName,
     start_world: inp.worldSlug, pages,
-    created_with: { style: inp.style, characterSlug: inp.characterSlug, characterName: inp.characterName, worldSlug: inp.worldSlug },
+    created_with: { style: inp.style, characterSlug: inp.characterSlug, characterName: inp.characterName, worldSlug: inp.worldSlug, quest: inp.quest, mood: inp.mood, ending: inp.ending, spark: inp.spark, favColor: inp.favColor, favFood: inp.favFood, petName: inp.petName },
   };
 }
 
