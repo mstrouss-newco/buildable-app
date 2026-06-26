@@ -182,7 +182,8 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
     try {
       const a = audioEl(); a.src = url;
       const p = a.play();
-      if (p && p.catch) p.catch(() => { if (seq === speakSeqRef.current && voiceRef.current) browserSpeak(text); });
+      // If autoplay is momentarily blocked, stay silent — never the robot voice.
+      if (p && p.catch) p.catch(() => {});
       return true;
     } catch { return false; }
   }
