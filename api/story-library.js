@@ -64,6 +64,8 @@ const CHARACTERS = [
   ["fairy",   "Petal the Fairy",    "a cute little flower fairy with delicate sparkly wings and a petal dress, friendly, full body"],
   ["robot",   "Bolt the Robot",     "a cute small friendly round robot with big glowing eyes and a little antenna, full body"],
   ["mermaid", "Marina the Mermaid", "a cute little mermaid child with a shimmering teal tail and a seashell top, friendly, full body"],
+  ["unicorn", "Sparkle the Unicorn", "a cute little rainbow unicorn with a soft pastel rainbow mane and tail and a tiny golden horn, friendly, full body"],
+  ["builder", "Bo the Builder", "a cheerful little kid builder wearing a yellow hard hat and blue tool-belt overalls, friendly, full body"],
 ];
 
 function styleId(s) { return STYLES[s] ? s : "watercolor"; }

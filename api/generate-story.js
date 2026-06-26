@@ -54,6 +54,8 @@ const CHARACTERS = {
   fairy:   { name: "Petal the Fairy", desc: "a little flower fairy with sparkly wings" },
   robot:   { name: "Bolt the Robot", desc: "a small friendly round robot with glowing eyes" },
   mermaid: { name: "Marina the Mermaid", desc: "a little mermaid with a shimmering teal tail" },
+  unicorn: { name: "Sparkle the Unicorn", desc: "a little rainbow unicorn with a pastel rainbow mane and a golden horn" },
+  builder: { name: "Bo the Builder", desc: "a cheerful kid builder in a yellow hard hat and tool-belt overalls" },
 };
 
 const EMOS = ["happy", "surprised", "scared", "sad", "sleepy"];
