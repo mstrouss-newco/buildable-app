@@ -435,8 +435,12 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
 
       {tab === "library" && (
         <div style={S.card}>
-          {songs.length === 0 && <div style={S.empty}>No songs yet! Make your first one.</div>}
           <div style={S.songGrid}>
+            {count < MAX_SONGS && (
+              <button style={S.addCard} onClick={() => { setTab("make"); setStep(0); setDraft(null); }} aria-label="Make a new song">
+                <span style={S.addPlus}>+</span><span style={S.addText}>Make a Song</span>
+              </button>
+            )}
             {songs.map((s) => (
               <div key={s.song_id} style={{ ...S.songCard, borderColor: s.cover_color || "#5B6CFF" }}>
                 <CoverThumb vibe={s.vibe} theme={s.theme} color={s.cover_color} size={48} radius={8} />
@@ -516,4 +520,7 @@ const S = {
   renameBtn: { background: "#2a2a3a", color: "#e7e7f5", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0, fontSize: 13 },
   deleteBtn: { background: "#2a2a3a", color: "#ff8080", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0 },
   fullNote: { marginTop: 14, textAlign: "center", color: "#FF8FB1", fontWeight: 700 },
+  addCard: { display: "flex", alignItems: "center", justifyContent: "center", gap: 14, background: "rgba(124,108,255,0.10)", border: "2px dashed rgba(124,108,255,0.5)", borderRadius: 14, padding: "18px", cursor: "pointer" },
+  addPlus: { fontSize: 30, fontWeight: 900, lineHeight: 1, color: "#cfc8ff" },
+  addText: { fontSize: 16, fontWeight: 800, color: "#fff" },
 };
