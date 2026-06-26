@@ -14,7 +14,7 @@ import QuizGate from "./QuizGate";
 import { getLearningSettings } from "./store";
 import { registerAudio } from './lib/audioUnlock.js';
 
-const MAX_SONGS = 10;
+const MAX_SONGS = 100000; // testing: effectively unlimited (was 10)
 
 const VIBES = [
   { id: "happy",  label: "Happy",  color: "#FFD93D" },

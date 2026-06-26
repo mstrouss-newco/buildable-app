@@ -1746,3 +1746,10 @@ draft does not double-prompt. Skippable; OFF = unchanged.
 `/typing.html` iframe when Learning Mode is on (once per entry, skippable). OFF = straight in.
 
 No emoji; default-OFF preserved.
+
+## Songs: lift the 10-song save cap for testing — June 26 2026
+
+Raised `MAX_SONGS` from 10 to 100000 (effectively unlimited) in both `api/save-song.js`
+(the real enforcement) and `src/MusicMaker.jsx` (the client-side gate that hid the Save
+button and blocked saves before the API call). TEMPORARY testing change — revert to a real
+cap before launch.

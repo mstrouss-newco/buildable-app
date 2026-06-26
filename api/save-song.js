@@ -1,12 +1,11 @@
 // /api/save-song.js
 // Saves one AI-generated song to a kid/parent profile (by device_id).
-// Enforces a hard cap of 10 songs per kid: if they already have 10, the save is
-// rejected with a friendly message telling them to delete one to make room.
+// Cap per kid is set very high (effectively unlimited) for testing — was 10.
 // Songs live centrally (Supabase) so they persist and can be reused in games.
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const MAX_SONGS = 10;
+const MAX_SONGS = 100000; // testing: effectively unlimited (was 10)
 
 function sb(path, init) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
