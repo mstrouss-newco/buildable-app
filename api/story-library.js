@@ -18,6 +18,7 @@ const STYLES = {
   watercolor: "soft children's picture-book WATERCOLOR illustration, gentle washes, warm colors, rounded friendly shapes, hand-painted storybook",
   modern3d:   "modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded characters, vibrant, glossy",
   papercut:   "layered CUT-PAPER COLLAGE illustration (Eric Carle style), textured construction-paper shapes, bold bright colors, visible paper edges",
+  modern:     "clean MODERN flat children's-book illustration, bold simple shapes, smooth flat colors with subtle gradients, minimal contemporary vector look, friendly and crisp",
 };
 const SAFE = "no text, no words, age 4-8, wholesome, child-friendly";
 
@@ -171,6 +172,7 @@ const SCENE_LOOK = {
   watercolor: "soft children's picture-book watercolor illustration, gentle washes, warm light",
   modern3d:   "modern 3D animated-movie style, soft cinematic lighting",
   papercut:   "layered cut-paper collage illustration, bold bright colors",
+  modern:     "clean modern flat illustration, bold simple shapes, smooth flat colors, contemporary",
 };
 const SHOTS = {
   establish: "Wide establishing shot of a magical ENCHANTED FOREST: glowing mushrooms, floating fireflies, tall ancient trees, a winding mossy path, soft golden light. Place THIS character skipping happily along the path, small within the big scene, clearly part of the world (not in front of it).",
@@ -227,8 +229,9 @@ const CAM=[
   "A warm medium shot focused on the hero and the key thing happening.",
 ];
 function worldDesc(slug){const w=WORLDS.find(x=>x[0]===slug);return w?w[2]:"";}
-function pageScenePrompt(action,world,style,i){
-  return `Children's picture-book illustration depicting THIS exact moment: "${action}". ${CAM[i%CAM.length]} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
+function pageScenePrompt(action,world,style,i,emo){
+  const feel = emo && emo!=="happy" ? ` The hero clearly feels ${emo}, shown gently in their face and body language.` : "";
+  return `Children's picture-book illustration depicting THIS exact moment: "${action}".${feel} ${CAM[i%CAM.length]} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
 }
 function pageSceneKey(ck){return "libpg:"+crypto.createHash("sha1").update(ck).digest("hex");}
 
@@ -243,12 +246,23 @@ export default async function handler(req, res) {
     if(!findItem("character",slug)||!action||!ck) return res.status(400).json({ ok:false, error:"bad input" });
     const k=pageSceneKey(ck);
     if(!body.force && await cacheGet(k)) return res.status(200).json({ ok:true, cached:true });
-    let ref = EMOS[emo] ? await cacheGet(exprKey(slug,style,emo)) : null;
-    if(!ref) ref = await cacheGet(cacheKey("character",slug,style));
-    if(!ref) return res.status(200).json({ ok:true, needBase:true });
     const openaiKey=process.env.OPENAI_API_KEY;
     if(!openaiKey) return res.status(200).json({ ok:true, noKey:true });
-    const b64=await genScene(ref, pageScenePrompt(action,world,style,i), openaiKey);
+    // Resolve a character reference for THIS style; lazily make the style's base
+    // cutout if it doesn't exist yet (so new styles work without pre-generation).
+    let ref = EMOS[emo] ? await cacheGet(exprKey(slug,style,emo)) : null;
+    if(!ref) ref = await cacheGet(cacheKey("character",slug,style));
+    if(!ref){
+      const item = findItem("character", slug);
+      if(item){
+        const bp = item[2] + ". A single character, centered, full body, simple plain background. " + (STYLES[styleId(style)]||STYLES.watercolor) + ", " + SAFE;
+        const nb = await genImage(bp, true, openaiKey);
+        if(nb){ await cachePut(cacheKey("character",slug,styleId(style)), nb); ref = nb; }
+      }
+    }
+    if(!ref) ref = EMOS[emo] ? await cacheGet(exprKey(slug,"watercolor",emo)) : await cacheGet(cacheKey("character",slug,"watercolor"));
+    if(!ref) return res.status(200).json({ ok:true, needBase:true });
+    const b64=await genScene(ref, pageScenePrompt(action,world,style,i,emo), openaiKey);
     if(!b64) return res.status(200).json({ ok:true, failed:true });
     if(body.force) await cacheDel(k);
     await cachePut(k,b64);

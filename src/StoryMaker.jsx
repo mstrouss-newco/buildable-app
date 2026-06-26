@@ -10,7 +10,7 @@ const PAGE_BG =
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
 
 const GUIDES = [["builder","Bo the Builder"],["wizard","Milo the Wizard"],["unicorn","Sparkle the Unicorn"],["fox","Pip the Fox"]];
-const STYLES = [["watercolor","Watercolor","🎨",true],["modern3d","Modern 3D","🧸",false],["papercut","Paper cut-out","✂️",false]];
+const STYLES = [["watercolor","Watercolor","🎨",true],["modern","Modern","🖼️",true],["modern3d","3D Movie","🧸",true],["papercut","Paper cut-out","✂️",true]];
 const CHARACTERS = [
   ["bunny","Bramble Bunny"],["fox","Pip Fox"],["bear","Biscuit Bear"],["penguin","Waddle Penguin"],
   ["dragon","Ember Dragon"],["owl","Professor Owl"],["turtle","Shelby Turtle"],["hedgehog","Quill Hedgehog"],

@@ -45,8 +45,8 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const page = pages[idx] || {};
   const words = wordsOf(page.text);
   const palette = WORLD_PALETTE[page.world_slug] || ["#3a2c63", "#7a4a86"];
-  const bgUrl = page.world_slug ? libImg("world", page.world_slug, style) : null;
-  const charUrl = libImg("character", charSlug, style, page.emotion || "happy");
+  const bgUrl = page.world_slug ? libImg("world", page.world_slug, "watercolor") : null;   // placeholder
+  const charUrl = libImg("character", charSlug, "watercolor", page.emotion || "happy");      // placeholder
 
   // RICH PAGES: generate an integrated illustration of each page's moment (the hero
   // drawn INTO the scene, by emotion) in the background. Flat layered page shows
@@ -146,6 +146,17 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   }
   function toggleRead() { if (playing) { stopAll(); setPlaying(false); setSpoken(-1); } else { narratePage(); } }
 
+  function repaint() {
+    const pg = pages[idx]; if (!pg || !pg.text) return;
+    const ck = tokenRef.current + "|" + idx + "|" + (pg.emotion || "happy");
+    setSceneUrl((m) => { const n = { ...m }; delete n[idx]; return n; });   // back to placeholder while it paints
+    fetch("/api/story-library", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pageScene: true, force: true, slug: charSlug, style, emo: pg.emotion || "happy", world: pg.world_slug, action: pg.text, pageIndex: idx, cacheKey: ck }) })
+      .then((r) => r.json())
+      .then((j) => { if (j && (j.generated || j.cached)) setSceneUrl((m) => ({ ...m, [idx]: "/api/story-library?pimg=1&k=" + encodeURIComponent(ck) + "&cb=" + Date.now() })); })
+      .catch(() => {});
+  }
+
   const isLast = idx === pages.length - 1;
 
   return (
@@ -163,6 +174,8 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       {sceneUrl[idx]
         ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} style={s.page} />
         : <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={idx} style={s.page} />}
+
+      <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">🎨 Repaint this page</button>
 
       <div style={s.textPanel}>
         <p style={s.text}>
@@ -205,6 +218,7 @@ const s = {
   controls: { display: "flex", alignItems: "center", gap: 14, marginTop: 18 },
   circleBtn: { width: 52, height: 52, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 26, cursor: "pointer", fontFamily: FRED },
   readBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b)", color: "#fff", fontSize: 17, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 6px 20px rgba(155,126,221,0.45)" },
+  repaintBtn: { marginTop: 10, padding: "8px 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.07)", color: "#cdd3ff", fontFamily: NUN, fontSize: 13, fontWeight: 700, cursor: "pointer" },
   pageNum: { marginTop: 12, fontSize: 14, opacity: 0.65 },
   endRow: { marginTop: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
   saveBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "#fff", color: "#b3477a", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },

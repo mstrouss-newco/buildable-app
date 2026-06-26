@@ -112,7 +112,7 @@ async function logCost(cost) {
 }
 
 function normalizeInput(body) {
-  const style = ["watercolor", "modern3d", "papercut"].includes(body.style) ? body.style : "watercolor";
+  const style = ["watercolor", "modern3d", "papercut", "modern"].includes(body.style) ? body.style : "watercolor";
   const characterSlug = CHARACTERS[body.characterSlug] ? body.characterSlug : "bunny";
   const worldSlug = WORLDS[body.worldSlug] ? body.worldSlug : "enchanted-forest";
   const characterName = clampText(body.characterName, 28) || CHARACTERS[characterSlug].name;
