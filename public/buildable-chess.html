@@ -603,6 +603,16 @@ function playWorldMusic(key){
   if(musicOn){m.play().catch(()=>{});}
 }
 function stopMusic(){if(musicEl)musicEl.pause();}
+// Browsers block audio until the user interacts *inside this frame*. In online play the
+// game is opened by a message from the app (gesture was in the parent), so music/SFX are
+// blocked until the first tap here. Kick them off on that first interaction.
+let audioUnlocked=false;
+function unlockAudio(){
+  if(audioUnlocked)return; audioUnlocked=true;
+  try{if(AC&&AC.state==='suspended')AC.resume();}catch(e){}
+  if(musicOn && !paused && (mode==='online'||mode==='solo'||mode==='two')) playWorldMusic(sceneKey);
+}
+['pointerdown','touchstart','mousedown','keydown'].forEach(ev=>window.addEventListener(ev,unlockAudio,{passive:true}));
 
 /* ================= GAME STATE ================= */
 let S=startState();
