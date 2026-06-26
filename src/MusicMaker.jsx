@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { shareCreation } from "./lib/shareSheet";
+import CoverThumb from "./lib/CoverThumb";
 
 const MAX_SONGS = 10;
 
@@ -405,7 +406,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
           <div style={S.songGrid}>
             {songs.map((s) => (
               <div key={s.song_id} style={{ ...S.songCard, borderColor: s.cover_color || "#5B6CFF" }}>
-                <div style={{ ...S.songSwatch, background: s.cover_color || "#5B6CFF" }} />
+                <CoverThumb vibe={s.vibe} theme={s.theme} color={s.cover_color} size={48} radius={8} />
                 <div style={S.songInfo}>
                   <div style={S.songTitle}>{s.title}</div>
                   <div style={S.songMeta}>

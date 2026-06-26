@@ -3,6 +3,7 @@
 // (characters, levels, and later sounds) so they can reuse it.
 import { useState, useEffect } from "react";
 import { shareCreation } from "./lib/shareSheet";
+import CoverThumb from "./lib/CoverThumb";
 import {
   listCharacters,
   deleteCharacter,
@@ -188,7 +189,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
           <div style={s.grid}>
             {songs.map((sg) => (
               <div key={sg.song_id} style={s.card}>
-                <div style={{ ...s.noImage, background: sg.cover_color || "rgba(155,126,221,0.25)" }}>🎵</div>
+                <CoverThumb vibe={sg.vibe} theme={sg.theme} color={sg.cover_color} fill radius={0} />
                 <h3 style={s.cardTitle}>{sg.title}</h3>
                 <p style={s.cardDesc}>{[sg.vibe, sg.theme].filter(Boolean).join(" · ")}</p>
                 <audio controls src={sg.audio_url} style={{ width: "92%", margin: "0 auto 12px" }} />
