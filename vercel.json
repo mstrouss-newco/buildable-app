@@ -80,6 +80,10 @@
       "dest": "/scene-proto.html"
     },
     {
+      "src": "/living-scene.html",
+      "dest": "/living-scene.html"
+    },
+    {
       "src": "/story-demo.html",
       "dest": "/story-demo.html"
     },
