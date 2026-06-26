@@ -290,11 +290,11 @@ function TopNav({ onBack, onHome, onMyStuff }) {
           <button onClick={onBack} style={styles.backButton}>← Back</button>
         )}
         {onHome && (
-          <button onClick={onHome} style={styles.backButton}>🏠 Home</button>
+          <button onClick={onHome} style={styles.backButton}>Home</button>
         )}
       </div>
       <button onClick={onMyStuff} style={styles.myStuffButton}>
-        📦 My Stuff{total ? ` (${total})` : ""}
+        My Stuff{total ? ` (${total})` : ""}
       </button>
     </div>
   );
@@ -561,10 +561,10 @@ function IntroScreen({ onComplete, onHome, onMyStuff, activeKid }) {
     <div style={styles.container}>
       <div style={{ ...styles.introTopBar, justifyContent: "space-between" }}>
         <button onClick={onHome} style={styles.backButton}>← Home</button>
-        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
       </div>
 
-      <div style={styles.gameIcon}>🎮</div>
+      <div style={styles.gameIcon}><GameGlyph id="controller" size={72} /></div>
       <h1 style={styles.logo}>Make a game</h1>
       <p style={styles.tagline}>Build your own game in 3 minutes!</p>
 
@@ -617,21 +617,32 @@ function IntroScreen({ onComplete, onHome, onMyStuff, activeKid }) {
   );
 }
 
+// Vector game icons (no emoji). Monochrome line marks for the game-type picker.
+function GameGlyph({ id, size = 60 }) {
+  const p = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "#d7d0f0", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" };
+  if (id === "runner") return (<svg {...p}><circle cx="14" cy="5" r="2"/><path d="M13 8l-3 3 2 3-1 5"/><path d="M10 11l-4 1"/><path d="M12 14l4 2"/><path d="M9 22l3-4"/></svg>);
+  if (id === "flying") return (<svg {...p}><path d="M12 2c3 2 4 6 4 9l-4 3-4-3c0-3 1-7 4-9z"/><circle cx="12" cy="9" r="1.6"/><path d="M8 16l-2 4 4-2M16 16l2 4-4-2"/></svg>);
+  if (id === "maze") return (<svg {...p}><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h6v6M21 9h-6M9 3v3M15 21v-6"/></svg>);
+  if (id === "match") return (<svg {...p}><path d="M12 3l2.2 5.3L20 10.5l-5.8 2.2L12 18l-2.2-5.3L4 10.5l5.8-2.2z"/></svg>);
+  if (id === "breakout") return (<svg {...p}><rect x="3" y="4" width="7" height="4" rx="0.6"/><rect x="11" y="4" width="10" height="4" rx="0.6"/><rect x="3" y="9" width="10" height="4" rx="0.6"/><rect x="14" y="9" width="7" height="4" rx="0.6"/><circle cx="12" cy="19" r="1.4"/></svg>);
+  return (<svg {...p}><rect x="3" y="9" width="18" height="9" rx="4.5"/><path d="M7 12v3M5.5 13.5h3"/><circle cx="16" cy="12.5" r="0.9"/><circle cx="18" cy="14.5" r="0.9"/></svg>);
+}
+
 // ============ GAME TYPE PICKER COMPONENT ============
 function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
   const games = [
-    { id: "runner", name: "Runner", icon: "🏃", description: "Jump and duck through obstacles!" },
-    { id: "flying", name: "Flying", icon: "🚀", description: "Blast enemies while you fly!" },
-    { id: "maze", name: "Maze", icon: "🗺️", description: "Find keys, unlock doors, get treasure!" },
-    { id: "match", name: "Match Magic", icon: "✨", description: "Match 3 or more to make them POP!" },
-    { id: "breakout", name: "Brick Breaker", icon: "🧱", description: "Bounce the ball to smash all the bricks!" },
+    { id: "runner", name: "Runner", description: "Jump and duck through obstacles!" },
+    { id: "flying", name: "Flying", description: "Blast enemies while you fly!" },
+    { id: "maze", name: "Maze", description: "Find keys, unlock doors, get treasure!" },
+    { id: "match", name: "Match Magic", description: "Match 3 or more to make them POP!" },
+    { id: "breakout", name: "Brick Breaker", description: "Bounce the ball to smash all the bricks!" },
   ];
 
   return (
     <div style={styles.container}>
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
-        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
       </div>
 
       <h1 style={styles.heading}>Pick your game</h1>
@@ -640,7 +651,7 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
       <div style={styles.gameGrid}>
         {games.map((game) => (
           <button key={game.id} onClick={() => onGameSelected(game.id)} style={styles.gameCard}>
-            <div style={styles.gameIcon}>{game.icon}</div>
+            <div style={styles.gameIcon}><GameGlyph id={game.id} /></div>
             <h3 style={styles.gameCardTitle}>{game.name}</h3>
             <p style={styles.gameCardDescription}>{game.description}</p>
           </button>
@@ -932,11 +943,11 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
       <LoadingGames isLoading={loading} operationType="game" onComplete={() => {}} />
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
-        <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
       </div>
 
       <h1 style={styles.heading}>
-        {loading ? "Building your game" + dots : gameHtml ? "🎮 " + (gameData.level?.name || "Your Game") + "!" : "Uh oh!"}
+        {loading ? "Building your game" + dots : gameHtml ? "" + (gameData.level?.name || "Your Game") + "!" : "Uh oh!"}
       </h1>
 
       {!loading && !error && (
@@ -988,7 +999,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
         <div style={styles.loadingGame}>
           <div style={styles.loadingSpinner} />
           <p style={{ fontSize: "22px", fontWeight: "bold", color: "#fff", margin: "20px 0 8px" }}>
-            🎮 Building your game{dots}
+            Building your game{dots}
           </p>
           <p style={{ fontSize: "15px", color: "#b0abc8" }}>
             Claude is writing custom game code for {gameData.character?.name || "your hero"} right now!
@@ -998,7 +1009,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
 
       {error && (
         <div style={styles.errorGame}>
-          <p style={{ fontSize: "20px", color: "#ff9a9a" }}>😕 {error}</p>
+          <p style={{ fontSize: "20px", color: "#ff9a9a" }}>{error}</p>
           <button
             onClick={() => window.location.reload()}
             style={{ ...styles.primaryButton, marginTop: "20px", maxWidth: "300px" }}
@@ -1030,13 +1041,13 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
                 disabled={publishing}
                 style={{ ...styles.primaryButton, opacity: publishing ? 0.6 : 1, cursor: publishing ? "not-allowed" : "pointer" }}
               >
-                {publishing ? "Publishing... ✨" : "🚀 Publish my game!"}
+                {publishing ? "Publishing..." : "Publish my game!"}
               </button>
               {publishError && <p style={styles.error}>{publishError}</p>}
             </>
           ) : (
             <div style={styles.publishedBox}>
-              <p style={styles.publishedTitle}>🎉 Published! Anyone can play it now.</p>
+              <p style={styles.publishedTitle}>Published! Anyone can play it now.</p>
               <p style={styles.shareLabel}>Share link:</p>
               <code style={styles.shareLink}>{(typeof window !== "undefined" ? window.location.origin : "") + publishedUrl}</code>
             </div>
