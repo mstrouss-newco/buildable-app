@@ -14,7 +14,7 @@
 //   title    string  heading shown above the question (optional)
 // -------------------------------------------------------------
 import { useEffect, useRef, useState } from "react";
-import { recordAnswer, BADGES } from "./store";
+import { recordAnswer, BADGES, getReviewItem, recordMiss, clearMiss, weakestSubject } from "./store";
 
 // Map a learning goal to a concrete quizType for the API. "mix" alternates so a
 // child gets variety across moments.
@@ -26,6 +26,14 @@ function goalToQuizType(goal) {
   }
   // default: math (with an occasional geometry question for variety)
   return Math.random() < 0.25 ? "geometry" : "math";
+}
+
+// Map a weak subject to the quizType the API understands.
+function subjectToQuizType(s) {
+  if (s === "geometry") return "geometry";
+  if (s === "spelling") return "spelling";
+  if (s === "reading") return "reading";
+  return "math";
 }
 
 export function questionText(q) {
@@ -75,7 +83,16 @@ export default function QuizGate({ age = 7, goal = "math", onPass, gameType = "c
     setLoading(true);
     setPicked(null);
     setWrong(false);
-    const quizType = goalToQuizType(goal);
+    // Practice what you missed: sometimes replay an exact missed question.
+    const review = Math.random() < 0.4 ? getReviewItem() : null;
+    if (review) {
+      setQ(review);
+      setLoading(false);
+      return;
+    }
+    // Otherwise fetch fresh, biased toward the weakest subject when we know one.
+    const weak = weakestSubject();
+    const quizType = (weak && Math.random() < 0.5) ? subjectToQuizType(weak) : goalToQuizType(goal);
     try {
       const r = await fetch("/api/generate-quiz", {
         method: "POST",
@@ -114,6 +131,7 @@ export default function QuizGate({ age = 7, goal = "math", onPass, gameType = "c
     if (i === q.correctIndex) {
       levelRef.current = Math.min(10, levelRef.current + 1); // adapt up for next time
       const newly = recordAnswer({ subject, correct: true }); // no-op unless Learning Mode on
+      clearMiss(q); // mastered — remove from the review queue
       const badge = newly && newly.length ? BADGES.find((b) => b.id === newly[0]) : null;
       if (badge) {
         // Brief celebration, then proceed.
@@ -125,6 +143,7 @@ export default function QuizGate({ age = 7, goal = "math", onPass, gameType = "c
     } else {
       levelRef.current = Math.max(1, levelRef.current - 1); // ease down
       recordAnswer({ subject, correct: false }); // no-op unless Learning Mode on
+      recordMiss(q); // queue it to practice again later
       setWrong(true);
     }
   }

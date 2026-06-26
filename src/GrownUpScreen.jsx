@@ -34,7 +34,7 @@ import {
   listFamilyProjects, assignProjectToKid,
   signInWithGoogle, completeOAuthRedirect,
 } from "./lib/accounts";
-import { getLearningSettings, setLearningSettings, learningGoalOptions, getProgress, BADGES, progressSubjects } from "./store";
+import { getLearningSettings, setLearningSettings, learningGoalOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount } from "./store";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -616,6 +616,9 @@ function LearningProgressCard() {
   const subjects = progressSubjects();
   const earnedSet = new Set(p.badges || []);
   const attempted = p.totalCorrect + p.totalWrong;
+  const weak = weakestSubject();
+  const queued = reviewCount();
+  const SUBJECT_LABEL = { math: "Math", geometry: "Shapes", spelling: "Spelling", reading: "Reading" };
 
   return (
     <div style={LP.wrap}>
@@ -636,6 +639,14 @@ function LearningProgressCard() {
           <div style={LP.statLabel}>Badges</div>
         </div>
       </div>
+
+      {attempted > 0 && (weak || queued > 0) && (
+        <div style={LP.practice}>
+          {weak ? <>Now practicing: <strong>{SUBJECT_LABEL[weak] || weak}</strong></> : null}
+          {weak && queued > 0 ? " · " : null}
+          {queued > 0 ? <>{queued} to review again</> : null}
+        </div>
+      )}
 
       {attempted === 0 ? (
         <div style={LP.empty}>No practice yet. Turn on Learning Mode above, then progress shows up here.</div>
@@ -680,6 +691,7 @@ const LP = {
     borderRadius: 16, padding: "14px 16px", margin: "14px 0",
   },
   title: { fontSize: 16, fontWeight: 800 },
+  practice: { fontSize: 13, fontWeight: 700, color: "#C9B8FF", margin: "0 0 12px", textAlign: "center" },
   sub: { fontSize: 12.5, opacity: 0.75, marginTop: 3, lineHeight: 1.4 },
   statRow: { display: "flex", gap: 10, margin: "14px 0 4px" },
   stat: {

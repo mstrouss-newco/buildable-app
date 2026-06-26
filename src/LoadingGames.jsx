@@ -12,7 +12,7 @@
 // No emojis anywhere — shapes/marks are inline SVG or CSS.
 import { useState, useEffect, useRef } from 'react';
 import "./loading-games.css";
-import { getLearningSettings, recordAnswer } from "./store";
+import { getLearningSettings, recordAnswer, getReviewItem, recordMiss, clearMiss, weakestSubject } from "./store";
 import { questionText } from "./QuizGate";
 
 // ---- small inline marks (no emojis) ----
@@ -33,6 +33,7 @@ function typeToSubject(t) {
   return "math";
 }
 
+function subjectToQuizType(s){ if(s==="geometry")return "geometry"; if(s==="spelling")return "spelling"; if(s==="reading")return "reading"; return "math"; }
 function goalToQuizType(goal) {
   if (goal === "reading") return Math.random() < 0.5 ? "reading" : "spelling";
   if (goal === "mix") {
@@ -165,7 +166,10 @@ function LearningQuestion({ age, goal, operationType }) {
   async function load() {
     setLoading(true);
     setPicked(null);
-    const quizType = goalToQuizType(goal);
+    const review = Math.random() < 0.4 ? getReviewItem() : null;
+    if (review) { setQ(review); setLoading(false); return; }
+    const weak = weakestSubject();
+    const quizType = (weak && Math.random() < 0.5) ? subjectToQuizType(weak) : goalToQuizType(goal);
     try {
       const r = await fetch("/api/generate-quiz", {
         method: "POST",
@@ -197,10 +201,12 @@ function LearningQuestion({ age, goal, operationType }) {
     if (i === q.correctIndex) {
       levelRef.current = Math.min(10, levelRef.current + 1);
       recordAnswer({ subject, correct: true }); // no-op unless Learning Mode on
+      clearMiss(q);
       setTimeout(() => { if (alive.current) load(); }, 900); // next question while still waiting
     } else {
       levelRef.current = Math.max(1, levelRef.current - 1);
       recordAnswer({ subject, correct: false }); // no-op unless Learning Mode on
+      recordMiss(q);
       setTimeout(() => { if (alive.current) setPicked(null); }, 900); // let them retry
     }
   }

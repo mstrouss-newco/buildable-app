@@ -474,3 +474,95 @@ export function recordAnswer({ subject, correct } = {}) {
 export function progressSubjects() {
   return [...SUBJECTS];
 }
+
+// ---------------- Practice what you missed ----------------
+// On-device review queue: when a question is answered wrong (Learning Mode on),
+// we store the FULL question object so it can be replayed EXACTLY later. When it
+// is later answered right, it leaves the queue. We also expose weakestSubject()
+// so callers can bias fresh questions toward where the kid struggles. No network.
+const REVIEW_KEY = "review";
+const REVIEW_MAX = 12;
+let reviewCache = [];
+let lastServedSig = null;
+
+// Stable signature for de-duping / matching a question, independent of UI text.
+function questionSig(q) {
+  if (!q || typeof q !== "object") return "";
+  const body = q.question || q.word_template || q.story || q.prompt || "";
+  const choices = Array.isArray(q.choices) ? q.choices.join("") : "";
+  return `${q.type || "?"}${body}${choices}`;
+}
+
+(async function hydrateReview() {
+  try {
+    const db = await openDB();
+    const stored = await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readonly");
+      const r = tx.objectStore(STORE).get(REVIEW_KEY);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+    if (Array.isArray(stored)) reviewCache = stored.filter((x) => x && typeof x === "object");
+  } catch {
+    // IndexedDB unavailable — keep empty.
+  }
+  emit();
+})();
+
+// Add a missed question to the review queue (newest last). No-op unless Learning
+// Mode is on. De-duped by signature; capped at REVIEW_MAX (drops oldest).
+export function recordMiss(question) {
+  if (!learningCache.enabled || !question || typeof question !== "object") return;
+  if (!Array.isArray(question.choices) || typeof question.correctIndex !== "number") return;
+  const sig = questionSig(question);
+  if (!sig) return;
+  reviewCache = reviewCache.filter((x) => questionSig(x) !== sig);
+  reviewCache.push({ ...question, _sig: sig, _missedAt: Date.now() });
+  if (reviewCache.length > REVIEW_MAX) reviewCache = reviewCache.slice(reviewCache.length - REVIEW_MAX);
+  idbSet(REVIEW_KEY, reviewCache).catch(() => {});
+  emit();
+}
+
+// Remove a question from the review queue (call when answered right).
+export function clearMiss(question) {
+  if (!question || typeof question !== "object") return;
+  const sig = questionSig(question);
+  const before = reviewCache.length;
+  reviewCache = reviewCache.filter((x) => questionSig(x) !== sig);
+  if (reviewCache.length !== before) {
+    idbSet(REVIEW_KEY, reviewCache).catch(() => {});
+    emit();
+  }
+}
+
+// Return one due review question (oldest first), avoiding the one just served
+// when possible. Returns null if the queue is empty. Does not mutate the queue.
+export function getReviewItem() {
+  if (!learningCache.enabled || reviewCache.length === 0) return null;
+  let pick = reviewCache.find((x) => questionSig(x) !== lastServedSig) || reviewCache[0];
+  lastServedSig = questionSig(pick);
+  // Strip internal fields before handing to the renderer.
+  const { _sig, _missedAt, ...clean } = pick;
+  return clean;
+}
+
+export function reviewCount() {
+  return reviewCache.length;
+}
+
+// Subject with the lowest right/attempts ratio among subjects with enough
+// attempts (>= 3). Returns null if none qualifies (so callers fall back to the
+// normal goal-based pick).
+export function weakestSubject(minAttempts = 3) {
+  const p = normalizeProgress(progressCache);
+  let worst = null;
+  let worstRatio = 1.01;
+  for (const s of SUBJECTS) {
+    const e = p.bySubject[s] || { right: 0, wrong: 0 };
+    const attempts = (e.right || 0) + (e.wrong || 0);
+    if (attempts < minAttempts) continue;
+    const ratio = (e.right || 0) / attempts;
+    if (ratio < worstRatio) { worstRatio = ratio; worst = s; }
+  }
+  return worst;
+}
