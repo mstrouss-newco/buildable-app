@@ -88,6 +88,10 @@
       "dest": "/glow.html"
     },
     {
+      "src": "/water.html",
+      "dest": "/water.html"
+    },
+    {
       "src": "/story-demo.html",
       "dest": "/story-demo.html"
     },

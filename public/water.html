@@ -1,0 +1,74 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Stories — water effects</title>
+<style>
+  body{margin:0;background:#0e1020;color:#eef0ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:22px;max-width:780px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 2px}
+  p.sub{color:#9aa0c7;margin:0 0 12px;font-size:13px;line-height:1.5}
+  .toggle{background:#3552a8;border:1px solid #5572d6;color:#fff;border-radius:999px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:16px}
+  .lbl{font-size:14px;color:#c3c8ee;margin:6px 0 20px}
+  .stage{position:relative;width:100%;aspect-ratio:3/2;border-radius:18px;overflow:hidden;background:#000;border:1px solid #2a3060}
+  .stage .base{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  /* river: a duplicate of the lower water region that ripples */
+  .water{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;clip-path:inset(56% 0 0 0);
+         -webkit-mask:linear-gradient(to bottom,transparent 54%,#000 62%);mask:linear-gradient(to bottom,transparent 54%,#000 62%);
+         opacity:0;transition:opacity .3s}
+  .lit .water{opacity:1;filter:url(#ripple)}
+  .caustic{position:absolute;left:0;right:0;bottom:0;height:44%;mix-blend-mode:screen;opacity:0;
+           background:repeating-linear-gradient(100deg,transparent 0 22px,rgba(255,255,255,.10) 26px,transparent 34px);
+           background-size:200% 100%}
+  .lit .caustic{opacity:1;animation:flow 7s linear infinite}
+  .leafw{position:absolute;width:11px;height:11px;border-radius:0 100% 0 100%;background:#c9863f;opacity:0}
+  .lit .leafw{animation:drift 9s linear infinite}
+  /* underwater: whole-scene gentle wobble + bubbles + rays */
+  .lit .uw{filter:url(#wobble)}
+  .bubble{position:absolute;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85),rgba(200,235,255,.25) 60%,transparent 72%);opacity:0}
+  .lit .bubble{animation:bub 6s ease-in infinite}
+  .rays{position:absolute;inset:0;mix-blend-mode:screen;opacity:0;
+        background:linear-gradient(105deg,transparent 35%,rgba(180,230,255,.18) 48%,transparent 58%)}
+  .lit .rays{opacity:1;animation:rays 8s ease-in-out infinite}
+  @keyframes flow{0%{background-position:0 0}100%{background-position:200% 0}}
+  @keyframes drift{0%{opacity:0;transform:translate(0,0) rotate(0)}10%{opacity:.85}100%{opacity:0;transform:translate(620px,18px) rotate(200deg)}}
+  @keyframes bub{0%{opacity:0;transform:translateY(0) translateX(0) scale(.6)}15%{opacity:.85}100%{opacity:0;transform:translateY(-340px) translateX(14px) scale(1)}}
+  @keyframes rays{0%,100%{opacity:.3}50%{opacity:.85}}
+</style>
+
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <filter id="ripple"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.045" numOctaves="2" seed="3" result="n">
+    <animate attributeName="baseFrequency" dur="7s" values="0.012 0.045;0.016 0.055;0.012 0.045" repeatCount="indefinite"/></feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="wobble"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.013" numOctaves="2" seed="7" result="n">
+    <animate attributeName="baseFrequency" dur="11s" values="0.008 0.013;0.011 0.017;0.008 0.013" repeatCount="indefinite"/></feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="9"/></filter>
+</svg>
+
+<h1>Flowing water — and friends</h1>
+<p class="sub">The painted water actually ripples (an SVG warp on just the water), light caustics drift across the surface, leaves float downstream. Underwater: the whole scene gently wobbles, bubbles rise, sun-rays sway. Tap to compare.</p>
+<button class="toggle" id="t">Turn effects OFF</button>
+
+<div class="stage lit" id="s1">
+  <img class="base" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=river">
+  <img class="water" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=river">
+  <div class="caustic"></div>
+  <div class="leafw" style="left:-3%;top:72%;animation-delay:0s"></div>
+  <div class="leafw" style="left:-3%;top:80%;animation-delay:3s"></div>
+  <div class="leafw" style="left:-3%;top:66%;animation-delay:6s"></div>
+</div>
+<p class="lbl"><b>Forest stream —</b> the water surface ripples and shimmers, leaves drift across it; the trees and fox above stay crisp.</p>
+
+<div class="stage lit" id="s2">
+  <img class="base uw" src="/api/story-library?simg=1&slug=mermaid&style=watercolor&shot=underwater">
+  <div class="rays"></div>
+  <div class="bubble" style="left:24%;bottom:8%;width:9px;height:9px;animation-delay:0s"></div>
+  <div class="bubble" style="left:30%;bottom:4%;width:6px;height:6px;animation-delay:1.4s"></div>
+  <div class="bubble" style="left:62%;bottom:10%;width:11px;height:11px;animation-delay:2.2s"></div>
+  <div class="bubble" style="left:70%;bottom:6%;width:7px;height:7px;animation-delay:3.5s"></div>
+  <div class="bubble" style="left:46%;bottom:3%;width:8px;height:8px;animation-delay:4.6s"></div>
+  <div class="bubble" style="left:82%;bottom:9%;width:6px;height:6px;animation-delay:1.0s"></div>
+</div>
+<p class="lbl"><b>Underwater —</b> the whole scene gently sways like you're below the surface, bubbles rise, light-rays drift down.</p>
+
+<script>
+  const t=document.getElementById("t");let on=true;
+  t.onclick=()=>{on=!on;document.querySelectorAll(".stage").forEach(s=>s.classList.toggle("lit",on));t.textContent=on?"Turn effects OFF":"Turn effects ON";};
+</script>
