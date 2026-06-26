@@ -1,21 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bgd" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1d1640"/><stop offset="1" stop-color="#0e0a1e"/>
-    </linearGradient>
-    <radialGradient id="gloss" cx="0.3" cy="0.18" r="0.95">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/><stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="bletter" x1="140" y1="98" x2="360" y2="416" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#8B5CF6"/><stop offset="0.52" stop-color="#EC4899"/><stop offset="1" stop-color="#FF7A59"/>
-    </linearGradient>
+    <linearGradient id="bgd" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1d1640"/><stop offset="1" stop-color="#0e0a1e"/></linearGradient>
+    <radialGradient id="gloss" cx="0.3" cy="0.18" r="0.95"><stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/><stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="bl" x1="150" y1="120" x2="365" y2="392" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8B5CF6"/><stop offset="0.52" stop-color="#EC4899"/><stop offset="1" stop-color="#FF7A59"/></linearGradient>
   </defs>
   <rect width="512" height="512" fill="url(#bgd)"/>
   <rect width="512" height="512" fill="url(#gloss)"/>
-  <!-- uppercase "B": stem + two stacked bowls, brand gradient -->
-  <g fill="url(#bletter)">
-    <rect x="146" y="98" width="70" height="316" rx="22"/>
-    <path fill-rule="evenodd" d="M168,180 a82,82 0 1,0 164,0 a82,82 0 1,0 -164,0 Z M216,180 a34,34 0 1,0 68,0 a34,34 0 1,0 -68,0 Z"/>
-    <path fill-rule="evenodd" d="M162,320 a96,96 0 1,0 192,0 a96,96 0 1,0 -192,0 Z M216,320 a42,42 0 1,0 84,0 a42,42 0 1,0 -84,0 Z"/>
-  </g>
+  <path d="M308.20 252.76Q330.16 257.44 343.48 274.54Q356.80 291.64 356.80 313.60Q356.80 345.28 334.66 363.82Q312.52 382.36 272.92 382.36L155.20 382.36L155.20 129.64L268.96 129.64Q307.48 129.64 329.26 147.28Q351.04 164.92 351.04 195.16Q351.04 217.48 339.34 232.24Q327.64 NaN 308.20 252.76M216.76 178.96L216.76 231.88L257.08 231.88Q272.20 231.88 280.30 225.22Q288.40 218.56 288.40 205.60Q288.40 192.64 280.30 185.80Q272.20 178.96 257.08 178.96L216.76 178.96M262.12 332.68Q277.60 332.68 286.06 325.66Q294.52 318.64 294.52 305.32Q294.52 292 285.70 284.44Q276.88 276.88 261.40 276.88L216.76 276.88L216.76 332.68" fill="url(#bl)"/>
 </svg>
