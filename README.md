@@ -75,6 +75,15 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Home launcher redesign — app-icon tiles, Games "coming soon" (June 26 2026)
+
+**What & why.** The kid-facing Home hub (`HomeScreen` in `src/BuildableKids.jsx`) was rebuilt to match the dark `buildablekids.` brand and to remove all emoji. Each activity tile is now a large **card-width app-icon banner** (full card width, 3:2 aspect, big white SVG glyph — note / controller / book / keyboard / chess king) with the label below it. The profile pill, My Stuff and Grown-ups buttons no longer use emoji either.
+
+- **Badges:** removed READY / NEW / BETA. The only badge is **"Coming soon"** on **Games**, which is now `disabled` (greyed) while the game engine is reworked. To re-enable Games, remove `disabled` + the badge from its `ExperienceCard`.
+- **Chess tile** opens `/buildable-chess.html`. That static page was falling through to the landing page until `vercel.json` got an explicit { "src": "/buildable-chess.html", "dest": "/buildable-chess.html" } route. NOTE: every static `public/*.html` page needs its own explicit route before the `/(.*)` -> `/landing.html` catch-all, or it serves the landing page.
+- Also redesigned this session: the **Grown-ups portal** (`src/GrownUpScreen.jsx`) to the dark brand with gradient-circle kid avatars (first initial, no emoji; legacy emoji avatars fall back to a name-derived color).
+
+
 ### ✅ Parent/Kid accounts + persistent per-kid creations (built June 23 2026)
 
 Status: **CODE COMPLETE & wired live.** Awaiting the owner's Supabase setup (below)
