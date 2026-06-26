@@ -50,7 +50,7 @@ export default async function handler(req,res){
     const key="seg:"+sha1(k+"|"+prompt);
     if(!body.force&&await cacheGet(key))return res.status(200).json({ok:true,cached:true});
     const proto=(req.headers["x-forwarded-proto"]||"https").toString(), host=(req.headers.host||"").toString();
-    const image=`${proto}://${host}/api/story-library?pimg=1&k=${encodeURIComponent(k)}`;
+    const image=body.imageUrl ? body.imageUrl.toString() : `${proto}://${host}/api/story-library?pimg=1&k=${encodeURIComponent(k)}`;
     const r=await falRun({prompt,image_url:image,mask_only:true,blur_mask:9,fill_holes:true});
     if(r.error||!r.image||!r.image.url)return res.status(200).json({ok:false,failed:true,detail:r});
     try{const mr=await fetch(r.image.url);const buf=Buffer.from(await mr.arrayBuffer());await cachePut(key,buf.toString("base64"));}catch(e){return res.status(200).json({ok:false,fetchFail:String(e&&e.message)});}
