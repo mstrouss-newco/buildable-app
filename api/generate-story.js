@@ -1,23 +1,21 @@
-// /api/generate-story.js
-// Buildable Stories — turns a kid's guided choices into a structured, age-safe
-// picture-book PLAN (title + 5-8 pages of text, art prompts, and ONE ambient
-// effect per page chosen from a fixed allow-list). Text only -> fast + cheap.
-// Page ART and NARRATION are produced later/lazily by separate endpoints so the
-// child never waits on a long batch image job.
+// /api/generate-story.js  (v2 — LIBRARY model)
+// Turns a kid's 3 picks (style + character + world) into a 6-page picture-book
+// PLAN. The pictures are NOT generated per story — each page just names a library
+// WORLD (background) + a core-5 EMOTION (the character's face). The reader layers
+// the cached library art with motion, so a story costs ~$0 and is instant.
 //
-// Conventions mirrored from the rest of the repo:
-//   - Claude via raw fetch (Haiku = cheap/fast) ; ANTHROPIC_API_KEY by name only.
-//   - Daily budget guard (DAILY_BUDGET_USD) + usage_log cost row (kind:"story").
-//   - VALIDATE-BEFORE-SERVE: if the model's JSON is malformed or unsafe, we serve
-//     a hand-written fallback story so the create->read->save flow always works.
-//   - Controlled vocabulary inputs (tap choices) keep free text — and moderation
-//     surface — tiny. Any optional free-text "twist" is blocklist-checked.
+//   POST { style, characterSlug, characterName?, worldSlug, age?, deviceId?, kidProfileId?, priorStory? }
+//     -> { ok, source, story }
+//   story = { schema:2, title, style, character_slug, character_name, start_world,
+//             pages:[{ text, world_slug, emotion, effect, effects:[effect] }], created_with }
 
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const STORY_COST_USD = parseFloat(process.env.STORY_COST_USD || "0.02");
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-// Must stay in sync with src/lib/storyEffects.jsx STORY_EFFECTS.
+// Must stay in sync with src/lib/storyEffects.jsx STORY_EFFECTS and api/story-library.js.
 const EFFECTS = [
   "fireplace_flicker", "snow_outside_window", "twinkling_stars", "candle_glow",
   "gentle_rain", "drifting_clouds", "magic_sparkles", "character_blink",
@@ -25,208 +23,166 @@ const EFFECTS = [
 ];
 const EFFECT_SET = new Set(EFFECTS);
 
-// Controlled vocab -> descriptive phrases for the prompt. The frontend offers
-// these same ids as tap choices.
-const HEROES = {
-  bunny: "a brave little bunny", dragon: "a friendly baby dragon", robot: "a curious robot",
-  kitten: "a clever kitten", astronaut: "a young astronaut", mermaid: "a kind mermaid",
-  fox: "a quick little fox", knight: "a gentle knight",
-};
+// The library worlds (slugs MUST match api/story-library.js).
 const WORLDS = {
-  snowy_forest: "a snowy forest with a cozy cabin", outer_space: "a sparkly outer-space adventure",
-  underwater: "a colorful underwater kingdom", candy_land: "a sweet candy land",
-  enchanted_woods: "an enchanted woodland", desert_oasis: "a sunny desert oasis",
-  cloud_castle: "a castle in the clouds", pirate_cove: "a friendly pirate cove",
+  "snowy-village":    { name: "Snowy Pine Village", desc: "a cozy snowy mountain village with little cabins and falling snow", fx: "snow_outside_window" },
+  "coral-reef":       { name: "Coral Reef Kingdom", desc: "a bright underwater coral reef kingdom", fx: "water_shimmer" },
+  "enchanted-forest": { name: "Enchanted Forest", desc: "a magical glowing forest with mushrooms and fireflies", fx: "magic_sparkles" },
+  "dragon-mountain":  { name: "Dragon Mountain", desc: "a friendly fantasy mountain with a little castle and a glowing cave", fx: "soft_glow" },
+  "dino-jungle":      { name: "Dino Jungle", desc: "a lush prehistoric jungle with ferns and a gentle volcano", fx: "floating_dust" },
+  "space-station":    { name: "Starlight Space", desc: "a friendly outer-space scene with planets and twinkling stars", fx: "twinkling_stars" },
+  "desert-oasis":     { name: "Golden Desert Oasis", desc: "a golden desert at sunset with a palm-tree oasis", fx: "sun_pulse" },
+  "candy-land":       { name: "Candy Cloud Land", desc: "a whimsical candy land with lollipop trees and marshmallow clouds", fx: "magic_sparkles" },
 };
-const PROBLEMS = {
-  lost_friend: "needs to find a lost friend", missing_star: "a special star has gone missing",
-  big_storm: "a big storm is coming", locked_door: "a magical door won't open",
-  hungry_creature: "a sad, hungry creature needs help", broken_bridge: "a broken bridge blocks the path",
-};
-const HELPERS = {
-  wise_owl: "a wise owl", talking_map: "a talking map", glowing_firefly: "a glowing firefly",
-  old_turtle: "a slow but clever turtle", friendly_ghost: "a friendly little ghost",
-  singing_bird: "a cheerful singing bird",
-};
-const TONES = {
-  cozy: "cozy and warm", funny: "silly and funny", adventurous: "exciting and adventurous",
-  magical: "dreamy and magical", brave: "brave and heartwarming",
-};
-const GENDERS = {
-  girl: { s: "she", o: "her", p: "her", desc: "a girl" },
-  boy: { s: "he", o: "him", p: "his", desc: "a boy" },
-  neutral: { s: "they", o: "them", p: "their", desc: "" },
-};
-const ENDINGS = {
-  happy: "a happy, satisfying ending", surprise: "a gentle, delightful surprise ending",
-  friendship: "an ending all about friendship", cozy_sleep: "a calm, sleepy bedtime ending",
+const WORLD_SLUGS = Object.keys(WORLDS);
+
+// The library characters (slugs MUST match api/story-library.js).
+const CHARACTERS = {
+  bunny:   { name: "Bramble the Bunny", desc: "a fluffy grey baby bunny with a cozy red scarf" },
+  fox:     { name: "Pip the Fox", desc: "a little orange fox cub with a fluffy white-tipped tail" },
+  bear:    { name: "Biscuit the Bear", desc: "a round brown bear cub" },
+  penguin: { name: "Waddle the Penguin", desc: "a little penguin chick with a blue bowtie" },
+  dragon:  { name: "Ember the Dragon", desc: "a friendly soft-green baby dragon with little wings" },
+  owl:     { name: "Professor Owl", desc: "a small wise owl with round glasses" },
+  turtle:  { name: "Shelby the Turtle", desc: "a tiny green turtle" },
+  hedgehog:{ name: "Quill the Hedgehog", desc: "a little hedgehog with soft spikes" },
+  koala:   { name: "Coco the Koala", desc: "a grey koala with big fluffy ears" },
+  tiger:   { name: "Tilly the Tiger", desc: "a little tiger cub with soft stripes" },
+  fawn:    { name: "Willow the Fawn", desc: "a baby deer fawn with white spots" },
+  otter:   { name: "Ollie the Otter", desc: "a river otter with whiskers" },
+  wizard:  { name: "Milo the Wizard", desc: "a little child wizard in a starry robe with a glowing wand" },
+  fairy:   { name: "Petal the Fairy", desc: "a little flower fairy with sparkly wings" },
+  robot:   { name: "Bolt the Robot", desc: "a small friendly round robot with glowing eyes" },
+  mermaid: { name: "Marina the Mermaid", desc: "a little mermaid with a shimmering teal tail" },
 };
 
-// Tiny server-side blocklist for the optional free-text twist (defense in depth;
-// most input is controlled tap choices).
-const BLOCKED = ["kill", "blood", "gun", "knife", "sexy", "naked", "drug", "hate", "die", "dead", "stupid"];
-function twistIsSafe(t) {
-  if (!t) return true;
-  const low = String(t).toLowerCase();
-  return !BLOCKED.some((w) => low.includes(w));
-}
-
-function pick(map, id, fallbackId) {
-  return map[id] || map[fallbackId];
-}
+const EMOS = ["happy", "surprised", "scared", "sad", "sleepy"];
+const EMO_SET = new Set(EMOS);
 
 function readBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
-  return new Promise((resolve) => {
-    let raw = "";
-    req.on("data", (c) => (raw += c));
-    req.on("end", () => { try { resolve(JSON.parse(raw || "{}")); } catch { resolve({}); } });
-  });
+  return new Promise((resolve) => { let raw = ""; req.on("data", (c) => (raw += c)); req.on("end", () => { try { resolve(JSON.parse(raw || "{}")); } catch { resolve({}); } }); });
 }
+function clampText(t, max) { return String(t || "").replace(/\s+/g, " ").trim().slice(0, max); }
 
-// ---- cost tracking (mirrors generate-song.js) ----
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 async function underBudget() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return true; // no logging configured -> allow
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return true;
   try {
     const today = new Date().toISOString().slice(0, 10);
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/usage_log?select=cost_usd&date=eq.${today}`, {
-      headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
-    });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/usage_log?select=cost_usd&date=eq.${today}`, { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } });
     if (!r.ok) return true;
     const rows = await r.json();
-    const total = (Array.isArray(rows) ? rows : []).reduce((s, x) => s + (x.cost_usd || 0), 0);
-    return total < DAILY_BUDGET_USD;
+    return (Array.isArray(rows) ? rows : []).reduce((s, x) => s + (x.cost_usd || 0), 0) < DAILY_BUDGET_USD;
   } catch { return true; }
 }
-async function logCost(cost, model) {
+async function logCost(cost) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
   try {
     const today = new Date().toISOString().slice(0, 10);
-    await fetch(`${SUPABASE_URL}/rest/v1/usage_log`, {
-      method: "POST",
-      headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ date: today, cost_usd: cost, kind: "story", model: model || CLAUDE_MODEL }),
-    });
-  } catch { /* best-effort */ }
+    await fetch(`${SUPABASE_URL}/rest/v1/usage_log`, { method: "POST", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ date: today, cost_usd: cost, kind: "story", model: CLAUDE_MODEL }) });
+  } catch {}
 }
 
-// ---- validate-before-serve ----
-function clampText(t, max) {
-  return String(t || "").replace(/\s+/g, " ").trim().slice(0, max);
+function normalizeInput(body) {
+  const style = ["watercolor", "modern3d", "papercut"].includes(body.style) ? body.style : "watercolor";
+  const characterSlug = CHARACTERS[body.characterSlug] ? body.characterSlug : "bunny";
+  const worldSlug = WORLDS[body.worldSlug] ? body.worldSlug : "enchanted-forest";
+  const characterName = clampText(body.characterName, 28) || CHARACTERS[characterSlug].name;
+  return { style, characterSlug, worldSlug, characterName };
 }
-function validateStory(obj, choices, priorSheet) {
+
+function buildPrompt(inp, age) {
+  const ch = CHARACTERS[inp.characterSlug];
+  const w = WORLDS[inp.worldSlug];
+  const worldList = WORLD_SLUGS.map((s) => `"${s}" (${WORLDS[s].desc})`).join(", ");
+  return [
+    `You are a beloved children's picture-book author writing for a child age ${age}.`,
+    `Write a gentle, wholesome, age-appropriate 6-page story. NO violence, scary peril, romance, or anything a parent wouldn't want a young child to hear.`,
+    `The hero is ${inp.characterName}, ${ch.desc}. The story BEGINS in ${w.name} (${w.desc}).`,
+    `The story may move between these library worlds (use the exact slug): ${worldList}.`,
+    `For EACH page choose the single emotion the hero feels, from EXACTLY this list: ${JSON.stringify(EMOS)}.`,
+    `Shape a simple arc across the 6 pages: cozy/curious beginning, a surprise, a worry or scary moment, a low point, then it works out, and a calm ending — so the emotions vary naturally (e.g. happy, surprised, scared, sad, happy, sleepy).`,
+    `Also choose one ambient "effect" per page from EXACTLY this list: ${JSON.stringify(EFFECTS)}.`,
+    `Return ONLY raw JSON (no markdown), shape:`,
+    `{"title": string (max 6 words), "pages": [ {"text": string (1-2 short simple sentences a ${age}-year-old can follow; refer to the hero as ${inp.characterName}), "world_slug": one of the world slugs above, "emotion": one of ${JSON.stringify(EMOS)}, "effect": one of the effect ids above } ]}`,
+    `Use exactly 6 pages. Page 1 must use world_slug "${inp.worldSlug}". Keep every page kind and clear.`,
+  ].join("\n");
+}
+
+function validateStory(obj, inp) {
   if (!obj || typeof obj !== "object") return null;
   const title = clampText(obj.title, 70);
-  if (!title) return null;
-  const sheet = (priorSheet && priorSheet.length ? priorSheet : clampText(obj.character_sheet, 240));
   let pages = Array.isArray(obj.pages) ? obj.pages : null;
-  if (!pages || pages.length < 4) return null;
-  pages = pages.slice(0, 8).map((p, i) => {
-    const text = clampText(p && p.text, 260);
-    const scene = clampText(p && p.art_prompt, 300) || (title + " storybook scene");
-    let effects = Array.isArray(p && p.effects) ? p.effects.filter((e) => EFFECT_SET.has(e)).slice(0, 2) : [];
-    if (!effects.length) effects = [EFFECT_SET.has(p && p.effect) ? p.effect : "soft_glow"];
-    const effect = effects[0];
+  if (!title || !pages || pages.length < 4) return null;
+  pages = pages.slice(0, 6).map((p) => {
+    const text = clampText(p && p.text, 240);
+    const world_slug = WORLDS[p && p.world_slug] ? p.world_slug : inp.worldSlug;
+    const emotion = EMO_SET.has(p && p.emotion) ? p.emotion : "happy";
+    const effect = EFFECT_SET.has(p && p.effect) ? p.effect : WORLDS[world_slug].fx;
     if (!text) return null;
-    // Drive the image from THIS PAGE'S TEXT so the picture depicts what the words
-    // say (places, objects, characters), with the character sheet keeping the hero
-    // consistent and Claude's scene note as extra detail.
-    const art_prompt =
-      "Children's storybook watercolor illustration of this exact moment: \"" + text + "\". " +
-      (sheet ? "The recurring characters always look like: " + sheet + ". " : "") +
-      (scene ? "Extra detail: " + scene + ". " : "") +
-      "Depict the specific places, objects, and characters named in the sentence. No text or words in the image.";
-    return { n: i + 1, text, art_prompt, effect, effects, art_url: null, audio_url: null, word_timings: null };
+    return { text, world_slug, emotion, effect, effects: [effect] };
   });
   if (pages.some((p) => p === null) || pages.length < 4) return null;
-  return { schema: 1, title, world: choices.world, character_sheet: sheet, pages, created_with: choices };
+  return wrap(title, pages, inp);
+}
+
+function wrap(title, pages, inp) {
+  return {
+    schema: 2, title, style: inp.style,
+    character_slug: inp.characterSlug, character_name: inp.characterName,
+    start_world: inp.worldSlug, pages,
+    created_with: { style: inp.style, characterSlug: inp.characterSlug, characterName: inp.characterName, worldSlug: inp.worldSlug },
+  };
 }
 
 // Hand-written safe fallback so the flow never dead-ends.
-function fallbackStory(c, priorSheet) {
-  const hero = pick(HEROES, c.hero, "bunny");
-  const world = pick(WORLDS, c.world, "enchanted_woods");
-  const helper = pick(HELPERS, c.helper, "wise_owl");
-  const name = clampText(c.heroName, 24) || "Pip";
-  const g = GENDERS[c.gender] || GENDERS.neutral;
-  const sheet = (priorSheet && priorSheet.length) ? priorSheet : "The hero is " + name + ", " + hero + " (always drawn with the same look, colors, and outfit on every page)" + (helper ? "; the helper is " + helper + ", drawn the same each time" : "") + ".";
-  const P = (text, effect, art) => ({ n: 0, text, effect, effects: [effect],
-    art_prompt: "Children's storybook watercolor illustration of this exact moment: \"" + text + "\". The recurring characters always look like: " + sheet + ". Depict the specific places, objects, and characters named in the sentence. No text in the image.",
-    art_url: null, audio_url: null, word_timings: null });
-  const pages = [
-    P(`Once upon a time, ${name}, ${hero}, lived in ${world}.`, "soft_glow", `${hero} in ${world}, soft storybook illustration`),
-    P(`One morning, ${name} discovered something was wrong and set off to help.`, "drifting_clouds", `${hero} setting off on a path, storybook`),
-    P(`Along the way, ${name} met ${helper}, who offered to come along with ${g.o}.`, "twinkling_stars", `${hero} meeting ${helper}, warm storybook`),
-    P(`Together they were brave and kind, and ${g.s} thought of a clever plan.`, "magic_sparkles", `${hero} and ${helper} making a plan, cozy storybook`),
-    P(`With a little courage and a lot of friendship, everything turned out wonderfully.`, "candle_glow", `${hero} happy ending in ${world}, glowing storybook`),
-    P(`And ${name} went home with a happy heart. The End.`, "fireplace_flicker", `${hero} cozy at home, warm storybook`),
-  ].map((p, i) => ({ ...p, n: i + 1 }));
-  return { schema: 1, title: `${name} and the ${pick(TONES, c.tone, "magical").split(" ")[0]} Day`, world: c.world, character_sheet: sheet, pages, created_with: c, fallback: true };
-}
-
-function buildPrompt(c, age, priorSheet) {
-  const hero = pick(HEROES, c.hero, "bunny");
-  const world = pick(WORLDS, c.world, "enchanted_woods");
-  const problem = pick(PROBLEMS, c.problem, "lost_friend");
-  const helper = pick(HELPERS, c.helper, "wise_owl");
-  const tone = pick(TONES, c.tone, "cozy");
-  const ending = pick(ENDINGS, c.ending, "happy");
-  const name = clampText(c.heroName, 24) || "the hero";
-  const g = GENDERS[c.gender] || GENDERS.neutral;
-  const twist = twistIsSafe(c.twist) ? clampText(c.twist, 120) : "";
-  return [
-    `You are a beloved children's picture-book author writing for a child age ${age || 6}.`,
-    `Write a gentle, wholesome, age-appropriate story. Absolutely NO violence, scary peril, romance, or anything a parent wouldn't want a young child to hear.`,
-    `Hero: ${name}, ${hero}${g.desc ? " (" + g.desc + ")" : ""}. Refer to ${name} using ${g.s}/${g.o}/${g.p} pronouns consistently throughout — never the wrong gender.`,
-    `World: ${world}. The problem: ${problem}. A helper appears: ${helper}. Tone: ${tone}. Ending: ${ending}.`,
-    twist ? `Gently weave in this idea if it is wholesome: "${twist}".` : ``,
-    `Return ONLY raw JSON (no markdown fences) of this exact shape:`,
-    `{"character_sheet": string (1-2 sentences fixing the hero's EXACT look — species, colors, distinctive features, outfit — and any recurring helper, so an illustrator draws them IDENTICALLY on every page), "title": string (max 6 words), "pages": [ {"text": string (1-2 short simple sentences a ${age || 6}-year-old can follow), "art_prompt": string (describe ONLY the SCENE/action for this page — do NOT redescribe the characters' appearance, that comes from character_sheet; NO text/words in the image), "effect": one of ${JSON.stringify(EFFECTS)} } ]}`,
-    `Use 6 pages. Keep the hero's appearance 100% consistent via character_sheet. Choose the single best-fitting "effect" id per page. Keep every page kind and clear.`,
-  ].filter(Boolean).join("\n");
+function fallbackStory(inp) {
+  const ch = CHARACTERS[inp.characterSlug];
+  const name = inp.characterName;
+  const w0 = inp.worldSlug;
+  // a second + third world that differ from the start, for a little travel
+  const others = WORLD_SLUGS.filter((s) => s !== w0);
+  const w1 = others[0], w2 = others[1] || others[0];
+  const beats = [
+    { t: `${name} woke up happy in ${WORLDS[w0].name}.`, w: w0, e: "happy" },
+    { t: `Then ${name} saw something sparkle far away. What could it be?`, w: w0, e: "surprised" },
+    { t: `The path led somewhere strange, and the shadows grew big.`, w: w1, e: "scared" },
+    { t: `For a moment ${name} felt lost and alone.`, w: w1, e: "sad" },
+    { t: `But a kind new friend showed ${name} the way, and everything was wonderful!`, w: w2, e: "happy" },
+    { t: `Full of happy memories, ${name} headed home for a cozy rest.`, w: w0, e: "sleepy" },
+  ];
+  const pages = beats.map((b) => ({ text: b.t, world_slug: b.w, emotion: b.e, effect: WORLDS[b.w].fx, effects: [WORLDS[b.w].fx] }));
+  return { ...wrap(`${name}'s Big Adventure`, pages, inp), fallback: true };
 }
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const body = await readBody(req);
-  const c = (body.choices && typeof body.choices === "object") ? body.choices : {};
+  const inp = normalizeInput(body);
   const age = Math.max(3, Math.min(12, parseInt(body.age || 6, 10) || 6));
-  const priorSheet = (body.priorCharacterSheet || "").toString().slice(0, 240).trim();
-
-  // Moderation: reject an unsafe free-text twist outright (controlled choices are safe by construction).
-  if (!twistIsSafe(c.twist)) {
-    return res.status(200).json({ ok: true, moderated: true, story: fallbackStory(c, priorSheet) });
-  }
 
   const claudeKey = process.env.ANTHROPIC_API_KEY;
-  // If no key or over budget -> serve the safe fallback story (still magical, $0).
   if (!claudeKey || !(await underBudget())) {
-    return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c, priorSheet) });
+    return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(inp) });
   }
-
   try {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1600, messages: [{ role: "user", content: buildPrompt(c, age, priorSheet) }] }),
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1400, messages: [{ role: "user", content: buildPrompt(inp, age) }] }),
     });
-    if (!resp.ok) {
-      return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c, priorSheet) });
-    }
+    if (!resp.ok) return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(inp) });
     const data = await resp.json();
     let txt = (data && data.content && data.content[0] && data.content[0].text) || "";
-    // strip code fences + isolate the JSON object
     txt = txt.replace(/```json|```/g, "").trim();
     const first = txt.indexOf("{"), last = txt.lastIndexOf("}");
     let parsed = null;
     if (first !== -1 && last !== -1) { try { parsed = JSON.parse(txt.slice(first, last + 1)); } catch { parsed = null; } }
-    const story = validateStory(parsed, c, priorSheet);
-    await logCost(STORY_COST_USD, CLAUDE_MODEL);
-    if (!story) return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c, priorSheet) });
+    const story = validateStory(parsed, inp);
+    await logCost(STORY_COST_USD);
+    if (!story) return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(inp) });
     return res.status(200).json({ ok: true, source: "ai", story });
-  } catch (e) {
-    return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(c, priorSheet) });
+  } catch {
+    return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(inp) });
   }
 }

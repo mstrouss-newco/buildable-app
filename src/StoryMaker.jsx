@@ -1,13 +1,10 @@
-// /src/StoryMaker.jsx
-// Buildable Stories — the kid-facing entry to the Stories product mode.
-// REDESIGN (quiz wizard): one big illustrated question per screen (no long scroll),
-// a talking owl guide that reads each question aloud + speaks an option when tapped
-// (browser speech — output only, never records the child), and a "story so far" strip
-// that fills in with pictures as choices are made. All controlled tap choices; the only
-// free text is the (optional, pre-filled) hero name. The generator/reader are unchanged.
-import { useState, useEffect, useRef } from "react";
+// /src/StoryMaker.jsx  (v2 — LIBRARY picker)
+// Kid-facing entry to Stories. Three tappy picks — STYLE -> CHARACTER -> WORLD —
+// from the reusable art library, then a confirm/name screen and "Make my story".
+// The writer (api/generate-story) builds a 6-page arc that moves between library
+// worlds and tags each page with an emotion; the reader layers the cached art.
+import { useState, useEffect } from "react";
 import StoryReader from "./StoryReader";
-import { shareCreation } from "./lib/shareSheet";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -16,40 +13,41 @@ const PAGE_BG =
   "radial-gradient(circle at 88% 112%, rgba(214,90,123,0.24), transparent 42%),#0a0a14";
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
 
-const HEROES = [["bunny","🐰","Bunny"],["dragon","🐲","Dragon"],["robot","🤖","Robot"],["kitten","🐱","Kitten"],["astronaut","🧑‍🚀","Astronaut"],["mermaid","🧜","Mermaid"],["fox","🦊","Fox"],["knight","🛡️","Knight"]];
-const GENDERS = [["girl","👧","Girl"],["boy","👦","Boy"],["neutral","🙂","Either"]];
-const WORLDS = [["snowy_forest","🌲","Snowy forest"],["outer_space","🚀","Outer space"],["underwater","🌊","Underwater"],["candy_land","🍭","Candy land"],["enchanted_woods","🍄","Enchanted woods"],["desert_oasis","🏜️","Desert oasis"],["cloud_castle","☁️","Cloud castle"],["pirate_cove","🏴‍☠️","Pirate cove"]];
-const PROBLEMS = [["lost_friend","🔍","A lost friend"],["missing_star","⭐","A missing star"],["big_storm","⛈️","A big storm"],["locked_door","🚪","A magic door"],["hungry_creature","🍎","A hungry creature"],["broken_bridge","🌉","A broken bridge"]];
-const HELPERS = [["wise_owl","🦉","Wise owl"],["talking_map","🗺️","Talking map"],["glowing_firefly","✨","Firefly"],["old_turtle","🐢","Clever turtle"],["friendly_ghost","👻","Friendly ghost"],["singing_bird","🐦","Singing bird"]];
-const TONES = [["cozy","🔥","Cozy"],["funny","😄","Funny"],["adventurous","🗺️","Adventurous"],["magical","🪄","Magical"],["brave","🦁","Brave"]];
-const ENDINGS = [["happy","🎉","Happy"],["surprise","🎁","Surprise"],["friendship","💞","Friendship"],["cozy_sleep","🌙","Sleepy"]];
-const STYLES = [["watercolor","🎨","Watercolor"],["modern3d","🧸","Modern 3D"],["papercut","✂️","Paper cut-out"],["crayon","🖍️","Crayon"],["comic","💥","Comic"],["claymation","🪅","Clay"]];
+// style id, label, emoji, enabled? (only watercolor art is built so far)
+const STYLES = [
+  ["watercolor", "Watercolor", "🎨", true],
+  ["modern3d", "Modern 3D", "🧸", false],
+  ["papercut", "Paper cut-out", "✂️", false],
+];
+const CHARACTERS = [
+  ["bunny","Bramble Bunny"],["fox","Pip Fox"],["bear","Biscuit Bear"],["penguin","Waddle Penguin"],
+  ["dragon","Ember Dragon"],["owl","Professor Owl"],["turtle","Shelby Turtle"],["hedgehog","Quill Hedgehog"],
+  ["koala","Coco Koala"],["tiger","Tilly Tiger"],["fawn","Willow Fawn"],["otter","Ollie Otter"],
+  ["wizard","Milo Wizard"],["fairy","Petal Fairy"],["robot","Bolt Robot"],["mermaid","Marina Mermaid"],
+];
+const WORLDS = [
+  ["snowy-village","Snowy Village"],["coral-reef","Coral Reef"],["enchanted-forest","Enchanted Forest"],["dragon-mountain","Dragon Mountain"],
+  ["dino-jungle","Dino Jungle"],["space-station","Starlight Space"],["desert-oasis","Desert Oasis"],["candy-land","Candy Land"],
+];
+const DEFAULT_NAME = Object.fromEntries(CHARACTERS);
 
 function getDeviceId() {
   try { let id = localStorage.getItem("deviceId"); if (!id) { id = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10); localStorage.setItem("deviceId", id); } return id; }
   catch { return "dev_anon"; }
 }
-function getKidProfileId() {
-  try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); return k && k.id ? k.id : null; } catch { return null; }
-}
-function emojiOf(opts, id) { const o = opts.find((x) => x[0] === id); return o ? o[1] : "❓"; }
+function getKidProfileId() { try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); return k && k.id ? k.id : null; } catch { return null; } }
+function libImg(kind, slug, style, emo) { return "/api/story-library?img=" + kind + ":" + slug + "&style=" + (style || "watercolor") + (emo ? "&emo=" + emo : ""); }
 
 export default function StoryMaker({ onBack, onHome, playerName }) {
   const deviceId = getDeviceId();
   const kidProfileId = getKidProfileId();
-  const [view, setView] = useState("landing");   // landing | wizard | generating | reading
-  const [step, setStep] = useState(0);
-  const [guideOn, setGuideOn] = useState(true);
+  const [view, setView] = useState("landing");   // landing | pick | ready | generating | reading
+  const [substep, setSubstep] = useState(0);      // 0 style | 1 character | 2 world
 
-  const [hero, setHero] = useState("bunny");
-  const [heroName, setHeroName] = useState(playerName || "");
-  const [gender, setGender] = useState("girl");
-  const [world, setWorld] = useState("snowy_forest");
-  const [problem, setProblem] = useState("lost_friend");
-  const [helper, setHelper] = useState("wise_owl");
-  const [tone, setTone] = useState("cozy");
-  const [ending, setEnding] = useState("happy");
-  const [artStyle, setArtStyle] = useState("watercolor");
+  const [style, setStyle] = useState("watercolor");
+  const [character, setCharacter] = useState(null);
+  const [world, setWorld] = useState(null);
+  const [name, setName] = useState("");
 
   const [story, setStory] = useState(null);
   const [error, setError] = useState(null);
@@ -59,84 +57,47 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const [savedMsg, setSavedMsg] = useState("");
   const [currentStoryId, setCurrentStoryId] = useState(null);
 
-  const STEPS = [
-    { key: "hero",    q: "Who is your hero?",                 opts: HEROES,   val: hero,     set: setHero },
-    { key: "gender",  q: "Is the hero a girl or a boy?",      opts: GENDERS,  val: gender,   set: setGender },
-    { key: "world",   q: "Where does the story happen?",      opts: WORLDS,   val: world,    set: setWorld },
-    { key: "problem", q: "What's the problem?",               opts: PROBLEMS, val: problem,  set: setProblem },
-    { key: "helper",  q: "Who helps out?",                    opts: HELPERS,  val: helper,   set: setHelper },
-    { key: "tone",    q: "What's the feeling?",               opts: TONES,    val: tone,     set: setTone },
-    { key: "ending",  q: "How does it end?",                  opts: ENDINGS,  val: ending,   set: setEnding },
-    { key: "style",   q: "What should the pictures look like?", opts: STYLES, val: artStyle, set: setArtStyle, thumbs: true },
-  ];
-  const last = STEPS.length - 1;
-  const cur = STEPS[Math.min(step, last)];
-
-  function speak(text) {
-    if (!guideOn || typeof window === "undefined" || !window.speechSynthesis) return;
-    try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 0.95; u.pitch = 1.1; window.speechSynthesis.speak(u); } catch {}
-  }
-  // Read the question aloud whenever the step changes (only in the wizard).
-  useEffect(() => { if (view === "wizard") speak(cur.q); }, [step, view]); // eslint-disable-line
-
   async function loadSaved() {
     try { const r = await fetch("/api/list-stories?deviceId=" + encodeURIComponent(deviceId) + (kidProfileId ? "&kidProfileId=" + encodeURIComponent(kidProfileId) : "")); const j = await r.json(); setSaved(Array.isArray(j.stories) ? j.stories : []); }
-    catch { /* ignore */ }
+    catch {}
   }
   useEffect(() => { loadSaved(); }, []);
 
-  function startWizard() { setStep(0); setError(null); setView("wizard"); }
+  function startPicker() { setError(null); setSubstep(0); setStyle("watercolor"); setCharacter(null); setWorld(null); setName(""); setView("pick"); }
 
-  function choose(stepObj, id, label) {
-    stepObj.set(id);
-    speak(label);
-    if (step < last) setTimeout(() => setStep((s) => Math.min(last, s + 1)), 260);
-  }
-
-  async function prefetchArt(s, indices) {
-    await Promise.all(indices.map(async (i) => {
-      const p = s.pages[i]; if (!p || p.art_url) return;
-      try { const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 42000);
-        const r = await fetch("/api/generate-story-art", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artPrompt: p.art_prompt, world: s.world, style: s.art_style }), signal: ctrl.signal });
-        const j = await r.json(); clearTimeout(to); if (j && j.url) p.art_url = j.url;
-      } catch {}
-    }));
-  }
-
-  // #5 — a brand-new adventure reusing the SAME characters (consistent look + names).
-  async function makeSequel(prev) {
-    const c = (prev && prev.created_with) || {};
-    // Pick a fresh problem so it's a different adventure, not a repeat.
-    const problems = PROBLEMS.map((p) => p[0]).filter((p) => p !== c.problem);
-    const newProblem = problems[Math.floor(Math.random() * problems.length)] || c.problem;
-    setError(null); setGenMsg("Starting a new adventure…"); setView("generating");
-    try {
-      const r = await fetch("/api/generate-story", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ choices: { ...c, problem: newProblem, twist: "" }, priorCharacterSheet: prev.character_sheet || "", age: 6, deviceId, kidProfileId }) });
-      const j = await r.json();
-      if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("reading"); return; }
-      const sNew = j.story; sNew.art_style = (prev && prev.art_style) || artStyle;
-      setStory(sNew); setSavedMsg(""); setCurrentStoryId(null); setView("reading");
-    } catch { setError("Hmm, that didn't work. Try again!"); setView("reading"); }
-  }
+  function chooseStyle(id, enabled) { if (!enabled) return; setStyle(id); setSubstep(1); }
+  function chooseCharacter(slug) { setCharacter(slug); setName(DEFAULT_NAME[slug] || ""); setSubstep(2); }
+  function chooseWorld(slug) { setWorld(slug); setView("ready"); }
 
   async function makeStory() {
     setError(null); setGenMsg("Writing your story…"); setView("generating");
     try {
-      const r = await fetch("/api/generate-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ choices: { hero, heroName, gender, world, problem, helper, tone, ending, twist: "" }, age: 6, deviceId, kidProfileId }) });
+      const r = await fetch("/api/generate-story", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style, characterSlug: character, characterName: name, worldSlug: world, age: 6, deviceId, kidProfileId }) });
       const j = await r.json();
-      if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("wizard"); return; }
-      const s = j.story; s.art_style = artStyle;
-      setStory(s); setSavedMsg(""); setCurrentStoryId(null); setView("reading");
-    } catch { setError("Hmm, that didn't work. Try again!"); setView("wizard"); }
+      if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("ready"); return; }
+      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setView("reading");
+    } catch { setError("Hmm, that didn't work. Try again!"); setView("ready"); }
   }
 
-  async function saveStory(enriched) {
-    const toSave = enriched && enriched.pages ? enriched : story;
+  async function makeSequel(prev) {
+    const c = (prev && prev.created_with) || {};
+    setError(null); setGenMsg("Starting a new adventure…"); setView("generating");
+    try {
+      const r = await fetch("/api/generate-story", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style: c.style || style, characterSlug: c.characterSlug || character, characterName: c.characterName || name, worldSlug: c.worldSlug || world, age: 6, deviceId, kidProfileId }) });
+      const j = await r.json();
+      if (!(j && j.ok && j.story)) { setError("Hmm, that didn't work. Try again!"); setView("reading"); return; }
+      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setView("reading");
+    } catch { setError("Hmm, that didn't work. Try again!"); setView("reading"); }
+  }
+
+  async function saveStory(toSave) {
+    if (!toSave || !toSave.pages) toSave = story;
     if (!toSave) return;
     setSaving(true); setSavedMsg("");
     try {
-      const r = await fetch("/api/save-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ story: toSave, deviceId, kidProfileId, kidName: heroName || playerName || "", coverColor: "#7a4a86" }) });
+      const r = await fetch("/api/save-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ story: toSave, deviceId, kidProfileId, kidName: name || playerName || "", coverColor: "#7a4a86" }) });
       const j = await r.json();
       if (r.ok && j.ok) { setSavedMsg("Saved to your library! 📚"); if (j.story && j.story.story_id) setCurrentStoryId(j.story.story_id); loadSaved(); }
       else if (r.status === 409) setSavedMsg(j.message || "Your library is full!");
@@ -164,59 +125,83 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       <div style={{ ...s.container, justifyContent: "center" }}>
         <div style={{ fontSize: 64 }}>📖</div>
         <h2 style={s.genTitle}>{genMsg}</h2>
-        <p style={s.genSub}>Dreaming up your hero, your world, and painting the pictures.</p>
+        <p style={s.genSub}>Dreaming up the adventure…</p>
       </div>
     );
   }
 
-  // ---------- WIZARD ----------
-  if (view === "wizard") {
+  // ---------- READY / CONFIRM ----------
+  if (view === "ready") {
     return (
       <div style={s.container}>
         <div style={s.topBar}>
-          <button style={s.navBtn} onClick={() => (step > 0 ? setStep((x) => x - 1) : setView("landing"))}>← Back</button>
-          <button style={s.iconBtn} onClick={() => setGuideOn((v) => !v)} title="Owl voice">{guideOn ? "🔊" : "🔇"}</button>
+          <button style={s.navBtn} onClick={() => { setSubstep(2); setView("pick"); }}>← Back</button>
+          <button style={s.navBtn} onClick={onHome}>🏠 Home</button>
         </div>
-
-        {/* story so far */}
-        <div style={s.strip}>
-          {STEPS.map((st, i) => (
-            <div key={st.key} style={{ ...s.chip, ...(i === step ? s.chipNow : {}), ...(i > step ? s.chipTodo : {}) }}>
-              {i <= step ? emojiOf(st.opts, st.val) : "•"}
-            </div>
-          ))}
+        <h2 style={s.readyTitle}>Ready to make your story?</h2>
+        <div style={s.reviewRow}>
+          <div style={s.reviewCard}><img src={libImg("character", character, "watercolor", "happy")} alt="" style={s.reviewImg} /><span style={s.reviewLbl}>{name}</span></div>
+          <div style={s.plus}>+</div>
+          <div style={s.reviewCard}><img src={libImg("world", world, "watercolor")} alt="" style={{ ...s.reviewImg, objectFit: "cover" }} /><span style={s.reviewLbl}>{(WORLDS.find((w) => w[0] === world) || [,""])[1]}</span></div>
         </div>
-
-        {/* talking guide */}
-        <div style={s.guideRow}>
-          <div style={s.owl}>🦉</div>
-          <button style={s.bubble} onClick={() => speak(cur.q)}>
-            {cur.q} <span style={s.speaker}>🔊</span>
-          </button>
-        </div>
-
-        {/* options */}
-        <div style={s.optGrid}>
-          {cur.opts.map(([id, emoji, label]) => (
-            <button key={id} onClick={() => choose(cur, id, label)} style={{ ...s.optTile, ...(cur.val === id ? s.optOn : {}) }}>
-              {cur.thumbs
-                ? <img src={"/api/story-style-sample?style=" + id} alt={label} style={s.optThumb} loading="lazy" />
-                : <span style={s.optEmoji}>{emoji}</span>}
-              <span style={s.optLabel}>{label}</span>
-            </button>
-          ))}
-        </div>
-
+        <label style={s.nameLbl}>Name your hero</label>
+        <input style={s.nameInput} value={name} maxLength={28} onChange={(e) => setName(e.target.value)} placeholder="Hero name" />
         {error && <p style={s.error}>{error}</p>}
+        <button style={s.makeBtn} onClick={makeStory}>📖 Make my story!</button>
+      </div>
+    );
+  }
 
-        {step === last && (
-          <button style={s.makeBtn} onClick={makeStory}>📖 Make my story!</button>
+  // ---------- PICKER ----------
+  if (view === "pick") {
+    const titles = ["Pick a look", "Pick your hero", "Pick a world"];
+    return (
+      <div style={s.container}>
+        <div style={s.topBar}>
+          <button style={s.navBtn} onClick={() => (substep > 0 ? setSubstep((x) => x - 1) : setView("landing"))}>← Back</button>
+          <button style={s.navBtn} onClick={onHome}>🏠 Home</button>
+        </div>
+        <div style={s.dots}>{[0, 1, 2].map((i) => <div key={i} style={{ ...s.dot, ...(i === substep ? s.dotOn : {}), ...(i < substep ? s.dotDone : {}) }} />)}</div>
+        <h2 style={s.qTitle}>{titles[substep]}</h2>
+
+        {substep === 0 && (
+          <div style={s.styleRow}>
+            {STYLES.map(([id, label, emoji, enabled]) => (
+              <button key={id} onClick={() => chooseStyle(id, enabled)} disabled={!enabled} style={{ ...s.styleTile, ...(style === id ? s.tileOn : {}), ...(!enabled ? s.tileSoon : {}) }}>
+                <span style={{ fontSize: 38 }}>{emoji}</span>
+                <span style={s.tileLabel}>{label}</span>
+                {!enabled && <span style={s.soon}>Soon</span>}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {substep === 1 && (
+          <div style={s.grid}>
+            {CHARACTERS.map(([slug, label]) => (
+              <button key={slug} onClick={() => chooseCharacter(slug)} style={{ ...s.gTile, ...(character === slug ? s.tileOn : {}) }}>
+                <img src={libImg("character", slug, "watercolor", "happy")} alt={label} loading="lazy" style={s.gImgChar} />
+                <span style={s.gLabel}>{label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {substep === 2 && (
+          <div style={s.grid}>
+            {WORLDS.map(([slug, label]) => (
+              <button key={slug} onClick={() => chooseWorld(slug)} style={{ ...s.gTile, ...(world === slug ? s.tileOn : {}) }}>
+                <img src={libImg("world", slug, "watercolor")} alt={label} loading="lazy" style={s.gImgWorld} />
+                <span style={s.gLabel}>{label}</span>
+              </button>
+            ))}
+          </div>
         )}
       </div>
     );
   }
 
-  // ---------- LANDING (library + start) ----------
+  // ---------- LANDING ----------
   return (
     <div style={s.container}>
       <div style={s.topBar}>
@@ -225,8 +210,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       </div>
       <h1 style={s.logo}>Stories</h1>
       <p style={s.tagline}>Make a magical picture book — just tap!</p>
-
-      <button style={s.startBtn} onClick={startWizard}>✨ Make a new story</button>
+      <button style={s.startBtn} onClick={startPicker}>✨ Make a new story</button>
 
       {saved.length > 0 && (
         <div style={s.savedWrap}>
@@ -234,9 +218,11 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
           <div style={s.savedRow}>
             {saved.map((st) => (
               <div key={st.story_id} style={s.savedCard}>
-                <button style={s.savedOpen} onClick={() => openSaved(st.story_id)}>📖 {st.title}</button>
-                <button style={s.savedShare} onClick={() => shareCreation({ kind: "story", id: st.story_id, title: st.title })} title="Share">🔗</button>
-                <button style={s.savedDel} onClick={() => deleteSaved(st.story_id)}>🗑️</button>
+                <button style={s.savedOpen} onClick={() => openSaved(st.story_id)}>
+                  <div style={{ ...s.savedCover, background: st.cover_color || "#7a4a86" }}>📖</div>
+                  <span style={s.savedName}>{st.title}</span>
+                </button>
+                <button style={s.savedDel} onClick={() => deleteSaved(st.story_id)} title="Delete">✕</button>
               </div>
             ))}
           </div>
@@ -247,38 +233,45 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
 }
 
 const s = {
-  container: { minHeight: "100vh", background: PAGE_BG, color: "#fff", fontFamily: NUN, padding: "20px 16px 50px", display: "flex", flexDirection: "column", alignItems: "center" },
-  topBar: { width: "100%", maxWidth: 820, display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 12 },
-  navBtn: { padding: "11px 20px", background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer" },
-  iconBtn: { width: 46, height: 46, borderRadius: 12, border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.08)", color: "#fff", fontSize: 18, cursor: "pointer" },
-  logo: { fontFamily: FRED, fontSize: "clamp(34px,7vw,52px)", fontWeight: 700, background: "linear-gradient(90deg,#9b7edd,#c06b99,#d65a7b)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: "8px 0 6px", textAlign: "center" },
-  tagline: { fontSize: 17, color: "#b8b3d0", textAlign: "center", marginBottom: 22, fontWeight: 600 },
-  startBtn: { padding: "20px 32px", borderRadius: 20, border: "none", background: GRAD, color: "#fff", fontSize: 24, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 12px 34px rgba(155,126,221,0.5)", marginBottom: 24 },
-  // wizard
-  strip: { width: "100%", maxWidth: 560, display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, marginBottom: 18 },
-  chip: { width: 40, height: 40, borderRadius: 12, background: "rgba(124,92,214,0.55)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 },
-  chipNow: { boxShadow: "0 0 0 3px #ffd66b" },
-  chipTodo: { background: "rgba(255,255,255,0.06)", border: "2px dashed rgba(255,255,255,0.18)", color: "#6a5c92" },
-  guideRow: { width: "100%", maxWidth: 660, display: "flex", alignItems: "center", gap: 10, marginBottom: 16 },
-  owl: { width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#9b7edd,#d6638b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flex: "none" },
-  bubble: { flex: 1, textAlign: "left", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 16, borderBottomLeftRadius: 4, padding: "12px 16px", color: "#fff", fontFamily: FRED, fontSize: "clamp(18px,3.4vw,24px)", fontWeight: 700, cursor: "pointer" },
-  speaker: { fontSize: 16, opacity: 0.7 },
-  optGrid: { width: "100%", maxWidth: 660, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 14, marginBottom: 16 },
-  optTile: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "16px 10px", borderRadius: 20, border: "3px solid transparent", background: "rgba(255,255,255,0.07)", color: "#fff", cursor: "pointer", fontFamily: NUN },
-  optOn: { border: "3px solid #ffd66b", background: "rgba(255,255,255,0.16)", boxShadow: "0 8px 22px rgba(155,126,221,0.45)" },
-  optEmoji: { fontSize: 46 },
-  optThumb: { width: 92, height: 92, borderRadius: 14, objectFit: "cover", background: "rgba(255,255,255,0.06)" },
-  optLabel: { fontSize: 15, fontWeight: 800 },
-  makeBtn: { padding: "18px 30px", borderRadius: 18, border: "none", background: GRAD, color: "#fff", fontSize: 22, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 10px 30px rgba(155,126,221,0.5)", marginTop: 4 },
-  error: { color: "#ffd7d7", background: "rgba(180,40,40,0.25)", borderRadius: 10, padding: "8px 12px", fontSize: 15, textAlign: "center" },
-  genTitle: { fontFamily: FRED, fontSize: 30, fontWeight: 700, margin: "16px 0 6px" },
-  genSub: { fontSize: 16, color: "#b8b3d0", textAlign: "center" },
-  // library
-  sectionTitle: { fontFamily: FRED, fontSize: 19, fontWeight: 700, margin: "0 0 12px" },
-  savedWrap: { width: "100%", maxWidth: 820 },
-  savedRow: { display: "flex", flexWrap: "wrap", gap: 10 },
-  savedCard: { display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", borderRadius: 14, padding: "6px 8px 6px 6px" },
-  savedOpen: { background: "rgba(255,255,255,0.1)", color: "#fff", border: "none", borderRadius: 10, padding: "10px 14px", fontWeight: 700, fontFamily: NUN, cursor: "pointer", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  savedShare: { background: "rgba(124,92,252,0.22)", border: "none", borderRadius: 8, padding: "8px", cursor: "pointer" },
-  savedDel: { background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 8, padding: "8px", cursor: "pointer" },
+  container: { minHeight: "100vh", background: PAGE_BG, color: "#fff", fontFamily: NUN, padding: "20px 16px 60px", display: "flex", flexDirection: "column", alignItems: "center" },
+  topBar: { width: "100%", maxWidth: 760, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  navBtn: { padding: "10px 18px", background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer" },
+  logo: { fontFamily: FRED, fontSize: 44, margin: "30px 0 6px", background: GRAD, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+  tagline: { opacity: 0.8, marginBottom: 26, fontSize: 16 },
+  startBtn: { padding: "16px 34px", borderRadius: 18, border: "none", background: GRAD, color: "#fff", fontSize: 19, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 10px 30px rgba(155,126,221,0.5)" },
+  dots: { display: "flex", gap: 8, marginTop: 6, marginBottom: 14 },
+  dot: { width: 10, height: 10, borderRadius: "50%", background: "#39406e" },
+  dotOn: { background: "#c06b99" }, dotDone: { background: "#7aa2ff" },
+  qTitle: { fontFamily: FRED, fontSize: 26, margin: "2px 0 18px", textAlign: "center" },
+  styleRow: { display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" },
+  styleTile: { position: "relative", width: 150, height: 130, borderRadius: 18, border: "2px solid rgba(255,255,255,0.14)", background: "rgba(255,255,255,0.06)", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", fontFamily: FRED },
+  tileLabel: { fontSize: 15, fontWeight: 700 },
+  tileSoon: { opacity: 0.4, cursor: "not-allowed" },
+  soon: { position: "absolute", top: 8, right: 8, fontSize: 11, background: "rgba(255,255,255,0.2)", padding: "2px 7px", borderRadius: 999 },
+  tileOn: { border: "2px solid #ffe08a", boxShadow: "0 0 0 3px rgba(255,224,138,0.3)" },
+  grid: { width: "100%", maxWidth: 760, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 12 },
+  gTile: { borderRadius: 16, border: "2px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontFamily: NUN },
+  gImgChar: { width: "100%", aspectRatio: "1/1", objectFit: "contain", borderRadius: 12, background: "rgba(255,255,255,0.05)" },
+  gImgWorld: { width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 12 },
+  gLabel: { fontSize: 13, fontWeight: 700, textAlign: "center" },
+  readyTitle: { fontFamily: FRED, fontSize: 26, margin: "10px 0 20px", textAlign: "center" },
+  reviewRow: { display: "flex", alignItems: "center", gap: 14, marginBottom: 22 },
+  reviewCard: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 160 },
+  reviewImg: { width: 160, height: 160, objectFit: "contain", borderRadius: 16, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" },
+  reviewLbl: { fontSize: 14, fontWeight: 700 },
+  plus: { fontSize: 30, opacity: 0.7 },
+  nameLbl: { fontSize: 14, opacity: 0.8, marginBottom: 6 },
+  nameInput: { padding: "12px 16px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.1)", color: "#fff", fontSize: 17, fontFamily: FRED, textAlign: "center", marginBottom: 18, width: 240, maxWidth: "80%" },
+  makeBtn: { padding: "16px 34px", borderRadius: 18, border: "none", background: GRAD, color: "#fff", fontSize: 19, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 10px 30px rgba(155,126,221,0.5)" },
+  error: { color: "#ffb0c0", fontSize: 14, marginBottom: 10 },
+  genTitle: { fontFamily: FRED, fontSize: 26, margin: "16px 0 6px" },
+  genSub: { opacity: 0.7 },
+  savedWrap: { width: "100%", maxWidth: 760, marginTop: 40 },
+  sectionTitle: { fontFamily: FRED, fontSize: 20, marginBottom: 12 },
+  savedRow: { display: "flex", gap: 12, flexWrap: "wrap" },
+  savedCard: { position: "relative" },
+  savedOpen: { width: 130, border: "none", background: "transparent", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 },
+  savedCover: { width: 130, height: 90, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34 },
+  savedName: { fontSize: 13, fontWeight: 700, color: "#fff", textAlign: "center" },
+  savedDel: { position: "absolute", top: -6, right: -6, width: 26, height: 26, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.6)", color: "#fff", cursor: "pointer", fontSize: 13 },
 };
