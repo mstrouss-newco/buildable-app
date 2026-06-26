@@ -51,7 +51,7 @@ export default async function handler(req,res){
   let b64 = req.query.force ? null : await cacheGet(key);
   if(!b64){
     const elKey=process.env.ELEVENLABS_API_KEY;
-    if(!elKey) return res.status(200).json({ok:true,configured:false});
+    if(!elKey){res.setHeader("Cache-Control","no-store");return res.status(503).json({ok:false,configured:false});}
     const model=(process.env.ELEVENLABS_MUSIC_MODEL||"music_v1").toLowerCase();
     try{
       const ctrl=new AbortController();
@@ -63,11 +63,11 @@ export default async function handler(req,res){
         signal:ctrl.signal,
       });
       clearTimeout(timer);
-      if(!r.ok) return res.status(200).json({ok:false,failed:true,status:r.status,detail:(await r.text().catch(()=>"")) .slice(0,200)});
+      if(!r.ok){res.setHeader("Cache-Control","no-store");return res.status(503).json({ok:false,failed:true,status:r.status,detail:(await r.text().catch(()=>"")) .slice(0,200)});}
       const buf=Buffer.from(await r.arrayBuffer());
       b64=buf.toString("base64");
       await cachePut(key,b64);
-    }catch(e){return res.status(200).json({ok:false,error:String(e&&e.message).slice(0,160)});}
+    }catch(e){res.setHeader("Cache-Control","no-store");return res.status(503).json({ok:false,error:String(e&&e.message).slice(0,160)});}
   }
   res.setHeader("Content-Type","audio/mpeg");
   res.setHeader("Access-Control-Allow-Origin","*");
