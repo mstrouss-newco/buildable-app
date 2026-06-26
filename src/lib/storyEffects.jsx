@@ -380,11 +380,6 @@ export function SceneStage({ url, effect, effects, world, pageIndex, style, wate
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
       <img src={url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 22s ease-in-out infinite alternate" }} />
-      {waterMask && (<>
-        <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true"><filter id="bk-ripple"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="2" seed="3" result="n"><animate attributeName="baseFrequency" dur="7s" values="0.012 0.04;0.016 0.05;0.012 0.04" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
-        <img src={url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", filter: "url(#bk-ripple)", ...maskCss }} />
-        <div style={{ position: "absolute", inset: 0, mixBlendMode: "screen", background: "repeating-linear-gradient(100deg,transparent 0 22px,rgba(255,255,255,.12) 26px,transparent 34px)", backgroundSize: "220% 100%", animation: "bk-flow 7s linear infinite", ...maskCss }} />
-      </>)}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
       <LivingLayer effect={FG_BY_WORLD[world] || "floating_dust"} />
       {children}

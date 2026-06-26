@@ -10,6 +10,7 @@ import AdminDashboard from "./AdminDashboard";
 import GrownUpScreen from "./GrownUpScreen";
 import StoryMaker from "./StoryMaker";
 import LoadingGames from "./LoadingGames";
+import FamilyChess from "./FamilyChess";
 import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
 import { getActiveKid, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
 
@@ -26,6 +27,8 @@ const SCREEN_MUSIC = "music";
 const SCREEN_GROWNUP = "grownup";
 const SCREEN_STORY = "story";
 const SCREEN_TYPING = "typing";
+const SCREEN_CHESS = "chess";
+const SCREEN_CHESS_FAMILY = "chess_family";
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
   const [activeKid, setActiveKidState] = useState(getActiveKid());
@@ -110,6 +113,7 @@ export default function BuildableKids() {
         onGames={() => setScreen(SCREEN_INTRO)}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
         onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
+        onChess={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
         onGrownUp={() => setScreen(SCREEN_GROWNUP)}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
@@ -236,6 +240,14 @@ export default function BuildableKids() {
     return <TypingScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
+  if (screen === SCREEN_CHESS) {
+    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHESS_FAMILY)} />;
+  }
+
+  if (screen === SCREEN_CHESS_FAMILY) {
+    return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
+  }
+
   if (screen === SCREEN_MY_STUFF) {
     return <MyStuffScreen {...myStuffNav} />;
   }
@@ -289,40 +301,81 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onMyStuff, onGrownUp, onAdmin }) {
-  const ExperienceCard = ({ emoji, title, desc, badge, badgeColor, onClick, featured, disabled }) => (
+function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin }) {
+  // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
+  const AppIcon = ({ grad, children }) => (
+    <div style={{ position: "relative", width: 76, height: 76, borderRadius: 20, background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%)" }} />
+      <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
+    </div>
+  );
+  const NoteGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <ellipse cx="17" cy="33" rx="7" ry="5.2" transform="rotate(-20 17 33)" fill="#fff" />
+      <rect x="22.6" y="11" width="3.2" height="22.5" fill="#fff" />
+      <path d="M25.8 11 q11 3 8.5 15 q.5 -8 -8.5 -9 z" fill="#fff" />
+    </svg>
+  );
+  const ControllerGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="6" y="18" width="36" height="16" rx="8" fill="#fff" />
+      <rect x="12" y="22.5" width="3.2" height="9" rx="1" fill="#2BB14F" />
+      <rect x="9" y="25.5" width="9.2" height="3.2" rx="1" fill="#2BB14F" />
+      <circle cx="32" cy="24.5" r="2.4" fill="#2BB14F" />
+      <circle cx="37" cy="29" r="2.4" fill="#2BB14F" />
+    </svg>
+  );
+  const BookGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 14 C18.5 10.5 12 10.5 8 12.3 V35.5 C12 33.7 18.5 33.7 24 37.2 Z" fill="#fff" />
+      <path d="M24 14 C29.5 10.5 36 10.5 40 12.3 V35.5 C36 33.7 29.5 33.7 24 37.2 Z" fill="#fff" opacity="0.82" />
+      <rect x="22.8" y="13.2" width="2.4" height="24" rx="1.2" fill="#fff" opacity="0.55" />
+    </svg>
+  );
+  const KeyboardGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="6" y="14" width="36" height="22" rx="4.5" fill="#fff" />
+      <rect x="10.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="16.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="22.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="28.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="34.5" y="18.5" width="3" height="4" rx="1" fill="#2F8FD6" />
+      <rect x="10.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="16.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="22.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="28.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="34.5" y="24.5" width="3" height="4" rx="1" fill="#2F8FD6" />
+      <rect x="14.5" y="30.5" width="19" height="3.5" rx="1.5" fill="#2F8FD6" />
+    </svg>
+  );
+  const ChessGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="22.4" y="5" width="3.2" height="9" rx="1" fill="#fff" />
+      <rect x="19.5" y="7.5" width="9" height="3.2" rx="1" fill="#fff" />
+      <circle cx="24" cy="18" r="5" fill="#fff" />
+      <path d="M16.5 22 h15 l-2.5 12 h-10 z" fill="#fff" />
+      <rect x="13" y="33" width="22" height="6" rx="3" fill="#fff" />
+    </svg>
+  );
+
+  const PILL_COLORS = ["linear-gradient(160deg,#8A6BFF,#6A4FE0)","linear-gradient(160deg,#F2789E,#E0578F)","linear-gradient(160deg,#4FA6E8,#2F8FD6)","linear-gradient(160deg,#3DD06A,#2BB14F)","linear-gradient(160deg,#FFC75A,#F0972A)","linear-gradient(160deg,#46D7C0,#1FA897)"];
+  const pillGrad = (name) => { let h = 0; const s = name || "?"; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return PILL_COLORS[h % PILL_COLORS.length]; };
+  const initial = (name) => { const n = (name || "").trim(); return n ? n[0].toUpperCase() : "?"; };
+
+  const ExperienceCard = ({ icon, title, desc, badge, badgeColor, onClick, disabled }) => (
     <button
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={{
-        position: "relative",
-        textAlign: "left",
-        padding: "26px 24px",
-        borderRadius: "22px",
-        border: featured ? "1px solid rgba(192,107,153,0.55)" : CARD_BORDER,
-        background: featured ? GRAD : CARD_BG,
-        color: "#fff",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.55 : 1,
-        boxShadow: featured ? "0 14px 40px rgba(155,126,221,0.45)" : "none",
-        fontFamily: NUN,
-        transition: "transform 0.12s ease",
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-        minHeight: "150px",
+        position: "relative", textAlign: "left", padding: "24px 22px",
+        borderRadius: "22px", border: CARD_BORDER, background: CARD_BG,
+        color: "#fff", cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1, fontFamily: NUN,
+        display: "flex", flexDirection: "column", gap: "12px", minHeight: "150px",
       }}
     >
-      <span style={{
-        position: "absolute", top: "16px", right: "16px",
-        fontSize: "12px", fontWeight: 800, letterSpacing: "0.5px",
-        textTransform: "uppercase",
-        padding: "5px 11px", borderRadius: "999px",
-        background: badgeColor, color: "#1a1330",
-      }}>{badge}</span>
-      <div style={{ fontSize: "44px", lineHeight: 1 }}>{emoji}</div>
-      <div style={{ fontFamily: FRED, fontSize: "26px", fontWeight: 700 }}>{title}</div>
-      <div style={{ fontSize: "15px", color: featured ? "rgba(255,255,255,0.92)" : "#cfc9e6" }}>{desc}</div>
+      {badge && (
+        <span style={{
+          position: "absolute", top: "16px", right: "16px",
+          fontSize: "12px", fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase",
+          padding: "5px 11px", borderRadius: "999px", background: badgeColor, color: "#1a1330",
+        }}>{badge}</span>
+      )}
+      {icon}
+      <div style={{ fontFamily: FRED, fontSize: "24px", fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: "15px", color: "#cfc9e6" }}>{desc}</div>
     </button>
   );
 
@@ -333,50 +386,61 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onMyStuf
           {activeKid && (
             <span style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
-              background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)",
-              borderRadius: "999px", padding: "8px 16px", fontFamily: NUN, fontWeight: 800,
+              background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: "999px", padding: "7px 14px 7px 7px", fontFamily: NUN, fontWeight: 800,
               fontSize: "15px", color: "#fff",
             }}>
-              <span style={{ fontSize: "20px" }}>{activeKid.avatar || "🙂"}</span>
+              <span style={{
+                width: 26, height: 26, borderRadius: "50%", background: pillGrad(activeKid.display_name),
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                fontFamily: FRED, fontSize: 13, fontWeight: 700, color: "#fff",
+              }}>{initial(activeKid.display_name)}</span>
               Playing as {activeKid.display_name}
             </span>
           )}
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
+          <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
           <button onClick={onGrownUp} style={styles.myStuffButton}>
-            {activeKid ? "🔄 Switch kid" : "👨‍👩‍👧 Grown-ups"}
+            {activeKid ? "Switch kid" : "Grown-ups"}
           </button>
         </div>
       </div>
 
-      <div style={styles.gameIcon}>🎮</div>
-      <h1 style={styles.logo}>buildablekids.</h1>
+      <h1 style={{ ...styles.logo, marginTop: "8px" }}>buildablekids.</h1>
       <p style={styles.tagline}>What do you want to make today?</p>
 
       <div style={{
-        width: "100%", maxWidth: "920px", marginTop: "26px",
+        width: "100%", maxWidth: "920px", marginTop: "20px",
         display: "grid", gap: "18px",
         gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
       }}>
         <ExperienceCard
-          emoji="🎵" title="Music" desc="Make your own song. Ready to play right now!"
-          badge="Ready" badgeColor="#7CF6B0" onClick={onMusic} featured
+          icon={<AppIcon grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)"><NoteGlyph /></AppIcon>}
+          title="Music" desc="Make your own song. Ready to play right now!"
+          badge="Ready" badgeColor="#7CF6B0" onClick={onMusic}
         />
         <ExperienceCard
-          emoji="🕹️" title="Games" desc="Build a game with your own hero and world."
+          icon={<AppIcon grad="linear-gradient(160deg,#3DD06A,#2BB14F)"><ControllerGlyph /></AppIcon>}
+          title="Games" desc="Build a game with your own hero and world."
           badge="Beta" badgeColor="#FFD66B" onClick={onGames}
         />
         <ExperienceCard
-          emoji="📖" title="Stories" desc="Turn your ideas into a living picture book."
+          icon={<AppIcon grad="linear-gradient(160deg,#F2789E,#E0578F)"><BookGlyph /></AppIcon>}
+          title="Stories" desc="Turn your ideas into a living picture book."
           badge="New" badgeColor="#7CF6B0" onClick={onStories}
         />
         <ExperienceCard
-          emoji="⌨️" title="Typing" desc="Learn to type by defending the castle!"
+          icon={<AppIcon grad="linear-gradient(160deg,#4FA6E8,#2F8FD6)"><KeyboardGlyph /></AppIcon>}
+          title="Typing" desc="Learn to type by defending the castle!"
           badge="New" badgeColor="#7CF6B0" onClick={onTyping}
         />
+        <ExperienceCard
+          icon={<AppIcon grad="linear-gradient(160deg,#FFC75A,#F0972A)"><ChessGlyph /></AppIcon>}
+          title="Chess" desc="Play your hero squad — solo or two players!"
+          badge="New" badgeColor="#7CF6B0" onClick={onChess}
+        />
       </div>
-
     </div>
   );
 }
@@ -396,6 +460,27 @@ function TypingScreen({ onHome }) {
       <iframe
         title="Buildable Typing"
         src="/typing.html"
+        style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+      />
+    </div>
+  );
+}
+
+function ChessScreen({ onHome, onFamily }) {
+  const pillBtn = {
+    fontFamily: NUN, fontWeight: 800, fontSize: "14px", color: "#fff",
+    background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)",
+    borderRadius: "999px", padding: "8px 16px", cursor: "pointer",
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
+      <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
+      {onFamily && (
+        <button onClick={onFamily} style={{ position: "absolute", top: "14px", right: "14px", zIndex: 2, ...pillBtn, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play a family member</button>
+      )}
+      <iframe
+        title="Buildable Chess"
+        src="/buildable-chess.html"
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>

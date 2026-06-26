@@ -144,12 +144,40 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
   const audioRef = useRef(null);
   const voiceRef = useRef(true);
   voiceRef.current = voiceOn;
+  const audioElRef = useRef(null);
+  const ttsCacheRef = useRef({});
+  const speakSeqRef = useRef(0);
 
   useEffect(() => { injectKeyframes(); refresh(); }, []);
 
-  function speak(text) {
+  function stopVoice() {
+    try { if (audioElRef.current) { audioElRef.current.pause(); audioElRef.current.currentTime = 0; } } catch {}
+    try { if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel(); } catch {}
+  }
+  // Fallback to the browser voice only if ElevenLabs isn't available.
+  function browserSpeak(text) {
     if (!voiceRef.current || typeof window === "undefined" || !window.speechSynthesis) return;
     try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 0.95; u.pitch = 1.05; window.speechSynthesis.speak(u); } catch {}
+  }
+  // Premium read-aloud via ElevenLabs (/api/narrate-story-page) — generated once
+  // per phrase, then cached in narration_cache and served instantly after.
+  async function speak(text) {
+    if (!voiceRef.current || typeof window === "undefined" || !text) return;
+    const seq = ++speakSeqRef.current;
+    stopVoice();
+    let url = ttsCacheRef.current[text];
+    if (!url) {
+      try {
+        const r = await fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+        const j = await r.json();
+        if (j && j.configured && j.audioUrl) { url = j.audioUrl; ttsCacheRef.current[text] = url; }
+      } catch {}
+    }
+    if (seq !== speakSeqRef.current || !voiceRef.current) return; // superseded or muted while loading
+    if (url) {
+      try { const a = new Audio(url); audioElRef.current = a; a.play().catch(() => browserSpeak(text)); return; } catch {}
+    }
+    browserSpeak(text);
   }
 
   async function refresh() {
@@ -296,7 +324,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
       <div style={S.header}>
         <button style={S.navBtn} onClick={onHome || onBack}>← Home</button>
         <h1 style={S.title}>Music Maker</h1>
-        <button style={S.voiceBtn} onClick={() => { const nv = !voiceOn; setVoiceOn(nv); if (!nv && window.speechSynthesis) window.speechSynthesis.cancel(); }} aria-label={voiceOn ? "Turn voice off" : "Turn voice on"} title={voiceOn ? "Voice on" : "Voice off"}>
+        <button style={S.voiceBtn} onClick={() => { const nv = !voiceOn; setVoiceOn(nv); if (!nv) stopVoice(); }} aria-label={voiceOn ? "Turn voice off" : "Turn voice on"} title={voiceOn ? "Voice on" : "Voice off"}>
           <Speaker on={voiceOn} />
         </button>
       </div>
