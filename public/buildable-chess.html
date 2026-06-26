@@ -601,6 +601,7 @@ let mode='solo',difficulty='easy',sceneKey='jungle',hintsOn=true,flip=false;
 let humanColor='w',selected=null,curMoves=[],lastMove=null,busy=false,gameOver=false;
 let paused=false,pendingBot=false;
 let pName='Player 1',pName2='Player 2';
+let oppName='Friend'; // online opponent display name
 
 /* ===== Player scores (saved on this device) ===== */
 function loadScores(){try{return JSON.parse(localStorage.getItem('bk_chess_scores')||'{}')||{};}catch(e){return {};}}
@@ -699,7 +700,8 @@ function updateTurnUI(){
   dot.style.color=isW?'var(--purple)':'var(--coral)';
   dot.style.background=isW?'#8B6CFF':'#FF7A6B';
   let label;
-  if(mode==='solo')label=(S.turn===humanColor)?'Your turn':'Robot thinking...';
+  if(mode==='online')label=(S.turn===humanColor)?'Your turn':(oppName+' is thinking...');
+  else if(mode==='solo')label=(S.turn===humanColor)?'Your turn':'Robot thinking...';
   else label=(isW?pName:pName2)+"'s turn";
   document.getElementById('turn-label').textContent=label;
 }
@@ -708,6 +710,7 @@ function updateTurnUI(){
 function onSquareClick(r,c){
   if(busy||gameOver||paused)return;
   if(mode==='solo'&&S.turn!==humanColor)return;
+  if(mode==='online'&&S.turn!==humanColor)return;
   const p=S.board[r][c];
   if(selected){
     const mv=curMoves.find(m=>m.to[0]===r&&m.to[1]===c);
@@ -732,6 +735,8 @@ function setTip(txt){document.getElementById('tip').textContent=txt;}
 function needsPromo(mv){return !!mv.promo;}
 
 function doMove(baseMv){
+  // online: auto-queen to keep both devices in sync without a modal
+  if(needsPromo(baseMv) && mode==='online'){finishMove({...baseMv,promo:'q'});return;}
   // handle promotion choice for human
   if(needsPromo(baseMv) && !(mode==='solo'&&S.turn!==humanColor)){
     askPromotion(choice=>finishMove({...baseMv,promo:choice}));
@@ -772,10 +777,18 @@ function finishMove(mv){
     updateTurnUI();
     refresh();
     const st=gameStatus(S);
+    // online: send my move to the other device
+    if(mode==='online'){
+      const capSq = captured ? (mv.ep?[mv.from[0],mv.to[1]]:[mv.to[0],mv.to[1]]) : null;
+      const payload={state:S,turn:S.turn,
+        lastMove:{from:mv.from,to:mv.to,cap:!!captured,capColor:captured?captured.c:null,capSq:capSq},
+        over:st.over, winner: st.over ? (st.result==='draw'?'draw':opp(st.loser)) : null};
+      try{window.parent&&window.parent.postMessage({type:'chessMove',payload:payload},'*');}catch(e){}
+    }
     if(st.check&&!st.over){flashBanner('Check!');sfxCheck();}
     if(st.over){endGame(st);busy=false;return;}
     busy=false;
-    setTip('');
+    if(mode==='online')setTip('Waiting for '+oppName+'...'); else setTip('');
     // bot turn
     if(mode==='solo'&&S.turn!==humanColor){
       updateTurnUI();
@@ -866,6 +879,23 @@ function explode(r,c,color){
   const ctr=squareCenterPx(r,c);const t=TEAMS[color];
   ({jungle:capJungle,ocean:capOcean,space:capSpace,candy:capCandy,castle:capCastle,desert:capDesert}[sceneKey]||capCandy)(ctr,t);
 }
+function shakeBoard(){const bw=document.getElementById('board-wrap');bw.classList.add('shake');setTimeout(()=>bw.classList.remove('shake'),320);}
+
+/* ---- online: apply the opponent's move that arrived from the other device ---- */
+function applyOpponentMove(p){
+  if(!p||!p.state)return;
+  const lm=p.lastMove;
+  if(lm&&lm.cap&&lm.capSq){explode(lm.capSq[0],lm.capSq[1],lm.capColor||opp(humanColor));sfxCapture();shakeBoard();}
+  else{sfxMove();}
+  S=p.state;
+  lastMove=lm?{from:lm.from,to:lm.to}:null;
+  selected=null;curMoves=[];gameOver=false;busy=false;
+  renderPieces();updateTurnUI();refresh();
+  const st=gameStatus(S);
+  if(st.check&&!st.over){flashBanner('Check!');sfxCheck();}
+  if(st.over){endGame(st);return;}
+  setTip(S.turn===humanColor?'Your turn — tap a hero!':('Waiting for '+oppName+'...'));
+}
 function flashBanner(txt){
   const b=document.getElementById('banner');b.textContent=txt;b.classList.remove('show');void b.offsetWidth;b.classList.add('show');
 }
@@ -909,10 +939,14 @@ function endGame(st){
   let title,sub,rec='';
   if(st.result==='draw'){
     title='Tie Game!';sub="Nobody could win — great brains!";
-    if(mode==='solo')recordResult(pName,'d'); else {recordResult(pName,'d');recordResult(pName2,'d');}
+    if(mode==='online')recordResult(pName,'d');
+    else if(mode==='solo')recordResult(pName,'d'); else {recordResult(pName,'d');recordResult(pName2,'d');}
   } else {
     const winner=opp(st.loser);
-    if(mode==='solo'){
+    if(mode==='online'){
+      if(winner===humanColor){title='You Win!';sub='Great game!';sfxWin();confettiBurst();recordResult(pName,'w');rec=trophyLine(pName);}
+      else{title=oppName+' Wins!';sub='Good try — rematch?';sfxLose();recordResult(pName,'l');}
+    } else if(mode==='solo'){
       if(winner===humanColor){title='You Win!';sub='You out-smarted the robot. Amazing!';sfxWin();confettiBurst();recordResult(pName,'w');rec=trophyLine(pName);}
       else{title='Robot Wins';sub='So close! Want to try again?';sfxLose();recordResult(pName,'l');}
     } else {
@@ -1039,8 +1073,36 @@ document.getElementById('btn-scores-close').onclick=()=>document.getElementById(
 // preload the ElevenLabs sound-effect library (used when served by the app; procedural fallback otherwise)
 loadSfxLibrary();
 
+/* ===== Online play: driven by the app via postMessage (no chat, just moves) ===== */
+function startOnlineGame(d){
+  mode='online';humanColor=d.myColor||'w';oppName=d.oppName||'Friend';
+  sceneKey=(d.world&&SCENES[d.world])?d.world:'jungle';
+  flip=(humanColor==='b');
+  S=d.state||startState();
+  selected=null;curMoves=[];gameOver=false;busy=false;paused=false;pendingBot=false;
+  lastMove=d.lastMove?{from:d.lastMove.from,to:d.lastMove.to}:null;
+  buildWorld(sceneKey);document.body.classList.add('in-game');
+  document.getElementById('hint-btn').classList.toggle('active',hintsOn);
+  document.getElementById('sound-btn').classList.toggle('active',soundOn);
+  document.getElementById('music-btn').classList.toggle('active',musicOn);
+  playWorldMusic(sceneKey);
+  show('s-game');buildSquares();renderPieces();updateTurnUI();refresh();
+  setTip(S.turn===humanColor?'Your turn — tap a hero!':('Waiting for '+oppName+'...'));
+}
+window.addEventListener('message',function(e){
+  const d=e.data||{};
+  if(d.type==='chessInit')startOnlineGame(d);
+  else if(d.type==='chessOpponentMove')applyOpponentMove(d.payload||d);
+});
+
 // menus start clean (no falling leaves); worlds appear once a game begins
 resetMenuTheme();
+// If embedded for online play, hide menus and tell the app we're ready for an init.
+if(new URLSearchParams(location.search).get('online')){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  setTip('Connecting...');
+  try{window.parent&&window.parent.postMessage({type:'chessReady'},'*');}catch(e){}
+}
 </script>
 </body>
 </html>
