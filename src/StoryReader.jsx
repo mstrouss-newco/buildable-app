@@ -26,6 +26,10 @@ function libImg(kind, slug, style, emo) {
 }
 function wordsOf(text) { return (text || "").trim().split(/\s+/).filter(Boolean); }
 
+function ShareIcon(){return(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>);}
+function SoundIcon({on}){return(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="4 9 8 9 13 4 13 20 8 15 4 15"/>{on?<path d="M16 8a4 4 0 0 1 0 8"/>:<g><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></g>}</svg>);}
+function Chevron({dir}){const pts=dir==="left"?"15 6 9 12 15 18":"9 6 15 12 9 18";return(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points={pts}/></svg>);}
+
 export default function StoryReader({ story, storyId, deviceId, kidProfileId, onExit, onSave, saving, savedMsg, onNewAdventure }) {
   const pages = (story && story.pages) || [];
   const style = (story && (story.style || story.art_style)) || "watercolor";
@@ -162,11 +166,11 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   return (
     <div style={s.container}>
       <div style={s.topBar}>
-        <button style={s.navBtn} onClick={onExit}>← Back</button>
+        <button style={s.navBtn} onClick={onExit}>Back</button>
         <span style={s.counter}>{story.title}</span>
         <div style={{ display: "flex", gap: 8 }}>
-          <button style={s.soundBtn} onClick={() => shareCreation({ kind: "story", id: storyId, title: story.title })} title="Share this story" aria-label="Share this story">🔗</button>
-          <button style={s.soundBtn} onClick={toggleSound} title="Background sounds" aria-label="Toggle background sounds">{soundOn ? "🔊" : "🔇"}</button>
+          <button style={s.soundBtn} onClick={() => shareCreation({ kind: "story", id: storyId, title: story.title })} title="Share this story" aria-label="Share this story"><ShareIcon/></button>
+          <button style={s.soundBtn} onClick={toggleSound} title="Background sounds" aria-label="Toggle background sounds"><SoundIcon on={soundOn}/></button>
         </div>
       </div>
       <audio ref={ambienceRef} style={{ display: "none" }} />
@@ -175,7 +179,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
         ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} style={s.page} />
         : <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={idx} style={s.page} />}
 
-      <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">🎨 Repaint this page</button>
+      <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">Repaint this page</button>
 
       <div style={s.textPanel}>
         <p style={s.text}>
@@ -184,9 +188,9 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       </div>
 
       <div style={s.controls}>
-        <button style={s.circleBtn} disabled={idx === 0} onClick={() => setIdx((i) => Math.max(0, i - 1))}>‹</button>
-        <button style={s.readBtn} onClick={toggleRead}>{playing ? "⏸ Pause" : "▶ Read to me"}</button>
-        <button style={{ ...s.circleBtn, ...(isLast ? { opacity: 0.3 } : {}) }} disabled={isLast} onClick={() => setIdx((i) => Math.min(pages.length - 1, i + 1))}>›</button>
+        <button style={s.circleBtn} disabled={idx === 0} onClick={() => setIdx((i) => Math.max(0, i - 1))}><Chevron dir="left"/></button>
+        <button style={s.readBtn} onClick={toggleRead}>{playing ? "Pause" : "Read to me"}</button>
+        <button style={{ ...s.circleBtn, ...(isLast ? { opacity: 0.3 } : {}) }} disabled={isLast} onClick={() => setIdx((i) => Math.min(pages.length - 1, i + 1))}><Chevron dir="right"/></button>
       </div>
 
       <p style={s.pageNum}>Page {idx + 1} of {pages.length}</p>
@@ -195,8 +199,8 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
 
       {isLast && (
         <div style={s.endRow}>
-          <button style={s.saveBtn} disabled={saving} onClick={() => onSave(story)}>{saving ? "Saving…" : "💾 Save to my library"}</button>
-          {onNewAdventure && (<button style={s.againBtn} onClick={() => onNewAdventure(story)}>✨ New adventure with {story.character_name || "the same hero"}</button>)}
+          <button style={s.saveBtn} disabled={saving} onClick={() => onSave(story)}>{saving ? "Saving…" : "Save to my library"}</button>
+          {onNewAdventure && (<button style={s.againBtn} onClick={() => onNewAdventure(story)}>New adventure with {story.character_name || "the same hero"}</button>)}
           {savedMsg && <p style={s.savedMsg}>{savedMsg}</p>}
         </div>
       )}
