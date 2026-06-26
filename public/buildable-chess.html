@@ -508,8 +508,8 @@ function setLayer(id,src){
 function buildWorld(key){
   const sc=SCENES[key];
   applyScene(key);
-  setLayer('world-bg','chess-art/'+key+'_bg.jpg');
-  setLayer('world-fg','chess-art/'+key+'_fg.jpg');
+  setLayer('world-bg','chess-art/'+key+'_bg.jpg?v=2');
+  setLayer('world-fg','chess-art/'+key+'_fg.jpg?v=2');
   document.getElementById('world-rays').style.display = sc.rays?'block':'none';
   buildParticles(sc.amb);
 }
@@ -1061,7 +1061,7 @@ function buildSceneGrid(){
   const g=document.getElementById('scene-grid');g.innerHTML='';
   SCENE_KEYS.forEach(k=>{
     const sc=SCENES[k];const o=document.createElement('div');o.className='opt'+(k===sceneKey?' sel':'');
-    o.innerHTML=`<div class="scene-chip" style="background:linear-gradient(135deg,${sc.pageA},${sc.pageB});background-image:url('chess-art/${k}_thumb.jpg');background-size:cover;background-position:center"></div><div class="ot">${sc.name}</div>`;
+    o.innerHTML=`<div class="scene-chip" style="background:linear-gradient(135deg,${sc.pageA},${sc.pageB});background-image:url('chess-art/${k}_thumb.jpg?v=2');background-size:cover;background-position:center"></div><div class="ot">${sc.name}</div>`;
     o.onclick=()=>{sceneKey=k;buildSceneGrid();};
     g.appendChild(o);
   });

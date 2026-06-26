@@ -160,6 +160,14 @@
       "dest": "/music-library/$1"
     },
     {
+      "src": "/chess-art/(.*)",
+      "dest": "/chess-art/$1"
+    },
+    {
+      "src": "/game-music/(.*)",
+      "dest": "/game-music/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

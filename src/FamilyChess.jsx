@@ -204,7 +204,7 @@ export default function FamilyChess({ activeKid, onHome }) {
                 <button key={k} onClick={() => setWorld(k)} style={{
                   width: 104, height: 74, borderRadius: 14, cursor: "pointer", color: "#fff", fontWeight: 800, fontSize: 13,
                   border: world === k ? "3px solid #A78BFF" : "1px solid rgba(255,255,255,0.18)",
-                  backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.05)), url('/chess-art/${k}_thumb.jpg')`,
+                  backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.05)), url('/chess-art/${k}_thumb.jpg?v=2')`,
                   backgroundSize: "cover", backgroundPosition: "center",
                   display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 6,
                   textShadow: "0 1px 3px rgba(0,0,0,0.85)",
