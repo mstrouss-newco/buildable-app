@@ -96,6 +96,10 @@
       "dest": "/water-seg.html"
     },
     {
+      "src": "/play.html",
+      "dest": "/play.html"
+    },
+    {
       "src": "/story-demo.html",
       "dest": "/story-demo.html"
     },

@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Runner — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#0e1020;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{background:#000;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  #hint{position:fixed;left:0;right:0;bottom:14px;text-align:center;color:#fff;opacity:.7;font-size:15px;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="900" height="540"></canvas></div>
+<div id="hint">Tap / Space to jump · hold for a higher jump</div>
+<script>
+// ============================================================================
+//  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
+//  Levels are RECIPES (difficulty knobs); the engine builds each level from them
+//  so gaps are always jumpable => a level can never be unclearable.
+// ============================================================================
+const GAME_CONFIG = window.GAME_CONFIG || {
+  name: "Bramble's Dash",
+  heroUrl: "https://www.buildablekids.com/api/story-library?img=character:bunny&style=watercolor&emo=happy",
+  bgUrl:   "https://www.buildablekids.com/api/story-library?img=world:enchanted-forest&style=watercolor",
+  palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#c0566f", flag:"#ffd23f", hud:"#ffffff" },
+  levels: [
+    { name:"Sunny Start",  speed:3.2, length:42, gapChance:0.16, gapMax:2, obstacleChance:0.10, enemyChance:0.06, coinChance:0.40 },
+    { name:"Mushroom Run",  speed:3.8, length:54, gapChance:0.22, gapMax:3, obstacleChance:0.16, enemyChance:0.12, coinChance:0.42 },
+    { name:"Firefly Finale",speed:4.4, length:64, gapChance:0.28, gapMax:3, obstacleChance:0.20, enemyChance:0.18, coinChance:0.44 },
+  ],
+};
+
+const W=900, H=540, TILE=60;                  // world units
+const GROUND_Y = H-110;                        // top of the ground band
+const GRAV=0.62, JUMP=-12.6, RUN_BASE=3.2, MAXJUMP_TILES=3.4; // physics
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+
+// --- assets ---
+const hero=new Image(); hero.crossOrigin="anonymous"; hero.src=GAME_CONFIG.heroUrl;
+const bg=new Image();   bg.crossOrigin="anonymous";   bg.src=GAME_CONFIG.bgUrl;
+
+// --- deterministic RNG so a level is reproducible (and QA-able) ---
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+// --- build one level's layout from its recipe (always clearable) ---
+function buildLevel(lv, idx){
+  const rnd=mulberry(1000+idx*97);
+  const P=GAME_CONFIG.palette;
+  const ground=[], obstacles=[], enemies=[], coins=[];
+  let x=0; const n=lv.length;
+  let segStart=0;
+  // first 3 tiles always solid (safe spawn)
+  for(let i=0;i<n;i++){
+    const tx=i*TILE;
+    const canGap = i>3 && i<n-3;
+    if(canGap && rnd()<lv.gapChance){
+      // close current ground segment, make a jumpable gap (<= gapMax tiles)
+      ground.push({x0:segStart, x1:tx, y:GROUND_Y});
+      const gapTiles=1+Math.floor(rnd()*Math.min(lv.gapMax, Math.floor(MAXJUMP_TILES)));
+      i+=gapTiles; segStart=(i)*TILE;
+      continue;
+    }
+    // obstacle (a block to jump) on solid ground
+    if(canGap && rnd()<lv.obstacleChance){ obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46}); }
+    // enemy walking on ground
+    else if(canGap && rnd()<lv.enemyChance){ enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false}); }
+    // coin arc
+    if(rnd()<lv.coinChance){ coins.push({x:tx+TILE/2, y:GROUND_Y-70-Math.floor(rnd()*60), got:false}); }
+  }
+  ground.push({x0:segStart, x1:n*TILE, y:GROUND_Y});
+  const goalX=n*TILE - TILE*1.4;
+  return { ground, obstacles, enemies, coins, goalX, worldEnd:n*TILE, name:lv.name, speed:lv.speed||RUN_BASE };
+}
+
+// --- game state ---
+let LEVELS = GAME_CONFIG.levels.map((lv,i)=>buildLevel(lv,i));
+let li=0, L=LEVELS[0];
+let player, camX, hearts, coinsGot, totalCoins, state, invuln, botMode=false, doneMsgT=0, started=false;
+
+function startLevel(i){
+  li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
+  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false};
+  camX=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; doneMsgT=0;
+  if(hearts==null) hearts=3;
+}
+startLevel(0);
+
+// --- input ---
+let jumpHeld=false;
+function doJump(){
+  if(!started){started=true;}
+  if(player.onGround){ player.vy=JUMP; player.onGround=false; player.dj=true; }
+  else if(player.dj){ player.vy=JUMP*0.82; player.dj=false; }  // one double-jump
+  jumpHeld=true;
+}
+addEventListener('keydown',e=>{ if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();doJump();} if(e.key==='b')botMode=!botMode; });
+addEventListener('keyup',e=>{ if(e.code==='Space'||e.code==='ArrowUp')jumpHeld=false; });
+c.addEventListener('pointerdown',e=>{e.preventDefault();doJump();});
+c.addEventListener('pointerup',()=>jumpHeld=false);
+
+// --- helpers: is there solid ground under world-x? ---
+function groundUnder(wx){ for(const g of L.ground){ if(wx>=g.x0 && wx<g.x1) return g.y; } return null; }
+
+// --- simple "perfect player" bot: jump before a gap or obstacle/enemy ---
+function botThink(){
+  const lookahead=player.x+90;
+  const gUnderNow=groundUnder(player.x+24);
+  const gUnderAhead=groundUnder(lookahead+30);
+  if(player.onGround){
+    if(gUnderAhead==null){ doJump(); return; }           // gap ahead
+    for(const o of L.obstacles){ if(o.x-player.x>10 && o.x-player.x<78){ doJump(); return; } }
+    for(const e of L.enemies){ if(!e.dead && e.x-player.x>10 && e.x-player.x<70){ doJump(); return; } }
+  } else { jumpHeld=true; }
+}
+
+// --- update ---
+function update(){
+  if(state!=="play"){ doneMsgT++; return; }
+  if(botMode) botThink();
+  if(!started) return;                       // wait for first input
+  // run
+  player.x += player.runV;
+  // gravity + variable jump height
+  player.vy += GRAV * (jumpHeld && player.vy<0 ? 0.62 : 1);
+  player.y += player.vy;
+  // ground / gaps
+  const gy=groundUnder(player.x+24);
+  if(player.vy>=0 && gy!=null && player.y+60>=gy){ player.y=gy-60; player.vy=0; if(!player.onGround){player.onGround=true;} player.dj=false; }
+  else { player.onGround=false; }
+  player.r = player.onGround?0:Math.max(-0.5,Math.min(0.5,player.vy*0.03));
+  // fell in a gap
+  if(player.y>H+40){ loseHeart(true); return; }
+  if(invuln>0) invuln--;
+  // coins
+  for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; } }
+  // enemies (walk a little)
+  for(const e of L.enemies){ if(e.dead)continue; e.x+=e.dir*0.6; if(Math.abs(e.x-e.base)>e.range)e.dir*=-1;
+    const dx=Math.abs((player.x+24)-e.x), dy=(player.y+60)-e.y;
+    if(dx<34 && Math.abs((player.y+30)-e.y)<46){
+      if(player.vy>0 && (player.y+60)-e.y<26){ e.dead=true; player.vy=JUMP*0.6; }  // stomp
+      else if(invuln<=0){ loseHeart(false); }
+    }
+  }
+  // obstacles
+  for(const o of L.obstacles){ const dx=Math.abs((player.x+24)-o.x); if(dx<28 && (player.y+60)>o.y-o.h+6 && (player.y+30)<o.y && invuln<=0){ loseHeart(false); } }
+  // reach goal
+  if(player.x>=L.goalX){ state="win"; }
+}
+function loseHeart(fell){
+  hearts--; invuln=70;
+  if(hearts<=0){ state="lose"; return; }
+  // gentle: nudge back to safe ground
+  if(fell){ let sx=player.x-TILE*2; while(sx>90 && groundUnder(sx)==null) sx-=20; player.x=Math.max(90,sx); player.y=GROUND_Y-80; player.vy=0; }
+}
+
+// --- draw ---
+function rrect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function heart(x,y,s){ctx.beginPath();ctx.moveTo(x,y+s*0.3);ctx.bezierCurveTo(x,y,x-s,y,x-s,y+s*0.35);ctx.bezierCurveTo(x-s,y+s*0.7,x,y+s*0.9,x,y+s*1.15);ctx.bezierCurveTo(x,y+s*0.9,x+s,y+s*0.7,x+s,y+s*0.35);ctx.bezierCurveTo(x+s,y,x,y,x,y+s*0.3);ctx.closePath();ctx.fill();}
+function draw(){
+  const P=GAME_CONFIG.palette;
+  camX = Math.max(0, player.x-220);
+  // sky / background (parallax)
+  ctx.fillStyle="#bfe3ff"; ctx.fillRect(0,0,W,H);
+  if(bg.complete && bg.naturalWidth){ const pw=W*1.4; const off=-(camX*0.35)%pw; for(let bx=off-pw;bx<W;bx+=pw){ ctx.globalAlpha=0.92; ctx.drawImage(bg,bx,-10,pw,H+20); ctx.globalAlpha=1; } }
+  // ground segments
+  for(const g of L.ground){ const sx=g.x0-camX, ex=g.x1-camX; if(ex<-40||sx>W+40)continue;
+    ctx.fillStyle=P.dirt; ctx.fillRect(sx,g.y+14,ex-sx,H-g.y); ctx.fillStyle=P.ground; ctx.fillRect(sx,g.y,ex-sx,18); ctx.fillStyle=P.groundTop; ctx.fillRect(sx,g.y,ex-sx,6); }
+  // coins
+  for(const k of L.coins){ if(k.got)continue; const x=k.x-camX; if(x<-30||x>W+30)continue; ctx.fillStyle=P.coin; ctx.beginPath();ctx.arc(x,k.y,11,0,7);ctx.fill(); ctx.fillStyle="rgba(255,255,255,.6)";ctx.beginPath();ctx.arc(x-3,k.y-3,3,0,7);ctx.fill(); }
+  // obstacles (crystals)
+  for(const o of L.obstacles){ const x=o.x-camX; if(x<-40||x>W+40)continue; ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x,o.y-o.h);ctx.lineTo(x+o.w/2,o.y);ctx.lineTo(x-o.w/2,o.y);ctx.closePath();ctx.fill(); ctx.fillStyle="rgba(255,255,255,.25)";ctx.beginPath();ctx.moveTo(x,o.y-o.h);ctx.lineTo(x+o.w/4,o.y-o.h/2);ctx.lineTo(x-o.w/6,o.y-o.h/3);ctx.closePath();ctx.fill(); }
+  // enemies (little blobs)
+  for(const e of L.enemies){ if(e.dead)continue; const x=e.x-camX; if(x<-40||x>W+40)continue; ctx.fillStyle=P.enemy; rrect(x-20,e.y-6,40,34,16);ctx.fill(); ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(x-7,e.y+6,5,0,7);ctx.arc(x+7,e.y+6,5,0,7);ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath();ctx.arc(x-6,e.y+7,2.4,0,7);ctx.arc(x+8,e.y+7,2.4,0,7);ctx.fill(); }
+  // goal flag
+  const fx=L.goalX-camX; if(fx<W+60){ ctx.strokeStyle="#6a4a2a";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(fx,GROUND_Y);ctx.lineTo(fx,GROUND_Y-120);ctx.stroke(); ctx.fillStyle=P.flag; ctx.beginPath();ctx.moveTo(fx,GROUND_Y-120);ctx.lineTo(fx+52,GROUND_Y-104);ctx.lineTo(fx,GROUND_Y-86);ctx.closePath();ctx.fill(); }
+  // hero
+  const hx=player.x-camX, hy=player.y;
+  ctx.save(); ctx.translate(hx+24,hy+30); ctx.rotate(player.r);
+  if(hero.complete && hero.naturalWidth){ ctx.drawImage(hero,-30,-34,60,68); } else { ctx.fillStyle="#e8915a"; rrect(-22,-26,44,56,16); ctx.fill(); }
+  ctx.restore();
+  if(invuln>0 && Math.floor(invuln/6)%2===0){ ctx.fillStyle="rgba(255,255,255,.25)"; ctx.beginPath();ctx.arc(hx+24,hy+30,34,0,7);ctx.fill(); }
+  // HUD
+  ctx.fillStyle=P.hud; ctx.font="bold 22px Fredoka,sans-serif"; ctx.textAlign="left";
+  ctx.fillText(L.name+"   Lv "+(li+1)+"/"+LEVELS.length, 18, 34);
+  ctx.textAlign="right"; ctx.fillText(coinsGot+" / "+totalCoins, W-18, 34);
+  ctx.fillStyle=P.enemy; for(let i=0;i<hearts;i++){ heart(W-44-i*30, 48, 11); }
+  // progress bar
+  const pg=Math.min(1, player.x/L.goalX); ctx.fillStyle="rgba(255,255,255,.25)"; rrect(18,H-22,W-36,8,4);ctx.fill(); ctx.fillStyle=P.flag; rrect(18,H-22,(W-36)*pg,8,4);ctx.fill();
+  // banners
+  if(state==="win"){ banner(li<LEVELS.length-1?"Level Complete!":"You Win!", li<LEVELS.length-1?"Tap for next level":"Tap to play again"); }
+  if(state==="lose"){ banner("Try Again!","Tap to restart this level"); }
+  if(!started && state==="play"){ ctx.fillStyle="rgba(0,0,0,.35)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Fredoka,sans-serif";ctx.fillText(GAME_CONFIG.name,W/2,H/2-10); ctx.font="20px Fredoka,sans-serif";ctx.fillText("Tap to start",W/2,H/2+28); }
+}
+function banner(t,s){ ctx.fillStyle="rgba(0,0,0,.45)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 40px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-6); ctx.font="20px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
+
+// advance on tap when level done
+c.addEventListener('pointerdown',()=>{ if(state==="win"){ if(li<LEVELS.length-1){ startLevel(li+1);} else { hearts=3; startLevel(0);} } else if(state==="lose"){ hearts=3; startLevel(li);} });
+
+function frame(){ update(); draw(); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+
+// expose for QA / picker
+window.BK_GAME = { startLevel:(i)=>startLevel(i), setBot:(b)=>{botMode=b;started=true;}, state:()=>state, level:()=>li };
+</script>
+</body>
+</html>
