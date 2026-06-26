@@ -1589,3 +1589,32 @@ blocks). No emojis in prompts or payloads (uses a text `clue`, not an emoji fiel
 **Still TODO:** kid-facing badges/streak + a parent progress dashboard (only the toggle +
 quiz gates shipped so far). Pre-existing emojis remain in some older screens (home tiles,
 `CreatorScreen` pickers) — a separate cleanup pass.
+
+## Learning Mode: progress, badges + parent dashboard (default OFF) — June 26 2026
+
+Built on the Learning Mode layer. All on-device (no login / no Supabase), and no-ops when
+Learning Mode is off, so nothing accrues or shows until a grown-up enables it.
+
+**Progress store (`src/store.js`):** `recordAnswer({subject, correct})`, `getProgress()`,
+`progressSubjects()`, and a `BADGES` catalog. Tracks `totalCorrect`/`totalWrong`, per-subject
+right/attempts (`math`,`geometry`,`spelling`,`reading`), `lastActiveDate` + `streakDays`
+(device calendar day), and earned `badges`. Same IndexedDB + synchronous in-memory cache
+pattern as learning settings. `recordAnswer` returns any NEWLY earned badge id.
+
+**Badges:** first-answer (1 right), math-whiz (25 total right), word-builder (15 spelling),
+bookworm (10 reading), on-a-roll (7-day streak).
+
+**Where it's wired:**
+- `src/QuizGate.jsx` records right/wrong (never on Skip), maps question `type` -> subject,
+  and on a newly-earned badge shows a brief SVG celebration before `onPass` (~1800ms that
+  turn only; normal ~650ms).
+- `src/LoadingGames.jsx` records answers from the render-wait question too.
+- `src/GrownUpScreen.jsx` — new "Learning progress" card: questions right / day streak /
+  badges earned, per-subject strength bars (right vs attempts), and an SVG badge shelf
+  (earned in color, unearned dimmed).
+- `src/MyStuff.jsx` — kid-facing badge shelf, shown only when Learning Mode is on AND at
+  least one badge is earned (never an empty/nagging shelf).
+
+All visuals are SVG/CSS — no emoji. **Note:** streak is device-local (a clock change can
+shift it); cross-device sync would need the deliberate anonymous-device-id design already
+flagged in SESSION-LOG.
