@@ -204,7 +204,8 @@ function frame(){ update(); draw(); requestAnimationFrame(frame); }
 requestAnimationFrame(frame);
 
 // expose for QA / picker
-window.BK_GAME = { startLevel:(i)=>startLevel(i), setBot:(b)=>{botMode=b;started=true;}, state:()=>state, level:()=>li };
+window.BK_GAME = { startLevel:(i)=>startLevel(i), setBot:(b)=>{botMode=b;started=true;}, state:()=>state, level:()=>li,
+  dbg:()=>({px:Math.round(player.x), goal:Math.round(L.goalX), started, runV:player.runV, hp:hearts, onG:player.onGround, vy:Math.round(player.vy), state}) };
 </script>
 </body>
 </html>
