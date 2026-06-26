@@ -161,6 +161,57 @@ async function genExpression(baseB64, prompt, openaiKey, timeoutMs = 44000) {
   return null;
 }
 
+// ---- SCENE prototype: redraw the base character INTO a full integrated scene ----
+// Uses image-edit with the cutout as a reference (input_fidelity high) so the
+// character stays on-model but is placed in the world, doing something, from a
+// chosen angle — a real picture-book page instead of a pasted sticker.
+const SCENE_LOOK = {
+  watercolor: "soft children's picture-book watercolor illustration, gentle washes, warm light",
+  modern3d:   "modern 3D animated-movie style, soft cinematic lighting",
+  papercut:   "layered cut-paper collage illustration, bold bright colors",
+};
+const SHOTS = {
+  establish: "Wide establishing shot of a magical ENCHANTED FOREST: glowing mushrooms, floating fireflies, tall ancient trees, a winding mossy path, soft golden light. Place THIS character skipping happily along the path, small within the big scene, clearly part of the world (not in front of it).",
+  peek:      "Inside a magical ENCHANTED FOREST. THIS character peeks out shyly from BEHIND a giant glowing mushroom, only half of its body visible at the edge of the frame, curious eyes looking toward a soft light. Playful close composition with depth.",
+  doorway:   "Seen from BEHIND, over the character's shoulder: THIS character stands small at the bottom of the frame before a tall shimmering doorway of light between two huge ancient trees in an enchanted forest, fireflies drifting, dramatic depth and scale.",
+  companion: "A cozy clearing in a magical ENCHANTED FOREST. THIS character sits on the left meeting a friendly wise OWL perched on a mossy log on the right, glowing mushrooms and fireflies around them, warm light. Both clearly together in the same scene, interacting.",
+  cozy:      "Night in a magical ENCHANTED FOREST. THIS character curls up sleepily at the base of a giant tree, nestled in soft moss, wrapped in a warm glow, fireflies like little lanterns, peaceful bedtime mood, cool blue night tones.",
+};
+function scenePrompt(shot, style) {
+  return (SHOTS[shot] || SHOTS.establish) + " " + (SCENE_LOOK[styleId(style)] || SCENE_LOOK.watercolor) +
+    ". Keep this the EXACT same character — same species, colors, and markings — but naturally integrated into the scene with believable lighting and shadow. A full rectangular scene illustration with foreground, midground and background. No text, age 4-8, wholesome.";
+}
+function sceneKey(slug, style, shot) {
+  return "libsc:" + crypto.createHash("sha1").update(slug + "|" + styleId(style) + "|" + shot).digest("hex");
+}
+async function genScene(baseB64, prompt, openaiKey, timeoutMs = 44000) {
+  const attempt = async (useFidelity) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const fd = new FormData();
+      fd.append("model", "gpt-image-1");
+      fd.append("prompt", prompt);
+      fd.append("size", "1536x1024");        // landscape page
+      fd.append("quality", "low");
+      if (useFidelity) fd.append("input_fidelity", "high");
+      fd.append("image", new Blob([Buffer.from(baseB64, "base64")], { type: "image/png" }), "base.png");
+      const res = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: { Authorization: `Bearer ${openaiKey}` }, body: fd, signal: ctrl.signal });
+      clearTimeout(timer);
+      if (res.ok) { const data = await res.json(); return { b64: data.data?.[0]?.b64_json || null, status: 200 }; }
+      return { b64: null, status: res.status };
+    } catch { clearTimeout(timer); return { b64: null, status: 0 }; }
+  };
+  for (let t = 0; t < 3; t++) {
+    let r = await attempt(true);
+    if (!r.b64 && r.status === 400) r = await attempt(false);
+    if (r.b64) return r.b64;
+    if (r.status !== 429) break;
+    await new Promise((res) => setTimeout(res, 4000 + t * 3000));
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   const q = req.query || {};
 
@@ -177,6 +228,36 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     res.status(200).send(buf);
     return;
+  }
+
+  // --- serve a generated SCENE page (prototype) ---
+  if (q.simg) {
+    const b64 = await cacheGet(sceneKey((q.slug||"").toString(), q.style, (q.shot||"").toString()));
+    if (!b64) { res.status(404).json({ ok: false, missing: true }); return; }
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.status(200).send(Buffer.from(b64, "base64"));
+    return;
+  }
+
+  // --- build one generated SCENE page (prototype) ---
+  if (q.scene) {
+    const slug = (q.slug || "").toString();
+    const style = styleId(q.style);
+    const shot = (q.shot || "establish").toString();
+    if (!findItem("character", slug) || !SHOTS[shot]) return res.status(400).json({ ok: false, error: "bad slug or shot" });
+    const k = sceneKey(slug, style, shot);
+    const force = !!q.force;
+    if (!force && await cacheGet(k)) return res.status(200).json({ ok: true, slug, shot, cached: true });
+    const base = await cacheGet(cacheKey("character", slug, style));
+    if (!base) return res.status(200).json({ ok: true, needBase: true });
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
+    const b64 = await genScene(base, scenePrompt(shot, style), openaiKey);
+    if (!b64) return res.status(200).json({ ok: true, slug, shot, failed: true });
+    if (force) await cacheDel(k);
+    await cachePut(k, b64);
+    return res.status(200).json({ ok: true, slug, shot, generated: true });
   }
 
   // --- build one asset (idempotent; cached) ---
