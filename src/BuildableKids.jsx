@@ -303,22 +303,22 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
 function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin }) {
-  // Each tile is a large, card-width app icon (banner) with the label below it.
+  // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
   const AppIcon = ({ grad, children }) => (
-    <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
+    <div style={{ position: "relative", width: 76, height: 76, borderRadius: 20, background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%)" }} />
-      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
+      <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
     </div>
   );
   const NoteGlyph = () => (
-    <svg width="118" height="118" viewBox="0 0 48 48" aria-hidden="true">
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
       <ellipse cx="17" cy="33" rx="7" ry="5.2" transform="rotate(-20 17 33)" fill="#fff" />
       <rect x="22.6" y="11" width="3.2" height="22.5" fill="#fff" />
       <path d="M25.8 11 q11 3 8.5 15 q.5 -8 -8.5 -9 z" fill="#fff" />
     </svg>
   );
   const ControllerGlyph = () => (
-    <svg width="118" height="118" viewBox="0 0 48 48" aria-hidden="true">
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
       <rect x="6" y="18" width="36" height="16" rx="8" fill="#fff" />
       <rect x="12" y="22.5" width="3.2" height="9" rx="1" fill="#2BB14F" />
       <rect x="9" y="25.5" width="9.2" height="3.2" rx="1" fill="#2BB14F" />
@@ -327,14 +327,14 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
     </svg>
   );
   const BookGlyph = () => (
-    <svg width="118" height="118" viewBox="0 0 48 48" aria-hidden="true">
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
       <path d="M24 14 C18.5 10.5 12 10.5 8 12.3 V35.5 C12 33.7 18.5 33.7 24 37.2 Z" fill="#fff" />
       <path d="M24 14 C29.5 10.5 36 10.5 40 12.3 V35.5 C36 33.7 29.5 33.7 24 37.2 Z" fill="#fff" opacity="0.82" />
       <rect x="22.8" y="13.2" width="2.4" height="24" rx="1.2" fill="#fff" opacity="0.55" />
     </svg>
   );
   const KeyboardGlyph = () => (
-    <svg width="118" height="118" viewBox="0 0 48 48" aria-hidden="true">
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
       <rect x="6" y="14" width="36" height="22" rx="4.5" fill="#fff" />
       <rect x="10.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="16.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="22.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="28.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="34.5" y="18.5" width="3" height="4" rx="1" fill="#2F8FD6" />
       <rect x="10.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="16.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="22.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="28.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="34.5" y="24.5" width="3" height="4" rx="1" fill="#2F8FD6" />
@@ -342,7 +342,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
     </svg>
   );
   const ChessGlyph = () => (
-    <svg width="118" height="118" viewBox="0 0 48 48" aria-hidden="true">
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
       <rect x="22.4" y="5" width="3.2" height="9" rx="1" fill="#fff" />
       <rect x="19.5" y="7.5" width="9" height="3.2" rx="1" fill="#fff" />
       <circle cx="24" cy="18" r="5" fill="#fff" />
@@ -351,34 +351,74 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
     </svg>
   );
 
+  // Notify on the Chess tile when it's this kid's move in a family game.
+  const [chessTurns, setChessTurns] = useState(0);
+  const prevTurnsRef = useRef(0);
+  const dingChime = () => {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      const c = new AC();
+      [660, 990].forEach((f, i) => {
+        const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.value = f;
+        const t = c.currentTime + i * 0.13; o.connect(g); g.connect(c.destination);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        o.start(t); o.stop(t + 0.2);
+      });
+    } catch (e) { /* ignore */ }
+  };
+  useEffect(() => {
+    let alive = true;
+    async function check() {
+      try {
+        if (!isSignedIn()) { if (alive) setChessTurns(0); return; }
+        const me = getActiveKid();
+        if (!me) { if (alive) setChessTurns(0); return; }
+        const ms = await listMyMatches(me.id);
+        const n = (ms || []).filter((m) => (m.turn || "w") === (m.white_kid === me.id ? "w" : "b")).length;
+        if (alive) {
+          if (n > prevTurnsRef.current) dingChime();
+          prevTurnsRef.current = n;
+          setChessTurns(n);
+        }
+      } catch (e) { /* ignore */ }
+    }
+    check();
+    const t = setInterval(check, 20000);
+    return () => { alive = false; clearInterval(t); };
+  }, [activeKid]);
+
   const PILL_COLORS = ["linear-gradient(160deg,#8A6BFF,#6A4FE0)","linear-gradient(160deg,#F2789E,#E0578F)","linear-gradient(160deg,#4FA6E8,#2F8FD6)","linear-gradient(160deg,#3DD06A,#2BB14F)","linear-gradient(160deg,#FFC75A,#F0972A)","linear-gradient(160deg,#46D7C0,#1FA897)"];
   const pillGrad = (name) => { let h = 0; const s = name || "?"; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return PILL_COLORS[h % PILL_COLORS.length]; };
   const initial = (name) => { const n = (name || "").trim(); return n ? n[0].toUpperCase() : "?"; };
 
-  const ExperienceCard = ({ icon, title, desc, badge, badgeColor, onClick, disabled }) => (
+  const ExperienceCard = ({ icon, title, desc, badge, badgeColor, onClick, disabled, dot }) => (
     <button
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={{
-        position: "relative", textAlign: "left", padding: "16px",
-        borderRadius: "24px", border: CARD_BORDER, background: CARD_BG,
+        position: "relative", textAlign: "left", padding: "24px 22px",
+        borderRadius: "22px", border: CARD_BORDER, background: CARD_BG,
         color: "#fff", cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.55 : 1, fontFamily: NUN,
-        display: "flex", flexDirection: "column", gap: "14px",
+        display: "flex", flexDirection: "column", gap: "12px", minHeight: "150px",
       }}
     >
-      {icon}
+      {dot && (
+        <span style={{
+          position: "absolute", top: -8, left: -8, width: 22, height: 22, borderRadius: "50%",
+          background: "#FF5468", border: "3px solid #1a1330", boxShadow: "0 0 12px rgba(255,84,104,0.8)",
+        }} />
+      )}
       {badge && (
         <span style={{
-          position: "absolute", top: "28px", right: "28px",
+          position: "absolute", top: "16px", right: "16px",
           fontSize: "12px", fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase",
-          padding: "5px 12px", borderRadius: "999px", background: badgeColor, color: "#1a1330",
+          padding: "5px 11px", borderRadius: "999px", background: badgeColor, color: "#1a1330",
         }}>{badge}</span>
       )}
-      <div style={{ padding: "0 8px 6px" }}>
-        <div style={{ fontFamily: FRED, fontSize: "26px", fontWeight: 700 }}>{title}</div>
-        <div style={{ fontSize: "15px", color: "#cfc9e6", marginTop: "8px" }}>{desc}</div>
-      </div>
+      {icon}
+      <div style={{ fontFamily: FRED, fontSize: "24px", fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: "15px", color: "#cfc9e6" }}>{desc}</div>
     </button>
   );
 
@@ -421,27 +461,29 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)"><NoteGlyph /></AppIcon>}
           title="Music" desc="Make your own song. Ready to play right now!"
-          onClick={onMusic}
+          badge="Ready" badgeColor="#7CF6B0" onClick={onMusic}
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#3DD06A,#2BB14F)"><ControllerGlyph /></AppIcon>}
           title="Games" desc="Build a game with your own hero and world."
-          badge="Coming soon" badgeColor="#D8D2EC" disabled
+          badge="Beta" badgeColor="#FFD66B" onClick={onGames}
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#F2789E,#E0578F)"><BookGlyph /></AppIcon>}
           title="Stories" desc="Turn your ideas into a living picture book."
-          onClick={onStories}
+          badge="New" badgeColor="#7CF6B0" onClick={onStories}
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#4FA6E8,#2F8FD6)"><KeyboardGlyph /></AppIcon>}
           title="Typing" desc="Learn to type by defending the castle!"
-          onClick={onTyping}
+          badge="New" badgeColor="#7CF6B0" onClick={onTyping}
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#FFC75A,#F0972A)"><ChessGlyph /></AppIcon>}
-          title="Chess" desc="Play your hero squad — solo or two players!"
-          onClick={onChess}
+          title="Chess"
+          desc={chessTurns > 0 ? `It's your move in ${chessTurns} game${chessTurns > 1 ? "s" : ""}!` : "Play your hero squad — solo, two players, or family."}
+          badge={chessTurns > 0 ? "Your move!" : "New"} badgeColor={chessTurns > 0 ? "#FF8FA3" : "#7CF6B0"}
+          dot={chessTurns > 0} onClick={onChess}
         />
       </div>
     </div>
