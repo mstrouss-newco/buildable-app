@@ -2024,7 +2024,10 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
     <li><a href="#parents">For Parents</a></li>
     <li><a href="#pricing">Pricing</a></li>
   </ul>
-  <button class="nav-cta" onclick="document.getElementById('beta').scrollIntoView({behavior:'smooth'})">Get Early Access</button>
+  <div style="display:flex;align-items:center;gap:10px">
+    <a href="/app" style="font-size:13px;font-weight:700;color:rgba(255,255,255,.6);padding:7px 14px;border-radius:100px;text-decoration:none;transition:all .18s">Log in</a>
+    <a href="/app" class="nav-cta" style="text-decoration:none;display:inline-flex;align-items:center">Try it free</a>
+  </div>
 </nav>
 
 <!-- ═══════ HERO ═══════ -->
@@ -2035,7 +2038,7 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
 
   <div class="hero-chip">
     <span class="chip-live"></span>
-    Safe AI creative studio · Ages 4–12
+    Make it · Share it · Remix it · Ages 4–12
   </div>
 
   <h1>
@@ -2044,21 +2047,20 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
   </h1>
 
   <p class="hero-sub">
-    Buildable Kids is the creative studio where children bring their biggest ideas to life — and watch them become something real.
+    Buildable Kids is the creative studio where children make their own music and stories — then share them and remix each other's creations into something brand new.
   </p>
 
-  <!-- Education chips — visible early, above CTA -->
+  <!-- Three pillars — what kids make -->
   <div class="hero-edu-row">
-    <span class="edu-chip" style="background:rgba(124,92,252,.15);color:var(--purple2)">➕ Math</span>
-    <span class="edu-chip" style="background:rgba(255,107,107,.12);color:var(--coral2)">📖 Spelling</span>
-    <span class="edu-chip" style="background:rgba(0,196,140,.12);color:var(--mint2)">🔬 STEM</span>
-    <span class="edu-chip" style="background:rgba(245,158,11,.12);color:var(--gold)">🌍 Science</span>
-    <span class="edu-chip-note">woven into every game</span>
+    <span class="edu-chip" style="background:rgba(124,92,252,.15);color:var(--purple2)">🎵 Music</span>
+    <span class="edu-chip" style="background:rgba(255,107,107,.12);color:var(--coral2)">📖 Stories</span>
+    <span class="edu-chip" style="background:rgba(245,158,11,.12);color:var(--gold)">🎮 Games — coming soon</span>
+    <span class="edu-chip-note">create, share &amp; remix</span>
   </div>
 
   <div class="hero-btns">
-    <button class="btn-primary" onclick="document.getElementById('beta').scrollIntoView({behavior:'smooth'})">Get Early Access</button>
-    <button class="btn-ghost" onclick="document.getElementById('create').scrollIntoView({behavior:'smooth'})">Watch what's possible ↓</button>
+    <a href="/app" class="btn-primary" style="text-decoration:none;display:inline-flex;align-items:center">Try it free</a>
+    <button class="btn-ghost" onclick="document.getElementById('create').scrollIntoView({behavior:'smooth'})">See how it works ↓</button>
   </div>
 
   <!-- Phone mockups removed — the Creation showcase below tells this story better -->
@@ -2076,28 +2078,28 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
         <div class="eyebrow">How it works</div>
         <h2>Describe it.<br>Build it.<br>Own it.</h2>
         <p class="section-sub">
-          A child says <em style="color:var(--purple2);font-style:normal;font-weight:800">"I want a dragon kingdom with a fire-breathing boss, a wizard to rescue, and magic coins"</em> — and in seconds, it exists. Buildable's AI acts as a creative partner, not a chatbot. It listens, builds, and hands the keys over to them.
+          A child hums a melody or dreams up <em style="color:var(--purple2);font-style:normal;font-weight:800">"a song about a brave little fox"</em> — and Buildable helps them turn it into a real track or a story they can read back. Then they share it, and other kids remix it into something all their own.
         </p>
         <div class="creation-features">
           <div class="creation-feature">
-            <div class="feat-icon" style="background:rgba(124,92,252,.15)">✦</div>
+            <div class="feat-icon" style="background:rgba(124,92,252,.15)">🎵</div>
             <div>
-              <div class="feat-title">AI builds it from their words</div>
-              <div class="feat-desc">Games, stories, music, and art — generated from whatever they can describe. No templates. No limits.</div>
+              <div class="feat-title">Make music &amp; stories from their ideas</div>
+              <div class="feat-desc">Songs, beats, and stories — built from whatever they can imagine. No templates. No limits. Games are coming soon.</div>
             </div>
           </div>
           <div class="creation-feature">
-            <div class="feat-icon" style="background:rgba(255,107,107,.12)">🎮</div>
+            <div class="feat-icon" style="background:rgba(255,107,107,.12)">✦</div>
             <div>
               <div class="feat-title">Every creation is uniquely theirs</div>
-              <div class="feat-desc">No two worlds are alike. Their game, their characters, their rules — from day one.</div>
+              <div class="feat-desc">No two are alike. Their song, their story, their characters — theirs from day one.</div>
             </div>
           </div>
           <div class="creation-feature">
-            <div class="feat-icon" style="background:rgba(0,196,140,.1)">♾️</div>
+            <div class="feat-icon" style="background:rgba(0,196,140,.1)">🔁</div>
             <div>
-              <div class="feat-title">Add, customize, rebuild forever</div>
-              <div class="feat-desc">New levels, new bosses, new worlds — every time they return, there's more to create.</div>
+              <div class="feat-title">Share it — and remix each other's</div>
+              <div class="feat-desc">Publish a song or story for friends to enjoy, and remix theirs into something new. Every creation sparks the next.</div>
             </div>
           </div>
         </div>
@@ -2735,7 +2737,7 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
       <div class="evolution-blurb">
         <div class="evolution-blurb-icon">♾️</div>
         <div class="evolution-blurb-text">
-          <strong>These worlds keep growing.</strong> Kids return to add levels, change characters, and expand their worlds — the more they create, the more others play. Top creators unlock advanced AI tools and earn featured placement.
+          <strong>These worlds keep growing.</strong> Kids return to add levels, change characters, and expand their worlds — the more they create, the more others play. Top creators unlock advanced creative tools and earn featured placement.
         </div>
       </div>
 
@@ -2757,7 +2759,7 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
     <div class="eyebrow">For parents &amp; educators</div>
     <h2 style="max-width:700px">Built for their imagination.<br>Designed for your peace of mind.</h2>
     <p class="section-sub">
-      Buildable is not an open AI tool. It's a structured creative environment where kids build, not browse. No open chat, no rabbit holes. Just creation — guided, safe, and age-appropriate.
+      Buildable is not an open internet playground. It's a structured creative space where kids build, not browse. No open chat, no rabbit holes. Just creation — guided, safe, and age-appropriate.
     </p>
 
     <div class="parents-grid">
@@ -2766,8 +2768,8 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
           <div class="trust-point">
             <div class="trust-icon">🛡️</div>
             <div>
-              <div class="trust-title">Structured AI, not open chat</div>
-              <div class="trust-desc">Kids describe creative ideas. The AI builds them. There's no freeform conversation, no access to the open web, no surprises.</div>
+              <div class="trust-title">Guided creation, not open chat</div>
+              <div class="trust-desc">Kids bring their own ideas to life in a guided space. There's no freeform conversation, no access to the open web, no surprises.</div>
             </div>
           </div>
           <div class="trust-point">
@@ -2912,7 +2914,7 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
         <ul class="p-feats">
           <li>Unlimited worlds &amp; levels</li>
           <li>Unlimited play &amp; customization</li>
-          <li>Advanced AI creative models</li>
+          <li>Advanced creative tools</li>
           <li>Full parent dashboard</li>
           <li>Weekly progress reports</li>
           <li>Challenge difficulty controls</li>
@@ -2961,7 +2963,7 @@ footer p { font-size:12px; color:rgba(255,255,255,.25); font-weight:600 }
   <div class="foot-logo">
     <span class="buildable">buildable</span><span class="kids">kids</span><span class="period">.</span>
   </div>
-  <p>Safe AI for kids &amp; families · &copy; 2025 Buildable Kids Inc.</p>
+  <p>A safe creative space for kids &amp; families · &copy; 2025 Buildable Kids Inc.</p>
   <div class="foot-links">
     <a href="#">Privacy</a><a href="#">Safety</a><a href="#">Contact</a>
   </div>
