@@ -44,9 +44,9 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const narrCacheRef = useRef({});
   const hlTimerRef = useRef(null);
   const ambienceRef = useRef(null);
+  const waterAudioRef = useRef(null);
   const [soundOn, setSoundOn] = useState(true);
   const [sceneUrl, setSceneUrl] = useState({});   // pageIndex -> generated scene url
-  const [waterMask, setWaterMask] = useState({}); // pageIndex -> water mask url
   const tokenRef = useRef((story && story.story_id) || (Math.random().toString(36).slice(2,10) + Date.now().toString(36)));
   const startedScenesRef = useRef(false);
 
@@ -77,13 +77,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
         fetch("/api/story-library", { method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
           body: JSON.stringify({ pageScene: true, slug: charSlug, style, emo: pg.emotion || "happy", world: pg.world_slug, action: pg.text, pageIndex: i, cacheKey: ck }) })
           .then((r) => r.json())
-          .then((j) => { clearTimeout(to); if (!cancelled && j && (j.generated || j.cached)) {
-            setSceneUrl((m) => ({ ...m, [i]: "/api/story-library?pimg=1&k=" + encodeURIComponent(ck) }));
-            if (wantsWater(pg)) {
-              fetch("/api/segment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ k: ck, prompt: "water" }) })
-                .then((r2) => r2.json()).then((s2) => { if (!cancelled && s2 && s2.ok) setWaterMask((m) => ({ ...m, [i]: "/api/segment?mask=1&prompt=water&k=" + encodeURIComponent(ck) })); }).catch(() => {});
-            }
-          } })
+          .then((j) => { clearTimeout(to); if (!cancelled && j && (j.generated || j.cached)) setSceneUrl((m) => ({ ...m, [i]: "/api/story-library?pimg=1&k=" + encodeURIComponent(ck) })); })
           .catch(() => { clearTimeout(to); })
           .finally(() => { active--; if (!cancelled) pump(); });
       }
@@ -109,10 +103,20 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
 
   useEffect(() => { stopAll(); setSpoken(-1); setPlaying(false); return () => stopAll(); }, [idx]);
 
+  // Trickling-water sound on water pages (generated once, cached). Loops quietly.
+  useEffect(() => {
+    const el = waterAudioRef.current; if (!el) return;
+    if (wantsWater(page) && soundOn) {
+      if (!el.src || el.src.indexOf("s=water") < 0) el.src = "/api/sfx?s=water";
+      el.loop = true; el.volume = 0.3; el.play().catch(() => {});
+    } else { try { el.pause(); } catch {} }
+  }, [idx, soundOn]);
+
   function stopAll() {
     try { if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel(); } catch {}
     try { if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; } } catch {}
     if (hlTimerRef.current) { clearInterval(hlTimerRef.current); hlTimerRef.current = null; }
+    try { if (waterAudioRef.current) waterAudioRef.current.pause(); } catch {}
   }
 
   function toggleSound() {
@@ -184,9 +188,10 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
         </div>
       </div>
       <audio ref={ambienceRef} style={{ display: "none" }} />
+      <audio ref={waterAudioRef} style={{ display: "none" }} />
 
       {sceneUrl[idx]
-        ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} waterMask={waterMask[idx]} style={s.page} />
+        ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} style={s.page} />
         : <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={idx} style={s.page} />}
 
       <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">Repaint this page</button>
