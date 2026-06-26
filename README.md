@@ -1702,3 +1702,12 @@ reaches a step, its pictures are warm in the browser cache.
 
 No emoji. Build verified (`npm run build`). ElevenLabs confirmed live (`/api/narrate-story-page`
 returns `hasElevenLabs:true`).
+
+## Typing game: fix silent audio on iPad / mobile — June 26 2026
+
+`public/typing.html` makes all its sounds (note/buzz/fanfare/boom) with the Web Audio
+API. Browsers start an `AudioContext` in a **suspended** state and only allow it to run
+after a user gesture calls `resume()` — the game never did, so it was silent (especially
+on iPad). Fix: `audio()` now calls `actx.resume()` whenever the context is suspended (it's
+invoked from the in-gesture Start/world-select taps and from each sound), and the gameplay
+`keydown` handler calls `audio()` on the first keypress as a safety net. No other changes.

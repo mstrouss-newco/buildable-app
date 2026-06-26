@@ -385,7 +385,7 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 
   // audio
   let actx=null;
-  function audio(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}return actx;}
+  function audio(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(actx&&actx.state==='suspended'){try{actx.resume();}catch(e){}}return actx;}
   const SCALE=[523.25,587.33,659.25,783.99,880.00,1046.50];
   function note(step){const ac=audio();if(!ac)return;const f=SCALE[Math.min(step,SCALE.length-1)];
     const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.value=f;
@@ -659,6 +659,7 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 
   document.addEventListener('keydown',e=>{
     if(!screens.game.classList.contains('on'))return;
+    audio();
     if(e.key==='Escape'){paused?doResume():doPause();return;}
     if(e.key===' '){e.preventDefault();doSuper();return;}
     if(e.key&&e.key.length===1&&/[a-zA-Z]/.test(e.key))handle(e.key);});
