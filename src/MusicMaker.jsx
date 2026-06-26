@@ -9,6 +9,8 @@ import { useState, useEffect, useRef } from "react";
 import { shareCreation } from "./lib/shareSheet";
 import CoverThumb from "./lib/CoverThumb";
 import IconImg from "./lib/IconImg";
+import QuizGate from "./QuizGate";
+import { getLearningSettings } from "./store";
 
 const MAX_SONGS = 10;
 
@@ -137,6 +139,8 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
   const [locking, setLocking] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [msgI, setMsgI] = useState(0);
+  const [justFinished, setJustFinished] = useState(false); // learning gate: only after a real finish
+  const [gateNext, setGateNext] = useState(null);          // pending action awaiting a quick question
   const audioRef = useRef(null);
   const voiceRef = useRef(true);
   voiceRef.current = voiceOn;
@@ -169,6 +173,11 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
   }
 
   function doRender() { if (busy || locking) return; speak("Rendering your song!"); setLocking(true); setTimeout(() => { setLocking(false); makeSong(); }, 1450); }
+  function startRender() {
+    const ls = getLearningSettings();
+    if (ls.enabled && justFinished) { setJustFinished(false); setGateNext(() => doRender); return; }
+    doRender();
+  }
 
   async function keepSong() {
     if (!draft) return;
@@ -178,7 +187,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
       const r = await fetch("/api/save-song", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deviceId, kidProfileId, kidName: playerName || "", title: draft.title, audioUrl: draft.audioUrl, vibe: draft.vibe, theme: draft.theme, prompt: draft.prompt, coverColor: draft.coverColor, durationSec: draft.durationSec, provider: draft.provider, meta: draft.meta }) });
       const j = await r.json();
-      if (r.ok && j.ok) { setStatus("Saved to My Songs!"); setDraft(null); setPrompt(""); setStep(0); await refresh(); }
+      if (r.ok && j.ok) { setStatus("Saved to My Songs!"); setDraft(null); setPrompt(""); setStep(0); setJustFinished(true); await refresh(); }
       else if (r.status === 409) { setStatus(j.message || "You already have 10 songs!"); setTab("library"); }
       else setStatus("Couldn't save — " + (j.detail || j.error || ("error " + r.status)));
     } catch (e) { setStatus("Couldn't save — " + ((e && e.message) || "network error")); }
@@ -266,6 +275,22 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
     );
   }
 
+  // Learning gate: when a child starts a new song right after finishing one,
+  // show one quick question first. Never hard-fails (QuizGate has Skip + passes
+  // through on errors).
+  if (gateNext) {
+    const proceed = gateNext;
+    return (
+      <QuizGate
+        age={6}
+        goal={getLearningSettings().goal}
+        gameType="song"
+        title="One quick question first!"
+        onPass={() => { setGateNext(null); proceed(); }}
+      />
+    );
+  }
+
   return (
     <div style={S.page}>
       <div style={S.header}>
@@ -333,7 +358,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
                   <div style={S.qHead}>One last thing…</div>
                   <div style={S.subHead}>What's your song about? (optional)</div>
                   <input style={S.input} placeholder="a dragon who loves tacos..." value={prompt} maxLength={120} onChange={(e) => setPrompt(e.target.value)} />
-                  <button style={{ ...S.renderBtn, background: accent, opacity: locking ? 0.85 : 1 }} onClick={doRender} disabled={locking}>
+                  <button style={{ ...S.renderBtn, background: accent, opacity: locking ? 0.85 : 1 }} onClick={startRender} disabled={locking}>
                     {locking ? "Locking it in…" : "Render my song!"}
                   </button>
                   <div style={S.skipRow}><button style={S.backBtn} onClick={() => setStep(TOTAL - 1)}>← Back</button></div>
