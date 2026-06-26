@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Stories — water effects (masked)</title>
+<title>Stories — water effects (banded)</title>
 <style>
   body{margin:0;background:#0e1020;color:#eef0ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:22px;max-width:780px;margin:0 auto}
   h1{font-size:20px;margin:0 0 2px}
@@ -9,12 +9,13 @@
   .lbl{font-size:14px;color:#c3c8ee;margin:6px 0 20px}
   .stage{position:relative;width:100%;aspect-ratio:3/2;border-radius:18px;overflow:hidden;background:#000;border:1px solid #2a3060}
   .stage .base{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  /* WATER BAND mask — confine the ripple to the bottom third where the stream is */
   .water{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
-         -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+         -webkit-mask:linear-gradient(to bottom,transparent 63%,#000 73%);mask:linear-gradient(to bottom,transparent 63%,#000 73%)}
   .lit .water{opacity:1;filter:url(#ripple)}
-  .caustic{position:absolute;inset:0;mix-blend-mode:screen;opacity:0;
-           background:repeating-linear-gradient(100deg,transparent 0 22px,rgba(255,255,255,.12) 26px,transparent 34px);
-           background-size:220% 100%;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+  .caustic{position:absolute;left:0;right:0;bottom:0;height:37%;mix-blend-mode:screen;opacity:0;
+           background:repeating-linear-gradient(100deg,transparent 0 22px,rgba(255,255,255,.13) 26px,transparent 34px);background-size:220% 100%;
+           -webkit-mask:linear-gradient(to bottom,transparent 6%,#000 22%);mask:linear-gradient(to bottom,transparent 6%,#000 22%)}
   .lit .caustic{opacity:1;animation:flow 7s linear infinite}
   .lit .uw{filter:url(#wobble)}
   .bubble{position:absolute;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85),rgba(200,235,255,.25) 60%,transparent 72%);opacity:0}
@@ -29,25 +30,25 @@
 <svg style="position:absolute;width:0;height:0" aria-hidden="true">
   <filter id="ripple"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.045" numOctaves="2" seed="3" result="n">
     <animate attributeName="baseFrequency" dur="7s" values="0.012 0.045;0.016 0.055;0.012 0.045" repeatCount="indefinite"/></feTurbulence>
-    <feDisplacementMap in="SourceGraphic" in2="n" scale="13" xChannelSelector="R" yChannelSelector="G"/></filter>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G"/></filter>
   <filter id="wobble"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.013" numOctaves="2" seed="7" result="n">
     <animate attributeName="baseFrequency" dur="11s" values="0.008 0.013;0.011 0.017;0.008 0.013" repeatCount="indefinite"/></feTurbulence>
     <feDisplacementMap in="SourceGraphic" in2="n" scale="9"/></filter>
 </svg>
 
-<h1>Flowing water — masked to the water</h1>
-<p class="sub">Now the ripple + shimmer are confined to the painted water only (auto-detected by its blue color), so the fox, grass and rocks stay still. Underwater stays a whole-scene sway. Tap to compare.</p>
+<h1>Flowing water — confined to the water</h1>
+<p class="sub">The river scene is composed so the stream sits in a clean band across the bottom and the fox stands on the bank above it. The ripple + shimmer are masked to that band, so only the water moves. Tap to compare.</p>
 <button class="toggle" id="t">Turn effects OFF</button>
 
 <div class="stage lit" id="s1">
-  <img class="base" id="riverBase" crossorigin="anonymous" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=river">
-  <img class="water" id="riverWater" crossorigin="anonymous" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=river">
-  <div class="caustic" id="riverCaustic"></div>
+  <img class="base" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=river">
+  <img class="water" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=river">
+  <div class="caustic"></div>
 </div>
-<p class="lbl"><b>Forest stream —</b> only the stream ripples and shimmers; the fox and banks stay crisp.</p>
+<p class="lbl"><b>Forest stream —</b> only the bottom band (the stream) ripples and shimmers; the fox on the bank stays still.</p>
 
 <div class="stage lit" id="s2">
-  <img class="base uw" crossorigin="anonymous" src="/api/story-library?simg=1&slug=mermaid&style=watercolor&shot=underwater">
+  <img class="base uw" src="/api/story-library?simg=1&slug=mermaid&style=watercolor&shot=underwater">
   <div class="rays"></div>
   <div class="bubble" style="left:24%;bottom:8%;width:9px;height:9px;animation-delay:0s"></div>
   <div class="bubble" style="left:30%;bottom:4%;width:6px;height:6px;animation-delay:1.4s"></div>
@@ -56,40 +57,9 @@
   <div class="bubble" style="left:46%;bottom:3%;width:8px;height:8px;animation-delay:4.6s"></div>
   <div class="bubble" style="left:82%;bottom:9%;width:6px;height:6px;animation-delay:1.0s"></div>
 </div>
-<p class="lbl"><b>Underwater —</b> the whole scene sways; bubbles rise; light-rays drift.</p>
+<p class="lbl"><b>Underwater —</b> the whole scene is water, so the gentle sway covers everything; bubbles rise, light-rays drift.</p>
 
 <script>
-// Auto-build a mask of the WATER (bluish pixels in the lower scene) and apply it
-// to the ripple + caustic layers so the effect only touches water.
-function buildWaterMask(img, vbias){
-  const W=220, H=Math.round(W*img.naturalHeight/img.naturalWidth);
-  const c=document.createElement('canvas'); c.width=W; c.height=H;
-  const cx=c.getContext('2d',{willReadFrequently:true});
-  cx.drawImage(img,0,0,W,H);
-  let dat; try{ dat=cx.getImageData(0,0,W,H);}catch(e){ return null; }
-  const m=cx.createImageData(W,H);
-  for(let p=0;p<dat.data.length;p+=4){
-    const r=dat.data[p],g=dat.data[p+1],b=dat.data[p+2];
-    const row=((p/4)/W)|0;
-    const bluish = b>=r+4 && b>=g-8 && (r+g+b)>150;
-    const water = bluish && row > H*vbias;
-    m.data[p]=m.data[p+1]=m.data[p+2]=255; m.data[p+3]= water?255:0;
-  }
-  cx.putImageData(m,0,0);
-  const c2=document.createElement('canvas'); c2.width=W; c2.height=H;
-  const cx2=c2.getContext('2d'); cx2.filter='blur(2.5px)'; cx2.drawImage(c,0,0);
-  return c2.toDataURL();
-}
-function applyMask(el,url){ if(!url)return; el.style.webkitMaskImage="url("+url+")"; el.style.maskImage="url("+url+")"; }
-function go(){
-  const base=document.getElementById('riverBase');
-  const url=buildWaterMask(base,0.34);
-  applyMask(document.getElementById('riverWater'),url);
-  applyMask(document.getElementById('riverCaustic'),url);
-}
-const base=document.getElementById('riverBase');
-if(base.complete && base.naturalWidth) go(); else base.onload=go;
-
-const t=document.getElementById("t");let on=true;
-t.onclick=()=>{on=!on;document.querySelectorAll(".stage").forEach(s=>s.classList.toggle("lit",on));t.textContent=on?"Turn effects OFF":"Turn effects ON";};
+  const t=document.getElementById("t");let on=true;
+  t.onclick=()=>{on=!on;document.querySelectorAll(".stage").forEach(s=>s.classList.toggle("lit",on));t.textContent=on?"Turn effects OFF":"Turn effects ON";};
 </script>
