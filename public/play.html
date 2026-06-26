@@ -34,7 +34,8 @@ const GAME_CONFIG = window.GAME_CONFIG || {
 
 const W=900, H=540, TILE=60;                  // world units
 const GROUND_Y = H-110;                        // top of the ground band
-const GRAV=0.62, JUMP=-12.6, RUN_BASE=3.2, MAXJUMP_TILES=3.4; // physics
+const GRAV=0.58, JUMP=-13.8, RUN_BASE=3.2; // physics
+const AIR_FRAMES = 2*Math.abs(JUMP)/GRAV;  // frames a full jump stays airborne
 const c=document.getElementById('c'), ctx=c.getContext('2d');
 
 // --- assets ---
@@ -51,6 +52,9 @@ function buildLevel(lv, idx){
   const ground=[], obstacles=[], enemies=[], coins=[];
   let x=0; const n=lv.length;
   let segStart=0;
+  // largest gap (in tiles) a full jump can comfortably clear at this level's speed
+  const speed = lv.speed||RUN_BASE;
+  const safeGapTiles = Math.max(1, Math.floor(speed*AIR_FRAMES*0.62/TILE) - 1);
   // first 3 tiles always solid (safe spawn)
   for(let i=0;i<n;i++){
     const tx=i*TILE;
@@ -58,7 +62,8 @@ function buildLevel(lv, idx){
     if(canGap && rnd()<lv.gapChance){
       // close current ground segment, make a jumpable gap (<= gapMax tiles)
       ground.push({x0:segStart, x1:tx, y:GROUND_Y});
-      const gapTiles=1+Math.floor(rnd()*Math.min(lv.gapMax, Math.floor(MAXJUMP_TILES)));
+      const maxGap=Math.max(1, Math.min(lv.gapMax, safeGapTiles));
+      const gapTiles=1+Math.floor(rnd()*maxGap);
       i+=gapTiles; segStart=(i)*TILE;
       continue;
     }
@@ -105,14 +110,11 @@ function groundUnder(wx){ for(const g of L.ground){ if(wx>=g.x0 && wx<g.x1) retu
 
 // --- simple "perfect player" bot: jump before a gap or obstacle/enemy ---
 function botThink(){
-  const lookahead=player.x+90;
-  const gUnderNow=groundUnder(player.x+24);
-  const gUnderAhead=groundUnder(lookahead+30);
   if(player.onGround){
-    if(gUnderAhead==null){ doJump(); return; }           // gap ahead
-    for(const o of L.obstacles){ if(o.x-player.x>10 && o.x-player.x<78){ doJump(); return; } }
-    for(const e of L.enemies){ if(!e.dead && e.x-player.x>10 && e.x-player.x<70){ doJump(); return; } }
-  } else { jumpHeld=true; }
+    if(groundUnder(player.x+48)==null){ doJump(); return; }   // gap edge just ahead
+    for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>4 && d<60){ doJump(); return; } }
+    for(const e of L.enemies){ if(!e.dead){ const d=e.x-(player.x+24); if(d>4 && d<54){ doJump(); return; } } }
+  } else { jumpHeld=true; }   // hold for full height/distance while airborne
 }
 
 // --- update ---
