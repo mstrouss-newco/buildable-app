@@ -1,5 +1,24 @@
 # Buildable Kids — Session Log
 
+## Library navigation + app-wide emoji removal (June 26 2026)
+
+**Easier libraries + "+ make next one" cards** (Mike: "make the libary easier to navigate... see a empty card with a + to make your next one")
+- Music Maker > My Songs: a dashed "+ Make a Song" card now leads the grid (jumps to the maker, resets the wizard). Header keeps "<- Home"; tabs are the in-screen nav.
+- My Stuff: every tab (Characters, Worlds, Songs) shows a "+ Make new" card, including the empty state, so there is always a clear way to create the next item. Back/Home kept as plain text.
+
+**No emoji anywhere** (Mike: "emojis get rid of them all, everywhere"). Functional symbols kept (arrows, play/pause triangles, check, x, chip cyclers). Replaced colorful emoji with vector icons / text / CSS:
+- src/MyStuff.jsx: tab + heading + Home emoji removed; character/world placeholders are line-art SVGs; Share is plain text.
+- src/lib/CoverThumb.jsx: cover fallback is a vector music note (was an emoji).
+- public/song.html + public/story.html (shared links): brand, CTAs, and cover/scene fallbacks de-emojified (vector note / calm gradient).
+- src/BuildableKids.jsx: new GameGlyph vector icons for the game-type picker + controller; Home / My Stuff / build / publish / error text are emoji-free.
+- src/CreatorScreen.jsx: trait chips are text-only; new ThemeGlyph vector world icons; difficulty uses colored CSS dots.
+- public/games-library.html: trophy/medals/hearts/stars now CSS badges + inline SVGs; game tiles use initials.
+
+**Still emoji (tracked, by design decision):**
+- The mini-games themselves (typing.html, croctot.html, rileys-garden.html) and src/lib/storyEffects.jsx use emoji AS their on-screen artwork. Mike chose "replace with real art" — a per-game art pass (generate sprites via /api/images, wire in, QA), to be done one game at a time.
+- public/landing.html: heavy emoji, but the other live session is actively editing it; deferred to avoid clobbering concurrent work.
+
+
 ## Platformer polish — moving platforms, swinging vines, friendly boss, background music + mute (June 26 2026)
 
 All in the FIXED data-driven engine `public/play.html` (no art-pipeline changes — every new
