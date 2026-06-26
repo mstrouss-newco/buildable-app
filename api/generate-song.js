@@ -48,20 +48,20 @@ const GENRE_DESC = {
 const SINGER_DESC = {
     none: "instrumental (no singer)", boy: "a boy singing",
     girl: "a girl singing", group: "a group of kids singing together",
-    both: "boy and girl singing together",
+    both: "boy and girl singing together", robot: "a fun robot voice",
 };
 const DRUM_DESC = {
     big: "big booming drums", soft: "soft gentle beats",
-    marching: "marching drums", bongos: "bongo drums",
+    marching: "marching drums", bongos: "bongo drums", electro: "electronic drum-machine beats",
 };
 const GUITAR_DESC = {
     electric: "electric guitar", acoustic: "acoustic guitar",
-    twangy: "twangy country guitar", none: "no guitar",
+    twangy: "twangy country guitar", bass: "deep bass guitar", none: "no guitar",
 };
 const STRING_DESC = {
-    violin: "violin", cello: "deep cello strings", harp: "gentle harp", none: "no strings",
+    violin: "violin", cello: "deep cello strings", harp: "gentle harp", orchestra: "a sweeping string orchestra", none: "no strings",
 };
-const SPEED_DESC = { slow: "slow", medium: "medium-paced", fast: "fast and energetic" };
+const SPEED_DESC = { slow: "slow", medium: "medium-paced", fast: "fast and energetic", superfast: "super fast and high-energy", groovy: "a groovy mid-tempo bounce" };
 
 function buildBrief(c) {
     const v = VIBES[c.vibe] || VIBES.happy;
