@@ -205,7 +205,10 @@ requestAnimationFrame(frame);
 
 // expose for QA / picker
 window.BK_GAME = { startLevel:(i)=>startLevel(i), setBot:(b)=>{botMode=b;started=true;}, state:()=>state, level:()=>li,
-  dbg:()=>({px:Math.round(player.x), goal:Math.round(L.goalX), started, runV:player.runV, hp:hearts, onG:player.onGround, vy:Math.round(player.vy), state}) };
+  dbg:()=>({px:Math.round(player.x), goal:Math.round(L.goalX), started, runV:player.runV, hp:hearts, onG:player.onGround, vy:Math.round(player.vy), state}),
+  // QA harness: run a "perfect player" headlessly (no rAF) through a level.
+  sim:(idx, maxFrames)=>{ hearts=3; startLevel(idx); botMode=true; started=true; let f=0; const cap=maxFrames||4000;
+    while(state==="play" && f<cap){ update(); f++; } return { level:idx, result:state, frames:f, coins:coinsGot+"/"+totalCoins }; } };
 </script>
 </body>
 </html>
