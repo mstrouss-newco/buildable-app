@@ -12,7 +12,7 @@
 // No emojis anywhere — shapes/marks are inline SVG or CSS.
 import { useState, useEffect, useRef } from 'react';
 import "./loading-games.css";
-import { getLearningSettings } from "./store";
+import { getLearningSettings, recordAnswer } from "./store";
 import { questionText } from "./QuizGate";
 
 // ---- small inline marks (no emojis) ----
@@ -24,6 +24,13 @@ function CheckMark({ size = 60 }) {
         strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function typeToSubject(t) {
+  if (t === "geometry") return "geometry";
+  if (t === "spelling") return "spelling";
+  if (t === "reading") return "reading";
+  return "math";
 }
 
 function goalToQuizType(goal) {
@@ -186,11 +193,14 @@ function LearningQuestion({ age, goal, operationType }) {
   function choose(i) {
     if (!q || picked === q.correctIndex) return;
     setPicked(i);
+    const subject = typeToSubject(q.type);
     if (i === q.correctIndex) {
       levelRef.current = Math.min(10, levelRef.current + 1);
+      recordAnswer({ subject, correct: true }); // no-op unless Learning Mode on
       setTimeout(() => { if (alive.current) load(); }, 900); // next question while still waiting
     } else {
       levelRef.current = Math.max(1, levelRef.current - 1);
+      recordAnswer({ subject, correct: false }); // no-op unless Learning Mode on
       setTimeout(() => { if (alive.current) setPicked(null); }, 900); // let them retry
     }
   }

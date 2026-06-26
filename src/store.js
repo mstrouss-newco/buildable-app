@@ -295,3 +295,182 @@ export function setLearningSettings(patch) {
 export function learningGoalOptions() {
   return [...GOAL_OPTIONS];
 }
+
+// ---------------- Progress + badges ----------------
+// On-device learning progress, only ever updated when Learning Mode is ON
+// (callers gate this; recordAnswer also no-ops if Learning Mode is off). Kept
+// next to the library data in the same IndexedDB store, mirroring the learning
+// settings cache so reads stay synchronous for the UI. No accounts, no network.
+//
+// Shape:
+//   {
+//     totalCorrect, totalWrong,
+//     bySubject: { math:{right,wrong}, geometry:{...}, spelling:{...}, reading:{...} },
+//     lastActiveDate: "YYYY-MM-DD" | null,
+//     streakDays, badges: [ids], created: <ms>
+//   }
+const PROGRESS_KEY = "progress";
+const SUBJECTS = ["math", "geometry", "spelling", "reading"];
+
+function emptySubjects() {
+  const out = {};
+  for (const s of SUBJECTS) out[s] = { right: 0, wrong: 0 };
+  return out;
+}
+
+function progressDefaults() {
+  return {
+    totalCorrect: 0,
+    totalWrong: 0,
+    bySubject: emptySubjects(),
+    lastActiveDate: null,
+    streakDays: 0,
+    badges: [],
+    created: Date.now(),
+  };
+}
+
+function normalizeProgress(raw) {
+  const src = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const out = progressDefaults();
+  out.totalCorrect = Number.isFinite(src.totalCorrect) ? src.totalCorrect : 0;
+  out.totalWrong = Number.isFinite(src.totalWrong) ? src.totalWrong : 0;
+  const bs = src.bySubject && typeof src.bySubject === "object" ? src.bySubject : {};
+  for (const s of SUBJECTS) {
+    const e = bs[s] && typeof bs[s] === "object" ? bs[s] : {};
+    out.bySubject[s] = {
+      right: Number.isFinite(e.right) ? e.right : 0,
+      wrong: Number.isFinite(e.wrong) ? e.wrong : 0,
+    };
+  }
+  out.lastActiveDate = typeof src.lastActiveDate === "string" ? src.lastActiveDate : null;
+  out.streakDays = Number.isFinite(src.streakDays) ? src.streakDays : 0;
+  out.badges = Array.isArray(src.badges) ? src.badges.filter((b) => typeof b === "string") : [];
+  out.created = Number.isFinite(src.created) ? src.created : Date.now();
+  return out;
+}
+
+let progressCache = progressDefaults();
+
+// Badge catalog. Each `earned(progress)` is a pure predicate over progress.
+// Labels/descriptions are plain text (no emoji); the UI draws SVG marks.
+export const BADGES = [
+  {
+    id: "first-answer",
+    label: "First Answer",
+    description: "Answered your very first question.",
+    earned: (p) => p.totalCorrect >= 1,
+  },
+  {
+    id: "math-whiz",
+    label: "Math Whiz",
+    description: "Got 25 questions right.",
+    earned: (p) => p.totalCorrect >= 25,
+  },
+  {
+    id: "word-builder",
+    label: "Word Builder",
+    description: "Got 15 spelling questions right.",
+    earned: (p) => (p.bySubject.spelling?.right || 0) >= 15,
+  },
+  {
+    id: "bookworm",
+    label: "Bookworm",
+    description: "Got 10 reading questions right.",
+    earned: (p) => (p.bySubject.reading?.right || 0) >= 10,
+  },
+  {
+    id: "on-a-roll",
+    label: "On a Roll",
+    description: "Practiced 7 days in a row.",
+    earned: (p) => p.streakDays >= 7,
+  },
+];
+
+function recomputeBadges(progress) {
+  const earned = BADGES.filter((b) => {
+    try { return !!b.earned(progress); } catch { return false; }
+  }).map((b) => b.id);
+  const had = new Set(progress.badges || []);
+  const newly = earned.filter((id) => !had.has(id));
+  progress.badges = earned;
+  return newly;
+}
+
+// Local calendar day as YYYY-MM-DD (device-local; streaks are about the kid's day).
+function todayKey(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function dayDiff(fromKey, toKey) {
+  // Whole-day difference between two YYYY-MM-DD keys (toKey - fromKey).
+  const a = new Date(fromKey + "T00:00:00");
+  const b = new Date(toKey + "T00:00:00");
+  return Math.round((b - a) / 86400000);
+}
+
+// Load persisted progress into the cache at startup (background).
+(async function hydrateProgress() {
+  try {
+    const db = await openDB();
+    const stored = await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readonly");
+      const r = tx.objectStore(STORE).get(PROGRESS_KEY);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+    if (stored && typeof stored === "object") progressCache = normalizeProgress(stored);
+  } catch {
+    // IndexedDB unavailable — keep defaults.
+  }
+  emit();
+})();
+
+// Synchronous read for the UI. Returns a normalized copy.
+export function getProgress() {
+  return normalizeProgress(progressCache);
+}
+
+// Record a single answer. Returns the array of NEWLY earned badge ids (possibly
+// empty). subject must be one of SUBJECTS; unknown subjects still bump totals.
+// Safe to call always — does nothing unless Learning Mode is enabled.
+export function recordAnswer({ subject, correct } = {}) {
+  if (!learningCache.enabled) return [];
+
+  const p = normalizeProgress(progressCache);
+
+  // Streak update keyed on the calendar day, before counting the answer.
+  const today = todayKey();
+  if (p.lastActiveDate !== today) {
+    if (p.lastActiveDate) {
+      const diff = dayDiff(p.lastActiveDate, today);
+      p.streakDays = diff === 1 ? (p.streakDays || 0) + 1 : 1;
+    } else {
+      p.streakDays = 1;
+    }
+    p.lastActiveDate = today;
+  } else if (!p.streakDays) {
+    p.streakDays = 1;
+  }
+
+  // Counts.
+  if (correct) p.totalCorrect += 1; else p.totalWrong += 1;
+  if (SUBJECTS.includes(subject)) {
+    if (correct) p.bySubject[subject].right += 1;
+    else p.bySubject[subject].wrong += 1;
+  }
+
+  const newly = recomputeBadges(p);
+
+  progressCache = p;
+  idbSet(PROGRESS_KEY, progressCache).catch(() => {});
+  emit();
+  return newly;
+}
+
+export function progressSubjects() {
+  return [...SUBJECTS];
+}

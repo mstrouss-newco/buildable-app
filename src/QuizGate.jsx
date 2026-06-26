@@ -14,6 +14,7 @@
 //   title    string  heading shown above the question (optional)
 // -------------------------------------------------------------
 import { useEffect, useRef, useState } from "react";
+import { recordAnswer, BADGES } from "./store";
 
 // Map a learning goal to a concrete quizType for the API. "mix" alternates so a
 // child gets variety across moments.
@@ -39,11 +40,34 @@ export function questionText(q) {
   return q.question || "Pick the right answer";
 }
 
+
+// Map a generated question's `type` to a progress subject. Unknown types map to
+// math as a safe default (totals still accrue).
+function typeToSubject(t) {
+  if (t === "geometry") return "geometry";
+  if (t === "spelling") return "spelling";
+  if (t === "reading") return "reading";
+  return "math";
+}
+
+// Drawn (no-emoji) badge mark for the celebration: a filled rosette + check.
+function BadgeMark({ size = 64 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="28" r="20" fill="#FFC75A" stroke="#F0972A" strokeWidth="2.5" />
+      <path d="M23 28.5l6 6 12-13" fill="none" stroke="#7a4b00" strokeWidth="4"
+        strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M24 44 L20 60 L32 53 L44 60 L40 44 Z" fill="#E0578F" stroke="#b5396e" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export default function QuizGate({ age = 7, goal = "math", onPass, gameType = "creation", title = "Quick question!" }) {
   const [q, setQ] = useState(null);
   const [loading, setLoading] = useState(true);
   const [picked, setPicked] = useState(null);
   const [wrong, setWrong] = useState(false);
+  const [earnedBadge, setEarnedBadge] = useState(null);
   const levelRef = useRef(1);
   const alive = useRef(true);
 
@@ -84,13 +108,23 @@ export default function QuizGate({ age = 7, goal = "math", onPass, gameType = "c
   }, []);
 
   function choose(i) {
-    if (!q) return;
+    if (!q || picked === q.correctIndex) return;
     setPicked(i);
+    const subject = typeToSubject(q.type);
     if (i === q.correctIndex) {
       levelRef.current = Math.min(10, levelRef.current + 1); // adapt up for next time
-      setTimeout(() => { onPass && onPass(); }, 650);
+      const newly = recordAnswer({ subject, correct: true }); // no-op unless Learning Mode on
+      const badge = newly && newly.length ? BADGES.find((b) => b.id === newly[0]) : null;
+      if (badge) {
+        // Brief celebration, then proceed.
+        setEarnedBadge(badge);
+        setTimeout(() => { onPass && onPass(); }, 1800);
+      } else {
+        setTimeout(() => { onPass && onPass(); }, 650);
+      }
     } else {
       levelRef.current = Math.max(1, levelRef.current - 1); // ease down
+      recordAnswer({ subject, correct: false }); // no-op unless Learning Mode on
       setWrong(true);
     }
   }
@@ -124,6 +158,12 @@ export default function QuizGate({ age = 7, goal = "math", onPass, gameType = "c
                 );
               })}
             </div>
+            {earnedBadge && (
+              <div style={QS.badgeCelebrate}>
+                <BadgeMark />
+                <p style={QS.badgeText}>New badge: {earnedBadge.label}!</p>
+              </div>
+            )}
             {wrong && <p style={QS.tryAgain}>Not quite — try again!</p>}
             <button style={QS.skip} onClick={() => onPass && onPass()}>Skip for now</button>
           </>
@@ -160,6 +200,12 @@ const QS = {
   choiceCorrect: { background: "rgba(0,196,140,0.25)", borderColor: "#00c48c", color: "#fff" },
   choiceWrong: { background: "rgba(214,90,123,0.25)", borderColor: "#d65a7b", color: "#fff" },
   tryAgain: { color: "#ffb3c4", fontSize: 14, fontWeight: 700, margin: "14px 0 0" },
+  badgeCelebrate: {
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+    margin: "16px 0 0", padding: "12px", borderRadius: 16,
+    background: "rgba(255,199,90,0.12)", border: "1px solid rgba(255,199,90,0.35)",
+  },
+  badgeText: { fontFamily: FRED, fontSize: 17, fontWeight: 800, color: "#FFD98A", margin: 0 },
   skip: {
     marginTop: 18, background: "transparent", color: "#fff",
     border: "1px solid rgba(255,255,255,0.35)", borderRadius: 14,

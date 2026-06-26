@@ -34,7 +34,7 @@ import {
   listFamilyProjects, assignProjectToKid,
   signInWithGoogle, completeOAuthRedirect,
 } from "./lib/accounts";
-import { getLearningSettings, setLearningSettings, learningGoalOptions } from "./store";
+import { getLearningSettings, setLearningSettings, learningGoalOptions, getProgress, BADGES, progressSubjects } from "./store";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -483,6 +483,8 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
 
             <LearningModeCard />
 
+            <LearningProgressCard />
+
             {signedIn && (
               <button style={S.linkBtn} onClick={goProjects}>Organize creations by child →</button>
             )}
@@ -581,6 +583,129 @@ function LearningModeCard() {
     </div>
   );
 }
+
+
+// -------------------------------------------------------------
+// Learning progress (grown-ups). Read-only summary of on-device progress:
+// questions right, current day streak, badges earned, per-subject strength
+// bars, and a badge shelf (earned in color, unearned dimmed). All visuals are
+// SVG/CSS — no emoji. Shows nothing meaningful until a kid answers in
+// Learning Mode; copy stays friendly when empty.
+// -------------------------------------------------------------
+const SUBJECT_LABEL = { math: "Math", geometry: "Shapes", spelling: "Spelling", reading: "Reading" };
+
+// Small SVG rosette used in the badge shelf. `on` toggles full color vs dimmed.
+function BadgeIcon({ on, size = 40 }) {
+  const ribbon = on ? "#FFC75A" : "rgba(255,255,255,0.10)";
+  const ribbonEdge = on ? "#F0972A" : "rgba(255,255,255,0.18)";
+  const check = on ? "#7a4b00" : "rgba(255,255,255,0.28)";
+  const tail = on ? "#E0578F" : "rgba(255,255,255,0.10)";
+  const tailEdge = on ? "#b5396e" : "rgba(255,255,255,0.18)";
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="26" r="18" fill={ribbon} stroke={ribbonEdge} strokeWidth="2.5" />
+      <path d="M24 26.5l5.5 5.5 11-12" fill="none" stroke={check} strokeWidth="4"
+        strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M25 41 L21 60 L32 53 L43 60 L39 41 Z" fill={tail} stroke={tailEdge} strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function LearningProgressCard() {
+  const p = getProgress();
+  const subjects = progressSubjects();
+  const earnedSet = new Set(p.badges || []);
+  const attempted = p.totalCorrect + p.totalWrong;
+
+  return (
+    <div style={LP.wrap}>
+      <div style={LP.title}>Learning progress</div>
+      <div style={LP.sub}>Saved on this device. Builds up as your kid plays in Learning Mode.</div>
+
+      <div style={LP.statRow}>
+        <div style={LP.stat}>
+          <div style={LP.statNum}>{p.totalCorrect}</div>
+          <div style={LP.statLabel}>Questions right</div>
+        </div>
+        <div style={LP.stat}>
+          <div style={LP.statNum}>{p.streakDays}</div>
+          <div style={LP.statLabel}>Day streak</div>
+        </div>
+        <div style={LP.stat}>
+          <div style={LP.statNum}>{(p.badges || []).length}</div>
+          <div style={LP.statLabel}>Badges</div>
+        </div>
+      </div>
+
+      {attempted === 0 ? (
+        <div style={LP.empty}>No practice yet. Turn on Learning Mode above, then progress shows up here.</div>
+      ) : (
+        <div style={LP.bars}>
+          {subjects.map((s) => {
+            const e = p.bySubject[s] || { right: 0, wrong: 0 };
+            const att = e.right + e.wrong;
+            const pct = att ? Math.round((e.right / att) * 100) : 0;
+            return (
+              <div key={s} style={LP.barRow}>
+                <span style={LP.barLabel}>{SUBJECT_LABEL[s] || s}</span>
+                <span style={LP.barTrack}>
+                  <span style={{ ...LP.barFill, width: pct + "%" }} />
+                </span>
+                <span style={LP.barNum}>{e.right}/{att}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={LP.shelfLabel}>Badge shelf</div>
+      <div style={LP.shelf}>
+        {BADGES.map((b) => {
+          const on = earnedSet.has(b.id);
+          return (
+            <div key={b.id} style={LP.badge} title={b.description}>
+              <BadgeIcon on={on} />
+              <span style={{ ...LP.badgeLabel, opacity: on ? 1 : 0.45 }}>{b.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const LP = {
+  wrap: {
+    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(155,126,221,0.3)",
+    borderRadius: 16, padding: "14px 16px", margin: "14px 0",
+  },
+  title: { fontSize: 16, fontWeight: 800 },
+  sub: { fontSize: 12.5, opacity: 0.75, marginTop: 3, lineHeight: 1.4 },
+  statRow: { display: "flex", gap: 10, margin: "14px 0 4px" },
+  stat: {
+    flex: 1, textAlign: "center", background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, padding: "10px 6px",
+  },
+  statNum: { fontFamily: FRED, fontSize: 24, fontWeight: 700, color: "#fff" },
+  statLabel: { fontSize: 11.5, opacity: 0.75, marginTop: 2 },
+  empty: { fontSize: 13, opacity: 0.7, lineHeight: 1.45, margin: "12px 0 4px" },
+  bars: { display: "flex", flexDirection: "column", gap: 8, margin: "14px 0 4px" },
+  barRow: { display: "flex", alignItems: "center", gap: 10 },
+  barLabel: { width: 70, fontSize: 13, fontWeight: 700, color: "#D8D2EC", flex: "0 0 auto" },
+  barTrack: {
+    flex: 1, height: 12, borderRadius: 999, background: "rgba(255,255,255,0.12)",
+    overflow: "hidden",
+  },
+  barFill: {
+    display: "block", height: "100%", borderRadius: 999,
+    background: "linear-gradient(90deg,#8A6BFF,#E0578F)",
+  },
+  barNum: { width: 44, textAlign: "right", fontSize: 12, fontWeight: 700, opacity: 0.85, flex: "0 0 auto" },
+  shelfLabel: { fontSize: 13, fontWeight: 700, opacity: 0.9, margin: "16px 0 8px" },
+  shelf: { display: "flex", flexWrap: "wrap", gap: 12 },
+  badge: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4, width: 72 },
+  badgeLabel: { fontSize: 11, fontWeight: 700, textAlign: "center", lineHeight: 1.25 },
+};
 
 const LM = {
   wrap: {

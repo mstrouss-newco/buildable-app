@@ -11,6 +11,9 @@ import {
   deleteLevel,
   listSounds,
   onLibraryChange,
+  getProgress,
+  getLearningSettings,
+  BADGES,
 } from "./store";
 
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
@@ -103,6 +106,8 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
 
       <h1 style={s.heading}>📦 My Stuff</h1>
       <p style={s.tagline}>Everything you've made. Tap "Use" to put it in a new game!</p>
+
+      <BadgeShelf />
 
       <div style={s.tabRow}>
         {tabs.map((t) => (
@@ -202,6 +207,48 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
           </div>
         )
       )}
+    </div>
+  );
+}
+
+// Kid-facing badge shelf. Only appears when Learning Mode is on AND at least one
+// badge is earned, so it never nags an empty shelf. Earned badges are full
+// color; the rest are dimmed "still to earn". No emoji — SVG rosette marks.
+function KidBadgeMark({ on, size = 56 }) {
+  const ribbon = on ? "#FFC75A" : "rgba(255,255,255,0.08)";
+  const ribbonEdge = on ? "#F0972A" : "rgba(255,255,255,0.16)";
+  const check = on ? "#7a4b00" : "rgba(255,255,255,0.22)";
+  const tail = on ? "#d65a7b" : "rgba(255,255,255,0.08)";
+  const tailEdge = on ? "#b5396e" : "rgba(255,255,255,0.16)";
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="26" r="18" fill={ribbon} stroke={ribbonEdge} strokeWidth="2.5" />
+      <path d="M24 26.5l5.5 5.5 11-12" fill="none" stroke={check} strokeWidth="4"
+        strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M25 41 L21 60 L32 53 L43 60 L39 41 Z" fill={tail} stroke={tailEdge} strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function BadgeShelf() {
+  const learning = getLearningSettings();
+  const p = getProgress();
+  const earned = new Set(p.badges || []);
+  if (!learning.enabled || earned.size === 0) return null;
+  return (
+    <div style={s.shelfWrap}>
+      <h2 style={s.shelfHeading}>My Badges</h2>
+      <div style={s.shelfRow}>
+        {BADGES.map((b) => {
+          const on = earned.has(b.id);
+          return (
+            <div key={b.id} style={s.shelfBadge} title={b.description}>
+              <KidBadgeMark on={on} />
+              <span style={{ ...s.shelfBadgeLabel, opacity: on ? 1 : 0.4 }}>{b.label}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -353,6 +400,18 @@ const s = {
     fontSize: "14px",
     fontFamily: NUN,
   },
+  shelfWrap: {
+    width: "100%", maxWidth: "1000px", margin: "0 auto 24px",
+    background: CARD_BG, border: CARD_BORDER, borderRadius: "20px",
+    padding: "18px 20px", boxShadow: "0 16px 44px rgba(0,0,0,0.35)",
+  },
+  shelfHeading: {
+    fontFamily: FRED, fontSize: "22px", fontWeight: "700", color: "#fff",
+    textAlign: "center", margin: "0 0 14px",
+  },
+  shelfRow: { display: "flex", flexWrap: "wrap", gap: "16px", justifyContent: "center" },
+  shelfBadge: { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", width: "84px" },
+  shelfBadgeLabel: { fontSize: "12px", fontWeight: "700", textAlign: "center", lineHeight: 1.25, color: "#fff" },
   empty: {
     background: CARD_BG,
     border: CARD_BORDER,
