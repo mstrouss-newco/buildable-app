@@ -70,10 +70,10 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
   // assortment loads each visit. They can also build their own below.
   const { characters: libraryHeroes, loading: heroesLoading } = useCharacters(12);
   const TRAITS = [
-    { word: "fluffy", emoji: "☁️" }, { word: "tiny", emoji: "🐭" }, { word: "giant", emoji: "🦣" },
-    { word: "sparkly", emoji: "✨" }, { word: "magical", emoji: "🪄" }, { word: "rainbow", emoji: "🌈" },
-    { word: "golden", emoji: "🥇" }, { word: "icy", emoji: "❄️" }, { word: "fire", emoji: "🔥" },
-    { word: "striped", emoji: "🦓" }, { word: "glowing", emoji: "💡" }, { word: "friendly", emoji: "😊" },
+    { word: "fluffy" }, { word: "tiny" }, { word: "giant" },
+    { word: "sparkly" }, { word: "magical" }, { word: "rainbow" },
+    { word: "golden" }, { word: "icy" }, { word: "fire" },
+    { word: "striped" }, { word: "glowing" }, { word: "friendly" },
   ];
 
   const toggleTrait = (word) => {
@@ -131,7 +131,7 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
                   ))}
                 </div>
               )}
-              <p style={styles.heroHint}>Tap a hero to use it — or build your own below ✨</p>
+              <p style={styles.heroHint}>Tap a hero to use it — or build your own below</p>
             </div>
           )}
 
@@ -145,7 +145,6 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
                   background: picked.includes(t.word) ? GRAD : "rgba(255,255,255,0.08)",
                   color: picked.includes(t.word) ? "#fff" : "#e9e6f5",
                 }}>
-                  <span style={{ fontSize: "22px" }}>{t.emoji}</span>
                   <span>{t.word}</span>
                 </button>
               ))}
@@ -154,7 +153,7 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
 
           {/* Optional words box (kept for kids who want to type) */}
           <details style={styles.detailsBox}>
-            <summary style={styles.detailsSummary}>Or type your own words ✍️</summary>
+            <summary style={styles.detailsSummary}>Or type your own words</summary>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g., a tiny fluffy pink dragon with sparkly wings..." style={styles.textarea} />
           </details>
@@ -199,7 +198,6 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
 
   const themeOptions = ["forest", "castle", "underwater", "space", "desert", "volcano", "candy kingdom"];
   const difficultyOptions = ["easy", "medium", "hard"];
-  const themeEmoji = { forest: "🌲", castle: "🏰", underwater: "🌊", space: "🚀", desert: "🏜️", volcano: "🌋", "candy kingdom": "🍭" };
 
   // Show real background art for the chosen theme so kids SEE the world.
   const { layers } = useAssets(theme);
@@ -253,7 +251,7 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
             <div style={styles.themeGrid}>
               {themeOptions.map((t) => {
                 return (
-                  <ThemeCard key={t} theme={t} emoji={themeEmoji[t] || "🌍"}
+                  <ThemeCard key={t} theme={t}
                     selected={theme === t} onClick={() => setTheme(t)} />
                 );
               })}
@@ -271,7 +269,7 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
                   color: difficulty === d ? "#fff" : "#cfc9e6",
                   boxShadow: difficulty === d ? "0 6px 16px rgba(155,126,221,0.45)" : "none"
                 }}>
-                  {d === "easy" ? "🟢 " : d === "medium" ? "🟡 " : "🔴 "}{d.charAt(0).toUpperCase() + d.slice(1)}
+                  <span style={{ display: "inline-block", width: "10px", height: "10px", borderRadius: "50%", marginRight: "7px", verticalAlign: "middle", background: d === "easy" ? "#46d17f" : d === "medium" ? "#f5c451" : "#ef6b6b" }} />{d.charAt(0).toUpperCase() + d.slice(1)}
                 </button>
               ))}
             </div>
@@ -279,7 +277,7 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
 
           {/* Optional words box */}
           <details style={styles.detailsBox}>
-            <summary style={styles.detailsSummary}>Or describe it in your own words ✍️</summary>
+            <summary style={styles.detailsSummary}>Or describe it in your own words</summary>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g., a spooky haunted castle with floating ghosts..." style={styles.textarea} />
           </details>
@@ -318,7 +316,21 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
 }
 
 // A theme card that loads and shows that theme's real sky art.
-function ThemeCard({ theme, emoji, selected, onClick }) {
+function ThemeGlyph({ theme, size = 40 }) {
+  const p = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "#e6def7", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" };
+  switch (theme) {
+    case "forest": return (<svg {...p}><path d="M12 3l5 8h-3l3 5H7l3-5H7z"/><path d="M12 16v4"/></svg>);
+    case "castle": return (<svg {...p}><path d="M4 21V9l2 1V7l2 1V6l2 1 2-1v2l2-1v3l2-1v12z"/><path d="M10 21v-4h4v4"/></svg>);
+    case "underwater": return (<svg {...p}><path d="M3 8c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/><path d="M3 13c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/><path d="M3 18c2 2 4 2 6 0s4-2 6 0 4 2 6 0"/></svg>);
+    case "space": return (<svg {...p}><circle cx="12" cy="12" r="4"/><ellipse cx="12" cy="12" rx="9" ry="3.4" transform="rotate(-20 12 12)"/></svg>);
+    case "desert": return (<svg {...p}><path d="M12 21V6"/><path d="M12 12H9.5a2 2 0 0 1-2-2V9"/><path d="M12 14h2.5a2 2 0 0 0 2-2v-1"/></svg>);
+    case "volcano": return (<svg {...p}><path d="M3 21l6-11 3 4 2-3 7 10z"/><path d="M9 10c0-2 2-2 2-4"/></svg>);
+    case "candy kingdom": return (<svg {...p}><circle cx="10" cy="9" r="5"/><path d="M10 14v7"/></svg>);
+    default: return (<svg {...p}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>);
+  }
+}
+
+function ThemeCard({ theme, selected, onClick }) {
   const { layers } = useAssets(theme);
   const art = layers.find((l) => /sky/i.test(l.type || "")) || layers[0];
   return (
@@ -328,8 +340,8 @@ function ThemeCard({ theme, emoji, selected, onClick }) {
       boxShadow: selected ? "0 8px 22px rgba(214,90,123,0.5)" : "none",
     }}>
       {art ? <img src={art.imageUrl} alt={theme} style={styles.themeCardImg} loading="lazy" />
-           : <div style={styles.themeCardFallback}><span style={{fontSize:"34px"}}>{emoji}</span></div>}
-      <span style={styles.themeCardLabel}>{emoji} {theme.charAt(0).toUpperCase() + theme.slice(1)}</span>
+           : <div style={styles.themeCardFallback}><ThemeGlyph theme={theme} size={40} /></div>}
+      <span style={styles.themeCardLabel}>{theme.charAt(0).toUpperCase() + theme.slice(1)}</span>
     </button>
   );
 }
