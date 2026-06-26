@@ -1558,3 +1558,34 @@ wizard** (`StoryMaker.jsx`):
   saved `character_sheet` (so the cast looks identical), with a new randomized problem.
   `generate-story` accepts `priorCharacterSheet` and is told to write a different adventure
   for the same characters.
+
+## Learning Mode — optional education layer (default OFF) — June 26 2026
+
+Toggleable layer that turns the existing "waiting" moments into one quick, age-aware
+learning question. **Default OFF** — kids see no change until a grown-up enables it in the
+**Grown-ups portal** (`<LearningModeCard />` in `src/GrownUpScreen.jsx`). Setting persists
+via `getLearningSettings()` / `setLearningSettings()` in `src/store.js`
+(shape `{ enabled:false, goal:"math"|"reading"|"mix" }`).
+
+**Where the question fires (no new screens — fills existing pauses):**
+1. During a render/generation wait — `src/LoadingGames.jsx` shows one real question (adaptive
+   `level` rises on correct / falls on wrong) instead of the generic mini-games when enabled.
+2. Before play starts — gated in `src/CreatorScreen.jsx` (world-build → play boundary).
+3. Starting a NEW creation right after finishing one — `src/StoryMaker.jsx` and
+   `src/MusicMaker.jsx` (each tracks a `justFinished` flag so it only triggers after a real
+   finish; MusicMaker gates the next render via `startRender`).
+
+**Component:** `src/QuizGate.jsx` — fetches one question, renders it (no emoji), `onPass()`
+on correct, retry on wrong, always a Skip escape, and passes through on any API error so a
+gate can never trap a child.
+
+**API:** `api/generate-quiz.js` — `quizType` of `math`/`geometry` generated locally and
+instantly (scaled by level); `spelling`/`reading` via Claude Haiku, cached in Supabase
+`quiz_cache`. EVERY failure path returns a safe local fallback (never `{fallback:true}` that
+blocks). No emojis in prompts or payloads (uses a text `clue`, not an emoji field).
+
+**Non-negotiable:** no emojis anywhere (use SVG/CSS); the gate must never hard-block a kid.
+
+**Still TODO:** kid-facing badges/streak + a parent progress dashboard (only the toggle +
+quiz gates shipped so far). Pre-existing emojis remain in some older screens (home tiles,
+`CreatorScreen` pickers) — a separate cleanup pass.
