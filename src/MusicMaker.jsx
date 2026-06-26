@@ -377,7 +377,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
               <SongPlayer src={draft.audioUrl} color={draft.coverColor} autoPlay size={92} />
               <div style={S.draftBtns}>
                 <button style={{ ...S.keepBtn, background: draft.coverColor }} onClick={keepSong} aria-label="Save this song" title="Save">
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="#15131f" aria-hidden="true"><path d="M12 21s-7.6-4.7-10.1-9.2C.2 8.5 1.9 5.2 5.2 5.2c1.9 0 3.2 1.1 3.8 2.1.6-1 1.9-2.1 3.8-2.1 3.3 0 5 3.3 3.3 6.6C19.6 16.3 12 21 12 21z"/></svg>
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="#15131f" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                   <span style={S.btnCap}>Save</span>
                 </button>
                 <button style={S.againBtn} onClick={makeSong} aria-label="Make another one" title="Try again">
