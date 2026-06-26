@@ -88,6 +88,20 @@ const GRAV=0.58, JUMP=-13.8, RUN_BASE=3.2; // physics
 const AIR_FRAMES = 2*Math.abs(JUMP)/GRAV;  // frames a full jump stays airborne
 const SLIDE_FRAMES=34;
 const c=document.getElementById('c'), ctx=c.getContext('2d');
+// --- sound (Web Audio; resumes on first tap, so it works on iPad) ---
+let AX=null, soundOn=true;
+function actx(){ if(!AX){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(AC)AX=new AC(); }catch{} } if(AX&&AX.state==='suspended'){ try{AX.resume();}catch{} } return AX; }
+function blip(f,dur,type,vol,glide){ const a=actx(); if(!a||!soundOn)return; try{ const o=a.createOscillator(),g=a.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f,a.currentTime); if(glide)o.frequency.exponentialRampToValueAtTime(glide,a.currentTime+dur); g.gain.setValueAtTime(0.0001,a.currentTime); g.gain.exponentialRampToValueAtTime(vol||0.14,a.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur); o.connect(g);g.connect(a.destination); o.start(); o.stop(a.currentTime+dur+0.03);}catch{} }
+const SFX={
+  jump:()=>blip(420,0.16,'sine',0.12,760),
+  land:()=>blip(190,0.07,'sine',0.06,120),
+  coin:()=>blip(900,0.09,'square',0.09,1340),
+  star:()=>{blip(880,0.12,'triangle',0.13,1320); setTimeout(()=>blip(1320,0.18,'triangle',0.13,1760),90);},
+  power:()=>{blip(660,0.10,'triangle',0.12,990); setTimeout(()=>blip(990,0.14,'triangle',0.12,1320),80);},
+  bounce:()=>blip(280,0.18,'sine',0.13,920),
+  hurt:()=>blip(320,0.22,'sawtooth',0.12,120),
+  win:()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,0.2,'triangle',0.14),i*130));}
+};
 
 // --- assets ---
 const hero=new Image(); hero.crossOrigin="anonymous"; hero.src=GAME_CONFIG.heroUrl;
@@ -203,8 +217,8 @@ function doJump(){
   if(!started){started=true;}
   if(player.slide>0) player.slide=0;                       // jump cancels a slide
   const jv = springT>0 ? 1.2 : 1;                          // spring power-up = higher jump
-  if(player.onGround){ player.vy=JUMP*jv; player.onGround=false; player.dj=true; }
-  else if(player.dj){ player.vy=JUMP*0.82*jv; player.dj=false; }
+  if(player.onGround){ player.vy=JUMP*jv; player.onGround=false; player.dj=true; SFX.jump(); }
+  else if(player.dj){ player.vy=JUMP*0.82*jv; player.dj=false; SFX.jump(); }
   jumpHeld=true;
 }
 function doSlide(){ if(!started){started=true;return;} if(player.onGround && player.slide<=0){ player.slide=SLIDE_FRAMES; } }
@@ -276,8 +290,8 @@ function update(){
       for(const pf of L.platforms){ if(cx>=pf.x && cx<=pf.x+pf.w && prevFeet<=pf.y && feet>=pf.y){ if(landY==null||pf.y<landY) landY=pf.y; } }
       for(const bp of L.bounces){ if(cx>=bp.x && cx<=bp.x+bp.w && prevFeet<=bp.y && feet>=bp.y){ bounce=true; bp.t=10; } }
     }
-    if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; }
-    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; }
+    if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; SFX.bounce(); }
+    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); SFX.land(); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; }
     else { player.onGround=false; }
   }
   player.r = player.onGround?0:Math.max(-0.5,Math.min(0.5,player.vy*0.03));
@@ -290,10 +304,10 @@ function update(){
   // magnet power-up: pull nearby coins toward the hero
   if(magnetT>0){ for(const k of L.coins){ if(k.got)continue; const dx=(player.x+24)-k.x, dy=(player.y+30)-k.y; if(dx*dx+dy*dy<170*170){ k.x+=dx*0.16; k.y+=dy*0.16; } } }
   // coins
-  for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; } }
-  for(const st of L.stars){ if(!st.got && Math.abs((player.x+24)-st.x)<38 && Math.abs((player.y+30)-st.y)<46){ st.got=true; starsGot++; } }
+  for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; SFX.coin(); } }
+  for(const st of L.stars){ if(!st.got && Math.abs((player.x+24)-st.x)<38 && Math.abs((player.y+30)-st.y)<46){ st.got=true; starsGot++; SFX.star(); } }
   // power-up pickups
-  for(const u of L.powerups){ if(u.got)continue; if(Math.abs((player.x+24)-u.x)<36 && Math.abs((player.y+30)-u.y)<44){ u.got=true; if(u.kind==="shield")shieldOn=true; else if(u.kind==="magnet")magnetT=360; else if(u.kind==="spring")springT=360; else if(u.kind==="star")starT=360; else if(u.kind==="heart"&&hearts<3)hearts++; } }
+  for(const u of L.powerups){ if(u.got)continue; if(Math.abs((player.x+24)-u.x)<36 && Math.abs((player.y+30)-u.y)<44){ u.got=true; SFX.power(); if(u.kind==="shield")shieldOn=true; else if(u.kind==="magnet")magnetT=360; else if(u.kind==="spring")springT=360; else if(u.kind==="star")starT=360; else if(u.kind==="heart"&&hearts<3)hearts++; } }
   // enemies (walk a little)
   for(const e of L.enemies){ if(e.dead)continue; e.x+=e.dir*0.6; if(Math.abs(e.x-e.base)>e.range)e.dir*=-1;
     const dx=Math.abs((player.x+24)-e.x), dy=(player.y+60)-e.y;
@@ -308,11 +322,11 @@ function update(){
   // low barriers: must SLIDE under (can't jump over)
   for(const b of L.lowBars){ const dx=Math.abs((player.x+24)-b.x); if(dx<26){ const heroTop=player.y+(player.slide>0?26:0); if(heroTop < GROUND_Y-36 && invuln<=0){ takeHit(); } } }
   // reach goal
-  if(player.x>=L.goalX){ state="win"; }
+  if(player.x>=L.goalX){ state="win"; SFX.win(); }
 }
 function takeHit(){ if(starT>0) return; if(shieldOn){ shieldOn=false; invuln=70; return; } loseHeart(false); }
 function loseHeart(fell){
-  hearts--; invuln=70;
+  hearts--; invuln=70; SFX.hurt();
   if(hearts<=0){ state="lose"; return; }
   // gentle: nudge back to safe ground
   if(fell){ let sx=player.x-TILE*2; while(sx>90 && groundUnder(sx)==null) sx-=20; player.x=Math.max(90,sx); player.y=GROUND_Y-80; player.vy=0; }

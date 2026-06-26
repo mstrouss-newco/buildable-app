@@ -11,6 +11,7 @@ import CoverThumb from "./lib/CoverThumb";
 import IconImg from "./lib/IconImg";
 import QuizGate from "./QuizGate";
 import { getLearningSettings } from "./store";
+import { registerAudio } from './lib/audioUnlock.js';
 
 const MAX_SONGS = 10;
 
@@ -152,7 +153,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
   useEffect(() => { injectKeyframes(); refresh(); QUESTION_PHRASES.forEach(preload); }, []);
 
   function audioEl() {
-    if (!audioElRef.current && typeof window !== "undefined") { const a = new Audio(); a.preload = "auto"; audioElRef.current = a; }
+    if (!audioElRef.current && typeof window !== "undefined") { const a = new Audio(); a.preload = "auto"; registerAudio(a); audioElRef.current = a; }
     return audioElRef.current;
   }
   function stopVoice() {
