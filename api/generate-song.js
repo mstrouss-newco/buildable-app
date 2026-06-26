@@ -44,6 +44,7 @@ const GENRE_DESC = {
     pop: "pop", country: "country with a twang", hiphop: "hip hop with a beat",
     rock: "rock", disco: "funky disco", sleepy: "soft sleepy-time lullaby",
     marching: "marching-band style", reggae: "laid-back reggae",
+    kpop: "upbeat K-pop with bright synths and a catchy sing-along hook",
 };
 const SINGER_DESC = {
     none: "instrumental (no singer)", boy: "a boy singing",

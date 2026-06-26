@@ -29,6 +29,7 @@ const GENRES = [
   { id: "pop", label: "Pop" }, { id: "country", label: "Country" }, { id: "hiphop", label: "Hip Hop" },
   { id: "rock", label: "Rock" }, { id: "disco", label: "Disco" }, { id: "sleepy", label: "Sleepy Time" },
   { id: "marching", label: "Marching" }, { id: "reggae", label: "Reggae" },
+  { id: "kpop", label: "K-Pop" },
 ];
 const SINGERS = [
   { id: "none", label: "No Singer", glyph: "none" },
