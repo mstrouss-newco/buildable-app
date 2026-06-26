@@ -261,18 +261,36 @@ export function libraryCounts() {
 // (optionally) between-moment gates into ONE real quick question. Defaults to
 // OFF so the app behaves exactly as before unless a grown-up turns it on.
 //
-// Shape: { enabled: boolean, goal: "math" | "reading" | "mix" }
+// Shape: { enabled: boolean, goal: "math" | "reading" | "mix", age: number }
+// `age` is the child's age, used to size quiz difficulty. It lives inside the
+// per-kid learning settings (already scoped + cloud-synced), so it follows the
+// kid with NO database schema change.
 const LEARNING_KEY = "learning";
-const LEARNING_DEFAULTS = { enabled: false, goal: "math" };
+const AGE_MIN = 3;
+const AGE_MAX = 13;
+const AGE_DEFAULT = 7;
+const LEARNING_DEFAULTS = { enabled: false, goal: "math", age: AGE_DEFAULT };
 const GOAL_OPTIONS = ["math", "reading", "mix"];
 let learningCache = { ...LEARNING_DEFAULTS };
 let learningChangedAt = 0; // ms of last local settings change (for cloud merge tie-break)
+
+// Clamp any value to a sane child age, falling back to the default.
+function clampAge(v) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return AGE_DEFAULT;
+  return Math.min(AGE_MAX, Math.max(AGE_MIN, n));
+}
+
+export function learningAgeRange() {
+  return { min: AGE_MIN, max: AGE_MAX, default: AGE_DEFAULT };
+}
 
 function normalizeLearning(raw) {
   const src = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const enabled = src.enabled === true;
   const goal = GOAL_OPTIONS.includes(src.goal) ? src.goal : LEARNING_DEFAULTS.goal;
-  return { enabled, goal };
+  const age = clampAge(src.age == null ? AGE_DEFAULT : src.age);
+  return { enabled, goal, age };
 }
 
 // Load persisted learning settings for the current scope into the cache.

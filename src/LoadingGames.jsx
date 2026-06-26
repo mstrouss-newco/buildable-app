@@ -43,7 +43,7 @@ function goalToQuizType(goal) {
   return Math.random() < 0.25 ? "geometry" : "math";
 }
 
-export default function LoadingGames({ isLoading, onComplete, operationType = 'character', age = 7, gameData }) {
+export default function LoadingGames({ isLoading, onComplete, operationType = 'character', age, gameData }) {
   const [gameType, setGameType] = useState('numbers');
   const [gameState, setGameState] = useState('playing');
   const [score, setScore] = useState(0);
@@ -51,7 +51,7 @@ export default function LoadingGames({ isLoading, onComplete, operationType = 'c
 
   // Read learning settings once at mount so behavior is stable for this wait.
   const learning = getLearningSettings();
-  const learnAge = (gameData && (gameData.age || gameData.character?.age)) || age || 7;
+  const learnAge = (gameData && (gameData.age || gameData.character?.age)) || age || learning.age || 7;
 
   useEffect(() => {
     if (!isLoading && gameState === 'playing') {

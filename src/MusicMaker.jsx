@@ -230,7 +230,9 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
   function doRender() { if (busy || locking) return; speak("Rendering your song!"); setLocking(true); setTimeout(() => { setLocking(false); makeSong(); }, 1450); }
   function startRender() {
     const ls = getLearningSettings();
-    if (ls.enabled && justFinished) { setJustFinished(false); setGateNext(() => doRender); return; }
+    // Learning Mode on: always gate the render with one quick question (every
+    // song, not only the second one). Skippable via QuizGate; never traps a kid.
+    if (ls.enabled) { setJustFinished(false); setGateNext(() => doRender); return; }
     doRender();
   }
 
@@ -337,7 +339,6 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
     const proceed = gateNext;
     return (
       <QuizGate
-        age={6}
         goal={getLearningSettings().goal}
         gameType="song"
         title="One quick question first!"

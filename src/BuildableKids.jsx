@@ -10,9 +10,10 @@ import AdminDashboard from "./AdminDashboard";
 import GrownUpScreen from "./GrownUpScreen";
 import StoryMaker from "./StoryMaker";
 import LoadingGames from "./LoadingGames";
+import QuizGate from "./QuizGate";
 import FamilyChess from "./FamilyChess";
 import { listMyMatches } from "./lib/chessMatches";
-import { saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid } from "./store";
+import { saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
 import { getActiveKid, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
 
 // Screens
@@ -492,6 +493,19 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
 }
 
 function TypingScreen({ onHome }) {
+  // Learning Mode: one quick question before the typing game opens. Shows once
+  // per entry; Skip/pass both proceed so a kid is never trapped. Off by default.
+  const [gate, setGate] = useState(() => getLearningSettings().enabled);
+  if (gate) {
+    return (
+      <QuizGate
+        goal={getLearningSettings().goal}
+        gameType="typing"
+        title="One quick question first!"
+        onPass={() => setGate(false)}
+      />
+    );
+  }
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button

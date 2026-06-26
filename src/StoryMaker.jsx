@@ -241,7 +241,6 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
     const proceed = gateNext;
     return (
       <QuizGate
-        age={6}
         goal={getLearningSettings().goal}
         gameType="story"
         title="One quick question first!"

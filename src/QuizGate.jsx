@@ -14,7 +14,7 @@
 //   title    string  heading shown above the question (optional)
 // -------------------------------------------------------------
 import { useEffect, useRef, useState } from "react";
-import { recordAnswer, BADGES, getReviewItem, recordMiss, clearMiss, weakestSubject } from "./store";
+import { recordAnswer, BADGES, getReviewItem, recordMiss, clearMiss, weakestSubject, getLearningSettings } from "./store";
 
 // Map a learning goal to a concrete quizType for the API. "mix" alternates so a
 // child gets variety across moments.
@@ -70,7 +70,9 @@ function BadgeMark({ size = 64 }) {
   );
 }
 
-export default function QuizGate({ age = 7, goal = "math", onPass, gameType = "creation", title = "Quick question!" }) {
+export default function QuizGate({ age, goal = "math", onPass, gameType = "creation", title = "Quick question!" }) {
+  // Fall back to the active kid's saved age when no explicit age is passed.
+  const effectiveAge = age == null ? (getLearningSettings().age || 7) : age;
   const [q, setQ] = useState(null);
   const [loading, setLoading] = useState(true);
   const [picked, setPicked] = useState(null);
@@ -97,7 +99,7 @@ export default function QuizGate({ age = 7, goal = "math", onPass, gameType = "c
       const r = await fetch("/api/generate-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ age, level: levelRef.current, gameType, quizType }),
+        body: JSON.stringify({ age: effectiveAge, level: levelRef.current, gameType, quizType }),
       });
       const data = await r.json();
       if (!alive.current) return;

@@ -232,7 +232,6 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
   if (levelGate) {
     return (
       <QuizGate
-        age={7}
         goal={getLearningSettings().goal}
         gameType="level"
         title="One quick question before you play!"

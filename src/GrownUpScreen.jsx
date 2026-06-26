@@ -34,7 +34,7 @@ import {
   listFamilyProjects, assignProjectToKid,
   signInWithGoogle, completeOAuthRedirect,
 } from "./lib/accounts";
-import { getLearningSettings, setLearningSettings, learningGoalOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount } from "./store";
+import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount } from "./store";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -545,6 +545,12 @@ function LearningModeCard() {
     setSettings(setLearningSettings({ goal }));
   }
 
+  const ageRange = learningAgeRange();
+  function setAge(next) {
+    const clamped = Math.min(ageRange.max, Math.max(ageRange.min, next));
+    setSettings(setLearningSettings({ age: clamped }));
+  }
+
   return (
     <div style={LM.wrap}>
       <div style={LM.headerRow}>
@@ -578,6 +584,38 @@ function LearningModeCard() {
               </button>
             ))}
           </div>
+
+          <div style={LM.ageLabel}>Child's age</div>
+          <div style={LM.ageRow}>
+            <button
+              type="button"
+              aria-label="Younger"
+              disabled={settings.age <= ageRange.min}
+              onClick={() => setAge(settings.age - 1)}
+              style={{ ...LM.ageStep, ...(settings.age <= ageRange.min ? LM.ageStepOff : {}) }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="3" y="7" width="10" height="2" rx="1" fill="currentColor" />
+              </svg>
+            </button>
+            <div style={LM.ageValue}>
+              <span style={LM.ageNum}>{settings.age}</span>
+              <span style={LM.ageUnit}>years</span>
+            </div>
+            <button
+              type="button"
+              aria-label="Older"
+              disabled={settings.age >= ageRange.max}
+              onClick={() => setAge(settings.age + 1)}
+              style={{ ...LM.ageStep, ...(settings.age >= ageRange.max ? LM.ageStepOff : {}) }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="3" y="7" width="10" height="2" rx="1" fill="currentColor" />
+                <rect x="7" y="3" width="2" height="10" rx="1" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
+          <div style={LM.ageHint}>Sets how hard the practice questions are.</div>
         </div>
       )}
     </div>
@@ -747,6 +785,21 @@ const LM = {
     fontFamily: NUN,
   },
   goalBtnActive: { background: "#fff", color: "#b3477a", borderColor: "#fff" },
+  ageLabel: { fontSize: 13, fontWeight: 700, margin: "14px 0 8px", opacity: 0.9 },
+  ageRow: { display: "flex", alignItems: "center", gap: 12 },
+  ageStep: {
+    width: 40, height: 40, borderRadius: 12, border: "1px solid rgba(255,255,255,0.25)",
+    background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+  },
+  ageStepOff: { opacity: 0.35, cursor: "default" },
+  ageValue: {
+    minWidth: 84, textAlign: "center", display: "flex", flexDirection: "column",
+    alignItems: "center", lineHeight: 1,
+  },
+  ageNum: { fontFamily: FRED, fontSize: 26, fontWeight: 700, color: "#fff" },
+  ageUnit: { fontSize: 11.5, opacity: 0.7, marginTop: 2 },
+  ageHint: { fontSize: 12, opacity: 0.7, marginTop: 8, lineHeight: 1.4 },
 };
 
 const S = {
