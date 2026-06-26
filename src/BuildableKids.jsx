@@ -472,7 +472,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#F2789E,#E0578F)"><BookGlyph /></AppIcon>}
           title="Stories" desc="Turn your ideas into a living picture book."
-          badge="New" badgeColor="#7CF6B0" onClick={onStories}
+          badge="New" badgeColor="#7CF6B0" badge="Coming soon" badgeColor="#D8D2EC" disabled
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#4FA6E8,#2F8FD6)"><KeyboardGlyph /></AppIcon>}
