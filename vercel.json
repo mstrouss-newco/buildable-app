@@ -112,6 +112,10 @@
       "dest": "/song.html?id=$1"
     },
     {
+      "src": "/typing.html",
+      "dest": "/typing.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
