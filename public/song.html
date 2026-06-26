@@ -37,33 +37,33 @@
 </head>
 <body>
   <div class="brand">
-    <div class="logo">🌟 Buildable Kids</div>
-    <a class="free" href="/">✨ Make your own — free</a>
+    <div class="logo">Buildable Kids</div>
+    <a class="free" href="/">Make your own — free</a>
   </div>
 
-  <div id="loading" class="state"><h1>🎵 Loading the song…</h1></div>
+  <div id="loading" class="state"><h1>Loading the song…</h1></div>
 
   <div id="missing" class="state hidden">
-    <h1>This song isn't available 🙈</h1>
+    <h1>This song isn't available</h1>
     <p>The link may be old or the song was removed. Make your own tune in a minute — it's free!</p>
-    <a class="free" style="padding:14px 30px;font-size:16px" href="/">🎶 Make your own song</a>
+    <a class="free" style="padding:14px 30px;font-size:16px" href="/">Make your own song</a>
   </div>
 
   <div id="player" class="player hidden">
-    <div class="cover" id="cover">🎵</div>
+    <div class="cover" id="cover"></div>
     <div class="song-title" id="title"></div>
     <div class="song-meta" id="meta"></div>
     <audio id="audio" controls preload="auto"></audio>
   </div>
 
   <div id="cta" class="cta hidden">
-    <h2>Made by a kid on Buildable Kids ✨</h2>
+    <h2>Made by a kid on Buildable Kids</h2>
     <p>Your child can make their own songs, stories &amp; games — free to start.</p>
     <a href="/">Make your own — free</a>
   </div>
 
 <script>
-  var VIBE_EMOJI={happy:"😀",epic:"🐉",spooky:"👻",silly:"🤣",chill:"😎",dance:"🕺"};
+  var NOTE_SVG='<svg width="96" height="96" viewBox="0 0 24 24" fill="rgba(255,255,255,.92)"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="2.6"/><circle cx="16" cy="16" r="2.6"/></svg>';
   function show(id){["loading","missing","player"].forEach(function(x){document.getElementById(x).classList.toggle("hidden",x!==id);});
     document.getElementById("cta").classList.toggle("hidden",id!=="player");}
   function getId(){
@@ -75,7 +75,7 @@
     var color=song.cover_color||"#7C5CFC";
     var cover=document.getElementById("cover");
     cover.style.background="linear-gradient(150deg,"+color+",#1a1330)";
-    cover.textContent=VIBE_EMOJI[song.vibe]||"🎵";
+    cover.innerHTML=NOTE_SVG;
     document.getElementById("title").textContent=song.title||"My Song";
     var meta=[song.vibe,song.theme].filter(Boolean).join(" · ");
     document.getElementById("meta").textContent=meta||"a song I made";

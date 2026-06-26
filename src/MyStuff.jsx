@@ -93,19 +93,19 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
   };
 
   const tabs = [
-    { id: "characters", label: "My Characters", icon: "🦸", count: characters.length },
-    { id: "levels", label: "My Levels", icon: "🌍", count: levels.length },
-    { id: "songs", label: "My Songs", icon: "🎵", count: songs.length },
+    { id: "characters", label: "My Characters", count: characters.length },
+    { id: "levels", label: "My Levels", count: levels.length },
+    { id: "songs", label: "My Songs", count: songs.length },
   ];
 
   return (
     <div style={s.container}>
       <div style={s.topBar}>
         <button onClick={onBack} style={s.navBtn}>← Back</button>
-        <button onClick={onHome} style={s.navBtn}>🏠 Home</button>
+        <button onClick={onHome} style={s.navBtn}>Home</button>
       </div>
 
-      <h1 style={s.heading}>📦 My Stuff</h1>
+      <h1 style={s.heading}>My Stuff</h1>
       <p style={s.tagline}>Everything you've made. Tap "Use" to put it in a new game!</p>
 
       <BadgeShelf />
@@ -122,7 +122,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
               boxShadow: tab === t.id ? "0 6px 18px rgba(155,126,221,0.45)" : "none",
             }}
           >
-            {t.icon} {t.label} ({t.count})
+            {t.label} ({t.count})
           </button>
         ))}
       </div>
@@ -130,21 +130,22 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
       {/* ---------- Characters ---------- */}
       {tab === "characters" && (
         characters.length === 0 ? (
-          <Empty text="No characters yet! Make one and it'll show up here." />
+          <div style={s.grid}><button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button></div>
         ) : (
           <div style={s.grid}>
+            <button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button>
             {characters.map((c) => (
               <div key={c.id} style={s.card}>
                 {c.image ? (
                   <img src={c.image} alt={c.name} style={s.cardImage} />
                 ) : (
-                  <div style={s.noImage}>🦸</div>
+                  <div style={s.noImage}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.6" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21c0-4.4 3.4-7 7.5-7s7.5 2.6 7.5 7"/></svg></div>
                 )}
                 <h3 style={s.cardTitle}>{c.name}</h3>
                 <p style={s.cardDesc}>{c.description}</p>
                 <div style={s.cardActions}>
                   <button style={s.useBtn} onClick={() => onUseCharacter && onUseCharacter(c)}>
-                    Use ▶
+                    Use
                   </button>
                   <button style={s.deleteBtn} onClick={() => removeCharacter(c.id)}>
                     Delete
@@ -159,15 +160,16 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
       {/* ---------- Levels ---------- */}
       {tab === "levels" && (
         levels.length === 0 ? (
-          <Empty text="No worlds yet! Build one and it'll show up here." />
+          <div style={s.grid}><button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button></div>
         ) : (
           <div style={s.grid}>
+            <button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button>
             {levels.map((l) => (
               <div key={l.id} style={s.card}>
                 {l.image ? (
                   <img src={l.image} alt={l.name} style={s.cardImage} />
                 ) : (
-                  <div style={s.noImage}>🌍</div>
+                  <div style={s.noImage}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 18l5-6 4 4 3-4 6 6"/><circle cx="8" cy="7" r="2"/></svg></div>
                 )}
                 <h3 style={s.cardTitle}>{l.name}</h3>
                 <p style={s.cardDesc}>
@@ -175,7 +177,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
                 </p>
                 <div style={s.cardActions}>
                   <button style={s.useBtn} onClick={() => onUseLevel && onUseLevel(l)}>
-                    Use ▶
+                    Use
                   </button>
                   <button style={s.deleteBtn} onClick={() => removeLevel(l.id)}>
                     Delete
@@ -190,9 +192,10 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
       {/* ---------- Songs ---------- */}
       {tab === "songs" && (
         songs.length === 0 ? (
-          <Empty text="No songs yet! Make one in Music and it'll show up here." />
+          <div style={s.grid}><button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button></div>
         ) : (
           <div style={s.grid}>
+            <button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button>
             {songs.map((sg) => (
               <div key={sg.song_id} style={s.card}>
                 <CoverThumb vibe={sg.vibe} theme={sg.theme} color={sg.cover_color} fill radius={0} />
@@ -200,7 +203,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
                 <p style={s.cardDesc}>{[sg.vibe, sg.theme].filter(Boolean).join(" · ")}</p>
                 <div style={{ padding: "0 14px 12px" }}><SongPlayer src={sg.audio_url} color={sg.cover_color || "#5B6CFF"} size={64} /></div>
                 <div style={s.cardActions}>
-                  <button style={s.useBtn} onClick={() => shareCreation({ kind: "song", id: sg.song_id, title: sg.title })}>🔗 Share</button>
+                  <button style={s.useBtn} onClick={() => shareCreation({ kind: "song", id: sg.song_id, title: sg.title })}>Share</button>
                   <button style={s.deleteBtn} onClick={() => removeSong(sg.song_id)}>Delete</button>
                 </div>
               </div>
@@ -323,6 +326,9 @@ const s = {
     cursor: "pointer",
     fontFamily: NUN,
   },
+  addCard: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 200, background: "rgba(155,126,221,0.08)", border: "2px dashed rgba(155,126,221,0.5)", borderRadius: 20, cursor: "pointer" },
+  addPlus: { fontSize: 54, fontWeight: 300, lineHeight: 1, color: "#c9bff0" },
+  addText: { fontSize: 16, fontWeight: 700, color: "#fff", fontFamily: FRED },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
