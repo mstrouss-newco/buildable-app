@@ -24,6 +24,18 @@ const STORE = "library";
 const KINDS = ["characters", "levels", "sounds"];
 const LEGACY_KEYS = { characters: "bk_characters", levels: "bk_levels", sounds: "bk_sounds" };
 
+// Learning Mode caches are scoped per kid profile so two kids on one device
+// don't share badges/streak, and (when signed in) progress can follow a kid.
+import { getActiveKid, isSignedIn } from "./lib/accounts";
+
+// The current scope id: the active kid's id, or "guest" when none is selected.
+// Recomputed on demand so a kid switch picks up the new id immediately.
+function scopeId() {
+  try { return getActiveKid()?.id || "guest"; } catch { return "guest"; }
+}
+// Per-kid IndexedDB keys, e.g. "progress:guest" / "learning:<kidId>".
+function scopedKey(base) { return `${base}:${scopeId()}`; }
+
 // In-memory cache — the source of truth for synchronous reads.
 const cache = { characters: [], levels: [], sounds: [] };
 let ready = false;
@@ -254,6 +266,7 @@ const LEARNING_KEY = "learning";
 const LEARNING_DEFAULTS = { enabled: false, goal: "math" };
 const GOAL_OPTIONS = ["math", "reading", "mix"];
 let learningCache = { ...LEARNING_DEFAULTS };
+let learningChangedAt = 0; // ms of last local settings change (for cloud merge tie-break)
 
 function normalizeLearning(raw) {
   const src = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -262,22 +275,26 @@ function normalizeLearning(raw) {
   return { enabled, goal };
 }
 
-// Load persisted learning settings into the cache at startup (background).
-(async function hydrateLearning() {
+// Load persisted learning settings for the current scope into the cache.
+// One-time migration: if a legacy un-suffixed "learning" exists and the scoped
+// key doesn't yet, copy it into the current scope so existing data isn't lost.
+async function loadLearningForScope() {
   try {
-    const db = await openDB();
-    const stored = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, "readonly");
-      const r = tx.objectStore(STORE).get(LEARNING_KEY);
-      r.onsuccess = () => resolve(r.result);
-      r.onerror = () => reject(r.error);
-    });
-    if (stored && typeof stored === "object") learningCache = normalizeLearning(stored);
+    let stored = await idbGet(scopedKey(LEARNING_KEY));
+    if ((!stored || typeof stored !== "object" || Array.isArray(stored))) {
+      const legacy = await idbGet(LEARNING_KEY);
+      if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
+        stored = legacy;
+        await idbSet(scopedKey(LEARNING_KEY), normalizeLearning(legacy));
+      }
+    }
+    learningCache = (stored && typeof stored === "object" && !Array.isArray(stored))
+      ? normalizeLearning(stored) : { ...LEARNING_DEFAULTS };
   } catch {
     // IndexedDB unavailable — keep safe defaults (OFF).
+    learningCache = { ...LEARNING_DEFAULTS };
   }
-  emit();
-})();
+}
 
 // Synchronous read for the UI. Always returns a safe, normalized object.
 export function getLearningSettings() {
@@ -287,7 +304,9 @@ export function getLearningSettings() {
 // Merge a patch into the learning settings, persist, and notify listeners.
 export function setLearningSettings(patch) {
   learningCache = normalizeLearning({ ...learningCache, ...(patch || {}) });
-  idbSet(LEARNING_KEY, learningCache).catch(() => {});
+  learningChangedAt = Date.now();
+  idbSet(scopedKey(LEARNING_KEY), learningCache).catch(() => {});
+  scheduleCloudPush();
   emit();
   return { ...learningCache };
 }
@@ -412,22 +431,25 @@ function dayDiff(fromKey, toKey) {
   return Math.round((b - a) / 86400000);
 }
 
-// Load persisted progress into the cache at startup (background).
-(async function hydrateProgress() {
+// Load persisted progress for the current scope into the cache.
+// One-time migration from the legacy un-suffixed "progress" key (see loadLearningForScope).
+async function loadProgressForScope() {
   try {
-    const db = await openDB();
-    const stored = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, "readonly");
-      const r = tx.objectStore(STORE).get(PROGRESS_KEY);
-      r.onsuccess = () => resolve(r.result);
-      r.onerror = () => reject(r.error);
-    });
-    if (stored && typeof stored === "object") progressCache = normalizeProgress(stored);
+    let stored = await idbGet(scopedKey(PROGRESS_KEY));
+    if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+      const legacy = await idbGet(PROGRESS_KEY);
+      if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
+        stored = legacy;
+        await idbSet(scopedKey(PROGRESS_KEY), normalizeProgress(legacy));
+      }
+    }
+    progressCache = (stored && typeof stored === "object" && !Array.isArray(stored))
+      ? normalizeProgress(stored) : progressDefaults();
   } catch {
     // IndexedDB unavailable — keep defaults.
+    progressCache = progressDefaults();
   }
-  emit();
-})();
+}
 
 // Synchronous read for the UI. Returns a normalized copy.
 export function getProgress() {
@@ -466,7 +488,8 @@ export function recordAnswer({ subject, correct } = {}) {
   const newly = recomputeBadges(p);
 
   progressCache = p;
-  idbSet(PROGRESS_KEY, progressCache).catch(() => {});
+  idbSet(scopedKey(PROGRESS_KEY), progressCache).catch(() => {});
+  scheduleCloudPush();
   emit();
   return newly;
 }
@@ -493,21 +516,23 @@ function questionSig(q) {
   return `${q.type || "?"}${body}${choices}`;
 }
 
-(async function hydrateReview() {
+// Load the review queue for the current scope, migrating the legacy key once.
+async function loadReviewForScope() {
   try {
-    const db = await openDB();
-    const stored = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, "readonly");
-      const r = tx.objectStore(STORE).get(REVIEW_KEY);
-      r.onsuccess = () => resolve(r.result);
-      r.onerror = () => reject(r.error);
-    });
-    if (Array.isArray(stored)) reviewCache = stored.filter((x) => x && typeof x === "object");
+    let stored = await idbGet(scopedKey(REVIEW_KEY));
+    if (!Array.isArray(stored) || stored.length === 0) {
+      const legacy = await idbGet(REVIEW_KEY);
+      if (Array.isArray(legacy) && legacy.length) {
+        stored = legacy;
+        await idbSet(scopedKey(REVIEW_KEY), legacy.filter((x) => x && typeof x === "object"));
+      }
+    }
+    reviewCache = Array.isArray(stored) ? stored.filter((x) => x && typeof x === "object") : [];
   } catch {
     // IndexedDB unavailable — keep empty.
+    reviewCache = [];
   }
-  emit();
-})();
+}
 
 // Add a missed question to the review queue (newest last). No-op unless Learning
 // Mode is on. De-duped by signature; capped at REVIEW_MAX (drops oldest).
@@ -519,7 +544,8 @@ export function recordMiss(question) {
   reviewCache = reviewCache.filter((x) => questionSig(x) !== sig);
   reviewCache.push({ ...question, _sig: sig, _missedAt: Date.now() });
   if (reviewCache.length > REVIEW_MAX) reviewCache = reviewCache.slice(reviewCache.length - REVIEW_MAX);
-  idbSet(REVIEW_KEY, reviewCache).catch(() => {});
+  idbSet(scopedKey(REVIEW_KEY), reviewCache).catch(() => {});
+  scheduleCloudPush();
   emit();
 }
 
@@ -530,7 +556,8 @@ export function clearMiss(question) {
   const before = reviewCache.length;
   reviewCache = reviewCache.filter((x) => questionSig(x) !== sig);
   if (reviewCache.length !== before) {
-    idbSet(REVIEW_KEY, reviewCache).catch(() => {});
+    idbSet(scopedKey(REVIEW_KEY), reviewCache).catch(() => {});
+    scheduleCloudPush();
     emit();
   }
 }
@@ -566,3 +593,134 @@ export function weakestSubject(minAttempts = 3) {
   }
   return worst;
 }
+
+
+// ---------------- Per-kid reload + cloud sync ----------------
+// Learning Mode data is scoped per kid (keys like "progress:<kidId>"). When the
+// active kid changes we must re-hydrate all three caches from that kid's scope.
+// For SIGNED-IN accounts we additionally sync the blob to Supabase so a kid's
+// progress follows them across devices. Guest mode stays 100% local (no network).
+
+const CLOUD_DEBOUNCE_MS = 1500;
+let cloudPushTimer = null;
+let cloudPushScope = null; // scope id the pending push belongs to
+
+// Snapshot the current scope's Learning Mode blob from the in-memory caches.
+function currentBlob() {
+  return {
+    settings: { ...learningCache },
+    progress: normalizeProgress(progressCache),
+    review: Array.isArray(reviewCache) ? reviewCache.slice() : [],
+    _settingsChangedAt: learningChangedAt,
+  };
+}
+
+// Persist the merged blob back into the current scope's IndexedDB keys.
+function persistBlobLocal() {
+  idbSet(scopedKey(LEARNING_KEY), learningCache).catch(() => {});
+  idbSet(scopedKey(PROGRESS_KEY), progressCache).catch(() => {});
+  idbSet(scopedKey(REVIEW_KEY), reviewCache).catch(() => {});
+}
+
+// Conservative field-wise merge of a cloud blob into the live caches. Never
+// loses local data: takes the MAX of counts/streak, UNION of badges/review.
+function mergeCloudIntoLocal(cloud) {
+  if (!cloud || typeof cloud !== "object") return;
+
+  // Progress: MAX of every count, UNION of badges.
+  const lp = normalizeProgress(progressCache);
+  const cp = normalizeProgress(cloud.progress);
+  const merged = progressDefaults();
+  merged.totalCorrect = Math.max(lp.totalCorrect, cp.totalCorrect);
+  merged.totalWrong = Math.max(lp.totalWrong, cp.totalWrong);
+  for (const sub of SUBJECTS) {
+    merged.bySubject[sub] = {
+      right: Math.max(lp.bySubject[sub].right, cp.bySubject[sub].right),
+      wrong: Math.max(lp.bySubject[sub].wrong, cp.bySubject[sub].wrong),
+    };
+  }
+  merged.streakDays = Math.max(lp.streakDays, cp.streakDays);
+  // Keep the most recent activity date (lexical compare works for YYYY-MM-DD).
+  merged.lastActiveDate = [lp.lastActiveDate, cp.lastActiveDate]
+    .filter(Boolean).sort().pop() || null;
+  merged.created = Math.min(lp.created || Date.now(), cp.created || Date.now());
+  merged.badges = Array.from(new Set([...(lp.badges || []), ...(cp.badges || [])]));
+  // Recompute earned badges from merged counts so the set stays consistent,
+  // then union with any historically earned ids.
+  const recomputed = BADGES.filter((b) => { try { return !!b.earned(merged); } catch { return false; } }).map((b) => b.id);
+  merged.badges = Array.from(new Set([...merged.badges, ...recomputed]));
+  progressCache = merged;
+
+  // Review: UNION by signature, cap at REVIEW_MAX (keep newest).
+  const cloudReview = Array.isArray(cloud.review) ? cloud.review : [];
+  const seen = new Set(reviewCache.map((x) => questionSig(x)));
+  for (const item of cloudReview) {
+    if (!item || typeof item !== "object") continue;
+    const sig = item._sig || questionSig(item);
+    if (sig && !seen.has(sig)) { seen.add(sig); reviewCache.push({ ...item, _sig: sig }); }
+  }
+  if (reviewCache.length > REVIEW_MAX) reviewCache = reviewCache.slice(reviewCache.length - REVIEW_MAX);
+
+  // Settings: prefer whichever side changed most recently; default to local.
+  const cloudAt = Number.isFinite(cloud._settingsChangedAt) ? cloud._settingsChangedAt : 0;
+  if (cloudAt > learningChangedAt && cloud.settings) {
+    learningCache = normalizeLearning(cloud.settings);
+    learningChangedAt = cloudAt;
+  }
+}
+
+// Debounced push of the current scope blob to the cloud (signed-in only).
+function scheduleCloudPush() {
+  if (!isSignedIn()) return;
+  const id = scopeId();
+  if (id === "guest") return;
+  cloudPushScope = id;
+  if (cloudPushTimer) clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(() => {
+    cloudPushTimer = null;
+    const blob = currentBlob();
+    // Fire-and-forget; never throw or block on a failed network call.
+    try {
+      fetch("/api/save-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kidProfileId: cloudPushScope, data: blob }),
+      }).catch(() => {});
+    } catch {}
+  }, CLOUD_DEBOUNCE_MS);
+}
+
+// Re-hydrate the three Learning Mode caches for the active kid, then (signed-in
+// only) merge any cloud copy and push the merged result back. Safe to call any
+// time; resolves after local load so the UI can refresh immediately.
+export async function reloadLearningForActiveKid() {
+  await Promise.all([loadLearningForScope(), loadProgressForScope(), loadReviewForScope()]);
+  emit();
+
+  // Cloud sync only for signed-in accounts with a real kid id. Guests stay local.
+  const id = scopeId();
+  if (isSignedIn() && id !== "guest") {
+    try {
+      const r = await fetch("/api/get-progress?kidProfileId=" + encodeURIComponent(id));
+      const json = await r.json().catch(() => null);
+      if (json && json.ok && json.data && typeof json.data === "object") {
+        mergeCloudIntoLocal(json.data);
+        persistBlobLocal();
+        emit();
+        // Push the merged blob so the cloud has the union too.
+        try {
+          fetch("/api/save-progress", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kidProfileId: id, data: currentBlob() }),
+          }).catch(() => {});
+        } catch {}
+      }
+    } catch {
+      // Offline / not configured — local data already loaded, nothing to do.
+    }
+  }
+}
+
+// Kick off the first load for whatever kid is active at startup.
+reloadLearningForActiveKid();

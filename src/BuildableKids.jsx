@@ -12,7 +12,7 @@ import StoryMaker from "./StoryMaker";
 import LoadingGames from "./LoadingGames";
 import FamilyChess from "./FamilyChess";
 import { listMyMatches } from "./lib/chessMatches";
-import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
+import { saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid } from "./store";
 import { getActiveKid, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
 
 // Screens
@@ -49,7 +49,7 @@ export default function BuildableKids() {
     const h = window.location.hash || "";
     if (h.indexOf("access_token") !== -1) {
       completeOAuthRedirect().then((done) => {
-        if (done) { setActiveKidState(getActiveKid()); setScreen(SCREEN_GROWNUP); }
+        if (done) { setActiveKidState(getActiveKid()); reloadLearningForActiveKid(); setScreen(SCREEN_GROWNUP); }
       });
     }
   }, []);
@@ -261,6 +261,7 @@ export default function BuildableKids() {
         onBack={() => setScreen(SCREEN_HOME)}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
+          reloadLearningForActiveKid();
           setScreen(SCREEN_HOME);
         }}
       />
