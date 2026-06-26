@@ -5,35 +5,159 @@
     }
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/app/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/app/(.*)", "dest": "/index.html" },
-    { "src": "/app", "dest": "/index.html" },
-    { "src": "/admin/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/admin.html", "dest": "/index.html" },
-    { "src": "/admin", "dest": "/index.html" },
-    { "src": "/demo/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/demo/(.*)", "status": 308, "headers": { "Location": "/app/$1" } },
-    { "src": "/demo", "status": 308, "headers": { "Location": "/app" } },
-    { "src": "/games-library.html", "dest": "/games-library.html" },
-    { "src": "/games", "dest": "/games-library.html" },
-    { "src": "/library", "dest": "/games-library.html" },
-    { "src": "/croctot.html", "dest": "/croctot.html" },
-    { "src": "/rileys-garden.html", "dest": "/rileys-garden.html" },
-    { "src": "/qa-expr.html", "dest": "/qa-expr.html" },
-    { "src": "/scene-proto.html", "dest": "/scene-proto.html" },
-    { "src": "/living-scene.html", "dest": "/living-scene.html" },
-    { "src": "/glow.html", "dest": "/glow.html" },
-    { "src": "/water.html", "dest": "/water.html" },
-    { "src": "/water-seg.html", "dest": "/water-seg.html" },
-    { "src": "/play.html", "dest": "/play.html" },
-    { "src": "/story-demo.html", "dest": "/story-demo.html" },
-    { "src": "/story.html", "dest": "/story.html" },
-    { "src": "/song.html", "dest": "/song.html" },
-    { "src": "/s/([^/]+)", "dest": "/story.html?id=$1" },
-    { "src": "/p/([^/]+)", "dest": "/song.html?id=$1" },
-    { "src": "/typing.html", "dest": "/typing.html" },
-    { "src": "/buildable-chess.html", "dest": "/buildable-chess.html" },
-    { "src": "/(.*)", "dest": "/landing.html" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/app/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/app/(.*)",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/app",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/admin/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/admin.html",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/admin",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/demo/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/demo/(.*)",
+      "status": 308,
+      "headers": {
+        "Location": "/app/$1"
+      }
+    },
+    {
+      "src": "/demo",
+      "status": 308,
+      "headers": {
+        "Location": "/app"
+      }
+    },
+    {
+      "src": "/games-library.html",
+      "dest": "/games-library.html"
+    },
+    {
+      "src": "/games",
+      "dest": "/games-library.html"
+    },
+    {
+      "src": "/library",
+      "dest": "/games-library.html"
+    },
+    {
+      "src": "/croctot.html",
+      "dest": "/croctot.html"
+    },
+    {
+      "src": "/rileys-garden.html",
+      "dest": "/rileys-garden.html"
+    },
+    {
+      "src": "/qa-expr.html",
+      "dest": "/qa-expr.html"
+    },
+    {
+      "src": "/scene-proto.html",
+      "dest": "/scene-proto.html"
+    },
+    {
+      "src": "/living-scene.html",
+      "dest": "/living-scene.html"
+    },
+    {
+      "src": "/glow.html",
+      "dest": "/glow.html"
+    },
+    {
+      "src": "/water.html",
+      "dest": "/water.html"
+    },
+    {
+      "src": "/water-seg.html",
+      "dest": "/water-seg.html"
+    },
+    {
+      "src": "/play.html",
+      "dest": "/play.html"
+    },
+    {
+      "src": "/story-demo.html",
+      "dest": "/story-demo.html"
+    },
+    {
+      "src": "/story.html",
+      "dest": "/story.html"
+    },
+    {
+      "src": "/song.html",
+      "dest": "/song.html"
+    },
+    {
+      "src": "/s/([^/]+)",
+      "dest": "/story.html?id=$1"
+    },
+    {
+      "src": "/p/([^/]+)",
+      "dest": "/song.html?id=$1"
+    },
+    {
+      "src": "/typing.html",
+      "dest": "/typing.html"
+    },
+    {
+      "src": "/buildable-chess.html",
+      "dest": "/buildable-chess.html"
+    },
+    {
+      "src": "/favicon.svg",
+      "dest": "/favicon.svg"
+    },
+    {
+      "src": "/favicon-16.png",
+      "dest": "/favicon-16.png"
+    },
+    {
+      "src": "/favicon-32.png",
+      "dest": "/favicon-32.png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "dest": "/apple-touch-icon.png"
+    },
+    {
+      "src": "/icon-192.png",
+      "dest": "/icon-192.png"
+    },
+    {
+      "src": "/icon-512.png",
+      "dest": "/icon-512.png"
+    },
+    {
+      "src": "/site.webmanifest",
+      "dest": "/site.webmanifest"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/landing.html"
+    }
   ]
 }

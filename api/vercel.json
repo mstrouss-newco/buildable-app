@@ -58,6 +58,34 @@
       "dest": "/song.html?id=$1"
     },
     {
+      "src": "/favicon.svg",
+      "dest": "/favicon.svg"
+    },
+    {
+      "src": "/favicon-16.png",
+      "dest": "/favicon-16.png"
+    },
+    {
+      "src": "/favicon-32.png",
+      "dest": "/favicon-32.png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "dest": "/apple-touch-icon.png"
+    },
+    {
+      "src": "/icon-192.png",
+      "dest": "/icon-192.png"
+    },
+    {
+      "src": "/icon-512.png",
+      "dest": "/icon-512.png"
+    },
+    {
+      "src": "/site.webmanifest",
+      "dest": "/site.webmanifest"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
