@@ -1647,3 +1647,29 @@ subject's quizType. Wrong answers `recordMiss`, correct answers `clearMiss`.
 
 **Grown-ups (`src/GrownUpScreen.jsx`):** the Learning progress card now shows
 "Now practicing: <subject>" and "<n> to review again". All SVG/CSS, no emoji.
+
+## Learning Mode: progress connected to each kid — June 26 2026
+
+Previously Learning Mode settings/progress/review were stored under single global
+IndexedDB keys, so two kids on one device shared one set of badges/streak, and an account
+kid's progress did not follow them across devices. Now it's per kid.
+
+**Per-kid scoping (`src/store.js`):** scope id = `getActiveKid()?.id || "guest"` (from
+`src/lib/accounts.js`). The three caches persist under `learning:<scope>`,
+`progress:<scope>`, `review:<scope>`. One-time migration copies any legacy un-suffixed
+`learning`/`progress`/`review` into the current scope so existing data isn't lost.
+`reloadLearningForActiveKid()` re-hydrates the caches and `emit()`s; `src/BuildableKids.jsx`
+calls it after every active-kid change (and once at startup).
+
+**Cloud sync for signed-in accounts (follows the kid across devices):**
+- `db/create-learning-progress.sql` — one row per kid: `kid_profile_id` (PK) + `data` jsonb
+  + `updated_at`. **OWNER must run this once** in the Supabase SQL editor.
+- `api/save-progress.js` (POST {kidProfileId, data} upsert) and `api/get-progress.js`
+  (GET ?kidProfileId=) via the service key, mirroring save-song.js. If env isn't
+  configured they return `ok:false` (non-fatal) and the client stays local-only.
+- Only when `isSignedIn()` and a kid id exists: on reload, pull cloud and MERGE
+  conservatively (field-wise MAX of counts/streak/per-subject, UNION of badges + review
+  queue, newest settings), persist + push back; every change debounce-pushes (~1.5s).
+  All network calls are fire-and-forget — never block a child. Guest mode is 100% local.
+
+No emoji; Learning Mode still default OFF (nothing accrues when off).
