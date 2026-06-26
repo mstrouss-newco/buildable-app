@@ -77,7 +77,8 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   async function loadSaved(){try{const r=await fetch("/api/list-stories?deviceId="+encodeURIComponent(deviceId)+(kidProfileId?"&kidProfileId="+encodeURIComponent(kidProfileId):""));const j=await r.json();setSaved(Array.isArray(j.stories)?j.stories:[]);}catch{}}
   useEffect(()=>{loadSaved();},[]);
 
-  function ensureMusic(){ if(!musicRef.current && typeof window!=="undefined"){ const a=new Audio("/music-library/playful_musicbox.mp3"); a.loop=true; a.volume=0.18; a.preload="auto"; musicRef.current=a; } return musicRef.current; }
+  const MUSIC_URL="/music-library/playful_musicbox.mp3?v=1";
+  function ensureMusic(){ if(!musicRef.current && typeof window!=="undefined"){ const a=new Audio(MUSIC_URL); a.loop=true; a.volume=0.18; a.preload="auto"; musicRef.current=a; } return musicRef.current; }
   function ensureVoice(){ if(!voiceRef.current && typeof window!=="undefined"){ const a=new Audio(); a.preload="auto"; voiceRef.current=a; } return voiceRef.current; }
   function stopVoice(){ try{ if(voiceRef.current){ voiceRef.current.pause(); } }catch{} try{ if(typeof window!=="undefined"&&window.speechSynthesis) window.speechSynthesis.cancel(); }catch{} }
   // Fetch + cache a spoken line ahead of time (so it plays the instant it's needed).
@@ -110,7 +111,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
     const m=ensureMusic(); if(m&&soundOn){ try{ m.play().catch(()=>{}); }catch{} }
     const v=ensureVoice();
     if(v && !primedRef.current){
-      try{ v.muted=true; v.src="/music-library/playful_musicbox.mp3"; const p=v.play();
+      try{ v.muted=true; v.src=MUSIC_URL; const p=v.play();
         if(p&&p.then) p.then(()=>{ try{ v.pause(); v.currentTime=0; v.muted=false; v.removeAttribute("src"); }catch{} }).catch(()=>{ try{ v.muted=false; }catch{} });
       }catch{}
       primedRef.current=true;
