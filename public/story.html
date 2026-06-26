@@ -46,16 +46,16 @@
 </head>
 <body>
   <div class="brand">
-    <div class="logo">🌟 Buildable Kids</div>
-    <a class="free" href="/">✨ Make your own — free</a>
+    <div class="logo">Buildable Kids</div>
+    <a class="free" href="/">Make your own — free</a>
   </div>
 
-  <div id="loading" class="state"><h1>📖 Opening the book…</h1></div>
+  <div id="loading" class="state"><h1>Opening the book…</h1></div>
 
   <div id="missing" class="state hidden">
-    <h1>This story isn't available 🙈</h1>
+    <h1>This story isn't available</h1>
     <p>The link may be old or the story was removed. But you can make your own in minutes — it's free!</p>
-    <a class="free" style="padding:14px 30px;font-size:16px" href="/">✨ Make your own story</a>
+    <a class="free" style="padding:14px 30px;font-size:16px" href="/">Make your own story</a>
   </div>
 
   <div id="book" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center">
@@ -70,7 +70,7 @@
     <p class="pagenum" id="pageNum"></p>
 
     <div class="cta">
-      <h2>Made by a kid on Buildable Kids ✨</h2>
+      <h2>Made by a kid on Buildable Kids</h2>
       <p>Your child can make their own stories, songs &amp; games — free to start.</p>
       <a href="/">Make your own — free</a>
     </div>
@@ -83,9 +83,7 @@
     cloud_castle:["#3a4a86","#8aa0d4"],pirate_cove:["#2a3d4a","#5a86a0"],space:["#1b1240","#5b3a86"],
     forest:["#1f3d2f","#4a7a55"],desert:["#6b4a1f","#caa05a"],castle:["#3a4a86","#8aa0d4"],
     candy:["#7a2f5f","#d4789e"],volcano:["#5a1f1f","#c2502f"]};
-  var SCENE={snowy_forest:"🌲",outer_space:"🚀",space:"🚀",underwater:"🐠",candy_land:"🍭",candy:"🍭",
-    enchanted_woods:"🍄",forest:"🌳",desert_oasis:"🌵",desert:"🌵",cloud_castle:"🏰",castle:"🏰",
-    pirate_cove:"⛵",volcano:"🌋"};
+  // scene art comes from generated images; calm gradient fallback (no emoji)
 
   var state={pages:[],idx:0,world:"",speaking:false};
 
@@ -104,8 +102,7 @@
     if(p.art_url){art.innerHTML='<img alt="" src="'+p.art_url+'">';}
     else{
       var pal=PALETTE[state.world]||["#3a2a5e","#7c5cfc"];
-      var emoji=SCENE[state.world]||"📖";
-      art.innerHTML='<div class="scene" style="background:linear-gradient(160deg,'+pal[0]+','+pal[1]+')">'+emoji+'</div>';
+      art.innerHTML='<div class="scene" style="background:linear-gradient(160deg,'+pal[0]+','+pal[1]+')"></div>';
     }
     // word spans (for read-aloud highlight)
     var words=(p.text||"").trim().split(/\s+/).filter(Boolean);
