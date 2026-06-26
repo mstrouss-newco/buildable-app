@@ -1627,3 +1627,23 @@ bookworm (10 reading), on-a-roll (7-day streak).
 All visuals are SVG/CSS — no emoji. **Note:** streak is device-local (a clock change can
 shift it); cross-device sync would need the deliberate anonymous-device-id design already
 flagged in SESSION-LOG.
+
+## Learning Mode: practice what you missed — June 26 2026
+
+Adaptive practice on top of the progress store, on-device, gated by Learning Mode.
+
+**Review queue (`src/store.js`):** `recordMiss(question)` stores the FULL question object
+(so it replays exactly) in a de-duped, capped (12) queue; `getReviewItem()` returns one due
+item (oldest first, avoids repeating the just-served one); `clearMiss(question)` removes an
+item once it's answered right; `reviewCount()` exposes the queue size. De-dupe signature is
+`type + (question|word_template|story|prompt) + choices`.
+
+**Weak-subject weighting (`src/store.js`):** `weakestSubject(minAttempts=3)` returns the
+subject with the lowest right/attempts ratio (math/geometry/spelling/reading), or null.
+
+**Wired in `src/QuizGate.jsx` and `src/LoadingGames.jsx`:** before fetching, ~40% of the
+time replay a queued miss; otherwise fetch fresh but ~50% of the time target the weakest
+subject's quizType. Wrong answers `recordMiss`, correct answers `clearMiss`.
+
+**Grown-ups (`src/GrownUpScreen.jsx`):** the Learning progress card now shows
+"Now practicing: <subject>" and "<n> to review again". All SVG/CSS, no emoji.
