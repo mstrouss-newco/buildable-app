@@ -26,6 +26,7 @@ const SCREEN_MUSIC = "music";
 const SCREEN_GROWNUP = "grownup";
 const SCREEN_STORY = "story";
 const SCREEN_TYPING = "typing";
+const SCREEN_CHESS = "chess";
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
   const [activeKid, setActiveKidState] = useState(getActiveKid());
@@ -110,6 +111,7 @@ export default function BuildableKids() {
         onGames={() => setScreen(SCREEN_INTRO)}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
         onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
+        onChess={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
         onGrownUp={() => setScreen(SCREEN_GROWNUP)}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
@@ -236,6 +238,10 @@ export default function BuildableKids() {
     return <TypingScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
+  if (screen === SCREEN_CHESS) {
+    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} />;
+  }
+
   if (screen === SCREEN_MY_STUFF) {
     return <MyStuffScreen {...myStuffNav} />;
   }
@@ -289,7 +295,19 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onMyStuff, onGrownUp, onAdmin }) {
+function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin }) {
+  // Buildable hero icon (purple King) — no emoji, matching the chess game art
+  const ChessHeroIcon = () => (
+    <svg width="46" height="46" viewBox="0 0 100 100">
+      <ellipse cx="50" cy="90" rx="24" ry="5" fill="rgba(0,0,0,0.18)" />
+      <path d="M30 84 Q30 46 50 42 Q70 46 70 84 Z" fill="#8B6CFF" />
+      <path d="M32 42 L34 22 L46 30 L50 18 L54 30 L66 22 L68 42 Z" fill="#5B3FD6" />
+      <circle cx="50" cy="12" r="5" fill="#FFD86B" />
+      <circle cx="42" cy="50" r="5.5" fill="#fff" /><circle cx="58" cy="50" r="5.5" fill="#fff" />
+      <circle cx="43" cy="51" r="2.6" fill="#2A2540" /><circle cx="59" cy="51" r="2.6" fill="#2A2540" />
+      <path d="M44 60 Q50 66 56 60" stroke="#2A2540" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+    </svg>
+  );
   const ExperienceCard = ({ emoji, title, desc, badge, badgeColor, onClick, featured, disabled }) => (
     <button
       onClick={disabled ? undefined : onClick}
@@ -375,6 +393,10 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onMyStuf
           emoji="⌨️" title="Typing" desc="Learn to type by defending the castle!"
           badge="New" badgeColor="#7CF6B0" onClick={onTyping}
         />
+        <ExperienceCard
+          emoji={<ChessHeroIcon />} title="Chess" desc="Play your hero squad — solo or two players!"
+          badge="New" badgeColor="#7CF6B0" onClick={onChess}
+        />
       </div>
 
     </div>
@@ -396,6 +418,27 @@ function TypingScreen({ onHome }) {
       <iframe
         title="Buildable Typing"
         src="/typing.html"
+        style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+      />
+    </div>
+  );
+}
+
+function ChessScreen({ onHome }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
+      <button
+        onClick={onHome}
+        style={{
+          position: "absolute", top: "14px", left: "14px", zIndex: 2,
+          fontFamily: NUN, fontWeight: 800, fontSize: "14px", color: "#fff",
+          background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)",
+          borderRadius: "999px", padding: "8px 16px", cursor: "pointer",
+        }}
+      >← Home</button>
+      <iframe
+        title="Buildable Chess"
+        src="/buildable-chess.html"
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
