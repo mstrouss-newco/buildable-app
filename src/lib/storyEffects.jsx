@@ -38,6 +38,7 @@ function injectKeyframes() {
   injected = true;
   const css = `
 @keyframes bk-flicker { 0%,100%{opacity:.55;transform:scale(1)} 45%{opacity:.95;transform:scale(1.06)} 70%{opacity:.7;transform:scale(.98)} }
+@keyframes bk-bloom { 0%,100%{opacity:.30} 22%{opacity:.56} 44%{opacity:.36} 63%{opacity:.62} 82%{opacity:.44} }
 @keyframes bk-fall { 0%{transform:translateY(-10%) translateX(0)} 100%{transform:translateY(110%) translateX(12px)} }
 @keyframes bk-rain { 0%{transform:translateY(-20%)} 100%{transform:translateY(120%)} }
 @keyframes bk-twinkle { 0%,100%{opacity:.2;transform:scale(.7)} 50%{opacity:1;transform:scale(1)} }
@@ -376,10 +377,13 @@ export function SceneStage({ url, effect, effects, world, pageIndex, style, wate
   useEffect(() => { injectKeyframes(); }, []);
   const layers = Array.isArray(effects) && effects.length ? effects.slice(0, 2) : [effect];
   const origin = ["50% 45%", "30% 40%", "70% 40%"][(pageIndex || 0) % 3];
-  const maskCss = waterMask ? { WebkitMaskImage: "url(" + waterMask + ")", maskImage: "url(" + waterMask + ")", WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat" } : null;
+  const GLOW_FX = new Set(["fireplace_flicker", "candle_glow", "magic_sparkles", "sun_pulse", "soft_glow", "twinkling_stars"]);
+  const glow = layers.some((e) => GLOW_FX.has(e)) || GLOW_FX.has(FG_BY_WORLD[world]);
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
       <img src={url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 22s ease-in-out infinite alternate" }} />
+      {glow && <img src={url} aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, filter: "blur(7px) brightness(1.55) saturate(1.15)", mixBlendMode: "screen", opacity: 0.42, animation: "bk-kenburns 22s ease-in-out infinite alternate, bk-bloom 3.4s ease-in-out infinite", pointerEvents: "none" }} />}
+      {glow && <div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "inherit", background: "radial-gradient(65% 55% at 50% 58%, rgba(255,184,92,0.16), transparent 72%)", mixBlendMode: "screen", animation: "bk-bloom 2.6s ease-in-out infinite", pointerEvents: "none" }} />}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
       <LivingLayer effect={FG_BY_WORLD[world] || "floating_dust"} />
       {children}

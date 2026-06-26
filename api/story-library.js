@@ -231,7 +231,9 @@ const CAM=[
 function worldDesc(slug){const w=WORLDS.find(x=>x[0]===slug);return w?w[2]:"";}
 function pageScenePrompt(action,world,style,i,emo){
   const feel = emo && emo!=="happy" ? ` The hero clearly feels ${emo}, shown gently in their face and body language.` : "";
-  return `Children's picture-book illustration depicting THIS exact moment: "${action}".${feel} ${CAM[i%CAM.length]} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
+  const glowy = /candle|lantern|lamp|fire|flame|ember|hearth|fireplace|glow|glowing|firefl|star|starlight|moon|window|magic|spark|torch|\blit\b|light/i.test(action);
+  const glowLine = glowy ? ` Paint any candles, lanterns, fireplaces, glowing windows, fireflies, stars or magic as bright WARM GLOWING light sources with a soft luminous halo, clearly casting warm light into the scene.` : "";
+  return `Children's picture-book illustration depicting THIS exact moment: "${action}".${feel}${glowLine} ${CAM[i%CAM.length]} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
 }
 function pageSceneKey(ck){return "libpg:"+crypto.createHash("sha1").update(ck).digest("hex");}
 
