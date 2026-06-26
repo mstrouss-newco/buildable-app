@@ -11,6 +11,7 @@ import GrownUpScreen from "./GrownUpScreen";
 import StoryMaker from "./StoryMaker";
 import LoadingGames from "./LoadingGames";
 import FamilyChess from "./FamilyChess";
+import { listMyMatches } from "./lib/chessMatches";
 import { saveCharacter, saveLevel, libraryCounts, onLibraryChange } from "./store";
 import { getActiveKid, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
 
@@ -350,11 +351,30 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
     </svg>
   );
 
+  // Notify on the Chess tile when it's this kid's move in a family game.
+  const [chessTurns, setChessTurns] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    async function check() {
+      try {
+        if (!isSignedIn()) { if (alive) setChessTurns(0); return; }
+        const me = getActiveKid();
+        if (!me) { if (alive) setChessTurns(0); return; }
+        const ms = await listMyMatches(me.id);
+        const n = (ms || []).filter((m) => (m.turn || "w") === (m.white_kid === me.id ? "w" : "b")).length;
+        if (alive) setChessTurns(n);
+      } catch (e) { /* ignore */ }
+    }
+    check();
+    const t = setInterval(check, 20000);
+    return () => { alive = false; clearInterval(t); };
+  }, [activeKid]);
+
   const PILL_COLORS = ["linear-gradient(160deg,#8A6BFF,#6A4FE0)","linear-gradient(160deg,#F2789E,#E0578F)","linear-gradient(160deg,#4FA6E8,#2F8FD6)","linear-gradient(160deg,#3DD06A,#2BB14F)","linear-gradient(160deg,#FFC75A,#F0972A)","linear-gradient(160deg,#46D7C0,#1FA897)"];
   const pillGrad = (name) => { let h = 0; const s = name || "?"; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return PILL_COLORS[h % PILL_COLORS.length]; };
   const initial = (name) => { const n = (name || "").trim(); return n ? n[0].toUpperCase() : "?"; };
 
-  const ExperienceCard = ({ icon, title, desc, badge, badgeColor, onClick, disabled }) => (
+  const ExperienceCard = ({ icon, title, desc, badge, badgeColor, onClick, disabled, dot }) => (
     <button
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
@@ -366,6 +386,12 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
         display: "flex", flexDirection: "column", gap: "12px", minHeight: "150px",
       }}
     >
+      {dot && (
+        <span style={{
+          position: "absolute", top: -8, left: -8, width: 22, height: 22, borderRadius: "50%",
+          background: "#FF5468", border: "3px solid #1a1330", boxShadow: "0 0 12px rgba(255,84,104,0.8)",
+        }} />
+      )}
       {badge && (
         <span style={{
           position: "absolute", top: "16px", right: "16px",
@@ -437,8 +463,10 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#FFC75A,#F0972A)"><ChessGlyph /></AppIcon>}
-          title="Chess" desc="Play your hero squad — solo or two players!"
-          badge="New" badgeColor="#7CF6B0" onClick={onChess}
+          title="Chess"
+          desc={chessTurns > 0 ? `It's your move in ${chessTurns} game${chessTurns > 1 ? "s" : ""}!` : "Play your hero squad — solo, two players, or family."}
+          badge={chessTurns > 0 ? "Your move!" : "New"} badgeColor={chessTurns > 0 ? "#FF8FA3" : "#7CF6B0"}
+          dot={chessTurns > 0} onClick={onChess}
         />
       </div>
     </div>
@@ -869,7 +897,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
 
   return (
     <div style={styles.container}>
-      <LoadingGames isLoading={loading} operationType="game" gameData={gameData} onComplete={() => {}} />
+      <LoadingGames isLoading={loading} operationType="game" onComplete={() => {}} />
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
         <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>
