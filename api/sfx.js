@@ -28,7 +28,7 @@ const SOUNDS = {
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
   chess_select:0.4, chess_move:0.5, chess_check:0.7, chess_castle:0.7, chess_promote:1.0,
-  chess_win:1.6, chess_lose:1.0, chess_capture:0.8,
+  chess_win:1.6, chess_lose:1.0, chess_yourturn:0.5, chess_capture:0.8,
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
 };

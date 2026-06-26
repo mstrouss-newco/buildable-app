@@ -180,6 +180,12 @@ body.in-game .card{background:rgba(20,16,40,.34);border-color:rgba(255,255,255,.
 .score-row .sr-name{font-weight:700;font-size:16px}
 .score-row .sr-w{font-weight:800;color:var(--mint)}
 .score-row .sr-meta{grid-column:2/4;font-size:12px;color:rgba(255,255,255,.5);margin-top:1px}
+/* win/lose celebrations */
+.piece.cheer svg{animation:cheer .55s ease-in-out infinite!important}
+@keyframes cheer{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-26%) rotate(5deg)}}
+.piece.sad svg{animation:sad 1.4s ease-in-out infinite!important;filter:grayscale(.4) drop-shadow(0 4px 4px rgba(0,0,0,.32))}
+@keyframes sad{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(5%) rotate(-3deg)}}
+.firework{position:fixed;width:9px;height:9px;border-radius:50%;z-index:46;pointer-events:none;will-change:transform,opacity}
 </style>
 </head>
 <body>
@@ -559,7 +565,7 @@ const tone=(f,d,ty,v)=>osc(f,f,d,ty,v); // back-compat
 // Optional ElevenLabs library SFX (used when the game is served by the app; falls back to procedural)
 const SFX_LIB={};
 function loadSfxLibrary(){
-  ['select','move','capture','check','castle','promote','win','lose',
+  ['select','move','capture','check','castle','promote','win','lose','yourturn',
    'capture_jungle','capture_ocean','capture_space','capture_candy','capture_castle','capture_desert'].forEach(n=>{
     try{const a=new Audio('/api/sfx?s=chess_'+n);a.preload='auto';a.volume=.5;
       a.addEventListener('canplaythrough',()=>{SFX_LIB[n]=a;},{once:true});a.addEventListener('error',()=>{});
@@ -584,6 +590,7 @@ function sfxPromote(){if(!soundOn)return;if(libPlay('promote'))return;[523,659,7
 function sfxCheck(){if(!soundOn)return;if(libPlay('check'))return;osc(900,900,.12,'sawtooth',.15);osc(720,720,.14,'sawtooth',.13,.11);}
 function sfxWin(){if(soundOn&&libPlay('win'))return;[523,659,784,1047,1319].forEach((f,i)=>osc(f,f,.24,'triangle',.18,i*.12));noise(.5,.06,1,.1,8000);}
 function sfxLose(){if(!soundOn)return;if(libPlay('lose'))return;[440,392,330,262].forEach((f,i)=>osc(f,f,.22,'sine',.14,i*.13));}
+function sfxYourTurn(){if(!soundOn)return;if(libPlay('yourturn'))return;osc(660,660,.12,'sine',.13);osc(990,990,.16,'sine',.13,.13);}
 
 /* ===== Background music (looping world tracks from the library) ===== */
 let musicOn=true, musicEl=null;
@@ -894,7 +901,8 @@ function applyOpponentMove(p){
   const st=gameStatus(S);
   if(st.check&&!st.over){flashBanner('Check!');sfxCheck();}
   if(st.over){endGame(st);return;}
-  setTip(S.turn===humanColor?'Your turn — tap a hero!':('Waiting for '+oppName+'...'));
+  if(S.turn===humanColor){setTimeout(()=>{sfxYourTurn();flashBanner('Your turn!');},340);setTip('Your turn — tap a hero!');}
+  else setTip('Waiting for '+oppName+'...');
 }
 function flashBanner(txt){
   const b=document.getElementById('banner');b.textContent=txt;b.classList.remove('show');void b.offsetWidth;b.classList.add('show');
@@ -910,6 +918,31 @@ function confettiBurst(){
     c.animate([{transform:`translateY(0) rotate(0)`,opacity:1},
       {transform:`translateY(105vh) rotate(${Math.random()*720}deg)`,opacity:1}],
       {duration:2200+Math.random()*1500,easing:'linear'}).onfinish=()=>c.remove();
+  }
+}
+// colorful firework bursts across the screen
+function fireworks(n){
+  const cols=['#FF6B6B','#FFD86B','#7C5CFC','#00C48C','#FF9ECF','#8ffcff','#A78BFF'];
+  for(let k=0;k<(n||7);k++){
+    setTimeout(()=>{
+      const cx=10+Math.random()*80, cy=12+Math.random()*55, col=cols[k%cols.length];
+      if(soundOn)osc(700+Math.random()*500,180,.18,'triangle',.12);
+      for(let i=0;i<22;i++){
+        const p=document.createElement('div');p.className='firework';p.style.background=col;
+        p.style.left=cx+'vw';p.style.top=cy+'vh';document.body.appendChild(p);
+        const ang=(i/22)*Math.PI*2,dist=60+Math.random()*90,dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist;
+        p.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},
+          {transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.2)`,opacity:0}],
+          {duration:900+Math.random()*500,easing:'cubic-bezier(.15,.7,.3,1)'}).onfinish=()=>p.remove();
+      }
+    }, k*260);
+  }
+}
+// make a side's pieces celebrate (or droop)
+function partyPieces(color,cls){
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=S.board[r][c];if(!p||p.c!==color)continue;
+    const el=pieceEls[r+','+c];if(el){el.classList.add(cls);el.querySelector('svg').style.animationDelay=(Math.random()*-.5)+'s';}
   }
 }
 
@@ -934,31 +967,43 @@ function trophyLine(name){
     +`<svg width="22" height="22" viewBox="0 0 24 24" fill="#FFD86B"><path d="M7 3h10v2h3v2.5a4.5 4.5 0 0 1-4.2 4.49A5 5 0 0 1 13 15v2h3v2H8v-2h3v-2a5 5 0 0 1-2.8-3.01A4.5 4.5 0 0 1 4 7.5V5h3V3zm0 4H6v.5A2.5 2.5 0 0 0 7 9.45V7zm10 0v2.45A2.5 2.5 0 0 0 18 7.5V7h-1z"/></svg>`
     +`${escapeHtml(name)} has won ${w} game${w===1?'':'s'}!</span>`;
 }
+const LOSE_SUBS=["Good try — rematch?","So close! Go again?","Nice game — want another?","Almost had it! Rematch?"];
 function endGame(st){
   gameOver=true;
-  let title,sub,rec='';
+  let title,sub,rec='',winColor=null;
   if(st.result==='draw'){
     title='Tie Game!';sub="Nobody could win — great brains!";
     if(mode==='online')recordResult(pName,'d');
     else if(mode==='solo')recordResult(pName,'d'); else {recordResult(pName,'d');recordResult(pName2,'d');}
   } else {
-    const winner=opp(st.loser);
+    const winner=opp(st.loser);winColor=winner;
     if(mode==='online'){
-      if(winner===humanColor){title='You Win!';sub='Great game!';sfxWin();confettiBurst();recordResult(pName,'w');rec=trophyLine(pName);}
-      else{title=oppName+' Wins!';sub='Good try — rematch?';sfxLose();recordResult(pName,'l');}
+      if(winner===humanColor){title='You Win!';sub='Great game!';recordResult(pName,'w');rec=trophyLine(pName);}
+      else{title=oppName+' Wins!';sub=LOSE_SUBS[Math.floor(Math.random()*LOSE_SUBS.length)];recordResult(pName,'l');}
     } else if(mode==='solo'){
-      if(winner===humanColor){title='You Win!';sub='You out-smarted the robot. Amazing!';sfxWin();confettiBurst();recordResult(pName,'w');rec=trophyLine(pName);}
-      else{title='Robot Wins';sub='So close! Want to try again?';sfxLose();recordResult(pName,'l');}
+      if(winner===humanColor){title='You Win!';sub='You out-smarted the robot. Amazing!';recordResult(pName,'w');rec=trophyLine(pName);}
+      else{title='Robot Wins';sub=LOSE_SUBS[Math.floor(Math.random()*LOSE_SUBS.length)];recordResult(pName,'l');}
     } else {
       const wName=winner==='w'?pName:pName2, lName=winner==='w'?pName2:pName;
-      title=wName+' Wins!';sub='Great game, champions!';sfxWin();confettiBurst();
+      title=wName+' Wins!';sub='Great game, champions!';
       recordResult(wName,'w');recordResult(lName,'l');rec=trophyLine(wName);
     }
+  }
+  // ---- fun finale ----
+  flashBanner(title);
+  if(st.result==='draw'){
+    sfxWin();confettiBurst();partyPieces('w','cheer');partyPieces('b','cheer');
+  } else {
+    const iLost=(mode!=='two') && winColor!==humanColor;
+    partyPieces(winColor,'cheer');        // winners dance
+    partyPieces(opp(winColor),'sad');     // others give a cute droop
+    if(iLost){ sfxLose(); setTimeout(()=>fireworks(3),250); }   // still a little sparkle so losing stays fun
+    else { sfxWin(); confettiBurst(); fireworks(8); }
   }
   document.getElementById('over-title').textContent=title;
   document.getElementById('over-sub').textContent=sub;
   document.getElementById('over-record').innerHTML=rec;
-  setTimeout(()=>document.getElementById('over-modal').classList.add('on'),700);
+  setTimeout(()=>document.getElementById('over-modal').classList.add('on'),1400);
 }
 
 /* ================= UI WIRING ================= */
