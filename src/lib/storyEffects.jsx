@@ -54,6 +54,7 @@ function injectKeyframes() {
 @keyframes bk-parallax { 0%,100%{transform:translateX(-4px)} 50%{transform:translateX(4px)} }
 @keyframes bk-sweep { 0%{background-position:200% 0} 100%{background-position:-120% 0} }
 @keyframes bk-kenburns { 0%{transform:scale(1.05) translate(0%,0%)} 100%{transform:scale(1.20) translate(-2.5%,-1.5%)} }
+@keyframes bk-flow { 0%{background-position:0 0} 100%{background-position:220% 0} }
 @keyframes bk-sunpulse { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.85;transform:scale(1.12)} }
 @keyframes bk-shimmer { 0%,100%{opacity:.15;transform:translateX(0)} 50%{opacity:.7;transform:translateX(6px)} }
 @keyframes bk-wave { 0%,100%{transform:translateX(-8px)} 50%{transform:translateX(8px)} }
@@ -371,13 +372,19 @@ export function LayeredPage({ bgUrl, charUrl, charSlug, effect, effects, palette
   );
 }
 
-export function SceneStage({ url, effect, effects, world, pageIndex, style, children }) {
+export function SceneStage({ url, effect, effects, world, pageIndex, style, waterMask, children }) {
   useEffect(() => { injectKeyframes(); }, []);
   const layers = Array.isArray(effects) && effects.length ? effects.slice(0, 2) : [effect];
   const origin = ["50% 45%", "30% 40%", "70% 40%"][(pageIndex || 0) % 3];
+  const maskCss = waterMask ? { WebkitMaskImage: "url(" + waterMask + ")", maskImage: "url(" + waterMask + ")", WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat" } : null;
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
       <img src={url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 22s ease-in-out infinite alternate" }} />
+      {waterMask && (<>
+        <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true"><filter id="bk-ripple"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="2" seed="3" result="n"><animate attributeName="baseFrequency" dur="7s" values="0.012 0.04;0.016 0.05;0.012 0.04" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
+        <img src={url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", filter: "url(#bk-ripple)", ...maskCss }} />
+        <div style={{ position: "absolute", inset: 0, mixBlendMode: "screen", background: "repeating-linear-gradient(100deg,transparent 0 22px,rgba(255,255,255,.12) 26px,transparent 34px)", backgroundSize: "220% 100%", animation: "bk-flow 7s linear infinite", ...maskCss }} />
+      </>)}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
       <LivingLayer effect={FG_BY_WORLD[world] || "floating_dust"} />
       {children}

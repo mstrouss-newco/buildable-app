@@ -25,6 +25,9 @@ function libImg(kind, slug, style, emo) {
   return "/api/story-library?img=" + kind + ":" + slug + "&style=" + (style || "watercolor") + (emo ? "&emo=" + emo : "");
 }
 function wordsOf(text) { return (text || "").trim().split(/\s+/).filter(Boolean); }
+const WATER_WORLDS = new Set(["coral-reef", "desert-oasis"]);
+const WATER_FX = new Set(["water_shimmer", "gentle_waves"]);
+function wantsWater(pg){ return !!pg && (WATER_WORLDS.has(pg.world_slug) || WATER_FX.has(pg.effect)); }
 
 function ShareIcon(){return(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>);}
 function SoundIcon({on}){return(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="4 9 8 9 13 4 13 20 8 15 4 15"/>{on?<path d="M16 8a4 4 0 0 1 0 8"/>:<g><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></g>}</svg>);}
@@ -43,6 +46,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const ambienceRef = useRef(null);
   const [soundOn, setSoundOn] = useState(true);
   const [sceneUrl, setSceneUrl] = useState({});   // pageIndex -> generated scene url
+  const [waterMask, setWaterMask] = useState({}); // pageIndex -> water mask url
   const tokenRef = useRef((story && story.story_id) || (Math.random().toString(36).slice(2,10) + Date.now().toString(36)));
   const startedScenesRef = useRef(false);
 
@@ -73,7 +77,13 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
         fetch("/api/story-library", { method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
           body: JSON.stringify({ pageScene: true, slug: charSlug, style, emo: pg.emotion || "happy", world: pg.world_slug, action: pg.text, pageIndex: i, cacheKey: ck }) })
           .then((r) => r.json())
-          .then((j) => { clearTimeout(to); if (!cancelled && j && (j.generated || j.cached)) setSceneUrl((m) => ({ ...m, [i]: "/api/story-library?pimg=1&k=" + encodeURIComponent(ck) })); })
+          .then((j) => { clearTimeout(to); if (!cancelled && j && (j.generated || j.cached)) {
+            setSceneUrl((m) => ({ ...m, [i]: "/api/story-library?pimg=1&k=" + encodeURIComponent(ck) }));
+            if (wantsWater(pg)) {
+              fetch("/api/segment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ k: ck, prompt: "water" }) })
+                .then((r2) => r2.json()).then((s2) => { if (!cancelled && s2 && s2.ok) setWaterMask((m) => ({ ...m, [i]: "/api/segment?mask=1&prompt=water&k=" + encodeURIComponent(ck) })); }).catch(() => {});
+            }
+          } })
           .catch(() => { clearTimeout(to); })
           .finally(() => { active--; if (!cancelled) pump(); });
       }
@@ -176,7 +186,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       <audio ref={ambienceRef} style={{ display: "none" }} />
 
       {sceneUrl[idx]
-        ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} style={s.page} />
+        ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} waterMask={waterMask[idx]} style={s.page} />
         : <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={idx} style={s.page} />}
 
       <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">Repaint this page</button>
