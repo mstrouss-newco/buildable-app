@@ -1,5 +1,26 @@
 # Buildable Kids — Session Log
 
+## Platformer: real ElevenLabs music library + no-reading demo instructions (June 26 2026)
+
+Follow-up to the polish pass, both in `public/play.html`.
+
+- **Real background music (replaces the Web Audio synth loop).** Now streams the actual
+  **ElevenLabs** tracks from the chess music library via `GET /api/chess-music?world=<key>`
+  (already cached server-side; all 6 worlds verified live, ~469KB mp3 each, served in <10ms).
+  `GAME_CONFIG.musicKey` sets the starting track (default **ocean** = dreamy ambient, Mike's
+  pick for the forest). Added a **music-note button** (top-left, next to mute) that cycles the
+  6-song library by ear — ocean/space/castle/jungle/candy/desert — with a brief on-canvas
+  track-name toast (drawn note glyph, no emoji). Mute button still toggles SFX + music; music
+  unlocks on the Play! tap (iOS gesture rule). No ElevenLabs key handled by the agent — the
+  endpoint already uses the owner's env key server-side.
+- **Instructions are now a no-reading demo (for pre-readers).** Replaced the text wall with a
+  live **auto-playing bunny demo** (the QA bot drives it, looping) behind an **animated
+  finger-swipe** hint (swipe up = jump, down = slide; glowing chevrons) and one big pulsing
+  **Play!** button. Tap anywhere on the overlay to start; the **?** button replays the demo.
+  `demoMode` loops the clip; the QA paths (sim/frameStep/setBot) force `demoMode=false` so the
+  headless sim can never loop forever. Sim still returns ALL LEVELS WIN (2847 frames).
+
+
 ## Library navigation + app-wide emoji removal (June 26 2026)
 
 **Easier libraries + "+ make next one" cards** (Mike: "make the libary easier to navigate... see a empty card with a + to make your next one")
