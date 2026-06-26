@@ -784,7 +784,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
 
   return (
     <div style={styles.container}>
-      <LoadingGames isLoading={loading} operationType="game" onComplete={() => {}} />
+      <LoadingGames isLoading={loading} operationType="game" gameData={gameData} onComplete={() => {}} />
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
         <button onClick={onMyStuff} style={styles.myStuffButton}>📦 My Stuff</button>

@@ -258,6 +258,13 @@
   }
 }
 
+.complete-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bounce 0.6s ease-out;
+}
+
 .complete-emoji {
   font-size: 64px;
   animation: bounce 0.6s ease-out;

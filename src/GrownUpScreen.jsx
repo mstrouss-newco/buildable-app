@@ -30,6 +30,7 @@ import {
   listFamilyProjects, assignProjectToKid,
   signInWithGoogle, completeOAuthRedirect,
 } from "./lib/accounts";
+import { getLearningSettings, setLearningSettings, learningGoalOptions } from "./store";
 
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -409,6 +410,8 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
 
             {error && <p style={S.error}>{error}</p>}
 
+            <LearningModeCard />
+
             {signedIn && (
               <button style={S.linkBtn} onClick={goProjects}>🎵 Organize creations by child →</button>
             )}
@@ -453,6 +456,92 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     </div>
   );
 }
+
+// -------------------------------------------------------------
+// Learning Mode card (grown-ups). Off by default. When on, the app turns
+// render-wait mini-games and quick moments into one real practice question.
+// No emojis: the on/off control is a CSS switch, the goal picker is buttons.
+// -------------------------------------------------------------
+function LearningModeCard() {
+  const [settings, setSettings] = useState(() => getLearningSettings());
+  const goals = learningGoalOptions();
+  const goalLabel = { math: "Math", reading: "Reading", mix: "A mix" };
+
+  function toggle() {
+    setSettings(setLearningSettings({ enabled: !settings.enabled }));
+  }
+  function pickGoal(goal) {
+    setSettings(setLearningSettings({ goal }));
+  }
+
+  return (
+    <div style={LM.wrap}>
+      <div style={LM.headerRow}>
+        <div>
+          <div style={LM.title}>Learning Mode</div>
+          <div style={LM.sub}>Turn waiting time into one quick practice question.</div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={settings.enabled}
+          onClick={toggle}
+          style={{ ...LM.switch, ...(settings.enabled ? LM.switchOn : {}) }}
+        >
+          <span style={{ ...LM.knob, ...(settings.enabled ? LM.knobOn : {}) }} />
+        </button>
+      </div>
+
+      {settings.enabled && (
+        <div style={LM.goalsWrap}>
+          <div style={LM.goalsLabel}>What should we practice?</div>
+          <div style={LM.goalsRow}>
+            {goals.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => pickGoal(g)}
+                style={{ ...LM.goalBtn, ...(settings.goal === g ? LM.goalBtnActive : {}) }}
+              >
+                {goalLabel[g] || g}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const LM = {
+  wrap: {
+    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(155,126,221,0.3)",
+    borderRadius: 16, padding: "14px 16px", margin: "14px 0",
+  },
+  headerRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  title: { fontSize: 16, fontWeight: 800 },
+  sub: { fontSize: 12.5, opacity: 0.75, marginTop: 3, lineHeight: 1.4, maxWidth: 280 },
+  switch: {
+    flex: "0 0 auto", width: 52, height: 30, borderRadius: 999, border: "none",
+    background: "rgba(255,255,255,0.22)", position: "relative", cursor: "pointer",
+    padding: 0, transition: "background 0.2s",
+  },
+  switchOn: { background: "#00c48c" },
+  knob: {
+    position: "absolute", top: 3, left: 3, width: 24, height: 24, borderRadius: "50%",
+    background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+  },
+  knobOn: { left: 25 },
+  goalsWrap: { marginTop: 14 },
+  goalsLabel: { fontSize: 13, fontWeight: 700, marginBottom: 8, opacity: 0.9 },
+  goalsRow: { display: "flex", flexWrap: "wrap", gap: 8 },
+  goalBtn: {
+    background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)",
+    borderRadius: 12, padding: "8px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer",
+    fontFamily: NUN,
+  },
+  goalBtnActive: { background: "#fff", color: "#b3477a", borderColor: "#fff" },
+};
 
 const S = {
   container: {

@@ -1,6 +1,8 @@
 // /src/StoryMaker.jsx  (v4 — music-style flow, no emojis, style samples, jackpot)
 import { useState, useEffect } from "react";
 import StoryReader from "./StoryReader";
+import QuizGate from "./QuizGate";
+import { getLearningSettings } from "./store";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -59,12 +61,20 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const [saving,setSaving]=useState(false);
   const [savedMsg,setSavedMsg]=useState("");
   const [currentStoryId,setCurrentStoryId]=useState(null);
+  const [justFinished,setJustFinished]=useState(false); // learning gate: only after a real finish
+  const [gateNext,setGateNext]=useState(null);              // pending action awaiting a quick question
 
   async function loadSaved(){try{const r=await fetch("/api/list-stories?deviceId="+encodeURIComponent(deviceId)+(kidProfileId?"&kidProfileId="+encodeURIComponent(kidProfileId):""));const j=await r.json();setSaved(Array.isArray(j.stories)?j.stories:[]);}catch{}}
   useEffect(()=>{loadSaved();},[]);
 
   function reset(){setGuide("unicorn");setStyle("watercolor");setHero("bunny");setWorld("enchanted-forest");setQuest("lost_friend");setMood("cozy");setEnding("happy");setSpark("");setCustomSpark("");setName(DEFAULT_NAME["bunny"]);}
-  function startPicker(){setError(null);reset();setStep(0);setView("pick");}
+  function doStartPicker(){setError(null);reset();setStep(0);setView("pick");}
+  function maybeGate(action){
+    const ls=getLearningSettings();
+    if(ls.enabled && justFinished){ setJustFinished(false); setGateNext(()=>action); return; }
+    action();
+  }
+  function startPicker(){ maybeGate(doStartPicker); }
 
   const STEPS = [
     { key:"guide",  q:"Who's your story buddy?", opts:GUIDES,     val:guide,  set:setGuide,  img:(id)=>libImg("character",id,"watercolor","happy") },
@@ -85,13 +95,14 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   function next(){setStep(s=>Math.min(TOTAL,s+1));}
   function back(){ if(atEnd){setStep(TOTAL-1);return;} if(step>0)setStep(step-1); else setView("landing"); }
 
-  function surprise(){
+  function doSurprise(){
     setError(null);
     setGuide(rand(GUIDES)[0]); setStyle("watercolor");
     const h=rand(CHARACTERS)[0];
     makeStory({ guide:rand(GUIDES)[0], style:"watercolor", characterSlug:h, characterName:DEFAULT_NAME[h], worldSlug:rand(WORLDS)[0],
       quest:rand(QUESTS)[0], mood:rand(MOODS)[0], ending:rand(ENDINGS)[0], spark:rand(SPARKS) });
   }
+  function surprise(){ maybeGate(doSurprise); }
 
   function doMake(){ if(locking) return; setLocking(true); setTimeout(()=>{ setLocking(false); makeStory(); }, 1350); }
 
@@ -103,7 +114,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body, age:6, deviceId, kidProfileId})});
       const j=await r.json();
       if(!(j&&j.ok&&j.story)){ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); return; }
-      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setView("reading");
+      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); setView("reading");
     }catch{ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); }
   }
   async function makeSequel(prev){
@@ -113,7 +124,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...c, age:6, deviceId, kidProfileId})});
       const j=await r.json();
       if(!(j&&j.ok&&j.story)){ setError("Hmm, that didn't work."); setView("reading"); return; }
-      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setView("reading");
+      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); setView("reading");
     }catch{ setError("Hmm, that didn't work."); setView("reading"); }
   }
 
@@ -131,6 +142,22 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   }
   async function openSaved(storyId){try{const r=await fetch("/api/list-stories?storyId="+encodeURIComponent(storyId));const j=await r.json();if(j&&j.story&&j.story.story){setStory(j.story.story);setSavedMsg("");setCurrentStoryId(storyId);setView("reading");}}catch{}}
   async function deleteSaved(storyId){try{await fetch("/api/delete-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({deviceId,storyId})});setSaved(p=>p.filter(x=>x.story_id!==storyId));}catch{}}
+
+  // Learning gate overlay: when set, show one quick question first, then run the
+  // pending action (start a new story / surprise). Never hard-fails (QuizGate
+  // has Skip + passes through on errors).
+  if (gateNext) {
+    const proceed = gateNext;
+    return (
+      <QuizGate
+        age={6}
+        goal={getLearningSettings().goal}
+        gameType="story"
+        title="One quick question first!"
+        onPass={() => { setGateNext(null); proceed(); }}
+      />
+    );
+  }
 
   // ---------- READING ----------
   if(view==="reading"&&story){

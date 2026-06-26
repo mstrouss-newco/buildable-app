@@ -243,3 +243,55 @@ export function libraryCounts() {
     sounds: cache.sounds.length,
   };
 }
+
+// ---------------- Learning Mode settings ----------------
+// Opt-in "Learning Mode" that turns the existing render-wait mini-games and
+// (optionally) between-moment gates into ONE real quick question. Defaults to
+// OFF so the app behaves exactly as before unless a grown-up turns it on.
+//
+// Shape: { enabled: boolean, goal: "math" | "reading" | "mix" }
+const LEARNING_KEY = "learning";
+const LEARNING_DEFAULTS = { enabled: false, goal: "math" };
+const GOAL_OPTIONS = ["math", "reading", "mix"];
+let learningCache = { ...LEARNING_DEFAULTS };
+
+function normalizeLearning(raw) {
+  const src = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const enabled = src.enabled === true;
+  const goal = GOAL_OPTIONS.includes(src.goal) ? src.goal : LEARNING_DEFAULTS.goal;
+  return { enabled, goal };
+}
+
+// Load persisted learning settings into the cache at startup (background).
+(async function hydrateLearning() {
+  try {
+    const db = await openDB();
+    const stored = await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readonly");
+      const r = tx.objectStore(STORE).get(LEARNING_KEY);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+    if (stored && typeof stored === "object") learningCache = normalizeLearning(stored);
+  } catch {
+    // IndexedDB unavailable — keep safe defaults (OFF).
+  }
+  emit();
+})();
+
+// Synchronous read for the UI. Always returns a safe, normalized object.
+export function getLearningSettings() {
+  return { ...learningCache };
+}
+
+// Merge a patch into the learning settings, persist, and notify listeners.
+export function setLearningSettings(patch) {
+  learningCache = normalizeLearning({ ...learningCache, ...(patch || {}) });
+  idbSet(LEARNING_KEY, learningCache).catch(() => {});
+  emit();
+  return { ...learningCache };
+}
+
+export function learningGoalOptions() {
+  return [...GOAL_OPTIONS];
+}

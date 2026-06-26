@@ -1,31 +1,65 @@
 // src/LoadingGames.jsx
-// Mini-games that play while character/level renders
-// Auto-dismisses when render completes
-import { useState, useEffect } from 'react';
+// Shown during the render wait for a character/level/game.
+//
+// DEFAULT behavior (Learning Mode OFF) is unchanged: rotating mini-games
+// (numbers / memory / pattern) that auto-dismiss when the real render finishes.
+//
+// When Learning Mode is ON (store.getLearningSettings().enabled), the slot
+// shows ONE real question from /api/generate-quiz instead of the mini-games.
+// The question is adaptive: level rises on a correct answer and falls on a
+// wrong one. It still auto-dismisses when the real render completes.
+//
+// No emojis anywhere — shapes/marks are inline SVG or CSS.
+import { useState, useEffect, useRef } from 'react';
 import "./loading-games.css";
+import { getLearningSettings } from "./store";
+import { questionText } from "./QuizGate";
 
-export default function LoadingGames({ isLoading, onComplete, operationType = 'character' }) {
+// ---- small inline marks (no emojis) ----
+function CheckMark({ size = 60 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" fill="none" stroke="#00c48c" strokeWidth="2" />
+      <path d="M6.5 12.5l3.5 3.5 7.5-8" fill="none" stroke="#00c48c" strokeWidth="2.4"
+        strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function goalToQuizType(goal) {
+  if (goal === "reading") return Math.random() < 0.5 ? "reading" : "spelling";
+  if (goal === "mix") {
+    const opts = ["math", "geometry", "spelling", "reading"];
+    return opts[Math.floor(Math.random() * opts.length)];
+  }
+  return Math.random() < 0.25 ? "geometry" : "math";
+}
+
+export default function LoadingGames({ isLoading, onComplete, operationType = 'character', age = 7, gameData }) {
   const [gameType, setGameType] = useState('numbers');
   const [gameState, setGameState] = useState('playing');
   const [score, setScore] = useState(0);
-const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  // Read learning settings once at mount so behavior is stable for this wait.
+  const learning = getLearningSettings();
+  const learnAge = (gameData && (gameData.age || gameData.character?.age)) || age || 7;
 
   useEffect(() => {
     if (!isLoading && gameState === 'playing') {
       // Render complete - show result
       setGameState('complete');
       setTimeout(() => {
-onComplete?.();
-setDismissed(true);
-}, 1500); // Show result for 1.5s then close
+        onComplete?.();
+        setDismissed(true);
+      }, 1500); // Show result for 1.5s then close
     }
   }, [isLoading]);
 
-  // Auto-rotate through the mini-games while we wait for the REAL game to
-  // finish rendering. The kid never has to choose — we cycle numbers ->
-  // memory -> pattern so it's obvious more is coming and we're still working.
+  // Auto-rotate through the mini-games while we wait (ONLY when learning is OFF).
   const GAME_ORDER = ['numbers', 'memory', 'pattern'];
   useEffect(() => {
+    if (learning.enabled) return; // learning mode shows a single question, no rotation
     if (!isLoading || gameState !== 'playing') return;
     const rotate = setInterval(() => {
       setGameType((prev) => {
@@ -34,17 +68,21 @@ setDismissed(true);
       });
     }, 9000); // ~9s per mini-game, then advance to the next automatically
     return () => clearInterval(rotate);
-  }, [isLoading, gameState]);
+  }, [isLoading, gameState, learning.enabled]);
 
   if (dismissed) return null;
-if (!isLoading && gameState !== 'complete') {
-return null;
-}
+  if (!isLoading && gameState !== 'complete') {
+    return null;
+  }
 
   return (
     <div className="loading-games-overlay">
       <div className="loading-games-container">
-        {gameState === 'playing' && (
+        {gameState === 'playing' && learning.enabled && (
+          <LearningQuestion age={learnAge} goal={learning.goal} operationType={operationType} />
+        )}
+
+        {gameState === 'playing' && !learning.enabled && (
           <>
             {gameType === 'numbers' && <TapNumbersGame setScore={setScore} />}
             {gameType === 'memory' && <MemoryMatchGame setScore={setScore} />}
@@ -54,18 +92,20 @@ return null;
 
         {gameState === 'complete' && (
           <div className="game-complete">
-            <div className="complete-emoji">🎉</div>
+            <div className="complete-mark"><CheckMark /></div>
             <h2>Great Job!</h2>
-            <p className="complete-score">Your Score: <strong>{score}</strong></p>
+            {!learning.enabled && (
+              <p className="complete-score">Your Score: <strong>{score}</strong></p>
+            )}
             <p className="complete-message">
               {operationType === 'character'
-                ? '✨ Your character is ready!'
-                : '🗺️ Your world is ready!'}
+                ? 'Your character is ready!'
+                : 'Your world is ready!'}
             </p>
             <div className="complete-dots">
-              <span>●</span>
-              <span>●</span>
-              <span>●</span>
+              <span>&bull;</span>
+              <span>&bull;</span>
+              <span>&bull;</span>
             </div>
           </div>
         )}
@@ -80,23 +120,113 @@ return null;
                   : operationType === 'game'
                   ? 'Building your game…'
                   : 'Building your world…'}
-                {' '}Hang tight — keep playing while we finish!
+                {' '}Hang tight — keep going while we finish!
               </span>
             </div>
-            <p className="loading-status-sub">More mini-games coming up while you wait:</p>
-            <div className="game-progress" aria-hidden="true">
-              {['numbers', 'memory', 'pattern'].map((g) => (
-                <span
-                  key={g}
-                  className={`game-progress-pill ${gameType === g ? 'active' : ''}`}
-                >
-                  {g === 'numbers' ? '🔢 Numbers' : g === 'memory' ? '🃏 Memory' : '🔷 Pattern'}
-                </span>
-              ))}
-            </div>
+            {!learning.enabled && (
+              <>
+                <p className="loading-status-sub">More mini-games coming up while you wait:</p>
+                <div className="game-progress" aria-hidden="true">
+                  {['numbers', 'memory', 'pattern'].map((g) => (
+                    <span
+                      key={g}
+                      className={`game-progress-pill ${gameType === g ? 'active' : ''}`}
+                    >
+                      {g === 'numbers' ? 'Numbers' : g === 'memory' ? 'Memory' : 'Pattern'}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// LEARNING MODE: one real adaptive question (no emojis)
+// ============================================================================
+function LearningQuestion({ age, goal, operationType }) {
+  const [q, setQ] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [picked, setPicked] = useState(null);
+  const levelRef = useRef(1);
+  const alive = useRef(true);
+
+  async function load() {
+    setLoading(true);
+    setPicked(null);
+    const quizType = goalToQuizType(goal);
+    try {
+      const r = await fetch("/api/generate-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ age, level: levelRef.current, gameType: operationType || "creation", quizType }),
+      });
+      const data = await r.json();
+      if (!alive.current) return;
+      if (data && Array.isArray(data.choices) && typeof data.correctIndex === "number") setQ(data);
+      else setQ(null);
+    } catch {
+      if (alive.current) setQ(null);
+    } finally {
+      if (alive.current) setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    alive.current = true;
+    load();
+    return () => { alive.current = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function choose(i) {
+    if (!q || picked === q.correctIndex) return;
+    setPicked(i);
+    if (i === q.correctIndex) {
+      levelRef.current = Math.min(10, levelRef.current + 1);
+      setTimeout(() => { if (alive.current) load(); }, 900); // next question while still waiting
+    } else {
+      levelRef.current = Math.max(1, levelRef.current - 1);
+      setTimeout(() => { if (alive.current) setPicked(null); }, 900); // let them retry
+    }
+  }
+
+  return (
+    <div className="game-content">
+      <h3>Quick question</h3>
+      {loading || !q ? (
+        <p className="game-instruction">Getting a question ready…</p>
+      ) : (
+        <>
+          <p className="game-instruction" style={{ fontSize: 17, color: "#fff", fontWeight: 700 }}>
+            {questionText(q)}
+          </p>
+          <div className="numbers-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 360 }}>
+            {q.choices.map((c, i) => {
+              const isCorrect = picked != null && i === q.correctIndex;
+              const isWrong = picked === i && i !== q.correctIndex;
+              return (
+                <button
+                  key={i}
+                  onClick={() => choose(i)}
+                  disabled={picked === q.correctIndex}
+                  className={`number-button ${isCorrect ? 'next' : ''} ${isWrong ? 'done' : ''}`}
+                  style={{ aspectRatio: "auto", padding: "14px 10px", fontSize: 18 }}
+                >
+                  {String(c)}
+                </button>
+              );
+            })}
+          </div>
+          {picked != null && picked !== q.correctIndex && (
+            <p className="game-instruction">Not quite — try again!</p>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -123,7 +253,7 @@ function TapNumbersGame({ setScore }) {
 
   return (
     <div className="game-content">
-      <h3>🔢 Tap the Numbers</h3>
+      <h3>Tap the Numbers</h3>
       <p className="game-instruction">Tap numbers 1-{currentIndex + 1} in order!</p>
 
       <div className="numbers-grid">
@@ -147,7 +277,7 @@ function TapNumbersGame({ setScore }) {
 }
 
 // ============================================================================
-// GAME 2: MEMORY MATCH
+// GAME 2: MEMORY MATCH (letter tiles — no emojis)
 // ============================================================================
 function MemoryMatchGame({ setScore }) {
   const [cards, setCards] = useState([]);
@@ -156,8 +286,8 @@ function MemoryMatchGame({ setScore }) {
   const [score, updateScore] = useState(0);
 
   useEffect(() => {
-    // Initialize cards
-    const symbols = ['🌟', '🎨', '🎵', '🎭', '🎪', '🎯'];
+    // Initialize cards using letters (no emojis).
+    const symbols = ['A', 'B', 'C', 'D', 'E', 'F'];
     const gameCards = [...symbols, ...symbols]
       .sort(() => Math.random() - 0.5)
       .map((symbol, i) => ({ id: i, symbol }));
@@ -184,7 +314,7 @@ function MemoryMatchGame({ setScore }) {
 
   return (
     <div className="game-content">
-      <h3>🃏 Memory Match</h3>
+      <h3>Memory Match</h3>
       <p className="game-instruction">Find matching pairs!</p>
 
       <div className="memory-grid">
@@ -210,8 +340,10 @@ function MemoryMatchGame({ setScore }) {
 }
 
 // ============================================================================
-// GAME 3: PATTERN RECOGNIZER
+// GAME 3: PATTERN RECOGNIZER (colored CSS tiles — no emojis)
 // ============================================================================
+const PATTERN_COLORS = ['#7a5cfc', '#ff6b6b', '#00c48c', '#ffd166'];
+
 function PatternGame({ setScore }) {
   const [pattern, setPattern] = useState([]);
   const [playerPattern, setPlayerPattern] = useState([]);
@@ -252,7 +384,7 @@ function PatternGame({ setScore }) {
     highlightShape(index);
 
     if (newPlayerPattern[newPlayerPattern.length - 1] !== pattern[newPlayerPattern.length - 1]) {
-      setMessage('❌ Try again!');
+      setMessage('Try again!');
       await new Promise((resolve) => setTimeout(resolve, 1000));
       playPattern(pattern);
       return;
@@ -262,7 +394,7 @@ function PatternGame({ setScore }) {
       const newScore = score + 1;
       updateScore(newScore);
       setScore(newScore);
-      setMessage(`✅ Level ${newScore}! Get ready...`);
+      setMessage(`Level ${newScore}! Get ready...`);
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const newPattern = [...pattern, Math.floor(Math.random() * 4)];
@@ -271,23 +403,21 @@ function PatternGame({ setScore }) {
     }
   };
 
-  const shapes = ['🔷', '🔶', '🟦', '🟪'];
-
   return (
     <div className="game-content">
-      <h3>🔷 Pattern Master</h3>
+      <h3>Pattern Master</h3>
       <p className="game-instruction">{message}</p>
 
       <div className="pattern-grid">
-        {shapes.map((shape, i) => (
+        {PATTERN_COLORS.map((color, i) => (
           <button
             key={i}
             id={`shape-${i}`}
             onClick={() => handleShapeClick(i)}
             className="pattern-shape"
-          >
-            {shape}
-          </button>
+            style={{ background: color }}
+            aria-label={`tile ${i + 1}`}
+          />
         ))}
       </div>
 

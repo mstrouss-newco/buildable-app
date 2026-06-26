@@ -1,5 +1,7 @@
 // /src/CreatorScreen.jsx
 import { useState, useEffect } from "react";
+import QuizGate from "./QuizGate";
+import { getLearningSettings } from "./store";
 
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -160,7 +162,7 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
           <button onClick={generateCharacter} disabled={loading || !description.trim()}
             style={{ ...styles.generateButton, opacity: loading || !description.trim() ? 0.6 : 1,
               cursor: loading || !description.trim() ? "not-allowed" : "pointer" }}>
-            {loading ? "Generating... ✨" : "Make my character!"}
+            {loading ? "Generating..." : "Make my character!"}
           </button>
           {error && <p style={styles.error}>{error}</p>}
         </div>
@@ -219,7 +221,25 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
     finally { setLoading(false); }
   };
 
-  const handleContinue = () => onLevelCreated({ name: levelName, description, theme, difficulty, previewImage: levelImage, layers: levelLayers, character: characterData });
+  const [levelGate, setLevelGate] = useState(false);
+  const doContinue = () => onLevelCreated({ name: levelName, description, theme, difficulty, previewImage: levelImage, layers: levelLayers, character: characterData });
+  const handleContinue = () => {
+    const ls = getLearningSettings();
+    if (ls.enabled) { setLevelGate(true); return; } // one quick question before play
+    doContinue();
+  };
+
+  if (levelGate) {
+    return (
+      <QuizGate
+        age={7}
+        goal={getLearningSettings().goal}
+        gameType="level"
+        title="One quick question before you play!"
+        onPass={() => { setLevelGate(false); doContinue(); }}
+      />
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -267,7 +287,7 @@ export function LevelCreatorScreen({ onLevelCreated, characterData }) {
 
           <button onClick={generateLevel} disabled={loading} style={{
             ...styles.generateButton, opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer" }}>
-            {loading ? "Building world... ✨" : "Make my world!"}
+            {loading ? "Building world..." : "Make my world!"}
           </button>
           {error && <p style={styles.error}>{error}</p>}
         </div>
