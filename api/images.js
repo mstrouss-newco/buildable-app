@@ -29,30 +29,44 @@ const WORLD = { space:"outer space with planets and stars", underwater:"a colorf
   desert:"a sunny desert", volcano:"a glowing volcano" };
 
 const COVER_STYLE = "vibrant playful square album-cover artwork, modern 3D glossy cartoon style, bright bold colors, fun and inviting, centered, no text, no words, no letters, child-friendly, ages 4-10";
-const ICON_STYLE  = "glossy realistic Apple GarageBand app-icon aesthetic, single subject centered, brightly and softly lit, clean, vibrant, kid-friendly, no text, no labels, no watermark";
+const ICON_STYLE  = "Photorealistic studio product photograph, realistic materials and reflections, soft even studio lighting, sharp focus, high detail, clean and glossy like an Apple GarageBand instrument icon. Single subject, centered, filling the frame. Not a cartoon, not an illustration, not 3D-rendered, not flat. No text, no labels, no watermark.";
 
 // Instrument / mood / world icon subjects (mirrors the Music Maker pickers).
 const ICONS = {
-  drums:  { big:"a full colorful kids' drum kit", soft:"a single snare drum with soft wire brushes on top",
-            marching:"a marching-band snare drum with crossed drumsticks", bongos:"a pair of wooden bongo drums" },
-  guitar: { electric:"a glossy cherry-red electric guitar", acoustic:"a warm honey-wood acoustic guitar",
-            twangy:"a shiny chrome resonator steel guitar" },
-  strings:{ violin:"a polished wooden violin with its bow", cello:"a polished wooden cello standing upright with its bow",
+  drums:  { big:"a complete colorful children's drum kit with a bass drum, two toms, a snare, a hi-hat and cymbals",
+            soft:"a snare drum with a pair of wire jazz brushes resting on the drumhead",
+            marching:"a marching-band snare drum with a shoulder strap and two wooden drumsticks",
+            bongos:"a pair of polished wooden bongo drums" },
+  guitar: { electric:"a glossy electric guitar with a vibrant solid body and chrome hardware",
+            acoustic:"a warm natural-wood acoustic guitar",
+            twangy:"a shiny chrome resonator guitar" },
+  strings:{ violin:"a polished wooden violin with its bow",
+            cello:"a polished wooden cello with its bow",
             harp:"an elegant golden concert harp" },
-  singer: { boy:"a cheerful young boy singing into a microphone", girl:"a cheerful young girl singing into a microphone",
-            group:"a happy group of kids singing together at microphones" },
-  vibe:   { happy:"a glossy 3D smiling sun radiating sunshine", epic:"a glossy 3D golden lightning bolt with dramatic light",
-            spooky:"a cute friendly glowing jack-o-lantern pumpkin", silly:"a goofy 3D face with googly eyes and a clown nose",
-            chill:"a relaxed 3D crescent moon wearing sunglasses", dance:"a sparkling 3D disco ball with colorful light beams" },
-  style:  { pop:"a shiny pop-star microphone with colorful stars", country:"a brown cowboy hat with a small acoustic guitar",
-            hiphop:"modern headphones with a gold chain", rock:"a bright electric guitar with a lightning bolt",
-            disco:"a shiny mirror disco ball with retro light rays", sleepy:"a golden crescent moon with little stars and a cloud",
-            marching:"a marching-band bass drum with a plumed band hat", reggae:"an acoustic guitar with red, gold and green stripes" },
-  world:  { space:"a colorful outer-space scene with a smiling planet and a cute rocket",
-            underwater:"a bright underwater ocean scene with coral and friendly fish",
-            castle:"a magical fairytale castle with towers and flags", candy:"a whimsical candy land with lollipops and gumdrops",
-            forest:"a lush enchanted forest with friendly trees", desert:"a sunny desert scene with sand dunes and a cactus",
-            volcano:"a playful but dramatic volcano with glowing lava" },
+  singer: { boy:"a happy young boy singing into a handheld studio microphone",
+            girl:"a happy young girl singing into a studio microphone on a stand",
+            group:"three happy kids singing together at studio microphones" },
+  vibe:   { happy:"a bright shiny sun in a clear blue sky",
+            epic:"a dramatic glowing bolt of lightning",
+            spooky:"a glowing carved Halloween jack-o-lantern pumpkin",
+            silly:"a pair of novelty clown glasses with a big red nose",
+            chill:"a pair of cool reflective sunglasses",
+            dance:"a sparkling mirror-ball disco ball" },
+  style:  { pop:"a shiny chrome studio vocal microphone",
+            country:"a brown cowboy hat resting on a wooden acoustic guitar",
+            hiphop:"a pair of modern DJ headphones with a thick gold chain",
+            rock:"a glossy electric guitar",
+            disco:"a sparkling mirror-ball disco ball with colorful dance-floor lights",
+            sleepy:"a glowing crescent moon with stars in a deep-blue night sky",
+            marching:"a marching-band bass drum with a tall plumed marching hat beside it",
+            reggae:"an acoustic guitar painted with red, gold and green stripes" },
+  world:  { space:"a colorful outer-space scene with planets, stars and a rocket",
+            underwater:"a vibrant underwater coral reef with tropical fish and sunbeams",
+            castle:"a majestic fairytale castle on a green hill under a bright sky",
+            candy:"a whimsical candy land of giant lollipops, gumdrops and candy canes",
+            forest:"a lush sunlit forest with tall trees and dappled light",
+            desert:"a sunny desert with golden sand dunes and a cactus",
+            volcano:"an erupting volcano with glowing orange lava and rocky terrain" },
 };
 
 function build(q) {
@@ -65,7 +79,7 @@ function build(q) {
     return {
       descriptor: `cover|${vibe}|${theme}`,
       prompt: `Square album cover artwork for a children's song. Mood: ${mood}. Setting: ${setting}. ${COVER_STYLE}`,
-      transparent: false,
+      transparent: false, quality: "low",
     };
   }
   if (kind === "icon") {
@@ -76,8 +90,8 @@ function build(q) {
     const transparent = !(cat === "world"); // worlds are full scenes; everything else is a cut-out
     return {
       descriptor: `icon|${cat}|${id}`,
-      prompt: `${subject}. ${ICON_STYLE}` + (cat === "world" ? "" : ", on a plain background"),
-      transparent,
+      prompt: `${subject}. ${ICON_STYLE}`,
+      transparent, quality: "medium",
     };
   }
   return null;
@@ -157,9 +171,10 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
     }
     return null;
   };
+  const q = opts.quality || "low";
   const tx = opts.transparent ? { background: "transparent", output_format: "png" } : {};
   return (
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "low", ...tx })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: q, ...tx })) ||
     (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", ...tx })) ||
     null
   );
@@ -204,9 +219,10 @@ export default async function handler(req, res) {
   if (!openaiKey) return res.status(503).json({ error: "no_openai_key" });      // <img onError> -> fallback
   if (!(await underBudget())) return res.status(503).json({ error: "over_budget" });
 
-  const b64 = await generateImage(spec.prompt, openaiKey, { transparent: spec.transparent });
+  const b64 = await generateImage(spec.prompt, openaiKey, { transparent: spec.transparent, quality: spec.quality });
   if (!b64) return res.status(502).json({ error: "image_provider_failed" });
   await cachePut(key, spec.descriptor, (q.kind || "").toString(), b64);
-  await logCost(IMG_COST_USD);
+  const COST = { low: 0.011, medium: 0.042, high: 0.167 };
+  await logCost(COST[spec.quality] || IMG_COST_USD);
   return sendPng(res, b64);
 }
