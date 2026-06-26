@@ -9,11 +9,60 @@
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
   canvas{background:#000;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
   #hint{position:fixed;left:0;right:0;bottom:14px;text-align:center;color:#fff;opacity:.7;font-size:15px;pointer-events:none}
+
+  /* on-screen controls */
+  #pad{position:fixed;left:18px;bottom:20px;display:flex;gap:14px;z-index:5}
+  #actions{position:fixed;right:18px;bottom:20px;display:flex;gap:14px;align-items:flex-end;z-index:5}
+  .ctl{width:74px;height:74px;border-radius:50%;background:rgba(20,30,50,.30);border:2px solid rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  .ctl:active{background:rgba(20,30,50,.55)}
+  .ctl.small{width:58px;height:58px}
+  .ctl.jump{width:94px;height:94px;background:rgba(59,191,115,.42);border-color:rgba(255,255,255,.75)}
+  .ar{display:block;width:0;height:0}
+  .arL{border-top:13px solid transparent;border-bottom:13px solid transparent;border-right:20px solid #fff}
+  .arR{border-top:13px solid transparent;border-bottom:13px solid transparent;border-left:20px solid #fff}
+  .arU{border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:22px solid #fff}
+  .arD{border-left:13px solid transparent;border-right:13px solid transparent;border-top:20px solid #fff}
+  #bHelp{position:fixed;left:16px;top:14px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);color:#fff;font:700 18px Fredoka,sans-serif;cursor:pointer}
+  #howto{position:fixed;inset:0;z-index:10;background:rgba(8,12,28,.85);display:flex;align-items:center;justify-content:center;padding:18px}
+  #howto .card{background:linear-gradient(160deg,#2a3566,#1b2446);border:1px solid rgba(255,255,255,.15);border-radius:20px;max-width:450px;width:100%;padding:22px 24px;color:#eef1ff;font-family:Fredoka,-apple-system,sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.55)}
+  #howto h1{margin:0 0 4px;font-size:26px;text-align:center}
+  #howto .sub{margin:0 0 16px;text-align:center;color:#aab3e0;font-size:14px}
+  #howto .rows{display:flex;flex-direction:column;gap:12px;font-size:15px}
+  #howto .row{display:flex;align-items:center;gap:13px;line-height:1.3}
+  #howto .ic{min-width:60px;height:30px;display:flex;gap:7px;align-items:center;justify-content:center}
+  .dot{width:18px;height:18px;border-radius:50%;display:inline-block;flex:0 0 auto;margin-left:21px}
+  .dot.coin{background:#ffd23f}.dot.bad{background:#7a4a86}.dot.flag{background:#ffd23f;border-radius:3px;width:14px;height:18px}
+  .dot.star{background:#ffd23f;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  #play{margin:22px auto 2px;display:block;background:#3bbf73;color:#fff;border:none;border-radius:14px;padding:13px 44px;font:700 19px Fredoka,sans-serif;cursor:pointer}
+  #play:active{background:#33a866}
 </style>
 </head>
 <body>
-<div id="wrap"><canvas id="c" width="900" height="540"></canvas></div>
-<div id="hint">Tap to jump · swipe down to slide</div>
+<div id="wrap"><canvas id="c" width="900" height="540"></canvas>
+  <button id="bHelp">?</button>
+  <div id="pad">
+    <div id="dleft" class="ctl"><span class="ar arL"></span></div>
+    <div id="dright" class="ctl"><span class="ar arR"></span></div>
+  </div>
+  <div id="actions">
+    <div id="ddown" class="ctl small"><span class="ar arD"></span></div>
+    <div id="djump" class="ctl jump"><span class="ar arU"></span></div>
+  </div>
+  <div id="howto"><div class="card">
+    <h1>Bramble&#39;s Dash</h1>
+    <p class="sub">Explore Whispering Woods!</p>
+    <div class="rows">
+      <div class="row"><span class="ic"><span class="ar arL"></span><span class="ar arR"></span></span> Move left and right</div>
+      <div class="row"><span class="ic"><span class="ar arU"></span></span> Press JUMP to hop — hold it for a higher jump</div>
+      <div class="row"><span class="ic"><span class="ar arD"></span></span> Press DOWN to slide under low branches</div>
+      <div class="row"><span class="dot coin"></span> Collect coins along the way</div>
+      <div class="row"><span class="dot star"></span> Climb the platforms to find 3 hidden stars</div>
+      <div class="row"><span class="dot bad"></span> Hop over crystals and bop the grumpy critters</div>
+      <div class="row"><span class="dot flag"></span> Reach the flag to win!</div>
+    </div>
+    <button id="play">Play!</button>
+  </div></div>
+<div id="hint">Move with the arrows · JUMP to hop · reach the flag</div>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -137,7 +186,7 @@ let shieldOn=false, magnetT=0, springT=0, starT=0;  // power-up effect timers
 
 function startLevel(i){
   li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
-  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0};
+  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0, vx:0, face:1};
   camX=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; starsGot=0; totalStars=L.stars.length; dust=[]; doneMsgT=0;
   shieldOn=false; magnetT=0; springT=0; starT=0;
   if(hearts==null) hearts=3;
@@ -146,7 +195,7 @@ function startLevel(i){
 startLevel(0);
 
 // --- input ---
-let jumpHeld=false;
+let jumpHeld=false, inputLeft=false, inputRight=false, paused=true;
 function doJump(){
   if(!started){started=true;}
   if(player.slide>0) player.slide=0;                       // jump cancels a slide
@@ -156,35 +205,63 @@ function doJump(){
   jumpHeld=true;
 }
 function doSlide(){ if(!started){started=true;return;} if(player.onGround && player.slide<=0){ player.slide=SLIDE_FRAMES; } }
-addEventListener('keydown',e=>{ if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();doJump();} if(e.code==='ArrowDown'){e.preventDefault();doSlide();} if(e.key==='b')botMode=!botMode; });
-addEventListener('keyup',e=>{ if(e.code==='Space'||e.code==='ArrowUp')jumpHeld=false; });
-let _psy=0,_pact=false;
-c.addEventListener('pointerdown',e=>{ e.preventDefault(); _psy=e.clientY; _pact=false; });
-c.addEventListener('pointermove',e=>{ if(!_pact && (e.clientY-_psy)>34){ _pact=true; if(state==="play") doSlide(); } });
-c.addEventListener('pointerup',e=>{ if(!_pact){ if(state==="win"){ if(li<LEVELS.length-1) startLevel(li+1); else { hearts=3; startLevel(0);} } else if(state==="lose"){ hearts=3; startLevel(li);} else { doJump(); } } _pact=true; jumpHeld=false; });
+addEventListener('keydown',e=>{
+  if(e.code==='ArrowLeft'){inputLeft=true;started=true;}
+  else if(e.code==='ArrowRight'){inputRight=true;started=true;}
+  else if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();started=true;doJump();}
+  else if(e.code==='ArrowDown'){e.preventDefault();doSlide();}
+  else if(e.key==='b')botMode=!botMode;
+});
+addEventListener('keyup',e=>{
+  if(e.code==='ArrowLeft')inputLeft=false;
+  else if(e.code==='ArrowRight')inputRight=false;
+  else if(e.code==='Space'||e.code==='ArrowUp')jumpHeld=false;
+});
+// on-screen buttons (mobile / iPad)
+function hold(id, down, up){ const el=document.getElementById(id); if(!el)return;
+  el.addEventListener('pointerdown',ev=>{ev.preventDefault(); started=true; down(); });
+  ['pointerup','pointerleave','pointercancel'].forEach(t=>el.addEventListener(t,ev=>{ev.preventDefault(); if(up)up();}));
+}
+hold('dleft', ()=>inputLeft=true, ()=>inputLeft=false);
+hold('dright',()=>inputRight=true,()=>inputRight=false);
+hold('djump', ()=>doJump(),       ()=>jumpHeld=false);
+hold('ddown', ()=>doSlide(),      null);
+// tap the world to continue after win / lose
+c.addEventListener('pointerdown',()=>{ if(state==="win"||state==="lose"){ hearts=3; startLevel(li); } });
+// how-to overlay
+const howto=document.getElementById('howto');
+document.getElementById('play').addEventListener('click',()=>{ howto.style.display='none'; paused=false; });
+document.getElementById('bHelp').addEventListener('click',()=>{ howto.style.display='flex'; paused=true; });
 
 // --- helpers: is there solid ground under world-x? ---
 function groundUnder(wx){ for(const g of L.ground){ if(wx>=g.x0 && wx<g.x1) return g.y; } return null; }
 
 // --- simple "perfect player" bot: jump before a gap or obstacle/enemy ---
 function botThink(){
+  inputRight=true; inputLeft=false;          // perfect player walks right
   if(player.onGround){
-    for(const b of L.lowBars){ const d=b.x-(player.x+24); if(d>2 && d<60){ if(player.slide<=0) doSlide(); return; } }  // duck under
-    if(groundUnder(player.x+48)==null){ doJump(); return; }   // gap edge just ahead
-    for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>4 && d<60){ doJump(); return; } }
-    for(const e of L.enemies){ if(!e.dead){ const d=e.x-(player.x+24); if(d>4 && d<54){ doJump(); return; } } }
-  } else { jumpHeld=true; }   // hold for full height/distance while airborne
+    for(const b of L.lowBars){ const d=b.x-(player.x+24); if(d>2 && d<60){ if(player.slide<=0) doSlide(); return; } }
+    if(groundUnder(player.x+24+46)==null){ doJump(); return; }   // gap just ahead
+    for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>2 && d<66){ doJump(); return; } }
+    for(const e of L.enemies){ if(!e.dead){ const d=e.x-(player.x+24); if(d>2 && d<58){ doJump(); return; } } }
+  } else { jumpHeld=true; }
 }
 
 // --- update ---
 function update(){
   if(state!=="play"){ doneMsgT++; return; }
+  if(paused) return;
   if(botMode) botThink();
   if(!started) return;                       // wait for first input
   if(player.slide>0) player.slide--;
   if(magnetT>0)magnetT--; if(springT>0)springT--; if(starT>0)starT--;
-  // run
-  player.x += player.runV;
+  // walk — player-controlled (Mario-style, no auto-scroll)
+  const ACC=0.7, MAXR=L.speed, FR=0.80;
+  if(inputLeft && !inputRight) player.vx-=ACC; else if(inputRight && !inputLeft) player.vx+=ACC; else player.vx*=FR;
+  if(player.vx>MAXR)player.vx=MAXR; if(player.vx<-MAXR)player.vx=-MAXR;
+  player.x += player.vx;
+  if(player.x<20){ player.x=20; if(player.vx<0)player.vx=0; }
+  if(Math.abs(player.vx)>0.4) player.face = player.vx>0?1:-1;
   // gravity + variable jump height
   player.vy += GRAV * (jumpHeld && player.vy<0 ? 0.62 : 1);
   player.y += player.vy;
@@ -259,7 +336,7 @@ function drawPU(x,y,kind,r){ r=r||15; const col={shield:"#4aa3ff",magnet:"#e0566
 function heart(x,y,s){ctx.beginPath();ctx.moveTo(x,y+s*0.3);ctx.bezierCurveTo(x,y,x-s,y,x-s,y+s*0.35);ctx.bezierCurveTo(x-s,y+s*0.7,x,y+s*0.9,x,y+s*1.15);ctx.bezierCurveTo(x,y+s*0.9,x+s,y+s*0.7,x+s,y+s*0.35);ctx.bezierCurveTo(x+s,y,x,y,x,y+s*0.3);ctx.closePath();ctx.fill();}
 function draw(){
   const P=GAME_CONFIG.palette;
-  camX = Math.max(0, player.x-220);
+  const _ct=Math.max(0, player.x - W*0.42); camX += (_ct-camX)*0.16; if(camX<0)camX=0;
   const t=Date.now()/1000, SC=L.scene||{mid:[],near:[],fore:[],top:[],flies:[]};
   // LAYER 1 — sky gradient
   const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#cfeaff"); sky.addColorStop(.55,"#dff0d6"); sky.addColorStop(1,"#eef6dc"); ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
@@ -304,7 +381,7 @@ function draw(){
   let scx=1, scy=1;
   if(player.land>0){ const k=player.land/8; scy=1-0.26*k; scx=1+0.26*k; }
   else if(!player.onGround){ if(player.vy<-1){ scy=1.12; scx=0.9; } else if(player.vy>4){ scy=1.07; scx=0.95; } }
-  ctx.save(); ctx.translate(hx+24, hy+64); ctx.scale(scx,scy); ctx.rotate(sliding?0:player.r*0.6);
+  ctx.save(); ctx.translate(hx+24, hy+64); ctx.scale(scx*(player.face||1),scy); ctx.rotate(sliding?0:player.r*0.6);
   if(hero.complete && hero.naturalWidth){ if(sliding) ctx.drawImage(hero,-34,-40,68,40); else ctx.drawImage(hero,-30,-68,60,68); }
   else { ctx.fillStyle="#e8915a"; rrect(-22, sliding?-34:-60, 44, sliding?32:56, 16); ctx.fill(); }
   ctx.restore();
@@ -331,7 +408,6 @@ function draw(){
   // banners
   if(state==="win"){ banner(li<LEVELS.length-1?"Level Complete!":"You Win!", "You found "+starsGot+"/"+totalStars+" stars  \u00b7  Tap to play again"); }
   if(state==="lose"){ banner("Try Again!","Tap to restart this level"); }
-  if(!started && state==="play"){ ctx.fillStyle="rgba(0,0,0,.35)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Fredoka,sans-serif";ctx.fillText(GAME_CONFIG.name,W/2,H/2-10); ctx.font="20px Fredoka,sans-serif";ctx.fillText("Tap to start",W/2,H/2+28); }
 }
 function t2(){return Date.now()/1000;}
 function banner(t,s){ ctx.fillStyle="rgba(0,0,0,.45)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 40px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-6); ctx.font="20px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
@@ -341,12 +417,12 @@ function frame(){ update(); draw(); requestAnimationFrame(frame); }
 requestAnimationFrame(frame);
 
 // expose for QA / picker
-window.BK_GAME = { startLevel:(i)=>startLevel(i), setBot:(b)=>{botMode=b;started=true;}, state:()=>state, level:()=>li,
+window.BK_GAME = { startLevel:(i)=>startLevel(i), setBot:(b)=>{botMode=b;started=true;paused=false;}, state:()=>state, level:()=>li,
   dbg:()=>({px:Math.round(player.x), goal:Math.round(L.goalX), started, runV:player.runV, hp:hearts, onG:player.onGround, vy:Math.round(player.vy), state}),
   // QA harness: run a "perfect player" headlessly (no rAF) through a level.
-  frameStep:(n)=>{ for(let i=0;i<(n||1);i++){ update(); draw(); } },
-  sim:(idx, maxFrames)=>{ hearts=3; startLevel(idx); botMode=true; started=true; let f=0; const cap=maxFrames||4000;
-    while(state==="play" && f<cap){ update(); f++; } return { level:idx, result:state, frames:f, coins:coinsGot+"/"+totalCoins }; } };
+  frameStep:(n)=>{ paused=false; for(let i=0;i<(n||1);i++){ update(); draw(); } },
+  sim:(idx, maxFrames)=>{ hearts=3; startLevel(idx); paused=false; botMode=true; started=true; inputLeft=false; inputRight=false; let f=0; const cap=maxFrames||8000;
+    while(state==="play" && f<cap){ update(); f++; } botMode=false; inputLeft=false; inputRight=false; return { level:idx, result:state, frames:f, coins:coinsGot+"/"+totalCoins }; } };
 </script>
 </body>
 </html>
