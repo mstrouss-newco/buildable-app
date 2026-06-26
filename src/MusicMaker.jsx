@@ -372,7 +372,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
             <div style={{ ...S.draft, borderColor: draft.coverColor }}>
               <div style={S.draftTitle}>{draft.title}</div>
               {draft.meta && draft.meta.recipe && <div style={S.recipe}>{draft.meta.recipe}</div>}
-              <SongPlayer src={draft.audioUrl} color={draft.coverColor} autoPlay size={78} />
+              <SongPlayer src={draft.audioUrl} color={draft.coverColor} autoPlay size={92} />
               <div style={S.draftBtns}>
                 <button style={{ ...S.keepBtn, background: draft.coverColor }} onClick={keepSong} aria-label="Save this song" title="Save">
                   <svg width="34" height="34" viewBox="0 0 24 24" fill="#15131f" aria-hidden="true"><path d="M12 21s-7.6-4.7-10.1-9.2C.2 8.5 1.9 5.2 5.2 5.2c1.9 0 3.2 1.1 3.8 2.1.6-1 1.9-2.1 3.8-2.1 3.3 0 5 3.3 3.3 6.6C19.6 16.3 12 21 12 21z"/></svg>
@@ -443,7 +443,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
                 <div style={S.songInfo}>
                   <div style={S.songTitle}>{s.title}</div>
                   <div style={S.songMeta}>{(s.vibe || "song")}{s.theme ? " · " + s.theme : ""}</div>
-                  <SongPlayer src={s.audio_url} color={s.cover_color || "#5B6CFF"} size={54} />
+                  <SongPlayer src={s.audio_url} color={s.cover_color || "#5B6CFF"} size={64} />
                 </div>
                 <button style={S.shareBtn} onClick={() => shareCreation({ kind: "song", id: s.song_id, title: s.title })} title="Share">↗</button>
                 <button style={S.renameBtn} onClick={() => renameSong(s)} title="Rename">Aa</button>
