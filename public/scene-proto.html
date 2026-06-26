@@ -1,0 +1,46 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Stories — scene prototype</title>
+<style>
+  body{margin:0;background:#0f1226;color:#eef0ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:26px;max-width:860px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:16px;margin:30px 0 4px}
+  p.sub{color:#9aa0c7;margin:0 0 14px;font-size:14px;line-height:1.5}
+  .stage{position:relative;width:100%;aspect-ratio:3/2;border-radius:18px;overflow:hidden;background:#000;border:1px solid #2a3060;margin-bottom:8px}
+  .stage .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .stage .ch{position:absolute;left:50%;bottom:0;width:30%;transform:translateX(-50%);filter:drop-shadow(0 8px 13px rgba(0,0,0,.4))}
+  .scene{width:100%;border-radius:18px;display:block;border:1px solid #2a3060;margin-bottom:6px}
+  .cap{color:#c3c8ee;font-size:14px;margin:0 0 20px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin-bottom:6px}
+  .bad{background:#5a2331;color:#ff9cb0}.good{background:#1f4d3a;color:#7df0b8}
+</style>
+<h1>Pip the Fox — Enchanted Forest</h1>
+<p class="sub">Top: how it looks <b>now</b> (one background, fox cut-out pasted in the same centered spot — what you flagged as flat). Below: the <b>new</b> approach — the same fox redrawn <i>into</i> the scene, different angle and action each page, a companion, real depth. Each new page ~1¢.</p>
+
+<span class="tag bad">NOW · flat</span>
+<div class="stage">
+  <img class="bg" src="/api/story-library?img=world:enchanted-forest&style=watercolor">
+  <img class="ch" src="/api/story-library?img=character:fox&style=watercolor&emo=happy">
+</div>
+<div class="stage">
+  <img class="bg" src="/api/story-library?img=world:enchanted-forest&style=watercolor">
+  <img class="ch" src="/api/story-library?img=character:fox&style=watercolor&emo=surprised">
+</div>
+<p class="cap">Same backdrop, fox stuck in the middle, page after page.</p>
+
+<h2><span class="tag good">NEW · integrated scenes</span></h2>
+
+<img class="scene" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=establish">
+<p class="cap"><b>Establishing —</b> Pip skipping down the glowing path, small in a big world.</p>
+
+<img class="scene" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=peek">
+<p class="cap"><b>Peek —</b> tucked behind a giant mushroom, only half in frame.</p>
+
+<img class="scene" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=doorway">
+<p class="cap"><b>Over-the-shoulder —</b> seen from behind, facing a shimmering doorway. Depth + scale.</p>
+
+<img class="scene" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=companion">
+<p class="cap"><b>Companion —</b> meeting a wise owl in a clearing — another character in the scene.</p>
+
+<img class="scene" src="/api/story-library?simg=1&slug=fox&style=watercolor&shot=cozy">
+<p class="cap"><b>Cozy night —</b> curled at the base of a tree, different mood + lighting.</p>

@@ -76,6 +76,10 @@
       "dest": "/qa-expr.html"
     },
     {
+      "src": "/scene-proto.html",
+      "dest": "/scene-proto.html"
+    },
+    {
       "src": "/story-demo.html",
       "dest": "/story-demo.html"
     },
