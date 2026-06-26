@@ -16,6 +16,7 @@
 import { useState, useEffect, useRef } from "react";
 import { shareCreation } from "./lib/shareSheet";
 import CoverThumb from "./lib/CoverThumb";
+import IconImg from "./lib/IconImg";
 
 const MAX_SONGS = 10;
 
@@ -265,7 +266,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
   const vibeObj = VIBES.find((v) => v.id === vibe) || VIBES[0];
 
   // Small helper: a row of tappable emoji tiles for a single choice.
-  const TileRow = ({ options, value, onPick, accent }) => (
+  const TileRow = ({ options, value, onPick, accent, cat }) => (
     <div style={S.tileRow}>
       {options.map((o) => {
         const active = value === o.id;
@@ -280,7 +281,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
               boxShadow: active ? `0 0 0 2px ${accent || "#5B6CFF"}55` : "none",
             }}
           >
-            <span style={S.tileEmoji}>{o.emoji}</span>
+            <IconImg cat={cat} id={o.id} emoji={o.emoji} size={28} />
             <span style={S.tileLabel}>{o.label}</span>
           </button>
         );
@@ -316,7 +317,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
                   color: vibe === v.id ? "#1a1a2a" : "#fff",
                 }}
               >
-                <span style={{ fontSize: 26 }}>{v.emoji}</span>
+                <IconImg cat="vibe" id={v.id} emoji={v.emoji} size={28} />
                 <span>{v.label}</span>
               </button>
             ))}
@@ -324,21 +325,21 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
 
           {/* GENRE */}
           <div style={S.label}>🎶 Pick a music style</div>
-          <TileRow options={GENRES} value={genre} onPick={setGenre} accent={vibeObj.color} />
+          <TileRow options={GENRES} value={genre} onPick={setGenre} accent={vibeObj.color} cat="style" />
 
           {/* SINGER */}
           <div style={S.label}>🎤 Who sings?</div>
-          <TileRow options={SINGERS} value={singer} onPick={setSinger} accent={vibeObj.color} />
+          <TileRow options={SINGERS} value={singer} onPick={setSinger} accent={vibeObj.color} cat="singer" />
 
           {/* INSTRUMENTS */}
           <div style={S.label}>🥁 Drums</div>
-          <TileRow options={DRUMS} value={drums} onPick={setDrums} accent={vibeObj.color} />
+          <TileRow options={DRUMS} value={drums} onPick={setDrums} accent={vibeObj.color} cat="drums" />
 
           <div style={S.label}>🎸 Guitar</div>
-          <TileRow options={GUITARS} value={guitar} onPick={setGuitar} accent={vibeObj.color} />
+          <TileRow options={GUITARS} value={guitar} onPick={setGuitar} accent={vibeObj.color} cat="guitar" />
 
           <div style={S.label}>🎻 Strings</div>
-          <TileRow options={STRINGS} value={strings} onPick={setStrings} accent={vibeObj.color} />
+          <TileRow options={STRINGS} value={strings} onPick={setStrings} accent={vibeObj.color} cat="strings" />
 
           {/* SPEED */}
           <div style={S.label}>⏱️ How fast?</div>
@@ -353,6 +354,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
                 onClick={() => setTheme(t.id)}
                 style={theme === t.id ? S.themeChipActive : S.themeChip}
               >
+                {t.id ? <IconImg cat="world" id={t.id} emoji="🌍" size={18} radius={4} /> : null}
                 {t.label}
               </button>
             ))}
@@ -447,8 +449,8 @@ const S = {
   tileEmoji: { fontSize: 28, lineHeight: 1 },
   tileLabel: { fontSize: 12, fontWeight: 700, textAlign: "center", color: "#e7e7f5" },
   themeRow: { display: "flex", flexWrap: "wrap", gap: 8 },
-  themeChip: { background: "#2a2a3a", color: "#ddd", border: "none", borderRadius: 999, padding: "8px 14px", cursor: "pointer", fontWeight: 600 },
-  themeChipActive: { background: "#fff", color: "#1a1a2a", border: "none", borderRadius: 999, padding: "8px 14px", cursor: "pointer", fontWeight: 700 },
+  themeChip: { display: "inline-flex", alignItems: "center", gap: 6, background: "#2a2a3a", color: "#ddd", border: "none", borderRadius: 999, padding: "8px 14px", cursor: "pointer", fontWeight: 600 },
+  themeChipActive: { display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", color: "#1a1a2a", border: "none", borderRadius: 999, padding: "8px 14px", cursor: "pointer", fontWeight: 700 },
   input: { width: "100%", boxSizing: "border-box", padding: "12px 14px", fontSize: 16, borderRadius: 12, border: "2px solid #3a3a4a", background: "#11111a", color: "#fff", outline: "none" },
   bigBtn: { width: "100%", marginTop: 18, padding: "16px", fontSize: 18, fontWeight: 800, color: "#1a1a2a", border: "none", borderRadius: 14, cursor: "pointer" },
   loading: { textAlign: "center", marginTop: 16, fontSize: 18, letterSpacing: 2 },
