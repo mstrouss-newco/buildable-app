@@ -39,6 +39,17 @@ const WORLDS = {
       canopy:   "A horizontal swag of overhanging leafy branch and hanging vines with dangling leaves drooping down from the top of the frame, soft green, used to frame the top edge of a forest scene",
     },
   },
+  "props": {
+    name: "Game Props",
+    pieces: {
+      coin:    "a single shiny round gold coin standing upright, soft warm glow, a tiny sparkle highlight, simple and clean, facing the viewer",
+      gem:     "a single small cluster of pointed amethyst purple crystal shards poking up, glossy facets, a spiky little hazard",
+      critter: "a single cute round fuzzy little forest creature with big friendly eyes and a tiny grumpy frown, soft purple-pink, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      vines:   "a tall vertical hanging curtain of leafy green vines and a mossy branch drooping straight down from above, dense leaves, like an overhead barrier to duck under, tall and narrow",
+      spring:  "a single bright bouncy springy mushroom with a glossy domed rubbery teal-green cap and a short stalk, looks bouncy and fun",
+      flag:    "a single cheerful little finish flag (a friendly triangular pennant) on a slim wooden pole, a goal marker, bright and inviting",
+    },
+  },
 };
 
 function pieceKey(world, piece, style) {

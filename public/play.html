@@ -349,7 +349,7 @@ function draw(){
   // LAYER 3 — mid trees (parallax 0.4), rooted behind the ground band
   for(const m of SC.mid){ const sx=m.x-camX*0.4 + Math.sin(t*0.5+m.ph)*3; if(sx<-260||sx>W+260)continue; const im=pieceImg(m.piece); if(im) drawPiece(im, sx, GROUND_Y+26, 300*m.s, m.flip); }
   // LAYER 4 — near bushes / mushrooms (parallax 0.66)
-  for(const nr of SC.near){ const sx=nr.x-camX*0.66 + Math.sin(t*0.8+nr.ph)*2; if(sx<-160||sx>W+160)continue; const im=pieceImg(nr.piece); if(im) drawPiece(im, sx, GROUND_Y+16, 150*nr.s, nr.flip); }
+  for(const nr of SC.near){ const sx=nr.x-camX*0.66 + Math.sin(t*0.8+nr.ph)*2; if(sx<-160||sx>W+160)continue; if(groundUnder(sx+camX)==null)continue; const im=pieceImg(nr.piece); if(im) drawPiece(im, sx, GROUND_Y+16, 150*nr.s, nr.flip); }
   // fireflies drifting in the air
   for(const f of SC.flies){ const sx=((f.x-camX*0.8)%W+W)%W; const y=f.y+Math.sin(t*f.sp+f.ph)*16; const a=0.3+0.4*Math.abs(Math.sin(t*1.6*f.sp+f.ph)); ctx.fillStyle="rgba(255,242,170,"+(a*0.25).toFixed(2)+")"; ctx.beginPath();ctx.arc(sx,y,6,0,7);ctx.fill(); ctx.fillStyle="rgba(255,244,180,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(sx,y,2.3,0,7);ctx.fill(); }
   // ground segments
@@ -390,7 +390,7 @@ function draw(){
   if(invuln>0 && !shieldOn && starT<=0 && Math.floor(invuln/6)%2===0){ ctx.fillStyle="rgba(255,255,255,.25)"; ctx.beginPath();ctx.arc(hx+24,hy+30,34,0,7);ctx.fill(); }
   // LAYER 6 — foreground ferns (parallax in front) + canopy framing the top
   { const sc=L.scene||{fore:[],top:[]};
-    for(const fo of sc.fore){ const sx=fo.x-camX*1.25 + Math.sin(t2()*0.7+fo.ph)*6; if(sx<-200||sx>W+200)continue; const im=pieceImg("fern"); if(im){ ctx.globalAlpha=0.92; drawPiece(im, sx, H+28, 230*fo.s, fo.flip); ctx.globalAlpha=1; } }
+    for(const fo of sc.fore){ const sx=fo.x-camX*1.25 + Math.sin(t2()*0.7+fo.ph)*6; if(sx<-200||sx>W+200)continue; if(groundUnder(sx+camX)==null)continue; const im=pieceImg("fern"); if(im){ ctx.globalAlpha=0.92; drawPiece(im, sx, H+28, 230*fo.s, fo.flip); ctx.globalAlpha=1; } }
     for(const tp of sc.top){ const sx=tp.x-camX*1.12; if(sx<-260||sx>W+260)continue; const im=pieceImg("canopy"); if(im) drawTopPiece(im, sx, 165*tp.s, tp.flip); }
   }
   // HUD
