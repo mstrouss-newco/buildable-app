@@ -156,6 +156,10 @@
       "dest": "/site.webmanifest"
     },
     {
+      "src": "/music-library/(.*)",
+      "dest": "/music-library/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
