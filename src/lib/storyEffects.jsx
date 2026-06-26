@@ -371,4 +371,18 @@ export function LayeredPage({ bgUrl, charUrl, charSlug, effect, effects, palette
   );
 }
 
+export function SceneStage({ url, effect, effects, world, pageIndex, style, children }) {
+  useEffect(() => { injectKeyframes(); }, []);
+  const layers = Array.isArray(effects) && effects.length ? effects.slice(0, 2) : [effect];
+  const origin = ["50% 45%", "30% 40%", "70% 40%"][(pageIndex || 0) % 3];
+  return (
+    <div style={{ position: "relative", overflow: "hidden", ...style }}>
+      <img src={url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 22s ease-in-out infinite alternate" }} />
+      {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
+      <LivingLayer effect={FG_BY_WORLD[world] || "floating_dust"} />
+      {children}
+    </div>
+  );
+}
+
 export default LivingPage;

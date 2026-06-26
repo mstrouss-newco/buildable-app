@@ -217,7 +217,43 @@ async function genScene(baseB64, prompt, openaiKey, timeoutMs = 44000) {
   return null;
 }
 
+function readBody(req){if(req.body&&typeof req.body==="object")return Promise.resolve(req.body);return new Promise((resolve)=>{let raw="";req.on("data",c=>raw+=c);req.on("end",()=>{try{resolve(JSON.parse(raw||"{}"));}catch{resolve({});}});});}
+const CAM=[
+  "Wide establishing shot, the hero small within a big scene.",
+  "The hero placed to one side of the frame, foreground elements adding depth.",
+  "A closer, cozy view of the hero in the moment.",
+  "A low angle looking up, wondrous and dramatic.",
+  "Seen from behind, over the hero's shoulder, looking into the scene.",
+  "A warm medium shot focused on the hero and the key thing happening.",
+];
+function worldDesc(slug){const w=WORLDS.find(x=>x[0]===slug);return w?w[2]:"";}
+function pageScenePrompt(action,world,style,i){
+  return `Children's picture-book illustration depicting THIS exact moment: "${action}". ${CAM[i%CAM.length]} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
+}
+function pageSceneKey(ck){return "libpg:"+crypto.createHash("sha1").update(ck).digest("hex");}
+
 export default async function handler(req, res) {
+  // --- PRODUCTION page scene: edit the hero (by emotion) INTO this page's moment ---
+  if (req.method === "POST") {
+    const body = await readBody(req);
+    if (!body.pageScene) return res.status(400).json({ ok:false, error:"unknown POST" });
+    const slug=(body.slug||"").toString(), style=styleId(body.style), emo=(body.emo||"").toString();
+    const world=(body.world||"").toString(), action=(body.action||"").toString().slice(0,400);
+    const i=parseInt(body.pageIndex||0,10)||0, ck=(body.cacheKey||"").toString();
+    if(!findItem("character",slug)||!action||!ck) return res.status(400).json({ ok:false, error:"bad input" });
+    const k=pageSceneKey(ck);
+    if(!body.force && await cacheGet(k)) return res.status(200).json({ ok:true, cached:true });
+    let ref = EMOS[emo] ? await cacheGet(exprKey(slug,style,emo)) : null;
+    if(!ref) ref = await cacheGet(cacheKey("character",slug,style));
+    if(!ref) return res.status(200).json({ ok:true, needBase:true });
+    const openaiKey=process.env.OPENAI_API_KEY;
+    if(!openaiKey) return res.status(200).json({ ok:true, noKey:true });
+    const b64=await genScene(ref, pageScenePrompt(action,world,style,i), openaiKey);
+    if(!b64) return res.status(200).json({ ok:true, failed:true });
+    if(body.force) await cacheDel(k);
+    await cachePut(k,b64);
+    return res.status(200).json({ ok:true, generated:true });
+  }
   const q = req.query || {};
 
   // --- serve a cached image as real PNG bytes (short URL for <img src>) ---
@@ -234,6 +270,14 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     res.status(200).send(buf);
     return;
+  }
+
+  // --- serve a generated PAGE SCENE (production) ---
+  if (q.pimg) {
+    const b64=await cacheGet(pageSceneKey((q.k||"").toString()));
+    if(!b64){ res.status(404).json({ ok:false, missing:true }); return; }
+    res.setHeader("Content-Type","image/png"); res.setHeader("Access-Control-Allow-Origin","*"); res.setHeader("Cache-Control","public, max-age=31536000, immutable");
+    res.status(200).send(Buffer.from(b64,"base64")); return;
   }
 
   // --- serve a generated SCENE page (prototype) ---

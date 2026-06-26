@@ -5,7 +5,7 @@
 // costs ~$0. Read-aloud highlights words in time (ElevenLabs if configured, else the
 // browser's built-in speech).
 import { useState, useEffect, useRef } from "react";
-import { LayeredPage } from "./lib/storyEffects";
+import { LayeredPage, SceneStage } from "./lib/storyEffects";
 import { shareCreation } from "./lib/shareSheet";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -38,12 +38,45 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const hlTimerRef = useRef(null);
   const ambienceRef = useRef(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [sceneUrl, setSceneUrl] = useState({});   // pageIndex -> generated scene url
+  const tokenRef = useRef((story && story.story_id) || (Math.random().toString(36).slice(2,10) + Date.now().toString(36)));
+  const startedScenesRef = useRef(false);
 
   const page = pages[idx] || {};
   const words = wordsOf(page.text);
   const palette = WORLD_PALETTE[page.world_slug] || ["#3a2c63", "#7a4a86"];
   const bgUrl = page.world_slug ? libImg("world", page.world_slug, style) : null;
   const charUrl = libImg("character", charSlug, style, page.emotion || "happy");
+
+  // RICH PAGES: generate an integrated illustration of each page's moment (the hero
+  // drawn INTO the scene, by emotion) in the background. Flat layered page shows
+  // instantly; each page upgrades to its painted scene when ready. Cached per story.
+  useEffect(() => {
+    if (startedScenesRef.current || !pages.length) return;
+    startedScenesRef.current = true;
+    let cancelled = false;
+    const token = tokenRef.current;
+    const queue = pages.map((_p, i) => i);
+    let active = 0, qi = 0;
+    const pump = () => {
+      while (!cancelled && active < 2 && qi < queue.length) {
+        const i = queue[qi++]; const pg = pages[i];
+        if (!pg || !pg.text) continue;
+        active++;
+        const ck = token + "|" + i + "|" + (pg.emotion || "happy");
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 120000);
+        fetch("/api/story-library", { method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
+          body: JSON.stringify({ pageScene: true, slug: charSlug, style, emo: pg.emotion || "happy", world: pg.world_slug, action: pg.text, pageIndex: i, cacheKey: ck }) })
+          .then((r) => r.json())
+          .then((j) => { clearTimeout(to); if (!cancelled && j && (j.generated || j.cached)) setSceneUrl((m) => ({ ...m, [i]: "/api/story-library?pimg=1&k=" + encodeURIComponent(ck) })); })
+          .catch(() => { clearTimeout(to); })
+          .finally(() => { active--; if (!cancelled) pump(); });
+      }
+    };
+    pump();
+    return () => { cancelled = true; };
+  }, []);
 
   // World ambience: optional (returns configured:false if not set up). Loops quietly.
   useEffect(() => {
@@ -127,7 +160,9 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       </div>
       <audio ref={ambienceRef} style={{ display: "none" }} />
 
-      <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={idx} style={s.page} />
+      {sceneUrl[idx]
+        ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} style={s.page} />
+        : <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={idx} style={s.page} />}
 
       <div style={s.textPanel}>
         <p style={s.text}>
