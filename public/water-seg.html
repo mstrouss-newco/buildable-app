@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Stories — segmented water</title>
+<style>
+  body{margin:0;background:#0e1020;color:#eef0ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px;max-width:820px;margin:0 auto}
+  h1{font-size:21px;margin:0 0 4px}
+  p.sub{color:#9aa0c7;margin:0 0 14px;font-size:14px;line-height:1.5}
+  .toggle{background:#3552a8;border:1px solid #5572d6;color:#fff;border-radius:999px;padding:9px 20px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px}
+  .stage{position:relative;width:100%;aspect-ratio:3/2;border-radius:18px;overflow:hidden;background:#000;border:1px solid #2a3060}
+  .stage img.base{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:kb 18s ease-in-out infinite alternate}
+  .water{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
+    -webkit-mask-image:var(--m);mask-image:var(--m);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+  .caustic{position:absolute;inset:0;mix-blend-mode:screen;opacity:0;
+    background:repeating-linear-gradient(100deg,transparent 0 22px,rgba(255,255,255,.13) 26px,transparent 34px);background-size:220% 100%;
+    -webkit-mask-image:var(--m);mask-image:var(--m);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+  .lit .water{opacity:1;filter:url(#bk-ripple)}
+  .lit .caustic{opacity:1;animation:flow 7s linear infinite}
+  .lbl{font-size:14px;color:#c3c8ee;margin:8px 0 22px}
+  @keyframes kb{0%{transform:scale(1.04)}100%{transform:scale(1.12) translate(-1.5%,-1%)}}
+  @keyframes flow{0%{background-position:0 0}100%{background-position:220% 0}}
+</style>
+
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <filter id="bk-ripple"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="2" seed="3" result="n">
+    <animate attributeName="baseFrequency" dur="7s" values="0.012 0.04;0.016 0.05;0.012 0.04" repeatCount="indefinite"/></feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G"/></filter>
+</svg>
+
+<h1>Flowing water — now masked to the actual stream</h1>
+<p class="sub">The ripple + shimmer are confined to a mask the AI made of just the water (it traced the stream's exact shape — the fox, banks and sky are left untouched). Tap to compare.</p>
+<button class="toggle" id="t">Turn water OFF</button>
+
+<div class="stage lit" id="s" style="--m:url(https://v3b.fal.media/files/b/0a9fcf3a/O_cbYb_E8l-dA0YPUVLY1_b2d539f0dc3a40038ce32e6043cd7ee9.png)">
+  <img class="base" src="https://www.buildablekids.com/api/story-library?simg=1&slug=fox&style=watercolor&shot=river">
+  <img class="water" src="https://www.buildablekids.com/api/story-library?simg=1&slug=fox&style=watercolor&shot=river">
+  <div class="caustic"></div>
+</div>
+<p class="lbl"><b>Forest stream —</b> only the stream ripples and shimmers; everything else stays perfectly still.</p>
+
+<script>
+  const t=document.getElementById("t");let on=true;
+  t.onclick=()=>{on=!on;document.getElementById("s").classList.toggle("lit",on);t.textContent=on?"Turn water OFF":"Turn water ON";};
+</script>
