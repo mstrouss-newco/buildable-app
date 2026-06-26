@@ -1,5 +1,33 @@
 # Buildable Kids — Session Log
 
+## Platformer polish — moving platforms, swinging vines, friendly boss, background music + mute (June 26 2026)
+
+All in the FIXED data-driven engine `public/play.html` (no art-pipeline changes — every new
+element is drawn with shapes, so nothing new to generate). New level recipe knobs:
+`movingPlatChance`, `vineChance`, `boss`, `bossHp`.
+
+- **Moving platforms** — climb-zone platforms can slide on X or Y (deterministic frame clock
+  `gameT` so the QA sim matches real play). The hero is carried along on horizontal ones.
+  They live only in CLIMB zones over solid ground, so the ground win-path is never blocked →
+  still always-clearable by construction.
+- **Swinging vines** — pendulum vines hang in climb zones over solid ground. Jump onto one to
+  grab, press JUMP to fling off in the swing direction; you can collect coins mid-swing. They
+  are an OPTIONAL toy — the QA "perfect runner" bot stays on the ground path (grab is gated to
+  `!botMode`), so the headless sim is unaffected and the level can never soft-lock on a vine.
+- **Friendly end-of-level boss** — appears on the last level (`boss:true`, default 3 HP). A
+  crowned creature guards a soft "magic barrier" just before the flag; bop it on the head
+  (stomp) 3× to make it happy and drop the barrier. Side bumps cost NO hearts (kid-friendly).
+  It stays dormant until the player is ~1 screen away, then arms an 18s mercy failsafe
+  (auto-gives-up) so it can NEVER soft-lock. The bot now stomps it: verified it dies by skill
+  (HP→0) at boss.t≈318 (~5s), well under the failsafe.
+- **Background music + mute** — soft Web Audio pentatonic loop (no files), per-world root note,
+  starts on the Play! tap (respects the iOS/iPad audio-unlock gesture). New top-left mute button
+  (drawn SVG speaker, no emoji) toggles SFX + music together.
+- **QA harness added**: `qa/sim-node.mjs` runs `BK_GAME.sim()` headlessly in Node (stubs the
+  browser globals) so "every level wins" can be checked from the command line. Baseline + final
+  both PASS.
+
+
 ## Share links, reusable AI image library, Music Maker quiz-wizard + ElevenLabs voice (June 26 2026)
 
 ### Sharing — private read-only links for stories & songs

@@ -23,6 +23,8 @@
   .arU{border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:22px solid #fff}
   .arD{border-left:13px solid transparent;border-right:13px solid transparent;border-top:20px solid #fff}
   #bHelp{position:fixed;left:16px;top:14px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);color:#fff;font:700 18px Fredoka,sans-serif;cursor:pointer}
+  #bMute{position:fixed;left:60px;top:14px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  #bMute svg{width:20px;height:20px;display:block}
   #howto{position:fixed;inset:0;z-index:10;background:rgba(8,12,28,.85);display:flex;align-items:center;justify-content:center;padding:18px}
   #howto .card{background:linear-gradient(160deg,#2a3566,#1b2446);border:1px solid rgba(255,255,255,.15);border-radius:20px;max-width:450px;width:100%;padding:22px 24px;color:#eef1ff;font-family:Fredoka,-apple-system,sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.55)}
   #howto h1{margin:0 0 4px;font-size:26px;text-align:center}
@@ -33,6 +35,7 @@
   .dot{width:18px;height:18px;border-radius:50%;display:inline-block;flex:0 0 auto;margin-left:21px}
   .dot.coin{background:#ffd23f}.dot.bad{background:#7a4a86}.dot.flag{background:#ffd23f;border-radius:3px;width:14px;height:18px}
   .dot.star{background:#ffd23f;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  .dot.vine{background:#6ea03f;border-radius:50% 50% 50% 50%/60% 60% 40% 40%}.dot.boss{background:#a86fb0}
   #play{margin:22px auto 2px;display:block;background:#3bbf73;color:#fff;border:none;border-radius:14px;padding:13px 44px;font:700 19px Fredoka,sans-serif;cursor:pointer}
   #play:active{background:#33a866}
 </style>
@@ -40,6 +43,7 @@
 <body>
 <div id="wrap"><canvas id="c" width="900" height="540"></canvas>
   <button id="bHelp">?</button>
+  <button id="bMute" aria-label="Sound on/off"></button>
   <div id="pad">
     <div id="dleft" class="ctl"><span class="ar arL"></span></div>
     <div id="dright" class="ctl"><span class="ar arR"></span></div>
@@ -58,7 +62,9 @@
       <div class="row"><span class="dot coin"></span> Collect coins along the way</div>
       <div class="row"><span class="dot star"></span> Climb the platforms to find 3 hidden stars</div>
       <div class="row"><span class="dot bad"></span> Hop over crystals and bop the grumpy critters</div>
-      <div class="row"><span class="dot flag"></span> Reach the flag to win!</div>
+      <div class="row"><span class="dot vine"></span> Jump onto a hanging vine to swing across</div>
+      <div class="row"><span class="dot boss"></span> Bop the friendly King on the head to make him happy</div>
+      <div class="row"><span class="dot flag"></span> Then reach the flag to win!</div>
     </div>
     <button id="play">Play!</button>
   </div></div>
@@ -77,7 +83,7 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   bgUrl:   "https://www.buildablekids.com/api/story-library?img=world:enchanted-forest&style=watercolor",
   palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#c0566f", flag:"#ffd23f", hud:"#ffffff" },
   levels: [
-    { name:"Whispering Woods", speed:3.2, length:150, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3 },
+    { name:"Whispering Woods", speed:3.2, length:150, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.55, vineChance:0.5, boss:true, bossHp:3 },
   ],
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
@@ -89,7 +95,7 @@ const AIR_FRAMES = 2*Math.abs(JUMP)/GRAV;  // frames a full jump stays airborne
 const SLIDE_FRAMES=34;
 const c=document.getElementById('c'), ctx=c.getContext('2d');
 // --- sound (Web Audio; resumes on first tap, so it works on iPad) ---
-let AX=null, soundOn=true;
+let AX=null, soundOn=true, musicOn=true;
 function actx(){ if(!AX){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(AC)AX=new AC(); }catch{} } if(AX&&AX.state==='suspended'){ try{AX.resume();}catch{} } return AX; }
 function blip(f,dur,type,vol,glide){ const a=actx(); if(!a||!soundOn)return; try{ const o=a.createOscillator(),g=a.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f,a.currentTime); if(glide)o.frequency.exponentialRampToValueAtTime(glide,a.currentTime+dur); g.gain.setValueAtTime(0.0001,a.currentTime); g.gain.exponentialRampToValueAtTime(vol||0.14,a.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur); o.connect(g);g.connect(a.destination); o.start(); o.stop(a.currentTime+dur+0.03);}catch{} }
 const SFX={
@@ -102,6 +108,22 @@ const SFX={
   hurt:()=>blip(320,0.22,'sawtooth',0.12,120),
   win:()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,0.2,'triangle',0.14),i*130));}
 };
+// --- gentle background music: soft pentatonic loop, no audio files (themable per world) ---
+const Music=(()=>{
+  let timer=null, step=0;
+  const PENT=[0,2,4,7,9,12,14,16];                 // major pentatonic — never sounds "wrong"
+  // per-world root note so each world has its own gentle key
+  const ROOTS={ "enchanted-forest":220.0, "desert":196.0, "ocean":174.6, "space":146.8, "candy":246.9, "ice":261.6, "volcano":164.8, "jungle":207.7 };
+  function rootHz(){ const w=(GAME_CONFIG&&GAME_CONFIG.world)||"enchanted-forest"; return ROOTS[w]||220.0; }
+  function tone(semi,dur,vol,type){ const a=actx(); if(!a||!soundOn||!musicOn)return; try{ const o=a.createOscillator(),g=a.createGain(); o.type=type||'triangle'; o.frequency.value=rootHz()*Math.pow(2,semi/12); g.gain.setValueAtTime(0.0001,a.currentTime); g.gain.exponentialRampToValueAtTime(vol,a.currentTime+0.06); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur); o.connect(g);g.connect(a.destination); o.start(); o.stop(a.currentTime+dur+0.05);}catch{} }
+  function tick(){ if(!soundOn||!musicOn) return; const i=step%16;
+    if(i===0||i===8) tone(PENT[0]-12,1.6,0.05,'sine');             // soft bass pulse
+    if(i%2===0){ const n=PENT[(Math.floor(step/2)*2+ (step%5))%PENT.length]; tone(n,0.55,0.03,'triangle'); }  // drifting melody
+    step++;
+  }
+  return { start(){ if(timer)return; try{ timer=setInterval(tick,300); }catch{} },
+           stop(){ if(timer){clearInterval(timer);timer=null;} } };
+})();
 
 // --- assets ---
 const hero=new Image(); hero.crossOrigin="anonymous"; hero.src=GAME_CONFIG.heroUrl;
@@ -123,7 +145,10 @@ function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=M
 // platform could catch it. Platforms/stars/bounces live only in CLIMB zones. ---
 function buildLevel(lv, idx){
   const rnd=mulberry(1000+idx*97);
-  const ground=[], obstacles=[], enemies=[], coins=[], lowBars=[], decos=[], powerups=[], platforms=[], bounces=[], stars=[];
+  const ground=[], obstacles=[], enemies=[], coins=[], lowBars=[], decos=[], powerups=[], platforms=[], bounces=[], stars=[], swings=[];
+  let boss=null, barrierX=Infinity;
+  const isLast = idx === ((GAME_CONFIG.levels&&GAME_CONFIG.levels.length||1)-1);
+  const wantBoss = lv.boss!==false && (lv.boss===true || isLast);
   const n=lv.length, speed=lv.speed||RUN_BASE;
   const safeGapTiles=Math.max(1, Math.floor(speed*AIR_FRAMES*0.62/TILE) - 1);
   const landTiles=Math.ceil(speed*AIR_FRAMES/TILE)+1;
@@ -154,8 +179,16 @@ function buildLevel(lv, idx){
         const py=GROUND_Y-100-(tier-1)*78;
         const wT=2+Math.floor(rnd()*2);
         if(j+wT>segEnd-2) break;
-        platforms.push({x:j*TILE, y:py, w:wT*TILE});
-        for(let cc=0;cc<wT;cc++) coins.push({x:j*TILE+TILE/2+cc*TILE, y:py-30, got:false});
+        const pf={x:j*TILE, y:py, w:wT*TILE};
+        if(rnd() < (lv.movingPlatChance||0)){
+          const horiz=rnd()<0.5;
+          pf.mv = horiz ? {axis:'x', amp:TILE*(0.9+rnd()*1.1), spd:0.018+rnd()*0.016, ph:rnd()*6.28, bx:pf.x, by:pf.y}
+                        : {axis:'y', amp:30+rnd()*36,          spd:0.018+rnd()*0.016, ph:rnd()*6.28, bx:pf.x, by:pf.y};
+          pf.dx=0; pf.dy=0;
+        }
+        platforms.push(pf);
+        if(!pf.mv) for(let cc=0;cc<wT;cc++) coins.push({x:j*TILE+TILE/2+cc*TILE, y:py-30, got:false});
+        if(rnd() < (lv.vineChance||0)) swings.push({ax:pf.x+pf.w*0.5, ay:GROUND_Y-230, len:140+rnd()*40, ang:(rnd()<0.5?-1:1)*(0.5+rnd()*0.3), angV:0, grabbed:false});
         if(tier===2 && stars.length<(lv.starCount||3) && rnd()<0.7) stars.push({x:j*TILE+TILE/2, y:py-36, got:false});
         else if(rnd()<0.35) powerups.push({x:j*TILE+TILE/2, y:py-36, kind:POOL[Math.floor(rnd()*POOL.length)], got:false});
         if(rnd()<0.4) bounces.push({x:j*TILE+wT*TILE/2-32, y:py-14, w:64, t:0});
@@ -165,6 +198,12 @@ function buildLevel(lv, idx){
     }
   }
   ground.push({x0:segStart, x1:n*TILE, y:GROUND_Y});
+  if(wantBoss){
+    const bx=(n*TILE) - TILE*4;                              // arena just before the flag
+    ground.push({x0:bx-TILE*2.5, x1:n*TILE, y:GROUND_Y});    // guarantee a solid, gap-free boss arena
+    boss={ x:bx, y:GROUND_Y, w:84, h:78, hp:(lv.bossHp||3), maxHp:(lv.bossHp||3), t:0, hit:0, defeated:false, happy:0, active:false };
+    barrierX = bx - boss.w*0.5 - 2;                          // soft magic wall just left of the boss
+  }
   // cosmetic decos (separate RNG)
   const rd=mulberry(7000+idx*131);
   for(let k=3;k<n;k++){ if(rd()<0.5) decos.push({x:k*TILE+rd()*TILE, kind: rd()<0.6?'bush':'grass', s:0.7+rd()*0.7}); }
@@ -174,7 +213,7 @@ function buildLevel(lv, idx){
   ground.unshift({x0:-3000, x1:0, y:GROUND_Y});
   ground.push({x0:n*TILE, x1:n*TILE+3000, y:GROUND_Y});
   const goalX=n*TILE - TILE*1.4;
-  return { ground, obstacles, enemies, coins, lowBars, decos, powerups, platforms, bounces, stars, goalX, worldEnd:n*TILE, name:lv.name, speed:lv.speed||RUN_BASE };
+  return { ground, obstacles, enemies, coins, lowBars, decos, powerups, platforms, bounces, stars, swings, boss, barrierX, goalX, worldEnd:n*TILE, name:lv.name, speed:lv.speed||RUN_BASE };
 }
 
 // --- scatter the world pieces across parallax layers (cosmetic; separate RNG so QA is unaffected) ---
@@ -196,15 +235,17 @@ function buildScene(L, idx){
 // --- game state ---
 let LEVELS = GAME_CONFIG.levels.map((lv,i)=>buildLevel(lv,i));
 let li=0, L=LEVELS[0];
-let player, camX, hearts, coinsGot, totalCoins, state, invuln, botMode=false, doneMsgT=0, started=false, starsGot=0, totalStars=0;
+let player, camX, hearts, coinsGot, totalCoins, state, invuln, botMode=false, doneMsgT=0, started=false, starsGot=0, totalStars=0, gameT=0;
 let dust=[];
 function spawnDust(wx,wy){ for(let i=0;i<6;i++) dust.push({x:wx,y:wy,vx:(Math.random()-0.5)*3.2,vy:-Math.random()*2,life:16+Math.random()*10}); }
 let shieldOn=false, magnetT=0, springT=0, starT=0;  // power-up effect timers
 
 function startLevel(i){
   li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
-  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0, vx:0, face:1};
-  camX=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; starsGot=0; totalStars=L.stars.length; dust=[]; doneMsgT=0;
+  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0, vx:0, face:1, swing:null, swingCool:0, standPf:null};
+  camX=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; starsGot=0; totalStars=L.stars.length; dust=[]; doneMsgT=0; gameT=0;
+  if(L.boss){ L.boss.hp=L.boss.maxHp; L.boss.defeated=false; L.boss.t=0; L.boss.hit=0; L.boss.happy=0; L.boss.active=false; }
+  for(const sw of (L.swings||[])){ sw.grabbed=false; }
   shieldOn=false; magnetT=0; springT=0; starT=0;
   if(hearts==null) hearts=3;
   if(!L.scene) L.scene=buildScene(L, li);
@@ -215,6 +256,10 @@ startLevel(0);
 let jumpHeld=false, inputLeft=false, inputRight=false, paused=true;
 function doJump(){
   if(!started){started=true;}
+  if(player.swing){ const sw=player.swing; const tang=sw.angV*sw.len;        // let go of the vine, fling in the swing direction
+    player.vx=Math.max(-7,Math.min(7,Math.cos(sw.ang)*tang*6));
+    player.vy=JUMP*0.7 - Math.min(6,Math.abs(Math.sin(sw.ang)*tang)*0.5);
+    player.swing=null; sw.grabbed=false; player.onGround=false; player.dj=true; player.swingCool=10; SFX.jump(); return; }
   if(player.slide>0) player.slide=0;                       // jump cancels a slide
   const jv = springT>0 ? 1.2 : 1;                          // spring power-up = higher jump
   if(player.onGround){ player.vy=JUMP*jv; player.onGround=false; player.dj=true; SFX.jump(); }
@@ -247,7 +292,14 @@ hold('ddown', ()=>doSlide(),      null);
 c.addEventListener('pointerdown',()=>{ if(state==="win"||state==="lose"){ hearts=3; startLevel(li); } });
 // how-to overlay
 const howto=document.getElementById('howto');
-document.getElementById('play').addEventListener('click',()=>{ howto.style.display='none'; paused=false; });
+document.getElementById('play').addEventListener('click',()=>{ howto.style.display='none'; paused=false; actx(); if(soundOn&&musicOn) Music.start(); });
+// mute / sound toggle
+const SPK_ON='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4,9 4,15 8,15 13,19 13,5 8,9" fill="#fff" stroke="none"/><path d="M16 8.5a5 5 0 0 1 0 7"/><path d="M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const SPK_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4,9 4,15 8,15 13,19 13,5 8,9" fill="#fff" stroke="none"/><line x1="16" y1="9" x2="22" y2="15"/><line x1="22" y1="9" x2="16" y2="15"/></svg>';
+const bMute=document.getElementById('bMute');
+function paintMute(){ bMute.innerHTML = (soundOn) ? SPK_ON : SPK_OFF; bMute.style.opacity = soundOn? '1' : '.55'; }
+paintMute();
+bMute.addEventListener('click',()=>{ soundOn=!soundOn; musicOn=soundOn; actx(); if(soundOn&&musicOn) Music.start(); else Music.stop(); paintMute(); });
 document.getElementById('bHelp').addEventListener('click',()=>{ howto.style.display='flex'; paused=true; });
 
 // --- helpers: is there solid ground under world-x? ---
@@ -257,6 +309,7 @@ function groundUnder(wx){ for(const g of L.ground){ if(wx>=g.x0 && wx<g.x1) retu
 function botThink(){
   inputRight=true; inputLeft=false;          // perfect player walks right
   if(player.onGround){
+    if(L.boss && !L.boss.defeated){ const d=L.boss.x-(player.x+24); if(d>-20 && d<90){ doJump(); return; } }
     for(const b of L.lowBars){ const d=b.x-(player.x+24); if(d>2 && d<60){ if(player.slide<=0) doSlide(); return; } }
     if(groundUnder(player.x+24+46)==null){ doJump(); return; }   // gap just ahead
     for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>2 && d<66){ doJump(); return; } }
@@ -271,7 +324,28 @@ function update(){
   if(botMode) botThink();
   if(!started) return;                       // wait for first input
   if(player.slide>0) player.slide--;
-  if(magnetT>0)magnetT--; if(springT>0)springT--; if(starT>0)starT--;
+  if(magnetT>0)magnetT--; if(springT>0)springT--; if(starT>0)starT--; if(player.swingCool>0)player.swingCool--;
+  gameT++;
+  // advance moving platforms (deterministic frame clock so the QA sim matches real play)
+  for(const pf of L.platforms){ if(pf.mv){ const m=pf.mv;
+    const nx = m.axis==='x'? m.bx+Math.sin(gameT*m.spd+m.ph)*m.amp : m.bx;
+    const ny = m.axis==='y'? m.by+Math.sin(gameT*m.spd+m.ph)*m.amp : m.by;
+    pf.dx=nx-pf.x; pf.dy=ny-pf.y; pf.x=nx; pf.y=ny; } }
+  // swinging vines: pendulum motion (ungrabbed) + ride/grab
+  for(const sw of L.swings){ if(sw===player.swing)continue; sw.angV += -0.006*Math.sin(sw.ang); sw.angV*=0.996; sw.ang+=sw.angV; }
+  if(player.swing){ const sw=player.swing;
+    sw.angV += -0.010*Math.sin(sw.ang);
+    if(inputLeft) sw.angV-=0.0016; if(inputRight) sw.angV+=0.0016;
+    sw.angV*=0.992; sw.ang+=sw.angV;
+    player.x = sw.ax+Math.sin(sw.ang)*sw.len - 24;
+    player.y = sw.ay+Math.cos(sw.ang)*sw.len - 30;
+    player.vx=0; player.vy=0; player.onGround=false;
+    for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; SFX.coin(); } }
+    return;
+  } else if(!botMode && !player.onGround && player.swingCool<=0){     // bonus toy; the QA "perfect runner" stays on the ground path
+    for(const sw of L.swings){ const bx=sw.ax+Math.sin(sw.ang)*sw.len, by=sw.ay+Math.cos(sw.ang)*sw.len;
+      if(Math.abs((player.x+24)-bx)<40 && Math.abs((player.y+30)-by)<46){ player.swing=sw; sw.grabbed=true; player.vy=0; break; } }
+  }
   // walk — player-controlled (Mario-style, no auto-scroll)
   const ACC=0.7, MAXR=L.speed, FR=0.80;
   if(inputLeft && !inputRight) player.vx-=ACC; else if(inputRight && !inputLeft) player.vx+=ACC; else player.vx*=FR;
@@ -284,15 +358,16 @@ function update(){
   player.y += player.vy;
   // vertical support: ground + one-way platforms + bounce pads
   { const feet=player.y+60, prevFeet=feet-player.vy, cx=player.x+24;
-    let landY=null, bounce=false;
+    let landY=null, landPf=null, bounce=false;
     if(player.vy>=0){
       const g=groundUnder(cx); if(g!=null && feet>=g) landY=g;
-      for(const pf of L.platforms){ if(cx>=pf.x && cx<=pf.x+pf.w && prevFeet<=pf.y && feet>=pf.y){ if(landY==null||pf.y<landY) landY=pf.y; } }
+      for(const pf of L.platforms){ if(cx>=pf.x && cx<=pf.x+pf.w && prevFeet<=pf.y && feet>=pf.y){ if(landY==null||pf.y<landY){landY=pf.y; landPf=pf;} } }
       for(const bp of L.bounces){ if(cx>=bp.x && cx<=bp.x+bp.w && prevFeet<=bp.y && feet>=bp.y){ bounce=true; bp.t=10; } }
     }
     if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; SFX.bounce(); }
-    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); SFX.land(); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; }
-    else { player.onGround=false; }
+    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); SFX.land(); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false;
+      if(landPf&&landPf.mv){ if(landPf.mv.axis==='x') player.x+=landPf.dx; player.standPf=landPf; } else player.standPf=null; }
+    else { player.onGround=false; player.standPf=null; }
   }
   player.r = player.onGround?0:Math.max(-0.5,Math.min(0.5,player.vy*0.03));
   // fell in a gap
@@ -321,6 +396,19 @@ function update(){
   for(const o of L.obstacles){ const dx=Math.abs((player.x+24)-o.x); if(dx<28 && (player.y+60)>o.y-o.h+6 && (player.y+30)<o.y && invuln<=0){ takeHit(); } }
   // low barriers: must SLIDE under (can't jump over)
   for(const b of L.lowBars){ const dx=Math.abs((player.x+24)-b.x); if(dx<26){ const heroTop=player.y+(player.slide>0?26:0); if(heroTop < GROUND_Y-36 && invuln<=0){ takeHit(); } } }
+  // friendly end-of-level boss: bop it on the head to make it happy
+  if(L.boss && !L.boss.defeated){ const b=L.boss; if(b.hit>0)b.hit--;
+    if(!b.active && player.x > b.x - W*0.9) b.active=true;       // wake up only when the player is close
+    if(b.active){ b.t++; if(b.t>60*18) defeatBoss(); }           // mercy failsafe: boss gives up 18s after the fight starts (never soft-locks)
+    const dx=Math.abs((player.x+24)-b.x), pcy=player.y+30;
+    if(dx < b.w*0.5+26 && pcy < b.y-6 && player.vy>0){           // stomp from above
+      b.hp--; b.hit=12; player.vy=JUMP*0.7; player.dj=true; SFX.bounce(); if(b.hp<=0) defeatBoss();
+    } else if(dx < b.w*0.5+20 && pcy > b.y-b.h && player.onGround && invuln<=0){  // gentle side bump — NO heart loss
+      player.vx=-3; player.x-=4; invuln=16;
+    }
+  }
+  // magic barrier holds you back until the boss is happy
+  if(L.boss && !L.boss.defeated && (player.x+24) > L.barrierX){ player.x=L.barrierX-24; if(player.vx>0)player.vx=0; }
   // reach goal
   if(player.x>=L.goalX){ state="win"; SFX.win(); }
 }
@@ -331,6 +419,7 @@ function loseHeart(fell){
   // gentle: nudge back to safe ground
   if(fell){ let sx=player.x-TILE*2; while(sx>90 && groundUnder(sx)==null) sx-=20; player.x=Math.max(90,sx); player.y=GROUND_Y-80; player.vy=0; }
 }
+function defeatBoss(){ const b=L.boss; if(!b||b.defeated)return; b.defeated=true; b.happy=140; SFX.power(); }
 
 // --- draw ---
 function rrect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
@@ -376,6 +465,13 @@ function draw(){
   for(const pf of L.platforms){ const x=pf.x-camX; if(x+pf.w<-30||x>W+30)continue; ctx.fillStyle="#6a4a2a"; rrect(x,pf.y,pf.w,18,8);ctx.fill(); ctx.fillStyle=P.ground; rrect(x,pf.y,pf.w,8,7);ctx.fill(); ctx.fillStyle=P.groundTop; ctx.fillRect(x+5,pf.y,pf.w-10,4); }
   // bounce pads
   for(const bp of L.bounces){ const x=bp.x-camX; if(x+bp.w<-30||x>W+30)continue; const sq=bp.t>0?(bp.t/10):0; if(bp.t>0)bp.t--; const im=propImg("spring"); if(im){ const bw=bp.w+16, bh=48*(1-sq*0.3); ctx.drawImage(im, x-8, (bp.y+14)-bh+sq*6, bw, bh); } else { ctx.fillStyle="#3bbf95"; rrect(x, bp.y+sq*8, bp.w, 16-sq*6, 8);ctx.fill(); ctx.fillStyle="rgba(255,255,255,.35)"; rrect(x+5, bp.y+2+sq*8, bp.w-10, 5, 4);ctx.fill(); } }
+  // swinging vines (bonus toy, over solid ground)
+  for(const sw of L.swings){ const ax=sw.ax-camX; if(ax<-70||ax>W+70)continue; const bx=ax+Math.sin(sw.ang)*sw.len, by=sw.ay+Math.cos(sw.ang)*sw.len;
+    ctx.lineCap="round"; ctx.strokeStyle="#5a7d3a"; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(ax,sw.ay); ctx.quadraticCurveTo((ax+bx)/2,(sw.ay+by)/2,bx,by); ctx.stroke();
+    ctx.strokeStyle="#86b65a"; ctx.lineWidth=2.5; ctx.stroke(); ctx.lineCap="butt";
+    ctx.fillStyle="#6ea03f"; ctx.beginPath(); ctx.arc(bx,by,11,0,7); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.2)"; ctx.beginPath(); ctx.arc(bx-3,by-3,4,0,7); ctx.fill();
+    ctx.fillStyle="#4f7a32"; ctx.beginPath(); ctx.ellipse(ax,sw.ay,9,5,0,0,7); ctx.fill();
+  }
   // coins
   for(const k of L.coins){ if(k.got)continue; const x=k.x-camX; if(x<-30||x>W+30)continue; const im=propImg("coin"); if(im){ const s=28, sp=0.35+0.65*Math.abs(Math.cos(t*3+k.x*0.02)), w=s*(im.naturalWidth/im.naturalHeight)*sp; ctx.drawImage(im, x-w/2, k.y-s/2, w, s); } else { ctx.fillStyle=P.coin; ctx.beginPath();ctx.arc(x,k.y,11,0,7);ctx.fill(); ctx.fillStyle="rgba(255,255,255,.6)";ctx.beginPath();ctx.arc(x-3,k.y-3,3,0,7);ctx.fill(); } }
   // hidden stars (up high, reward exploring)
@@ -388,6 +484,18 @@ function draw(){
   for(const b of L.lowBars){ const x=b.x-camX; if(x<-40||x>W+40)continue; const im=propImg("vines"); if(im){ const h=GROUND_Y-20, w=72; ctx.drawImage(im, x-w/2, -16, w, h); } else { ctx.fillStyle=P.obstacle; rrect(x-22,-12,44,GROUND_Y-24,12); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-22,-12,12,GROUND_Y-24,12); ctx.fill(); ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x-30,GROUND_Y-36);ctx.lineTo(x+30,GROUND_Y-36);ctx.lineTo(x,GROUND_Y-18);ctx.closePath();ctx.fill(); } }
   // power-ups (floating bonus pickups)
   for(const u of L.powerups){ if(u.got)continue; const x=u.x-camX; if(x<-30||x>W+30)continue; drawPU(x, u.y+Math.sin(Date.now()/300+u.x)*4, u.kind, 15); }
+  // friendly end-of-level boss
+  if(L.boss){ const b=L.boss, x=b.x-camX; if(x>-130&&x<W+130){ const happy=b.defeated; const bob=Math.sin(t*3)*4 - (b.hit>0?7:0); const bw=b.w, bh=b.h, topY=b.y-bh+bob;
+    ctx.fillStyle="rgba(0,0,0,.16)"; ctx.beginPath(); ctx.ellipse(x, GROUND_Y+6, bw*0.5, 10, 0,0,7); ctx.fill();
+    ctx.fillStyle = happy? "#7bc86a" : "#a86fb0"; rrect(x-bw/2, topY, bw, bh, 22); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-bw/2+6, topY+6, bw-12, 13, 9); ctx.fill();
+    ctx.fillStyle="#ffd23f"; const cy=topY-2; ctx.beginPath(); ctx.moveTo(x-18,cy); ctx.lineTo(x-18,cy-14); ctx.lineTo(x-9,cy-4); ctx.lineTo(x,cy-16); ctx.lineTo(x+9,cy-4); ctx.lineTo(x+18,cy-14); ctx.lineTo(x+18,cy); ctx.closePath(); ctx.fill();
+    const ey=topY+bh*0.34; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x-16,ey,10,0,7); ctx.arc(x+16,ey,10,0,7); ctx.fill();
+    ctx.fillStyle="#222"; const ed=happy?-2:0; ctx.beginPath(); ctx.arc(x-16+ed,ey,4.5,0,7); ctx.arc(x+16+ed,ey,4.5,0,7); ctx.fill();
+    ctx.strokeStyle="#222"; ctx.lineWidth=3; ctx.beginPath(); const my=topY+bh*0.66; if(happy) ctx.arc(x,my-4,12,0.15*Math.PI,0.85*Math.PI); else ctx.arc(x,my+10,11,1.15*Math.PI,1.85*Math.PI); ctx.stroke();
+    if(!happy){ for(let i=0;i<b.maxHp;i++){ ctx.fillStyle = i<b.hp? "#ff6b8a":"rgba(255,255,255,.32)"; ctx.beginPath(); ctx.arc(x-(b.maxHp-1)*7+i*14, topY-26, 5,0,7); ctx.fill(); } }
+  } }
+  if(L.boss && !L.boss.defeated){ const bxs=L.barrierX-camX; if(bxs>-20&&bxs<W+20){ ctx.fillStyle="rgba(150,200,255,"+(0.10+0.05*Math.sin(t*4)).toFixed(3)+")"; ctx.fillRect(bxs-3,0,6,GROUND_Y+10); } }
   // goal flag
   const fx=L.goalX-camX; if(fx<W+80 && fx>-90){ const im=propImg("flag"); if(im){ const h=150, w=h*(im.naturalWidth/im.naturalHeight); ctx.drawImage(im, fx-w*0.16, GROUND_Y-h, w, h); } else { ctx.strokeStyle="#6a4a2a";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(fx,GROUND_Y);ctx.lineTo(fx,GROUND_Y-120);ctx.stroke(); ctx.fillStyle=P.flag; ctx.beginPath();ctx.moveTo(fx,GROUND_Y-120);ctx.lineTo(fx+52,GROUND_Y-104);ctx.lineTo(fx,GROUND_Y-86);ctx.closePath();ctx.fill(); } }
   // landing dust

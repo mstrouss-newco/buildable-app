@@ -75,6 +75,19 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Platformer polish — moving platforms, swinging vines, friendly boss, music + mute (June 26 2026)
+
+Polish pass on the fixed runner engine `public/play.html` (all drawn with shapes — no
+`api/game-art` changes). New level-recipe knobs: `movingPlatChance`, `vineChance`, `boss`,
+`bossHp`. Moving platforms and swinging vines are bonus elements confined to CLIMB zones over
+solid ground, so the ground win-path stays always-clearable. The last level gets a friendly
+crowned boss: stomp it 3× to drop a soft barrier before the flag; no heart loss on side bumps;
+it wakes only when the player is near and has an 18s mercy auto-win so it can never soft-lock.
+Background music is a soft Web Audio pentatonic loop (per-world key, unlocks on the Play! tap)
+with a new top-left mute button. Added `qa/sim-node.mjs` to run the `BK_GAME.sim()` "perfect
+player" headlessly in Node — baseline and post-change both report ALL LEVELS WIN. See the
+dated SESSION-LOG.md entry for details.
+
 ## Home launcher redesign — app-icon tiles, Games "coming soon" (June 26 2026)
 
 **What & why.** The kid-facing Home hub (`HomeScreen` in `src/BuildableKids.jsx`) was rebuilt to match the dark `buildablekids.` brand and to remove all emoji. Each activity tile is now a large **card-width app-icon banner** (full card width, 3:2 aspect, big white SVG glyph — note / controller / book / keyboard / chess king) with the label below it. The profile pill, My Stuff and Grown-ups buttons no longer use emoji either.
