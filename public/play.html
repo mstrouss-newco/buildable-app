@@ -28,9 +28,7 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   bgUrl:   "https://www.buildablekids.com/api/story-library?img=world:enchanted-forest&style=watercolor",
   palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#c0566f", flag:"#ffd23f", hud:"#ffffff" },
   levels: [
-    { name:"Sunny Start",  speed:3.2, length:42, gapChance:0.16, gapMax:2, obstacleChance:0.10, enemyChance:0.06, lowChance:0.16, coinChance:0.40, powerupChance:0.06 },
-    { name:"Mushroom Run",  speed:3.8, length:54, gapChance:0.20, gapMax:3, obstacleChance:0.14, enemyChance:0.12, lowChance:0.18, coinChance:0.42, powerupChance:0.06 },
-    { name:"Firefly Finale",speed:4.4, length:64, gapChance:0.24, gapMax:3, obstacleChance:0.16, enemyChance:0.16, lowChance:0.20, coinChance:0.44, powerupChance:0.07 },
+    { name:"Whispering Woods", speed:3.2, length:150, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3 },
   ],
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
@@ -65,6 +63,7 @@ function buildLevel(lv, idx){
   const safeGapTiles = Math.max(1, Math.floor(speed*AIR_FRAMES*0.62/TILE) - 1);
   const landTiles = Math.ceil(speed*AIR_FRAMES/TILE)+1;  // tiles a jump covers -> low bars must wait until player has LANDED (can't slide mid-air)
   let lastHaz = -99;                       // enforce breathing room between hazards
+  const hazTiles=[];
   const SPACING = 3;                        // tiles of safe ground after each hazard
   // first 3 tiles always solid (safe spawn)
   for(let i=0;i<n;i++){
@@ -75,14 +74,15 @@ function buildLevel(lv, idx){
       ground.push({x0:segStart, x1:tx, y:GROUND_Y});
       const maxGap=Math.max(1, Math.min(lv.gapMax, safeGapTiles));
       const gapTiles=1+Math.floor(rnd()*maxGap);
+      for(let q=i;q<=i+gapTiles;q++) hazTiles.push(q);
       i+=gapTiles; segStart=(i)*TILE; lastHaz=i;
       continue;
     }
     // obstacle (a block to jump) on solid ground
-    if(canHaz && rnd()<lv.obstacleChance){ obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46}); lastHaz=i; }
+    if(canHaz && rnd()<lv.obstacleChance){ obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46}); lastHaz=i; hazTiles.push(i); }
     // enemy walking on ground
-    else if(canHaz && rnd()<lv.enemyChance){ enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false}); lastHaz=i; }
-    else if(canHaz && (lv.lowChance||0)>0 && (i-lastHaz)>=landTiles && rnd()<lv.lowChance){ lowBars.push({x:tx+TILE/2}); lastHaz=i; }
+    else if(canHaz && rnd()<lv.enemyChance){ enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false}); lastHaz=i; hazTiles.push(i); }
+    else if(canHaz && (lv.lowChance||0)>0 && (i-lastHaz)>=landTiles && rnd()<lv.lowChance){ lowBars.push({x:tx+TILE/2}); lastHaz=i; hazTiles.push(i); }
     // coin arc (independent of hazards)
     if(rnd()<lv.coinChance){ coins.push({x:tx+TILE/2, y:GROUND_Y-70-Math.floor(rnd()*60), got:false}); }
   }
@@ -93,21 +93,45 @@ function buildLevel(lv, idx){
   for(let i=3;i<n;i++){ if(rd()<0.55) decos.push({x:i*TILE+rd()*TILE, kind: rd()<0.6?'bush':'grass', s:0.7+rd()*0.7}); }
   const rp=mulberry(9000+idx*53);
   for(let i=6;i<n-3;i++){ if(rp()<(lv.powerupChance||0.05)) powerups.push({x:i*TILE+TILE/2, y:GROUND_Y-70-Math.floor(rp()*40), kind:POOL[Math.floor(rp()*POOL.length)], got:false}); }
+  // PLATFORMS, BOUNCE PADS, STARS — climbable layer (separate RNG; kept away from
+  // ground hazards so the guaranteed low route + QA stay valid)
+  const platforms=[], bounces=[], stars=[];
+  const hazSet=new Set(hazTiles);
+  const nearHaz=(tt)=>{ for(let d=-3;d<=3;d++) if(hazSet.has(tt+d)) return true; return false; };
+  const rpf=mulberry(12000+idx*17);
+  let pj=6;
+  while(pj<n-6){
+    if(!nearHaz(pj) && rpf()<(lv.platformChance||0.45)){
+      const tier=1+Math.floor(rpf()*3);
+      const py=GROUND_Y-100-(tier-1)*72;
+      const wT=2+Math.floor(rpf()*2);
+      platforms.push({x:pj*TILE, y:py, w:wT*TILE});
+      for(let cc=0;cc<wT;cc++) coins.push({x:pj*TILE+TILE/2+cc*TILE, y:py-30, got:false});
+      if(tier>=2 && rpf()<0.55 && stars.length<(lv.starCount||3)) stars.push({x:pj*TILE+TILE/2, y:py-36, got:false});
+      else if(tier>=2 && rpf()<0.4) powerups.push({x:pj*TILE+TILE/2, y:py-36, kind:POOL[Math.floor(rpf()*POOL.length)], got:false});
+      if(tier===1 && rpf()<0.5) bounces.push({x:pj*TILE+wT*TILE/2-32, y:py-14, w:64, t:0});
+      pj+=wT+2;
+    } else pj += 1+Math.floor(rpf()*2);
+  }
+  while(stars.length<(lv.starCount||3) && platforms.length){ const pf=platforms[Math.floor(rpf()*platforms.length)]; stars.push({x:pf.x+pf.w/2, y:pf.y-36, got:false}); }
+  // endless edges so the world never just stops
+  ground.unshift({x0:-3000, x1:0, y:GROUND_Y});
+  ground.push({x0:n*TILE, x1:n*TILE+3000, y:GROUND_Y});
   const goalX=n*TILE - TILE*1.4;
-  return { ground, obstacles, enemies, coins, lowBars, decos, powerups, goalX, worldEnd:n*TILE, name:lv.name, speed:lv.speed||RUN_BASE };
+  return { ground, obstacles, enemies, coins, lowBars, decos, powerups, platforms, bounces, stars, goalX, worldEnd:n*TILE, name:lv.name, speed:lv.speed||RUN_BASE };
 }
 
 // --- scatter the world pieces across parallax layers (cosmetic; separate RNG so QA is unaffected) ---
 function buildScene(L, idx){
   const we=L.worldEnd, S={mid:[],near:[],fore:[],top:[],flies:[]};
   const r1=mulberry(21000+idx*7);
-  for(let x=140; x<we; x+= 230+r1()*210){ S.mid.push({x, piece: r1()<0.58?"tree_a":"tree_b", s:0.85+r1()*0.6, flip:r1()<0.5, ph:r1()*6.28}); }
+  for(let x=-1000; x<we+1600; x+= 230+r1()*210){ S.mid.push({x, piece: r1()<0.58?"tree_a":"tree_b", s:0.85+r1()*0.6, flip:r1()<0.5, ph:r1()*6.28}); }
   const r2=mulberry(33000+idx*7);
-  for(let x=70; x<we; x+= 140+r2()*150){ const t=r2(); S.near.push({x, piece: t<0.4?"bush_a":t<0.7?"bush_b":"mushroom", s:0.5+r2()*0.45, flip:r2()<0.5, ph:r2()*6.28}); }
+  for(let x=-1000; x<we+1600; x+= 140+r2()*150){ const t=r2(); S.near.push({x, piece: t<0.4?"bush_a":t<0.7?"bush_b":"mushroom", s:0.5+r2()*0.45, flip:r2()<0.5, ph:r2()*6.28}); }
   const r3=mulberry(44000+idx*7);
-  for(let x=240; x<we; x+= 470+r3()*260){ S.fore.push({x, piece:"fern", s:0.95+r3()*0.7, flip:r3()<0.5, ph:r3()*6.28}); }
+  for(let x=-1000; x<we+1600; x+= 470+r3()*260){ S.fore.push({x, piece:"fern", s:0.95+r3()*0.7, flip:r3()<0.5, ph:r3()*6.28}); }
   const r4=mulberry(55000+idx*7);
-  for(let x=120; x<we; x+= 360+r4()*240){ S.top.push({x, piece:"canopy", s:0.9+r4()*0.5, flip:r4()<0.5}); }
+  for(let x=-1000; x<we+1600; x+= 360+r4()*240){ S.top.push({x, piece:"canopy", s:0.9+r4()*0.5, flip:r4()<0.5}); }
   const r5=mulberry(66000+idx*7);
   for(let i=0;i<48;i++){ S.flies.push({x:r5()*we, y:60+r5()*(GROUND_Y-50), ph:r5()*6.28, sp:0.4+r5()*0.8}); }
   return S;
@@ -116,13 +140,15 @@ function buildScene(L, idx){
 // --- game state ---
 let LEVELS = GAME_CONFIG.levels.map((lv,i)=>buildLevel(lv,i));
 let li=0, L=LEVELS[0];
-let player, camX, hearts, coinsGot, totalCoins, state, invuln, botMode=false, doneMsgT=0, started=false;
+let player, camX, hearts, coinsGot, totalCoins, state, invuln, botMode=false, doneMsgT=0, started=false, starsGot=0, totalStars=0;
+let dust=[];
+function spawnDust(wx,wy){ for(let i=0;i<6;i++) dust.push({x:wx,y:wy,vx:(Math.random()-0.5)*3.2,vy:-Math.random()*2,life:16+Math.random()*10}); }
 let shieldOn=false, magnetT=0, springT=0, starT=0;  // power-up effect timers
 
 function startLevel(i){
   li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
-  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0};
-  camX=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; doneMsgT=0;
+  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0};
+  camX=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; starsGot=0; totalStars=L.stars.length; dust=[]; doneMsgT=0;
   shieldOn=false; magnetT=0; springT=0; starT=0;
   if(hearts==null) hearts=3;
   if(!L.scene) L.scene=buildScene(L, li);
@@ -172,18 +198,30 @@ function update(){
   // gravity + variable jump height
   player.vy += GRAV * (jumpHeld && player.vy<0 ? 0.62 : 1);
   player.y += player.vy;
-  // ground / gaps
-  const gy=groundUnder(player.x+24);
-  if(player.vy>=0 && gy!=null && player.y+60>=gy){ player.y=gy-60; player.vy=0; if(!player.onGround){player.onGround=true;} player.dj=false; }
-  else { player.onGround=false; }
+  // vertical support: ground + one-way platforms + bounce pads
+  { const feet=player.y+60, prevFeet=feet-player.vy, cx=player.x+24;
+    let landY=null, bounce=false;
+    if(player.vy>=0){
+      const g=groundUnder(cx); if(g!=null && feet>=g) landY=g;
+      for(const pf of L.platforms){ if(cx>=pf.x && cx<=pf.x+pf.w && prevFeet<=pf.y && feet>=pf.y){ if(landY==null||pf.y<landY) landY=pf.y; } }
+      for(const bp of L.bounces){ if(cx>=bp.x && cx<=bp.x+bp.w && prevFeet<=bp.y && feet>=bp.y){ bounce=true; bp.t=10; } }
+    }
+    if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; }
+    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; }
+    else { player.onGround=false; }
+  }
   player.r = player.onGround?0:Math.max(-0.5,Math.min(0.5,player.vy*0.03));
   // fell in a gap
   if(player.y>H+40){ loseHeart(true); return; }
   if(invuln>0) invuln--;
+  if(player.land>0)player.land--;
+  for(const d of dust){ d.x+=d.vx; d.y+=d.vy; d.vy+=0.2; d.life--; }
+  if(dust.length) dust=dust.filter(d=>d.life>0);
   // magnet power-up: pull nearby coins toward the hero
   if(magnetT>0){ for(const k of L.coins){ if(k.got)continue; const dx=(player.x+24)-k.x, dy=(player.y+30)-k.y; if(dx*dx+dy*dy<170*170){ k.x+=dx*0.16; k.y+=dy*0.16; } } }
   // coins
   for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; } }
+  for(const st of L.stars){ if(!st.got && Math.abs((player.x+24)-st.x)<38 && Math.abs((player.y+30)-st.y)<46){ st.got=true; starsGot++; } }
   // power-up pickups
   for(const u of L.powerups){ if(u.got)continue; if(Math.abs((player.x+24)-u.x)<36 && Math.abs((player.y+30)-u.y)<44){ u.got=true; if(u.kind==="shield")shieldOn=true; else if(u.kind==="magnet")magnetT=360; else if(u.kind==="spring")springT=360; else if(u.kind==="star")starT=360; else if(u.kind==="heart"&&hearts<3)hearts++; } }
   // enemies (walk a little)
@@ -250,8 +288,14 @@ function draw(){
   // ground segments
   for(const g of L.ground){ const sx=g.x0-camX, ex=g.x1-camX; if(ex<-40||sx>W+40)continue;
     ctx.fillStyle=P.dirt; ctx.fillRect(sx,g.y+14,ex-sx,H-g.y); ctx.fillStyle=P.ground; ctx.fillRect(sx,g.y,ex-sx,18); ctx.fillStyle=P.groundTop; ctx.fillRect(sx,g.y,ex-sx,6); }
+  // climbable platforms
+  for(const pf of L.platforms){ const x=pf.x-camX; if(x+pf.w<-30||x>W+30)continue; ctx.fillStyle="#6a4a2a"; rrect(x,pf.y,pf.w,18,8);ctx.fill(); ctx.fillStyle=P.ground; rrect(x,pf.y,pf.w,8,7);ctx.fill(); ctx.fillStyle=P.groundTop; ctx.fillRect(x+5,pf.y,pf.w-10,4); }
+  // bounce pads
+  for(const bp of L.bounces){ const x=bp.x-camX; if(x+bp.w<-30||x>W+30)continue; const sq=bp.t>0?(bp.t/10):0; if(bp.t>0)bp.t--; ctx.fillStyle="#3bbf95"; rrect(x, bp.y+sq*8, bp.w, 16-sq*6, 8);ctx.fill(); ctx.fillStyle="rgba(255,255,255,.35)"; rrect(x+5, bp.y+2+sq*8, bp.w-10, 5, 4);ctx.fill(); }
   // coins
   for(const k of L.coins){ if(k.got)continue; const x=k.x-camX; if(x<-30||x>W+30)continue; ctx.fillStyle=P.coin; ctx.beginPath();ctx.arc(x,k.y,11,0,7);ctx.fill(); ctx.fillStyle="rgba(255,255,255,.6)";ctx.beginPath();ctx.arc(x-3,k.y-3,3,0,7);ctx.fill(); }
+  // hidden stars (up high, reward exploring)
+  for(const st of L.stars){ if(st.got)continue; const x=st.x-camX; if(x<-30||x>W+30)continue; const yy=st.y+Math.sin(t*2+st.x*0.01)*4; ctx.save(); ctx.translate(x,yy); ctx.rotate(Math.sin(t*1.4+st.x)*0.25); ctx.fillStyle="rgba(255,225,90,.35)"; ctx.beginPath();ctx.arc(0,0,17,0,7);ctx.fill(); ctx.fillStyle="#ffd23f"; star5(0,0,13); ctx.fillStyle="#fff7cc"; star5(0,0,6.5); ctx.restore(); }
   // obstacles (crystals)
   for(const o of L.obstacles){ const x=o.x-camX; if(x<-40||x>W+40)continue; ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x,o.y-o.h);ctx.lineTo(x+o.w/2,o.y);ctx.lineTo(x-o.w/2,o.y);ctx.closePath();ctx.fill(); ctx.fillStyle="rgba(255,255,255,.25)";ctx.beginPath();ctx.moveTo(x,o.y-o.h);ctx.lineTo(x+o.w/4,o.y-o.h/2);ctx.lineTo(x-o.w/6,o.y-o.h/3);ctx.closePath();ctx.fill(); }
   // enemies (little blobs)
@@ -262,12 +306,17 @@ function draw(){
   for(const u of L.powerups){ if(u.got)continue; const x=u.x-camX; if(x<-30||x>W+30)continue; drawPU(x, u.y+Math.sin(Date.now()/300+u.x)*4, u.kind, 15); }
   // goal flag
   const fx=L.goalX-camX; if(fx<W+60){ ctx.strokeStyle="#6a4a2a";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(fx,GROUND_Y);ctx.lineTo(fx,GROUND_Y-120);ctx.stroke(); ctx.fillStyle=P.flag; ctx.beginPath();ctx.moveTo(fx,GROUND_Y-120);ctx.lineTo(fx+52,GROUND_Y-104);ctx.lineTo(fx,GROUND_Y-86);ctx.closePath();ctx.fill(); }
+  // landing dust
+  for(const d of dust){ const x=d.x-camX; ctx.fillStyle="rgba(170,150,110,"+Math.min(0.6,d.life/26).toFixed(2)+")"; ctx.beginPath();ctx.arc(x,d.y,3,0,7);ctx.fill(); }
   // hero
   const hx=player.x-camX, hy=player.y;
   const sliding=player.slide>0;
-  ctx.save(); ctx.translate(hx+24,hy+30); ctx.rotate(sliding?0:player.r);
-  if(hero.complete && hero.naturalWidth){ if(sliding) ctx.drawImage(hero,-34,6,68,40); else ctx.drawImage(hero,-30,-34,60,68); }
-  else { ctx.fillStyle="#e8915a"; rrect(-22,sliding?2:-26,44,sliding?32:56,16); ctx.fill(); }
+  let scx=1, scy=1;
+  if(player.land>0){ const k=player.land/8; scy=1-0.26*k; scx=1+0.26*k; }
+  else if(!player.onGround){ if(player.vy<-1){ scy=1.12; scx=0.9; } else if(player.vy>4){ scy=1.07; scx=0.95; } }
+  ctx.save(); ctx.translate(hx+24, hy+64); ctx.scale(scx,scy); ctx.rotate(sliding?0:player.r*0.6);
+  if(hero.complete && hero.naturalWidth){ if(sliding) ctx.drawImage(hero,-34,-40,68,40); else ctx.drawImage(hero,-30,-68,60,68); }
+  else { ctx.fillStyle="#e8915a"; rrect(-22, sliding?-34:-60, 44, sliding?32:56, 16); ctx.fill(); }
   ctx.restore();
   if(shieldOn){ ctx.strokeStyle="rgba(90,170,255,.85)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(hx+24,hy+28,34,0,7);ctx.stroke(); ctx.fillStyle="rgba(120,190,255,.16)";ctx.beginPath();ctx.arc(hx+24,hy+28,34,0,7);ctx.fill(); }
   if(starT>0){ ctx.fillStyle="rgba(255,220,90,.95)"; for(let s=0;s<3;s++){ const a=Date.now()/200+s*2.1; star5(hx+24+Math.cos(a)*30, hy+28+Math.sin(a)*30, 5); } }
@@ -282,13 +331,15 @@ function draw(){
   ctx.fillText(L.name+"   Lv "+(li+1)+"/"+LEVELS.length, 18, 34);
   ctx.textAlign="right"; ctx.fillText(coinsGot+" / "+totalCoins, W-18, 34);
   ctx.fillStyle=P.enemy; for(let i=0;i<hearts;i++){ heart(W-44-i*30, 48, 11); }
+  // star progress (top center)
+  for(let i=0;i<totalStars;i++){ const sx=W/2+(i-(totalStars-1)/2)*30; ctx.fillStyle = i<starsGot?"#ffd23f":"rgba(255,255,255,.28)"; star5(sx,30,11); }
   // active power-up icons (top-left, under the level name)
   let pax=30; const acts=[["shield",shieldOn?1:0],["magnet",magnetT],["spring",springT],["star",starT]];
   for(const [k,v] of acts){ if(v>0){ drawPU(pax,66,k,12); pax+=32; } }
   // progress bar
   const pg=Math.min(1, player.x/L.goalX); ctx.fillStyle="rgba(255,255,255,.25)"; rrect(18,H-22,W-36,8,4);ctx.fill(); ctx.fillStyle=P.flag; rrect(18,H-22,(W-36)*pg,8,4);ctx.fill();
   // banners
-  if(state==="win"){ banner(li<LEVELS.length-1?"Level Complete!":"You Win!", li<LEVELS.length-1?"Tap for next level":"Tap to play again"); }
+  if(state==="win"){ banner(li<LEVELS.length-1?"Level Complete!":"You Win!", "You found "+starsGot+"/"+totalStars+" stars  \u00b7  Tap to play again"); }
   if(state==="lose"){ banner("Try Again!","Tap to restart this level"); }
   if(!started && state==="play"){ ctx.fillStyle="rgba(0,0,0,.35)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Fredoka,sans-serif";ctx.fillText(GAME_CONFIG.name,W/2,H/2-10); ctx.font="20px Fredoka,sans-serif";ctx.fillText("Tap to start",W/2,H/2+28); }
 }
