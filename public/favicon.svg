@@ -1,26 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bgd" x1="0" y1="0" x2="0" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#1d1640"/>
-      <stop offset="1" stop-color="#0e0a1e"/>
+      <stop offset="0" stop-color="#1d1640"/><stop offset="1" stop-color="#0e0a1e"/>
     </linearGradient>
     <radialGradient id="gloss" cx="0.3" cy="0.18" r="0.95">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/>
-      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/><stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="bletter" x1="150" y1="98" x2="380" y2="410" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#8B5CF6"/>
-      <stop offset="0.52" stop-color="#EC4899"/>
-      <stop offset="1" stop-color="#FF7A59"/>
+    <linearGradient id="bletter" x1="140" y1="98" x2="360" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8B5CF6"/><stop offset="0.52" stop-color="#EC4899"/><stop offset="1" stop-color="#FF7A59"/>
     </linearGradient>
   </defs>
-
   <rect width="512" height="512" fill="url(#bgd)"/>
   <rect width="512" height="512" fill="url(#gloss)"/>
-
-  <!-- lowercase "b" in the brand gradient (matches the wordmark) -->
+  <!-- uppercase "B": stem + two stacked bowls, brand gradient -->
   <g fill="url(#bletter)">
-    <rect x="145" y="98" width="74" height="312" rx="37"/>
-    <path fill-rule="evenodd" d="M176,308 a102,102 0 1,0 204,0 a102,102 0 1,0 -204,0 Z M232,308 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0 Z"/>
+    <rect x="146" y="98" width="70" height="316" rx="22"/>
+    <path fill-rule="evenodd" d="M168,180 a82,82 0 1,0 164,0 a82,82 0 1,0 -164,0 Z M216,180 a34,34 0 1,0 68,0 a34,34 0 1,0 -68,0 Z"/>
+    <path fill-rule="evenodd" d="M162,320 a96,96 0 1,0 192,0 a96,96 0 1,0 -192,0 Z M216,320 a42,42 0 1,0 84,0 a42,42 0 1,0 -84,0 Z"/>
   </g>
 </svg>
