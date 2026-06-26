@@ -228,6 +228,7 @@ export default async function handler(req, res) {
     if (!b64) { res.status(404).json({ ok: false, missing: true }); return; }
     const buf = Buffer.from(b64, "base64");
     res.setHeader("Content-Type", "image/png");
+    res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     res.status(200).send(buf);
     return;
@@ -238,6 +239,7 @@ export default async function handler(req, res) {
     const b64 = await cacheGet(sceneKey((q.slug||"").toString(), q.style, (q.shot||"").toString()));
     if (!b64) { res.status(404).json({ ok: false, missing: true }); return; }
     res.setHeader("Content-Type", "image/png");
+    res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     res.status(200).send(Buffer.from(b64, "base64"));
     return;
