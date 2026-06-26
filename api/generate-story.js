@@ -9,6 +9,8 @@
 //   story = { schema:2, title, style, character_slug, character_name, start_world,
 //             pages:[{ text, world_slug, emotion, effect, effects:[effect] }], created_with }
 
+import crypto from "crypto";
+
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const STORY_COST_USD = parseFloat(process.env.STORY_COST_USD || "0.02");
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
@@ -169,8 +171,9 @@ function validateStory(obj, inp) {
 }
 
 function wrap(title, pages, inp) {
+  const scene_token = "st" + crypto.createHash("sha1").update((inp.characterSlug||"")+"|"+(inp.style||"")+"|"+pages.map((p)=>p.text).join("\u00a7")).digest("hex").slice(0,16);
   return {
-    schema: 2, title, style: inp.style,
+    schema: 2, title, style: inp.style, scene_token,
     character_slug: inp.characterSlug, character_name: inp.characterName,
     start_world: inp.worldSlug, pages,
     created_with: { style: inp.style, characterSlug: inp.characterSlug, characterName: inp.characterName, worldSlug: inp.worldSlug, quest: inp.quest, mood: inp.mood, ending: inp.ending, spark: inp.spark, favColor: inp.favColor, favFood: inp.favFood, petName: inp.petName },

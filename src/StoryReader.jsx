@@ -47,7 +47,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const waterAudioRef = useRef(null);
   const [soundOn, setSoundOn] = useState(true);
   const [sceneUrl, setSceneUrl] = useState({});   // pageIndex -> generated scene url
-  const tokenRef = useRef((story && story.story_id) || (Math.random().toString(36).slice(2,10) + Date.now().toString(36)));
+  const tokenRef = useRef((story && (story.scene_token || story.story_id)) || (Math.random().toString(36).slice(2,10) + Date.now().toString(36)));
   const startedScenesRef = useRef(false);
 
   const page = pages[idx] || {};

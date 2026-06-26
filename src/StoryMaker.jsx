@@ -55,6 +55,8 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const [name,setName]=useState(DEFAULT_NAME["bunny"]);
 
   const [story,setStory]=useState(null);
+  const [scenes,setScenes]=useState({});
+  const paintStartedRef=useRef(false);
   const [error,setError]=useState(null);
   const [genMsg,setGenMsg]=useState("Writing your story");
   const [saved,setSaved]=useState([]);
@@ -154,6 +156,33 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   function labelOf(st){const o=st.opts.find(x=>x[0]===st.val);return o?o[1]:"";}
   function cycle(st,dir){const i=st.opts.findIndex(o=>o[0]===st.val);const ni=((i<0?0:i)+dir+st.opts.length)%st.opts.length;st.set(st.opts[ni][0]);}
   function pickOpt(st,id){st.set(id);}
+  // PAINT THE STORY: pre-generate every page's woven scene at creation time, so
+  // the reader opens already painted (and saved stories cache them forever).
+  useEffect(()=>{
+    if(view!=="painting" || !story || !Array.isArray(story.pages)) return;
+    if(paintStartedRef.current) return; paintStartedRef.current=true;
+    let cancelled=false;
+    const token = story.scene_token || story.story_id || (Math.random().toString(36).slice(2,10));
+    const pages=story.pages, slug=story.character_slug||"bunny", style=story.style||"watercolor";
+    let qi=0, active=0;
+    const pump=()=>{
+      while(!cancelled && active<3 && qi<pages.length){
+        const i=qi++; const pg=pages[i]; if(!pg||!pg.text){ continue; }
+        active++;
+        const ck=token+"|"+i+"|"+(pg.emotion||"happy");
+        const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),120000);
+        fetch("/api/story-library",{method:"POST",headers:{"Content-Type":"application/json"},signal:ctrl.signal,
+          body:JSON.stringify({pageScene:true,slug,style,emo:pg.emotion||"happy",world:pg.world_slug,action:pg.text,pageIndex:i,cacheKey:ck})})
+          .then(r=>r.json())
+          .then(j=>{ clearTimeout(to); if(!cancelled && j && (j.generated||j.cached)) setScenes(m=>({...m,[i]:"/api/story-library?pimg=1&k="+encodeURIComponent(ck)})); })
+          .catch(()=>clearTimeout(to))
+          .finally(()=>{ active--; if(!cancelled) pump(); });
+      }
+    };
+    pump();
+    return ()=>{ cancelled=true; };
+  },[view,story]);
+
   function next(){setStep(s=>Math.min(TOTAL,s+1));}
   function back(){ if(atEnd){setStep(TOTAL-1);return;} if(step>0)setStep(step-1); else setView("landing"); }
 
@@ -176,7 +205,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body, age:6, deviceId, kidProfileId})});
       const j=await r.json();
       if(!(j&&j.ok&&j.story)){ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); return; }
-      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); setView("reading");
+      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); paintStartedRef.current=false; setScenes({}); setView("painting");
     }catch{ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); }
   }
   async function makeSequel(prev){
@@ -186,7 +215,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...c, age:6, deviceId, kidProfileId})});
       const j=await r.json();
       if(!(j&&j.ok&&j.story)){ setError("Hmm, that didn't work."); setView("reading"); return; }
-      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); setView("reading");
+      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); paintStartedRef.current=false; setScenes({}); setView("painting");
     }catch{ setError("Hmm, that didn't work."); setView("reading"); }
   }
 
@@ -232,6 +261,26 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
       <h2 style={s.genTitle}>{genMsg}…</h2>
       <p style={s.genSub}>{(GUIDES.find(g=>g[0]===guide)||[,"Your buddy"])[1]} is dreaming it up</p>
       <style>{spin}</style>
+    </div>);
+  }
+
+  // ---------- PAINTING (pre-generate the woven scenes) ----------
+  if(view==="painting" && story && Array.isArray(story.pages)){
+    const total=story.pages.length, done=Object.keys(scenes).length, allDone=done>=total;
+    return (<div style={{...s.container,justifyContent:"center"}}>
+      <h2 style={s.genTitle}>Painting your story…</h2>
+      <p style={s.genSub}>{allDone?"All done! Tap to read.":(done+" of "+total+" pages painted")}</p>
+      <div style={s.paintGrid}>
+        {story.pages.map((_,i)=>(
+          <div key={i} style={s.paintCell}>
+            {scenes[i] ? <img src={scenes[i]} alt="" style={s.paintImg}/> : <div style={s.paintShimmer}/>}
+          </div>
+        ))}
+      </div>
+      <button style={{...s.makeBtn,...(done<1?{opacity:.5}:{}),...(allDone?{animation:"bkLock .6s cubic-bezier(.2,.9,.3,1.5) both"}:{})}} disabled={done<1} onClick={()=>setView("reading")}>
+        {allDone?"Read my story!":(done>=1?"Start reading":"Painting…")}
+      </button>
+      <style>{spin+lock+shimmer}</style>
     </div>);
   }
 
@@ -309,6 +358,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
 }
 
 const spin = "@keyframes bkSpin{0%,80%,100%{transform:scale(.4);opacity:.4}40%{transform:scale(1);opacity:1}}";
+const shimmer = "@keyframes bkShim{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes bkFade{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}";
 const lock = "@keyframes bkLock{0%{transform:scale(1)}55%{transform:scale(1.12);box-shadow:0 0 0 3px rgba(255,224,138,.55)}100%{transform:scale(1)}}";
 
 const s = {
@@ -348,6 +398,10 @@ const s = {
   chipVal:{fontSize:11,fontWeight:700,textAlign:"center",maxWidth:80},
   error:{color:"#ffb0c0",fontSize:14,marginTop:12},
   genTitle:{fontFamily:FRED,fontSize:26,margin:"18px 0 6px"},genSub:{opacity:.7},
+  paintGrid:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,width:"100%",maxWidth:520,margin:"16px 0 20px"},
+  paintCell:{aspectRatio:"3 / 2",borderRadius:12,overflow:"hidden",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)"},
+  paintImg:{width:"100%",height:"100%",objectFit:"cover",animation:"bkFade .5s ease both"},
+  paintShimmer:{width:"100%",height:"100%",background:"linear-gradient(100deg,rgba(255,255,255,0.05) 30%,rgba(255,255,255,0.20) 50%,rgba(255,255,255,0.05) 70%)",backgroundSize:"200% 100%",animation:"bkShim 1.4s linear infinite"},
   spinDots:{display:"flex",gap:10},spinDot:{width:16,height:16,borderRadius:"50%",background:"#c06b99",animation:"bkSpin 1.2s ease-in-out infinite"},
   savedWrap:{width:"100%",maxWidth:760,marginTop:40},
   sectionTitle:{fontFamily:FRED,fontSize:20,marginBottom:12},
