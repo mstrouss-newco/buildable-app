@@ -84,6 +84,7 @@ export default function FamilyChess({ activeKid, onHome }) {
       state: m.board || initialBoard(),
       lastMove: m.last_move || null,
       oppName: nameOf(oppId),
+      myName: (me && me.display_name) || "You",
     }, "*");
   }
 
@@ -181,9 +182,16 @@ export default function FamilyChess({ activeKid, onHome }) {
             {err && <div style={{ ...C.note, borderColor: "rgba(255,120,120,0.4)", color: "#ffd0d0", marginBottom: 12 }}>{err}</div>}
 
             <div style={C.sect}>Pick a world</div>
-            <div style={C.worldRow}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 4 }}>
               {WORLDS.map(([k, label]) => (
-                <button key={k} style={C.chip(world === k)} onClick={() => setWorld(k)}>{label}</button>
+                <button key={k} onClick={() => setWorld(k)} style={{
+                  width: 104, height: 74, borderRadius: 14, cursor: "pointer", color: "#fff", fontWeight: 800, fontSize: 13,
+                  border: world === k ? "3px solid #A78BFF" : "1px solid rgba(255,255,255,0.18)",
+                  backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.05)), url('/chess-art/${k}_thumb.jpg')`,
+                  backgroundSize: "cover", backgroundPosition: "center",
+                  display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 6,
+                  textShadow: "0 1px 3px rgba(0,0,0,0.85)",
+                }}>{label}</button>
               ))}
             </div>
 

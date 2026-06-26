@@ -1133,6 +1133,7 @@ loadSfxLibrary();
 /* ===== Online play: driven by the app via postMessage (no chat, just moves) ===== */
 function startOnlineGame(d){
   mode='online';humanColor=d.myColor||'w';oppName=d.oppName||'Friend';
+  if(d.myName)pName=d.myName; // so wins are recorded for this kid
   sceneKey=(d.world&&SCENES[d.world])?d.world:'jungle';
   flip=(humanColor==='b');
   S=d.state||startState();
