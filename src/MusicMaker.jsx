@@ -55,6 +55,7 @@ const SPEEDS = [
 ];
 
 const LOADER_MSGS = ["Mixing the beats…", "Tuning the guitars…", "Finding the melody…", "Adding some sparkle…", "Almost there…"];
+const QUESTION_PHRASES = ["Pick a vibe","Pick a music style","Who sings?","Pick your drums","Pick a guitar","Add some strings?","How fast should it go?","Last one! What is your song about?","Rendering your song!"];
 
 function getDeviceId() {
   try { let id = localStorage.getItem("deviceId"); if (!id) { id = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10); localStorage.setItem("deviceId", id); } return id; } catch { return "dev_anon"; }
@@ -148,36 +149,59 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
   const ttsCacheRef = useRef({});
   const speakSeqRef = useRef(0);
 
-  useEffect(() => { injectKeyframes(); refresh(); }, []);
+  useEffect(() => { injectKeyframes(); refresh(); QUESTION_PHRASES.forEach(preload); }, []);
 
+  function audioEl() {
+    if (!audioElRef.current && typeof window !== "undefined") { const a = new Audio(); a.preload = "auto"; audioElRef.current = a; }
+    return audioElRef.current;
+  }
   function stopVoice() {
     try { if (audioElRef.current) { audioElRef.current.pause(); audioElRef.current.currentTime = 0; } } catch {}
     try { if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel(); } catch {}
   }
-  // Fallback to the browser voice only if ElevenLabs isn't available.
   function browserSpeak(text) {
     if (!voiceRef.current || typeof window === "undefined" || !window.speechSynthesis) return;
     try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 0.95; u.pitch = 1.05; window.speechSynthesis.speak(u); } catch {}
   }
-  // Premium read-aloud via ElevenLabs (/api/narrate-story-page) — generated once
-  // per phrase, then cached in narration_cache and served instantly after.
-  async function speak(text) {
+  function toObjUrl(dataUrl) {
+    try {
+      const b64 = dataUrl.split(",")[1]; const bin = atob(b64);
+      const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return URL.createObjectURL(new Blob([arr], { type: "audio/mpeg" }));
+    } catch { return dataUrl; }
+  }
+  async function preload(text) {
+    if (!text || ttsCacheRef.current[text]) return;
+    try {
+      const r = await fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      const j = await r.json();
+      if (j && j.configured && j.audioUrl) ttsCacheRef.current[text] = toObjUrl(j.audioUrl);
+    } catch {}
+  }
+  function playUrl(url, text, seq) {
+    try {
+      const a = audioEl(); a.src = url;
+      const p = a.play();
+      if (p && p.catch) p.catch(() => { if (seq === speakSeqRef.current && voiceRef.current) browserSpeak(text); });
+      return true;
+    } catch { return false; }
+  }
+  // ElevenLabs read-aloud. Plays from the client cache synchronously (preserves the
+  // tap's audio permission); only awaits a fetch if the phrase isn't preloaded yet.
+  function speak(text) {
     if (!voiceRef.current || typeof window === "undefined" || !text) return;
     const seq = ++speakSeqRef.current;
     stopVoice();
-    let url = ttsCacheRef.current[text];
-    if (!url) {
-      try {
-        const r = await fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
-        const j = await r.json();
-        if (j && j.configured && j.audioUrl) { url = j.audioUrl; ttsCacheRef.current[text] = url; }
-      } catch {}
-    }
-    if (seq !== speakSeqRef.current || !voiceRef.current) return; // superseded or muted while loading
-    if (url) {
-      try { const a = new Audio(url); audioElRef.current = a; a.play().catch(() => browserSpeak(text)); return; } catch {}
-    }
-    browserSpeak(text);
+    const cached = ttsCacheRef.current[text];
+    if (cached) { playUrl(cached, text, seq); return; }
+    fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) })
+      .then((r) => r.json())
+      .then((j) => {
+        if (seq !== speakSeqRef.current || !voiceRef.current) return;
+        if (j && j.configured && j.audioUrl) { const u = toObjUrl(j.audioUrl); ttsCacheRef.current[text] = u; playUrl(u, text, seq); }
+        else browserSpeak(text);
+      })
+      .catch(() => { if (seq === speakSeqRef.current && voiceRef.current) browserSpeak(text); });
   }
 
   async function refresh() {
@@ -257,7 +281,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
   useEffect(() => {
     if (tab !== "make" || busy || draft) return;
     if (atEnd) speak("Last one! What is your song about?");
-    else if (cur) speak(cur.q);
+    else if (cur) { speak(cur.q); cur.options.forEach((o) => preload(o.label)); }
   }, [step, tab, busy, draft]); // eslint-disable-line
 
   // Cycle the loader message while a song is generating.
