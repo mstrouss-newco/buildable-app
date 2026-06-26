@@ -175,6 +175,7 @@ const SHOTS = {
   peek:      "Inside a magical ENCHANTED FOREST. THIS character peeks out shyly from BEHIND a giant glowing mushroom, only half of its body visible at the edge of the frame, curious eyes looking toward a soft light. Playful close composition with depth.",
   doorway:   "Seen from BEHIND, over the character's shoulder: THIS character stands small at the bottom of the frame before a tall shimmering doorway of light between two huge ancient trees in an enchanted forest, fireflies drifting, dramatic depth and scale.",
   companion: "A cozy clearing in a magical ENCHANTED FOREST. THIS character sits on the left meeting a friendly wise OWL perched on a mossy log on the right, glowing mushrooms and fireflies around them, warm light. Both clearly together in the same scene, interacting.",
+  candle:    "Inside a cozy wooden cabin at night: THIS character sits on a soft rug in the middle, a warm crackling stone FIREPLACE glowing on the RIGHT, and a single lit CANDLE in a brass holder glowing on a small wooden table on the LEFT, a frosty window behind. Snug golden interior light, magical and calm.",
   cozy:      "Night in a magical ENCHANTED FOREST. THIS character curls up sleepily at the base of a giant tree, nestled in soft moss, wrapped in a warm glow, fireflies like little lanterns, peaceful bedtime mood, cool blue night tones.",
 };
 function scenePrompt(shot, style) {
