@@ -1,5 +1,5 @@
-// /src/StoryMaker.jsx  (v4 — music-style flow, no emojis, style samples, jackpot)
-import { useState, useEffect } from "react";
+// /src/StoryMaker.jsx  (v5 — talking story buddy + calming music + faster picker art)
+import { useState, useEffect, useRef } from "react";
 import StoryReader from "./StoryReader";
 import QuizGate from "./QuizGate";
 import { getLearningSettings } from "./store";
@@ -64,8 +64,62 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const [justFinished,setJustFinished]=useState(false); // learning gate: only after a real finish
   const [gateNext,setGateNext]=useState(null);              // pending action awaiting a quick question
 
+  // --- sound: calming background music + talking story buddy (iPad-safe) ---
+  // The buddy voice uses the SAME ElevenLabs narration the reader uses
+  // (/api/narrate-story-page) — real audio files, which play reliably on iPad.
+  // Browser speech is only a fallback if ElevenLabs isn't configured.
+  const [soundOn,setSoundOn]=useState(true);
+  const musicRef=useRef(null);      // looping background music
+  const voiceRef=useRef(null);      // the buddy's spoken-line player
+  const narrCacheRef=useRef({});    // text -> audioUrl ("none" if unavailable)
+  const primedRef=useRef(false);
+
   async function loadSaved(){try{const r=await fetch("/api/list-stories?deviceId="+encodeURIComponent(deviceId)+(kidProfileId?"&kidProfileId="+encodeURIComponent(kidProfileId):""));const j=await r.json();setSaved(Array.isArray(j.stories)?j.stories:[]);}catch{}}
   useEffect(()=>{loadSaved();},[]);
+
+  function ensureMusic(){ if(!musicRef.current && typeof window!=="undefined"){ const a=new Audio("/music-library/playful_musicbox.mp3"); a.loop=true; a.volume=0.18; a.preload="auto"; musicRef.current=a; } return musicRef.current; }
+  function ensureVoice(){ if(!voiceRef.current && typeof window!=="undefined"){ const a=new Audio(); a.preload="auto"; voiceRef.current=a; } return voiceRef.current; }
+  function stopVoice(){ try{ if(voiceRef.current){ voiceRef.current.pause(); } }catch{} try{ if(typeof window!=="undefined"&&window.speechSynthesis) window.speechSynthesis.cancel(); }catch{} }
+  // Fetch + cache a spoken line ahead of time (so it plays the instant it's needed).
+  function prewarm(text){ if(!text||narrCacheRef.current[text]!==undefined) return; fetch("/api/narrate-story-page",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})}).then(r=>r.json()).then(j=>{ narrCacheRef.current[text]=(j&&j.configured&&j.audioUrl)?j.audioUrl:"none"; }).catch(()=>{}); }
+
+  // The buddy speaks a line via ElevenLabs (cached per-text so repeats are free + instant).
+  async function say(text){
+    if(!soundOn||typeof window==="undefined"||!text) return;
+    const v=ensureVoice(); if(!v) return;
+    try{
+      let url=narrCacheRef.current[text];
+      if(url===undefined){
+        const r=await fetch("/api/narrate-story-page",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+        const j=await r.json();
+        url=(j&&j.configured&&j.audioUrl)?j.audioUrl:"none";
+        narrCacheRef.current[text]=url;
+      }
+      if(!soundOn) return; // kid may have muted while it loaded
+      if(url==="none"){ // ElevenLabs not configured -> gentle browser-speech fallback
+        if(window.speechSynthesis){ try{ window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.rate=0.95; u.pitch=1.12; window.speechSynthesis.speak(u); }catch{} }
+        return;
+      }
+      v.src=url; v.currentTime=0; v.volume=1; v.muted=false; v.play().catch(()=>{});
+    }catch{}
+  }
+
+  // Unlock audio from inside a real tap — required by iOS Safari / iPad.
+  function primeSound(){
+    if(typeof window==="undefined") return;
+    const m=ensureMusic(); if(m&&soundOn){ try{ m.play().catch(()=>{}); }catch{} }
+    const v=ensureVoice();
+    if(v && !primedRef.current){
+      try{ v.muted=true; v.src="/music-library/playful_musicbox.mp3"; const p=v.play();
+        if(p&&p.then) p.then(()=>{ try{ v.pause(); v.currentTime=0; v.muted=false; v.removeAttribute("src"); }catch{} }).catch(()=>{ try{ v.muted=false; }catch{} });
+      }catch{}
+      primedRef.current=true;
+    }
+  }
+  function toggleSound(){ setSoundOn(v=>{ const n=!v; const m=musicRef.current; if(m){ if(n){ m.play().catch(()=>{}); } else { try{m.pause();}catch{} } } if(!n){ stopVoice(); } return n; }); }
+
+  // Stop music + voice when the story maker closes.
+  useEffect(()=>()=>{ try{ if(musicRef.current) musicRef.current.pause(); }catch{} stopVoice(); },[]);
 
   function reset(){setGuide("unicorn");setStyle("watercolor");setHero("bunny");setWorld("enchanted-forest");setQuest("lost_friend");setMood("cozy");setEnding("happy");setSpark("");setCustomSpark("");setName(DEFAULT_NAME["bunny"]);}
   function doStartPicker(){setError(null);reset();setStep(0);setView("pick");}
@@ -74,7 +128,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
     if(ls.enabled && justFinished){ setJustFinished(false); setGateNext(()=>action); return; }
     action();
   }
-  function startPicker(){ maybeGate(doStartPicker); }
+  function startPicker(){ primeSound(); maybeGate(doStartPicker); }
 
   const STEPS = [
     { key:"guide",  q:"Who's your story buddy?", opts:GUIDES,     val:guide,  set:setGuide,  img:(id)=>libImg("character",id,"watercolor","happy") },
@@ -89,6 +143,13 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   const atEnd=step>=TOTAL;
   const cur=STEPS[step];
 
+  // Background music plays only while building; pause everywhere else.
+  useEffect(()=>{ const m=musicRef.current; if(m){ if(soundOn&&view==="pick"){ m.play().catch(()=>{}); } else { try{m.pause();}catch{} } } if(view!=="pick"){ stopVoice(); } },[view,soundOn]);
+  // The story buddy reads each question aloud as the kid moves through the steps.
+  useEffect(()=>{ if(view!=="pick") return; const t=setTimeout(()=>{ if(atEnd){ say("One last thing! Give your hero a name, then tap Make my story!"); } else if(cur){ say(step===0 ? ("Hi! Let's make a magical story together. "+cur.q) : cur.q); } }, 450); return ()=>clearTimeout(t); },[view,step]);
+  // Pre-load the pictures for the current + upcoming steps so tiles appear fast.
+  useEffect(()=>{ if(typeof window==="undefined") return; if(view!=="pick"&&view!=="landing") return; const idxs = view==="landing" ? [0,1,2] : [step,step+1,step+2]; idxs.forEach(i=>{ const st=STEPS[i]; if(!st||!st.img) return; st.opts.forEach(([id])=>{ try{ const im=new Image(); im.decoding="async"; im.src=st.img(id); }catch{} }); }); if(view==="pick"&&soundOn){ const nx=STEPS[step+1]; if(nx) prewarm(nx.q); if(step+1>=TOTAL) prewarm("One last thing! Give your hero a name, then tap Make my story!"); } },[view,step]);
+
   function labelOf(st){const o=st.opts.find(x=>x[0]===st.val);return o?o[1]:"";}
   function cycle(st,dir){const i=st.opts.findIndex(o=>o[0]===st.val);const ni=((i<0?0:i)+dir+st.opts.length)%st.opts.length;st.set(st.opts[ni][0]);}
   function pickOpt(st,id){st.set(id);}
@@ -102,7 +163,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
     makeStory({ guide:rand(GUIDES)[0], style:"watercolor", characterSlug:h, characterName:DEFAULT_NAME[h], worldSlug:rand(WORLDS)[0],
       quest:rand(QUESTS)[0], mood:rand(MOODS)[0], ending:rand(ENDINGS)[0], spark:rand(SPARKS) });
   }
-  function surprise(){ maybeGate(doSurprise); }
+  function surprise(){ primeSound(); maybeGate(doSurprise); }
 
   function doMake(){ if(locking) return; setLocking(true); setTimeout(()=>{ setLocking(false); makeStory(); }, 1350); }
 
@@ -177,7 +238,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
   if(view==="pick"){
     return (<div style={s.container}>
       <style>{spin+lock}</style>
-      <div style={s.topBar}><button style={s.navBtn} onClick={back}>Back</button><button style={s.navBtn} onClick={onHome}>Home</button></div>
+      <div style={s.topBar}><button style={s.navBtn} onClick={back}>Back</button><button style={s.navBtn} onClick={toggleSound} aria-label="Turn sound on or off">{soundOn?"Sound on":"Sound off"}</button><button style={s.navBtn} onClick={onHome}>Home</button></div>
       <div style={s.dots}>{STEPS.map((_,i)=><span key={i} style={{...s.dot,...(i===step?s.dotOn:i<step?s.dotDone:{})}}/>)}<span style={{...s.dot,...(atEnd?s.dotOn:{})}}/></div>
 
       {!atEnd ? (<>
@@ -185,7 +246,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
         <div style={cur.img?s.grid:s.textGrid}>
           {cur.opts.map(([id,label])=>{const on=cur.val===id;return (
             <button key={id} onClick={()=>pickOpt(cur,id)} style={{...(cur.img?s.gTile:s.textTile),...(on?s.tileOn:{})}}>
-              {cur.img && <img src={cur.img(id)} alt={label} loading="lazy" style={cur.key==="world"?s.gImgWorld:s.gImgChar}/>}
+              {cur.img && <img src={cur.img(id)} alt={label} loading="eager" decoding="async" style={cur.key==="world"?s.gImgWorld:s.gImgChar}/>}
               <span style={s.gLabel}>{label}</span>
             </button>);})}
         </div>

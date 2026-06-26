@@ -1673,3 +1673,32 @@ calls it after every active-kid change (and once at startup).
   All network calls are fire-and-forget — never block a child. Guest mode is 100% local.
 
 No emoji; Learning Mode still default OFF (nothing accrues when off).
+
+## Stories: talking buddy (ElevenLabs) + calming music + faster picker — June 26 2026
+
+The story builder (`src/StoryMaker.jsx`, now v5) got three kid-friendly fixes.
+
+**Talking story buddy — iPad-safe.** The builder used to be silent (the v3 "talking owl"
+was lost in the v4 rebuild). The buddy now greets the child and reads each question aloud
+as they move through the steps. Crucially it speaks via the **same ElevenLabs narration the
+reader uses** (`/api/narrate-story-page`, cached per-text), NOT the browser's
+`speechSynthesis` — because iPad Safari speech is unreliable. Real audio files play fine on
+iPad once unlocked. Browser speech remains only as a fallback if `ELEVENLABS_API_KEY` is
+unset. iOS audio is unlocked inside the first real tap (`primeSound()` on "Make a new story"
+/ "Surprise me!"). Question audio for the next step is pre-warmed so it plays instantly.
+
+**Calming background music.** A soft music-box loop (`/music-library/playful_musicbox.mp3`)
+plays quietly (vol 0.18) only while building; it pauses on the generating/reading screens.
+Started on the same first tap (iOS gesture requirement).
+
+**One "Sound on/off" button** in the builder top bar controls both the buddy voice and the
+music. Default ON.
+
+**Faster picker pictures.** The library art (`/api/story-library`) already had year-long
+cache headers, so the lag was first-load latency with no prefetch. The builder now
+pre-loads the pictures for the current + next two steps (and steps 0-2 from the landing
+screen via `new Image()`), and tile `<img>`s use `decoding="async"`. By the time a child
+reaches a step, its pictures are warm in the browser cache.
+
+No emoji. Build verified (`npm run build`). ElevenLabs confirmed live (`/api/narrate-story-page`
+returns `hasElevenLabs:true`).
