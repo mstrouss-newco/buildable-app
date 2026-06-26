@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { shareCreation } from "./lib/shareSheet";
 import CoverThumb from "./lib/CoverThumb";
 import IconImg from "./lib/IconImg";
+import SongPlayer from "./lib/SongPlayer";
 import QuizGate from "./QuizGate";
 import { getLearningSettings } from "./store";
 import { registerAudio } from './lib/audioUnlock.js';
@@ -371,10 +372,16 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
             <div style={{ ...S.draft, borderColor: draft.coverColor }}>
               <div style={S.draftTitle}>{draft.title}</div>
               {draft.meta && draft.meta.recipe && <div style={S.recipe}>{draft.meta.recipe}</div>}
-              <audio ref={audioRef} controls src={draft.audioUrl} style={S.audio} autoPlay />
+              <SongPlayer src={draft.audioUrl} color={draft.coverColor} autoPlay size={78} />
               <div style={S.draftBtns}>
-                <button style={{ ...S.keepBtn, background: draft.coverColor }} onClick={keepSong}>Keep it!</button>
-                <button style={S.againBtn} onClick={makeSong}>Try again</button>
+                <button style={{ ...S.keepBtn, background: draft.coverColor }} onClick={keepSong} aria-label="Save this song" title="Save">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="#15131f" aria-hidden="true"><path d="M12 21s-7.6-4.7-10.1-9.2C.2 8.5 1.9 5.2 5.2 5.2c1.9 0 3.2 1.1 3.8 2.1.6-1 1.9-2.1 3.8-2.1 3.3 0 5 3.3 3.3 6.6C19.6 16.3 12 21 12 21z"/></svg>
+                  <span style={S.btnCap}>Save</span>
+                </button>
+                <button style={S.againBtn} onClick={makeSong} aria-label="Make another one" title="Try again">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3 8"/><path d="M3 3.5V8h4.5"/></svg>
+                  <span style={S.btnCap}>New one</span>
+                </button>
               </div>
               <button style={S.tweakBtn} onClick={() => { setDraft(null); setStep(TOTAL); }}>← Tweak my choices</button>
               {status && <div style={S.status}>{status}</div>}
@@ -436,7 +443,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
                 <div style={S.songInfo}>
                   <div style={S.songTitle}>{s.title}</div>
                   <div style={S.songMeta}>{(s.vibe || "song")}{s.theme ? " · " + s.theme : ""}</div>
-                  <audio controls src={s.audio_url} style={S.audioSmall} />
+                  <SongPlayer src={s.audio_url} color={s.cover_color || "#5B6CFF"} size={54} />
                 </div>
                 <button style={S.shareBtn} onClick={() => shareCreation({ kind: "song", id: s.song_id, title: s.title })} title="Share">↗</button>
                 <button style={S.renameBtn} onClick={() => renameSong(s)} title="Rename">Aa</button>
@@ -493,8 +500,9 @@ const S = {
   recipe: { fontSize: 13, color: "#b9b9d0", marginBottom: 10, fontWeight: 600 },
   audio: { width: "100%" },
   draftBtns: { display: "flex", gap: 10, marginTop: 12 },
-  keepBtn: { flex: 1, padding: "12px", fontWeight: 800, color: "#1a1a2a", border: "none", borderRadius: 12, cursor: "pointer" },
-  againBtn: { flex: 1, padding: "12px", fontWeight: 700, color: "#fff", background: "#2a2a3a", border: "none", borderRadius: 12, cursor: "pointer" },
+  keepBtn: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px", fontWeight: 800, color: "#1a1a2a", border: "none", borderRadius: 14, cursor: "pointer" },
+  againBtn: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px", fontWeight: 700, color: "#fff", background: "#2a2a3a", border: "none", borderRadius: 14, cursor: "pointer" },
+  btnCap: { fontSize: 13, fontWeight: 800 },
   tweakBtn: { display: "block", margin: "12px auto 0", background: "transparent", color: "#9a9ac0", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14 },
   status: { marginTop: 14, textAlign: "center", color: "#FFD93D", fontWeight: 700 },
   empty: { textAlign: "center", color: "#bbb", padding: "30px 0", fontSize: 16 },

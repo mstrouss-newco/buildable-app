@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { shareCreation } from "./lib/shareSheet";
 import CoverThumb from "./lib/CoverThumb";
+import SongPlayer from "./lib/SongPlayer";
 import {
   listCharacters,
   deleteCharacter,
@@ -197,7 +198,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
                 <CoverThumb vibe={sg.vibe} theme={sg.theme} color={sg.cover_color} fill radius={0} />
                 <h3 style={s.cardTitle}>{sg.title}</h3>
                 <p style={s.cardDesc}>{[sg.vibe, sg.theme].filter(Boolean).join(" · ")}</p>
-                <audio controls src={sg.audio_url} style={{ width: "92%", margin: "0 auto 12px" }} />
+                <div style={{ padding: "0 14px 12px" }}><SongPlayer src={sg.audio_url} color={sg.cover_color || "#5B6CFF"} size={56} /></div>
                 <div style={s.cardActions}>
                   <button style={s.useBtn} onClick={() => shareCreation({ kind: "song", id: sg.song_id, title: sg.title })}>🔗 Share</button>
                   <button style={s.deleteBtn} onClick={() => removeSong(sg.song_id)}>Delete</button>
