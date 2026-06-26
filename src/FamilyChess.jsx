@@ -48,9 +48,12 @@ export default function FamilyChess({ activeKid, onHome }) {
 
   const iframeRef = useRef(null);
   const pollRef = useRef(null);
-  const lastStampRef = useRef(null);
+  const lastMoveKeyRef = useRef(null);
+  const lastReactionAtRef = useRef(null);
   const readyRef = useRef(false);
   const matchRef = useRef(null);
+
+  const moveKeyOf = (m) => JSON.stringify([m && m.turn, (m && m.last_move) || null, (m && m.status) || "active"]);
 
   const signedIn = isSignedIn();
   const me = activeKid || getActiveKid();
@@ -97,7 +100,13 @@ export default function FamilyChess({ activeKid, onHome }) {
       else if (d.type === "chessMove" && m) {
         const p = d.payload; if (!p) return;
         const patch = { board: p.state, turn: p.turn, last_move: p.lastMove, status: p.over ? "done" : "active", winner: p.over ? (p.winner || null) : null };
-        patchMatch(m.id, patch).then((row) => { if (row) lastStampRef.current = row.updated_at; }).catch(() => {});
+        lastMoveKeyRef.current = moveKeyOf(patch); // don't echo my own move back to me
+        patchMatch(m.id, patch).catch(() => {});
+      }
+      else if (d.type === "chessReaction" && m) {
+        const reaction = { text: String(d.text || "").slice(0, 40), by: me && me.id, at: new Date().toISOString() };
+        lastReactionAtRef.current = reaction.at; // don't show my own reaction back to me
+        patchMatch(m.id, { reaction }).catch(() => {});
       }
     }
     window.addEventListener("message", onMsg);
@@ -110,19 +119,27 @@ export default function FamilyChess({ activeKid, onHome }) {
     matchRef.current = match;
     if (pollRef.current) clearInterval(pollRef.current);
     if (!match) return;
-    lastStampRef.current = match.updated_at;
+    lastMoveKeyRef.current = moveKeyOf(match);
+    lastReactionAtRef.current = (match.reaction && match.reaction.at) || null;
     if (readyRef.current) sendInit(match);
+    const mine = myColor(match);
     pollRef.current = setInterval(async () => {
       try {
         const row = await getMatch(match.id);
         if (!row) return;
-        if (row.updated_at !== lastStampRef.current) {
-          lastStampRef.current = row.updated_at;
-          const mine = myColor(match);
-          if (row.status === "done" || row.turn === mine) {
-            const ifr = iframeRef.current;
-            if (ifr && ifr.contentWindow) ifr.contentWindow.postMessage({ type: "chessOpponentMove", payload: { state: row.board, lastMove: row.last_move } }, "*");
+        const ifr = iframeRef.current;
+        // a real move happened (board/turn/status changed) — not just a reaction
+        const mk = moveKeyOf(row);
+        if (mk !== lastMoveKeyRef.current) {
+          lastMoveKeyRef.current = mk;
+          if ((row.status === "done" || row.turn === mine) && ifr && ifr.contentWindow) {
+            ifr.contentWindow.postMessage({ type: "chessOpponentMove", payload: { state: row.board, lastMove: row.last_move } }, "*");
           }
+        }
+        // opponent sent a reaction
+        if (row.reaction && row.reaction.at !== lastReactionAtRef.current && row.reaction.by !== (me && me.id)) {
+          lastReactionAtRef.current = row.reaction.at;
+          if (ifr && ifr.contentWindow) ifr.contentWindow.postMessage({ type: "chessShowReaction", text: row.reaction.text }, "*");
         }
       } catch (e) { /* keep polling */ }
     }, 2000);

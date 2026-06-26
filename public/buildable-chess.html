@@ -186,6 +186,19 @@ body.in-game .card{background:rgba(20,16,40,.34);border-color:rgba(255,255,255,.
 .piece.sad svg{animation:sad 1.4s ease-in-out infinite!important;filter:grayscale(.4) drop-shadow(0 4px 4px rgba(0,0,0,.32))}
 @keyframes sad{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(5%) rotate(-3deg)}}
 .firework{position:absolute;width:9px;height:9px;border-radius:50%;z-index:46;pointer-events:none;will-change:transform,opacity}
+/* online reactions */
+.react-bar{display:none;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.react-bar.on{display:flex}
+.react-bar button{font-family:'Fredoka',sans-serif;font-weight:700;font-size:13px;color:#fff;border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.07);border-radius:100px;padding:7px 13px;cursor:pointer;transition:transform .1s}
+.react-bar button:active{transform:scale(.94)}
+.react-bar.spent{opacity:.4;pointer-events:none}
+.react-bar.spent::after{content:"one per move";display:block;width:100%;text-align:center;font-size:11px;color:rgba(255,255,255,.45);font-weight:600;margin-top:2px}
+.react-toast{position:absolute;right:12px;bottom:70px;max-width:62%;color:#fff;font-family:'Nunito',sans-serif;font-weight:900;
+  font-size:16px;padding:12px 16px;border-radius:16px 16px 4px 16px;box-shadow:0 10px 30px rgba(0,0,0,.45);
+  opacity:0;pointer-events:none;z-index:30}
+.react-toast.show{animation:reactpop 3.2s ease forwards}
+@keyframes reactpop{0%{opacity:0;transform:translateX(28px) scale(.9)}9%{opacity:1;transform:translateX(0) scale(1.04)}16%{transform:translateX(0) scale(1)}82%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(18px)}}
 </style>
 </head>
 <body>
@@ -271,6 +284,8 @@ body.in-game .card{background:rgba(20,16,40,.34);border-color:rgba(255,255,255,.
       </div>
 
       <div style="text-align:center;margin-top:12px;min-height:22px;font-weight:600;color:rgba(255,255,255,.7)" id="tip"></div>
+      <div class="react-bar" id="react-bar"></div>
+      <div class="react-toast" id="react-toast"></div>
     </section>
 
   </div>
@@ -803,6 +818,7 @@ function finishMove(mv){
         lastMove:{from:mv.from,to:mv.to,cap:!!captured,capColor:captured?captured.c:null,capSq:capSq},
         over:st.over, winner: st.over ? (st.result==='draw'?'draw':opp(st.loser)) : null};
       try{window.parent&&window.parent.postMessage({type:'chessMove',payload:payload},'*');}catch(e){}
+      setReactionReady(true); // fresh reaction allowance each move
     }
     if(st.check&&!st.over){flashBanner('Check!');sfxCheck();}
     if(st.over){endGame(st);busy=false;return;}
@@ -913,6 +929,7 @@ function applyOpponentMove(p){
   const st=gameStatus(S);
   if(st.check&&!st.over){flashBanner('Check!');sfxCheck();}
   if(st.over){endGame(st);return;}
+  setReactionReady(true); // fresh reaction allowance after opponent's move
   if(S.turn===humanColor){setTimeout(()=>{sfxYourTurn();flashBanner('Your turn!');},340);setTip('Your turn — tap a hero!');}
   else setTip('Waiting for '+oppName+'...');
 }
@@ -1080,6 +1097,7 @@ function startGame(){
   document.getElementById('sound-btn').classList.toggle('active',soundOn);
   document.getElementById('music-btn').classList.toggle('active',musicOn);
   playWorldMusic(sceneKey);
+  document.getElementById('react-bar').classList.remove('on'); // reactions are online-only
   show('s-game');
   buildSquares();renderPieces();updateTurnUI();refresh();
   setTip(mode==='two'?'Purple goes first. Tap a hero to begin!':'You are Purple. Tap a hero to begin!');
@@ -1131,6 +1149,26 @@ document.getElementById('btn-scores-close').onclick=()=>document.getElementById(
 loadSfxLibrary();
 
 /* ===== Online play: driven by the app via postMessage (no chat, just moves) ===== */
+/* ===== Online reactions (canned, no free text; one per move) ===== */
+const REACTIONS=['Nice move!','Wow!','You got this!','Nice try!','Gotcha!','Too easy!'];
+let reactionReady=false;
+function buildReactionBar(){
+  const bar=document.getElementById('react-bar');bar.innerHTML='';
+  REACTIONS.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>sendReaction(t);bar.appendChild(b);});
+}
+function setReactionReady(v){reactionReady=v;document.getElementById('react-bar').classList.toggle('spent',!v);}
+function sendReaction(text){
+  if(mode!=='online'||!reactionReady)return;
+  setReactionReady(false);
+  try{window.parent&&window.parent.postMessage({type:'chessReaction',text:text},'*');}catch(e){}
+  showReaction('You: '+text,true);
+}
+function showReaction(text,mine){
+  const t=document.getElementById('react-toast');t.textContent=text;
+  t.style.background = mine ? 'linear-gradient(135deg,#00B47E,#28D9A0)' : 'linear-gradient(135deg,#7C5CFC,#A78BFF)';
+  t.classList.remove('show');void t.offsetWidth;t.classList.add('show');
+  if(!mine&&soundOn){try{osc(880,1150,.1,'sine',.12);}catch(e){}}
+}
 function startOnlineGame(d){
   mode='online';humanColor=d.myColor||'w';oppName=d.oppName||'Friend';
   if(d.myName)pName=d.myName; // so wins are recorded for this kid
@@ -1145,12 +1183,14 @@ function startOnlineGame(d){
   document.getElementById('music-btn').classList.toggle('active',musicOn);
   playWorldMusic(sceneKey);
   show('s-game');buildSquares();renderPieces();updateTurnUI();refresh();
+  document.getElementById('react-bar').classList.add('on');buildReactionBar();setReactionReady(true);
   setTip(S.turn===humanColor?'Your turn — tap a hero!':('Waiting for '+oppName+'...'));
 }
 window.addEventListener('message',function(e){
   const d=e.data||{};
   if(d.type==='chessInit')startOnlineGame(d);
   else if(d.type==='chessOpponentMove')applyOpponentMove(d.payload||d);
+  else if(d.type==='chessShowReaction')showReaction(d.text,false);
 });
 
 // menus start clean (no falling leaves); worlds appear once a game begins
