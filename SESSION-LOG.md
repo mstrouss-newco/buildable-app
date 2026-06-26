@@ -1,5 +1,46 @@
 # Buildable Kids — Session Log
 
+## Share links, reusable AI image library, Music Maker quiz-wizard + ElevenLabs voice (June 26 2026)
+
+### Sharing — private read-only links for stories & songs
+- `api/shared-story.js`, `api/shared-song.js` — public GET by id from `saved_stories`/`saved_songs`
+  (service key, public-safe fields only; no new tables — reuses the saved item id as the share token).
+- `public/story.html`, `public/song.html` — kid-safe read-only viewers (story book w/ browser read-aloud +
+  page nav; song cover + audio player), each with a "Make your own — free" CTA to the landing page.
+- Routes added to `vercel.json` (root): `/story.html`, `/song.html`, `/s/:id`, `/p/:id`.
+- `src/lib/shareSheet.js` — native share sheet (text/email/social) + desktop copy/email/text/social fallback.
+  Wired into StoryMaker saved cards, StoryReader top bar, MusicMaker library, MyStuff song cards.
+
+### Reusable AI image library — generate once, cache, serve by URL
+- `api/images.js` — `GET /api/images?kind=cover|icon&...` → `gpt-image-1`, cached in `image_cache`,
+  served as PNG bytes (`Cache-Control: immutable`). `?force=1` regenerate, `?manifest=1` list. Quality
+  per-kind (icons=medium photoreal, covers=low). Auto/None/Surprise are NOT images (see wizard glyphs).
+- `db/create-image-cache.sql` — `image_cache(cache_key, descriptor, b64, kind, created_at)`. RUN ONCE in
+  Supabase (done). No new env vars — reuses `OPENAI_API_KEY` + `SUPABASE_*`.
+- `src/lib/CoverThumb.jsx` (song covers in MusicMaker + MyStuff) and `src/lib/IconImg.jsx` (Music Maker
+  picker icons) pull images by URL with a note/emoji placeholder until the photo loads. IconImg URLs carry
+  `&v=2` to bust the immutable cache after the cartoon→photoreal prompt change.
+- Music Maker icons are PHOTOREALISTIC studio shots; all 34 base + new option icons prewarmed/cached.
+
+### Music Maker — quiz-wizard redesign (`src/MusicMaker.jsx`)
+- One big illustrated question per screen, progress dots, **Next** button (no auto-advance), Back/Skip.
+- Always-visible "song so far" strip — chips cycle (tap ▲▼ or swipe up/down) to change any earlier choice
+  anytime, right up to render. **Render** plays a staggered slot-machine "lock + glow" then generates.
+- 6+ options per question. New options + matching descriptions in `api/generate-song.js`: robot singer,
+  electro drums, bass guitar, orchestra strings, super-fast/groovy speeds (+ Both singer photo).
+- No emoji: Auto/None/Surprise render as vector glyphs; photos elsewhere. Animated "thinking" loader
+  (equalizer bars + cycling messages). Removed the "world/theme" picker from song creation.
+- **Read-aloud voice via ElevenLabs** (`/api/narrate-story-page`, cached in `narration_cache`) with a header
+  speaker toggle; browser TTS only as a silent fallback. All ~50 wizard phrases pre-cached. Voice =
+  `ELEVENLABS_VOICE_ID` (default "Rachel"); change the env value + re-cache to swap voices.
+
+### Setup recap
+- One-time SQL: `db/create-image-cache.sql` (done). Tables in play: `image_cache`, `narration_cache`,
+  `saved_stories`, `saved_songs`.
+- Env (Vercel): `OPENAI_API_KEY` (image library), `ELEVENLABS_API_KEY` (+ optional `ELEVENLABS_VOICE_ID`,
+  `ELEVENLABS_MODEL_ID`) for wizard voice — all already configured.
+
+
 
 ## Typing game added to the app (June 26 2026)
 
