@@ -25,6 +25,7 @@ const SCREEN_ADMIN = "admin";
 const SCREEN_MUSIC = "music";
 const SCREEN_GROWNUP = "grownup";
 const SCREEN_STORY = "story";
+const SCREEN_TYPING = "typing";
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
   const [activeKid, setActiveKidState] = useState(getActiveKid());
@@ -108,6 +109,7 @@ export default function BuildableKids() {
         onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
         onGames={() => setScreen(SCREEN_INTRO)}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
+        onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
         onGrownUp={() => setScreen(SCREEN_GROWNUP)}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
@@ -230,6 +232,10 @@ export default function BuildableKids() {
     );
   }
 
+  if (screen === SCREEN_TYPING) {
+    return <TypingScreen onHome={() => setScreen(SCREEN_HOME)} />;
+  }
+
   if (screen === SCREEN_MY_STUFF) {
     return <MyStuffScreen {...myStuffNav} />;
   }
@@ -283,7 +289,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onStories, onMyStuff, onGrownUp, onAdmin }) {
+function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onMyStuff, onGrownUp, onAdmin }) {
   const ExperienceCard = ({ emoji, title, desc, badge, badgeColor, onClick, featured, disabled }) => (
     <button
       onClick={disabled ? undefined : onClick}
@@ -365,8 +371,33 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onMyStuff, onGrown
           emoji="📖" title="Stories" desc="Turn your ideas into a living picture book."
           badge="New" badgeColor="#7CF6B0" onClick={onStories}
         />
+        <ExperienceCard
+          emoji="⌨️" title="Typing" desc="Learn to type by defending the castle!"
+          badge="New" badgeColor="#7CF6B0" onClick={onTyping}
+        />
       </div>
 
+    </div>
+  );
+}
+
+function TypingScreen({ onHome }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
+      <button
+        onClick={onHome}
+        style={{
+          position: "absolute", top: "14px", left: "14px", zIndex: 2,
+          fontFamily: NUN, fontWeight: 800, fontSize: "14px", color: "#fff",
+          background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)",
+          borderRadius: "999px", padding: "8px 16px", cursor: "pointer",
+        }}
+      >← Home</button>
+      <iframe
+        title="Buildable Typing"
+        src="/typing.html"
+        style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+      />
     </div>
   );
 }

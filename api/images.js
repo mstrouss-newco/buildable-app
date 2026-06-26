@@ -69,8 +69,68 @@ const ICONS = {
             volcano:"an erupting volcano with glowing orange lava and rocky terrain" },
 };
 
+// Typing-game characters (heroes, baddies, bosses). Transparent cut-outs.
+const TYPE_STYLE = "cute friendly cartoon game-character mascot for a kids' typing game, " +
+  "bold clean thick outlines, bright vibrant colors, big expressive eyes, full body, centered, " +
+  "simple flat-shaded sprite, not scary, child-friendly ages 4-8, transparent background";
+const TYPE_SUBJECTS = {
+  hero: {
+    rocket:"a heroic friendly rocket-ship mascot with a brave smile and little arms",
+    fox:   "a brave heroic cartoon fox wearing a tiny superhero cape",
+    dragon:"a cute brave baby dragon with small wings and a tiny friendly flame",
+    wizard:"a young cartoon wizard kid in a purple robe and pointy hat holding a glowing wand",
+    robot: "a friendly heroic cartoon robot with a glowing blue visor and little rocket boosters",
+    knight:"a brave cartoon kid knight in shiny golden armor holding a small shield",
+  },
+  foe: {
+    space_1:"a goofy purple alien space-invader blob with big silly eyes",
+    space_2:"a goofy little cartoon UFO saucer with a cheeky face",
+    space_3:"a goofy green three-eyed alien creature",
+    space_4:"a goofy grinning cartoon comet with a sparkly tail",
+    jungle_1:"a goofy friendly cartoon green snake with a silly grin",
+    jungle_2:"a playful goofy cartoon monkey sticking out its tongue",
+    jungle_3:"a small goofy cartoon crocodile with a toothy grin",
+    jungle_4:"a chubby goofy cartoon rhino with a big horn",
+    sea_1:"a goofy cartoon pufferfish with big eyes",
+    sea_2:"a goofy cartoon crab waving its claws",
+    sea_3:"a goofy cartoon octopus with a silly grin",
+    sea_4:"a goofy friendly cartoon baby shark with a big grin, not scary",
+    candy_1:"a goofy gummy-bear candy monster with a silly face",
+    candy_2:"a goofy walking slice of pie with eyes and little legs",
+    candy_3:"a goofy donut creature with sprinkles and a face",
+    candy_4:"a goofy cupcake monster with frosting and googly eyes",
+    ice_1:"a goofy cartoon penguin wearing a tiny scarf",
+    ice_2:"a goofy fluffy snowy cartoon owl",
+    ice_3:"a goofy cute cartoon seal pup",
+    ice_4:"a goofy fluffy white snow-monster cub, cute not scary",
+    volcano_1:"a goofy little cartoon lava lizard",
+    volcano_2:"a goofy cartoon bat with big ears",
+    volcano_3:"a goofy rolling cartoon rock creature with a face",
+    volcano_4:"a goofy cute cartoon stone golem",
+  },
+  boss: {
+    space:"a big goofy UFO mothership boss with glowing lights, a silly face and a tiny gold crown",
+    jungle:"a big friendly cartoon gorilla king with a tiny gold crown, goofy not scary",
+    sea:"a big friendly cartoon blue whale boss with a tiny gold crown, happy and goofy",
+    candy:"a big goofy lollipop-king candy boss with a tiny gold crown",
+    ice:"a big friendly cartoon snowman king boss with a tiny gold crown",
+    volcano:"a big goofy friendly cartoon lava dragon boss with a tiny gold crown, not scary",
+  },
+};
+
 function build(q) {
   const kind = (q.kind || "").toString();
+  if (kind === "type") {
+    const cat = (q.cat || "").toString();
+    const id = (q.id || "").toString();
+    const subject = TYPE_SUBJECTS[cat] && TYPE_SUBJECTS[cat][id];
+    if (!subject) return null;
+    return {
+      descriptor: `type|${cat}|${id}`,
+      prompt: `${subject}. ${TYPE_STYLE}`,
+      transparent: true, quality: "medium",
+    };
+  }
   if (kind === "cover") {
     const vibe = (q.vibe || "happy").toString();
     const theme = (q.theme || "").toString();

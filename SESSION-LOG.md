@@ -1,6 +1,24 @@
 # Buildable Kids — Session Log
 
 
+## Typing game added to the app (June 26 2026)
+
+- New **Typing** experience: a learn-to-type game for ages 5-7 (find the glowing key,
+  use the matching-color finger, defend the castle, beat the world boss). 6 worlds,
+  enemy types, unlockable heroes, a SUPER power-up.
+- Files:
+  - `public/typing.html` — the self-contained game (vanilla HTML/JS/CSS, auto-fits screen).
+  - `src/BuildableKids.jsx` — added `SCREEN_TYPING`, a `TypingScreen` (full-screen iframe of
+    `/typing.html` + Home button), a "Typing" tile on the Home screen.
+  - `api/images.js` — extended the image library with a new `kind=type` (heroes / baddies /
+    bosses) so the game pulls generated art: `<... src="/api/images?kind=type&cat=hero&id=rocket">`.
+    Transparent cut-outs, medium quality, cached in `image_cache` like covers/icons.
+- Art is generate-on-first-request + cached (emoji placeholder shows until the PNG loads).
+  No new env vars or SQL — reuses OPENAI_API_KEY + image_cache already in place.
+
+# Buildable Kids — Session Log
+
+
 ## Account creation fix — email confirmation (Option B)
 
 ### Root cause (confirmed by probing live Supabase auth endpoint)
