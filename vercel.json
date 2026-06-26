@@ -84,6 +84,10 @@
       "dest": "/living-scene.html"
     },
     {
+      "src": "/glow.html",
+      "dest": "/glow.html"
+    },
+    {
       "src": "/story-demo.html",
       "dest": "/story-demo.html"
     },
