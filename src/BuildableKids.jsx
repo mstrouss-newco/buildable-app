@@ -31,6 +31,12 @@ const SCREEN_STORY = "story";
 const SCREEN_TYPING = "typing";
 const SCREEN_CHESS = "chess";
 const SCREEN_CHESS_FAMILY = "chess_family";
+function GrownUpFab({ onClick }) {
+  return (
+    <button onClick={onClick} aria-label="Open grown-ups area" style={{ position: "fixed", bottom: 16, left: 16, zIndex: 9998, background: "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "10px 16px", fontSize: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }}>Grown-ups</button>
+  );
+}
+
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
   const [activeKid, setActiveKidState] = useState(getActiveKid());
@@ -107,6 +113,7 @@ export default function BuildableKids() {
   };
 
   // ============ HOME HUB ============
+  const __view = (() => {
   if (screen === SCREEN_HOME) {
     return (
       <HomeScreen
@@ -272,6 +279,14 @@ export default function BuildableKids() {
   if (screen === SCREEN_ADMIN) {
     return <AdminDashboard onExit={() => setScreen(SCREEN_HOME)} />;
   }
+  })();
+
+  return (
+    <>
+      {__view}
+      {screen !== SCREEN_GROWNUP && <GrownUpFab onClick={() => setScreen(SCREEN_GROWNUP)} />}
+    </>
+  );
 }
 
 // ============ TOP NAVIGATION BAR ============
