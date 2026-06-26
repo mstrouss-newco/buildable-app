@@ -55,23 +55,25 @@ function buildLevel(lv, idx){
   // largest gap (in tiles) a full jump can comfortably clear at this level's speed
   const speed = lv.speed||RUN_BASE;
   const safeGapTiles = Math.max(1, Math.floor(speed*AIR_FRAMES*0.62/TILE) - 1);
+  let lastHaz = -99;                       // enforce breathing room between hazards
+  const SPACING = 3;                        // tiles of safe ground after each hazard
   // first 3 tiles always solid (safe spawn)
   for(let i=0;i<n;i++){
     const tx=i*TILE;
-    const canGap = i>3 && i<n-3;
-    if(canGap && rnd()<lv.gapChance){
+    const canHaz = i>3 && i<n-3 && (i-lastHaz)>=SPACING;   // gated by spacing
+    if(canHaz && rnd()<lv.gapChance){
       // close current ground segment, make a jumpable gap (<= gapMax tiles)
       ground.push({x0:segStart, x1:tx, y:GROUND_Y});
       const maxGap=Math.max(1, Math.min(lv.gapMax, safeGapTiles));
       const gapTiles=1+Math.floor(rnd()*maxGap);
-      i+=gapTiles; segStart=(i)*TILE;
+      i+=gapTiles; segStart=(i)*TILE; lastHaz=i;
       continue;
     }
     // obstacle (a block to jump) on solid ground
-    if(canGap && rnd()<lv.obstacleChance){ obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46}); }
+    if(canHaz && rnd()<lv.obstacleChance){ obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46}); lastHaz=i; }
     // enemy walking on ground
-    else if(canGap && rnd()<lv.enemyChance){ enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false}); }
-    // coin arc
+    else if(canHaz && rnd()<lv.enemyChance){ enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false}); lastHaz=i; }
+    // coin arc (independent of hazards)
     if(rnd()<lv.coinChance){ coins.push({x:tx+TILE/2, y:GROUND_Y-70-Math.floor(rnd()*60), got:false}); }
   }
   ground.push({x0:segStart, x1:n*TILE, y:GROUND_Y});
