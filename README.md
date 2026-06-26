@@ -1711,3 +1711,25 @@ after a user gesture calls `resume()` — the game never did, so it was silent (
 on iPad). Fix: `audio()` now calls `actx.resume()` whenever the context is suspended (it's
 invoked from the in-gesture Start/world-select taps and from each sound), and the gameplay
 `keydown` handler calls `audio()` on the first keypress as a safety net. No other changes.
+
+## Learning Mode: per-kid age + questions in Music & Typing — June 26 2026
+
+Two fixes from live testing: questions weren't age-tailored, and Music/Typing didn't prompt.
+
+**Per-kid age (no DB change):** age now lives inside the per-kid learning settings
+(`{enabled, goal, age}` in `src/store.js`), so it's already scoped per kid and cloud-synced
+for signed-in accounts — no schema change. Clamped 3–13, default 7; legacy settings
+normalize to 7. A "Child's age" stepper was added to the Learning Mode card in
+`src/GrownUpScreen.jsx` (sets the ACTIVE kid's age). Every quiz gate now reads age from
+`getLearningSettings().age` instead of hardcoded 6/7 — Music, Story, Creator, Typing, and
+LoadingGames (which still prefers gameData.age). Age is set in the grown-ups card, not the
+kid create form (kept that flow simple).
+
+**Music now prompts:** `startRender()` in `src/MusicMaker.jsx` gates EVERY song render with a
+question when Learning Mode is on (previously only the 2nd song after a save). Regenerating a
+draft does not double-prompt. Skippable; OFF = unchanged.
+
+**Typing now prompts:** `src/BuildableKids.jsx` shows a one-question entry gate before the
+`/typing.html` iframe when Learning Mode is on (once per entry, skippable). OFF = straight in.
+
+No emoji; default-OFF preserved.
