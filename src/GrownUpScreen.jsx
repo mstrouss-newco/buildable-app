@@ -2,15 +2,19 @@
 // -------------------------------------------------------------
 // Grown-ups area: a proper, dedicated account flow.
 //
+// Redesigned to the Buildable brand: dark starfield surface, the
+// gradient "buildablekids." wordmark, clean app-icon glyphs, and
+// gradient-circle kid avatars with initials. NO EMOJI anywhere.
+//
 // This screen is a guided, multi-STEP flow (not a single cramped panel):
 //
-//   STEP "choose"   -> pick a lane: Continue with Google (preferred), use
-//                       email instead, or continue without an account.
-//   STEP "auth"     -> parent signs up or signs in (Google or email).
-//   STEP "kids"     -> create + manage kid profiles (tap-a-tile, no kid
-//                       passwords). Choosing a tile starts play for that kid.
-//   STEP "projects" -> assign existing creations (songs/games) to a kid so
-//                       a parent can keep each child's stuff organized.
+// STEP "choose" -> pick a lane: Continue with Google (preferred), use
+// email instead, or continue without an account.
+// STEP "auth" -> parent signs up or signs in (Google or email).
+// STEP "picker" -> "Who's playing?" tap-a-tile kid picker.
+// STEP "gate" -> grown-up-only math check before the Parents area.
+// STEP "parents" -> create + manage kid profiles.
+// STEP "projects" -> assign existing creations (songs/games) to a kid.
 //
 // Google sign-in (preferred): signInWithGoogle() redirects to Supabase ->
 // Google -> back here with tokens in the URL hash; completeOAuthRedirect()
@@ -31,13 +35,46 @@ import {
   signInWithGoogle, completeOAuthRedirect,
 } from "./lib/accounts";
 
-const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-const CARD_BG = "rgba(255,255,255,0.05)";
-const CARD_BORDER = "1px solid rgba(155,126,221,0.22)";
+const GRAD_BTN = "linear-gradient(90deg, #8A6BFF 0%, #E0578F 100%)";
+const CARD_BG = "rgba(255,255,255,0.045)";
+const CARD_BORDER = "1px solid rgba(255,255,255,0.10)";
 
-const AVATARS = ["🦄", "🐯", "🐸", "🐙", "🐵", "🦊", "🐶", "🐼", "🐢", "🐝", "🌟", "🚀"];
+// Kid avatars are colors, not pictures. Each kid gets a gradient circle
+// with their first initial. The DB `avatar` column stores a color key
+// (e.g. "purple"); legacy rows (old emoji values) fall back to a color
+// derived from the child's name, so nothing breaks and no emoji renders.
+const COLORS = [
+  { key: "purple", grad: "linear-gradient(160deg,#8A6BFF,#6A4FE0)" },
+  { key: "pink",   grad: "linear-gradient(160deg,#F2789E,#E0578F)" },
+  { key: "blue",   grad: "linear-gradient(160deg,#4FA6E8,#2F8FD6)" },
+  { key: "green",  grad: "linear-gradient(160deg,#3DD06A,#2BB14F)" },
+  { key: "amber",  grad: "linear-gradient(160deg,#FFC75A,#F0972A)" },
+  { key: "teal",   grad: "linear-gradient(160deg,#46D7C0,#1FA897)" },
+];
+const COLOR_MAP = Object.fromEntries(COLORS.map((c) => [c.key, c.grad]));
+
+function avatarGrad(kid) {
+  if (kid && kid.avatar && COLOR_MAP[kid.avatar]) return COLOR_MAP[kid.avatar];
+  const name = (kid && kid.display_name) || "?";
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return COLORS[h % COLORS.length].grad;
+}
+function initialOf(kid) {
+  const n = ((kid && kid.display_name) || "").trim();
+  return n ? n[0].toUpperCase() : "?";
+}
+
+// The brand wordmark, used in place of the old family emoji.
+function Wordmark() {
+  return (
+    <div style={S.logo}>
+      buildablekids<span style={{ color: "#E87BB0" }}>.</span>
+    </div>
+  );
+}
 
 // Inline Google "G" mark so the button needs no external asset.
 function GoogleG() {
@@ -49,6 +86,36 @@ function GoogleG() {
       <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3.01-2.33z"/>
       <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.47.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
     </svg>
+  );
+}
+
+// Small clean glyphs for the "organize creations" list (no emoji).
+function SongGlyph() {
+  return (
+    <span style={S.projIcon}>
+      <span style={{ ...S.projIconBox, background: COLOR_MAP.purple }}>
+        <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
+          <ellipse cx="17" cy="33" rx="7" ry="5.2" transform="rotate(-20 17 33)" fill="#fff"/>
+          <rect x="22.6" y="11" width="3.2" height="22.5" fill="#fff"/>
+          <path d="M25.8 11 q11 3 8.5 15 q.5 -8 -8.5 -9 z" fill="#fff"/>
+        </svg>
+      </span>
+    </span>
+  );
+}
+function GameGlyph() {
+  return (
+    <span style={S.projIcon}>
+      <span style={{ ...S.projIconBox, background: COLOR_MAP.green }}>
+        <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
+          <rect x="6" y="18" width="36" height="16" rx="8" fill="#fff"/>
+          <rect x="12" y="22.5" width="3.2" height="9" rx="1" fill="#2BB14F"/>
+          <rect x="9" y="25.5" width="9.2" height="3.2" rx="1" fill="#2BB14F"/>
+          <circle cx="32" cy="24.5" r="2.4" fill="#2BB14F"/>
+          <circle cx="37" cy="29" r="2.4" fill="#2BB14F"/>
+        </svg>
+      </span>
+    </span>
   );
 }
 
@@ -70,7 +137,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
   const [kids, setKids] = useState([]);
   const [loadingKids, setLoadingKids] = useState(true);
   const [newName, setNewName] = useState("");
-  const [newAvatar, setNewAvatar] = useState(AVATARS[0]);
+  const [newAvatar, setNewAvatar] = useState(COLORS[0].key);
 
   // grown-up gate (simple check so kids can't wander into the Parents area)
   const [gateA] = useState(() => 3 + Math.floor(Math.random() * 7));
@@ -184,7 +251,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
     try {
       await createKidProfile(newName.trim(), newAvatar);
       setNewName("");
-      setNewAvatar(AVATARS[0]);
+      setNewAvatar(COLORS[0].key);
       await refreshKids();
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
@@ -250,14 +317,14 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
         {signedIn && <button onClick={handleSignOut} style={S.backBtn}>Sign out</button>}
       </div>
 
-      <div style={S.iconBig}>👨‍👩‍👧</div>
+      <Wordmark />
 
       {/* STEP: choose a lane ------------------------------------- */}
       {step === "choose" && !signedIn && (
         <>
-          <h1 style={S.title}>Grown-ups</h1>
+          <h1 style={S.title}>Set up your family</h1>
           <div style={S.card}>
-            <p style={S.lead}>Set up the family — your kids' creations follow them on any device.</p>
+            <p style={S.lead}>Your kids' creations follow them on any device.</p>
             {!configured && (
               <p style={S.warn}>
                 Accounts aren't switched on for this site yet. You can still play as a
@@ -267,13 +334,13 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
             <button style={S.googleBtn} disabled={!configured} onClick={handleGoogle}>
               <GoogleG /> <span style={{ marginLeft: 10 }}>Continue with Google</span>
             </button>
-            <button style={S.linkBtn} disabled={!configured}
+            <button style={S.secondaryBig} disabled={!configured}
               onClick={() => { setMode("signup"); setStep("auth"); }}>
-              Use email instead
+              Continue with email
             </button>
             <div style={S.divider}><span style={S.dividerText}>or</span></div>
             <button style={S.ghostBig} onClick={() => setStep("picker")}>
-              Continue without an account
+              Keep playing as a guest
             </button>
             <p style={S.fineprint}>
               Guest mode keeps profiles on this device only. No login, nothing leaves
@@ -329,14 +396,14 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
             {!loadingKids && kids.length === 0 ? (
               <>
                 <p style={S.lead}>Let's set up your first child's profile.</p>
-                <button style={S.primaryBig} onClick={() => setStep("parents")}>＋ Add your first child</button>
+                <button style={S.primaryBig} onClick={() => setStep("parents")}>Add your first child</button>
               </>
             ) : (
               <>
                 <div style={S.kidGrid}>
                   {kids.map((k) => (
-                    <button key={k.id} onClick={() => chooseKid(k)} style={S.kidTile}>
-                      <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
+                    <button key={k.id} onClick={() => chooseKid(k)} style={S.kidWrap}>
+                      <span style={{ ...S.kidAvatar, background: avatarGrad(k) }}>{initialOf(k)}</span>
                       <span style={S.kidName}>{k.display_name}</span>
                     </button>
                   ))}
@@ -348,7 +415,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
             )}
 
             {error && <p style={S.error}>{error}</p>}
-            <button style={S.ghostBig} onClick={openParents}>👨‍👩‍👧 Parents</button>
+            <button style={S.ghostBig} onClick={openParents}>For grown-ups</button>
           </div>
         </>
       )}
@@ -381,14 +448,14 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
             {kids.length > 0 && (
               <div style={S.kidGrid}>
                 {kids.map((k) => (
-                  <div key={k.id} style={S.kidWrap}>
-                    <div style={S.kidTile}>
-                      <span style={S.kidAvatar}>{k.avatar || "🙂"}</span>
+                  <div key={k.id} style={S.kidManageWrap}>
+                    <div style={S.kidWrap}>
+                      <span style={{ ...S.kidAvatar, background: avatarGrad(k) }}>{initialOf(k)}</span>
                       <span style={S.kidName}>{k.display_name}</span>
                     </div>
                     <div style={S.kidActions}>
-                      <button type="button" style={S.miniBtn} title="Rename" onClick={() => handleRename(k)}>✏️</button>
-                      <button type="button" style={S.miniBtn} title="Remove" onClick={() => handleDeleteKid(k)}>🗑️</button>
+                      <button type="button" style={S.miniBtn} onClick={() => handleRename(k)}>Rename</button>
+                      <button type="button" style={S.miniBtnDanger} onClick={() => handleDeleteKid(k)}>Remove</button>
                     </div>
                   </div>
                 ))}
@@ -399,18 +466,22 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
               <input style={S.input} value={newName} maxLength={40}
                 onChange={(e) => setNewName(e.target.value)} placeholder="Add a child's name" />
               <div style={S.avatarRow}>
-                {AVATARS.map((a) => (
-                  <button type="button" key={a} onClick={() => setNewAvatar(a)}
-                    style={{ ...S.avatarPick, ...(newAvatar === a ? S.avatarPickActive : {}) }}>{a}</button>
+                {COLORS.map((c) => (
+                  <button type="button" key={c.key} onClick={() => setNewAvatar(c.key)}
+                    aria-label={"Color " + c.key}
+                    style={{
+                      ...S.colorPick, background: c.grad,
+                      ...(newAvatar === c.key ? S.colorPickActive : {}),
+                    }} />
                 ))}
               </div>
-              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>＋ Add child</button>
+              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>Add child</button>
             </form>
 
             {error && <p style={S.error}>{error}</p>}
 
             {signedIn && (
-              <button style={S.linkBtn} onClick={goProjects}>🎵 Organize creations by child →</button>
+              <button style={S.linkBtn} onClick={goProjects}>Organize creations by child →</button>
             )}
             <button style={S.ghostBig} onClick={() => setStep("picker")}>← Done</button>
           </div>
@@ -430,16 +501,14 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
             <div style={S.projList}>
               {projects.map((p) => (
                 <div key={p.kind + ":" + p.projectId} style={S.projRow}>
-                  <span style={S.projIcon}>{p.kind === "game" ? "🎮" : "🎵"}</span>
+                  {p.kind === "game" ? <GameGlyph /> : <SongGlyph />}
                   <span style={S.projTitle}>{p.title}</span>
                   <select style={S.select} disabled={busy}
                     value={p.kidProfileId || ""}
                     onChange={(e) => handleAssign(p, e.target.value || null)}>
                     <option value="">Unassigned</option>
                     {kids.map((k) => (
-                      <option key={k.id} value={k.id}>
-                        {(k.avatar ? k.avatar + " " : "") + k.display_name}
-                      </option>
+                      <option key={k.id} value={k.id}>{k.display_name}</option>
                     ))}
                   </select>
                 </div>
@@ -456,63 +525,70 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
 
 const S = {
   container: {
-    minHeight: "100vh", background: GRAD, color: "#fff",
+    minHeight: "100vh", background: "#120C22", color: "#fff",
     fontFamily: NUN, padding: "20px 16px 60px", boxSizing: "border-box",
   },
   topRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   backBtn: {
-    background: "rgba(255,255,255,0.12)", color: "#fff", border: "none",
-    borderRadius: 14, padding: "8px 16px", fontSize: 15, fontWeight: 700,
+    background: "rgba(255,255,255,0.10)", color: "#fff", border: "none",
+    borderRadius: 999, padding: "8px 16px", fontSize: 15, fontWeight: 700,
     cursor: "pointer", fontFamily: NUN,
   },
-  iconBig: { fontSize: 56, textAlign: "center", marginTop: 8 },
-  title: { fontFamily: FRED, fontSize: 30, fontWeight: 700, textAlign: "center", margin: "6px 0 14px" },
+  logo: {
+    fontFamily: FRED, fontWeight: 700, fontSize: 24, textAlign: "center",
+    margin: "10px 0 2px",
+    background: "linear-gradient(90deg, #9B7CFF, #E87BB0)",
+    WebkitBackgroundClip: "text", backgroundClip: "text",
+    WebkitTextFillColor: "transparent", color: "transparent",
+  },
+  title: { fontFamily: FRED, fontSize: 28, fontWeight: 600, textAlign: "center", margin: "10px 0 16px" },
   card: {
     maxWidth: 460, margin: "0 auto", background: CARD_BG, border: CARD_BORDER,
     borderRadius: 22, padding: 22,
   },
-  lead: { fontSize: 16, lineHeight: 1.45, textAlign: "center", margin: "0 0 16px", opacity: 0.95 },
-  muted: { fontSize: 14, textAlign: "center", opacity: 0.7, margin: "12px 0" },
-  fineprint: { fontSize: 12, textAlign: "center", opacity: 0.6, margin: "12px 0 0", lineHeight: 1.4 },
+  lead: { fontSize: 16, lineHeight: 1.45, textAlign: "center", margin: "0 0 16px", color: "#D8D2EC" },
+  muted: { fontSize: 14, textAlign: "center", color: "#9C93BC", margin: "12px 0" },
+  fineprint: { fontSize: 12, textAlign: "center", color: "#8C84A8", margin: "14px 0 0", lineHeight: 1.4 },
   warn: {
-    fontSize: 13, lineHeight: 1.4, background: "rgba(255,210,120,0.14)",
-    border: "1px solid rgba(255,210,120,0.4)", borderRadius: 12, padding: "10px 12px", margin: "0 0 14px",
+    fontSize: 13, lineHeight: 1.4, color: "#FFE2A6",
+    background: "rgba(255,200,90,0.12)",
+    border: "1px solid rgba(255,200,90,0.32)", borderRadius: 12, padding: "10px 12px", margin: "0 0 14px",
   },
   googleBtn: {
     width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-    background: "#fff", color: "#3c4043", border: "none", borderRadius: 16,
+    background: "#fff", color: "#3c4043", border: "none", borderRadius: 999,
     padding: "14px 18px", fontSize: 16, fontWeight: 800, cursor: "pointer",
-    fontFamily: NUN, marginTop: 4, boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    fontFamily: NUN, marginTop: 4, boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
   },
   primaryBig: {
-    width: "100%", background: "#fff", color: "#b3477a", border: "none",
-    borderRadius: 16, padding: "14px 18px", fontSize: 17, fontWeight: 800,
-    cursor: "pointer", fontFamily: FRED, marginTop: 8,
+    width: "100%", background: GRAD_BTN, color: "#fff", border: "none",
+    borderRadius: 999, padding: "14px 18px", fontSize: 17, fontWeight: 700,
+    cursor: "pointer", fontFamily: FRED, marginTop: 10,
   },
   secondaryBig: {
-    width: "100%", background: "rgba(255,255,255,0.16)", color: "#fff",
-    border: "1px solid rgba(255,255,255,0.3)", borderRadius: 16, padding: "13px 18px",
+    width: "100%", background: "rgba(255,255,255,0.08)", color: "#fff",
+    border: "1px solid rgba(255,255,255,0.18)", borderRadius: 999, padding: "13px 18px",
     fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: NUN, marginTop: 10,
   },
   ghostBig: {
     width: "100%", background: "transparent", color: "#fff",
-    border: "1px solid rgba(255,255,255,0.35)", borderRadius: 16, padding: "12px 18px",
+    border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "12px 18px",
     fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: NUN, marginTop: 10,
   },
-  divider: { display: "flex", alignItems: "center", margin: "16px 0", opacity: 0.6 },
+  divider: { display: "flex", alignItems: "center", margin: "16px 0", opacity: 0.5 },
   dividerText: {
-    margin: "0 auto", fontSize: 13, textTransform: "uppercase", letterSpacing: 1,
+    margin: "0 auto", fontSize: 13, textTransform: "uppercase", letterSpacing: 1, color: "#9C93BC",
   },
   form: { display: "flex", flexDirection: "column", gap: 12 },
-  label: { display: "flex", flexDirection: "column", gap: 6, fontSize: 14, fontWeight: 700 },
+  label: { display: "flex", flexDirection: "column", gap: 6, fontSize: 14, fontWeight: 700, color: "#D8D2EC" },
   input: {
     width: "100%", boxSizing: "border-box", borderRadius: 12, border: "none",
     padding: "12px 14px", fontSize: 16, fontFamily: NUN, color: "#333",
   },
   linkBtn: {
-    display: "block", width: "100%", background: "none", color: "#fff",
+    display: "block", width: "100%", background: "none", color: "#C9A0E8",
     border: "none", textDecoration: "underline", fontSize: 14, fontWeight: 700,
-    cursor: "pointer", marginTop: 14, fontFamily: NUN, opacity: 0.95,
+    cursor: "pointer", marginTop: 14, fontFamily: NUN,
   },
   error: {
     color: "#ffd7d7", background: "rgba(180,40,40,0.25)", borderRadius: 10,
@@ -524,37 +600,48 @@ const S = {
   },
   kidGrid: {
     display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
-    gap: 12, margin: "6px 0 16px",
+    gap: 14, margin: "6px 0 16px", justifyItems: "center",
   },
-  kidWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4 },
-  kidTile: {
-    width: "100%", aspectRatio: "1", display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "center", gap: 4,
-    background: "rgba(255,255,255,0.1)", border: "2px solid transparent",
-    borderRadius: 18, cursor: "pointer", color: "#fff", fontFamily: NUN,
+  kidManageWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
+  kidWrap: {
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+    background: "transparent", border: "none", cursor: "pointer", color: "#fff",
+    fontFamily: NUN, padding: 0,
   },
-  kidTileActive: { border: "2px solid #fff", background: "rgba(255,255,255,0.22)" },
-  kidAvatar: { fontSize: 34 },
-  kidName: { fontSize: 13, fontWeight: 700, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  kidAvatar: {
+    width: 72, height: 72, borderRadius: "50%", display: "flex",
+    alignItems: "center", justifyContent: "center", fontFamily: FRED,
+    fontSize: 30, fontWeight: 600, color: "#fff",
+    boxShadow: "0 8px 18px rgba(0,0,0,0.4)",
+  },
+  kidName: { fontSize: 14, fontWeight: 700, maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   kidActions: { display: "flex", gap: 6 },
   miniBtn: {
-    background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8,
-    padding: "2px 6px", fontSize: 13, cursor: "pointer",
+    background: "rgba(255,255,255,0.10)", color: "#fff", border: "none", borderRadius: 999,
+    padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: NUN,
+  },
+  miniBtnDanger: {
+    background: "rgba(225,90,90,0.18)", color: "#FFC9C9", border: "none", borderRadius: 999,
+    padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: NUN,
   },
   addRow: { display: "flex", flexDirection: "column", gap: 10, marginTop: 6 },
-  avatarRow: { display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" },
-  avatarPick: {
-    background: "rgba(255,255,255,0.1)", border: "2px solid transparent",
-    borderRadius: 10, padding: "4px 6px", fontSize: 20, cursor: "pointer",
+  avatarRow: { display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" },
+  colorPick: {
+    width: 34, height: 34, borderRadius: "50%", border: "2px solid transparent",
+    cursor: "pointer", padding: 0,
   },
-  avatarPickActive: { border: "2px solid #fff", background: "rgba(255,255,255,0.22)" },
+  colorPickActive: { border: "2px solid #fff", boxShadow: "0 0 0 2px rgba(255,255,255,0.35)" },
   projList: { display: "flex", flexDirection: "column", gap: 8, margin: "6px 0 14px" },
   projRow: {
     display: "flex", alignItems: "center", gap: 10,
-    background: "rgba(255,255,255,0.08)", borderRadius: 12, padding: "8px 10px",
+    background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "8px 10px",
   },
-  projIcon: { fontSize: 20 },
-  projTitle: { flex: 1, fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  projIcon: { display: "flex", alignItems: "center" },
+  projIconBox: {
+    width: 30, height: 30, borderRadius: 9, display: "flex",
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
+  },
+  projTitle: { flex: 1, fontSize: 14, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   select: {
     borderRadius: 10, border: "none", padding: "6px 8px", fontSize: 13,
     fontFamily: NUN, color: "#333", maxWidth: 150,
