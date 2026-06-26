@@ -1,0 +1,104 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Buildable Stories — living demo</title>
+<style>
+  body{margin:0;background:#0e1020;color:#eef0ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:22px}
+  h1{font-size:20px;margin:0 0 2px}
+  p.sub{color:#9aa0c7;margin:0 0 16px;font-size:13px;text-align:center;max-width:560px}
+  .stage{position:relative;width:min(92vw,560px);aspect-ratio:4/3;border-radius:20px;overflow:hidden;background:#000;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .6s ease}
+  .bg.kb{animation:kb 14s ease-in-out infinite alternate}
+  .chwrap{position:absolute;transform-origin:50% 100%;transition:opacity .5s ease}
+  .ch{width:100%;display:block;transform-origin:50% 100%;filter:drop-shadow(0 10px 16px rgba(0,0,0,.42))}
+  .cap{position:absolute;left:0;right:0;bottom:0;padding:30px 20px 16px;font-size:17px;line-height:1.35;font-weight:600;
+       background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,0));text-shadow:0 1px 4px rgba(0,0,0,.6)}
+  .flake{position:absolute;top:-6%;width:7px;height:7px;border-radius:50%;background:#fff;opacity:.0;animation:fall linear infinite}
+  .dots{display:flex;gap:7px;margin:14px 0 6px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#39406e;cursor:pointer}
+  .dot.on{background:#7aa2ff}
+  .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  .btn{background:#1d2247;border:1px solid #2f376b;color:#cdd3ff;border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer}
+  .btn.on{background:#3552a8;border-color:#5572d6;color:#fff}
+  @keyframes kb{0%{transform:scale(1.05)}100%{transform:scale(1.16) translate(-2%,-1%)}}
+  @keyframes fall{0%{transform:translateY(0) translateX(0);opacity:0}10%{opacity:.85}100%{transform:translateY(560px) translateX(22px);opacity:0}}
+  @keyframes cfloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3.4%) scale(1.014)}}
+  @keyframes csway{0%,100%{transform:translateY(0) rotate(-1.8deg)}50%{transform:translateY(-2.6%) rotate(1.8deg)}}
+  @keyframes cbob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2.2%) scale(1.03)}}
+</style>
+
+<h1>A story, alive</h1>
+<p class="sub">Auto-playing. The character moves to a new spot, switches expression to fit the moment, and drifts across library worlds — with motion, no video. Pick a hero to recast the same story.</p>
+
+<div class="stage" id="stage">
+  <img class="bg kb" id="bg">
+  <div class="chwrap" id="chwrap"><img class="ch" id="ch"></div>
+  <div class="cap" id="cap"></div>
+</div>
+
+<div class="dots" id="dots"></div>
+<div class="row" id="heroes"></div>
+
+<script>
+const API="/api/story-library";
+const img=(kind,slug,emo)=>`${API}?img=${kind}:${slug}&style=watercolor`+(emo?`&emo=${emo}`:"");
+
+// 6-page story (character stays the hero; worlds + faces change with the beat)
+const PAGES=[
+  {world:"snowy-village",    emo:"happy",     text:"Bramble woke up to the very first snow of winter."},
+  {world:"snowy-village",    emo:"surprised", text:"Oh! A trail of golden sparkles led into the trees."},
+  {world:"enchanted-forest", emo:"scared",    text:"Deep in the woods the shadows grew tall, and the path vanished."},
+  {world:"enchanted-forest", emo:"sad",       text:"Lost and alone, a tiny tear rolled down."},
+  {world:"candy-land",       emo:"happy",     text:"Then the sparkles opened into a whole land made of candy!"},
+  {world:"snowy-village",    emo:"sleepy",    text:"Full and happy, our hero drifted home for a cozy nap."},
+];
+// per-page placement (matches the app): x%, size, facing, motion
+const PLACE=[
+  {x:50,s:0.62,flip:1, anim:"cfloat"},
+  {x:70,s:0.56,flip:-1,anim:"csway"},
+  {x:32,s:0.60,flip:1, anim:"cbob"},
+  {x:60,s:0.54,flip:-1,anim:"cfloat"},
+  {x:40,s:0.66,flip:1, anim:"csway"},
+  {x:50,s:0.58,flip:1, anim:"cbob"},
+];
+const HEROES=[["bunny","Bunny"],["fox","Fox"],["dragon","Dragon"],["penguin","Penguin"],["mermaid","Mermaid"],["robot","Robot"]];
+
+let hero="bunny", idx=0, timer=null;
+const bg=document.getElementById("bg"), ch=document.getElementById("ch"),
+      chwrap=document.getElementById("chwrap"), cap=document.getElementById("cap");
+
+// snow
+for(let i=0;i<14;i++){const f=document.createElement("div");f.className="flake";
+  f.style.left=(Math.random()*100)+"%";f.style.animationDuration=(5+Math.random()*5)+"s";
+  f.style.animationDelay=(-Math.random()*8)+"s";f.style.opacity=1;document.getElementById("stage").appendChild(f);}
+
+function render(i){
+  const p=PAGES[i], pl=PLACE[i%PLACE.length];
+  bg.style.opacity=0; chwrap.style.opacity=0;
+  setTimeout(()=>{
+    bg.src=img("world",p.world);
+    ch.src=img("character",hero,p.emo);
+    chwrap.style.left=pl.x+"%";
+    chwrap.style.bottom="0%";
+    chwrap.style.width=(pl.s*70)+"%";
+    chwrap.style.transform=`translateX(-50%) scaleX(${pl.flip})`;
+    ch.style.animation="none"; void ch.offsetWidth;
+    ch.style.animation=`${pl.anim} 4s ease-in-out infinite`;
+    cap.textContent=p.text;
+    bg.style.opacity=1; chwrap.style.opacity=1;
+  },300);
+  [...document.querySelectorAll('.dot')].forEach((d,k)=>d.classList.toggle('on',k===i));
+}
+function go(i){idx=(i+PAGES.length)%PAGES.length;render(idx);restart();}
+function next(){go(idx+1);}
+function restart(){clearInterval(timer);timer=setInterval(next,4200);}
+
+// dots
+const dotsEl=document.getElementById("dots");
+PAGES.forEach((_,k)=>{const d=document.createElement("div");d.className="dot";d.onclick=()=>go(k);dotsEl.appendChild(d);});
+// hero buttons
+const hEl=document.getElementById("heroes");
+HEROES.forEach(([slug,name])=>{const b=document.createElement("button");b.className="btn"+(slug===hero?" on":"");
+  b.textContent=name;b.onclick=()=>{hero=slug;[...hEl.children].forEach(c=>c.classList.toggle('on',c.textContent===name));go(0);};hEl.appendChild(b);});
+
+go(0);
+</script>
