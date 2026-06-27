@@ -37,6 +37,9 @@ const WORLDS = {
       fern:     "A single large foreground fern frond, big feathery arching leaves, rich green, the kind that frames the very front of a scene",
       mushroom: "A small cluster of three glowing enchanted toadstool mushrooms with rounded caps, gentle bioluminescent blue-and-pink glow, mossy base",
       canopy:   "A horizontal swag of overhanging leafy branch and hanging vines with dangling leaves drooping down from the top of the frame, soft green, used to frame the top edge of a forest scene",
+      coin:     "a single glowing round golden acorn coin standing upright, soft warm glow, a tiny sparkle highlight, simple and clean, facing the viewer",
+      gem:      "a single small cluster of pointed glowing green bramble thorns and crystal shards poking up, glossy, a spiky little hazard",
+      critter:  "a single cute round fuzzy little forest sprite with big friendly eyes and a tiny grumpy frown, mossy green with a small leaf on top, cartoonish and harmless, NEVER scary, a gentle game obstacle",
     },
   },
   "snowy-village": {
@@ -50,6 +53,9 @@ const WORLDS = {
       fern:     "A single large foreground tuft of frosty winter grass and a frozen fern frond, pale green tipped with white, the kind that frames the very front of a scene",
       mushroom: "A small cluster of three little glowing lanterns on a snowy mound, gentle warm golden glow against the snow",
       canopy:   "A horizontal swag of snow-laden overhanging branches with dangling icicles drooping down from the top of the frame, used to frame the top edge of a winter scene",
+      coin:     "a single shiny round gold coin with a tiny snowflake on its face, standing upright, soft cool glow, a sparkle highlight, facing the viewer",
+      gem:      "a single small cluster of pointed clear blue ice icicle spikes poking up, glossy frosty facets, a spiky little hazard",
+      critter:  "a single cute round fluffy little snowball creature with big friendly eyes and a tiny grumpy frown, white with rosy cheeks and a tiny scarf, cartoonish and harmless, NEVER scary, a gentle game obstacle",
     },
   },
   "coral-reef": {
@@ -63,6 +69,9 @@ const WORLDS = {
       fern:     "A single large foreground frond of feathery green sea grass arcing upward, the kind that frames the very front of an underwater scene",
       mushroom: "A small cluster of three glowing bioluminescent sea anemones with rounded soft tops, gentle blue-and-pink underwater glow",
       canopy:   "A horizontal swag of dangling kelp strands and drifting bubbles drooping down from the top of the frame, used to frame the top edge of an underwater scene",
+      coin:     "a single shiny round golden pearl coin like a sand dollar standing upright, soft pearly glow, a sparkle highlight, facing the viewer",
+      gem:      "a single small cluster of pointed spiky sea-urchin spines and sharp coral shards poking up, glossy, a spiky little hazard",
+      critter:  "a single cute round little orange crab with big friendly eyes and a tiny grumpy frown, rounded soft claws, cartoonish and harmless, NEVER scary, a gentle game obstacle",
     },
   },
   "dragon-mountain": {
@@ -76,6 +85,9 @@ const WORLDS = {
       fern:     "A single large foreground tuft of tough mountain grass and a hardy fern, the kind that frames the very front of a scene",
       mushroom: "A small cluster of three glowing amber crystal geode shards poking from a rock, gentle warm orange glow",
       canopy:   "A horizontal swag of an overhanging craggy rock ledge with dangling vines and a few hanging crystals drooping from the top of the frame, used to frame the top edge",
+      coin:     "a single shiny round gold dragon coin with a tiny scale pattern, standing upright, warm glow, a sparkle highlight, facing the viewer",
+      gem:      "a single small cluster of pointed sharp jagged grey rock spikes poking up, a spiky little hazard",
+      critter:  "a single cute round chubby baby dragon with big friendly eyes and a tiny grumpy frown, soft purple with little stubby wings, cartoonish and harmless, NEVER scary, a gentle game obstacle",
     },
   },
   "dino-jungle": {
@@ -89,6 +101,9 @@ const WORLDS = {
       fern:     "A single large foreground giant prehistoric fern frond with big arching leaves, rich green, the kind that frames the very front of a scene",
       mushroom: "A small cluster of three glowing rounded prehistoric mushrooms with soft caps, gentle green bioluminescent glow, mossy base",
       canopy:   "A horizontal swag of overhanging giant jungle leaves and hanging vines drooping down from the top of the frame, used to frame the top edge of a jungle scene",
+      coin:     "a single shiny round golden amber coin with a tiny fern leaf inside, standing upright, warm glow, a sparkle highlight, facing the viewer",
+      gem:      "a single small cluster of pointed sharp thorny vines and spiky leaves poking up, a spiky little hazard",
+      critter:  "a single cute round chubby baby dinosaur with big friendly eyes and a tiny grumpy frown, soft green with little spots, cartoonish and harmless, NEVER scary, a gentle game obstacle",
     },
   },
   "space-station": {
@@ -102,6 +117,9 @@ const WORLDS = {
       fern:     "A single large foreground curling glowing alien plant tendril, the kind that frames the very front of a scene",
       mushroom: "A small cluster of three glowing round energy cells on a small metal base, gentle blue-and-purple glow",
       canopy:   "A horizontal swag of overhanging space-station ceiling pipes and dangling cables with little blinking lights drooping from the top of the frame, used to frame the top edge",
+      coin:     "a single shiny round glowing energy token coin shaped like a star, standing upright, soft blue glow, a sparkle highlight, facing the viewer",
+      gem:      "a single small cluster of pointed sharp glowing red laser-crystal spikes poking up, glossy, a spiky little hazard",
+      critter:  "a single cute round little friendly robot blob with big friendly eyes and a tiny grumpy frown, soft teal metallic with little antenna, cartoonish and harmless, NEVER scary, a gentle game obstacle",
     },
   },
   "desert-oasis": {
@@ -115,6 +133,9 @@ const WORLDS = {
       fern:     "A single large foreground tuft of spiky green agave leaves, the kind that frames the very front of a scene",
       mushroom: "A small cluster of three glowing blooming desert cactus flowers, gentle warm pink-and-gold glow",
       canopy:   "A horizontal swag of overhanging green palm fronds drooping down from the top of the frame, used to frame the top edge of a desert scene",
+      coin:     "a single shiny round gold sun coin standing upright, warm golden glow, a sparkle highlight, facing the viewer",
+      gem:      "a single small cluster of pointed sharp cactus spines and sandstone spikes poking up, a spiky little hazard",
+      critter:  "a single cute round chubby little desert armadillo with big friendly eyes and a tiny grumpy frown, sandy tan, rolled and rounded, cartoonish and harmless, NEVER scary, a gentle game obstacle",
     },
   },
   "candy-land": {
@@ -128,6 +149,9 @@ const WORLDS = {
       fern:     "A single large foreground frond of soft licorice-strand leaves and candy grass, the kind that frames the very front of a scene",
       mushroom: "A small cluster of three glowing rounded candy mushrooms like shiny gumdrops, gentle pink-and-blue glow",
       canopy:   "A horizontal swag of overhanging dripping frosting and dangling candy strands drooping down from the top of the frame, used to frame the top edge of a candy scene",
+      coin:     "a single shiny round gold chocolate coin wrapped in gold foil, standing upright, soft glow, a sparkle highlight, facing the viewer",
+      gem:      "a single small cluster of pointed sharp striped candy-cane and rock-candy spikes poking up, glossy bright, a spiky little hazard",
+      critter:  "a single cute round little gumdrop creature with big friendly eyes and a tiny grumpy frown, pastel pink and glossy, cartoonish and harmless, NEVER scary, a gentle game obstacle",
     },
   },
   "props": {

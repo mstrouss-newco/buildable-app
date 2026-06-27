@@ -138,7 +138,10 @@ const PIECE_NAMES=["far","tree_a","tree_b","bush_a","bush_b","fern","mushroom","
 const PC={}; for(const nm of PIECE_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+WORLD+":"+nm+"&style="+ARTSTYLE; PC[nm]=im; }
 const PROP_NAMES=["coin","gem","critter","vines","spring","flag"];
 const PR={}; for(const nm of PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img=props:"+nm+"&style="+ARTSTYLE; PR[nm]=im; }
-function propImg(nm){ const im=PR[nm]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+// per-world themed gameplay props (coin/gem/critter); fall back to the generic props set if a world lacks one
+const WORLD_PROP_NAMES=["coin","gem","critter"];
+const WP={}; for(const nm of WORLD_PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+WORLD+":"+nm+"&style="+ARTSTYLE; WP[nm]=im; }
+function propImg(nm){ const wi=WP[nm]; if(wi&&wi.complete&&wi.naturalWidth) return wi; const im=PR[nm]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 
 // --- deterministic RNG so a level is reproducible (and QA-able) ---
 function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
