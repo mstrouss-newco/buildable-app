@@ -55,9 +55,9 @@ function LearningControl() {
         <div style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(8,5,18,0.72)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <form onSubmit={submit} style={{ background: "#1E1733", borderRadius: 20, padding: 24, width: "100%", maxWidth: 320, textAlign: "center", fontFamily: NUN }}>
             <p style={{ color: "#fff", fontFamily: FRED, fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>Grown-ups only</p>
-            <p style={{ color: "#B6AED0", fontSize: 14, margin: "0 0 14px" }}>Quick check \u2014 what is {ab.a} \u00d7 {ab.b}?</p>
+            <p style={{ color: "#B6AED0", fontSize: 14, margin: "0 0 14px" }}>Quick check — what is {ab.a} × {ab.b}?</p>
             <input autoFocus type="number" inputMode="numeric" value={val} onChange={(e) => setVal(e.target.value)} placeholder="Type the answer" style={{ width: "100%", boxSizing: "border-box", borderRadius: 12, border: "none", padding: "12px 14px", fontSize: 16, fontFamily: NUN, color: "#333" }} />
-            {err && <p style={{ color: "#ffd7d7", fontSize: 13, margin: "8px 0 0" }}>Not quite \u2014 ask a grown-up.</p>}
+            {err && <p style={{ color: "#ffd7d7", fontSize: 13, margin: "8px 0 0" }}>Not quite — ask a grown-up.</p>}
             <button type="submit" style={{ width: "100%", marginTop: 12, border: "none", borderRadius: 999, padding: 12, fontFamily: FRED, fontWeight: 700, fontSize: 15, color: "#fff", background: "linear-gradient(90deg,#8A6BFF,#E0578F)", cursor: "pointer" }}>Turn Learning {on ? "Off" : "On"}</button>
             <button type="button" onClick={() => setGate(false)} style={{ width: "100%", marginTop: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: 10, color: "#C9C2E0", fontFamily: NUN, fontSize: 13, cursor: "pointer" }}>Cancel</button>
           </form>
