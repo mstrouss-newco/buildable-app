@@ -1,5 +1,26 @@
 # Buildable Kids — Session Log
 
+## Game: per-world themed enemies, hazards & coins (June 26 2026)
+
+Follow-up to the 7-new-worlds session. The engine drew every world's enemy/hazard/coin from
+one shared generic `props` set, so a desert level had the same forest critter as the forest.
+Now each of the **8 worlds** has its own themed gameplay props in `api/game-art.js`:
+
+- **critter** (enemy): forest sprite, snowball-with-scarf, reef crab, baby dragon, baby dino,
+  space-alien blob, desert armadillo, candy gumdrop — all cute/harmless, never scary, no emoji.
+- **gem** (spiky hazard): bramble thorns, icicles, sea-urchin spines, rock spikes, thorny vines,
+  laser crystals, cactus spines, candy-cane spikes.
+- **coin** (collectible): acorn, snowflake coin, pearl sand-dollar, dragon coin, amber leaf coin,
+  star energy token, sun coin, gold candy coin.
+- Engine (`public/play.html`): added a world-specific prop map `WP` for coin/gem/critter loaded
+  from the current `GAME_CONFIG.world`; `propImg()` now prefers the world's own art and **falls
+  back to the generic `props:*`** if a world lacks one (so nothing can break). Scenery + other
+  props (vines/spring/flag) unchanged.
+- Generated all **24** new cut-outs via `?build=` (~$0.24, cached), **verified all 24 `?img=`
+  serve valid PNGs**, confirmed the gallery looks on-theme. **QA:** `BK_GAME.sim(0)` still returns
+  **win** (render-only change). Rebased onto teammates' concurrent pushes; clean.
+
+
 ## Top Creations board — central library publishing, hearts/plays, remix (June 26 2026)
 
 Mike: "lets have top songs, games, and stories... reflection of our central library. first name of kid... kids can toggle on and off publishing their creations." Choices: private-by-default, first name only, real hearts+plays, remix included.
