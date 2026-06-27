@@ -34,7 +34,10 @@ export default async function handler(req, res) {
     let stories = await r.json();
     if (Array.isArray(stories)) stories = stories.map((row) => ({
       ...row,
-      thumbnail: row.cover_art || thumbForWorld(row.world) || null,
+      // prefer the story's own first-page art, but never ship a heavy embedded
+      // (data:) image into a list — fall back to lightweight world art for those.
+      thumbnail: (row.cover_art && !String(row.cover_art).startsWith("data:")) ? row.cover_art : (thumbForWorld(row.world) || null),
+      cover_art: undefined,
     }));
     return res.status(200).json({ ok: true, configured: true, stories: Array.isArray(stories) ? stories : [], count: Array.isArray(stories) ? stories.length : 0, max: 20 });
   } catch (e) {

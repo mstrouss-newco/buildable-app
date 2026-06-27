@@ -28,6 +28,94 @@
   - **Responsive**: width hook → phone <700 (2-col tiles, tighter), tablet 700–1023, desktop ≥1024.
 - No DB/API changes; additive, with graceful fallbacks. `npm run build` passes (53 modules).
 - TODO Phase 2: first-login helper onboarding (character + voice), spoken greeting, tap-to-change helper.
+## Breaker adopts the shared start screen (BS) + start-screen is now a rule (June 27 2026)
+
+First real adoption of `buildable-startscreen.js`: `public/breaker-engine.html` now renders
+its launch/level-select via `BS` instead of its own `showMenu`/`renderLevels`. Editing the
+ONE shared file now restyles breaker's start screen (and every future adopter) at once.
+
+- **`buildable-startscreen.js` → v1.1** (safer, more reusable): mounts a child
+  `<div class="bss">` INTO the host overlay instead of restyling the host (so it can't
+  fight the engine's `.ov` show/hide). Added `showBack:false` (in-app games launched in an
+  iframe omit the back button) and a "Cleared" footer for `done` levels that have no per-
+  level stars (breaker doesn't track stars). The standalone demo (`?v=2`) still matches.
+- **`breaker-engine.html`:** loads `buildable-startscreen.js`; `showMenu()` →
+  `mountStart()`, which builds a `BS` config from `GAME_CONFIG.levels` + `PREFS.unlocked`
+  (state done/next/locked, per-level color, "Make It Mine" → its existing customize panel,
+  sound → `BA` mute). Keeps the old `renderLevels()` as a fallback if `BS` ever fails to
+  load — which is also the path the headless QA sim takes.
+- **QA:** `qa-breaker.mjs` reports ALL LEVELS WIN + render ok BEFORE and AFTER the change
+  (gameplay untouched; the swap is menu-only). Live render verified in the browser.
+- **Rule added** to `BUILDING-A-GAME.md` non-negotiables: every game's start screen is
+  rendered by `BS` — never hand-roll or fork a per-game menu — so the start experience is
+  changed once, centrally, not 1×1 per game.
+
+Additive: only breaker's menu code changed; its gameplay, routes, and the other engines
+are untouched. Other engines (survival, croc, platformer) adopt `BS` next, one at a time.
+
+
+## Shared start screen / level picker `buildable-startscreen.js` (June 27 2026)
+
+Added one consistent "start a game" experience for every engine, replacing the four
+hand-rolled menus (survival `showMenu`/`renderLevels`/`renderLocker`, croc
+`buildLevelPicker`, breaker `showMenu`, platformer's bare "Play!"). Design reviewed +
+approved against the live survival screen. Additive — not wired into any engine yet
+(engines adopt one at a time, QA before/after); live games unaffected. NOTE: this is the
+launch screen of a *built* game, NOT the AI game builder.
+
+- **`public/buildable-startscreen.js`** (global `BS`, `window.BuildableStartScreen`) — the
+  fourth shared engine lib after `BR`/`BA`/`BM`. DOM-based, self-styled (one scoped
+  stylesheet), self-iconed (inline SVG, no emoji/webfont), headless-safe (no-op without a
+  DOM so the QA sim is unaffected). `BS.mount(el, config, callbacks)` renders: header
+  (coins chip + sound), title/subtitle, hero strip (avatar + progress + Change), a mode
+  row (Solo / 2 players / Family), a level grid (art thumbnail + stars earned + lock
+  badge; the `next` level gets a green Play highlight), and an optional "Make it mine".
+- **Optimizations over the old survival screen:** coins moved into the header; hero shown
+  with progress; compact cards with real art thumbnails (all 6 levels fit, far less dead
+  space); per-level stars; the next level is the visual focus; locked = dim + lock badge
+  (not a fake "Locked" button); modes incl. multiplayer entry in one place.
+- **`public/startscreen-demo.html`** — live demo (Space Sparkles config). Verified the
+  real component render matches the approved mockup.
+- **`vercel.json`** — added explicit routes for `buildable-startscreen.js`,
+  `startscreen-demo.html`, AND `buildable-mechanics.js` (the last was a latent gap — it
+  had no route, so it would have 404'd to landing.html when an engine first loads it).
+- **`BUILDING-A-GAME.md`** — shared-libs table now lists four libs + a start-screen spec
+  (config shape, `state` = done|next|locked, thumbnail/stars wiring, `family` → multiplayer).
+  The `family` mode launches `FamilyRealtime` (MULTIPLAYER.md).
+
+
+## Real-time multiplayer mechanism — reusable Broadcast layer + frozen contract (June 27 2026)
+
+Built the generic, reusable REAL-TIME two-player mechanism (first user: tennis, built in a
+separate chat). Additive — NOT imported by the app yet (no tile/route this commit), so the
+live app is unaffected; the game chat wires it in when tennis is ready. No new npm
+dependency (raw-WebSocket, matching the repo's no-SDK pattern).
+
+- **`src/lib/realtimeChannel.js`** — dependency-free Supabase Realtime **Broadcast** client
+  over a raw WebSocket (protocol v1.0.0, verified against the Supabase docs). join / send /
+  on / 20s heartbeat / auto-reconnect. Passes the parent JWT as `access_token` so moving to
+  private channels later is a config change.
+- **`src/lib/rtMatch.js`** — generic `rt_matches` lobby over PostgREST (create/list/get/
+  patch + role + channel topic), mirroring `chessMatches.js`. One table for ALL real-time
+  games via a `game` column.
+- **`src/FamilyRealtime.jsx`** — generic glue: lobby (pick a sibling) → open channel →
+  assign role (host owns the ball) → embed the game iframe → bridge the frozen `mp:`
+  postMessage contract ↔ the channel → enforce canned-reactions-only → write the result.
+  A game becomes multiplayer via `<FamilyRealtime game={{slug,url,title}} .../>`.
+- **`db/create-rt-matches.sql`** — family-RLS match/lobby table (mirrors `chess_matches`).
+  **OWNER TO-DO:** run in Supabase (after the accounts SQL).
+- **`db/seed-multiplayer-mechanic.sql`** — registers `mp-realtime-broadcast` +
+  `mp-turn-based-row` in `game_mechanics` so a prompt can request multiplayer by name.
+  **OWNER TO-DO:** run in Supabase.
+- **Docs:** froze the `mp:` handshake contract + "how to use this mechanic" checklist in
+  `MULTIPLAYER.md`; added a "Making it multiplayer" section to `BUILDING-A-GAME.md`; added
+  §12 to `MECHANICS.md`.
+
+The split: this layer is the network "pipes"; the tennis **game** (other chat) just speaks
+the `mp:` contract and never touches Supabase. Both build against the frozen contract in
+parallel. Security v1: public Broadcast topic on the match's unguessable UUID (the lobby
+row is RLS-locked to the family); upgrade path = private channels + Realtime Authorization.
+
 
 
 ## Multiplayer playbook `MULTIPLAYER.md` (June 27 2026)
@@ -481,3 +569,9 @@ All committed to `main`; Vercel auto-deploys. Commits this session:
   terms. Search index is also stale right after commits; verify via raw@SHA instead.
 - Output filter blocks tool results derived from files containing URLs/keys — worked around
   by returning booleans/short identifiers and computing in-page.
+
+- 2026-06-27 — Stories: multi-voice narration (narrator + per-speaker character voices) + in-page dialogue (writer emits `lines` with who/say) + narrative SFX one-shots (door/knock/thunder/firewhoosh/splash/magic/pop/whoosh/footsteps/bell/rustle/sparkle in api/sfx.js, catalogued in /api/list-audio). Reader sequences line clips per voice + plays SFX cues; single-voice fallback kept.
+
+## Chess: spoken "Checkmate!" voiceover — June 26 2026
+
+New `api/chess-voice.js` (ElevenLabs TTS, cached in narration_cache key `chessvoice:<line>`, `?force=1` regen). On checkmate the game plays a line via `playCheckmateVO(won)`: playful on a win ("Checkmate! In your face!" / "Boom! Checkmate! Gotcha!" / "Checkmate! Too easy!"), gentle on a loss ("Checkmate! Good game — want a rematch?") so the losing kid is never taunted by their own device. Created ElevenLabs sound per BUILDING-A-GAME.md (no synth); served under the existing /api/ route; silent fallback if unconfigured. Pre-warmed live + verified.

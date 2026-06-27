@@ -308,3 +308,22 @@ roughly in order (each step is additive — never break a live game):
 
 Keep this file, `BUILDING-A-GAME.md`, `buildable-mechanics.js`, and the `db/seed-*.sql`
 mechanic seeds in sync as the catalog grows.
+
+---
+
+## 12. Multiplayer mechanics (two kids playing together)
+
+Multiplayer is a mechanic too — registered in `game_mechanics` so a generation prompt can
+request it by name, and fully specified in **`MULTIPLAYER.md`** (transports, the frozen
+`mp:` contract, the tennis blueprint). Two registered slugs:
+
+| slug | name | transport |
+|------|------|-----------|
+| `mp-realtime-broadcast` | Real-time two-player (Broadcast) | Supabase Realtime Broadcast — live ball/paddles (tennis, pong) |
+| `mp-turn-based-row`     | Turn-based two-player (poll a row) | one family-scoped row, re-read every ~2s (chess, board games) |
+
+Seeded by `db/seed-multiplayer-mechanic.sql`. The real-time mechanic is implemented by the
+shared layer `src/lib/realtimeChannel.js` + `src/lib/rtMatch.js` + `src/FamilyRealtime.jsx`
+and the `rt_matches` table — a game opts in by speaking the `mp:` contract and launching
+through `FamilyRealtime`. Non-negotiables for any multiplayer: parent-account lane,
+family-RLS, **canned reactions only (no free-text chat)**, network-agnostic engine.

@@ -49,9 +49,9 @@ over feel — the survival/croc/breaker model.
 
 ---
 
-## The three shared engine libraries (use them — don't reinvent)
+## The four shared engine libraries (use them — don't reinvent)
 
-Every Track B engine loads these three `<script>`s and builds on them. They are the
+Every Track B engine loads these four `<script>`s and builds on them. They are the
 reason a new game is cheap:
 
 | Library | Global | Owns | Never instead… |
@@ -59,9 +59,48 @@ reason a new game is cheap:
 | `public/buildable-renders.js` | `BR` (`window.BuildableRenders`) | All drawn-shape art: hero, enemy, coin, sprite, background, hearts | …inline your own canvas shapes |
 | `public/buildable-audio.js` | `BA` (`window.BuildableAudio`) | Synth SFX, music loop, mute, the iPad audio-unlock | …hand-roll your own beep synth |
 | `public/buildable-mechanics.js` | `BM` (`window.BuildableMechanics`) | FX/"juice": particle bursts, screen shake, screen flash, floating pop text, `explode()` | …copy-paste a `burst()`/`flash()` again |
+| `public/buildable-startscreen.js` | `BS` (`window.BuildableStartScreen`) | The start screen / level picker: title, hero, mode row, level cards (art + stars + lock), customize | …hand-roll a `showMenu`/level picker again |
 
 `buildable-mechanics.js` is new — it extracts the `burst()` / flash / shake / `pop()`
 code that survival, croc, and breaker were each copy-pasting. See `MECHANICS.md` §9.
+
+### The start screen / level picker (`buildable-startscreen.js`)
+
+Every game shows the SAME launch experience — title, hero, mode row, level cards with
+art + stars + lock state, and an optional customize button — instead of each engine
+hand-rolling its own `#menu`/`showMenu`/`buildLevelPicker`. (This is the start screen of a
+*built* game — NOT the AI game builder.) The engine supplies a config; `BS` renders the
+DOM and calls back on tap. Demo: `public/startscreen-demo.html`.
+
+```js
+const screen = BS.mount(document.getElementById("start"), {
+  title: "Space Sparkles", subtitle: "Beat each boss to unlock the next world",
+  coins: 24, sound: true,
+  hero: { name: "Pip", img: "<character url>", progressText: "2 of 6 worlds cleared" },
+  modes: ["solo", "two", "family"], mode: "solo",   // omit modes a game doesn't support
+  levels: [
+    { n: 1, name: "Comet Meadow",  img: "<thumb>", stars: 3, maxStars: 3, state: "done" },
+    { n: 2, name: "Nebula Drift",  img: "<thumb>", stars: 2, state: "done" },
+    { n: 3, name: "Asteroid Twirl", color: "#2b4a6b", state: "next" },   // highlighted "Play"
+    { n: 4, name: "Stardust Caves", state: "locked" },
+  ],
+  customizeLabel: "Make it mine",                    // omit to hide
+}, {
+  onPlay: (n) => startLevel(n),   onMode: (m) => { /* solo|two|family */ },
+  onHero: () => openHeroPicker(),  onCustomize: () => openCustomize(),
+  onSound: (on) => BA.toggleMute(), onBack: () => goHome(),
+});
+// later: screen.update({ coins: 30, levels: [...] });
+```
+
+Rules: `state` is `"done"` | `"next"` | `"locked"` (lock the rest; mark the next playable
+one `"next"` so it gets the green Play highlight). Each level shows its **art thumbnail**
+(`img`; falls back to a solid `color`, then a drawn icon) and **stars earned** — wire
+`img` to the shared thumbnail/world art. The `"family"` mode is where the real-time
+multiplayer mechanic plugs in (launch `FamilyRealtime` — see `MULTIPLAYER.md`). Headless-
+safe: with no DOM (QA sim), `BS.mount` is a no-op. Adopt it per engine one at a time, QA
+before/after (it replaces the engine's own menu code, not its gameplay).
+
 
 ---
 
@@ -79,15 +118,24 @@ code that survival, croc, and breaker were each copy-pasting. See `MECHANICS.md`
    it back**: gameplay rules → a `game_mechanics` row via an idempotent `db/seed-*.sql`;
    shared FX code → a function in `buildable-mechanics.js`. Keep `MECHANICS.md` in sync.
 
-3. **Pull art from the library, with a fallback.** Characters via `/api/list-characters`,
-   worlds/elements via `/api/list-assets` (filter by `theme`), generated world art via
-   `/api/game-art`. Reference by id/url in the level card. **Always** keep a `BR.*` drawn
-   fallback so a missing asset can never break a kid's game. Where to find/send each kind:
-   `ASSET-LIBRARY.md`. How to make it look alive: `GAME-LOOK.md`.
+3. **Pull art AND audio from the library, with a fallback.** Characters via
+   `/api/list-characters`, worlds/elements via `/api/list-assets`, music + sound effects
+   via `/api/list-audio` — all filterable by `theme` (a label, not a fence: you may mix
+   themes), generated world art via `/api/game-art`. Reference by id/url in the level
+   card. **Always** keep a fallback (`BR.*` drawn art; `BA` synth sound) so a missing
+   asset can never break a kid's game. Where to find/send each kind: `ASSET-LIBRARY.md`.
+   How to make it look alive: `GAME-LOOK.md`.
 
-4. **Wire sound + FX through the shared libs.** `BA.sfx(...)`, `BA.setMusic(...)`,
-   `BA.unlock()` on first tap; `BM.explode(...)`, `BM.burst(...)`, `BM.shake(...)` for
-   feel. No inline synth, no copy-pasted particle loop.
+4. **Wire sound + FX through the shared libs — and CREATE new sounds for a new engine.**
+   Play audio through `BA` — `BA.setMusic(url)`, `BA.configure({sfxBase, map})`,
+   `BA.sfx(...)`, `BA.unlock()` on the first tap. **Sound rule (see `ASSET-LIBRARY.md`):**
+   we ship only **unique created sounds** (ElevenLabs), never computer beeps — the `BA`
+   synth is a silent dev/offline fallback ONLY. A kid building a game just uses the
+   catalog; but **building a NEW engine/type is the moment to CREATE fresh bespoke sounds
+   + music** that fit it and register them (`SOUNDS` in `api/sfx.js`, worlds in
+   `api/chess-music.js`) so they grow the company library for every other game. Then
+   `BM.explode(...)`, `BM.burst(...)`, `BM.shake(...)` for feel — no copy-pasted particle
+   loop. (ElevenLabs only for real music.)
 
 5. **Bake in always-winnable.** Cap difficulty in the level *builder* so a 4–8-year-old
    can always finish: gaps ≤ jump range; hero speed ≥ enemy speed; bosses on a timer with
@@ -100,21 +148,67 @@ code that survival, croc, and breaker were each copy-pasting. See `MECHANICS.md`
    _(Convergence note: hooks are currently named `BK_GAME` / `SURV_GAME` / `CROC_GAME`;
    the target is one shared name — see `MECHANICS.md` roadmap.)_
 
-7. **Route it.** Every `public/*.html` needs its **own explicit route in `vercel.json`
-   before** the `/(.*)` → `landing.html` catch-all, or it serves the landing page. Add a
-   tile/launch path in `src/BuildableKids.jsx` (full-screen iframe, like Typing/Chess).
+7. **Route it + give it a face.** Every `public/*.html` needs its **own explicit route in
+   `vercel.json` before** the `/(.*)` → `landing.html` catch-all, or it serves the landing
+   page. Add a tile/launch path in `src/BuildableKids.jsx` (full-screen iframe, like
+   Typing/Chess). Creations get a **list/menu thumbnail auto-derived from their own art**
+   (`api/_thumbs.js`): a saved game's thumbnail comes from its `world`/`theme`, so use a
+   real library theme word; a published game can set `preview_image_url`. See the
+   thumbnails note in `ASSET-LIBRARY.md`.
 
 8. **QA the live deploy, then log it.** Commit to `main` (Vercel auto-deploys in ~1–2
    min), confirm it actually renders in the iframe (not just a 200), then add a dated
    entry to **`SESSION-LOG.md`** and the README session log. This is required for every
-   change (`AGENTS.md`).
+   change (`AGENTS.md`). _Gotcha: the library GET endpoints are edge-cached — when QA-ing
+   an API live, bust the cache with a throwaway `?cb=<n>` or you'll read a stale copy._
 
 ---
+
+## Making it multiplayer (optional)
+
+Two kids can play together in two ways — pick by **how fast they need to see each other**.
+Full rules, the frozen message contract, and the tennis blueprint are in
+[`MULTIPLAYER.md`](./MULTIPLAYER.md); the short version:
+
+- **Same device** → local two-player (pass-and-play). No backend, no accounts. Done.
+- **Across devices, taking turns** (chess, board/card games) → **poll a row**: one
+  family-scoped Supabase row holds the whole game state; a move updates it; the other
+  device re-reads every ~2s. Reference: chess (`chess_matches` + `FamilyChess.jsx`).
+- **Across devices, continuous motion** (tennis, pong) → the **real-time mechanic**: a
+  Supabase Realtime **Broadcast** channel for the live ball/paddles, plus a row for the
+  lobby/score.
+
+**To make a game use the real-time mechanic, do only two things** (everything else is
+inherited):
+
+1. **Build the game to the `mp:` contract** — it stays a normal network-agnostic
+   `public/<game>.html` engine that posts `mp:ready`, broadcasts **positions not
+   commands** via `mp:send`, applies `mp:peer`, honors its `role` (host owns the ball;
+   each kid broadcasts only their own paddle), and ends with `mp:result`.
+2. **Launch it through the shared layer**, not a bare iframe:
+   `<FamilyRealtime game={{ slug, url, title }} activeKid={…} />`. That gives you the
+   lobby, the live channel, role assignment, the reaction safety check, and the
+   score write-back for free, reusing the one `rt_matches` table.
+
+A generation prompt can simply say **"use the real-time multiplayer mechanic"**
+(`game_mechanics` slug `mp-realtime-broadcast`).
+
+**Multiplayer rules (always):** requires the parent-account lane (guests can't play
+cross-device); every match table is family-RLS scoped (copy `chess_matches`/`rt_matches`);
+**canned reactions only — never free-text chat between kids**; the engine stays
+network-agnostic (all Supabase code lives in the React layer).
+
 
 ## The non-negotiable rules (from `AGENTS.md` / README — they apply here too)
 
 - **Kids' product.** Age-appropriate always; preserve content moderation and the
   validate-before-serve fallback in `generate-game.js`.
+- **One shared start screen — change it once, every game updates.** Every game's
+  launch / level-select screen is rendered by `buildable-startscreen.js` (`BS`). Do NOT
+  hand-roll a per-game menu (`showMenu`/`buildLevelPicker`/`#levelSelect`) or fork BS's
+  markup into an engine — feed `BS` a config and keep a tiny fallback. Editing that one
+  file restyles the start experience across survival, croc, breaker, platformer, and
+  tennis at once, instead of changing each game 1×1. (Breaker is the reference adoption.)
 - **No emojis** in the hand-authored engines — use `BR` drawn art or library images.
   (Track A's legacy emoji-sprite shortcut is being replaced by library sprites.)
 - **Library-first, always with a fallback.** Read shared assets/mechanics on render;

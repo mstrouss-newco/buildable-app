@@ -75,6 +75,93 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Breaker adopts the shared start screen (BS) + start-screen is now a rule (June 27 2026)
+
+First real adoption of `buildable-startscreen.js`: `public/breaker-engine.html` now renders
+its launch/level-select via `BS` instead of its own `showMenu`/`renderLevels`. Editing the
+ONE shared file now restyles breaker's start screen (and every future adopter) at once.
+
+- **`buildable-startscreen.js` → v1.1** (safer, more reusable): mounts a child
+  `<div class="bss">` INTO the host overlay instead of restyling the host (so it can't
+  fight the engine's `.ov` show/hide). Added `showBack:false` (in-app games launched in an
+  iframe omit the back button) and a "Cleared" footer for `done` levels that have no per-
+  level stars (breaker doesn't track stars). The standalone demo (`?v=2`) still matches.
+- **`breaker-engine.html`:** loads `buildable-startscreen.js`; `showMenu()` →
+  `mountStart()`, which builds a `BS` config from `GAME_CONFIG.levels` + `PREFS.unlocked`
+  (state done/next/locked, per-level color, "Make It Mine" → its existing customize panel,
+  sound → `BA` mute). Keeps the old `renderLevels()` as a fallback if `BS` ever fails to
+  load — which is also the path the headless QA sim takes.
+- **QA:** `qa-breaker.mjs` reports ALL LEVELS WIN + render ok BEFORE and AFTER the change
+  (gameplay untouched; the swap is menu-only). Live render verified in the browser.
+- **Rule added** to `BUILDING-A-GAME.md` non-negotiables: every game's start screen is
+  rendered by `BS` — never hand-roll or fork a per-game menu — so the start experience is
+  changed once, centrally, not 1×1 per game.
+
+Additive: only breaker's menu code changed; its gameplay, routes, and the other engines
+are untouched. Other engines (survival, croc, platformer) adopt `BS` next, one at a time.
+
+## Shared start screen / level picker `buildable-startscreen.js` (June 27 2026)
+
+Added one consistent "start a game" experience for every engine, replacing the four
+hand-rolled menus (survival `showMenu`/`renderLevels`/`renderLocker`, croc
+`buildLevelPicker`, breaker `showMenu`, platformer's bare "Play!"). Design reviewed +
+approved against the live survival screen. Additive — not wired into any engine yet
+(engines adopt one at a time, QA before/after); live games unaffected. NOTE: this is the
+launch screen of a *built* game, NOT the AI game builder.
+
+- **`public/buildable-startscreen.js`** (global `BS`, `window.BuildableStartScreen`) — the
+  fourth shared engine lib after `BR`/`BA`/`BM`. DOM-based, self-styled (one scoped
+  stylesheet), self-iconed (inline SVG, no emoji/webfont), headless-safe (no-op without a
+  DOM so the QA sim is unaffected). `BS.mount(el, config, callbacks)` renders: header
+  (coins chip + sound), title/subtitle, hero strip (avatar + progress + Change), a mode
+  row (Solo / 2 players / Family), a level grid (art thumbnail + stars earned + lock
+  badge; the `next` level gets a green Play highlight), and an optional "Make it mine".
+- **Optimizations over the old survival screen:** coins moved into the header; hero shown
+  with progress; compact cards with real art thumbnails (all 6 levels fit, far less dead
+  space); per-level stars; the next level is the visual focus; locked = dim + lock badge
+  (not a fake "Locked" button); modes incl. multiplayer entry in one place.
+- **`public/startscreen-demo.html`** — live demo (Space Sparkles config). Verified the
+  real component render matches the approved mockup.
+- **`vercel.json`** — added explicit routes for `buildable-startscreen.js`,
+  `startscreen-demo.html`, AND `buildable-mechanics.js` (the last was a latent gap — it
+  had no route, so it would have 404'd to landing.html when an engine first loads it).
+- **`BUILDING-A-GAME.md`** — shared-libs table now lists four libs + a start-screen spec
+  (config shape, `state` = done|next|locked, thumbnail/stars wiring, `family` → multiplayer).
+  The `family` mode launches `FamilyRealtime` (MULTIPLAYER.md).
+
+## Real-time multiplayer mechanism — reusable Broadcast layer + frozen contract (June 27 2026)
+
+Built the generic, reusable REAL-TIME two-player mechanism (first user: tennis, built in a
+separate chat). Additive — NOT imported by the app yet (no tile/route this commit), so the
+live app is unaffected; the game chat wires it in when tennis is ready. No new npm
+dependency (raw-WebSocket, matching the repo's no-SDK pattern).
+
+- **`src/lib/realtimeChannel.js`** — dependency-free Supabase Realtime **Broadcast** client
+  over a raw WebSocket (protocol v1.0.0, verified against the Supabase docs). join / send /
+  on / 20s heartbeat / auto-reconnect. Passes the parent JWT as `access_token` so moving to
+  private channels later is a config change.
+- **`src/lib/rtMatch.js`** — generic `rt_matches` lobby over PostgREST (create/list/get/
+  patch + role + channel topic), mirroring `chessMatches.js`. One table for ALL real-time
+  games via a `game` column.
+- **`src/FamilyRealtime.jsx`** — generic glue: lobby (pick a sibling) → open channel →
+  assign role (host owns the ball) → embed the game iframe → bridge the frozen `mp:`
+  postMessage contract ↔ the channel → enforce canned-reactions-only → write the result.
+  A game becomes multiplayer via `<FamilyRealtime game={{slug,url,title}} .../>`.
+- **`db/create-rt-matches.sql`** — family-RLS match/lobby table (mirrors `chess_matches`).
+  **OWNER TO-DO:** run in Supabase (after the accounts SQL).
+- **`db/seed-multiplayer-mechanic.sql`** — registers `mp-realtime-broadcast` +
+  `mp-turn-based-row` in `game_mechanics` so a prompt can request multiplayer by name.
+  **OWNER TO-DO:** run in Supabase.
+- **Docs:** froze the `mp:` handshake contract + "how to use this mechanic" checklist in
+  `MULTIPLAYER.md`; added a "Making it multiplayer" section to `BUILDING-A-GAME.md`; added
+  §12 to `MECHANICS.md`.
+
+The split: this layer is the network "pipes"; the tennis **game** (other chat) just speaks
+the `mp:` contract and never touches Supabase. Both build against the frozen contract in
+parallel. Security v1: public Broadcast topic on the match's unguessable UUID (the lobby
+row is RLS-locked to the family); upgrade path = private channels + Realtime Authorization.
+
+
 ## Multiplayer playbook `MULTIPLAYER.md` (June 27 2026)
 
 Audited how multiplayer works and wrote it up as a playbook (docs only — no code/DB
@@ -512,6 +599,40 @@ theme=space -> space music + space sfx). Additive: added named exports
 SOUNDS (api/sfx.js) + CHESS_MUSIC_WORLDS (api/chess-music.js); no DB change.
 Now a new themed project can pull world+hero+music+sfx from one shelf by one word.
 (Remember: library GET endpoints are edge-cached — QA with ?cb=.)
+
+---
+
+## Session log — 2026-06-27f (Every creation gets a thumbnail from its own art)
+
+Each creation list now returns a `thumbnail` auto-derived from the creation's OWN
+art, so lists/menus show real pictures instead of flat color cards:
+- stories -> first-page illustration (nested select story->pages->0->>art_url;
+  embedded data: images skipped to keep lists light; falls back to world art)
+- saved games -> their world/theme art from the shared library (api/_thumbs.js)
+- published games -> preview_image_url (already stored) || world art
+- songs -> generated cover (vibe/theme) so they match in generic lists
+Endpoints: list-stories, list-songs, list-games, list-published-games,
+top-creations. UI: TopBoard trending tiles now render the art (ArtThumb) with the
+glyph tile as a safe fallback. Approach is derive-at-read: no DB change, no
+backfill, works for ALL existing creations immediately, self-updating. (A stored
+thumbnail_url column is available as optional hardening if we ever want it frozen
+per creation.) Helper: api/_thumbs.js (thumbForWorld, songCover). QA cache-busted.
+
+---
+
+## Session log — 2026-06-27g (Last silo closed: chess worlds in shared library)
+
+list-assets now merges the 6 chess world backgrounds (chess-art/<theme>_bg.jpg,
+static files) as themed source:chess background layers — verified live
+(theme=castle returns the story dragon-mountain world AND the chess castle bg).
+So community + story + chess worlds all live in one themed picker. Also aligned
+BUILDING-A-GAME.md with the shipped shared audio catalog (/api/list-audio),
+creation thumbnails (api/_thumbs.js), and the edge-cache ?cb= QA reminder.
+
+Asset unification status: characters (themed), stories (heroes+worlds), audio
+(music+sfx catalog), thumbnails, and now chess worlds — all converged. Remaining
+nice-to-haves: chess foregrounds/thumbs as separate layer kinds; community_* are
+near-empty in this env (real art lives as files/caches now surfaced via reads).
 
 ---
 

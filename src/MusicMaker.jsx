@@ -463,14 +463,9 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
       {tab === "library" && (
         <div style={S.card}>
           <div style={S.songGrid}>
-            {count < MAX_SONGS && (
-              <button style={S.addCard} onClick={() => { setTab("make"); setStep(0); setDraft(null); }} aria-label="Make a new song">
-                <span style={S.addPlus}>+</span><span style={S.addText}>Make a Song</span>
-              </button>
-            )}
             {songs.map((s) => (
               <div key={s.song_id} style={{ ...S.songCard, borderColor: s.cover_color || "#5B6CFF" }}>
-                <CoverThumb vibe={s.vibe} theme={s.theme} color={s.cover_color} size={48} radius={8} />
+                <CoverThumb vibe={s.vibe} theme={s.theme} color={s.cover_color} size={48} radius={8} seed={s.song_id} label={s.title} />
                 <div style={S.songInfo}>
                   <div style={S.songTitle}>{s.title}</div>
                   <div style={S.songMeta}>{(s.vibe || "song")}{s.theme ? " · " + s.theme : ""}</div>
@@ -484,6 +479,11 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
                 <button style={S.deleteBtn} onClick={() => deleteSong(s.song_id)} title="Delete">✕</button>
               </div>
             ))}
+            {count < MAX_SONGS && (
+              <button style={S.addCard} onClick={() => { setTab("make"); setStep(0); setDraft(null); }} aria-label="Make a new song">
+                <span style={S.addPlus}>+</span><span style={S.addText}>Make a Song</span>
+              </button>
+            )}
           </div>
           {count >= MAX_SONGS && <div style={S.fullNote}>Your song box is full! Delete one to make a new tune.</div>}
         </div>

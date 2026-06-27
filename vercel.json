@@ -188,6 +188,18 @@
       "dest": "/buildable-audio.js"
     },
     {
+      "src": "/buildable-mechanics.js",
+      "dest": "/buildable-mechanics.js"
+    },
+    {
+      "src": "/buildable-startscreen.js",
+      "dest": "/buildable-startscreen.js"
+    },
+    {
+      "src": "/startscreen-demo.html",
+      "dest": "/startscreen-demo.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

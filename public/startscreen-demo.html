@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Start Screen — demo</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0a18;font-family:system-ui,sans-serif}
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}
+  #frame{position:relative;width:380px;max-width:100%;height:100%;max-height:780px;border-radius:28px;overflow:hidden;border:6px solid #272443;background:#131229}
+  #start{position:absolute;inset:0}
+  #log{position:fixed;left:8px;bottom:8px;color:#6f6a93;font-size:12px;font-family:ui-monospace,monospace}
+</style>
+</head>
+<body>
+  <div id="stage"><div id="frame"><div id="start"></div></div></div>
+  <div id="log">tap a level / mode — events log here</div>
+  <script src="/buildable-startscreen.js?v=2"></script>
+  <script>
+    var log = document.getElementById('log');
+    var screen = BuildableStartScreen.mount(document.getElementById('start'), {
+      title: "Space Sparkles",
+      subtitle: "Beat each boss to unlock the next world",
+      coins: 24,
+      sound: true,
+      hero: { name: "Pip", progressText: "2 of 6 worlds cleared" },
+      modes: ["solo", "two", "family"],
+      mode: "solo",
+      levels: [
+        { n:1, name:"Comet Meadow",   color:"#1f6f5c", stars:3, maxStars:3, state:"done" },
+        { n:2, name:"Nebula Drift",   color:"#4a3b8c", stars:2, maxStars:3, state:"done" },
+        { n:3, name:"Asteroid Twirl", color:"#2b4a6b", state:"next" },
+        { n:4, name:"Stardust Caves", state:"locked" },
+        { n:5, name:"Rocket Rapids",  state:"locked" },
+        { n:6, name:"Galaxy Finale",  state:"locked" }
+      ],
+      customizeLabel: "Make it mine"
+    }, {
+      onPlay:     function (n) { log.textContent = "play level " + n; },
+      onMode:     function (m) { log.textContent = "mode: " + m; },
+      onHero:     function ()  { log.textContent = "change hero"; },
+      onCustomize:function ()  { log.textContent = "customize"; },
+      onSound:    function (o) { log.textContent = "sound " + (o ? "on" : "off"); },
+      onBack:     function ()  { log.textContent = "back"; }
+    });
+  </script>
+</body>
+</html>

@@ -143,3 +143,100 @@ authority mid-rally). Set expectations: this is "feels good for kids," not espor
   and reuses one lobby + identity + safety stack — turn-based games share the chess row
   helpers; real-time games share a Broadcast helper. See `BUILDING-A-GAME.md` for where
   multiplayer fits in the overall build flow.
+
+---
+
+## The real-time mechanic — how a game "uses" it (FROZEN CONTRACT)
+
+This is the handshake that lets one chat build the game while another builds the pipes.
+A game becomes multiplayer by **speaking these `postMessage` messages** — nothing more.
+The game never touches Supabase, sockets, accounts, or the database. The reusable layer
+(`src/lib/realtimeChannel.js` + `src/lib/rtMatch.js` + `src/FamilyRealtime.jsx`) does all
+of that and launches the game inside an iframe.
+
+**This contract is frozen.** Build the game against it; build the pipes against it; they
+meet in the middle without either side waiting on the other.
+
+### What the game must do
+
+1. Run inside an iframe and read nothing about the network except these messages.
+2. On load, when ready to play, post **`mp:ready`** to its parent.
+3. Drive all networked motion by **broadcasting positions, not commands** (send "my
+   paddle is at y=0.62", never "move up").
+4. Respect **roles**: the `host` simulates and broadcasts the shared object (the ball);
+   the `guest` never simulates it — it renders what the host sends. Both broadcast only
+   their **own** paddle.
+
+### App → Game (the pipes tell the game things)
+
+| Message | Payload | Meaning |
+|---|---|---|
+| `mp:init`   | `{ role:"host"\|"guest", you:{kidId,name,color}, opp:{kidId,name,color}, world, settings }` | Both kids connected. Set up the match. `role` decides who owns the ball. |
+| `mp:start`  | `{}` | Both sides are `mp:ready` — begin play now. |
+| `mp:peer`   | `{ event, data }` | A live message from the opponent. e.g. `{event:"paddle", data:{y}}` or (from host only) `{event:"ball", data:{x,y,vx,vy,score}}`. Apply it. |
+| `mp:reaction` | `{ text }` | Opponent sent a canned reaction — show a friendly bubble. |
+| `mp:peerLeft` | `{}` | Opponent disconnected — pause and show "waiting…". |
+
+### Game → App (the game asks the pipes to do things)
+
+| Message | Payload | Meaning |
+|---|---|---|
+| `mp:ready`    | `{}` | Loaded and ready. The pipes wait for BOTH sides before sending `mp:start`. |
+| `mp:send`     | `{ event, data }` | Broadcast a live message to the opponent. Send these many times a second (paddle every frame; ball every frame from the host only). |
+| `mp:reaction` | `{ text }` | Send a canned reaction. `text` MUST be one of the allowed list (the pipes reject anything else — this is the no-free-text-chat rule, enforced). |
+| `mp:result`   | `{ winner, score }` | Game over. The pipes write the final result to the match row and close the channel. |
+
+### Conventions the game implements (not enforced by the pipes)
+
+- **Paddle:** both sides each frame → `mp:send {event:"paddle", data:{y:0..1}}` (use a
+  0–1 fraction so different screen sizes agree).
+- **Ball:** host only, each frame → `mp:send {event:"ball", data:{x,y,vx,vy,score}}`
+  (also 0–1 coords). Guest applies it via `mp:peer` and does NOT run ball physics.
+- **Smooth the opponent:** lerp the remote paddle/ball toward each new value; don't snap.
+- **Kid-friendly speed:** tune the ball slow enough to feel good at ~50 ms latency.
+
+### The allowed canned reactions (no free text, ever)
+
+`"Nice shot!"` · `"So close!"` · `"Good game!"` · `"Wow!"` · `"Let's go!"` · `"Haha!"`
+The pipes validate `mp:reaction.text` against this list and silently drop anything else.
+
+---
+
+## Using the mechanic in a NEW game (the checklist)
+
+To make any new game multiplayer, an agent (or a generation prompt that says "use the
+real-time multiplayer mechanic") does ONLY this:
+
+1. **Build the game to the contract above** — post `mp:ready`, broadcast positions via
+   `mp:send`, apply `mp:peer`, honor `role`, end with `mp:result`. The game stays a
+   normal network-agnostic `public/<game>.html` engine (see `BUILDING-A-GAME.md`).
+2. **Launch it through the shared layer**, not a bare iframe:
+   `<FamilyRealtime game={{ slug:"tennis", url:"/tennis.html", title:"Buildable Tennis" }} activeKid={...} />`.
+   That component owns the lobby (one kid starts → sibling joins), the live channel, the
+   role assignment, the reaction safety check, and the result write-back.
+3. **Reuse the one match table.** `rt_matches` (family-RLS) already holds the lobby +
+   settings + final score for ANY real-time game — distinguished by its `game` column.
+   No new table per game.
+4. **Register it** (optional, for the generator): the `game_mechanics` row
+   `mp-realtime-broadcast` documents the mechanic so a prompt can request it by name. See
+   `db/seed-multiplayer-mechanic.sql` and `MECHANICS.md`.
+
+That's the whole opt-in: **build to the contract, launch through `FamilyRealtime`.** The
+networking, security, lobby, and safety are inherited — not rebuilt.
+
+### The reusable pieces (this chat owns these)
+
+| File | Role |
+|---|---|
+| `src/lib/realtimeChannel.js` | Dependency-free Supabase Realtime Broadcast client (raw WebSocket, protocol v1.0.0). join / send / on / heartbeat / auto-reconnect. |
+| `src/lib/rtMatch.js` | The `rt_matches` lobby over PostgREST (create / list / get / patch) — mirrors `chessMatches.js`. Derives the channel topic + the host/guest role. |
+| `src/FamilyRealtime.jsx` | Generic glue: lobby UI → open channel → assign role → embed the game iframe → bridge the `mp:` contract ↔ the channel → enforce canned reactions → write the result. |
+| `db/create-rt-matches.sql` | The family-RLS match table (run once in Supabase). |
+| `db/seed-multiplayer-mechanic.sql` | Registers the mechanic in `game_mechanics`. |
+
+> **Security note (v1):** the live channel is a public Broadcast topic named by the
+> match's random UUID. The match UUID is only known to the family (the `rt_matches` row
+> is RLS-locked to the family), so it's unguessable-in-practice. The honest upgrade later
+> is Supabase **private channels + Realtime Authorization** (RLS on `realtime.messages`);
+> `realtimeChannel.js` already passes the parent JWT as `access_token` so that switch is
+> a config change, not a rewrite.

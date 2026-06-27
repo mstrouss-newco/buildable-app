@@ -42,10 +42,8 @@ function RankBadge({ n }) {
   return (<div style={{ width: 30, textAlign: "center", color: "#7d77a0", fontWeight: 800, flexShrink: 0 }}>{n}</div>);
 }
 
-function Thumb({ item }) {
-  if (item.kind === "song") return <CoverThumb vibe={item.vibe} theme={item.theme} color={item.cover_color} size={52} radius={12} />;
-  if (item.kind === "game" && item.preview_image_url) return <img src={item.preview_image_url} alt="" width={52} height={52} style={{ borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />;
-  // game w/o preview, or story: gradient tile + glyph
+// Gradient tile + glyph — the safe fallback when a creation has no usable art.
+function GlyphTile({ item }) {
   const bg = item.cover_color || "#5B6CFF";
   return (
     <div style={{ width: 52, height: 52, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -54,6 +52,21 @@ function Thumb({ item }) {
         : <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="9" width="18" height="9" rx="4.5"/><path d="M7 12v3M5.5 13.5h3"/><circle cx="16" cy="12.5" r="0.9"/><circle cx="18" cy="14.5" r="0.9"/></svg>}
     </div>
   );
+}
+
+// A creation's own art as a 52px tile, falling back to the glyph if it fails.
+function ArtThumb({ item, src }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <GlyphTile item={item} />;
+  return <img src={src} alt="" width={52} height={52} loading="lazy" style={{ borderRadius: 12, objectFit: "cover", flexShrink: 0, background: item.cover_color || "#5B6CFF" }} onError={() => setFailed(true)} />;
+}
+
+function Thumb({ item }) {
+  // Songs keep their generated cover (vibe/theme).
+  if (item.kind === "song") return <CoverThumb vibe={item.vibe} theme={item.theme} color={item.cover_color} size={52} radius={12} seed={item.id} label={item.title} />;
+  // Everything else: use the creation's OWN art (thumbnail), else the glyph tile.
+  const art = item.thumbnail || item.preview_image_url;
+  return art ? <ArtThumb item={item} src={art} /> : <GlyphTile item={item} />;
 }
 
 export default function TopBoard({ onHome, onBack, onRemix }) {
