@@ -1,0 +1,410 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Sunny Town Drive — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#0a1030;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{background:#000;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  /* #start hosts the SHARED start screen (BS). */
+  #start{position:fixed;inset:0;z-index:10;display:none}
+  #muteBtn{position:fixed;left:12px;bottom:12px;z-index:30;display:none;font-family:inherit;font-weight:700;font-size:14px;
+           color:#cdd0ff;background:rgba(26,20,64,.7);border:1px solid #3a2c6e;border-radius:10px;padding:7px 12px;cursor:pointer}
+  #helpBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:18px;
+           color:#1a0f3a;background:#ffd86b;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+  #backBtn{position:fixed;left:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
+           color:#fff;background:rgba(26,20,64,.78);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+  .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;background:#ffd86b;color:#1a0f3a;
+         font-weight:700;padding:12px 22px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="540" height="820"></canvas></div>
+
+<!-- shared start screen mounts here -->
+<div id="start"></div>
+
+<div id="toast" class="toast"></div>
+<button id="backBtn" title="Back to menu">‹ Menu</button>
+<button id="muteBtn">Sound: On</button>
+<button id="helpBtn" title="How to play">?</button>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script>
+// ============================================================================
+//  SUNNY TOWN DRIVE — FIXED ENGINE (never regenerated).
+//  A game = this engine + GAME_CONFIG (data). A cute 3-lane "drive through town,
+//  dodge stuff, collect treats" runner, inspired by car-runner kids' games.
+//  Built to the Buildable game playbook (BUILDING-A-GAME.md):
+//    - data-driven levels (recipe cards), ALWAYS-CLEARABLE, headless QA-simmed
+//    - shared engine libs: BR (draw) · BA (audio) · BM (FX/juice) · BS (start screen)
+//    - QA hook exposed as window.BUILDABLE_GAME (RUNNER_GAME kept as an alias)
+//  Always-winnable guarantee: each obstacle row leaves >=1 open lane, and rows are
+//  spaced so only ONE row is ever in the car's collision band -> a perfect driver
+//  can always weave through untouched. (See botThink + ROW_GAP.)
+// ============================================================================
+const W=540, H=820;
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+const BR=(typeof window!=="undefined"&&window.BuildableRenders)||(typeof globalThis!=="undefined"&&globalThis.BuildableRenders);
+const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThis!=="undefined"&&globalThis.BuildableAudio);
+const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
+const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
+function sfx(n,o){ if(BA)BA.sfx(n,o); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+// shared FX bag (BM). Fallback keeps the engine working if BM is missing.
+let fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" };
+function resetFx(){ fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" }; }
+
+// ---- data: the game recipe (safe to tweak freely; no code changes needed) ----
+// Each level = one Sunny Town world: how far to drive, how fast, how busy. Always clearable.
+//   dist     = how far you drive to finish (pixels of road)
+//   speed    = how fast the road scrolls
+//   density  = chance a new row has a 2nd blocked lane (never blocks all 3)
+//   treat    = chance a new row drops a treat in an open lane
+const GAME_CONFIG = window.GAME_CONFIG || {
+  name: "Sunny Town Drive",
+  hearts: 3,
+  levels: [
+    { name:"Maple Street",    sky:"#bfe9ff", grass:"#8fd98f", dist:3400, speed:3.6, density:0.00, treat:0.55 },
+    { name:"Market Square",   sky:"#ffe3bf", grass:"#9bd98a", dist:4200, speed:4.1, density:0.10, treat:0.55 },
+    { name:"Sunny Beach Road",sky:"#bff0ec", grass:"#ffe39c", dist:5000, speed:4.6, density:0.22, treat:0.50 },
+    { name:"Petal Park",      sky:"#ffd6ec", grass:"#86d68f", dist:5800, speed:5.1, density:0.34, treat:0.50 },
+    { name:"Downtown Dash",   sky:"#cdd6ff", grass:"#8fbf8f", dist:6600, speed:5.6, density:0.46, treat:0.45 },
+    { name:"Rainbow Bridge",  sky:"#e6d6ff", grass:"#9be0c0", dist:7600, speed:6.1, density:0.55, treat:0.45 },
+  ],
+  treatColors: ["#ffd23f","#ff8fce","#7ee0a0","#62d0ff","#ff7aa8"],
+};
+function levelColor(i){ const c=GAME_CONFIG.treatColors; return c[i%c.length]; }
+
+// obstacle + treat kinds (drawn with BR/canvas — no images needed, never breaks)
+const OBSTACLES = ["cone","puddle","car","hay"];
+const TREATS    = ["coin","icecream","flower","gift"];
+
+// ---- road geometry ----
+const LANES = 3;
+const ROAD_W = 360, ROAD_X = (W-ROAD_W)/2;            // road box
+const LANE_W = ROAD_W/LANES;
+function laneCenter(i){ return ROAD_X + (i+0.5)*LANE_W; }
+const CAR_Y = H-150, CAR_W = LANE_W*0.62, CAR_H = 96;
+const OBS_H = 70, OBS_W = LANE_W*0.66;
+const ROW_GAP = 240;          // world spacing between rows -> only one row in the car band at a time
+const START_CLEAR = 360;      // no obstacles for the first stretch
+const HIT_BAND = 34;          // |obstacle.y - CAR_Y| within this (same lane) = crash
+const SAFE_BAND = 64;         // wider zone the bot treats as dangerous (must exceed HIT_BAND)
+
+// ---- saved profile: progress + stars ----
+function defaultPrefs(){ return { unlocked:0, bestLevel:0, totalWins:0, stars:{}, coins:0 }; }
+function mergePrefs(d){ const p=defaultPrefs(); if(!d||typeof d!=="object")return p;
+  p.unlocked=Math.max(0,d.unlocked||0); p.bestLevel=d.bestLevel||0; p.totalWins=d.totalWins||0; p.coins=d.coins||0;
+  if(d.stars&&typeof d.stars==="object")p.stars=Object.assign({},d.stars); return p; }
+let PREFS=defaultPrefs();
+function activeKidId(){ try{ const k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return k&&k.id?k.id:null; }catch{ return null; } }
+function prefsKey(){ const k=activeKidId(); return "bk_runner_prefs"+(k?("_"+k):""); }
+function loadPrefs(){ try{ const s=localStorage.getItem(prefsKey()); if(s)PREFS=mergePrefs(JSON.parse(s)); }catch{} }
+function savePrefs(){ try{ localStorage.setItem(prefsKey(), JSON.stringify(PREFS)); }catch{} }
+
+// ---- live game state ----
+let G=null, level=0, L=null, state="title", started=false, botMode=false, helpOpen=false;
+let scenery=[]; (function(){ const r=mulberry(11); for(let i=0;i<14;i++) scenery.push({side:r()<.5?0:1, y:r()*H, kind:Math.floor(r()*3), t:r()*6.28}); })();
+
+function startLevel(i){
+  resetFx();
+  level=clamp(i,0,GAME_CONFIG.levels.length-1); L=GAME_CONFIG.levels[level];
+  const rng=mulberry(9090+level*257);
+  G={ lane:1, carX:laneCenter(1), speed:L.speed, dist:0, nextRow:START_CLEAR,
+      hearts:GAME_CONFIG.hearts, hurtsTaken:0, invuln:0, score:0, treatsGot:0,
+      obstacles:[], treats:[], rng, roadScroll:0, bob:0 };
+  state="play"; started=false;
+}
+
+// spawn one row of obstacles (+ maybe a treat) as the road advances
+function spawnRow(){
+  const lanesArr=[0,1,2];
+  // how many lanes to block: 1, sometimes 2 — NEVER 3 (always leave an open lane)
+  let blockCount = 1;
+  if(G.rng() < L.density) blockCount = 2;
+  // shuffle lanes, block the first `blockCount`
+  for(let k=lanesArr.length-1;k>0;k--){ const j=Math.floor(G.rng()*(k+1)); const t=lanesArr[k];lanesArr[k]=lanesArr[j];lanesArr[j]=t; }
+  const blocked=lanesArr.slice(0,blockCount), open=lanesArr.slice(blockCount);
+  for(const ln of blocked){ const type=OBSTACLES[Math.floor(G.rng()*OBSTACLES.length)];
+    G.obstacles.push({ lane:ln, y:-OBS_H, type, passed:false, hit:false }); }
+  // drop a treat in an open lane sometimes
+  if(open.length && G.rng() < L.treat){ const ln=open[Math.floor(G.rng()*open.length)];
+    const type=TREATS[Math.floor(G.rng()*TREATS.length)];
+    G.treats.push({ lane:ln, y:-30, type, got:false }); }
+}
+
+// ---------- input ----------
+function setLane(n){ if(!G)return; G.lane=clamp(n,0,LANES-1); }
+function moveLeft(){ if(!G)return; if(!started){started=true;} setLane(G.lane-1); sfx("select"); }
+function moveRight(){ if(!G)return; if(!started){started=true;} setLane(G.lane+1); sfx("select"); }
+function canvasPt(e){ const r=c.getBoundingClientRect(); return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) }; }
+let downX=null;
+c.addEventListener('pointerdown',e=>{ e.preventDefault(); if(BA)BA.unlock();
+  if(helpOpen){ helpOpen=false; return; }
+  if(state==="play"){ downX=canvasPt(e).x; return; }
+  if(state==="win"||state==="lose"){ advanceAfterEnd(); return; } });
+c.addEventListener('pointerup',e=>{ if(state!=="play"||downX==null)return; const x=canvasPt(e).x; const dx=x-downX;
+  if(Math.abs(dx)>24){ dx<0?moveLeft():moveRight(); }                 // swipe
+  else { x<W/2?moveLeft():moveRight(); }                              // tap a side
+  downX=null; });
+c.addEventListener('pointercancel',()=>{ downX=null; });
+addEventListener('keydown',e=>{ const k=e.key;
+  if(k==='b'){ botMode=!botMode; started=true; return; }
+  if(state==="win"||state==="lose"){ advanceAfterEnd(); return; }
+  if(["ArrowLeft","Left","a","A"].includes(k)){ moveLeft(); e.preventDefault(); }
+  if(["ArrowRight","Right","d","D"].includes(k)){ moveRight(); e.preventDefault(); }
+});
+
+// ---------- QA bot: a perfect driver (proves every level is winnable) ----------
+function botThink(){ if(!G)return; started=true;
+  // 1) anything inside the danger zone right now (above OR below the car) must be
+  //    avoided first — never swerve INTO a row that is still crossing the car.
+  const bandBlocked=new Set();
+  for(const o of G.obstacles){ if(o.passed)continue; if(Math.abs(o.y-CAR_Y)<SAFE_BAND) bandBlocked.add(o.lane); }
+  if(bandBlocked.size){
+    if(bandBlocked.has(G.lane)){ for(const ln of [1,0,2]){ if(!bandBlocked.has(ln)){ setLane(ln); return; } } }
+    return;                                    // already safe in the band -> hold
+  }
+  // 2) band is clear -> pre-position into the nearest INCOMING row's open lane.
+  let nearY=-1; for(const o of G.obstacles){ if(o.passed)continue; if(o.y<CAR_Y && o.y>nearY) nearY=o.y; }
+  if(nearY<0) return;                          // nothing incoming -> hold lane
+  const inc=new Set();
+  for(const o of G.obstacles){ if(o.passed)continue; if(Math.abs(o.y-nearY)<OBS_H) inc.add(o.lane); }
+  if(!inc.has(G.lane)) return;                 // current lane fine for the next row
+  for(const ln of [1,0,2]){ if(!inc.has(ln)){ setLane(ln); return; } }
+}
+
+// ---------- update (pure logic; headless-safe) ----------
+function update(){
+  if(state!=="play"||helpOpen||!G) return;
+  if(botMode) botThink();
+  // smooth car slide toward its lane (visual only; collision uses G.lane)
+  const targetX=laneCenter(G.lane); G.carX += (targetX-G.carX)*0.35;
+  if(!started){ if(BM) BM.update(fx); return; }       // wait for first move
+  G.bob += 0.18;
+  G.dist += G.speed; G.roadScroll = (G.roadScroll + G.speed) % 80;
+  if(G.invuln>0) G.invuln--;
+
+  // spawn rows as we travel
+  while(G.dist >= G.nextRow){ spawnRow(); G.nextRow += ROW_GAP; }
+
+  // move + handle obstacles
+  for(const o of G.obstacles){ o.y += G.speed;
+    if(!o.passed && !o.hit && o.lane===G.lane && Math.abs(o.y-CAR_Y) < HIT_BAND){
+      o.hit=true; hitCar(o); }
+    if(o.y>CAR_Y+SAFE_BAND){ o.passed=true; } }
+  G.obstacles=G.obstacles.filter(o=>o.y<H+OBS_H);
+
+  // move + collect treats
+  for(const t of G.treats){ t.y += G.speed;
+    if(!t.got && t.lane===G.lane && Math.abs(t.y-CAR_Y) < (CAR_H*0.5+24)){
+      t.got=true; G.treatsGot++; G.score+=10; PREFS.coins++;
+      if(BM){ BM.burst(fx.parts, laneCenter(t.lane), t.y, treatColor(t.type), 9); BM.pop(fx.pops, laneCenter(t.lane), t.y, "+10", "#fff"); }
+      sfx("coin",{tier:2}); } }
+  G.treats=G.treats.filter(t=>!t.got && t.y<H+30);
+
+  if(BM) BM.update(fx);
+
+  if(G.dist>=L.dist){ winLevel(); }
+}
+
+function hitCar(o){ if(G.invuln>0) return;
+  G.hearts--; G.hurtsTaken++; G.invuln=70;
+  if(BM){ BM.shake(fx,0.6); BM.flash(fx,"#ff5a5a",0.30); BM.burst(fx.parts, laneCenter(o.lane), CAR_Y, "#ffd86b", 12); }
+  sfx("hurt");
+  if(G.hearts<=0){ state="lose"; sfx("lose"); }
+}
+function winLevel(){ state="win"; sfx("win"); PREFS.totalWins++;
+  const earned = G.hurtsTaken<=0?3 : (G.hurtsTaken===1?2:1);
+  PREFS.stars[level]=Math.max(PREFS.stars[level]||0, earned);
+  const u=Math.min(GAME_CONFIG.levels.length-1, level+1); if(u>(PREFS.unlocked||0)){ PREFS.unlocked=u; }
+  PREFS.bestLevel=Math.max(PREFS.bestLevel||0, level+1); savePrefs();
+  if(BM){ for(let i=0;i<4;i++) BM.burst(fx.parts, W*(0.25+0.18*i), H*0.4, GAME_CONFIG.treatColors[i%5], 20, {gravity:18,spd:[2,6],life:[0.7,1.4]}); BM.flash(fx,"#ffffff",0.2); }
+}
+
+function advanceAfterEnd(){
+  if(state==="win"){ if(level<GAME_CONFIG.levels.length-1){ startLevel(level+1); } else { showMenu(); toast("You drove through every town!"); } }
+  else { showMenu(); }
+}
+
+// ---------- draw ----------
+function rrect(x,y,w,h,r){ BR?BR.rrect(ctx,x,y,w,h,r):ctx.rect(x,y,w,h); }
+function treatColor(t){ return ({coin:"#ffd23f",icecream:"#ff8fce",flower:"#ff7aa8",gift:"#62d0ff"})[t]||"#ffd23f"; }
+
+function drawBackdrop(){
+  // sky
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,L?L.sky:"#bfe9ff"); g.addColorStop(1,"#ffffff");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // grass sides
+  ctx.fillStyle=L?L.grass:"#8fd98f"; ctx.fillRect(0,0,ROAD_X,H); ctx.fillRect(ROAD_X+ROAD_W,0,W-(ROAD_X+ROAD_W),H);
+  // roadside scenery (scrolls)
+  const scroll = G?G.dist:0;
+  for(const s of scenery){ const y=((s.y+scroll*0.6)%(H+80))-40; const x= s.side?ROAD_X+ROAD_W+24+(s.kind*8): ROAD_X-24-(s.kind*8);
+    if(s.kind===0){ ctx.fillStyle="#4fae5a"; ctx.beginPath();ctx.arc(x,y,15,0,7);ctx.fill(); ctx.fillStyle="#8a5a3c"; ctx.fillRect(x-3,y+10,6,14); }
+    else if(s.kind===1){ ctx.fillStyle="#ffb6d5"; ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fill(); ctx.fillStyle="#ffe27a"; ctx.beginPath();ctx.arc(x,y,3,0,7);ctx.fill(); }
+    else { ctx.fillStyle="#cfe8ff"; rrect(x-9,y-9,18,18,4); ctx.fill(); } }
+  // road
+  ctx.fillStyle="#5b5b6b"; ctx.fillRect(ROAD_X,0,ROAD_W,H);
+  ctx.fillStyle="rgba(255,255,255,.85)"; ctx.fillRect(ROAD_X-3,0,4,H); ctx.fillRect(ROAD_X+ROAD_W-1,0,4,H);
+  // dashed lane lines (scroll)
+  const off = G?G.roadScroll:0; ctx.fillStyle="rgba(255,255,255,.7)";
+  for(let l=1;l<LANES;l++){ const lx=ROAD_X+l*LANE_W-2; for(let y=-80+off;y<H;y+=80){ ctx.fillRect(lx,y,4,42); } }
+}
+
+function drawCar(x,y,blink){ ctx.save();
+  if(blink){ ctx.globalAlpha=0.45; }
+  const w=CAR_W, h=CAR_H;
+  // shadow
+  ctx.fillStyle="rgba(0,0,0,.18)"; ctx.beginPath(); ctx.ellipse(x,y+h*0.42,w*0.5,9,0,0,7); ctx.fill();
+  // body
+  ctx.fillStyle="#ff5d8f"; rrect(x-w/2,y-h/2,w,h,16); ctx.fill();
+  ctx.fillStyle="#ff86ac"; rrect(x-w/2+4,y-h/2+4,w-8,h*0.30,12); ctx.fill();    // hood highlight
+  // windshield + cute driver
+  ctx.fillStyle="#bfe9ff"; rrect(x-w/2+8,y-h*0.16,w-16,h*0.30,10); ctx.fill();
+  ctx.fillStyle="#ffe0b8"; ctx.beginPath();ctx.arc(x,y-h*0.02,9,0,7);ctx.fill();   // head
+  ctx.fillStyle="#5a3b86"; ctx.beginPath();ctx.arc(x,y-h*0.07,9,Math.PI,0);ctx.fill(); // hair
+  ctx.fillStyle="#2a2a3a"; ctx.beginPath();ctx.arc(x-3,y-h*0.02,1.5,0,7);ctx.arc(x+3,y-h*0.02,1.5,0,7);ctx.fill();
+  // headlights + wheels
+  ctx.fillStyle="#fff4b0"; ctx.beginPath();ctx.arc(x-w*0.28,y-h/2+6,4,0,7);ctx.arc(x+w*0.28,y-h/2+6,4,0,7);ctx.fill();
+  ctx.fillStyle="#222"; rrect(x-w/2-5,y-h*0.22,7,20,3); rrect(x+w/2-2,y-h*0.22,7,20,3); rrect(x-w/2-5,y+h*0.06,7,20,3); rrect(x+w/2-2,y+h*0.06,7,20,3); ctx.fill();
+  ctx.restore();
+}
+function drawObstacle(o){ const x=laneCenter(o.lane), y=o.y;
+  if(o.type==="cone"){ ctx.fillStyle="#ff7a2c"; ctx.beginPath();ctx.moveTo(x,y-OBS_H*0.45);ctx.lineTo(x+22,y+OBS_H*0.32);ctx.lineTo(x-22,y+OBS_H*0.32);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#fff"; rrect(x-15,y-2,30,7,3); ctx.fill(); ctx.fillStyle="#3a2a1a"; rrect(x-26,y+OBS_H*0.30,52,8,3); ctx.fill(); }
+  else if(o.type==="puddle"){ ctx.fillStyle="rgba(80,160,230,.85)"; ctx.beginPath();ctx.ellipse(x,y,OBS_W*0.5,OBS_H*0.32,0,0,7);ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.5)"; ctx.beginPath();ctx.ellipse(x-6,y-4,8,3,0,0,7);ctx.fill(); }
+  else if(o.type==="car"){ ctx.fillStyle="#5aa0ff"; rrect(x-OBS_W*0.5,y-OBS_H*0.5,OBS_W,OBS_H,14); ctx.fill();
+    ctx.fillStyle="#cfe8ff"; rrect(x-OBS_W*0.4,y-OBS_H*0.18,OBS_W*0.8,OBS_H*0.34,8); ctx.fill();
+    ctx.fillStyle="#222"; rrect(x-OBS_W*0.5-4,y-OBS_H*0.28,6,16,3); rrect(x+OBS_W*0.5-2,y-OBS_H*0.28,6,16,3); ctx.fill(); }
+  else { ctx.fillStyle="#e0b85a"; rrect(x-OBS_W*0.5,y-OBS_H*0.45,OBS_W,OBS_H*0.9,8); ctx.fill();
+    ctx.strokeStyle="#b8923c"; ctx.lineWidth=3; ctx.beginPath();ctx.moveTo(x-OBS_W*0.5,y-10);ctx.lineTo(x+OBS_W*0.5,y-10);ctx.moveTo(x-OBS_W*0.5,y+10);ctx.lineTo(x+OBS_W*0.5,y+10);ctx.stroke(); }
+}
+function drawTreat(t){ const x=laneCenter(t.lane), y=t.y, tt=Date.now()/300;
+  ctx.save(); ctx.shadowColor=treatColor(t.type); ctx.shadowBlur=12;
+  if(t.type==="coin"){ ctx.fillStyle="#ffd23f"; ctx.beginPath();ctx.arc(x,y,12,0,7);ctx.fill(); ctx.fillStyle="#ffe88a"; ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fill(); }
+  else if(t.type==="icecream"){ ctx.fillStyle="#ffb84d"; ctx.beginPath();ctx.moveTo(x,y+14);ctx.lineTo(x-8,y);ctx.lineTo(x+8,y);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#ff8fce"; ctx.beginPath();ctx.arc(x,y-3,9,0,7);ctx.fill(); }
+  else if(t.type==="flower"){ ctx.fillStyle="#ff7aa8"; for(let i=0;i<5;i++){ const a=tt+i*1.256; ctx.beginPath();ctx.arc(x+Math.cos(a)*7,y+Math.sin(a)*7,5,0,7);ctx.fill(); } ctx.fillStyle="#ffe27a"; ctx.beginPath();ctx.arc(x,y,4,0,7);ctx.fill(); }
+  else { ctx.fillStyle="#62d0ff"; rrect(x-11,y-9,22,18,4); ctx.fill(); ctx.fillStyle="#ffd23f"; ctx.fillRect(x-2,y-9,4,18); ctx.fillRect(x-11,y-2,22,4); }
+  ctx.restore();
+}
+
+function banner(t,s){ ctx.fillStyle="rgba(10,12,40,.62)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 40px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-6); ctx.font="20px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
+function star5(cx,cy,r,filled){ ctx.beginPath();
+  for(let i=0;i<10;i++){ const ang=-Math.PI/2+i*Math.PI/5, rad=(i%2===0)?r:r*0.45; const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.closePath(); if(filled){ ctx.fillStyle="#ffd54a"; ctx.fill(); ctx.strokeStyle="#caa42a"; ctx.lineWidth=2; ctx.stroke(); } else { ctx.fillStyle="rgba(255,255,255,.14)"; ctx.fill(); ctx.strokeStyle="rgba(255,255,255,.4)"; ctx.lineWidth=2; ctx.stroke(); } }
+function drawEarnedStars(earned){ const r=24, gap=64, y=H/2-78; const xs=[W/2-gap,W/2,W/2+gap]; for(let i=0;i<3;i++) star5(xs[i],y,r,i<earned); }
+
+function drawTutorial(){ const tt=Date.now()/1000;
+  ctx.fillStyle="rgba(10,12,40,.55)"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="bold 26px Fredoka,sans-serif";
+  ctx.fillText("Tap a side or swipe to move!", W/2, 120);
+  ctx.font="18px Fredoka,sans-serif"; ctx.fillStyle="#cdd0ff";
+  ctx.fillText("Dodge the road and grab the treats", W/2, 152);
+  const swing=Math.sin(tt*1.6); const lx=W/2-90, rx=W/2+90, ay=200;
+  ctx.fillStyle=swing<0?"#ffd86b":"rgba(255,255,255,.4)"; ctx.beginPath();ctx.moveTo(lx+10,ay-12);ctx.lineTo(lx-12,ay);ctx.lineTo(lx+10,ay+12);ctx.closePath();ctx.fill();
+  ctx.fillStyle=swing>0?"#ffd86b":"rgba(255,255,255,.4)"; ctx.beginPath();ctx.moveTo(rx-10,ay-12);ctx.lineTo(rx+12,ay);ctx.lineTo(rx-10,ay+12);ctx.closePath();ctx.fill();
+}
+
+function draw(){ if(!G){ return; }
+  drawBackdrop();
+  const sh = BM ? BM.shakeOffset(fx) : {x:0,y:0};
+  ctx.save(); ctx.translate(sh.x, sh.y);
+  for(const t of G.treats) drawTreat(t);
+  for(const o of G.obstacles) drawObstacle(o);
+  const blink = G.invuln>0 && (Math.floor(G.invuln/5)%2===0);
+  drawCar(G.carX, CAR_Y - Math.sin(G.bob)*1.5, blink);
+  ctx.restore();
+  if(BM) BM.draw(ctx, fx, { W, H, font:"bold 20px Fredoka,sans-serif" });
+  // HUD
+  ctx.textAlign="left"; ctx.fillStyle="#1a0f3a"; ctx.font="bold 20px Fredoka,sans-serif";
+  ctx.fillText((L?L.name:"")+"  ·  "+(level+1)+"/"+GAME_CONFIG.levels.length, 16, 30);
+  for(let i=0;i<G.hearts;i++){ ctx.fillStyle="#ff5d8f"; if(BR&&BR.heart)BR.heart(ctx, W-24-i*30, 24, 10); else { ctx.beginPath();ctx.arc(W-24-i*30,24,8,0,7);ctx.fill(); } }
+  ctx.fillStyle="#7a5c1a"; ctx.font="bold 16px Fredoka,sans-serif"; ctx.fillText("Treats: "+G.treatsGot, 16, 52);
+  // progress bar
+  const pct=clamp(G.dist/L.dist,0,1), bw=W-120, bx=60, by=H-26;
+  ctx.fillStyle="rgba(0,0,0,.18)"; rrect(bx,by,bw,12,6); ctx.fill();
+  ctx.fillStyle="#7ee0a0"; rrect(bx,by,bw*pct,12,6); ctx.fill();
+  ctx.fillStyle="#1a0f3a"; ctx.beginPath();ctx.arc(bx+bw*pct,by+6,9,0,7);ctx.fill();   // car marker
+  // overlays
+  if(state==="play" && (!started||helpOpen)) drawTutorial();
+  if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Town Cleared!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next town unlocked - tap to drive on":"Tap to finish"); drawEarnedStars(PREFS.stars[level]||0); }
+  if(state==="lose"){ banner("Crashed out!","Tap to try again"); }
+}
+
+// ---------- shared start screen (BS) ----------
+function el(id){ const e=document.getElementById(id); return (e&&e.style)?e:null; }
+function toast(msg){ const e=el("toast"); if(!e)return; e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{e.style.display="none";},2600); }
+function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
+function showInGameMute(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"block":"none"; }
+function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=on?"block":"none"; }
+
+let startScreen=null;
+function totalStars(){ let t=0; for(const k in PREFS.stars) t+=(PREFS.stars[k]||0); return t; }
+function maxStars(){ return GAME_CONFIG.levels.length*3; }
+function buildStartCfg(){
+  const unlocked=PREFS.unlocked||0;
+  const levels = GAME_CONFIG.levels.map((l,i)=>{ const st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
+    return { n:i+1, name:l.name, color:levelColor(i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
+  return { title:"Sunny Town Drive", subtitle:"Stars: "+totalStars()+" of "+maxStars(),
+    coins: totalStars(), sound: !(BA&&BA.muted), showBack:false, levels };
+}
+function showMenu(){ state="title"; G=null; showHelpBtn(false); showInGameMute(false); showInGameBack(false);
+  const host=document.getElementById("start"); if(host)host.style.display="block";
+  if(!BS||!host){ return; }
+  const cb={
+    onPlay:(n)=>{ if(BA)BA.unlock(); startLevel(n-1); hideMenu(); },
+    onSound:(on)=>{ if(BA){ BA.unlock(); BA.toggleMute(); } },
+    onBack:()=>{},
+  };
+  if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb);
+  else startScreen.update(buildStartCfg());
+}
+function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showHelpBtn(true); showInGameMute(true); showInGameBack(true); }
+
+function wireMenus(){
+  const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
+  const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; };
+  const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; showMenu(); };
+}
+
+function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
+// boot
+if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showMenu(); }
+requestAnimationFrame(frame);
+
+// ---------- QA / picker hooks (standardized name; alias kept) ----------
+window.BUILDABLE_GAME = {
+  startLevel:(i)=>{ startLevel(i); },
+  setBot:(b)=>{ botMode=b; started=true; },
+  state:()=>state,
+  dbg:()=>({ level, lane:G&&G.lane, hearts:G&&G.hearts, dist:G&&Math.round(G.dist), need:L&&L.dist, obs:G&&G.obstacles.length, treats:G&&G.treatsGot, state }),
+  // headless harness: a perfect driver clears a level untouched
+  sim:(idx, maxFrames)=>{ startLevel(idx); state="play"; botMode=true; started=true; let f=0; const cap=maxFrames||40000;
+    while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }
+    return { level:idx, result:state, frames:f, heartsLeft:G?G.hearts:0, hurts:G?G.hurtsTaken:0, treats:G?G.treatsGot:0, stars:PREFS.stars[idx]||0 }; },
+  // full adventure: every town in a row
+  campaign:(cap)=>{ const out=[]; cap=cap||40000;
+    for(let lvl=0; lvl<GAME_CONFIG.levels.length; lvl++){ startLevel(lvl); state="play"; botMode=true; started=true;
+      let f=0; while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }
+      out.push({ level:lvl+1, result:state, frames:f, heartsLeft:G?G.hearts:0 }); if(state==="lose")break; }
+    return out; },
+  // render debug hooks
+  _begin:(i)=>{ startLevel(i||0); state="play"; botMode=true; started=true; },
+  _step:(n)=>{ for(let i=0;i<(n||1);i++) update(); },
+  _draw:()=>{ try{ draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
+  _prefs:()=>PREFS, _cfg:()=>GAME_CONFIG,
+};
+window.RUNNER_GAME = window.BUILDABLE_GAME;   // back-compat alias
+</script>
+</body>
+</html>

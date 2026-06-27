@@ -567,6 +567,34 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27i (Sunny Town Drive — new 3-lane runner engine)
+
+New hand-authored **Track B** engine `public/runner-engine.html` (route `/runner-engine.html`):
+a cute "drive through town, dodge stuff, collect treats" runner for ages 4-8, inspired by
+LEGO Friends: Heartlake Rush (built as our own original — no licensed art). Steering is
+**3-lane tap/swipe** (tap a side, swipe, or arrow keys) so it works on phone, iPad and
+desktop. Theme is a fresh **Sunny Town** with 6 towns (Maple Street -> Rainbow Bridge),
+each a data recipe in `GAME_CONFIG.levels` — adding a town is editing data, not engine code.
+
+Built to BUILDING-A-GAME.md: data-driven levels, **always-winnable** (every obstacle row
+leaves >=1 open lane and rows are spaced so only one is in the car's collision band, so a
+perfect driver can finish untouched), and headless QA-simmed. Uses shared engine libs BR
+(drawn car/obstacles/treats, no images so it can't break), BA (sound via the existing
+created catalog), BM (crash shake/flash + treat sparkles), BS (the shared start screen).
+
+QA: `qa-runner.mjs` exposes `window.BUILDABLE_GAME` (+ `RUNNER_GAME` alias) with
+`sim()`/`campaign()`; a perfect-driver bot clears all 6 towns with **0 hits / 3 stars**
+across 5 runs each + a full campaign, plus render smoke — all PASS. Surfaced in
+`src/BuildableKids.jsx` as a "Sunny Town Drive" tile in the Games picker
+(`SunnyTownScreen`, full-screen iframe) and a row in `public/games-library.html`.
+`esbuild` build of BuildableKids.jsx passes.
+
+**Follow-ups (deferred):** bespoke ElevenLabs sounds + generated Sunny Town cast/pets art
+in the shared asset library; car customizing, missions/unlocks, and a driver picker
+(v1 is dodge + collect only, per scope).
+
+---
+
 ## Session log — 2026-06-27b (characters get a theme label — first convergence step)
 
 First step of bringing every project onto the shared asset library: gave reusable
