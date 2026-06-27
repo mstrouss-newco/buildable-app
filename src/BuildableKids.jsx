@@ -748,9 +748,26 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onArt, onTyping, o
     story: { label: "Story", color: "#7CF6B0", bg: "rgba(124,246,176,0.16)" },
   };
 
+  // Favorite game (from per-kid telemetry) -> the helper nudges toward it.
+  const [favGame, setFavGame] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const did = deviceId();
+    const kid = getActiveKid();
+    const q = kid && kid.id ? "?kidProfileId=" + encodeURIComponent(kid.id) : "?deviceId=" + encodeURIComponent(did);
+    fetch("/api/kid-game-stats" + q).then((r) => r.json()).then((d) => { if (alive && d && d.favorite && d.favorite.plays >= 2) setFavGame(d.favorite); }).catch(() => {});
+    return () => { alive = false; };
+  }, [activeKid]);
+  const GAME_NAMES = { platformer: "Platformer", survival: "Survival", breaker: "Breaker", chess: "Chess", typing: "Typing", tennis: "Tennis", runner: "Sunny Town Drive", generated: "your own game" };
+  const favLine = favGame ? (favGame.game === "generated"
+    ? "You love making your own games — want to build another?"
+    : ((GAME_NAMES[favGame.game] || favGame.game) + " is your favorite — want to play it again?")) : null;
+
   const kidName = (activeKid && activeKid.display_name) || "friend";
   const helperLine = chessTurns > 0
     ? `It's your move in ${chessTurns} chess game${chessTurns > 1 ? "s" : ""} — want to play?`
+    : favLine
+    ? favLine
     : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”? Or make something new!` : "What should we make today? Tap a tile and I'll help!");
 
   // ---- floating helper (bottom-right): the kid's own helper character ----
