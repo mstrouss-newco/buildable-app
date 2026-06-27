@@ -49,9 +49,9 @@ over feel — the survival/croc/breaker model.
 
 ---
 
-## The three shared engine libraries (use them — don't reinvent)
+## The four shared engine libraries (use them — don't reinvent)
 
-Every Track B engine loads these three `<script>`s and builds on them. They are the
+Every Track B engine loads these four `<script>`s and builds on them. They are the
 reason a new game is cheap:
 
 | Library | Global | Owns | Never instead… |
@@ -59,9 +59,48 @@ reason a new game is cheap:
 | `public/buildable-renders.js` | `BR` (`window.BuildableRenders`) | All drawn-shape art: hero, enemy, coin, sprite, background, hearts | …inline your own canvas shapes |
 | `public/buildable-audio.js` | `BA` (`window.BuildableAudio`) | Synth SFX, music loop, mute, the iPad audio-unlock | …hand-roll your own beep synth |
 | `public/buildable-mechanics.js` | `BM` (`window.BuildableMechanics`) | FX/"juice": particle bursts, screen shake, screen flash, floating pop text, `explode()` | …copy-paste a `burst()`/`flash()` again |
+| `public/buildable-startscreen.js` | `BS` (`window.BuildableStartScreen`) | The start screen / level picker: title, hero, mode row, level cards (art + stars + lock), customize | …hand-roll a `showMenu`/level picker again |
 
 `buildable-mechanics.js` is new — it extracts the `burst()` / flash / shake / `pop()`
 code that survival, croc, and breaker were each copy-pasting. See `MECHANICS.md` §9.
+
+### The start screen / level picker (`buildable-startscreen.js`)
+
+Every game shows the SAME launch experience — title, hero, mode row, level cards with
+art + stars + lock state, and an optional customize button — instead of each engine
+hand-rolling its own `#menu`/`showMenu`/`buildLevelPicker`. (This is the start screen of a
+*built* game — NOT the AI game builder.) The engine supplies a config; `BS` renders the
+DOM and calls back on tap. Demo: `public/startscreen-demo.html`.
+
+```js
+const screen = BS.mount(document.getElementById("start"), {
+  title: "Space Sparkles", subtitle: "Beat each boss to unlock the next world",
+  coins: 24, sound: true,
+  hero: { name: "Pip", img: "<character url>", progressText: "2 of 6 worlds cleared" },
+  modes: ["solo", "two", "family"], mode: "solo",   // omit modes a game doesn't support
+  levels: [
+    { n: 1, name: "Comet Meadow",  img: "<thumb>", stars: 3, maxStars: 3, state: "done" },
+    { n: 2, name: "Nebula Drift",  img: "<thumb>", stars: 2, state: "done" },
+    { n: 3, name: "Asteroid Twirl", color: "#2b4a6b", state: "next" },   // highlighted "Play"
+    { n: 4, name: "Stardust Caves", state: "locked" },
+  ],
+  customizeLabel: "Make it mine",                    // omit to hide
+}, {
+  onPlay: (n) => startLevel(n),   onMode: (m) => { /* solo|two|family */ },
+  onHero: () => openHeroPicker(),  onCustomize: () => openCustomize(),
+  onSound: (on) => BA.toggleMute(), onBack: () => goHome(),
+});
+// later: screen.update({ coins: 30, levels: [...] });
+```
+
+Rules: `state` is `"done"` | `"next"` | `"locked"` (lock the rest; mark the next playable
+one `"next"` so it gets the green Play highlight). Each level shows its **art thumbnail**
+(`img`; falls back to a solid `color`, then a drawn icon) and **stars earned** — wire
+`img` to the shared thumbnail/world art. The `"family"` mode is where the real-time
+multiplayer mechanic plugs in (launch `FamilyRealtime` — see `MULTIPLAYER.md`). Headless-
+safe: with no DOM (QA sim), `BS.mount` is a no-op. Adopt it per engine one at a time, QA
+before/after (it replaces the engine's own menu code, not its gameplay).
+
 
 ---
 

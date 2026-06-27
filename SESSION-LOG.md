@@ -1,5 +1,35 @@
 # Buildable Kids — Session Log
 
+## Shared start screen / level picker `buildable-startscreen.js` (June 27 2026)
+
+Added one consistent "start a game" experience for every engine, replacing the four
+hand-rolled menus (survival `showMenu`/`renderLevels`/`renderLocker`, croc
+`buildLevelPicker`, breaker `showMenu`, platformer's bare "Play!"). Design reviewed +
+approved against the live survival screen. Additive — not wired into any engine yet
+(engines adopt one at a time, QA before/after); live games unaffected. NOTE: this is the
+launch screen of a *built* game, NOT the AI game builder.
+
+- **`public/buildable-startscreen.js`** (global `BS`, `window.BuildableStartScreen`) — the
+  fourth shared engine lib after `BR`/`BA`/`BM`. DOM-based, self-styled (one scoped
+  stylesheet), self-iconed (inline SVG, no emoji/webfont), headless-safe (no-op without a
+  DOM so the QA sim is unaffected). `BS.mount(el, config, callbacks)` renders: header
+  (coins chip + sound), title/subtitle, hero strip (avatar + progress + Change), a mode
+  row (Solo / 2 players / Family), a level grid (art thumbnail + stars earned + lock
+  badge; the `next` level gets a green Play highlight), and an optional "Make it mine".
+- **Optimizations over the old survival screen:** coins moved into the header; hero shown
+  with progress; compact cards with real art thumbnails (all 6 levels fit, far less dead
+  space); per-level stars; the next level is the visual focus; locked = dim + lock badge
+  (not a fake "Locked" button); modes incl. multiplayer entry in one place.
+- **`public/startscreen-demo.html`** — live demo (Space Sparkles config). Verified the
+  real component render matches the approved mockup.
+- **`vercel.json`** — added explicit routes for `buildable-startscreen.js`,
+  `startscreen-demo.html`, AND `buildable-mechanics.js` (the last was a latent gap — it
+  had no route, so it would have 404'd to landing.html when an engine first loads it).
+- **`BUILDING-A-GAME.md`** — shared-libs table now lists four libs + a start-screen spec
+  (config shape, `state` = done|next|locked, thumbnail/stars wiring, `family` → multiplayer).
+  The `family` mode launches `FamilyRealtime` (MULTIPLAYER.md).
+
+
 ## Real-time multiplayer mechanism — reusable Broadcast layer + frozen contract (June 27 2026)
 
 Built the generic, reusable REAL-TIME two-player mechanism (first user: tennis, built in a
