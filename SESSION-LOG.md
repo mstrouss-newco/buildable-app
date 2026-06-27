@@ -775,3 +775,7 @@ ensureMusic() runs on game start (both modes), swaps the track when the backdrop
 stacking, and respects the mute toggle. Real ElevenLabs music (not the in-house-synth music-library
 loops), satisfying the sound rule. Verified live: candy + jungle return 200 audio/mpeg (~470KB,
 cached from chess); BA.music.src set with loop=true on game start. All Breaker audio is now ElevenLabs.
+
+## Chess: "living pieces" experiment — idle motion + move speech + toggle — June 26 2026
+
+Pieces now idle in place (randomized aliveBob/Wiggle/Breathe/Look on the piece SVG, pivot near feet, never leave the square; selected/celebration states override). On a kid's own move a short upbeat line plays (16 phrases via `api/chess-voice.js` move1..move16, ElevenLabs TTS cached; skips the bot's moves and the game-ending move so the Checkmate VO is not stepped on; non-overlapping). New **Living pieces** toggle (face icon in the HUD) turns motion+speech off, saved in localStorage `bk_chess_alive` (default on). Created ElevenLabs audio per BUILDING-A-GAME.md; no emoji.
