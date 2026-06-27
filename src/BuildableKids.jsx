@@ -612,7 +612,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#3DD06A,#2BB14F)"><ControllerGlyph /></AppIcon>}
           title="Games" desc="Two games: jump or survive!"
-          onClick={onGames}
+          badge="Beta" badgeColor="#FFD27C" onClick={onGames}
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#F2789E,#E0578F)"><BookGlyph /></AppIcon>}
