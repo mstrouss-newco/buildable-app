@@ -1,5 +1,17 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Helper reacts to game win/lose SHIPPED to main
+- New global HelperReactions layer (src/HelperReactions.jsx, mounted in main.jsx OUTSIDE
+  the screen switch): listens for postMessage {source:"buildable",kind:"win"|"lose"} from
+  game iframes, pops the kid's helper at the bottom, speaks a cheer/encouragement in the
+  helper's voice, and bounces. Auto-hides after ~6s.
+- Tiny bridge public/buildable-buddy.js (window.BB.win()/lose()/cheer()) posts those events.
+- Wired: breaker (winLevel/loseLife), croc (gameOver), and the generated-game template
+  (api/generate-game now instructs win/lose postMessage). Others adopt next (1 line each).
+- FIX: all helper voices (home greeting, win/lose reactions, Helper Lab preview) now share
+  ONE audio element (src/lib/voiceBus.js) so a new line stops the previous — no more overlap.
+
+
 ## 2026-06-27 — Survival: shared start-screen (BS) + real ElevenLabs audio + BM FX
 - survival-engine.html now uses the shared BuildableStartScreen (BS) level picker
   (art thumbs + stars + lock + green "next") instead of its hand-rolled #menu grid.
