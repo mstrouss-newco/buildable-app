@@ -30,6 +30,30 @@ function wordsOf(text) { return (text || "").trim().split(/\s+/).filter(Boolean)
 const NARRATOR_VOICE = "21m00Tcm4TlvDq8ikWAM"; // Rachel — warm narrator
 const VOICE_POOL = ["EXAVITQu4vr4xnSDxMaL", "MF3mGyEYCl7XYWbV9V6O", "ErXwobaYiN019PkySvjV", "TxGEqnHWrfWFTfGW9XjX"]; // Bella, Elli, Antoni, Josh
 function hashStr(t){ let h=0; t=String(t||""); for(let i=0;i<t.length;i++){ h=(h*31+t.charCodeAt(i))|0; } return Math.abs(h); }
+// Split a page's prose into spoken parts: narration + quoted dialogue, attributing
+// each quote to the hero/friend by the name nearest it. No LLM call — instant.
+function parseLines(text, heroName, friendName) {
+  if (!text) return [];
+  const hero = String(heroName || "").split(" ")[0].toLowerCase();
+  const friend = String(friendName || "").split(" ")[0].toLowerCase();
+  const matches = [...text.matchAll(/[\u201c\u201d"]([^\u201c\u201d"]+)[\u201c\u201d"]/g)];
+  if (!matches.length) return [{ who: "narrator", say: text }];
+  const out = []; let cursor = 0;
+  for (const mm of matches) {
+    const start = mm.index, end = start + mm[0].length;
+    const before = text.slice(cursor, start).trim();
+    if (before) out.push({ who: "narrator", say: before });
+    const say = (mm[1] || "").trim();
+    const ctx = (text.slice(Math.max(0, start - 55), start) + " " + text.slice(end, end + 55)).toLowerCase();
+    const hi = hero ? ctx.indexOf(hero) : -1, fi = friend ? ctx.indexOf(friend) : -1;
+    let who = "other";
+    if (hi >= 0 && (fi < 0 || hi <= fi)) who = "hero"; else if (fi >= 0) who = "friend";
+    if (say) out.push({ who, say });
+    cursor = end;
+  }
+  const tail = text.slice(cursor).trim(); if (tail) out.push({ who: "narrator", say: tail });
+  return out;
+}
 const WATER_WORLDS = new Set(["coral-reef", "desert-oasis"]);
 const WATER_FX = new Set(["water_shimmer", "gentle_waves"]);
 function wantsWater(pg){ return !!pg && (WATER_WORLDS.has(pg.world_slug) || WATER_FX.has(pg.effect)); }
@@ -69,6 +93,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
 
   const page = pages[idx] || {};
   const words = wordsOf(page.text);
+  const pageLines = (Array.isArray(page.lines) && page.lines.length) ? page.lines : parseLines(page.text, story.character_name, story.companion_name);
   const palette = WORLD_PALETTE[page.world_slug] || ["#3a2c63", "#7a4a86"];
   const bgUrl = page.world_slug ? libImg("world", page.world_slug, "watercolor") : null;   // placeholder
   const charUrl = libImg("character", charSlug, "watercolor", page.emotion || "happy");      // placeholder
@@ -170,6 +195,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   // ---- single-voice fallback (no dialog lines) ----
   async function narratePageSingle() {
     setPlaying(true); setSpoken(-1);
+    (page.sfx || []).forEach((nm, i) => setTimeout(() => playSfx(nm), 250 + i * 800));
     if (soundOn && ambienceRef.current && ambienceRef.current.src && ambienceRef.current.paused) ambienceRef.current.play().catch(() => {});
     let cached = narrCacheRef.current[idx];
     if (cached === undefined) {
@@ -238,8 +264,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   }
 
   function narratePage() {
-    const lns = Array.isArray(page.lines) && page.lines.length ? page.lines : null;
-    if (lns) playSequence(lns, page.sfx); else narratePageSingle();
+    if (pageLines.length > 1) playSequence(pageLines, page.sfx); else narratePageSingle();
   }
   function toggleRead() { if (playing) { seqRef.current++; stopAll(); setPlaying(false); setSpoken(-1); setSpokenLine(-1); } else { narratePage(); } }
 
@@ -338,8 +363,8 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">Repaint this page</button>
 
       <div style={s.textPanel}>
-        {Array.isArray(page.lines) && page.lines.length
-          ? page.lines.map((l, i) => (
+        {pageLines.length > 1
+          ? pageLines.map((l, i) => (
               <p key={i} style={{ ...s.line, ...(l.who !== "narrator" ? s.lineDialog : {}), ...(i === spokenLine ? s.lineOn : {}) }}>
                 {l.who === "hero" ? <b style={s.speaker}>{(story.character_name || "Hero") + ": "}</b> : l.who === "friend" ? <b style={s.speaker}>{(story.companion_name || "Friend") + ": "}</b> : null}
                 {l.say}

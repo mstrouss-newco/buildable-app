@@ -152,11 +152,10 @@ function buildPrompt(inp, age) {
     `Quietly teach a gentle lesson about ${inp.lesson} through what the characters DO — never state the lesson outright, never be preachy; it should just be felt.`,
     `Shape a simple arc across the 6 pages: cozy/curious beginning, a surprise, a worry or scary moment, a low point, then it works out, and a calm ending — so the emotions vary naturally (e.g. happy, surprised, scared, sad, happy, sleepy).`,
     `Also choose one ambient "effect" per page from EXACTLY this list: ${JSON.stringify(EFFECTS)}.`,
-    `Make the pages LIVELY: mix narration with real DIALOGUE — have ${inp.characterName} and ${inp.companionName} actually TALK to each other in quotes on most pages (short, simple, kind lines).`,
-    `For each page also return "lines": an array that breaks the page into spoken parts in order, each {"who": one of "narrator","hero","friend","other", "say": the exact words spoken}. Use "hero" for ${inp.characterName}'s spoken lines, "friend" for ${inp.companionName}'s, and "narrator" for description. 2-4 lines per page.`,
-    `And return "sfx": an array of 0-2 sound cues that fit the page, chosen ONLY from this list: ["door","knock","thunder","firewhoosh","splash","magic","pop","whoosh","footsteps","bell","rustle","sparkle"]. Use them only where they clearly fit (a door opening, a storm, a campfire, a splash, a bit of magic). Leave empty if none fit.`,
+    `Make the pages LIVELY: on most pages have ${inp.characterName} and ${inp.companionName} actually TALK to each other in quotation marks, and make clear who is speaking, like: ${inp.characterName} said, "..." and ${inp.companionName} replied, "...". Keep lines short, simple and kind.`,
+    `Also return "sfx": an array of 0-2 sound cues that fit the page, chosen ONLY from this list: ["door","knock","thunder","firewhoosh","splash","magic","pop","whoosh","footsteps","bell","rustle","sparkle"]. Use them only where they clearly fit (a door opening, a storm, a campfire, a splash, a bit of magic). Leave empty if none fit.`,
     `Return ONLY raw JSON (no markdown), shape:`,
-    `{"title": string (max 6 words), "pages": [ {"text": string (the page as a flowing paragraph for on-screen reading; refer to the hero as ${inp.characterName}), "lines": [{"who": "narrator|hero|friend|other", "say": string}], "sfx": ["..."], "world_slug": one of the world slugs above, "emotion": one of ${JSON.stringify(EMOS)}, "effect": one of the effect ids above } ]}`,
+    `{"title": string (max 6 words), "pages": [ {"text": string (the page as a flowing paragraph for on-screen reading; refer to the hero as ${inp.characterName}), "sfx": ["..."], "world_slug": one of the world slugs above, "emotion": one of ${JSON.stringify(EMOS)}, "effect": one of the effect ids above } ]}`,
     `Use exactly 6 pages. Page 1 must use world_slug "${inp.worldSlug}". Keep every page kind and clear.`,
   ].filter(Boolean).join("\n");
 }
@@ -172,14 +171,10 @@ function validateStory(obj, inp) {
     const world_slug = WORLDS[p && p.world_slug] ? p.world_slug : inp.worldSlug;
     const emotion = EMO_SET.has(p && p.emotion) ? p.emotion : "happy";
     const effect = EFFECT_SET.has(p && p.effect) ? p.effect : WORLDS[world_slug].fx;
-    let lines = Array.isArray(p && p.lines)
-      ? p.lines.map((l) => ({ who: WHO.has(l && l.who) ? l.who : "narrator", say: clampText(l && l.say, 200) })).filter((l) => l.say).slice(0, 8)
-      : null;
-    if (lines && !lines.length) lines = null;
     const sfx = Array.isArray(p && p.sfx) ? p.sfx.filter((x) => SFX_OK.has(x)).slice(0, 2) : [];
-    const text = clampText(p && p.text, 260) || (lines ? lines.map((l) => l.say).join(" ") : "");
+    const text = clampText(p && p.text, 260);
     if (!text) return null;
-    return { text, world_slug, emotion, effect, effects: [effect], lines, sfx };
+    return { text, world_slug, emotion, effect, effects: [effect], sfx };
   });
   if (pages.some((p) => p === null) || pages.length < 4) return null;
   return wrap(title, pages, inp);
@@ -228,11 +223,11 @@ export default async function handler(req, res) {
   }
   try {
     const ctrl = new AbortController();
-    const to = setTimeout(() => ctrl.abort(), 50000);
+    const to = setTimeout(() => ctrl.abort(), 38000);
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 3600, messages: [{ role: "user", content: buildPrompt(inp, age) }] }),
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1700, messages: [{ role: "user", content: buildPrompt(inp, age) }] }),
       signal: ctrl.signal,
     });
     clearTimeout(to);
