@@ -171,6 +171,14 @@ const bgCache={};
 function backdropDef(){ return BACKDROPS.find(b=>b.id===PREFS.backdrop)||BACKDROPS[0]; }
 function bgImage(){ const d=backdropDef(); if(!d.img)return null; if(!bgCache[d.id])bgCache[d.id]=mkImg(d.img); return bgCache[d.id]; }
 
+// looping background music: reuse the shared ElevenLabs per-world tracks (/api/chess-music).
+// backdrops map onto music worlds; meadow has no world so it borrows the warm "jungle" track.
+function musicWorldFor(id){ return id==="meadow" ? "jungle" : id; }
+let _curMusic="";
+function ensureMusic(){ if(!BA||!BA.setMusic)return; const url="/api/chess-music?world="+musicWorldFor(PREFS.backdrop);
+  if(url!==_curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); _curMusic=url; }
+  if(BA.playMusic)BA.playMusic(); }
+
 function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 
 // ---- live game state ----
@@ -213,7 +221,7 @@ function startLevel(i, carryLives){
     speed, baseSpeed:speed, bricks:buildBricks(L,rng), balls:[], caps:[], lasers:[],
     onPaddle:true, sticky:false, stickyT:0, slowT:0, laserT:0, laserCd:0, fireT:0, score:0 };
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ]; G.onPaddle=true;
-  state="play"; started=false;
+  state="play"; started=false; ensureMusic();
 }
 function launch(){ if(!G||G.mode!=="solo"||!G.onPaddle)return; G.onPaddle=false; started=true;
   const b=G.balls[0], ang=-Math.PI/2+(Math.random()*0.5-0.25), sp=G.speed; b.vx=Math.cos(ang)*sp; b.vy=Math.sin(ang)*sp; sfx("shoot"); }
@@ -227,7 +235,7 @@ function startPong(){ currentMode="two"; resetFx();
   const sp=5.2;
   G={ mode:"two", padW:120, p1x:W/2, p2x:W/2, s1:0, s2:0, target:5,
       ball:newBall(W/2,H/2,(Math.random()<.5?0.6:Math.PI-0.6),sp), speed:sp, serveDelay:50, winner:0 };
-  state="play"; started=true;
+  state="play"; started=true; ensureMusic();
 }
 function pongServe(towardBottom){ const a = towardBottom ? (Math.PI/2 + (Math.random()*0.6-0.3)) : (-Math.PI/2 + (Math.random()*0.6-0.3));
   G.ball=newBall(W/2,H/2,a,G.speed); G.serveDelay=45; }
