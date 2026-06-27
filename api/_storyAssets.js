@@ -31,34 +31,51 @@ function cacheKey(kind, slug, style) {
   return "lib:" + crypto.createHash("sha1").update(kind + "|" + slug + "|" + style).digest("hex");
 }
 
-// Return story assets of `kind` ("world" | "character") whose base image at
-// `style` is already cached in narration_cache. Empty array on any problem.
-export async function builtStoryAssets(kind, url, key, style = "watercolor") {
+// Styles to look across (watercolor first = the story maker's default).
+const STYLE_ORDER = ["watercolor", "modern3d", "modern", "papercut"];
+
+// Return story assets of `kind` ("world" | "character") whose base image is
+// already cached in narration_cache in ANY style. One asset per slug, using the
+// first style that's built (so it surfaces real art no matter which style the
+// kid used). Empty array on any problem — safe to merge into a picker.
+export async function builtStoryAssets(kind, url, key) {
   try {
     if (!url || !key) return [];
     const list = kind === "world" ? WORLDS : CHARACTERS;
-    const items = list.map((it) => ({ slug: it[0], name: it[1], k: cacheKey(kind, it[0], style) }));
 
-    // One batched existence check (quoted values; cache_key contains a colon).
-    const inList = items.map((x) => `"${x.k}"`).join(",");
+    // Every (slug, style) base key.
+    const entries = [];
+    for (const it of list) {
+      for (const style of STYLE_ORDER) {
+        entries.push({ slug: it[0], name: it[1], style, k: cacheKey(kind, it[0], style) });
+      }
+    }
+
+    // One batched existence check. Encode the whole value so the colons in the
+    // keys survive (the server URL-decodes before parsing the in() list).
+    const inList = entries.map((e) => e.k).join(",");
     const r = await fetch(
-      `${url}/rest/v1/narration_cache?cache_key=in.(${inList})&select=cache_key`,
+      `${url}/rest/v1/narration_cache?cache_key=in.(${encodeURIComponent(inList)})&select=cache_key`,
       { headers: { apikey: key, Authorization: `Bearer ${key}` } }
     );
     if (!r.ok) return [];
     const rows = await r.json().catch(() => []);
     const have = new Set((Array.isArray(rows) ? rows : []).map((x) => x.cache_key));
 
-    return items
-      .filter((x) => have.has(x.k))
-      .map((x) => ({
-        id: "story:" + kind + ":" + x.slug,
-        slug: x.slug,
-        name: x.name,
-        theme: kind === "world" ? (WORLD_THEME[x.slug] || "") : "",
-        imageUrl: `/api/story-library?img=${kind}:${x.slug}&style=${style}`,
-        source: "story",
-      }));
+    // First built style per slug (STYLE_ORDER preference).
+    const bySlug = new Map();
+    for (const e of entries) {
+      if (have.has(e.k) && !bySlug.has(e.slug)) bySlug.set(e.slug, e);
+    }
+
+    return [...bySlug.values()].map((e) => ({
+      id: "story:" + kind + ":" + e.slug,
+      slug: e.slug,
+      name: e.name,
+      theme: kind === "world" ? (WORLD_THEME[e.slug] || "") : "",
+      imageUrl: `/api/story-library?img=${kind}:${e.slug}&style=${e.style}`,
+      source: "story",
+    }));
   } catch {
     return [];
   }
