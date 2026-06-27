@@ -204,6 +204,16 @@ network-agnostic (all Supabase code lives in the React layer).
 
 ## The non-negotiable rules (from `AGENTS.md` / README — they apply here too)
 
+- **Every creation saves, shares, and publishes.** Songs, stories, games, drawings, and
+  any new maker support all three (save to library · private share link · moderated
+  publish) — reuse the shared mechanisms in `CREATIONS.md`. Not done until all three work.
+- **Build for desktop, iPad, and iPhone.** Touch-first; audio-unlock on first tap; test
+  portrait phone. A desktop-only feature is not done.
+- **Consistent game navigation.** Use the shared start screen (`BS`) + one shared nav
+  frame — Home top-left (exits to the hub), Sound/Pause top-right, sub-screen Back returns
+  to the start screen. Never hand-roll a bespoke per-game back button (see "Consistent
+  game navigation").
+
 - **Kids' product.** Age-appropriate always; preserve content moderation and the
   validate-before-serve fallback in `generate-game.js`.
 - **One shared start screen — change it once, every game updates.** Every game's
@@ -222,6 +232,45 @@ network-agnostic (all Supabase code lives in the React layer).
   `db/seed-*.sql` for the owner to run.
 - **Canonical source is the repo.** Loose copies in any working folder may be stale
   (e.g. a root `platformer-engine.html` predates `public/play.html`). Build from `public/`.
+
+---
+
+## Consistent game navigation
+
+Every game must feel the same to get into, move around, and get out of — the kid should
+never have to relearn "how do I leave / pause" per game. Today this is inconsistent: the
+app wraps each game in its own copy-pasted Back button (survival/breaker/platformer repeat
+the same inline style; tennis differs), in-game controls vary (chess has Pause, others
+don't), and labels drift (Back vs Home). The standard fixes that.
+
+**The three fixed nav positions (same in every game):**
+
+- **Top-left = Home** — leaves the game and returns to the Games hub. One label
+  ("Home"), one style, one position, everywhere. *Within* a game's own sub-screens
+  (a customize panel, a hero locker), the top-left is a **Back** that returns to the
+  start screen — never a second way out of the game.
+- **Top-right = Sound** (and Pause if the game pauses) — matches the start screen header.
+- **Start screen = `buildable-startscreen.js` (BS)** — the consistent way *in* (pick a
+  level / mode). Its back button is wired to the same Home action.
+
+**One shared wrapper, not four.** The React shell wraps every game iframe in a single
+`GameFrame` component that renders the iframe + the standard Home control (consistent
+pill, top-left) and owns the exit. The per-game `SurvivalScreen`/`BreakerScreen`/
+`TennisScreen`/`PlatformerScreen` inline back buttons collapse into this one wrapper, so
+changing the nav once changes it for every game — the same "edit one file" principle as
+the start screen.
+
+**The exit contract (for in-game Home/Back).** A game asks to leave by posting
+`nav:exit` to its parent; the shell returns to the hub. (Mirrors the `mp:`/`BS` pattern —
+the engine stays network-agnostic and shell-agnostic; it just signals intent.)
+`BS`'s back button and any in-game Home button post `nav:exit`.
+
+**Rules:** never hand-roll a bespoke per-game back button or put the exit in a different
+corner; Home is always top-left, Sound/Pause top-right; sub-screen Back returns to the
+start screen, not out of the game; and it all works the same on desktop, iPad, and iPhone
+(big touch targets). Adopt the shared `GameFrame` + `BS` per engine, one at a time, QA
+before/after — breaker is the first start-screen adoption; the nav wrapper rolls out the
+same way.
 
 ---
 

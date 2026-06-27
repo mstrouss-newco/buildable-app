@@ -90,3 +90,16 @@ that already works**:
 - **Roll out one project at a time**, QA the live deploy, and log it in the README.
 
 **Asset organization:** see [`./ASSET-LIBRARY.md`](./ASSET-LIBRARY.md) for exactly where to find and where to send every kind of asset.
+
+## Creations rule (save · share · publish) + cross-platform + navigation
+
+Every kid creation (song, story, game, drawing, any new maker) MUST support all three:
+**save to the kid's library, share by a private read-only link, and publish to the public
+gallery (moderated).** Reuse the shared mechanisms — don't reinvent per maker. A maker
+isn't done until all three work. See [`./CREATIONS.md`](./CREATIONS.md).
+
+Build everything for **desktop, iPad, and iPhone** (touch-first; audio unlocks on the
+first tap; test portrait phone — a desktop-only feature is not done). Use **consistent
+game navigation** — the shared start screen (`buildable-startscreen.js`) and one shared
+nav frame (Home top-left exits to the hub, Sound/Pause top-right), never a bespoke
+per-game back button. See [`./BUILDING-A-GAME.md`](./BUILDING-A-GAME.md).

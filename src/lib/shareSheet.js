@@ -19,13 +19,13 @@ function shareUrl(kind, id) {
 function shareText(kind, title) {
   const name = title || (kind === "song" ? "my song" : "my story");
   return kind === "song"
-    ? `🎵 Listen to "${name}" — a song I made on Buildable Kids!`
-    : `📖 Read "${name}" — a story I made on Buildable Kids!`;
+    ? `Listen to "${name}" — a song I made on Buildable Kids!`
+    : `Read "${name}" — a story I made on Buildable Kids!`;
 }
 
 export async function shareCreation({ kind, id, title }) {
   if (!id) {
-    alert("Save it first, then you can share it! 💾");
+    alert("Save it first, then you can share it!");
     return;
   }
   const url = shareUrl(kind, id);

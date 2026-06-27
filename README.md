@@ -87,6 +87,37 @@ and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 **Owner action for family (cross-device) play:** run `db/create-rt-matches.sql` once in Supabase (if not already), and confirm the parent-account lane env vars are live. Solo + same-screen 2-player work with no setup. **Still TODO:** live QA across two real devices/sessions (the one thing a headless sim can't cover), and optional bespoke background music.
 
+## Creations standard (save · share · publish) + cross-platform + nav rules (June 27 2026)
+
+Audited how kid creations are saved/shared/published and codified the universal rule. Docs
++ one safe fix this pass; the two feature gaps below are tracked for a follow-up.
+
+- **New `CREATIONS.md`** — the rule: EVERY creation type (song, story, game, the planned
+  Art Studio drawing, and any new maker) must support all three — save to the kid's
+  library, share by a private read-only link, and publish to the public gallery
+  (moderated). Documents the three shared mechanisms to reuse (`saved_<type>` + family RLS
+  + `list-<type>`; `shareCreation`/`shareSheet` + a `/<type>.html` viewer;
+  `publish-creation` + moderation), the current coverage matrix, and a checklist for new
+  types. Linked from `AGENTS.md` + `BUILDING-A-GAME.md`.
+- **Cross-platform rule** added to `AGENTS.md` + `BUILDING-A-GAME.md` + `CREATIONS.md`:
+  every maker, viewer, library screen, and game must work on **desktop, iPad, and
+  iPhone** — touch-first, audio-unlock on first tap, test portrait phone, no
+  desktop-only features.
+- **Fixed** `src/lib/shareSheet.js` — removed emojis from the share text + the "save
+  first" alert (no-emoji rule).
+
+- **Consistent game navigation** added to `BUILDING-A-GAME.md`: one standard — Home
+  top-left (leaves to the hub), Sound/Pause top-right, sub-screen Back returns to the
+  start screen; one shared `GameFrame` wrapper instead of the 4 copy-pasted per-game back
+  buttons; in-game Home/BS-back post a `nav:exit` message to the shell. Roll out per
+  engine like `BS`. (Doc/standard now; the `GameFrame` refactor is the follow-up.)
+
+**Audit — current coverage:** songs + stories have all three; games have save + publish
+but **no private share link**. **Open gaps (tracked in CREATIONS.md):** (1) add a
+read-only game viewer (`public/game.html?id=`) + a `game` branch in `shareCreation`;
+(2) `MyStuff.jsx` only has characters/levels/songs tabs — add Stories + Games tabs with
+Share + Publish actions. Both touch live React UI — to do next, confirming scope first.
+
 ## Breaker adopts the shared start screen (BS) + start-screen is now a rule (June 27 2026)
 
 First real adoption of `buildable-startscreen.js`: `public/breaker-engine.html` now renders
