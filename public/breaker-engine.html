@@ -37,6 +37,8 @@
            color:#cdd0ff;background:rgba(26,20,64,.7);border:1px solid #3a2c6e;border-radius:10px;padding:7px 12px;cursor:pointer}
   #helpBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:18px;
            color:#1a0f3a;background:#ffd86b;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+  #backBtn{position:fixed;left:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
+           color:#fff;background:rgba(26,20,64,.78);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
   .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;background:#ffd86b;color:#1a0f3a;
          font-weight:700;padding:12px 22px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
 </style>
@@ -56,6 +58,7 @@
 </div>
 
 <div id="toast" class="toast"></div>
+<button id="backBtn" title="Back to menu">‹ Menu</button>
 <button id="muteBtn">Sound: On</button>
 <button id="helpBtn" title="How to play">?</button>
 
@@ -486,6 +489,7 @@ function show(id,on){ const e=el(id); if(e)e.classList[on?"add":"remove"]("show"
 function toast(msg){ const e=el("toast"); if(!e)return; e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{e.style.display="none";},2600); }
 function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
 function showInGameMute(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"block":"none"; }
+function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=on?"block":"none"; }
 
 let startScreen=null;
 function buildStartCfg(){
@@ -499,7 +503,7 @@ function buildStartCfg(){
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",
     sound: !(BA&&BA.muted), showBack:false, modes:["solo","two"], mode:currentMode, levels, customizeLabel:"Make It Mine" };
 }
-function showMenu(){ state="title"; G=null; show("customize",false); showHelpBtn(false); showInGameMute(false);
+function showMenu(){ state="title"; G=null; show("customize",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
   const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host){ return; }
   const cb={
@@ -512,12 +516,12 @@ function showMenu(){ state="title"; G=null; show("customize",false); showHelpBtn
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb);
   else startScreen.update(buildStartCfg());
 }
-function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showHelpBtn(true); showInGameMute(true); }
+function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showHelpBtn(true); showInGameMute(true); showInGameBack(true); }
 function startPlay(i){ if(BA)BA.unlock(); startLevel(i,null); }
 
 // ----- Make It Mine (customize) — bespoke; opened from the BS start screen -----
 let custTab="look";
-function showCustomize(){ custTab="look"; const host=document.getElementById("start"); if(host)host.style.display="none"; show("customize",true); showHelpBtn(false); showInGameMute(false); renderCustomize(); }
+function showCustomize(){ custTab="look"; const host=document.getElementById("start"); if(host)host.style.display="none"; show("customize",true); showHelpBtn(false); showInGameMute(false); showInGameBack(false); renderCustomize(); }
 function renderCustomize(){ const tabs=el("custTabs"), grid=el("custGrid"); if(!tabs||!grid)return;
   const TAB_LABEL={look:"Look", power:"Power-ups", diff:"How Hard"};
   tabs.innerHTML=""; for(const s of ["look","power","diff"]){ const b=document.createElement("button"); b.className="tab"+(s===custTab?" on":""); b.textContent=TAB_LABEL[s]; b.onclick=()=>{custTab=s;renderCustomize();}; tabs.appendChild(b); }
@@ -554,7 +558,8 @@ function renderDiff(grid){
 
 function wireMenus(){ const bk=el("custBack"); if(bk)bk.onclick=showMenu;
   const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
-  const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; }; }
+  const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; };
+  const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; showMenu(); }; }
 
 function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
 // boot
