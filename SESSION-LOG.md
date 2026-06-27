@@ -1,5 +1,17 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Home redesign SHIPPED to main (Phase 1 + helper + 3D heroes)
+- Merged feature/home-redesign -> main. Live changes: new kid home (welcome, your-move
+  chess card, jump-back-in thumbnails, 4 colored-app-icon make tiles w/ 2-player tags),
+  Chess+Typing moved into Games picker, Trending list (empty-state until kids publish),
+  FLOATING HELPER = the kid's helper character image (tap to talk, x to hide), new
+  Helper Lab screen (SCREEN_HELPER) to pick-from-library or make-your-own helper (stored on
+  the kid object + localStorage bk_helper_v1; account-mode DB persist + voice = Phase 2).
+- Hero/helper picker now prefers modern3d (3D render) over watercolor (_storyAssets
+  STYLE_ORDER); built modern3d for all 24 library characters (cached in narration_cache).
+- Responsive phone/tablet/desktop. Build passes. QA'd on preview before merge.
+
+
 ## 2026-06-27 — Home screen redesign (Phase 1) [branch: feature/home-redesign]
 - Rebuilt `HomeScreen` in `src/BuildableKids.jsx` to the approved new layout:
   - **Helper greeting**: buddy avatar + "Welcome back, {name}!" with a dynamic line
