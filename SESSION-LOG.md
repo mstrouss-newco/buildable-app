@@ -1,5 +1,20 @@
 # Buildable Kids — Session Log
 
+## Top Creations board — central library publishing, hearts/plays, remix (June 26 2026)
+
+Mike: "lets have top songs, games, and stories... reflection of our central library. first name of kid... kids can toggle on and off publishing their creations." Choices: private-by-default, first name only, real hearts+plays, remix included.
+
+**DB** (db/create-publishing.sql — Mike ran it): published/published_at/play_count/heart_count on saved_songs + saved_stories; heart_count on published_games; new creation_hearts(kind,creation_id,device_id unique) so hearts toggle without double-counting. Songs/stories publish by flagging the EXISTING saved row (no data duplication → remix just reads the row).
+
+**Backend**: /api/top-creations (kind=song|game|story, ranked hearts*3+plays, public-safe cols only, marks which the device hearted), /api/heart-creation (toggle + recount), /api/play-creation (increment), /api/publish-creation (song/story flag by device_id ownership; game = approved/hidden). list-songs + list-stories now select the new cols with a pre-migration fallback so nothing breaks before the SQL is run.
+
+**App**: new TopBoard.jsx — home "Top Creations" tile → SCREEN_TOP. Leaderboard rows (rank medal, cover, title, creator first name, plays, tappable heart, Play/Read, Remix). Songs play in-row via SongPlayer (now has onPlay→count). Games open /play/:id, stories /story.html?id.
+
+**Publish toggles (private by default)**: My Songs cards have a globe toggle (grey=private, green=public); saved story cards have one too; games get a "Make private" button after publishing (publish-game still does the initial publish).
+
+**Remix**: songs prefill the whole Music wizard from meta.choices (keepSong now stores choices); stories open the picker with the title as the idea seed; games route to the game picker. Deeper game/story prefill (theme/character/world slugs) is a later refinement.
+
+
 ## Game: 7 new worlds for the platformer art library (June 26 2026)
 
 The runner engine (`public/play.html`) could already swap worlds via `GAME_CONFIG.world`,
