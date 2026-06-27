@@ -10,43 +10,47 @@
   html,body{margin:0;height:100%;background:#0b1030;overflow:hidden;touch-action:none;
     font-family:'Fredoka',-apple-system,sans-serif;color:#fff;-webkit-user-select:none;user-select:none}
   #app{position:fixed;inset:0;display:flex;flex-direction:column}
-  #top{display:flex;align-items:center;gap:10px;padding:7px 12px 7px 92px;background:#120b30;flex:0 0 auto;z-index:5}
-  #top .t{font-weight:700;font-size:19px;letter-spacing:.3px}
-  .spacer{flex:1}
-  #stage{flex:1 1 auto;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:6px}
+  /* TOP bar: title + do-actions + my art + sound */
+  #top{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 84px;background:#120b30;z-index:5}
+  #top .t{font-weight:700;font-size:18px;letter-spacing:.3px;margin-right:4px}
+  /* MIDDLE: left rail | canvas | right rail */
+  #mid{flex:1 1 auto;display:flex;min-height:0}
+  .rail{flex:0 0 auto;background:var(--tray);display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:7px 6px;overflow-y:auto;overflow-x:hidden}
+  #left{width:78px;border-right:2px solid var(--line)}
+  #right{width:70px;border-left:2px solid var(--line)}
+  #stage{flex:1 1 auto;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;padding:8px}
   #paper{background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.45);max-width:100%;max-height:100%;touch-action:none}
-  /* the "art desk": every tool visible, grouped into clearly separated zones */
-  #tray{flex:0 0 auto;background:var(--tray);border-top:2px solid var(--line);padding:8px;max-height:48vh;overflow-y:auto}
-  .groups{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;justify-content:center}
-  .g{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:6px 9px 8px;display:flex;flex-direction:column;gap:5px}
-  .gh{display:flex;align-items:center;gap:6px;color:#a99fe0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-  .gh svg{display:block}
+  /* BOTTOM bar: size / mirror / style / stamps */
+  #bottom{flex:0 0 auto;background:var(--tray);border-top:2px solid var(--line);padding:6px 8px;display:flex;gap:8px;align-items:stretch;justify-content:center;overflow-x:auto}
+  .railhdr{font-size:10px;font-weight:700;color:#a99fe0;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:4px}
+  .g{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:5px 8px 7px;display:flex;flex-direction:column;gap:5px;flex:0 0 auto}
+  .gh{display:flex;align-items:center;gap:6px;color:#a99fe0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
   .items{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-  .bt{width:60px;height:58px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#cfc8ff}
+  .bt{width:62px;height:56px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#cfc8ff;flex:0 0 auto}
   .bt.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(126,224,160,.4);color:#fff}
   .bt .lab{font-size:10px;font-weight:600}
-  .sw{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.28);cursor:pointer}
+  .sw{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.28);cursor:pointer;flex:0 0 auto}
   .sw.on{border-color:#fff;box-shadow:0 0 0 3px var(--accent)}
-  .mi{width:50px;height:50px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .mi{width:50px;height:50px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
   .mi.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(126,224,160,.4)}
-  .iconbtn{width:54px;height:54px;border-radius:15px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .iconbtn{width:48px;height:48px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex:0 0 auto}
   .iconbtn:active{transform:translateY(2px)}
-  .iconbtn.big{width:62px;height:62px}
   .iconbtn.save{background:#fff0f5;border-color:#ff9bbb}
-  input[type=color]{width:38px;height:38px;border:none;background:none;border-radius:50%;cursor:pointer;padding:0}
+  .spacer{flex:1}
+  input[type=color]{width:42px;height:42px;border:none;background:none;border-radius:50%;cursor:pointer;padding:0;flex:0 0 auto}
   .ov{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(8,6,24,.74)}
   .ov.show{display:flex}
   .card{background:linear-gradient(180deg,#1a1248,#241152);border:2px solid var(--line);border-radius:22px;padding:20px;max-width:94vw;max-height:88vh;overflow:auto;text-align:center}
   .card h2{margin:0 0 14px;font-size:22px}
   .pickwrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:640px}
   .pick{width:92px;height:92px;border-radius:16px;background:#fff;border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .pick img{max-width:84px;max-height:84px}
-  .pick canvas{width:84px;height:62px}
+  .pick img{max-width:84px;max-height:84px}.pick canvas{width:84px;height:62px}
   .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
   .tab{font-weight:700;font-size:14px;color:#cdd0ff;background:#241a52;border:2px solid var(--line);border-radius:11px;padding:8px 15px;cursor:pointer}
   .tab.on{background:var(--accent);color:#1a0f3a;border-color:var(--accent)}
-  #toast{position:fixed;left:50%;bottom:52vh;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#2b1a66;border:2px solid var(--accent);color:#fff;font-weight:600;padding:10px 18px;border-radius:14px;z-index:40;pointer-events:none}
+  #toast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-20px);opacity:0;transition:.25s;background:#2b1a66;border:2px solid var(--accent);color:#fff;font-weight:600;padding:10px 18px;border-radius:14px;z-index:40;pointer-events:none}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   input[type=text]{font-family:inherit;font-size:18px;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:#0f0a2c;color:#fff;width:260px;max-width:70vw;text-align:center}
 </style>
@@ -54,37 +58,39 @@
 <body>
 <div id="app">
   <div id="top">
-    <div class="t">Art Studio</div><div class="spacer"></div>
+    <div class="t">Art Studio</div>
+    <button class="iconbtn" id="undoBtn" aria-label="Undo"></button>
+    <button class="iconbtn" id="redoBtn" aria-label="Redo"></button>
+    <button class="iconbtn" id="clearBtn" aria-label="Start over"></button>
+    <button class="iconbtn save" id="saveBtn" aria-label="Save"></button>
+    <span class="spacer"></span>
     <button class="iconbtn" id="galleryBtn" aria-label="My art"></button>
     <button class="iconbtn" id="soundBtn" aria-label="Sound"></button>
   </div>
-  <div id="stage"><canvas id="paper"></canvas></div>
-  <div id="tray"><div class="groups" id="groups"></div></div>
+  <div id="mid">
+    <div class="rail" id="left"></div>
+    <div id="stage"><canvas id="paper"></canvas></div>
+    <div class="rail" id="right"></div>
+  </div>
+  <div id="bottom"></div>
 </div>
 
 <div class="ov" id="clearOv"><div class="card"><h2>Start over?</h2>
-  <div><button class="iconbtn big" id="clearNo" aria-label="Keep it" style="background:#10391f;border-color:#3DD06A"></button>
-  <button class="iconbtn big" id="clearYes" aria-label="Start over" style="background:#3a1430;border-color:#ff7a90"></button></div></div></div>
-
-<div class="ov" id="stickOv"><div class="card"><h2>Stickers</h2><div class="tabs" id="stickTabs"></div>
-  <div class="pickwrap" id="stickWrap"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="stickClose" aria-label="Done"></button></div></div></div>
-
+  <div><button class="iconbtn" id="clearNo" aria-label="Keep it" style="width:62px;height:62px;background:#10391f;border-color:#3DD06A"></button>
+  <button class="iconbtn" id="clearYes" aria-label="Start over" style="width:62px;height:62px;background:#3a1430;border-color:#ff7a90"></button></div></div></div>
+<div class="ov" id="stickOv"><div class="card"><h2>Stickers</h2><div class="tabs" id="stickTabs"></div><div class="pickwrap" id="stickWrap"></div>
+  <div style="margin-top:16px"><button class="iconbtn" id="stickClose" style="width:62px;height:62px" aria-label="Done"></button></div></div></div>
 <div class="ov" id="shapeOv"><div class="card"><h2>Shapes</h2><div class="pickwrap" id="shapeWrap"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="shapeClose" aria-label="Done"></button></div></div></div>
-
+  <div style="margin-top:16px"><button class="iconbtn" id="shapeClose" style="width:62px;height:62px" aria-label="Done"></button></div></div></div>
 <div class="ov" id="bgOv"><div class="card"><h2>Scene</h2><div class="pickwrap" id="bgWrap"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="bgClose" aria-label="Done"></button></div></div></div>
-
+  <div style="margin-top:16px"><button class="iconbtn" id="bgClose" style="width:62px;height:62px" aria-label="Done"></button></div></div></div>
 <div class="ov" id="galleryOv"><div class="card"><h2>My Art</h2><div class="pickwrap" id="galleryWrap"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="galleryClose" aria-label="Close"></button></div></div></div>
-
+  <div style="margin-top:16px"><button class="iconbtn" id="galleryClose" style="width:62px;height:62px" aria-label="Close"></button></div></div></div>
 <div class="ov" id="saveOv"><div class="card"><h2>Save your art</h2>
   <input type="text" id="artTitle" placeholder="My masterpiece" maxlength="40"><br><br>
   <label style="display:block;margin:6px 0 16px;font-size:15px;opacity:.85"><input type="checkbox" id="shareChk"> Also show my family</label>
-  <div><button class="iconbtn big" id="saveCancel" aria-label="Not yet"></button>
-  <button class="iconbtn save big" id="saveGo" aria-label="Save it"></button></div></div></div>
-
+  <div><button class="iconbtn" id="saveCancel" style="width:62px;height:62px" aria-label="Not yet"></button>
+  <button class="iconbtn save" id="saveGo" style="width:62px;height:62px" aria-label="Save it"></button></div></div></div>
 <div id="toast"></div>
 
 <script src="/buildable-renders.js"></script>
@@ -176,27 +182,26 @@
   function autosave(){ try{ localStorage.setItem("artstudio:wip",JSON.stringify({ops:S.ops,style:S.style,bg:S.bg})); }catch(e){} }
   function restoreWip(){ try{ var w=JSON.parse(localStorage.getItem("artstudio:wip")||"null"); if(w&&w.ops){ S.ops=w.ops.filter(function(o){return o.t==="stroke"||o.t==="stamp"||o.t==="fill";}); if(w.style)S.style=w.style; if(w.bg)S.bg=w.bg; } }catch(e){} }
 
-  // ---------- icons ----------
-  function ic(inner,w){ w=w||30; return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 32 32" fill="none">'+inner+'</svg>'; }
+  function ic(inner,w){ w=w||28; return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 32 32" fill="none">'+inner+'</svg>'; }
   var ICONS={
-    gallery: ic('<rect x="6" y="9" width="20" height="15" rx="2.5" stroke="#dcd6ff" stroke-width="2.4"/><circle cx="12" cy="14" r="2.2" fill="#ffd23f"/><path d="M7 22 l5-4 4 3 3-2 6 5" stroke="#7ee0a0" stroke-width="2.2" stroke-linejoin="round"/>',28),
-    soundOn: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#dcd6ff"/><path d="M20 12 q3 4 0 8 M23.5 9 q6 7 0 14" stroke="#7ee0a0" stroke-width="2.2" stroke-linecap="round"/>',28),
-    soundOff: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#9b93d6"/><path d="M21 12 l7 8 M28 12 l-7 8" stroke="#ff7a90" stroke-width="2.6" stroke-linecap="round"/>',28),
-    undo: ic('<path d="M11 9 L6 14 L11 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14 H18 a7 7 0 1 1 0 14 H13" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>',28),
-    redo: ic('<path d="M21 9 L26 14 L21 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 14 H14 a7 7 0 1 0 0 14 H19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>',28),
-    trash: ic('<path d="M6 9 H26" stroke="#ffb3c1" stroke-width="2.6" stroke-linecap="round"/><path d="M12 9 V6.5 H20 V9" stroke="#ffb3c1" stroke-width="2.4"/><path d="M9 9 L10.5 27 H21.5 L23 9" stroke="#ffb3c1" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 13 V23 M18 13 V23" stroke="#ffb3c1" stroke-width="2.2" stroke-linecap="round"/>',28),
+    gallery: ic('<rect x="6" y="9" width="20" height="15" rx="2.5" stroke="#dcd6ff" stroke-width="2.4"/><circle cx="12" cy="14" r="2.2" fill="#ffd23f"/><path d="M7 22 l5-4 4 3 3-2 6 5" stroke="#7ee0a0" stroke-width="2.2" stroke-linejoin="round"/>'),
+    soundOn: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#dcd6ff"/><path d="M20 12 q3 4 0 8 M23.5 9 q6 7 0 14" stroke="#7ee0a0" stroke-width="2.2" stroke-linecap="round"/>'),
+    soundOff: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#9b93d6"/><path d="M21 12 l7 8 M28 12 l-7 8" stroke="#ff7a90" stroke-width="2.6" stroke-linecap="round"/>'),
+    undo: ic('<path d="M11 9 L6 14 L11 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14 H18 a7 7 0 1 1 0 14 H13" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>'),
+    redo: ic('<path d="M21 9 L26 14 L21 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 14 H14 a7 7 0 1 0 0 14 H19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>'),
+    trash: ic('<path d="M6 9 H26" stroke="#ffb3c1" stroke-width="2.6" stroke-linecap="round"/><path d="M12 9 V6.5 H20 V9" stroke="#ffb3c1" stroke-width="2.4"/><path d="M9 9 L10.5 27 H21.5 L23 9" stroke="#ffb3c1" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 13 V23 M18 13 V23" stroke="#ffb3c1" stroke-width="2.2" stroke-linecap="round"/>'),
     heart: ic('<path d="M16 27 C16 27 4 19.5 4 11.5 C4 7.4 7.2 4.5 11 4.5 C13.5 4.5 15.2 6 16 7.6 C16.8 6 18.5 4.5 21 4.5 C24.8 4.5 28 7.4 28 11.5 C28 19.5 16 27 16 27 Z" fill="#ff5d8f"/>',30),
     check: ic('<path d="M7 17 L13 23 L25 9" stroke="#7ee0a0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',30),
-    x: ic('<path d="M9 9 L23 23 M23 9 L9 23" stroke="#dcd6ff" stroke-width="3.4" stroke-linecap="round"/>',28),
+    x: ic('<path d="M9 9 L23 23 M23 9 L9 23" stroke="#dcd6ff" stroke-width="3.4" stroke-linecap="round"/>'),
     sticker: ic('<rect x="6" y="6" width="20" height="20" rx="6" fill="none" stroke="#ffd23f" stroke-width="2.6"/><path d="M11 16l3 3 7-8" stroke="#ffd23f" stroke-width="2.6" fill="none" stroke-linecap="round"/>',30),
     shapeStar: ic('<path d="M16 5l2.6 7.2L26 13l-6 4.2L21.5 25 16 20.5 10.5 25 12 17.2 6 13l7.4-.8z" fill="#ffd23f"/>',30),
     scene: ic('<rect x="4" y="6" width="24" height="20" rx="3" stroke="#cfc8ff" stroke-width="2.4"/><circle cx="11" cy="13" r="3" fill="#ffd23f"/><path d="M5 23 L12 16 L17 21 L22 16 L27 22" stroke="#7ee0a0" stroke-width="2.4" stroke-linejoin="round"/>',30),
-    hdrBrush: ic('<rect x="13" y="4" width="6" height="13" rx="2" fill="#a99fe0"/><path d="M13 17h6l-3 8z" fill="#a99fe0"/>',16),
-    hdrColors: ic('<circle cx="9" cy="12" r="5" fill="#ff7a90"/><circle cx="20" cy="10" r="5" fill="#ffd23f"/><circle cx="15" cy="21" r="5" fill="#3a86ff"/>',16),
-    hdrSize: ic('<circle cx="9" cy="16" r="3" fill="#a99fe0"/><circle cx="22" cy="16" r="8" fill="#a99fe0"/>',16),
-    hdrMagic: ic('<path d="M16 4l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#a99fe0"/>',16)
+    hdrBrush: ic('<rect x="13" y="4" width="6" height="13" rx="2" fill="#a99fe0"/><path d="M13 17h6l-3 8z" fill="#a99fe0"/>',14),
+    hdrColors: ic('<circle cx="9" cy="12" r="5" fill="#ff7a90"/><circle cx="20" cy="10" r="5" fill="#ffd23f"/><circle cx="15" cy="21" r="5" fill="#3a86ff"/>',14),
+    hdrSize: ic('<circle cx="9" cy="16" r="3" fill="#a99fe0"/><circle cx="22" cy="16" r="8" fill="#a99fe0"/>',14),
+    hdrMagic: ic('<path d="M16 4l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#a99fe0"/>',14)
   };
-  function brushGlyph(b){ var sz=32, col=b.erase?"#ffb3c1":(b.fill?"#7ee0a0":"#cfc8ff"); function w(i){ return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32">'+i+'</svg>'; }
+  function brushGlyph(b){ var sz=30, col=b.erase?"#ffb3c1":(b.fill?"#7ee0a0":"#cfc8ff"); function w(i){ return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32">'+i+'</svg>'; }
     if(b.fill)    return w('<path d="M6 16l10-10 9 9-10 10z" fill="none" stroke="'+col+'" stroke-width="2.4"/><path d="M24 20c2 3 3 4 3 6a3 3 0 0 1-6 0c0-2 1-3 3-6z" fill="'+col+'"/>');
     if(b.erase)   return w('<rect x="6" y="13" width="16" height="9" rx="2" transform="rotate(-30 14 17)" fill="'+col+'"/>');
     if(b.rainbow) return w('<path d="M5 24a11 11 0 0 1 22 0" fill="none" stroke="#ff5d5d" stroke-width="3"/><path d="M9 24a7 7 0 0 1 14 0" fill="none" stroke="#ffd23f" stroke-width="3"/><path d="M13 24a3 3 0 0 1 6 0" fill="none" stroke="#3a86ff" stroke-width="3"/>');
@@ -211,71 +216,53 @@
     if(b.id==="chalk")  return w('<rect x="12" y="6" width="7" height="18" rx="2" fill="#eaf6ff"/>');
     return w('<rect x="13" y="5" width="6" height="14" rx="2" fill="'+col+'"/><path d="M13 19h6l-3 7z" fill="'+col+'"/>');
   }
-  function mirrorIcon(m){ var sz=32, head='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32" fill="none">';
+  function mirrorIcon(m){ var sz=30, head='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32" fill="none">';
     if(m===1) return head+'<circle cx="16" cy="16" r="11" stroke="#cfc8ff" stroke-width="2.4"/><path d="M16 10 l3 5 -6 0 z" fill="#ffd23f"/></svg>';
     if(m==="V") return head+'<rect x="5" y="6" width="22" height="20" rx="3" stroke="#cfc8ff" stroke-width="2.2"/><line x1="16" y1="6" x2="16" y2="26" stroke="#7ee0a0" stroke-width="2" stroke-dasharray="3 3"/><path d="M14 20 l-5 -7 5 0 z" fill="#ffd23f"/><path d="M18 20 l5 -7 -5 0 z" fill="#ffd23f"/></svg>';
     if(m==="H") return head+'<rect x="6" y="5" width="20" height="22" rx="3" stroke="#cfc8ff" stroke-width="2.2"/><line x1="6" y1="16" x2="26" y2="16" stroke="#7ee0a0" stroke-width="2" stroke-dasharray="3 3"/><path d="M13 14 l7 -5 0 5 z" fill="#ffd23f"/><path d="M13 18 l7 5 0 -5 z" fill="#ffd23f"/></svg>';
     var cnt=m/2,lines=""; for(var i=0;i<cnt;i++){ var a=Math.PI*i/cnt,dx=Math.cos(a)*11,dy=Math.sin(a)*11; lines+='<line x1="'+(16-dx).toFixed(1)+'" y1="'+(16-dy).toFixed(1)+'" x2="'+(16+dx).toFixed(1)+'" y2="'+(16+dy).toFixed(1)+'" stroke="#7ee0a0" stroke-width="1.8"/>'; }
     return head+'<circle cx="16" cy="16" r="11" stroke="#cfc8ff" stroke-width="2.2"/>'+lines+'<circle cx="16" cy="16" r="2.2" fill="#ffd23f"/></svg>'; }
-  function styleIcon(id){ var sz=32, b='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32">';
+  function styleIcon(id){ var sz=30, b='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32">';
     if(id==="paper") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#fff" stroke="#cfc8ff" stroke-width="1.5"/><path d="M9 20 q5 -10 14 -4" stroke="#b9b3e0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
     if(id==="chalk") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#243240"/><path d="M9 20 q5 -10 14 -4" stroke="#eaf6ff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
     if(id==="neon") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#0a0a1e"/><path d="M9 20 q5 -10 14 -4" stroke="#67e8f9" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"/><path d="M9 20 q5 -10 14 -4" stroke="#bff7ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
     if(id==="3d") return b+'<rect x="9" y="9" width="18" height="18" rx="4" fill="#6a4fd0"/><rect x="5" y="5" width="18" height="18" rx="4" fill="#b9a6ff"/></svg>';
     if(id==="pixel"){ var g='<g fill="#cfc8ff">'; for(var r=0;r<3;r++)for(var c=0;c<3;c++){ if((r+c)%2===0) g+='<rect x="'+(7+c*6)+'" y="'+(7+r*6)+'" width="6" height="6"/>'; } return b+'<rect x="4" y="4" width="24" height="24" rx="4" fill="#241a52"/>'+g+'</g></svg>'; }
     return b+'</svg>'; }
-  function sizeDotSvg(sz){ var r=Math.max(4,Math.min(18,sz/2)); return '<svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="'+r+'" fill="#cfc8ff"/></svg>'; }
+  function sizeDotSvg(sz){ var r=Math.max(4,Math.min(18,sz/2)); return '<svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="'+r+'" fill="#cfc8ff"/></svg>'; }
 
-  // ---------- build the visible grouped desk ----------
+  // ---------- build the 4-edge frame ----------
   function el(tag,cls,html){ var d=document.createElement(tag); if(cls)d.className=cls; if(html!=null)d.innerHTML=html; return d; }
-  function group(headerIcon,label){ var g=el("div","g"); g.appendChild(el("div","gh",headerIcon+'<span>'+label+'</span>')); var items=el("div","items"); g.appendChild(items); g._items=items; return g; }
+  function groupCard(headerIcon,label){ var g=el("div","g"); g.appendChild(el("div","gh",headerIcon+'<span>'+label+'</span>')); var items=el("div","items"); g.appendChild(items); g._items=items; return g; }
   function buildUI(){
-    var root=document.getElementById("groups"); root.innerHTML="";
-    // BRUSHES
-    var gB=group(ICONS.hdrBrush,"Brushes");
+    // LEFT rail = brushes
+    var left=document.getElementById("left"); left.innerHTML="";
+    left.appendChild(el("div","railhdr",ICONS.hdrBrush+'<span>Brush</span>'));
     CFG.brushes.forEach(function(b){ var t=el("div","bt"+(b.id===S.brush.id?" on":""), brushGlyph(b)+'<span class="lab">'+b.name+'</span>'); t.dataset.bid=b.id;
-      t.onclick=function(){ S.brush=b; syncSel("bt","bid",S.brush.id); playSfx(b.sound); }; gB._items.appendChild(t); });
-    root.appendChild(gB);
-    // COLORS
-    var gC=group(ICONS.hdrColors,"Colors");
+      t.onclick=function(){ S.brush=b; syncSel("#left .bt","bid",S.brush.id); playSfx(b.sound); }; left.appendChild(t); });
+    // RIGHT rail = colors
+    var right=document.getElementById("right"); right.innerHTML="";
+    right.appendChild(el("div","railhdr",ICONS.hdrColors+'<span>Color</span>'));
     CFG.palette.forEach(function(col){ var sw=el("div","sw"+(col===S.color?" on":"")); sw.style.background=col; if(col==="#ffffff") sw.style.border="3px solid #888"; sw.dataset.col=col;
-      sw.onclick=function(){ S.color=col; addRecent(col); syncSel("sw","col",S.color); playSfx("pop"); }; gC._items.appendChild(sw); });
+      sw.onclick=function(){ S.color=col; addRecent(col); syncSel("#right .sw","col",S.color); playSfx("pop"); }; right.appendChild(sw); });
     var picker=el("input"); picker.type="color"; picker.value=(S.color&&S.color[0]==="#")?S.color:"#33aaff";
-    picker.oninput=function(){ S.color=picker.value; addRecent(picker.value); syncSel("sw","col",S.color); }; gC._items.appendChild(picker);
-    root.appendChild(gC);
-    // SIZE
-    var gS=group(ICONS.hdrSize,"Size");
-    CFG.sizes.forEach(function(sz){ var t=el("div","mi"+(sz===S.size?" on":""), sizeDotSvg(sz)); t.dataset.sz=String(sz);
-      t.onclick=function(){ S.size=sz; syncSel("mi","sz",String(sz),"#groups"); playSfx("pop"); }; gS._items.appendChild(t); });
-    root.appendChild(gS);
-    // MIRROR
-    var gM=group(ICONS.hdrMagic,"Mirror");
-    CFG.mirror.forEach(function(m){ var t=el("div","mi"+(m===S.mirror?" on":""), mirrorIcon(m)); t.dataset.m=String(m);
-      t.onclick=function(){ S.mirror=m; syncSel("mi","m",String(m)); playSfx("pop"); }; gM._items.appendChild(t); });
-    root.appendChild(gM);
-    // STYLE
-    var gT=group(ICONS.hdrMagic,"Style");
-    CFG.styles.forEach(function(st){ var t=el("div","mi"+(st.id===S.style?" on":""), styleIcon(st.id)); t.dataset.st=st.id;
-      t.onclick=function(){ S.style=st.id; S.bg=st.bg; redraw(); syncSel("mi","st",S.style); playSfx("pop"); }; gT._items.appendChild(t); });
-    root.appendChild(gT);
-    // STAMPS
-    var gP=group(ICONS.shapeStar,"Stamps");
+    picker.oninput=function(){ S.color=picker.value; addRecent(picker.value); syncSel("#right .sw","col",S.color); }; right.appendChild(picker);
+    // BOTTOM bar = size / mirror / style / stamps
+    var bottom=document.getElementById("bottom"); bottom.innerHTML="";
+    var gS=groupCard(ICONS.hdrSize,"Size"); CFG.sizes.forEach(function(sz){ var t=el("div","mi"+(sz===S.size?" on":""), sizeDotSvg(sz)); t.dataset.sz=String(sz);
+      t.onclick=function(){ S.size=sz; syncSel("#bottom .mi","sz",String(sz)); playSfx("pop"); }; gS._items.appendChild(t); }); bottom.appendChild(gS);
+    var gM=groupCard(ICONS.hdrMagic,"Mirror"); CFG.mirror.forEach(function(m){ var t=el("div","mi"+(m===S.mirror?" on":""), mirrorIcon(m)); t.dataset.m=String(m);
+      t.onclick=function(){ S.mirror=m; syncSel("#bottom .mi","m",String(m)); playSfx("pop"); }; gM._items.appendChild(t); }); bottom.appendChild(gM);
+    var gT=groupCard(ICONS.hdrMagic,"Style"); CFG.styles.forEach(function(st){ var t=el("div","mi"+(st.id===S.style?" on":""), styleIcon(st.id)); t.dataset.st=st.id;
+      t.onclick=function(){ S.style=st.id; S.bg=st.bg; redraw(); syncSel("#bottom .mi","st",S.style); playSfx("pop"); }; gT._items.appendChild(t); }); bottom.appendChild(gT);
+    var gP=groupCard(ICONS.shapeStar,"Stamps");
     var bShapes=el("div","mi",ICONS.shapeStar); bShapes.onclick=openShapes; gP._items.appendChild(bShapes);
     var bStick=el("div","mi",ICONS.sticker); bStick.onclick=function(){ S.brush=findBrush("sticker"); openStickers(); }; gP._items.appendChild(bStick);
-    var bScene=el("div","mi",ICONS.scene); bScene.onclick=openBg; gP._items.appendChild(bScene);
-    root.appendChild(gP);
-    // DO (actions)
-    var gD=group("","Do");
-    var u=el("button","iconbtn",ICONS.undo); u.onclick=undo; gD._items.appendChild(u);
-    var r=el("button","iconbtn",ICONS.redo); r.onclick=redoOp; gD._items.appendChild(r);
-    var cl=el("button","iconbtn",ICONS.trash); cl.onclick=function(){ document.getElementById("clearOv").classList.add("show"); }; gD._items.appendChild(cl);
-    var sv=el("button","iconbtn save big",ICONS.heart); sv.onclick=function(){ document.getElementById("saveOv").classList.add("show"); }; gD._items.appendChild(sv);
-    root.appendChild(gD);
+    var bScene=el("div","mi",ICONS.scene); bScene.onclick=openBg; gP._items.appendChild(bScene); bottom.appendChild(gP);
   }
-  function syncSel(cls,attr,val,scope){ var sel=(scope||"#groups")+" ."+cls; document.querySelectorAll(sel).forEach(function(e){ if(e.dataset && (attr in e.dataset)) e.classList.toggle("on", e.dataset[attr]===val); }); }
+  function syncSel(sel,attr,val){ document.querySelectorAll(sel).forEach(function(e){ if(e.dataset && (attr in e.dataset)) e.classList.toggle("on", e.dataset[attr]===val); }); }
   function addRecent(col){ if(S.recent.indexOf(col)<0){ S.recent.unshift(col); S.recent=S.recent.slice(0,6); } }
 
-  // ---------- shapes / stickers / scene / gallery (big collections in overlays) ----------
   function tileMedia(onclick){ var d=el("div","pick"); d.onclick=onclick; return d; }
   function openShapes(){ var ov=document.getElementById("shapeOv"), wrap=document.getElementById("shapeWrap"); wrap.innerHTML="";
     CFG.shapes.forEach(function(sh){ var cv=document.createElement("canvas"); cv.width=84; cv.height=62; try{ BR.shape(cv.getContext("2d"),sh,42,31,52,S.color); }catch(e){}
@@ -323,6 +310,9 @@
     paper.addEventListener("mousedown",down); paper.addEventListener("touchstart",down,{passive:false});
     window.addEventListener("mousemove",move); window.addEventListener("touchmove",move,{passive:false});
     window.addEventListener("mouseup",up); window.addEventListener("touchend",up);
+    document.getElementById("undoBtn").onclick=undo; document.getElementById("redoBtn").onclick=redoOp;
+    document.getElementById("clearBtn").onclick=function(){ document.getElementById("clearOv").classList.add("show"); };
+    document.getElementById("saveBtn").onclick=function(){ document.getElementById("saveOv").classList.add("show"); };
     document.getElementById("clearNo").onclick=function(){ document.getElementById("clearOv").classList.remove("show"); };
     document.getElementById("clearYes").onclick=function(){ document.getElementById("clearOv").classList.remove("show"); clearAll(); playSfx("art_undo"); };
     document.getElementById("saveCancel").onclick=function(){ document.getElementById("saveOv").classList.remove("show"); };
@@ -336,8 +326,10 @@
       if(BA&&BA.toggleMute) try{BA.toggleMute();}catch(_){} document.getElementById("soundBtn").innerHTML=S.muted?ICONS.soundOff:ICONS.soundOn; if(!S.muted) playSfx("pop"); };
     window.addEventListener("resize", fitCanvas);
   }
-  function paintStatic(){ var g=document.getElementById("galleryBtn"); if(g) g.innerHTML=ICONS.gallery; var s=document.getElementById("soundBtn"); if(s) s.innerHTML=S.muted?ICONS.soundOff:ICONS.soundOn;
-    ["clearNo","check"].length; document.getElementById("clearNo").innerHTML=ICONS.check; document.getElementById("clearYes").innerHTML=ICONS.trash;
+  function paintStatic(){ document.getElementById("undoBtn").innerHTML=ICONS.undo; document.getElementById("redoBtn").innerHTML=ICONS.redo;
+    document.getElementById("clearBtn").innerHTML=ICONS.trash; document.getElementById("saveBtn").innerHTML=ICONS.heart;
+    document.getElementById("galleryBtn").innerHTML=ICONS.gallery; document.getElementById("soundBtn").innerHTML=S.muted?ICONS.soundOff:ICONS.soundOn;
+    document.getElementById("clearNo").innerHTML=ICONS.check; document.getElementById("clearYes").innerHTML=ICONS.trash;
     document.getElementById("saveCancel").innerHTML=ICONS.x; document.getElementById("saveGo").innerHTML=ICONS.heart;
     document.getElementById("stickClose").innerHTML=ICONS.check; document.getElementById("shapeClose").innerHTML=ICONS.check;
     document.getElementById("bgClose").innerHTML=ICONS.check; document.getElementById("galleryClose").innerHTML=ICONS.x; }

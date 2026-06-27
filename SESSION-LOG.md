@@ -1,5 +1,13 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Art Studio: framed layout (tools on all 4 edges, big canvas)
+- The bottom panel had shrunk the canvas to ~1/3 of the page. Reframed: tools now ring the
+  canvas on all four edges so the center drawing area is large.
+  - LEFT rail = Brushes (all 14, scrolls). RIGHT rail = Colors (+ color picker).
+  - BOTTOM bar = Size / Mirror / Style / Stamps (grouped). TOP bar = Undo/Redo/Clear/Save +
+    My Art + Sound. Each region holds one category so nothing feels crowded.
+- Active choice highlights green. All drawing/sound/save/gallery logic unchanged; qa-art.mjs green.
+
 ## 2026-06-27 — Art Studio: "art desk" — every tool visible, grouped into labeled zones
 - Picker-only version hid too much (kid couldn't find things). Rebuilt so EVERYTHING is on
   screen at once, organized into clearly separated zones each with a little icon header:
