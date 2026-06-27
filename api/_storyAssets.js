@@ -31,8 +31,8 @@ function cacheKey(kind, slug, style) {
   return "lib:" + crypto.createHash("sha1").update(kind + "|" + slug + "|" + style).digest("hex");
 }
 
-// Styles to look across (watercolor first = the story maker's default).
-const STYLE_ORDER = ["watercolor", "modern3d", "modern", "papercut"];
+// Styles to look across (modern3d first = picker prefers the 3D/modern render).
+const STYLE_ORDER = ["modern3d", "modern", "watercolor", "papercut"];
 
 // Return story assets of `kind` ("world" | "character") whose base image is
 // already cached in narration_cache in ANY style. One asset per slug, using the
