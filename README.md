@@ -1915,3 +1915,33 @@ piled on top of each game's own sound on/off control. Now both FABs show only on
 lobby/menu screens (`SCREEN_HOME, SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP,
 SCREEN_INTRO`); they're hidden over games and the story/music makers. Both are also lifted
 by `env(safe-area-inset-bottom)` so they clear the iPhone home indicator.
+
+## Buildable Breaker — customizable brick breaker (June 27 2026)
+
+A classic **paddle-and-ball brick breaker** as a new game type, built the same way as the
+others: a fixed **engine** (`public/breaker-engine.html`) plus a data-driven `GAME_CONFIG`
+(brick layouts + difficulty knobs). Touch **drag** to move the paddle, or **arrow keys / A-D**;
+**tap / Space** launches. Six levels (full, pyramid, checker, gaps, diamond, boss wall), tougher
+2-hit bricks, and falling power-up capsules.
+
+**Make It Mine.** Kids customize three things, saved per kid in the browser: the **Look**
+(backdrop: Meadow / Space / Candy / Ocean / Castle / Desert; ball: Glow / Star / Comet / Berry;
+paddle color), **Power-ups** on/off (Big Paddle, Multi Ball, Slow-Mo, Catch, Extra Life), and
+**How Hard** (Easy / Normal / Hard — lives, paddle width, ball speed).
+
+**Always fair.** A tiny natural jitter on each paddle bounce stops the ball from ever locking
+into a vertical or repeating orbit, so it keeps sweeping the bricks and every level clears.
+`qa-breaker.mjs` runs a perfect-paddle bot through every level repeatedly (headless) plus a
+render smoke test — all six clear with no dead-ends and no console errors on the live deploy.
+
+**Shared libraries.** Uses `public/buildable-renders.js` (drawing) and `public/buildable-audio.js`
+(WebAudio bounce / smash / win / lose), the same as the other engines. No emojis — all art is
+drawn or from the shared library. No database changes.
+
+**Vercel routing (critical).** `public/breaker-engine.html` needs an explicit route **before**
+the `/(.*)` → `/landing.html` catch-all, or the page falls through to the landing page on the
+live site (works locally, which hides it). Added next to the survival-engine route.
+
+**Wired in.** Tile on the Top Games hub (`public/games-library.html`) and a **Breaker** tile in
+the in-app Games picker (`src/BuildableKids.jsx` → `GamePicker` → `BreakerScreen`), mirroring
+Survival and Platformer.
