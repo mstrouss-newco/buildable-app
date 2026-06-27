@@ -41,6 +41,12 @@ const SOUNDS = {
   tennis_boom:  "Short punchy cartoon explosion boom with a bright sparkly pop, fun and friendly, single hit, no music, no voices",
   tennis_cheer: "Short happy little crowd cheer and clap, cheerful kids celebration, single hit, no music",
 
+  // Breaker (brick-breaker) one-shots
+  breaker_smash: "Short crisp cartoon brick crunch and pop, a block breaking apart, single hit, no music, no voices",
+  breaker_break: "Short bright satisfying glassy block shatter with a sparkly twinkle, single hit, no music, no voices",
+  breaker_power: "Short cheerful rising magical sparkle power-up chime, friendly cartoon, no music, no voices",
+  breaker_miss:  "Short soft descending cartoon womp, a ball slipping past, gentle and not harsh, single hit, no music, no voices",
+
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
   knock:     "Three soft friendly knocks on a wooden door, single hit, no music, no voices",
@@ -209,6 +215,7 @@ const DURATIONS = {
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
   tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
   tennis_boom:0.6, tennis_cheer:1.4,
+  breaker_smash:0.5, breaker_break:0.6, breaker_power:0.8, breaker_miss:0.6,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,

@@ -330,7 +330,7 @@ function updateSolo(){
 // damage a brick (used by ball and laser); spawns juice + capsule on destroy
 function damageBrick(br,hx,hy,dmg){ br.hp-=dmg; const cx=br.x+br.w/2, cy=br.y+br.h/2;
   if(br.hp<=0){ br.alive=false; G.score+=10;
-    if(BM){ if(br.maxHp>=2||br.power) BM.explode(fx,cx,cy,br.col,{n:14,pop:"+10",popCol:"#fff",shake:0.2,flash:0.08,sfx:()=>sfx("coin",{tier:2})});
+    if(BM){ if(br.maxHp>=2||br.power) BM.explode(fx,cx,cy,br.col,{n:14,pop:"+10",popCol:"#fff",shake:0.2,flash:0.08,sfx:()=>sfx("boom")});
             else { BM.burst(fx.parts,cx,cy,br.col,7); BM.pop(fx.pops,cx,cy,"+10",br.col); sfx("coin",{tier:1}); } }
     else sfx("coin",{tier:br.maxHp>=2?2:1});
     if(br.power){ G.caps.push({x:cx,y:cy,id:br.power,col:(POWERS[br.power]||{}).col||"#fff",got:false}); }
@@ -388,7 +388,7 @@ function pongPaddle(b,px,py,dir){ const padL=px-G.padW/2, padR=px+G.padW/2;
     if(BM)BM.burst(fx.parts,b.x,b.y,dir>0?PREFS.paddle:"#62d0ff",6); sfx("shoot");
   }
 }
-function pongScore(scorer){ if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ffffff",0.25); BM.explode(fx, G.ball.x, scorer===2?H-30:30, "#ffd86b", {n:18,pop:"Point!",popCol:"#fff",shake:0,flash:0}); } sfx("coin",{tier:3});
+function pongScore(scorer){ if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ffffff",0.25); BM.explode(fx, G.ball.x, scorer===2?H-30:30, "#ffd86b", {n:18,pop:"Point!",popCol:"#fff",shake:0,flash:0}); } sfx("point");
   if(G.s1>=G.target){ G.winner=1; state="win"; sfx("win"); return; }
   if(G.s2>=G.target){ G.winner=2; state="win"; sfx("win"); return; }
   pongServe(scorer===1);   // serve toward the player who just got scored on
@@ -612,6 +612,11 @@ function wireMenus(){ const bk=el("custBack"); if(bk)bk.onclick=showMenu;
   const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; showMenu(); }; }
 
 function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
+// bespoke created sounds (ElevenLabs via /api/sfx) — synth stays as a silent fallback.
+// Reuses tennis's paddle-game one-shots; adds Breaker-specific brick sounds.
+if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+  shoot:"tennis_hit", select:"tennis_wall", coin:"breaker_smash", boom:"breaker_break",
+  levelup:"breaker_power", hurt:"breaker_miss", point:"tennis_point", win:"tennis_win", lose:"tennis_lose" } }); }
 // boot
 if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showMenu(); }
 requestAnimationFrame(frame);
