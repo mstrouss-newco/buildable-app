@@ -130,9 +130,11 @@ knight walking through a `jungle` world past `candy` coins is completely valid.
   `list-characters` / `list-assets` (source:story); characters have a `theme`
   column; ALL music + sfx are catalogued in `/api/list-audio` (themed chess
   music + mood loops + ambience + chess one-shots), filterable by theme.
-- **Still siloed (converge toward shared):** chess WORLD art uses bundled
-  `public/chess-art/*.jpg` (not yet library rows); synth one-shots in
-  `buildable-audio.js` are client-only (not URL-addressable in the catalog).
+- **Done / shared:** the 6 chess world backgrounds (`chess-art/*_bg.jpg`) now
+  surface in `list-assets` as themed `source:chess` backgrounds — all four asset
+  worlds (community, story, chess) merge into one themed picker.
+- **Still client-only (by design):** synth one-shots in `buildable-audio.js` are
+  generated in-browser, so they're not URL-addressable in the audio catalog.
 - **North star:** one `/api/library` read that returns every kind, filterable by
   `theme` and `usable_in`, so a new project renders itself from existing assets.
 

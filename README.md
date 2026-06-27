@@ -533,6 +533,22 @@ per creation.) Helper: api/_thumbs.js (thumbForWorld, songCover). QA cache-buste
 
 ---
 
+## Session log — 2026-06-27g (Last silo closed: chess worlds in shared library)
+
+list-assets now merges the 6 chess world backgrounds (chess-art/<theme>_bg.jpg,
+static files) as themed source:chess background layers — verified live
+(theme=castle returns the story dragon-mountain world AND the chess castle bg).
+So community + story + chess worlds all live in one themed picker. Also aligned
+BUILDING-A-GAME.md with the shipped shared audio catalog (/api/list-audio),
+creation thumbnails (api/_thumbs.js), and the edge-cache ?cb= QA reminder.
+
+Asset unification status: characters (themed), stories (heroes+worlds), audio
+(music+sfx catalog), thumbnails, and now chess worlds — all converged. Remaining
+nice-to-haves: chess foregrounds/thumbs as separate layer kinds; community_* are
+near-empty in this env (real art lives as files/caches now surfaced via reads).
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
