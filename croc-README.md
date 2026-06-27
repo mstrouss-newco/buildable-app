@@ -58,19 +58,30 @@ Open `croc-engine.html` and find `GAME_CONFIG` near the top. Everything you'd tw
 
 After any change, run `node qa-croc.mjs` to confirm every world is still beatable.
 
-## Updating the graphics (same process as the game & story builders)
+## The graphics (same process as the game & story builders)
 
-The hero loads from your live **character library** (`/api/story-library?img=character:croc`),
-so a kid's own saved character shows up automatically; if it can't load, a clean drawn croc
-is used instead. For the snack enemies, bosses, and backgrounds, run:
+The art comes from your live **character library** — the exact system the story and game
+builders use. A Croc Tot cast was added to that library (in `api/story-library.js`):
+
+- `croctot` — the hero Tot
+- `homework-monster`, `evil-pot`, `captain-spud`, `mosquito-max`, `jelly-dragon` — the five bosses
+
+The hero shows a kid's **own saved character** if they have one; otherwise the `croctot`
+character. Each boss shows its themed character. If any art can't load, the engine draws a
+clean shape instead, so the game always works.
+
+These are generated once and then cached forever. To (re)generate one, just open this URL
+(it builds + caches server-side, costs a few cents, and is safe to repeat):
 
 ```
-OPENAI_API_KEY=sk-... node generate-croc-art.mjs
+https://www.buildablekids.com/api/story-library?build=1&kind=character&slug=croctot&style=modern3d
 ```
 
-That fills `croc-art/` with transparent cut-outs and world backgrounds (including
-`croc-art/croc_bg.png`, the Games-hub thumbnail). A future engine pass can swap the drawn
-shapes for these PNGs the same way Survival uses its boss art.
+Swap `slug=` for any of the six. The engine loads them with `&emo=base`. To restyle the whole
+game, change `artStyle` in `GAME_CONFIG` (e.g. `watercolor`) and rebuild the slugs at that style.
+
+(`generate-croc-art.mjs` is an alternative that writes local PNGs into `croc-art/` if you ever
+have an `OPENAI_API_KEY` and prefer committed files — not needed for the live game.)
 
 ## Testing & shipping
 
