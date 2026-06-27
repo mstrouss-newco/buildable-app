@@ -7,7 +7,9 @@
 <style>
   html,body{margin:0;height:100%;background:#0a1030;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  canvas.layer{position:absolute;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  /* a fixed-aspect stage so the 3D canvas and the HUD canvas always coincide exactly */
+  #stage{position:relative;width:540px;height:820px;max-width:100%;max-height:100%;aspect-ratio:540 / 820}
+  canvas.layer{position:absolute;inset:0;width:100%;height:100%;image-rendering:auto;border-radius:14px}
   #c{background:#bfe9ff}
   #hud{pointer-events:none}
   #start{position:fixed;inset:0;z-index:10;display:none}
@@ -23,8 +25,10 @@
 </head>
 <body>
 <div id="wrap">
-  <canvas id="c" class="layer" width="540" height="820"></canvas>
-  <canvas id="hud" class="layer" width="540" height="820"></canvas>
+  <div id="stage">
+    <canvas id="c" class="layer" width="540" height="820"></canvas>
+    <canvas id="hud" class="layer" width="540" height="820"></canvas>
+  </div>
 </div>
 
 <!-- shared start screen mounts here -->
@@ -35,7 +39,9 @@
 <button id="muteBtn">Sound: On</button>
 <button id="helpBtn" title="How to play">?</button>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Three.js is hosted on our OWN site (not a CDN) so it always loads, even on
+     school/work networks that block cdnjs. This was the "never starts" cause. -->
+<script src="three.min.js?v=r128"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script>
@@ -71,13 +77,15 @@ function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=M
 const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Sunny Town Drive",
   hearts: 3,
+  // speeds tuned GENTLE for ages 4-8 (was 3.6→6.1; kids found it too fast). Each town
+  // ramps up a little; dist tuned so a run is a comfy ~18-22 seconds.
   levels: [
-    { name:"Maple Street",    sky:0xbfe9ff, grass:0x8fd98f, dist:3400, speed:3.6, density:0.00, treat:0.55 },
-    { name:"Market Square",   sky:0xffe3bf, grass:0x9bd98a, dist:4200, speed:4.1, density:0.10, treat:0.55 },
-    { name:"Sunny Beach Road",sky:0xbff0ec, grass:0xffe39c, dist:5000, speed:4.6, density:0.22, treat:0.50 },
-    { name:"Petal Park",      sky:0xffd6ec, grass:0x86d68f, dist:5800, speed:5.1, density:0.34, treat:0.50 },
-    { name:"Downtown Dash",   sky:0xcdd6ff, grass:0x8fbf8f, dist:6600, speed:5.6, density:0.46, treat:0.45 },
-    { name:"Rainbow Bridge",  sky:0xe6d6ff, grass:0x9be0c0, dist:7600, speed:6.1, density:0.55, treat:0.45 },
+    { name:"Maple Street",    skyId:"maple",    sky:0xbfe9ff, grass:0x8fd98f, dist:2500, speed:2.2, density:0.00, treat:0.55 },
+    { name:"Market Square",   skyId:"market",   sky:0xffe3bf, grass:0x9bd98a, dist:2900, speed:2.6, density:0.10, treat:0.55 },
+    { name:"Sunny Beach Road",skyId:"beach",    sky:0xbff0ec, grass:0xffe39c, dist:3400, speed:3.0, density:0.20, treat:0.50 },
+    { name:"Petal Park",      skyId:"petal",    sky:0xffd6ec, grass:0x86d68f, dist:3900, speed:3.4, density:0.30, treat:0.50 },
+    { name:"Downtown Dash",   skyId:"downtown", sky:0xcdd6ff, grass:0x8fbf8f, dist:4400, speed:3.8, density:0.40, treat:0.45 },
+    { name:"Rainbow Bridge",  skyId:"rainbow",  sky:0xe6d6ff, grass:0x9be0c0, dist:5000, speed:4.2, density:0.50, treat:0.45 },
   ],
   treatColors: ["#ffd23f","#ff8fce","#7ee0a0","#62d0ff","#ff7aa8"],
 };
@@ -90,7 +98,7 @@ const TREATS    = ["coin","gift","star","icecream"];
 const LANES = 3;
 const CAR_Y = H-150;          // the car's fixed position along the track
 const OBS_H = 70;
-const ROW_GAP = 240;          // spacing between rows -> one row in the band at a time
+const ROW_GAP = 290;          // spacing between rows -> one row in the band + comfy reaction time
 const START_CLEAR = 360;      // clear road at the start of each town
 const HIT_BAND = 34;          // |obstacle p - CAR_Y| within this (same lane) = crash
 const SAFE_BAND = 64;         // wider zone the bot treats as dangerous (must exceed HIT_BAND)
@@ -309,9 +317,21 @@ function buildScene(){
   carGroup=makeCar(0xff5d8f, 0xff86ac); carGroup.position.set(0,0,zForP(CAR_Y)); scene.add(carGroup);
   sceneReady=true;
 }
+const skyTexCache={};
 function applyTownColors(){ if(!scene)return; const sky=new THREE.Color(L.sky);
+  // solid-color fallback first (always works); fog fades distant road to this color
   scene.background=sky; scene.fog.color=sky; if(groundMesh) groundMesh.material=mat(L.grass);
   const cv=document.getElementById('c'); if(cv) cv.style.background="#"+sky.getHexString();
+  // then try the AI sky/skyline backdrop (cached forever after first gen); on any
+  // failure we silently keep the solid color, so a missing image can't break the game.
+  const id=L.skyId; if(!id || !THREE.TextureLoader) return;
+  if(skyTexCache[id]){ scene.background=skyTexCache[id]; return; }
+  try{ new THREE.TextureLoader().load(
+    "/api/images?kind=runnersky&town="+encodeURIComponent(id),
+    (tex)=>{ skyTexCache[id]=tex; if(L && L.skyId===id && scene) scene.background=tex; },
+    undefined,
+    ()=>{ /* keep solid color */ }
+  ); }catch(e){}
 }
 
 // sync logic arrays -> meshes, then render
@@ -420,7 +440,16 @@ function wireMenus(){
   const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; showMenu(); };
 }
 
-function frame(){ update(); draw(); requestAnimationFrame(frame); }
+function drawNo3D(){ if(!hctx)return; hctx.clearRect(0,0,W,H);
+  hctx.fillStyle="#1a1546"; hctx.fillRect(0,0,W,H);
+  hctx.textAlign="center"; hctx.fillStyle="#fff"; hctx.font="bold 24px Fredoka,sans-serif";
+  hctx.fillText("Couldn't load the 3D engine", W/2, H/2-10);
+  hctx.font="18px Fredoka,sans-serif"; hctx.fillStyle="#cdd0ff";
+  hctx.fillText("Please check your connection and refresh.", W/2, H/2+24); }
+function frame(){ update();
+  if(renderer){ draw(); }
+  else if(state!=="title" && hctx){ drawNo3D(); }   // never silently blank
+  requestAnimationFrame(frame); }
 // boot
 if(typeof document!=="undefined" && document.getElementById("start")){
   loadPrefs(); wireMenus();

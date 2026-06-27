@@ -54,6 +54,20 @@ const SOUNDS = {
   town_buy:   "Short happy little cash-register cha-ching ding, buying a shop, cheerful cartoon, single hit, no music, no voices",
   town_card:  "Short soft playful card flip whoosh with a light twinkle, drawing a surprise card, single hit, no music, no voices",
   town_cheer: "Short happy little kids cheer and clap with a sparkle, cheerful board-game win celebration, single hit, no music",
+  // Board games (Tic-Tac-Toe, Connect Four, Dots and Boxes) one-shots
+  board_place: "Short soft friendly cartoon click tap, placing a game piece down, single hit, no music, no voices",
+  board_drop:  "Short cheerful plastic disc plonk dropping and settling into a slot, single hit, no music, no voices",
+  board_line:  "Short soft crayon line stroke drawn on paper with a gentle tap, single hit, no music, no voices",
+  board_claim: "Short happy sparkly pop chime, a box being won and claimed, cheerful cartoon, single hit, no music, no voices",
+  board_win:   "Happy short victory fanfare with a bright sparkle, cheerful kids board game win, no voices",
+  board_draw:  "Short gentle friendly two-note chime, a tied game, not sad, single hit, no music, no voices",
+  // ---- Checkers game one-shot SFX (short, punchy, kid-friendly) ----
+  checkers_select:  "Short soft UI pluck pop, friendly cartoon piece pick-up blip, single hit, no music, no voices",
+  checkers_move:    "Short soft wooden tap, a round checkers piece sliding and tapping down on a board, single hit, no music, no voices",
+  checkers_capture: "Short bouncy cartoon hop and pop, a checkers piece jumping over another and knocking it out, single hit, no music, no voices",
+  checkers_king:    "Short cheerful rising magical sparkle chime, a piece being crowned king, triumphant and short, no music, no voices",
+  checkers_win:     "Happy short victory fanfare with a sparkle, cheerful kids game win, no voices",
+  checkers_lose:    "Gentle soft descending wah-wah, friendly cartoon lose, short, no music, no voices",
 
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
@@ -214,6 +228,16 @@ const SOUNDS = {
   crowd: "Short stadium crowd cheer roar, single hit, no music",
   goal: "Short triumphant goal scored fanfare with crowd, single hit, no music",
 
+  // ---- Batch 2 simple games: Memory, Bingo, Snakes & Ladders (bespoke one-shots) ----
+  mem_flip:     "Short soft satisfying card flip whoosh with a tiny tap, a memory card turning over, single hit, no music, no voices",
+  mem_match:    "Short cheerful sparkly ding-ding match-found chime with a happy little pop, a matching pair, single hit, no music, no voices",
+  mem_flipback: "Short soft gentle low whoosh, two cards flipping back face-down, not harsh, single hit, no music, no voices",
+  party_win:    "Short joyful celebration fanfare with a party-popper pop, confetti sparkle and a tiny kid cheer, cheerful kids game win, no voices",
+  bingo_call:   "Short bright cheerful announce ding with a soft attention bell, a bingo number being called, single hit, no music, no voices",
+  bingo_daub:   "Short soft chunky ink-stamp daub thunk with a tiny squish, marking a bingo square, single hit, no music, no voices",
+  dice_roll:    "Short playful wooden dice shake and tumble roll landing with a tap, single hit, no music, no voices",
+  snl_ladder:   "Short cheerful rising sparkle slide-whistle climb up, going up a ladder, bright and happy, single hit, no music, no voices",
+  snl_snake:    "Short playful descending wobble slide-whistle whoosh, sliding down a snake, silly not scary, single hit, no music, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -224,6 +248,8 @@ const DURATIONS = {
   tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
   tennis_boom:0.6, tennis_cheer:1.4,
   breaker_smash:0.5, breaker_break:0.6, breaker_power:0.8, breaker_miss:0.6,
+  board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
+  checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,

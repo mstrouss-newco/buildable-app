@@ -47,6 +47,144 @@
   Supabase, and confirm the parent-account lane env vars are live. Pass-and-play + bot need
   no setup. **Still TODO (owner):** merge the branch to `main` to deploy, then live-QA across
   real devices (the one thing the headless sim can't cover).
+## 2026-06-27 — Art Studio: obvious Clear button + more stamp shapes
+- Top action buttons now have word captions under the icons (Undo / Redo / Clear / Save /
+  Mine / Sound) and CLEAR is tinted red so it reads as "clear/start over" at a glance.
+- More to play with: BR.shape() gained triangle, circle, lightning, moon, cloud (now 10 shapes)
+  and the studio's Shapes stamp set lists them. qa-art.mjs green.
+
+## 2026-06-27 — Three simple 2-player board games on ONE shared shell (Tic-Tac-Toe, Connect Four, Dots and Boxes)
+Shipped to `main` (live on www.buildablekids.com); branch `claude/games-simple-batch1` also pushed.
+- **New shared shell built ONCE:** `public/buildable-boardgame.js` (`BG`, `window.BuildableBoardGame`)
+  — the Track-B host for turn-based, same-device, no-backend board games. It owns the hot-seat
+  TURN MANAGER (Player A / Player B, or solo vs an easy computer), the canvas (responsive + DPR +
+  rAF loop), pointer→board mapping ("place your thing"), the shared start screen (BS, Solo/2-player
+  mode row), sound (BA), juice (BM shake/burst), the win banner + Play again, Home→`nav:exit`, mute,
+  and a headless QA scaffold. Plus two reusable DETECTORS: `BG.lineWinner` (N-in-a-row any direction)
+  and `BG.boxesNewlyClosed` (the 4th-side-claims-a-box rule).
+- **Three engines instantiate it** (~150 lines each = rules + draw + easy AI):
+  - `public/tictactoe-engine.html` — 3x3, first to three; solo easy computer or 2-player.
+  - `public/connectfour-engine.html` — 7x6, discs fall to the lowest slot, first to four any
+    direction; falling-disc animation (visual only — logic resolves immediately); solo AI or 2-player.
+  - `public/dotsboxes-engine.html` — small 3x3-box grid for young kids; draw a line, close a box's
+    4th side to claim it AND go again; most boxes wins; solo AI or 2-player.
+- **Always-winnable / pressure-free:** no soft-locks (every game terminates with a valid result),
+  ties are friendly (not a loss), and the easy AI is genuinely beatable (takes obvious wins, only
+  sometimes blocks, otherwise plays light/random). No emoji — all art is drawn via BR primitives.
+- **Shared in-game menu (same across all three).** Built ONCE into the shell: a Pause button
+  (top-right) opens a menu — **Keep playing / New game / Sound on-off / Home** — and the board
+  matches the rest of the app's nav (Home top-left, Sound top-right). Each game **auto-saves** to
+  the browser (no backend), so leaving mid-match shows a **"Continue your game"** button on the
+  start screen. Edit the menu in one place (`buildable-boardgame.js`) and all three update.
+- **Bespoke created sounds** registered in `api/sfx.js` (BA synth = silent fallback only):
+  `board_place`, `board_drop`, `board_line`, `board_claim`, `board_win`, `board_draw` (all ≥0.5s).
+- **Reusable mechanics written back** per MECHANICS.md (new §14) + `db/seed-boardgame-mechanics.sql`:
+  `hot-seat-turns`, `grid-line-winner`, `box-claim-extra-turn` (idempotent; **owner action:** run once).
+- **Routed + tiled:** explicit `vercel.json` routes for the 3 engines + `buildable-boardgame.js`
+  (before the landing catch-all); three launch tiles + a shared `BoardGameScreen` iframe wrapper in
+  `src/BuildableKids.jsx` (Games picker → Tic-Tac-Toe / Connect Four / Dots and Boxes).
+- **QA:** `qa-tictactoe.mjs` (perfect player NEVER loses to the AI; AI beatable; 200 random games all
+  terminate), `qa-connectfour.mjs` (gravity invariant; AI beatable; 200 games terminate),
+  `qa-dotsandboxes.mjs` (every game claims ALL boxes / draws ALL edges; AI beatable) — ALL PASS.
+  `npm run build` clean.
+- **Left out of v1 (follow-up):** cross-device play. These are the textbook poll-a-row fit
+  (`mp-turn-based-row`, like chess); the shell is already network-agnostic so it is additive later.
+
+## 2026-06-27 — Art Studio: framed layout (tools on all 4 edges, big canvas)
+- The bottom panel had shrunk the canvas to ~1/3 of the page. Reframed: tools now ring the
+  canvas on all four edges so the center drawing area is large.
+  - LEFT rail = Brushes (all 14, scrolls). RIGHT rail = Colors (+ color picker).
+  - BOTTOM bar = Size / Mirror / Style / Stamps (grouped). TOP bar = Undo/Redo/Clear/Save +
+    My Art + Sound. Each region holds one category so nothing feels crowded.
+- Active choice highlights green. All drawing/sound/save/gallery logic unchanged; qa-art.mjs green.
+
+## 2026-06-27 — Art Studio: "art desk" — every tool visible, grouped into labeled zones
+- Picker-only version hid too much (kid couldn't find things). Rebuilt so EVERYTHING is on
+  screen at once, organized into clearly separated zones each with a little icon header:
+  Brushes (all 14 as picture tiles) · Colors (swatches + color picker) · Size (5 dots) ·
+  Mirror (6 split icons) · Style (5 look previews) · Stamps (Shapes/Stickers/Scene) · Do
+  (undo/redo/trash/heart). Active choice shows a green highlight so she sees what's picked.
+- Big sticker library + scenes + gallery stay as overlays (too many to inline); everything
+  else is one tap, no hunting. Tray scrolls if short on height; canvas still gets the room.
+- All drawing/sound/save/gallery logic unchanged; qa-art.mjs still green.
+## 2026-06-27 — Three simple luck/matching games on ONE shared turn shell (Memory, Bingo, Snakes & Ladders)
+Batch 2 of simple games — all same-device pass-and-play, built on one new shared brain. Branch
+`claude/games-simple-batch2` (not main).
+
+- **NEW shared lib `public/buildable-turns.js` (`BT`, the 5th engine lib).** One headless-safe
+  turn shell for 2-4 players (+ solo): roster (4 colors + token shapes, no emoji), whose turn,
+  per-player scores, winner. `BT.create({count}) -> cur()/next(keepTurn)/add()/leader()/finish()`.
+  Registered as `game_mechanics` slug `same-device-turns` (`db/seed-same-device-turns-mechanic.sql`)
+  and documented in `MECHANICS.md` section 15. The local counterpart to the cross-device `mp-*` mechanics.
+- **`buildable-startscreen.js` gained `p2`/`p3`/`p4` mode keys** (people icon + "2/3/4 players")
+  so any same-device game gets a player-count picker through the shared BS mode row. Additive —
+  breaker's BS adoption still passes QA.
+- **Memory Match (`public/memory-engine.html`).** Solo or 2-4. Flip two cards, a match stays up +
+  scores + bonus turn, a miss flips back, clear the board to win. Difficulty = grid size
+  (Easy 3x4 / Medium 4x4 / Hard 4x6) via the customize panel; card faces PULLED from the shared
+  asset library by theme (`/api/list-assets?theme=`) with BR drawn-shape fallback. 6 theme packs.
+- **Bingo (`public/bingo-engine.html`).** 2-4 players, the DEVICE is the caller (rotating via BT).
+  Picture mode = library art + drawn icon fallback; Word mode = kid word list, spelled + said.
+  Players daub matches, first full line wins. Always-winnable: calls drawn from the union of all
+  cards. New caller speech via `api/say.js` (ElevenLabs TTS, cached) — the "called-item speech".
+- **Snakes & Ladders (`public/snakes-engine.html`).** 2-4, pure luck so the littlest kid can win.
+  Roll the die, hop the 30-square serpentine track, climb ladders / slide down snakes, bonus roll
+  on a six; reach-OR-pass the top star to win (no exact-landing soft-lock). 3 themed boards.
+- **Bespoke created sounds** added to `api/sfx.js` (auto-surface in `/api/list-audio`):
+  `mem_flip`, `mem_match`, `mem_flipback`, `party_win`, `bingo_call`, `bingo_daub`, `dice_roll`,
+  `snl_ladder`, `snl_snake`. Plus `api/say.js` for spoken called words/letters/picture names.
+- **Wiring.** Three `vercel.json` routes (+ `/buildable-turns.js`) before the catch-all; three
+  tiles + screens in `src/BuildableKids.jsx` (full-screen iframe, Home top-left, BS back posts
+  `nav:exit`); key-art prompts added to `api/images.js` (`memory`/`bingo`/`snakes`).
+- **QA.** Headless sim hooks (`window.BUILDABLE_GAME` + per-game alias) + `qa-memory.mjs`,
+  `qa-bingo.mjs`, `qa-snakes.mjs` (model: `qa-breaker.mjs`). Every difficulty x player-count x
+  theme is proven winnable (perfect-memory bot clears all boards; a bingo winner always emerges;
+  snakes always ends in a win and every seat can win) + render smoke for each. `npm run build` clean.
+- **Owner action:** run `db/seed-same-device-turns-mechanic.sql` once; the caller voice + new SFX
+  auto-generate + cache on first play (ElevenLabs), with the BA synth as the silent fallback.
+
+## 2026-06-27 — Buildable Checkers: kid-friendly 2-player checkers (reuses the chess plumbing)
+Branch: `claude/games-checkers` (NOT merged to main). New turn-based game built on the
+chess "poll a row" model (MULTIPLAYER.md Pattern A). Checkers is board-shaped like chess,
+so this reuses the chess plumbing instead of inventing new transport.
+
+- **New engine `public/buildable-checkers.html`** — a DOM board (same approach as
+  `buildable-chess.html`, which renders reliably inside iOS iframes), three modes:
+  *Play the Robot* (beatable bot, Easy/Normal/Tricky), *Two Players* same-screen
+  pass-and-play, and *online* family play. Standard kid rules: diagonal moves, jump to
+  capture, multi-jumps chain, a man becomes a **King** on the far row (kings move/jump
+  both ways). A **"Must jump" toggle** (default OFF = relaxed) keeps captures optional for
+  the youngest kids. Worlds reuse the existing `chess-art` backdrops + the per-world
+  `/api/chess-music` tracks; pieces are drawn SVG discs (purple/coral, crown for kings) —
+  **no emoji**. Sound via `BA` (`buildable-audio.js`).
+- **Network-agnostic, exactly like chess.** The engine only emits its move / applies the
+  opponent's move via `postMessage` (`checkersReady` / `checkersInit` / `checkersMove` /
+  `checkersOpponentMove` / `checkersReaction` / `checkersShowReaction`). ALL Supabase code
+  lives in the React layer. Canned reactions only (the same 6 phrases) — no free text.
+- **`db/create-checkers-matches.sql`** — a copy of `chess_matches` (whole game state in one
+  row) with the SAME family-RLS policy + `updated_at` trigger; idempotent, non-destructive.
+  **Owner action: run it once in the Supabase SQL editor** (after the accounts tables).
+- **React layer:** `src/lib/checkersMatches.js` (PostgREST over `checkers_matches`, mirrors
+  `chessMatches.js`) + `src/FamilyCheckers.jsx` (lobby + 2s poll + the postMessage bridge,
+  mirrors `FamilyChess.jsx`). Gated on the parent-account lane; guests get the friendly
+  "ask a grown-up" state.
+- **Wiring:** new **Checkers** tile in the Games picker + `CheckersScreen`/`FamilyCheckers`
+  routes in `src/BuildableKids.jsx` (Home top-left, "Play a family member" top-right — same
+  nav as chess). `api/sfx.js`: registered bespoke `checkers_select/move/capture/king/win/lose`
+  one-shots (+ durations) — they auto-generate & cache on first play (BA synth is the silent
+  fallback). `vercel.json`: explicit `/buildable-checkers.html` route before the catch-all.
+- **QA:** `qa-checkers.mjs` (headless rules + bot) — opening legality, multi-jump,
+  promotion, forced-capture, and **the robot is beatable** (a strong kid beats Easy 40/40,
+  Normal 60/60; Tricky ~50/50, still winnable). `qa-checkers-dom.mjs` (jsdom render smoke) —
+  builds 64 cells + 24 pieces, selection highlights, a move re-renders, and the online init
+  flips the board for the blue side. `npm run build` clean.
+- **Deviations from the brief (flagged for Mike):** the brief suggested `BM`/`BS`, but those
+  are canvas/level-picker libs aimed at the arcade engines; chess — the explicit template —
+  is a self-contained DOM board with its own start/setup screens, so checkers follows chess
+  for iOS reliability and fit (capture/king "juice" is done with DOM sparkles + sounds, not
+  the `BM` canvas FX). Easy to revisit if you'd rather force `BS`/`BM`.
+- **Still TODO (manual):** run the SQL; live QA across two real devices/sessions (the one
+  thing the headless + jsdom sims can't cover); optionally pre-warm the 6 `checkers_*` SFX.
 
 ## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
 - The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of
@@ -850,3 +988,15 @@ meadow chiptune-pop, space synthwave, candy bubblegum, ocean surf, castle 8-bit 
 Engine ensureMusic now points at /api/breaker-music?world=<backdrop> (loop, swaps on backdrop change,
 respects mute). All 6 worlds pre-warmed + cached live (~469KB each; cached refetch ~19ms). Verified
 engine sets BA.music.src to the new endpoint with loop=true.
+
+## Chess: rank badges on living pieces — June 26 2026
+
+Themed creatures were hard to read as chess ranks, so every in-game piece now carries a small white corner badge with the classic piece glyph (pawn/knight/bishop/rook/queen/king) via `withBadge()` wrapping `pieceSVG` in renderPieces + promotion. Creature + team color still carry theme/side; the badge gives instant rank ID. Home mascots unbadged.
+
+## Chess: AI-generated piece art — kind=chesspiece + Space prototype — June 26 2026
+
+Added `kind=chesspiece` to `api/images.js` (gpt-image-1, transparent, cached in image_cache, served by `/api/images?kind=chesspiece&world=&piece=`). Prompt = piece-shaped core ("clearly reads as a chess <rook/knight/...>") + per-world theme. Game renders AI image pieces for worlds in `AIWORLDS` (prototype: space) with the vector piece as an instant fallback shown until the image loads (so the board is playable during the ~30s first-gen), team distinguished by a colored base glow. Alive idle animates the img too. Other worlds keep vector. Next: judge quality/iPad perf on Space, then roll out remaining worlds; note no server-side image resize lib, so watch iPad memory (1024 PNGs, ~6 distinct per world).
+
+## Chess: AI pieces rolled out to all worlds — June 26 2026
+
+After approving the Space prototype, expanded AIWORLDS to all six worlds (ocean/jungle/space/candy/castle/desert). Each world now renders gpt-image-1 piece art (kind=chesspiece) with the vector classic-core piece as instant fallback until each image loads + caches. Pieces generate on first open (~30s, vector shows meanwhile), instant after.

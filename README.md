@@ -103,6 +103,105 @@ Game length is customizable (Short/Medium/Long = 2/3/4 laps). **Pricing plays li
 - **Owner action:** run `db/create-town-matches.sql` once for cross-device family play; confirm
   the parent-account lane env vars are live (pass-and-play + bot need no setup). On branch
   `claude/games-family-town` — **not** pushed to `main`; merge to deploy + live-QA on devices.
+## Three simple 2-player board games on ONE shared shell (June 27 2026)
+
+Built Tic-Tac-Toe, Connect Four, and Dots and Boxes in one pass by creating a reusable
+**simple-board-game shell ONCE** and instantiating all three on it. Branch
+`claude/games-simple-batch1` (handed to Mike, **not** pushed to main).
+
+- **New 4th shared engine lib next to BR/BA/BM/BS:** `public/buildable-boardgame.js` — `BG`
+  (`window.BuildableBoardGame`). The Track-B host for turn-based, same-device, **no-backend**
+  board games: a hot-seat TURN MANAGER (Player A / Player B, or solo vs an easy computer),
+  responsive canvas + rAF loop, pointer→board mapping, the shared start screen (BS) with a
+  Solo/2-player mode row, sound (BA), juice (BM), the win banner + Play again, Home→`nav:exit`,
+  mute, and a headless QA scaffold. Reusable detectors `BG.lineWinner` (N-in-a-row any direction)
+  and `BG.boxesNewlyClosed` (4th-side-claims-a-box). A new board game = ~150 lines of rules + draw.
+- **Three engines:** `public/tictactoe-engine.html` (3x3, three-in-a-row), `connectfour-engine.html`
+  (7x6 gravity drop, four in a row, falling-disc animation), `dotsboxes-engine.html` (small 3x3-box
+  grid; close a box's 4th side to claim it + go again; most boxes wins). Each plays solo (easy
+  computer) or 2-player hot-seat.
+- **Always-winnable / pressure-free:** no soft-locks, friendly ties, and the easy AI is genuinely
+  beatable. No emoji — drawn art via BR.
+- **Shared in-game menu (same across all three), built once in the shell:** a Pause button (top-right)
+  opens Keep playing / New game / Sound / Home; auto-saves to the browser (no backend) so a left match
+  shows "Continue your game" on the start screen. **Bespoke created sounds** in `api/sfx.js`
+  (`board_place/drop/line/claim/win/draw`; synth fallback only).
+- **Reusable mechanics written back:** MECHANICS.md §14 + `db/seed-boardgame-mechanics.sql`
+  (`hot-seat-turns`, `grid-line-winner`, `box-claim-extra-turn`). **Owner action:** run the seed once.
+- **Routes + tiles:** explicit `vercel.json` routes (before the landing catch-all) for the 3 engines
+  + `buildable-boardgame.js`; 3 tiles + a shared `BoardGameScreen` wrapper in `src/BuildableKids.jsx`.
+- **QA:** `qa-tictactoe.mjs` / `qa-connectfour.mjs` / `qa-dotsandboxes.mjs` all PASS (perfect TTT
+  player never loses to the AI; AIs beatable; every game terminates / claims all boxes);
+  `npm run build` clean.
+- **Left out of v1 (follow-up):** cross-device play — the textbook poll-a-row fit
+  (`mp-turn-based-row`, like chess); the shell is network-agnostic so it is additive later.
+## Three simple games on one shared turn shell — Memory, Bingo, Snakes & Ladders (June 27 2026)
+Batch 2 of simple luck/matching games, all **same-device pass-and-play** (no backend v1) on one new
+shared brain. Branch `claude/games-simple-batch2` (NOT main).
+
+- **New 5th shared engine lib `public/buildable-turns.js` (`BT` / `window.BuildableTurns`).** One
+  headless-safe turn shell for **2-4 players + solo**: roster (4 colors + token shapes, no emoji),
+  whose turn, per-player scores, winner. `BT.create({count}) -> cur()/next(keepTurn)/add()/leader()/finish()`.
+  Registered as `game_mechanics` slug `same-device-turns` (`db/seed-same-device-turns-mechanic.sql`),
+  documented in `MECHANICS.md` section 15 — the local counterpart to the cross-device `mp-*` mechanics.
+- **`buildable-startscreen.js`** gained reusable **`p2`/`p3`/`p4` mode keys** so any same-device game
+  gets a player-count picker through the shared BS mode row (additive; breaker QA still green).
+- **Memory Match (`/memory-engine.html`)** — solo or 2-4. Flip two cards; match stays + scores +
+  bonus turn; miss flips back; clear the board to win. Difficulty = grid size (Easy/Medium/Hard);
+  **card faces pulled from the shared asset library by theme** (`/api/list-assets`) with a BR
+  drawn-shape fallback; 6 theme packs.
+- **Bingo (`/bingo-engine.html`)** — 2-4, the DEVICE is the caller (rotating via BT). **Picture
+  mode** = library art + drawn-icon fallback; **Word mode** = kid word list, spelled + said via the
+  new `api/say.js` ElevenLabs caller voice. Daub matches, first full line wins. Always-winnable
+  (calls drawn from the union of all cards).
+- **Snakes & Ladders (`/snakes-engine.html`)** — 2-4, pure luck so the littlest kid can win. Roll,
+  hop the 30-square serpentine track, climb ladders / slide down snakes, bonus roll on a six;
+  reach-OR-pass the top star to win (no exact-landing soft-lock); 3 themed boards.
+- **Sound = unique created audio.** New bespoke one-shots in `api/sfx.js` (auto-listed in
+  `/api/list-audio`): `mem_flip`, `mem_match`, `mem_flipback`, `party_win`, `bingo_call`,
+  `bingo_daub`, `dice_roll`, `snl_ladder`, `snl_snake`; plus `api/say.js` for spoken called
+  words/letters/picture names. BA synth stays the silent fallback only.
+- **Wiring:** three `vercel.json` routes (+ `/buildable-turns.js`) before the catch-all; three tiles
+  + iframe screens in `src/BuildableKids.jsx` (Home top-left, BS back posts `nav:exit`); key-art
+  prompts added to `api/images.js`.
+- **QA:** shared `window.BUILDABLE_GAME` sim hook + per-game alias; `qa-memory.mjs`, `qa-bingo.mjs`,
+  `qa-snakes.mjs` (model `qa-breaker.mjs`) prove every difficulty x player-count x theme is winnable
+  + render smoke; `npm run build` clean. **Owner action:** run `db/seed-same-device-turns-mechanic.sql`
+  once; caller voice + new SFX auto-generate/cache on first play.
+## Buildable Checkers — kid-friendly 2-player checkers, reuses the chess plumbing (June 27 2026)
+New turn-based game on branch `claude/games-checkers` (**not merged to main**). Checkers is
+board-shaped like chess, so it reuses the chess "poll a row" multiplayer model
+(`MULTIPLAYER.md` Pattern A) rather than inventing a transport.
+
+- **Engine `public/buildable-checkers.html`** — a DOM board like `buildable-chess.html`
+  (renders reliably in iOS iframes). Modes: solo vs a beatable robot (Easy/Normal/Tricky),
+  same-screen 2-player pass-and-play, and online family play. Kid rules: diagonal moves,
+  jump-to-capture with chained multi-jumps, **King** on the far row (kings go both ways), and
+  a **"Must jump" toggle (default OFF = relaxed)** so captures are optional for little kids.
+  Worlds reuse the `chess-art` backdrops + `/api/chess-music`; pieces are drawn SVG discs
+  (purple/coral, gold crown for kings) — **no emoji**. Sound via `buildable-audio.js` (BA).
+- **Network-agnostic exactly like chess:** the engine only emits/applies moves over
+  `postMessage` (`checkersReady`/`checkersInit`/`checkersMove`/`checkersOpponentMove`/
+  `checkersReaction`/`checkersShowReaction`); ALL Supabase code lives in the React layer.
+  Canned reactions only (same 6 phrases) — no free text.
+- **`db/create-checkers-matches.sql`** copies `chess_matches` (whole state in one row) with
+  the SAME family-RLS policy + `updated_at` trigger; idempotent + non-destructive.
+  **Owner action: run it once in the Supabase SQL editor.**
+- **React:** `src/lib/checkersMatches.js` (PostgREST, mirrors `chessMatches.js`) +
+  `src/FamilyCheckers.jsx` (lobby + 2s poll + bridge, mirrors `FamilyChess.jsx`). Gated on
+  the parent-account lane.
+- **Wiring:** Games-picker **Checkers** tile + `CheckersScreen`/`FamilyCheckers` routes in
+  `src/BuildableKids.jsx`; bespoke `checkers_*` one-shots registered in `api/sfx.js`
+  (auto-generate + cache on first play; BA synth is the silent fallback); explicit
+  `/buildable-checkers.html` route in `vercel.json` before the catch-all.
+- **QA:** `qa-checkers.mjs` (headless rules + bot) — legality, multi-jump, promotion,
+  forced-capture, and **the robot is beatable** (strong kid beats Easy 40/40, Normal 60/60;
+  Tricky ~50/50, still winnable). `qa-checkers-dom.mjs` (jsdom render smoke) passes;
+  `npm run build` clean.
+- **Note (deviation):** the original brief mentioned `BM`/`BS`, but those are canvas/level-
+  picker libs for the arcade engines; chess (the template) is a self-contained DOM board, so
+  checkers follows chess for fit + iOS reliability (DOM sparkle/sound "juice", not BM canvas
+  FX). **Still TODO (manual):** run the SQL; live QA on two real devices.
 
 ## Tennis: per-world background music + pre-warmed assets (June 27 2026)
 - **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.
@@ -602,6 +701,11 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 ---
 
 ## Session log — 2026-06-27i (Sunny Town Drive — new 3-lane runner engine)
+
+**2026-06-27 fix (never-starts):** Three.js is now **self-hosted** at `public/three.min.js`
+(+ vercel route) instead of loaded from cdnjs — a blocked/slow CDN was the likely cause of
+the game never starting on some networks. Added a visible "couldn't load 3D" fallback so it
+can never silently blank. Verified live loading from the local copy.
 
 **2026-06-27 3D rebuild:** Sunny Town Drive is now **true 3D** (Three.js r128, blocky
 LEGO-style) — camera behind the car, road receding into fog. Crucially the *gameplay logic

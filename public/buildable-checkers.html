@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>Buildable Checkers — Hop & Crown!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0F0E17; --purple:#7C5CFC; --purple2:#A78BFF; --coral:#FF6B6B; --coral2:#FF9898;
+  --cream:#FDFAF5; --mint:#00C48C; --gold:#F59E0B;
+  --light:#E8DCC8; --dark:#B59B73; --pageA:#1a1830; --pageB:#0F0E17;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-height:100vh;min-height:100dvh;
+  display:flex;align-items:safe center;justify-content:safe center;overflow:auto;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  background:radial-gradient(120% 120% at 50% 0%,var(--pageA),var(--pageB));transition:background .8s ease}
+
+/* world layers (reuse chess-art) */
+.world{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;opacity:0;transition:opacity .8s ease;pointer-events:none}
+.world.on{opacity:1}
+#world-bg{filter:saturate(1.05)}
+#world-fg{opacity:0}#world-fg.on{opacity:.5}
+.scrim{position:fixed;inset:0;z-index:1;background:radial-gradient(120% 100% at 50% 30%,rgba(15,14,23,.18),rgba(15,14,23,.72));pointer-events:none}
+.ambient{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.amb{position:absolute;border-radius:50%;background:rgba(255,255,255,.7);opacity:.5}
+
+.app{width:600px;max-width:100vw;padding:10px;position:relative;z-index:2}
+.logo{font-family:'Nunito',sans-serif;font-weight:900;font-size:clamp(18px,5vw,22px);letter-spacing:-.3px;display:table;margin:0 auto 10px;padding:6px 16px;border-radius:100px;background:rgba(15,14,23,.62);border:1px solid rgba(255,255,255,.14);box-shadow:0 6px 20px rgba(0,0,0,.4);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.logo .b{background:linear-gradient(110deg,#A78BFF,#C084FC 40%,#F472B6 75%,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo .k{color:#FF6B6B}
+.card{position:relative;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:26px;padding:22px;backdrop-filter:blur(14px);box-shadow:0 30px 90px rgba(0,0,0,.5)}
+
+.screen{display:none}
+.screen.on{display:block;animation:pop .35s ease}
+@keyframes pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+
+.big-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:clamp(28px,7vw,46px);text-align:center;line-height:1;margin-bottom:6px}
+.big-title .grad{background:linear-gradient(110deg,#A78BFF,#F472B6 70%,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.big-sub{text-align:center;color:rgba(255,255,255,.62);font-size:15px;font-weight:600;margin-bottom:22px}
+
+.btn{font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;color:#fff;border:none;cursor:pointer;
+  border-radius:18px;padding:16px 22px;transition:transform .12s,box-shadow .12s,filter .12s;width:100%}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,#7C5CFC,#A78BFF);box-shadow:0 12px 30px rgba(124,92,252,.4)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
+.btn-ghost:hover{background:rgba(255,255,255,.13)}
+.btn-row{display:flex;flex-direction:column;gap:12px;max-width:380px;margin:0 auto}
+.linklike{display:block;text-align:center;margin-top:16px;color:rgba(255,255,255,.55);font-weight:600;font-size:14px;cursor:pointer}
+.linklike:hover{color:#fff}
+.mode-card{display:flex;align-items:center;gap:16px;text-align:left;padding:16px 18px}
+.mode-card svg{width:52px;height:52px;flex:none}
+.mode-card .mc-t{display:block;font-family:'Nunito',sans-serif;font-weight:900;font-size:19px;line-height:1.1}
+.mode-card .mc-s{display:block;font-size:13px;color:rgba(255,255,255,.6);font-weight:600}
+
+.sect{font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.5);margin:18px 0 10px}
+.opt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px}
+.opt{cursor:pointer;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);border-radius:16px;
+  padding:10px 8px;text-align:center;transition:transform .12s,border-color .12s,background .12s}
+.opt:hover{transform:translateY(-3px)}
+.opt.sel{border-color:var(--purple2);background:rgba(124,92,252,.16)}
+.opt .ot{font-weight:700;font-size:14px;margin-top:6px}
+.scene-chip{width:100%;height:38px;border-radius:10px;margin-bottom:2px;background-size:cover;background-position:center}
+.name-in{width:100%;font-family:'Fredoka',sans-serif;font-size:16px;color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:13px 15px;margin-bottom:10px;outline:none}
+.name-in::placeholder{color:rgba(255,255,255,.4)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px 16px;margin-top:8px}
+.toggle-row .tl{font-weight:600;font-size:15px}
+.toggle-row .ts{font-size:12px;color:rgba(255,255,255,.5);margin-top:2px}
+.switch{width:54px;height:30px;border-radius:30px;background:rgba(255,255,255,.18);position:relative;cursor:pointer;transition:background .2s;flex:none}
+.switch.on{background:var(--mint)}
+.switch i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s}
+.switch.on i{left:27px}
+
+.hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.turn-pill{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:100px;padding:8px 16px 8px 8px;font-weight:700;font-size:15px}
+.turn-pill .dot{width:26px;height:26px;border-radius:50%;box-shadow:0 0 12px currentColor}
+.hud-btns{display:flex;gap:8px}
+.iconbtn{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,transform .12s}
+.iconbtn:hover{background:rgba(255,255,255,.13)}.iconbtn:active{transform:scale(.92)}
+.iconbtn.active{background:rgba(0,196,140,.22);border-color:rgba(0,196,140,.5)}
+.iconbtn svg{width:22px;height:22px}
+
+.board-wrap{position:relative;width:min(92vw,520px);margin:0 auto;aspect-ratio:1}
+.board{position:absolute;inset:0;border-radius:14px;overflow:hidden;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);box-shadow:0 18px 50px rgba(0,0,0,.5);border:3px solid rgba(255,255,255,.14)}
+.cell{position:relative;cursor:pointer}
+.cell.dark{background:var(--dark)}
+.cell.light{background:var(--light)}
+.cell .marker{position:absolute;left:50%;top:50%;width:34%;height:34%;transform:translate(-50%,-50%);border-radius:50%;background:rgba(0,196,140,.55);box-shadow:0 0 10px rgba(0,196,140,.6);display:none;pointer-events:none}
+.cell.target .marker{display:block;animation:bob 1s ease-in-out infinite}
+.cell.cap .marker{background:rgba(255,107,107,.6);box-shadow:0 0 12px rgba(255,107,107,.7)}
+@keyframes bob{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.18)}}
+.cell.sel{box-shadow:inset 0 0 0 4px var(--purple2)}
+.cell.lastfrom,.cell.lastto{box-shadow:inset 0 0 0 4px rgba(245,158,11,.85)}
+.piece-layer{position:absolute;inset:0;pointer-events:none;z-index:3}
+.piece{position:absolute;width:12.5%;height:12.5%;transition:left .22s ease,top .22s ease;display:flex;align-items:center;justify-content:center}
+.piece svg{width:84%;height:84%;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
+.fx-layer{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:visible}
+.spark{position:absolute;width:9px;height:9px;border-radius:50%;transform:translate(-50%,-50%)}
+.banner{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:rgba(15,14,23,.85);border:1px solid rgba(255,255,255,.2);
+  padding:8px 18px;border-radius:100px;font-weight:800;font-size:15px;opacity:0;transition:opacity .25s;z-index:6;white-space:nowrap}
+.banner.show{opacity:1}
+
+.react-bar{display:none;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.react-bar.on{display:flex}
+.react-bar.spent{opacity:.4;pointer-events:none}
+.react-bar button{font-family:'Fredoka',sans-serif;font-weight:600;font-size:13px;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:100px;padding:8px 13px;cursor:pointer}
+.react-bar button:hover{background:rgba(255,255,255,.16)}
+.react-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:linear-gradient(135deg,#7C5CFC,#A78BFF);color:#fff;font-weight:800;font-size:15px;padding:11px 20px;border-radius:100px;opacity:0;transition:opacity .25s,transform .25s;z-index:60;pointer-events:none}
+.react-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.modal{position:fixed;inset:0;background:rgba(8,7,15,.72);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:70;padding:20px}
+.modal.on{display:flex;animation:pop .3s ease}
+.modal .box{background:#1a1830;border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:28px;max-width:420px;width:100%;text-align:center;box-shadow:0 30px 90px rgba(0,0,0,.6)}
+.modal h2{font-family:'Nunito',sans-serif;font-weight:900;font-size:26px;margin-bottom:8px}
+.modal p{color:rgba(255,255,255,.7);font-size:15px;margin-bottom:18px;line-height:1.5}
+.guide-piece{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.05);border-radius:14px;padding:12px 14px;margin-bottom:10px;text-align:left}
+.guide-piece svg{width:46px;height:46px;flex:none}
+.guide-piece b{display:block;font-size:15px}.guide-piece span{font-size:13px;color:rgba(255,255,255,.6)}
+</style>
+</head>
+<body>
+<div class="world" id="world-bg"></div>
+<div class="world" id="world-fg"></div>
+<div class="scrim"></div>
+<div class="ambient" id="ambient"></div>
+
+<div class="app">
+  <div class="logo"><span class="b">Buildable</span> <span class="k">Checkers</span></div>
+  <div class="card">
+
+    <!-- HOME -->
+    <section class="screen on" id="s-home">
+      <div class="big-title"><span class="grad">Hop &amp; Crown</span> Checkers</div>
+      <div class="big-sub">Jump your friend's pieces and crown your kings!</div>
+      <div class="btn-row">
+        <button class="btn btn-ghost mode-card" id="btn-solo">
+          <span id="solo-art"></span>
+          <span><span class="mc-t">Play the Robot</span><span class="mc-s">Just you vs the computer</span></span>
+        </button>
+        <button class="btn btn-ghost mode-card" id="btn-two">
+          <span id="two-art"></span>
+          <span><span class="mc-t">Two Players</span><span class="mc-s">Take turns on one screen</span></span>
+        </button>
+      </div>
+      <span class="linklike" id="btn-guide">How do you play?</span>
+    </section>
+
+    <!-- SETUP -->
+    <section class="screen" id="s-setup">
+      <div class="big-title" style="font-size:30px">Get ready!</div>
+      <div class="big-sub" id="setup-sub">Pick where you want to play</div>
+
+      <div class="sect">Choose your world</div>
+      <div class="opt-grid" id="scene-grid"></div>
+
+      <div id="diff-block" style="display:none">
+        <div class="sect">How tough is the robot?</div>
+        <div class="opt-grid" id="diff-grid"></div>
+      </div>
+
+      <div class="sect">Who's playing?</div>
+      <div>
+        <input class="name-in" id="p1-name" maxlength="14" placeholder="Your name">
+        <input class="name-in" id="p2-name" maxlength="14" placeholder="Player 2 (Coral)" style="display:none">
+      </div>
+
+      <div class="toggle-row" style="margin-top:8px">
+        <div><div class="tl">Show me where I can move</div><div class="ts">Glowing dots point out every move</div></div>
+        <div class="switch on" id="hint-switch"><i></i></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="tl">Must jump</div><div class="ts">Off = relaxed (jumping is optional)</div></div>
+        <div class="switch" id="jump-switch"><i></i></div>
+      </div>
+
+      <div class="btn-row" style="margin-top:20px">
+        <button class="btn btn-primary" id="btn-start">Start Playing!</button>
+        <button class="btn btn-ghost" id="btn-back-home">Back</button>
+      </div>
+    </section>
+
+    <!-- GAME -->
+    <section class="screen" id="s-game">
+      <div class="hud">
+        <div class="turn-pill"><span class="dot" id="turn-dot"></span><span id="turn-label">Purple's turn</span></div>
+        <div class="hud-btns">
+          <div class="iconbtn active" id="hint-btn" title="Show moves"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 4v2M12 18v2M4 12h2M18 12h2"/></svg></div>
+          <div class="iconbtn active" id="sound-btn" title="Sound effects"><svg viewBox="0 0 24 24" fill="#fff"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8c1.5 1 1.5 7 0 8" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+          <div class="iconbtn active" id="music-btn" title="Music"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.6" fill="#fff" stroke="none"/><circle cx="16.5" cy="16" r="2.6" fill="#fff" stroke="none"/></svg></div>
+          <div class="iconbtn" id="menu-btn" title="Pause"><svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg></div>
+        </div>
+      </div>
+
+      <div class="board-wrap" id="board-wrap">
+        <div class="board" id="board">
+          <div class="piece-layer" id="piece-layer"></div>
+          <div class="fx-layer" id="fx-layer"></div>
+        </div>
+        <div class="banner" id="banner"></div>
+      </div>
+
+      <div style="text-align:center;margin-top:12px;min-height:22px;font-weight:600;color:rgba(255,255,255,.78)" id="tip"></div>
+      <div class="react-bar" id="react-bar"></div>
+      <div class="react-toast" id="react-toast"></div>
+    </section>
+
+  </div>
+</div>
+
+<!-- Game over modal -->
+<div class="modal" id="over-modal"><div class="box">
+  <h2 id="over-title">Purple Wins!</h2><p id="over-sub">What a game!</p>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btn-rematch">Play Again</button>
+    <button class="btn btn-ghost" id="btn-tomenu">Main Menu</button>
+  </div>
+</div></div>
+
+<!-- Guide modal -->
+<div class="modal" id="guide-modal"><div class="box" style="text-align:left">
+  <h2 style="text-align:center">How to play</h2>
+  <div id="guide-list"></div>
+  <div class="btn-row"><button class="btn btn-primary" id="btn-guide-close">Got it!</button></div>
+</div></div>
+
+<!-- Menu modal -->
+<div class="modal" id="menu-modal"><div class="box">
+  <h2>Paused</h2><p>Take a break or start fresh.</p>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btn-resume">Keep Playing</button>
+    <button class="btn btn-ghost" id="btn-restart">Restart Game</button>
+    <button class="btn btn-ghost" id="btn-quit">Main Menu</button>
+  </div>
+</div></div>
+
+<script src="buildable-audio.js"></script>
+<script>
+/* ============================================================================
+   Buildable Checkers — a kid-friendly draughts engine.
+   Same shape as buildable-chess.html: a DOM board (reliable inside iOS iframes),
+   three modes (solo bot / same-screen 2-player / online), and a NETWORK-AGNOSTIC
+   online contract — the engine only emits its move + applies the opponent's move
+   via postMessage; ALL Supabase code lives in the React layer (FamilyCheckers.jsx).
+   Headless-safe: the rules + bot + QA hook (window.CHECKERS_GAME) run with no DOM.
+   ============================================================================ */
+var BA = window.BuildableAudio || null;
+var HAS_DOM = typeof document !== "undefined" && !!document.getElementById;
+
+/* ---------------- rules (pure, no DOM) ---------------- */
+var N = 8;
+function inB(r,c){ return r>=0 && r<N && c>=0 && c<N; }
+function enemy(col){ return col==="r" ? "b" : "r"; }
+function cloneBoard(b){ return b.map(function(row){ return row.map(function(p){ return p? {c:p.c,k:p.k} : null; }); }); }
+
+// Standard 8x8 setup: dark squares (r+c odd). Red (Purple) bottom, moves up; Blue (Coral) top, moves down.
+function initialBoard(){
+  var b=[]; for(var r=0;r<N;r++){ b.push([]); for(var c=0;c<N;c++){ var p=null;
+    if((r+c)%2===1){ if(r<3)p={c:"b",k:false}; else if(r>4)p={c:"r",k:false}; }
+    b[r].push(p);
+  }}
+  return { board:b, turn:"r" };
+}
+function dirsFor(p){
+  if(p.k) return [[-1,-1],[-1,1],[1,-1],[1,1]];
+  return p.c==="r" ? [[-1,-1],[-1,1]] : [[1,-1],[1,1]];   // red up, blue down
+}
+function kingRowFor(col){ return col==="r" ? 0 : N-1; }
+
+// immediate single-step capture hops for the piece at (r,c)
+function captureHopsAt(board,r,c){
+  var p=board[r][c]; if(!p) return []; var out=[]; var ds=dirsFor(p);
+  for(var i=0;i<ds.length;i++){ var dr=ds[i][0],dc=ds[i][1];
+    var mr=r+dr,mc=c+dc,lr=r+2*dr,lc=c+2*dc;
+    if(inB(lr,lc) && inB(mr,mc) && board[mr][mc] && board[mr][mc].c===enemy(p.c) && !board[lr][lc]){
+      out.push({to:[lr,lc], cap:[mr,mc]});
+    }
+  }
+  return out;
+}
+// immediate single-step plain hops
+function simpleHopsAt(board,r,c){
+  var p=board[r][c]; if(!p) return []; var out=[]; var ds=dirsFor(p);
+  for(var i=0;i<ds.length;i++){ var nr=r+ds[i][0],nc=c+ds[i][1];
+    if(inB(nr,nc) && !board[nr][nc]) out.push({to:[nr,nc], cap:null});
+  }
+  return out;
+}
+function anyCapture(board,col){
+  for(var r=0;r<N;r++)for(var c=0;c<N;c++){ var p=board[r][c]; if(p&&p.c===col&&captureHopsAt(board,r,c).length)return true; }
+  return false;
+}
+// apply one hop to a board copy; returns {board, promoted}
+function applyHop(board,fr,fc,hop){
+  var nb=cloneBoard(board); var p=nb[fr][fc]; nb[fr][fc]=null;
+  var tr=hop.to[0],tc=hop.to[1];
+  if(hop.cap) nb[hop.cap[0]][hop.cap[1]]=null;
+  var promoted=false;
+  if(!p.k && tr===kingRowFor(p.c)){ p={c:p.c,k:true}; promoted=true; } else { p={c:p.c,k:p.k}; }
+  nb[tr][tc]=p;
+  return {board:nb, promoted:promoted};
+}
+// full capture sequences (multi-jump) from (r,c) via DFS. man promotion ends the sequence.
+function captureSeqs(board,r,c){
+  var p=board[r][c]; if(!p) return [];
+  var res=[];
+  function dfs(b,cr,cc,path,caps){
+    var hops=captureHopsAt(b,cr,cc);
+    if(!hops.length){ if(caps.length) res.push({from:[r,c],path:path.slice(),caps:caps.slice(),to:[cr,cc]}); return; }
+    for(var i=0;i<hops.length;i++){
+      var ap=applyHop(b,cr,cc,hops[i]);
+      var np=path.concat([hops[i].to]); var ncaps=caps.concat([hops[i].cap]);
+      if(ap.promoted){ res.push({from:[r,c],path:np,caps:ncaps,to:hops[i].to,promo:true}); }
+      else dfs(ap.board, hops[i].to[0], hops[i].to[1], np, ncaps);
+    }
+  }
+  dfs(board,r,c,[],[]);
+  return res;
+}
+// all full legal moves for a color. mustJump: captures mandatory when available.
+function allMoves(board,col,mustJump){
+  var caps=[], simples=[];
+  for(var r=0;r<N;r++)for(var c=0;c<N;c++){ var p=board[r][c]; if(!p||p.c!==col)continue;
+    var cs=captureSeqs(board,r,c); for(var i=0;i<cs.length;i++)caps.push(cs[i]);
+    var ss=simpleHopsAt(board,r,c); for(var j=0;j<ss.length;j++)simples.push({from:[r,c],path:[ss[j].to],caps:[],to:ss[j].to});
+  }
+  if(caps.length && mustJump) return caps;
+  if(caps.length) return caps.concat(simples);   // relaxed: both allowed
+  return simples;
+}
+function moversFor(board,col,mustJump){
+  // distinct origin squares that have at least one legal move
+  var mv=allMoves(board,col,mustJump), seen={}, out=[];
+  for(var i=0;i<mv.length;i++){ var k=mv[i].from[0]+","+mv[i].from[1]; if(!seen[k]){seen[k]=1;out.push(mv[i].from);} }
+  return out;
+}
+function applyFullMove(board,mv){
+  // mv: {from,path,caps}. Apply hop by hop.
+  var b=cloneBoard(board); var cr=mv.from[0],cc=mv.from[1];
+  for(var i=0;i<mv.path.length;i++){
+    var cap = (mv.caps && mv.caps[i]) ? mv.caps[i] : null;
+    var ap=applyHop(b,cr,cc,{to:mv.path[i],cap:cap}); b=ap.board; cr=mv.path[i][0]; cc=mv.path[i][1];
+  }
+  return b;
+}
+function countPieces(board,col){ var n=0; for(var r=0;r<N;r++)for(var c=0;c<N;c++){var p=board[r][c]; if(p&&p.c===col)n++;} return n; }
+// winner if the game is over for the side to move, else null
+function winnerIfOver(board,toMove,mustJump){
+  if(countPieces(board,toMove)===0) return enemy(toMove);
+  if(moversFor(board,toMove,mustJump).length===0) return enemy(toMove);
+  return null;
+}
+
+/* ---------------- bot ---------------- */
+function botPick(board,col,diff,mustJump){
+  var moves=allMoves(board,col,mustJump);
+  if(!moves.length) return null;
+  if(diff==="easy"){
+    // beatable: take a capture only sometimes, otherwise wander
+    if(Math.random()<0.45){ var caps=moves.filter(function(m){return m.caps.length;}); if(caps.length) return caps[(Math.random()*caps.length)|0]; }
+    return moves[(Math.random()*moves.length)|0];
+  }
+  // normal / tricky: greedy on captures, then a light heuristic
+  var best=null,bestScore=-1e9;
+  for(var i=0;i<moves.length;i++){
+    var m=moves[i]; var sc=m.caps.length*10;
+    var nb=applyFullMove(board,m);
+    // promotion bonus
+    if(nb[m.to[0]][m.to[1]] && nb[m.to[0]][m.to[1]].k) sc+=4;
+    // advance toward crowning
+    sc += (col==="r" ? (7-m.to[0]) : m.to[0]) * 0.3;
+    if(diff==="tricky"){
+      // 1-ply safety: penalize handing the opponent a capture
+      if(anyCapture(nb,enemy(col))){
+        var reply=allMoves(nb,enemy(col),mustJump), maxCap=0;
+        for(var j=0;j<reply.length;j++) if(reply[j].caps.length>maxCap)maxCap=reply[j].caps.length;
+        sc -= maxCap*8;
+      }
+      sc += (countPieces(nb,col)-countPieces(nb,enemy(col)))*1.5;
+    }
+    sc += Math.random()*0.6;
+    if(sc>bestScore){bestScore=sc;best=m;}
+  }
+  return best;
+}
+
+/* ====================================================================
+   DOM layer + game flow (skipped entirely when there is no document)
+   ==================================================================== */
+var SCENES={
+  jungle:{name:"Jungle",light:"#DCEFA8",dark:"#79B84F",pageA:"#1c3b1e",pageB:"#0d1f10",amb:"leaf"},
+  ocean:{name:"Ocean",light:"#C2EAF5",dark:"#4FA6C9",pageA:"#0e3550",pageB:"#06202f",amb:"bubble"},
+  space:{name:"Space",light:"#6A5FB0",dark:"#332C6E",pageA:"#1a1742",pageB:"#070617",amb:"star"},
+  candy:{name:"Candy",light:"#FFE0F0",dark:"#FF9ECF",pageA:"#5a2347",pageB:"#2a0f22",amb:"star"},
+  castle:{name:"Castle",light:"#E6D6F0",dark:"#B58BD0",pageA:"#2a2540",pageB:"#12101f",amb:"leaf"},
+  desert:{name:"Desert",light:"#F5E0B8",dark:"#D9A861",pageA:"#5a3a1e",pageB:"#2a1a0e",amb:"star"}
+};
+var SCENE_KEYS=Object.keys(SCENES);
+
+// game state
+var mode="solo", difficulty="easy", sceneKey="jungle", mustJump=false, hintsOn=true, flip=false;
+var humanColor="r", oppName="Friend", pName="You", pName2="Coral";
+var soundOn=true, musicOn=true, paused=false, gameOver=false, busy=false;
+var S=initialBoard();
+var selected=null, midJump=false, curHopMap={}, turnStart=null, turnCaps=[], lastMove=null;
+
+function $(id){ return document.getElementById(id); }
+function show(id){ if(!HAS_DOM)return; var ss=document.querySelectorAll(".screen"); for(var i=0;i<ss.length;i++)ss[i].classList.remove("on"); var el=$(id); if(el)el.classList.add("on"); }
+function setTip(t){ if(HAS_DOM)$("tip").textContent=t; }
+
+/* ---- piece art (drawn SVG discs + crown for kings; no emoji) ---- */
+function discSVG(col,king){
+  var a = col==="r" ? "#8E6BFF" : "#FF7A7A", b = col==="r" ? "#6A45E8" : "#F0577E";
+  var ring = col==="r" ? "#C9B8FF" : "#FFC9C9";
+  var crown = king ? '<g transform="translate(50,30)"><path d="M-17 6 L-17 -8 L-9 0 L0 -12 L9 0 L17 -8 L17 6 Z" fill="#FFD15C" stroke="#E0A21A" stroke-width="2" stroke-linejoin="round"/><circle cx="-12" cy="-9" r="2.4" fill="#FFF0C0"/><circle cx="0" cy="-13" r="2.6" fill="#FFF0C0"/><circle cx="12" cy="-9" r="2.4" fill="#FFF0C0"/></g>' : "";
+  return '<svg viewBox="0 0 100 100">'
+    + '<ellipse cx="50" cy="86" rx="34" ry="8" fill="rgba(0,0,0,.22)"/>'
+    + '<circle cx="50" cy="54" r="40" fill="'+b+'"/>'
+    + '<circle cx="50" cy="49" r="40" fill="'+a+'"/>'
+    + '<circle cx="50" cy="49" r="40" fill="none" stroke="'+ring+'" stroke-width="3" opacity=".7"/>'
+    + '<circle cx="50" cy="49" r="27" fill="none" stroke="'+ring+'" stroke-width="2.5" opacity=".5"/>'
+    + '<circle cx="41" cy="46" r="4.6" fill="#1a1330"/><circle cx="59" cy="46" r="4.6" fill="#1a1330"/>'
+    + '<circle cx="42.4" cy="44.6" r="1.5" fill="#fff"/><circle cx="60.4" cy="44.6" r="1.5" fill="#fff"/>'
+    + '<path d="M41 58 Q50 66 59 58" fill="none" stroke="#1a1330" stroke-width="3" stroke-linecap="round"/>'
+    + crown + '</svg>';
+}
+function modeArtSVG(kind){
+  if(kind==="solo") return '<svg viewBox="0 0 100 100" width="52" height="52"><rect x="22" y="30" width="56" height="44" rx="12" fill="#A78BFF"/><circle cx="40" cy="50" r="6" fill="#1a1330"/><circle cx="60" cy="50" r="6" fill="#1a1330"/><rect x="46" y="16" width="8" height="14" rx="4" fill="#A78BFF"/><circle cx="50" cy="14" r="5" fill="#FFD15C"/></svg>';
+  return '<svg viewBox="0 0 100 100" width="52" height="52">'+'<circle cx="36" cy="50" r="22" fill="#8E6BFF"/><circle cx="64" cy="50" r="22" fill="#FF7A7A"/></svg>';
+}
+
+/* ---- board build / render ---- */
+function vrc(r,c){ return flip ? [N-1-r, N-1-c] : [r,c]; }   // logical -> visual
+function buildBoard(){
+  var board=$("board");
+  // remove old cells (keep piece-layer + fx-layer)
+  var olds=board.querySelectorAll(".cell"); for(var i=0;i<olds.length;i++)olds[i].remove();
+  var frag=document.createDocumentFragment();
+  for(var vr=0;vr<N;vr++)for(var vc=0;vc<N;vc++){
+    var lr=flip?N-1-vr:vr, lc=flip?N-1-vc:vc;     // visual -> logical
+    var cell=document.createElement("div");
+    cell.className="cell "+(((lr+lc)%2===1)?"dark":"light");
+    cell.dataset.r=lr; cell.dataset.c=lc;
+    cell.style.gridRow=(vr+1); cell.style.gridColumn=(vc+1);
+    var m=document.createElement("div"); m.className="marker"; cell.appendChild(m);
+    cell.addEventListener("click",function(){ onTap(parseInt(this.dataset.r,10),parseInt(this.dataset.c,10)); });
+    frag.appendChild(cell);
+  }
+  // insert cells before piece-layer so pieces overlay
+  board.insertBefore(frag, $("piece-layer"));
+}
+function cellAt(r,c){ return $("board").querySelector('.cell[data-r="'+r+'"][data-c="'+c+'"]'); }
+function renderPieces(){
+  var layer=$("piece-layer"); layer.innerHTML="";
+  for(var r=0;r<N;r++)for(var c=0;c<N;c++){ var p=S.board[r][c]; if(!p)continue;
+    var v=vrc(r,c); var d=document.createElement("div"); d.className="piece";
+    d.style.left=(v[1]*12.5)+"%"; d.style.top=(v[0]*12.5)+"%";
+    d.innerHTML=discSVG(p.c,p.k); layer.appendChild(d);
+  }
+}
+function clearHighlights(){
+  var cells=$("board").querySelectorAll(".cell"); for(var i=0;i<cells.length;i++)cells[i].classList.remove("sel","target","cap","lastfrom","lastto");
+}
+function paintLastMove(){
+  if(!lastMove)return;
+  var f=cellAt(lastMove.from[0],lastMove.from[1]); if(f)f.classList.add("lastfrom");
+  var t=cellAt(lastMove.to[0],lastMove.to[1]); if(t)t.classList.add("lastto");
+}
+
+/* ---- selection + hops ---- */
+function myTurnNow(){
+  if(gameOver||paused||busy)return false;
+  if(mode==="online") return S.turn===humanColor;
+  if(mode==="solo")   return S.turn==="r";   // human is red in solo
+  return true;                                // two-player: whoever's turn it is taps
+}
+function hopsForPiece(r,c){
+  if(midJump) return captureHopsAt(S.board,r,c);
+  var caps=captureHopsAt(S.board,r,c);
+  if(mustJump && anyCapture(S.board,S.turn)) return caps;
+  return simpleHopsAt(S.board,r,c).concat(caps);
+}
+function selectPiece(r,c){
+  selected=[r,c]; curHopMap={};
+  clearHighlights(); paintLastMove();
+  var sc=cellAt(r,c); if(sc)sc.classList.add("sel");
+  var hops=hopsForPiece(r,c);
+  for(var i=0;i<hops.length;i++){ var h=hops[i]; var key=h.to[0]+","+h.to[1]; curHopMap[key]=h;
+    if(hintsOn){ var cell=cellAt(h.to[0],h.to[1]); if(cell){ cell.classList.add("target"); if(h.cap)cell.classList.add("cap"); } }
+  }
+  if(BA&&soundOn)BA.sfx("select");
+}
+function clearSel(){ selected=null; midJump=false; curHopMap={}; clearHighlights(); paintLastMove(); }
+
+function onTap(r,c){
+  if(!myTurnNow())return;
+  var key=r+","+c;
+  if(selected && curHopMap[key]){ doHop(curHopMap[key]); return; }
+  var p=S.board[r][c];
+  if(p && p.c===S.turn && !midJump){
+    // only selectable if it actually has a legal move (respect mustJump)
+    var movers=moversFor(S.board,S.turn,mustJump), ok=false;
+    for(var i=0;i<movers.length;i++)if(movers[i][0]===r&&movers[i][1]===c)ok=true;
+    if(ok){ if(!turnStart||!midJump)turnStart=[r,c]; selectPiece(r,c); return; }
+  }
+  if(!midJump)clearSel();
+}
+
+function doHop(hop){
+  if(!selected)return;
+  var fr=selected[0],fc=selected[1];
+  if(!turnStart) turnStart=[fr,fc];
+  var ap=applyHop(S.board,fr,fc,hop);
+  S.board=ap.board;
+  if(hop.cap){ turnCaps.push(hop.cap); spark(hop.cap[0],hop.cap[1], enemy(S.turn)==="r"?"#A78BFF":"#FF9898", 10); if(BA&&soundOn)BA.sfx("capture"); }
+  else { if(BA&&soundOn)BA.sfx("move"); }
+  if(ap.promoted){ if(BA&&soundOn)BA.sfx("king"); spark(hop.to[0],hop.to[1],"#FFD15C",14); }
+  selected=[hop.to[0],hop.to[1]];
+  renderPieces();
+  // continue a multi-jump?
+  if(hop.cap && !ap.promoted){
+    var more=captureHopsAt(S.board,selected[0],selected[1]);
+    if(more.length){ midJump=true; selectPiece(selected[0],selected[1]); setTip("Keep jumping!"); return; }
+  }
+  endTurn();
+}
+
+function endTurn(){
+  lastMove={from:turnStart, to:selected.slice()};
+  var mover=S.turn;
+  S.turn=enemy(S.turn);
+  selected=null; midJump=false; turnStart=null; turnCaps=[];
+  clearHighlights(); renderPieces(); paintLastMove(); updateTurnUI();
+  var w=winnerIfOver(S.board,S.turn,mustJump);
+  if(w){ finish(w); if(mode==="online")sendMove(true,w); return; }
+  if(mode==="online"){ sendMove(false,null); setTip("Waiting for "+oppName+"..."); enableReactions(); return; }
+  if(mode==="solo" && S.turn==="b"){ busy=true; setTip("Robot is thinking..."); setTimeout(botTurn, 620); }
+  else setTip(turnLabel()+", tap a piece!");
+}
+
+function botTurn(){
+  if(gameOver){busy=false;return;}
+  var mv=botPick(S.board,"b",difficulty,mustJump);
+  if(!mv){ busy=false; var w=winnerIfOver(S.board,"b",mustJump); if(w)finish(w); return; }
+  // animate hop-by-hop
+  var cr=mv.from[0],cc=mv.from[1], i=0;
+  turnStart=[cr,cc];
+  function step(){
+    if(i>=mv.path.length){ selected=[cr,cc]; S.turn="b"; /*will flip in endTurn*/ busy=false; endTurn(); return; }
+    var cap=(mv.caps&&mv.caps[i])?mv.caps[i]:null;
+    var ap=applyHop(S.board,cr,cc,{to:mv.path[i],cap:cap}); S.board=ap.board;
+    if(cap){ spark(cap[0],cap[1],"#A78BFF",10); if(BA&&soundOn)BA.sfx("capture"); }
+    else if(BA&&soundOn)BA.sfx("move");
+    if(ap.promoted){ if(BA&&soundOn)BA.sfx("king"); spark(mv.path[i][0],mv.path[i][1],"#FFD15C",14); }
+    cr=mv.path[i][0]; cc=mv.path[i][1]; i++;
+    renderPieces();
+    setTimeout(step, cap?320:240);
+  }
+  step();
+}
+
+/* ---- online: opponent move arrives ---- */
+function applyOpponentMove(payload){
+  if(!payload||!payload.state)return;
+  S={board:payload.state.board||payload.state, turn:payload.state.turn||humanColor};
+  if(S.turn!==humanColor && payload.state.turn===undefined) S.turn=humanColor;
+  lastMove=payload.lastMove?{from:payload.lastMove.from,to:payload.lastMove.to}:null;
+  selected=null; midJump=false; busy=false;
+  renderPieces(); clearHighlights(); paintLastMove(); updateTurnUI();
+  var w=winnerIfOver(S.board,S.turn,mustJump);
+  if(w){ finish(w); return; }
+  if(S.turn===humanColor){ setTip("Your turn — tap a piece!"); flashBanner("Your turn!"); enableReactions(); }
+  else setTip("Waiting for "+oppName+"...");
+}
+function sendMove(over,winner){
+  try{ window.parent && window.parent.postMessage({type:"checkersMove", payload:{ state:S, turn:S.turn, lastMove:lastMove, over:!!over, winner:winner||null }}, "*"); }catch(e){}
+}
+
+/* ---- turn UI / banner / fx ---- */
+function turnLabel(){
+  if(mode==="online") return S.turn===humanColor ? "Your turn" : (oppName+"'s turn");
+  if(mode==="solo")   return S.turn==="r" ? "Your turn" : "Robot's turn";
+  return S.turn==="r" ? (pName||"Purple")+"'s turn" : (pName2||"Coral")+"'s turn";
+}
+function updateTurnUI(){
+  if(!HAS_DOM)return;
+  $("turn-label").textContent=turnLabel();
+  $("turn-dot").style.color = S.turn==="r" ? "#A78BFF" : "#FF9898";
+  $("turn-dot").style.background = S.turn==="r" ? "#A78BFF" : "#FF9898";
+}
+function flashBanner(t){ if(!HAS_DOM)return; var b=$("banner"); b.textContent=t; b.classList.add("show"); setTimeout(function(){b.classList.remove("show");},1300); }
+function spark(r,c,col,n){
+  if(!HAS_DOM)return; var v=vrc(r,c); var fx=$("fx-layer");
+  var cx=(v[1]+0.5)*12.5, cy=(v[0]+0.5)*12.5;
+  for(var i=0;i<n;i++){ (function(){
+    var s=document.createElement("div"); s.className="spark"; s.style.background=col;
+    s.style.left=cx+"%"; s.style.top=cy+"%"; fx.appendChild(s);
+    var ang=Math.random()*Math.PI*2, dist=18+Math.random()*34;
+    var dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist;
+    s.animate([{transform:"translate(-50%,-50%) translate(0,0)",opacity:1},{transform:"translate(-50%,-50%) translate("+dx+"px,"+dy+"px)",opacity:0}],{duration:520+Math.random()*220,easing:"ease-out"});
+    setTimeout(function(){s.remove();},760);
+  })(); }
+}
+
+/* ---- game over ---- */
+function finish(winner){
+  gameOver=true; busy=false; clearHighlights();
+  var iWon;
+  if(mode==="online") iWon = winner===humanColor;
+  else if(mode==="solo") iWon = winner==="r";
+  else iWon = true; // 2-player: someone at this device won
+  if(BA&&soundOn)BA.sfx(iWon?"win":"lose");
+  var title,sub;
+  if(mode==="solo"){ title = winner==="r" ? "You Win!" : "Robot Wins"; sub = winner==="r" ? "You out-jumped the robot!" : "So close — try again!"; }
+  else if(mode==="online"){ title = winner===humanColor ? "You Win!" : oppName+" Wins!"; sub = "Great game!"; }
+  else { title = (winner==="r"?(pName||"Purple"):(pName2||"Coral"))+" Wins!"; sub="What a game!"; }
+  if(HAS_DOM){ $("over-title").textContent=title; $("over-sub").textContent=sub; $("over-modal").classList.add("on"); }
+  if(mode==="online") disableReactions();
+}
+
+/* ====================================================================
+   Online reactions (canned, no free text; one per move) — safety rule
+   ==================================================================== */
+var REACTIONS=["Nice move!","Wow!","You got this!","Nice try!","Gotcha!","Too easy!"];
+var reactionReady=false;
+function buildReactionBar(){ if(!HAS_DOM)return; var bar=$("react-bar"); bar.innerHTML="";
+  REACTIONS.forEach(function(t){ var b=document.createElement("button"); b.textContent=t; b.onclick=function(){sendReaction(t);}; bar.appendChild(b); });
+}
+function enableReactions(){ if(mode!=="online"||!HAS_DOM)return; reactionReady=true; $("react-bar").classList.add("on"); $("react-bar").classList.remove("spent"); }
+function disableReactions(){ if(!HAS_DOM)return; reactionReady=false; $("react-bar").classList.add("spent"); }
+function sendReaction(text){
+  if(mode!=="online"||!reactionReady)return; reactionReady=false; $("react-bar").classList.add("spent");
+  try{ window.parent && window.parent.postMessage({type:"checkersReaction", text:text}, "*"); }catch(e){}
+  showReaction("You: "+text,true);
+}
+function showReaction(text,mine){
+  if(!HAS_DOM)return; var t=$("react-toast"); t.textContent=text;
+  t.style.background = mine ? "linear-gradient(135deg,#00B47E,#28D9A0)" : "linear-gradient(135deg,#7C5CFC,#A78BFF)";
+  t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
+  setTimeout(function(){t.classList.remove("show");}, 2200);
+}
+
+/* ====================================================================
+   Worlds / scenes
+   ==================================================================== */
+function applyScene(key){ var sc=SCENES[key]; var r=document.documentElement.style;
+  r.setProperty("--light",sc.light); r.setProperty("--dark",sc.dark);
+  r.setProperty("--pageA",sc.pageA); r.setProperty("--pageB",sc.pageB);
+}
+function buildWorld(key){
+  applyScene(key);
+  var bg=$("world-bg"), fg=$("world-fg");
+  bg.style.backgroundImage="url('chess-art/"+key+"_bg.jpg?v=2')"; bg.classList.add("on");
+  fg.style.backgroundImage="url('chess-art/"+key+"_fg.jpg?v=2')"; fg.classList.add("on");
+  buildAmbient(SCENES[key].amb);
+  document.body.style.background="radial-gradient(120% 120% at 50% 0%,var(--pageA),var(--pageB))";
+}
+function resetMenuTheme(){ var r=document.documentElement.style; r.setProperty("--pageA","#1a1830"); r.setProperty("--pageB","#0F0E17");
+  $("ambient").innerHTML=""; ["world-bg","world-fg"].forEach(function(id){var e=$(id); e.classList.remove("on"); e.style.backgroundImage="";}); stopMusic();
+}
+function buildAmbient(kind){
+  var a=$("ambient"); a.innerHTML="";
+  for(var i=0;i<26;i++){ var d=document.createElement("div"); d.className="amb";
+    var sz=2+Math.random()*5; d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.left=(Math.random()*100)+"%"; d.style.top=(Math.random()*100)+"%";
+    d.style.opacity=0.2+Math.random()*0.4;
+    if(kind==="bubble")d.style.background="rgba(180,230,255,.7)";
+    else if(kind==="leaf")d.style.background="rgba(190,240,170,.6)";
+    else d.style.background="rgba(255,255,255,.8)";
+    var dur=4+Math.random()*6;
+    d.animate([{transform:"translateY(0)"},{transform:"translateY(-22px)"}],{duration:dur*1000,iterations:Infinity,direction:"alternate",easing:"ease-in-out"});
+    a.appendChild(d);
+  }
+}
+
+/* ---- music: reuse the chess per-world tracks ---- */
+var musicWorld=null;
+function playWorldMusic(key){
+  if(!musicOn||paused)return;
+  if(BA){ if(musicWorld!==key){ BA.setMusic("/api/chess-music?world="+encodeURIComponent(key)); musicWorld=key; } BA.playMusic(); }
+}
+function stopMusic(){ if(BA)BA.stopMusic(); }
+
+/* ====================================================================
+   Setup screens / wiring
+   ==================================================================== */
+function buildSceneGrid(){
+  var g=$("scene-grid"); g.innerHTML="";
+  SCENE_KEYS.forEach(function(k){ var sc=SCENES[k];
+    var o=document.createElement("div"); o.className="opt"+(k===sceneKey?" sel":"");
+    o.innerHTML='<div class="scene-chip" style="background:linear-gradient(135deg,'+sc.pageA+','+sc.pageB+');background-image:url(\'chess-art/'+k+'_thumb.jpg?v=2\')"></div><div class="ot">'+sc.name+'</div>';
+    o.onclick=function(){ sceneKey=k; buildSceneGrid(); };
+    g.appendChild(o);
+  });
+}
+function buildDiffGrid(){
+  var g=$("diff-grid"); g.innerHTML="";
+  [["easy","Easy"],["normal","Normal"],["tricky","Tricky"]].forEach(function(d){
+    var o=document.createElement("div"); o.className="opt"+(d[0]===difficulty?" sel":"");
+    o.innerHTML='<div class="ot">'+d[1]+'</div>';
+    o.onclick=function(){ difficulty=d[0]; buildDiffGrid(); };
+    g.appendChild(o);
+  });
+}
+function buildGuide(){
+  var list=$("guide-list"); if(!list)return;
+  var items=[
+    [discSVG("r",false),"Move","Tap a piece, then tap a glowing square. Pieces step diagonally forward."],
+    [discSVG("b",false),"Jump","Hop over a friend's piece to a free square behind it to capture. Chain more jumps if you can!"],
+    [discSVG("r",true),"Crown","Reach the far row and your piece becomes a King — it can move and jump backward too."],
+    [modeArtSVG("two"),"Win","Capture all of the other side's pieces, or leave them with no moves."]
+  ];
+  list.innerHTML="";
+  items.forEach(function(it){ var d=document.createElement("div"); d.className="guide-piece";
+    d.innerHTML='<div style="width:46px;height:46px">'+it[0]+'</div><div><b>'+it[1]+'</b><span>'+it[2]+'</span></div>'; list.appendChild(d); });
+}
+
+function startGame(){
+  gameOver=false; busy=false; paused=false; selected=null; midJump=false; turnStart=null; turnCaps=[]; lastMove=null;
+  S=initialBoard(); flip=(mode==="online" && humanColor==="b");
+  buildWorld(sceneKey); buildBoard(); renderPieces(); updateTurnUI();
+  show("s-game");
+  $("hint-btn").classList.toggle("active",hintsOn);
+  $("sound-btn").classList.toggle("active",soundOn);
+  $("music-btn").classList.toggle("active",musicOn);
+  if(musicOn)playWorldMusic(sceneKey);
+  if(mode==="online"){ setTip(S.turn===humanColor?"Your turn — tap a piece!":("Waiting for "+oppName+"...")); }
+  else setTip(turnLabel()+", tap a piece!");
+}
+
+function initWiring(){
+  if(!HAS_DOM)return;
+  $("solo-art").innerHTML=modeArtSVG("solo");
+  $("two-art").innerHTML=modeArtSVG("two");
+  buildGuide();
+
+  $("btn-solo").onclick=function(){ mode="solo"; $("diff-block").style.display="block"; $("p2-name").style.display="none"; $("setup-sub").textContent="Pick a world and the robot's level"; buildSceneGrid(); buildDiffGrid(); show("s-setup"); };
+  $("btn-two").onclick=function(){ mode="two"; $("diff-block").style.display="none"; $("p2-name").style.display="block"; $("setup-sub").textContent="Pick a world — then take turns!"; buildSceneGrid(); show("s-setup"); };
+  $("btn-guide").onclick=function(){ $("guide-modal").classList.add("on"); };
+  $("btn-guide-close").onclick=function(){ $("guide-modal").classList.remove("on"); };
+  $("btn-back-home").onclick=function(){ resetMenuTheme(); show("s-home"); };
+
+  $("hint-switch").onclick=function(){ hintsOn=!hintsOn; this.classList.toggle("on",hintsOn); };
+  $("jump-switch").onclick=function(){ mustJump=!mustJump; this.classList.toggle("on",mustJump); };
+
+  $("btn-start").onclick=function(){
+    pName = ($("p1-name").value||"").trim() || "Purple";
+    pName2 = ($("p2-name").value||"").trim() || "Coral";
+    if(BA)BA.unlock();
+    startGame();
+  };
+
+  $("hint-btn").onclick=function(){ hintsOn=!hintsOn; this.classList.toggle("active",hintsOn); if(selected&&!hintsOn)clearHighlights(); else if(selected)selectPiece(selected[0],selected[1]); };
+  $("sound-btn").onclick=function(){ soundOn=!soundOn; this.classList.toggle("active",soundOn); };
+  $("music-btn").onclick=function(){ musicOn=!musicOn; this.classList.toggle("active",musicOn); if(musicOn)playWorldMusic(sceneKey); else stopMusic(); };
+  $("menu-btn").onclick=function(){ paused=true; $("menu-modal").classList.add("on"); };
+  $("btn-resume").onclick=function(){ paused=false; $("menu-modal").classList.remove("on"); if(musicOn)playWorldMusic(sceneKey); if(mode==="solo"&&S.turn==="b"&&!gameOver){busy=true;setTimeout(botTurn,400);} };
+  $("btn-restart").onclick=function(){ $("menu-modal").classList.remove("on"); if(mode!=="online")startGame(); };
+  $("btn-quit").onclick=function(){ $("menu-modal").classList.remove("on"); $("over-modal").classList.remove("on"); resetMenuTheme(); exitToHub(); };
+  $("btn-rematch").onclick=function(){ $("over-modal").classList.remove("on"); if(mode==="online"){ exitToHub(); } else startGame(); };
+  $("btn-tomenu").onclick=function(){ $("over-modal").classList.remove("on"); resetMenuTheme(); exitToHub(); };
+
+  buildReactionBar();
+}
+function exitToHub(){
+  // online play is launched by the React shell; signal intent to leave (nav contract).
+  if(mode==="online"){ try{ window.parent && window.parent.postMessage({type:"nav:exit"}, "*"); }catch(e){} }
+  show("s-home");
+}
+
+/* ====================================================================
+   Online entry: driven by the app via postMessage (no chat, just moves)
+   ==================================================================== */
+function startOnlineGame(d){
+  mode="online"; humanColor=d.myColor||"r"; oppName=d.oppName||"Friend";
+  if(d.myName)pName=d.myName;
+  sceneKey=(d.world&&SCENES[d.world])?d.world:"jungle";
+  if(d.state){ S={board:d.state.board||d.state, turn:d.state.turn||"r"}; } else { S=initialBoard(); }
+  flip=(humanColor==="b");
+  gameOver=false; busy=false; paused=false; selected=null; midJump=false; turnStart=null; turnCaps=[];
+  lastMove=d.lastMove?{from:d.lastMove.from,to:d.lastMove.to}:null;
+  if(BA)BA.unlock();
+  buildWorld(sceneKey); buildBoard(); renderPieces(); updateTurnUI();
+  $("hint-btn").classList.toggle("active",hintsOn);
+  $("sound-btn").classList.toggle("active",soundOn);
+  $("music-btn").classList.toggle("active",musicOn);
+  if(musicOn)playWorldMusic(sceneKey);
+  show("s-game"); buildReactionBar();
+  if(S.turn===humanColor)enableReactions();
+  paintLastMove();
+  setTip(S.turn===humanColor?"Your turn — tap a piece!":("Waiting for "+oppName+"..."));
+}
+
+if(HAS_DOM){
+  window.addEventListener("message",function(e){
+    var d=e.data||{};
+    if(d.type==="checkersInit")startOnlineGame(d);
+    else if(d.type==="checkersOpponentMove")applyOpponentMove(d.payload||d);
+    else if(d.type==="checkersShowReaction")showReaction(d.text,false);
+  });
+  initWiring();
+  resetMenuTheme();
+  // If embedded for online play, hide menus and tell the app we're ready for an init.
+  if(new URLSearchParams(location.search).get("online")){
+    document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("on");});
+    setTip("Connecting...");
+    try{ window.parent && window.parent.postMessage({type:"checkersReady"}, "*"); }catch(e){}
+  }
+}
+
+/* ====================================================================
+   Headless QA hook — a perfect-ish player drives the engine with no DOM
+   (mirrors the BK_GAME/CROC_GAME pattern). qa-checkers.mjs drives this.
+   ==================================================================== */
+function strongPick(board,col,mj){
+  // capture-greedy + 1-ply safety; used as the "good kid" in QA.
+  var moves=allMoves(board,col,mj); if(!moves.length)return null;
+  var best=null,bs=-1e9;
+  for(var i=0;i<moves.length;i++){ var m=moves[i]; var sc=m.caps.length*12;
+    var nb=applyFullMove(board,m);
+    if(nb[m.to[0]][m.to[1]]&&nb[m.to[0]][m.to[1]].k)sc+=5;
+    sc+=(col==="r"?(7-m.to[0]):m.to[0])*0.35;
+    if(anyCapture(nb,enemy(col))){ var rep=allMoves(nb,enemy(col),mj),mx=0; for(var j=0;j<rep.length;j++)if(rep[j].caps.length>mx)mx=rep[j].caps.length; sc-=mx*9; }
+    sc+=(countPieces(nb,col)-countPieces(nb,enemy(col)))*1.5;
+    if(sc>bs){bs=sc;best=m;}
+  }
+  return best;
+}
+function simGame(opts){
+  opts=opts||{}; var diff=opts.difficulty||"easy", mj=!!opts.mustJump, cap=opts.maxMoves||300;
+  var st=initialBoard(); var moves=0;
+  while(moves<cap){
+    var w=winnerIfOver(st.board,st.turn,mj); if(w)return {winner:w,moves:moves,reason:"mate"};
+    var mv = st.turn==="r" ? strongPick(st.board,"r",mj) : botPick(st.board,"b",diff,mj);
+    if(!mv) return {winner:enemy(st.turn),moves:moves,reason:"nomove"};
+    st.board=applyFullMove(st.board,mv); st.turn=enemy(st.turn); moves++;
+  }
+  var rc=countPieces(st.board,"r"), bc=countPieces(st.board,"b");
+  return {winner: rc>bc?"r":(bc>rc?"b":"draw"), moves:moves, reason:"cap", red:rc, blue:bc};
+}
+var CHECKERS_GAME = {
+  initialBoard:initialBoard, allMoves:allMoves, captureSeqs:captureSeqs, anyCapture:anyCapture,
+  winnerIfOver:winnerIfOver, botPick:botPick, strongPick:strongPick, applyFullMove:applyFullMove,
+  countPieces:countPieces, sim:simGame
+};
+if(typeof window!=="undefined")window.CHECKERS_GAME=CHECKERS_GAME;
+if(typeof module!=="undefined"&&module.exports)module.exports=CHECKERS_GAME;
+</script>
+</body>
+</html>

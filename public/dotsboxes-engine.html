@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Dots and Boxes</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b1030;overflow:hidden;touch-action:manipulation;font-family:'Fredoka',-apple-system,sans-serif;color:#fff}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;border-radius:18px;touch-action:none}
+  #start{position:fixed;inset:0;z-index:10;display:none}
+  #hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;font-weight:700;font-size:18px;
+       background:rgba(20,16,54,.66);padding:8px 18px;border-radius:999px;pointer-events:none;white-space:nowrap}
+  .corner{position:fixed;top:12px;z-index:30;font-family:inherit;font-weight:800;font-size:14px;color:#cdd0ff;
+          background:rgba(26,20,64,.72);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer}
+  #home{left:12px} #mute{right:12px}
+  #banner{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;
+          background:rgba(8,10,40,.74);backdrop-filter:blur(3px)}
+  #banner.show{display:flex}
+  #banner .card{background:linear-gradient(180deg,#1a1450,#2a1b6b);border:2px solid #4a36a0;border-radius:24px;
+                padding:30px 40px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  #bTitle{font-size:40px;font-weight:700;margin:0 0 6px} #bSub{opacity:.82;margin:0 0 20px;font-size:18px}
+  #again{font-family:inherit;font-weight:700;font-size:22px;color:#1a0f3a;background:#7ee0a0;border:none;border-radius:16px;
+         padding:14px 40px;cursor:pointer;box-shadow:0 6px 0 #4cba74}
+  #again:active{transform:translateY(3px);box-shadow:0 3px 0 #4cba74}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv"></canvas></div>
+<div id="hud"></div>
+<button id="home" class="corner">Home</button>
+<button id="mute" class="corner">Sound: On</button>
+<div id="start"></div>
+<div id="banner"><div class="card"><h1 id="bTitle"></h1><p id="bSub"></p><button id="again">Play again</button></div></div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-boardgame.js"></script>
+<script>
+const BG = window.BuildableBoardGame, BR = window.BuildableRenders;
+const COLS=3, ROWS=3;                       // 3x3 boxes (4x4 dots) — small + friendly for young kids
+const NH=(ROWS+1)*COLS, NV=ROWS*(COLS+1);   // edge counts
+const TOTAL=COLS*ROWS;                       // boxes to claim
+const P = [{ name:"Teal", col:"#36D6C3", glow:"rgba(54,214,195,.55)" },
+           { name:"Coral", col:"#FF8A5B", glow:"rgba(255,138,91,.55)" }];
+
+function geo(W,H){ const m=Math.min(W,H)*0.78; const cell=m/Math.max(COLS,ROWS);
+  const bw=cell*COLS, bh=cell*ROWS; return { x0:(W-bw)/2, y0:(H-bh)/2, cell, bw, bh }; }
+function dot(W,H,c,r){ const g=geo(W,H); return { x:g.x0+c*g.cell, y:g.y0+r*g.cell }; }
+function boxCenter(W,H,bc,br){ const g=geo(W,H); return { x:g.x0+(bc+.5)*g.cell, y:g.y0+(br+.5)*g.cell }; }
+function segDist(px,py,ax,ay,bx,by){ const dx=bx-ax,dy=by-ay; const L=dx*dx+dy*dy||1; let t=((px-ax)*dx+(py-ay)*dy)/L; t=Math.max(0,Math.min(1,t)); const x=ax+t*dx,y=ay+t*dy; return Math.hypot(px-x,py-y); }
+// edge endpoints (in dot coords)
+function hEnds(c,r){ return { c0:c, r0:r, c1:c+1, r1:r }; }       // horizontal i=r*COLS+c
+function vEnds(c,r){ return { c0:c, r0:r, c1:c, r1:r+1 }; }       // vertical   i=r*(COLS+1)+c
+function sidesDrawn(G,bc,br){ const s=BG.boxSides(COLS,ROWS,bc,br); let n=0; if(G.h[s.top.i])n++; if(G.h[s.bottom.i])n++; if(G.v[s.left.i])n++; if(G.v[s.right.i])n++; return n; }
+function anyThreeSide(G){ for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(!G.owner[r*COLS+c] && sidesDrawn(G,c,r)===3) return true; return false; }
+
+const spec = {
+  id:"dotsboxes", title:"Dots and Boxes", subtitle:"Draw lines — close a box to claim it!",
+  modes:["solo","two"], aiName:"Robo", players:P, aspect:1,
+  sfx:{ place:"board_line", claim:"board_claim", win:"board_win", draw:"board_draw" },
+  sfxPlace:"place", sfxWin:"win", sfxDraw:"draw",
+
+  init(){ return { h:new Array(NH).fill(0), v:new Array(NV).fill(0), owner:new Array(TOTAL).fill(0), scores:[0,0], last:null }; },
+  moves(G){ const m=[]; for(let i=0;i<NH;i++) if(!G.h[i]) m.push({kind:"h",i}); for(let i=0;i<NV;i++) if(!G.v[i]) m.push({kind:"v",i}); return m; },
+
+  move(G, tk, api){
+    if(!tk) return { moved:false };
+    const arr = tk.kind==="h"?G.h:G.v; if(tk.i<0||tk.i>=arr.length||arr[tk.i]) return { moved:false };
+    arr[tk.i]=api.turn; G.last=tk;
+    const closed=BG.boxesNewlyClosed(G.h,G.v,COLS,ROWS,tk.kind,tk.i);
+    if(closed.length){ for(const b of closed){ G.owner[b]=api.turn; G.scores[api.turn-1]++; }
+      const b0=closed[0], bc=b0%COLS, br=(b0/COLS|0), p=boxCenter(api.W,api.H,bc,br);
+      return { moved:true, sound:"claim", extra:true, fx:{ x:p.x, y:p.y, col:P[api.turn-1].col, n:16 } }; }
+    return { moved:true, sound:"place", extra:false };
+  },
+  tap(G,x,y,api){ const g=geo(api.W,api.H); const thr=g.cell*0.42; let best=null, bd=thr;
+    for(let i=0;i<NH;i++){ if(G.h[i])continue; const c=i%COLS, r=(i/COLS|0); const a=dot(api.W,api.H,c,r), b=dot(api.W,api.H,c+1,r); const d=segDist(x,y,a.x,a.y,b.x,b.y); if(d<bd){bd=d;best={kind:"h",i};} }
+    for(let i=0;i<NV;i++){ if(G.v[i])continue; const c=i%(COLS+1), r=(i/(COLS+1)|0); const a=dot(api.W,api.H,c,r), b=dot(api.W,api.H,c,r+1); const d=segDist(x,y,a.x,a.y,b.x,b.y); if(d<bd){bd=d;best={kind:"v",i};} }
+    if(!best) return { moved:false }; return spec.move(G,best,api);
+  },
+
+  // EASY computer: grab a free box, otherwise avoid handing one over, else random.
+  ai(G,api){ const legal=spec.moves(G);
+    for(const t of legal){ const arr=t.kind==="h"?G.h:G.v; arr[t.i]=2; const c=BG.boxesNewlyClosed(G.h,G.v,COLS,ROWS,t.kind,t.i); arr[t.i]=0; if(c.length) return spec.move(G,t,api); }
+    let safe=legal.filter(t=>{ const arr=t.kind==="h"?G.h:G.v; arr[t.i]=2; const bad=anyThreeSide(G); arr[t.i]=0; return !bad; });
+    const pool = safe.length?safe:legal; return spec.move(G, BG.pick(pool,api.rng), api);
+  },
+
+  result(G){ const done=G.scores[0]+G.scores[1]>=TOTAL;
+    if(!done) return { over:false };
+    const w = G.scores[0]>G.scores[1]?1:(G.scores[1]>G.scores[0]?2:0);
+    return { over:true, winner:w, scores:P[0].name+" "+G.scores[0]+"  —  "+G.scores[1]+" "+P[1].name }; },
+  hud(G,ctrl){ const sc=P[0].name+" "+G.scores[0]+" — "+G.scores[1]+" "+P[1].name;
+    const who = ctrl.mode==="solo" ? (ctrl.turn===1?"Your turn":"Robo...") : P[ctrl.turn-1].name+"'s turn";
+    return sc+"   •   "+who; },
+
+  draw(ctx,G,R){ const {W,H,t}=R; const g=geo(W,H);
+    // claimed box fills
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const o=G.owner[r*COLS+c]; if(!o) continue;
+      const p=boxCenter(W,H,c,r); ctx.fillStyle=BR._rgba(P[o-1].col,0.22); BR.rrect(ctx,p.x-g.cell*0.46,p.y-g.cell*0.46,g.cell*0.92,g.cell*0.92,10); ctx.fill();
+      ctx.fillStyle=P[o-1].col; BR.sparkle(ctx,p.x,p.y,g.cell*0.14,t*1.5); }
+    // edges
+    const drawEdge=(a,b,who,isLast)=>{ ctx.lineCap="round"; ctx.lineWidth=g.cell*0.075;
+      ctx.strokeStyle = who?P[who-1].col:"rgba(120,120,180,.18)"; if(isLast){ ctx.shadowColor="#fff"; ctx.shadowBlur=12; }
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.shadowBlur=0; };
+    // faint guides for undrawn edges first
+    for(let i=0;i<NH;i++){ const c=i%COLS,r=(i/COLS|0); if(!G.h[i]) drawEdge(dot(W,H,c,r),dot(W,H,c+1,r),0,false); }
+    for(let i=0;i<NV;i++){ const c=i%(COLS+1),r=(i/(COLS+1)|0); if(!G.v[i]) drawEdge(dot(W,H,c,r),dot(W,H,c,r+1),0,false); }
+    for(let i=0;i<NH;i++){ const c=i%COLS,r=(i/COLS|0); if(G.h[i]) drawEdge(dot(W,H,c,r),dot(W,H,c+1,r),G.h[i],G.last&&G.last.kind==="h"&&G.last.i===i); }
+    for(let i=0;i<NV;i++){ const c=i%(COLS+1),r=(i/(COLS+1)|0); if(G.v[i]) drawEdge(dot(W,H,c,r),dot(W,H,c,r+1),G.v[i],G.last&&G.last.kind==="v"&&G.last.i===i); }
+    // dots
+    for(let r=0;r<=ROWS;r++) for(let c=0;c<=COLS;c++){ const d=dot(W,H,c,r); ctx.fillStyle="#e9ecff"; ctx.beginPath(); ctx.arc(d.x,d.y,g.cell*0.055,0,7); ctx.fill(); }
+  },
+};
+
+const ctrl = BG.boot(spec);
+
+// ---------- QA / picker hook ----------
+function tokKey(t){ return t.kind+t.i; }
+function fullGame(opts){ opts=opts||{}; const mode=opts.mode||"two", cap=opts.cap||(NH+NV)+5;
+  ctrl.rnd=BG.rng(opts.seed||1); ctrl.startGame(mode);
+  const strat=opts.strat || ((G)=>BG.pick(spec.moves(G), ctrl.rnd));
+  const strat2=opts.strat2 || strat; let n=0;
+  while(ctrl._state()==="play" && n<cap){
+    if(mode==="solo" && ctrl._turn()===2){ ctrl._ai(); }
+    else { const who=ctrl._turn(); ctrl._play((who===1?strat:strat2)(ctrl.G,who)); }
+    n++;
+  }
+  const G=ctrl.G; const drawn=G.h.filter(x=>x).length+G.v.filter(x=>x).length;
+  const r=spec.result(G);
+  return { result:ctrl._state(), winner:r.winner, moves:n, claimed:G.scores[0]+G.scores[1], drawnEdges:drawn, edges:NH+NV };
+}
+// greedy "smart" player: take a box, avoid giving one, else random — proves AI beatable + game ends
+function smart(G){ const legal=spec.moves(G);
+  for(const t of legal){ const arr=t.kind==="h"?G.h:G.v; arr[t.i]=1; const c=BG.boxesNewlyClosed(G.h,G.v,COLS,ROWS,t.kind,t.i); arr[t.i]=0; if(c.length) return t; }
+  const safe=legal.filter(t=>{ const arr=t.kind==="h"?G.h:G.v; arr[t.i]=1; const bad=anyThreeSide(G); arr[t.i]=0; return !bad; });
+  return (safe.length?safe:legal)[0];
+}
+window.BUILDABLE_GAME = {
+  _cfg:()=>({ title:spec.title, modes:spec.modes, cols:COLS, rows:ROWS, boxes:TOTAL, edges:NH+NV }),
+  sim: fullGame,
+  simVsAI:(seed)=>fullGame({ mode:"solo", seed:seed||7, strat:(G)=>smart(G) }),
+  moves:()=>ctrl.moves(), _play:(t)=>ctrl._play(t), _ai:()=>ctrl._ai(),
+  _turn:()=>ctrl._turn(), _state:()=>ctrl._state(), result:()=>spec.result(ctrl.G),
+  _begin:(m)=>ctrl.startGame(m||"two"), _draw:()=>ctrl._draw(), _G:()=>ctrl.G,
+};
+window.DOTSBOXES_GAME = window.BUILDABLE_GAME;
+</script>
+</body>
+</html>

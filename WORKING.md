@@ -18,7 +18,9 @@ overwrite each other. Git merges the code; this file carries the *intent*.
 Home tiles:
 - **Music** — LIVE (Ready)
 - **Games** — LIVE, **Beta** tag. Opens a pick-a-game screen: Platformer (`/play.html`)
-  + Survival (`/survival-engine.html`), both playable. The old AI-generated game flow
+  + Survival (`/survival-engine.html`) + Breaker + Sunny Town + Tennis + Chess + Typing
+  + Sound Machine + **Memory Match (`/memory-engine.html`)** + **Bingo (`/bingo-engine.html`)**
+  + **Snakes & Ladders (`/snakes-engine.html`)** — all playable. The old AI-generated game flow
   is retired — do not route Games back to SCREEN_INTRO.
 - **Stories** — COMING SOON (disabled). **Do not re-enable without Mike.**
 - **Typing** — LIVE (New)
@@ -34,7 +36,18 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
-- **claude/games-family-town** — Family Town board game: `public/family-town.html`, `src/FamilyTown.jsx`, `src/lib/townMatches.js`, `db/create-town-matches.sql`, `api/sfx.js` (town_* sounds), + a tile/route in `vercel.json` + `src/BuildableKids.jsx`. Branch handed to Mike to merge.
+- **claude/games-family-town** — Family Town board game (MERGED): `public/family-town.html`, `src/FamilyTown.jsx`, `src/lib/townMatches.js`, `db/create-town-matches.sql`, `api/sfx.js` (town_* sounds), `api/images.js` (kind=town art), + a tile/route in `vercel.json` + `src/BuildableKids.jsx`.
+- (none right now)  
+  _Done on branch `claude/games-simple-batch2` (await Mike merge): Memory + Bingo + Snakes &
+  Ladders engines, the shared `buildable-turns.js` (BT) turn shell, BS `p2/p3/p4` modes,
+  bespoke sounds in `api/sfx.js` + `api/say.js` caller voice, vercel routes + BuildableKids tiles._
+- **claude/games-checkers** — NEW kid-friendly Checkers (turn-based, Pattern A, the chess
+  model). Owns NEW files only: `public/buildable-checkers.html`,
+  `db/create-checkers-matches.sql`, `src/lib/checkersMatches.js`, `src/FamilyCheckers.jsx`,
+  `qa-checkers.mjs`. Touches shared files additively: `vercel.json` (adds a checkers route),
+  `api/sfx.js` (adds `checkers_*` one-shots), `src/BuildableKids.jsx` (adds a Games-picker
+  Checkers tile + `SCREEN_CHECKERS`/`SCREEN_CHECKERS_FAMILY` — high-collision file, edits
+  kept tiny & isolated). Does NOT touch the chess files.
 
 ## Suggested ownership (to avoid collisions)
 - Games engines + `public/*.html` + `vercel.json` routes

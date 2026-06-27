@@ -312,6 +312,21 @@
       ctx.fillStyle = "#ffd23f"; ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 0, 7); ctx.fill();
     } else if (name === "diamond") {
       ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.7, 0); ctx.closePath(); ctx.fill();
+    } else if (name === "triangle") {
+      ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.88, r * 0.7); ctx.lineTo(-r * 0.88, r * 0.7); ctx.closePath(); ctx.fill();
+    } else if (name === "circle") {
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.92, 0, 7); ctx.fill();
+    } else if (name === "lightning") {
+      ctx.beginPath(); ctx.moveTo(r * 0.15, -r); ctx.lineTo(-r * 0.5, r * 0.12); ctx.lineTo(-r * 0.05, r * 0.12);
+      ctx.lineTo(-r * 0.2, r); ctx.lineTo(r * 0.55, -r * 0.18); ctx.lineTo(r * 0.05, -r * 0.18); ctx.closePath();
+      ctx.fillStyle = color || "#ffd23f"; ctx.fill();
+    } else if (name === "moon") {
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.9, 0, 7); ctx.fill();
+      ctx.globalCompositeOperation = "destination-out"; ctx.beginPath(); ctx.arc(r * 0.45, -r * 0.2, r * 0.8, 0, 7); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+    } else if (name === "cloud") {
+      ctx.beginPath(); ctx.arc(-r * 0.45, r * 0.1, r * 0.42, 0, 7); ctx.arc(0, -r * 0.15, r * 0.55, 0, 7);
+      ctx.arc(r * 0.5, r * 0.1, r * 0.45, 0, 7); ctx.rect(-r * 0.55, r * 0.05, r * 1.1, r * 0.45); ctx.fill();
     } else {                            // dot
       ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
     }

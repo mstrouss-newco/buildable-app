@@ -349,3 +349,97 @@ Three reusable mechanics shipped with Tennis. Registered in `game_mechanics` via
 `foot` label (e.g. a difficulty hint), with NO progression wording. Use it for
 difficulty/mode pickers where "Cleared / Next up / Locked" doesn't fit. (Tennis uses three
 `ready` cards: Easy / Normal / Tricky.)
+
+---
+
+## 14. Simple board games — the hot-seat shell + reusable detectors
+
+The simple-board-game batch (Tic-Tac-Toe, Connect Four, Dots and Boxes) added a
+**fourth shared piece next to BR/BA/BM/BS: the board-game shell**
+`public/buildable-boardgame.js` — global `BG` (`window.BuildableBoardGame`). It is the
+Track-B engine host for *turn-based, same-device, no-backend* board games: build it once,
+instantiate per game with a small spec. Each engine (`tictactoe-engine.html`,
+`connectfour-engine.html`, `dotsboxes-engine.html`) is ~150 lines of *rules + draw*; the
+shell owns everything else. Three reusable mechanics came out of it (seeded by
+`db/seed-boardgame-mechanics.sql`):
+
+| slug | what it gives a game | how to reuse |
+|---|---|---|
+| `hot-seat-turns` | Player A / Player B alternate on ONE device (pass-and-play), or Player B = an easy computer in solo mode. No backend, no accounts. | `BG.boot(spec)` runs the shell (canvas, pointer→board mapping, BS start screen with a Solo/2-player mode row, BA sound, BM juice, win banner, Home→`nav:exit`, mute, QA scaffold). The spec supplies `init/moves/move/tap/ai/result/hud/draw`. A move flips the turn unless `out.extra` is set (the extra-turn reward). |
+| `grid-line-winner` | N-in-a-row win detection in any of 4 directions, with the winning cells for highlighting. | `BG.lineWinner(cells, cols, rows, need)` → `{player, cells}` or `null`; `BG.boardFull(cells)` for the draw. The SAME call powers Tic-Tac-Toe (`need=3`) and Connect Four (`need=4`). |
+| `box-claim-extra-turn` | The dots-and-boxes "4th side closes a box → claim it + go again" rule. | Store edges as `h[]`/`v[]`; after drawing one, `BG.boxesNewlyClosed(h,v,cols,rows,kind,idx)` returns the box(es) it closed. The closer claims them and returns `{moved:true, extra:true}` so the hot-seat manager keeps their turn. Most boxes wins. |
+
+**The spec contract** (what `BG.boot(spec)` expects): `init()` → fresh state `G`;
+`moves(G)` → legal move tokens; `move(G, token, api)` → `{moved, sound?, extra?, fx?}`
+(the rule application — `tap` and `ai` both go through it); `tap(G,x,y,api)` maps a pointer
+to a token; `ai(G,api)` makes the easy-computer move; `result(G)` →
+`{over, winner:1|2|0(draw)|null, line?, scores?}`; `hud(G,ctrl)` → status text; `draw(ctx,G,R)`
+renders (skipped headless). `api` carries `{turn, mode, rng, W, H}`.
+
+**Always-winnable / pressure-free.** These are 2-player games, so "always-winnable" means:
+no soft-locks (every game terminates with a valid result), no harsh fail (a tie is friendly,
+not a loss), and the **easy computer is genuinely beatable** — it takes obvious wins, only
+*sometimes* blocks, and otherwise plays light/random. The QA sims assert exactly this (a
+perfect Tic-Tac-Toe player never loses to the AI; a smart Connect Four player beats it a
+healthy share; every Dots-and-Boxes game claims all boxes).
+
+**QA hook.** Each engine exposes `window.BUILDABLE_GAME` (plus a `*_GAME` alias) with
+`sim(opts)` / `simVsAI(seed)` driving full games headlessly through the shared `moves`/`_play`
+pipeline (logical move tokens, no pixels), `_begin/_play/_draw/_G/result`. Runners:
+`qa-tictactoe.mjs`, `qa-connectfour.mjs`, `qa-dotsandboxes.mjs` (model: `qa-breaker.mjs`).
+
+**Bespoke sounds** (created, not synth): `board_place`, `board_drop`, `board_line`,
+`board_claim`, `board_win`, `board_draw` registered in `api/sfx.js` (BA synth is the silent
+fallback only).
+
+**Left out of v1 (follow-up):** cross-device play. Per `MULTIPLAYER.md`, these turn-based
+games are the textbook fit for the **poll-a-row** transport (`mp-turn-based-row`, like chess):
+one family-scoped row holds the whole board, a move updates it, the other device re-reads
+every ~2s. The shell is already network-agnostic (rules + render only), so adding it later is
+additive — no engine rewrite.
+
+---
+
+## 15. Same-device turn shell — `same-device-turns` (the 5th shared lib, `BT`)
+
+The "simple games" batch (Memory, Bingo, Snakes & Ladders) introduced one shared brain for
+**local pass-and-play**: 2-4 players (plus a solo path), **no backend, no accounts** (v1).
+Instead of each board/card game re-rolling its own "whose turn is it + who's winning" code, they
+all build on **`public/buildable-turns.js`** — global **`BT`** (`window.BuildableTurns`) — the
+fifth shared engine library alongside `BR` (art), `BA` (sound), `BM` (FX), and `BS` (start screen).
+
+```js
+// load it:  <script src="buildable-turns.js"></script>   then  BT = window.BuildableTurns
+const m = BT.create({ count: 3, onTurn:(p,i)=>{}, onWin:(p)=>{} });  // 1-4 players (count:1 = solo)
+m.cur();            // current player {idx, name, color, token, score, won}  (no emoji — colored pawns)
+m.add(1);           // add to the current player's score
+m.next();           // advance to the next seat   (m.next(true) KEEPS the turn — bonus move)
+m.leader();         // highest score
+m.finish(i);        // end the match (winner = i, or the leader if omitted) -> fires onWin
+m.reset();
+```
+
+Design guarantees (so adopting it is safe, mirroring `BM`):
+- **One match object owns the data** — roster (4 distinct colors + a token shape), turn index,
+  scores, winner. A game keeps its own board state; `BT` only arbitrates turns + scoring.
+- **Headless-safe.** No DOM, no timers — the QA sims (`qa-memory/bingo/snakes.mjs`) drive whole
+  matches with no rendering.
+- **One brain, three play styles.** Memory = strict turns + a **bonus turn on a match**; Snakes =
+  strict turns + a **bonus roll on a six**; Bingo = the roster + a **rotating caller** + winner with
+  **simultaneous daubing**. All three reuse the same `cur()/next()/add()/leader()/finish()`.
+
+Player-count picking is done through the shared start screen: `buildable-startscreen.js` gained
+reusable **`p2` / `p3` / `p4` mode keys** (a people icon + "2/3/4 players" labels) for the BS mode
+row, so any same-device multiplayer game gets a player-count picker for free (Memory also offers
+`solo`).
+
+**Registered as `game_mechanics` slug `same-device-turns`** via `db/seed-same-device-turns-mechanic.sql`
+(tags: `multiplayer`, `same-device`, `turn-based`, `pass-and-play`, `shared-lib`). This is the local
+counterpart to the cross-device multiplayer mechanics in section 12 (`mp-turn-based-row`,
+`mp-realtime-broadcast`): use `same-device-turns` when two-to-four kids share ONE screen, and the
+`mp-*` mechanics when they're on different devices.
+
+**To reuse it:** load `buildable-turns.js`, `BT.create({count})`, render the player HUD from
+`m.players` + `m.curIndex()`, and call `m.next()` / `m.finish()` from your game's rules. Keep a
+drawn HUD (no emoji). Reference engines: `public/memory-engine.html`, `bingo-engine.html`,
+`snakes-engine.html`.

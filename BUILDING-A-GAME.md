@@ -300,3 +300,34 @@ buildable-app/
 
 That's the whole loop: **pick a track → build content as data on a shared engine →
 reuse/store mechanics → pull/store assets → guarantee winnable → QA → route → log.**
+
+---
+
+## Non-negotiable: signal win/lose (helper reactions + per-kid logging)
+
+Every game MUST tell the app when the player wins or loses. ONE signal powers two
+things: the kid's helper popping in to cheer/console, AND per-kid telemetry
+(favorite games + progress, and later helper/AI personalization).
+
+**How (from inside the game / engine iframe), exactly once per game-over:**
+
+```js
+// raw (works everywhere, incl. generated blob games):
+window.parent.postMessage({ source: "buildable", kind: "win"  }, "*"); // on WIN
+window.parent.postMessage({ source: "buildable", kind: "lose" }, "*"); // on LOSE
+// or, if the page already loads buildable-buddy.js:  BB.win();  BB.lose();
+```
+
+- Send it the moment the win / Game-Over screen shows. Never more than once per result.
+- A game with its OWN celebration voice (chess, tennis) should STILL send win/lose
+  for logging — add `silent: true` to the message if you don't want the helper to
+  also speak (logging still happens). (Today chess/tennis don't send yet — TODO.)
+
+**Plays** are logged automatically by the app: when a game opens, `BuildableKids.jsx`
+maps its screen to a slug in `GAME_SLUGS` and logs a `play`. When you add a new
+in-app game screen, add it to `GAME_SLUGS` so its plays are counted.
+
+**Where it goes:** `/api/log-game-event` → `kid_game_events` table
+(`db/create-kid-game-events.sql` — run once in Supabase). Rows are
+`{kid_profile_id, device_id, game, event: play|win|lose, created_at}`. Best-effort;
+never block gameplay on it.

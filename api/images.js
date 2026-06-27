@@ -210,6 +210,9 @@ function build(q) {
       survival: "A brave little hero in the middle of a swarm of cute round googly-eyed creatures closing in from every side, the hero glowing with a star power-up and shooting sparkles outward, a big friendly crowned boss monster looming in the background, energetic and thrilling but not scary",
       chess: "An epic friendly chess battle on a giant glowing chessboard, two armies of cute characterful chess pieces (a brave king and queen, knights on horseback, castle rooks) facing off mid-charge, sparks and magic dust flying, a fantasy kingdom backdrop",
       typing: "A heroic kid defending a magical castle, glowing letter and word runes flying through the air like shooting stars as the hero zaps them, friendly cartoon creatures approaching, bright magical sparks, exciting and triumphant",
+      memory: "A cheerful tabletop of big colorful face-down memory cards, two cards flipped up revealing matching glowing star and heart symbols with a burst of sparkles between them, a few kids' hands reaching in, warm playful game-night vibe",
+      bingo: "A fun kids' bingo game scene, big colorful bingo cards covered in cheerful picture squares with bright stamp daubers marking them, a glowing called picture floating above, confetti and a happy BINGO sparkle, game-night energy",
+      snakes: "A whimsical snakes-and-ladders board game viewed at a tilt, a winding numbered path climbing a colorful hill with friendly rope ladders going up and silly smiling cartoon snakes sliding down, cute colorful player tokens racing to a golden star at the top",
     };
     const subject = GAMES[id];
     if (!subject) return null;
@@ -263,6 +266,52 @@ function build(q) {
     };
     if (SPOTS[id]) return { descriptor: `town|${id}`, prompt: `${SPOTS[id]}. ${TOWN_ICON_STYLE}`, transparent: true, quality: "medium" };
     return null;
+  }
+  if (kind === "chesspiece") {
+    const PIECE = {
+      p:"a chess PAWN: a small simple rounded ball head on a short rounded pedestal base",
+      n:"a chess KNIGHT shaped like a horse's head and arched neck rising from a round pedestal base",
+      b:"a tall slender chess BISHOP with a smooth domed mitre hat with a small vertical slit, on a round pedestal base",
+      r:"a chess ROOK shaped like a sturdy castle tower with square battlements (crenellations) on top, on a round pedestal base",
+      q:"a tall elegant chess QUEEN wearing a pointed multi-point crown, on a round pedestal base",
+      k:"a tall chess KING wearing a crown topped with a small cross, on a round pedestal base",
+    };
+    const NAME = {p:"pawn",n:"knight",b:"bishop",r:"rook",q:"queen",k:"king"};
+    const THEME = {
+      ocean:"made of coral, pearl and seashells, gentle underwater sea theme, aqua and teal accents",
+      jungle:"covered in leaves, vines and little flowers, lush green jungle theme",
+      space:"glowing cosmic theme with a metallic sheen, tiny stars and nebula colors, purples and blues",
+      candy:"made of candy, frosting and sprinkles, sweet pastel theme",
+      castle:"classic medieval theme of carved stone with gold trim",
+      desert:"warm desert theme of carved sandstone with little cactus and sun motifs",
+    };
+    const piece=(q.piece||"").toString(); const world=(q.world||"").toString();
+    if(!PIECE[piece]||!THEME[world]) return null;
+    return {
+      descriptor:`chesspiece|${world}|${piece}`,
+      prompt:`${PIECE[piece]}, ${THEME[world]}. The overall silhouette must clearly read as a chess ${NAME[piece]}. Cute kawaii character with two big friendly eyes and a little smile, thick clean outlines, bold soft 3D cartoon style, a single piece standing upright and centered, full body, soft studio lighting, child-friendly ages 4-8, no text, no words, no letters, transparent background`,
+      transparent:true, quality:"medium",
+    };
+  }
+  if (kind === "runnersky") {
+    // Full-bleed sky + distant skyline backdrops for the 3D car runner "Sunny Town Drive".
+    // Used as the Three.js scene background (the 3D road is drawn in front), so: NO road,
+    // NO cars, horizon line low, lots of sky. One per town.
+    const TOWNS = {
+      maple:    "a bright cheerful spring morning sky, big soft fluffy white clouds in a clear blue sky, a faraway cozy small-town skyline of cute rounded rooftops and leafy maple trees along the low horizon",
+      market:   "a warm sunny mid-morning sky with gentle golden light and a few soft clouds, a faraway cute town-square skyline with little market awnings, a clock tower and rounded rooftops on the low horizon",
+      beach:    "a breezy sunny seaside sky, soft clouds, a faraway sparkling ocean horizon with tiny sailboats and a couple of palm trees and beach huts along the low horizon",
+      petal:    "a dreamy soft-pink springtime sky with gentle clouds, a faraway skyline of blooming cherry-blossom treetops and a cute park gazebo on the low horizon",
+      downtown: "a bright friendly city daytime sky with soft clouds, a faraway cute rounded city skyline of small skyscrapers and buildings on the low horizon, cheerful not gloomy",
+      rainbow:  "a magical happy sky with a big soft rainbow arcing across fluffy clouds, a faraway whimsical skyline of candy-colored rooftops and a distant bridge on the low horizon",
+    };
+    const town=(q.town||"").toString(); const subj=TOWNS[town];
+    if(!subj) return null;
+    return {
+      descriptor:`runnersky|${town}`,
+      prompt:`${subj}. Wide scenic background, modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, vibrant cheerful colors, the sky filling most of the frame with the horizon low in the bottom third. NO road, NO street, NO cars, NO people, NO text, NO words, NO letters, NO UI. Child-friendly ages 4-8.`,
+      transparent:false, quality:"medium",
+    };
   }
   return null;
 }

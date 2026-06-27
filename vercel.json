@@ -76,6 +76,10 @@
       "dest": "/runner-engine.html"
     },
     {
+      "src": "/three.min.js",
+      "dest": "/three.min.js"
+    },
+    {
       "src": "/rileys-garden.html",
       "dest": "/rileys-garden.html"
     },
@@ -142,6 +146,10 @@
     {
       "src": "/buildable-chess.html",
       "dest": "/buildable-chess.html"
+    },
+    {
+      "src": "/buildable-checkers.html",
+      "dest": "/buildable-checkers.html"
     },
     {
       "src": "/favicon.svg",
@@ -216,6 +224,22 @@
       "dest": "/buildable-startscreen.js"
     },
     {
+      "src": "/buildable-boardgame.js",
+      "dest": "/buildable-boardgame.js"
+    },
+    {
+      "src": "/tictactoe-engine.html",
+      "dest": "/tictactoe-engine.html"
+    },
+    {
+      "src": "/connectfour-engine.html",
+      "dest": "/connectfour-engine.html"
+    },
+    {
+      "src": "/dotsboxes-engine.html",
+      "dest": "/dotsboxes-engine.html"
+    },
+    {
       "src": "/startscreen-demo.html",
       "dest": "/startscreen-demo.html"
     },
@@ -230,6 +254,22 @@
     {
       "src": "/art-studio.html",
       "dest": "/art-studio.html"
+    },
+    {
+      "src": "/memory-engine.html",
+      "dest": "/memory-engine.html"
+    },
+    {
+      "src": "/bingo-engine.html",
+      "dest": "/bingo-engine.html"
+    },
+    {
+      "src": "/snakes-engine.html",
+      "dest": "/snakes-engine.html"
+    },
+    {
+      "src": "/buildable-turns.js",
+      "dest": "/buildable-turns.js"
     },
     {
       "src": "/(.*)",
