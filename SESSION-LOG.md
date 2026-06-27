@@ -1,5 +1,27 @@
 # Buildable Kids — Session Log
 
+## Multiplayer playbook `MULTIPLAYER.md` (June 27 2026)
+
+Audited how multiplayer works and wrote it up as a playbook (docs only — no code/DB
+change). Finding: there is exactly ONE multiplayer pattern today — turn-based family
+**chess via polling** (`chess_matches` row holds the whole board; the mover PATCHes it;
+the opponent re-reads via `getMatch` on a 2s `setInterval`; `FamilyChess.jsx` +
+`lib/chessMatches.js` own all networking, the engine only talks `postMessage`). No
+Supabase Realtime/Broadcast is used anywhere yet.
+
+- **New `MULTIPLAYER.md`** documents the two transports and when to use each: turn-based
+  → poll a row (chess); real-time → a Supabase **Broadcast** channel (tennis, not built
+  yet). Captures the shared non-negotiables (parent-account lane + `kid_profiles`
+  identity; family-RLS scoping copied from `chess_matches`; **canned reactions only, no
+  free-text chat**; engine stays network-agnostic via `postMessage`).
+- **Tennis blueprint** included: Broadcast channel per match, **host-authoritative ball**
+  (starter simulates + broadcasts ball position/score; each kid broadcasts only their own
+  paddle), **send positions not commands** (self-correcting on dropped packets),
+  kid-friendly ball speed, lerp-smoothing, and a `tennis_matches` row for lobby/score.
+- Linked from `AGENTS.md` and `BUILDING-A-GAME.md`.
+
+
+
 ## Game engine docs + shared FX library `buildable-mechanics.js` (June 27 2026)
 
 Organization pass on how we build games, so a new game/world/engine is storable,

@@ -11,7 +11,7 @@ and data shapes, the non-negotiable rules, and the known gotchas.
 The README also keeps a dated session log and a commit history — that log is the
 source of truth for recent changes. **Add a dated entry there for every change you make.**
 
-**Building a new game, world, or game type?** Start with [`./BUILDING-A-GAME.md`](./BUILDING-A-GAME.md) — the single entry point that ties together the engine tracks, the shared engine libraries, `MECHANICS.md`, `GAME-LOOK.md`, and `ASSET-LIBRARY.md`.
+**Building a new game, world, or game type?** Start with [`./BUILDING-A-GAME.md`](./BUILDING-A-GAME.md) — the single entry point that ties together the engine tracks, the shared engine libraries, `MECHANICS.md`, `GAME-LOOK.md`, and `ASSET-LIBRARY.md`. For two-player games (turn-based or real-time), see [`./MULTIPLAYER.md`](./MULTIPLAYER.md).
 
 ## Authorized scope (owner-granted)
 

@@ -10,6 +10,7 @@ different question; this doc tells you when to open which:
 | [`MECHANICS.md`](./MECHANICS.md) | "How does it *play*? What proven mechanic do I reuse, and where do I store a new one?" |
 | [`GAME-LOOK.md`](./GAME-LOOK.md) | "How does it *look and sound*? Layers, parallax, art pipeline, audio unlock." |
 | [`ASSET-LIBRARY.md`](./ASSET-LIBRARY.md) | "What do I *render with*? Where to find assets, where to send new ones." |
+| [`MULTIPLAYER.md`](./MULTIPLAYER.md) | "Two kids playing together? Turn-based (poll a row) vs real-time (Broadcast), and the shared rules." |
 
 The north star (same as the asset rule): anything you build — an engine, a mechanic, a
 world, a hero — should be **storable, trackable, and reusable by the next game.** Don't
