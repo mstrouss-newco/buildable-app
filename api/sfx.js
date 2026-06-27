@@ -47,6 +47,14 @@ const SOUNDS = {
   breaker_power: "Short cheerful rising magical sparkle power-up chime, friendly cartoon, no music, no voices",
   breaker_miss:  "Short soft descending cartoon womp, a ball slipping past, gentle and not harsh, single hit, no music, no voices",
 
+  // ---- Family Town (board game) one-shots — bespoke, kid-friendly ----
+  town_roll:  "Short friendly wooden dice shake and roll, two dice tumbling and settling on a table, single hit, no music, no voices",
+  town_move:  "Short soft cute hop boop, a little game token hopping one space on a board, single quick hit, no music, no voices",
+  town_coin:  "Short bright cheerful coin pickup ding with a tiny sparkle, collecting play coins, single hit, no music, no voices",
+  town_buy:   "Short happy little cash-register cha-ching ding, buying a shop, cheerful cartoon, single hit, no music, no voices",
+  town_card:  "Short soft playful card flip whoosh with a light twinkle, drawing a surprise card, single hit, no music, no voices",
+  town_cheer: "Short happy little kids cheer and clap with a sparkle, cheerful board-game win celebration, single hit, no music",
+
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
   knock:     "Three soft friendly knocks on a wooden door, single hit, no music, no voices",

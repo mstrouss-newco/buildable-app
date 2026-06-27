@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Family Town</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:#0F0E17;color:#fff;font-family:'Nunito',sans-serif;overflow:hidden;}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{display:block;touch-action:none;}
+  /* in-game controls (HTML, over the canvas) */
+  #hud{position:fixed;left:0;right:0;bottom:0;z-index:6;display:none;flex-direction:column;align-items:center;gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom));pointer-events:none;}
+  #hud > *{pointer-events:auto;}
+  .btn{font-family:'Fredoka',sans-serif;font-weight:700;font-size:18px;color:#fff;border:none;cursor:pointer;border-radius:16px;padding:14px 26px;background:linear-gradient(135deg,#7C5CFC,#A78BFF);box-shadow:0 8px 20px rgba(0,0,0,.4);}
+  .btn:active{transform:translateY(1px);}
+  .btn.ghost{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);}
+  .btn.green{background:linear-gradient(135deg,#34D399,#10B981);}
+  .btn:disabled{opacity:.45;cursor:default;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;}
+  #reactRow{display:none;gap:8px;flex-wrap:wrap;justify-content:center;max-width:560px;}
+  .react{font-family:'Nunito';font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:8px 14px;cursor:pointer;}
+  #topbar{position:fixed;top:0;left:0;right:0;z-index:6;display:none;justify-content:space-between;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;pointer-events:none;}
+  #topbar > *{pointer-events:auto;}
+  .pill{font-family:'Nunito';font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:8px 14px;cursor:pointer;}
+  /* setup overlay (pick players + length) */
+  #setup{position:fixed;inset:0;z-index:8;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(8,5,18,.82);}
+  .sheet{width:100%;max-width:460px;background:#1E1733;border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:22px;max-height:92vh;overflow:auto;}
+  .sheet h2{font-family:'Fredoka';font-weight:700;font-size:24px;margin:0 0 2px;}
+  .sheet .sub{color:#B6AED0;font-size:14px;margin:0 0 16px;}
+  .lab{font-weight:800;text-transform:uppercase;letter-spacing:.5px;font-size:12px;color:rgba(255,255,255,.5);margin:16px 0 8px;}
+  .seat{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px 10px;margin-bottom:8px;}
+  .dot{width:22px;height:22px;border-radius:50%;flex:0 0 auto;}
+  .seat input{flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;color:#fff;font-family:'Nunito';font-weight:700;font-size:15px;padding:9px 11px;}
+  .toggle{font-family:'Nunito';font-weight:800;font-size:13px;border:none;border-radius:999px;padding:8px 12px;cursor:pointer;color:#fff;flex:0 0 auto;}
+  .toggle.you{background:linear-gradient(135deg,#7C5CFC,#A78BFF);}
+  .toggle.bot{background:rgba(255,255,255,.14);}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{font-family:'Nunito';font-weight:800;font-size:14px;border-radius:999px;padding:9px 15px;cursor:pointer;color:#fff;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);}
+  .chip.on{border:2px solid #A78BFF;background:rgba(124,92,252,.22);}
+  .seatctl{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+  .seatctl button{width:38px;height:38px;border-radius:12px;border:none;background:rgba(255,255,255,.12);color:#fff;font-size:22px;font-weight:800;cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game"></canvas></div>
+
+<div id="topbar">
+  <button id="homeBtn" class="pill">Home</button>
+  <div class="row">
+    <button id="reactBtn" class="pill">Say something</button>
+    <button id="muteBtn" class="pill">Sound: On</button>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="reactRow"></div>
+  <div class="row" id="actionRow">
+    <button id="rollBtn" class="btn">Roll the dice</button>
+    <button id="buyBtn" class="btn green" style="display:none">Buy</button>
+    <button id="skipBtn" class="btn ghost" style="display:none">No thanks</button>
+    <button id="nextBtn" class="btn" style="display:none">Next player</button>
+  </div>
+</div>
+
+<!-- BS start screen mounts here -->
+<div id="start" style="position:fixed;inset:0;z-index:7;"></div>
+
+<!-- custom setup (players + length) -->
+<div id="setup">
+  <div class="sheet">
+    <h2>Set up your town</h2>
+    <p class="sub">Pick who is playing and how long the game is.</p>
+    <div class="lab">Players</div>
+    <div class="seatctl"><button id="lessP">-</button><div id="pcount" style="font-weight:800;font-size:16px">3 players</div><button id="moreP">+</button></div>
+    <div id="seatList"></div>
+    <div class="lab">Game length</div>
+    <div class="chips" id="lenChips"></div>
+    <button id="startGame" class="btn green" style="width:100%;margin-top:20px">Start the game</button>
+    <button id="setupBack" class="btn ghost" style="width:100%;margin-top:10px">Back</button>
+  </div>
+</div>
+
+<script src="/buildable-renders.js"></script>
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-mechanics.js"></script>
+<script src="/buildable-startscreen.js"></script>
+<script>
+"use strict";
+/* ============================================================================
+   FAMILY TOWN — an ORIGINAL Monopoly-STYLE board game for 3-4 kids.
+   Track B hand-authored engine. Network-agnostic: it knows pass-and-play and an
+   "online" mode where it EMITS its move (whole state) and APPLIES opponents'
+   moves via postMessage. ALL Supabase code lives in the React layer (FamilyTown.jsx).
+   Shared libs: BR (art/board/tokens), BA (sound), BM (juice), BS (start screen).
+   ========================================================================== */
+var BR = window.BuildableRenders, BA = window.BuildableAudio,
+    BM = window.BuildableMechanics, BS = window.BuildableStartScreen;
+
+/* ---- seat colors (friendly, brand) ---- */
+var SEAT_COLORS = [
+  { id:"purple", name:"Purple", c:"#7C5CFC", c2:"#A78BFF" },
+  { id:"coral",  name:"Coral",  c:"#FF7A9A", c2:"#FFB0C2" },
+  { id:"mint",   name:"Mint",   c:"#2DD4A7", c2:"#7DE9CF" },
+  { id:"sky",    name:"Sky",    c:"#38BDF8", c2:"#9AD9FB" },
+];
+
+/* ---- game length the kids choose (laps ~= time) ---- */
+var LENGTHS = [
+  { id:"short", name:"Short", laps:2, hint:"about 10 min" },
+  { id:"med",   name:"Medium", laps:3, hint:"about 15 min" },
+  { id:"long",  name:"Long",  laps:4, hint:"about 20 min" },
+];
+
+/* ---- money model: simple round-number COINS (gentle) ---- */
+var START_COINS = 25;      // everyone starts with 25 coins
+var PASS_START  = 10;      // collect 10 every time you pass Start
+var TREAT_BONUS = 5;       // Treat Shop corner gives a small treat
+
+/* ---- the board: a loop of 24 spaces (original town, NOT Monopoly) ---- */
+// type: start | park | treat | fountain (corners) | prop (buyable) | surprise
+// prop tiers: A cost5/fee2, B cost10/fee3, C cost15/fee4
+function P(name,tier){ var t={A:[5,2],B:[10,3],C:[15,4]}[tier]; return {type:"prop",name:name,tier:tier,cost:t[0],fee:t[1]}; }
+var BOARD = [
+  {type:"start", name:"Start"},
+  P("Lemonade Stand","A"), P("Toy Cart","A"),
+  {type:"surprise", name:"Surprise"},
+  P("Pet Parade","B"), P("Ice Cream Stand","B"),
+  {type:"park", name:"Picnic Park"},
+  P("Bakery","A"), P("Bookshop","B"),
+  {type:"surprise", name:"Surprise"},
+  P("Music Hall","C"), P("Art Studio","C"),
+  {type:"treat", name:"Treat Shop"},
+  P("Garden Patch","A"), P("Swimming Pool","B"),
+  {type:"surprise", name:"Surprise"},
+  P("Cinema","C"), P("Arcade","C"),
+  {type:"fountain", name:"Wishing Fountain"},
+  P("Fire Station","B"), P("Library","B"),
+  {type:"surprise", name:"Surprise"},
+  P("Sweet Shop","C"), P("Train Stop","C"),
+];
+var NSPACES = BOARD.length; // 24
+
+/* ---- the chance deck: a FULLY MODERATED, kid-appropriate set of surprises.
+   kind: coins (delta to me) | move (steps, +/-) | moveTo (index, collect Start if passed)
+       | all (every player gets delta). All gentle: no knockouts, never below 0 coins. ---- */
+var DECK = [
+  { text:"You found 5 coins on the path!", kind:"coins", amount:5 },
+  { text:"Happy birthday! Have a treat.", kind:"coins", amount:10 },
+  { text:"You helped a neighbor. Thank-you gift!", kind:"coins", amount:3 },
+  { text:"Sunny day bonus!", kind:"coins", amount:4 },
+  { text:"You won the coloring contest!", kind:"coins", amount:6 },
+  { text:"You shared with a friend. Give 2 coins.", kind:"coins", amount:-2 },
+  { text:"Oops, you dropped your ice cream. Buy another.", kind:"coins", amount:-3 },
+  { text:"Hop home to Start and collect 10!", kind:"moveTo", amount:0 },
+  { text:"Skip ahead to the Treat Shop!", kind:"moveTo", amount:12 },
+  { text:"Take a shortcut. Move ahead 3.", kind:"move", amount:3 },
+  { text:"You forgot your hat. Go back 2.", kind:"move", amount:-2 },
+  { text:"Everyone is happy! Each player gets 1.", kind:"all", amount:1 },
+  { text:"Lucky penny!", kind:"coins", amount:2 },
+  { text:"Your lemonade stand made a profit!", kind:"coins", amount:8 },
+  { text:"Library book was late. Pay 2.", kind:"coins", amount:-2 },
+  { text:"A relaxing picnic in the park.", kind:"coins", amount:3 },
+  { text:"You found a puppy! Everyone says aww.", kind:"all", amount:2 },
+  { text:"Your garden grew flowers!", kind:"coins", amount:5 },
+  { text:"Cozy rainy day at home.", kind:"coins", amount:1 },
+  { text:"You won a board game!", kind:"coins", amount:4 },
+  { text:"You helped at the bake sale!", kind:"coins", amount:7 },
+  { text:"A balloon floated away. Lose 1.", kind:"coins", amount:-1 },
+  { text:"Star Helper award!", kind:"coins", amount:6 },
+  { text:"Make a wish at the Fountain!", kind:"moveTo", amount:18 },
+];
+
+/* ---- canned reactions only (no free text, EVER — child-safety rule) ---- */
+var REACTIONS = ["Nice move!","Good try!","Wow!","Let's go!","Haha!","Your turn!"];
+
+/* ============================ STATE ============================ */
+var CONFIG = window.GAME_CONFIG || { board: BOARD, deck: DECK };
+var S = null;             // the game state (the whole thing — same shape as the DB row's state)
+var ONLINE = false, MY_SEAT = 0;   // online (cross-device) mode + which seat this device controls
+var rng = Math.random;    // overridable for deterministic QA sim
+
+function makeSeats(specs){
+  // specs: [{name, bot}] length 2..4
+  return specs.map(function(sp,i){
+    var col = SEAT_COLORS[i];
+    return { name: sp.name || ("Player "+(i+1)), color: col.id, seat:i,
+             bot: !!sp.bot, pos:0, coins:START_COINS, owns:[], laps:0, finished:false };
+  });
+}
+function newGame(specs, laps){
+  return {
+    seats: makeSeats(specs),
+    turn: 0, round: 0, lapsTarget: laps || 3,
+    owners: {},            // spaceIdx -> seat index
+    phase: "rolling",      // rolling | decide | over
+    lastRoll: null, card: null, msg: "",
+    winner: null,
+  };
+}
+
+/* ============================ RULES (pure-ish) ============================ */
+function netWorth(st, seat){
+  var c = st.seats[seat].coins, owns = st.seats[seat].owns;
+  for(var i=0;i<owns.length;i++){ var sp = CONFIG.board[owns[i]]; if(sp && sp.cost) c += sp.cost; }
+  return c;
+}
+function pay(st, seat, delta){ // never below 0 — gentle, no debt, no knockout
+  var s = st.seats[seat]; s.coins = Math.max(0, s.coins + delta); return s.coins;
+}
+function rollDice(){ return [1+Math.floor(rng()*6), 1+Math.floor(rng()*6)]; }
+
+function moveSeat(st, seat, steps){
+  var s = st.seats[seat];
+  for(var k=0;k<Math.abs(steps);k++){
+    s.pos = (s.pos + (steps>0?1:-1) + NSPACES) % NSPACES;
+    if(steps>0 && s.pos===0){ s.laps++; pay(st, seat, PASS_START); } // passed/landed on Start
+  }
+}
+function jumpTo(st, seat, idx){ // for cards: move forward to idx, collecting Start if passed
+  var s = st.seats[seat];
+  while(s.pos !== idx){
+    s.pos = (s.pos + 1) % NSPACES;
+    if(s.pos===0){ s.laps++; pay(st, seat, PASS_START); }
+  }
+}
+function drawCard(st){ return CONFIG.deck[Math.floor(rng()*CONFIG.deck.length)]; }
+
+// Resolve where `seat` landed. Applies instant effects. Returns:
+//   { buy: spaceIdx|null, card: cardObj|null, lines:[strings] }
+function resolveLanding(st, seat){
+  var s = st.seats[seat], idx = s.pos, sp = CONFIG.board[idx], out = { buy:null, card:null, lines:[] };
+  if(sp.type==="prop"){
+    var owner = st.owners[idx];
+    if(owner === undefined){ out.buy = idx; }                 // free spot — offer to buy
+    else if(owner === seat){ out.lines.push("Your own spot — relax!"); }
+    else { var f = sp.fee; pay(st, seat, -f); pay(st, owner, +f); // gentle visit fee
+           out.lines.push("Visiting "+st.seats[owner].name+"'s "+sp.name+". Pay "+f+"."); }
+  } else if(sp.type==="treat"){ pay(st, seat, TREAT_BONUS); out.lines.push("Treat Shop! +"+TREAT_BONUS+" coins."); }
+  else if(sp.type==="park"){ out.lines.push("Picnic Park — take a rest."); }
+  else if(sp.type==="start"){ out.lines.push("Home at Start!"); }
+  else if(sp.type==="fountain" || sp.type==="surprise"){
+    var c = drawCard(st); out.card = c; applyCard(st, seat, c, out);
+  }
+  return out;
+}
+function applyCard(st, seat, c, out){
+  out.lines.push("Surprise: "+c.text);
+  if(c.kind==="coins"){ pay(st, seat, c.amount); }
+  else if(c.kind==="all"){ for(var i=0;i<st.seats.length;i++) pay(st, i, c.amount); }
+  else if(c.kind==="move"){ moveSeat(st, seat, c.amount); var o2=resolveLanding(st,seat); out.buy=o2.buy; out.lines=out.lines.concat(o2.lines); if(o2.card)out.lines.push("(and another surprise!)"); }
+  else if(c.kind==="moveTo"){ jumpTo(st, seat, c.amount); var o3=resolveLanding(st,seat); out.buy=o3.buy; out.lines=out.lines.concat(o3.lines); }
+}
+function applyBuy(st, seat, idx, yes){
+  if(!yes) return;
+  var sp = CONFIG.board[idx], s = st.seats[seat];
+  if(s.coins >= sp.cost){ pay(st, seat, -sp.cost); s.owns.push(idx); st.owners[idx] = seat; }
+}
+// Bot buys if it can afford and keeps a small safety reserve.
+function botWantsBuy(st, seat, idx){
+  var sp = CONFIG.board[idx], s = st.seats[seat];
+  return s.coins - sp.cost >= 4; // keep >=4 coins after buying
+}
+function advanceTurn(st){
+  st.turn = (st.turn + 1) % st.seats.length;
+  if(st.turn === 0){ st.round++; // a full round finished — fair, everyone had equal turns
+    var maxLaps = 0; for(var i=0;i<st.seats.length;i++) maxLaps = Math.max(maxLaps, st.seats[i].laps);
+    if(maxLaps >= st.lapsTarget){ finishGame(st); }
+  }
+}
+function finishGame(st){
+  st.phase = "over";
+  var best = 0;
+  for(var i=1;i<st.seats.length;i++){
+    var a = netWorth(st,i), b = netWorth(st,best);
+    if(a>b || (a===b && st.seats[i].owns.length>st.seats[best].owns.length)) best = i;
+  }
+  st.winner = best;
+}
+/* ============================ HEADLESS TURN + QA SIM ============================ */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function headlessTurn(st){
+  var seat = st.turn, d = rollDice();
+  st.lastRoll = { seat:seat, dice:d };
+  moveSeat(st, seat, d[0]+d[1]);
+  if(d[0]===d[1]) pay(st, seat, 2);            // doubles = small +2 bonus (no re-roll: keeps turns equal)
+  var out = resolveLanding(st, seat);
+  if(out.buy !== null) applyBuy(st, seat, out.buy, botWantsBuy(st, seat, out.buy));
+  advanceTurn(st);
+  return out;
+}
+function sim(opts){
+  opts = opts || {};
+  var n = opts.players || 4, laps = opts.laps || 3, seed = (opts.seed != null) ? opts.seed : 1234;
+  rng = mulberry32(seed);
+  var specs = []; for(var i=0;i<n;i++) specs.push({ name:"P"+(i+1), bot:true });
+  var st = newGame(specs, laps), turns = 0, cap = opts.cap || 6000;
+  while(st.phase !== "over" && turns < cap){ headlessTurn(st); turns++; }
+  rng = Math.random;
+  var coins = st.seats.map(function(s){ return s.coins; });
+  var net = st.seats.map(function(_,i){ return netWorth(st,i); });
+  return { result: st.phase==="over" ? "win":"timeout", winner: st.winner, turns:turns, round:st.round,
+           coins:coins, net:net, minCoins: Math.min.apply(null,coins),
+           everyoneFinished: st.phase==="over",            // ended on a round boundary = equal turns for all
+           noDebt: coins.every(function(c){ return c>=0; }) };
+}
+
+/* ============================ RENDER ============================ */
+var cvs = document.getElementById("game"), ctx = cvs.getContext("2d");
+var DPR = Math.min(window.devicePixelRatio||1, 2), VW=900, VH=900, board=720, ox=0, oy=0, cs=0;
+function resize(){
+  var w = window.innerWidth, h = window.innerHeight;
+  VW = w; VH = h; cvs.width = w*DPR; cvs.height = h*DPR; cvs.style.width=w+"px"; cvs.style.height=h+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  board = Math.min(w, h) - 24; board = Math.min(board, 760);
+  cs = board/7; ox = (w-board)/2; oy = (h-board)/2;
+}
+window.addEventListener("resize", resize);
+function ringCells(){ var N=7, a=[];
+  for(var c=0;c<N-1;c++) a.push([c,0]);
+  for(var r=0;r<N-1;r++) a.push([N-1,r]);
+  for(var c2=N-1;c2>0;c2--) a.push([c2,N-1]);
+  for(var r2=N-1;r2>0;r2--) a.push([0,r2]);
+  return a; }
+var CELLS = ringCells();
+function cellXY(idx){ var p=CELLS[idx]; return { x: ox + p[0]*cs, y: oy + p[1]*cs }; }
+function spaceColor(sp){
+  if(sp.type==="start")    return "#FFD166";
+  if(sp.type==="treat")    return "#FF8FB1";
+  if(sp.type==="park")     return "#7DE9CF";
+  if(sp.type==="fountain") return "#9AD9FB";
+  if(sp.type==="surprise") return "#C9A7FF";
+  return { A:"#3a3556", B:"#324a6b", C:"#5b3f6b" }[sp.tier] || "#33304d";
+}
+var fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" };
+var diceAnim = 0, diceFaces = [1,1];
+
+function draw(){
+  if(!ctx) return "noctx";
+  ctx.clearRect(0,0,VW,VH);
+  // backdrop
+  var g = ctx.createLinearGradient(0,0,0,VH); g.addColorStop(0,"#171528"); g.addColorStop(1,"#0d0c18");
+  ctx.fillStyle=g; ctx.fillRect(0,0,VW,VH);
+  var so = BM ? BM.shakeOffset(fx) : {x:0,y:0}; ctx.save(); ctx.translate(so.x,so.y);
+  // board spaces
+  for(var i=0;i<NSPACES;i++){
+    var sp = CONFIG.board[i], xy = cellXY(i), pad=4, owner = S && S.owners[i];
+    BR.rrect(ctx, xy.x+pad, xy.y+pad, cs-pad*2, cs-pad*2, 10);
+    ctx.fillStyle = spaceColor(sp); ctx.fill();
+    if(owner !== undefined && owner !== null){ // owned: colored top band
+      var oc = SEAT_COLORS[owner]; ctx.fillStyle = oc.c; BR.rrect(ctx, xy.x+pad, xy.y+pad, cs-pad*2, 9, 5); ctx.fill();
+    }
+    // label
+    ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.textAlign="center";
+    ctx.font = "700 "+Math.max(9, cs*0.115|0)+"px Nunito, sans-serif";
+    wrapText(sp.name, xy.x+cs/2, xy.y+cs*0.42, cs-12, cs*0.16);
+    if(sp.cost){ ctx.fillStyle="rgba(255,255,255,.72)"; ctx.font="800 "+Math.max(9,cs*0.12|0)+"px Nunito"; ctx.fillText(sp.cost+"c", xy.x+cs/2, xy.y+cs-9); }
+  }
+  // center panel
+  drawCenter();
+  // tokens (offset when sharing a space)
+  if(S){
+    var here = {};
+    for(var s=0;s<S.seats.length;s++){
+      var seat=S.seats[s], pos = tokenPos(s), key=Math.round(pos.idx);
+      here[key]=(here[key]||0)+1; var n=here[key]-1;
+      var off = [[0,0],[12,0],[0,12],[12,12]][s] ;
+      var c = SEAT_COLORS[s];
+      drawToken(pos.x+cs/2-6+off[0], pos.y+cs/2-6+off[1], c, S.turn===s);
+    }
+  }
+  if(BM){ BM.update(fx); BM.draw(ctx, fx); }
+  ctx.restore();
+  return "ok";
+}
+function wrapText(t, cx, cy, maxw, lh){
+  var words=String(t).split(" "), line="", lines=[];
+  for(var i=0;i<words.length;i++){ var test=line?line+" "+words[i]:words[i];
+    if(ctx.measureText(test).width>maxw && line){ lines.push(line); line=words[i]; } else line=test; }
+  lines.push(line);
+  var y = cy - (lines.length-1)*lh/2;
+  for(var j=0;j<lines.length;j++){ ctx.fillText(lines[j], cx, y+j*lh); }
+}
+function drawToken(x,y,c,active){
+  ctx.save();
+  if(active){ ctx.shadowColor=c.c; ctx.shadowBlur=14; }
+  ctx.beginPath(); ctx.arc(x+6,y+6,active?11:9,0,7); 
+  var g=ctx.createRadialGradient(x+3,y+3,1,x+6,y+6,12); g.addColorStop(0,c.c2); g.addColorStop(1,c.c);
+  ctx.fillStyle=g; ctx.fill(); ctx.lineWidth=2.5; ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.stroke();
+  ctx.restore();
+}
+function drawCenter(){
+  if(board < 1) return;
+  var x = ox+cs+6, y = oy+cs+6, w = board-2*cs-12, h = board-2*cs-12;
+  BR.rrect(ctx, x, y, w, h, 22); ctx.fillStyle="rgba(20,18,38,.82)"; ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.10)"; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.textAlign="center";
+  // title
+  ctx.fillStyle="#fff"; ctx.font="700 "+Math.max(18, w*0.07|0)+"px Fredoka, sans-serif";
+  ctx.fillText("Family Town", x+w/2, y+w*0.10+8);
+  if(!S){ ctx.fillStyle="#B6AED0"; ctx.font="700 14px Nunito"; ctx.fillText(ONLINE?"Waiting for players…":"", x+w/2, y+w*0.10+34); return; }
+  if(S.phase==="over"){
+    var win = S.seats[S.winner];
+    ctx.fillStyle=SEAT_COLORS[S.winner].c2; ctx.font="700 "+Math.max(20,w*0.085|0)+"px Fredoka";
+    ctx.fillText(win.name+" wins!", x+w/2, y+h*0.42);
+    ctx.fillStyle="#fff"; ctx.font="800 16px Nunito"; ctx.fillText("Most coins: "+netWorth(S,S.winner), x+w/2, y+h*0.42+30);
+    ctx.fillStyle="#B6AED0"; ctx.font="700 13px Nunito"; ctx.fillText("Great game, everyone!", x+w/2, y+h*0.42+54);
+    return;
+  }
+  // whose turn
+  var cur = S.seats[S.turn], cc=SEAT_COLORS[S.turn];
+  ctx.fillStyle=cc.c2; ctx.font="700 "+Math.max(16,w*0.07|0)+"px Fredoka";
+  ctx.fillText(cur.name+"'s turn", x+w/2, y+w*0.20+14);
+  // dice
+  var ds=Math.min(46, w*0.14), dy=y+h*0.30, gap=14;
+  drawDie(x+w/2 - ds - gap/2, dy, ds, diceAnim>0?(1+Math.floor(rng()*6)):(S.lastRoll?S.lastRoll.dice[0]:1));
+  drawDie(x+w/2 + gap/2, dy, ds, diceAnim>0?(1+Math.floor(rng()*6)):(S.lastRoll?S.lastRoll.dice[1]:1));
+  // message
+  ctx.fillStyle="#EDE9FB"; ctx.font="700 "+Math.max(13,w*0.052|0)+"px Nunito";
+  wrapTextLeft(S.msg||"", x+w/2, dy+ds+26, w*0.82, 19);
+  // coin tallies
+  var ty = y+h-14 - (S.seats.length-1)*22;
+  for(var i=0;i<S.seats.length;i++){
+    var se=S.seats[i], col=SEAT_COLORS[i], yy=ty+i*22;
+    ctx.textAlign="left"; ctx.fillStyle=col.c2; ctx.beginPath(); ctx.arc(x+18,yy-4,6,0,7); ctx.fill();
+    ctx.fillStyle = i===S.turn ? "#fff" : "rgba(255,255,255,.7)"; ctx.font="800 13px Nunito";
+    ctx.fillText(se.name, x+30, yy);
+    ctx.textAlign="right"; ctx.fillStyle="#FFD166"; ctx.fillText(se.coins+"c", x+w-16, yy);
+    ctx.textAlign="center";
+  }
+  ctx.textAlign="center";
+}
+function wrapTextLeft(t,cx,cy,maxw,lh){ ctx.textAlign="center"; wrapText(t,cx,cy,maxw,lh); }
+function drawDie(x,y,s,v){
+  BR.rrect(ctx,x,y,s,s,s*0.18); ctx.fillStyle="#fff"; ctx.fill();
+  ctx.fillStyle="#2a2342"; var r=s*0.09, q=s*0.27, m=s*0.5, e=s*0.73;
+  var P={1:[[m,m]],2:[[q,q],[e,e]],3:[[q,q],[m,m],[e,e]],4:[[q,q],[e,q],[q,e],[e,e]],5:[[q,q],[e,q],[m,m],[q,e],[e,e]],6:[[q,q],[e,q],[q,m],[e,m],[q,e],[e,e]]}[v]||[[m,m]];
+  for(var i=0;i<P.length;i++){ ctx.beginPath(); ctx.arc(x+P[i][0],y+P[i][1],r,0,7); ctx.fill(); }
+}
+/* token animation: interpolate along a path of cells */
+var tokenAnim = null; // { seat, path:[idx...], i, t }
+function tokenPos(seat){
+  var s = S.seats[seat];
+  if(tokenAnim && tokenAnim.seat===seat){
+    var a=tokenAnim, from=cellXY(a.path[a.i]), to=cellXY(a.path[Math.min(a.i+1,a.path.length-1)]);
+    return { x: from.x+(to.x-from.x)*a.t, y: from.y+(to.y-from.y)*a.t, idx:a.path[a.i] };
+  }
+  var xy=cellXY(s.pos); return { x:xy.x, y:xy.y, idx:s.pos };
+}
+/* ============================ SOUND ============================ */
+function sfx(n){ if(BA && BA.sfx) BA.sfx(n); }
+if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+  roll:"town_roll", move:"town_move", coin:"town_coin", buy:"town_buy", card:"town_card", cheer:"town_cheer"
+}}); }
+
+/* ============================ DOM helpers ============================ */
+function el(id){ return document.getElementById(id); }
+function show(id,on){ var e=el(id); if(e) e.style.display = on ? "flex" : "none"; }
+function setBtn(id,on){ var e=el(id); if(e) e.style.display = on ? "inline-block":"none"; }
+
+var pendingBuy = null;
+
+/* ============================ TURN FLOW ============================ */
+function canIRoll(){ return S && S.phase==="rolling" && (ONLINE ? S.turn===MY_SEAT : !S.seats[S.turn].bot); }
+function updateButtons(){
+  setBtn("rollBtn", canIRoll()); setBtn("buyBtn", false); setBtn("skipBtn", false); setBtn("nextBtn", false);
+}
+function beginTurn(){
+  if(!S) return;
+  if(S.phase==="over"){ showOver(); return; }
+  S.phase="rolling"; updateButtons();
+  if(ONLINE && S.turn!==MY_SEAT){ S.msg = S.seats[S.turn].name+" is playing…"; return; }   // wait for opponent
+  if(!ONLINE && S.seats[S.turn].bot){ S.msg = S.seats[S.turn].name+" is thinking…"; setTimeout(function(){ if(S && S.turn>=0) rollTurn(S.turn); }, 750); return; }
+  S.msg = "Tap Roll, "+S.seats[S.turn].name+"!";
+}
+function onRoll(){ if(canIRoll()) rollTurn(S.turn); }
+function rollTurn(seat){
+  if(BA) BA.unlock();
+  var d = rollDice(); S.lastRoll = { seat:seat, dice:d }; sfx("roll");
+  S.phase="moving"; updateButtons(); diceAnim = 26;
+  setTimeout(function(){ diceAnim=0; doMove(seat, d); }, 520);
+}
+function doMove(seat, d){
+  var steps = d[0]+d[1], p = S.seats[seat].pos, path=[];
+  for(var k=0;k<=steps;k++) path.push((p+k)%NSPACES);
+  animateToken(seat, path, function(){
+    moveSeat(S, seat, steps);
+    if(d[0]===d[1]) pay(S, seat, 2);
+    var out = resolveLanding(S, seat);
+    var lines = out.lines.slice(); if(d[0]===d[1]) lines.unshift("Doubles! +2 bonus.");
+    S.msg = lines.join("   ");
+    var c = cellXY(S.seats[seat].pos);
+    if(out.card) sfx("card");
+    if(/\+|treat|profit|bonus|found|won|award|gift|collect/i.test(S.msg)) sfx("coin");
+    if(BM) BM.burst(fx.parts, c.x+cs/2, c.y+cs/2, SEAT_COLORS[seat].c2, 9);
+    if(out.buy !== null){ pendingBuy = out.buy; promptBuy(seat, out.buy); }
+    else endTurn();
+  });
+}
+function animateToken(seat, path, done){ tokenAnim = { seat:seat, path:path, i:0, t:0, done:done }; }
+function promptBuy(seat, idx){
+  var sp = CONFIG.board[idx], human = ONLINE ? (seat===MY_SEAT) : !S.seats[seat].bot;
+  if(!human){ // bot decides
+    var yes = botWantsBuy(S, seat, idx); applyBuy(S, seat, idx, yes);
+    S.msg = yes ? (S.seats[seat].name+" bought "+sp.name+"!") : (S.seats[seat].name+" passed on "+sp.name+".");
+    if(yes) sfx("buy");
+    setTimeout(endTurn, 850); return;
+  }
+  S.phase="decide"; S.msg = "Buy "+sp.name+" for "+sp.cost+" coins?";
+  setBtn("rollBtn", false); setBtn("buyBtn", S.seats[seat].coins>=sp.cost); setBtn("skipBtn", true); setBtn("nextBtn", false);
+}
+function resolveBuy(yes){
+  var seat=S.turn, idx=pendingBuy; pendingBuy=null;
+  applyBuy(S, seat, idx, yes); if(yes){ sfx("buy"); var c=cellXY(idx); if(BM) BM.explode(fx, c.x+cs/2, c.y+cs/2, SEAT_COLORS[seat].c2, {n:14}); }
+  endTurn();
+}
+function endTurn(){
+  setBtn("buyBtn",false); setBtn("skipBtn",false);
+  advanceTurn(S);
+  if(S.phase==="over"){
+    sfx("cheer"); if(BM){ var cx=ox+board/2, cy=oy+board/2; BM.explode(fx,cx,cy,"#FFD166",{n:24}); }
+    if(ONLINE && S.turn===MY_SEAT) {} // result is emitted by the mover below
+    emitMove(true); showOver(); return;
+  }
+  if(ONLINE) emitMove(false);
+  beginTurn();
+}
+function showOver(){ updateButtons(); setBtn("nextBtn", !ONLINE); var nb=el("nextBtn"); if(nb) nb.textContent="Play again"; }
+
+/* ============================ ONLINE BRIDGE (chess-style poll-a-row) ============================ */
+// Network-agnostic: emit my whole state out; apply opponents' whole state in. React owns Supabase.
+function emitMove(over){
+  if(!ONLINE || !window.parent) return;
+  window.parent.postMessage({ type:"townMove", state:S, lastRoll:S.lastRoll, over:!!over, winner:S.winner }, "*");
+  if(over) window.parent.postMessage({ type:"townResult", winner:S.winner }, "*");
+}
+function applyOpponentState(state, lastRoll){
+  S = state; if(lastRoll) S.lastRoll = lastRoll;
+  if(lastRoll){ var nm=S.seats[lastRoll.seat] ? S.seats[lastRoll.seat].name : "Player"; S.msg = nm+" rolled "+(lastRoll.dice[0]+lastRoll.dice[1])+"."; }
+  if(S.phase==="over"){ showOver(); return; }
+  beginTurn();
+}
+window.addEventListener("message", function(e){
+  var m = e.data || {};
+  if(m.type==="townInit"){
+    ONLINE = true; MY_SEAT = m.mySeat|0; S = m.state; show("start",false); show("setup",false); showGameUI(); beginTurn();
+  } else if(m.type==="townOpponentMove"){ applyOpponentState(m.state, m.lastRoll); }
+  else if(m.type==="townShowReaction"){ showReaction(m.seat, m.text); }
+  else if(m.type==="townStart"){ beginTurn(); }
+});
+
+/* ============================ REACTIONS (canned only) ============================ */
+function buildReactRow(){
+  var row=el("reactRow"); if(!row) return; row.innerHTML="";
+  REACTIONS.forEach(function(t){ var b=document.createElement("button"); b.className="react"; b.textContent=t;
+    b.onclick=function(){ sendReaction(t); show("reactRow",false); }; row.appendChild(b); });
+}
+function sendReaction(text){
+  if(REACTIONS.indexOf(text)<0) return;                  // enforce: canned only
+  showReaction(ONLINE?MY_SEAT:S.turn, text);
+  if(ONLINE && window.parent) window.parent.postMessage({ type:"townReaction", text:text }, "*");
+}
+function showReaction(seat, text){
+  if(BM){ var cx=ox+board/2, cy=oy+board*0.32; BM.pop(fx.pops, cx, cy, text, SEAT_COLORS[seat]?SEAT_COLORS[seat].c2:"#fff"); }
+}
+
+/* ============================ START SCREEN (BS) + SETUP ============================ */
+var setupMode="solo", playerCount=3, seatRows=[];
+function showGameUI(){ show("topbar",true); show("hud",true); show("start",false); show("setup",false); }
+function mountStart(){
+  var host=el("start"); if(!host || !BS || !BS.mount){ openSetup(1); return; }
+  show("topbar",false); show("hud",false); host.style.display="block";
+  BS.mount(host, {
+    title:"Family Town", subtitle:"Roll, move around town, and collect the most coins!",
+    coins: 0, sound: !(BA&&BA.muted),
+    modes:["solo","two"], mode:setupMode,
+    levels: LENGTHS.map(function(L,i){ return { n:i+1, name:L.name+" game", color:["#2DD4A7","#7C5CFC","#FF7A9A"][i], state:"ready", foot:L.hint }; }),
+  }, {
+    onPlay:function(n){ openSetup(n); },
+    onMode:function(m){ setupMode=m; },
+    onSound:function(){ if(BA){ BA.unlock(); BA.toggleMute(); } },
+    onBack:function(){ if(window.parent) window.parent.postMessage({type:"nav:exit"},"*"); },
+  });
+}
+function openSetup(lenIdx){
+  show("start",false); show("setup",true); show("topbar",false); show("hud",false);
+  playerCount = setupMode==="solo" ? 3 : 3;
+  renderSetup(lenIdx ? lenIdx-1 : 1);
+}
+var chosenLen=1;
+function renderSetup(lenIdx){
+  if(lenIdx!=null) chosenLen=lenIdx;
+  el("pcount").textContent = playerCount+" players";
+  // seat rows
+  var list=el("seatList"); list.innerHTML="";
+  for(var i=0;i<playerCount;i++){
+    if(!seatRows[i]) seatRows[i] = { name: (setupMode==="solo" && i>0) ? ["Robo","Buddy","Ace"][i-1] : "Player "+(i+1),
+                                     bot: setupMode==="solo" ? i>0 : false };
+    (function(i){
+      var sr=seatRows[i], col=SEAT_COLORS[i];
+      var div=document.createElement("div"); div.className="seat";
+      div.innerHTML='<div class="dot" style="background:linear-gradient(135deg,'+col.c2+','+col.c+')"></div>';
+      var inp=document.createElement("input"); inp.value=sr.name; inp.maxLength=10;
+      inp.oninput=function(){ sr.name=inp.value.slice(0,10); };
+      var tg=document.createElement("button"); tg.className="toggle "+(sr.bot?"bot":"you"); tg.textContent=sr.bot?"Robot":"Person";
+      tg.onclick=function(){ sr.bot=!sr.bot; renderSetup(); };
+      div.appendChild(inp); div.appendChild(tg); list.appendChild(div);
+    })(i);
+  }
+  // length chips
+  var chips=el("lenChips"); chips.innerHTML="";
+  LENGTHS.forEach(function(L,i){ var b=document.createElement("button"); b.className="chip"+(i===chosenLen?" on":"");
+    b.textContent=L.name+" ("+L.hint+")"; b.onclick=function(){ chosenLen=i; renderSetup(); }; chips.appendChild(b); });
+}
+function startFromSetup(){
+  var specs=[]; for(var i=0;i<playerCount;i++){ var sr=seatRows[i]||{name:"Player "+(i+1),bot:i>0}; specs.push({ name:sr.name||("Player "+(i+1)), bot:!!sr.bot }); }
+  // safety: at least one human in offline play
+  if(specs.every(function(s){return s.bot;})) specs[0].bot=false;
+  startLocalGame(specs, LENGTHS[chosenLen].laps);
+}
+function startLocalGame(specs, laps){
+  ONLINE=false; S=newGame(specs, laps); showGameUI(); if(BA)BA.unlock(); beginTurn();
+}
+
+/* ============================ WIRE CONTROLS ============================ */
+function wire(){
+  el("rollBtn").onclick=onRoll;
+  el("buyBtn").onclick=function(){ resolveBuy(true); };
+  el("skipBtn").onclick=function(){ resolveBuy(false); };
+  el("nextBtn").onclick=function(){ mountStart(); };
+  el("homeBtn").onclick=function(){ if(window.parent) window.parent.postMessage({type:"nav:exit"},"*"); };
+  el("reactBtn").onclick=function(){ var r=el("reactRow"); show("reactRow", r.style.display!=="flex"); };
+  var mb=el("muteBtn"); var upd=function(){ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); };
+  mb.onclick=function(){ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; upd();
+  el("lessP").onclick=function(){ playerCount=Math.max(2,playerCount-1); renderSetup(); };
+  el("moreP").onclick=function(){ playerCount=Math.min(4,playerCount+1); renderSetup(); };
+  el("startGame").onclick=startFromSetup;
+  el("setupBack").onclick=function(){ show("setup",false); mountStart(); };
+  buildReactRow();
+}
+
+/* ============================ LOOP + BOOT ============================ */
+function loop(){
+  if(diceAnim>0) diceAnim--;
+  if(tokenAnim){ tokenAnim.t += 0.18;
+    if(tokenAnim.t>=1){ tokenAnim.t=0; tokenAnim.i++;
+      if(tokenAnim.i >= tokenAnim.path.length-1){ var cb=tokenAnim.done; tokenAnim=null; if(cb) cb(); }
+      else sfx("move");
+    } }
+  draw(); requestAnimationFrame(loop);
+}
+function boot(){
+  try{ var qs=new URLSearchParams(location.search); ONLINE = qs.get("online")==="1"; }catch(e){}
+  resize(); wire();
+  if(ONLINE){ showGameUI(); S=null; if(window.parent) window.parent.postMessage({type:"townReady"},"*"); }
+  else mountStart();
+  requestAnimationFrame(loop);
+}
+try{ boot(); }catch(e){ /* headless QA: no DOM */ }
+
+/* ============================ QA HOOK ============================ */
+window.BUILDABLE_GAME = {
+  _cfg: function(){ return CONFIG; },
+  sim: sim,
+  _state: function(){ return S; },
+  _draw: function(){ try{ return draw(); }catch(e){ return "err:"+e.message; } },
+  _newLocal: function(specs,laps){ startLocalGame(specs,laps); return S; },
+  _headlessTurn: headlessTurn,
+  netWorth: netWorth,
+};
+window.FAMILY_TOWN_GAME = window.BUILDABLE_GAME;
+</script>
+</body>
+</html>

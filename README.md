@@ -75,6 +75,35 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Family Town — original 3-4 player Monopoly-STYLE board game (June 27 2026)
+**New Track B engine `public/family-town.html`** (branch `claude/games-family-town`) — an
+ORIGINAL board game (our own town, spaces, art, and name; never the Monopoly brand). 3-4 kids
+roll two dice, loop a 24-space board, collect/spend simple round-number COINS, buy friendly
+spots, and draw a fully moderated kid-safe "Surprise" deck (24 gentle cards). SOFT design:
+coins never drop below 0, no knockouts, everyone finishes; the "winner" is most coins + spots.
+Game length is customizable (Short/Medium/Long = 2/3/4 laps).
+
+- **Three ways to play, one network-agnostic engine:** solo vs a friendly bot, same-device
+  pass-and-play (2-4 seats), and cross-device **family** play.
+- **Multiplayer = turn-based "poll a row" (chess model), extended to N seats.** The 3-4 player
+  design question resolves cleanly: chess used two fixed kid columns + a binary `turn`; Family
+  Town stores the seats as a `players` array and makes `turn` an index `0..N-1` advanced by
+  `(turn+1)%N`. The whole game state lives in ONE `town_matches` row, so a late/dropped poll
+  self-heals like chess. Family RLS (`parent_id = auth.uid()`) is unchanged by seat count.
+- **Engine stays network-agnostic:** emits `townMove` (its whole state), applies
+  `townOpponentMove` via postMessage; ALL Supabase lives in `src/lib/townMatches.js` +
+  `src/FamilyTown.jsx`. Canned reactions only (no free-text chat).
+- **Shared everything:** BR (board/tokens/dice/cards — no emoji), BM (roll/buy/cheer juice),
+  BA (sound), BS (start screen). New bespoke ElevenLabs one-shots in `api/sfx.js`: `town_roll`,
+  `town_move`, `town_coin`, `town_buy`, `town_card`, `town_cheer`.
+- **Always-winnable + QA'd:** `qa-family-town.mjs` (drives `BUILDABLE_GAME.sim()` headlessly) —
+  2/3/4 players × Short/Med/Long × many seeds all finish with a winner, no negative coins, equal
+  turns, all seats can win. `npm run build` clean. Route added to `vercel.json`; tile + screen
+  added to `src/BuildableKids.jsx`.
+- **Owner action:** run `db/create-town-matches.sql` once for cross-device family play; confirm
+  the parent-account lane env vars are live (pass-and-play + bot need no setup). On branch
+  `claude/games-family-town` — **not** pushed to `main`; merge to deploy + live-QA on devices.
+
 ## Tennis: per-world background music + pre-warmed assets (June 27 2026)
 - **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.
 - **Pre-warmed all generated assets** so the first kid never waits: 8 court images (`/api/images?kind=tennis&id=*`), 7 one-shot SFX (`/api/sfx?s=tennis_*`), and 8 music tracks (`/api/tennis-music?world=*`) generated + cached.

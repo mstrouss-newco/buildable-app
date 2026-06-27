@@ -13,6 +13,7 @@ import TopBoard from "./TopBoard.jsx";
 import LoadingGames from "./LoadingGames";
 import QuizGate from "./QuizGate";
 import FamilyChess from "./FamilyChess";
+import FamilyTown from "./FamilyTown";
 import FamilyRealtime from "./FamilyRealtime";
 import { listMyMatches } from "./lib/chessMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
@@ -43,6 +44,8 @@ const SCREEN_SOUNDS = "sounds";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_TENNIS = "tennis";
 const SCREEN_TENNIS_FAMILY = "tennis_family";
+const SCREEN_TOWN = "town";
+const SCREEN_TOWN_FAMILY = "town_family";
 const SCREEN_TOP = "top";
 const SCREEN_HELPER = "helper";
 const SCREEN_ART = "art";
@@ -82,7 +85,7 @@ function LearningControl() {
   );
 }
 
-function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onTyping, onTennis, onSounds }) {
+function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onTyping, onTennis, onSounds, onTown }) {
   const tile = (grad, title, desc, onClick, soon, imgId) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
@@ -109,6 +112,7 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, false, "runner")}
         {tile("linear-gradient(160deg,#34D399,#0EA5E9)", "Tennis", "Bounce it back \u2014 solo, 2 players, or family!", onTennis, false, "tennis")}
         {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false, "chess")}
+        {tile("linear-gradient(160deg,#7C5CFC,#FF7A9A)", "Family Town", "Roll, move, collect coins \u2014 3-4 players!", onTown, false, "town")}
         {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false, "typing")}
         {tile("linear-gradient(160deg,#FF8FB1,#F0577E)", "Sound Machine", "Whoopee, explosions and silly sounds!", onSounds, false, "sounds")}
       </div>
@@ -177,6 +181,17 @@ function PlatformerScreen({ onHome }) {
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
       <iframe title="Buildable Platformer" src="/play.html?v=20260627b" onLoad={(e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} }} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
+  );
+}
+
+function TownScreen({ onHome, onFamily }) {
+  const pillBtn = { position: "absolute", top: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
+      <button onClick={onHome} style={{ ...pillBtn, left: 14 }}>Back</button>
+      <button onClick={onFamily} style={{ ...pillBtn, right: 14, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play a sibling</button>
+      <iframe title="Family Town" src="/family-town.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
@@ -433,7 +448,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -458,6 +473,12 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_TENNIS_FAMILY) {
     return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1", title: "Buildable Tennis" }} activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_TOWN) {
+    return <TownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
+  }
+  if (screen === SCREEN_TOWN_FAMILY) {
+    return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_CHESS) {
     return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHESS_FAMILY)} />;

@@ -196,6 +196,10 @@
       "dest": "/tennis.html"
     },
     {
+      "src": "/family-town.html",
+      "dest": "/family-town.html"
+    },
+    {
       "src": "/buildable-renders.js",
       "dest": "/buildable-renders.js"
     },

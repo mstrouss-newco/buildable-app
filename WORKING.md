@@ -23,6 +23,7 @@ Home tiles:
 - **Stories** — COMING SOON (disabled). **Do not re-enable without Mike.**
 - **Typing** — LIVE (New)
 - **Chess** — LIVE
+- **Family Town** — original 3-4 player board game; on branch `claude/games-family-town` (pass-and-play + bot + cross-device). Merge to go LIVE.
 - **Top Creations** — leave as-is unless told (owned by another session).
 
 Global / app-wide:
@@ -33,7 +34,7 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
-- (none right now)
+- **claude/games-family-town** — Family Town board game: `public/family-town.html`, `src/FamilyTown.jsx`, `src/lib/townMatches.js`, `db/create-town-matches.sql`, `api/sfx.js` (town_* sounds), + a tile/route in `vercel.json` + `src/BuildableKids.jsx`. Branch handed to Mike to merge.
 
 ## Suggested ownership (to avoid collisions)
 - Games engines + `public/*.html` + `vercel.json` routes

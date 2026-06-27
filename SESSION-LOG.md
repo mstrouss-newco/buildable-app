@@ -1,5 +1,34 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Family Town: original 3-4 player Monopoly-STYLE board game (branch claude/games-family-town)
+- **New Track B engine `public/family-town.html`** — an ORIGINAL board game (our own town,
+  spaces, art, name — never the Monopoly brand). 3-4 players roll two dice, hop around a
+  24-space loop, collect/spend round-number COINS, buy friendly spots, and draw a fully
+  moderated kid-safe "Surprise" card deck (24 gentle cards, no knockouts). SOFT outcomes:
+  coins never go below 0, nobody is eliminated, everyone finishes; "winner" = most coins +
+  spots. Game length is customizable (Short/Medium/Long = 2/3/4 laps ≈ play time).
+- **Same-device pass-and-play (2-4 seats) + a friendly bot** for solo play, AND cross-device
+  family play.
+- **Multiplayer = turn-based "poll a row" (the chess model), extended from 2 fixed columns to
+  an N-seat array.** The whole game state lives in one `town_matches` row; `turn` is an index
+  0..N-1 advanced by (turn+1)%N. Family RLS (`parent_id = auth.uid()`) is unchanged regardless
+  of seat count. Engine stays network-agnostic (emits `townMove`, applies `townOpponentMove`
+  via postMessage); all Supabase code is in `src/lib/townMatches.js` + `src/FamilyTown.jsx`.
+- **Shared libs:** board/tokens/dice/cards via BR (no emoji), roll/buy/cheer juice via BM,
+  sound via BA, start screen via BS. **New bespoke ElevenLabs one-shots registered in
+  `api/sfx.js`:** `town_roll`, `town_move`, `town_coin`, `town_buy`, `town_card`, `town_cheer`
+  (synth is the silent fallback only).
+- **Route + tile:** `/family-town.html` added to `vercel.json` before the catch-all; a
+  "Family Town" tile + `TownScreen` (Back / Play-a-sibling) added to `src/BuildableKids.jsx`,
+  wired to `<FamilyTown>` for cross-device play.
+- **Always-winnable + QA'd:** `qa-family-town.mjs` drives `BUILDABLE_GAME.sim()` headlessly —
+  across 2/3/4 players × Short/Med/Long × many seeds EVERY game finishes with a winner, no
+  negative coins, equal turns for all, and all 4 seats can win. `npm run build` is clean.
+- **Owner action for cross-device family play:** run `db/create-town-matches.sql` once in
+  Supabase, and confirm the parent-account lane env vars are live. Pass-and-play + bot need
+  no setup. **Still TODO (owner):** merge the branch to `main` to deploy, then live-QA across
+  real devices (the one thing the headless sim can't cover).
+
 ## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
 - The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of
   big buttons, each showing the kid's CURRENT choice as a picture and opening a simple full-screen
