@@ -256,15 +256,24 @@ function draw(){
   else if(state==="win") banner(worldIdx<WORLDS.length-1?"World Cleared!":"You did it!", "Score "+score+(worldIdx<WORLDS.length-1?" — tap for the next world":" — tap to celebrate"));
   else if(state==="pause") banner("Paused","Tap to keep playing");
 }
+function shade(c,t){ const h=BR._hex(c[0]==="#"?c:"#888888"); const m=v=>Math.round(v*(1-t)); return "rgb("+m(h[0])+","+m(h[1])+","+m(h[2])+")"; }
+function lite(c,t){ return BR._lighten?BR._lighten(c,t):c; }
+// a chunky, glossy "gem" block with a top-down gradient + 3D bevel edges
 function drawCell(x,y,col){
-  const pad=1, s=CELL-pad*2, r=Math.max(3,CELL*0.12);
-  // base block
-  BR.rrect(ctx, x+pad, y+pad, s, s, r); ctx.fillStyle=col; ctx.fill();
-  // glossy top bevel (lighter shade of the block's own colour)
-  ctx.save(); BR.rrect(ctx, x+pad+2, y+pad+2, s-4, s*0.40, Math.max(2,r-1));
-  ctx.fillStyle=(BR._lighten?BR._lighten(col,0.5):"rgba(255,255,255,0.45)"); ctx.globalAlpha=0.85; ctx.fill(); ctx.restore();
-  // crisp dark edge
-  ctx.strokeStyle="rgba(0,0,0,0.30)"; ctx.lineWidth=2; BR.rrect(ctx, x+pad, y+pad, s, s, r); ctx.stroke();
+  const pad=1, s=CELL-pad*2, X=x+pad, Y=y+pad, r=Math.max(3,CELL*0.16);
+  const top=lite(col,0.45), bot=shade(col,0.28);
+  // body gradient (light top → colour → darker bottom)
+  const g=ctx.createLinearGradient(X,Y,X,Y+s); g.addColorStop(0,top); g.addColorStop(0.22,col); g.addColorStop(1,bot);
+  BR.rrect(ctx,X,Y,s,s,r); ctx.fillStyle=g; ctx.fill();
+  // soft inner shine, top-left
+  ctx.save(); ctx.globalAlpha=0.5; BR.rrect(ctx, X+s*0.13, Y+s*0.11, s*0.5, s*0.30, r*0.6); ctx.fillStyle="#ffffff"; ctx.fill(); ctx.restore();
+  // bevel: bright top + left edge, dark bottom + right edge
+  const lw=Math.max(2, s*0.10);
+  ctx.lineCap="round"; ctx.lineWidth=lw;
+  ctx.strokeStyle="rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.moveTo(X+r,Y+lw*0.5); ctx.lineTo(X+s-r,Y+lw*0.5); ctx.moveTo(X+lw*0.5,Y+r); ctx.lineTo(X+lw*0.5,Y+s-r); ctx.stroke();
+  ctx.strokeStyle="rgba(0,0,0,0.30)"; ctx.beginPath(); ctx.moveTo(X+r,Y+s-lw*0.5); ctx.lineTo(X+s-r,Y+s-lw*0.5); ctx.moveTo(X+s-lw*0.5,Y+r); ctx.lineTo(X+s-lw*0.5,Y+s-r); ctx.stroke();
+  // crisp outline
+  ctx.lineWidth=1.5; ctx.strokeStyle="rgba(0,0,0,0.38)"; BR.rrect(ctx,X,Y,s,s,r); ctx.stroke();
 }
 function drawGhost(x,y){ const r=Math.max(5,CELL*0.18),pad=3; BR.rrect(ctx,x+pad,y+pad,CELL-pad*2,CELL-pad*2,r); ctx.fillStyle="rgba(255,255,255,0.12)"; ctx.fill(); ctx.strokeStyle="rgba(255,255,255,0.4)"; ctx.lineWidth=2; ctx.stroke(); }
 function txtShadow(on){ if(on){ ctx.shadowColor="rgba(0,0,0,0.35)"; ctx.shadowBlur=4; ctx.shadowOffsetY=1; } else { ctx.shadowColor="transparent"; ctx.shadowBlur=0; ctx.shadowOffsetY=0; } }
@@ -394,19 +403,39 @@ function toast(msg){ const t=document.getElementById("toast"); if(!t) return; t.
 
 // ---------------- SHARED START SCREEN (BS) + fallback ----------------
 let startScreen=null, bsMounted=false;
+// little tetromino-stack thumbnail per world (so the picker looks like real worlds)
+function _rr(x,a,b,w,h,r){ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r); x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); }
+function _mini(x,X,Y,s,col){ const r=4; _rr(x,X+1,Y+1,s-2,s-2,r); const g=x.createLinearGradient(X,Y,X,Y+s); g.addColorStop(0,lite(col,0.45)); g.addColorStop(0.25,col); g.addColorStop(1,shade(col,0.28)); x.fillStyle=g; x.fill();
+  x.save(); x.globalAlpha=0.5; _rr(x,X+3,Y+3,s-6,(s-6)*0.4,r-1); x.fillStyle="#fff"; x.fill(); x.restore();
+  x.strokeStyle="rgba(0,0,0,0.32)"; x.lineWidth=1.4; _rr(x,X+1,Y+1,s-2,s-2,r); x.stroke(); }
+function worldThumb(w){
+  try{
+    if(typeof document==="undefined"||!document.createElement) return null;
+    const c=document.createElement("canvas"); if(!c) return null; c.width=200; c.height=140;
+    const x=c.getContext&&c.getContext("2d"); if(!x||typeof x.fillRect!=="function"||typeof c.toDataURL!=="function") return null;
+    const g=x.createLinearGradient(0,0,0,140); g.addColorStop(0,w.bg[0]); g.addColorStop(1,w.bg[1]); x.fillStyle=g; x.fillRect(0,0,200,140);
+    const s=26, p=w.palette, rows=[[1,2,2,3,4],[0,1,4,5],[5,6]];   // little stack, bottom-up
+    for(let ri=0;ri<rows.length;ri++){ const row=rows[ri], yy=140 - (ri+1)*s - 8;
+      for(let ci=0;ci<row.length;ci++) _mini(x, 14+ci*s, yy, s, p[row[ci]%p.length]); }
+    // a floating T-piece up top
+    const t=p[4%p.length], tx=112, ty=16;
+    [[0,0],[1,0],[2,0],[1,1]].forEach(([a,b])=>_mini(x, tx+a*s, ty+b*s, s, t));
+    return c.toDataURL("image/png");
+  }catch(e){ return null; }
+}
 function buildStartCfg(){
   const unlocked=PREFS.unlocked||0;
   const worldCards=WORLDS.map((w,i)=>{ const st = i<unlocked ? (PREFS.cleared[i]?"done":"next") : (i===unlocked?"next":"locked");
-    return { n:i+1, name:w.name, color:w.accent, state:st, foot: st==="locked"?undefined:(w.goalRows+" rows") }; });
-  const calm={ n:99, name:"Calm Mode", color:"#5a73b8", state:"ready", foot:"Never lose — just play" };
-  return { title:"Tumble Blocks", subtitle:"Fill a row to make it tumble away!",
-    sound:!(BA&&BA.muted), showBack:false, levels:[calm, ...worldCards], customizeLabel:"Make it mine (soon)" };
+    if(w._thumb===undefined) w._thumb=worldThumb(w);
+    return { n:i+1, name:w.name, color:w.accent, img:w._thumb||undefined, state:st, maxStars:3, stars: st==="done"?3:undefined }; });
+  return { title:"Tumble Blocks", subtitle:"Pick a world — fill a row to make it tumble away!",
+    sound:!(BA&&BA.muted), showBack:false, levels:worldCards, customizeLabel:"Calm Mode · just play, never lose" };
 }
 function pickWorld(n){ if(BA) BA.unlock(); if(n===99) startWorld(Math.max(0,PREFS.unlocked||0),"endless"); else startWorld(n-1,"adventure"); hideMenu(); }
 function showMenu(){ state="title"; cur=null; showNav(false); showPad(false);
   const host=document.getElementById("start"); if(host) host.style.display="block";
   if(BS && host && host.appendChild){
-    const cb={ onPlay:pickWorld, onCustomize:()=>toast("Per-kid themes are coming soon!"),
+    const cb={ onPlay:pickWorld, onCustomize:()=>{ if(BA) BA.unlock(); startWorld(Math.max(0,PREFS.unlocked||0),"endless"); hideMenu(); },
       onSound:(on)=>{ if(BA){ BA.unlock(); BA.toggleMute(); } updateSoundBtn(); }, onBack:()=>{} };
     try{ if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg()); bsMounted=true; }
     catch(e){ bsMounted=false; }

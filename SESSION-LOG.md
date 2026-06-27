@@ -25,6 +25,12 @@
 - **Mechanic stored:** `db/seed-tetris-mechanic.sql` registers `tumble-blocks-clear` and
   `soft-reset-never-lose` so the catalog grows. Docs: `tetris-README.md`,
   `BUILDING-A-GAME.md` + `MECHANICS.md` updated.
+- **Menu + blocks polish (same day):** the world picker showed a stray "99 · Calm
+  Mode" card (the shared start screen always prints the card number) — moved Calm to
+  its own bottom button ("Calm Mode · just play, never lose") and gave each world card
+  a generated mini-thumbnail of its own palette so the picker reads as real worlds.
+  Blocks are now dynamic 3D "gems": a top-down colour gradient, a glossy top-left
+  shine, and bevelled bright/dark edges (was a flat fill).
 - **Look overhaul (same day):** made it look like real Tetris — solid dark playfield
   with a bright accent frame (was a washed-out translucent green), crisp beveled
   blocks, and a clean Score / Level / Rows panel with a boxed Next. Removed the
