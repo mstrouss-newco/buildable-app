@@ -7,25 +7,27 @@
 <style>
   html,body{margin:0;height:100%;background:#0c1230;overflow:hidden;touch-action:none;
     font-family:'Fredoka',-apple-system,sans-serif;-webkit-user-select:none;user-select:none}
-  #wrap{position:fixed;left:0;right:0;top:0;bottom:104px;display:flex;align-items:center;justify-content:center}
+  #wrap{position:fixed;left:0;right:0;top:0;bottom:108px;display:flex;align-items:center;justify-content:center}
   canvas{background:#0a1030;max-width:100%;max-height:100%;border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.4)}
   /* shared start screen host */
   #start{position:fixed;inset:0;z-index:10;display:none}
   /* big, kid-friendly on-screen controls */
-  #pad{position:fixed;left:0;right:0;bottom:0;height:104px;z-index:20;display:none;
-    align-items:center;justify-content:center;gap:12px;padding:8px 12px;box-sizing:border-box;
-    background:linear-gradient(180deg,rgba(12,18,48,0),rgba(12,18,48,.85))}
-  .pbtn{flex:1;max-width:120px;height:78px;border:none;border-radius:18px;cursor:pointer;
+  #pad{position:fixed;left:0;right:0;bottom:0;height:108px;z-index:20;display:none;
+    align-items:center;justify-content:center;gap:12px;padding:10px 12px;box-sizing:border-box;
+    background:linear-gradient(180deg,rgba(12,18,48,0),rgba(12,18,48,.9))}
+  .pbtn{flex:1;max-width:118px;height:82px;border:none;border-radius:18px;cursor:pointer;
     font-family:inherit;font-weight:800;color:#1a0f3a;background:#9b7bff;box-shadow:0 5px 0 #6a4ad6;
     display:flex;align-items:center;justify-content:center;touch-action:none}
   .pbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #6a4ad6}
   .pbtn.go{background:#7ee0a0;box-shadow:0 5px 0 #4fb87b}
-  .pbtn svg{width:42px;height:42px;pointer-events:none}
-  #soundBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:13px;
-    color:#cdd0ff;background:rgba(26,20,64,.72);border:1px solid #3a2c6e;border-radius:12px;padding:8px 13px;cursor:pointer}
-  #pauseBtn{position:fixed;right:108px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:13px;
-    color:#cdd0ff;background:rgba(26,20,64,.72);border:1px solid #3a2c6e;border-radius:12px;padding:8px 13px;cursor:pointer}
-  .toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:40;background:#ffd86b;color:#1a0f3a;
+  .pbtn svg{width:44px;height:44px;pointer-events:none}
+  .navb{position:fixed;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
+    color:#fff;background:rgba(26,20,64,.82);border:1px solid #3a2c6e;border-radius:12px;padding:9px 15px;cursor:pointer;
+    box-shadow:0 4px 12px rgba(0,0,0,.35);align-items:center;gap:6px}
+  #homeBtn{left:12px}
+  #pauseBtn{right:104px}
+  #soundBtn{right:12px}
+  .toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:40;background:#ffd86b;color:#1a0f3a;
     font-weight:800;padding:11px 22px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none;max-width:80%;text-align:center}
 </style>
 </head>
@@ -44,8 +46,9 @@
 </div>
 
 <div id="toast" class="toast"></div>
-<button id="pauseBtn">Pause</button>
-<button id="soundBtn">Sound: On</button>
+<button id="homeBtn"  class="navb">&#8249; Home</button>
+<button id="pauseBtn" class="navb">Pause</button>
+<button id="soundBtn" class="navb">Sound: On</button>
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
@@ -57,55 +60,52 @@
    FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
      - content-as-data GAME_CONFIG (worlds = piece colors, fall speed, goals, themes)
      - kid tuning: slow drop, 3-piece preview, ghost landing, lock delay, 7-bag
-     - ALWAYS-WINNABLE: you can NEVER lose. If the stack tops out, the world's
-       helper gently sweeps a couple of rows away ("soft reset") and play continues.
-     - two ways to play: ADVENTURE (clear goalRows to win a world, speeds ramp by
-       world) + CALM (endless, extra-slow, just for fun).
-     - draws blocks via BR, juice (line-clear pop/shake/flash) via BM, sounds via
-       BA (bespoke ElevenLabs one-shots), start screen + world picker via BS.
-     - QA hook exposed as window.BUILDABLE_GAME (TUMBLE_GAME alias). A headless
-       El-Tetris bot clears every world (qa-tetris.mjs asserts it).
+     - ALWAYS-WINNABLE: you can NEVER lose. A top-out triggers the world helper's
+       gentle row-sweep ("soft reset") and play continues.
+     - Adventure (clear goalRows to win a world; speeds ramp) + Calm (endless) modes.
+     - draws blocks via BR, juice (clear pop/shake/flash) via BM, sounds via BA,
+       start screen + world picker via BS — with a built-in fallback menu so the
+       game is playable even if BS fails to load.
+     - SCORE + ROWS + in-game Home / Pause / Sound nav.
+     - QA hook window.BUILDABLE_GAME (TUMBLE_GAME alias); an El-Tetris bot clears
+       every world (qa-tetris.mjs).
    =========================================================================== */
 const BR = window.BuildableRenders, BA = window.BuildableAudio,
       BM = window.BuildableMechanics, BS = window.BuildableStartScreen;
 
 // ---------------- CONTENT AS DATA ----------------
-// Each world = a level: its own character, soft block palette, background, fall
-// speed (ms between gravity steps — bigger = slower), goalRows, an ambience loop
-// (reused from the shared sound library), and a themed "helper" rescue move.
 const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Tumble Blocks",
   cols: 9, rows: 16,
-  preview: 3,                 // generous next-piece preview
-  lockDelayMs: 600,           // forgiving: piece rests before locking, resets on move
-  endlessFall: 980,           // calm mode gravity (very slow)
+  preview: 3,
+  lockDelayMs: 600,
+  endlessFall: 980,
   worlds: [
     { name:"Sunny Meadow",  hero:"Bramble Bunny", fall:880, goalRows:8,  ambience:"forest",
-      bg:["#bde6c4","#7fcf9e"], accent:"#3f9d6b", helper:"Bramble's garden sweep",
-      palette:["#ff9bb8","#ffd166","#a0e57e","#7ad0ff","#c7a3ff","#ff9f6e","#8be0c4"] },
+      bg:["#bde6c4","#7fcf9e"], accent:"#2f8a5b", helper:"Bramble's garden sweep",
+      palette:["#ff9bb8","#ffcf5e","#8fd96a","#5cc0f0","#b78fff","#ff9f6e","#5fd4b0"] },
     { name:"Candy Land",    hero:"Pip Gumdrop",   fall:780, goalRows:9,  ambience:"candy",
-      bg:["#ffd6ec","#ff9ec4"], accent:"#d65aa0", helper:"Pip's sugar swirl",
-      palette:["#ff7aa8","#ffb04d","#ffe27a","#7ee0a0","#62d0ff","#c79bff","#ff8fce"] },
+      bg:["#ffd6ec","#ff9ec4"], accent:"#c0468a", helper:"Pip's sugar swirl",
+      palette:["#ff6f9d","#ffab3d","#ffe27a","#6fd99a","#52c6f0","#bf8aff","#ff7ec6"] },
     { name:"Coral Reef",    hero:"Bubbles Fish",  fall:690, goalRows:10, ambience:"waves",
-      bg:["#a8e6ff","#3aa0d6"], accent:"#1f7fb5", helper:"Bubbles' wave wash",
-      palette:["#7be0ff","#5ad1c4","#9be8a0","#ffd27a","#ff9bd0","#a0b8ff","#ffe27a"] },
+      bg:["#a8e6ff","#3aa0d6"], accent:"#15709f", helper:"Bubbles' wave wash",
+      palette:["#5cd6ff","#3fc7b8","#86e08c","#ffc85e","#ff8ac6","#8aa8ff","#ffe05e"] },
     { name:"Snowy Peak",    hero:"Frosty Cub",    fall:610, goalRows:11, ambience:"wind",
-      bg:["#e6f4ff","#aacbe8"], accent:"#6f9fd0", helper:"Frosty's snow puff",
-      palette:["#bfe3ff","#d9c7ff","#aef0d8","#ffd6a8","#ffc2dd","#9fd0ff","#fff0a8"] },
+      bg:["#e6f4ff","#9bc0e0"], accent:"#5685ba", helper:"Frosty's snow puff",
+      palette:["#9fd0ff","#c2a8ff","#8fe6c0","#ffc888","#ffa8cc","#7ec0ff","#ffe888"] },
     { name:"Space Station", hero:"Comet Robot",   fall:540, goalRows:12, ambience:"space",
       bg:["#241a52","#0c1030"], accent:"#9b7bff", helper:"Comet's star beam",
-      palette:["#9b7bff","#62d0ff","#7ee0a0","#ffd166","#ff7aa8","#67e8f9","#c79bff"] },
+      palette:["#9b7bff","#52c6f0","#6fd99a","#ffc94d","#ff6f9d","#56e0f0","#bf8aff"] },
     { name:"Volcano Fest",  hero:"Ember Dragon",  fall:470, goalRows:14, ambience:"fire",
       bg:["#3a1c2a","#1a0f18"], accent:"#ff7a45", helper:"Ember's lava splash",
-      palette:["#ff8a5c","#ffb04d","#ffd166","#ff6f91","#ffa3a3","#ff7a45","#ffcf6b"] },
+      palette:["#ff7a4d","#ffab3d","#ffd24d","#ff5f85","#ff8f8f","#ff6a35","#ffc44d"] },
   ],
 };
 const COLS = GAME_CONFIG.cols, ROWS = GAME_CONFIG.rows;
 const WORLDS = GAME_CONFIG.worlds;
-GAME_CONFIG.levels = WORLDS;   // BS / QA read .levels
+GAME_CONFIG.levels = WORLDS;
 
 // ---------------- TETROMINOES (all 7 classic shapes) ----------------
-// Defined as a compact matrix; rotations are generated by rotating the box.
 const PIECE_DEFS = {
   I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
   O: [[1,1],[1,1]],
@@ -117,122 +117,107 @@ const PIECE_DEFS = {
 };
 const PIECE_KEYS = ["I","O","T","S","Z","J","L"];
 function rotateCW(m){ const n=m.length, r=[]; for(let y=0;y<n;y++){ r.push([]); for(let x=0;x<n;x++) r[y].push(m[n-1-x][y]); } return r; }
-// precompute 4 rotation matrices per piece
 const PIECES = {};
 PIECE_KEYS.forEach((k,i)=>{ const states=[]; let m=PIECE_DEFS[k]; for(let r=0;r<4;r++){ states.push(m); m=rotateCW(m); } PIECES[k]={ states, colorIdx:i }; });
 function matrixCells(m){ const out=[]; for(let y=0;y<m.length;y++) for(let x=0;x<m[y].length;x++) if(m[y][x]) out.push([x,y]); return out; }
 
+// scoring (classic-ish, scaled by world)
+const LINE_SCORES = [0, 100, 300, 500, 800];
+
 // ---------------- STATE ----------------
 let cv, ctx, CW=600, CH=820;
-let mode="adventure";          // "adventure" | "endless"
+let mode="adventure";
 let worldIdx=0, W=WORLDS[0];
-let grid=[];                   // grid[r][c] = colorString | null
-let cur=null;                  // {key, rot, px, py}
-let bag=[], nextQ=[];
-let rowsCleared=0, goal=0, gravTimer=0, lockTimer=0, locking=false, lockResets=0;
-let state="title";             // title | play | win | pause
+let grid=newGrid();             // never empty (fixes title-state draw)
+let cur=null, bag=[], nextQ=[];
+let rowsCleared=0, goal=0, score=0, gravTimer=0, lockTimer=0, locking=false, lockResets=0;
+let state="title";
 let started=false, botMode=false;
 let fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0 };
 let lastT=0, _curMusic=null, helperPulse=0;
-const PREFS = { unlocked:0, cleared:[] };   // cleared[i] = best rows cleared / done flag
+const PREFS = { unlocked:0, cleared:[], best:[] };
+const EMBED = (typeof window!=="undefined" && window.parent && window.parent!==window);
 
-// ---------------- PREFS (guarded for headless) ----------------
-function loadPrefs(){ try{ const s=localStorage.getItem("tumble_prefs"); if(s){ const p=JSON.parse(s); Object.assign(PREFS,p); } }catch(e){} }
+function loadPrefs(){ try{ const s=localStorage.getItem("tumble_prefs"); if(s) Object.assign(PREFS, JSON.parse(s)); }catch(e){} }
 function savePrefs(){ try{ localStorage.setItem("tumble_prefs", JSON.stringify(PREFS)); }catch(e){} }
 
 // ---------------- BOARD HELPERS ----------------
-function newGrid(){ const g=[]; for(let r=0;r<ROWS;r++){ g.push(new Array(COLS).fill(null)); } return g; }
+function newGrid(){ const g=[]; for(let r=0;r<ROWS;r++) g.push(new Array(COLS).fill(null)); return g; }
 function cellsOf(p){ const m=PIECES[p.key].states[p.rot&3]; return matrixCells(m).map(([x,y])=>[p.px+x, p.py+y]); }
-function collides(g, p){ for(const [c,r] of cellsOf(p)){ if(c<0||c>=COLS||r>=ROWS) return true; if(r>=0 && g[r][c]) return true; } return false; }
+function collides(g, p){ for(const [c,r] of cellsOf(p)){ if(c<0||c>=COLS||r>=ROWS) return true; if(r>=0 && g[r] && g[r][c]) return true; } return false; }
 function pieceColor(p){ return W.palette[ PIECES[p.key].colorIdx % W.palette.length ]; }
 
 function refillBag(){ const b=PIECE_KEYS.slice(); for(let i=b.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=b[i]; b[i]=b[j]; b[j]=t; } bag=bag.concat(b); }
 function pullKey(){ if(bag.length===0) refillBag(); return bag.shift(); }
 function fillQueue(){ while(nextQ.length < (GAME_CONFIG.preview||3)+1) nextQ.push(pullKey()); }
+function topGap(m){ let g=0; for(let y=0;y<m.length;y++){ if(m[y].some(v=>v)) break; g++; } return g; }
 
 function spawn(){
   fillQueue();
   const key=nextQ.shift(); fillQueue();
-  const m=PIECES[key].states[0];
-  const w=m[0].length;
+  const m=PIECES[key].states[0], w=m[0].length;
   const p={ key, rot:0, px:((COLS - w)>>1), py:-topGap(m) };
-  // if it can't appear → gentle rescue (never lose)
-  if(collides(grid,p)){ gentleReset(); if(collides(grid,p)){ grid=newGrid(); } }
+  if(collides(grid,p)){ gentleReset(); if(collides(grid,p)) grid=newGrid(); }
   cur=p; locking=false; lockTimer=0; lockResets=0; gravTimer=0;
 }
-function topGap(m){ // how many empty rows at top of the matrix, so the piece peeks in from the top
-  let g=0; for(let y=0;y<m.length;y++){ if(m[y].some(v=>v)) break; g++; } return g; }
-
-// the world helper sweeps the bottom rows away — themed, calm, NEVER a game over
+// world helper sweeps the bottom rows away — NEVER a game over
 function gentleReset(){
-  let removed=0;
-  for(let k=0;k<3;k++){ if(grid.some(row=>row.some(c=>c))){ grid.shift(); grid.unshift(new Array(COLS).fill(null)); removed++; } }
-  // squash everything down so floating blocks settle
-  compact();
-  helperPulse=1;
-  toast(W.helper+"!");
+  for(let k=0;k<3;k++){ if(grid.some(row=>row.some(c=>c))){ grid.shift(); grid.unshift(new Array(COLS).fill(null)); } }
+  compact(); helperPulse=1; toast(W.helper+"!");
   if(BA) BA.sfx("reset");
-  if(BM){ for(let c=0;c<COLS;c++) BM.burst(fx.parts, bx(c)+CELL/2, by(ROWS-1)+CELL/2, W.accent, 4, {spd:[1,4],life:[.4,.9]}); BM.flash(fx, "#ffffff", 0.18); }
+  if(BM){ for(let c=0;c<COLS;c++) BM.burst(fx.parts, bx(c)+CELL/2, by(ROWS-1)+CELL/2, W.accent, 4, {spd:[1,4],life:[.4,.9]}); BM.flash(fx,"#ffffff",0.18); }
 }
-function compact(){ // drop all settled cells to remove gaps created by a sweep
-  const stack=[];
+function compact(){ const stack=[];
   for(let c=0;c<COLS;c++){ const col=[]; for(let r=ROWS-1;r>=0;r--){ if(grid[r][c]) col.push(grid[r][c]); } stack[c]=col; }
   grid=newGrid();
-  for(let c=0;c<COLS;c++){ for(let i=0;i<stack[c].length;i++){ grid[ROWS-1-i][c]=stack[c][i]; } }
+  for(let c=0;c<COLS;c++) for(let i=0;i<stack[c].length;i++) grid[ROWS-1-i][c]=stack[c][i];
 }
 
 // ---------------- MOVEMENT ----------------
 function tryMove(dx,dy){ if(!cur) return false; const p={...cur, px:cur.px+dx, py:cur.py+dy}; if(!collides(grid,p)){ cur=p; if(dy===0) bumpLock(); return true; } return false; }
-function tryRotate(){ if(!cur) return false; const nr=(cur.rot+1)&3; const kicks=[0,-1,1,-2,2];
-  for(const k of kicks){ const p={...cur, rot:nr, px:cur.px+k}; if(!collides(grid,p)){ cur=p; bumpLock(); if(BA) BA.sfx("rotate"); return true; } }
-  return false;
-}
-function bumpLock(){ if(locking && lockResets<12){ lockTimer=0; lockResets++; } }   // forgiving lock-delay reset
+function tryRotate(){ if(!cur) return false; const nr=(cur.rot+1)&3; for(const k of [0,-1,1,-2,2]){ const p={...cur, rot:nr, px:cur.px+k}; if(!collides(grid,p)){ cur=p; bumpLock(); if(BA) BA.sfx("rotate"); return true; } } return false; }
+function bumpLock(){ if(locking && lockResets<12){ lockTimer=0; lockResets++; } }
 function ghostY(){ if(!cur) return 0; let p={...cur}; while(!collides(grid,{...p,py:p.py+1})) p.py++; return p.py; }
-function hardDrop(){ if(!cur) return; cur.py=ghostY(); lockPiece(); }
+function hardDrop(){ if(!cur) return; const d=ghostY()-cur.py; if(d>0) score+=d*2*(worldIdx+1); cur.py=ghostY(); lockPiece(); }
 
 function lockPiece(){
   if(!cur) return;
-  for(const [c,r] of cellsOf(cur)){ if(r>=0) grid[r][c]=pieceColor(cur); }
+  for(const [c,r] of cellsOf(cur)) if(r>=0 && grid[r]) grid[r][c]=pieceColor(cur);
   if(BA) BA.sfx("lock");
   cur=null; locking=false; lockTimer=0;
   clearLines();
   spawn();
 }
-
 function clearLines(){
   const full=[]; for(let r=0;r<ROWS;r++){ if(grid[r].every(c=>c)) full.push(r); }
   if(!full.length) return 0;
-  // juice along each cleared row
-  if(BM){ for(const r of full){ for(let c=0;c<COLS;c++){ BM.burst(fx.parts, bx(c)+CELL/2, by(r)+CELL/2, grid[r][c]||W.accent, 6, {spd:[1,5],life:[.4,1]}); } }
+  if(BM){ for(const r of full){ for(let c=0;c<COLS;c++) BM.burst(fx.parts, bx(c)+CELL/2, by(r)+CELL/2, grid[r][c]||W.accent, 6, {spd:[1,5],life:[.4,1]}); }
     BM.shake(fx, full.length>=3?0.5:0.28); BM.flash(fx, "#ffffff", full.length>=4?0.32:0.2);
-    const cy=by(full[0])+CELL/2; BM.pop(fx.pops, CW*0.5, cy, full.length>=4?"AWESOME!":(full.length>=2?("+"+full.length+" rows!"):"Nice!"), "#fff"); }
+    BM.pop(fx.pops, CW*0.5, by(full[0])+CELL/2, full.length>=4?"AWESOME!":(full.length>=2?("+"+full.length+" rows!"):"Nice!"), "#fff"); }
   if(BA) BA.sfx(full.length>=3?"combo":"clear");
-  // remove rows
   for(const r of full){ grid.splice(r,1); grid.unshift(new Array(COLS).fill(null)); }
   rowsCleared += full.length;
-  if(mode==="adventure" && rowsCleared>=goal && state==="play"){ winWorld(); }
+  score += LINE_SCORES[full.length] * (worldIdx+1);
+  if(mode==="adventure" && rowsCleared>=goal && state==="play") winWorld();
   return full.length;
 }
-
 function winWorld(){
-  state="win";
-  PREFS.cleared[worldIdx]=true;
+  state="win"; PREFS.cleared[worldIdx]=true;
+  if(!PREFS.best[worldIdx] || score>PREFS.best[worldIdx]) PREFS.best[worldIdx]=score;
   const u=Math.min(WORLDS.length-1, worldIdx+1); if(u>(PREFS.unlocked||0)) PREFS.unlocked=u;
   savePrefs();
-  if(BA){ BA.sfx("win"); }
+  if(BA) BA.sfx("win");
   if(BM){ for(let i=0;i<5;i++) BM.burst(fx.parts, CW*(0.2+0.15*i), CH*0.4, W.palette[i%W.palette.length], 22, {gravity:16,spd:[2,6],life:[.8,1.5]}); BM.flash(fx,"#ffffff",0.25); }
+  showNav(true);
 }
 
 // ---------------- LAYOUT ----------------
 let CELL=46, BX=0, BY=0, BW=0, BH=0, PANELX=0;
 function computeLayout(){
   CW=cv?cv.width:600; CH=cv?cv.height:820;
-  const topBar=66, padR=150, padX=18, padBot=18;
-  const availW=CW - padX*2 - padR, availH=CH - topBar - padBot;
-  CELL=Math.floor(Math.min(availW/COLS, availH/ROWS));
-  BW=CELL*COLS; BH=CELL*ROWS;
-  BX=padX; BY=topBar; PANELX=BX+BW+18;
+  const topBar=66, padR=160, padX=18, padBot=18;
+  CELL=Math.floor(Math.min((CW-padX*2-padR)/COLS, (CH-topBar-padBot)/ROWS));
+  BW=CELL*COLS; BH=CELL*ROWS; BX=padX; BY=topBar; PANELX=BX+BW+18;
 }
 function bx(c){ return BX + c*CELL; }
 function by(r){ return BY + r*CELL; }
@@ -242,154 +227,136 @@ function draw(){
   if(!ctx) return;
   computeLayout();
   const sh = BM ? BM.shakeOffset(fx) : {x:0,y:0};
-  // background gradient
   const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,W.bg[0]); g.addColorStop(1,W.bg[1]);
   ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
   ctx.save(); ctx.translate(sh.x, sh.y);
-  // board well
   BR.rrect(ctx, BX-7, BY-7, BW+14, BH+14, 18); ctx.fillStyle="rgba(10,14,40,0.42)"; ctx.fill();
-  // grid guide
   ctx.strokeStyle="rgba(255,255,255,0.06)"; ctx.lineWidth=1;
   for(let c=0;c<=COLS;c++){ ctx.beginPath(); ctx.moveTo(bx(c),BY); ctx.lineTo(bx(c),BY+BH); ctx.stroke(); }
   for(let r=0;r<=ROWS;r++){ ctx.beginPath(); ctx.moveTo(BX,by(r)); ctx.lineTo(BX+BW,by(r)); ctx.stroke(); }
-  // settled blocks
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c]) drawCell(bx(c),by(r),grid[r][c]);
-  // ghost + current
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r] && grid[r][c]) drawCell(bx(c),by(r),grid[r][c]);
   if(cur && state==="play"){
     const gy=ghostY();
     for(const [c,r] of cellsOf({...cur,py:gy})) if(r>=0) drawGhost(bx(c),by(r));
     for(const [c,r] of cellsOf(cur)) if(r>=0) drawCell(bx(c),by(r),pieceColor(cur));
   }
   ctx.restore();
-  // HUD (not shaken)
-  drawHUD();
-  // next preview + character panel
-  drawPanel();
-  // FX overlay
+  drawHUD(); drawPanel();
   if(BM) BM.draw(ctx, fx, {W:CW,H:CH});
-  // banners
-  if(state==="win") banner(worldIdx<WORLDS.length-1?"World Cleared!":"You did it!", worldIdx<WORLDS.length-1?"Tap for the next world":"Tap to celebrate");
+  if(state==="title" && (!BS || !bsMounted)) drawTitleFallback();
+  else if(state==="win") banner(worldIdx<WORLDS.length-1?"World Cleared!":"You did it!", "Score "+score+(worldIdx<WORLDS.length-1?" — tap for the next world":" — tap to celebrate"));
   else if(state==="pause") banner("Paused","Tap to keep playing");
 }
 function drawCell(x,y,col){
   const r=Math.max(5,CELL*0.18), pad=2;
   BR.rrect(ctx, x+pad, y+pad, CELL-pad*2, CELL-pad*2, r); ctx.fillStyle=col; ctx.fill();
-  // soft top highlight
   ctx.save(); BR.rrect(ctx, x+pad, y+pad, CELL-pad*2, (CELL-pad*2)*0.5, r); ctx.fillStyle="rgba(255,255,255,0.28)"; ctx.fill(); ctx.restore();
   ctx.strokeStyle="rgba(0,0,0,0.12)"; ctx.lineWidth=2; BR.rrect(ctx, x+pad, y+pad, CELL-pad*2, CELL-pad*2, r); ctx.stroke();
 }
 function drawGhost(x,y){ const r=Math.max(5,CELL*0.18),pad=3; BR.rrect(ctx,x+pad,y+pad,CELL-pad*2,CELL-pad*2,r); ctx.fillStyle="rgba(255,255,255,0.12)"; ctx.fill(); ctx.strokeStyle="rgba(255,255,255,0.4)"; ctx.lineWidth=2; ctx.stroke(); }
+function txtShadow(on){ if(on){ ctx.shadowColor="rgba(0,0,0,0.35)"; ctx.shadowBlur=4; ctx.shadowOffsetY=1; } else { ctx.shadowColor="transparent"; ctx.shadowBlur=0; ctx.shadowOffsetY=0; } }
 function drawHUD(){
-  ctx.fillStyle="rgba(255,255,255,0.95)"; ctx.font="bold 26px Fredoka,sans-serif"; ctx.textAlign="left"; ctx.textBaseline="middle";
-  ctx.fillText(W.name, BX, 30);
-  ctx.font="600 15px Fredoka,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.75)";
-  ctx.fillText(mode==="adventure" ? ("Clear "+goal+" rows together") : "Calm play — never lose", BX, 52);
-  // progress bar (adventure)
+  ctx.textAlign="left"; ctx.textBaseline="middle"; txtShadow(true);
+  ctx.fillStyle="#fff"; ctx.font="bold 26px Fredoka,sans-serif"; ctx.fillText(W.name, BX, 28);
+  ctx.font="600 15px Fredoka,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.82)";
+  ctx.fillText(mode==="adventure" ? ("Clear "+goal+" rows") : "Calm play — never lose", BX, 50);
+  txtShadow(false);
   if(mode==="adventure"){
     const pw=BW, ph=8, px=BX, py=58;
-    BR.rrect(ctx,px,py,pw,ph,5); ctx.fillStyle="rgba(0,0,0,0.25)"; ctx.fill();
+    BR.rrect(ctx,px,py,pw,ph,5); ctx.fillStyle="rgba(0,0,0,0.28)"; ctx.fill();
     const f=Math.max(0,Math.min(1, rowsCleared/Math.max(1,goal)));
     if(f>0){ BR.rrect(ctx,px,py,pw*f,ph,5); ctx.fillStyle=W.accent; ctx.fill(); }
   }
 }
 function drawPanel(){
-  const x=PANELX, w=CW-PANELX-16;
-  ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-  ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.font="bold 18px Fredoka,sans-serif"; ctx.fillText("Next", x, BY+18);
-  let py=BY+34;
-  const q=nextQ.slice(0, GAME_CONFIG.preview||3);
-  q.forEach((key,i)=>{
-    const cell=Math.min(20, (w-8)/4);
-    const m=PIECES[key].states[0], cells=matrixCells(m);
+  const x=PANELX, w=CW-PANELX-14;
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic"; txtShadow(true);
+  // SCORE
+  ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.font="bold 16px Fredoka,sans-serif"; ctx.fillText("Score", x, BY+12);
+  ctx.fillStyle="#fff"; ctx.font="bold 34px Fredoka,sans-serif"; ctx.fillText(String(score), x, BY+44);
+  // ROWS
+  ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.font="bold 16px Fredoka,sans-serif"; ctx.fillText("Rows", x, BY+78);
+  ctx.fillStyle="#fff"; ctx.font="bold 26px Fredoka,sans-serif";
+  ctx.fillText(mode==="adventure" ? (rowsCleared+" / "+goal) : String(rowsCleared), x, BY+104);
+  txtShadow(false);
+  // NEXT
+  ctx.fillStyle="rgba(255,255,255,0.9)"; ctx.font="bold 16px Fredoka,sans-serif"; txtShadow(true); ctx.fillText("Next", x, BY+140); txtShadow(false);
+  let py=BY+156;
+  nextQ.slice(0, GAME_CONFIG.preview||3).forEach((key,i)=>{
+    const cell=Math.min(19,(w-6)/4);
+    const cells=matrixCells(PIECES[key].states[0]);
     const minx=Math.min(...cells.map(c=>c[0])), maxx=Math.max(...cells.map(c=>c[0]));
     const miny=Math.min(...cells.map(c=>c[1])), maxy=Math.max(...cells.map(c=>c[1]));
-    const pw=(maxx-minx+1)*cell, off=(w-pw)/2;
+    const cc=i===0?cell:cell*0.82, pw=(maxx-minx+1)*cc, off=(w-pw)/2;
     const col=W.palette[PIECES[key].colorIdx % W.palette.length];
-    const big = i===0;
-    const cc = big?cell:cell*0.82;
     for(const [cx,cy] of cells){ const dx=x+off+(cx-minx)*cc, dy=py+(cy-miny)*cc;
       BR.rrect(ctx,dx+1,dy+1,cc-2,cc-2,Math.max(3,cc*0.2)); ctx.fillStyle=col; ctx.fill();
       ctx.fillStyle="rgba(255,255,255,0.25)"; BR.rrect(ctx,dx+1,dy+1,cc-2,(cc-2)*0.5,Math.max(3,cc*0.2)); ctx.fill(); }
-    py += (maxy-miny+1)*cc + 14;
+    py += (maxy-miny+1)*cc + 12;
   });
-  // rows-cleared big number
-  ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.font="bold 16px Fredoka,sans-serif"; ctx.fillText("Rows", x, py+14);
-  ctx.font="bold 40px Fredoka,sans-serif"; ctx.fillStyle=W.accent; ctx.fillText(String(rowsCleared), x, py+52);
   // character chip
-  const chipY=CH-92;
-  const pulse = helperPulse>0 ? 1+helperPulse*0.15 : 1;
+  const chipY=CH-86, pulse=helperPulse>0?1+helperPulse*0.15:1;
   ctx.save(); ctx.translate(x+22, chipY); ctx.scale(pulse,pulse);
   ctx.beginPath(); ctx.arc(0,0,20,0,7); ctx.fillStyle=W.accent; ctx.fill();
-  ctx.fillStyle="rgba(255,255,255,0.9)"; ctx.beginPath(); ctx.arc(-6,-3,4,0,7); ctx.arc(6,-3,4,0,7); ctx.fill();
+  ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.beginPath(); ctx.arc(-6,-3,4,0,7); ctx.arc(6,-3,4,0,7); ctx.fill();
   ctx.fillStyle="#1a0f3a"; ctx.beginPath(); ctx.arc(-6,-3,2,0,7); ctx.arc(6,-3,2,0,7); ctx.fill();
   ctx.strokeStyle="#1a0f3a"; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(0,2,7,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
   ctx.restore();
-  ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.font="600 13px Fredoka,sans-serif"; ctx.fillText(W.hero, x+46, chipY+5);
+  ctx.fillStyle="rgba(255,255,255,0.88)"; ctx.font="600 12px Fredoka,sans-serif"; txtShadow(true); ctx.fillText(W.hero, x+46, chipY+4); txtShadow(false);
 }
 function banner(title,sub){
-  ctx.save(); ctx.fillStyle="rgba(10,14,40,0.6)"; ctx.fillRect(0,0,CW,CH);
+  ctx.save(); ctx.fillStyle="rgba(10,14,40,0.62)"; ctx.fillRect(0,0,CW,CH);
   ctx.textAlign="center"; ctx.fillStyle="#fff"; ctx.font="bold 44px Fredoka,sans-serif"; ctx.fillText(title, CW/2, CH/2-10);
   ctx.font="600 20px Fredoka,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.fillText(sub, CW/2, CH/2+30);
+  ctx.restore();
+}
+// shown only if BS didn't load — keeps the game playable instead of a blank board
+function drawTitleFallback(){
+  ctx.save(); ctx.fillStyle="rgba(10,14,40,0.62)"; ctx.fillRect(0,0,CW,CH);
+  ctx.textAlign="center"; ctx.fillStyle="#fff"; ctx.font="bold 48px Fredoka,sans-serif"; ctx.fillText("Tumble Blocks", CW/2, CH*0.38);
+  ctx.font="600 22px Fredoka,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.fillText("Fill a row to make it tumble away!", CW/2, CH*0.44);
+  BR.rrect(ctx, CW/2-110, CH*0.52, 220, 64, 18); ctx.fillStyle="#7ee0a0"; ctx.fill();
+  ctx.fillStyle="#0c2417"; ctx.font="bold 26px Fredoka,sans-serif"; ctx.fillText("Tap to Play", CW/2, CH*0.52+40);
   ctx.restore();
 }
 
 // ---------------- UPDATE ----------------
 function update(dt){
-  if(state!=="play"){ if(BM) BM.update(fx, dt); if(helperPulse>0) helperPulse=Math.max(0,helperPulse-(dt||0.016)*2); return; }
   if(helperPulse>0) helperPulse=Math.max(0,helperPulse-(dt||0.016)*2);
+  if(state!=="play"){ if(BM) BM.update(fx, dt); return; }
   if(botMode){ botStep(); if(BM) BM.update(fx, dt); return; }
   if(!cur){ if(BM) BM.update(fx, dt); return; }
   const ms=(dt||0.016)*1000;
   const fall = mode==="endless" ? GAME_CONFIG.endlessFall : (W.fall - Math.min(W.fall*0.35, rowsCleared*9));
   gravTimer += ms;
-  if(gravTimer >= fall){ gravTimer=0; if(!tryMove(0,1)){ locking=true; } }
+  if(gravTimer >= fall){ gravTimer=0; if(!tryMove(0,1)) locking=true; }
   if(locking){ lockTimer += ms; if(lockTimer >= (GAME_CONFIG.lockDelayMs||600)){ if(!tryMove(0,1)) lockPiece(); else { locking=false; lockTimer=0; } } }
   if(BM) BM.update(fx, dt);
 }
 
-// ---------------- HEADLESS BOT (El-Tetris heuristic) ----------------
-// Clears lines reliably so QA can prove every world is completable.
-function botStep(){
-  if(!cur){ return; }
-  const best=bestPlacement();
-  if(best){ cur.rot=best.rot; cur.px=best.px; cur.py=ghostY(); lockPiece(); }
-  else { hardDrop(); }
-}
-function colHeights(g){ const h=new Array(COLS).fill(0); for(let c=0;c<COLS;c++){ for(let r=0;r<ROWS;r++){ if(g[r][c]){ h[c]=ROWS-r; break; } } } return h; }
+// ---------------- HEADLESS BOT (El-Tetris) ----------------
+function botStep(){ if(!cur) return; const best=bestPlacement(); if(best){ cur.rot=best.rot; cur.px=best.px; cur.py=ghostY(); lockPiece(); } else hardDrop(); }
 function evalGrid(g, landingHeight, rowsClearedNow){
   let rowT=0, colT=0, holes=0, wells=0;
-  // row transitions (walls count as filled)
   for(let r=0;r<ROWS;r++){ let prev=1; for(let c=0;c<COLS;c++){ const cell=g[r][c]?1:0; if(cell!==prev) rowT++; prev=cell; } if(prev!==1) rowT++; }
-  // column transitions (floor filled, top empty)
   for(let c=0;c<COLS;c++){ let prev=0; for(let r=0;r<ROWS;r++){ const cell=g[r][c]?1:0; if(cell!==prev) colT++; prev=cell; } if(prev!==1) colT++; }
-  // holes
   for(let c=0;c<COLS;c++){ let seen=false; for(let r=0;r<ROWS;r++){ if(g[r][c]) seen=true; else if(seen) holes++; } }
-  // wells
-  for(let c=0;c<COLS;c++){ for(let r=0;r<ROWS;r++){ if(!g[r][c]){ const left=(c===0)||g[r][c-1]; const right=(c===COLS-1)||g[r][c+1]; if(left&&right){ let d=1; let rr=r+1; while(rr<ROWS && !g[rr][c]){ d++; rr++; } wells += d*(d+1)/2; r=rr; } } } }
-  return (-4.500158825*landingHeight) + (3.418126810*rowsClearedNow) + (-3.217888286*rowT) + (-9.348695305*colT) + (-7.899265427*holes) + (-3.385597224*wells);
+  for(let c=0;c<COLS;c++){ for(let r=0;r<ROWS;r++){ if(!g[r][c]){ const left=(c===0)||g[r][c-1], right=(c===COLS-1)||g[r][c+1]; if(left&&right){ let d=1, rr=r+1; while(rr<ROWS && !g[rr][c]){ d++; rr++; } wells += d*(d+1)/2; r=rr; } } } }
+  return (-4.500158825*landingHeight)+(3.418126810*rowsClearedNow)+(-3.217888286*rowT)+(-9.348695305*colT)+(-7.899265427*holes)+(-3.385597224*wells);
 }
 function bestPlacement(){
-  let best=null, bestScore=-1e9;
-  const key=cur.key;
+  let best=null, bestScore=-1e9; const key=cur.key;
   for(let rot=0;rot<4;rot++){
-    const cells=matrixCells(PIECES[key].states[rot]);
-    const xs=cells.map(c=>c[0]); const minx=Math.min(...xs), maxx=Math.max(...xs);
+    const cells=matrixCells(PIECES[key].states[rot]); const xs=cells.map(c=>c[0]); const minx=Math.min(...xs), maxx=Math.max(...xs);
     for(let px=-minx; px<=COLS-1-maxx; px++){
-      const test={key,rot,px,py:0};
-      // drop
-      let py=-2; while(!collides(grid,{...test,py:py+1}) && py<ROWS) py++;
-      const placed={key,rot,px,py};
-      if(collides(grid,placed)) continue;
-      // simulate on a copy
-      const g=grid.map(row=>row.slice());
-      let minRow=ROWS;
-      for(const [x,y] of cellsOf(placed)){ if(y<0){ minRow=-1; break; } g[y][x]="x"; if(y<minRow) minRow=y; }
-      if(minRow<0) continue;  // would lock above the top → skip if avoidable
-      // count + clear full rows
-      let cleared=0; for(let r=0;r<ROWS;r++){ if(g[r].every(c=>c)){ cleared++; } }
-      if(cleared){ const ng=[]; for(let r=0;r<ROWS;r++){ if(!g[r].every(c=>c)) ng.push(g[r]); } while(ng.length<ROWS) ng.unshift(new Array(COLS).fill(null)); for(let r=0;r<ROWS;r++) g[r]=ng[r]; }
-      const landingHeight = ROWS - minRow;
-      const sc=evalGrid(g, landingHeight, cleared);
+      let py=-2; while(!collides(grid,{key,rot,px,py:py+1}) && py<ROWS) py++;
+      const placed={key,rot,px,py}; if(collides(grid,placed)) continue;
+      const g=grid.map(row=>row.slice()); let minRow=ROWS, bad=false;
+      for(const [x,y] of cellsOf(placed)){ if(y<0){ bad=true; break; } g[y][x]="x"; if(y<minRow) minRow=y; }
+      if(bad) continue;
+      let cleared=0; for(let r=0;r<ROWS;r++) if(g[r].every(c=>c)) cleared++;
+      if(cleared){ const ng=[]; for(let r=0;r<ROWS;r++) if(!g[r].every(c=>c)) ng.push(g[r]); while(ng.length<ROWS) ng.unshift(new Array(COLS).fill(null)); for(let r=0;r<ROWS;r++) g[r]=ng[r]; }
+      const sc=evalGrid(g, ROWS-minRow, cleared);
       if(sc>bestScore){ bestScore=sc; best={rot,px}; }
     }
   }
@@ -399,10 +366,9 @@ function bestPlacement(){
 // ---------------- START / FLOW ----------------
 function startWorld(i, m){
   worldIdx=clamp(i,0,WORLDS.length-1); W=WORLDS[worldIdx]; mode=m||"adventure";
-  grid=newGrid(); bag=[]; nextQ=[]; rowsCleared=0; goal=W.goalRows; gravTimer=0; lockTimer=0; locking=false;
+  grid=newGrid(); bag=[]; nextQ=[]; rowsCleared=0; goal=W.goalRows; score=0; gravTimer=0; lockTimer=0; locking=false;
   fx=BM?BM.makeFx():fx; state="play"; started=true; helperPulse=0;
-  ensureMusic();
-  spawn();
+  ensureMusic(); spawn();
 }
 function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 function ensureMusic(){ if(!BA||!BA.setMusic) return; const url="/api/sfx?s="+(W.ambience||"forest");
@@ -411,71 +377,68 @@ function ensureMusic(){ if(!BA||!BA.setMusic) return; const url="/api/sfx?s="+(W
 let toastT=null;
 function toast(msg){ const t=document.getElementById("toast"); if(!t) return; t.textContent=msg; t.style.display="block"; if(toastT) clearTimeout(toastT); toastT=setTimeout(()=>{ t.style.display="none"; }, 1600); }
 
-// ---------------- SHARED START SCREEN (BS) ----------------
-let startScreen=null;
+// ---------------- SHARED START SCREEN (BS) + fallback ----------------
+let startScreen=null, bsMounted=false;
 function buildStartCfg(){
   const unlocked=PREFS.unlocked||0;
-  const worldCards=WORLDS.map((w,i)=>{ const st = PREFS.cleared[i] ? "done" : (i<=unlocked ? (i===0&&!PREFS.cleared[0]&&unlocked===0?"next":(i===unlocked?"next":(i<unlocked?"done":"locked"))) : "locked");
-    const stt = i<unlocked ? (PREFS.cleared[i]?"done":"next") : (i===unlocked?"next":"locked");
-    return { n:i+1, name:w.name, color:w.accent, state:stt, foot: stt==="locked"?undefined:(w.goalRows+" rows") }; });
-  // Calm/endless card first (always playable)
+  const worldCards=WORLDS.map((w,i)=>{ const st = i<unlocked ? (PREFS.cleared[i]?"done":"next") : (i===unlocked?"next":"locked");
+    return { n:i+1, name:w.name, color:w.accent, state:st, foot: st==="locked"?undefined:(w.goalRows+" rows") }; });
   const calm={ n:99, name:"Calm Mode", color:"#5a73b8", state:"ready", foot:"Never lose — just play" };
   return { title:"Tumble Blocks", subtitle:"Fill a row to make it tumble away!",
     sound:!(BA&&BA.muted), showBack:false, levels:[calm, ...worldCards], customizeLabel:"Make it mine (soon)" };
 }
-function showMenu(){ state="title"; cur=null; showPlayUI(false);
+function pickWorld(n){ if(BA) BA.unlock(); if(n===99) startWorld(Math.max(0,PREFS.unlocked||0),"endless"); else startWorld(n-1,"adventure"); hideMenu(); }
+function showMenu(){ state="title"; cur=null; showNav(false); showPad(false);
   const host=document.getElementById("start"); if(host) host.style.display="block";
-  if(!BS||!host) return;
-  const cb={
-    onPlay:(n)=>{ if(BA) BA.unlock(); if(n===99){ startWorld(Math.max(0,PREFS.unlocked||0),"endless"); } else { startWorld(n-1,"adventure"); } hideMenu(); },
-    onCustomize:()=>{ toast("Per-kid themes are coming soon!"); },
-    onSound:(on)=>{ if(BA){ BA.unlock(); BA.toggleMute(); } updateSoundBtn(); },
-    onBack:()=>{},
-  };
-  if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb);
-  else startScreen.update(buildStartCfg());
+  if(BS && host && host.appendChild){
+    const cb={ onPlay:pickWorld, onCustomize:()=>toast("Per-kid themes are coming soon!"),
+      onSound:(on)=>{ if(BA){ BA.unlock(); BA.toggleMute(); } updateSoundBtn(); }, onBack:()=>{} };
+    try{ if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg()); bsMounted=true; }
+    catch(e){ bsMounted=false; }
+  } else { bsMounted=false; if(host) host.style.display="none"; }   // fallback: canvas "Tap to Play"
 }
-function hideMenu(){ const host=document.getElementById("start"); if(host) host.style.display="none"; showPlayUI(true); }
-function showPlayUI(on){ const set=(id,d)=>{ const e=document.getElementById(id); if(e) e.style.display=d?(id==="pad"?"flex":"block"):"none"; };
-  set("pad",on); set("soundBtn",on); set("pauseBtn",on); }
+function hideMenu(){ const host=document.getElementById("start"); if(host) host.style.display="none"; showNav(true); showPad(true); }
+function showPad(on){ const e=document.getElementById("pad"); if(e) e.style.display=on?"flex":"none"; }
+function showNav(on){ ["homeBtn","pauseBtn","soundBtn"].forEach(id=>{ const e=document.getElementById(id); if(!e) return;
+  if(id==="homeBtn" && EMBED && on) { e.style.display="none"; return; }   // React shell already shows a Back when embedded
+  e.style.display=on?"flex":"none"; }); }
 function updateSoundBtn(){ const b=document.getElementById("soundBtn"); if(b) b.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }
 
-// advancing past a win banner / pause tap
 function onCanvasTap(){
-  if(state==="win"){ if(mode==="adventure" && worldIdx<WORLDS.length-1 && PREFS.cleared[worldIdx]){ startWorld(worldIdx+1,"adventure"); } else { showMenu(); } return true; }
-  if(state==="pause"){ state="play"; return true; }
+  if(state==="title" && !bsMounted){ pickWorld(Math.max(1, (PREFS.unlocked||0)+1)); return true; }   // fallback start
+  if(state==="win"){ if(mode==="adventure" && worldIdx<WORLDS.length-1 && PREFS.cleared[worldIdx]) startWorld(worldIdx+1,"adventure"); else showMenu(); return true; }
+  if(state==="pause"){ state="play"; setPauseLabel(); return true; }
   return false;
 }
+function setPauseLabel(){ const pb=document.getElementById("pauseBtn"); if(pb) pb.textContent=state==="pause"?"Play":"Pause"; }
 
 // ---------------- INPUT ----------------
 function bindInput(){
-  // big buttons (hold-to-repeat for left/right)
   holdBtn("bLeft", ()=>{ if(state==="play"&&!botMode){ if(tryMove(-1,0)&&BA) BA.sfx("move"); } });
   holdBtn("bRight",()=>{ if(state==="play"&&!botMode){ if(tryMove(1,0)&&BA) BA.sfx("move"); } });
   tapBtn("bRot", ()=>{ if(state==="play"&&!botMode) tryRotate(); else onCanvasTap(); });
   tapBtn("bDrop",()=>{ if(state==="play"&&!botMode) hardDrop(); else onCanvasTap(); });
+  const hb=document.getElementById("homeBtn"); if(hb) hb.onclick=()=>{ if(EMBED){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } showMenu(); };
   const sb=document.getElementById("soundBtn"); if(sb) sb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(BA.muted&&BA.stopMusic)BA.stopMusic(); else { _curMusic=null; ensureMusic(); } } updateSoundBtn(); };
-  const pb=document.getElementById("pauseBtn"); if(pb) pb.onclick=()=>{ if(state==="play"){ state="pause"; pb.textContent="Play"; } else if(state==="pause"){ state="play"; pb.textContent="Pause"; } };
-  // keyboard (desktop)
-  if(g_addEvent) window.addEventListener("keydown",(e)=>{ if(botMode) return;
-    if(state==="title") return;
+  const pb=document.getElementById("pauseBtn"); if(pb) pb.onclick=()=>{ if(state==="play"){ state="pause"; } else if(state==="pause"){ state="play"; } setPauseLabel(); };
+  if(g_addEvent) window.addEventListener("keydown",(e)=>{ if(botMode||state==="title") return;
     if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
     if(state!=="play"){ if(e.key===" "||e.key==="Enter") onCanvasTap(); return; }
     if(e.key==="ArrowLeft"){ if(tryMove(-1,0)&&BA)BA.sfx("move"); }
     else if(e.key==="ArrowRight"){ if(tryMove(1,0)&&BA)BA.sfx("move"); }
     else if(e.key==="ArrowUp"){ tryRotate(); }
-    else if(e.key==="ArrowDown"){ if(tryMove(0,1)){ gravTimer=0; } }
+    else if(e.key==="ArrowDown"){ if(tryMove(0,1)){ gravTimer=0; score+=1; } }
     else if(e.key===" "){ hardDrop(); }
+    else if(e.key==="p"||e.key==="P"){ state="pause"; setPauseLabel(); }
   });
-  // gestures on the board
   bindGestures();
 }
-function holdBtn(id, fn){ const e=document.getElementById(id); if(!e) return; let iv=null,to=null;
+function holdBtn(id, fn){ const e=document.getElementById(id); if(!e||!e.addEventListener) return; let iv=null,to=null;
   const start=(ev)=>{ ev.preventDefault(); if(BA)BA.unlock(); fn(); to=setTimeout(()=>{ iv=setInterval(fn,90); },240); };
   const end=()=>{ if(to)clearTimeout(to); if(iv)clearInterval(iv); to=iv=null; };
   e.addEventListener("pointerdown",start); e.addEventListener("pointerup",end); e.addEventListener("pointerleave",end); e.addEventListener("pointercancel",end);
 }
-function tapBtn(id, fn){ const e=document.getElementById(id); if(!e) return; e.addEventListener("pointerdown",(ev)=>{ ev.preventDefault(); if(BA)BA.unlock(); fn(); }); }
+function tapBtn(id, fn){ const e=document.getElementById(id); if(!e||!e.addEventListener) return; e.addEventListener("pointerdown",(ev)=>{ ev.preventDefault(); if(BA)BA.unlock(); fn(); }); }
 function bindGestures(){
   if(!cv||!cv.addEventListener) return;
   let sx=0,sy=0,st=0,lastCol=0,startPx=0,moved=false,dropped=false;
@@ -484,18 +447,17 @@ function bindGestures(){
     if(state!=="play"||botMode){ onCanvasTap(); return; }
     sx=e.clientX; sy=e.clientY; st=Date.now(); moved=false; dropped=false; startPx=cur?cur.px:0; lastCol=0; });
   cv.addEventListener("pointermove",(e)=>{ if(state!=="play"||botMode||!cur||dropped) return;
-    const cp=cellPx()||CELL; const dxc=Math.round((e.clientX-sx)/cp);
-    if(dxc!==lastCol){ const want=startPx+dxc; while(cur.px<want){ if(!tryMove(1,0))break; } while(cur.px>want){ if(!tryMove(-1,0))break; } if(dxc!==lastCol&&BA)BA.sfx("move"); lastCol=dxc; moved=true; }
-    if((e.clientY-sy) > cp*2.2 && Math.abs(e.clientX-sx) < cp*1.2){ dropped=true; hardDrop(); }
-  });
-  cv.addEventListener("pointerup",(e)=>{ if(state!=="play"||botMode){ return; }
+    const cp=cellPx()||CELL, dxc=Math.round((e.clientX-sx)/cp);
+    if(dxc!==lastCol){ const want=startPx+dxc; while(cur.px<want){ if(!tryMove(1,0))break; } while(cur.px>want){ if(!tryMove(-1,0))break; } if(BA)BA.sfx("move"); lastCol=dxc; moved=true; }
+    if((e.clientY-sy) > cp*2.2 && Math.abs(e.clientX-sx) < cp*1.2){ dropped=true; hardDrop(); } });
+  cv.addEventListener("pointerup",(e)=>{ if(state!=="play"||botMode) return;
     const dt=Date.now()-st, dx=Math.abs(e.clientX-sx), dy=Math.abs(e.clientY-sy);
-    if(!moved && !dropped && dt<260 && dx<14 && dy<14){ tryRotate(); } });
+    if(!moved && !dropped && dt<260 && dx<14 && dy<14) tryRotate(); });
 }
 
 // ---------------- LOOP ----------------
 function frame(t){ const now=t||(performance&&performance.now?performance.now():Date.now()); let dt=(now-lastT)/1000; lastT=now; if(!(dt>0)||dt>0.1) dt=0.016;
-  update(dt); if(cv) draw(); requestAnimationFrame(frame); }
+  update(dt); if(cv){ try{ draw(); }catch(e){} } requestAnimationFrame(frame); }
 
 // bespoke created sounds (ElevenLabs via /api/sfx) — synth stays a silent fallback.
 if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
@@ -507,31 +469,31 @@ const g_addEvent = (typeof window!=="undefined" && window.addEventListener);
 if(typeof document!=="undefined" && document.getElementById("start")){
   cv=document.getElementById("c"); if(cv&&cv.getContext) ctx=cv.getContext("2d");
   loadPrefs(); bindInput(); updateSoundBtn(); showMenu();
+  if(!bsMounted){ showNav(true); }   // fallback menu: still show Sound/Pause? keep Home hidden on title
 }
 if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(frame);
 
 // ---------------- QA / picker hooks (standard name + alias) ----------------
 window.BUILDABLE_GAME = {
   startWorld:(i,m)=>startWorld(i,m||"adventure"),
+  showMenu:()=>showMenu(),
   state:()=>state,
-  dbg:()=>({ world:worldIdx, mode, rows:rowsCleared, goal, state, hasCur:!!cur }),
-  // headless: a perfect bot clears the world's goal
-  sim:(idx, maxFrames)=>{ startWorld(idx,"adventure"); botMode=true; state="play"; started=true; let f=0; const cap=maxFrames||80000;
-    while(state!=="win" && f<cap){ update(0.016); f++; }
-    botMode=false;
-    return { world:idx, result:state, frames:f, rows:rowsCleared, goal }; },
-  // endless never tops out: confirm it survives a long run + keeps clearing
+  dbg:()=>({ world:worldIdx, mode, rows:rowsCleared, goal, score, state, hasCur:!!cur }),
+  sim:(idx, maxFrames)=>{ startWorld(idx,"adventure"); botMode=true; state="play"; started=true; let f=0; const cap=maxFrames||120000;
+    while(state!=="win" && f<cap){ update(0.016); f++; } botMode=false;
+    return { world:idx, result:state, frames:f, rows:rowsCleared, goal, score }; },
   simEndless:(idx, frames)=>{ startWorld(idx,"endless"); botMode=true; state="play"; started=true; let f=0; const cap=frames||40000;
     while(f<cap){ update(0.016); f++; } botMode=false;
     return { result:state, rows:rowsCleared, frames:f }; },
-  campaign:(cap)=>{ const out=[]; cap=cap||80000; for(let i=0;i<WORLDS.length;i++){ startWorld(i,"adventure"); botMode=true; state="play"; started=true; let f=0;
-      while(state!=="win" && f<cap){ update(0.016); f++; } out.push({ world:i+1, result:state, frames:f, rows:rowsCleared }); botMode=false; if(state!=="win") break; } return out; },
+  campaign:(cap)=>{ const out=[]; cap=cap||120000; for(let i=0;i<WORLDS.length;i++){ startWorld(i,"adventure"); botMode=true; state="play"; started=true; let f=0;
+      while(state!=="win" && f<cap){ update(0.016); f++; } out.push({ world:i+1, result:state, frames:f, rows:rowsCleared, score }); botMode=false; if(state!=="win") break; } return out; },
   _begin:(i,m)=>{ startWorld(i||0,m||"adventure"); botMode=true; state="play"; started=true; },
+  _menu:()=>{ showMenu(); },
   _step:(n)=>{ for(let i=0;i<(n||1);i++) update(0.016); },
   _draw:()=>{ try{ draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
   _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS, _setBot:(b)=>{ botMode=b; },
 };
-window.TUMBLE_GAME = window.BUILDABLE_GAME;   // friendly alias
+window.TUMBLE_GAME = window.BUILDABLE_GAME;
 </script>
 </body>
 </html>

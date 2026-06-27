@@ -20,6 +20,8 @@ vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:
 const G=sandbox.BUILDABLE_GAME; if(!G){ console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
 if(sandbox.TUMBLE_GAME!==G){ console.error('FAIL: TUMBLE_GAME alias missing'); process.exit(2); }
 const cfg=G._cfg(); const n=cfg.levels.length; let ok=true;
+console.log('--- TITLE/menu state renders without crashing (the bug from the screenshot) ---');
+const td=G._draw(); console.log('title render:',td); if(td!=='ok')ok=false;
 console.log('--- ADVENTURE: the bot clears every world goal (3 runs each) ---');
 for(let i=0;i<n;i++){ const w=cfg.worlds[i]; let win=true,worst=0; for(let t=0;t<3;t++){ const r=G.sim(i,120000); if(r.result!=='win')win=false; worst=Math.max(worst,r.frames); }
   if(!win)ok=false; console.log(`${win?'PASS':'FAIL'}  W${i+1} ${w.name.padEnd(14)} goal=${String(w.goalRows).padStart(2)} winAll3=${win} worstPieces=${worst}`); }
