@@ -220,7 +220,7 @@
   };
 
   // names of available renders (handy for docs / tooling)
-  BR.list = function () { return ["rrect", "sparkle", "heart", "background", "enemy", "hero", "gem", "projectile", "particle", "orbiter", "puIcon", "gearSVG", "stroke", "mirror"]; };
+  BR.list = function () { return ["rrect", "sparkle", "heart", "background", "enemy", "hero", "gem", "projectile", "particle", "orbiter", "puIcon", "gearSVG", "stroke", "mirror", "shape"]; };
 
 
   // ---- Drawing-studio behaviors (shared so the next maker reuses them) ----------
@@ -239,7 +239,20 @@
       }
       ctx.stroke();
     }
-    if (tex === "spray") {
+    if (tex === "ribbon") {          // calligraphy: width follows per-point .w (speed)
+      for (var i = 0; i < pts.length; i++) { var p = pts[i], rw = (p.w != null ? p.w : w);
+        ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.6, rw / 2), 0, 7); ctx.fill();
+        if (i) { var q = pts[i-1]; ctx.lineWidth = Math.max(1, rw); ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(p.x, p.y); ctx.stroke(); } }
+    } else if (tex === "fur") {       // soft strands shooting off the path
+      for (var i = 0; i < pts.length; i++) { var p = pts[i];
+        for (var k = 0; k < Math.max(4, w / 2); k++) { var ang = Math.random() * 7, len = w * (0.4 + Math.random() * 0.8);
+          ctx.globalAlpha = a * (0.4 + Math.random() * 0.5); ctx.lineWidth = 1.2; ctx.beginPath();
+          ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(ang) * len, p.y + Math.sin(ang) * len); ctx.stroke(); } }
+    } else if (tex === "dots") {      // sponge: clustered soft dots
+      for (var i = 0; i < pts.length; i++) { var p = pts[i];
+        for (var k = 0; k < Math.max(3, w / 4); k++) { ctx.globalAlpha = a * (0.5 + Math.random() * 0.4);
+          ctx.beginPath(); ctx.arc(p.x + (Math.random() - 0.5) * w, p.y + (Math.random() - 0.5) * w, Math.random() * (w / 5) + 1, 0, 7); ctx.fill(); } }
+    } else if (tex === "spray") {
       for (var i = 0; i < pts.length; i++) { var p = pts[i], n = Math.max(6, w);
         for (var k = 0; k < n; k++) { var ang = Math.random() * 7, rr = Math.random() * w; ctx.globalAlpha = a * 0.5;
           ctx.beginPath(); ctx.arc(p.x + Math.cos(ang) * rr, p.y + Math.sin(ang) * rr, 0.9, 0, 7); ctx.fill(); } }
@@ -264,6 +277,15 @@
   // center (a kaleidoscope). n=1 just draws once. For n>1 it also draws a mirrored set,
   // so a single scribble becomes a symmetrical pattern.
   BR.mirror = function (ctx, n, W, H, drawFn) {
+    var cx0 = W / 2, cy0 = H / 2;
+    if (n === "V") {                    // left-right mirror across the vertical center
+      drawFn();
+      ctx.save(); ctx.translate(cx0, 0); ctx.scale(-1, 1); ctx.translate(-cx0, 0); drawFn(); ctx.restore(); return;
+    }
+    if (n === "H") {                    // top-bottom mirror across the horizontal center
+      drawFn();
+      ctx.save(); ctx.translate(0, cy0); ctx.scale(1, -1); ctx.translate(0, -cy0); drawFn(); ctx.restore(); return;
+    }
     n = Math.max(1, n | 0);
     if (n === 1) { drawFn(); return; }
     var cx = W / 2, cy = H / 2, step = (Math.PI * 2) / n;
@@ -271,6 +293,29 @@
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(step * i); ctx.translate(-cx, -cy); drawFn(); ctx.restore();
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(step * i); ctx.scale(1, -1); ctx.translate(-cx, -cy); drawFn(); ctx.restore();
     }
+  };
+
+
+  // BR.shape(ctx, name, x, y, size, color) — drawn shape stamps for the "shapes" brush.
+  BR.shape = function (ctx, name, x, y, size, color) {
+    var r = size / 2; ctx.save(); ctx.translate(x, y); ctx.fillStyle = color || "#ff5d8f";
+    if (name === "heart") {
+      ctx.beginPath(); ctx.moveTo(0, r * 0.65);
+      ctx.bezierCurveTo(r, -r * 0.3, r * 0.55, -r, 0, -r * 0.35);
+      ctx.bezierCurveTo(-r * 0.55, -r, -r, -r * 0.3, 0, r * 0.65); ctx.fill();
+    } else if (name === "star") {
+      ctx.beginPath(); for (var i = 0; i < 10; i++) { var a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r;
+        ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill();
+    } else if (name === "flower") {
+      for (var p = 0; p < 6; p++) { var a2 = p * Math.PI / 3; ctx.beginPath();
+        ctx.ellipse(Math.cos(a2) * r * 0.55, Math.sin(a2) * r * 0.55, r * 0.42, r * 0.26, a2, 0, 7); ctx.fill(); }
+      ctx.fillStyle = "#ffd23f"; ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 0, 7); ctx.fill();
+    } else if (name === "diamond") {
+      ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.7, 0); ctx.closePath(); ctx.fill();
+    } else {                            // dot
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+    }
+    ctx.restore();
   };
 
   g.BuildableRenders = BR;

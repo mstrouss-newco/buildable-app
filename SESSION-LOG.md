@@ -4,6 +4,25 @@
 - Win/lose helper reaction now fires in Survival (win+lose), Platformer/play.html (win+lose),
   and Typing (win) via direct window.parent.postMessage. Engines verified loading on preview.
 - Chess + Tennis intentionally skipped (they already have their own spoken celebration).
+## 2026-06-27 — Art Studio v2: 9 new art features SHIPPED to main
+- Saving verified working live (saved_art table created). New features on public/art-studio.html:
+  1. ART STYLES (the "hand-drawn vs 3D" ask): Paper / Chalk / Neon / 3D Pop / Pixel — each
+     changes the background + how every stroke renders (neon glow, raised 3D shadow+highlight,
+     blocky pixel-grid). Style saved with the drawing.
+  2. FILL BUCKET (flood fill, tolerance) with the art_fill splash sound; stored as a replayable op.
+  3. SHAPES stamp brush — drawn star/heart/flower/diamond/dot via new shared BR.shape() (no emoji).
+  4. 3 new brush textures via BR.stroke(): Ribbon (calligraphy, width follows speed), Fur, Sponge/dots.
+  5. STICKER picker now has THEME TABS (All/Forest/Ocean/Space/Candy) over list-characters+list-assets,
+     with a BR-drawn shape fallback so it's never empty.
+  6. BACKGROUND picker — solid colors + gradient scenes (Sky/Candy/Galaxy/Forest).
+  7. MIRROR modes added: Mirror (left-right) + Flip (top-bottom) alongside kaleidoscope x2/x4/x8,
+     via BR.mirror() now accepting "V"/"H".
+  8. Full COLOR PICKER (any color) + a Recent-colors row.
+  9. MY ART gallery — reopen any saved drawing (list-art -> restore ops + style + bg).
+- Shared libs grew (reusable by next maker): BR.shape(); BR.stroke ribbon/fur/dots; BR.mirror V/H.
+- QA: qa-art.mjs extended — all 12 drawing brushes across all 6 mirror modes + all 5 styles, fill +
+  shape ops, undo/redo, and lossless save->restore (incl style+bg). All green.
+
 
 ## 2026-06-27 — Helper reacts to game win/lose SHIPPED to main
 - New global HelperReactions layer (src/HelperReactions.jsx, mounted in main.jsx OUTSIDE
