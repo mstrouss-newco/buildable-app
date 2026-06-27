@@ -779,3 +779,7 @@ cached from chess); BA.music.src set with loop=true on game start. All Breaker a
 ## Chess: "living pieces" experiment — idle motion + move speech + toggle — June 26 2026
 
 Pieces now idle in place (randomized aliveBob/Wiggle/Breathe/Look on the piece SVG, pivot near feet, never leave the square; selected/celebration states override). On a kid's own move a short upbeat line plays (16 phrases via `api/chess-voice.js` move1..move16, ElevenLabs TTS cached; skips the bot's moves and the game-ending move so the Checkmate VO is not stepped on; non-overlapping). New **Living pieces** toggle (face icon in the HUD) turns motion+speech off, saved in localStorage `bk_chess_alive` (default on). Created ElevenLabs audio per BUILDING-A-GAME.md; no emoji.
+
+## Chess: world-specific living creatures (Ocean + Jungle first) — June 26 2026
+
+Piece art is now per-world: `pieceSVG(type,color,world)` dispatches to a `CREATURES[world]` set, falling back to the default heroes for un-themed worlds. Ocean = fish/seahorse/jellyfish/crab/octopus/pufferfish-king; Jungle = frog/monkey/parrot/tortoise/butterfly/lion-king. Drawn as inline SVG (reusing the team palette + eyes/smile helpers) so the alive idle motion, 2-team recolor, and crispness all carry over; rendered via `renderPieces` with the active `sceneKey`. World BACKGROUNDS already reuse the asset library; creatures are newly drawn vector (the library has scene/item art, not 6 creatures/world). Next: Space, Candy, Castle, Desert creature sets. No emoji.
