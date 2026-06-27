@@ -245,6 +245,26 @@ function build(q) {
       transparent:true, quality:"medium",
     };
   }
+  if (kind === "runnersky") {
+    // Full-bleed sky + distant skyline backdrops for the 3D car runner "Sunny Town Drive".
+    // Used as the Three.js scene background (the 3D road is drawn in front), so: NO road,
+    // NO cars, horizon line low, lots of sky. One per town.
+    const TOWNS = {
+      maple:    "a bright cheerful spring morning sky, big soft fluffy white clouds in a clear blue sky, a faraway cozy small-town skyline of cute rounded rooftops and leafy maple trees along the low horizon",
+      market:   "a warm sunny mid-morning sky with gentle golden light and a few soft clouds, a faraway cute town-square skyline with little market awnings, a clock tower and rounded rooftops on the low horizon",
+      beach:    "a breezy sunny seaside sky, soft clouds, a faraway sparkling ocean horizon with tiny sailboats and a couple of palm trees and beach huts along the low horizon",
+      petal:    "a dreamy soft-pink springtime sky with gentle clouds, a faraway skyline of blooming cherry-blossom treetops and a cute park gazebo on the low horizon",
+      downtown: "a bright friendly city daytime sky with soft clouds, a faraway cute rounded city skyline of small skyscrapers and buildings on the low horizon, cheerful not gloomy",
+      rainbow:  "a magical happy sky with a big soft rainbow arcing across fluffy clouds, a faraway whimsical skyline of candy-colored rooftops and a distant bridge on the low horizon",
+    };
+    const town=(q.town||"").toString(); const subj=TOWNS[town];
+    if(!subj) return null;
+    return {
+      descriptor:`runnersky|${town}`,
+      prompt:`${subj}. Wide scenic background, modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, vibrant cheerful colors, the sky filling most of the frame with the horizon low in the bottom third. NO road, NO street, NO cars, NO people, NO text, NO words, NO letters, NO UI. Child-friendly ages 4-8.`,
+      transparent:false, quality:"medium",
+    };
+  }
   return null;
 }
 
