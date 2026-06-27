@@ -25,6 +25,11 @@
 - **Mechanic stored:** `db/seed-tetris-mechanic.sql` registers `tumble-blocks-clear` and
   `soft-reset-never-lose` so the catalog grows. Docs: `tetris-README.md`,
   `BUILDING-A-GAME.md` + `MECHANICS.md` updated.
+- **Fix pass (same day):** the menu/title state crashed `draw()` (empty board grid) so
+  only the well + grid showed — no HUD/pieces/controls. Initialized the grid at boot,
+  guarded `draw()`, and `qa-tetris.mjs` now asserts the title render. Added a **Score**
+  (panel), an in-game **Pause** overlay, **Home/Pause/Sound** nav buttons (standard
+  corners), and a built-in "Tap to Play" fallback if BS fails to load.
 - Built on branch `claude/games-tetris` (not pushed to main). **Owner action:** run
   `db/seed-tetris-mechanic.sql` once; the 8 tumble SFX auto-generate + cache on first play.
 
