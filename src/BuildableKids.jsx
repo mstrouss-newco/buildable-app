@@ -154,7 +154,7 @@ function PlatformerScreen({ onHome }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Buildable Platformer" src="/play.html" onLoad={(e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} }} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+      <iframe title="Buildable Platformer" src="/play.html?v=20260627b" onLoad={(e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} }} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
