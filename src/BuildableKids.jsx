@@ -19,6 +19,7 @@ import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibrary
 import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
 import { registerAudio } from "./lib/audioUnlock";
 import { playVoiceUrl } from "./lib/voiceBus";
+import { setCurrentGame, logGameEvent } from "./lib/gameLog";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -42,6 +43,20 @@ const SCREEN_SOUNDS = "sounds";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_TENNIS = "tennis";
 const SCREEN_TENNIS_FAMILY = "tennis_family";
+
+// Which screens are games (for per-kid play/win/lose logging). Family variants
+// log under the base game; SCREEN_PLAY = a generated "Make a game" creation.
+const GAME_SLUGS = {
+  [SCREEN_PLATFORMER]: "platformer",
+  [SCREEN_SURVIVAL]: "survival",
+  [SCREEN_BREAKER]: "breaker",
+  [SCREEN_CHESS]: "chess",
+  [SCREEN_CHESS_FAMILY]: "chess",
+  [SCREEN_TYPING]: "typing",
+  [SCREEN_TENNIS]: "tennis",
+  [SCREEN_TENNIS_FAMILY]: "tennis",
+  [SCREEN_PLAY]: "generated",
+};
 const SCREEN_TOP = "top";
 const SCREEN_HELPER = "helper";
 const SCREEN_ART = "art";
@@ -222,6 +237,15 @@ export default function BuildableKids() {
   }, []);
 
   const goHome = () => setScreen(SCREEN_HOME);
+
+  // Per-kid game telemetry: log a "play" when a game screen opens, and remember
+  // the current game so win/lose results get attributed to it (see gameLog +
+  // HelperReactions). Best-effort; never blocks the UI.
+  useEffect(() => {
+    const slug = GAME_SLUGS[screen] || null;
+    setCurrentGame(slug);
+    if (slug) logGameEvent("play", slug);
+  }, [screen]);
   const openMyStuff = (from) => {
     setReturnTo(from);
     setScreen(SCREEN_MY_STUFF);

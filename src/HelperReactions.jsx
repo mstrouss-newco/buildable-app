@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getActiveKid, getKidHelper } from "./lib/accounts";
 import { playVoiceUrl } from "./lib/voiceBus";
+import { logGameEvent } from "./lib/gameLog";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const WINS = ["You did it! Woohoo!", "Amazing job!", "You're a superstar!", "That was awesome!", "Yes! You win!", "Incredible! High five!"];
@@ -21,6 +22,7 @@ export default function HelperReactions() {
       const d = e && e.data;
       if (!d || d.source !== "buildable" || !d.kind) return;
       if (["win", "lose", "levelup", "cheer"].indexOf(d.kind) === -1) return;
+      if (d.kind === "win" || d.kind === "lose") { try { logGameEvent(d.kind); } catch (e) {} }
       const win = d.kind === "win" || d.kind === "levelup" || d.kind === "cheer";
       const pool = win ? WINS : LOSES;
       const text = d.text || pool[Math.floor(Math.random() * pool.length)];
