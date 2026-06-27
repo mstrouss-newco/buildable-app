@@ -436,12 +436,12 @@ function update(){
   // magic barrier holds you back until the boss is happy
   if(L.boss && !L.boss.defeated && (player.x+24) > L.barrierX){ player.x=L.barrierX-24; if(player.vx>0)player.vx=0; }
   // reach goal
-  if(player.x>=L.goalX){ state="win"; SFX.win(); }
+  if(player.x>=L.goalX){ state="win"; SFX.win(); try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){} }
 }
 function takeHit(){ if(starT>0) return; if(shieldOn){ shieldOn=false; invuln=70; return; } loseHeart(false); }
 function loseHeart(fell){
   hearts--; invuln=70; SFX.hurt();
-  if(hearts<=0){ state="lose"; return; }
+  if(hearts<=0){ state="lose"; try{window.parent.postMessage({source:"buildable",kind:"lose"},"*")}catch(e){} return; }
   // gentle: nudge back to safe ground
   if(fell){ let sx=player.x-TILE*2; while(sx>90 && groundUnder(sx)==null) sx-=20; player.x=Math.max(90,sx); player.y=GROUND_Y-80; player.vy=0; }
 }

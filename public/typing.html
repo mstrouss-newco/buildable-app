@@ -616,7 +616,7 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
     setStars(0);setStreak(0);setCharge(0);document.body.style.background=W.body;elLane.style.background=W.lane;applyHero();
     $('pauseOverlay').classList.remove('on');$('helpOverlay').classList.remove('on');show('game');loadEncounter();startTimer();}
 
-  function winWorld(){gen++;running=false;lock=true;clearInterval(timer);
+  function winWorld(){gen++;running=false;lock=true;clearInterval(timer);try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){};
     const before=totalStars;totalStars+=runStars;saveStars(totalStars);
     let unlocked=HEROES.find(h=>h.unlock>before&&h.unlock<=totalStars);const last=worldIdx>=WORLDS.length-1;
     $('winFace').innerHTML=IC_TROPHY;

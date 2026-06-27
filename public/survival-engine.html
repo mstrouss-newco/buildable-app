@@ -271,7 +271,7 @@ function spawnEnemy(){ const r=spawnRng(); const edge=Math.floor(r*4); let x,y; 
   enemies.push({ x,y, r:15, hp:L.eHp, maxHp:L.eHp, spd:L.eSpeed, dmg:L.eDmg, val:L.eValue, col, wob:spawnRng()*6.28, boss:false, orbCd:0 }); }
 function spawnBoss(){ const b=L.boss||{hp:30,spd:1.1,dmg:1}; boss={ x:W/2, y:-40, r:42, hp:b.hp, maxHp:b.hp, spd:b.spd, dmg:b.dmg, val:8, col:P.boss, wob:0, boss:true, orbCd:0 }; bossSpawned=true; sfx("boss"); }
 function burst(x,y,col,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=1+Math.random()*3; parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*12,col}); } }
-function hurtHero(dmg){ if(invuln>0)return; if(stats.shield){ stats.shield=false; invuln=70; burst(hero.x,hero.y,P.visor,12); sfx("hurt"); return; } hero.hearts-=dmg; invuln=80; burst(hero.x,hero.y,P.hp,14); sfx("hurt"); if(hero.hearts<=0){ hero.hearts=0; state="lose"; sfx("lose"); } }
+function hurtHero(dmg){ if(invuln>0)return; if(stats.shield){ stats.shield=false; invuln=70; burst(hero.x,hero.y,P.visor,12); sfx("hurt"); return; } hero.hearts-=dmg; invuln=80; burst(hero.x,hero.y,P.hp,14); sfx("hurt"); if(hero.hearts<=0){ hero.hearts=0; state="lose"; sfx("lose"); try{window.parent.postMessage({source:"buildable",kind:"lose"},"*")}catch(e){} } }
 
 // ---------- bot (QA "good player": kite away from the swarm, keep firing) ----------
 function botThink(){
@@ -349,7 +349,7 @@ function update(){
   if(BM&&fx) BM.update(fx);   // advance shared FX (flash/shake) from the mechanics lib
   // win when the boss is beaten (boss only appears after surviving the timer).
   // Beating the boss is the gate: it permanently unlocks the next level.
-  if(bossSpawned && !boss){ state="win"; sfx("win");
+  if(bossSpawned && !boss){ state="win"; sfx("win"); try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){};
     if(CHAR){ const u=Math.min(GAME_CONFIG.levels.length-1, level+1); if(u>(CHAR.unlocked||0)){ CHAR.unlocked=u; saveChar(); } } }
 }
 // coin tiers: 1 (=1, common) · 2 (=5, rare) · 3 (=10, boss/lucky). Higher levels drop a bit more.
