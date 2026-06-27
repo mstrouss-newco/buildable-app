@@ -515,6 +515,24 @@ Now a new themed project can pull world+hero+music+sfx from one shelf by one wor
 
 ---
 
+## Session log — 2026-06-27f (Every creation gets a thumbnail from its own art)
+
+Each creation list now returns a `thumbnail` auto-derived from the creation's OWN
+art, so lists/menus show real pictures instead of flat color cards:
+- stories -> first-page illustration (nested select story->pages->0->>art_url;
+  embedded data: images skipped to keep lists light; falls back to world art)
+- saved games -> their world/theme art from the shared library (api/_thumbs.js)
+- published games -> preview_image_url (already stored) || world art
+- songs -> generated cover (vibe/theme) so they match in generic lists
+Endpoints: list-stories, list-songs, list-games, list-published-games,
+top-creations. UI: TopBoard trending tiles now render the art (ArtThumb) with the
+glyph tile as a safe fallback. Approach is derive-at-read: no DB change, no
+backfill, works for ALL existing creations immediately, self-updating. (A stored
+thumbnail_url column is available as optional hardening if we ever want it frozen
+per creation.) Helper: api/_thumbs.js (thumbForWorld, songCover). QA cache-busted.
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
