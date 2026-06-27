@@ -74,6 +74,18 @@ Share + Publish actions. Both touch live React UI — to do next, confirming sco
 - MANUAL (owner): run db/add-kid-helper.sql in Supabase for signed-in cross-device sync.
 
 
+## Tennis goes dynamic — AI-art courts, ambient motion, explosions + smack talk (June 27 2026)
+Big presentation upgrade to Buildable Tennis (`public/tennis.html`) + three reusable mechanics logged for future games.
+
+- **Choosable AI-art worlds ("Choose your court").** 8 worlds (Sunny Beach, Space Station, Jungle, Underwater, Candy Land, Snowy Peak, Volcano Arena, Sunset Rooftop), each a full-scene backdrop from a NEW `kind=tennis` in `api/images.js` (generate-once-cache, budget-gated, `<img onError>` fallback). Drawn cover-fit via `BR.bgImage` + a readability scrim; every world keeps a drawn gradient fallback so a missing image never breaks play. Picker = shared BS `customizeLabel`/`onCustomize` -> a world grid of cached thumbnails.
+- **Ambient world particles** (`fx-ambient-particles`): ~34 cheap per-world dots (snow falls, bubbles/embers rise, stars twinkle, leaves/sweets/clouds drift) so even a static backdrop feels alive. Runs in every state.
+- **Explosions + juicier sound:** `BM.explode` fireworks where the ball blasts past the goal line and a 5-burst celebration on match win; new bespoke ElevenLabs SFX `tennis_boom` + `tennis_cheer` registered in `api/sfx.js` (synth fallback).
+- **Smack talk** (`smack-talk-taunts`): playful fading speech bubbles. SOLO -> the bot talks freely (cheeky/hype/goofy). KID-VS-KID -> canned reactions ONLY; expanded the child-safe list to 12 ("Too slow!", "Boop!", "Wibble wobble!"...) in BOTH `tennis.html` and the enforced `ALLOWED` set in `FamilyRealtime.jsx` (no free text, ever).
+- **Shared start-screen gain:** `buildable-startscreen.js` now supports a reusable `state:"ready"` card (green Play badge + optional `foot` hint, no progression wording) — Tennis uses Easy/Normal/Tricky. Fixes the odd "Cleared" footer for difficulty/mode pickers in any game.
+- **Logged for reuse:** `MECHANICS.md` (FX row + new section 13), `GAME-LOOK.md` (AI-backdrop pattern), and `db/seed-tennis-mechanics.sql` (registers `pick-ai-world-backdrop`, `smack-talk-taunts`, `fx-ambient-particles`). `FamilyRealtime` lobby worlds updated to the 8 tennis worlds.
+
+QA: `qa-tennis.mjs` still wins Easy/Normal/Tricky (render smoke ok); `npm run build` clean. **Owner action:** run `db/seed-tennis-mechanics.sql` once; the 8 court images auto-generate + cache on first view (or pre-warm `/api/images?kind=tennis&id=<world>`).
+
 ## Buildable Tennis — first real-time 1- & 2-player game (June 27 2026)
 **Tennis is the first real-time multiplayer game** (the blueprint in `MULTIPLAYER.md` is now built). A new Track B engine `public/tennis.html` — paddles top & bottom, a bouncy ball, first to 7.
 

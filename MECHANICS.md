@@ -259,6 +259,7 @@ code stay one source of truth.
 | `fx-hit-flash`           | Hit flash             | `BM.flash` |
 | `fx-floating-score-pop`  | Floating score pop    | `BM.pop` |
 | `fx-confetti-celebrate`  | Confetti celebrate    | `BM.burst` (gravity) |
+| `fx-ambient-particles`   | Ambient world particles | per-world drift (snow/bubbles/embers/stars) |
 
 **To add an FX mechanic:** add the function to `buildable-mechanics.js`, add a row to
 `game_mechanics` (an idempotent `db/seed-*.sql`), and add a line to the table above.
@@ -330,3 +331,21 @@ shared layer `src/lib/realtimeChannel.js` + `src/lib/rtMatch.js` + `src/FamilyRe
 and the `rt_matches` table — a game opts in by speaking the `mp:` contract and launching
 through `FamilyRealtime`. Non-negotiables for any multiplayer: parent-account lane,
 family-RLS, **canned reactions only (no free-text chat)**, network-agnostic engine.
+
+
+## 13. Presentation mechanics from Buildable Tennis (reusable)
+
+Three reusable mechanics shipped with Tennis. Registered in `game_mechanics` via
+`db/seed-tennis-mechanics.sql`; full look/feel notes in `GAME-LOOK.md`.
+
+| slug | what it gives a game | how to reuse |
+|---|---|---|
+| `pick-ai-world-backdrop` | A "**Choose your court / where do you want to play?**" picker of AI-art worlds | Add scene prompts under a `kind` in `api/images.js` (Tennis = `kind=tennis`); show a grid (BS `customizeLabel` + `onCustomize`); draw the chosen image cover-fit via `BR.bgImage` + a dark scrim; **always** keep a drawn gradient fallback. |
+| `smack-talk-taunts` | Playful trash talk as fading speech bubbles | Solo: bot taunts FREELY (cheeky/hype/goofy `TAUNTS` arrays, `sayTop`/`sayBot`). Kid-vs-kid: **canned reactions ONLY**, enforced by the `ALLOWED` set in `FamilyRealtime.jsx` — never free text (child-safety). |
+| `fx-ambient-particles` | Per-world drifting particles so even a static backdrop feels alive | ~34 cheap dots; type + color + motion chosen by the world (snow falls, bubbles/embers rise, stars twinkle, leaves/sweets/clouds drift); wraps at edges; runs in every state. |
+
+**Shared start-screen note:** `buildable-startscreen.js` (BS) gained a reusable
+**`state:"ready"`** level state — a playable card with a green Play badge and an optional
+`foot` label (e.g. a difficulty hint), with NO progression wording. Use it for
+difficulty/mode pickers where "Cleared / Next up / Locked" doesn't fit. (Tennis uses three
+`ready` cards: Easy / Normal / Tricky.)

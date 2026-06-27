@@ -38,6 +38,8 @@ const SOUNDS = {
   tennis_point: "Short cheerful little ding plus a soft whoosh, a point scored, friendly cartoon, single hit, no music, no voices",
   tennis_win:   "Happy short victory fanfare with a sparkle, cheerful kids game win, no voices",
   tennis_lose:  "Gentle soft descending wah-wah, friendly cartoon lose, short, no music",
+  tennis_boom:  "Short punchy cartoon explosion boom with a bright sparkly pop, fun and friendly, single hit, no music, no voices",
+  tennis_cheer: "Short happy little crowd cheer and clap, cheerful kids celebration, single hit, no music",
 
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
@@ -118,6 +120,7 @@ const DURATIONS = {
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
   tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
+  tennis_boom:0.6, tennis_cheer:1.4,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,

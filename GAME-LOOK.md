@@ -174,3 +174,26 @@ Fix lives in `src/lib/audioUnlock.js`, installed once in `src/main.jsx`:
 - Richer foreground art (layered grass strips). (Moving platforms + swinging vines
   enhanced June 26 2026: denser, diagonal movers, ride-coins, vine chains, swing-the-pit.)
 - A small mute/settings control; gentle background music per world.
+
+
+## Choosable AI-art world backdrops + ambient motion (Tennis pattern)
+
+How to give a game rich, kid-chosen scenery without hand-painting it:
+
+1. **Generate once, cache forever.** Add a `kind` to `api/images.js` with a full-scene
+   prompt per world (Tennis = `kind=tennis&id=<world>`), `transparent:false`,
+   `quality:"medium"`. The endpoint generates on first request, caches the PNG keyed by a
+   hash, enforces the daily budget, and returns non-200 on any miss so `<img onError>`
+   falls back. ~$0.04 per world, one time.
+2. **Draw it cover-fit + scrim.** Load it as an `Image`; in `draw()` use
+   `BR.bgImage(ctx, img, W, H)` (cover-fit) and lay a soft dark scrim
+   (`rgba(8,10,24,0.34)`) on top so the ball/paddles/score stay readable over busy art.
+3. **ALWAYS keep a drawn fallback.** Each world also defines a `bg:[c1,c2]` gradient; if
+   the image hasn't loaded (or failed/over-budget), the gradient renders instead. A
+   missing asset can never break a kid's game (library-first rule).
+4. **Make it move.** Layer cheap per-world **ambient particles** (`fx-ambient-particles`)
+   over the static image — snow falling, bubbles/embers rising, stars twinkling, leaves/
+   sweets/clouds drifting — so the scene feels dynamic. ~34 dots, wrap-around, ~0 cost.
+5. **Let kids choose.** Surface a world grid via the shared start screen's customize hook
+   (`customizeLabel` + `onCustomize`); each card shows the cached AI thumbnail over its
+   gradient. Picking sets the world, preloads its backdrop, and re-seeds the particles.
