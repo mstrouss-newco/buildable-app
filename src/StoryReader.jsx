@@ -28,6 +28,8 @@ function wordsOf(text) { return (text || "").trim().split(/\s+/).filter(Boolean)
 const WATER_WORLDS = new Set(["coral-reef", "desert-oasis"]);
 const WATER_FX = new Set(["water_shimmer", "gentle_waves"]);
 function wantsWater(pg){ return !!pg && (WATER_WORLDS.has(pg.world_slug) || WATER_FX.has(pg.effect)); }
+const AMBIENT_BY_WORLD = { "enchanted-forest": "forest", "dino-jungle": "jungle", "space-station": "space", "candy-land": "candy", "snowy-village": "wind", "dragon-mountain": "wind", "coral-reef": "waves", "desert-oasis": "wind" };
+function ambientFor(pg){ if(!pg) return null; const fx = pg.effect; if(fx==="fireplace_flicker"||fx==="candle_glow") return "fire"; if(fx==="gentle_rain") return "rain"; if(fx==="water_shimmer"||fx==="gentle_waves") return "waves"; if(fx==="twinkling_stars") return "crickets"; return AMBIENT_BY_WORLD[pg.world_slug] || null; }
 
 function ShareIcon(){return(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>);}
 function SoundIcon({on}){return(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="4 9 8 9 13 4 13 20 8 15 4 15"/>{on?<path d="M16 8a4 4 0 0 1 0 8"/>:<g><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></g>}</svg>);}
@@ -106,12 +108,15 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
 
   useEffect(() => { stopAll(); setSpoken(-1); setPlaying(false); return () => stopAll(); }, [idx]);
 
-  // Trickling-water sound on water pages (generated once, cached). Loops quietly.
+  // Ambient soundscape matched to the page's world/effect — forest birds, night
+  // crickets, snowy wind, reef waves, fire crackle, jungle, space, candy, rain.
+  // Generated once via ElevenLabs, cached, looped quietly.
   useEffect(() => {
     const el = waterAudioRef.current; if (!el) return;
-    if (wantsWater(page) && soundOn) {
-      if (!el.src || el.src.indexOf("s=water") < 0) el.src = "/api/sfx?s=water";
-      el.loop = true; el.volume = 0.3; el.play().catch(() => {});
+    const snd = ambientFor(page);
+    if (snd && soundOn) {
+      if (!el.src || el.src.indexOf("s=" + snd) < 0) el.src = "/api/sfx?s=" + snd;
+      el.loop = true; el.volume = 0.26; el.play().catch(() => {});
     } else { try { el.pause(); } catch {} }
   }, [idx, soundOn]);
 

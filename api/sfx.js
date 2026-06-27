@@ -8,6 +8,13 @@ const SOUNDS = {
   water: "Gentle continuous trickling forest stream, soft babbling water over pebbles, calm and steady, seamless ambient loop, no music, no voices",
   fire:  "Soft crackling cozy campfire, gentle pops, warm ambient loop, no music, no voices",
   waves: "Gentle calm ocean waves lapping softly, peaceful seaside ambient loop, no music, no voices",
+  forest:  "Peaceful daytime forest ambience, gentle birdsong and soft rustling leaves, calm and airy, seamless ambient loop, no music, no voices",
+  crickets:"Calm nighttime crickets chirping softly with a gentle breeze, peaceful evening ambient loop, no music, no voices",
+  wind:    "Soft gentle wind blowing across a wide snowy mountain landscape, calm airy whoosh, seamless ambient loop, no music, no voices",
+  jungle:  "Lush tropical jungle ambience, distant exotic birds and soft chirping insects, gentle and warm, seamless ambient loop, no music, no voices",
+  space:   "Soft calm cosmic outer-space ambience, gentle airy hum with faint twinkles, dreamy, seamless ambient loop, no music, no voices",
+  candy:   "Light whimsical magical sparkle chimes and soft twinkles, cheerful and gentle, seamless ambient loop, no music, no voices",
+  rain:    "Gentle soft steady rainfall, soothing calm raindrops, seamless ambient loop, no music, no voices",
 
   // ---- Chess game one-shot SFX (short, punchy, kid-friendly cartoon sounds) ----
   chess_select:  "Short soft UI pluck pop, friendly cartoon select blip, single hit, no music",
