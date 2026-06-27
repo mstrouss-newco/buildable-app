@@ -210,6 +210,15 @@ function build(q) {
       survival: "A brave little hero in the middle of a swarm of cute round googly-eyed creatures closing in from every side, the hero glowing with a star power-up and shooting sparkles outward, a big friendly crowned boss monster looming in the background, energetic and thrilling but not scary",
       chess: "An epic friendly chess battle on a giant glowing chessboard, two armies of cute characterful chess pieces (a brave king and queen, knights on horseback, castle rooks) facing off mid-charge, sparks and magic dust flying, a fantasy kingdom backdrop",
       typing: "A heroic kid defending a magical castle, glowing letter and word runes flying through the air like shooting stars as the hero zaps them, friendly cartoon creatures approaching, bright magical sparks, exciting and triumphant",
+      runner: "A cheerful kid driving a chunky colorful toy car down a sunny town street, dodging traffic cones and scooping up ice-cream cones, balloons and gold coins, bright houses and shops whizzing past, big blue sky, strong sense of speed and fun",
+      maze: "A cute hungry round hero gobbling a glowing trail of treats through a friendly neon maze, three goofy colorful ghost chasers bobbing around the corners, dark playful arcade maze with glowing walls, exciting chase energy",
+      tennis: "Two cute cartoon kids on opposite sides of a bright tennis court mid-rally, a glowing ball bouncing between their paddles with a motion trail, confetti and sparks flying, sunny stadium, energetic and playful",
+      town: "A happy family of cute characters rolling a giant die and racing colorful tokens around a sunny board-game town full of little houses, shops and gold coins, collecting coins, cheerful and bright",
+      checkers: "A friendly checkers battle on a big glossy red-and-black board, cute round crown-topped checker pieces hopping and jumping over each other, a golden king piece glowing, sparks of fun",
+      tictactoe: "A playful giant tic-tac-toe grid drawn in glowing chalk, big cute smiling X and O characters leaping into the squares, three matching pieces glowing in a winning row, confetti, bright and cheerful",
+      connectfour: "A colorful vertical connect-four grid with big glossy red and yellow discs dropping in, four matching discs glowing in a diagonal winning line, cute cartoon hands dropping a disc, confetti, fun and bright",
+      dotsboxes: "A friendly dots-and-boxes game on bright paper, a grid of dots joined by colorful crayon lines, several little squares filled in with happy colors, a crayon closing the final box, playful and cheerful",
+      sounds: "A fun burst of cartoon sound effects, a big colorful soundboard of glowing buttons exploding with musical notes, stars and silly cartoon noise symbols flying out, vibrant energetic and playful",
       memory: "A cheerful tabletop of big colorful face-down memory cards, two cards flipped up revealing matching glowing star and heart symbols with a burst of sparkles between them, a few kids' hands reaching in, warm playful game-night vibe",
       bingo: "A fun kids' bingo game scene, big colorful bingo cards covered in cheerful picture squares with bright stamp daubers marking them, a glowing called picture floating above, confetti and a happy BINGO sparkle, game-night energy",
       snakes: "A whimsical snakes-and-ladders board game viewed at a tilt, a winding numbered path climbing a colorful hill with friendly rope ladders going up and silly smiling cartoon snakes sliding down, cute colorful player tokens racing to a golden star at the top",
@@ -290,6 +299,37 @@ function build(q) {
     return {
       descriptor:`chesspiece|${world}|${piece}`,
       prompt:`${PIECE[piece]}, ${THEME[world]}. The overall silhouette must clearly read as a chess ${NAME[piece]}. Cute kawaii character with two big friendly eyes and a little smile, thick clean outlines, bold soft 3D cartoon style, a single piece standing upright and centered, full body, soft studio lighting, child-friendly ages 4-8, no text, no words, no letters, transparent background`,
+      transparent:true, quality:"medium",
+    };
+  }
+  if (kind === "runnerprop") {
+    // Distinct roadside pieces per town for the 3D runner "Sunny Town Drive".
+    // Transparent modern-3D cut-outs (buildings + a tree), rendered as billboards.
+    const P = {
+      maple: { bld_a:"a cozy two-story suburban house with a pitched red roof and a small front porch",
+               bld_b:"a cute single-story cottage with a brick chimney and flower window boxes",
+               tree:"a big lush leafy green maple tree with a full rounded canopy and a sturdy trunk" },
+      market: { bld_a:"a charming small-town shop with a striped red-and-white awning and a hanging sign",
+                bld_b:"a quaint market-square building with a little clock tower on top",
+                tree:"a neat rounded topiary tree planted in a square wooden planter" },
+      beach: { bld_a:"a cute wooden beach hut on short stilts with a palm-leaf thatched roof",
+               bld_b:"a colorful seaside ice-cream and surf stand with a striped beach umbrella",
+               tree:"a tall curved palm tree with big green fronds and a couple of coconuts" },
+      petal: { bld_a:"a pretty pastel-pink cottage with a flower-covered trellis and a heart on the door",
+               bld_b:"a small white park gazebo with a pink domed roof and flower boxes",
+               tree:"a blossoming cherry-blossom tree absolutely full of soft pink flowers" },
+      downtown: { bld_a:"a tall modern glass skyscraper in a cute rounded cartoon style, lots of windows",
+                  bld_b:"a mid-rise city office building with rows of windows and a flat roof",
+                  tree:"a slim city sidewalk tree with a tidy round canopy in a square concrete planter" },
+      rainbow: { bld_a:"a whimsical candy-colored tall house with a swirly twisted roof",
+                 bld_b:"a cute building painted in bright rainbow stripes with a curved roof",
+                 tree:"a magical lollipop-shaped tree with a swirly trunk and rainbow-colored leaves" },
+    };
+    const town=(q.town||"").toString(); const piece=(q.piece||"").toString();
+    const set=P[town]; if(!set||!set[piece]) return null;
+    return {
+      descriptor:`runnerprop|${town}|${piece}`,
+      prompt:`${set[piece]}. Modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded glossy shapes, vibrant cheerful colors, thick clean forms. A SINGLE isolated element, centered, full and complete from base to top, on a FULLY TRANSPARENT background. No ground, no floor line, no cast shadow, no road, no other objects, no people, no text, no words. Child-friendly ages 4-8.`,
       transparent:true, quality:"medium",
     };
   }
