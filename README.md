@@ -412,6 +412,25 @@ trigger a stray load.
 
 ---
 
+## Session log — 2026-06-27c (Stories wired into the shared asset library)
+
+Stories now feed the shared library WITHOUT touching the story maker or the DB:
+- `api/story-library.js` gains named exports (WORLDS, CHARACTERS, STYLES).
+- `api/_storyAssets.js` (new) returns only story worlds/heroes whose image is
+  already cached (checked across all 4 styles), tagged `source:story` + theme.
+  Degrades to [] on any error.
+- `api/list-characters.js` + `api/list-assets.js` merge those in, so the creator
+  picker (CreatorScreen) can offer story heroes + worlds alongside game art.
+
+Additive + safe: endpoints verified live (still return cleanly, no breakage).
+NOTE: surfacing is gated on art being BUILT — story bases are cached lazily as
+kids make stories, so the shelf fills in over time. To populate it immediately,
+run a one-time pre-build of the story library (build endpoint per world/character
+at one style). Worlds in particular need this (world bases are only built on
+explicit `?build=`, not during normal story play).
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
