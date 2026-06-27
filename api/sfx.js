@@ -206,6 +206,16 @@ const SOUNDS = {
   crowd: "Short stadium crowd cheer roar, single hit, no music",
   goal: "Short triumphant goal scored fanfare with crowd, single hit, no music",
 
+  // ---- Batch 2 simple games: Memory, Bingo, Snakes & Ladders (bespoke one-shots) ----
+  mem_flip:     "Short soft satisfying card flip whoosh with a tiny tap, a memory card turning over, single hit, no music, no voices",
+  mem_match:    "Short cheerful sparkly ding-ding match-found chime with a happy little pop, a matching pair, single hit, no music, no voices",
+  mem_flipback: "Short soft gentle low whoosh, two cards flipping back face-down, not harsh, single hit, no music, no voices",
+  party_win:    "Short joyful celebration fanfare with a party-popper pop, confetti sparkle and a tiny kid cheer, cheerful kids game win, no voices",
+  bingo_call:   "Short bright cheerful announce ding with a soft attention bell, a bingo number being called, single hit, no music, no voices",
+  bingo_daub:   "Short soft chunky ink-stamp daub thunk with a tiny squish, marking a bingo square, single hit, no music, no voices",
+  dice_roll:    "Short playful wooden dice shake and tumble roll landing with a tap, single hit, no music, no voices",
+  snl_ladder:   "Short cheerful rising sparkle slide-whistle climb up, going up a ladder, bright and happy, single hit, no music, no voices",
+  snl_snake:    "Short playful descending wobble slide-whistle whoosh, sliding down a snake, silly not scary, single hit, no music, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {

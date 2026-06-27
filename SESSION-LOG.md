@@ -1,5 +1,42 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Three simple luck/matching games on ONE shared turn shell (Memory, Bingo, Snakes & Ladders)
+Batch 2 of simple games — all same-device pass-and-play, built on one new shared brain. Branch
+`claude/games-simple-batch2` (not main).
+
+- **NEW shared lib `public/buildable-turns.js` (`BT`, the 5th engine lib).** One headless-safe
+  turn shell for 2-4 players (+ solo): roster (4 colors + token shapes, no emoji), whose turn,
+  per-player scores, winner. `BT.create({count}) -> cur()/next(keepTurn)/add()/leader()/finish()`.
+  Registered as `game_mechanics` slug `same-device-turns` (`db/seed-same-device-turns-mechanic.sql`)
+  and documented in `MECHANICS.md` section 14. The local counterpart to the cross-device `mp-*` mechanics.
+- **`buildable-startscreen.js` gained `p2`/`p3`/`p4` mode keys** (people icon + "2/3/4 players")
+  so any same-device game gets a player-count picker through the shared BS mode row. Additive —
+  breaker's BS adoption still passes QA.
+- **Memory Match (`public/memory-engine.html`).** Solo or 2-4. Flip two cards, a match stays up +
+  scores + bonus turn, a miss flips back, clear the board to win. Difficulty = grid size
+  (Easy 3x4 / Medium 4x4 / Hard 4x6) via the customize panel; card faces PULLED from the shared
+  asset library by theme (`/api/list-assets?theme=`) with BR drawn-shape fallback. 6 theme packs.
+- **Bingo (`public/bingo-engine.html`).** 2-4 players, the DEVICE is the caller (rotating via BT).
+  Picture mode = library art + drawn icon fallback; Word mode = kid word list, spelled + said.
+  Players daub matches, first full line wins. Always-winnable: calls drawn from the union of all
+  cards. New caller speech via `api/say.js` (ElevenLabs TTS, cached) — the "called-item speech".
+- **Snakes & Ladders (`public/snakes-engine.html`).** 2-4, pure luck so the littlest kid can win.
+  Roll the die, hop the 30-square serpentine track, climb ladders / slide down snakes, bonus roll
+  on a six; reach-OR-pass the top star to win (no exact-landing soft-lock). 3 themed boards.
+- **Bespoke created sounds** added to `api/sfx.js` (auto-surface in `/api/list-audio`):
+  `mem_flip`, `mem_match`, `mem_flipback`, `party_win`, `bingo_call`, `bingo_daub`, `dice_roll`,
+  `snl_ladder`, `snl_snake`. Plus `api/say.js` for spoken called words/letters/picture names.
+- **Wiring.** Three `vercel.json` routes (+ `/buildable-turns.js`) before the catch-all; three
+  tiles + screens in `src/BuildableKids.jsx` (full-screen iframe, Home top-left, BS back posts
+  `nav:exit`); key-art prompts added to `api/images.js` (`memory`/`bingo`/`snakes`).
+- **QA.** Headless sim hooks (`window.BUILDABLE_GAME` + per-game alias) + `qa-memory.mjs`,
+  `qa-bingo.mjs`, `qa-snakes.mjs` (model: `qa-breaker.mjs`). Every difficulty x player-count x
+  theme is proven winnable (perfect-memory bot clears all boards; a bingo winner always emerges;
+  snakes always ends in a win and every seat can win) + render smoke for each. `npm run build` clean.
+- **Owner action:** run `db/seed-same-device-turns-mechanic.sql` once; the caller voice + new SFX
+  auto-generate + cache on first play (ElevenLabs), with the BA synth as the silent fallback.
+
+
 ## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
 - The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of
   big buttons, each showing the kid's CURRENT choice as a picture and opening a simple full-screen

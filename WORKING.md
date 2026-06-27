@@ -18,7 +18,9 @@ overwrite each other. Git merges the code; this file carries the *intent*.
 Home tiles:
 - **Music** — LIVE (Ready)
 - **Games** — LIVE, **Beta** tag. Opens a pick-a-game screen: Platformer (`/play.html`)
-  + Survival (`/survival-engine.html`), both playable. The old AI-generated game flow
+  + Survival (`/survival-engine.html`) + Breaker + Sunny Town + Tennis + Chess + Typing
+  + Sound Machine + **Memory Match (`/memory-engine.html`)** + **Bingo (`/bingo-engine.html`)**
+  + **Snakes & Ladders (`/snakes-engine.html`)** — all playable. The old AI-generated game flow
   is retired — do not route Games back to SCREEN_INTRO.
 - **Stories** — COMING SOON (disabled). **Do not re-enable without Mike.**
 - **Typing** — LIVE (New)
@@ -33,7 +35,10 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
-- (none right now)
+- (none right now)  
+  _Done on branch `claude/games-simple-batch2` (await Mike merge): Memory + Bingo + Snakes &
+  Ladders engines, the shared `buildable-turns.js` (BT) turn shell, BS `p2/p3/p4` modes,
+  bespoke sounds in `api/sfx.js` + `api/say.js` caller voice, vercel routes + BuildableKids tiles._
 
 ## Suggested ownership (to avoid collisions)
 - Games engines + `public/*.html` + `vercel.json` routes

@@ -46,6 +46,9 @@ const SCREEN_TENNIS_FAMILY = "tennis_family";
 const SCREEN_TOP = "top";
 const SCREEN_HELPER = "helper";
 const SCREEN_ART = "art";
+const SCREEN_MEMORY = "memory";
+const SCREEN_BINGO = "bingo";
+const SCREEN_SNAKES = "snakes";
 function LearningControl() {
   const [gate, setGate] = useState(false);
   const [ab, setAb] = useState({ a: 0, b: 0 });
@@ -82,7 +85,7 @@ function LearningControl() {
   );
 }
 
-function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onTyping, onTennis, onSounds }) {
+function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onTyping, onTennis, onSounds, onMemory, onBingo, onSnakes }) {
   const tile = (grad, title, desc, onClick, soon, imgId) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
@@ -110,6 +113,9 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#34D399,#0EA5E9)", "Tennis", "Bounce it back \u2014 solo, 2 players, or family!", onTennis, false, "tennis")}
         {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false, "chess")}
         {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false, "typing")}
+        {tile("linear-gradient(160deg,#7DD3FC,#A78BFF)", "Memory Match", "Flip cards, find the pairs \u2014 solo or 2-4!", onMemory, false, "memory")}
+        {tile("linear-gradient(160deg,#FFD23F,#FF8FB1)", "Bingo", "The device calls \u2014 daub a line to win, 2-4!", onBingo, false, "bingo")}
+        {tile("linear-gradient(160deg,#34D399,#F5B83D)", "Snakes & Ladders", "Roll, climb and slide to the top, 2-4!", onSnakes, false, "snakes")}
         {tile("linear-gradient(160deg,#FF8FB1,#F0577E)", "Sound Machine", "Whoopee, explosions and silly sounds!", onSounds, false, "sounds")}
       </div>
     </div>
@@ -172,6 +178,33 @@ function ArtStudioScreen({ onHome }) {
   );
 }
 
+function MemoryScreen({ onHome }) {
+  useEffect(() => { const h = (e) => { if (e && e.data === "nav:exit") onHome(); }; window.addEventListener("message", h); return () => window.removeEventListener("message", h); }, [onHome]);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#131229" }}>
+      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Home</button>
+      <iframe title="Buildable Memory Match" src="/memory-engine.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
+  );
+}
+function BingoScreen({ onHome }) {
+  useEffect(() => { const h = (e) => { if (e && e.data === "nav:exit") onHome(); }; window.addEventListener("message", h); return () => window.removeEventListener("message", h); }, [onHome]);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#131229" }}>
+      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Home</button>
+      <iframe title="Buildable Bingo" src="/bingo-engine.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
+  );
+}
+function SnakesScreen({ onHome }) {
+  useEffect(() => { const h = (e) => { if (e && e.data === "nav:exit") onHome(); }; window.addEventListener("message", h); return () => window.removeEventListener("message", h); }, [onHome]);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#131229" }}>
+      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Home</button>
+      <iframe title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
+  );
+}
 function PlatformerScreen({ onHome }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
@@ -433,7 +466,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onMemory={() => setScreen(SCREEN_MEMORY)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -446,6 +479,15 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_RUNNER) {
     return <SunnyTownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_MEMORY) {
+    return <MemoryScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_BINGO) {
+    return <BingoScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_SNAKES) {
+    return <SnakesScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_SOUNDS) {
     return <SoundboardScreen onHome={() => setScreen(returnTo || SCREEN_HOME)} />;

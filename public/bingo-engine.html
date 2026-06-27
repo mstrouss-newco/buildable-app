@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Bingo — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#131229;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  #wrap{position:fixed;inset:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  .ov{position:absolute;inset:0;z-index:5}
+  #start{position:absolute;inset:0;z-index:6}
+  .hide{display:none!important}
+  #cust{position:absolute;inset:0;z-index:8;background:rgba(8,5,18,.82);display:flex;align-items:center;justify-content:center;padding:18px}
+  .csheet{width:100%;max-width:430px;background:#1d1b36;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:20px;color:#fff}
+  .ctitle{font-size:20px;font-weight:900;margin:0 0 12px;text-align:center}
+  .crow{font-size:13px;font-weight:800;color:#b6aed0;margin:14px 0 7px}
+  .cgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .cbtn{border:2px solid rgba(255,255,255,.1);background:#262248;color:#fff;border-radius:14px;padding:12px 6px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:7px}
+  .cbtn.on{border-color:#7CF6B0;background:#2a2a52}
+  .sw{width:30px;height:30px;border-radius:9px}
+  .cdone{margin-top:18px;width:100%;border:none;border-radius:999px;padding:13px;font-weight:900;font-size:15px;color:#16142b;background:#7CF6B0;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="start" class="ov"></div>
+  <div id="cust" class="hide"><div class="csheet">
+    <p class="ctitle">Make it mine</p>
+    <div class="crow">Card size</div>
+    <div class="cgrid" id="sizeGrid"></div>
+    <div class="crow">Picture set (for picture bingo)</div>
+    <div class="cgrid" id="themeGrid"></div>
+    <button class="cdone" id="custDone">Done</button>
+  </div></div>
+</div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-turns.js"></script>
+<script>
+//  Buildable Bingo — hand-authored Track B engine. 2-4 players, same-device, pass-and-play.
+//  The DEVICE is the caller: it reveals a picture or a simple word, players daub matches,
+//  first to a full line wins. Picture mode = asset library; Word mode = kid word list + spoken
+//  letter/word audio. Shared libs: BR/BA/BM/BS + the BT turn shell (roster + caller rotation
+//  + winner). ALWAYS-WINNABLE: calls are drawn from the union of all cards, so every card
+//  must complete. QA hook: window.BUILDABLE_GAME.
+const BR=(typeof window!=="undefined"&&window.BuildableRenders)||globalThis.BuildableRenders;
+const BA=(typeof window!=="undefined"&&window.BuildableAudio)||globalThis.BuildableAudio;
+const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||globalThis.BuildableMechanics;
+const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||globalThis.BuildableStartScreen;
+const BT=(typeof window!=="undefined"&&window.BuildableTurns)||globalThis.BuildableTurns;
+
+// ---------- DATA ----------
+// Kid word list (3-5 letters, simple). Spoken via /api/say (cached TTS); BA synth is fallback.
+const WORDS=["cat","dog","sun","hat","bus","cup","fox","pig","cow","bee","owl","ant","bat","hen",
+  "fish","frog","star","moon","tree","cake","ball","bird","duck","leaf","milk","book","shoe",
+  "lion","bear","ship","rain","nest","kite","drum","corn","sock","ring","bell","gift","snow"];
+// Named picture icons drawn inline (no emoji) — names are spoken by the caller. Library images
+// overlay these when available; the drawn icon is always the fallback.
+const ICONS=["sun","star","heart","flower","moon","cloud","fish","leaf","apple","kite","drum",
+  "balloon","gift","bell","ring","snow","duck","tree"];
+const ICON_COL={sun:"#FFD23F",star:"#FFD23F",heart:"#FF6B6B",flower:"#FF8FB1",moon:"#E9E6FF",
+  cloud:"#CFE6FF",fish:"#67E8F9",leaf:"#34D399",apple:"#FF6B6B",kite:"#A78BFF",drum:"#F5B83D",
+  balloon:"#FF8FB1",gift:"#7DD3FC",bell:"#FFC75A",ring:"#F5D976",snow:"#CFE6FF",duck:"#FFD23F",tree:"#34D399"};
+
+const GAME_CONFIG=(typeof window!=="undefined"&&window.GAME_CONFIG)||{
+  title:"Bingo",
+  modes:[{key:"pictures",name:"Pictures"},{key:"words",name:"Words"}],
+  themes:[{key:"space",name:"Space",color:"#3a2f6e"},{key:"jungle",name:"Jungle",color:"#1f6f3a"},
+    {key:"candy",name:"Candy",color:"#9c2f6e"},{key:"ocean",name:"Ocean",color:"#1f4a6f"},
+    {key:"castle",name:"Castle",color:"#6e5a2f"},{key:"desert",name:"Desert",color:"#6e4a2f"}],
+  sizes:[{key:"easy",name:"Easy",n:3,foot:"3 x 3"},{key:"normal",name:"Normal",n:4,foot:"4 x 4"}],
+};
+
+// ---------- STATE ----------
+let state="menu";
+let match=null;
+let cards=[];          // cards[p] = { grid:[{item,marked}], n }
+let pool=[], poolIdx=0;
+let current=null;      // current called item {kind,val,name}
+let calledList=[];     // history of called items (val)
+let nowMs=0, headless=false;
+let PREFS={ players:2, modeIdx:0, sizeIdx:1, themeIdx:0 };
+let fx=BM?BM.makeFx():{parts:[],pops:[],shake:0,flash:0,flashCol:"#fff"};
+let amb=[]; let cv,ctx,W=0,H=0,DPR=1;
+let pulse=0;
+const LIB_IMG={};      // index -> library image (picture mode)
+let voiceEl=null;
+
+function curMode(){ return GAME_CONFIG.modes[PREFS.modeIdx]||GAME_CONFIG.modes[0]; }
+function curTheme(){ return GAME_CONFIG.themes[PREFS.themeIdx]||GAME_CONFIG.themes[0]; }
+function curSize(){ return GAME_CONFIG.sizes[PREFS.sizeIdx]||GAME_CONFIG.sizes[1]; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function sample(arr,k){ return shuffle(arr.slice()).slice(0,k); }
+
+// ---------- LIBRARY ART ----------
+function loadLibArt(theme){
+  if(headless||typeof fetch==="undefined") return;
+  try{ fetch("/api/list-assets?theme="+encodeURIComponent(theme.key)+"&cb="+Date.now())
+    .then(r=>r.ok?r.json():null).then(j=>{ const els=(j&&(j.elements||j.sprites||j.assets))||[];
+      els.slice(0,ICONS.length).forEach((e,i)=>{ const u=e.image_url||e.url; if(!u)return; const im=new Image();
+        im.crossOrigin="anonymous"; im.onload=()=>{LIB_IMG[i]=im;}; im.src=u; }); }).catch(()=>{});
+  }catch(e){}
+}
+
+// ---------- SPEECH (created caller audio) ----------
+function speak(text){
+  if(headless||typeof Audio==="undefined"||BA&&BA.muted) return;
+  try{ if(!voiceEl) voiceEl=new Audio(); voiceEl.src="/api/say?t="+encodeURIComponent(text);
+    voiceEl.crossOrigin="anonymous"; const p=voiceEl.play(); if(p&&p.catch)p.catch(()=>{}); }catch(e){}
+}
+
+// ---------- BUILD ----------
+function build(){
+  const sz=curSize(), n=sz.n, mode=curMode(), theme=curTheme();
+  const universe = mode.key==="words" ? WORDS.slice() : ICONS.slice();
+  // each card is a random sample of n*n distinct items
+  match=BT.create({ count:PREFS.players, onWin:(p)=>{ if(BA)BA.sfx("bingo_win");
+    if(BM){ for(let i=0;i<5;i++) BM.explode(fx,W*(0.15+0.18*i),H*(0.3+0.1*(i%2)),theme.color,{n:18,pop:i===0?"BINGO!":""}); } speak("Bingo!"); } });
+  cards=[];
+  for(let p=0;p<PREFS.players;p++){
+    const items=sample(universe, n*n);
+    cards.push({ n, grid: items.map(it=>({item:it, marked:false})) });
+  }
+  // call pool = union of all items across all cards (no replacement) -> guarantees completion
+  const set={}; cards.forEach(c=>c.grid.forEach(g=>{set[g.item]=1;}));
+  pool=shuffle(Object.keys(set)); poolIdx=0; current=null; calledList=[];
+  loadLibArt(theme); makeAmbient(theme);
+  state="play";
+  // first call belongs to the first caller (BT.cur)
+}
+function makeAmbient(theme){ amb=[]; if(headless)return; for(let i=0;i<24;i++) amb.push({x:Math.random(),y:Math.random(),r:1+Math.random()*2.2,s:0.02+Math.random()*0.05,tw:Math.random()*6.28}); }
+
+// ---------- CALLING ----------
+function callNext(){
+  if(state!=="play"||match.over) return null;
+  if(poolIdx>=pool.length){ // everyone should have won by now; safety: finish leader
+    match.finish(); state="win"; return null; }
+  const val=pool[poolIdx++]; calledList.push(val);
+  const mode=curMode();
+  current={ kind:mode.key, val, name: mode.key==="words"?val:val };
+  if(BA)BA.sfx("bingo_call");
+  speak(mode.key==="words"? spellAndSay(val) : (cap(val)+"!"));
+  // rotate the caller for flavor (uses the shared turn shell)
+  if(!headless) match.next();
+  return val;
+}
+function spellAndSay(w){ return w.toUpperCase().split("").join(", ")+". "+cap(w); }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+// ---------- MARKING ----------
+function daub(p,ci){
+  const c=cards[p]; const cell=c.grid[ci];
+  if(!current||cell.marked||cell.item!==current.val) return false;
+  cell.marked=true;
+  if(BA)BA.sfx("bingo_daub");
+  if(BM){ const r=cellRect(p,ci); BM.explode(fx,r.x+r.w/2,r.y+r.h/2,match.players[p].color,{n:8}); }
+  match.addTo(p,1);
+  if(hasLine(c)){ match.finish(p); state="win"; }
+  return true;
+}
+function hasLine(c){
+  const n=c.n, m=(r,col)=>c.grid[r*n+col].marked;
+  for(let r=0;r<n;r++){ let all=true; for(let col=0;col<n;col++) if(!m(r,col)){all=false;break;} if(all)return true; }
+  for(let col=0;col<n;col++){ let all=true; for(let r=0;r<n;r++) if(!m(r,col)){all=false;break;} if(all)return true; }
+  let d1=true,d2=true; for(let i=0;i<n;i++){ if(!m(i,i))d1=false; if(!m(i,n-1-i))d2=false; } return d1||d2;
+}
+function isFull(c){ return c.grid.every(g=>g.marked); }
+
+// ---------- LAYOUT ----------
+function layout(){
+  const top=Math.min(150,H*0.22);
+  const n=PREFS.players, cols=n<=2?n:2, rows=Math.ceil(n/cols);
+  const padX=Math.max(8,W*0.025), padY=8;
+  const aw=W-padX*2, ah=H-top-padY*2;
+  const gx=14, gy=14;
+  const cw=(aw-gx*(cols-1))/cols, ch=(ah-gy*(rows-1))/rows;
+  return {top,cols,rows,cw,ch,gx,gy,padX,padY};
+}
+function cardRect(p){ const L=layout(), r=(p/L.cols)|0, c=p%L.cols;
+  return { x:L.padX+c*(L.cw+L.gx), y:L.top+L.padY+r*(L.ch+L.gy), w:L.cw, h:L.ch }; }
+function cellRect(p,ci){
+  const cr=cardRect(p), n=cards[p].n; const titleH=Math.min(26,cr.h*0.16);
+  const gx=cr.x+6, gy=cr.y+titleH+4, gw=cr.w-12, gh=cr.h-titleH-10;
+  const gap=Math.max(3,Math.min(gw,gh)*0.02), s=Math.min((gw-gap*(n-1))/n,(gh-gap*(n-1))/n);
+  const ox=cr.x+(cr.w-(s*n+gap*(n-1)))/2, oy=gy+(gh-(s*n+gap*(n-1)))/2;
+  const r=(ci/n)|0, col=ci%n;
+  return { x:ox+col*(s+gap), y:oy+r*(s+gap), w:s, h:s };
+}
+
+// ---------- INPUT ----------
+function tapAt(px,py){
+  if(state==="menu") return;
+  if(state==="win"){ showMenu(); return; }
+  // tap the big CALL button (top area)
+  const L=layout();
+  if(py<L.top){ callNext(); return; }
+  // tap a cell to daub
+  for(let p=0;p<cards.length;p++){ const c=cards[p]; for(let ci=0;ci<c.grid.length;ci++){
+    const r=cellRect(p,ci); if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h){ daub(p,ci); return; } } }
+}
+
+// ---------- UPDATE / DRAW ----------
+function update(dt){ nowMs+=dt*1000; pulse=(Math.sin(nowMs*0.006)+1)/2; if(BM)BM.update(fx,dt);
+  for(const p of amb){ p.y-=p.s*dt; if(p.y<-0.05){p.y=1.05;p.x=Math.random();} } }
+
+function drawIcon(g,name,cx,cy,s,col){
+  g.save(); g.translate(cx,cy); g.fillStyle=col||ICON_COL[name]||"#fff"; g.strokeStyle=col||ICON_COL[name]||"#fff";
+  const r=s/2;
+  if(name==="sun"){ g.beginPath(); g.arc(0,0,r*0.55,0,7); g.fill(); g.lineWidth=Math.max(2,s*0.06); for(let i=0;i<8;i++){ const a=i*Math.PI/4; g.beginPath(); g.moveTo(Math.cos(a)*r*0.7,Math.sin(a)*r*0.7); g.lineTo(Math.cos(a)*r,Math.sin(a)*r); g.stroke(); } }
+  else if(name==="cloud"){ g.beginPath(); g.arc(-r*0.4,r*0.1,r*0.4,0,7); g.arc(0,-r*0.1,r*0.5,0,7); g.arc(r*0.45,r*0.12,r*0.38,0,7); g.rect(-r*0.7,r*0.1,r*1.4,r*0.4); g.fill(); }
+  else if(name==="fish"){ g.beginPath(); g.ellipse(0,0,r*0.7,r*0.45,0,0,7); g.fill(); g.beginPath(); g.moveTo(r*0.6,0); g.lineTo(r,-r*0.4); g.lineTo(r,r*0.4); g.closePath(); g.fill(); }
+  else if(name==="leaf"){ g.beginPath(); g.ellipse(0,0,r*0.4,r*0.75,Math.PI/4,0,7); g.fill(); }
+  else if(name==="apple"){ g.beginPath(); g.arc(0,r*0.1,r*0.6,0,7); g.fill(); g.fillStyle="#34D399"; g.fillRect(-r*0.06,-r*0.7,r*0.12,r*0.4); }
+  else if(name==="kite"){ g.beginPath(); g.moveTo(0,-r); g.lineTo(r*0.6,0); g.lineTo(0,r*0.7); g.lineTo(-r*0.6,0); g.closePath(); g.fill(); }
+  else if(name==="drum"){ g.beginPath(); g.ellipse(0,-r*0.3,r*0.7,r*0.25,0,0,7); g.rect(-r*0.7,-r*0.3,r*1.4,r*0.7); g.fill(); }
+  else if(name==="balloon"){ g.beginPath(); g.ellipse(0,-r*0.1,r*0.55,r*0.7,0,0,7); g.fill(); g.lineWidth=2; g.beginPath(); g.moveTo(0,r*0.6); g.lineTo(0,r); g.stroke(); }
+  else if(name==="gift"){ g.fillRect(-r*0.6,-r*0.4,r*1.2,r*1.0); g.fillStyle="#fff"; g.fillRect(-r*0.1,-r*0.4,r*0.2,r*1.0); }
+  else if(name==="bell"){ g.beginPath(); g.moveTo(-r*0.6,r*0.5); g.quadraticCurveTo(-r*0.6,-r*0.6,0,-r*0.6); g.quadraticCurveTo(r*0.6,-r*0.6,r*0.6,r*0.5); g.closePath(); g.fill(); g.beginPath(); g.arc(0,r*0.6,r*0.15,0,7); g.fill(); }
+  else if(name==="ring"){ g.lineWidth=Math.max(3,s*0.12); g.beginPath(); g.arc(0,r*0.1,r*0.5,0,7); g.stroke(); g.beginPath(); g.moveTo(0,-r*0.4); g.lineTo(-r*0.15,-r*0.75); g.lineTo(r*0.15,-r*0.75); g.closePath(); g.fill(); }
+  else if(name==="snow"){ g.lineWidth=Math.max(2,s*0.07); for(let i=0;i<6;i++){ const a=i*Math.PI/3; g.beginPath(); g.moveTo(0,0); g.lineTo(Math.cos(a)*r*0.8,Math.sin(a)*r*0.8); g.stroke(); } }
+  else if(name==="duck"){ g.beginPath(); g.arc(r*0.15,-r*0.2,r*0.35,0,7); g.ellipse(-r*0.15,r*0.2,r*0.55,r*0.4,0,0,7); g.fill(); g.fillStyle="#F5B83D"; g.beginPath(); g.moveTo(r*0.45,-r*0.2); g.lineTo(r*0.8,-r*0.1); g.lineTo(r*0.45,0); g.closePath(); g.fill(); }
+  else if(name==="tree"){ g.fillStyle="#7a4a26"; g.fillRect(-r*0.12,r*0.2,r*0.24,r*0.6); g.fillStyle=col||"#34D399"; g.beginPath(); g.arc(0,-r*0.1,r*0.55,0,7); g.fill(); }
+  else if(name==="moon"){ g.beginPath(); g.arc(0,0,r*0.6,0,7); g.fill(); g.fillStyle="#16142e"; g.beginPath(); g.arc(r*0.25,-r*0.1,r*0.55,0,7); g.fill(); }
+  else { BR.shape(g,(name==="star"||name==="heart"||name==="flower"||name==="diamond")?name:"star",0,0,s,col||ICON_COL[name]||"#FFD23F"); }
+  g.restore();
+}
+function drawItem(g,kind,val,cx,cy,s,libImg){
+  if(kind==="words"){ g.save(); g.fillStyle="#2a2350"; g.textAlign="center"; g.textBaseline="middle";
+    g.font="900 "+Math.min(s*0.34,s*0.34)+"px Nunito,sans-serif"; g.fillText(String(val).toUpperCase(),cx,cy); g.restore(); }
+  else { if(libImg&&libImg.complete&&(libImg.naturalWidth||libImg.width)){ BR.sprite(g,libImg,cx,cy,s*1.2); }
+    else drawIcon(g,val,cx,cy,s*0.8); }
+}
+function draw(){
+  if(!ctx) return "noctx"; const theme=curTheme();
+  const grad=ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0,"#16142e"); grad.addColorStop(1,theme.color);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  ctx.save(); for(const p of amb){ ctx.globalAlpha=0.22+0.3*(0.5+0.5*Math.sin(p.tw+nowMs*0.002)); ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(p.x*W,p.y*H,p.r,0,7); ctx.fill(); } ctx.restore();
+  const sh=BM?BM.shakeOffset(fx):{x:0,y:0}; ctx.save(); ctx.translate(sh.x,sh.y);
+  drawCaller(); 
+  for(let p=0;p<cards.length;p++) drawCard(p);
+  if(BM)BM.draw(ctx,fx,{W,H});
+  ctx.restore();
+  if(state==="win") drawWin();
+  return "ok";
+}
+function drawCaller(){
+  const L=layout(), h=L.top-8;
+  ctx.save(); BR.rrect(ctx,L.padX,8,W-L.padX*2,h-8,16); ctx.fillStyle="rgba(10,8,24,0.5)"; ctx.fill();
+  const caller=match?match.cur():null;
+  ctx.textAlign="left"; ctx.textBaseline="top"; ctx.fillStyle="#cfc9e6"; ctx.font="800 13px Nunito,sans-serif";
+  ctx.fillText("Caller: "+(caller?caller.name:""), L.padX+16, 18);
+  // big called item
+  const cx=W*0.30, cy=8+h/2+6, s=Math.min(h*0.7,90);
+  if(current){ ctx.fillStyle="#fbf7ff"; BR.rrect(ctx,cx-s*0.62,cy-s*0.62,s*1.24,s*1.24,14); ctx.fill();
+    drawItem(ctx,current.kind,current.val,cx,cy,s,null);
+    ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.font="900 "+Math.min(34,W*0.07)+"px Nunito,sans-serif"; ctx.textBaseline="middle";
+    ctx.fillText(cap(current.val), cx+s*0.8, cy);
+  } else { ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.font="900 "+Math.min(26,W*0.055)+"px Nunito,sans-serif"; ctx.textBaseline="middle";
+    ctx.fillText("Tap CALL to start", cx-s*0.4, cy); }
+  // CALL button (right)
+  const bw=Math.min(150,W*0.26), bx=W-L.padX-bw-6, by=18, bh=h-24;
+  BR.rrect(ctx,bx,by,bw,bh,14); ctx.fillStyle="#7CF6B0"; ctx.fill();
+  ctx.fillStyle="#0c3a24"; ctx.textAlign="center"; ctx.font="900 "+Math.min(22,bw*0.18)+"px Nunito,sans-serif"; ctx.textBaseline="middle";
+  ctx.fillText("CALL", bx+bw/2, by+bh/2);
+  ctx.restore();
+}
+function drawCard(p){
+  const cr=cardRect(p), c=cards[p], pl=match.players[p], n=c.n;
+  ctx.save(); BR.rrect(ctx,cr.x,cr.y,cr.w,cr.h,16); ctx.fillStyle="rgba(255,255,255,0.06)"; ctx.fill();
+  ctx.lineWidth=2; ctx.strokeStyle=pl.color; ctx.globalAlpha=0.7; ctx.stroke(); ctx.globalAlpha=1;
+  ctx.fillStyle=pl.color; ctx.beginPath(); ctx.arc(cr.x+16,cr.y+15,7,0,7); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.font="800 13px Nunito,sans-serif";
+  ctx.fillText(pl.name, cr.x+30, cr.y+15);
+  for(let ci=0;ci<c.grid.length;ci++){
+    const cell=c.grid[ci], r=cellRect(p,ci), callable=current&&!cell.marked&&cell.item===current.val;
+    const rad=Math.min(r.w,r.h)*0.18;
+    BR.rrect(ctx,r.x,r.y,r.w,r.h,rad);
+    ctx.fillStyle=cell.marked?"rgba(124,246,176,0.22)":"#fbf7ff"; ctx.fill();
+    if(callable){ ctx.lineWidth=2+pulse*2.5; ctx.strokeStyle="#FFD23F"; ctx.globalAlpha=0.6+0.4*pulse; ctx.stroke(); ctx.globalAlpha=1; }
+    drawItem(ctx,curMode().key,cell.item,r.x+r.w/2,r.y+r.h/2,Math.min(r.w,r.h)*0.78,LIB_IMG[ICONS.indexOf(cell.item)]);
+    if(cell.marked){ ctx.strokeStyle="#2bbe6f"; ctx.lineWidth=Math.max(3,r.w*0.08); ctx.beginPath(); ctx.arc(r.x+r.w/2,r.y+r.h/2,Math.min(r.w,r.h)*0.38,0,7); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function drawWin(){
+  ctx.save(); ctx.fillStyle="rgba(8,5,18,0.62)"; ctx.fillRect(0,0,W,H);
+  const w=match.winnerIdx>=0?match.players[match.winnerIdx]:match.leader();
+  ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.font="900 "+Math.min(50,W*0.1)+"px Nunito,sans-serif";
+  ctx.fillText("BINGO!",W/2,H*0.4);
+  ctx.fillStyle=w.color; ctx.font="900 "+Math.min(28,W*0.06)+"px Nunito,sans-serif"; ctx.fillText(w.name+" wins!",W/2,H*0.4+Math.min(54,W*0.11));
+  ctx.fillStyle="#7CF6B0"; ctx.font="800 16px Nunito,sans-serif"; ctx.fillText("Tap to play again",W/2,H*0.4+Math.min(104,W*0.21));
+  ctx.restore();
+}
+
+// ---------- START SCREEN (BS) ----------
+function buildStartCfg(){
+  return { title:GAME_CONFIG.title, subtitle:"The device calls — daub a full line to win!",
+    sound:BA?!BA.muted:true, showBack:true,
+    modes:["p2","p3","p4"], mode:"p"+PREFS.players,
+    levels: GAME_CONFIG.modes.map((m,i)=>({ n:i+1, name:m.name, state:"ready", color:curTheme().color,
+      foot: m.key==="words"?"Spell & say":(curTheme().name+" pictures") })),
+    customizeLabel:"Make it mine" };
+}
+let startScreen=null;
+function showMenu(){ state="menu"; mountStart(); }
+function mountStart(){
+  const host=document.getElementById("start"); if(!host)return; host.classList.remove("hide");
+  const cb={ onPlay:(n)=>{ PREFS.modeIdx=Math.max(0,Math.min(GAME_CONFIG.modes.length-1,n-1)); host.classList.add("hide"); if(BA)BA.unlock(); build(); },
+    onMode:(m)=>{ PREFS.players=+m.slice(1)||2; },
+    onCustomize:()=>openCustomize(), onSound:()=>{ if(BA)BA.toggleMute(); },
+    onBack:()=>{ try{ if(window.parent) window.parent.postMessage("nav:exit","*"); }catch(e){} } };
+  if(BS&&BS.mount) startScreen=BS.mount(host,buildStartCfg(),cb);
+}
+function openCustomize(){
+  const el=document.getElementById("cust"); if(!el)return;
+  const sg=document.getElementById("sizeGrid"),tg=document.getElementById("themeGrid"); sg.innerHTML="";tg.innerHTML="";
+  GAME_CONFIG.sizes.forEach((s,i)=>{ const b=document.createElement("button"); b.className="cbtn"+(i===PREFS.sizeIdx?" on":"");
+    b.innerHTML='<span style="font-weight:900">'+s.name+'</span><span style="font-size:11px;color:#b6aed0">'+s.foot+'</span>';
+    b.onclick=()=>{PREFS.sizeIdx=i;openCustomize();}; sg.appendChild(b); });
+  GAME_CONFIG.themes.forEach((t,i)=>{ const b=document.createElement("button"); b.className="cbtn"+(i===PREFS.themeIdx?" on":"");
+    b.innerHTML='<span class="sw" style="background:'+t.color+'"></span><span>'+t.name+'</span>';
+    b.onclick=()=>{PREFS.themeIdx=i;openCustomize();}; tg.appendChild(b); });
+  el.classList.remove("hide");
+}
+
+// ---------- LOOP / BOOT ----------
+function resize(){ if(!cv)return; DPR=Math.min(2,(window.devicePixelRatio||1)); W=cv.clientWidth||window.innerWidth; H=cv.clientHeight||window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
+let _last=0;
+function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
+  if(state==="play") update(dt); else { nowMs+=dt*1000; pulse=(Math.sin(nowMs*0.006)+1)/2; if(BM)BM.update(fx,dt); for(const p of amb){p.y-=p.s*dt; if(p.y<-0.05)p.y=1.05;} }
+  draw(); requestAnimationFrame(frame); }
+if(typeof document!=="undefined"&&document.getElementById("cv")){
+  cv=document.getElementById("cv"); ctx=cv.getContext("2d"); resize(); window.addEventListener("resize",resize);
+  const onTap=(e)=>{ const t=e.touches?e.touches[0]:e; const rb=cv.getBoundingClientRect(); if(BA)BA.unlock(); tapAt(t.clientX-rb.left,t.clientY-rb.top); };
+  cv.addEventListener("mousedown",onTap); cv.addEventListener("touchstart",(e)=>{e.preventDefault();onTap(e);},{passive:false});
+  document.getElementById("custDone").onclick=()=>{ document.getElementById("cust").classList.add("hide"); if(startScreen&&startScreen.update) startScreen.update(buildStartCfg()); else mountStart(); };
+  if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+    bingo_call:"bingo_call", bingo_daub:"bingo_daub", bingo_win:"party_win", select:"mem_flip" } }); }
+  showMenu(); requestAnimationFrame(frame);
+}
+
+// ---------- QA / SIM HOOKS ----------
+function headlessBegin(o){ headless=true; o=o||{}; PREFS.players=o.players||2; PREFS.modeIdx=o.modeIdx||0; PREFS.sizeIdx=o.sizeIdx!=null?o.sizeIdx:1; PREFS.themeIdx=o.themeIdx||0; build(); }
+// Bot: call items and daub every match until a player completes a line. Always terminates in a win.
+function simGame(o){
+  headlessBegin(o); let guard=0;
+  while(state==="play" && guard++<2000){
+    const v=callNext(); if(v==null) break;
+    for(let p=0;p<cards.length;p++){ const c=cards[p]; for(let ci=0;ci<c.grid.length;ci++){ if(c.grid[ci].item===v && !c.grid[ci].marked){ daub(p,ci); if(state!=="play")break; } } if(state!=="play")break; }
+  }
+  return { result:state, winner:match?match.winnerIdx:-1, calls:calledList.length, scores:match?match.players.map(p=>p.score):[] };
+}
+window.BUILDABLE_GAME={
+  state:()=>state, begin:(o)=>headlessBegin(o), call:()=>callNext(), daub:(p,ci)=>daub(p,ci), sim:(o)=>simGame(o),
+  campaign:()=>{ const out=[]; [2,3,4].forEach(pl=>{ GAME_CONFIG.modes.forEach((m,mi)=>{ GAME_CONFIG.sizes.forEach((s,si)=>{
+    const r=simGame({players:pl,modeIdx:mi,sizeIdx:si,themeIdx:(si+mi)%6}); out.push({players:pl,mode:m.name,size:s.name,result:r.result,calls:r.calls}); }); }); }); return out; },
+  _draw:()=>{ try{ return draw(); }catch(e){ return "ERR: "+(e&&e.message||e); } },
+  _step:(n)=>{ for(let i=0;i<(n||1);i++) update(1/60); },
+  _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS,
+};
+window.BINGO_GAME=window.BUILDABLE_GAME;
+</script>
+</body>
+</html>

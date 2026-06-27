@@ -220,6 +220,22 @@
       "dest": "/art-studio.html"
     },
     {
+      "src": "/memory-engine.html",
+      "dest": "/memory-engine.html"
+    },
+    {
+      "src": "/bingo-engine.html",
+      "dest": "/bingo-engine.html"
+    },
+    {
+      "src": "/snakes-engine.html",
+      "dest": "/snakes-engine.html"
+    },
+    {
+      "src": "/buildable-turns.js",
+      "dest": "/buildable-turns.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

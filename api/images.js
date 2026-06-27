@@ -210,6 +210,9 @@ function build(q) {
       survival: "A brave little hero in the middle of a swarm of cute round googly-eyed creatures closing in from every side, the hero glowing with a star power-up and shooting sparkles outward, a big friendly crowned boss monster looming in the background, energetic and thrilling but not scary",
       chess: "An epic friendly chess battle on a giant glowing chessboard, two armies of cute characterful chess pieces (a brave king and queen, knights on horseback, castle rooks) facing off mid-charge, sparks and magic dust flying, a fantasy kingdom backdrop",
       typing: "A heroic kid defending a magical castle, glowing letter and word runes flying through the air like shooting stars as the hero zaps them, friendly cartoon creatures approaching, bright magical sparks, exciting and triumphant",
+      memory: "A cheerful tabletop of big colorful face-down memory cards, two cards flipped up revealing matching glowing star and heart symbols with a burst of sparkles between them, a few kids' hands reaching in, warm playful game-night vibe",
+      bingo: "A fun kids' bingo game scene, big colorful bingo cards covered in cheerful picture squares with bright stamp daubers marking them, a glowing called picture floating above, confetti and a happy BINGO sparkle, game-night energy",
+      snakes: "A whimsical snakes-and-ladders board game viewed at a tilt, a winding numbered path climbing a colorful hill with friendly rope ladders going up and silly smiling cartoon snakes sliding down, cute colorful player tokens racing to a golden star at the top",
     };
     const subject = GAMES[id];
     if (!subject) return null;
