@@ -1,5 +1,15 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
+- The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of
+  big buttons, each showing the kid's CURRENT choice as a picture and opening a simple full-screen
+  picker: Brush (shows current brush) / Color (current color dot) / Size (current dot) /
+  Mirror (current split icon) / Style (current preview) / Stickers / Scene; then Undo, Redo,
+  Start-over (trash), Save (heart). Nothing to read; tap a picture to change it.
+- Pickers are big tap targets in a shared overlay. Sticker picker keeps theme tabs; shapes,
+  backgrounds, gallery unchanged. Sound feedback preserved (brush preview + pops + tool sounds).
+- All drawing/render/save/gallery logic unchanged; qa-art.mjs still green.
+
 ## 2026-06-27 — Art Studio: kid-friendly visual icons + tool-matched sound (pre-readers)
 - No-reading UI: every control is now a picture a 4-year-old can read.
   - MIRROR buttons show the actual split: single shape (off), butterfly across a vertical line
