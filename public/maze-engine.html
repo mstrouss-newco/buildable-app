@@ -1,0 +1,525 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Maze Munchers — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#0a1030;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{background:#000;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  #start{position:fixed;inset:0;z-index:10;display:none}
+  #backBtn{position:fixed;left:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
+           color:#fff;background:rgba(26,20,64,.78);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+  #muteBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:700;font-size:14px;
+           color:#cdd0ff;background:rgba(26,20,64,.7);border:1px solid #3a2c6e;border-radius:10px;padding:7px 12px;cursor:pointer}
+  /* on-screen d-pad for touch */
+  #dpad{position:fixed;right:14px;bottom:14px;z-index:30;display:none;width:168px;height:168px;
+        opacity:.92;-webkit-user-select:none;user-select:none}
+  #dpad button{position:absolute;width:54px;height:54px;border:none;border-radius:14px;cursor:pointer;
+        background:rgba(155,123,255,.82);color:#1a0f3a;font-size:24px;font-weight:900;box-shadow:0 4px 0 #6a4ad6}
+  #dpad button:active{transform:translateY(3px);box-shadow:0 1px 0 #6a4ad6}
+  #dpad .up{left:57px;top:0}
+  #dpad .left{left:0;top:57px}
+  #dpad .right{left:114px;top:57px}
+  #dpad .down{left:57px;top:114px}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;background:#ffd86b;color:#1a0f3a;
+         font-weight:700;padding:11px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="900" height="600"></canvas></div>
+<div id="start"></div>
+<div id="toast" class="toast"></div>
+<button id="backBtn" title="Back to menu">‹ Menu</button>
+<button id="muteBtn">Sound: On</button>
+<div id="dpad" aria-hidden="true">
+  <button class="up" data-d="up" aria-label="Up">▲</button>
+  <button class="left" data-d="left" aria-label="Left">◀</button>
+  <button class="right" data-d="right" aria-label="Right">▶</button>
+  <button class="down" data-d="down" aria-label="Down">▼</button>
+</div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script>
+// ============================================================================
+//  MAZE MUNCHERS — a FIXED, hand-authored Track B engine (BUILDING-A-GAME.md).
+//  An ORIGINAL maze chase (NOT Pac-Man): own name, own art, own mazes.
+//  Guide a friendly muncher around a maze, gobble every treat, dodge the
+//  friendly chasers; grab a power treat to briefly chase THEM; clear the maze.
+//    - content-as-data GAME_CONFIG (6 themed worlds: layout size, chaser count
+//      + speed + smarts, power-treat duration) — add a world by editing data.
+//    - mazes are GENERATED per level (seeded recursive-backtracker + braiding),
+//      so every maze is fully connected => every treat reachable => winnable.
+//    - kid tuning: hero always faster than chasers; generous power treats; a
+//      soft "caught" loses a heart + resets positions; out of hearts gently
+//      restarts the level. NEVER a harsh game-over.
+//    - shared engine libs: BR (draw) - BA (sound) - BM (FX/juice) - BS (start).
+//    - QA hook: window.MAZE_GAME (alias window.BUILDABLE_GAME) with sim()/campaign().
+// ============================================================================
+const W=900, H=600;
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+const BR=(typeof window!=="undefined"&&window.BuildableRenders)||(typeof globalThis!=="undefined"&&globalThis.BuildableRenders);
+const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThis!=="undefined"&&globalThis.BuildableAudio);
+const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
+const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
+function sfx(n,o){ if(BA)BA.sfx(n,o); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+// shared FX bag (BM); fallback object keeps the engine alive if BM is missing.
+let fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" };
+function resetFx(){ fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" }; }
+
+// ---- data: the game recipe. A world = a themed level. Tweak freely (no engine edits). ----
+//  cols/rows = maze size in CELLS (render grid is 2*cols+1 by 2*rows+1).
+//  braid = how many dead-ends get opened into loops (higher = easier to escape).
+//  chasers/speed/smart ramp up; power = power-treat duration in frames (60fps).
+//  hero is ALWAYS faster than chasers (heroSpeed below), so a level is always clearable.
+const HERO_SPEED = 0.140;   // tiles/frame — fixed, always >= every chaser speed
+const GAME_CONFIG = window.GAME_CONFIG || {
+  name: "Maze Munchers",
+  levels: [
+    { name:"Candy Cove",      cols:7,  rows:5, braid:0.95, chasers:2, speed:0.075, smart:0.20, power:660,
+      hero:"#ffe27a", heroName:"Nibbz",  ears:"round", chaserCols:["#ff6b9d","#c66bff"], particle:"sweets",
+      bg:["#3a1140","#6a1f5c"], wall:"#ff7eb6", pellet:"#ffd6ec", treat:"#fff1a8" },
+    { name:"Coral Reef",      cols:8,  rows:6, braid:0.85, chasers:2, speed:0.085, smart:0.32, power:640,
+      hero:"#ffb347", heroName:"Finn",   ears:"fin",   chaserCols:["#5bd6ff","#8a6bff"], particle:"bubbles",
+      bg:["#062b3a","#0d5a6e"], wall:"#19c3c3", pellet:"#bdfff0", treat:"#ffe27a" },
+    { name:"Star Station",    cols:9,  rows:6, braid:0.72, chasers:3, speed:0.098, smart:0.45, power:600,
+      hero:"#8ef0ff", heroName:"Bolt",   ears:"antenna",chaserCols:["#7CFC9A","#ff9a5c","#c66bff"], particle:"stars",
+      bg:["#0a1030","#241152"], wall:"#7c5cff", pellet:"#cfe6ff", treat:"#ffe27a" },
+    { name:"Whisper Wood",    cols:9,  rows:7, braid:0.60, chasers:3, speed:0.108, smart:0.55, power:560,
+      hero:"#ff9a5c", heroName:"Rua",    ears:"fox",   chaserCols:["#bfa6ff","#7ee0a0","#ffd86b"], particle:"leaves",
+      bg:["#0c2a1c","#16482f"], wall:"#5fbf6f", pellet:"#d8ffcf", treat:"#ffe27a" },
+    { name:"Dino Jungle",     cols:10, rows:7, braid:0.50, chasers:4, speed:0.116, smart:0.62, power:540,
+      hero:"#7bdc6b", heroName:"Chomps", ears:"dino",  chaserCols:["#ff8f5c","#ffd23f","#5bd6ff","#ff6b9d"], particle:"leaves",
+      bg:["#22300c","#3c5418"], wall:"#c9a13b", pellet:"#f3ffcf", treat:"#ffe27a" },
+    { name:"Frost Village",   cols:11, rows:8, braid:0.45, chasers:4, speed:0.124, smart:0.70, power:510,
+      hero:"#ffd23f", heroName:"Pip",    ears:"round", chaserCols:["#9fd8ff","#cfe6ff","#bfa6ff","#a0f0e0"], particle:"snow",
+      bg:["#10243a","#244a6b"], wall:"#9fd8ff", pellet:"#eaf6ff", treat:"#ffe27a" },
+  ],
+};
+
+// ---- runtime state ----
+let level = 0, state = "title";   // title | ready | play | caught | levelwin | alldone
+let lv = GAME_CONFIG.levels[0];
+let grid = [], GW = 0, GH = 0, tile = 32, ox = 0, oy = 0;
+let dots = [], dotsLeft = 0;
+let hero = null, chasers = [], homeGX = 1, homeGY = 1, heroGX0 = 1, heroGY0 = 1;
+let lives = 3, lostThisLevel = 0, score = 0;
+let powerTimer = 0, eatChain = 0, readyTimer = 0, invuln = 0, t = 0;
+let queuedDir = null, botMode = false;
+let R = mulberry(1);                 // seeded rng for chaser AI (per level)
+let distField = null, homeField = null;
+let ambient = [];
+const DIRS = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+const NAME2DIR = { right:{x:1,y:0}, left:{x:-1,y:0}, down:{x:0,y:1}, up:{x:0,y:-1} };
+function frightened(){ return powerTimer > 0; }
+
+// ---- maze generation: seeded recursive backtracker + braiding ----
+//  Perfect maze (fully connected) => every cell reachable. Braiding only OPENS
+//  walls (removes dead-ends into loops) so connectivity is preserved and the
+//  hero always has escape routes. Result: every treat is reachable = winnable.
+function buildMaze(C, Rr, rng, braid){
+  const gw = 2*C+1, gh = 2*Rr+1;
+  const g = []; for(let y=0;y<gh;y++){ g.push(new Array(gw).fill(1)); }
+  const seen = []; for(let y=0;y<Rr;y++) seen.push(new Array(C).fill(false));
+  const stack = [[0,0]]; seen[0][0]=true; g[1][1]=0;
+  while(stack.length){
+    const cur = stack[stack.length-1], cx=cur[0], cy=cur[1];
+    const opts = DIRS.filter(d=>{ const nx=cx+d.x, ny=cy+d.y; return nx>=0&&nx<C&&ny>=0&&ny<Rr&&!seen[ny][nx]; });
+    if(!opts.length){ stack.pop(); continue; }
+    const d = opts[Math.floor(rng()*opts.length)|0], nx=cx+d.x, ny=cy+d.y;
+    seen[ny][nx]=true;
+    g[1+2*cy+d.y][1+2*cx+d.x]=0;   // wall between
+    g[1+2*ny][1+2*nx]=0;            // the new cell
+    stack.push([nx,ny]);
+  }
+  // braid: open most dead-ends (one extra opening) -> loops, easier to dodge
+  for(let y=0;y<Rr;y++) for(let x=0;x<C;x++){
+    const gx=1+2*x, gy=1+2*y;
+    const open = DIRS.filter(d=> g[gy+d.y] && g[gy+d.y][gx+d.x]===0 );
+    if(open.length===1 && rng()<braid){
+      const cand = DIRS.filter(d=>{ const wx=gx+d.x, wy=gy+d.y, ccx=gx+2*d.x, ccy=gy+2*d.y;
+        return ccx>0&&ccx<gw&&ccy>0&&ccy<gh && g[wy][wx]===1; });
+      if(cand.length){ const d=cand[Math.floor(rng()*cand.length)|0]; g[gy+d.y][gx+d.x]=0; }
+    }
+  }
+  return { g, gw, gh };
+}
+
+function cellOpen(gx,gy){ return gx>=0&&gy>=0&&gy<GH&&gx<GW&&grid[gy][gx]===0; }
+function center(gx,gy){ return { x: ox + gx*tile + tile/2, y: oy + gy*tile + tile/2 }; }
+function layout(){
+  // fit the maze in the canvas, leaving a top HUD strip
+  const hud = 58;
+  tile = Math.floor(Math.min(W/GW, (H-hud)/GH));
+  ox = Math.floor((W - GW*tile)/2);
+  oy = hud + Math.floor(((H-hud) - GH*tile)/2);
+}
+
+// BFS distance field from a cell over open tiles (used for chase + bot)
+function bfsField(sx,sy){
+  const f = []; for(let y=0;y<GH;y++) f.push(new Array(GW).fill(-1));
+  if(!cellOpen(sx,sy)) return f;
+  const q=[[sx,sy]]; f[sy][sx]=0; let h=0;
+  while(h<q.length){ const cx=q[h][0], cy=q[h][1]; h++;
+    for(const d of DIRS){ const nx=cx+d.x, ny=cy+d.y; if(cellOpen(nx,ny)&&f[ny][nx]<0){ f[ny][nx]=f[cy][cx]+1; q.push([nx,ny]); } } }
+  return f;
+}
+
+// ---- entities (step between adjacent open cell-centers; smooth + grid-perfect) ----
+function makeEntity(gx,gy,spd){ return { gx, gy, fx:gx, fy:gy, tx:gx, ty:gy, t:1, dir:null, spd, moving:false, px:center(gx,gy).x, py:center(gx,gy).y, eaten:false }; }
+function stepEntity(e, decide){
+  if(!e.moving){
+    const d = decide(e);
+    if(d && cellOpen(e.gx+d.x, e.gy+d.y)){ e.dir=d; e.fx=e.gx; e.fy=e.gy; e.tx=e.gx+d.x; e.ty=e.gy+d.y; e.t=0; e.moving=true; }
+  }
+  if(e.moving){
+    e.t += e.spd;
+    if(e.t>=1){
+      e.t-=1; e.gx=e.tx; e.gy=e.ty; e.fx=e.gx; e.fy=e.gy;
+      const d = decide(e);
+      if(d && cellOpen(e.gx+d.x, e.gy+d.y)){ e.dir=d; e.tx=e.gx+d.x; e.ty=e.gy+d.y; e.moving=true; }
+      else { e.moving=false; e.t=0; e.dir=e.dir; }
+    }
+  }
+  const a=center(e.fx,e.fy), b=center(e.tx,e.ty), tt=Math.min(1,e.t);
+  e.px = a.x + (b.x-a.x)*tt; e.py = a.y + (b.y-a.y)*tt;
+}
+
+function decideHero(e){
+  if(queuedDir && cellOpen(e.gx+queuedDir.x, e.gy+queuedDir.y)) return queuedDir;
+  if(e.dir && cellOpen(e.gx+e.dir.x, e.gy+e.dir.y)) return e.dir;
+  return null;
+}
+function neighbors(e, allowReverse){
+  let opts = DIRS.filter(d=> cellOpen(e.gx+d.x, e.gy+d.y));
+  if(!allowReverse && e.dir){ const f = opts.filter(d=> !(d.x===-e.dir.x && d.y===-e.dir.y)); if(f.length) opts=f; }
+  return opts;
+}
+function decideChaser(e){
+  if(e.eaten){
+    // head home (static distance field), reverse allowed
+    let best=null, bd=1e9;
+    for(const d of DIRS){ const nx=e.gx+d.x, ny=e.gy+d.y; if(cellOpen(nx,ny)&&homeField[ny][nx]>=0&&homeField[ny][nx]<bd){ bd=homeField[ny][nx]; best=d; } }
+    return best;
+  }
+  const opts = neighbors(e, false);
+  if(!opts.length){ return e.dir ? {x:-e.dir.x,y:-e.dir.y} : null; }
+  if(frightened()){
+    // flee: usually move to the neighbor FARTHEST from the hero
+    if(Math.random() < 0.72){ let best=opts[0], bd=-1; for(const d of opts){ const v=distField[e.gy+d.y][e.gx+d.x]; if(v>bd){ bd=v; best=d; } } return best; }
+    return opts[Math.floor(Math.random()*opts.length)|0];
+  }
+  // normal: with prob "smart" chase the hero (nearest by distance field), else wander
+  if(Math.random() < lv.smart){ let best=opts[0], bd=1e9; for(const d of opts){ const v=distField[e.gy+d.y][e.gx+d.x]; if(v>=0&&v<bd){ bd=v; best=d; } } return best; }
+  return opts[Math.floor(Math.random()*opts.length)|0];
+}
+
+// ---- multi-source chaser distance field (how close is danger to each cell) ----
+function chaserDistField(){
+  const f=[]; for(let y=0;y<GH;y++) f.push(new Array(GW).fill(999));
+  const q=[]; let h=0;
+  for(const e of chasers){ if(e.eaten) continue; const gx=e.gx, gy=e.gy; if(cellOpen(gx,gy)&&f[gy][gx]>0){ f[gy][gx]=0; q.push([gx,gy]); } }
+  while(h<q.length){ const cx=q[h][0], cy=q[h][1]; h++; for(const d of DIRS){ const nx=cx+d.x, ny=cy+d.y; if(cellOpen(nx,ny)&&f[ny][nx]>f[cy][cx]+1){ f[ny][nx]=f[cy][cx]+1; q.push([nx,ny]); } } }
+  return f;
+}
+// perfect-player bot: BFS to the nearest treat, but only through cells the hero
+// can reach BEFORE any chaser (arrival-time test, since the hero is ~1.9x faster).
+// This lets it dash through gaps a flat "keep your distance" rule would forbid, so
+// it explores the whole maze and clears it; grabbing a corner power treat then
+// makes everything safe. With hero speed > every chaser, every maze is clearable.
+function botDir(){
+  // plan from the cell the hero is heading INTO (avoids reversing at every junction)
+  const sx=hero.moving?hero.tx:hero.gx, sy=hero.moving?hero.ty:hero.gy, fr=frightened();
+  const cd = fr ? null : chaserDistField();
+  const ratio = HERO_SPEED / lv.speed;     // how many cells the hero covers per chaser cell (>1)
+  function bfsTo(pred, margin){
+    const prev=[]; for(let y=0;y<GH;y++) prev.push(new Array(GW).fill(null));
+    const seen=[]; for(let y=0;y<GH;y++) seen.push(new Array(GW).fill(false));
+    const q=[[sx,sy,0]]; seen[sy][sx]=true; let h=0;
+    while(h<q.length){ const cx=q[h][0], cy=q[h][1], k=q[h][2]; h++;
+      if(!(cx===sx&&cy===sy) && pred(cx,cy)){ let px=cx,py=cy; while(prev[py][px] && !(prev[py][px][0]===sx&&prev[py][px][1]===sy)){ const pp=prev[py][px]; px=pp[0]; py=pp[1]; } return {x:px-sx, y:py-sy}; }
+      for(const d of DIRS){ const nx=cx+d.x, ny=cy+d.y; if(!cellOpen(nx,ny)||seen[ny][nx]) continue;
+        // hero reaches (nx,ny) in (k+1)/HERO_SPEED frames; nearest chaser in cd/lv.speed. Safe if hero is first (+margin).
+        const ok = fr || (margin===null) || (cd[ny][nx] > (k+1)/ratio + margin);
+        if(ok){ seen[ny][nx]=true; prev[ny][nx]=[cx,cy]; q.push([nx,ny,k+1]); } }
+    }
+    return null;
+  }
+  function fleeDir(){ let best=null, bd=-1; for(const d of DIRS){ const nx=sx+d.x, ny=sy+d.y; if(cellOpen(nx,ny)){ const v=cd?cd[ny][nx]:9; if(v>bd){ bd=v; best=d; } } } return best; }
+  let d = bfsTo((gx,gy)=>dots[gy][gx]>0, 1.2); if(d) return d;   // comfortable buffer
+  d = bfsTo((gx,gy)=>dots[gy][gx]>0, 0.4);  if(d) return d;       // beat them with margin
+  d = bfsTo((gx,gy)=>dots[gy][gx]>0, -0.4); if(d) return d;       // tight but still first
+  d = bfsTo((gx,gy)=>dots[gy][gx]>0, null); if(d) return d;       // ignore safety (desperate)
+  return fleeDir();
+}
+// ---- level setup ----
+function spawnAmbient(){
+  ambient=[]; const n=34; for(let i=0;i<n;i++){ ambient.push({ x:Math.random()*W, y:Math.random()*H, s:0.4+Math.random()*1.2, r:1+Math.random()*2.4, ph:Math.random()*6.28 }); }
+}
+function startLevel(i, keepLives){
+  level = i; lv = GAME_CONFIG.levels[i]; resetFx();
+  R = mulberry((i+1)*1337 + 7);
+  const m = buildMaze(lv.cols, lv.rows, mulberry((i+1)*99991+13), lv.braid);
+  grid = m.g; GW = m.gw; GH = m.gh; layout();
+  // anchors
+  homeGX = 1 + 2*((lv.cols/2)|0); homeGY = 1 + 2*((lv.rows/2)|0);
+  heroGX0 = 1 + 2*((lv.cols/2)|0); heroGY0 = GH-2;
+  homeField = bfsField(homeGX, homeGY);
+  // dots: a treat on every open cell; power treats in the 4 corners; none under hero start
+  dots=[]; dotsLeft=0;
+  for(let y=0;y<GH;y++){ dots.push(new Array(GW).fill(0)); for(let x=0;x<GW;x++){ if(grid[y][x]===0){ dots[y][x]=1; dotsLeft++; } } }
+  const corners=[[1,1],[GW-2,1],[1,GH-2],[GW-2,GH-2]];
+  for(const cc of corners){ if(grid[cc[1]][cc[0]]===0 && dots[cc[1]][cc[0]]===0){ dots[cc[1]][cc[0]]=2; dotsLeft++; } else if(grid[cc[1]][cc[0]]===0){ dots[cc[1]][cc[0]]=2; } }
+  if(dots[heroGY0][heroGX0]>0){ dots[heroGY0][heroGX0]=0; dotsLeft--; }
+  // entities
+  hero = makeEntity(heroGX0, heroGY0, HERO_SPEED); hero.dir=NAME2DIR.left; queuedDir=null;
+  chasers=[]; for(let k=0;k<lv.chasers;k++){ const e=makeEntity(homeGX, homeGY, lv.speed); e.dir=DIRS[k%4]; e.col=lv.chaserCols[k%lv.chaserCols.length]; e.blink=0; chasers.push(e); }
+  powerTimer=0; eatChain=0; invuln=0; lostThisLevel=0; score=keepLives==null?0:score;
+  lives = keepLives==null ? 3 : keepLives;
+  spawnAmbient();
+  state="ready"; readyTimer=botMode?6:90; toast("");
+  sfx("select");
+}
+function resetPositions(){
+  hero = makeEntity(heroGX0, heroGY0, HERO_SPEED); hero.dir=NAME2DIR.left; queuedDir=null;
+  for(let k=0;k<chasers.length;k++){ const c0=chasers[k]; const e=makeEntity(homeGX,homeGY,lv.speed); e.dir=DIRS[k%4]; e.col=c0.col; chasers[k]=e; }
+  powerTimer=0; eatChain=0; invuln=60; state="ready"; readyTimer=botMode?6:70;
+}
+
+function eatAt(gx,gy){
+  const v = dots[gy] && dots[gy][gx]; if(!v) return;
+  dots[gy][gx]=0; dotsLeft--;
+  if(v===2){ powerTimer = lv.power; eatChain=0; for(const e of chasers){ if(!e.eaten){ /* turn to flee */ } } sfx("levelup"); if(BM)BM.pop(fx.pops, hero.px, hero.py-tile*0.5, "POWER!", "#ffe27a"); }
+  else { score+=10; sfx("coin"); if(BM&&Math.random()<0.5)BM.burst(fx.parts, hero.px, hero.py, lv.pellet, 3); }
+  if(dotsLeft<=0) winLevel();
+}
+function winLevel(){
+  state="levelwin";
+  const stars = lostThisLevel===0?3 : lostThisLevel<=2?2 : 1;
+  if((PREFS.stars[level]||0) < stars) PREFS.stars[level]=stars;
+  PREFS.unlocked = Math.max(PREFS.unlocked||0, Math.min(GAME_CONFIG.levels.length-1, level+1));
+  savePrefs();
+  sfx("win"); if(BM){ for(let i=0;i<5;i++) setTimeout(()=>{ try{ BM.explode(fx, W*(0.25+Math.random()*0.5), H*(0.25+Math.random()*0.4), ["#ffd23f","#ff6b9d","#7ee0a0","#8ef0ff"][i%4], {n:16}); }catch(e){} }, i*140); }
+}
+function caught(){
+  if(invuln>0 || state!=="play") return;
+  lives--; lostThisLevel++; sfx("hurt"); if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ff5566",0.3); BM.burst(fx.parts, hero.px, hero.py, "#ff6b9d", 14); }
+  if(lives<=0){
+    // gentle full restart of THIS level (treats back) — never a harsh game-over
+    toast("Let's try again!");
+    const i=level; startLevel(i, 3);
+  } else {
+    toast("Oops!"); resetPositions();
+  }
+}
+
+// ---- main update ----
+function update(){
+  t += 1/60;
+  if(state==="ready"){ readyTimer--; if(readyTimer<=0){ state="play"; sfx("select"); } if(BM)BM.update(fx,1/60); return; }
+  if(state!=="play"){ if(BM)BM.update(fx,1/60); return; }
+  if(invuln>0) invuln--;
+  if(powerTimer>0){ powerTimer--; if(powerTimer===0){ eatChain=0; } }
+  // bot drives the hero in QA/sim
+  if(botMode){ const d=botDir(); if(d) queuedDir=d; }
+  // distance field from the hero (for chase + flee), recomputed each frame
+  distField = bfsField(hero.gx, hero.gy);
+  // move hero, eat what it's over
+  stepEntity(hero, decideHero);
+  { const useTo = hero.t>0.5; const gx=useTo?hero.tx:hero.fx, gy=useTo?hero.ty:hero.fy; eatAt(gx,gy); }
+  // move chasers
+  for(const e of chasers){ stepEntity(e, decideChaser); if(e.eaten && e.gx===homeGX && e.gy===homeGY && e.t<0.05){ e.eaten=false; } }
+  // collisions
+  for(const e of chasers){ const dx=hero.px-e.px, dy=hero.py-e.py; if(dx*dx+dy*dy < (tile*0.58)*(tile*0.58)){
+      if(e.eaten) continue;
+      if(frightened()){ e.eaten=true; eatChain++; const pts=100*Math.min(8,eatChain); score+=pts; sfx("explode"); if(BM){ BM.explode(fx, e.px, e.py, e.col, {n:14}); BM.pop(fx.pops, e.px, e.py-tile*0.4, "+"+pts, "#ffe27a"); } }
+      else { caught(); break; }
+  } }
+  if(BM)BM.update(fx,1/60);
+}
+
+// ---- drawing ----
+function dirAngle(d){ if(!d) return 0; if(d.x>0)return 0; if(d.x<0)return Math.PI; if(d.y>0)return Math.PI/2; return -Math.PI/2; }
+function drawAmbient(){
+  const p=lv.particle; ctx.save();
+  for(const a of ambient){
+    a.ph+=0.01;
+    if(p==="snow"){ a.y+=a.s*0.6; a.x+=Math.sin(a.ph)*0.3; if(a.y>H)a.y=-4; ctx.fillStyle="rgba(255,255,255,0.7)"; }
+    else if(p==="bubbles"){ a.y-=a.s*0.7; if(a.y<-4)a.y=H+4; ctx.fillStyle="rgba(190,240,255,0.5)"; }
+    else if(p==="stars"){ ctx.fillStyle="rgba(255,255,255,"+(0.3+0.4*Math.abs(Math.sin(a.ph)))+")"; }
+    else if(p==="sweets"){ a.y+=a.s*0.4; a.x+=Math.sin(a.ph)*0.5; if(a.y>H)a.y=-4; ctx.fillStyle="rgba(255,200,230,0.55)"; }
+    else { a.y+=a.s*0.4; a.x+=Math.sin(a.ph)*0.7; if(a.y>H)a.y=-4; ctx.fillStyle="rgba(180,230,150,0.5)"; }
+    ctx.beginPath(); ctx.arc(a.x,a.y,a.r,0,7); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawMaze(){
+  const r = Math.max(4, tile*0.32);
+  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){
+    if(grid[y][x]!==1) continue;
+    const px=ox+x*tile, py=oy+y*tile;
+    const g=ctx.createLinearGradient(px,py,px,py+tile); g.addColorStop(0,BR?BR._lighten(lv.wall,0.25):lv.wall); g.addColorStop(1,lv.wall);
+    ctx.fillStyle=g; if(BR)BR.rrect(ctx,px+tile*0.08,py+tile*0.08,tile*0.84,tile*0.84,r); else ctx.rect(px,py,tile,tile); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,0.18)"; if(BR){ BR.rrect(ctx,px+tile*0.16,py+tile*0.14,tile*0.68,tile*0.2,r*0.6); ctx.fill(); }
+  }
+}
+function drawDots(){
+  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){
+    const v=dots[y][x]; if(!v) continue; const cc=center(x,y);
+    if(v===1){ ctx.fillStyle=lv.pellet; ctx.beginPath(); ctx.arc(cc.x,cc.y,Math.max(2,tile*0.10),0,7); ctx.fill(); }
+    else { const pulse=0.7+0.3*Math.sin(t*5+x); ctx.save(); ctx.fillStyle=lv.treat;
+      const gg=ctx.createRadialGradient(cc.x,cc.y,1,cc.x,cc.y,tile*0.5); gg.addColorStop(0,BR?BR._rgba(lv.treat,0.6*pulse):lv.treat); gg.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cc.x,cc.y,tile*0.5,0,7); ctx.fill();
+      ctx.fillStyle=lv.treat; if(BR)BR.sparkle(ctx,cc.x,cc.y,tile*0.26*pulse,t*1.5); ctx.restore(); }
+  }
+}
+function drawHero(){
+  const x=hero.px, y=hero.py, r=tile*0.40, ang=dirAngle(hero.dir);
+  const chompV = hero.moving ? (0.5+0.5*Math.sin(t*16)) : 0.12;
+  const mouth = 0.05*Math.PI + chompV*0.34*Math.PI;
+  ctx.fillStyle="rgba(0,0,0,0.20)"; ctx.beginPath(); ctx.ellipse(x,y+r*0.86,r*0.7,r*0.22,0,0,7); ctx.fill();
+  // ears (so it reads as a CRITTER, not a wedge)
+  ctx.fillStyle=BR?BR._lighten(lv.hero,0.1):lv.hero;
+  if(lv.ears==="antenna"){ ctx.strokeStyle=lv.hero; ctx.lineWidth=Math.max(2,r*0.12); ctx.beginPath(); ctx.moveTo(x,y-r*0.7); ctx.lineTo(x,y-r*1.25); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y-r*1.32,r*0.16,0,7); ctx.fill(); }
+  else if(lv.ears==="fin"){ ctx.beginPath(); ctx.moveTo(x-r*0.1,y-r*0.7); ctx.lineTo(x+r*0.5,y-r*1.2); ctx.lineTo(x+r*0.6,y-r*0.5); ctx.closePath(); ctx.fill(); }
+  else if(lv.ears==="fox"||lv.ears==="dino"){ for(const sx of [-1,1]){ ctx.beginPath(); ctx.moveTo(x+sx*r*0.5,y-r*0.5); ctx.lineTo(x+sx*r*0.78,y-r*1.15); ctx.lineTo(x+sx*r*0.12,y-r*0.78); ctx.closePath(); ctx.fill(); } }
+  else { for(const sx of [-1,1]){ ctx.beginPath(); ctx.arc(x+sx*r*0.55,y-r*0.62,r*0.26,0,7); ctx.fill(); } }
+  // body with a chomping mouth toward travel direction
+  const bg=ctx.createRadialGradient(x-r*0.3,y-r*0.4,r*0.2,x,y,r*1.1); bg.addColorStop(0,BR?BR._lighten(lv.hero,0.4):"#fff"); bg.addColorStop(1,lv.hero);
+  ctx.fillStyle=bg; ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,r, ang+mouth, ang+2*Math.PI-mouth); ctx.closePath(); ctx.fill();
+  // eyes
+  const ep=ang-Math.PI/2, ex=Math.cos(ep)*r*0.42, ey=Math.sin(ep)*r*0.42, ox2=Math.cos(ang)*r*0.12, oy2=Math.sin(ang)*r*0.12;
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x+ex+ox2,y+ey+oy2,r*0.2,0,7); ctx.fill();
+  ctx.fillStyle="#23204a"; ctx.beginPath(); ctx.arc(x+ex+ox2+Math.cos(ang)*r*0.06,y+ey+oy2+Math.sin(ang)*r*0.06,r*0.1,0,7); ctx.fill();
+  if(frightened()){ ctx.strokeStyle="rgba(255,226,122,0.9)"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y,r*1.25,0,7); ctx.stroke(); }
+}
+function drawChaser(e){
+  const r=tile*0.36;
+  if(e.eaten){ ctx.fillStyle="rgba(255,255,255,0.85)"; for(const sx of [-1,1]){ ctx.beginPath(); ctx.arc(e.px+sx*r*0.32,e.py,r*0.26,0,7); ctx.fill(); ctx.fillStyle="#3a5cff"; ctx.beginPath(); ctx.arc(e.px+sx*r*0.32,e.py,r*0.12,0,7); ctx.fill(); ctx.fillStyle="rgba(255,255,255,0.85)"; } return; }
+  let col=e.col;
+  if(frightened()){ const ending = powerTimer<90 && (Math.floor(powerTimer/8)%2===0); col = ending ? "#ffffff" : "#3a5cff"; }
+  if(BR) BR.enemy(ctx, e.px, e.py, r, col, t*4, false); else { ctx.fillStyle=col; ctx.beginPath(); ctx.arc(e.px,e.py,r,0,7); ctx.fill(); }
+}
+function drawHUD(){
+  // hearts
+  for(let i=0;i<3;i++){ ctx.fillStyle = i<lives ? "#ff5d7a" : "rgba(255,255,255,0.18)"; if(BR)BR.heart(ctx, 26+i*30, 16, 9); }
+  // level name
+  ctx.fillStyle="#fff"; ctx.font="700 22px Fredoka,sans-serif"; ctx.textAlign="center"; ctx.fillText(lv.name, W/2, 36);
+  // treats left
+  ctx.textAlign="right"; ctx.font="700 18px Fredoka,sans-serif"; ctx.fillStyle="#ffe27a"; ctx.fillText("Treats: "+dotsLeft, W-20, 34);
+  ctx.textAlign="left";
+  if(frightened()){ const w=Math.min(220,W*0.3), bx=W/2-w/2, by=46; ctx.fillStyle="rgba(255,255,255,0.18)"; if(BR)BR.rrect(ctx,bx,by,w,6,3); ctx.fill(); ctx.fillStyle="#ffe27a"; if(BR)BR.rrect(ctx,bx,by,w*(powerTimer/lv.power),6,3); ctx.fill(); }
+}
+function overlay(title, sub, col){
+  ctx.fillStyle="rgba(8,8,24,0.55)"; ctx.fillRect(0,0,W,H);
+  ctx.textAlign="center"; ctx.fillStyle=col||"#fff"; ctx.font="800 48px Fredoka,sans-serif"; ctx.fillText(title, W/2, H/2-6);
+  if(sub){ ctx.fillStyle="#cdd0ff"; ctx.font="600 22px Fredoka,sans-serif"; ctx.fillText(sub, W/2, H/2+34); }
+  ctx.textAlign="left";
+}
+function draw(){
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,lv.bg[0]); g.addColorStop(1,lv.bg[1]); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  drawAmbient();
+  ctx.save(); if(BM){ const s=BM.shakeOffset(fx); ctx.translate(s.x,s.y); }
+  drawMaze(); drawDots();
+  for(const e of chasers) if(e.eaten) drawChaser(e);
+  for(const e of chasers) if(!e.eaten) drawChaser(e);
+  drawHero();
+  if(BM)BM.draw(ctx, fx, {W,H});
+  ctx.restore();
+  drawHUD();
+  if(state==="ready"){ const n=Math.ceil(readyTimer/30); overlay("Ready?", n>0?("Go in "+n+"..."):"Go!", lv.hero); }
+  else if(state==="levelwin"){ const last = level>=GAME_CONFIG.levels.length-1; overlay(last?"You did it!":"World cleared!", last?"You cleared every world! Tap for menu":"Tap to play the next world", "#ffe27a"); }
+}
+
+// ---- prefs ----
+let PREFS = { unlocked:0, stars:{} };
+function loadPrefs(){ try{ const s=localStorage.getItem('mz_prefs'); if(s) PREFS=Object.assign(PREFS, JSON.parse(s)); }catch(e){} if(!PREFS.stars) PREFS.stars={}; }
+function savePrefs(){ try{ localStorage.setItem('mz_prefs', JSON.stringify(PREFS)); }catch(e){} }
+
+// ---- ui helpers ----
+function el(id){ const e=document.getElementById(id); return (e&&e.style)?e:null; }
+function toast(msg){ const e=el("toast"); if(!e)return; if(!msg){ e.style.display="none"; return; } e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{ e.style.display="none"; }, 1800); }
+function showInGame(on){ const b=el("backBtn"),m=el("muteBtn"),d=el("dpad"); if(b)b.style.display=on?"block":"none"; if(m)m.style.display=on?"block":"none"; if(d)d.style.display=on?"block":"none"; }
+
+// ---- input ----
+function setDir(name){ const d=NAME2DIR[name]; if(!d)return; queuedDir=d; if(BA)BA.unlock(); }
+function advance(){ if(state!=="levelwin")return; if(level>=GAME_CONFIG.levels.length-1){ showMenu(); } else { startLevel(level+1, 3); hideMenu(); } }
+if(typeof document!=="undefined"){
+  document.addEventListener("keydown",(e)=>{
+    const k=e.key;
+    if(k==="ArrowUp"||k==="w"||k==="W")setDir("up");
+    else if(k==="ArrowDown"||k==="s"||k==="S")setDir("down");
+    else if(k==="ArrowLeft"||k==="a"||k==="A")setDir("left");
+    else if(k==="ArrowRight"||k==="d"||k==="D")setDir("right");
+    else if(k===" "||k==="Enter")advance();
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(k))e.preventDefault();
+  });
+  // swipe + tap on the canvas
+  let sx=0,sy=0,st=0;
+  const startP=(x,y)=>{ sx=x; sy=y; st=Date.now(); };
+  const endP=(x,y)=>{ const dx=x-sx, dy=y-sy; if(Math.abs(dx)<14&&Math.abs(dy)<14){ if(state==="levelwin")advance(); return; }
+    if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?"right":"left"); else setDir(dy>0?"down":"up"); };
+  c.addEventListener("touchstart",(e)=>{ const t0=e.changedTouches[0]; startP(t0.clientX,t0.clientY); },{passive:true});
+  c.addEventListener("touchend",(e)=>{ const t0=e.changedTouches[0]; endP(t0.clientX,t0.clientY); },{passive:true});
+  c.addEventListener("mousedown",(e)=>startP(e.clientX,e.clientY));
+  c.addEventListener("mouseup",(e)=>endP(e.clientX,e.clientY));
+  const dp=el("dpad"); if(dp){ dp.querySelectorAll("button").forEach(b=>{ const fire=(ev)=>{ ev.preventDefault(); setDir(b.getAttribute("data-d")); }; b.addEventListener("touchstart",fire,{passive:false}); b.addEventListener("mousedown",fire); }); }
+}
+
+// ---- shared start screen (BS) ----
+let startScreen=null;
+function buildStartCfg(){
+  const un=PREFS.unlocked||0;
+  const levels=GAME_CONFIG.levels.map((l,i)=>{ const stt=i<un?"done":(i===un?"next":"locked");
+    return { n:i+1, name:l.name, color:l.wall, maxStars:3, stars: stt==="done"?(PREFS.stars[i]||0):undefined, state:stt }; });
+  let total=0; for(const k in PREFS.stars) total+=PREFS.stars[k]||0;
+  return { title:"Maze Munchers", subtitle:"Gobble every treat — dodge the friendly chasers!", coins:total, sound:!(BA&&BA.muted), showBack:false, levels };
+}
+function showMenu(){ state="title"; showInGame(false); const host=document.getElementById("start"); if(host)host.style.display="block";
+  if(!BS||!host) return;
+  const cb={ onPlay:(n)=>{ startPlay(n-1); hideMenu(); }, onMode:()=>{}, onHero:()=>{}, onCustomize:()=>{}, onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } }, onBack:()=>{} };
+  if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg());
+}
+function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showInGame(true); }
+function startPlay(i){ if(BA)BA.unlock(); botMode=false; startLevel(i,null); }
+function wireMenus(){ const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
+  const bb=el("backBtn"); if(bb)bb.onclick=()=>{ showMenu(); }; }
+
+function frame(){ if(state!=="title") update(); if(grid.length && hero && state!=="title") draw(); requestAnimationFrame(frame); }
+
+// bespoke created sounds (ElevenLabs via /api/sfx) — synth stays a silent fallback.
+if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+  coin:"maze_chomp", levelup:"maze_power", explode:"maze_eat", boom:"maze_eat",
+  win:"maze_win", hurt:"maze_caught", select:"maze_start" } }); }
+
+// boot
+if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showMenu(); }
+if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(frame);
+
+// ---- QA / picker hooks (standardized name MAZE_GAME; BUILDABLE_GAME alias) ----
+window.MAZE_GAME = {
+  _cfg:()=>GAME_CONFIG,
+  state:()=>state,
+  dbg:()=>({ level, state, dotsLeft, lives, power:powerTimer, chasers:chasers.length, heroSpd:HERO_SPEED, chaserSpd:lv.speed }),
+  startLevel:(i)=>{ botMode=false; startLevel(i,null); },
+  // headless harness: a perfect player (BFS-to-nearest-treat bot) clears the maze
+  sim:(idx, maxFrames)=>{ botMode=true; startLevel(idx,null); let f=0; const cap=maxFrames||40000;
+    while(state!=="levelwin" && f<cap){ update(); f++; }
+    const res = dotsLeft<=0 ? "win" : "timeout"; const out={ level:idx, result:res, frames:f, dotsLeft, lives, stars:PREFS.stars[idx]||0 }; botMode=false; return out; },
+  campaign:(cap)=>{ const out=[]; cap=cap||40000; botMode=true;
+    for(let i=0;i<GAME_CONFIG.levels.length;i++){ startLevel(i,null); let f=0; while(state!=="levelwin"&&f<cap){ update(); f++; } out.push({ level:i+1, result:dotsLeft<=0?"win":"timeout", frames:f, lives }); if(dotsLeft>0)break; } botMode=false; return out; },
+  // render smoke
+  _begin:(i)=>{ botMode=false; startLevel(i||0,null); state="play"; readyTimer=0; },
+  _step:(n)=>{ for(let i=0;i<(n||1);i++) update(); },
+  _draw:()=>{ try{ draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
+};
+window.BUILDABLE_GAME = window.MAZE_GAME;
+</script>
+</body>
+</html>

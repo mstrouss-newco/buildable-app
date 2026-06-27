@@ -22,6 +22,10 @@ Home tiles:
   + Sound Machine + **Memory Match (`/memory-engine.html`)** + **Bingo (`/bingo-engine.html`)**
   + **Snakes & Ladders (`/snakes-engine.html`)** — all playable. The old AI-generated game flow
   is retired — do not route Games back to SCREEN_INTRO.
+  + Survival (`/survival-engine.html`) + Maze Munchers (`/maze-engine.html`, an
+  original maze chase — gobble treats, dodge friendly chasers, grab a power treat),
+  all playable. The old AI-generated game flow is retired — do not route Games back to
+  SCREEN_INTRO.
 - **Stories** — COMING SOON (disabled). **Do not re-enable without Mike.**
 - **Typing** — LIVE (New)
 - **Chess** — LIVE
@@ -48,6 +52,9 @@ Global / app-wide:
   `api/sfx.js` (adds `checkers_*` one-shots), `src/BuildableKids.jsx` (adds a Games-picker
   Checkers tile + `SCREEN_CHECKERS`/`SCREEN_CHECKERS_FAMILY` — high-collision file, edits
   kept tiny & isolated). Does NOT touch the chess files.
+- `claude/games-maze-chase` — NEW **Maze Munchers** Track B engine (`public/maze-engine.html`,
+  `qa-maze.mjs`, `api/sfx.js` maze_* sounds, `vercel.json` route, Games tile). Built + QA-green;
+  branch handed to Mike to merge (not pushed to `main`).
 
 ## Suggested ownership (to avoid collisions)
 - Games engines + `public/*.html` + `vercel.json` routes

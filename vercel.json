@@ -270,6 +270,12 @@
     {
       "src": "/buildable-turns.js",
       "dest": "/buildable-turns.js"
+      "src": "/maze-engine.html",
+      "dest": "/maze-engine.html"
+    },
+    {
+      "src": "/maze",
+      "dest": "/maze-engine.html"
     },
     {
       "src": "/(.*)",

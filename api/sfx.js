@@ -68,6 +68,13 @@ const SOUNDS = {
   checkers_king:    "Short cheerful rising magical sparkle chime, a piece being crowned king, triumphant and short, no music, no voices",
   checkers_win:     "Happy short victory fanfare with a sparkle, cheerful kids game win, no voices",
   checkers_lose:    "Gentle soft descending wah-wah, friendly cartoon lose, short, no music, no voices",
+  // ---- Maze Munchers one-shots (arcade-friendly, kid-cute; per BUILDING-A-GAME "create new sounds") ----
+  maze_chomp:  "Short bright bouncy arcade chomp munch, a friendly gulp eating a treat, cheerful cartoon, single hit, no music, no voices",
+  maze_power:  "Short cheerful rising magical power-up sparkle chime, exciting arcade glow-up, friendly cartoon, no music, no voices",
+  maze_eat:    "Short funny gulp and pop with a springy boing, gobbling up a wobbly chaser, playful arcade cartoon, single hit, no music, no voices",
+  maze_win:    "Happy short victory fanfare with a sparkly arcade jingle, cheerful kids maze cleared, no voices",
+  maze_caught: "Short soft gentle descending uh-oh wobble, friendly and not scary, a tag in a chase, single hit, no music, no voices",
+  maze_start:  "Short cheerful arcade start blip, a friendly ready-go ding, single hit, no music, no voices",
 
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
@@ -250,6 +257,7 @@ const DURATIONS = {
   breaker_smash:0.5, breaker_break:0.6, breaker_power:0.8, breaker_miss:0.6,
   board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
+  maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,

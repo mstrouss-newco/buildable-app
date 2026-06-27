@@ -190,6 +190,35 @@ so this reuses the chess plumbing instead of inventing new transport.
   the `BM` canvas FX). Easy to revisit if you'd rather force `BS`/`BM`.
 - **Still TODO (manual):** run the SQL; live QA across two real devices/sessions (the one
   thing the headless + jsdom sims can't cover); optionally pre-warm the 6 `checkers_*` SFX.
+## 2026-06-27 — Maze Munchers: NEW original maze-chase engine (Track B)
+- **New hand-authored Track B engine `public/maze-engine.html`** — an ORIGINAL maze chase
+  (NOT Pac-Man: own name "Maze Munchers", own drawn art, own generated mazes). Gobble every
+  treat, dodge the friendly chasers, grab a corner power treat to briefly chase THEM, clear
+  the world. Same engine family as survival/croc/breaker.
+- **Content-as-data `GAME_CONFIG`**: 6 themed worlds (Candy Cove, Coral Reef, Star Station,
+  Whisper Wood, Dino Jungle, Frost Village), each its own palette / hero critter / chaser
+  cast / ambient particles, with a difficulty ramp (more + faster + smarter chasers, shorter
+  power treat). Mazes are generated per level with a seeded recursive-backtracker + braiding,
+  so every maze is fully connected ⇒ every treat reachable ⇒ winnable.
+- **Kid tuning / always-winnable:** hero is ALWAYS faster than every chaser; power treats are
+  long & generous (~8.5–11s, scaling down slightly by world). Soft "caught" = lose a heart +
+  reset positions; out of hearts gently restarts the world (treats back). **Never a harsh
+  game-over.** Controls: arrows/WASD + swipe + on-screen d-pad; audio unlock on first tap.
+- **Shared libs:** `BR` (hero/critter, `BR.enemy` chasers, walls, treats, hearts — no emoji),
+  `BM` (chomp/eat bursts, power pop, caught shake+flash, win confetti), `BA` (sound), `BS`
+  (start screen + world picker with stars/lock). Single-player v1 (same-device co-op = future).
+- **Bespoke CREATED sounds** registered in `api/sfx.js`: `maze_chomp`, `maze_power`, `maze_eat`,
+  `maze_win`, `maze_caught`, `maze_start` (synth = silent fallback only).
+- **QA `qa-maze.mjs`** (hook `window.MAZE_GAME`, alias `window.BUILDABLE_GAME`): a perfect-player
+  BFS bot with arrival-time evasion clears ALL 6 mazes (3 runs each), a full campaign clears
+  6/6, and the render smoke-test passes — re-run 3× green. `npm run build` clean.
+- **Wiring:** `vercel.json` route for `/maze-engine.html` (+ `/maze`) before the catch-all;
+  **Maze Munchers** tile in the Games picker → `MazeScreen` iframe in `src/BuildableKids.jsx`.
+- Decisions taken with Mike: difficulty ramps per world (each its own world/cast/sound);
+  power treat long & generous; touch = swipe + arrows; single-player only for v1.
+- Branch `claude/games-maze-chase` (NOT pushed to main). Docs: `maze-README.md`, WORKING.md.
+- TODO: per-world ElevenLabs background music (deferred); save/share/publish + shared GameFrame.
+
 
 ## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
 - The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of
