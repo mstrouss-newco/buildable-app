@@ -574,6 +574,18 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ## Session log — 2026-06-27i (Sunny Town Drive — new 3-lane runner engine)
 
+**2026-06-27 3D rebuild:** Sunny Town Drive is now **true 3D** (Three.js r128, blocky
+LEGO-style) — camera behind the car, road receding into fog. Crucially the *gameplay logic
+is unchanged*: it stays a pure track-position model (lane + p in the same 0..H units), so
+`runner-engine.html` maps p->world Z and lane->world X for drawing only. That means the
+always-winnable guarantee and the headless QA bot still work with no WebGL — `qa-runner.mjs`
+runs the same sim/campaign (all 6 towns clear 0-hit/3-star) and now loads only the libs the
+3D engine uses (`buildable-audio.js`, `buildable-startscreen.js`). Rendering is a WebGL scene
+canvas (#c) with a 2D HUD overlay canvas (#hud) on top for hearts/town/progress/banners; the
+shared BS start screen still sits over it. All 3D init is guarded by `window.THREE` so the
+engine loads cleanly headlessly. Verified live in-browser (3D scene renders + plays, no
+console errors).
+
 New hand-authored **Track B** engine `public/runner-engine.html` (route `/runner-engine.html`):
 a cute "drive through town, dodge stuff, collect treats" runner for ages 4-8, inspired by
 LEGO Friends: Heartlake Rush (built as our own original — no licensed art). Steering is

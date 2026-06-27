@@ -3,7 +3,7 @@ import fs from 'fs'; import vm from 'vm';
 const dir=process.argv[2]||'.';
 const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
 const html=read('runner-engine.html');
-const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js'].map(read).join('\n');
+const libs=['buildable-audio.js','buildable-startscreen.js'].map(read).join('\n');
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
 const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:540,height:820}:(typeof k==='string'?noop:undefined))});

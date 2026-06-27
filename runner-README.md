@@ -1,9 +1,20 @@
-# Sunny Town Drive — runner engine
+# Sunny Town Drive — 3D runner engine
 
 A cute **3-lane "drive through town, dodge stuff, collect treats"** runner for young kids
 (ages 4–8), inspired by car-runner games like *LEGO Friends: Heartlake Rush* — built as an
-original (no licensed art). It's a hand-authored **Track B** engine: one static page,
-launched full-screen in an iframe.
+original (no licensed art). It's **true 3D** (Three.js, blocky LEGO-style): the camera sits
+behind the car and the road runs off into the distance. Hand-authored **Track B** engine:
+one static page, launched full-screen in an iframe.
+
+## How the 3D works (and why QA still passes)
+
+The **gameplay logic is unchanged** from the 2D version — it stays a pure track-position
+model (a `lane` plus a position `p` in the same 0..H units). The 3D layer only changes
+*drawing*: it maps `p` → world Z and `lane` → world X. So the always-winnable guarantee and
+the headless robot tester need no WebGL and keep working. Rendering = a WebGL scene canvas
+(`#c`) for the world + a 2D HUD canvas (`#hud`) on top for hearts/town/progress/banners; the
+shared start screen sits over both. Three.js (r128) loads from a CDN; all 3D setup is guarded
+by `window.THREE` so the engine also loads cleanly in the Node QA sandbox.
 
 - **File:** `public/runner-engine.html`
 - **Route:** `/runner-engine.html` (added in `vercel.json` before the catch-all)
