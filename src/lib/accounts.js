@@ -377,16 +377,19 @@ export async function completeOAuthRedirect() {
 // signed in, persisted to the kid_profiles.helper jsonb column (db/add-kid-helper.sql).
 // Graceful: if the DB column doesn't exist yet, the localStorage copy still works.
 export function getKidHelper(kid) {
-  if (!kid) return null;
-  if (kid.helper) return kid.helper;
-  try { return JSON.parse(localStorage.getItem("bk_helper_" + kid.id) || "null"); } catch { return null; }
+  const key = kid && kid.id ? ("bk_helper_" + kid.id) : "bk_helper_v1";
+  if (kid && kid.helper) return kid.helper;
+  try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; }
 }
 export async function saveKidHelper(kid, helper) {
-  if (!kid || !kid.id || !helper) return;
-  try { localStorage.setItem("bk_helper_" + kid.id, JSON.stringify(helper)); } catch (e) {}
+  if (!helper) return;
+  const id = kid && kid.id ? kid.id : null;
+  // No profile selected (pure guest) -> store under a global device key.
+  try { localStorage.setItem(id ? ("bk_helper_" + id) : "bk_helper_v1", JSON.stringify(helper)); } catch (e) {}
+  if (!id) return;
   const active = getActiveKid();
-  if (active && active.id === kid.id) setActiveKid({ ...active, helper });
+  if (active && active.id === id) setActiveKid({ ...active, helper });
   if (isSignedIn()) {
-    try { await restFetch(`kid_profiles?id=eq.${kid.id}`, { method: "PATCH", body: JSON.stringify({ helper }) }); } catch (e) { /* column may not exist yet */ }
+    try { await restFetch(`kid_profiles?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ helper }) }); } catch (e) { /* column may not exist yet */ }
   }
 }
