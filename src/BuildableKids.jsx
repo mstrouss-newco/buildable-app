@@ -866,7 +866,7 @@ function HelperLabScreen({ activeKid, onHome, onDone }) {
         <button onClick={onHome} style={styles.backButton}>Home</button>
       </div>
       <h1 style={{ ...styles.logo, marginTop: 8 }}>Helper Lab</h1>
-      <p style={styles.tagline}>Pick a buddy or make your own \u2014 they cheer you on!</p>
+      <p style={styles.tagline}>Pick a buddy or make your own — they cheer you on!</p>
       <div style={{ width: "100%", maxWidth: 920 }}>
         <CharacterCreatorScreen
           onCharacterCreated={(c) => {
