@@ -746,7 +746,9 @@ session.
 
 **2026-06-27 follow-up:** Whoopee pad now plays a wet `fart` (fresh cache key, bypasses the old clip) + 13 new sounds (giggle, dino roar, robot, splat, cha-ching, drum roll, gong, frog, cow moo, rooster, vroom, achoo, party pop) — 31 pads total, all verified live + pre-warmed.
 
-**2026-06-27 — themed sound packs:** Soundboard rebuilt with a tabbed pack UI (10 packs: Silly, Animals, Instruments, Space, Spooky, Vehicles, Magic, Nature, Food, Sports) — 133 pads, 86 new ElevenLabs one-shots (all dur>=0.5s), theme-tagged per pack in /api/list-audio for reuse, ~30 white-line glyphs (no emoji). Last pack remembered in localStorage. Sampled every pack live (audio/mpeg).
+**2026-06-27 — themed sound packs:** Soundboard rebuilt with a tabbed pack UI (10 packs: Silly, Animals, Instruments, Space, Spooky, Vehicles, Magic, Nature, Food, Sports) — 133 pads, 86 new ElevenLabs one-shots (all dur>=0.5s), theme-tagged per pack in /api/list-audio for reuse, ~30 white-line glyphs (no emoji). Last pack remembered in localStorage. Sampled every pack live (audio/mpeg). 
+
+**2026-06-27 - theme tile art (for pre-readers):** Each pack tab now shows an AI-generated picture badge so kids who cannot read can recognize the theme. Added a `soundpack` kind to `api/images.js` (gpt-image-1, transparent glossy icon per theme, cached in image_cache, served as PNG); the tab `<img>` falls back to a colored SVG emblem on any error. Pre-generated all 10 packs - verified cached via manifest.
 
 ---
 
