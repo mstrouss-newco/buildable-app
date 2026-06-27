@@ -21,7 +21,11 @@ export default async function handler(req, res) {
     meta: b.meta && typeof b.meta === "object" ? b.meta : null,
   };
   try {
-    await fetch(`${URL}/rest/v1/kid_game_events`, { method: "POST", headers: H, body: JSON.stringify(row) });
+    const r = await fetch(`${URL}/rest/v1/kid_game_events`, { method: "POST", headers: H, body: JSON.stringify(row) });
+    // Report REAL success so this is verifiable. If the table doesn't exist yet
+    // (migration not run) we return ok:false with a hint, but never error — the
+    // client ignores the body and logging stays best-effort.
+    if (!r.ok) { const detail = await r.text().catch(() => ""); return res.status(200).json({ ok: false, status: r.status, detail: detail.slice(0, 160) }); }
     return res.status(200).json({ ok: true });
-  } catch (e) { return res.status(200).json({ ok: false }); }
+  } catch (e) { return res.status(200).json({ ok: false, error: String((e && e.message) || e).slice(0, 120) }); }
 }
