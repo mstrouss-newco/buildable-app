@@ -677,7 +677,7 @@ function ChessScreen({ onHome, onFamily }) {
       )}
       <iframe
         title="Buildable Chess"
-        src="/buildable-chess.html"
+        src="/buildable-chess.html?v=2"
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>

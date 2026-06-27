@@ -118,9 +118,9 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 body.in-game .world{opacity:1}
 .world .scene{position:absolute;opacity:0;transition:opacity 1s ease}
 .world .scene.on{opacity:1}
-.world .scene-bg{inset:-7%;width:114%;height:114%;object-fit:cover;filter:blur(2px) saturate(1.06) brightness(.96);
+.world .scene-bg{inset:-7%;width:114%;height:114%;background-size:cover;background-position:center;filter:blur(2px) saturate(1.06) brightness(.96);
   animation:kenburns 26s ease-in-out infinite alternate}
-.world .scene-fg{left:-7%;width:114%;bottom:0;height:54%;object-fit:cover;object-position:center bottom;filter:blur(.4px);
+.world .scene-fg{left:-7%;width:114%;bottom:0;height:54%;background-size:cover;background-position:center bottom;filter:blur(.4px);
   -webkit-mask-image:linear-gradient(to top,#000 58%,transparent);mask-image:linear-gradient(to top,#000 58%,transparent);
   animation:sway 18s ease-in-out infinite alternate}
 .world .tint{position:absolute;inset:0;background:linear-gradient(160deg,var(--pageA),transparent 50%,var(--pageB));opacity:.5;mix-blend-mode:multiply}
@@ -203,8 +203,8 @@ body.in-game .card{background:rgba(20,16,40,.34);border-color:rgba(255,255,255,.
 </head>
 <body>
 <div class="world" id="world">
-  <img class="scene scene-bg" id="world-bg" alt="">
-  <img class="scene scene-fg" id="world-fg" alt="">
+  <div class="scene scene-bg" id="world-bg"></div>
+  <div class="scene scene-fg" id="world-fg"></div>
   <div class="tint"></div>
   <div class="rays" id="world-rays"></div>
 </div>
@@ -495,15 +495,14 @@ function resetMenuTheme(){
   const r=document.documentElement.style;
   r.setProperty('--pageA','#1a1830');r.setProperty('--pageB','#0F0E17');
   clearAmbient();document.body.classList.remove('in-game');stopMusic();
-  ['world-bg','world-fg'].forEach(id=>{const img=document.getElementById(id);img.classList.remove('on');img.removeAttribute('src');});
+  ['world-bg','world-fg'].forEach(id=>{const el=document.getElementById(id);el.classList.remove('on');el.style.backgroundImage='';});
 }
 // Load the world's parallax layers + light it up like the storybook engine
-function setLayer(id,src){
-  const img=document.getElementById(id);
-  img.classList.remove('on');
-  img.onload=()=>img.classList.add('on');
-  img.onerror=()=>{img.classList.remove('on');img.removeAttribute('src');}; // fall back to gradient
-  img.src=src;
+function setLayer(id,url){
+  // CSS background-image (renders reliably inside iframes on iOS Safari, unlike <img>)
+  const el=document.getElementById(id);
+  el.style.backgroundImage="url('"+url+"')";
+  el.classList.add('on');
 }
 function buildWorld(key){
   const sc=SCENES[key];

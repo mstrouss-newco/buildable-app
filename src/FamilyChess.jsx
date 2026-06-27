@@ -166,7 +166,7 @@ export default function FamilyChess({ activeKid, onHome }) {
         <iframe
           ref={iframeRef}
           title="Buildable Chess (online)"
-          src="/buildable-chess.html?online=1"
+          src="/buildable-chess.html?online=1&v=2"
           onLoad={() => { if (readyRef.current && matchRef.current) sendInit(matchRef.current); }}
           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
         />
