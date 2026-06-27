@@ -296,7 +296,7 @@ const s = {
   },
   heading: {
     fontFamily: FRED,
-    fontSize: "44px",
+    fontSize: "clamp(26px, 7vw, 44px)",
     fontWeight: "700",
     color: "#fff",
     textAlign: "center",
@@ -327,7 +327,7 @@ const s = {
     fontFamily: NUN,
   },
   addCard: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 200, background: "rgba(155,126,221,0.08)", border: "2px dashed rgba(155,126,221,0.5)", borderRadius: 20, cursor: "pointer" },
-  addPlus: { fontSize: 54, fontWeight: 300, lineHeight: 1, color: "#c9bff0" },
+  addPlus: { fontSize: "clamp(28px, 8vw, 54px)", fontWeight: 300, lineHeight: 1, color: "#c9bff0" },
   addText: { fontSize: 16, fontWeight: 700, color: "#fff", fontFamily: FRED },
   grid: {
     display: "grid",
@@ -358,7 +358,7 @@ const s = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "60px",
+    fontSize: "clamp(30px, 8.5vw, 60px)",
     background: "rgba(0,0,0,0.25)",
   },
   cardTitle: {

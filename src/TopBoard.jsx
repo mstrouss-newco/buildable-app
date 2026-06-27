@@ -152,7 +152,7 @@ const s = {
   container: { minHeight: "100vh", background: PAGE_BG, padding: "20px 16px 60px", fontFamily: NUN, display: "flex", flexDirection: "column", alignItems: "center" },
   topBar: { width: "100%", maxWidth: 900, display: "flex", justifyContent: "space-between", marginBottom: 8 },
   navBtn: { fontFamily: NUN, fontWeight: 800, fontSize: 15, color: "#fff", background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" },
-  heading: { fontFamily: FRED, fontSize: 34, fontWeight: 700, color: "#fff", margin: "10px 0 2px", textAlign: "center" },
+  heading: { fontFamily: FRED, fontSize: "clamp(22px, 5.5vw, 34px)", fontWeight: 700, color: "#fff", margin: "10px 0 2px", textAlign: "center" },
   tagline: { color: "#bdb6d8", fontSize: 15, margin: "0 0 18px", textAlign: "center", maxWidth: 560 },
   tabRow: { display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", justifyContent: "center" },
   tab: { fontFamily: FRED, fontWeight: 600, fontSize: 17, color: "#fff", border: "none", borderRadius: 999, padding: "10px 26px", cursor: "pointer" },

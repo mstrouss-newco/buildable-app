@@ -65,3 +65,17 @@ input::placeholder, textarea::placeholder {
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* ---- Phones (portrait) ----------------------------------------------------
+   The app's screens are sized for tablet/desktop. On a narrow phone they feel
+   oversized and can push content past the screen edge. Two safeguards:
+   1) never allow sideways scrolling, and clamp media to the screen width;
+   2) gently scale the whole app down on small screens so everything fits and
+      feels right (tuneable; only applies to phone widths). */
+html, body { max-width: 100%; overflow-x: hidden; }
+#root { overflow-x: hidden; }
+#root img, #root svg, #root canvas, #root video { max-width: 100%; }
+
+/* NOTE: we intentionally do NOT zoom #root — the games run in iframes inside it,
+   and zooming would shrink them too. Phone sizing is handled per-screen with
+   fluid clamp() font sizes and padding instead. */

@@ -1304,7 +1304,7 @@ const styles = {
   },
   heading: {
     fontFamily: FRED,
-    fontSize: "44px",
+    fontSize: "clamp(26px, 7vw, 44px)",
     fontWeight: "700",
     color: "#fff",
     textAlign: "center",
@@ -1329,7 +1329,7 @@ const styles = {
     fontWeight: "700",
   },
   gameIcon: {
-    fontSize: "64px",
+    fontSize: "clamp(32px, 9vw, 64px)",
     textAlign: "center",
     marginBottom: "6px",
     filter: "drop-shadow(0 8px 22px rgba(155,126,221,0.5))",

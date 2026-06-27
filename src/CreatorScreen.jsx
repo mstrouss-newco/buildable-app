@@ -348,7 +348,7 @@ function ThemeCard({ theme, selected, onClick }) {
 
 const styles = {
   container: { maxWidth: "1100px", margin: "0 auto", padding: "10px 0 30px", fontFamily: NUN, color: "#fff" },
-  heading: { fontFamily: FRED, fontSize: "40px", fontWeight: "700", textAlign: "center", marginBottom: "8px", color: "#fff", textShadow: "0 0 30px rgba(155,126,221,0.5)" },
+  heading: { fontFamily: FRED, fontSize: "clamp(24px, 6.5vw, 40px)", fontWeight: "700", textAlign: "center", marginBottom: "8px", color: "#fff", textShadow: "0 0 30px rgba(155,126,221,0.5)" },
   subtext: { fontSize: "18px", textAlign: "center", color: "#b8b3d0", marginBottom: "30px", fontWeight: "600" },
   contentArea: { display: "flex", gap: "26px", marginBottom: "26px", flexWrap: "wrap" },
   inputSection: { flex: "1 1 320px", display: "flex", flexDirection: "column", gap: "18px" },
@@ -380,7 +380,7 @@ const styles = {
   regenerateButton: { padding: "11px 18px", background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", fontSize: "14px", fontWeight: "700", borderRadius: "12px", cursor: "pointer", fontFamily: NUN },
   previewImage: { width: "100%", borderRadius: "18px", background: "rgba(0,0,0,0.3)", objectFit: "cover", border: "1px solid rgba(155,126,221,0.25)" },
   placeholderBox: { width: "100%", aspectRatio: "1", background: "rgba(255,255,255,0.04)", borderRadius: "18px", display: "flex", alignItems: "center", justifyContent: "center", border: "2px dashed rgba(155,126,221,0.35)" },
-  placeholderText: { fontSize: "60px", color: "rgba(155,126,221,0.5)", margin: 0 },
+  placeholderText: { fontSize: "clamp(30px, 8.5vw, 60px)", color: "rgba(155,126,221,0.5)", margin: 0 },
   error: { color: "#ff9a9a", fontSize: "14px", marginTop: "10px", padding: "12px", background: "rgba(214,90,123,0.12)", border: "1px solid rgba(214,90,123,0.3)", borderRadius: "12px" }
 };
 

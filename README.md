@@ -1773,3 +1773,14 @@ the inflated `innerHeight`) and re-fits on `orientationchange`. play.html's bott
 controls are lifted by `env(safe-area-inset-bottom)`.
 
 No gameplay/logic changes. Build verified (`npm run build`); all game scripts parse.
+
+## iPhone (portrait): less oversized, no sideways scroll — June 26 2026
+
+First responsive pass for small phones (reported: things too big, content runs off the
+sides). `index.css`: `overflow-x:hidden` + `max-width:100%` on html/body/#root and
+`max-width:100%` on media so nothing can force a sideways scroll. Oversized headings/logos
+across the app (BuildableKids, CreatorScreen, MyStuff, StoryMaker, TopBoard, GrownUpScreen,
+MusicMaker) switched from fixed 30–64px to `clamp(...vw...)` so they shrink on phones and
+stay full-size on desktop. We deliberately do NOT zoom #root because the games run in
+iframes inside it (zoom would shrink the games). Games' own phone polish is a follow-up
+pending on-device feedback. Build verified.

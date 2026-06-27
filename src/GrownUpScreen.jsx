@@ -890,7 +890,7 @@ const S = {
   kidAvatar: {
     width: 72, height: 72, borderRadius: "50%", display: "flex",
     alignItems: "center", justifyContent: "center", fontFamily: FRED,
-    fontSize: 30, fontWeight: 600, color: "#fff",
+    fontSize: "clamp(20px, 5vw, 30px)", fontWeight: 600, color: "#fff",
     boxShadow: "0 8px 18px rgba(0,0,0,0.4)",
   },
   kidName: { fontSize: 14, fontWeight: 700, maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
