@@ -204,6 +204,14 @@
       "dest": "/startscreen-demo.html"
     },
     {
+      "src": "/soundboard.html",
+      "dest": "/soundboard.html"
+    },
+    {
+      "src": "/sounds",
+      "dest": "/soundboard.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

@@ -52,6 +52,26 @@ const SOUNDS = {
   bell:      "Short gentle bright bell ding, single hit, no music, no voices",
   rustle:    "Short soft rustle of leaves and bushes moving, single hit, no music, no voices",
   sparkle:   "Short delicate fairy sparkle shimmer, twinkling, single hit, no music, no voices",
+
+  // ---- Sound Machine: silly kid-fun one-shots (public/soundboard.html) ----
+  whoopee:     "Short funny wet whoopee cushion raspberry toot, comedic cartoon, single hit, not gross, no music, no voices",
+  boom:        "Short cartoon comic kaboom explosion, big silly boom, playful not scary, single hit, no music, no voices",
+  boing:       "Short bouncy cartoon spring boing, comedic sproing, single hit, no music, no voices",
+  burp:        "Short funny little cartoon burp, silly and goofy, single hit, not gross, no music, no voices",
+  honk:        "Short silly clown bicycle horn honk honk, comedic, single hit, no music, no voices",
+  tada:        "Short cheerful ta-da success fanfare sting, happy reveal, single hit, no voices",
+  laser:       "Short zippy sci-fi laser pew zap, playful cartoon, single hit, no music, no voices",
+  ding:        "Short bright cheerful correct-answer ding ting, happy, single hit, no music, no voices",
+  buzzer:      "Short funny wrong-answer game-show buzzer buzz, comedic, single hit, no music, no voices",
+  sadtrombone: "Short funny sad trombone womp womp waaah, comedic gentle fail, single hit, no music, no voices",
+  squeak:      "Short cute rubber duck toy squeak, single hit, no music, no voices",
+  airhorn:     "Short fun party air horn blast, celebratory, single hit, no music, no voices",
+  bonk:        "Short comedic cartoon bonk thwack, silly soft impact, single hit, no music, no voices",
+  slidewhistle:"Short comedic slide whistle swooping up, silly, single hit, no music, no voices",
+  meow:        "Short cute kitten meow, friendly, single hit, no music, no voices",
+  woof:        "Short friendly small happy dog woof, single hit, no music, no voices",
+  quack:       "Short silly cartoon duck quack, single hit, no music, no voices",
+  cheer:       "Short happy little group of kids cheering yay and clapping, celebratory, single hit, no music",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -61,6 +81,9 @@ const DURATIONS = {
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
   tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
+  whoopee:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
+  buzzer:0.7, sadtrombone:1.4, squeak:0.4, airhorn:0.9, bonk:0.4, slidewhistle:0.7,
+  meow:0.7, woof:0.5, quack:0.5, cheer:1.4,
 };
 
 async function cacheGet(key){if(!SUPABASE_URL||!SUPABASE_SERVICE_KEY)return null;try{const r=await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}&select=audio_b64&limit=1`,{headers:{apikey:SUPABASE_SERVICE_KEY,Authorization:`Bearer ${SUPABASE_SERVICE_KEY}`}});if(!r.ok)return null;const rows=await r.json();return Array.isArray(rows)&&rows[0]?rows[0].audio_b64:null;}catch{return null;}}

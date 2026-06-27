@@ -30,6 +30,11 @@ const SFX_THEME = {
   door: "castle", knock: "castle", bell: "castle", thunder: "storm",
   firewhoosh: "forest", rustle: "forest", splash: "ocean",
   magic: "magic", sparkle: "magic",
+  // Sound Machine silly one-shots (theme "fun")
+  whoopee: "fun", boom: "fun", boing: "fun", burp: "fun", honk: "fun",
+  tada: "fun", laser: "fun", ding: "fun", buzzer: "fun", sadtrombone: "fun",
+  squeak: "fun", airhorn: "fun", bonk: "fun", slidewhistle: "fun",
+  meow: "fun", woof: "fun", quack: "fun", cheer: "fun",
 };
 
 const norm = (t) => String(t || "").trim().toLowerCase();

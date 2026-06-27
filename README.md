@@ -648,6 +648,26 @@ near-empty in this env (real art lives as files/caches now surfaced via reads).
 
 ---
 
+## Session log — 2026-06-27h (Sound Machine — silly SFX soundboard for kids)
+
+New kid soundboard at `public/soundboard.html` (route `/soundboard.html` + `/sounds`):
+a colorful, no-emoji grid of big tappable pads that play short ElevenLabs one-shots
+— whoopee cushion, explosion, boing, burp, honk, ta-da, laser, ding, buzzer, sad
+trombone, squeak, air horn, bonk, slide whistle, meow, woof, quack, cheer. Each pad
+plays `/api/sfx?s=<key>` (generated-once + cached, audio/mpeg, immutable); taps clone
+the cached clip so they overlap for spam-friendly fun. Mute is remembered in
+`localStorage` (shared `bk_muted` key); first tap satisfies iOS audio-gesture.
+
+Per BUILDING-A-GAME.md (CREATE bespoke sounds for a new type, never synth): added the
+18 fun prompts + durations to `api/sfx.js` `SOUNDS`/`DURATIONS`, and tagged them
+`theme:"fun"` in `/api/list-audio` so every other game can pull them. Surfaced in the
+app two ways (src/BuildableKids.jsx): a "Sound Machine" tile on the Home "What do you
+want to make?" grid AND in the Games picker, each opening a full-screen iframe
+(`SoundboardScreen`). `vite build` passes; "make your own sound" deferred to a later
+session.
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
