@@ -219,6 +219,51 @@ function build(q) {
       transparent: false, quality: "medium",
     };
   }
+  if (kind === "town") {
+    // Family Town (original board game): a board scene, a start-screen hero, 4 cute
+    // animal tokens, and a charming icon per shop / corner. id picks which.
+    const id = (q.id || "").toString();
+    const TOWN_ICON_STYLE = "Bright bold glossy 3D cartoon app-icon style, a single cute subject centered and filling the frame, vibrant saturated candy colors, soft studio lighting, thick clean rounded shapes, playful and inviting, child-friendly ages 4-8, no text, no words, no letters, no UI, transparent background";
+    const TOKEN_STYLE = "Cute glossy 3D cartoon board-game token mascot, a single adorable character centered and filling the frame, big sparkly friendly eyes, sitting pose, vibrant colors, soft studio lighting, child-friendly ages 4-8, no text, no words, no letters, transparent background";
+    if (id === "board") {
+      const BOARD_STYLE = "A charming whimsical storybook aerial bird's-eye view of a cozy little town, soft painterly children's-book illustration with a glossy polished finish, warm sunny lighting, lots of soft inviting detail, no text, no words, no letters, no UI, child-friendly ages 4-8";
+      return { descriptor: "town|board", prompt: `A cozy colorful little town called Family Town seen from above, with tiny shops, an ice-cream cart, a park with a picnic blanket, a sparkling wishing fountain, a little train and winding paths between them. ${BOARD_STYLE}`, transparent: false, quality: "medium" };
+    }
+    if (id === "hero") {
+      return { descriptor: "town|hero", prompt: `Four cute animal friends — a purple kitten, an orange fox, a green frog and a blue bunny — cheering happily together around a colorful board game with big dice and shiny gold coins. ${GAME_STYLE}`, transparent: false, quality: "medium" };
+    }
+    const TOKENS = {
+      token_purple: "an adorable purple kitten",
+      token_coral:  "an adorable coral-orange fox",
+      token_mint:   "an adorable mint-green frog",
+      token_sky:    "an adorable sky-blue bunny",
+    };
+    if (TOKENS[id]) return { descriptor: `town|${id}`, prompt: `${TOKENS[id]}. ${TOKEN_STYLE}`, transparent: true, quality: "medium" };
+    const SPOTS = {
+      spot_lemonade:  "a cute lemonade stand with a pitcher of lemonade and a striped awning",
+      spot_toycart:   "a little wooden toy cart full of colorful toys and balloons",
+      spot_petparade: "a happy puppy and kitten holding a little parade flag",
+      spot_icecream:  "a colorful ice-cream cart with swirly ice-cream cones",
+      spot_bakery:    "a cozy bakery shopfront with cupcakes and a pretzel",
+      spot_bookshop:  "a neat stack of colorful books with a little shop sign",
+      spot_musichall: "a cheerful little concert hall with music notes and a star",
+      spot_artstudio: "an artist's easel with a colorful painting and a paint palette",
+      spot_garden:    "a sunny garden patch with bright flowers and a watering can",
+      spot_pool:      "a sparkling blue swimming pool with a beach ball and a float ring",
+      spot_cinema:    "a movie-theater marquee with a popcorn box and a film reel",
+      spot_arcade:    "a colorful arcade machine with a joystick and a glowing screen",
+      spot_firestation:"a cute little red fire station with a tiny fire truck",
+      spot_library:   "a grand little library building with books and columns",
+      spot_sweetshop: "a candy sweet-shop with lollipops and gumdrops in glass jars",
+      spot_trainstop: "a charming little train station with a colorful steam train",
+      spot_start:     "a bright cheerful START banner with an arrow and confetti",
+      spot_park:      "a sunny picnic park with a checkered blanket, a basket and a tree",
+      spot_treat:     "a happy treat shop with a wrapped gift box and balloons",
+      spot_fountain:  "a pretty wishing fountain with sparkling water and gold coins",
+    };
+    if (SPOTS[id]) return { descriptor: `town|${id}`, prompt: `${SPOTS[id]}. ${TOWN_ICON_STYLE}`, transparent: true, quality: "medium" };
+    return null;
+  }
   return null;
 }
 

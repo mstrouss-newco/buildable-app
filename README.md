@@ -81,7 +81,7 @@ ORIGINAL board game (our own town, spaces, art, and name; never the Monopoly bra
 roll two dice, loop a 24-space board, collect/spend simple round-number COINS, buy friendly
 spots, and draw a fully moderated kid-safe "Surprise" deck (24 gentle cards). SOFT design:
 coins never drop below 0, no knockouts, everyone finishes; the "winner" is most coins + spots.
-Game length is customizable (Short/Medium/Long = 2/3/4 laps).
+Game length is customizable (Short/Medium/Long = 2/3/4 laps). **Pricing plays like Monopoly:** 16 spots in 8 color groups of 2, a price ladder (6→20 coins), rent that rises with price, and owning a full color set DOUBLES the fee (start 30 coins, pass-Start +20). **Real AI art** (`kind=town` in `api/images.js`): a storybook board scene, a hero, 4 animal tokens, and an icon per shop/corner — all with drawn fallbacks. Pre-warm `/api/images?kind=town&id=board|hero|token_*|spot_*`.
 
 - **Three ways to play, one network-agnostic engine:** solo vs a friendly bot, same-device
   pass-and-play (2-4 seats), and cross-device **family** play.

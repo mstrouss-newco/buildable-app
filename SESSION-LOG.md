@@ -1,5 +1,24 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Family Town: AI art + Monopoly-style pricing (branch claude/games-family-town)
+- **Real AI art** via a new `kind=town` in `api/images.js` (generate-once-cache, `<img>`/drawn
+  fallbacks so a miss never breaks play): a storybook **board scene** painted behind the center
+  panel, a **start-screen hero**, four cute **animal tokens** (purple kitten / coral fox / mint
+  frog / sky bunny) drawn as the moving pieces, and a charming **icon per shop + corner** (20).
+  Engine preloads them and degrades to drawn shapes if absent.
+- **Pricing now plays like Monopoly:** 16 spots are 8 **color groups** of 2, with a price LADDER
+  (6→8→10→12→14→16→18→20 coins) and rent that rises with price; owning **both spots in a group
+  (a "set") DOUBLES the visit fee** — shown by a star on the owned tiles. Start bumped to 30
+  coins, pass-Start to 20 (GO-style). Bots now grab the second spot of a group to complete a set.
+  Each property cell shows its Monopoly-style color band + price tag.
+- **Soft design kept:** coins never below 0, no knockouts, everyone finishes; winner = most
+  coins + spots. `qa-family-town.mjs` re-verified: 2/3/4 players × Short/Med/Long all finish,
+  no debt, equal turns, all seats can win; config check now asserts 8 groups + a price ladder.
+  `npm run build` clean. `START_COINS` synced to 30 in `src/lib/townMatches.js`.
+- **Owner action:** the town art auto-generates + caches on first view; to pre-warm, visit
+  `/api/images?kind=town&id=board` (and `hero`, `token_purple|coral|mint|sky`, and each
+  `spot_*` id) once after deploy. Still on branch `claude/games-family-town` — not on `main`.
+
 ## 2026-06-27 — Family Town: original 3-4 player Monopoly-STYLE board game (branch claude/games-family-town)
 - **New Track B engine `public/family-town.html`** — an ORIGINAL board game (our own town,
   spaces, art, name — never the Monopoly brand). 3-4 players roll two dice, hop around a

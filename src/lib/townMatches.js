@@ -46,7 +46,7 @@ export function myParentId() {
 
 // The four seat colors, matching the engine (public/family-town.html SEAT_COLORS).
 export const SEAT_COLORS = ["purple", "coral", "mint", "sky"];
-export const START_COINS = 25;
+export const START_COINS = 30;
 
 // Build the initial whole-game state. MUST match the engine's newGame() shape so
 // the engine can render a row created here. `seats` = [{ kidId, name }] in seat order.

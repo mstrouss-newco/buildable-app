@@ -45,9 +45,12 @@ console.log('--- coins stay >= 0 every turn (soft-loss, deep check) ---');
   for(let s=1;s<=30;s++){ const r=G.sim({players:4,laps:4,seed:s}); if(r.minCoins<0){ bad=true; seen.push(s);} }
   if(bad)ok=false; console.log(`${bad?'FAIL':'PASS'}  minCoins>=0 across 30 long games ${bad?'(neg at seeds '+seen.join(',')+')':''}`); }
 console.log('--- config sanity ---');
-{ const c=G._cfg(); const props=c.board.filter(b=>b.type==='prop').length, sur=c.board.filter(b=>b.type==='surprise').length;
-  const good = c.board.length===24 && props>=12 && sur>=3 && c.deck.length>=20;
-  if(!good)ok=false; console.log(`${good?'PASS':'FAIL'}  spaces=${c.board.length} props=${props} surprises=${sur} cards=${c.deck.length}`); }
+{ const c=G._cfg(); const props=c.board.filter(b=>b.type==='prop'); const sur=c.board.filter(b=>b.type==='surprise').length;
+  const groups=new Set(props.map(p=>p.group)); const costs=[...new Set(props.map(p=>p.cost))].sort((a,b)=>a-b);
+  const everyPropHasIconAndGroup = props.every(p=>p.icon && p.group);
+  const laddered = costs.length>=6 && costs[0]<costs[costs.length-1];
+  const good = c.board.length===24 && props.length===16 && sur>=3 && c.deck.length>=20 && groups.size===8 && laddered && everyPropHasIconAndGroup;
+  if(!good)ok=false; console.log(`${good?'PASS':'FAIL'}  spaces=${c.board.length} props=${props.length} groups=${groups.size} costs=[${costs.join(',')}] surprises=${sur} cards=${c.deck.length} iconsOK=${everyPropHasIconAndGroup}`); }
 console.log('--- render smoke (stubbed canvas) ---');
 { G.sim({players:3,laps:2,seed:5}); const d=G._draw(); console.log('draw():',d); if(d!=='ok')ok=false; }
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);

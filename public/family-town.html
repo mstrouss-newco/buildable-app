@@ -98,6 +98,35 @@
 var BR = window.BuildableRenders, BA = window.BuildableAudio,
     BM = window.BuildableMechanics, BS = window.BuildableStartScreen;
 
+/* ---- AI art library: generate-once-cache PNGs from /api/images?kind=town. Every
+   draw has a drawn/colored fallback, so a missing or slow image never breaks play. ---- */
+var IMG = {}, IMG_OK = {};
+function artURL(id){ return "/api/images?kind=town&id=" + encodeURIComponent(id); }
+function loadArt(id){
+  if(IMG[id]) return IMG[id];
+  try{ var im = new Image(); im.onload = function(){ IMG_OK[id] = true; }; im.src = artURL(id); IMG[id] = im; }
+  catch(e){ IMG[id] = null; }
+  return IMG[id];
+}
+function preloadArt(){
+  try{
+    ["board","token_purple","token_coral","token_mint","token_sky"].forEach(loadArt);
+    for(var i=0;i<BOARD.length;i++){ if(BOARD[i].icon) loadArt(BOARD[i].icon); }
+  }catch(e){}
+}
+function imgReady(id){ var im=IMG[id]; return im && (im.naturalWidth||im.width); }
+function imgCover(im, x, y, w, h, r){
+  if(!im || !(im.naturalWidth||im.width)) return false;
+  ctx.save(); BR.rrect(ctx,x,y,w,h,r||0); ctx.clip();
+  var iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height, sc=Math.max(w/iw,h/ih), dw=iw*sc, dh=ih*sc;
+  ctx.drawImage(im, x+(w-dw)/2, y+(h-dh)/2, dw, dh); ctx.restore(); return true;
+}
+function imgContain(im, x, y, w, h){
+  if(!im || !(im.naturalWidth||im.width)) return false;
+  var iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height, sc=Math.min(w/iw,h/ih), dw=iw*sc, dh=ih*sc;
+  ctx.drawImage(im, x+(w-dw)/2, y+(h-dh)/2, dw, dh); return true;
+}
+
 /* ---- seat colors (friendly, brand) ---- */
 var SEAT_COLORS = [
   { id:"purple", name:"Purple", c:"#7C5CFC", c2:"#A78BFF" },
@@ -114,31 +143,44 @@ var LENGTHS = [
 ];
 
 /* ---- money model: simple round-number COINS (gentle) ---- */
-var START_COINS = 25;      // everyone starts with 25 coins
-var PASS_START  = 10;      // collect 10 every time you pass Start
-var TREAT_BONUS = 5;       // Treat Shop corner gives a small treat
+var START_COINS = 30;      // everyone starts with 30 coins (Monopoly-style bank)
+var PASS_START  = 20;      // collect 20 every time you pass Start (like GO)
+var TREAT_BONUS = 10;      // Treat Shop corner gives a small bonus
 
 /* ---- the board: a loop of 24 spaces (original town, NOT Monopoly) ---- */
-// type: start | park | treat | fountain (corners) | prop (buyable) | surprise
-// prop tiers: A cost5/fee2, B cost10/fee3, C cost15/fee4
-function P(name,tier){ var t={A:[5,2],B:[10,3],C:[15,4]}[tier]; return {type:"prop",name:name,tier:tier,cost:t[0],fee:t[1]}; }
+// Monopoly-style COLOR GROUPS: 8 groups of 2 spots. Spots get pricier around the
+// board, the visit fee (rent) rises with the price, and owning BOTH spots in a
+// group (a "set") DOUBLES the fee — the core Monopoly pricing idea, kid-simple.
+var GROUPS = [
+  { id:"g1", color:"#9C6B43", cost:6,  rent:1 },   // cheapest
+  { id:"g2", color:"#7FD3EC", cost:8,  rent:1 },
+  { id:"g3", color:"#E0529C", cost:10, rent:2 },
+  { id:"g4", color:"#F0922A", cost:12, rent:2 },
+  { id:"g5", color:"#E5484D", cost:14, rent:3 },
+  { id:"g6", color:"#FFCE3A", cost:16, rent:4 },
+  { id:"g7", color:"#33B86B", cost:18, rent:4 },
+  { id:"g8", color:"#3B73D6", cost:20, rent:5 },   // most expensive
+];
+function GP(id){ for(var i=0;i<GROUPS.length;i++) if(GROUPS[i].id===id) return GROUPS[i]; return GROUPS[0]; }
+// prop: name + town-art icon id + color group; cost & base fee come from the group.
+function P(name, icon, gid){ var g=GP(gid); return { type:"prop", name:name, icon:icon, group:gid, cost:g.cost, fee:g.rent }; }
 var BOARD = [
-  {type:"start", name:"Start"},
-  P("Lemonade Stand","A"), P("Toy Cart","A"),
+  {type:"start", name:"Start", icon:"spot_start"},
+  P("Lemonade Stand","spot_lemonade","g1"), P("Toy Cart","spot_toycart","g1"),
   {type:"surprise", name:"Surprise"},
-  P("Pet Parade","B"), P("Ice Cream Stand","B"),
-  {type:"park", name:"Picnic Park"},
-  P("Bakery","A"), P("Bookshop","B"),
+  P("Pet Parade","spot_petparade","g2"), P("Ice Cream Stand","spot_icecream","g2"),
+  {type:"park", name:"Picnic Park", icon:"spot_park"},
+  P("Bakery","spot_bakery","g3"), P("Bookshop","spot_bookshop","g3"),
   {type:"surprise", name:"Surprise"},
-  P("Music Hall","C"), P("Art Studio","C"),
-  {type:"treat", name:"Treat Shop"},
-  P("Garden Patch","A"), P("Swimming Pool","B"),
+  P("Music Hall","spot_musichall","g4"), P("Art Studio","spot_artstudio","g4"),
+  {type:"treat", name:"Treat Shop", icon:"spot_treat"},
+  P("Garden Patch","spot_garden","g5"), P("Swimming Pool","spot_pool","g5"),
   {type:"surprise", name:"Surprise"},
-  P("Cinema","C"), P("Arcade","C"),
-  {type:"fountain", name:"Wishing Fountain"},
-  P("Fire Station","B"), P("Library","B"),
+  P("Cinema","spot_cinema","g6"), P("Arcade","spot_arcade","g6"),
+  {type:"fountain", name:"Wishing Fountain", icon:"spot_fountain"},
+  P("Fire Station","spot_firestation","g7"), P("Library","spot_library","g7"),
   {type:"surprise", name:"Surprise"},
-  P("Sweet Shop","C"), P("Train Stop","C"),
+  P("Sweet Shop","spot_sweetshop","g8"), P("Train Stop","spot_trainstop","g8"),
 ];
 var NSPACES = BOARD.length; // 24
 
@@ -209,6 +251,13 @@ function netWorth(st, seat){
 function pay(st, seat, delta){ // never below 0 — gentle, no debt, no knockout
   var s = st.seats[seat]; s.coins = Math.max(0, s.coins + delta); return s.coins;
 }
+// Monopoly "set" rule: does `owner` hold BOTH spots in color group `gid`?
+function ownsSet(st, owner, gid){
+  if(!gid) return false; var need=0, have=0;
+  for(var i=0;i<CONFIG.board.length;i++){ var b=CONFIG.board[i];
+    if(b.type==="prop" && b.group===gid){ need++; if(st.owners[i]===owner) have++; } }
+  return need>0 && have===need;
+}
 function rollDice(){ return [1+Math.floor(rng()*6), 1+Math.floor(rng()*6)]; }
 
 function moveSeat(st, seat, steps){
@@ -235,8 +284,9 @@ function resolveLanding(st, seat){
     var owner = st.owners[idx];
     if(owner === undefined){ out.buy = idx; }                 // free spot — offer to buy
     else if(owner === seat){ out.lines.push("Your own spot — relax!"); }
-    else { var f = sp.fee; pay(st, seat, -f); pay(st, owner, +f); // gentle visit fee
-           out.lines.push("Visiting "+st.seats[owner].name+"'s "+sp.name+". Pay "+f+"."); }
+    else { var f = sp.fee; var set = ownsSet(st, owner, sp.group); if(set) f *= 2; // own the pair -> double fee
+           pay(st, seat, -f); pay(st, owner, +f);
+           out.lines.push("Visiting "+st.seats[owner].name+"'s "+sp.name+(set?" (full set!)":"")+". Pay "+f+"."); }
   } else if(sp.type==="treat"){ pay(st, seat, TREAT_BONUS); out.lines.push("Treat Shop! +"+TREAT_BONUS+" coins."); }
   else if(sp.type==="park"){ out.lines.push("Picnic Park — take a rest."); }
   else if(sp.type==="start"){ out.lines.push("Home at Start!"); }
@@ -260,7 +310,13 @@ function applyBuy(st, seat, idx, yes){
 // Bot buys if it can afford and keeps a small safety reserve.
 function botWantsBuy(st, seat, idx){
   var sp = CONFIG.board[idx], s = st.seats[seat];
-  return s.coins - sp.cost >= 4; // keep >=4 coins after buying
+  if(s.coins < sp.cost) return false;
+  // owns the OTHER spot in this group? grab it to complete the set (double rent).
+  var ownsOther = false;
+  for(var i=0;i<CONFIG.board.length;i++){ var b=CONFIG.board[i];
+    if(b.type==="prop" && b.group===sp.group && i!==idx && st.owners[i]===seat) ownsOther=true; }
+  if(ownsOther) return s.coins - sp.cost >= 0;
+  return s.coins - sp.cost >= 4;   // otherwise keep a small reserve
 }
 function advanceTurn(st){
   st.turn = (st.turn + 1) % st.seats.length;
@@ -326,12 +382,12 @@ function ringCells(){ var N=7, a=[];
 var CELLS = ringCells();
 function cellXY(idx){ var p=CELLS[idx]; return { x: ox + p[0]*cs, y: oy + p[1]*cs }; }
 function spaceColor(sp){
-  if(sp.type==="start")    return "#FFD166";
-  if(sp.type==="treat")    return "#FF8FB1";
-  if(sp.type==="park")     return "#7DE9CF";
-  if(sp.type==="fountain") return "#9AD9FB";
-  if(sp.type==="surprise") return "#C9A7FF";
-  return { A:"#3a3556", B:"#324a6b", C:"#5b3f6b" }[sp.tier] || "#33304d";
+  if(sp.type==="start")    return "#39331e";
+  if(sp.type==="treat")    return "#3a2230";
+  if(sp.type==="park")     return "#1f3a31";
+  if(sp.type==="fountain") return "#1f2c3a";
+  if(sp.type==="surprise") return "#2e2742";
+  return "#262238";
 }
 var fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" };
 var diceAnim = 0, diceFaces = [1,1];
@@ -344,19 +400,7 @@ function draw(){
   ctx.fillStyle=g; ctx.fillRect(0,0,VW,VH);
   var so = BM ? BM.shakeOffset(fx) : {x:0,y:0}; ctx.save(); ctx.translate(so.x,so.y);
   // board spaces
-  for(var i=0;i<NSPACES;i++){
-    var sp = CONFIG.board[i], xy = cellXY(i), pad=4, owner = S && S.owners[i];
-    BR.rrect(ctx, xy.x+pad, xy.y+pad, cs-pad*2, cs-pad*2, 10);
-    ctx.fillStyle = spaceColor(sp); ctx.fill();
-    if(owner !== undefined && owner !== null){ // owned: colored top band
-      var oc = SEAT_COLORS[owner]; ctx.fillStyle = oc.c; BR.rrect(ctx, xy.x+pad, xy.y+pad, cs-pad*2, 9, 5); ctx.fill();
-    }
-    // label
-    ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.textAlign="center";
-    ctx.font = "700 "+Math.max(9, cs*0.115|0)+"px Nunito, sans-serif";
-    wrapText(sp.name, xy.x+cs/2, xy.y+cs*0.42, cs-12, cs*0.16);
-    if(sp.cost){ ctx.fillStyle="rgba(255,255,255,.72)"; ctx.font="800 "+Math.max(9,cs*0.12|0)+"px Nunito"; ctx.fillText(sp.cost+"c", xy.x+cs/2, xy.y+cs-9); }
-  }
+  for(var i=0;i<NSPACES;i++) drawSpace(i);
   // center panel
   drawCenter();
   // tokens (offset when sharing a space)
@@ -367,12 +411,36 @@ function draw(){
       here[key]=(here[key]||0)+1; var n=here[key]-1;
       var off = [[0,0],[12,0],[0,12],[12,12]][s] ;
       var c = SEAT_COLORS[s];
-      drawToken(pos.x+cs/2-6+off[0], pos.y+cs/2-6+off[1], c, S.turn===s);
+      drawToken(pos.x+cs/2-6+off[0], pos.y+cs/2-6+off[1], c, S.turn===s, c.id);
     }
   }
   if(BM){ BM.update(fx); BM.draw(ctx, fx); }
   ctx.restore();
   return "ok";
+}
+function drawSpace(i){
+  var sp=CONFIG.board[i], xy=cellXY(i), pad=4, x=xy.x+pad, y=xy.y+pad, w=cs-pad*2, h=cs-pad*2;
+  var owner = S ? S.owners[i] : undefined;
+  // base tile
+  BR.rrect(ctx,x,y,w,h,10); ctx.fillStyle = sp.type==="prop" ? "#262238" : spaceColor(sp); ctx.fill();
+  // Monopoly-style color band for properties
+  if(sp.type==="prop"){ ctx.fillStyle = GP(sp.group).color; BR.rrect(ctx,x,y,w,Math.max(8,h*0.22),7); ctx.fill();
+    ctx.fillStyle="#262238"; ctx.fillRect(x, y+h*0.20, w, 2); }
+  // icon art (AI), fall back to a drawn glyph for Surprise
+  var iconId = sp.icon || null, iy = sp.type==="prop" ? y+h*0.20 : y+h*0.06, ih2 = sp.type==="prop" ? h*0.52 : h*0.6;
+  if(iconId && imgReady(iconId)) imgContain(IMG[iconId], x+w*0.10, iy, w*0.80, ih2);
+  else if(sp.type==="surprise"){ ctx.fillStyle="#FFD166"; ctx.textAlign="center"; ctx.font="800 "+(h*0.42|0)+"px Fredoka,sans-serif"; ctx.fillText("?", x+w/2, y+h*0.66); }
+  else if(iconId){ /* corner with art still loading: subtle dot */ }
+  // name
+  ctx.fillStyle="rgba(255,255,255,.95)"; ctx.textAlign="center"; ctx.font="800 "+Math.max(8,w*0.135|0)+"px Nunito,sans-serif";
+  wrapText(sp.name, x+w/2, y+h*0.88, w-6, w*0.15);
+  // price tag (top-right)
+  if(sp.cost){ ctx.fillStyle="#1b1830"; BR.rrect(ctx, x+w-w*0.42, y+2, w*0.40, h*0.18, 5); ctx.fill();
+    ctx.fillStyle="#FFD166"; ctx.textAlign="center"; ctx.font="800 "+Math.max(8,w*0.13|0)+"px Nunito"; ctx.fillText(sp.cost+"c", x+w-w*0.22, y+h*0.16); }
+  // owner ring (+ star if full set)
+  if(owner!==undefined && owner!==null){ ctx.strokeStyle=SEAT_COLORS[owner].c; ctx.lineWidth=3.5; BR.rrect(ctx,x+1.7,y+1.7,w-3.4,h-3.4,9); ctx.stroke();
+    if(S && ownsSet(S, owner, sp.group)){ ctx.fillStyle=SEAT_COLORS[owner].c2; ctx.textAlign="center"; ctx.font="800 "+(w*0.16|0)+"px Nunito"; ctx.fillText("\u2605", x+w*0.16, y+h*0.92); } }
+  ctx.textAlign="center";
 }
 function wrapText(t, cx, cy, maxw, lh){
   var words=String(t).split(" "), line="", lines=[];
@@ -382,19 +450,24 @@ function wrapText(t, cx, cy, maxw, lh){
   var y = cy - (lines.length-1)*lh/2;
   for(var j=0;j<lines.length;j++){ ctx.fillText(lines[j], cx, y+j*lh); }
 }
-function drawToken(x,y,c,active){
+function drawToken(x,y,c,active,colorId){
+  var cx=x+6, cy=y+6, id = colorId ? ("token_"+colorId) : null;
+  if(active){ ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,active?16:13,0,7); ctx.fillStyle="rgba(255,255,255,.16)"; ctx.fill(); ctx.restore(); }
+  if(id && imgReady(id)){ var im=IMG[id], sz=active?30:26; ctx.save(); if(active){ ctx.shadowColor=c.c; ctx.shadowBlur=12; } ctx.drawImage(im, cx-sz/2, cy-sz/2, sz, sz); ctx.restore(); return; }
   ctx.save();
   if(active){ ctx.shadowColor=c.c; ctx.shadowBlur=14; }
-  ctx.beginPath(); ctx.arc(x+6,y+6,active?11:9,0,7); 
-  var g=ctx.createRadialGradient(x+3,y+3,1,x+6,y+6,12); g.addColorStop(0,c.c2); g.addColorStop(1,c.c);
+  ctx.beginPath(); ctx.arc(cx,cy,active?11:9,0,7);
+  var g=ctx.createRadialGradient(cx-3,cy-3,1,cx,cy,12); g.addColorStop(0,c.c2); g.addColorStop(1,c.c);
   ctx.fillStyle=g; ctx.fill(); ctx.lineWidth=2.5; ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.stroke();
   ctx.restore();
 }
 function drawCenter(){
   if(board < 1) return;
   var x = ox+cs+6, y = oy+cs+6, w = board-2*cs-12, h = board-2*cs-12;
-  BR.rrect(ctx, x, y, w, h, 22); ctx.fillStyle="rgba(20,18,38,.82)"; ctx.fill();
-  ctx.strokeStyle="rgba(255,255,255,.10)"; ctx.lineWidth=1.5; ctx.stroke();
+  if(imgReady("board")){ imgCover(IMG["board"], x, y, w, h, 22);
+    ctx.save(); BR.rrect(ctx,x,y,w,h,22); ctx.clip(); ctx.fillStyle="rgba(15,13,30,.66)"; ctx.fillRect(x,y,w,h); ctx.restore(); }
+  else { BR.rrect(ctx, x, y, w, h, 22); ctx.fillStyle="rgba(20,18,38,.82)"; ctx.fill(); }
+  ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.lineWidth=1.5; BR.rrect(ctx,x,y,w,h,22); ctx.stroke();
   ctx.textAlign="center";
   // title
   ctx.fillStyle="#fff"; ctx.font="700 "+Math.max(18, w*0.07|0)+"px Fredoka, sans-serif";
@@ -574,6 +647,7 @@ function mountStart(){
   BS.mount(host, {
     title:"Family Town", subtitle:"Roll, move around town, and collect the most coins!",
     coins: 0, sound: !(BA&&BA.muted),
+    hero: { name:"Family Town", img: artURL("hero"), progressText:"3-4 players \u00b7 buy spots, collect coins" },
     modes:["solo","two"], mode:setupMode,
     levels: LENGTHS.map(function(L,i){ return { n:i+1, name:L.name+" game", color:["#2DD4A7","#7C5CFC","#FF7A9A"][i], state:"ready", foot:L.hint }; }),
   }, {
@@ -652,7 +726,7 @@ function loop(){
 }
 function boot(){
   try{ var qs=new URLSearchParams(location.search); ONLINE = qs.get("online")==="1"; }catch(e){}
-  resize(); wire();
+  resize(); wire(); preloadArt();
   if(ONLINE){ showGameUI(); S=null; if(window.parent) window.parent.postMessage({type:"townReady"},"*"); }
   else mountStart();
   requestAnimationFrame(loop);
