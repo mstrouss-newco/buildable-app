@@ -697,6 +697,8 @@ want to make?" grid AND in the Games picker, each opening a full-screen iframe
 (`SoundboardScreen`). `vite build` passes; "make your own sound" deferred to a later
 session.
 
+**Live QA fixes:** ElevenLabs requires duration_seconds 0.5–30 (squeak/bonk were 0.4 → bumped); error responses now send `Cache-Control: no-store` and the soundboard requests `/api/sfx?s=<key>&v=1` so a poisoned error never sticks in the edge cache. All 18 pads verified returning audio/mpeg live.
+
 ---
 
 ## QA Session Log Ã¢ÂÂ June 7 2026
