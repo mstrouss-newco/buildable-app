@@ -26,6 +26,10 @@ const SFX_THEME = {
   water: "water", fire: "fire", waves: "ocean", forest: "forest",
   crickets: "forest", wind: "snow", jungle: "jungle", space: "space",
   candy: "candy", rain: "rain",
+  // story narrative one-shots
+  door: "castle", knock: "castle", bell: "castle", thunder: "storm",
+  firewhoosh: "forest", rustle: "forest", splash: "ocean",
+  magic: "magic", sparkle: "magic",
 };
 
 const norm = (t) => String(t || "").trim().toLowerCase();

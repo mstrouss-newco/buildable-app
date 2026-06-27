@@ -485,3 +485,5 @@ All committed to `main`; Vercel auto-deploys. Commits this session:
   terms. Search index is also stale right after commits; verify via raw@SHA instead.
 - Output filter blocks tool results derived from files containing URLs/keys — worked around
   by returning booleans/short identifiers and computing in-page.
+
+- 2026-06-27 — Stories: multi-voice narration (narrator + per-speaker character voices) + in-page dialogue (writer emits `lines` with who/say) + narrative SFX one-shots (door/knock/thunder/firewhoosh/splash/magic/pop/whoosh/footsteps/bell/rustle/sparkle in api/sfx.js, catalogued in /api/list-audio). Reader sequences line clips per voice + plays SFX cues; single-voice fallback kept.

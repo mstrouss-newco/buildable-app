@@ -25,6 +25,11 @@ function libImg(kind, slug, style, emo) {
   return "/api/story-library?img=" + kind + ":" + slug + "&style=" + (style || "watercolor") + (emo ? "&emo=" + emo : "");
 }
 function wordsOf(text) { return (text || "").trim().split(/\s+/).filter(Boolean); }
+// Voice palette (ElevenLabs pre-made voices). Speaker -> voice is assigned per
+// story (not bound to a character forever).
+const NARRATOR_VOICE = "21m00Tcm4TlvDq8ikWAM"; // Rachel — warm narrator
+const VOICE_POOL = ["EXAVITQu4vr4xnSDxMaL", "MF3mGyEYCl7XYWbV9V6O", "ErXwobaYiN019PkySvjV", "TxGEqnHWrfWFTfGW9XjX"]; // Bella, Elli, Antoni, Josh
+function hashStr(t){ let h=0; t=String(t||""); for(let i=0;i<t.length;i++){ h=(h*31+t.charCodeAt(i))|0; } return Math.abs(h); }
 const WATER_WORLDS = new Set(["coral-reef", "desert-oasis"]);
 const WATER_FX = new Set(["water_shimmer", "gentle_waves"]);
 function wantsWater(pg){ return !!pg && (WATER_WORLDS.has(pg.world_slug) || WATER_FX.has(pg.effect)); }
@@ -39,6 +44,9 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const pages = (story && story.pages) || [];
   const style = (story && (story.style || story.art_style)) || "watercolor";
   const charSlug = (story && story.character_slug) || "bunny";
+  const _va = hashStr((story && story.character_slug) || "h") % VOICE_POOL.length;
+  const VOICE = { narrator: NARRATOR_VOICE, hero: VOICE_POOL[_va], friend: VOICE_POOL[(_va + 1) % VOICE_POOL.length], other: VOICE_POOL[(_va + 2) % VOICE_POOL.length] };
+  const voiceFor = (who) => VOICE[who] || NARRATOR_VOICE;
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);   // page-turn direction (1=forward, -1=back)
   const [cover, setCover] = useState(true);   // show the book cover first
@@ -50,6 +58,10 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const hlTimerRef = useRef(null);
   const ambienceRef = useRef(null);
   const waterAudioRef = useRef(null);
+  const sfxRef = useRef(null);
+  const lineCacheRef = useRef({});
+  const seqRef = useRef(0);
+  const [spokenLine, setSpokenLine] = useState(-1);
   const [soundOn, setSoundOn] = useState(true);
   const [sceneUrl, setSceneUrl] = useState({});   // pageIndex -> generated scene url
   const tokenRef = useRef((story && (story.scene_token || story.story_id)) || (Math.random().toString(36).slice(2,10) + Date.now().toString(36)));
@@ -106,7 +118,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
     return () => { cancelled = true; try { ambienceRef.current && ambienceRef.current.pause(); } catch {} };
   }, []);
 
-  useEffect(() => { stopAll(); setSpoken(-1); setPlaying(false); return () => stopAll(); }, [idx]);
+  useEffect(() => { seqRef.current++; stopAll(); setSpoken(-1); setSpokenLine(-1); setPlaying(false); return () => stopAll(); }, [idx]);
 
   // Ambient soundscape matched to the page's world/effect — forest birds, night
   // crickets, snowy wind, reef waves, fire crackle, jungle, space, candy, rain.
@@ -155,7 +167,8 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
     el.play().catch(() => { setPlaying(false); });
   }
 
-  async function narratePage() {
+  // ---- single-voice fallback (no dialog lines) ----
+  async function narratePageSingle() {
     setPlaying(true); setSpoken(-1);
     if (soundOn && ambienceRef.current && ambienceRef.current.src && ambienceRef.current.paused) ambienceRef.current.play().catch(() => {});
     let cached = narrCacheRef.current[idx];
@@ -170,7 +183,65 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
     if (cached && cached !== "none") playWithAudio(cached.audioUrl, cached.wordTimings);
     else readAloudBrowser();
   }
-  function toggleRead() { if (playing) { stopAll(); setPlaying(false); setSpoken(-1); } else { narratePage(); } }
+
+  // ---- one-shot sound effect ----
+  function playSfx(name) {
+    const el = sfxRef.current; if (!el || !soundOn) return;
+    try { el.src = "/api/sfx?s=" + encodeURIComponent(name); el.volume = 0.55; el.currentTime = 0; el.play().catch(() => {}); } catch {}
+  }
+
+  // ---- per-line voice clip (cached by voice+text) ----
+  async function fetchLineAudio(text, voiceId) {
+    const key = voiceId + "|" + text;
+    if (lineCacheRef.current[key] !== undefined) return lineCacheRef.current[key];
+    let res = "none";
+    try {
+      const r = await fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voiceId }) });
+      const j = await r.json();
+      if (j && j.configured && j.audioUrl) res = { audioUrl: j.audioUrl };
+    } catch {}
+    lineCacheRef.current[key] = res; return res;
+  }
+  function playClip(audioUrl) {
+    return new Promise((resolve) => {
+      const el = audioRef.current; if (!el) { resolve(); return; }
+      el.src = audioUrl; try { el.preservesPitch = true; } catch {} el.playbackRate = 0.96;
+      el.onended = () => resolve(); el.onerror = () => resolve();
+      el.play().catch(() => resolve());
+    });
+  }
+  function speakLine(text) {
+    return new Promise((resolve) => {
+      if (typeof window === "undefined" || !window.speechSynthesis) { resolve(); return; }
+      const u = new SpeechSynthesisUtterance(text); u.rate = 0.9; u.pitch = 1.05;
+      u.onend = () => resolve(); u.onerror = () => resolve();
+      window.speechSynthesis.speak(u);
+    });
+  }
+
+  // ---- multi-voice sequencer: play each line in its speaker's voice + sfx ----
+  async function playSequence(lns, sfx) {
+    const my = ++seqRef.current; setPlaying(true); setSpoken(-1);
+    if (soundOn && ambienceRef.current && ambienceRef.current.src && ambienceRef.current.paused) ambienceRef.current.play().catch(() => {});
+    (sfx || []).forEach((nm, i) => setTimeout(() => { if (seqRef.current === my) playSfx(nm); }, 250 + i * 800));
+    let nextP = fetchLineAudio(lns[0].say, voiceFor(lns[0].who));
+    for (let i = 0; i < lns.length; i++) {
+      if (seqRef.current !== my) return;
+      setSpokenLine(i);
+      const a = await nextP;
+      if (lns[i + 1]) nextP = fetchLineAudio(lns[i + 1].say, voiceFor(lns[i + 1].who));
+      if (seqRef.current !== my) return;
+      if (a && a !== "none" && a.audioUrl) await playClip(a.audioUrl);
+      else await speakLine(lns[i].say);
+    }
+    if (seqRef.current === my) { setSpokenLine(-1); setPlaying(false); }
+  }
+
+  function narratePage() {
+    const lns = Array.isArray(page.lines) && page.lines.length ? page.lines : null;
+    if (lns) playSequence(lns, page.sfx); else narratePageSingle();
+  }
+  function toggleRead() { if (playing) { seqRef.current++; stopAll(); setPlaying(false); setSpoken(-1); setSpokenLine(-1); } else { narratePage(); } }
 
   function repaint() {
     const pg = pages[idx]; if (!pg || !pg.text) return;
@@ -256,6 +327,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       </div>
       <audio ref={ambienceRef} style={{ display: "none" }} />
       <audio ref={waterAudioRef} style={{ display: "none" }} />
+      <audio ref={sfxRef} style={{ display: "none" }} />
 
       <div key={idx} style={{ width: "100%", maxWidth: 760, animation: (dir >= 0 ? "bk-turn-next" : "bk-turn-prev") + " 0.5s cubic-bezier(.2,.7,.3,1) both", transformOrigin: dir >= 0 ? "left center" : "right center" }}>
         {sceneUrl[idx]
@@ -266,9 +338,13 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">Repaint this page</button>
 
       <div style={s.textPanel}>
-        <p style={s.text}>
-          {words.map((w, i) => (<span key={i} style={{ ...(i === spoken ? s.wordOn : s.word) }}>{w} </span>))}
-        </p>
+        {Array.isArray(page.lines) && page.lines.length
+          ? page.lines.map((l, i) => (
+              <p key={i} style={{ ...s.line, ...(l.who !== "narrator" ? s.lineDialog : {}), ...(i === spokenLine ? s.lineOn : {}) }}>
+                {l.who === "hero" ? <b style={s.speaker}>{(story.character_name || "Hero") + ": "}</b> : l.who === "friend" ? <b style={s.speaker}>{(story.companion_name || "Friend") + ": "}</b> : null}
+                {l.say}
+              </p>))
+          : <p style={s.text}>{words.map((w, i) => (<span key={i} style={{ ...(i === spoken ? s.wordOn : s.word) }}>{w} </span>))}</p>}
       </div>
 
       <div style={s.controls}>
@@ -294,6 +370,10 @@ const s = {
   page: { width: "100%", maxWidth: 760, aspectRatio: "3 / 2", borderRadius: 24, border: "1px solid rgba(155,126,221,0.3)", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" },
   textPanel: { width: "100%", maxWidth: 760, marginTop: 14, padding: "16px 22px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(155,126,221,0.22)", borderRadius: 18, boxSizing: "border-box" },
   text: { fontFamily: FRED, fontSize: "clamp(17px, 2.6vw, 22px)", lineHeight: 1.55, margin: 0, color: "#fff", textAlign: "center" },
+  line: { fontFamily: FRED, fontSize: "clamp(16px, 2.5vw, 21px)", lineHeight: 1.5, margin: "4px 0", color: "#efeaff", padding: "3px 8px", borderRadius: 10, transition: "background .15s" },
+  lineDialog: { fontStyle: "italic", paddingLeft: 14 },
+  lineOn: { background: "rgba(255,224,138,0.16)", color: "#fff" },
+  speaker: { fontStyle: "normal", color: "#ffd98a" },
   word: { color: "#efeaff", transition: "color 0.1s, background 0.1s", borderRadius: 6, padding: "0 1px" },
   wordOn: { color: "#1a1330", background: "#ffe08a", borderRadius: 6, padding: "0 3px", boxShadow: "0 0 0 2px #ffe08a" },
   controls: { display: "flex", alignItems: "center", gap: 14, marginTop: 18 },
