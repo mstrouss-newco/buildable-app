@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Snakes &amp; Ladders — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#131229;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  #wrap{position:fixed;inset:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  .ov{position:absolute;inset:0;z-index:5}
+  #start{position:absolute;inset:0;z-index:6}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="start" class="ov"></div>
+</div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-turns.js"></script>
+<script>
+//  Buildable Snakes & Ladders — hand-authored Track B engine. 2-4 players, same-device.
+//  Roll the die, hop along the numbered track, climb ladders, slide down snakes — first to the
+//  top wins. PURE LUCK so the littlest kid can win. Shared libs: BR/BA/BM/BS + the BT turn shell.
+//  ALWAYS-WINNABLE: reach-OR-pass the final square to win (no exact-landing soft-lock), dice
+//  always move forward so the game always ends in a win. QA hook: window.BUILDABLE_GAME.
+const BR=(typeof window!=="undefined"&&window.BuildableRenders)||globalThis.BuildableRenders;
+const BA=(typeof window!=="undefined"&&window.BuildableAudio)||globalThis.BuildableAudio;
+const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||globalThis.BuildableMechanics;
+const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||globalThis.BuildableStartScreen;
+const BT=(typeof window!=="undefined"&&window.BuildableTurns)||globalThis.BuildableTurns;
+
+// ---------- DATA: themed boards (the "levels" in the BS picker) ----------
+// Each board: a 6x5 = 30-square track. ladders climb (from<to), snakes slide (from>to).
+// Heads/tails kept off the first & last squares so the board always progresses.
+const GAME_CONFIG=(typeof window!=="undefined"&&window.GAME_CONFIG)||{
+  title:"Snakes & Ladders",
+  cols:6, rows:5,
+  boards:[
+    { key:"jungle", name:"Jungle Climb", color:"#1f6f3a", cellA:"#2e8b4f", cellB:"#256e40",
+      ladders:[[3,11],[6,17],[9,21],[14,24]], snakes:[[16,5],[20,8],[27,12],[29,18]] },
+    { key:"space", name:"Space Slide", color:"#3a2f6e", cellA:"#4a3f86", cellB:"#352b63",
+      ladders:[[2,10],[7,19],[13,22],[15,26]], snakes:[[18,6],[23,11],[25,9],[28,16]] },
+    { key:"candy", name:"Candy Hills", color:"#9c2f6e", cellA:"#c44f8e", cellB:"#9c2f6e",
+      ladders:[[4,14],[8,18],[11,23],[16,27]], snakes:[[19,7],[22,3],[26,13],[28,15]] },
+  ],
+};
+function N(){ return GAME_CONFIG.cols*GAME_CONFIG.rows; }
+
+// ---------- STATE ----------
+let state="menu";
+let match=null, board=null;
+let pos=[];             // pos[p] = square 0..N (0 = start line)
+let die=1, rolling=0, rollFace=1;
+let mover=null;         // {p, path:[squares], idx, t, phase, applied}
+let nowMs=0, headless=false;
+let PREFS={ players:2, boardIdx:0 };
+let fx=BM?BM.makeFx():{parts:[],pops:[],shake:0,flash:0,flashCol:"#fff"};
+let cv,ctx,W=0,H=0,DPR=1; let canRoll=true;
+
+function curBoard(){ return GAME_CONFIG.boards[PREFS.boardIdx]||GAME_CONFIG.boards[0]; }
+
+// ---------- BUILD ----------
+function build(){
+  board=curBoard();
+  match=BT.create({ count:PREFS.players, onWin:(p)=>{ if(BA)BA.sfx("win");
+    if(BM){ for(let i=0;i<5;i++) BM.explode(fx,W*(0.15+0.18*i),H*(0.3+0.08*(i%2)),board.color,{n:18,pop:i===0?"You win!":""}); } } });
+  pos=new Array(PREFS.players).fill(0); die=1; rolling=0; mover=null; canRoll=true;
+  state="play";
+}
+
+// ---------- BOARD GEOMETRY (serpentine) ----------
+function boardRect(){
+  const top=Math.min(150,H*0.20), bot=Math.min(120,H*0.15);
+  const availW=W-20, availH=H-top-bot-20;
+  const cols=GAME_CONFIG.cols, rows=GAME_CONFIG.rows;
+  let cw=availW/cols, ch=availH/rows; const cell=Math.min(cw,ch);
+  const bw=cell*cols, bh=cell*rows; const ox=(W-bw)/2, oy=top+10+(availH-bh)/2;
+  return {ox,oy,cell,cols,rows,top,bot};
+}
+function squareXY(sq){ // sq 1..N -> center; 0 -> start (below board)
+  const B=boardRect();
+  if(sq<=0){ return { x:B.ox+B.cell*0.5, y:B.oy+B.cell*B.rows+B.bot*0.4 }; }
+  const i=Math.min(sq,N())-1; const r=(i/B.cols)|0; const within=i%B.cols;
+  const col = (r%2===0)? within : (B.cols-1-within);   // boustrophedon
+  const rowFromBottom=B.rows-1-r;
+  return { x:B.ox+col*B.cell+B.cell/2, y:B.oy+rowFromBottom*B.cell+B.cell/2 };
+}
+function jumpTarget(sq){
+  for(const [a,b] of board.ladders) if(a===sq) return {to:b,kind:"ladder"};
+  for(const [a,b] of board.snakes)  if(a===sq) return {to:b,kind:"snake"};
+  return null;
+}
+
+// ---------- ROLL & MOVE ----------
+function roll(){
+  if(state!=="play"||!canRoll||mover||match.over) return 0;
+  const r=1+((Math.random()*6)|0); die=r; rolling=headless?0:0.5; rollFace=r;
+  if(BA)BA.sfx("dice");
+  startMove(match.curIndex(), r);
+  return r;
+}
+function startMove(p,steps){
+  canRoll=false;
+  const from=pos[p]; const path=[];
+  for(let s=1;s<=steps;s++){ path.push(Math.min(from+s, N())); }
+  mover={ p, path, idx:0, t:0, phase:"hop", applied:false, steps };
+  if(headless) resolveMoveInstant();
+}
+function resolveMoveInstant(){
+  const p=mover.p, steps=mover.steps; let np=Math.min(pos[p]+steps, N());
+  // win on reach OR pass
+  if(pos[p]+steps>=N()){ pos[p]=N(); finishTurn(p,true,steps); return; }
+  pos[p]=np;
+  const j=jumpTarget(np); if(j){ pos[p]=j.to; }
+  finishTurn(p,false,steps);
+}
+function finishTurn(p,won,steps){
+  mover=null; canRoll=true;
+  if(won){ match.finish(p); state="win"; return; }
+  // extra turn on a 6 (pure-luck bonus), else next player
+  if(steps===6) { /* keep turn */ } else match.next();
+}
+
+// ---------- UPDATE ----------
+function update(dt){
+  nowMs+=dt*1000; if(rolling>0) rolling=Math.max(0,rolling-dt);
+  if(BM)BM.update(fx,dt);
+  if(mover && !headless){
+    mover.t+=dt;
+    if(mover.phase==="hop"){
+      const hopDur=0.16;
+      if(mover.t>=hopDur){ mover.t=0; mover.idx++; if(BA)BA.sfx("hop");
+        if(mover.idx>=mover.path.length){
+          const p=mover.p, landed=mover.path[mover.path.length-1];
+          if(pos[p]+mover.steps>=N()){ pos[p]=N(); finishTurn(p,true,mover.steps); return; }
+          pos[p]=landed; const j=jumpTarget(landed);
+          if(j){ mover.phase="slide"; mover.t=0; mover.slideFrom=landed; mover.slideTo=j.to; mover.kind=j.kind;
+            if(BA)BA.sfx(j.kind==="ladder"?"ladder":"snake"); }
+          else { finishTurn(p,false,mover.steps); }
+        }
+      }
+    } else if(mover.phase==="slide"){
+      const slideDur=0.5;
+      if(mover.t>=slideDur){ pos[mover.p]=mover.slideTo;
+        if(BM){ const xy=squareXY(mover.slideTo); BM.explode(fx,xy.x,xy.y,mover.kind==="ladder"?"#7CF6B0":"#FF8FB1",{n:10}); }
+        finishTurn(mover.p,false,mover.steps); }
+    }
+  }
+}
+function visualPos(p){
+  if(mover && mover.p===p){
+    if(mover.phase==="hop"){ const a=mover.idx===0?pos[p]:mover.path[mover.idx-1]; const b=mover.path[Math.min(mover.idx,mover.path.length-1)];
+      const f=Math.min(1,mover.t/0.16); return lerpSq(a,b,f); }
+    if(mover.phase==="slide"){ const f=Math.min(1,mover.t/0.5); return lerpSq(mover.slideFrom,mover.slideTo,f); }
+  }
+  return squareXY(pos[p]);
+}
+function lerpSq(a,b,f){ const A=squareXY(a),B=squareXY(b); return {x:A.x+(B.x-A.x)*f, y:A.y+(B.y-A.y)*f}; }
+
+// ---------- INPUT ----------
+function tapAt(px,py){
+  if(state==="menu") return;
+  if(state==="win"){ showMenu(); return; }
+  roll();
+}
+
+// ---------- DRAW ----------
+function draw(){
+  if(!ctx) return "noctx"; const b=curBoard();
+  const grad=ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0,"#16142e"); grad.addColorStop(1,b.color);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  const sh=BM?BM.shakeOffset(fx):{x:0,y:0}; ctx.save(); ctx.translate(sh.x,sh.y);
+  drawBoard(); drawJumps(); drawTokens();
+  if(BM)BM.draw(ctx,fx,{W,H});
+  ctx.restore();
+  drawHUD(); drawDie();
+  if(state==="win") drawWin();
+  return "ok";
+}
+function drawBoard(){
+  const B=boardRect();
+  for(let sq=1;sq<=N();sq++){ const xy=squareXY(sq); const i=sq-1; const r=(i/B.cols)|0;
+    const x=xy.x-B.cell/2, y=xy.y-B.cell/2; const light=((r + (i%B.cols))%2===0);
+    BR.rrect(ctx,x+1,y+1,B.cell-2,B.cell-2,Math.max(4,B.cell*0.1)); ctx.fillStyle=light?curBoard().cellA:curBoard().cellB; ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,0.55)"; ctx.font="800 "+Math.max(10,B.cell*0.24)+"px Nunito,sans-serif"; ctx.textAlign="left"; ctx.textBaseline="top";
+    ctx.fillText(String(sq), x+4, y+3);
+    if(sq===N()){ ctx.fillStyle="#FFD23F"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="900 "+Math.max(12,B.cell*0.3)+"px Nunito,sans-serif"; BR.shape(ctx,"star",xy.x,xy.y,B.cell*0.5,"#FFD23F"); }
+  }
+}
+function drawJumps(){
+  const B=boardRect();
+  // ladders
+  for(const [a,c] of curBoard().ladders){ const A=squareXY(a),C=squareXY(c);
+    ctx.strokeStyle="rgba(255,221,120,0.9)"; ctx.lineWidth=Math.max(4,B.cell*0.09); ctx.lineCap="round";
+    const dx=C.x-A.x, dy=C.y-A.y, len=Math.hypot(dx,dy), nx=-dy/len, ny=dx/len, off=B.cell*0.14;
+    ctx.beginPath(); ctx.moveTo(A.x+nx*off,A.y+ny*off); ctx.lineTo(C.x+nx*off,C.y+ny*off);
+    ctx.moveTo(A.x-nx*off,A.y-ny*off); ctx.lineTo(C.x-nx*off,C.y-ny*off); ctx.stroke();
+    const rungs=Math.max(3,(len/(B.cell*0.5))|0); ctx.lineWidth=Math.max(2,B.cell*0.05);
+    for(let i=1;i<rungs;i++){ const f=i/rungs; const mx=A.x+dx*f,my=A.y+dy*f; ctx.beginPath(); ctx.moveTo(mx+nx*off,my+ny*off); ctx.lineTo(mx-nx*off,my-ny*off); ctx.stroke(); }
+  }
+  // snakes
+  for(const [a,c] of curBoard().snakes){ const A=squareXY(a),C=squareXY(c);
+    ctx.strokeStyle="rgba(255,143,177,0.92)"; ctx.lineWidth=Math.max(5,B.cell*0.13); ctx.lineCap="round";
+    const dx=C.x-A.x, dy=C.y-A.y, len=Math.hypot(dx,dy)||1, nx=-dy/len, ny=dx/len;
+    ctx.beginPath(); ctx.moveTo(A.x,A.y); const segs=6;
+    for(let i=1;i<=segs;i++){ const f=i/segs; const wob=Math.sin(f*Math.PI*3)*B.cell*0.3; ctx.lineTo(A.x+dx*f+nx*wob, A.y+dy*f+ny*wob); }
+    ctx.stroke();
+    ctx.fillStyle="#FF8FB1"; ctx.beginPath(); ctx.arc(A.x,A.y,B.cell*0.18,0,7); ctx.fill();
+    ctx.fillStyle="#16142e"; ctx.beginPath(); ctx.arc(A.x-B.cell*0.06,A.y-B.cell*0.04,B.cell*0.04,0,7); ctx.arc(A.x+B.cell*0.06,A.y-B.cell*0.04,B.cell*0.04,0,7); ctx.fill();
+  }
+}
+function drawTokens(){
+  const B=boardRect();
+  // group tokens that share a square so they don't fully overlap
+  for(let p=0;p<pos.length;p++){ const xy=visualPos(p); const same=[]; for(let q=0;q<pos.length;q++) if(pos[q]===pos[p]) same.push(q);
+    const k=same.indexOf(p), off=(same.length>1)?(k-(same.length-1)/2)*B.cell*0.22:0;
+    const pl=match.players[p], rad=B.cell*0.22;
+    ctx.save(); ctx.translate(xy.x+off, xy.y- B.cell*0.05);
+    ctx.fillStyle="rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(0,rad*0.95,rad*0.9,rad*0.4,0,0,7); ctx.fill();
+    ctx.fillStyle=pl.color; ctx.beginPath(); ctx.arc(0,0,rad,0,7); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.beginPath(); ctx.arc(-rad*0.3,-rad*0.3,rad*0.28,0,7); ctx.fill();
+    ctx.restore();
+  }
+}
+function drawHUD(){
+  const top=Math.min(150,H*0.20);
+  ctx.save(); ctx.fillStyle="rgba(10,8,24,0.42)"; ctx.fillRect(0,0,W,top*0.5);
+  const n=match?match.count:2, pad=12, gap=8, bw=(W-pad*2-gap*(n-1))/n, bh=top*0.5-16;
+  for(let i=0;i<n;i++){ const p=match.players[i], x=pad+i*(bw+gap), on=(match.curIndex()===i)&&state==="play";
+    BR.rrect(ctx,x,8,bw,bh,10); ctx.fillStyle=on?"rgba(255,255,255,0.16)":"rgba(255,255,255,0.06)"; ctx.fill();
+    if(on){ ctx.lineWidth=2.5; ctx.strokeStyle=p.color; ctx.stroke(); }
+    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(x+16,8+bh/2,7,0,7); ctx.fill();
+    ctx.fillStyle="#fff"; ctx.font="800 "+Math.min(14,bw*0.15)+"px Nunito,sans-serif"; ctx.textAlign="left"; ctx.textBaseline="middle";
+    ctx.fillText(p.name+" · "+pos[i], x+28, 8+bh/2);
+  }
+  ctx.restore();
+}
+function drawDie(){
+  const bot=Math.min(120,H*0.15), cy=H-bot*0.5, s=Math.min(64,bot*0.62);
+  const cx=W*0.5;
+  ctx.save();
+  // ROLL prompt
+  if(state==="play" && canRoll && !mover){ ctx.fillStyle="#7CF6B0"; BR.rrect(ctx,cx-s*1.9,cy-s*0.5,s*1.2,s,12); ctx.fill();
+    ctx.fillStyle="#0c3a24"; ctx.font="900 "+s*0.32+"px Nunito,sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("ROLL",cx-s*1.3,cy); }
+  // die face
+  const wob = rolling>0 ? Math.sin(nowMs*0.05)*0.15 : 0;
+  ctx.translate(cx+s*0.5,cy); ctx.rotate(wob);
+  ctx.fillStyle="#fbf7ff"; BR.rrect(ctx,-s/2,-s/2,s,s,s*0.18); ctx.fill();
+  ctx.fillStyle="#2a2350"; const pip=s*0.1; const f=die;
+  const pts={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],6:[[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]]}[f]||[[0,0]];
+  for(const [dx,dy] of pts){ ctx.beginPath(); ctx.arc(dx*s*0.27,dy*s*0.27,pip,0,7); ctx.fill(); }
+  ctx.restore();
+}
+function drawWin(){
+  ctx.save(); ctx.fillStyle="rgba(8,5,18,0.62)"; ctx.fillRect(0,0,W,H);
+  const w=match.winnerIdx>=0?match.players[match.winnerIdx]:match.leader();
+  ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.font="900 "+Math.min(46,W*0.1)+"px Nunito,sans-serif";
+  ctx.fillText(w.name+" wins!",W/2,H*0.42);
+  ctx.fillStyle="#cfc9e6"; ctx.font="800 "+Math.min(20,W*0.045)+"px Nunito,sans-serif"; ctx.fillText("Reached the top star!",W/2,H*0.42+Math.min(46,W*0.1));
+  ctx.fillStyle="#7CF6B0"; ctx.font="800 16px Nunito,sans-serif"; ctx.fillText("Tap to play again",W/2,H*0.42+Math.min(96,W*0.2));
+  ctx.restore();
+}
+
+// ---------- START SCREEN (BS) ----------
+function buildStartCfg(){
+  return { title:GAME_CONFIG.title, subtitle:"Roll, climb ladders, dodge snakes — race to the top!",
+    sound:BA?!BA.muted:true, showBack:true,
+    modes:["p2","p3","p4"], mode:"p"+PREFS.players,
+    levels: GAME_CONFIG.boards.map((b,i)=>({ n:i+1, name:b.name, state:"ready", color:b.color, foot:"Pure luck" })),
+  };
+}
+let startScreen=null;
+function showMenu(){ state="menu"; mountStart(); }
+function mountStart(){
+  const host=document.getElementById("start"); if(!host)return; host.classList.remove("hide");
+  const cb={ onPlay:(n)=>{ PREFS.boardIdx=Math.max(0,Math.min(GAME_CONFIG.boards.length-1,n-1)); host.classList.add("hide"); if(BA)BA.unlock(); build(); },
+    onMode:(m)=>{ PREFS.players=+m.slice(1)||2; },
+    onSound:()=>{ if(BA)BA.toggleMute(); },
+    onBack:()=>{ try{ if(window.parent) window.parent.postMessage("nav:exit","*"); }catch(e){} } };
+  if(BS&&BS.mount) startScreen=BS.mount(host,buildStartCfg(),cb);
+}
+
+// ---------- LOOP / BOOT ----------
+function resize(){ if(!cv)return; DPR=Math.min(2,(window.devicePixelRatio||1)); W=cv.clientWidth||window.innerWidth; H=cv.clientHeight||window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
+let _last=0;
+function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
+  if(state==="play") update(dt); else { nowMs+=dt*1000; if(BM)BM.update(fx,dt); }
+  draw(); requestAnimationFrame(frame); }
+if(typeof document!=="undefined"&&document.getElementById("cv")){
+  cv=document.getElementById("cv"); ctx=cv.getContext("2d"); resize(); window.addEventListener("resize",resize);
+  const onTap=(e)=>{ const t=e.touches?e.touches[0]:e; const rb=cv.getBoundingClientRect(); if(BA)BA.unlock(); tapAt(t.clientX-rb.left,t.clientY-rb.top); };
+  cv.addEventListener("mousedown",onTap); cv.addEventListener("touchstart",(e)=>{e.preventDefault();onTap(e);},{passive:false});
+  if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+    dice:"dice_roll", hop:"mem_flip", ladder:"snl_ladder", snake:"snl_snake", win:"party_win", lose:"tennis_lose" } }); }
+  showMenu(); requestAnimationFrame(frame);
+}
+
+// ---------- QA / SIM HOOKS ----------
+function headlessBegin(o){ headless=true; o=o||{}; PREFS.players=o.players||2; PREFS.boardIdx=o.boardIdx||0; build(); }
+function simGame(o){ headlessBegin(o); let guard=0;
+  while(state==="play" && guard++<5000){ roll(); }
+  return { result:state, winner:match?match.winnerIdx:-1, rolls:guard, positions:pos.slice() }; }
+window.BUILDABLE_GAME={
+  state:()=>state, begin:(o)=>headlessBegin(o), roll:()=>roll(), sim:(o)=>simGame(o),
+  campaign:()=>{ const out=[]; [2,3,4].forEach(pl=>{ GAME_CONFIG.boards.forEach((b,bi)=>{ const r=simGame({players:pl,boardIdx:bi});
+    out.push({players:pl,board:b.name,result:r.result,winner:r.winner,rolls:r.rolls}); }); }); return out; },
+  _jump:(sq)=>jumpTarget(sq), _pos:()=>pos.slice(), _N:()=>N(),
+  _draw:()=>{ try{ return draw(); }catch(e){ return "ERR: "+(e&&e.message||e); } },
+  _begin:(o)=>{ headless=false; headlessBegin(o); headless=false; },
+  _step:(n)=>{ for(let i=0;i<(n||1);i++) update(1/60); },
+  _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS,
+};
+window.SNAKES_GAME=window.BUILDABLE_GAME;
+</script>
+</body>
+</html>

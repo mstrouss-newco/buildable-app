@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Memory — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#131229;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  #wrap{position:fixed;inset:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  .ov{position:absolute;inset:0;z-index:5}
+  #start{position:absolute;inset:0;z-index:6}
+  .hide{display:none!important}
+  #cust{position:absolute;inset:0;z-index:8;background:rgba(8,5,18,.82);display:flex;align-items:center;justify-content:center;padding:18px}
+  .csheet{width:100%;max-width:430px;background:#1d1b36;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:20px;color:#fff}
+  .ctitle{font-size:20px;font-weight:900;margin:0 0 12px;text-align:center}
+  .crow{font-size:13px;font-weight:800;color:#b6aed0;margin:14px 0 7px}
+  .cgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .cbtn{border:2px solid rgba(255,255,255,.1);background:#262248;color:#fff;border-radius:14px;padding:12px 6px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:7px}
+  .cbtn.on{border-color:#7CF6B0;background:#2a2a52}
+  .sw{width:30px;height:30px;border-radius:9px}
+  .cdone{margin-top:18px;width:100%;border:none;border-radius:999px;padding:13px;font-weight:900;font-size:15px;color:#16142b;background:#7CF6B0;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="start" class="ov"></div>
+  <div id="cust" class="hide"><div class="csheet">
+    <p class="ctitle">Make it mine</p>
+    <div class="crow">Board size</div>
+    <div class="cgrid" id="sizeGrid"></div>
+    <div class="crow">Picture set</div>
+    <div class="cgrid" id="themeGrid"></div>
+    <button class="cdone" id="custDone">Done</button>
+  </div></div>
+</div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-turns.js"></script>
+<script>
+//  Buildable Memory/Match — hand-authored Track B engine.
+//  A game = this FIXED engine + GAME_CONFIG (data). Solo or 2-4 players, pass-and-play.
+//  Shared libs: BR (art), BA (sound), BM (juice), BS (start screen), BT (turn shell).
+//  Always-winnable: a matching game can never soft-lock. QA hook: window.BUILDABLE_GAME.
+const BR=(typeof window!=="undefined"&&window.BuildableRenders)||globalThis.BuildableRenders;
+const BA=(typeof window!=="undefined"&&window.BuildableAudio)||globalThis.BuildableAudio;
+const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||globalThis.BuildableMechanics;
+const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||globalThis.BuildableStartScreen;
+const BT=(typeof window!=="undefined"&&window.BuildableTurns)||globalThis.BuildableTurns;
+
+// ---------- DATA ----------
+const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
+  title:"Memory Match",
+  // 6 themes — each is a real asset-library theme word so faces can be pulled by theme.
+  themes:[
+    {key:"space",  name:"Space",   color:"#3a2f6e", faces:[["star","#FFD23F"],["diamond","#7DD3FC"],["dot","#FF8FB1"],["heart","#A78BFF"],["flower","#67E8F9"],["star","#FF6B6B"],["diamond","#34D399"],["dot","#F5B83D"],["heart","#9B7BFF"],["flower","#FFC75A"],["star","#5CC0F0"],["diamond","#E0578F"]]},
+    {key:"jungle", name:"Jungle",  color:"#1f6f3a", faces:[["flower","#34D399"],["heart","#FFD23F"],["star","#A7F070"],["dot","#FF8FB1"],["diamond","#67E8F9"],["flower","#F5B83D"],["heart","#FF6B6B"],["star","#7CF6B0"],["dot","#9B7BFF"],["diamond","#FFC75A"],["flower","#5CC0F0"],["heart","#E0578F"]]},
+    {key:"candy",  name:"Candy",   color:"#9c2f6e", faces:[["heart","#FF8FB1"],["star","#FFD23F"],["flower","#FF6B6B"],["diamond","#A78BFF"],["dot","#7DD3FC"],["heart","#FFC75A"],["star","#E0578F"],["flower","#67E8F9"],["diamond","#34D399"],["dot","#F5B83D"],["heart","#9B7BFF"],["star","#5CC0F0"]]},
+    {key:"ocean",  name:"Ocean",   color:"#1f4a6f", faces:[["diamond","#7DD3FC"],["dot","#67E8F9"],["star","#34D399"],["heart","#A78BFF"],["flower","#FFD23F"],["diamond","#5CC0F0"],["dot","#FF8FB1"],["star","#FFC75A"],["heart","#FF6B6B"],["flower","#9B7BFF"],["diamond","#7CF6B0"],["dot","#E0578F"]]},
+    {key:"castle", name:"Castle",  color:"#6e5a2f", faces:[["star","#F5B83D"],["diamond","#FFD23F"],["heart","#FF6B6B"],["dot","#A78BFF"],["flower","#7DD3FC"],["star","#FFC75A"],["diamond","#34D399"],["heart","#FF8FB1"],["dot","#67E8F9"],["flower","#9B7BFF"],["star","#5CC0F0"],["diamond","#E0578F"]]},
+    {key:"desert", name:"Desert",  color:"#6e4a2f", faces:[["dot","#FFC75A"],["star","#F5B83D"],["flower","#FF8FB1"],["heart","#FFD23F"],["diamond","#A7F070"],["dot","#FF6B6B"],["star","#7DD3FC"],["flower","#34D399"],["heart","#9B7BFF"],["diamond","#67E8F9"],["dot","#5CC0F0"],["star","#E0578F"]]},
+  ],
+  sizes:[
+    {key:"easy",   name:"Easy",   cols:4, rows:3, foot:"6 pairs"},
+    {key:"medium", name:"Medium", cols:4, rows:4, foot:"8 pairs"},
+    {key:"hard",   name:"Hard",   cols:4, rows:6, foot:"12 pairs"},
+  ],
+};
+
+// ---------- STATE ----------
+let state="menu";
+let match=null;                       // BT match object
+let deck=[];                          // cards
+let faceUp=[];                         // indices of currently face-up (max 2)
+let lockUntil=0;                       // ms timestamp: input locked while a miss flips back
+let nowMs=0, headless=false;
+let PREFS={ players:2, solo:false, sizeIdx:1, themeIdx:0 };
+const FACE_IMG={};                     // faceKey -> HTMLImageElement (library art; optional)
+let fx = BM?BM.makeFx():{parts:[],pops:[],shake:0,flash:0,flashCol:"#fff"};
+let amb=[];                            // ambient particles
+let cv, ctx, W=0, H=0, DPR=1;
+
+function curTheme(){ return GAME_CONFIG.themes[PREFS.themeIdx]||GAME_CONFIG.themes[0]; }
+function curSize(){ return GAME_CONFIG.sizes[PREFS.sizeIdx]||GAME_CONFIG.sizes[1]; }
+function rnd(a){ return a[(Math.random()*a.length)|0]; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i];a[i]=a[j];a[j]=t; } return a; }
+
+// ---------- LIBRARY ART (pull card faces by theme, drawn fallback) ----------
+function loadThemeArt(theme){
+  // Library-first: try to pull element images for this theme; faces gracefully fall back to
+  // BR drawn shapes if a fetch/image fails (never breaks the game).
+  if(headless || typeof fetch==="undefined") return;
+  try{
+    fetch("/api/list-assets?theme="+encodeURIComponent(theme.key)+"&cb="+Date.now())
+      .then(r=>r.ok?r.json():null)
+      .then(j=>{
+        const els=(j&&(j.elements||j.sprites||j.assets))||[];
+        const urls=[]; for(const e of els){ const u=e.image_url||e.url||e.imageUrl; if(u) urls.push(u); }
+        urls.slice(0,12).forEach((u,i)=>{
+          const key=theme.key+":"+i; if(FACE_IMG[key]) return;
+          const im=new Image(); im.crossOrigin="anonymous"; im.onload=()=>{FACE_IMG[key]=im;}; im.src=u;
+        });
+      }).catch(()=>{});
+  }catch(e){}
+}
+
+// ---------- BUILD A BOARD ----------
+function build(){
+  const sz=curSize(), theme=curTheme();
+  const pairs=(sz.cols*sz.rows)>>1;
+  const faces=[];
+  for(let i=0;i<pairs;i++){ faces.push(i); faces.push(i); }
+  shuffle(faces);
+  deck=faces.map((f,i)=>({ id:i, face:f, theme:theme.key, flipped:false, matched:false, anim:0 }));
+  faceUp=[]; lockUntil=0;
+  match=BT.create({ count: PREFS.solo?1:PREFS.players,
+    onWin:(p)=>{ if(BA)BA.sfx("win"); if(BM){ for(let i=0;i<4;i++) BM.explode(fx, W*(0.2+0.2*i), H*0.4, theme.color, {n:16,pop:i===0?"You win!":""}); } } });
+  loadThemeArt(theme);
+  makeAmbient(theme);
+  state="play";
+}
+
+function makeAmbient(theme){
+  amb=[];
+  if(headless) return;
+  const n=26; for(let i=0;i<n;i++) amb.push({ x:Math.random(), y:Math.random(), r:1+Math.random()*2.4, s:0.02+Math.random()*0.05, tw:Math.random()*6.28 });
+}
+
+// ---------- LAYOUT ----------
+function layout(){
+  const sz=curSize();
+  const hud=Math.min(96, H*0.13);
+  const padX=Math.max(10,W*0.03), padTop=hud+8, padBot=Math.max(10,H*0.02);
+  const gw=W-padX*2, gh=H-padTop-padBot;
+  const gap=Math.max(6, Math.min(gw,gh)*0.018);
+  let cw=(gw-gap*(sz.cols-1))/sz.cols;
+  let ch=(gh-gap*(sz.rows-1))/sz.rows;
+  // keep cards from being too wide/tall — cap aspect close to a square-ish card
+  const cell=Math.min(cw,ch* (cw/ch>0.78?1:1)); // simple
+  const useW=Math.min(cw,ch*0.82), useH=Math.min(ch,cw/0.82);
+  const totalW=useW*sz.cols+gap*(sz.cols-1), totalH=useH*sz.rows+gap*(sz.rows-1);
+  const ox=(W-totalW)/2, oy=padTop+(gh-totalH)/2;
+  return {sz,gap,cw:useW,ch:useH,ox,oy,hud};
+}
+function cardRect(i){
+  const L=layout(), sz=L.sz, r=(i/sz.cols)|0, c=i%sz.cols;
+  return { x:L.ox+c*(L.cw+L.gap), y:L.oy+r*(L.ch+L.gap), w:L.cw, h:L.ch };
+}
+
+// ---------- INPUT ----------
+function tapAt(px,py){
+  if(state!=="play") { if(state==="win"){ showMenu(); } return; }
+  if(nowMs<lockUntil) return;
+  if(faceUp.length>=2) return;
+  for(let i=0;i<deck.length;i++){
+    const cd=deck[i]; if(cd.matched||cd.flipped) continue;
+    const r=cardRect(i);
+    if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h){ flip(i); return; }
+  }
+}
+function flip(i){
+  const cd=deck[i]; if(cd.matched||cd.flipped) return;
+  cd.flipped=true; cd.anim=0; faceUp.push(i);
+  if(BA)BA.sfx("select");
+  if(faceUp.length===2) checkPair();
+}
+function checkPair(){
+  const [a,b]=faceUp;
+  if(deck[a].face===deck[b].face){
+    // MATCH — score, celebrate, same player goes again
+    deck[a].matched=deck[b].matched=true; faceUp=[];
+    match.add(1);
+    const r=cardRect(b);
+    if(BA)BA.sfx("match");
+    if(BM){ BM.explode(fx, r.x+r.w/2, r.y+r.h/2, curTheme().color, {n:14,pop:"+1"}); BM.shake(fx,0.18); }
+    if(deck.every(c=>c.matched)){ match.finish(); state="win"; }
+    // keepTurn: do NOT advance (classic memory bonus turn)
+  } else {
+    // MISS — flip both back shortly, next player's turn
+    if(BA)BA.sfx("flipback");
+    lockUntil=nowMs+ (headless?0:850);
+    if(headless){ resolveMiss(); }
+  }
+}
+function resolveMiss(){
+  if(faceUp.length<2) return;
+  const [a,b]=faceUp; deck[a].flipped=deck[b].flipped=false; deck[a].anim=deck[b].anim=0; faceUp=[];
+  if(!match.solo) match.next();
+}
+
+// ---------- UPDATE ----------
+function update(dt){
+  nowMs+=dt*1000;
+  if(state==="play" && nowMs>=lockUntil && faceUp.length===2 && !deck[faceUp[0]].matched){
+    resolveMiss();
+  }
+  for(const c of deck){ if(c.anim<1) c.anim=Math.min(1,c.anim+dt*6); }
+  if(BM) BM.update(fx,dt);
+  for(const p of amb){ p.tw+=dt*2; p.y-=p.s*dt; if(p.y<-0.05){ p.y=1.05; p.x=Math.random(); } }
+}
+
+// ---------- DRAW ----------
+function drawFace(g,cd,x,y,w,h){
+  const theme=GAME_CONFIG.themes.find(t=>t.key===cd.theme)||curTheme();
+  const key=theme.key+":"+cd.face, im=FACE_IMG[key];
+  const cx=x+w/2, cy=y+h/2, s=Math.min(w,h)*0.62;
+  if(im&&im.complete&&(im.naturalWidth||im.width)){
+    BR.sprite(g, im, cx, cy, s*1.25);
+  } else {
+    const f=theme.faces[cd.face%theme.faces.length]||["star","#fff"];
+    BR.shape(g, f[0], cx, cy, s, f[1]);
+  }
+}
+function roundCard(g,x,y,w,h,r,fill,stroke){
+  BR.rrect(g,x,y,w,h,r); g.fillStyle=fill; g.fill(); if(stroke){ g.lineWidth=Math.max(2,w*0.04); g.strokeStyle=stroke; g.stroke(); }
+}
+function draw(){
+  if(!ctx) return "noctx";
+  const theme=curTheme();
+  // backdrop
+  const grad=ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0,"#16142e"); grad.addColorStop(1,theme.color);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  // ambient
+  ctx.save(); for(const p of amb){ ctx.globalAlpha=0.25+0.35*(0.5+0.5*Math.sin(p.tw)); ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(p.x*W,p.y*H,p.r,0,7); ctx.fill(); } ctx.restore();
+
+  const sh=BM?BM.shakeOffset(fx):{x:0,y:0}; ctx.save(); ctx.translate(sh.x,sh.y);
+  // cards
+  for(let i=0;i<deck.length;i++){
+    const cd=deck[i], r=cardRect(i);
+    const show=cd.flipped||cd.matched;
+    const t=cd.anim, scaleX=show?(t):(1); // simple flip feel
+    const sx=Math.abs(Math.cos((show? (1-t):0)*Math.PI*0)); // keep simple
+    ctx.save(); ctx.translate(r.x+r.w/2, r.y+r.h/2);
+    ctx.scale(show? (0.6+0.4*t):1, 1); ctx.translate(-(r.x+r.w/2),-(r.y+r.h/2));
+    const rad=Math.min(r.w,r.h)*0.16;
+    if(cd.matched){
+      roundCard(ctx,r.x,r.y,r.w,r.h,rad,"rgba(124,246,176,0.18)","#7CF6B0");
+      drawFace(ctx,cd,r.x,r.y,r.w,r.h);
+    } else if(cd.flipped){
+      roundCard(ctx,r.x,r.y,r.w,r.h,rad,"#fbf7ff",null);
+      drawFace(ctx,cd,r.x,r.y,r.w,r.h);
+    } else {
+      // card back — themed, drawn (no emoji)
+      roundCard(ctx,r.x,r.y,r.w,r.h,rad,theme.color,"rgba(255,255,255,0.16)");
+      ctx.globalAlpha=0.85; BR.sparkle(ctx, r.x+r.w/2, r.y+r.h/2, Math.min(r.w,r.h)*0.18, nowMs*0.001+i); ctx.globalAlpha=1;
+    }
+    ctx.restore();
+  }
+  if(BM) BM.draw(ctx,fx,{W,H});
+  ctx.restore();
+
+  drawHUD();
+  if(state==="win") drawWin();
+  return "ok";
+}
+function drawHUD(){
+  const L=layout(), hud=L.hud;
+  ctx.save();
+  ctx.fillStyle="rgba(10,8,24,0.42)"; ctx.fillRect(0,0,W,hud);
+  const n=match?match.count:2, pad=14, gap=10, bw=(W-pad*2-gap*(n-1))/n;
+  for(let i=0;i<n;i++){
+    const p=match.players[i], x=pad+i*(bw+gap), on=(match.curIndex()===i)&&state==="play";
+    BR.rrect(ctx,x,12,bw,hud-24,12); ctx.fillStyle=on?"rgba(255,255,255,0.16)":"rgba(255,255,255,0.06)"; ctx.fill();
+    if(on){ ctx.lineWidth=2.5; ctx.strokeStyle=p.color; ctx.stroke(); }
+    // token pawn
+    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(x+18,hud/2,8,0,7); ctx.fill();
+    ctx.fillStyle="#fff"; ctx.font="800 "+Math.min(15,bw*0.16)+"px Nunito,sans-serif"; ctx.textBaseline="middle";
+    ctx.textAlign="left"; ctx.fillText(p.name, x+32, hud/2-7);
+    ctx.fillStyle="#cfc9e6"; ctx.font="800 13px Nunito,sans-serif"; ctx.fillText("Pairs: "+p.score, x+32, hud/2+11);
+  }
+  ctx.restore();
+}
+function drawWin(){
+  ctx.save(); ctx.fillStyle="rgba(8,5,18,0.62)"; ctx.fillRect(0,0,W,H);
+  const w=match.leader();
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle="#fff"; ctx.font="900 "+Math.min(42,W*0.09)+"px Nunito,sans-serif";
+  ctx.fillText(match.solo?"You did it!":(w.name+" wins!"), W/2, H*0.42);
+  ctx.fillStyle="#cfc9e6"; ctx.font="800 "+Math.min(20,W*0.045)+"px Nunito,sans-serif";
+  ctx.fillText(match.solo?("All "+w.score+" pairs found"):("with "+w.score+" pairs"), W/2, H*0.42+Math.min(46,W*0.1));
+  ctx.fillStyle="#7CF6B0"; ctx.font="800 16px Nunito,sans-serif";
+  ctx.fillText("Tap to play again", W/2, H*0.42+Math.min(96,W*0.2));
+  ctx.restore();
+}
+
+// ---------- START SCREEN (BS) ----------
+let started=false;
+function buildStartCfg(){
+  return {
+    title:GAME_CONFIG.title, subtitle:"Flip two cards — find the matching pairs",
+    sound: BA?!BA.muted:true, showBack:true,
+    modes:["solo","p2","p3","p4"], mode: PREFS.solo?"solo":("p"+PREFS.players),
+    levels: GAME_CONFIG.sizes.map((s,i)=>({ n:i+1, name:s.name, state:"ready",
+      color:curTheme().color, foot:s.foot+" · "+curTheme().name })),
+    customizeLabel:"Make it mine",
+  };
+}
+let startScreen=null;
+function showMenu(){ state="menu"; mountStart(); }
+function mountStart(){
+  const host=document.getElementById("start"); if(!host) return;
+  host.classList.remove("hide");
+  const cb={
+    onPlay:(n)=>{ PREFS.sizeIdx=Math.max(0,Math.min(GAME_CONFIG.sizes.length-1,n-1)); host.classList.add("hide"); if(BA)BA.unlock(); build(); },
+    onMode:(m)=>{ if(m==="solo"){ PREFS.solo=true; PREFS.players=1; } else { PREFS.solo=false; PREFS.players=+m.slice(1)||2; } },
+    onCustomize:()=>openCustomize(),
+    onSound:()=>{ if(BA)BA.toggleMute(); },
+    onBack:()=>{ try{ if(window.parent) window.parent.postMessage("nav:exit","*"); }catch(e){} },
+  };
+  if(BS&&BS.mount) startScreen=BS.mount(host, buildStartCfg(), cb);
+}
+
+// ---------- CUSTOMIZE (theme + size) ----------
+function openCustomize(){
+  const el=document.getElementById("cust"); if(!el) return;
+  const sg=document.getElementById("sizeGrid"), tg=document.getElementById("themeGrid");
+  sg.innerHTML=""; tg.innerHTML="";
+  GAME_CONFIG.sizes.forEach((s,i)=>{ const b=document.createElement("button"); b.className="cbtn"+(i===PREFS.sizeIdx?" on":"");
+    b.innerHTML='<span style="font-weight:900">'+s.name+'</span><span style="font-size:11px;color:#b6aed0">'+s.foot+'</span>';
+    b.onclick=()=>{ PREFS.sizeIdx=i; openCustomize(); }; sg.appendChild(b); });
+  GAME_CONFIG.themes.forEach((t,i)=>{ const b=document.createElement("button"); b.className="cbtn"+(i===PREFS.themeIdx?" on":"");
+    b.innerHTML='<span class="sw" style="background:'+t.color+'"></span><span>'+t.name+'</span>';
+    b.onclick=()=>{ PREFS.themeIdx=i; openCustomize(); }; tg.appendChild(b); });
+  el.classList.remove("hide");
+}
+
+// ---------- LOOP / BOOT ----------
+function resize(){
+  if(!cv) return; DPR=Math.min(2,(window.devicePixelRatio||1));
+  W=cv.clientWidth||window.innerWidth; H=cv.clientHeight||window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+let _last=0;
+function frame(ts){
+  if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
+  if(state==="play") update(dt); else { nowMs+=dt*1000; if(BM)BM.update(fx,dt); for(const p of amb){ p.y-=p.s*dt; if(p.y<-0.05)p.y=1.05; } }
+  draw();
+  requestAnimationFrame(frame);
+}
+if(typeof document!=="undefined" && document.getElementById("cv")){
+  cv=document.getElementById("cv"); ctx=cv.getContext("2d");
+  resize(); window.addEventListener("resize",resize);
+  const onTap=(e)=>{ const t=e.touches?e.touches[0]:e; const rb=cv.getBoundingClientRect(); tapAt(t.clientX-rb.left, t.clientY-rb.top); if(BA)BA.unlock(); };
+  cv.addEventListener("mousedown",onTap); cv.addEventListener("touchstart",(e)=>{ e.preventDefault(); onTap(e); },{passive:false});
+  document.getElementById("custDone").onclick=()=>{ document.getElementById("cust").classList.add("hide"); if(startScreen&&startScreen.update) startScreen.update(buildStartCfg()); else mountStart(); };
+  // audio map — bespoke created sounds (BA synth is the silent fallback only)
+  if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+    select:"mem_flip", match:"mem_match", flipback:"mem_flipback", win:"party_win", lose:"tennis_lose" } }); }
+  showMenu(); requestAnimationFrame(frame);
+}
+
+// ---------- QA / SIM HOOKS ----------
+function headlessBegin(opts){
+  headless=true; opts=opts||{};
+  PREFS.solo=!!opts.solo; PREFS.players=opts.players||(opts.solo?1:2);
+  PREFS.sizeIdx=opts.sizeIdx!=null?opts.sizeIdx:1; PREFS.themeIdx=opts.themeIdx||0;
+  build();
+}
+// A perfect-memory bot: it remembers every card and clears the board → always a win.
+function simPerfect(opts){
+  headlessBegin(opts);
+  const byFace={}; deck.forEach((c,i)=>{ (byFace[c.face]=byFace[c.face]||[]).push(i); });
+  let moves=0, guard=0;
+  for(const f in byFace){
+    const [a,b]=byFace[f];
+    flip(a); flip(b); moves++;
+    if(nowMs<lockUntil){ resolveMiss(); }   // (won't happen for a perfect bot)
+    if(++guard>1000) break;
+  }
+  return { result: state, moves, cleared: deck.every(c=>c.matched), winner: match?match.leader().idx:-1,
+           scores: match?match.players.map(p=>p.score):[] };
+}
+window.BUILDABLE_GAME = {
+  state:()=>state,
+  begin:(o)=>headlessBegin(o),
+  flip:(i)=>flip(i),
+  sim:(o)=>simPerfect(o),
+  campaign:()=>{
+    const out=[];
+    [{solo:true,players:1},{players:2},{players:3},{players:4}].forEach(pc=>{
+      GAME_CONFIG.sizes.forEach((s,si)=>{ const r=simPerfect(Object.assign({sizeIdx:si,themeIdx:si%GAME_CONFIG.themes.length},pc));
+        out.push({ players:pc.solo?1:pc.players, size:s.name, result:r.result, cleared:r.cleared, moves:r.moves }); });
+    });
+    return out;
+  },
+  _draw:()=>{ try{ return draw(); }catch(e){ return "ERR: "+(e&&e.message||e); } },
+  _step:(n)=>{ for(let i=0;i<(n||1);i++) update(1/60); },
+  _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS,
+};
+window.MEMORY_GAME = window.BUILDABLE_GAME;
+</script>
+</body>
+</html>

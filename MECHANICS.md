@@ -397,3 +397,49 @@ games are the textbook fit for the **poll-a-row** transport (`mp-turn-based-row`
 one family-scoped row holds the whole board, a move updates it, the other device re-reads
 every ~2s. The shell is already network-agnostic (rules + render only), so adding it later is
 additive — no engine rewrite.
+
+---
+
+## 15. Same-device turn shell — `same-device-turns` (the 5th shared lib, `BT`)
+
+The "simple games" batch (Memory, Bingo, Snakes & Ladders) introduced one shared brain for
+**local pass-and-play**: 2-4 players (plus a solo path), **no backend, no accounts** (v1).
+Instead of each board/card game re-rolling its own "whose turn is it + who's winning" code, they
+all build on **`public/buildable-turns.js`** — global **`BT`** (`window.BuildableTurns`) — the
+fifth shared engine library alongside `BR` (art), `BA` (sound), `BM` (FX), and `BS` (start screen).
+
+```js
+// load it:  <script src="buildable-turns.js"></script>   then  BT = window.BuildableTurns
+const m = BT.create({ count: 3, onTurn:(p,i)=>{}, onWin:(p)=>{} });  // 1-4 players (count:1 = solo)
+m.cur();            // current player {idx, name, color, token, score, won}  (no emoji — colored pawns)
+m.add(1);           // add to the current player's score
+m.next();           // advance to the next seat   (m.next(true) KEEPS the turn — bonus move)
+m.leader();         // highest score
+m.finish(i);        // end the match (winner = i, or the leader if omitted) -> fires onWin
+m.reset();
+```
+
+Design guarantees (so adopting it is safe, mirroring `BM`):
+- **One match object owns the data** — roster (4 distinct colors + a token shape), turn index,
+  scores, winner. A game keeps its own board state; `BT` only arbitrates turns + scoring.
+- **Headless-safe.** No DOM, no timers — the QA sims (`qa-memory/bingo/snakes.mjs`) drive whole
+  matches with no rendering.
+- **One brain, three play styles.** Memory = strict turns + a **bonus turn on a match**; Snakes =
+  strict turns + a **bonus roll on a six**; Bingo = the roster + a **rotating caller** + winner with
+  **simultaneous daubing**. All three reuse the same `cur()/next()/add()/leader()/finish()`.
+
+Player-count picking is done through the shared start screen: `buildable-startscreen.js` gained
+reusable **`p2` / `p3` / `p4` mode keys** (a people icon + "2/3/4 players" labels) for the BS mode
+row, so any same-device multiplayer game gets a player-count picker for free (Memory also offers
+`solo`).
+
+**Registered as `game_mechanics` slug `same-device-turns`** via `db/seed-same-device-turns-mechanic.sql`
+(tags: `multiplayer`, `same-device`, `turn-based`, `pass-and-play`, `shared-lib`). This is the local
+counterpart to the cross-device multiplayer mechanics in section 12 (`mp-turn-based-row`,
+`mp-realtime-broadcast`): use `same-device-turns` when two-to-four kids share ONE screen, and the
+`mp-*` mechanics when they're on different devices.
+
+**To reuse it:** load `buildable-turns.js`, `BT.create({count})`, render the player HUD from
+`m.players` + `m.curIndex()`, and call `m.next()` / `m.finish()` from your game's rules. Keep a
+drawn HUD (no emoji). Reference engines: `public/memory-engine.html`, `bingo-engine.html`,
+`snakes-engine.html`.

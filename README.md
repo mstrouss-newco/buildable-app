@@ -107,6 +107,39 @@ Built Tic-Tac-Toe, Connect Four, and Dots and Boxes in one pass by creating a re
   `npm run build` clean.
 - **Left out of v1 (follow-up):** cross-device play — the textbook poll-a-row fit
   (`mp-turn-based-row`, like chess); the shell is network-agnostic so it is additive later.
+## Three simple games on one shared turn shell — Memory, Bingo, Snakes & Ladders (June 27 2026)
+Batch 2 of simple luck/matching games, all **same-device pass-and-play** (no backend v1) on one new
+shared brain. Branch `claude/games-simple-batch2` (NOT main).
+
+- **New 5th shared engine lib `public/buildable-turns.js` (`BT` / `window.BuildableTurns`).** One
+  headless-safe turn shell for **2-4 players + solo**: roster (4 colors + token shapes, no emoji),
+  whose turn, per-player scores, winner. `BT.create({count}) -> cur()/next(keepTurn)/add()/leader()/finish()`.
+  Registered as `game_mechanics` slug `same-device-turns` (`db/seed-same-device-turns-mechanic.sql`),
+  documented in `MECHANICS.md` section 15 — the local counterpart to the cross-device `mp-*` mechanics.
+- **`buildable-startscreen.js`** gained reusable **`p2`/`p3`/`p4` mode keys** so any same-device game
+  gets a player-count picker through the shared BS mode row (additive; breaker QA still green).
+- **Memory Match (`/memory-engine.html`)** — solo or 2-4. Flip two cards; match stays + scores +
+  bonus turn; miss flips back; clear the board to win. Difficulty = grid size (Easy/Medium/Hard);
+  **card faces pulled from the shared asset library by theme** (`/api/list-assets`) with a BR
+  drawn-shape fallback; 6 theme packs.
+- **Bingo (`/bingo-engine.html`)** — 2-4, the DEVICE is the caller (rotating via BT). **Picture
+  mode** = library art + drawn-icon fallback; **Word mode** = kid word list, spelled + said via the
+  new `api/say.js` ElevenLabs caller voice. Daub matches, first full line wins. Always-winnable
+  (calls drawn from the union of all cards).
+- **Snakes & Ladders (`/snakes-engine.html`)** — 2-4, pure luck so the littlest kid can win. Roll,
+  hop the 30-square serpentine track, climb ladders / slide down snakes, bonus roll on a six;
+  reach-OR-pass the top star to win (no exact-landing soft-lock); 3 themed boards.
+- **Sound = unique created audio.** New bespoke one-shots in `api/sfx.js` (auto-listed in
+  `/api/list-audio`): `mem_flip`, `mem_match`, `mem_flipback`, `party_win`, `bingo_call`,
+  `bingo_daub`, `dice_roll`, `snl_ladder`, `snl_snake`; plus `api/say.js` for spoken called
+  words/letters/picture names. BA synth stays the silent fallback only.
+- **Wiring:** three `vercel.json` routes (+ `/buildable-turns.js`) before the catch-all; three tiles
+  + iframe screens in `src/BuildableKids.jsx` (Home top-left, BS back posts `nav:exit`); key-art
+  prompts added to `api/images.js`.
+- **QA:** shared `window.BUILDABLE_GAME` sim hook + per-game alias; `qa-memory.mjs`, `qa-bingo.mjs`,
+  `qa-snakes.mjs` (model `qa-breaker.mjs`) prove every difficulty x player-count x theme is winnable
+  + render smoke; `npm run build` clean. **Owner action:** run `db/seed-same-device-turns-mechanic.sql`
+  once; caller voice + new SFX auto-generate/cache on first play.
 
 ## Tennis: per-world background music + pre-warmed assets (June 27 2026)
 - **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.

@@ -52,6 +52,10 @@
     solo: '<circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/>',
     two: '<circle cx="8" cy="9" r="2.8"/><circle cx="16" cy="9" r="2.8"/><path d="M3 19c0-2.8 2.2-4.6 5-4.6S13 16.2 13 19"/><path d="M13 19c0-2.8 2.2-4.6 5-4.6 1 0 1.9.2 2.7.6"/>',
     family: '<path d="M12 21s-7-4.5-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 3.7C19 16.5 12 21 12 21z"/>',
+    p2: '<circle cx="8" cy="9" r="2.8"/><circle cx="16" cy="9" r="2.8"/><path d="M3 19c0-2.8 2.2-4.6 5-4.6S13 16.2 13 19"/><path d="M13 19c0-2.8 2.2-4.6 5-4.6 1 0 1.9.2 2.7.6"/>',
+    p3: '<circle cx="8" cy="9" r="2.8"/><circle cx="16" cy="9" r="2.8"/><path d="M3 19c0-2.8 2.2-4.6 5-4.6S13 16.2 13 19"/><path d="M13 19c0-2.8 2.2-4.6 5-4.6 1 0 1.9.2 2.7.6"/>',
+    p4: '<circle cx="8" cy="9" r="2.8"/><circle cx="16" cy="9" r="2.8"/><path d="M3 19c0-2.8 2.2-4.6 5-4.6S13 16.2 13 19"/><path d="M13 19c0-2.8 2.2-4.6 5-4.6 1 0 1.9.2 2.7.6"/>',
+
     wand: '<path d="M15 4l5 5"/><path d="M4 20L16 8"/><path d="M14 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/>',
     sound: '<path d="M5 9v6h4l5 4V5L9 9z"/><path d="M17 8a5 5 0 0 1 0 8"/>',
     mute: '<path d="M5 9v6h4l5 4V5L9 9z"/><path d="M22 9l-6 6M16 9l6 6"/>',
@@ -61,7 +65,7 @@
     return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill || "none"}" stroke="${stroke || "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name] || ""}</svg>`;
   }
 
-  const MODE_LABEL = { solo: "Solo", two: "2 players", family: "Family" };
+  const MODE_LABEL = { solo: "Solo", two: "2 players", family: "Family", p2: "2 players", p3: "3 players", p4: "4 players" };
 
   let styleInjected = false;
   function injectStyle(doc) {
