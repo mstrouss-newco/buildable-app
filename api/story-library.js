@@ -327,20 +327,7 @@ export default async function handler(req, res) {
     }
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return res.status(200).json({ ok: true, configured: false });
     const [base, expr, scenes] = await Promise.all([countLike("lib:"), countLike("libx:"), countLike("libpg:")]);
-    // sample actual cached lib: keys
-    let sampleCached = [];
-    try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?select=cache_key&cache_key=like.lib:%25&limit=6`,
-        { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } });
-      sampleCached = (await r.json()).map(x => x.cache_key);
-    } catch {}
-    // keys my matching WOULD compute, for comparison
-    const expected = {
-      "character|bunny|watercolor": cacheKey("character","bunny","watercolor"),
-      "character|bunny|modern3d": cacheKey("character","bunny","modern3d"),
-      "world|enchanted-forest|watercolor": cacheKey("world","enchanted-forest","watercolor"),
-    };
-    return res.status(200).json({ ok: true, storyCache: { base, expr, scenes, total: base + expr + scenes }, sampleCached, expected });
+    return res.status(200).json({ ok: true, storyCache: { base, expr, scenes, total: base + expr + scenes } });
   }
 
 
