@@ -543,3 +543,7 @@ All committed to `main`; Vercel auto-deploys. Commits this session:
   by returning booleans/short identifiers and computing in-page.
 
 - 2026-06-27 — Stories: multi-voice narration (narrator + per-speaker character voices) + in-page dialogue (writer emits `lines` with who/say) + narrative SFX one-shots (door/knock/thunder/firewhoosh/splash/magic/pop/whoosh/footsteps/bell/rustle/sparkle in api/sfx.js, catalogued in /api/list-audio). Reader sequences line clips per voice + plays SFX cues; single-voice fallback kept.
+
+## Chess: spoken "Checkmate!" voiceover — June 26 2026
+
+New `api/chess-voice.js` (ElevenLabs TTS, cached in narration_cache key `chessvoice:<line>`, `?force=1` regen). On checkmate the game plays a line via `playCheckmateVO(won)`: playful on a win ("Checkmate! In your face!" / "Boom! Checkmate! Gotcha!" / "Checkmate! Too easy!"), gentle on a loss ("Checkmate! Good game — want a rematch?") so the losing kid is never taunted by their own device. Created ElevenLabs sound per BUILDING-A-GAME.md (no synth); served under the existing /api/ route; silent fallback if unconfigured. Pre-warmed live + verified.

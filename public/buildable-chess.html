@@ -996,6 +996,11 @@ function trophyLine(name){
     +`${escapeHtml(name)} has won ${w} game${w===1?'':'s'}!</span>`;
 }
 const LOSE_SUBS=["Good try — rematch?","So close! Go again?","Nice game — want another?","Almost had it! Rematch?"];
+let cmVoiceEl=null;
+function playCheckmateVO(won){
+  try{ const n=won?('win'+(1+Math.floor(Math.random()*3))):'gg';
+    if(!cmVoiceEl)cmVoiceEl=new Audio(); cmVoiceEl.src='/api/chess-voice?line='+n; cmVoiceEl.volume=0.95; cmVoiceEl.play().catch(()=>{}); }catch(e){}
+}
 function endGame(st){
   gameOver=true;
   let title,sub,rec='',winColor=null;
@@ -1027,6 +1032,7 @@ function endGame(st){
     partyPieces(opp(winColor),'sad');     // others give a cute droop
     if(iLost){ sfxLose(); setTimeout(()=>fireworks(3),250); }   // still a little sparkle so losing stays fun
     else { sfxWin(); confettiBurst(); fireworks(8); }
+    setTimeout(()=>playCheckmateVO(!iLost),650);
   }
   document.getElementById('over-title').textContent=title;
   document.getElementById('over-sub').textContent=sub;
