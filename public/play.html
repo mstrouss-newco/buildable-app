@@ -139,7 +139,7 @@ const PC={}; for(const nm of PIECE_NAMES){ const im=new Image(); im.crossOrigin=
 const PROP_NAMES=["coin","gem","critter","vines","spring","flag"];
 const PR={}; for(const nm of PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img=props:"+nm+"&style="+ARTSTYLE; PR[nm]=im; }
 // per-world themed gameplay props (coin/gem/critter); fall back to the generic props set if a world lacks one
-const WORLD_PROP_NAMES=["coin","gem","critter"];
+const WORLD_PROP_NAMES=["coin","gem","critter","boss"];
 const WP={}; for(const nm of WORLD_PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+WORLD+":"+nm+"&style="+ARTSTYLE; WP[nm]=im; }
 function propImg(nm){ const wi=WP[nm]; if(wi&&wi.complete&&wi.naturalWidth) return wi; const im=PR[nm]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 
@@ -219,7 +219,7 @@ function buildLevel(lv, idx){
   if(wantBoss){
     const bx=(n*TILE) - TILE*4;                              // arena just before the flag
     ground.push({x0:bx-TILE*2.5, x1:n*TILE, y:GROUND_Y});    // guarantee a solid, gap-free boss arena
-    boss={ x:bx, y:GROUND_Y, w:84, h:78, hp:(lv.bossHp||3), maxHp:(lv.bossHp||3), t:0, hit:0, defeated:false, happy:0, active:false };
+    boss={ x:bx, y:GROUND_Y, w:100, h:92, hp:(lv.bossHp||3), maxHp:(lv.bossHp||3), t:0, hit:0, defeated:false, happy:0, active:false };
     barrierX = bx - boss.w*0.5 - 2;                          // soft magic wall just left of the boss
   }
   // cosmetic decos (separate RNG)
@@ -511,16 +511,28 @@ function draw(){
   for(const b of L.lowBars){ const x=b.x-camX; if(x<-40||x>W+40)continue; const im=propImg("vines"); if(im){ const h=GROUND_Y-20, w=72; ctx.drawImage(im, x-w/2, -16, w, h); } else { ctx.fillStyle=P.obstacle; rrect(x-22,-12,44,GROUND_Y-24,12); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-22,-12,12,GROUND_Y-24,12); ctx.fill(); ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x-30,GROUND_Y-36);ctx.lineTo(x+30,GROUND_Y-36);ctx.lineTo(x,GROUND_Y-18);ctx.closePath();ctx.fill(); } }
   // power-ups (floating bonus pickups)
   for(const u of L.powerups){ if(u.got)continue; const x=u.x-camX; if(x<-30||x>W+30)continue; drawPU(x, u.y+Math.sin(Date.now()/300+u.x)*4, u.kind, 15); }
-  // friendly end-of-level boss
-  if(L.boss){ const b=L.boss, x=b.x-camX; if(x>-130&&x<W+130){ const happy=b.defeated; const bob=Math.sin(t*3)*4 - (b.hit>0?7:0); const bw=b.w, bh=b.h, topY=b.y-bh+bob;
-    ctx.fillStyle="rgba(0,0,0,.16)"; ctx.beginPath(); ctx.ellipse(x, GROUND_Y+6, bw*0.5, 10, 0,0,7); ctx.fill();
-    ctx.fillStyle = happy? "#7bc86a" : "#a86fb0"; rrect(x-bw/2, topY, bw, bh, 22); ctx.fill();
-    ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-bw/2+6, topY+6, bw-12, 13, 9); ctx.fill();
-    ctx.fillStyle="#ffd23f"; const cy=topY-2; ctx.beginPath(); ctx.moveTo(x-18,cy); ctx.lineTo(x-18,cy-14); ctx.lineTo(x-9,cy-4); ctx.lineTo(x,cy-16); ctx.lineTo(x+9,cy-4); ctx.lineTo(x+18,cy-14); ctx.lineTo(x+18,cy); ctx.closePath(); ctx.fill();
-    const ey=topY+bh*0.34; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x-16,ey,10,0,7); ctx.arc(x+16,ey,10,0,7); ctx.fill();
-    ctx.fillStyle="#222"; const ed=happy?-2:0; ctx.beginPath(); ctx.arc(x-16+ed,ey,4.5,0,7); ctx.arc(x+16+ed,ey,4.5,0,7); ctx.fill();
-    ctx.strokeStyle="#222"; ctx.lineWidth=3; ctx.beginPath(); const my=topY+bh*0.66; if(happy) ctx.arc(x,my-4,12,0.15*Math.PI,0.85*Math.PI); else ctx.arc(x,my+10,11,1.15*Math.PI,1.85*Math.PI); ctx.stroke();
-    if(!happy){ for(let i=0;i<b.maxHp;i++){ ctx.fillStyle = i<b.hp? "#ff6b8a":"rgba(255,255,255,.32)"; ctx.beginPath(); ctx.arc(x-(b.maxHp-1)*7+i*14, topY-26, 5,0,7); ctx.fill(); } }
+  // friendly end-of-level boss — themed world art if available, else a drawn blob
+  if(L.boss){ const b=L.boss, x=b.x-camX; if(x>-180&&x<W+180){ const happy=b.defeated;
+    const bob=Math.sin(t*3)*4 - (b.hit>0?7:0) + (happy?-Math.abs(Math.sin(t*6))*7:0);
+    const bim=propImg("boss");
+    ctx.fillStyle="rgba(0,0,0,.16)"; ctx.beginPath(); ctx.ellipse(x, GROUND_Y+6, b.w*0.62, 11, 0,0,7); ctx.fill();
+    if(bim){
+      const hh=176*(b.hit>0?0.93:1), ww=hh*(bim.naturalWidth/bim.naturalHeight), topY=GROUND_Y+bob-hh;
+      ctx.save(); if(happy){ ctx.translate(x,GROUND_Y); ctx.rotate(Math.sin(t*9)*0.05); ctx.translate(-x,-GROUND_Y); }
+      ctx.drawImage(bim, x-ww/2, topY, ww, hh); ctx.restore();
+      if(b.hit>0){ ctx.fillStyle="rgba(255,255,255,"+(b.hit/26).toFixed(3)+")"; ctx.beginPath(); ctx.ellipse(x, topY+hh*0.45, ww*0.42, hh*0.42,0,0,7); ctx.fill(); }
+      if(!happy){ for(let i=0;i<b.maxHp;i++){ ctx.fillStyle=i<b.hp?"#ff6b8a":"rgba(255,255,255,.4)"; ctx.beginPath(); ctx.arc(x-(b.maxHp-1)*8+i*16, topY-14, 5.5,0,7); ctx.fill(); } }
+      else { for(let i=0;i<7;i++){ const a=t*2.2+i*0.9; ctx.fillStyle="rgba(255,232,130,.85)"; const sx=x+Math.cos(a)*(46+8*Math.sin(t*3+i)), sy=topY+hh*0.4+Math.sin(a)*30; ctx.beginPath(); ctx.arc(sx,sy,3.2,0,7); ctx.fill(); } }
+    } else {
+      const bw=b.w, bh=b.h, topY=b.y-bh+bob;
+      ctx.fillStyle = happy? "#7bc86a" : "#a86fb0"; rrect(x-bw/2, topY, bw, bh, 22); ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-bw/2+6, topY+6, bw-12, 13, 9); ctx.fill();
+      ctx.fillStyle="#ffd23f"; const cy=topY-2; ctx.beginPath(); ctx.moveTo(x-18,cy); ctx.lineTo(x-18,cy-14); ctx.lineTo(x-9,cy-4); ctx.lineTo(x,cy-16); ctx.lineTo(x+9,cy-4); ctx.lineTo(x+18,cy-14); ctx.lineTo(x+18,cy); ctx.closePath(); ctx.fill();
+      const ey=topY+bh*0.34; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x-16,ey,10,0,7); ctx.arc(x+16,ey,10,0,7); ctx.fill();
+      ctx.fillStyle="#222"; const ed=happy?-2:0; ctx.beginPath(); ctx.arc(x-16+ed,ey,4.5,0,7); ctx.arc(x+16+ed,ey,4.5,0,7); ctx.fill();
+      ctx.strokeStyle="#222"; ctx.lineWidth=3; ctx.beginPath(); const my=topY+bh*0.66; if(happy) ctx.arc(x,my-4,12,0.15*Math.PI,0.85*Math.PI); else ctx.arc(x,my+10,11,1.15*Math.PI,1.85*Math.PI); ctx.stroke();
+      if(!happy){ for(let i=0;i<b.maxHp;i++){ ctx.fillStyle = i<b.hp? "#ff6b8a":"rgba(255,255,255,.32)"; ctx.beginPath(); ctx.arc(x-(b.maxHp-1)*7+i*14, topY-26, 5,0,7); ctx.fill(); } }
+    }
   } }
   if(L.boss && !L.boss.defeated){ const bxs=L.barrierX-camX; if(bxs>-20&&bxs<W+20){ ctx.fillStyle="rgba(150,200,255,"+(0.10+0.05*Math.sin(t*4)).toFixed(3)+")"; ctx.fillRect(bxs-3,0,6,GROUND_Y+10); } }
   // goal flag

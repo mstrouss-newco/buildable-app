@@ -40,6 +40,7 @@ const WORLDS = {
       coin:     "a single glowing round golden acorn coin standing upright, soft warm glow, a tiny sparkle highlight, simple and clean, facing the viewer",
       gem:      "a single small cluster of pointed glowing green bramble thorns and crystal shards poking up, glossy, a spiky little hazard",
       critter:  "a single cute round fuzzy little forest sprite with big friendly eyes and a tiny grumpy frown, mossy green with a small leaf on top, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      boss:     "a big friendly giant forest sprite wearing a little gold crown, mossy green with a small leaf on top, big happy eyes and a gentle smile, cute and round, harmless and royal, NEVER scary, a friendly game boss",
     },
   },
   "snowy-village": {
@@ -56,6 +57,7 @@ const WORLDS = {
       coin:     "a single shiny round gold coin with a tiny snowflake on its face, standing upright, soft cool glow, a sparkle highlight, facing the viewer",
       gem:      "a single small cluster of pointed clear blue ice icicle spikes poking up, glossy frosty facets, a spiky little hazard",
       critter:  "a single cute round fluffy little snowball creature with big friendly eyes and a tiny grumpy frown, white with rosy cheeks and a tiny scarf, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      boss:     "a big friendly giant snowball creature wearing a little gold crown and a cozy scarf, rosy cheeks, big happy eyes and a gentle smile, cute and round, harmless and royal, NEVER scary, a friendly game boss",
     },
   },
   "coral-reef": {
@@ -72,6 +74,7 @@ const WORLDS = {
       coin:     "a single shiny round golden pearl coin like a sand dollar standing upright, soft pearly glow, a sparkle highlight, facing the viewer",
       gem:      "a single small cluster of pointed spiky sea-urchin spines and sharp coral shards poking up, glossy, a spiky little hazard",
       critter:  "a single cute round little orange crab with big friendly eyes and a tiny grumpy frown, rounded soft claws, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      boss:     "a big friendly giant orange crab wearing a little gold crown, rounded soft claws, big happy eyes and a gentle smile, cute and round, harmless and royal, NEVER scary, a friendly game boss",
     },
   },
   "dragon-mountain": {
@@ -88,6 +91,7 @@ const WORLDS = {
       coin:     "a single shiny round gold dragon coin with a tiny scale pattern, standing upright, warm glow, a sparkle highlight, facing the viewer",
       gem:      "a single small cluster of pointed sharp jagged grey rock spikes poking up, a spiky little hazard",
       critter:  "a single cute round chubby baby dragon with big friendly eyes and a tiny grumpy frown, soft purple with little stubby wings, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      boss:     "a big friendly giant baby dragon wearing a little gold crown, soft purple with little stubby wings, big happy eyes and a gentle smile, cute and round, harmless and royal, NEVER scary, a friendly game boss",
     },
   },
   "dino-jungle": {
@@ -104,6 +108,7 @@ const WORLDS = {
       coin:     "a single shiny round golden amber coin with a tiny fern leaf inside, standing upright, warm glow, a sparkle highlight, facing the viewer",
       gem:      "a single small cluster of pointed sharp thorny vines and spiky leaves poking up, a spiky little hazard",
       critter:  "a single cute round chubby baby dinosaur with big friendly eyes and a tiny grumpy frown, soft green with little spots, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      boss:     "a big friendly giant baby dinosaur wearing a little gold crown, soft green with little spots, big happy eyes and a gentle smile, cute and round, harmless and royal, NEVER scary, a friendly game boss",
     },
   },
   "space-station": {
@@ -120,6 +125,7 @@ const WORLDS = {
       coin:     "a single shiny round glowing energy token coin shaped like a star, standing upright, soft blue glow, a sparkle highlight, facing the viewer",
       gem:      "a single small cluster of pointed sharp glowing red laser-crystal spikes poking up, glossy, a spiky little hazard",
       critter:  "a single cute round little friendly robot blob with big friendly eyes and a tiny grumpy frown, soft teal metallic with little antenna, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      boss:     "a big friendly giant robot blob wearing a little gold crown, soft teal metallic with a little antenna, big happy eyes and a gentle smile, cute and round, harmless and royal, NEVER scary, a friendly game boss",
     },
   },
   "desert-oasis": {
@@ -136,6 +142,7 @@ const WORLDS = {
       coin:     "a single shiny round gold sun coin standing upright, warm golden glow, a sparkle highlight, facing the viewer",
       gem:      "a single small cluster of pointed sharp cactus spines and sandstone spikes poking up, a spiky little hazard",
       critter:  "a single cute round chubby little desert armadillo with big friendly eyes and a tiny grumpy frown, sandy tan, rolled and rounded, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      boss:     "a big friendly giant desert armadillo wearing a little gold crown, sandy tan and rounded, big happy eyes and a gentle smile, cute and harmless and royal, NEVER scary, a friendly game boss",
     },
   },
   "candy-land": {
@@ -152,6 +159,7 @@ const WORLDS = {
       coin:     "a single shiny round gold chocolate coin wrapped in gold foil, standing upright, soft glow, a sparkle highlight, facing the viewer",
       gem:      "a single small cluster of pointed sharp striped candy-cane and rock-candy spikes poking up, glossy bright, a spiky little hazard",
       critter:  "a single cute round little gumdrop creature with big friendly eyes and a tiny grumpy frown, pastel pink and glossy, cartoonish and harmless, NEVER scary, a gentle game obstacle",
+      boss:     "a big friendly giant gumdrop creature wearing a little gold crown, glossy pastel pink, big happy eyes and a gentle smile, cute and round, harmless and royal, NEVER scary, a friendly game boss",
     },
   },
   "props": {
