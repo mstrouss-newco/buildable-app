@@ -330,7 +330,7 @@ function build(q) {
     return {
       descriptor:`runnerprop|${town}|${piece}`,
       prompt:`${set[piece]}. Modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded glossy shapes, vibrant cheerful colors, thick clean forms. A SINGLE isolated element, centered, full and complete from base to top, on a FULLY TRANSPARENT background. No ground, no floor line, no cast shadow, no road, no other objects, no people, no text, no words. Child-friendly ages 4-8.`,
-      transparent:true, quality:"medium",
+      transparent:true, quality:"low",
     };
   }
   if (kind === "runnersky") {
