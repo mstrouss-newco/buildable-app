@@ -333,7 +333,7 @@ function resize(){ if(!cv)return; DPR=Math.min(2,(window.devicePixelRatio||1)); 
 let _last=0;
 function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
   if(state==="play") update(dt); else { nowMs+=dt*1000; pulse=(Math.sin(nowMs*0.006)+1)/2; if(BM)BM.update(fx,dt); for(const p of amb){p.y-=p.s*dt; if(p.y<-0.05)p.y=1.05;} }
-  draw(); requestAnimationFrame(frame); }
+  try{ draw(); }catch(e){ if(typeof console!=="undefined") console.error("draw",e); } requestAnimationFrame(frame); }
 if(typeof document!=="undefined"&&document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d"); resize(); window.addEventListener("resize",resize);
   const onTap=(e)=>{ const t=e.touches?e.touches[0]:e; const rb=cv.getBoundingClientRect(); if(BA)BA.unlock(); tapAt(t.clientX-rb.left,t.clientY-rb.top); };

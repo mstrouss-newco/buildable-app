@@ -17,6 +17,8 @@ vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:
 const G=sandbox.BUILDABLE_GAME; if(!G){ console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
 if(sandbox.MEMORY_GAME!==G){ console.error('FAIL: MEMORY_GAME alias missing'); process.exit(2); }
 let ok=true;
+console.log('--- menu-state render (match null, before any game) ---');
+{ const dm=G._draw(); if(dm!=='ok'){ok=false;} console.log(`${dm==='ok'?'PASS':'FAIL'}  menu render=${dm}`); }
 console.log('--- every size x player-count clears (perfect bot, 6 runs each) ---');
 const counts=[{solo:true,players:1,lbl:'solo'},{players:2,lbl:'2p'},{players:3,lbl:'3p'},{players:4,lbl:'4p'}];
 const cfg=G._cfg();

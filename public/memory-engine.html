@@ -258,6 +258,7 @@ function draw(){
   return "ok";
 }
 function drawHUD(){
+  if(!match) return;
   const L=layout(), hud=L.hud;
   ctx.save();
   ctx.fillStyle="rgba(10,8,24,0.42)"; ctx.fillRect(0,0,W,hud);
@@ -338,7 +339,7 @@ let _last=0;
 function frame(ts){
   if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
   if(state==="play") update(dt); else { nowMs+=dt*1000; if(BM)BM.update(fx,dt); for(const p of amb){ p.y-=p.s*dt; if(p.y<-0.05)p.y=1.05; } }
-  draw();
+  try{ draw(); }catch(e){ if(typeof console!=="undefined") console.error("draw",e); }
   requestAnimationFrame(frame);
 }
 if(typeof document!=="undefined" && document.getElementById("cv")){
