@@ -75,6 +75,18 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Buildable Tennis — first real-time 1- & 2-player game (June 27 2026)
+**Tennis is the first real-time multiplayer game** (the blueprint in `MULTIPLAYER.md` is now built). A new Track B engine `public/tennis.html` — paddles top & bottom, a bouncy ball, first to 7.
+
+- **Three ways to play, one engine:** *solo* vs a beatable bot, *2 players* same-screen (top half / bottom half, or A/D + arrow keys), and *family* across devices via the realtime layer.
+- **Speaks the frozen `mp:` contract only** — the engine never touches Supabase. Loaded with `?online=1` it hides its menu, posts `mp:ready`, then on `mp:init`/`mp:start` runs the match: the **host owns the ball** and broadcasts ball + its own paddle every frame; each kid broadcasts **positions, not commands**; the guest renders the field flipped (self at the bottom) and never simulates the ball; remote paddle + ball are lerp-smoothed; ends with `mp:result`. Canned reactions only (the 6 allowed phrases) — no free text.
+- **Launched through `FamilyRealtime`** (now wired into the app for the first time): Games picker → **Tennis** tile → solo/2-player engine, with a **"Play a sibling"** button → `<FamilyRealtime game={{slug:"tennis", url:"/tennis.html?online=1"}}>` for cross-device play. Reuses the generic `rt_matches` table (keyed `game='tennis'`) — no new table.
+- **Shared everything:** drawn art/ball/paddles via `BR`, juice (paddle-hit bursts, score shake/flash, "Point!" pops) via `BM`, sound via `BA`. **New bespoke ElevenLabs one-shots registered in `api/sfx.js`:** `tennis_hit`, `tennis_wall`, `tennis_point`, `tennis_win`, `tennis_lose` (auto-generated + cached on first play; `BA` synth is the silent fallback only). Start screen via the shared `BS`.
+- **Always-winnable + QA'd:** every bounce carries a minimum sideways angle (no dead-straight stalemates) and the bots are tuned beatable. `qa-tennis.mjs` drives `TENNIS_GAME.sim()` headlessly — a flawless corner-aiming player wins every difficulty (Gentle/Normal/Speedy all PASS) and the render smoke-test passes. `npm run build` is clean.
+- **Route:** `public/tennis.html` added to `vercel.json` before the landing-page catch-all.
+
+**Owner action for family (cross-device) play:** run `db/create-rt-matches.sql` once in Supabase (if not already), and confirm the parent-account lane env vars are live. Solo + same-screen 2-player work with no setup. **Still TODO:** live QA across two real devices/sessions (the one thing a headless sim can't cover), and optional bespoke background music.
+
 ## Breaker adopts the shared start screen (BS) + start-screen is now a rule (June 27 2026)
 
 First real adoption of `buildable-startscreen.js`: `public/breaker-engine.html` now renders

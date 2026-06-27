@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Buildable Tennis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; background:#0F0E17; font-family:'Nunito',sans-serif; }
+  #wrap { position:fixed; inset:0; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  /* start menu mount (BS renders into here) */
+  #menu { position:absolute; inset:0; z-index:5; }
+  /* canned-reaction bar (online only) */
+  #reactBar { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:6;
+    display:none; gap:8px; flex-wrap:wrap; justify-content:center; max-width:92%; }
+  #reactBar.on { display:flex; }
+  #reactBar button { font-family:'Fredoka',sans-serif; font-weight:600; font-size:14px; color:#fff;
+    background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.26); border-radius:999px;
+    padding:8px 14px; cursor:pointer; }
+  #reactBar button:active { background:rgba(255,255,255,0.30); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="menu"></div>
+  <div id="reactBar"></div>
+</div>
+
+<!-- shared engine libraries (drawn art, sound, juice, start screen) -->
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+
+<script>
+/* =====================================================================
+   Buildable Tennis — a 1- and 2-player paddle game.
+   Track B hand-authored engine. Network-agnostic: it knows nothing about
+   Supabase. For cross-device family play it speaks ONLY the frozen `mp:`
+   postMessage contract (see MULTIPLAYER.md) — host owns the ball, every kid
+   broadcasts positions (not commands), guest renders what the host sends.
+   ===================================================================== */
+"use strict";
+var BR = window.BuildableRenders, BA = window.BuildableAudio, BM = window.BuildableMechanics, BS = window.BuildableStartScreen;
+
+/* ---------- 1) CONTENT AS DATA (worlds + difficulty levels) ---------- */
+var GAME_CONFIG = window.GAME_CONFIG || {
+  name: "Buildable Tennis",
+  target: 7,                 // first to 7 points wins
+  paddleW: 0.22,             // generous paddle (kid-friendly)
+  ballR: 0.018,
+  // difficulty "levels" shown on the start screen (all unlocked)
+  levels: [
+    { name: "Gentle",  start: 0.42, max: 0.78, gain: 1.035, bot: 0.18 },
+    { name: "Normal",  start: 0.52, max: 0.95, gain: 1.045, bot: 0.26 },
+    { name: "Speedy",  start: 0.62, max: 1.12, gain: 1.055, bot: 0.34 },
+  ],
+  // world -> background theme + accent colors (drawn art, never breaks)
+  worlds: {
+    default: { bg: ["#10243a", "#0a1830"], net: "#9fd0ff", me: "#7ee0a0", opp: "#ff9ec4", ball: "#ffe27a" },
+    jungle:  { bg: ["#123a1f", "#0a2414"], net: "#a8f0b8", me: "#ffe27a", opp: "#7ad6ff", ball: "#ffd23f" },
+    ocean:   { bg: ["#0a3550", "#062032"], net: "#bdeaff", me: "#ffe27a", opp: "#ff9ec4", ball: "#aef0ff" },
+    space:   { bg: ["#1a1240", "#0a0820"], net: "#c9b8ff", me: "#7ee0a0", opp: "#ff9ec4", ball: "#fff1a8" },
+    candy:   { bg: ["#5a2f6e", "#3a1f49"], net: "#ffd0ec", me: "#aef0c0", opp: "#9fd0ff", ball: "#fff1a8" },
+    castle:  { bg: ["#2b2f48", "#171a2c"], net: "#cfd6ff", me: "#ffd23f", opp: "#7ad6ff", ball: "#fff" },
+  },
+};
+function worldTheme(k) { return GAME_CONFIG.worlds[k] || GAME_CONFIG.worlds.default; }
+
+/* ---------- 2) STATE ---------- */
+var canvas = document.getElementById("c");
+var ctx = canvas ? canvas.getContext("2d") : null;
+var DPR = (window.devicePixelRatio || 1);
+var VW = 900, VH = 1200;       // CSS pixel size of the canvas (set in resize)
+
+// the play field is normalized 0..1 in both axes; it renders into a centered
+// court rectangle that keeps a 3:4 portrait aspect so paddles sit top & bottom.
+var court = { x: 0, y: 0, w: 0, h: 0 };
+
+var fx = BM ? BM.makeFx() : { parts: [], pops: [], shake: 0, flash: 0, flashCol: "#fff" };
+
+var G = null;          // live game object
+var state = "title";   // title | play | over
+var mode = "solo";     // solo | two | online
+var diff = 0;          // index into GAME_CONFIG.levels
+var worldKey = "default";
+var paused = false;    // online: opponent left
+var started = false;
+
+// online bits
+var online = (function () { try { return new URLSearchParams(location.search).get("online") === "1"; } catch (e) { return false; } })();
+var _now = function () { try { return performance.now(); } catch (e) { return Date.now(); } };
+var role = "host";     // host owns the ball
+var flip = false;      // guest renders the field upside-down (self at bottom)
+var meKid = null, oppKid = null, meName = "You", oppName = "Friend";
+var lastSentPaddle = 0, lastSentBall = 0;
+
+/* ---------- 3) NEW GAME ---------- */
+function newGame() {
+  var lv = GAME_CONFIG.levels[diff] || GAME_CONFIG.levels[1];
+  G = {
+    lv: lv,
+    botX: 0.5, topX: 0.5, bottomX: 0.5,   // paddle centers (normalized x)
+    botTargetX: 0.5, oppTargetX: 0.5,     // smoothing targets for remote/bot
+    bx: 0.5, by: 0.5, vx: 0, vy: 0,       // ball
+    bxT: 0.5, byT: 0.5,                   // ball smoothing target (guest)
+    sBottom: 0, sTop: 0,                  // scores (canonical: bottom vs top)
+    serveTo: Math.random() < 0.5 ? 1 : -1,
+    cool: 0,                              // serve countdown (seconds)
+    winner: null,
+  };
+  serve(G.serveTo);
+  state = "play"; started = true; paused = false;
+}
+
+function serve(dir) {
+  var lv = G.lv;
+  G.bx = 0.5; G.by = 0.5; G.bxT = 0.5; G.byT = 0.5;
+  var ang = (Math.random() * 0.5 - 0.25);     // small sideways spread
+  G.vx = Math.sin(ang) * lv.start;
+  G.vy = dir * Math.cos(ang) * lv.start;
+  G.cool = 0.7;                                // brief pause before it flies
+}
+
+/* ---------- 4) INPUT ---------- */
+var keys = {};
+function setMyPaddleX(nx) {
+  if (!G) return;
+  nx = Math.max(GAME_CONFIG.paddleW / 2, Math.min(1 - GAME_CONFIG.paddleW / 2, nx));
+  if (mode === "online") { if (role === "host") G.bottomX = nx; else G.topX = nx; }
+  else G.bottomX = nx;
+}
+function setTopHumanX(nx) {
+  if (!G) return;
+  G.topX = Math.max(GAME_CONFIG.paddleW / 2, Math.min(1 - GAME_CONFIG.paddleW / 2, nx));
+}
+// pointer -> normalized court coords (account for guest flip)
+function pointerToCourt(clientX, clientY) {
+  var r = canvas.getBoundingClientRect();
+  var nx = (clientX - r.left - court.x) / court.w;
+  var ny = (clientY - r.top - court.y) / court.h;
+  if (flip) ny = 1 - ny;            // guest sees field flipped
+  return { nx: nx, ny: ny };
+}
+function onPointer(clientX, clientY) {
+  if (state !== "play" || !G) return;
+  var p = pointerToCourt(clientX, clientY);
+  if (mode === "two") {
+    // top half drives the top paddle, bottom half drives the bottom paddle
+    if (p.ny < 0.5) setTopHumanX(p.nx); else G.bottomX = clamp(p.nx);
+  } else {
+    setMyPaddleX(p.nx);
+  }
+}
+function clamp(nx) { return Math.max(GAME_CONFIG.paddleW / 2, Math.min(1 - GAME_CONFIG.paddleW / 2, nx)); }
+
+if (canvas) {
+  canvas.addEventListener("pointermove", function (e) { onPointer(e.clientX, e.clientY); }, { passive: true });
+  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); onPointer(e.clientX, e.clientY); }, { passive: true });
+  canvas.addEventListener("touchmove", function (e) {
+    for (var i = 0; i < e.touches.length; i++) onPointer(e.touches[i].clientX, e.touches[i].clientY);
+  }, { passive: true });
+}
+window.addEventListener("keydown", function (e) { keys[e.key] = true; if (BA && (e.key === " " || e.key.indexOf("Arrow") === 0)) BA.unlock(); });
+window.addEventListener("keyup", function (e) { keys[e.key] = false; });
+
+/* ---------- 5) UPDATE (physics) ---------- */
+function update(dt) {
+  if (!G || state !== "play" || paused) return;
+  dt = Math.min(dt, 0.05);                       // clamp big frames
+
+  // ---- keyboard paddle control ----
+  var step = 1.4 * dt;
+  if (mode !== "online") {
+    if (keys["ArrowLeft"]) G.bottomX = clamp(G.bottomX - step);
+    if (keys["ArrowRight"]) G.bottomX = clamp(G.bottomX + step);
+    if (mode === "two") {
+      if (keys["a"] || keys["A"]) setTopHumanX(G.topX - step);
+      if (keys["d"] || keys["D"]) setTopHumanX(G.topX + step);
+    }
+  } else {
+    var myKey = (role === "host") ? "bottomX" : "topX";
+    if (keys["ArrowLeft"]) G[myKey] = clamp(G[myKey] - step);
+    if (keys["ArrowRight"]) G[myKey] = clamp(G[myKey] + step);
+  }
+
+  // ---- bot AI (solo: bot is the TOP paddle) ----
+  if (mode === "solo") {
+    var aim = G.bx;                                // chase the ball's x
+    var maxV = G.lv.bot * dt;
+    var d = aim - G.topX;
+    if (Math.abs(d) > maxV) d = (d > 0 ? maxV : -maxV);
+    G.topX = clamp(G.topX + d);
+  }
+
+  // ---- GUEST: never simulates the ball — just smooths toward host values ----
+  if (mode === "online" && role === "guest") {
+    G.bx += (G.bxT - G.bx) * Math.min(1, 12 * dt);
+    G.by += (G.byT - G.by) * Math.min(1, 12 * dt);
+    G.bottomX += (G.oppTargetX - G.bottomX) * Math.min(1, 14 * dt);   // host's paddle
+    return;
+  }
+
+  // ---- HOST / SOLO / TWO simulate the ball ----
+  // smooth a remote opponent paddle (online host smooths guest's paddle)
+  if (mode === "online" && role === "host") {
+    G.topX += (G.oppTargetX - G.topX) * Math.min(1, 14 * dt);
+  }
+
+  if (G.cool > 0) { G.cool -= dt; return; }
+
+  var r = GAME_CONFIG.ballR, hw = GAME_CONFIG.paddleW / 2, pInset = 0.045, pTh = 0.022;
+  G.bx += G.vx * dt; G.by += G.vy * dt;
+
+  // side walls
+  if (G.bx < r) { G.bx = r; G.vx = Math.abs(G.vx); ping("tennis_wall", "select"); }
+  if (G.bx > 1 - r) { G.bx = 1 - r; G.vx = -Math.abs(G.vx); ping("tennis_wall", "select"); }
+
+  // bottom paddle (canonical bottom defends by≈1)
+  var byPaddle = 1 - pInset;
+  if (G.vy > 0 && G.by + r >= byPaddle - pTh && G.by + r <= byPaddle + pTh + 0.04) {
+    if (Math.abs(G.bx - G.bottomX) <= hw + r) { bounce(-1, G.bottomX); }
+  }
+  // top paddle defends by≈0
+  var tyPaddle = pInset;
+  if (G.vy < 0 && G.by - r <= tyPaddle + pTh && G.by - r >= tyPaddle - pTh - 0.04) {
+    if (Math.abs(G.bx - G.topX) <= hw + r) { bounce(1, G.topX); }
+  }
+
+  // scoring
+  if (G.by > 1 + 0.04) { point("top"); }
+  else if (G.by < -0.04) { point("bottom"); }
+
+  // host broadcasts ball + own paddle every frame
+  if (mode === "online" && role === "host") {
+    sendPaddle(G.bottomX);
+    sendBall();
+  } else if (mode === "online" && role === "guest") {
+    sendPaddle(G.topX);
+  }
+}
+
+function bounce(dir, paddleX) {
+  var lv = G.lv;
+  // reflect, steer by where it hit the paddle, and speed up a touch (capped)
+  var off = (G.bx - paddleX) / (GAME_CONFIG.paddleW / 2);   // -1..1
+  var speed = Math.min(lv.max, Math.hypot(G.vx, G.vy) * lv.gain);
+  // always impart some sideways angle so no shot is ever dead-straight
+  var mag = Math.max(0.16, Math.abs(off) * 0.9);
+  var sgn = off === 0 ? (Math.random() < 0.5 ? -1 : 1) : (off > 0 ? 1 : -1);
+  var ang = sgn * Math.min(0.95, mag);                      // up to ~54deg
+  G.vx = Math.sin(ang) * speed;
+  G.vy = dir * Math.abs(Math.cos(ang)) * speed;
+  G.by = dir < 0 ? Math.min(G.by, 1 - 0.045 - 0.022 - GAME_CONFIG.ballR)
+                 : Math.max(G.by, 0.045 + 0.022 + GAME_CONFIG.ballR);
+  ping("tennis_hit", "coin");
+  if (BM) { BM.burst(fx.parts, c2x(G.bx), c2y(G.by), worldTheme(worldKey).ball, 10); BM.shake(fx, 0.12); }
+}
+
+function point(side) {
+  if (side === "top") G.sTop++; else G.sBottom++;
+  if (BM) { BM.shake(fx, 0.4); BM.flash(fx, "#fff", 0.5);
+    BM.pop(fx.pops, c2x(0.5), c2y(0.5), "Point!", "#fff"); }
+  ping("tennis_point", "hurt");
+
+  var tgt = GAME_CONFIG.target;
+  if (G.sBottom >= tgt || G.sTop >= tgt) { finish(); return; }
+  // host owns score in online — push it out, then serve toward the loser
+  G.serveTo = (side === "top") ? 1 : -1;   // serve toward whoever was scored on
+  serve(G.serveTo);
+  if (mode === "online" && role === "host") sendBall();
+}
+
+function finish() {
+  state = "over"; G.winner = G.sBottom > G.sTop ? "bottom" : "top";
+  var iWon;
+  if (mode === "online") iWon = (role === "host") ? (G.winner === "bottom") : (G.winner === "top");
+  else iWon = (G.winner === "bottom");           // solo/two: bottom is "you"/P1
+  ping(iWon ? "tennis_win" : "tennis_lose", iWon ? "win" : "lose");
+  if (BM) BM.flash(fx, iWon ? "#7ee0a0" : "#ff9ec4", 0.6);
+
+  // online: only the host writes the official result through the pipes
+  if (mode === "online" && role === "host") {
+    var winnerKid = (G.winner === "bottom") ? meKid : oppKid;
+    mp("mp:result", { winner: winnerKid, score: { host: G.sBottom, guest: G.sTop } });
+  }
+}
+
+/* ---------- 6) RENDER ---------- */
+function c2x(nx) { return court.x + nx * court.w; }
+function c2y(ny) { var y = flip ? (1 - ny) : ny; return court.y + y * court.h; }
+
+function draw() {
+  if (!ctx) return;
+  var th = worldTheme(worldKey);
+  var sh = BM ? BM.shakeOffset(fx) : { x: 0, y: 0 };
+  ctx.save();
+  ctx.translate(sh.x || 0, sh.y || 0);
+
+  // backdrop
+  var g = ctx.createLinearGradient(0, 0, 0, VH);
+  g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
+  ctx.fillStyle = g; ctx.fillRect(-40, -40, VW + 80, VH + 80);
+
+  // court frame
+  ctx.fillStyle = "rgba(255,255,255,0.04)";
+  rrect(court.x, court.y, court.w, court.h, 18); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 3;
+  rrect(court.x, court.y, court.w, court.h, 18); ctx.stroke();
+
+  // center net (dashed)
+  ctx.strokeStyle = th.net; ctx.globalAlpha = 0.5; ctx.lineWidth = 4;
+  ctx.setLineDash([14, 12]); ctx.beginPath();
+  ctx.moveTo(court.x + 12, c2y(0.5)); ctx.lineTo(court.x + court.w - 12, c2y(0.5));
+  ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+  // paddles — "my" color is whichever paddle the local player drives
+  var myIsBottom = !(mode === "online" && role === "guest");
+  paddle(G.bottomX, 1 - 0.045, myIsBottom ? th.me : th.opp);
+  paddle(G.topX, 0.045, myIsBottom ? th.opp : th.me);
+
+  // ball
+  if (!(G.cool > 0 && state === "play") || true) {
+    var bx = c2x(G.bx), by = c2y(G.by), r = GAME_CONFIG.ballR * court.w;
+    var rg = ctx.createRadialGradient(bx - r * 0.3, by - r * 0.3, r * 0.2, bx, by, r);
+    rg.addColorStop(0, "#fff"); rg.addColorStop(1, th.ball);
+    ctx.fillStyle = rg; ctx.shadowColor = th.ball; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.arc(bx, by, r, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+  }
+
+  // scores (top-of-screen for the opponent, bottom for me)
+  var topScore = myIsBottom ? G.sTop : G.sBottom;
+  var botScore = myIsBottom ? G.sBottom : G.sTop;
+  ctx.font = "900 30px Nunito, sans-serif"; ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillText(String(topScore), court.x + 16, court.y + 40);
+  ctx.fillText(String(botScore), court.x + 16, court.y + court.h - 18);
+
+  // FX layer
+  if (BM) BM.draw(ctx, fx, { font: "900 26px Nunito, sans-serif" });
+
+  // overlays
+  if (paused) banner("Waiting for " + oppName + "…", "");
+  else if (state === "over") {
+    var myIsBottom2 = !(mode === "online" && role === "guest");
+    var iWon = (G.winner === "bottom") === myIsBottom2;
+    banner(iWon ? "You win! 🎉".replace(" 🎉", "") : (mode === "solo" ? "Try again!" : "So close!"),
+           mode === "online" ? "Tap to play again" : "Tap for the menu");
+  } else if (state === "play" && G.cool > 0) {
+    ctx.font = "800 22px Nunito, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.fillText("Get ready!", c2x(0.5), c2y(0.5) - 30);
+  }
+  ctx.restore();
+}
+
+function paddle(nx, ny, col) {
+  var w = GAME_CONFIG.paddleW * court.w, h = 0.022 * court.h * 1.6;
+  var x = c2x(nx) - w / 2, y = c2y(ny) - h / 2;
+  var g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, "#ffffff"); g.addColorStop(1, col);
+  ctx.fillStyle = g; ctx.shadowColor = col; ctx.shadowBlur = 14;
+  rrect(x, y, w, h, h / 2); ctx.fill(); ctx.shadowBlur = 0;
+}
+function rrect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function banner(title, sub) {
+  ctx.fillStyle = "rgba(10,8,20,0.62)"; ctx.fillRect(court.x, court.y, court.w, court.h);
+  ctx.textAlign = "center"; ctx.fillStyle = "#fff";
+  ctx.font = "900 40px Nunito, sans-serif"; ctx.fillText(title, c2x(0.5), c2y(0.5) - 6);
+  if (sub) { ctx.font = "700 18px Nunito, sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillText(sub, c2x(0.5), c2y(0.5) + 30); }
+}
+
+/* ---------- 7) AUDIO: bespoke ElevenLabs one-shots (synth fallback) ---------- */
+var _sndCache = {};
+function ping(name, fallback) {
+  if (!BA || BA.muted) return;
+  try {
+    if (!BA._unlocked) { if (fallback) BA.sfx(fallback); return; }
+    var a = _sndCache[name];
+    if (!a) { a = new Audio("/api/sfx?s=" + name); a.volume = 0.5; _sndCache[name] = a; }
+    a.currentTime = 0;
+    var pr = a.play();
+    if (pr && pr.catch) pr.catch(function () { if (fallback) BA.sfx(fallback); });
+  } catch (e) { if (fallback) BA.sfx(fallback); }
+}
+
+/* ---------- 8) ONLINE: the frozen mp: contract ---------- */
+function mp(type, extra) {
+  var msg = Object.assign({ type: type }, extra || {});
+  try { if (window.parent && window.parent !== window) window.parent.postMessage(msg, "*"); } catch (e) {}
+}
+function sendPaddle(nx) {
+  var now = _now();
+  if (now - lastSentPaddle < 33) return;        // ~30/s
+  lastSentPaddle = now;
+  mp("mp:send", { event: "paddle", data: { x: nx } });
+}
+function sendBall() {
+  var now = _now();
+  if (now - lastSentBall < 33) return;
+  lastSentBall = now;
+  mp("mp:send", { event: "ball", data: { x: G.bx, y: G.by, vx: G.vx, vy: G.vy, sB: G.sBottom, sT: G.sTop } });
+}
+function applyPeer(event, data) {
+  if (!G || !data) return;
+  if (event === "paddle") {
+    // opponent's own paddle: host receives guest's TOP paddle; guest receives host's BOTTOM paddle
+    if (role === "host") G.oppTargetX = data.x;      // guest paddle (top)
+    else G.oppTargetX = data.x;                       // host paddle (bottom)
+  } else if (event === "ball") {
+    G.bxT = data.x; G.byT = data.y; G.vx = data.vx; G.vy = data.vy;
+    if (typeof data.sB === "number") { G.sBottom = data.sB; G.sTop = data.sT; }
+    G.cool = 0;
+  } else if (event === "result") {
+    if (state !== "over") { G.winner = (data.winner === meKid) ? (role === "host" ? "bottom" : "top")
+                                                               : (role === "host" ? "top" : "bottom");
+      state = "over"; var iWon = data.winner === meKid;
+      ping(iWon ? "tennis_win" : "tennis_lose", iWon ? "win" : "lose"); }
+  }
+}
+
+if (online) {
+  // hide the local menu — the React lobby drives this match
+  var mEl = document.getElementById("menu"); if (mEl) mEl.style.display = "none";
+  window.addEventListener("message", function (e) {
+    var d = e.data || {}; if (!d.type || String(d.type).indexOf("mp:") !== 0) return;
+    if (d.type === "mp:init") {
+      role = d.role || "host"; flip = (role === "guest");
+      worldKey = d.world || "default";
+      meKid = d.you && d.you.kidId; meName = (d.you && d.you.name) || "You";
+      oppKid = d.opp && d.opp.kidId; oppName = (d.opp && d.opp.name) || "Friend";
+      mode = "online"; diff = 1;                       // family games play at "Normal"
+      showReactBar(true);
+    } else if (d.type === "mp:start") {
+      mode = "online"; newGame();
+    } else if (d.type === "mp:peer") {
+      if (paused) paused = false;
+      applyPeer(d.event, d.data);
+    } else if (d.type === "mp:reaction") {
+      if (d.text && BM) BM.pop(fx.pops, c2x(0.5), c2y(0.28), d.text, "#fff");
+    } else if (d.type === "mp:peerLeft") {
+      paused = true;
+    }
+  });
+  // tell the pipes we're loaded and ready
+  mp("mp:ready", {});
+}
+
+// canned-reaction bar (online only) — child-safe fixed phrases, no free text
+var REACTIONS = ["Nice shot!", "So close!", "Good game!", "Wow!", "Let's go!", "Haha!"];
+function showReactBar(on) {
+  var bar = document.getElementById("reactBar"); if (!bar) return;
+  if (on && !bar._built) {
+    REACTIONS.forEach(function (t) {
+      var b = document.createElement("button"); b.textContent = t;
+      b.onclick = function () { mp("mp:reaction", { text: t }); if (BM) BM.pop(fx.pops, c2x(0.5), c2y(0.72), t, "#fff"); };
+      bar.appendChild(b);
+    });
+    bar._built = true;
+  }
+  bar.className = on ? "on" : "";
+}
+
+/* ---------- 9) START SCREEN (shared BS) for solo / two-player ---------- */
+var startUI = null;
+function startConfig() {
+  return {
+    title: GAME_CONFIG.name,
+    subtitle: mode === "two" ? "Two players — one each end of the screen!" : "Bounce it past your opponent to score!",
+    sound: !(BA && BA.muted),
+    modes: ["solo", "two"], mode: mode,
+    levels: GAME_CONFIG.levels.map(function (lv, i) {
+      return { n: i + 1, name: lv.name, color: ["#2b6f5c", "#4a3b8c", "#6b2f4a"][i % 3],
+               state: i === 1 ? "next" : "done" };   // all playable; Normal highlighted
+    }),
+  };
+}
+function mountStart() {
+  if (online) return;
+  var m = document.getElementById("menu"); if (!m || !BS) return;
+  var cbs = {
+    onPlay: function (n) { if (BA) BA.unlock(); diff = (n || 1) - 1; m.style.display = "none"; newGame(); },
+    onMode: function (mo) { mode = (mo === "two") ? "two" : "solo"; if (startUI) startUI.update(startConfig()); },
+    onSound: function () { if (BA) { BA.unlock(); BA.toggleMute(); } if (startUI) startUI.update(startConfig()); },
+    onBack: function () {},
+  };
+  if (!startUI) startUI = BS.mount(m, startConfig(), cbs); else startUI.update(startConfig());
+}
+function backToMenu() {
+  if (online) { newGame(); return; }              // online: tap restarts
+  state = "title"; var m = document.getElementById("menu"); if (m) m.style.display = "block"; mountStart();
+}
+
+// tap on the end screen
+if (canvas) canvas.addEventListener("pointerdown", function () {
+  if (state === "over") { if (mode === "online") { if (role === "host") newGame(); } else backToMenu(); }
+});
+
+/* ---------- 10) RESIZE + MAIN LOOP ---------- */
+function resize() {
+  if (!canvas) return;
+  VW = window.innerWidth; VH = window.innerHeight;
+  DPR = window.devicePixelRatio || 1;
+  canvas.width = VW * DPR; canvas.height = VH * DPR;
+  canvas.style.width = VW + "px"; canvas.style.height = VH + "px";
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // fit a 3:4 portrait court centered, with margins
+  var maxW = VW * 0.96, maxH = VH * 0.92, aspect = 3 / 4;
+  var w = maxW, h = w / aspect;
+  if (h > maxH) { h = maxH; w = h * aspect; }
+  court.w = w; court.h = h; court.x = (VW - w) / 2; court.y = (VH - h) / 2;
+}
+window.addEventListener("resize", resize);
+
+var last = 0;
+function frame(ts) {
+  var dt = last ? (ts - last) / 1000 : 0.016; last = ts;
+  if (BM) BM.update(fx, dt);
+  update(dt);
+  if (G) draw();
+  requestAnimationFrame(frame);
+}
+
+// boot
+if (typeof document !== "undefined" && canvas) {
+  resize();
+  newGame(); state = "title";       // have a field to draw behind the menu
+  if (!online) mountStart();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- 11) QA / HEADLESS HOOK ---------- */
+// A perfect player (bottom paddle tracks the ball) must beat the bot on every
+// difficulty. qa-tennis.mjs drives this in Node with stubbed browser globals.
+window.TENNIS_GAME = {
+  _cfg: function () { return GAME_CONFIG; },
+  _begin: function (i) { mode = "solo"; diff = i || 0; newGame(); },
+  _step: function (n) { for (var k = 0; k < (n || 1); k++) update(0.016); },
+  _draw: function () { try { draw(); return "ok"; } catch (e) { return "ERR: " + (e && e.message || e); } },
+  // simulate one difficulty to a finish with a flawless bottom player
+  sim: function (idx, maxFrames) {
+    mode = "solo"; diff = idx || 0; newGame();
+    var cap = maxFrames || 40000, f = 0;
+    while (state !== "over" && f < cap) {
+      // flawless player: aim each return to the corner away from the bot,
+      // by offsetting the paddle so the contact angle steers the ball there
+      var aim = G.topX < 0.5 ? 0.84 : 0.16;
+      var desiredOff = (aim > G.bx) ? 0.8 : -0.8;
+      G.bottomX = clamp(G.bx - desiredOff * (GAME_CONFIG.paddleW / 2));
+      update(0.016); f++;
+    }
+    return { level: idx, result: (G.winner === "bottom" ? "win" : "lose"),
+             frames: f, sB: G.sBottom, sT: G.sTop };
+  },
+  campaign: function (cap) {
+    var out = []; for (var i = 0; i < GAME_CONFIG.levels.length; i++) out.push(this.sim(i, cap || 40000));
+    return out;
+  },
+};
+</script>
+</body>
+</html>
