@@ -1,5 +1,28 @@
 # Buildable Kids — Session Log
 
+## Game: 7 new worlds for the platformer art library (June 26 2026)
+
+The runner engine (`public/play.html`) could already swap worlds via `GAME_CONFIG.world`,
+but only **one** world's art existed (`enchanted-forest`) plus the generic `props` set — so
+every game looked like the forest. Added the other **7 worlds** to `api/game-art.js`:
+**snowy-village, coral-reef, dragon-mountain, dino-jungle, space-station, desert-oasis,
+candy-land**.
+
+- Each world reuses the engine's **fixed 8 piece keys** (`far, tree_a, tree_b, bush_a,
+  bush_b, fern, mushroom, canopy`) so the engine swaps worlds with zero code changes — only
+  the watercolor descriptions are themed per world (e.g. reef = branching coral / kelp /
+  sea-fan / glowing anemones; candy = lollipop trees / gumdrop bushes / candy mushrooms).
+- Generated all **56** new cut-outs via `?build=` (gpt-image-1, low, transparent PNG,
+  cached in `narration_cache`), ~$0.60 one-time. **Verified all 64 `?img=` URLs** (8 worlds
+  x 8 pieces) serve valid non-zero PNGs.
+- **QA:** `BK_GAME.sim(0)` still returns **win** (gameplay untouched — art is cosmetic and
+  uses a separate RNG). Loaded the engine with a **candy-land** config in an iframe and
+  confirmed it renders the full candy scene (lollipop trees, candy hills, cotton-candy
+  clouds) and the sim wins — proving the world swap works end-to-end.
+- No `play.html` change needed (a teammate's concurrent ElevenLabs-music rewrite landed
+  first; rebased cleanly, kept theirs).
+
+
 ## Platformer: real ElevenLabs music library + no-reading demo instructions (June 26 2026)
 
 Follow-up to the polish pass, both in `public/play.html`.

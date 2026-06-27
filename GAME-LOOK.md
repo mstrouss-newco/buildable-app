@@ -164,8 +164,10 @@ Fix lives in `src/lib/audioUnlock.js`, installed once in `src/main.jsx`:
 
 ## 8. Known gaps / next improvements
 
-- Generate world pieces for the other 7 worlds + non-watercolor styles (only
-  `enchanted-forest` + generic `props` exist so far).
+- ~~Generate world pieces for the other 7 worlds~~ DONE (June 26 2026): all 8 worlds
+  (enchanted-forest, snowy-village, coral-reef, dragon-mountain, dino-jungle, space-station,
+  desert-oasis, candy-land) now have full watercolor piece sets, cached + verified. Still
+  TODO: non-watercolor styles (modern3d/papercut/modern) for these worlds.
 - Per-world themed props (a desert enemy vs a forest critter), not just generic.
 - Optional vertical camera for taller climbs.
 - Richer foreground art (layered grass strips), moving platforms, swinging vines.
