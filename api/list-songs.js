@@ -36,11 +36,13 @@ export default async function handler(req, res) {
     const filter = kidProfileId
       ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId)
       : "device_id=eq." + encodeURIComponent(deviceId);
-    const q =
-      "saved_songs?" + filter +
-      "&select=song_id,title,prompt,vibe,theme,audio_url,cover_color,duration_sec,provider,created_at" +
-      "&order=created_at.desc&limit=10";
-    const r = await sb(q);
+    const baseCols = "song_id,title,prompt,vibe,theme,audio_url,cover_color,duration_sec,provider,created_at";
+    const tail = "&order=created_at.desc&limit=10";
+    let r = await sb("saved_songs?" + filter + "&select=" + baseCols + ",published,play_count,heart_count" + tail);
+    if (!r.ok) {
+      // pre-migration fallback: publishing columns may not exist yet
+      r = await sb("saved_songs?" + filter + "&select=" + baseCols + tail);
+    }
     if (!r.ok) {
       const detail = await r.text();
       return res.status(502).json({ error: "list failed", status: r.status, detail: detail.slice(0, 300) });

@@ -9,6 +9,7 @@ import MusicMaker from "./MusicMaker";
 import AdminDashboard from "./AdminDashboard";
 import GrownUpScreen from "./GrownUpScreen";
 import StoryMaker from "./StoryMaker";
+import TopBoard from "./TopBoard.jsx";
 import LoadingGames from "./LoadingGames";
 import QuizGate from "./QuizGate";
 import FamilyChess from "./FamilyChess";
@@ -33,6 +34,7 @@ const SCREEN_CHESS = "chess";
 const SCREEN_GAME_PICKER = "game_picker";
 const SCREEN_PLATFORMER = "platformer";
 const SCREEN_CHESS_FAMILY = "chess_family";
+const SCREEN_TOP = "top";
 function LearningControl() {
   const [gate, setGate] = useState(false);
   const [ab, setAb] = useState({ a: 0, b: 0 });
@@ -112,6 +114,14 @@ function GrownUpFab({ onClick }) {
 
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
+  const [remixData, setRemixData] = useState(null);
+  const startRemix = (item) => {
+    setRemixData(item);
+    setReturnTo(SCREEN_TOP);
+    if (item.kind === "song") setScreen(SCREEN_MUSIC);
+    else if (item.kind === "story") setScreen(SCREEN_STORY);
+    else setScreen(SCREEN_GAME_PICKER);
+  };
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
   const [gameData, setGameData] = useState({
@@ -192,6 +202,7 @@ export default function BuildableKids() {
       <HomeScreen
         activeKid={activeKid}
         onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
+        onTop={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TOP); }}
         onGames={() => setScreen(SCREEN_GAME_PICKER)}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
         onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
@@ -298,12 +309,24 @@ export default function BuildableKids() {
   }
 
   // ============ MY STUFF LIBRARY ============
+  if (screen === SCREEN_TOP) {
+    return (
+      <TopBoard
+        onHome={() => { setRemixData(null); setScreen(SCREEN_HOME); }}
+        onBack={() => { setRemixData(null); setScreen(returnTo || SCREEN_HOME); }}
+        onRemix={startRemix}
+      />
+    );
+  }
+
   if (screen === SCREEN_MUSIC) {
     return (
       <MusicMaker
         playerName={gameData.playerName}
-        onHome={() => setScreen(SCREEN_HOME)}
-        onBack={() => setScreen(returnTo || SCREEN_HOME)}
+        remix={remixData && remixData.kind === "song" ? remixData : null}
+        onConsumeRemix={() => setRemixData(null)}
+        onHome={() => { setRemixData(null); setScreen(SCREEN_HOME); }}
+        onBack={() => { setRemixData(null); setScreen(returnTo || SCREEN_HOME); }}
       />
     );
   }
@@ -312,8 +335,10 @@ export default function BuildableKids() {
     return (
       <StoryMaker
         playerName={(activeKid && activeKid.display_name) || gameData.playerName}
-        onHome={() => setScreen(SCREEN_HOME)}
-        onBack={() => setScreen(returnTo || SCREEN_HOME)}
+        remix={remixData && remixData.kind === "story" ? remixData : null}
+        onConsumeRemix={() => setRemixData(null)}
+        onHome={() => { setRemixData(null); setScreen(SCREEN_HOME); }}
+        onBack={() => { setRemixData(null); setScreen(returnTo || SCREEN_HOME); }}
       />
     );
   }
@@ -398,7 +423,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin }) {
+function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop }) {
   // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
   const AppIcon = ({ grad, children }) => (
     <div style={{ position: "relative", width: 76, height: 76, borderRadius: 20, background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
@@ -558,6 +583,11 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
           icon={<AppIcon grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)"><NoteGlyph /></AppIcon>}
           title="Music" desc="Make your own song. Ready to play right now!"
           badge="Ready" badgeColor="#7CF6B0" onClick={onMusic}
+        />
+        <ExperienceCard
+          icon={<AppIcon grad="linear-gradient(160deg,#FFB13C,#F0972A)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4h10v3a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/><path d="M9 13.5h6M8 20h8M12 13.5V20"/></svg></AppIcon>}
+          title="Top Creations" desc="See and remix songs, games & stories other kids made."
+          badge="New" badgeColor="#7CF6B0" onClick={onTop}
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#3DD06A,#2BB14F)"><ControllerGlyph /></AppIcon>}

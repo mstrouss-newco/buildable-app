@@ -122,7 +122,7 @@ function Speaker({ on, size = 22 }) {
   );
 }
 
-export default function MusicMaker({ onBack, onHome, playerName }) {
+export default function MusicMaker({ onBack, onHome, playerName, remix = null, onConsumeRemix = null }) {
   const deviceId = getDeviceId();
   const kidProfileId = getKidProfileId();
   const [vibe, setVibe] = useState("happy");
@@ -216,6 +216,23 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
     } catch {}
   }
 
+  // Remix: prefill the wizard from another kid's published song, then clear draft.
+  useEffect(() => {
+    if (!remix) return;
+    const c = (remix.meta && remix.meta.choices) || {};
+    setVibe(c.vibe || remix.vibe || "happy");
+    if (c.genre) setGenre(c.genre);
+    if (c.singer) setSinger(c.singer);
+    if (c.drums) setDrums(c.drums);
+    if (c.guitar) setGuitar(c.guitar);
+    if (c.strings) setStrings(c.strings);
+    if (c.speed) setSpeed(c.speed);
+    setPrompt(c.prompt || remix.theme || "");
+    setDraft(null); setTab("make"); setStep(0);
+    setStatus("Remixing " + (remix.title || "a song") + " — change anything you like!");
+    if (onConsumeRemix) onConsumeRemix();
+  }, [remix]);
+
   function buildChoices() { return { vibe, genre, singer, drums, guitar, strings, speed, prompt }; }
 
   async function makeSong() {
@@ -243,7 +260,7 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
     setStatus("Saving...");
     try {
       const r = await fetch("/api/save-song", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceId, kidProfileId, kidName: playerName || "", title: draft.title, audioUrl: draft.audioUrl, vibe: draft.vibe, theme: draft.theme, prompt: draft.prompt, coverColor: draft.coverColor, durationSec: draft.durationSec, provider: draft.provider, meta: draft.meta }) });
+        body: JSON.stringify({ deviceId, kidProfileId, kidName: playerName || "", title: draft.title, audioUrl: draft.audioUrl, vibe: draft.vibe, theme: draft.theme, prompt: draft.prompt, coverColor: draft.coverColor, durationSec: draft.durationSec, provider: draft.provider, meta: { ...(draft.meta || {}), choices: buildChoices() } }) });
       const j = await r.json();
       if (r.ok && j.ok) { setStatus("Saved to My Songs!"); setDraft(null); setPrompt(""); setStep(0); setJustFinished(true); await refresh(); }
       else if (r.status === 409) { setStatus(j.message || "You already have 10 songs!"); setTab("library"); }
@@ -262,6 +279,14 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Could not rename"); }
       refresh();
     } catch (err) { alert(err.message || "Could not rename song"); }
+  }
+  async function publishSong(song) {
+    const next = !song.published;
+    setSongs((prev) => prev.map((x) => x.song_id === song.song_id ? { ...x, published: next } : x));
+    try {
+      await fetch("/api/publish-creation", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "song", id: song.song_id, deviceId: getDeviceId(), publish: next }) });
+    } catch { /* keep optimistic */ }
   }
   async function deleteSong(songId) {
     try { await fetch("/api/delete-song", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId, songId }) }); await refresh(); } catch {}
@@ -451,6 +476,9 @@ export default function MusicMaker({ onBack, onHome, playerName }) {
                   <div style={S.songMeta}>{(s.vibe || "song")}{s.theme ? " · " + s.theme : ""}</div>
                   <SongPlayer src={s.audio_url} color={s.cover_color || "#5B6CFF"} size={64} />
                 </div>
+                <button style={{ ...S.shareBtn, display: "inline-flex", alignItems: "center", justifyContent: "center", background: s.published ? "rgba(61,208,106,0.22)" : "rgba(255,255,255,0.08)", color: s.published ? "#7CF6B0" : "#cfc8ff" }} onClick={() => publishSong(s)} title={s.published ? "Published to Top board — tap to make private" : "Publish to the Top board"} aria-label="Publish">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>
+                </button>
                 <button style={S.shareBtn} onClick={() => shareCreation({ kind: "song", id: s.song_id, title: s.title })} title="Share">↗</button>
                 <button style={S.renameBtn} onClick={() => renameSong(s)} title="Rename">Aa</button>
                 <button style={S.deleteBtn} onClick={() => deleteSong(s.song_id)} title="Delete">✕</button>

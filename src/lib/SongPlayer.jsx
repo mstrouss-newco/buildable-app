@@ -3,7 +3,8 @@ import { useRef, useState, useEffect } from "react";
 // A big, kid-friendly audio player: one large round play/pause button + a
 // progress bar that fills as the song plays. Replaces the tiny native <audio>
 // controls so a pre-reader can tell what to tap.
-export default function SongPlayer({ src, color = "#5B6CFF", autoPlay = false, size = 64 }) {
+export default function SongPlayer({ src, color = "#5B6CFF", autoPlay = false, size = 64, onPlay = null }) {
+  const playedOnce = useRef(false);
   const ref = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [pct, setPct] = useState(0);
@@ -11,16 +12,16 @@ export default function SongPlayer({ src, color = "#5B6CFF", autoPlay = false, s
   useEffect(() => {
     const a = ref.current;
     if (!a) return;
-    const onPlay = () => setPlaying(true);
+    const onPlayEvt = () => { setPlaying(true); if (!playedOnce.current) { playedOnce.current = true; try { onPlay && onPlay(); } catch {} } };
     const onPause = () => setPlaying(false);
     const onEnd = () => { setPlaying(false); setPct(0); };
     const onTime = () => { if (a.duration) setPct((a.currentTime / a.duration) * 100); };
-    a.addEventListener("play", onPlay);
+    a.addEventListener("play", onPlayEvt);
     a.addEventListener("pause", onPause);
     a.addEventListener("ended", onEnd);
     a.addEventListener("timeupdate", onTime);
     return () => {
-      a.removeEventListener("play", onPlay);
+      a.removeEventListener("play", onPlayEvt);
       a.removeEventListener("pause", onPause);
       a.removeEventListener("ended", onEnd);
       a.removeEventListener("timeupdate", onTime);
