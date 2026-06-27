@@ -761,3 +761,12 @@ castle=stone, desert=sand, meadow=gloss. Bespoke ElevenLabs SFX via BA.configure
 new breaker_smash/break/power/miss in api/sfx.js) — synth now fallback-only, satisfying the sound
 rule; verified /api/sfx?s=breaker_smash=200 live. All headless QA green (solo+pong+renders); live
 deploy QA'd. TODO: looping music must be ElevenLabs (not in-house-synth music-library loops).
+
+## Buildable Breaker: looping ElevenLabs music — June 27 2026
+
+Background music now reuses the shared ElevenLabs per-world tracks (/api/chess-music?world=).
+Breaker backdrops map onto music worlds (meadow->jungle; space/candy/ocean/castle/desert direct).
+ensureMusic() runs on game start (both modes), swaps the track when the backdrop changes without
+stacking, and respects the mute toggle. Real ElevenLabs music (not the in-house-synth music-library
+loops), satisfying the sound rule. Verified live: candy + jungle return 200 audio/mpeg (~470KB,
+cached from chess); BA.music.src set with loop=true on game start. All Breaker audio is now ElevenLabs.
