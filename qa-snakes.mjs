@@ -16,7 +16,9 @@ sandbox.window=sandbox; sandbox.globalThis=sandbox;
 vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:'snakes'});
 const G=sandbox.BUILDABLE_GAME; if(!G){ console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
 if(sandbox.SNAKES_GAME!==G){ console.error('FAIL: SNAKES_GAME alias missing'); process.exit(2); }
-let ok=true; const cfg=G._cfg();
+let ok=true;
+console.log('--- menu-state render (match null, before any game) ---');
+{ const dm=G._draw(); if(dm!=='ok'){ok=false;} console.log(`${dm==='ok'?'PASS':'FAIL'}  menu render=${dm}`); } const cfg=G._cfg();
 console.log('--- game always ends in a win (40 runs each combo) ---');
 for(const pl of [2,3,4]) for(let bi=0;bi<cfg.boards.length;bi++){
   let win=true,maxR=0,sumR=0,runs=40; for(let t=0;t<runs;t++){ const r=G.sim({players:pl,boardIdx:bi}); if(r.result!=='win'||r.winner<0) win=false; maxR=Math.max(maxR,r.rolls); sumR+=r.rolls; }

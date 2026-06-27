@@ -16,7 +16,9 @@ sandbox.window=sandbox; sandbox.globalThis=sandbox;
 vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:'bingo'});
 const G=sandbox.BUILDABLE_GAME; if(!G){ console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
 if(sandbox.BINGO_GAME!==G){ console.error('FAIL: BINGO_GAME alias missing'); process.exit(2); }
-let ok=true; const cfg=G._cfg();
+let ok=true;
+console.log('--- menu-state render (match null, before any game) ---');
+{ const dm=G._draw(); if(dm!=='ok'){ok=false;} console.log(`${dm==='ok'?'PASS':'FAIL'}  menu render=${dm}`); } const cfg=G._cfg();
 console.log('--- a winner always emerges (8 runs each combo) ---');
 for(const pl of [2,3,4]) for(let mi=0;mi<cfg.modes.length;mi++) for(let si=0;si<cfg.sizes.length;si++){
   let win=true,maxC=0; for(let t=0;t<8;t++){ const r=G.sim({players:pl,modeIdx:mi,sizeIdx:si,themeIdx:t%6}); if(r.result!=='win'||r.winner<0) win=false; maxC=Math.max(maxC,r.calls); }

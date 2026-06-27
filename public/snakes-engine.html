@@ -230,6 +230,7 @@ function drawTokens(){
   }
 }
 function drawHUD(){
+  if(!match) return;
   const top=Math.min(150,H*0.20);
   ctx.save(); ctx.fillStyle="rgba(10,8,24,0.42)"; ctx.fillRect(0,0,W,top*0.5);
   const n=match?match.count:2, pad=12, gap=8, bw=(W-pad*2-gap*(n-1))/n, bh=top*0.5-16;
@@ -292,7 +293,7 @@ function resize(){ if(!cv)return; DPR=Math.min(2,(window.devicePixelRatio||1)); 
 let _last=0;
 function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
   if(state==="play") update(dt); else { nowMs+=dt*1000; if(BM)BM.update(fx,dt); }
-  draw(); requestAnimationFrame(frame); }
+  try{ draw(); }catch(e){ if(typeof console!=="undefined") console.error("draw",e); } requestAnimationFrame(frame); }
 if(typeof document!=="undefined"&&document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d"); resize(); window.addEventListener("resize",resize);
   const onTap=(e)=>{ const t=e.touches?e.touches[0]:e; const rb=cv.getBoundingClientRect(); if(BA)BA.unlock(); tapAt(t.clientX-rb.left,t.clientY-rb.top); };

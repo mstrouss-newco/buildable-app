@@ -61,6 +61,11 @@ Shipped to `main` (live on www.buildablekids.com); branch `claude/games-simple-b
   else is one tap, no hunting. Tray scrolls if short on height; canvas still gets the room.
 - All drawing/sound/save/gallery logic unchanged; qa-art.mjs still green.
 ## 2026-06-27 — Three simple luck/matching games on ONE shared turn shell (Memory, Bingo, Snakes & Ladders)
+**Live-QA fix (same day):** the menu frame crashed (`drawHUD` read `match.players` while `match` was
+null before the first game), which killed the rAF loop so the board never appeared after pressing Play.
+Guarded `drawHUD` + made the frame loop crash-proof (try/catch) in all three engines; added a menu-state
+render assertion to `qa-memory/bingo/snakes.mjs` so it can't regress. Verified live in Chrome.
+
 Batch 2 of simple games — all same-device pass-and-play, built on one new shared brain. Branch
 `claude/games-simple-batch2` (not main).
 
