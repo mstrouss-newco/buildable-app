@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>Buildable Typing — Defend the Castle!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,8 +15,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-height:100vh;
-  display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none;
+body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-height:100vh;min-height:100dvh;
+  display:flex;align-items:safe center;justify-content:safe center;overflow:auto;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);user-select:none;
   -webkit-tap-highlight-color:transparent;transition:background .6s ease}
 .app{width:760px;max-width:100vw;transform-origin:center center;padding:6px}
 .logo{font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;text-align:center;margin-bottom:10px;letter-spacing:-.3px}
@@ -421,8 +421,12 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
     if(name==='how')startDemo();else stopDemo();fit();}
 
   function fit(){elApp.style.transform='none';const w=elApp.offsetWidth,h=elApp.offsetHeight;if(!w||!h)return;
-    scaleNow=Math.min(1,(window.innerWidth-12)/w,(window.innerHeight-12)/h);elApp.style.transform='scale('+scaleNow+')';}
+    const vv=window.visualViewport;
+    const vw=(vv&&vv.width)||window.innerWidth, vh=(vv&&vv.height)||window.innerHeight;
+    scaleNow=Math.min(1,(vw-12)/w,(vh-12)/h);elApp.style.transform='scale('+scaleNow+')';}
   window.addEventListener('resize',fit);
+  window.addEventListener('orientationchange',()=>setTimeout(fit,250));
+  if(window.visualViewport){window.visualViewport.addEventListener('resize',fit);}
 
   // ===== how-to diagram (drawn keyboard + hands) =====
   function zoneColor(ch){if(ch===';')return FCOLOR.pinky;const f=FINGER[ch];return f?FCOLOR[f.f]:'#A78BFF';}

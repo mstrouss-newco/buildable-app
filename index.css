@@ -10,6 +10,16 @@ html, body, * {
 html, body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh; /* iOS landscape: use the truly-visible height */
+}
+
+/* Keep the app's top/bottom controls clear of iPad Safari toolbars and the
+   home indicator in landscape (safe-area insets). Background stays full-bleed
+   because it's painted on <body> with background-attachment: fixed. */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 body {
   background:

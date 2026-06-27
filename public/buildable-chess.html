@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>Buildable Chess — Hero Squad!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,8 +15,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-height:100vh;
-  display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none;
+body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-height:100vh;min-height:100dvh;
+  display:flex;align-items:safe center;justify-content:safe center;overflow:auto;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);user-select:none;
   -webkit-tap-highlight-color:transparent;
   background:radial-gradient(120% 120% at 50% 0%,var(--pageA),var(--pageB));transition:background .8s ease}
 .app{width:640px;max-width:100vw;padding:10px;position:relative;z-index:2}

@@ -1753,3 +1753,23 @@ Raised `MAX_SONGS` from 10 to 100000 (effectively unlimited) in both `api/save-s
 (the real enforcement) and `src/MusicMaker.jsx` (the client-side gate that hid the Save
 button and blocked saves before the API call). TEMPORARY testing change — revert to a real
 cap before launch.
+
+## iPad landscape: stop top/bottom clipping everywhere — June 26 2026
+
+In landscape, iPad Safari's visible height is short and `100vh` overstates it, so screens
+that center content in a `100vh` body with `overflow:hidden` clipped the top and bottom.
+
+**React app** (`index.html`, `index.css`): viewport now uses `viewport-fit=cover`; `#root`
+gets `min-height:100dvh` + `env(safe-area-inset-*)` padding so the top bar (Back/Home) and
+bottom content clear the Safari toolbars and the home indicator. Background stays full-bleed
+(painted on `<body>`, `background-attachment:fixed`).
+
+**Full-screen games** (`public/typing.html`, `public/buildable-chess.html`,
+`public/story.html`, `public/play.html`): bodies use `min-height:100dvh`, `align-/justify-`
+`content:safe center`, `overflow:auto`, and safe-area padding — so when the layout is taller
+than a short landscape viewport it scrolls instead of clipping, and controls clear the
+edges. Typing's `fit()` now scales to `window.visualViewport` (the truly-visible area, not
+the inflated `innerHeight`) and re-fits on `orientationchange`. play.html's bottom hint and
+controls are lifted by `env(safe-area-inset-bottom)`.
+
+No gameplay/logic changes. Build verified (`npm run build`); all game scripts parse.
