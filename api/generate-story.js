@@ -227,11 +227,15 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(inp) });
   }
   try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 50000);
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1400, messages: [{ role: "user", content: buildPrompt(inp, age) }] }),
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 3600, messages: [{ role: "user", content: buildPrompt(inp, age) }] }),
+      signal: ctrl.signal,
     });
+    clearTimeout(to);
     if (!resp.ok) return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(inp) });
     const data = await resp.json();
     let txt = (data && data.content && data.content[0] && data.content[0].text) || "";
