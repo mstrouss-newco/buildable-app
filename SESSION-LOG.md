@@ -1,5 +1,21 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Art Studio: kid-friendly visual icons + tool-matched sound (pre-readers)
+- No-reading UI: every control is now a picture a 4-year-old can read.
+  - MIRROR buttons show the actual split: single shape (off), butterfly across a vertical line
+    (mirror), across a horizontal line (flip), and a pie cut into 2/4/8 wedges (kaleidoscope).
+  - STYLE buttons are little previews of each look (white paper / dark chalk / glowing neon /
+    raised 3D / pixel blocks).
+  - SAVE = a heart, UNDO/REDO = curved arrows, START-OVER = trash, BACKGROUND = a landscape,
+    MY ART = a photo stack, SOUND = a speaker (with waves on / red x off). Size = small dot -> big dot.
+  - Clear/Save confirm dialogs use icon buttons (green check / heart / X), not words.
+- Sound that matches the tool: each brush already triggers its own ElevenLabs one-shot while
+  drawing (crayon scratch, marker squeak, paint swish, pencil, chalk, spray hiss, neon hum,
+  glitter twinkle); tapping a brush now PREVIEWS its sound, taps on colors/styles/mirror give a
+  soft pop, fill = splash, stamp = thunk, undo = whoosh, save = sparkle chime. Cadence tightened.
+- All visual (no emoji). QA (qa-art.mjs) still green.
+
+
 ## 2026-06-27 — Helper reactions rolled out to more games
 - Win/lose helper reaction now fires in Survival (win+lose), Platformer/play.html (win+lose),
   and Typing (win) via direct window.parent.postMessage. Engines verified loading on preview.

@@ -20,8 +20,8 @@
   #paper{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.45);max-width:100%;max-height:100%;touch-action:none}
   #tray{flex:0 0 auto;background:var(--tray);border-top:2px solid var(--line);padding:6px 8px 9px}
   .row{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:3px 2px;-webkit-overflow-scrolling:touch}
-  .tool{flex:0 0 auto;width:58px;height:56px;border-radius:14px;background:var(--tray2);border:3px solid var(--line);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:#cfc8ff}
+  .tool{flex:0 0 auto;width:66px;height:64px;border-radius:16px;background:var(--tray2);border:3px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:#cfc8ff}
   .tool.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(126,224,160,.35);color:#fff}
   .tool .lab{font-size:10.5px;font-weight:600}
   .sw{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.25);cursor:pointer}
@@ -29,7 +29,16 @@
   .chip{flex:0 0 auto;min-width:44px;height:38px;border-radius:12px;background:var(--tray2);border:2px solid var(--line);
     color:#cfc8ff;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 12px}
   .chip.on{border-color:var(--good);color:#fff}
-  #size{width:120px;flex:0 0 auto}
+  #size{width:130px;flex:0 0 auto}
+  .iconbtn{flex:0 0 auto;width:56px;height:56px;border-radius:16px;background:var(--tray2);border:3px solid var(--line);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .iconbtn:active{transform:translateY(2px)}
+  .iconbtn.big{width:64px;height:64px}
+  .iconbtn.save{background:#fff0f5;border-color:#ff9bbb}
+  .micon{flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:var(--tray2);border:3px solid var(--line);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .micon.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(126,224,160,.35)}
+  .endcap{flex:0 0 auto;display:flex;align-items:center;color:#9b93d6}
   .grp{display:flex;align-items:center;gap:6px;flex:0 0 auto}
   .sec{font-size:11px;color:#9b93d6;font-weight:600;margin:0 2px 0 6px;flex:0 0 auto;text-transform:uppercase;letter-spacing:.4px}
   .btn{font-family:inherit;font-weight:700;font-size:15px;color:#1a0f3a;background:var(--accent);border:none;
@@ -65,31 +74,33 @@
   <div id="top">
     <div class="t">Art Studio</div>
     <div class="spacer"></div>
-    <button class="icbtn" id="galleryBtn">My Art</button>
-    <button class="icbtn" id="soundBtn">Sound: On</button>
+    <button class="iconbtn" id="galleryBtn" aria-label="My art"></button>
+    <button class="iconbtn" id="soundBtn" aria-label="Sound on or off"></button>
   </div>
   <div id="stage"><canvas id="paper"></canvas></div>
   <div id="tray">
     <div class="row" id="brushRow"></div>
     <div class="row" id="colorRow"></div>
     <div class="row" id="ctrlRow">
-      <span class="sec">Size</span><input type="range" id="size" min="2" max="80" value="18">
-      <span class="sec">Style</span><span id="styleRow" class="grp"></span>
-      <span class="sec">Mirror</span><span id="mirRow" class="grp"></span>
-      <button class="chip" id="bgBtn">Background</button>
+      <span class="endcap" id="sizeSmall"></span>
+      <input type="range" id="size" min="2" max="80" value="18">
+      <span class="endcap" id="sizeBig"></span>
+      <span id="styleRow" class="grp"></span>
+      <span id="mirRow" class="grp"></span>
+      <button class="iconbtn" id="bgBtn" aria-label="Background"></button>
       <span class="spacer" style="flex:1"></span>
-      <button class="btn ghost" id="undoBtn">Undo</button>
-      <button class="btn ghost" id="redoBtn">Redo</button>
-      <button class="btn ghost" id="clearBtn">Clear</button>
-      <button class="btn save" id="saveBtn">Save</button>
+      <button class="iconbtn" id="undoBtn" aria-label="Undo"></button>
+      <button class="iconbtn" id="redoBtn" aria-label="Redo"></button>
+      <button class="iconbtn" id="clearBtn" aria-label="Start over"></button>
+      <button class="iconbtn save big" id="saveBtn" aria-label="Save"></button>
     </div>
   </div>
 </div>
 
 <div class="ov" id="clearOv"><div class="card">
   <h2>Clear everything?</h2><p>Your drawing will be wiped. This can't be undone.</p>
-  <button class="btn ghost" id="clearNo">Keep it</button>
-  <button class="btn" id="clearYes" style="background:#ff7a90;box-shadow:0 5px 0 #c9536a">Yes, clear</button>
+  <button class="iconbtn big" id="clearNo" aria-label="Keep my drawing" style="background:#10391f;border-color:#3DD06A"></button>
+  <button class="iconbtn big" id="clearYes" aria-label="Start over" style="background:#3a1430;border-color:#ff7a90"></button>
 </div></div>
 
 <div class="ov" id="stickOv"><div class="card">
@@ -122,8 +133,8 @@
   <input type="text" id="artTitle" placeholder="My masterpiece" maxlength="40"><br><br>
   <label style="display:block;margin:6px 0 16px;font-size:15px;opacity:.85">
     <input type="checkbox" id="shareChk"> Also show my family</label>
-  <div><button class="btn ghost" id="saveCancel">Not yet</button>
-  <button class="btn save" id="saveGo">Save it!</button></div>
+  <div><button class="iconbtn big" id="saveCancel" aria-label="Not yet"></button>
+  <button class="iconbtn save big" id="saveGo" aria-label="Save it"></button></div>
 </div></div>
 
 <div id="toast"></div>
@@ -204,7 +215,7 @@
     try{ var a=_snd[name]; if(!a){ a=new Audio("/api/sfx?s="+encodeURIComponent(name)); a.volume=0.5; _snd[name]=a; }
       a.currentTime=0; a.play().catch(function(){}); }catch(e){} }
   var _lastStroke=0;
-  function playStrokeSfx(name){ var t=Date.now(); if(t-_lastStroke<120) return; _lastStroke=t; playSfx(name); }
+  function playStrokeSfx(name){ var t=Date.now(); if(t-_lastStroke<90) return; _lastStroke=t; playSfx(name); }
 
   // ---------- background ----------
   function drawBg(c){
@@ -343,6 +354,39 @@
 
   // ---------- UI ----------
   function svg(inner){ return '<svg width="28" height="28" viewBox="0 0 32 32">'+inner+'</svg>'; }
+  function ic(inner,w){ w=w||30; return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 32 32" fill="none">'+inner+'</svg>'; }
+  var ICONS = {
+    gallery: ic('<rect x="6" y="9" width="20" height="15" rx="2.5" stroke="#dcd6ff" stroke-width="2.4"/><circle cx="12" cy="14" r="2.2" fill="#ffd23f"/><path d="M7 22 l5-4 4 3 3-2 6 5" stroke="#7ee0a0" stroke-width="2.2" stroke-linejoin="round"/>'),
+    soundOn: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#dcd6ff"/><path d="M20 12 q3 4 0 8 M23.5 9 q6 7 0 14" stroke="#7ee0a0" stroke-width="2.2" stroke-linecap="round"/>'),
+    soundOff: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#9b93d6"/><path d="M21 12 l7 8 M28 12 l-7 8" stroke="#ff7a90" stroke-width="2.6" stroke-linecap="round"/>'),
+    bg: ic('<rect x="4" y="6" width="24" height="20" rx="3" stroke="#cfc8ff" stroke-width="2.4"/><circle cx="11" cy="13" r="3" fill="#ffd23f"/><path d="M5 23 L12 16 L17 21 L22 16 L27 22" stroke="#7ee0a0" stroke-width="2.4" stroke-linejoin="round"/>'),
+    undo: ic('<path d="M11 9 L6 14 L11 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14 H18 a7 7 0 1 1 0 14 H13" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>'),
+    redo: ic('<path d="M21 9 L26 14 L21 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 14 H14 a7 7 0 1 0 0 14 H19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>'),
+    trash: ic('<path d="M6 9 H26" stroke="#ffb3c1" stroke-width="2.6" stroke-linecap="round"/><path d="M12 9 V6.5 H20 V9" stroke="#ffb3c1" stroke-width="2.4"/><path d="M9 9 L10.5 27 H21.5 L23 9" stroke="#ffb3c1" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 13 V23 M18 13 V23" stroke="#ffb3c1" stroke-width="2.2" stroke-linecap="round"/>'),
+    heart: ic('<path d="M16 27 C16 27 4 19.5 4 11.5 C4 7.4 7.2 4.5 11 4.5 C13.5 4.5 15.2 6 16 7.6 C16.8 6 18.5 4.5 21 4.5 C24.8 4.5 28 7.4 28 11.5 C28 19.5 16 27 16 27 Z" fill="#ff5d8f"/>'),
+    check: ic('<path d="M7 17 L13 23 L25 9" stroke="#7ee0a0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'),
+    x: ic('<path d="M9 9 L23 23 M23 9 L9 23" stroke="#dcd6ff" stroke-width="3.4" stroke-linecap="round"/>'),
+    dotS: ic('<circle cx="16" cy="16" r="3.5" fill="#9b93d6"/>',18),
+    dotB: ic('<circle cx="16" cy="16" r="10" fill="#cfc8ff"/>',26)
+  };
+  function mirrorIcon(m){
+    var head='<svg width="30" height="30" viewBox="0 0 32 32" fill="none">';
+    if(m===1) return head+'<circle cx="16" cy="16" r="11" stroke="#cfc8ff" stroke-width="2.4"/><path d="M16 10 l3 5 -6 0 z" fill="#ffd23f"/></svg>';
+    if(m==="V") return head+'<rect x="5" y="6" width="22" height="20" rx="3" stroke="#cfc8ff" stroke-width="2.2"/><line x1="16" y1="6" x2="16" y2="26" stroke="#7ee0a0" stroke-width="2" stroke-dasharray="3 3"/><path d="M14 20 l-5 -7 5 0 z" fill="#ffd23f"/><path d="M18 20 l5 -7 -5 0 z" fill="#ffd23f"/></svg>';
+    if(m==="H") return head+'<rect x="6" y="5" width="20" height="22" rx="3" stroke="#cfc8ff" stroke-width="2.2"/><line x1="6" y1="16" x2="26" y2="16" stroke="#7ee0a0" stroke-width="2" stroke-dasharray="3 3"/><path d="M13 14 l7 -5 0 5 z" fill="#ffd23f"/><path d="M13 18 l7 5 0 -5 z" fill="#ffd23f"/></svg>';
+    var cnt=m/2, lines=""; for(var i=0;i<cnt;i++){ var a=Math.PI*i/cnt, dx=Math.cos(a)*11, dy=Math.sin(a)*11;
+      lines+='<line x1="'+(16-dx).toFixed(1)+'" y1="'+(16-dy).toFixed(1)+'" x2="'+(16+dx).toFixed(1)+'" y2="'+(16+dy).toFixed(1)+'" stroke="#7ee0a0" stroke-width="1.8"/>'; }
+    return head+'<circle cx="16" cy="16" r="11" stroke="#cfc8ff" stroke-width="2.2"/>'+lines+'<circle cx="16" cy="16" r="2.2" fill="#ffd23f"/></svg>';
+  }
+  function styleIcon(id){
+    var b='<svg width="30" height="30" viewBox="0 0 32 32">';
+    if(id==="paper") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#fff" stroke="#cfc8ff" stroke-width="1.5"/><path d="M9 20 q5 -10 14 -4" stroke="#b9b3e0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
+    if(id==="chalk") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#243240"/><path d="M9 20 q5 -10 14 -4" stroke="#eaf6ff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
+    if(id==="neon") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#0a0a1e"/><path d="M9 20 q5 -10 14 -4" stroke="#67e8f9" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"/><path d="M9 20 q5 -10 14 -4" stroke="#bff7ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+    if(id==="3d") return b+'<rect x="9" y="9" width="18" height="18" rx="4" fill="#6a4fd0"/><rect x="5" y="5" width="18" height="18" rx="4" fill="#b9a6ff"/></svg>';
+    if(id==="pixel"){ var g='<g fill="#cfc8ff">'; for(var r=0;r<3;r++)for(var c=0;c<3;c++){ if((r+c)%2===0) g+='<rect x="'+(7+c*6)+'" y="'+(7+r*6)+'" width="6" height="6"/>'; } return b+'<rect x="4" y="4" width="24" height="24" rx="4" fill="#241a52"/>'+g+'</g></svg>'; }
+    return b+'</svg>';
+  }
   function brushGlyph(b){
     var col=b.erase?"#ffb3c1":(b.stamp||b.shapes?"#ffd23f":(b.fill?"#7ee0a0":"#cfc8ff"));
     if(b.fill)    return svg('<path d="M6 16l10-10 9 9-10 10z" fill="none" stroke="'+col+'" stroke-width="2.4"/><path d="M24 20c2 3 3 4 3 6a3 3 0 0 1-6 0c0-2 1-3 3-6z" fill="'+col+'"/>');
@@ -363,7 +407,7 @@
       var el=document.createElement("div"); el.className="tool"+(b.id===S.brush.id?" on":"");
       el.innerHTML=brushGlyph(b)+'<span class="lab">'+b.name+'</span>';
       el.dataset.bid=b.id; el.onclick=function(){ S.brush=b; if(BA&&BA.unlock)try{BA.unlock();}catch(_){}
-        if(b.stamp) openStickers(); if(b.shapes) openShapes(); syncBrush(); };
+        if(b.stamp) openStickers(); if(b.shapes) openShapes(); syncBrush(); playSfx(b.sound); };
       br.appendChild(el);
     });
     var cr=document.getElementById("colorRow"); cr.innerHTML="";
@@ -376,24 +420,25 @@
     var rwrap=document.createElement("span"); rwrap.className="grp"; rwrap.id="recentWrap"; cr.appendChild(rwrap);
     renderRecent();
     var sr=document.getElementById("styleRow"); sr.innerHTML="";
-    STUDIO_CONFIG.styles.forEach(function(st){ var b=document.createElement("button"); b.className="chip"+(st.id===S.style?" on":"");
-      b.textContent=st.name; b.dataset.st=st.id; b.onclick=function(){ S.style=st.id; S.bg=st.bg; redraw(); syncStyle(); syncBg(); }; sr.appendChild(b); });
+    STUDIO_CONFIG.styles.forEach(function(st){ var b=document.createElement("button"); b.className="micon"+(st.id===S.style?" on":"");
+      b.innerHTML=styleIcon(st.id); b.setAttribute("aria-label",st.name); b.dataset.st=st.id;
+      b.onclick=function(){ S.style=st.id; S.bg=st.bg; redraw(); syncStyle(); playSfx("pop"); }; sr.appendChild(b); });
     var mr=document.getElementById("mirRow"); mr.innerHTML="";
-    STUDIO_CONFIG.mirror.forEach(function(m){ var b=document.createElement("button"); b.className="chip"+(m===S.mirror?" on":"");
-      b.textContent = m===1?"Off":(m==="V"?"Mirror":(m==="H"?"Flip":"x"+m)); b.dataset.m=String(m);
-      b.onclick=function(){ S.mirror=m; syncMir(); }; mr.appendChild(b); });
+    STUDIO_CONFIG.mirror.forEach(function(m){ var b=document.createElement("button"); b.className="micon"+(m===S.mirror?" on":"");
+      b.innerHTML=mirrorIcon(m); b.setAttribute("aria-label","mirror "+m); b.dataset.m=String(m);
+      b.onclick=function(){ S.mirror=m; syncMir(); playSfx("pop"); }; mr.appendChild(b); });
   }
   function swatch(col){ var sw=document.createElement("div"); sw.className="sw"+(col===S.color?" on":"");
     sw.style.background=col; if(col==="#ffffff") sw.style.border="3px solid #888"; sw.dataset.col=col;
-    sw.onclick=function(){ S.color=col; addRecent(col); syncColor(); }; return sw; }
+    sw.onclick=function(){ S.color=col; addRecent(col); syncColor(); playSfx("pop"); }; return sw; }
   function addRecent(col){ if(S.recent.indexOf(col)<0){ S.recent.unshift(col); S.recent=S.recent.slice(0,6); renderRecent(); } }
   function renderRecent(){ var w=document.getElementById("recentWrap"); if(!w) return; w.innerHTML="";
     S.recent.forEach(function(c){ var sw=document.createElement("div"); sw.className="sw"; sw.style.width="28px"; sw.style.height="28px";
       sw.style.background=c; sw.onclick=function(){ S.color=c; syncColor(); }; w.appendChild(sw); }); }
   function syncBrush(){ document.querySelectorAll("#brushRow .tool").forEach(function(e){ e.classList.toggle("on", e.dataset.bid===S.brush.id); }); }
   function syncColor(){ document.querySelectorAll("#colorRow .sw").forEach(function(e){ e.classList.toggle("on", e.dataset.col===S.color); }); }
-  function syncStyle(){ document.querySelectorAll("#styleRow .chip").forEach(function(e){ e.classList.toggle("on", e.dataset.st===S.style); }); }
-  function syncMir(){ document.querySelectorAll("#mirRow .chip").forEach(function(e){ e.classList.toggle("on", e.dataset.m===String(S.mirror)); }); }
+  function syncStyle(){ document.querySelectorAll("#styleRow .micon").forEach(function(e){ e.classList.toggle("on", e.dataset.st===S.style); }); }
+  function syncMir(){ document.querySelectorAll("#mirRow .micon").forEach(function(e){ e.classList.toggle("on", e.dataset.m===String(S.mirror)); }); }
   function syncBg(){ }
 
   // ---------- shapes picker ----------
@@ -440,7 +485,7 @@
   function findBrush(id){ return STUDIO_CONFIG.brushes.filter(function(b){return b.id===id;})[0]; }
 
   // ---------- background picker ----------
-  function openBg(){ var ov=document.getElementById("bgOv"); var wrap=document.getElementById("bgWrap"); wrap.innerHTML="";
+  function openBg(){ playSfx("pop"); var ov=document.getElementById("bgOv"); var wrap=document.getElementById("bgWrap"); wrap.innerHTML="";
     STUDIO_CONFIG.backgrounds.forEach(function(bg){ var d=document.createElement("div"); d.className="pick";
       var cv=document.createElement("canvas"); cv.width=80; cv.height=80; var c=cv.getContext("2d");
       if(bg.type==="grad"){ var g=c.createLinearGradient(0,0,0,80); g.addColorStop(0,bg.from); g.addColorStop(1,bg.to); c.fillStyle=g; } else c.fillStyle=bg.c;
@@ -515,13 +560,19 @@
     document.getElementById("galleryClose").onclick=function(){ document.getElementById("galleryOv").classList.remove("show"); };
     document.getElementById("soundBtn").onclick=function(){ S.muted=!S.muted; try{ localStorage.setItem("artstudio:muted", S.muted?"1":"0"); }catch(e){}
       if(BA&&BA.toggleMute) try{BA.toggleMute();}catch(_){}
-      document.getElementById("soundBtn").textContent="Sound: "+(S.muted?"Off":"On"); };
+      document.getElementById("soundBtn").innerHTML = S.muted?ICONS.soundOff:ICONS.soundOn; if(!S.muted) playSfx("pop"); };
     window.addEventListener("resize", fitCanvas);
   }
 
+  function paintIcons(){
+    var set=function(id,html){ var el=document.getElementById(id); if(el) el.innerHTML=html; };
+    set("galleryBtn",ICONS.gallery); set("bgBtn",ICONS.bg); set("undoBtn",ICONS.undo); set("redoBtn",ICONS.redo);
+    set("clearBtn",ICONS.trash); set("saveBtn",ICONS.heart); set("sizeSmall",ICONS.dotS); set("sizeBig",ICONS.dotB);
+    set("clearNo",ICONS.check); set("clearYes",ICONS.trash); set("saveCancel",ICONS.x); set("saveGo",ICONS.heart);
+    set("soundBtn", S.muted?ICONS.soundOff:ICONS.soundOn);
+  }
   function init(){ try{ S.muted=localStorage.getItem("artstudio:muted")==="1"; }catch(e){}
-    document.getElementById("soundBtn").textContent="Sound: "+(S.muted?"Off":"On");
-    restoreWip(); buildUI(); wire(); fitCanvas(); }
+    restoreWip(); buildUI(); paintIcons(); wire(); fitCanvas(); }
   if(document.readyState!=="loading") init(); else document.addEventListener("DOMContentLoaded", init);
 
   // ---------- QA hook ----------
