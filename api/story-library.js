@@ -67,6 +67,13 @@ const CHARACTERS = [
   ["mermaid", "Marina the Mermaid", "a cute little mermaid child with a shimmering teal tail and a seashell top, friendly, full body"],
   ["unicorn", "Sparkle the Unicorn", "a cute little rainbow unicorn with a soft pastel rainbow mane and tail and a tiny golden horn, friendly, full body"],
   ["builder", "Bo the Builder", "a cheerful little kid builder wearing a yellow hard hat and blue tool-belt overalls, friendly, full body"],
+  // --- Croc Tot game cast (added for croc-engine.html) ---
+  ["croctot",          "Croc Tot",          "a cute happy little green crocodile-shaped tater tot character with tiny arms, big friendly eyes, a little snout, standing, full body"],
+  ["homework-monster", "Homework Monster",  "a big goofy floating monster made of a messy stack of homework papers and a pencil, with a grumpy but silly cartoon face, friendly-funny not scary, full body"],
+  ["evil-pot",         "The Evil Pot",      "a big silly cartoon cooking pot character with grumpy eyebrows and little arms holding a wooden ladle, friendly-funny not scary, full body"],
+  ["captain-spud",     "Captain Spud",      "a goofy cartoon pirate potato captain with an eyepatch and a tiny pirate hat, friendly, full body"],
+  ["mosquito-max",     "Mosquito Maximus",  "a big silly cartoon mosquito with a long goofy nose and friendly googly eyes, friendly-funny not scary, full body"],
+  ["jelly-dragon",     "Jelly Dragon",      "a big friendly round wobbly purple jelly dragon with tiny wings and a happy smile, full body"],
 ];
 
 function styleId(s) { return STYLES[s] ? s : "watercolor"; }

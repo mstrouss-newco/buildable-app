@@ -106,19 +106,19 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   levels: [
     { name:"The Sky",          skyA:"#1a3a8a", skyB:"#8fd0ff", accent:"#bfe4ff",
       waveSecs:16, spawnGap:1.5, maxAlive:3, eSpeed:0.6, eHp:1, points:3,
-      boss:{ name:"HOMEWORK MONSTER", col:"#8a55ff", hp:60, atk:"aim",  fireGap:1.1, char:"dragon" } },
+      boss:{ name:"HOMEWORK MONSTER", col:"#8a55ff", hp:60, atk:"aim",  fireGap:1.1, char:"homework-monster" } },
     { name:"The Kitchen",      skyA:"#7a3010", skyB:"#d6ad6a", accent:"#ffd9a0",
       waveSecs:18, spawnGap:1.25,maxAlive:4, eSpeed:0.9, eHp:1, points:4,
-      boss:{ name:"THE EVIL POT", col:"#9a9a9a", hp:74, atk:"steam", fireGap:1.4, char:"bear" } },
+      boss:{ name:"THE EVIL POT", col:"#9a9a9a", hp:74, atk:"steam", fireGap:1.4, char:"evil-pot" } },
     { name:"Underwater",       skyA:"#001a4d", skyB:"#0a5fb0", accent:"#7fe6ff",
       waveSecs:20, spawnGap:1.1, maxAlive:4, eSpeed:1.05,eHp:1, points:4,
-      boss:{ name:"CAPTAIN SPUD",   col:"#cc8a4a", hp:86, atk:"cannon",fireGap:1.3, char:"wizard" } },
+      boss:{ name:"CAPTAIN SPUD",   col:"#cc8a4a", hp:86, atk:"cannon",fireGap:1.3, char:"captain-spud" } },
     { name:"The Jungle",       skyA:"#0a2a12", skyB:"#2f7a32", accent:"#a8e6a0",
       waveSecs:22, spawnGap:1.0, maxAlive:5, eSpeed:1.2, eHp:1, points:5,
-      boss:{ name:"MOSQUITO MAXIMUS",col:"#4a5a44",hp:98, atk:"dive",  fireGap:1.6, char:"tiger" } },
+      boss:{ name:"MOSQUITO MAXIMUS",col:"#4a5a44",hp:98, atk:"dive",  fireGap:1.6, char:"mosquito-max" } },
     { name:"Tater Tot Island", skyA:"#2a0f4d", skyB:"#ff9a3a", accent:"#ffd6a0",
       waveSecs:24, spawnGap:0.9, maxAlive:5, eSpeed:1.35,eHp:2, points:6,
-      boss:{ name:"JELLY DRAGON",   col:"#b23aff", hp:120,atk:"orbs",  fireGap:1.0, char:"unicorn" } },
+      boss:{ name:"JELLY DRAGON",   col:"#b23aff", hp:120,atk:"orbs",  fireGap:1.0, char:"jelly-dragon" } },
   ],
 
   // colors used by enemy / hero shape fallbacks, per world index (1..5)
@@ -192,8 +192,10 @@ function kidCharSlug(){
   }catch(e){}
   return null;
 }
-const heroSlug = kidCharSlug();                       // null => drawn croc fallback
-let heroImg = heroSlug ? charImg(heroSlug,"happy") : null;
+// kid's own character stars as the Tot; otherwise the library "croctot" character.
+// (If neither has art yet, the engine draws its clean croc shape — always works.)
+const heroSlug = kidCharSlug();
+let heroImg = heroSlug ? charImg(heroSlug,"happy") : charImg("croctot","base");
 
 // ===========================================================================
 //  AUDIO  (tiny Web-Audio synth — guarded so headless never touches it)
@@ -314,7 +316,7 @@ function spawnBoss(){
   G.bossPhase=true; G.enemies=[]; G.shots=[]; G.bproj=[];
   G.boss={ x:W-150, y:H/2-50, w:96, h:96, hp:bc.hp, maxHp:bc.hp,
     vy:rnd(-50,50), col:bc.col, name:bc.name, atk:bc.atk, fireGap:bc.fireGap,
-    img:(typeof charImg==="function"?charImg(bc.char,"angry"):null),
+    img:(typeof charImg==="function"?charImg(bc.char,"base"):null),
     fireT:0, hits:0, stunT:0, shake:0, intro:1.0, ladle:0, ladleOn:false, diveOn:false, dvx:0, dvy:0, diveT:0 };
   setMsg(bc.name + " — get ready!", 2.0);
   speak(bc.name+"!");
