@@ -37,19 +37,14 @@
            color:#cdd6ff;background:rgba(20,26,64,.7);border:1px solid #2c386e;border-radius:10px;padding:7px 12px;cursor:pointer}
   #helpBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:18px;
            color:#0b1230;background:#ffe27a;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+  #start{position:fixed;inset:0;z-index:10;display:none}   /* shared start screen / level picker (BS) */
 </style>
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="900" height="600"></canvas></div>
 <div id="hint">Drag to move · your hero sparkles on its own</div>
 
-<div id="menu" class="ov">
-  <h1 id="menuTitle">Space Sparkles</h1>
-  <div class="sub" id="menuSub">Drag to move. Beat each boss to unlock the next level.</div>
-  <div class="coins" id="menuCoins">★ 0 coins</div>
-  <div class="grid" id="levelSelect" style="max-width:560px"></div>
-  <button class="btn alt" id="lockerBtn">My Hero</button>
-</div>
+<div id="start"></div>
 
 <div id="locker" class="ov">
   <h1>My Hero</h1>
@@ -64,6 +59,8 @@
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -76,7 +73,11 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Space Sparkles",
   theme: "space", artStyle: "modern3d",
   bgImg: "chess-art/space_bg.jpg",                 // polished space backdrop (jpg is the real file)
-  musicUrl: "",                                    // music intentionally off
+  // Real ElevenLabs music (generated + cached) — never the old synth mp3s.
+  musicUrl: "https://www.buildablekids.com/api/chess-music?world=space",
+  // Bespoke Space Sparkles sound effects (ElevenLabs) from the shared /api/sfx library.
+  sfxBase: "https://www.buildablekids.com/api/sfx?s=",
+  sfx: { shoot:"spk_shoot", coin:"spk_coin", levelup:"spk_levelup", hurt:"spk_hurt", boss:"spk_boss", win:"spk_win", lose:"spk_lose", explode:"spk_pop", boom:"spk_boom" },
   heroUrl: ART+"robot&style=modern3d&emo=happy",   // Bolt the Robot (drawn astronaut if it can't load)
   palette: { hero:"#eaf2ff", visor:"#62d0ff", spark:"#ffe27a", gem:"#6ff0ff", hp:"#ff7aa8", xp:"#7ad0ff", boss:"#c69bff" },
   // base hero stats (level-ups stack on top of these during a run)
@@ -107,6 +108,11 @@ const BR=(typeof window!=="undefined"&&window.BuildableRenders)||(typeof globalT
 // shared audio library (synth SFX + space music); safe if missing (node QA)
 const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThis!=="undefined"&&globalThis.BuildableAudio);
 function sfx(n,o){ if(BA)BA.sfx(n,o); }
+// shared FX/"juice" library (particles, flash, shake, explode) — headless-safe
+const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
+const fx=BM?BM.makeFx():null;   // flash+shake live here; the engine keeps its own particles/rings
+// shared start screen / level picker (BS) — the consistent launch screen for every game
+const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
 // art: hero, background, per-level boss character — all transparent library cut-outs
 function mkImg(src){ const im=(typeof Image!=="undefined")?new Image():{}; try{ im.crossOrigin="anonymous"; }catch(e){} if(src&&"src" in im) im.src=src; return im; }
 const heroImg=mkImg(GAME_CONFIG.heroUrl);
@@ -140,7 +146,7 @@ const BOT_PREF=["nova","fast","big","homing","multi","frost","pierce","orbit","s
 // ---- game state ----
 let level, L, stats, hero, enemies, projs, gems, parts, stars;
 let state, started, botMode=false;
-let levelFrame, levelDur, spawnTimer, spawnRng, offerRng, spawnCount;
+let levelFrame, levelDur, spawnTimer, spawnRng, offerRng, dropRng, spawnCount;
 let xp, plvl, xpNeed, invuln, boss, bossSpawned, choices=[];
 let inputDir={x:0,y:0}, orbAngle=0, regenTimer=0;
 let runGems=0, runLevelsCleared=0, lockerTab="weapon", novaTimer=0, rings=[], helpOpen=false;
@@ -217,7 +223,7 @@ function startLevel(i, carry){
   hero={ x:W/2, y:H/2, r:16, hearts:(carry?Math.min(maxH,prevHearts+1):maxH), maxHearts:maxH, cd:0, aim:0, vx:0, vy:0 };
   enemies=[]; projs=[]; gems=[]; parts=[]; rings=[];
   levelFrame=0; levelDur=Math.round((L.dur||30)*60); spawnTimer=0; spawnCount=0; orbAngle=0; regenTimer=0; novaTimer=0;
-  spawnRng=mulberry(1234+level*101); offerRng=mulberry(5678+level*211);
+  spawnRng=mulberry(1234+level*101); offerRng=mulberry(5678+level*211); dropRng=mulberry(4242+level*131);
   invuln=0; boss=null; bossSpawned=false; choices=[];
   state="play"; inputDir={x:0,y:0};
 }
@@ -340,18 +346,21 @@ function update(){
   // particles
   for(const pt of parts){ pt.x+=pt.vx; pt.y+=pt.vy; pt.vx*=0.92; pt.vy*=0.92; pt.life--; }
   parts=parts.filter(pt=>pt.life>0);
+  if(BM&&fx) BM.update(fx);   // advance shared FX (flash/shake) from the mechanics lib
   // win when the boss is beaten (boss only appears after surviving the timer).
   // Beating the boss is the gate: it permanently unlocks the next level.
   if(bossSpawned && !boss){ state="win"; sfx("win");
     if(CHAR){ const u=Math.min(GAME_CONFIG.levels.length-1, level+1); if(u>(CHAR.unlocked||0)){ CHAR.unlocked=u; saveChar(); } } }
 }
 // coin tiers: 1 (=1, common) · 2 (=5, rare) · 3 (=10, boss/lucky). Higher levels drop a bit more.
-function rollTier(){ const r=Math.random()-level*0.012; if(r>0.965) return 3; if(r>0.80) return 2; return 1; }
+function rollTier(){ const r=(dropRng?dropRng():Math.random())-level*0.012; if(r>0.965) return 3; if(r>0.80) return 2; return 1; }
 function tierVal(t){ return t===3?10:t===2?5:1; }
-function dropCoin(x,y,tier){ const t=tier||rollTier(); gems.push({ x,y, tier:t, val:tierVal(t), vx:(Math.random()-0.5)*2, vy:(Math.random()-0.5)*2, got:false }); }
+function dropCoin(x,y,tier){ const rr=dropRng||Math.random; const t=tier||rollTier(); gems.push({ x,y, tier:t, val:tierVal(t), vx:(rr()-0.5)*2, vy:(rr()-0.5)*2, got:false }); }
 function killEnemy(e){ burst(e.x,e.y,e.col,e.boss?26:10);
-  if(e.boss){ for(let i=0;i<3;i++) dropCoin(e.x+(Math.random()-0.5)*46, e.y+(Math.random()-0.5)*46, 3); boss=null; }
-  else { dropCoin(e.x,e.y); const i=enemies.indexOf(e); if(i>=0)enemies.splice(i,1); } }
+  if(e.boss){ for(let i=0;i<3;i++) dropCoin(e.x+(Math.random()-0.5)*46, e.y+(Math.random()-0.5)*46, 3); boss=null;
+    if(BM&&fx) BM.explode(fx, e.x, e.y, e.col, { n:0, flash:0.3, flashCol:"#ffffff", shake:0.45, sfx:"boom" });   // big-kill juice (flash+shake+boom)
+    else sfx("boom"); }
+  else { dropCoin(e.x,e.y); sfx("explode"); const i=enemies.indexOf(e); if(i>=0)enemies.splice(i,1); } }
 
 // ---------- draw ----------
 // thin wrappers → the shared renders library (BuildableRenders)
@@ -408,6 +417,8 @@ function draw(){
     for(const st of stars){ if(st.s<1.4)continue; const a=0.3*Math.abs(Math.sin(t*st.sp+st.ph)); ctx.fillStyle="rgba(255,255,255,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(st.x,st.y,st.s*0.8,0,7);ctx.fill(); }
     const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.38,W/2,H/2,Math.max(W,H)*0.72); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.40)"); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
   } else { BR.background(ctx, W, H, stars, t, GAME_CONFIG.theme); }
+  // screen-shake the gameplay layer (from BM); bg + HUD stay steady
+  let _so={x:0,y:0}; if(BM&&fx){ _so=BM.shakeOffset(fx); } ctx.save(); ctx.translate(_so.x,_so.y);
   // coins (glowing, tiered)
   for(const g of gems) BR.coin(ctx,g.x,g.y,t,g.tier,g.val);
   // nova shockwave rings
@@ -426,6 +437,8 @@ function draw(){
   drawHero();
   // orbiting helper stars
   if(stats.orbit>0){ for(let k=0;k<stats.orbit;k++){ const a=orbAngle+k*6.28/stats.orbit, ox=hero.x+Math.cos(a)*54, oy=hero.y+Math.sin(a)*54; BR.orbiter(ctx,ox,oy,P.spark); } }
+  ctx.restore();                                  // end shake layer
+  if(BM&&fx) BM.draw(ctx, fx, { W, H });          // shared FX particles + flash overlay
   // joystick ring
   if(joyOn){ ctx.strokeStyle="rgba(255,255,255,.25)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(joyOx,joyOy,34,0,7);ctx.stroke(); ctx.fillStyle="rgba(255,255,255,.3)";ctx.beginPath();ctx.arc(joyOx+inputDir.x*26,joyOy+inputDir.y*26,14,0,7);ctx.fill(); }
   // HUD
@@ -452,18 +465,32 @@ function draw(){
 function el(id){ const e=document.getElementById(id); return (e&&e.style)?e:null; }
 function show(id,on){ const e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
 function toast(msg){ const e=el("toast"); if(!e)return; e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{e.style.display="none";},2600); }
-function refreshMenu(){ const c=CHAR?CHAR.coins:0; const a=el("menuCoins"); if(a)a.textContent="★ "+c+" coins"; const b=el("lockerCoins"); if(b)b.textContent="★ "+c+" coins"; }
-function showMenu(){ state="title"; show("locker",false); show("menu",true); showHelpBtn(false); refreshMenu(); renderLevels(); }
-function renderLevels(){ const wrap=el("levelSelect"); if(!wrap||!CHAR)return; wrap.innerHTML="";
-  const unlocked=CHAR.unlocked||0;
-  GAME_CONFIG.levels.forEach((lv,i)=>{ const open=i<=unlocked;
-    const card=document.createElement("div"); card.className="card"; card.style.width="150px";
-    card.innerHTML='<div class="nm">Level '+(i+1)+'</div><div class="ds">'+lv.name+'</div>';
-    const b=document.createElement("button"); b.className="btn small"+(open?"":" ");
-    if(open){ b.textContent="Play"; b.onclick=()=>startRunAt(i); } else { b.textContent="Locked"; b.disabled=true; b.style.opacity=".45"; }
-    card.appendChild(b); wrap.appendChild(card); });
-}
-function startRunAt(i){ if(BA)BA.unlock(); runGems=0; runLevelsCleared=0; stats=null; startLevel(i,false); state="play"; started=false; show("menu",false); show("locker",false); showHelpBtn(true); }
+function refreshMenu(){ const b=el("lockerCoins"); if(b)b.textContent="★ "+(CHAR?CHAR.coins:0)+" coins"; }
+// ---- shared start screen / level picker (BS) ----
+function heroName(){ const h=GEAR.hero.find(x=>x.id===(CHAR&&CHAR.equipped.hero)); return h?h.name:"Astro"; }
+function bsLevels(){ const unlocked=CHAR?(CHAR.unlocked||0):0;
+  return GAME_CONFIG.levels.map((lv,i)=>{ const st = i<unlocked?"done" : i===unlocked?"next" : "locked";
+    const o={ n:i+1, name:lv.name, state:st };
+    if(st!=="locked") o.img = ART+lv.bossChar+"&style="+(GAME_CONFIG.artStyle||"modern3d")+"&emo=happy";
+    if(st==="done"){ o.stars=3; o.maxStars=3; }
+    return o; }); }
+function bsConfig(){ const unlocked=CHAR?(CHAR.unlocked||0):0; return {
+  title:GAME_CONFIG.name, subtitle:"Beat each boss to unlock the next world",
+  coins:CHAR?CHAR.coins:0, sound:!(BA&&BA.muted),
+  hero:{ name:heroName(), img:GAME_CONFIG.heroUrl, progressText:unlocked+" of "+GAME_CONFIG.levels.length+" worlds cleared" },
+  levels:bsLevels(), customizeLabel:"My Hero",
+}; }
+let bsScreen=null;
+function showMenu(){ state="title"; show("locker",false); showHelpBtn(false); showMuteBtn(false);
+  const startEl=el("start"); if(!startEl) return; startEl.style.display="block";
+  if(BS && !bsScreen){ bsScreen=BS.mount(startEl, bsConfig(), {
+      onPlay:(n)=>startRunAt(n-1), onCustomize:showLocker, onHero:showLocker,
+      onSound:(on)=>{ if(BA){ BA.unlock(); const cur=!BA.muted; if(cur!==on) BA.toggleMute(); } },
+      onBack:()=>{ try{ window.parent && window.parent!==window && window.parent.postMessage("bk:home","*"); }catch(e){} },
+    }); }
+  else if(bsScreen){ bsScreen.update(bsConfig()); } }
+function startRunAt(i){ if(BA)BA.unlock(); runGems=0; runLevelsCleared=0; stats=null; startLevel(i,false); state="play"; started=false;
+  const s=el("start"); if(s)s.style.display="none"; show("locker",false); showHelpBtn(true); showMuteBtn(true); }
 function startRun(){ startRunAt(Math.min((CHAR&&CHAR.unlocked)||0, GAME_CONFIG.levels.length-1)); }
 function endRun(won){ if(!CHAR)CHAR=defaultChar();
   CHAR.totalRuns++; if(won)CHAR.totalWins++; CHAR.totalGems+=runGems; CHAR.bestLevel=Math.max(CHAR.bestLevel,runLevelsCleared);
@@ -483,18 +510,17 @@ function renderLocker(){ const tabs=el("lockerTabs"), grid=el("lockerGrid"); if(
     else { btn.textContent="Buy ★"+item.cost; btn.onclick=()=>{ if(CHAR.coins>=item.cost){ CHAR.coins-=item.cost; CHAR.owned[lockerTab].push(item.id); CHAR.equipped[lockerTab]=item.id; saveChar(); refreshMenu(); renderLocker(); } else { toast("Need ★"+(item.cost-CHAR.coins)+" more coins"); } }; }
     card.appendChild(btn); grid.appendChild(card); }
 }
-function showLocker(){ lockerTab="weapon"; show("menu",false); show("locker",true); showHelpBtn(false); refreshMenu(); renderLocker(); }
+function showLocker(){ lockerTab="weapon"; const s=el("start"); if(s)s.style.display="none"; show("locker",true); showHelpBtn(false); showMuteBtn(false); refreshMenu(); renderLocker(); }
 
-function wireMenus(){ const l=el("lockerBtn"), bk=el("lockerBack");
-  if(l)l.onclick=showLocker; if(bk)bk.onclick=showMenu;
-  const mt=el("menuTitle"); if(mt)mt.textContent=GAME_CONFIG.name;
+function wireMenus(){ const bk=el("lockerBack"); if(bk)bk.onclick=showMenu;   // start screen + level picker are the shared BS overlay now
   const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
   const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; }; }
 function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
+function showMuteBtn(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"block":"none"; }
 
 function frame(){ update(); draw(); requestAnimationFrame(frame); }
-// boot: load the saved character, wire menus, show the main menu
-if(typeof document!=="undefined" && document.getElementById("menu")){ if(BA && GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); CHAR=localLoadChar()||defaultChar(); wireMenus(); showMenu(); loadChar(); }
+// boot: load the saved character, wire menus, show the shared start screen
+if(typeof document!=="undefined" && document.getElementById("start")){ if(BA){ BA.configure({sfxBase:GAME_CONFIG.sfxBase, map:GAME_CONFIG.sfx}); if(GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); } CHAR=localLoadChar()||defaultChar(); wireMenus(); showMenu(); loadChar(); }
 requestAnimationFrame(frame);
 
 // ---------- QA / picker hooks ----------

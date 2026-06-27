@@ -53,6 +53,18 @@ const SOUNDS = {
   rustle:    "Short soft rustle of leaves and bushes moving, single hit, no music, no voices",
   sparkle:   "Short delicate fairy sparkle shimmer, twinkling, single hit, no music, no voices",
 
+  // ---- Space Sparkles (survival game type) — bespoke SFX ----
+  spk_shoot:   "Short soft sci-fi laser pew zap, cute friendly cartoon star blaster, single quick hit, no music, no voices",
+  spk_coin:    "Short bright cheerful star-coin pickup ding with a tiny sparkle, single hit, no music, no voices",
+  spk_coinbig: "Short rich rewarding jackpot star-coin chime with a sparkle cascade, cheerful, single hit, no music, no voices",
+  spk_levelup: "Cheerful rising magical power-up sparkle chime, bright and triumphant, short, no music, no voices",
+  spk_hurt:    "Short soft cartoon ouch bonk thud, gentle and not scary, single hit, no music, no voices",
+  spk_pop:     "Short cute squishy cartoon splat pop, a space slime bursting, single hit, no music, no voices",
+  spk_boom:    "Short punchy cartoon space explosion boom with sparkly debris, big but friendly, single hit, no music, no voices",
+  spk_boss:    "Short playful but ominous boss-appear sci-fi horn sting, cartoon, single hit, no music, no voices",
+  spk_win:     "Happy short victory fanfare with a bright cosmic sparkle, cheerful kids game win, no voices",
+  spk_lose:    "Gentle soft descending wah-wah with a little twinkle, friendly cartoon lose, short, no music, no voices",
+
   // ---- Sound Machine: silly kid-fun one-shots (public/soundboard.html) ----
   whoopee:     "Short funny wet whoopee cushion raspberry toot, comedic cartoon, single hit, not gross, no music, no voices",
   boom:        "Short cartoon comic kaboom explosion, big silly boom, playful not scary, single hit, no music, no voices",
@@ -81,6 +93,7 @@ const DURATIONS = {
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
   tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
+  spk_shoot:0.3, spk_coin:0.4, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.4, spk_pop:0.4, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   whoopee:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   buzzer:0.7, sadtrombone:1.4, squeak:0.5, airhorn:0.9, bonk:0.5, slidewhistle:0.7,
   meow:0.7, woof:0.5, quack:0.5, cheer:1.4,

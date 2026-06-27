@@ -1,5 +1,17 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Survival: shared start-screen (BS) + real ElevenLabs audio + BM FX
+- survival-engine.html now uses the shared BuildableStartScreen (BS) level picker
+  (art thumbs + stars + lock + green "next") instead of its hand-rolled #menu grid.
+- Audio: ElevenLabs music ON (/api/chess-music?world=space) + bespoke Space Sparkles
+  SFX via /api/sfx (spk_*), played as real files through the upgraded buildable-audio.js
+  (fetch+decode Web Audio buffers; synth = offline FALLBACK only). Per the sound rule.
+- Adopted buildable-mechanics.js (BM): boss kill = explode (flash+shake+boom).
+- Coin drops made deterministic (seeded dropRng) so difficulty is reproducible/fair;
+  headless sim wins all 6 levels every run (cold + carry campaign).
+- MANUAL (owner): hit /api/sfx?s=spk_* once each to generate the new ElevenLabs sounds.
+
+
 ## Creations standard (save · share · publish) + cross-platform + nav rules (June 27 2026)
 
 Audited how kid creations are saved/shared/published and codified the universal rule. Docs
