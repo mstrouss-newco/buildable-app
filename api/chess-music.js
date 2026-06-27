@@ -74,3 +74,6 @@ export default async function handler(req,res){
   res.setHeader("Cache-Control","public, max-age=31536000, immutable");
   res.status(200).send(Buffer.from(b64,"base64"));
 }
+
+// Named export so the shared audio catalog can list per-world music without duplicating.
+export { WORLDS as CHESS_MUSIC_WORLDS };
