@@ -113,6 +113,7 @@ async function logCost(cost) {
   } catch {}
 }
 
+function pickCompanion(heroSlug){ const ks=Object.keys(CHARACTERS).filter((k)=>k!==heroSlug); return ks[Math.floor(Math.random()*ks.length)] || heroSlug; }
 function normalizeInput(body) {
   const style = ["watercolor", "modern3d", "papercut", "modern"].includes(body.style) ? body.style : "watercolor";
   const characterSlug = CHARACTERS[body.characterSlug] ? body.characterSlug : "bunny";
@@ -126,7 +127,9 @@ function normalizeInput(body) {
   const favFood = clampText(body.favFood, 24);
   const petName = clampText(body.petName, 24);
   const lesson = LESSONS[Math.floor(Math.random() * LESSONS.length)];
-  return { style, characterSlug, worldSlug, characterName, quest, mood, ending, spark, favColor, favFood, petName, lesson };
+  const companionSlug = (CHARACTERS[body.companionSlug] && body.companionSlug !== characterSlug) ? body.companionSlug : pickCompanion(characterSlug);
+  const companionName = ((CHARACTERS[companionSlug] && CHARACTERS[companionSlug].name) || "a friend").split(" ")[0];
+  return { style, characterSlug, worldSlug, characterName, quest, mood, ending, spark, favColor, favFood, petName, lesson, companionSlug, companionName };
 }
 
 function buildPrompt(inp, age) {
@@ -137,6 +140,7 @@ function buildPrompt(inp, age) {
     `You are a beloved children's picture-book author writing for a child age ${age}.`,
     `Write a gentle, wholesome, age-appropriate 6-page story. NO violence, scary peril, romance, or anything a parent wouldn't want a young child to hear.`,
     `The hero is ${inp.characterName}, ${ch.desc}. The story BEGINS in ${w.name} (${w.desc}).`,
+    `${inp.characterName} has a best friend named ${inp.companionName} (${(CHARACTERS[inp.companionSlug]||{}).desc||"a friendly companion"}) who shares the whole adventure. Mention ${inp.companionName} BY NAME on at least 3 of the pages, doing things together with ${inp.characterName} — never leave the friend behind.`,
     `The story may move between these library worlds (use the exact slug): ${worldList}.`,
     `For EACH page choose the single emotion the hero feels, from EXACTLY this list: ${JSON.stringify(EMOS)}.`,
     inp.quest ? `The adventure: ${inp.characterName} must ${QUESTS[inp.quest]}.` : ``,
@@ -171,12 +175,13 @@ function validateStory(obj, inp) {
 }
 
 function wrap(title, pages, inp) {
-  const scene_token = "st" + crypto.createHash("sha1").update((inp.characterSlug||"")+"|"+(inp.style||"")+"|"+pages.map((p)=>p.text).join("\u00a7")).digest("hex").slice(0,16);
+  const scene_token = "st" + crypto.createHash("sha1").update((inp.characterSlug||"")+"|"+(inp.companionSlug||"")+"|"+(inp.style||"")+"|"+pages.map((p)=>p.text).join("\u00a7")).digest("hex").slice(0,16);
   return {
     schema: 2, title, style: inp.style, scene_token,
     character_slug: inp.characterSlug, character_name: inp.characterName,
+    companion_slug: inp.companionSlug, companion_name: inp.companionName,
     start_world: inp.worldSlug, pages,
-    created_with: { style: inp.style, characterSlug: inp.characterSlug, characterName: inp.characterName, worldSlug: inp.worldSlug, quest: inp.quest, mood: inp.mood, ending: inp.ending, spark: inp.spark, favColor: inp.favColor, favFood: inp.favFood, petName: inp.petName },
+    created_with: { style: inp.style, characterSlug: inp.characterSlug, characterName: inp.characterName, companionSlug: inp.companionSlug, worldSlug: inp.worldSlug, quest: inp.quest, mood: inp.mood, ending: inp.ending, spark: inp.spark, favColor: inp.favColor, favFood: inp.favFood, petName: inp.petName },
   };
 }
 

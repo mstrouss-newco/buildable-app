@@ -191,7 +191,8 @@ function scenePrompt(shot, style) {
 function sceneKey(slug, style, shot) {
   return "libsc:" + crypto.createHash("sha1").update(slug + "|" + styleId(style) + "|" + shot).digest("hex");
 }
-async function genScene(baseB64, prompt, openaiKey, timeoutMs = 44000) {
+async function genScene(refs, prompt, openaiKey, timeoutMs = 44000) {
+  const arr = (Array.isArray(refs) ? refs : [refs]).filter(Boolean);
   const attempt = async (useFidelity) => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -202,7 +203,8 @@ async function genScene(baseB64, prompt, openaiKey, timeoutMs = 44000) {
       fd.append("size", "1536x1024");        // landscape page
       fd.append("quality", "low");
       if (useFidelity) fd.append("input_fidelity", "high");
-      fd.append("image", new Blob([Buffer.from(baseB64, "base64")], { type: "image/png" }), "base.png");
+      const field = arr.length > 1 ? "image[]" : "image";
+      arr.forEach((b, i) => fd.append(field, new Blob([Buffer.from(b, "base64")], { type: "image/png" }), (i === 0 ? "base" : "friend" + i) + ".png"));
       const res = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: { Authorization: `Bearer ${openaiKey}` }, body: fd, signal: ctrl.signal });
       clearTimeout(timer);
       if (res.ok) { const data = await res.json(); return { b64: data.data?.[0]?.b64_json || null, status: 200 }; }
@@ -237,13 +239,14 @@ function shotFor(i,emo){
   if(emo==="sleepy") return "A cozy, warm close view with a calm bedtime mood.";
   return CAM[i%CAM.length];
 }
-function pageScenePrompt(action,world,style,i,emo){
+function pageScenePrompt(action,world,style,i,emo,compName){
   const feel = emo && emo!=="happy" ? ` The hero clearly feels ${emo}, shown gently in their face and body language.` : "";
   const glowy = /candle|lantern|lamp|fire|flame|ember|hearth|fireplace|glow|glowing|firefl|star|starlight|moon|window|magic|spark|torch|\blit\b|light/i.test(action);
   const glowLine = glowy ? ` Paint any candles, lanterns, fireplaces, glowing windows, fireflies, stars or magic as bright WARM GLOWING light sources with a soft luminous halo, clearly casting warm light into the scene.` : "";
   const hasCompany = /friend|friends|owl|fox|bird|fish|dragon|fairy|bear|bunny|rabbit|together|\bmet\b|meets|join|companion|buddy|family|mother|father|\bmom\b|\bdad\b|sister|brother|\bthey\b|\bthem\b|creature|animal|someone|village|crew|crowd|everyone/i.test(action);
-  const compLine = hasCompany ? ` Show the friends or creatures from this moment too, interacting warmly with the hero so the page feels alive — the hero is not alone.` : "";
-  return `Children's picture-book illustration depicting THIS exact moment: "${action}".${feel}${glowLine}${compLine} ${shotFor(i,emo)} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
+  const compLine = (hasCompany && !compName) ? ` Show the friends or creatures from this moment too, interacting warmly with the hero so the page feels alive — the hero is not alone.` : "";
+  const compLine2 = compName ? ` The hero's best friend ${compName} (the SECOND reference image) is also in this scene — keep ${compName} EXACTLY on-model: same species, colors and markings as that reference, the same size relation, interacting warmly with the hero.` : "";
+  return `Children's picture-book illustration depicting THIS exact moment: "${action}".${feel}${glowLine}${compLine}${compLine2} ${shotFor(i,emo)} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
 }
 function pageSceneKey(ck){return "libpg:"+crypto.createHash("sha1").update(ck).digest("hex");}
 
@@ -253,6 +256,7 @@ export default async function handler(req, res) {
     const body = await readBody(req);
     if (!body.pageScene) return res.status(400).json({ ok:false, error:"unknown POST" });
     const slug=(body.slug||"").toString(), style=styleId(body.style), emo=(body.emo||"").toString();
+    const companion=(body.companion||"").toString();
     const world=(body.world||"").toString(), action=(body.action||"").toString().slice(0,400);
     const i=parseInt(body.pageIndex||0,10)||0, ck=(body.cacheKey||"").toString();
     if(!findItem("character",slug)||!action||!ck) return res.status(400).json({ ok:false, error:"bad input" });
@@ -274,7 +278,24 @@ export default async function handler(req, res) {
     }
     if(!ref) ref = EMOS[emo] ? await cacheGet(exprKey(slug,"watercolor",emo)) : await cacheGet(cacheKey("character",slug,"watercolor"));
     if(!ref) return res.status(200).json({ ok:true, needBase:true });
-    const b64=await genScene(ref, pageScenePrompt(action,world,style,i,emo), openaiKey);
+    // RECURRING SIDEKICK: if this page mentions the friend, add a 2nd on-model reference
+    let companionRef=null, compName="";
+    if(companion && companion!==slug && findItem("character",companion)){
+      const ci=findItem("character",companion); const nm=(ci[1]||"").split(" ")[0];
+      const onPage = (nm && action.indexOf(nm)>=0) || /friend|friends|together|\bthey\b|\bthem\b|\bmet\b|join|companion|buddy|everyone|each other/i.test(action);
+      if(onPage){
+        companionRef = (EMOS["happy"] ? await cacheGet(exprKey(companion,style,"happy")) : null) || await cacheGet(cacheKey("character",companion,style));
+        if(!companionRef){
+          const cbp = ci[2] + ". A single character, centered, full body, simple plain background. " + (STYLES[styleId(style)]||STYLES.watercolor) + ", " + SAFE;
+          const cnb = await genImage(cbp, true, openaiKey);
+          if(cnb){ await cachePut(cacheKey("character",companion,styleId(style)), cnb); companionRef=cnb; }
+        }
+        if(!companionRef) companionRef = await cacheGet(cacheKey("character",companion,"watercolor"));
+        if(companionRef) compName = nm;
+      }
+    }
+    const refs = companionRef ? [ref, companionRef] : [ref];
+    const b64=await genScene(refs, pageScenePrompt(action,world,style,i,emo,compName), openaiKey);
     if(!b64) return res.status(200).json({ ok:true, failed:true });
     if(body.force) await cacheDel(k);
     await cachePut(k,b64);

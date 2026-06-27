@@ -76,7 +76,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
         const ctrl = new AbortController();
         const to = setTimeout(() => ctrl.abort(), 120000);
         fetch("/api/story-library", { method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
-          body: JSON.stringify({ pageScene: true, slug: charSlug, style, emo: pg.emotion || "happy", world: pg.world_slug, action: pg.text, pageIndex: i, cacheKey: ck }) })
+          body: JSON.stringify({ pageScene: true, slug: charSlug, style, emo: pg.emotion || "happy", world: pg.world_slug, action: pg.text, pageIndex: i, cacheKey: ck, companion: (story && story.companion_slug) || "" }) })
           .then((r) => r.json())
           .then((j) => { clearTimeout(to); if (!cancelled && j && (j.generated || j.cached)) setSceneUrl((m) => ({ ...m, [i]: "/api/story-library?pimg=1&k=" + encodeURIComponent(ck) })); })
           .catch(() => { clearTimeout(to); })
@@ -170,7 +170,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
     const ck = tokenRef.current + "|" + idx + "|" + (pg.emotion || "happy");
     setSceneUrl((m) => { const n = { ...m }; delete n[idx]; return n; });   // back to placeholder while it paints
     fetch("/api/story-library", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pageScene: true, force: true, slug: charSlug, style, emo: pg.emotion || "happy", world: pg.world_slug, action: pg.text, pageIndex: idx, cacheKey: ck }) })
+      body: JSON.stringify({ pageScene: true, force: true, slug: charSlug, style, emo: pg.emotion || "happy", world: pg.world_slug, action: pg.text, pageIndex: idx, cacheKey: ck, companion: (story && story.companion_slug) || "" }) })
       .then((r) => r.json())
       .then((j) => { if (j && (j.generated || j.cached)) setSceneUrl((m) => ({ ...m, [idx]: "/api/story-library?pimg=1&k=" + encodeURIComponent(ck) + "&cb=" + Date.now() })); })
       .catch(() => {});

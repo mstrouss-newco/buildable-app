@@ -172,7 +172,7 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
         const ck=token+"|"+i+"|"+(pg.emotion||"happy");
         const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),120000);
         fetch("/api/story-library",{method:"POST",headers:{"Content-Type":"application/json"},signal:ctrl.signal,
-          body:JSON.stringify({pageScene:true,slug,style,emo:pg.emotion||"happy",world:pg.world_slug,action:pg.text,pageIndex:i,cacheKey:ck})})
+          body:JSON.stringify({pageScene:true,slug,style,emo:pg.emotion||"happy",world:pg.world_slug,action:pg.text,pageIndex:i,cacheKey:ck,companion:story.companion_slug||""})})
           .then(r=>r.json())
           .then(j=>{ clearTimeout(to); if(!cancelled && j && (j.generated||j.cached)) setScenes(m=>({...m,[i]:"/api/story-library?pimg=1&k="+encodeURIComponent(ck)})); })
           .catch(()=>clearTimeout(to))
