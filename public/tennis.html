@@ -212,7 +212,7 @@ function newGame() {
   };
   serve(G.serveTo);
   bubbleTop = bubbleBot = null;
-  loadBg(worldKey); initParticles();
+  loadBg(worldKey); initParticles(); playMusic();
   state = "play"; started = true; paused = false;
 }
 
@@ -259,12 +259,12 @@ function clamp(nx) { return Math.max(GAME_CONFIG.paddleW / 2, Math.min(1 - GAME_
 
 if (canvas) {
   canvas.addEventListener("pointermove", function (e) { onPointer(e.clientX, e.clientY); }, { passive: true });
-  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); onPointer(e.clientX, e.clientY); }, { passive: true });
+  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); playMusic(); onPointer(e.clientX, e.clientY); }, { passive: true });
   canvas.addEventListener("touchmove", function (e) {
     for (var i = 0; i < e.touches.length; i++) onPointer(e.touches[i].clientX, e.touches[i].clientY);
   }, { passive: true });
 }
-window.addEventListener("keydown", function (e) { keys[e.key] = true; if (BA && (e.key === " " || e.key.indexOf("Arrow") === 0)) BA.unlock(); });
+window.addEventListener("keydown", function (e) { keys[e.key] = true; if (BA && (e.key === " " || e.key.indexOf("Arrow") === 0)) { BA.unlock(); playMusic(); } });
 window.addEventListener("keyup", function (e) { keys[e.key] = false; });
 
 /* ---------- 5) UPDATE (physics) ---------- */
@@ -541,6 +541,18 @@ function ping(name, fallback) {
   } catch (e) { if (fallback) BA.sfx(fallback); }
 }
 
+// per-world background music (real ElevenLabs tracks via /api/tennis-music, cached).
+// Own a single looping <audio> element, like chess; respects the mute toggle.
+var musicEl = null, musicWorld = null;
+function playMusic() {
+  if (!BA || BA.muted || !BA._unlocked) return;
+  var key = mapWorld(worldKey);
+  if (!musicEl) { musicEl = new Audio(); musicEl.loop = true; musicEl.volume = 0.32; }
+  if (musicWorld !== key) { musicEl.src = "/api/tennis-music?world=" + key; musicWorld = key; }
+  var pr = musicEl.play(); if (pr && pr.catch) pr.catch(function () {});
+}
+function stopMusic() { if (musicEl) { try { musicEl.pause(); } catch (e) {} } }
+
 /* ---------- 8) ONLINE: the frozen mp: contract ---------- */
 function mp(type, extra) {
   var msg = Object.assign({ type: type }, extra || {});
@@ -640,7 +652,7 @@ function mountStart() {
   var cbs = {
     onPlay: function (n) { if (BA) BA.unlock(); diff = (n || 1) - 1; m.style.display = "none"; newGame(); },
     onMode: function (mo) { mode = (mo === "two") ? "two" : "solo"; if (startUI) startUI.update(startConfig()); },
-    onSound: function () { if (BA) { BA.unlock(); BA.toggleMute(); } if (startUI) startUI.update(startConfig()); },
+    onSound: function () { if (BA) { BA.unlock(); BA.toggleMute(); if (BA.muted) stopMusic(); else playMusic(); } if (startUI) startUI.update(startConfig()); },
     onCustomize: showCourtPicker,
     onBack: function () {},
   };
@@ -675,6 +687,7 @@ function buildCourtGrid() {
     card.appendChild(thumb); card.appendChild(nm);
     card.onclick = function () {
       worldKey = key; loadBg(worldKey); initParticles();
+      if (BA) BA.unlock(); playMusic();   // preview the chosen world's music
       hideCourtPicker();
     };
     grid.appendChild(card);

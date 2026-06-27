@@ -75,6 +75,11 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Tennis: per-world background music + pre-warmed assets (June 27 2026)
+- **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.
+- **Pre-warmed all generated assets** so the first kid never waits: 8 court images (`/api/images?kind=tennis&id=*`), 7 one-shot SFX (`/api/sfx?s=tennis_*`), and 8 music tracks (`/api/tennis-music?world=*`) generated + cached.
+- QA: `qa-tennis.mjs` still wins all difficulties; `npm run build` clean.
+
 ## Tennis goes dynamic — AI-art courts, ambient motion, explosions + smack talk (June 27 2026)
 Big presentation upgrade to Buildable Tennis (`public/tennis.html`) + three reusable mechanics logged for future games.
 
