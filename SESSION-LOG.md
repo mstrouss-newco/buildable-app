@@ -1,9 +1,54 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
+- The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of
+  big buttons, each showing the kid's CURRENT choice as a picture and opening a simple full-screen
+  picker: Brush (shows current brush) / Color (current color dot) / Size (current dot) /
+  Mirror (current split icon) / Style (current preview) / Stickers / Scene; then Undo, Redo,
+  Start-over (trash), Save (heart). Nothing to read; tap a picture to change it.
+- Pickers are big tap targets in a shared overlay. Sticker picker keeps theme tabs; shapes,
+  backgrounds, gallery unchanged. Sound feedback preserved (brush preview + pops + tool sounds).
+- All drawing/render/save/gallery logic unchanged; qa-art.mjs still green.
+
+## 2026-06-27 — Art Studio: kid-friendly visual icons + tool-matched sound (pre-readers)
+- No-reading UI: every control is now a picture a 4-year-old can read.
+  - MIRROR buttons show the actual split: single shape (off), butterfly across a vertical line
+    (mirror), across a horizontal line (flip), and a pie cut into 2/4/8 wedges (kaleidoscope).
+  - STYLE buttons are little previews of each look (white paper / dark chalk / glowing neon /
+    raised 3D / pixel blocks).
+  - SAVE = a heart, UNDO/REDO = curved arrows, START-OVER = trash, BACKGROUND = a landscape,
+    MY ART = a photo stack, SOUND = a speaker (with waves on / red x off). Size = small dot -> big dot.
+  - Clear/Save confirm dialogs use icon buttons (green check / heart / X), not words.
+- Sound that matches the tool: each brush already triggers its own ElevenLabs one-shot while
+  drawing (crayon scratch, marker squeak, paint swish, pencil, chalk, spray hiss, neon hum,
+  glitter twinkle); tapping a brush now PREVIEWS its sound, taps on colors/styles/mirror give a
+  soft pop, fill = splash, stamp = thunk, undo = whoosh, save = sparkle chime. Cadence tightened.
+- All visual (no emoji). QA (qa-art.mjs) still green.
+
+
 ## 2026-06-27 — Helper reactions rolled out to more games
 - Win/lose helper reaction now fires in Survival (win+lose), Platformer/play.html (win+lose),
   and Typing (win) via direct window.parent.postMessage. Engines verified loading on preview.
 - Chess + Tennis intentionally skipped (they already have their own spoken celebration).
+## 2026-06-27 — Art Studio v2: 9 new art features SHIPPED to main
+- Saving verified working live (saved_art table created). New features on public/art-studio.html:
+  1. ART STYLES (the "hand-drawn vs 3D" ask): Paper / Chalk / Neon / 3D Pop / Pixel — each
+     changes the background + how every stroke renders (neon glow, raised 3D shadow+highlight,
+     blocky pixel-grid). Style saved with the drawing.
+  2. FILL BUCKET (flood fill, tolerance) with the art_fill splash sound; stored as a replayable op.
+  3. SHAPES stamp brush — drawn star/heart/flower/diamond/dot via new shared BR.shape() (no emoji).
+  4. 3 new brush textures via BR.stroke(): Ribbon (calligraphy, width follows speed), Fur, Sponge/dots.
+  5. STICKER picker now has THEME TABS (All/Forest/Ocean/Space/Candy) over list-characters+list-assets,
+     with a BR-drawn shape fallback so it's never empty.
+  6. BACKGROUND picker — solid colors + gradient scenes (Sky/Candy/Galaxy/Forest).
+  7. MIRROR modes added: Mirror (left-right) + Flip (top-bottom) alongside kaleidoscope x2/x4/x8,
+     via BR.mirror() now accepting "V"/"H".
+  8. Full COLOR PICKER (any color) + a Recent-colors row.
+  9. MY ART gallery — reopen any saved drawing (list-art -> restore ops + style + bg).
+- Shared libs grew (reusable by next maker): BR.shape(); BR.stroke ribbon/fur/dots; BR.mirror V/H.
+- QA: qa-art.mjs extended — all 12 drawing brushes across all 6 mirror modes + all 5 styles, fill +
+  shape ops, undo/redo, and lossless save->restore (incl style+bg). All green.
+
 
 ## 2026-06-27 — Helper reacts to game win/lose SHIPPED to main
 - New global HelperReactions layer (src/HelperReactions.jsx, mounted in main.jsx OUTSIDE
@@ -90,6 +135,11 @@ Share + Publish actions. Both touch live React UI — to do next, confirming sco
 - First-login ONBOARDING: onProfileChosen -> Helper Lab when the kid has no helper yet.
 - MANUAL (owner): run db/add-kid-helper.sql in Supabase for signed-in cross-device sync.
 
+
+## Tennis: per-world background music + pre-warmed assets (June 27 2026)
+- **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.
+- **Pre-warmed all generated assets** so the first kid never waits: 8 court images (`/api/images?kind=tennis&id=*`), 7 one-shot SFX (`/api/sfx?s=tennis_*`), and 8 music tracks (`/api/tennis-music?world=*`) generated + cached.
+- QA: `qa-tennis.mjs` still wins all difficulties; `npm run build` clean.
 
 ## Tennis goes dynamic — AI-art courts, ambient motion, explosions + smack talk (June 27 2026)
 Big presentation upgrade to Buildable Tennis (`public/tennis.html`) + three reusable mechanics logged for future games.
@@ -715,3 +765,40 @@ lives lost), 2 levels (Tall Towers, Castle Walls → 8), 2 power-ups (Laser, Fir
 same-device 2-player Pong mode (first to 5; touch-by-half or arrows vs A/D). `qa-breaker.mjs`
 covers Solo-all-levels-win + Pong-winner + render smoke (both modes). Live deploy QA'd in-iframe,
 no console errors. Docs synced: BUILDING-A-GAME.md, MECHANICS.md §11, breaker-README.md.
+
+## Buildable Breaker: round 3 polish (menu button, stars, rewards, themed bricks, sounds) — June 27 2026
+
+In-game "‹ Menu" back button (Solo + Pong). Star progression: start screen shows "Stars: N of 24"
++ BS coins slot; Solo win screen draws the 1–3 earned stars. Star-unlock rewards: ball skins +
+paddle colors gated by total stars (new reward balls Rainbow@16, Flame@24; locked items show cost).
+Themed brick styles per backdrop (drawn): space=metal+rivets, candy=gloss+sprinkles, ocean=bubble,
+castle=stone, desert=sand, meadow=gloss. Bespoke ElevenLabs SFX via BA.configure (reuse tennis_*;
+new breaker_smash/break/power/miss in api/sfx.js) — synth now fallback-only, satisfying the sound
+rule; verified /api/sfx?s=breaker_smash=200 live. All headless QA green (solo+pong+renders); live
+deploy QA'd. TODO: looping music must be ElevenLabs (not in-house-synth music-library loops).
+
+## Buildable Breaker: looping ElevenLabs music — June 27 2026
+
+Background music now reuses the shared ElevenLabs per-world tracks (/api/chess-music?world=).
+Breaker backdrops map onto music worlds (meadow->jungle; space/candy/ocean/castle/desert direct).
+ensureMusic() runs on game start (both modes), swaps the track when the backdrop changes without
+stacking, and respects the mute toggle. Real ElevenLabs music (not the in-house-synth music-library
+loops), satisfying the sound rule. Verified live: candy + jungle return 200 audio/mpeg (~470KB,
+cached from chess); BA.music.src set with loop=true on game start. All Breaker audio is now ElevenLabs.
+
+## Chess: "living pieces" experiment — idle motion + move speech + toggle — June 26 2026
+
+Pieces now idle in place (randomized aliveBob/Wiggle/Breathe/Look on the piece SVG, pivot near feet, never leave the square; selected/celebration states override). On a kid's own move a short upbeat line plays (16 phrases via `api/chess-voice.js` move1..move16, ElevenLabs TTS cached; skips the bot's moves and the game-ending move so the Checkmate VO is not stepped on; non-overlapping). New **Living pieces** toggle (face icon in the HUD) turns motion+speech off, saved in localStorage `bk_chess_alive` (default on). Created ElevenLabs audio per BUILDING-A-GAME.md; no emoji.
+
+## Chess: world-specific living creatures (Ocean + Jungle first) — June 26 2026
+
+Piece art is now per-world: `pieceSVG(type,color,world)` dispatches to a `CREATURES[world]` set, falling back to the default heroes for un-themed worlds. Ocean = fish/seahorse/jellyfish/crab/octopus/pufferfish-king; Jungle = frog/monkey/parrot/tortoise/butterfly/lion-king. Drawn as inline SVG (reusing the team palette + eyes/smile helpers) so the alive idle motion, 2-team recolor, and crispness all carry over; rendered via `renderPieces` with the active `sceneKey`. World BACKGROUNDS already reuse the asset library; creatures are newly drawn vector (the library has scene/item art, not 6 creatures/world). Next: Space, Candy, Castle, Desert creature sets. No emoji.
+
+## Buildable Breaker: bespoke upbeat music (api/breaker-music.js) — June 27 2026
+
+Replaced the chess-music reuse with a dedicated upbeat/arcade music set: new api/breaker-music.js
+(ElevenLabs Music /v1/music, cache key breakermusic:<world>) with one peppy track per backdrop —
+meadow chiptune-pop, space synthwave, candy bubblegum, ocean surf, castle 8-bit march, desert funk.
+Engine ensureMusic now points at /api/breaker-music?world=<backdrop> (loop, swaps on backdrop change,
+respects mute). All 6 worlds pre-warmed + cached live (~469KB each; cached refetch ~19ms). Verified
+engine sets BA.music.src to the new endpoint with loop=true.

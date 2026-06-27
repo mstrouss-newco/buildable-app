@@ -38,6 +38,22 @@ const SFX_THEME = {
   giggle: "fun", roar: "fun", robot: "fun", splat: "fun", cash: "fun",
   drumroll: "fun", gong: "fun", frog: "fun", moo: "fun", rooster: "fun",
   vroom: "fun", sneeze: "fun", partypop: "fun",
+  // themed sound packs
+  lion: "animals", elephant: "animals", monkey: "animals", horse: "animals", owl: "animals", wolf: "animals",
+  sheep: "animals", pig: "animals", bird: "animals", snake: "animals", bee: "animals", catpurr: "animals",
+  dolphin: "animals", piano: "instruments", guitar: "instruments", trumpet: "instruments", violin: "instruments", flute: "instruments",
+  xylophone: "instruments", tambourine: "instruments", cymbal: "instruments", harp: "instruments", sax: "instruments", chime: "instruments",
+  accordion: "instruments", spaceship: "space", teleport: "space", rocket: "space", ufo: "space", blaster: "space",
+  powerup: "space", forcefield: "space", alien: "space", warp: "space", scan: "space", beepboop: "space",
+  ghost: "spooky", spookywind: "spooky", witch: "spooky", heartbeat: "spooky", monster: "spooky", chains: "spooky",
+  creak: "spooky", bat: "spooky", cauldron: "spooky", carhorn: "vehicles", train: "vehicles", airplane: "vehicles",
+  helicopter: "vehicles", motorcycle: "vehicles", truck: "vehicles", boat: "vehicles", siren: "vehicles", bikebell: "vehicles",
+  skid: "vehicles", fairy: "magic", spell: "magic", potion: "magic", wandzap: "magic", dragon: "magic",
+  shield: "magic", levelup: "magic", treasure: "magic", portal: "magic", fireball: "magic", birds: "nature",
+  waterfall: "nature", bubbles: "nature", sunrise: "nature", crunch: "food", slurp: "food", sizzle: "food",
+  gulp: "food", chomp: "food", fizz: "food", blender: "food", microwave: "food", popcorn: "food",
+  cheersclink: "food", refwhistle: "sports", bounce: "sports", swish: "sports", kick: "sports", batcrack: "sports",
+  crowd: "sports", goal: "sports",
 };
 
 const norm = (t) => String(t || "").trim().toLowerCase();

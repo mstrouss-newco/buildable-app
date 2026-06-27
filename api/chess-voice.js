@@ -11,6 +11,22 @@ const LINES = {
   win2: "Boom! Checkmate! Gotcha!",
   win3: "Checkmate! Too easy!",
   gg:   "Checkmate! Good game — want a rematch?",
+  move1: "Let's go!",
+  move2: "Here we go!",
+  move3: "Onward!",
+  move4: "Charge!",
+  move5: "Woohoo!",
+  move6: "For glory!",
+  move7: "Hi-ho!",
+  move8: "Tally-ho!",
+  move9: "Adventure!",
+  move10: "Coming through!",
+  move11: "Zoom!",
+  move12: "Take that!",
+  move13: "Yes!",
+  move14: "Marching on!",
+  move15: "To the rescue!",
+  move16: "Wheee!",
 };
 
 async function cacheGet(key){

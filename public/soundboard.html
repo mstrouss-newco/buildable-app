@@ -14,66 +14,63 @@
     font-family:'Nunito',sans-serif;
     background:
       radial-gradient(900px 500px at 15% -10%, #FFE7B8 0%, rgba(255,231,184,0) 60%),
-      radial-gradient(900px 600px at 110% 10%, #D8C8FF 0%, rgba(216,200,255,0) 55%),
+      radial-gradient(900px 600px at 110% 8%, #D8C8FF 0%, rgba(216,200,255,0) 55%),
       #FBF6EC;
-    color:#2B2240;
-    min-height:100%;
-    padding:18px 16px calc(28px + env(safe-area-inset-bottom));
-    overflow-x:hidden;
+    color:#2B2240; min-height:100%;
+    padding:16px 14px calc(28px + env(safe-area-inset-bottom));
   }
-  .wrap { max-width:1040px; margin:0 auto; }
-
-  .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; }
-  .title { font-size:30px; font-weight:900; letter-spacing:-0.5px; color:#3B2C66; }
-  .title small { display:block; font-size:14px; font-weight:800; color:#9A8FB8; letter-spacing:0; margin-top:2px; }
-  .mute {
-    flex-shrink:0; border:none; cursor:pointer; font-family:inherit; font-weight:800; font-size:14px;
-    color:#5B4A8A; background:#fff; border:2px solid #EBE3F5; border-radius:999px;
-    padding:9px 16px; display:inline-flex; align-items:center; gap:8px;
-  }
+  .wrap { max-width:1060px; margin:0 auto; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .title { font-size:27px; font-weight:900; letter-spacing:-0.5px; color:#3B2C66; }
+  .title small { display:block; font-size:13px; font-weight:800; color:#9A8FB8; margin-top:2px; }
+  .mute { flex-shrink:0; border:2px solid #EBE3F5; cursor:pointer; font-family:inherit; font-weight:800; font-size:14px;
+    color:#5B4A8A; background:#fff; border-radius:999px; padding:9px 16px; }
   .mute.off { background:#3B2C66; color:#fff; border-color:#3B2C66; }
 
-  .grid {
-    margin-top:18px;
-    display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(132px, 1fr));
-    gap:14px;
-  }
-  @media (max-width:520px){ .grid { grid-template-columns:repeat(2, 1fr); gap:12px; } }
+  .tabs { display:flex; gap:5px; overflow-x:auto; padding:12px 2px 8px; scrollbar-width:none; -ms-overflow-style:none; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab { flex:0 0 auto; border:none; background:transparent; cursor:pointer; font-family:inherit;
+    font-weight:800; font-size:12px; color:#7A6FA0; padding:4px 3px 2px; display:flex; flex-direction:column;
+    align-items:center; gap:6px; width:72px; transition:transform .06s; }
+  .tab:active { transform:scale(0.93); }
+  .tab-ic { width:54px; height:54px; border-radius:17px; display:flex; align-items:center; justify-content:center;
+    overflow:hidden; box-shadow:0 5px 12px rgba(60,40,110,0.18); border:3px solid transparent;
+    transition:border-color .12s, transform .12s; position:relative; }
+  .tab-ic::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,0.25), rgba(255,255,255,0) 60%); pointer-events:none; }
+  .tab-ic img { width:100%; height:100%; object-fit:cover; position:relative; z-index:1; }
+  .tab-ic svg { width:33px; height:33px; position:relative; z-index:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.18)); }
+  .tab-lbl { white-space:nowrap; }
+  .tab.active { color:#3B2C66; }
+  .tab.active .tab-ic { border-color:#3B2C66; transform:translateY(-2px); }
 
-  .pad {
-    position:relative;
-    border:none; cursor:pointer; font-family:inherit;
-    border-radius:24px;
-    aspect-ratio:1 / 1;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
-    color:#fff;
-    box-shadow:0 8px 0 rgba(0,0,0,0.12), 0 12px 22px rgba(60,40,110,0.18);
-    transition:transform .07s ease, box-shadow .07s ease;
-    overflow:hidden;
-  }
+  .grid { margin-top:8px; display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:13px; }
+  @media (max-width:520px){ .grid { grid-template-columns:repeat(3, 1fr); gap:10px; } .title{font-size:23px;} }
+  @media (max-width:360px){ .grid { grid-template-columns:repeat(2, 1fr); } }
+
+  .pad { position:relative; border:none; cursor:pointer; font-family:inherit; border-radius:22px; aspect-ratio:1/1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; color:#fff;
+    box-shadow:0 7px 0 rgba(0,0,0,0.12), 0 11px 20px rgba(60,40,110,0.18);
+    transition:transform .07s ease, box-shadow .07s ease; overflow:hidden; }
   .pad::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0)); }
-  .pad svg { width:46px; height:46px; position:relative; z-index:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18)); }
-  .pad span { position:relative; z-index:1; font-weight:900; font-size:15px; letter-spacing:0.2px; text-shadow:0 2px 4px rgba(0,0,0,0.18); }
-  .pad:active { transform:translateY(6px); box-shadow:0 2px 0 rgba(0,0,0,0.12), 0 4px 10px rgba(60,40,110,0.18); }
+  .pad svg { width:42px; height:42px; position:relative; z-index:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18)); }
+  .pad span { position:relative; z-index:1; font-weight:900; font-size:14px; letter-spacing:0.2px; text-align:center; padding:0 4px; text-shadow:0 2px 4px rgba(0,0,0,0.18); }
+  .pad:active { transform:translateY(5px); box-shadow:0 2px 0 rgba(0,0,0,0.12), 0 4px 10px rgba(60,40,110,0.18); }
   .pad.pop { animation:pop .32s ease; }
   @keyframes pop { 0%{transform:scale(1)} 35%{transform:scale(1.08)} 100%{transform:scale(1)} }
-
-  .hint { text-align:center; color:#A89CC4; font-weight:800; font-size:14px; margin-top:22px; }
+  .hint { text-align:center; color:#A89CC4; font-weight:800; font-size:13.5px; margin-top:20px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="topbar">
-    <div class="title">Sound Machine<small>Tap a button to make a sound!</small></div>
-    <button class="mute" id="muteBtn" aria-label="Mute"><span id="muteLabel">Sound on</span></button>
+    <div class="title">Sound Machine<small id="sub">Pick a pack and tap to play!</small></div>
+    <button class="mute" id="muteBtn"><span id="muteLabel">Sound on</span></button>
   </div>
+  <div class="tabs" id="tabs"></div>
   <div class="grid" id="grid"></div>
   <div class="hint">Tap fast for a silly mix!</div>
 </div>
-
 <script>
-// ---- glyphs (white line art, no emoji) ----
 var G = {
   burst:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6v7M24 35v7M6 24h7M35 24h7M11 11l5 5M32 32l5 5M37 11l-5 5M16 32l-5 5"/><circle cx="24" cy="24" r="6" fill="#fff" stroke="none"/></svg>',
   star:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 5l5.3 12.6L43 18.8l-10 8.8L36.3 41 24 33.7 11.7 41 15 27.6l-10-8.8 13.7-1.2z"/></svg>',
@@ -85,98 +82,264 @@ var G = {
   horn:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linejoin="round"><path d="M7 19v10h7l13 8V11l-13 8z" fill="#fff"/><path d="M33 18c3 2.5 3 9.5 0 12M37 13c5 4 5 17 0 21" stroke-linecap="round"/></svg>',
   frown:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><circle cx="24" cy="24" r="18"/><circle cx="17" cy="20" r="2.2" fill="#fff" stroke="none"/><circle cx="31" cy="20" r="2.2" fill="#fff" stroke="none"/><path d="M16 33c4-5 12-5 16 0"/></svg>',
   paw:'<svg viewBox="0 0 48 48" fill="#fff"><ellipse cx="24" cy="31" rx="9" ry="7.5"/><circle cx="13" cy="22" r="4"/><circle cx="35" cy="22" r="4"/><circle cx="19" cy="14" r="3.6"/><circle cx="29" cy="14" r="3.6"/></svg>',
-  duck:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M30 14a7 7 0 10-9 6.6c-6 1-11 5.6-11 12.4 0 1 .8 1.6 2 1.6h20c6 0 10-4 10-10 0-5-3.5-9-8-10.2z"/><path d="M30 16l9-2-7 5z"/><circle cx="27" cy="13" r="1.5" fill="#3B2C66"/></svg>',
+  duck:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M30 14a7 7 0 10-9 6.6c-6 1-11 5.6-11 12.4 0 1 .8 1.6 2 1.6h20c6 0 10-4 10-10 0-5-3.5-9-8-10.2z"/><path d="M30 16l9-2-7 5z"/></svg>',
   music:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M19 9l20-4v22a6 6 0 11-4-5.6V12L23 14.4V31a6 6 0 11-4-5.6z"/></svg>',
   bubble:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.4"><circle cx="20" cy="26" r="11"/><circle cx="34" cy="16" r="5"/><circle cx="16" cy="22" r="3" fill="#fff" stroke="none"/></svg>',
   smile:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><circle cx="24" cy="24" r="18"/><circle cx="17" cy="20" r="2.4" fill="#fff" stroke="none"/><circle cx="31" cy="20" r="2.4" fill="#fff" stroke="none"/><path d="M16 28c4 5 12 5 16 0"/></svg>',
   blob:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 7c7 0 9 6 13 9s4 10-1 14-9 2-12 5-9 3-13-2-3-11-1-15 7-11 14-11z"/></svg>',
   coin:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2"><circle cx="24" cy="24" r="16"/><path d="M24 14v20M19 18.5c0-2.5 2.2-3.5 5-3.5s5 1 5 3.3c0 4.7-10 2.7-10 7.4 0 2.4 2.2 3.3 5 3.3s5-1 5-3.5" stroke-linecap="round"/></svg>',
-  drum:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="24" cy="18" rx="13" ry="5" fill="#fff" stroke="none"/><path d="M11 18v9c0 2.8 5.8 5 13 5s13-2.2 13-5v-9"/><path d="M11 27c0 2.8 5.8 5 13 5s13-2.2 13-5"/><path d="M30 7l6 9M18 7l-6 9"/></svg>',
+  drum:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="24" cy="18" rx="13" ry="5" fill="#fff" stroke="none"/><path d="M11 18v9c0 2.8 5.8 5 13 5s13-2.2 13-5v-9"/><path d="M30 7l6 9M18 7l-6 9"/></svg>',
   gong:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2"><path d="M24 6v6" stroke-linecap="round"/><circle cx="24" cy="27" r="15"/><circle cx="24" cy="27" r="6" fill="#fff" stroke="none"/></svg>',
   car:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M7 30l3-9c.6-1.8 2.3-3 4.2-3h19.6c1.9 0 3.6 1.2 4.2 3l3 9v6a2 2 0 0 1-2 2h-3a4 4 0 0 1-8 0H20a4 4 0 0 1-8 0H9a2 2 0 0 1-2-2z"/><circle cx="16" cy="36" r="3.2" fill="#2B2240"/><circle cx="32" cy="36" r="3.2" fill="#2B2240"/></svg>',
-  robot:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"><path d="M24 7v5" stroke-linecap="round"/><circle cx="24" cy="6" r="2" fill="#fff" stroke="none"/><rect x="11" y="14" width="26" height="22" rx="5"/><circle cx="19" cy="24" r="2.6" fill="#fff" stroke="none"/><circle cx="29" cy="24" r="2.6" fill="#fff" stroke="none"/><path d="M19 30h10" stroke-linecap="round"/></svg>'
+  robot:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"><path d="M24 7v5" stroke-linecap="round"/><circle cx="24" cy="6" r="2" fill="#fff" stroke="none"/><rect x="11" y="14" width="26" height="22" rx="5"/><circle cx="19" cy="24" r="2.6" fill="#fff" stroke="none"/><circle cx="29" cy="24" r="2.6" fill="#fff" stroke="none"/><path d="M19 30h10" stroke-linecap="round"/></svg>',
+  bird:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M30 12a4 4 0 00-4 4c0 1 0 1-1 1H10c-2 0-3 2-1 4l6 5c1 6 6 10 12 10 7 0 12-6 12-13 0-3-1-5-2-7l3-4c1-2-1-4-3-3l-3 1a4 4 0 00-1-2z"/><circle cx="29" cy="16" r="1.4" fill="#2B2240"/></svg>',
+  fish:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M6 24c6-9 18-12 26-6 2-2 5-4 9-4-2 3-2 6-1 8 1 2 1 5 0 7 1 2 1 5-1 8-4 0-7-2-9-4-8 6-20 3-26-6 2 0 4-1 5-3-1-2-3-3-5-3z"/><circle cx="30" cy="20" r="1.6" fill="#2B2240"/></svg>',
+  bug:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><ellipse cx="24" cy="27" rx="9" ry="11" fill="#fff" stroke="none"/><path d="M24 16v22M15 22h18M14 30h20" stroke="#2B2240" stroke-width="2.4"/><circle cx="24" cy="11" r="4" fill="#fff" stroke="none"/><path d="M20 8l-4-3M28 8l4-3"/></svg>',
+  snake:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 38c10 0 6-10 14-10s4-9 10-12"/><circle cx="38" cy="14" r="3" fill="#fff" stroke="none"/></svg>',
+  guitar:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M38 8l-3 3M34 12l-12 12"/><path d="M22 24a7 7 0 11-6 6 6 6 0 10 6-6z" fill="#fff" stroke="none"/></svg>',
+  trumpet:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"><path d="M6 20v8h6l16 6V14L12 20z" fill="#fff"/><path d="M30 17v14M35 18v12M40 20v8" stroke-linecap="round"/></svg>',
+  rocket:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 4c7 5 10 12 10 20l-4 6h-12l-4-6c0-8 3-15 10-20z"/><circle cx="24" cy="19" r="3.4" fill="#2B2240"/><path d="M14 32l-4 8 8-3M34 32l4 8-8-3M21 39h6l-3 5z"/></svg>',
+  alien:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 6c9 0 15 7 15 16 0 11-8 20-15 20S9 33 9 22C9 13 15 6 24 6z"/><ellipse cx="17" cy="22" rx="3.6" ry="5" fill="#2B2240"/><ellipse cx="31" cy="22" rx="3.6" ry="5" fill="#2B2240"/></svg>',
+  planet:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3"><circle cx="22" cy="22" r="12" fill="#fff" stroke="none"/><ellipse cx="24" cy="26" rx="22" ry="7" transform="rotate(-20 24 26)"/></svg>',
+  ghost:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M12 40V22a12 12 0 0124 0v18l-4-3-4 3-4-3-4 3-4-3z"/><circle cx="19" cy="21" r="2.4" fill="#2B2240"/><circle cx="29" cy="21" r="2.4" fill="#2B2240"/></svg>',
+  bat:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 16c2-3 5-5 5-2 3-2 7-2 9 1 0-1 3-1 3 2-2 1-3 3-3 5 3 1 5 3 5 3-4 0-7 2-9 5-1-3-3-5-5-5-2 0-4 2-5 5-2-3-5-5-9-5 0 0 2-2 5-3 0-2-1-4-3-5 0-3 3-3 3-2 2-3 6-3 9-1 0-3 3-1 5 2z"/></svg>',
+  moon:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M30 6a18 18 0 100 36 14 14 0 010-36z"/></svg>',
+  train:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M14 8h14a8 8 0 018 8v16a4 4 0 01-4 4H14a4 4 0 01-4-4V12a4 4 0 014-4z"/><rect x="15" y="14" width="16" height="9" rx="2" fill="#2B2240"/><circle cx="17" cy="40" r="3"/><circle cx="31" cy="40" r="3"/></svg>',
+  plane:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M42 22L26 24l-7-14h-4l3 15-7 1-3-5H6l3 8-3 8h2l3-5 7 1-3 15h4l7-14 16 2z"/></svg>',
+  wand:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"><path d="M12 38L34 16"/><path d="M37 8l1 5 5 1-5 1-1 5-1-5-5-1 5-1z" fill="#fff" stroke="none"/></svg>',
+  fire:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 4c2 8 10 10 10 20a10 10 0 11-20 0c0-5 2-7 4-9 1 3 3 4 4 3 2-3-3-7-2-14z"/></svg>',
+  gem:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M14 8h20l8 11-18 21L6 19z"/><path d="M6 19h36M20 8l-6 11 10 21M28 8l6 11-10 21" stroke="#2B2240" stroke-width="1.6" fill="none"/></svg>',
+  shield:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 5l15 5v11c0 10-7 18-15 21-8-3-15-11-15-21V10z"/><path d="M17 24l5 5 9-10" stroke="#2B2240" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  water:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 5c8 10 14 17 14 24a14 14 0 11-28 0c0-7 6-14 14-24z"/></svg>',
+  leaf:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M40 8C20 8 8 20 8 40c0 0 0-14 12-22 0 0-4 8-2 14C30 30 40 22 40 8z"/></svg>',
+  cloud:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M14 36a9 9 0 01-1-18 12 12 0 0123 3 8 8 0 01-2 15z"/></svg>',
+  sun:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"><circle cx="24" cy="24" r="9" fill="#fff" stroke="none"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M14 34l-4 4"/></svg>',
+  fork:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M16 6v12a4 4 0 008 0V6M20 22v20"/><path d="M32 6c-4 0-6 4-6 10s2 8 6 8v18"/></svg>',
+  cup:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"><path d="M12 14h22v12a11 11 0 01-22 0z" fill="#fff" stroke="none"/><path d="M34 16h5a4 4 0 010 8h-5" stroke-linecap="round"/><path d="M16 6c0 2-2 2-2 4M24 6c0 2-2 2-2 4" stroke-linecap="round"/></svg>',
+  ball:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3"><circle cx="24" cy="24" r="18" fill="#fff" stroke="none"/><path d="M24 6v36M6 24h36M11 11c8 5 18 5 26 0M11 37c8-5 18-5 26 0" stroke="#2B2240" stroke-width="2"/></svg>',
+  whistle:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M8 20a10 10 0 0010 10h6l8 6V18a4 4 0 00-4-4H18A10 10 0 008 20z"/><circle cx="18" cy="22" r="3" fill="#2B2240"/><path d="M34 14h8v5h-8z"/></svg>',
+  trophy:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M14 8h20v6a10 10 0 01-20 0z"/><path d="M14 10H8v4a6 6 0 006 5M34 10h6v4a6 6 0 01-6 5" fill="none" stroke="#fff" stroke-width="3"/><path d="M22 24h4v8h-4zM16 36h16v4H16z"/></svg>'
 };
-
-// ---- sounds: key, label, gradient, glyph ----
-var SOUNDS = [
-  ["fart","Whoopee","linear-gradient(160deg,#FF8FB1,#F0577E)","wave"],
-  ["boom","Explosion","linear-gradient(160deg,#FF9F45,#F0622A)","burst"],
-  ["boing","Boing","linear-gradient(160deg,#5FD0F0,#2F8FD6)","spring"],
-  ["burp","Burp","linear-gradient(160deg,#7CD98E,#39A85B)","wave"],
-  ["honk","Honk","linear-gradient(160deg,#FFC75A,#F0972A)","horn"],
-  ["tada","Ta-da!","linear-gradient(160deg,#B68BFF,#7C4FE0)","star"],
-  ["laser","Laser","linear-gradient(160deg,#67E8F9,#2BB6D6)","bolt"],
-  ["ding","Ding!","linear-gradient(160deg,#86E8B6,#23B57E)","check"],
-  ["buzzer","Buzzer","linear-gradient(160deg,#FF7C7C,#E0414F)","cross"],
-  ["sadtrombone","Womp Womp","linear-gradient(160deg,#9AA6C4,#5E6B8F)","frown"],
-  ["squeak","Squeak","linear-gradient(160deg,#FFD166,#F0A93A)","bubble"],
-  ["airhorn","Air Horn","linear-gradient(160deg,#FF6FA5,#E03C8A)","horn"],
-  ["bonk","Bonk","linear-gradient(160deg,#FFB14E,#E07A2A)","burst"],
-  ["slidewhistle","Whistle","linear-gradient(160deg,#8AD6FF,#4F9FE0)","wave"],
-  ["meow","Meow","linear-gradient(160deg,#C9A7FF,#9466E0)","paw"],
-  ["woof","Woof","linear-gradient(160deg,#FFB36B,#E0823A)","paw"],
-  ["quack","Quack","linear-gradient(160deg,#FFDE5A,#F0B72A)","duck"],
-  ["cheer","Cheer!","linear-gradient(160deg,#7BE0C4,#1FA897)","music"],
-  ["giggle","Giggle","linear-gradient(160deg,#FFD66B,#F0B23A)","smile"],
-  ["roar","Dino Roar","linear-gradient(160deg,#7CD98E,#2BA85B)","blob"],
-  ["robot","Robot","linear-gradient(160deg,#9FB4C9,#5E7A99)","robot"],
-  ["splat","Splat","linear-gradient(160deg,#A7E05A,#74B12A)","blob"],
-  ["cash","Cha-Ching","linear-gradient(160deg,#5BD98E,#1FA85F)","coin"],
-  ["drumroll","Drum Roll","linear-gradient(160deg,#B68BFF,#7C4FE0)","drum"],
-  ["gong","Gong","linear-gradient(160deg,#FFC75A,#E0922A)","gong"],
-  ["frog","Frog","linear-gradient(160deg,#6FD98E,#2BA86B)","paw"],
-  ["moo","Cow Moo","linear-gradient(160deg,#FFB36B,#E0823A)","paw"],
-  ["rooster","Rooster","linear-gradient(160deg,#FF9F6B,#E0623A)","paw"],
-  ["vroom","Vroom","linear-gradient(160deg,#FF7C7C,#E0414F)","car"],
-  ["sneeze","Achoo!","linear-gradient(160deg,#8AD6FF,#4F9FE0)","wave"],
-  ["partypop","Party Pop","linear-gradient(160deg,#FF8FD1,#E03CA0)","star"]
+var PACKS = [
+  {id:"silly", name:"Silly", sounds:[
+    ["fart","Whoopee","wave","linear-gradient(160deg,#FF8FB1,#F0577E)"],
+    ["burp","Burp","wave","linear-gradient(160deg,#FF9F45,#F0622A)"],
+    ["boing","Boing","spring","linear-gradient(160deg,#5FD0F0,#2F8FD6)"],
+    ["honk","Honk","horn","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+    ["tada","Ta-da!","star","linear-gradient(160deg,#7CD98E,#39A85B)"],
+    ["buzzer","Buzzer","cross","linear-gradient(160deg,#FFC75A,#F0972A)"],
+    ["sadtrombone","Womp","frown","linear-gradient(160deg,#FF8FB1,#F0577E)"],
+    ["squeak","Squeak","bubble","linear-gradient(160deg,#FF9F45,#F0622A)"],
+    ["bonk","Bonk","burst","linear-gradient(160deg,#5FD0F0,#2F8FD6)"],
+    ["slidewhistle","Whistle","wave","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+    ["giggle","Giggle","smile","linear-gradient(160deg,#7CD98E,#39A85B)"],
+    ["sneeze","Achoo!","wave","linear-gradient(160deg,#FFC75A,#F0972A)"],
+    ["splat","Splat","blob","linear-gradient(160deg,#FF8FB1,#F0577E)"],
+    ["partypop","Party Pop","star","linear-gradient(160deg,#FF9F45,#F0622A)"],
+    ["airhorn","Air Horn","horn","linear-gradient(160deg,#5FD0F0,#2F8FD6)"],
+    ["boom","Explosion","burst","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+  ]},
+  {id:"animals", name:"Animals", sounds:[
+    ["meow","Cat","paw","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["woof","Dog","paw","linear-gradient(160deg,#FFB36B,#E0823A)"],
+    ["quack","Duck","duck","linear-gradient(160deg,#FFD66B,#F0B23A)"],
+    ["frog","Frog","blob","linear-gradient(160deg,#6FD0E0,#2F9FB6)"],
+    ["moo","Cow","paw","linear-gradient(160deg,#C9A7FF,#9466E0)"],
+    ["rooster","Rooster","bird","linear-gradient(160deg,#FF9F6B,#E0623A)"],
+    ["roar","Dino","blob","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["lion","Lion","paw","linear-gradient(160deg,#FFB36B,#E0823A)"],
+    ["elephant","Elephant","paw","linear-gradient(160deg,#FFD66B,#F0B23A)"],
+    ["monkey","Monkey","paw","linear-gradient(160deg,#6FD0E0,#2F9FB6)"],
+    ["horse","Horse","paw","linear-gradient(160deg,#C9A7FF,#9466E0)"],
+    ["owl","Owl","bird","linear-gradient(160deg,#FF9F6B,#E0623A)"],
+    ["wolf","Wolf","paw","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["sheep","Sheep","paw","linear-gradient(160deg,#FFB36B,#E0823A)"],
+    ["pig","Pig","paw","linear-gradient(160deg,#FFD66B,#F0B23A)"],
+    ["bird","Birdie","bird","linear-gradient(160deg,#6FD0E0,#2F9FB6)"],
+    ["snake","Snake","snake","linear-gradient(160deg,#C9A7FF,#9466E0)"],
+    ["bee","Bee","bug","linear-gradient(160deg,#FF9F6B,#E0623A)"],
+    ["catpurr","Purr","paw","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["dolphin","Dolphin","fish","linear-gradient(160deg,#FFB36B,#E0823A)"],
+  ]},
+  {id:"instruments", name:"Instruments", sounds:[
+    ["piano","Piano","music","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+    ["guitar","Guitar","guitar","linear-gradient(160deg,#FF8FB1,#E0578F)"],
+    ["trumpet","Trumpet","trumpet","linear-gradient(160deg,#FFC75A,#E0922A)"],
+    ["violin","Violin","music","linear-gradient(160deg,#67E8C9,#1FA897)"],
+    ["flute","Flute","music","linear-gradient(160deg,#8AB4FF,#4F6FE0)"],
+    ["xylophone","Xylophone","music","linear-gradient(160deg,#FFB14E,#E07A2A)"],
+    ["tambourine","Tambourine","drum","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+    ["cymbal","Cymbal","gong","linear-gradient(160deg,#FF8FB1,#E0578F)"],
+    ["harp","Harp","music","linear-gradient(160deg,#FFC75A,#E0922A)"],
+    ["sax","Sax","trumpet","linear-gradient(160deg,#67E8C9,#1FA897)"],
+    ["chime","Chimes","star","linear-gradient(160deg,#8AB4FF,#4F6FE0)"],
+    ["accordion","Accordion","music","linear-gradient(160deg,#FFB14E,#E07A2A)"],
+    ["drumroll","Drum Roll","drum","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+    ["gong","Gong","gong","linear-gradient(160deg,#FF8FB1,#E0578F)"],
+    ["bell","Bell","star","linear-gradient(160deg,#FFC75A,#E0922A)"],
+  ]},
+  {id:"space", name:"Space", sounds:[
+    ["laser","Laser","bolt","linear-gradient(160deg,#7C8BFF,#4F4FE0)"],
+    ["robot","Robot","robot","linear-gradient(160deg,#67E8F9,#2BB6D6)"],
+    ["space","Cosmic","planet","linear-gradient(160deg,#C9A7FF,#7C4FE0)"],
+    ["spaceship","Spaceship","rocket","linear-gradient(160deg,#5FA8F0,#2F6FD6)"],
+    ["teleport","Teleport","planet","linear-gradient(160deg,#9FB4C9,#5E7A99)"],
+    ["rocket","Rocket","rocket","linear-gradient(160deg,#FF8FD1,#E03CA0)"],
+    ["ufo","UFO","planet","linear-gradient(160deg,#7C8BFF,#4F4FE0)"],
+    ["blaster","Blaster","bolt","linear-gradient(160deg,#67E8F9,#2BB6D6)"],
+    ["powerup","Power Up","star","linear-gradient(160deg,#C9A7FF,#7C4FE0)"],
+    ["forcefield","Force Field","shield","linear-gradient(160deg,#5FA8F0,#2F6FD6)"],
+    ["alien","Alien","alien","linear-gradient(160deg,#9FB4C9,#5E7A99)"],
+    ["warp","Warp","planet","linear-gradient(160deg,#FF8FD1,#E03CA0)"],
+    ["scan","Scanner","planet","linear-gradient(160deg,#7C8BFF,#4F4FE0)"],
+    ["beepboop","Beep Boop","robot","linear-gradient(160deg,#67E8F9,#2BB6D6)"],
+  ]},
+  {id:"spooky", name:"Spooky", sounds:[
+    ["ghost","Ghost","ghost","linear-gradient(160deg,#9A7BD0,#5E3F9F)"],
+    ["spookywind","Eerie Wind","cloud","linear-gradient(160deg,#7A8AA8,#4A5A7A)"],
+    ["witch","Witch","moon","linear-gradient(160deg,#A0C46B,#6BA02A)"],
+    ["heartbeat","Heartbeat","ghost","linear-gradient(160deg,#C98BFF,#8A4FE0)"],
+    ["monster","Monster","blob","linear-gradient(160deg,#6B7BA0,#3F4F7A)"],
+    ["chains","Chains","moon","linear-gradient(160deg,#E0A04F,#B0702A)"],
+    ["creak","Creak","ghost","linear-gradient(160deg,#9A7BD0,#5E3F9F)"],
+    ["bat","Bats","bat","linear-gradient(160deg,#7A8AA8,#4A5A7A)"],
+    ["cauldron","Cauldron","moon","linear-gradient(160deg,#A0C46B,#6BA02A)"],
+    ["thunder","Thunder","cloud","linear-gradient(160deg,#C98BFF,#8A4FE0)"],
+  ]},
+  {id:"vehicles", name:"Vehicles", sounds:[
+    ["vroom","Race Car","car","linear-gradient(160deg,#5FD0F0,#2F8FD6)"],
+    ["carhorn","Car Horn","car","linear-gradient(160deg,#FF7C7C,#E0414F)"],
+    ["train","Train","train","linear-gradient(160deg,#FFB14E,#E07A2A)"],
+    ["airplane","Airplane","plane","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["helicopter","Helicopter","plane","linear-gradient(160deg,#9FB4C9,#5E7A99)"],
+    ["motorcycle","Motorcycle","car","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+    ["truck","Truck","train","linear-gradient(160deg,#5FD0F0,#2F8FD6)"],
+    ["boat","Boat","horn","linear-gradient(160deg,#FF7C7C,#E0414F)"],
+    ["siren","Siren","car","linear-gradient(160deg,#FFB14E,#E07A2A)"],
+    ["bikebell","Bike Bell","star","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["skid","Tire Skid","car","linear-gradient(160deg,#9FB4C9,#5E7A99)"],
+  ]},
+  {id:"magic", name:"Magic", sounds:[
+    ["magic","Magic","wand","linear-gradient(160deg,#C9A7FF,#7C4FE0)"],
+    ["sparkle","Sparkle","star","linear-gradient(160deg,#FF8FD1,#E03CA0)"],
+    ["fairy","Fairy","wand","linear-gradient(160deg,#67E8F9,#2BB6D6)"],
+    ["spell","Spell","wand","linear-gradient(160deg,#FFD66B,#F0B23A)"],
+    ["potion","Potion","gem","linear-gradient(160deg,#7CD9C4,#1FA897)"],
+    ["wandzap","Wand","wand","linear-gradient(160deg,#FF9F45,#F0622A)"],
+    ["dragon","Dragon","fire","linear-gradient(160deg,#C9A7FF,#7C4FE0)"],
+    ["shield","Shield","shield","linear-gradient(160deg,#FF8FD1,#E03CA0)"],
+    ["levelup","Level Up","star","linear-gradient(160deg,#67E8F9,#2BB6D6)"],
+    ["treasure","Treasure","gem","linear-gradient(160deg,#FFD66B,#F0B23A)"],
+    ["portal","Portal","planet","linear-gradient(160deg,#7CD9C4,#1FA897)"],
+    ["fireball","Fireball","fire","linear-gradient(160deg,#FF9F45,#F0622A)"],
+  ]},
+  {id:"nature", name:"Nature", sounds:[
+    ["rain","Rain","cloud","linear-gradient(160deg,#5FBFE0,#2F8FB6)"],
+    ["thunder","Thunder","cloud","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["wind","Wind","cloud","linear-gradient(160deg,#A0C46B,#6BA02A)"],
+    ["waves","Ocean","water","linear-gradient(160deg,#FFC75A,#E0922A)"],
+    ["water","Stream","water","linear-gradient(160deg,#8AD6FF,#4F9FE0)"],
+    ["fire","Campfire","fire","linear-gradient(160deg,#B0A0E0,#7060B0)"],
+    ["forest","Forest","leaf","linear-gradient(160deg,#5FBFE0,#2F8FB6)"],
+    ["crickets","Crickets","moon","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["jungle","Jungle","leaf","linear-gradient(160deg,#A0C46B,#6BA02A)"],
+    ["splash","Splash","water","linear-gradient(160deg,#FFC75A,#E0922A)"],
+    ["rustle","Leaves","leaf","linear-gradient(160deg,#8AD6FF,#4F9FE0)"],
+    ["birds","Birdsong","bird","linear-gradient(160deg,#B0A0E0,#7060B0)"],
+    ["waterfall","Waterfall","water","linear-gradient(160deg,#5FBFE0,#2F8FB6)"],
+    ["bubbles","Bubbles","bubble","linear-gradient(160deg,#7CD98E,#2BA85B)"],
+    ["sunrise","Morning","sun","linear-gradient(160deg,#A0C46B,#6BA02A)"],
+  ]},
+  {id:"food", name:"Food", sounds:[
+    ["pop","Pop","bubble","linear-gradient(160deg,#FF9F45,#F0622A)"],
+    ["crunch","Crunch","fork","linear-gradient(160deg,#FFC75A,#E0922A)"],
+    ["slurp","Slurp","cup","linear-gradient(160deg,#FF8FB1,#E0578F)"],
+    ["sizzle","Sizzle","fire","linear-gradient(160deg,#7CD98E,#39A85B)"],
+    ["gulp","Gulp","cup","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+    ["chomp","Chomp","fork","linear-gradient(160deg,#FFB14E,#E07A2A)"],
+    ["fizz","Fizz","cup","linear-gradient(160deg,#FF9F45,#F0622A)"],
+    ["blender","Blender","cup","linear-gradient(160deg,#FFC75A,#E0922A)"],
+    ["microwave","Microwave","star","linear-gradient(160deg,#FF8FB1,#E0578F)"],
+    ["popcorn","Popcorn","burst","linear-gradient(160deg,#7CD98E,#39A85B)"],
+    ["cheersclink","Cheers","cup","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+  ]},
+  {id:"sports", name:"Sports", sounds:[
+    ["cheer","Crowd Cheer","trophy","linear-gradient(160deg,#3DD06A,#2BB14F)"],
+    ["buzzer","Buzzer","cross","linear-gradient(160deg,#FF7C7C,#E0414F)"],
+    ["refwhistle","Whistle","whistle","linear-gradient(160deg,#FFB13C,#F0972A)"],
+    ["bounce","Bounce","ball","linear-gradient(160deg,#5FD0F0,#2F8FD6)"],
+    ["swish","Swish","ball","linear-gradient(160deg,#B68BFF,#7C4FE0)"],
+    ["kick","Kick","ball","linear-gradient(160deg,#FFD66B,#F0B23A)"],
+    ["batcrack","Home Run","ball","linear-gradient(160deg,#3DD06A,#2BB14F)"],
+    ["crowd","Stadium","trophy","linear-gradient(160deg,#FF7C7C,#E0414F)"],
+    ["goal","Goal!","trophy","linear-gradient(160deg,#FFB13C,#F0972A)"],
+  ]},
 ];
 
-var muted = false;
-try { muted = localStorage.getItem("bk_muted") === "1"; } catch(e){}
-var cache = {};
-
-function playSound(key){
-  if (muted) return;
-  var base = cache[key];
-  if (!base){ base = new Audio("/api/sfx?s=" + key + "&v=1"); base.preload = "auto"; cache[key] = base; }
-  // clone so rapid taps overlap (same cached URL, no refetch)
-  var a = base.cloneNode();
-  a.play().catch(function(){});
-  if (navigator.vibrate) { try { navigator.vibrate(18); } catch(e){} }
+var muted=false; try{ muted=localStorage.getItem("bk_muted")==="1"; }catch(e){}
+var cache={};
+function play(key){
+  if(muted) return;
+  var base=cache[key];
+  if(!base){ base=new Audio("/api/sfx?s="+key+"&v=1"); base.preload="auto"; cache[key]=base; }
+  var a=base.cloneNode(); a.play().catch(function(){});
+  if(navigator.vibrate){ try{navigator.vibrate(16);}catch(e){} }
 }
+function warm(pack){ pack.sounds.forEach(function(s){ if(!cache[s[0]]) cache[s[0]]=new Audio("/api/sfx?s="+s[0]+"&v=1"); }); }
 
-function buildGrid(){
-  var grid = document.getElementById("grid");
-  SOUNDS.forEach(function(s){
-    var key=s[0], label=s[1], grad=s[2], glyph=s[3];
-    var b = document.createElement("button");
-    b.className = "pad";
-    b.style.background = grad;
-    b.innerHTML = G[glyph] + '<span>' + label + '</span>';
-    var fire = function(ev){
-      ev.preventDefault();
-      playSound(key);
-      b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
-    };
-    b.addEventListener("pointerdown", fire);
-    grid.appendChild(b);
-    // warm the cache so first tap is instant
-    cache[key] = new Audio("/api/sfx?s=" + key + "&v=1");
+var activeId=null;
+try{ activeId=localStorage.getItem("bk_sfx_pack"); }catch(e){}
+if(!activeId || !PACKS.some(function(p){return p.id===activeId;})) activeId=PACKS[0].id;
+
+var PACK_META = {
+  silly:{glyph:'smile',grad:'linear-gradient(160deg,#FF8FB1,#F0577E)'},
+  animals:{glyph:'paw',grad:'linear-gradient(160deg,#7CD98E,#2BA85B)'},
+  instruments:{glyph:'music',grad:'linear-gradient(160deg,#B68BFF,#7C4FE0)'},
+  space:{glyph:'rocket',grad:'linear-gradient(160deg,#7C8BFF,#4F4FE0)'},
+  spooky:{glyph:'ghost',grad:'linear-gradient(160deg,#9A7BD0,#5E3F9F)'},
+  vehicles:{glyph:'car',grad:'linear-gradient(160deg,#5FD0F0,#2F8FD6)'},
+  magic:{glyph:'wand',grad:'linear-gradient(160deg,#C9A7FF,#7C4FE0)'},
+  nature:{glyph:'leaf',grad:'linear-gradient(160deg,#5FBFE0,#2F8FB6)'},
+  food:{glyph:'fork',grad:'linear-gradient(160deg,#FF9F45,#F0622A)'},
+  sports:{glyph:'trophy',grad:'linear-gradient(160deg,#3DD06A,#2BB14F)'},
+};
+function renderTabs(){
+  var t=document.getElementById("tabs"); t.innerHTML="";
+  PACKS.forEach(function(p){
+    var meta=PACK_META[p.id]||{glyph:'star',grad:'linear-gradient(160deg,#B68BFF,#7C4FE0)'};
+    var b=document.createElement("button");
+    b.className="tab"+(p.id===activeId?" active":"");
+    var ic=document.createElement("div"); ic.className="tab-ic"; ic.style.background=meta.grad;
+    var img=document.createElement("img"); img.alt=p.name; img.loading="lazy";
+    img.onerror=function(){ ic.innerHTML=(G[meta.glyph]||G.star); };
+    img.src="/api/images?kind=soundpack&id="+encodeURIComponent(p.id);
+    ic.appendChild(img);
+    var lbl=document.createElement("span"); lbl.className="tab-lbl"; lbl.textContent=p.name;
+    b.appendChild(ic); b.appendChild(lbl);
+    b.addEventListener("click", function(){ activeId=p.id; try{localStorage.setItem("bk_sfx_pack",p.id);}catch(e){}
+      renderTabs(); renderGrid(); });
+    t.appendChild(b);
   });
 }
-
-function setMute(on){
-  muted = on;
-  try { localStorage.setItem("bk_muted", on ? "1" : "0"); } catch(e){}
-  var btn=document.getElementById("muteBtn"), lab=document.getElementById("muteLabel");
-  lab.textContent = on ? "Sound off" : "Sound on";
-  btn.classList.toggle("off", on);
+function renderGrid(){
+  var pack=PACKS.filter(function(p){return p.id===activeId;})[0];
+  warm(pack);
+  var g=document.getElementById("grid"); g.innerHTML="";
+  pack.sounds.forEach(function(s){
+    var key=s[0],label=s[1],glyph=s[2],grad=s[3];
+    var b=document.createElement("button"); b.className="pad"; b.style.background=grad;
+    b.innerHTML=(G[glyph]||G.star)+'<span>'+label+'</span>';
+    b.addEventListener("pointerdown", function(ev){ ev.preventDefault(); play(key);
+      b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); });
+    g.appendChild(b);
+  });
 }
+function setMute(on){ muted=on; try{localStorage.setItem("bk_muted",on?"1":"0");}catch(e){}
+  var btn=document.getElementById("muteBtn"), lab=document.getElementById("muteLabel");
+  lab.textContent=on?"Sound off":"Sound on"; btn.classList.toggle("off",on); }
 document.getElementById("muteBtn").addEventListener("click", function(){ setMute(!muted); });
 
-buildGrid();
-setMute(muted);
+renderTabs(); renderGrid(); setMute(muted);
 </script>
 </body>
 </html>

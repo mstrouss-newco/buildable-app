@@ -183,6 +183,25 @@ function build(q) {
     if (!subject) return null;
     return { descriptor: `tennis|${id}`, prompt: `${subject}. ${COURT_STYLE}`, transparent: false, quality: "medium" };
   }
+  if (kind === "soundpack") {
+    const id = (q.id || "").toString();
+    const PACK_STYLE = "Bright bold glossy 3D cartoon app-icon style, a single centered group of objects filling the frame, vibrant saturated candy colors, soft studio lighting, thick clean rounded shapes, playful and inviting, child-friendly ages 4-8, no text, no words, no letters, no UI, transparent background";
+    const PACKS = {
+      silly:       "a bright red whoopee cushion with a goofy cartoon smiling face sticking its tongue out",
+      animals:     "three cute friendly cartoon animal faces grouped together — a happy puppy, a kitten and a little lion cub",
+      instruments: "a colorful cartoon electric guitar, a drum and a shiny trumpet grouped together with a couple of music notes",
+      space:       "a friendly cartoon rocket ship blasting off past a ringed planet and twinkling stars",
+      spooky:      "a cute friendly smiling cartoon ghost next to a glowing jack-o-lantern pumpkin, playful and not scary",
+      vehicles:    "a cute shiny cartoon red race car with a little blue train and a yellow airplane grouped behind it",
+      magic:       "a sparkling magic wand with a glowing star tip, swirling magic sparkles and a little potion bottle",
+      nature:      "a cheerful nature scene icon with a round green tree, a bright smiling sun and a fluffy white cloud",
+      food:        "a yummy cartoon cheeseburger, a slice of pizza and a soda cup with a straw grouped together",
+      sports:      "a shiny golden trophy with a soccer ball, a basketball and a referee whistle grouped around it",
+    };
+    const subject = PACKS[id];
+    if (!subject) return null;
+    return { descriptor: `soundpack|${id}`, prompt: `${subject}. ${PACK_STYLE}`, transparent: true, quality: "medium" };
+  }
   if (kind === "game") {
     const id = (q.id || "").toString();
     const GAMES = {

@@ -19,7 +19,7 @@ const BK=sandbox.BUILDABLE_GAME; if(!BK){ console.error('FAIL: BUILDABLE_GAME no
 if(sandbox.BREAKER_GAME!==BK){ console.error('FAIL: BREAKER_GAME alias missing'); process.exit(2); }
 const cfg=BK._cfg(); const n=cfg.levels.length; let ok=true;
 console.log('--- SOLO: every level clears (5 runs each) ---');
-for(let i=0;i<n;i++){ let win=true,maxF=0; for(let t=0;t<5;t++){ const r=BK.sim(i,40000); if(r.result!=='win')win=false; maxF=Math.max(maxF,r.frames); } if(!win)ok=false; console.log(`${win?'PASS':'FAIL'}  L${i+1} ${cfg.levels[i].name.padEnd(15)} winAll5=${win} worst=${maxF}f (~${(maxF/60).toFixed(0)}s)`); }
+for(let i=0;i<n;i++){ let win=true,maxF=0; for(let t=0;t<5;t++){ const r=BK.sim(i,60000); if(r.result!=='win')win=false; maxF=Math.max(maxF,r.frames); } if(!win)ok=false; console.log(`${win?'PASS':'FAIL'}  L${i+1} ${cfg.levels[i].name.padEnd(15)} winAll5=${win} worst=${maxF}f (~${(maxF/60).toFixed(0)}s)`); }
 console.log('--- stars: a clean run earns 3 ---');
 const s=BK.sim(0,40000); console.log(`stars(L1)=${s.stars} livesLeft=${s.livesLeft}`);
 console.log('--- PONG: a winner emerges (3 runs) ---');

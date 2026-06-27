@@ -75,6 +75,11 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Tennis: per-world background music + pre-warmed assets (June 27 2026)
+- **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.
+- **Pre-warmed all generated assets** so the first kid never waits: 8 court images (`/api/images?kind=tennis&id=*`), 7 one-shot SFX (`/api/sfx?s=tennis_*`), and 8 music tracks (`/api/tennis-music?world=*`) generated + cached.
+- QA: `qa-tennis.mjs` still wins all difficulties; `npm run build` clean.
+
 ## Tennis goes dynamic — AI-art courts, ambient motion, explosions + smack talk (June 27 2026)
 Big presentation upgrade to Buildable Tennis (`public/tennis.html`) + three reusable mechanics logged for future games.
 
@@ -567,6 +572,46 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27i (Sunny Town Drive — new 3-lane runner engine)
+
+**2026-06-27 3D rebuild:** Sunny Town Drive is now **true 3D** (Three.js r128, blocky
+LEGO-style) — camera behind the car, road receding into fog. Crucially the *gameplay logic
+is unchanged*: it stays a pure track-position model (lane + p in the same 0..H units), so
+`runner-engine.html` maps p->world Z and lane->world X for drawing only. That means the
+always-winnable guarantee and the headless QA bot still work with no WebGL — `qa-runner.mjs`
+runs the same sim/campaign (all 6 towns clear 0-hit/3-star) and now loads only the libs the
+3D engine uses (`buildable-audio.js`, `buildable-startscreen.js`). Rendering is a WebGL scene
+canvas (#c) with a 2D HUD overlay canvas (#hud) on top for hearts/town/progress/banners; the
+shared BS start screen still sits over it. All 3D init is guarded by `window.THREE` so the
+engine loads cleanly headlessly. Verified live in-browser (3D scene renders + plays, no
+console errors).
+
+New hand-authored **Track B** engine `public/runner-engine.html` (route `/runner-engine.html`):
+a cute "drive through town, dodge stuff, collect treats" runner for ages 4-8, inspired by
+LEGO Friends: Heartlake Rush (built as our own original — no licensed art). Steering is
+**3-lane tap/swipe** (tap a side, swipe, or arrow keys) so it works on phone, iPad and
+desktop. Theme is a fresh **Sunny Town** with 6 towns (Maple Street -> Rainbow Bridge),
+each a data recipe in `GAME_CONFIG.levels` — adding a town is editing data, not engine code.
+
+Built to BUILDING-A-GAME.md: data-driven levels, **always-winnable** (every obstacle row
+leaves >=1 open lane and rows are spaced so only one is in the car's collision band, so a
+perfect driver can finish untouched), and headless QA-simmed. Uses shared engine libs BR
+(drawn car/obstacles/treats, no images so it can't break), BA (sound via the existing
+created catalog), BM (crash shake/flash + treat sparkles), BS (the shared start screen).
+
+QA: `qa-runner.mjs` exposes `window.BUILDABLE_GAME` (+ `RUNNER_GAME` alias) with
+`sim()`/`campaign()`; a perfect-driver bot clears all 6 towns with **0 hits / 3 stars**
+across 5 runs each + a full campaign, plus render smoke — all PASS. Surfaced in
+`src/BuildableKids.jsx` as a "Sunny Town Drive" tile in the Games picker
+(`SunnyTownScreen`, full-screen iframe) and a row in `public/games-library.html`.
+`esbuild` build of BuildableKids.jsx passes.
+
+**Follow-ups (deferred):** bespoke ElevenLabs sounds + generated Sunny Town cast/pets art
+in the shared asset library; car customizing, missions/unlocks, and a driver picker
+(v1 is dodge + collect only, per scope).
+
+---
+
 ## Session log — 2026-06-27b (characters get a theme label — first convergence step)
 
 First step of bringing every project onto the shared asset library: gave reusable
@@ -712,6 +757,10 @@ session.
 **Live QA fixes:** ElevenLabs requires duration_seconds 0.5–30 (squeak/bonk were 0.4 → bumped); error responses now send `Cache-Control: no-store` and the soundboard requests `/api/sfx?s=<key>&v=1` so a poisoned error never sticks in the edge cache. All 18 pads verified returning audio/mpeg live.
 
 **2026-06-27 follow-up:** Whoopee pad now plays a wet `fart` (fresh cache key, bypasses the old clip) + 13 new sounds (giggle, dino roar, robot, splat, cha-ching, drum roll, gong, frog, cow moo, rooster, vroom, achoo, party pop) — 31 pads total, all verified live + pre-warmed.
+
+**2026-06-27 — themed sound packs:** Soundboard rebuilt with a tabbed pack UI (10 packs: Silly, Animals, Instruments, Space, Spooky, Vehicles, Magic, Nature, Food, Sports) — 133 pads, 86 new ElevenLabs one-shots (all dur>=0.5s), theme-tagged per pack in /api/list-audio for reuse, ~30 white-line glyphs (no emoji). Last pack remembered in localStorage. Sampled every pack live (audio/mpeg). 
+
+**2026-06-27 - theme tile art (for pre-readers):** Each pack tab now shows an AI-generated picture badge so kids who cannot read can recognize the theme. Added a `soundpack` kind to `api/images.js` (gpt-image-1, transparent glossy icon per theme, cached in image_cache, served as PNG); the tab `<img>` falls back to a colored SVG emblem on any error. Pre-generated all 10 packs - verified cached via manifest.
 
 ---
 
