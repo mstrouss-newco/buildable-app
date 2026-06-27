@@ -672,6 +672,19 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27j (Sunny Town Drive: self-host fix, slower speed, AI skies)
+
+Three follow-ups after the 3D rebuild: (1) **self-hosted Three.js** (`public/three.min.js`
++route) instead of cdnjs — fixes "never starts" on networks that block the CDN; added a
+visible no-3D fallback. (2) **Slower gameplay** for ages 4-8 (speeds 2.2→4.2, wider ROW_GAP,
+~20s runs) — still all-win in QA. (3) First real art: **AI sky backdrops** per town via a new
+`images.js` kind `runnersky` (gpt-image-1, Supabase-cached, modern3d), loaded as the Three.js
+`scene.background` with the solid town color as fallback. All 6 skies generated + verified
+live behind the 3D road, no console errors. NEXT: AI vehicles + roadside scenery as billboard
+sprites, then ElevenLabs sounds (bg music, engine hum, crash, treat chime).
+
+---
+
 ## Session log — 2026-06-27i (Sunny Town Drive — new 3-lane runner engine)
 
 **2026-06-27 fix (never-starts):** Three.js is now **self-hosted** at `public/three.min.js`
