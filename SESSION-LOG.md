@@ -1,5 +1,24 @@
 # Buildable Kids — Session Log
 
+## Game: themed end-of-world bosses (June 26 2026)
+
+Each world now ends with its OWN friendly boss instead of one generic purple blob.
+
+- **Art:** added a `boss` piece to all 8 worlds in `api/game-art.js` — a giant, crowned,
+  smiling version of that world's enemy (forest sprite, scarf snowman, crab king, baby dragon,
+  baby dino, robot blob, armadillo, gumdrop). Generated + verified all 8 (1024x1024 PNGs).
+- **Engine (`public/play.html`):** added `boss` to the world-prop map so it loads per world;
+  the boss now renders from that art (gentle bob, a white flash + squash when bopped, HP pips
+  above its head, and a happy wobble + sparkles when cheered up), with the original drawn blob
+  kept as a graceful fallback if art hasn't loaded. Bumped the boss size (100x92) so it reads as
+  a proper end-of-level boss. Unchanged: the friendly fight (bop the head `bossHp` times — no
+  hearts lost on side bumps), the magic barrier that holds you back until it's happy, and the
+  18s mercy failsafe so it can never soft-lock.
+- **QA:** live `BK_GAME.sim(0)` wins (a win REQUIRES defeating the boss to pass the barrier).
+  Stress-tested 5 varied recipes with bossHp 2-5 — all win. Visually confirmed the forest boss
+  renders in-engine with HP pips + stomp flash, and all 8 bosses in a gallery. Rebased clean.
+
+
 ## Game: more moving platforms & swinging vines (June 26 2026)
 
 Beefed up the two optional "climb-layer" toys in `public/play.html`, keeping the
