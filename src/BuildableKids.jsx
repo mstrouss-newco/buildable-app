@@ -142,9 +142,9 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, false, "runner")}
         {tile("linear-gradient(160deg,#F0577E,#9B7BFF)", "Maze Munchers", "Gobble the treats, dodge the chasers!", onMaze, false, "maze")}
         {tile("linear-gradient(160deg,#34D399,#0EA5E9)", "Tennis", "Bounce it back \u2014 solo, 2 players, or family!", onTennis, false, "tennis")}
-        {tile("linear-gradient(160deg,#5B8CFF,#FF7DB0)", "Tic-Tac-Toe", "Three in a row \u2014 solo or 2 players!", onTicTacToe, false)}
-        {tile("linear-gradient(160deg,#FF5A6E,#FFC94D)", "Connect Four", "Drop discs, line up four to win!", onConnectFour, false)}
-        {tile("linear-gradient(160deg,#36D6C3,#FF8A5B)", "Dots and Boxes", "Close a box to claim it \u2014 most wins!", onDotsBoxes, false)}
+        {tile("linear-gradient(160deg,#5B8CFF,#FF7DB0)", "Tic-Tac-Toe", "Three in a row \u2014 solo or 2 players!", onTicTacToe, false, "tictactoe")}
+        {tile("linear-gradient(160deg,#FF5A6E,#FFC94D)", "Connect Four", "Drop discs, line up four to win!", onConnectFour, false, "connectfour")}
+        {tile("linear-gradient(160deg,#36D6C3,#FF8A5B)", "Dots and Boxes", "Close a box to claim it \u2014 most wins!", onDotsBoxes, false, "dotsboxes")}
         {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false, "chess")}
         {tile("linear-gradient(160deg,#7C5CFC,#FF7A9A)", "Family Town", "Roll, move, collect coins \u2014 3-4 players!", onTown, false, "town")}
         {tile("linear-gradient(160deg,#E8636F,#8E6BFF)", "Checkers", "Hop, jump and crown your kings!", onCheckers, false, "checkers")}
