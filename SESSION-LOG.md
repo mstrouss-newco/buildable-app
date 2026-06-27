@@ -1,5 +1,37 @@
 # Buildable Kids — Session Log
 
+## Game engine docs + shared FX library `buildable-mechanics.js` (June 27 2026)
+
+Organization pass on how we build games, so a new game/world/engine is storable,
+trackable, and reusable instead of rebuilt from memory. All additive — no engine, route,
+or UI changed, so live games are untouched this pass.
+
+- **New entry point `BUILDING-A-GAME.md`.** The single "start here for a new game" guide:
+  pick a track (A = the `generate-game.js` Phaser generator, B = a hand-authored
+  `public/*.html` engine), build content as data on a shared engine, reuse/store
+  mechanics, pull/store assets, guarantee always-winnable, QA, route, log. It ties
+  together `MECHANICS.md`, `GAME-LOOK.md`, and `ASSET-LIBRARY.md`. `AGENTS.md` now points
+  to it.
+- **New shared engine lib `public/buildable-mechanics.js`** (global `BM`,
+  `window.BuildableMechanics`) — the third shared lib alongside `buildable-renders.js`
+  (`BR`) and `buildable-audio.js` (`BA`). Extracts the particle `burst()`, screen shake,
+  screen flash, and floating `pop()` text that `survival-engine` / `croc-engine` /
+  `breaker-engine` each copy-pasted, into one headless-safe library, plus a composed
+  `explode()`. NOT yet wired into the engines (adoption is step 1 of the unification
+  roadmap, one engine at a time with QA before/after).
+- **`MECHANICS.md` expanded** with §9 (FX/"juice" mechanics + the `BM` library), §10 (one
+  catalog, two engine tracks), and §11 (the multi-session unification roadmap).
+- **`db/seed-fx-mechanics.sql`** — idempotent seed of 5 FX mechanics
+  (`fx-explosion-burst`, `fx-screen-shake-on-hit`, `fx-hit-flash`,
+  `fx-floating-score-pop`, `fx-confetti-celebrate`) into `game_mechanics`; each `rule`
+  points at its `BM` call so catalog and code stay in sync. **OWNER TO-DO:** run it in the
+  Supabase SQL editor (non-destructive INSERT … ON CONFLICT DO UPDATE).
+- **QA:** Node smoke test confirms `buildable-mechanics.js` is headless-safe — particles
+  and pops cull to zero, shake/flash decay, and `BM.draw(null, …)` (no ctx) does not
+  throw, so the perfect-player sim is unaffected.
+
+
+
 ## Game: themed end-of-world bosses (June 26 2026)
 
 Each world now ends with its OWN friendly boss instead of one generic purple blob.

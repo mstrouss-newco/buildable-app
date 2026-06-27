@@ -207,3 +207,104 @@ This catalog is the design reference. The mechanics are also stored as rows in t
 | `reach-the-chest` | Reach the chest at the end |
 | `timed-run` | Simple timed run |
 | `kill-then-boss` | Kill 15 bad guys, then beat the (mini)boss to end the level (guaranteed level-end) |
+
+---
+
+## 9. FX / "juice" mechanics — now a shared code library (`buildable-mechanics.js`)
+
+§1–§8 cover **gameplay** mechanics (how a level is won, how enemies move). This section
+covers **feel/FX** mechanics — the "juice" that makes a hit land: explosions, screen
+shake, screen flash, floating pop text, confetti. These were being **copy-pasted** into
+every hand-authored engine (`survival-engine`, `croc-engine`, `breaker-engine` each had
+their own near-identical `burst()`, `flash`, `shake`, `pop()`), which is exactly the
+drift this library exists to stop.
+
+They now live once in **`public/buildable-mechanics.js`** — global `BM`
+(`window.BuildableMechanics`) — the third shared engine library alongside
+`buildable-renders.js` (`BR`, drawn art) and `buildable-audio.js` (`BA`, sound).
+
+```js
+// load it:  <script src="buildable-mechanics.js"></script>   then  BM = window.BuildableMechanics
+const fx = BM.makeFx();                         // { parts, pops, shake, flash, flashCol }
+BM.explode(fx, x, y, "#ffa500", { n:18, pop:"BOOM!", sfx:"win" }); // burst + flash + shake (+sound)
+BM.burst(fx.parts, x, y, col, 12);              // just particles
+BM.shake(fx, 0.3);                               // kick the camera
+BM.flash(fx, "#ff4400", 0.25);                   // hurt flash
+BM.pop(fx.pops, x, y, "-1", "#ff5555");          // floating text
+// each frame:
+BM.update(fx, dt);                               // advance + cull (headless-safe; dt in seconds, or omit for 60fps)
+const sh = BM.shakeOffset(fx);                   // translate the camera by {x,y} before drawing the world
+BM.draw(ctx, fx, { W, H });                       // draw particles + pops + flash overlay
+```
+
+Design guarantees (so adopting it is safe):
+- **Engine owns the data.** Helpers operate on arrays/state you pass in, so an engine
+  adopts `BM` without changing its data model.
+- **Headless-safe.** Every canvas call is guarded; `BM.update()` with no `ctx` never
+  throws, so the QA sim (`update()` with no rendering) keeps passing.
+- **Both time models.** Pass `dt` in seconds (croc/survival), or omit it for the older
+  frame-stepped engines.
+
+**FX mechanics are also catalogued as `game_mechanics` rows** (tag `fx`), so the
+generator can name them too — see `db/seed-fx-mechanics.sql`. Each FX row's `rule`
+carries `lib`/`fn` pointing at the `BM` call that produces it, so the catalog and the
+code stay one source of truth.
+
+### Seeded FX mechanics
+
+| slug | name | BM call |
+|------|------|---------|
+| `fx-explosion-burst`     | Explosion burst       | `BM.explode` |
+| `fx-screen-shake-on-hit` | Screen shake on hit   | `BM.shake` |
+| `fx-hit-flash`           | Hit flash             | `BM.flash` |
+| `fx-floating-score-pop`  | Floating score pop    | `BM.pop` |
+| `fx-confetti-celebrate`  | Confetti celebrate    | `BM.burst` (gravity) |
+
+**To add an FX mechanic:** add the function to `buildable-mechanics.js`, add a row to
+`game_mechanics` (an idempotent `db/seed-*.sql`), and add a line to the table above.
+
+---
+
+## 10. One catalog, two engine tracks (the unification)
+
+Buildable builds games two ways, and the goal is that **both draw mechanics from this
+one catalog** (see `BUILDING-A-GAME.md` for the full picture):
+
+- **Track A — the AI generator** (`api/generate-game.js`, Phaser): already reads
+  `game_mechanics` rows and injects the chosen mechanic's name/description/`rule` into
+  the Claude prompt (§8). It composes a game from named mechanics.
+- **Track B — hand-authored engines** (`public/play.html`, `survival-engine.html`,
+  `croc-engine.html`, `breaker-engine.html`): data-driven, always-clearable, QA-simmed,
+  and they now share `BR` + `BA` + `BM`. They consume the **same** vocabulary — the
+  movement patterns (§2), the win conditions (§4, esp. `kill-then-boss`), and the FX
+  primitives (§9).
+
+The same mechanic should mean the same thing in both tracks. A boss-defeat rule named
+`kill-then-boss` and an `fx-explosion-burst` are reusable whether a game is generated or
+hand-authored.
+
+---
+
+## 11. Roadmap to full unification (multi-session)
+
+Status today: assets are one shared library; the three engine code libs (`BR`/`BA`/`BM`)
+exist; `game_mechanics` exists and the generator uses it. Remaining convergence work,
+roughly in order (each step is additive — never break a live game):
+
+1. **Adopt `BM` in the hand-authored engines.** Replace each engine's local
+   `burst()`/`flash`/`shake`/`pop()` with `BM.*`, one engine at a time, re-running its
+   `qa-<game>.mjs` before/after. (Survival or breaker first — smallest diff.)
+2. **One QA hook name.** Standardize the test hook on a single `window.BUILDABLE_GAME`
+   (keep `BK_GAME`/`SURV_GAME`/`CROC_GAME` as aliases) so `qa/sim-node.mjs` tests every
+   engine without special-casing.
+3. **Engines read `game_mechanics` too.** Let a Track B engine pull mechanic rules (e.g.
+   a boss pattern, an FX combo) from the catalog at load, with a hard-coded fallback —
+   mirroring how engines already read the asset library with a drawn fallback.
+4. **Shared engine core.** Extract the copy-pasted `mulberry()` RNG + image-loader/cache
+   + audio-unlock into one `buildable-engine-core.js`, imported by every engine.
+5. **One `/api/library` read** that returns assets AND mechanics filterable by `theme`
+   and `usable_in`, so a brand-new game can assemble itself — art, sound, FX, and rules —
+   from existing shared pieces.
+
+Keep this file, `BUILDING-A-GAME.md`, `buildable-mechanics.js`, and the `db/seed-*.sql`
+mechanic seeds in sync as the catalog grows.

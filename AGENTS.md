@@ -11,6 +11,8 @@ and data shapes, the non-negotiable rules, and the known gotchas.
 The README also keeps a dated session log and a commit history — that log is the
 source of truth for recent changes. **Add a dated entry there for every change you make.**
 
+**Building a new game, world, or game type?** Start with [`./BUILDING-A-GAME.md`](./BUILDING-A-GAME.md) — the single entry point that ties together the engine tracks, the shared engine libraries, `MECHANICS.md`, `GAME-LOOK.md`, and `ASSET-LIBRARY.md`.
+
 ## Authorized scope (owner-granted)
 
 The repo owner has authorized AI agents to work fairly autonomously on this project:
