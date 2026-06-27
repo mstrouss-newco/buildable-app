@@ -293,10 +293,13 @@ roughly in order (each step is additive — never break a live game):
 
 1. **Adopt `BM` in the hand-authored engines.** Replace each engine's local
    `burst()`/`flash`/`shake`/`pop()` with `BM.*`, one engine at a time, re-running its
-   `qa-<game>.mjs` before/after. (Survival or breaker first — smallest diff.)
+   `qa-<game>.mjs` before/after. **DONE for `breaker-engine.html`** (the reference
+   adoption, 2026-06-27): it now drives all juice through `BM.explode`/`burst`/`shake`/
+   `flash`/`pop` + `BM.update`/`shakeOffset`/`draw`. Survival/croc next.
 2. **One QA hook name.** Standardize the test hook on a single `window.BUILDABLE_GAME`
    (keep `BK_GAME`/`SURV_GAME`/`CROC_GAME` as aliases) so `qa/sim-node.mjs` tests every
-   engine without special-casing.
+   engine without special-casing. **Breaker now exposes `window.BUILDABLE_GAME`** with
+   `BREAKER_GAME` kept as an alias (2026-06-27).
 3. **Engines read `game_mechanics` too.** Let a Track B engine pull mechanic rules (e.g.
    a boss pattern, an FX combo) from the catalog at load, with a hard-coded fallback —
    mirroring how engines already read the asset library with a drawn fallback.

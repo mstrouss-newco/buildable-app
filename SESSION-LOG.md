@@ -612,3 +612,14 @@ All committed to `main`; Vercel auto-deploys. Commits this session:
 ## Chess: spoken "Checkmate!" voiceover — June 26 2026
 
 New `api/chess-voice.js` (ElevenLabs TTS, cached in narration_cache key `chessvoice:<line>`, `?force=1` regen). On checkmate the game plays a line via `playCheckmateVO(won)`: playful on a win ("Checkmate! In your face!" / "Boom! Checkmate! Gotcha!" / "Checkmate! Too easy!"), gentle on a loss ("Checkmate! Good game — want a rematch?") so the losing kid is never taunted by their own device. Created ElevenLabs sound per BUILDING-A-GAME.md (no synth); served under the existing /api/ route; silent fallback if unconfigured. Pre-warmed live + verified.
+
+## Buildable Breaker: evolved to playbook (BM + BS + pong, stars, levels) — June 27 2026
+
+Breaker is now the reference adoption for `BM` (buildable-mechanics.js — all juice via
+explode/burst/shake/flash/pop) and `BS` (buildable-startscreen.js — shared menu + level cards
+with stars/lock + Solo/2-player mode row; customize overlay via onCustomize). QA hook
+standardized to `window.BUILDABLE_GAME` (BREAKER_GAME alias kept). Added: level stars (1–3 by
+lives lost), 2 levels (Tall Towers, Castle Walls → 8), 2 power-ups (Laser, Fireball), and a
+same-device 2-player Pong mode (first to 5; touch-by-half or arrows vs A/D). `qa-breaker.mjs`
+covers Solo-all-levels-win + Pong-winner + render smoke (both modes). Live deploy QA'd in-iframe,
+no console errors. Docs synced: BUILDING-A-GAME.md, MECHANICS.md §11, breaker-README.md.
