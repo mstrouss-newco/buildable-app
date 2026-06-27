@@ -38,7 +38,7 @@ A fixed, hand-built engine you ship as one static HTML page, launched full-scree
 iframe. These are **data-driven + always-clearable + QA-simmed**, and they draw/sound/
 feel through the three shared engine libraries. Current Track B engines:
 `public/play.html` (platformer), `survival-engine.html`, `croc-engine.html`,
-`breaker-engine.html`.
+`breaker-engine.html` (solo brick-breaker + a same-device 2-player pong mode).
 
 Use Track B when: you want a polished, bespoke engine for one game type with full control
 over feel — the survival/croc/breaker model.
@@ -99,7 +99,10 @@ one `"next"` so it gets the green Play highlight). Each level shows its **art th
 `img` to the shared thumbnail/world art. The `"family"` mode is where the real-time
 multiplayer mechanic plugs in (launch `FamilyRealtime` — see `MULTIPLAYER.md`). Headless-
 safe: with no DOM (QA sim), `BS.mount` is a no-op. Adopt it per engine one at a time, QA
-before/after (it replaces the engine's own menu code, not its gameplay).
+before/after (it replaces the engine's own menu code, not its gameplay). **`breaker-engine.html`
+is the first/reference adoption (2026-06-27):** its start screen + level picker are now
+rendered by `BS` (Solo / 2-player mode row, level cards with stars + lock state, Make It
+Mine button), with the bespoke customize overlay opened via `onCustomize`.
 
 
 ---

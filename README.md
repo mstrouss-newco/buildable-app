@@ -2162,3 +2162,31 @@ live site (works locally, which hides it). Added next to the survival-engine rou
 **Wired in.** Tile on the Top Games hub (`public/games-library.html`) and a **Breaker** tile in
 the in-app Games picker (`src/BuildableKids.jsx` → `GamePicker` → `BreakerScreen`), mirroring
 Survival and Platformer.
+
+## Buildable Breaker — evolved to the game playbook (BM + BS + pong) — June 27 2026
+
+Brought Breaker in line with `BUILDING-A-GAME.md` / `MECHANICS.md`, making it the **reference
+adoption** for the two newest shared engine libraries:
+
+- **`BM` (FX/juice).** Replaced the engine's local `burst()`/particles with the shared
+  `buildable-mechanics.js`: brick smashes call `BM.explode`/`BM.burst` + `BM.pop` ("+10"
+  floating text); losing a life / scoring a point calls `BM.shake` + `BM.flash`; each frame
+  runs `BM.update`, and drawing uses `BM.shakeOffset` (camera kick) + `BM.draw`. This is
+  MECHANICS.md §9/§11-step-1 done for breaker (survival/croc next).
+- **`BS` (start screen).** The menu/level-picker is now rendered by `buildable-startscreen.js`
+  (`BS.mount`) — title, Solo / 2-player mode row, level cards with **stars + lock state**, and
+  the Make It Mine button (which opens the bespoke customize overlay via `onCustomize`). First
+  engine to adopt the one shared start screen.
+- **Standard QA hook.** Renamed the test hook to **`window.BUILDABLE_GAME`** (kept
+  `BREAKER_GAME` as an alias) per MECHANICS.md §11-step-2.
+
+New gameplay in the same pass: **level stars** (1–3 by lives lost, shown on the BS cards);
+two new levels (**Tall Towers**, **Castle Walls** → 8 total); two new power-ups (**Laser**,
+**Fireball**); and a same-device **2-player Pong** mode (two paddles, first to 5; touch by
+screen-half, or arrows vs A/D), selected from the BS mode row.
+
+QA: `qa-breaker.mjs` now also drives Pong (two bots until a winner) and render-smoke-tests both
+modes; all 8 Solo levels still clear across repeated runs. Live-deploy verified in the iframe
+(BS menu, mode switch, Solo juice, Pong court) with no console errors. Always-winnable invariant
+unchanged (anti-vertical-bounce jitter). No DB changes — progress/stars/choices are per-kid in
+the browser.

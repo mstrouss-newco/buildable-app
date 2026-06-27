@@ -1,76 +1,95 @@
 # Buildable Breaker — instructions
 
-A classic **paddle-and-ball brick breaker** for kids. You slide a paddle along the bottom,
-the ball bounces around, and you smash every brick to clear the level. The twist that fits
-Buildable: kids **make it their own** — they pick the look, turn power-ups on or off, and
-choose how hard it is. No reading required to play.
+A **paddle-and-ball brick breaker** for kids, plus a same-device **2-player pong** mode.
+In Solo, you slide a paddle along the bottom, the ball bounces around, and you smash every
+brick to clear the level. The twist that fits Buildable: kids **make it their own** — they
+pick the look, turn power-ups on or off, and choose how hard it is. No reading required.
 
-It's built as a new **game type** for the Games section, alongside Survival (Space Sparkles),
-Platformer (Bramble's Dash), and Croc Tot. Like those, the game is a fixed **engine** plus a
-data-driven **recipe** (`GAME_CONFIG`): you tune numbers, you never rewrite the game.
+It's a Track B hand-authored **engine** for the Games section, alongside Survival, Platformer,
+and Croc Tot. Like those, the game is a fixed engine plus a data-driven **recipe**
+(`GAME_CONFIG`): you tune numbers, you never rewrite the game.
+
+**Breaker is the reference adoption for the shared engine libraries.** It is the first engine
+to drive its juice through **`BM`** (`buildable-mechanics.js`) and to render its start screen
+through **`BS`** (`buildable-startscreen.js`), per `BUILDING-A-GAME.md` / `MECHANICS.md` §11.
 
 ## The files
 
 - **public/breaker-engine.html** — the game itself (open this to play).
-- **public/buildable-renders.js** — the shared drawing library (kept next to the HTML).
-- **public/buildable-audio.js** — the shared sound library (bounce, smash, win, lose, etc.).
-- **qa-breaker.mjs** — the headless test: a perfect-paddle bot clears every level, plus a
-  render smoke test. `node qa-breaker.mjs <repo-dir>`.
+- **public/buildable-renders.js** — `BR`, shared drawn art (kept next to the HTML).
+- **public/buildable-audio.js** — `BA`, shared sound (bounce, smash, win, lose).
+- **public/buildable-mechanics.js** — `BM`, shared FX/juice (explosions, shake, flash, pops).
+- **public/buildable-startscreen.js** — `BS`, the shared start screen / level picker.
+- **qa-breaker.mjs** — headless test: Solo clears every level, Pong produces a winner, plus a
+  render smoke test for both modes. `node qa-breaker.mjs <repo-dir>`.
 
-Drag on a tablet/phone, or use the arrow keys (or A / D) on a computer. Space launches the ball.
+Drag on a tablet/phone, or use the arrow keys (or A / D) on a computer. Space launches.
 
-## How to play
+## How to play — Solo
 
-1. **Slide to move the paddle.** Hold and drag anywhere, or use the arrow keys / A and D.
-2. **Tap (or press Space) to launch** the ball off the paddle.
+1. **Slide to move the paddle.** Drag, or use the arrow keys / A and D.
+2. **Tap (or Space) to launch** the ball off the paddle.
 3. **Bounce the ball into the bricks** to smash them. Where the ball hits the paddle decides
    which way it flies, so kids learn to aim.
-4. **Catch the falling power-up capsules** with the paddle (if power-ups are turned on).
-5. **Clear every brick to win the level** and unlock the next one. Run out of lives and you
-   start that level again. Beat all six to win the whole game.
+4. **Catch the falling power-up capsules** with the paddle (if power-ups are on).
+5. **Clear every brick to win the level** and unlock the next; earn **1–3 stars** based on how
+   few lives you lost. Beat all eight levels to win.
 
-A wordless how-to-play demo shows on the first launch, and the **?** button replays it.
+A wordless how-to-play demo shows on first launch, and the **?** button replays it.
+
+## How to play — 2 players (Pong)
+
+Pick **2 players** on the start screen. Two paddles (top and bottom); knock the ball past your
+buddy to score. **First to 5 wins.** On a touchscreen, each player slides their own half of the
+screen; on a computer, the bottom player uses the **arrow keys** and the top player uses **A / D**.
+Same device, pass-and-play — no accounts or network needed.
 
 ## Make It Mine (the customizing)
 
-The **Make It Mine** button on the menu opens three tabs:
+The **Make It Mine** button opens three tabs (choices saved per kid):
 
-- **Look** — pick a **backdrop** (Meadow, Space, Candy, Ocean, Castle, Desert), a **ball**
-  (Glow Ball, Star, Comet, Berry), and a **paddle color**.
-- **Power-ups** — turn each one on or off: **Big Paddle**, **Multi Ball** (splits into 3),
-  **Slow-Mo**, **Catch** (the ball sticks so you can aim, then tap to fling it), **Extra Life**.
-- **How Hard** — **Easy** (5 lives, wide paddle, slower ball), **Normal** (3 lives), or
-  **Hard** (2 lives, narrow paddle, faster ball).
+- **Look** — backdrop (Meadow, Space, Candy, Ocean, Castle, Desert), ball (Glow, Star, Comet,
+  Berry), and paddle color.
+- **Power-ups** — turn each on/off: **Big Paddle**, **Multi Ball**, **Slow-Mo**, **Catch**,
+  **Extra Life**, **Laser** (paddle zaps bricks), **Fireball** (ball smashes straight through).
+- **How Hard** — Easy (5 lives, wide paddle, slow), Normal (3 lives), Hard (2 lives, narrow, fast).
 
-Every choice is saved per kid in the browser (and follows the same active-kid pattern as the
-other games), so it sticks between visits.
+## The eight levels
 
-## The six levels
+1. First Bounce (full wall) · 2. Step Pyramid · 3. Checker Castle · 4. Secret Gaps ·
+5. Tall Towers · 6. Castle Walls · 7. Diamond Drop · 8. Brick Boss (big tough wall).
 
-1. **First Bounce** — a simple full wall of bricks.
-2. **Step Pyramid** — a pyramid shape, a few tougher bricks.
-3. **Checker Castle** — a checkerboard pattern.
-4. **Secret Gaps** — bricks with gaps to thread the ball through.
-5. **Diamond Drop** — a diamond layout, lots of tougher bricks.
-6. **Brick Boss** — the big full wall, mostly tough bricks.
+Bricks with a white dot drop a power-up; bricks with a light stripe take two hits. Levels get
+bigger and faster as you go.
 
-Bricks with a small white dot drop a power-up. Tougher bricks (with a light stripe) take two
-hits. Levels get bigger and the ball gets a little faster as you go.
+## Shared libraries it builds on (the playbook rules)
 
-## Why it's always fair
+- **`BM` (FX/juice)** — brick smashes call `BM.explode`/`BM.burst` for particles, `BM.pop` for
+  floating "+10" score text, `BM.shake`/`BM.flash` on losing a life or scoring a point. Each
+  frame runs `BM.update`; drawing uses `BM.shakeOffset` (camera kick) + `BM.draw`. No local
+  copy-pasted particle code — this is the §9 unification in practice.
+- **`BS` (start screen)** — the menu, mode row (Solo / 2 players), level cards (stars + lock
+  state), and Make It Mine button are all rendered by `BS.mount(...)`. The bespoke customize
+  overlay opens from `BS`'s `onCustomize`. Change `buildable-startscreen.js` once and every
+  game's start screen changes together.
+- **`BR` (art)** and **`BA` (sound)** — all visuals are drawn (no emojis) and all sound goes
+  through `BA`, with safe fallbacks so a missing asset or offline state never breaks play.
 
-Brick breakers are inherently clearable, and the engine keeps it that way: the ball is never
-allowed to settle into a perfectly vertical or perfectly repeating bounce (a tiny natural
-jitter on each paddle hit), so it always keeps sweeping across the bricks. The headless test
-(`qa-breaker.mjs`) runs a perfect-paddle bot through every level multiple times and confirms
-each one clears with no dead-ends.
+## Always-winnable + QA
+
+Brick breakers are inherently clearable; the engine keeps it that way by never letting the ball
+settle into a perfectly vertical or repeating bounce (a tiny natural jitter on each paddle hit).
+The QA hook is the standardized **`window.BUILDABLE_GAME`** (with `BREAKER_GAME` kept as an
+alias). `qa-breaker.mjs` runs a perfect-paddle bot through all eight Solo levels (multiple runs
+each), drives two bots through a Pong match until someone wins, and render-smoke-tests both
+modes — all headless, all green, with no console errors on the live deploy.
 
 ## How it's wired in
 
 - **Vercel route** — `public/breaker-engine.html` has an explicit route in `vercel.json`,
-  added **before** the `/(.*)` catch-all (the same gotcha the other games hit).
-- **Top Games hub** — a "Buildable Breaker" tile in `public/games-library.html`.
-- **In-app Games picker** — a **Breaker** tile in `src/BuildableKids.jsx` (`GamePicker` →
-  `BreakerScreen`), mirroring how Survival and Platformer are wired.
+  before the `/(.*)` → landing catch-all.
+- **Top Games hub** — a tile in `public/games-library.html`.
+- **In-app Games picker** — a Breaker tile in `src/BuildableKids.jsx` (`GamePicker` →
+  `BreakerScreen`).
 
-No database changes are needed — progress and look/play choices live in the browser.
+No database changes — progress, stars, and look/play choices live in the browser per kid.
