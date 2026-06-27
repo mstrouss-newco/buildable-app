@@ -55,7 +55,7 @@ function LearningControl() {
   }
   return (
     <>
-      <button onClick={open} aria-label="Learning mode (grown-ups only)" style={{ position: "fixed", bottom: 64, left: 16, zIndex: 9998, background: on ? "rgba(40,165,75,0.92)" : "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "10px 16px", fontSize: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }}>Learning: {on ? "On" : "Off"}</button>
+      <button onClick={open} aria-label="Learning mode (grown-ups only)" style={{ position: "fixed", bottom: "calc(64px + env(safe-area-inset-bottom))", left: 16, zIndex: 9998, background: on ? "rgba(40,165,75,0.92)" : "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "10px 16px", fontSize: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }}>Learning: {on ? "On" : "Off"}</button>
       {gate && (
         <div style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(8,5,18,0.72)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <form onSubmit={submit} style={{ background: "#1E1733", borderRadius: 20, padding: 24, width: "100%", maxWidth: 320, textAlign: "center", fontFamily: NUN }}>
@@ -118,7 +118,7 @@ function PlatformerScreen({ onHome }) {
 
 function GrownUpFab({ onClick }) {
   return (
-    <button onClick={onClick} aria-label="Open grown-ups area" style={{ position: "fixed", bottom: 16, left: 16, zIndex: 9998, background: "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "10px 16px", fontSize: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }}>Grown-ups</button>
+    <button onClick={onClick} aria-label="Open grown-ups area" style={{ position: "fixed", bottom: "calc(16px + env(safe-area-inset-bottom))", left: 16, zIndex: 9998, background: "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "10px 16px", fontSize: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }}>Grown-ups</button>
   );
 }
 
@@ -408,7 +408,7 @@ export default function BuildableKids() {
   return (
     <>
       {__view}
-      {screen !== SCREEN_GROWNUP && <><GrownUpFab onClick={() => setScreen(SCREEN_GROWNUP)} /><LearningControl /></>}
+      {[SCREEN_HOME, SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <><GrownUpFab onClick={() => setScreen(SCREEN_GROWNUP)} /><LearningControl /></>}
     </>
   );
 }

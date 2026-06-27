@@ -1848,3 +1848,12 @@ screen. The Home Chess tile shows a "Your move!" badge + dot + ding when it's th
 routes before the `/(.*)` → `/landing.html` catch-all — otherwise world images fall through to
 the landing page and render blank on the live site (works locally, which hides it). World/
 thumb image URLs and the game iframe carry `?v=2` for cache-busting.
+
+## Fix overlapping floating buttons (Grown-ups / Learning vs game sound) — June 26 2026
+
+The Grown-ups FAB (bottom-left) and the Learning toggle (just above it) were rendered on
+every screen except the grown-ups portal — including over the game iframes, where they
+piled on top of each game's own sound on/off control. Now both FABs show only on the
+lobby/menu screens (`SCREEN_HOME, SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP,
+SCREEN_INTRO`); they're hidden over games and the story/music makers. Both are also lifted
+by `env(safe-area-inset-bottom)` so they clear the iPhone home indicator.
