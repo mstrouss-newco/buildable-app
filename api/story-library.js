@@ -229,11 +229,21 @@ const CAM=[
   "A warm medium shot focused on the hero and the key thing happening.",
 ];
 function worldDesc(slug){const w=WORLDS.find(x=>x[0]===slug);return w?w[2]:"";}
+function shotFor(i,emo){
+  if(i===0) return "Wide cinematic establishing shot that sets the scene, the hero small within a big beautiful world.";
+  if(emo==="scared") return "A dramatic low angle looking up, suspenseful but still gentle, the hero small in the frame.";
+  if(emo==="sad") return "A tender, quiet close-up of the hero in the moment.";
+  if(emo==="surprised"||emo==="excited") return "A dynamic shot capturing the big exciting moment, the hero reacting with energy.";
+  if(emo==="sleepy") return "A cozy, warm close view with a calm bedtime mood.";
+  return CAM[i%CAM.length];
+}
 function pageScenePrompt(action,world,style,i,emo){
   const feel = emo && emo!=="happy" ? ` The hero clearly feels ${emo}, shown gently in their face and body language.` : "";
   const glowy = /candle|lantern|lamp|fire|flame|ember|hearth|fireplace|glow|glowing|firefl|star|starlight|moon|window|magic|spark|torch|\blit\b|light/i.test(action);
   const glowLine = glowy ? ` Paint any candles, lanterns, fireplaces, glowing windows, fireflies, stars or magic as bright WARM GLOWING light sources with a soft luminous halo, clearly casting warm light into the scene.` : "";
-  return `Children's picture-book illustration depicting THIS exact moment: "${action}".${feel}${glowLine} ${CAM[i%CAM.length]} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
+  const hasCompany = /friend|friends|owl|fox|bird|fish|dragon|fairy|bear|bunny|rabbit|together|\bmet\b|meets|join|companion|buddy|family|mother|father|\bmom\b|\bdad\b|sister|brother|\bthey\b|\bthem\b|creature|animal|someone|village|crew|crowd|everyone/i.test(action);
+  const compLine = hasCompany ? ` Show the friends or creatures from this moment too, interacting warmly with the hero so the page feels alive — the hero is not alone.` : "";
+  return `Children's picture-book illustration depicting THIS exact moment: "${action}".${feel}${glowLine}${compLine} ${shotFor(i,emo)} Setting: ${worldDesc(world)}. ${SCENE_LOOK[styleId(style)]||SCENE_LOOK.watercolor}. The hero is THIS exact character from the reference image — keep its species, colors and markings identical, integrated naturally into the scene with believable light and shadow, NOT pasted on top. A full rectangular scene with clear foreground, midground and background. No text or words. Age 4-8, wholesome.`;
 }
 function pageSceneKey(ck){return "libpg:"+crypto.createHash("sha1").update(ck).digest("hex");}
 

@@ -24,6 +24,10 @@ export const STORY_EFFECTS = [
   "sun_pulse",
   "water_shimmer",
   "gentle_waves",
+  "bubbles",
+  "embers",
+  "fireflies",
+  "falling_leaves",
 ];
 
 const EFFECT_SET = new Set(STORY_EFFECTS);
@@ -39,6 +43,9 @@ function injectKeyframes() {
   const css = `
 @keyframes bk-flicker { 0%,100%{opacity:.55;transform:scale(1)} 45%{opacity:.95;transform:scale(1.06)} 70%{opacity:.7;transform:scale(.98)} }
 @keyframes bk-bloom { 0%,100%{opacity:.30} 22%{opacity:.56} 44%{opacity:.36} 63%{opacity:.62} 82%{opacity:.44} }
+@keyframes bk-firefly { 0%{transform:translate(0,0);opacity:.2} 25%{opacity:1} 50%{transform:translate(14px,-12px);opacity:.5} 75%{opacity:.95} 100%{transform:translate(-8px,-22px);opacity:.2} }
+@keyframes bk-leaf { 0%{transform:translateY(-12%) translateX(0) rotate(0)} 50%{transform:translateY(50%) translateX(22px) rotate(180deg)} 100%{transform:translateY(115%) translateX(-12px) rotate(360deg)} }
+@keyframes bk-bubble { 0%{transform:translateY(15%) translateX(0) scale(.6);opacity:0} 15%{opacity:.75} 50%{transform:translateY(-45%) translateX(10px) scale(.9)} 100%{transform:translateY(-115%) translateX(-6px) scale(1);opacity:0} }
 @keyframes bk-fall { 0%{transform:translateY(-10%) translateX(0)} 100%{transform:translateY(110%) translateX(12px)} }
 @keyframes bk-rain { 0%{transform:translateY(-20%)} 100%{transform:translateY(120%)} }
 @keyframes bk-twinkle { 0%,100%{opacity:.2;transform:scale(.7)} 50%{opacity:1;transform:scale(1)} }
@@ -227,6 +234,53 @@ function LivingLayer({ effect }) {
             animation: "bk-wave 5s ease-in-out infinite" }} />
         </div>
       );
+    case "bubbles":
+      return (
+        <div style={base} aria-hidden="true">
+          {seedNodes(22, (i) => { const sz = 6 + Math.random() * 14; return (
+            <span key={i} style={{
+              position: "absolute", bottom: "-8%", left: `${Math.random() * 100}%`, width: sz, height: sz, borderRadius: "50%",
+              background: "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.7), rgba(200,235,255,0.15) 60%, transparent 72%)",
+              border: "1px solid rgba(255,255,255,0.3)",
+              animation: `bk-bubble ${5 + Math.random() * 5}s linear ${Math.random() * 5}s infinite`,
+            }} />); })}
+        </div>
+      );
+    case "embers":
+      return (
+        <div style={base} aria-hidden="true">
+          {seedNodes(20, (i) => (
+            <span key={i} style={{
+              position: "absolute", bottom: "-5%", left: `${Math.random() * 100}%`, width: 4, height: 4, borderRadius: "50%",
+              background: "rgba(255,150,60,0.9)", boxShadow: "0 0 6px rgba(255,120,40,0.85)",
+              animation: `bk-rise ${4 + Math.random() * 4}s ease-in ${Math.random() * 4}s infinite`,
+            }} />
+          ))}
+        </div>
+      );
+    case "fireflies":
+      return (
+        <div style={base} aria-hidden="true">
+          {seedNodes(24, (i) => (
+            <span key={i} style={{
+              position: "absolute", top: `${18 + Math.random() * 62}%`, left: `${Math.random() * 100}%`, width: 5, height: 5, borderRadius: "50%",
+              background: "rgba(255,244,150,0.95)", boxShadow: "0 0 8px 2px rgba(255,230,120,0.8)",
+              animation: `bk-firefly ${3.5 + Math.random() * 3.5}s ease-in-out ${Math.random() * 4}s infinite`,
+            }} />
+          ))}
+        </div>
+      );
+    case "falling_leaves":
+      return (
+        <div style={base} aria-hidden="true">
+          {seedNodes(18, (i) => { const green = Math.random() < 0.5; return (
+            <span key={i} style={{
+              position: "absolute", top: "-10%", left: `${Math.random() * 100}%`, width: 11, height: 8, borderRadius: "0 60% 0 60%",
+              background: green ? "rgba(120,170,70,0.85)" : "rgba(210,150,60,0.85)",
+              animation: `bk-leaf ${6 + Math.random() * 5}s linear ${Math.random() * 5}s infinite`,
+            }} />); })}
+        </div>
+      );
     case "soft_glow":
     default:
       return (
@@ -318,9 +372,14 @@ export function LivingPage({ artUrl, effect, effects, palette, world, heroEmoji,
 }
 
 const FG_BY_WORLD = {
-  snowy_forest: "snow_outside_window", outer_space: "twinkling_stars", underwater: "floating_dust",
-  candy_land: "magic_sparkles", enchanted_woods: "floating_dust", desert_oasis: "floating_dust",
-  cloud_castle: "drifting_clouds", pirate_cove: "water_shimmer",
+  "snowy-village": "snow_outside_window",
+  "coral-reef": "bubbles",
+  "enchanted-forest": "fireflies",
+  "dragon-mountain": "embers",
+  "dino-jungle": "falling_leaves",
+  "space-station": "twinkling_stars",
+  "desert-oasis": "sun_pulse",
+  "candy-land": "magic_sparkles",
 };
 
 // Each character has a natural on-page size so a bear isn't the same size as a
