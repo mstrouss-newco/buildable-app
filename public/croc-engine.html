@@ -84,6 +84,7 @@
 </div>
 
 <script src="buildable-renders.js"></script>
+<script src="buildable-buddy.js?v=1"></script>
 <script>
 // ===========================================================================
 //  CROC TOT — a data-driven horizontal shoot-'em-up engine.
@@ -420,6 +421,7 @@ function startGame(level, bot){
 }
 function gameOver(won){
   STATE="over";
+  try{ if(window.BB){ won?BB.win():BB.lose(); } }catch(e){}
   if(G.score>best) best=G.score;
   if(typeof document!=="undefined") showOver(won);
 }

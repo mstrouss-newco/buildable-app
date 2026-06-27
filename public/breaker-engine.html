@@ -66,6 +66,7 @@
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-buddy.js?v=1"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -343,9 +344,9 @@ function hitBricks(b){ const fire=G.fireT>0;
   }
 }
 function loseLife(){ G.lives--; G.lostLives++; if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ff4444",0.3); } sfx("hurt");
-  if(G.lives<=0){ state="lose"; sfx("lose"); return; }
+  if(G.lives<=0){ state="lose"; sfx("lose"); if(window.BB)BB.lose(); return; }
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, G.speed) ]; G.onPaddle=true; G.stuck=null; started=false; }
-function winLevel(){ state="win"; sfx("win"); PREFS.totalWins++;
+function winLevel(){ state="win"; sfx("win"); if(window.BB)BB.win(); PREFS.totalWins++;
   const earned = G.lostLives<=0?3 : (G.lostLives===1?2:1);
   PREFS.stars[level]=Math.max(PREFS.stars[level]||0, earned);
   const u=Math.min(GAME_CONFIG.levels.length-1, level+1); if(u>(PREFS.unlocked||0)){ PREFS.unlocked=u; }
