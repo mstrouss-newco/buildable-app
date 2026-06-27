@@ -1,5 +1,16 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Phase 2: talking helper + voice + onboarding SHIPPED to main
+- Floating helper now SPEAKS: taps (and auto on home load) play "Hi {name}! {line}" via
+  /api/narrate-story-page (ElevenLabs, cached), iPad-safe (registerAudio + global unlock).
+- Helper Lab is a 2-step wizard: pick/make character -> choose VOICE (Calm/Gentle/Peppy/Silly,
+  each with a "hear" preview). All 4 voice IDs verified producing audio.
+- Helper saved PER-KID: localStorage bk_helper_<kidId> (bk_helper_v1 if no profile) +
+  kid_profiles.helper jsonb when signed in (accounts.saveKidHelper/getKidHelper, graceful).
+- First-login ONBOARDING: onProfileChosen -> Helper Lab when the kid has no helper yet.
+- MANUAL (owner): run db/add-kid-helper.sql in Supabase for signed-in cross-device sync.
+
+
 ## Buildable Tennis — first real-time 1- & 2-player game (June 27 2026)
 **Tennis is the first real-time multiplayer game** (the blueprint in `MULTIPLAYER.md` is now built). A new Track B engine `public/tennis.html` — paddles top & bottom, a bouncy ball, first to 7.
 
