@@ -129,7 +129,7 @@ function startLevel(i){
   G={ lane:1, carX:xForLane(1), speed:L.speed, dist:0, nextRow:START_CLEAR,
       hearts:GAME_CONFIG.hearts, hurtsTaken:0, invuln:0, score:0, treatsGot:0,
       obstacles:[], treats:[], gc:[], rng, scrollZ:0, bob:0, shake:0 };
-  if(THREE && sceneReady) applyTownColors();
+  if(THREE && sceneReady){ applyTownColors(); applyTownScenery(L.skyId); }
   state="play"; started=false;
 }
 
@@ -306,6 +306,41 @@ function makeBalloon(color){ const g=new THREE.Group();
   g.userData.vx=0.01+Math.random()*0.02; g.userData.phase=Math.random()*6.28; return g;
 }
 
+// ---- per-town roadside scenery: AI billboards with a blocky fallback ----
+const SCENERY_PIECES=["bld_a","bld_b","tree"];
+const PIECE_DIM={ bld_a:{w:5.4,h:6.2}, bld_b:{w:5.0,h:5.2}, tree:{w:4.6,h:5.6} };
+const propTexCache={};   // "town:piece" -> THREE.Texture, or false if it failed
+function makeFallbackProp(piece){ const g=new THREE.Group();
+  if(piece==="tree"){ const tr=meshOf(cyl(0.2,0.26,1.1,10),0x8a5a3c); tr.position.y=0.55; g.add(tr);
+    const lv=meshOf(new THREE.SphereGeometry(1.0,12,10),0x4fae5a); lv.position.y=1.7; g.add(lv); }
+  else { const col=piece==="bld_a"?0xffb3a7:0xbfd7ff; const h=meshOf(box(1.9,2.4,1.9),col); h.position.y=1.2; g.add(h);
+    const roof=meshOf(cyl(0.05,1.6,1.05,4),0xb5524a); roof.position.y=2.9; roof.rotation.y=Math.PI/4; g.add(roof); }
+  return g;
+}
+function makeScenerySlot(piece){ const grp=new THREE.Group();
+  const fb=makeFallbackProp(piece); grp.add(fb);
+  const planeMat=new THREE.MeshBasicMaterial({transparent:true,alphaTest:0.4,side:THREE.DoubleSide});
+  const dim=PIECE_DIM[piece]||{w:5,h:5.5};
+  const plane=new THREE.Mesh(new THREE.PlaneGeometry(dim.w,dim.h), planeMat);
+  plane.position.y=dim.h/2; plane.visible=false; grp.add(plane);
+  grp.userData={ piece, plane, fb }; return grp;
+}
+function applyTownScenery(town){ if(!scene)return;
+  for(const slot of scenePool){ const piece=slot.userData.piece, key=town+":"+piece;
+    const plane=slot.userData.plane, fb=slot.userData.fb;
+    if(propTexCache[key] && propTexCache[key]!==false){ plane.material.map=propTexCache[key]; plane.material.needsUpdate=true; plane.visible=true; fb.visible=false; continue; }
+    plane.visible=false; fb.visible=true;     // show blocky fallback until/unless the art loads
+    if(propTexCache[key]===false) continue;   // known-missing -> stay blocky
+    try{ new THREE.TextureLoader().load(
+      "/api/images?kind=runnerprop&town="+encodeURIComponent(town)+"&piece="+encodeURIComponent(piece),
+      (tex)=>{ propTexCache[key]=tex; if(!L||L.skyId!==town) return;
+        for(const s2 of scenePool){ if(s2.userData.piece===piece){ s2.userData.plane.material.map=tex; s2.userData.plane.material.needsUpdate=true; s2.userData.plane.visible=true; s2.userData.fb.visible=false; } } },
+      undefined,
+      ()=>{ propTexCache[key]=false; }
+    ); }catch(e){}
+  }
+}
+
 function buildScene(){
   const cv=document.getElementById('c');
   renderer=new THREE.WebGLRenderer({canvas:cv, antialias:true});
@@ -323,18 +358,14 @@ function buildScene(){
   // lane dashes (recycled)
   for(let i=0;i<26;i++){ for(const lx of [-1.5,1.5]){ const d=meshOf(box(0.22,0.06,2.2), 0xffffff);
     d.position.set(lx, 0.16, NEAR_Z - i*7); scene.add(d); dashPool.push(d); } }
-  // roadside scenery (trees + houses, recycled) for motion + town flavor
-  const houseCols=[0xff9aa2,0xffd3b6,0xa8e6cf,0xbfd7ff,0xe6c8ff];
+  // roadside scenery slots (AI billboards w/ blocky fallback), 2 depth rows for layering
+  let si=0;
   for(let i=0;i<16;i++){ for(const sx of [-1,1]){
-    const useTree = (i%2===0);
-    const grp=new THREE.Group();
-    if(useTree){ const tr=meshOf(cyl(0.18,0.22,1.0,10),0x8a5a3c); tr.position.y=0.5; grp.add(tr);
-      const lv=meshOf(new THREE.SphereGeometry(0.85,12,10),0x4fae5a); lv.position.y=1.5; grp.add(lv); }
-    else { const h=meshOf(box(1.6,1.8,1.6), houseCols[i%houseCols.length]); h.position.y=0.9; grp.add(h);
-      const roof=meshOf(cyl(0.05,1.3,0.9,4), 0xb5524a); roof.position.y=2.2; roof.rotation.y=Math.PI/4; grp.add(roof); }
-    grp.position.set(sx*(6.8+(i%3)*0.6), 0, NEAR_Z - i*12);
-    grp.userData.kind = useTree ? "tree" : "house"; grp.userData.swayPh=Math.random()*6.28;
-    scene.add(grp); scenePool.push(grp); } }
+    const piece=SCENERY_PIECES[si%SCENERY_PIECES.length]; si++;
+    const slot=makeScenerySlot(piece);
+    const farRow=(i%3===0); const xoff=farRow?(11+(i%3)*0.7):(6.7+(i%3)*0.6);
+    slot.position.set(sx*xoff, 0, NEAR_Z - i*12);
+    scene.add(slot); scenePool.push(slot); } }
   // floating clouds (drift across the sky, in front of the AI backdrop) — big & close enough to read
   for(let i=0;i<12;i++){ const cl=makeCloud();
     cl.position.set(-65+Math.random()*130, 10+Math.random()*15, -38 - Math.random()*70);
@@ -377,8 +408,7 @@ function renderScene(){
   // recycle dashes + scenery to fake forward motion
   const adv = (state==="play"&&started)?G.speed*ZPP:0;
   for(const d of dashPool){ d.position.z+=adv; if(d.position.z>NEAR_Z+4) d.position.z=FAR_Z; }
-  for(const s of scenePool){ s.position.z+=adv; if(s.position.z>NEAR_Z+8) s.position.z-=16*12;
-    if(s.userData.kind==="tree") s.rotation.z = Math.sin(now*1.1 + s.userData.swayPh)*0.05; }   // gentle sway
+  for(const s of scenePool){ s.position.z+=adv; if(s.position.z>NEAR_Z+8) s.position.z-=16*12; }
   // car
   carGroup.position.x = G.carX; carGroup.position.z = zForP(CAR_Y);
   carGroup.position.y = Math.sin(G.bob)*0.06;
