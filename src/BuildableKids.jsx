@@ -505,6 +505,32 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
       <rect x="13" y="33" width="22" height="6" rx="3" fill="#fff" />
     </svg>
   );
+  const TrophyGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 4h10v3a5 5 0 0 1-10 0z" /><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3" /><path d="M9 13.5h6M8 20h8M12 13.5V20" />
+    </svg>
+  );
+  // The greeting buddy: a friendly default face (real helper art lands in Phase 2).
+  const BuddyGlyph = ({ size = 34 }) => (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M11 12 l5 6 M37 12 l-5 6" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <circle cx="18.5" cy="23" r="3.4" fill="#fff" /><circle cx="29.5" cy="23" r="3.4" fill="#fff" />
+      <path d="M17.5 31 q6.5 6 13 0" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+
+  // ---- responsive: phone < 700, tablet 700-1023, desktop >= 1024 ----
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  useEffect(() => {
+    const on = () => setVw(window.innerWidth);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  const phone = vw < 700;
+  const tablet = vw >= 700 && vw < 1024;
+  const maxW = phone ? "100%" : tablet ? 720 : 940;
+  const makeCols = phone ? 2 : 4;
+  const iconScale = phone ? 1.15 : 1.4;
 
   // Notify on the Chess tile when it's this kid's move in a family game.
   const [chessTurns, setChessTurns] = useState(0);
@@ -546,105 +572,259 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
   const pillGrad = (name) => { let h = 0; const s = name || "?"; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return PILL_COLORS[h % PILL_COLORS.length]; };
   const initial = (name) => { const n = (name || "").trim(); return n ? n[0].toUpperCase() : "?"; };
 
-  const ExperienceCard = ({ icon, title, desc, badge, badgeColor, onClick, disabled, dot }) => (
+  function deviceId() {
+    try {
+      let id = localStorage.getItem("deviceId");
+      if (!id) { id = "dev_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8); localStorage.setItem("deviceId", id); }
+      return id;
+    } catch { return "dev_anon"; }
+  }
+
+  // ---- Jump back in: this kid's most recent creations (songs/stories/games) ----
+  const [jumpItems, setJumpItems] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const did = deviceId();
+        const kid = getActiveKid();
+        const kq = kid && kid.id ? "&kidProfileId=" + encodeURIComponent(kid.id) : "";
+        const q = "?deviceId=" + encodeURIComponent(did) + kq;
+        const [sg, st, gm] = await Promise.all([
+          fetch("/api/list-songs" + q).then((r) => r.json()).catch(() => ({})),
+          fetch("/api/list-stories" + q).then((r) => r.json()).catch(() => ({})),
+          fetch("/api/list-games" + q).then((r) => r.json()).catch(() => ({})),
+        ]);
+        const items = [];
+        (sg && sg.songs || []).forEach((s) => items.push({ kind: "song", id: s.song_id, title: s.title || "My song", thumbnail: s.thumbnail || null, color: s.cover_color || "#7a3b8f", created_at: s.created_at, open: onMusic }));
+        (st && st.stories || []).forEach((s) => items.push({ kind: "story", id: s.story_id, title: s.title || "My story", thumbnail: s.thumbnail || null, color: s.cover_color || "#1d6e56", created_at: s.created_at, open: onStories }));
+        (gm && gm.games || []).forEach((g) => items.push({ kind: "game", id: g.game_id || g.id, title: g.title || "My game", thumbnail: g.thumbnail || g.preview_image_url || null, color: "#274690", created_at: g.created_at, open: onGames }));
+        items.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        if (alive) setJumpItems(items.slice(0, 3));
+      } catch (e) { if (alive) setJumpItems([]); }
+    })();
+    return () => { alive = false; };
+  }, [activeKid]);
+
+  // ---- Trending from other kids: top published creations across kinds ----
+  const [trending, setTrending] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const kinds = ["game", "song", "story"];
+        const lists = await Promise.all(kinds.map((k) =>
+          fetch("/api/top-creations?kind=" + k + "&limit=6").then((r) => r.json()).then((d) => (d.items || [])).catch(() => [])
+        ));
+        const all = [].concat.apply([], lists);
+        const score = (c) => (c.heart_count || 0) * 3 + (c.play_count || 0);
+        all.sort((a, b) => score(b) - score(a) || (new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+        if (alive) setTrending(all.slice(0, 5));
+      } catch (e) { if (alive) setTrending([]); }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const KIND_TAG = {
+    game: { label: "Game", color: "#bfa6f5", bg: "rgba(155,126,221,0.18)" },
+    song: { label: "Song", color: "#e98fb3", bg: "rgba(214,90,123,0.20)" },
+    story: { label: "Story", color: "#7CF6B0", bg: "rgba(124,246,176,0.16)" },
+  };
+
+  const kidName = (activeKid && activeKid.display_name) || "friend";
+  const greetLine = chessTurns > 0
+    ? `It's your move in ${chessTurns} game${chessTurns > 1 ? "s" : ""}!`
+    : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”?` : "What do you want to make today?");
+
+  // ---- a big-icon "make" tile ----
+  const MakeTile = ({ glyph, title, sub, tag, onClick, featured }) => (
     <button
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
+      onClick={onClick}
       style={{
-        position: "relative", textAlign: "left", padding: "24px 22px",
-        borderRadius: "22px", border: CARD_BORDER, background: CARD_BG,
-        color: "#fff", cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.55 : 1, fontFamily: NUN,
-        display: "flex", flexDirection: "column", gap: "12px", minHeight: "150px",
+        position: "relative", borderRadius: 20, padding: phone ? "18px 12px" : "22px 14px",
+        border: featured ? "none" : CARD_BORDER, background: featured ? GRAD : CARD_BG,
+        color: "#fff", cursor: "pointer", fontFamily: NUN, textAlign: "center",
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+        minHeight: phone ? 120 : 150, boxShadow: featured ? "0 10px 26px rgba(155,126,221,0.40)" : "none",
       }}
     >
-      {dot && (
+      {tag && (
         <span style={{
-          position: "absolute", top: -8, left: -8, width: 22, height: 22, borderRadius: "50%",
-          background: "#FF5468", border: "3px solid #1a1330", boxShadow: "0 0 12px rgba(255,84,104,0.8)",
-        }} />
+          position: "absolute", top: 11, right: 11, display: "inline-flex", alignItems: "center", gap: 4,
+          fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase",
+          padding: "3px 8px", borderRadius: 999,
+          background: featured ? "rgba(0,0,0,0.26)" : "rgba(155,126,221,0.22)", color: featured ? "#fff" : "#cfc1f5",
+        }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="3" /><path d="M2 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1M16 3.5a3 3 0 0 1 0 7M22 21v-1a5 5 0 0 0-4-4.9" /></svg>
+          2-player
+        </span>
       )}
-      {badge && (
-        <span style={{
-          position: "absolute", top: "16px", right: "16px",
-          fontSize: "12px", fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase",
-          padding: "5px 11px", borderRadius: "999px", background: badgeColor, color: "#1a1330",
-        }}>{badge}</span>
-      )}
-      {icon}
-      <div style={{ fontFamily: FRED, fontSize: "24px", fontWeight: 700 }}>{title}</div>
-      <div style={{ fontSize: "15px", color: "#cfc9e6" }}>{desc}</div>
+      <div style={{ height: phone ? 50 : 60, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ transform: `scale(${iconScale})` }}>{glyph}</div>
+      </div>
+      <div style={{ fontFamily: FRED, fontSize: phone ? 16 : 19, fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: phone ? 11.5 : 13, color: featured ? "rgba(255,255,255,0.9)" : "#cfc9e6" }}>{sub}</div>
     </button>
   );
 
   return (
-    <div style={styles.container}>
-      <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          {activeKid && (
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: "8px",
-              background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)",
-              borderRadius: "999px", padding: "7px 14px 7px 7px", fontFamily: NUN, fontWeight: 800,
-              fontSize: "15px", color: "#fff",
-            }}>
+    <div style={{ ...styles.container, padding: phone ? "16px 14px 60px" : "24px 20px 70px" }}>
+      <div style={{ width: "100%", maxWidth: maxW, margin: "0 auto" }}>
+
+        {/* top bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <div>
+            {activeKid && (
               <span style={{
-                width: 26, height: 26, borderRadius: "50%", background: pillGrad(activeKid.display_name),
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                fontFamily: FRED, fontSize: 13, fontWeight: 700, color: "#fff",
-              }}>{initial(activeKid.display_name)}</span>
-              Playing as {activeKid.display_name}
-            </span>
-          )}
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: 999, padding: "7px 14px 7px 7px", fontFamily: NUN, fontWeight: 800,
+                fontSize: 14, color: "#fff",
+              }}>
+                <span style={{
+                  width: 26, height: 26, borderRadius: "50%", background: pillGrad(activeKid.display_name),
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: FRED, fontSize: 13, fontWeight: 700, color: "#fff",
+                }}>{initial(activeKid.display_name)}</span>
+                Playing as {activeKid.display_name}
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
+            <button onClick={onGrownUp} style={styles.myStuffButton}>{activeKid ? "Switch kid" : "Grown-ups"}</button>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
-          <button onClick={onGrownUp} style={styles.myStuffButton}>
-            {activeKid ? "Switch kid" : "Grown-ups"}
+
+        {/* helper greeting */}
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 16 }}>
+          <button onClick={onGrownUp} title="Your helper" style={{
+            width: phone ? 50 : 58, height: phone ? 50 : 58, borderRadius: "50%", flexShrink: 0, padding: 0, cursor: "pointer",
+            border: "none", background: "linear-gradient(135deg,#9b7edd,#6f5bd6)",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 6px 20px rgba(155,126,221,0.5)",
+          }}>
+            <BuddyGlyph size={phone ? 28 : 32} />
+          </button>
+          <div style={{
+            flex: 1, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(155,126,221,0.28)",
+            borderRadius: "6px 16px 16px 16px", padding: phone ? "10px 13px" : "12px 15px",
+          }}>
+            <div style={{
+              fontFamily: FRED, fontWeight: 700, fontSize: phone ? 21 : 25, lineHeight: 1.12,
+              background: "linear-gradient(90deg,#bfa6f5,#e98fb3)", WebkitBackgroundClip: "text",
+              backgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 4,
+            }}>Welcome back, {kidName}!</div>
+            <div style={{ fontSize: phone ? 13 : 14, color: "#e9e5f7", lineHeight: 1.45 }}>{greetLine}</div>
+          </div>
+        </div>
+
+        {/* your move card (multiplayer) */}
+        {chessTurns > 0 && (
+          <button onClick={onChess} style={{
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 18,
+            display: "flex", gap: 12, alignItems: "center",
+            background: "linear-gradient(135deg, rgba(255,214,107,0.16), rgba(214,90,123,0.16))",
+            border: "1px solid rgba(255,214,107,0.45)", borderRadius: 16, padding: "12px 14px", color: "#fff", fontFamily: NUN,
+          }}>
+            <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><ChessGlyph /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                Your move in chess
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#FFD66B", color: "#5a3d00", padding: "2px 7px", borderRadius: 999 }}>Your turn</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#d9cfb0" }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</div>
+            </div>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Play →</span>
+          </button>
+        )}
+
+        {/* jump back in */}
+        {jumpItems.length > 0 && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
+              <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: "#fff" }}>Jump back in</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${jumpItems.length}, 1fr)`, gap: 10, marginBottom: 22 }}>
+              {jumpItems.map((it) => {
+                const tag = KIND_TAG[it.kind];
+                return (
+                  <button key={it.kind + it.id} onClick={it.open} style={{
+                    borderRadius: 15, overflow: "hidden", border: "1px solid rgba(155,126,221,0.22)",
+                    background: "#13111f", cursor: "pointer", textAlign: "left", padding: 0, color: "#fff", fontFamily: NUN,
+                  }}>
+                    <div style={{ height: phone ? 64 : 80, position: "relative", background: it.thumbnail ? `center/cover no-repeat url(${it.thumbnail})` : it.color }}>
+                      <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: "rgba(0,0,0,0.45)", padding: "2px 7px", borderRadius: 999 }}>{tag.label}</span>
+                    </div>
+                    <div style={{ padding: "8px 10px" }}>
+                      <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</div>
+                      <div style={{ fontSize: 11, color: "#8e89a8" }}>Your {it.kind}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* what do you want to make */}
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: "#cfc9e6", marginBottom: 11 }}>What do you want to make?</div>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${makeCols}, 1fr)`, gap: 11, marginBottom: 14 }}>
+          <MakeTile featured glyph={<ControllerGlyph />} title="Make a game" sub="Build & play games" tag onClick={onGames} />
+          <MakeTile glyph={<TrophyGlyph />} title="Play a top game" sub="Play it, then remix it" tag onClick={onTop} />
+          <MakeTile glyph={<BookGlyph />} title="Make a story" sub="A living picture book" onClick={onStories} />
+          <MakeTile glyph={<NoteGlyph />} title="Make a song" sub="Sing about anything" onClick={onMusic} />
+        </div>
+
+        {/* secondary tiles: chess + typing (kept, not lost) */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11, marginBottom: 24 }}>
+          <button onClick={onChess} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, background: CARD_BG, border: CARD_BORDER, borderRadius: 16, padding: "12px 14px", cursor: "pointer", color: "#fff", fontFamily: NUN, textAlign: "left" }}>
+            <AppIcon grad="linear-gradient(160deg,#FFC75A,#F0972A)"><ChessGlyph /></AppIcon>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: FRED, fontSize: 17, fontWeight: 700 }}>Chess</div>
+              <div style={{ fontSize: 12.5, color: chessTurns > 0 ? "#FFD66B" : "#cfc9e6" }}>{chessTurns > 0 ? "It's your move!" : "Solo, 2-player, or family"}</div>
+            </div>
+            {chessTurns > 0 && <span style={{ position: "absolute", top: -7, right: -7, width: 20, height: 20, borderRadius: "50%", background: "#FF5468", border: "3px solid #0a0a14", boxShadow: "0 0 12px rgba(255,84,104,0.8)" }} />}
+          </button>
+          <button onClick={onTyping} style={{ display: "flex", alignItems: "center", gap: 12, background: CARD_BG, border: CARD_BORDER, borderRadius: 16, padding: "12px 14px", cursor: "pointer", color: "#fff", fontFamily: NUN, textAlign: "left" }}>
+            <AppIcon grad="linear-gradient(160deg,#4FA6E8,#2F8FD6)"><KeyboardGlyph /></AppIcon>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: FRED, fontSize: 17, fontWeight: 700 }}>Typing</div>
+              <div style={{ fontSize: 12.5, color: "#cfc9e6" }}>Defend the castle!</div>
+            </div>
           </button>
         </div>
-      </div>
 
-      <h1 style={{ ...styles.logo, marginTop: "8px" }}>buildablekids.</h1>
-      <p style={styles.tagline}>What do you want to make today?</p>
+        {/* trending from other kids */}
+        {trending.length > 0 && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: "#fff" }}>Trending from other kids</span>
+              <button onClick={onTop} style={{ background: "none", border: "none", color: "#bfa6f5", fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all →</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {trending.map((it, i) => {
+                const tag = KIND_TAG[it.kind] || KIND_TAG.game;
+                return (
+                  <button key={it.kind + it.id} onClick={onTop} style={{
+                    display: "flex", alignItems: "center", gap: 11, background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.10)", borderRadius: 13, padding: "9px 11px",
+                    cursor: "pointer", color: "#fff", fontFamily: NUN, textAlign: "left",
+                  }}>
+                    <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: "#8e89a8", width: 14, flexShrink: 0 }}>{i + 1}</span>
+                    <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: it.thumbnail ? `center/cover no-repeat url(${it.thumbnail})` : (it.cover_color || tag.bg) }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title || "Untitled"}</div>
+                      <div style={{ fontSize: 11, color: "#8e89a8" }}>by {it.creator || "a kid"}</div>
+                    </div>
+                    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: tag.bg, padding: "3px 8px", borderRadius: 999, flexShrink: 0 }}>{tag.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
 
-      <div style={{
-        width: "100%", maxWidth: "920px", marginTop: "20px",
-        display: "grid", gap: "18px",
-        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-      }}>
-        <ExperienceCard
-          icon={<AppIcon grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)"><NoteGlyph /></AppIcon>}
-          title="Music" desc="Make your own song. Ready to play right now!"
-          badge="Ready" badgeColor="#7CF6B0" onClick={onMusic}
-        />
-        <ExperienceCard
-          icon={<AppIcon grad="linear-gradient(160deg,#FFB13C,#F0972A)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4h10v3a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/><path d="M9 13.5h6M8 20h8M12 13.5V20"/></svg></AppIcon>}
-          title="Top Creations" desc="See and remix songs, games & stories other kids made."
-          badge="New" badgeColor="#7CF6B0" onClick={onTop}
-        />
-        <ExperienceCard
-          icon={<AppIcon grad="linear-gradient(160deg,#3DD06A,#2BB14F)"><ControllerGlyph /></AppIcon>}
-          title="Games" desc="Two games: jump or survive!"
-          badge="Beta" badgeColor="#FFD27C" onClick={onGames}
-        />
-        <ExperienceCard
-          icon={<AppIcon grad="linear-gradient(160deg,#F2789E,#E0578F)"><BookGlyph /></AppIcon>}
-          title="Stories" desc="Turn your ideas into a living picture book."
-          badge="Beta" badgeColor="#FFD27C" onClick={onStories}
-        />
-        <ExperienceCard
-          icon={<AppIcon grad="linear-gradient(160deg,#4FA6E8,#2F8FD6)"><KeyboardGlyph /></AppIcon>}
-          title="Typing" desc="Learn to type by defending the castle!"
-          badge="New" badgeColor="#7CF6B0" onClick={onTyping}
-        />
-        <ExperienceCard
-          icon={<AppIcon grad="linear-gradient(160deg,#FFC75A,#F0972A)"><ChessGlyph /></AppIcon>}
-          title="Chess"
-          desc={chessTurns > 0 ? `It's your move in ${chessTurns} game${chessTurns > 1 ? "s" : ""}!` : "Play your hero squad — solo, two players, or family."}
-          badge={chessTurns > 0 ? "Your move!" : "New"} badgeColor={chessTurns > 0 ? "#FF8FA3" : "#7CF6B0"}
-          dot={chessTurns > 0} onClick={onChess}
-        />
       </div>
     </div>
   );

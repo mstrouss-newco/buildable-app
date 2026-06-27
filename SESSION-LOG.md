@@ -1,5 +1,23 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Home screen redesign (Phase 1) [branch: feature/home-redesign]
+- Rebuilt `HomeScreen` in `src/BuildableKids.jsx` to the approved new layout:
+  - **Helper greeting**: buddy avatar + "Welcome back, {name}!" with a dynamic line
+    (your-move count → "keep going with <last creation>" → "what do you want to make?").
+    Buddy art + spoken voice = Phase 2 (default face glyph for now; avatar taps to Switch kid).
+  - **Your move card**: prominent gold card when it's the kid's turn in family chess
+    (reuses existing `listMyMatches` polling). Multiplayer stays a mode inside games, not a section.
+  - **Jump back in**: kid's 3 most-recent creations w/ real thumbnails via
+    `/api/list-songs|list-stories|list-games` (deviceId + kidProfileId). Hidden when empty.
+  - **Make tiles**: 4 big-icon tiles (Make a game / Play a top game / Make a story / Make a song)
+    with 2-player tags; Chess + Typing kept as secondary tiles (chess shows your-move dot).
+  - **Trending from other kids**: live list from `/api/top-creations` (mixed kinds, ranked),
+    rows + "See all" open the Top board. Hidden when empty.
+  - **Responsive**: width hook → phone <700 (2-col tiles, tighter), tablet 700–1023, desktop ≥1024.
+- No DB/API changes; additive, with graceful fallbacks. `npm run build` passes (53 modules).
+- TODO Phase 2: first-login helper onboarding (character + voice), spoken greeting, tap-to-change helper.
+
+
 ## Multiplayer playbook `MULTIPLAYER.md` (June 27 2026)
 
 Audited how multiplayer works and wrote it up as a playbook (docs only — no code/DB
