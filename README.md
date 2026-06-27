@@ -1794,3 +1794,57 @@ MusicMaker) switched from fixed 30–64px to `clamp(...vw...)` so they shrink on
 stay full-size on desktop. We deliberately do NOT zoom #root because the games run in
 iframes inside it (zoom would shrink the games). Games' own phone polish is a follow-up
 pending on-device feedback. Build verified.
+
+## Buildable Chess — full game, living worlds, online family play (June 26 2026)
+
+A complete kids' chess game at `public/buildable-chess.html`, opened from the Home **Chess**
+tile (`ChessScreen` in `src/BuildableKids.jsx`, iframe `/buildable-chess.html?v=2`).
+
+**Game.** Full legal-move engine (validated with perft + the Kiwipete position), in-page bot
+(Easy / Medium / Hard), two-player pass-and-play, and online family play. Buildable hero
+pieces (Sprout/Pony/Wizard/Tower/Queen/King), Purple vs Coral. Teacher-first **toggleable
+move hints** (green dot = move, ring = capture). **Pause** stops the music and freezes the
+board (and bot). Per-player **scoreboard** in localStorage (`bk_chess_scores`); online games
+record under the kid's name. Win = confetti + fireworks + cheering pieces; losing stays
+playful (droop + sparkle + rematch).
+
+**Worlds.** Six worlds (Jungle, Ocean, Space, Candy, Castle, Desert) reuse platformer scene
+art (`upload/midground_*` / `foreground_*`) downscaled to light JPEGs in `public/chess-art/`:
+`<world>_bg.jpg` + `_fg.jpg` (~100–170 KB, 1000px) and `_thumb.jpg` (~20 KB, 300px, world
+picker). Rendered as living parallax using **CSS `background-image` divs, not `<img>`** —
+`<img>` was unreliable inside an iframe on iOS Safari; CSS bg matches the picker which always
+worked. Plus Ken Burns drift, light rays, themed particles. **Themed captures** per world
+(space laser+explosion, castle sword slash, jungle coconut bonk, ocean splash, candy shatter,
+desert poof) — visual + sound.
+
+**Music = ElevenLabs (not synth).** `api/chess-music.js` generates a real per-world track via
+ElevenLabs Music (`POST /v1/music`, `model_id` = `ELEVENLABS_MUSIC_MODEL` || `music_v1`),
+caches it in `narration_cache` (key `chessmusic:<world>`), serves a loopable mp3; `?force=1`
+regenerates. The game loads `/api/chess-music?world=<world>` and starts it on the **first tap
+inside the game** (iframe autoplay needs an in-frame gesture). Older code-synthesized loops
+were archived to `public/music-library/` for reuse and are NOT used by chess.
+
+**SFX = ElevenLabs.** `api/sfx.js` has chess one-shots
+(`chess_select/move/capture/check/castle/promote/win/lose/yourturn` + per-world
+`chess_capture_<world>`) with short `DURATIONS`. The game preloads `/api/sfx?s=chess_*` and
+falls back to built-in WebAudio sounds.
+
+**Online family play.** Siblings on separate devices — **requires the email/parent account
+lane** (guest kids live on one device only). `src/FamilyChess.jsx` (via "Play a family
+member" in `ChessScreen`) lists the family's `kid_profiles`, creates/opens a match, hosts the
+game iframe (`/buildable-chess.html?online=1&v=2`), and syncs by **polling `chess_matches`
+every 2 s**. Board ↔ app talk via `postMessage` (`chessInit` / `chessOpponentMove` /
+`chessMove` / `chessReaction` / `chessShowReaction`). Move detection is **content-based**
+(turn + last_move + status) so a reaction can't cause a phantom move. **Canned reaction
+badges** (Nice move! / Nice try! / …), no free text, **one per move**, pop on the opponent's
+screen. The Home Chess tile shows a "Your move!" badge + dot + ding when it's the kid's turn.
+
+**Database — run once in the Supabase SQL editor:**
+- `db/create-chess-matches.sql` — `chess_matches` table (parent_id / white_kid / black_kid /
+  world / board / turn / last_move / status / winner) + RLS scoped to `parent_id = auth.uid()`.
+- `db/add-chess-reaction.sql` — adds the `reaction jsonb` column for reaction badges.
+
+**Vercel routing (critical).** `public/chess-art/` (and `public/game-music/`) need explicit
+routes before the `/(.*)` → `/landing.html` catch-all — otherwise world images fall through to
+the landing page and render blank on the live site (works locally, which hides it). World/
+thumb image URLs and the game iframe carry `?v=2` for cache-busting.
