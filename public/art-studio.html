@@ -38,6 +38,12 @@
   .iconbtn{width:48px;height:48px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex:0 0 auto}
   .iconbtn:active{transform:translateY(2px)}
   .iconbtn.save{background:#fff0f5;border-color:#ff9bbb}
+  #top .tbtn{width:56px;height:50px;flex-direction:column;gap:0}
+  #top .tbtn svg{width:24px;height:24px}
+  #top .tbtn .cap{font-size:9px;font-weight:700;color:#cfc8ff;line-height:1.05;margin-top:1px}
+  #top .tbtn.clear{background:#2a1430;border-color:#ff7a90}
+  #top .tbtn.clear .cap{color:#ffb3c1}
+  #top .tbtn.save .cap{color:#ff5d8f}
   .spacer{flex:1}
   input[type=color]{width:42px;height:42px;border:none;background:none;border-radius:50%;cursor:pointer;padding:0;flex:0 0 auto}
   .ov{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(8,6,24,.74)}
@@ -59,13 +65,13 @@
 <div id="app">
   <div id="top">
     <div class="t">Art Studio</div>
-    <button class="iconbtn" id="undoBtn" aria-label="Undo"></button>
-    <button class="iconbtn" id="redoBtn" aria-label="Redo"></button>
-    <button class="iconbtn" id="clearBtn" aria-label="Start over"></button>
-    <button class="iconbtn save" id="saveBtn" aria-label="Save"></button>
+    <button class="iconbtn tbtn" id="undoBtn" aria-label="Undo"></button>
+    <button class="iconbtn tbtn" id="redoBtn" aria-label="Redo"></button>
+    <button class="iconbtn tbtn clear" id="clearBtn" aria-label="Clear"></button>
+    <button class="iconbtn tbtn save" id="saveBtn" aria-label="Save"></button>
     <span class="spacer"></span>
-    <button class="iconbtn" id="galleryBtn" aria-label="My art"></button>
-    <button class="iconbtn" id="soundBtn" aria-label="Sound"></button>
+    <button class="iconbtn tbtn" id="galleryBtn" aria-label="My art"></button>
+    <button class="iconbtn tbtn" id="soundBtn" aria-label="Sound"></button>
   </div>
   <div id="mid">
     <div class="rail" id="left"></div>
@@ -114,7 +120,7 @@
     sizes:[6,16,30,50,72], mirror:[1,"V","H",2,4,8],
     styles:[{id:"paper",name:"Paper",bg:{type:"color",c:"#ffffff"}},{id:"chalk",name:"Chalk",bg:{type:"color",c:"#243240"}},
       {id:"neon",name:"Neon",bg:{type:"color",c:"#0a0a1e"}},{id:"3d",name:"3D",bg:{type:"color",c:"#eef0f7"}},{id:"pixel",name:"Pixel",bg:{type:"color",c:"#ffffff"}}],
-    shapes:["star","heart","flower","diamond","dot"],
+    shapes:["star","heart","flower","diamond","triangle","circle","lightning","moon","cloud","dot"],
     backgrounds:[{type:"color",c:"#ffffff",name:"White"},{type:"color",c:"#0a0a1e",name:"Night"},{type:"color",c:"#243240",name:"Slate"},
       {type:"color",c:"#fff7e6",name:"Cream"},{type:"color",c:"#eafff2",name:"Mint"},{type:"color",c:"#ffeaf2",name:"Blush"},
       {type:"grad",from:"#89f7fe",to:"#66a6ff",name:"Sky"},{type:"grad",from:"#fbc2eb",to:"#a18cd1",name:"Candy"},
@@ -323,12 +329,14 @@
     document.getElementById("galleryBtn").onclick=openGallery;
     document.getElementById("galleryClose").onclick=function(){ document.getElementById("galleryOv").classList.remove("show"); };
     document.getElementById("soundBtn").onclick=function(){ S.muted=!S.muted; try{ localStorage.setItem("artstudio:muted",S.muted?"1":"0"); }catch(e){}
-      if(BA&&BA.toggleMute) try{BA.toggleMute();}catch(_){} document.getElementById("soundBtn").innerHTML=S.muted?ICONS.soundOff:ICONS.soundOn; if(!S.muted) playSfx("pop"); };
+      if(BA&&BA.toggleMute) try{BA.toggleMute();}catch(_){} setSound(); if(!S.muted) playSfx("pop"); };
     window.addEventListener("resize", fitCanvas);
   }
-  function paintStatic(){ document.getElementById("undoBtn").innerHTML=ICONS.undo; document.getElementById("redoBtn").innerHTML=ICONS.redo;
-    document.getElementById("clearBtn").innerHTML=ICONS.trash; document.getElementById("saveBtn").innerHTML=ICONS.heart;
-    document.getElementById("galleryBtn").innerHTML=ICONS.gallery; document.getElementById("soundBtn").innerHTML=S.muted?ICONS.soundOff:ICONS.soundOn;
+  function cap(t){ return '<span class="cap">'+t+'</span>'; }
+  function setSound(){ document.getElementById("soundBtn").innerHTML=(S.muted?ICONS.soundOff:ICONS.soundOn)+cap("Sound"); }
+  function paintStatic(){ document.getElementById("undoBtn").innerHTML=ICONS.undo+cap("Undo"); document.getElementById("redoBtn").innerHTML=ICONS.redo+cap("Redo");
+    document.getElementById("clearBtn").innerHTML=ICONS.trash+cap("Clear"); document.getElementById("saveBtn").innerHTML=ICONS.heart+cap("Save");
+    document.getElementById("galleryBtn").innerHTML=ICONS.gallery+cap("Mine"); setSound();
     document.getElementById("clearNo").innerHTML=ICONS.check; document.getElementById("clearYes").innerHTML=ICONS.trash;
     document.getElementById("saveCancel").innerHTML=ICONS.x; document.getElementById("saveGo").innerHTML=ICONS.heart;
     document.getElementById("stickClose").innerHTML=ICONS.check; document.getElementById("shapeClose").innerHTML=ICONS.check;

@@ -1,5 +1,11 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Art Studio: obvious Clear button + more stamp shapes
+- Top action buttons now have word captions under the icons (Undo / Redo / Clear / Save /
+  Mine / Sound) and CLEAR is tinted red so it reads as "clear/start over" at a glance.
+- More to play with: BR.shape() gained triangle, circle, lightning, moon, cloud (now 10 shapes)
+  and the studio's Shapes stamp set lists them. qa-art.mjs green.
+
 ## 2026-06-27 — Three simple 2-player board games on ONE shared shell (Tic-Tac-Toe, Connect Four, Dots and Boxes)
 Shipped to `main` (live on www.buildablekids.com); branch `claude/games-simple-batch1` also pushed.
 - **New shared shell built ONCE:** `public/buildable-boardgame.js` (`BG`, `window.BuildableBoardGame`)
