@@ -119,7 +119,7 @@ var cache = {};
 function playSound(key){
   if (muted) return;
   var base = cache[key];
-  if (!base){ base = new Audio("/api/sfx?s=" + key); base.preload = "auto"; cache[key] = base; }
+  if (!base){ base = new Audio("/api/sfx?s=" + key + "&v=1"); base.preload = "auto"; cache[key] = base; }
   // clone so rapid taps overlap (same cached URL, no refetch)
   var a = base.cloneNode();
   a.play().catch(function(){});
@@ -142,7 +142,7 @@ function buildGrid(){
     b.addEventListener("pointerdown", fire);
     grid.appendChild(b);
     // warm the cache so first tap is instant
-    cache[key] = new Audio("/api/sfx?s=" + key);
+    cache[key] = new Audio("/api/sfx?s=" + key + "&v=1");
   });
 }
 
