@@ -1,5 +1,10 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Helper reactions rolled out to more games
+- Win/lose helper reaction now fires in Survival (win+lose), Platformer/play.html (win+lose),
+  and Typing (win) via direct window.parent.postMessage. Engines verified loading on preview.
+- Chess + Tennis intentionally skipped (they already have their own spoken celebration).
+
 ## 2026-06-27 — Helper reacts to game win/lose SHIPPED to main
 - New global HelperReactions layer (src/HelperReactions.jsx, mounted in main.jsx OUTSIDE
   the screen switch): listens for postMessage {source:"buildable",kind:"win"|"lose"} from
