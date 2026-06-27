@@ -734,3 +734,14 @@ lives lost), 2 levels (Tall Towers, Castle Walls → 8), 2 power-ups (Laser, Fir
 same-device 2-player Pong mode (first to 5; touch-by-half or arrows vs A/D). `qa-breaker.mjs`
 covers Solo-all-levels-win + Pong-winner + render smoke (both modes). Live deploy QA'd in-iframe,
 no console errors. Docs synced: BUILDING-A-GAME.md, MECHANICS.md §11, breaker-README.md.
+
+## Buildable Breaker: round 3 polish (menu button, stars, rewards, themed bricks, sounds) — June 27 2026
+
+In-game "‹ Menu" back button (Solo + Pong). Star progression: start screen shows "Stars: N of 24"
++ BS coins slot; Solo win screen draws the 1–3 earned stars. Star-unlock rewards: ball skins +
+paddle colors gated by total stars (new reward balls Rainbow@16, Flame@24; locked items show cost).
+Themed brick styles per backdrop (drawn): space=metal+rivets, candy=gloss+sprinkles, ocean=bubble,
+castle=stone, desert=sand, meadow=gloss. Bespoke ElevenLabs SFX via BA.configure (reuse tennis_*;
+new breaker_smash/break/power/miss in api/sfx.js) — synth now fallback-only, satisfying the sound
+rule; verified /api/sfx?s=breaker_smash=200 live. All headless QA green (solo+pong+renders); live
+deploy QA'd. TODO: looping music must be ElevenLabs (not in-house-synth music-library loops).
