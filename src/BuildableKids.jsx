@@ -73,7 +73,7 @@ function LearningControl() {
   );
 }
 
-function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker }) {
+function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onChess, onTyping }) {
   const tile = (grad, title, desc, onClick, soon) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
       <div style={{ width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)" }} />
@@ -95,6 +95,8 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker }) {
         {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Platformer", "Run, jump and reach the flag!", onPlatformer, false)}
         {tile("linear-gradient(160deg,#9B7BFF,#67E8F9)", "Breaker", "Bounce the ball, smash every brick!", onBreaker, false)}
         {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false)}
+        {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false)}
+        {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false)}
       </div>
     </div>
   );
@@ -376,7 +378,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -459,8 +461,8 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
 function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop }) {
   // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
-  const AppIcon = ({ grad, children }) => (
-    <div style={{ position: "relative", width: 76, height: 76, borderRadius: 20, background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
+  const AppIcon = ({ grad, size = 76, children }) => (
+    <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%)" }} />
       <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
     </div>
@@ -473,12 +475,10 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
     </svg>
   );
   const ControllerGlyph = () => (
-    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="6" y="18" width="36" height="16" rx="8" fill="#fff" />
-      <rect x="12" y="22.5" width="3.2" height="9" rx="1" fill="#2BB14F" />
-      <rect x="9" y="25.5" width="9.2" height="3.2" rx="1" fill="#2BB14F" />
-      <circle cx="32" cy="24.5" r="2.4" fill="#2BB14F" />
-      <circle cx="37" cy="29" r="2.4" fill="#2BB14F" />
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 11h4M8 9v4" />
+      <line x1="15" y1="11" x2="15.01" y2="11" /><line x1="17.5" y1="13.5" x2="17.51" y2="13.5" />
+      <path d="M5 16a4 4 0 0 1-1.3-3.6l.8-4.2A3.5 3.5 0 0 1 7.9 5.5h8.2a3.5 3.5 0 0 1 3.4 2.7l.8 4.2A4 4 0 0 1 16.5 16c-1 0-1.8-.5-2.3-1.3l-.5-.7h-3.4l-.5.7C9.3 15.5 8.5 16 7.5 16z" />
     </svg>
   );
   const BookGlyph = () => (
@@ -530,9 +530,8 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
   const tablet = vw >= 700 && vw < 1024;
   const maxW = phone ? "100%" : tablet ? 720 : 940;
   const makeCols = phone ? 2 : 4;
-  const iconScale = phone ? 1.15 : 1.4;
 
-  // Notify on the Chess tile when it's this kid's move in a family game.
+  // Notify on the Chess card when it's this kid's move in a family game.
   const [chessTurns, setChessTurns] = useState(0);
   const prevTurnsRef = useRef(0);
   const dingChime = () => {
@@ -608,6 +607,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
 
   // ---- Trending from other kids: top published creations across kinds ----
   const [trending, setTrending] = useState([]);
+  const [trendingLoaded, setTrendingLoaded] = useState(false);
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -619,8 +619,8 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
         const all = [].concat.apply([], lists);
         const score = (c) => (c.heart_count || 0) * 3 + (c.play_count || 0);
         all.sort((a, b) => score(b) - score(a) || (new Date(b.created_at || 0) - new Date(a.created_at || 0)));
-        if (alive) setTrending(all.slice(0, 5));
-      } catch (e) { if (alive) setTrending([]); }
+        if (alive) { setTrending(all.slice(0, 5)); setTrendingLoaded(true); }
+      } catch (e) { if (alive) { setTrending([]); setTrendingLoaded(true); } }
     })();
     return () => { alive = false; };
   }, []);
@@ -632,47 +632,47 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
   };
 
   const kidName = (activeKid && activeKid.display_name) || "friend";
-  const greetLine = chessTurns > 0
-    ? `It's your move in ${chessTurns} game${chessTurns > 1 ? "s" : ""}!`
-    : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”?` : "What do you want to make today?");
+  const helperLine = chessTurns > 0
+    ? `It's your move in ${chessTurns} chess game${chessTurns > 1 ? "s" : ""} — want to play?`
+    : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”? Or make something new!` : "What should we make today? Tap a tile and I'll help!");
 
-  // ---- a big-icon "make" tile ----
-  const MakeTile = ({ glyph, title, sub, tag, onClick, featured }) => (
+  // ---- floating chatbot-style helper (bottom-right) ----
+  const [helperOpen, setHelperOpen] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setHelperOpen(true), 900); return () => clearTimeout(t); }, []);
+
+  // ---- a "make" tile: colored app-icon + label ----
+  const MakeTile = ({ grad, glyph, title, sub, tag, onClick }) => (
     <button
       onClick={onClick}
       style={{
         position: "relative", borderRadius: 20, padding: phone ? "18px 12px" : "22px 14px",
-        border: featured ? "none" : CARD_BORDER, background: featured ? GRAD : CARD_BG,
-        color: "#fff", cursor: "pointer", fontFamily: NUN, textAlign: "center",
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-        minHeight: phone ? 120 : 150, boxShadow: featured ? "0 10px 26px rgba(155,126,221,0.40)" : "none",
+        border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: "pointer", fontFamily: NUN,
+        textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+        minHeight: phone ? 132 : 162,
       }}
     >
       {tag && (
         <span style={{
           position: "absolute", top: 11, right: 11, display: "inline-flex", alignItems: "center", gap: 4,
           fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase",
-          padding: "3px 8px", borderRadius: 999,
-          background: featured ? "rgba(0,0,0,0.26)" : "rgba(155,126,221,0.22)", color: featured ? "#fff" : "#cfc1f5",
+          padding: "3px 8px", borderRadius: 999, background: "rgba(155,126,221,0.22)", color: "#cfc1f5",
         }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="3" /><path d="M2 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1M16 3.5a3 3 0 0 1 0 7M22 21v-1a5 5 0 0 0-4-4.9" /></svg>
           2-player
         </span>
       )}
-      <div style={{ height: phone ? 50 : 60, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ transform: `scale(${iconScale})` }}>{glyph}</div>
-      </div>
+      <AppIcon grad={grad} size={phone ? 70 : 84}>{glyph}</AppIcon>
       <div style={{ fontFamily: FRED, fontSize: phone ? 16 : 19, fontWeight: 700 }}>{title}</div>
-      <div style={{ fontSize: phone ? 11.5 : 13, color: featured ? "rgba(255,255,255,0.9)" : "#cfc9e6" }}>{sub}</div>
+      <div style={{ fontSize: phone ? 11.5 : 13, color: "#cfc9e6" }}>{sub}</div>
     </button>
   );
 
   return (
-    <div style={{ ...styles.container, padding: phone ? "16px 14px 60px" : "24px 20px 70px" }}>
+    <div style={{ ...styles.container, padding: phone ? "16px 14px 90px" : "24px 20px 100px" }}>
       <div style={{ width: "100%", maxWidth: maxW, margin: "0 auto" }}>
 
         {/* top bar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
           <div>
             {activeKid && (
               <span style={{
@@ -696,27 +696,14 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
           </div>
         </div>
 
-        {/* helper greeting */}
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 16 }}>
-          <button onClick={onGrownUp} title="Your helper" style={{
-            width: phone ? 50 : 58, height: phone ? 50 : 58, borderRadius: "50%", flexShrink: 0, padding: 0, cursor: "pointer",
-            border: "none", background: "linear-gradient(135deg,#9b7edd,#6f5bd6)",
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 6px 20px rgba(155,126,221,0.5)",
-          }}>
-            <BuddyGlyph size={phone ? 28 : 32} />
-          </button>
+        {/* welcome */}
+        <div style={{ marginBottom: 20 }}>
           <div style={{
-            flex: 1, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(155,126,221,0.28)",
-            borderRadius: "6px 16px 16px 16px", padding: phone ? "10px 13px" : "12px 15px",
-          }}>
-            <div style={{
-              fontFamily: FRED, fontWeight: 700, fontSize: phone ? 21 : 25, lineHeight: 1.12,
-              background: "linear-gradient(90deg,#bfa6f5,#e98fb3)", WebkitBackgroundClip: "text",
-              backgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 4,
-            }}>Welcome back, {kidName}!</div>
-            <div style={{ fontSize: phone ? 13 : 14, color: "#e9e5f7", lineHeight: 1.45 }}>{greetLine}</div>
-          </div>
+            fontFamily: FRED, fontWeight: 700, fontSize: phone ? 28 : 36, lineHeight: 1.08,
+            background: "linear-gradient(90deg,#bfa6f5,#e98fb3)", WebkitBackgroundClip: "text",
+            backgroundClip: "text", WebkitTextFillColor: "transparent",
+          }}>Welcome back, {kidName}!</div>
+          <div style={{ fontSize: phone ? 14 : 16, color: "#b8b3d0", fontWeight: 600, marginTop: 4 }}>Let's make something fun today.</div>
         </div>
 
         {/* your move card (multiplayer) */}
@@ -768,63 +755,69 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
         )}
 
         {/* what do you want to make */}
-        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 15, color: "#cfc9e6", marginBottom: 11 }}>What do you want to make?</div>
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${makeCols}, 1fr)`, gap: 11, marginBottom: 14 }}>
-          <MakeTile featured glyph={<ControllerGlyph />} title="Make a game" sub="Build & play games" tag onClick={onGames} />
-          <MakeTile glyph={<TrophyGlyph />} title="Play a top game" sub="Play it, then remix it" tag onClick={onTop} />
-          <MakeTile glyph={<BookGlyph />} title="Make a story" sub="A living picture book" onClick={onStories} />
-          <MakeTile glyph={<NoteGlyph />} title="Make a song" sub="Sing about anything" onClick={onMusic} />
+        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: "#fff", marginBottom: 11 }}>What do you want to make?</div>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${makeCols}, 1fr)`, gap: 12, marginBottom: 26 }}>
+          <MakeTile grad="linear-gradient(160deg,#3DD06A,#2BB14F)" glyph={<ControllerGlyph />} title="Make a game" sub="Build & play games" tag onClick={onGames} />
+          <MakeTile grad="linear-gradient(160deg,#FFB13C,#F0972A)" glyph={<TrophyGlyph />} title="Play a top game" sub="Play it, then remix it" tag onClick={onTop} />
+          <MakeTile grad="linear-gradient(160deg,#F2789E,#E0578F)" glyph={<BookGlyph />} title="Make a story" sub="A living picture book" onClick={onStories} />
+          <MakeTile grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)" glyph={<NoteGlyph />} title="Make a song" sub="Sing about anything" onClick={onMusic} />
         </div>
 
-        {/* secondary tiles: chess + typing (kept, not lost) */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11, marginBottom: 24 }}>
-          <button onClick={onChess} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, background: CARD_BG, border: CARD_BORDER, borderRadius: 16, padding: "12px 14px", cursor: "pointer", color: "#fff", fontFamily: NUN, textAlign: "left" }}>
-            <AppIcon grad="linear-gradient(160deg,#FFC75A,#F0972A)"><ChessGlyph /></AppIcon>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FRED, fontSize: 17, fontWeight: 700 }}>Chess</div>
-              <div style={{ fontSize: 12.5, color: chessTurns > 0 ? "#FFD66B" : "#cfc9e6" }}>{chessTurns > 0 ? "It's your move!" : "Solo, 2-player, or family"}</div>
-            </div>
-            {chessTurns > 0 && <span style={{ position: "absolute", top: -7, right: -7, width: 20, height: 20, borderRadius: "50%", background: "#FF5468", border: "3px solid #0a0a14", boxShadow: "0 0 12px rgba(255,84,104,0.8)" }} />}
-          </button>
-          <button onClick={onTyping} style={{ display: "flex", alignItems: "center", gap: 12, background: CARD_BG, border: CARD_BORDER, borderRadius: 16, padding: "12px 14px", cursor: "pointer", color: "#fff", fontFamily: NUN, textAlign: "left" }}>
-            <AppIcon grad="linear-gradient(160deg,#4FA6E8,#2F8FD6)"><KeyboardGlyph /></AppIcon>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FRED, fontSize: 17, fontWeight: 700 }}>Typing</div>
-              <div style={{ fontSize: 12.5, color: "#cfc9e6" }}>Defend the castle!</div>
-            </div>
-          </button>
+        {/* trending from other kids — always shown */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: "#fff" }}>Trending from other kids</span>
+          {trending.length > 0 && <button onClick={onTop} style={{ background: "none", border: "none", color: "#bfa6f5", fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all →</button>}
         </div>
-
-        {/* trending from other kids */}
-        {trending.length > 0 && (
-          <>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: "#fff" }}>Trending from other kids</span>
-              <button onClick={onTop} style={{ background: "none", border: "none", color: "#bfa6f5", fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all →</button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {trending.map((it, i) => {
-                const tag = KIND_TAG[it.kind] || KIND_TAG.game;
-                return (
-                  <button key={it.kind + it.id} onClick={onTop} style={{
-                    display: "flex", alignItems: "center", gap: 11, background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.10)", borderRadius: 13, padding: "9px 11px",
-                    cursor: "pointer", color: "#fff", fontFamily: NUN, textAlign: "left",
-                  }}>
-                    <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: "#8e89a8", width: 14, flexShrink: 0 }}>{i + 1}</span>
-                    <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: it.thumbnail ? `center/cover no-repeat url(${it.thumbnail})` : (it.cover_color || tag.bg) }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title || "Untitled"}</div>
-                      <div style={{ fontSize: 11, color: "#8e89a8" }}>by {it.creator || "a kid"}</div>
-                    </div>
-                    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: tag.bg, padding: "3px 8px", borderRadius: 999, flexShrink: 0 }}>{tag.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </>
+        {trending.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {trending.map((it, i) => {
+              const tag = KIND_TAG[it.kind] || KIND_TAG.game;
+              return (
+                <button key={it.kind + it.id} onClick={onTop} style={{
+                  display: "flex", alignItems: "center", gap: 11, background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.10)", borderRadius: 13, padding: "9px 11px",
+                  cursor: "pointer", color: "#fff", fontFamily: NUN, textAlign: "left",
+                }}>
+                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: "#8e89a8", width: 14, flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: it.thumbnail ? `center/cover no-repeat url(${it.thumbnail})` : (it.cover_color || tag.bg) }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title || "Untitled"}</div>
+                    <div style={{ fontSize: 11, color: "#8e89a8" }}>by {it.creator || "a kid"}</div>
+                  </div>
+                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: tag.bg, padding: "3px 8px", borderRadius: 999, flexShrink: 0 }}>{tag.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <button onClick={onTop} style={{
+            width: "100%", textAlign: "center", cursor: "pointer", color: "#cfc9e6", fontFamily: NUN,
+            background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(155,126,221,0.35)", borderRadius: 14, padding: "20px 16px",
+          }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: "#fff", marginBottom: 4 }}>No top projects yet</div>
+            <div style={{ fontSize: 13 }}>Make something and publish it to be the first on the board!</div>
+          </button>
         )}
 
+      </div>
+
+      {/* floating helper — bottom-right, chatbot style */}
+      <div style={{ position: "fixed", right: phone ? 14 : 22, bottom: phone ? 14 : 22, zIndex: 9000, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, fontFamily: NUN }}>
+        {helperOpen && (
+          <div style={{ maxWidth: 250, background: "#1b1830", border: "1px solid rgba(155,126,221,0.4)", borderRadius: "16px 16px 4px 16px", padding: "12px 14px", color: "#e9e5f7", boxShadow: "0 12px 34px rgba(0,0,0,0.55)", position: "relative" }}>
+            <button onClick={() => setHelperOpen(false)} aria-label="Close" style={{ position: "absolute", top: 6, right: 8, background: "none", border: "none", color: "#8e89a8", fontSize: 16, cursor: "pointer", lineHeight: 1 }}>×</button>
+            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>Hi {kidName}!</div>
+            <div style={{ fontSize: 13, lineHeight: 1.45, paddingRight: 6 }}>{helperLine}</div>
+            <button onClick={onGrownUp} style={{ marginTop: 8, background: "rgba(155,126,221,0.18)", border: "1px solid rgba(155,126,221,0.4)", color: "#cfc1f5", fontFamily: NUN, fontWeight: 800, fontSize: 12, borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}>Change my helper</button>
+          </div>
+        )}
+        <button onClick={() => setHelperOpen((o) => !o)} aria-label="Your helper" style={{
+          width: phone ? 56 : 64, height: phone ? 56 : 64, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.18)", cursor: "pointer",
+          background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", boxShadow: "0 8px 26px rgba(155,126,221,0.6)",
+          display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "flex-end",
+        }}>
+          <BuddyGlyph size={phone ? 30 : 34} />
+        </button>
       </div>
     </div>
   );
