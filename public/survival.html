@@ -72,11 +72,29 @@
 //  hero so kiting always works => a level can always be survived (it's fair).
 // ============================================================================
 const ART="https://www.buildablekids.com/api/story-library?img=character:";
+// --- Builder/replay config injection -------------------------------------
+// A game built in the Game Maker is just this engine + a chosen GAME_CONFIG.
+// The maker hands the recipe over the URL as ?cfg=<base64url JSON>; a saved or
+// shared game can pass ?g=<id> and we fetch the recipe. Falls back to the
+// default below so opening survival.html directly still plays a real game.
+(function(){
+  try{
+    var qs=new URLSearchParams(location.search);
+    var raw=qs.get('cfg');
+    if(raw){
+      var t=raw.replace(/-/g,'+').replace(/_/g,'/'); while(t.length%4)t+='=';
+      window.GAME_CONFIG=JSON.parse(decodeURIComponent(escape(atob(t))));
+    } else if(qs.get('g')){
+      var x=new XMLHttpRequest(); x.open('GET','/api/load-game?id='+encodeURIComponent(qs.get('g')),false); x.send(null);
+      if(x.status>=200&&x.status<300){ var row=JSON.parse(x.responseText); if(row&&row.config) window.GAME_CONFIG=row.config; }
+    }
+  }catch(e){ try{console.warn('[buildable] config load failed',e);}catch(_){} }
+})();
 const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Space Sparkles",
   theme: "space", artStyle: "modern3d",
-  bgImg: "chess-art/space_bg.png",                 // polished space backdrop
-  musicUrl: "game-music/music_space.mp3",          // looping space music
+  bgImg: "/chess-art/space_bg.jpg",                 // polished space backdrop
+  musicUrl: "/game-music/music_space.mp3",          // looping space music
   heroUrl: ART+"robot&style=modern3d&emo=happy",   // Bolt the Robot (drawn astronaut if it can't load)
   palette: { hero:"#eaf2ff", visor:"#62d0ff", spark:"#ffe27a", gem:"#6ff0ff", hp:"#ff7aa8", xp:"#7ad0ff", boss:"#c69bff" },
   // base hero stats (level-ups stack on top of these during a run)

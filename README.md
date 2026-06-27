@@ -15,6 +15,8 @@ persistence run as **Vercel serverless functions** under `/api`. The game itself
 **Phaser 3.60** rendered inside a sandboxed iframe (via a Blob URL) Ã¢ÂÂ it is generated
 HTML, not part of the React bundle.
 
+**Game Maker (data-driven engines).** Two fixed HTML engines live in `public/`: the platformer (`play.html`) and the survival game (`survival.html`). Each plays "a game" = engine + a `GAME_CONFIG` recipe. `src/GameMaker.jsx` is a guided picker (hero/world/difficulty/music) that builds that recipe and launches the engine via `?cfg=<base64url JSON>` (or `?g=<id>`). Built games save to My Stuff (`store.js` "games" kind) and publish to the Top board as a self-contained page (`/api/publish-game`); `/play/:id` (→ `api/play-game.js`) serves a published game. These engines are **not** the Phaser generation path below — they are fixed and re-skinnable by data only.
+
 **Repo layout.** The live app is in `src/` (entry: `src/main.jsx` -> `src/BuildableKids.jsx`).
 `api/*.js` are serverless endpoints. `db/` holds SQL seeds. `public/` holds static
 landing/library HTML. `upload/` holds the sprite-art PNGs and **duplicate copies** of

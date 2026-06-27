@@ -21,8 +21,8 @@
 
 const DB_NAME = "buildable_kids";
 const STORE = "library";
-const KINDS = ["characters", "levels", "sounds"];
-const LEGACY_KEYS = { characters: "bk_characters", levels: "bk_levels", sounds: "bk_sounds" };
+const KINDS = ["characters", "levels", "sounds", "games"];
+const LEGACY_KEYS = { characters: "bk_characters", levels: "bk_levels", sounds: "bk_sounds", games: "bk_games" };
 
 // Learning Mode caches are scoped per kid profile so two kids on one device
 // don't share badges/streak, and (when signed in) progress can follow a kid.
@@ -37,7 +37,7 @@ function scopeId() {
 function scopedKey(base) { return `${base}:${scopeId()}`; }
 
 // In-memory cache — the source of truth for synchronous reads.
-const cache = { characters: [], levels: [], sounds: [] };
+const cache = { characters: [], levels: [], sounds: [], games: [] };
 let ready = false;
 const listeners = new Set();
 
@@ -239,6 +239,36 @@ export function saveSound(sound) {
   persist("sounds");
   emit();
   return item;
+}
+
+// ---------------- Games (built in the Game Maker) ----------------
+// A saved game is just its name + the engine recipe (GAME_CONFIG). Replaying it
+// re-opens the same fixed engine with the same recipe, so it always plays back.
+export function listGames() {
+  return cache.games;
+}
+
+export function saveGame(game) {
+  const item = {
+    id: makeId(),
+    createdAt: Date.now(),
+    engine: game.engine || "platformer",
+    name: game.name || "My Game",
+    world: game.world || "",
+    difficulty: game.difficulty || "",
+    image: game.image || null,
+    config: game.config || null,
+  };
+  cache.games = [item, ...cache.games];
+  persist("games");
+  emit();
+  return item;
+}
+
+export function deleteGame(id) {
+  cache.games = cache.games.filter((g) => g.id !== id);
+  persist("games");
+  emit();
 }
 
 export function deleteSound(id) {

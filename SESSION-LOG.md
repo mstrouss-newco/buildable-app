@@ -1,5 +1,31 @@
 # Buildable Kids — Session Log
 
+## Game Maker — guided builder for the two engines (June 26 2026)
+
+Both game engines (the **platformer** `public/play.html` and the new **survival**
+`public/survival.html`) are now driven by a guided maker, exactly like Music Maker and
+Story Maker. A game = the fixed engine + a `GAME_CONFIG` recipe; nothing is regenerated.
+
+- **`src/GameMaker.jsx`** — a 4-pick picture flow (hero → world → how tricky → music),
+  then "name it" and **Build my game!**. It assembles a `GAME_CONFIG` and hands it to the
+  engine over the URL as `?cfg=<base64url JSON>`. Six shared worlds (forest, ocean, space,
+  candy, castle, desert) each bundle a backdrop + music track + colour palette that already
+  exist in the repo, so there's no new art to generate.
+- **Engine config injection** — both `play.html` and `survival.html` read `?cfg=` (and
+  `?g=<id>` for a saved/shared game) before falling back to their built-in default, so
+  opening either file directly still plays a real game.
+- **Survival shipped live** — `survival-engine.html` is now `public/survival.html` with its
+  deps (`buildable-renders.js`, `buildable-audio.js`, `public/game-music/`) and explicit
+  `vercel.json` routes (the catch-all otherwise swallows new public files).
+- **Save + share parity** — built games save locally to **My Stuff → My Games** (replayable
+  via `?cfg=`) and **Publish** to the Top board through `/api/publish-game` (a tiny self-
+  contained page that embeds the live engine with the recipe baked in).
+- **Fixed playback** — added `/play/:id` (route → `api/play-game.js`) so a published game
+  actually opens; this route was missing before.
+- Wiring: `src/BuildableKids.jsx` Games picker → Game Maker per engine; game remixes from the
+  Top board open the maker in the matching engine.
+
+
 ## Game: per-world themed enemies, hazards & coins (June 26 2026)
 
 Follow-up to the 7-new-worlds session. The engine drew every world's enemy/hazard/coin from

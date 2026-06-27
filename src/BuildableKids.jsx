@@ -9,6 +9,7 @@ import MusicMaker from "./MusicMaker";
 import AdminDashboard from "./AdminDashboard";
 import GrownUpScreen from "./GrownUpScreen";
 import StoryMaker from "./StoryMaker";
+import GameMaker from "./GameMaker";
 import TopBoard from "./TopBoard.jsx";
 import LoadingGames from "./LoadingGames";
 import QuizGate from "./QuizGate";
@@ -34,6 +35,7 @@ const SCREEN_CHESS = "chess";
 const SCREEN_GAME_PICKER = "game_picker";
 const SCREEN_PLATFORMER = "platformer";
 const SCREEN_SURVIVAL = "survival";
+const SCREEN_GAME_MAKER = "game_maker";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_TOP = "top";
 function LearningControl() {
@@ -102,7 +104,7 @@ function SurvivalScreen({ onHome }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Buildable Survival" src="/survival-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+      <iframe title="Buildable Survival" src="/survival.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
@@ -131,8 +133,9 @@ export default function BuildableKids() {
     if (item.kind === "song") setScreen(SCREEN_MUSIC);
     else if (item.kind === "story") setScreen(SCREEN_STORY);
     else {
-      setGameData((prev) => ({ ...prev, playerName: prev.playerName || (activeKid && activeKid.display_name) || "", gameType: null, character: null, level: null }));
-      setScreen(SCREEN_GAME_TYPE);
+      const eng = (item.mechanic || "").toLowerCase().indexOf("surviv") !== -1 ? "survival" : "platformer";
+      setGameEngine(eng);
+      setScreen(SCREEN_GAME_MAKER);
     }
   };
   const [activeKid, setActiveKidState] = useState(getActiveKid());
@@ -144,6 +147,7 @@ export default function BuildableKids() {
     character: null,
     level: null,
   });
+  const [gameEngine, setGameEngine] = useState("platformer");
 
   // Finish a Google sign-in no matter which screen we land on: if the return
   // tokens are in the URL, complete the session and go straight to "Who's playing?".
@@ -365,7 +369,19 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => { setGameEngine("platformer"); setScreen(SCREEN_GAME_MAKER); }} onSurvival={() => { setGameEngine("survival"); setScreen(SCREEN_GAME_MAKER); }} />;
+  }
+  if (screen === SCREEN_GAME_MAKER) {
+    return (
+      <GameMaker
+        engine={gameEngine}
+        playerName={(activeKid && activeKid.display_name) || gameData.playerName || ""}
+        remix={remixData && remixData.kind === "game" ? remixData : null}
+        onConsumeRemix={() => setRemixData(null)}
+        onBack={() => setScreen(SCREEN_GAME_PICKER)}
+        onHome={() => setScreen(SCREEN_HOME)}
+      />
+    );
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;

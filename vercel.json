@@ -100,6 +100,10 @@
       "dest": "/play.html"
     },
     {
+      "src": "/survival.html",
+      "dest": "/survival.html"
+    },
+    {
       "src": "/story-demo.html",
       "dest": "/story-demo.html"
     },
@@ -168,16 +172,16 @@
       "dest": "/game-music/$1"
     },
     {
-      "src": "/survival-engine.html",
-      "dest": "/survival-engine.html"
-    },
-    {
       "src": "/buildable-renders.js",
       "dest": "/buildable-renders.js"
     },
     {
       "src": "/buildable-audio.js",
       "dest": "/buildable-audio.js"
+    },
+    {
+      "src": "/play/([^/]+)",
+      "dest": "/api/play-game?id=$1"
     },
     {
       "src": "/(.*)",

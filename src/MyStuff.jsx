@@ -11,6 +11,8 @@ import {
   listLevels,
   deleteLevel,
   listSounds,
+  listGames,
+  deleteGame,
   onLibraryChange,
   getProgress,
   getLearningSettings,
@@ -50,6 +52,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
   const [levels, setLevels] = useState(listLevels());
   const [sounds, setSounds] = useState(listSounds());
   const [songs, setSongs] = useState([]);
+  const [games, setGames] = useState(listGames());
 
   async function loadSongs() {
     try {
@@ -78,6 +81,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
       setCharacters([...listCharacters()]);
       setLevels([...listLevels()]);
       setSounds([...listSounds()]);
+      setGames([...listGames()]);
     };
     refresh();
     return onLibraryChange(refresh);
@@ -91,11 +95,23 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
     deleteLevel(id);
     setLevels(listLevels());
   };
+  const removeGame = (id) => {
+    deleteGame(id);
+    setGames(listGames());
+  };
+  function b64url(obj) {
+    try { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); } catch { return ""; }
+  }
+  const playGame = (g) => {
+    const path = g.engine === "survival" ? "/survival.html" : "/play.html";
+    window.location.href = path + "?cfg=" + b64url(g.config);
+  };
 
   const tabs = [
     { id: "characters", label: "My Characters", count: characters.length },
     { id: "levels", label: "My Levels", count: levels.length },
     { id: "songs", label: "My Songs", count: songs.length },
+    { id: "games", label: "My Games", count: games.length },
   ];
 
   return (
@@ -182,6 +198,32 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
                   <button style={s.deleteBtn} onClick={() => removeLevel(l.id)}>
                     Delete
                   </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* ---------- Games ---------- */}
+      {tab === "games" && (
+        games.length === 0 ? (
+          <div style={s.grid}><button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button></div>
+        ) : (
+          <div style={s.grid}>
+            <button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button>
+            {games.map((g) => (
+              <div key={g.id} style={s.card}>
+                {g.image ? (
+                  <img src={g.image} alt={g.name} style={s.cardImage} />
+                ) : (
+                  <div style={s.noImage}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="9" rx="4.5"/><path d="M7 12v3M5.5 13.5h3"/><circle cx="16" cy="12.5" r="0.9"/></svg></div>
+                )}
+                <h3 style={s.cardTitle}>{g.name}</h3>
+                <p style={s.cardDesc}>{[g.engine === "survival" ? "Survival" : "Platformer", g.world, g.difficulty].filter(Boolean).join(" \u00b7 ")}</p>
+                <div style={s.cardActions}>
+                  <button style={s.useBtn} onClick={() => playGame(g)}>Play</button>
+                  <button style={s.deleteBtn} onClick={() => removeGame(g.id)}>Delete</button>
                 </div>
               </div>
             ))}
