@@ -295,9 +295,9 @@ function makeCloudTexture(){
   return new THREE.CanvasTexture(cv);
 }
 function makeCloud(){ if(!cloudTex)cloudTex=makeCloudTexture();
-  const m=new THREE.MeshBasicMaterial({map:cloudTex,transparent:true,depthWrite:false,fog:false,opacity:0.92});
-  const w=20+Math.random()*18; const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,w*0.52), m);
-  mesh.userData.vx=0.012+Math.random()*0.03; return mesh;
+  const m=new THREE.MeshBasicMaterial({map:cloudTex,transparent:true,depthWrite:false,fog:false,opacity:0.95});
+  const w=26+Math.random()*22; const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,w*0.5), m);
+  mesh.userData.vx=0.06+Math.random()*0.07; return mesh;   // clearly visible drift
 }
 function makeBalloon(color){ const g=new THREE.Group();
   const balloon=new THREE.Mesh(new THREE.SphereGeometry(1.6,16,14), new THREE.MeshBasicMaterial({color,fog:false}));
@@ -335,14 +335,14 @@ function buildScene(){
     grp.position.set(sx*(6.8+(i%3)*0.6), 0, NEAR_Z - i*12);
     grp.userData.kind = useTree ? "tree" : "house"; grp.userData.swayPh=Math.random()*6.28;
     scene.add(grp); scenePool.push(grp); } }
-  // floating clouds (drift across the sky, in front of the AI backdrop)
-  for(let i=0;i<8;i++){ const cl=makeCloud();
-    cl.position.set(-60+Math.random()*120, 13+Math.random()*16, -60 - Math.random()*90);
+  // floating clouds (drift across the sky, in front of the AI backdrop) — big & close enough to read
+  for(let i=0;i<12;i++){ const cl=makeCloud();
+    cl.position.set(-65+Math.random()*130, 10+Math.random()*15, -38 - Math.random()*70);
     scene.add(cl); cloudPool.push(cl); }
-  // a couple of hot-air balloons drifting far off for life
+  // hot-air balloons drifting for life
   const balloonCols=[0xff7aa8,0x62d0ff,0xffd23f];
-  for(let i=0;i<2;i++){ const b=makeBalloon(balloonCols[i%balloonCols.length]);
-    b.position.set((i?1:-1)*(16+Math.random()*10), 10+Math.random()*6, -80 - i*30);
+  for(let i=0;i<3;i++){ const b=makeBalloon(balloonCols[i%balloonCols.length]);
+    b.position.set((i%2?1:-1)*(12+Math.random()*16), 11+Math.random()*7, -55 - i*22);
     scene.add(b); balloonPool.push(b); }
   carGroup=makeCar(0xff5d8f, 0xff86ac); carGroup.position.set(0,0,zForP(CAR_Y)); scene.add(carGroup);
   sceneReady=true;
