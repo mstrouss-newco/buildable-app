@@ -33,7 +33,13 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
-- (none right now)
+- **claude/games-checkers** — NEW kid-friendly Checkers (turn-based, Pattern A, the chess
+  model). Owns NEW files only: `public/buildable-checkers.html`,
+  `db/create-checkers-matches.sql`, `src/lib/checkersMatches.js`, `src/FamilyCheckers.jsx`,
+  `qa-checkers.mjs`. Touches shared files additively: `vercel.json` (adds a checkers route),
+  `api/sfx.js` (adds `checkers_*` one-shots), `src/BuildableKids.jsx` (adds a Games-picker
+  Checkers tile + `SCREEN_CHECKERS`/`SCREEN_CHECKERS_FAMILY` — high-collision file, edits
+  kept tiny & isolated). Does NOT touch the chess files.
 
 ## Suggested ownership (to avoid collisions)
 - Games engines + `public/*.html` + `vercel.json` routes
