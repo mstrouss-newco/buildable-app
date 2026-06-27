@@ -75,6 +75,44 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Word Buddies — kid spelling game with a teaching Helper (June 27 2026)
+New Track B engine `public/word-buddies.html` — a gentle, kid-friendly Words-With-Friends. Two
+players take turns making short 2–4 letter words (CAT, DOG, SUN, FISH) on a small 9×9 board from
+a letter rack; drag tiles (or tap-select then tap a cell). **No timers, no harsh "invalid" buzz** —
+a wrong try gets a soft nudge, not a buzzer. On branch `claude/games-word-buddies` (NOT main).
+
+- **The Helper is the heart.** A friendly "Stuck?" button (capped at 3×/game) PLUS an auto-offer
+  after 3 wrong tries. It finds a word the kid can actually make right now, highlights the tiles in
+  order, places them, and **SPELLS IT ALOUD** ("C… A… T… cat!"). The Helper never scores against the
+  kid — it credits the current player. Built as a **reusable mechanic** `makeTeachHint(deps)` and
+  registered as `teach-hint-spell` in `game_mechanics` (`db/seed-word-buddies-mechanics.sql`) so
+  Typing / Bingo and future readers can call it. (MECHANICS.md §14.)
+- **Created audio (not synth).** New `api/spell-voice.js` — crafted ElevenLabs TTS for clear A–Z
+  letter NAMES (phonetic respellings so a single letter is never misread) + the spoken word list,
+  cached in `narration_cache`, served as mp3. Registered in the shared catalog (`/api/list-audio`
+  now returns a `speech` section, theme `words`) so Typing/Bingo reuse the same clips. New bespoke
+  gentle one-shots in `api/sfx.js` (`wb_pick/place/word/star/helper/oops/win`; synth = silent
+  fallback only). **Owner step:** these auto-generate + cache on first request — pre-warm with
+  `node qa/prewarm-word-buddies.mjs` (needs `ELEVENLABS_API_KEY` set in Vercel, which it already is).
+- **Shared libs, no emoji:** tiles/board/Helper highlight via `BR`; tile-pop / word-complete juice
+  via `BM`; start screen (Solo / 2-player, no-back in-iframe) via `BS`; created SFX via `BA`.
+  Gentle points, soft win — everyone celebrated (`BB.win()` + `{source:"buildable",kind:"win"}`).
+- **Always-winnable + QA'd.** Letter bag is weighted from the word list and the engine guarantees a
+  move exists each turn (rack reshuffle backstop; Helper also plays crossword-style touch words when
+  the center jams). `qa-word-buddies.mjs` drives `window.BUILDABLE_GAME` headlessly: opening move
+  exists 300/300 seeds, 10 full auto-Helper games play only real words with no sparse dead-end, and
+  the hand-built validator accepts a real Helper placement — ALL CHECKS PASS. `npm run build` clean.
+- **Multiplayer:** ships **same-device pass-and-play first (v1)**. Turn-based cross-device is
+  scaffolded the chess way — `db/create-word-matches.sql` (poll-a-row `word_matches`, family-RLS,
+  copy of `chess_matches`); the React lobby (`wordMatches.js`/`FamilyWord.jsx`) is the follow-up.
+- **Route:** `public/word-buddies.html` (+ `/word-buddies`) added to `vercel.json` before the
+  landing catch-all. **Tile + screen:** "Word Buddies" in the Games picker → `WordBuddiesScreen`
+  iframe in `src/BuildableKids.jsx`; logged as slug `word_buddies` in `GAME_SLUGS`.
+
+**Owner actions:** run `db/seed-word-buddies-mechanics.sql` and (for future online play)
+`db/create-word-matches.sql` once in Supabase; optionally `node qa/prewarm-word-buddies.mjs` to
+pre-generate all letter/word audio. Branch is `claude/games-word-buddies` — **merge when ready, not pushed to main.**
+
 ## Tennis: per-world background music + pre-warmed assets (June 27 2026)
 - **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.
 - **Pre-warmed all generated assets** so the first kid never waits: 8 court images (`/api/images?kind=tennis&id=*`), 7 one-shot SFX (`/api/sfx?s=tennis_*`), and 8 music tracks (`/api/tennis-music?world=*`) generated + cached.

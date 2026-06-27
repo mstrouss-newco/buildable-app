@@ -73,6 +73,15 @@ const SOUNDS = {
   spk_win:     "Happy short victory fanfare with a bright cosmic sparkle, cheerful kids game win, no voices",
   spk_lose:    "Gentle soft descending wah-wah with a little twinkle, friendly cartoon lose, short, no music, no voices",
 
+  // ---- Word Buddies (spelling game) — bespoke gentle one-shots (NO harsh buzz) ----
+  wb_pick:     "Short soft gentle pluck pop, picking up a wooden letter tile, friendly cartoon, single hit, no music, no voices",
+  wb_place:    "Short soft warm wooden tile tap placing down, gentle and satisfying, single hit, no music, no voices",
+  wb_word:     "Short cheerful magical sparkle chime, a word finished, happy and bright, single hit, no music, no voices",
+  wb_star:     "Short bright happy little star ding with a tiny sparkle, single hit, no music, no voices",
+  wb_helper:   "Short warm friendly gentle chime, a kind helper appearing to lend a hand, single hit, no music, no voices",
+  wb_oops:     "Very soft gentle low boop, a kind try-again nudge, warm and NOT harsh, single hit, no music, no voices",
+  wb_win:      "Happy short celebration fanfare with cheerful sparkles, gentle kids game win, no voices",
+
   // ---- Sound Machine: silly kid-fun one-shots (public/soundboard.html) ----
   fart:        "Short funny wet squelchy fart, silly whoopee cushion raspberry toot, comedic cartoon, single hit, no music, no voices",
   giggle:      "Short cute happy kid giggle laugh, playful and silly, single hit, no music",
@@ -218,6 +227,7 @@ const DURATIONS = {
   breaker_smash:0.5, breaker_break:0.6, breaker_power:0.8, breaker_miss:0.6,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
+  wb_pick:0.4, wb_place:0.4, wb_word:1.0, wb_star:0.5, wb_helper:0.8, wb_oops:0.5, wb_win:1.6,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   giggle:0.9, roar:1.0, robot:0.8, splat:0.5, cash:0.7, drumroll:1.3, gong:1.4,
   frog:0.6, moo:1.0, rooster:1.2, vroom:1.0, sneeze:0.8, partypop:1.0,

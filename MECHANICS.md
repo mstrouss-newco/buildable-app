@@ -349,3 +349,39 @@ Three reusable mechanics shipped with Tennis. Registered in `game_mechanics` via
 `foot` label (e.g. a difficulty hint), with NO progression wording. Use it for
 difficulty/mode pickers where "Cleared / Next up / Locked" doesn't fit. (Tennis uses three
 `ready` cards: Easy / Normal / Tricky.)
+
+
+## 14. Teaching Helper mechanic from Word Buddies (`teach-hint-spell`)
+
+A reusable **"stuck? — let me show you"** Helper for LEARNING games, shipped with Word
+Buddies (`public/word-buddies.html`). Registered in `game_mechanics` via
+`db/seed-word-buddies-mechanics.sql`. This is the heart of turning a game into a teaching
+toy: instead of just failing a stuck kid, the Helper finds something they can actually do,
+**does it with them, and says it out loud.**
+
+| slug | what it gives a game | how to reuse |
+|---|---|---|
+| `teach-hint-spell` | A friendly Helper that finds a makeable answer, highlights the pieces **in order**, places them, and **SPELLS/SAYS IT ALOUD** ("C… A… T… cat!") | Build one with `makeTeachHint(deps)` (in `word-buddies.html`). The Helper **never scores against the kid** — the host credits the kid. Trigger = a capped button (3×/game) **and** an auto-offer after N wrong tries. |
+
+**The contract** (`makeTeachHint(deps)` → `{ findMove, play }`):
+
+```js
+const Helper = makeTeachHint({
+  words, rows, cols,
+  letterAt: (r,c)=>committedLetter|null,   // what's already on the board
+  rackOf:   ()=>[...availableLetters],      // the stuck learner's pieces
+  place:    (cell)=>{},                     // commit one piece {r,c,letter}
+  sayLetter:(ch)=>Promise, sayWord:(w)=>Promise,   // SPEAK it (crafted audio)
+  onStep:   (cell,i)=>{}, onWord:(word)=>{},        // visual highlight hooks
+});
+Helper.findMove();      // first makeable word (shortest-first = friendliest), or null
+await Helper.play(true); // highlight in order → place → spell each letter → say the word
+```
+
+`findMove` connects a word two ways: **through** an existing letter, or **crossword-style**
+(a fresh word in empty cells touching the board) so a move stays available when the middle
+jams. Pair it with a rack-reshuffle backstop for an **always-winnable** guarantee (Word
+Buddies' `ensureMove`). The spoken audio comes from **`/api/spell-voice`** (ElevenLabs,
+cached) — clear A–Z letter NAMES + a simple word list — registered in the shared audio
+catalog (`/api/list-audio` `speech` section, theme `words`), so **Typing and Bingo reuse
+the exact same clips.** No emoji; tiles/highlights drawn via `BR`, juice via `BM`.

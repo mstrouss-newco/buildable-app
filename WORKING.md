@@ -33,7 +33,12 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
-- (none right now)
+- **Word Buddies** (branch `claude/games-word-buddies`) — new spelling game with a teaching
+  Helper. Owns: `public/word-buddies.html`, `api/spell-voice.js`, additive edits to
+  `api/sfx.js` + `api/list-audio.js`, `db/seed-word-buddies-mechanics.sql`,
+  `db/create-word-matches.sql`, `qa-word-buddies.mjs`, and the Word Buddies tile/screen +
+  route in `src/BuildableKids.jsx` / `vercel.json`. v1 = same-device pass-and-play; awaiting
+  Mike's merge (NOT on main). Live-deploy QA pending the branch preview.
 
 ## Suggested ownership (to avoid collisions)
 - Games engines + `public/*.html` + `vercel.json` routes

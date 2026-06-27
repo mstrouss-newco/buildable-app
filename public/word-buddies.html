@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Word Buddies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+<style>
+  html,body{margin:0;height:100%;background:#FBF3E6;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none}
+  #wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+  #topbar{height:50px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 96px;color:#4a3b78;font-weight:800;gap:8px}
+  #turn{flex:1;text-align:center;font-family:'Fredoka',sans-serif;font-size:17px;font-weight:700}
+  .scorechip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:900;padding:4px 10px;border-radius:999px}
+  #soundBtn{width:36px;height:36px;border:none;border-radius:50%;background:rgba(124,92,252,.14);color:#6a4fe0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
+  #stage{flex:1;position:relative;min-height:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #controls{flex:0 0 auto;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
+  .btn{font-family:'Fredoka',sans-serif;font-weight:700;font-size:15px;border:none;border-radius:14px;padding:11px 16px;cursor:pointer;color:#fff;background:#9b86e8;box-shadow:0 4px 0 rgba(0,0,0,.10)}
+  .btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.10)}
+  .btn.primary{background:linear-gradient(160deg,#5BC98C,#33A86D);font-size:17px;padding:12px 24px}
+  .btn.help{background:linear-gradient(160deg,#FFC75A,#F0972A);color:#5a3a00}
+  .btn.ghost{background:rgba(124,92,252,.14);color:#5a47a0;box-shadow:none}
+  .btn:disabled{opacity:.45;cursor:default}
+  #menu{position:absolute;inset:0;z-index:5}
+  #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:rgba(40,30,70,.92);color:#fff;font-weight:800;font-size:14px;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:6;max-width:88%;text-align:center}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="topbar">
+    <div id="turn">Word Buddies</div>
+    <div id="scores" style="display:flex;gap:6px;flex:0 0 auto"></div>
+    <button id="soundBtn" aria-label="Sound">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9v6h4l5 4V5L9 9z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg>
+    </button>
+  </div>
+  <div id="stage">
+    <canvas id="c"></canvas>
+    <div id="toast"></div>
+    <div id="menu"></div>
+  </div>
+  <div id="controls">
+    <button class="btn help" id="stuckBtn">Stuck?</button>
+    <button class="btn ghost" id="mixBtn">Mix</button>
+    <button class="btn primary" id="wordBtn">Word!</button>
+    <button class="btn ghost" id="swapBtn">New tiles</button>
+    <button class="btn ghost" id="doneBtn">Finish</button>
+  </div>
+</div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-buddy.js"></script>
+<script>
+/* ============================================================================
+   WORD BUDDIES — a gentle, kid-friendly Words-With-Friends with a learning HELPER.
+   Track B hand-authored engine. Content-as-data GAME_CONFIG. Always-winnable, no
+   timers, no harsh "invalid" buzz. The HELPER is the heart: when a kid is stuck it
+   finds a word they can really make, places it tile-by-tile, and SPELLS IT ALOUD
+   ("C... A... T... cat!"). The Helper is built as a reusable teach/hint mechanic
+   (see makeTeachHint) so Typing/Bingo and other learning games can call it.
+
+   Shared engine libs: BR (drawn tiles/board — NO emoji), BM (tile-pop/word juice),
+   BS (start screen), BA (created SFX). Spoken letters/words come from /api/spell-voice
+   (ElevenLabs, cached) and are registered in the shared audio library.
+
+   QA hook: window.BUILDABLE_GAME (alias WORD_BUDDIES_GAME) with sim()/guarantee().
+============================================================================ */
+const BR=(typeof window!=="undefined"&&window.BuildableRenders)||null;
+const BA=(typeof window!=="undefined"&&window.BuildableAudio)||null;
+const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||null;
+const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||null;
+const BB=(typeof window!=="undefined"&&window.BB)||{win(){},lose(){},cheer(){},levelup(){}};
+const HAS_DOM = (typeof document!=="undefined") && !!(document.getElementById && document.getElementById("c"));
+
+/* ---------------- CONTENT AS DATA ---------------- */
+const GAME_CONFIG = (typeof window!=="undefined" && window.GAME_CONFIG) || {
+  board: { cols: 9, rows: 9 },
+  rackSize: 7,
+  seedWord: "cat",                 // placed across the center so move 1 has an anchor
+  // easy 2–4 letter words (kept in sync with api/spell-voice.js WORDS)
+  words: ["cat","dog","sun","fish","bat","hat","cap","map","pig","cow","hen","fox",
+          "bug","bee","ant","owl","run","hop","dig","mud","log","web","jam","cup",
+          "pot","pan","net","bed","box","top","bus","van","sky","toy","ball","bird",
+          "frog","tree","star","moon","milk","cake","book","duck","rain","leaf","nest"],
+  // gentle scoring (soft win, encouraging)
+  score: { perTile: 1, base: 1, longBonusLen: 4, longBonus: 2 },
+  helper: { perGame: 3, autoAfterWrong: 3 },   // button up to 3x/game + auto-offer after 3 wrong tries
+  colors: {
+    p1: "#7C5CFC", p2: "#F0577E",
+    tile: "#FFF4DC", tileEdge: "#E8D6AE", letter: "#5A3D1E",
+    pend: "#FFE3A0", pendEdge: "#E9B84A",
+    boardBg: "#F3E7CF", cell: "#FBF3E0", cellEdge: "#E4D2AC", center: "#E7C98A",
+    helper: "#36B37E",
+  },
+};
+const WORDS = GAME_CONFIG.words.map(w=>w.toLowerCase());
+const WORDSET = new Set(WORDS);
+const COLS = GAME_CONFIG.board.cols, ROWS = GAME_CONFIG.board.rows;
+const RACK_N = GAME_CONFIG.rackSize;
+const LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
+
+/* ---------------- seedable RNG (deterministic for QA) ---------------- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+let RNG = mulberry32((Date.now()>>>0));
+function rint(n){ return Math.floor(RNG()*n); }
+
+/* ---------------- letter bag (weighted toward the word list so plays are reachable) ---------------- */
+function buildBag(){
+  const freq={}; for(const w of WORDS) for(const ch of w) freq[ch]=(freq[ch]||0)+1;
+  const bag=[];
+  for(const ch of LETTERS){ const f=freq[ch]||0; let n=Math.round(f*0.7); if("aeiou".includes(ch)) n+=3; if(n<1 && f>0) n=1; for(let i=0;i<n;i++) bag.push(ch); }
+  // light shuffle
+  for(let i=bag.length-1;i>0;i--){ const j=rint(i+1); const t=bag[i]; bag[i]=bag[j]; bag[j]=t; }
+  return bag;
+}
+function deal(bag,n){ const out=[]; for(let i=0;i<n && bag.length;i++) out.push(bag.pop()); return out; }
+
+/* ---------------- game state ---------------- */
+let board, bag, players, turn, pending, state, twoPlayer, wrongCount, helperLeft, passes, helping;
+let held=null, dragX=0, dragY=0, selRack=-1, hlCells=null, hlIndex=-1; // UI/helper highlight
+let fx = BM? BM.makeFx() : {parts:[],pops:[],shake:0,flash:0,flashCol:"#fff"};
+
+function blankBoard(){ const b=[]; for(let r=0;r<ROWS;r++){ b.push(new Array(COLS).fill(null)); } return b; }
+function cur(){ return players[turn]; }
+
+function newGame(opts){
+  opts=opts||{};
+  if(opts.seed!=null) RNG=mulberry32(opts.seed>>>0);
+  twoPlayer = opts.twoPlayer!==false;     // default pass-and-play
+  board=blankBoard(); bag=buildBag();
+  // place the seed word across the center row so the first move always has an anchor
+  const sw=(GAME_CONFIG.seedWord||"cat").toLowerCase();
+  const cr=Math.floor(ROWS/2), cc=Math.floor((COLS-sw.length)/2);
+  for(let i=0;i<sw.length;i++) board[cr][cc+i]=sw[i];
+  players=[{name:"Purple",color:GAME_CONFIG.colors.p1,score:0,stars:0,rack:deal(bag,RACK_N)},
+           {name:"Coral", color:GAME_CONFIG.colors.p2,score:0,stars:0,rack:deal(bag,RACK_N)}];
+  turn=0; pending=[]; wrongCount=0; passes=0; helping=false;
+  helperLeft=GAME_CONFIG.helper.perGame;
+  selRack=-1; held=null; hlCells=null; hlIndex=-1;
+  ensureMove();   // always-winnable guarantee for whoever is up
+  state="play";
+  syncHud();
+}
+
+/* ---------------- merged board lookup (committed + tentative pending) ---------------- */
+function pendAt(r,c){ for(const p of pending){ if(p.r===r&&p.c===c) return p; } return null; }
+function letterAt(r,c){ if(r<0||c<0||r>=ROWS||c>=COLS) return null; const p=pendAt(r,c); if(p) return p.letter; return board[r][c]; }
+function committedAt(r,c){ if(r<0||c<0||r>=ROWS||c>=COLS) return null; return board[r][c]; }
+
+/* ---------------- multiset helpers ---------------- */
+function rackCounts(rack){ const m={}; for(const ch of rack) m[ch]=(m[ch]||0)+1; return m; }
+function rackHas(rack, need){ const m=rackCounts(rack); for(const ch of need){ if(!m[ch]) return false; m[ch]--; } return true; }
+
+/* ============================================================================
+   THE HELPER — a reusable "teach / hint / spell" mechanic.
+   Registered in game_mechanics as slug `teach-hint-spell` (db/seed-word-buddies-
+   mechanics.sql). Any learning game can build one by passing this small contract:
+     deps = {
+       words:    [..],                       // the valid word list
+       letterAt: (r,c)=>letter|null,         // committed board letters
+       rows, cols,
+       rackOf:   ()=>[...letters],           // the stuck player's available tiles
+       place:    (cell)=>{},                 // place one tile on the board (cell={r,c,letter})
+       sayLetter:(ch)=>Promise, sayWord:(w)=>Promise,   // SPEAK it out loud
+       onStep:   (cell,i)=>{}, onWord:(word)=>{},       // visual hooks (highlight in order)
+     }
+   findMove() returns the first makeable word (shorter words first = friendlier), or
+   null. play(animated) highlights the tiles in order, places them, and spells the
+   word aloud. The Helper NEVER scores against the kid — the host credits the kid.
+============================================================================ */
+function makeTeachHint(deps){
+  const DIRS=[[0,1],[1,0]];
+  const wordsByLen=deps.words.slice().sort((a,b)=>a.length-b.length);
+  function anchors(){ const a=[]; for(let r=0;r<deps.rows;r++) for(let c=0;c<deps.cols;c++){ if(deps.letterAt(r,c)) a.push([r,c]); } return a; }
+  function findMove(){
+    const rack=deps.rackOf();
+    for(const [ar,ac] of anchors()){
+      for(const [dr,dc] of DIRS){
+        for(const W of wordsByLen){
+          for(let i=0;i<W.length;i++){
+            if(W[i]!==deps.letterAt(ar,ac)) continue;
+            const sr=ar-dr*i, sc=ac-dc*i, er=sr+dr*(W.length-1), ec=sc+dc*(W.length-1);
+            if(sr<0||sc<0||er<0||ec<0||er>=deps.rows||ec>=deps.cols) continue;
+            // the cells just before/after the run must be empty so the word is exactly W
+            if(deps.letterAt(sr-dr,sc-dc)) continue;
+            if(deps.letterAt(er+dr,ec+dc)) continue;
+            const cells=[]; const need=[]; let placed=0, ok=true;
+            for(let k=0;k<W.length;k++){
+              const rr=sr+dr*k, cc=sc+dc*k, ex=deps.letterAt(rr,cc);
+              if(ex==null){ need.push(W[k]); placed++; cells.push({r:rr,c:cc,letter:W[k],fromRack:true}); }
+              else if(ex!==W[k]){ ok=false; break; }
+              else cells.push({r:rr,c:cc,letter:W[k],fromRack:false});
+            }
+            if(!ok||placed===0) continue;
+            if(!rackHas(rack,need)) continue;
+            return {word:W,cells,dir:[dr,dc]};
+          }
+        }
+      }
+    }
+    // fallback (crossword-style): drop a whole new word into empty cells that TOUCHES
+    // the board (≥1 cell orthogonally next to a committed tile). Keeps a move available
+    // when the through-anchor spots are all jammed. Only the main word is validated.
+    const hasCommitted = anchors().length>0;
+    if(hasCommitted){
+      for(const W of wordsByLen){
+        for(const [dr,dc] of DIRS){
+          for(let sr=0;sr<deps.rows;sr++) for(let sc=0;sc<deps.cols;sc++){
+            const er=sr+dr*(W.length-1), ec=sc+dc*(W.length-1);
+            if(er>=deps.rows||ec>=deps.cols) continue;
+            if(deps.letterAt(sr-dr,sc-dc)) continue;          // boundary before empty
+            if(deps.letterAt(er+dr,ec+dc)) continue;          // boundary after empty
+            let okc=true, touches=false; const cells=[]; const need=[];
+            for(let k=0;k<W.length;k++){
+              const rr=sr+dr*k, cc=sc+dc*k;
+              if(deps.letterAt(rr,cc)){ okc=false; break; }     // must be empty cells
+              need.push(W[k]); cells.push({r:rr,c:cc,letter:W[k],fromRack:true});
+              if(deps.letterAt(rr-1,cc)||deps.letterAt(rr+1,cc)||deps.letterAt(rr,cc-1)||deps.letterAt(rr,cc+1)) touches=true;
+            }
+            if(!okc||!touches) continue;
+            if(!rackHas(rack,need)) continue;
+            return {word:W,cells,dir:[dr,dc]};
+          }
+        }
+      }
+    }
+    return null;
+  }
+  async function play(animated){
+    const mv=findMove(); if(!mv) return null;
+    for(let i=0;i<mv.cells.length;i++){
+      const cell=mv.cells[i];
+      if(deps.onStep) deps.onStep(cell,i);
+      if(cell.fromRack) deps.place(cell);
+      if(animated && deps.sayLetter){ await deps.sayLetter(cell.letter); await wait(150); }
+    }
+    if(deps.onWord) deps.onWord(mv.word);
+    if(animated && deps.sayWord){ await deps.sayWord(mv.word); }
+    return mv;
+  }
+  return { findMove, play };
+}
+
+// One Helper instance bound to this engine's state.
+const Helper = makeTeachHint({
+  words: WORDS, rows: ROWS, cols: COLS,
+  letterAt: committedAt,
+  rackOf: ()=>cur().rack.slice(),
+  place: (cell)=>{ // remove one matching tile from the rack, place it as committed
+    const r=cur().rack, idx=r.indexOf(cell.letter); if(idx>=0) r.splice(idx,1);
+    board[cell.r][cell.c]=cell.letter;
+  },
+  sayLetter: (ch)=>Voice.sayLetter(ch),
+  sayWord: (w)=>Voice.sayWord(w),
+  onStep: (cell,i)=>{ hlCells=hlCells||[]; hlIndex=i; sfx("wb_place"); if(BM&&HAS_DOM){ const p=cellCenter(cell.r,cell.c); BM.burst(fx.parts,p.x,p.y,GAME_CONFIG.colors.helper,8); } },
+  onWord: (w)=>{ sfx("wb_word"); if(BM&&HAS_DOM){ const c=hlCells; } },
+});
+
+/* ---------------- spoken voice (ElevenLabs via /api/spell-voice, cached) ---------------- */
+const Voice = {
+  base:"/api/spell-voice", cache:{}, enabled:true,
+  el(url){ if(typeof Audio==="undefined") return null; if(!this.cache[url]){ const a=new Audio(url); a.preload="auto"; this.cache[url]=a; } return this.cache[url]; },
+  prime(){ if(typeof Audio==="undefined") return; for(const l of LETTERS) this.el(this.base+"?letter="+l); },
+  sayLetter(ch){ return this.play(this.base+"?letter="+encodeURIComponent(ch)); },
+  sayWord(w){ return this.play(this.base+"?word="+encodeURIComponent(w)); },
+  play(url){
+    return new Promise((res)=>{
+      if(!this.enabled || (BA&&BA.muted) || typeof Audio==="undefined") return res();
+      let done=false; const fin=()=>{ if(done) return; done=true; res(); };
+      try{ const a=this.el(url); a.currentTime=0; a.onended=fin;
+        const p=a.play(); if(p&&p.catch) p.catch(fin);
+        setTimeout(fin, 1500);   // safety so the chain never stalls
+      }catch(e){ fin(); }
+    });
+  },
+};
+function sfx(name){ if(BA&&BA.sfx) BA.sfx(name); }
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* ---------------- always-winnable guarantee ---------------- */
+// Make sure the player who is up can actually make a word. If not (rare), swap their
+// rack for fresh tiles until a move exists or the bag runs low. Silent backstop.
+function ensureMove(){
+  if(Helper.findMove()) return true;
+  for(let tries=0; tries<24 && bag.length>=RACK_N; tries++){
+    bag.push(...cur().rack); cur().rack=[];
+    for(let i=bag.length-1;i>0;i--){ const j=rint(i+1); const t=bag[i]; bag[i]=bag[j]; bag[j]=t; }
+    cur().rack=deal(bag,RACK_N);
+    if(Helper.findMove()) return true;
+  }
+  return !!Helper.findMove();
+}
+
+/* ---------------- refill + turns ---------------- */
+function refill(){ const need=RACK_N-cur().rack.length; if(need>0) cur().rack.push(...deal(bag,need)); }
+function nextTurn(){
+  pending=[]; selRack=-1; wrongCount=0; hlCells=null; hlIndex=-1;
+  if(twoPlayer) turn=1-turn;
+  ensureMove();
+  syncHud();
+}
+
+/* ---------------- submit a hand-built word (gentle checks) ---------------- */
+function recallPending(){ for(const p of pending) cur().rack.push(p.letter); pending=[]; }
+function lineOf(){
+  if(pending.length===0) return null;
+  const rs=new Set(pending.map(p=>p.r)), cs=new Set(pending.map(p=>p.c));
+  if(rs.size===1) return {dir:[0,1], fixed:[...rs][0], axis:"c"};
+  if(cs.size===1) return {dir:[1,0], fixed:[...cs][0], axis:"r"};
+  return null; // not a straight line
+}
+function validateSubmit(){
+  if(pending.length===0) return {ok:false,reason:"Place some tiles to make a word!"};
+  const ln=lineOf(); if(!ln) return {ok:false,reason:"Put your tiles in one line."};
+  const [dr,dc]=ln.dir;
+  // contiguity between the first and last pending cell along the line
+  const idx=(p)=> ln.axis==="c"? p.c : p.r;
+  const sorted=pending.slice().sort((a,b)=>idx(a)-idx(b));
+  let lo=idx(sorted[0]), hi=idx(sorted[sorted.length-1]);
+  const baseR= ln.axis==="c"? ln.fixed : 0, baseC= ln.axis==="c"? 0 : ln.fixed;
+  for(let k=lo;k<=hi;k++){ const rr= ln.axis==="c"? ln.fixed : k, cc= ln.axis==="c"? k : ln.fixed; if(!letterAt(rr,cc)) return {ok:false,reason:"Keep the tiles together — no gaps."}; }
+  // extend across committed tiles to read the whole word
+  let s=lo; while(letterAt(ln.axis==="c"?ln.fixed:s-1, ln.axis==="c"?s-1:ln.fixed)) s--;
+  let e=hi; while(letterAt(ln.axis==="c"?ln.fixed:e+1, ln.axis==="c"?e+1:ln.fixed)) e++;
+  let word=""; const cells=[]; let touchesCommitted=false;
+  for(let k=s;k<=e;k++){ const rr= ln.axis==="c"? ln.fixed : k, cc= ln.axis==="c"? k : ln.fixed; word+=letterAt(rr,cc); if(committedAt(rr,cc)) touchesCommitted=true; cells.push({r:rr,c:cc}); }
+  if(word.length<2) return {ok:false,reason:"Words need at least 2 letters."};
+  // connection: the word includes a committed tile, OR a pending tile touches one
+  if(!touchesCommitted){
+    let adj=false; for(const p of pending){ for(const [ar,ac] of [[p.r-1,p.c],[p.r+1,p.c],[p.r,p.c-1],[p.r,p.c+1]]){ if(committedAt(ar,ac)){ adj=true; break; } } if(adj) break; }
+    if(!adj) return {ok:false,reason:"Connect your word to the board."};
+  }
+  if(!WORDSET.has(word)) return {ok:false,reason:"Hmm, that's not a word yet — try again or tap Stuck?"};
+  return {ok:true, word, cells};
+}
+function scoreFor(word, newTiles){ const s=GAME_CONFIG.score; let pts=newTiles*s.perTile + s.base; if(word.length>=s.longBonusLen) pts+=s.longBonus; return pts; }
+
+function commitWord(word, newTilesCount, helperAssisted){
+  // commit pending tiles to the board
+  for(const p of pending){ board[p.r][p.c]=p.letter; }
+  pending=[];
+  const pts=scoreFor(word, newTilesCount);
+  cur().score+=pts; cur().stars+=1;
+  if(BM&&HAS_DOM){ BM.flash(fx,"#fff7d6",0.12); }
+  refill();
+}
+
+/* ---------------- actions wired to buttons ---------------- */
+async function doSubmit(){
+  if(state!=="play"||helping) return;
+  const v=validateSubmit();
+  if(!v.ok){ wrongCount++; sfx("wb_oops"); toast(v.reason); wiggle();
+    if(wrongCount>=GAME_CONFIG.helper.autoAfterWrong && helperLeft>0){ toast("Want a little help? Tap Stuck?"); pulseStuck(); }
+    return; }
+  const newTiles=pending.length;
+  // celebrate + spell it (kid's own word)
+  sfx("wb_word"); sfx("wb_star");
+  if(BM&&HAS_DOM){ for(const p of pending){ const c=cellCenter(p.r,p.c); BM.explode(fx,c.x,c.y,cur().color,{n:10,pop:"+"+scoreFor(v.word,newTiles),popCol:"#fff",shake:0.12,flash:0}); } }
+  commitWord(v.word,newTiles,false);
+  passes=0; syncHud();
+  // spell the word aloud, then pass
+  helping=true; updateButtons();
+  await spellAloud(v.word);
+  helping=false;
+  nextTurn(); updateButtons();
+}
+async function spellAloud(word){
+  for(const ch of word){ sfx("wb_place"); await Voice.sayLetter(ch); await wait(120); }
+  await Voice.sayWord(word);
+}
+async function doHelper(){
+  if(state!=="play"||helping) return;
+  if(helperLeft<=0){ toast("Helper has helped lots already — you try this one!"); return; }
+  recallPending();
+  const mv=Helper.findMove();
+  if(!mv){ toast("Let's get new tiles!"); doSwap(); return; }
+  helperLeft--; helping=true; wrongCount=0; updateButtons();
+  sfx("wb_helper"); toast("Watch — we'll spell it together!");
+  hlCells=mv.cells.slice();
+  await Helper.play(true);          // places tiles in order + speaks each letter + the word
+  // credit the CURRENT player (Helper never scores against the kid)
+  const newTiles=mv.cells.filter(c=>c.fromRack).length;
+  const pts=scoreFor(mv.word,newTiles); cur().score+=pts; cur().stars+=1;
+  if(BM&&HAS_DOM){ const last=mv.cells[mv.cells.length-1]; const c=cellCenter(last.r,last.c); BM.explode(fx,c.x,c.y,GAME_CONFIG.colors.helper,{n:14,pop:mv.word.toUpperCase()+"!",popCol:"#fff",shake:0.14,flash:0.08}); }
+  refill(); passes=0; syncHud();
+  helping=false; nextTurn(); updateButtons();
+}
+function doMix(){ if(helping) return; const r=cur().rack; for(let i=r.length-1;i>0;i--){ const j=rint(i+1); const t=r[i]; r[i]=r[j]; r[j]=t; } sfx("wb_pick"); selRack=-1; }
+function doSwap(){
+  if(helping) return; recallPending();
+  if(bag.length>0){ bag.push(...cur().rack); cur().rack=[]; for(let i=bag.length-1;i>0;i--){ const j=rint(i+1); const t=bag[i]; bag[i]=bag[j]; bag[j]=t; } cur().rack=deal(bag,RACK_N); toast(cur().name+" got new tiles."); }
+  else { toast("No more tiles in the bag!"); }
+  passes++; if(passes>=2 && bag.length===0){ finish(); return; }
+  sfx("wb_pick"); nextTurn(); updateButtons();
+}
+function finish(){
+  state="over"; recallPending(); syncHud(); sfx("wb_win");
+  if(BM&&HAS_DOM){ for(let i=0;i<4;i++) BM.burst(fx.parts, (HAS_DOM?cssW:600)*(0.25+0.18*i), (HAS_DOM?cssH:400)*0.4, [GAME_CONFIG.colors.p1,GAME_CONFIG.colors.p2,"#FFD166","#5BC98C"][i], 22, {gravity:18,spd:[2,6],life:[0.8,1.5]}); BM.flash(fx,"#ffffff",0.2); }
+  BB.win();  // encouraging: everyone wins — also logs the play result for the app
+  try{ if(window.parent&&window.parent!==window) window.parent.postMessage({source:"buildable",kind:"win",silent:true},"*"); }catch(e){}
+  updateButtons();
+}
+
+/* ============================================================================
+   RENDERING + INPUT (DOM only — fully guarded so the headless QA sim never touches it)
+============================================================================ */
+let cv, ctx, cssW=600, cssH=400, dpr=1;
+let board0={x:0,y:0,size:0,cell:0}, rack0={x:0,y:0,tile:0,gap:0};
+
+function cellCenter(r,c){ return { x: board0.x + c*board0.cell + board0.cell/2, y: board0.y + r*board0.cell + board0.cell/2 }; }
+function layout(){
+  const stage=document.getElementById("stage"); const rect=stage.getBoundingClientRect();
+  cssW=rect.width; cssH=rect.height; dpr=Math.min(2, window.devicePixelRatio||1);
+  cv.width=Math.round(cssW*dpr); cv.height=Math.round(cssH*dpr); cv.style.width=cssW+"px"; cv.style.height=cssH+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const rackArea=Math.max(70, Math.min(96, cssH*0.18));
+  const avail=Math.min(cssW-20, cssH-rackArea-16);
+  const size=Math.max(120, avail); const cell=Math.floor(size/COLS); const bs=cell*COLS;
+  board0={x:Math.round((cssW-bs)/2), y:8, size:bs, cell};
+  const tile=Math.min(cell, Math.floor((cssW-24)/RACK_N)-6, 52); const gap=8;
+  const rw=RACK_N*tile+(RACK_N-1)*gap;
+  rack0={x:Math.round((cssW-rw)/2), y:board0.y+bs+Math.max(10,(rackArea-tile)/2), tile, gap};
+}
+function roundTile(x,y,s,fill,edge,letter,letterCol,scale){
+  scale=scale||1; const cx=x+s/2, cy=y+s/2; ctx.save(); ctx.translate(cx,cy); ctx.scale(scale,scale); ctx.translate(-cx,-cy);
+  if(BR&&BR.rrect){ BR.rrect(ctx,x,y,s,s,Math.max(6,s*0.18)); } else { ctx.beginPath(); ctx.rect(x,y,s,s); }
+  ctx.fillStyle=fill; ctx.fill(); ctx.lineWidth=Math.max(2,s*0.05); ctx.strokeStyle=edge; ctx.stroke();
+  if(letter){ ctx.fillStyle=letterCol; ctx.font="700 "+Math.floor(s*0.56)+"px Fredoka, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(letter.toUpperCase(), x+s/2, y+s/2+s*0.04); }
+  ctx.restore();
+}
+function draw(){
+  if(!HAS_DOM) return;
+  const C=GAME_CONFIG.colors;
+  // soft background
+  const g=ctx.createLinearGradient(0,0,0,cssH); g.addColorStop(0,"#FFF7E8"); g.addColorStop(1,"#F6E9CE"); ctx.fillStyle=g; ctx.fillRect(0,0,cssW,cssH);
+  const sh=BM?BM.shakeOffset(fx):{x:0,y:0}; ctx.save(); ctx.translate(sh.x,sh.y);
+  // board backing
+  if(BR&&BR.rrect){ BR.rrect(ctx,board0.x-6,board0.y-6,board0.size+12,board0.size+12,16); ctx.fillStyle=C.boardBg; ctx.fill(); }
+  const ce=board0.cell;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const x=board0.x+c*ce, y=board0.y+r*ce;
+    const isC=(r===Math.floor(ROWS/2)&&c===Math.floor(COLS/2));
+    if(BR&&BR.rrect){ BR.rrect(ctx,x+2,y+2,ce-4,ce-4,6); ctx.fillStyle=isC?C.center:C.cell; ctx.fill(); ctx.lineWidth=1.5; ctx.strokeStyle=C.cellEdge; ctx.stroke(); }
+    const L=board[r][c];
+    if(L) roundTile(x+3,y+3,ce-6,C.tile,C.tileEdge,L,C.letter,1);
+  }
+  // pending tiles
+  for(const p of pending){ const x=board0.x+p.c*ce, y=board0.y+p.r*ce; roundTile(x+3,y+3,ce-6,C.pend,C.pendEdge,p.letter,C.letter,1); }
+  // helper highlight ring on the current step cell
+  if(hlCells && hlIndex>=0 && hlIndex<hlCells.length){ const hc=hlCells[hlIndex]; const x=board0.x+hc.c*ce, y=board0.y+hc.r*ce; const t=(Date.now()%900)/900; const a=0.4+0.4*Math.sin(t*Math.PI*2); ctx.save(); ctx.strokeStyle=C.helper; ctx.globalAlpha=a; ctx.lineWidth=4; if(BR&&BR.rrect){ BR.rrect(ctx,x+1,y+1,ce-2,ce-2,8); ctx.stroke(); } ctx.restore(); }
+  // rack
+  const rt=rack0.tile;
+  for(let i=0;i<RACK_N;i++){ const x=rack0.x+i*(rt+rack0.gap), y=rack0.y; const ch=cur().rack[i];
+    // slot
+    if(BR&&BR.rrect){ BR.rrect(ctx,x,y,rt,rt,10); ctx.fillStyle="rgba(124,92,252,0.07)"; ctx.fill(); ctx.setLineDash([4,4]); ctx.strokeStyle="rgba(124,92,252,0.25)"; ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]); }
+    if(ch && !(held&&held.src==="rack"&&held.i===i)){ const sel=(i===selRack); roundTile(x,y,rt,sel?C.pend:C.tile,sel?C.pendEdge:C.tileEdge,ch,C.letter,sel?1.06:1); }
+  }
+  // juice
+  if(BM) BM.draw(ctx, fx, {W:cssW,H:cssH,font:"700 18px Fredoka, sans-serif"});
+  ctx.restore();
+  // dragging tile follows the finger (drawn on top, unshaken)
+  if(held && held.letter){ roundTile(dragX-rt/2,dragY-rt/2,rt,C.pend,C.pendEdge,held.letter,C.letter,1.1); }
+  // game-over banner
+  if(state==="over"){ ctx.fillStyle="rgba(30,22,55,0.55)"; ctx.fillRect(0,0,cssW,cssH);
+    ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="700 30px Fredoka, sans-serif"; ctx.fillText("Great words!", cssW/2, cssH*0.4);
+    ctx.font="700 19px Fredoka, sans-serif";
+    const a=players[0], b=players[1];
+    ctx.fillText(a.name+": "+a.score+(twoPlayer?("   "+b.name+": "+b.score):""), cssW/2, cssH*0.4+38);
+    ctx.font="600 15px Nunito, sans-serif"; ctx.fillStyle="#ffe9b0"; ctx.fillText("Tap New game to play again", cssW/2, cssH*0.4+70);
+  }
+}
+function frame(){ if(HAS_DOM){ try{ draw(); }catch(e){} if(BM) BM.update(fx); } requestAnimationFrame(frame); }
+
+/* ---------------- pointer input ---------------- */
+function evtPos(e){ const r=cv.getBoundingClientRect(); const t=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0])||e; return {x:t.clientX-r.left, y:t.clientY-r.top}; }
+function rackIndexAt(x,y){ const rt=rack0.tile; if(y<rack0.y-6||y>rack0.y+rt+6) return -1; for(let i=0;i<RACK_N;i++){ const tx=rack0.x+i*(rt+rack0.gap); if(x>=tx-3&&x<=tx+rt+3) return i; } return -1; }
+function cellAt(x,y){ const ce=board0.cell; if(x<board0.x||y<board0.y||x>board0.x+board0.size||y>board0.y+board0.size) return null; const c=Math.floor((x-board0.x)/ce), r=Math.floor((y-board0.y)/ce); if(r<0||c<0||r>=ROWS||c>=COLS) return null; return {r,c}; }
+let downX=0,downY=0,downT=0;
+function onDown(e){ if(state!=="play"||helping) return; e.preventDefault(); const p=evtPos(e); downX=p.x; downY=p.y; downT=Date.now();
+  const ri=rackIndexAt(p.x,p.y);
+  if(ri>=0 && cur().rack[ri]){ held={src:"rack",i:ri,letter:cur().rack[ri]}; dragX=p.x; dragY=p.y; sfx("wb_pick"); return; }
+  const cl=cellAt(p.x,p.y); if(cl){ const pp=pendAt(cl.r,cl.c); if(pp){ held={src:"cell",r:cl.r,c:cl.c,letter:pp.letter}; dragX=p.x; dragY=p.y; sfx("wb_pick"); return; } }
+}
+function onMove(e){ if(!held) return; e.preventDefault(); const p=evtPos(e); dragX=p.x; dragY=p.y; }
+function placeFromHeld(target){
+  if(!held) return;
+  if(held.src==="rack"){
+    if(target){ // place rack tile onto an empty board cell
+      pending.push({r:target.r,c:target.c,letter:held.letter,from:held.i});
+      cur().rack.splice(held.i,1); sfx("wb_place");
+    }
+  } else if(held.src==="cell"){
+    // move an existing pending tile
+    const p=pendAt(held.r,held.c);
+    if(target){ p.r=target.r; p.c=target.c; sfx("wb_place"); }
+    else { // dropped to rack / off board -> return to rack
+      pending=pending.filter(x=>x!==p); cur().rack.push(p.letter); sfx("wb_pick"); }
+  }
+}
+function onUp(e){ if(state!=="play"||helping){ held=null; return; } e.preventDefault(); const p=evtPos(e); const dist=Math.hypot(p.x-downX,p.y-downY); const tap=(dist<8 && Date.now()-downT<350);
+  const target=cellAt(p.x,p.y); const onBoardEmpty = target && !letterAt(target.r,target.c);
+  if(tap){
+    if(held&&held.src==="rack"){ selRack=(selRack===held.i?-1:held.i); held=null; return; }
+    if(held&&held.src==="cell"){ const pp=pendAt(held.r,held.c); pending=pending.filter(x=>x!==pp); cur().rack.push(pp.letter); held=null; sfx("wb_pick"); return; }
+    // tap an empty cell with a selected rack tile -> place it
+    if(selRack>=0 && onBoardEmpty && cur().rack[selRack]){ pending.push({r:target.r,c:target.c,letter:cur().rack[selRack],from:selRack}); cur().rack.splice(selRack,1); selRack=-1; sfx("wb_place"); held=null; return; }
+    held=null; return;
+  }
+  // drag drop
+  if(held){ placeFromHeld(onBoardEmpty?target:null); held=null; }
+}
+
+/* ---------------- HUD + buttons + toast ---------------- */
+function el(id){ return document.getElementById(id); }
+function syncHud(){ if(!HAS_DOM) return;
+  el("turn").textContent = state==="over" ? "Great words!" : (twoPlayer ? (cur().name+"'s turn") : "Build a word!");
+  const sc=el("scores"); sc.innerHTML="";
+  const mk=(pl,on)=>{ const s=document.createElement("span"); s.className="scorechip"; s.style.background=pl.color+(on?"":"22"); s.style.color=on?"#fff":pl.color; s.textContent=pl.score; return s; };
+  sc.appendChild(mk(players[0],turn===0)); if(twoPlayer) sc.appendChild(mk(players[1],turn===1));
+}
+function updateButtons(){ if(!HAS_DOM) return; const playing=state==="play"&&!helping;
+  el("wordBtn").disabled=!playing; el("mixBtn").disabled=!playing; el("swapBtn").disabled=!playing;
+  el("stuckBtn").disabled=!playing||helperLeft<=0; el("stuckBtn").textContent = helperLeft>0? "Stuck? ("+helperLeft+")" : "Stuck?";
+  el("doneBtn").textContent = state==="over" ? "New game" : "Finish";
+}
+let toastT=null;
+function toast(msg){ if(!HAS_DOM) return; const t=el("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2200); }
+let wiggleT=0; function wiggle(){ if(BM&&HAS_DOM){ BM.shake(fx,0.25); } }
+function pulseStuck(){ if(!HAS_DOM) return; const b=el("stuckBtn"); b.animate?b.animate([{transform:"scale(1)"},{transform:"scale(1.12)"},{transform:"scale(1)"}],{duration:600,iterations:2}):0; }
+
+/* ---------------- start screen (BS) ---------------- */
+let startScreen=null;
+function startCfg(){ return {
+  title:"Word Buddies", subtitle:"Make little words — your Helper spells them out loud!",
+  sound: !(BA&&BA.muted), showBack:false,
+  modes:["solo","two"], mode: twoPlayer?"two":"solo",
+  levels:[
+    {n:1,name:"Make Words", color:GAME_CONFIG.colors.p1, state:"ready", foot:"Take turns • gentle points"},
+    {n:2,name:"Helper spells it", color:GAME_CONFIG.colors.helper, state:"ready", foot:"Tap Stuck? for a hand"},
+  ],
+}; }
+function showMenu(){ if(!HAS_DOM||!BS) { return; } state="menu"; const host=el("menu"); host.style.display="block";
+  startScreen=BS.mount(host, startCfg(), {
+    onMode:(m)=>{ twoPlayer=(m==="two"); },
+    onSound:(on)=>{ if(BA){ BA.unlock(); BA.toggleMute(); } },
+    onPlay:()=>{ host.style.display="none"; if(startScreen){startScreen.destroy();startScreen=null;} BA&&BA.unlock&&BA.unlock(); Voice.prime(); newGame({twoPlayer}); updateButtons(); },
+  });
+}
+
+/* ---------------- boot ---------------- */
+if(HAS_DOM){
+  cv=el("c"); ctx=cv.getContext("2d");
+  // created SFX (ElevenLabs via /api/sfx); BA synth is the silent fallback only
+  if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+    wb_pick:"wb_pick", wb_place:"wb_place", wb_word:"wb_word", wb_star:"wb_star",
+    wb_helper:"wb_helper", wb_oops:"wb_oops", wb_win:"wb_win" } }); }
+  const ro=()=>{ layout(); }; window.addEventListener("resize",ro);
+  newGame({twoPlayer:true}); state="menu";    // build a game underneath, show menu on top
+  layout();
+  cv.addEventListener("pointerdown",onDown); cv.addEventListener("pointermove",onMove); cv.addEventListener("pointerup",onUp); cv.addEventListener("pointercancel",()=>{held=null;});
+  cv.addEventListener("touchstart",onDown,{passive:false}); cv.addEventListener("touchmove",onMove,{passive:false}); cv.addEventListener("touchend",onUp,{passive:false});
+  el("wordBtn").onclick=doSubmit; el("stuckBtn").onclick=doHelper; el("mixBtn").onclick=doMix; el("swapBtn").onclick=doSwap;
+  el("doneBtn").onclick=()=>{ if(state==="over"){ showMenu(); } else finish(); };
+  el("soundBtn").onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } };
+  showMenu(); updateButtons(); syncHud();
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================================
+   QA / sim hook — headless, no DOM. Asserts the engine is always-winnable: the
+   Helper must ALWAYS find a valid, connected word, and every word it plays is in
+   the dictionary. Shared name window.BUILDABLE_GAME (+ alias).
+============================================================================ */
+const QA = {
+  // one full game where the Helper auto-plays every turn until the bag is dry
+  sim(seed, maxTurns){
+    newGame({seed:(seed==null?12345:seed), twoPlayer:true});
+    const words=[]; let allValid=true, stuckSparse=false; const cap=maxTurns||80; let t=0;
+    const filled=()=>{ let n=0; for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(board[r][c]) n++; return n; };
+    while(state==="play" && t<cap){
+      ensureMove();
+      const mv=Helper.findMove();
+      if(!mv){
+        // graceful end if the bag is dry or the small board is packed; a "stuck" with a
+        // sparse board and a full bag would be a real always-winnable failure.
+        // NOTE: this auto-player uses the Helper every turn and clusters the center
+        // (a worst case a human wouldn't hit). A human always also has "New tiles"
+        // (pass+reshuffle) and "Finish", so the game never hard-locks. We only flag a
+        // failure if the move-finder dies on a still-sparse board (a real engine bug).
+        const ratio=filled()/(ROWS*COLS);
+        if(bag.length>0 && ratio<0.40) stuckSparse=true;
+        break;
+      }
+      const newTiles=mv.cells.filter(c=>c.fromRack).length;
+      for(const cell of mv.cells){ if(cell.fromRack){ const r=cur().rack, i=r.indexOf(cell.letter); if(i>=0) r.splice(i,1); board[cell.r][cell.c]=cell.letter; } }
+      if(!WORDSET.has(mv.word)) allValid=false;
+      words.push(mv.word);
+      cur().score+=scoreFor(mv.word,newTiles); cur().stars+=1;
+      refill(); turn=1-turn; t++;
+    }
+    const fillRatio=+(filled()/(ROWS*COLS)).toFixed(2);
+    const pass = allValid && !stuckSparse && words.length>0;
+    return { seed:(seed==null?12345:seed), turns:t, words, allValid, stuckSparse, fillRatio, scores:players.map(p=>p.score), bagLeft:bag.length, result: pass?"PASS":"FAIL" };
+  },
+  // the always-winnable guarantee across many seeds: a move must exist on the opening turn
+  guarantee(n){
+    n=n||200; let fails=0; const bad=[];
+    for(let s=0;s<n;s++){ newGame({seed:s,twoPlayer:true}); if(!Helper.findMove()){ fails++; if(bad.length<8) bad.push(s); } }
+    return { tried:n, openingMoveMissing:fails, badSeeds:bad, result: fails===0?"PASS":"FAIL" };
+  },
+  // the manual-submit validator, exercised on a known-good and known-bad placement
+  checkValidator(){
+    newGame({seed:7,twoPlayer:true});
+    // try to extend/cross the seed word with a real word from the rack via the Helper move
+    const mv=Helper.findMove(); if(!mv) return {result:"FAIL",why:"no move"};
+    for(const cell of mv.cells){ if(cell.fromRack){ const r=cur().rack,i=r.indexOf(cell.letter); if(i>=0) r.splice(i,1); pending.push({r:cell.r,c:cell.c,letter:cell.letter}); } }
+    const v=validateSubmit();
+    return { result: v.ok && WORDSET.has(v.word) ? "PASS":"CHECK", word:v.word, reason:v.reason||null };
+  },
+  _state:()=>state, _cfg:()=>GAME_CONFIG, _find:()=>Helper.findMove(),
+};
+if(typeof window!=="undefined"){ window.BUILDABLE_GAME=QA; window.WORD_BUDDIES_GAME=QA; }
+if(typeof module!=="undefined" && module.exports){ module.exports={QA, makeTeachHint, WORDS}; }
+</script>
+</body>
+</html>

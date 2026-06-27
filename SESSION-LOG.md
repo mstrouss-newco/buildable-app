@@ -1,5 +1,25 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Word Buddies: kid spelling game with a teaching Helper (branch claude/games-word-buddies)
+- New Track B engine `public/word-buddies.html`: gentle Words-With-Friends for early readers — take
+  turns making 2–4 letter words on a 9×9 board from a letter rack. NO timers, NO harsh buzz; wrong
+  tries get a soft nudge. Content-as-data `GAME_CONFIG` (board, word list, weighted bag, scoring).
+- **HELPER (the point of it):** "Stuck?" button (3×/game) + auto-offer after 3 wrong tries. Finds a
+  makeable word, highlights tiles in order, places them, and SPELLS IT ALOUD ("C… A… T… cat!").
+  Never scores against the kid. Built reusable as `makeTeachHint(deps)` + registered
+  `teach-hint-spell` in `game_mechanics` (`db/seed-word-buddies-mechanics.sql`) for Typing/Bingo.
+- **Created audio:** `api/spell-voice.js` (ElevenLabs TTS for A–Z letter names + the word list,
+  cached) + gentle one-shots in `api/sfx.js` (`wb_*`); both surfaced via `/api/list-audio` (new
+  `speech` section, theme `words`). `qa/prewarm-word-buddies.mjs` pre-warms all clips.
+- Shared `BR`/`BM`/`BS`/`BA` (no emoji). Always-winnable (bag weighting + per-turn move guarantee +
+  crossword touch fallback). QA: `qa-word-buddies.mjs` — opening move 300/300 seeds, 10 full games
+  all-valid & no sparse dead-end, validator PASS; `npm run build` clean. Decisions set with Mike:
+  2–4 letters, gentle points, Helper = auto-after-3-wrong + 3× button, pre-generated audio.
+- v1 = same-device pass-and-play. Cross-device turn-based scaffolded (`db/create-word-matches.sql`,
+  poll-a-row chess model); React lobby is the follow-up. Route + Games tile + `WordBuddiesScreen`
+  wired in `vercel.json` / `src/BuildableKids.jsx`. **On a branch — not pushed to main.**
+  Owner: run the 2 SQL files; live-deploy QA pending the branch preview.
+
 ## 2026-06-27 — Art Studio: "art desk" — every tool visible, grouped into labeled zones
 - Picker-only version hid too much (kid couldn't find things). Rebuilt so EVERYTHING is on
   screen at once, organized into clearly separated zones each with a little icon header:

@@ -10,6 +10,7 @@
 // returned and any project may mix freely. Read-only, no DB, never breaks.
 import { SOUNDS } from "./sfx.js";
 import { CHESS_MUSIC_WORLDS } from "./chess-music.js";
+import { LETTER_SAY, WORDS } from "./spell-voice.js";
 
 // Reusable mood-music loops shipped as static files (public/music-library/).
 const MUSIC_LIB = [
@@ -26,6 +27,9 @@ const SFX_THEME = {
   water: "water", fire: "fire", waves: "ocean", forest: "forest",
   crickets: "forest", wind: "snow", jungle: "jungle", space: "space",
   candy: "candy", rain: "rain",
+  // Word Buddies (spelling game) gentle one-shots (theme "words")
+  wb_pick: "words", wb_place: "words", wb_word: "words", wb_star: "words",
+  wb_helper: "words", wb_oops: "words", wb_win: "words",
   // story narrative one-shots
   door: "castle", knock: "castle", bell: "castle", thunder: "storm",
   firewhoosh: "forest", rustle: "forest", splash: "ocean",
@@ -106,19 +110,44 @@ export default async function handler(req, res) {
     });
   }
 
+  // ---- SPEECH (crafted spoken letters + words, ElevenLabs via /api/spell-voice) ----
+  // Reusable reading-game audio: any project (Word Buddies, Typing, Bingo) can
+  // speak a clear letter NAME or a simple word from these cached clips.
+  const speech = [];
+  for (const ltr of Object.keys(LETTER_SAY || {})) {
+    speech.push({
+      id: "speech:ltr_" + ltr,
+      name: "Letter " + ltr.toUpperCase(),
+      kind: "speech", role: "letter", theme: "words",
+      url: "/api/spell-voice?letter=" + encodeURIComponent(ltr),
+      source: "word-buddies",
+    });
+  }
+  for (const w of [...new Set(WORDS || [])]) {
+    speech.push({
+      id: "speech:w_" + w,
+      name: 'Word "' + w + '"',
+      kind: "speech", role: "word", theme: "words",
+      url: "/api/spell-voice?word=" + encodeURIComponent(w),
+      source: "word-buddies",
+    });
+  }
+
   // Optional theme filter (label, not fence): with no theme, return everything.
   const matches = (a) => !theme || norm(a.theme) === theme;
   const m = music.filter(matches);
   const s = sfx.filter(matches);
+  const sp = speech.filter(matches);
 
-  const themes = [...new Set([...music, ...sfx].map((a) => a.theme).filter(Boolean))].sort();
+  const themes = [...new Set([...music, ...sfx, ...speech].map((a) => a.theme).filter(Boolean))].sort();
 
   return res.status(200).json({
     configured: true,
     theme: theme || null,
     themes,
-    counts: { music: m.length, sfx: s.length },
+    counts: { music: m.length, sfx: s.length, speech: sp.length },
     music: m,
     sfx: s,
+    speech: sp,
   });
 }

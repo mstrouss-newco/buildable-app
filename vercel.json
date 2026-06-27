@@ -228,6 +228,14 @@
       "dest": "/art-studio.html"
     },
     {
+      "src": "/word-buddies.html",
+      "dest": "/word-buddies.html"
+    },
+    {
+      "src": "/word-buddies",
+      "dest": "/word-buddies.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
