@@ -1,6 +1,7 @@
 // /api/list-stories.js — saved stories for one profile (by kid_profile_id when
 // signed in, else device_id), newest first. Read-only, service key. Mirrors
 // list-songs.js. Omits the big story JSON unless ?storyId=ID asks for one full story.
+import { thumbForWorld } from "./_thumbs.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 function sb(path) {
@@ -24,11 +25,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, story: Array.isArray(rows) ? rows[0] || null : null });
     }
     const filter = kidProfileId ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId) : "device_id=eq." + encodeURIComponent(deviceId);
-    const baseCols = "story_id,title,world,cover_color,created_at";
+    const safeCols = "story_id,title,world,cover_color,created_at";
+    const baseCols = safeCols + ",cover_art:story->pages->0->>art_url"; // first-page art as cover
     let r = await sb("saved_stories?" + filter + "&select=" + baseCols + ",published,play_count,heart_count&order=created_at.desc&limit=20");
     if (!r.ok) { r = await sb("saved_stories?" + filter + "&select=" + baseCols + "&order=created_at.desc&limit=20"); }
+    if (!r.ok) { r = await sb("saved_stories?" + filter + "&select=" + safeCols + "&order=created_at.desc&limit=20"); } // last resort: no cover_art
     if (!r.ok) { const detail = await r.text(); return res.status(502).json({ error: "list failed", status: r.status, detail: detail.slice(0, 300) }); }
-    const stories = await r.json();
+    let stories = await r.json();
+    if (Array.isArray(stories)) stories = stories.map((row) => ({
+      ...row,
+      thumbnail: row.cover_art || thumbForWorld(row.world) || null,
+    }));
     return res.status(200).json({ ok: true, configured: true, stories: Array.isArray(stories) ? stories : [], count: Array.isArray(stories) ? stories.length : 0, max: 20 });
   } catch (e) {
     return res.status(500).json({ error: "server error", detail: String((e && e.message) || e).slice(0, 200) });

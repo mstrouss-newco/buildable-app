@@ -1,4 +1,5 @@
 // /api/list-published-games.js
+import { thumbForWorld } from "./_thumbs.js";
 // PUBLIC gallery endpoint for kid-published games (published_games table).
 //   GET /api/list-published-games            -> newest approved games (no html, light list)
 //   GET /api/list-published-games?gameId=ID  -> one full game including html (to play it)
@@ -37,7 +38,8 @@ export default async function handler(req, res) {
     }
     const r = await fetch(url, { headers: sbHeaders(supabaseKey) });
     if (!r.ok) return res.status(200).json({ games: [] });
-    const games = await r.json();
+    let games = await r.json();
+    if (Array.isArray(games)) games = games.map((g) => ({ ...g, thumbnail: g.preview_image_url || thumbForWorld(g.theme) || null }));
     return res.status(200).json({ games: Array.isArray(games) ? games : [] });
   } catch (e) {
     return res.status(200).json({ games: [] });

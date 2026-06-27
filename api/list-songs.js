@@ -3,6 +3,7 @@
 // Read-only. Used by the kid-facing "My Songs" library and by games that want to
 // reuse a previously created track. The 10-song cap is enforced on save, not here.
 
+import { songCover } from "./_thumbs.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
@@ -47,7 +48,8 @@ export default async function handler(req, res) {
       const detail = await r.text();
       return res.status(502).json({ error: "list failed", status: r.status, detail: detail.slice(0, 300) });
     }
-    const songs = await r.json();
+    let songs = await r.json();
+    if (Array.isArray(songs)) songs = songs.map((row) => ({ ...row, thumbnail: songCover(row.vibe, row.theme) }));
     return res.status(200).json({
       configured: true,
       songs: Array.isArray(songs) ? songs : [],
