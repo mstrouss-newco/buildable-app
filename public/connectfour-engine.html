@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Connect Four</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b1030;overflow:hidden;touch-action:manipulation;font-family:'Fredoka',-apple-system,sans-serif;color:#fff}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;border-radius:18px;touch-action:none}
+  #start{position:fixed;inset:0;z-index:10;display:none}
+  #hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;font-weight:700;font-size:18px;
+       background:rgba(20,16,54,.66);padding:8px 18px;border-radius:999px;pointer-events:none;white-space:nowrap}
+  .corner{position:fixed;top:12px;z-index:30;font-family:inherit;font-weight:800;font-size:14px;color:#cdd0ff;
+          background:rgba(26,20,64,.72);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer}
+  #home{left:12px} #mute{right:12px}
+  #banner{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;
+          background:rgba(8,10,40,.74);backdrop-filter:blur(3px)}
+  #banner.show{display:flex}
+  #banner .card{background:linear-gradient(180deg,#1a1450,#2a1b6b);border:2px solid #4a36a0;border-radius:24px;
+                padding:30px 40px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  #bTitle{font-size:40px;font-weight:700;margin:0 0 6px} #bSub{opacity:.82;margin:0 0 20px;font-size:18px}
+  #again{font-family:inherit;font-weight:700;font-size:22px;color:#1a0f3a;background:#7ee0a0;border:none;border-radius:16px;
+         padding:14px 40px;cursor:pointer;box-shadow:0 6px 0 #4cba74}
+  #again:active{transform:translateY(3px);box-shadow:0 3px 0 #4cba74}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv"></canvas></div>
+<div id="hud"></div>
+<button id="home" class="corner">Home</button>
+<button id="mute" class="corner">Sound: On</button>
+<div id="start"></div>
+<div id="banner"><div class="card"><h1 id="bTitle"></h1><p id="bSub"></p><button id="again">Play again</button></div></div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-boardgame.js"></script>
+<script>
+const BG = window.BuildableBoardGame, BR = window.BuildableRenders;
+const COLS=7, ROWS=6, NEED=4;
+const P = [{ name:"Red", col:"#FF5A6E", glow:"rgba(255,90,110,.6)" },
+           { name:"Gold", col:"#FFC94D", glow:"rgba(255,201,77,.6)" }];
+
+function geo(W,H){ const pad=Math.min(W,H)*0.06; const availW=W-pad*2, availH=H-pad*2;
+  let cell=Math.min(availW/COLS, availH/ROWS); const bw=cell*COLS, bh=cell*ROWS;
+  return { x0:(W-bw)/2, y0:(H-bh)/2, cell, bw, bh, rad:cell*0.40 }; }
+function slot(W,H,col,row){ const g=geo(W,H); return { x:g.x0+(col+.5)*g.cell, y:g.y0+(row+.5)*g.cell, g }; }
+function lowestEmpty(cells,col){ for(let r=ROWS-1;r>=0;r--){ if(!cells[r*COLS+col]) return r; } return -1; }
+
+function disc(ctx,x,y,r,player){ const col=P[player-1].col;
+  const gg=ctx.createRadialGradient(x,y,1,x,y,r*1.5); gg.addColorStop(0,P[player-1].glow); gg.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(x,y,r*1.5,0,7); ctx.fill();
+  const cg=ctx.createRadialGradient(x-r*0.35,y-r*0.4,1,x,y,r); cg.addColorStop(0,BR._lighten(col,0.5)); cg.addColorStop(1,col);
+  ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.25)"; ctx.lineWidth=Math.max(1,r*0.08); ctx.beginPath(); ctx.arc(x,y,r*0.78,0,7); ctx.stroke();
+}
+
+const spec = {
+  id:"connectfour", title:"Connect Four", subtitle:"Drop discs — line up four to win!",
+  modes:["solo","two"], aiName:"Robo", players:P, aspect:COLS/ROWS,
+  sfx:{ place:"board_drop", win:"board_win", draw:"board_draw" },
+  sfxPlace:"place", sfxWin:"win", sfxDraw:"draw",
+
+  init(){ return { cells:new Array(COLS*ROWS).fill(0), fall:{} }; },
+  moves(G){ const m=[]; for(let c=0;c<COLS;c++) if(lowestEmpty(G.cells,c)>=0) m.push(c); return m; },
+
+  move(G, col, api){
+    if(col<0||col>=COLS) return { moved:false };
+    const row=lowestEmpty(G.cells,col); if(row<0) return { moved:false };
+    G.cells[row*COLS+col]=api.turn;
+    G.fall[row*COLS+col]=G._t||0;                 // visual drop start time
+    const s=slot(api.W,api.H,col,row);
+    return { moved:true, sound:"place", fx:{ x:s.x, y:s.y, col:P[api.turn-1].col, n:12 } };
+  },
+  tap(G,x,y,api){ const g=geo(api.W,api.H); const c=Math.floor((x-g.x0)/g.cell);
+    if(c<0||c>=COLS) return { moved:false }; return spec.move(G,c,api); },
+
+  // EASY computer: takes a win, usually blocks, avoids handing a win, prefers the middle.
+  ai(G,api){ const me=2, you=1, legal=spec.moves(G);
+    const wins=(p,col)=>{ const r=lowestEmpty(G.cells,col); if(r<0) return false; G.cells[r*COLS+col]=p; const w=BG.lineWinner(G.cells,COLS,ROWS,NEED); G.cells[r*COLS+col]=0; return !!w; };
+    let pick=-1;
+    for(const c of legal) if(wins(me,c)){ pick=c; break; }                       // win now
+    if(pick<0 && api.rng()<0.6){ for(const c of legal) if(wins(you,c)){ pick=c; break; } }  // block ~60%
+    if(pick<0){ // avoid moves that let the opponent win immediately (when we notice ~70%)
+      let safe=legal;
+      if(api.rng()<0.7){ safe=legal.filter(c=>{ const r=lowestEmpty(G.cells,c); G.cells[r*COLS+c]=me; const bad=spec.moves(G).some(cc=>wins(you,cc)); G.cells[r*COLS+c]=0; return !bad; }); if(!safe.length) safe=legal; }
+      const order=[3,2,4,1,5,0,6].filter(c=>safe.includes(c));
+      pick = (api.rng()<0.6 && order.length) ? order[Math.floor(api.rng()*Math.min(3,order.length))] : BG.pick(safe,api.rng);
+    }
+    return spec.move(G, pick, api);
+  },
+
+  result(G){ const w=BG.lineWinner(G.cells,COLS,ROWS,NEED);
+    if(w) return { over:true, winner:w.player, line:{ cells:w.cells } };
+    if(BG.boardFull(G.cells)) return { over:true, winner:0 };
+    return { over:false };
+  },
+  hud(G,ctrl){ if(ctrl.mode==="solo") return ctrl.turn===1?"Your turn — tap a column":"Robo is thinking...";
+    return P[ctrl.turn-1].name+"'s turn — tap a column"; },
+
+  draw(ctx,G,R){ const {W,H,t}=R; const g=geo(W,H); G._t=t;
+    // board body
+    BR.rrect(ctx, g.x0-12, g.y0-12, g.bw+24, g.bh+24, 22);
+    const bg=ctx.createLinearGradient(0,g.y0,0,g.y0+g.bh); bg.addColorStop(0,"#2440b0"); bg.addColorStop(1,"#16277a");
+    ctx.fillStyle=bg; ctx.fill();
+    // holes + discs
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const s=slot(W,H,c,r); const idx=r*COLS+c; const v=G.cells[idx];
+      // hole
+      ctx.fillStyle="#0c1645"; ctx.beginPath(); ctx.arc(s.x,s.y,g.rad,0,7); ctx.fill();
+      if(v){ const start=G.fall[idx]; let y=s.y;
+        if(start!=null){ const prog=Math.min(1,(t-start)/0.32); const from=g.y0-g.cell; y=from+(s.y-from)*(1-(1-prog)*(1-prog)); if(prog>=1) y=s.y; }
+        disc(ctx,s.x,y,g.rad*0.92,v); }
+    }
+    // win highlight
+    if(R.line && R.line.cells){ ctx.save();
+      for(const idx of R.line.cells){ const c=idx%COLS, r=(idx/COLS|0), s=slot(W,H,c,r);
+        ctx.strokeStyle="rgba(255,255,255,.95)"; ctx.lineWidth=g.rad*0.22; ctx.shadowColor="#fff"; ctx.shadowBlur=16;
+        ctx.beginPath(); ctx.arc(s.x,s.y,g.rad*0.92,0,7); ctx.stroke(); }
+      ctx.restore(); }
+  },
+};
+
+const ctrl = BG.boot(spec);
+
+// ---------- QA / picker hook ----------
+function fullGame(opts){ opts=opts||{}; const mode=opts.mode||"two", cap=opts.cap||COLS*ROWS+2;
+  ctrl.rnd=BG.rng(opts.seed||1); ctrl.startGame(mode);
+  const strat=opts.strat || ((G)=>BG.pick(spec.moves(G), ctrl.rnd));
+  const strat2=opts.strat2 || strat; let n=0;
+  while(ctrl._state()==="play" && n<cap){
+    if(mode==="solo" && ctrl._turn()===2){ ctrl._ai(); }
+    else { const who=ctrl._turn(); ctrl._play((who===1?strat:strat2)(ctrl.G,who)); }
+    n++;
+  }
+  const r=spec.result(ctrl.G);
+  return { result:ctrl._state(), winner:r.winner, moves:n, full:BG.boardFull(ctrl.G.cells) };
+}
+// "smart-ish" player: win, block, avoid feeding a win, center-biased (proves the AI is beatable + games end)
+function smart(G, me){ const you=me===1?2:1; const legal=spec.moves(G);
+  const wins=(p,c)=>{ const r=lowestEmpty(G.cells,c); if(r<0)return false; G.cells[r*COLS+c]=p; const w=BG.lineWinner(G.cells,COLS,ROWS,NEED); G.cells[r*COLS+c]=0; return !!w; };
+  for(const c of legal) if(wins(me,c)) return c;
+  for(const c of legal) if(wins(you,c)) return c;
+  let safe=legal.filter(c=>{ const r=lowestEmpty(G.cells,c); G.cells[r*COLS+c]=me; const bad=spec.moves(G).some(cc=>wins(you,cc)); G.cells[r*COLS+c]=0; return !bad; });
+  if(!safe.length) safe=legal; const order=[3,2,4,1,5,0,6].filter(c=>safe.includes(c)); return order[0];
+}
+window.BUILDABLE_GAME = {
+  _cfg:()=>({ title:spec.title, modes:spec.modes, cols:COLS, rows:ROWS }),
+  sim: fullGame,
+  simVsAI:(seed)=>fullGame({ mode:"solo", seed:seed||7, strat:(G)=>smart(G,1) }),
+  moves:()=>ctrl.moves(), _play:(t)=>ctrl._play(t), _ai:()=>ctrl._ai(),
+  _turn:()=>ctrl._turn(), _state:()=>ctrl._state(), result:()=>spec.result(ctrl.G),
+  _begin:(m)=>ctrl.startGame(m||"two"), _draw:()=>ctrl._draw(), _G:()=>ctrl.G,
+};
+window.CONNECTFOUR_GAME = window.BUILDABLE_GAME;
+</script>
+</body>
+</html>

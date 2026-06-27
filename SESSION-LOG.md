@@ -1,5 +1,37 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Three simple 2-player board games on ONE shared shell (Tic-Tac-Toe, Connect Four, Dots and Boxes)
+Branch: `claude/games-simple-batch1` (handed to Mike — NOT pushed to main).
+- **New shared shell built ONCE:** `public/buildable-boardgame.js` (`BG`, `window.BuildableBoardGame`)
+  — the Track-B host for turn-based, same-device, no-backend board games. It owns the hot-seat
+  TURN MANAGER (Player A / Player B, or solo vs an easy computer), the canvas (responsive + DPR +
+  rAF loop), pointer→board mapping ("place your thing"), the shared start screen (BS, Solo/2-player
+  mode row), sound (BA), juice (BM shake/burst), the win banner + Play again, Home→`nav:exit`, mute,
+  and a headless QA scaffold. Plus two reusable DETECTORS: `BG.lineWinner` (N-in-a-row any direction)
+  and `BG.boxesNewlyClosed` (the 4th-side-claims-a-box rule).
+- **Three engines instantiate it** (~150 lines each = rules + draw + easy AI):
+  - `public/tictactoe-engine.html` — 3x3, first to three; solo easy computer or 2-player.
+  - `public/connectfour-engine.html` — 7x6, discs fall to the lowest slot, first to four any
+    direction; falling-disc animation (visual only — logic resolves immediately); solo AI or 2-player.
+  - `public/dotsboxes-engine.html` — small 3x3-box grid for young kids; draw a line, close a box's
+    4th side to claim it AND go again; most boxes wins; solo AI or 2-player.
+- **Always-winnable / pressure-free:** no soft-locks (every game terminates with a valid result),
+  ties are friendly (not a loss), and the easy AI is genuinely beatable (takes obvious wins, only
+  sometimes blocks, otherwise plays light/random). No emoji — all art is drawn via BR primitives.
+- **Bespoke created sounds** registered in `api/sfx.js` (BA synth = silent fallback only):
+  `board_place`, `board_drop`, `board_line`, `board_claim`, `board_win`, `board_draw` (all ≥0.5s).
+- **Reusable mechanics written back** per MECHANICS.md (new §14) + `db/seed-boardgame-mechanics.sql`:
+  `hot-seat-turns`, `grid-line-winner`, `box-claim-extra-turn` (idempotent; **owner action:** run once).
+- **Routed + tiled:** explicit `vercel.json` routes for the 3 engines + `buildable-boardgame.js`
+  (before the landing catch-all); three launch tiles + a shared `BoardGameScreen` iframe wrapper in
+  `src/BuildableKids.jsx` (Games picker → Tic-Tac-Toe / Connect Four / Dots and Boxes).
+- **QA:** `qa-tictactoe.mjs` (perfect player NEVER loses to the AI; AI beatable; 200 random games all
+  terminate), `qa-connectfour.mjs` (gravity invariant; AI beatable; 200 games terminate),
+  `qa-dotsandboxes.mjs` (every game claims ALL boxes / draws ALL edges; AI beatable) — ALL PASS.
+  `npm run build` clean.
+- **Left out of v1 (follow-up):** cross-device play. These are the textbook poll-a-row fit
+  (`mp-turn-based-row`, like chess); the shell is already network-agnostic so it is additive later.
+
 ## 2026-06-27 — Art Studio: framed layout (tools on all 4 edges, big canvas)
 - The bottom panel had shrunk the canvas to ~1/3 of the page. Reframed: tools now ring the
   canvas on all four edges so the center drawing area is large.

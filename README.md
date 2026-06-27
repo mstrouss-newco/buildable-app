@@ -75,6 +75,36 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Three simple 2-player board games on ONE shared shell (June 27 2026)
+
+Built Tic-Tac-Toe, Connect Four, and Dots and Boxes in one pass by creating a reusable
+**simple-board-game shell ONCE** and instantiating all three on it. Branch
+`claude/games-simple-batch1` (handed to Mike, **not** pushed to main).
+
+- **New 4th shared engine lib next to BR/BA/BM/BS:** `public/buildable-boardgame.js` — `BG`
+  (`window.BuildableBoardGame`). The Track-B host for turn-based, same-device, **no-backend**
+  board games: a hot-seat TURN MANAGER (Player A / Player B, or solo vs an easy computer),
+  responsive canvas + rAF loop, pointer→board mapping, the shared start screen (BS) with a
+  Solo/2-player mode row, sound (BA), juice (BM), the win banner + Play again, Home→`nav:exit`,
+  mute, and a headless QA scaffold. Reusable detectors `BG.lineWinner` (N-in-a-row any direction)
+  and `BG.boxesNewlyClosed` (4th-side-claims-a-box). A new board game = ~150 lines of rules + draw.
+- **Three engines:** `public/tictactoe-engine.html` (3x3, three-in-a-row), `connectfour-engine.html`
+  (7x6 gravity drop, four in a row, falling-disc animation), `dotsboxes-engine.html` (small 3x3-box
+  grid; close a box's 4th side to claim it + go again; most boxes wins). Each plays solo (easy
+  computer) or 2-player hot-seat.
+- **Always-winnable / pressure-free:** no soft-locks, friendly ties, and the easy AI is genuinely
+  beatable. No emoji — drawn art via BR. **Bespoke created sounds** in `api/sfx.js`
+  (`board_place/drop/line/claim/win/draw`; synth fallback only).
+- **Reusable mechanics written back:** MECHANICS.md §14 + `db/seed-boardgame-mechanics.sql`
+  (`hot-seat-turns`, `grid-line-winner`, `box-claim-extra-turn`). **Owner action:** run the seed once.
+- **Routes + tiles:** explicit `vercel.json` routes (before the landing catch-all) for the 3 engines
+  + `buildable-boardgame.js`; 3 tiles + a shared `BoardGameScreen` wrapper in `src/BuildableKids.jsx`.
+- **QA:** `qa-tictactoe.mjs` / `qa-connectfour.mjs` / `qa-dotsandboxes.mjs` all PASS (perfect TTT
+  player never loses to the AI; AIs beatable; every game terminates / claims all boxes);
+  `npm run build` clean.
+- **Left out of v1 (follow-up):** cross-device play — the textbook poll-a-row fit
+  (`mp-turn-based-row`, like chess); the shell is network-agnostic so it is additive later.
+
 ## Tennis: per-world background music + pre-warmed assets (June 27 2026)
 - **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.
 - **Pre-warmed all generated assets** so the first kid never waits: 8 court images (`/api/images?kind=tennis&id=*`), 7 one-shot SFX (`/api/sfx?s=tennis_*`), and 8 music tracks (`/api/tennis-music?world=*`) generated + cached.

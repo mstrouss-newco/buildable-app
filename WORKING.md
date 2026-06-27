@@ -33,7 +33,7 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
-- (none right now)
+- `claude/games-simple-batch1` — simple 2-player board games batch: NEW `public/buildable-boardgame.js` (BG shell) + `tictactoe-engine.html` / `connectfour-engine.html` / `dotsboxes-engine.html`, their `vercel.json` routes, `board_*` sounds in `api/sfx.js`, `db/seed-boardgame-mechanics.sql`, MECHANICS.md §14, and 3 tiles + `BoardGameScreen` in `src/BuildableKids.jsx`. Branch handed to Mike (not on main).
 
 ## Suggested ownership (to avoid collisions)
 - Games engines + `public/*.html` + `vercel.json` routes

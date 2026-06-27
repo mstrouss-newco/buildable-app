@@ -216,6 +216,22 @@
       "dest": "/buildable-startscreen.js"
     },
     {
+      "src": "/buildable-boardgame.js",
+      "dest": "/buildable-boardgame.js"
+    },
+    {
+      "src": "/tictactoe-engine.html",
+      "dest": "/tictactoe-engine.html"
+    },
+    {
+      "src": "/connectfour-engine.html",
+      "dest": "/connectfour-engine.html"
+    },
+    {
+      "src": "/dotsboxes-engine.html",
+      "dest": "/dotsboxes-engine.html"
+    },
+    {
       "src": "/startscreen-demo.html",
       "dest": "/startscreen-demo.html"
     },

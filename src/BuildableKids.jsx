@@ -44,6 +44,9 @@ const SCREEN_SOUNDS = "sounds";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_TENNIS = "tennis";
 const SCREEN_TENNIS_FAMILY = "tennis_family";
+const SCREEN_TICTACTOE = "tictactoe";
+const SCREEN_CONNECTFOUR = "connectfour";
+const SCREEN_DOTSBOXES = "dotsboxes";
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
 // log under the base game; SCREEN_PLAY = a generated "Make a game" creation.
@@ -56,6 +59,9 @@ const GAME_SLUGS = {
   [SCREEN_TYPING]: "typing",
   [SCREEN_TENNIS]: "tennis",
   [SCREEN_TENNIS_FAMILY]: "tennis",
+  [SCREEN_TICTACTOE]: "tictactoe",
+  [SCREEN_CONNECTFOUR]: "connectfour",
+  [SCREEN_DOTSBOXES]: "dotsboxes",
   [SCREEN_PLAY]: "generated",
 };
 const SCREEN_TOP = "top";
@@ -97,7 +103,7 @@ function LearningControl() {
   );
 }
 
-function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onTyping, onTennis, onSounds }) {
+function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onTyping, onTennis, onSounds, onTicTacToe, onConnectFour, onDotsBoxes }) {
   const tile = (grad, title, desc, onClick, soon, imgId) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
@@ -123,6 +129,9 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false, "survival")}
         {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, false, "runner")}
         {tile("linear-gradient(160deg,#34D399,#0EA5E9)", "Tennis", "Bounce it back \u2014 solo, 2 players, or family!", onTennis, false, "tennis")}
+        {tile("linear-gradient(160deg,#5B8CFF,#FF7DB0)", "Tic-Tac-Toe", "Three in a row \u2014 solo or 2 players!", onTicTacToe, false)}
+        {tile("linear-gradient(160deg,#FF5A6E,#FFC94D)", "Connect Four", "Drop discs, line up four to win!", onConnectFour, false)}
+        {tile("linear-gradient(160deg,#36D6C3,#FF8A5B)", "Dots and Boxes", "Close a box to claim it \u2014 most wins!", onDotsBoxes, false)}
         {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false, "chess")}
         {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false, "typing")}
         {tile("linear-gradient(160deg,#FF8FB1,#F0577E)", "Sound Machine", "Whoopee, explosions and silly sounds!", onSounds, false, "sounds")}
@@ -156,6 +165,14 @@ function BreakerScreen({ onHome }) {
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
       <iframe title="Buildable Breaker" src="/breaker-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
+  );
+}
+function BoardGameScreen({ onHome, title, src }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0b1030", zIndex: 50 }}>
+      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
+      <iframe title={title} src={src} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
@@ -457,7 +474,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -467,6 +484,15 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER) {
     return <BreakerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_TICTACTOE) {
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_CONNECTFOUR) {
+    return <BoardGameScreen title="Buildable Connect Four" src="/connectfour-engine.html" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_DOTSBOXES) {
+    return <BoardGameScreen title="Buildable Dots and Boxes" src="/dotsboxes-engine.html" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_RUNNER) {
     return <SunnyTownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
