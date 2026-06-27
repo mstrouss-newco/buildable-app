@@ -63,7 +63,7 @@ function ArtThumb({ item, src }) {
 
 function Thumb({ item }) {
   // Songs keep their generated cover (vibe/theme).
-  if (item.kind === "song") return <CoverThumb vibe={item.vibe} theme={item.theme} color={item.cover_color} size={52} radius={12} />;
+  if (item.kind === "song") return <CoverThumb vibe={item.vibe} theme={item.theme} color={item.cover_color} size={52} radius={12} seed={item.id} label={item.title} />;
   // Everything else: use the creation's OWN art (thumbnail), else the glyph tile.
   const art = item.thumbnail || item.preview_image_url;
   return art ? <ArtThumb item={item} src={art} /> : <GlyphTile item={item} />;

@@ -145,9 +145,11 @@ function build(q) {
     const theme = (q.theme || "").toString();
     const mood = VIBE[vibe] || vibe;
     const setting = WORLD[theme] || (theme ? theme : "a fun imaginative world");
+    const seed = (q.seed || "").toString().slice(0, 60);
+    const label = (q.label || "").toString().slice(0, 60).replace(/[^\w \-']/g, "");
     return {
-      descriptor: `cover|${vibe}|${theme}`,
-      prompt: `Square album cover artwork for a children's song. Mood: ${mood}. Setting: ${setting}. ${COVER_STYLE}`,
+      descriptor: `cover|${vibe}|${theme}` + (seed ? `|${seed}` : ""),
+      prompt: `Square album cover artwork for a children's song${label ? ` called "${label}"` : ""}. Mood: ${mood}. Setting: ${setting}. ${COVER_STYLE}`,
       transparent: false, quality: "low",
     };
   }
