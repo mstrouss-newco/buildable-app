@@ -191,10 +191,19 @@ function saveGuestKids(arr) {
 // ---- KID PROFILES (branch: account -> Supabase, else -> guest) ----
 export async function listKidProfiles() {
   if (isSignedIn()) {
-    return restFetch(
-      "kid_profiles?select=id,display_name:name,avatar,helper,created_at&order=created_at.asc",
-      { method: "GET" }
-    );
+    try {
+      return await restFetch(
+        "kid_profiles?select=id,display_name:name,avatar,helper,created_at&order=created_at.asc",
+        { method: "GET" }
+      );
+    } catch (e) {
+      // helper column may not exist yet (db/add-kid-helper.sql not run) -> fall
+      // back to the base columns so profiles always load.
+      return restFetch(
+        "kid_profiles?select=id,display_name:name,avatar,created_at&order=created_at.asc",
+        { method: "GET" }
+      );
+    }
   }
   return loadGuestKids();
 }
