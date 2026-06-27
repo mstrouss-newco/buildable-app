@@ -39,6 +39,8 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const charSlug = (story && story.character_slug) || "bunny";
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);   // page-turn direction (1=forward, -1=back)
+  const [cover, setCover] = useState(true);   // show the book cover first
+  const [ended, setEnded] = useState(false);  // show 'The End'
   const [spoken, setSpoken] = useState(-1);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -177,6 +179,64 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   }
 
   const isLast = idx === pages.length - 1;
+  const friend = story.companion_name;
+  const topBar = (
+    <div style={s.topBar}>
+      <button style={s.navBtn} onClick={onExit}>Back</button>
+      <span style={s.counter}>{story.title}</span>
+      <span style={{ width: 64 }} />
+    </div>
+  );
+
+  // ---------- COVER ----------
+  if (cover) {
+    const p0 = pages[0] || {};
+    const overlay = (
+      <div style={s.coverOverlay}>
+        <div style={s.coverInner}>
+          <p style={s.coverKicker}>A storybook</p>
+          <h1 style={s.coverTitle}>{story.title}</h1>
+          <p style={s.coverBy}>starring {story.character_name}{friend ? ` & ${friend}` : ""}</p>
+          <button style={s.coverBtn} onClick={() => { setDir(1); setCover(false); }}>Open the book</button>
+        </div>
+      </div>
+    );
+    return (
+      <div style={s.container}>
+        {topBar}
+        {sceneUrl[0]
+          ? <SceneStage url={sceneUrl[0]} effects={["magic_sparkles"]} world={p0.world_slug} pageIndex={0} style={s.page}>{overlay}</SceneStage>
+          : <LayeredPage bgUrl={p0.world_slug ? libImg("world", p0.world_slug, "watercolor") : null} charUrl={libImg("character", charSlug, "watercolor", p0.emotion || "happy")} charSlug={charSlug} effects={["magic_sparkles"]} palette={palette} world={p0.world_slug} pageIndex={0} style={s.page}>{overlay}</LayeredPage>}
+      </div>
+    );
+  }
+
+  // ---------- THE END ----------
+  if (ended) {
+    const li2 = pages.length - 1; const pl = pages[li2] || {};
+    const overlay = (
+      <div style={s.coverOverlay}>
+        <div style={s.coverInner}>
+          <h1 style={s.endTitle}>The End</h1>
+          <p style={s.coverBy}>{story.character_name}{friend ? ` and ${friend}` : ""} lived happily ever after.</p>
+        </div>
+      </div>
+    );
+    return (
+      <div style={s.container}>
+        {topBar}
+        {sceneUrl[li2]
+          ? <SceneStage url={sceneUrl[li2]} effects={["magic_sparkles", "twinkling_stars"]} world={pl.world_slug} pageIndex={li2} style={s.page}>{overlay}</SceneStage>
+          : <LayeredPage bgUrl={pl.world_slug ? libImg("world", pl.world_slug, "watercolor") : null} charUrl={libImg("character", charSlug, "watercolor", pl.emotion || "happy")} charSlug={charSlug} effects={["magic_sparkles"]} palette={palette} world={pl.world_slug} pageIndex={li2} style={s.page}>{overlay}</LayeredPage>}
+        <div style={s.endRow}>
+          <button style={s.saveBtn} disabled={saving} onClick={() => onSave(story)}>{saving ? "Saving…" : "Save to my library"}</button>
+          <button style={s.againBtn} onClick={() => { setEnded(false); setDir(-1); setIdx(0); }}>Read it again</button>
+          {onNewAdventure && (<button style={s.againBtn} onClick={() => onNewAdventure(story)}>New adventure with {story.character_name || "the same hero"}</button>)}
+          {savedMsg && <p style={s.savedMsg}>{savedMsg}</p>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={s.container}>
@@ -209,20 +269,13 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       <div style={s.controls}>
         <button style={s.circleBtn} disabled={idx === 0} onClick={() => { setDir(-1); setIdx((i) => Math.max(0, i - 1)); }}><Chevron dir="left"/></button>
         <button style={s.readBtn} onClick={toggleRead}>{playing ? "Pause" : "Read to me"}</button>
-        <button style={{ ...s.circleBtn, ...(isLast ? { opacity: 0.3 } : {}) }} disabled={isLast} onClick={() => { setDir(1); setIdx((i) => Math.min(pages.length - 1, i + 1)); }}><Chevron dir="right"/></button>
+        <button style={s.circleBtn} onClick={() => { if (isLast) { setEnded(true); } else { setDir(1); setIdx((i) => i + 1); } }}><Chevron dir="right"/></button>
       </div>
 
       <p style={s.pageNum}>Page {idx + 1} of {pages.length}</p>
 
       <audio ref={audioRef} style={{ display: "none" }} />
 
-      {isLast && (
-        <div style={s.endRow}>
-          <button style={s.saveBtn} disabled={saving} onClick={() => onSave(story)}>{saving ? "Saving…" : "Save to my library"}</button>
-          {onNewAdventure && (<button style={s.againBtn} onClick={() => onNewAdventure(story)}>New adventure with {story.character_name || "the same hero"}</button>)}
-          {savedMsg && <p style={s.savedMsg}>{savedMsg}</p>}
-        </div>
-      )}
     </div>
   );
 }
@@ -247,4 +300,11 @@ const s = {
   saveBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "#fff", color: "#b3477a", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
   savedMsg: { fontSize: 14, color: "#bdf5cf", fontWeight: 700 },
   againBtn: { padding: "12px 24px", borderRadius: 16, border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
+  coverOverlay: { position: "absolute", inset: 0, borderRadius: "inherit", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(to top, rgba(10,8,24,0.80), rgba(10,8,24,0.15) 55%, rgba(10,8,24,0.50))", padding: 20, boxSizing: "border-box" },
+  coverInner: { textAlign: "center", maxWidth: "88%" },
+  coverKicker: { fontFamily: NUN, fontSize: 12, letterSpacing: 3, textTransform: "uppercase", color: "#e9c6ff", margin: "0 0 10px", opacity: 0.9 },
+  coverTitle: { fontFamily: FRED, fontSize: "clamp(28px,5.5vw,46px)", fontWeight: 800, margin: "0 0 10px", color: "#fff", textShadow: "0 3px 18px rgba(0,0,0,0.65)", lineHeight: 1.12 },
+  coverBy: { fontFamily: FRED, fontSize: "clamp(15px,2.5vw,19px)", color: "#f3ecff", margin: "0 0 20px", textShadow: "0 2px 10px rgba(0,0,0,0.6)" },
+  coverBtn: { padding: "14px 32px", borderRadius: 18, border: "none", background: "linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b)", color: "#fff", fontSize: 18, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 10px 30px rgba(155,126,221,0.6)", animation: "bk-cbob 2.6s ease-in-out infinite" },
+  endTitle: { fontFamily: FRED, fontSize: "clamp(40px,9vw,76px)", fontWeight: 800, margin: "0 0 8px", color: "#fff", textShadow: "0 4px 22px rgba(0,0,0,0.7)" },
 };
