@@ -75,6 +75,16 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Games rebuild (Platformer + Survival) + global parent controls (June 26 2026)
+
+**Games is two real engines now, not AI-generated.** The Games tile opens a "Pick a game" screen (`GamePicker` in `src/BuildableKids.jsx`) with **Platformer** (`/play.html`) and **Survival** (`/survival-engine.html`), each launched full-screen in an iframe like Typing/Chess. The old generate-a-game flow (SCREEN_INTRO -> game-type -> character/level -> PlayGame) is no longer routed to.
+
+- **Survival engine deployed:** `public/survival-engine.html` + `public/buildable-renders.js` + `public/buildable-audio.js`, with explicit `vercel.json` routes for all three (the `/(.*)` catch-all otherwise serves landing.html). Self-contained (own level picker + My Hero locker); loads hero art from the absolute `/api/story-library` URL; falls back to drawn art / no music if `chess-art/space_bg.png` / `game-music/music_space.mp3` are not routed.
+- **Global Grown-ups button:** a fixed `GrownUpFab` renders on every screen except the grown-ups area, so the parent portal is reachable from anywhere (Music, Typing, Chess, the games).
+- **Global Learning toggle:** a fixed `LearningControl` "Learning: On/Off" pill on every page, gated by a grown-up math check, drives the existing `getLearningSettings`/`setLearningSettings` setting.
+- Also: Grown-ups portal + kid Home launcher restyled to the dark brand with no emoji; chess routing fixed (`/buildable-chess.html` route added). Stories tile set back to "Coming soon".
+
+
 ## Platformer polish — moving platforms, swinging vines, friendly boss, music + mute (June 26 2026)
 
 Polish pass on the fixed runner engine `public/play.html` (all drawn with shapes — no
