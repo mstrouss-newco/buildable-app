@@ -20,6 +20,8 @@
 // Public read (no admin token): only approved rows with an image are returned.
 // Clean hosted URLs are preferred; base64 (data:) images are capped.
 
+import { builtStoryAssets } from "./_storyAssets.js";
+
 // Try the rich select (with theme_tags); return null on failure (e.g. column
 // missing) so the caller can fall back to the plain select.
 async function fetchChars(url, key, withTheme) {
@@ -86,7 +88,7 @@ export default async function handler(req, res) {
       return tags.includes(wantTheme);
     };
 
-    const all = (Array.isArray(rows) ? rows : [])
+    const fromCommunity = (Array.isArray(rows) ? rows : [])
       .filter((r) => hasImage(r.image_url) && matchTheme(r))
       .map((r) => ({
         id: r.id,
@@ -94,7 +96,24 @@ export default async function handler(req, res) {
         description: r.description || "",
         image: r.image_url,
         theme: (r.theme_tags && r.theme_tags[0]) || "",
+        source: "community",
       }));
+
+    // SHARED LIBRARY: also offer curated STORY heroes (only ones already built,
+    // so no broken tiles). Story heroes are theme-agnostic, so they appear only
+    // when no theme filter is set. Safe: returns [] on any failure.
+    const story = wantTheme
+      ? []
+      : (await builtStoryAssets("character", url, key)).map((c) => ({
+          id: c.id,
+          name: c.name,
+          description: "",
+          image: c.imageUrl,
+          theme: c.theme,
+          source: "story",
+        }));
+
+    const all = [...fromCommunity, ...story];
 
     // Prefer clean hosted URLs; backfill with a capped number of base64 images.
     const clean = shuffle(all.filter((c) => isClean(c.image)));

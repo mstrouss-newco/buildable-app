@@ -415,3 +415,8 @@ export default async function handler(req, res) {
     imgUrl: "/api/story-library?img=<kind>:<slug>&style=<style>",
   });
 }
+
+// Named exports so the SHARED asset library (list-characters / list-assets / any
+// future /api/library) can reuse this curated catalog WITHOUT duplicating it.
+// Stories keep using the default handler exactly as before — this is additive.
+export { WORLDS, CHARACTERS, STYLES };

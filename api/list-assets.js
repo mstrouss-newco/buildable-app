@@ -11,6 +11,8 @@
 // generator already uses. Heavy base64 image_urls are skipped to keep the
 // picker light; clean URL rows (asset-pack / GitHub raw) are preferred.
 
+import { builtStoryAssets } from "./_storyAssets.js";
+
 async function sbGet(url, key, path) {
   const r = await fetch(`${url}/rest/v1/${path}`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
@@ -54,14 +56,25 @@ export default async function handler(req, res) {
       return tags.some((t) => normTheme(t) === wt) || normTheme(cat) === wt;
     };
 
-    const layers = (Array.isArray(layerRows) ? layerRows : [])
+    const communityLayers = (Array.isArray(layerRows) ? layerRows : [])
       .filter((r) => cleanUrl(r.image_url) && matchTheme(r))
       .map((r) => ({
         id: r.asset_id,
         type: r.layer_type,
         theme: (r.theme_tags && r.theme_tags[0]) || r.category || "",
         imageUrl: r.image_url,
+        source: "community",
       }));
+
+    // SHARED LIBRARY: also offer curated STORY worlds (full backgrounds) — only
+    // ones already built, so no broken tiles. Story worlds carry a theme, so the
+    // ?theme= filter applies. Safe: returns [] on any failure.
+    const wt = normTheme(theme);
+    const storyWorlds = (await builtStoryAssets("world", url, key))
+      .filter((w) => !theme || normTheme(w.theme) === wt)
+      .map((w) => ({ id: w.id, type: "background", theme: w.theme, imageUrl: w.imageUrl, source: "story" }));
+
+    const layers = [...communityLayers, ...storyWorlds];
 
     const sprites = (Array.isArray(spriteRows) ? spriteRows : [])
       .filter((r) => cleanUrl(r.image_url) && matchTheme(r))
