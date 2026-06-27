@@ -118,13 +118,19 @@ const BACKDROPS = [
   { id:"castle", name:"Castle",  img:"chess-art/castle_bg.jpg", c1:"#e6d6ff", c2:"#9b7bff" },
   { id:"desert", name:"Desert",  img:"chess-art/desert_bg.jpg", c1:"#ffe6b0", c2:"#e6b35a" },
 ];
+// cost = total stars needed to unlock (0 = free from the start)
 const BALLS = [
-  { id:"glow",  name:"Glow Ball", col:"#ffffff", glow:"#9b7bff" },
-  { id:"star",  name:"Star",      col:"#ffd86b", glow:"#ffb04d", star:true },
-  { id:"comet", name:"Comet",     col:"#62d0ff", glow:"#62d0ff" },
-  { id:"berry", name:"Berry",     col:"#ff7aa8", glow:"#ff7aa8" },
+  { id:"glow",    name:"Glow Ball", col:"#ffffff", glow:"#9b7bff", cost:0 },
+  { id:"star",    name:"Star",      col:"#ffd86b", glow:"#ffb04d", star:true, cost:0 },
+  { id:"comet",   name:"Comet",     col:"#62d0ff", glow:"#62d0ff", cost:3 },
+  { id:"berry",   name:"Berry",     col:"#ff7aa8", glow:"#ff7aa8", cost:8 },
+  { id:"rainbow", name:"Rainbow",   col:"#ff7aa8", glow:"#ffffff", rainbow:true, cost:16 },
+  { id:"flame",   name:"Flame",     col:"#ff8a3d", glow:"#ff5a2c", flame:true,   cost:24 },
 ];
-const PADDLES = ["#9b7bff","#62d0ff","#7ee0a0","#ff7aa8","#ffd86b","#ff8fce"];
+const PADDLES = [
+  { col:"#9b7bff", cost:0 }, { col:"#62d0ff", cost:0 }, { col:"#7ee0a0", cost:0 },
+  { col:"#ff7aa8", cost:4 }, { col:"#ffd86b", cost:10 }, { col:"#ff8fce", cost:16 },
+];
 const DIFFS = {
   easy:   { name:"Easy",   lives:5, padW:150, speedMul:0.85 },
   normal: { name:"Normal", lives:3, padW:120, speedMul:1.0  },
@@ -404,8 +410,10 @@ function drawBackdrop(){ const t=Date.now()/1000, img=bgImage();
     for(const st of stars){ const a=0.25*Math.abs(Math.sin(t*st.sp+st.ph)); ctx.fillStyle="rgba(255,255,255,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(st.x,st.y,st.s,0,7);ctx.fill(); } }
 }
 function drawBall(b,fire){ const sk=BALLS.find(x=>x.id===PREFS.ball)||BALLS[0];
-  ctx.save(); ctx.shadowColor=fire?"#ff8a3d":sk.glow; ctx.shadowBlur=fire?22:16;
-  if(fire){ const g=ctx.createRadialGradient(b.x,b.y,1,b.x,b.y,BALL_R+3); g.addColorStop(0,"#fff"); g.addColorStop(0.5,"#ffd86b"); g.addColorStop(1,"#ff5a2c"); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R+2,0,7);ctx.fill(); }
+  const useFlame = fire || sk.flame;
+  ctx.save(); ctx.shadowColor=useFlame?"#ff8a3d":(sk.rainbow?"#fff":sk.glow); ctx.shadowBlur=useFlame?22:16;
+  if(useFlame){ const g=ctx.createRadialGradient(b.x,b.y,1,b.x,b.y,BALL_R+3); g.addColorStop(0,"#fff"); g.addColorStop(0.5,"#ffd86b"); g.addColorStop(1,"#ff5a2c"); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R+2,0,7);ctx.fill(); }
+  else if(sk.rainbow){ const hue=(Date.now()/12)%360, col="hsl("+hue.toFixed(0)+",90%,62%)"; const g=ctx.createRadialGradient(b.x-3,b.y-3,1,b.x,b.y,BALL_R); g.addColorStop(0,"#fff"); g.addColorStop(1,col); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R,0,7);ctx.fill(); }
   else if(sk.star){ BR.sparkle(ctx,b.x,b.y,BALL_R+2,Date.now()/200); }
   else { const g=ctx.createRadialGradient(b.x-3,b.y-3,1,b.x,b.y,BALL_R); g.addColorStop(0,"#fff"); g.addColorStop(1,sk.col); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R,0,7);ctx.fill(); }
   ctx.restore(); }
@@ -501,6 +509,7 @@ function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=on?"
 let startScreen=null;
 function totalStars(){ let t=0; for(const k in PREFS.stars) t+=(PREFS.stars[k]||0); return t; }
 function maxStars(){ return GAME_CONFIG.levels.length*3; }
+function isUnlocked(cost){ return (cost||0) <= totalStars(); }
 function buildStartCfg(){
   const levels = currentMode==="two"
     ? [{ n:1, name:"Pong Match", color:"#2b4a6b", state:"next" }]
@@ -544,14 +553,22 @@ function renderLook(grid){
   const head=document.createElement("div"); head.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:2px 0 4px"; head.textContent="Backdrop"; grid.appendChild(head);
   for(const d of BACKDROPS){ const sw='background:linear-gradient(135deg,'+d.c1+','+d.c2+')';
     grid.appendChild(optCard('<div style="width:100%;height:100%;border-radius:10px;'+sw+'"></div>', d.name, "", PREFS.backdrop===d.id, ()=>{ PREFS.backdrop=d.id; savePrefs(); renderCustomize(); })); }
-  const h2=document.createElement("div"); h2.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:10px 0 4px"; h2.textContent="Ball"; grid.appendChild(h2);
-  for(const b of BALLS){ const dot='<div style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,'+b.col+');box-shadow:0 0 12px '+b.glow+'"></div>';
-    grid.appendChild(optCard(dot, b.name, "", PREFS.ball===b.id, ()=>{ PREFS.ball=b.id; savePrefs(); renderCustomize(); })); }
+  const tip=document.createElement("div"); tip.style.cssText="width:100%;text-align:center;font-size:12px;color:#ffd86b;margin:10px 0 -2px"; tip.textContent="Earn stars in Solo to unlock more!"; grid.appendChild(tip);
+  const h2=document.createElement("div"); h2.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:8px 0 4px"; h2.textContent="Ball"; grid.appendChild(h2);
+  for(const b of BALLS){ const locked=!isUnlocked(b.cost);
+    const dot='<div style="position:relative;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,'+b.col+');box-shadow:0 0 12px '+b.glow+';'+(locked?'opacity:.35;':'')+'"></div>';
+    const ds = locked ? ("Unlock at ★"+b.cost) : "";
+    grid.appendChild(optCard(dot, b.name, ds, PREFS.ball===b.id, ()=>{ if(locked){ toast("Earn "+(b.cost-totalStars())+" more stars to unlock "+b.name); return; } PREFS.ball=b.id; savePrefs(); renderCustomize(); })); }
   const h3=document.createElement("div"); h3.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:10px 0 4px"; h3.textContent="Paddle"; grid.appendChild(h3);
-  const row=document.createElement("div"); row.style.cssText="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;width:100%";
-  for(const col of PADDLES){ const sw=document.createElement("div"); const sel=PREFS.paddle===col;
-    sw.style.cssText="width:64px;height:30px;border-radius:8px;cursor:pointer;background:linear-gradient(180deg,#fff,"+col+");border:3px solid "+(sel?"#7ee0a0":"transparent")+";box-shadow:0 0 0 2px "+(sel?"rgba(126,224,160,.4)":"transparent")+";";
-    sw.onclick=()=>{ PREFS.paddle=col; savePrefs(); renderCustomize(); }; row.appendChild(sw); }
+  const row=document.createElement("div"); row.style.cssText="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:flex-start;width:100%";
+  for(const pd of PADDLES){ const col=pd.col, locked=!isUnlocked(pd.cost), sel=PREFS.paddle===col;
+    const wrap=document.createElement("div"); wrap.style.cssText="display:flex;flex-direction:column;align-items:center;gap:3px";
+    const sw=document.createElement("div");
+    sw.style.cssText="width:64px;height:30px;border-radius:8px;cursor:pointer;background:linear-gradient(180deg,#fff,"+col+");border:3px solid "+(sel?"#7ee0a0":"transparent")+";box-shadow:0 0 0 2px "+(sel?"rgba(126,224,160,.4)":"transparent")+";"+(locked?"opacity:.35;":"");
+    sw.onclick=()=>{ if(locked){ toast("Earn "+(pd.cost-totalStars())+" more stars to unlock this paddle"); return; } PREFS.paddle=col; savePrefs(); renderCustomize(); };
+    wrap.appendChild(sw);
+    if(locked){ const t=document.createElement("div"); t.style.cssText="font-size:11px;font-weight:800;color:#ffd86b"; t.textContent="★"+pd.cost; wrap.appendChild(t); }
+    row.appendChild(wrap); }
   grid.appendChild(row);
 }
 function renderPowers(grid){
