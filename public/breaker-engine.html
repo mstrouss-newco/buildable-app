@@ -171,11 +171,10 @@ const bgCache={};
 function backdropDef(){ return BACKDROPS.find(b=>b.id===PREFS.backdrop)||BACKDROPS[0]; }
 function bgImage(){ const d=backdropDef(); if(!d.img)return null; if(!bgCache[d.id])bgCache[d.id]=mkImg(d.img); return bgCache[d.id]; }
 
-// looping background music: reuse the shared ElevenLabs per-world tracks (/api/chess-music).
-// backdrops map onto music worlds; meadow has no world so it borrows the warm "jungle" track.
-function musicWorldFor(id){ return id==="meadow" ? "jungle" : id; }
+// looping background music: bespoke upbeat ElevenLabs arcade tracks, one per backdrop
+// (/api/breaker-music?world=<backdrop>), generated once + cached server-side.
 let _curMusic="";
-function ensureMusic(){ if(!BA||!BA.setMusic)return; const url="/api/chess-music?world="+musicWorldFor(PREFS.backdrop);
+function ensureMusic(){ if(!BA||!BA.setMusic)return; const url="/api/breaker-music?world="+PREFS.backdrop;
   if(url!==_curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); _curMusic=url; }
   if(BA.playMusic)BA.playMusic(); }
 
