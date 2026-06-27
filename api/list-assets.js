@@ -21,6 +21,10 @@ async function sbGet(url, key, path) {
   return r.json().catch(() => []);
 }
 
+// SHARED LIBRARY: the 6 chess world backgrounds are bundled static files, always
+// available — register them as themed world layers so any project can use them.
+const CHESS_WORLDS = ["candy", "castle", "desert", "jungle", "ocean", "space"];
+
 const cleanUrl = (u) => typeof u === "string" && u.length > 0 && !u.startsWith("data:");
 
 // Normalize a theme string to a single canonical key so the UI's short labels
@@ -74,7 +78,12 @@ export default async function handler(req, res) {
       .filter((w) => !theme || normTheme(w.theme) === wt)
       .map((w) => ({ id: w.id, type: "background", theme: w.theme, imageUrl: w.imageUrl, source: "story" }));
 
-    const layers = [...communityLayers, ...storyWorlds];
+    // Chess world backgrounds (static files, always present).
+    const chessWorlds = CHESS_WORLDS
+      .filter((w) => !theme || normTheme(w) === wt)
+      .map((w) => ({ id: "chess:world:" + w, type: "background", theme: w, imageUrl: "/chess-art/" + w + "_bg.jpg", source: "chess" }));
+
+    const layers = [...communityLayers, ...storyWorlds, ...chessWorlds];
 
     const sprites = (Array.isArray(spriteRows) ? spriteRows : [])
       .filter((r) => cleanUrl(r.image_url) && matchTheme(r))
