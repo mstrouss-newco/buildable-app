@@ -81,6 +81,10 @@ that already works**:
   rows or tags is fine. Do NOT delete or re-path an asset a live game/story
   currently loads until its shared-library replacement is verified on the live
   site. (The Survival `space_bg.png` → `.jpg` miss is the cautionary tale.)
+- **Sound = unique created audio only.** Ship only sounds/music we deliberately
+  create (ElevenLabs), listed in `/api/list-audio`; the `buildable-audio.js` synth is a
+  silent fallback ONLY, never the product. Kids consume the library; **a new game
+  engine/type must CREATE fresh sounds** and register them so the company library grows.
 - **Keep the guardrails.** Only `moderation_status = approved` + `reusable = true`
   assets flow between projects; preserve content moderation.
 - **Roll out one project at a time**, QA the live deploy, and log it in the README.

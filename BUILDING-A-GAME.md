@@ -126,12 +126,16 @@ before/after (it replaces the engine's own menu code, not its gameplay).
    asset can never break a kid's game. Where to find/send each kind: `ASSET-LIBRARY.md`.
    How to make it look alive: `GAME-LOOK.md`.
 
-4. **Wire sound + FX through the shared libs.** Pick themed music + sfx from the shared
-   audio catalog (`/api/list-audio?theme=…`) and play them through `BA` —
-   `BA.setMusic(url)`, `BA.configure({sfxBase, map})`, `BA.sfx(...)`, `BA.unlock()` on the
-   first tap — with the `BA` synth as the offline fallback. `BM.explode(...)`,
-   `BM.burst(...)`, `BM.shake(...)` for feel. No inline synth, no copy-pasted particle
-   loop. (ElevenLabs only for real music — see the audio rule.)
+4. **Wire sound + FX through the shared libs — and CREATE new sounds for a new engine.**
+   Play audio through `BA` — `BA.setMusic(url)`, `BA.configure({sfxBase, map})`,
+   `BA.sfx(...)`, `BA.unlock()` on the first tap. **Sound rule (see `ASSET-LIBRARY.md`):**
+   we ship only **unique created sounds** (ElevenLabs), never computer beeps — the `BA`
+   synth is a silent dev/offline fallback ONLY. A kid building a game just uses the
+   catalog; but **building a NEW engine/type is the moment to CREATE fresh bespoke sounds
+   + music** that fit it and register them (`SOUNDS` in `api/sfx.js`, worlds in
+   `api/chess-music.js`) so they grow the company library for every other game. Then
+   `BM.explode(...)`, `BM.burst(...)`, `BM.shake(...)` for feel — no copy-pasted particle
+   loop. (ElevenLabs only for real music.)
 
 5. **Bake in always-winnable.** Cap difficulty in the level *builder* so a 4–8-year-old
    can always finish: gaps ≤ jump range; hero speed ≥ enemy speed; bosses on a timer with

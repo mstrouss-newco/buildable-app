@@ -14,7 +14,8 @@ Every reusable asset is one of five `kind`s, and is filed under one `theme`:
 
 - **kind:** `character` (a hero/creature cutout) · `world` (a full background) ·
   `element` (a small object: coin, gem, spike, chest, prop) · `music` (a looping
-  background track) · `sfx` (a short one-shot sound).
+  background track) · `sfx` (a short one-shot sound). Music and sfx are always
+  **uniquely created** sounds, never computer-synthesized beeps (see the Sound rule).
 - **theme** is the universal key that ties a set together:
   `space`, `jungle`, `ocean`, `candy`, `desert`, `castle`, `forest`
   (add new themes sparingly, lowercase, singular).
@@ -24,6 +25,33 @@ matches a jungle look" — it does NOT lock the asset to jungle projects. Every
 engine can pull ANY asset of ANY theme. Theme just makes "give me a jungle set"
 a one-line request; it is never a wall. Always tag what you create with both
 `kind` and `theme` so others can find it by that label.
+
+---
+
+## Sound rule — unique created sounds only; new game types grow the library
+
+Two firm rules for audio, because sound is part of the brand:
+
+1. **No computer-generated sounds as the product.** We ship only unique sound
+   effects and music that we deliberately **create** (ElevenLabs sound/music
+   generation), cached and listed in `/api/list-audio`. The synthesized tone beeps
+   in `buildable-audio.js` (`BA.sfx` synth) are a **silent-safe dev/offline fallback
+   ONLY** — never the intended kid experience. A child should always hear a real,
+   crafted sound, not a computer tone. If a needed sound is missing, **create it** —
+   don't settle for the synth.
+
+2. **Kids consume the library; new game types CREATE for it.** A kid making a game
+   only *picks from* the sounds that already exist — they never generate new ones.
+   But **every time WE build a new game engine or game type, treat it as a chance to
+   create fresh, bespoke sounds and music** that fit it, and register them in the
+   shared catalog so every other game can reuse them. That's how the company's sound
+   library grows diverse over time: each new engine contributes new created sounds
+   back to the shelf.
+
+How to add a created sound: add a named prompt to `SOUNDS` in `api/sfx.js`
+(one-shots + ambience) and/or a world to `api/chess-music.js` (music); name it
+`<theme>_<action>` or `game_<action>`; hit the endpoint once to generate + cache it;
+it then appears in `/api/list-audio` automatically.
 
 ---
 
@@ -41,7 +69,7 @@ a one-line request; it is never a wall. Always tag what you create with both
 | Per-world music (chess style) | `GET /api/chess-music?world=<theme>` | `narration_cache` |
 | Kids' saved songs | `GET /api/list-songs` | `saved_songs` |
 | Shared drawing code (always-available fallback) | `public/buildable-renders.js` (`window.BuildableRenders`) | — |
-| Shared audio code (sfx + mute + unlock) | `public/buildable-audio.js` (`window.BuildableAudio`) | — |
+| Shared audio PLAYER + offline-fallback synth | `public/buildable-audio.js` (`window.BuildableAudio`) — plays created sounds; synth is fallback only | — |
 
 Read filters that always apply: `moderation_status = approved` and, for
 layers/sprites, `reusable = true`. Prefer clean hosted `image_url`s over heavy
