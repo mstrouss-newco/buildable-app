@@ -75,8 +75,8 @@ const ART="https://www.buildablekids.com/api/story-library?img=character:";
 const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Space Sparkles",
   theme: "space", artStyle: "modern3d",
-  bgImg: "chess-art/space_bg.png",                 // polished space backdrop
-  musicUrl: "game-music/music_space.mp3",          // looping space music
+  bgImg: "chess-art/space_bg.jpg",                 // polished space backdrop (jpg is the real file)
+  musicUrl: "",                                    // music intentionally off
   heroUrl: ART+"robot&style=modern3d&emo=happy",   // Bolt the Robot (drawn astronaut if it can't load)
   palette: { hero:"#eaf2ff", visor:"#62d0ff", spark:"#ffe27a", gem:"#6ff0ff", hp:"#ff7aa8", xp:"#7ad0ff", boss:"#c69bff" },
   // base hero stats (level-ups stack on top of these during a run)
@@ -494,7 +494,7 @@ function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"blo
 
 function frame(){ update(); draw(); requestAnimationFrame(frame); }
 // boot: load the saved character, wire menus, show the main menu
-if(typeof document!=="undefined" && document.getElementById("menu")){ if(BA)BA.setMusic(GAME_CONFIG.musicUrl); CHAR=localLoadChar()||defaultChar(); wireMenus(); showMenu(); loadChar(); }
+if(typeof document!=="undefined" && document.getElementById("menu")){ if(BA && GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); CHAR=localLoadChar()||defaultChar(); wireMenus(); showMenu(); loadChar(); }
 requestAnimationFrame(frame);
 
 // ---------- QA / picker hooks ----------
