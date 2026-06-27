@@ -286,6 +286,7 @@ function doJump(){
 }
 function doSlide(){ if(!started){started=true;return;} if(player.onGround && player.slide<=0){ player.slide=SLIDE_FRAMES; } }
 addEventListener('keydown',e=>{
+  if(demoMode && (e.code==='ArrowLeft'||e.code==='ArrowRight'||e.code==='ArrowUp'||e.code==='ArrowDown'||e.code==='Space')) startPlay();
   if(e.code==='ArrowLeft'){inputLeft=true;started=true;}
   else if(e.code==='ArrowRight'){inputRight=true;started=true;}
   else if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();started=true;doJump();}
@@ -299,7 +300,7 @@ addEventListener('keyup',e=>{
 });
 // on-screen buttons (mobile / iPad)
 function hold(id, down, up){ const el=document.getElementById(id); if(!el)return;
-  el.addEventListener('pointerdown',ev=>{ev.preventDefault(); started=true; down(); });
+  el.addEventListener('pointerdown',ev=>{ev.preventDefault(); if(demoMode) startPlay(); started=true; down(); });
   ['pointerup','pointerleave','pointercancel'].forEach(t=>el.addEventListener(t,ev=>{ev.preventDefault(); if(up)up();}));
 }
 hold('dleft', ()=>inputLeft=true, ()=>inputLeft=false);
@@ -345,6 +346,7 @@ function botThink(){
 // --- update ---
 function update(){
   if(state!=="play"){ doneMsgT++; if(demoMode){ if(++demoRestartT>70){ hearts=3; startLevel(0); botMode=true; started=true; paused=false; demoRestartT=0; } } return; }
+  if(demoMode){ if(++demoRestartT>300){ hearts=3; startLevel(0); botMode=true; started=true; paused=false; demoRestartT=0; return; } }
   if(paused) return;
   if(botMode) botThink();
   if(!started) return;                       // wait for first input
