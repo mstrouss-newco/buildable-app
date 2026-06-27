@@ -212,6 +212,10 @@
       "dest": "/soundboard.html"
     },
     {
+      "src": "/art-studio.html",
+      "dest": "/art-studio.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

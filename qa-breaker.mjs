@@ -25,7 +25,7 @@ const s=BK.sim(0,40000); console.log(`stars(L1)=${s.stars} livesLeft=${s.livesLe
 console.log('--- PONG: a winner emerges (3 runs) ---');
 for(let t=0;t<3;t++){ const p=BK.simPong(80000); const good=p.result==='win'&&p.winner>0; if(!good)ok=false; console.log(`${good?'PASS':'FAIL'}  pong winner=P${p.winner} score=${p.s1}-${p.s2} frames=${p.frames}`); }
 console.log('--- render smoke (both modes) ---');
-BK._begin(5); BK._step(150); const d1=BK._draw(); console.log('solo render:',d1);
+BK.sim(0,40000); const dw=BK._draw(); console.log('solo WIN render:',dw); BK._begin(5); BK._step(150); const d1=BK._draw(); console.log('solo render:',d1); if(dw!=='ok')ok=false;
 BK._beginPong(); BK._step(150); const d2=BK._draw(); console.log('pong render:',d2);
 if(d1!=='ok'||d2!=='ok')ok=false;
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);

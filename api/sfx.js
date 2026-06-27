@@ -38,6 +38,8 @@ const SOUNDS = {
   tennis_point: "Short cheerful little ding plus a soft whoosh, a point scored, friendly cartoon, single hit, no music, no voices",
   tennis_win:   "Happy short victory fanfare with a sparkle, cheerful kids game win, no voices",
   tennis_lose:  "Gentle soft descending wah-wah, friendly cartoon lose, short, no music",
+  tennis_boom:  "Short punchy cartoon explosion boom with a bright sparkly pop, fun and friendly, single hit, no music, no voices",
+  tennis_cheer: "Short happy little crowd cheer and clap, cheerful kids celebration, single hit, no music",
 
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
@@ -66,7 +68,20 @@ const SOUNDS = {
   spk_lose:    "Gentle soft descending wah-wah with a little twinkle, friendly cartoon lose, short, no music, no voices",
 
   // ---- Sound Machine: silly kid-fun one-shots (public/soundboard.html) ----
-  whoopee:     "Short funny wet whoopee cushion raspberry toot, comedic cartoon, single hit, not gross, no music, no voices",
+  fart:        "Short funny wet squelchy fart, silly whoopee cushion raspberry toot, comedic cartoon, single hit, no music, no voices",
+  giggle:      "Short cute happy kid giggle laugh, playful and silly, single hit, no music",
+  roar:        "Short friendly cartoon dinosaur roar, playful not scary, single hit, no music, no voices",
+  robot:       "Short playful robot beep-boop blip voice, retro cartoon, single hit, no music",
+  splat:       "Short comedic wet splat squish, silly cartoon, single hit, no music, no voices",
+  cash:        "Short bright cash register cha-ching ka-ching, cheerful, single hit, no music, no voices",
+  drumroll:    "Short snappy drum roll ending in a cymbal crash, single hit, no music, no voices",
+  gong:        "Short deep comedic gong bong, single hit, no music, no voices",
+  frog:        "Short funny cartoon frog ribbit croak, silly, single hit, no music, no voices",
+  moo:         "Short friendly cartoon cow moo, single hit, no music, no voices",
+  rooster:     "Short cheerful rooster cock-a-doodle-doo crow, single hit, no music, no voices",
+  vroom:       "Short playful toy race car engine vroom zoom, single hit, no music, no voices",
+  sneeze:      "Short silly cartoon achoo sneeze, goofy, single hit, no music",
+  partypop:    "Short fun party popper pop with confetti and a little cheer, celebratory, single hit, no music",
   boom:        "Short cartoon comic kaboom explosion, big silly boom, playful not scary, single hit, no music, no voices",
   boing:       "Short bouncy cartoon spring boing, comedic sproing, single hit, no music, no voices",
   burp:        "Short funny little cartoon burp, silly and goofy, single hit, not gross, no music, no voices",
@@ -84,6 +99,19 @@ const SOUNDS = {
   woof:        "Short friendly small happy dog woof, single hit, no music, no voices",
   quack:       "Short silly cartoon duck quack, single hit, no music, no voices",
   cheer:       "Short happy little group of kids cheering yay and clapping, celebratory, single hit, no music",
+  // ---- Art Studio — bespoke brush + UI SFX (one-shots, short) ----
+  art_crayon:  "Short soft waxy crayon scribble scratch on paper, gentle, single hit, no music, no voices",
+  art_marker:  "Short soft squeaky felt-tip marker stroke gliding on paper, single hit, no music, no voices",
+  art_paint:   "Short soft wet paintbrush swish stroke with a tiny splatter, single hit, no music, no voices",
+  art_pencil:  "Short light pencil sketching scratch on paper, fine and soft, single hit, no music, no voices",
+  art_chalk:   "Short soft dusty chalk drag on a board, gentle grain, single hit, no music, no voices",
+  art_spray:   "Short soft spray-can hiss puff of paint, single hit, no music, no voices",
+  art_neon:    "Short soft electric neon hum zap with a bright shimmer, single hit, no music, no voices",
+  art_glitter: "Short delicate sparkly glitter twinkle shimmer dropping, magical, single hit, no music, no voices",
+  art_stamp:   "Short cute soft cartoon stamp thunk with a tiny boing, single hit, no music, no voices",
+  art_fill:    "Short happy watery paint-bucket splash fill, single hit, no music, no voices",
+  art_undo:    "Short soft reverse whoosh swipe, gentle, single hit, no music, no voices",
+  art_save:    "Cheerful short sparkle save chime, bright and proud, single hit, no music, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -92,11 +120,16 @@ const DURATIONS = {
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
   tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
+  tennis_boom:0.6, tennis_cheer:1.4,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
-  spk_shoot:0.3, spk_coin:0.4, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.4, spk_pop:0.4, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
-  whoopee:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
+  spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
+  fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
+  giggle:0.9, roar:1.0, robot:0.8, splat:0.5, cash:0.7, drumroll:1.3, gong:1.4,
+  frog:0.6, moo:1.0, rooster:1.2, vroom:1.0, sneeze:0.8, partypop:1.0,
   buzzer:0.7, sadtrombone:1.4, squeak:0.5, airhorn:0.9, bonk:0.5, slidewhistle:0.7,
   meow:0.7, woof:0.5, quack:0.5, cheer:1.4,
+  art_crayon:0.4, art_marker:0.4, art_paint:0.5, art_pencil:0.4, art_chalk:0.4, art_spray:0.5,
+  art_neon:0.5, art_glitter:0.6, art_stamp:0.4, art_fill:0.6, art_undo:0.4, art_save:1.2,
 };
 
 async function cacheGet(key){if(!SUPABASE_URL||!SUPABASE_SERVICE_KEY)return null;try{const r=await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}&select=audio_b64&limit=1`,{headers:{apikey:SUPABASE_SERVICE_KEY,Authorization:`Bearer ${SUPABASE_SERVICE_KEY}`}});if(!r.ok)return null;const rows=await r.json();return Array.isArray(rows)&&rows[0]?rows[0].audio_b64:null;}catch{return null;}}

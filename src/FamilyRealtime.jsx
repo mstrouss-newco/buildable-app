@@ -16,12 +16,13 @@ import { createMatch, listMyMatches, getMatch, patchMatch, channelTopic, roleFor
 import { openChannel } from "./lib/realtimeChannel";
 
 // The ONLY messages two kids can send each other (no free-text chat — child safety).
-const REACTIONS = ["Nice shot!", "So close!", "Good game!", "Wow!", "Let's go!", "Haha!"];
+const REACTIONS = ["Nice shot!", "Too slow!", "So close!", "Let's go!", "Is that all?", "You got this!", "Boop!", "Wibble wobble!", "Bonk!", "Wheee!", "Great game!", "Haha!"];
 const ALLOWED = new Set(REACTIONS);
 
 const WORLDS = [
-  ["default", "Classic"], ["jungle", "Jungle"], ["ocean", "Ocean"],
-  ["space", "Space"], ["candy", "Candy"], ["castle", "Castle"],
+  ["beach", "Sunny Beach"], ["space", "Space Station"], ["jungle", "Jungle"],
+  ["ocean", "Underwater"], ["candy", "Candy Land"], ["snow", "Snowy Peak"],
+  ["volcano", "Volcano"], ["city", "Rooftop"],
 ];
 
 const C = {
@@ -41,7 +42,7 @@ const C = {
 export default function FamilyRealtime({ game, activeKid, onHome }) {
   const [kids, setKids] = useState([]);
   const [matches, setMatches] = useState([]);
-  const [world, setWorld] = useState("default");
+  const [world, setWorld] = useState("beach");
   const [match, setMatch] = useState(null);
   const [phase, setPhase] = useState("connecting"); // connecting | waiting | playing
   const [err, setErr] = useState("");

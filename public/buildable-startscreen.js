@@ -117,17 +117,18 @@
 
   function levelCard(lv) {
     const state = lv.state || "locked";
-    const cls = state === "locked" ? "bss-lv locked" : (state === "next" ? "bss-lv next" : "bss-lv");
+    const cls = state === "locked" ? "bss-lv locked" : ((state === "next" || state === "ready") ? "bss-lv next" : "bss-lv");
     let thumbBg = "";
     if (lv.img) thumbBg = `background-image:url('${lv.img}')`;
     else if (state === "locked") thumbBg = "background:#221f3c;color:#6f6a93";
     else if (lv.color) thumbBg = `background:${lv.color}`;
     let overlay = "";
-    if (state === "next") overlay = `<span class="bss-badge">${svg("play", 12, "#0c3a24", "#0c3a24")}Play</span>`;
+    if (state === "next" || state === "ready") overlay = `<span class="bss-badge">${svg("play", 12, "#0c3a24", "#0c3a24")}Play</span>`;
     else if (state === "locked") overlay = `<span class="bss-lk">${svg("lock", 15)}</span>`;
     let foot;
     if (state === "locked") foot = `<div class="bss-note">Locked</div>`;
     else if (state === "next") foot = `<div class="bss-note go">Next up</div>`;
+    else if (state === "ready") foot = lv.foot ? `<div class="bss-note">${lv.foot}</div>` : `<div class="bss-note"></div>`;
     else foot = (lv.stars != null) ? `<div class="bss-stars">${starRow(lv.stars, lv.maxStars)}</div>` : `<div class="bss-note">Cleared</div>`;
     const icon = state === "locked" ? svg("lock", 25, "#6f6a93") : "";
     return `<div class="${cls}" data-n="${lv.n}" role="button" tabindex="0">

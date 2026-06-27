@@ -44,6 +44,7 @@ const SCREEN_TENNIS = "tennis";
 const SCREEN_TENNIS_FAMILY = "tennis_family";
 const SCREEN_TOP = "top";
 const SCREEN_HELPER = "helper";
+const SCREEN_ART = "art";
 function LearningControl() {
   const [gate, setGate] = useState(false);
   const [ab, setAb] = useState({ a: 0, b: 0 });
@@ -147,6 +148,15 @@ function SoundboardScreen({ onHome }) {
     <div style={{ position: "fixed", inset: 0, background: "#FBF6EC", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
       <iframe title="Buildable Sound Machine" src="/soundboard.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
+  );
+}
+
+function ArtStudioScreen({ onHome }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0b1030", zIndex: 50 }}>
+      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
+      <iframe title="Buildable Art Studio" src="/art-studio.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
@@ -263,6 +273,7 @@ export default function BuildableKids() {
         onGames={() => setScreen(SCREEN_GAME_PICKER)}
         onSounds={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_SOUNDS); }}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
+        onArt={() => setScreen(SCREEN_ART)}
         onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
         onChess={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
@@ -425,6 +436,9 @@ export default function BuildableKids() {
   if (screen === SCREEN_SOUNDS) {
     return <SoundboardScreen onHome={() => setScreen(returnTo || SCREEN_HOME)} />;
   }
+  if (screen === SCREEN_ART) {
+    return <ArtStudioScreen onHome={() => setScreen(SCREEN_HOME)} />;
+  }
   if (screen === SCREEN_TENNIS) {
     return <TennisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => setScreen(SCREEN_TENNIS_FAMILY)} />;
   }
@@ -511,7 +525,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds }) {
+function HomeScreen({ activeKid, onMusic, onGames, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds }) {
   // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
   const AppIcon = ({ grad, size = 76, children }) => (
     <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
@@ -530,6 +544,13 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
       <ellipse cx="17" cy="33" rx="7" ry="5.2" transform="rotate(-20 17 33)" fill="#fff" />
       <rect x="22.6" y="11" width="3.2" height="22.5" fill="#fff" />
       <path d="M25.8 11 q11 3 8.5 15 q.5 -8 -8.5 -9 z" fill="#fff" />
+    </svg>
+  );
+  const ArtGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="27" y="9" width="6.5" height="20" rx="3" transform="rotate(38 30 19)" fill="#fff" />
+      <path d="M18 30 q-3 2 -4 7 q5 -1 7 -4 z" fill="#fff" />
+      <circle cx="14" cy="14" r="3.4" fill="#fff" /><circle cx="22" cy="11" r="2.4" fill="#fff" opacity="0.8" />
     </svg>
   );
   const ControllerGlyph = () => (
@@ -849,6 +870,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
           <MakeTile grad="linear-gradient(160deg,#F2789E,#E0578F)" glyph={<BookGlyph />} title="Make a story" sub="A living picture book" onClick={onStories} />
           <MakeTile grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)" glyph={<NoteGlyph />} title="Make a song" sub="Sing about anything" onClick={onMusic} />
           <MakeTile grad="linear-gradient(160deg,#FF8FB1,#F0577E)" glyph={<SpeakerGlyph />} title="Sound Machine" sub="Silly sounds & explosions" onClick={onSounds} />
+          <MakeTile grad="linear-gradient(160deg,#22B8CF,#1098AD)" glyph={<ArtGlyph />} title="Make art" sub="Draw, stamp & mirror" onClick={onArt} />
         </div>
 
         {/* trending from other kids — always shown */}

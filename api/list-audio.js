@@ -31,10 +31,13 @@ const SFX_THEME = {
   firewhoosh: "forest", rustle: "forest", splash: "ocean",
   magic: "magic", sparkle: "magic",
   // Sound Machine silly one-shots (theme "fun")
-  whoopee: "fun", boom: "fun", boing: "fun", burp: "fun", honk: "fun",
+  fart: "fun", boom: "fun", boing: "fun", burp: "fun", honk: "fun",
   tada: "fun", laser: "fun", ding: "fun", buzzer: "fun", sadtrombone: "fun",
   squeak: "fun", airhorn: "fun", bonk: "fun", slidewhistle: "fun",
   meow: "fun", woof: "fun", quack: "fun", cheer: "fun",
+  giggle: "fun", roar: "fun", robot: "fun", splat: "fun", cash: "fun",
+  drumroll: "fun", gong: "fun", frog: "fun", moo: "fun", rooster: "fun",
+  vroom: "fun", sneeze: "fun", partypop: "fun",
 };
 
 const norm = (t) => String(t || "").trim().toLowerCase();

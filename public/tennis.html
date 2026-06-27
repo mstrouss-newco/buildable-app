@@ -22,6 +22,21 @@
     background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.26); border-radius:999px;
     padding:8px 14px; cursor:pointer; }
   #reactBar button:active { background:rgba(255,255,255,0.30); }
+  /* "Choose your court" picker overlay */
+  .ov { position:absolute; inset:0; z-index:8; display:none; flex-direction:column; align-items:center;
+    background:linear-gradient(180deg,#0b1230,#241152); color:#fff; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .ov.show { display:flex; }
+  .ov h1 { font-family:'Fredoka',sans-serif; font-weight:700; font-size:30px; margin:32px 0 4px; }
+  .ov .sub { opacity:.8; margin:0 0 18px; font-size:15px; }
+  .ov .btn { font-family:'Fredoka',sans-serif; font-weight:600; font-size:16px; color:#1a0f3a; background:#9b7bff;
+    border:none; border-radius:14px; padding:12px 28px; margin:6px 0 28px; cursor:pointer; }
+  #courtGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; width:100%;
+    max-width:680px; padding:0 18px 24px; }
+  .court-card { border-radius:16px; overflow:hidden; cursor:pointer; border:3px solid transparent;
+    background:#1a1444; text-align:center; }
+  .court-card.on { border-color:#7ee0a0; box-shadow:0 0 0 2px rgba(126,224,160,.4); }
+  .court-card .thumb { width:100%; aspect-ratio:4/3; background-size:cover; background-position:center; display:block; }
+  .court-card .nm { font-weight:800; font-size:14px; padding:8px 4px; }
 </style>
 </head>
 <body>
@@ -29,6 +44,12 @@
   <canvas id="c"></canvas>
   <div id="menu"></div>
   <div id="reactBar"></div>
+  <div id="court" class="ov">
+    <h1>Choose your court</h1>
+    <div class="sub">Where do you want to play?</div>
+    <div id="courtGrid"></div>
+    <button class="btn" id="courtBack">Back</button>
+  </div>
 </div>
 
 <!-- shared engine libraries (drawn art, sound, juice, start screen) -->
@@ -60,17 +81,21 @@ var GAME_CONFIG = window.GAME_CONFIG || {
     { name: "Normal",  start: 0.52, max: 0.95, gain: 1.045, bot: 0.26 },
     { name: "Speedy",  start: 0.62, max: 1.12, gain: 1.055, bot: 0.34 },
   ],
-  // world -> background theme + accent colors (drawn art, never breaks)
+  // world -> AI backdrop (img:1 => /api/images?kind=tennis&id=<key>) + accent colors
+  // + ambient particle style `p`. Drawn gradient `bg` is the always-safe fallback.
   worlds: {
-    default: { bg: ["#10243a", "#0a1830"], net: "#9fd0ff", me: "#7ee0a0", opp: "#ff9ec4", ball: "#ffe27a" },
-    jungle:  { bg: ["#123a1f", "#0a2414"], net: "#a8f0b8", me: "#ffe27a", opp: "#7ad6ff", ball: "#ffd23f" },
-    ocean:   { bg: ["#0a3550", "#062032"], net: "#bdeaff", me: "#ffe27a", opp: "#ff9ec4", ball: "#aef0ff" },
-    space:   { bg: ["#1a1240", "#0a0820"], net: "#c9b8ff", me: "#7ee0a0", opp: "#ff9ec4", ball: "#fff1a8" },
-    candy:   { bg: ["#5a2f6e", "#3a1f49"], net: "#ffd0ec", me: "#aef0c0", opp: "#9fd0ff", ball: "#fff1a8" },
-    castle:  { bg: ["#2b2f48", "#171a2c"], net: "#cfd6ff", me: "#ffd23f", opp: "#7ad6ff", ball: "#fff" },
+    beach:   { name: "Sunny Beach",    bg: ["#2aa9d6", "#0e6ea0"], net: "#fff6cf", me: "#7ee0a0", opp: "#ff9ec4", ball: "#ffe27a", img: 1, p: "sun" },
+    space:   { name: "Space Station",  bg: ["#1a1240", "#0a0820"], net: "#c9b8ff", me: "#7ee0a0", opp: "#ff9ec4", ball: "#fff1a8", img: 1, p: "stars" },
+    jungle:  { name: "Jungle",         bg: ["#123a1f", "#0a2414"], net: "#a8f0b8", me: "#ffe27a", opp: "#7ad6ff", ball: "#ffd23f", img: 1, p: "leaves" },
+    ocean:   { name: "Underwater",     bg: ["#0a3550", "#062032"], net: "#bdeaff", me: "#ffe27a", opp: "#ff9ec4", ball: "#aef0ff", img: 1, p: "bubbles" },
+    candy:   { name: "Candy Land",     bg: ["#5a2f6e", "#3a1f49"], net: "#ffd0ec", me: "#aef0c0", opp: "#9fd0ff", ball: "#fff1a8", img: 1, p: "sweets" },
+    snow:    { name: "Snowy Peak",     bg: ["#2b5a78", "#16304a"], net: "#eaf6ff", me: "#ffd23f", opp: "#ff9ec4", ball: "#ffffff", img: 1, p: "snow" },
+    volcano: { name: "Volcano Arena",  bg: ["#5a1f1f", "#2a0e0e"], net: "#ffd0a0", me: "#7ee0a0", opp: "#ffd23f", ball: "#ffcaa0", img: 1, p: "embers" },
+    city:    { name: "Sunset Rooftop", bg: ["#6b2f5a", "#2a1330"], net: "#ffd6e6", me: "#7ee0a0", opp: "#ffd23f", ball: "#fff1a8", img: 1, p: "clouds" },
   },
 };
-function worldTheme(k) { return GAME_CONFIG.worlds[k] || GAME_CONFIG.worlds.default; }
+function worldTheme(k) { return GAME_CONFIG.worlds[k] || GAME_CONFIG.worlds.beach; }
+function mapWorld(k) { return GAME_CONFIG.worlds[k] ? k : "beach"; }   // online lobby may send unknown keys
 
 /* ---------- 2) STATE ---------- */
 var canvas = document.getElementById("c");
@@ -88,7 +113,7 @@ var G = null;          // live game object
 var state = "title";   // title | play | over
 var mode = "solo";     // solo | two | online
 var diff = 0;          // index into GAME_CONFIG.levels
-var worldKey = "default";
+var worldKey = "beach";
 var paused = false;    // online: opponent left
 var started = false;
 
@@ -99,6 +124,77 @@ var role = "host";     // host owns the ball
 var flip = false;      // guest renders the field upside-down (self at bottom)
 var meKid = null, oppKid = null, meName = "You", oppName = "Friend";
 var lastSentPaddle = 0, lastSentBall = 0;
+
+/* ---------- WORLD BACKDROP (AI art) + AMBIENT PARTICLES + SMACK TALK ---------- */
+var bgImg = null, bgKey = null;
+function loadBg(key) {
+  key = mapWorld(key);
+  if (bgKey === key) return;
+  bgKey = key; bgImg = null;
+  var th = worldTheme(key); if (!th.img) return;
+  try {
+    var im = new Image();
+    im.onload = function () { if (bgKey === key) bgImg = im; };
+    im.onerror = function () { if (bgKey === key) bgImg = null; };
+    im.src = "/api/images?kind=tennis&id=" + key;
+  } catch (e) {}
+}
+
+var parts = [];
+function initParticles() { parts = []; for (var i = 0; i < 34; i++) parts.push(spawnPart(true)); }
+function spawnPart(initial) {
+  var t = worldTheme(worldKey).p || "stars";
+  var p = { type: t, x: Math.random(), y: Math.random(), r: 2 + Math.random() * 4, a: 0.5 + Math.random() * 0.5, ph: Math.random() * 6.28 };
+  if (!initial) {   // respawn at the entry edge for its motion type
+    if (t === "snow" || t === "leaves" || t === "sweets") { p.y = -0.05; p.x = Math.random(); }
+    else if (t === "bubbles" || t === "embers" || t === "sun") { p.y = 1.05; p.x = Math.random(); }
+    else { p.x = Math.random(); p.y = Math.random(); }
+  }
+  return p;
+}
+function updateParticles(dt) {
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i]; p.ph += dt * 2;
+    switch (p.type) {
+      case "snow":    p.y += dt * 0.06; p.x += Math.sin(p.ph) * 0.0006; break;
+      case "leaves":  p.y += dt * 0.05; p.x += dt * 0.03 + Math.sin(p.ph) * 0.001; break;
+      case "sweets":  p.y += dt * 0.045; p.x += Math.sin(p.ph) * 0.0008; break;
+      case "bubbles": p.y -= dt * 0.07; p.x += Math.sin(p.ph) * 0.0008; break;
+      case "embers":  p.y -= dt * 0.09; p.x += Math.sin(p.ph) * 0.0012; p.a = 0.4 + 0.4 * Math.abs(Math.sin(p.ph)); break;
+      case "sun":     p.y -= dt * 0.03; p.x += Math.sin(p.ph) * 0.0006; p.a = 0.4 + 0.4 * Math.abs(Math.sin(p.ph)); break;
+      case "clouds":  p.x += dt * 0.02; break;
+      default:        p.x += dt * 0.008; p.a = 0.4 + 0.4 * Math.abs(Math.sin(p.ph)); break; // stars twinkle
+    }
+    if (p.y < -0.08 || p.y > 1.08 || p.x < -0.08 || p.x > 1.08) parts[i] = spawnPart(false);
+  }
+}
+function drawParticles() {
+  var col = partColor(worldTheme(worldKey).p);
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i];
+    ctx.globalAlpha = p.a * 0.8; ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(p.x * VW, p.y * VH, p.r, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function partColor(t) {
+  return t === "embers" ? "#ff9a3c" : t === "leaves" ? "#9be86a" : t === "bubbles" ? "#bfeaff"
+    : t === "sweets" ? "#ffb3e0" : t === "snow" ? "#ffffff" : t === "sun" ? "#ffe9a8"
+    : t === "clouds" ? "#ffffff" : "#fff6cf";
+}
+
+// SMACK TALK — playful, child-safe. The bot talks freely (it's the computer); kid-vs-kid
+// stays canned reactions only (the bar). Bubbles fade after ~2.2s.
+var TAUNTS = {
+  botPoint: ["Too slow!", "Is that all?", "Gotcha!", "Boop!", "Hehe!", "Wibble wobble!", "Bonk!"],
+  youPoint: ["Nice shot!", "Wow!", "You got this!", "Wheee!", "Boom!"],
+  botWin:   ["I win! Good game!", "Gotcha! Rematch?", "So fun! Again?"],
+  youWin:   ["You win! Amazing!", "Wow, you got me!", "Great game!"],
+};
+function pick(a) { return a[(Math.random() * a.length) | 0]; }
+var bubbleTop = null, bubbleBot = null;   // {text, t} — top=opponent, bottom=you
+function sayTop(text) { bubbleTop = { text: text, t: 2.2 }; }
+function sayBot(text) { bubbleBot = { text: text, t: 2.2 }; }
 
 /* ---------- 3) NEW GAME ---------- */
 function newGame() {
@@ -115,6 +211,8 @@ function newGame() {
     winner: null,
   };
   serve(G.serveTo);
+  bubbleTop = bubbleBot = null;
+  loadBg(worldKey); initParticles();
   state = "play"; started = true; paused = false;
 }
 
@@ -264,9 +362,20 @@ function bounce(dir, paddleX) {
 
 function point(side) {
   if (side === "top") G.sTop++; else G.sBottom++;
-  if (BM) { BM.shake(fx, 0.4); BM.flash(fx, "#fff", 0.5);
-    BM.pop(fx.pops, c2x(0.5), c2y(0.5), "Point!", "#fff"); }
-  ping("tennis_point", "hurt");
+  // EXPLOSION where the ball blew past the goal line
+  var ex = c2x(G.bx), ey = c2y(side === "top" ? 0.97 : 0.03);
+  if (BM) {
+    if (BM.explode) BM.explode(fx, ex, ey, worldTheme(worldKey).ball, { n: 26, shake: 0.5, flash: 0.5, flashCol: "#fff" });
+    else { BM.burst(fx.parts, ex, ey, "#fff", 24); BM.shake(fx, 0.5); BM.flash(fx, "#fff", 0.5); }
+    BM.pop(fx.pops, c2x(0.5), c2y(0.5), "Point!", "#fff");
+  }
+  ping("tennis_boom", "boss"); ping("tennis_point", "hurt");
+
+  // smack talk (solo only — bot talks freely; kid-vs-kid uses the canned bar)
+  if (mode === "solo") {
+    if (side === "top") sayTop(pick(TAUNTS.botPoint));   // bot scored on you
+    else sayBot(pick(TAUNTS.youPoint));                  // you scored
+  }
 
   var tgt = GAME_CONFIG.target;
   if (G.sBottom >= tgt || G.sTop >= tgt) { finish(); return; }
@@ -282,7 +391,20 @@ function finish() {
   if (mode === "online") iWon = (role === "host") ? (G.winner === "bottom") : (G.winner === "top");
   else iWon = (G.winner === "bottom");           // solo/two: bottom is "you"/P1
   ping(iWon ? "tennis_win" : "tennis_lose", iWon ? "win" : "lose");
-  if (BM) BM.flash(fx, iWon ? "#7ee0a0" : "#ff9ec4", 0.6);
+  ping("tennis_cheer", "win");
+  // celebratory fireworks across the court
+  if (BM) {
+    BM.flash(fx, iWon ? "#7ee0a0" : "#ff9ec4", 0.6); BM.shake(fx, 0.5);
+    for (var k = 0; k < 5; k++) {
+      var fxx = court.x + court.w * (0.2 + 0.6 * Math.random());
+      var fxy = court.y + court.h * (0.2 + 0.6 * Math.random());
+      var cols = ["#ffe27a", "#7ee0a0", "#ff9ec4", "#9fd0ff", "#ffd23f"];
+      if (BM.explode) BM.explode(fx, fxx, fxy, cols[k % cols.length], { n: 22 });
+      else BM.burst(fx.parts, fxx, fxy, cols[k % cols.length], 22);
+    }
+  }
+  // winner/loser smack talk (solo only)
+  if (mode === "solo") sayBot(pick(iWon ? TAUNTS.youWin : TAUNTS.botWin));
 
   // online: only the host writes the official result through the pipes
   if (mode === "online" && role === "host") {
@@ -302,10 +424,20 @@ function draw() {
   ctx.save();
   ctx.translate(sh.x || 0, sh.y || 0);
 
-  // backdrop
-  var g = ctx.createLinearGradient(0, 0, 0, VH);
-  g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
-  ctx.fillStyle = g; ctx.fillRect(-40, -40, VW + 80, VH + 80);
+  // backdrop — AI art world (cover-fit) if loaded, else the safe drawn gradient
+  var drewImg = false;
+  if (bgImg && BR && BR.bgImage) { try { drewImg = BR.bgImage(ctx, bgImg, VW, VH); } catch (e) {} }
+  if (!drewImg) {
+    var g = ctx.createLinearGradient(0, 0, 0, VH);
+    g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
+    ctx.fillStyle = g; ctx.fillRect(-40, -40, VW + 80, VH + 80);
+  } else {
+    // gentle darkening scrim so the ball, paddles and score stay readable over art
+    ctx.fillStyle = "rgba(8,10,24,0.34)"; ctx.fillRect(-40, -40, VW + 80, VH + 80);
+  }
+
+  // ambient world particles (snow, bubbles, embers, stars...) drifting behind the court
+  drawParticles();
 
   // court frame
   ctx.fillStyle = "rgba(255,255,255,0.04)";
@@ -341,8 +473,12 @@ function draw() {
   ctx.fillText(String(topScore), court.x + 16, court.y + 40);
   ctx.fillText(String(botScore), court.x + 16, court.y + court.h - 18);
 
-  // FX layer
+  // FX layer (particle bursts, explosions, screen flash, "Point!" pops)
   if (BM) BM.draw(ctx, fx, { font: "900 26px Nunito, sans-serif" });
+
+  // smack-talk speech bubbles (top = opponent/bot, bottom = you)
+  if (bubbleTop) bubble(bubbleTop, c2x(0.5), court.y + court.h * 0.16);
+  if (bubbleBot) bubble(bubbleBot, c2x(0.5), court.y + court.h * 0.84);
 
   // overlays
   if (paused) banner("Waiting for " + oppName + "…", "");
@@ -359,6 +495,16 @@ function draw() {
   ctx.restore();
 }
 
+function bubble(b, cx, cy) {
+  var fade = Math.min(1, b.t / 0.4);
+  ctx.font = "800 18px Nunito, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  var w = ctx.measureText(b.text).width + 30, h = 34;
+  ctx.globalAlpha = fade;
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  rrect(cx - w / 2, cy - h / 2, w, h, 16); ctx.fill();
+  ctx.fillStyle = "#1a1330"; ctx.fillText(b.text, cx, cy + 1);
+  ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic";
+}
 function paddle(nx, ny, col) {
   var w = GAME_CONFIG.paddleW * court.w, h = 0.022 * court.h * 1.6;
   var x = c2x(nx) - w / 2, y = c2y(ny) - h / 2;
@@ -437,7 +583,7 @@ if (online) {
     var d = e.data || {}; if (!d.type || String(d.type).indexOf("mp:") !== 0) return;
     if (d.type === "mp:init") {
       role = d.role || "host"; flip = (role === "guest");
-      worldKey = d.world || "default";
+      worldKey = mapWorld(d.world); loadBg(worldKey);
       meKid = d.you && d.you.kidId; meName = (d.you && d.you.name) || "You";
       oppKid = d.opp && d.opp.kidId; oppName = (d.opp && d.opp.name) || "Friend";
       mode = "online"; diff = 1;                       // family games play at "Normal"
@@ -457,8 +603,9 @@ if (online) {
   mp("mp:ready", {});
 }
 
-// canned-reaction bar (online only) — child-safe fixed phrases, no free text
-var REACTIONS = ["Nice shot!", "So close!", "Good game!", "Wow!", "Let's go!", "Haha!"];
+// canned-reaction bar (online only) — child-safe fixed phrases, no free text.
+// MUST stay a subset of the ALLOWED list enforced in src/FamilyRealtime.jsx.
+var REACTIONS = ["Nice shot!", "Too slow!", "So close!", "Let's go!", "Is that all?", "You got this!", "Boop!", "Wibble wobble!", "Bonk!", "Wheee!", "Great game!", "Haha!"];
 function showReactBar(on) {
   var bar = document.getElementById("reactBar"); if (!bar) return;
   if (on && !bar._built) {
@@ -482,8 +629,9 @@ function startConfig() {
     modes: ["solo", "two"], mode: mode,
     levels: GAME_CONFIG.levels.map(function (lv, i) {
       return { n: i + 1, name: lv.name, color: ["#2b6f5c", "#4a3b8c", "#6b2f4a"][i % 3],
-               state: i === 1 ? "next" : "done" };   // all playable; Normal highlighted
+               state: "ready", foot: ["Easy", "Normal", "Tricky"][i] };   // difficulty picker (all playable)
     }),
+    customizeLabel: "Choose your court",
   };
 }
 function mountStart() {
@@ -493,10 +641,49 @@ function mountStart() {
     onPlay: function (n) { if (BA) BA.unlock(); diff = (n || 1) - 1; m.style.display = "none"; newGame(); },
     onMode: function (mo) { mode = (mo === "two") ? "two" : "solo"; if (startUI) startUI.update(startConfig()); },
     onSound: function () { if (BA) { BA.unlock(); BA.toggleMute(); } if (startUI) startUI.update(startConfig()); },
+    onCustomize: showCourtPicker,
     onBack: function () {},
   };
   if (!startUI) startUI = BS.mount(m, startConfig(), cbs); else startUI.update(startConfig());
 }
+
+/* ---------- "Choose your court" picker (AI art worlds) ---------- */
+function showCourtPicker() {
+  var ov = document.getElementById("court"); if (!ov) return;
+  buildCourtGrid();
+  var m = document.getElementById("menu"); if (m) m.style.display = "none";
+  ov.classList.add("show");
+}
+function hideCourtPicker() {
+  var ov = document.getElementById("court"); if (ov) ov.classList.remove("show");
+  var m = document.getElementById("menu"); if (m) m.style.display = "block";
+}
+function buildCourtGrid() {
+  var grid = document.getElementById("courtGrid"); if (!grid) return;
+  grid.innerHTML = "";
+  Object.keys(GAME_CONFIG.worlds).forEach(function (key) {
+    var w = GAME_CONFIG.worlds[key];
+    var card = document.createElement("div");
+    card.className = "court-card" + (key === worldKey ? " on" : "");
+    var thumb = document.createElement("div"); thumb.className = "thumb";
+    thumb.style.background = "linear-gradient(160deg," + w.bg[0] + "," + w.bg[1] + ")";
+    // overlay the cached AI art; if it isn't there yet, the gradient shows through
+    var im = new Image();
+    im.onload = function () { thumb.style.backgroundImage = "url('/api/images?kind=tennis&id=" + key + "')"; };
+    im.src = "/api/images?kind=tennis&id=" + key;
+    var nm = document.createElement("div"); nm.className = "nm"; nm.textContent = w.name;
+    card.appendChild(thumb); card.appendChild(nm);
+    card.onclick = function () {
+      worldKey = key; loadBg(worldKey); initParticles();
+      hideCourtPicker();
+    };
+    grid.appendChild(card);
+  });
+}
+(function () {
+  var back = document.getElementById("courtBack");
+  if (back) back.onclick = hideCourtPicker;
+})();
 function backToMenu() {
   if (online) { newGame(); return; }              // online: tap restarts
   state = "title"; var m = document.getElementById("menu"); if (m) m.style.display = "block"; mountStart();
@@ -527,6 +714,9 @@ var last = 0;
 function frame(ts) {
   var dt = last ? (ts - last) / 1000 : 0.016; last = ts;
   if (BM) BM.update(fx, dt);
+  if (parts.length) updateParticles(dt);
+  if (bubbleTop) { bubbleTop.t -= dt; if (bubbleTop.t <= 0) bubbleTop = null; }
+  if (bubbleBot) { bubbleBot.t -= dt; if (bubbleBot.t <= 0) bubbleBot = null; }
   update(dt);
   if (G) draw();
   requestAnimationFrame(frame);

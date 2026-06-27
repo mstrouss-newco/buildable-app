@@ -220,7 +220,58 @@
   };
 
   // names of available renders (handy for docs / tooling)
-  BR.list = function () { return ["rrect", "sparkle", "heart", "background", "enemy", "hero", "gem", "projectile", "particle", "orbiter", "puIcon", "gearSVG"]; };
+  BR.list = function () { return ["rrect", "sparkle", "heart", "background", "enemy", "hero", "gem", "projectile", "particle", "orbiter", "puIcon", "gearSVG", "stroke", "mirror"]; };
+
+
+  // ---- Drawing-studio behaviors (shared so the next maker reuses them) ----------
+  // BR.stroke(ctx, {texture, points:[{x,y}], color, width, alpha}) — draws ONE textured
+  // line. Behavior switches on `texture`: smooth | wet | waxy | fine | grain | spray | glow.
+  BR.stroke = function (ctx, o) {
+    var pts = o.points || []; if (!pts.length) return;
+    var col = o.color || "#000", w = o.width || 10, a = o.alpha == null ? 1 : o.alpha, tex = o.texture || "smooth";
+    ctx.save(); ctx.globalAlpha = a; ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.strokeStyle = col; ctx.fillStyle = col;
+    function line(jit, ww, alpha) {
+      ctx.globalAlpha = alpha; ctx.lineWidth = ww; ctx.beginPath();
+      for (var i = 0; i < pts.length; i++) {
+        var p = pts[i], jx = jit ? (Math.random() - 0.5) * jit : 0, jy = jit ? (Math.random() - 0.5) * jit : 0;
+        if (i === 0) ctx.moveTo(p.x + jx, p.y + jy); else ctx.lineTo(p.x + jx, p.y + jy);
+      }
+      ctx.stroke();
+    }
+    if (tex === "spray") {
+      for (var i = 0; i < pts.length; i++) { var p = pts[i], n = Math.max(6, w);
+        for (var k = 0; k < n; k++) { var ang = Math.random() * 7, rr = Math.random() * w; ctx.globalAlpha = a * 0.5;
+          ctx.beginPath(); ctx.arc(p.x + Math.cos(ang) * rr, p.y + Math.sin(ang) * rr, 0.9, 0, 7); ctx.fill(); } }
+    } else if (tex === "grain") {           // chalk: scattered specks along the path
+      for (var i = 0; i < pts.length; i++) { var p = pts[i];
+        for (var k = 0; k < Math.max(4, w / 3); k++) { ctx.globalAlpha = a * (0.25 + Math.random() * 0.4);
+          ctx.beginPath(); ctx.arc(p.x + (Math.random() - 0.5) * w, p.y + (Math.random() - 0.5) * w, Math.random() * 1.6 + 0.4, 0, 7); ctx.fill(); } }
+    } else if (tex === "waxy") {            // crayon: a few jittered translucent passes
+      line(w * 0.18, w, a * 0.6); line(w * 0.28, w * 0.7, a * 0.45); line(w * 0.12, w * 0.4, a * 0.6);
+    } else if (tex === "fine") {            // pencil: thin, soft
+      line(0.6, Math.max(1, w * 0.35), a * 0.85);
+    } else if (tex === "glow") {            // neon: blurred halo + bright core
+      ctx.shadowColor = col; ctx.shadowBlur = w * 1.6; line(0, w * 0.7, a * 0.9);
+      ctx.shadowBlur = 0; ctx.strokeStyle = "#fff"; line(0, Math.max(1, w * 0.25), a * 0.9);
+    } else {                                // smooth / wet (paint, marker, rainbow)
+      line(0, w, a);
+    }
+    ctx.restore();
+  };
+
+  // BR.mirror(ctx, n, W, H, drawFn) — calls drawFn() n times rotated around the canvas
+  // center (a kaleidoscope). n=1 just draws once. For n>1 it also draws a mirrored set,
+  // so a single scribble becomes a symmetrical pattern.
+  BR.mirror = function (ctx, n, W, H, drawFn) {
+    n = Math.max(1, n | 0);
+    if (n === 1) { drawFn(); return; }
+    var cx = W / 2, cy = H / 2, step = (Math.PI * 2) / n;
+    for (var i = 0; i < n; i++) {
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(step * i); ctx.translate(-cx, -cy); drawFn(); ctx.restore();
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(step * i); ctx.scale(1, -1); ctx.translate(-cx, -cy); drawFn(); ctx.restore();
+    }
+  };
 
   g.BuildableRenders = BR;
 })(typeof window !== "undefined" ? window : globalThis);
