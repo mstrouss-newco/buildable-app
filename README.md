@@ -711,6 +711,8 @@ session.
 
 **Live QA fixes:** ElevenLabs requires duration_seconds 0.5–30 (squeak/bonk were 0.4 → bumped); error responses now send `Cache-Control: no-store` and the soundboard requests `/api/sfx?s=<key>&v=1` so a poisoned error never sticks in the edge cache. All 18 pads verified returning audio/mpeg live.
 
+**2026-06-27 follow-up:** Whoopee pad now plays a wet `fart` (fresh cache key, bypasses the old clip) + 13 new sounds (giggle, dino roar, robot, splat, cha-ching, drum roll, gong, frog, cow moo, rooster, vroom, achoo, party pop) — 31 pads total, all verified live + pre-warmed.
+
 ---
 
 ## QA Session Log Ã¢ÂÂ June 7 2026
