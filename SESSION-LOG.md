@@ -1,5 +1,12 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Maze Munchers: shipped to main (live) + per-world music
+- Merged `claude/games-maze-chase` to `main` (owner asked to make it live for testing); Vercel auto-deploys. Maze tile is in the Games picker.
+- **Per-world background music**: new `api/maze-music.js` (mirrors `breaker-music.js`) generates a bespoke upbeat ElevenLabs track per world (candy/reef/station/wood/jungle/frost), cached in `narration_cache` (`mazemusic:<world>`), served loopable. `maze-engine.html` switches the track when the world changes, starts on first tap (audio-unlock), and follows the sound on/off toggle. Volume under the SFX (BA default).
+- One-time "how to play" hint toast on first play. `qa-maze.mjs` still clears all 6 worlds + campaign; `npm run build` clean.
+- Owner action: the 6 music tracks + 6 maze_* SFX auto-generate + cache on first play (or pre-warm `/api/maze-music?world=<key>` and `/api/sfx?s=maze_*`).
+
+
 ## 2026-06-27 — Family Town: AI art + Monopoly-style pricing (branch claude/games-family-town)
 - **Real AI art** via a new `kind=town` in `api/images.js` (generate-once-cache, `<img>`/drawn
   fallbacks so a miss never breaks play): a storybook **board scene** painted behind the center

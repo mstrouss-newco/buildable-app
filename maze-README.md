@@ -47,6 +47,5 @@ smoke-test. All green.
   `src/BuildableKids.jsx`.
 
 ## TODO (next)
-- Bespoke per-world background music (ElevenLabs, like `breaker-music.js`) — sounds shipped,
-  music deferred.
+- Bespoke per-world background music: DONE — `api/maze-music.js` (ElevenLabs, like `breaker-music.js`), one track per world, auto-generates + caches on first play; engine switches per world + follows the sound toggle.
 - Save/share/publish a cleared run (CREATIONS rule) + the shared `GameFrame` nav wrapper.
