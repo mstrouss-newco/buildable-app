@@ -79,7 +79,7 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   bgUrl:   "https://www.buildablekids.com/api/story-library?img=world:enchanted-forest&style=watercolor",
   palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#c0566f", flag:"#ffd23f", hud:"#ffffff" },
   levels: [
-    { name:"Whispering Woods", speed:3.2, length:150, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.55, vineChance:0.5, boss:true, bossHp:3 },
+    { name:"Whispering Woods", speed:3.2, length:150, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, boss:true, bossHp:3 },
   ],
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
@@ -150,6 +150,7 @@ function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=M
 // CLIMB zones (flat ground + platforms). Always clearable: RUN zones space
 // hazards <= a jump apart; CLIMB zones are flat so the bot never jumps where a
 // platform could catch it. Platforms/stars/bounces live only in CLIMB zones. ---
+function mkSwing(ax, rnd){ return {ax, ay:GROUND_Y-230, len:140+rnd()*40, ang:(rnd()<0.5?-1:1)*(0.5+rnd()*0.3), angV:0, grabbed:false}; }
 function buildLevel(lv, idx){
   const rnd=mulberry(1000+idx*97);
   const ground=[], obstacles=[], enemies=[], coins=[], lowBars=[], decos=[], powerups=[], platforms=[], bounces=[], stars=[], swings=[];
@@ -171,6 +172,7 @@ function buildLevel(lv, idx){
           ground.push({x0:segStart, x1:tx, y:GROUND_Y});
           const maxGap=Math.max(1, Math.min(lv.gapMax, safeGapTiles));
           const gapTiles=1+Math.floor(rnd()*maxGap);
+          if((lv.vineChance||0)>0 && rnd()<0.6) swings.push(mkSwing(tx + gapTiles*TILE*0.5, rnd));   // optional vine to swing the pit (ground jump still clears it)
           i+=gapTiles; segStart=i*TILE; lastHaz=i; continue;
         }
         if(canHaz && rnd()<lv.obstacleChance){ obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46}); lastHaz=i; }
@@ -180,7 +182,7 @@ function buildLevel(lv, idx){
       }
       mode="climb";
     } else {
-      const segEnd=Math.min(n-4, i + 9 + Math.floor(rnd()*5));    // 9-13 tiles, flat ground
+      const segEnd=Math.min(n-4, i + 12 + Math.floor(rnd()*6));   // 12-17 tiles, roomier climbs
       for(let j=i+1; j<segEnd-2; ){
         const tier=1+Math.floor(rnd()*2);                         // 1 or 2 (both reachable)
         const py=GROUND_Y-100-(tier-1)*78;
@@ -188,18 +190,27 @@ function buildLevel(lv, idx){
         if(j+wT>segEnd-2) break;
         const pf={x:j*TILE, y:py, w:wT*TILE};
         if(rnd() < (lv.movingPlatChance||0)){
-          const horiz=rnd()<0.5;
-          pf.mv = horiz ? {axis:'x', amp:TILE*(0.9+rnd()*1.1), spd:0.018+rnd()*0.016, ph:rnd()*6.28, bx:pf.x, by:pf.y}
-                        : {axis:'y', amp:30+rnd()*36,          spd:0.018+rnd()*0.016, ph:rnd()*6.28, bx:pf.x, by:pf.y};
+          const roll=rnd();                                       // x / y / diagonal movers for variety
+          if(roll<0.42)      pf.mv={axis:'x',    amp:TILE*(0.9+rnd()*1.3),               spd:0.018+rnd()*0.016, ph:rnd()*6.28, bx:pf.x, by:pf.y};
+          else if(roll<0.78) pf.mv={axis:'y',    amp:28+rnd()*34,                        spd:0.018+rnd()*0.016, ph:rnd()*6.28, bx:pf.x, by:pf.y};
+          else               pf.mv={axis:'diag', amp:TILE*(0.7+rnd()*0.9), ampY:24+rnd()*26, spd:0.016+rnd()*0.014, ph:rnd()*6.28, bx:pf.x, by:pf.y};
           pf.dx=0; pf.dy=0;
         }
         platforms.push(pf);
-        if(!pf.mv) for(let cc=0;cc<wT;cc++) coins.push({x:j*TILE+TILE/2+cc*TILE, y:py-30, got:false});
-        if(rnd() < (lv.vineChance||0)) swings.push({ax:pf.x+pf.w*0.5, ay:GROUND_Y-230, len:140+rnd()*40, ang:(rnd()<0.5?-1:1)*(0.5+rnd()*0.3), angV:0, grabbed:false});
+        if(pf.mv){                                                // coins along the mover's path reward riding it
+          const cn=2+Math.floor(rnd()*2), spread=(pf.mv.axis==='y')?0:(pf.mv.amp||TILE)*1.1;
+          for(let cc=0;cc<cn;cc++){ const fx=(cn>1?cc/(cn-1):0.5)-0.5; coins.push({x:pf.x+pf.w*0.5+fx*spread, y:py-30, got:false}); }
+        } else {
+          for(let cc=0;cc<wT;cc++) coins.push({x:j*TILE+TILE/2+cc*TILE, y:py-30, got:false});
+        }
+        if(rnd() < (lv.vineChance||0)){                           // more vines, sometimes a 2-vine chain to swing across
+          swings.push(mkSwing(pf.x+pf.w*0.5, rnd));
+          if(rnd()<0.45) swings.push(mkSwing(pf.x+pf.w*0.5 + TILE*(2.4+rnd()*1.4), rnd));
+        }
         if(tier===2 && stars.length<(lv.starCount||3) && rnd()<0.7) stars.push({x:j*TILE+TILE/2, y:py-36, got:false});
         else if(rnd()<0.35) powerups.push({x:j*TILE+TILE/2, y:py-36, kind:POOL[Math.floor(rnd()*POOL.length)], got:false});
         if(rnd()<0.4) bounces.push({x:j*TILE+wT*TILE/2-32, y:py-14, w:64, t:0});
-        j += wT + 1 + Math.floor(rnd()*2);
+        j += wT + 1 + Math.floor(rnd()*1);                        // tighter packing => more platforms
       }
       i=segEnd; mode="run";
     }
@@ -341,9 +352,9 @@ function update(){
   if(magnetT>0)magnetT--; if(springT>0)springT--; if(starT>0)starT--; if(player.swingCool>0)player.swingCool--;
   gameT++;
   // advance moving platforms (deterministic frame clock so the QA sim matches real play)
-  for(const pf of L.platforms){ if(pf.mv){ const m=pf.mv;
-    const nx = m.axis==='x'? m.bx+Math.sin(gameT*m.spd+m.ph)*m.amp : m.bx;
-    const ny = m.axis==='y'? m.by+Math.sin(gameT*m.spd+m.ph)*m.amp : m.by;
+  for(const pf of L.platforms){ if(pf.mv){ const m=pf.mv, s=Math.sin(gameT*m.spd+m.ph);
+    const nx = (m.axis==='x'||m.axis==='diag')? m.bx+s*m.amp : m.bx;
+    const ny = m.axis==='y'? m.by+s*m.amp : (m.axis==='diag'? m.by+Math.cos(gameT*m.spd+m.ph)*m.ampY : m.by);
     pf.dx=nx-pf.x; pf.dy=ny-pf.y; pf.x=nx; pf.y=ny; } }
   // swinging vines: pendulum motion (ungrabbed) + ride/grab
   for(const sw of L.swings){ if(sw===player.swing)continue; sw.angV += -0.006*Math.sin(sw.ang); sw.angV*=0.996; sw.ang+=sw.angV; }
@@ -380,7 +391,7 @@ function update(){
     }
     if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; SFX.bounce(); }
     else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); SFX.land(); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false;
-      if(landPf&&landPf.mv){ if(landPf.mv.axis==='x') player.x+=landPf.dx; player.standPf=landPf; } else player.standPf=null; }
+      if(landPf&&landPf.mv){ if(landPf.mv.axis==='x'||landPf.mv.axis==='diag') player.x+=landPf.dx; player.standPf=landPf; } else player.standPf=null; }
     else { player.onGround=false; player.standPf=null; }
   }
   player.r = player.onGround?0:Math.max(-0.5,Math.min(0.5,player.vy*0.03));
