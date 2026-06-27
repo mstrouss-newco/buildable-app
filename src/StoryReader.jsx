@@ -252,7 +252,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       <audio ref={ambienceRef} style={{ display: "none" }} />
       <audio ref={waterAudioRef} style={{ display: "none" }} />
 
-      <div key={idx} style={{ animation: (dir >= 0 ? "bk-turn-next" : "bk-turn-prev") + " 0.5s cubic-bezier(.2,.7,.3,1) both", transformOrigin: dir >= 0 ? "left center" : "right center" }}>
+      <div key={idx} style={{ width: "100%", maxWidth: 760, animation: (dir >= 0 ? "bk-turn-next" : "bk-turn-prev") + " 0.5s cubic-bezier(.2,.7,.3,1) both", transformOrigin: dir >= 0 ? "left center" : "right center" }}>
         {sceneUrl[idx]
           ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} style={s.page} />
           : <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={idx} style={s.page} />}
