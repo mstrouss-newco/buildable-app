@@ -1,5 +1,12 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Maze Munchers: "Make It Mine" buddy, bonus treats, scoring
+- **Make It Mine buddy picker** (shared BS `customizeLabel`/`onCustomize` + a bespoke overlay): kids pick a muncher buddy (color + ears) that overrides the per-world look in EVERY world, or "Match world". Persists in `mz_prefs.buddy`. No emoji (drawn).
+- **Surprise bonus treats**: a glowing bonus appears anywhere for ~7s (with a shrinking life-ring), worth +250 and a burst/pop; reappears on a timer. Optional — never required to clear, so always-winnable + the QA bot are unaffected.
+- **Scoring**: score in the HUD, per-world **best** saved (`mz_prefs.best`), and a richer win screen (3 sparkle stars + "Score / Best" + "New best!").
+- `qa-maze.mjs` still clears all 6 worlds + campaign + render smoke (drawBonus/buddy/win overlay exercised); `npm run build` clean. Shipped to `main`.
+
+
 ## 2026-06-27 — Maze Munchers: shipped to main (live) + per-world music
 - Merged `claude/games-maze-chase` to `main` (owner asked to make it live for testing); Vercel auto-deploys. Maze tile is in the Games picker.
 - **Per-world background music**: new `api/maze-music.js` (mirrors `breaker-music.js`) generates a bespoke upbeat ElevenLabs track per world (candy/reef/station/wood/jungle/frost), cached in `narration_cache` (`mazemusic:<world>`), served loopable. `maze-engine.html` switches the track when the world changes, starts on first tap (audio-unlock), and follows the sound on/off toggle. Volume under the SFX (BA default).

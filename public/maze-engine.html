@@ -25,11 +25,32 @@
   #dpad .down{left:57px;top:114px}
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;background:#ffd86b;color:#1a0f3a;
          font-weight:700;padding:11px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
+  /* Make It Mine overlay */
+  .ov{position:fixed;inset:0;z-index:12;display:none;flex-direction:column;align-items:center;
+      background:linear-gradient(180deg,#0b1230,#241152);color:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .ov.show{display:flex}
+  .ov h1{font-size:36px;margin:26px 0 4px}
+  .ov .sub{opacity:.8;margin:0 0 16px;text-align:center;padding:0 20px}
+  .btn{font-family:inherit;font-weight:800;font-size:20px;color:#1a0f3a;background:#9b7bff;border:none;
+       border-radius:16px;padding:14px 34px;margin:8px;cursor:pointer;box-shadow:0 6px 0 #6a4ad6}
+  .btn:active{transform:translateY(3px);box-shadow:0 3px 0 #6a4ad6}
+  .btn.small{font-size:16px;padding:10px 18px}
+  .grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:560px;padding:0 14px 24px}
+  .opt{width:120px;background:#1a1444;border:3px solid #2c2466;border-radius:16px;padding:12px;text-align:center;cursor:pointer}
+  .opt.on{border-color:#7ee0a0;box-shadow:0 0 0 2px rgba(126,224,160,.35)}
+  .opt .sw{height:58px;border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center}
+  .opt .nm{font-weight:700;font-size:15px}
 </style>
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="900" height="600"></canvas></div>
 <div id="start"></div>
+<div id="customize" class="ov">
+  <h1>Make It Mine</h1>
+  <div class="sub">Pick your muncher buddy! It comes with you to every world.</div>
+  <div class="grid" id="buddyGrid"></div>
+  <button class="btn small" id="custBack">Done</button>
+</div>
 <div id="toast" class="toast"></div>
 <button id="backBtn" title="Back to menu">‹ Menu</button>
 <button id="muteBtn">Sound: On</button>
@@ -108,6 +129,19 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   ],
 };
 
+// Make-It-Mine buddies — a kid's chosen muncher overrides the per-world look in EVERY world.
+const BUDDIES = [
+  { name:"Match world", world:true },
+  { name:"Sunny",  color:"#ffe27a", ears:"round" },
+  { name:"Berry",  color:"#ff6b9d", ears:"round" },
+  { name:"Sky",    color:"#8ef0ff", ears:"antenna" },
+  { name:"Leaf",   color:"#7ee0a0", ears:"fox" },
+  { name:"Grape",  color:"#c69bff", ears:"fox" },
+  { name:"Tango",  color:"#ff9a5c", ears:"dino" },
+  { name:"Mint",   color:"#5be0b0", ears:"antenna" },
+];
+function currentBuddy(){ const b=(typeof PREFS!=="undefined"&&PREFS.buddy!=null)?BUDDIES[PREFS.buddy]:null; if(b&&!b.world) return { hero:b.color, ears:b.ears }; return { hero:lv.hero, ears:lv.ears }; }
+
 // ---- runtime state ----
 let level = 0, state = "title";   // title | ready | play | caught | levelwin | alldone
 let lv = GAME_CONFIG.levels[0];
@@ -117,6 +151,8 @@ let hero = null, chasers = [], homeGX = 1, homeGY = 1, heroGX0 = 1, heroGY0 = 1;
 let lives = 3, lostThisLevel = 0, score = 0;
 let powerTimer = 0, eatChain = 0, readyTimer = 0, invuln = 0, t = 0;
 let queuedDir = null, botMode = false;
+let bonus = null, bonusTimer = 0;   // surprise bonus treat (big points; optional)
+let lastWin = { stars:0, score:0, best:0, nb:false };
 let R = mulberry(1);                 // seeded rng for chaser AI (per level)
 let distField = null, homeField = null;
 let ambient = [];
@@ -286,6 +322,7 @@ function startLevel(i, keepLives){
   hero = makeEntity(heroGX0, heroGY0, HERO_SPEED); hero.dir=NAME2DIR.left; queuedDir=null;
   chasers=[]; for(let k=0;k<lv.chasers;k++){ const e=makeEntity(homeGX, homeGY, lv.speed); e.dir=DIRS[k%4]; e.col=lv.chaserCols[k%lv.chaserCols.length]; e.blink=0; chasers.push(e); }
   powerTimer=0; eatChain=0; invuln=0; lostThisLevel=0; score=keepLives==null?0:score;
+  bonus=null; bonusTimer=(9+Math.random()*4)*60|0;
   lives = keepLives==null ? 3 : keepLives;
   spawnAmbient();
   state="ready"; readyTimer=botMode?6:90; toast("");
@@ -307,6 +344,8 @@ function eatAt(gx,gy){
 function winLevel(){
   state="levelwin";
   const stars = lostThisLevel===0?3 : lostThisLevel<=2?2 : 1;
+  if(!PREFS.best) PREFS.best={}; const prevBest=PREFS.best[level]||0; const nb=score>prevBest; if(nb)PREFS.best[level]=score;
+  lastWin={ stars:stars, score:score, best:Math.max(prevBest,score), nb:nb };
   if((PREFS.stars[level]||0) < stars) PREFS.stars[level]=stars;
   PREFS.unlocked = Math.max(PREFS.unlocked||0, Math.min(GAME_CONFIG.levels.length-1, level+1));
   savePrefs();
@@ -324,6 +363,8 @@ function caught(){
   }
 }
 
+function spawnBonus(){ const cells=[]; for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){ if(grid[y][x]===0 && !(x===hero.gx&&y===hero.gy)) cells.push([x,y]); } if(!cells.length){ bonusTimer=240; return; } const c=cells[(Math.random()*cells.length)|0]; bonus={ gx:c[0], gy:c[1], life:7*60, max:7*60 }; }
+
 // ---- main update ----
 function update(){
   t += 1/60;
@@ -338,6 +379,10 @@ function update(){
   // move hero, eat what it's over
   stepEntity(hero, decideHero);
   { const useTo = hero.t>0.5; const gx=useTo?hero.tx:hero.fx, gy=useTo?hero.ty:hero.fy; eatAt(gx,gy); }
+  // surprise bonus treat: appears for a few seconds anywhere, worth big points (optional)
+  if(!bonus){ bonusTimer--; if(bonusTimer<=0) spawnBonus(); }
+  else { bonus.life--; if(bonus.life<=0){ bonus=null; bonusTimer=(11+Math.random()*6)*60|0; }
+    else { const ht = hero.t>0.5?[hero.tx,hero.ty]:[hero.fx,hero.fy]; if(ht[0]===bonus.gx&&ht[1]===bonus.gy){ score+=250; sfx("coin",{tier:3}); const cc=center(bonus.gx,bonus.gy); if(BM){ BM.explode(fx, cc.x, cc.y, "#ffd23f", {n:16}); BM.pop(fx.pops, cc.x, cc.y-tile*0.4, "+250", "#ffd23f"); } bonus=null; bonusTimer=(11+Math.random()*6)*60|0; } } }
   // move chasers
   for(const e of chasers){ stepEntity(e, decideChaser); if(e.eaten && e.gx===homeGX && e.gy===homeGY && e.t<0.05){ e.eaten=false; } }
   // collisions
@@ -384,18 +429,18 @@ function drawDots(){
   }
 }
 function drawHero(){
-  const x=hero.px, y=hero.py, r=tile*0.40, ang=dirAngle(hero.dir);
+  const x=hero.px, y=hero.py, r=tile*0.40, ang=dirAngle(hero.dir); const HB=currentBuddy();
   const chompV = hero.moving ? (0.5+0.5*Math.sin(t*16)) : 0.12;
   const mouth = 0.05*Math.PI + chompV*0.34*Math.PI;
   ctx.fillStyle="rgba(0,0,0,0.20)"; ctx.beginPath(); ctx.ellipse(x,y+r*0.86,r*0.7,r*0.22,0,0,7); ctx.fill();
   // ears (so it reads as a CRITTER, not a wedge)
-  ctx.fillStyle=BR?BR._lighten(lv.hero,0.1):lv.hero;
-  if(lv.ears==="antenna"){ ctx.strokeStyle=lv.hero; ctx.lineWidth=Math.max(2,r*0.12); ctx.beginPath(); ctx.moveTo(x,y-r*0.7); ctx.lineTo(x,y-r*1.25); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y-r*1.32,r*0.16,0,7); ctx.fill(); }
-  else if(lv.ears==="fin"){ ctx.beginPath(); ctx.moveTo(x-r*0.1,y-r*0.7); ctx.lineTo(x+r*0.5,y-r*1.2); ctx.lineTo(x+r*0.6,y-r*0.5); ctx.closePath(); ctx.fill(); }
-  else if(lv.ears==="fox"||lv.ears==="dino"){ for(const sx of [-1,1]){ ctx.beginPath(); ctx.moveTo(x+sx*r*0.5,y-r*0.5); ctx.lineTo(x+sx*r*0.78,y-r*1.15); ctx.lineTo(x+sx*r*0.12,y-r*0.78); ctx.closePath(); ctx.fill(); } }
+  ctx.fillStyle=BR?BR._lighten(HB.hero,0.1):HB.hero;
+  if(HB.ears==="antenna"){ ctx.strokeStyle=HB.hero; ctx.lineWidth=Math.max(2,r*0.12); ctx.beginPath(); ctx.moveTo(x,y-r*0.7); ctx.lineTo(x,y-r*1.25); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y-r*1.32,r*0.16,0,7); ctx.fill(); }
+  else if(HB.ears==="fin"){ ctx.beginPath(); ctx.moveTo(x-r*0.1,y-r*0.7); ctx.lineTo(x+r*0.5,y-r*1.2); ctx.lineTo(x+r*0.6,y-r*0.5); ctx.closePath(); ctx.fill(); }
+  else if(HB.ears==="fox"||HB.ears==="dino"){ for(const sx of [-1,1]){ ctx.beginPath(); ctx.moveTo(x+sx*r*0.5,y-r*0.5); ctx.lineTo(x+sx*r*0.78,y-r*1.15); ctx.lineTo(x+sx*r*0.12,y-r*0.78); ctx.closePath(); ctx.fill(); } }
   else { for(const sx of [-1,1]){ ctx.beginPath(); ctx.arc(x+sx*r*0.55,y-r*0.62,r*0.26,0,7); ctx.fill(); } }
   // body with a chomping mouth toward travel direction
-  const bg=ctx.createRadialGradient(x-r*0.3,y-r*0.4,r*0.2,x,y,r*1.1); bg.addColorStop(0,BR?BR._lighten(lv.hero,0.4):"#fff"); bg.addColorStop(1,lv.hero);
+  const bg=ctx.createRadialGradient(x-r*0.3,y-r*0.4,r*0.2,x,y,r*1.1); bg.addColorStop(0,BR?BR._lighten(HB.hero,0.4):"#fff"); bg.addColorStop(1,HB.hero);
   ctx.fillStyle=bg; ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,r, ang+mouth, ang+2*Math.PI-mouth); ctx.closePath(); ctx.fill();
   // eyes
   const ep=ang-Math.PI/2, ex=Math.cos(ep)*r*0.42, ey=Math.sin(ep)*r*0.42, ox2=Math.cos(ang)*r*0.12, oy2=Math.sin(ang)*r*0.12;
@@ -417,7 +462,7 @@ function drawHUD(){
   ctx.fillStyle="#fff"; ctx.font="700 22px Fredoka,sans-serif"; ctx.textAlign="center"; ctx.fillText(lv.name, W/2, 36);
   // treats left
   ctx.textAlign="right"; ctx.font="700 18px Fredoka,sans-serif"; ctx.fillStyle="#ffe27a"; ctx.fillText("Treats: "+dotsLeft, W-20, 34);
-  ctx.textAlign="left";
+  ctx.textAlign="left"; ctx.font="700 16px Fredoka,sans-serif"; ctx.fillStyle="#cde6ff"; ctx.fillText("Score "+score, 112, 33);
   if(frightened()){ const w=Math.min(220,W*0.3), bx=W/2-w/2, by=46; ctx.fillStyle="rgba(255,255,255,0.18)"; if(BR)BR.rrect(ctx,bx,by,w,6,3); ctx.fill(); ctx.fillStyle="#ffe27a"; if(BR)BR.rrect(ctx,bx,by,w*(powerTimer/lv.power),6,3); ctx.fill(); }
 }
 function overlay(title, sub, col){
@@ -426,11 +471,18 @@ function overlay(title, sub, col){
   if(sub){ ctx.fillStyle="#cdd0ff"; ctx.font="600 22px Fredoka,sans-serif"; ctx.fillText(sub, W/2, H/2+34); }
   ctx.textAlign="left";
 }
+function drawBonus(){ if(!bonus)return; const cc=center(bonus.gx,bonus.gy), pulse=0.7+0.3*Math.sin(t*7);
+  const gg=ctx.createRadialGradient(cc.x,cc.y,1,cc.x,cc.y,tile*0.7); gg.addColorStop(0,"rgba(255,210,63,"+(0.55*pulse)+")"); gg.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cc.x,cc.y,tile*0.7,0,7); ctx.fill();
+  ctx.fillStyle="#ffd23f"; if(BR)BR.sparkle(ctx,cc.x,cc.y,tile*0.34*pulse,t*2); else { ctx.beginPath(); ctx.arc(cc.x,cc.y,tile*0.3,0,7); ctx.fill(); }
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(cc.x-tile*0.08,cc.y-tile*0.08,tile*0.06,0,7); ctx.fill();
+  // life ring
+  ctx.strokeStyle="rgba(255,255,255,0.5)"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cc.x,cc.y,tile*0.44,-Math.PI/2,-Math.PI/2+6.283*(bonus.life/bonus.max)); ctx.stroke();
+}
 function draw(){
   const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,lv.bg[0]); g.addColorStop(1,lv.bg[1]); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
   drawAmbient();
   ctx.save(); if(BM){ const s=BM.shakeOffset(fx); ctx.translate(s.x,s.y); }
-  drawMaze(); drawDots();
+  drawMaze(); drawDots(); drawBonus();
   for(const e of chasers) if(e.eaten) drawChaser(e);
   for(const e of chasers) if(!e.eaten) drawChaser(e);
   drawHero();
@@ -438,12 +490,15 @@ function draw(){
   ctx.restore();
   drawHUD();
   if(state==="ready"){ const n=Math.ceil(readyTimer/30); overlay("Ready?", n>0?("Go in "+n+"..."):"Go!", lv.hero); }
-  else if(state==="levelwin"){ const last = level>=GAME_CONFIG.levels.length-1; overlay(last?"You did it!":"World cleared!", last?"You cleared every world! Tap for menu":"Tap to play the next world", "#ffe27a"); }
+  else if(state==="levelwin"){ const last = level>=GAME_CONFIG.levels.length-1;
+    overlay(last?"You did it!":"World cleared!", (lastWin.nb?"New best! ":"")+"Score "+lastWin.score+"  -  Best "+lastWin.best, "#ffe27a");
+    ctx.textAlign="center"; for(let i=0;i<3;i++){ ctx.fillStyle=i<lastWin.stars?"#ffd23f":"rgba(255,255,255,0.2)"; if(BR)BR.sparkle(ctx,W/2+(i-1)*46,H/2-58,16,t); }
+    ctx.fillStyle="#9fe6c0"; ctx.font="600 18px Fredoka,sans-serif"; ctx.fillText(last?"Tap for the menu":"Tap to play the next world", W/2, H/2+72); ctx.textAlign="left"; }
 }
 
 // ---- prefs ----
-let PREFS = { unlocked:0, stars:{} };
-function loadPrefs(){ try{ const s=localStorage.getItem('mz_prefs'); if(s) PREFS=Object.assign(PREFS, JSON.parse(s)); }catch(e){} if(!PREFS.stars) PREFS.stars={}; }
+let PREFS = { unlocked:0, stars:{}, best:{}, buddy:null };
+function loadPrefs(){ try{ const s=localStorage.getItem('mz_prefs'); if(s) PREFS=Object.assign(PREFS, JSON.parse(s)); }catch(e){} if(!PREFS.stars) PREFS.stars={}; if(!PREFS.best) PREFS.best={}; }
 function savePrefs(){ try{ localStorage.setItem('mz_prefs', JSON.stringify(PREFS)); }catch(e){} }
 
 // ---- ui helpers ----
@@ -476,6 +531,18 @@ if(typeof document!=="undefined"){
   const dp=el("dpad"); if(dp){ dp.querySelectorAll("button").forEach(b=>{ const fire=(ev)=>{ ev.preventDefault(); setDir(b.getAttribute("data-d")); }; b.addEventListener("touchstart",fire,{passive:false}); b.addEventListener("mousedown",fire); }); }
 }
 
+// ---- Make It Mine (buddy picker) ----
+function show(id,on){ const e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
+function showCustomize(){ const host=document.getElementById("start"); if(host)host.style.display="none"; show("customize",true); showInGame(false); renderBuddies(); }
+function renderBuddies(){ const grid=el("buddyGrid"); if(!grid)return; grid.innerHTML="";
+  BUDDIES.forEach((b,i)=>{ const on=(PREFS.buddy==null&&b.world)||(PREFS.buddy===i);
+    const sw = b.world ? '<div style="width:100%;height:100%;border-radius:12px;background:conic-gradient(#ff6b9d,#ffe27a,#8ef0ff,#7ee0a0,#c69bff,#ff6b9d)"></div>'
+                       : '<div style="width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,'+b.color+')"></div>';
+    const card=document.createElement("div"); card.className="opt"+(on?" on":""); card.innerHTML='<div class="sw">'+sw+'</div><div class="nm">'+b.name+'</div>';
+    card.onclick=()=>{ PREFS.buddy=b.world?null:i; savePrefs(); renderBuddies(); if(startScreen)startScreen.update(buildStartCfg()); if(BA){ BA.unlock(); sfx("select"); } };
+    grid.appendChild(card); });
+}
+
 // ---- shared start screen (BS) ----
 let startScreen=null;
 function buildStartCfg(){
@@ -483,18 +550,19 @@ function buildStartCfg(){
   const levels=GAME_CONFIG.levels.map((l,i)=>{ const stt=i<un?"done":(i===un?"next":"locked");
     return { n:i+1, name:l.name, color:l.wall, maxStars:3, stars: stt==="done"?(PREFS.stars[i]||0):undefined, state:stt }; });
   let total=0; for(const k in PREFS.stars) total+=PREFS.stars[k]||0;
-  return { title:"Maze Munchers", subtitle:"Gobble every treat — dodge the friendly chasers!", coins:total, sound:!(BA&&BA.muted), showBack:false, levels };
+  return { title:"Maze Munchers", subtitle:"Gobble every treat — dodge the friendly chasers!", coins:total, sound:!(BA&&BA.muted), showBack:false, levels, customizeLabel:"Make it mine" };
 }
-function showMenu(){ state="title"; showInGame(false); if(BA&&BA.stopMusic)BA.stopMusic(); _curMusic=null; const host=document.getElementById("start"); if(host)host.style.display="block";
+function showMenu(){ state="title"; showInGame(false); show("customize",false); if(BA&&BA.stopMusic)BA.stopMusic(); _curMusic=null; const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host) return;
-  const cb={ onPlay:(n)=>{ startPlay(n-1); hideMenu(); }, onMode:()=>{}, onHero:()=>{}, onCustomize:()=>{}, onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(!BA.muted){ ensureMusic(); playMusic(); } } }, onBack:()=>{} };
+  const cb={ onPlay:(n)=>{ startPlay(n-1); hideMenu(); }, onMode:()=>{}, onHero:()=>{}, onCustomize:()=>showCustomize(), onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(!BA.muted){ ensureMusic(); playMusic(); } } }, onBack:()=>{} };
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg());
 }
 function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showInGame(true); }
 function startPlay(i){ if(BA)BA.unlock(); botMode=false; startLevel(i,null); ensureMusic(); playMusic();
   if(!_hintShown){ _hintShown=true; toast("Swipe or use arrows to move. Eat a glowing treat to chase them!"); } }
 function wireMenus(){ const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(!BA.muted){ ensureMusic(); playMusic(); } } upd(); }; }
-  const bb=el("backBtn"); if(bb)bb.onclick=()=>{ showMenu(); }; }
+  const bb=el("backBtn"); if(bb)bb.onclick=()=>{ showMenu(); };
+  const cb2=el("custBack"); if(cb2)cb2.onclick=()=>{ show("customize",false); showMenu(); }; }
 
 function frame(){ if(state!=="title") update(); if(grid.length && hero && state!=="title") draw(); requestAnimationFrame(frame); }
 
