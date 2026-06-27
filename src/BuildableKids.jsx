@@ -130,7 +130,10 @@ export default function BuildableKids() {
     setReturnTo(SCREEN_TOP);
     if (item.kind === "song") setScreen(SCREEN_MUSIC);
     else if (item.kind === "story") setScreen(SCREEN_STORY);
-    else setScreen(SCREEN_GAME_PICKER);
+    else {
+      setGameData((prev) => ({ ...prev, playerName: prev.playerName || (activeKid && activeKid.display_name) || "", gameType: null, character: null, level: null }));
+      setScreen(SCREEN_GAME_TYPE);
+    }
   };
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
@@ -230,6 +233,7 @@ export default function BuildableKids() {
       <IntroScreen
         onComplete={(name, age) => {
           setGameData((prev) => ({ ...prev, playerName: name, age }));
+          setRemixData(null);
           setScreen(SCREEN_GAME_TYPE);
         }}
         onHome={goHome}
@@ -264,6 +268,7 @@ export default function BuildableKids() {
           onMyStuff={() => openMyStuff(SCREEN_CHARACTER_CREATOR)}
         />
         <CharacterCreatorScreen
+          initialDescription={remixData && remixData.kind === "game" ? remixData.character : undefined}
           onCharacterCreated={(character) => {
             saveCharacter(character); // auto-save to My Characters
             setGameData((prev) => ({ ...prev, character }));
@@ -285,9 +290,11 @@ export default function BuildableKids() {
         />
         <LevelCreatorScreen
           characterData={gameData.character}
+          initialTheme={remixData && remixData.kind === "game" ? remixData.theme : undefined}
           onLevelCreated={(level) => {
             saveLevel(level); // auto-save to My Levels
             setGameData((prev) => ({ ...prev, level }));
+            setRemixData(null);
             setScreen(SCREEN_PLAY);
           }}
         />

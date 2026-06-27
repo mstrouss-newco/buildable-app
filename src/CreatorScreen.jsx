@@ -58,8 +58,8 @@ function AssetTile({ imageUrl, label, selected, onClick }) {
   );
 }
 
-export function CharacterCreatorScreen({ onCharacterCreated }) {
-  const [description, setDescription] = useState("a fluffy pink dragon with sparkly wings");
+export function CharacterCreatorScreen({ onCharacterCreated, initialDescription }) {
+  const [description, setDescription] = useState(initialDescription || "a fluffy pink dragon with sparkly wings");
   const [characterImage, setCharacterImage] = useState(null);
   const [characterName, setCharacterName] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -186,9 +186,9 @@ export function CharacterCreatorScreen({ onCharacterCreated }) {
   );
 }
 
-export function LevelCreatorScreen({ onLevelCreated, characterData }) {
+export function LevelCreatorScreen({ onLevelCreated, characterData, initialTheme }) {
   const [description, setDescription] = useState("");
-  const [theme, setTheme] = useState("forest");
+  const [theme, setTheme] = useState(["forest","castle","underwater","space","desert","volcano","candy kingdom"].includes(initialTheme) ? initialTheme : "forest");
   const [difficulty, setDifficulty] = useState("easy");
   const [levelImage, setLevelImage] = useState(null);
   const [levelLayers, setLevelLayers] = useState(null);

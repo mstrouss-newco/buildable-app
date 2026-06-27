@@ -86,15 +86,38 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
       body:JSON.stringify({kind:"story",id:st.story_id,deviceId,publish:next})}); }catch{}
   }
 
-  // Remix: riff on another kid's published story by starting the picker with its
-  // idea pre-filled, so the new book is the kid's own creation.
+  // Remix: open the picker pre-filled with the EXACT choices behind another kid's
+  // published story (hero, world, quest, mood, ending, art style), so the kid can
+  // tweak anything and make their own version. Falls back to seeding the idea.
   useEffect(()=>{
     if(!remix) return;
+    let alive=true;
     reset();
-    setCustomSpark(remix.title||""); setSpark("");
-    setView("pick"); setStep(0);
-    setSavedMsg("");
+    (async()=>{
+      let c=null;
+      try{
+        const r=await fetch("/api/list-stories?storyId="+encodeURIComponent(remix.id));
+        const j=await r.json();
+        c=(j&&j.story&&j.story.story&&j.story.story.created_with)||null;
+      }catch{}
+      if(!alive) return;
+      if(c){
+        if(c.guide)setGuide(c.guide);
+        setStyle(c.style||"watercolor");
+        if(c.characterSlug)setHero(c.characterSlug);
+        if(c.worldSlug)setWorld(c.worldSlug);
+        if(c.quest)setQuest(c.quest);
+        if(c.mood)setMood(c.mood);
+        if(c.ending)setEnding(c.ending);
+        if(c.characterName)setName(c.characterName);
+        if(c.spark){setCustomSpark(c.spark);setSpark("");}
+      } else {
+        setCustomSpark(remix.title||""); setSpark("");
+      }
+      setView("pick"); setStep(0); setSavedMsg("");
+    })();
     if(onConsumeRemix) onConsumeRemix();
+    return ()=>{alive=false;};
   },[remix]);
 
   const MUSIC_URL="/music-library/playful_musicbox.mp3?v=1";
