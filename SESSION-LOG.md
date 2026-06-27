@@ -25,6 +25,12 @@
 - **Mechanic stored:** `db/seed-tetris-mechanic.sql` registers `tumble-blocks-clear` and
   `soft-reset-never-lose` so the catalog grows. Docs: `tetris-README.md`,
   `BUILDING-A-GAME.md` + `MECHANICS.md` updated.
+- **Look overhaul (same day):** made it look like real Tetris — solid dark playfield
+  with a bright accent frame (was a washed-out translucent green), crisp beveled
+  blocks, and a clean Score / Level / Rows panel with a boxed Next. Removed the
+  per-cell line-clear confetti that littered the board and the stacked "Nice!" pop
+  text; line clears now show ONE centred label (Line/Double/Triple/TETRIS!) + a quick
+  flash. Verified by replaying the engine's real canvas draw calls to a PNG.
 - **Fix pass (same day):** the menu/title state crashed `draw()` (empty board grid) so
   only the well + grid showed — no HUD/pieces/controls. Initialized the grid at boot,
   guarded `draw()`, and `qa-tetris.mjs` now asserts the title render. Added a **Score**

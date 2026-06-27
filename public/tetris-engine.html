@@ -162,6 +162,7 @@ function spawn(){
 }
 // world helper sweeps the bottom rows away — NEVER a game over
 function gentleReset(){
+  if(!BW) computeLayout();
   for(let k=0;k<3;k++){ if(grid.some(row=>row.some(c=>c))){ grid.shift(); grid.unshift(new Array(COLS).fill(null)); } }
   compact(); helperPulse=1; toast(W.helper+"!");
   if(BA) BA.sfx("reset");
@@ -191,9 +192,14 @@ function lockPiece(){
 function clearLines(){
   const full=[]; for(let r=0;r<ROWS;r++){ if(grid[r].every(c=>c)) full.push(r); }
   if(!full.length) return 0;
-  if(BM){ for(const r of full){ for(let c=0;c<COLS;c++) BM.burst(fx.parts, bx(c)+CELL/2, by(r)+CELL/2, grid[r][c]||W.accent, 6, {spd:[1,5],life:[.4,1]}); }
-    BM.shake(fx, full.length>=3?0.5:0.28); BM.flash(fx, "#ffffff", full.length>=4?0.32:0.2);
-    BM.pop(fx.pops, CW*0.5, by(full[0])+CELL/2, full.length>=4?"AWESOME!":(full.length>=2?("+"+full.length+" rows!"):"Nice!"), "#fff"); }
+  if(!BW) computeLayout();   // FX coords need the layout even if no draw ran yet
+  if(BM){ // clean: a quick flash + shake + a SINGLE Tetris-style label (no confetti litter, no stacked text)
+    BM.shake(fx, full.length>=3?0.45:0.22); BM.flash(fx, full.length>=4?"#ffffff":W.accent, full.length>=4?0.32:0.16);
+    fx.pops.length=0;   // never stack pop labels on top of each other
+    const label = full.length>=4?"TETRIS!":(full.length===3?"Triple!":(full.length===2?"Double!":"Line!"));
+    BM.pop(fx.pops, BX+BW/2, by(full[0])+CELL/2, label, "#fff");
+    // a few short sparkles only on the cleared rows (tiny, fade fast — not scattered dots)
+    for(const r of full) BM.burst(fx.parts, BX+BW/2, by(r)+CELL/2, "#ffffff", 5, {spd:[1,4],life:[.25,.5]}); }
   if(BA) BA.sfx(full.length>=3?"combo":"clear");
   for(const r of full){ grid.splice(r,1); grid.unshift(new Array(COLS).fill(null)); }
   rowsCleared += full.length;
@@ -231,10 +237,12 @@ function draw(){
   const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,W.bg[0]); g.addColorStop(1,W.bg[1]);
   ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
   ctx.save(); ctx.translate(sh.x, sh.y);
-  BR.rrect(ctx, BX-7, BY-7, BW+14, BH+14, 18); ctx.fillStyle="rgba(10,14,40,0.42)"; ctx.fill();
-  ctx.strokeStyle="rgba(255,255,255,0.06)"; ctx.lineWidth=1;
-  for(let c=0;c<=COLS;c++){ ctx.beginPath(); ctx.moveTo(bx(c),BY); ctx.lineTo(bx(c),BY+BH); ctx.stroke(); }
-  for(let r=0;r<=ROWS;r++){ ctx.beginPath(); ctx.moveTo(BX,by(r)); ctx.lineTo(BX+BW,by(r)); ctx.stroke(); }
+  // solid Tetris-style playfield with a bright accent frame (no see-through wash)
+  BR.rrect(ctx, BX-9, BY-9, BW+18, BH+18, 16); ctx.fillStyle=W.accent; ctx.fill();
+  BR.rrect(ctx, BX-3, BY-3, BW+6, BH+6, 12); ctx.fillStyle="#0b1130"; ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,0.05)"; ctx.lineWidth=1;
+  for(let c=1;c<COLS;c++){ ctx.beginPath(); ctx.moveTo(bx(c),BY); ctx.lineTo(bx(c),BY+BH); ctx.stroke(); }
+  for(let r=1;r<ROWS;r++){ ctx.beginPath(); ctx.moveTo(BX,by(r)); ctx.lineTo(BX+BW,by(r)); ctx.stroke(); }
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r] && grid[r][c]) drawCell(bx(c),by(r),grid[r][c]);
   if(cur && state==="play"){
     const gy=ghostY();
@@ -249,10 +257,14 @@ function draw(){
   else if(state==="pause") banner("Paused","Tap to keep playing");
 }
 function drawCell(x,y,col){
-  const r=Math.max(5,CELL*0.18), pad=2;
-  BR.rrect(ctx, x+pad, y+pad, CELL-pad*2, CELL-pad*2, r); ctx.fillStyle=col; ctx.fill();
-  ctx.save(); BR.rrect(ctx, x+pad, y+pad, CELL-pad*2, (CELL-pad*2)*0.5, r); ctx.fillStyle="rgba(255,255,255,0.28)"; ctx.fill(); ctx.restore();
-  ctx.strokeStyle="rgba(0,0,0,0.12)"; ctx.lineWidth=2; BR.rrect(ctx, x+pad, y+pad, CELL-pad*2, CELL-pad*2, r); ctx.stroke();
+  const pad=1, s=CELL-pad*2, r=Math.max(3,CELL*0.12);
+  // base block
+  BR.rrect(ctx, x+pad, y+pad, s, s, r); ctx.fillStyle=col; ctx.fill();
+  // glossy top bevel (lighter shade of the block's own colour)
+  ctx.save(); BR.rrect(ctx, x+pad+2, y+pad+2, s-4, s*0.40, Math.max(2,r-1));
+  ctx.fillStyle=(BR._lighten?BR._lighten(col,0.5):"rgba(255,255,255,0.45)"); ctx.globalAlpha=0.85; ctx.fill(); ctx.restore();
+  // crisp dark edge
+  ctx.strokeStyle="rgba(0,0,0,0.30)"; ctx.lineWidth=2; BR.rrect(ctx, x+pad, y+pad, s, s, r); ctx.stroke();
 }
 function drawGhost(x,y){ const r=Math.max(5,CELL*0.18),pad=3; BR.rrect(ctx,x+pad,y+pad,CELL-pad*2,CELL-pad*2,r); ctx.fillStyle="rgba(255,255,255,0.12)"; ctx.fill(); ctx.strokeStyle="rgba(255,255,255,0.4)"; ctx.lineWidth=2; ctx.stroke(); }
 function txtShadow(on){ if(on){ ctx.shadowColor="rgba(0,0,0,0.35)"; ctx.shadowBlur=4; ctx.shadowOffsetY=1; } else { ctx.shadowColor="transparent"; ctx.shadowBlur=0; ctx.shadowOffsetY=0; } }
@@ -271,19 +283,20 @@ function drawHUD(){
   }
 }
 function drawPanel(){
-  const x=PANELX, w=CW-PANELX-14, top=62;   // panel top clears the Sound/Pause buttons
-  ctx.textAlign="left"; ctx.textBaseline="alphabetic"; txtShadow(true);
-  // SCORE
-  ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.font="bold 16px Fredoka,sans-serif"; ctx.fillText("Score", x, top);
-  ctx.fillStyle="#fff"; ctx.font="bold 32px Fredoka,sans-serif"; ctx.fillText(String(score), x, top+32);
-  // ROWS
-  ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.font="bold 16px Fredoka,sans-serif"; ctx.fillText("Rows", x, top+68);
-  ctx.fillStyle="#fff"; ctx.font="bold 26px Fredoka,sans-serif";
-  ctx.fillText(mode==="adventure" ? (rowsCleared+" / "+goal) : String(rowsCleared), x, top+94);
-  txtShadow(false);
-  // NEXT
-  ctx.fillStyle="rgba(255,255,255,0.9)"; ctx.font="bold 16px Fredoka,sans-serif"; txtShadow(true); ctx.fillText("Next", x, top+130); txtShadow(false);
-  let py=top+146;
+  const x=PANELX, w=CW-PANELX-14, top=58;
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  function stat(label,val,ly,vy,vsize){ txtShadow(true);
+    ctx.fillStyle="rgba(255,255,255,0.78)"; ctx.font="bold 13px Fredoka,sans-serif"; ctx.fillText(label, x, ly);
+    ctx.fillStyle="#fff"; ctx.font="bold "+vsize+"px Fredoka,sans-serif"; ctx.fillText(val, x, vy); txtShadow(false); }
+  stat("SCORE", String(score), top, top+30, 30);
+  stat("LEVEL", String(worldIdx+1), top+58, top+82, 24);
+  stat(mode==="adventure"?"ROWS":"LINES", mode==="adventure"?(rowsCleared+" / "+goal):String(rowsCleared), top+112, top+136, 24);
+  // NEXT — in its own boxed area, like classic Tetris
+  txtShadow(true); ctx.fillStyle="rgba(255,255,255,0.78)"; ctx.font="bold 13px Fredoka,sans-serif"; ctx.fillText("NEXT", x, top+172); txtShadow(false);
+  const boxY=top+182, boxH=Math.max(96, Math.min(176, (CH-86)-boxY-14));
+  BR.rrect(ctx, x, boxY, w, boxH, 12); ctx.fillStyle="rgba(11,17,48,0.55)"; ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,0.12)"; ctx.lineWidth=1.5; BR.rrect(ctx, x, boxY, w, boxH, 12); ctx.stroke();
+  let py=boxY+14;
   nextQ.slice(0, GAME_CONFIG.preview||3).forEach((key,i)=>{
     const cell=Math.min(19,(w-6)/4);
     const cells=matrixCells(PIECES[key].states[0]);
