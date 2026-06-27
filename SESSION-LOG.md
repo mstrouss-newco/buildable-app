@@ -1,5 +1,39 @@
 # Buildable Kids — Session Log
 
+## Real-time multiplayer mechanism — reusable Broadcast layer + frozen contract (June 27 2026)
+
+Built the generic, reusable REAL-TIME two-player mechanism (first user: tennis, built in a
+separate chat). Additive — NOT imported by the app yet (no tile/route this commit), so the
+live app is unaffected; the game chat wires it in when tennis is ready. No new npm
+dependency (raw-WebSocket, matching the repo's no-SDK pattern).
+
+- **`src/lib/realtimeChannel.js`** — dependency-free Supabase Realtime **Broadcast** client
+  over a raw WebSocket (protocol v1.0.0, verified against the Supabase docs). join / send /
+  on / 20s heartbeat / auto-reconnect. Passes the parent JWT as `access_token` so moving to
+  private channels later is a config change.
+- **`src/lib/rtMatch.js`** — generic `rt_matches` lobby over PostgREST (create/list/get/
+  patch + role + channel topic), mirroring `chessMatches.js`. One table for ALL real-time
+  games via a `game` column.
+- **`src/FamilyRealtime.jsx`** — generic glue: lobby (pick a sibling) → open channel →
+  assign role (host owns the ball) → embed the game iframe → bridge the frozen `mp:`
+  postMessage contract ↔ the channel → enforce canned-reactions-only → write the result.
+  A game becomes multiplayer via `<FamilyRealtime game={{slug,url,title}} .../>`.
+- **`db/create-rt-matches.sql`** — family-RLS match/lobby table (mirrors `chess_matches`).
+  **OWNER TO-DO:** run in Supabase (after the accounts SQL).
+- **`db/seed-multiplayer-mechanic.sql`** — registers `mp-realtime-broadcast` +
+  `mp-turn-based-row` in `game_mechanics` so a prompt can request multiplayer by name.
+  **OWNER TO-DO:** run in Supabase.
+- **Docs:** froze the `mp:` handshake contract + "how to use this mechanic" checklist in
+  `MULTIPLAYER.md`; added a "Making it multiplayer" section to `BUILDING-A-GAME.md`; added
+  §12 to `MECHANICS.md`.
+
+The split: this layer is the network "pipes"; the tennis **game** (other chat) just speaks
+the `mp:` contract and never touches Supabase. Both build against the frozen contract in
+parallel. Security v1: public Broadcast topic on the match's unguessable UUID (the lobby
+row is RLS-locked to the family); upgrade path = private channels + Realtime Authorization.
+
+
+
 ## Multiplayer playbook `MULTIPLAYER.md` (June 27 2026)
 
 Audited how multiplayer works and wrote it up as a playbook (docs only — no code/DB

@@ -121,6 +121,41 @@ code that survival, croc, and breaker were each copy-pasting. See `MECHANICS.md`
 
 ---
 
+## Making it multiplayer (optional)
+
+Two kids can play together in two ways — pick by **how fast they need to see each other**.
+Full rules, the frozen message contract, and the tennis blueprint are in
+[`MULTIPLAYER.md`](./MULTIPLAYER.md); the short version:
+
+- **Same device** → local two-player (pass-and-play). No backend, no accounts. Done.
+- **Across devices, taking turns** (chess, board/card games) → **poll a row**: one
+  family-scoped Supabase row holds the whole game state; a move updates it; the other
+  device re-reads every ~2s. Reference: chess (`chess_matches` + `FamilyChess.jsx`).
+- **Across devices, continuous motion** (tennis, pong) → the **real-time mechanic**: a
+  Supabase Realtime **Broadcast** channel for the live ball/paddles, plus a row for the
+  lobby/score.
+
+**To make a game use the real-time mechanic, do only two things** (everything else is
+inherited):
+
+1. **Build the game to the `mp:` contract** — it stays a normal network-agnostic
+   `public/<game>.html` engine that posts `mp:ready`, broadcasts **positions not
+   commands** via `mp:send`, applies `mp:peer`, honors its `role` (host owns the ball;
+   each kid broadcasts only their own paddle), and ends with `mp:result`.
+2. **Launch it through the shared layer**, not a bare iframe:
+   `<FamilyRealtime game={{ slug, url, title }} activeKid={…} />`. That gives you the
+   lobby, the live channel, role assignment, the reaction safety check, and the
+   score write-back for free, reusing the one `rt_matches` table.
+
+A generation prompt can simply say **"use the real-time multiplayer mechanic"**
+(`game_mechanics` slug `mp-realtime-broadcast`).
+
+**Multiplayer rules (always):** requires the parent-account lane (guests can't play
+cross-device); every match table is family-RLS scoped (copy `chess_matches`/`rt_matches`);
+**canned reactions only — never free-text chat between kids**; the engine stays
+network-agnostic (all Supabase code lives in the React layer).
+
+
 ## The non-negotiable rules (from `AGENTS.md` / README — they apply here too)
 
 - **Kids' product.** Age-appropriate always; preserve content moderation and the
