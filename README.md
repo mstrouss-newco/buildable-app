@@ -75,6 +75,40 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Buildable Photo Booth — Snapchat-style face filters for kids (June 27 2026)
+
+A camera "photo booth" where kids point at their own face and get silly filters in real
+time, then snap a photo to save + share with family. Branch `claude/photo-booth`
+(**not** pushed to main). All face tracking runs **on-device** — the video never leaves the
+browser; only a finished photo is uploaded, and only when the kid taps Save/Share.
+
+- **Page:** `public/photo-booth.html` (standalone, like Art Studio / Sound Machine). Dark
+  brand styling, Fredoka font, no emoji, all art drawn procedurally on canvas.
+- **Face tracking:** MediaPipe Tasks-Vision via CDN — `FaceLandmarker` (468 points) for
+  props/masks/warps and `ImageSegmenter` (selfie model, lazy-loaded) for backgrounds. Both
+  try GPU then fall back to CPU. If a model can't load, the camera + Snap still work.
+- **Four filter families (the four Mike picked):**
+  1. **Silly props** — party hat, crown, cat/bunny ears, glasses, heart specs, star eyes,
+     googly eyes, mustache, rainbow (stuck to face landmarks, scaled + rotated to head tilt).
+  2. **Full-face masks** — kitty, puppy, bear, robot, dino, alien (cover the face oval).
+  3. **Stretchy (funhouse warps)** — bug eyes, big mouth, chipmunk cheeks, big head
+     (magnifying-glass region copy from the live frame, clipped to a circle).
+  4. **Backgrounds** — space, under the sea, jungle, rainbow, disco (segmentation keeps the
+     kid, swaps the scene behind; auto-detects mask polarity so the person is never cut out).
+- **Save / share:** **reuses the existing `saved_art` rail** — POSTs to `/api/save-art` with
+  `theme:"photo"`, the finished JPEG in `image_b64`, and the chosen filters in `art`. No new
+  API, no new table, no migration. "My pics" reads `/api/list-art` filtered to `theme==="photo"`.
+  Download fallback if the network save fails.
+- **Routes + tile:** explicit `vercel.json` routes (before the landing catch-all) for
+  `/photo-booth.html` and `/booth`; a "Photo Booth" make-tile + `PhotoBoothScreen` wrapper
+  (iframe with `allow="camera"`, Back posts `nav:exit`) + `SCREEN_PHOTO` in `src/BuildableKids.jsx`.
+- **QA:** inline module passes `node --check`; a headless mock-canvas harness exercises every
+  prop/mask/warp/background + thumbnails against a synthetic face with **zero runtime errors**;
+  caught + fixed a mirroring bug that rotated props 180° (angle now reads 0° for a level face);
+  `npm run build` clean. **Live-camera QA on a real device is still pending** (no camera in CI).
+- **Owner action:** none for the DB. Just merge + deploy, then try it on an iPad/laptop and
+  allow the camera when prompted.
+
 ## Three simple 2-player board games on ONE shared shell (June 27 2026)
 
 Built Tic-Tac-Toe, Connect Four, and Dots and Boxes in one pass by creating a reusable

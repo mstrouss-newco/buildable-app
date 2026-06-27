@@ -1,0 +1,545 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Photo Booth</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --tray:#1a1444; --tray2:#241a52; --card:#201751; --line:#3a2c6e; --accent:#9b7bff; --good:#7ee0a0; --pink:#ff5d8f; }
+  html,body{margin:0;height:100%;background:#0b1030;overflow:hidden;touch-action:none;
+    font-family:'Fredoka',-apple-system,sans-serif;color:#fff;-webkit-user-select:none;user-select:none}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column}
+  /* TOP bar */
+  #top{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 84px;background:#120b30;z-index:5}
+  #top .t{font-weight:700;font-size:18px;letter-spacing:.3px;margin-right:4px}
+  .spacer{flex:1}
+  .iconbtn{height:50px;min-width:48px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0 10px;color:#cfc8ff;flex:0 0 auto}
+  .iconbtn:active{transform:translateY(2px)}
+  .iconbtn .cap{font-size:9px;font-weight:700;color:#cfc8ff;line-height:1.05;margin-top:1px}
+  .iconbtn svg{width:24px;height:24px}
+  .iconbtn.snap{background:linear-gradient(160deg,#ff8fb1,#f0577e);border-color:#ff9bbb;min-width:74px}
+  .iconbtn.snap .cap{color:#fff}
+  /* STAGE */
+  #stage{flex:1 1 auto;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:8px;background:#0b1030}
+  #frame{position:relative;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.5);background:#000;max-width:100%;max-height:100%}
+  #out{display:block;max-width:100%;max-height:100%;background:#000}
+  video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+  #hint{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-size:13px;color:#fff;
+    text-shadow:0 1px 4px rgba(0,0,0,.7);pointer-events:none;opacity:.9}
+  /* flash on snap */
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+  #flash.go{animation:fl .5s ease-out}
+  @keyframes fl{0%{opacity:.9}100%{opacity:0}}
+  /* BOTTOM */
+  #bottom{flex:0 0 auto;background:var(--tray);border-top:2px solid var(--line);padding:7px 8px 9px;display:flex;flex-direction:column;gap:7px}
+  .tabs{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
+  .tab{font-weight:700;font-size:13px;color:#cdd0ff;background:#241a52;border:2px solid var(--line);border-radius:11px;padding:7px 14px;cursor:pointer}
+  .tab.on{background:var(--accent);color:#1a0f3a;border-color:var(--accent)}
+  #row{display:flex;gap:8px;align-items:center;overflow-x:auto;padding:2px 2px 4px;min-height:64px}
+  .bt{width:66px;height:58px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#cfc8ff;flex:0 0 auto;padding:0}
+  .bt.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(126,224,160,.4);color:#fff}
+  .bt canvas{width:42px;height:34px}
+  .bt .lab{font-size:9px;font-weight:600;line-height:1}
+  .bt.none{background:#2a1430;border-color:#ff7a90;color:#ffb3c1}
+  /* overlays */
+  .ov{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(8,6,24,.8);padding:16px}
+  .ov.show{display:flex}
+  .card{background:linear-gradient(180deg,#1a1248,#241152);border:2px solid var(--line);border-radius:22px;padding:22px;max-width:540px;width:100%;max-height:86vh;overflow:auto;text-align:center;box-sizing:border-box}
+  .card h2{margin:0 0 8px;font-size:22px}
+  .card p{color:#cfc8ff;font-size:14px;line-height:1.5;margin:6px 0 16px}
+  .big{display:inline-block;font-weight:700;font-size:16px;padding:12px 26px;border-radius:14px;border:none;cursor:pointer;
+    background:linear-gradient(160deg,#9b7bff,#7c5cfc);color:#fff;margin:4px}
+  .big.alt{background:#2a2060;color:#cfc8ff;border:2px solid var(--line)}
+  .grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  .gphoto{width:130px;border-radius:14px;overflow:hidden;background:#13111f;border:1px solid var(--line)}
+  .gphoto img{width:130px;height:100px;object-fit:cover;display:block}
+  .gphoto .pl{font-size:11px;color:#a99fe0;padding:6px}
+  #toast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-20px);opacity:0;transition:.25s;
+    background:#2b1a66;border:2px solid var(--accent);color:#fff;font-weight:600;padding:10px 18px;border-radius:14px;z-index:40;pointer-events:none}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #loader{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#cfc8ff;background:#0b1030;z-index:3}
+  #loader.hide{display:none}
+  .spin{width:42px;height:42px;border-radius:50%;border:5px solid #2a2060;border-top-color:var(--accent);animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .backbtn{position:absolute;top:14px;left:14px;z-index:8;font-weight:700;font-size:14px;color:#fff;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:8px 16px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
+  <button class="backbtn" id="backBtn" style="display:none">Home</button>
+  <div id="top">
+    <span class="t">Photo Booth</span>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="flipBtn" title="Flip camera">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#cfc8ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17v-6h-6"/><path d="M21 7a9 9 0 0 0-15-3M3 17a9 9 0 0 0 15 3"/></svg>
+      <span class="cap">Flip</span>
+    </button>
+    <button class="iconbtn" id="galleryBtn" title="My photos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#cfc8ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 16l-5-5L5 19"/></svg>
+      <span class="cap">My pics</span>
+    </button>
+    <button class="iconbtn snap" id="snapBtn" title="Take a photo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.4"/></svg>
+      <span class="cap">Snap!</span>
+    </button>
+  </div>
+
+  <div id="stage">
+    <div id="frame">
+      <video id="vid" playsinline autoplay muted></video>
+      <canvas id="out"></canvas>
+      <div id="flash"></div>
+      <div id="hint">Make a silly face!</div>
+      <div id="loader"><div class="spin"></div><div id="loadTxt">Warming up the camera…</div></div>
+    </div>
+  </div>
+
+  <div id="bottom">
+    <div class="tabs" id="tabs"></div>
+    <div id="row"></div>
+  </div>
+</div>
+
+<!-- camera permission / error -->
+<div class="ov" id="permOv">
+  <div class="card">
+    <h2 id="permTitle">Turn on the camera</h2>
+    <p id="permMsg">Photo Booth needs your camera so you can see your silly face. Your video stays on this device — nothing is sent anywhere unless you save a photo.</p>
+    <button class="big" id="permBtn">Turn on camera</button>
+  </div>
+</div>
+
+<!-- snapped photo preview -->
+<div class="ov" id="snapOv">
+  <div class="card">
+    <h2>Nice shot!</h2>
+    <img id="snapImg" style="max-width:100%;border-radius:14px;border:2px solid var(--line)" alt="">
+    <div style="margin-top:14px">
+      <button class="big" id="saveBtn">Save it</button>
+      <button class="big" id="shareBtn">Save &amp; share with family</button>
+      <button class="big" id="dlBtn">Download</button>
+      <button class="big alt" id="retakeBtn">Take another</button>
+    </div>
+  </div>
+</div>
+
+<!-- my photos gallery -->
+<div class="ov" id="galOv">
+  <div class="card">
+    <h2>My photos</h2>
+    <div class="grid" id="galGrid"><div class="pl" style="color:#a99fe0">Loading…</div></div>
+    <div style="margin-top:16px"><button class="big alt" id="galClose">Close</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { FilesetResolver, FaceLandmarker, ImageSegmenter }
+  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12";
+
+/* ---------------- tiny helpers ---------------- */
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const inApp = params.get("app") === "1" || window.top !== window.self;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+function deviceId(){ const k="photobooth:device"; let v=localStorage.getItem(k); if(!v){ v="dev_"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem(k,v);} return v; }
+
+/* ---------------- state ---------------- */
+const vid = $("vid"), out = $("out"), octx = out.getContext("2d");
+const base = document.createElement("canvas"), bctx = base.getContext("2d");   // mirrored frame (for warps)
+const tmp  = document.createElement("canvas"), tctx = tmp.getContext("2d");    // scratch for warps / person mask
+let stream = null, facing = "user";
+let landmarker = null, segmenter = null, segLoading = false;
+let running = false, lastFaceTs = -1, lastSegTs = -1;
+let curLandmarks = null;       // canvas-space points cache for this frame
+let active = { prop:null, mask:null, warp:null, bg:null };
+let curTab = "prop";
+
+/* ---------------- FaceMesh landmark indices ---------------- */
+const IDX = {
+  foreheadTop:10, chin:152, noseTip:1, noseBridge:168,
+  leftCheek:234, rightCheek:454,
+  Leye:[33,133,159,145], Reye:[362,263,386,374],
+  mouthTop:13, mouthBottom:14, mouthLeft:61, mouthRight:291,
+  browL:[70,63], browR:[300,293]
+};
+
+/* ====================================================================
+   FILTER DEFINITIONS  (each draws procedurally — no emojis, no images)
+   A "geo" object is computed each frame from the landmarks:
+     geo.faceW, geo.faceH, geo.cx, geo.cy, geo.ang (roll, radians),
+     geo.Leye, geo.Reye, geo.eyeMid, geo.nose, geo.mouth, geo.chin, geo.foreTop
+   Coordinates are already mirrored into canvas pixel space.
+==================================================================== */
+
+/* place(): translate+rotate+scale around a point, run fn in local space.
+   local unit ~ faceW, origin at (0,0). */
+function place(ctx, x, y, ang, scale, fn){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.scale(scale,scale); fn(ctx); ctx.restore();
+}
+function ellipse(ctx,x,y,rx,ry){ ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2); ctx.closePath(); }
+
+/* ---- PROPS (stick-on accessories) ---- */
+const PROPS = {
+  party: { lab:"Party hat", draw(ctx,g){ const w=g.faceW; place(ctx,g.foreTop.x,g.foreTop.y-w*0.18,g.ang,w/200,c=>{
+      c.fillStyle="#ff5d8f"; c.beginPath(); c.moveTo(0,-160); c.lineTo(-72,30); c.lineTo(72,30); c.closePath(); c.fill();
+      c.fillStyle="#ffd23f"; for(let i=-1;i<=1;i++){ c.beginPath(); c.moveTo(i*40,-90+Math.abs(i)*25); c.lineTo(i*40-22,30); c.lineTo(i*40+22,30); c.closePath(); c.fill(); }
+      c.fillStyle="#7ee0a0"; c.beginPath(); c.arc(0,-160,20,0,7); c.fill(); }); } },
+  crown: { lab:"Crown", draw(ctx,g){ const w=g.faceW; place(ctx,g.foreTop.x,g.foreTop.y-w*0.05,g.ang,w/200,c=>{
+      c.fillStyle="#ffd23f"; c.beginPath(); c.moveTo(-92,30); c.lineTo(-92,-30); c.lineTo(-46,10); c.lineTo(0,-50); c.lineTo(46,10); c.lineTo(92,-30); c.lineTo(92,30); c.closePath(); c.fill();
+      c.fillStyle="#ff5d8f"; [-92,0,92].forEach(x=>{c.beginPath();c.arc(x,-40,13,0,7);c.fill();}); c.fillStyle="#67e8f9"; c.beginPath(); c.arc(0,12,12,0,7); c.fill(); }); } },
+  catears: { lab:"Cat ears", draw(ctx,g){ const w=g.faceW; place(ctx,g.foreTop.x,g.foreTop.y,g.ang,w/200,c=>{
+      [-1,1].forEach(s=>{ c.fillStyle="#5b4bb0"; c.beginPath(); c.moveTo(s*60,10); c.lineTo(s*98,-92); c.lineTo(s*118,8); c.closePath(); c.fill();
+        c.fillStyle="#ffb3c1"; c.beginPath(); c.moveTo(s*72,2); c.lineTo(s*96,-58); c.lineTo(s*106,4); c.closePath(); c.fill(); }); }); } },
+  bunny: { lab:"Bunny", draw(ctx,g){ const w=g.faceW; place(ctx,g.foreTop.x,g.foreTop.y,g.ang,w/200,c=>{
+      [-1,1].forEach(s=>{ c.fillStyle="#fff"; ellipse(c,s*48,-110,26,72); c.fill(); c.fillStyle="#ffb3c1"; ellipse(c,s*48,-110,13,52); c.fill(); }); }); } },
+  glasses: { lab:"Glasses", draw(ctx,g){ const w=g.faceW; place(ctx,g.eyeMid.x,g.eyeMid.y,g.ang,w/200,c=>{
+      c.strokeStyle="#1a1444"; c.lineWidth=9; c.fillStyle="rgba(155,210,255,.35)";
+      [-46,46].forEach(x=>{ ellipse(c,x,0,34,30); c.fill(); c.stroke(); });
+      c.beginPath(); c.moveTo(-12,0); c.lineTo(12,0); c.moveTo(-80,-4); c.lineTo(-104,-12); c.moveTo(80,-4); c.lineTo(104,-12); c.stroke(); }); } },
+  heart: { lab:"Heart specs", draw(ctx,g){ const w=g.faceW; place(ctx,g.eyeMid.x,g.eyeMid.y,g.ang,w/200,c=>{
+      c.fillStyle="#ff5d8f"; [-46,46].forEach(x=>{ heart(c,x,0,30); }); c.strokeStyle="#ffd23f"; c.lineWidth=6;
+      c.beginPath(); c.moveTo(-14,-2); c.lineTo(14,-2); c.stroke(); }); } },
+  star: { lab:"Star eyes", draw(ctx,g){ const w=g.faceW; [g.Leye,g.Reye].forEach(e=>{ place(ctx,e.x,e.y,g.ang,w/200,c=>{
+      c.fillStyle="#ffd23f"; star(c,0,0,30,14,5); c.fillStyle="#ff5d8f"; c.beginPath(); c.arc(0,0,8,0,7); c.fill(); }); }); } },
+  googly: { lab:"Googly", draw(ctx,g){ const w=g.faceW; [g.Leye,g.Reye].forEach(e=>{ place(ctx,e.x,e.y,g.ang,w/200,c=>{
+      c.fillStyle="#fff"; c.strokeStyle="#222"; c.lineWidth=4; c.beginPath(); c.arc(0,0,32,0,7); c.fill(); c.stroke();
+      const a=Date.now()/250; c.fillStyle="#111"; c.beginPath(); c.arc(Math.cos(a)*12,Math.sin(a)*12,13,0,7); c.fill(); }); }); } },
+  mustache: { lab:"Mustache", draw(ctx,g){ const w=g.faceW; const mx=(g.nose.x+g.mouth.x)/2, my=(g.nose.y+g.mouth.y)/2; place(ctx,mx,my,g.ang,w/200,c=>{
+      c.fillStyle="#3a2c1a"; for(const s of [-1,1]){ c.beginPath(); c.moveTo(0,-6); c.bezierCurveTo(s*20,-22,s*70,-26,s*86,-2); c.bezierCurveTo(s*70,6,s*30,8,0,8); c.closePath(); c.fill(); } }); } },
+  rainbow: { lab:"Rainbow", draw(ctx,g){ const w=g.faceW; place(ctx,g.foreTop.x,g.foreTop.y-w*0.1,g.ang,w/200,c=>{
+      const cols=["#ff5d8f","#ff8f3c","#ffd23f","#7ee0a0","#67e8f9","#9b7bff"]; c.lineWidth=12; c.lineCap="round";
+      cols.forEach((col,i)=>{ c.strokeStyle=col; c.beginPath(); c.arc(0,30,40+i*13,Math.PI,2*Math.PI); c.stroke(); }); }); } }
+};
+function heart(c,x,y,r){ c.beginPath(); c.moveTo(x,y+r*0.9); c.bezierCurveTo(x-r*1.4,y-r*0.5,x-r*0.5,y-r*1.2,x,y-r*0.4); c.bezierCurveTo(x+r*0.5,y-r*1.2,x+r*1.4,y-r*0.5,x,y+r*0.9); c.closePath(); c.fill(); }
+function star(c,x,y,R,r,n){ c.beginPath(); for(let i=0;i<n*2;i++){ const a=Math.PI/n*i-Math.PI/2; const rr=i%2?r:R; c.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);} c.closePath(); c.fill(); }
+
+/* ---- MASKS (cover the whole face) ---- */
+const MASKS = {
+  cat: { lab:"Kitty", draw(ctx,g){ faceMask(ctx,g,"#b98be0","#fff",(c,w)=>{
+      [-1,1].forEach(s=>{ c.fillStyle="#b98be0"; c.beginPath(); c.moveTo(s*78,-118); c.lineTo(s*128,-210); c.lineTo(s*150,-110); c.closePath(); c.fill(); });
+      eyes(c,"#1a1444",18); c.fillStyle="#ff8fb1"; c.beginPath(); c.moveTo(0,40); c.lineTo(-16,26); c.lineTo(16,26); c.closePath(); c.fill();
+      c.strokeStyle="#1a1444"; c.lineWidth=4; for(const s of [-1,1])for(let i=0;i<3;i++){ c.beginPath(); c.moveTo(s*22,52+i*10); c.lineTo(s*120,40+i*22); c.stroke(); } }); } },
+  dog: { lab:"Puppy", draw(ctx,g){ faceMask(ctx,g,"#caa472","#fff",(c,w)=>{
+      [-1,1].forEach(s=>{ c.fillStyle="#7a5a32"; ellipse(c,s*150,-30,40,110); c.fill(); });
+      eyes(c,"#2a1a0a",20); c.fillStyle="#2a1a0a"; ellipse(c,0,52,30,22); c.fill();
+      c.strokeStyle="#2a1a0a"; c.lineWidth=5; c.beginPath(); c.moveTo(0,68); c.lineTo(0,96); c.stroke(); }); } },
+  bear: { lab:"Bear", draw(ctx,g){ faceMask(ctx,g,"#8a6a48","#fff",(c,w)=>{
+      [-1,1].forEach(s=>{ c.fillStyle="#8a6a48"; c.beginPath(); c.arc(s*132,-128,48,0,7); c.fill(); c.fillStyle="#caa472"; c.beginPath(); c.arc(s*132,-128,24,0,7); c.fill(); });
+      eyes(c,"#2a1a0a",16); c.fillStyle="#caa472"; ellipse(c,0,70,70,52); c.fill(); c.fillStyle="#2a1a0a"; ellipse(c,0,40,26,18); c.fill(); }); } },
+  robot: { lab:"Robot", draw(ctx,g){ const w=g.faceW; place(ctx,g.cx,g.cy,g.ang,w/200,c=>{
+      c.fillStyle="#9aa7c7"; roundRect(c,-150,-150,300,330,40); c.fill();
+      c.fillStyle="#cfd8ea"; roundRect(c,-110,-110,220,180,26); c.fill();
+      c.fillStyle="#67e8f9"; [-58,58].forEach(x=>{ c.beginPath(); c.arc(x,-30,30,0,7); c.fill(); }); c.fillStyle="#1a1444"; [-58,58].forEach(x=>{ c.beginPath(); c.arc(x,-30,12,0,7); c.fill(); });
+      c.fillStyle="#ff5d8f"; roundRect(c,-60,80,120,40,12); c.fill();
+      c.strokeStyle="#67e8f9"; c.lineWidth=8; c.beginPath(); c.moveTo(0,-150); c.lineTo(0,-200); c.stroke(); c.fillStyle="#ffd23f"; c.beginPath(); c.arc(0,-208,16,0,7); c.fill(); }); } },
+  dino: { lab:"Dino", draw(ctx,g){ faceMask(ctx,g,"#5fc56a","#fff",(c,w)=>{
+      c.fillStyle="#3f9e49"; for(let i=-2;i<=2;i++){ c.beginPath(); c.moveTo(i*40-18,-150); c.lineTo(i*40,-210); c.lineTo(i*40+18,-150); c.closePath(); c.fill(); }
+      eyes(c,"#1a1444",18); c.fillStyle="#1a1444"; [-30,30].forEach(x=>{ c.beginPath(); c.arc(x,46,6,0,7); c.fill(); });
+      c.fillStyle="#fff"; for(let i=-2;i<=2;i++){ c.beginPath(); c.moveTo(i*36-12,70); c.lineTo(i*36,96); c.lineTo(i*36+12,70); c.closePath(); c.fill(); } }); } },
+  alien: { lab:"Alien", draw(ctx,g){ const w=g.faceW; place(ctx,g.cx,g.cy,g.ang,w/200,c=>{
+      c.fillStyle="#7ee0a0"; ellipse(c,0,0,150,185); c.fill();
+      c.fillStyle="#0b1030"; [-60,60].forEach((x,i)=>{ c.save(); c.translate(x,-10); c.rotate((i?1:-1)*0.4); ellipse(c,0,0,38,58); c.fill(); c.restore(); });
+      c.fillStyle="#67e8f9"; [-60,60].forEach((x,i)=>{ c.save(); c.translate(x,-22); c.rotate((i?1:-1)*0.4); ellipse(c,0,0,12,18); c.fill(); c.restore(); });
+      c.strokeStyle="#5bbf85"; c.lineWidth=6; c.beginPath(); c.moveTo(-30,70); c.quadraticCurveTo(0,84,30,70); c.stroke(); }); } }
+};
+function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function faceMask(ctx,g,fill,_w,extra){ const w=g.faceW; place(ctx,g.cx,g.cy,g.ang,w/200,c=>{ c.fillStyle=fill; ellipse(c,0,0,150,175); c.fill(); extra(c,w); }); }
+function eyes(c,col,r){ c.fillStyle=col; [-58,58].forEach(x=>{ c.beginPath(); c.arc(x,-30,r,0,7); c.fill(); }); c.fillStyle="#fff"; [-58,58].forEach(x=>{ c.beginPath(); c.arc(x-5,-35,r*0.35,0,7); c.fill(); }); }
+
+/* ---- WARPS (silly funhouse stretches) ---- */
+const WARPS = {
+  bugeyes: { lab:"Bug eyes", run(g){ [g.Leye,g.Reye].forEach(e=> bulge(e.x,e.y,g.faceW*0.30,1.7)); } },
+  bigmouth:{ lab:"Big mouth", run(g){ bulge(g.mouth.x,g.mouth.y,g.faceW*0.34,1.8); } },
+  chipmunk:{ lab:"Chipmunk", run(g){ bulge(g.leftCheek.x,g.leftCheek.y,g.faceW*0.30,1.6); bulge(g.rightCheek.x,g.rightCheek.y,g.faceW*0.30,1.6); } },
+  alienhead:{ lab:"Big head", run(g){ bulge(g.foreTop.x,(g.foreTop.y+g.cy)/2,g.faceW*0.6,1.4); } }
+};
+/* bulge: copy a circular region of the (mirrored) base frame and redraw it bigger,
+   clipped to a circle so we get a clean magnifying-glass effect. */
+function bulge(cx,cy,R,scale){
+  if(!R||R<6) return;
+  const src=R*2, S=Math.min(src*scale, R*4);
+  octx.save();
+  octx.beginPath(); octx.arc(cx,cy,R,0,7); octx.clip();
+  octx.drawImage(base, cx-R, cy-R, R*2, R*2, cx-S/2, cy-S/2, S, S);
+  octx.restore();
+}
+
+/* ---- BACKGROUNDS (procedural scenes; person kept via segmentation) ---- */
+const BGS = {
+  space:{ lab:"Space", draw(c,w,h,t){ c.fillStyle="#0a0a2a"; c.fillRect(0,0,w,h);
+      for(let i=0;i<70;i++){ const x=(i*97%w), y=(i*53%h); c.globalAlpha=0.4+0.6*Math.abs(Math.sin(t/600+i)); c.fillStyle="#fff"; c.fillRect(x,y,2,2);} c.globalAlpha=1;
+      c.fillStyle="#ff8f3c"; c.beginPath(); c.arc(w*0.8,h*0.22,Math.min(w,h)*0.12,0,7); c.fill(); c.strokeStyle="rgba(255,210,120,.6)"; c.lineWidth=6; c.beginPath(); c.ellipse(w*0.8,h*0.22,Math.min(w,h)*0.18,Math.min(w,h)*0.06,0.5,0,7); c.stroke(); } },
+  sea:{ lab:"Under sea", draw(c,w,h,t){ const grd=c.createLinearGradient(0,0,0,h); grd.addColorStop(0,"#1ca7d0"); grd.addColorStop(1,"#0a4a6e"); c.fillStyle=grd; c.fillRect(0,0,w,h);
+      c.fillStyle="rgba(255,255,255,.3)"; for(let i=0;i<26;i++){ const x=(i*83%w), y=h-((t/12+i*60)%(h+40)); c.beginPath(); c.arc(x,y,4+i%5*2,0,7); c.fill(); }
+      c.fillStyle="#2e8b57"; for(let i=0;i<6;i++){ const x=i*w/6+20; c.beginPath(); c.moveTo(x,h); c.quadraticCurveTo(x+Math.sin(t/500+i)*30,h-90,x+10,h-160); c.lineWidth=14; c.strokeStyle="#2e8b57"; c.stroke(); } } },
+  jungle:{ lab:"Jungle", draw(c,w,h,t){ c.fillStyle="#173d1f"; c.fillRect(0,0,w,h);
+      for(let i=0;i<40;i++){ const x=(i*61%w), y=(i*97%h); c.save(); c.translate(x,y); c.rotate(i+t/2000); c.fillStyle=i%2?"#2e7d32":"#3f9e49"; ellipse(c,0,0,34,16); c.fill(); c.restore(); } } },
+  rainbow:{ lab:"Rainbow", draw(c,w,h,t){ const grd=c.createLinearGradient(0,0,0,h); grd.addColorStop(0,"#67e8f9"); grd.addColorStop(1,"#bfe9ff"); c.fillStyle=grd; c.fillRect(0,0,w,h);
+      const cols=["#ff5d8f","#ff8f3c","#ffd23f","#7ee0a0","#67e8f9","#9b7bff"]; c.lineWidth=Math.max(10,w/26); cols.forEach((col,i)=>{ c.strokeStyle=col; c.beginPath(); c.arc(w/2,h*1.05,w*0.3+i*c.lineWidth,Math.PI,2*Math.PI); c.stroke(); });
+      c.fillStyle="#fff"; [0.2,0.8].forEach((fx,k)=>{ const bx=w*fx,by=h*(0.25+k*0.1); [[-26,0],[26,0],[0,-16],[10,-12]].forEach(o=>{c.beginPath();c.arc(bx+o[0],by+o[1],22,0,7);c.fill();}); }); } },
+  disco:{ lab:"Disco", draw(c,w,h,t){ c.fillStyle="#12031f"; c.fillRect(0,0,w,h);
+      const cols=["#ff5d8f","#ffd23f","#67e8f9","#7ee0a0","#9b7bff"]; for(let i=0;i<28;i++){ const x=(i*89%w), y=(i*47%h); c.globalAlpha=0.3+0.5*Math.abs(Math.sin(t/300+i)); c.fillStyle=cols[i%cols.length]; c.beginPath(); c.arc(x,y,16+i%4*6,0,7); c.fill(); } c.globalAlpha=1; } }
+};
+
+/* ====================================================================
+   GEOMETRY  — convert landmarks to mirrored canvas points + a geo object
+==================================================================== */
+function avg(pts){ let x=0,y=0; for(const p of pts){x+=p.x;y+=p.y;} return {x:x/pts.length,y:y/pts.length}; }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+function buildGeo(landmarks,W,H){
+  const P=i=>({ x:(1-landmarks[i].x)*W, y:landmarks[i].y*H }); // mirror X
+  const Leye=avg(IDX.Leye.map(P)), Reye=avg(IDX.Reye.map(P));
+  const foreTop=P(IDX.foreheadTop), chin=P(IDX.chin);
+  const leftCheek=P(IDX.leftCheek), rightCheek=P(IDX.rightCheek);
+  const nose=P(IDX.noseTip);
+  const mouth=avg([P(IDX.mouthTop),P(IDX.mouthBottom),P(IDX.mouthLeft),P(IDX.mouthRight)]);
+  const faceW=dist(leftCheek,rightCheek);
+  const faceH=dist(foreTop,chin);
+  // Mirroring swaps which eye lands on which side of the screen, so order the two
+  // eye centres by screen-x and measure the angle left->right. This keeps props
+  // upright for a level face and tilts them correctly when the head tilts.
+  const eL = Leye.x<=Reye.x ? Leye : Reye;
+  const eR = Leye.x<=Reye.x ? Reye : Leye;
+  const ang=Math.atan2(eR.y-eL.y, eR.x-eL.x);
+  const cx=(foreTop.x+chin.x)/2, cy=(foreTop.y+chin.y)/2;
+  return { faceW,faceH,cx,cy,ang, Leye,Reye, eyeMid:avg([Leye,Reye]), nose, mouth, chin, foreTop, leftCheek, rightCheek };
+}
+
+/* ====================================================================
+   RENDER LOOP
+==================================================================== */
+function sizeCanvas(){
+  const vw=vid.videoWidth||640, vh=vid.videoHeight||480;
+  if(out.width!==vw||out.height!==vh){ out.width=vw; out.height=vh; base.width=vw; base.height=vh; }
+}
+function drawMirroredVideo(ctx,W,H){ ctx.save(); ctx.translate(W,0); ctx.scale(-1,1); ctx.drawImage(vid,0,0,W,H); ctx.restore(); }
+
+function loop(){
+  if(!running) return;
+  requestAnimationFrame(loop);
+  if(vid.readyState<2) return;
+  sizeCanvas();
+  const W=out.width, H=out.height, now=performance.now();
+
+  // 1) background or plain mirrored video
+  if(active.bg && segmenter){
+    drawBackgroundComposite(W,H,now);
+  } else {
+    drawMirroredVideo(octx,W,H);
+  }
+  // keep a mirrored copy for warps
+  bctx.drawImage(out,0,0);
+
+  // 2) face landmarks (throttle to video timestamps)
+  if(landmarker){
+    try{
+      const res=landmarker.detectForVideo(vid, now);
+      curLandmarks=(res && res.faceLandmarks && res.faceLandmarks[0]) || null;
+    }catch(e){ /* transient */ }
+  }
+  const g = curLandmarks ? buildGeo(curLandmarks,W,H) : null;
+  $("hint").style.display = g ? "none" : "block";
+
+  if(g){
+    // warps read from the base (already-drawn) frame, so run them first
+    if(active.warp && WARPS[active.warp]) try{ WARPS[active.warp].run(g); }catch(e){}
+    // re-snapshot base if a warp changed pixels we might sample again next frame — fine as is
+    if(active.mask && MASKS[active.mask]) try{ MASKS[active.mask].draw(octx,g); }catch(e){}
+    if(active.prop && PROPS[active.prop]) try{ PROPS[active.prop].draw(octx,g); }catch(e){}
+  }
+}
+
+/* ---- background compositing using selfie segmentation ---- */
+let segCanvas=document.createElement("canvas"), segCtx=segCanvas.getContext("2d");
+function drawBackgroundComposite(W,H,now){
+  // draw the scene
+  BGS[active.bg].draw(octx,W,H,now);
+  // person mask
+  let maskOK=false;
+  try{
+    const r=segmenter.segmentForVideo(vid, now);
+    const m=(r.confidenceMasks&&r.confidenceMasks[0])||null;
+    if(m){
+      const mw=m.width, mh=m.height, f=m.getAsFloat32Array();
+      if(segCanvas.width!==mw){ segCanvas.width=mw; segCanvas.height=mh; }
+      const img=segCtx.createImageData(mw,mh);
+      // polarity auto-detect: center is usually person
+      let cen=0,cor=0,cn=0,crn=0;
+      for(let y=0;y<mh;y+=8)for(let x=0;x<mw;x+=8){ const v=f[y*mw+x]; if(x>mw*0.35&&x<mw*0.65&&y>mh*0.3&&y<mh*0.8){cen+=v;cn++;} else if(x<mw*0.12||x>mw*0.88){cor+=v;crn++;} }
+      const personHigh=(cn?cen/cn:0)>=(crn?cor/crn:0);
+      for(let i=0;i<f.length;i++){ let v=f[i]; if(!personHigh)v=1-v; const a=v>0.5?255:(v>0.35?Math.round((v-0.35)/0.15*255):0); img.data[i*4+3]=a; }
+      segCtx.putImageData(img,0,0);
+      maskOK=true;
+    }
+    if(m&&m.close)m.close();
+  }catch(e){ maskOK=false; }
+  if(maskOK){
+    // person = mirrored video masked by the alpha
+    tmp.width=W; tmp.height=H; tctx.clearRect(0,0,W,H);
+    drawMirroredVideo(tctx,W,H);
+    tctx.globalCompositeOperation="destination-in";
+    // mask is in un-mirrored space -> mirror it too
+    tctx.save(); tctx.translate(W,0); tctx.scale(-1,1); tctx.imageSmoothingEnabled=true; tctx.drawImage(segCanvas,0,0,W,H); tctx.restore();
+    tctx.globalCompositeOperation="source-over";
+    octx.drawImage(tmp,0,0);
+  } else {
+    // segmentation failed -> just show the kid, no scene
+    drawMirroredVideo(octx,W,H);
+  }
+}
+
+/* ====================================================================
+   CAMERA
+==================================================================== */
+async function startCamera(){
+  $("permOv").classList.remove("show");
+  $("loader").classList.remove("hide"); $("loadTxt").textContent="Warming up the camera…";
+  try{
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:facing, width:{ideal:640}, height:{ideal:480} }, audio:false });
+    vid.srcObject=stream; await vid.play();
+  }catch(e){
+    $("loader").classList.add("hide");
+    $("permTitle").textContent="Camera is off";
+    $("permMsg").textContent="We couldn't open the camera. Check that you allowed camera access in your browser, then try again.";
+    $("permBtn").textContent="Try again"; $("permOv").classList.add("show");
+    return;
+  }
+  $("loadTxt").textContent="Loading the magic filters…";
+  await loadModels();
+  $("loader").classList.add("hide");
+  running=true; loop();
+}
+async function loadModels(){
+  if(landmarker) return;
+  const url="https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+  try{
+    const fileset=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12/wasm");
+    window._fileset=fileset;
+    for(const delegate of ["GPU","CPU"]){
+      try{
+        landmarker=await FaceLandmarker.createFromOptions(fileset,{ baseOptions:{ modelAssetPath:url, delegate }, runningMode:"VIDEO", numFaces:1 });
+        break;
+      }catch(inner){ console.warn("face "+delegate+" failed",inner); }
+    }
+    if(!landmarker) toast("Filters couldn't start — you can still take photos!");
+  }catch(e){ console.warn("face model failed",e); toast("Filters need internet the first time."); }
+}
+async function ensureSegmenter(){
+  if(segmenter||segLoading) return;
+  segLoading=true; toast("Loading backgrounds…");
+  try{
+    const fileset=window._fileset||await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.12/wasm");
+    const surl="https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite";
+    for(const delegate of ["GPU","CPU"]){
+      try{ segmenter=await ImageSegmenter.createFromOptions(fileset,{ baseOptions:{ modelAssetPath:surl, delegate }, runningMode:"VIDEO", outputConfidenceMasks:true, outputCategoryMask:false }); break; }
+      catch(inner){ console.warn("seg "+delegate+" failed",inner); }
+    }
+    if(!segmenter){ toast("Couldn't load backgrounds."); active.bg=null; renderRow(); }
+  }catch(e){ console.warn("seg failed",e); toast("Couldn't load backgrounds."); active.bg=null; renderRow(); }
+  segLoading=false;
+}
+
+/* ====================================================================
+   UI  — tabs + filter row
+==================================================================== */
+const TABS=[ {k:"prop",lab:"Silly props"}, {k:"mask",lab:"Face masks"}, {k:"warp",lab:"Stretchy"}, {k:"bg",lab:"Backgrounds"} ];
+function buildTabs(){ const el=$("tabs"); el.innerHTML=""; TABS.forEach(t=>{ const b=document.createElement("button"); b.className="tab"+(curTab===t.k?" on":""); b.textContent=t.lab; b.onclick=()=>{ curTab=t.k; buildTabs(); renderRow(); }; el.appendChild(b); }); }
+function thumbCanvas(drawFn){ const c=document.createElement("canvas"); c.width=84; c.height=68; const x=c.getContext("2d"); drawFn(x,84,68); return c; }
+function renderRow(){
+  const row=$("row"); row.innerHTML="";
+  const setMap={ prop:PROPS, mask:MASKS, warp:WARPS, bg:BGS }[curTab];
+  // "none" button
+  const none=document.createElement("button"); none.className="bt none"+(!active[curTab]?" on":"");
+  none.innerHTML='<div style="font-size:22px;line-height:1">∅</div><span class="lab">None</span>';
+  none.onclick=()=>{ active[curTab]=null; renderRow(); }; row.appendChild(none);
+  Object.keys(setMap).forEach(key=>{
+    const b=document.createElement("button"); b.className="bt"+(active[curTab]===key?" on":"");
+    const tc=thumbCanvas((x,w,h)=>previewThumb(curTab,key,x,w,h));
+    b.appendChild(tc);
+    const l=document.createElement("span"); l.className="lab"; l.textContent=setMap[key].lab; b.appendChild(l);
+    b.onclick=async ()=>{ active[curTab]=key; if(curTab==="bg") await ensureSegmenter(); renderRow(); };
+    row.appendChild(b);
+  });
+}
+/* small static previews so kids can tell filters apart */
+function previewThumb(tab,key,x,w,h){
+  x.clearRect(0,0,w,h);
+  if(tab==="bg"){ BGS[key].draw(x,w,h,0); return; }
+  // fake a small face geo centered in the thumb
+  const g={ faceW:w*0.7, faceH:h*0.8, cx:w/2, cy:h*0.56, ang:0,
+    Leye:{x:w*0.4,y:h*0.5}, Reye:{x:w*0.6,y:h*0.5}, eyeMid:{x:w/2,y:h*0.5},
+    nose:{x:w/2,y:h*0.62}, mouth:{x:w/2,y:h*0.72}, chin:{x:w/2,y:h*0.96}, foreTop:{x:w/2,y:h*0.16},
+    leftCheek:{x:w*0.18,y:h*0.56}, rightCheek:{x:w*0.82,y:h*0.56} };
+  x.fillStyle="#2a2060"; ellipse(x,g.cx,g.cy,g.faceW*0.5,g.faceH*0.5); x.fill();
+  if(tab==="prop"&&PROPS[key]) PROPS[key].draw(x,g);
+  if(tab==="mask"&&MASKS[key]) MASKS[key].draw(x,g);
+  if(tab==="warp"){ x.fillStyle="#9b7bff"; x.font="bold 11px Fredoka"; x.textAlign="center"; x.fillText("〰",w/2,h*0.58); }
+}
+
+/* ====================================================================
+   SNAP / SAVE / GALLERY
+==================================================================== */
+let lastShot=null;
+function snap(){
+  if(!running){ toast("Turn on the camera first!"); return; }
+  $("flash").classList.remove("go"); void $("flash").offsetWidth; $("flash").classList.add("go");
+  lastShot=out.toDataURL("image/jpeg",0.9);
+  $("snapImg").src=lastShot; $("snapOv").classList.add("show");
+}
+function activeName(){ const parts=[]; if(active.mask)parts.push(MASKS[active.mask].lab); if(active.prop)parts.push(PROPS[active.prop].lab); if(active.warp)parts.push(WARPS[active.warp].lab); if(active.bg)parts.push(BGS[active.bg].lab); return parts.join(" + ")||"Silly selfie"; }
+async function saveShot(share){
+  if(!lastShot) return;
+  const payload={ art_id:"pho_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), device_id:deviceId(),
+    title:activeName(), theme:"photo", image_b64:lastShot,
+    art:{ ops:[], type:"photo", filters:{...active} }, published:!!share };
+  try{
+    const r=await fetch("/api/save-art",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
+    if(r.ok){ toast(share?"Saved & shared with family!":"Saved to your photos!"); $("snapOv").classList.remove("show"); }
+    else downloadShot();
+  }catch(e){ downloadShot(); }
+}
+function downloadShot(){ if(!lastShot) return; const a=document.createElement("a"); a.href=lastShot; a.download="silly-photo.jpg"; a.click(); toast("Saved to your downloads!"); $("snapOv").classList.remove("show"); }
+async function openGallery(){
+  $("galOv").classList.add("show"); const grid=$("galGrid"); grid.innerHTML='<div class="pl">Loading…</div>';
+  try{
+    const r=await fetch("/api/list-art?deviceId="+encodeURIComponent(deviceId()));
+    const j=r.ok?await r.json():null; const arr=((j&&j.art)||[]).filter(a=>a.theme==="photo");
+    if(!arr.length){ grid.innerHTML='<div class="pl">No photos yet — snap your first silly selfie!</div>'; return; }
+    grid.innerHTML=""; arr.forEach(a=>{ const d=document.createElement("div"); d.className="gphoto";
+      const img=a.image_b64||""; d.innerHTML=(img?`<img src="${img}" alt="">`:"")+`<div class="pl">${(a.title||"Photo")}</div>`; grid.appendChild(d); });
+  }catch(e){ grid.innerHTML='<div class="pl">Couldn\'t load your photos.</div>'; }
+}
+
+/* ====================================================================
+   WIRING
+==================================================================== */
+function wire(){
+  $("permBtn").onclick=startCamera;
+  $("snapBtn").onclick=snap;
+  $("galleryBtn").onclick=openGallery;
+  $("galClose").onclick=()=>$("galOv").classList.remove("show");
+  $("saveBtn").onclick=()=>saveShot(false);
+  $("shareBtn").onclick=()=>saveShot(true);
+  $("dlBtn").onclick=downloadShot;
+  $("retakeBtn").onclick=()=>$("snapOv").classList.remove("show");
+  $("flipBtn").onclick=()=>{ facing=facing==="user"?"environment":"user"; if(running) startCamera(); };
+  // The app wraps this page with its own Back button, so only show our own
+  // when opened standalone (?app=1 forces it on for testing).
+  const showBack = params.get("app")==="1";
+  if(showBack){ const b=$("backBtn"); b.style.display="block"; b.onclick=()=>{ try{ window.parent.postMessage("nav:exit","*"); }catch(e){} }; }
+  if(!inApp){ document.getElementById("top").style.paddingLeft="14px"; }
+}
+
+/* boot */
+buildTabs(); renderRow(); wire();
+$("permOv").classList.add("show"); $("loader").classList.add("hide");
+</script>
+</body>
+</html>
