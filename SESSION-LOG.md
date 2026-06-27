@@ -802,3 +802,7 @@ meadow chiptune-pop, space synthwave, candy bubblegum, ocean surf, castle 8-bit 
 Engine ensureMusic now points at /api/breaker-music?world=<backdrop> (loop, swaps on backdrop change,
 respects mute). All 6 worlds pre-warmed + cached live (~469KB each; cached refetch ~19ms). Verified
 engine sets BA.music.src to the new endpoint with loop=true.
+
+## Chess: rank badges on living pieces — June 26 2026
+
+Themed creatures were hard to read as chess ranks, so every in-game piece now carries a small white corner badge with the classic piece glyph (pawn/knight/bishop/rook/queen/king) via `withBadge()` wrapping `pieceSVG` in renderPieces + promotion. Creature + team color still carry theme/side; the badge gives instant rank ID. Home mascots unbadged.
