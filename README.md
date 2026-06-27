@@ -431,6 +431,25 @@ explicit `?build=`, not during normal story play).
 
 ---
 
+## Session log — 2026-06-27d (Stories LIVE in the shared library — verified)
+
+Confirmed working live: /api/list-characters now returns 25 heroes (all 18 story
+characters incl. the croc cast, tagged source:story) + the community hero; and
+/api/list-assets returns all 8 story worlds tagged by theme. So story art now
+shows in the shared creator picker and is reusable by games.
+
+Root cause of earlier "shows zero": EDGE-CACHED API GET responses. The merge code
+was correct; cached empty responses masked it. Verified by busting cache (?cb=).
+The narration_cache holds 184 story pictures (38 base, 94 expression, 52 scene).
+Fix that mattered: match cached "lib:" base keys via a like-filter instead of a
+long in() id list. Diagnostic counter lives at /api/story-library?stats=1.
+
+GOTCHA for future: these library GET endpoints are edge-cached — always bust the
+cache (?cb=) when QA-ing live, and consider a short max-age if the picker needs
+to reflect brand-new creations quickly.
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
