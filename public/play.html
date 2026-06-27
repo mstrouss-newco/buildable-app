@@ -311,8 +311,8 @@ hold('ddown', ()=>doSlide(),      null);
 c.addEventListener('pointerdown',()=>{ if(state==="win"||state==="lose"){ hearts=3; startLevel(li); } });
 // how-to overlay
 const howto=document.getElementById('howto');
-function startDemo(){ demoMode=true; botMode=true; hearts=3; startLevel(0); started=true; paused=false; demoRestartT=0; howto.style.display='flex'; }
-function startPlay(){ demoMode=false; botMode=false; howto.style.display='none'; hearts=3; startLevel(0); started=false; paused=false; inputLeft=false; inputRight=false; actx(); if(soundOn&&musicOn) Music.start(); }
+function startDemo(){ demoMode=true; botMode=false; hearts=3; startLevel(0); started=false; paused=false; demoRestartT=0; howto.style.display='flex'; }  // start screen: idle hero + finger-swipe, NO auto-play
+function startPlay(){ demoMode=false; botMode=false; howto.style.display='none'; hearts=3; startLevel(0); started=false; paused=false; inputLeft=false; inputRight=false; try{window.focus();}catch{} actx(); if(soundOn&&musicOn) Music.start(); }
 // tap the Play button OR anywhere on the overlay to start (pre-reader friendly)
 howto.addEventListener('pointerdown',(e)=>{ e.preventDefault(); startPlay(); });
 // mute / sound toggle
@@ -345,8 +345,7 @@ function botThink(){
 
 // --- update ---
 function update(){
-  if(state!=="play"){ doneMsgT++; if(demoMode){ if(++demoRestartT>70){ hearts=3; startLevel(0); botMode=true; started=true; paused=false; demoRestartT=0; } } return; }
-  if(demoMode){ if(++demoRestartT>300){ hearts=3; startLevel(0); botMode=true; started=true; paused=false; demoRestartT=0; return; } }
+  if(state!=="play"){ doneMsgT++; return; }
   if(paused) return;
   if(botMode) botThink();
   if(!started) return;                       // wait for first input

@@ -13,6 +13,7 @@ import TopBoard from "./TopBoard.jsx";
 import LoadingGames from "./LoadingGames";
 import QuizGate from "./QuizGate";
 import FamilyChess from "./FamilyChess";
+import FamilyRealtime from "./FamilyRealtime";
 import { listMyMatches } from "./lib/chessMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
 import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
@@ -37,6 +38,8 @@ const SCREEN_PLATFORMER = "platformer";
 const SCREEN_SURVIVAL = "survival";
 const SCREEN_BREAKER = "breaker";
 const SCREEN_CHESS_FAMILY = "chess_family";
+const SCREEN_TENNIS = "tennis";
+const SCREEN_TENNIS_FAMILY = "tennis_family";
 const SCREEN_TOP = "top";
 const SCREEN_HELPER = "helper";
 function LearningControl() {
@@ -75,10 +78,12 @@ function LearningControl() {
   );
 }
 
-function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onChess, onTyping }) {
-  const tile = (grad, title, desc, onClick, soon) => (
+function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onChess, onTyping, onTennis }) {
+  const tile = (grad, title, desc, onClick, soon, imgId) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
-      <div style={{ width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)" }} />
+      <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
+        {imgId && <img src={`/api/images?kind=game&id=${imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+      </div>
       {soon && <span style={{ position: "absolute", top: 28, right: 28, fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 12px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
       <div style={{ padding: "0 8px 6px" }}>
         <div style={{ fontFamily: FRED, fontSize: 26, fontWeight: 700 }}>{title}</div>
@@ -94,11 +99,12 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onChess, onTy
       <h1 style={{ ...styles.logo, marginTop: 8 }}>Games</h1>
       <p style={styles.tagline}>Pick a game to play!</p>
       <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Platformer", "Run, jump and reach the flag!", onPlatformer, false)}
-        {tile("linear-gradient(160deg,#9B7BFF,#67E8F9)", "Breaker", "Bounce the ball, smash every brick!", onBreaker, false)}
-        {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false)}
-        {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false)}
-        {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false)}
+        {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Platformer", "Run, jump and reach the flag!", onPlatformer, false, "platformer")}
+        {tile("linear-gradient(160deg,#9B7BFF,#67E8F9)", "Breaker", "Bounce the ball, smash every brick!", onBreaker, false, "breaker")}
+        {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false, "survival")}
+        {tile("linear-gradient(160deg,#34D399,#0EA5E9)", "Tennis", "Bounce it back \u2014 solo, 2 players, or family!", onTennis, false, "tennis")}
+        {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false, "chess")}
+        {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false, "typing")}
       </div>
     </div>
   );
@@ -109,6 +115,17 @@ function SurvivalScreen({ onHome }) {
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
       <iframe title="Buildable Survival" src="/survival-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
+  );
+}
+
+function TennisScreen({ onHome, onFamily }) {
+  const pillBtn = { position: "absolute", top: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
+      <button onClick={onHome} style={{ ...pillBtn, left: 14 }}>Back</button>
+      <button onClick={onFamily} style={{ ...pillBtn, right: 14, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play a sibling</button>
+      <iframe title="Buildable Tennis" src="/tennis.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
@@ -126,7 +143,7 @@ function PlatformerScreen({ onHome }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Buildable Platformer" src="/play.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+      <iframe title="Buildable Platformer" src="/play.html" onLoad={(e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} }} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
@@ -381,7 +398,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -391,6 +408,12 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER) {
     return <BreakerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_TENNIS) {
+    return <TennisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => setScreen(SCREEN_TENNIS_FAMILY)} />;
+  }
+  if (screen === SCREEN_TENNIS_FAMILY) {
+    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1", title: "Buildable Tennis" }} activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_CHESS) {
     return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHESS_FAMILY)} />;

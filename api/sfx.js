@@ -32,6 +32,13 @@ const SOUNDS = {
   chess_capture_candy:   "Short crisp sugar-glass shatter and candy crunch, cartoon, single hit, no music",
   chess_capture_desert:  "Short soft sandy poof puff with a light whoosh, cartoon desert, single hit, no music",
 
+  // ---- Tennis game one-shot SFX (short, punchy, kid-friendly) ----
+  tennis_hit:   "Short bright bouncy paddle bonk, a soft ball thwack off a paddle, cheerful cartoon, single hit, no music, no voices",
+  tennis_wall:  "Short soft low wall thud bounce, a ball tapping a side wall, gentle cartoon, single hit, no music, no voices",
+  tennis_point: "Short cheerful little ding plus a soft whoosh, a point scored, friendly cartoon, single hit, no music, no voices",
+  tennis_win:   "Happy short victory fanfare with a sparkle, cheerful kids game win, no voices",
+  tennis_lose:  "Gentle soft descending wah-wah, friendly cartoon lose, short, no music",
+
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
   knock:     "Three soft friendly knocks on a wooden door, single hit, no music, no voices",
@@ -52,6 +59,7 @@ const DURATIONS = {
   chess_win:1.6, chess_lose:1.0, chess_yourturn:0.5, chess_capture:0.8,
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
+  tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
 };
 

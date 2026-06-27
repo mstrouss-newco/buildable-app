@@ -180,6 +180,10 @@
       "dest": "/breaker-engine.html"
     },
     {
+      "src": "/tennis.html",
+      "dest": "/tennis.html"
+    },
+    {
       "src": "/buildable-renders.js",
       "dest": "/buildable-renders.js"
     },
