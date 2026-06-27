@@ -108,6 +108,14 @@
       "dest": "/play.html"
     },
     {
+      "src": "/make-a-game-mockup.html",
+      "dest": "/make-a-game-mockup.html"
+    },
+    {
+      "src": "/make-a-game",
+      "dest": "/make-a-game-mockup.html"
+    },
+    {
       "src": "/story-demo.html",
       "dest": "/story-demo.html"
     },

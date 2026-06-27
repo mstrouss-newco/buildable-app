@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buildable — Make a Game (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#fbf5e9; --card:#ffffff; --ink:#3f3a33; --muted:#8b8378;
+    --green:#67bd57; --green-d:#4a9b3c; --blue:#6db7d6; --pink:#e98aa9;
+    --amber:#f0b34a; --purple:#9a86d6; --line:#ece3d2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#eaf6ff 0%,#fbf5e9 240px,#fbf5e9 100%);
+       font-family:'Nunito',sans-serif;color:var(--ink);}
+  h1,h2,h3,.baloo{font-family:'Baloo 2',cursive;}
+  .wrap{max-width:1000px;margin:0 auto;padding:22px 18px 80px;}
+  .topbar{display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;margin-bottom:6px;}
+  .topbar h1{font-size:40px;margin:6px 0 2px;color:var(--green-d);letter-spacing:.3px;}
+  .topbar p{margin:0;color:var(--muted);font-weight:700;font-size:16px;}
+  .note{font-size:13px;color:#a99; background:#fff7e6;border:1px dashed #e6c98a;border-radius:10px;
+        padding:6px 10px;display:inline-block;margin-top:10px;font-weight:700;}
+
+  /* step rail */
+  .rail{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:18px 0 8px;}
+  .rail .pill{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);
+        border-radius:999px;padding:6px 14px 6px 8px;font-family:'Baloo 2';font-weight:700;color:var(--muted);font-size:15px;}
+  .rail .pill .n{width:26px;height:26px;border-radius:50%;background:var(--line);color:#fff;
+        display:flex;align-items:center;justify-content:center;font-size:15px;}
+  .rail .pill.core{border-color:#cfe9c6;color:var(--green-d);} .rail .pill.core .n{background:var(--green);}
+  .rail .pill.action{border-color:#f6dca6;color:#b9892a;} .rail .pill.action .n{background:var(--amber);}
+
+  .step{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:18px 20px;margin:16px 0;box-shadow:0 6px 0 #f1e7d4;}
+  .step-head{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
+  .step-head .num{width:38px;height:38px;border-radius:50%;color:#fff;font-family:'Baloo 2';font-weight:800;
+        font-size:20px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .step-head h2{font-size:24px;margin:0;}
+  .step-head .hint{margin-left:auto;font-size:13px;color:var(--muted);font-weight:700;text-align:right;max-width:320px;}
+  .seg{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:2px 10px;margin-left:4px;vertical-align:middle;}
+  .seg.core{background:#e7f6e1;color:var(--green-d);} .seg.action{background:#fdeecb;color:#b9892a;}
+
+  .grid{display:grid;gap:12px;margin-top:14px;}
+  .g6{grid-template-columns:repeat(6,1fr);} .g8{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:760px){.g6{grid-template-columns:repeat(3,1fr);}.g8{grid-template-columns:repeat(2,1fr);}}
+
+  .pick{position:relative;background:#fcfaf4;border:2px solid var(--line);border-radius:18px;padding:10px 8px 8px;
+        text-align:center;cursor:pointer;transition:transform .08s, border-color .12s, background .12s;}
+  .pick:hover{transform:translateY(-2px);border-color:#d8cdb6;}
+  .pick.sel{border-color:var(--green);background:#f1faec;box-shadow:0 0 0 3px #d6efca inset;}
+  .pick img{width:100%;height:84px;object-fit:contain;display:block;}
+  .pick .nm{font-family:'Baloo 2';font-weight:700;font-size:15px;margin-top:4px;color:var(--ink);}
+  .pick .tick{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--green);
+        color:#fff;font-family:'Baloo 2';font-weight:800;display:none;align-items:center;justify-content:center;font-size:15px;}
+  .pick.sel .tick{display:flex;}
+
+  /* bad guys ladder */
+  .ladder{display:flex;align-items:flex-end;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .rung{position:relative;background:#fff;border:2px solid var(--line);border-radius:16px;padding:8px 6px 6px;text-align:center;cursor:pointer;}
+  .rung .rank{position:absolute;top:-12px;left:50%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;
+        background:var(--amber);color:#fff;font-family:'Baloo 2';font-weight:800;display:flex;align-items:center;justify-content:center;font-size:15px;border:2px solid #fff;}
+  .rung img{object-fit:contain;display:block;margin:6px auto 0;}
+  .rung .nm{font-family:'Baloo 2';font-weight:700;font-size:13px;margin-top:2px;color:var(--ink);}
+  .rung .x{position:absolute;top:2px;right:4px;color:#cbb;font-weight:800;font-size:14px;}
+  .addslot{display:flex;align-items:center;justify-content:center;border:2px dashed #d8cdb6;border-radius:16px;
+        color:#b6a98c;font-family:'Baloo 2';font-weight:800;font-size:14px;cursor:default;background:#fdfbf5;}
+  .palette{margin-top:14px;padding-top:12px;border-top:2px dashed var(--line);}
+  .palette .lbl{font-weight:800;color:var(--muted);font-size:13px;margin-bottom:8px;}
+  .palette .row{display:flex;gap:10px;flex-wrap:wrap;}
+  .chip{background:#fcfaf4;border:2px solid var(--line);border-radius:14px;padding:6px 6px 4px;width:84px;text-align:center;cursor:pointer;}
+  .chip:hover{border-color:var(--amber);} .chip.used{opacity:.35;pointer-events:none;}
+  .chip img{width:56px;height:56px;object-fit:contain;display:block;margin:0 auto;}
+  .chip .nm{font-size:11px;font-weight:700;color:var(--muted);margin-top:2px;}
+
+  .bossrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;}
+  .bosspick{position:relative;background:#fcfaf4;border:2px solid var(--line);border-radius:18px;padding:8px;width:128px;text-align:center;cursor:pointer;}
+  .bosspick:hover{border-color:var(--purple);}
+  .bosspick.sel{border-color:var(--purple);background:#f3effb;box-shadow:0 0 0 3px #ddd2f5 inset;}
+  .bosspick img{width:100%;height:110px;object-fit:contain;}
+  .bosspick .nm{font-family:'Baloo 2';font-weight:700;font-size:14px;}
+  .bosspick .crown{position:absolute;top:6px;left:8px;font-size:11px;font-weight:800;color:#b9892a;background:#fdeecb;border-radius:999px;padding:1px 8px;}
+
+  .world{position:relative;border-radius:18px;overflow:hidden;border:2px solid var(--line);cursor:pointer;height:120px;background:#dff;}
+  .world:hover{border-color:var(--blue);} .world.sel{border-color:var(--blue);box-shadow:0 0 0 3px #bfe3f0 inset;}
+  .world .far{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.95;}
+  .world .tree{position:absolute;bottom:-6px;right:6px;height:78px;}
+  .world .ground{position:absolute;left:0;right:0;bottom:0;height:24px;background:linear-gradient(#9b7b4f,#6e5532);}
+  .world .nm{position:absolute;left:8px;bottom:6px;color:#fff;font-family:'Baloo 2';font-weight:800;font-size:15px;text-shadow:0 1px 3px rgba(0,0,0,.55);z-index:2;}
+  .world .tick{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;display:none;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:800;z-index:3;}
+  .world.sel .tick{display:flex;}
+
+  /* recipe card */
+  .recipe{background:linear-gradient(180deg,#fff,#fdf6e7);border:3px solid var(--green);border-radius:24px;padding:18px 20px;margin-top:22px;box-shadow:0 8px 0 #e7d9bd;}
+  .recipe h2{font-size:26px;margin:0 0 2px;color:var(--green-d);}
+  .recipe .sub{color:var(--muted);font-weight:700;margin:0 0 14px;font-size:14px;}
+  .slots{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+  .slot{text-align:center;}
+  .slot .cap{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+  .slot .box{background:#fff;border:2px solid var(--line);border-radius:16px;padding:6px;display:flex;align-items:center;justify-content:center;}
+  .slot .box img{object-fit:contain;display:block;}
+  .crew{display:flex;gap:6px;align-items:flex-end;}
+  .crew .ci{position:relative;background:#fff;border:2px solid var(--line);border-radius:12px;padding:4px;}
+  .crew .ci .rk{position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;background:var(--amber);color:#fff;font-family:'Baloo 2';font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;}
+  .crew .ci img{object-fit:contain;display:block;}
+  .playbtn{margin-top:16px;display:flex;align-items:center;gap:12px;}
+  .playbtn button{font-family:'Baloo 2';font-weight:800;font-size:20px;color:#fff;background:var(--green);border:none;
+        border-radius:16px;padding:12px 30px;cursor:pointer;box-shadow:0 4px 0 var(--green-d);}
+  .playbtn .gn{font-family:'Baloo 2';font-weight:800;font-size:22px;color:var(--ink);}
+  .arrow{flex:0 0 auto;color:#cbbf9f;font-weight:800;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>Make a Game</h1>
+    <p>Build it the same way every time</p>
+    <span class="note">Mockup using real Buildable art · same 5 building blocks for every game</span>
+  </div>
+
+  <div class="rail">
+    <div class="pill core"><span class="n">1</span>Hero</div>
+    <div class="pill core"><span class="n">2</span>Sidekick</div>
+    <div class="pill action"><span class="n">3</span>Bad guys</div>
+    <div class="pill action"><span class="n">4</span>Boss</div>
+    <div class="pill core"><span class="n">5</span>World</div>
+  </div>
+
+  <!-- STEP 1 HERO -->
+  <div class="step">
+    <div class="step-head">
+      <div class="num" style="background:var(--green)">1</div>
+      <h2>Pick your hero<span class="seg core">core</span></h2>
+      <div class="hint">The main character you play as.</div>
+    </div>
+    <div class="grid g6" id="heroGrid"></div>
+  </div>
+
+  <!-- STEP 2 SIDEKICK -->
+  <div class="step">
+    <div class="step-head">
+      <div class="num" style="background:var(--blue)">2</div>
+      <h2>Pick a sidekick<span class="seg core">core</span></h2>
+      <div class="hint">A buddy who tags along. (Cheers you on now — gets powers later.)</div>
+    </div>
+    <div class="grid g6" id="sideGrid"></div>
+  </div>
+
+  <!-- STEP 3 BAD GUYS -->
+  <div class="step">
+    <div class="step-head">
+      <div class="num" style="background:var(--amber)">3</div>
+      <h2>Make the bad guys<span class="seg action">action pack</span></h2>
+      <div class="hint">3 to 5 of them, smallest/easiest (1) to biggest/hardest (5).</div>
+    </div>
+    <div id="crewNote" class="note" style="background:#eef7ff;border-color:#bcdcef;color:#3a6b86;margin-top:12px;"></div>
+    <div class="ladder" id="ladder"></div>
+    <div class="palette">
+      <div class="lbl">Library — tap to add to your crew</div>
+      <div class="row" id="enemyPalette"></div>
+    </div>
+  </div>
+
+  <!-- STEP 4 BOSS -->
+  <div class="step">
+    <div class="step-head">
+      <div class="num" style="background:var(--purple)">4</div>
+      <h2>Build a boss<span class="seg action">action pack</span></h2>
+      <div class="hint">One big boss at the end of the world.</div>
+    </div>
+    <div class="bossrow" id="bossRow"></div>
+  </div>
+
+  <!-- STEP 5 WORLD -->
+  <div class="step">
+    <div class="step-head">
+      <div class="num" style="background:var(--blue)">5</div>
+      <h2>Pick the world<span class="seg core">core</span></h2>
+      <div class="hint">Where your game takes place. Sets the default bad-guy crew.</div>
+    </div>
+    <div class="grid g8" id="worldGrid"></div>
+  </div>
+
+  <!-- RECIPE -->
+  <div class="recipe">
+    <h2>Your game recipe</h2>
+    <p class="sub">Every game a kid makes is saved as this same card — hero, sidekick, ranked bad guys, boss, world.</p>
+    <div class="slots" id="recipeSlots"></div>
+    <div class="playbtn">
+      <span class="gn" id="gameName">—</span>
+      <span class="arrow">▶</span>
+      <button>Play!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SL="https://www.buildablekids.com/api/story-library";
+const GA="https://www.buildablekids.com/api/game-art";
+const char=s=>`${SL}?img=character:${s}&style=watercolor`;
+const ga=(w,p)=>`${GA}?img=${w}:${p}&style=watercolor`;
+
+const HEROES=[["fox","Pip"],["bunny","Bramble"],["dragon","Ember"],["robot","Bolt"],["unicorn","Sparkle"],["owl","Owl"]];
+const SIDEKICKS=[["fairy","Petal"],["penguin","Waddle"],["otter","Ollie"],["hedgehog","Quill"],["owl","Owl"],["robot","Bolt"]];
+const WORLDS=[["coral-reef","Coral Reef","Reef"],["enchanted-forest","Enchanted Forest","Forest"],["snowy-village","Snowy Village","Snow"],["dragon-mountain","Dragon Mountain","Mountain"],["dino-jungle","Dino Jungle","Jungle"],["space-station","Space Station","Space"],["desert-oasis","Desert Oasis","Desert"],["candy-land","Candy Land","Candy"]];
+const ENEMIES=[["candy-land","Gumdrop"],["snowy-village","Snowball"],["coral-reef","Snippy Crab"],["dino-jungle","Baby Dino"],["desert-oasis","Armadillo"],["enchanted-forest","Forest Sprite"],["space-station","Bloop"],["dragon-mountain","Dragonling"]];
+const BOSSES=[["coral-reef","Crab King"],["dragon-mountain","Dragon King"],["candy-land","Gummy King"],["space-station","Robo King"],["dino-jungle","Dino King"],["enchanted-forest","Forest Giant"]];
+
+const state={hero:"fox",side:"fairy",crew:["candy-land","snowy-village","coral-reef","dino-jungle"],boss:"coral-reef",world:"coral-reef"};
+
+function heroName(s){const m=HEROES.concat(SIDEKICKS).find(h=>h[0]===s);return m?m[1]:s;}
+function worldWord(w){const m=WORLDS.find(x=>x[0]===w);return m?m[2]:w;}
+function enemyName(w){const m=ENEMIES.find(x=>x[0]===w);return m?m[1]:w;}
+
+function renderHeroes(){
+  document.getElementById('heroGrid').innerHTML=HEROES.map(([s,n])=>
+    `<div class="pick ${state.hero===s?'sel':''}" data-h="${s}"><span class="tick">✓</span><img src="${char(s)}" alt="${n}"><div class="nm">${n}</div></div>`).join('');
+}
+function renderSide(){
+  document.getElementById('sideGrid').innerHTML=SIDEKICKS.map(([s,n])=>
+    `<div class="pick ${state.side===s?'sel':''}" data-s="${s}"><span class="tick">✓</span><img src="${char(s)}" alt="${n}"><div class="nm">${n}</div></div>`).join('');
+}
+function renderLadder(){
+  const sizes=[58,66,74,82,90];
+  let h=state.crew.map((w,i)=>{
+    const sz=sizes[Math.min(i,4)];
+    return `<div class="rung" data-rm="${w}" style="width:${sz+26}px"><span class="rank">${i+1}</span><span class="x">✕</span><img src="${ga(w,'critter')}" style="width:${sz}px;height:${sz}px"><div class="nm">${enemyName(w)}</div></div>`;
+  }).join('');
+  for(let k=state.crew.length;k<5;k++){ const sz=sizes[k]; h+=`<div class="addslot" style="width:${sz+26}px;height:${sz+34}px">add</div>`; }
+  document.getElementById('ladder').innerHTML=h;
+  document.getElementById('enemyPalette').innerHTML=ENEMIES.map(([w,n])=>
+    `<div class="chip ${state.crew.includes(w)?'used':''}" data-add="${w}"><img src="${ga(w,'critter')}" alt="${n}"><div class="nm">${n}</div></div>`).join('');
+  const ww=WORLDS.find(x=>x[0]===state.world);
+  document.getElementById('crewNote').textContent=`Using ${ww?ww[1]:''}'s default crew — tap any to swap. (In the real version each world ships its own ranked crew; here we mix the library to show the idea.)`;
+}
+function renderBoss(){
+  document.getElementById('bossRow').innerHTML=BOSSES.map(([w,n])=>
+    `<div class="bosspick ${state.boss===w?'sel':''}" data-b="${w}"><span class="crown">boss</span><img src="${ga(w,'boss')}" alt="${n}"><div class="nm">${n}</div></div>`).join('');
+}
+function renderWorlds(){
+  document.getElementById('worldGrid').innerHTML=WORLDS.map(([w,n])=>
+    `<div class="world ${state.world===w?'sel':''}" data-w="${w}"><img class="far" src="${ga(w,'far')}"><div class="ground"></div><img class="tree" src="${ga(w,'tree_a')}"><span class="nm">${n}</span><span class="tick">✓</span></div>`).join('');
+}
+function renderRecipe(){
+  const slots=document.getElementById('recipeSlots');
+  const crewHtml=state.crew.map((w,i)=>`<div class="ci"><span class="rk">${i+1}</span><img src="${ga(w,'critter')}" style="width:46px;height:46px"></div>`).join('');
+  slots.innerHTML=
+    `<div class="slot"><div class="cap">Hero</div><div class="box"><img src="${char(state.hero)}" style="width:64px;height:64px"></div></div>`+
+    `<div class="slot"><div class="cap">Sidekick</div><div class="box"><img src="${char(state.side)}" style="width:64px;height:64px"></div></div>`+
+    `<div class="slot"><div class="cap">Bad guys (1–5)</div><div class="crew">${crewHtml}</div></div>`+
+    `<div class="slot"><div class="cap">Boss</div><div class="box"><img src="${ga(state.boss,'boss')}" style="width:72px;height:72px"></div></div>`+
+    `<div class="slot"><div class="cap">World</div><div class="box" style="padding:0;overflow:hidden;width:96px;height:72px;position:relative"><img src="${ga(state.world,'far')}" style="width:96px;height:72px;object-fit:cover"></div></div>`;
+  document.getElementById('gameName').textContent=`${heroName(state.hero)}'s ${worldWord(state.world)} Dash`;
+}
+function renderAll(){renderHeroes();renderSide();renderLadder();renderBoss();renderWorlds();renderRecipe();}
+
+document.addEventListener('click',e=>{
+  const h=e.target.closest('[data-h]'); if(h){state.hero=h.dataset.h;renderAll();return;}
+  const s=e.target.closest('[data-s]'); if(s){state.side=s.dataset.s;renderAll();return;}
+  const b=e.target.closest('[data-b]'); if(b){state.boss=b.dataset.b;renderAll();return;}
+  const w=e.target.closest('[data-w]'); if(w){state.world=w.dataset.w;renderAll();return;}
+  const add=e.target.closest('[data-add]'); if(add){const k=add.dataset.add; if(!state.crew.includes(k)&&state.crew.length<5){state.crew.push(k);renderAll();}return;}
+  const rm=e.target.closest('[data-rm]'); if(rm){const k=rm.dataset.rm; if(state.crew.length>3){state.crew=state.crew.filter(x=>x!==k);renderAll();}return;}
+});
+renderAll();
+</script>
+</body>
+</html>
