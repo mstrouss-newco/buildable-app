@@ -84,6 +84,19 @@ const SOUNDS = {
   woof:        "Short friendly small happy dog woof, single hit, no music, no voices",
   quack:       "Short silly cartoon duck quack, single hit, no music, no voices",
   cheer:       "Short happy little group of kids cheering yay and clapping, celebratory, single hit, no music",
+  // ---- Art Studio — bespoke brush + UI SFX (one-shots, short) ----
+  art_crayon:  "Short soft waxy crayon scribble scratch on paper, gentle, single hit, no music, no voices",
+  art_marker:  "Short soft squeaky felt-tip marker stroke gliding on paper, single hit, no music, no voices",
+  art_paint:   "Short soft wet paintbrush swish stroke with a tiny splatter, single hit, no music, no voices",
+  art_pencil:  "Short light pencil sketching scratch on paper, fine and soft, single hit, no music, no voices",
+  art_chalk:   "Short soft dusty chalk drag on a board, gentle grain, single hit, no music, no voices",
+  art_spray:   "Short soft spray-can hiss puff of paint, single hit, no music, no voices",
+  art_neon:    "Short soft electric neon hum zap with a bright shimmer, single hit, no music, no voices",
+  art_glitter: "Short delicate sparkly glitter twinkle shimmer dropping, magical, single hit, no music, no voices",
+  art_stamp:   "Short cute soft cartoon stamp thunk with a tiny boing, single hit, no music, no voices",
+  art_fill:    "Short happy watery paint-bucket splash fill, single hit, no music, no voices",
+  art_undo:    "Short soft reverse whoosh swipe, gentle, single hit, no music, no voices",
+  art_save:    "Cheerful short sparkle save chime, bright and proud, single hit, no music, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -97,6 +110,8 @@ const DURATIONS = {
   whoopee:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   buzzer:0.7, sadtrombone:1.4, squeak:0.5, airhorn:0.9, bonk:0.5, slidewhistle:0.7,
   meow:0.7, woof:0.5, quack:0.5, cheer:1.4,
+  art_crayon:0.4, art_marker:0.4, art_paint:0.5, art_pencil:0.4, art_chalk:0.4, art_spray:0.5,
+  art_neon:0.5, art_glitter:0.6, art_stamp:0.4, art_fill:0.6, art_undo:0.4, art_save:1.2,
 };
 
 async function cacheGet(key){if(!SUPABASE_URL||!SUPABASE_SERVICE_KEY)return null;try{const r=await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}&select=audio_b64&limit=1`,{headers:{apikey:SUPABASE_SERVICE_KEY,Authorization:`Bearer ${SUPABASE_SERVICE_KEY}`}});if(!r.ok)return null;const rows=await r.json();return Array.isArray(rows)&&rows[0]?rows[0].audio_b64:null;}catch{return null;}}

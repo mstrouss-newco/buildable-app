@@ -43,6 +43,25 @@ read-only game viewer (`public/game.html?id=`) + a `game` branch in `shareCreati
 (2) `MyStuff.jsx` only has characters/levels/songs tabs — add Stories + Games tabs with
 Share + Publish actions. Both touch live React UI — to do next, confirming scope first.
 
+## 2026-06-27 — Art Studio v1 (Core + Kaleidoscope) SHIPPED to main
+- NEW maker built on the game playbook (Track B engine): public/art-studio.html.
+- Brushes with PERSONALITY + bespoke sounds: crayon/marker/paint/pencil/chalk/spray/neon
+  + rainbow + glitter; sticker-stamp brush (pulls /api/list-characters + /api/list-assets,
+  BR-drawn fallback so it's never empty); eraser; size; full undo/redo; clear-with-confirm.
+- Kaleidoscope/mirror mode (Off/x2/x4/x8) via new shared BR.mirror(); textured strokes via
+  new shared BR.stroke() in buildable-renders.js (reusable by the next maker).
+- 12 new bespoke ElevenLabs one-shot sounds registered in api/sfx.js (art_* keys) so they
+  grow the company sound library. Sounds play via /api/sfx?s=... (BA mute/unlock honored).
+- Save+share: db/create-saved-art.sql (saved_art mirrors saved_stories; 'art' added to
+  creation_hearts) + api/save-art.js + api/list-art.js; publish-creation.js learns 'art'.
+  Saves store finished PNG (image_b64) AND replayable recipe (art JSONB). Autosave to
+  localStorage so work is never lost. Confetti + chime on save.
+- Wired in: vercel.json route /art-studio.html (before catch-all); src/BuildableKids.jsx
+  "Make art" home tile + ArtStudioScreen iframe (Back top-left, shared nav). No emojis.
+- QA: qa-art.mjs (headless) asserts all brushes lay strokes across mirror settings,
+  undo/redo work, and save->JSON->clear->restore is lossless. All green.
+- MANUAL (owner): run db/create-saved-art.sql in Supabase so saving persists.
+
 
 ## 2026-06-27 — Phase 2: talking helper + voice + onboarding SHIPPED to main
 - Floating helper now SPEAKS: taps (and auto on home load) play "Hi {name}! {line}" via

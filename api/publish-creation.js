@@ -14,8 +14,9 @@ export default async function handler(req, res) {
   const publish = b.publish !== false;
   if (!id || !deviceId) return res.status(400).json({ error: "id,deviceId required" });
   try {
-    if (kind === "song" || kind === "story") {
-      const [table, idcol] = kind === "song" ? ["saved_songs", "song_id"] : ["saved_stories", "story_id"];
+    if (kind === "song" || kind === "story" || kind === "art") {
+      const [table, idcol] = kind === "song" ? ["saved_songs", "song_id"]
+        : kind === "art" ? ["saved_art", "art_id"] : ["saved_stories", "story_id"];
       const patch = { published: publish, published_at: publish ? new Date().toISOString() : null };
       const r = await fetch(`${URL}/rest/v1/${table}?${idcol}=eq.${encodeURIComponent(id)}&device_id=eq.${encodeURIComponent(deviceId)}`, { method: "PATCH", headers: { ...H, Prefer: "return=representation" }, body: JSON.stringify(patch) });
       const rows = await r.json();
