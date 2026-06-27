@@ -293,6 +293,37 @@ function build(q) {
       transparent:true, quality:"medium",
     };
   }
+  if (kind === "runnerprop") {
+    // Distinct roadside pieces per town for the 3D runner "Sunny Town Drive".
+    // Transparent modern-3D cut-outs (buildings + a tree), rendered as billboards.
+    const P = {
+      maple: { bld_a:"a cozy two-story suburban house with a pitched red roof and a small front porch",
+               bld_b:"a cute single-story cottage with a brick chimney and flower window boxes",
+               tree:"a big lush leafy green maple tree with a full rounded canopy and a sturdy trunk" },
+      market: { bld_a:"a charming small-town shop with a striped red-and-white awning and a hanging sign",
+                bld_b:"a quaint market-square building with a little clock tower on top",
+                tree:"a neat rounded topiary tree planted in a square wooden planter" },
+      beach: { bld_a:"a cute wooden beach hut on short stilts with a palm-leaf thatched roof",
+               bld_b:"a colorful seaside ice-cream and surf stand with a striped beach umbrella",
+               tree:"a tall curved palm tree with big green fronds and a couple of coconuts" },
+      petal: { bld_a:"a pretty pastel-pink cottage with a flower-covered trellis and a heart on the door",
+               bld_b:"a small white park gazebo with a pink domed roof and flower boxes",
+               tree:"a blossoming cherry-blossom tree absolutely full of soft pink flowers" },
+      downtown: { bld_a:"a tall modern glass skyscraper in a cute rounded cartoon style, lots of windows",
+                  bld_b:"a mid-rise city office building with rows of windows and a flat roof",
+                  tree:"a slim city sidewalk tree with a tidy round canopy in a square concrete planter" },
+      rainbow: { bld_a:"a whimsical candy-colored tall house with a swirly twisted roof",
+                 bld_b:"a cute building painted in bright rainbow stripes with a curved roof",
+                 tree:"a magical lollipop-shaped tree with a swirly trunk and rainbow-colored leaves" },
+    };
+    const town=(q.town||"").toString(); const piece=(q.piece||"").toString();
+    const set=P[town]; if(!set||!set[piece]) return null;
+    return {
+      descriptor:`runnerprop|${town}|${piece}`,
+      prompt:`${set[piece]}. Modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded glossy shapes, vibrant cheerful colors, thick clean forms. A SINGLE isolated element, centered, full and complete from base to top, on a FULLY TRANSPARENT background. No ground, no floor line, no cast shadow, no road, no other objects, no people, no text, no words. Child-friendly ages 4-8.`,
+      transparent:true, quality:"medium",
+    };
+  }
   if (kind === "runnersky") {
     // Full-bleed sky + distant skyline backdrops for the 3D car runner "Sunny Town Drive".
     // Used as the Three.js scene background (the 3D road is drawn in front), so: NO road,
