@@ -81,22 +81,22 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   lockDelayMs: 600,
   endlessFall: 980,
   worlds: [
-    { name:"Sunny Meadow",  hero:"Bramble Bunny", fall:880, goalRows:8,  ambience:"forest",
+    { name:"Sunny Meadow",  hero:"Bramble Bunny", fall:880, goalRows:8,  ambience:"forest", scene:"chess-art/jungle_bg.jpg",
       bg:["#bde6c4","#7fcf9e"], accent:"#2f8a5b", helper:"Bramble's garden sweep",
       palette:["#ff9bb8","#ffcf5e","#8fd96a","#5cc0f0","#b78fff","#ff9f6e","#5fd4b0"] },
-    { name:"Candy Land",    hero:"Pip Gumdrop",   fall:780, goalRows:9,  ambience:"candy",
+    { name:"Candy Land",    hero:"Pip Gumdrop",   fall:780, goalRows:9,  ambience:"candy", scene:"chess-art/candy_bg.jpg",
       bg:["#ffd6ec","#ff9ec4"], accent:"#c0468a", helper:"Pip's sugar swirl",
       palette:["#ff6f9d","#ffab3d","#ffe27a","#6fd99a","#52c6f0","#bf8aff","#ff7ec6"] },
-    { name:"Coral Reef",    hero:"Bubbles Fish",  fall:690, goalRows:10, ambience:"waves",
+    { name:"Coral Reef",    hero:"Bubbles Fish",  fall:690, goalRows:10, ambience:"waves", scene:"chess-art/ocean_bg.jpg",
       bg:["#a8e6ff","#3aa0d6"], accent:"#15709f", helper:"Bubbles' wave wash",
       palette:["#5cd6ff","#3fc7b8","#86e08c","#ffc85e","#ff8ac6","#8aa8ff","#ffe05e"] },
-    { name:"Snowy Peak",    hero:"Frosty Cub",    fall:610, goalRows:11, ambience:"wind",
+    { name:"Snowy Peak",    hero:"Frosty Cub",    fall:610, goalRows:11, ambience:"wind", scene:"/api/images?kind=tennis&id=snow",
       bg:["#e6f4ff","#9bc0e0"], accent:"#5685ba", helper:"Frosty's snow puff",
       palette:["#9fd0ff","#c2a8ff","#8fe6c0","#ffc888","#ffa8cc","#7ec0ff","#ffe888"] },
-    { name:"Space Station", hero:"Comet Robot",   fall:540, goalRows:12, ambience:"space",
+    { name:"Space Station", hero:"Comet Robot",   fall:540, goalRows:12, ambience:"space", scene:"chess-art/space_bg.jpg",
       bg:["#241a52","#0c1030"], accent:"#9b7bff", helper:"Comet's star beam",
       palette:["#9b7bff","#52c6f0","#6fd99a","#ffc94d","#ff6f9d","#56e0f0","#bf8aff"] },
-    { name:"Volcano Fest",  hero:"Ember Dragon",  fall:470, goalRows:14, ambience:"fire",
+    { name:"Volcano Fest",  hero:"Ember Dragon",  fall:470, goalRows:14, ambience:"fire", scene:"/api/images?kind=tennis&id=volcano",
       bg:["#3a1c2a","#1a0f18"], accent:"#ff7a45", helper:"Ember's lava splash",
       palette:["#ff7a4d","#ffab3d","#ffd24d","#ff5f85","#ff8f8f","#ff6a35","#ffc44d"] },
   ],
@@ -234,12 +234,23 @@ function bx(c){ return BX + c*CELL; }
 function by(r){ return BY + r*CELL; }
 
 // ---------------- DRAW ----------------
+const _bgCache={};
+function mkImg(src){ try{ if(typeof Image==="undefined") return null; const im=new Image(); try{ im.crossOrigin="anonymous"; }catch(e){} im.src=src; return im; }catch(e){ return null; } }
+function sceneImg(){ if(!W.scene) return null; if(_bgCache[W.scene]===undefined) _bgCache[W.scene]=mkImg(W.scene); return _bgCache[W.scene]; }
+// chess/tennis-style photo backdrop behind the board, with a readability scrim + gradient fallback
+function drawBackdrop(){
+  const im=sceneImg();
+  if(im && (im.complete||im.width) && (im.naturalWidth||im.width) && BR.bgImage(ctx,im,CW,CH)){
+    ctx.fillStyle="rgba(10,13,34,0.42)"; ctx.fillRect(0,0,CW,CH);
+  } else {
+    const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,W.bg[0]); g.addColorStop(1,W.bg[1]); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+  }
+}
 function draw(){
   if(!ctx) return;
   computeLayout();
   const sh = BM ? BM.shakeOffset(fx) : {x:0,y:0};
-  const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,W.bg[0]); g.addColorStop(1,W.bg[1]);
-  ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+  drawBackdrop();
   ctx.save(); ctx.translate(sh.x, sh.y);
   // solid Tetris-style playfield with a bright accent frame (no see-through wash)
   BR.rrect(ctx, BX-9, BY-9, BW+18, BH+18, 16); ctx.fillStyle=W.accent; ctx.fill();

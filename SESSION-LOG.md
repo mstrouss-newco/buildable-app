@@ -25,6 +25,12 @@
 - **Mechanic stored:** `db/seed-tetris-mechanic.sql` registers `tumble-blocks-clear` and
   `soft-reset-never-lose` so the catalog grows. Docs: `tetris-README.md`,
   `BUILDING-A-GAME.md` + `MECHANICS.md` updated.
+- **World backdrops (same day):** each world now gets a chess/tennis-style photo
+  backdrop behind the board (drawn cover-fit via `BR.bgImage` + a dark readability
+  scrim), with the per-world gradient kept as the fallback. Sunny Meadow→jungle,
+  Candy→candy, Coral Reef→ocean, Space→space (reusing the instant, free
+  `chess-art/*.jpg` set chess/breaker already use); Snowy Peak→`/api/images?kind=tennis&id=snow`
+  and Volcano→`...&id=volcano` (generate-once-cache, gradient fallback until ready).
 - **Drop controls (same day):** the green button is now a real drop control — HOLD it
   for a controlled fast-fall (soft drop) or quick-TAP to slam to the bottom (hard drop,
   with a little landing thud + shake). Swipe-down on the board still hard-drops; Down

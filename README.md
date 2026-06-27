@@ -98,6 +98,10 @@ falling-blocks puzzle tuned for ages 4–8, with **no harsh game-over**.
   Calm survives a long run with no errors, render smoke passes. `npm run build` clean.
 - **Route + face:** `public/tetris-engine.html` in `vercel.json` before the catch-all;
   **Tumble Blocks** tile + `TetrisScreen` in `src/BuildableKids.jsx`.
+- **World backdrops:** each world draws a photo backdrop behind the board (cover-fit
+  `BR.bgImage` + scrim, gradient fallback) like chess/tennis — 4 reuse the free
+  `chess-art/*.jpg` set, snow/volcano use `/api/images?kind=tennis&id=...` (cached on
+  first view). Blocks are 3D gems; drop button holds for soft-drop / taps for hard-drop.
 - **Stored for reuse:** `db/seed-tetris-mechanic.sql` (`tumble-blocks-clear`,
   `soft-reset-never-lose`); `tetris-README.md`; `BUILDING-A-GAME.md` + `MECHANICS.md`.
 
