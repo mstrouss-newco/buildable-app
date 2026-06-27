@@ -38,7 +38,8 @@ A fixed, hand-built engine you ship as one static HTML page, launched full-scree
 iframe. These are **data-driven + always-clearable + QA-simmed**, and they draw/sound/
 feel through the three shared engine libraries. Current Track B engines:
 `public/play.html` (platformer), `survival-engine.html`, `croc-engine.html`,
-`breaker-engine.html` (solo brick-breaker + a same-device 2-player pong mode).
+`breaker-engine.html` (solo brick-breaker + a same-device 2-player pong mode), and
+`tetris-engine.html` (Tumble Blocks — a gentle, never-lose kid Tetris).
 
 Use Track B when: you want a polished, bespoke engine for one game type with full control
 over feel — the survival/croc/breaker model.
@@ -288,7 +289,7 @@ buildable-app/
 │  ├─ buildable-renders.js     (BR — drawn art)        ← shared engine lib
 │  ├─ buildable-audio.js       (BA — sound)            ← shared engine lib
 │  ├─ buildable-mechanics.js   (BM — FX/juice)         ← shared engine lib (new)
-│  ├─ play.html, survival-engine.html, croc-engine.html, breaker-engine.html  (Track B engines)
+│  ├─ play.html, survival-engine.html, croc-engine.html, breaker-engine.html, tetris-engine.html  (Track B engines)
 │  └─ …                        (each needs a vercel.json route)
 ├─ api/
 │  ├─ generate-game.js  (Track A generator — reads community_* + game_mechanics)

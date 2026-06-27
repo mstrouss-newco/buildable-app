@@ -1,5 +1,33 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Tumble Blocks: a gentle kid Tetris (new Track B engine)
+- **New engine `public/tetris-engine.html`** — "Tumble Blocks", a falling-blocks puzzle
+  tuned for ages 4–8: slow drop, 3-piece preview, ghost landing, forgiving lock delay,
+  7-bag randomizer, all 7 classic tetrominoes. Content-as-data `GAME_CONFIG` (worlds =
+  palette + fall speed + goalRows + ambience + helper).
+- **No harsh game-over (always-winnable).** You can never lose. A top-out triggers the
+  world helper's gentle row-sweep (`gentleReset`) and play continues. Two modes:
+  **Adventure** (clear a world's goalRows to win; 6 worlds, speed ramps world to world)
+  and **Calm** (endless, extra-slow, just for fun).
+- **Touch-first** for iPad: big ◀ ⟳ ▶ ⬇ buttons (auto-repeat) PLUS board gestures
+  (drag = move, tap = turn, swipe-down = drop); keyboard on desktop.
+- **Shared libs:** blocks/board via `BR` (no emoji), line-clear pop/shake/flash via `BM`,
+  start screen + world picker via `BS`, sound via `BA`.
+- **Bespoke sounds CREATED + registered** in `api/sfx.js` (+`DURATIONS`): `tumble_move`,
+  `tumble_rotate`, `tumble_lock`, `tumble_clear`, `tumble_combo`, `tumble_levelup`,
+  `tumble_win`, `tumble_reset`. Each world also loops a calm ambience reused from the
+  shared sound library.
+- **QA:** new `qa-tetris.mjs` (modeled on `qa-breaker.mjs`) — a headless El-Tetris bot
+  clears EVERY world goal (24–35 pieces each), Calm survives a 3,000-piece run with no
+  errors, render smoke passes. `npm run build` clean.
+- **Wiring:** `vercel.json` route for `/tetris-engine.html`; **Tumble Blocks** tile +
+  `TetrisScreen` in `src/BuildableKids.jsx`.
+- **Mechanic stored:** `db/seed-tetris-mechanic.sql` registers `tumble-blocks-clear` and
+  `soft-reset-never-lose` so the catalog grows. Docs: `tetris-README.md`,
+  `BUILDING-A-GAME.md` + `MECHANICS.md` updated.
+- Built on branch `claude/games-tetris` (not pushed to main). **Owner action:** run
+  `db/seed-tetris-mechanic.sql` once; the 8 tumble SFX auto-generate + cache on first play.
+
 ## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
 - The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of
   big buttons, each showing the kid's CURRENT choice as a picture and opening a simple full-screen

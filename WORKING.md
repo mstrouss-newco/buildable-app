@@ -17,9 +17,13 @@ overwrite each other. Git merges the code; this file carries the *intent*.
 ## Intended product state (source of truth — keep in sync with Mike)
 Home tiles:
 - **Music** — LIVE (Ready)
-- **Games** — LIVE, **Beta** tag. Opens a pick-a-game screen: Platformer (`/play.html`)
-  + Survival (`/survival-engine.html`), both playable. The old AI-generated game flow
-  is retired — do not route Games back to SCREEN_INTRO.
+- **Games** — LIVE, **Beta** tag. Opens a pick-a-game screen of Track B engines:
+  Platformer (`/play.html`), Survival (`/survival-engine.html`), Breaker
+  (`/breaker-engine.html`), Sunny Town Drive (`/runner-engine.html`), Tennis
+  (`/tennis.html`), Chess, Typing, Sound Machine, and **Tumble Blocks**
+  (`/tetris-engine.html`, gentle kid Tetris — on branch `claude/games-tetris`, awaiting
+  Mike's merge). The old AI-generated game flow is retired — do not route Games back to
+  SCREEN_INTRO.
 - **Stories** — COMING SOON (disabled). **Do not re-enable without Mike.**
 - **Typing** — LIVE (New)
 - **Chess** — LIVE

@@ -129,6 +129,18 @@ Also cap level length (Riley uses 45s normal / 90s boss) so a level can't run fo
 
 ---
 
+### softResetNeverLose — guaranteed no-lose (falling-block default)
+
+The falling-block sibling of `killThenBoss`: instead of ending a game when the stack
+tops out, **never end it**. When a new piece can't appear, the world's helper gently
+sweeps the bottom rows away (Tumble Blocks' `gentleReset`) and play continues. This makes
+a Tetris-style game age-4-friendly (no harsh game-over) while the goal (clear N rows to
+win a world) stays always reachable. Pair it with a **goal counter the player controls**
+(`rowsCleared >= goalRows`) so the end state depends on a monotonically rising counter,
+never on surviving — the same robustness principle as `killThenBoss`. Proven in
+`public/tetris-engine.html` (2026-06-27); the QA bot (`qa-tetris.mjs`, El-Tetris) confirms
+every world is completable.
+
 ### killThenBoss — guaranteed level-end (recommended default)
 
 **This is the most robust way to make a level always end, and the recommended default for generated games.** Proven in Riley (2026-06-09). Instead of ending a level on “defeat EVERY enemy” (fragile — one unreachable enemy soft-locks the level), drive the ending off a **kill counter the player controls**:
@@ -207,6 +219,8 @@ This catalog is the design reference. The mechanics are also stored as rows in t
 | `reach-the-chest` | Reach the chest at the end |
 | `timed-run` | Simple timed run |
 | `kill-then-boss` | Kill 15 bad guys, then beat the (mini)boss to end the level (guaranteed level-end) |
+| `tumble-blocks-clear` | Fill a row to clear it; clear N rows to win a world (falling-block goal) |
+| `soft-reset-never-lose` | Top-out gently sweeps rows away instead of ending the game (always-winnable) |
 
 ---
 
@@ -275,7 +289,7 @@ one catalog** (see `BUILDING-A-GAME.md` for the full picture):
   `game_mechanics` rows and injects the chosen mechanic's name/description/`rule` into
   the Claude prompt (§8). It composes a game from named mechanics.
 - **Track B — hand-authored engines** (`public/play.html`, `survival-engine.html`,
-  `croc-engine.html`, `breaker-engine.html`): data-driven, always-clearable, QA-simmed,
+  `croc-engine.html`, `breaker-engine.html`, `tetris-engine.html`): data-driven, always-clearable, QA-simmed,
   and they now share `BR` + `BA` + `BM`. They consume the **same** vocabulary — the
   movement patterns (§2), the win conditions (§4, esp. `kill-then-boss`), and the FX
   primitives (§9).

@@ -75,6 +75,35 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Tumble Blocks — gentle kid Tetris, a new Track B engine (June 27 2026)
+New hand-authored engine `public/tetris-engine.html` for the Games section — a
+falling-blocks puzzle tuned for ages 4–8, with **no harsh game-over**.
+
+- **Always-winnable falling-block rule.** You can never lose: a top-out triggers the
+  world helper's gentle row-sweep (`gentleReset`) instead of a game over. **Adventure**
+  mode = 6 worlds (each its own character, soft palette, background, ambience, row goal),
+  clear the goal to advance; speed ramps within and across worlds. **Calm** mode =
+  endless, extra-slow, no goal.
+- **Kid tuning:** slow drop + small ramp, 3-piece preview, ghost landing outline,
+  forgiving lock-delay (resets on nudge), 7-bag randomizer, all 7 classic tetrominoes
+  recolored per world.
+- **Touch-first (iPad):** big ◀ ⟳ ▶ ⬇ buttons (left/right auto-repeat) plus board
+  gestures (drag = move, tap = turn, swipe-down = drop); arrows/Space on desktop.
+- **Shared libs:** `BR` blocks/board (no emoji), `BM` line-clear pop/shake/flash, `BS`
+  start screen + world picker, `BA` sound. **New bespoke ElevenLabs one-shots registered
+  in `api/sfx.js`:** `tumble_move/rotate/lock/clear/combo/levelup/win/reset` (synth is the
+  silent fallback); each world also loops a calm shared-library ambience.
+- **Always-winnable + QA'd:** `qa-tetris.mjs` (modeled on `qa-breaker.mjs`) drives
+  `BUILDABLE_GAME.sim()` headlessly — a flawless El-Tetris bot clears every world's goal,
+  Calm survives a long run with no errors, render smoke passes. `npm run build` clean.
+- **Route + face:** `public/tetris-engine.html` in `vercel.json` before the catch-all;
+  **Tumble Blocks** tile + `TetrisScreen` in `src/BuildableKids.jsx`.
+- **Stored for reuse:** `db/seed-tetris-mechanic.sql` (`tumble-blocks-clear`,
+  `soft-reset-never-lose`); `tetris-README.md`; `BUILDING-A-GAME.md` + `MECHANICS.md`.
+
+**Owner action:** run `db/seed-tetris-mechanic.sql` once; the 8 tumble SFX auto-generate
++ cache on first play. Built on branch `claude/games-tetris` — not merged to main.
+
 ## Tennis: per-world background music + pre-warmed assets (June 27 2026)
 - **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.
 - **Pre-warmed all generated assets** so the first kid never waits: 8 court images (`/api/images?kind=tennis&id=*`), 7 one-shot SFX (`/api/sfx?s=tennis_*`), and 8 music tracks (`/api/tennis-music?world=*`) generated + cached.

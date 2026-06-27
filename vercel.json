@@ -192,6 +192,10 @@
       "dest": "/breaker-engine.html"
     },
     {
+      "src": "/tetris-engine.html",
+      "dest": "/tetris-engine.html"
+    },
+    {
       "src": "/tennis.html",
       "dest": "/tennis.html"
     },

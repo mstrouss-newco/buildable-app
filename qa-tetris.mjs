@@ -1,0 +1,33 @@
+// Headless QA for public/tetris-engine.html (Tumble Blocks).
+// A perfect El-Tetris bot must clear EVERY world's goal (adventure), Calm/endless
+// must survive a long run without throwing (you can never lose), + render smoke.
+import fs from 'fs'; import vm from 'vm';
+const dir=process.argv[2]||'.';
+const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
+const html=read('tetris-engine.html');
+const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js'].map(read).join('\n');
+const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
+const noop=()=>{};
+const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:600,height:820}:(typeof k==='string'?noop:undefined))});
+function el(withAppend){ const e={ style:{setProperty:noop,display:''}, classList:{add:noop,remove:noop,contains:()=>false}, addEventListener:noop, removeEventListener:noop, getContext:()=>ctxStub, onclick:null, textContent:'', width:600, height:820, naturalWidth:0, complete:false, getBoundingClientRect:()=>({left:0,top:0,width:600,height:820}) };
+  Object.defineProperty(e,'innerHTML',{set(){},get(){return''}}); if(withAppend){ e.appendChild=noop; e.removeChild=noop; } return e; }
+class ImageStub{set src(v){this._src=v;}get src(){return this._src;}addEventListener(){}}
+// "start" host lacks appendChild → BS.mount uses its headless stub
+const documentStub={ getElementById:(id)=> id==='start'? el(false): el(true), querySelector:()=>el(true), addEventListener:noop, createElement:()=>el(true), head:el(true), documentElement:el(true) };
+const sandbox={ document:documentStub, window:{}, Image:ImageStub, requestAnimationFrame:noop, cancelAnimationFrame:noop, addEventListener:noop, removeEventListener:noop, setTimeout:()=>0, clearTimeout:noop, setInterval:()=>0, clearInterval:noop, performance:{now:()=>Date.now()}, Date, Math, console };
+sandbox.window=sandbox; sandbox.globalThis=sandbox;
+vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:'tumble'});
+const G=sandbox.BUILDABLE_GAME; if(!G){ console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
+if(sandbox.TUMBLE_GAME!==G){ console.error('FAIL: TUMBLE_GAME alias missing'); process.exit(2); }
+const cfg=G._cfg(); const n=cfg.levels.length; let ok=true;
+console.log('--- ADVENTURE: the bot clears every world goal (3 runs each) ---');
+for(let i=0;i<n;i++){ const w=cfg.worlds[i]; let win=true,worst=0; for(let t=0;t<3;t++){ const r=G.sim(i,120000); if(r.result!=='win')win=false; worst=Math.max(worst,r.frames); }
+  if(!win)ok=false; console.log(`${win?'PASS':'FAIL'}  W${i+1} ${w.name.padEnd(14)} goal=${String(w.goalRows).padStart(2)} winAll3=${win} worstPieces=${worst}`); }
+console.log('--- CALM (endless): survives a long run, never errors, keeps clearing ---');
+for(let i=0;i<n;i++){ let res; try{ res=G.simEndless(i,3000); }catch(e){ res={result:'ERR:'+e.message,rows:0}; }
+  const good = (res.result==='play'||res.result==='win') && res.rows>0; if(!good)ok=false;
+  console.log(`${good?'PASS':'FAIL'}  W${i+1} endless rows=${res.rows} state=${res.result}`); }
+console.log('--- render smoke (title + mid-play + win banner) ---');
+G._begin(0,'adventure'); G._step(8); const d1=G._draw(); console.log('mid-play render:',d1); if(d1!=='ok')ok=false;
+const wr=G.sim(0,120000); const d2=G._draw(); console.log(`win(W1) render: ${d2} (result=${wr.result} rows=${wr.rows}/${wr.goal})`); if(d2!=='ok')ok=false;
+console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);
