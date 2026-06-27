@@ -816,3 +816,7 @@ engine sets BA.music.src to the new endpoint with loop=true.
 ## Chess: rank badges on living pieces — June 26 2026
 
 Themed creatures were hard to read as chess ranks, so every in-game piece now carries a small white corner badge with the classic piece glyph (pawn/knight/bishop/rook/queen/king) via `withBadge()` wrapping `pieceSVG` in renderPieces + promotion. Creature + team color still carry theme/side; the badge gives instant rank ID. Home mascots unbadged.
+
+## Chess: AI-generated piece art — kind=chesspiece + Space prototype — June 26 2026
+
+Added `kind=chesspiece` to `api/images.js` (gpt-image-1, transparent, cached in image_cache, served by `/api/images?kind=chesspiece&world=&piece=`). Prompt = piece-shaped core ("clearly reads as a chess <rook/knight/...>") + per-world theme. Game renders AI image pieces for worlds in `AIWORLDS` (prototype: space) with the vector piece as an instant fallback shown until the image loads (so the board is playable during the ~30s first-gen), team distinguished by a colored base glow. Alive idle animates the img too. Other worlds keep vector. Next: judge quality/iPad perf on Space, then roll out remaining worlds; note no server-side image resize lib, so watch iPad memory (1024 PNGs, ~6 distinct per world).

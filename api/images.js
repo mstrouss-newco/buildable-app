@@ -219,6 +219,32 @@ function build(q) {
       transparent: false, quality: "medium",
     };
   }
+  if (kind === "chesspiece") {
+    const PIECE = {
+      p:"a chess PAWN: a small simple rounded ball head on a short rounded pedestal base",
+      n:"a chess KNIGHT shaped like a horse's head and arched neck rising from a round pedestal base",
+      b:"a tall slender chess BISHOP with a smooth domed mitre hat with a small vertical slit, on a round pedestal base",
+      r:"a chess ROOK shaped like a sturdy castle tower with square battlements (crenellations) on top, on a round pedestal base",
+      q:"a tall elegant chess QUEEN wearing a pointed multi-point crown, on a round pedestal base",
+      k:"a tall chess KING wearing a crown topped with a small cross, on a round pedestal base",
+    };
+    const NAME = {p:"pawn",n:"knight",b:"bishop",r:"rook",q:"queen",k:"king"};
+    const THEME = {
+      ocean:"made of coral, pearl and seashells, gentle underwater sea theme, aqua and teal accents",
+      jungle:"covered in leaves, vines and little flowers, lush green jungle theme",
+      space:"glowing cosmic theme with a metallic sheen, tiny stars and nebula colors, purples and blues",
+      candy:"made of candy, frosting and sprinkles, sweet pastel theme",
+      castle:"classic medieval theme of carved stone with gold trim",
+      desert:"warm desert theme of carved sandstone with little cactus and sun motifs",
+    };
+    const piece=(q.piece||"").toString(); const world=(q.world||"").toString();
+    if(!PIECE[piece]||!THEME[world]) return null;
+    return {
+      descriptor:`chesspiece|${world}|${piece}`,
+      prompt:`${PIECE[piece]}, ${THEME[world]}. The overall silhouette must clearly read as a chess ${NAME[piece]}. Cute kawaii character with two big friendly eyes and a little smile, thick clean outlines, bold soft 3D cartoon style, a single piece standing upright and centered, full body, soft studio lighting, child-friendly ages 4-8, no text, no words, no letters, transparent background`,
+      transparent:true, quality:"medium",
+    };
+  }
   return null;
 }
 

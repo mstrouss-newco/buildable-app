@@ -109,6 +109,13 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
   display:flex;align-items:center;justify-content:center;will-change:left,top}
 .piece svg{width:84%;height:84%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.32));transform-origin:50% 82%;animation:bob 3s ease-in-out infinite}
 .piece.lift svg{animation:none}
+.piece .pbase{position:absolute;left:16%;bottom:4%;width:68%;height:16%;border-radius:50%;z-index:0;filter:blur(1px)}
+.piece .pbase.tw{background:radial-gradient(ellipse at center,rgba(139,108,255,.95),rgba(139,108,255,0) 70%)}
+.piece .pbase.tb{background:radial-gradient(ellipse at center,rgba(255,122,107,.95),rgba(255,122,107,0) 70%)}
+.piece .pfallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .4s;z-index:1}
+.piece img.paimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .5s;filter:drop-shadow(0 4px 4px rgba(0,0,0,.34));transform-origin:50% 82%;z-index:2}
+.piece.img-on img.paimg{opacity:1}
+.piece.img-on .pfallback{opacity:0}
 .piece.lift{transform:scale(1.14);z-index:6;filter:drop-shadow(0 8px 10px rgba(0,0,0,.4))}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4%)}}
 @keyframes aliveBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7%)}}
@@ -639,6 +646,7 @@ function sfxYourTurn(){if(!soundOn)return;if(libPlay('yourturn'))return;osc(660,
 /* ===== Background music (looping world tracks from the library) ===== */
 let musicOn=true, musicEl=null, musicWorld=null;
 const ALIVE=['aliveBob','aliveWiggle','aliveBreathe','aliveLook'];
+const AIWORLDS={space:1}; // worlds using AI-generated piece art (prototype); others use vector
 let aliveOn=true; try{aliveOn=localStorage.getItem('bk_chess_alive')!=='0';}catch(e){}
 let moveVoiceEl=null;
 function sayMove(){ if(!aliveOn)return; try{ if(moveVoiceEl&&!moveVoiceEl.paused&&!moveVoiceEl.ended)return; const n='move'+(1+Math.floor(Math.random()*16)); if(!moveVoiceEl)moveVoiceEl=new Audio(); moveVoiceEl.src='/api/chess-voice?line='+n; moveVoiceEl.volume=0.85; moveVoiceEl.play().catch(()=>{}); }catch(e){} }
@@ -728,10 +736,14 @@ function renderPieces(){
     const d=disp(r,c);
     const el=document.createElement('div');
     el.className='piece';el.style.left=pct(d.dc);el.style.top=pct(d.dr);
-    el.innerHTML=withBadge(pieceSVG(p.t,p.c,sceneKey),p.t);
-    const _svg=el.querySelector('svg');
-    if(aliveOn){const _v=ALIVE[Math.floor(Math.random()*ALIVE.length)];_svg.style.animation=_v+' '+(2.6+Math.random()*2.2).toFixed(2)+'s ease-in-out '+(-Math.random()*3).toFixed(2)+'s infinite';}
-    else{_svg.style.animation='none';}
+    if(AIWORLDS[sceneKey]){
+      const url='/api/images?kind=chesspiece&world='+sceneKey+'&piece='+p.t;
+      el.innerHTML='<div class="pbase '+(p.c==='w'?'tw':'tb')+'"></div><div class="pfallback">'+withBadge(pieceSVG(p.t,p.c,sceneKey),p.t)+'</div><img class="paimg" alt="" onload="this.parentNode.classList.add(\'img-on\')" src="'+url+'">';
+    } else {
+      el.innerHTML=withBadge(pieceSVG(p.t,p.c,sceneKey),p.t);
+    }
+    if(aliveOn){const _v=ALIVE[Math.floor(Math.random()*ALIVE.length)];const _d=(2.6+Math.random()*2.2).toFixed(2)+'s ease-in-out '+(-Math.random()*3).toFixed(2)+'s infinite';el.querySelectorAll('svg,img.paimg').forEach(a=>a.style.animation=_v+' '+_d);}
+    else{el.querySelectorAll('svg,img.paimg').forEach(a=>a.style.animation='none');}
     el.dataset.r=r;el.dataset.c=c;
     el.addEventListener('click',(e)=>{e.stopPropagation();onSquareClick(r,c);});
     pieceLayer.appendChild(el);
