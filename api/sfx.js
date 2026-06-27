@@ -52,7 +52,7 @@ const DURATIONS = {
   chess_win:1.6, chess_lose:1.0, chess_yourturn:0.5, chess_capture:0.8,
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
-  door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.4, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
+  door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
 };
 
 async function cacheGet(key){if(!SUPABASE_URL||!SUPABASE_SERVICE_KEY)return null;try{const r=await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}&select=audio_b64&limit=1`,{headers:{apikey:SUPABASE_SERVICE_KEY,Authorization:`Bearer ${SUPABASE_SERVICE_KEY}`}});if(!r.ok)return null;const rows=await r.json();return Array.isArray(rows)&&rows[0]?rows[0].audio_b64:null;}catch{return null;}}
