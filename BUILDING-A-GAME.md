@@ -79,15 +79,20 @@ code that survival, croc, and breaker were each copy-pasting. See `MECHANICS.md`
    it back**: gameplay rules → a `game_mechanics` row via an idempotent `db/seed-*.sql`;
    shared FX code → a function in `buildable-mechanics.js`. Keep `MECHANICS.md` in sync.
 
-3. **Pull art from the library, with a fallback.** Characters via `/api/list-characters`,
-   worlds/elements via `/api/list-assets` (filter by `theme`), generated world art via
-   `/api/game-art`. Reference by id/url in the level card. **Always** keep a `BR.*` drawn
-   fallback so a missing asset can never break a kid's game. Where to find/send each kind:
-   `ASSET-LIBRARY.md`. How to make it look alive: `GAME-LOOK.md`.
+3. **Pull art AND audio from the library, with a fallback.** Characters via
+   `/api/list-characters`, worlds/elements via `/api/list-assets`, music + sound effects
+   via `/api/list-audio` — all filterable by `theme` (a label, not a fence: you may mix
+   themes), generated world art via `/api/game-art`. Reference by id/url in the level
+   card. **Always** keep a fallback (`BR.*` drawn art; `BA` synth sound) so a missing
+   asset can never break a kid's game. Where to find/send each kind: `ASSET-LIBRARY.md`.
+   How to make it look alive: `GAME-LOOK.md`.
 
-4. **Wire sound + FX through the shared libs.** `BA.sfx(...)`, `BA.setMusic(...)`,
-   `BA.unlock()` on first tap; `BM.explode(...)`, `BM.burst(...)`, `BM.shake(...)` for
-   feel. No inline synth, no copy-pasted particle loop.
+4. **Wire sound + FX through the shared libs.** Pick themed music + sfx from the shared
+   audio catalog (`/api/list-audio?theme=…`) and play them through `BA` —
+   `BA.setMusic(url)`, `BA.configure({sfxBase, map})`, `BA.sfx(...)`, `BA.unlock()` on the
+   first tap — with the `BA` synth as the offline fallback. `BM.explode(...)`,
+   `BM.burst(...)`, `BM.shake(...)` for feel. No inline synth, no copy-pasted particle
+   loop. (ElevenLabs only for real music — see the audio rule.)
 
 5. **Bake in always-winnable.** Cap difficulty in the level *builder* so a 4–8-year-old
    can always finish: gaps ≤ jump range; hero speed ≥ enemy speed; bosses on a timer with
@@ -100,14 +105,19 @@ code that survival, croc, and breaker were each copy-pasting. See `MECHANICS.md`
    _(Convergence note: hooks are currently named `BK_GAME` / `SURV_GAME` / `CROC_GAME`;
    the target is one shared name — see `MECHANICS.md` roadmap.)_
 
-7. **Route it.** Every `public/*.html` needs its **own explicit route in `vercel.json`
-   before** the `/(.*)` → `landing.html` catch-all, or it serves the landing page. Add a
-   tile/launch path in `src/BuildableKids.jsx` (full-screen iframe, like Typing/Chess).
+7. **Route it + give it a face.** Every `public/*.html` needs its **own explicit route in
+   `vercel.json` before** the `/(.*)` → `landing.html` catch-all, or it serves the landing
+   page. Add a tile/launch path in `src/BuildableKids.jsx` (full-screen iframe, like
+   Typing/Chess). Creations get a **list/menu thumbnail auto-derived from their own art**
+   (`api/_thumbs.js`): a saved game's thumbnail comes from its `world`/`theme`, so use a
+   real library theme word; a published game can set `preview_image_url`. See the
+   thumbnails note in `ASSET-LIBRARY.md`.
 
 8. **QA the live deploy, then log it.** Commit to `main` (Vercel auto-deploys in ~1–2
    min), confirm it actually renders in the iframe (not just a 200), then add a dated
    entry to **`SESSION-LOG.md`** and the README session log. This is required for every
-   change (`AGENTS.md`).
+   change (`AGENTS.md`). _Gotcha: the library GET endpoints are edge-cached — when QA-ing
+   an API live, bust the cache with a throwaway `?cb=<n>` or you'll read a stale copy._
 
 ---
 
