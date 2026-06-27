@@ -30,6 +30,8 @@ const SCREEN_GROWNUP = "grownup";
 const SCREEN_STORY = "story";
 const SCREEN_TYPING = "typing";
 const SCREEN_CHESS = "chess";
+const SCREEN_GAME_PICKER = "game_picker";
+const SCREEN_PLATFORMER = "platformer";
 const SCREEN_CHESS_FAMILY = "chess_family";
 function LearningControl() {
   const [gate, setGate] = useState(false);
@@ -64,6 +66,41 @@ function LearningControl() {
         </div>
       )}
     </>
+  );
+}
+
+function GamePicker({ onHome, onPlatformer }) {
+  const tile = (grad, title, desc, onClick, soon) => (
+    <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
+      <div style={{ width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)" }} />
+      {soon && <span style={{ position: "absolute", top: 28, right: 28, fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 12px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
+      <div style={{ padding: "0 8px 6px" }}>
+        <div style={{ fontFamily: FRED, fontSize: 26, fontWeight: 700 }}>{title}</div>
+        <div style={{ fontSize: 15, color: "#cfc9e6", marginTop: 8 }}>{desc}</div>
+      </div>
+    </button>
+  );
+  return (
+    <div style={styles.container}>
+      <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
+        <button onClick={onHome} style={styles.backButton}>Home</button>
+      </div>
+      <h1 style={{ ...styles.logo, marginTop: 8 }}>Games</h1>
+      <p style={styles.tagline}>Pick a game to play!</p>
+      <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+        {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Platformer", "Run, jump and reach the flag!", onPlatformer, false)}
+        {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", null, true)}
+      </div>
+    </div>
+  );
+}
+
+function PlatformerScreen({ onHome }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
+      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
+      <iframe title="Buildable Platformer" src="/play.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
   );
 }
 
@@ -155,7 +192,7 @@ export default function BuildableKids() {
       <HomeScreen
         activeKid={activeKid}
         onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
-        onGames={() => setScreen(SCREEN_INTRO)}
+        onGames={() => setScreen(SCREEN_GAME_PICKER)}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
         onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
         onChess={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
@@ -285,6 +322,12 @@ export default function BuildableKids() {
     return <TypingScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
+  if (screen === SCREEN_GAME_PICKER) {
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} />;
+  }
+  if (screen === SCREEN_PLATFORMER) {
+    return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
   if (screen === SCREEN_CHESS) {
     return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHESS_FAMILY)} />;
   }
@@ -518,8 +561,8 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#3DD06A,#2BB14F)"><ControllerGlyph /></AppIcon>}
-          title="Games" desc="Build a game with your own hero and world."
-          badge="Coming soon" badgeColor="#D8D2EC" disabled
+          title="Games" desc="Two games: jump or survive!"
+          onClick={onGames}
         />
         <ExperienceCard
           icon={<AppIcon grad="linear-gradient(160deg,#F2789E,#E0578F)"><BookGlyph /></AppIcon>}
