@@ -5,7 +5,7 @@
 // helper's voice (/api/narrate-story-page), bounces, then auto-hides.
 import { useEffect, useRef, useState } from "react";
 import { getActiveKid, getKidHelper } from "./lib/accounts";
-import { registerAudio } from "./lib/audioUnlock";
+import { playVoiceUrl } from "./lib/voiceBus";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const WINS = ["You did it! Woohoo!", "Amazing job!", "You're a superstar!", "That was awesome!", "Yes! You win!", "Incredible! High five!"];
@@ -14,7 +14,6 @@ const LOSES = ["So close! Try again!", "Don't give up — you've got this!", "Al
 export default function HelperReactions() {
   const [show, setShow] = useState(false);
   const [state, setState] = useState({ win: true, text: "" });
-  const audioRef = useRef(null);
   const hideRef = useRef(null);
 
   useEffect(() => {
@@ -32,7 +31,7 @@ export default function HelperReactions() {
         const vid = helper && helper.voice;
         fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vid ? { text: text, voiceId: vid } : { text: text }) })
           .then((r) => r.json())
-          .then((j) => { if (j && j.configured && j.audioUrl) { if (!audioRef.current) { audioRef.current = new Audio(); registerAudio(audioRef.current); } const a = audioRef.current; a.src = j.audioUrl; a.currentTime = 0; a.volume = 1; a.play().catch(() => {}); } })
+          .then((j) => { if (j && j.configured && j.audioUrl) playVoiceUrl(j.audioUrl); })
           .catch(() => {});
       } catch (err) {}
       clearTimeout(hideRef.current);

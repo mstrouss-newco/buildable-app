@@ -18,6 +18,7 @@ import { listMyMatches } from "./lib/chessMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
 import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
 import { registerAudio } from "./lib/audioUnlock";
+import { playVoiceUrl } from "./lib/voiceBus";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -700,7 +701,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
   const [localHelper] = useState(() => getKidHelper(activeKid) || (() => { try { return JSON.parse(localStorage.getItem("bk_helper_v1") || "null"); } catch { return null; } })());
   const helper = (activeKid && activeKid.helper) || localHelper || null;
   const voiceRef = useRef(null);
-  const playClip = (j) => { if (j && j.configured && j.audioUrl) { if (!voiceRef.current) { voiceRef.current = new Audio(); registerAudio(voiceRef.current); } const a = voiceRef.current; a.src = j.audioUrl; a.currentTime = 0; a.volume = 1; a.play().catch(() => {}); return true; } return false; };
+  const playClip = (j) => { if (j && j.configured && j.audioUrl) { playVoiceUrl(j.audioUrl); return true; } return false; };
   const speakHelper = () => {
     try {
       const text = `Hi ${kidName}! ${helperLine}`;
@@ -933,7 +934,7 @@ function HelperLabScreen({ activeKid, onHome, onDone }) {
     const v = HELPER_VOICES.find((x) => x.id === vid) || HELPER_VOICES[0];
     fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: v.sample, voiceId: vid }) })
       .then((r) => r.json())
-      .then((j) => { if (j && j.configured && j.audioUrl) { if (!prevRef.current) { prevRef.current = new Audio(); registerAudio(prevRef.current); } const a = prevRef.current; a.src = j.audioUrl; a.currentTime = 0; a.play().catch(() => {}); } })
+      .then((j) => { if (j && j.configured && j.audioUrl) playVoiceUrl(j.audioUrl); })
       .catch(() => {});
   };
   const finish = () => {
