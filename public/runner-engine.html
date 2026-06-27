@@ -39,7 +39,9 @@
 <button id="muteBtn">Sound: On</button>
 <button id="helpBtn" title="How to play">?</button>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Three.js is hosted on our OWN site (not a CDN) so it always loads, even on
+     school/work networks that block cdnjs. This was the "never starts" cause. -->
+<script src="three.min.js?v=r128"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script>
@@ -424,7 +426,16 @@ function wireMenus(){
   const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; showMenu(); };
 }
 
-function frame(){ update(); draw(); requestAnimationFrame(frame); }
+function drawNo3D(){ if(!hctx)return; hctx.clearRect(0,0,W,H);
+  hctx.fillStyle="#1a1546"; hctx.fillRect(0,0,W,H);
+  hctx.textAlign="center"; hctx.fillStyle="#fff"; hctx.font="bold 24px Fredoka,sans-serif";
+  hctx.fillText("Couldn't load the 3D engine", W/2, H/2-10);
+  hctx.font="18px Fredoka,sans-serif"; hctx.fillStyle="#cdd0ff";
+  hctx.fillText("Please check your connection and refresh.", W/2, H/2+24); }
+function frame(){ update();
+  if(renderer){ draw(); }
+  else if(state!=="title" && hctx){ drawNo3D(); }   // never silently blank
+  requestAnimationFrame(frame); }
 // boot
 if(typeof document!=="undefined" && document.getElementById("start")){
   loadPrefs(); wireMenus();
