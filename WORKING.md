@@ -39,6 +39,13 @@ Global / app-wide:
   _Done on branch `claude/games-simple-batch2` (await Mike merge): Memory + Bingo + Snakes &
   Ladders engines, the shared `buildable-turns.js` (BT) turn shell, BS `p2/p3/p4` modes,
   bespoke sounds in `api/sfx.js` + `api/say.js` caller voice, vercel routes + BuildableKids tiles._
+- **claude/games-checkers** — NEW kid-friendly Checkers (turn-based, Pattern A, the chess
+  model). Owns NEW files only: `public/buildable-checkers.html`,
+  `db/create-checkers-matches.sql`, `src/lib/checkersMatches.js`, `src/FamilyCheckers.jsx`,
+  `qa-checkers.mjs`. Touches shared files additively: `vercel.json` (adds a checkers route),
+  `api/sfx.js` (adds `checkers_*` one-shots), `src/BuildableKids.jsx` (adds a Games-picker
+  Checkers tile + `SCREEN_CHECKERS`/`SCREEN_CHECKERS_FAMILY` — high-collision file, edits
+  kept tiny & isolated). Does NOT touch the chess files.
 
 ## Suggested ownership (to avoid collisions)
 - Games engines + `public/*.html` + `vercel.json` routes

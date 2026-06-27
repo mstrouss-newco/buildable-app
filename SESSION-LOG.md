@@ -96,6 +96,48 @@ Batch 2 of simple games — all same-device pass-and-play, built on one new shar
 - **Owner action:** run `db/seed-same-device-turns-mechanic.sql` once; the caller voice + new SFX
   auto-generate + cache on first play (ElevenLabs), with the BA synth as the silent fallback.
 
+## 2026-06-27 — Buildable Checkers: kid-friendly 2-player checkers (reuses the chess plumbing)
+Branch: `claude/games-checkers` (NOT merged to main). New turn-based game built on the
+chess "poll a row" model (MULTIPLAYER.md Pattern A). Checkers is board-shaped like chess,
+so this reuses the chess plumbing instead of inventing new transport.
+
+- **New engine `public/buildable-checkers.html`** — a DOM board (same approach as
+  `buildable-chess.html`, which renders reliably inside iOS iframes), three modes:
+  *Play the Robot* (beatable bot, Easy/Normal/Tricky), *Two Players* same-screen
+  pass-and-play, and *online* family play. Standard kid rules: diagonal moves, jump to
+  capture, multi-jumps chain, a man becomes a **King** on the far row (kings move/jump
+  both ways). A **"Must jump" toggle** (default OFF = relaxed) keeps captures optional for
+  the youngest kids. Worlds reuse the existing `chess-art` backdrops + the per-world
+  `/api/chess-music` tracks; pieces are drawn SVG discs (purple/coral, crown for kings) —
+  **no emoji**. Sound via `BA` (`buildable-audio.js`).
+- **Network-agnostic, exactly like chess.** The engine only emits its move / applies the
+  opponent's move via `postMessage` (`checkersReady` / `checkersInit` / `checkersMove` /
+  `checkersOpponentMove` / `checkersReaction` / `checkersShowReaction`). ALL Supabase code
+  lives in the React layer. Canned reactions only (the same 6 phrases) — no free text.
+- **`db/create-checkers-matches.sql`** — a copy of `chess_matches` (whole game state in one
+  row) with the SAME family-RLS policy + `updated_at` trigger; idempotent, non-destructive.
+  **Owner action: run it once in the Supabase SQL editor** (after the accounts tables).
+- **React layer:** `src/lib/checkersMatches.js` (PostgREST over `checkers_matches`, mirrors
+  `chessMatches.js`) + `src/FamilyCheckers.jsx` (lobby + 2s poll + the postMessage bridge,
+  mirrors `FamilyChess.jsx`). Gated on the parent-account lane; guests get the friendly
+  "ask a grown-up" state.
+- **Wiring:** new **Checkers** tile in the Games picker + `CheckersScreen`/`FamilyCheckers`
+  routes in `src/BuildableKids.jsx` (Home top-left, "Play a family member" top-right — same
+  nav as chess). `api/sfx.js`: registered bespoke `checkers_select/move/capture/king/win/lose`
+  one-shots (+ durations) — they auto-generate & cache on first play (BA synth is the silent
+  fallback). `vercel.json`: explicit `/buildable-checkers.html` route before the catch-all.
+- **QA:** `qa-checkers.mjs` (headless rules + bot) — opening legality, multi-jump,
+  promotion, forced-capture, and **the robot is beatable** (a strong kid beats Easy 40/40,
+  Normal 60/60; Tricky ~50/50, still winnable). `qa-checkers-dom.mjs` (jsdom render smoke) —
+  builds 64 cells + 24 pieces, selection highlights, a move re-renders, and the online init
+  flips the board for the blue side. `npm run build` clean.
+- **Deviations from the brief (flagged for Mike):** the brief suggested `BM`/`BS`, but those
+  are canvas/level-picker libs aimed at the arcade engines; chess — the explicit template —
+  is a self-contained DOM board with its own start/setup screens, so checkers follows chess
+  for iOS reliability and fit (capture/king "juice" is done with DOM sparkles + sounds, not
+  the `BM` canvas FX). Easy to revisit if you'd rather force `BS`/`BM`.
+- **Still TODO (manual):** run the SQL; live QA across two real devices/sessions (the one
+  thing the headless + jsdom sims can't cover); optionally pre-warm the 6 `checkers_*` SFX.
 
 ## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
 - The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of

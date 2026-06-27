@@ -140,6 +140,40 @@ shared brain. Branch `claude/games-simple-batch2` (NOT main).
   `qa-snakes.mjs` (model `qa-breaker.mjs`) prove every difficulty x player-count x theme is winnable
   + render smoke; `npm run build` clean. **Owner action:** run `db/seed-same-device-turns-mechanic.sql`
   once; caller voice + new SFX auto-generate/cache on first play.
+## Buildable Checkers — kid-friendly 2-player checkers, reuses the chess plumbing (June 27 2026)
+New turn-based game on branch `claude/games-checkers` (**not merged to main**). Checkers is
+board-shaped like chess, so it reuses the chess "poll a row" multiplayer model
+(`MULTIPLAYER.md` Pattern A) rather than inventing a transport.
+
+- **Engine `public/buildable-checkers.html`** — a DOM board like `buildable-chess.html`
+  (renders reliably in iOS iframes). Modes: solo vs a beatable robot (Easy/Normal/Tricky),
+  same-screen 2-player pass-and-play, and online family play. Kid rules: diagonal moves,
+  jump-to-capture with chained multi-jumps, **King** on the far row (kings go both ways), and
+  a **"Must jump" toggle (default OFF = relaxed)** so captures are optional for little kids.
+  Worlds reuse the `chess-art` backdrops + `/api/chess-music`; pieces are drawn SVG discs
+  (purple/coral, gold crown for kings) — **no emoji**. Sound via `buildable-audio.js` (BA).
+- **Network-agnostic exactly like chess:** the engine only emits/applies moves over
+  `postMessage` (`checkersReady`/`checkersInit`/`checkersMove`/`checkersOpponentMove`/
+  `checkersReaction`/`checkersShowReaction`); ALL Supabase code lives in the React layer.
+  Canned reactions only (same 6 phrases) — no free text.
+- **`db/create-checkers-matches.sql`** copies `chess_matches` (whole state in one row) with
+  the SAME family-RLS policy + `updated_at` trigger; idempotent + non-destructive.
+  **Owner action: run it once in the Supabase SQL editor.**
+- **React:** `src/lib/checkersMatches.js` (PostgREST, mirrors `chessMatches.js`) +
+  `src/FamilyCheckers.jsx` (lobby + 2s poll + bridge, mirrors `FamilyChess.jsx`). Gated on
+  the parent-account lane.
+- **Wiring:** Games-picker **Checkers** tile + `CheckersScreen`/`FamilyCheckers` routes in
+  `src/BuildableKids.jsx`; bespoke `checkers_*` one-shots registered in `api/sfx.js`
+  (auto-generate + cache on first play; BA synth is the silent fallback); explicit
+  `/buildable-checkers.html` route in `vercel.json` before the catch-all.
+- **QA:** `qa-checkers.mjs` (headless rules + bot) — legality, multi-jump, promotion,
+  forced-capture, and **the robot is beatable** (strong kid beats Easy 40/40, Normal 60/60;
+  Tricky ~50/50, still winnable). `qa-checkers-dom.mjs` (jsdom render smoke) passes;
+  `npm run build` clean.
+- **Note (deviation):** the original brief mentioned `BM`/`BS`, but those are canvas/level-
+  picker libs for the arcade engines; chess (the template) is a self-contained DOM board, so
+  checkers follows chess for fit + iOS reliability (DOM sparkle/sound "juice", not BM canvas
+  FX). **Still TODO (manual):** run the SQL; live QA on two real devices.
 
 ## Tennis: per-world background music + pre-warmed assets (June 27 2026)
 - **Per-world background music.** New `api/tennis-music.js` (mirrors `chess-music.js`) generates a bespoke UPBEAT ElevenLabs track per world (beach surf-uke, space synthwave, jungle marimba, ocean bubbly, candy music-box pop, snow glockenspiel, volcano adventure brass, city Rhodes funk), cached in `narration_cache` (`tennismusic:<world>`), served as a loopable mp3. `tennis.html` owns a single looping `<audio>` element -> `/api/tennis-music?world=<key>`, starts on first tap/key (audio-unlock), switches when the kid picks a court (previews the world's track), and follows the sound on/off toggle. Volume 0.32 under the SFX.

@@ -148,6 +148,10 @@
       "dest": "/buildable-chess.html"
     },
     {
+      "src": "/buildable-checkers.html",
+      "dest": "/buildable-checkers.html"
+    },
+    {
       "src": "/favicon.svg",
       "dest": "/favicon.svg"
     },

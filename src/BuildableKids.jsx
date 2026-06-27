@@ -13,6 +13,7 @@ import TopBoard from "./TopBoard.jsx";
 import LoadingGames from "./LoadingGames";
 import QuizGate from "./QuizGate";
 import FamilyChess from "./FamilyChess";
+import FamilyCheckers from "./FamilyCheckers";
 import FamilyRealtime from "./FamilyRealtime";
 import { listMyMatches } from "./lib/chessMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
@@ -42,6 +43,8 @@ const SCREEN_BREAKER = "breaker";
 const SCREEN_RUNNER = "runner";
 const SCREEN_SOUNDS = "sounds";
 const SCREEN_CHESS_FAMILY = "chess_family";
+const SCREEN_CHECKERS = "checkers";
+const SCREEN_CHECKERS_FAMILY = "checkers_family";
 const SCREEN_TENNIS = "tennis";
 const SCREEN_TENNIS_FAMILY = "tennis_family";
 const SCREEN_TICTACTOE = "tictactoe";
@@ -106,7 +109,7 @@ function LearningControl() {
   );
 }
 
-function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onTyping, onTennis, onSounds, onTicTacToe, onConnectFour, onDotsBoxes, onMemory, onBingo, onSnakes }) {
+function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onCheckers, onTyping, onTennis, onSounds, onTicTacToe, onConnectFour, onDotsBoxes, onMemory, onBingo, onSnakes }) {
   const tile = (grad, title, desc, onClick, soon, imgId) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
@@ -136,6 +139,7 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#FF5A6E,#FFC94D)", "Connect Four", "Drop discs, line up four to win!", onConnectFour, false)}
         {tile("linear-gradient(160deg,#36D6C3,#FF8A5B)", "Dots and Boxes", "Close a box to claim it \u2014 most wins!", onDotsBoxes, false)}
         {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false, "chess")}
+        {tile("linear-gradient(160deg,#E8636F,#8E6BFF)", "Checkers", "Hop, jump and crown your kings!", onCheckers, false, "checkers")}
         {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false, "typing")}
         {tile("linear-gradient(160deg,#7DD3FC,#A78BFF)", "Memory Match", "Flip cards, find the pairs \u2014 solo or 2-4!", onMemory, false, "memory")}
         {tile("linear-gradient(160deg,#FFD23F,#FF8FB1)", "Bingo", "The device calls \u2014 daub a line to win, 2-4!", onBingo, false, "bingo")}
@@ -507,7 +511,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -557,6 +561,14 @@ export default function BuildableKids() {
 
   if (screen === SCREEN_CHESS_FAMILY) {
     return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
+  }
+
+  if (screen === SCREEN_CHECKERS) {
+    return <CheckersScreen onHome={() => setScreen(returnTo === SCREEN_GAME_PICKER ? SCREEN_GAME_PICKER : SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHECKERS_FAMILY)} />;
+  }
+
+  if (screen === SCREEN_CHECKERS_FAMILY) {
+    return <FamilyCheckers activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
 
   if (screen === SCREEN_MY_STUFF) {
@@ -1177,6 +1189,27 @@ function ChessScreen({ onHome, onFamily }) {
       <iframe
         title="Buildable Chess"
         src="/buildable-chess.html?v=2"
+        style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+      />
+    </div>
+  );
+}
+
+function CheckersScreen({ onHome, onFamily }) {
+  const pillBtn = {
+    fontFamily: NUN, fontWeight: 800, fontSize: "14px", color: "#fff",
+    background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)",
+    borderRadius: "999px", padding: "8px 16px", cursor: "pointer",
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
+      <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
+      {onFamily && (
+        <button onClick={onFamily} style={{ position: "absolute", top: "14px", right: "14px", zIndex: 2, ...pillBtn, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play a family member</button>
+      )}
+      <iframe
+        title="Buildable Checkers"
+        src="/buildable-checkers.html?v=1"
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
