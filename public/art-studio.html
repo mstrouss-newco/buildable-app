@@ -6,122 +6,84 @@
 <title>Buildable Art Studio</title>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --tray:#1a1444; --tray2:#241a52; --line:#3a2c6e; --accent:#9b7bff; --good:#7ee0a0; }
+  :root{ --tray:#1a1444; --tray2:#241a52; --card:#201751; --line:#3a2c6e; --accent:#9b7bff; --good:#7ee0a0; }
   html,body{margin:0;height:100%;background:#0b1030;overflow:hidden;touch-action:none;
     font-family:'Fredoka',-apple-system,sans-serif;color:#fff;-webkit-user-select:none;user-select:none}
   #app{position:fixed;inset:0;display:flex;flex-direction:column}
-  #top{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 92px;background:#120b30;flex:0 0 auto;z-index:5}
-  #top .t{font-weight:700;font-size:20px;letter-spacing:.3px}
+  #top{display:flex;align-items:center;gap:10px;padding:7px 12px 7px 92px;background:#120b30;flex:0 0 auto;z-index:5}
+  #top .t{font-weight:700;font-size:19px;letter-spacing:.3px}
   .spacer{flex:1}
-  #stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:8px}
-  #paper{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.45);max-width:100%;max-height:100%;touch-action:none}
-  /* ONE clean toolbar of big self-explanatory buttons; each shows the current choice */
-  #tray{flex:0 0 auto;background:var(--tray);border-top:2px solid var(--line);padding:10px 10px 12px}
-  .bar{display:flex;align-items:center;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .open{flex:0 0 auto;width:66px;height:66px;border-radius:18px;background:var(--tray2);border:3px solid var(--line);
-    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;position:relative}
-  .open:active{transform:translateY(2px)}
-  .open .cap{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:10px;font-weight:600;color:#9b93d6}
-  .open.act{width:58px;height:58px;border-radius:15px}
-  .open.save{width:66px;height:66px;background:#fff0f5;border-color:#ff9bbb}
-  .div{flex:0 0 auto;width:2px;height:42px;background:var(--line);border-radius:2px;margin:0 2px}
-  .iconbtn{flex:0 0 auto;width:56px;height:56px;border-radius:16px;background:var(--tray2);border:3px solid var(--line);
-    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  #stage{flex:1 1 auto;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:6px}
+  #paper{background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.45);max-width:100%;max-height:100%;touch-action:none}
+  /* the "art desk": every tool visible, grouped into clearly separated zones */
+  #tray{flex:0 0 auto;background:var(--tray);border-top:2px solid var(--line);padding:8px;max-height:48vh;overflow-y:auto}
+  .groups{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;justify-content:center}
+  .g{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:6px 9px 8px;display:flex;flex-direction:column;gap:5px}
+  .gh{display:flex;align-items:center;gap:6px;color:#a99fe0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .gh svg{display:block}
+  .items{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .bt{width:60px;height:58px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#cfc8ff}
+  .bt.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(126,224,160,.4);color:#fff}
+  .bt .lab{font-size:10px;font-weight:600}
+  .sw{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.28);cursor:pointer}
+  .sw.on{border-color:#fff;box-shadow:0 0 0 3px var(--accent)}
+  .mi{width:50px;height:50px;border-radius:13px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .mi.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(126,224,160,.4)}
+  .iconbtn{width:54px;height:54px;border-radius:15px;background:var(--tray2);border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
   .iconbtn:active{transform:translateY(2px)}
-  .iconbtn.big{width:64px;height:64px}
+  .iconbtn.big{width:62px;height:62px}
   .iconbtn.save{background:#fff0f5;border-color:#ff9bbb}
+  input[type=color]{width:38px;height:38px;border:none;background:none;border-radius:50%;cursor:pointer;padding:0}
   .ov{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(8,6,24,.74)}
   .ov.show{display:flex}
-  .card{background:linear-gradient(180deg,#1a1248,#241152);border:2px solid var(--line);border-radius:22px;
-    padding:20px;max-width:94vw;max-height:88vh;overflow:auto;text-align:center}
+  .card{background:linear-gradient(180deg,#1a1248,#241152);border:2px solid var(--line);border-radius:22px;padding:20px;max-width:94vw;max-height:88vh;overflow:auto;text-align:center}
   .card h2{margin:0 0 14px;font-size:22px}
   .pickwrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:640px}
-  .pick{width:92px;height:92px;border-radius:16px;background:#241a52;border:3px solid var(--line);cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;overflow:hidden;color:#cfc8ff;font-weight:600;font-size:12px}
-  .pick.media{background:#fff;color:#23204a}
-  .pick.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(126,224,160,.4)}
-  .pick img{max-width:84px;max-height:62px}
+  .pick{width:92px;height:92px;border-radius:16px;background:#fff;border:3px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .pick img{max-width:84px;max-height:84px}
   .pick canvas{width:84px;height:62px}
-  .pick .nm{font-size:11px;font-weight:600}
-  .sw{width:58px;height:58px;border-radius:50%;border:3px solid rgba(255,255,255,.3);cursor:pointer}
-  .sw.on{border-color:#fff;box-shadow:0 0 0 3px var(--accent)}
   .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
   .tab{font-weight:700;font-size:14px;color:#cdd0ff;background:#241a52;border:2px solid var(--line);border-radius:11px;padding:8px 15px;cursor:pointer}
   .tab.on{background:var(--accent);color:#1a0f3a;border-color:var(--accent)}
-  #toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;
-    background:#2b1a66;border:2px solid var(--accent);color:#fff;font-weight:600;padding:10px 18px;border-radius:14px;z-index:40;pointer-events:none}
+  #toast{position:fixed;left:50%;bottom:52vh;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#2b1a66;border:2px solid var(--accent);color:#fff;font-weight:600;padding:10px 18px;border-radius:14px;z-index:40;pointer-events:none}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   input[type=text]{font-family:inherit;font-size:18px;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:#0f0a2c;color:#fff;width:260px;max-width:70vw;text-align:center}
-  input[type=color]{width:58px;height:58px;border:none;background:none;border-radius:50%;cursor:pointer;padding:0}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="top">
-    <div class="t">Art Studio</div>
-    <div class="spacer"></div>
+    <div class="t">Art Studio</div><div class="spacer"></div>
     <button class="iconbtn" id="galleryBtn" aria-label="My art"></button>
     <button class="iconbtn" id="soundBtn" aria-label="Sound"></button>
   </div>
   <div id="stage"><canvas id="paper"></canvas></div>
-  <div id="tray"><div class="bar">
-    <button class="open" id="brushBtn"  aria-label="Brush"><span class="cap">Brush</span></button>
-    <button class="open" id="colorBtn"  aria-label="Color"><span class="cap">Color</span></button>
-    <button class="open" id="sizeBtn"   aria-label="Size"><span class="cap">Size</span></button>
-    <span class="div"></span>
-    <button class="open" id="mirrorBtn" aria-label="Mirror"><span class="cap">Mirror</span></button>
-    <button class="open" id="styleBtn"  aria-label="Style"><span class="cap">Style</span></button>
-    <button class="open" id="stickerBtn" aria-label="Stickers"><span class="cap">Stickers</span></button>
-    <button class="open" id="bgBtn"     aria-label="Background"><span class="cap">Scene</span></button>
-    <span class="spacer"></span>
-    <button class="open act" id="undoBtn"  aria-label="Undo"></button>
-    <button class="open act" id="redoBtn"  aria-label="Redo"></button>
-    <button class="open act" id="clearBtn" aria-label="Start over"></button>
-    <button class="open save" id="saveBtn" aria-label="Save"></button>
-  </div></div>
+  <div id="tray"><div class="groups" id="groups"></div></div>
 </div>
 
-<!-- generic picker (brush / color / size / mirror / style) -->
-<div class="ov" id="pickOv"><div class="card">
-  <h2 id="pickTitle"></h2>
-  <div class="pickwrap" id="pickGrid"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="pickClose" aria-label="Close"></button></div>
-</div></div>
+<div class="ov" id="clearOv"><div class="card"><h2>Start over?</h2>
+  <div><button class="iconbtn big" id="clearNo" aria-label="Keep it" style="background:#10391f;border-color:#3DD06A"></button>
+  <button class="iconbtn big" id="clearYes" aria-label="Start over" style="background:#3a1430;border-color:#ff7a90"></button></div></div></div>
 
-<div class="ov" id="clearOv"><div class="card">
-  <h2>Start over?</h2>
-  <div style="margin:6px 0 4px"><button class="iconbtn big" id="clearNo" aria-label="Keep my drawing" style="background:#10391f;border-color:#3DD06A"></button>
-  <button class="iconbtn big" id="clearYes" aria-label="Start over" style="background:#3a1430;border-color:#ff7a90"></button></div>
-</div></div>
-
-<div class="ov" id="stickOv"><div class="card">
-  <h2>Stickers</h2><div class="tabs" id="stickTabs"></div>
+<div class="ov" id="stickOv"><div class="card"><h2>Stickers</h2><div class="tabs" id="stickTabs"></div>
   <div class="pickwrap" id="stickWrap"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="stickClose" aria-label="Done"></button></div>
-</div></div>
+  <div style="margin-top:16px"><button class="iconbtn big" id="stickClose" aria-label="Done"></button></div></div></div>
 
-<div class="ov" id="shapeOv"><div class="card">
-  <h2>Shapes</h2><div class="pickwrap" id="shapeWrap"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="shapeClose" aria-label="Done"></button></div>
-</div></div>
+<div class="ov" id="shapeOv"><div class="card"><h2>Shapes</h2><div class="pickwrap" id="shapeWrap"></div>
+  <div style="margin-top:16px"><button class="iconbtn big" id="shapeClose" aria-label="Done"></button></div></div></div>
 
-<div class="ov" id="bgOv"><div class="card">
-  <h2>Scene</h2><div class="pickwrap" id="bgWrap"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="bgClose" aria-label="Done"></button></div>
-</div></div>
+<div class="ov" id="bgOv"><div class="card"><h2>Scene</h2><div class="pickwrap" id="bgWrap"></div>
+  <div style="margin-top:16px"><button class="iconbtn big" id="bgClose" aria-label="Done"></button></div></div></div>
 
-<div class="ov" id="galleryOv"><div class="card">
-  <h2>My Art</h2><div class="pickwrap" id="galleryWrap"></div>
-  <div style="margin-top:16px"><button class="iconbtn big" id="galleryClose" aria-label="Close"></button></div>
-</div></div>
+<div class="ov" id="galleryOv"><div class="card"><h2>My Art</h2><div class="pickwrap" id="galleryWrap"></div>
+  <div style="margin-top:16px"><button class="iconbtn big" id="galleryClose" aria-label="Close"></button></div></div></div>
 
-<div class="ov" id="saveOv"><div class="card">
-  <h2>Save your art</h2>
+<div class="ov" id="saveOv"><div class="card"><h2>Save your art</h2>
   <input type="text" id="artTitle" placeholder="My masterpiece" maxlength="40"><br><br>
   <label style="display:block;margin:6px 0 16px;font-size:15px;opacity:.85"><input type="checkbox" id="shareChk"> Also show my family</label>
   <div><button class="iconbtn big" id="saveCancel" aria-label="Not yet"></button>
-  <button class="iconbtn save big" id="saveGo" aria-label="Save it"></button></div>
-</div></div>
+  <button class="iconbtn save big" id="saveGo" aria-label="Save it"></button></div></div></div>
 
 <div id="toast"></div>
 
@@ -132,110 +94,70 @@
 (function(){
   "use strict";
   var BR=window.BuildableRenders, BA=window.BuildableAudio, BM=window.BuildableMechanics;
-
-  var CFG = window.STUDIO_CONFIG || {
+  var CFG=window.STUDIO_CONFIG||{
     brushes:[
-      {id:"crayon",name:"Crayon",sound:"art_crayon",texture:"waxy"},
-      {id:"marker",name:"Marker",sound:"art_marker",texture:"smooth"},
-      {id:"paint", name:"Paint", sound:"art_paint", texture:"wet"},
-      {id:"pencil",name:"Pencil",sound:"art_pencil",texture:"fine"},
-      {id:"chalk", name:"Chalk", sound:"art_chalk", texture:"grain"},
-      {id:"spray", name:"Spray", sound:"art_spray", texture:"spray"},
-      {id:"neon",  name:"Neon",  sound:"art_neon",  texture:"glow"},
-      {id:"ribbon",name:"Ribbon",sound:"art_marker",texture:"ribbon",dynamic:true},
-      {id:"fur",   name:"Fur",   sound:"art_chalk", texture:"fur"},
-      {id:"dots",  name:"Sponge",sound:"art_spray", texture:"dots"},
-      {id:"rainbow",name:"Rainbow",sound:"art_marker",texture:"smooth",rainbow:true},
-      {id:"glitter",name:"Glitter",sound:"art_glitter",texture:"smooth",fx:"twinkle"},
-      {id:"shapes",name:"Shapes",sound:"art_stamp",shapes:true},
-      {id:"fill",  name:"Fill",  sound:"art_fill", fill:true},
-      {id:"eraser",name:"Eraser",sound:"art_undo", erase:true}
+      {id:"crayon",name:"Crayon",sound:"art_crayon",texture:"waxy"},{id:"marker",name:"Marker",sound:"art_marker",texture:"smooth"},
+      {id:"paint",name:"Paint",sound:"art_paint",texture:"wet"},{id:"pencil",name:"Pencil",sound:"art_pencil",texture:"fine"},
+      {id:"chalk",name:"Chalk",sound:"art_chalk",texture:"grain"},{id:"spray",name:"Spray",sound:"art_spray",texture:"spray"},
+      {id:"neon",name:"Neon",sound:"art_neon",texture:"glow"},{id:"ribbon",name:"Ribbon",sound:"art_marker",texture:"ribbon",dynamic:true},
+      {id:"fur",name:"Fur",sound:"art_chalk",texture:"fur"},{id:"dots",name:"Sponge",sound:"art_spray",texture:"dots"},
+      {id:"rainbow",name:"Rainbow",sound:"art_marker",texture:"smooth",rainbow:true},{id:"glitter",name:"Glitter",sound:"art_glitter",texture:"smooth",fx:"twinkle"},
+      {id:"fill",name:"Fill",sound:"art_fill",fill:true},{id:"eraser",name:"Eraser",sound:"art_undo",erase:true}
     ],
     palette:["#ff4d4d","#ff8a3d","#ffd23f","#7ee0a0","#2ec4b6","#3a86ff","#8338ec","#ff70a6","#9b5e3c","#000000","#ffffff"],
-    sizes:[6,16,30,50,72],
-    mirror:[1,"V","H",2,4,8],
-    styles:[
-      {id:"paper",name:"Paper",bg:{type:"color",c:"#ffffff"}},
-      {id:"chalk",name:"Chalk",bg:{type:"color",c:"#243240"}},
-      {id:"neon", name:"Neon", bg:{type:"color",c:"#0a0a1e"}},
-      {id:"3d",   name:"3D Pop",bg:{type:"color",c:"#eef0f7"}},
-      {id:"pixel",name:"Pixel",bg:{type:"color",c:"#ffffff"}}
-    ],
+    sizes:[6,16,30,50,72], mirror:[1,"V","H",2,4,8],
+    styles:[{id:"paper",name:"Paper",bg:{type:"color",c:"#ffffff"}},{id:"chalk",name:"Chalk",bg:{type:"color",c:"#243240"}},
+      {id:"neon",name:"Neon",bg:{type:"color",c:"#0a0a1e"}},{id:"3d",name:"3D",bg:{type:"color",c:"#eef0f7"}},{id:"pixel",name:"Pixel",bg:{type:"color",c:"#ffffff"}}],
     shapes:["star","heart","flower","diamond","dot"],
-    backgrounds:[
-      {type:"color",c:"#ffffff",name:"White"},{type:"color",c:"#0a0a1e",name:"Night"},
-      {type:"color",c:"#243240",name:"Slate"},{type:"color",c:"#fff7e6",name:"Cream"},
-      {type:"color",c:"#eafff2",name:"Mint"},{type:"color",c:"#ffeaf2",name:"Blush"},
+    backgrounds:[{type:"color",c:"#ffffff",name:"White"},{type:"color",c:"#0a0a1e",name:"Night"},{type:"color",c:"#243240",name:"Slate"},
+      {type:"color",c:"#fff7e6",name:"Cream"},{type:"color",c:"#eafff2",name:"Mint"},{type:"color",c:"#ffeaf2",name:"Blush"},
       {type:"grad",from:"#89f7fe",to:"#66a6ff",name:"Sky"},{type:"grad",from:"#fbc2eb",to:"#a18cd1",name:"Candy"},
-      {type:"grad",from:"#0a0a2e",to:"#3a1c71",name:"Galaxy"},{type:"grad",from:"#0f3d3e",to:"#136a4a",name:"Forest"}
-    ],
+      {type:"grad",from:"#0a0a2e",to:"#3a1c71",name:"Galaxy"},{type:"grad",from:"#0f3d3e",to:"#136a4a",name:"Forest"}],
     stickerThemes:["all","forest","ocean","space","candy"]
   };
-
-  var S={ brush:CFG.brushes[0], color:CFG.palette[0], size:18, mirror:1, style:"paper",
-    bg:CFG.styles[0].bg, ops:[], redo:[], sticker:null, shape:"star", hue:0, muted:false, recent:[] };
+  var S={brush:CFG.brushes[0],color:CFG.palette[0],size:18,mirror:1,style:"paper",bg:CFG.styles[0].bg,ops:[],redo:[],sticker:null,shape:"star",hue:0,muted:false,recent:[]};
   var Q=10;
-
   var paper=document.getElementById("paper"), ctx=paper.getContext?paper.getContext("2d"):null, stage=document.getElementById("stage");
   function fitCanvas(){ if(!paper.getBoundingClientRect) return; var r=stage.getBoundingClientRect();
-    paper.width=Math.max(200,Math.floor(r.width-16)); paper.height=Math.max(200,Math.floor(r.height-16));
+    paper.width=Math.max(200,Math.floor(r.width-12)); paper.height=Math.max(160,Math.floor(r.height-12));
     paper.style.width=paper.width+"px"; paper.style.height=paper.height+"px"; redraw(); }
 
-  // ---- sound ----
-  var _snd={};
-  function playSfx(name){ if(S.muted||!name) return; try{ var a=_snd[name]; if(!a){ a=new Audio("/api/sfx?s="+encodeURIComponent(name)); a.volume=.5; _snd[name]=a; } a.currentTime=0; a.play().catch(function(){}); }catch(e){} }
+  var _snd={}; function playSfx(n){ if(S.muted||!n) return; try{ var a=_snd[n]; if(!a){ a=new Audio("/api/sfx?s="+encodeURIComponent(n)); a.volume=.5; _snd[n]=a; } a.currentTime=0; a.play().catch(function(){}); }catch(e){} }
   var _ls=0; function playStrokeSfx(n){ var t=Date.now(); if(t-_ls<90) return; _ls=t; playSfx(n); }
 
-  // ---- background + strokes ----
   function drawBg(c){ if(!c) return; c.save(); c.globalCompositeOperation="source-over"; var bg=S.bg||{type:"color",c:"#fff"};
-    if(bg.type==="grad"){ var g=c.createLinearGradient(0,0,0,paper.height); g.addColorStop(0,bg.from); g.addColorStop(1,bg.to); c.fillStyle=g; } else c.fillStyle=bg.c||"#fff";
-    c.fillRect(0,0,paper.width,paper.height); c.restore(); }
+    if(bg.type==="grad"){ var g=c.createLinearGradient(0,0,0,paper.height); g.addColorStop(0,bg.from); g.addColorStop(1,bg.to); c.fillStyle=g; } else c.fillStyle=bg.c||"#fff"; c.fillRect(0,0,paper.width,paper.height); c.restore(); }
   function rainbowCol(op,i){ return "hsl("+((op.hueStart+i*6)%360)+",85%,55%)"; }
   function quant(pts){ return pts.map(function(p){ return {x:Math.round(p.x/Q)*Q,y:Math.round(p.y/Q)*Q,w:p.w}; }); }
   function baseStroke(c,op,color){ var pts=op.points;
     if(op.rainbow){ for(var i=1;i<pts.length;i++) BR.stroke(c,{texture:op.texture,points:[pts[i-1],pts[i]],color:color||rainbowCol(op,i),width:op.width,alpha:1}); }
     else BR.stroke(c,{texture:op.texture,points:pts,color:color||op.color,width:op.width,alpha:1}); }
-  function styledStroke(c,op){ var st=op.style||"paper", save=op.points;
-    if(st==="pixel") op.points=quant(op.points);
+  function styledStroke(c,op){ var st=op.style||"paper",save=op.points; if(st==="pixel") op.points=quant(op.points);
     c.save(); c.lineCap=st==="pixel"?"butt":"round"; c.lineJoin=st==="pixel"?"miter":"round";
     if(op.erase){ c.globalCompositeOperation="destination-out"; baseStroke(c,op,"#000"); c.restore(); op.points=save; return; }
     if(st==="neon"){ c.shadowColor=op.color; c.shadowBlur=Math.max(8,op.width*1.4); baseStroke(c,op); baseStroke(c,op); }
-    else if(st==="3d"){ c.save(); c.translate(3,4); baseStroke(c,op,"rgba(0,0,0,0.18)"); c.restore(); baseStroke(c,op);
-      c.save(); c.translate(-1,-1); c.globalAlpha=.5; baseStroke(c,op,"rgba(255,255,255,0.55)"); c.restore(); }
-    else baseStroke(c,op);
-    c.restore(); op.points=save; }
+    else if(st==="3d"){ c.save(); c.translate(3,4); baseStroke(c,op,"rgba(0,0,0,0.18)"); c.restore(); baseStroke(c,op); c.save(); c.translate(-1,-1); c.globalAlpha=.5; baseStroke(c,op,"rgba(255,255,255,0.55)"); c.restore(); }
+    else baseStroke(c,op); c.restore(); op.points=save; }
   function drawStrokeMir(c,op){ if(!c||!op.points||!op.points.length) return; BR.mirror(c,op.mirror||1,paper.width,paper.height,function(){ styledStroke(c,op); }); }
-  function drawStampMir(c,op){ if(!c) return;
-    if(op.shape){ BR.mirror(c,op.mirror||1,paper.width,paper.height,function(){ BR.shape(c,op.shape,op.x,op.y,op.size,op.color); }); return; }
+  function drawStampMir(c,op){ if(!c) return; if(op.shape){ BR.mirror(c,op.mirror||1,paper.width,paper.height,function(){ BR.shape(c,op.shape,op.x,op.y,op.size,op.color); }); return; }
     var img=stampCache[op.url]; if(!img){ loadStamp(op.url,function(){ redraw(); }); return; } if(!(img.naturalWidth||img.width)) return;
     var sz=op.size; BR.mirror(c,op.mirror||1,paper.width,paper.height,function(){ try{ c.drawImage(img,op.x-sz/2,op.y-sz/2,sz,sz); }catch(e){} }); }
   function hexToRgb(h){ if(!h) return null; if(h[0]==="#") h=h.slice(1); if(h.length===3) h=h.split("").map(function(x){return x+x;}).join(""); var n=parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
   function floodFill(c,x,y,hex){ if(!c||!c.getImageData) return; x=x|0;y=y|0; var W=paper.width,H=paper.height,id; try{ id=c.getImageData(0,0,W,H); }catch(e){ return; } var d=id.data;
     var si=(y*W+x)*4, tgt=[d[si],d[si+1],d[si+2],d[si+3]], col=hexToRgb(hex); if(!col) return;
     if(Math.abs(col[0]-tgt[0])+Math.abs(col[1]-tgt[1])+Math.abs(col[2]-tgt[2])<8&&tgt[3]>250) return;
-    var tol=40, stack=[si], guard=0, max=W*H+10;
-    function match(i){ return Math.abs(d[i]-tgt[0])<=tol&&Math.abs(d[i+1]-tgt[1])<=tol&&Math.abs(d[i+2]-tgt[2])<=tol&&Math.abs(d[i+3]-tgt[3])<=tol; }
-    while(stack.length&&guard++<max){ var i=stack.pop(); if(i<0||i>=d.length||!match(i)) continue;
-      d[i]=col[0];d[i+1]=col[1];d[i+2]=col[2];d[i+3]=255; var px=(i/4)%W;
-      stack.push(i+4*W);stack.push(i-4*W); if(px>0)stack.push(i-4); if(px<W-1)stack.push(i+4); }
-    c.putImageData(id,0,0); }
-  function redraw(){ if(!ctx) return; drawBg(ctx);
-    for(var i=0;i<S.ops.length;i++){ var op=S.ops[i];
-      if(op.t==="stroke") drawStrokeMir(ctx,op); else if(op.t==="stamp") drawStampMir(ctx,op); else if(op.t==="fill") floodFill(ctx,op.x,op.y,op.color); } }
+    var tol=40,stack=[si],guard=0,max=W*H+10; function match(i){ return Math.abs(d[i]-tgt[0])<=tol&&Math.abs(d[i+1]-tgt[1])<=tol&&Math.abs(d[i+2]-tgt[2])<=tol&&Math.abs(d[i+3]-tgt[3])<=tol; }
+    while(stack.length&&guard++<max){ var i=stack.pop(); if(i<0||i>=d.length||!match(i)) continue; d[i]=col[0];d[i+1]=col[1];d[i+2]=col[2];d[i+3]=255; var px=(i/4)%W; stack.push(i+4*W);stack.push(i-4*W); if(px>0)stack.push(i-4); if(px<W-1)stack.push(i+4); } c.putImageData(id,0,0); }
+  function redraw(){ if(!ctx) return; drawBg(ctx); for(var i=0;i<S.ops.length;i++){ var op=S.ops[i]; if(op.t==="stroke") drawStrokeMir(ctx,op); else if(op.t==="stamp") drawStampMir(ctx,op); else if(op.t==="fill") floodFill(ctx,op.x,op.y,op.color); } }
 
-  var stampCache={};
-  function loadStamp(url,cb){ if(stampCache[url]&&stampCache[url]._done){ cb&&cb(); return; }
-    var img=new Image(); img.crossOrigin="anonymous"; img.onload=function(){ img._done=true; stampCache[url]=img; cb&&cb(); };
-    img.onerror=function(){ img._done=true; stampCache[url]=img; cb&&cb(); }; img.src=url; stampCache[url]=img; }
-
+  var stampCache={}; function loadStamp(url,cb){ if(stampCache[url]&&stampCache[url]._done){ cb&&cb(); return; } var img=new Image(); img.crossOrigin="anonymous"; img.onload=function(){ img._done=true; stampCache[url]=img; cb&&cb(); }; img.onerror=function(){ img._done=true; stampCache[url]=img; cb&&cb(); }; img.src=url; stampCache[url]=img; }
   function pushOp(op){ S.ops.push(op); S.redo.length=0; autosave(); }
   function undo(){ if(!S.ops.length) return; S.redo.push(S.ops.pop()); redraw(); playSfx("art_undo"); autosave(); }
   function redoOp(){ if(!S.redo.length) return; S.ops.push(S.redo.pop()); redraw(); autosave(); }
   function clearAll(){ S.ops.length=0; S.redo.length=0; redraw(); autosave(); }
 
   var drawing=false,cur=null,lastP=null,lastT=0;
-  function pos(e){ var r=paper.getBoundingClientRect(); var cx=e.touches?e.touches[0].clientX:e.clientX, cy=e.touches?e.touches[0].clientY:e.clientY;
-    return {x:(cx-r.left)*(paper.width/r.width),y:(cy-r.top)*(paper.height/r.height)}; }
+  function pos(e){ var r=paper.getBoundingClientRect(); var cx=e.touches?e.touches[0].clientX:e.clientX, cy=e.touches?e.touches[0].clientY:e.clientY; return {x:(cx-r.left)*(paper.width/r.width),y:(cy-r.top)*(paper.height/r.height)}; }
   function withW(p){ if(!S.brush.dynamic) return {x:p.x,y:p.y}; return {x:p.x,y:p.y,w:S.size}; }
   function down(e){ e.preventDefault(); if(BA&&BA.unlock) try{BA.unlock();}catch(_){}
     var p=pos(e);
@@ -243,43 +165,39 @@
     if(S.brush.shapes){ var so={t:"stamp",shape:S.shape,x:p.x,y:p.y,size:Math.max(40,S.size*2.6),color:S.color,mirror:S.mirror}; pushOp(so); drawStampMir(ctx,so); playSfx("art_stamp"); return; }
     if(S.brush.stamp){ if(!S.sticker){ openStickers(); return; } var st={t:"stamp",url:S.sticker.url,x:p.x,y:p.y,size:Math.max(40,S.size*2.6),mirror:S.mirror}; pushOp(st); drawStampMir(ctx,st); playSfx("art_stamp"); return; }
     drawing=true; lastP=p; lastT=Date.now();
-    cur={t:"stroke",brush:S.brush.id,texture:S.brush.texture||"smooth",color:S.color,width:S.size,mirror:S.mirror,style:S.style,
-      rainbow:!!S.brush.rainbow,hueStart:S.hue,erase:!!S.brush.erase,dynamic:!!S.brush.dynamic,points:[withW(p)]}; }
+    cur={t:"stroke",brush:S.brush.id,texture:S.brush.texture||"smooth",color:S.color,width:S.size,mirror:S.mirror,style:S.style,rainbow:!!S.brush.rainbow,hueStart:S.hue,erase:!!S.brush.erase,dynamic:!!S.brush.dynamic,points:[withW(p)]}; }
   function move(e){ if(!drawing) return; e.preventDefault(); var p=pos(e);
-    if(cur.dynamic){ var dt=Math.max(8,Date.now()-lastT), dist=Math.hypot(p.x-lastP.x,p.y-lastP.y), sp=dist/dt, w=Math.max(3,S.size*(1.5-Math.min(1,sp*5))); p={x:p.x,y:p.y,w:w}; lastT=Date.now(); }
+    if(cur.dynamic){ var dt=Math.max(8,Date.now()-lastT),dist=Math.hypot(p.x-lastP.x,p.y-lastP.y),sp=dist/dt,w=Math.max(3,S.size*(1.5-Math.min(1,sp*5))); p={x:p.x,y:p.y,w:w}; lastT=Date.now(); }
     var prev=cur.points[cur.points.length-1]; cur.points.push(p);
     drawStrokeMir(ctx,{texture:cur.texture,color:cur.rainbow?rainbowCol(cur,cur.points.length):cur.color,width:cur.width,mirror:cur.mirror,style:cur.style,rainbow:false,erase:cur.erase,points:[prev,p]});
     if(cur.rainbow) S.hue=(S.hue+3)%360; if(S.brush.fx==="twinkle") sparkleAt(p); lastP=p; playStrokeSfx(S.brush.sound); }
   function up(){ if(!drawing) return; drawing=false; if(cur&&cur.points.length){ pushOp(cur); redraw(); } cur=null; }
-  function sparkleAt(p){ if(!ctx) return; for(var k=0;k<5;k++){ var ang=Math.random()*7, rr=Math.random()*S.size*1.4;
-    ctx.save(); ctx.globalAlpha=.9; ctx.fillStyle="hsl("+((S.hue+k*40)%360)+",90%,65%)";
-    if(BR.sparkle) BR.sparkle(ctx,p.x+Math.cos(ang)*rr,p.y+Math.sin(ang)*rr,4,Date.now()/120); else{ ctx.beginPath(); ctx.arc(p.x+Math.cos(ang)*rr,p.y+Math.sin(ang)*rr,1.6,0,7); ctx.fill(); } ctx.restore(); } S.hue=(S.hue+12)%360; }
-
+  function sparkleAt(p){ if(!ctx) return; for(var k=0;k<5;k++){ var ang=Math.random()*7,rr=Math.random()*S.size*1.4; ctx.save(); ctx.globalAlpha=.9; ctx.fillStyle="hsl("+((S.hue+k*40)%360)+",90%,65%)"; if(BR.sparkle) BR.sparkle(ctx,p.x+Math.cos(ang)*rr,p.y+Math.sin(ang)*rr,4,Date.now()/120); else{ ctx.beginPath(); ctx.arc(p.x+Math.cos(ang)*rr,p.y+Math.sin(ang)*rr,1.6,0,7); ctx.fill(); } ctx.restore(); } S.hue=(S.hue+12)%360; }
   function autosave(){ try{ localStorage.setItem("artstudio:wip",JSON.stringify({ops:S.ops,style:S.style,bg:S.bg})); }catch(e){} }
-  function restoreWip(){ try{ var w=JSON.parse(localStorage.getItem("artstudio:wip")||"null");
-    if(w&&w.ops){ S.ops=w.ops.filter(function(o){return o.t==="stroke"||o.t==="stamp"||o.t==="fill";}); if(w.style)S.style=w.style; if(w.bg)S.bg=w.bg; } }catch(e){} }
+  function restoreWip(){ try{ var w=JSON.parse(localStorage.getItem("artstudio:wip")||"null"); if(w&&w.ops){ S.ops=w.ops.filter(function(o){return o.t==="stroke"||o.t==="stamp"||o.t==="fill";}); if(w.style)S.style=w.style; if(w.bg)S.bg=w.bg; } }catch(e){} }
 
   // ---------- icons ----------
-  function ic(inner,w){ w=w||34; return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 32 32" fill="none">'+inner+'</svg>'; }
-  function bsvg(inner){ return '<svg width="40" height="40" viewBox="0 0 32 32">'+inner+'</svg>'; }
+  function ic(inner,w){ w=w||30; return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 32 32" fill="none">'+inner+'</svg>'; }
   var ICONS={
-    gallery: ic('<rect x="6" y="9" width="20" height="15" rx="2.5" stroke="#dcd6ff" stroke-width="2.4"/><circle cx="12" cy="14" r="2.2" fill="#ffd23f"/><path d="M7 22 l5-4 4 3 3-2 6 5" stroke="#7ee0a0" stroke-width="2.2" stroke-linejoin="round"/>',30),
-    soundOn: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#dcd6ff"/><path d="M20 12 q3 4 0 8 M23.5 9 q6 7 0 14" stroke="#7ee0a0" stroke-width="2.2" stroke-linecap="round"/>',30),
-    soundOff: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#9b93d6"/><path d="M21 12 l7 8 M28 12 l-7 8" stroke="#ff7a90" stroke-width="2.6" stroke-linecap="round"/>',30),
-    bg: ic('<rect x="4" y="6" width="24" height="20" rx="3" stroke="#cfc8ff" stroke-width="2.4"/><circle cx="11" cy="13" r="3" fill="#ffd23f"/><path d="M5 23 L12 16 L17 21 L22 16 L27 22" stroke="#7ee0a0" stroke-width="2.4" stroke-linejoin="round"/>'),
-    sticker: ic('<rect x="6" y="6" width="20" height="20" rx="6" fill="none" stroke="#ffd23f" stroke-width="2.6"/><path d="M11 16l3 3 7-8" stroke="#ffd23f" stroke-width="2.6" fill="none" stroke-linecap="round"/>'),
-    undo: ic('<path d="M11 9 L6 14 L11 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14 H18 a7 7 0 1 1 0 14 H13" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>',30),
-    redo: ic('<path d="M21 9 L26 14 L21 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 14 H14 a7 7 0 1 0 0 14 H19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>',30),
-    trash: ic('<path d="M6 9 H26" stroke="#ffb3c1" stroke-width="2.6" stroke-linecap="round"/><path d="M12 9 V6.5 H20 V9" stroke="#ffb3c1" stroke-width="2.4"/><path d="M9 9 L10.5 27 H21.5 L23 9" stroke="#ffb3c1" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 13 V23 M18 13 V23" stroke="#ffb3c1" stroke-width="2.2" stroke-linecap="round"/>',30),
-    heart: ic('<path d="M16 27 C16 27 4 19.5 4 11.5 C4 7.4 7.2 4.5 11 4.5 C13.5 4.5 15.2 6 16 7.6 C16.8 6 18.5 4.5 21 4.5 C24.8 4.5 28 7.4 28 11.5 C28 19.5 16 27 16 27 Z" fill="#ff5d8f"/>',34),
-    check: ic('<path d="M7 17 L13 23 L25 9" stroke="#7ee0a0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',34),
-    x: ic('<path d="M9 9 L23 23 M23 9 L9 23" stroke="#dcd6ff" stroke-width="3.4" stroke-linecap="round"/>',30)
+    gallery: ic('<rect x="6" y="9" width="20" height="15" rx="2.5" stroke="#dcd6ff" stroke-width="2.4"/><circle cx="12" cy="14" r="2.2" fill="#ffd23f"/><path d="M7 22 l5-4 4 3 3-2 6 5" stroke="#7ee0a0" stroke-width="2.2" stroke-linejoin="round"/>',28),
+    soundOn: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#dcd6ff"/><path d="M20 12 q3 4 0 8 M23.5 9 q6 7 0 14" stroke="#7ee0a0" stroke-width="2.2" stroke-linecap="round"/>',28),
+    soundOff: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#9b93d6"/><path d="M21 12 l7 8 M28 12 l-7 8" stroke="#ff7a90" stroke-width="2.6" stroke-linecap="round"/>',28),
+    undo: ic('<path d="M11 9 L6 14 L11 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14 H18 a7 7 0 1 1 0 14 H13" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>',28),
+    redo: ic('<path d="M21 9 L26 14 L21 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 14 H14 a7 7 0 1 0 0 14 H19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>',28),
+    trash: ic('<path d="M6 9 H26" stroke="#ffb3c1" stroke-width="2.6" stroke-linecap="round"/><path d="M12 9 V6.5 H20 V9" stroke="#ffb3c1" stroke-width="2.4"/><path d="M9 9 L10.5 27 H21.5 L23 9" stroke="#ffb3c1" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 13 V23 M18 13 V23" stroke="#ffb3c1" stroke-width="2.2" stroke-linecap="round"/>',28),
+    heart: ic('<path d="M16 27 C16 27 4 19.5 4 11.5 C4 7.4 7.2 4.5 11 4.5 C13.5 4.5 15.2 6 16 7.6 C16.8 6 18.5 4.5 21 4.5 C24.8 4.5 28 7.4 28 11.5 C28 19.5 16 27 16 27 Z" fill="#ff5d8f"/>',30),
+    check: ic('<path d="M7 17 L13 23 L25 9" stroke="#7ee0a0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',30),
+    x: ic('<path d="M9 9 L23 23 M23 9 L9 23" stroke="#dcd6ff" stroke-width="3.4" stroke-linecap="round"/>',28),
+    sticker: ic('<rect x="6" y="6" width="20" height="20" rx="6" fill="none" stroke="#ffd23f" stroke-width="2.6"/><path d="M11 16l3 3 7-8" stroke="#ffd23f" stroke-width="2.6" fill="none" stroke-linecap="round"/>',30),
+    shapeStar: ic('<path d="M16 5l2.6 7.2L26 13l-6 4.2L21.5 25 16 20.5 10.5 25 12 17.2 6 13l7.4-.8z" fill="#ffd23f"/>',30),
+    scene: ic('<rect x="4" y="6" width="24" height="20" rx="3" stroke="#cfc8ff" stroke-width="2.4"/><circle cx="11" cy="13" r="3" fill="#ffd23f"/><path d="M5 23 L12 16 L17 21 L22 16 L27 22" stroke="#7ee0a0" stroke-width="2.4" stroke-linejoin="round"/>',30),
+    hdrBrush: ic('<rect x="13" y="4" width="6" height="13" rx="2" fill="#a99fe0"/><path d="M13 17h6l-3 8z" fill="#a99fe0"/>',16),
+    hdrColors: ic('<circle cx="9" cy="12" r="5" fill="#ff7a90"/><circle cx="20" cy="10" r="5" fill="#ffd23f"/><circle cx="15" cy="21" r="5" fill="#3a86ff"/>',16),
+    hdrSize: ic('<circle cx="9" cy="16" r="3" fill="#a99fe0"/><circle cx="22" cy="16" r="8" fill="#a99fe0"/>',16),
+    hdrMagic: ic('<path d="M16 4l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#a99fe0"/>',16)
   };
-  function brushGlyph(b,big){ var sz=big?40:34; var col=b.erase?"#ffb3c1":(b.stamp||b.shapes?"#ffd23f":(b.fill?"#7ee0a0":"#cfc8ff"));
-    function w(inner){ return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32">'+inner+'</svg>'; }
+  function brushGlyph(b){ var sz=32, col=b.erase?"#ffb3c1":(b.fill?"#7ee0a0":"#cfc8ff"); function w(i){ return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32">'+i+'</svg>'; }
     if(b.fill)    return w('<path d="M6 16l10-10 9 9-10 10z" fill="none" stroke="'+col+'" stroke-width="2.4"/><path d="M24 20c2 3 3 4 3 6a3 3 0 0 1-6 0c0-2 1-3 3-6z" fill="'+col+'"/>');
-    if(b.shapes)  return w('<path d="M16 5l2.6 7.2L26 13l-6 4.2L21.5 25 16 20.5 10.5 25 12 17.2 6 13l7.4-.8z" fill="'+col+'"/>');
-    if(b.stamp)   return w('<rect x="6" y="6" width="20" height="20" rx="5" fill="none" stroke="'+col+'" stroke-width="2.5"/><path d="M11 16l3 3 7-8" stroke="'+col+'" stroke-width="2.5" fill="none" stroke-linecap="round"/>');
     if(b.erase)   return w('<rect x="6" y="13" width="16" height="9" rx="2" transform="rotate(-30 14 17)" fill="'+col+'"/>');
     if(b.rainbow) return w('<path d="M5 24a11 11 0 0 1 22 0" fill="none" stroke="#ff5d5d" stroke-width="3"/><path d="M9 24a7 7 0 0 1 14 0" fill="none" stroke="#ffd23f" stroke-width="3"/><path d="M13 24a3 3 0 0 1 6 0" fill="none" stroke="#3a86ff" stroke-width="3"/>');
     if(b.fx)      return w('<path d="M16 5l2.2 6.4L25 13l-6 3 -1 7-2-7-6-3 6.8-1.6z" fill="#ffd23f"/>');
@@ -287,74 +205,85 @@
     if(b.id==="fur")    return w('<g stroke="'+col+'" stroke-width="2" stroke-linecap="round"><path d="M8 24v-7M13 24v-9M18 24v-8M23 24v-6"/></g>');
     if(b.id==="dots")   return w('<g fill="'+col+'"><circle cx="11" cy="13" r="3"/><circle cx="19" cy="11" r="2.4"/><circle cx="16" cy="20" r="2.8"/><circle cx="22" cy="19" r="2"/></g>');
     if(b.id==="neon")   return w('<rect x="8" y="6" width="6" height="20" rx="3" fill="#67e8f9"/><rect x="8" y="6" width="6" height="6" rx="3" fill="#fff"/>');
+    if(b.id==="paint")  return w('<rect x="13" y="5" width="6" height="12" rx="2" fill="#3a86ff"/><path d="M12 17h8l-4 8z" fill="#3a86ff"/>');
+    if(b.id==="marker") return w('<rect x="13" y="5" width="6" height="12" rx="2" fill="#ff70a6"/><path d="M13 17h6l-3 6z" fill="#ff70a6"/>');
+    if(b.id==="pencil") return w('<rect x="13" y="5" width="5" height="15" rx="1.5" fill="#ffd23f"/><path d="M13 20h5l-2.5 5z" fill="#9b5e3c"/>');
+    if(b.id==="chalk")  return w('<rect x="12" y="6" width="7" height="18" rx="2" fill="#eaf6ff"/>');
     return w('<rect x="13" y="5" width="6" height="14" rx="2" fill="'+col+'"/><path d="M13 19h6l-3 7z" fill="'+col+'"/>');
   }
-  function mirrorIcon(m,big){ var sz=big?40:32; var head='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32" fill="none">';
+  function mirrorIcon(m){ var sz=32, head='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32" fill="none">';
     if(m===1) return head+'<circle cx="16" cy="16" r="11" stroke="#cfc8ff" stroke-width="2.4"/><path d="M16 10 l3 5 -6 0 z" fill="#ffd23f"/></svg>';
     if(m==="V") return head+'<rect x="5" y="6" width="22" height="20" rx="3" stroke="#cfc8ff" stroke-width="2.2"/><line x1="16" y1="6" x2="16" y2="26" stroke="#7ee0a0" stroke-width="2" stroke-dasharray="3 3"/><path d="M14 20 l-5 -7 5 0 z" fill="#ffd23f"/><path d="M18 20 l5 -7 -5 0 z" fill="#ffd23f"/></svg>';
     if(m==="H") return head+'<rect x="6" y="5" width="20" height="22" rx="3" stroke="#cfc8ff" stroke-width="2.2"/><line x1="6" y1="16" x2="26" y2="16" stroke="#7ee0a0" stroke-width="2" stroke-dasharray="3 3"/><path d="M13 14 l7 -5 0 5 z" fill="#ffd23f"/><path d="M13 18 l7 5 0 -5 z" fill="#ffd23f"/></svg>';
-    var cnt=m/2,lines=""; for(var i=0;i<cnt;i++){ var a=Math.PI*i/cnt,dx=Math.cos(a)*11,dy=Math.sin(a)*11;
-      lines+='<line x1="'+(16-dx).toFixed(1)+'" y1="'+(16-dy).toFixed(1)+'" x2="'+(16+dx).toFixed(1)+'" y2="'+(16+dy).toFixed(1)+'" stroke="#7ee0a0" stroke-width="1.8"/>'; }
+    var cnt=m/2,lines=""; for(var i=0;i<cnt;i++){ var a=Math.PI*i/cnt,dx=Math.cos(a)*11,dy=Math.sin(a)*11; lines+='<line x1="'+(16-dx).toFixed(1)+'" y1="'+(16-dy).toFixed(1)+'" x2="'+(16+dx).toFixed(1)+'" y2="'+(16+dy).toFixed(1)+'" stroke="#7ee0a0" stroke-width="1.8"/>'; }
     return head+'<circle cx="16" cy="16" r="11" stroke="#cfc8ff" stroke-width="2.2"/>'+lines+'<circle cx="16" cy="16" r="2.2" fill="#ffd23f"/></svg>'; }
-  function styleIcon(id,big){ var sz=big?40:32, b='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32">';
+  function styleIcon(id){ var sz=32, b='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32">';
     if(id==="paper") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#fff" stroke="#cfc8ff" stroke-width="1.5"/><path d="M9 20 q5 -10 14 -4" stroke="#b9b3e0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
     if(id==="chalk") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#243240"/><path d="M9 20 q5 -10 14 -4" stroke="#eaf6ff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
     if(id==="neon") return b+'<rect x="4" y="4" width="24" height="24" rx="5" fill="#0a0a1e"/><path d="M9 20 q5 -10 14 -4" stroke="#67e8f9" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"/><path d="M9 20 q5 -10 14 -4" stroke="#bff7ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
     if(id==="3d") return b+'<rect x="9" y="9" width="18" height="18" rx="4" fill="#6a4fd0"/><rect x="5" y="5" width="18" height="18" rx="4" fill="#b9a6ff"/></svg>';
     if(id==="pixel"){ var g='<g fill="#cfc8ff">'; for(var r=0;r<3;r++)for(var c=0;c<3;c++){ if((r+c)%2===0) g+='<rect x="'+(7+c*6)+'" y="'+(7+r*6)+'" width="6" height="6"/>'; } return b+'<rect x="4" y="4" width="24" height="24" rx="4" fill="#241a52"/>'+g+'</g></svg>'; }
     return b+'</svg>'; }
-  function colorDot(col,d){ d=d||34; var brd=col==="#ffffff"?"#888":"rgba(0,0,0,.25)";
-    return '<span style="display:block;width:'+d+'px;height:'+d+'px;border-radius:50%;background:'+col+';border:2px solid '+brd+'"></span>'; }
-  function sizeDot(sz){ var r=Math.max(4,Math.min(16,sz/2)); return '<svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="'+r+'" fill="#cfc8ff"/></svg>'; }
+  function sizeDotSvg(sz){ var r=Math.max(4,Math.min(18,sz/2)); return '<svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="'+r+'" fill="#cfc8ff"/></svg>'; }
 
-  // ---------- openers ----------
-  function refreshOpeners(){
-    setHTML("brushBtn", brushGlyph(S.brush)+cap("Brush"));
-    setHTML("colorBtn", colorDot(S.color)+cap("Color"));
-    setHTML("sizeBtn", sizeDot(S.size)+cap("Size"));
-    setHTML("mirrorBtn", mirrorIcon(S.mirror)+cap("Mirror"));
-    setHTML("styleBtn", styleIcon(S.style)+cap("Style"));
-    setHTML("stickerBtn", ICONS.sticker+cap("Stickers"));
-    setHTML("bgBtn", ICONS.bg+cap("Scene"));
+  // ---------- build the visible grouped desk ----------
+  function el(tag,cls,html){ var d=document.createElement(tag); if(cls)d.className=cls; if(html!=null)d.innerHTML=html; return d; }
+  function group(headerIcon,label){ var g=el("div","g"); g.appendChild(el("div","gh",headerIcon+'<span>'+label+'</span>')); var items=el("div","items"); g.appendChild(items); g._items=items; return g; }
+  function buildUI(){
+    var root=document.getElementById("groups"); root.innerHTML="";
+    // BRUSHES
+    var gB=group(ICONS.hdrBrush,"Brushes");
+    CFG.brushes.forEach(function(b){ var t=el("div","bt"+(b.id===S.brush.id?" on":""), brushGlyph(b)+'<span class="lab">'+b.name+'</span>'); t.dataset.bid=b.id;
+      t.onclick=function(){ S.brush=b; syncSel("bt","bid",S.brush.id); playSfx(b.sound); }; gB._items.appendChild(t); });
+    root.appendChild(gB);
+    // COLORS
+    var gC=group(ICONS.hdrColors,"Colors");
+    CFG.palette.forEach(function(col){ var sw=el("div","sw"+(col===S.color?" on":"")); sw.style.background=col; if(col==="#ffffff") sw.style.border="3px solid #888"; sw.dataset.col=col;
+      sw.onclick=function(){ S.color=col; addRecent(col); syncSel("sw","col",S.color); playSfx("pop"); }; gC._items.appendChild(sw); });
+    var picker=el("input"); picker.type="color"; picker.value=(S.color&&S.color[0]==="#")?S.color:"#33aaff";
+    picker.oninput=function(){ S.color=picker.value; addRecent(picker.value); syncSel("sw","col",S.color); }; gC._items.appendChild(picker);
+    root.appendChild(gC);
+    // SIZE
+    var gS=group(ICONS.hdrSize,"Size");
+    CFG.sizes.forEach(function(sz){ var t=el("div","mi"+(sz===S.size?" on":""), sizeDotSvg(sz)); t.dataset.sz=String(sz);
+      t.onclick=function(){ S.size=sz; syncSel("mi","sz",String(sz),"#groups"); playSfx("pop"); }; gS._items.appendChild(t); });
+    root.appendChild(gS);
+    // MIRROR
+    var gM=group(ICONS.hdrMagic,"Mirror");
+    CFG.mirror.forEach(function(m){ var t=el("div","mi"+(m===S.mirror?" on":""), mirrorIcon(m)); t.dataset.m=String(m);
+      t.onclick=function(){ S.mirror=m; syncSel("mi","m",String(m)); playSfx("pop"); }; gM._items.appendChild(t); });
+    root.appendChild(gM);
+    // STYLE
+    var gT=group(ICONS.hdrMagic,"Style");
+    CFG.styles.forEach(function(st){ var t=el("div","mi"+(st.id===S.style?" on":""), styleIcon(st.id)); t.dataset.st=st.id;
+      t.onclick=function(){ S.style=st.id; S.bg=st.bg; redraw(); syncSel("mi","st",S.style); playSfx("pop"); }; gT._items.appendChild(t); });
+    root.appendChild(gT);
+    // STAMPS
+    var gP=group(ICONS.shapeStar,"Stamps");
+    var bShapes=el("div","mi",ICONS.shapeStar); bShapes.onclick=openShapes; gP._items.appendChild(bShapes);
+    var bStick=el("div","mi",ICONS.sticker); bStick.onclick=function(){ S.brush=findBrush("sticker"); openStickers(); }; gP._items.appendChild(bStick);
+    var bScene=el("div","mi",ICONS.scene); bScene.onclick=openBg; gP._items.appendChild(bScene);
+    root.appendChild(gP);
+    // DO (actions)
+    var gD=group("","Do");
+    var u=el("button","iconbtn",ICONS.undo); u.onclick=undo; gD._items.appendChild(u);
+    var r=el("button","iconbtn",ICONS.redo); r.onclick=redoOp; gD._items.appendChild(r);
+    var cl=el("button","iconbtn",ICONS.trash); cl.onclick=function(){ document.getElementById("clearOv").classList.add("show"); }; gD._items.appendChild(cl);
+    var sv=el("button","iconbtn save big",ICONS.heart); sv.onclick=function(){ document.getElementById("saveOv").classList.add("show"); }; gD._items.appendChild(sv);
+    root.appendChild(gD);
   }
-  function cap(t){ return '<span class="cap">'+t+'</span>'; }
-  function setHTML(id,h){ var el=document.getElementById(id); if(el) el.innerHTML=h; }
+  function syncSel(cls,attr,val,scope){ var sel=(scope||"#groups")+" ."+cls; document.querySelectorAll(sel).forEach(function(e){ if(e.dataset && (attr in e.dataset)) e.classList.toggle("on", e.dataset[attr]===val); }); }
+  function addRecent(col){ if(S.recent.indexOf(col)<0){ S.recent.unshift(col); S.recent=S.recent.slice(0,6); } }
 
-  // ---------- generic picker ----------
-  function openPick(title,build){ document.getElementById("pickTitle").textContent=title; var g=document.getElementById("pickGrid"); g.innerHTML=""; build(g); document.getElementById("pickOv").classList.add("show"); }
-  function closePick(){ document.getElementById("pickOv").classList.remove("show"); }
-  function tile(cls,inner,on,onclick){ var d=document.createElement("div"); d.className="pick"+(cls?" "+cls:"")+(on?" on":""); d.innerHTML=inner; d.onclick=onclick; return d; }
-
-  function pickBrush(){ openPick("Pick a brush", function(g){ CFG.brushes.forEach(function(b){
-    g.appendChild(tile("", brushGlyph(b,true)+'<span class="nm">'+b.name+'</span>', b.id===S.brush.id, function(){
-      S.brush=b; refreshOpeners(); closePick(); playSfx(b.sound);
-      if(b.stamp) openStickers(); if(b.shapes) openShapes(); })); }); }); }
-  function pickColor(){ openPick("Pick a color", function(g){
-    CFG.palette.forEach(function(col){ var d=document.createElement("div"); d.className="sw"+(col===S.color?" on":""); d.style.background=col; if(col==="#ffffff") d.style.border="3px solid #888";
-      d.onclick=function(){ S.color=col; addRecent(col); refreshOpeners(); closePick(); playSfx("pop"); }; g.appendChild(d); });
-    var lab=document.createElement("div"); lab.style.cssText="width:100%;height:0"; g.appendChild(lab);
-    var picker=document.createElement("input"); picker.type="color"; picker.value=(S.color&&S.color[0]==="#")?S.color:"#33aaff";
-    picker.oninput=function(){ S.color=picker.value; addRecent(picker.value); refreshOpeners(); }; g.appendChild(picker);
-    S.recent.forEach(function(c){ var d=document.createElement("div"); d.className="sw"; d.style.width="42px"; d.style.height="42px"; d.style.background=c;
-      d.onclick=function(){ S.color=c; refreshOpeners(); closePick(); }; g.appendChild(d); }); }); }
-  function pickSize(){ openPick("Pick a size", function(g){ CFG.sizes.forEach(function(sz){
-    g.appendChild(tile("", sizeDot(sz), sz===S.size, function(){ S.size=sz; refreshOpeners(); closePick(); playSfx("pop"); })); }); }); }
-  function pickMirror(){ openPick("Mirror magic", function(g){ CFG.mirror.forEach(function(m){
-    g.appendChild(tile("", mirrorIcon(m,true), m===S.mirror, function(){ S.mirror=m; refreshOpeners(); closePick(); playSfx("pop"); })); }); }); }
-  function pickStyle(){ openPick("Pick a style", function(g){ CFG.styles.forEach(function(st){
-    g.appendChild(tile("media", styleIcon(st.id,true), st.id===S.style, function(){ S.style=st.id; S.bg=st.bg; redraw(); refreshOpeners(); closePick(); playSfx("pop"); })); }); }); }
-
-  // ---------- shapes ----------
+  // ---------- shapes / stickers / scene / gallery (big collections in overlays) ----------
+  function tileMedia(onclick){ var d=el("div","pick"); d.onclick=onclick; return d; }
   function openShapes(){ var ov=document.getElementById("shapeOv"), wrap=document.getElementById("shapeWrap"); wrap.innerHTML="";
     CFG.shapes.forEach(function(sh){ var cv=document.createElement("canvas"); cv.width=84; cv.height=62; try{ BR.shape(cv.getContext("2d"),sh,42,31,52,S.color); }catch(e){}
-      var d=tile("media","",sh===S.shape,function(){ S.shape=sh; S.brush=findBrush("shapes"); refreshOpeners(); ov.classList.remove("show"); toast("Tap to stamp!"); }); d.appendChild(cv); wrap.appendChild(d); });
-    ov.classList.add("show"); }
-
-  // ---------- stickers ----------
+      var d=tileMedia(function(){ S.shape=sh; S.brush=findBrush("shapes"); ov.classList.remove("show"); toast("Tap to stamp!"); }); d.appendChild(cv); wrap.appendChild(d); }); ov.classList.add("show"); }
   var stickerCache={};
   function openStickers(){ buildStickTabs(); loadStickers("all"); document.getElementById("stickOv").classList.add("show"); }
   function buildStickTabs(){ var t=document.getElementById("stickTabs"); if(t.childElementCount) return;
-    CFG.stickerThemes.forEach(function(th,i){ var b=document.createElement("button"); b.className="tab"+(i===0?" on":""); b.textContent=th.charAt(0).toUpperCase()+th.slice(1);
+    CFG.stickerThemes.forEach(function(th,i){ var b=el("button","tab"+(i===0?" on":"")); b.textContent=th.charAt(0).toUpperCase()+th.slice(1);
       b.onclick=function(){ document.querySelectorAll("#stickTabs .tab").forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); loadStickers(th); }; t.appendChild(b); }); }
   function loadStickers(theme){ var wrap=document.getElementById("stickWrap"); if(stickerCache[theme]){ renderStickers(wrap,stickerCache[theme]); return; }
     wrap.innerHTML="<p style='opacity:.7'>Loading…</p>"; var q=theme==="all"?"":("&theme="+encodeURIComponent(theme));
@@ -363,64 +292,39 @@
       .then(function(res){ var items=normalize(res[0]).concat(normalize(res[1])).filter(function(x){return x.url;}); if(!items.length){ drawnFallback(wrap); return; } stickerCache[theme]=items; renderStickers(wrap,items); })
       .catch(function(){ drawnFallback(wrap); }); }
   function normalize(j){ var arr=Array.isArray(j)?j:(j&&(j.items||j.characters||j.assets))||[]; return arr.map(function(x){ return {url:x.image_url||x.url||x.preview_image_url,name:x.name||""}; }); }
-  function renderStickers(wrap,items){ wrap.innerHTML=""; items.forEach(function(it){ var im=new Image(); im.src=it.url;
-    var d=tile("media","",false,function(){ S.sticker=it; S.brush=findBrush("sticker"); refreshOpeners(); document.getElementById("stickOv").classList.remove("show"); toast("Tap the paper to stamp!"); }); d.appendChild(im); wrap.appendChild(d); }); }
+  function renderStickers(wrap,items){ wrap.innerHTML=""; items.forEach(function(it){ var im=new Image(); im.src=it.url; var d=tileMedia(function(){ S.sticker=it; S.brush=findBrush("sticker"); document.getElementById("stickOv").classList.remove("show"); toast("Tap the paper to stamp!"); }); d.appendChild(im); wrap.appendChild(d); }); }
   function drawnFallback(wrap){ wrap.innerHTML=""; CFG.shapes.forEach(function(sh){ var cv=document.createElement("canvas"); cv.width=84; cv.height=62; try{ BR.shape(cv.getContext("2d"),sh,42,31,52,"#ff7aa8"); }catch(e){}
-    var d=tile("media","",false,function(){ S.sticker={url:cv.toDataURL(),name:sh}; S.brush=findBrush("sticker"); refreshOpeners(); document.getElementById("stickOv").classList.remove("show"); toast("Tap the paper to stamp!"); }); d.appendChild(cv); wrap.appendChild(d); }); }
-  function findBrush(id){ return CFG.brushes.filter(function(b){return b.id===id;})[0]||{id:id,sound:"art_stamp"}; }
-  // sticker brush isn't in the curated tray list, but pickBrush includes it? add a virtual entry
-  if(!CFG.brushes.some(function(b){return b.stamp;})) CFG.brushes.splice(12,0,{id:"sticker",name:"Sticker",sound:"art_stamp",stamp:true});
-
-  // ---------- background ----------
+    var d=tileMedia(function(){ S.sticker={url:cv.toDataURL(),name:sh}; S.brush=findBrush("sticker"); document.getElementById("stickOv").classList.remove("show"); toast("Tap the paper to stamp!"); }); d.appendChild(cv); wrap.appendChild(d); }); }
+  function findBrush(id){ var b=CFG.brushes.filter(function(x){return x.id===id;})[0]; if(b) return b; var v={id:id,sound:"art_stamp"}; if(id==="sticker")v.stamp=true; if(id==="shapes")v.shapes=true; return v; }
   function openBg(){ playSfx("pop"); var ov=document.getElementById("bgOv"), wrap=document.getElementById("bgWrap"); wrap.innerHTML="";
     CFG.backgrounds.forEach(function(bg){ var cv=document.createElement("canvas"); cv.width=84; cv.height=62; var c=cv.getContext("2d");
       if(bg.type==="grad"){ var g=c.createLinearGradient(0,0,0,62); g.addColorStop(0,bg.from); g.addColorStop(1,bg.to); c.fillStyle=g; } else c.fillStyle=bg.c; c.fillRect(0,0,84,62);
-      var d=tile("media","",false,function(){ S.bg=bg; redraw(); ov.classList.remove("show"); }); d.appendChild(cv); wrap.appendChild(d); });
-    ov.classList.add("show"); }
-
-  // ---------- gallery ----------
+      var d=tileMedia(function(){ S.bg=bg; redraw(); ov.classList.remove("show"); }); d.appendChild(cv); wrap.appendChild(d); }); ov.classList.add("show"); }
   function deviceId(){ var k="artstudio:device",v=localStorage.getItem(k); if(!v){ v="dev_"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem(k,v); } return v; }
   function openGallery(){ var ov=document.getElementById("galleryOv"), wrap=document.getElementById("galleryWrap"); wrap.innerHTML="<p style='opacity:.7'>Loading…</p>"; ov.classList.add("show");
     fetch("/api/list-art?deviceId="+encodeURIComponent(deviceId())).then(function(r){return r.ok?r.json():null;}).then(function(j){ var arr=(j&&j.art)||[];
       if(!arr.length){ wrap.innerHTML="<p style='opacity:.85'>No saved art yet — make something and tap the heart!</p>"; return; } wrap.innerHTML="";
-      arr.forEach(function(it){ var d=tile("media","",false,function(){ loadArt(it.art_id); ov.classList.remove("show"); });
-        if(it.thumbnail){ var im=new Image(); im.src=it.thumbnail; d.appendChild(im); } else d.appendChild(document.createTextNode((it.title||"Art").slice(0,12))); wrap.appendChild(d); });
+      arr.forEach(function(it){ var d=tileMedia(function(){ loadArt(it.art_id); ov.classList.remove("show"); }); if(it.thumbnail){ var im=new Image(); im.src=it.thumbnail; d.appendChild(im); } else d.appendChild(document.createTextNode((it.title||"Art").slice(0,12))); wrap.appendChild(d); });
     }).catch(function(){ wrap.innerHTML="<p style='opacity:.85'>Couldn't load your art.</p>"; }); }
   function loadArt(id){ fetch("/api/list-art?artId="+encodeURIComponent(id)).then(function(r){return r.ok?r.json():null;}).then(function(j){ var a=j&&j.art; if(!a||!a.art){ toast("Couldn't open that one."); return; }
-    S.ops=(a.art.ops||[]).filter(function(o){return o.t;}); S.redo.length=0; if(a.art.style)S.style=a.art.style; if(a.art.bg)S.bg=a.art.bg; refreshOpeners(); redraw(); autosave(); toast("Opened your art!"); }).catch(function(){ toast("Couldn't open that one."); }); }
+    S.ops=(a.art.ops||[]).filter(function(o){return o.t;}); S.redo.length=0; if(a.art.style)S.style=a.art.style; if(a.art.bg)S.bg=a.art.bg; buildUI(); redraw(); autosave(); toast("Opened your art!"); }).catch(function(){ toast("Couldn't open that one."); }); }
 
-  // ---------- save ----------
   function doSave(){ var title=(document.getElementById("artTitle").value||"My masterpiece").slice(0,40), share=document.getElementById("shareChk").checked, image_b64="";
     try{ image_b64=paper.toDataURL("image/png"); }catch(e){}
     var payload={ art_id:"art_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), device_id:deviceId(), title:title, theme:(S.bg&&S.bg.name)||S.style||"rainbow", image_b64:image_b64, art:{ops:S.ops,bg:S.bg,style:S.style}, published:!!share };
     document.getElementById("saveOv").classList.remove("show"); playSfx("art_save"); celebrate();
-    fetch("/api/save-art",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-      .then(function(r){ if(r.ok) toast(share?"Saved & shared with family!":"Saved to your gallery!"); else downloadFallback(image_b64,title); })
-      .catch(function(){ downloadFallback(image_b64,title); }); }
+    fetch("/api/save-art",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).then(function(r){ if(r.ok) toast(share?"Saved & shared with family!":"Saved to your gallery!"); else downloadFallback(image_b64,title); }).catch(function(){ downloadFallback(image_b64,title); }); }
   function downloadFallback(data,title){ if(!data){ toast("Saved!"); return; } try{ var a=document.createElement("a"); a.href=data; a.download=(title||"art").replace(/\s+/g,"_")+".png"; document.body.appendChild(a); a.click(); a.remove(); toast("Saved a copy to your device!"); }catch(e){ toast("Saved!"); } }
   var fxParts=[]; function celebrate(){ if(!BM||!BM.burst||!ctx) return; for(var i=0;i<6;i++) BM.burst(fxParts,Math.random()*paper.width,paper.height*0.4,"hsl("+(i*60)+",90%,60%)",14);
     var t0=Date.now(); (function loop(){ if(Date.now()-t0>900){ redraw(); return; } redraw(); BM.updateParticles(fxParts,1/60); BM.drawParticles(ctx,fxParts); requestAnimationFrame(loop); })(); }
-  function addRecent(col){ if(S.recent.indexOf(col)<0){ S.recent.unshift(col); S.recent=S.recent.slice(0,6); } }
   var _tt; function toast(m){ var t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(_tt); _tt=setTimeout(function(){ t.classList.remove("show"); },1800); }
 
   function wire(){
     paper.addEventListener("mousedown",down); paper.addEventListener("touchstart",down,{passive:false});
     window.addEventListener("mousemove",move); window.addEventListener("touchmove",move,{passive:false});
     window.addEventListener("mouseup",up); window.addEventListener("touchend",up);
-    document.getElementById("brushBtn").onclick=pickBrush;
-    document.getElementById("colorBtn").onclick=pickColor;
-    document.getElementById("sizeBtn").onclick=pickSize;
-    document.getElementById("mirrorBtn").onclick=pickMirror;
-    document.getElementById("styleBtn").onclick=pickStyle;
-    document.getElementById("stickerBtn").onclick=function(){ S.brush=findBrush("sticker"); refreshOpeners(); openStickers(); };
-    document.getElementById("bgBtn").onclick=openBg;
-    document.getElementById("pickClose").onclick=closePick;
-    document.getElementById("undoBtn").onclick=undo;
-    document.getElementById("redoBtn").onclick=redoOp;
-    document.getElementById("clearBtn").onclick=function(){ document.getElementById("clearOv").classList.add("show"); };
     document.getElementById("clearNo").onclick=function(){ document.getElementById("clearOv").classList.remove("show"); };
     document.getElementById("clearYes").onclick=function(){ document.getElementById("clearOv").classList.remove("show"); clearAll(); playSfx("art_undo"); };
-    document.getElementById("saveBtn").onclick=function(){ document.getElementById("saveOv").classList.add("show"); };
     document.getElementById("saveCancel").onclick=function(){ document.getElementById("saveOv").classList.remove("show"); };
     document.getElementById("saveGo").onclick=doSave;
     document.getElementById("stickClose").onclick=function(){ document.getElementById("stickOv").classList.remove("show"); };
@@ -432,19 +336,16 @@
       if(BA&&BA.toggleMute) try{BA.toggleMute();}catch(_){} document.getElementById("soundBtn").innerHTML=S.muted?ICONS.soundOff:ICONS.soundOn; if(!S.muted) playSfx("pop"); };
     window.addEventListener("resize", fitCanvas);
   }
-  function paintStatic(){ setHTML("galleryBtn",ICONS.gallery); setHTML("soundBtn",S.muted?ICONS.soundOff:ICONS.soundOn);
-    setHTML("undoBtn",ICONS.undo); setHTML("redoBtn",ICONS.redo); setHTML("clearBtn",ICONS.trash); setHTML("saveBtn",ICONS.heart);
-    setHTML("pickClose",ICONS.x); setHTML("clearNo",ICONS.check); setHTML("clearYes",ICONS.trash);
-    setHTML("saveCancel",ICONS.x); setHTML("saveGo",ICONS.heart); setHTML("stickClose",ICONS.check);
-    setHTML("shapeClose",ICONS.check); setHTML("bgClose",ICONS.check); setHTML("galleryClose",ICONS.x); }
-  function init(){ try{ S.muted=localStorage.getItem("artstudio:muted")==="1"; }catch(e){}
-    restoreWip(); paintStatic(); refreshOpeners(); wire(); fitCanvas(); }
+  function paintStatic(){ var g=document.getElementById("galleryBtn"); if(g) g.innerHTML=ICONS.gallery; var s=document.getElementById("soundBtn"); if(s) s.innerHTML=S.muted?ICONS.soundOff:ICONS.soundOn;
+    ["clearNo","check"].length; document.getElementById("clearNo").innerHTML=ICONS.check; document.getElementById("clearYes").innerHTML=ICONS.trash;
+    document.getElementById("saveCancel").innerHTML=ICONS.x; document.getElementById("saveGo").innerHTML=ICONS.heart;
+    document.getElementById("stickClose").innerHTML=ICONS.check; document.getElementById("shapeClose").innerHTML=ICONS.check;
+    document.getElementById("bgClose").innerHTML=ICONS.check; document.getElementById("galleryClose").innerHTML=ICONS.x; }
+  function init(){ try{ S.muted=localStorage.getItem("artstudio:muted")==="1"; }catch(e){} restoreWip(); buildUI(); paintStatic(); wire(); fitCanvas(); }
   if(document.readyState!=="loading") init(); else document.addEventListener("DOMContentLoaded", init);
 
-  // ---------- QA hook ----------
   window.ART_GAME={ state:S, config:CFG,
-    sim:function(){ var report={added:0,brushesUsed:[],mirrorsUsed:[],stylesUsed:[],hadFill:false,hadShape:false,undoOk:false,redoOk:false};
-      var mirs=CFG.mirror, styles=CFG.styles;
+    sim:function(){ var report={added:0,brushesUsed:[],mirrorsUsed:[],stylesUsed:[],hadFill:false,hadShape:false,undoOk:false,redoOk:false}, mirs=CFG.mirror, styles=CFG.styles;
       CFG.brushes.forEach(function(b,bi){ if(b.fill||b.stamp||b.shapes||b.erase) return; var m=mirs[bi%mirs.length], st=styles[bi%styles.length].id;
         S.ops.push({t:"stroke",brush:b.id,texture:b.texture||"smooth",color:CFG.palette[bi%CFG.palette.length],width:18,mirror:m,style:st,rainbow:!!b.rainbow,hueStart:0,erase:false,dynamic:!!b.dynamic,points:[{x:50,y:50,w:18},{x:120,y:90,w:10},{x:200,y:140,w:14}]});
         report.added++; report.brushesUsed.push(b.id); if(report.mirrorsUsed.indexOf(m)<0)report.mirrorsUsed.push(m); if(report.stylesUsed.indexOf(st)<0)report.stylesUsed.push(st); });
@@ -454,8 +355,7 @@
       S.ops.push({t:"stroke",brush:"eraser",texture:"smooth",color:"#000",width:24,mirror:1,style:"paper",erase:true,points:[{x:60,y:60},{x:90,y:90}]}); report.added++;
       var before=S.ops.length; S.redo.length=0; S.redo.push(S.ops.pop()); report.undoOk=(S.ops.length===before-1); S.ops.push(S.redo.pop()); report.redoOk=(S.ops.length===before);
       report.total=S.ops.length; report.allBrushesDrawable=report.brushesUsed.length>=9; return report; },
-    roundtrip:function(){ var json=JSON.stringify({ops:S.ops,bg:S.bg,style:S.style}), n=S.ops.length, saved=S.ops.slice();
-      S.ops.length=0; var p=JSON.parse(json); S.ops=p.ops; S.style=p.style; S.bg=p.bg;
+    roundtrip:function(){ var json=JSON.stringify({ops:S.ops,bg:S.bg,style:S.style}), n=S.ops.length, saved=S.ops.slice(); S.ops.length=0; var p=JSON.parse(json); S.ops=p.ops; S.style=p.style; S.bg=p.bg;
       return {ok:(S.ops.length===n&&JSON.stringify(S.ops)===JSON.stringify(saved)),count:S.ops.length,expected:n}; },
     reset:function(){ S.ops.length=0; S.redo.length=0; } };
 })();

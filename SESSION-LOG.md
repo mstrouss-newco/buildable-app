@@ -1,5 +1,15 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Art Studio: "art desk" — every tool visible, grouped into labeled zones
+- Picker-only version hid too much (kid couldn't find things). Rebuilt so EVERYTHING is on
+  screen at once, organized into clearly separated zones each with a little icon header:
+  Brushes (all 14 as picture tiles) · Colors (swatches + color picker) · Size (5 dots) ·
+  Mirror (6 split icons) · Style (5 look previews) · Stamps (Shapes/Stickers/Scene) · Do
+  (undo/redo/trash/heart). Active choice shows a green highlight so she sees what's picked.
+- Big sticker library + scenes + gallery stay as overlays (too many to inline); everything
+  else is one tap, no hunting. Tray scrolls if short on height; canvas still gets the room.
+- All drawing/sound/save/gallery logic unchanged; qa-art.mjs still green.
+
 ## 2026-06-27 — Art Studio: decluttered, picker-based kid UI (one tidy toolbar)
 - The tray was too crowded (16 brushes + 4 control rows). Reorganized into ONE clean toolbar of
   big buttons, each showing the kid's CURRENT choice as a picture and opening a simple full-screen
