@@ -235,6 +235,7 @@ function advanceAfterEnd(){
 // ============================================================================
 let renderer=null, scene=null, camera=null, sceneReady=false;
 let carGroup=null, dashPool=[], scenePool=[], groundMesh=null, roadMesh=null;
+let cloudPool=[], balloonPool=[], cloudTex=null;
 const matCache={};
 function mat(color){ if(!matCache[color]) matCache[color]=new THREE.MeshLambertMaterial({color}); return matCache[color]; }
 const geoCache={};
@@ -286,6 +287,25 @@ function makeTreat(type){
   g.userData.type=type; return g;
 }
 
+// soft fluffy cloud drawn to a canvas (no external asset) -> a floating sky sprite
+function makeCloudTexture(){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=140; const x=cv.getContext('2d');
+  function blob(cx,cy,r){ const g=x.createRadialGradient(cx,cy,0,cx,cy,r); g.addColorStop(0,"rgba(255,255,255,0.96)"); g.addColorStop(0.7,"rgba(255,255,255,0.78)"); g.addColorStop(1,"rgba(255,255,255,0)"); x.fillStyle=g; x.beginPath();x.arc(cx,cy,r,0,7);x.fill(); }
+  blob(86,86,42); blob(128,72,54); blob(172,86,44); blob(110,96,52); blob(150,96,48);
+  return new THREE.CanvasTexture(cv);
+}
+function makeCloud(){ if(!cloudTex)cloudTex=makeCloudTexture();
+  const m=new THREE.MeshBasicMaterial({map:cloudTex,transparent:true,depthWrite:false,fog:false,opacity:0.92});
+  const w=20+Math.random()*18; const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,w*0.52), m);
+  mesh.userData.vx=0.012+Math.random()*0.03; return mesh;
+}
+function makeBalloon(color){ const g=new THREE.Group();
+  const balloon=new THREE.Mesh(new THREE.SphereGeometry(1.6,16,14), new THREE.MeshBasicMaterial({color,fog:false}));
+  balloon.scale.y=1.25; balloon.position.y=2.2; g.add(balloon);
+  const basket=new THREE.Mesh(box(0.7,0.6,0.7), new THREE.MeshBasicMaterial({color:0x8a5a3c,fog:false})); basket.position.y=0.1; g.add(basket);
+  g.userData.vx=0.01+Math.random()*0.02; g.userData.phase=Math.random()*6.28; return g;
+}
+
 function buildScene(){
   const cv=document.getElementById('c');
   renderer=new THREE.WebGLRenderer({canvas:cv, antialias:true});
@@ -313,7 +333,17 @@ function buildScene(){
     else { const h=meshOf(box(1.6,1.8,1.6), houseCols[i%houseCols.length]); h.position.y=0.9; grp.add(h);
       const roof=meshOf(cyl(0.05,1.3,0.9,4), 0xb5524a); roof.position.y=2.2; roof.rotation.y=Math.PI/4; grp.add(roof); }
     grp.position.set(sx*(6.8+(i%3)*0.6), 0, NEAR_Z - i*12);
+    grp.userData.kind = useTree ? "tree" : "house"; grp.userData.swayPh=Math.random()*6.28;
     scene.add(grp); scenePool.push(grp); } }
+  // floating clouds (drift across the sky, in front of the AI backdrop)
+  for(let i=0;i<8;i++){ const cl=makeCloud();
+    cl.position.set(-60+Math.random()*120, 13+Math.random()*16, -60 - Math.random()*90);
+    scene.add(cl); cloudPool.push(cl); }
+  // a couple of hot-air balloons drifting far off for life
+  const balloonCols=[0xff7aa8,0x62d0ff,0xffd23f];
+  for(let i=0;i<2;i++){ const b=makeBalloon(balloonCols[i%balloonCols.length]);
+    b.position.set((i?1:-1)*(16+Math.random()*10), 10+Math.random()*6, -80 - i*30);
+    scene.add(b); balloonPool.push(b); }
   carGroup=makeCar(0xff5d8f, 0xff86ac); carGroup.position.set(0,0,zForP(CAR_Y)); scene.add(carGroup);
   sceneReady=true;
 }
@@ -337,11 +367,18 @@ function applyTownColors(){ if(!scene)return; const sky=new THREE.Color(L.sky);
 // sync logic arrays -> meshes, then render
 function renderScene(){
   if(!renderer) return;
+  const now=Date.now()/1000;
+  // clouds + balloons drift ALWAYS (even on the menu) so the sky feels alive
+  for(const cl of cloudPool){ cl.position.x += cl.userData.vx; if(cl.position.x>72) cl.position.x=-72; }
+  for(const b of balloonPool){ b.position.x += b.userData.vx; if(b.position.x>40) b.position.x=-40;
+    if(b.userData.baseY==null) b.userData.baseY=b.position.y;
+    b.position.y = b.userData.baseY + Math.sin(now*0.8+b.userData.phase)*0.5; }
   if(!G){ renderer.render(scene,camera); return; }
   // recycle dashes + scenery to fake forward motion
   const adv = (state==="play"&&started)?G.speed*ZPP:0;
-  for(const d of dashPool){ d.position.z+=adv; if(d.position.z>NEAR_Z+4) d.position.z-=26*7/2*2 || 0; if(d.position.z>NEAR_Z+4) d.position.z=FAR_Z; }
-  for(const s of scenePool){ s.position.z+=adv; if(s.position.z>NEAR_Z+8) s.position.z-=16*12; }
+  for(const d of dashPool){ d.position.z+=adv; if(d.position.z>NEAR_Z+4) d.position.z=FAR_Z; }
+  for(const s of scenePool){ s.position.z+=adv; if(s.position.z>NEAR_Z+8) s.position.z-=16*12;
+    if(s.userData.kind==="tree") s.rotation.z = Math.sin(now*1.1 + s.userData.swayPh)*0.05; }   // gentle sway
   // car
   carGroup.position.x = G.carX; carGroup.position.z = zForP(CAR_Y);
   carGroup.position.y = Math.sin(G.bob)*0.06;
