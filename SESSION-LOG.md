@@ -1,5 +1,26 @@
 # Buildable Kids — Session Log
 
+## Game: more moving platforms & swinging vines (June 26 2026)
+
+Beefed up the two optional "climb-layer" toys in `public/play.html`, keeping the
+always-clearable-by-ground guarantee (the QA "perfect player" stays on the ground and
+ignores both, so denser bonus content can't soft-lock a level).
+
+- **More moving platforms.** Roomier CLIMB zones (12-17 tiles) + tighter platform packing
+  => more platforms per zone. Raised the default `movingPlatChance` 0.55 -> 0.75. Added a
+  third **diagonal** mover type (alongside horizontal/vertical) and made movers carry a little
+  arc of coins along their travel so riding them is rewarding. Riders are carried by horizontal
+  and diagonal movers.
+- **More swinging vines.** New `mkSwing()` helper; raised default `vineChance` 0.5 -> 0.8;
+  sometimes spawns a **2-vine chain** to swing across, and an **optional vine over a RUN-zone
+  gap** (a "swing the pit" shortcut — the ground jump still clears the gap, so it stays
+  clearable). Vines render in lush clusters near platforms.
+- **QA:** live `BK_GAME.sim(0)` returns **win**; stress-tested **5 varied recipes** (fast/long/
+  gap-heavy/max-density/slow) by rebuilding `LEVELS` from temp configs — **all win** with up to
+  21 platforms (all moving) and 31 vines. Visual check: vines/platforms/ride-coins render well.
+  Engine-only change; art untouched. Rebased onto teammates' pushes; clean.
+
+
 ## Game: per-world themed enemies, hazards & coins (June 26 2026)
 
 Follow-up to the 7-new-worlds session. The engine drew every world's enemy/hazard/coin from

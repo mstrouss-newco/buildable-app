@@ -171,5 +171,6 @@ Fix lives in `src/lib/audioUnlock.js`, installed once in `src/main.jsx`:
 - ~~Per-world themed props~~ DONE (June 26 2026): all 8 worlds have themed coin/gem/critter;
   the engine prefers world props and falls back to the generic `props` set.
 - Optional vertical camera for taller climbs.
-- Richer foreground art (layered grass strips), moving platforms, swinging vines.
+- Richer foreground art (layered grass strips). (Moving platforms + swinging vines
+  enhanced June 26 2026: denser, diagonal movers, ride-coins, vine chains, swing-the-pit.)
 - A small mute/settings control; gentle background music per world.
