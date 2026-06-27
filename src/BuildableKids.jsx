@@ -15,7 +15,8 @@ import QuizGate from "./QuizGate";
 import FamilyChess from "./FamilyChess";
 import { listMyMatches } from "./lib/chessMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
-import { getActiveKid, setActiveKid, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
+import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
+import { registerAudio } from "./lib/audioUnlock";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -422,7 +423,7 @@ export default function BuildableKids() {
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
           reloadLearningForActiveKid();
-          setScreen(SCREEN_HOME);
+          setScreen(getKidHelper(kid) ? SCREEN_HOME : SCREEN_HELPER);
         }}
       />
     );
@@ -652,9 +653,21 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
   const [helperOpen, setHelperOpen] = useState(false);
   const [helperHidden, setHelperHidden] = useState(false);
   const [defaultHelperImg, setDefaultHelperImg] = useState(null);
-  const [localHelper] = useState(() => { try { return JSON.parse(localStorage.getItem("bk_helper_v1") || "null"); } catch { return null; } });
+  const [localHelper] = useState(() => getKidHelper(activeKid) || (() => { try { return JSON.parse(localStorage.getItem("bk_helper_v1") || "null"); } catch { return null; } })());
   const helper = (activeKid && activeKid.helper) || localHelper || null;
-  useEffect(() => { const t = setTimeout(() => setHelperOpen(true), 900); return () => clearTimeout(t); }, []);
+  const voiceRef = useRef(null);
+  const playClip = (j) => { if (j && j.configured && j.audioUrl) { if (!voiceRef.current) { voiceRef.current = new Audio(); registerAudio(voiceRef.current); } const a = voiceRef.current; a.src = j.audioUrl; a.currentTime = 0; a.volume = 1; a.play().catch(() => {}); return true; } return false; };
+  const speakHelper = () => {
+    try {
+      const text = `Hi ${kidName}! ${helperLine}`;
+      const vid = (helper && helper.voice) || null;
+      fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vid ? { text, voiceId: vid } : { text }) })
+        .then((r) => r.json())
+        .then((j) => { if (!playClip(j) && vid) { fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }).then((r) => r.json()).then(playClip).catch(() => {}); } })
+        .catch(() => {});
+    } catch (e) {}
+  };
+  useEffect(() => { const t = setTimeout(() => { setHelperOpen(true); speakHelper(); }, 900); return () => clearTimeout(t); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (helper && helper.image) return; // already have a real helper image
     let alive = true;
@@ -844,7 +857,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
             </div>
           )}
           <div style={{ position: "relative" }}>
-            <button onClick={() => setHelperOpen((o) => !o)} aria-label={"Talk to " + helperName} className="bk-float" style={{
+            <button onClick={() => setHelperOpen((o) => { const n = !o; if (n) speakHelper(); return n; })} aria-label={"Talk to " + helperName} className="bk-float" style={{
               width: phone ? 66 : 76, height: phone ? 66 : 76, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.22)", cursor: "pointer", padding: 0, overflow: "hidden",
               background: helperImg ? `center/cover no-repeat url(${helperImg})` : "linear-gradient(135deg,#9b7edd,#6f5bd6)",
               boxShadow: "0 10px 28px rgba(155,126,221,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
@@ -859,24 +872,67 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
   );
 }
 
+const HELPER_VOICES = [
+  { id: "21m00Tcm4TlvDq8ikWAM", label: "Calm",   sample: "Hi there! I'm your calm and friendly helper." },
+  { id: "EXAVITQu4vr4xnSDxMaL", label: "Gentle", sample: "Hello! I'll be right here to help you make things." },
+  { id: "MF3mGyEYCl7XYWbV9V6O", label: "Peppy",  sample: "Hi hi hi! Let's make something super fun together!" },
+  { id: "yoZ06aMxZJJ28mfd3POQ", label: "Silly",  sample: "Hiya! Wanna make something totally goofy? Let's go!" },
+];
+
 function HelperLabScreen({ activeKid, onHome, onDone }) {
+  const [step, setStep] = useState("character");
+  const [pending, setPending] = useState(null);
+  const [voice, setVoice] = useState(HELPER_VOICES[0].id);
+  const prevRef = useRef(null);
+  const preview = (vid) => {
+    const v = HELPER_VOICES.find((x) => x.id === vid) || HELPER_VOICES[0];
+    fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: v.sample, voiceId: vid }) })
+      .then((r) => r.json())
+      .then((j) => { if (j && j.configured && j.audioUrl) { if (!prevRef.current) { prevRef.current = new Audio(); registerAudio(prevRef.current); } const a = prevRef.current; a.src = j.audioUrl; a.currentTime = 0; a.play().catch(() => {}); } })
+      .catch(() => {});
+  };
+  const finish = () => {
+    const helper = { name: (pending && pending.name) || "Buddy", image: (pending && pending.image) || null, description: (pending && pending.description) || "", voice };
+    saveKidHelper(activeKid, helper);
+    onDone(activeKid ? { ...activeKid, helper } : null);
+  };
+  const PlayDot = () => (<svg width="11" height="11" viewBox="0 0 10 10" aria-hidden="true" style={{ marginRight: 4 }}><path d="M2 1 L9 5 L2 9 Z" fill="currentColor" /></svg>);
   return (
     <div style={styles.container}>
       <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
         <button onClick={onHome} style={styles.backButton}>Home</button>
       </div>
       <h1 style={{ ...styles.logo, marginTop: 8 }}>Helper Lab</h1>
-      <p style={styles.tagline}>Pick a buddy or make your own — they cheer you on!</p>
-      <div style={{ width: "100%", maxWidth: 920 }}>
-        <CharacterCreatorScreen
-          onCharacterCreated={(c) => {
-            const helper = { name: (c && c.name) || "Buddy", image: (c && c.image) || null, description: (c && c.description) || "" };
-            try { localStorage.setItem("bk_helper_v1", JSON.stringify(helper)); } catch (e) {}
-            if (activeKid) { const kid = { ...activeKid, helper }; setActiveKid(kid); onDone(kid); }
-            else { onDone(null); }
-          }}
-        />
-      </div>
+      {step === "character" ? (
+        <>
+          <p style={styles.tagline}>Pick a buddy or make your own — they cheer you on!</p>
+          <div style={{ width: "100%", maxWidth: 920 }}>
+            <CharacterCreatorScreen
+              onCharacterCreated={(c) => { setPending({ name: (c && c.name) || "Buddy", image: (c && c.image) || null, description: (c && c.description) || "" }); setStep("voice"); }}
+            />
+          </div>
+        </>
+      ) : (
+        <div style={{ width: "100%", maxWidth: 520, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+          <p style={styles.tagline}>Now pick {(pending && pending.name) || "your buddy"}'s voice!</p>
+          {pending && pending.image && (
+            <img src={pending.image} alt="" style={{ width: 120, height: 120, borderRadius: "50%", objectFit: "cover", border: "3px solid rgba(155,126,221,0.5)" }} />
+          )}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, width: "100%" }}>
+            {HELPER_VOICES.map((v) => (
+              <button key={v.id} onClick={() => { setVoice(v.id); preview(v.id); }} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "14px 16px", borderRadius: 14, cursor: "pointer",
+                border: voice === v.id ? "2px solid #9b7edd" : CARD_BORDER, background: voice === v.id ? "rgba(155,126,221,0.18)" : CARD_BG, color: "#fff", fontFamily: NUN, fontWeight: 800, fontSize: 16,
+              }}>
+                {v.label}
+                <span style={{ display: "inline-flex", alignItems: "center", fontSize: 12, color: "#bfa6f5", fontWeight: 800 }}><PlayDot />hear</span>
+              </button>
+            ))}
+          </div>
+          <button onClick={finish} style={{ ...styles.primaryButton, maxWidth: 360 }}>That's my helper!</button>
+          <button onClick={() => setStep("character")} style={styles.backButton}>Pick a different character</button>
+        </div>
+      )}
     </div>
   );
 }

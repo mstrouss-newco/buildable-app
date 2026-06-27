@@ -192,7 +192,7 @@ function saveGuestKids(arr) {
 export async function listKidProfiles() {
   if (isSignedIn()) {
     return restFetch(
-      "kid_profiles?select=id,display_name:name,avatar,created_at&order=created_at.asc",
+      "kid_profiles?select=id,display_name:name,avatar,helper,created_at&order=created_at.asc",
       { method: "GET" }
     );
   }
@@ -370,4 +370,23 @@ export async function completeOAuthRedirect() {
   // Remove the tokens from the address bar so they aren't bookmarked/shared.
   try { history.replaceState(null, "", oauthRedirectTarget()); } catch (e) {}
   return true;
+}
+
+// ---- HELPER (per-kid character + voice) ----------------------------
+// Stored per-kid in localStorage (works in guest + account mode) AND, when
+// signed in, persisted to the kid_profiles.helper jsonb column (db/add-kid-helper.sql).
+// Graceful: if the DB column doesn't exist yet, the localStorage copy still works.
+export function getKidHelper(kid) {
+  if (!kid) return null;
+  if (kid.helper) return kid.helper;
+  try { return JSON.parse(localStorage.getItem("bk_helper_" + kid.id) || "null"); } catch { return null; }
+}
+export async function saveKidHelper(kid, helper) {
+  if (!kid || !kid.id || !helper) return;
+  try { localStorage.setItem("bk_helper_" + kid.id, JSON.stringify(helper)); } catch (e) {}
+  const active = getActiveKid();
+  if (active && active.id === kid.id) setActiveKid({ ...active, helper });
+  if (isSignedIn()) {
+    try { await restFetch(`kid_profiles?id=eq.${kid.id}`, { method: "PATCH", body: JSON.stringify({ helper }) }); } catch (e) { /* column may not exist yet */ }
+  }
 }
