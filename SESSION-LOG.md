@@ -783,3 +783,12 @@ Pieces now idle in place (randomized aliveBob/Wiggle/Breathe/Look on the piece S
 ## Chess: world-specific living creatures (Ocean + Jungle first) — June 26 2026
 
 Piece art is now per-world: `pieceSVG(type,color,world)` dispatches to a `CREATURES[world]` set, falling back to the default heroes for un-themed worlds. Ocean = fish/seahorse/jellyfish/crab/octopus/pufferfish-king; Jungle = frog/monkey/parrot/tortoise/butterfly/lion-king. Drawn as inline SVG (reusing the team palette + eyes/smile helpers) so the alive idle motion, 2-team recolor, and crispness all carry over; rendered via `renderPieces` with the active `sceneKey`. World BACKGROUNDS already reuse the asset library; creatures are newly drawn vector (the library has scene/item art, not 6 creatures/world). Next: Space, Candy, Castle, Desert creature sets. No emoji.
+
+## Buildable Breaker: bespoke upbeat music (api/breaker-music.js) — June 27 2026
+
+Replaced the chess-music reuse with a dedicated upbeat/arcade music set: new api/breaker-music.js
+(ElevenLabs Music /v1/music, cache key breakermusic:<world>) with one peppy track per backdrop —
+meadow chiptune-pop, space synthwave, candy bubblegum, ocean surf, castle 8-bit march, desert funk.
+Engine ensureMusic now points at /api/breaker-music?world=<backdrop> (loop, swaps on backdrop change,
+respects mute). All 6 worlds pre-warmed + cached live (~469KB each; cached refetch ~19ms). Verified
+engine sets BA.music.src to the new endpoint with loop=true.
