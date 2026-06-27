@@ -373,6 +373,26 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27b (characters get a theme label — first convergence step)
+
+First step of bringing every project onto the shared asset library: gave reusable
+heroes a `theme` so they can be filtered and mixed like worlds/elements already are
+(theme is a LABEL, not a fence — heroes stay usable across all themes).
+
+- `db/add-character-theme-tags.sql` (idempotent, non-destructive): adds
+  `theme_tags text[]` + a GIN index to `community_characters`. **Owner must run
+  this once in the Supabase SQL editor** (agents can't touch Supabase).
+- `api/list-characters.js`: now selects `theme_tags`, returns `theme`, accepts an
+  optional `?theme=` filter, and **falls back gracefully if the column doesn't
+  exist yet** — so the picker keeps working before/after the migration is run.
+- `api/generate-creature.js`: writes `theme_tags` when a `theme` is provided
+  (best-effort; missing column can't block character creation).
+
+Order is safe: code is live and harmless now; running the SQL simply switches the
+theme filter on. No project breaks at any point.
+
+---
+
 ## Session log — 2026-06-27 (Shared Asset Library rule + Survival background fix)
 
 **Shared Asset Library rule added to `AGENTS.md`.** Codified that all projects

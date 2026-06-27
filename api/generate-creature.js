@@ -106,13 +106,19 @@ async function saveCache(supabaseUrl, supabaseKey, hash, url, entity) {
   } catch (e) {}
 }
 
-async function logToCommunity(supabaseUrl, supabaseKey, name, description, imageUrl, deviceId) {
+async function logToCommunity(supabaseUrl, supabaseKey, name, description, imageUrl, deviceId, theme) {
   if (!supabaseUrl || !supabaseKey) return null;
   try {
+    // Theme is a LABEL, not a fence (see ASSET-LIBRARY.md): only set it when the
+    // caller knows one; heroes stay usable across every theme regardless. This
+    // is best-effort — if the theme_tags column isn't there yet the POST simply
+    // fails and is caught below, so character creation is never blocked.
+    const row = { name, description, image_url: imageUrl, created_by_device_id: deviceId, moderation_status: "approved" };
+    if (theme && String(theme).trim()) row.theme_tags = [String(theme).trim().toLowerCase()];
     const r = await fetch(`${supabaseUrl}/rest/v1/community_characters`, {
       method: "POST",
       headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json", "Prefer": "return=representation" },
-      body: JSON.stringify({ name, description, image_url: imageUrl, created_by_device_id: deviceId, moderation_status: "approved" })
+      body: JSON.stringify(row)
     });
     if (r.ok) {
       const data = await r.json();
@@ -168,7 +174,7 @@ async function generateImage(prompt, openaiKey, timeoutMs = 55000) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
-  const { entity, deviceId } = req.body || {};
+  const { entity, deviceId, theme } = req.body || {};
   if (!entity || (!entity.body && !entity.description)) return res.status(400).json({ error: "entity.body or entity.description required" });
 
   const hash = entityHash(entity);
@@ -201,7 +207,7 @@ export default async function handler(req, res) {
     if (supabaseUrl && supabaseKey) {
       await saveCache(supabaseUrl, supabaseKey, hash, imageUrl, entity);
       await logSpend(supabaseUrl, supabaseKey, DALLE_COST_PER_IMAGE);
-      await logToCommunity(supabaseUrl, supabaseKey, characterName, entity.description || '', imageUrl, deviceId || 'anonymous');
+      await logToCommunity(supabaseUrl, supabaseKey, characterName, entity.description || '', imageUrl, deviceId || 'anonymous', theme || entity.theme || null);
     }
 
     return res.status(200).json({ url: imageUrl, cached: false, characterName });
