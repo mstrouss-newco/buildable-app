@@ -22,6 +22,7 @@ const EFFECTS = [
   "fireplace_flicker", "snow_outside_window", "twinkling_stars", "candle_glow",
   "gentle_rain", "drifting_clouds", "magic_sparkles", "character_blink",
   "soft_glow", "floating_dust", "sun_pulse", "water_shimmer", "gentle_waves",
+  "shooting_stars", "falling_petals",
 ];
 const EFFECT_SET = new Set(EFFECTS);
 

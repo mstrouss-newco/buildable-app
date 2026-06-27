@@ -28,6 +28,8 @@ export const STORY_EFFECTS = [
   "embers",
   "fireflies",
   "falling_leaves",
+  "shooting_stars",
+  "falling_petals",
 ];
 
 const EFFECT_SET = new Set(STORY_EFFECTS);
@@ -46,6 +48,7 @@ function injectKeyframes() {
 @keyframes bk-firefly { 0%{transform:translate(0,0);opacity:.2} 25%{opacity:1} 50%{transform:translate(14px,-12px);opacity:.5} 75%{opacity:.95} 100%{transform:translate(-8px,-22px);opacity:.2} }
 @keyframes bk-leaf { 0%{transform:translateY(-12%) translateX(0) rotate(0)} 50%{transform:translateY(50%) translateX(22px) rotate(180deg)} 100%{transform:translateY(115%) translateX(-12px) rotate(360deg)} }
 @keyframes bk-bubble { 0%{transform:translateY(15%) translateX(0) scale(.6);opacity:0} 15%{opacity:.75} 50%{transform:translateY(-45%) translateX(10px) scale(.9)} 100%{transform:translateY(-115%) translateX(-6px) scale(1);opacity:0} }
+@keyframes bk-shoot { 0%{opacity:0;transform:translate(0,0) rotate(150deg)} 4%{opacity:1} 18%{opacity:0;transform:translate(-240px,150px) rotate(150deg)} 100%{opacity:0;transform:translate(-240px,150px) rotate(150deg)} }
 @keyframes bk-fall { 0%{transform:translateY(-10%) translateX(0)} 100%{transform:translateY(110%) translateX(12px)} }
 @keyframes bk-rain { 0%{transform:translateY(-20%)} 100%{transform:translateY(120%)} }
 @keyframes bk-twinkle { 0%,100%{opacity:.2;transform:scale(.7)} 50%{opacity:1;transform:scale(1)} }
@@ -281,6 +284,36 @@ function LivingLayer({ effect }) {
             }} />); })}
         </div>
       );
+    case "shooting_stars":
+      return (
+        <div style={base} aria-hidden="true">
+          {seedNodes(30, (i) => (
+            <span key={"t" + i} style={{
+              position: "absolute", top: `${Math.random() * 70}%`, left: `${Math.random() * 100}%`, width: 4, height: 4, borderRadius: "50%",
+              background: "#fff", boxShadow: "0 0 6px rgba(255,255,255,0.9)",
+              animation: `bk-twinkle ${1.5 + Math.random() * 2.5}s ease-in-out ${Math.random() * 3}s infinite`,
+            }} />
+          ))}
+          {seedNodes(3, (i) => (
+            <span key={"s" + i} style={{
+              position: "absolute", top: `${5 + Math.random() * 38}%`, left: `${52 + Math.random() * 42}%`, width: 86, height: 2, borderRadius: 2,
+              background: "linear-gradient(90deg, rgba(255,255,255,0), #fff)", boxShadow: "0 0 8px rgba(255,255,255,0.9)",
+              animation: `bk-shoot ${7 + i * 4}s ease-in ${2.5 + i * 3}s infinite`,
+            }} />
+          ))}
+        </div>
+      );
+    case "falling_petals":
+      return (
+        <div style={base} aria-hidden="true">
+          {seedNodes(16, (i) => { const pink = Math.random() < 0.6; return (
+            <span key={i} style={{
+              position: "absolute", top: "-10%", left: `${Math.random() * 100}%`, width: 10, height: 7, borderRadius: "60% 0 60% 0",
+              background: pink ? "rgba(255,180,200,0.9)" : "rgba(255,235,245,0.92)",
+              animation: `bk-leaf ${6 + Math.random() * 5}s linear ${Math.random() * 5}s infinite`,
+            }} />); })}
+        </div>
+      );
     case "soft_glow":
     default:
       return (
@@ -377,7 +410,7 @@ const FG_BY_WORLD = {
   "enchanted-forest": "fireflies",
   "dragon-mountain": "embers",
   "dino-jungle": "falling_leaves",
-  "space-station": "twinkling_stars",
+  "space-station": "shooting_stars",
   "desert-oasis": "sun_pulse",
   "candy-land": "magic_sparkles",
 };
