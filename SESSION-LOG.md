@@ -1,7 +1,7 @@
 # Buildable Kids — Session Log
 
 ## 2026-06-27 — Three simple 2-player board games on ONE shared shell (Tic-Tac-Toe, Connect Four, Dots and Boxes)
-Branch: `claude/games-simple-batch1` (handed to Mike — NOT pushed to main).
+Shipped to `main` (live on www.buildablekids.com); branch `claude/games-simple-batch1` also pushed.
 - **New shared shell built ONCE:** `public/buildable-boardgame.js` (`BG`, `window.BuildableBoardGame`)
   — the Track-B host for turn-based, same-device, no-backend board games. It owns the hot-seat
   TURN MANAGER (Player A / Player B, or solo vs an easy computer), the canvas (responsive + DPR +
