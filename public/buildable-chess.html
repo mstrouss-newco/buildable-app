@@ -646,7 +646,7 @@ function sfxYourTurn(){if(!soundOn)return;if(libPlay('yourturn'))return;osc(660,
 /* ===== Background music (looping world tracks from the library) ===== */
 let musicOn=true, musicEl=null, musicWorld=null;
 const ALIVE=['aliveBob','aliveWiggle','aliveBreathe','aliveLook'];
-const AIWORLDS={space:1}; // worlds using AI-generated piece art (prototype); others use vector
+const AIWORLDS={space:1,ocean:1,jungle:1,candy:1,castle:1,desert:1}; // all worlds use AI-generated piece art (vector fallback while each loads)
 let aliveOn=true; try{aliveOn=localStorage.getItem('bk_chess_alive')!=='0';}catch(e){}
 let moveVoiceEl=null;
 function sayMove(){ if(!aliveOn)return; try{ if(moveVoiceEl&&!moveVoiceEl.paused&&!moveVoiceEl.ended)return; const n='move'+(1+Math.floor(Math.random()*16)); if(!moveVoiceEl)moveVoiceEl=new Audio(); moveVoiceEl.src='/api/chess-voice?line='+n; moveVoiceEl.volume=0.85; moveVoiceEl.play().catch(()=>{}); }catch(e){} }

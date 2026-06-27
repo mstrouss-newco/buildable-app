@@ -865,3 +865,7 @@ Themed creatures were hard to read as chess ranks, so every in-game piece now ca
 ## Chess: AI-generated piece art — kind=chesspiece + Space prototype — June 26 2026
 
 Added `kind=chesspiece` to `api/images.js` (gpt-image-1, transparent, cached in image_cache, served by `/api/images?kind=chesspiece&world=&piece=`). Prompt = piece-shaped core ("clearly reads as a chess <rook/knight/...>") + per-world theme. Game renders AI image pieces for worlds in `AIWORLDS` (prototype: space) with the vector piece as an instant fallback shown until the image loads (so the board is playable during the ~30s first-gen), team distinguished by a colored base glow. Alive idle animates the img too. Other worlds keep vector. Next: judge quality/iPad perf on Space, then roll out remaining worlds; note no server-side image resize lib, so watch iPad memory (1024 PNGs, ~6 distinct per world).
+
+## Chess: AI pieces rolled out to all worlds — June 26 2026
+
+After approving the Space prototype, expanded AIWORLDS to all six worlds (ocean/jungle/space/candy/castle/desert). Each world now renders gpt-image-1 piece art (kind=chesspiece) with the vector classic-core piece as instant fallback until each image loads + caches. Pieces generate on first open (~30s, vector shows meanwhile), instant after.
