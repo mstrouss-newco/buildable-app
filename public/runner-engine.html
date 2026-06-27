@@ -77,13 +77,15 @@ function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=M
 const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Sunny Town Drive",
   hearts: 3,
+  // speeds tuned GENTLE for ages 4-8 (was 3.6→6.1; kids found it too fast). Each town
+  // ramps up a little; dist tuned so a run is a comfy ~18-22 seconds.
   levels: [
-    { name:"Maple Street",    sky:0xbfe9ff, grass:0x8fd98f, dist:3400, speed:3.6, density:0.00, treat:0.55 },
-    { name:"Market Square",   sky:0xffe3bf, grass:0x9bd98a, dist:4200, speed:4.1, density:0.10, treat:0.55 },
-    { name:"Sunny Beach Road",sky:0xbff0ec, grass:0xffe39c, dist:5000, speed:4.6, density:0.22, treat:0.50 },
-    { name:"Petal Park",      sky:0xffd6ec, grass:0x86d68f, dist:5800, speed:5.1, density:0.34, treat:0.50 },
-    { name:"Downtown Dash",   sky:0xcdd6ff, grass:0x8fbf8f, dist:6600, speed:5.6, density:0.46, treat:0.45 },
-    { name:"Rainbow Bridge",  sky:0xe6d6ff, grass:0x9be0c0, dist:7600, speed:6.1, density:0.55, treat:0.45 },
+    { name:"Maple Street",    sky:0xbfe9ff, grass:0x8fd98f, dist:2500, speed:2.2, density:0.00, treat:0.55 },
+    { name:"Market Square",   sky:0xffe3bf, grass:0x9bd98a, dist:2900, speed:2.6, density:0.10, treat:0.55 },
+    { name:"Sunny Beach Road",sky:0xbff0ec, grass:0xffe39c, dist:3400, speed:3.0, density:0.20, treat:0.50 },
+    { name:"Petal Park",      sky:0xffd6ec, grass:0x86d68f, dist:3900, speed:3.4, density:0.30, treat:0.50 },
+    { name:"Downtown Dash",   sky:0xcdd6ff, grass:0x8fbf8f, dist:4400, speed:3.8, density:0.40, treat:0.45 },
+    { name:"Rainbow Bridge",  sky:0xe6d6ff, grass:0x9be0c0, dist:5000, speed:4.2, density:0.50, treat:0.45 },
   ],
   treatColors: ["#ffd23f","#ff8fce","#7ee0a0","#62d0ff","#ff7aa8"],
 };
@@ -96,7 +98,7 @@ const TREATS    = ["coin","gift","star","icecream"];
 const LANES = 3;
 const CAR_Y = H-150;          // the car's fixed position along the track
 const OBS_H = 70;
-const ROW_GAP = 240;          // spacing between rows -> one row in the band at a time
+const ROW_GAP = 290;          // spacing between rows -> one row in the band + comfy reaction time
 const START_CLEAR = 360;      // clear road at the start of each town
 const HIT_BAND = 34;          // |obstacle p - CAR_Y| within this (same lane) = crash
 const SAFE_BAND = 64;         // wider zone the bot treats as dangerous (must exceed HIT_BAND)
