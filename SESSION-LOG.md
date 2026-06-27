@@ -47,6 +47,16 @@
   Supabase, and confirm the parent-account lane env vars are live. Pass-and-play + bot need
   no setup. **Still TODO (owner):** merge the branch to `main` to deploy, then live-QA across
   real devices (the one thing the headless sim can't cover).
+## 2026-06-27 — Art Studio: coloring-book mode + portrait/tablet reflow
+- COLORING BOOK: new Stamps option opens 8 outline pages (flower/house/fish/butterfly/rocket/
+  sun/car/balloon, drawn line-art). Picking one sets a white page; kid fills regions with the
+  Fill bucket (outline bounds the flood) or draws over it. Outlines redraw on top (multiply) so
+  the lines stay crisp above colors. Page persists in autosave + saved art (art.coloring).
+- RESPONSIVE: @media portrait / max-width 760 — the left (brushes) and right (colors) rails
+  flip from vertical side rails to horizontal scroll bars above/below the canvas, so on a
+  portrait tablet/phone the drawing area keeps full width instead of being squeezed.
+- qa-art.mjs green.
+
 ## 2026-06-27 — Art Studio: obvious Clear button + more stamp shapes
 - Top action buttons now have word captions under the icons (Undo / Redo / Clear / Save /
   Mine / Sound) and CLEAR is tinted red so it reads as "clear/start over" at a glance.
