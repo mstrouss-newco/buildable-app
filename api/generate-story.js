@@ -21,7 +21,7 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const EFFECTS = [
   "fireplace_flicker", "snow_outside_window", "twinkling_stars", "candle_glow",
   "gentle_rain", "drifting_clouds", "magic_sparkles", "character_blink",
-  "soft_glow", "floating_dust", "sun_pulse", "water_shimmer", "gentle_waves",
+  "soft_glow", "floating_dust", "sun_pulse",
   "shooting_stars", "falling_petals",
 ];
 const EFFECT_SET = new Set(EFFECTS);
@@ -29,7 +29,7 @@ const EFFECT_SET = new Set(EFFECTS);
 // The library worlds (slugs MUST match api/story-library.js).
 const WORLDS = {
   "snowy-village":    { name: "Snowy Pine Village", desc: "a cozy snowy mountain village with little cabins and falling snow", fx: "snow_outside_window" },
-  "coral-reef":       { name: "Coral Reef Kingdom", desc: "a bright underwater coral reef kingdom", fx: "water_shimmer" },
+  "coral-reef":       { name: "Coral Reef Kingdom", desc: "a bright underwater coral reef kingdom", fx: "bubbles" },
   "enchanted-forest": { name: "Enchanted Forest", desc: "a magical glowing forest with mushrooms and fireflies", fx: "magic_sparkles" },
   "dragon-mountain":  { name: "Dragon Mountain", desc: "a friendly fantasy mountain with a little castle and a glowing cave", fx: "soft_glow" },
   "dino-jungle":      { name: "Dino Jungle", desc: "a lush prehistoric jungle with ferns and a gentle volcano", fx: "floating_dust" },

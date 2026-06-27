@@ -214,29 +214,10 @@ function LivingLayer({ effect }) {
         </div>
       );
     case "water_shimmer":
-      // A sweeping light band + sparkles along the lower third (the water).
-      return (
-        <div style={base} aria-hidden="true">
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "34%",
-            background: "linear-gradient(105deg, transparent 30%, rgba(220,240,255,0.28) 50%, transparent 70%)",
-            backgroundSize: "220% 100%", animation: "bk-sweep 4.5s linear infinite" }} />
-          {seedNodes(28, (i) => (
-            <span key={i} style={{
-              position: "absolute", bottom: `${4 + Math.random() * 26}%`, left: `${Math.random() * 100}%`,
-              width: 5, height: 5, borderRadius: "50%", background: "rgba(220,240,255,0.95)",
-              boxShadow: "0 0 6px rgba(180,220,255,0.9)",
-              animation: `bk-twinkle ${1.4 + Math.random() * 2}s ease-in-out ${Math.random() * 2.5}s infinite` }} />
-          ))}
-        </div>
-      );
     case "gentle_waves":
-      return (
-        <div style={base} aria-hidden="true">
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "30%",
-            background: "linear-gradient(transparent, rgba(120,180,220,0.18))",
-            animation: "bk-wave 5s ease-in-out infinite" }} />
-        </div>
-      );
+      // Water overlay removed — it covered too much of the scene. Reef/water pages
+      // still get bubbles (per-world ambience) + the water SOUND.
+      return <div style={base} aria-hidden="true" />;
     case "bubbles":
       return (
         <div style={base} aria-hidden="true">
