@@ -388,6 +388,7 @@ export default function BuildableKids() {
         onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
         onTop={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TOP); }}
         onGames={() => setScreen(SCREEN_GAME_PICKER)}
+        onMakeGame={() => setScreen(SCREEN_INTRO)}
         onSounds={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_SOUNDS); }}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
         onArt={() => setScreen(SCREEN_ART)}
@@ -680,7 +681,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds }) {
+function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds }) {
   // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
   const AppIcon = ({ grad, size = 76, children }) => (
     <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
@@ -737,6 +738,12 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onArt, onTyping, o
       <circle cx="24" cy="18" r="5" fill="#fff" />
       <path d="M16.5 22 h15 l-2.5 12 h-10 z" fill="#fff" />
       <rect x="13" y="33" width="22" height="6" rx="3" fill="#fff" />
+    </svg>
+  );
+  const WandGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 9 l3.6 9.8 L37.4 22 l-9.8 3.6 L24 35 l-3.6-9.4 L11 22 l9.8-3.2 Z" fill="#fff" />
+      <circle cx="38" cy="11" r="2.4" fill="#fff" /><circle cx="11" cy="35" r="1.8" fill="#fff" />
     </svg>
   );
   const TrophyGlyph = () => (
@@ -1037,7 +1044,8 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onArt, onTyping, o
         {/* what do you want to make */}
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: "#fff", marginBottom: 11 }}>What do you want to make?</div>
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${makeCols}, 1fr)`, gap: 12, marginBottom: 26 }}>
-          <MakeTile grad="linear-gradient(160deg,#3DD06A,#2BB14F)" glyph={<ControllerGlyph />} title="Make a game" sub="Build & play games" tag onClick={onGames} />
+          <MakeTile grad="linear-gradient(160deg,#A06BFF,#7A4FE0)" glyph={<WandGlyph />} title="Make a game" sub="Build your own" onClick={onMakeGame} />
+          <MakeTile grad="linear-gradient(160deg,#3DD06A,#2BB14F)" glyph={<ControllerGlyph />} title="Play a game" sub="Ready-to-play games" tag onClick={onGames} />
           <MakeTile grad="linear-gradient(160deg,#FFB13C,#F0972A)" glyph={<TrophyGlyph />} title="Play a top game" sub="Play it, then remix it" tag onClick={onTop} />
           <MakeTile grad="linear-gradient(160deg,#F2789E,#E0578F)" glyph={<BookGlyph />} title="Make a story" sub="A living picture book" onClick={onStories} />
           <MakeTile grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)" glyph={<NoteGlyph />} title="Make a song" sub="Sing about anything" onClick={onMusic} />
