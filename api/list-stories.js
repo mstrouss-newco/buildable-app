@@ -24,8 +24,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, story: Array.isArray(rows) ? rows[0] || null : null });
     }
     const filter = kidProfileId ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId) : "device_id=eq." + encodeURIComponent(deviceId);
-    const q = "saved_stories?" + filter + "&select=story_id,title,world,cover_color,created_at&order=created_at.desc&limit=20";
-    const r = await sb(q);
+    const baseCols = "story_id,title,world,cover_color,created_at";
+    let r = await sb("saved_stories?" + filter + "&select=" + baseCols + ",published,play_count,heart_count&order=created_at.desc&limit=20");
+    if (!r.ok) { r = await sb("saved_stories?" + filter + "&select=" + baseCols + "&order=created_at.desc&limit=20"); }
     if (!r.ok) { const detail = await r.text(); return res.status(502).json({ error: "list failed", status: r.status, detail: detail.slice(0, 300) }); }
     const stories = await r.json();
     return res.status(200).json({ ok: true, configured: true, stories: Array.isArray(stories) ? stories : [], count: Array.isArray(stories) ? stories.length : 0, max: 20 });

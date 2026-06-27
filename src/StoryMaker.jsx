@@ -37,7 +37,7 @@ const rand=(a)=>a[Math.floor(Math.random()*a.length)];
 
 function Chevron({dir}){return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{dir==="up"?<polyline points="6 15 12 9 18 15"/>:<polyline points="6 9 12 15 18 9"/>}</svg>);}
 
-export default function StoryMaker({ onBack, onHome, playerName }) {
+export default function StoryMaker({ onBack, onHome, playerName, remix = null, onConsumeRemix = null }) {
   const deviceId=getDeviceId(); const kidProfileId=getKidProfileId();
   const [view,setView]=useState("landing");   // landing | pick | generating | reading
   const [step,setStep]=useState(0);
@@ -78,6 +78,24 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
 
   async function loadSaved(){try{const r=await fetch("/api/list-stories?deviceId="+encodeURIComponent(deviceId)+(kidProfileId?"&kidProfileId="+encodeURIComponent(kidProfileId):""));const j=await r.json();setSaved(Array.isArray(j.stories)?j.stories:[]);}catch{}}
   useEffect(()=>{loadSaved();},[]);
+
+  async function publishStory(st){
+    const next=!st.published;
+    setSaved(prev=>prev.map(x=>x.story_id===st.story_id?{...x,published:next}:x));
+    try{ await fetch("/api/publish-creation",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({kind:"story",id:st.story_id,deviceId,publish:next})}); }catch{}
+  }
+
+  // Remix: riff on another kid's published story by starting the picker with its
+  // idea pre-filled, so the new book is the kid's own creation.
+  useEffect(()=>{
+    if(!remix) return;
+    reset();
+    setCustomSpark(remix.title||""); setSpark("");
+    setView("pick"); setStep(0);
+    setSavedMsg("");
+    if(onConsumeRemix) onConsumeRemix();
+  },[remix]);
 
   const MUSIC_URL="/music-library/playful_musicbox.mp3?v=1";
   function ensureMusic(){ if(!musicRef.current && typeof window!=="undefined"){ const a=new Audio(MUSIC_URL); a.loop=true; a.volume=0.18; a.preload="auto"; musicRef.current=a; } return musicRef.current; }
@@ -350,6 +368,9 @@ export default function StoryMaker({ onBack, onHome, playerName }) {
             <div style={{...s.savedCover,background:st.cover_color||"#7a4a86"}}/>
             <span style={s.savedName}>{st.title}</span></button>
           <button style={s.savedDel} onClick={()=>deleteSaved(st.story_id)} title="Delete">×</button>
+          <button style={{...s.savedPub,background:st.published?"rgba(61,208,106,0.9)":"rgba(0,0,0,0.6)"}} onClick={()=>publishStory(st)} title={st.published?"Published to Top board — tap to make private":"Publish to the Top board"} aria-label="Publish">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>
+          </button>
         </div>))}
       </div>
     </div>)}
@@ -410,4 +431,5 @@ const s = {
   savedCover:{width:130,height:90,borderRadius:14},
   savedName:{fontSize:13,fontWeight:700,color:"#fff",textAlign:"center"},
   savedDel:{position:"absolute",top:-6,right:-6,width:26,height:26,borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.6)",color:"#fff",cursor:"pointer",fontSize:16,lineHeight:1},
+  savedPub:{position:"absolute",bottom:-6,right:-6,width:28,height:28,borderRadius:"50%",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
 };

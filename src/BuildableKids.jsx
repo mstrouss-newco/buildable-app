@@ -925,6 +925,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
   const [gameMechanic, setGameMechanic] = useState(null);
   const [publishing, setPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState(null);
+  const [publishedGameId, setPublishedGameId] = useState(null);
   const [publishError, setPublishError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1033,6 +1034,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
       const data = await response.json();
       if (response.ok && data.shareUrl) {
         setPublishedUrl(data.shareUrl);
+        setPublishedGameId(data.gameId || null);
       } else {
         setPublishError("Couldn't publish your game. Try again!");
       }
@@ -1042,6 +1044,16 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
     } finally {
       setPublishing(false);
     }
+  };
+
+  const unpublishGame = async () => {
+    try {
+      const deviceId = localStorage.getItem("deviceId");
+      if (publishedGameId && deviceId) {
+        await fetch("/api/publish-creation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "game", id: publishedGameId, deviceId, publish: false }) });
+      }
+    } catch (e) { /* ignore */ }
+    setPublishedUrl(null); setPublishedGameId(null);
   };
 
   // Inject the generated HTML into the iframe.
@@ -1174,6 +1186,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
               <p style={styles.publishedTitle}>Published! Anyone can play it now.</p>
               <p style={styles.shareLabel}>Share link:</p>
               <code style={styles.shareLink}>{(typeof window !== "undefined" ? window.location.origin : "") + publishedUrl}</code>
+              <button onClick={unpublishGame} style={{ marginTop: "14px", background: "rgba(255,255,255,0.10)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "999px", padding: "10px 20px", fontWeight: 800, fontFamily: NUN, cursor: "pointer" }}>Make private</button>
             </div>
           )}
         </div>
