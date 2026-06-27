@@ -168,6 +168,18 @@
       "dest": "/game-music/$1"
     },
     {
+      "src": "/survival-engine.html",
+      "dest": "/survival-engine.html"
+    },
+    {
+      "src": "/buildable-renders.js",
+      "dest": "/buildable-renders.js"
+    },
+    {
+      "src": "/buildable-audio.js",
+      "dest": "/buildable-audio.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
