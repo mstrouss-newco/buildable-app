@@ -18,6 +18,11 @@ Branch: `claude/games-simple-batch1` (handed to Mike — NOT pushed to main).
 - **Always-winnable / pressure-free:** no soft-locks (every game terminates with a valid result),
   ties are friendly (not a loss), and the easy AI is genuinely beatable (takes obvious wins, only
   sometimes blocks, otherwise plays light/random). No emoji — all art is drawn via BR primitives.
+- **Shared in-game menu (same across all three).** Built ONCE into the shell: a Pause button
+  (top-right) opens a menu — **Keep playing / New game / Sound on-off / Home** — and the board
+  matches the rest of the app's nav (Home top-left, Sound top-right). Each game **auto-saves** to
+  the browser (no backend), so leaving mid-match shows a **"Continue your game"** button on the
+  start screen. Edit the menu in one place (`buildable-boardgame.js`) and all three update.
 - **Bespoke created sounds** registered in `api/sfx.js` (BA synth = silent fallback only):
   `board_place`, `board_drop`, `board_line`, `board_claim`, `board_win`, `board_draw` (all ≥0.5s).
 - **Reusable mechanics written back** per MECHANICS.md (new §14) + `db/seed-boardgame-mechanics.sql`:

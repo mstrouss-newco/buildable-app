@@ -93,7 +93,10 @@ Built Tic-Tac-Toe, Connect Four, and Dots and Boxes in one pass by creating a re
   grid; close a box's 4th side to claim it + go again; most boxes wins). Each plays solo (easy
   computer) or 2-player hot-seat.
 - **Always-winnable / pressure-free:** no soft-locks, friendly ties, and the easy AI is genuinely
-  beatable. No emoji — drawn art via BR. **Bespoke created sounds** in `api/sfx.js`
+  beatable. No emoji — drawn art via BR.
+- **Shared in-game menu (same across all three), built once in the shell:** a Pause button (top-right)
+  opens Keep playing / New game / Sound / Home; auto-saves to the browser (no backend) so a left match
+  shows "Continue your game" on the start screen. **Bespoke created sounds** in `api/sfx.js`
   (`board_place/drop/line/claim/win/draw`; synth fallback only).
 - **Reusable mechanics written back:** MECHANICS.md §14 + `db/seed-boardgame-mechanics.sql`
   (`hot-seat-turns`, `grid-line-winner`, `box-claim-extra-turn`). **Owner action:** run the seed once.

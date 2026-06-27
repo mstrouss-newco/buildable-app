@@ -130,7 +130,7 @@
       spec: S, state: "title",        // title | play | over
       mode: "two", turn: null, G: null, winner: null, line: null,
       W: 900, H: 600, t: 0, fx: BM ? BM.makeFx() : null, rnd: BG.rng(12345),
-      aiPending: 0,
+      aiPending: 0, paused: false, _hasSave: false,
     };
 
     // ----- sound: configure BA with this game's map (bespoke ElevenLabs) -----
@@ -192,6 +192,7 @@
         ctrl.state = "over"; ctrl.winner = res.winner; ctrl.line = res.line || null;
         if (BM && ctrl.fx) { BM.shake(ctrl.fx, 0.35); if (res.line && res.line.fx) {} }
         sfx(res.winner === 0 ? (S.sfxDraw || "draw") : (S.sfxWin || "win"));
+        clearSave();                              // finished game — nothing to resume
         showBanner(res);
         return true;
       }
@@ -201,11 +202,12 @@
       if (D.hud) D.hud.textContent = S.hud ? S.hud(ctrl.G, ctrl) : "";
       // queue AI if it's now the computer's move (solo)
       if (ctrl.mode === "solo" && ctrl.turn === 2) ctrl.aiPending = 24;  // ~0.4s think
+      saveGame();                                 // auto-save so the game can be continued later
       return true;
     }
 
     function humanTap(ev) {
-      if (ctrl.state !== "play") return;
+      if (ctrl.state !== "play" || ctrl.paused) return;
       if (ctrl.mode === "solo" && ctrl.turn === 2) return;   // not your turn
       if (BA) BA.unlock();
       const p = toLocal(ev);
@@ -234,6 +236,7 @@
 
     function startGame(mode) {
       ctrl.mode = mode || ctrl.mode;
+      ctrl.paused = false; closePause(); clearSave();
       ctrl.G = S.init({ mode: ctrl.mode, rng: ctrl.rnd });
       ctrl.turn = S.turn ? S.turn(ctrl.G) : 1;
       ctrl.winner = null; ctrl.line = null; ctrl.state = "play";
@@ -246,7 +249,8 @@
     }
 
     function toMenu() {
-      ctrl.state = "title";
+      ctrl.state = "title"; ctrl.paused = false; closePause();
+      ctrl._hasSave = hasSave();
       if (D.banner) D.banner.classList.remove("show");
       if (D.start) D.start.style.display = "block";
       mountStart();
@@ -273,17 +277,74 @@
       else startScreen.update(startCfg());
     }
 
+    // ----- save / continue (localStorage; no backend) -----
+    const SAVE_KEY = "bg_save_" + (S.id || "game");
+    function saveGame() { if (!hasDoc) return; try { if (ctrl.state !== "play") return;
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ G: ctrl.G, turn: ctrl.turn, mode: ctrl.mode })); ctrl._hasSave = true; } catch (e) {} }
+    function clearSave() { if (hasDoc) { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} } ctrl._hasSave = false; }
+    function hasSave() { if (!hasDoc) return false; try { const r = localStorage.getItem(SAVE_KEY); if (!r) return false; const o = JSON.parse(r); return !!(o && o.G); } catch (e) { return false; } }
+    function resumeSave() { if (!hasDoc) return; try { const r = localStorage.getItem(SAVE_KEY); if (!r) return; const o = JSON.parse(r); if (!o || !o.G) return;
+      ctrl.mode = o.mode || ctrl.mode; ctrl.G = o.G; ctrl.turn = o.turn || 1; ctrl.winner = null; ctrl.line = null; ctrl.state = "play"; ctrl.paused = false;
+      ctrl.fx = BM ? BM.makeFx() : null; ctrl.aiPending = 0; closePause();
+      if (D.banner) D.banner.classList.remove("show"); if (D.start) D.start.style.display = "none";
+      if (D.hud) D.hud.textContent = S.hud ? S.hud(ctrl.G, ctrl) : ""; if (BA) BA.unlock();
+      if (ctrl.mode === "solo" && ctrl.turn === 2) ctrl.aiPending = 24; } catch (e) {} }
+
+    // ----- shared in-game menu (Pause button + pause overlay + Continue) -----
+    // Built ONCE here so all three games get the SAME menu — edit it in one place.
+    let pauseBtn = null, contBtn = null, pauseOv = null;
+    function openPause() { if (ctrl.state !== "play") return; ctrl.paused = true; if (pauseOv) pauseOv.classList.add("show"); }
+    function closePause() { ctrl.paused = false; if (pauseOv) pauseOv.classList.remove("show"); }
+    function injectChrome() {
+      if (!hasDoc || !document.body) return;
+      const st = document.createElement("style"); st.textContent =
+        ".bgctl{position:fixed;top:12px;z-index:32;font-family:inherit;font-weight:800;font-size:14px;color:#cdd0ff;" +
+        "background:rgba(26,20,64,.72);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;display:none}" +
+        "#bgPauseBtn{right:108px}" +
+        "#bgContinue{top:auto;bottom:26px;left:50%;transform:translateX(-50%);z-index:14;color:#11331f;background:#7ee0a0;" +
+        "border:none;padding:14px 30px;font-size:18px;border-radius:16px;box-shadow:0 6px 0 #4cba74}" +
+        "#bgPause{position:fixed;inset:0;z-index:46;display:none;flex-direction:column;align-items:center;justify-content:center;" +
+        "background:rgba(8,10,40,.82);backdrop-filter:blur(3px)}#bgPause.show{display:flex}" +
+        "#bgPause .card{background:linear-gradient(180deg,#1a1450,#2a1b6b);border:2px solid #4a36a0;border-radius:24px;padding:26px 28px;text-align:center;min-width:250px}" +
+        "#bgPause h2{margin:0 0 16px;font-size:30px;font-weight:700}" +
+        "#bgPause button{display:block;width:100%;font-family:inherit;font-weight:700;font-size:20px;margin:9px 0;padding:13px;border-radius:14px;border:none;cursor:pointer;color:#1a0f3a;background:#9b7bff;box-shadow:0 5px 0 #6a4ad6}" +
+        "#bgPause button:active{transform:translateY(2px);box-shadow:0 3px 0 #6a4ad6}" +
+        "#bgPause button.ghost{background:#241a52;color:#cdd0ff;box-shadow:none;border:1px solid #3a2c6e}";
+      (document.head || document.documentElement).appendChild(st);
+      pauseBtn = document.createElement("button"); pauseBtn.id = "bgPauseBtn"; pauseBtn.className = "bgctl"; pauseBtn.textContent = "Pause";
+      pauseBtn.onclick = openPause; document.body.appendChild(pauseBtn);
+      contBtn = document.createElement("button"); contBtn.id = "bgContinue"; contBtn.className = "bgctl"; contBtn.textContent = "Continue your game";
+      contBtn.onclick = resumeSave; document.body.appendChild(contBtn);
+      pauseOv = document.createElement("div"); pauseOv.id = "bgPause";
+      pauseOv.innerHTML = '<div class="card"><h2>Paused</h2>' +
+        '<button id="bgResume">Keep playing</button>' +
+        '<button id="bgNew">New game</button>' +
+        '<button id="bgSoundT" class="ghost">Sound: On</button>' +
+        '<button id="bgHomeB" class="ghost">Home</button></div>';
+      document.body.appendChild(pauseOv);
+      pauseOv.querySelector("#bgResume").onclick = closePause;
+      pauseOv.querySelector("#bgNew").onclick = function () { startGame(ctrl.mode); };
+      const sb = pauseOv.querySelector("#bgSoundT"); const updS = function () { sb.textContent = "Sound: " + (BA && BA.muted ? "Off" : "On"); }; updS();
+      sb.onclick = function () { if (BA) { BA.unlock(); BA.toggleMute(); } updS(); };
+      pauseOv.querySelector("#bgHomeB").onclick = function () { try { g.parent && g.parent.postMessage("nav:exit", "*"); } catch (e) {} };
+    }
+    function updateChrome() {
+      if (pauseBtn) pauseBtn.style.display = (ctrl.state === "play" && !ctrl.paused) ? "block" : "none";
+      if (contBtn) contBtn.style.display = (ctrl.state === "title" && ctrl._hasSave) ? "block" : "none";
+    }
+
     // ----- frame loop -----
     function frame() {
       ctrl.t += 1 / 60;
-      if (ctrl.aiPending > 0 && --ctrl.aiPending === 0) aiStep();
+      if (!ctrl.paused && ctrl.aiPending > 0 && --ctrl.aiPending === 0) aiStep();
+      updateChrome();
       if (ctx && ctrl.state !== "title") {
         ctx.clearRect(0, 0, ctrl.W, ctrl.H);
         const off = (BM && ctrl.fx) ? BM.shakeOffset(ctrl.fx) : { x: 0, y: 0 };
         ctx.save(); ctx.translate(off.x, off.y);
         try { S.draw(ctx, ctrl.G, { W: ctrl.W, H: ctrl.H, t: ctrl.t, fx: ctrl.fx, winner: ctrl.winner, line: ctrl.line, state: ctrl.state }); } catch (e) {}
         ctx.restore();
-        if (BM && ctrl.fx) { BM.update(ctrl.fx, 1 / 60); BM.draw(ctx, ctrl.fx, { W: ctrl.W, H: ctrl.H }); }
+        if (BM && ctrl.fx) { if (!ctrl.paused) BM.update(ctrl.fx, 1 / 60); BM.draw(ctx, ctrl.fx, { W: ctrl.W, H: ctrl.H }); }
       }
       g.requestAnimationFrame(frame);
     }
@@ -295,6 +356,7 @@
       if (D.again) D.again.onclick = () => startGame(ctrl.mode);
       if (D.home) D.home.onclick = () => { try { g.parent && g.parent.postMessage("nav:exit", "*"); } catch (e) {} };
       if (D.mute) { const upd = () => D.mute.textContent = "Sound: " + (BA && BA.muted ? "Off" : "On"); upd(); D.mute.onclick = () => { if (BA) { BA.unlock(); BA.toggleMute(); } upd(); }; }
+      injectChrome();
       toMenu();
       g.requestAnimationFrame(frame);
     }
