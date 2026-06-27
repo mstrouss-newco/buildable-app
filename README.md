@@ -373,6 +373,25 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27 (Shared Asset Library rule + Survival background fix)
+
+**Shared Asset Library rule added to `AGENTS.md`.** Codified that all projects
+(story, game, chess, song, future) draw from ONE shared library, every reusable
+asset tagged `kind`/`theme`/`url`/`source`/`usable_in`, `community_*` tables as
+the source of truth. Migration is additive: write-on-create, read-on-render with
+a local/drawn fallback, and never delete or re-path a live asset until its shared
+replacement is verified live. `theme` is the universal key for rendering a new
+project from existing assets.
+
+**Survival background fix.** `public/survival-engine.html` pointed `bgImg` at
+`chess-art/space_bg.png` (never existed — real file is `.jpg`), so Space Sparkles
+silently fell back to drawn art. Repointed to `chess-art/space_bg.jpg` (verified
+served live) and disabled the dead `game-music/music_space.mp3` reference
+(`musicUrl: ""`, music intentionally off) with a guard so an empty URL can't
+trigger a stray load.
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
