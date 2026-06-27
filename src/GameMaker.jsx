@@ -195,6 +195,17 @@ export default function GameMaker({ engine = "platformer", onBack, onHome, playe
     setView("playing");
   }
 
+  // One-tap shortcut: surprise hero + world, gentle difficulty, straight to play.
+  function quickPlay() {
+    const h = HEROES[Math.floor(Math.random() * HEROES.length)][0];
+    const w = WORLDS[Math.floor(Math.random() * WORLDS.length)].id;
+    setHero(h); setWorld(w); setDifficulty("easy"); setMusic("world");
+    const cfg = buildConfig(engine, { hero: h, world: w, difficulty: "easy", music: "world", name: "" });
+    builtCfg.current = cfg;
+    setSaved(false); setPublishState("idle");
+    setView("playing");
+  }
+
   function doSave() {
     const cfg = builtCfg.current || buildConfig(engine, pick);
     saveGame({
@@ -335,6 +346,7 @@ export default function GameMaker({ engine = "platformer", onBack, onHome, playe
       </div>
 
       <button onClick={next} style={s.bigBtn}>{step < STEPS.length - 1 ? "Next →" : "Almost done →"}</button>
+      <button onClick={quickPlay} style={s.ghostBtn}>Quick play — surprise me!</button>
     </div>
   );
 }
