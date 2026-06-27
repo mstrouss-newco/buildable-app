@@ -310,6 +310,27 @@ export default async function handler(req, res) {
   }
   const q = req.query || {};
 
+  // --- read-only diagnostic: how many story pictures are actually cached? ---
+  // Returns COUNTS only (no image data, no secrets). lib: = base cutouts/worlds,
+  // libx: = expression variants, libpg: = full page scenes.
+  if (q.stats) {
+    async function countLike(prefix) {
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/narration_cache?select=cache_key&cache_key=like.${encodeURIComponent(prefix + "%")}`,
+          { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, Prefer: "count=exact", Range: "0-0" } }
+        );
+        const cr = r.headers.get("content-range") || "";
+        const total = cr.includes("/") ? parseInt(cr.split("/")[1], 10) : NaN;
+        return Number.isFinite(total) ? total : 0;
+      } catch { return 0; }
+    }
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return res.status(200).json({ ok: true, configured: false });
+    const [base, expr, scenes] = await Promise.all([countLike("lib:"), countLike("libx:"), countLike("libpg:")]);
+    return res.status(200).json({ ok: true, storyCache: { base, expr, scenes, total: base + expr + scenes } });
+  }
+
+
   // --- serve a cached image as real PNG bytes (short URL for <img src>) ---
   if (q.img) {
     const [kind, slug] = q.img.toString().split(":");
