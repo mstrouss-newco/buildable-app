@@ -15,7 +15,7 @@ import QuizGate from "./QuizGate";
 import FamilyChess from "./FamilyChess";
 import { listMyMatches } from "./lib/chessMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
-import { getActiveKid, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
+import { getActiveKid, setActiveKid, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -37,6 +37,7 @@ const SCREEN_SURVIVAL = "survival";
 const SCREEN_BREAKER = "breaker";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_TOP = "top";
+const SCREEN_HELPER = "helper";
 function LearningControl() {
   const [gate, setGate] = useState(false);
   const [ab, setAb] = useState({ a: 0, b: 0 });
@@ -236,6 +237,7 @@ export default function BuildableKids() {
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
         onGrownUp={() => setScreen(SCREEN_GROWNUP)}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
+        onHelper={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_HELPER); }}
       />
     );
   }
@@ -403,6 +405,16 @@ export default function BuildableKids() {
 
   // ============ ADMIN DASHBOARD ============
   // ──────── GROWN-UPS (parent sign-in + kid profile picker) ────────
+  if (screen === SCREEN_HELPER) {
+    return (
+      <HelperLabScreen
+        activeKid={activeKid}
+        onHome={goHome}
+        onDone={(kid) => { if (kid) setActiveKidState(kid); setScreen(SCREEN_HOME); }}
+      />
+    );
+  }
+
   if (screen === SCREEN_GROWNUP) {
     return (
       <GrownUpScreen
@@ -459,7 +471,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop }) {
+function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper }) {
   // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
   const AppIcon = ({ grad, size = 76, children }) => (
     <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
@@ -636,34 +648,51 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
     ? `It's your move in ${chessTurns} chess game${chessTurns > 1 ? "s" : ""} — want to play?`
     : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”? Or make something new!` : "What should we make today? Tap a tile and I'll help!");
 
-  // ---- floating chatbot-style helper (bottom-right) ----
+  // ---- floating helper (bottom-right): the kid's own helper character ----
   const [helperOpen, setHelperOpen] = useState(false);
+  const [helperHidden, setHelperHidden] = useState(false);
+  const [defaultHelperImg, setDefaultHelperImg] = useState(null);
+  const [localHelper] = useState(() => { try { return JSON.parse(localStorage.getItem("bk_helper_v1") || "null"); } catch { return null; } });
+  const helper = (activeKid && activeKid.helper) || localHelper || null;
   useEffect(() => { const t = setTimeout(() => setHelperOpen(true), 900); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (helper && helper.image) return; // already have a real helper image
+    let alive = true;
+    fetch("/api/list-characters?limit=1").then((r) => r.json()).then((d) => {
+      const arr = (d && (d.characters || d.items)) || (Array.isArray(d) ? d : []);
+      const img = arr && arr[0] && (arr[0].image_url || arr[0].image);
+      if (alive && img) setDefaultHelperImg(img);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const helperImg = (helper && helper.image) || defaultHelperImg || null;
+  const helperName = (helper && helper.name) || "your buddy";
 
-  // ---- a "make" tile: colored app-icon + label ----
+  // ---- a "make" tile: colored app-icon + label. 2-player chip sits BELOW the
+  // text (a flow element) so it never overlaps the icon on narrow tiles. ----
   const MakeTile = ({ grad, glyph, title, sub, tag, onClick }) => (
     <button
       onClick={onClick}
       style={{
-        position: "relative", borderRadius: 20, padding: phone ? "18px 12px" : "22px 14px",
+        borderRadius: 20, padding: phone ? "18px 12px 14px" : "22px 14px 16px",
         border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: "pointer", fontFamily: NUN,
-        textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-        minHeight: phone ? 132 : 162,
+        textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 9,
+        minHeight: phone ? 142 : 172,
       }}
     >
+      <AppIcon grad={grad} size={phone ? 70 : 84}>{glyph}</AppIcon>
+      <div style={{ fontFamily: FRED, fontSize: phone ? 16 : 19, fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: phone ? 11.5 : 13, color: "#cfc9e6" }}>{sub}</div>
       {tag && (
         <span style={{
-          position: "absolute", top: 11, right: 11, display: "inline-flex", alignItems: "center", gap: 4,
+          display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2,
           fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase",
-          padding: "3px 8px", borderRadius: 999, background: "rgba(155,126,221,0.22)", color: "#cfc1f5",
+          padding: "3px 9px", borderRadius: 999, background: "rgba(155,126,221,0.22)", color: "#cfc1f5",
         }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="3" /><path d="M2 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1M16 3.5a3 3 0 0 1 0 7M22 21v-1a5 5 0 0 0-4-4.9" /></svg>
           2-player
         </span>
       )}
-      <AppIcon grad={grad} size={phone ? 70 : 84}>{glyph}</AppIcon>
-      <div style={{ fontFamily: FRED, fontSize: phone ? 16 : 19, fontWeight: 700 }}>{title}</div>
-      <div style={{ fontSize: phone ? 11.5 : 13, color: "#cfc9e6" }}>{sub}</div>
     </button>
   );
 
@@ -801,23 +830,52 @@ function HomeScreen({ activeKid, onMusic, onGames, onStories, onTyping, onChess,
 
       </div>
 
-      {/* floating helper — bottom-right, chatbot style */}
-      <div style={{ position: "fixed", right: phone ? 14 : 22, bottom: phone ? 14 : 22, zIndex: 9000, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, fontFamily: NUN }}>
-        {helperOpen && (
-          <div style={{ maxWidth: 250, background: "#1b1830", border: "1px solid rgba(155,126,221,0.4)", borderRadius: "16px 16px 4px 16px", padding: "12px 14px", color: "#e9e5f7", boxShadow: "0 12px 34px rgba(0,0,0,0.55)", position: "relative" }}>
-            <button onClick={() => setHelperOpen(false)} aria-label="Close" style={{ position: "absolute", top: 6, right: 8, background: "none", border: "none", color: "#8e89a8", fontSize: 16, cursor: "pointer", lineHeight: 1 }}>×</button>
-            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>Hi {kidName}!</div>
-            <div style={{ fontSize: 13, lineHeight: 1.45, paddingRight: 6 }}>{helperLine}</div>
-            <button onClick={onGrownUp} style={{ marginTop: 8, background: "rgba(155,126,221,0.18)", border: "1px solid rgba(155,126,221,0.4)", color: "#cfc1f5", fontFamily: NUN, fontWeight: 800, fontSize: 12, borderRadius: 999, padding: "5px 11px", cursor: "pointer" }}>Change my helper</button>
+      {/* floating helper — the kid's own helper character, friendly + floating */}
+      {!helperHidden && (
+        <div style={{ position: "fixed", right: phone ? 14 : 22, bottom: phone ? 14 : 22, zIndex: 9000, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, fontFamily: NUN }}>
+          {helperOpen && (
+            <div style={{ maxWidth: 250, background: "#1b1830", border: "1px solid rgba(155,126,221,0.4)", borderRadius: "16px 16px 4px 16px", padding: "12px 14px", color: "#e9e5f7", boxShadow: "0 12px 34px rgba(0,0,0,0.55)", position: "relative", animation: "bkpop 0.18s ease-out" }}>
+              <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>Hi {kidName}!</div>
+              <div style={{ fontSize: 13, lineHeight: 1.45 }}>{helperLine}</div>
+              <button onClick={onHelper} style={{ marginTop: 9, background: "rgba(155,126,221,0.18)", border: "1px solid rgba(155,126,221,0.4)", color: "#cfc1f5", fontFamily: NUN, fontWeight: 800, fontSize: 12, borderRadius: 999, padding: "6px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 3l2.2 6.3L22 11l-6.8 1.7L13 19l-2.2-6.3L4 11l6.8-1.7z" /><path d="M5 4v3M3.5 5.5h3" /></svg>
+                Helper Lab
+              </button>
+            </div>
+          )}
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setHelperOpen((o) => !o)} aria-label={"Talk to " + helperName} className="bk-float" style={{
+              width: phone ? 66 : 76, height: phone ? 66 : 76, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.22)", cursor: "pointer", padding: 0, overflow: "hidden",
+              background: helperImg ? `center/cover no-repeat url(${helperImg})` : "linear-gradient(135deg,#9b7edd,#6f5bd6)",
+              boxShadow: "0 10px 28px rgba(155,126,221,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {!helperImg && <BuddyGlyph size={phone ? 32 : 36} />}
+            </button>
+            <button onClick={() => setHelperHidden(true)} aria-label="Hide helper" style={{ position: "absolute", top: -5, right: -5, width: 22, height: 22, borderRadius: "50%", border: "2px solid #0a0a14", background: "#3a3550", color: "#fff", fontSize: 13, lineHeight: "16px", cursor: "pointer", padding: 0 }}>×</button>
           </div>
-        )}
-        <button onClick={() => setHelperOpen((o) => !o)} aria-label="Your helper" style={{
-          width: phone ? 56 : 64, height: phone ? 56 : 64, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.18)", cursor: "pointer",
-          background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", boxShadow: "0 8px 26px rgba(155,126,221,0.6)",
-          display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "flex-end",
-        }}>
-          <BuddyGlyph size={phone ? 30 : 34} />
-        </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HelperLabScreen({ activeKid, onHome, onDone }) {
+  return (
+    <div style={styles.container}>
+      <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
+        <button onClick={onHome} style={styles.backButton}>Home</button>
+      </div>
+      <h1 style={{ ...styles.logo, marginTop: 8 }}>Helper Lab</h1>
+      <p style={styles.tagline}>Pick a buddy or make your own \u2014 they cheer you on!</p>
+      <div style={{ width: "100%", maxWidth: 920 }}>
+        <CharacterCreatorScreen
+          onCharacterCreated={(c) => {
+            const helper = { name: (c && c.name) || "Buddy", image: (c && c.image) || null, description: (c && c.description) || "" };
+            try { localStorage.setItem("bk_helper_v1", JSON.stringify(helper)); } catch (e) {}
+            if (activeKid) { const kid = { ...activeKid, helper }; setActiveKid(kid); onDone(kid); }
+            else { onDone(null); }
+          }}
+        />
       </div>
     </div>
   );

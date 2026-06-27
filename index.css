@@ -79,3 +79,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
 /* NOTE: we intentionally do NOT zoom #root — the games run in iframes inside it,
    and zooming would shrink them too. Phone sizing is handled per-screen with
    fluid clamp() font sizes and padding instead. */
+
+/* Floating helper: gentle bob + bubble pop-in */
+@keyframes bkfloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes bkpop   { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.bk-float { animation: bkfloat 3.2s ease-in-out infinite; }
