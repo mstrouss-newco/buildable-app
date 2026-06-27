@@ -65,6 +65,7 @@
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-startscreen.js"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -452,7 +453,23 @@ function show(id,on){ const e=el(id); if(e)e.classList[on?"add":"remove"]("show"
 function toast(msg){ const e=el("toast"); if(!e)return; e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{e.style.display="none";},2600); }
 function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
 
-function showMenu(){ state="title"; show("customize",false); show("menu",true); showHelpBtn(false); renderLevels(); }
+let startUI=null;
+const BSS_COLORS=["#1f6f5c","#4a3b8c","#2b4a6b","#5a2f6e","#6b2f4a","#2f5a6e"];
+function syncMute(){ const mb=el("muteBtn"); if(mb)mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }
+function startConfig(){ const unlocked=PREFS.unlocked||0;
+  return { title:GAME_CONFIG.name, subtitle:"Bounce the ball and smash every brick.",
+    sound:!(BA&&BA.muted), showBack:false,
+    levels:GAME_CONFIG.levels.map((lv,i)=>({ n:i+1, name:lv.name,
+      color: i<=unlocked ? BSS_COLORS[i%BSS_COLORS.length] : undefined,
+      state: i<unlocked ? "done" : (i===unlocked ? "next" : "locked") })),
+    customizeLabel:"Make It Mine" }; }
+function mountStart(){ const m=el("menu"); if(!m)return;
+  if(window.BuildableStartScreen){ const cfg=startConfig();
+    const cbs={ onPlay:(n)=>startPlay(n-1), onCustomize:showCustomize,
+      onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } syncMute(); }, onBack:()=>{} };
+    if(!startUI) startUI=window.BuildableStartScreen.mount(m,cfg,cbs); else startUI.update(cfg);
+  } else { renderLevels(); } }
+function showMenu(){ state="title"; show("customize",false); show("menu",true); showHelpBtn(false); mountStart(); }
 function renderLevels(){ const wrap=el("levelSelect"); if(!wrap)return; wrap.innerHTML="";
   const unlocked=PREFS.unlocked||0;
   GAME_CONFIG.levels.forEach((lv,i)=>{ const open=i<=unlocked;

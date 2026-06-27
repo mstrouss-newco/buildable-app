@@ -6,35 +6,36 @@
 //  WHAT THIS IS: one consistent launch / level-select screen for EVERY game
 //  (survival, croc, breaker, platformer, tennis). Each engine used to hand-roll its
 //  own menu (#menu/#levelSelect/showMenu/buildLevelPicker) with a different look.
-//  This renders the agreed design from a small config and calls back when the kid
-//  picks a level, mode, hero, or customize. NOTE: this is the start screen of a
-//  *built* game — it is NOT the AI game builder.
+//  Edit THIS one file and every game's start screen changes at once. NOTE: this is
+//  the start screen of a *built* game — it is NOT the AI game builder.
 //
-//  DOM-based (the start screen is an HTML overlay, not canvas). Self-styled (injects
-//  one scoped stylesheet) and self-iconed (inline SVG, no emoji, no webfont).
-//  Headless-safe: if there's no document (QA sim), mount() is a no-op stub.
+//  Mounts a child <div class="bss"> INTO a positioned, full-size container you give
+//  it (so it never fights the host's show/hide or overlay classes). Self-styled (one
+//  scoped stylesheet), self-iconed (inline SVG, no emoji/webfont). Headless-safe: with
+//  no document (QA sim) mount() is a no-op stub.
 //
 //  Usage:  <script src="buildable-startscreen.js"></script>  then  BS = window.BuildableStartScreen
-//    const screen = BS.mount(document.getElementById("start"), {
+//    const screen = BS.mount(document.getElementById("menu"), {
 //      title:"Space Sparkles", subtitle:"Beat each boss to unlock the next world",
-//      coins:24, sound:true,
-//      hero:{ name:"Pip", img:"/api/story-library?img=character:bunny", progressText:"2 of 6 worlds cleared" },
-//      modes:["solo","two","family"], mode:"solo",
+//      coins:24, sound:true, showBack:true,
+//      hero:{ name:"Pip", img:"<url>", progressText:"2 of 6 worlds cleared" },  // omit if no hero
+//      modes:["solo","two","family"], mode:"solo",                              // omit if single-player
 //      levels:[
-//        { n:1, name:"Comet Meadow",  img:"<thumb>", stars:3, maxStars:3, state:"done" },
-//        { n:2, name:"Nebula Drift",  img:"<thumb>", stars:2, maxStars:3, state:"done" },
-//        { n:3, name:"Asteroid Twirl",img:"<thumb>", state:"next" },
-//        { n:4, name:"Stardust Caves", state:"locked" },
+//        { n:1, name:"Comet Meadow", img:"<thumb>", color:"#1f6f5c", stars:3, maxStars:3, state:"done" },
+//        { n:2, name:"Asteroid Twirl", color:"#2b4a6b", state:"next" },         // green Play highlight
+//        { n:3, name:"Stardust Caves", state:"locked" },
 //      ],
-//      customizeLabel:"Make it mine",
-//    }, {
-//      onPlay:(n)=>{}, onMode:(m)=>{}, onHero:()=>{}, onCustomize:()=>{},
-//      onSound:(on)=>{}, onBack:()=>{},
-//    });
-//    // later: screen.update({ coins:30, levels:[...] });  screen.destroy();
+//      customizeLabel:"Make it mine",                                           // omit to hide
+//    }, { onPlay:(n)=>{}, onMode:(m)=>{}, onHero:()=>{}, onCustomize:()=>{}, onSound:(on)=>{}, onBack:()=>{} });
+//    // later: screen.update({ coins:30, levels:[...] });   screen.destroy();
+//
+//  level.state: "done" (shows stars, or "Cleared" if no stars given) | "next"
+//  (the playable one — green Play) | "locked" (dimmed + lock badge). Thumbnail =
+//  img, else a solid color, else a drawn icon. The "family" mode is where the
+//  real-time multiplayer mechanic plugs in (launch FamilyRealtime — see MULTIPLAYER.md).
 // ============================================================================
 (function (g) {
-  const BS = { version: "1.0.0" };
+  const BS = { version: "1.1.0" };
 
   const THEME = {
     bg: "#131229", card: "#1d1b36", cardLocked: "#191830",
@@ -42,7 +43,6 @@
     text: "#ffffff", dim: "#9b95c4", dimmer: "#56527a", border: "rgba(255,255,255,.08)",
   };
 
-  // ---- tiny inline SVG icon set (outline, no emoji, no webfont) -------------
   const ICON = {
     back: '<path d="M15 5l-7 7 7 7"/>',
     star: '<path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18l-5.8 3.4 1.1-6.5L2.6 9.8l6.5-.9z"/>',
@@ -62,13 +62,12 @@
   }
 
   const MODE_LABEL = { solo: "Solo", two: "2 players", family: "Family" };
-  const MODE_ICON = { solo: "solo", two: "two", family: "family" };
 
   let styleInjected = false;
   function injectStyle(doc) {
     if (styleInjected) return; styleInjected = true;
     const css = `
-.bss{position:absolute;inset:0;overflow:auto;display:flex;justify-content:center;background:var(--bss-bg);font-family:'Nunito',system-ui,sans-serif;color:var(--bss-text);-webkit-tap-highlight-color:transparent}
+.bss{position:absolute;inset:0;overflow:auto;display:flex;justify-content:center;background:var(--bss-bg);font-family:'Nunito',system-ui,sans-serif;color:var(--bss-text);-webkit-tap-highlight-color:transparent;z-index:1}
 .bss *{box-sizing:border-box}
 .bss-inner{width:100%;max-width:420px;padding:18px 16px 28px}
 .bss-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -96,13 +95,13 @@
 .bss-meta{padding:8px 10px 10px}
 .bss-ln{font-size:12.5px;font-weight:800}
 .bss-lv.locked .bss-ln{color:var(--bss-dim)}
-.bss-stars{margin-top:3px;display:flex;gap:1px;align-items:center;font-size:0}
+.bss-stars{margin-top:3px;display:flex;gap:1px;align-items:center}
 .bss-note{margin-top:3px;font-size:12px;color:var(--bss-dimmer)}
 .bss-note.go{color:var(--bss-go)}
 .bss-cust{margin-top:15px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--bss-card);border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:11px;color:#cdbcff;font-size:13.5px;font-weight:800;cursor:pointer}
 `;
     const st = doc.createElement("style"); st.id = "bss-style"; st.textContent = css;
-    doc.head.appendChild(st);
+    (doc.head || doc.documentElement).appendChild(st);
   }
 
   function starRow(stars, maxStars) {
@@ -113,6 +112,8 @@
     }
     return h;
   }
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
   function levelCard(lv) {
     const state = lv.state || "locked";
@@ -127,7 +128,7 @@
     let foot;
     if (state === "locked") foot = `<div class="bss-note">Locked</div>`;
     else if (state === "next") foot = `<div class="bss-note go">Next up</div>`;
-    else foot = `<div class="bss-stars">${starRow(lv.stars, lv.maxStars)}</div>`;
+    else foot = (lv.stars != null) ? `<div class="bss-stars">${starRow(lv.stars, lv.maxStars)}</div>` : `<div class="bss-note">Cleared</div>`;
     const icon = state === "locked" ? svg("lock", 25, "#6f6a93") : "";
     return `<div class="${cls}" data-n="${lv.n}" role="button" tabindex="0">
       <div class="bss-thumb" style="${thumbBg}">${lv.img ? "" : icon}${overlay}</div>
@@ -135,12 +136,10 @@
     </div>`;
   }
 
-  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
-
   function render(root, cfg) {
     const modes = cfg.modes || [];
     const modesHtml = modes.map((m) =>
-      `<div class="bss-mode ${m === cfg.mode ? "on" : ""}" data-mode="${m}">${svg(MODE_ICON[m], 17)}${MODE_LABEL[m] || m}</div>`).join("");
+      `<div class="bss-mode ${m === cfg.mode ? "on" : ""}" data-mode="${m}">${svg(m, 17)}${MODE_LABEL[m] || m}</div>`).join("");
     const heroHtml = cfg.hero ? `
       <div class="bss-hero">
         <span class="bss-av">${cfg.hero.img ? `<img src="${cfg.hero.img}" alt="">` : svg("solo", 26, "#cdbcff")}</span>
@@ -148,10 +147,13 @@
         <button class="bss-change" data-act="hero">${svg("change", 15)}Change</button>
       </div>` : "";
     const soundIc = cfg.sound === false ? "mute" : "sound";
+    const backHtml = cfg.showBack === false
+      ? `<span class="bss-ic" style="visibility:hidden"></span>`
+      : `<button class="bss-ic" data-act="back" aria-label="Back">${svg("back", 18)}</button>`;
     root.innerHTML = `
       <div class="bss-inner">
         <div class="bss-top">
-          <button class="bss-ic" data-act="back" aria-label="Back">${svg("back", 18)}</button>
+          ${backHtml}
           <div style="display:flex;align-items:center;gap:8px">
             ${cfg.coins != null ? `<span class="bss-coins">${svg("star", 14, THEME.gold, THEME.gold)}${cfg.coins}</span>` : ""}
             <button class="bss-ic" data-act="sound" aria-label="Sound">${svg(soundIc, 18)}</button>
@@ -165,25 +167,26 @@
       </div>`;
   }
 
-  // ---- public: mount -------------------------------------------------------
   BS.mount = function (el, cfg, cb) {
     cb = cb || {};
-    if (typeof document === "undefined" || !el) return { update() {}, destroy() {}, el: null }; // headless stub
+    if (typeof document === "undefined" || !el || !el.appendChild) return { update() {}, destroy() {}, el: null }; // headless stub
     injectStyle(document);
     cfg = Object.assign({}, cfg);
     const t = Object.assign({}, THEME, cfg.theme || {});
-    el.classList.add("bss");
-    el.style.setProperty("--bss-bg", t.bg); el.style.setProperty("--bss-card", t.card);
-    el.style.setProperty("--bss-cardLocked", t.cardLocked); el.style.setProperty("--bss-go", t.go);
-    el.style.setProperty("--bss-gold", t.gold); el.style.setProperty("--bss-text", t.text);
-    el.style.setProperty("--bss-dim", t.dim); el.style.setProperty("--bss-dimmer", t.dimmer);
-    el.style.setProperty("--bss-border", t.border);
+    const wrap = document.createElement("div");
+    wrap.className = "bss";
+    const setv = (k, v) => wrap.style.setProperty(k, v);
+    setv("--bss-bg", t.bg); setv("--bss-card", t.card); setv("--bss-cardLocked", t.cardLocked);
+    setv("--bss-go", t.go); setv("--bss-gold", t.gold); setv("--bss-text", t.text);
+    setv("--bss-dim", t.dim); setv("--bss-dimmer", t.dimmer); setv("--bss-border", t.border);
+    try { el.innerHTML = ""; } catch (e) {}
+    el.appendChild(wrap);
 
-    function paint() { render(el, cfg); }
+    function paint() { render(wrap, cfg); }
     paint();
 
     function onClick(e) {
-      const act = e.target.closest("[data-act]");
+      const act = e.target.closest && e.target.closest("[data-act]");
       if (act) {
         const a = act.getAttribute("data-act");
         if (a === "back" && cb.onBack) cb.onBack();
@@ -192,17 +195,17 @@
         else if (a === "sound") { cfg.sound = cfg.sound === false ? true : false; paint(); if (cb.onSound) cb.onSound(cfg.sound); }
         return;
       }
-      const mode = e.target.closest("[data-mode]");
+      const mode = e.target.closest && e.target.closest("[data-mode]");
       if (mode) { cfg.mode = mode.getAttribute("data-mode"); paint(); if (cb.onMode) cb.onMode(cfg.mode); return; }
-      const lv = e.target.closest(".bss-lv");
+      const lv = e.target.closest && e.target.closest(".bss-lv");
       if (lv && !lv.classList.contains("locked")) { const n = +lv.getAttribute("data-n"); if (cb.onPlay) cb.onPlay(n); }
     }
-    el.addEventListener("click", onClick);
+    wrap.addEventListener("click", onClick);
 
     return {
-      el,
+      el: wrap,
       update(patch) { Object.assign(cfg, patch || {}); paint(); },
-      destroy() { el.removeEventListener("click", onClick); el.classList.remove("bss"); el.innerHTML = ""; },
+      destroy() { try { wrap.removeEventListener("click", onClick); if (wrap.parentNode) wrap.parentNode.removeChild(wrap); } catch (e) {} },
     };
   };
 

@@ -199,6 +199,12 @@ network-agnostic (all Supabase code lives in the React layer).
 
 - **Kids' product.** Age-appropriate always; preserve content moderation and the
   validate-before-serve fallback in `generate-game.js`.
+- **One shared start screen — change it once, every game updates.** Every game's
+  launch / level-select screen is rendered by `buildable-startscreen.js` (`BS`). Do NOT
+  hand-roll a per-game menu (`showMenu`/`buildLevelPicker`/`#levelSelect`) or fork BS's
+  markup into an engine — feed `BS` a config and keep a tiny fallback. Editing that one
+  file restyles the start experience across survival, croc, breaker, platformer, and
+  tennis at once, instead of changing each game 1×1. (Breaker is the reference adoption.)
 - **No emojis** in the hand-authored engines — use `BR` drawn art or library images.
   (Track A's legacy emoji-sprite shortcut is being replaced by library sprites.)
 - **Library-first, always with a fallback.** Read shared assets/mechanics on render;

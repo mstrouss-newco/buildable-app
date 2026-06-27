@@ -75,6 +75,31 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Breaker adopts the shared start screen (BS) + start-screen is now a rule (June 27 2026)
+
+First real adoption of `buildable-startscreen.js`: `public/breaker-engine.html` now renders
+its launch/level-select via `BS` instead of its own `showMenu`/`renderLevels`. Editing the
+ONE shared file now restyles breaker's start screen (and every future adopter) at once.
+
+- **`buildable-startscreen.js` → v1.1** (safer, more reusable): mounts a child
+  `<div class="bss">` INTO the host overlay instead of restyling the host (so it can't
+  fight the engine's `.ov` show/hide). Added `showBack:false` (in-app games launched in an
+  iframe omit the back button) and a "Cleared" footer for `done` levels that have no per-
+  level stars (breaker doesn't track stars). The standalone demo (`?v=2`) still matches.
+- **`breaker-engine.html`:** loads `buildable-startscreen.js`; `showMenu()` →
+  `mountStart()`, which builds a `BS` config from `GAME_CONFIG.levels` + `PREFS.unlocked`
+  (state done/next/locked, per-level color, "Make It Mine" → its existing customize panel,
+  sound → `BA` mute). Keeps the old `renderLevels()` as a fallback if `BS` ever fails to
+  load — which is also the path the headless QA sim takes.
+- **QA:** `qa-breaker.mjs` reports ALL LEVELS WIN + render ok BEFORE and AFTER the change
+  (gameplay untouched; the swap is menu-only). Live render verified in the browser.
+- **Rule added** to `BUILDING-A-GAME.md` non-negotiables: every game's start screen is
+  rendered by `BS` — never hand-roll or fork a per-game menu — so the start experience is
+  changed once, centrally, not 1×1 per game.
+
+Additive: only breaker's menu code changed; its gameplay, routes, and the other engines
+are untouched. Other engines (survival, croc, platformer) adopt `BS` next, one at a time.
+
 ## Shared start screen / level picker `buildable-startscreen.js` (June 27 2026)
 
 Added one consistent "start a game" experience for every engine, replacing the four
