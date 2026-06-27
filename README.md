@@ -481,6 +481,19 @@ to reflect brand-new creations quickly.
 
 ---
 
+## Session log — 2026-06-27e (Shared AUDIO catalog live)
+
+New /api/list-audio: the single shared catalog for sound. Lists 12 music tracks
+(6 themed ElevenLabs world tracks via /api/chess-music + 6 mood loops from
+public/music-library) and 24 sfx (10 themed ambience + 14 chess one-shots from
+/api/sfx), each tagged kind/theme/url/source. ?theme=<t> filters (verified live:
+theme=space -> space music + space sfx). Additive: added named exports
+SOUNDS (api/sfx.js) + CHESS_MUSIC_WORLDS (api/chess-music.js); no DB change.
+Now a new themed project can pull world+hero+music+sfx from one shelf by one word.
+(Remember: library GET endpoints are edge-cached — QA with ?cb=.)
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.

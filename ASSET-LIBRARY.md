@@ -35,6 +35,7 @@ a one-line request; it is never a wall. Always tag what you create with both
 | Characters / heroes | `GET /api/list-characters?limit=N` | `community_characters` |
 | Story worlds + characters (curated) | `GET /api/story-library` | curated list in code + `narration_cache` image cache |
 | A generated game world/prop image | `GET /api/game-art?world=&artStyle=` | cached in `narration_cache` / `image_cache` |
+| ALL music + sfx (one catalog) | `GET /api/list-audio?theme=<t>` | music-library files + /api/chess-music + /api/sfx |
 | Reusable music loops | `public/music-library/` (+ `MANIFEST.md`) | static files |
 | Sound effects + ambience | `GET /api/sfx?s=<name>` | `narration_cache` (generated once, cached) |
 | Per-world music (chess style) | `GET /api/chess-music?world=<theme>` | `narration_cache` |
@@ -125,10 +126,13 @@ knight walking through a `jungle` world past `candy` coins is completely valid.
 
 - **Done / shared:** games read+write `community_*` (worlds, elements, characters);
   shared `buildable-renders.js` + `buildable-audio.js`; `/api/sfx` cached ambience.
-- **Still siloed (converge toward shared):** story worlds/characters live in
-  `story-library` (separate from `community_*`); chess uses bundled
-  `public/chess-art/*.jpg`; music is split across `music-library/`,
-  `/api/chess-music`, and synth; characters lack a `theme_tags` column.
+- **Done / shared (added 2026-06-27):** story heroes + worlds surface in
+  `list-characters` / `list-assets` (source:story); characters have a `theme`
+  column; ALL music + sfx are catalogued in `/api/list-audio` (themed chess
+  music + mood loops + ambience + chess one-shots), filterable by theme.
+- **Still siloed (converge toward shared):** chess WORLD art uses bundled
+  `public/chess-art/*.jpg` (not yet library rows); synth one-shots in
+  `buildable-audio.js` are client-only (not URL-addressable in the catalog).
 - **North star:** one `/api/library` read that returns every kind, filterable by
   `theme` and `usable_in`, so a new project renders itself from existing assets.
 
