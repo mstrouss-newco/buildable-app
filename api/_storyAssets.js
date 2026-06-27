@@ -51,11 +51,11 @@ export async function builtStoryAssets(kind, url, key) {
       }
     }
 
-    // One batched existence check. Encode the whole value so the colons in the
-    // keys survive (the server URL-decodes before parsing the in() list).
-    const inList = entries.map((e) => e.k).join(",");
+    // Pull the set of cached base keys with a simple prefix filter (proven to
+    // work; "lib:" base images are few) and match locally — robust and avoids
+    // any long-URL / in() encoding pitfalls.
     const r = await fetch(
-      `${url}/rest/v1/narration_cache?cache_key=in.(${encodeURIComponent(inList)})&select=cache_key`,
+      `${url}/rest/v1/narration_cache?select=cache_key&cache_key=like.lib:%25&limit=2000`,
       { headers: { apikey: key, Authorization: `Bearer ${key}` } }
     );
     if (!r.ok) return [];
