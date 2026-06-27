@@ -176,6 +176,10 @@
       "dest": "/survival-engine.html"
     },
     {
+      "src": "/breaker-engine.html",
+      "dest": "/breaker-engine.html"
+    },
+    {
       "src": "/buildable-renders.js",
       "dest": "/buildable-renders.js"
     },

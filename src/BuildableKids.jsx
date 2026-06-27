@@ -34,6 +34,7 @@ const SCREEN_CHESS = "chess";
 const SCREEN_GAME_PICKER = "game_picker";
 const SCREEN_PLATFORMER = "platformer";
 const SCREEN_SURVIVAL = "survival";
+const SCREEN_BREAKER = "breaker";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_TOP = "top";
 function LearningControl() {
@@ -72,7 +73,7 @@ function LearningControl() {
   );
 }
 
-function GamePicker({ onHome, onPlatformer, onSurvival }) {
+function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker }) {
   const tile = (grad, title, desc, onClick, soon) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
       <div style={{ width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)" }} />
@@ -92,6 +93,7 @@ function GamePicker({ onHome, onPlatformer, onSurvival }) {
       <p style={styles.tagline}>Pick a game to play!</p>
       <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Platformer", "Run, jump and reach the flag!", onPlatformer, false)}
+        {tile("linear-gradient(160deg,#9B7BFF,#67E8F9)", "Breaker", "Bounce the ball, smash every brick!", onBreaker, false)}
         {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false)}
       </div>
     </div>
@@ -103,6 +105,15 @@ function SurvivalScreen({ onHome }) {
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
       <iframe title="Buildable Survival" src="/survival-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    </div>
+  );
+}
+
+function BreakerScreen({ onHome }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
+      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
+      <iframe title="Buildable Breaker" src="/breaker-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
@@ -365,13 +376,16 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_SURVIVAL) {
     return <SurvivalScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_BREAKER) {
+    return <BreakerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_CHESS) {
     return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHESS_FAMILY)} />;

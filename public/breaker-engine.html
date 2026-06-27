@@ -1,0 +1,539 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Buildable Breaker — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#0a1030;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{background:#000;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  /* menu + customize overlays (DOM, so taps are big and easy on iPad) */
+  .ov{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;align-items:center;
+      background:linear-gradient(180deg,#0b1230,#241152);color:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .ov.show{display:flex}
+  .ov h1{font-size:40px;margin:30px 0 4px;letter-spacing:.5px}
+  .ov .sub{opacity:.78;margin:0 0 18px;text-align:center;padding:0 20px;max-width:560px}
+  .btn{font-family:inherit;font-weight:700;font-size:22px;color:#1a0f3a;background:#9b7bff;border:none;
+       border-radius:16px;padding:16px 40px;margin:8px;cursor:pointer;min-width:220px;box-shadow:0 6px 0 #6a4ad6}
+  .btn:active{transform:translateY(3px);box-shadow:0 3px 0 #6a4ad6}
+  .btn.alt{background:#ffd86b;box-shadow:0 6px 0 #c9a948}
+  .btn.small{font-size:17px;min-width:0;padding:10px 18px;margin:4px}
+  .tabs{display:flex;gap:8px;margin:6px 0 14px;flex-wrap:wrap;justify-content:center}
+  .tab{font-family:inherit;font-weight:700;font-size:16px;color:#cdd0ff;background:#241a52;border:2px solid #3a2c6e;
+       border-radius:12px;padding:9px 18px;cursor:pointer}
+  .tab.on{background:#9b7bff;color:#1a0f3a;border-color:#9b7bff}
+  .grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:760px;padding:0 14px 24px}
+  .opt{width:150px;background:#1a1444;border:3px solid #2c2466;border-radius:16px;padding:12px;text-align:center;cursor:pointer}
+  .opt.on{border-color:#7ee0a0;box-shadow:0 0 0 2px rgba(126,224,160,.35)}
+  .opt .sw{height:54px;border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center}
+  .opt .nm{font-weight:700;font-size:17px}
+  .opt .ds{opacity:.7;font-size:12px;min-height:16px;margin-top:2px}
+  .toggle{width:150px;background:#1a1444;border:3px solid #2c2466;border-radius:16px;padding:12px;text-align:center;cursor:pointer}
+  .toggle.on{border-color:#7ee0a0;box-shadow:0 0 0 2px rgba(126,224,160,.35)}
+  .toggle .pill{display:inline-block;margin-top:6px;font-weight:800;font-size:13px;padding:3px 12px;border-radius:20px;background:#3a2c6e;color:#cdd0ff}
+  .toggle.on .pill{background:#7ee0a0;color:#0c2417}
+  #muteBtn{position:fixed;left:12px;bottom:12px;z-index:30;font-family:inherit;font-weight:700;font-size:14px;
+           color:#cdd0ff;background:rgba(26,20,64,.7);border:1px solid #3a2c6e;border-radius:10px;padding:7px 12px;cursor:pointer}
+  #helpBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:18px;
+           color:#1a0f3a;background:#ffd86b;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+  .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;background:#ffd86b;color:#1a0f3a;
+         font-weight:700;padding:12px 22px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="900" height="600"></canvas></div>
+
+<div id="menu" class="ov">
+  <h1 id="menuTitle">Buildable Breaker</h1>
+  <div class="sub">Bounce the ball, smash every brick. Slide or use the arrow keys to move your paddle.</div>
+  <div class="grid" id="levelSelect" style="max-width:560px"></div>
+  <button class="btn alt" id="customizeBtn">Make It Mine</button>
+</div>
+
+<div id="customize" class="ov">
+  <h1>Make It Mine</h1>
+  <div class="sub" id="custSub">Pick how your game looks and plays.</div>
+  <div class="tabs" id="custTabs"></div>
+  <div class="grid" id="custGrid"></div>
+  <button class="btn small" id="custBack">Back</button>
+</div>
+
+<div id="toast" class="toast"></div>
+<button id="muteBtn">Sound: On</button>
+<button id="helpBtn" title="How to play">?</button>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script>
+// ============================================================================
+//  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
+//  Classic paddle-and-ball brick breaker. You slide the paddle; the ball bounces
+//  and smashes bricks. Levels are RECIPES (brick layouts + difficulty knobs).
+//  Brick breakers are always clearable, so every level can be beaten.
+//  Kids customize: the LOOK (backdrop, ball, paddle), POWER-UPS (on/off),
+//  and DIFFICULTY (easy/normal/hard). No code edits needed.
+// ============================================================================
+const W=900, H=600;
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+const BR=(typeof window!=="undefined"&&window.BuildableRenders)||(typeof globalThis!=="undefined"&&globalThis.BuildableRenders);
+const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThis!=="undefined"&&globalThis.BuildableAudio);
+function sfx(n,o){ if(BA)BA.sfx(n,o); }
+function mkImg(src){ const im=(typeof Image!=="undefined")?new Image():{}; try{ im.crossOrigin="anonymous"; }catch(e){} if(src&&"src" in im) im.src=src; return im; }
+
+// ---- data: the game recipe (safe to tweak freely; no code changes needed) ----
+const GAME_CONFIG = window.GAME_CONFIG || {
+  name: "Buildable Breaker",
+  // each level = a layout recipe. rows/cols of bricks, how tough they are, ball speed.
+  //   pattern: how the bricks are arranged (full | pyramid | checker | gaps | diamond)
+  //   tough:   how many of the bricks take 2+ hits (0..1 share)
+  //   speed:   base ball speed for this level
+  levels: [
+    { name:"First Bounce",  cols:8,  rows:3, pattern:"full",    tough:0.0, speed:4.2 },
+    { name:"Step Pyramid",  cols:9,  rows:5, pattern:"pyramid", tough:0.1, speed:4.6 },
+    { name:"Checker Castle",cols:10, rows:5, pattern:"checker", tough:0.2, speed:5.0 },
+    { name:"Secret Gaps",   cols:10, rows:6, pattern:"gaps",    tough:0.3, speed:5.3 },
+    { name:"Diamond Drop",  cols:11, rows:7, pattern:"diamond", tough:0.4, speed:5.6 },
+    { name:"Brick Boss",    cols:12, rows:8, pattern:"full",    tough:0.55,speed:6.0 },
+  ],
+  // bright, friendly Buildable colors used for the brick rows (top to bottom)
+  brickColors: ["#ff7aa8","#ffb04d","#ffd86b","#7ee0a0","#62d0ff","#9b7bff","#ff8fce"],
+};
+
+// ---- look options kids can pick (the "Make It Mine" screen) ----
+// backdrops: "meadow" is a drawn Buildable scene; the rest load a polished art image.
+const BACKDROPS = [
+  { id:"meadow", name:"Meadow",  c1:"#bff0d8", c2:"#7fd1a6" },
+  { id:"space",  name:"Space",   img:"chess-art/space_bg.jpg",  c1:"#1a1546", c2:"#0a1030" },
+  { id:"candy",  name:"Candy",   img:"chess-art/candy_bg.jpg",  c1:"#ffd6ec", c2:"#ff9ec4" },
+  { id:"ocean",  name:"Ocean",   img:"chess-art/ocean_bg.jpg",  c1:"#a8e6ff", c2:"#3aa0d6" },
+  { id:"castle", name:"Castle",  img:"chess-art/castle_bg.jpg", c1:"#e6d6ff", c2:"#9b7bff" },
+  { id:"desert", name:"Desert",  img:"chess-art/desert_bg.jpg", c1:"#ffe6b0", c2:"#e6b35a" },
+];
+// ball skins: drawn so they always work, even with no internet
+const BALLS = [
+  { id:"glow",  name:"Glow Ball", col:"#ffffff", glow:"#9b7bff" },
+  { id:"star",  name:"Star",      col:"#ffd86b", glow:"#ffb04d", star:true },
+  { id:"comet", name:"Comet",     col:"#62d0ff", glow:"#62d0ff", trail:true },
+  { id:"berry", name:"Berry",     col:"#ff7aa8", glow:"#ff7aa8" },
+];
+const PADDLES = ["#9b7bff","#62d0ff","#7ee0a0","#ff7aa8","#ffd86b","#ff8fce"];
+// difficulty presets: lives, paddle width, and a speed multiplier on top of the level speed
+const DIFFS = {
+  easy:   { name:"Easy",   lives:5, padW:150, speedMul:0.85 },
+  normal: { name:"Normal", lives:3, padW:120, speedMul:1.0  },
+  hard:   { name:"Hard",   lives:2, padW:92,  speedMul:1.18 },
+};
+// power-ups: a brick may drop a falling capsule; catch it with the paddle to use it.
+// Each can be turned on/off by the kid. apply(g) changes the live game.
+const POWERS = {
+  grow:  { name:"Big Paddle", col:"#7ee0a0", desc:"Wider paddle",       apply:g=>{ g.padW=Math.min(220,g.padW+34); g.padGrowT=600; } },
+  multi: { name:"Multi Ball", col:"#62d0ff", desc:"Split into 3 balls", apply:g=>{ splitBalls(); } },
+  slow:  { name:"Slow-Mo",    col:"#9b7bff", desc:"Slows the ball",      apply:g=>{ g.slowT=420; } },
+  sticky:{ name:"Catch",      col:"#ffd86b", desc:"Ball sticks, tap to fling", apply:g=>{ g.sticky=true; g.stickyT=900; } },
+  life:  { name:"Extra Life", col:"#ff7aa8", desc:"+1 life",             apply:g=>{ g.lives++; } },
+};
+const POWER_IDS = Object.keys(POWERS);
+
+// ---- saved profile: progress + the kid's look/play choices ----
+function defaultPrefs(){ return {
+  unlocked:0, bestLevel:0, totalWins:0,
+  backdrop:"meadow", ball:"glow", paddle:"#9b7bff", difficulty:"normal",
+  powers:{ grow:true, multi:true, slow:true, sticky:true, life:true },
+}; }
+function mergePrefs(d){ const p=defaultPrefs(); if(!d||typeof d!=="object")return p;
+  p.unlocked=Math.max(0,d.unlocked||0); p.bestLevel=d.bestLevel||0; p.totalWins=d.totalWins||0;
+  if(d.backdrop)p.backdrop=d.backdrop; if(d.ball)p.ball=d.ball; if(d.paddle)p.paddle=d.paddle;
+  if(d.difficulty&&DIFFS[d.difficulty])p.difficulty=d.difficulty;
+  if(d.powers&&typeof d.powers==="object")for(const k of POWER_IDS) if(k in d.powers)p.powers[k]=!!d.powers[k];
+  return p; }
+let PREFS=defaultPrefs();
+function activeKidId(){ try{ const k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return k&&k.id?k.id:null; }catch{ return null; } }
+function prefsKey(){ const k=activeKidId(); return "bk_breaker_prefs"+(k?("_"+k):""); }
+function loadPrefs(){ try{ const s=localStorage.getItem(prefsKey()); if(s)PREFS=mergePrefs(JSON.parse(s)); }catch{} }
+function savePrefs(){ try{ localStorage.setItem(prefsKey(), JSON.stringify(PREFS)); }catch{} }
+
+// ---- art (backdrop image, drawn fallback) ----
+const bgCache={};
+function backdropDef(){ return BACKDROPS.find(b=>b.id===PREFS.backdrop)||BACKDROPS[0]; }
+function bgImage(){ const d=backdropDef(); if(!d.img)return null; if(!bgCache[d.id])bgCache[d.id]=mkImg(d.img); return bgCache[d.id]; }
+
+// deterministic RNG so a level's tough-brick/power-up layout is the same each try
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+// ---- live game state ----
+const PAD_Y = H-42;        // paddle's vertical position
+const PAD_H = 18;
+const BALL_R = 9;
+let G=null;                // the whole live game object
+let level=0, L=null, state="title", started=false, botMode=false, helpOpen=false;
+let stars=[]; (function(){ const r=mulberry(7); for(let i=0;i<70;i++) stars.push({x:r()*W,y:r()*H,s:0.6+r()*1.6,ph:r()*6.28,sp:0.5+r()*1.4}); })();
+
+// build the brick layout for a level from its recipe
+function buildBricks(L, rng){
+  const cols=L.cols, rows=L.rows;
+  const top=70, marginX=40, gap=6;
+  const bw=(W-marginX*2-gap*(cols-1))/cols, bh=24;
+  const cset=GAME_CONFIG.brickColors;
+  const bricks=[];
+  for(let r=0;r<rows;r++){
+    for(let cidx=0;cidx<cols;cidx++){
+      if(!inPattern(L.pattern, r, cidx, rows, cols)) continue;
+      const tough = rng() < L.tough;          // some bricks take 2 hits
+      const hp = tough?2:1;
+      bricks.push({
+        x: marginX + cidx*(bw+gap), y: top + r*(bh+gap), w:bw, h:bh,
+        hp, maxHp:hp, col:cset[r%cset.length], alive:true,
+        power: null,    // power-up id filled in below
+      });
+    }
+  }
+  // sprinkle power-ups onto a few random bricks (only the ones turned on)
+  const onPowers=POWER_IDS.filter(k=>PREFS.powers[k]);
+  if(onPowers.length){ const n=Math.min(bricks.length, 2+Math.floor(bricks.length*0.12));
+    for(let i=0;i<n;i++){ const b=bricks[Math.floor(rng()*bricks.length)]; if(b) b.power=onPowers[Math.floor(rng()*onPowers.length)]; } }
+  return bricks;
+}
+// which grid cells are filled, per pattern (keeps every level clearable)
+function inPattern(p, r, cidx, rows, cols){
+  const mid=(cols-1)/2;
+  switch(p){
+    case "pyramid": return Math.abs(cidx-mid) <= (mid * (r+1)/rows) + 0.001;
+    case "checker": return (r+cidx)%2===0;
+    case "gaps":    return !(cidx%3===2 && r%2===1);
+    case "diamond": return Math.abs(cidx-mid) + Math.abs(r-(rows-1)/2) <= Math.max(mid,(rows-1)/2)+0.5;
+    default:        return true;   // full
+  }
+}
+
+function newBall(x,y,ang,speed){ return { x,y, vx:Math.cos(ang)*speed, vy:Math.sin(ang)*speed }; }
+
+// start a level. carryLives keeps your remaining lives between levels.
+function startLevel(i, carryLives){
+  level=Math.max(0,Math.min(GAME_CONFIG.levels.length-1,i)); L=GAME_CONFIG.levels[level];
+  const diff=DIFFS[PREFS.difficulty]||DIFFS.normal;
+  const rng=mulberry(4242+level*131);
+  const speed=L.speed*diff.speedMul;
+  G={
+    padW:diff.padW, padX:W/2, padGrowT:0,
+    lives:(carryLives!=null?carryLives:diff.lives),
+    speed, baseSpeed:speed,
+    bricks: buildBricks(L, rng),
+    balls: [],                 // filled when the ball launches
+    caps: [],                  // falling power-up capsules
+    parts: [],                 // sparkle particles
+    onPaddle:true,             // ball waits on the paddle until launch
+    sticky:false, stickyT:0, slowT:0,
+    score:0,
+  };
+  // place a waiting ball on the paddle
+  G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ];
+  G.onPaddle=true;
+  state="play"; started=false;
+}
+
+// launch the waiting ball off the paddle
+function launch(){ if(!G||!G.onPaddle)return; G.onPaddle=false; started=true;
+  const b=G.balls[0]; const ang=-Math.PI/2 + (Math.random()*0.5-0.25); const sp=G.speed;
+  b.vx=Math.cos(ang)*sp; b.vy=Math.sin(ang)*sp; sfx("shoot"); }
+
+// split every ball into three (Multi Ball power-up)
+function splitBalls(){ if(!G)return; const add=[];
+  for(const b of G.balls){ const sp=Math.hypot(b.vx,b.vy)||G.speed; const a0=Math.atan2(b.vy,b.vx);
+    add.push(newBall(b.x,b.y,a0-0.4,sp)); add.push(newBall(b.x,b.y,a0+0.4,sp)); }
+  G.balls=G.balls.concat(add).slice(0,9); }   // cap so it never gets silly
+
+function burst(x,y,col,n){ for(let i=0;i<(n||8);i++){ const a=Math.random()*6.28,s=1+Math.random()*3; G.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:16+Math.random()*10,col}); } }
+
+// ---------- input: drag (touch) + arrow keys, plus tap/space to launch ----------
+function canvasPt(e){ const r=c.getBoundingClientRect(); return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) }; }
+function movePaddleTo(x){ if(!G)return; G.padX=Math.max(G.padW/2, Math.min(W-G.padW/2, x)); if(G.onPaddle&&G.balls[0]){ G.balls[0].x=G.padX; } }
+let dragging=false;
+c.addEventListener('pointerdown',e=>{ e.preventDefault(); if(BA)BA.unlock(); if(helpOpen){ helpOpen=false; return; }
+  if(state==="play"){ const p=canvasPt(e); dragging=true; movePaddleTo(p.x);
+    if(G.sticky && G.stuck){ flingStuck(); }     // catch power-up: tap to fling
+    else if(G.onPaddle){ launch(); }
+    return; }
+  if(state==="win"||state==="lose"){ advanceAfterEnd(); return; } });
+c.addEventListener('pointermove',e=>{ if(!dragging)return; const p=canvasPt(e); movePaddleTo(p.x); });
+function endDrag(){ dragging=false; }
+c.addEventListener('pointerup',endDrag); c.addEventListener('pointercancel',endDrag);
+
+const held={};
+addEventListener('keydown',e=>{
+  if(e.key==='b'){ botMode=!botMode; started=true; return; }
+  if(state==="win"||state==="lose"){ advanceAfterEnd(); return; }
+  if([" ","Spacebar","ArrowUp","Up"].includes(e.key)){ if(G&&G.sticky&&G.stuck)flingStuck(); else launch(); e.preventDefault(); return; }
+  if(["ArrowLeft","Left","a","A"].includes(e.key)){ held.left=true; e.preventDefault(); }
+  if(["ArrowRight","Right","d","D"].includes(e.key)){ held.right=true; e.preventDefault(); }
+});
+addEventListener('keyup',e=>{ if(["ArrowLeft","Left","a","A"].includes(e.key))held.left=false; if(["ArrowRight","Right","d","D"].includes(e.key))held.right=false; });
+
+function flingStuck(){ const b=G.stuck; if(!b)return; const ang=-Math.PI/2 + (Math.random()*0.5-0.25); const sp=G.speed; b.vx=Math.cos(ang)*sp; b.vy=Math.sin(ang)*sp; G.stuck=null; sfx("shoot"); }
+
+// ---------- QA bot: a perfect paddle that tracks the lowest falling ball ----------
+function botThink(){ if(!G)return; if(G.onPaddle){ launch(); return; } if(G.sticky&&G.stuck){ flingStuck(); return; }
+  // pick the lowest ball heading down (the one we must catch)
+  let ball=null, low=-1;
+  for(const b of G.balls){ if(b===G.stuck)continue; if(b.vy>0 && b.y>low){ low=b.y; ball=b; } }
+  if(!ball){ let by=-1; for(const b of G.balls){ if(b.y>by){by=b.y;ball=b;} } }
+  if(!ball){ return; }
+  // steer the bounce toward the nearest remaining brick so we sweep the whole board
+  let tb=null, bd=1e9; for(const br of G.bricks){ if(!br.alive)continue; const cx=br.x+br.w/2,cy=br.y+br.h/2; const d=(cx-ball.x)*(cx-ball.x)+(cy-ball.y)*(cy-ball.y); if(d<bd){bd=d;tb=br;} }
+  let target=ball.x;
+  if(tb){ const dir=(tb.x+tb.w/2)>ball.x?1:-1; target=ball.x - dir*G.padW*0.42; }   // offset so contact angles ball toward the brick
+  movePaddleTo(target);
+}
+
+// ---------- update: pure logic, no canvas (so QA can run it headless) ----------
+function update(){
+  if(state!=="play"||helpOpen||!G) return;
+  if(botMode) botThink();
+  else { const ps=10; if(held.left)movePaddleTo(G.padX-ps); if(held.right)movePaddleTo(G.padX+ps); }
+  if(!started) return;
+
+  // timers for temporary power-ups
+  if(G.padGrowT>0){ G.padGrowT--; if(G.padGrowT===0){ const d=DIFFS[PREFS.difficulty]||DIFFS.normal; G.padW=d.padW; } }
+  if(G.stickyT>0){ G.stickyT--; if(G.stickyT===0)G.sticky=false; }
+  const slow = G.slowT>0 ? 0.55 : 1; if(G.slowT>0)G.slowT--;
+
+  const padL=G.padX-G.padW/2, padR=G.padX+G.padW/2;
+  // move each ball
+  for(const b of G.balls){
+    if(b===G.stuck){ b.x=G.padX; b.y=PAD_Y-PAD_H/2-BALL_R; continue; }
+    b.x+=b.vx*slow; b.y+=b.vy*slow;
+    // walls
+    if(b.x<BALL_R){ b.x=BALL_R; b.vx=Math.abs(b.vx); sfx("select"); }
+    if(b.x>W-BALL_R){ b.x=W-BALL_R; b.vx=-Math.abs(b.vx); sfx("select"); }
+    if(b.y<BALL_R){ b.y=BALL_R; b.vy=Math.abs(b.vy); sfx("select"); }
+    // paddle bounce: reflect with an angle based on where it hit the paddle
+    if(b.vy>0 && b.y+BALL_R>=PAD_Y-PAD_H/2 && b.y-BALL_R<=PAD_Y+PAD_H/2 && b.x>=padL-BALL_R && b.x<=padR+BALL_R){
+      const hit=Math.max(-1,Math.min(1,(b.x-G.padX)/(G.padW/2)));
+      // tiny natural jitter so the bounce is never perfectly repeatable (no stuck orbits)
+      let ang=-Math.PI/2 + hit*1.0 + (Math.random()*0.10-0.05);
+      ang=Math.max(-Math.PI/2-1.15, Math.min(-Math.PI/2+1.15, ang));   // keep it heading clearly upward
+      const sp=G.speed;
+      b.vx=Math.cos(ang)*sp; b.vy=Math.sin(ang)*sp; b.y=PAD_Y-PAD_H/2-BALL_R;
+      // keep the ball lively: never perfectly vertical (so it sweeps the bricks)
+      const minVx=sp*0.22; if(Math.abs(b.vx)<minVx){ b.vx=(b.vx<0?-1:1)*minVx; b.vy=-Math.sqrt(Math.max(1,sp*sp-b.vx*b.vx)); }
+      if(G.sticky){ G.stuck=b; }           // Catch power-up: grab the ball
+      sfx("shoot");
+    }
+    // bricks
+    hitBricks(b);
+  }
+  // remove balls that fell past the bottom
+  G.balls=G.balls.filter(b=> b===G.stuck || b.y<H+30);
+  if(G.balls.length===0 && !G.stuck){ loseLife(); }
+
+  // falling power-up capsules
+  for(const cap of G.caps){ cap.y+=2.4;
+    if(cap.y>PAD_Y-PAD_H/2-10 && cap.y<PAD_Y+PAD_H && cap.x>padL-12 && cap.x<padR+12){
+      cap.got=true; const p=POWERS[cap.id]; if(p){ p.apply(G); sfx("levelup"); burst(cap.x,cap.y,cap.col,12); } }
+  }
+  G.caps=G.caps.filter(cap=>!cap.got && cap.y<H+20);
+
+  // particles
+  for(const pt of G.parts){ pt.x+=pt.vx; pt.y+=pt.vy; pt.vx*=0.92; pt.vy*=0.92; pt.life--; }
+  G.parts=G.parts.filter(pt=>pt.life>0);
+
+  // win when no breakable bricks remain
+  if(!G.bricks.some(b=>b.alive)){ winLevel(); }
+}
+
+// ball-vs-bricks: reflect on the axis with the smaller overlap (robust + simple)
+function hitBricks(b){
+  for(const br of G.bricks){ if(!br.alive)continue;
+    if(b.x+BALL_R<br.x || b.x-BALL_R>br.x+br.w || b.y+BALL_R<br.y || b.y-BALL_R>br.y+br.h) continue;
+    // overlap depth on each axis
+    const ox = Math.min(b.x+BALL_R-br.x, br.x+br.w-(b.x-BALL_R));
+    const oy = Math.min(b.y+BALL_R-br.y, br.y+br.h-(b.y-BALL_R));
+    if(ox<oy){ b.vx=-b.vx; b.x+= (b.x<br.x+br.w/2? -ox: ox); }
+    else     { b.vy=-b.vy; b.y+= (b.y<br.y+br.h/2? -oy: oy); }
+    br.hp--; burst(b.x,b.y,br.col,5);
+    if(br.hp<=0){ br.alive=false; G.score+=10; sfx("coin",{tier:br.maxHp>=2?2:1});
+      if(br.power){ G.caps.push({x:br.x+br.w/2,y:br.y+br.h/2,id:br.power,col:(POWERS[br.power]||{}).col||"#fff",got:false}); }
+    } else { sfx("coin",{tier:1}); }
+    break;   // one brick per step keeps bounces clean
+  }
+}
+
+function loseLife(){ G.lives--; sfx("hurt");
+  if(G.lives<=0){ state="lose"; sfx("lose"); return; }
+  // put a fresh ball back on the paddle
+  G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, G.speed) ];
+  G.onPaddle=true; G.stuck=null; started=false; }
+
+function winLevel(){ state="win"; sfx("win"); PREFS.totalWins++;
+  const u=Math.min(GAME_CONFIG.levels.length-1, level+1);
+  if(u>(PREFS.unlocked||0)){ PREFS.unlocked=u; }
+  PREFS.bestLevel=Math.max(PREFS.bestLevel||0, level+1); savePrefs(); }
+
+function advanceAfterEnd(){
+  if(state==="win"){ if(level<GAME_CONFIG.levels.length-1){ startLevel(level+1, G.lives); } else { showMenu(); toast("You beat every level!"); } }
+  else { showMenu(); }   // lose -> back to menu
+}
+
+// ---------- draw ----------
+function rrect(x,y,w,h,r){ BR.rrect(ctx,x,y,w,h,r); }
+function drawBackdrop(){ const t=Date.now()/1000; const img=bgImage();
+  if(img && (img.complete||img.width) && (img.naturalWidth||img.width)){ BR.bgImage(ctx,img,W,H);
+    const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.4,W/2,H/2,Math.max(W,H)*0.72); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.32)"); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+  } else { const d=backdropDef(); const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,d.c1); g.addColorStop(1,d.c2); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    for(const st of stars){ const a=0.25*Math.abs(Math.sin(t*st.sp+st.ph)); ctx.fillStyle="rgba(255,255,255,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(st.x,st.y,st.s,0,7);ctx.fill(); } }
+}
+function drawBall(b){ const sk=BALLS.find(x=>x.id===PREFS.ball)||BALLS[0];
+  ctx.save(); ctx.shadowColor=sk.glow; ctx.shadowBlur=16;
+  if(sk.star){ BR.sparkle(ctx,b.x,b.y,BALL_R+2,Date.now()/200); }
+  else { const g=ctx.createRadialGradient(b.x-3,b.y-3,1,b.x,b.y,BALL_R); g.addColorStop(0,"#fff"); g.addColorStop(1,sk.col); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R,0,7);ctx.fill(); }
+  ctx.restore(); }
+function drawPaddle(){ const x=G.padX-G.padW/2; ctx.save(); ctx.shadowColor=PREFS.paddle; ctx.shadowBlur=12;
+  const g=ctx.createLinearGradient(0,PAD_Y-PAD_H/2,0,PAD_Y+PAD_H/2); g.addColorStop(0,"#ffffff"); g.addColorStop(0.25,PREFS.paddle); g.addColorStop(1,shade(PREFS.paddle,-30));
+  ctx.fillStyle=g; rrect(x,PAD_Y-PAD_H/2,G.padW,PAD_H,9); ctx.fill(); ctx.restore(); }
+function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt; r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b)); return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+function banner(t,s){ ctx.fillStyle="rgba(10,12,40,.66)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 48px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-6); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+36); }
+
+// wordless how-to-play demo (for kids who can't read yet)
+function drawTutorial(){ const tt=Date.now()/1000;
+  ctx.fillStyle="rgba(10,12,40,.82)"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="bold 30px Fredoka,sans-serif"; ctx.fillText("Slide to move. Bounce the ball!", W/2, 80);
+  // demo paddle following a finger, ball bouncing on top
+  const swing=Math.sin(tt*1.4)*150, px=W/2+swing;
+  const pw=120, py=H*0.62;
+  ctx.fillStyle="#9b7bff"; rrect(px-pw/2,py,pw,18,9); ctx.fill();
+  const bx=W/2+Math.sin((tt-0.2)*1.4)*150, by=py-26-Math.abs(Math.sin(tt*3))*40;
+  ctx.save(); ctx.shadowColor="#9b7bff"; ctx.shadowBlur=16; ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(bx,by,9,0,7);ctx.fill(); ctx.restore();
+  if(BR.hand)BR.hand(ctx, px, py+44, 1.2);
+  // a couple of bricks up top
+  const cols=["#ff7aa8","#ffd86b","#7ee0a0","#62d0ff","#9b7bff"];
+  for(let i=0;i<5;i++){ ctx.fillStyle=cols[i]; rrect(W/2-160+i*66, H*0.30, 56, 22, 6); ctx.fill(); }
+  // pulsing play arrow
+  const pr=32+Math.sin(tt*3)*3, ay=H-72; ctx.fillStyle="rgba(155,123,255,.25)"; ctx.beginPath();ctx.arc(W/2,ay,pr+10,0,7);ctx.fill();
+  ctx.fillStyle="#9b7bff"; ctx.beginPath();ctx.arc(W/2,ay,pr,0,7);ctx.fill();
+  ctx.fillStyle="#1a0f3a"; ctx.beginPath();ctx.moveTo(W/2-9,ay-14);ctx.lineTo(W/2+15,ay);ctx.lineTo(W/2-9,ay+14);ctx.closePath();ctx.fill();
+}
+
+function draw(){ if(!G){ return; }
+  drawBackdrop();
+  // bricks
+  for(const br of G.bricks){ if(!br.alive)continue;
+    ctx.fillStyle=br.col; rrect(br.x,br.y,br.w,br.h,6); ctx.fill();
+    // tough bricks get a lighter inner stripe so kids see they take 2 hits
+    if(br.maxHp>=2){ ctx.fillStyle = br.hp>=2 ? "rgba(255,255,255,.30)" : "rgba(0,0,0,.18)"; rrect(br.x+4,br.y+4,br.w-8,4,2); ctx.fill(); }
+    // power-up bricks get a soft glow dot
+    if(br.power){ ctx.fillStyle="rgba(255,255,255,.85)"; ctx.beginPath();ctx.arc(br.x+br.w/2,br.y+br.h/2,3.2,0,7);ctx.fill(); }
+  }
+  // falling capsules
+  for(const cap of G.caps){ ctx.save(); ctx.shadowColor=cap.col; ctx.shadowBlur=12; ctx.fillStyle=cap.col; rrect(cap.x-13,cap.y-8,26,16,8); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.9)"; ctx.beginPath();ctx.arc(cap.x,cap.y,3,0,7);ctx.fill(); ctx.restore(); }
+  // particles
+  for(const pt of G.parts){ const a=Math.max(0,pt.life/24); ctx.fillStyle=pt.col; ctx.globalAlpha=a; ctx.beginPath();ctx.arc(pt.x,pt.y,2.4,0,7);ctx.fill(); ctx.globalAlpha=1; }
+  // balls + paddle
+  for(const b of G.balls) drawBall(b);
+  drawPaddle();
+
+  // HUD
+  ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.font="bold 22px Fredoka,sans-serif";
+  ctx.fillText(L.name+"   Level "+(level+1)+"/"+GAME_CONFIG.levels.length, 18, 32);
+  // lives as hearts
+  for(let i=0;i<G.lives;i++){ if(BR.heart){ ctx.fillStyle="#ff7aa8"; BR.heart(ctx, W-26-i*30, 22, 10); } }
+  const left=G.bricks.filter(b=>b.alive).length;
+  ctx.textAlign="right"; ctx.fillStyle="rgba(255,255,255,.9)"; ctx.font="bold 18px Fredoka,sans-serif"; ctx.fillText("Bricks left: "+left, W-18, 52);
+
+  // overlays
+  if(state==="play" && (!started||helpOpen)) drawTutorial();
+  if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); }
+  if(state==="lose"){ banner("Out of lives!","Tap to try again"); }
+}
+
+// ---------- DOM menus (guarded so headless QA never touches them) ----------
+function el(id){ const e=document.getElementById(id); return (e&&e.style)?e:null; }
+function show(id,on){ const e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
+function toast(msg){ const e=el("toast"); if(!e)return; e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{e.style.display="none";},2600); }
+function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
+
+function showMenu(){ state="title"; show("customize",false); show("menu",true); showHelpBtn(false); renderLevels(); }
+function renderLevels(){ const wrap=el("levelSelect"); if(!wrap)return; wrap.innerHTML="";
+  const unlocked=PREFS.unlocked||0;
+  GAME_CONFIG.levels.forEach((lv,i)=>{ const open=i<=unlocked;
+    const card=document.createElement("div"); card.className="opt"; card.style.width="150px"; card.style.cursor=open?"pointer":"default";
+    card.innerHTML='<div class="sw" style="background:'+(open?'#2c2466':'#181238')+';font-weight:800;font-size:20px;color:'+(open?'#fff':'#5a4f88')+'">'+(i+1)+'</div><div class="nm">'+lv.name+'</div><div class="ds">'+(open?(lv.cols*lv.rows)+' bricks':'Locked')+'</div>';
+    if(open) card.onclick=()=>startPlay(i);
+    wrap.appendChild(card); });
+}
+function startPlay(i){ if(BA)BA.unlock(); startLevel(i,null); show("menu",false); show("customize",false); showHelpBtn(true); }
+
+// ----- Make It Mine (customize) -----
+let custTab="look";
+function showCustomize(){ custTab="look"; show("menu",false); show("customize",true); showHelpBtn(false); renderCustomize(); }
+function renderCustomize(){ const tabs=el("custTabs"), grid=el("custGrid"); if(!tabs||!grid)return;
+  const TAB_LABEL={look:"Look", power:"Power-ups", diff:"How Hard"};
+  tabs.innerHTML=""; for(const s of ["look","power","diff"]){ const b=document.createElement("button"); b.className="tab"+(s===custTab?" on":""); b.textContent=TAB_LABEL[s]; b.onclick=()=>{custTab=s;renderCustomize();}; tabs.appendChild(b); }
+  grid.innerHTML="";
+  if(custTab==="look") renderLook(grid);
+  else if(custTab==="power") renderPowers(grid);
+  else renderDiff(grid);
+}
+function optCard(swHTML,name,ds,on,onClick){ const card=document.createElement("div"); card.className="opt"+(on?" on":"");
+  card.innerHTML='<div class="sw">'+swHTML+'</div><div class="nm">'+name+'</div><div class="ds">'+(ds||"")+'</div>'; card.onclick=onClick; return card; }
+function renderLook(grid){
+  const head=document.createElement("div"); head.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:2px 0 4px"; head.textContent="Backdrop"; grid.appendChild(head);
+  for(const d of BACKDROPS){ const sw=d.img?'background:linear-gradient(135deg,'+d.c1+','+d.c2+')':'background:linear-gradient(135deg,'+d.c1+','+d.c2+')';
+    grid.appendChild(optCard('<div style="width:100%;height:100%;border-radius:10px;'+sw+'"></div>', d.name, "", PREFS.backdrop===d.id, ()=>{ PREFS.backdrop=d.id; savePrefs(); renderCustomize(); })); }
+  const h2=document.createElement("div"); h2.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:10px 0 4px"; h2.textContent="Ball"; grid.appendChild(h2);
+  for(const b of BALLS){ const dot='<div style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,'+b.col+');box-shadow:0 0 12px '+b.glow+'"></div>';
+    grid.appendChild(optCard(dot, b.name, "", PREFS.ball===b.id, ()=>{ PREFS.ball=b.id; savePrefs(); renderCustomize(); })); }
+  const h3=document.createElement("div"); h3.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:10px 0 4px"; h3.textContent="Paddle"; grid.appendChild(h3);
+  const row=document.createElement("div"); row.style.cssText="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;width:100%";
+  for(const col of PADDLES){ const sw=document.createElement("div"); const sel=PREFS.paddle===col;
+    sw.style.cssText="width:64px;height:30px;border-radius:8px;cursor:pointer;background:linear-gradient(180deg,#fff,"+col+");border:3px solid "+(sel?"#7ee0a0":"transparent")+";box-shadow:0 0 0 2px "+(sel?"rgba(126,224,160,.4)":"transparent")+";";
+    sw.onclick=()=>{ PREFS.paddle=col; savePrefs(); renderCustomize(); }; row.appendChild(sw); }
+  grid.appendChild(row);
+}
+function renderPowers(grid){
+  const note=document.createElement("div"); note.style.cssText="width:100%;text-align:center;opacity:.75;margin-bottom:6px"; note.textContent="Tap to turn each power-up on or off."; grid.appendChild(note);
+  for(const id of POWER_IDS){ const p=POWERS[id]; const on=!!PREFS.powers[id];
+    const card=document.createElement("div"); card.className="toggle"+(on?" on":"");
+    card.innerHTML='<div class="sw" style="background:'+p.col+';border-radius:12px;"></div><div class="nm">'+p.name+'</div><div class="ds">'+p.desc+'</div><div class="pill">'+(on?"ON":"OFF")+'</div>';
+    card.onclick=()=>{ PREFS.powers[id]=!PREFS.powers[id]; savePrefs(); renderCustomize(); }; grid.appendChild(card); }
+}
+function renderDiff(grid){
+  for(const id of ["easy","normal","hard"]){ const d=DIFFS[id]; const on=PREFS.difficulty===id;
+    grid.appendChild(optCard('<div style="font-weight:800;font-size:22px;color:#1a0f3a;background:#ffd86b;border-radius:12px;width:100%;height:100%;display:flex;align-items:center;justify-content:center">'+d.name+'</div>',
+      d.name, d.lives+" lives", on, ()=>{ PREFS.difficulty=id; savePrefs(); renderCustomize(); })); }
+}
+
+function wireMenus(){ const cb=el("customizeBtn"), bk=el("custBack"); if(cb)cb.onclick=showCustomize; if(bk)bk.onclick=showMenu;
+  const mt=el("menuTitle"); if(mt)mt.textContent=GAME_CONFIG.name;
+  const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
+  const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; }; }
+
+function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
+// boot
+if(typeof document!=="undefined" && document.getElementById("menu")){ loadPrefs(); wireMenus(); startLevel(0,null); state="title"; showMenu(); }
+requestAnimationFrame(frame);
+
+// ---------- QA / picker hooks ----------
+window.BREAKER_GAME = {
+  startLevel:(i)=>{ startLevel(i,null); },
+  setBot:(b)=>{ botMode=b; started=true; },
+  state:()=>state,
+  dbg:()=>({ level, lives:G?G.lives:0, balls:G?G.balls.length:0, bricksLeft:G?G.bricks.filter(b=>b.alive).length:0, state }),
+  // headless harness: a perfect paddle plays a level, returns the result
+  sim:(idx, maxFrames)=>{ startLevel(idx,null); state="play"; botMode=true; started=true; let f=0; const cap=maxFrames||20000;
+    while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }
+    return { level:idx, result:state, frames:f, livesLeft:G?G.lives:0, bricksLeft:G?G.bricks.filter(b=>b.alive).length:0 }; },
+  // full adventure: clear every level carrying lives forward
+  campaign:(cap)=>{ const out=[]; cap=cap||20000;
+    for(let lvl=0; lvl<GAME_CONFIG.levels.length; lvl++){ const carry=lvl===0?null:(G?G.lives:null); startLevel(lvl,carry); state="play"; botMode=true; started=true;
+      let f=0; while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }
+      out.push({ level:lvl+1, result:state, frames:f, livesLeft:G?G.lives:0 }); if(state==="lose")break; }
+    return out; },
+  // render debug hooks
+  _begin:(i)=>{ startLevel(i||0,null); state="play"; botMode=true; started=true; },
+  _step:(n)=>{ for(let i=0;i<(n||1);i++) update(); }, _draw:()=>{ try{ draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
+  _setPref:(k,v)=>{ PREFS[k]=v; }, _prefs:()=>PREFS, _cfg:()=>GAME_CONFIG,
+};
+</script>
+</body>
+</html>
