@@ -63,9 +63,12 @@ that already works**:
   `url` (a hosted link, not embedded base64 when avoidable), `source` (which
   project made it), and `usable_in` (which projects may use it; default = all).
   The `community_*` tables are the source of truth — extend them, don't replace.
-- **`theme` is the universal key.** Spinning up a new project for a theme should
-  be able to pull a matching world + character + element + music + sfx by that
-  one label.
+- **`theme` is a label, not a fence.** It makes "give me a jungle set" a one-line
+  request, but it never locks an asset to one theme: every engine can pull ANY
+  asset of ANY theme, and one creation may freely mix themes (a castle knight in a
+  jungle world). Adding a new theme (e.g. `city`) is free — just a new label value,
+  no new table/folder/engine change. `usable_in` (asset shape), not `theme`, is the
+  real gate on what a project can use. See `ASSET-LIBRARY.md`.
 - **Write on create.** When a project generates a reusable asset, it WRITES it
   to the shared library (approved + reusable), so the next project can use it.
 - **Read on render, always with a fallback.** When a project renders, it READS
