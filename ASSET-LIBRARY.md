@@ -19,9 +19,11 @@ Every reusable asset is one of five `kind`s, and is filed under one `theme`:
   `space`, `jungle`, `ocean`, `candy`, `desert`, `castle`, `forest`
   (add new themes sparingly, lowercase, singular).
 
-When you build a new project for a theme, you should be able to pull a matching
-world + character + element + music + sfx by that one theme word. Always tag
-what you create with both `kind` and `theme` so the next project can find it.
+A theme is a **label, not a fence.** Tagging an asset `theme: jungle` means "this
+matches a jungle look" — it does NOT lock the asset to jungle projects. Every
+engine can pull ANY asset of ANY theme. Theme just makes "give me a jungle set"
+a one-line request; it is never a wall. Always tag what you create with both
+`kind` and `theme` so others can find it by that label.
 
 ---
 
@@ -70,6 +72,40 @@ Existing write paths already follow this: `api/generate-creature.js` → charact
 tables — **do not invent a new siloed store.**
 
 ---
+
+## Adding a new theme (e.g. `city`) — it's free, no plumbing
+
+A theme is just a new value of the `theme` label. Adding one needs **no new
+table, no new folder, no engine change**:
+
+1. Pick a lowercase singular word (`city`) and add it to the theme list above so
+   it's the one canonical spelling everyone uses.
+2. Tag any new assets you make with `theme_tags: ['city']` — they flow into the
+   SAME `community_*` tables as every other theme. Nothing else moves.
+3. That's it: because engines pull by filter, the new theme is instantly
+   available everywhere the moment assets carry the tag.
+4. Nice-to-have: seed a small starter set (one world + one hero + a few elements
+   + a music + a couple sfx) so a "city" request isn't empty on day one.
+5. Only make a bundled folder (like `public/chess-art/`) if you truly need static
+   files — and if you do, also register those files as library rows so they're
+   not siloed.
+
+## Mixing themes — encouraged, never blocked
+
+The library is ONE pool. A single creation can freely mix themes: a `castle`
+knight walking through a `jungle` world past `candy` coins is completely valid.
+
+- **Select at the asset level.** Engines take a list of specific assets (by id or
+  url) in their config and render whatever they're handed. They must NOT assume a
+  creation is single-theme or filter everything to one theme.
+- **Theme is one optional filter, not a gate.** Use it to *suggest* a matching
+  set ("here's a jungle starter"), but always let the kid/recipe pick across
+  themes. A "surprise me" or "knight in the jungle" request should pull from
+  everything.
+- **`usable_in` is the real gate — and it's about shape, not theme.** It answers
+  "is this asset built right for this kind of project" (e.g. a transparent cutout
+  for a game vs a full-bleed story background), which is separate from how it
+  looks. Filter on `usable_in` for suitability; treat `theme` as taste.
 
 ## The three rules that keep this from breaking anything
 
