@@ -49,3 +49,33 @@ When in doubt on a destructive or secret-touching step, prepare it as a file/SQL
 owner can run, and log it — don't execute it.
 
 Never commit secrets, API keys, or tokens; env vars are referenced by name only.
+
+## Shared Asset Library rule (assets are one library, shared across all projects)
+
+Every project (story maker, game builder, chess, song maker, and any new one)
+draws from ONE shared asset library so a thing made in one project can be reused
+to render another. The rule, and how to grow into it **without breaking anything
+that already works**:
+
+- **One library, five kinds.** Every reusable asset is tagged with the same
+  fields: `kind` (`character` | `world` | `element` | `music` | `sfx`),
+  `theme` (`space`, `jungle`, `ocean`, `candy`, `desert`, `castle`, `forest`, …),
+  `url` (a hosted link, not embedded base64 when avoidable), `source` (which
+  project made it), and `usable_in` (which projects may use it; default = all).
+  The `community_*` tables are the source of truth — extend them, don't replace.
+- **`theme` is the universal key.** Spinning up a new project for a theme should
+  be able to pull a matching world + character + element + music + sfx by that
+  one label.
+- **Write on create.** When a project generates a reusable asset, it WRITES it
+  to the shared library (approved + reusable), so the next project can use it.
+- **Read on render, always with a fallback.** When a project renders, it READS
+  from the shared library by theme, but ALWAYS keeps a local/drawn fallback so a
+  library miss or outage can never break the experience (e.g. the engines fall
+  back to `buildable-renders.js` drawn art if an image fails to load).
+- **Migration is additive — never break a live asset.** Adding shared-library
+  rows or tags is fine. Do NOT delete or re-path an asset a live game/story
+  currently loads until its shared-library replacement is verified on the live
+  site. (The Survival `space_bg.png` → `.jpg` miss is the cautionary tale.)
+- **Keep the guardrails.** Only `moderation_status = approved` + `reusable = true`
+  assets flow between projects; preserve content moderation.
+- **Roll out one project at a time**, QA the live deploy, and log it in the README.
