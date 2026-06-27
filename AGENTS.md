@@ -79,3 +79,5 @@ that already works**:
 - **Keep the guardrails.** Only `moderation_status = approved` + `reusable = true`
   assets flow between projects; preserve content moderation.
 - **Roll out one project at a time**, QA the live deploy, and log it in the README.
+
+**Asset organization:** see [`./ASSET-LIBRARY.md`](./ASSET-LIBRARY.md) for exactly where to find and where to send every kind of asset.
