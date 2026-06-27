@@ -574,6 +574,11 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ## Session log — 2026-06-27i (Sunny Town Drive — new 3-lane runner engine)
 
+**2026-06-27 fix (never-starts):** Three.js is now **self-hosted** at `public/three.min.js`
+(+ vercel route) instead of loaded from cdnjs — a blocked/slow CDN was the likely cause of
+the game never starting on some networks. Added a visible "couldn't load 3D" fallback so it
+can never silently blank. Verified live loading from the local copy.
+
 **2026-06-27 3D rebuild:** Sunny Town Drive is now **true 3D** (Three.js r128, blocky
 LEGO-style) — camera behind the car, road receding into fog. Crucially the *gameplay logic
 is unchanged*: it stays a pure track-position model (lane + p in the same 0..H units), so
