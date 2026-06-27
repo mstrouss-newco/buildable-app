@@ -1,5 +1,19 @@
 # Buildable Kids — Session Log
 
+## Platformer opens calm (no auto-run) + App-Store-style game thumbnails (June 27 2026)
+
+- **Platformer no longer auto-plays itself on open.** The hub runs play.html in an `<iframe>`,
+  so keyboard went to the parent and the auto-demo never handed over ("stuck in demo mode").
+  Removed the auto-running bot demo entirely: the start screen now shows the **idle hero in the
+  scene + the animated finger-swipe hint + a big Play** button. Any tap / key / on-screen button
+  starts the game and grabs focus (`window.focus()`), and the React iframe focuses itself onLoad
+  so the keyboard works immediately. Sim still wins.
+- **Real action key-art thumbnails for the Games hub** (was flat color gradients). Added a
+  **`game` kind** to `api/images.js` (`?kind=game&id=platformer|breaker|survival|chess|typing`,
+  gpt-image-1 medium, cached) with action-packed App-Store-style prompts; new `GAME_STYLE`.
+  `src/BuildableKids.jsx` tiles render the image with the old gradient as the `onError` fallback.
+  Generate-once-cache; trigger each URL after deploy.
+
 ## 2026-06-27 — Home redesign SHIPPED to main (Phase 1 + helper + 3D heroes)
 - Merged feature/home-redesign -> main. Live changes: new kid home (welcome, your-move
   chess card, jump-back-in thumbnails, 4 colored-app-icon make tiles w/ 2-player tags),
