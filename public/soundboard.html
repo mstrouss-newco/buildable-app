@@ -27,12 +27,21 @@
     color:#5B4A8A; background:#fff; border-radius:999px; padding:9px 16px; }
   .mute.off { background:#3B2C66; color:#fff; border-color:#3B2C66; }
 
-  .tabs { display:flex; gap:9px; overflow-x:auto; padding:14px 2px 6px; scrollbar-width:none; -ms-overflow-style:none; }
+  .tabs { display:flex; gap:5px; overflow-x:auto; padding:12px 2px 8px; scrollbar-width:none; -ms-overflow-style:none; }
   .tabs::-webkit-scrollbar { display:none; }
-  .tab { flex:0 0 auto; border:2px solid #EBE3F5; background:#fff; color:#5B4A8A; cursor:pointer;
-    font-family:inherit; font-weight:800; font-size:14.5px; border-radius:999px; padding:9px 17px; white-space:nowrap; transition:transform .06s; }
-  .tab:active { transform:scale(0.95); }
-  .tab.active { background:#3B2C66; color:#fff; border-color:#3B2C66; }
+  .tab { flex:0 0 auto; border:none; background:transparent; cursor:pointer; font-family:inherit;
+    font-weight:800; font-size:12px; color:#7A6FA0; padding:4px 3px 2px; display:flex; flex-direction:column;
+    align-items:center; gap:6px; width:72px; transition:transform .06s; }
+  .tab:active { transform:scale(0.93); }
+  .tab-ic { width:54px; height:54px; border-radius:17px; display:flex; align-items:center; justify-content:center;
+    overflow:hidden; box-shadow:0 5px 12px rgba(60,40,110,0.18); border:3px solid transparent;
+    transition:border-color .12s, transform .12s; position:relative; }
+  .tab-ic::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,0.25), rgba(255,255,255,0) 60%); pointer-events:none; }
+  .tab-ic img { width:100%; height:100%; object-fit:cover; position:relative; z-index:1; }
+  .tab-ic svg { width:33px; height:33px; position:relative; z-index:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.18)); }
+  .tab-lbl { white-space:nowrap; }
+  .tab.active { color:#3B2C66; }
+  .tab.active .tab-ic { border-color:#3B2C66; transform:translateY(-2px); }
 
   .grid { margin-top:8px; display:grid; grid-template-columns:repeat(auto-fill, minmax(128px, 1fr)); gap:13px; }
   @media (max-width:520px){ .grid { grid-template-columns:repeat(3, 1fr); gap:10px; } .title{font-size:23px;} }
@@ -282,11 +291,31 @@ var activeId=null;
 try{ activeId=localStorage.getItem("bk_sfx_pack"); }catch(e){}
 if(!activeId || !PACKS.some(function(p){return p.id===activeId;})) activeId=PACKS[0].id;
 
+var PACK_META = {
+  silly:{glyph:'smile',grad:'linear-gradient(160deg,#FF8FB1,#F0577E)'},
+  animals:{glyph:'paw',grad:'linear-gradient(160deg,#7CD98E,#2BA85B)'},
+  instruments:{glyph:'music',grad:'linear-gradient(160deg,#B68BFF,#7C4FE0)'},
+  space:{glyph:'rocket',grad:'linear-gradient(160deg,#7C8BFF,#4F4FE0)'},
+  spooky:{glyph:'ghost',grad:'linear-gradient(160deg,#9A7BD0,#5E3F9F)'},
+  vehicles:{glyph:'car',grad:'linear-gradient(160deg,#5FD0F0,#2F8FD6)'},
+  magic:{glyph:'wand',grad:'linear-gradient(160deg,#C9A7FF,#7C4FE0)'},
+  nature:{glyph:'leaf',grad:'linear-gradient(160deg,#5FBFE0,#2F8FB6)'},
+  food:{glyph:'fork',grad:'linear-gradient(160deg,#FF9F45,#F0622A)'},
+  sports:{glyph:'trophy',grad:'linear-gradient(160deg,#3DD06A,#2BB14F)'},
+};
 function renderTabs(){
   var t=document.getElementById("tabs"); t.innerHTML="";
   PACKS.forEach(function(p){
+    var meta=PACK_META[p.id]||{glyph:'star',grad:'linear-gradient(160deg,#B68BFF,#7C4FE0)'};
     var b=document.createElement("button");
-    b.className="tab"+(p.id===activeId?" active":""); b.textContent=p.name;
+    b.className="tab"+(p.id===activeId?" active":"");
+    var ic=document.createElement("div"); ic.className="tab-ic"; ic.style.background=meta.grad;
+    var img=document.createElement("img"); img.alt=p.name; img.loading="lazy";
+    img.onerror=function(){ ic.innerHTML=(G[meta.glyph]||G.star); };
+    img.src="/api/images?kind=soundpack&id="+encodeURIComponent(p.id);
+    ic.appendChild(img);
+    var lbl=document.createElement("span"); lbl.className="tab-lbl"; lbl.textContent=p.name;
+    b.appendChild(ic); b.appendChild(lbl);
     b.addEventListener("click", function(){ activeId=p.id; try{localStorage.setItem("bk_sfx_pack",p.id);}catch(e){}
       renderTabs(); renderGrid(); });
     t.appendChild(b);
