@@ -9,7 +9,6 @@
 //   GET ?img=<kind>:<slug>&style=    -> serve the cached PNG bytes (short URL)
 // Env (owner, by name only): OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY.
 import crypto from "crypto";
-import { builtStoryAssets } from "./_storyAssets.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -341,9 +340,7 @@ export default async function handler(req, res) {
       "character|bunny|modern3d": cacheKey("character","bunny","modern3d"),
       "world|enchanted-forest|watercolor": cacheKey("world","enchanted-forest","watercolor"),
     };
-    const helperChars = (await builtStoryAssets("character", SUPABASE_URL, SUPABASE_SERVICE_KEY)).length;
-    const helperWorlds = (await builtStoryAssets("world", SUPABASE_URL, SUPABASE_SERVICE_KEY)).length;
-    return res.status(200).json({ ok: true, storyCache: { base, expr, scenes, total: base + expr + scenes }, sampleCached, expected, helper: { chars: helperChars, worlds: helperWorlds } });
+    return res.status(200).json({ ok: true, storyCache: { base, expr, scenes, total: base + expr + scenes }, sampleCached, expected });
   }
 
 
