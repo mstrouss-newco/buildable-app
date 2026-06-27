@@ -25,6 +25,11 @@
 - **Mechanic stored:** `db/seed-tetris-mechanic.sql` registers `tumble-blocks-clear` and
   `soft-reset-never-lose` so the catalog grows. Docs: `tetris-README.md`,
   `BUILDING-A-GAME.md` + `MECHANICS.md` updated.
+- **Drop controls (same day):** the green button is now a real drop control — HOLD it
+  for a controlled fast-fall (soft drop) or quick-TAP to slam to the bottom (hard drop,
+  with a little landing thud + shake). Swipe-down on the board still hard-drops; Down
+  key = soft drop, Space = hard drop. Added a one-time on-first-play hint toast so the
+  touch controls are discoverable on a tablet.
 - **Menu + blocks polish (same day):** the world picker showed a stray "99 · Calm
   Mode" card (the shared start screen always prints the card number) — moved Calm to
   its own bottom button ("Calm Mode · just play, never lose") and gave each world card

@@ -179,7 +179,11 @@ function tryMove(dx,dy){ if(!cur) return false; const p={...cur, px:cur.px+dx, p
 function tryRotate(){ if(!cur) return false; const nr=(cur.rot+1)&3; for(const k of [0,-1,1,-2,2]){ const p={...cur, rot:nr, px:cur.px+k}; if(!collides(grid,p)){ cur=p; bumpLock(); if(BA) BA.sfx("rotate"); return true; } } return false; }
 function bumpLock(){ if(locking && lockResets<12){ lockTimer=0; lockResets++; } }
 function ghostY(){ if(!cur) return 0; let p={...cur}; while(!collides(grid,{...p,py:p.py+1})) p.py++; return p.py; }
-function hardDrop(){ if(!cur) return; const d=ghostY()-cur.py; if(d>0) score+=d*2*(worldIdx+1); cur.py=ghostY(); lockPiece(); }
+function softDrop(){ if(state!=="play"||botMode||!cur) return false; if(tryMove(0,1)){ gravTimer=0; score+=1; return true; } locking=true; return false; }
+function hardDrop(){ if(!cur) return; if(!BW) computeLayout();
+  const landY=ghostY(), d=landY-cur.py; if(d>0) score+=d*2*(worldIdx+1); cur.py=landY;
+  if(BM){ BM.shake(fx, Math.min(0.22, 0.05+d*0.012)); for(const [c,r] of cellsOf(cur)) if(r>=0) BM.burst(fx.parts, bx(c)+CELL/2, by(r)+CELL*0.85, "#ffffff", 2, {spd:[1,3],life:[.18,.38]}); }
+  lockPiece(); }
 
 function lockPiece(){
   if(!cur) return;
@@ -441,7 +445,8 @@ function showMenu(){ state="title"; cur=null; showNav(false); showPad(false);
     catch(e){ bsMounted=false; }
   } else { bsMounted=false; if(host) host.style.display="none"; }   // fallback: canvas "Tap to Play"
 }
-function hideMenu(){ const host=document.getElementById("start"); if(host) host.style.display="none"; showNav(true); showPad(true); }
+function hideMenu(){ const host=document.getElementById("start"); if(host) host.style.display="none"; showNav(true); showPad(true);
+  if(!PREFS.seenHint){ PREFS.seenHint=true; savePrefs(); toast("Slide to move, tap to turn, hold the green button to drop fast!"); } }
 function showPad(on){ const e=document.getElementById("pad"); if(e) e.style.display=on?"flex":"none"; }
 function showNav(on){ ["homeBtn","pauseBtn","soundBtn"].forEach(id=>{ const e=document.getElementById(id); if(!e) return;
   if(id==="homeBtn" && EMBED && on) { e.style.display="none"; return; }   // React shell already shows a Back when embedded
@@ -461,7 +466,7 @@ function bindInput(){
   holdBtn("bLeft", ()=>{ if(state==="play"&&!botMode){ if(tryMove(-1,0)&&BA) BA.sfx("move"); } });
   holdBtn("bRight",()=>{ if(state==="play"&&!botMode){ if(tryMove(1,0)&&BA) BA.sfx("move"); } });
   tapBtn("bRot", ()=>{ if(state==="play"&&!botMode) tryRotate(); else onCanvasTap(); });
-  tapBtn("bDrop",()=>{ if(state==="play"&&!botMode) hardDrop(); else onCanvasTap(); });
+  bindDrop();   // green button: HOLD = controlled fast fall, quick TAP = slam to the bottom
   const hb=document.getElementById("homeBtn"); if(hb) hb.onclick=()=>{ if(EMBED){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } showMenu(); };
   const sb=document.getElementById("soundBtn"); if(sb) sb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(BA.muted&&BA.stopMusic)BA.stopMusic(); else { _curMusic=null; ensureMusic(); } } updateSoundBtn(); };
   const pb=document.getElementById("pauseBtn"); if(pb) pb.onclick=()=>{ if(state==="play"){ state="pause"; } else if(state==="pause"){ state="play"; } setPauseLabel(); };
@@ -483,6 +488,17 @@ function holdBtn(id, fn){ const e=document.getElementById(id); if(!e||!e.addEven
   e.addEventListener("pointerdown",start); e.addEventListener("pointerup",end); e.addEventListener("pointerleave",end); e.addEventListener("pointercancel",end);
 }
 function tapBtn(id, fn){ const e=document.getElementById(id); if(!e||!e.addEventListener) return; e.addEventListener("pointerdown",(ev)=>{ ev.preventDefault(); if(BA)BA.unlock(); fn(); }); }
+// green drop button: HOLD = controlled fast fall (soft drop); quick TAP = slam to bottom (hard drop)
+function bindDrop(){ const e=document.getElementById("bDrop"); if(!e||!e.addEventListener) return;
+  let iv=null, downT=0, soft=0;
+  const start=(ev)=>{ ev.preventDefault(); if(BA)BA.unlock();
+    if(state!=="play"||botMode){ onCanvasTap(); return; }
+    downT=Date.now(); soft=0;
+    iv=setInterval(()=>{ if(softDrop()) soft++; }, 45); };   // rush downward while held
+  const end=()=>{ if(iv){ clearInterval(iv); iv=null; }
+    if(state==="play"&&!botMode && Date.now()-downT < 200 && soft<=1) hardDrop(); };   // a quick tap = full slam
+  e.addEventListener("pointerdown",start); e.addEventListener("pointerup",end); e.addEventListener("pointerleave",end); e.addEventListener("pointercancel",end);
+}
 function bindGestures(){
   if(!cv||!cv.addEventListener) return;
   let sx=0,sy=0,st=0,lastCol=0,startPx=0,moved=false,dropped=false;
