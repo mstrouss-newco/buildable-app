@@ -108,9 +108,12 @@ const EFFECTS=[
 ].map(e=>({...e,kind:"effect",theme:"",dim:"2d",source:"buildable-mechanics"}));
 
 const PACKS=[
-  {name:"KayKit Platformer",dim:"3d",license:"CC0",count:"370 models",status:"downloaded · partly in /models",cc0:true},
+  {name:"Kenney City Kit",dim:"3d",license:"CC0",count:"40 models",status:"live in library",cc0:true},
+  {name:"Kenney Particle Pack",dim:"2d",license:"CC0",count:"24 effects",status:"live in Effects",cc0:true},
+  {name:"KayKit Platformer",dim:"3d",license:"CC0",count:"370 models",status:"downloaded · partly in /models",cc0:true,preview:"/packs/kaykit-platformer.png"},
   {name:"Quaternius Nature",dim:"3d",license:"CC0",count:"81 models",status:"live in /models/nature",cc0:true},
-  {name:"Tiny Swords",dim:"2d",license:"no-republish",count:"410 sprites",status:"downloaded · needs curate",cc0:false},
+  {name:"Downtown City MegaKit",dim:"3d",license:"CC0",count:"100+ models",status:"downloaded · zip (Quaternius)",cc0:true,preview:"/packs/downtown-city.png"},
+  {name:"Tiny Swords",dim:"2d",license:"no-republish",count:"410 sprites",status:"downloaded · needs curate",cc0:false,preview:"/packs/tiny-swords.png"},
   {name:"Mossy Cavern",dim:"2d",license:"no-republish",count:"tileset + character",status:"downloaded · needs curate",cc0:false}
 ];
 
@@ -251,7 +254,12 @@ function render(){
     html+= items.length? '<div class="grid">'+items.map(tile).join("")+'</div>' : '<div class="muted">none'+(state.theme?" for "+state.theme:"")+'</div>';
   });
   html+='<div class="seclbl"><b>Downloaded packs</b><span class="muted">source shelf · not all curated in yet</span></div>';
-  html+='<div class="grid">'+PACKS.filter(p=>state.dim==="all"||p.dim===state.dim).map(p=>'<div class="card"><div class="thumb"><span class="ic">'+(p.dim==="3d"?"◈":"▦")+'</span></div><div class="cbody"><div class="cname">'+p.name+'</div><div class="badges"><span class="b">'+p.dim.toUpperCase()+'</span><span class="b '+(p.cc0?"cc0":"warn")+'">'+p.license+'</span></div><div class="note">'+p.count+' · '+p.status+'</div></div></div>').join("")+'</div>';
+  html+='<div class="grid">'+PACKS.filter(p=>state.dim==="all"||p.dim===state.dim).map(p=>{
+    const th=p.preview
+      ? '<div class="thumb '+(p.dim==="2d"?"fxthumb":"")+'"><img src="'+p.preview+'" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain"></div>'
+      : '<div class="thumb"><span class="ic">'+(p.dim==="3d"?"◈":"▦")+'</span></div>';
+    return '<div class="card">'+th+'<div class="cbody"><div class="cname">'+p.name+'</div><div class="badges"><span class="b">'+p.dim.toUpperCase()+'</span><span class="b '+(p.cc0?"cc0":"warn")+'">'+p.license+'</span></div><div class="note">'+p.count+' · '+p.status+'</div></div></div>';
+  }).join("")+'</div>';
   sec.innerHTML=html;
   sec.querySelectorAll(".copy").forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent="copied";setTimeout(()=>b.textContent="copy",900);});
   let cur=null;
