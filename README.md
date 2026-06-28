@@ -709,6 +709,19 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27m (Sunny Town Drive: sounds + music)
+
+Bespoke audio (ElevenLabs, per the sound rule). Added `sfx.js`: runner_coin (treat chime),
+runner_crash (soft bump), runner_engine (idle-hum loop). New `api/runner-music.js` = cheerful
+instrumental loop per town (maple/market/beach/petal/downtown/rainbow), cached in
+narration_cache ("runnermusic:<town>"). Engine wires BA.configure map (coin/hurt/select/win/lose),
+ensureMusic() per town on level start, and a looping engine-hum <audio> gated on play/mute.
+Short sfx prewarmed; music generates in-browser on first play (Audio element, no 30s cutoff) —
+Maple verified caching. QA still all-win; no console errors. Sunny Town Drive now has AI sky +
+distinct per-town worlds + AI cars/obstacles/treats + drifting clouds/balloons + sound + music.
+
+---
+
 ## Session log — 2026-06-27l (Sunny Town Drive: AI cars/obstacles/treats)
 
 Foreground art overhaul: `images.js` kind `runnerobj` (shared, modern3d, transparent,
