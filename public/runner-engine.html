@@ -15,9 +15,9 @@
   #start{position:fixed;inset:0;z-index:10;display:none}
   #muteBtn{position:fixed;left:12px;bottom:12px;z-index:30;display:none;font-family:inherit;font-weight:700;font-size:14px;
            color:#cdd0ff;background:rgba(26,20,64,.7);border:1px solid #3a2c6e;border-radius:10px;padding:7px 12px;cursor:pointer}
-  #helpBtn{position:fixed;right:12px;top:56px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:18px;
+  #helpBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:18px;
            color:#1a0f3a;background:#ffd86b;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
-  #backBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
+  #backBtn{position:fixed;left:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
            color:#fff;background:rgba(26,20,64,.78);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
   .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;background:#ffd86b;color:#1a0f3a;
          font-weight:700;padding:12px 22px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
@@ -459,11 +459,7 @@ function buildScene(){
     slot.position.set(sx*xoff, 0, NEAR_Z - i*12);
     scene.add(slot); scenePool.push(slot); } }
   // (clouds removed — the AI sky already has clouds; the billboard ones looked flat)
-  // hot-air balloons drifting for life
-  const balloonCols=[0xff7aa8,0x62d0ff,0xffd23f];
-  for(let i=0;i<3;i++){ const b=makeBalloon(balloonCols[i%balloonCols.length]);
-    b.position.set((i%2?1:-1)*(12+Math.random()*16), 11+Math.random()*7, -55 - i*22);
-    scene.add(b); balloonPool.push(b); }
+  // (hot-air balloons removed — they clashed with the city towns)
   carGroup=makeCar(0xff5d8f, 0xff86ac); carGroup.position.set(0,0,zForP(CAR_Y)); scene.add(carGroup);
   sceneReady=true;
 }
@@ -538,13 +534,17 @@ function drawTutorial(){ const tt=Date.now()/1000;
   hctx.fillStyle=swing>0?"#ffd86b":"rgba(255,255,255,.4)"; hctx.beginPath();hctx.moveTo(rx-10,ay-12);hctx.lineTo(rx+12,ay);hctx.lineTo(rx-10,ay+12);hctx.closePath();hctx.fill();
 }
 function drawHUD(){ if(!hctx||!G) return; hctx.clearRect(0,0,W,H);
-  // top bar
-  hctx.textAlign="left"; hctx.fillStyle="#1a0f3a"; hctx.font="bold 20px Fredoka,sans-serif";
+  // readable backing strip behind the top HUD (so text shows over any sky)
+  const tg=hctx.createLinearGradient(0,0,0,76); tg.addColorStop(0,"rgba(12,14,42,0.62)"); tg.addColorStop(1,"rgba(12,14,42,0)");
+  hctx.fillStyle=tg; hctx.fillRect(0,0,W,76);
+  // top bar (light text on the strip)
+  hctx.textAlign="left"; hctx.fillStyle="#ffffff"; hctx.font="bold 20px Fredoka,sans-serif";
   hctx.fillText((L?L.name:"")+"  ·  "+(level+1)+"/"+GAME_CONFIG.levels.length, 16, 30);
-  for(let i=0;i<G.hearts;i++){ heart(W-22-i*30, 26, 9, "#ff5d8f"); }
-  hctx.fillStyle="#3a2c0a"; hctx.font="bold 16px Fredoka,sans-serif"; hctx.fillText("Treats: "+G.treatsGot, 16, 52);
-  // progress bar
+  for(let i=0;i<G.hearts;i++){ heart(W-22-i*30, 26, 9, "#ff6f9d"); }
+  hctx.fillStyle="#ffe2a6"; hctx.font="bold 16px Fredoka,sans-serif"; hctx.fillText("Treats: "+G.treatsGot, 16, 52);
+  // progress bar (with its own readable backing pill)
   const pct=clamp(G.dist/L.dist,0,1), bw=W-120, bx=60, by=H-26;
+  hctx.fillStyle="rgba(12,14,42,0.45)"; rrect(bx-10,by-7,bw+20,26,13); hctx.fill();
   hctx.fillStyle="rgba(0,0,0,.20)"; rrect(bx,by,bw,12,6); hctx.fill();
   hctx.fillStyle="#7ee0a0"; rrect(bx,by,bw*pct,12,6); hctx.fill();
   hctx.fillStyle="#1a0f3a"; hctx.beginPath();hctx.arc(bx+bw*pct,by+6,9,0,7);hctx.fill();
