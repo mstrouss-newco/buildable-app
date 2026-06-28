@@ -990,6 +990,24 @@ session.
 
 ---
 
+## Session log — 2026-06-28 (Internal Asset Library visualizer LIVE)
+
+New internal page public/asset-library.html (route added before catch-all;
+noindex). Live-reads /api/list-assets + list-characters + list-audio and shows
+everything we can build with: a 2D/3D toggle (hard gate), game-type + theme
+filters, kind toggles incl a new Effects kind, a theme x kind COVERAGE MATRIX
+(filled=have, hollow=gap), and a gallery with real thumbnails, source + license
+badges, copy-id, and inline audio play. Also lists the 14 live 3D nature models
+(/models/nature/*.gltf, Quaternius) and the downloaded packs (KayKit/Tiny Swords/
+Quaternius/Mossy) with CC0 vs no-republish flags. Verified live in Chrome: 293
+assets (44 2D, 14 3D, 235 audio), thumbnails + matrix render.
+KNOWN NUANCE: characters are intentionally theme-less, so the matrix Hero column
+reads blank per-theme (they're cross-theme/available everywhere) — refine later
+(add an "any" lane or theme-tag heroes). Effects sounds mostly "create" (matches
+the new-engine-creates-sounds rule). QA library GETs with ?cb= (edge-cached).
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
