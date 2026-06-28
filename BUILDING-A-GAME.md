@@ -10,11 +10,35 @@ different question; this doc tells you when to open which:
 | [`MECHANICS.md`](./MECHANICS.md) | "How does it *play*? What proven mechanic do I reuse, and where do I store a new one?" |
 | [`GAME-LOOK.md`](./GAME-LOOK.md) | "How does it *look and sound*? Layers, parallax, art pipeline, audio unlock." |
 | [`ASSET-LIBRARY.md`](./ASSET-LIBRARY.md) | "What do I *render with*? Where to find assets, where to send new ones." |
+| **Asset Library** — `/asset-library.html` (internal) | "What do we already HAVE? Browse everything by 2D/3D · theme · kind, with previews + a coverage matrix." |
 | [`MULTIPLAYER.md`](./MULTIPLAYER.md) | "Two kids playing together? Turn-based (poll a row) vs real-time (Broadcast), and the shared rules." |
 
 The north star (same as the asset rule): anything you build — an engine, a mechanic, a
 world, a hero — should be **storable, trackable, and reusable by the next game.** Don't
 invent a one-off; pull from the shared libraries and write back to them.
+
+---
+
+## First — agree the asset plan (ASK before you build)
+
+**Before any code, plan the assets WITH the user.** Open the internal **Asset Library**
+(`/asset-library.html`) — it browses everything we have by **2D/3D**, **theme**, and
+**kind** (`character` · `world` · `element` · `effect` · `music` · `sfx`), with live
+previews, a **coverage matrix** (what we have vs. gaps), our 3D model packs, and the
+downloaded CC0 packs. Then, in chat:
+
+1. **Recommend a concrete set** for the game's theme + dimension, pulling real names/ids
+   from the library. e.g. 2D jungle platformer → "Dino Jungle world, a story hero, jungle
+   music + ambience, fire/spark effects." 3D city runner → "Kenney City Kit buildings +
+   roads, city music."
+2. **Surface the gaps** the coverage matrix shows and say how you'd fill each — generate
+   it, CREATE the sound (new engine = new sounds), or curate from a pack.
+3. **Ask the user to confirm or adjust** — which assets to use, and whether to **go get a
+   new asset pack** (prefer CC0 / Kenney — see `ASSET-LIBRARY.md`) when the library
+   doesn't have the right look. The user downloads packs; you inventory, tag, and register.
+
+Only once the asset set is agreed do you pick a track and build. This keeps every game
+built from the shared shelf — and grows it on purpose.
 
 ---
 
@@ -121,12 +145,15 @@ Mine button), with the bespoke customize overlay opened via `onCustomize`.
    it back**: gameplay rules → a `game_mechanics` row via an idempotent `db/seed-*.sql`;
    shared FX code → a function in `buildable-mechanics.js`. Keep `MECHANICS.md` in sync.
 
-3. **Pull art AND audio from the library, with a fallback.** Characters via
-   `/api/list-characters`, worlds/elements via `/api/list-assets`, music + sound effects
-   via `/api/list-audio` — all filterable by `theme` (a label, not a fence: you may mix
-   themes), generated world art via `/api/game-art`. Reference by id/url in the level
-   card. **Always** keep a fallback (`BR.*` drawn art; `BA` synth sound) so a missing
-   asset can never break a kid's game. Where to find/send each kind: `ASSET-LIBRARY.md`.
+3. **Pull art AND audio from the library (per the agreed asset plan), with a fallback.**
+   Characters via `/api/list-characters`, worlds/elements via `/api/list-assets`, music +
+   sfx via `/api/list-audio`, **3D models** via `/models/manifest.json` (auto-discovered
+   from `public/models/<pack>/`), **effect art** in `/fx/`, generated world art via
+   `/api/game-art` — all filterable by `theme` (a label, not a fence: you may mix themes)
+   and split by `dimension` (2D vs 3D never mix). Browse it all in the Asset Library page.
+   Reference by id/url in the level card. **Always** keep a fallback (`BR.*` drawn art;
+   `BA` synth sound) so a missing asset can never break a kid's game. Where to find/send
+   each kind (incl. downloaded packs + the curate→serve→register flow): `ASSET-LIBRARY.md`.
    How to make it look alive: `GAME-LOOK.md`.
 
 4. **Wire sound + FX through the shared libs — and CREATE new sounds for a new engine.**
