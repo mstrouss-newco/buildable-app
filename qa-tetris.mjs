@@ -9,11 +9,12 @@ const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js'
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
 const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:600,height:820}:(typeof k==='string'?noop:undefined))});
-function el(withAppend){ const e={ style:{setProperty:noop,display:''}, classList:{add:noop,remove:noop,contains:()=>false}, addEventListener:noop, removeEventListener:noop, getContext:()=>ctxStub, onclick:null, textContent:'', width:600, height:820, naturalWidth:0, complete:false, getBoundingClientRect:()=>({left:0,top:0,width:600,height:820}) };
+const dropL={};
+function el(withAppend,id){ const e={ style:{setProperty:noop,display:''}, classList:{add:noop,remove:noop,contains:()=>false}, addEventListener:(t,fn)=>{ if(id==='bDrop'){ (dropL[t]=dropL[t]||[]).push(fn); } }, removeEventListener:noop, getContext:()=>ctxStub, onclick:null, textContent:'', width:600, height:820, naturalWidth:0, complete:false, getBoundingClientRect:()=>({left:0,top:0,width:600,height:820}) };
   Object.defineProperty(e,'innerHTML',{set(){},get(){return''}}); if(withAppend){ e.appendChild=noop; e.removeChild=noop; } return e; }
 class ImageStub{set src(v){this._src=v;}get src(){return this._src;}addEventListener(){}}
 // "start" host lacks appendChild → BS.mount uses its headless stub
-const documentStub={ getElementById:(id)=> id==='start'? el(false): el(true), querySelector:()=>el(true), addEventListener:noop, createElement:()=>el(true), head:el(true), documentElement:el(true) };
+const documentStub={ getElementById:(id)=> id==='start'? el(false,id): el(true,id), querySelector:()=>el(true), addEventListener:noop, createElement:()=>el(true), head:el(true), documentElement:el(true) };
 const sandbox={ document:documentStub, window:{}, Image:ImageStub, requestAnimationFrame:noop, cancelAnimationFrame:noop, addEventListener:noop, removeEventListener:noop, setTimeout:()=>0, clearTimeout:noop, setInterval:()=>0, clearInterval:noop, performance:{now:()=>Date.now()}, Date, Math, console };
 sandbox.window=sandbox; sandbox.globalThis=sandbox;
 vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:'tumble'});
@@ -32,4 +33,10 @@ for(let i=0;i<n;i++){ let res; try{ res=G.simEndless(i,3000); }catch(e){ res={re
 console.log('--- render smoke (title + mid-play + win banner) ---');
 G._begin(0,'adventure'); G._step(8); const d1=G._draw(); console.log('mid-play render:',d1); if(d1!=='ok')ok=false;
 const wr=G.sim(0,120000); const d2=G._draw(); console.log(`win(W1) render: ${d2} (result=${wr.result} rows=${wr.rows}/${wr.goal})`); if(d2!=='ok')ok=false;
+console.log('--- DOWN button: one tap drops exactly ONE piece (no double-fire) ---');
+G.startWorld(0,'adventure');
+{ const before=G._filled(); const ev={preventDefault:noop};
+  (dropL['pointerdown']||[]).forEach(f=>f(ev)); (dropL['pointerup']||[]).forEach(f=>f(ev)); (dropL['pointerleave']||[]).forEach(f=>f(ev));
+  const locked=(G._filled()-before)/4;
+  console.log((locked===1?'PASS':'FAIL')+`  one tap locked ${locked} piece(s); next piece present=${G._cur()}`); if(locked!==1)ok=false; }
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);

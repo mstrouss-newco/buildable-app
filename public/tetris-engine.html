@@ -505,13 +505,16 @@ function holdBtn(id, fn){ const e=document.getElementById(id); if(!e||!e.addEven
 function tapBtn(id, fn){ const e=document.getElementById(id); if(!e||!e.addEventListener) return; e.addEventListener("pointerdown",(ev)=>{ ev.preventDefault(); if(BA)BA.unlock(); fn(); }); }
 // green drop button: HOLD = controlled fast fall (soft drop); quick TAP = slam to bottom (hard drop)
 function bindDrop(){ const e=document.getElementById("bDrop"); if(!e||!e.addEventListener) return;
-  let iv=null, downT=0, soft=0;
-  const start=(ev)=>{ ev.preventDefault(); if(BA)BA.unlock();
+  let iv=null, downT=0, soft=0, pressed=false;   // `pressed` = exactly one drop action per press
+  const stop=()=>{ if(iv){ clearInterval(iv); iv=null; } };
+  const start=(ev)=>{ if(ev&&ev.preventDefault)ev.preventDefault(); if(pressed) return; if(BA)BA.unlock();
     if(state!=="play"||botMode){ onCanvasTap(); return; }
-    downT=Date.now(); soft=0;
-    iv=setInterval(()=>{ if(softDrop()) soft++; }, 45); };   // rush downward while held
-  const end=()=>{ if(iv){ clearInterval(iv); iv=null; }
-    if(state==="play"&&!botMode && Date.now()-downT < 200 && soft<=1) hardDrop(); };   // a quick tap = full slam
+    pressed=true; downT=Date.now(); soft=0;
+    iv=setInterval(()=>{ if(softDrop()) soft++; }, 55); };   // rush downward while held
+  // ONLY the first of pointerup/pointerleave/pointercancel acts — otherwise a single tap
+  // fires end twice (up + stray leave) and hard-drops the next piece too. (Mike's "two blocks" bug.)
+  const end=(ev)=>{ if(ev&&ev.preventDefault)ev.preventDefault(); if(!pressed) return; pressed=false; stop();
+    if(state==="play"&&!botMode && Date.now()-downT < 200 && soft<=1) hardDrop(); };   // a quick tap = one slam, current piece only
   e.addEventListener("pointerdown",start); e.addEventListener("pointerup",end); e.addEventListener("pointerleave",end); e.addEventListener("pointercancel",end);
 }
 function bindGestures(){
@@ -572,6 +575,7 @@ window.BUILDABLE_GAME = {
   _step:(n)=>{ for(let i=0;i<(n||1);i++) update(0.016); },
   _draw:()=>{ try{ draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
   _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS, _setBot:(b)=>{ botMode=b; },
+  _filled:()=>grid.reduce((acc,row)=>acc+row.filter(c=>c).length,0), _cur:()=>!!cur,
 };
 window.TUMBLE_GAME = window.BUILDABLE_GAME;
 </script>
