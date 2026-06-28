@@ -1,0 +1,159 @@
+{
+  "generated": "2026-06-28",
+  "count": 17,
+  "models": [
+    {
+      "name": "Building Large 2",
+      "file": "Building_Large_2",
+      "pack": "city",
+      "theme": "city",
+      "source": "city pack",
+      "license": "",
+      "url": "/models/city/Building_Large_2.gltf"
+    },
+    {
+      "name": "Building Medium 2 001",
+      "file": "Building_Medium_2_001",
+      "pack": "city",
+      "theme": "city",
+      "source": "city pack",
+      "license": "",
+      "url": "/models/city/Building_Medium_2_001.gltf"
+    },
+    {
+      "name": "Building Small 1",
+      "file": "Building_Small_1",
+      "pack": "city",
+      "theme": "city",
+      "source": "city pack",
+      "license": "",
+      "url": "/models/city/Building_Small_1.gltf"
+    },
+    {
+      "name": "Bush Common",
+      "file": "Bush_Common",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Bush_Common.gltf"
+    },
+    {
+      "name": "Bush Common Flowers",
+      "file": "Bush_Common_Flowers",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Bush_Common_Flowers.gltf"
+    },
+    {
+      "name": "CommonTree 1",
+      "file": "CommonTree_1",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/CommonTree_1.gltf"
+    },
+    {
+      "name": "CommonTree 3",
+      "file": "CommonTree_3",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/CommonTree_3.gltf"
+    },
+    {
+      "name": "CommonTree 5",
+      "file": "CommonTree_5",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/CommonTree_5.gltf"
+    },
+    {
+      "name": "Fern 1",
+      "file": "Fern_1",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Fern_1.gltf"
+    },
+    {
+      "name": "Flower 3 Group",
+      "file": "Flower_3_Group",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Flower_3_Group.gltf"
+    },
+    {
+      "name": "Flower 4 Group",
+      "file": "Flower_4_Group",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Flower_4_Group.gltf"
+    },
+    {
+      "name": "Grass Common Tall",
+      "file": "Grass_Common_Tall",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Grass_Common_Tall.gltf"
+    },
+    {
+      "name": "Mushroom Common",
+      "file": "Mushroom_Common",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Mushroom_Common.gltf"
+    },
+    {
+      "name": "Pine 1",
+      "file": "Pine_1",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Pine_1.gltf"
+    },
+    {
+      "name": "Pine 3",
+      "file": "Pine_3",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Pine_3.gltf"
+    },
+    {
+      "name": "Rock Medium 1",
+      "file": "Rock_Medium_1",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Rock_Medium_1.gltf"
+    },
+    {
+      "name": "Rock Medium 2",
+      "file": "Rock_Medium_2",
+      "pack": "nature",
+      "theme": "forest",
+      "source": "quaternius",
+      "license": "CC0",
+      "url": "/models/nature/Rock_Medium_2.gltf"
+    }
+  ]
+}

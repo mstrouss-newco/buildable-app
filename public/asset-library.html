@@ -139,18 +139,20 @@ async function getJSON(u){try{const r=await fetch(u);if(!r.ok)return null;return
 
 async function load(){
   document.getElementById("counts").textContent="Loading…";
-  const [assets,chars,audio]=await Promise.all([
+  const [assets,chars,audio,mf]=await Promise.all([
     getJSON("/api/list-assets"+cb),
     getJSON("/api/list-characters"+cb.replace("?","?limit=60&")),
-    getJSON("/api/list-audio"+cb)
+    getJSON("/api/list-audio"+cb),
+    getJSON("/models/manifest.json"+cb)
   ]);
+  const models3d=(mf&&mf.models||[]).map(m=>({id:"model:"+m.pack+":"+m.file,name:m.name,kind:"element",theme:m.theme||"",dim:"3d",source:m.source||m.pack,license:m.license||"",url:m.url,icon:"◈"}));
   const out=[];
   (assets&&assets.layers||[]).forEach(l=>out.push({id:l.id,name:(l.theme||"world")+" world",kind:"world",theme:l.theme||"",dim:"2d",source:l.source||"community",url:l.imageUrl,thumb:l.imageUrl}));
   (assets&&assets.sprites||[]).forEach(s=>out.push({id:s.id,name:s.subject||"element",kind:"element",theme:s.theme||"",dim:"2d",source:s.source||"community",url:s.imageUrl,thumb:s.imageUrl}));
   (chars&&chars.characters||[]).forEach(c=>out.push({id:c.id,name:c.name,kind:"character",theme:c.theme||"",dim:"2d",source:c.source||"community",url:c.image,thumb:(c.image&&c.image.indexOf("data:")!==0)?c.image:null}));
   (audio&&audio.music||[]).forEach(m=>out.push({id:m.id,name:m.name,kind:"music",theme:m.theme||"",dim:"any",source:m.source,url:m.url,audio:true}));
   (audio&&audio.sfx||[]).forEach(s=>out.push({id:s.id,name:s.name,kind:"sfx",theme:s.theme||"",dim:"any",source:s.source,url:s.url,audio:true}));
-  ALL=out.concat(MODELS_3D,EFFECTS);
+  ALL=out.concat(models3d.length?models3d:MODELS_3D,EFFECTS);
   const n2d=ALL.filter(a=>a.dim==="2d").length,n3d=ALL.filter(a=>a.dim==="3d").length;
   document.getElementById("counts").textContent=ALL.length+" assets · "+n2d+" 2D · "+n3d+" 3D · "+(audio?(audio.music.length+audio.sfx.length):0)+" audio";
   buildFilters(); render();
@@ -200,7 +202,7 @@ function tile(a){
   }else if(a.audio){
     inner='<div class="thumb"><button class="play" data-u="'+a.url+'">▶</button></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">'+a.kind+'</span><span class="b src">'+a.source+'</span><button class="copy" data-c="'+a.url+'">copy</button></div></div>';
   }else if(a.dim==="3d"){
-    inner='<div class="thumb view3d" data-u="'+a.url+'" data-n="'+a.name+'" style="cursor:pointer"><span class="ic">'+(a.icon||"◈")+'</span><span style="position:absolute;bottom:5px;font-size:10px;color:var(--mut)">click to view</span></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">3D</span><span class="b cc0">'+a.source+'</span><button class="copy" data-c="'+a.url+'">copy</button></div></div>';
+    inner='<div class="thumb view3d" data-u="'+a.url+'" data-n="'+a.name+'" style="cursor:pointer"><span class="ic">'+(a.icon||"◈")+'</span><span style="position:absolute;bottom:5px;font-size:10px;color:var(--mut)">click to view</span></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">3D</span><span class="b '+(a.license==="CC0"?"cc0":"")+'">'+(a.source||"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.url+'">copy</button></div></div>';
   }else{
     const t=a.thumb?'<img src="'+a.thumb+'" loading="lazy" alt="" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=ic>▦</span>\'">':'<span class="ic">▦</span>';
     inner='<div class="thumb">'+t+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b '+(a.source==="story"||a.source==="community"?"src":"")+'">'+(a.source||"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.id+'">copy</button></div></div>';
