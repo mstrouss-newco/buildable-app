@@ -328,22 +328,22 @@ function build(q) {
     // Distinct roadside pieces per town for the 3D runner "Sunny Town Drive".
     // Transparent modern-3D cut-outs (buildings + a tree), rendered as billboards.
     const P = {
-      maple: { bld_a:"a cozy two-story suburban house with a pitched red roof and a small front porch",
+      maple: { bld_c:"a tall narrow suburban townhouse with a gabled roof and a round attic window", tree_b:"a slender white-bark birch tree with airy green leaves", prop:"a small red mailbox beside a little round flower bush", bld_a:"a cozy two-story suburban house with a pitched red roof and a small front porch",
                bld_b:"a cute single-story cottage with a brick chimney and flower window boxes",
                tree:"a big lush leafy green maple tree with a full rounded canopy and a sturdy trunk" },
-      market: { bld_a:"a charming small-town shop with a striped red-and-white awning and a hanging sign",
+      market: { bld_c:"a corner bakery shop with a bread-and-cupcake sign and a striped awning", tree_b:"a tall leafy shade tree on a small grassy mound", prop:"a wooden market fruit cart with crates of colorful fruit", bld_a:"a charming small-town shop with a striped red-and-white awning and a hanging sign",
                 bld_b:"a quaint market-square building with a little clock tower on top",
                 tree:"a neat rounded topiary tree planted in a square wooden planter" },
-      beach: { bld_a:"a cute wooden beach hut on short stilts with a palm-leaf thatched roof",
+      beach: { bld_c:"a tall striped lighthouse with a red roof and a round lamp room", tree_b:"a short leaning palm tree with a little hammock between trunks", prop:"a colorful beach umbrella with a towel and a small sandcastle", bld_a:"a cute wooden beach hut on short stilts with a palm-leaf thatched roof",
                bld_b:"a colorful seaside ice-cream and surf stand with a striped beach umbrella",
                tree:"a tall curved palm tree with big green fronds and a couple of coconuts" },
-      petal: { bld_a:"a pretty pastel-pink cottage with a flower-covered trellis and a heart on the door",
+      petal: { bld_c:"a charming flower shop with big blooms in the front window", tree_b:"a soft weeping willow tree with gently drooping pink-tinged branches", prop:"a wooden flower cart full of colorful bouquets", bld_a:"a pretty pastel-pink cottage with a flower-covered trellis and a heart on the door",
                bld_b:"a small white park gazebo with a pink domed roof and flower boxes",
                tree:"a blossoming cherry-blossom tree absolutely full of soft pink flowers" },
-      downtown: { bld_a:"a tall modern glass skyscraper in a cute rounded cartoon style, lots of windows",
+      downtown: { bld_c:"a tall rounded glass office tower, cute cartoon style", tree_b:"a tidy ornamental tree in a round concrete planter", prop:"a small city bus-stop shelter with a bench", bld_a:"a tall modern glass skyscraper in a cute rounded cartoon style, lots of windows",
                   bld_b:"a mid-rise city office building with rows of windows and a flat roof",
                   tree:"a slim city sidewalk tree with a tidy round canopy in a square concrete planter" },
-      rainbow: { bld_a:"a whimsical candy-colored tall house with a swirly twisted roof",
+      rainbow: { bld_c:"a tall spiral candy-cane tower building with peppermint stripes", tree_b:"a fluffy cotton-candy puff tree on a swirly striped trunk", prop:"a gumdrop bush dotted with colorful lollipops", bld_a:"a whimsical candy-colored tall house with a swirly twisted roof",
                  bld_b:"a cute building painted in bright rainbow stripes with a curved roof",
                  tree:"a magical lollipop-shaped tree with a swirly trunk and rainbow-colored leaves" },
     };

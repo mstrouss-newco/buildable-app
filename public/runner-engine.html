@@ -79,13 +79,15 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   hearts: 3,
   // speeds tuned GENTLE for ages 4-8 (was 3.6→6.1; kids found it too fast). Each town
   // ramps up a little; dist tuned so a run is a comfy ~18-22 seconds.
+  // density = chance of a 2nd blocked lane (dodge). bump = chance a row is a full-width
+  // log you must JUMP (swipe up). A row is either a dodge-row or a jump-row, never both.
   levels: [
-    { name:"Maple Street",    skyId:"maple",    sky:0xbfe9ff, grass:0x8fd98f, dist:2500, speed:2.2, density:0.00, treat:0.55 },
-    { name:"Market Square",   skyId:"market",   sky:0xffe3bf, grass:0x9bd98a, dist:2900, speed:2.6, density:0.10, treat:0.55 },
-    { name:"Sunny Beach Road",skyId:"beach",    sky:0xbff0ec, grass:0xffe39c, dist:3400, speed:3.0, density:0.20, treat:0.50 },
-    { name:"Petal Park",      skyId:"petal",    sky:0xffd6ec, grass:0x86d68f, dist:3900, speed:3.4, density:0.30, treat:0.50 },
-    { name:"Downtown Dash",   skyId:"downtown", sky:0xcdd6ff, grass:0x8fbf8f, dist:4400, speed:3.8, density:0.40, treat:0.45 },
-    { name:"Rainbow Bridge",  skyId:"rainbow",  sky:0xe6d6ff, grass:0x9be0c0, dist:5000, speed:4.2, density:0.50, treat:0.45 },
+    { name:"Maple Street",    skyId:"maple",    sky:0xbfe9ff, grass:0x8fd98f, dist:2500, speed:2.2, density:0.00, treat:0.55, bump:0.00 },
+    { name:"Market Square",   skyId:"market",   sky:0xffe3bf, grass:0x9bd98a, dist:2900, speed:2.6, density:0.10, treat:0.55, bump:0.14 },
+    { name:"Sunny Beach Road",skyId:"beach",    sky:0xbff0ec, grass:0xffe39c, dist:3400, speed:3.0, density:0.20, treat:0.50, bump:0.18 },
+    { name:"Petal Park",      skyId:"petal",    sky:0xffd6ec, grass:0x86d68f, dist:3900, speed:3.4, density:0.30, treat:0.50, bump:0.22 },
+    { name:"Downtown Dash",   skyId:"downtown", sky:0xcdd6ff, grass:0x8fbf8f, dist:4400, speed:3.8, density:0.40, treat:0.45, bump:0.28 },
+    { name:"Rainbow Bridge",  skyId:"rainbow",  sky:0xe6d6ff, grass:0x9be0c0, dist:5000, speed:4.2, density:0.50, treat:0.45, bump:0.32 },
   ],
   treatColors: ["#ffd23f","#ff8fce","#7ee0a0","#62d0ff","#ff7aa8"],
 };
@@ -102,6 +104,7 @@ const ROW_GAP = 290;          // spacing between rows -> one row in the band + c
 const START_CLEAR = 360;      // clear road at the start of each town
 const HIT_BAND = 34;          // |obstacle p - CAR_Y| within this (same lane) = crash
 const SAFE_BAND = 64;         // wider zone the bot treats as dangerous (must exceed HIT_BAND)
+const JUMP_V = 2.4, GRAV = 0.09, CLEAR_H = 6;   // jump: clears a "bump" while airborne (jy>CLEAR_H)
 
 // ---- 3D mapping: p (0..H) -> world Z, lane -> world X ----
 const NEAR_Z = 4, FAR_Z = -170, ZPP = (NEAR_Z-FAR_Z)/CAR_Y;
@@ -128,7 +131,7 @@ function startLevel(i){
   const rng=mulberry(9090+level*257);
   G={ lane:1, carX:xForLane(1), speed:L.speed, dist:0, nextRow:START_CLEAR,
       hearts:GAME_CONFIG.hearts, hurtsTaken:0, invuln:0, score:0, treatsGot:0,
-      obstacles:[], treats:[], gc:[], rng, scrollZ:0, bob:0, shake:0 };
+      obstacles:[], treats:[], gc:[], rng, scrollZ:0, bob:0, shake:0, jy:0, jv:0 };
   if(THREE && sceneReady){ applyTownColors(); applyTownScenery(L.skyId); }
   if(renderer) ensureMusic();
   state="play"; started=false;
@@ -136,6 +139,13 @@ function startLevel(i){
 
 // spawn one row of obstacles (+ maybe a treat). Pure logic — no THREE here.
 function spawnRow(){
+  // jump-row: a full-width log you must JUMP over (swipe up). Never mixed with a dodge-row.
+  if(G.dist > START_CLEAR+ROW_GAP && G.rng() < (L.bump||0)){
+    G.obstacles.push({ lane:-1, y:-OBS_H, type:"bump", passed:false, hit:false });
+    if(G.rng() < L.treat){ const ln=Math.floor(G.rng()*LANES), type=TREATS[Math.floor(G.rng()*TREATS.length)];
+      G.treats.push({ lane:ln, y:-30, type, got:false }); }
+    return;
+  }
   const lanesArr=[0,1,2];
   let blockCount = 1; if(G.rng() < L.density) blockCount = 2;   // never 3 -> always an open lane
   for(let k=lanesArr.length-1;k>0;k--){ const j=Math.floor(G.rng()*(k+1)); const t=lanesArr[k];lanesArr[k]=lanesArr[j];lanesArr[j]=t; }
@@ -151,15 +161,18 @@ function spawnRow(){
 function setLane(n){ if(!G)return; G.lane=clamp(n,0,LANES-1); }
 function moveLeft(){ if(!G)return; if(!started){started=true;} setLane(G.lane-1); sfx("select"); }
 function moveRight(){ if(!G)return; if(!started){started=true;} setLane(G.lane+1); sfx("select"); }
+function jump(){ if(!G)return; if(!started){started=true;} if(G.jy<=0 && G.jv<=0){ G.jv=JUMP_V; sfx("jump"); } }
 function canvasPt(e){ const r=hud.getBoundingClientRect(); return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) }; }
-let downX=null;
+let downX=null, downY=null;
 function onDown(e){ e.preventDefault(); if(BA)BA.unlock();
   if(helpOpen){ helpOpen=false; return; }
-  if(state==="play"){ downX=canvasPt(e).x; return; }
+  if(state==="play"){ const p=canvasPt(e); downX=p.x; downY=p.y; return; }
   if(state==="win"||state==="lose"){ advanceAfterEnd(); return; } }
-function onUp(e){ if(state!=="play"||downX==null)return; const x=canvasPt(e).x; const dx=x-downX;
-  if(Math.abs(dx)>24){ dx<0?moveLeft():moveRight(); } else { x<W/2?moveLeft():moveRight(); }
-  downX=null; }
+function onUp(e){ if(state!=="play"||downX==null)return; const p=canvasPt(e); const dx=p.x-downX, dy=p.y-downY;
+  if(dy<-24 && Math.abs(dy)>Math.abs(dx)){ jump(); }            // swipe UP = jump
+  else if(Math.abs(dx)>24){ dx<0?moveLeft():moveRight(); }       // swipe sideways
+  else { p.x<W/2?moveLeft():moveRight(); }                       // tap a side
+  downX=null; downY=null; }
 if(typeof document!=="undefined" && document.getElementById('c')){
   const cc=document.getElementById('c');
   cc.addEventListener('pointerdown',onDown); cc.addEventListener('pointerup',onUp); cc.addEventListener('pointercancel',()=>{downX=null;});
@@ -168,11 +181,15 @@ if(typeof document!=="undefined" && document.getElementById('c')){
     if(state==="win"||state==="lose"){ advanceAfterEnd(); return; }
     if(["ArrowLeft","Left","a","A"].includes(k)){ moveLeft(); e.preventDefault(); }
     if(["ArrowRight","Right","d","D"].includes(k)){ moveRight(); e.preventDefault(); }
+    if(["ArrowUp","Up","w","W"," ","Spacebar"].includes(k)){ jump(); e.preventDefault(); }
   });
 }
 
 // ---------- QA bot: a perfect driver (proves every town is winnable) ----------
 function botThink(){ if(!G)return; started=true;
+  // jump the nearest approaching bump (full-width log) so we're airborne as it crosses
+  let bump=null; for(const o of G.obstacles){ if(o.type==="bump"&&!o.passed){ if(!bump||o.y>bump.y) bump=o; } }
+  if(bump){ const lead=27*G.speed; if(bump.y<CAR_Y && bump.y>CAR_Y-lead && G.jy<=0 && G.jv<=0){ jump(); } }
   const bandBlocked=new Set();
   for(const o of G.obstacles){ if(o.passed)continue; if(Math.abs(o.y-CAR_Y)<SAFE_BAND) bandBlocked.add(o.lane); }
   if(bandBlocked.size){
@@ -196,12 +213,16 @@ function update(){
   G.bob += 0.18;
   G.dist += G.speed; G.scrollZ += G.speed*ZPP;
   if(G.invuln>0) G.invuln--;
+  if(G.jv!==0 || G.jy>0){ G.jy += G.jv; G.jv -= GRAV; if(G.jy<=0){ G.jy=0; G.jv=0; } }   // jump arc
 
   while(G.dist >= G.nextRow){ spawnRow(); G.nextRow += ROW_GAP; }
 
   const keepO=[];
   for(const o of G.obstacles){ o.y += G.speed;
-    if(!o.passed && !o.hit && o.lane===G.lane && Math.abs(o.y-CAR_Y) < HIT_BAND){ o.hit=true; hitCar(o); }
+    if(!o.passed && !o.hit){
+      if(o.type==="bump"){ if(Math.abs(o.y-CAR_Y)<HIT_BAND && G.jy<CLEAR_H){ o.hit=true; hitCar(o); } }   // jump it
+      else if(o.lane===G.lane && Math.abs(o.y-CAR_Y)<HIT_BAND){ o.hit=true; hitCar(o); }                   // dodge it
+    }
     if(o.y>CAR_Y+SAFE_BAND){ o.passed=true; }
     if(o.y<H+OBS_H) keepO.push(o); else G.gc.push(o); }
   G.obstacles=keepO;
@@ -279,6 +300,10 @@ function makeCar(bodyColor, cabinColor){
 const OBSTACLE_PIECE={ car:"ob_car", cone:"cone", hay:"hay", barrel:"barrel" };
 function makeObstacle(type){
   const g=new THREE.Group(); const fb=new THREE.Group(); g.add(fb);
+  if(type==="bump"){ // a full-width log to JUMP over (no billboard)
+    const log=meshOf(cyl(0.5,0.5,9.4,12), 0x9a6b3b); log.rotation.z=Math.PI/2; log.position.y=0.5; g.add(log);
+    for(const sx of [-1,1]){ const cap=meshOf(cyl(0.52,0.52,0.12,12), 0xc8a06a); cap.rotation.z=Math.PI/2; cap.position.set(sx*4.7,0.5,0); g.add(cap); }
+    return g; }
   if(type==="cone"){ const c=meshOf(cyl(0.05,0.7,1.5,16), 0xff7a2c); c.position.y=0.75; fb.add(c);
     const ring=meshOf(cyl(0.45,0.55,0.28,16), 0xffffff); ring.position.y=0.6; fb.add(ring);
     const base=meshOf(box(1.3,0.18,1.3), 0x3a2a1a); base.position.y=0.09; fb.add(base); }
@@ -326,39 +351,46 @@ function makeBalloon(color){ const g=new THREE.Group();
 }
 
 // ---- per-town roadside scenery: AI billboards with a blocky fallback ----
-const SCENERY_PIECES=["bld_a","bld_b","tree"];
-const PIECE_DIM={ bld_a:{w:5.4,h:6.2}, bld_b:{w:5.0,h:5.2}, tree:{w:4.6,h:5.6} };
+// 6 distinct pieces per town; each slot picks a RANDOM one (+ random mirror & scale) and
+// re-randomizes every time it recycles, so the roadside never looks repetitive.
+const SCENERY_PIECES=["bld_a","bld_b","bld_c","tree","tree_b","prop"];
+const PIECE_DIM={ bld_a:{w:5.4,h:6.2}, bld_b:{w:5.0,h:5.2}, bld_c:{w:4.6,h:6.6},
+  tree:{w:4.6,h:5.6}, tree_b:{w:4.2,h:5.8}, prop:{w:3.4,h:3.2} };
 const propTexCache={};   // "town:piece" -> THREE.Texture, or false if it failed
 function makeFallbackProp(piece){ const g=new THREE.Group();
-  if(piece==="tree"){ const tr=meshOf(cyl(0.2,0.26,1.1,10),0x8a5a3c); tr.position.y=0.55; g.add(tr);
+  if(piece.indexOf("tree")===0){ const tr=meshOf(cyl(0.2,0.26,1.1,10),0x8a5a3c); tr.position.y=0.55; g.add(tr);
     const lv=meshOf(new THREE.SphereGeometry(1.0,12,10),0x4fae5a); lv.position.y=1.7; g.add(lv); }
-  else { const col=piece==="bld_a"?0xffb3a7:0xbfd7ff; const h=meshOf(box(1.9,2.4,1.9),col); h.position.y=1.2; g.add(h);
+  else if(piece==="prop"){ const b=meshOf(new THREE.SphereGeometry(0.7,10,8),0x6fbf5a); b.position.y=0.7; g.add(b); }
+  else { const cols={bld_a:0xffb3a7,bld_b:0xbfd7ff,bld_c:0xfde08a}; const h=meshOf(box(1.9,2.4,1.9),cols[piece]||0xcccccc); h.position.y=1.2; g.add(h);
     const roof=meshOf(cyl(0.05,1.6,1.05,4),0xb5524a); roof.position.y=2.9; roof.rotation.y=Math.PI/4; g.add(roof); }
   return g;
 }
-function makeScenerySlot(piece){ const grp=new THREE.Group();
-  const fb=makeFallbackProp(piece); grp.add(fb);
+function makeScenerySlot(){ const grp=new THREE.Group();
+  const fb=new THREE.Group(); grp.add(fb);
   const planeMat=new THREE.MeshBasicMaterial({transparent:true,alphaTest:0.4,side:THREE.DoubleSide});
-  const dim=PIECE_DIM[piece]||{w:5,h:5.5};
-  const plane=new THREE.Mesh(new THREE.PlaneGeometry(dim.w,dim.h), planeMat);
-  plane.position.y=dim.h/2; plane.visible=false; grp.add(plane);
-  grp.userData={ piece, plane, fb }; return grp;
+  const plane=new THREE.Mesh(new THREE.PlaneGeometry(1,1), planeMat); plane.visible=false; grp.add(plane);
+  grp.userData={ fb, plane, piece:null, town:null, side:1 }; return grp;
 }
-function applyTownScenery(town){ if(!scene)return;
-  for(const slot of scenePool){ const piece=slot.userData.piece, key=town+":"+piece;
-    const plane=slot.userData.plane, fb=slot.userData.fb;
-    if(propTexCache[key] && propTexCache[key]!==false){ plane.material.map=propTexCache[key]; plane.material.needsUpdate=true; plane.visible=true; fb.visible=false; continue; }
-    plane.visible=false; fb.visible=true;     // show blocky fallback until/unless the art loads
-    if(propTexCache[key]===false) continue;   // known-missing -> stay blocky
-    try{ new THREE.TextureLoader().load(
-      "/api/images?kind=runnerprop&town="+encodeURIComponent(town)+"&piece="+encodeURIComponent(piece),
-      (tex)=>{ propTexCache[key]=tex; if(!L||L.skyId!==town) return;
-        for(const s2 of scenePool){ if(s2.userData.piece===piece){ s2.userData.plane.material.map=tex; s2.userData.plane.material.needsUpdate=true; s2.userData.plane.visible=true; s2.userData.fb.visible=false; } } },
-      undefined,
-      ()=>{ propTexCache[key]=false; }
-    ); }catch(e){}
-  }
+function setSlotPiece(slot, town, piece){
+  slot.userData.piece=piece; slot.userData.town=town;
+  const fb=slot.userData.fb; while(fb.children.length)fb.remove(fb.children[0]); fb.add(makeFallbackProp(piece)); fb.visible=true;
+  const plane=slot.userData.plane, d=PIECE_DIM[piece]||{w:5,h:5.5};
+  plane.geometry.dispose(); plane.geometry=new THREE.PlaneGeometry(d.w,d.h); plane.position.y=d.h/2; plane.visible=false; plane.material.map=null;
+  plane.scale.x = Math.random()<0.5?-1:1;                 // mirror the art for variety
+  slot.scale.setScalar(0.86 + Math.random()*0.3);         // size jitter
+  const key=town+":"+piece;
+  if(propTexCache[key]===false) return;
+  if(propTexCache[key]){ plane.material.map=propTexCache[key]; plane.material.needsUpdate=true; plane.visible=true; fb.visible=false; return; }
+  try{ new THREE.TextureLoader().load("/api/images?kind=runnerprop&town="+encodeURIComponent(town)+"&piece="+encodeURIComponent(piece),
+    (t)=>{ propTexCache[key]=t; if(slot.userData.piece===piece && slot.userData.town===town){ plane.material.map=t; plane.material.needsUpdate=true; plane.visible=true; fb.visible=false; } },
+    undefined, ()=>{ propTexCache[key]=false; }); }catch(e){}
 }
+function randPiece(){ return SCENERY_PIECES[Math.floor(Math.random()*SCENERY_PIECES.length)]; }
+function applyTownScenery(town){ if(!scene)return; for(const slot of scenePool) setSlotPiece(slot, town, randPiece()); }
+function recycleSlot(slot){ const town=slot.userData.town; if(!town) return;
+  setSlotPiece(slot, town, randPiece());
+  const far=Math.random()<0.35, xoff=far?(10.5+Math.random()*2):(6.6+Math.random()*1.4);
+  slot.position.x = slot.userData.side*xoff; }
 
 function buildScene(){
   const cv=document.getElementById('c');
@@ -377,12 +409,10 @@ function buildScene(){
   // lane dashes (recycled)
   for(let i=0;i<26;i++){ for(const lx of [-1.5,1.5]){ const d=meshOf(box(0.22,0.06,2.2), 0xffffff);
     d.position.set(lx, 0.16, NEAR_Z - i*7); scene.add(d); dashPool.push(d); } }
-  // roadside scenery slots (AI billboards w/ blocky fallback), 2 depth rows for layering
-  let si=0;
-  for(let i=0;i<16;i++){ for(const sx of [-1,1]){
-    const piece=SCENERY_PIECES[si%SCENERY_PIECES.length]; si++;
-    const slot=makeScenerySlot(piece);
-    const farRow=(i%3===0); const xoff=farRow?(11+(i%3)*0.7):(6.7+(i%3)*0.6);
+  // roadside scenery slots (AI billboards w/ blocky fallback); pieces are assigned per town
+  for(let i=0;i<18;i++){ for(const sx of [-1,1]){
+    const slot=makeScenerySlot(); slot.userData.side=sx;
+    const farRow=(i%3===0); const xoff=farRow?(10.8+(i%3)*0.7):(6.7+(i%3)*0.6);
     slot.position.set(sx*xoff, 0, NEAR_Z - i*12);
     scene.add(slot); scenePool.push(slot); } }
   // floating clouds (drift across the sky, in front of the AI backdrop) — big & close enough to read
@@ -427,15 +457,15 @@ function renderScene(){
   // recycle dashes + scenery to fake forward motion
   const adv = (state==="play"&&started)?G.speed*ZPP:0;
   for(const d of dashPool){ d.position.z+=adv; if(d.position.z>NEAR_Z+4) d.position.z=FAR_Z; }
-  for(const s of scenePool){ s.position.z+=adv; if(s.position.z>NEAR_Z+8) s.position.z-=16*12; }
+  for(const s of scenePool){ s.position.z+=adv; if(s.position.z>NEAR_Z+8){ s.position.z-=18*12; recycleSlot(s); } }
   // car
   carGroup.position.x = G.carX; carGroup.position.z = zForP(CAR_Y);
-  carGroup.position.y = Math.sin(G.bob)*0.06;
+  carGroup.position.y = Math.sin(G.bob)*0.06 + (G.jy||0)*0.12;
   carGroup.rotation.y = clamp((xForLane(G.lane)-G.carX)*0.16, -0.3, 0.3);   // gentle bank (billboard-friendly)
   carGroup.visible = !(G.invuln>0 && Math.floor(G.invuln/5)%2===0);
   // obstacles
   for(const o of G.obstacles){ if(!o._mesh){ o._mesh=makeObstacle(o.type); scene.add(o._mesh); }
-    o._mesh.position.set(xForLane(o.lane), 0, zForP(o.y)); }
+    o._mesh.position.set(o.type==="bump"?0:xForLane(o.lane), 0, zForP(o.y)); }
   // treats
   for(const t of G.treats){ if(!t._mesh){ t._mesh=makeTreat(t.type); scene.add(t._mesh); }
     t._mesh.position.set(xForLane(t.lane), 1.15+Math.sin(G.bob+t.y*0.05)*0.18, zForP(t.y)); }
@@ -461,8 +491,8 @@ function star5(cx,cy,r,filled){ hctx.beginPath();
 function banner(t,s){ hctx.fillStyle="rgba(10,12,40,.55)";hctx.fillRect(0,0,W,H); hctx.textAlign="center"; hctx.fillStyle="#fff";hctx.font="bold 40px Fredoka,sans-serif";hctx.fillText(t,W/2,H/2-6); hctx.font="20px Fredoka,sans-serif";hctx.fillText(s,W/2,H/2+34); }
 function drawTutorial(){ const tt=Date.now()/1000;
   hctx.fillStyle="rgba(10,12,40,.45)"; hctx.fillRect(0,0,W,H);
-  hctx.fillStyle="#fff"; hctx.textAlign="center"; hctx.font="bold 26px Fredoka,sans-serif"; hctx.fillText("Tap a side or swipe to move!", W/2, 110);
-  hctx.font="18px Fredoka,sans-serif"; hctx.fillStyle="#cdd0ff"; hctx.fillText("Dodge the road and grab the treats", W/2, 142);
+  hctx.fillStyle="#fff"; hctx.textAlign="center"; hctx.font="bold 26px Fredoka,sans-serif"; hctx.fillText("Tap a side to move!", W/2, 110);
+  hctx.font="18px Fredoka,sans-serif"; hctx.fillStyle="#cdd0ff"; hctx.fillText("Swipe UP to jump · grab the treats", W/2, 142);
   const swing=Math.sin(tt*1.6); const lx=W/2-90, rx=W/2+90, ay=185;
   hctx.fillStyle=swing<0?"#ffd86b":"rgba(255,255,255,.4)"; hctx.beginPath();hctx.moveTo(lx+10,ay-12);hctx.lineTo(lx-12,ay);hctx.lineTo(lx+10,ay+12);hctx.closePath();hctx.fill();
   hctx.fillStyle=swing>0?"#ffd86b":"rgba(255,255,255,.4)"; hctx.beginPath();hctx.moveTo(rx-10,ay-12);hctx.lineTo(rx+12,ay);hctx.lineTo(rx-10,ay+12);hctx.closePath();hctx.fill();
@@ -533,7 +563,7 @@ function drawNo3D(){ if(!hctx)return; hctx.clearRect(0,0,W,H);
   hctx.fillText("Please check your connection and refresh.", W/2, H/2+24); }
 // ---- sound: bespoke created sounds (ElevenLabs) via BA + a looping engine hum ----
 if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
-  coin:"runner_coin", hurt:"runner_crash", select:"town_move", win:"tennis_win", lose:"tennis_lose" } }); }
+  coin:"runner_coin", hurt:"runner_crash", select:"town_move", jump:"runner_jump", win:"tennis_win", lose:"tennis_lose" } }); }
 let _curMusic=null;
 function ensureMusic(){ if(!renderer||!BA||!BA.setMusic||!L) return; const url="/api/runner-music?town="+encodeURIComponent(L.skyId);
   if(url!==_curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); _curMusic=url; } if(BA.playMusic)BA.playMusic(); }
