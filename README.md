@@ -709,6 +709,20 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27k (Sunny Town Drive: distinct AI worlds per town)
+
+Made the levels look genuinely different + layered. Added `images.js` kind `runnerprop`
+(modern3d, transparent, quality "low" so gen fits the fetch window) with distinct
+building+tree pieces per town (maple cottages, market shops+clock tower, beach huts+palms,
+petal blossoms+gazebo, downtown skyscrapers, rainbow candy houses). The 3D engine renders
+roadside scenery as **camera-facing textured billboards** at two depth rows (layering),
+loaded per town via `/api/images?kind=runnerprop&town=&piece=`, with the old blocky models
+as a graceful fallback. Plus drifting clouds + balloons + per-town AI sky from before. QA
+still all-win (render-only change). Verified live: Maple and Market look clearly distinct,
+no console errors. NEXT: AI vehicles + treats, then ElevenLabs sounds.
+
+---
+
 ## Session log — 2026-06-27j (Sunny Town Drive: self-host fix, slower speed, AI skies)
 
 Three follow-ups after the 3D rebuild: (1) **self-hosted Three.js** (`public/three.min.js`
