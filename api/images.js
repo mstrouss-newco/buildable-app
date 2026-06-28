@@ -200,7 +200,7 @@ function build(q) {
     };
     const subject = PACKS[id];
     if (!subject) return null;
-    return { descriptor: `soundpack|${id}`, prompt: `${subject}. ${PACK_STYLE}`, transparent: true, quality: "medium" };
+    return { descriptor: `soundpack|${id}`, prompt: `${subject}. ${PACK_STYLE}`, transparent: true, quality: "low" };
   }
   if (kind === "game") {
     const id = (q.id || "").toString();
