@@ -127,6 +127,10 @@ others) double top-left button bug.
   shell's — now all unified behind `GameFrame` + `showBack:false`.
 
 Menu/nav only — gameplay untouched. Verified live.
+## 2026-06-27 — Maze Munchers: controls fix (turn at open intersections)
+- **Bug (Mike):** the muncher couldn't turn at an open intersection — only when it ran into a wall — so it felt uncontrollable. Root cause was INPUT, not the movement model: the maze ran in an iframe that never received keyboard focus (the platformer focuses its iframe `onLoad`; the maze did not), so arrow keys were dead and the hero only moved via swipe. The buffered-turn logic itself was already correct (verified in a headless unit test: a gliding hero turns at the next opening).
+- **Fixes:** (1) `MazeScreen` now focuses the iframe `onLoad`; the engine also grabs focus (canvas `tabIndex`, `window.focus()` on load + on every pointer/d-pad press) and listens for keys on both `document` and `window`. (2) **Tap-toward-a-direction**: a tap now steers the muncher toward where the kid tapped (relative to the hero), in addition to swipe + arrows + on-screen d-pad. (3) **Instant 180-degree reverse** for snappy feel. (4) Kept the classic **buffered cornering**: a requested turn is queued and applied at the next opening that allows it.
+- QA: `qa-maze.mjs` still clears all 6 worlds + campaign + render smoke; added headless turn/reverse checks; `npm run build` clean. Shipped to `main`.
 
 
 ## 2026-06-27 — Maze Munchers: "Make It Mine" buddy, bonus treats, scoring

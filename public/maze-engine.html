@@ -65,6 +65,7 @@
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-gamenav.js"></script>
 <script>
 // ============================================================================
 //  MAZE MUNCHERS — a FIXED, hand-authored Track B engine (BUILDING-A-GAME.md).
@@ -87,6 +88,8 @@ const BR=(typeof window!=="undefined"&&window.BuildableRenders)||(typeof globalT
 const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThis!=="undefined"&&globalThis.BuildableAudio);
 const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
 const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
+const BN=(typeof window!=="undefined"&&window.BuildableGameNav)||null;
+function navUpdate(){ try{ if(BN&&BN.update)BN.update(); }catch(e){} }
 function sfx(n,o){ if(BA)BA.sfx(n,o); }
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
@@ -507,28 +510,48 @@ function toast(msg){ const e=el("toast"); if(!e)return; if(!msg){ e.style.displa
 function showInGame(on){ const b=el("backBtn"),m=el("muteBtn"),d=el("dpad"); if(b)b.style.display=on?"block":"none"; if(m)m.style.display=on?"block":"none"; if(d)d.style.display=on?"block":"none"; }
 
 // ---- input ----
-function setDir(name){ const d=NAME2DIR[name]; if(!d)return; queuedDir=d; if(BA)BA.unlock(); }
+function applyDir(d){ if(!d)return; if(BA)BA.unlock();
+  // instant 180-degree reverse for snappy feel (don't wait for the next cell)
+  if(hero && hero.moving && hero.dir && d.x===-hero.dir.x && d.y===-hero.dir.y){
+    const ofx=hero.fx, ofy=hero.fy; hero.fx=hero.tx; hero.fy=hero.ty; hero.tx=ofx; hero.ty=ofy; hero.gx=hero.fx; hero.gy=hero.fy; hero.t=1-hero.t; hero.dir=d;
+  }
+  queuedDir=d;   // buffered: applied at the next opening that allows it (classic maze cornering)
+}
+function setDir(name){ applyDir(NAME2DIR[name]); }
 function advance(){ if(state!=="levelwin")return; if(level>=GAME_CONFIG.levels.length-1){ showMenu(); } else { startLevel(level+1, 3); ensureMusic(); playMusic(); hideMenu(); } }
+function focusGame(){ try{ if(typeof window!=="undefined"&&window.focus)window.focus(); if(c&&c.focus)c.focus(); }catch(e){} }
 if(typeof document!=="undefined"){
-  document.addEventListener("keydown",(e)=>{
-    const k=e.key;
+  if(c){ try{ c.tabIndex=0; c.style.outline="none"; }catch(e){} }
+  // keyboard: works once the game canvas/iframe has focus (we grab focus on load + on any pointer)
+  const onKey=(e)=>{ const k=e.key;
     if(k==="ArrowUp"||k==="w"||k==="W")setDir("up");
     else if(k==="ArrowDown"||k==="s"||k==="S")setDir("down");
     else if(k==="ArrowLeft"||k==="a"||k==="A")setDir("left");
     else if(k==="ArrowRight"||k==="d"||k==="D")setDir("right");
     else if(k===" "||k==="Enter")advance();
     if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(k))e.preventDefault();
-  });
-  // swipe + tap on the canvas
-  let sx=0,sy=0,st=0;
-  const startP=(x,y)=>{ sx=x; sy=y; st=Date.now(); };
-  const endP=(x,y)=>{ const dx=x-sx, dy=y-sy; if(Math.abs(dx)<14&&Math.abs(dy)<14){ if(state==="levelwin")advance(); return; }
-    if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?"right":"left"); else setDir(dy>0?"down":"up"); };
+  };
+  document.addEventListener("keydown", onKey);
+  try{ window.addEventListener("keydown", onKey); }catch(e){}
+  // swipe (drag) OR tap-toward-a-direction OR the on-screen d-pad all steer the muncher
+  let sx=0, sy=0;
+  const startP=(x,y)=>{ sx=x; sy=y; focusGame(); };
+  const endP=(x,y)=>{ const dx=x-sx, dy=y-sy;
+    if(Math.abs(dx)<14 && Math.abs(dy)<14){
+      if(state==="levelwin"){ advance(); return; }
+      // a tap: steer toward where the kid tapped, relative to the muncher
+      if(state==="play" && hero){ const rect=c.getBoundingClientRect();
+        const ax=(x-rect.left)*(W/(rect.width||W))-hero.px, ay=(y-rect.top)*(H/(rect.height||H))-hero.py;
+        if(Math.abs(ax)>Math.abs(ay)) applyDir(ax>0?NAME2DIR.right:NAME2DIR.left); else applyDir(ay>0?NAME2DIR.down:NAME2DIR.up); }
+      return;
+    }
+    if(Math.abs(dx)>Math.abs(dy)) applyDir(dx>0?NAME2DIR.right:NAME2DIR.left); else applyDir(dy>0?NAME2DIR.down:NAME2DIR.up);
+  };
   c.addEventListener("touchstart",(e)=>{ const t0=e.changedTouches[0]; startP(t0.clientX,t0.clientY); },{passive:true});
   c.addEventListener("touchend",(e)=>{ const t0=e.changedTouches[0]; endP(t0.clientX,t0.clientY); },{passive:true});
-  c.addEventListener("mousedown",(e)=>startP(e.clientX,e.clientY));
+  c.addEventListener("mousedown",(e)=>{ startP(e.clientX,e.clientY); });
   c.addEventListener("mouseup",(e)=>endP(e.clientX,e.clientY));
-  const dp=el("dpad"); if(dp){ dp.querySelectorAll("button").forEach(b=>{ const fire=(ev)=>{ ev.preventDefault(); setDir(b.getAttribute("data-d")); }; b.addEventListener("touchstart",fire,{passive:false}); b.addEventListener("mousedown",fire); }); }
+  const dp=el("dpad"); if(dp){ dp.querySelectorAll("button").forEach(b=>{ const fire=(ev)=>{ ev.preventDefault(); focusGame(); setDir(b.getAttribute("data-d")); }; b.addEventListener("touchstart",fire,{passive:false}); b.addEventListener("mousedown",fire); }); }
 }
 
 // ---- Make It Mine (buddy picker) ----
@@ -552,12 +575,12 @@ function buildStartCfg(){
   let total=0; for(const k in PREFS.stars) total+=PREFS.stars[k]||0;
   return { title:"Maze Munchers", subtitle:"Gobble every treat — dodge the friendly chasers!", coins:total, sound:!(BA&&BA.muted), showBack:false, levels, customizeLabel:"Make it mine" };
 }
-function showMenu(){ state="title"; showInGame(false); show("customize",false); if(BA&&BA.stopMusic)BA.stopMusic(); _curMusic=null; const host=document.getElementById("start"); if(host)host.style.display="block";
+function showMenu(){ state="title"; showInGame(false); show("customize",false); navUpdate(); if(BA&&BA.stopMusic)BA.stopMusic(); _curMusic=null; const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host) return;
   const cb={ onPlay:(n)=>{ startPlay(n-1); hideMenu(); }, onMode:()=>{}, onHero:()=>{}, onCustomize:()=>showCustomize(), onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(!BA.muted){ ensureMusic(); playMusic(); } } }, onBack:()=>{} };
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg());
 }
-function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showInGame(true); }
+function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showInGame(true); focusGame(); navUpdate(); }
 function startPlay(i){ if(BA)BA.unlock(); botMode=false; startLevel(i,null); ensureMusic(); playMusic();
   if(!_hintShown){ _hintShown=true; toast("Swipe or use arrows to move. Eat a glowing treat to chase them!"); } }
 function wireMenus(){ const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(!BA.muted){ ensureMusic(); playMusic(); } } upd(); }; }
@@ -572,7 +595,9 @@ if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   win:"maze_win", hurt:"maze_caught", select:"maze_start" } }); }
 
 // boot
-if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showMenu(); }
+if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showMenu();
+  if(BN&&BN.register){ BN.register({ hide:["muteBtn","backBtn"], onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(!BA.muted){ ensureMusic(); playMusic(); } } }, onMenu:()=>showMenu(), soundOn:()=>!(BA&&BA.muted), inGame:()=>state==="play"||state==="ready"||state==="levelwin" }); }
+}
 if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(frame);
 
 // ---- QA / picker hooks (standardized name MAZE_GAME; BUILDABLE_GAME alias) ----
