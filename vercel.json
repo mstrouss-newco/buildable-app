@@ -10,6 +10,14 @@
       "dest": "/api/$1"
     },
     {
+      "src": "/asset-library.html",
+      "dest": "/asset-library.html"
+    },
+    {
+      "src": "/asset-library",
+      "dest": "/asset-library.html"
+    },
+    {
       "src": "/app/assets/(.*)",
       "dest": "/assets/$1"
     },

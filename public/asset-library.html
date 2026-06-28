@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Asset Library — internal</title>
+<style>
+  :root{ --bg:#0e1120; --panel:#161a2e; --panel2:#1d2238; --line:#2b3151; --txt:#e7e9f5; --mut:#9aa0c4; --acc:#7c8cff; --accbg:#23284a; --teal:#3ddc97; --warn:#ffcf6b; --warnbg:#3a3320; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px 20px 60px}
+  h1{font-size:18px;font-weight:600;margin:0}
+  .sub{color:var(--mut);font-size:12px}
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+  .seg button{background:transparent;color:var(--mut);border:0;padding:6px 16px;font:inherit;cursor:pointer}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--acc);color:#0b0e1c;font-weight:600}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .lbl{font-size:12px;color:var(--mut);margin-right:2px}
+  .chip{font-size:12px;padding:5px 12px;border-radius:99px;border:1px solid var(--line);color:var(--txt);background:transparent;cursor:pointer}
+  .chip.on{background:var(--accbg);border-color:var(--acc);color:#c9d0ff}
+  .chip.kind.on{background:var(--acc);color:#0b0e1c;font-weight:600;border-color:var(--acc)}
+  .chip:disabled{opacity:.35;cursor:not-allowed}
+  input[type=text]{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:7px 10px;font:inherit;min-width:200px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:16px 0}
+  .matrix{display:grid;gap:5px;align-items:center;margin-top:8px}
+  .mh{font-size:11px;color:var(--mut);text-align:center}
+  .cell{height:18px;border-radius:5px;width:74%;margin:0 auto;cursor:pointer}
+  .cell.have{background:var(--teal)}
+  .cell.gap{border:1px solid var(--line)}
+  .seclbl{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 10px}
+  .seclbl b{font-size:15px;font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+  .thumb{height:96px;background:var(--panel2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--mut);position:relative}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .ic{font-size:30px}
+  .cbody{padding:8px 10px}
+  .cname{font-size:13px;margin-bottom:4px;word-break:break-word}
+  .badges{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  .b{font-size:10px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+  .b.src{background:var(--accbg);border-color:var(--acc);color:#c9d0ff}
+  .b.warn{background:var(--warnbg);border-color:var(--warn);color:var(--warn)}
+  .b.cc0{background:#16331f;border-color:#3ddc97;color:#7ef0bd}
+  .copy{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:6px;font-size:10px;padding:1px 7px;cursor:pointer}
+  .copy:active{transform:scale(.95)}
+  .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent;border:0;color:var(--txt);font-size:26px;cursor:pointer}
+  .muted{color:var(--mut);font-size:12px}
+  .note{font-size:11px;color:var(--mut);margin-top:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+    <h1>Asset Library</h1><span class="sub">internal · live from the shared library</span>
+    <button id="refresh" class="chip" style="margin-left:auto">Refresh</button>
+  </div>
+  <div class="sub" id="counts" style="margin-bottom:14px">Loading…</div>
+
+  <div class="bar">
+    <div class="seg" id="dim">
+      <button data-d="all" class="on">All</button><button data-d="2d">2D</button><button data-d="3d">3D</button>
+    </div>
+    <input type="text" id="search" placeholder="Search assets" />
+  </div>
+  <div class="chips" id="gametypes"><span class="lbl">Game type</span></div>
+  <div class="chips" id="themes"><span class="lbl">Theme</span></div>
+  <div class="chips" id="kinds"><span class="lbl">Kind</span></div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <b style="font-size:14px">Coverage</b>
+      <span class="muted"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--teal);vertical-align:-1px"></span> have &nbsp; <span style="display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid var(--line);vertical-align:-1px"></span> gap</span>
+    </div>
+    <div id="matrix" class="matrix"></div>
+    <div class="note">Filled = at least one asset for that theme + kind (under the current 2D/3D filter). Click a cell to jump to it.</div>
+  </div>
+
+  <div id="sections"></div>
+</div>
+
+<script>
+const KINDS=[["character","Characters"],["world","Worlds"],["element","Elements"],["effect","Effects"],["music","Music"],["sfx","SFX"]];
+const THEMES_ORDER=["space","jungle","ocean","candy","castle","desert","forest","snow"];
+const GAME_TYPES=[["side-scroller","2d"],["top-down","2d"],["breakout","2d"],["survival","2d"],["3d-runner","3d"]];
+const cb="?cb="+Date.now();
+
+const MODELS_3D=["Bush_Common","Bush_Common_Flowers","CommonTree_1","CommonTree_3","CommonTree_5","Fern_1","Flower_3_Group","Flower_4_Group","Grass_Common_Tall","Mushroom_Common","Pine_1","Pine_3","Rock_Medium_1","Rock_Medium_2"]
+  .map(n=>({id:"model:"+n,name:n.replace(/_/g," "),kind:"element",theme:"forest",dim:"3d",source:"quaternius",license:"CC0",url:"/models/nature/"+n+".gltf",icon:"◈"}));
+
+const EFFECTS=[
+  {id:"fx:explode",name:"Explosion",visual:"BM.explode()",sound:"boom",ready:false,icon:"✷"},
+  {id:"fx:burst",name:"Particle burst",visual:"BM.burst()",sound:"pop",ready:false,icon:"✵"},
+  {id:"fx:flash",name:"Screen flash",visual:"BM.flash()",sound:null,icon:"◐"},
+  {id:"fx:shake",name:"Screen shake",visual:"BM.shake()",sound:null,icon:"≈"},
+  {id:"fx:pop",name:"Pop text",visual:"BM.pop()",sound:null,icon:"↑"}
+].map(e=>({...e,kind:"effect",theme:"",dim:"2d",source:"buildable-mechanics"}));
+
+const PACKS=[
+  {name:"KayKit Platformer",dim:"3d",license:"CC0",count:"370 models",status:"downloaded · partly in /models",cc0:true},
+  {name:"Quaternius Nature",dim:"3d",license:"CC0",count:"81 models",status:"live in /models/nature",cc0:true},
+  {name:"Tiny Swords",dim:"2d",license:"no-republish",count:"410 sprites",status:"downloaded · needs curate",cc0:false},
+  {name:"Mossy Cavern",dim:"2d",license:"no-republish",count:"tileset + character",status:"downloaded · needs curate",cc0:false}
+];
+
+let ALL=[]; const state={dim:"all",game:null,theme:null,kinds:new Set(KINDS.map(k=>k[0])),q:""};
+
+async function getJSON(u){try{const r=await fetch(u);if(!r.ok)return null;return await r.json();}catch(e){return null;}}
+
+async function load(){
+  document.getElementById("counts").textContent="Loading…";
+  const [assets,chars,audio]=await Promise.all([
+    getJSON("/api/list-assets"+cb),
+    getJSON("/api/list-characters"+cb.replace("?","?limit=60&")),
+    getJSON("/api/list-audio"+cb)
+  ]);
+  const out=[];
+  (assets&&assets.layers||[]).forEach(l=>out.push({id:l.id,name:(l.theme||"world")+" world",kind:"world",theme:l.theme||"",dim:"2d",source:l.source||"community",url:l.imageUrl,thumb:l.imageUrl}));
+  (assets&&assets.sprites||[]).forEach(s=>out.push({id:s.id,name:s.subject||"element",kind:"element",theme:s.theme||"",dim:"2d",source:s.source||"community",url:s.imageUrl,thumb:s.imageUrl}));
+  (chars&&chars.characters||[]).forEach(c=>out.push({id:c.id,name:c.name,kind:"character",theme:c.theme||"",dim:"2d",source:c.source||"community",url:c.image,thumb:(c.image&&c.image.indexOf("data:")!==0)?c.image:null}));
+  (audio&&audio.music||[]).forEach(m=>out.push({id:m.id,name:m.name,kind:"music",theme:m.theme||"",dim:"any",source:m.source,url:m.url,audio:true}));
+  (audio&&audio.sfx||[]).forEach(s=>out.push({id:s.id,name:s.name,kind:"sfx",theme:s.theme||"",dim:"any",source:s.source,url:s.url,audio:true}));
+  ALL=out.concat(MODELS_3D,EFFECTS);
+  const n2d=ALL.filter(a=>a.dim==="2d").length,n3d=ALL.filter(a=>a.dim==="3d").length;
+  document.getElementById("counts").textContent=ALL.length+" assets · "+n2d+" 2D · "+n3d+" 3D · "+(audio?(audio.music.length+audio.sfx.length):0)+" audio";
+  buildFilters(); render();
+}
+
+function passDim(a){return state.dim==="all"||a.dim===state.dim||a.dim==="any";}
+function visible(a){
+  if(!passDim(a))return false;
+  if(!state.kinds.has(a.kind))return false;
+  if(state.theme&&(a.theme||"").toLowerCase()!==state.theme)return false;
+  if(state.q&&(a.name+" "+a.source+" "+a.theme).toLowerCase().indexOf(state.q)<0)return false;
+  return true;
+}
+
+function buildFilters(){
+  const gt=document.getElementById("gametypes");
+  GAME_TYPES.forEach(([g,d])=>{const b=document.createElement("button");b.className="chip";b.textContent=g;b.disabled=(state.dim!=="all"&&state.dim!==d);
+    b.onclick=()=>{state.game=state.game===g?null:g; if(state.game){setDim(d);} render();}; gt.appendChild(b);});
+  const th=document.getElementById("themes");
+  const themes=[...new Set(ALL.map(a=>a.theme).filter(Boolean))].sort((a,b)=>THEMES_ORDER.indexOf(a)-THEMES_ORDER.indexOf(b));
+  themes.forEach(t=>{const b=document.createElement("button");b.className="chip";b.dataset.t=t;b.textContent=t;b.onclick=()=>{state.theme=state.theme===t?null:t;render();};th.appendChild(b);});
+  const kc=document.getElementById("kinds");
+  KINDS.forEach(([k,lab])=>{const b=document.createElement("button");b.className="chip kind on";b.dataset.k=k;b.textContent=lab;b.onclick=()=>{state.kinds.has(k)?state.kinds.delete(k):state.kinds.add(k);render();};kc.appendChild(b);});
+}
+function setDim(d){state.dim=d;document.querySelectorAll("#dim button").forEach(x=>x.classList.toggle("on",x.dataset.d===d));}
+
+function renderMatrix(){
+  const m=document.getElementById("matrix");
+  const kinds=KINDS.filter(k=>state.kinds.has(k[0]));
+  const themes=[...new Set(ALL.filter(a=>a.theme).map(a=>a.theme))].sort((a,b)=>THEMES_ORDER.indexOf(a)-THEMES_ORDER.indexOf(b));
+  m.style.gridTemplateColumns="68px repeat("+kinds.length+",1fr)";
+  let h='<span></span>'+kinds.map(k=>'<span class="mh">'+k[1].replace("Characters","Hero").replace("Elements","Elem")+'</span>').join("");
+  themes.forEach(t=>{h+='<span class="muted" style="font-size:12px">'+t+'</span>';
+    kinds.forEach(k=>{const have=ALL.some(a=>a.theme===t&&a.kind===k[0]&&passDim(a));
+      h+='<span class="cell '+(have?"have":"gap")+'" data-t="'+t+'" data-k="'+k[0]+'"></span>';});});
+  m.innerHTML=h;
+  m.querySelectorAll(".cell").forEach(c=>c.onclick=()=>{state.theme=c.dataset.t;document.querySelectorAll("#themes .chip").forEach(x=>x.classList.toggle("on",x.dataset.t===c.dataset.t));render();});
+}
+
+function tile(a){
+  let inner;
+  if(a.kind==="effect"){
+    inner='<div class="thumb"><span class="ic">'+a.icon+'</span></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b src">'+a.visual+'</span>'+(a.sound?(a.ready?'<span class="b">sound: '+a.sound+'</span>':'<span class="b warn">sound: create</span>'):'<span class="b">visual only</span>')+'</div></div>';
+  }else if(a.audio){
+    inner='<div class="thumb"><button class="play" data-u="'+a.url+'">▶</button></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">'+a.kind+'</span><span class="b src">'+a.source+'</span><button class="copy" data-c="'+a.url+'">copy</button></div></div>';
+  }else if(a.dim==="3d"){
+    inner='<div class="thumb"><span class="ic">'+(a.icon||"◈")+'</span></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">3D</span><span class="b cc0">'+a.source+'</span><button class="copy" data-c="'+a.url+'">copy</button></div></div>';
+  }else{
+    const t=a.thumb?'<img src="'+a.thumb+'" loading="lazy" alt="" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=ic>▦</span>\'">':'<span class="ic">▦</span>';
+    inner='<div class="thumb">'+t+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b '+(a.source==="story"||a.source==="community"?"src":"")+'">'+(a.source||"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.id+'">copy</button></div></div>';
+  }
+  return '<div class="card">'+inner+'</div>';
+}
+
+function render(){
+  document.querySelectorAll("#gametypes .chip").forEach(b=>{b.classList.toggle("on",b.textContent===state.game);b.disabled=(state.dim!=="all"&&GAME_TYPES.find(g=>g[0]===b.textContent)[1]!==state.dim);});
+  renderMatrix();
+  const sec=document.getElementById("sections");
+  const shown=ALL.filter(visible);
+  let html="";
+  KINDS.forEach(([k,lab])=>{
+    const items=shown.filter(a=>a.kind===k);
+    if(!state.kinds.has(k))return;
+    html+='<div class="seclbl"><b>'+lab+'</b><span class="muted">'+items.length+'</span></div>';
+    html+= items.length? '<div class="grid">'+items.map(tile).join("")+'</div>' : '<div class="muted">none'+(state.theme?" for "+state.theme:"")+'</div>';
+  });
+  html+='<div class="seclbl"><b>Downloaded packs</b><span class="muted">source shelf · not all curated in yet</span></div>';
+  html+='<div class="grid">'+PACKS.filter(p=>state.dim==="all"||p.dim===state.dim).map(p=>'<div class="card"><div class="thumb"><span class="ic">'+(p.dim==="3d"?"◈":"▦")+'</span></div><div class="cbody"><div class="cname">'+p.name+'</div><div class="badges"><span class="b">'+p.dim.toUpperCase()+'</span><span class="b '+(p.cc0?"cc0":"warn")+'">'+p.license+'</span></div><div class="note">'+p.count+' · '+p.status+'</div></div></div>').join("")+'</div>';
+  sec.innerHTML=html;
+  sec.querySelectorAll(".copy").forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent="copied";setTimeout(()=>b.textContent="copy",900);});
+  let cur=null;
+  sec.querySelectorAll(".play").forEach(b=>b.onclick=()=>{if(cur)cur.pause();cur=new Audio(b.dataset.u);cur.play().catch(()=>{});b.textContent="❙❙";setTimeout(()=>b.textContent="▶",1500);});
+}
+
+document.querySelectorAll("#dim button").forEach(b=>b.onclick=()=>{setDim(b.dataset.d);if(state.game&&GAME_TYPES.find(g=>g[0]===state.game)[1]!==b.dataset.d)state.game=null;render();});
+document.getElementById("search").oninput=e=>{state.q=e.target.value.toLowerCase().trim();render();};
+document.getElementById("refresh").onclick=load;
+load();
+</script>
+</body>
+</html>
