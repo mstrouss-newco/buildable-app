@@ -49,6 +49,12 @@ To make a pack's art usable in a game (**curate → serve → register**):
   is not.** Curate into games; never expose a browsable/downloadable copy of the pack.
 - **3D packs** ship `.fbx/.obj/.gltf` — only **`.gltf`** works in the browser (Three.js).
 
+**Kenney (kenney.nl/assets) is the preferred source** — everything there is CC0
+(2D, 3D, UI, Audio, VFX). Pull kits on demand (never bulk-import): 3D kits drop into
+`public/models/<kit>/` + regen `scripts/gen-models-manifest.mjs` to auto-appear;
+VFX/Light Masks become `effect` assets. Keep heroes on our generated art and shipped
+sound on ElevenLabs. See `game-assets/MANIFEST.md` for the step-by-step.
+
 Prefer CC0 packs to avoid any redistribution worry.
 
 ---

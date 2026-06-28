@@ -6,6 +6,8 @@ import path from "path";
 
 const ROOT = "public/models";
 // Per-pack metadata. Unknown packs fall back to theme=folder name, no license badge.
+// Add a line per 3D pack you drop into public/models/. Kenney kits are CC0:
+//   kenney_city: { theme: "city", source: "kenney", license: "CC0" },
 const META = {
   nature: { theme: "forest", source: "quaternius", license: "CC0" },
   city:   { theme: "city",   source: "city pack",  license: "verify" },
