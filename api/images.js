@@ -189,7 +189,7 @@ function build(q) {
     const SUBJECTS = {"fart": "a bright red rubber whoopee cushion","burp": "a cute cartoon kid with puffed cheeks burping","boing": "a bouncy coiled metal spring","honk": "a red clown bicycle horn with a rubber bulb","tada": "colorful party confetti and streamers bursting","buzzer": "a big shiny red game-show buzzer button","sadtrombone": "a shiny brass trombone","squeak": "a cute yellow squeaky rubber toy","bonk": "a cartoon wooden mallet hammer","slidewhistle": "a colorful slide whistle toy","giggle": "a happy laughing cartoon face","sneeze": "a cartoon face sneezing into a tissue","splat": "a colorful splat of paint","partypop": "a party popper shooting confetti","airhorn": "a hand-held air horn","boom": "a cartoon comic-book explosion cloud","meow": "a cute friendly cartoon cat","woof": "a cute friendly cartoon dog","quack": "a cute cartoon yellow duck","frog": "a cute cartoon green frog","moo": "a cute cartoon cow","rooster": "a colorful cartoon rooster","roar": "a cute friendly cartoon green dinosaur","lion": "a cute friendly cartoon lion","elephant": "a cute cartoon elephant","monkey": "a cute cartoon monkey","horse": "a cute cartoon horse","owl": "a cute cartoon owl","wolf": "a cute friendly cartoon wolf","sheep": "a fluffy cute cartoon sheep","pig": "a cute pink cartoon pig","bird": "a cute little cartoon bird","snake": "a cute friendly cartoon green snake","bee": "a cute cartoon bumblebee","catpurr": "a happy cute cartoon kitten curled up","dolphin": "a cute cartoon dolphin","piano": "a shiny black grand piano","guitar": "a glossy electric guitar","trumpet": "a shiny brass trumpet","violin": "a polished wooden violin with a bow","flute": "a shiny silver flute","xylophone": "a colorful rainbow xylophone with mallets","tambourine": "a tambourine with jingles","cymbal": "a shiny golden crash cymbal","harp": "an elegant golden harp","sax": "a shiny golden saxophone","chime": "a set of hanging wind chimes","accordion": "a colorful accordion","drumroll": "a drum with two wooden drumsticks","gong": "a large golden gong on a stand","bell": "a shiny golden hand bell","laser": "a glowing green laser beam bolt","robot": "a cute friendly silver cartoon robot","space": "a colorful planet with a ring and stars","spaceship": "a sleek cartoon spaceship","teleport": "a glowing blue teleporter beam pad","rocket": "a cartoon rocket ship blasting off","ufo": "a shiny cartoon flying saucer UFO","blaster": "a sci-fi toy ray-gun blaster","powerup": "a glowing golden star power-up","forcefield": "a glowing blue energy force-field bubble","alien": "a cute friendly green cartoon alien","warp": "a swirl of stars in a glowing tunnel","scan": "a glowing green radar scanner screen","beepboop": "a cute little robot head with antennae","ghost": "a cute friendly cartoon ghost","spookywind": "a swirling gray ghostly wind cloud","witch": "a friendly cartoon witch with a pointy hat","heartbeat": "a glowing red cartoon heart","monster": "a cute friendly googly-eyed monster","chains": "a set of old metal chains","creak": "a creaky old wooden door opening","bat": "a cute cartoon bat","cauldron": "a bubbling green witch cauldron","thunder": "a storm cloud with a yellow lightning bolt","vroom": "a shiny cartoon race car","carhorn": "a cute cartoon car beeping its horn","train": "a colorful cartoon steam train","airplane": "a cartoon airplane","helicopter": "a cartoon helicopter","motorcycle": "a shiny cartoon motorcycle","truck": "a big cartoon delivery truck","boat": "a cartoon boat on blue water","siren": "a police car with flashing lights","bikebell": "a bicycle handlebar bell","skid": "a car tire with skid marks","magic": "a sparkling magic wand with a star tip","sparkle": "bright glittering golden magic sparkles","fairy": "a cute cartoon fairy with sparkly wings","spell": "an open glowing magic spellbook","potion": "a glowing purple magic potion bottle","wandzap": "a magic wand shooting sparkles","dragon": "a cute friendly cartoon dragon","shield": "a shiny magical glowing shield","levelup": "a glowing golden star burst badge","treasure": "an open treasure chest full of gold coins","portal": "a glowing swirling purple portal ring","fireball": "a glowing orange cartoon fireball","rain": "a blue rain cloud with falling raindrops","wind": "a swirling gust of blue wind","waves": "a curling blue ocean wave","water": "a sparkling blue water droplet","fire": "a cozy glowing campfire with logs","forest": "a tall green pine tree","crickets": "a green cricket bug under a moon","jungle": "a green jungle palm tree with a vine","splash": "a blue water splash","rustle": "a pile of green leaves","birds": "a little bird singing on a branch","waterfall": "a waterfall splashing over rocks","bubbles": "shiny floating soap bubbles","sunrise": "a bright smiling sun rising","pop": "a colorful balloon mid-pop","crunch": "a crunchy potato chip","slurp": "a cup of drink with a straw","sizzle": "a frying pan with sizzling food","gulp": "a tall glass of water","chomp": "a juicy red apple with a bite taken out","fizz": "a fizzy soda can with bubbles","blender": "a kitchen blender with a smoothie","microwave": "a kitchen microwave oven","popcorn": "a red-striped bucket of popcorn","cheersclink": "two glasses clinking in a toast","cheer": "a group of happy cheering kids","refwhistle": "a silver referee whistle","bounce": "an orange basketball","swish": "a basketball going through a hoop net","kick": "a black and white soccer ball","batcrack": "a baseball next to a wooden baseball bat","crowd": "a crowd of cheering cartoon fans","goal": "a soccer ball in a goal net"};
     const subject = SUBJECTS[id];
     if (!subject) return null;
-    return { descriptor: `soundfx|${id}`, prompt: `${subject}. ${FX_STYLE}`, transparent: true, quality: "low" };
+    return { descriptor: `soundfx|webp|${id}`, prompt: `${subject}. ${FX_STYLE}`, transparent: true, quality: "low", format: "webp" };
   }
   if (kind === "soundpack") {
     const id = (q.id || "").toString();
@@ -208,7 +208,7 @@ function build(q) {
     };
     const subject = PACKS[id];
     if (!subject) return null;
-    return { descriptor: `soundpack|${id}`, prompt: `${subject}. ${PACK_STYLE}`, transparent: true, quality: "low" };
+    return { descriptor: `soundpack|webp|${id}`, prompt: `${subject}. ${PACK_STYLE}`, transparent: true, quality: "low", format: "webp" };
   }
   if (kind === "game") {
     const id = (q.id || "").toString();
@@ -462,7 +462,12 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
     return null;
   };
   const q = opts.quality || "low";
-  const tx = opts.transparent ? { background: "transparent", output_format: "png" } : {};
+  const fmt = opts.format === "webp" ? "webp" : "png";
+  const tx = opts.transparent
+    ? (fmt === "webp"
+        ? { background: "transparent", output_format: "webp", output_compression: 75 }
+        : { background: "transparent", output_format: "png" })
+    : (fmt === "webp" ? { output_format: "webp", output_compression: 75 } : {});
   return (
     (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: q, ...tx })) ||
     (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", ...tx })) ||
@@ -471,9 +476,9 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
 }
 
 /* ---------------- handler ---------------- */
-function sendPng(res, b64) {
+function sendPng(res, b64, contentType) {
   const buf = Buffer.from(b64, "base64");
-  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Content-Type", contentType || "image/png");
   res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   res.status(200).send(buf);
 }
@@ -502,17 +507,17 @@ export default async function handler(req, res) {
   if (q.force) await cacheDel(key);
   else {
     const cached = await cacheGet(key);
-    if (cached) return sendPng(res, cached);
+    if (cached) return sendPng(res, cached, spec.format === "webp" ? "image/webp" : "image/png");
   }
 
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) return res.status(503).json({ error: "no_openai_key" });      // <img onError> -> fallback
   if (!(await underBudget())) return res.status(503).json({ error: "over_budget" });
 
-  const b64 = await generateImage(spec.prompt, openaiKey, { transparent: spec.transparent, quality: spec.quality });
+  const b64 = await generateImage(spec.prompt, openaiKey, { transparent: spec.transparent, quality: spec.quality, format: spec.format });
   if (!b64) return res.status(502).json({ error: "image_provider_failed" });
   await cachePut(key, spec.descriptor, (q.kind || "").toString(), b64);
   const COST = { low: 0.011, medium: 0.042, high: 0.167 };
   await logCost(COST[spec.quality] || IMG_COST_USD);
-  return sendPng(res, b64);
+  return sendPng(res, b64, spec.format === "webp" ? "image/webp" : "image/png");
 }
