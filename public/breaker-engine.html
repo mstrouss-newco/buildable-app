@@ -302,7 +302,7 @@ function updateSolo(){
 
   // laser power-up: paddle auto-zaps bricks straight up
   if(G.laserT>0){ G.laserT--; if(G.laserCd>0)G.laserCd--; if(G.laserCd<=0){ G.laserCd=14;
-    G.lasers.push({x:padL+8,y:PAD_Y-12,vy:-9}); G.lasers.push({x:padR-8,y:PAD_Y-12,vy:-9}); sfx("shoot"); } }
+    G.lasers.push({x:padL+8,y:PAD_Y-12,vy:-9}); G.lasers.push({x:padR-8,y:PAD_Y-12,vy:-9}); } }   /* no per-laser beep; brick smash carries it */
   for(const lz of G.lasers){ lz.y+=lz.vy;
     for(const br of G.bricks){ if(!br.alive)continue; if(lz.x>=br.x&&lz.x<=br.x+br.w&&lz.y<=br.y+br.h&&lz.y>=br.y){ damageBrick(br,lz.x,lz.y,1); lz.dead=true; break; } } }
   G.lasers=G.lasers.filter(lz=>!lz.dead && lz.y>-10);

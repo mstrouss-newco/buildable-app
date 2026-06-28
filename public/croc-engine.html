@@ -84,6 +84,7 @@
 </div>
 
 <script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
 <script src="buildable-buddy.js?v=1"></script>
 <script>
 // ===========================================================================
@@ -205,15 +206,23 @@ let AC=null;
 function ac(){ if(muted) return null; if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } } return AC; }
 function tone(f,d,v,tp){ try{ const a=ac(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.connect(g); g.connect(a.destination); o.type=tp||"square"; o.frequency.value=f; const n=a.currentTime; g.gain.setValueAtTime(v||0.08,n); g.gain.exponentialRampToValueAtTime(0.001,n+d); o.start(n); o.stop(n+d+0.01);}catch(e){} }
 function slide(f1,f2,d,v){ try{ const a=ac(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.connect(g); g.connect(a.destination); o.type="sawtooth"; const n=a.currentTime; o.frequency.setValueAtTime(f1,n); o.frequency.exponentialRampToValueAtTime(f2,n+d); g.gain.setValueAtTime(v||0.1,n); g.gain.exponentialRampToValueAtTime(0.001,n+d); o.start(n); o.stop(n+d+0.01);}catch(e){} }
+const BA=(typeof window!=="undefined"&&window.BuildableAudio)||null;
+if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+  pop:"croc_pop", coin:"croc_coin", power:"croc_power", hurt:"croc_hurt",
+  hit:"croc_hit", boom:"croc_boom", win:"croc_win", lose:"croc_lose" } });
+  if(BA.setMusic) BA.setMusic("https://www.buildablekids.com/api/chess-music?world=candy"); }
+function bsfx(n,o){ if(BA)BA.sfx(n,o); }
+// Real bespoke croc sounds (ElevenLabs). No per-shot beep — it's an auto-shooter:
+// sound plays on snack-pop, boss impact (soft+throttled), boom, collect, power, hurt, win.
 const SFX={
-  shoot:()=>tone(660,0.05,0.03,"square"),
-  hit:()=>slide(300,80,0.3,0.18),
-  enemyDie:()=>slide(340,120,0.12,0.08),
-  collect:()=>{ [523,784].forEach((f,i)=>setTimeout(()=>tone(f,0.1,0.07,"sine"),i*45)); },
-  power:()=>{ [400,600,800,1000].forEach((f,i)=>setTimeout(()=>tone(f,0.09,0.09,"sine"),i*45)); },
-  bossHit:()=>slide(200,60,0.14,0.12),
-  bossDie:()=>{ [523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>tone(f,0.3,0.12,"sine"),i*100)); },
-  win:()=>{ [523,659,784,1047,1319,1568,2093].forEach((f,i)=>setTimeout(()=>tone(f,0.35,0.14,"sine"),i*110)); },
+  shoot:()=>{},                       // silent: kids shoot automatically
+  hit:()=>bsfx("hurt"),               // the Tot got hit
+  enemyDie:()=>bsfx("pop"),           // a flying snack pops
+  collect:()=>bsfx("coin"),           // grabbed ketchup/mustard
+  power:()=>bsfx("power"),            // power-up
+  bossHit:()=>bsfx("hit"),            // soft throttled impact on the boss
+  bossDie:()=>bsfx("boom"),           // boss explodes
+  win:()=>bsfx("win"),
 };
 function speak(txt){ try{ if(muted||typeof speechSynthesis==="undefined")return; speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(txt); u.pitch=1.4; u.rate=1.0; speechSynthesis.speak(u);}catch(e){} }
 

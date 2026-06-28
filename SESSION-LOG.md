@@ -1,5 +1,14 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Croc + Breaker audio: clean sound model (no repetitive beep)
+- Croc Tot: replaced inline synth tones (sound-rule violation) with real bespoke
+  ElevenLabs sounds via BA; removed the per-shot fire beep (auto-shooter). Sound on
+  snack-pop, boss impact (soft+throttled "hit"), boom, collect, power, hurt, win.
+  Added music (chess-music?world=candy). New bespoke croc_* SFX in api/sfx.js.
+- Breaker: removed the laser power-up's per-volley beep (brick smash carries it);
+  ball-launch/bounce/brick feedback unchanged (already real ElevenLabs sounds).
+
+
 ## 2026-06-28 — Maze Munchers: on-screen debug overlay + version stamp (touch turning still unconfirmed)
 - Mike: turning STILL broken on his real iPhone via the arrow pad (muncher only changes at walls). Prior frame-rate/input/timestep fixes did not resolve it, and I cannot reproduce it (the Claude-in-Chrome automation tab pauses requestAnimationFrame and can't do real iOS touch), so I stopped verifying by proxy and added live instrumentation so Mike can see where it breaks on his device:
   - **Version stamp** (bottom-left): "Maze v8 · 2026-06-28 (tap=debug)" — confirms which build is loaded; tap it to toggle the debug overlay.

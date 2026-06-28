@@ -110,6 +110,16 @@ const SOUNDS = {
   spk_win:     "Happy short victory fanfare with a bright cosmic sparkle, cheerful kids game win, no voices",
   spk_lose:    "Gentle soft descending wah-wah with a little twinkle, friendly cartoon lose, short, no music, no voices",
 
+  // ---- Croc Tot (food side-shooter game type) — bespoke SFX ----
+  croc_hit:    "Short soft squishy splat tick, a food pellet bonking a flying snack, gentle cartoon, single hit, no music, no voices",
+  croc_pop:    "Short cute cartoon food splat pop, a flying snack bursting into crumbs, single hit, no music, no voices",
+  croc_coin:   "Short cheerful squelchy ketchup squirt with a happy ding, grabbing a saucy power item, single hit, no music, no voices",
+  croc_power:  "Cheerful rising sizzling power-up chime, a tasty food boost, short, no music, no voices",
+  croc_hurt:   "Short soft cartoon ouch splat, gentle and not scary, single hit, no music, no voices",
+  croc_boom:   "Short big silly cartoon food explosion splat boom with splattering bits, friendly, single hit, no music, no voices",
+  croc_win:    "Happy short victory fanfare with a silly food jingle, cheerful kids game win, no voices",
+  croc_lose:   "Gentle soft descending wah-wah splat, friendly cartoon lose, short, no music, no voices",
+
   // ---- Sound Machine: silly kid-fun one-shots (public/soundboard.html) ----
   fart:        "Short funny wet squelchy fart, silly whoopee cushion raspberry toot, comedic cartoon, single hit, no music, no voices",
   giggle:      "Short cute happy kid giggle laugh, playful and silly, single hit, no music",
@@ -279,6 +289,7 @@ const DURATIONS = {
   maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_hit:0.5, spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
+  croc_hit:0.5, croc_pop:0.5, croc_coin:0.5, croc_power:1.0, croc_hurt:0.5, croc_boom:0.9, croc_win:1.6, croc_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   giggle:0.9, roar:1.0, robot:0.8, splat:0.5, cash:0.7, drumroll:1.3, gong:1.4,
   frog:0.6, moo:1.0, rooster:1.2, vroom:1.0, sneeze:0.8, partypop:1.0,
