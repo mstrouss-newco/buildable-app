@@ -16,6 +16,11 @@ const SOUNDS = {
   candy:   "Light whimsical magical sparkle chimes and soft twinkles, cheerful and gentle, seamless ambient loop, no music, no voices",
   rain:    "Gentle soft steady rainfall, soothing calm raindrops, seamless ambient loop, no music, no voices",
 
+  // ---- Sunny Town Drive (car runner) ----
+  runner_coin:   "Short bright cheerful treat pickup ding with a tiny happy sparkle, collecting a coin or goody, single hit, no music, no voices",
+  runner_crash:  "Short soft friendly cartoon bump thud, a cute toy car gently bonking something, bouncy and not harsh or scary, single hit, no music, no voices",
+  runner_engine: "Soft gentle cute toy car engine idle hum, smooth low continuous putter, calm and quiet, seamless ambient loop, no music, no voices",
+
   // ---- Chess game one-shot SFX (short, punchy, kid-friendly cartoon sounds) ----
   chess_select:  "Short soft UI pluck pop, friendly cartoon select blip, single hit, no music",
   chess_move:    "Short soft wooden tap whoosh, a game piece sliding and tapping down, single hit, no music",

@@ -130,6 +130,7 @@ function startLevel(i){
       hearts:GAME_CONFIG.hearts, hurtsTaken:0, invuln:0, score:0, treatsGot:0,
       obstacles:[], treats:[], gc:[], rng, scrollZ:0, bob:0, shake:0 };
   if(THREE && sceneReady){ applyTownColors(); applyTownScenery(L.skyId); }
+  if(renderer) ensureMusic();
   state="play"; started=false;
 }
 
@@ -504,7 +505,7 @@ function buildStartCfg(){
   return { title:"Sunny Town Drive", subtitle:"Stars: "+totalStars()+" of "+maxStars(),
     coins: totalStars(), sound: !(BA&&BA.muted), showBack:false, levels };
 }
-function showMenu(){ state="title"; G=null; clearHUD(); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
+function showMenu(){ state="title"; G=null; stopMusic(); engineHum(false); clearHUD(); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
   if(renderer){ renderer.render(scene,camera); }
   const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host){ return; }
@@ -530,8 +531,20 @@ function drawNo3D(){ if(!hctx)return; hctx.clearRect(0,0,W,H);
   hctx.fillText("Couldn't load the 3D engine", W/2, H/2-10);
   hctx.font="18px Fredoka,sans-serif"; hctx.fillStyle="#cdd0ff";
   hctx.fillText("Please check your connection and refresh.", W/2, H/2+24); }
+// ---- sound: bespoke created sounds (ElevenLabs) via BA + a looping engine hum ----
+if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+  coin:"runner_coin", hurt:"runner_crash", select:"town_move", win:"tennis_win", lose:"tennis_lose" } }); }
+let _curMusic=null;
+function ensureMusic(){ if(!renderer||!BA||!BA.setMusic||!L) return; const url="/api/runner-music?town="+encodeURIComponent(L.skyId);
+  if(url!==_curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); _curMusic=url; } if(BA.playMusic)BA.playMusic(); }
+function stopMusic(){ if(BA&&BA.stopMusic)BA.stopMusic(); _curMusic=null; }
+let engineAud=null, _engOn=false;
+function engineHum(on){ if(!renderer) return; on = !!on && !(BA&&BA.muted); if(on===_engOn) return; _engOn=on;
+  try{ if(!engineAud){ engineAud=new Audio("/api/sfx?s=runner_engine"); engineAud.loop=true; engineAud.volume=0.3; }
+    if(on) engineAud.play().catch(()=>{}); else engineAud.pause(); }catch(e){} }
+
 function frame(){ update();
-  if(renderer){ draw(); }
+  if(renderer){ draw(); engineHum(state==="play" && started && !helpOpen); }
   else if(state!=="title" && hctx){ drawNo3D(); }   // never silently blank
   requestAnimationFrame(frame); }
 // boot
