@@ -709,6 +709,17 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27l (Sunny Town Drive: AI cars/obstacles/treats)
+
+Foreground art overhaul: `images.js` kind `runnerobj` (shared, modern3d, transparent,
+quality low) = hero_car (pink rear view), ob_car, cone/hay/barrel, coin/gift/star/icecream.
+Engine renders the hero car, obstacles and treats as camera-facing billboards (addBillboard +
+loadObjTex) with the old 3D models as graceful fallback; hero bank reduced for billboard
+friendliness; treats hover (no edge-on spin). 9 pieces cached. Verified live on Beach Road:
+glossy AI hero car + distinct beach scenery, no errors. NEXT: ElevenLabs sounds.
+
+---
+
 ## Session log — 2026-06-27k (Sunny Town Drive: distinct AI worlds per town)
 
 Made the levels look genuinely different + layered. Added `images.js` kind `runnerprop`
