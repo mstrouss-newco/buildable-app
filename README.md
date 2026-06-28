@@ -1052,6 +1052,23 @@ the new-engine-creates-sounds rule). QA library GETs with ?cb= (edge-cached).
 
 ---
 
+## Session log — 2026-06-28b (Asset Library: theme-filter fix, 3D auto-discovery, city starter set)
+
+- THEME FILTER FIX: picking a theme is now strict (only that theme's assets) and
+  the selected chip highlights (syncThemeChips). Heroes/effects are theme-less so
+  they show 0 under a theme — their cross-theme availability lives in the coverage
+  matrix "any theme" marker, not the gallery. Verified: "space" -> 21 cards.
+- 3D AUTO-DISCOVERY: page reads /models/manifest.json (gen scripts/gen-models-
+  manifest.mjs). Mike's new city pack (3 buildings) appeared automatically.
+- CITY STARTER SET (grows the new theme per the rule): City Music (api/chess-music
+  world=city), City ambience (api/sfx s=city), a Sunny City 2D world
+  (story-library, pre-built) — all tagged theme=city + the 3 city building models.
+  Verified theme=city -> 6 assets across world/music/sfx/3D.
+- CITY MODEL PACK LICENSE: flagged "verify" (warn badge) in the manifest — source
+  unknown, Mike to confirm so it can be set CC0 or otherwise.
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
