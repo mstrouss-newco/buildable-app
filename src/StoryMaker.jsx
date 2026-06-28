@@ -33,6 +33,8 @@ const DEFAULT_NAME = Object.fromEntries(CHARACTERS);
 function getDeviceId(){try{let id=localStorage.getItem("deviceId");if(!id){id="dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);localStorage.setItem("deviceId",id);}return id;}catch{return "dev_anon";}}
 function getKidProfileId(){try{const k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");return k&&k.id?k.id:null;}catch{return null;}}
 function libImg(kind,slug,style,emo){return "/api/story-library?img="+kind+":"+slug+"&style="+(style||"watercolor")+(emo?"&emo="+emo:"");}
+function iconImg(id){return "/api/game-art?img=story-icons:"+id+"&style=watercolor";}
+const SPARK_ICON={"It's my birthday!":"birthday","I lost my favorite toy":"lost_toy","My first day somewhere new":"first_day","Learning to be brave":"learn_brave","A rainy-day adventure":"rainy_day","Making a new friend":"new_friend"};
 const rand=(a)=>a[Math.floor(Math.random()*a.length)];
 
 function Chevron({dir}){return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{dir==="up"?<polyline points="6 15 12 9 18 15"/>:<polyline points="6 9 12 15 18 9"/>}</svg>);}
@@ -179,9 +181,9 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
     { key:"style",  q:"Pick a look",             opts:STYLES,     val:style,  set:setStyle,  img:(id)=>libImg("character","bunny",id) },
     { key:"hero",   q:"Who's our hero?",          opts:CHARACTERS, val:hero,   set:(v)=>{setHero(v);setName(DEFAULT_NAME[v]||"");}, img:(id)=>libImg("character",id,"watercolor","happy") },
     { key:"world",  q:"Where does it happen?",    opts:WORLDS,     val:world,  set:setWorld,  img:(id)=>libImg("world",id,"watercolor") },
-    { key:"quest",  q:"What happens in the story?",opts:QUESTS,    val:quest,  set:setQuest,  img:null },
-    { key:"mood",   q:"How should it feel?",      opts:MOODS,      val:mood,   set:setMood,   img:null },
-    { key:"ending", q:"How does it end?",         opts:ENDINGS,    val:ending, set:setEnding, img:null },
+    { key:"quest",  q:"What happens in the story?",opts:QUESTS,    val:quest,  set:setQuest,  img:(id)=>iconImg(id) },
+    { key:"mood",   q:"How should it feel?",      opts:MOODS,      val:mood,   set:setMood,   img:(id)=>iconImg(id) },
+    { key:"ending", q:"How does it end?",         opts:ENDINGS,    val:ending, set:setEnding, img:(id)=>iconImg(id) },
   ];
   const TOTAL=STEPS.length;
   const atEnd=step>=TOTAL;
@@ -351,7 +353,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
           <input style={{...s.bigInput,textAlign:"center",fontFamily:FRED,fontSize:20}} value={name} maxLength={28} onChange={e=>setName(e.target.value)} placeholder="Hero name"/>
           <label style={{...s.fieldLbl,marginTop:10}}>What's your big idea? (optional)</label>
           <div style={s.sparkGrid}>
-            {SPARKS.map((txt)=>(<button key={txt} onClick={()=>{setSpark(txt===spark&&!customSpark?"":txt);setCustomSpark("");}} style={{...s.sparkCard,...((spark===txt&&!customSpark)?s.tileOn:{})}}>{txt}</button>))}
+            {SPARKS.map((txt)=>(<button key={txt} onClick={()=>{setSpark(txt===spark&&!customSpark?"":txt);setCustomSpark("");}} style={{...s.sparkCard,...((spark===txt&&!customSpark)?s.tileOn:{})}}>{SPARK_ICON[txt]&&<img src={iconImg(SPARK_ICON[txt])} alt="" style={s.sparkImg}/>}{txt}</button>))}
           </div>
           <input style={s.bigInput} value={customSpark} maxLength={140} placeholder="…or type your own idea" onChange={(e)=>{setCustomSpark(e.target.value);if(e.target.value)setSpark("");}}/>
           <button style={{...s.makeBtn,...(locking?s.makeBtnLock:{})}} onClick={doMake} disabled={locking}>{locking?"Making it!":"Make my story!"}</button>
@@ -429,7 +431,8 @@ const s = {
   fieldLbl:{fontSize:14,opacity:.85,marginBottom:6,fontFamily:FRED},
   bigInput:{width:"100%",boxSizing:"border-box",padding:"13px 16px",borderRadius:14,border:"1px solid rgba(255,255,255,0.2)",background:"rgba(255,255,255,0.1)",color:"#fff",fontSize:16,fontFamily:NUN,marginBottom:12},
   sparkGrid:{width:"100%",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:12},
-  sparkCard:{borderRadius:14,border:"2px solid rgba(255,255,255,0.12)",background:"rgba(255,255,255,0.06)",color:"#fff",cursor:"pointer",padding:"13px 12px",fontFamily:FRED,fontSize:14,textAlign:"center"},
+  sparkCard:{borderRadius:14,border:"2px solid rgba(255,255,255,0.12)",background:"rgba(255,255,255,0.06)",color:"#fff",cursor:"pointer",padding:"13px 12px",fontFamily:FRED,fontSize:14,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:6},
+  sparkImg:{width:56,height:56,objectFit:"contain"},
   makeBtn:{marginTop:8,padding:"16px 34px",borderRadius:18,border:"none",background:GRAD,color:"#fff",fontSize:19,fontWeight:800,fontFamily:FRED,cursor:"pointer",boxShadow:"0 10px 30px rgba(155,126,221,0.5)"},
   makeBtnLock:{opacity:.85,transform:"scale(.98)"},
   sofarWrap:{width:"100%",maxWidth:760,marginTop:28},

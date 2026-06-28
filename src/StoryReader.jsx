@@ -402,7 +402,7 @@ const s = {
   word: { color: "#efeaff", transition: "color 0.1s, background 0.1s", borderRadius: 6, padding: "0 1px" },
   wordOn: { color: "#1a1330", background: "#ffe08a", borderRadius: 6, padding: "0 3px", boxShadow: "0 0 0 2px #ffe08a" },
   controls: { display: "flex", alignItems: "center", gap: 14, marginTop: 18 },
-  circleBtn: { width: 52, height: 52, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 26, cursor: "pointer", fontFamily: FRED },
+  circleBtn: { width: 52, height: 52, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 26, cursor: "pointer", fontFamily: FRED, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 0 },
   readBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b)", color: "#fff", fontSize: 17, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 6px 20px rgba(155,126,221,0.45)" },
   repaintBtn: { marginTop: 10, padding: "8px 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.07)", color: "#cdd3ff", fontFamily: NUN, fontSize: 13, fontWeight: 700, cursor: "pointer" },
   pageNum: { marginTop: 12, fontSize: 14, opacity: 0.65 },
