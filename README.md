@@ -241,6 +241,19 @@ QA: `qa-tennis.mjs` still wins Easy/Normal/Tricky (render smoke ok); `npm run bu
 
 **Owner action for family (cross-device) play:** run `db/create-rt-matches.sql` once in Supabase (if not already), and confirm the parent-account lane env vars are live. Solo + same-screen 2-player work with no setup. **Still TODO:** live QA across two real devices/sessions (the one thing a headless sim can't cover), and optional bespoke background music.
 
+## In-game controls: one rule — top-left=Home, controls top-right, bottom=gameplay (June 27 2026)
+
+Fixes play.html (platformer) overlapping the shell Home, and ends the bottom-left vs
+top-right inconsistency. Final rule for EVERY game: top-left is the shell Home only; the
+game's own controls (Menu/Sound/Music/Help) go in a top-right vertical stack
+(right:12px, top 12/56/100…); bottom corners are reserved for gameplay (D-pad/jump/paddle)
+— which is why controls can't live bottom-left.
+
+- play.html: #bMute/#bMusic/#bHelp moved top-left -> top-right stack.
+- runner: re-applied (a concurrent commit had reverted the earlier move) — Menu/Sound/Help top-right.
+- breaker/maze/survival: Sound moved to top-right stack; board games' #mute back to top-right.
+- BUILDING-A-GAME.md nav rule updated to match. (Croc isn't shell-wrapped, so no Home collision.)
+
 ## Quick-play guest invite link (zero-auth) — v1 Tic-Tac-Toe (June 27 2026)
 
 First slice of "a kid sends a link to play someone outside the family." Deliberately
