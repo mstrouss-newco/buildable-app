@@ -252,6 +252,16 @@ const SOUNDS = {
   dice_roll:    "Short playful wooden dice shake and tumble roll landing with a tap, single hit, no music, no voices",
   snl_ladder:   "Short cheerful rising sparkle slide-whistle climb up, going up a ladder, bright and happy, single hit, no music, no voices",
   snl_snake:    "Short playful descending wobble slide-whistle whoosh, sliding down a snake, silly not scary, single hit, no music, no voices",
+
+  // ---- Tumble Blocks (gentle kid Tetris, public/tetris-engine.html) — bespoke one-shots ----
+  tumble_move:   "Very short soft gentle wooden tick, a friendly block nudging sideways, tiny and quiet, single hit, no music, no voices",
+  tumble_rotate: "Very short soft springy cartoon twist whoosh, a block turning, light and cute, single hit, no music, no voices",
+  tumble_lock:   "Short soft rounded cartoon block settling and clicking gently into place, cozy and satisfying, not harsh, single hit, no music, no voices",
+  tumble_clear:  "Short bright cheerful sparkly chime sweep, a row of blocks twinkling away, happy and magical, single hit, no music, no voices",
+  tumble_combo:  "Short rich joyful cascade of sparkly chimes rising up, lots of rows clearing at once, triumphant and delightful, single hit, no music, no voices",
+  tumble_levelup:"Cheerful rising magical power-up sparkle fanfare, moving to a new world, bright and proud, short, no music, no voices",
+  tumble_win:    "Happy short gentle victory jingle with a warm sparkle, a cheerful kids puzzle win, no voices",
+  tumble_reset:  "Short soft friendly swoosh and gentle plink, blocks tidying themselves away calmly, soothing not sad, single hit, no music, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -262,6 +272,7 @@ const DURATIONS = {
   tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
   tennis_boom:0.6, tennis_cheer:1.4,
   breaker_smash:0.5, breaker_break:0.6, breaker_power:0.8, breaker_miss:0.6,
+  tumble_move:0.25, tumble_rotate:0.3, tumble_lock:0.45, tumble_clear:0.8, tumble_combo:1.2, tumble_levelup:1.1, tumble_win:1.6, tumble_reset:0.8,
   board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
   maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,

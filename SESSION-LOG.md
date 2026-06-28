@@ -1,5 +1,26 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Tumble Blocks shipped to production (gentle kid Tetris)
+- New Track B engine `public/tetris-engine.html` — a falling-blocks puzzle for ages 4-8
+  with NO harsh game-over (top-out triggers the world helper's gentle row-sweep). Two
+  modes: Adventure (6 worlds, clear the row goal to advance, speeds ramp) + Calm (endless).
+- All 7 tetrominoes as dynamic 3D "gem" blocks; slow drop + ramp, 3-piece preview, ghost
+  landing, forgiving lock delay, 7-bag. Touch-first: big buttons (hold green = soft drop,
+  tap = hard slam) + board gestures + keyboard. SCORE / LEVEL / ROWS + boxed NEXT.
+- Per-world photo backdrops behind the board (chess/tennis pattern: `BR.bgImage` + scrim,
+  gradient fallback): jungle/candy/ocean/space reuse `chess-art/*.jpg`; snow/volcano use
+  `/api/images?kind=tennis&id=...`.
+- Uses the shared libs (BR/BM/BS/BA) and the shell nav bridge (`buildable-gamenav.js`):
+  the React `GameFrame` renders Home/Sound/Menu; the engine hides its own nav in-app.
+- Bespoke ElevenLabs one-shots registered in `api/sfx.js` (`tumble_*`); each world loops
+  a shared-library ambience.
+- Wiring: `vercel.json` route + **Tumble Blocks** tile (+ `kind=game&id=tetris` art) +
+  `TetrisScreen` in `src/BuildableKids.jsx`. QA: `qa-tetris.mjs` (El-Tetris bot clears
+  every world; Calm never errors; render smoke). `npm run build` clean.
+- **Owner action (optional):** run `db/seed-tetris-mechanic.sql` once (registers the
+  falling-block mechanics; the game does NOT need it to play). Snow/volcano backdrops
+  generate + cache on first view.
+
 ## Shell-owned game chrome — mechanism shipped (June 27 2026)
 
 The durable fix so nav controls stop drifting/overlapping: the React shell (`GameFrame`)
