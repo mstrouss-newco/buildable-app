@@ -16,6 +16,7 @@ overwrite each other. Git merges the code; this file carries the *intent*.
 
 ## Intended product state (source of truth — keep in sync with Mike)
 Home tiles:
+- **Make a game** (AI game builder, `onMakeGame`→SCREEN_INTRO) — **COMING SOON (disabled)** as of 2026-06-27 (Mike). MakeTile has a `soon` flag; remove it to re-enable. Do not re-enable without Mike.
 - **Music** — LIVE (Ready)
 - **Games** — LIVE, **Beta** tag. Opens a pick-a-game screen: Platformer (`/play.html`)
   + Survival (`/survival-engine.html`) + Breaker + Sunny Town + Tennis + Chess + Typing
