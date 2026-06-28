@@ -730,6 +730,18 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27n (Sunny Town Drive: jump mechanic + world variety)
+
+(1) **Swipe-up JUMP**: new full-width "log" obstacle you jump over (swipe up / up-arrow / space);
+jump arc physics (JUMP_V/GRAV/CLEAR_H); per-level `bump` chance; rows are either dodge-rows or
+jump-rows, never both, so still always-winnable — the QA bot now jumps too and clears all 6 towns
+0-hit. (2) **World variety**: 6 distinct scenery pieces per town (added bld_c, tree_b, prop = 18
+new modern3d cut-outs; 36 total). Engine now picks a RANDOM piece per slot with random mirror +
+size jitter and RE-randomizes on every recycle, so the roadside stops repeating. New `runner_jump`
+sfx. QA all-win; verified live (Beach Road clearly varied), no console errors.
+
+---
+
 ## Session log — 2026-06-27m (Sunny Town Drive: sounds + music)
 
 Bespoke audio (ElevenLabs, per the sound rule). Added `sfx.js`: runner_coin (treat chime),
