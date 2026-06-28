@@ -105,7 +105,7 @@ const ROW_GAP = 290;          // spacing between rows -> one row in the band + c
 const START_CLEAR = 360;      // clear road at the start of each town
 const HIT_BAND = 34;          // |obstacle p - CAR_Y| within this (same lane) = crash
 const SAFE_BAND = 64;         // wider zone the bot treats as dangerous (must exceed HIT_BAND)
-const JUMP_V = 2.4, GRAV = 0.09, CLEAR_H = 6;   // jump: clears a "bump" while airborne (jy>CLEAR_H)
+const JUMP_V = 2.4, GRAV = 0.085, CLEAR_H = 3;   // jump: clears a "bump" while airborne (jy>CLEAR_H)
 
 // ---- 3D mapping: p (0..H) -> world Z, lane -> world X ----
 const NEAR_Z = 4, FAR_Z = -170, ZPP = (NEAR_Z-FAR_Z)/CAR_Y;
@@ -221,7 +221,9 @@ function update(){
   const keepO=[];
   for(const o of G.obstacles){ o.y += G.speed;
     if(!o.passed && !o.hit){
-      if(o.type==="bump"){ if(Math.abs(o.y-CAR_Y)<HIT_BAND && G.jy<CLEAR_H){ o.hit=true; hitCar(o); } }   // jump it
+      if(o.type==="bump"){ const near=Math.abs(o.y-CAR_Y)<HIT_BAND+10;       // jump it
+        if(near && G.jy>CLEAR_H) o.cleared=true;                              // got air near the log -> cleared for good
+        else if(near && !o.cleared && Math.abs(o.y-CAR_Y)<HIT_BAND){ o.hit=true; hitCar(o); } }
       else if(o.lane===G.lane && Math.abs(o.y-CAR_Y)<HIT_BAND){ o.hit=true; hitCar(o); }                   // dodge it
     }
     if(o.y>CAR_Y+SAFE_BAND){ o.passed=true; }
