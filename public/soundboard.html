@@ -334,7 +334,7 @@ function renderGrid(){
     var key=s[0],label=s[1],glyph=s[2],grad=s[3];
     var b=document.createElement("button"); b.className="pad"; b.style.background=grad;
     var ic=document.createElement("div"); ic.className="ic";
-    var img=document.createElement("img"); img.alt=label; img.decoding="async"; img.loading="lazy";
+    var img=document.createElement("img"); img.alt=label; img.decoding="async";
     img.onload=function(){ img.className="loaded"; };
     img.onerror=function(){ try{ic.removeChild(img);}catch(e){} };
     img.src="/api/images?kind=soundfx&id="+encodeURIComponent(key);
