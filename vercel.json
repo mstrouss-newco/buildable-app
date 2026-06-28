@@ -264,6 +264,10 @@
       "dest": "/startscreen-demo.html"
     },
     {
+      "src": "/play-invite.html",
+      "dest": "/play-invite.html"
+    },
+    {
       "src": "/soundboard.html",
       "dest": "/soundboard.html"
     },

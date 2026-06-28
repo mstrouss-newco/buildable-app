@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Play a Friend — Buildable Kids</title>
+<style>
+  :root{ --bg:#131229; --card:#1d1b36; --line:rgba(255,255,255,.10); --accent:#7C5CFC; --go:#7CF6B0; --gold:#F5D976; --text:#fff; --dim:#9b95c4; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:'Nunito',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+  #app{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+  .wrap{width:100%;max-width:420px}
+  h1{font-size:28px;font-weight:900;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:15px;margin:0 0 22px;line-height:1.4}
+  .status{font-size:18px;font-weight:800;min-height:26px;margin:0 0 16px}
+  .status.go{color:var(--go)} .status.gold{color:var(--gold)}
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:300px;max-width:88vw;margin:0 auto 20px}
+  .cell{aspect-ratio:1;background:var(--card);border:1px solid var(--line);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:54px;font-weight:900;cursor:pointer;user-select:none}
+  .cell.x{color:#62d0ff} .cell.o{color:#ff8fb1}
+  .cell.dis{cursor:default}
+  .btn{font-family:inherit;font-weight:800;font-size:16px;color:#16142b;background:var(--gold);border:none;border-radius:14px;padding:13px 22px;cursor:pointer;margin:6px 4px}
+  .btn.alt{background:rgba(124,92,252,.2);color:#cdbcff}
+  .btn.go{background:var(--go);color:#0c3a24}
+  input{font-family:inherit;font-size:17px;padding:13px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:#fff;width:100%;max-width:280px;text-align:center;margin-bottom:14px}
+  .linkbox{display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:10px auto 0;max-width:340px}
+  .linkbox input{margin:0;border:none;background:transparent;font-size:13px;text-align:left;color:var(--dim);padding:0}
+  .who{color:var(--dim);font-size:14px;margin-top:14px}
+  .err{color:#ff9a9a;font-size:14px;margin-top:10px;min-height:18px}
+</style>
+</head>
+<body>
+<div id="app"><div class="wrap" id="root">Loading…</div></div>
+<script>
+const API="/api/invite";
+const root=document.getElementById("root");
+function device(){ let d=localStorage.getItem("bk_guest_device"); if(!d){ d="g_"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem("bk_guest_device",d);} return d; }
+function myName(){ return localStorage.getItem("bk_guest_name")||""; }
+function setName(n){ localStorage.setItem("bk_guest_name",n); }
+function tokenFromUrl(){ return new URLSearchParams(location.search).get("t")||""; }
+function setUrlToken(t){ const u=new URL(location.href); u.searchParams.set("t",t); history.replaceState(null,"",u); }
+async function api(method,body){
+  const opt={method,headers:{"Content-Type":"application/json"}};
+  let url=API;
+  if(method==="GET"){ url+="?token="+encodeURIComponent(body.token)+"&device="+encodeURIComponent(device()); }
+  else { opt.body=JSON.stringify({...body,device:device()}); }
+  const r=await fetch(url,opt); const j=await r.json().catch(()=>({error:"network"}));
+  if(!r.ok) throw new Error(j.error||"error"); return j;
+}
+
+let poll=null, view=null, token=tokenFromUrl();
+function stopPoll(){ if(poll){ clearInterval(poll); poll=null; } }
+function startPoll(){ stopPoll(); poll=setInterval(async()=>{ try{ const v=await api("GET",{token}); if(JSON.stringify(v)!==JSON.stringify(view)){ view=v; renderGame(); } }catch(e){} },1500); }
+
+// ---------- screens ----------
+function screenStart(){
+  stopPoll();
+  root.innerHTML=
+    '<h1>Play a Friend</h1>'+
+    '<p class="sub">Start a Tic-Tac-Toe game, then send the link to a grown-up or friend. They tap it and play you — no sign-up.</p>'+
+    '<input id="nm" maxlength="24" placeholder="Your name" />'+
+    '<div><button class="btn" id="go">Make a game link</button></div>'+
+    '<div class="err" id="err"></div>';
+  const nm=document.getElementById("nm"); nm.value=myName();
+  document.getElementById("go").onclick=async()=>{
+    const name=(nm.value||"").trim()||"Me"; setName(name);
+    try{ const r=await api("POST",{action:"create",game:"ttt",name}); token=r.token; setUrlToken(token); view=await api("GET",{token}); renderGame(); }
+    catch(e){ document.getElementById("err").textContent=e.message; }
+  };
+}
+function screenJoin(){
+  stopPoll();
+  const host=(view&&view.host&&view.host.name)||"A friend";
+  root.innerHTML=
+    '<h1>'+esc(host)+' invited you!</h1>'+
+    '<p class="sub">Play a game of Tic-Tac-Toe together. Just type your name to start.</p>'+
+    '<input id="nm" maxlength="24" placeholder="Your name" />'+
+    '<div><button class="btn go" id="join">Join the game</button></div>'+
+    '<div class="err" id="err"></div>';
+  const nm=document.getElementById("nm"); nm.value=myName();
+  document.getElementById("join").onclick=async()=>{
+    const name=(nm.value||"").trim()||"Friend"; setName(name);
+    try{ view=await api("POST",{action:"join",token,name}); renderGame(); startPoll(); }
+    catch(e){ document.getElementById("err").textContent=e.message; }
+  };
+}
+function screenFull(){ stopPoll(); root.innerHTML='<h1>Game is full</h1><p class="sub">This game already has two players. Ask for a fresh link to play.</p>'; }
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function renderGame(){
+  if(!view){ return; }
+  const st=view.state||{board:Array(9).fill(null),turn:"X",winner:null};
+  const me=view.yourMark, oppName=(view.you==="host"?(view.guest&&view.guest.name):(view.host&&view.host.name));
+  let status, cls="";
+  if(!view.guest && view.you==="host"){ status="Waiting for a friend to join…"; }
+  else if(st.winner==="draw"){ status="It's a draw!"; cls="gold"; }
+  else if(st.winner){ const win=st.winner===me?"You win!":((oppName||"They")+" win!"); status=win; cls=(st.winner===me?"go":"gold"); }
+  else if(st.turn===me){ status="Your turn"; cls="go"; }
+  else { status="Waiting for "+(oppName||"your friend")+"…"; }
+
+  let html='<h1>Tic-Tac-Toe</h1>';
+  html+='<div class="who">'+esc((view.host&&view.host.name)||"X")+' (X) vs '+esc((view.guest&&view.guest.name)||"…")+' (O)</div>';
+  html+='<p class="status '+cls+'">'+esc(status)+'</p>';
+  html+='<div class="board">';
+  const myTurn=(st.turn===me)&&!st.winner&&view.guest;
+  for(let i=0;i<9;i++){ const v=st.board[i]; const k=v?(" "+v.toLowerCase()):""; const dis=(!myTurn||v)?" dis":"";
+    html+='<div class="cell'+k+dis+'" data-i="'+i+'">'+(v||"")+'</div>'; }
+  html+='</div>';
+  if(st.winner){ html+='<div><button class="btn go" id="again">Play again</button></div>'; }
+  if(!view.guest && view.you==="host"){
+    html+='<div class="sub" style="margin-top:6px">Send this link so they can play you:</div>'+
+          '<div class="linkbox"><input id="lk" readonly value="'+esc(location.href)+'"/></div>'+
+          '<div><button class="btn" id="share">Send link</button><button class="btn alt" id="copy">Copy link</button></div>';
+  }
+  root.innerHTML=html;
+
+  if(myTurn){ root.querySelectorAll(".cell").forEach(c=>{ if(!st.board[+c.dataset.i]) c.onclick=async()=>{
+    try{ view=await api("POST",{action:"move",token,index:+c.dataset.i}); renderGame(); }catch(e){} }; }); }
+  const again=document.getElementById("again"); if(again) again.onclick=async()=>{ try{ view=await api("POST",{action:"reset",token}); renderGame(); }catch(e){} };
+  const sh=document.getElementById("share"); if(sh) sh.onclick=async()=>{ const url=location.href;
+    if(navigator.share){ try{ await navigator.share({title:"Play me at Tic-Tac-Toe!",text:"Tap to play a quick game with me on Buildable Kids:",url}); }catch(e){} }
+    else { try{ await navigator.clipboard.writeText(url); sh.textContent="Copied!"; }catch(e){} } };
+  const cp=document.getElementById("copy"); if(cp) cp.onclick=async()=>{ try{ await navigator.clipboard.writeText(location.href); cp.textContent="Copied!"; setTimeout(()=>cp.textContent="Copy link",1500);}catch(e){} };
+}
+
+// ---------- boot ----------
+(async function(){
+  if(!token){ screenStart(); return; }
+  try{
+    view=await api("GET",{token});
+    if(view.you){ renderGame(); startPoll(); }          // I'm already a player -> resume
+    else if(!view.guest){ screenJoin(); }                // open seat -> join screen
+    else { screenFull(); }                               // two players already, not me
+  }catch(e){
+    root.innerHTML='<h1>Hmm…</h1><p class="sub">This game link isn\'t working. It may have expired. Ask for a new link.</p>';
+  }
+})();
+</script>
+</body>
+</html>

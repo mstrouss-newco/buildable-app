@@ -1,5 +1,31 @@
 # Buildable Kids — Session Log
 
+## Quick-play guest invite link (zero-auth) — v1 Tic-Tac-Toe (June 27 2026)
+
+First slice of "a kid sends a link to play someone outside the family." Deliberately
+standalone — touches no existing game/engine — and is the foundation the real games +
+the optional "save as friend" account plug into next.
+
+- **The link is the save point.** The whole match lives server-side keyed to an
+  unguessable token (the link). Reopen the link -> back in the exact board (resume).
+- `db/create-invite-matches.sql` — `invite_matches` token-keyed table. CROSS-family by
+  design (NOT the family-RLS model): RLS on with NO public policy; only the service-role
+  `/api/invite` endpoint (which validates the token) touches it. 7-day expiry. **OWNER:
+  run in Supabase.**
+- `api/invite.js` — one service-role endpoint, server-authoritative: `create` (kid starts
+  + gets link), `join` (guest claims the open seat, name only), `move` (validated turns),
+  `reset` (play again), GET poll. A device token in the browser claims/locks a seat so a
+  forwarded link can't steal it, and recognizes a returning player for resume.
+- `public/play-invite.html` — self-contained: kid makes a link + shares it (native share
+  / copy), friend opens it, types a name, and plays — no account, no chat. Polls every
+  1.5s. Desktop/iPad/iPhone, no emoji.
+- Game logic unit-tested (win/draw/turn validation). vercel route added.
+
+Next (later): wire the same invite layer into real games; optional "save as friend"
+where the recipient creates a lightweight account linked to the kid's profile (parent-
+visible). No free-text chat — canned reactions only — stays the rule.
+
+
 ## In-game nav controls standardized — no more Menu/Home overlap (June 27 2026)
 
 Follow-up to the GameFrame work: the IN-GAME controls (not just the start screen) were
