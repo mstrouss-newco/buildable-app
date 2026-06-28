@@ -302,6 +302,28 @@ function build(q) {
       transparent:true, quality:"medium",
     };
   }
+  if (kind === "runnerobj") {
+    // Shared (theme-neutral) foreground art for the 3D runner: the cars, obstacles
+    // and treats. Transparent modern-3D cut-outs rendered as billboards in-scene.
+    const OBJ = {
+      hero_car:"a cute friendly bright PINK toy car viewed from directly BEHIND and slightly above, as if you are driving right behind it: you can see its rounded roof, rear windshield, two round red tail lights and a bumper. Clean symmetrical rear view",
+      ob_car:"a cute SKY-BLUE toy car viewed from directly BEHIND and slightly above: rounded roof, rear windshield, two tail lights and a bumper. Clean symmetrical rear view",
+      cone:"a bright orange traffic safety cone with a white reflective stripe, sitting upright, viewed from the front",
+      hay:"a round golden hay bale, a chunky cylinder of straw, viewed from the side",
+      barrel:"a road construction barrel drum painted with red and white horizontal stripes, standing upright",
+      coin:"a single shiny gold coin with a little star stamped on its face, viewed straight on, plump and round",
+      gift:"a cute small wrapped gift present box with a bright bow and ribbon on top",
+      star:"a single glossy gold five-pointed star, plump and rounded, viewed straight on",
+      icecream:"a cute ice cream cone with a single round pink strawberry scoop on a golden waffle cone",
+    };
+    const piece=(q.piece||"").toString(); const subj=OBJ[piece];
+    if(!subj) return null;
+    return {
+      descriptor:`runnerobj|${piece}`,
+      prompt:`${subj}. Modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded glossy shapes, vibrant cheerful colors, thick clean forms. A SINGLE isolated element, centered, full and complete, on a FULLY TRANSPARENT background. No ground, no floor line, no cast shadow, no other objects, no people, no text, no words. Child-friendly ages 4-8.`,
+      transparent:true, quality:"low",
+    };
+  }
   if (kind === "runnerprop") {
     // Distinct roadside pieces per town for the 3D runner "Sunny Town Drive".
     // Transparent modern-3D cut-outs (buildings + a tree), rendered as billboards.
