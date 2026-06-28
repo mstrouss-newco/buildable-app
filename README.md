@@ -1069,6 +1069,24 @@ the new-engine-creates-sounds rule). QA library GETs with ?cb= (edge-cached).
 
 ---
 
+## Session log — 2026-06-28c (Kenney kits in + every 3D asset previewable)
+
+Processed two Kenney CC0 kits Mike dropped in Buildable MVP/:
+- CITY KIT (Suburban): 40 GLB -> public/models/city-kit/ + the kit's per-model
+  preview PNGs -> previews/. Manifest now supports .glb + a `thumb` field, so the
+  Asset Library shows each city model's real preview image. Tagged theme=city,
+  source=kenney, CC0.
+- PARTICLE PACK: 24 curated effect PNGs -> public/fx/ (+ /fx/manifest.json + /fx/
+  route). Surfaced as the `effect` kind on a checkerboard backdrop (they're white-
+  on-transparent). Effects shelf now 29 (24 particles + 5 BM code FX).
+PREVIEW FIX (Mike: "need to see the assets"): 3D model cards now show a thumbnail —
+the kit's preview image when shipped, else a CLIENT-SIDE rendered snapshot (shared
+offscreen Three.js renderer, queued). Verified: all 17 preview-less models (nature
++ buildings) rendered; 40 city models show Kenney previews. Clicking still opens the
+live rotating 3D viewer. gen-models-manifest META documents adding Kenney kits.
+
+---
+
 ## QA Session Log Ã¢ÂÂ June 7 2026
 
 The following bugs were found and fixed during a full end-to-end QA pass. All fixes were committed directly to `main` and auto-deployed to Vercel production.
