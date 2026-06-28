@@ -1,5 +1,12 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Survival audio: no per-shot beep; impact/kill/explode only
+- Removed the per-bullet fire sound (Mike: constant "beep beep" on every shot).
+- Sound on meaningful events: soft bespoke impact (spk_hit) on a non-lethal hit
+  (throttled 0.16s + 0.5 vol -> occasional tick, not per-bullet), pop on kill, boom+shake
+  on boss. Coins/level-up/hurt/boss/win/lose unchanged. New bespoke spk_hit in api/sfx.js.
+
+
 ## 2026-06-28 — Tumble Blocks shipped to production (gentle kid Tetris)
 - New Track B engine `public/tetris-engine.html` — a falling-blocks puzzle for ages 4-8
   with NO harsh game-over (top-out triggers the world helper's gentle row-sweep). Two

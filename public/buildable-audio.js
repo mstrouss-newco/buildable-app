@@ -101,12 +101,15 @@
   BA.stopMusic = function () { if (BA.music) { try { BA.music.pause(); } catch (e) {} } };
   BA.toggleMute = function () { BA.muted = !BA.muted; try { localStorage.setItem("bk_muted", BA.muted?"1":"0"); } catch(e){} if (BA.master) BA.master.gain.value = BA.muted?0:0.9; if (BA.muted) BA.stopMusic(); else BA.unlock(); return BA.muted; };
 
-  const THROTTLE = { shoot:0.07, explode:0.04, coin:0.03, boom:0.12 };
+  // throttle rapid repeats; "hit" is throttled hard + played soft so a stream of
+  // impacts becomes an occasional gentle tick, never a beep-per-bullet.
+  const THROTTLE = { shoot:0.07, explode:0.04, coin:0.03, boom:0.12, hit:0.16 };
+  const VOL = { hit:0.5 };
   BA.sfx = function (name, opt) {
     if (BA.muted) return; const ac = ctx(); if (!ac) return; if (!BA._unlocked) BA.unlock();
     const now = ac.currentTime, th = THROTTLE[name]; if (th && now - (BA._last[name]||0) < th) return; BA._last[name] = now;
     const key = BA.map[name], b = key && BA.buffers[key];
-    if (b) { const tier = (opt && opt.tier) || 1; const rate = name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0; playBuf(b, rate, 1); }
+    if (b) { const tier = (opt && opt.tier) || 1; const rate = name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0; playBuf(b, rate, VOL[name]||1); }
     else { synth(name, opt); if (key) load(key); }   // real sound not ready -> synth now, fetch for next time
   };
 

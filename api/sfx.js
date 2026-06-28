@@ -99,6 +99,7 @@ const SOUNDS = {
 
   // ---- Space Sparkles (survival game type) — bespoke SFX ----
   spk_shoot:   "Short soft sci-fi laser pew zap, cute friendly cartoon star blaster, single quick hit, no music, no voices",
+  spk_hit:     "Short soft sci-fi sparkle impact zap, a little star bullet tapping a slime, gentle and light, single hit, no music, no voices",
   spk_coin:    "Short bright cheerful star-coin pickup ding with a tiny sparkle, single hit, no music, no voices",
   spk_coinbig: "Short rich rewarding jackpot star-coin chime with a sparkle cascade, cheerful, single hit, no music, no voices",
   spk_levelup: "Cheerful rising magical power-up sparkle chime, bright and triumphant, short, no music, no voices",
@@ -277,7 +278,7 @@ const DURATIONS = {
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
   maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
-  spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
+  spk_hit:0.5, spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   giggle:0.9, roar:1.0, robot:0.8, splat:0.5, cash:0.7, drumroll:1.3, gong:1.4,
   frog:0.6, moo:1.0, rooster:1.2, vroom:1.0, sneeze:0.8, partypop:1.0,

@@ -33,7 +33,7 @@
   .card .ds{opacity:.7;font-size:13px;min-height:32px;margin:4px 0 8px}
   .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;background:#ffe27a;color:#0b1230;
          font-weight:700;padding:12px 22px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
-  #muteBtn{position:fixed;right:12px;top:56px;z-index:30;font-family:inherit;font-weight:700;font-size:14px;
+  #muteBtn{position:fixed;left:12px;bottom:12px;z-index:30;font-family:inherit;font-weight:700;font-size:14px;
            color:#cdd6ff;background:rgba(20,26,64,.7);border:1px solid #2c386e;border-radius:10px;padding:7px 12px;cursor:pointer}
   #helpBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:18px;
            color:#0b1230;background:#ffe27a;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
@@ -77,7 +77,8 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   musicUrl: "https://www.buildablekids.com/api/chess-music?world=space",
   // Bespoke Space Sparkles sound effects (ElevenLabs) from the shared /api/sfx library.
   sfxBase: "https://www.buildablekids.com/api/sfx?s=",
-  sfx: { shoot:"spk_shoot", coin:"spk_coin", levelup:"spk_levelup", hurt:"spk_hurt", boss:"spk_boss", win:"spk_win", lose:"spk_lose", explode:"spk_pop", boom:"spk_boom" },
+  // No per-shot fire sound (it's an auto-shooter). Sound plays on impact/kill/explode only.
+  sfx: { hit:"spk_hit", coin:"spk_coin", levelup:"spk_levelup", hurt:"spk_hurt", boss:"spk_boss", win:"spk_win", lose:"spk_lose", explode:"spk_pop", boom:"spk_boom" },
   heroUrl: ART+"robot&style=modern3d&emo=happy",   // Bolt the Robot (drawn astronaut if it can't load)
   palette: { hero:"#eaf2ff", visor:"#62d0ff", spark:"#ffe27a", gem:"#6ff0ff", hp:"#ff7aa8", xp:"#7ad0ff", boss:"#c69bff" },
   // base hero stats (level-ups stack on top of these during a run)
@@ -264,14 +265,14 @@ function gainXp(v){ xp+=v; while(xp>=xpNeed){ xp-=xpNeed; plvl++; xpNeed=Math.ce
 function nearestEnemy(){ let best=null,bd=1e9; const all=boss?enemies.concat([boss]):enemies; for(const e of all){ const d=dist2(hero.x,hero.y,e.x,e.y); if(d<bd){bd=d;best=e;} } return best; }
 function fire(){ const tgt=nearestEnemy(); if(!tgt)return; const base=Math.atan2(tgt.y-hero.y,tgt.x-hero.x); hero.aim=base;
   const n=stats.projPerShot, spread=0.26; const start=base-(n-1)*spread/2;
-  for(let i=0;i<n;i++){ const a=n===1?base:start+i*spread; projs.push({ x:hero.x,y:hero.y, vx:Math.cos(a)*stats.projSpeed, vy:Math.sin(a)*stats.projSpeed, life:70, dmg:stats.projDmg, r:7+stats.projR, pierce:stats.pierce, hit:new Set() }); } sfx("shoot"); }
+  for(let i=0;i<n;i++){ const a=n===1?base:start+i*spread; projs.push({ x:hero.x,y:hero.y, vx:Math.cos(a)*stats.projSpeed, vy:Math.sin(a)*stats.projSpeed, life:70, dmg:stats.projDmg, r:7+stats.projR, pierce:stats.pierce, hit:new Set() }); } }   // no per-shot sound (auto-shooter)
 function spawnEnemy(){ const r=spawnRng(); const edge=Math.floor(r*4); let x,y; const m=18;
   if(edge===0){x=-m;y=spawnRng()*H;} else if(edge===1){x=W+m;y=spawnRng()*H;} else if(edge===2){x=spawnRng()*W;y=-m;} else {x=spawnRng()*W;y=H+m;}
   const col=L.colors[Math.floor(spawnRng()*L.colors.length)];
   enemies.push({ x,y, r:15, hp:L.eHp, maxHp:L.eHp, spd:L.eSpeed, dmg:L.eDmg, val:L.eValue, col, wob:spawnRng()*6.28, boss:false, orbCd:0 }); }
 function spawnBoss(){ const b=L.boss||{hp:30,spd:1.1,dmg:1}; boss={ x:W/2, y:-40, r:42, hp:b.hp, maxHp:b.hp, spd:b.spd, dmg:b.dmg, val:8, col:P.boss, wob:0, boss:true, orbCd:0 }; bossSpawned=true; sfx("boss"); }
 function burst(x,y,col,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=1+Math.random()*3; parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*12,col}); } }
-function hurtHero(dmg){ if(invuln>0)return; if(stats.shield){ stats.shield=false; invuln=70; burst(hero.x,hero.y,P.visor,12); sfx("hurt"); return; } hero.hearts-=dmg; invuln=80; burst(hero.x,hero.y,P.hp,14); sfx("hurt"); if(hero.hearts<=0){ hero.hearts=0; state="lose"; sfx("lose"); try{window.parent.postMessage({source:"buildable",kind:"lose"},"*")}catch(e){} } }
+function hurtHero(dmg){ if(invuln>0)return; if(stats.shield){ stats.shield=false; invuln=70; burst(hero.x,hero.y,P.visor,12); sfx("hurt"); return; } hero.hearts-=dmg; invuln=80; burst(hero.x,hero.y,P.hp,14); sfx("hurt"); if(hero.hearts<=0){ hero.hearts=0; state="lose"; sfx("lose"); } }
 
 // ---------- bot (QA "good player": kite away from the swarm, keep firing) ----------
 function botThink(){
@@ -321,7 +322,7 @@ function update(){
     for(const e of all){ if(p.hit.has(e))continue; if(dist2(p.x,p.y,e.x,e.y) < (p.r+e.r)*(p.r+e.r)){ e.hp-=p.dmg; p.hit.add(e); burst(p.x,p.y,e.col,4);
       if(stats.frost) e.slowT=Math.max(e.slowT||0, 60+stats.frost*30);
       if(p.pierce>0)p.pierce--; else p.life=0;
-      if(e.hp<=0){ killEnemy(e); }
+      if(e.hp<=0){ killEnemy(e); } else { sfx("hit"); }   // soft impact only when it survives; kill plays the pop
       break; } }
   }
   projs=projs.filter(p=>p.life>0 && p.x>-20&&p.x<W+20&&p.y>-20&&p.y<H+20);
@@ -349,7 +350,7 @@ function update(){
   if(BM&&fx) BM.update(fx);   // advance shared FX (flash/shake) from the mechanics lib
   // win when the boss is beaten (boss only appears after surviving the timer).
   // Beating the boss is the gate: it permanently unlocks the next level.
-  if(bossSpawned && !boss){ state="win"; sfx("win"); try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){};
+  if(bossSpawned && !boss){ state="win"; sfx("win");
     if(CHAR){ const u=Math.min(GAME_CONFIG.levels.length-1, level+1); if(u>(CHAR.unlocked||0)){ CHAR.unlocked=u; saveChar(); } } }
 }
 // coin tiers: 1 (=1, common) · 2 (=5, rare) · 3 (=10, boss/lucky). Higher levels drop a bit more.
@@ -476,7 +477,7 @@ function bsLevels(){ const unlocked=CHAR?(CHAR.unlocked||0):0;
     return o; }); }
 function bsConfig(){ const unlocked=CHAR?(CHAR.unlocked||0):0; return {
   title:GAME_CONFIG.name, subtitle:"Beat each boss to unlock the next world",
-  coins:CHAR?CHAR.coins:0, sound:!(BA&&BA.muted), showBack:false,
+  coins:CHAR?CHAR.coins:0, sound:!(BA&&BA.muted),
   hero:{ name:heroName(), img:GAME_CONFIG.heroUrl, progressText:unlocked+" of "+GAME_CONFIG.levels.length+" worlds cleared" },
   levels:bsLevels(), customizeLabel:"My Hero",
 }; }
