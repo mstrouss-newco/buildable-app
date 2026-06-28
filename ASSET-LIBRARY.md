@@ -28,6 +28,31 @@ a one-line request; it is never a wall. Always tag what you create with both
 
 ---
 
+## External asset packs (downloaded art / 3D models)
+
+Downloaded packs (itch.io, Kenney, etc.) live on the **source shelf** — the
+project's `game-assets/` folder, one subfolder per pack, each with its license +
+the shared `game-assets/MANIFEST.md` inventory. **That folder is NOT the live
+library** — files there aren't on the web, so a game can't load them yet.
+
+To make a pack's art usable in a game (**curate → serve → register**):
+1. **Curate** only the files a game uses — never bulk-copy a whole pack.
+2. **Serve** them from `public/game-assets/<pack>/…` (our own domain).
+3. **Register** them in the shared library (`community_sprites` / `community_layers`),
+   tagged `theme_tags` + `source` = pack name + a `license` note, so they appear in
+   `/api/list-assets?theme=…` like any other asset.
+
+**License discipline (do not skip):**
+- **CC0 packs** (KayKit, Quaternius, Kenney) — no strings: host, modify, ship freely.
+- **Non-CC0** (e.g. Tiny Swords: free commercial use BUT "don't redistribute the raw
+  files") — using a sprite inside a game is fine; **publishing the raw pack wholesale
+  is not.** Curate into games; never expose a browsable/downloadable copy of the pack.
+- **3D packs** ship `.fbx/.obj/.gltf` — only **`.gltf`** works in the browser (Three.js).
+
+Prefer CC0 packs to avoid any redistribution worry.
+
+---
+
 ## Sound rule — unique created sounds only; new game types grow the library
 
 Two firm rules for audio, because sound is part of the brand:
