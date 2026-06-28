@@ -152,7 +152,6 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#7DD3FC,#A78BFF)", "Memory Match", "Flip cards, find the pairs \u2014 solo or 2-4!", onMemory, false, "memory")}
         {tile("linear-gradient(160deg,#FFD23F,#FF8FB1)", "Bingo", "The device calls \u2014 daub a line to win, 2-4!", onBingo, false, "bingo")}
         {tile("linear-gradient(160deg,#34D399,#F5B83D)", "Snakes & Ladders", "Roll, climb and slide to the top, 2-4!", onSnakes, false, "snakes")}
-        {tile("linear-gradient(160deg,#FF8FB1,#F0577E)", "Sound Machine", "Whoopee, explosions and silly sounds!", onSounds, false, "sounds")}
       </div>
     </div>
   );
