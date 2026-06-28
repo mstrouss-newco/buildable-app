@@ -24,6 +24,7 @@ const WORLD_THEME = {
   "space-station": "space",
   "desert-oasis": "desert",
   "candy-land": "candy",
+  "city-town": "city",
 };
 
 // Must match story-library.js cacheKey(kind, slug, style).

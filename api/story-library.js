@@ -46,6 +46,7 @@ const WORLDS = [
   ["space-station",   "Starlight Space",    "A friendly outer-space scene, colorful planets and ringed worlds, a swirl of twinkling stars, a drifting little asteroid, deep blue space"],
   ["desert-oasis",    "Golden Desert Oasis","A golden desert at warm sunset, rolling sand dunes, a small palm-tree oasis with a clear blue pool, distant ancient stone ruins"],
   ["candy-land",      "Candy Cloud Land",   "A whimsical candy land, pastel pink and blue sky, lollipop trees, fluffy marshmallow clouds, a winding candy path over gentle frosting hills"],
+  ["city-town",       "Sunny City",         "A cheerful friendly cartoon city, colorful low-rise buildings with bright awnings, a clean sunny street with little trees and lampposts, soft fluffy clouds, warm and welcoming"],
 ];
 
 const CHARACTERS = [

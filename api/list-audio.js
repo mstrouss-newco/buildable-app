@@ -25,7 +25,7 @@ const MUSIC_LIB = [
 const SFX_THEME = {
   water: "water", fire: "fire", waves: "ocean", forest: "forest",
   crickets: "forest", wind: "snow", jungle: "jungle", space: "space",
-  candy: "candy", rain: "rain",
+  candy: "candy", rain: "rain", city: "city",
   // story narrative one-shots
   door: "castle", knock: "castle", bell: "castle", thunder: "storm",
   firewhoosh: "forest", rustle: "forest", splash: "ocean",

@@ -15,6 +15,7 @@ const SOUNDS = {
   space:   "Soft calm cosmic outer-space ambience, gentle airy hum with faint twinkles, dreamy, seamless ambient loop, no music, no voices",
   candy:   "Light whimsical magical sparkle chimes and soft twinkles, cheerful and gentle, seamless ambient loop, no music, no voices",
   rain:    "Gentle soft steady rainfall, soothing calm raindrops, seamless ambient loop, no music, no voices",
+  city:    "Gentle friendly daytime town-square ambience, soft distant footsteps, a faint fountain, a far-off bicycle bell and a few birds, calm and warm, seamless ambient loop, no music, no voices",
 
   // ---- Sunny Town Drive (car runner) ----
   runner_coin:   "Short bright cheerful treat pickup ding with a tiny happy sparkle, collecting a coin or goody, single hit, no music, no voices",

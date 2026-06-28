@@ -8,7 +8,7 @@ const ROOT = "public/models";
 // Per-pack metadata. Unknown packs fall back to theme=folder name, no license badge.
 const META = {
   nature: { theme: "forest", source: "quaternius", license: "CC0" },
-  city:   { theme: "city",   source: "city pack",  license: "" },
+  city:   { theme: "city",   source: "city pack",  license: "verify" },
 };
 
 const models = [];

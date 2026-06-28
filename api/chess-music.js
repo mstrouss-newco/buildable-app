@@ -14,6 +14,7 @@ const WORLDS = {
   candy:  "Playful but soft and warm music box and mellow marimba, gentle bouncy and sweet, light and cozy, low register not shrill, instrumental, no vocals, smooth loop",
   castle: "Cozy warm piano with soft strings, gentle and slightly regal, calm fairytale mood, low and warm, instrumental, no vocals, smooth loop",
   desert: "Chill lo-fi hip hop: warm Rhodes electric piano, soft boom-bap drums and vinyl crackle, relaxed mellow jazzy chords, low and warm, instrumental, no vocals, smooth loop",
+  city:   "Warm friendly city pop-funk: bright clean electric guitar, soft claps and mellow bass, a sunny upbeat town-stroll groove, low and warm, instrumental, no vocals, smooth loop",
 };
 
 async function cacheGet(key){
