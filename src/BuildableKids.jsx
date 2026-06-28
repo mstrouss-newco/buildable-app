@@ -906,7 +906,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
         minHeight: phone ? 142 : 172,
       }}
     >
-      {soon && <span style={{ position: "absolute", top: 10, right: 10, fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 9px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
+      {soon && <span style={{ position: "absolute", zIndex: 3, top: 10, right: 10, fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 9px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
       <AppIcon grad={grad} size={phone ? 70 : 84}>{glyph}</AppIcon>
       <div style={{ fontFamily: FRED, fontSize: phone ? 16 : 19, fontWeight: 700 }}>{title}</div>
       <div style={{ fontSize: phone ? 11.5 : 13, color: "#cfc9e6" }}>{sub}</div>
@@ -1013,13 +1013,13 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
         {/* what do you want to make */}
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: "#fff", marginBottom: 11 }}>What do you want to make?</div>
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${makeCols}, 1fr)`, gap: 12, marginBottom: 26 }}>
-          <MakeTile grad="linear-gradient(160deg,#A06BFF,#7A4FE0)" glyph={<WandGlyph />} title="Make a game" sub="Coming soon" soon onClick={onMakeGame} />
           <MakeTile grad="linear-gradient(160deg,#3DD06A,#2BB14F)" glyph={<ControllerGlyph />} title="Play a game" sub="Ready-to-play games" tag onClick={onGames} />
           <MakeTile grad="linear-gradient(160deg,#FFB13C,#F0972A)" glyph={<TrophyGlyph />} title="Play a top game" sub="Play it, then remix it" tag onClick={onTop} />
           <MakeTile grad="linear-gradient(160deg,#F2789E,#E0578F)" glyph={<BookGlyph />} title="Make a story" sub="A living picture book" onClick={onStories} />
           <MakeTile grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)" glyph={<NoteGlyph />} title="Make a song" sub="Sing about anything" onClick={onMusic} />
           <MakeTile grad="linear-gradient(160deg,#FF8FB1,#F0577E)" glyph={<SpeakerGlyph />} title="Sound Machine" sub="Silly sounds & explosions" onClick={onSounds} />
           <MakeTile grad="linear-gradient(160deg,#22B8CF,#1098AD)" glyph={<ArtGlyph />} title="Make art" sub="Draw, stamp & mirror" onClick={onArt} />
+          <MakeTile grad="linear-gradient(160deg,#A06BFF,#7A4FE0)" glyph={<WandGlyph />} title="Make a game" sub="Coming soon" soon onClick={onMakeGame} />
         </div>
 
         {/* trending from other kids — always shown */}
