@@ -39,7 +39,7 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
-- **claude/topnav-grownup** (BRANCH READY — await Mike merge) — moved the floating **Grown-ups**
+- **claude/topnav-grownup** (MERGED to main — LIVE, verified) — moved the floating **Grown-ups**
   (`GrownUpFab`) + **Learning On/Off** (`LearningControl`) controls OUT of their bottom-left
   floating position INTO the top nav as ONE shared, gated nav button, consistently
   site-wide. Touches the high-collision `src/BuildableKids.jsx` (FAB defs ~84/232, the
