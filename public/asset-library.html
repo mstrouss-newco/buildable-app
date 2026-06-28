@@ -226,7 +226,7 @@ function render(){
   sec.querySelectorAll(".copy").forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent="copied";setTimeout(()=>b.textContent="copy",900);});
   let cur=null;
   sec.querySelectorAll(".play").forEach(b=>b.onclick=()=>{if(cur)cur.pause();cur=new Audio(b.dataset.u);cur.play().catch(()=>{});b.textContent="❙❙";setTimeout(()=>b.textContent="▶",1500);});
-  sec.querySelectorAll(".view3d").forEach(b=>b.onclick=()=>openPreview(b.dataset.u,b.dataset.n));
+  sec.querySelectorAll(".view3d").forEach(b=>{const card=b.closest(".card")||b;card.style.cursor="pointer";card.onclick=()=>openPreview(b.dataset.u,b.dataset.n);});
 }
 
 document.querySelectorAll("#dim button").forEach(b=>b.onclick=()=>{setDim(b.dataset.d);if(state.game&&GAME_TYPES.find(g=>g[0]===state.game)[1]!==b.dataset.d)state.game=null;render();});
