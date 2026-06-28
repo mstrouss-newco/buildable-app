@@ -745,6 +745,19 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27p (Sunny Town Drive: 3D city buildings + clouds removed)
+
+Used the Quaternius **Downtown City MegaKit** (CC0): it ships modular pieces but ALSO 3 prebuilt
+buildings (Building_Small_1 / Medium_2 / Large_2) — extracted those (gltf+bin + BaseColor textures
+at 256px, normals/ORM at 32px since Lambert drops them) into `public/models/city/`. Generalized the
+engine model system: `TOWN_MODELS` maps maple/petal→nature kit, market/downtown→city kit; city
+buildings auto-scale to ~16u tall, sit on the ground, and rotate to FACE the road per side (slot.side)
+so they form a street canyon. Market Square now renders a real 3D city block. Also REMOVED the flat
+billboard cloud sprites (Mike: looked bad) — the AI sky keeps its painted clouds; balloons stay. QA
+all-win; verified live, no console errors.
+
+---
+
 ## Session log — 2026-06-27o (Sunny Town Drive: real 3D nature models)
 
 Brought in real CC0 3D models (Quaternius **Stylized Nature MegaKit**) for the leafy towns.
