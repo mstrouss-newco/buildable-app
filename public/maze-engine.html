@@ -23,6 +23,8 @@
   #dpad .left{left:0;top:57px}
   #dpad .right{left:114px;top:57px}
   #dpad .down{left:57px;top:114px}
+  #ver{position:fixed;left:10px;bottom:10px;z-index:31;font-family:inherit;font-size:11px;font-weight:700;color:#9fb0e6;background:rgba(10,12,30,.65);border:1px solid #2c2466;border-radius:8px;padding:5px 9px;cursor:pointer;opacity:.85;-webkit-tap-highlight-color:transparent}
+  #dbg{position:fixed;left:10px;bottom:44px;z-index:32;display:none;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.45;color:#bdffd0;background:rgba(6,8,22,.9);border:1px solid #2c7d52;border-radius:10px;padding:8px 10px;white-space:pre;pointer-events:none;max-width:70vw}
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;background:#ffd86b;color:#1a0f3a;
          font-weight:700;padding:11px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
   /* Make It Mine overlay */
@@ -52,6 +54,8 @@
   <button class="btn small" id="custBack">Done</button>
 </div>
 <div id="toast" class="toast"></div>
+<div id="ver">maze</div>
+<div id="dbg"></div>
 <button id="backBtn" title="Back to menu">‹ Menu</button>
 <button id="muteBtn">Sound: On</button>
 <div id="dpad" aria-hidden="true">
@@ -155,6 +159,10 @@ let lives = 3, lostThisLevel = 0, score = 0;
 let powerTimer = 0, eatChain = 0, readyTimer = 0, invuln = 0, t = 0;
 let queuedDir = null, botMode = false;
 let bonus = null, bonusTimer = 0;   // surprise bonus treat (big points; optional)
+const VERSION = "v8 \u00b7 2026-06-28";
+let DBG=false, frameCount=0, tapCount=0, turnCount=0, lastTap={arrow:"-", at:-9999};
+function DIRARROW(d){ return !d?"\u00b7":(d.x>0?"\u2192":d.x<0?"\u2190":d.y>0?"\u2193":"\u2191"); }
+function openAt(gx,gy){ let o=""; if(cellOpen(gx-1,gy))o+="\u2190"; if(cellOpen(gx+1,gy))o+="\u2192"; if(cellOpen(gx,gy-1))o+="\u2191"; if(cellOpen(gx,gy+1))o+="\u2193"; return o||"(none)"; }
 let lastWin = { stars:0, score:0, best:0, nb:false };
 let R = mulberry(1);                 // seeded rng for chaser AI (per level)
 let distField = null, homeField = null;
@@ -380,7 +388,9 @@ function update(){
   // distance field from the hero (for chase + flee), recomputed each frame
   distField = bfsField(hero.gx, hero.gy);
   // move hero, eat what it's over
+  const _pd = hero.dir;
   stepEntity(hero, decideHero);
+  if(hero.dir && _pd && (hero.dir.x!==_pd.x || hero.dir.y!==_pd.y)) turnCount++;
   { const useTo = hero.t>0.5; const gx=useTo?hero.tx:hero.fx, gy=useTo?hero.ty:hero.fy; eatAt(gx,gy); }
   // surprise bonus treat: appears for a few seconds anywhere, worth big points (optional)
   if(!bonus){ bonusTimer--; if(bonusTimer<=0) spawnBonus(); }
@@ -497,6 +507,14 @@ function draw(){
     overlay(last?"You did it!":"World cleared!", (lastWin.nb?"New best! ":"")+"Score "+lastWin.score+"  -  Best "+lastWin.best, "#ffe27a");
     ctx.textAlign="center"; for(let i=0;i<3;i++){ ctx.fillStyle=i<lastWin.stars?"#ffd23f":"rgba(255,255,255,0.2)"; if(BR)BR.sparkle(ctx,W/2+(i-1)*46,H/2-58,16,t); }
     ctx.fillStyle="#9fe6c0"; ctx.font="600 18px Fredoka,sans-serif"; ctx.fillText(last?"Tap for the menu":"Tap to play the next world", W/2, H/2+72); ctx.textAlign="left"; }
+  if(DBG){ const dd=el("dbg"); if(dd){ const now=(typeof performance!=="undefined"?performance.now():Date.now()); const fresh=(now-lastTap.at)<450;
+    dd.textContent = "MAZE "+VERSION
+      +"\nstate:  "+state
+      +"\ndir:    "+DIRARROW(hero&&hero.dir)+"   queued: "+DIRARROW(queuedDir)
+      +"\nlastTap:"+lastTap.arrow+(fresh?"  <== JUST TAPPED":"")
+      +"\ntaps:"+tapCount+"  turns:"+turnCount+"  frames:"+frameCount
+      +"\ncell:   "+(hero?hero.gx+","+hero.gy+" t="+hero.t.toFixed(2)+(hero.moving?" moving":" STOPPED"):"-")
+      +"\nopen here: "+(hero?openAt(hero.gx,hero.gy):"-"); } }
 }
 
 // ---- prefs ----
@@ -516,6 +534,7 @@ function applyDir(d){ if(!d)return; if(BA)BA.unlock();
     const ofx=hero.fx, ofy=hero.fy; hero.fx=hero.tx; hero.fy=hero.ty; hero.tx=ofx; hero.ty=ofy; hero.gx=hero.fx; hero.gy=hero.fy; hero.t=1-hero.t; hero.dir=d;
   }
   queuedDir=d;   // buffered: applied at the next opening that allows it (classic maze cornering)
+  tapCount++; lastTap={ arrow:DIRARROW(d), at:(typeof performance!=="undefined"?performance.now():Date.now()) };
 }
 function setDir(name){ applyDir(NAME2DIR[name]); }
 function advance(){ if(state!=="levelwin")return; if(level>=GAME_CONFIG.levels.length-1){ showMenu(); } else { startLevel(level+1, 3); ensureMusic(); playMusic(); hideMenu(); } }
@@ -557,7 +576,8 @@ if(typeof document!=="undefined"){
   c.addEventListener("mousemove",(e)=>{ if(e.buttons) moveP(e.clientX,e.clientY); });
   c.addEventListener("mouseup",(e)=>{ if(!_swiped) endP(e.clientX,e.clientY); });
   const dp=el("dpad"); if(dp){ dp.querySelectorAll("button").forEach(b=>{ const nm=b.getAttribute("data-d");
-    const fire=(ev)=>{ if(ev&&ev.preventDefault)ev.preventDefault(); focusGame(); setDir(nm); };
+    const fire=(ev)=>{ if(ev&&ev.preventDefault)ev.preventDefault(); focusGame(); setDir(nm);
+      try{ b.style.background="#ffe27a"; setTimeout(()=>{ b.style.background=""; }, 130); }catch(e){} };
     b.addEventListener("pointerdown",fire);                 // modern unified path (touch + mouse + pen)
     b.addEventListener("touchstart",fire,{passive:false});  // older iOS Safari
     b.addEventListener("mousedown",fire);
@@ -594,7 +614,9 @@ function showMenu(){ state="title"; showInGame(false); show("customize",false); 
 function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showInGame(true); focusGame(); navUpdate(); }
 function startPlay(i){ if(BA)BA.unlock(); botMode=false; startLevel(i,null); ensureMusic(); playMusic();
   if(!_hintShown){ _hintShown=true; toast("Swipe or use arrows to move. Eat a glowing treat to chase them!"); } }
-function wireMenus(){ const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(!BA.muted){ ensureMusic(); playMusic(); } } upd(); }; }
+function wireMenus(){
+  const vr=el("ver"); if(vr){ vr.textContent="Maze "+VERSION+"  (tap=debug)"; const tog=(ev)=>{ if(ev&&ev.preventDefault)ev.preventDefault(); DBG=!DBG; const dd=el("dbg"); if(dd)dd.style.display=DBG?"block":"none"; }; vr.addEventListener("click",tog); vr.addEventListener("touchstart",tog,{passive:false}); }
+  const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); if(!BA.muted){ ensureMusic(); playMusic(); } } upd(); }; }
   const bb=el("backBtn"); if(bb)bb.onclick=()=>{ showMenu(); };
   const cb2=el("custBack"); if(cb2)cb2.onclick=()=>{ show("customize",false); showMenu(); }; }
 
@@ -603,6 +625,7 @@ function frame(ts){
   if(typeof ts!=="number") ts=(typeof performance!=="undefined"?performance.now():Date.now());
   if(!_lastTs) _lastTs=ts;
   let dt=(ts-_lastTs)/1000; _lastTs=ts; if(dt>0.2) dt=0.2;   // clamp after tab was hidden
+  frameCount++;
   if(state!=="title"){ _acc+=dt; let n=0; while(_acc>=1/60 && n<6){ update(); _acc-=1/60; n++; } }
   if(grid.length && hero && state!=="title") draw();
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(frame);

@@ -1,5 +1,15 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Maze Munchers: on-screen debug overlay + version stamp (touch turning still unconfirmed)
+- Mike: turning STILL broken on his real iPhone via the arrow pad (muncher only changes at walls). Prior frame-rate/input/timestep fixes did not resolve it, and I cannot reproduce it (the Claude-in-Chrome automation tab pauses requestAnimationFrame and can't do real iOS touch), so I stopped verifying by proxy and added live instrumentation so Mike can see where it breaks on his device:
+  - **Version stamp** (bottom-left): "Maze v8 · 2026-06-28 (tap=debug)" — confirms which build is loaded; tap it to toggle the debug overlay.
+  - **Debug overlay**: live dir, queued (buffered) dir, lastTap (+ "JUST TAPPED" flash), tap counter, turn counter, frame counter, hero cell + t + moving/STOPPED, and the open directions at the hero's cell. Lets Mike report whether the tap registers (tapCount up?), whether the buffer sets (queued shows the arrow?), and whether the turn fires (turnCount up?) at an open intersection.
+  - **D-pad buttons flash** yellow on press for visible tap confirmation.
+  - Cache-bust bumped to `/maze-engine.html?v=20260628a`.
+- Turn logic (for the record): movement is grid-cell-stepping. Each entity moves between adjacent open cell-centers; `e.t` accrues `spd` per 1/60s fixed step; on `e.t>=1` it snaps to the next cell and calls `decideHero`, which returns `queuedDir` if `cellOpen(gx+queuedDir)` else continues. So a turn is consumed at EVERY cell-center crossing (event-based, not a single-frame alignment), and turns immediately if the opening is there. This clears all levels in headless sim and via real touchstart dispatch on the live d-pad — but neither exercises real iOS touch with the live rAF loop.
+- QA green; build clean.
+
+
 ## 2026-06-27 — Board games: adopt shared game-nav (fix phone overlap) + Dots and Boxes size picker
 Two pieces of Mike feedback on the board games.
 - **Nav overlap fixed at the shared level.** The board games were wrapped in `GameFrame` but had
