@@ -158,6 +158,7 @@ let landmarker = null, segmenter = null, segLoading = false;
 let running = false, lastFaceTs = -1, lastSegTs = -1;
 let curLandmarks = null;       // canvas-space points cache for this frame
 let active = { prop:null, mask:null, warp:null, bg:null };
+function clearAll(){ active.prop=null; active.mask=null; active.warp=null; active.bg=null; }
 let curTab = "prop";
 
 /* ---------------- FaceMesh landmark indices ---------------- */
@@ -455,16 +456,17 @@ function thumbCanvas(drawFn){ const c=document.createElement("canvas"); c.width=
 function renderRow(){
   const row=$("row"); row.innerHTML="";
   const setMap={ prop:PROPS, mask:MASKS, warp:WARPS, bg:BGS }[curTab];
-  // "none" button
+  // "none" button — clears every filter (only one can ever be on at a time)
   const none=document.createElement("button"); none.className="bt none"+(!active[curTab]?" on":"");
   none.innerHTML='<div style="font-size:22px;line-height:1">∅</div><span class="lab">None</span>';
-  none.onclick=()=>{ active[curTab]=null; renderRow(); }; row.appendChild(none);
+  none.onclick=()=>{ clearAll(); renderRow(); }; row.appendChild(none);
   Object.keys(setMap).forEach(key=>{
     const b=document.createElement("button"); b.className="bt"+(active[curTab]===key?" on":"");
     const tc=thumbCanvas((x,w,h)=>previewThumb(curTab,key,x,w,h));
     b.appendChild(tc);
     const l=document.createElement("span"); l.className="lab"; l.textContent=setMap[key].lab; b.appendChild(l);
-    b.onclick=async ()=>{ active[curTab]=key; if(curTab==="bg") await ensureSegmenter(); renderRow(); };
+    // Only one filter on at a time: choosing any filter clears all the others.
+    b.onclick=async ()=>{ clearAll(); active[curTab]=key; if(curTab==="bg") await ensureSegmenter(); renderRow(); };
     row.appendChild(b);
   });
 }
