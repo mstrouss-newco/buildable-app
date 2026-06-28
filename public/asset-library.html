@@ -162,7 +162,7 @@ function passDim(a){return state.dim==="all"||a.dim===state.dim||a.dim==="any";}
 function visible(a){
   if(!passDim(a))return false;
   if(!state.kinds.has(a.kind))return false;
-  if(state.theme&&a.theme&&a.theme.toLowerCase()!==state.theme)return false; // theme-less = cross-theme, never hidden
+  if(state.theme&&(a.theme||"").toLowerCase()!==state.theme)return false; // strict: pick a theme = only that theme
   if(state.q&&(a.name+" "+a.source+" "+a.theme).toLowerCase().indexOf(state.q)<0)return false;
   return true;
 }
@@ -173,10 +173,11 @@ function buildFilters(){
     b.onclick=()=>{state.game=state.game===g?null:g; if(state.game){setDim(d);} render();}; gt.appendChild(b);});
   const th=document.getElementById("themes");
   const themes=[...new Set(ALL.map(a=>a.theme).filter(Boolean))].sort((a,b)=>THEMES_ORDER.indexOf(a)-THEMES_ORDER.indexOf(b));
-  themes.forEach(t=>{const b=document.createElement("button");b.className="chip";b.dataset.t=t;b.textContent=t;b.onclick=()=>{state.theme=state.theme===t?null:t;render();};th.appendChild(b);});
+  themes.forEach(t=>{const b=document.createElement("button");b.className="chip";b.dataset.t=t;b.textContent=t;b.onclick=()=>{state.theme=state.theme===t?null:t;syncThemeChips();render();};th.appendChild(b);});
   const kc=document.getElementById("kinds");
   KINDS.forEach(([k,lab])=>{const b=document.createElement("button");b.className="chip kind on";b.dataset.k=k;b.textContent=lab;b.onclick=()=>{state.kinds.has(k)?state.kinds.delete(k):state.kinds.add(k);render();};kc.appendChild(b);});
 }
+function syncThemeChips(){document.querySelectorAll('#themes .chip').forEach(x=>x.classList.toggle('on',x.dataset.t===state.theme));}
 function setDim(d){state.dim=d;document.querySelectorAll("#dim button").forEach(x=>x.classList.toggle("on",x.dataset.d===d));}
 
 function renderMatrix(){
@@ -192,7 +193,7 @@ function renderMatrix(){
       const cls=themed?"have":(cross?"avail":"gap");
       h+='<span class="cell '+cls+'" data-t="'+t+'" data-k="'+k[0]+'"></span>';});});
   m.innerHTML=h;
-  m.querySelectorAll(".cell").forEach(c=>c.onclick=()=>{state.theme=c.dataset.t;document.querySelectorAll("#themes .chip").forEach(x=>x.classList.toggle("on",x.dataset.t===c.dataset.t));render();});
+  m.querySelectorAll(".cell").forEach(c=>c.onclick=()=>{state.theme=c.dataset.t;syncThemeChips();render();});
 }
 
 function tile(a){
