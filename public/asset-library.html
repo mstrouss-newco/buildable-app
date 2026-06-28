@@ -30,6 +30,7 @@
   .cell{height:18px;border-radius:5px;width:74%;margin:0 auto;cursor:pointer}
   .cell.have{background:var(--teal)}
   .cell.gap{border:1px solid var(--line)}
+  .cell.avail{border:1px solid var(--teal)}
   .seclbl{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 10px}
   .seclbl b{font-size:15px;font-weight:600}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
@@ -50,6 +51,8 @@
   .muted{color:var(--mut);font-size:12px}
   .note{font-size:11px;color:var(--mut);margin-top:2px}
 </style>
+<script src="/three.min.js?v=r128"></script>
+<script src="/GLTFLoader.js?v=1"></script>
 </head>
 <body>
 <div class="wrap">
@@ -72,7 +75,7 @@
   <div class="panel">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <b style="font-size:14px">Coverage</b>
-      <span class="muted"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--teal);vertical-align:-1px"></span> have &nbsp; <span style="display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid var(--line);vertical-align:-1px"></span> gap</span>
+      <span class="muted"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--teal);vertical-align:-1px"></span> have &nbsp; <span style="display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid var(--teal);vertical-align:-1px"></span> any theme &nbsp; <span style="display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid var(--line);vertical-align:-1px"></span> gap</span>
     </div>
     <div id="matrix" class="matrix"></div>
     <div class="note">Filled = at least one asset for that theme + kind (under the current 2D/3D filter). Click a cell to jump to it.</div>
@@ -81,6 +84,11 @@
   <div id="sections"></div>
 </div>
 
+<div id="preview" style="display:none;position:fixed;inset:0;background:rgba(8,10,20,.88);z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+  <div id="pname" style="font-size:15px"></div>
+  <canvas id="pcanvas" width="380" height="380" style="background:#11152a;border:1px solid var(--line);border-radius:14px"></canvas>
+  <button class="chip" onclick="closePreview()">Close</button>
+</div>
 <script>
 const KINDS=[["character","Characters"],["world","Worlds"],["element","Elements"],["effect","Effects"],["music","Music"],["sfx","SFX"]];
 const THEMES_ORDER=["space","jungle","ocean","candy","castle","desert","forest","snow"];
@@ -106,6 +114,26 @@ const PACKS=[
 ];
 
 let ALL=[]; const state={dim:"all",game:null,theme:null,kinds:new Set(KINDS.map(k=>k[0])),q:""};
+let _ren,_scene,_cam,_cur,_raf,_ldr;
+function ensure3d(){ if(_ren)return true; if(typeof THREE==="undefined"||!THREE.GLTFLoader)return false;
+  const cv=document.getElementById("pcanvas");
+  _ren=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true}); _ren.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  _scene=new THREE.Scene(); _cam=new THREE.PerspectiveCamera(40,1,0.1,100); _cam.position.set(0,1.6,7);
+  _scene.add(new THREE.AmbientLight(0xffffff,0.9)); const dl=new THREE.DirectionalLight(0xffffff,0.8); dl.position.set(5,10,7); _scene.add(dl);
+  _ldr=new THREE.GLTFLoader(); return true; }
+function openPreview(url,name){
+  const ov=document.getElementById("preview"); ov.style.display="flex"; document.getElementById("pname").textContent=name;
+  if(!ensure3d()){ document.getElementById("pname").textContent=name+" — 3D viewer unavailable"; return; }
+  if(_cur){_scene.remove(_cur);_cur=null;}
+  _ldr.load(url,(g)=>{ const o=g.scene;
+    o.traverse(m=>{ if(m.isMesh){ const mm=m.material; o.castShadow=false;
+      m.material=new THREE.MeshLambertMaterial({map:(mm&&mm.map)||null,color:(mm&&mm.color)?mm.color:0xffffff,transparent:!!(mm&&mm.transparent),alphaTest:(mm&&mm.alphaTest)||0,side:THREE.DoubleSide}); }});
+    const box=new THREE.Box3().setFromObject(o),size=new THREE.Vector3(),ctr=new THREE.Vector3(); box.getSize(size); box.getCenter(ctr);
+    o.position.sub(ctr); const md=Math.max(size.x,size.y,size.z)||1; o.scale.setScalar(4/md); _cur=o; _scene.add(o);
+  }, undefined, ()=>{ document.getElementById("pname").textContent=name+" — failed to load"; });
+  if(!_raf){ const loop=()=>{ _raf=requestAnimationFrame(loop); if(_cur)_cur.rotation.y+=0.012; _ren.render(_scene,_cam); }; loop(); }
+}
+function closePreview(){ document.getElementById("preview").style.display="none"; if(_raf){cancelAnimationFrame(_raf);_raf=null;} }
 
 async function getJSON(u){try{const r=await fetch(u);if(!r.ok)return null;return await r.json();}catch(e){return null;}}
 
@@ -132,7 +160,7 @@ function passDim(a){return state.dim==="all"||a.dim===state.dim||a.dim==="any";}
 function visible(a){
   if(!passDim(a))return false;
   if(!state.kinds.has(a.kind))return false;
-  if(state.theme&&(a.theme||"").toLowerCase()!==state.theme)return false;
+  if(state.theme&&a.theme&&a.theme.toLowerCase()!==state.theme)return false; // theme-less = cross-theme, never hidden
   if(state.q&&(a.name+" "+a.source+" "+a.theme).toLowerCase().indexOf(state.q)<0)return false;
   return true;
 }
@@ -156,8 +184,11 @@ function renderMatrix(){
   m.style.gridTemplateColumns="68px repeat("+kinds.length+",1fr)";
   let h='<span></span>'+kinds.map(k=>'<span class="mh">'+k[1].replace("Characters","Hero").replace("Elements","Elem")+'</span>').join("");
   themes.forEach(t=>{h+='<span class="muted" style="font-size:12px">'+t+'</span>';
-    kinds.forEach(k=>{const have=ALL.some(a=>a.theme===t&&a.kind===k[0]&&passDim(a));
-      h+='<span class="cell '+(have?"have":"gap")+'" data-t="'+t+'" data-k="'+k[0]+'"></span>';});});
+    kinds.forEach(k=>{
+      const themed=ALL.some(a=>a.theme===t&&a.kind===k[0]&&passDim(a));
+      const cross=!themed&&ALL.some(a=>a.kind===k[0]&&!a.theme&&passDim(a));
+      const cls=themed?"have":(cross?"avail":"gap");
+      h+='<span class="cell '+cls+'" data-t="'+t+'" data-k="'+k[0]+'"></span>';});});
   m.innerHTML=h;
   m.querySelectorAll(".cell").forEach(c=>c.onclick=()=>{state.theme=c.dataset.t;document.querySelectorAll("#themes .chip").forEach(x=>x.classList.toggle("on",x.dataset.t===c.dataset.t));render();});
 }
@@ -169,7 +200,7 @@ function tile(a){
   }else if(a.audio){
     inner='<div class="thumb"><button class="play" data-u="'+a.url+'">▶</button></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">'+a.kind+'</span><span class="b src">'+a.source+'</span><button class="copy" data-c="'+a.url+'">copy</button></div></div>';
   }else if(a.dim==="3d"){
-    inner='<div class="thumb"><span class="ic">'+(a.icon||"◈")+'</span></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">3D</span><span class="b cc0">'+a.source+'</span><button class="copy" data-c="'+a.url+'">copy</button></div></div>';
+    inner='<div class="thumb view3d" data-u="'+a.url+'" data-n="'+a.name+'" style="cursor:pointer"><span class="ic">'+(a.icon||"◈")+'</span><span style="position:absolute;bottom:5px;font-size:10px;color:var(--mut)">click to view</span></div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">3D</span><span class="b cc0">'+a.source+'</span><button class="copy" data-c="'+a.url+'">copy</button></div></div>';
   }else{
     const t=a.thumb?'<img src="'+a.thumb+'" loading="lazy" alt="" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=ic>▦</span>\'">':'<span class="ic">▦</span>';
     inner='<div class="thumb">'+t+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b '+(a.source==="story"||a.source==="community"?"src":"")+'">'+(a.source||"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.id+'">copy</button></div></div>';
@@ -195,6 +226,7 @@ function render(){
   sec.querySelectorAll(".copy").forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent="copied";setTimeout(()=>b.textContent="copy",900);});
   let cur=null;
   sec.querySelectorAll(".play").forEach(b=>b.onclick=()=>{if(cur)cur.pause();cur=new Audio(b.dataset.u);cur.play().catch(()=>{});b.textContent="❙❙";setTimeout(()=>b.textContent="▶",1500);});
+  sec.querySelectorAll(".view3d").forEach(b=>b.onclick=()=>openPreview(b.dataset.u,b.dataset.n));
 }
 
 document.querySelectorAll("#dim button").forEach(b=>b.onclick=()=>{setDim(b.dataset.d);if(state.game&&GAME_TYPES.find(g=>g[0]===state.game)[1]!==b.dataset.d)state.game=null;render();});
