@@ -1105,7 +1105,9 @@ session.
 
 **2026-06-27 — themed sound packs:** Soundboard rebuilt with a tabbed pack UI (10 packs: Silly, Animals, Instruments, Space, Spooky, Vehicles, Magic, Nature, Food, Sports) — 133 pads, 86 new ElevenLabs one-shots (all dur>=0.5s), theme-tagged per pack in /api/list-audio for reuse, ~30 white-line glyphs (no emoji). Last pack remembered in localStorage. Sampled every pack live (audio/mpeg). 
 
-**2026-06-27 - theme tile art (for pre-readers):** Each pack tab now shows an AI-generated picture badge so kids who cannot read can recognize the theme. Added a `soundpack` kind to `api/images.js` (gpt-image-1, transparent glossy icon per theme, cached in image_cache, served as PNG); the tab `<img>` falls back to a colored SVG emblem on any error. Pre-generated all 10 packs - verified cached via manifest.
+**2026-06-27 - theme tile art (for pre-readers):** Each pack tab now shows an AI-generated picture badge so kids who cannot read can recognize the theme. Added a `soundpack` kind to `api/images.js` (gpt-image-1, transparent glossy icon per theme, cached in image_cache, served as PNG); the tab `<img>` falls back to a colored SVG emblem on any error. Pre-generated all 10 packs - verified cached via manifest. 
+
+**2026-06-28 - real picture on EVERY sound button:** Per Mike, each of the 131 pads now shows an AI-generated picture of the actual thing (lion shows a lion, trumpet a trumpet) so pre-readers see what they tap. Added a `soundfx` kind to `api/images.js` with a kid-recognizable subject for all 131 keys (gpt-image-1 low, transparent, cached). Pads render the SVG emblem instantly then fade the photo in; text label kept underneath. Pre-generated all 131 - 100% cached (verified via manifest).
 
 ---
 
