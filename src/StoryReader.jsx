@@ -86,6 +86,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const lineCacheRef = useRef({});
   const seqRef = useRef(0);
   const [spokenLine, setSpokenLine] = useState(-1);
+  const [spokenWord, setSpokenWord] = useState(-1);
   const [soundOn, setSoundOn] = useState(true);
   const [sceneUrl, setSceneUrl] = useState({});   // pageIndex -> generated scene url
   const tokenRef = useRef((story && (story.scene_token || story.story_id)) || (Math.random().toString(36).slice(2,10) + Date.now().toString(36)));
@@ -143,7 +144,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
     return () => { cancelled = true; try { ambienceRef.current && ambienceRef.current.pause(); } catch {} };
   }, []);
 
-  useEffect(() => { seqRef.current++; stopAll(); setSpoken(-1); setSpokenLine(-1); setPlaying(false); return () => stopAll(); }, [idx]);
+  useEffect(() => { seqRef.current++; stopAll(); setSpoken(-1); setSpokenLine(-1); setSpokenWord(-1); setPlaying(false); return () => stopAll(); }, [idx]);
 
   // Ambient soundscape matched to the page's world/effect — forest birds, night
   // crickets, snowy wind, reef waves, fire crackle, jungle, space, candy, rain.
@@ -224,23 +225,35 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
     try {
       const r = await fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voiceId }) });
       const j = await r.json();
-      if (j && j.configured && j.audioUrl) res = { audioUrl: j.audioUrl };
+      if (j && j.configured && j.audioUrl) res = { audioUrl: j.audioUrl, wordTimings: j.wordTimings };
     } catch {}
     lineCacheRef.current[key] = res; return res;
   }
-  function playClip(audioUrl) {
+  function playClip(audioUrl, wordTimings) {
     return new Promise((resolve) => {
       const el = audioRef.current; if (!el) { resolve(); return; }
       el.src = audioUrl; try { el.preservesPitch = true; } catch {} el.playbackRate = 0.96;
-      el.onended = () => resolve(); el.onerror = () => resolve();
-      el.play().catch(() => resolve());
+      let tmr = null; setSpokenWord(-1);
+      if (Array.isArray(wordTimings) && wordTimings.length) {
+        tmr = setInterval(() => {
+          const t = el.currentTime || 0; let wi = -1;
+          for (let i = 0; i < wordTimings.length; i++) { if (t >= (wordTimings[i].start || 0)) wi = i; }
+          setSpokenWord(wi);
+        }, 70);
+      }
+      const done = () => { if (tmr) clearInterval(tmr); setSpokenWord(-1); resolve(); };
+      el.onended = done; el.onerror = done;
+      el.play().catch(done);
     });
   }
   function speakLine(text) {
     return new Promise((resolve) => {
       if (typeof window === "undefined" || !window.speechSynthesis) { resolve(); return; }
       const u = new SpeechSynthesisUtterance(text); u.rate = 0.9; u.pitch = 1.05;
-      u.onend = () => resolve(); u.onerror = () => resolve();
+      const w = wordsOf(text); const starts = []; let acc = 0;
+      w.forEach((x) => { const at = text.indexOf(x, acc); starts.push(at); acc = at + x.length; });
+      u.onboundary = (e) => { if (e.name && e.name !== "word") return; let wi = 0; for (let i = 0; i < starts.length; i++) { if (e.charIndex >= starts[i]) wi = i; } setSpokenWord(wi); };
+      u.onend = () => { setSpokenWord(-1); resolve(); }; u.onerror = () => { setSpokenWord(-1); resolve(); };
       window.speechSynthesis.speak(u);
     });
   }
@@ -257,7 +270,8 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       const a = await nextP;
       if (lns[i + 1]) nextP = fetchLineAudio(lns[i + 1].say, voiceFor(lns[i + 1].who));
       if (seqRef.current !== my) return;
-      if (a && a !== "none" && a.audioUrl) await playClip(a.audioUrl);
+      setSpokenWord(-1);
+      if (a && a !== "none" && a.audioUrl) await playClip(a.audioUrl, a.wordTimings);
       else await speakLine(lns[i].say);
     }
     if (seqRef.current === my) { setSpokenLine(-1); setPlaying(false); }
@@ -266,7 +280,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   function narratePage() {
     if (pageLines.length > 1) playSequence(pageLines, page.sfx); else narratePageSingle();
   }
-  function toggleRead() { if (playing) { seqRef.current++; stopAll(); setPlaying(false); setSpoken(-1); setSpokenLine(-1); } else { narratePage(); } }
+  function toggleRead() { if (playing) { seqRef.current++; stopAll(); setPlaying(false); setSpoken(-1); setSpokenLine(-1); setSpokenWord(-1); } else { narratePage(); } }
 
   function repaint() {
     const pg = pages[idx]; if (!pg || !pg.text) return;
@@ -367,7 +381,9 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
           ? pageLines.map((l, i) => (
               <p key={i} style={{ ...s.line, ...(l.who !== "narrator" ? s.lineDialog : {}), ...(i === spokenLine ? s.lineOn : {}) }}>
                 {l.who === "hero" ? <b style={s.speaker}>{(story.character_name || "Hero") + ": "}</b> : l.who === "friend" ? <b style={s.speaker}>{(story.companion_name || "Friend") + ": "}</b> : null}
-                {l.say}
+                {i === spokenLine
+                  ? wordsOf(l.say).map((w, wi) => (<span key={wi} style={wi === spokenWord ? s.wordOn : s.word}>{w} </span>))
+                  : l.say}
               </p>))
           : <p style={s.text}>{words.map((w, i) => (<span key={i} style={{ ...(i === spoken ? s.wordOn : s.word) }}>{w} </span>))}</p>}
       </div>
