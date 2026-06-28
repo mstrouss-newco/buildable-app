@@ -462,7 +462,7 @@ function hideMenu(){ const host=document.getElementById("start"); if(host) host.
   if(!PREFS.seenHint){ PREFS.seenHint=true; savePrefs(); toast("Slide to move, tap to turn, hold the green button to drop fast!"); } }
 function showPad(on){ const e=document.getElementById("pad"); if(e) e.style.display=on?"flex":"none"; }
 function showNav(on){ ["homeBtn","pauseBtn","soundBtn"].forEach(id=>{ const e=document.getElementById(id); if(!e) return;
-  if(id==="homeBtn" && EMBED && on) { e.style.display="none"; return; }   // React shell already shows a Back when embedded
+  if(EMBED && on){ e.style.display="none"; return; }   // in-app: the shell (GameFrame) renders Home/Sound/Menu — don't double them
   e.style.display=on?"flex":"none"; }); }
 function updateSoundBtn(){ const b=document.getElementById("soundBtn"); if(b) b.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }
 function toggleSound(){ if(BA){ BA.unlock(); BA.toggleMute(); if(BA.muted&&BA.stopMusic)BA.stopMusic(); else { _curMusic=null; ensureMusic(); } } updateSoundBtn(); navUpdate(); }
