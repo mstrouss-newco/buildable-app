@@ -33,14 +33,13 @@ Home tiles:
 - **Top Creations** — leave as-is unless told (owned by another session).
 
 Global / app-wide:
-- **Grown-ups button** on every page (`GrownUpFab` in `src/BuildableKids.jsx`) — keep.
-- **Learning On/Off pill** on every page (`LearningControl`), parent-gated by a math
-  check, drives `getLearningSettings`/`setLearningSettings` — keep.
+- **Grown-ups + Learning controls** live in the TOP NAV as ONE gated `GrownUpButton` (math-gate → popover with Learning On/Off + Open grown-ups area). NOT floating. The old floating `GrownUpFab` + `LearningControl` pills are removed. (branch `claude/topnav-grownup`)
+- **Learning On/Off** is inside the top-nav Grown-ups button popover (parent-gated, drives `getLearningSettings`/`setLearningSettings`).
 - **No emoji anywhere** — use SVG / the art library.
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
-- **claude/topnav-grownup** (CLAIMED — top-nav chrome) — moving the floating **Grown-ups**
+- **claude/topnav-grownup** (BRANCH READY — await Mike merge) — moved the floating **Grown-ups**
   (`GrownUpFab`) + **Learning On/Off** (`LearningControl`) controls OUT of their bottom-left
   floating position INTO the top nav as ONE shared, gated nav button, consistently
   site-wide. Touches the high-collision `src/BuildableKids.jsx` (FAB defs ~84/232, the

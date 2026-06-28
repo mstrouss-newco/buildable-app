@@ -81,42 +81,6 @@ const SCREEN_MEMORY = "memory";
 const SCREEN_BINGO = "bingo";
 const SCREEN_SNAKES = "snakes";
 const SCREEN_MAZE = "maze";
-function LearningControl() {
-  const [gate, setGate] = useState(false);
-  const [ab, setAb] = useState({ a: 0, b: 0 });
-  const [val, setVal] = useState("");
-  const [err, setErr] = useState(false);
-  const [, force] = useState(0);
-  let on = false;
-  try { on = !!(getLearningSettings() && getLearningSettings().enabled); } catch (e) {}
-  function open() { setAb({ a: 3 + Math.floor(Math.random() * 7), b: 3 + Math.floor(Math.random() * 7) }); setVal(""); setErr(false); setGate(true); }
-  function submit(e) {
-    e.preventDefault();
-    if (parseInt(val, 10) === ab.a * ab.b) {
-      const next = !on;
-      try { setLearningSettings({ ...getLearningSettings(), enabled: next }); } catch (e2) {}
-      setGate(false); force((x) => x + 1);
-    } else { setErr(true); }
-  }
-  return (
-    <>
-      <button onClick={open} aria-label="Learning mode (grown-ups only)" style={{ position: "fixed", bottom: "calc(64px + env(safe-area-inset-bottom))", left: 16, zIndex: 9998, background: on ? "rgba(40,165,75,0.92)" : "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "10px 16px", fontSize: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }}>Learning: {on ? "On" : "Off"}</button>
-      {gate && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(8,5,18,0.72)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <form onSubmit={submit} style={{ background: "#1E1733", borderRadius: 20, padding: 24, width: "100%", maxWidth: 320, textAlign: "center", fontFamily: NUN }}>
-            <p style={{ color: "#fff", fontFamily: FRED, fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>Grown-ups only</p>
-            <p style={{ color: "#B6AED0", fontSize: 14, margin: "0 0 14px" }}>Quick check — what is {ab.a} × {ab.b}?</p>
-            <input autoFocus type="number" inputMode="numeric" value={val} onChange={(e) => setVal(e.target.value)} placeholder="Type the answer" style={{ width: "100%", boxSizing: "border-box", borderRadius: 12, border: "none", padding: "12px 14px", fontSize: 16, fontFamily: NUN, color: "#333" }} />
-            {err && <p style={{ color: "#ffd7d7", fontSize: 13, margin: "8px 0 0" }}>Not quite — ask a grown-up.</p>}
-            <button type="submit" style={{ width: "100%", marginTop: 12, border: "none", borderRadius: 999, padding: 12, fontFamily: FRED, fontWeight: 700, fontSize: 15, color: "#fff", background: "linear-gradient(90deg,#8A6BFF,#E0578F)", cursor: "pointer" }}>Turn Learning {on ? "Off" : "On"}</button>
-            <button type="button" onClick={() => setGate(false)} style={{ width: "100%", marginTop: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: 10, color: "#C9C2E0", fontFamily: NUN, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-          </form>
-        </div>
-      )}
-    </>
-  );
-}
-
 function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onCheckers, onTyping, onTennis, onSounds, onTown, onTicTacToe, onConnectFour, onDotsBoxes, onMemory, onBingo, onSnakes, onMaze, onTetris }) {
   const tile = (grad, title, desc, onClick, soon, imgId) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -229,9 +193,57 @@ function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes an
 function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=20260627b" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TownScreen({ onHome, onFamily }) { return <GameFrame title="Family Town" src="/family-town.html?v=1" onHome={onHome} right={familyBtn(onFamily)} />; }
 
-function GrownUpFab({ onClick }) {
+// Shared top-nav Grown-ups control. Replaces the floating GrownUpFab + LearningControl
+// pills. One parent-gated button (math check) opens a small menu that collapses BOTH
+// controls: the Learning On/Off toggle and Open grown-ups area. `fixed` renders it as a
+// top-right overlay (hub screens); without it, inline (grouped with My Stuff in a header).
+function GrownUpButton({ onGrownUp, fixed }) {
+  const [step, setStep] = useState(null); // null | "gate" | "menu"
+  const [ab, setAb] = useState({ a: 0, b: 0 });
+  const [val, setVal] = useState("");
+  const [err, setErr] = useState(false);
+  const [, force] = useState(0);
+  let on = false;
+  try { on = !!(getLearningSettings() && getLearningSettings().enabled); } catch (e) {}
+  function openGate() { setAb({ a: 3 + Math.floor(Math.random() * 7), b: 3 + Math.floor(Math.random() * 7) }); setVal(""); setErr(false); setStep("gate"); }
+  function submitGate(e) { e.preventDefault(); if (parseInt(val, 10) === ab.a * ab.b) { setStep("menu"); } else { setErr(true); } }
+  function toggleLearning() { try { setLearningSettings({ ...getLearningSettings(), enabled: !on }); } catch (e) {} force((x) => x + 1); }
+  const btnStyle = fixed
+    ? { position: "fixed", top: "calc(14px + env(safe-area-inset-top))", right: 14, zIndex: 9998, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "9px 15px", fontSize: 14, fontWeight: 800, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }
+    : { ...styles.myStuffButton, display: "inline-flex", alignItems: "center", gap: 6 };
+  const Shield = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z" /></svg>
+  );
+  const overlay = { position: "fixed", inset: 0, zIndex: 10000, background: "rgba(8,5,18,0.72)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
+  const card = { background: "#1E1733", borderRadius: 20, padding: 24, width: "100%", maxWidth: 320, textAlign: "center", fontFamily: NUN };
+  const menuBtn = { width: "100%", marginTop: 10, border: "none", borderRadius: 999, padding: 13, fontFamily: FRED, fontWeight: 700, fontSize: 15, color: "#fff", cursor: "pointer" };
+  const cancelBtn = { width: "100%", marginTop: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: 10, color: "#C9C2E0", fontFamily: NUN, fontSize: 13, cursor: "pointer" };
   return (
-    <button onClick={onClick} aria-label="Open grown-ups area" style={{ position: "fixed", bottom: "calc(16px + env(safe-area-inset-bottom))", left: 16, zIndex: 9998, background: "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "10px 16px", fontSize: 14, fontWeight: 700, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }}>Grown-ups</button>
+    <>
+      <button onClick={openGate} aria-label="Grown-ups" style={btnStyle}><Shield />Grown-ups</button>
+      {step === "gate" && (
+        <div style={overlay}>
+          <form onSubmit={submitGate} style={card}>
+            <p style={{ color: "#fff", fontFamily: FRED, fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>Grown-ups only</p>
+            <p style={{ color: "#B6AED0", fontSize: 14, margin: "0 0 14px" }}>Quick check — what is {ab.a} × {ab.b}?</p>
+            <input autoFocus type="number" inputMode="numeric" value={val} onChange={(e) => setVal(e.target.value)} placeholder="Type the answer" style={{ width: "100%", boxSizing: "border-box", borderRadius: 12, border: "none", padding: "12px 14px", fontSize: 16, fontFamily: NUN, color: "#333" }} />
+            {err && <p style={{ color: "#ffd7d7", fontSize: 13, margin: "8px 0 0" }}>Not quite — ask a grown-up.</p>}
+            <button type="submit" style={{ ...menuBtn, background: "linear-gradient(90deg,#8A6BFF,#E0578F)" }}>Continue</button>
+            <button type="button" onClick={() => setStep(null)} style={cancelBtn}>Cancel</button>
+          </form>
+        </div>
+      )}
+      {step === "menu" && (
+        <div style={overlay}>
+          <div style={card}>
+            <p style={{ color: "#fff", fontFamily: FRED, fontSize: 20, fontWeight: 700, margin: "0 0 14px" }}>Grown-ups</p>
+            <button onClick={toggleLearning} style={{ ...menuBtn, marginTop: 0, background: on ? "rgba(40,165,75,0.92)" : "rgba(255,255,255,0.12)" }}>Learning: {on ? "On" : "Off"}</button>
+            <button onClick={() => { setStep(null); if (onGrownUp) onGrownUp(); }} style={{ ...menuBtn, background: "linear-gradient(90deg,#8A6BFF,#E0578F)" }}>Open grown-ups area</button>
+            <button onClick={() => setStep(null)} style={cancelBtn}>Close</button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -600,7 +612,7 @@ export default function BuildableKids() {
   return (
     <>
       {__view}
-      {[SCREEN_HOME, SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <><GrownUpFab onClick={() => setScreen(SCREEN_GROWNUP)} /><LearningControl /></>}
+      {[SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <GrownUpButton onGrownUp={() => setScreen(SCREEN_GROWNUP)} fixed />}
     </>
   );
 }
@@ -933,7 +945,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
-            <button onClick={onGrownUp} style={styles.myStuffButton}>{activeKid ? "Switch kid" : "Grown-ups"}</button>
+            <GrownUpButton onGrownUp={onGrownUp} />
           </div>
         </div>
 
