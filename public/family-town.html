@@ -646,7 +646,7 @@ function mountStart(){
   show("topbar",false); show("hud",false); host.style.display="block";
   BS.mount(host, {
     title:"Family Town", subtitle:"Roll, move around town, and collect the most coins!",
-    coins: 0, sound: !(BA&&BA.muted),
+    coins: 0, sound: !(BA&&BA.muted), showBack:false,
     hero: { name:"Family Town", img: artURL("hero"), progressText:"3-4 players \u00b7 buy spots, collect coins" },
     modes:["solo","two"], mode:setupMode,
     levels: LENGTHS.map(function(L,i){ return { n:i+1, name:L.name+" game", color:["#2DD4A7","#7C5CFC","#FF7A9A"][i], state:"ready", foot:L.hint }; }),

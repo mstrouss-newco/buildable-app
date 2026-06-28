@@ -354,7 +354,7 @@
       fit(); g.addEventListener("resize", fit);
       D.cv.addEventListener("pointerdown", humanTap);
       if (D.again) D.again.onclick = () => startGame(ctrl.mode);
-      if (D.home) D.home.onclick = () => { try { g.parent && g.parent.postMessage("nav:exit", "*"); } catch (e) {} };
+      if (D.home) D.home.style.display = "none";
       if (D.mute) { const upd = () => D.mute.textContent = "Sound: " + (BA && BA.muted ? "Off" : "On"); upd(); D.mute.onclick = () => { if (BA) { BA.unlock(); BA.toggleMute(); } upd(); }; }
       injectChrome();
       toMenu();

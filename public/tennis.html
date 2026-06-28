@@ -637,7 +637,7 @@ function startConfig() {
   return {
     title: GAME_CONFIG.name,
     subtitle: mode === "two" ? "Two players — one each end of the screen!" : "Bounce it past your opponent to score!",
-    sound: !(BA && BA.muted),
+    sound: !(BA && BA.muted), showBack:false,
     modes: ["solo", "two"], mode: mode,
     levels: GAME_CONFIG.levels.map(function (lv, i) {
       return { n: i + 1, name: lv.name, color: ["#2b6f5c", "#4a3b8c", "#6b2f4a"][i % 3],

@@ -272,7 +272,7 @@ function drawWin(){
 // ---------- START SCREEN (BS) ----------
 function buildStartCfg(){
   return { title:GAME_CONFIG.title, subtitle:"Roll, climb ladders, dodge snakes — race to the top!",
-    sound:BA?!BA.muted:true, showBack:true,
+    sound:BA?!BA.muted:true, showBack:false,
     modes:["p2","p3","p4"], mode:"p"+PREFS.players,
     levels: GAME_CONFIG.boards.map((b,i)=>({ n:i+1, name:b.name, state:"ready", color:b.color, foot:"Pure luck" })),
   };

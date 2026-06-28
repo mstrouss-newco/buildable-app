@@ -158,125 +158,44 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
   );
 }
 
-function SurvivalScreen({ onHome }) {
+// ---- ONE consistent game frame for every full-screen game/maker ----
+// Home is always top-left; games never draw their own back button (BS showBack:false).
+// Also returns to the hub on a nav:exit message (string, {type:"nav:exit"}, or legacy bk:home).
+function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = null, iframeProps = {} }) {
+  useEffect(() => {
+    const h = (e) => { const d = e && e.data; if (d === "nav:exit" || d === "bk:home" || (d && d.type === "nav:exit")) onHome(); };
+    window.addEventListener("message", h);
+    return () => window.removeEventListener("message", h);
+  }, [onHome]);
+  const homeStyle = light
+    ? { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }
+    : { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" };
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Buildable Survival" src="/survival-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+    <div style={{ position: "fixed", inset: 0, background: bg, zIndex: 50 }}>
+      <button onClick={onHome} style={homeStyle} aria-label="Home">Home</button>
+      {right}
+      <iframe title={title} src={src} {...iframeProps} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
 
-function TennisScreen({ onHome, onFamily }) {
-  const pillBtn = { position: "absolute", top: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" };
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
-      <button onClick={onHome} style={{ ...pillBtn, left: 14 }}>Back</button>
-      <button onClick={onFamily} style={{ ...pillBtn, right: 14, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play a sibling</button>
-      <iframe title="Buildable Tennis" src="/tennis.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
+function familyBtn(onFamily) {
+  return <button onClick={onFamily} style={{ position: "absolute", top: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Play a sibling</button>;
 }
 
-function BreakerScreen({ onHome }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Buildable Breaker" src="/breaker-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-function BoardGameScreen({ onHome, title, src }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#0b1030", zIndex: 50 }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title={title} src={src} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-
-function MazeScreen({ onHome }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Maze Munchers" src="/maze-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-
-function SunnyTownScreen({ onHome }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Sunny Town Drive" src="/runner-engine.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-
-function SoundboardScreen({ onHome }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#FBF6EC", zIndex: 50 }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Buildable Sound Machine" src="/soundboard.html" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-
-function ArtStudioScreen({ onHome }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#0b1030", zIndex: 50 }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Buildable Art Studio" src="/art-studio.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-
-function MemoryScreen({ onHome }) {
-  useEffect(() => { const h = (e) => { if (e && e.data === "nav:exit") onHome(); }; window.addEventListener("message", h); return () => window.removeEventListener("message", h); }, [onHome]);
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#131229" }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Home</button>
-      <iframe title="Buildable Memory Match" src="/memory-engine.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-function BingoScreen({ onHome }) {
-  useEffect(() => { const h = (e) => { if (e && e.data === "nav:exit") onHome(); }; window.addEventListener("message", h); return () => window.removeEventListener("message", h); }, [onHome]);
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#131229" }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Home</button>
-      <iframe title="Buildable Bingo" src="/bingo-engine.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-function SnakesScreen({ onHome }) {
-  useEffect(() => { const h = (e) => { if (e && e.data === "nav:exit") onHome(); }; window.addEventListener("message", h); return () => window.removeEventListener("message", h); }, [onHome]);
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#131229" }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Home</button>
-      <iframe title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-function PlatformerScreen({ onHome }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
-      <button onClick={onHome} style={{ position: "absolute", top: 14, left: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Back</button>
-      <iframe title="Buildable Platformer" src="/play.html?v=20260627b" onLoad={(e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} }} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
-
-function TownScreen({ onHome, onFamily }) {
-  const pillBtn = { position: "absolute", top: 14, zIndex: 2, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" };
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
-      <button onClick={onHome} style={{ ...pillBtn, left: 14 }}>Back</button>
-      <button onClick={onFamily} style={{ ...pillBtn, right: 14, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play a sibling</button>
-      <iframe title="Family Town" src="/family-town.html?v=1" style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
-    </div>
-  );
-}
+function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html" onHome={onHome} />; }
+function TennisScreen({ onHome, onFamily }) { return <GameFrame title="Buildable Tennis" src="/tennis.html" onHome={onHome} right={familyBtn(onFamily)} />; }
+function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html" onHome={onHome} />; }
+function BoardGameScreen({ onHome, title, src }) { return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />; }
+function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html" onHome={onHome} />; }
+function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html" onHome={onHome} />; }
+function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
+function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=1" onHome={onHome} bg="#0b1030" />; }
+function MemoryScreen({ onHome }) { return <GameFrame title="Buildable Memory Match" src="/memory-engine.html?v=1" onHome={onHome} bg="#131229" />; }
+function BingoScreen({ onHome }) { return <GameFrame title="Buildable Bingo" src="/bingo-engine.html?v=1" onHome={onHome} bg="#131229" />; }
+function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=1" onHome={onHome} bg="#131229" />; }
+function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=20260627b" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function TownScreen({ onHome, onFamily }) { return <GameFrame title="Family Town" src="/family-town.html?v=1" onHome={onHome} right={familyBtn(onFamily)} />; }
 
 function GrownUpFab({ onClick }) {
   return (

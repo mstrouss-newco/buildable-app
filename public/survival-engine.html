@@ -476,7 +476,7 @@ function bsLevels(){ const unlocked=CHAR?(CHAR.unlocked||0):0;
     return o; }); }
 function bsConfig(){ const unlocked=CHAR?(CHAR.unlocked||0):0; return {
   title:GAME_CONFIG.name, subtitle:"Beat each boss to unlock the next world",
-  coins:CHAR?CHAR.coins:0, sound:!(BA&&BA.muted),
+  coins:CHAR?CHAR.coins:0, sound:!(BA&&BA.muted), showBack:false,
   hero:{ name:heroName(), img:GAME_CONFIG.heroUrl, progressText:unlocked+" of "+GAME_CONFIG.levels.length+" worlds cleared" },
   levels:bsLevels(), customizeLabel:"My Hero",
 }; }

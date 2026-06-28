@@ -293,7 +293,7 @@ let started=false;
 function buildStartCfg(){
   return {
     title:GAME_CONFIG.title, subtitle:"Flip two cards — find the matching pairs",
-    sound: BA?!BA.muted:true, showBack:true,
+    sound: BA?!BA.muted:true, showBack:false,
     modes:["solo","p2","p3","p4"], mode: PREFS.solo?"solo":("p"+PREFS.players),
     levels: GAME_CONFIG.sizes.map((s,i)=>({ n:i+1, name:s.name, state:"ready",
       color:curTheme().color, foot:s.foot+" · "+curTheme().name })),

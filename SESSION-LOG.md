@@ -1,5 +1,27 @@
 # Buildable Kids — Session Log
 
+## Consistent game navigation shipped — one GameFrame, no more double buttons (June 27 2026)
+
+Implemented the nav standard from BUILDING-A-GAME.md and fixed the Dots and Boxes (and
+others) double top-left button bug.
+
+- **One `GameFrame`** in `BuildableKids.jsx` replaces 13 near-duplicate per-game `Screen`
+  components (which had mixed "Back"/"Home" labels + copy-pasted inline buttons). It
+  renders one consistent **Home** pill (top-left) + an optional right control
+  (Tennis/Town "Play a sibling") + listens for exit messages (`"nav:exit"` string,
+  `{type:"nav:exit"}`, and legacy `"bk:home"`) so in-game exits work too.
+- **Games no longer draw their own back button:** set BS `showBack:false` on
+  survival/tennis/family-town/bingo/memory/snakes (breaker/maze/runner/board already
+  false), and hid the board games' own `#home` corner button (`buildable-boardgame.js`).
+  This removes the stacked "Home"+"Back" overlap and makes the top-left Home identical in
+  every game.
+- Audit had found: 13 duplicate shell back buttons (labels drifted Back vs Home), THREE
+  different exit messages, and games variously drawing their own back on top of the
+  shell's — now all unified behind `GameFrame` + `showBack:false`.
+
+Menu/nav only — gameplay untouched. Verified live.
+
+
 ## 2026-06-27 — Maze Munchers: "Make It Mine" buddy, bonus treats, scoring
 - **Make It Mine buddy picker** (shared BS `customizeLabel`/`onCustomize` + a bespoke overlay): kids pick a muncher buddy (color + ears) that overrides the per-world look in EVERY world, or "Match world". Persists in `mz_prefs.buddy`. No emoji (drawn).
 - **Surprise bonus treats**: a glowing bonus appears anywhere for ~7s (with a shrinking life-ring), worth +250 and a burst/pop; reappears on a timer. Optional — never required to clear, so always-winnable + the QA bot are unaffected.

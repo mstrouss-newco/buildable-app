@@ -300,7 +300,7 @@ function drawWin(){
 // ---------- START SCREEN (BS) ----------
 function buildStartCfg(){
   return { title:GAME_CONFIG.title, subtitle:"The device calls — daub a full line to win!",
-    sound:BA?!BA.muted:true, showBack:true,
+    sound:BA?!BA.muted:true, showBack:false,
     modes:["p2","p3","p4"], mode:"p"+PREFS.players,
     levels: GAME_CONFIG.modes.map((m,i)=>({ n:i+1, name:m.name, state:"ready", color:curTheme().color,
       foot: m.key==="words"?"Spell & say":(curTheme().name+" pictures") })),
