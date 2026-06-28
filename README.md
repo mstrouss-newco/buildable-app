@@ -730,6 +730,22 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-27o (Sunny Town Drive: real 3D nature models)
+
+Brought in real CC0 3D models (Quaternius **Stylized Nature MegaKit**) for the leafy towns.
+Curated 14 models (trees/pines/bushes/rocks/flowers/grass/mushroom/fern) sharing 10 textures,
+downscaled (diffuse 256px, normals 64px) → ~2.5MB in `public/models/nature/`. Vendored r128
+`GLTFLoader.js` (+vercel routes for `/GLTFLoader.js` and `/models/(.*)`). Engine: `loadModel`
+caches each GLTF, `prepModel` swaps to toy MeshLambert + auto-scales to a target height + sits
+it on the ground; scenery slots for `TOWN_KIND==="nature3d"` (Maple, Petal) place a random
+cloned model (random spin/scale, re-randomized on recycle) instead of a billboard — other towns
+keep the AI billboards as before, and the blocky/billboard fallback remains if a model fails.
+Brightened lighting (ambient 1.0 + hemisphere fill) so models read well. QA all-win; verified
+live on Maple Street, no console errors. City MegaKit is modular brick pieces (assemble-required)
+— deferred. Source zips live in the working folder.
+
+---
+
 ## Session log — 2026-06-27n (Sunny Town Drive: jump mechanic + world variety)
 
 (1) **Swipe-up JUMP**: new full-width "log" obstacle you jump over (swipe up / up-arrow / space);
