@@ -11,6 +11,7 @@ const ROOT = "public/models";
 const META = {
   nature: { theme: "forest", source: "quaternius", license: "CC0" },
   city:   { theme: "city",   source: "city pack",  license: "verify" },
+  "city-kit": { theme: "city", source: "kenney", license: "CC0" },
 };
 
 const models = [];
@@ -18,12 +19,15 @@ for (const pack of fs.readdirSync(ROOT)) {
   const dir = path.join(ROOT, pack);
   if (!fs.statSync(dir).isDirectory()) continue;
   const meta = META[pack] || { theme: pack, source: pack, license: "" };
+  const pvDir = path.join(dir, "previews");
+  const hasPv = fs.existsSync(pvDir);
   for (const f of fs.readdirSync(dir)) {
-    if (!f.endsWith(".gltf")) continue;
-    const file = f.replace(/\.gltf$/, "");
+    if (!/\.(gltf|glb)$/i.test(f)) continue;
+    const file = f.replace(/\.(gltf|glb)$/i, "");
+    const thumb = hasPv && fs.existsSync(path.join(pvDir, file + ".png")) ? "/models/" + pack + "/previews/" + file + ".png" : "";
     models.push({
-      name: file.replace(/_/g, " "), file, pack,
-      theme: meta.theme, source: meta.source, license: meta.license,
+      name: file.replace(/[_-]/g, " "), file, pack,
+      theme: meta.theme, source: meta.source, license: meta.license, thumb,
       url: "/models/" + pack + "/" + f,
     });
   }

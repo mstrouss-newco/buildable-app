@@ -1,0 +1,174 @@
+{
+  "generated": "2026-06-28",
+  "count": 24,
+  "fx": [
+    {
+      "name": "circle 01",
+      "file": "circle_01",
+      "url": "/fx/circle_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "circle 05",
+      "file": "circle_05",
+      "url": "/fx/circle_05.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "dirt 01",
+      "file": "dirt_01",
+      "url": "/fx/dirt_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "fire 01",
+      "file": "fire_01",
+      "url": "/fx/fire_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "flame 01",
+      "file": "flame_01",
+      "url": "/fx/flame_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "flare 01",
+      "file": "flare_01",
+      "url": "/fx/flare_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "light 01",
+      "file": "light_01",
+      "url": "/fx/light_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "light 03",
+      "file": "light_03",
+      "url": "/fx/light_03.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "magic 01",
+      "file": "magic_01",
+      "url": "/fx/magic_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "magic 05",
+      "file": "magic_05",
+      "url": "/fx/magic_05.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "muzzle 01",
+      "file": "muzzle_01",
+      "url": "/fx/muzzle_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "scorch 01",
+      "file": "scorch_01",
+      "url": "/fx/scorch_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "scratch 01",
+      "file": "scratch_01",
+      "url": "/fx/scratch_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "slash 01",
+      "file": "slash_01",
+      "url": "/fx/slash_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "smoke 01",
+      "file": "smoke_01",
+      "url": "/fx/smoke_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "smoke 05",
+      "file": "smoke_05",
+      "url": "/fx/smoke_05.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "spark 01",
+      "file": "spark_01",
+      "url": "/fx/spark_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "spark 05",
+      "file": "spark_05",
+      "url": "/fx/spark_05.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "star 01",
+      "file": "star_01",
+      "url": "/fx/star_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "star 07",
+      "file": "star_07",
+      "url": "/fx/star_07.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "symbol 01",
+      "file": "symbol_01",
+      "url": "/fx/symbol_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "trace 01",
+      "file": "trace_01",
+      "url": "/fx/trace_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "twirl 01",
+      "file": "twirl_01",
+      "url": "/fx/twirl_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    },
+    {
+      "name": "window 01",
+      "file": "window_01",
+      "url": "/fx/window_01.png",
+      "source": "kenney",
+      "license": "CC0"
+    }
+  ]
+}

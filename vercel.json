@@ -96,6 +96,10 @@
       "dest": "/models/$1"
     },
     {
+      "src": "/fx/(.*)",
+      "dest": "/fx/$1"
+    },
+    {
       "src": "/rileys-garden.html",
       "dest": "/rileys-garden.html"
     },

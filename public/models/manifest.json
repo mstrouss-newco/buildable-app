@@ -1,7 +1,407 @@
 {
   "generated": "2026-06-28",
-  "count": 17,
+  "count": 57,
   "models": [
+    {
+      "name": "building type a",
+      "file": "building-type-a",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-a.png",
+      "url": "/models/city-kit/building-type-a.glb"
+    },
+    {
+      "name": "building type b",
+      "file": "building-type-b",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-b.png",
+      "url": "/models/city-kit/building-type-b.glb"
+    },
+    {
+      "name": "building type c",
+      "file": "building-type-c",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-c.png",
+      "url": "/models/city-kit/building-type-c.glb"
+    },
+    {
+      "name": "building type d",
+      "file": "building-type-d",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-d.png",
+      "url": "/models/city-kit/building-type-d.glb"
+    },
+    {
+      "name": "building type e",
+      "file": "building-type-e",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-e.png",
+      "url": "/models/city-kit/building-type-e.glb"
+    },
+    {
+      "name": "building type f",
+      "file": "building-type-f",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-f.png",
+      "url": "/models/city-kit/building-type-f.glb"
+    },
+    {
+      "name": "building type g",
+      "file": "building-type-g",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-g.png",
+      "url": "/models/city-kit/building-type-g.glb"
+    },
+    {
+      "name": "building type h",
+      "file": "building-type-h",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-h.png",
+      "url": "/models/city-kit/building-type-h.glb"
+    },
+    {
+      "name": "building type i",
+      "file": "building-type-i",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-i.png",
+      "url": "/models/city-kit/building-type-i.glb"
+    },
+    {
+      "name": "building type j",
+      "file": "building-type-j",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-j.png",
+      "url": "/models/city-kit/building-type-j.glb"
+    },
+    {
+      "name": "building type k",
+      "file": "building-type-k",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-k.png",
+      "url": "/models/city-kit/building-type-k.glb"
+    },
+    {
+      "name": "building type l",
+      "file": "building-type-l",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-l.png",
+      "url": "/models/city-kit/building-type-l.glb"
+    },
+    {
+      "name": "building type m",
+      "file": "building-type-m",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-m.png",
+      "url": "/models/city-kit/building-type-m.glb"
+    },
+    {
+      "name": "building type n",
+      "file": "building-type-n",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-n.png",
+      "url": "/models/city-kit/building-type-n.glb"
+    },
+    {
+      "name": "building type o",
+      "file": "building-type-o",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-o.png",
+      "url": "/models/city-kit/building-type-o.glb"
+    },
+    {
+      "name": "building type p",
+      "file": "building-type-p",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-p.png",
+      "url": "/models/city-kit/building-type-p.glb"
+    },
+    {
+      "name": "building type q",
+      "file": "building-type-q",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-q.png",
+      "url": "/models/city-kit/building-type-q.glb"
+    },
+    {
+      "name": "building type r",
+      "file": "building-type-r",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-r.png",
+      "url": "/models/city-kit/building-type-r.glb"
+    },
+    {
+      "name": "building type s",
+      "file": "building-type-s",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-s.png",
+      "url": "/models/city-kit/building-type-s.glb"
+    },
+    {
+      "name": "building type t",
+      "file": "building-type-t",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-t.png",
+      "url": "/models/city-kit/building-type-t.glb"
+    },
+    {
+      "name": "building type u",
+      "file": "building-type-u",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/building-type-u.png",
+      "url": "/models/city-kit/building-type-u.glb"
+    },
+    {
+      "name": "driveway long",
+      "file": "driveway-long",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/driveway-long.png",
+      "url": "/models/city-kit/driveway-long.glb"
+    },
+    {
+      "name": "driveway short",
+      "file": "driveway-short",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/driveway-short.png",
+      "url": "/models/city-kit/driveway-short.glb"
+    },
+    {
+      "name": "fence",
+      "file": "fence",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence.png",
+      "url": "/models/city-kit/fence.glb"
+    },
+    {
+      "name": "fence 1x2",
+      "file": "fence-1x2",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence-1x2.png",
+      "url": "/models/city-kit/fence-1x2.glb"
+    },
+    {
+      "name": "fence 1x3",
+      "file": "fence-1x3",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence-1x3.png",
+      "url": "/models/city-kit/fence-1x3.glb"
+    },
+    {
+      "name": "fence 1x4",
+      "file": "fence-1x4",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence-1x4.png",
+      "url": "/models/city-kit/fence-1x4.glb"
+    },
+    {
+      "name": "fence 2x2",
+      "file": "fence-2x2",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence-2x2.png",
+      "url": "/models/city-kit/fence-2x2.glb"
+    },
+    {
+      "name": "fence 2x3",
+      "file": "fence-2x3",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence-2x3.png",
+      "url": "/models/city-kit/fence-2x3.glb"
+    },
+    {
+      "name": "fence 3x2",
+      "file": "fence-3x2",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence-3x2.png",
+      "url": "/models/city-kit/fence-3x2.glb"
+    },
+    {
+      "name": "fence 3x3",
+      "file": "fence-3x3",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence-3x3.png",
+      "url": "/models/city-kit/fence-3x3.glb"
+    },
+    {
+      "name": "fence low",
+      "file": "fence-low",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/fence-low.png",
+      "url": "/models/city-kit/fence-low.glb"
+    },
+    {
+      "name": "path long",
+      "file": "path-long",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/path-long.png",
+      "url": "/models/city-kit/path-long.glb"
+    },
+    {
+      "name": "path short",
+      "file": "path-short",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/path-short.png",
+      "url": "/models/city-kit/path-short.glb"
+    },
+    {
+      "name": "path stones long",
+      "file": "path-stones-long",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/path-stones-long.png",
+      "url": "/models/city-kit/path-stones-long.glb"
+    },
+    {
+      "name": "path stones messy",
+      "file": "path-stones-messy",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/path-stones-messy.png",
+      "url": "/models/city-kit/path-stones-messy.glb"
+    },
+    {
+      "name": "path stones short",
+      "file": "path-stones-short",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/path-stones-short.png",
+      "url": "/models/city-kit/path-stones-short.glb"
+    },
+    {
+      "name": "planter",
+      "file": "planter",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/planter.png",
+      "url": "/models/city-kit/planter.glb"
+    },
+    {
+      "name": "tree large",
+      "file": "tree-large",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/tree-large.png",
+      "url": "/models/city-kit/tree-large.glb"
+    },
+    {
+      "name": "tree small",
+      "file": "tree-small",
+      "pack": "city-kit",
+      "theme": "city",
+      "source": "kenney",
+      "license": "CC0",
+      "thumb": "/models/city-kit/previews/tree-small.png",
+      "url": "/models/city-kit/tree-small.glb"
+    },
     {
       "name": "Building Large 2",
       "file": "Building_Large_2",
@@ -9,6 +409,7 @@
       "theme": "city",
       "source": "city pack",
       "license": "verify",
+      "thumb": "",
       "url": "/models/city/Building_Large_2.gltf"
     },
     {
@@ -18,6 +419,7 @@
       "theme": "city",
       "source": "city pack",
       "license": "verify",
+      "thumb": "",
       "url": "/models/city/Building_Medium_2_001.gltf"
     },
     {
@@ -27,6 +429,7 @@
       "theme": "city",
       "source": "city pack",
       "license": "verify",
+      "thumb": "",
       "url": "/models/city/Building_Small_1.gltf"
     },
     {
@@ -36,6 +439,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Bush_Common.gltf"
     },
     {
@@ -45,6 +449,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Bush_Common_Flowers.gltf"
     },
     {
@@ -54,6 +459,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/CommonTree_1.gltf"
     },
     {
@@ -63,6 +469,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/CommonTree_3.gltf"
     },
     {
@@ -72,6 +479,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/CommonTree_5.gltf"
     },
     {
@@ -81,6 +489,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Fern_1.gltf"
     },
     {
@@ -90,6 +499,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Flower_3_Group.gltf"
     },
     {
@@ -99,6 +509,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Flower_4_Group.gltf"
     },
     {
@@ -108,6 +519,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Grass_Common_Tall.gltf"
     },
     {
@@ -117,6 +529,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Mushroom_Common.gltf"
     },
     {
@@ -126,6 +539,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Pine_1.gltf"
     },
     {
@@ -135,6 +549,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Pine_3.gltf"
     },
     {
@@ -144,6 +559,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Rock_Medium_1.gltf"
     },
     {
@@ -153,6 +569,7 @@
       "theme": "forest",
       "source": "quaternius",
       "license": "CC0",
+      "thumb": "",
       "url": "/models/nature/Rock_Medium_2.gltf"
     }
   ]
