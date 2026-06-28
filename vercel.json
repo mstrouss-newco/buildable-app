@@ -80,6 +80,14 @@
       "dest": "/three.min.js"
     },
     {
+      "src": "/GLTFLoader.js",
+      "dest": "/GLTFLoader.js"
+    },
+    {
+      "src": "/models/(.*)",
+      "dest": "/models/$1"
+    },
+    {
       "src": "/rileys-garden.html",
       "dest": "/rileys-garden.html"
     },

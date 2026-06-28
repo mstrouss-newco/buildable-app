@@ -42,6 +42,7 @@
 <!-- Three.js is hosted on our OWN site (not a CDN) so it always loads, even on
      school/work networks that block cdnjs. This was the "never starts" cause. -->
 <script src="three.min.js?v=r128"></script>
+<script src="GLTFLoader.js?v=1"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script>
@@ -357,6 +358,31 @@ const SCENERY_PIECES=["bld_a","bld_b","bld_c","tree","tree_b","prop"];
 const PIECE_DIM={ bld_a:{w:5.4,h:6.2}, bld_b:{w:5.0,h:5.2}, bld_c:{w:4.6,h:6.6},
   tree:{w:4.6,h:5.6}, tree_b:{w:4.2,h:5.8}, prop:{w:3.4,h:3.2} };
 const propTexCache={};   // "town:piece" -> THREE.Texture, or false if it failed
+
+// ---- real 3D models (Quaternius Stylized Nature MegaKit, CC0) for leafy towns ----
+const TOWN_KIND={ maple:"nature3d", petal:"nature3d", beach:"billboard", market:"billboard", downtown:"billboard", rainbow:"billboard" };
+const NATURE_MODELS=["CommonTree_1","CommonTree_3","CommonTree_5","Pine_1","Pine_3","Bush_Common","Bush_Common_Flowers","Rock_Medium_1","Rock_Medium_2","Flower_3_Group","Flower_4_Group","Grass_Common_Tall","Mushroom_Common","Fern_1"];
+const MODEL_TARGET_H={ tree:6.0, pine:6.4, bush:2.4, rock:1.7, flower:1.5, grass:1.4, mushroom:1.3, fern:1.8 };
+function modelCategory(n){ n=n.toLowerCase(); for(const k of ["pine","tree","bush","rock","flower","grass","mushroom","fern"]) if(n.indexOf(k)>=0) return k; return "tree"; }
+let _gltf=null; const modelCache={}, modelCbs={};
+function prepModel(obj,name){ // toy Lambert material + auto-scale to target height + sit on ground
+  obj.traverse(o=>{ if(o.isMesh){ const m=o.material;
+    o.material=new THREE.MeshLambertMaterial({ map:(m&&m.map)||null, color:(m&&m.color)?m.color:0xffffff, transparent:!!(m&&m.transparent), alphaTest:(m&&m.alphaTest)||0, side:THREE.DoubleSide }); } });
+  let box=new THREE.Box3().setFromObject(obj), size=new THREE.Vector3(); box.getSize(size);
+  const t=MODEL_TARGET_H[modelCategory(name)]||5, s=size.y>0?t/size.y:1; obj.scale.setScalar(s);
+  box=new THREE.Box3().setFromObject(obj); obj.position.y -= box.min.y;
+}
+function loadModel(name, cb){
+  if(!THREE || !THREE.GLTFLoader) return;
+  if(modelCache[name]===false) return;
+  if(modelCache[name] && modelCache[name]!=="loading"){ cb(modelCache[name]); return; }
+  if(modelCache[name]==="loading"){ modelCbs[name].push(cb); return; }
+  modelCache[name]="loading"; modelCbs[name]=[cb];
+  if(!_gltf) _gltf=new THREE.GLTFLoader();
+  _gltf.load("models/nature/"+name+".gltf",
+    (g)=>{ const o=g.scene; prepModel(o,name); modelCache[name]=o; (modelCbs[name]||[]).forEach(c=>c(o)); modelCbs[name]=[]; },
+    undefined, ()=>{ modelCache[name]=false; });
+}
 function makeFallbackProp(piece){ const g=new THREE.Group();
   if(piece.indexOf("tree")===0){ const tr=meshOf(cyl(0.2,0.26,1.1,10),0x8a5a3c); tr.position.y=0.55; g.add(tr);
     const lv=meshOf(new THREE.SphereGeometry(1.0,12,10),0x4fae5a); lv.position.y=1.7; g.add(lv); }
@@ -371,8 +397,17 @@ function makeScenerySlot(){ const grp=new THREE.Group();
   const plane=new THREE.Mesh(new THREE.PlaneGeometry(1,1), planeMat); plane.visible=false; grp.add(plane);
   grp.userData={ fb, plane, piece:null, town:null, side:1 }; return grp;
 }
+function clearSlotModel(slot){ if(slot.userData.model){ slot.remove(slot.userData.model); slot.userData.model=null; } }
 function setSlotPiece(slot, town, piece){
   slot.userData.piece=piece; slot.userData.town=town;
+  clearSlotModel(slot);
+  if(TOWN_KIND[town]==="nature3d"){   // real 3D model
+    slot.userData.fb.visible=false; slot.userData.plane.visible=false;
+    slot.scale.setScalar(0.8+Math.random()*0.5); slot.rotation.y=Math.random()*6.28;
+    loadModel(piece, (proto)=>{ if(slot.userData.town!==town||slot.userData.piece!==piece) return; clearSlotModel(slot); const inst=proto.clone(true); slot.add(inst); slot.userData.model=inst; });
+    return;
+  }
+  slot.rotation.y=0;
   const fb=slot.userData.fb; while(fb.children.length)fb.remove(fb.children[0]); fb.add(makeFallbackProp(piece)); fb.visible=true;
   const plane=slot.userData.plane, d=PIECE_DIM[piece]||{w:5,h:5.5};
   plane.geometry.dispose(); plane.geometry=new THREE.PlaneGeometry(d.w,d.h); plane.position.y=d.h/2; plane.visible=false; plane.material.map=null;
@@ -386,9 +421,10 @@ function setSlotPiece(slot, town, piece){
     undefined, ()=>{ propTexCache[key]=false; }); }catch(e){}
 }
 function randPiece(){ return SCENERY_PIECES[Math.floor(Math.random()*SCENERY_PIECES.length)]; }
-function applyTownScenery(town){ if(!scene)return; for(const slot of scenePool) setSlotPiece(slot, town, randPiece()); }
+function randItem(town){ return TOWN_KIND[town]==="nature3d" ? NATURE_MODELS[Math.floor(Math.random()*NATURE_MODELS.length)] : randPiece(); }
+function applyTownScenery(town){ if(!scene)return; for(const slot of scenePool) setSlotPiece(slot, town, randItem(town)); }
 function recycleSlot(slot){ const town=slot.userData.town; if(!town) return;
-  setSlotPiece(slot, town, randPiece());
+  setSlotPiece(slot, town, randItem(town));
   const far=Math.random()<0.35, xoff=far?(10.5+Math.random()*2):(6.6+Math.random()*1.4);
   slot.position.x = slot.userData.side*xoff; }
 
