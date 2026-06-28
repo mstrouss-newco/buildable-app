@@ -161,7 +161,7 @@
           ${backHtml}
           <div style="display:flex;align-items:center;gap:8px">
             ${cfg.coins != null ? `<span class="bss-coins">${svg("star", 14, THEME.gold, THEME.gold)}${cfg.coins}</span>` : ""}
-            <button class="bss-ic" data-act="sound" aria-label="Sound">${svg(soundIc, 18)}</button>
+            ${cfg.hideSound ? "" : `<button class="bss-ic" data-act="sound" aria-label="Sound">${svg(soundIc, 18)}</button>`}
           </div>
         </div>
         <div class="bss-head"><div class="bss-title">${esc(cfg.title || "")}</div>${cfg.subtitle ? `<div class="bss-sub">${esc(cfg.subtitle)}</div>` : ""}</div>

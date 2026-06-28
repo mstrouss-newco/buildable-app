@@ -261,6 +261,28 @@ gameplay** (D-pad, jump, paddle). That's why controls go top-right, not bottom �
 games use the bottom for movement. (play/runner/breaker/maze/survival/board standardized
 to this 2026-06-27.)
 
+**Shell-owned chrome (the durable end state).** The most robust version is for the React
+shell (`GameFrame`) to render ALL the chrome — Home (top-left) AND the Sound/Menu/Help
+cluster (top-right) — so an engine draws NO nav buttons of its own. Then there is nothing
+per-game to drift, get clobbered by a concurrent edit, or overlap a game's HUD. A game
+opts in via the shared bridge `public/buildable-gamenav.js` (`BuildableGameNav`):
+
+```js
+// after the engine's own controls are wired (kept for standalone use):
+BuildableGameNav.register({
+  hide: ["muteBtn","helpBtn","backBtn"],     // the engine's own button ids (hidden in-app)
+  onSound: () => toggleMute(), onMenu: () => showMenu(), onHelp: () => openHelp(),
+  soundOn: () => !muted, inGame: () => state === "play",
+});
+// call BuildableGameNav.update() whenever sound/inGame changes.
+```
+Also pass `hideSound: true` to `BS.mount(...)` so the start screen's own sound icon yields
+to the shell's. In-app the bridge hides the engine's buttons and reports state; the shell
+renders the cluster and sends back `nav:sound`/`nav:menu`/`nav:help`. **Standalone**
+(engine opened directly) the bridge does nothing, so the engine's own buttons still work.
+Rollout is capability-based and per-engine: until an engine calls `register`, `GameFrame`
+shows only Home (today's behavior), so converting one engine never affects the others.
+
 **One shared wrapper, not four.** The React shell wraps every game iframe in a single
 `GameFrame` component that renders the iframe + the standard Home control (consistent
 pill, top-left) and owns the exit. The per-game `SurvivalScreen`/`BreakerScreen`/

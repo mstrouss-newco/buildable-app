@@ -241,6 +241,28 @@ QA: `qa-tennis.mjs` still wins Easy/Normal/Tricky (render smoke ok); `npm run bu
 
 **Owner action for family (cross-device) play:** run `db/create-rt-matches.sql` once in Supabase (if not already), and confirm the parent-account lane env vars are live. Solo + same-screen 2-player work with no setup. **Still TODO:** live QA across two real devices/sessions (the one thing a headless sim can't cover), and optional bespoke background music.
 
+## Shell-owned game chrome — mechanism shipped (June 27 2026)
+
+The durable fix so nav controls stop drifting/overlapping: the React shell (`GameFrame`)
+can now render ALL the chrome — Home + a Sound/Menu/Help cluster — so engines draw NO nav
+buttons of their own (nothing per-game to clobber). Shipped the MECHANISM only this pass
+(safe: it's capability-based and inert until an engine opts in, so live games are
+unchanged):
+
+- `public/buildable-gamenav.js` (`BuildableGameNav`) — the game-side bridge: in-app it
+  hides the engine's own nav buttons and reports capabilities + sound state to the shell;
+  standalone it does nothing (engine's own buttons still work).
+- `GameFrame` (BuildableKids.jsx) — renders Home always, and the Sound/Menu/Help cluster
+  ONLY for a game that sends `nav:state`; clicks go back as `nav:sound/menu/help`.
+- `BS` gained `hideSound` so the start screen's sound icon yields to the shell's.
+- Doc + per-engine conversion recipe in BUILDING-A-GAME.md.
+
+Rollout is per-engine and capability-based: an engine opts in by calling
+`BuildableGameNav.register(...)`; until then `GameFrame` shows only Home, exactly as now.
+Deferred converting engines this pass because breaker/runner are being actively rewritten
+by other work — converting now would just get clobbered. (Overlaps themselves were already
+fixed in the prior commit; this makes the fix un-clobberable going forward.)
+
 ## In-game controls: one rule — top-left=Home, controls top-right, bottom=gameplay (June 27 2026)
 
 Fixes play.html (platformer) overlapping the shell Home, and ends the bottom-left vs

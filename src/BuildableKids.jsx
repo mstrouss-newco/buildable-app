@@ -160,20 +160,49 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
 // ---- ONE consistent game frame for every full-screen game/maker ----
 // Home is always top-left; games never draw their own back button (BS showBack:false).
 // Also returns to the hub on a nav:exit message (string, {type:"nav:exit"}, or legacy bk:home).
+function NavBtn({ kind, muted, top, onClick }) {
+  const sv = { stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", fill: "none" };
+  let icon = null;
+  if (kind === "sound") icon = muted
+    ? <g {...sv}><path d="M5 9v6h4l5 4V5L9 9z" /><path d="M22 9l-6 6M16 9l6 6" /></g>
+    : <g {...sv}><path d="M5 9v6h4l5 4V5L9 9z" /><path d="M17 8a5 5 0 0 1 0 8" /></g>;
+  else if (kind === "menu") icon = <g {...sv}><path d="M4 7h16M4 12h16M4 17h16" /></g>;
+  return (
+    <button onClick={onClick} aria-label={kind} style={{ position: "absolute", top, right: 14, zIndex: 3, width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "rgba(18,18,38,0.55)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: NUN, fontWeight: 800, fontSize: 17, padding: 0 }}>
+      {kind === "help" ? "?" : <svg width="20" height="20" viewBox="0 0 24 24">{icon}</svg>}
+    </button>
+  );
+}
+
+// One shell-owned game wrapper. Home is always top-left. If a game opts into the
+// shared nav bridge (buildable-gamenav.js -> posts "nav:state"), the shell also renders
+// its Sound/Menu/Help cluster top-right and the game draws NO nav buttons of its own
+// (nothing per-game to drift or overlap). Games that don't opt in render exactly as before.
 function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = null, iframeProps = {} }) {
+  const ref = useRef(null);
+  const [nav, setNav] = useState(null);
   useEffect(() => {
-    const h = (e) => { const d = e && e.data; if (d === "nav:exit" || d === "bk:home" || (d && d.type === "nav:exit")) onHome(); };
+    const h = (e) => {
+      const d = e && e.data;
+      if (d === "nav:exit" || d === "bk:home" || (d && d.type === "nav:exit")) { onHome(); return; }
+      if (d && d.type === "nav:state") setNav({ sound: !!d.sound, hasMenu: !!d.hasMenu, hasHelp: !!d.hasHelp, inGame: d.inGame !== false });
+    };
     window.addEventListener("message", h);
     return () => window.removeEventListener("message", h);
   }, [onHome]);
+  const send = (type) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type }, "*"); } catch (e) {} };
   const homeStyle = light
     ? { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }
     : { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" };
+  const showMenuBtn = nav && nav.hasMenu && nav.inGame;
   return (
     <div style={{ position: "fixed", inset: 0, background: bg, zIndex: 50 }}>
       <button onClick={onHome} style={homeStyle} aria-label="Home">Home</button>
       {right}
-      <iframe title={title} src={src} {...iframeProps} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+      {nav && <NavBtn kind="sound" muted={!nav.sound} top={14} onClick={() => send("nav:sound")} />}
+      {showMenuBtn && <NavBtn kind="menu" top={58} onClick={() => send("nav:menu")} />}
+      {nav && nav.hasHelp && <NavBtn kind="help" top={showMenuBtn ? 102 : 58} onClick={() => send("nav:help")} />}
+      <iframe ref={ref} title={title} src={src} {...iframeProps} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
     </div>
   );
 }
