@@ -1,5 +1,24 @@
 # Buildable Kids — Session Log
 
+## 2026-06-27 — Board games: adopt shared game-nav (fix phone overlap) + Dots and Boxes size picker
+Two pieces of Mike feedback on the board games.
+- **Nav overlap fixed at the shared level.** The board games were wrapped in `GameFrame` but had
+  never adopted the standardized `buildable-gamenav.js` bridge, so in-app they showed the shell's
+  controls AND their own (Home + status + Pause + Sound), which collided on phone widths. Now the
+  shared board shell (`buildable-boardgame.js`) **registers with `buildable-gamenav`**: in-app it
+  hides the engine's own Home/Sound/Pause and the React `GameFrame` draws the ONE consistent set
+  (Home top-left, Sound + Menu top-right); standalone the engine keeps its own buttons. The turn/
+  score **status moved to its own row** (wraps, never sits in the top-button band), and Pause+Sound
+  share one right-aligned cluster so they can't overlap each other. Fixed once in the shell → all
+  three board games benefit. (Did NOT touch `buildable-gamenav.js` / `GameFrame` — only adopted them.)
+- **Dots and Boxes — pick your board size.** Start screen now offers **Small (3x3) / Medium (5x5) /
+  Large (7x6)** size cards (shared BS `ready` cards via a new `spec.choices` hook in the shell), so
+  the same game scales from a quick kid grid to a big 42-box match. The engine was refactored to a
+  fully dynamic board size (cols/rows live in the game state; geometry/edges/AI/draw all derive from
+  it). Still always-winnable / pressure-free.
+- **QA:** `qa-dotsandboxes.mjs` now checks ALL three sizes (every game draws all edges + claims all
+  boxes; AI beatable on each); `qa-tictactoe` / `qa-connectfour` still green; `npm run build` clean.
+
 ## 2026-06-27 — Survival audio: no per-shot beep; impact/kill/explode only
 - Removed the per-bullet fire sound (Mike: constant "beep beep" on every shot).
 - Sound on meaningful events: soft bespoke impact (spk_hit) on a non-lethal hit

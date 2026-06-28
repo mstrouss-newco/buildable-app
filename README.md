@@ -103,6 +103,21 @@ Game length is customizable (Short/Medium/Long = 2/3/4 laps). **Pricing plays li
 - **Owner action:** run `db/create-town-matches.sql` once for cross-device family play; confirm
   the parent-account lane env vars are live (pass-and-play + bot need no setup). On branch
   `claude/games-family-town` — **not** pushed to `main`; merge to deploy + live-QA on devices.
+## Board games: shared game-nav adopted (phone-overlap fix) + Dots and Boxes size picker (June 27 2026)
+
+Mike feedback follow-up on the board games.
+- **Phone-width nav overlap fixed in the shared shell.** The board games sat in `GameFrame` but never
+  adopted `buildable-gamenav.js`, so in-app they doubled the shell's controls with their own (Home +
+  status + Pause + Sound) and collided on phones. `buildable-boardgame.js` now **registers with the
+  shared nav bridge** (in-app: hide engine Home/Sound/Pause, shell draws the one consistent set;
+  standalone: engine keeps its own). Status text moved to its own row (wraps), Pause+Sound grouped in
+  one right cluster. One shell change → all three games fixed. (Only adopted the shared nav — did not
+  edit `buildable-gamenav.js` / `GameFrame`.)
+- **Dots and Boxes is now resizable:** Small (3x3) / Medium (5x5) / Large (7x6) cards on the start
+  screen (via a new `spec.choices` hook in the shell); engine refactored to a dynamic board size.
+- **QA:** `qa-dotsandboxes.mjs` covers all three sizes (all boxes claimed, AI beatable); others green;
+  build clean.
+
 ## Three simple 2-player board games on ONE shared shell (June 27 2026)
 
 Built Tic-Tac-Toe, Connect Four, and Dots and Boxes in one pass by creating a reusable

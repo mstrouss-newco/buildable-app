@@ -246,6 +246,7 @@
       if (D.hud) D.hud.textContent = S.hud ? S.hud(ctrl.G, ctrl) : "";
       if (BA) BA.unlock();
       if (ctrl.mode === "solo" && ctrl.turn === 2) ctrl.aiPending = 24;
+      navUpdate();
     }
 
     function toMenu() {
@@ -254,6 +255,7 @@
       if (D.banner) D.banner.classList.remove("show");
       if (D.start) D.start.style.display = "block";
       mountStart();
+      navUpdate();
     }
 
     let startScreen = null;
@@ -262,13 +264,15 @@
         title: S.title, subtitle: S.subtitle,
         sound: !(BA && BA.muted), showBack: false,
         modes: S.modes || ["solo", "two"], mode: ctrl.mode,
-        levels: [{ n: 1, name: ctrl.mode === "solo" ? ("Play " + (S.aiName || "the computer")) : "Two players", color: (S.players && S.players[0] && S.players[0].col) || "#5B8CFF", state: "ready", foot: ctrl.mode === "solo" ? "vs an easy computer" : "take turns on one screen" }],
+        levels: S.choices
+          ? S.choices.map(function (c, i) { return { n: i + 1, name: c.name, color: (S.players && S.players[0] && S.players[0].col) || "#5B8CFF", state: "ready", foot: c.foot }; })
+          : [{ n: 1, name: ctrl.mode === "solo" ? ("Play " + (S.aiName || "the computer")) : "Two players", color: (S.players && S.players[0] && S.players[0].col) || "#5B8CFF", state: "ready", foot: ctrl.mode === "solo" ? "vs an easy computer" : "take turns on one screen" }],
       };
     }
     function mountStart() {
       if (!BS || !D.start) return;
       const cb = {
-        onPlay: () => startGame(ctrl.mode),
+        onPlay: (n) => { if (S.choices && S.applyChoice) { try { S.applyChoice(S.choices[(n || 1) - 1].value); } catch (e) {} } startGame(ctrl.mode); },
         onMode: (m) => { ctrl.mode = m; startScreen && startScreen.update(startCfg()); },
         onSound: () => { if (BA) { BA.unlock(); BA.toggleMute(); } },
         onBack: () => { try { g.parent && g.parent.postMessage("nav:exit", "*"); } catch (e) {} },
@@ -293,6 +297,7 @@
     // ----- shared in-game menu (Pause button + pause overlay + Continue) -----
     // Built ONCE here so all three games get the SAME menu — edit it in one place.
     let pauseBtn = null, contBtn = null, pauseOv = null;
+    function navUpdate() { try { if (g.BuildableGameNav) g.BuildableGameNav.update(); } catch (e) {} }
     function openPause() { if (ctrl.state !== "play") return; ctrl.paused = true; if (pauseOv) pauseOv.classList.add("show"); }
     function closePause() { ctrl.paused = false; if (pauseOv) pauseOv.classList.remove("show"); }
     function injectChrome() {
@@ -300,7 +305,12 @@
       const st = document.createElement("style"); st.textContent =
         ".bgctl{position:fixed;top:12px;z-index:32;font-family:inherit;font-weight:800;font-size:14px;color:#cdd0ff;" +
         "background:rgba(26,20,64,.72);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;display:none}" +
-        "#bgPauseBtn{right:108px}" +
+        // status text sits on its OWN row below the top buttons so it never collides on phone widths
+        "#hud{top:54px;left:50%;transform:translateX(-50%);max-width:calc(100% - 150px);white-space:normal;" +
+        "text-align:center;font-size:15px;line-height:1.25;pointer-events:none}" +
+        // Pause + Sound share ONE right-aligned cluster -> they lay out without overlap regardless of label width
+        "#bgRight{position:fixed;top:10px;right:10px;z-index:32;display:flex;gap:8px;align-items:center}" +
+        "#bgRight>button{position:static;top:auto;right:auto;left:auto;bottom:auto;margin:0}" +
         "#bgContinue{top:auto;bottom:26px;left:50%;transform:translateX(-50%);z-index:14;color:#11331f;background:#7ee0a0;" +
         "border:none;padding:14px 30px;font-size:18px;border-radius:16px;box-shadow:0 6px 0 #4cba74}" +
         "#bgPause{position:fixed;inset:0;z-index:46;display:none;flex-direction:column;align-items:center;justify-content:center;" +
@@ -312,7 +322,10 @@
         "#bgPause button.ghost{background:#241a52;color:#cdd0ff;box-shadow:none;border:1px solid #3a2c6e}";
       (document.head || document.documentElement).appendChild(st);
       pauseBtn = document.createElement("button"); pauseBtn.id = "bgPauseBtn"; pauseBtn.className = "bgctl"; pauseBtn.textContent = "Pause";
-      pauseBtn.onclick = openPause; document.body.appendChild(pauseBtn);
+      pauseBtn.onclick = openPause;
+      const rightWrap = document.createElement("div"); rightWrap.id = "bgRight"; document.body.appendChild(rightWrap);
+      rightWrap.appendChild(pauseBtn);
+      if (D.mute) rightWrap.appendChild(D.mute);   // group Sound next to Pause (no more overlap)
       contBtn = document.createElement("button"); contBtn.id = "bgContinue"; contBtn.className = "bgctl"; contBtn.textContent = "Continue your game";
       contBtn.onclick = resumeSave; document.body.appendChild(contBtn);
       pauseOv = document.createElement("div"); pauseOv.id = "bgPause";
@@ -354,10 +367,19 @@
       fit(); g.addEventListener("resize", fit);
       D.cv.addEventListener("pointerdown", humanTap);
       if (D.again) D.again.onclick = () => startGame(ctrl.mode);
-      if (D.home) D.home.style.display = "none";
-      if (D.mute) { const upd = () => D.mute.textContent = "Sound: " + (BA && BA.muted ? "Off" : "On"); upd(); D.mute.onclick = () => { if (BA) { BA.unlock(); BA.toggleMute(); } upd(); }; }
+      if (D.home) D.home.onclick = () => { try { g.parent && g.parent.postMessage("nav:exit", "*"); } catch (e) {} };  // standalone Home (hidden in-app by gamenav)
+      if (D.mute) { const upd = () => D.mute.textContent = "Sound: " + (BA && BA.muted ? "Off" : "On"); upd(); D.mute.onclick = () => { if (BA) { BA.unlock(); BA.toggleMute(); } upd(); navUpdate(); }; }
       injectChrome();
       toMenu();
+      // Adopt the shared in-game nav (buildable-gamenav.js): in-app, hide our own
+      // Home/Sound/Pause and let the React shell (GameFrame) draw ONE consistent set.
+      if (g.BuildableGameNav) { g.BuildableGameNav.register({
+        hide: ["home", "mute", "bgPauseBtn"],
+        onSound: function () { if (BA) { BA.unlock(); BA.toggleMute(); } if (D.mute) D.mute.textContent = "Sound: " + (BA && BA.muted ? "Off" : "On"); navUpdate(); },
+        onMenu: function () { toMenu(); },                 // shell "Menu" -> back to the start screen (auto-saved)
+        soundOn: function () { return !(BA && BA.muted); },
+        inGame: function () { return ctrl.state === "play"; },
+      }); }
       g.requestAnimationFrame(frame);
     }
 

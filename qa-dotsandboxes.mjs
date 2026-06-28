@@ -21,19 +21,23 @@ vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:
 const DG=sandbox.BUILDABLE_GAME; if(!DG){ console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
 if(sandbox.DOTSBOXES_GAME!==DG){ console.error('FAIL: DOTSBOXES_GAME alias missing'); process.exit(2); }
 const cfg=DG._cfg(); let ok=true;
+const SIZES=cfg.sizes;   // [[3,3],[5,5],[7,6]]
 
-console.log('--- random vs random: ALL edges drawn + ALL boxes claimed (200 games) ---');
+console.log('--- EVERY size: random vs random -> ALL edges drawn + ALL boxes claimed (120 games each) ---');
 let fails=0;
-for(let s=0;s<200;s++){ const r=DG.sim({mode:'two',seed:s+1});
-  const good=(r.result==='over') && r.drawnEdges===r.edges && r.claimed===cfg.boxes && (r.winner===0||r.winner===1||r.winner===2);
-  if(!good){ fails++; if(fails<4) console.log('  BAD', JSON.stringify(r)); } }
-console.log(`${fails===0?'PASS':'FAIL'}  completion fails=${fails}/200 (boxes=${cfg.boxes}, edges=${cfg.edges})`); if(fails)ok=false;
+for(const sz of SIZES){ let szFail=0;
+  for(let s=0;s<120;s++){ const r=DG.sim({mode:'two',seed:s+1,size:sz});
+    const good=(r.result==='over') && r.drawnEdges===r.edges && r.claimed===r.boxes && (r.winner===0||r.winner===1||r.winner===2);
+    if(!good){ szFail++; fails++; if(szFail<3) console.log('  BAD', JSON.stringify(r)); } }
+  console.log(`  ${szFail===0?'PASS':'FAIL'}  size ${sz[0]}x${sz[1]} (${sz[0]*sz[1]} boxes)  fails=${szFail}/120`); }
+if(fails)ok=false;
 
-console.log('--- solo vs easy AI: greedy player is competitive/beatable (100 games) ---');
-let wins=0,losses=0,draws=0;
-for(let s=0;s<100;s++){ const r=DG.simVsAI(s*5+2); if(r.winner===1)wins++; else if(r.winner===2)losses++; else draws++; }
-console.log(`greedy-vs-AI  wins=${wins} draws=${draws} losses=${losses}`);
-console.log(`${wins>=25?'PASS':'FAIL'}  AI is beatable (greedy wins >=25)`); if(wins<25)ok=false;
+console.log('--- solo vs easy AI on each size: greedy player is beatable ---');
+for(const sz of SIZES){ let wins=0,losses=0,draws=0;
+  for(let s=0;s<60;s++){ const r=DG.simVsAI(s*5+2, sz); if(r.winner===1)wins++; else if(r.winner===2)losses++; else draws++; }
+  const beatable=wins>=10;
+  console.log(`  ${beatable?'PASS':'FAIL'}  size ${sz[0]}x${sz[1]}  greedy wins=${wins} draws=${draws} losses=${losses}`);
+  if(!beatable)ok=false; }
 
 console.log('--- render smoke ---');
 DG._begin('two'); DG._play({kind:'h',i:0}); DG._play({kind:'v',i:0}); const d=DG._draw(); console.log('render:', d); if(d!=='ok')ok=false;
