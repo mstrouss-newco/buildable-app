@@ -40,6 +40,12 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
+- **claude/topnav-grownup** (CLAIMED — top-nav chrome) — moving the floating **Grown-ups**
+  (`GrownUpFab`) + **Learning On/Off** (`LearningControl`) controls OUT of their bottom-left
+  floating position INTO the top nav as ONE shared, gated nav button, consistently
+  site-wide. Touches the high-collision `src/BuildableKids.jsx` (FAB defs ~84/232, the
+  global render line ~603, and `TopNav` ~609). Plan being confirmed with Mike; lands on a
+  branch. **If you edit BuildableKids.jsx top-bar / FAB area, coordinate.**
 - **claude/games-family-town** — Family Town board game (MERGED): `public/family-town.html`, `src/FamilyTown.jsx`, `src/lib/townMatches.js`, `db/create-town-matches.sql`, `api/sfx.js` (town_* sounds), `api/images.js` (kind=town art), + a tile/route in `vercel.json` + `src/BuildableKids.jsx`.
 - (none right now)  
   _Done on branch `claude/games-simple-batch2` (await Mike merge): Memory + Bingo + Snakes &
