@@ -18,6 +18,15 @@ Two pieces of Mike feedback on the board games.
   it). Still always-winnable / pressure-free.
 - **QA:** `qa-dotsandboxes.mjs` now checks ALL three sizes (every game draws all edges + claims all
   boxes; AI beatable on each); `qa-tictactoe` / `qa-connectfour` still green; `npm run build` clean.
+## 2026-06-27 — Maze Munchers: touch controls reliability (frame-rate + input hardening)
+- Mike (on iPhone) reported turning still failed when tapping the on-screen ARROW BUTTONS, even after the keyboard-focus fix. The buffered-turn logic + the button handlers both test correct on the live build (verified by dispatching a real touchstart to the d-pad buttons and driving the loop: tap UP -> buffered, tap LEFT at an intersection -> the muncher turns). So the failure is a real-device factor synthetic events can't reproduce. Addressed the likely causes:
+  - **Fixed-timestep game loop.** Movement was coupled to display refresh (one update per rAF, no dt) -> on a 120Hz iPhone the muncher ran ~2x too fast, so intersections flew by and taps felt ignored. The loop now accumulates real time and steps logic at a constant 60/sec on every device.
+  - **Hardened the d-pad** with `pointerdown` (unified touch+mouse) + a `click` fallback alongside touchstart/mousedown, and `touch-action:none` / no tap-highlight on the buttons and canvas.
+  - **Swipe also registers on touchmove** (a flick that the browser would otherwise treat as a pan/gesture now turns), with non-passive listeners + preventDefault; added touchcancel reset.
+  - **Calmer kid speeds** (hero 0.13; chasers 0.06-0.108, all < hero so still always-winnable).
+  - **Cache-bust** the in-app maze iframe (`/maze-engine.html?v=20260627d`) so devices stop serving a stale cached build.
+- QA: `qa-maze.mjs` clears all 6 worlds + campaign + render smoke; `npm run build` clean.
+
 
 ## 2026-06-27 — Survival audio: no per-shot beep; impact/kill/explode only
 - Removed the per-bullet fire sound (Mike: constant "beep beep" on every shot).

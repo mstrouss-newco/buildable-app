@@ -7,7 +7,7 @@
 <style>
   html,body{margin:0;height:100%;background:#0a1030;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  canvas{background:#000;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  canvas{background:#000;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px;touch-action:none}
   #start{position:fixed;inset:0;z-index:10;display:none}
   #backBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
            color:#fff;background:rgba(26,20,64,.78);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
@@ -16,7 +16,7 @@
   /* on-screen d-pad for touch */
   #dpad{position:fixed;right:14px;bottom:14px;z-index:30;display:none;width:168px;height:168px;
         opacity:.92;-webkit-user-select:none;user-select:none}
-  #dpad button{position:absolute;width:54px;height:54px;border:none;border-radius:14px;cursor:pointer;
+  #dpad button{position:absolute;width:54px;height:54px;border:none;border-radius:14px;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;
         background:rgba(155,123,255,.82);color:#1a0f3a;font-size:24px;font-weight:900;box-shadow:0 4px 0 #6a4ad6}
   #dpad button:active{transform:translateY(3px);box-shadow:0 1px 0 #6a4ad6}
   #dpad .up{left:57px;top:0}
@@ -107,26 +107,26 @@ function playMusic(){ if(BA&&BA.playMusic) BA.playMusic(); }
 //  braid = how many dead-ends get opened into loops (higher = easier to escape).
 //  chasers/speed/smart ramp up; power = power-treat duration in frames (60fps).
 //  hero is ALWAYS faster than chasers (heroSpeed below), so a level is always clearable.
-const HERO_SPEED = 0.140;   // tiles/frame — fixed, always >= every chaser speed
+const HERO_SPEED = 0.130;   // tiles/frame — fixed, always >= every chaser speed
 const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Maze Munchers",
   levels: [
-    { name:"Candy Cove", key:"candy",      cols:7,  rows:5, braid:0.95, chasers:2, speed:0.075, smart:0.20, power:660,
+    { name:"Candy Cove", key:"candy",      cols:7,  rows:5, braid:0.95, chasers:2, speed:0.060, smart:0.20, power:660,
       hero:"#ffe27a", heroName:"Nibbz",  ears:"round", chaserCols:["#ff6b9d","#c66bff"], particle:"sweets",
       bg:["#3a1140","#6a1f5c"], wall:"#ff7eb6", pellet:"#ffd6ec", treat:"#fff1a8" },
-    { name:"Coral Reef", key:"reef",      cols:8,  rows:6, braid:0.85, chasers:2, speed:0.085, smart:0.32, power:640,
+    { name:"Coral Reef", key:"reef",      cols:8,  rows:6, braid:0.85, chasers:2, speed:0.070, smart:0.32, power:640,
       hero:"#ffb347", heroName:"Finn",   ears:"fin",   chaserCols:["#5bd6ff","#8a6bff"], particle:"bubbles",
       bg:["#062b3a","#0d5a6e"], wall:"#19c3c3", pellet:"#bdfff0", treat:"#ffe27a" },
-    { name:"Star Station", key:"station",    cols:9,  rows:6, braid:0.72, chasers:3, speed:0.098, smart:0.45, power:600,
+    { name:"Star Station", key:"station",    cols:9,  rows:6, braid:0.72, chasers:3, speed:0.080, smart:0.45, power:600,
       hero:"#8ef0ff", heroName:"Bolt",   ears:"antenna",chaserCols:["#7CFC9A","#ff9a5c","#c66bff"], particle:"stars",
       bg:["#0a1030","#241152"], wall:"#7c5cff", pellet:"#cfe6ff", treat:"#ffe27a" },
-    { name:"Whisper Wood", key:"wood",    cols:9,  rows:7, braid:0.60, chasers:3, speed:0.108, smart:0.55, power:560,
+    { name:"Whisper Wood", key:"wood",    cols:9,  rows:7, braid:0.60, chasers:3, speed:0.090, smart:0.55, power:560,
       hero:"#ff9a5c", heroName:"Rua",    ears:"fox",   chaserCols:["#bfa6ff","#7ee0a0","#ffd86b"], particle:"leaves",
       bg:["#0c2a1c","#16482f"], wall:"#5fbf6f", pellet:"#d8ffcf", treat:"#ffe27a" },
-    { name:"Dino Jungle", key:"jungle",     cols:10, rows:7, braid:0.50, chasers:4, speed:0.116, smart:0.62, power:540,
+    { name:"Dino Jungle", key:"jungle",     cols:10, rows:7, braid:0.50, chasers:4, speed:0.100, smart:0.62, power:540,
       hero:"#7bdc6b", heroName:"Chomps", ears:"dino",  chaserCols:["#ff8f5c","#ffd23f","#5bd6ff","#ff6b9d"], particle:"leaves",
       bg:["#22300c","#3c5418"], wall:"#c9a13b", pellet:"#f3ffcf", treat:"#ffe27a" },
-    { name:"Frost Village", key:"frost",   cols:11, rows:8, braid:0.45, chasers:4, speed:0.124, smart:0.70, power:510,
+    { name:"Frost Village", key:"frost",   cols:11, rows:8, braid:0.45, chasers:4, speed:0.108, smart:0.70, power:510,
       hero:"#ffd23f", heroName:"Pip",    ears:"round", chaserCols:["#9fd8ff","#cfe6ff","#bfa6ff","#a0f0e0"], particle:"snow",
       bg:["#10243a","#244a6b"], wall:"#9fd8ff", pellet:"#eaf6ff", treat:"#ffe27a" },
   ],
@@ -547,11 +547,22 @@ if(typeof document!=="undefined"){
     }
     if(Math.abs(dx)>Math.abs(dy)) applyDir(dx>0?NAME2DIR.right:NAME2DIR.left); else applyDir(dy>0?NAME2DIR.down:NAME2DIR.up);
   };
-  c.addEventListener("touchstart",(e)=>{ const t0=e.changedTouches[0]; startP(t0.clientX,t0.clientY); },{passive:true});
-  c.addEventListener("touchend",(e)=>{ const t0=e.changedTouches[0]; endP(t0.clientX,t0.clientY); },{passive:true});
-  c.addEventListener("mousedown",(e)=>{ startP(e.clientX,e.clientY); });
-  c.addEventListener("mouseup",(e)=>endP(e.clientX,e.clientY));
-  const dp=el("dpad"); if(dp){ dp.querySelectorAll("button").forEach(b=>{ const fire=(ev)=>{ ev.preventDefault(); focusGame(); setDir(b.getAttribute("data-d")); }; b.addEventListener("touchstart",fire,{passive:false}); b.addEventListener("mousedown",fire); }); }
+  let _swiped=false;
+  const moveP=(x,y)=>{ if(_swiped)return; const dx=x-sx, dy=y-sy; if(Math.abs(dx)>=16||Math.abs(dy)>=16){ _swiped=true; if(Math.abs(dx)>Math.abs(dy)) applyDir(dx>0?NAME2DIR.right:NAME2DIR.left); else applyDir(dy>0?NAME2DIR.down:NAME2DIR.up); } };
+  c.addEventListener("touchstart",(e)=>{ const t0=e.changedTouches[0]; _swiped=false; startP(t0.clientX,t0.clientY); },{passive:false});
+  c.addEventListener("touchmove",(e)=>{ const t0=e.changedTouches[0]; moveP(t0.clientX,t0.clientY); if(e.cancelable)e.preventDefault(); },{passive:false});
+  c.addEventListener("touchend",(e)=>{ const t0=e.changedTouches[0]; if(!_swiped) endP(t0.clientX,t0.clientY); },{passive:false});
+  c.addEventListener("touchcancel",()=>{ _swiped=false; },{passive:true});
+  c.addEventListener("mousedown",(e)=>{ _swiped=false; startP(e.clientX,e.clientY); });
+  c.addEventListener("mousemove",(e)=>{ if(e.buttons) moveP(e.clientX,e.clientY); });
+  c.addEventListener("mouseup",(e)=>{ if(!_swiped) endP(e.clientX,e.clientY); });
+  const dp=el("dpad"); if(dp){ dp.querySelectorAll("button").forEach(b=>{ const nm=b.getAttribute("data-d");
+    const fire=(ev)=>{ if(ev&&ev.preventDefault)ev.preventDefault(); focusGame(); setDir(nm); };
+    b.addEventListener("pointerdown",fire);                 // modern unified path (touch + mouse + pen)
+    b.addEventListener("touchstart",fire,{passive:false});  // older iOS Safari
+    b.addEventListener("mousedown",fire);
+    b.addEventListener("click",fire);                       // last-resort fallback (a tap always clicks)
+  }); }
 }
 
 // ---- Make It Mine (buddy picker) ----
@@ -587,7 +598,15 @@ function wireMenus(){ const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textCon
   const bb=el("backBtn"); if(bb)bb.onclick=()=>{ showMenu(); };
   const cb2=el("custBack"); if(cb2)cb2.onclick=()=>{ show("customize",false); showMenu(); }; }
 
-function frame(){ if(state!=="title") update(); if(grid.length && hero && state!=="title") draw(); requestAnimationFrame(frame); }
+let _lastTs=0, _acc=0;
+function frame(ts){
+  if(typeof ts!=="number") ts=(typeof performance!=="undefined"?performance.now():Date.now());
+  if(!_lastTs) _lastTs=ts;
+  let dt=(ts-_lastTs)/1000; _lastTs=ts; if(dt>0.2) dt=0.2;   // clamp after tab was hidden
+  if(state!=="title"){ _acc+=dt; let n=0; while(_acc>=1/60 && n<6){ update(); _acc-=1/60; n++; } }
+  if(grid.length && hero && state!=="title") draw();
+  if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(frame);
+}
 
 // bespoke created sounds (ElevenLabs via /api/sfx) — synth stays a silent fallback.
 if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
