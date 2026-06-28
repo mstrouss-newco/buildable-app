@@ -448,6 +448,9 @@ function buildScene(){
   // ground (grass) + road
   groundMesh=meshOf(box(200,0.4,460), 0x8fd98f); groundMesh.position.set(0,-0.3,-180); scene.add(groundMesh);
   roadMesh=meshOf(box(11,0.4,460), 0x5b5b6b); roadMesh.position.set(0,-0.08,-180); scene.add(roadMesh);
+  // real asphalt from the city kit so the road matches the cityscape (falls back to grey)
+  try{ new THREE.TextureLoader().load("models/city/T_Concrete_Asphalt_BaseColor.png",
+    (t)=>{ t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(3,90); roadMesh.material=new THREE.MeshLambertMaterial({map:t}); }); }catch(e){}
   for(const sx of [-1,1]){ const curb=meshOf(box(0.4,0.5,460), 0xf2f2f2); curb.position.set(sx*5.2,0.05,-180); scene.add(curb); }
   // lane dashes (recycled)
   for(let i=0;i<26;i++){ for(const lx of [-1.5,1.5]){ const d=meshOf(box(0.22,0.06,2.2), 0xffffff);
@@ -466,7 +469,9 @@ function buildScene(){
 const skyTexCache={};
 function applyTownColors(){ if(!scene)return; const sky=new THREE.Color(L.sky);
   // solid-color fallback first (always works); fog fades distant road to this color
-  scene.background=sky; scene.fog.color=sky; if(groundMesh) groundMesh.material=mat(L.grass);
+  scene.background=sky; scene.fog.color=sky;
+  const city = !!(TOWN_MODELS[L.skyId] && TOWN_MODELS[L.skyId].dir==="city");
+  if(groundMesh) groundMesh.material=mat(city ? 0xb6b4be : L.grass);   // concrete sidewalks in the city, grass elsewhere
   const cv=document.getElementById('c'); if(cv) cv.style.background="#"+sky.getHexString();
   // then try the AI sky/skyline backdrop (cached forever after first gen); on any
   // failure we silently keep the solid color, so a missing image can't break the game.
