@@ -54,8 +54,12 @@
     box-shadow:0 7px 0 rgba(0,0,0,0.12), 0 11px 20px rgba(60,40,110,0.18);
     transition:transform .07s ease, box-shadow .07s ease; overflow:hidden; }
   .pad::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0)); }
-  .pad svg { width:42px; height:42px; position:relative; z-index:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18)); }
-  .pad span { position:relative; z-index:1; font-weight:900; font-size:14px; letter-spacing:0.2px; text-align:center; padding:0 4px; text-shadow:0 2px 4px rgba(0,0,0,0.18); }
+  .pad .ic { position:relative; z-index:1; width:60px; height:60px; display:flex; align-items:center; justify-content:center; }
+  .pad .ic .emblem { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .pad .ic svg { width:42px; height:42px; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18)); }
+  .pad .ic img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; transition:opacity .25s ease; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.22)); }
+  .pad .ic img.loaded { opacity:1; }
+  .pad span { position:relative; z-index:1; font-weight:900; font-size:13.5px; letter-spacing:0.2px; text-align:center; padding:0 4px; text-shadow:0 2px 4px rgba(0,0,0,0.22); }
   .pad:active { transform:translateY(5px); box-shadow:0 2px 0 rgba(0,0,0,0.12), 0 4px 10px rgba(60,40,110,0.18); }
   .pad.pop { animation:pop .32s ease; }
   @keyframes pop { 0%{transform:scale(1)} 35%{transform:scale(1.08)} 100%{transform:scale(1)} }
@@ -332,7 +336,15 @@ function renderGrid(){
   pack.sounds.forEach(function(s){
     var key=s[0],label=s[1],glyph=s[2],grad=s[3];
     var b=document.createElement("button"); b.className="pad"; b.style.background=grad;
-    b.innerHTML=(G[glyph]||G.star)+'<span>'+label+'</span>';
+    var ic=document.createElement("div"); ic.className="ic";
+    var em=document.createElement("span"); em.className="emblem"; em.innerHTML=(G[glyph]||G.star); ic.appendChild(em);
+    var img=document.createElement("img"); img.alt=label; img.decoding="async"; img.loading="lazy";
+    img.onload=function(){ img.className="loaded"; };
+    img.onerror=function(){ try{ic.removeChild(img);}catch(e){} };
+    img.src="/api/images?kind=soundfx&id="+encodeURIComponent(key);
+    ic.appendChild(img);
+    var lbl=document.createElement("span"); lbl.textContent=label;
+    b.appendChild(ic); b.appendChild(lbl);
     b.addEventListener("pointerdown", function(ev){ ev.preventDefault(); play(key);
       b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); });
     g.appendChild(b);
