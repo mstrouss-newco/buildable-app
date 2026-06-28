@@ -1,5 +1,21 @@
 # Buildable Kids — Session Log
 
+## In-game nav controls standardized — no more Menu/Home overlap (June 27 2026)
+
+Follow-up to the GameFrame work: the IN-GAME controls (not just the start screen) were
+still hand-rolled per engine and collided with the shell's top-left Home (e.g. runner's
+"‹ Menu" sat top-left, right under Home). Standardized positions across engines:
+
+- **Top-left = shell Home only** (games place nothing there).
+- **Top-right stack:** Menu (`#backBtn`, top:12px) + Help (`#helpBtn`, top:56px).
+- **Bottom-left:** Sound (`#muteBtn`).
+
+Moved `#backBtn` top-left→top-right in runner/breaker/maze; restacked `#helpBtn` to
+top:56px; moved Sound to bottom-left consistently (maze + the three board games' `#mute`).
+CSS-only (static engine files; no build impact). Documented in BUILDING-A-GAME.md's
+Consistent game navigation section. (Croc is still a non-BS engine — separate follow-up.)
+
+
 ## Consistent game navigation shipped — one GameFrame, no more double buttons (June 27 2026)
 
 Implemented the nav standard from BUILDING-A-GAME.md and fixed the Dots and Boxes (and

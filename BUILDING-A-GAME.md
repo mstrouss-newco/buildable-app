@@ -253,6 +253,13 @@ don't), and labels drift (Back vs Home). The standard fixes that.
 - **Start screen = `buildable-startscreen.js` (BS)** — the consistent way *in* (pick a
   level / mode). Its back button is wired to the same Home action.
 
+**In-game controls have fixed homes too (don't crowd the top-left).** While playing, a
+game's own controls sit in consistent spots so they never collide with the shell Home:
+**Menu** ("back to this game's level picker", `#backBtn`) top-right at `top:12px`,
+**Help** (`#helpBtn`) stacked just below at `top:56px`, and **Sound** (`#muteBtn`)
+bottom-left. The top-left is reserved for the shell Home — a game must never place a
+button there. (Runner/breaker/maze/board games were standardized to this 2026-06-27.)
+
 **One shared wrapper, not four.** The React shell wraps every game iframe in a single
 `GameFrame` component that renders the iframe + the standard Home control (consistent
 pill, top-left) and owns the exit. The per-game `SurvivalScreen`/`BreakerScreen`/
