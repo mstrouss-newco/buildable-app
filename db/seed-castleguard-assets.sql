@@ -13,6 +13,7 @@ INSERT INTO community_sprites (subject, image_url, theme_tags, reusable, moderat
 SELECT v.subject, v.url, ARRAY['castle']::text[], true, 'approved'
 FROM (VALUES
   ('archer',  'https://www.buildablekids.com/game-assets/tiny-swords/archer_idle.png'),
+  ('knight',  'https://www.buildablekids.com/game-assets/tiny-swords/knight_idle.png'),
   ('arrow',   'https://www.buildablekids.com/game-assets/tiny-swords/arrow.png'),
   ('goblin',  'https://www.buildablekids.com/game-assets/tiny-swords/baddie_run.png'),
   ('tower',   'https://www.buildablekids.com/game-assets/tiny-swords/tower.png'),

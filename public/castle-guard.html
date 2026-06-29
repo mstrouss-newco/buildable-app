@@ -66,6 +66,8 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   sprites: {
     archer_idle:  { file: "archer_idle.png",  fw: 192, fh: 192, n: 6, fps: 7 },
     archer_shoot: { file: "archer_shoot.png", fw: 192, fh: 192, n: 8, fps: 14 },
+    knight_idle:  { file: "knight_idle.png",  fw: 192, fh: 192, n: 8, fps: 8 },
+    knight_attack:{ file: "knight_attack.png",fw: 192, fh: 192, n: 4, fps: 14 },
     arrow:        { file: "arrow.png",        fw: 64,  fh: 64,  n: 1 },
     baddie_run:   { file: "baddie_run.png",   fw: 192, fh: 192, n: 6, fps: 10 },
     baddie_idle:  { file: "baddie_idle.png",  fw: 192, fh: 192, n: 8, fps: 8 },
@@ -77,11 +79,16 @@ const GAME_CONFIG = window.GAME_CONFIG || {
     rock1:        { file: "rock1.png",        fw: 64,  fh: 64,  n: 1 },
     rock2:        { file: "rock2.png",        fw: 64,  fh: 64,  n: 1 },
   },
-  // v1: ONE defender type (Archer). Adding "knight" later is just another entry.
+  // Two defender types. Archer = ranged soft arrows (wide reach). Knight = short-range
+  // melee blocker that bonks goblins passing close (great at tight path corners).
+  // Adding another is just another entry here — engine is data-driven.
   defenders: [
     { id: "archer", name: "Archer", cost: 20, range: 178, fireMs: 720, dmg: 1,
       h: 104, idle: "archer_idle", shoot: "archer_shoot", arrow: "arrow",
       tint: "#3b6fd4" },
+    { id: "knight", name: "Knight", cost: 25, range: 98, fireMs: 600, dmg: 2, melee: true,
+      h: 116, idle: "knight_idle", shoot: "knight_attack",
+      tint: "#c98b3b" },
   ],
   // baddie kinds (silly goblins). hits = soft bonks before it poofs.
   baddies: {
@@ -145,6 +152,7 @@ function sfx(n, o) { try { if (BA) BA.sfx(n, o); } catch (e) {} }
 if (BA && BA.configure) {
   BA.configure({ sfxBase: "/api/sfx?s=", map: {
     place:   "cg_place",      // place a tower
+    bonk:    "cg_bonk",       // knight melee bonk
     shoot:   "cg_twang",      // soft arrow twang
     poof:    "cg_poof",       // goblin poofs and goes home
     coin:    "cg_coin",       // coin reward
@@ -166,6 +174,8 @@ let S = null;                 // active game state
 let state = "menu";           // "menu" | "play" | "wavebreak" | "retry" | "win"
 let fx = BM ? BM.makeFx() : { parts: [], pops: [], shake: 0, flash: 0, flashCol: "#fff" };
 let toastMsg = "", toastT = 0;
+let selDef = "archer";        // currently-selected defender to build
+let defChips = [];            // bottom-bar picker hit-rects (logical coords)
 function toast(m) { toastMsg = m; toastT = 2.2; }
 
 function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
@@ -301,10 +311,18 @@ function step(dt) {
       }
       if (best) {
         g.cool = g.def.fireMs / 1000; g.shootT = 0.22; g.face = (best._p.x >= g.x) ? 1 : -1;
-        const ang = Math.atan2(best._p.y - (g.y - 30), best._p.x - g.x);
-        S.arrows.push({ x: g.x + g.face * 8, y: g.y - 30, vx: Math.cos(ang) * 560, vy: Math.sin(ang) * 560,
-          target: best, dmg: g.def.dmg, life: 1.4 });
-        sfx("shoot", { vol: 0.5 });
+        if (g.def.melee) {
+          // gentle melee bonk — no projectile, damage the nearby goblin directly
+          best.hp -= g.def.dmg; best.hit = 0.18;
+          if (BM) { BM.burst(fx.parts, best._p.x, best._p.y - 14, "#ffe9b0", 8); BM.shake(fx, 0.10); }
+          sfx("bonk", { vol: 0.5 });
+          if (best.hp <= 0) poofBaddie(best, best._p);
+        } else {
+          const ang = Math.atan2(best._p.y - (g.y - 30), best._p.x - g.x);
+          S.arrows.push({ x: g.x + g.face * 8, y: g.y - 30, vx: Math.cos(ang) * 560, vy: Math.sin(ang) * 560,
+            target: best, dmg: g.def.dmg, life: 1.4 });
+          sfx("shoot", { vol: 0.5 });
+        }
       }
     }
   }
@@ -548,10 +566,23 @@ function drawHUD() {
   // wave label
   ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.font = "bold 18px Fredoka,sans-serif"; ctx.textAlign = "center";
   ctx.fillText("Wave " + (S.waveIdx + 1) + " of " + S.W.L.waves.length, LW / 2, 76);
-  // cost hint bottom
-  ctx.fillStyle = "rgba(20,30,18,0.45)"; BR && BR.rrect ? BR.rrect(ctx, LW / 2 - 110, LH - 50, 220, 36, 16) : ctx.fillRect(LW / 2 - 110, LH - 50, 220, 36); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.font = "bold 17px Fredoka,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("Archer — " + GAME_CONFIG.defenders[0].cost + " coins", LW / 2, LH - 32);
+  // defender picker chips (bottom) — tap to choose what to build, then tap a glowing spot
+  defChips = [];
+  const defs = GAME_CONFIG.defenders, cw = 168, ch = 44, gap = 14;
+  const total = defs.length * cw + (defs.length - 1) * gap;
+  let dx = LW / 2 - total / 2; const dy = LH - 54;
+  for (const def of defs) {
+    const sel = def.id === selDef, afford = S.coins >= def.cost;
+    ctx.fillStyle = sel ? "rgba(245,210,90,0.92)" : "rgba(20,30,18,0.55)";
+    BR && BR.rrect ? BR.rrect(ctx, dx, dy, cw, ch, 18) : ctx.fillRect(dx, dy, cw, ch); ctx.fill();
+    if (sel) { ctx.lineWidth = 3; ctx.strokeStyle = "#fff7da"; BR && BR.rrect ? BR.rrect(ctx, dx, dy, cw, ch, 18) : ctx.strokeRect(dx, dy, cw, ch); ctx.stroke(); }
+    ctx.globalAlpha = afford ? 1 : 0.5;
+    ctx.fillStyle = sel ? "#23200a" : "#fff"; ctx.font = "bold 17px Fredoka,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(def.name + " — " + def.cost, dx + cw / 2, dy + ch / 2);
+    ctx.globalAlpha = 1;
+    defChips.push({ x: dx, y: dy, w: cw, h: ch, id: def.id });
+    dx += cw + gap;
+  }
   ctx.restore();
 }
 function drawToast() {
@@ -597,10 +628,14 @@ function onTap(clientX, clientY) {
   if (state === "win") { showMenu(); return; }
   if (state !== "play" && state !== "wavebreak") return;
   const p = toLogical(clientX, clientY);
-  // find nearest empty slot within reach
+  // 1) did we tap a defender picker chip? (select, don't place)
+  for (const c of defChips) {
+    if (p.x >= c.x && p.x <= c.x + c.w && p.y >= c.y && p.y <= c.y + c.h) { selDef = c.id; sfx("place", { vol: 0.3 }); return; }
+  }
+  // 2) otherwise place the selected defender on the nearest empty slot within reach
   let bi = -1, bd = 44;
   S.W.slots.forEach((s, i) => { if (!s.occupied) { const d = Math.hypot(s.x - p.x, s.y - p.y); if (d < bd) { bd = d; bi = i; } } });
-  if (bi >= 0) placeDefender(bi, "archer");
+  if (bi >= 0) placeDefender(bi, selDef);
 }
 if (cv) {
   cv.addEventListener("pointerdown", e => { e.preventDefault(); onTap(e.clientX, e.clientY); }, { passive: false });
@@ -670,7 +705,8 @@ if (typeof document !== "undefined" && cv) {
 /* ===================================================================== */
 /*  QA / HEADLESS HOOK (standardized name + alias)                       */
 /* ===================================================================== */
-function _simBot(idx, maxFrames) {
+function _simBot(idx, maxFrames, defId) {
+  defId = defId || "archer";
   // "sensible placement" bot: build the cheapest covering set, then top up as
   // coins allow, preferring slots that sit closest to the path.
   startLevel(idx);
@@ -679,11 +715,12 @@ function _simBot(idx, maxFrames) {
     .sort((a, b) => a.d - b.d);
   const dt = 1 / 60; const cap = maxFrames || 60000; let f = 0;
   let retries = 0;
-  const buyNext = () => { for (const r of ranked) { if (!S.W.slots[r.i].occupied) { if (placeDefender(r.i, "archer")) return true; return false; } } return false; };
+  const buyNext = () => { for (const r of ranked) { if (!S.W.slots[r.i].occupied) { if (placeDefender(r.i, defId)) return true; return false; } } return false; };
   while (f < cap) {
     if (state === "play") {
       // greedily build whenever affordable
-      let guard = 0; while (S.coins >= GAME_CONFIG.defenders[0].cost && guard++ < 8) { if (!buyNext()) break; }
+      const _cost = (GAME_CONFIG.defenders.find(d => d.id === defId) || GAME_CONFIG.defenders[0]).cost;
+      let guard = 0; while (S.coins >= _cost && guard++ < 8) { if (!buyNext()) break; }
       step(dt);
     } else if (state === "wavebreak") { tickNonPlay(dt); }
     else if (state === "retry") { retries++; if (retries > 6) break; retryWave(); }
@@ -697,6 +734,7 @@ const API = {
   startLevel: (i) => startLevel(i),
   state: () => state,
   sim: (idx, maxFrames) => _simBot(idx, maxFrames),
+  simWith: (idx, defId, maxFrames) => _simBot(idx, maxFrames, defId),
   campaign: (cap) => GAME_CONFIG.levels.map((_, i) => _simBot(i, cap || 60000)),
   _begin: (i) => startLevel(i || 0),
   _step: (frames) => { for (let k = 0; k < (frames || 1); k++) { if (state === "play") step(1 / 60); else tickNonPlay(1 / 60); } },

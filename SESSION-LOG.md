@@ -1,5 +1,22 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Castle Guard: added the KNIGHT defender (second tower type)
+Second defender for Castle Guard (live). **Knight** = a short-range MELEE blocker (no projectile):
+when a goblin passes close it gives a gentle bonk (dmg 2, range 98, cost 25) — strongest at tight
+path corners where goblins cluster, complementing the wide-reach Archer. Engine stayed data-driven:
+added a `knight` entry to `GAME_CONFIG.defenders` (with `melee:true`) + a melee branch in the fire
+loop (direct damage + BM bonk FX, no arrow). New **defender picker**: two tappable chips at the
+bottom (Archer 20 / Knight 25); the selected one highlights, dims when unaffordable; tap a chip to
+choose, then tap a glowing slot to build the selected defender.
+- **Art:** Knight = Blue Warrior from Tiny Swords (`knight_idle` 8f / `knight_attack` 4f), curated
+  into `public/game-assets/tiny-swords/`, BR drawn fallback kept.
+- **Sound:** new bespoke `cg_bonk` (soft cartoon knight bonk) in `api/sfx.js`.
+- **Always-winnable preserved:** the QA bot (archers) still beats every level; added a Knight smoke
+  to `qa-castleguard.mjs` (melee path runs headlessly — knight-only even cleared L1). Build clean.
+- **Asset seed:** `db/seed-castleguard-assets.sql` gained a `knight` sprite row (optional re-run).
+- Committed to `main` (cache-bust `?v=20260628b`); live-QA in the iframe after deploy.
+
+
 ## 2026-06-28 — Castle Guard: new kid tower-defense engine (Tiny Swords art)
 New hand-authored Track B engine **`public/castle-guard.html`** (branch `claude/games-castle-guard`,
 NOT pushed to main). A gentle, always-winnable single-player tower defense: the kid spends earned

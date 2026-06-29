@@ -48,5 +48,12 @@ G._begin(1); G._step(120); console.log('play render:', G._draw());
 const w = G.sim(0, 90000); const dw = G._draw(); console.log('post-win render:', dw);
 if (G._draw() !== 'ok') ok = false;
 
+console.log('--- KNIGHT smoke: melee defender runs headlessly without error (level 1) ---');
+try {
+  const k = G.simWith(0, 'knight', 90000);
+  console.log(`knight run: result=${k.result} frames=${k.frames} defenders=${k.defenders} hearts=${k.hearts}`);
+  if (!k || typeof k.frames !== 'number') ok = false;
+} catch (e) { console.log('FAIL knight smoke:', e.message); ok = false; }
+
 console.log(ok ? 'ALL CHECKS PASS' : 'SOME CHECKS FAILED');
 process.exit(ok ? 0 : 1);

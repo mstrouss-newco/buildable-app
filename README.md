@@ -76,6 +76,8 @@ and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
 ## Castle Guard — kid-friendly tower defense, Tiny Swords art (June 28 2026)
+**Update (June 28 2026):** added a second defender, the **Knight** — a short-range MELEE blocker (dmg 2 / range 98 / cost 25, `melee:true`, no projectile) that gently bonks goblins passing close, great at tight corners alongside the wide-reach Archer. New bottom **defender picker** (tap Archer/Knight chip → tap a slot). Knight art = Tiny Swords Blue Warrior; new `cg_bonk` sound; QA bot still beats every level (+ a knight smoke). Live via `?v=20260628b`.
+
 **New Track B engine `public/castle-guard.html`** (branch `claude/games-castle-guard`, **not** pushed to
 main). A gentle, ALWAYS-WINNABLE single-player tower defense for ages 4-8. The kid spends earned coins to
 place **Archer** towers beside a winding path; archers auto-fire soft arrows at slow, **silly goblins**;
