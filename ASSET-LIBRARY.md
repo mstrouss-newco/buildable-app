@@ -53,6 +53,8 @@ To make a pack's art usable in a game (**curate → serve → register**):
 (2D, 3D, UI, Audio, VFX). Pull kits on demand (never bulk-import): 3D kits drop into
 `public/models/<kit>/` + regen `scripts/gen-models-manifest.mjs` to auto-appear;
 VFX/Light Masks become `effect` assets. Keep heroes on our generated art and shipped
+
+**Particle FX textures (Kenney CC0):** white tintable sprites live in `public/fx/` (indexed in `public/fx/manifest.json`). Engines load them through the shared FX lib: `BM.useTextures({ glow:'/fx/circle_05.png', spark:'/fx/star_01.png', star:'/fx/star_07.png', ring:'/fx/circle_01.png', smoke:'/fx/smoke_05.png', fire:'/fx/fire_01.png', muzzle:'/fx/light_03.png', magic:'/fx/magic_05.png' })`, then `BM.explode/burst/muzzle/ring` draw them tinted + additive (drawn-shape fallback if a file is missing). Survival (`survival-engine.html`) is the reference adopter.
 sound on ElevenLabs. See `game-assets/MANIFEST.md` for the step-by-step.
 
 Prefer CC0 packs to avoid any redistribution worry.

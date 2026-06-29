@@ -1,5 +1,13 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Survival: Kenney particle FX in the shared effects lib (BM)
+- Upgraded buildable-mechanics.js (BM): tinted, additive, texture-backed particles
+  (Kenney CC0 from /fx) + tint cache; new BM.useTextures, BM.muzzle, BM.ring; BM.explode
+  layers smoke + sparks + flash + shockwave ring. Drawn-shape fallback kept.
+- Survival wired: glowing impact sparks, textured slime-pop + big boss explosion, muzzle
+  flash per shot (visual only). All 6 levels still win. FX in public/fx/manifest.json.
+
+
 ## 2026-06-28 — Sunny Town Drive: 3D car + colored houses
 
 Replaced the flat 2D billboard hero car with a real low-poly 3D car (rounded body, windshield,
