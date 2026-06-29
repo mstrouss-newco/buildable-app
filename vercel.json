@@ -180,6 +180,10 @@
       "dest": "/buildable-checkers.html"
     },
     {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
       "src": "/favicon.svg",
       "dest": "/favicon.svg"
     },
