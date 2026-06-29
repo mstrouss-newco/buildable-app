@@ -56,6 +56,7 @@ const SCREEN_TICTACTOE = "tictactoe";
 const SCREEN_CONNECTFOUR = "connectfour";
 const SCREEN_DOTSBOXES = "dotsboxes";
 const SCREEN_CASTLE = "castle";
+const SCREEN_SLING = "sling";
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
 // log under the base game; SCREEN_PLAY = a generated "Make a game" creation.
@@ -85,7 +86,6 @@ const SCREEN_MEMORY = "memory";
 const SCREEN_BINGO = "bingo";
 const SCREEN_SNAKES = "snakes";
 const SCREEN_MAZE = "maze";
-const SCREEN_SLING = "sling";
 function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onCheckers, onTyping, onTennis, onSounds, onTown, onTicTacToe, onConnectFour, onDotsBoxes, onMemory, onBingo, onSnakes, onMaze, onTetris, onCastle, onSling }) {
   const tile = (grad, title, desc, onClick, soon, imgId) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
