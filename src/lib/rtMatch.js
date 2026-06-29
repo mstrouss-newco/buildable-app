@@ -62,6 +62,11 @@ export async function listMyMatches(game, meKidId) {
   return rows || [];
 }
 
+export async function listInvitesForKid(meKidId) {
+  const rows = await rest(`rt_matches?status=eq.open&guest_kid=eq.${meKidId}&order=updated_at.desc`, { method: "GET" });
+  return rows || [];
+}
+
 export async function getMatch(id) {
   const rows = await rest(`rt_matches?id=eq.${id}&limit=1`, { method: "GET" });
   return rows && rows[0];

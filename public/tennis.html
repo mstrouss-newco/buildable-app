@@ -15,13 +15,18 @@
   /* start menu mount (BS renders into here) */
   #menu { position:absolute; inset:0; z-index:5; }
   /* canned-reaction bar (online only) */
-  #reactBar { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:6;
-    display:none; gap:8px; flex-wrap:wrap; justify-content:center; max-width:92%; }
-  #reactBar.on { display:flex; }
-  #reactBar button { font-family:'Fredoka',sans-serif; font-weight:600; font-size:14px; color:#fff;
-    background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.26); border-radius:999px;
-    padding:8px 14px; cursor:pointer; }
-  #reactBar button:active { background:rgba(255,255,255,0.30); }
+  /* compact: a small "Say..." button bottom-right; phrases pop up on demand so they never cover the court */
+  #reactToggle { position:absolute; right:14px; bottom:14px; z-index:6; display:none;
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:13px; color:#fff;
+    background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.28); border-radius:999px; padding:8px 14px; cursor:pointer; }
+  #reactToggle.on { display:block; }
+  #reactPop { position:absolute; right:14px; bottom:54px; z-index:7; display:none; flex-direction:column; gap:6px;
+    max-width:200px; max-height:46vh; overflow-y:auto; background:rgba(18,12,34,0.94);
+    border:1px solid rgba(255,255,255,0.18); border-radius:14px; padding:8px; }
+  #reactPop.on { display:flex; }
+  #reactPop button { font-family:'Fredoka',sans-serif; font-weight:600; font-size:13px; color:#fff; text-align:left;
+    background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:7px 12px; cursor:pointer; }
+  #reactPop button:active { background:rgba(255,255,255,0.30); }
   /* "Choose your court" picker overlay */
   .ov { position:absolute; inset:0; z-index:8; display:none; flex-direction:column; align-items:center;
     background:linear-gradient(180deg,#0b1230,#241152); color:#fff; overflow-y:auto; -webkit-overflow-scrolling:touch; }
@@ -43,7 +48,8 @@
 <div id="wrap">
   <canvas id="c"></canvas>
   <div id="menu"></div>
-  <div id="reactBar"></div>
+  <button id="reactToggle" aria-label="Say something">Say…</button>
+  <div id="reactPop"></div>
   <div id="court" class="ov">
     <h1>Choose your court</h1>
     <div class="sub">Where do you want to play?</div>
@@ -619,16 +625,19 @@ if (online) {
 // MUST stay a subset of the ALLOWED list enforced in src/FamilyRealtime.jsx.
 var REACTIONS = ["Nice shot!", "Too slow!", "So close!", "Let's go!", "Is that all?", "You got this!", "Boop!", "Wibble wobble!", "Bonk!", "Wheee!", "Great game!", "Haha!"];
 function showReactBar(on) {
-  var bar = document.getElementById("reactBar"); if (!bar) return;
-  if (on && !bar._built) {
-    REACTIONS.forEach(function (t) {
-      var b = document.createElement("button"); b.textContent = t;
-      b.onclick = function () { mp("mp:reaction", { text: t }); if (BM) BM.pop(fx.pops, c2x(0.5), c2y(0.72), t, "#fff"); };
-      bar.appendChild(b);
+  var t = document.getElementById("reactToggle"), pop = document.getElementById("reactPop");
+  if (!t || !pop) return;
+  if (on && !pop._built) {
+    REACTIONS.forEach(function (txt) {
+      var b = document.createElement("button"); b.textContent = txt;
+      b.onclick = function () { mp("mp:reaction", { text: txt }); if (BM) BM.pop(fx.pops, c2x(0.5), c2y(0.72), txt, "#fff"); pop.className = ""; };
+      pop.appendChild(b);
     });
-    bar._built = true;
+    pop._built = true;
+    t.onclick = function () { pop.className = (pop.className === "on") ? "" : "on"; };
   }
-  bar.className = on ? "on" : "";
+  t.className = on ? "on" : "";
+  if (!on) pop.className = "";
 }
 
 /* ---------- 9) START SCREEN (shared BS) for solo / two-player ---------- */
