@@ -39,6 +39,14 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
+- **claude/games-castle-guard** — NEW **Castle Guard** kid tower-defense Track B engine.
+  Owns NEW files: `public/castle-guard.html`, `qa-castleguard.mjs`,
+  `public/game-assets/tiny-swords/*` (curated Pixel Frog sprites + LICENSE.txt),
+  `db/seed-castleguard-assets.sql`, `db/seed-castleguard-mechanic.sql`. Touches shared
+  files additively: `vercel.json` (castle-guard + /game-assets routes), `api/sfx.js`
+  (`cg_*` one-shots), `api/images.js` (kind=game `castleguard` art), `src/BuildableKids.jsx`
+  (Games tile + `SCREEN_CASTLE` — high-collision file, edits kept tiny). v1: ONE defender
+  (Archer), hearts/never-game-over, Green Meadow. Branch NOT pushed to main — hand to Mike.
 - **claude/topnav-grownup** (MERGED to main — LIVE, verified) — moved the floating **Grown-ups**
   (`GrownUpFab`) + **Learning On/Off** (`LearningControl`) controls OUT of their bottom-left
   floating position INTO the top nav as ONE shared, gated nav button, consistently

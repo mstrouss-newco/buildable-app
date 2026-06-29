@@ -54,6 +54,7 @@ const SCREEN_TOWN_FAMILY = "town_family";
 const SCREEN_TICTACTOE = "tictactoe";
 const SCREEN_CONNECTFOUR = "connectfour";
 const SCREEN_DOTSBOXES = "dotsboxes";
+const SCREEN_CASTLE = "castle";
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
 // log under the base game; SCREEN_PLAY = a generated "Make a game" creation.
@@ -61,6 +62,7 @@ const GAME_SLUGS = {
   [SCREEN_PLATFORMER]: "platformer",
   [SCREEN_SURVIVAL]: "survival",
   [SCREEN_BREAKER]: "breaker",
+  [SCREEN_CASTLE]: "castle",
   [SCREEN_TETRIS]: "tetris",
   [SCREEN_CHESS]: "chess",
   [SCREEN_CHESS_FAMILY]: "chess",
@@ -81,7 +83,7 @@ const SCREEN_MEMORY = "memory";
 const SCREEN_BINGO = "bingo";
 const SCREEN_SNAKES = "snakes";
 const SCREEN_MAZE = "maze";
-function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onCheckers, onTyping, onTennis, onSounds, onTown, onTicTacToe, onConnectFour, onDotsBoxes, onMemory, onBingo, onSnakes, onMaze, onTetris }) {
+function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onCheckers, onTyping, onTennis, onSounds, onTown, onTicTacToe, onConnectFour, onDotsBoxes, onMemory, onBingo, onSnakes, onMaze, onTetris, onCastle }) {
   const tile = (grad, title, desc, onClick, soon, imgId) => (
     <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
@@ -104,6 +106,7 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
       <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
         {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Platformer", "Run, jump and reach the flag!", onPlatformer, false, "platformer")}
         {tile("linear-gradient(160deg,#9B7BFF,#67E8F9)", "Breaker", "Bounce the ball, smash every brick!", onBreaker, false, "breaker")}
+        {tile("linear-gradient(160deg,#6FCF6A,#2E8B57)", "Castle Guard", "Place archers to stop the silly goblins!", onCastle, false, "castleguard")}
         {tile("linear-gradient(160deg,#67C7FF,#9B7BFF)", "Tumble Blocks", "Fill a row and watch it tumble away!", onTetris, false, "tetris")}
         {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false, "survival")}
         {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, false, "runner")}
@@ -181,6 +184,7 @@ function familyBtn(onFamily) {
 function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html" onHome={onHome} />; }
 function TennisScreen({ onHome, onFamily }) { return <GameFrame title="Buildable Tennis" src="/tennis.html" onHome={onHome} right={familyBtn(onFamily)} />; }
 function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html" onHome={onHome} />; }
+function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628a" onHome={onHome} bg="#2e7d32" />; }
 function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html" onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src }) { return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />; }
 function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=20260628a" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
@@ -503,7 +507,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -513,6 +517,9 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER) {
     return <BreakerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_CASTLE) {
+    return <CastleGuardScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_TETRIS) {
     return <TetrisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -848,7 +855,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
     fetch("/api/kid-game-stats" + q).then((r) => r.json()).then((d) => { if (alive && d && d.favorite && d.favorite.plays >= 2) setFavGame(d.favorite); }).catch(() => {});
     return () => { alive = false; };
   }, [activeKid]);
-  const GAME_NAMES = { platformer: "Platformer", survival: "Survival", breaker: "Breaker", chess: "Chess", typing: "Typing", tennis: "Tennis", runner: "Sunny Town Drive", generated: "your own game" };
+  const GAME_NAMES = { platformer: "Platformer", castle: "Castle Guard", survival: "Survival", breaker: "Breaker", chess: "Chess", typing: "Typing", tennis: "Tennis", runner: "Sunny Town Drive", generated: "your own game" };
   const favLine = favGame ? (favGame.game === "generated"
     ? "You love making your own games — want to build another?"
     : ((GAME_NAMES[favGame.game] || favGame.game) + " is your favorite — want to play it again?")) : null;

@@ -1,0 +1,22 @@
+Tiny Swords (Free Pack) — by Pixel Frog
+Source: https://pixelfrog-assets.itch.io/tiny-swords
+
+LICENSE (verified 2026-06-28):
+- Free for use in personal AND commercial projects.
+- Assets may be modified.
+- Credit is appreciated but not required.
+- You may NOT redistribute, resell, or repackage the raw assets.
+
+How we comply (per ASSET-LIBRARY.md):
+- We CURATE only the specific sprites Castle Guard uses into this folder and
+  serve them from our own domain inside the game. We do NOT expose a browsable
+  or downloadable copy of the whole pack.
+- Goblin enemies are in the PAID "Enemy Pack" and are NOT in the free pack, so
+  Castle Guard's silly baddies reskin the free RED "Pawn" unit (decision with
+  owner, 2026-06-28).
+
+Curated files (all from the Free Pack):
+  archer_idle/shoot, arrow        <- Blue Archer (defender)  -> theme: castle
+  baddie_idle/run                 <- Red Pawn (silly baddie)
+  castle, tower                   <- Blue Buildings
+  tree, bush1, bush2, rock1, rock2 <- Terrain/Decorations

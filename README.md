@@ -75,6 +75,36 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Castle Guard — kid-friendly tower defense, Tiny Swords art (June 28 2026)
+**New Track B engine `public/castle-guard.html`** (branch `claude/games-castle-guard`, **not** pushed to
+main). A gentle, ALWAYS-WINNABLE single-player tower defense for ages 4-8. The kid spends earned coins to
+place **Archer** towers beside a winding path; archers auto-fire soft arrows at slow, **silly goblins**;
+a bonked goblin **POOFS into smoke and goes home** (no health-bar death, no scary imagery). **Soft loss
+only:** a goblin reaching the castle costs a heart, and at zero hearts the **wave replays** — never a
+game-over screen.
+- **v1 decisions (with Mike):** ONE defender (Archer); goblins reskin the free red Tiny Swords **Pawn**
+  (real goblins are in the paid Enemy Pack); **hearts, never game-over** + simple round-number coins;
+  **Green Meadow** world first.
+- **Content as data** (`GAME_CONFIG`): path (normalized waypoints), waves `{baddie,count,spacingMs,speed,hits}`,
+  defender `{range,fireMs,cost,dmg}`, goblin `{speed,hits,reward}`. Build slots auto-derive from the path.
+  Adding a level/world = editing data, never engine code.
+- **Shared everything:** BR (drawn fallback for every sprite — no emoji), BM (arrow hit / goblin poof /
+  coin / win juice), BS (start screen + level picker), BA (created sounds), `buildable-gamenav` (shell owns
+  Home/Sound). New bespoke ElevenLabs one-shots in `api/sfx.js`: `cg_place`, `cg_twang`, `cg_poof`,
+  `cg_coin`, `cg_oops`, `cg_cheer`.
+- **Assets:** Tiny Swords by **Pixel Frog** — license verified (free for personal + commercial use, modify
+  OK, credit optional, **NO redistribution of the raw pack**). We CURATE only the used sprites into
+  `public/game-assets/tiny-swords/` (with `LICENSE.txt`) and register them in the shared library
+  (`db/seed-castleguard-assets.sql`, theme `castle`) so other games can reuse them.
+- **Reusable mechanics written back:** `td-wave-spawner` + `td-auto-fire-defender` (MECHANICS.md §16,
+  `db/seed-castleguard-mechanic.sql`).
+- **Always-winnable + QA'd:** `qa-castleguard.mjs` (drives `BUILDABLE_GAME.sim()` headlessly) — a sensible-
+  placement bot beats every level (5 runs each), 3 stars achievable, render smoke OK. `npm run build` clean.
+  Route added to `vercel.json` (+ `/game-assets/(.*)`); tile + `SCREEN_CASTLE` + screen added to
+  `src/BuildableKids.jsx`; tile art `kind=game&id=castleguard` in `api/images.js`.
+- **Owner actions:** run `db/seed-castleguard-assets.sql` + `db/seed-castleguard-mechanic.sql` once in
+  Supabase (optional; the game runs without them). Merge the branch to deploy + live-QA on devices.
+
 ## Family Town — original 3-4 player Monopoly-STYLE board game (June 27 2026)
 **New Track B engine `public/family-town.html`** (branch `claude/games-family-town`) — an
 ORIGINAL board game (our own town, spaces, art, and name; never the Monopoly brand). 3-4 kids

@@ -82,6 +82,13 @@ const SOUNDS = {
   maze_win:    "Happy short victory fanfare with a sparkly arcade jingle, cheerful kids maze cleared, no voices",
   maze_caught: "Short soft gentle descending uh-oh wobble, friendly and not scary, a tag in a chase, single hit, no music, no voices",
   maze_start:  "Short cheerful arcade start blip, a friendly ready-go ding, single hit, no music, no voices",
+  // ---- Castle Guard (tower defense) one-shots — bespoke, gentle, kid-friendly ----
+  cg_place: "Short soft friendly wooden thunk with a tiny cheerful chime, placing a little tower down, single hit, no music, no voices",
+  cg_twang: "Short soft gentle bow twang, a toy arrow with a soft tip being shot, light and not sharp, single hit, no music, no voices",
+  cg_poof:  "Short soft puffy poof of smoke with a tiny comical boing, a silly goblin giving up and popping away, friendly and not scary, single hit, no music, no voices",
+  cg_coin:  "Short bright cheerful coin pickup ding with a tiny sparkle, collecting a gold coin, single hit, no music, no voices",
+  cg_oops:  "Short soft gentle descending uh-oh wobble, friendly and not scary, a goblin sneaking past, single hit, no music, no voices",
+  cg_cheer: "Short happy little kids cheer and clap with a sparkle, cheerful wave-cleared celebration, single hit, no music, no voices",
 
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
@@ -277,6 +284,7 @@ const DURATIONS = {
   board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
   maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,
+  cg_place:0.45, cg_twang:0.4, cg_poof:0.55, cg_coin:0.5, cg_oops:0.6, cg_cheer:1.3,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_hit:0.5, spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,

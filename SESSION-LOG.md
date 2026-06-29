@@ -1,5 +1,39 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Castle Guard: new kid tower-defense engine (Tiny Swords art)
+New hand-authored Track B engine **`public/castle-guard.html`** (branch `claude/games-castle-guard`,
+NOT pushed to main). A gentle, always-winnable single-player tower defense: the kid spends earned
+coins to place **Archer** towers beside a winding path; archers auto-fire soft arrows; **silly
+goblins** walk the path and, when bonked enough, **POOF into smoke and go home** (no health-bar
+death, nothing scary). Soft loss only: a goblin that slips into the castle costs a heart, and at
+zero hearts the **wave just replays** — never a game-over screen.
+- **Decisions with Mike (2026-06-28):** v1 has ONE defender (Archer); baddies reskin the free
+  **red Tiny Swords Pawn** (goblins are paid-pack only); **hearts, never game-over** + simple
+  round-number coins; **Green Meadow** ships first.
+- **Content as data** (`GAME_CONFIG`): per-level path (normalized waypoints), wave list
+  (`{baddie,count,spacingMs,speed,hits}`), defender stats (`range,fireMs,cost,dmg`), goblin stats
+  (`speed,hits,reward`). Build slots are auto-derived along the path. Adding a level/world = data.
+- **Shared libs:** BR (drawn fallbacks for every sprite — no emoji), BM (`explode`/`burst`/`shake`/
+  `flash`/`pop` for arrow hits, goblin poof, coin pickup, win confetti), BS (start screen + level
+  picker), BA (created sounds). Registers with `buildable-gamenav` so the React shell owns Home/Sound.
+- **Assets:** Tiny Swords (Pixel Frog) — license verified (free commercial use, modify OK, NO
+  redistribution). Curated only the used sprites into `public/game-assets/tiny-swords/` (+ `LICENSE.txt`)
+  and registered them in the shared library (`db/seed-castleguard-assets.sql`, theme `castle`).
+- **Sounds (created, ElevenLabs):** `cg_place`, `cg_twang`, `cg_poof`, `cg_coin`, `cg_oops`,
+  `cg_cheer` added to `api/sfx.js` (synth is silent fallback only). They generate+cache on first
+  hit once deployed (needs `ELEVENLABS_API_KEY`, already set in Vercel by owner).
+- **Reusable mechanics written back:** `td-wave-spawner` + `td-auto-fire-defender` (MECHANICS.md §16,
+  `db/seed-castleguard-mechanic.sql`).
+- **QA:** `qa-castleguard.mjs` (model `qa-breaker.mjs`) — a sensible-placement bot beats ALL 3
+  levels (5 runs each), 3 stars achievable, render smoke OK in every state. `npm run build` clean.
+- **Wired in:** `vercel.json` routes for `/castle-guard.html` + `/game-assets/(.*)` (before the
+  landing catch-all); Games tile + `SCREEN_CASTLE` + `CastleGuardScreen` in `src/BuildableKids.jsx`;
+  tile-art prompt (`kind=game id=castleguard`) in `api/images.js`.
+- **Owner actions:** run `db/seed-castleguard-assets.sql` + `db/seed-castleguard-mechanic.sql` once
+  in Supabase (optional — the game runs without them; they're for cross-game reuse). Merge the branch
+  to deploy + live-QA on devices.
+
+
 ## 2026-06-28 — Maze Munchers: on-screen debug overlay + version stamp (touch turning still unconfirmed)
 - Mike: turning STILL broken on his real iPhone via the arrow pad (muncher only changes at walls). Prior frame-rate/input/timestep fixes did not resolve it, and I cannot reproduce it (the Claude-in-Chrome automation tab pauses requestAnimationFrame and can't do real iOS touch), so I stopped verifying by proxy and added live instrumentation so Mike can see where it breaks on his device:
   - **Version stamp** (bottom-left): "Maze v8 · 2026-06-28 (tap=debug)" — confirms which build is loaded; tap it to toggle the debug overlay.
