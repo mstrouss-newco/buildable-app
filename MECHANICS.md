@@ -443,3 +443,35 @@ counterpart to the cross-device multiplayer mechanics in section 12 (`mp-turn-ba
 `m.players` + `m.curIndex()`, and call `m.next()` / `m.finish()` from your game's rules. Keep a
 drawn HUD (no emoji). Reference engines: `public/memory-engine.html`, `bingo-engine.html`,
 `snakes-engine.html`.
+
+---
+
+## 16. Tower-defense mechanics from Castle Guard (reusable)
+
+Two reusable mechanics shipped with **Castle Guard** (`public/castle-guard.html`), the first
+hand-authored Track B *tower-defense* engine. Registered in `game_mechanics` via
+`db/seed-castleguard-mechanic.sql`. Both are kid-tuned (ages 4-8) and always-winnable.
+
+| slug | what it gives a game | how to reuse |
+|---|---|---|
+| `td-wave-spawner` | A scripted enemy **wave spawner** that walks units along a path | A wave = `{baddie, count, spacingMs, speed, hits}`; a short grace delay precedes the first spawn; a wave clears when the spawn queue is empty AND no enemies remain; clearing all waves wins. Drive position by distance-along-path (`pointAtRaw(segs,total,d)`); store the path as normalized waypoints in `GAME_CONFIG.levels[].path` so a new map = data. |
+| `td-auto-fire-defender` | An **auto-aiming defender** that the kid only has to *place* | Defender = `{cost, range, fireMs, dmg}`. Each frame it targets the nearest in-range enemy and fires a homing soft projectile; on enough hits the enemy gently **POOFS** and leaves (no health-bar death, no harsh loss) and drops a coin. Aiming/firing is automatic so young kids only choose *where* to build. Keep a `BR` drawn fallback for every sprite. |
+
+**Always-winnable / pressure-free.** Goblins are slow and few, starting coins are generous,
+and the loss is soft: a goblin that reaches the castle costs a heart, and at zero hearts the
+**wave simply replays** (`retryWave()`) — never a game-over screen. The QA sim
+(`qa-castleguard.mjs`, model `qa-breaker.mjs`) asserts a sensible-placement bot beats EVERY
+level.
+
+**QA hook.** Exposes `window.BUILDABLE_GAME` (alias `CASTLEGUARD_GAME`) with `sim(idx,maxFrames)`
+(runs the placement bot headlessly), `campaign(cap)`, and `_begin/_step/_draw/_cfg` — all
+headless-safe (no canvas access in `step()`).
+
+**Bespoke sounds** (created, not synth): `cg_place`, `cg_twang`, `cg_poof`, `cg_coin`, `cg_oops`,
+`cg_cheer` registered in `api/sfx.js` (BA synth is the silent fallback only).
+
+**Assets.** Tiny Swords (Pixel Frog) curated into `public/game-assets/tiny-swords/` (free for
+commercial use, no redistribution — see that folder's `LICENSE.txt`) and registered into the
+shared library (`db/seed-castleguard-assets.sql`, theme `castle`). The free pack has no goblins
+(paid Enemy Pack), so the silly baddie reskins the free RED Pawn unit.
+

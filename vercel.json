@@ -228,6 +228,14 @@
       "dest": "/breaker-engine.html"
     },
     {
+      "src": "/castle-guard.html",
+      "dest": "/castle-guard.html"
+    },
+    {
+      "src": "/game-assets/(.*)",
+      "dest": "/game-assets/$1"
+    },
+    {
       "src": "/tetris-engine.html",
       "dest": "/tetris-engine.html"
     },

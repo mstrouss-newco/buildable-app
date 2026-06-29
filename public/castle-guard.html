@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Castle Guard</title>
+<style>
+  :root { --fred: "Fredoka", system-ui, sans-serif; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #2a7a3a; overflow: hidden; font-family: var(--fred); color: #fff; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #start { position: absolute; inset: 0; z-index: 5; }
+  /* tiny standalone nav buttons (hidden in-app via BuildableGameNav) */
+  .navbtn { position: absolute; z-index: 6; border: none; cursor: pointer; border-radius: 999px;
+    background: rgba(20,30,18,0.55); color: #fff; font-family: var(--fred); font-weight: 700;
+    backdrop-filter: blur(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  #homeBtn { left: 12px; top: 12px; padding: 9px 16px; font-size: 15px; }
+  #muteBtn { right: 12px; top: 12px; width: 44px; height: 44px; font-size: 13px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="game"></canvas>
+  <button id="homeBtn" class="navbtn">Home</button>
+  <button id="muteBtn" class="navbtn">Snd</button>
+  <div id="start"></div>
+</div></div>
+
+<!-- shared engine libraries (Track B) -->
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-gamenav.js"></script>
+
+<script>
+/* =====================================================================
+   CASTLE GUARD — a gentle, always-winnable kids' tower defense (Track B)
+   Defenders (Archer) fire soft arrows at silly goblins walking a path.
+   A bonked goblin POOFS into smoke and goes home (no health bars, no harsh
+   loss). Goblins that slip into the castle cost a heart; at zero hearts you
+   simply replay the wave — never a game-over screen.
+
+   Content is data (GAME_CONFIG): path, waves, defender stats, goblin stats.
+   Adding a level/world = editing data, never engine code.
+   Art = Tiny Swords (Pixel Frog) curated sprites, with BR drawn fallbacks.
+   Sound = created ElevenLabs one-shots via BA (synth is silent fallback only).
+   ===================================================================== */
+
+const BR = window.BuildableRenders, BA = window.BuildableAudio,
+      BM = window.BuildableMechanics, BS = window.BuildableStartScreen;
+
+/* ---------- logical design resolution (all gameplay math uses these) ---------- */
+const LW = 960, LH = 600;
+
+/* ---------- content as data ---------- */
+const GAME_CONFIG = window.GAME_CONFIG || {
+  theme: "castle",
+  world: { name: "Green Meadow", grassTop: "#8AD06A", grassBot: "#5DB048",
+           path: "#D8B57A", pathEdge: "#B68A4E" },
+  spriteBase: "game-assets/tiny-swords/",
+  // frame slicing for the Tiny Swords sheets (fw/fh = one frame; n = frames; fps = anim speed, 0 = static frame 0)
+  sprites: {
+    archer_idle:  { file: "archer_idle.png",  fw: 192, fh: 192, n: 6, fps: 7 },
+    archer_shoot: { file: "archer_shoot.png", fw: 192, fh: 192, n: 8, fps: 14 },
+    arrow:        { file: "arrow.png",        fw: 64,  fh: 64,  n: 1 },
+    baddie_run:   { file: "baddie_run.png",   fw: 192, fh: 192, n: 6, fps: 10 },
+    baddie_idle:  { file: "baddie_idle.png",  fw: 192, fh: 192, n: 8, fps: 8 },
+    castle:       { file: "castle.png",       fw: 320, fh: 256, n: 1 },
+    tower:        { file: "tower.png",        fw: 128, fh: 256, n: 1 },
+    tree:         { file: "tree.png",         fw: 256, fh: 256, n: 6, fps: 6 },
+    bush1:        { file: "bush1.png",        fw: 128, fh: 128, n: 8, fps: 0 },
+    bush2:        { file: "bush2.png",        fw: 128, fh: 128, n: 8, fps: 0 },
+    rock1:        { file: "rock1.png",        fw: 64,  fh: 64,  n: 1 },
+    rock2:        { file: "rock2.png",        fw: 64,  fh: 64,  n: 1 },
+  },
+  // v1: ONE defender type (Archer). Adding "knight" later is just another entry.
+  defenders: [
+    { id: "archer", name: "Archer", cost: 20, range: 178, fireMs: 720, dmg: 1,
+      h: 104, idle: "archer_idle", shoot: "archer_shoot", arrow: "arrow",
+      tint: "#3b6fd4" },
+  ],
+  // baddie kinds (silly goblins). hits = soft bonks before it poofs.
+  baddies: {
+    pawn: { name: "Goblin", sprite: "baddie_run", h: 84, speed: 42, hits: 3, reward: 5, r: 26 },
+  },
+  econ: { startCoins: 80, perPoof: 5, waveBonus: 20 },
+  build: { slotEvery: 158, slotOffset: 66 },   // build-slot auto-placement along the path
+  levels: [
+    { n: 1, name: "First Steps", hearts: 5, startCoins: 80,
+      path: [[0.00,0.32],[0.34,0.32],[0.34,0.66],[0.70,0.66],[0.70,0.38],[1.00,0.38]],
+      waves: [ { baddie: "pawn", count: 5, spacingMs: 1700, hits: 2, speed: 38 } ] },
+    { n: 2, name: "Two by Two", hearts: 5, startCoins: 80,
+      path: [[0.00,0.52],[0.22,0.52],[0.22,0.22],[0.50,0.22],[0.50,0.74],[0.80,0.74],[0.80,0.42],[1.00,0.42]],
+      waves: [ { baddie: "pawn", count: 6, spacingMs: 1550, hits: 2, speed: 40 },
+               { baddie: "pawn", count: 7, spacingMs: 1400, hits: 3, speed: 42 } ] },
+    { n: 3, name: "Big Parade", hearts: 5, startCoins: 95,
+      path: [[0.00,0.24],[0.26,0.24],[0.26,0.56],[0.10,0.56],[0.10,0.82],[0.56,0.82],[0.56,0.40],[0.80,0.40],[0.80,0.70],[1.00,0.70]],
+      waves: [ { baddie: "pawn", count: 6, spacingMs: 1500, hits: 2, speed: 40 },
+               { baddie: "pawn", count: 8, spacingMs: 1350, hits: 3, speed: 42 },
+               { baddie: "pawn", count: 9, spacingMs: 1250, hits: 3, speed: 44 } ] },
+  ],
+};
+
+/* ---------- image loading + frame slicing (with graceful fallback) ---------- */
+const IMG = {};            // name -> HTMLImageElement (or stub)
+let imagesReady = false;
+function mkImg(src) {
+  const im = (typeof Image !== "undefined") ? new Image() : {};
+  try { im.crossOrigin = "anonymous"; } catch (e) {}
+  if (src && "src" in im) im.src = src;
+  return im;
+}
+function loadSprites() {
+  const S = GAME_CONFIG.sprites, base = GAME_CONFIG.spriteBase;
+  for (const k in S) IMG[k] = mkImg(base + S[k].file);
+  imagesReady = true;
+}
+// draw one animation frame of a sheet sprite, centered at cx,cy, scaled to height h.
+function drawSprite(ctx, name, cx, cy, h, t, opt) {
+  opt = opt || {};
+  const meta = GAME_CONFIG.sprites[name], im = IMG[name];
+  const ok = im && im.complete && (im.naturalWidth || im.width);
+  if (!ok || !meta) return false;
+  const fw = meta.fw, fh = meta.fh, n = meta.n || 1;
+  let f = 0;
+  if (n > 1) f = (meta.fps ? Math.floor((t || 0) * meta.fps) : 0) % n;
+  if (opt.frame != null) f = opt.frame % n;
+  const sx = f * fw, w = h * (fw / fh);
+  ctx.save();
+  if (opt.alpha != null) ctx.globalAlpha = opt.alpha;
+  ctx.translate(cx, cy);
+  if (opt.scale && opt.scale !== 1) ctx.scale(opt.scale, opt.scale);
+  if (opt.flip) ctx.scale(-1, 1);
+  try { ctx.drawImage(im, sx, 0, fw, fh, -w / 2, -h / 2, w, h); } catch (e) { ctx.restore(); return false; }
+  ctx.restore();
+  return true;
+}
+
+/* ---------- audio: created sounds via BA; synth is the silent fallback only ---------- */
+function sfx(n, o) { try { if (BA) BA.sfx(n, o); } catch (e) {} }
+if (BA && BA.configure) {
+  BA.configure({ sfxBase: "/api/sfx?s=", map: {
+    place:   "cg_place",      // place a tower
+    shoot:   "cg_twang",      // soft arrow twang
+    poof:    "cg_poof",       // goblin poofs and goes home
+    coin:    "cg_coin",       // coin reward
+    heart:   "cg_oops",       // a goblin slipped into the castle
+    win:     "cg_cheer",      // wave / level cleared
+  }});
+}
+
+/* ---------- prefs (unlock + stars), localStorage with safe fallback ---------- */
+const PREFS = { unlocked: 0, stars: {} };
+function loadPrefs() { try { const d = JSON.parse(localStorage.getItem("castleguard") || "{}");
+  PREFS.unlocked = d.unlocked || 0; PREFS.stars = d.stars || {}; } catch (e) {} }
+function savePrefs() { try { localStorage.setItem("castleguard", JSON.stringify(PREFS)); } catch (e) {} }
+
+/* ===================================================================== */
+/*  GAME STATE + PURE SIMULATION (no canvas) — drives both play and QA   */
+/* ===================================================================== */
+let S = null;                 // active game state
+let state = "menu";           // "menu" | "play" | "wavebreak" | "retry" | "win"
+let fx = BM ? BM.makeFx() : { parts: [], pops: [], shake: 0, flash: 0, flashCol: "#fff" };
+let toastMsg = "", toastT = 0;
+function toast(m) { toastMsg = m; toastT = 2.2; }
+
+function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+/* build path geometry in logical coords; compute slot positions */
+function buildLevel(idx) {
+  const L = GAME_CONFIG.levels[idx];
+  const pts = L.path.map(p => ({ x: p[0] * LW, y: p[1] * LH }));
+  const segs = [];
+  let total = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    segs.push({ a, b, len, start: total }); total += len;
+  }
+  // derive build slots: walk the path, drop a slot offset perpendicular, alternating sides
+  const slots = [];
+  const every = GAME_CONFIG.build.slotEvery, off = GAME_CONFIG.build.slotOffset;
+  let d = every * 0.55, side = 1;
+  while (d < total - 12) {
+    const p = pointAtRaw(segs, total, d);
+    const nx = -p.dy, ny = p.dx;                 // unit normal
+    let sx = p.x + nx * off * side, sy = p.y + ny * off * side;
+    // keep on-screen; if off, flip the side
+    if (sx < 46 || sx > LW - 46 || sy < 60 || sy > LH - 40) { sx = p.x - nx * off * side; sy = p.y - ny * off * side; }
+    sx = Math.max(46, Math.min(LW - 46, sx)); sy = Math.max(64, Math.min(LH - 42, sy));
+    slots.push({ x: sx, y: sy, occupied: false });
+    d += every; side *= -1;
+  }
+  // decorative scatter (separate RNG; never affects gameplay)
+  const rng = mulberry(1000 + idx * 7);
+  const decor = [];
+  const kinds = ["tree", "tree", "bush1", "bush2", "rock1", "rock2"];
+  for (let i = 0; i < 16; i++) {
+    const x = 30 + rng() * (LW - 60), y = 120 + rng() * (LH - 150);
+    // keep decor off the path and off slots
+    if (distToPath(segs, total, x, y) < 56) continue;
+    let nearSlot = false;
+    for (const s of slots) if (Math.hypot(s.x - x, s.y - y) < 60) { nearSlot = true; break; }
+    if (nearSlot) continue;
+    const kind = kinds[(rng() * kinds.length) | 0];
+    decor.push({ kind, x, y, h: kind === "tree" ? 120 : kind.startsWith("bush") ? 60 : 40, ph: rng() * 6.28 });
+  }
+  decor.sort((a, b) => a.y - b.y);
+  return { L, idx, pts, segs, total, slots, decor, castle: pts[pts.length - 1], spawn: pts[0] };
+}
+// position + tangent at distance d along the path
+function pointAtRaw(segs, total, d) {
+  d = Math.max(0, Math.min(total, d));
+  for (const s of segs) {
+    if (d <= s.start + s.len || s === segs[segs.length - 1]) {
+      const u = s.len ? (d - s.start) / s.len : 0;
+      const dx = (s.b.x - s.a.x) / (s.len || 1), dy = (s.b.y - s.a.y) / (s.len || 1);
+      return { x: s.a.x + (s.b.x - s.a.x) * u, y: s.a.y + (s.b.y - s.a.y) * u, dx, dy };
+    }
+  }
+  const last = segs[segs.length - 1].b; return { x: last.x, y: last.y, dx: 1, dy: 0 };
+}
+function distToPath(segs, total, x, y) {
+  let best = 1e9;
+  for (const s of segs) {
+    const vx = s.b.x - s.a.x, vy = s.b.y - s.a.y, l2 = vx * vx + vy * vy || 1;
+    let t = ((x - s.a.x) * vx + (y - s.a.y) * vy) / l2; t = Math.max(0, Math.min(1, t));
+    const px = s.a.x + vx * t, py = s.a.y + vy * t;
+    best = Math.min(best, Math.hypot(x - px, y - py));
+  }
+  return best;
+}
+
+/* start a fresh level */
+function startLevel(idx) {
+  const W = buildLevel(idx);
+  S = {
+    W, idx, hearts: W.L.hearts, maxHearts: W.L.hearts,
+    coins: W.L.startCoins != null ? W.L.startCoins : GAME_CONFIG.econ.startCoins,
+    waveIdx: 0, baddies: [], arrows: [], defenders: [],
+    spawnQueue: [], spawnTimer: 0, betweenT: 0, t: 0, perfect: true,
+  };
+  beginWave(0);
+  state = "play";
+  toast("Tap a glowing spot to build an Archer!");
+}
+function beginWave(wi) {
+  const wv = S.W.L.waves[wi];
+  S.waveIdx = wi;
+  S.spawnQueue = [];
+  for (let i = 0; i < wv.count; i++) S.spawnQueue.push(wv);
+  S.spawnTimer = 1.0;          // small grace so the kid can place a tower first
+}
+
+/* place a defender at a slot (returns true on success) */
+function placeDefender(slotIdx, defId) {
+  const slot = S.W.slots[slotIdx]; if (!slot || slot.occupied) return false;
+  const def = GAME_CONFIG.defenders.find(d => d.id === (defId || "archer")) || GAME_CONFIG.defenders[0];
+  if (S.coins < def.cost) { toast("Need more coins!"); sfx("heart", { vol: 0.3 }); return false; }
+  S.coins -= def.cost; slot.occupied = true;
+  S.defenders.push({ x: slot.x, y: slot.y, def, cool: 0, anim: 0, shootT: 0, face: 1 });
+  sfx("place");
+  if (BM) BM.burst(fx.parts, slot.x, slot.y, "#ffe08a", 10);
+  return true;
+}
+
+/* core simulation step — dt in seconds. NO canvas access (headless-safe). */
+function step(dt) {
+  if (state !== "play") return;
+  S.t += dt;
+  const econ = GAME_CONFIG.econ;
+
+  // spawn from queue
+  if (S.spawnQueue.length) {
+    S.spawnTimer -= dt;
+    if (S.spawnTimer <= 0) {
+      const wv = S.spawnQueue.shift();
+      const kind = GAME_CONFIG.baddies[wv.baddie];
+      S.baddies.push({ dist: 0, hp: wv.hits || kind.hits, max: wv.hits || kind.hits,
+        speed: wv.speed || kind.speed, kind, r: kind.r || 26, poof: 0, hit: 0, gone: false, bob: Math.random() * 6 });
+      S.spawnTimer = (wv.spacingMs || 1500) / 1000;
+    }
+  }
+
+  // defenders fire
+  for (const g of S.defenders) {
+    g.anim += dt; if (g.shootT > 0) g.shootT -= dt;
+    g.cool -= dt;
+    if (g.cool <= 0) {
+      // nearest live baddie within range
+      let best = null, bd = 1e9;
+      for (const b of S.baddies) {
+        if (b.poof || b.gone) continue;
+        const p = pointAtRaw(S.W.segs, S.W.total, b.dist);
+        const d = Math.hypot(p.x - g.x, p.y - g.y);
+        if (d <= g.def.range && d < bd) { bd = d; best = b; best._p = p; }
+      }
+      if (best) {
+        g.cool = g.def.fireMs / 1000; g.shootT = 0.22; g.face = (best._p.x >= g.x) ? 1 : -1;
+        const ang = Math.atan2(best._p.y - (g.y - 30), best._p.x - g.x);
+        S.arrows.push({ x: g.x + g.face * 8, y: g.y - 30, vx: Math.cos(ang) * 560, vy: Math.sin(ang) * 560,
+          target: best, dmg: g.def.dmg, life: 1.4 });
+        sfx("shoot", { vol: 0.5 });
+      }
+    }
+  }
+
+  // arrows
+  for (const a of S.arrows) {
+    a.life -= dt; if (a.life <= 0) { a.dead = true; continue; }
+    // gentle homing toward the (still-live) target's current position
+    const b = a.target;
+    if (b && !b.poof && !b.gone) {
+      const p = pointAtRaw(S.W.segs, S.W.total, b.dist);
+      const ang = Math.atan2(p.y - a.y, p.x - a.x), sp = 600;
+      a.vx += (Math.cos(ang) * sp - a.vx) * Math.min(1, dt * 9);
+      a.vy += (Math.sin(ang) * sp - a.vy) * Math.min(1, dt * 9);
+      if (Math.hypot(p.x - a.x, p.y - a.y) < (b.r || 24)) {
+        a.dead = true; b.hp -= a.dmg; b.hit = 0.18;
+        if (BM) BM.burst(fx.parts, a.x, a.y, "#fff2c8", 6);
+        if (b.hp <= 0) poofBaddie(b, p);
+      }
+    }
+    a.x += a.vx * dt; a.y += a.vy * dt;
+    if (a.x < -40 || a.x > LW + 40 || a.y < -40 || a.y > LH + 40) a.dead = true;
+  }
+  S.arrows = S.arrows.filter(a => !a.dead);
+
+  // baddies walk / poof
+  for (const b of S.baddies) {
+    if (b.hit > 0) b.hit -= dt;
+    if (b.poof > 0) { b.poof -= dt; if (b.poof <= 0) b.gone = true; continue; }
+    b.dist += b.speed * dt;
+    if (b.dist >= S.W.total) {            // slipped into the castle
+      b.gone = true; S.hearts = Math.max(0, S.hearts - 1); S.perfect = false;
+      sfx("heart"); if (BM) { BM.flash(fx, "#ff9a6b", 0.18); BM.shake(fx, 0.18); }
+      if (S.hearts <= 0) { enterRetry(); return; }
+    }
+  }
+  S.baddies = S.baddies.filter(b => !b.gone);
+
+  // wave / level completion
+  if (state === "play" && S.spawnQueue.length === 0 && S.baddies.length === 0) {
+    if (S.waveIdx < S.W.L.waves.length - 1) {
+      S.coins += econ.waveBonus; toast("Wave clear!  +" + econ.waveBonus + " coins");
+      sfx("win", { vol: 0.5 }); state = "wavebreak"; S.betweenT = 1.6;
+    } else {
+      winLevel();
+    }
+  }
+
+  if (BM) BM.update(fx, dt);
+}
+function poofBaddie(b, p) {
+  b.poof = 0.45;
+  S.coins += (b.kind.reward != null ? b.kind.reward : GAME_CONFIG.econ.perPoof);
+  if (BM) { BM.explode(fx, p.x, p.y, "#cfd8c0", { n: 16, pop: "poof!" }); }
+  if (BM) BM.pop(fx.pops, p.x, p.y - 18, "+" + (b.kind.reward || GAME_CONFIG.econ.perPoof), "#ffe08a");
+  sfx("poof"); sfx("coin", { vol: 0.6 });
+}
+function enterRetry() {
+  state = "retry";
+  toast("");
+}
+function retryWave() {
+  S.hearts = S.maxHearts; S.baddies = []; S.arrows = [];
+  beginWave(S.waveIdx); state = "play";
+  toast("Here they come again — you've got this!");
+}
+function winLevel() {
+  state = "win";
+  const stars = S.hearts >= S.maxHearts ? 3 : S.hearts >= Math.ceil(S.maxHearts * 0.6) ? 2 : 1;
+  PREFS.stars[S.idx] = Math.max(PREFS.stars[S.idx] || 0, stars);
+  if (S.idx + 1 > PREFS.unlocked) PREFS.unlocked = Math.min(GAME_CONFIG.levels.length - 1, S.idx + 1);
+  savePrefs();
+  sfx("win"); if (BM) BM.explode(fx, LW / 2, LH * 0.4, "#ffd86b", { n: 30, pop: "You win!" });
+  try { window.parent.postMessage({ source: "buildable", kind: "win" }, "*"); } catch (e) {}
+  S._stars = stars;
+}
+
+/* between-wave timer advances outside step() so it still ticks in "wavebreak" */
+function tickNonPlay(dt) {
+  if (state === "wavebreak") { S.betweenT -= dt; if (S.betweenT <= 0) { state = "play"; beginWave(S.waveIdx + 1); } }
+  if (BM && state !== "play") BM.update(fx, dt);
+}
+
+/* ===================================================================== */
+/*  RENDER (skipped headless)                                            */
+/* ===================================================================== */
+const cv = (typeof document !== "undefined") ? document.getElementById("game") : null;
+const ctx = cv ? cv.getContext("2d") : null;
+let VIEW = { scale: 1, ox: 0, oy: 0, cw: LW, ch: LH };
+function resize() {
+  if (!cv) return;
+  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.max(1, r.width * dpr); cv.height = Math.max(1, r.height * dpr);
+  const scale = Math.min(cv.width / LW, cv.height / LH);
+  VIEW = { scale, ox: (cv.width - LW * scale) / 2, oy: (cv.height - LH * scale) / 2, cw: cv.width, ch: cv.height };
+}
+if (cv) { window.addEventListener("resize", resize); }
+
+function render() {
+  if (!ctx) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, VIEW.cw, VIEW.ch);
+  // letterbox bg
+  ctx.fillStyle = "#3a7d2f"; ctx.fillRect(0, 0, VIEW.cw, VIEW.ch);
+  ctx.setTransform(VIEW.scale, 0, 0, VIEW.scale, VIEW.ox, VIEW.oy);
+  const sh = BM ? BM.shakeOffset(fx) : { x: 0, y: 0 };
+  ctx.translate(sh.x, sh.y);
+
+  drawWorld();
+  if (S) {
+    drawSlots();
+    drawCastle();
+    // sort drawables by y for depth
+    const draws = [];
+    for (const d of S.W.decor) draws.push({ y: d.y, fn: () => drawDecor(d) });
+    for (const g of S.defenders) draws.push({ y: g.y, fn: () => drawDefender(g) });
+    for (const b of S.baddies) { const p = pointAtRaw(S.W.segs, S.W.total, b.dist); b._p = p; draws.push({ y: p.y, fn: () => drawBaddie(b, p) }); }
+    draws.sort((a, b) => a.y - b.y);
+    for (const d of draws) d.fn();
+    for (const a of S.arrows) drawArrow(a);
+  }
+  if (BM) BM.draw(ctx, fx, { W: LW, H: LH });
+  if (S) drawHUD();
+  drawToast();
+  if (state === "retry") drawRetry();
+  if (state === "win") drawWin();
+}
+
+function drawWorld() {
+  const w = GAME_CONFIG.world;
+  const g = ctx.createLinearGradient(0, 0, 0, LH);
+  g.addColorStop(0, w.grassTop); g.addColorStop(1, w.grassBot);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, LW, LH);
+  // soft texture stripes
+  ctx.globalAlpha = 0.06; ctx.fillStyle = "#1f5a18";
+  for (let y = 24; y < LH; y += 48) ctx.fillRect(0, y, LW, 18);
+  ctx.globalAlpha = 1;
+  if (S) drawPath();
+}
+function drawPath() {
+  const pts = S.W.pts;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = GAME_CONFIG.world.pathEdge; ctx.lineWidth = 56;
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
+  ctx.strokeStyle = GAME_CONFIG.world.path; ctx.lineWidth = 44;
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
+  // start marker (goblin gate)
+  const s = S.W.spawn;
+  ctx.fillStyle = "rgba(40,30,20,0.25)"; ctx.beginPath(); ctx.ellipse(s.x + 6, s.y, 26, 14, 0, 0, 7); ctx.fill();
+}
+function drawDecor(d) {
+  const sway = Math.sin(S ? S.t * 1.2 + d.ph : d.ph) * 2;
+  if (!drawSprite(ctx, d.kind, d.x + sway, d.y - d.h * 0.4, d.h, S ? S.t + d.ph : 0, { frame: d.kind.startsWith("bush") ? 0 : undefined })) {
+    // fallback drawn decor
+    if (d.kind === "tree") { ctx.fillStyle = "#3f7a2e"; ctx.beginPath(); ctx.arc(d.x, d.y - d.h * 0.5, d.h * 0.36, 0, 7); ctx.fill(); ctx.fillStyle = "#7a4a25"; ctx.fillRect(d.x - 5, d.y - d.h * 0.2, 10, d.h * 0.3); }
+    else if (d.kind.startsWith("bush")) { ctx.fillStyle = "#4c9a3a"; ctx.beginPath(); ctx.arc(d.x, d.y - 14, 22, 0, 7); ctx.fill(); }
+    else { ctx.fillStyle = "#9aa3a8"; ctx.beginPath(); ctx.arc(d.x, d.y - 10, 14, 0, 7); ctx.fill(); }
+  }
+}
+function drawCastle() {
+  const c = S.W.castle;
+  if (!drawSprite(ctx, "castle", c.x - 4, c.y - 34, 150, S.t)) {
+    ctx.fillStyle = "#9fb6c9"; BR && BR.rrect ? BR.rrect(ctx, c.x - 50, c.y - 70, 100, 90, 10) : ctx.fillRect(c.x - 50, c.y - 70, 100, 90); ctx.fill();
+    ctx.fillStyle = "#6f879b"; ctx.fillRect(c.x - 56, c.y - 96, 26, 34); ctx.fillRect(c.x + 30, c.y - 96, 26, 34);
+  }
+}
+function drawSlots() {
+  for (const slot of S.W.slots) {
+    if (slot.occupied) continue;
+    const canBuy = state === "play" && S.coins >= GAME_CONFIG.defenders[0].cost;
+    const pulse = 0.45 + 0.3 * Math.sin(S.t * 4 + slot.x);
+    ctx.save();
+    ctx.strokeStyle = canBuy ? "rgba(255,231,138," + pulse + ")" : "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 3; ctx.setLineDash([7, 6]);
+    ctx.beginPath(); ctx.arc(slot.x, slot.y, 26, 0, 7); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = canBuy ? "rgba(255,231,138,0.18)" : "rgba(255,255,255,0.06)";
+    ctx.beginPath(); ctx.arc(slot.x, slot.y, 24, 0, 7); ctx.fill();
+    if (canBuy) { ctx.fillStyle = "rgba(35,40,20,0.85)"; ctx.font = "bold 22px Fredoka,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("+", slot.x, slot.y + 1); }
+    ctx.restore();
+  }
+}
+function drawDefender(g) {
+  // range ring hint (subtle)
+  ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.beginPath(); ctx.arc(g.x, g.y - 24, g.def.range, 0, 7); ctx.fill();
+  const sprite = (g.shootT > 0 ? g.def.shoot : g.def.idle);
+  if (!drawSprite(ctx, sprite, g.x, g.y - g.def.h * 0.32, g.def.h, g.anim, { flip: g.face < 0 })) {
+    // fallback drawn archer
+    if (BR && BR.hero) BR.hero(ctx, g.x, g.y - 16, { color: g.def.tint, face: g.face });
+    else { ctx.fillStyle = g.def.tint; ctx.beginPath(); ctx.arc(g.x, g.y - 24, 16, 0, 7); ctx.fill(); }
+  }
+}
+function drawBaddie(b, p) {
+  const bob = Math.sin(S.t * 8 + b.bob) * 2;
+  const sc = b.poof > 0 ? Math.max(0.1, b.poof / 0.45) : 1;
+  const flip = p.dx < 0;
+  if (!drawSprite(ctx, b.kind.sprite, p.x, p.y - b.kind.h * 0.30 + bob, b.kind.h, S.t, { flip, scale: sc, alpha: b.poof > 0 ? sc : 1 })) {
+    if (BR && BR.enemy) BR.enemy(ctx, p.x, p.y - 20 + bob, (b.r || 24) * sc, "#cc5b4a", S.t * 3, false);
+    else { ctx.fillStyle = "#cc5b4a"; ctx.beginPath(); ctx.arc(p.x, p.y - 20, (b.r || 22) * sc, 0, 7); ctx.fill(); }
+  }
+  if (b.hit > 0) { ctx.fillStyle = "rgba(255,255,255," + (b.hit / 0.18 * 0.5) + ")"; ctx.beginPath(); ctx.arc(p.x, p.y - 24, b.r || 24, 0, 7); ctx.fill(); }
+  // gentle bonk pips (NOT a draining health bar): little dots that fill in as it's bonked
+  if (b.poof <= 0 && b.max > 1) {
+    const done = b.max - b.hp;
+    for (let i = 0; i < b.max; i++) {
+      ctx.fillStyle = i < done ? "#ffd23f" : "rgba(255,255,255,0.35)";
+      ctx.beginPath(); ctx.arc(p.x - (b.max - 1) * 4 + i * 8, p.y - b.kind.h * 0.62, 2.6, 0, 7); ctx.fill();
+    }
+  }
+}
+function drawArrow(a) {
+  const ang = Math.atan2(a.vy, a.vx);
+  if (!drawSprite(ctx, "arrow", a.x, a.y, 26, 0, {})) {
+    ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(ang);
+    ctx.strokeStyle = "#7a5a32"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(8, 0); ctx.stroke();
+    ctx.fillStyle = "#ffd86b"; ctx.beginPath(); ctx.arc(9, 0, 4, 0, 7); ctx.fill();  // soft tip
+    ctx.restore();
+  } else {
+    // rotate the sprite version
+    ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(ang); ctx.translate(-a.x, -a.y);
+    ctx.restore();
+  }
+}
+
+function drawHUD() {
+  // coins (top center-left), hearts (top center-right) — drawn, no emoji
+  ctx.save();
+  // coin chip
+  ctx.fillStyle = "rgba(20,30,18,0.5)"; BR && BR.rrect ? BR.rrect(ctx, LW / 2 - 150, 14, 130, 40, 18) : ctx.fillRect(LW / 2 - 150, 14, 130, 40); ctx.fill();
+  if (BR && BR.coin) BR.coin(ctx, LW / 2 - 124, 34, S.t, 2, "");
+  ctx.fillStyle = "#fff"; ctx.font = "bold 24px Fredoka,sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillText(String(S.coins), LW / 2 - 104, 35);
+  // hearts chip
+  const hx = LW / 2 + 24;
+  ctx.fillStyle = "rgba(20,30,18,0.5)"; BR && BR.rrect ? BR.rrect(ctx, hx - 10, 14, 150, 40, 18) : ctx.fillRect(hx - 10, 14, 150, 40); ctx.fill();
+  for (let i = 0; i < S.maxHearts; i++) {
+    ctx.globalAlpha = i < S.hearts ? 1 : 0.25;
+    if (BR && BR.heart) BR.heart(ctx, hx + 8 + i * 27, 34, 11); else { ctx.fillStyle = "#ff5b6e"; ctx.beginPath(); ctx.arc(hx + 8 + i * 27, 34, 8, 0, 7); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1;
+  // wave label
+  ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.font = "bold 18px Fredoka,sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("Wave " + (S.waveIdx + 1) + " of " + S.W.L.waves.length, LW / 2, 76);
+  // cost hint bottom
+  ctx.fillStyle = "rgba(20,30,18,0.45)"; BR && BR.rrect ? BR.rrect(ctx, LW / 2 - 110, LH - 50, 220, 36, 16) : ctx.fillRect(LW / 2 - 110, LH - 50, 220, 36); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.font = "bold 17px Fredoka,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Archer — " + GAME_CONFIG.defenders[0].cost + " coins", LW / 2, LH - 32);
+  ctx.restore();
+}
+function drawToast() {
+  if (toastT <= 0 || !toastMsg) return;
+  ctx.save(); ctx.globalAlpha = Math.min(1, toastT);
+  ctx.fillStyle = "rgba(20,30,18,0.7)"; const w = 14 + toastMsg.length * 11;
+  BR && BR.rrect ? BR.rrect(ctx, LW / 2 - w / 2, 96, w, 40, 18) : ctx.fillRect(LW / 2 - w / 2, 96, w, 40); ctx.fill();
+  ctx.fillStyle = "#ffe7a8"; ctx.font = "bold 20px Fredoka,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(toastMsg, LW / 2, 117); ctx.restore();
+}
+function drawRetry() {
+  ctx.save(); ctx.fillStyle = "rgba(15,30,15,0.62)"; ctx.fillRect(0, 0, LW, LH);
+  ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.font = "bold 44px Fredoka,sans-serif";
+  ctx.fillText("Let's try that wave again!", LW / 2, LH / 2 - 24);
+  ctx.font = "22px Fredoka,sans-serif"; ctx.fillStyle = "#cfe9c0";
+  ctx.fillText("Your archers stay put — tap to keep going", LW / 2, LH / 2 + 18);
+  ctx.fillStyle = "#ffd23f"; BR && BR.rrect ? BR.rrect(ctx, LW / 2 - 90, LH / 2 + 44, 180, 52, 26) : ctx.fillRect(LW / 2 - 90, LH / 2 + 44, 180, 52);
+  ctx.fill(); ctx.fillStyle = "#23204a"; ctx.font = "bold 24px Fredoka,sans-serif"; ctx.fillText("Keep going", LW / 2, LH / 2 + 71);
+  ctx.restore();
+}
+function drawWin() {
+  ctx.save(); ctx.fillStyle = "rgba(15,30,15,0.55)"; ctx.fillRect(0, 0, LW, LH);
+  ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.font = "bold 52px Fredoka,sans-serif";
+  ctx.fillText("Castle Saved!", LW / 2, LH / 2 - 30);
+  const stars = S._stars || 1;
+  for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < stars ? 1 : 0.25; if (BR && BR.shape) BR.shape(ctx, "star", LW / 2 - 60 + i * 60, LH / 2 + 24, 26, "#ffd23f"); }
+  ctx.globalAlpha = 1; ctx.fillStyle = "#cfe9c0"; ctx.font = "22px Fredoka,sans-serif";
+  ctx.fillText("Tap to choose another level", LW / 2, LH / 2 + 84);
+  ctx.restore();
+}
+
+/* ===================================================================== */
+/*  INPUT                                                                */
+/* ===================================================================== */
+function toLogical(clientX, clientY) {
+  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const px = (clientX - r.left) * dpr, py = (clientY - r.top) * dpr;
+  return { x: (px - VIEW.ox) / VIEW.scale, y: (py - VIEW.oy) / VIEW.scale };
+}
+function onTap(clientX, clientY) {
+  if (BA) BA.unlock();
+  if (state === "retry") { retryWave(); return; }
+  if (state === "win") { showMenu(); return; }
+  if (state !== "play" && state !== "wavebreak") return;
+  const p = toLogical(clientX, clientY);
+  // find nearest empty slot within reach
+  let bi = -1, bd = 44;
+  S.W.slots.forEach((s, i) => { if (!s.occupied) { const d = Math.hypot(s.x - p.x, s.y - p.y); if (d < bd) { bd = d; bi = i; } } });
+  if (bi >= 0) placeDefender(bi, "archer");
+}
+if (cv) {
+  cv.addEventListener("pointerdown", e => { e.preventDefault(); onTap(e.clientX, e.clientY); }, { passive: false });
+}
+
+/* ===================================================================== */
+/*  START SCREEN (BS) + NAV                                              */
+/* ===================================================================== */
+function levelCards() {
+  return GAME_CONFIG.levels.map((l, i) => {
+    const unlocked = PREFS.unlocked || 0;
+    const st = i < unlocked ? "done" : (i === unlocked ? "next" : "locked");
+    return { n: l.n, name: l.name, color: "#2f6b34", stars: PREFS.stars[i] || 0, maxStars: 3, state: st };
+  });
+}
+function showMenu() {
+  state = "menu"; S = null;
+  const host = document.getElementById("start"); if (!host) return;
+  host.style.display = "block";
+  BS.mount(host, {
+    title: "Castle Guard",
+    subtitle: "Place archers to gently stop the silly goblins!",
+    hero: { name: GAME_CONFIG.world.name, progressText: (PREFS.unlocked || 0) + " of " + GAME_CONFIG.levels.length + " levels cleared" },
+    coins: 0, sound: !(BA && BA.muted), showBack: false, hideSound: true,
+    levels: levelCards(),
+  }, {
+    onPlay: (n) => { host.style.display = "none"; if (BA) BA.unlock(); startLevel(n - 1); },
+    onSound: () => { if (BA) { BA.unlock(); BA.toggleMute(); } navUpdate(); },
+    onBack: () => exitGame(),
+  });
+}
+function exitGame() { try { window.parent.postMessage({ type: "nav:exit" }, "*"); } catch (e) {} try { window.parent.postMessage("nav:exit", "*"); } catch (e) {} }
+function navUpdate() { try { if (window.BuildableGameNav) window.BuildableGameNav.update(); } catch (e) {} }
+
+// standalone nav buttons + shared nav bridge
+const homeBtn = document.getElementById("homeBtn"), muteBtn = document.getElementById("muteBtn");
+if (homeBtn) homeBtn.onclick = () => { if (state === "menu") exitGame(); else showMenu(); };
+if (muteBtn) muteBtn.onclick = () => { if (BA) { BA.unlock(); BA.toggleMute(); } if (muteBtn) muteBtn.textContent = (BA && BA.muted) ? "Off" : "Snd"; navUpdate(); };
+try {
+  if (window.BuildableGameNav) window.BuildableGameNav.register({
+    hide: ["homeBtn", "muteBtn"],
+    onSound: () => { if (BA) { BA.unlock(); BA.toggleMute(); } },
+    onMenu: () => { if (state !== "menu") showMenu(); },
+    soundOn: () => !(BA && BA.muted),
+    inGame: () => state !== "menu",
+  });
+} catch (e) {}
+
+/* ===================================================================== */
+/*  MAIN LOOP                                                            */
+/* ===================================================================== */
+let last = 0;
+function frame(ts) {
+  const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
+  if (toastT > 0) toastT -= dt;
+  if (state === "play") step(dt); else tickNonPlay(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- boot ---------- */
+if (typeof document !== "undefined" && cv) {
+  loadPrefs(); loadSprites(); resize(); showMenu();
+  requestAnimationFrame(frame);
+}
+
+/* ===================================================================== */
+/*  QA / HEADLESS HOOK (standardized name + alias)                       */
+/* ===================================================================== */
+function _simBot(idx, maxFrames) {
+  // "sensible placement" bot: build the cheapest covering set, then top up as
+  // coins allow, preferring slots that sit closest to the path.
+  startLevel(idx);
+  // rank slots by closeness to the path (best coverage first)
+  const ranked = S.W.slots.map((s, i) => ({ i, d: distToPath(S.W.segs, S.W.total, s.x, s.y) }))
+    .sort((a, b) => a.d - b.d);
+  const dt = 1 / 60; const cap = maxFrames || 60000; let f = 0;
+  let retries = 0;
+  const buyNext = () => { for (const r of ranked) { if (!S.W.slots[r.i].occupied) { if (placeDefender(r.i, "archer")) return true; return false; } } return false; };
+  while (f < cap) {
+    if (state === "play") {
+      // greedily build whenever affordable
+      let guard = 0; while (S.coins >= GAME_CONFIG.defenders[0].cost && guard++ < 8) { if (!buyNext()) break; }
+      step(dt);
+    } else if (state === "wavebreak") { tickNonPlay(dt); }
+    else if (state === "retry") { retries++; if (retries > 6) break; retryWave(); }
+    else if (state === "win") break;
+    f++;
+  }
+  return { level: idx, result: state, frames: f, hearts: S ? S.hearts : 0, stars: (S && S._stars) || PREFS.stars[idx] || 0, retries, defenders: S ? S.defenders.length : 0 };
+}
+const API = {
+  _cfg: () => GAME_CONFIG,
+  startLevel: (i) => startLevel(i),
+  state: () => state,
+  sim: (idx, maxFrames) => _simBot(idx, maxFrames),
+  campaign: (cap) => GAME_CONFIG.levels.map((_, i) => _simBot(i, cap || 60000)),
+  _begin: (i) => startLevel(i || 0),
+  _step: (frames) => { for (let k = 0; k < (frames || 1); k++) { if (state === "play") step(1 / 60); else tickNonPlay(1 / 60); } },
+  _draw: () => { try { render(); return "ok"; } catch (e) { return "ERR:" + e.message; } },
+};
+if (typeof window !== "undefined") { window.BUILDABLE_GAME = API; window.CASTLEGUARD_GAME = API; }
+</script>
+</body>
+</html>
