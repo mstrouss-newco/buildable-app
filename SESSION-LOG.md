@@ -1,5 +1,17 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Sunny Town Drive: 3D car + colored houses
+
+Replaced the flat 2D billboard hero car with a real low-poly 3D car (rounded body, windshield,
+bumpers, head/tail lights) whose 4 wheels are pivot-groups that SPIN with speed (`G.speed*0.42`)
++ stronger bank into turns. Filled in the plain-white Kenney houses: each building clone gets a
+random tint from a pastel `BUILDING_TINTS` palette (clone material, set color) so the street is a
+mix of peach/blue/mint/pink/lilac/brick/white. Track/QA untouched (qa-runner all-win). Note: the
+asset zips (Kenney bundle/car kit, brick variation textures) were cleared from the workspace when
+the sandbox disk filled — used a procedural 3D car + material tints instead of new model/texture
+assets; can swap in a downloaded car model + brick variation atlases later.
+
+
 ## 2026-06-28 — Castle Guard: new kid tower-defense engine (Tiny Swords art)
 New hand-authored Track B engine **`public/castle-guard.html`** (branch `claude/games-castle-guard`,
 NOT pushed to main). A gentle, always-winnable single-player tower defense: the kid spends earned
