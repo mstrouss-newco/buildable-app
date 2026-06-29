@@ -1,5 +1,23 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Sunny Town Drive: low-poly model reskin (Kenney + Quaternius)
+
+Replaced the box/billboard roadside with real CC0 3D models, fully data-driven. New
+`SCENERY_SETS` config: `forest` = Quaternius nature (.gltf — trees/pines/bushes/rocks/
+flowers/fern/grass/mushroom), `city` = Kenney City Kit (.glb — building-type-a..u + trees/
+planter/fence/driveway). `TOWN_SET` assigns each of the 6 towns a style (maple/petal/beach=
+forest, market/downtown/rainbow=city). Engine: generalized `loadModel(item)` handles .glb +
+.gltf; `prepModel` swaps to toy MeshLambert, scales (Quaternius=normalize-to-height; Kenney=
+fixed scale + Y-stretch for buildings) and grounds each model; slots clone cached prototypes
+(no reload), random rotation/scale, re-randomized on recycle; buildings face the road + sit
+farther out to frame the street. Library-first WITH fallback: a failed model shows the blocky
+`makeFallbackProp(cat)` so the game never breaks. **Fix:** Kenney GLBs reference an external
+`Textures/colormap.png` that was missing (decode error → all buildings fell back); extracted
+it CC0 from `kenney_city-kit-suburban_20.zip` into `public/models/city-kit/Textures/`. Track/
+lane/dodge/collect/jump logic untouched — `qa-runner.mjs` all-win before & after. Verified
+live in iframe: forest + city towns render, runs winnable, no console errors.
+
+
 ## 2026-06-27 — Croc + Breaker audio: clean sound model (no repetitive beep)
 - Croc Tot: replaced inline synth tones (sound-rule violation) with real bespoke
   ElevenLabs sounds via BA; removed the per-shot fire beep (auto-shooter). Sound on

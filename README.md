@@ -820,6 +820,18 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-28 (Sunny Town Drive: low-poly model reskin)
+
+Roadside scenery is now real CC0 3D models, data-driven via `SCENERY_SETS`/`TOWN_SET`:
+Quaternius nature (.gltf) for forest towns, Kenney City Kit (.glb) buildings for city towns,
+blocky `makeFallbackProp` as the load-fail fallback. Generalized `loadModel(item)` (handles
+.glb+.gltf) + `prepModel` (Lambert, scale, ground; Kenney buildings get a Y-stretch + face the
+road). Fixed the Kenney GLBs' missing external `Textures/colormap.png` (extracted CC0 from the
+kit zip) — buildings now load textured. Track/jump/QA untouched; all-win verified. See
+SESSION-LOG.md.
+
+---
+
 ## Session log — 2026-06-27p (Sunny Town Drive: 3D city buildings + clouds removed)
 
 Used the Quaternius **Downtown City MegaKit** (CC0): it ships modular pieces but ALSO 3 prebuilt

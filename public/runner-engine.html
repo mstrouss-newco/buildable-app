@@ -374,7 +374,7 @@ const propTexCache={};   // "town:piece" -> THREE.Texture, or false if it failed
 const CITY_SCALE=6.0;   // Kenney kit footprint scale; buildings are short, so they get a tall Y-stretch (yMul) -> a street canyon
 const CITY_FACE=0;      // extra yaw if Kenney buildings face the wrong way (Math.PI to flip)
 function N(file,cat){ return {dir:"nature",file,ext:"gltf",cat}; }                 // Quaternius (normalize to height)
-function C(file,cat){ return {dir:"city-kit",file,ext:"glb",cat,scale:CITY_SCALE, yMul: cat==="building"?2.4:1}; } // Kenney (fixed scale, tall buildings)
+function C(file,cat){ return {dir:"city-kit",file,ext:"glb",cat,scale:CITY_SCALE, yMul: cat==="building"?1.8:1}; } // Kenney (fixed scale, slightly taller buildings)
 const SCENERY_SETS={
   forest: [ N("CommonTree_1","tree"),N("CommonTree_3","tree"),N("CommonTree_5","tree"),N("Pine_1","pine"),N("Pine_3","pine"),
             N("Bush_Common","bush"),N("Bush_Common_Flowers","bush"),N("Rock_Medium_1","rock"),N("Rock_Medium_2","rock"),
