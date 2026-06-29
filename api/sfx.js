@@ -83,6 +83,13 @@ const SOUNDS = {
   maze_caught: "Short soft gentle descending uh-oh wobble, friendly and not scary, a tag in a chase, single hit, no music, no voices",
   maze_start:  "Short cheerful arcade start blip, a friendly ready-go ding, single hit, no music, no voices",
 
+  // ---- Sling Squad one-shots (slingshot launcher; per BUILDING-A-GAME "new engine = create new sounds") ----
+  sling_stretch: "Short soft stretchy elastic rubber-band pull and creak, a slingshot being drawn back, single hit, no music, no voices",
+  sling_release: "Short bouncy cartoon slingshot twang and boing as an elastic snaps forward and launches, playful, single hit, no music, no voices",
+  sling_thud:    "Short soft wooden thud and clatter, friendly cartoon blocks getting bonked and tumbling, single hit, no music, no voices",
+  sling_poof:    "Short cute puffy pop and poof, a goofy character popping into a little puff of air, playful cartoon, single hit, no music, no voices",
+  sling_win:     "Happy short victory fanfare with a sparkly cheer, cheerful kids slingshot level cleared, no voices",
+
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
   knock:     "Three soft friendly knocks on a wooden door, single hit, no music, no voices",
@@ -287,6 +294,7 @@ const DURATIONS = {
   board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
   maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,
+  sling_stretch:0.5, sling_release:0.5, sling_thud:0.6, sling_poof:0.5, sling_win:1.6,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_hit:0.5, spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   croc_hit:0.5, croc_pop:0.5, croc_coin:0.5, croc_power:1.0, croc_hurt:0.5, croc_boom:0.9, croc_win:1.6, croc_lose:1.0,

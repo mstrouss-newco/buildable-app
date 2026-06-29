@@ -443,3 +443,50 @@ counterpart to the cross-device multiplayer mechanics in section 12 (`mp-turn-ba
 `m.players` + `m.curIndex()`, and call `m.next()` / `m.finish()` from your game's rules. Keep a
 drawn HUD (no emoji). Reference engines: `public/memory-engine.html`, `bingo-engine.html`,
 `snakes-engine.html`.
+
+---
+
+## 16. Slingshot launch + topple physics (Sling Squad — first physics-engine game)
+
+**Sling Squad** (`public/sling-squad.html`) is the first Track B engine to use a real
+**rigid-body physics engine** — **Matter.js** (`public/matter.min.js`, MIT, vendored as one
+self-contained file; the dependency was confirmed with the owner). It's an ORIGINAL
+kid-friendly slingshot launcher (our own characters Pip/Bloop/Tace, goofy crowned castle
+critters, our levels + name — never Angry Birds branding/art/characters).
+
+Registered as `game_mechanics` slug **`sling-launch-physics`** via
+`db/seed-sling-launch-mechanic.sql` (run once in Supabase).
+
+**The mechanic:** drag a friendly pal back in the slingshot to set aim + power, release to
+fling them along a gravity arc; they collide with stacked wooden block towers and goofy
+targets, which topple and **POOF** into a little puff (no harm, no weapons). Clear all the
+targets to win.
+
+**Always-winnable / kid-tuned (the important part):**
+- **Forgiving aim** — big pull, gentle gravity, a live trajectory-dots preview; pull is
+  clamped so a wild drag still launches sensibly.
+- **Generous launches** with a few to spare per level; **soft-fail only** — running out of
+  slings just retries the level, never a harsh game-over.
+- **Generous pop** — a target pops on ANY of: a direct hit by the flung pal (always counts),
+  a hard knock from a tumbling block, being displaced from its rest spot, or falling off.
+- **Pre-settle then arm** — each level steps the towers to their rest pose with pops
+  disabled, records target rest positions, THEN arms popping, so settling jitter can never
+  pop a target before the kid acts.
+- **Auto-calibrated aim predictor** — the engine measures its own effective per-frame gravity
+  once at load, so the trajectory preview AND the QA bot match the real Matter physics.
+
+**Data-driven** like every Track B engine: `GAME_CONFIG.levels[] = { name, launches,
+blocks:[{x,y,w,h}], targets:[{x,y}] }`. Adding a level = editing data, never engine code.
+
+**Shared libs:** BR (drawn art — cohesive castle world, the always-on fallback), BA (created
+`sling_*` sounds via `/api/sfx`; synth is the silent fallback only), BM (`explode`/`shake`
+juice on launch/impact/poof/win), BS (start screen + level picker), game-nav bridge
+(`nav:exit`, shell-owned Home/Sound/Help). Library-first with a fallback: the flung pals will
+wear real `/api/list-characters` art if available, else the drawn squad — a library miss can
+never break play.
+
+**QA hook:** `window.BUILDABLE_GAME` (alias `SLING_GAME`) exposes `sim(idx)` / `campaign()`
+driving a **sensible-aim bot** that picks the most reachable target and fires the flattest
+unobstructed arc (lobbing over towers when needed). Runner `qa-sling.mjs` (model:
+`qa-breaker.mjs`) asserts the bot clears EVERY level with launches to spare + a render smoke
+test. Run it before and after any change.

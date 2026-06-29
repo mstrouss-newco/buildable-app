@@ -40,6 +40,14 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
+- **claude/games-sling-squad** — NEW **Sling Squad** Track B engine (an ORIGINAL kid-friendly
+  slingshot/physics launcher; our own characters/art/name, NOT Angry Birds). Owns NEW files only:
+  `public/sling-squad.html`, `public/matter.min.js` (vendored MIT physics lib), `qa-sling.mjs`,
+  `db/seed-sling-launch-mechanic.sql`. Touches shared files ADDITIVELY: `vercel.json` (adds
+  `/sling-squad.html`, `/sling`, `/matter.min.js` routes), `api/sfx.js` (adds `sling_*` one-shots),
+  `src/BuildableKids.jsx` (adds a Games-picker Sling Squad tile + `SCREEN_SLING` — high-collision
+  file, edits kept tiny & isolated), `MECHANICS.md`. First repo use of a physics library
+  (Matter.js, confirmed with Mike). Built + QA-green; branch handed to Mike to merge (not pushed to `main`).
 - **claude/topnav-grownup** (MERGED to main — LIVE, verified) — moved the floating **Grown-ups**
   (`GrownUpFab`) + **Learning On/Off** (`LearningControl`) controls OUT of their bottom-left
   floating position INTO the top nav as ONE shared, gated nav button, consistently
