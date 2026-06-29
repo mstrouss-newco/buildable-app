@@ -194,6 +194,38 @@ Mine button), with the bespoke customize overlay opened via `onCustomize`.
 
 ---
 
+## Physics (optional — for NEW toy/sandbox game types only)
+
+Our level engines are **scripted and deterministic** on purpose — that's what makes
+levels *always-winnable* and lets the QA bot prove every level is beatable. **Do NOT
+bolt a physics engine onto those engines** (survival, croc, platformer, breaker): loose
+physics can make a "reach the exit" level un-winnable and breaks the sim.
+
+Where physics is great: a **brand-new sandbox/toy game type where unpredictability is
+the fun** — a block stacker, marble run, slingshot/launcher (Angry-Birds style),
+pinball, "knock it down". These pair beautifully with Kenney's blocky 3D kits and 2D
+shape packs (Asset Library → Kenney catalog).
+
+Approved libraries (all free, MIT-ish, load from a CDN like `three.min.js` — no download):
+
+| Need | Use | Notes |
+|---|---|---|
+| Simple 2D gravity + collisions | **Phaser Arcade Physics** | already in the AI generator (Track A) — free |
+| Fun 2D rigid bodies | **Matter.js** | stacking, launchers, marbles, ragdolls, pinball; lightweight |
+| Accurate 2D (Box2D) | **Planck.js** | only if you need precise platformer physics; heavier |
+| 3D rigid bodies | **Cannon-es** | light, pairs with Three.js — good for a 3D physics toy |
+| Top performance 2D/3D | **Rapier** (`@dimforge/rapier`) | Rust/WASM, fast; more setup |
+
+Rules when you DO use physics:
+- **New game type only** — never the guaranteed-clearable level engines.
+- **Don't make winning physics-fragile.** Prefer score/sandbox goals over "physics must
+  land the ball in the exact spot," or give a deterministic assist so a kid can't soft-lock.
+- **It needs its own QA** (fixed timestep / seeded, or assert "can't get permanently
+  stuck") — the standard always-winnable sim assumes determinism and won't fit.
+- Keep the no-emoji + library-first-with-fallback rules; load the lib from cdnjs/jsdelivr.
+
+---
+
 ## Making it multiplayer (optional)
 
 Two kids can play together in two ways — pick by **how fast they need to see each other**.
