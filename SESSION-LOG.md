@@ -1,5 +1,20 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Castle Guard polish: calm decor, no-words tutorial, 90s+ levels (Mike feedback)
+Three fixes from Mike playing the live build:
+- **Trees no longer "fly around."** Decor (trees/bushes/rocks) was cycling its sprite-sheet
+  animation frames every render; now decor draws a single static frame (`frame:0`) with only a
+  gentle sway. Calm and sensible.
+- **Instructions for kids who can't read.** Added a wordless tutorial: an animated **pointing
+  hand** taps the best build spot (nearest the goblin entrance) until the first guard is placed;
+  the defender **picker chips now show a picture icon** of each guard (archer-with-bow vs
+  knight-with-sword) + a coin; and a short **spoken line** ("Tap a glowing spot to place a guard!")
+  plays at level start via `/api/say` (best-effort, audio unlocked on the Play tap).
+- **Levels last 90s+.** Was ~20s. Widened spawn spacing (gentler trickle, not just more goblins),
+  added a 3rd wave to L1/L2, slowed goblins, and lengthened the between-wave rest to 5s. QA bot
+  durations now ~93s / ~96s / ~121s, still winnable with full hearts. Build clean. Cache-bust v=20260628c.
+
+
 ## 2026-06-28 — Castle Guard: added the KNIGHT defender (second tower type)
 Second defender for Castle Guard (live). **Knight** = a short-range MELEE blocker (no projectile):
 when a goblin passes close it gives a gentle bonk (dmg 2, range 98, cost 25) — strongest at tight
