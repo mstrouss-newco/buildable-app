@@ -291,19 +291,40 @@ function addBillboard(parent, fb, piece){ const d=OBJ_DIM[piece]||{w:2,h:2,y:1};
   loadObjTex(piece, (t)=>{ m.map=t; m.needsUpdate=true; plane.visible=true; if(fb)fb.visible=false; });
   return plane;
 }
+// A real low-poly 3D car (cute, rounded) with wheels that SPIN as you drive.
 function makeCar(bodyColor, cabinColor){
-  const g=new THREE.Group(); const fb=new THREE.Group(); g.add(fb);
-  const body=meshOf(box(2.0,0.9,2.8), bodyColor); body.position.y=0.55; fb.add(body);
-  const cabin=meshOf(box(1.5,0.8,1.4), cabinColor); cabin.position.set(0,1.25,-0.15); fb.add(cabin);
-  const glass=meshOf(box(1.45,0.55,0.12), 0xbfe9ff); glass.position.set(0,1.25,0.56); fb.add(glass);
-  const head=meshOf(cyl(0.26,0.26,0.3,12), 0xffe0b8); head.position.set(0,1.55,-0.15); fb.add(head);
-  for(const sx of [-1,1]){ for(const sz of [-1,1]){
-    const w=meshOf(cyl(0.42,0.42,0.32,16), 0x222831); w.rotation.z=Math.PI/2; w.position.set(sx*0.95, 0.18, sz*0.95); fb.add(w); } }
-  for(const sx of [-1,1]){ const hl=meshOf(box(0.28,0.2,0.12), 0xfff4b0); hl.position.set(sx*0.55,0.55,1.42); fb.add(hl); }
-  studs(fb, bodyColor, 2.0, 2.8, 1.06);
-  addBillboard(g, fb, "hero_car");
+  const g=new THREE.Group();
+  const dark=shadeHex(bodyColor,-26);
+  // body: lower chassis + curved upper, made of a few rounded-ish boxes
+  const lower=meshOf(box(2.1,0.6,3.2), bodyColor); lower.position.y=0.62; g.add(lower);
+  const hood =meshOf(box(2.0,0.42,1.0), bodyColor); hood.position.set(0,1.0,1.05); g.add(hood);
+  const trunk=meshOf(box(2.0,0.42,0.9), bodyColor); trunk.position.set(0,1.0,-1.1); g.add(trunk);
+  const cabin=meshOf(box(1.7,0.8,1.5), cabinColor); cabin.position.set(0,1.32,-0.1); g.add(cabin);
+  const roof =meshOf(box(1.55,0.16,1.35), cabinColor); roof.position.set(0,1.74,-0.1); g.add(roof);
+  // glass (windshield, rear, sides)
+  const gMat=0xbfe9ff;
+  const wsF=meshOf(box(1.55,0.55,0.1), gMat); wsF.position.set(0,1.34,0.66); g.add(wsF);
+  const wsR=meshOf(box(1.55,0.55,0.1), gMat); wsR.position.set(0,1.34,-0.86); g.add(wsR);
+  for(const sx of[-1,1]){ const sw=meshOf(box(0.08,0.46,1.2), gMat); sw.position.set(sx*0.86,1.34,-0.1); g.add(sw); }
+  // bumpers + lights
+  const chrome=0xeef0f2;
+  const bF=meshOf(box(2.05,0.26,0.32),chrome); bF.position.set(0,0.5,1.6); g.add(bF);
+  const bR=meshOf(box(2.05,0.26,0.32),chrome); bR.position.set(0,0.5,-1.6); g.add(bR);
+  for(const sx of[-1,1]){ const hl=meshOf(box(0.34,0.24,0.12),0xfff3b0); hl.position.set(sx*0.66,0.78,1.6); g.add(hl);
+    const tl=meshOf(box(0.34,0.24,0.12),0xff4d4d); tl.position.set(sx*0.66,0.78,-1.6); g.add(tl); }
+  // wheels — each in a pivot group so it rolls cleanly about its axle (X)
+  const wheels=[];
+  for(const sx of[-1,1]){ for(const sz of[-1,1]){
+    const pv=new THREE.Group(); pv.position.set(sx*1.02, 0.42, sz*1.05);
+    const tire=meshOf(cyl(0.44,0.44,0.34,18), 0x202026); tire.rotation.z=Math.PI/2; pv.add(tire);
+    const hub =meshOf(cyl(0.2,0.2,0.36,12), 0xe8e8ee);  hub.rotation.z=Math.PI/2;  pv.add(hub);
+    g.add(pv); wheels.push(pv);
+  } }
+  g.userData.wheels=wheels;
   return g;
 }
+function shadeHex(hex,amt){ let r=((hex>>16)&255)+amt, gg=((hex>>8)&255)+amt, b=(hex&255)+amt;
+  r=clamp(r,0,255); gg=clamp(gg,0,255); b=clamp(b,0,255); return (r<<16)|(gg<<8)|b; }
 const OBSTACLE_PIECE={ car:"ob_car", cone:"cone", hay:"hay", barrel:"barrel" };
 function makeObstacle(type){
   const g=new THREE.Group(); const fb=new THREE.Group(); g.add(fb);
@@ -374,6 +395,8 @@ const propTexCache={};   // "town:piece" -> THREE.Texture, or false if it failed
 // ===========================================================================
 const CITY_SCALE=6.0;   // Kenney kit footprint scale; buildings are short, so they get a tall Y-stretch (yMul) -> a street canyon
 const CITY_FACE=0;      // extra yaw if Kenney buildings face the wrong way (Math.PI to flip)
+// per-building color tints (the white Kenney houses get a random cheerful color)
+const BUILDING_TINTS=[0xffffff, 0xffd2b0, 0xbcd6ff, 0xc7eccb, 0xffe6a6, 0xffc9dd, 0xe0cdff, 0xe6a487, 0xb9e6e0, 0xf2b8b8];
 function N(file,cat){ return {dir:"nature",file,ext:"gltf",cat}; }                 // Quaternius (normalize to height)
 function C(file,cat){ return {dir:"city-kit",file,ext:"glb",cat,scale:CITY_SCALE, yMul: cat==="building"?1.8:1}; } // Kenney (fixed scale, slightly taller buildings)
 const SCENERY_SETS={
@@ -436,7 +459,11 @@ function setSlotPiece(slot, town, item){
   slot.rotation.y = faceRoad ? ((side<0? Math.PI/2 : -Math.PI/2)+CITY_FACE) : Math.random()*6.28;
   // library-first WITH fallback: show a blocky prop until/unless the real model loads
   const fb=slot.userData.fb; while(fb.children.length)fb.remove(fb.children[0]); fb.add(makeFallbackProp(cat)); fb.visible=true;
-  loadModel(item, (proto)=>{ if(slot.userData.item!==item||slot.userData.town!==town) return; clearSlotModel(slot); const inst=proto.clone(true); slot.add(inst); slot.userData.model=inst; fb.visible=false; });
+  loadModel(item, (proto)=>{ if(slot.userData.item!==item||slot.userData.town!==town) return; clearSlotModel(slot);
+    const inst=proto.clone(true);
+    if(cat==="building"){ const tint=BUILDING_TINTS[(Math.random()*BUILDING_TINTS.length)|0];   // colorize the plain white houses
+      inst.traverse(o=>{ if(o.isMesh){ o.material=o.material.clone(); o.material.color=new THREE.Color(tint); } }); }
+    slot.add(inst); slot.userData.model=inst; fb.visible=false; });
 }
 function randItem(town){ const set=SCENERY_SETS[TOWN_SET[town]]||SCENERY_SETS.forest; return set[Math.floor(Math.random()*set.length)]; }
 function applyTownScenery(town){ if(!scene)return; for(const slot of scenePool) setSlotPiece(slot, town, randItem(town)); }
@@ -511,9 +538,10 @@ function renderScene(){
   for(const s of scenePool){ s.position.z+=adv; if(s.position.z>NEAR_Z+8){ s.position.z-=18*12; recycleSlot(s); } }
   // car
   carGroup.position.x = G.carX; carGroup.position.z = zForP(CAR_Y);
-  carGroup.position.y = Math.sin(G.bob)*0.06 + (G.jy||0)*0.12;
-  carGroup.rotation.y = clamp((xForLane(G.lane)-G.carX)*0.16, -0.3, 0.3);   // gentle bank (billboard-friendly)
+  carGroup.position.y = Math.sin(G.bob)*0.05 + (G.jy||0)*0.12;
+  carGroup.rotation.y = clamp((xForLane(G.lane)-G.carX)*0.2, -0.4, 0.4);   // bank into turns
   carGroup.visible = !(G.invuln>0 && Math.floor(G.invuln/5)%2===0);
+  if(carGroup.userData.wheels){ const ws=(state==="play"&&started)? (G.speed*0.42) : 0; for(const w of carGroup.userData.wheels) w.rotation.x -= ws; }   // wheels roll
   // obstacles
   for(const o of G.obstacles){ if(!o._mesh){ o._mesh=makeObstacle(o.type); scene.add(o._mesh); }
     o._mesh.position.set(o.type==="bump"?0:xForLane(o.lane), 0, zForP(o.y)); }
