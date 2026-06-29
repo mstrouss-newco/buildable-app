@@ -364,78 +364,80 @@ const PIECE_DIM={ bld_a:{w:5.4,h:6.2}, bld_b:{w:5.0,h:5.2}, bld_c:{w:4.6,h:6.6},
   tree:{w:4.6,h:5.6}, tree_b:{w:4.2,h:5.8}, prop:{w:3.4,h:3.2} };
 const propTexCache={};   // "town:piece" -> THREE.Texture, or false if it failed
 
-// ---- real 3D models (Quaternius CC0 MegaKits): Nature for leafy towns, City for urban ----
-const NATURE_MODELS=["CommonTree_1","CommonTree_3","CommonTree_5","Pine_1","Pine_3","Bush_Common","Bush_Common_Flowers","Rock_Medium_1","Rock_Medium_2","Flower_3_Group","Flower_4_Group","Grass_Common_Tall","Mushroom_Common","Fern_1"];
-const CITY_MODELS=["Building_Small_1","Building_Medium_2_001","Building_Large_2"];
-const TOWN_MODELS={ maple:{dir:"nature",list:NATURE_MODELS}, petal:{dir:"nature",list:NATURE_MODELS},
-                    market:{dir:"city",list:CITY_MODELS}, downtown:{dir:"city",list:CITY_MODELS} };
-const CITY_FACE=0;   // extra yaw if buildings face the wrong way (Math.PI to flip)
-const MODEL_TARGET_H={ tree:6.0, pine:6.4, bush:2.4, rock:1.7, flower:1.5, grass:1.4, mushroom:1.3, fern:1.8, building:16 };
-function modelCategory(n){ n=n.toLowerCase(); if(n.indexOf("building")>=0) return "building"; for(const k of ["pine","tree","bush","rock","flower","grass","mushroom","fern"]) if(n.indexOf(k)>=0) return k; return "tree"; }
+// ===========================================================================
+//  Roadside scenery = real low-poly 3D models, chosen per town from a DATA config.
+//  Kenney City Kit (.glb, CC0) = "city"; Quaternius Nature (.gltf, CC0) = "forest".
+//  Library-first: a model loads from /models/...; if it fails to load, the slot
+//  shows a simple blocky fallback (makeFallbackProp) so the game never breaks.
+//  Decorative ONLY — never affects lanes / track / collectibles / QA.
+// ===========================================================================
+const CITY_SCALE=8.0;   // Kenney kit models are ~1u; scale up to fit the world (keeps proportions + variety)
+const CITY_FACE=0;      // extra yaw if Kenney buildings face the wrong way (Math.PI to flip)
+function N(file,cat){ return {dir:"nature",file,ext:"gltf",cat}; }                 // Quaternius (normalize to height)
+function C(file,cat){ return {dir:"city-kit",file,ext:"glb",cat,scale:CITY_SCALE}; } // Kenney (fixed scale)
+const SCENERY_SETS={
+  forest: [ N("CommonTree_1","tree"),N("CommonTree_3","tree"),N("CommonTree_5","tree"),N("Pine_1","pine"),N("Pine_3","pine"),
+            N("Bush_Common","bush"),N("Bush_Common_Flowers","bush"),N("Rock_Medium_1","rock"),N("Rock_Medium_2","rock"),
+            N("Flower_3_Group","flower"),N("Flower_4_Group","flower"),N("Fern_1","fern"),N("Grass_Common_Tall","grass"),N("Mushroom_Common","mushroom") ],
+  // buildings listed extra so the city reads as a city; trees/planters/fences = filler
+  city: [ C("building-type-a","building"),C("building-type-b","building"),C("building-type-c","building"),C("building-type-d","building"),
+          C("building-type-e","building"),C("building-type-f","building"),C("building-type-h","building"),C("building-type-k","building"),
+          C("building-type-m","building"),C("building-type-o","building"),C("building-type-q","building"),C("building-type-s","building"),
+          C("building-type-b","building"),C("building-type-f","building"),C("building-type-o","building"),
+          C("tree-large","tree"),C("tree-small","tree"),C("planter","planter"),C("fence","fence"),C("driveway-long","driveway") ],
+};
+const TOWN_SET={ maple:"forest", petal:"forest", beach:"forest", market:"city", downtown:"city", rainbow:"city" };
+const MODEL_TARGET_H={ tree:6.0, pine:6.4, bush:2.4, rock:1.7, flower:1.5, grass:1.4, mushroom:1.3, fern:1.8 };
 let _gltf=null; const modelCache={}, modelCbs={};
-function prepModel(obj,name){ // toy Lambert material + auto-scale to target height + sit on ground
+function prepModel(obj,cat,fixedScale){ // toy Lambert material + scale + sit on ground
   obj.traverse(o=>{ if(o.isMesh){ const m=o.material;
     o.material=new THREE.MeshLambertMaterial({ map:(m&&m.map)||null, color:(m&&m.color)?m.color:0xffffff, transparent:!!(m&&m.transparent), alphaTest:(m&&m.alphaTest)||0, side:THREE.DoubleSide }); } });
-  let box=new THREE.Box3().setFromObject(obj), size=new THREE.Vector3(); box.getSize(size);
-  const t=MODEL_TARGET_H[modelCategory(name)]||5, s=size.y>0?t/size.y:1; obj.scale.setScalar(s);
-  box=new THREE.Box3().setFromObject(obj); obj.position.y -= box.min.y;
+  if(fixedScale>0){ obj.scale.setScalar(fixedScale); }
+  else { const box=new THREE.Box3().setFromObject(obj), size=new THREE.Vector3(); box.getSize(size); const t=MODEL_TARGET_H[cat]||5, s=size.y>0?t/size.y:1; obj.scale.setScalar(s); }
+  const b=new THREE.Box3().setFromObject(obj); obj.position.y -= b.min.y;
 }
-function loadModel(dir, name, cb){
+function loadModel(item, cb){
   if(!THREE || !THREE.GLTFLoader) return;
-  const key=dir+"/"+name;
+  const key=item.dir+"/"+item.file;
   if(modelCache[key]===false) return;
   if(modelCache[key] && modelCache[key]!=="loading"){ cb(modelCache[key]); return; }
   if(modelCache[key]==="loading"){ modelCbs[key].push(cb); return; }
   modelCache[key]="loading"; modelCbs[key]=[cb];
   if(!_gltf) _gltf=new THREE.GLTFLoader();
-  _gltf.load("models/"+key+".gltf",
-    (g)=>{ const o=g.scene; prepModel(o,name); modelCache[key]=o; (modelCbs[key]||[]).forEach(c=>c(o)); modelCbs[key]=[]; },
+  _gltf.load("models/"+key+"."+item.ext,
+    (g)=>{ const o=g.scene; prepModel(o,item.cat,item.scale); modelCache[key]=o; (modelCbs[key]||[]).forEach(c=>c(o)); modelCbs[key]=[]; },
     undefined, ()=>{ modelCache[key]=false; });
 }
-function makeFallbackProp(piece){ const g=new THREE.Group();
-  if(piece.indexOf("tree")===0){ const tr=meshOf(cyl(0.2,0.26,1.1,10),0x8a5a3c); tr.position.y=0.55; g.add(tr);
-    const lv=meshOf(new THREE.SphereGeometry(1.0,12,10),0x4fae5a); lv.position.y=1.7; g.add(lv); }
-  else if(piece==="prop"){ const b=meshOf(new THREE.SphereGeometry(0.7,10,8),0x6fbf5a); b.position.y=0.7; g.add(b); }
-  else { const cols={bld_a:0xffb3a7,bld_b:0xbfd7ff,bld_c:0xfde08a}; const h=meshOf(box(1.9,2.4,1.9),cols[piece]||0xcccccc); h.position.y=1.2; g.add(h);
-    const roof=meshOf(cyl(0.05,1.6,1.05,4),0xb5524a); roof.position.y=2.9; roof.rotation.y=Math.PI/4; g.add(roof); }
+function makeFallbackProp(cat){ const g=new THREE.Group();   // blocky stand-in if a model fails to load
+  if(cat==="tree"||cat==="pine"){ const tr=meshOf(cyl(0.2,0.26,1.1,10),0x8a5a3c); tr.position.y=0.55; g.add(tr);
+    const lv=meshOf(new THREE.SphereGeometry(1.0,12,10), cat==="pine"?0x3e8e54:0x4fae5a); lv.position.y=1.7; g.add(lv); }
+  else if(cat==="building"){ const cols=[0xb7a98f,0xc9b7a0,0x9fb0bf,0xcdbfae]; const h=meshOf(box(2.4,4.6,2.4), cols[Math.floor(Math.random()*cols.length)]); h.position.y=2.3; g.add(h);
+    const top=meshOf(box(2.55,0.3,2.55),0x8a8378); top.position.y=4.6; g.add(top); }
+  else if(cat==="fence"||cat==="driveway"){ const b=meshOf(box(2.4,0.6,0.3),0xb8b1a0); b.position.y=0.3; g.add(b); }
+  else if(cat==="rock"){ const b=meshOf(new THREE.SphereGeometry(0.8,8,6),0x9a9a9a); b.position.y=0.55; b.scale.y=0.7; g.add(b); }
+  else { const b=meshOf(new THREE.SphereGeometry(0.7,10,8),0x6fbf5a); b.position.y=0.7; g.add(b); }   // bush/flower/grass/fern/planter/mushroom
   return g;
 }
 function makeScenerySlot(){ const grp=new THREE.Group();
   const fb=new THREE.Group(); grp.add(fb);
-  const planeMat=new THREE.MeshBasicMaterial({transparent:true,alphaTest:0.4,side:THREE.DoubleSide});
-  const plane=new THREE.Mesh(new THREE.PlaneGeometry(1,1), planeMat); plane.visible=false; grp.add(plane);
-  grp.userData={ fb, plane, piece:null, town:null, side:1 }; return grp;
+  grp.userData={ fb, item:null, town:null, side:1 }; return grp;
 }
 function clearSlotModel(slot){ if(slot.userData.model){ slot.remove(slot.userData.model); slot.userData.model=null; } }
-function setSlotPiece(slot, town, piece){
-  slot.userData.piece=piece; slot.userData.town=town;
+function setSlotPiece(slot, town, item){
+  slot.userData.item=item; slot.userData.town=town;
   clearSlotModel(slot);
-  const side=slot.userData.side||1, tm=TOWN_MODELS[town];
-  // place along its side: city buildings sit farther out and frame the street
-  const xoff = (tm&&tm.dir==="city") ? (9.5+Math.random()*3.0) : (Math.random()<0.35?(10.5+Math.random()*2):(6.6+Math.random()*1.4));
+  const side=slot.userData.side||1, cat=item.cat, isCity=TOWN_SET[town]==="city";
+  const faceRoad = (cat==="building"||cat==="fence");
+  // buildings sit farther out to frame the street; trees/filler line the road nearer (never in lanes)
+  const xoff = cat==="building" ? (12+Math.random()*2.2) : (isCity ? (7.5+Math.random()*2.2) : (6.5+Math.random()*3));
   slot.position.x = side*xoff;
-  if(tm){   // real 3D model
-    slot.userData.fb.visible=false; slot.userData.plane.visible=false;
-    if(tm.dir==="city"){ slot.scale.setScalar(0.95+Math.random()*0.18); slot.rotation.y=(side<0? Math.PI/2 : -Math.PI/2)+CITY_FACE; }
-    else { slot.scale.setScalar(0.8+Math.random()*0.5); slot.rotation.y=Math.random()*6.28; }
-    loadModel(tm.dir, piece, (proto)=>{ if(slot.userData.town!==town||slot.userData.piece!==piece) return; clearSlotModel(slot); const inst=proto.clone(true); slot.add(inst); slot.userData.model=inst; });
-    return;
-  }
-  slot.rotation.y=0;
-  const fb=slot.userData.fb; while(fb.children.length)fb.remove(fb.children[0]); fb.add(makeFallbackProp(piece)); fb.visible=true;
-  const plane=slot.userData.plane, d=PIECE_DIM[piece]||{w:5,h:5.5};
-  plane.geometry.dispose(); plane.geometry=new THREE.PlaneGeometry(d.w,d.h); plane.position.y=d.h/2; plane.visible=false; plane.material.map=null;
-  plane.scale.x = Math.random()<0.5?-1:1;                 // mirror the art for variety
-  slot.scale.setScalar(0.86 + Math.random()*0.3);         // size jitter
-  const key=town+":"+piece;
-  if(propTexCache[key]===false) return;
-  if(propTexCache[key]){ plane.material.map=propTexCache[key]; plane.material.needsUpdate=true; plane.visible=true; fb.visible=false; return; }
-  try{ new THREE.TextureLoader().load("/api/images?kind=runnerprop&town="+encodeURIComponent(town)+"&piece="+encodeURIComponent(piece),
-    (t)=>{ propTexCache[key]=t; if(slot.userData.piece===piece && slot.userData.town===town){ plane.material.map=t; plane.material.needsUpdate=true; plane.visible=true; fb.visible=false; } },
-    undefined, ()=>{ propTexCache[key]=false; }); }catch(e){}
+  slot.scale.setScalar(0.85+Math.random()*0.35);
+  slot.rotation.y = faceRoad ? ((side<0? Math.PI/2 : -Math.PI/2)+CITY_FACE) : Math.random()*6.28;
+  // library-first WITH fallback: show a blocky prop until/unless the real model loads
+  const fb=slot.userData.fb; while(fb.children.length)fb.remove(fb.children[0]); fb.add(makeFallbackProp(cat)); fb.visible=true;
+  loadModel(item, (proto)=>{ if(slot.userData.item!==item||slot.userData.town!==town) return; clearSlotModel(slot); const inst=proto.clone(true); slot.add(inst); slot.userData.model=inst; fb.visible=false; });
 }
-function randPiece(){ return SCENERY_PIECES[Math.floor(Math.random()*SCENERY_PIECES.length)]; }
-function randItem(town){ const tm=TOWN_MODELS[town]; return tm ? tm.list[Math.floor(Math.random()*tm.list.length)] : randPiece(); }
+function randItem(town){ const set=SCENERY_SETS[TOWN_SET[town]]||SCENERY_SETS.forest; return set[Math.floor(Math.random()*set.length)]; }
 function applyTownScenery(town){ if(!scene)return; for(const slot of scenePool) setSlotPiece(slot, town, randItem(town)); }
 function recycleSlot(slot){ const town=slot.userData.town; if(!town) return; setSlotPiece(slot, town, randItem(town)); }
 
@@ -475,8 +477,10 @@ const skyTexCache={};
 function applyTownColors(){ if(!scene)return; const sky=new THREE.Color(L.sky);
   // solid-color fallback first (always works); fog fades distant road to this color
   scene.background=sky; scene.fog.color=sky;
-  const city = !!(TOWN_MODELS[L.skyId] && TOWN_MODELS[L.skyId].dir==="city");
-  if(groundMesh) groundMesh.material=mat(city ? 0xb6b4be : L.grass);   // concrete sidewalks in the city, grass elsewhere
+  const city = TOWN_SET[L.skyId]==="city";
+  // ground color is pre-darkened so the bright scene lighting doesn't blow it out to white
+  const gcol = city ? 0x6e6c76 : new THREE.Color(L.grass).multiplyScalar(0.42).getHex();
+  if(groundMesh) groundMesh.material=mat(gcol);   // concrete sidewalks in the city, grass elsewhere
   const cv=document.getElementById('c'); if(cv) cv.style.background="#"+sky.getHexString();
   // then try the AI sky/skyline backdrop (cached forever after first gen); on any
   // failure we silently keep the solid color, so a missing image can't break the game.
