@@ -97,18 +97,22 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   econ: { startCoins: 80, perPoof: 5, waveBonus: 20 },
   build: { slotEvery: 158, slotOffset: 66 },   // build-slot auto-placement along the path
   levels: [
-    { n: 1, name: "First Steps", hearts: 5, startCoins: 80,
+    { n: 1, name: "First Steps", hearts: 5, startCoins: 90,
       path: [[0.00,0.32],[0.34,0.32],[0.34,0.66],[0.70,0.66],[0.70,0.38],[1.00,0.38]],
-      waves: [ { baddie: "pawn", count: 5, spacingMs: 1700, hits: 2, speed: 38 } ] },
-    { n: 2, name: "Two by Two", hearts: 5, startCoins: 80,
+      waves: [ { baddie: "pawn", count: 10, spacingMs: 2600, hits: 2, speed: 26 },
+               { baddie: "pawn", count: 11, spacingMs: 2500, hits: 2, speed: 26 },
+               { baddie: "pawn", count: 12, spacingMs: 2400, hits: 3, speed: 28 } ] },
+    { n: 2, name: "Two by Two", hearts: 5, startCoins: 95,
       path: [[0.00,0.52],[0.22,0.52],[0.22,0.22],[0.50,0.22],[0.50,0.74],[0.80,0.74],[0.80,0.42],[1.00,0.42]],
-      waves: [ { baddie: "pawn", count: 6, spacingMs: 1550, hits: 2, speed: 40 },
-               { baddie: "pawn", count: 7, spacingMs: 1400, hits: 3, speed: 42 } ] },
-    { n: 3, name: "Big Parade", hearts: 5, startCoins: 95,
+      waves: [ { baddie: "pawn", count: 11, spacingMs: 2500, hits: 2, speed: 26 },
+               { baddie: "pawn", count: 12, spacingMs: 2400, hits: 3, speed: 28 },
+               { baddie: "pawn", count: 13, spacingMs: 2300, hits: 3, speed: 30 } ] },
+    { n: 3, name: "Big Parade", hearts: 5, startCoins: 110,
       path: [[0.00,0.24],[0.26,0.24],[0.26,0.56],[0.10,0.56],[0.10,0.82],[0.56,0.82],[0.56,0.40],[0.80,0.40],[0.80,0.70],[1.00,0.70]],
-      waves: [ { baddie: "pawn", count: 6, spacingMs: 1500, hits: 2, speed: 40 },
-               { baddie: "pawn", count: 8, spacingMs: 1350, hits: 3, speed: 42 },
-               { baddie: "pawn", count: 9, spacingMs: 1250, hits: 3, speed: 44 } ] },
+      waves: [ { baddie: "pawn", count: 11, spacingMs: 2000, hits: 2, speed: 26 },
+               { baddie: "pawn", count: 13, spacingMs: 1850, hits: 3, speed: 28 },
+               { baddie: "pawn", count: 13, spacingMs: 1750, hits: 3, speed: 30 },
+               { baddie: "pawn", count: 14, spacingMs: 1650, hits: 3, speed: 32 } ] },
   ],
 };
 
@@ -149,6 +153,8 @@ function drawSprite(ctx, name, cx, cy, h, t, opt) {
 
 /* ---------- audio: created sounds via BA; synth is the silent fallback only ---------- */
 function sfx(n, o) { try { if (BA) BA.sfx(n, o); } catch (e) {} }
+let _voiceEl = null;
+function sayVoice(t) { try { if (!BA || BA.muted) return; if (!_voiceEl) _voiceEl = new Audio(); _voiceEl.src = "/api/say?t=" + encodeURIComponent(t); const pr = _voiceEl.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {} }
 if (BA && BA.configure) {
   BA.configure({ sfxBase: "/api/sfx?s=", map: {
     place:   "cg_place",      // place a tower
@@ -255,8 +261,13 @@ function startLevel(idx) {
     spawnQueue: [], spawnTimer: 0, betweenT: 0, t: 0, perfect: true,
   };
   beginWave(0);
+  // tutorial target: the empty slot nearest the goblins' entrance (taught with a hand, no words)
+  let bi = -1, bd = 1e9;
+  S.W.slots.forEach((s, i) => { const d = Math.hypot(s.x - S.W.spawn.x, s.y - S.W.spawn.y); if (!s.occupied && d < bd) { bd = d; bi = i; } });
+  S.tutSlot = bi;
   state = "play";
-  toast("Tap a glowing spot to build an Archer!");
+  toast("Tap a glowing spot!");
+  sayVoice("Tap a glowing spot to place a guard!");
 }
 function beginWave(wi) {
   const wv = S.W.L.waves[wi];
@@ -365,7 +376,7 @@ function step(dt) {
   if (state === "play" && S.spawnQueue.length === 0 && S.baddies.length === 0) {
     if (S.waveIdx < S.W.L.waves.length - 1) {
       S.coins += econ.waveBonus; toast("Wave clear!  +" + econ.waveBonus + " coins");
-      sfx("win", { vol: 0.5 }); state = "wavebreak"; S.betweenT = 1.6;
+      sfx("win", { vol: 0.5 }); state = "wavebreak"; S.betweenT = 5.0;
     } else {
       winLevel();
     }
@@ -443,6 +454,7 @@ function render() {
     draws.sort((a, b) => a.y - b.y);
     for (const d of draws) d.fn();
     for (const a of S.arrows) drawArrow(a);
+    if (state === "play" && S.defenders.length === 0 && S.tutSlot >= 0) drawTutorialHand();
   }
   if (BM) BM.draw(ctx, fx, { W: LW, H: LH });
   if (S) drawHUD();
@@ -475,7 +487,7 @@ function drawPath() {
 }
 function drawDecor(d) {
   const sway = Math.sin(S ? S.t * 1.2 + d.ph : d.ph) * 2;
-  if (!drawSprite(ctx, d.kind, d.x + sway, d.y - d.h * 0.4, d.h, S ? S.t + d.ph : 0, { frame: d.kind.startsWith("bush") ? 0 : undefined })) {
+  if (!drawSprite(ctx, d.kind, d.x + sway, d.y - d.h * 0.4, d.h, 0, { frame: 0 })) {
     // fallback drawn decor
     if (d.kind === "tree") { ctx.fillStyle = "#3f7a2e"; ctx.beginPath(); ctx.arc(d.x, d.y - d.h * 0.5, d.h * 0.36, 0, 7); ctx.fill(); ctx.fillStyle = "#7a4a25"; ctx.fillRect(d.x - 5, d.y - d.h * 0.2, 10, d.h * 0.3); }
     else if (d.kind.startsWith("bush")) { ctx.fillStyle = "#4c9a3a"; ctx.beginPath(); ctx.arc(d.x, d.y - 14, 22, 0, 7); ctx.fill(); }
@@ -547,6 +559,16 @@ function drawArrow(a) {
   }
 }
 
+function drawTutorialHand() {
+  const slot = S.W.slots[S.tutSlot]; if (!slot) return;
+  const pulse = 0.5 + 0.5 * Math.sin(S.t * 4);
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,231,138," + (0.45 + 0.45 * pulse) + ")"; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(slot.x, slot.y, 30 + pulse * 5, 0, 7); ctx.stroke();
+  const tap = Math.max(0, Math.sin(S.t * 4)) * 12;   // bobbing "tap" motion
+  if (BR && BR.hand) BR.hand(ctx, slot.x + 22, slot.y + 14 + tap, 1.15);
+  ctx.restore();
+}
 function drawHUD() {
   // coins (top center-left), hearts (top center-right) — drawn, no emoji
   ctx.save();
@@ -576,9 +598,14 @@ function drawHUD() {
     ctx.fillStyle = sel ? "rgba(245,210,90,0.92)" : "rgba(20,30,18,0.55)";
     BR && BR.rrect ? BR.rrect(ctx, dx, dy, cw, ch, 18) : ctx.fillRect(dx, dy, cw, ch); ctx.fill();
     if (sel) { ctx.lineWidth = 3; ctx.strokeStyle = "#fff7da"; BR && BR.rrect ? BR.rrect(ctx, dx, dy, cw, ch, 18) : ctx.strokeRect(dx, dy, cw, ch); ctx.stroke(); }
-    ctx.globalAlpha = afford ? 1 : 0.5;
-    ctx.fillStyle = sel ? "#23200a" : "#fff"; ctx.font = "bold 17px Fredoka,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(def.name + " — " + def.cost, dx + cw / 2, dy + ch / 2);
+    ctx.globalAlpha = afford ? 1 : 0.45;
+    // picture icon of the guard (non-readers recognize archer-with-bow vs knight-with-sword)
+    drawSprite(ctx, def.idle, dx + 30, dy + ch / 2, 48, S.t, {});
+    ctx.fillStyle = sel ? "#23200a" : "#fff"; ctx.textBaseline = "middle";
+    ctx.font = "bold 16px Fredoka,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(def.name, dx + 56, dy + ch / 2);
+    if (BR && BR.coin) BR.coin(ctx, dx + cw - 42, dy + ch / 2, S.t, 1, "");
+    ctx.fillText(String(def.cost), dx + cw - 32, dy + ch / 2);
     ctx.globalAlpha = 1;
     defChips.push({ x: dx, y: dy, w: cw, h: ch, id: def.id });
     dx += cw + gap;

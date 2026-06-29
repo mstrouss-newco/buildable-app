@@ -188,7 +188,7 @@ function familyBtn(onFamily) {
 function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html" onHome={onHome} />; }
 function TennisScreen({ onHome, onFamily }) { return <GameFrame title="Buildable Tennis" src="/tennis.html" onHome={onHome} right={familyBtn(onFamily)} />; }
 function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html" onHome={onHome} />; }
-function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628b" onHome={onHome} bg="#2e7d32" />; }
+function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628c" onHome={onHome} bg="#2e7d32" />; }
 function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html" onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src }) { return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />; }
 function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=20260628a" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
