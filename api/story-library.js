@@ -75,6 +75,11 @@ const CHARACTERS = [
   ["captain-spud",     "Captain Spud",      "a goofy cartoon pirate potato captain with an eyepatch and a tiny pirate hat, friendly, full body"],
   ["mosquito-max",     "Mosquito Maximus",  "a big silly cartoon mosquito with a long goofy nose and friendly googly eyes, friendly-funny not scary, full body"],
   ["jelly-dragon",     "Jelly Dragon",      "a big friendly round wobbly purple jelly dragon with tiny wings and a happy smile, full body"],
+
+  // ---- Space Sparkles (survival) — bespoke space-critter enemies ----
+  ["star-slime", "Star Slime", "a cute round wobbly glowing green space slime alien with two big friendly eyes and tiny antennae, soft and squishy, full body"],
+  ["comet-bug",  "Comet Bug",  "a cute little blue space bug alien with big friendly eyes, tiny wings and a glowing sparkly tail, full body"],
+  ["puff-blob",  "Puff Blob",  "a cute fluffy round pink space gas-blob creature with big sparkly eyes and a tiny smile, full body"],
 ];
 
 function styleId(s) { return STYLES[s] ? s : "watercolor"; }

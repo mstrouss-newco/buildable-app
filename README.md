@@ -106,6 +106,31 @@ game-over screen.
   `src/BuildableKids.jsx`; tile art `kind=game&id=castleguard` in `api/images.js`.
 - **Owner actions:** run `db/seed-castleguard-assets.sql` + `db/seed-castleguard-mechanic.sql` once in
   Supabase (optional; the game runs without them). Merge the branch to deploy + live-QA on devices.
+## Sling Squad — original slingshot/physics launcher; first physics-engine game (June 28 2026)
+**New Track B engine `public/sling-squad.html`** (branch `claude/games-sling-squad`) — an ORIGINAL
+kid-friendly slingshot game (our own characters/art/name; NEVER Angry Birds). FIRST Buildable game
+to use a real rigid-body **physics engine: Matter.js** (`public/matter.min.js`, MIT, vendored as one
+self-contained file — dependency confirmed with Mike). Drag a friendly pal back in the slingshot,
+release to fling them along a gravity arc, knock over stacked block towers and bonk goofy castle
+critters that topple + POOF (no harm/weapons). Clear all targets to win.
+
+- **Very forgiving + always-winnable (Mike's picks):** big easy pull + trajectory preview, gentle
+  gravity, generous launches with spares, SOFT-FAIL retry (no game-over). Generous target pop
+  (direct hit always counts + knocked + displaced + fell-off); levels pre-settle then arm pops so
+  jitter can't pop a target early. 3 simple squad pals, no powers in v1. Castle world ships first.
+- **Data-driven:** `GAME_CONFIG.levels[]` (blocks + targets + launches) — a new level is data, not
+  code. 5 castle levels.
+- **Shared libs:** BR (drawn castle art = always-on fallback), BA (new created `sling_*` sounds in
+  `api/sfx.js`; synth = silent fallback), BM (explode/shake), BS (start screen), game-nav (`nav:exit`,
+  shell Home/Sound/Help). Library-first w/ fallback (flung pals can use `/api/list-characters` art).
+  Win/lose posted for helper reactions + per-kid telemetry. No emoji.
+- **New mechanic** `sling-launch-physics` (`MECHANICS.md` §16 + `db/seed-sling-launch-mechanic.sql`).
+- **QA:** `qa-sling.mjs` drives a sensible-aim bot (`window.BUILDABLE_GAME`/`SLING_GAME`) that clears
+  EVERY level with launches to spare + render smoke; aim predictor auto-calibrates to Matter gravity.
+  Also visually verified by rendering the real `draw()` to PNGs. `npm run build` transforms clean.
+  Routes added to `vercel.json` (before catch-all); tile + `SCREEN_SLING` added to `src/BuildableKids.jsx`.
+- **Owner action:** run `db/seed-sling-launch-mechanic.sql` once. On branch `claude/games-sling-squad`
+  — **not** pushed to `main`; merge to deploy + live-QA on devices.
 
 ## Family Town — original 3-4 player Monopoly-STYLE board game (June 27 2026)
 **New Track B engine `public/family-town.html`** (branch `claude/games-family-town`) — an

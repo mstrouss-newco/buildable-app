@@ -1,0 +1,542 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Sling Squad — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#0a1030;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{background:#7fc7ff;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  #start{position:fixed;inset:0;z-index:10;display:none}
+  .ov{position:fixed;inset:0;z-index:12;display:none;flex-direction:column;align-items:center;justify-content:center;
+      background:linear-gradient(180deg,#0b1230,#241152);color:#fff;text-align:center;padding:24px}
+  .ov.show{display:flex}
+  .ov h1{font-size:34px;margin:0 0 10px}
+  .ov p{opacity:.85;max-width:520px;line-height:1.5;margin:6px 0}
+  .btn{font-family:inherit;font-weight:700;font-size:20px;color:#1a0f3a;background:#ffd86b;border:none;
+       border-radius:16px;padding:14px 34px;margin:14px 8px 0;cursor:pointer;box-shadow:0 6px 0 #c9a73f}
+  .btn:active{transform:translateY(3px);box-shadow:0 3px 0 #c9a73f}
+  #muteBtn{position:fixed;right:12px;top:56px;z-index:30;display:none;font-family:inherit;font-weight:700;font-size:14px;
+           color:#cdd0ff;background:rgba(26,20,64,.7);border:1px solid #3a2c6e;border-radius:10px;padding:7px 12px;cursor:pointer}
+  #helpBtn{position:fixed;right:12px;top:100px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:18px;
+           color:#1a0f3a;background:#ffd86b;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+  #backBtn{position:fixed;left:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
+           color:#fff;background:rgba(26,20,64,.78);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="960" height="600"></canvas></div>
+<div id="start"></div>
+<div id="help" class="ov">
+  <h1>How to play</h1>
+  <p>Drag your friendly Sling Squad pal back in the slingshot, aim, and let go to fling them!</p>
+  <p>Knock over every silly block tower and bonk all the goofy targets until they go <b>POOF</b>.
+     Clear them all before you run out of slings — but don't worry, you get plenty of tries.</p>
+  <button class="btn" id="helpClose">Got it!</button>
+</div>
+<button id="backBtn" title="Back to menu">‹ Menu</button>
+<button id="muteBtn">Sound: On</button>
+<button id="helpBtn" title="How to play">?</button>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-gamenav.js"></script>
+<script src="matter.min.js"></script>
+<script>
+// ============================================================================
+//  SLING SQUAD — a FIXED Track B engine. A game = this engine + GAME_CONFIG (data).
+//  Original kid-friendly slingshot/physics launcher (NOT Angry Birds — our own
+//  characters, art, names, levels). Built to BUILDING-A-GAME.md:
+//    - data-driven levels (recipes), always-clearable, headless QA-simmed
+//    - real physics via Matter.js (vendored, MIT) — the novel bit, confirmed w/ Mike
+//    - shared engine libs: BR (draw) · BA (audio) · BM (FX/juice) · BS (start screen) · BN (nav)
+//  QA hook exposed as window.BUILDABLE_GAME (SLING_GAME kept as an alias).
+// ============================================================================
+var BR = window.BuildableRenders, BA = window.BuildableAudio, BM = window.BuildableMechanics,
+    BS = window.BuildableStartScreen, BN = window.BuildableGameNav, M = window.Matter;
+
+// ---- logical world (canvas is scaled by CSS to fit any screen) ----
+var W = 960, H = 600, GY = 548;           // GY = top of the ground band
+var AX = 168, AY = 360;                    // slingshot fork (where ammo loads)
+var MAXPULL = 132, MAXV = 27;              // very forgiving: big pull, strong launch
+var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced OR knocked)
+
+// ---- the SQUAD: 3 simple friendly characters you fling (no powers in v1) ----
+var SQUAD = [
+  { name:"Pip",   body:"#ff8fb1", cheek:"#ff6f9a" },
+  { name:"Bloop", body:"#6fd3ff", cheek:"#3fb8ee" },
+  { name:"Tace",  body:"#ffd45e", cheek:"#f0b431" }
+];
+
+// ---- TARGET look (goofy castle critters that just topple + POOF, never hurt) ----
+var TARGET_COL = "#b6f06a", TARGET_CHEEK = "#8ed83f";
+var SQUAD_IMGS = [];   // OPTIONAL library character art for the flung pals (drawn squad = fallback)
+
+// ============================================================================
+//  GAME_CONFIG — content as DATA. Adding a level = editing this, never the engine.
+//  Castle / blocks world (first world, picked with Mike). Coordinates are in the
+//  960x600 logical space; blocks {x,y,w,h} are centers; targets {x,y} sit exposed.
+//  launches: generous "slings" per level (always-winnable, a few to spare).
+// ============================================================================
+var GAME_CONFIG = window.GAME_CONFIG || {
+  world: "castle",
+  levels: [
+    { name:"Wobbly Gate", launches:4,
+      blocks:[ {x:705,y:520,w:30,h:60},{x:775,y:520,w:30,h:60},{x:740,y:476,w:120,h:26} ],
+      targets:[ {x:740,y:445} ] },
+    { name:"Tilty Tower", launches:5,
+      blocks:[ {x:690,y:520,w:32,h:60},{x:760,y:520,w:32,h:60},{x:725,y:476,w:110,h:26},
+               {x:725,y:438,w:30,h:50} ],
+      targets:[ {x:725,y:395}, {x:600,y:530} ] },
+    { name:"Double Trouble", launches:5,
+      blocks:[ {x:620,y:520,w:30,h:60},{x:620,y:474,w:64,h:24},
+               {x:820,y:520,w:30,h:60},{x:820,y:474,w:64,h:24} ],
+      targets:[ {x:620,y:444}, {x:820,y:444} ] },
+    { name:"Castle Keep", launches:6,
+      blocks:[ {x:660,y:520,w:30,h:60},{x:740,y:520,w:30,h:60},{x:700,y:476,w:130,h:26},
+               {x:672,y:440,w:30,h:46},{x:728,y:440,w:30,h:46},{x:700,y:408,w:90,h:24} ],
+      targets:[ {x:700,y:378}, {x:560,y:530}, {x:840,y:530} ] },
+    { name:"Grand Topple", launches:6,
+      blocks:[ {x:700,y:520,w:34,h:60},{x:780,y:520,w:34,h:60},{x:740,y:476,w:128,h:26},
+               {x:712,y:440,w:30,h:46},{x:768,y:440,w:30,h:46},{x:740,y:408,w:96,h:24},
+               {x:740,y:376,w:30,h:42} ],
+      targets:[ {x:740,y:337}, {x:600,y:530}, {x:860,y:530} ] }
+  ]
+};
+
+// ---- runtime state ----
+var canvas = (typeof document!=="undefined") ? document.getElementById("c") : null;
+var ctx = canvas ? canvas.getContext("2d") : null;
+var state = "title";            // title | ready | aiming | flying | reload | win | lose
+var level = 0, G = null, fx = (BM ? BM.makeFx() : null);
+var botMode = false, started = false;
+var EFF_G = 0.45;               // per-frame gravity accel (auto-calibrated below)
+
+// ---- progress (best-effort localStorage; headless-safe) ----
+var PREFS = { unlocked:0, stars:[] };
+function loadPrefs(){ try{ var s=localStorage.getItem("sling.prefs"); if(s){ var p=JSON.parse(s); PREFS.unlocked=p.unlocked||0; PREFS.stars=p.stars||[]; } }catch(e){} }
+function savePrefs(){ try{ localStorage.setItem("sling.prefs", JSON.stringify(PREFS)); }catch(e){} }
+function totalStars(){ return (PREFS.stars||[]).reduce(function(a,b){return a+(b||0);},0); }
+function maxStars(){ return GAME_CONFIG.levels.length*3; }
+
+// ---- audio helper (created sounds via /api/sfx; synth is silent fallback only) ----
+function sfx(n){ try{ if(BA&&BA.sfx) BA.sfx(n); }catch(e){} }
+
+// ============================================================================
+//  Matter.js world — the real physics. One engine per level.
+// ============================================================================
+var engine=null, world=null;
+function mat(opts){ return Object.assign({ friction:0.62, frictionStatic:0.9, restitution:0.06, density:0.0026 }, opts||{}); }
+
+// Auto-calibrate effective per-frame gravity so the aim predictor matches Matter.
+(function calibrate(){
+  try{
+    var e=M.Engine.create(); e.gravity.y=1;
+    var b=M.Bodies.circle(0,0,12,{ frictionAir:0 });
+    M.Composite.add(e.world,b); M.Body.setVelocity(b,{x:0,y:0});
+    var y0=b.position.y; var N=30;
+    for(var i=0;i<N;i++) M.Engine.update(e,1000/60);
+    var dy=b.position.y - y0;            // dy = 0.5 * g * N^2  (v0y = 0)
+    EFF_G = (2*dy)/(N*N);
+  }catch(err){ EFF_G = 0.45; }
+})();
+
+function buildWorld(idx){
+  var L = GAME_CONFIG.levels[idx];
+  engine = M.Engine.create(); engine.gravity.y = 1; world = engine.world;
+  // ground + side walls (keep play roughly on-screen; off-screen = "fell" = pop)
+  var ground = M.Bodies.rectangle(W/2, GY+40, W+400, 80, { isStatic:true, friction:0.95 });
+  var lWall  = M.Bodies.rectangle(-60, H/2, 60, H*2, { isStatic:true });
+  var rWall  = M.Bodies.rectangle(W+60, H/2, 60, H*2, { isStatic:true });
+  M.Composite.add(world, [ground, lWall, rWall]);
+
+  var blocks = [];
+  (L.blocks||[]).forEach(function(b){
+    var body = M.Bodies.rectangle(b.x, b.y, b.w, b.h, mat({ density:0.0022 }));
+    body._kind="block"; body._w=b.w; body._h=b.h; blocks.push(body); M.Composite.add(world, body);
+  });
+  var targets = [];
+  (L.targets||[]).forEach(function(t){
+    var s=34; var body = M.Bodies.rectangle(t.x, t.y, s, s, mat({ density:0.0016, chamfer:{radius:9} }));
+    body._kind="target"; body._w=s; body._h=s; body._alive=true; body._sx=t.x; body._sy=t.y;
+    targets.push(body); M.Composite.add(world, body);
+  });
+
+  G = { L:L, blocks:blocks, targets:targets, ammo:null, ammoBody:null, slingIdx:0,
+        launchesLeft:L.launches, launchesUsed:0, restFrames:0, flyFrames:0, reload:0,
+        popped:0, totalTargets:targets.length, drag:null, armed:false };
+
+  // pop a target on a solid bonk from the flung ammo (direct hit always counts)
+  M.Events.on(engine, "collisionStart", function(ev){
+    if(!G || !G.armed) return;                 // ignore contacts during pre-settle
+    for(var i=0;i<ev.pairs.length;i++){ var p=ev.pairs[i], a=p.bodyA, b=p.bodyB;
+      var t = a._kind==="target"?a:(b._kind==="target"?b:null);
+      var o = (t===a)?b:a;
+      if(t && t._alive && (o._kind==="ammo" || o._kind==="block")){
+        var spd = Math.hypot(o.velocity.x,o.velocity.y);
+        if(o._kind==="ammo" || spd>2.2) popTarget(t);
+      }
+    }
+  });
+  // PRE-SETTLE: let blocks + targets find their rest pose with pops disabled,
+  // then record each target's resting position as its displacement origin.
+  for(var ps=0; ps<26; ps++) M.Engine.update(engine, 1000/60);
+  G.targets.forEach(function(t){ t._sx=t.position.x; t._sy=t.position.y; M.Body.setVelocity(t,{x:0,y:0}); M.Body.setAngularVelocity(t,0); });
+  G.armed = true;
+  loadAmmo();
+}
+
+function loadAmmo(){
+  if(G.launchesLeft<=0){ return; }
+  G.slingIdx = (G.launchesUsed) % SQUAD.length;
+  G.ammo = { x:AX, y:AY, squad:G.slingIdx };   // visual, held in the sling
+  G.ammoBody = null; G.drag=null; state = "ready";
+}
+
+function popTarget(t){
+  if(!t._alive) return; t._alive=false; G.popped++;
+  if(fx&&BM) BM.explode(fx, t.position.x, t.position.y, "#bdf06a", { n:16, pop:"POOF!", sfx:null });
+  sfx("poof");
+  M.Composite.remove(world, t);
+  if(G.popped>=G.totalTargets){ winLevel(); }
+}
+
+// ---- launch: drag vector -> velocity (clamped, forgiving) ----
+function aimFromDrag(dx,dy){
+  // dx,dy = fork - dragPoint  (pull-back vector); launch goes opposite the pull
+  var pull = Math.hypot(dx,dy); if(pull>MAXPULL){ var k=MAXPULL/pull; dx*=k; dy*=k; }
+  var vx = dx*(MAXV/MAXPULL), vy = dy*(MAXV/MAXPULL);
+  return { vx:vx, vy:vy };
+}
+function doLaunch(vx,vy){
+  var b = M.Bodies.circle(AX, AY, 18, mat({ density:0.02, restitution:0.34, frictionAir:0.0016, friction:0.5 }));
+  b._kind="ammo"; b._squad=G.slingIdx; M.Composite.add(world, b);
+  M.Body.setVelocity(b,{x:vx,y:vy});
+  G.ammoBody=b; G.ammo=null; G.flyFrames=0; G.restFrames=0; state="flying";
+  sfx("launch"); if(fx&&BM) BM.shake(fx,0.18);
+}
+
+// ---- win / lose (soft) ----
+function winLevel(){ if(state==="win")return; state="win";
+  var extra = Math.max(0, G.launchesUsed - G.totalTargets);
+  var stars = Math.max(1, 3 - extra);
+  if(!PREFS.stars[level] || PREFS.stars[level]<stars) PREFS.stars[level]=stars;
+  if(PREFS.unlocked < Math.min(level+1, GAME_CONFIG.levels.length)) PREFS.unlocked=Math.min(level+1,GAME_CONFIG.levels.length);
+  savePrefs(); sfx("win"); if(fx&&BM) BM.explode(fx, W/2, 200, "#ffd86b", { n:30, pop:"You did it!", sfx:null });
+  signal("win");
+}
+function loseLevel(){ if(state==="lose")return; state="lose"; sfx("lose"); signal("lose"); }
+
+// tell the app (helper reactions + per-kid telemetry) — exactly once per result
+function signal(kind){ try{ if(window.parent){ window.parent.postMessage({ source:"buildable", kind:kind }, "*"); } }catch(e){} }
+
+// ============================================================================
+//  Aim predictor (shared by the kid's trajectory dots AND the QA bot).
+//  Matches Matter closely because the flung ammo has near-zero air friction.
+// ============================================================================
+function tracePath(vx,vy,tx,ty){
+  var x=AX,y=AY,ux=vx,uy=vy, minD=1e9, reach=false, blocked=false, hitGroundAt=null;
+  for(var i=0;i<260;i++){
+    x+=ux; y+=uy; uy+=EFF_G;
+    var d=Math.hypot(x-tx,y-ty); if(d<minD)minD=d;
+    if(d<26){ reach=true; break; }
+    if(blocksHit(x,y)){ blocked=true; break; }
+    if(y>GY+8){ hitGroundAt=x; break; }
+    if(x>W+40||x<-40) break;
+  }
+  return { reach:reach, blocked:blocked&&!reach, minDist:minD, groundX:hitGroundAt };
+}
+function blocksHit(x,y){
+  if(!G||!G.blocks) return false;
+  for(var i=0;i<G.blocks.length;i++){ var b=G.blocks[i]; if(b.position.y>GY+160) continue;
+    var bd=b.bounds; if(x>bd.min.x-1&&x<bd.max.x+1&&y>bd.min.y-1&&y<bd.max.y+1) return true; }
+  return false;
+}
+function planShot(tx,ty){
+  var cands=[];
+  for(var T=22;T<=80;T+=2){
+    var vx=(tx-AX)/T, vy=(ty-AY-0.5*EFF_G*T*T)/T; var sp=Math.hypot(vx,vy);
+    if(sp>MAXV*0.99 || vy>=0) continue;
+    var r=tracePath(vx,vy,tx,ty);
+    cands.push({ vx:vx, vy:vy, T:T, good:(r.reach&&!r.blocked), reach:r.reach, blocked:r.blocked, minDist:r.minDist });
+  }
+  var good=cands.filter(function(c){return c.good;});
+  if(good.length){ good.sort(function(a,b){return a.T-b.T;}); var g=good[0]; g.good=true; return g; }   // flattest clean shot = direct hit
+  if(cands.length){ cands.sort(function(a,b){return a.minDist-b.minDist;}); return cands[0]; }
+  var ang=Math.atan2(ty-AY,tx-AX); return { vx:Math.cos(ang)*MAXV*0.95, vy:Math.sin(ang)*MAXV*0.95-3, good:false, minDist:999 };
+}
+function firstAlive(){ for(var i=0;i<G.targets.length;i++) if(G.targets[i]._alive) return G.targets[i]; return null; }
+
+// ---- the sensible-aim QA bot: pick the most reachable target, fire the best arc ----
+function botThink(){
+  if(state!=="ready" || !G) return;
+  var alive=G.targets.filter(function(t){return t._alive;}); if(!alive.length) return;
+  var best=null, bestScore=1e9;
+  for(var i=0;i<alive.length;i++){ var pl=planShot(alive[i].position.x, alive[i].position.y);
+    var score=(pl.good?0:1000) + (pl.minDist||0) + (pl.T||40)*0.05;
+    if(score<bestScore){ bestScore=score; best=pl; } }
+  // tiny per-shot variation so repeated misses don't loop identically
+  var j=((G.launchesUsed%3)-1)*1.1; best.vy-=Math.abs(j); best.vx+=j*0.25;
+  var sp=Math.hypot(best.vx,best.vy); if(sp>MAXV){ var k=MAXV/sp; best.vx*=k; best.vy*=k; }
+  doLaunch(best.vx,best.vy);
+}
+
+// ============================================================================
+//  Main step — physics + pop/settle/win/lose.  draw() is separate (headless-safe).
+// ============================================================================
+function update(){
+  if(!G || state==="title") return;
+  if(state==="win" || state==="lose"){ if(fx&&BM)BM.update(fx,1/60); return; }
+  M.Engine.update(engine, 1000/60);
+  // pop checks (generous: displaced OR knocked OR fell off) — only once armed
+  if(G.armed){ for(var i=0;i<G.targets.length;i++){ var t=G.targets[i]; if(!t._alive) continue;
+    var dd=Math.hypot(t.position.x-t._sx, t.position.y-t._sy);
+    var sp=Math.hypot(t.velocity.x,t.velocity.y);
+    if(dd>POP_MOVE || sp>POP_SPD || t.position.y>GY+24 || t.position.x<-30 || t.position.x>W+30) popTarget(t);
+  } }
+  if(state==="win") return;
+  if(state==="flying" && G.ammoBody){
+    G.flyFrames++;
+    var s=Math.hypot(G.ammoBody.velocity.x,G.ammoBody.velocity.y);
+    var off=G.ammoBody.position.y>GY+70 || G.ammoBody.position.x>W+70 || G.ammoBody.position.x<-70;
+    if(s<0.7) G.restFrames++; else G.restFrames=0;
+    if(off || G.restFrames>16 || G.flyFrames>340){
+      M.Composite.remove(world, G.ammoBody); G.ammoBody=null;
+      G.launchesUsed++; G.launchesLeft--;
+      if(state==="win") return;
+      state="reload"; G.reload=botMode?2:14;
+    }
+  }
+  if(state==="reload"){ if(--G.reload<=0){ if(G.launchesLeft>0) loadAmmo(); else loseLevel(); } }
+  if(fx&&BM) BM.update(fx,1/60);
+  if(botMode) botThink();
+}
+
+// ============================================================================
+//  Rendering (drawn art = the always-on baseline; can never break a kid's game).
+// ============================================================================
+function drawBg(){
+  var g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,"#8fd0ff"); g.addColorStop(.55,"#bfe8ff"); g.addColorStop(1,"#e9f8ff");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // sun
+  ctx.save(); ctx.globalAlpha=.9; ctx.fillStyle="#fff3b0"; ctx.beginPath(); ctx.arc(120,96,46,0,7); ctx.fill();
+  ctx.globalAlpha=.35; ctx.beginPath(); ctx.arc(120,96,66,0,7); ctx.fill(); ctx.restore();
+  // soft clouds
+  ctx.fillStyle="rgba(255,255,255,.85)";
+  [[300,90,1],[560,70,.8],[780,120,1.1]].forEach(function(c){ ctx.save(); ctx.translate(c[0],c[1]); ctx.scale(c[2],c[2]);
+    ctx.beginPath(); ctx.arc(-22,4,16,0,7); ctx.arc(0,-6,22,0,7); ctx.arc(24,4,18,0,7); ctx.rect(-22,4,46,14); ctx.fill(); ctx.restore(); });
+  // distant castle hills
+  ctx.fillStyle="#a7d68a"; ctx.beginPath(); ctx.moveTo(0,470); ctx.quadraticCurveTo(260,400,520,460);
+  ctx.quadraticCurveTo(760,520,960,452); ctx.lineTo(960,GY); ctx.lineTo(0,GY); ctx.fill();
+  // a friendly far castle silhouette
+  ctx.fillStyle="#cdb79a"; var bx=380,by=372;
+  ctx.fillRect(bx,by,150,86); for(var i=0;i<5;i++) ctx.fillRect(bx+i*32,by-12,20,14);
+  ctx.fillStyle="#bda988"; ctx.fillRect(bx+58,by+34,34,52);
+  // grass ground band
+  var gg=ctx.createLinearGradient(0,GY,0,H); gg.addColorStop(0,"#73c364"); gg.addColorStop(1,"#4e9a45");
+  ctx.fillStyle=gg; ctx.fillRect(0,GY,W,H-GY);
+  ctx.fillStyle="#86d172"; ctx.fillRect(0,GY,W,7);
+}
+function drawSling(){
+  // wooden Y slingshot at the fork
+  ctx.strokeStyle="#7a4a25"; ctx.lineWidth=11; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(AX,AY+96); ctx.lineTo(AX,AY+12); ctx.stroke();
+  ctx.lineWidth=9;
+  ctx.beginPath(); ctx.moveTo(AX,AY+22); ctx.lineTo(AX-16,AY-6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(AX,AY+22); ctx.lineTo(AX+16,AY-6); ctx.stroke();
+}
+function drawBand(toX,toY){
+  ctx.strokeStyle="#3a2c1f"; ctx.lineWidth=6; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(AX-16,AY-6); ctx.lineTo(toX,toY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(AX+16,AY-6); ctx.lineTo(toX,toY); ctx.stroke();
+}
+function drawSquadFace(x,y,r,sq){
+  var c=SQUAD[sq%SQUAD.length];
+  var im=SQUAD_IMGS[sq%SQUAD.length];
+  if(im && (im.naturalWidth||im.width) && BR && BR.sprite){ BR.sprite(ctx, im, x, y, r*2.2, { shadow:true }); return; }
+  ctx.save(); ctx.translate(x,y);
+  ctx.fillStyle="rgba(0,0,0,.12)"; ctx.beginPath(); ctx.ellipse(0,r*0.92,r*0.9,r*0.32,0,0,7); ctx.fill();
+  ctx.fillStyle=c.body; ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.fill();
+  ctx.fillStyle=c.cheek; ctx.beginPath(); ctx.arc(-r*0.42,r*0.28,r*0.2,0,7); ctx.arc(r*0.42,r*0.28,r*0.2,0,7); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-r*0.34,-r*0.12,r*0.27,0,7); ctx.arc(r*0.34,-r*0.12,r*0.27,0,7); ctx.fill();
+  ctx.fillStyle="#23304a"; ctx.beginPath(); ctx.arc(-r*0.30,-r*0.10,r*0.14,0,7); ctx.arc(r*0.38,-r*0.10,r*0.14,0,7); ctx.fill();
+  ctx.strokeStyle="#23304a"; ctx.lineWidth=Math.max(2,r*0.12); ctx.lineCap="round";
+  ctx.beginPath(); ctx.arc(0,r*0.18,r*0.34,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
+  ctx.restore();
+}
+function drawTarget(b){
+  ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
+  var w=b._w,h=b._h;
+  ctx.fillStyle=TARGET_COL; BR? BR.rrect(ctx,-w/2,-h/2,w,h,9):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
+  ctx.fillStyle=TARGET_CHEEK; BR? BR.rrect(ctx,-w/2,h*0.06,w,h*0.44,9):0; ctx.fill();
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-w*0.20,-h*0.12,w*0.16,0,7); ctx.arc(w*0.20,-h*0.12,w*0.16,0,7); ctx.fill();
+  ctx.fillStyle="#23304a"; ctx.beginPath(); ctx.arc(-w*0.20,-h*0.12,w*0.08,0,7); ctx.arc(w*0.20,-h*0.12,w*0.08,0,7); ctx.fill();
+  ctx.strokeStyle="#23304a"; ctx.lineWidth=2.4; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(-w*0.16,h*0.18); ctx.quadraticCurveTo(0,h*0.30,w*0.16,h*0.18); ctx.stroke();
+  // little crown nub so it reads as a goofy castle critter
+  ctx.fillStyle="#ffd45e"; ctx.beginPath(); ctx.moveTo(-w*0.22,-h*0.46); ctx.lineTo(-w*0.10,-h*0.62);
+  ctx.lineTo(0,-h*0.46); ctx.lineTo(w*0.10,-h*0.62); ctx.lineTo(w*0.22,-h*0.46); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawBlock(b){
+  ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
+  var w=b._w,h=b._h;
+  ctx.fillStyle="#caa46a"; BR? BR.rrect(ctx,-w/2,-h/2,w,h,5):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
+  ctx.strokeStyle="#9b7741"; ctx.lineWidth=3; ctx.stroke();
+  ctx.strokeStyle="rgba(155,119,65,.6)"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(-w/2+4,0); ctx.lineTo(w/2-4,0); ctx.stroke();
+  ctx.restore();
+}
+function hudIcon(x,y,sq){ drawSquadFace(x,y,11,sq); }
+function draw(){
+  if(!ctx) return;
+  ctx.clearRect(0,0,W,H);
+  ctx.save(); if(fx&&BM){ var sh=BM.shakeOffset(fx); ctx.translate(sh.x,sh.y); }
+  drawBg();
+  for(var i=0;i<G.blocks.length;i++) drawBlock(G.blocks[i]);
+  for(var j=0;j<G.targets.length;j++){ if(G.targets[j]._alive) drawTarget(G.targets[j]); }
+  drawSling();
+  // ammo: held in sling (ready/aiming) or in flight
+  if(state==="flying" && G.ammoBody){ drawBand(G.ammoBody.position.x,G.ammoBody.position.y); drawSquadFace(G.ammoBody.position.x,G.ammoBody.position.y,18,G.ammoBody._squad); }
+  else if(G.ammo){ var px=G.drag?G.drag.x:AX, py=G.drag?G.drag.y:AY; drawBand(px,py); drawSquadFace(px,py,18,G.ammo.squad);
+    if(state==="aiming" && G.drag){ // trajectory preview dots (kid aim help)
+      var dx=AX-G.drag.x, dy=AY-G.drag.y; var a=aimFromDrag(dx,dy);
+      var x=AX,y=AY,ux=a.vx,uy=a.vy; ctx.fillStyle="rgba(255,255,255,.85)";
+      for(var k=0;k<26;k++){ x+=ux; y+=uy; uy+=EFF_G; if(k%2===0){ ctx.beginPath(); ctx.arc(x,y,3.2,0,7); ctx.fill(); } if(y>GY||x>W) break; }
+    }
+  }
+  ctx.restore();
+  if(fx&&BM) BM.draw(ctx,fx,{W:W,H:H});
+  // HUD
+  ctx.fillStyle="rgba(20,16,48,.42)"; BR?BR.rrect(ctx,14,12,250,40,12):ctx.fillRect(14,12,250,40); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.font="700 20px Fredoka,sans-serif"; ctx.textBaseline="middle"; ctx.textAlign="left";
+  ctx.fillText(G.L.name,28,33);
+  // slings left
+  var left=G.launchesLeft - ((state==="flying")?0:0);
+  ctx.fillStyle="rgba(20,16,48,.42)"; BR?BR.rrect(ctx,W-210,12,196,40,12):0; ctx.fill();
+  ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.fillText("Slings",W-200,33);
+  for(var s=0;s<Math.max(0,left);s++) hudIcon(W-118+s*26,33,(G.launchesUsed+s)%SQUAD.length);
+  // targets left badge
+  var tl=G.totalTargets-G.popped;
+  ctx.fillStyle="rgba(20,16,48,.42)"; BR?BR.rrect(ctx,W/2-70,12,140,40,12):0; ctx.fill();
+  ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.fillText("Topple: "+tl,W/2,33);
+  // banners
+  if(state==="win"){ banner("Level cleared!", (level+1<GAME_CONFIG.levels.length)?"Tap for the next one":"Tap to play again"); }
+  if(state==="lose"){ banner("Out of slings!","Tap to try again"); }
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+}
+function banner(title,sub){
+  ctx.save(); ctx.fillStyle="rgba(12,14,36,.55)"; ctx.fillRect(0,0,W,H);
+  ctx.textAlign="center"; ctx.fillStyle="#ffd86b"; ctx.font="800 52px Fredoka,sans-serif"; ctx.fillText(title,W/2,H/2-12);
+  ctx.fillStyle="#fff"; ctx.font="700 24px Fredoka,sans-serif"; ctx.fillText(sub,W/2,H/2+38); ctx.restore();
+}
+
+// ============================================================================
+//  Input (mouse + touch), forgiving aim for small hands.
+// ============================================================================
+function pt(ev){ var r=canvas.getBoundingClientRect();
+  var cx=(ev.touches&&ev.touches[0])?ev.touches[0].clientX:ev.clientX;
+  var cy=(ev.touches&&ev.touches[0])?ev.touches[0].clientY:ev.clientY;
+  return { x:(cx-r.left)/r.width*W, y:(cy-r.top)/r.height*H }; }
+function clampDrag(p){ var dx=p.x-AX, dy=p.y-AY, d=Math.hypot(dx,dy);
+  if(d>MAXPULL){ var k=MAXPULL/d; dx*=k; dy*=k; } return { x:AX+dx, y:AY+dy }; }
+function onDown(ev){ if(BA){BA.unlock&&BA.unlock();}
+  if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else showMenu(); return; }
+  if(state==="lose"){ ev.preventDefault&&ev.preventDefault(); startLevel(level); return; }
+  if(state==="ready"){ ev.preventDefault&&ev.preventDefault(); state="aiming"; G.drag=clampDrag(pt(ev)); sfx("stretch"); }
+}
+function onMove(ev){ if(state==="aiming"){ ev.preventDefault&&ev.preventDefault(); G.drag=clampDrag(pt(ev)); } }
+function onUp(ev){ if(state==="aiming"){ ev.preventDefault&&ev.preventDefault();
+  var dx=AX-G.drag.x, dy=AY-G.drag.y; var pull=Math.hypot(dx,dy);
+  if(pull<14){ state="ready"; G.drag=null; return; }   // too gentle — reload, no waste
+  var a=aimFromDrag(dx,dy); doLaunch(a.vx,a.vy); } }
+
+// ============================================================================
+//  Start screen (shared BS) + menu chrome.
+// ============================================================================
+var startScreen=null;
+function buildStartCfg(){
+  var levels=GAME_CONFIG.levels.map(function(l,i){ var unlocked=PREFS.unlocked||0;
+    var st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
+    return { n:i+1, name:l.name, color:"#3b6ea5", maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
+  return { title:"Sling Squad", subtitle:"Fling your friends and topple every tower! Stars: "+totalStars()+" of "+maxStars(),
+           coins:totalStars(), sound:!(BA&&BA.muted), showBack:false, hideSound:true, levels:levels };
+}
+function el(id){ return document.getElementById(id); }
+function show(id,on){ var e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
+function showChrome(on){ ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
+function showMenu(){ state="title"; G=null; show("help",false); showChrome(false);
+  var host=el("start"); if(host)host.style.display="block"; if(!BS||!host)return;
+  var cb={ onPlay:function(n){ if(BA)BA.unlock&&BA.unlock(); startLevel(n-1); },
+           onSound:function(){ if(BA){BA.unlock&&BA.unlock();BA.toggleMute&&BA.toggleMute();} },
+           onBack:function(){}, onCustomize:function(){} };
+  if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg());
+}
+function hideMenu(){ var host=el("start"); if(host)host.style.display="none"; showChrome(true); }
+function startLevel(i){ level=i; buildWorld(i); started=true; hideMenu(); show("help",false); }
+
+function wireMenus(){
+  var hb=el("helpBtn"); if(hb)hb.onclick=function(){ show("help",true); };
+  var hc=el("helpClose"); if(hc)hc.onclick=function(){ show("help",false); };
+  var mb=el("muteBtn"); if(mb){ var upd=function(){ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd();
+    mb.onclick=function(){ if(BA){BA.unlock&&BA.unlock();BA.toggleMute&&BA.toggleMute();} upd(); }; }
+  var bb=el("backBtn"); if(bb)bb.onclick=function(){ showMenu(); };
+  if(canvas){ canvas.addEventListener("mousedown",onDown); canvas.addEventListener("mousemove",onMove);
+    window.addEventListener("mouseup",onUp);
+    canvas.addEventListener("touchstart",onDown,{passive:false}); canvas.addEventListener("touchmove",onMove,{passive:false});
+    window.addEventListener("touchend",onUp,{passive:false}); }
+}
+
+// shared game-nav bridge: in-app the React shell draws Home/Sound/Help; standalone our buttons work.
+if(BN&&BN.register){ BN.register({ hide:["muteBtn","helpBtn","backBtn"],
+  onSound:function(){ if(BA){BA.unlock&&BA.unlock();BA.toggleMute&&BA.toggleMute();} },
+  onMenu:function(){ showMenu(); }, onHelp:function(){ show("help",true); },
+  soundOn:function(){ return !(BA&&BA.muted); }, inGame:function(){ return state==="ready"||state==="aiming"||state==="flying"||state==="reload"; } }); }
+
+// created sounds (ElevenLabs via /api/sfx); BA synth stays a silent fallback only
+if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+  stretch:"sling_stretch", launch:"sling_release", thud:"sling_thud", poof:"sling_poof",
+  win:"sling_win", lose:"tennis_lose" } }); }
+
+function frame(){ update(); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requestAnimationFrame(frame); }
+// LIBRARY-FIRST (with fallback): try to dress the flung pals in real shared-library
+// characters (/api/list-characters). If anything is missing/offline, the drawn squad
+// stays — a library miss can never break a kid's game.
+function loadSquadArt(){ try{ if(typeof fetch!=="function") return;
+  fetch("/api/list-characters?limit=12").then(function(r){ return r.ok?r.json():null; }).then(function(d){
+    if(!d) return; var list=Array.isArray(d)?d:(d.items||d.characters||[]);
+    var urls=[]; list.forEach(function(c){ var u=c&&(c.image_url||c.image||c.url); if(u&&urls.length<SQUAD.length) urls.push(u); });
+    urls.forEach(function(u,i){ var im=new Image(); im.crossOrigin="anonymous"; im.onload=function(){ SQUAD_IMGS[i]=im; }; im.onerror=function(){}; im.src=u; });
+  }).catch(function(){}); }catch(e){} }
+if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
+
+// ============================================================================
+//  QA / picker hooks (standardized name; alias kept) — drives the sensible-aim bot.
+// ============================================================================
+window.BUILDABLE_GAME = {
+  _cfg:function(){ return GAME_CONFIG; },
+  state:function(){ return state; },
+  effG:function(){ return EFF_G; },
+  dbg:function(){ return { level:level, state:state, launchesLeft:G&&G.launchesLeft, used:G&&G.launchesUsed,
+    targets:G?G.totalTargets:0, popped:G?G.popped:0 }; },
+  // one level with the bot; returns whether it cleared + launches used
+  sim:function(idx,maxFrames){ botMode=true; startLevel(idx); state="ready"; started=true;
+    var f=0, cap=maxFrames||20000; while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }
+    return { level:idx, result:state, frames:f, launchesUsed:G?G.launchesUsed:0, launchesLeft:G?G.launchesLeft:0,
+             targets:G?G.totalTargets:0, popped:G?G.popped:0, stars:PREFS.stars[idx]||0 }; },
+  // whole campaign
+  campaign:function(cap){ var out=[]; cap=cap||20000;
+    for(var i=0;i<GAME_CONFIG.levels.length;i++){ out.push(this.sim(i,cap)); } botMode=false; return out; },
+  // render-smoke helpers
+  _begin:function(i){ botMode=false; startLevel(i||0); state="ready"; started=true; },
+  _step:function(n){ for(var i=0;i<(n||1);i++) update(); },
+  _draw:function(){ try{ if(G&&ctx) draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
+  _aimHeld:function(px,py){ if(G){ state="aiming"; G.drag=clampDrag({x:px,y:py}); } }
+};
+window.SLING_GAME = window.BUILDABLE_GAME;   // back-compat / convenience alias
+</script>
+</body>
+</html>
