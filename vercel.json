@@ -104,6 +104,10 @@
       "dest": "/packs/$1"
     },
     {
+      "src": "/kenney/(.*)",
+      "dest": "/kenney/$1"
+    },
+    {
       "src": "/rileys-garden.html",
       "dest": "/rileys-garden.html"
     },

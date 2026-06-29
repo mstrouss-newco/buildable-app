@@ -117,7 +117,7 @@ const PACKS=[
   {name:"Mossy Cavern",dim:"2d",license:"no-republish",count:"tileset + character",status:"downloaded · needs curate",cc0:false}
 ];
 
-let ALL=[]; const state={dim:"all",game:null,theme:null,kinds:new Set(KINDS.map(k=>k[0])),q:""};
+let ALL=[],KENNEY=[]; const state={dim:"all",game:null,theme:null,kinds:new Set(KINDS.map(k=>k[0])),q:""};
 let _ren,_scene,_cam,_cur,_raf,_ldr;
 function ensure3d(){ if(_ren)return true; if(typeof THREE==="undefined"||!THREE.GLTFLoader)return false;
   const cv=document.getElementById("pcanvas");
@@ -160,13 +160,16 @@ async function getJSON(u){try{const r=await fetch(u);if(!r.ok)return null;return
 
 async function load(){
   document.getElementById("counts").textContent="Loading…";
-  const [assets,chars,audio,mf,fxm]=await Promise.all([
+  const [assets,chars,audio,mf,fxm,kny]=await Promise.all([
     getJSON("/api/list-assets"+cb),
     getJSON("/api/list-characters"+cb.replace("?","?limit=60&")),
     getJSON("/api/list-audio"+cb),
     getJSON("/models/manifest.json"+cb),
-    getJSON("/fx/manifest.json"+cb)
+    getJSON("/fx/manifest.json"+cb),
+    getJSON("/kenney/manifest.json"+cb)
   ]);
+  KENNEY=(kny&&kny.packs)||[];
+
   const models3d=(mf&&mf.models||[]).map(m=>({id:"model:"+m.pack+":"+m.file,name:m.name,kind:"element",theme:m.theme||"",dim:"3d",source:m.source||m.pack,license:m.license||"",url:m.url,thumb:m.thumb||"",icon:"◈"}));
   const fxAssets=(fxm&&fxm.fx||[]).map(f=>({id:"fx:"+f.file,name:f.name,kind:"effect",theme:"",dim:"2d",source:f.source||"kenney",license:f.license||"CC0",url:f.url,thumb:f.url}));
   const out=[];
@@ -177,7 +180,7 @@ async function load(){
   (audio&&audio.sfx||[]).forEach(s=>out.push({id:s.id,name:s.name,kind:"sfx",theme:s.theme||"",dim:"any",source:s.source,url:s.url,audio:true}));
   ALL=out.concat(models3d.length?models3d:MODELS_3D,fxAssets,EFFECTS);
   const n2d=ALL.filter(a=>a.dim==="2d").length,n3d=ALL.filter(a=>a.dim==="3d").length;
-  document.getElementById("counts").textContent=ALL.length+" assets · "+n2d+" 2D · "+n3d+" 3D · "+(audio?(audio.music.length+audio.sfx.length):0)+" audio";
+  document.getElementById("counts").textContent=ALL.length+" assets · "+n2d+" 2D · "+n3d+" 3D · "+(audio?(audio.music.length+audio.sfx.length):0)+" audio · "+KENNEY.length+" Kenney packs";
   buildFilters(); render();
 }
 
@@ -260,6 +263,9 @@ function render(){
       : '<div class="thumb"><span class="ic">'+(p.dim==="3d"?"◈":"▦")+'</span></div>';
     return '<div class="card">'+th+'<div class="cbody"><div class="cname">'+p.name+'</div><div class="badges"><span class="b">'+p.dim.toUpperCase()+'</span><span class="b '+(p.cc0?"cc0":"warn")+'">'+p.license+'</span></div><div class="note">'+p.count+' · '+p.status+'</div></div></div>';
   }).join("")+'</div>';
+  const kpacks=KENNEY.filter(pk=>(state.dim==="all"||pk.dim===state.dim)&&(!state.q||(pk.name+" "+pk.category).toLowerCase().indexOf(state.q)>=0));
+  html+='<div class="seclbl"><b>Kenney catalog</b><span class="muted">'+kpacks.length+' of '+KENNEY.length+' packs · CC0 source shelf · ask to pull a kit in</span></div>';
+  html+='<div class="grid">'+kpacks.map(pk=>'<div class="card"><div class="thumb '+(pk.dim==="2d"?"fxthumb":"")+'">'+(pk.preview?'<img src="'+pk.preview+'" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain">':'<span class="ic">▦</span>')+'</div><div class="cbody"><div class="cname">'+pk.name+'</div><div class="badges"><span class="b">'+pk.dim.toUpperCase()+'</span><span class="b cc0">CC0</span><span class="b">'+pk.count+' files</span></div></div></div>').join("")+'</div>';
   sec.innerHTML=html;
   sec.querySelectorAll(".copy").forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent="copied";setTimeout(()=>b.textContent="copy",900);});
   let cur=null;
