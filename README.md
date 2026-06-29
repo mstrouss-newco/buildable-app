@@ -852,6 +852,14 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 
 ---
 
+## Session log — 2026-06-28 (Sunny Town Drive: 3D car + colored houses)
+
+Flat billboard hero car -> real low-poly 3D car with spinning wheels (pivot groups, `G.speed`)
++ bank. Kenney houses get per-instance pastel tints (`BUILDING_TINTS`, cloned material) so they're
+not all white. QA all-win; verified live, no errors.
+
+---
+
 ## Session log — 2026-06-28 (Sunny Town Drive: low-poly model reskin)
 
 Roadside scenery is now real CC0 3D models, data-driven via `SCENERY_SETS`/`TOWN_SET`:

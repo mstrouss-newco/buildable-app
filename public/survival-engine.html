@@ -112,6 +112,8 @@ function sfx(n,o){ if(BA)BA.sfx(n,o); }
 // shared FX/"juice" library (particles, flash, shake, explode) — headless-safe
 const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
 const fx=BM?BM.makeFx():null;   // flash+shake live here; the engine keeps its own particles/rings
+// Kenney CC0 particle textures (served from /fx) → glowing tinted FX; drawn shapes are the fallback.
+if(BM&&BM.useTextures) BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/star_01.png", star:"/fx/star_07.png", ring:"/fx/circle_01.png", smoke:"/fx/smoke_05.png", fire:"/fx/fire_01.png", muzzle:"/fx/light_03.png", magic:"/fx/magic_05.png" });
 // shared start screen / level picker (BS) — the consistent launch screen for every game
 const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
 // art: hero, background, per-level boss character — all transparent library cut-outs
@@ -265,13 +267,13 @@ function gainXp(v){ xp+=v; while(xp>=xpNeed){ xp-=xpNeed; plvl++; xpNeed=Math.ce
 function nearestEnemy(){ let best=null,bd=1e9; const all=boss?enemies.concat([boss]):enemies; for(const e of all){ const d=dist2(hero.x,hero.y,e.x,e.y); if(d<bd){bd=d;best=e;} } return best; }
 function fire(){ const tgt=nearestEnemy(); if(!tgt)return; const base=Math.atan2(tgt.y-hero.y,tgt.x-hero.x); hero.aim=base;
   const n=stats.projPerShot, spread=0.26; const start=base-(n-1)*spread/2;
-  for(let i=0;i<n;i++){ const a=n===1?base:start+i*spread; projs.push({ x:hero.x,y:hero.y, vx:Math.cos(a)*stats.projSpeed, vy:Math.sin(a)*stats.projSpeed, life:70, dmg:stats.projDmg, r:7+stats.projR, pierce:stats.pierce, hit:new Set() }); } }   // no per-shot sound (auto-shooter)
+  for(let i=0;i<n;i++){ const a=n===1?base:start+i*spread; projs.push({ x:hero.x,y:hero.y, vx:Math.cos(a)*stats.projSpeed, vy:Math.sin(a)*stats.projSpeed, life:70, dmg:stats.projDmg, r:7+stats.projR, pierce:stats.pierce, hit:new Set() }); } if(BM&&fx) BM.muzzle(fx, hero.x+Math.cos(base)*20, hero.y+Math.sin(base)*20, P.spark); }   // muzzle flash, no per-shot sound
 function spawnEnemy(){ const r=spawnRng(); const edge=Math.floor(r*4); let x,y; const m=18;
   if(edge===0){x=-m;y=spawnRng()*H;} else if(edge===1){x=W+m;y=spawnRng()*H;} else if(edge===2){x=spawnRng()*W;y=-m;} else {x=spawnRng()*W;y=H+m;}
   const col=L.colors[Math.floor(spawnRng()*L.colors.length)];
   enemies.push({ x,y, r:15, hp:L.eHp, maxHp:L.eHp, spd:L.eSpeed, dmg:L.eDmg, val:L.eValue, col, wob:spawnRng()*6.28, boss:false, orbCd:0 }); }
 function spawnBoss(){ const b=L.boss||{hp:30,spd:1.1,dmg:1}; boss={ x:W/2, y:-40, r:42, hp:b.hp, maxHp:b.hp, spd:b.spd, dmg:b.dmg, val:8, col:P.boss, wob:0, boss:true, orbCd:0 }; bossSpawned=true; sfx("boss"); }
-function burst(x,y,col,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=1+Math.random()*3; parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*12,col}); } }
+function burst(x,y,col,n){ if(BM&&fx){ BM.burst(fx.parts,x,y,col,n,{tex:"spark",additive:true,spd:[50,230],life:[0.28,0.55],r:3.5}); return; } for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=1+Math.random()*3; parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*12,col}); } }
 function hurtHero(dmg){ if(invuln>0)return; if(stats.shield){ stats.shield=false; invuln=70; burst(hero.x,hero.y,P.visor,12); sfx("hurt"); return; } hero.hearts-=dmg; invuln=80; burst(hero.x,hero.y,P.hp,14); sfx("hurt"); if(hero.hearts<=0){ hero.hearts=0; state="lose"; sfx("lose"); } }
 
 // ---------- bot (QA "good player": kite away from the swarm, keep firing) ----------
@@ -328,7 +330,7 @@ function update(){
   projs=projs.filter(p=>p.life>0 && p.x>-20&&p.x<W+20&&p.y>-20&&p.y<H+20);
   // Star Nova: periodic shockwave that damages everything nearby
   if(stats.nova>0){ const cd=Math.max(80,240-stats.nova*38); novaTimer++;
-    if(novaTimer>=cd){ novaTimer=0; const nr=80+stats.nova*20, nd=1+Math.floor((stats.nova-1)/2); rings.push({x:hero.x,y:hero.y,r:12,max:nr,life:22});
+    if(novaTimer>=cd){ novaTimer=0; const nr=80+stats.nova*20, nd=1+Math.floor((stats.nova-1)/2); if(BM&&fx)BM.ring(fx,hero.x,hero.y,nr,P.spark); else rings.push({x:hero.x,y:hero.y,r:12,max:nr,life:22});
       const all2=boss?enemies.concat([boss]):enemies; for(const e of all2){ if(dist2(hero.x,hero.y,e.x,e.y)<nr*nr){ e.hp-=nd; burst(e.x,e.y,P.spark,4); if(stats.frost)e.slowT=Math.max(e.slowT||0,60); if(e.hp<=0)killEnemy(e); } } } }
   for(const rg of rings){ rg.r+=(rg.max-rg.r)*0.25; rg.life--; } rings=rings.filter(rg=>rg.life>0);
   // orbiting helper stars (a passive spinning weapon)
@@ -357,11 +359,12 @@ function update(){
 function rollTier(){ const r=(dropRng?dropRng():Math.random())-level*0.012; if(r>0.965) return 3; if(r>0.80) return 2; return 1; }
 function tierVal(t){ return t===3?10:t===2?5:1; }
 function dropCoin(x,y,tier){ const rr=dropRng||Math.random; const t=tier||rollTier(); gems.push({ x,y, tier:t, val:tierVal(t), vx:(rr()-0.5)*2, vy:(rr()-0.5)*2, got:false }); }
-function killEnemy(e){ burst(e.x,e.y,e.col,e.boss?26:10);
+function killEnemy(e){
   if(e.boss){ for(let i=0;i<3;i++) dropCoin(e.x+(Math.random()-0.5)*46, e.y+(Math.random()-0.5)*46, 3); boss=null;
-    if(BM&&fx) BM.explode(fx, e.x, e.y, e.col, { n:0, flash:0.3, flashCol:"#ffffff", shake:0.45, sfx:"boom" });   // big-kill juice (flash+shake+boom)
-    else sfx("boom"); }
-  else { dropCoin(e.x,e.y); sfx("explode"); const i=enemies.indexOf(e); if(i>=0)enemies.splice(i,1); } }
+    if(BM&&fx) BM.explode(fx, e.x, e.y, e.col, { big:true, sfx:"boom" }); else { burst(e.x,e.y,e.col,26); sfx("boom"); } }
+  else { dropCoin(e.x,e.y);
+    if(BM&&fx) BM.explode(fx, e.x, e.y, e.col, { sfx:"explode" }); else { burst(e.x,e.y,e.col,10); sfx("explode"); }
+    const i=enemies.indexOf(e); if(i>=0)enemies.splice(i,1); } }
 
 // ---------- draw ----------
 // thin wrappers → the shared renders library (BuildableRenders)

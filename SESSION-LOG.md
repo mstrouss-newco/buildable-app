@@ -16,6 +16,25 @@ choose, then tap a glowing slot to build the selected defender.
 - **Asset seed:** `db/seed-castleguard-assets.sql` gained a `knight` sprite row (optional re-run).
 - Committed to `main` (cache-bust `?v=20260628b`); live-QA in the iframe after deploy.
 
+## 2026-06-28 — Survival: Kenney particle FX in the shared effects lib (BM)
+- Upgraded buildable-mechanics.js (BM): tinted, additive, texture-backed particles
+  (Kenney CC0 from /fx) + tint cache; new BM.useTextures, BM.muzzle, BM.ring; BM.explode
+  layers smoke + sparks + flash + shockwave ring. Drawn-shape fallback kept.
+- Survival wired: glowing impact sparks, textured slime-pop + big boss explosion, muzzle
+  flash per shot (visual only). All 6 levels still win. FX in public/fx/manifest.json.
+
+
+## 2026-06-28 — Sunny Town Drive: 3D car + colored houses
+
+Replaced the flat 2D billboard hero car with a real low-poly 3D car (rounded body, windshield,
+bumpers, head/tail lights) whose 4 wheels are pivot-groups that SPIN with speed (`G.speed*0.42`)
++ stronger bank into turns. Filled in the plain-white Kenney houses: each building clone gets a
+random tint from a pastel `BUILDING_TINTS` palette (clone material, set color) so the street is a
+mix of peach/blue/mint/pink/lilac/brick/white. Track/QA untouched (qa-runner all-win). Note: the
+asset zips (Kenney bundle/car kit, brick variation textures) were cleared from the workspace when
+the sandbox disk filled — used a procedural 3D car + material tints instead of new model/texture
+assets; can swap in a downloaded car model + brick variation atlases later.
+
 
 ## 2026-06-28 — Castle Guard: new kid tower-defense engine (Tiny Swords art)
 New hand-authored Track B engine **`public/castle-guard.html`** (branch `claude/games-castle-guard`,

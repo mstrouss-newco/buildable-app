@@ -17,8 +17,9 @@ import FamilyTown from "./FamilyTown";
 import FamilyCheckers from "./FamilyCheckers";
 import FamilyRealtime from "./FamilyRealtime";
 import { listMyMatches } from "./lib/chessMatches";
+import { listInvitesForKid } from "./lib/rtMatch";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
-import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken } from "./lib/accounts";
+import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken, listKidProfiles } from "./lib/accounts";
 import { registerAudio } from "./lib/audioUnlock";
 import { playVoiceUrl } from "./lib/voiceBus";
 import { setCurrentGame, logGameEvent } from "./lib/gameLog";
@@ -266,6 +267,7 @@ export default function BuildableKids() {
   };
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
+  const [rtAutoJoin, setRtAutoJoin] = useState(null);
   const [gameData, setGameData] = useState({
     playerName: "",
     age: null,
@@ -365,6 +367,7 @@ export default function BuildableKids() {
         onGrownUp={() => setScreen(SCREEN_GROWNUP)}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
         onHelper={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_HELPER); }}
+        onJoinInvite={(m) => { setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); }}
       />
     );
   }
@@ -555,10 +558,10 @@ export default function BuildableKids() {
     return <ArtStudioScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TENNIS) {
-    return <TennisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => setScreen(SCREEN_TENNIS_FAMILY)} />;
+    return <TennisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => { setRtAutoJoin(null); setScreen(SCREEN_TENNIS_FAMILY); }} />;
   }
   if (screen === SCREEN_TENNIS_FAMILY) {
-    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1", title: "Buildable Tennis" }} activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_GAME_PICKER); }} />;
   }
   if (screen === SCREEN_TOWN) {
     return <TownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
@@ -654,7 +657,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds }) {
+function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds, onJoinInvite }) {
   // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
   const AppIcon = ({ grad, size = 76, children }) => (
     <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
@@ -748,6 +751,27 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
   // Notify on the Chess card when it's this kid's move in a family game.
   const [chessTurns, setChessTurns] = useState(0);
   const prevTurnsRef = useRef(0);
+  const [rtInvite, setRtInvite] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    async function checkInvites() {
+      try {
+        if (!isSignedIn()) { if (alive) setRtInvite(null); return; }
+        const meK = getActiveKid(); if (!meK) { if (alive) setRtInvite(null); return; }
+        const invs = await listInvitesForKid(meK.id);
+        if (!alive) return;
+        if (!invs || !invs.length) { setRtInvite(null); return; }
+        const m = invs[0];
+        let hostName = "A family member";
+        try { const ks = await listKidProfiles(); const h = (ks || []).find((k) => k.id === m.host_kid); if (h) hostName = h.display_name; } catch (e) {}
+        const titles = { tennis: "Tennis", town: "Family Town" };
+        if (alive) setRtInvite({ match: m, hostName, gameTitle: titles[m.game] || "a game" });
+      } catch (e) { /* ignore */ }
+    }
+    checkInvites();
+    const iv = setInterval(checkInvites, 6000);
+    return () => { alive = false; clearInterval(iv); };
+  }, []);
   const dingChime = () => {
     try {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
@@ -986,6 +1010,26 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
               <div style={{ fontSize: 12, color: "#d9cfb0" }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</div>
             </div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Play →</span>
+          </button>
+        )}
+
+        {/* multiplayer invite alert (someone started a real-time game with this kid) */}
+        {rtInvite && onJoinInvite && (
+          <button onClick={() => onJoinInvite(rtInvite.match)} style={{
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 18,
+            display: "flex", gap: 12, alignItems: "center",
+            background: "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(14,165,233,0.18))",
+            border: "1px solid rgba(52,211,153,0.5)", borderRadius: 16, padding: "12px 14px", color: "#fff", fontFamily: NUN,
+          }}>
+            <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><ControllerGlyph /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                {rtInvite.hostName} wants to play {rtInvite.gameTitle}!
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#34D399", color: "#053d2b", padding: "2px 7px", borderRadius: 999 }}>Invite</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#bfe9d8" }}>Tap to join and play together</div>
+            </div>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#34D399", color: "#053d2b", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Join →</span>
           </button>
         )}
 

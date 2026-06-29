@@ -21,21 +21,27 @@ invent a one-off; pull from the shared libraries and write back to them.
 
 ## First — agree the asset plan (ASK before you build)
 
-**Before any code, plan the assets WITH the user.** Open the internal **Asset Library**
+**Before any code, plan the assets WITH the user — give 3 options, each shown as a picture.** Open the internal **Asset Library**
 (`/asset-library.html`) — it browses everything we have by **2D/3D**, **theme**, and
 **kind** (`character` · `world` · `element` · `effect` · `music` · `sfx`), with live
 previews, a **coverage matrix** (what we have vs. gaps), our 3D model packs, and the
 downloaded CC0 packs. Then, in chat:
 
-1. **Recommend a concrete set** for the game's theme + dimension, pulling real names/ids
-   from the library. e.g. 2D jungle platformer → "Dino Jungle world, a story hero, jungle
-   music + ambience, fire/spark effects." 3D city runner → "Kenney City Kit buildings +
-   roads, city music."
-2. **Surface the gaps** the coverage matrix shows and say how you'd fill each — generate
-   it, CREATE the sound (new engine = new sounds), or curate from a pack.
-3. **Ask the user to confirm or adjust** — which assets to use, and whether to **go get a
-   new asset pack** (prefer CC0 / Kenney — see `ASSET-LIBRARY.md`) when the library
-   doesn't have the right look. The user downloads packs; you inventory, tag, and register.
+1. **Offer THREE distinct asset-set options** from the library — don't pick for the user.
+   Each option is a concrete set with real names/ids (vary the theme/style; keep one
+   dimension), e.g. for a platformer: **A · Dino Jungle** (jungle world + dino hero + leafy
+   element/spark effects), **B · Candy Land** (candy world + a sweet hero + gem pickups),
+   **C · Space Station** (space world + robot hero + star effects).
+2. **Show a quick visual MOCKUP (screenshot) of the game for EACH of the 3 options** so the
+   user decides by SEEING, not by reading names. For each option, lay its assets into a
+   rough game screen — hero + world background + a couple of elements + the HUD — and
+   present the three previews together (use the visual/mockup tool or a small HTML preview
+   that pulls the real asset URLs). Pictures first, then the asset list under each.
+3. **Surface the gaps** per option (what's missing vs the coverage matrix) and how you'd
+   fill each — generate it, CREATE the sound (new engine = new sounds), or curate from a pack.
+4. **Ask the user to pick one (or mix across options)** — and whether to **go get a new
+   asset pack** (prefer CC0 / Kenney — see `ASSET-LIBRARY.md`) if none of the three looks
+   are right. The user downloads packs; you inventory, tag, and register.
 
 Only once the asset set is agreed do you pick a track and build. This keeps every game
 built from the shared shelf — and grows it on purpose.

@@ -5,11 +5,8 @@
 // and bridges the frozen `mp:` postMessage contract <-> the live channel. The GAME does
 // all the gameplay and never touches the network. See MULTIPLAYER.md for the contract.
 //
-//   <FamilyRealtime
-//     game={{ slug: "tennis", url: "/tennis.html", title: "Buildable Tennis" }}
-//     activeKid={activeKid}
-//     onHome={() => ...}
-//   />
+//   <FamilyRealtime game={{ slug:"tennis", url:"/tennis.html", title:"Buildable Tennis" }}
+//     activeKid={activeKid} onHome={() => ...} autoJoinId={optionalMatchId} />
 import { useEffect, useRef, useState } from "react";
 import { isSignedIn, listKidProfiles, getActiveKid, getSession } from "./lib/accounts";
 import { createMatch, listMyMatches, getMatch, patchMatch, channelTopic, roleFor } from "./lib/rtMatch";
@@ -24,27 +21,30 @@ const WORLDS = [
   ["ocean", "Underwater"], ["candy", "Candy Land"], ["snow", "Snowy Peak"],
   ["volcano", "Volcano"], ["city", "Rooftop"],
 ];
+const CONNECT_TIMEOUT_MS = 20000;
 
 const C = {
   wrap: { position: "fixed", inset: 0, background: "#0F0E17", color: "#fff", fontFamily: "'Nunito',sans-serif", overflow: "auto", zIndex: 50 },
   pad: { maxWidth: 620, margin: "0 auto", padding: "64px 20px 40px" },
-  back: { position: "absolute", top: 14, left: 14, zIndex: 2, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" },
+  back: { position: "absolute", top: 14, left: 14, zIndex: 6, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" },
   h1: { fontWeight: 900, fontSize: 28, margin: "0 0 4px" },
   sub: { color: "#cfc9e6", margin: "0 0 20px", fontSize: 15 },
   sect: { fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, fontSize: 13, color: "rgba(255,255,255,0.5)", margin: "22px 0 10px" },
   card: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: "14px 16px", marginBottom: 10 },
+  invite: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "rgba(124,92,252,0.15)", border: "1px solid rgba(167,139,255,0.5)", borderRadius: 16, padding: "14px 16px", marginBottom: 10 },
   btn: { fontFamily: "'Fredoka',sans-serif", fontWeight: 700, fontSize: 15, color: "#fff", border: "none", cursor: "pointer", borderRadius: 12, padding: "10px 16px", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)" },
   chip: (on) => ({ cursor: "pointer", fontWeight: 700, fontSize: 14, padding: "8px 14px", borderRadius: 999, border: on ? "2px solid #A78BFF" : "1px solid rgba(255,255,255,0.18)", background: on ? "rgba(124,92,252,0.18)" : "rgba(255,255,255,0.05)", color: "#fff", marginRight: 8, marginBottom: 8 }),
   note: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 18, color: "#cfc9e6", lineHeight: 1.5 },
-  overlay: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,14,23,0.86)", color: "#fff", fontWeight: 800, fontSize: 18, zIndex: 3, textAlign: "center", padding: 24 },
+  overlay: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,14,23,0.92)", color: "#fff", zIndex: 5, textAlign: "center", padding: 24 },
 };
 
-export default function FamilyRealtime({ game, activeKid, onHome }) {
+export default function FamilyRealtime({ game, activeKid, onHome, autoJoinId }) {
   const [kids, setKids] = useState([]);
   const [matches, setMatches] = useState([]);
   const [world, setWorld] = useState("beach");
   const [match, setMatch] = useState(null);
-  const [phase, setPhase] = useState("connecting"); // connecting | waiting | playing
+  const [phase, setPhase] = useState("connecting"); // connecting | playing
+  const [timedOut, setTimedOut] = useState(false);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -57,10 +57,12 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
   const oppSeenAtRef = useRef(0);
   const helloTimer = useRef(null);
   const watchTimer = useRef(null);
+  const connectTimer = useRef(null);
 
   const signedIn = isSignedIn();
   const me = activeKid || getActiveKid();
   const nameOf = (id) => { const k = kids.find((x) => x.id === id); return (k && k.display_name) || "Friend"; };
+  const oppIdOf = (m) => (m && (m.host_kid === me.id ? m.guest_kid : m.host_kid));
   const post = (msg) => { const ifr = iframeRef.current; if (ifr && ifr.contentWindow) ifr.contentWindow.postMessage(msg, "*"); };
 
   async function refresh() {
@@ -74,21 +76,40 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
   }
 
   useEffect(() => {
-    if (signedIn && me) refresh(); else setLoading(false);
+    if (signedIn && me) {
+      refresh().then(() => { if (autoJoinId) tryAutoJoin(autoJoinId); });
+    } else setLoading(false);
     return () => teardown();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  async function tryAutoJoin(id) {
+    try { const m = await getMatch(id); if (m) enterMatch(m); } catch (e) {}
+  }
+
   // ---- lobby actions ----
   async function startWith(sib) {
+    // CONVERGENCE: if an open match with this sibling already exists (either of us
+    // started it), JOIN that one instead of making a second match that never connects.
+    const existing = matches.find((m) =>
+      m.status !== "done" && (m.host_kid === sib.id || m.guest_kid === sib.id));
+    if (existing) { enterMatch(existing); return; }
     try { const m = await createMatch(game.slug, me.id, sib.id, world, {}); enterMatch(m); }
     catch (e) { setErr((e && e.message) || "Could not start the game."); }
   }
   function resume(m) { enterMatch(m); }
+  function leaveMatch() {
+    teardown();
+    matchRef.current = null; setMatch(null);
+    setPhase("connecting"); setTimedOut(false);
+    refresh();
+  }
 
   function maybeStart() {
     if (startedRef.current || !meReadyRef.current || !oppReadyRef.current) return;
     startedRef.current = true;
+    if (connectTimer.current) { clearTimeout(connectTimer.current); connectTimer.current = null; }
+    setTimedOut(false);
     setPhase("playing");
     post({ type: "mp:start" });
     const m = matchRef.current;
@@ -97,12 +118,11 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
 
   function sendInit() {
     const m = matchRef.current; if (!m) return;
-    const oppId = m.host_kid === me.id ? m.guest_kid : m.host_kid;
     post({
       type: "mp:init",
       role: roleFor(m, me.id),
       you: { kidId: me.id, name: (me && me.display_name) || "You" },
-      opp: { kidId: oppId, name: nameOf(oppId) },
+      opp: { kidId: oppIdOf(m), name: nameOf(oppIdOf(m)) },
       world: m.world, settings: m.settings || {},
     });
   }
@@ -111,7 +131,7 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
     teardown();
     matchRef.current = m; setMatch(m);
     meReadyRef.current = false; oppReadyRef.current = false; startedRef.current = false;
-    setPhase("connecting");
+    setPhase("connecting"); setTimedOut(false);
 
     const s = getSession();
     const ch = openChannel(channelTopic(m), {
@@ -123,7 +143,6 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
           oppReadyRef.current = !!(data && data.ready);
           maybeStart();
         } else if (event === "g") {
-          // a live gameplay message from the opponent (paddle / ball / point / result)
           post({ type: "mp:peer", event: data && data.event, data: data && data.data });
         } else if (event === "react") {
           const t = data && data.text;
@@ -133,11 +152,12 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
     });
     chanRef.current = ch;
 
-    // announce myself ~ every 2.5s so the other device knows I'm here + my ready state
     helloTimer.current = setInterval(() => ch.send("hello", { ready: meReadyRef.current }), 2500);
     ch.send("hello", { ready: false });
 
-    // if the opponent goes quiet for 6s mid-game, tell the game to pause
+    // show a "still trying / make sure they have it open" message if not connected in time
+    connectTimer.current = setTimeout(() => { if (!startedRef.current) setTimedOut(true); }, CONNECT_TIMEOUT_MS);
+
     watchTimer.current = setInterval(() => {
       if (startedRef.current && oppSeenAtRef.current && Date.now() - oppSeenAtRef.current > 6000) {
         post({ type: "mp:peerLeft" });
@@ -146,8 +166,9 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
   }
 
   function teardown() {
-    if (helloTimer.current) clearInterval(helloTimer.current);
-    if (watchTimer.current) clearInterval(watchTimer.current);
+    if (helloTimer.current) { clearInterval(helloTimer.current); helloTimer.current = null; }
+    if (watchTimer.current) { clearInterval(watchTimer.current); watchTimer.current = null; }
+    if (connectTimer.current) { clearTimeout(connectTimer.current); connectTimer.current = null; }
     if (chanRef.current) { try { chanRef.current.close(); } catch (e) {} chanRef.current = null; }
   }
 
@@ -185,14 +206,33 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
 
   if (match) {
     const waiting = phase !== "playing";
+    const oppName = nameOf(oppIdOf(matchRef.current || match));
     return (
       <div style={C.wrap}>
-        <button style={C.back} onClick={() => { teardown(); setMatch(null); refresh(); }}>← Leave</button>
+        <button style={C.back} onClick={leaveMatch}>← Leave</button>
         <iframe ref={iframeRef} title={game.title} src={game.url} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allow="autoplay" />
-        {waiting && <div style={C.overlay}>{phase === "connecting" ? `Waiting for ${nameOf(matchRef.current && (matchRef.current.host_kid === me.id ? matchRef.current.guest_kid : matchRef.current.host_kid))}…` : "Get ready!"}</div>}
+        {waiting && (
+          <div style={C.overlay}>
+            <div style={{ maxWidth: 340 }}>
+              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 8 }}>
+                {timedOut ? `Still waiting for ${oppName}…` : `Waiting for ${oppName}…`}
+              </div>
+              <div style={{ fontSize: 15, color: "#cfc9e6", fontWeight: 600, lineHeight: 1.5, marginBottom: 22 }}>
+                {timedOut
+                  ? `Make sure ${oppName} has ${game.title} open on their device and taps to join. It'll connect as soon as they're in.`
+                  : `Ask ${oppName} to open ${game.title} on their device and join.`}
+              </div>
+              <button style={{ ...C.btn, padding: "12px 22px" }} onClick={leaveMatch}>← Back to games</button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
+
+  // lobby: separate INVITES FOR ME (someone already started a game with me) from my own
+  const invites = matches.filter((m) => m.status !== "done" && m.host_kid !== me.id);
+  const mine = matches.filter((m) => m.status !== "done" && m.host_kid === me.id);
 
   return (
     <div style={C.wrap}><button style={C.back} onClick={onHome}>← Home</button><div style={C.pad}>
@@ -201,14 +241,24 @@ export default function FamilyRealtime({ game, activeKid, onHome }) {
       {err && <div style={{ ...C.note, borderColor: "#ff7a7a", color: "#ffb3b3", marginBottom: 14 }}>{err}</div>}
       {loading ? <div style={C.note}>Loading your family…</div> : (
         <>
+          {invites.length > 0 && (<>
+            <div style={C.sect}>Invites for you</div>
+            {invites.map((m) => (
+              <div key={m.id} style={C.invite}>
+                <span><b>{nameOf(m.host_kid)}</b> wants to play{m.world ? ` · ${m.world}` : ""}</span>
+                <button style={{ ...C.btn, background: "linear-gradient(135deg,#34D399,#0EA5E9)" }} onClick={() => resume(m)}>Join</button>
+              </div>
+            ))}
+          </>)}
+
           <div style={C.sect}>Look</div>
           <div>{WORLDS.map(([k, label]) => <span key={k} style={C.chip(world === k)} onClick={() => setWorld(k)}>{label}</span>)}</div>
 
-          {matches.length > 0 && (<>
+          {mine.length > 0 && (<>
             <div style={C.sect}>Your games</div>
-            {matches.map((m) => (
+            {mine.map((m) => (
               <div key={m.id} style={C.card}>
-                <span>vs {nameOf(m.host_kid === me.id ? m.guest_kid : m.host_kid)} · {m.world}</span>
+                <span>vs {nameOf(oppIdOf(m))} · {m.world}</span>
                 <button style={C.btn} onClick={() => resume(m)}>Open</button>
               </div>
             ))}
