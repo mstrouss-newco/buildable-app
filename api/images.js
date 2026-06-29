@@ -317,14 +317,14 @@ function build(q) {
     // and treats. Transparent modern-3D cut-outs rendered as billboards in-scene.
     const OBJ = {
       hero_car:"a cute friendly bright PINK toy car viewed from directly BEHIND and slightly above, as if you are driving right behind it: you can see its rounded roof, rear windshield, two round red tail lights and a bumper. Clean symmetrical rear view",
-      ob_car:"a cute SKY-BLUE toy car viewed from directly BEHIND and slightly above: rounded roof, rear windshield, two tail lights and a bumper. Clean symmetrical rear view",
-      cone:"a bright orange traffic safety cone with a white reflective stripe, sitting upright, viewed from the front",
-      hay:"a round golden hay bale, a chunky cylinder of straw, viewed from the side",
-      barrel:"a road construction barrel drum painted with red and white horizontal stripes, standing upright",
-      coin:"a single shiny gold coin with a little star stamped on its face, viewed straight on, plump and round",
-      gift:"a cute small wrapped gift present box with a bright bow and ribbon on top",
-      star:"a single glossy gold five-pointed star, plump and rounded, viewed straight on",
-      icecream:"a cute ice cream cone with a single round pink strawberry scoop on a golden waffle cone",
+      ob_car:"a stalled broken-down car seen from directly BEHIND with its red-and-orange hazard warning lights blinking and a little grey smoke puff rising, clearly a dangerous obstacle blocking the lane",
+      cone:"a tall bright ORANGE traffic safety cone with bold white reflective hazard stripes, sitting upright, clearly a warning marker",
+      barrier:"a red-and-white striped road construction barrier sawhorse roadblock on legs with a small warning sign, clearly a hazard blocking the way",
+      oildrum:"a chunky industrial metal oil drum barrel painted with bold YELLOW and BLACK diagonal hazard warning stripes, slightly rusty and dented, clearly dangerous",
+      coin:"a single shiny GLOWING gold coin with a star on its face radiating a soft warm golden sparkle glow, obviously a happy treasure reward, plump and round",
+      gift:"a cute glossy wrapped present gift box with a big sparkly bow glowing with a soft cheerful aura, obviously a reward",
+      star:"a single plump glossy GLOWING gold five-pointed star sparkling with a warm aura, obviously a happy reward",
+      icecream:"a cute glossy ice cream cone treat with a pink strawberry scoop, a cherry on top and a little sparkle, obviously a yummy reward",
     };
     const piece=(q.piece||"").toString(); const subj=OBJ[piece];
     if(!subj) return null;
