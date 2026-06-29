@@ -371,10 +371,10 @@ const propTexCache={};   // "town:piece" -> THREE.Texture, or false if it failed
 //  shows a simple blocky fallback (makeFallbackProp) so the game never breaks.
 //  Decorative ONLY — never affects lanes / track / collectibles / QA.
 // ===========================================================================
-const CITY_SCALE=8.0;   // Kenney kit models are ~1u; scale up to fit the world (keeps proportions + variety)
+const CITY_SCALE=6.0;   // Kenney kit footprint scale; buildings are short, so they get a tall Y-stretch (yMul) -> a street canyon
 const CITY_FACE=0;      // extra yaw if Kenney buildings face the wrong way (Math.PI to flip)
 function N(file,cat){ return {dir:"nature",file,ext:"gltf",cat}; }                 // Quaternius (normalize to height)
-function C(file,cat){ return {dir:"city-kit",file,ext:"glb",cat,scale:CITY_SCALE}; } // Kenney (fixed scale)
+function C(file,cat){ return {dir:"city-kit",file,ext:"glb",cat,scale:CITY_SCALE, yMul: cat==="building"?2.4:1}; } // Kenney (fixed scale, tall buildings)
 const SCENERY_SETS={
   forest: [ N("CommonTree_1","tree"),N("CommonTree_3","tree"),N("CommonTree_5","tree"),N("Pine_1","pine"),N("Pine_3","pine"),
             N("Bush_Common","bush"),N("Bush_Common_Flowers","bush"),N("Rock_Medium_1","rock"),N("Rock_Medium_2","rock"),
@@ -389,11 +389,11 @@ const SCENERY_SETS={
 const TOWN_SET={ maple:"forest", petal:"forest", beach:"forest", market:"city", downtown:"city", rainbow:"city" };
 const MODEL_TARGET_H={ tree:6.0, pine:6.4, bush:2.4, rock:1.7, flower:1.5, grass:1.4, mushroom:1.3, fern:1.8 };
 let _gltf=null; const modelCache={}, modelCbs={};
-function prepModel(obj,cat,fixedScale){ // toy Lambert material + scale + sit on ground
+function prepModel(obj,item){ // toy Lambert material + scale + sit on ground
   obj.traverse(o=>{ if(o.isMesh){ const m=o.material;
     o.material=new THREE.MeshLambertMaterial({ map:(m&&m.map)||null, color:(m&&m.color)?m.color:0xffffff, transparent:!!(m&&m.transparent), alphaTest:(m&&m.alphaTest)||0, side:THREE.DoubleSide }); } });
-  if(fixedScale>0){ obj.scale.setScalar(fixedScale); }
-  else { const box=new THREE.Box3().setFromObject(obj), size=new THREE.Vector3(); box.getSize(size); const t=MODEL_TARGET_H[cat]||5, s=size.y>0?t/size.y:1; obj.scale.setScalar(s); }
+  if(item.scale>0){ const s=item.scale, yM=item.yMul||1; obj.scale.set(s, s*yM, s); }   // fixed scale (Kenney), optional Y stretch
+  else { const box=new THREE.Box3().setFromObject(obj), size=new THREE.Vector3(); box.getSize(size); const t=MODEL_TARGET_H[item.cat]||5, s=size.y>0?t/size.y:1; obj.scale.setScalar(s); }
   const b=new THREE.Box3().setFromObject(obj); obj.position.y -= b.min.y;
 }
 function loadModel(item, cb){
@@ -405,7 +405,7 @@ function loadModel(item, cb){
   modelCache[key]="loading"; modelCbs[key]=[cb];
   if(!_gltf) _gltf=new THREE.GLTFLoader();
   _gltf.load("models/"+key+"."+item.ext,
-    (g)=>{ const o=g.scene; prepModel(o,item.cat,item.scale); modelCache[key]=o; (modelCbs[key]||[]).forEach(c=>c(o)); modelCbs[key]=[]; },
+    (g)=>{ const o=g.scene; prepModel(o,item); modelCache[key]=o; (modelCbs[key]||[]).forEach(c=>c(o)); modelCbs[key]=[]; },
     undefined, ()=>{ modelCache[key]=false; });
 }
 function makeFallbackProp(cat){ const g=new THREE.Group();   // blocky stand-in if a model fails to load
@@ -429,7 +429,7 @@ function setSlotPiece(slot, town, item){
   const side=slot.userData.side||1, cat=item.cat, isCity=TOWN_SET[town]==="city";
   const faceRoad = (cat==="building"||cat==="fence");
   // buildings sit farther out to frame the street; trees/filler line the road nearer (never in lanes)
-  const xoff = cat==="building" ? (12+Math.random()*2.2) : (isCity ? (7.5+Math.random()*2.2) : (6.5+Math.random()*3));
+  const xoff = cat==="building" ? (9.6+Math.random()*1.8) : (isCity ? (7.2+Math.random()*1.8) : (6.5+Math.random()*3));
   slot.position.x = side*xoff;
   slot.scale.setScalar(0.85+Math.random()*0.35);
   slot.rotation.y = faceRoad ? ((side<0? Math.PI/2 : -Math.PI/2)+CITY_FACE) : Math.random()*6.28;
