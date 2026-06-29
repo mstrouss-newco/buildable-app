@@ -1,5 +1,10 @@
 # Buildable Kids — Session Log
 
+## 2026-06-28 — Survival: real cast art (fix fallback) + bespoke space enemies
+- Fix: hero+bosses use BASE modern3d cutout (emo=base) so art loads (was 404->fallback).
+- Added space-enemy slugs star-slime/comet-bug/puff-blob; enemies render cutouts (blob fallback).
+
+
 ## 2026-06-28 — Castle Guard: added the KNIGHT defender (second tower type)
 Second defender for Castle Guard (live). **Knight** = a short-range MELEE blocker (no projectile):
 when a goblin passes close it gives a gentle bonk (dmg 2, range 98, cost 25) — strongest at tight

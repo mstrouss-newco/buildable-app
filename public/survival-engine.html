@@ -79,7 +79,7 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   sfxBase: "https://www.buildablekids.com/api/sfx?s=",
   // No per-shot fire sound (it's an auto-shooter). Sound plays on impact/kill/explode only.
   sfx: { hit:"spk_hit", coin:"spk_coin", levelup:"spk_levelup", hurt:"spk_hurt", boss:"spk_boss", win:"spk_win", lose:"spk_lose", explode:"spk_pop", boom:"spk_boom" },
-  heroUrl: ART+"robot&style=modern3d&emo=happy",   // Bolt the Robot (drawn astronaut if it can't load)
+  heroUrl: ART+"robot&style=modern3d&emo=base",    // Bolt the Robot base cutout (drawn astronaut fallback)
   palette: { hero:"#eaf2ff", visor:"#62d0ff", spark:"#ffe27a", gem:"#6ff0ff", hp:"#ff7aa8", xp:"#7ad0ff", boss:"#c69bff" },
   // base hero stats (level-ups stack on top of these during a run)
   hero: { speed:2.7, hearts:4, fireCd:23, projSpeed:7.0, projDmg:1, projR:0, projPerShot:1, pierce:0, pickupR:115 },
@@ -123,6 +123,8 @@ const bgImg=mkImg(GAME_CONFIG.bgImg);
 const charCache={};
 function charImg(slug,emo){ const k=slug+":"+emo; if(!charCache[k]) charCache[k]=mkImg(ART+slug+"&style="+(GAME_CONFIG.artStyle||"modern3d")+"&emo="+emo); return charCache[k]; }
 let bossImg=null;
+const ENEMY_SLUGS=["star-slime","comet-bug","puff-blob"];
+const enemyImgs=ENEMY_SLUGS.map(sl=>charImg(sl,"base"));   // preload bespoke space-critter art (drawn blob fallback)
 
 // deterministic RNG so spawns are reproducible (and QA-able)
 function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -216,7 +218,7 @@ function applyGear(s){ BASE._bonusHearts=0; if(!CHAR)return; const eq=CHAR.equip
 // carry=true keeps your upgrades & hearts into the next level; false = brand-new run
 function startLevel(i, carry){
   level=Math.max(0,Math.min(GAME_CONFIG.levels.length-1,i)); L=GAME_CONFIG.levels[level];
-  bossImg = L.bossChar ? charImg(L.bossChar,"angry") : null;   // start loading this level's boss art
+  bossImg = L.bossChar ? charImg(L.bossChar,"base") : null;   // start loading this level's boss art (base cutout)
   const prevHearts = hero?hero.hearts:BASE.hearts;
   if(!carry || !stats){ stats=freshStats(); applyGear(stats); xp=0; plvl=1; xpNeed=START_NEED;
     // catch-up: starting a later level on its own grants the progress you'd have by then, so a retry is fair
@@ -271,7 +273,7 @@ function fire(){ const tgt=nearestEnemy(); if(!tgt)return; const base=Math.atan2
 function spawnEnemy(){ const r=spawnRng(); const edge=Math.floor(r*4); let x,y; const m=18;
   if(edge===0){x=-m;y=spawnRng()*H;} else if(edge===1){x=W+m;y=spawnRng()*H;} else if(edge===2){x=spawnRng()*W;y=-m;} else {x=spawnRng()*W;y=H+m;}
   const col=L.colors[Math.floor(spawnRng()*L.colors.length)];
-  enemies.push({ x,y, r:15, hp:L.eHp, maxHp:L.eHp, spd:L.eSpeed, dmg:L.eDmg, val:L.eValue, col, wob:spawnRng()*6.28, boss:false, orbCd:0 }); }
+  enemies.push({ x,y, r:15, hp:L.eHp, maxHp:L.eHp, spd:L.eSpeed, dmg:L.eDmg, val:L.eValue, col, wob:spawnRng()*6.28, boss:false, orbCd:0, sprite:enemyImgs[Math.floor(spawnRng()*enemyImgs.length)] }); }
 function spawnBoss(){ const b=L.boss||{hp:30,spd:1.1,dmg:1}; boss={ x:W/2, y:-40, r:42, hp:b.hp, maxHp:b.hp, spd:b.spd, dmg:b.dmg, val:8, col:P.boss, wob:0, boss:true, orbCd:0 }; bossSpawned=true; sfx("boss"); }
 function burst(x,y,col,n){ if(BM&&fx){ BM.burst(fx.parts,x,y,col,n,{tex:"spark",additive:true,spd:[50,230],life:[0.28,0.55],r:3.5}); return; } for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=1+Math.random()*3; parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*12,col}); } }
 function hurtHero(dmg){ if(invuln>0)return; if(stats.shield){ stats.shield=false; invuln=70; burst(hero.x,hero.y,P.visor,12); sfx("hurt"); return; } hero.hearts-=dmg; invuln=80; burst(hero.x,hero.y,P.hp,14); sfx("hurt"); if(hero.hearts<=0){ hero.hearts=0; state="lose"; sfx("lose"); } }
@@ -428,7 +430,7 @@ function draw(){
   // nova shockwave rings
   for(const rg of rings){ const a=Math.min(0.55,rg.life/22*0.55); ctx.strokeStyle="rgba(255,226,122,"+a.toFixed(2)+")"; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(rg.x,rg.y,rg.r,0,7); ctx.stroke(); }
   // enemies + boss
-  for(const e of enemies){ blob(e.x,e.y,e.r,e.col,e.wob,false); if(e.slowT>0){ ctx.strokeStyle="rgba(150,220,255,.65)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,e.r+3,0,7);ctx.stroke(); } }
+  for(const e of enemies){ const im=e.sprite; if(im && (im.naturalWidth||im.width)){ BR.sprite(ctx, im, e.x, e.y, e.r*2.6, {shadow:true}); } else { blob(e.x,e.y,e.r,e.col,e.wob,false); } if(e.slowT>0){ ctx.strokeStyle="rgba(150,220,255,.65)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,e.r+5,0,7);ctx.stroke(); } }
   if(boss){ const useArt=bossImg && (bossImg.naturalWidth||bossImg.width);
     if(useArt){ BR.sprite(ctx,bossImg,boss.x,boss.y,boss.r*2.5,{shadow:true,glow:"rgba(198,155,255,0.4)"}); }
     else blob(boss.x,boss.y,boss.r,boss.col,Date.now()/300,true);
@@ -475,7 +477,7 @@ function heroName(){ const h=GEAR.hero.find(x=>x.id===(CHAR&&CHAR.equipped.hero)
 function bsLevels(){ const unlocked=CHAR?(CHAR.unlocked||0):0;
   return GAME_CONFIG.levels.map((lv,i)=>{ const st = i<unlocked?"done" : i===unlocked?"next" : "locked";
     const o={ n:i+1, name:lv.name, state:st };
-    if(st!=="locked") o.img = ART+lv.bossChar+"&style="+(GAME_CONFIG.artStyle||"modern3d")+"&emo=happy";
+    if(st!=="locked") o.img = ART+lv.bossChar+"&style="+(GAME_CONFIG.artStyle||"modern3d")+"&emo=base";
     if(st==="done"){ o.stars=3; o.maxStars=3; }
     return o; }); }
 function bsConfig(){ const unlocked=CHAR?(CHAR.unlocked||0):0; return {
