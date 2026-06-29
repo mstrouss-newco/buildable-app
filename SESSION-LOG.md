@@ -68,6 +68,42 @@ zero hearts the **wave just replays** — never a game-over screen.
 - **Owner actions:** run `db/seed-castleguard-assets.sql` + `db/seed-castleguard-mechanic.sql` once
   in Supabase (optional — the game runs without them; they're for cross-game reuse). Merge the branch
   to deploy + live-QA on devices.
+## 2026-06-28 — Sling Squad: original slingshot/physics launcher (first physics-engine game)
+
+New Track B engine `public/sling-squad.html` (branch `claude/games-sling-squad`) — an ORIGINAL
+kid-friendly slingshot game (our own characters Pip/Bloop/Tace, goofy crowned castle critters,
+our levels + name; NEVER Angry Birds branding/art/characters). The novel bit: it's the FIRST
+Buildable game to use a real rigid-body **physics engine — Matter.js** (`public/matter.min.js`,
+MIT, vendored as one self-contained file; the dependency was confirmed with Mike before adding).
+
+- **Core loop:** drag a friendly pal back in the slingshot to set aim + power, release to fling
+  them along a gravity arc; they knock over stacked wooden block towers and bonk goofy targets
+  that simply topple and POOF (no harm, no weapons). Clear all targets to win.
+- **Always-winnable / very forgiving (Mike's pick):** big easy pull with a live trajectory
+  preview, gentle gravity, generous launches with a few to spare, and SOFT-FAIL only — out of
+  slings just retries the level, never a harsh game-over. Targets pop generously (direct hit
+  always counts + knocked-by-block + displaced-from-rest + fell-off). Each level pre-settles its
+  towers with pops disabled so settling jitter can't pop a target before the kid acts.
+- **3 simple squad characters, no powers in v1** (Mike's pick). Castle world ships first.
+- **Data-driven:** `GAME_CONFIG.levels[]` = {name, launches, blocks, targets} — adding a level
+  is editing data, never engine code. 5 castle levels.
+- **Shared libs:** BR (cohesive drawn castle art = always-on fallback), BA (new created
+  `sling_*` one-shots in `api/sfx.js`: stretch/release/thud/poof/win; synth is silent fallback),
+  BM (explode/shake juice), BS (start screen + level picker), game-nav bridge (shell Home/Sound/
+  Help, `nav:exit`). Library-first w/ fallback: flung pals wear `/api/list-characters` art if
+  present, else the drawn squad — a library miss can never break play. Win/lose posted to the
+  app for helper reactions + per-kid telemetry. NO emoji.
+- **New reusable mechanic** `sling-launch-physics` → `MECHANICS.md` §16 +
+  `db/seed-sling-launch-mechanic.sql` (owner runs once in Supabase).
+- **Always-winnable QA:** `qa-sling.mjs` (model: `qa-breaker.mjs`) drives a sensible-aim bot via
+  `window.BUILDABLE_GAME` (alias `SLING_GAME`); it clears EVERY level with launches to spare +
+  render smoke. Auto-calibrated aim predictor matches the real Matter gravity. Also visually
+  verified by rendering the actual `draw()` to PNGs (castle scene + realistic toppling win).
+- **Wired in:** `vercel.json` routes (`/sling-squad.html`, `/sling`, `/matter.min.js`) before the
+  landing catch-all; Games-picker tile + `SCREEN_SLING` screen in `src/BuildableKids.jsx`
+  (full-screen iframe, like Maze/Breaker). React build transforms clean.
+- **Owner action:** run `db/seed-sling-launch-mechanic.sql` once. On branch
+  `claude/games-sling-squad` — NOT pushed to `main`; merge to deploy + live-QA in the iframe.
 
 ## 2026-06-28 — Sunny Town Drive: low-poly model reskin (Kenney + Quaternius)
 

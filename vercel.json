@@ -328,6 +328,18 @@
       "dest": "/maze-engine.html"
     },
     {
+      "src": "/sling-squad.html",
+      "dest": "/sling-squad.html"
+    },
+    {
+      "src": "/sling",
+      "dest": "/sling-squad.html"
+    },
+    {
+      "src": "/matter.min.js",
+      "dest": "/matter.min.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
