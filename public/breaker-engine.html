@@ -230,8 +230,7 @@ function splitBalls(){ if(!G)return; const add=[];
   for(const b of G.balls){ const sp=Math.hypot(b.vx,b.vy)||G.speed, a0=Math.atan2(b.vy,b.vx);
     add.push(newBall(b.x,b.y,a0-0.4,sp)); add.push(newBall(b.x,b.y,a0+0.4,sp)); }
   G.balls=G.balls.concat(add).slice(0,9); }
-
-// ---------- PONG: 2-player pass-and-play ----------
+if(G&&G.stuck)flingStuck(); else launch();// ---------- PONG: 2-player pass-and-play ----------
 function startPong(){ currentMode="two"; resetFx();
   const sp=5.2;
   G={ mode:"two", padW:120, p1x:W/2, p2x:W/2, s1:0, s2:0, target:5,
@@ -249,7 +248,7 @@ const pointers={}; let dragging=false;
 c.addEventListener('pointerdown',e=>{ e.preventDefault(); if(BA)BA.unlock(); if(helpOpen){ helpOpen=false; return; }
   if(state==="play"){ const p=canvasPt(e);
     if(G.mode==="two"){ const which=p.y<H/2?"p2":"p1"; pointers[e.pointerId]=which; movePong(which,p.x); return; }
-    dragging=true; movePaddleTo(p.x); if(G.sticky&&G.stuck)flingStuck(); else if(G.onPaddle)launch(); return; }
+    dragging=true; movePaddleTo(p.x); if(G.stuck)flingStuck(); else if(G.onPaddle)launch(); return; }
   if(state==="win"||state==="lose"){ advanceAfterEnd(); return; } });
 c.addEventListener('pointermove',e=>{ const p=canvasPt(e);
   if(G&&G.mode==="two"){ const which=pointers[e.pointerId]; if(which)movePong(which,p.x); return; }
@@ -261,7 +260,7 @@ const held={};
 addEventListener('keydown',e=>{ const k=e.key;
   if(k==='b'){ botMode=!botMode; started=true; return; }
   if(state==="win"||state==="lose"){ advanceAfterEnd(); return; }
-  if([" ","Spacebar","ArrowUp","Up"].includes(k)){ if(G&&G.sticky&&G.stuck)flingStuck(); else launch(); e.preventDefault(); return; }
+  if([" ","Spacebar","ArrowUp","Up"].includes(k)){ if(G&&G.stuck)flingStuck(); else launch(); e.preventDefault(); return; }
   if(["ArrowLeft","Left"].includes(k)){ held.arL=true; e.preventDefault(); }
   if(["ArrowRight","Right"].includes(k)){ held.arR=true; e.preventDefault(); }
   if(k==='a'||k==='A'){ held.aK=true; }
