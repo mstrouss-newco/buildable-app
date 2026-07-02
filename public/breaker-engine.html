@@ -176,7 +176,7 @@ function bgImage(){ const d=backdropDef(); if(!d.img)return null; if(!bgCache[d.
 // looping background music: bespoke upbeat ElevenLabs arcade tracks, one per backdrop
 // (/api/breaker-music?world=<backdrop>), generated once + cached server-side.
 let _curMusic="";
-function ensureMusic(){ if(!BA||!BA.setMusic)return; const url="/api/breaker-music?world="+PREFS.backdrop;
+    function ensureMusic(){ if(!BA||!BA.setMusic)return; const url="/music-library/playful_musicbox.mp3";
   if(url!==_curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); _curMusic=url; }
   if(BA.playMusic)BA.playMusic(); }
 
