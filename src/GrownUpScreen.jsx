@@ -120,7 +120,7 @@ function GameGlyph() {
   );
 }
 
-export default function GrownUpScreen({ onBack, onProfileChosen }) {
+export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends }) {
   // Flow steps. Start on the kid picker when already signed in (returning
   // parent); otherwise start on the lane chooser.
   const [step, setStep] = useState(isSignedIn() ? "picker" : "choose");
@@ -487,6 +487,9 @@ export default function GrownUpScreen({ onBack, onProfileChosen }) {
 
             {signedIn && (
               <button style={S.linkBtn} onClick={goProjects}>Organize creations by child →</button>
+            )}
+            {signedIn && onOpenFriends && (
+              <button style={S.linkBtn} onClick={onOpenFriends}>Manage friends & friend code →</button>
             )}
             <button style={S.ghostBig} onClick={() => setStep("picker")}>← Done</button>
           </div>

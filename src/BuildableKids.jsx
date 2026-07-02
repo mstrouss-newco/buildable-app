@@ -13,6 +13,8 @@ import TopBoard from "./TopBoard.jsx";
 import LoadingGames from "./LoadingGames";
 import QuizGate from "./QuizGate";
 import FamilyChess from "./FamilyChess";
+import GameLobby from "./GameLobby";
+import GrownUpFriends from "./GrownUpFriends";
 import FamilyTown from "./FamilyTown";
 import FamilyCheckers from "./FamilyCheckers";
 import FamilyRealtime from "./FamilyRealtime";
@@ -46,6 +48,8 @@ const SCREEN_RUNNER = "runner";
 const SCREEN_TETRIS = "tetris";
 const SCREEN_SOUNDS = "sounds";
 const SCREEN_CHESS_FAMILY = "chess_family";
+const SCREEN_CHESS_LOBBY = "chess_lobby";
+const SCREEN_GROWNUP_FRIENDS = "grownup_friends";
 const SCREEN_CHECKERS = "checkers";
 const SCREEN_CHECKERS_FAMILY = "checkers_family";
 const SCREEN_TENNIS = "tennis";
@@ -271,6 +275,7 @@ export default function BuildableKids() {
   };
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
+  const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
   const [rtAutoJoin, setRtAutoJoin] = useState(null);
   const [gameData, setGameData] = useState({
     playerName: "",
@@ -577,7 +582,19 @@ export default function BuildableKids() {
     return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_CHESS) {
-    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHESS_FAMILY)} />;
+    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHESS_LOBBY)} />;
+  }
+
+  if (screen === SCREEN_CHESS_LOBBY) {
+    return (
+      <GameLobby
+        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=2", transport: "turns" }}
+        activeKid={activeKid}
+        onHome={() => setScreen(SCREEN_HOME)}
+        onSameDevice={() => setScreen(SCREEN_CHESS)}
+        onAddFriend={() => { setFriendsReturn(SCREEN_CHESS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
   }
 
   if (screen === SCREEN_CHESS_FAMILY) {
@@ -612,6 +629,7 @@ export default function BuildableKids() {
     return (
       <GrownUpScreen
         onBack={() => setScreen(SCREEN_HOME)}
+        onOpenFriends={() => { setFriendsReturn(SCREEN_GROWNUP); setScreen(SCREEN_GROWNUP_FRIENDS); }}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
           reloadLearningForActiveKid();
@@ -619,6 +637,10 @@ export default function BuildableKids() {
         }}
       />
     );
+  }
+
+  if (screen === SCREEN_GROWNUP_FRIENDS) {
+    return <GrownUpFriends onBack={() => setScreen(friendsReturn || SCREEN_GROWNUP)} />;
   }
 
   if (screen === SCREEN_ADMIN) {
@@ -1279,7 +1301,7 @@ function ChessScreen({ onHome, onFamily }) {
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       {onFamily && (
-        <button onClick={onFamily} style={{ position: "absolute", top: "14px", right: "14px", zIndex: 2, ...pillBtn, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play a family member</button>
+        <button onClick={onFamily} style={{ position: "absolute", top: "14px", right: "14px", zIndex: 2, ...pillBtn, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play with a friend</button>
       )}
       <iframe
         title="Buildable Chess"

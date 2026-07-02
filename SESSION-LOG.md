@@ -1381,3 +1381,30 @@ Added `kind=chesspiece` to `api/images.js` (gpt-image-1, transparent, cached in 
 ## Chess: AI pieces rolled out to all worlds — June 26 2026
 
 After approving the Space prototype, expanded AIWORLDS to all six worlds (ocean/jungle/space/candy/castle/desert). Each world now renders gpt-image-1 piece art (kind=chesspiece) with the vector classic-core piece as instant fallback until each image loads + caches. Pieces generate on first open (~30s, vector shows meanwhile), instant after.
+
+
+## Shared friends + invites lobby — cross-account multiplayer (July 2 2026)
+
+Redesigned the 2-player flow into ONE reusable lobby + ONE shared friends/invites/presence
+system, and wired CHESS to it first (as requested — prove on one game). Branch
+`claude/friends-lobby`. Production `vite build` passes; `node --check api/friends.js` clean.
+
+- **Mode select** on "2 players": Same device (routes to the existing local board — one tap,
+  unchanged) vs Play with a friend (cross-account).
+- **Friends** = ONE shared list across all games: your siblings + kids from approved friend
+  families, online first, offline grayed but still tappable (they get an email). "Add a
+  friend" opens the grown-ups panel.
+- **Safety:** family friend code + BOTH grown-ups approve (COPPA-aligned, no strangers). All
+  cross-family reads/writes go through the service-role `api/friends.js` (validates the
+  parent JWT); friendships/invites/matches carry two parents with dual-parent RLS.
+- **Presence:** cheap heartbeat — `kid_profiles.last_seen` stamped ~30s while the app is open;
+  online = seen < 90s. No new service.
+- **Offline invites email the grown-up** via Resend (new; skipped gracefully until
+  `RESEND_API_KEY` is set).
+- New files: `db/create-friends.sql`, `api/friends.js`, `src/lib/friends.js`,
+  `src/lib/friendMatches.js`, `src/GameLobby.jsx`, `src/GrownUpFriends.jsx`. Chess repointed
+  to `<GameLobby>`; `GrownUpScreen` got a "Manage friends" link. Other games untouched this
+  pass (they move onto `<GameLobby>` next).
+
+**OWNER TODO:** run `db/create-friends.sql` in Supabase; set `RESEND_API_KEY` + `RESEND_FROM`
+(and optionally `APP_URL`) in Vercel. Then QA across two real accounts/devices.
