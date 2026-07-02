@@ -27,11 +27,13 @@
 '  --hud-radius: 999px;  /* corner roundness. 999px = pill, 12px = soft rectangle */',
 '  --hud-text:   #ffffff;/* text color inside the panels */',
 '  --hud-gap:    10px;   /* space between the little panels */',
+'  --hud-font:   \'Baloo 2\', system-ui, sans-serif; /* the HUD text font */',
 '}',
 '.hud{position:absolute;top:18px;left:20px;right:20px;display:flex;',
 '  justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}',
 '.hud-group{display:flex;align-items:center;gap:var(--hud-gap);}',
 '.hud-chip{display:inline-flex;align-items:center;gap:12px;color:var(--hud-text);',
+'  font-family:var(--hud-font);',
 '  font-weight:700;font-size:15px;line-height:1;padding:9px 16px;border-radius:var(--hud-radius);',
 '  background:rgba(8,10,20,var(--hud-dark));border:1px solid rgba(255,255,255,0.18);',
 '  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);',
@@ -41,8 +43,18 @@
 '.hud-heart{width:15px;height:15px;display:inline-block;}'
   ].join('\n');
 
+  function injectFont() {
+    if (g.document.getElementById('buildable-hud-font')) return;
+    var l = g.document.createElement('link');
+    l.id = 'buildable-hud-font';
+    l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&display=swap';
+    g.document.head.appendChild(l);
+  }
+
   function injectStyle() {
     if (g.document.getElementById('buildable-hud-style')) return;
+    injectFont();
     var s = g.document.createElement('style');
     s.id = 'buildable-hud-style';
     s.textContent = STYLE;
