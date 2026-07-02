@@ -240,3 +240,48 @@ networking, security, lobby, and safety are inherited — not rebuilt.
 > is Supabase **private channels + Realtime Authorization** (RLS on `realtime.messages`);
 > `realtimeChannel.js` already passes the parent JWT as `access_token` so that switch is
 > a config change, not a rewrite.
+
+---
+
+## Pattern C — Friends (cross-account, the reusable lobby)
+
+**Status: NEW (branch `claude/friends-lobby`). Proven on chess first.** Patterns A & B
+were **family-only** (two kids under ONE parent). Pattern C adds **approved friends on a
+DIFFERENT account**, plus one shared **lobby** every game reuses. It sits on top of A/B —
+a friend match is still a turn-based row (chess) or a Broadcast channel (tennis); what's
+new is *who* can be on the other side and the *one* connect experience around it.
+
+**The golden rule stays:** a game only supplies its board. Local play, the friends list,
+online status, invites, and the waiting screen are all inherited from the lobby.
+
+### The pieces (built ONCE, shared by all games)
+| File | Role |
+|---|---|
+| `db/create-friends.sql` | The whole shared layer: family `friend_code`, `family_friends` (both-grown-ups approval), kid `last_seen` (presence), `game_invites`, and `friend_matches` (the ONE cross-account match table for every game, dual-parent RLS). Idempotent — **owner runs once.** |
+| `api/friends.js` | The one service-role lobby brain (validates the caller's parent JWT): my code, add-by-code, pending/approve/decline, the friends list (siblings + approved friend kids, with online flags), and send/poll/accept/cancel invites. Emails the other grown-up (Resend) on a request and on an **offline** invite. |
+| `src/lib/friends.js` | Client wrapper for `api/friends.js` **+ the presence heartbeat** (stamps `kid_profiles.last_seen` every ~30s while the app is open; online = seen < 90s). |
+| `src/lib/friendMatches.js` | Turn-based poll over `friend_matches` (dual-parent RLS lets BOTH families read+patch) — the chess model on the shared table. |
+| `src/GameLobby.jsx` | **The reusable lobby.** Mode select (Same device / Play with a friend) → friends list (online first, offline grayed but tappable, incoming invites, "Add a friend") → waiting+cancel → embeds the board and bridges moves. |
+| `src/GrownUpFriends.jsx` | Grown-ups panel: show family code, add-by-code, approve/decline requests. The **safety gate**. Reached from Grown-ups → "Manage friends". |
+
+### Safety model (non-negotiable, on top of the Pattern A/B rules)
+- **No strangers, no open search.** Families connect only by a private **friend code** a
+  grown-up shares with another grown-up.
+- **BOTH grown-ups approve** before any kid can play (requester approves by requesting;
+  the other approves in the grown-ups area). Nothing is playable while `status='pending'`.
+- **Friends are family-to-family** and **shared across every game** — approve once, friends
+  everywhere. The friends list a kid sees = their siblings + kids from approved friend
+  families.
+- Canned reactions only, engine stays network-agnostic — unchanged from A/B.
+
+### Drop a NEW game into the lobby
+Render `<GameLobby game={{ slug, title, url:"/<game>.html?online=1", transport:"turns" }}
+activeKid={...} onHome={...} onSameDevice={...} onAddFriend={...} />`. Turn-based games work
+today (chess). Real-time games (tennis) reuse the same lobby + `friend_matches` row for the
+lobby/score and layer the Pattern B Broadcast channel on top — that bridge is the next step.
+
+### Owner setup (one-time, in Vercel + Supabase)
+1. Run `db/create-friends.sql` in the Supabase SQL editor.
+2. Add env vars: `RESEND_API_KEY` and `RESEND_FROM` (a verified sender, e.g.
+   `Buildable <hello@buildablekids.com>`), and optionally `APP_URL`. Email is skipped
+   gracefully until `RESEND_API_KEY` is set — everything else works without it.
