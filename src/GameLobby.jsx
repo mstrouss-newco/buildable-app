@@ -59,12 +59,12 @@ const C = {
 
 const avatarText = (name) => (name || "?").trim().charAt(0).toUpperCase();
 
-export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend }) {
+export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend, entry }) {
   const me = activeKid || getActiveKid();
   const signedIn = isSignedIn();
   const transport = (game && game.transport) || "turns";
 
-  const [phase, setPhase] = useState("mode"); // mode | friends | waiting | playing
+  const [phase, setPhase] = useState(entry === "friends" ? "friends" : "mode"); // mode | friends | waiting | playing
   const [friends, setFriends] = useState([]);
   const [inbox, setInbox] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -277,7 +277,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
     );
     return (
       <div style={C.wrap}>
-        <button style={C.back} onClick={() => setPhase("mode")}>&larr; Back</button>
+        <button style={C.back} onClick={() => (entry === "friends" ? onHome() : setPhase("mode"))}>&larr; Back</button>
         <div style={C.pad}>
           <h1 style={C.h1}>Family &amp; friends</h1>
           <p style={C.sub}>Pick who to play with. Family is always here &mdash; green dot means they're online right now.</p>

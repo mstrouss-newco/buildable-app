@@ -243,6 +243,23 @@ body.in-game .card{background:rgba(20,16,40,.34);border-color:rgba(255,255,255,.
       <span class="linklike" id="btn-scores" style="margin-top:6px">Scoreboard</span>
     </section>
 
+    <!-- TWO-PLAYER CHOICE: same device vs a friend on their own device -->
+    <section class="screen" id="s-twochoice">
+      <div class="big-title" style="font-size:30px">Two Players</div>
+      <div class="big-sub">How do you want to play together?</div>
+      <div class="btn-row">
+        <button class="btn btn-ghost mode-card" id="btn-two-local">
+          <span id="tc-local-art"></span>
+          <span class="mc-txt"><span class="mc-t">Same device</span><span class="mc-s">Take turns on one screen</span></span>
+        </button>
+        <button class="btn btn-ghost mode-card" id="btn-two-friend">
+          <span id="tc-friend-art"></span>
+          <span class="mc-txt"><span class="mc-t">Play with a friend</span><span class="mc-s">On their own device</span></span>
+        </button>
+      </div>
+      <span class="linklike" id="btn-twochoice-back">← Back</span>
+    </section>
+
     <!-- SETUP -->
     <section class="screen" id="s-setup">
       <div class="big-title" style="font-size:30px">Get ready!</div>
@@ -1095,9 +1112,14 @@ function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.re
 
 document.getElementById('solo-art').innerHTML=pieceSVG('n','w');
 document.getElementById('two-art').innerHTML=pieceSVG('q','b');
+document.getElementById('tc-local-art').innerHTML=pieceSVG('q','b');
+document.getElementById('tc-friend-art').innerHTML=pieceSVG('q','w');
 
 document.getElementById('btn-solo').onclick=()=>{mode='solo';openSetup();};
-document.getElementById('btn-two').onclick=()=>{mode='two';openSetup();};
+document.getElementById('btn-two').onclick=()=>show('s-twochoice');
+document.getElementById('btn-two-local').onclick=()=>{mode='two';openSetup();};
+document.getElementById('btn-two-friend').onclick=()=>{try{window.parent.postMessage({type:'chessPlayFriend'},'*');}catch(e){}};
+document.getElementById('btn-twochoice-back').onclick=()=>show('s-home');
 document.getElementById('btn-back-home').onclick=()=>show('s-home');
 
 function openSetup(){

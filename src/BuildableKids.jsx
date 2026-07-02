@@ -581,16 +581,16 @@ export default function BuildableKids() {
     return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_CHESS) {
-    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHESS_LOBBY)} />;
+    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHESS_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=2", transport: "turns" }}
+        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=3", transport: "turns" }}
         activeKid={activeKid}
-        onHome={() => setScreen(SCREEN_HOME)}
-        onSameDevice={() => setScreen(SCREEN_CHESS)}
+        entry="friends"
+        onHome={() => setScreen(SCREEN_CHESS)}
         onAddFriend={() => { setFriendsReturn(SCREEN_CHESS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
       />
     );
@@ -1290,7 +1290,12 @@ function TypingScreen({ onHome }) {
   );
 }
 
-function ChessScreen({ onHome, onFamily }) {
+function ChessScreen({ onHome, onPlayFriend }) {
+  useEffect(() => {
+    function onMsg(e) { if (e && e.data && e.data.type === "chessPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [onPlayFriend]);
   const pillBtn = {
     fontFamily: NUN, fontWeight: 800, fontSize: "14px", color: "#fff",
     background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)",
@@ -1299,12 +1304,9 @@ function ChessScreen({ onHome, onFamily }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
-      {onFamily && (
-        <button onClick={onFamily} style={{ position: "absolute", top: "14px", right: "14px", zIndex: 2, ...pillBtn, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play with a friend</button>
-      )}
       <iframe
         title="Buildable Chess"
-        src="/buildable-chess.html?v=2"
+        src="/buildable-chess.html?v=3"
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
