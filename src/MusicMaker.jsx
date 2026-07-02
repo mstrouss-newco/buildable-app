@@ -240,7 +240,17 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     try {
       const r = await fetch("/api/generate-song", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...buildChoices(), kidName: playerName || "" }) });
       const j = await r.json();
-      if (j && j.ok) setDraft(j); else setStatus("Hmm, that didn't work. Try again!");
+      if (j && j.ok) { setDraft(j); }
+      else if (j && j.blocked) {
+        // Kid typed something the server's safety filter blocked (bad language,
+        // scary/violent words, etc). Keep them on the "about your song" screen,
+        // say a friendly line aloud (many users can't read yet), and show a
+        // clear kid-friendly message that those words aren't allowed.
+        setStep(TOTAL);
+        speak("Oops! Let's keep it friendly. Try some different words for your song.");
+        setStatus("\uD83C\uDFB5 Oops! Some of those words aren't allowed. Let's keep songs kind and friendly \u2014 try something fun like animals, space, or a silly adventure!");
+      }
+      else setStatus("Hmm, that didn't work. Try again!");
     } catch { setStatus("Hmm, that didn't work. Try again!"); }
     finally { setBusy(false); }
   }
