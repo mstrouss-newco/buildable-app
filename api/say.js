@@ -54,6 +54,6 @@ export default async function handler(req,res){
   }
   res.setHeader("Content-Type","audio/mpeg");
   res.setHeader("Access-Control-Allow-Origin","*");
-  res.setHeader("Cache-Control","public, max-age=31536000, immutable");
+  res.setHeader("Cache-Control","public, s-maxage=31536000, max-age=31536000, immutable");
   res.status(200).send(Buffer.from(b64,"base64"));
 }

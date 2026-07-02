@@ -480,7 +480,7 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
 function sendPng(res, b64, contentType) {
   const buf = Buffer.from(b64, "base64");
   res.setHeader("Content-Type", contentType || "image/png");
-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.setHeader("Cache-Control", "public, s-maxage=31536000, max-age=31536000, immutable");
   res.status(200).send(buf);
 }
 
