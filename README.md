@@ -75,6 +75,9 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## First Bounce - fix frozen ball after sticky Catch power-up expires (July 2 2026)
+Bug: in the brick-breaker (public/breaker-engine.html), a ball caught by the sticky "Catch" power-up could get permanently stuck to the paddle, freezing the game with no way to relaunch. Reported after a multiball where the other balls fell off. Cause: the release input gated flingStuck() on `G.sticky && G.stuck`. When the Catch timer expired while a ball was still pinned, `G.stuck` stayed set but `G.sticky` went false, so Space/click/tap fell through to `launch()`, which no-ops because `G.onPaddle` is false, leaving the ball stranded. Fix: gate the release on `G.stuck` alone in both the pointerdown and keydown handlers, so a pinned ball is always releasable regardless of the power-up timer. Commit 8969f36.
+
 ## Castle Guard — kid-friendly tower defense, Tiny Swords art (June 28 2026)
 **Update (June 28 2026):** added a second defender, the **Knight** — a short-range MELEE blocker (dmg 2 / range 98 / cost 25, `melee:true`, no projectile) that gently bonks goblins passing close, great at tight corners alongside the wide-reach Archer. New bottom **defender picker** (tap Archer/Knight chip → tap a slot). Knight art = Tiny Swords Blue Warrior; new `cg_bonk` sound; QA bot still beats every level (+ a knight smoke). Live via `?v=20260628b`.
 
