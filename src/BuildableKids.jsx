@@ -1072,7 +1072,6 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
         <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: "#fff", marginBottom: 11 }}>What do you want to make?</div>
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${makeCols}, 1fr)`, gap: 12, marginBottom: 26 }}>
           <MakeTile grad="linear-gradient(160deg,#3DD06A,#2BB14F)" glyph={<ControllerGlyph />} title="Play a game" sub="Ready-to-play games" tag onClick={onGames} />
-          <MakeTile grad="linear-gradient(160deg,#FFB13C,#F0972A)" glyph={<TrophyGlyph />} title="Play a top game" sub="Play it, then remix it" tag onClick={onTop} />
           <MakeTile grad="linear-gradient(160deg,#F2789E,#E0578F)" glyph={<BookGlyph />} title="Make a story" sub="A living picture book" onClick={onStories} />
           <MakeTile grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)" glyph={<NoteGlyph />} title="Make a song" sub="Sing about anything" onClick={onMusic} />
           <MakeTile grad="linear-gradient(160deg,#FF8FB1,#F0577E)" glyph={<SpeakerGlyph />} title="Sound Machine" sub="Silly sounds & explosions" onClick={onSounds} />
