@@ -876,6 +876,17 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-02 (Buddy helper: greet once per 30 min + varied lines)
+
+`BuildableKids.jsx` helper buddy no longer nags on every visit and no longer repeats the same
+line. Added a `HELPER_DEFAULTS` pool with a per-visit `defaultLine` (`useState`) so the bubble
+text and the spoken greeting stay in sync; the chess prompt now reads `. Want to play?`. The
+auto-greet `useEffect` gates on a `bk_buddy_last_greet` localStorage timestamp with a
+`30 * 60 * 1000` ms cooldown, and opening the float button also stamps that key, so the buddy
+greets at most once per 30 minutes. Scoped to `src/BuildableKids.jsx`, committed to `main`
+(Vercel auto-deploys); verified the committed file via the GitHub API. No other files touched.
+
+---
 
 ## Session log — 2026-06-28 (Sunny Town Drive: 3D car + colored houses)
 
