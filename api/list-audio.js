@@ -10,6 +10,7 @@
 // returned and any project may mix freely. Read-only, no DB, never breaks.
 import { SOUNDS } from "./sfx.js";
 import { CHESS_MUSIC_WORLDS } from "./chess-music.js";
+import { LIBRARY_MUSIC } from "./library-music.js";
 
 // Reusable mood-music loops shipped as static files (public/music-library/).
 const MUSIC_LIB = [
@@ -83,6 +84,18 @@ export default async function handler(req, res) {
       name, kind: "music", theme: th, mood,
       url: "/music-library/" + file + ".mp3",
       source: "library",
+    });
+  }
+  // Reusable named ElevenLabs tracks (generated + cached) — created, warm, on-brand.
+  for (const name of Object.keys(LIBRARY_MUSIC || {})) {
+    const t = LIBRARY_MUSIC[name];
+    music.push({
+      id: "music:libgen:" + name,
+      name: t.label || pretty(name),
+      kind: "music",
+      theme: t.theme || "",
+      url: "/api/library-music?name=" + encodeURIComponent(name),
+      source: "elevenlabs",
     });
   }
 

@@ -75,6 +75,9 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Breaker music — warm "kid spa with a heartbeat" from shared library (July 2 2026)
+Owner disliked Breaker's music: the static /music-library/playful_musicbox.mp3 loop sounded like shrill synthesized computer tones (violates the ElevenLabs-only / created-sound rule). Added a NEW reusable shared endpoint api/library-music.js that generates + caches (narration_cache key "libmusic:<name>") warm created ElevenLabs tracks by name — two variants: spa_heartbeat_warm and spa_heartbeat_bright (soft marimba/pads, gentle heartbeat pulse, explicitly NO chiptune / NO shrill highs). Both are catalogued in /api/list-audio (source elevenlabs, theme "calm") so ANY game can reuse them, and documented in public/music-library/MANIFEST.md. Breaker's ensureMusic() now points at /api/library-music?name=spa_heartbeat_warm. Owner to listen to both variants and pick; regenerate a variant with ?force=1 after prompt tweaks. Scoped to api/library-music.js, api/list-audio.js, public/breaker-engine.html, music-library/MANIFEST.md.
+
 ## Breaker music — pull from shared music library instead of generated track (July 2 2026)
 Breaker (public/breaker-engine.html) no longer plays the generated /api/breaker-music?world=<backdrop> ElevenLabs track for its looping background music. Its ensureMusic() now points BA.setMusic at a static track from the shared music library (/music-library/playful_musicbox.mp3), so background music comes from the reusable library rather than a per-backdrop generated clip. SFX are unchanged (still the bespoke one-shots via BA.configure). Scoped to public/breaker-engine.html, committed to main (Vercel auto-deploys). Commit 94b3445.
 

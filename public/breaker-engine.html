@@ -181,10 +181,11 @@ const bgCache={};
 function backdropDef(){ return BACKDROPS.find(b=>b.id===PREFS.backdrop)||BACKDROPS[0]; }
 function bgImage(){ const d=backdropDef(); if(!d.img)return null; if(!bgCache[d.id])bgCache[d.id]=mkImg(d.img); return bgCache[d.id]; }
 
-// looping background music: bespoke upbeat ElevenLabs arcade tracks, one per backdrop
-// (/api/breaker-music?world=<backdrop>), generated once + cached server-side.
+// looping background music: warm, created (ElevenLabs) "kid spa with a heartbeat"
+// track from the shared library — soft/rounded, no chiptune, no shrill tones.
+// Reusable by any game via /api/library-music?name=<name>.
 let _curMusic="";
-    function ensureMusic(){ if(!BA||!BA.setMusic)return; const url="/music-library/playful_musicbox.mp3";
+    function ensureMusic(){ if(!BA||!BA.setMusic)return; const url="/api/library-music?name=spa_heartbeat_warm";
   if(url!==_curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); _curMusic=url; }
   if(BA.playMusic)BA.playMusic(); }
 
