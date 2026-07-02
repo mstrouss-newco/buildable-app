@@ -147,8 +147,8 @@
     paper.width=Math.max(200,Math.floor(r.width-12)); paper.height=Math.max(160,Math.floor(r.height-12));
     paper.style.width=paper.width+"px"; paper.style.height=paper.height+"px"; redraw(); }
 
-  var _snd={}; function playSfx(n){ if(S.muted||!n) return; try{ var a=_snd[n]; if(!a){ a=new Audio("/api/sfx?s="+encodeURIComponent(n)); a.volume=.5; _snd[n]=a; } a.currentTime=0; a.play().catch(function(){}); }catch(e){} }
-  var _ls=0; function playStrokeSfx(n){ var t=Date.now(); if(t-_ls<90) return; _ls=t; playSfx(n); }
+  var _snd={}; function playSfx(n,trimMs){ if(S.muted||!n) return; try{ var a=_snd[n]; if(!a){ a=new Audio("/api/sfx?s="+encodeURIComponent(n)); a.volume=.5; _snd[n]=a; } a.currentTime=0; clearTimeout(a._trim); var p=a.play(); if(p&&p.catch)p.catch(function(){}); if(trimMs){ a._trim=setTimeout(function(){ try{ a.pause(); a.currentTime=0; }catch(e){} },trimMs); } }catch(e){} }
+  var _ls=0; function playStrokeSfx(n){ var t=Date.now(); if(t-_ls<90) return; _ls=t; playSfx(n,260); }
 
   function drawBg(c){ if(!c) return; c.save(); c.globalCompositeOperation="source-over"; var bg=S.bg||{type:"color",c:"#fff"};
     if(bg.type==="grad"){ var g=c.createLinearGradient(0,0,0,paper.height); g.addColorStop(0,bg.from); g.addColorStop(1,bg.to); c.fillStyle=g; } else c.fillStyle=bg.c||"#fff"; c.fillRect(0,0,paper.width,paper.height); c.restore(); }
