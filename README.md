@@ -876,6 +876,11 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-02 (Sound Machine: start unmuted + graphic speaker icon)
+
+Two changes to the kids soundboard at `public/soundboard.html`. (1) The board now **always starts with sound ON**: the init no longer reads the saved `bk_muted` value from `localStorage` (`var muted=false;`), so every fresh load is unmuted regardless of how the previous visit ended. A child can still tap to mute during a session, but it will not persist across reloads. (Browser autoplay policy still requires the first tap before any audio plays.) (2) The mute toggle no longer shows the text "Sound on"/"Sound off" — it now renders an inline SVG **graphic speaker** (no emoji): a speaker with sound waves when on, and a speaker with an "x" when muted. Icons use `currentColor` so they stay legible on both the white (on) and dark-purple (off) button states, and an `aria-label="Sound"` was added for screen readers. Icon markup lives in `ON_SVG`/`OFF_SVG` consts near `setMute`.
+
+---
 ## Session log — 2026-07-02 (Remove "Play a top game" tile from home grid)
 
 Removed the "Play a top game" MakeTile (TrophyGlyph, onClick=onTop) from the "What do you want to make?" grid on the home screen, so top games now live only in the "Trending from other kids" section. The onTop handler is unchanged and still wired to that trending list, so nothing else needed touching. The grid drops from seven tiles to six (Play a game, Make a story, Make a song, Sound Machine, Make art, Make a game). Scoped to src/BuildableKids.jsx, committed to main (Vercel auto-deploys). No other files touched.
