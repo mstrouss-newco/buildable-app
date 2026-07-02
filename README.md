@@ -876,6 +876,12 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-02 (Remove "Play a top game" tile from home grid)
+
+Removed the "Play a top game" MakeTile (TrophyGlyph, onClick=onTop) from the "What do you want to make?" grid on the home screen, so top games now live only in the "Trending from other kids" section. The onTop handler is unchanged and still wired to that trending list, so nothing else needed touching. The grid drops from seven tiles to six (Play a game, Make a story, Make a song, Sound Machine, Make art, Make a game). Scoped to src/BuildableKids.jsx, committed to main (Vercel auto-deploys). No other files touched.
+
+---
+
 ## Session log — 2026-07-02 (Buddy helper: greet once per 30 min + varied lines)
 
 `BuildableKids.jsx` helper buddy no longer nags on every visit and no longer repeats the same
