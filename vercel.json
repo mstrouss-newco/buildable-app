@@ -264,6 +264,10 @@
       "dest": "/buildable-mechanics.js"
     },
     {
+      "src": "/buildable-hud.js",
+      "dest": "/buildable-hud.js"
+    },
+    {
       "src": "/buildable-startscreen.js",
       "dest": "/buildable-startscreen.js"
     },
