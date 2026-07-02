@@ -197,3 +197,22 @@ How to give a game rich, kid-chosen scenery without hand-painting it:
 5. **Let kids choose.** Surface a world grid via the shared start screen's customize hook
    (`customizeLabel` + `onCustomize`); each card shows the cached AI thumbnail over its
    gradient. Picking sets the world, preloads its backdrop, and re-seeds the particles.
+
+## Shared game HUD (`public/buildable-hud.js`)
+
+One file owns the look of every game's info bar (title, lives, score, timer,
+"bricks left", etc). The panels are a dark tint over whatever art is behind them,
+so the same look works on any game regardless of its colors.
+
+- **Restyle everything at once** by editing the five `--hud-*` knobs at the top of
+  the file: `--hud-dark` (panel darkness), `--hud-radius` (corner roundness),
+  `--hud-text` (text color), `--hud-gap` (spacing), `--hud-font` (font — currently
+  **Baloo 2**, matching the game titles).
+- **A game uses it in two lines:**
+  `const hud = BuildableHUD.mount(document.getElementById('c'));`
+  then each frame `hud.set({ left:[{text:"Sunny", soft:"Level 1/6"}], right:[{text:"Bricks left: 12"},{hearts:3}] });`
+- Chips: `{text}` · `{text, soft}` (lighter secondary) · `{hearts:n}` (drawn art, no emoji).
+- `mount()` overlays the canvas and keeps the bar aligned on resize, so info never
+  drifts onto the play area. Hearts are drawn as SVG art (no emoji, per house rule).
+- **Rollout status:** Breaker is the pilot (canvas-painted HUD → shared chips).
+  Other engines still paint their HUD on the canvas and are pending conversion.
