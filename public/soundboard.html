@@ -68,7 +68,7 @@
 <div class="wrap">
   <div class="topbar">
     <div class="title">Sound Machine<small id="sub">Pick a pack and tap to play!</small></div>
-    <button class="mute" id="muteBtn"><span id="muteLabel">Sound on</span></button>
+    <button class="mute" id="muteBtn" aria-label="Sound"><span id="muteLabel"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/><path d="M16 8.5a5 5 0 0 1 0 7"/><path d="M18.5 6a8.5 8.5 0 0 1 0 12"/></svg></span></button>
   </div>
   <div class="tabs" id="tabs"></div>
   <div class="grid" id="grid"></div>
@@ -280,7 +280,7 @@ var PACKS = [
   ]},
 ];
 
-var muted=false; try{ muted=localStorage.getItem("bk_muted")==="1"; }catch(e){}
+var muted=false; /* Sound Machine: always starts unmuted, ignore saved value */
 var cache={};
 function play(key){
   if(muted) return;
@@ -346,9 +346,10 @@ function renderGrid(){
     g.appendChild(b);
   });
 }
+var ON_SVG="<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 9v6h4l5 4V5L8 9H4z\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M16 8.5a5 5 0 0 1 0 7\"/><path d=\"M18.5 6a8.5 8.5 0 0 1 0 12\"/></svg>", OFF_SVG="<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 9v6h4l5 4V5L8 9H4z\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M17 9l4 6\"/><path d=\"M21 9l-4 6\"/></svg>";
 function setMute(on){ muted=on; try{localStorage.setItem("bk_muted",on?"1":"0");}catch(e){}
   var btn=document.getElementById("muteBtn"), lab=document.getElementById("muteLabel");
-  lab.textContent=on?"Sound off":"Sound on"; btn.classList.toggle("off",on); }
+  lab.innerHTML = on ? OFF_SVG : ON_SVG; btn.classList.toggle("off",on); }
 document.getElementById("muteBtn").addEventListener("click", function(){ setMute(!muted); });
 
 renderTabs(); renderGrid(); setMute(muted);
