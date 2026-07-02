@@ -112,7 +112,7 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#6FCF6A,#2E8B57)", "Castle Guard", "Place archers and knights to stop the silly goblins!", onCastle, false, "castleguard")}
         {tile("linear-gradient(160deg,#67C7FF,#9B7BFF)", "Tumble Blocks", "Fill a row and watch it tumble away!", onTetris, false, "tetris")}
         {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false, "survival")}
-        {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, false, "runner")}
+        {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, true, "runner")}
         {tile("linear-gradient(160deg,#F0577E,#9B7BFF)", "Maze Munchers", "Gobble the treats, dodge the chasers!", onMaze, false, "maze")}
         {tile("linear-gradient(160deg,#7BD0FF,#73C364)", "Sling Squad", "Fling your pals, topple every tower!", onSling, false, "sling")}
         {tile("linear-gradient(160deg,#34D399,#0EA5E9)", "Tennis", "Bounce it back \u2014 solo, 2 players, or family!", onTennis, false, "tennis")}
