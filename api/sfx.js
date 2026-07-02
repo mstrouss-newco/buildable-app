@@ -313,8 +313,8 @@ const DURATIONS = {
   frog:0.6, moo:1.0, rooster:1.2, vroom:1.0, sneeze:0.8, partypop:1.0,
   buzzer:0.7, sadtrombone:1.4, squeak:0.5, airhorn:0.9, bonk:0.5, slidewhistle:0.7,
   meow:0.7, woof:0.5, quack:0.5, cheer:1.4,
-  art_crayon:0.4, art_marker:0.4, art_paint:0.5, art_pencil:0.4, art_chalk:0.4, art_spray:0.5,
-  art_neon:0.5, art_glitter:0.6, art_stamp:0.4, art_fill:0.6, art_undo:0.4, art_save:1.2,
+  art_crayon:0.5, art_marker:0.5, art_paint:0.5, art_pencil:0.5, art_chalk:0.5, art_spray:0.5,
+  art_neon:0.5, art_glitter:0.6, art_stamp:0.5, art_fill:0.6, art_undo:0.5, art_save:1.2,
   lion:1.2, elephant:1.0, monkey:0.9, horse:1.0, owl:0.9, wolf:1.2, sheep:0.7, pig:0.7, bird:0.6, snake:0.7, bee:0.7, catpurr:0.9, dolphin:0.8, piano:1.0, guitar:0.8, trumpet:1.0, violin:0.9, flute:0.9, xylophone:0.9, tambourine:0.6, cymbal:0.8, harp:1.1, sax:1.0, chime:0.9, accordion:0.9, spaceship:0.9, teleport:0.9, rocket:1.2, ufo:1.0, blaster:0.5, powerup:0.9, forcefield:0.8, alien:0.8, warp:1.0, scan:0.8, beepboop:0.7, ghost:1.0, spookywind:1.2, witch:1.0, heartbeat:1.0, monster:0.9, chains:0.9, creak:1.0, bat:0.7, cauldron:1.0, carhorn:0.6, train:1.2, airplane:1.0, helicopter:1.0, motorcycle:0.9, truck:0.8, boat:1.0, siren:1.2, bikebell:0.6, skid:0.7, fairy:0.9, spell:0.9, potion:0.9, wandzap:0.7, dragon:1.1, shield:0.7, levelup:1.0, treasure:1.0, portal:1.0, fireball:0.8, birds:1.0, waterfall:1.0, bubbles:0.7, sunrise:1.0, crunch:0.6, slurp:0.7, sizzle:0.9, gulp:0.5, chomp:0.5, fizz:0.8, blender:0.8, microwave:0.6, popcorn:0.9, cheersclink:0.6, refwhistle:0.6, bounce:0.6, swish:0.6, kick:0.5, batcrack:0.5, crowd:1.2, goal:1.2,
 };
 
