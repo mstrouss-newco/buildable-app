@@ -66,6 +66,7 @@
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-hud.js"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -78,6 +79,7 @@
 // ============================================================================
 const W=900, H=600;
 const c=document.getElementById('c'), ctx=c.getContext('2d');
+let hud=null; function HUD(){ return hud||(hud=BuildableHUD.mount(c)); }
 const BR=(typeof window!=="undefined"&&window.BuildableRenders)||(typeof globalThis!=="undefined"&&globalThis.BuildableRenders);
 const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThis!=="undefined"&&globalThis.BuildableAudio);
 const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
@@ -474,6 +476,7 @@ function draw(){ if(!G){ return; }
   if(state==="win" && G.mode==="two"){ banner("Player "+G.winner+" wins!", "Tap for the menu"); }
   else if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); drawEarnedStars(PREFS.stars[level]||0); }
   if(state==="lose"){ banner("Out of lives!","Tap to try again"); }
+  if(hud){ hud[(state==="play" && G.mode!=="two") ? "show" : "hide"](); }
 }
 // each backdrop gives its bricks a matching drawn style (the always-on art layer)
 function drawBrick(br){ const x=br.x,y=br.y,w=br.w,h=br.h; ctx.fillStyle=br.col; rrect(x,y,w,h,6); ctx.fill();
@@ -506,13 +509,12 @@ function drawSolo(){
   for(const cap of G.caps){ ctx.save(); ctx.shadowColor=cap.col; ctx.shadowBlur=12; ctx.fillStyle=cap.col; rrect(cap.x-13,cap.y-8,26,16,8); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.9)"; ctx.beginPath();ctx.arc(cap.x,cap.y,3,0,7);ctx.fill(); ctx.restore(); }
   const fire=G.fireT>0; for(const b of G.balls) drawBall(b,fire);
   drawPaddleAt(G.padX, PAD_Y, PREFS.paddle);
-  // HUD
-  ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.font="bold 22px Fredoka,sans-serif";
-  ctx.fillText(L.name+"   Level "+(level+1)+"/"+GAME_CONFIG.levels.length, 18, 32);
-  for(let i=0;i<G.lives;i++){ if(BR.heart){ ctx.fillStyle="#ff7aa8"; BR.heart(ctx, W-26-i*30, 22, 10); } }
-  const leftN=G.bricks.filter(b=>b.alive).length; ctx.textAlign="right"; ctx.fillStyle="rgba(255,255,255,.9)"; ctx.font="bold 18px Fredoka,sans-serif"; ctx.fillText("Bricks left: "+leftN, W-18, 52);
-  if(G.fireT>0||G.laserT>0||G.slowT>0){ ctx.textAlign="left"; ctx.font="bold 15px Fredoka,sans-serif"; ctx.fillStyle="#ffd86b";
-    const tags=[]; if(G.fireT>0)tags.push("Fireball"); if(G.laserT>0)tags.push("Laser"); if(G.slowT>0)tags.push("Slow-Mo"); ctx.fillText(tags.join("  "), 18, 56); }
+  // HUD — shared tinted chips (see buildable-hud.js). No longer painted on canvas.
+  { const leftN=G.bricks.filter(b=>b.alive).length;
+    const left=[{ text:L.name, soft:"Level "+(level+1)+"/"+GAME_CONFIG.levels.length }];
+    const tags=[]; if(G.fireT>0)tags.push("Fireball"); if(G.laserT>0)tags.push("Laser"); if(G.slowT>0)tags.push("Slow-Mo");
+    if(tags.length) left.push({ text:tags.join("  ") });
+    HUD().set({ left:left, right:[ { text:"Bricks left: "+leftN }, { hearts:G.lives } ] }); }
 }
 function drawPong(){
   // center line
@@ -552,7 +554,7 @@ function buildStartCfg(){
   if(currentMode!=="two"){ cfg.coins = totalStars(); cfg.subtitle = "Stars: "+totalStars()+" of "+maxStars(); }   // total stars earned
   return cfg;
 }
-function showMenu(){ state="title"; G=null; show("customize",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
+function showMenu(){ state="title"; G=null; if(hud)hud.hide(); show("customize",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
   const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host){ return; }
   const cb={
