@@ -260,12 +260,27 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   }
 
   if (phase === "friends") {
+    const family = friends.filter((f) => f.group === "family");
+    const pals = friends.filter((f) => f.group === "friend");
+    const personRow = (f) => (
+      <div key={f.kidId} style={C.card(!f.online)}>
+        <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={C.dot(f.online)} />
+          <span style={C.ava}>{avatarText(f.name)}</span>
+          <span>
+            <span style={{ fontWeight: 800, fontSize: 17 }}>{f.name}</span>
+            <span style={{ display: "block", color: "#cfc9e6", fontSize: 13 }}>{f.online ? "Online now" : "Offline \u2014 we'll notify them"}</span>
+          </span>
+        </span>
+        <button style={C.btn} onClick={() => invite(f)}>Invite</button>
+      </div>
+    );
     return (
       <div style={C.wrap}>
         <button style={C.back} onClick={() => setPhase("mode")}>&larr; Back</button>
         <div style={C.pad}>
-          <h1 style={C.h1}>Play with a friend</h1>
-          <p style={C.sub}>Pick a friend to challenge. Green dot means they're online now.</p>
+          <h1 style={C.h1}>Family &amp; friends</h1>
+          <p style={C.sub}>Pick who to play with. Family is always here &mdash; green dot means they're online right now.</p>
 
           {!signedIn && (
             <div style={C.note}>Playing with friends needs a grown-up account so friends stay safe and approved. Ask a grown-up to tap <b>Grown-ups</b> on the home screen and sign in.</div>
@@ -290,26 +305,17 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
                 </>
               )}
 
-              <div style={C.sect}>Your friends</div>
-              {loading && friends.length === 0 ? (
-                <p style={{ color: "#cfc9e6" }}>Loading your friends&hellip;</p>
-              ) : friends.length === 0 ? (
-                <div style={C.note}>No friends yet. Tap <b>Add a friend</b> below to connect with someone — a grown-up helps set it up.</div>
-              ) : (
-                friends.map((f) => (
-                  <div key={f.kidId} style={C.card(!f.online)}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={C.dot(f.online)} />
-                      <span style={C.ava}>{avatarText(f.name)}</span>
-                      <span>
-                        <span style={{ fontWeight: 800, fontSize: 17 }}>{f.name}</span>
-                        <span style={{ display: "block", color: "#cfc9e6", fontSize: 13 }}>{f.online ? "Online now" : "Offline — we'll notify them"}</span>
-                      </span>
-                    </span>
-                    <button style={C.btn} onClick={() => invite(f)}>Invite</button>
-                  </div>
-                ))
-              )}
+              {loading && friends.length === 0 && <p style={{ color: "#cfc9e6" }}>Loading&hellip;</p>}
+
+              <div style={C.sect}>Your family</div>
+              {family.length === 0 ? (
+                <div style={C.note}>Add brothers &amp; sisters in <b>Grown-ups &rarr; Parents</b>. They show up here automatically &mdash; no code, no approval, just tap Invite.</div>
+              ) : family.map((f) => personRow(f))}
+
+              <div style={C.sect}>Friends</div>
+              {pals.length === 0 ? (
+                <p style={{ color: "#cfc9e6", fontSize: 14 }}>No friends added yet. Tap <b>Add a friend</b> below &mdash; a grown-up sets it up once.</p>
+              ) : pals.map((f) => personRow(f))}
 
               <button style={C.ghost} onClick={() => (onAddFriend ? onAddFriend() : null)}>+ Add a friend to your account</button>
             </>
@@ -338,8 +344,8 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
         <button style={C.bigBtn} onClick={() => setPhase("friends")}>
           <span style={{ ...C.ava, width: 46, height: 46, fontSize: 22 }}>&#9734;</span>
           <span>
-            <p style={C.bigTitle}>Play with a friend</p>
-            <p style={C.bigSub}>Challenge an approved friend on their own device.</p>
+            <p style={C.bigTitle}>Family &amp; friends</p>
+            <p style={C.bigSub}>Invite a brother, sister, or approved friend on their own device.</p>
           </span>
         </button>
       </div>
