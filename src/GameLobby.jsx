@@ -244,6 +244,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   if (phase === "waiting") {
     return (
       <div style={C.wrap}>
+        <button style={C.back} onClick={cancelWaiting}>&larr; Back</button>
         <div style={C.center}>
           <div style={{ width: 66, height: 66, borderRadius: 999, border: "4px solid rgba(167,139,255,0.35)", borderTopColor: "#A78BFF", animation: "bkspin 1s linear infinite" }} />
           <style>{"@keyframes bkspin{to{transform:rotate(360deg)}}"}</style>

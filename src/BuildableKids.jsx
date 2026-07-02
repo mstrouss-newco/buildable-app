@@ -587,7 +587,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_CHESS_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=4", transport: "turns" }}
+        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=5", transport: "turns" }}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_CHESS)}
@@ -1306,7 +1306,7 @@ function ChessScreen({ onHome, onPlayFriend }) {
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       <iframe
         title="Buildable Chess"
-        src="/buildable-chess.html?v=4"
+        src="/buildable-chess.html?v=5"
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
