@@ -892,11 +892,24 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
     : ((GAME_NAMES[favGame.game] || favGame.game) + " is your favorite — want to play it again?")) : null;
 
   const kidName = (activeKid && activeKid.display_name) || "friend";
+  // A pool of friendly default lines so the buddy doesn't say the same thing every time.
+  const HELPER_DEFAULTS = [
+    "What should we make today? Tap a tile and I'll help!",
+    "So many things to make! Pick a tile and let's go.",
+    "Ready for some fun? Tap anything and I'll help you start.",
+    "What are we making today? A game, a song, or a story?",
+    "Let's build something awesome. Tap a tile to begin!",
+    "I'm ready when you are! Pick something and we'll make it.",
+    "Feeling creative? Tap a tile and let's get started.",
+    "Ooh, what should we dream up today? Tap a tile!",
+  ];
+  // Pick one line for this visit and keep it steady, so the bubble and the voice match.
+  const [defaultLine] = useState(() => HELPER_DEFAULTS[Math.floor(Math.random() * HELPER_DEFAULTS.length)]);
   const helperLine = chessTurns > 0
-    ? `It's your move in ${chessTurns} chess game${chessTurns > 1 ? "s" : ""} — want to play?`
+    ? `It's your move in ${chessTurns} chess game${chessTurns > 1 ? "s" : ""}. Want to play?`
     : favLine
     ? favLine
-    : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”? Or make something new!` : "What should we make today? Tap a tile and I'll help!");
+    : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”? Or make something new!` : defaultLine);
 
   // ---- floating helper (bottom-right): the kid's own helper character ----
   const [helperOpen, setHelperOpen] = useState(false);
@@ -916,7 +929,18 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
         .catch(() => {});
     } catch (e) {}
   };
-  useEffect(() => { const t = setTimeout(() => { setHelperOpen(true); speakHelper(); }, 900); return () => clearTimeout(t); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const COOLDOWN_MS = 30 * 60 * 1000; // only auto-greet once every 30 minutes
+    let last = 0;
+    try { last = parseInt(localStorage.getItem("bk_buddy_last_greet") || "0", 10) || 0; } catch (e) {}
+    if (Date.now() - last < COOLDOWN_MS) return; // greeted recently, stay quiet this visit
+    const t = setTimeout(() => {
+      setHelperOpen(true);
+      speakHelper();
+      try { localStorage.setItem("bk_buddy_last_greet", String(Date.now())); } catch (e) {}
+    }, 900);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (helper && helper.image) return; // already have a real helper image
     let alive = true;
@@ -1131,7 +1155,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
             </div>
           )}
           <div style={{ position: "relative" }}>
-            <button onClick={() => setHelperOpen((o) => { const n = !o; if (n) speakHelper(); return n; })} aria-label={"Talk to " + helperName} className="bk-float" style={{
+            <button onClick={() => setHelperOpen((o) => { const n = !o; if (n) { speakHelper(); try { localStorage.setItem("bk_buddy_last_greet", String(Date.now())); } catch (e) {} } return n; })} aria-label={"Talk to " + helperName} className="bk-float" style={{
               width: phone ? 66 : 76, height: phone ? 66 : 76, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.22)", cursor: "pointer", padding: 0, overflow: "hidden",
               background: helperImg ? `center/cover no-repeat url(${helperImg})` : "linear-gradient(135deg,#9b7edd,#6f5bd6)",
               boxShadow: "0 10px 28px rgba(155,126,221,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
