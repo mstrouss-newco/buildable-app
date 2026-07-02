@@ -75,6 +75,9 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Breaker music — pull from shared music library instead of generated track (July 2 2026)
+Breaker (public/breaker-engine.html) no longer plays the generated /api/breaker-music?world=<backdrop> ElevenLabs track for its looping background music. Its ensureMusic() now points BA.setMusic at a static track from the shared music library (/music-library/playful_musicbox.mp3), so background music comes from the reusable library rather than a per-backdrop generated clip. SFX are unchanged (still the bespoke one-shots via BA.configure). Scoped to public/breaker-engine.html, committed to main (Vercel auto-deploys). Commit 94b3445.
+
 ## First Bounce - fix frozen ball after sticky Catch power-up expires (July 2 2026)
 Bug: in the brick-breaker (public/breaker-engine.html), a ball caught by the sticky "Catch" power-up could get permanently stuck to the paddle, freezing the game with no way to relaunch. Reported after a multiball where the other balls fell off. Cause: the release input gated flingStuck() on `G.sticky && G.stuck`. When the Catch timer expired while a ball was still pinned, `G.stuck` stayed set but `G.sticky` went false, so Space/click/tap fell through to `launch()`, which no-ops because `G.onPaddle` is false, leaving the ball stranded. Fix: gate the release on `G.stuck` alone in both the pointerdown and keydown handlers, so a pinned ball is always releasable regardless of the power-up timer. Commit 8969f36.
 
