@@ -208,8 +208,9 @@
     return '<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="16" r="11" fill="#eaf2ff"/><circle cx="22" cy="16" r="7" fill="#62d0ff"/><rect x="9" y="25" width="22" height="12" rx="6" fill="#eaf2ff"/></svg>';
   };
 
-  // a pointing-hand glyph (for wordless tutorials)
-  BR.hand = function (ctx, x, y, s) {
+  // a pointing-hand glyph (for wordless tutorials).
+  // Drawn version kept as the fallback until the shared 3D hand image loads.
+  BR._handDrawn = function (ctx, x, y, s) {
     s = s || 1; ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
     ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(0, 32, 16, 5, 0, 0, 7); ctx.fill();   // shadow
     ctx.fillStyle = "#ffd9b8";                                                                              // hand
@@ -217,6 +218,27 @@
     BR.rrect(ctx, -6, -30, 12, 28, 6); ctx.fill();                                                          // index finger
     ctx.fillStyle = "#7ad0ff"; BR.rrect(ctx, -16, 22, 32, 11, 5); ctx.fill();                               // cuff
     ctx.restore();
+  };
+
+  // Shared 3D pointing-hand image used across every game's wordless tutorials.
+  // Same call signature as before: BR.hand(ctx, x, y, s). The fingertip lands at
+  // (x, y - 30*s) so existing callers keep pointing at exactly the same spot;
+  // falls back to the drawn hand until the PNG has loaded.
+  BR._handImg = (typeof Image !== "undefined") ? new Image() : null;
+  BR._handReady = false;
+  if (BR._handImg) { BR._handImg.onload = function () { BR._handReady = true; }; BR._handImg.src = "/tutorial-hand.png?v=1"; }
+  BR._handTip = 0.696;   // fingertip x-fraction across the art (auto-measured)
+  BR.hand = function (ctx, x, y, s) {
+    s = s || 1;
+    if (BR._handReady && BR._handImg && BR._handImg.width) {
+      var h = 70 * s, w = h * (BR._handImg.width / BR._handImg.height);
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.28)"; ctx.shadowBlur = 8 * s; ctx.shadowOffsetY = 4 * s;
+      ctx.drawImage(BR._handImg, x - w * BR._handTip, y - 30 * s, w, h);
+      ctx.restore();
+      return;
+    }
+    BR._handDrawn(ctx, x, y, s);
   };
 
   // names of available renders (handy for docs / tooling)
