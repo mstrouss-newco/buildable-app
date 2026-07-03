@@ -6,6 +6,20 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad — a unique backdrop per level + parallax depth (July 2 2026)
+**LIVE on main + live-QA'd in Chrome.** Every Sling Squad level now shows its own place instead of
+the one drawn castle sky. Shipped 8 CC0 Kenney "Background Elements Remastered" scenes to
+`public/kenney/sling/bg/` (grass, desert, forest, fall, castles, + muted/empty spares).
+- **Per-level theme** (`BG_THEMES`, cycles by level; per-level override via `level.bg/sky/g0/g1/top`):
+  L1 grass · L2 desert · L3 forest · L4 fall · L5 castles. Each picks the scene image AND a matching
+  sky/ground-band palette.
+- **`drawBg` now composites** a cover-scaled scene (FAR plane, subtle drag parallax) + drifting clouds
+  (NEAR plane, moves more = real depth) + a crisp themed ground band the blocks rest on.
+- **Never-breaks fallback:** `drawBgDrawn(theme)` draws a tinted sky/hill scene if the art misses or
+  in headless QA — a library miss can't break a kid's game.
+- **QA:** `qa-sling.mjs` still clears all 5 levels (5x each) + render smoke passes. Live-verified L1
+  (grass) and L2 (desert) in-browser, no console errors.
+
 ## Breaker — level previews + livelier Play / Make a level hub (July 2 2026)
 Owner: the Breaker level cards showed blank flat-color tops ("previews don't load") and the home hub's Play / Make a level buttons felt "weak and boring." Two fixes in `public/breaker-engine.html`: (1) new `levelThumbURL(l,i)` draws a small canvas preview of each level's REAL brick layout (via `inPattern`) on a themed gradient + ball/paddle hint, cached, and `buildStartCfg()` now passes it as `img` for every unlocked level so cards look like actual mini-levels (locked levels stay dark with a lock, kept as mystery). (2) The hub `.hubBig` buttons were redesigned to be playful + animated: color gradients, a shine sweep, a bouncing ball over a rainbow brick row + paddle inside the green Play button, and stacking-blocks animation inside the purple Make a level button, with hover lift + tap bounce. Gameplay untouched (qa-breaker.mjs still clears all 8 levels). Scoped to public/breaker-engine.html.
 
