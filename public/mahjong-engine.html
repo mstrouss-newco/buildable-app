@@ -407,13 +407,165 @@ function drawWin(){
   ctx.fillStyle="#8fa0c4"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Tap to play again", vw/2, py+ph-22);
   ctx.restore();
 }
+// ---------- SERENE GARDEN / KOI-POND BACKDROP (procedural, gently animated) ----------
+// Calm koi-pond scene drawn behind the tiles: dawn sky, swaying bamboo, hanging
+// paper lanterns, a teal pond with shimmering ripples, lily pads + lotus, and a few
+// koi that slowly swim. Kept soft/low-contrast so the cream tiles still pop.
+const KOI=[
+  {cx:0.27, cy:0.52, rx:0.15, ry:0.10, sp:0.34, ph:0.0, col:"#ef6d3a", patch:"#fff3e6", sc:1.15},
+  {cx:0.71, cy:0.70, rx:0.16, ry:0.09, sp:0.27, ph:2.2, col:"#f6f1e8", patch:"#ef6d3a", sc:1.00},
+  {cx:0.50, cy:0.86, rx:0.21, ry:0.055,sp:0.40, ph:4.1, col:"#e7a233", patch:"#fff3e6", sc:0.88},
+];
+function drawScene(c,W,H,ms){
+  const t=ms/1000, horizon=Math.round(H*0.40), waterH=H-horizon;
+  const U=Math.max(11,Math.min(W,H)/620*18); // unit scale for props
+  // --- sky ---
+  let g=c.createLinearGradient(0,0,0,horizon);
+  g.addColorStop(0,"#9cc2d6"); g.addColorStop(0.6,"#c6dcda"); g.addColorStop(1,"#e6e6cd");
+  c.fillStyle=g; c.fillRect(0,0,W,horizon+2);
+  // soft morning sun
+  const sx=W*0.78, sy=horizon*0.46, sr=horizon*0.95;
+  let sg=c.createRadialGradient(sx,sy,4,sx,sy,sr);
+  sg.addColorStop(0,"rgba(255,247,220,0.9)"); sg.addColorStop(1,"rgba(255,247,220,0)");
+  c.fillStyle=sg; c.fillRect(0,0,W,horizon+2);
+  // --- bamboo grove (edges, so the center stays open for tiles) ---
+  drawBamboo(c,W,horizon,t);
+  // --- hanging paper lanterns ---
+  const lsz=Math.max(13,Math.min(W,H)*0.045);
+  drawLantern(c, W*0.19, -2, lsz, t, 0.0);
+  drawLantern(c, W*0.83, -2, lsz*0.92, t, 1.6);
+  // --- water ---
+  g=c.createLinearGradient(0,horizon,0,H);
+  g.addColorStop(0,"#bfd9cd"); g.addColorStop(0.14,"#7fb1a7"); g.addColorStop(1,"#3d7a76");
+  c.fillStyle=g; c.fillRect(0,horizon,W,waterH);
+  c.fillStyle="rgba(255,250,232,0.30)"; c.fillRect(0,horizon,W,3); // waterline shine
+  // sun reflection column on the water
+  let rg=c.createLinearGradient(0,horizon,0,H);
+  rg.addColorStop(0,"rgba(255,247,214,0.35)"); rg.addColorStop(1,"rgba(255,247,214,0)");
+  c.save(); c.fillStyle=rg;
+  c.beginPath(); c.moveTo(sx-U*1.2,horizon); c.lineTo(sx+U*1.2,horizon);
+  c.lineTo(sx+U*3.4,H); c.lineTo(sx-U*3.4,H); c.closePath(); c.fill(); c.restore();
+  // shimmering ripple lines
+  c.save();
+  for(let i=0;i<12;i++){
+    const yy=horizon+(i+1)/13*waterH, amp=0.6+i*0.55;
+    c.strokeStyle="rgba(255,255,255,"+(0.08+0.03*Math.sin(t*0.8+i))+")";
+    c.lineWidth=1+i*0.13; c.beginPath();
+    for(let xx=0;xx<=W;xx+=16){ const yo=Math.sin(xx*0.018+t*0.9+i*0.6)*amp;
+      xx===0?c.moveTo(xx,yy+yo):c.lineTo(xx,yy+yo); }
+    c.stroke();
+  }
+  c.restore();
+  // --- lily pads (edges) + one lotus ---
+  drawLily(c, W*0.11, horizon+waterH*0.74, U*1.5, t, 0.3, true);
+  drawLily(c, W*0.90, horizon+waterH*0.44, U*1.15, t, 1.1, false);
+  drawLily(c, W*0.83, horizon+waterH*0.86, U*1.35, t, 2.0, false);
+  // --- koi (compute a gentle swim path + heading) ---
+  for(const k of KOI){
+    const a=t*k.sp+k.ph;
+    const x=W*k.cx+Math.cos(a)*W*k.rx;
+    const y=horizon+waterH*k.cy+Math.sin(a*1.3)*waterH*k.ry;
+    const vx=-Math.sin(a)*W*k.rx*k.sp, vy=Math.cos(a*1.3)*waterH*k.ry*k.sp*1.3;
+    const ang=Math.atan2(vy,vx), wag=Math.sin(t*6+k.ph)*0.38;
+    drawKoi(c,x,y,ang,wag,U*0.052*k.sc,k.col,k.patch);
+  }
+  // gentle depth vignette so tiles in the center read clearly
+  let vg=c.createRadialGradient(W/2,H*0.52,Math.min(W,H)*0.28,W/2,H*0.52,Math.max(W,H)*0.72);
+  vg.addColorStop(0,"rgba(20,40,44,0)"); vg.addColorStop(1,"rgba(16,30,36,0.28)");
+  c.fillStyle=vg; c.fillRect(0,0,W,H);
+}
+function drawBamboo(c,W,horizon,t){
+  const cl=[0.045,0.095,0.14, 0.865,0.915,0.96];
+  c.save(); c.globalAlpha=0.5; c.lineCap="round";
+  cl.forEach((fx,i)=>{
+    const x=fx*W, sway=Math.sin(t*0.5+i)*5, h=horizon*(0.82+(i%3)*0.07), top=horizon-h;
+    const w=Math.max(4.5,W*0.011);
+    c.strokeStyle="#6f9f6a"; c.lineWidth=w;
+    c.beginPath(); c.moveTo(x,horizon);
+    c.quadraticCurveTo(x+sway*0.5,(horizon+top)/2,x+sway,top); c.stroke();
+    c.strokeStyle="#5b8557"; c.lineWidth=w*1.15;
+    for(let s=0;s<5;s++){ const ny=horizon-(s+0.5)/5*h, nx=x+sway*((horizon-ny)/h);
+      c.beginPath(); c.moveTo(nx-w*0.6,ny); c.lineTo(nx+w*0.6,ny); c.stroke(); }
+    c.fillStyle="#79ac72";
+    for(let l=0;l<4;l++){ const a=-0.6+l*0.4, lx=x+sway, ly=top+l*6;
+      c.save(); c.translate(lx,ly); c.rotate(a);
+      c.beginPath(); c.ellipse(w*2.2,0,w*3,w*0.9,0,0,7); c.fill(); c.restore(); }
+  });
+  c.restore();
+}
+function drawLantern(c,x,topY,size,t,phase){
+  const sway=Math.sin(t*0.8+phase)*0.12, len=size*2.4;
+  const lx=x+Math.sin(sway)*len, ly=topY+Math.cos(sway)*len;
+  c.save();
+  c.strokeStyle="rgba(70,48,34,0.55)"; c.lineWidth=Math.max(1,size*0.07);
+  c.beginPath(); c.moveTo(x,topY); c.lineTo(lx,ly); c.stroke();
+  let gg=c.createRadialGradient(lx,ly,size*0.3,lx,ly,size*2.1);
+  gg.addColorStop(0,"rgba(255,150,90,0.45)"); gg.addColorStop(1,"rgba(255,150,90,0)");
+  c.fillStyle=gg; c.beginPath(); c.arc(lx,ly,size*2.1,0,7); c.fill();
+  c.fillStyle="#d94f3d"; c.beginPath(); c.ellipse(lx,ly,size*0.82,size,0,0,7); c.fill();
+  c.strokeStyle="rgba(255,220,180,0.4)"; c.lineWidth=size*0.05;
+  c.beginPath(); c.ellipse(lx,ly,size*0.42,size*0.92,0,0,7); c.stroke();
+  c.fillStyle="#b83a2c";
+  c.fillRect(lx-size*0.42,ly-size*1.02,size*0.84,size*0.16);
+  c.fillRect(lx-size*0.42,ly+size*0.86,size*0.84,size*0.16);
+  c.strokeStyle="#e8b64a"; c.lineWidth=size*0.1;
+  c.beginPath(); c.moveTo(lx,ly+size); c.lineTo(lx,ly+size*1.45); c.stroke();
+  c.restore();
+}
+function drawLily(c,x,y,r,t,ph,lotus){
+  const wob=Math.sin(t*0.6+ph)*2;
+  c.save(); c.translate(x,y+wob);
+  c.fillStyle="rgba(38,86,68,0.8)";
+  c.beginPath(); c.arc(0,0,r,0.55,Math.PI*2+0.15); c.lineTo(0,0); c.closePath(); c.fill();
+  c.fillStyle="rgba(120,182,150,0.35)";
+  c.beginPath(); c.arc(-r*0.18,-r*0.18,r*0.5,0.7,Math.PI*2); c.fill();
+  if(lotus){
+    const R=r*0.6;
+    c.fillStyle="#f4a6c0";
+    for(let p=0;p<6;p++){ const a=p/6*Math.PI*2; c.save(); c.rotate(a);
+      c.beginPath(); c.ellipse(0,-R*0.55,R*0.28,R*0.6,0,0,7); c.fill(); c.restore(); }
+    c.fillStyle="#fbd6e2";
+    for(let p=0;p<5;p++){ const a=p/5*Math.PI*2+0.3; c.save(); c.rotate(a);
+      c.beginPath(); c.ellipse(0,-R*0.4,R*0.2,R*0.42,0,0,7); c.fill(); c.restore(); }
+    c.fillStyle="#f6d873"; c.beginPath(); c.arc(0,0,R*0.24,0,7); c.fill();
+  }
+  c.restore();
+}
+function drawKoi(c,x,y,ang,wag,s,col,patch){
+  const L=42*s, Wd=17*s;
+  c.save(); c.translate(x,y); c.rotate(ang); c.globalAlpha=0.93;
+  // tail (wagging)
+  c.save(); c.translate(-L*0.4,0); c.rotate(wag); c.fillStyle=col;
+  c.beginPath(); c.moveTo(0,0);
+  c.quadraticCurveTo(-L*0.34,-Wd*0.7,-L*0.5,-Wd*0.55);
+  c.quadraticCurveTo(-L*0.34,0,-L*0.5,Wd*0.55);
+  c.quadraticCurveTo(-L*0.34,Wd*0.7,0,0); c.fill(); c.restore();
+  // pectoral fins
+  c.fillStyle=col; c.globalAlpha=0.8;
+  c.beginPath(); c.ellipse(L*0.05,-Wd*0.45,L*0.15,Wd*0.2,-0.5,0,7); c.fill();
+  c.beginPath(); c.ellipse(L*0.05, Wd*0.45,L*0.15,Wd*0.2, 0.5,0,7); c.fill();
+  c.globalAlpha=0.93;
+  // body
+  c.fillStyle=col; c.beginPath(); c.moveTo(L*0.5,0);
+  c.quadraticCurveTo(L*0.2,-Wd*0.5,-L*0.34,-Wd*0.28);
+  c.quadraticCurveTo(-L*0.44,0,-L*0.34,Wd*0.28);
+  c.quadraticCurveTo(L*0.2,Wd*0.5,L*0.5,0); c.fill();
+  // patches
+  c.fillStyle=patch;
+  c.beginPath(); c.ellipse(-L*0.02,0,L*0.16,Wd*0.3,0,0,7); c.fill();
+  c.beginPath(); c.ellipse(L*0.25,-Wd*0.06,L*0.1,Wd*0.18,0,0,7); c.fill();
+  // eyes
+  c.fillStyle="#2a2320";
+  c.beginPath(); c.arc(L*0.36,-Wd*0.17,Wd*0.08,0,7); c.fill();
+  c.beginPath(); c.arc(L*0.36, Wd*0.17,Wd*0.08,0,7); c.fill();
+  c.restore();
+}
 function draw(){
   if(!ctx) return;
   ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.clearRect(0,0,W,H);
-  // soft table backdrop
-  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,"#16233d"); g.addColorStop(1,"#101a2e");
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // serene garden / koi-pond backdrop (procedural, gently animated)
+  drawScene(ctx,W,H,nowMs);
   const so=(BM&&fx)?BM.shakeOffset(fx):{x:0,y:0};
   ctx.save(); ctx.translate(so.x,so.y);
   if(!view.b && tiles.length) layout();
