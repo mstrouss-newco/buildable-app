@@ -1,0 +1,13 @@
+Mahjong tile art — sources & license
+=====================================
+
+All tile-face art in this folder is from Kenney (www.kenney.nl), licensed
+Creative Commons Zero (CC0) — public domain, free to host, modify, and ship,
+no credit required.
+
+Sets:
+- cards/   -> Kenney "Playing Cards Pack"      (CC0)
+- animals/ -> Kenney "Animal Pack Remastered"  (CC0)
+- candy/   -> Kenney "Platformer Assets Candy" (CC0)
+
+Files are renamed 01.png..NN.png; each is one distinct tile face.
