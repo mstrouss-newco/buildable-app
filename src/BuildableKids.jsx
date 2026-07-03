@@ -55,6 +55,7 @@ const SCREEN_CHECKERS_FAMILY = "checkers_family";
 const SCREEN_CHECKERS_LOBBY = "checkers_lobby";
 const SCREEN_TENNIS = "tennis";
 const SCREEN_TENNIS_FAMILY = "tennis_family";
+const SCREEN_TENNIS_LOBBY = "tennis_lobby";
 const SCREEN_TOWN = "town";
 const SCREEN_TOWN_FAMILY = "town_family";
 const SCREEN_TICTACTOE = "tictactoe";
@@ -190,7 +191,14 @@ function familyBtn(onFamily) {
 }
 
 function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html" onHome={onHome} />; }
-function TennisScreen({ onHome, onFamily }) { return <GameFrame title="Buildable Tennis" src="/tennis.html" onHome={onHome} right={familyBtn(onFamily)} />; }
+function TennisScreen({ onHome, onPlayFriend }) {
+  useEffect(() => {
+    function onMsg(e) { if (e && e.data && e.data.type === "tennisPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [onPlayFriend]);
+  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=2" onHome={onHome} />;
+}
 function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html" onHome={onHome} />; }
 function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628c" onHome={onHome} bg="#2e7d32" />; }
 function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html" onHome={onHome} bg="#0c1230" />; }
@@ -570,8 +578,20 @@ export default function BuildableKids() {
     return <ArtStudioScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TENNIS) {
-    return <TennisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => { setRtAutoJoin(null); setScreen(SCREEN_TENNIS_FAMILY); }} />;
+    return <TennisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
   }
+  if (screen === SCREEN_TENNIS_LOBBY) {
+    return (
+      <GameLobby
+        game={{ slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=2", transport: "realtime" }}
+        activeKid={activeKid}
+        entry="friends"
+        onHome={() => setScreen(SCREEN_TENNIS)}
+        onAddFriend={() => { setFriendsReturn(SCREEN_TENNIS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
+  }
+
   if (screen === SCREEN_TENNIS_FAMILY) {
     return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_GAME_PICKER); }} />;
   }

@@ -655,7 +655,7 @@ function startConfig() {
     title: GAME_CONFIG.name,
     subtitle: mode === "two" ? "Two players — one each end of the screen!" : "Bounce it past your opponent to score!",
     sound: !(BA && BA.muted), showBack:false,
-    modes: ["solo", "two"], mode: mode,
+    modes: ["solo", "two", "family"], mode: mode,
     levels: GAME_CONFIG.levels.map(function (lv, i) {
       return { n: i + 1, name: lv.name, color: ["#2b6f5c", "#4a3b8c", "#6b2f4a"][i % 3],
                state: "ready", foot: ["Easy", "Normal", "Tricky"][i] };   // difficulty picker (all playable)
@@ -668,7 +668,7 @@ function mountStart() {
   var m = document.getElementById("menu"); if (!m || !BS) return;
   var cbs = {
     onPlay: function (n) { if (BA) BA.unlock(); diff = (n || 1) - 1; m.style.display = "none"; newGame(); },
-    onMode: function (mo) { mode = (mo === "two") ? "two" : "solo"; if (startUI) startUI.update(startConfig()); },
+    onMode: function (mo) { if (mo === "family") { try { window.parent.postMessage({ type: "tennisPlayFriend" }, "*"); } catch (e) {} return; } mode = (mo === "two") ? "two" : "solo"; if (startUI) startUI.update(startConfig()); },
     onSound: function () { if (BA) { BA.unlock(); BA.toggleMute(); if (BA.muted) stopMusic(); else playMusic(); } if (startUI) startUI.update(startConfig()); },
     onCustomize: showCourtPicker,
     onBack: function () {},

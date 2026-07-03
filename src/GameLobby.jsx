@@ -19,12 +19,13 @@
 // + api/friends.js (shared, not per-game). No free-text chat -- ever.
 // ==================================================================
 import { useEffect, useRef, useState } from "react";
-import { isSignedIn, getActiveKid } from "./lib/accounts";
+import { isSignedIn, getActiveKid, getSession } from "./lib/accounts";
 import {
   listFriends, sendInvite, cancelInvite, pollInvite, acceptInvite,
   inboxInvites, startPresence, stopPresence,
 } from "./lib/friends";
 import { getFriendMatch, patchFriendMatch, roleFor, oppKidOf } from "./lib/friendMatches";
+import { openChannel } from "./lib/realtimeChannel";
 
 // ---- chess board helpers (only used for transport === 'turns' chess) ----
 function initialBoard() {
@@ -59,6 +60,8 @@ const C = {
 
 const avatarText = (name) => (name || "?").trim().charAt(0).toUpperCase();
 
+const ALLOWED_REACTIONS = new Set(["Nice shot!","So close!","Good game!","Wow!","Let's go!","Haha!","Too slow!","You got this!","Great game!","Boop!","Bonk!","Wheee!","Is that all?","Wibble wobble!"]);
+
 export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend, entry }) {
   const me = activeKid || getActiveKid();
   const signedIn = isSignedIn();
@@ -73,11 +76,12 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   const [err, setErr] = useState("");
   const [outInvite, setOutInvite] = useState(null); // { id, toName }
   const [match, setMatch] = useState(null);
+  const [rtConnecting, setRtConnecting] = useState(false);
 
   // ---- presence: mark me online while this lobby is open ----
   useEffect(() => {
     if (signedIn && me) startPresence(me);
-    return () => stopPresence();
+    return () => { stopPresence(); teardownRealtime(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -139,6 +143,13 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   const readyRef = useRef(false);
   const lastMoveKeyRef = useRef(null);
   const lastReactionAtRef = useRef(null);
+  const chanRef = useRef(null);
+  const meReadyRef = useRef(false);
+  const oppReadyRef = useRef(false);
+  const startedRef = useRef(false);
+  const oppSeenAtRef = useRef(0);
+  const helloTimerRef = useRef(null);
+  const watchTimerRef = useRef(null);
 
   const myColor = (m) => (roleFor(m, me.id) === "host" ? "w" : "b");
   const moveKeyOf = (m) => JSON.stringify([m && m.turn, (m && m.last_move) || null, (m && m.status) || "active"]);
@@ -147,6 +158,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
     readyRef.current = false;
     matchRef.current = m; setMatch(m); setOutInvite(null);
     setPhase("playing");
+    if (transport === "realtime") openRealtime(m);
   }
 
   function sendInitToBoard(m) {
@@ -168,6 +180,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   useEffect(() => {
     function onMsg(e) {
       const d = e.data || {}; const m = matchRef.current;
+      if (transport === "realtime") { handleMpMessage(d); return; }
       if (d.type === msg + "Ready") {
         readyRef.current = true;
         // Host seeds the opening position the first time (guest waits for it).
@@ -194,7 +207,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
 
   // poll the shared row for the opponent's move while playing
   useEffect(() => {
-    if (phase !== "playing" || !match) return;
+    if (phase !== "playing" || !match || transport !== "turns") return;
     matchRef.current = match;
     lastMoveKeyRef.current = moveKeyOf(match);
     lastReactionAtRef.current = (match.reaction && match.reaction.at) || null;
@@ -222,23 +235,80 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, match]);
 
+  // ---- real-time (Broadcast) bridge: the mp: contract (tennis, pong, ...) ----
+  const postMsg = (mm) => { const ifr = iframeRef.current; if (ifr && ifr.contentWindow) ifr.contentWindow.postMessage(mm, "*"); };
+  function sendMpInit() {
+    const m = matchRef.current; if (!m) return;
+    postMsg({ type: "mp:init", role: roleFor(m, me.id), you: { kidId: me.id, name: (me && me.display_name) || "You" }, opp: { kidId: oppKidOf(m, me.id), name: "Friend" }, world: m.world || "beach", settings: {} });
+  }
+  function maybeStartRt() {
+    if (startedRef.current || !meReadyRef.current || !oppReadyRef.current) return;
+    startedRef.current = true; setRtConnecting(false);
+    postMsg({ type: "mp:start" });
+    const m = matchRef.current;
+    if (m && roleFor(m, me.id) === "host") patchFriendMatch(m.id, { status: "playing" }).catch(() => {});
+  }
+  function openRealtime(m) {
+    teardownRealtime();
+    meReadyRef.current = false; oppReadyRef.current = false; startedRef.current = false;
+    setRtConnecting(true);
+    const s2 = getSession();
+    const ch = openChannel("match:" + m.id, {
+      accessToken: s2 && s2.access_token,
+      onMessage: (event, data) => {
+        if (event === "hello") { oppSeenAtRef.current = Date.now(); oppReadyRef.current = !!(data && data.ready); maybeStartRt(); }
+        else if (event === "g") { postMsg({ type: "mp:peer", event: data && data.event, data: data && data.data }); }
+        else if (event === "react") { const t = data && data.text; if (ALLOWED_REACTIONS.has(t)) postMsg({ type: "mp:reaction", text: t }); }
+      },
+    });
+    chanRef.current = ch;
+    helloTimerRef.current = setInterval(() => ch.send("hello", { ready: meReadyRef.current }), 2500);
+    ch.send("hello", { ready: false });
+    watchTimerRef.current = setInterval(() => {
+      if (startedRef.current && oppSeenAtRef.current && Date.now() - oppSeenAtRef.current > 6000) postMsg({ type: "mp:peerLeft" });
+    }, 2000);
+  }
+  function handleMpMessage(d) {
+    if (!d.type || !String(d.type).startsWith("mp:")) return;
+    const ch = chanRef.current; const m = matchRef.current;
+    if (d.type === "mp:ready") { meReadyRef.current = true; sendMpInit(); if (ch) ch.send("hello", { ready: true }); maybeStartRt(); }
+    else if (d.type === "mp:send" && ch) { ch.send("g", { event: d.event, data: d.data }); }
+    else if (d.type === "mp:reaction" && ch) { const t = String(d.text || ""); if (ALLOWED_REACTIONS.has(t)) { ch.send("react", { text: t }); if (m) patchFriendMatch(m.id, { reaction: { text: t, by: me && me.id, at: new Date().toISOString() } }).catch(() => {}); } }
+    else if (d.type === "mp:result" && m) { patchFriendMatch(m.id, { status: "done", winner: d.winner || null, state: { score: d.score || null } }).catch(() => {}); if (ch) ch.send("g", { event: "result", data: { winner: d.winner, score: d.score } }); }
+  }
+  function teardownRealtime() {
+    if (helloTimerRef.current) { clearInterval(helloTimerRef.current); helloTimerRef.current = null; }
+    if (watchTimerRef.current) { clearInterval(watchTimerRef.current); watchTimerRef.current = null; }
+    if (chanRef.current) { try { chanRef.current.close(); } catch (e) {} chanRef.current = null; }
+  }
+
   function leaveGame() {
     if (pollRef.current) clearInterval(pollRef.current);
-    matchRef.current = null; setMatch(null); setPhase("friends");
+    teardownRealtime();
+    matchRef.current = null; setMatch(null); setPhase("friends"); setRtConnecting(false);
   }
 
   // ============================ RENDER ============================
   if (phase === "playing" && match) {
     return (
       <div style={C.wrap}>
-        <button style={C.back} onClick={leaveGame}>&larr; Friends</button>
+        <button style={C.back} onClick={leaveGame}>&larr; Back</button>
         <iframe
           ref={iframeRef}
           title={`${game.title} (online)`}
           src={game.url}
+          allow="autoplay"
           onLoad={() => { if (readyRef.current && matchRef.current) sendInitToBoard(matchRef.current); }}
           style={{ width: "100%", height: "100%", border: "none", display: "block" }}
         />
+        {transport === "realtime" && rtConnecting && (
+          <div style={{ ...C.center, background: "rgba(15,14,23,0.94)" }}>
+            <div style={{ width: 60, height: 60, borderRadius: 999, border: "4px solid rgba(167,139,255,0.35)", borderTopColor: "#A78BFF", animation: "bkspin 1s linear infinite" }} />
+            <style>{"@keyframes bkspin{to{transform:rotate(360deg)}}"}</style>
+            <h1 style={{ ...C.h1, marginTop: 20 }}>Getting your friend&hellip;</h1>
+            <p style={C.sub}>The game starts the moment you're both connected.</p>
+          </div>
+        )}
       </div>
     );
   }
