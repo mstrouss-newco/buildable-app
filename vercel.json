@@ -284,6 +284,10 @@
       "dest": "/buildable-gamenav.js"
     },
     {
+      "src": "/buildable-viewport.js",
+      "dest": "/buildable-viewport.js"
+    },
+    {
       "src": "/buildable-boardgame.js",
       "dest": "/buildable-boardgame.js"
     },
