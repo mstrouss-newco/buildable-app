@@ -6,6 +6,17 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Croc Tot: adopt the shared Breaker-format UI — loading screen, HUD, customize, nav (July 3 2026)
+Croc Tot (`public/croctot.html`) was the most "off" live game in the consistency audit: it was fully self-contained (no shared libs) with a hand-rolled tap-to-play + level overlay, a bespoke DOM status bar, and no customize step. Converted it to match Breaker's format using the shared building-blocks:
+- **Loading screen:** replaced the `#tapOverlay`/`#levelOverlay` with `buildable-startscreen.js` (BS) mounted into a full-screen `#start` — title, 5 level cards (Backyard/Kitchen/Night Sky/Jungle/Volcano), and a "Make it mine" button. `showStart()` drives it on boot, after Menu, and after game-over.
+- **Customize:** new bespoke "Make it mine" overlay (`#crocCustomize`) reached from BS — a difficulty picker (Chill 7 lives / Just Right 5 / Spicy 3) stored in `crocDiff` and applied in `resetG()`.
+- **HUD:** swapped the old DOM `.hb` status bar + power/time meters for the shared `buildable-hud.js` on-canvas chips — left `Croc Tot · Level n/5` + `Boss in m:ss` + active-powerup tags, right `Score`/`Best` + drawn hearts. Old `#hud`/`.bar`/`#uh` hidden via CSS; the dramatic boss bar (`#bw`) kept. `syncHud()` runs each frame while playing.
+- **Nav:** registered `buildable-gamenav.js` so the app shell owns Home/Sound/Menu (added a `MUTED` flag gating `ac()`/`speak()`); hides the engine's own `#btnMenu` in-app.
+- Bumped the app's Croc Tot iframe to `?v=2`.
+Browser-QA'd live on www.buildablekids.com/croctot.html: loading screen, Make-it-mine (Spicy → 3 hearts confirmed in HUD), level play (Kitchen, Breaker-format chips), Menu returns to loading, Sound mutes, no console errors. Scoped to public/croctot.html + src/BuildableKids.jsx. This is the pilot for rolling the same three shared building-blocks out to the other games flagged in the audit.
+
+---
+
 ## Survival: full-screen on iPad/iPhone + gently-moving nature worlds (July 3 2026)
 Owner asks: make Space Sparkles (`public/survival-engine.html`) fill the whole screen on iPad/iPhone, and swap the single space backdrop for the new gently-moving parallax nature worlds.
 
