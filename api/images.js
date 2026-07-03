@@ -231,6 +231,7 @@ function build(q) {
       dotsboxes: "A friendly dots-and-boxes game on bright paper, a grid of dots joined by colorful crayon lines, several little squares filled in with happy colors, a crayon closing the final box, playful and cheerful",
       sounds: "A fun burst of cartoon sound effects, a big colorful soundboard of glowing buttons exploding with musical notes, stars and silly cartoon noise symbols flying out, vibrant energetic and playful",
       memory: "A cheerful tabletop of big colorful face-down memory cards, two cards flipped up revealing matching glowing star and heart symbols with a burst of sparkles between them, a few kids' hands reaching in, warm playful game-night vibe",
+      mahjong: "A neat pyramid of stacked wooden mahjong tiles on a warm table, each tile face showing a big friendly kid-picture like a panda, a cherry and a playing card, two matching tiles glowing and lifting away with a soft sparkle, cozy inviting puzzle vibe",
       bingo: "A fun kids' bingo game scene, big colorful bingo cards covered in cheerful picture squares with bright stamp daubers marking them, a glowing called picture floating above, confetti and a happy BINGO sparkle, game-night energy",
       snakes: "A whimsical snakes-and-ladders board game viewed at a tilt, a winding numbered path climbing a colorful hill with friendly rope ladders going up and silly smiling cartoon snakes sliding down, cute colorful player tokens racing to a golden star at the top",
     };

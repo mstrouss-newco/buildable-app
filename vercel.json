@@ -316,6 +316,10 @@
       "dest": "/memory-engine.html"
     },
     {
+      "src": "/mahjong-engine.html",
+      "dest": "/mahjong-engine.html"
+    },
+    {
       "src": "/bingo-engine.html",
       "dest": "/bingo-engine.html"
     },
