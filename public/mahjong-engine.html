@@ -74,6 +74,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 //  ALWAYS-WINNABLE: boards are generated solvable (reverse "peel" builder), and the
 //  game auto-reshuffles (still solvable) whenever no move is left, so a kid can never
 //  get stuck. QA hook: window.MAHJONG_GAME (sim replays the guaranteed solution).
+const BR=(typeof window!=="undefined"&&window.BuildableRenders)||globalThis.BuildableRenders;
 const BA=(typeof window!=="undefined"&&window.BuildableAudio)||globalThis.BuildableAudio;
 const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||globalThis.BuildableMechanics;
 const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||globalThis.BuildableStartScreen;
@@ -104,6 +105,7 @@ let tiles=[];                     // {x,y,z,id,face,gone}
 let solution=[];                  // recorded guaranteed-solvable pair order [[idA,idB],...]
 let selId=-1;                     // currently selected free tile id
 let hintPair=null, hintUntil=0;
+let demo=null;                    // first-play tutorial (shared pointing hand)
 let history=[];                   // stack of removed [idA,idB] pairs (for Recall/undo)
 const CAP=3;                      // each helper (Recall / Hint / Mix) is capped at 3 per game
 let undosLeft=CAP, hintsLeft=CAP, mixesLeft=CAP;
@@ -190,8 +192,16 @@ function build(){
   selId=-1; hintPair=null; state="play";
   history=[]; undosLeft=CAP; hintsLeft=CAP; mixesLeft=CAP;
   startedAt=Date.now(); elapsedMs=0; isNewBest=false; wonBest=0;
-  if(!headless){ loadSetArt(set); layout(); showChrome(true); updateBanner(); updateChrome(); }
+  demo=null;
+  if(!headless){ loadSetArt(set); layout(); showChrome(true); updateBanner(); updateChrome();
+    if(!demoSeen()) startDemo(); }
 }
+
+// ---------- FIRST-PLAY DEMO (shared 3D pointing hand — same mechanic as other games) ----------
+function demoSeen(){ try{ return localStorage.getItem("bk_mahjong_demo")==="1"; }catch(e){ return !!window.__mjDemo; } }
+function markDemoSeen(){ try{ localStorage.setItem("bk_mahjong_demo","1"); }catch(e){ window.__mjDemo=1; } }
+function startDemo(){ const m=availableMatch(); demo = m ? {a:m[0], b:m[1], t:0} : null; }
+function endDemo(){ if(demo){ demo=null; markDemoSeen(); } }
 
 // ---------- MOVES ----------
 function tileById(id){ for(const t of tiles) if(t.id===id) return t; return null; }
@@ -325,6 +335,29 @@ function drawTile(t){
   if(!free){ ctx.fillStyle="rgba(10,18,34,.34)"; rr(ctx,p.x,p.y,w,h,r); ctx.fill(); }
   if(hinted){ ctx.lineWidth=w*0.06; ctx.strokeStyle="#33d17a"; rr(ctx,p.x-2,p.y-2,w+4,h+4,r+2); ctx.stroke(); }
 }
+function drawDemo(){
+  const A=tileById(demo.a), B=tileById(demo.b);
+  if(!A||!B||A.gone||B.gone){ demo=null; return; }
+  const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
+  // dim the board so the two demo tiles stand out
+  ctx.save(); ctx.fillStyle="rgba(10,14,28,.5)"; ctx.fillRect(0,0,vw,vh); ctx.restore();
+  drawTile(A); drawTile(B);                       // redraw the pair bright, over the dim
+  const pulse=0.5+0.5*Math.sin(demo.t*4.5);
+  [A,B].forEach(t=>{ const p=tilePx(t); ctx.save();
+    ctx.strokeStyle="rgba(124,246,176,"+(0.55+0.4*pulse)+")"; ctx.lineWidth=Math.max(3,view.tileW*0.09);
+    rr(ctx,p.x-3,p.y-3,view.tileW+6,view.tileH+6,Math.max(6,view.tileW*0.15)); ctx.stroke(); ctx.restore(); });
+  // shared 3D pointing hand taps A then B, back and forth (fingertip lands at y-30*s)
+  const s=Math.max(0.95, view.tileW/46);
+  const which=(Math.sin(demo.t*1.5)>=0)?A:B; const c=tileCenter(which);
+  const bob=Math.abs(Math.sin(demo.t*4.5))*7;
+  if(BR&&BR.hand) BR.hand(ctx, c.x, c.y+30*s+bob, s);
+  // caption
+  ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillStyle="#fff";
+  ctx.font="900 "+Math.min(26,vw*0.052)+"px 'Baloo 2',Nunito,sans-serif";
+  ctx.fillText("Tap two matching tiles!", vw/2, 72);
+  ctx.fillStyle="#bcd0ee"; ctx.font="700 15px Nunito,sans-serif";
+  ctx.fillText("Clear the whole board to win", vw/2, 98);
+}
 function drawWin(){
   const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
   ctx.save();
@@ -356,6 +389,7 @@ function draw(){
   for(const t of order) drawTile(t);
   ctx.restore();
   if(BM){ BM.draw(ctx,fx,{W:W,H:H}); }
+  if(demo && state==="play") drawDemo();
   if(state==="win") drawWin();
   return "ok";
 }
@@ -436,7 +470,7 @@ function resize(){ if(!cv) return; DPR=Math.min(2,(window.devicePixelRatio||1));
   cv.width=W*DPR; cv.height=H*DPR; if(state==="play") layout(); }
 let _last=0;
 function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
-  nowMs+=dt*1000; if(BM)BM.update(fx,dt);
+  nowMs+=dt*1000; if(BM)BM.update(fx,dt); if(demo) demo.t+=dt;
   if(state==="play"){ elapsedMs=Date.now()-startedAt; const bt=document.getElementById("bTime"); if(bt) bt.textContent=fmtTime(elapsedMs); }
   try{ draw(); }catch(e){ if(typeof console!=="undefined") console.error("draw",e); }
   requestAnimationFrame(frame);
@@ -445,6 +479,7 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
   resize(); window.addEventListener("resize",resize);
   const onTap=(e)=>{ if(state==="win"){ if(BA)BA.unlock(); showMenu(); return; } if(state!=="play") return;
+    if(demo) endDemo();
     const t=e.touches?e.touches[0]:e;
     const rb=cv.getBoundingClientRect(); const hit=pick(t.clientX-rb.left, t.clientY-rb.top);
     if(hit) tapTile(hit); };
@@ -505,6 +540,7 @@ window.MAHJONG_GAME = {
   _draw:()=>{ try{ return draw(); }catch(e){ return "ERR:"+(e&&e.message||e); } },
   _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS, _remaining:()=>remaining(),
   _win:()=>{ if(state==="play") winGame(); return {elapsedMs, isNewBest, wonBest}; },   // QA: force the win overlay
+  _demo:()=>{ startDemo(); return !!demo; },   // QA: force the first-play demo
 };
 window.BUILDABLE_GAME = window.MAHJONG_GAME;
 </script>
