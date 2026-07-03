@@ -252,7 +252,7 @@ function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
 function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=20260628a" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/sling-squad.html?v=1" onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=1" onHome={onHome} bg="#7fc7ff" />; }
+function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=2" onHome={onHome} bg="#7fc7ff" />; }
 function StringMatchScreen({ onHome }) { return <GameFrame title="String Match" src="/string-match.html?v=1" onHome={onHome} bg="#bfe3f5" light />; }
 function BubbleScreen({ onHome }) { return <GameFrame title="Bubble Buddies" src="/bubble-engine.html?v=1" onHome={onHome} bg="#0e1830" />; }
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html" onHome={onHome} />; }

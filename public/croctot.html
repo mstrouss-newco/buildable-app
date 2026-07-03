@@ -43,6 +43,9 @@ canvas{display:block;width:100%;height:auto;border-radius:10px;border:2px solid 
 #btnRow{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;width:100%;}
 #uh{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;min-height:16px;width:100%;}
 .upg{background:rgba(255,200,0,0.18);border:1px solid rgba(255,200,0,0.45);border-radius:5px;padding:1px 6px;font-size:11px;color:#ffdd44;font-weight:700;}
+/* Breaker-format: score/lives/level/time + power now live in the shared on-canvas
+   HUD (buildable-hud.js). Hide the old DOM status bar & meters; keep the boss bar. */
+#hud,#uh,.bar{display:none!important;}
 
 /* ── iPhone small ── */
 @media(max-width:390px){#wrap{padding:2px 2px 8px;gap:2px;}.hb{font-size:10px;padding:2px 5px;}}
@@ -141,7 +144,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div id="canvasWrap">
     <canvas id="c"></canvas>
     <!-- Full-screen tap target for title screen — real HTML button, works on all iOS -->
-    <div id="tapOverlay" onclick="tapToPlay()" ontouchstart="tapToPlay()" style="position:absolute;inset:0;cursor:pointer;-webkit-tap-highlight-color:transparent;background:transparent;z-index:10;display:block;"></div>
+    <div id="tapOverlay" onclick="tapToPlay()" ontouchstart="tapToPlay()" style="position:absolute;inset:0;cursor:pointer;-webkit-tap-highlight-color:transparent;background:transparent;z-index:10;display:none;"></div>
     <!-- Level selector overlay -->
     <div id="levelOverlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;gap:20px;border-radius:10px;z-index:50;">
       <div style="color:#FFD700;font-size:24px;font-weight:900;">SELECT LEVEL</div>
@@ -162,6 +165,19 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
         style="font-size:36px;font-weight:900;text-align:center;letter-spacing:12px;text-transform:uppercase;width:140px;padding:10px;border-radius:10px;border:2px solid #FFD700;background:#111;color:#FFD700;outline:none;">
       <button id="initSubmit" style="padding:12px 32px;font-size:16px;font-weight:900;border-radius:10px;border:none;background:#ff6600;color:#fff;cursor:pointer;">Done ✓</button>
     </div>
+    <!-- Shared loading / level-select screen (buildable-startscreen.js mounts here) -->
+    <div id="start" style="position:fixed;inset:0;z-index:60;display:none;"></div>
+    <!-- "Make it mine" customize overlay (bespoke, opened from the loading screen) -->
+    <div id="crocCustomize" style="position:fixed;inset:0;z-index:70;display:none;background:#131229;overflow:auto;">
+      <div style="max-width:420px;margin:0 auto;padding:18px 16px 28px;color:#fff;font-family:'Nunito',system-ui,sans-serif;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <button id="czBack" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;border:none;cursor:pointer;font-size:18px;">&#8592;</button>
+          <div><div style="font-size:22px;font-weight:900;">Make it mine</div><div style="color:#9b95c4;font-size:12.5px;">Pick how tricky Croc Tot should be</div></div>
+        </div>
+        <div id="czDiff" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <button id="czPlay" style="margin-top:16px;width:100%;padding:13px;border:none;border-radius:13px;background:#7CF6B0;color:#0c3a24;font-size:15px;font-weight:900;cursor:pointer;">Done · pick a level</button>
+      </div>
+    </div>
   </div>
   <div id="btnRow">
     <button class="btn" id="btnS" style="display:none;visibility:hidden;width:0;padding:0;margin:0;border:0;overflow:hidden;">Start</button>
@@ -173,6 +189,11 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div id="msg"></div>
 </div>
 
+<!-- Shared Buildable game building-blocks (same as Breaker): one loading screen,
+     one in-game HUD, one shell-owned nav. -->
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-hud.js?v=1"></script>
+<script src="buildable-gamenav.js"></script>
 <script>
 // ── polyfill ──────────────────────────────────────────────────────────────
 if(!CanvasRenderingContext2D.prototype.roundRect){
@@ -210,11 +231,94 @@ const UI={sc:$("sc"),bs:$("bs"),lv:$("lv"),lel:$("lel"),tim:$("tim"),pwr:$("pwrE
   msg:$("msg"),bw:$("bw"),bi:$("bi"),bl:$("bl"),tf:$("tf"),pf:$("pf"),uh:$("uh"),
   btnS:$("btnS"),btnR:$("btnR"),btnP:$("btnP"),btnNew:$("btnNew")};
 
+// ── Shared Buildable UI: loading screen (BS) + on-canvas HUD + shell nav ─────
+//    Same three building-blocks Breaker uses, so Croc Tot now opens, sets up
+//    and plays with the same look as the other games.
+const BS=window.BuildableStartScreen;
+let _hud=null; function HUD(){ return _hud||(_hud=BuildableHUD.mount(CV)); }
+
+const DIFFS=[
+  {key:"chill", name:"Chill",      lives:7, note:"7 lives · gentle snacks"},
+  {key:"normal",name:"Just Right", lives:5, note:"5 lives · the classic"},
+  {key:"spicy", name:"Spicy",      lives:3, note:"3 lives · for brave crocs"},
+];
+const LEVEL_NAMES=["Backyard","Kitchen","Night Sky","Jungle","Volcano"];
+function fmtTime(ms){ const s=Math.max(0,Math.floor(ms/1000)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+
+// Build the shared HUD chips from game state (called every frame while playing).
+function syncHud(){
+  const h=HUD();
+  const timeLeft=Math.max(0,(G.LDUR||60000)-(G.lElapsed||0));
+  const left=[{ text:"Croc Tot", soft:"Level "+(G.level||1)+" / 5" }];
+  const tags=[];
+  if(powerLevel>=4)tags.push("RAPID"); else if(powerLevel>=3)tags.push("TRIPLE"); else if(powerLevel>=2)tags.push("DOUBLE");
+  if(G.upg){ if(G.upg.shield&&G.shieldHp>0)tags.push("SHIELD x"+G.shieldHp); if(G.upg.magnet)tags.push("MAGNET");
+    if(G.freezeT>0)tags.push("FREEZE"); if(G.ghostT>0)tags.push("GHOST"); if(G.dblT>0)tags.push("2X");
+    if(G.upg.bomb&&G.bombCount>0)tags.push("BOMB x"+G.bombCount); if(G.upg.laser&&G.laserT>0)tags.push("LASER"); }
+  if(!G.bActive) left.push({ text:"Boss in "+fmtTime(timeLeft) });
+  if(tags.length) left.push({ text:tags.join("  ") });
+  h.set({ left:left, right:[ { text:"Score "+(G.score||0), soft:"Best "+best }, { hearts:Math.max(0,G.lives||0) } ] });
+}
+
+// ── Shared loading / level-select screen ────────────────────────────────────
+let _startScreen=null;
+function showStart(){
+  ST="title";
+  const cz=document.getElementById("crocCustomize"); if(cz)cz.style.display="none";
+  const host=document.getElementById("start"); if(host)host.style.display="block";
+  if(_hud)_hud.hide();
+  if(window.BuildableGameNav&&BuildableGameNav.update)BuildableGameNav.update();
+  const cfg={
+    title:"Croc Tot",
+    subtitle:"Blast the flying snacks — beat the boss!",
+    sound:!MUTED, showBack:false, hideSound:true,
+    customizeLabel:"Make it mine",
+    levels: LEVEL_NAMES.map((nm,i)=>({ n:i+1, name:nm,
+      color:["#3a7d3a","#7d5a3a","#2b3b6b","#2f6b3a","#7d2f2f"][i], state:"ready" })),
+  };
+  const cb={ onPlay:(n)=>{ G.startLevel=n; hideStart(); startGame(); }, onCustomize:showCustomize };
+  if(_startScreen){ _startScreen.update(cfg); } else if(BS){ _startScreen=BS.mount(host,cfg,cb); }
+}
+function hideStart(){ const h=document.getElementById("start"); if(h)h.style.display="none"; }
+
+// ── "Make it mine" customize (bespoke, reached from the loading screen) ──────
+function showCustomize(){
+  hideStart();
+  const box=document.getElementById("czDiff"); if(box){ box.innerHTML="";
+    DIFFS.forEach(d=>{
+      const on=d.key===crocDiff.key;
+      const b=document.createElement("button");
+      b.style.cssText="text-align:left;padding:12px 14px;border-radius:13px;cursor:pointer;font-family:'Nunito',system-ui,sans-serif;border:2px solid "+(on?"#7CF6B0":"rgba(255,255,255,.12)")+";background:#1d1b36;color:#fff;";
+      b.innerHTML="<div style='font-size:15px;font-weight:800'>"+d.name+"</div><div style='color:#9b95c4;font-size:12px'>"+d.note+"</div>";
+      b.onclick=()=>{ crocDiff={key:d.key,lives:d.lives}; showCustomize(); };
+      box.appendChild(b);
+    });
+  }
+  const c=document.getElementById("crocCustomize"); if(c)c.style.display="block";
+}
+(function wireCustomize(){
+  const back=document.getElementById("czBack"); if(back)back.onclick=showStart;
+  const play=document.getElementById("czPlay"); if(play)play.onclick=showStart; // "Done" -> back to level pick
+})();
+
+// ── Shell-owned nav: the app always shows Home; we add Sound + Menu ──────────
+if(window.BuildableGameNav){
+  BuildableGameNav.register({
+    hide:["btnMenu"],
+    onSound:()=>{ MUTED=!MUTED; if(MUTED&&window.speechSynthesis){try{speechSynthesis.cancel();}catch(e){}} },
+    onMenu:()=>{ paused=false; stopBg(); showStart(); },
+    soundOn:()=>!MUTED,
+    inGame:()=>ST==="playing",
+  });
+}
+
 // ── state ─────────────────────────────────────────────────────────────────
 FACE_IMG=(()=>{const i=new Image();i.src="data:image/jpeg;base64,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";return i;})();
 JACKSON_PHOTO=(()=>{const i=new Image();i.src="data:image/jpeg;base64,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";return i;})();
 
 let ST="title",best=0,titleT=0,paused=false;
+let MUTED=false;                              // shell Sound button toggles this
+let crocDiff={key:"normal",lives:5};          // chosen on the "Make it mine" screen
 let notifs=[]; // {msg, icon, col, t, dur}
 let oActive=false,oT=0,oDur=3,oMsg="",oSub="",oCol="#fff",oDone=null;
 let deathT=0,deathActive=false;
@@ -239,7 +343,7 @@ function burst(x,y,col,n=8,big=false){
 
 // ── audio ─────────────────────────────────────────────────────────────────
 let AC=null;
-function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}return AC;}
+function ac(){if(MUTED)return null;if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}return AC;}
 function tone(f,d,v,tp="square"){try{const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type=tp;o.frequency.value=f;const n=a.currentTime;g.gain.setValueAtTime(v||0.1,n);g.gain.exponentialRampToValueAtTime(0.001,n+d);o.start(n);o.stop(n+d+0.01);}catch(e){}}
 function slide(f1,f2,d,v){try{const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type="sawtooth";const n=a.currentTime;o.frequency.setValueAtTime(f1,n);o.frequency.exponentialRampToValueAtTime(f2,n+d);g.gain.setValueAtTime(v||0.1,n);g.gain.exponentialRampToValueAtTime(0.001,n+d);o.start(n);o.stop(n+d+0.01);}catch(e){}}
 
@@ -357,6 +461,7 @@ function stopBg(){bgOn=false;}
 
 let voiceDone=false;
 function speak(txt,pitch,rate){
+  if(MUTED)return;
   try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.pitch=pitch||2.0;u.rate=rate||1.0;u.volume=1.0;speechSynthesis.speak(u);}catch(e){}
 }
 function tryVoice(){
@@ -410,7 +515,7 @@ const PWUPS=[
 
 // ── game state ────────────────────────────────────────────────────────────
 function resetG(){
-  G={score:0,lives:5,level:1,lStart:0,lElapsed:0,LDUR:60000,lastTime:0,
+  G={score:0,lives:(crocDiff&&crocDiff.lives)||5,level:1,lStart:0,lElapsed:0,LDUR:60000,lastTime:0,
     tot:{x:80,y:H/2,w:36,h:30,vx:0,vy:0,dir:1,inv:0,wf:0},
     enemies:[],items:[],pwups:[],shots:[],fries:[],parts:[],pops:[],clouds:[],bgd:[],
     upg:{shield:false,magnet:false,baby:false,bigShot:false,freeze:false,ghost:false,dbl:false,bomb:false,missile:false,laser:false},
@@ -635,7 +740,7 @@ function showTapOverlay(){
   const ov=document.getElementById('tapOverlay');
   if(ov)ov.style.display='block';
 }
-function startGame(){if(ST==="playing")return;tryVoice();const chosenLevel=G.startLevel||1;G.startLevel=null;initGame();G.level=chosenLevel;document.getElementById('lel').textContent=G.level;ST="playing";setTimeout(()=>speak("Dodge the flying vegetables!",0.5,0.75),5200);}
+function startGame(){if(ST==="playing")return;tryVoice();const chosenLevel=G.startLevel||1;G.startLevel=null;initGame();G.level=chosenLevel;document.getElementById('lel').textContent=G.level;ST="playing";hideStart();const _cz=document.getElementById('crocCustomize');if(_cz)_cz.style.display='none';HUD().show();if(window.BuildableGameNav&&BuildableGameNav.update)BuildableGameNav.update();setTimeout(()=>speak("Dodge the flying vegetables!",0.5,0.75),5200);}
 
 // ── boss attacks ─────────────────────────────────────────────────────────
 function bossShoot(spd,spread){
@@ -1584,6 +1689,7 @@ function loop(now){
   if(G.lastTime)dt=Math.min((now-G.lastTime)/1000,0.04);
   try{draw();}catch(e){console.error("DRAW:",e.message);}
   try{update(now);}catch(e){console.error("UPDATE:",e.message);if(G.lastTime)G.lastTime=now;}
+  if(ST==="playing"){ try{ HUD().show(); syncHud(); }catch(e){} } else if(_hud){ _hud.hide(); }
   requestAnimationFrame(loop);
 }
 
@@ -1613,6 +1719,7 @@ function submitInitials(){
   initStr='';
   hideInitOverlay();
   ST='title';UI.btnS.style.display='';UI.btnR.style.display='none';
+  showStart();
 }
 
 document.addEventListener("keydown",e=>{
@@ -1720,7 +1827,7 @@ if(btnMenu)btnMenu.addEventListener("click",()=>{
   UI.btnP.style.display='none';
   btnMenu.style.display='none';
   if(UI.btnNew)UI.btnNew.style.display='none';
-  showTapOverlay();
+  showStart();
   stopBg();
 });
 // btnS hidden on mobile — canvas TAP TO PLAY used instead
@@ -1747,6 +1854,8 @@ if(_initInp){
 setTimeout(_resizeCanvas, 100);
 setTimeout(_resizeCanvas, 500);
 requestAnimationFrame(loop);
+// Show the shared loading / level-select screen on boot (replaces the old tap-to-play).
+showStart();
 </script>
 </body>
 </html>
