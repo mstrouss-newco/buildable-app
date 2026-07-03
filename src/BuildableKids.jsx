@@ -99,8 +99,13 @@ const SCREEN_BINGO = "bingo";
 const SCREEN_SNAKES = "snakes";
 const SCREEN_MAZE = "maze";
 function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onCheckers, onTyping, onTennis, onSounds, onTown, onTicTacToe, onConnectFour, onDotsBoxes, onMemory, onBingo, onSnakes, onMaze, onTetris, onCastle, onSling, onCroc }) {
+  // QA gate: coming-soon tiles ask for a password (1111) before opening.
+  const [gate, setGate] = useState(null);
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState(false);
+  const submitPw = () => { if (pw === "1111") { const go = gate; setGate(null); setPw(""); setErr(false); if (go) go(); } else { setErr(true); } };
   const tile = (grad, title, desc, onClick, soon, imgId) => (
-    <button onClick={soon ? undefined : onClick} disabled={soon} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "not-allowed" : "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
+    <button onClick={soon ? () => { setGate(() => onClick); setPw(""); setErr(false); } : onClick} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
         {imgId && <img src={`/api/images?kind=game&id=${imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
       </div>
@@ -119,7 +124,7 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
       <h1 style={{ ...styles.logo, marginTop: 8 }}>Games</h1>
       <p style={styles.tagline}>Pick a game to play!</p>
       <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Platformer", "Run, jump and reach the flag!", onPlatformer, false, "platformer")}
+        {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Hop Heroes", "Run, jump and reach the flag!", onPlatformer, true, "platformer")}
         {tile("linear-gradient(160deg,#9B7BFF,#67E8F9)", "Breaker", "Bounce the ball, smash every brick!", onBreaker, false, "breaker")}
         {tile("linear-gradient(160deg,#6FCF6A,#2E8B57)", "Castle Guard", "Place archers and knights to stop the silly goblins!", onCastle, false, "castleguard")}
         {tile("linear-gradient(160deg,#67C7FF,#9B7BFF)", "Tumble Blocks", "Fill a row and watch it tumble away!", onTetris, false, "tetris")}
@@ -132,13 +137,27 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#FF5A6E,#FFC94D)", "Connect Four", "Drop discs, line up four to win!", onConnectFour, false, "connectfour")}
         {tile("linear-gradient(160deg,#36D6C3,#FF8A5B)", "Dots and Boxes", "Close a box to claim it \u2014 most wins!", onDotsBoxes, false, "dotsboxes")}
         {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false, "chess")}
-        {tile("linear-gradient(160deg,#7C5CFC,#FF7A9A)", "Family Town", "Roll, move, collect coins \u2014 3-4 players!", onTown, false, "town")}
+        {tile("linear-gradient(160deg,#7C5CFC,#FF7A9A)", "Family Town", "Roll, move, collect coins \u2014 3-4 players!", onTown, true, "town")}
         {tile("linear-gradient(160deg,#E8636F,#8E6BFF)", "Checkers", "Hop, jump and crown your kings!", onCheckers, false, "checkers")}
         {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false, "typing")}
         {tile("linear-gradient(160deg,#7DD3FC,#A78BFF)", "Memory Match", "Flip cards, find the pairs \u2014 solo or 2-4!", onMemory, false, "memory")}
         {tile("linear-gradient(160deg,#FFD23F,#FF8FB1)", "Bingo", "The device calls \u2014 daub a line to win, 2-4!", onBingo, false, "bingo")}
         {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, true, "runner")}
       </div>
+      {gate && (
+        <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,8,24,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 340, background: "#1b1533", border: CARD_BORDER, borderRadius: 24, padding: "26px 22px", fontFamily: NUN, color: "#fff", boxShadow: "0 18px 50px rgba(0,0,0,0.5)" }}>
+            <div style={{ fontFamily: FRED, fontSize: 22, fontWeight: 700, textAlign: "center" }}>Coming soon</div>
+            <div style={{ fontSize: 14, color: "#cfc9e6", textAlign: "center", marginTop: 8 }}>Enter the password to preview this game.</div>
+            <input value={pw} onChange={(e) => { setPw(e.target.value); setErr(false); }} onKeyDown={(e) => { if (e.key === "Enter") submitPw(); }} type="password" inputMode="numeric" autoFocus placeholder="Password" style={{ width: "100%", boxSizing: "border-box", marginTop: 16, padding: "12px 14px", borderRadius: 14, border: err ? "2px solid #FF6B81" : "1px solid rgba(255,255,255,0.2)", background: "#12102a", color: "#fff", fontFamily: NUN, fontSize: 18, textAlign: "center", letterSpacing: "4px" }} />
+            {err && <div style={{ color: "#FF9BAA", fontSize: 13, textAlign: "center", marginTop: 8 }}>Wrong password. Try again.</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+              <button onClick={() => setGate(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.2)", background: "transparent", color: "#cfc9e6", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Cancel</button>
+              <button onClick={submitPw} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "linear-gradient(160deg,#9B7BFF,#67E8F9)", color: "#12102a", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Enter</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
