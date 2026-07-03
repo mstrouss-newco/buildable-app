@@ -762,7 +762,10 @@ function renderMaker(){ const steps=el("mkSteps"), body=el("mkBody"), sub=el("mk
     next.style.display = (mkStep==="home"||mkStep==="share") ? "none" : "inline-block"; }
 }
 
-function lookBg(look){ const d=BACKDROPS.find(b=>b.id===(look&&look.backdrop))||BACKDROPS[0]; return "linear-gradient(135deg,"+d.c1+","+d.c2+")"; }
+function backdropThumb(d){ return d && d.img ? d.img.replace("_bg.jpg","_thumb.jpg") : null; }
+function lookBg(look){ const d=BACKDROPS.find(b=>b.id===(look&&look.backdrop))||BACKDROPS[0];
+  const grad="linear-gradient(135deg,"+d.c1+","+d.c2+")"; const th=backdropThumb(d);
+  return th ? "url('"+th+"') center/cover, "+grad : grad; }
 function miniThumb(L0){ const cols=L0.cols||10, rows=L0.rows||6;
   let html='<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:1px;padding:6px;background:'+lookBg(L0.look)+';height:70px;box-sizing:border-box;align-content:start">';
   const map={}; for(const cc of (L0.cells||[])) map[cc.r+"_"+cc.c]=cc.type;
@@ -791,7 +794,8 @@ function mkSection(body,t){ const h=document.createElement("div"); h.style.cssTe
 function renderMkLook(body){
   mkSection(body,"Backdrop"); const gb=document.createElement("div"); gb.className="grid";
   for(const d of BACKDROPS){ const on=mkLook.backdrop===d.id; const card=document.createElement("div"); card.className="opt"+(on?" on":"");
-    card.innerHTML='<div class="sw"><div style="width:100%;height:100%;border-radius:10px;background:linear-gradient(135deg,'+d.c1+','+d.c2+')"></div></div><div class="nm">'+d.name+'</div><div class="ds"></div>';
+    const th=backdropThumb(d); const swBg = th ? "url('"+th+"') center/cover, linear-gradient(135deg,"+d.c1+","+d.c2+")" : "linear-gradient(135deg,"+d.c1+","+d.c2+")";
+    card.innerHTML='<div class="sw"><div style="width:100%;height:100%;border-radius:10px;background:'+swBg+'"></div></div><div class="nm">'+d.name+'</div><div class="ds"></div>';
     card.onclick=()=>{ mkLook.backdrop=d.id; renderMaker(); }; gb.appendChild(card); }
   body.appendChild(gb);
   mkSection(body,"Ball"); const gball=document.createElement("div"); gball.className="grid";
