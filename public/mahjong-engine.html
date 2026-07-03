@@ -21,9 +21,12 @@
   .hide{display:none!important}
   /* in-game controls: top-right vertical stack (Home is shell-owned, top-left) */
   #ctrls{position:absolute;top:12px;right:12px;z-index:4;display:flex;flex-direction:column;gap:9px}
-  .cbtn{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(16,26,46,.62);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .cbtn{width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(16,26,46,.62);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;padding:0}
   .cbtn:active{transform:scale(.92)}
-  .cbtn span{font-family:'Baloo 2','Nunito',sans-serif;font-weight:800;font-size:12px;line-height:1}
+  .cbtn span{font-family:'Baloo 2','Nunito',sans-serif;font-weight:800;font-size:11px;line-height:1}
+  .cbtn b{font-family:'Baloo 2','Nunito',sans-serif;font-weight:900;font-size:11px;line-height:1;color:#7CF6B0}
+  .cbtn.off{opacity:.38;cursor:default}
+  .cbtn.off b{color:#9aa7c4}
   #banner{position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:4;background:rgba(16,26,46,.72);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 18px;color:#fff;font-weight:800;font-size:15px;display:flex;gap:14px;align-items:center}
   /* customize (tile-set picker) */
   #cust{position:absolute;inset:0;z-index:8;background:rgba(8,12,24,.84);display:flex;align-items:center;justify-content:center;padding:18px}
@@ -47,8 +50,9 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div id="banner" class="hide"><span id="bLeft">Tiles left: 0</span><span id="bTime" style="opacity:.85">0:00</span></div>
   <div id="ctrls" class="hide">
     <button class="cbtn" id="soundBtn" aria-label="Sound"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9v6h4l5 4V5L9 9z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg></button>
-    <button class="cbtn" id="hintBtn" aria-label="Hint"><span>Hint</span></button>
-    <button class="cbtn" id="shufBtn" aria-label="Shuffle"><span>Mix</span></button>
+    <button class="cbtn" id="undoBtn" aria-label="Recall last move"><span>Recall</span><b id="undoN">3</b></button>
+    <button class="cbtn" id="hintBtn" aria-label="Hint"><span>Hint</span><b id="hintN">3</b></button>
+    <button class="cbtn" id="shufBtn" aria-label="Scramble"><span>Mix</span><b id="mixN">3</b></button>
   </div>
   <div id="start" class="ov"></div>
   <div id="cust" class="hide"><div class="csheet">
@@ -100,6 +104,9 @@ let tiles=[];                     // {x,y,z,id,face,gone}
 let solution=[];                  // recorded guaranteed-solvable pair order [[idA,idB],...]
 let selId=-1;                     // currently selected free tile id
 let hintPair=null, hintUntil=0;
+let history=[];                   // stack of removed [idA,idB] pairs (for Recall/undo)
+const CAP=3;                      // each helper (Recall / Hint / Mix) is capped at 3 per game
+let undosLeft=CAP, hintsLeft=CAP, mixesLeft=CAP;
 let nowMs=0, headless=false;
 let PREFS={ setIdx:0, lvlIdx:0 };
 let startedAt=0, elapsedMs=0, isNewBest=false, wonBest=0;   // clear timer + personal best
@@ -181,8 +188,9 @@ function build(){
   for(let tryN=0; tryN<8 && !ord; tryN++) ord=assignSolvable(tiles, set.count);
   solution=ord||[];
   selId=-1; hintPair=null; state="play";
+  history=[]; undosLeft=CAP; hintsLeft=CAP; mixesLeft=CAP;
   startedAt=Date.now(); elapsedMs=0; isNewBest=false; wonBest=0;
-  if(!headless){ loadSetArt(set); layout(); showChrome(true); updateBanner(); }
+  if(!headless){ loadSetArt(set); layout(); showChrome(true); updateBanner(); updateChrome(); }
 }
 
 // ---------- MOVES ----------
@@ -201,13 +209,13 @@ function tapTile(t){
   if(selId<0){ selId=t.id; if(BA)BA.sfx("select"); return; }
   const a=tileById(selId), b=t;
   if(a && a.face===b.face){
-    a.gone=true; b.gone=true; selId=-1;
+    a.gone=true; b.gone=true; selId=-1; history.push([a.id,b.id]);
     if(BA)BA.sfx("match");
     if(BM && !headless){ const p=tileCenter(a),q=tileCenter(b);
       BM.burst(fx.parts,p.x,p.y,"#7CF6B0",10); BM.burst(fx.parts,q.x,q.y,"#FFD23F",10); }
-    updateBanner();
+    updateBanner(); updateChrome();
     if(remaining()===0){ winGame(); }
-    else if(!availableMatch()){ autoShuffle(); }     // never let a kid get stuck
+    else if(!availableMatch()){ autoShuffle(); }     // safety net (uncapped): never let a kid get stuck
   } else {
     // wrong pair — keep the newly tapped one selected (friendly), tiny nudge
     selId=b.id; if(BA)BA.sfx("nomatch"); if(BM&&!headless) BM.shake(fx,0.18);
@@ -217,13 +225,24 @@ function autoShuffle(){
   const present=tiles.filter(t=>!t.gone);
   // re-run the peel generator on just the remaining tiles → solvable from here on
   let ord=null; for(let n=0;n<8 && !ord;n++) ord=assignSolvable(present, curSet().count);
-  selId=-1; hintPair=null; if(BA)BA.sfx("shuffle");
-  if(BM&&!headless) BM.flash(fx,"#67E8F9",0.4);
+  selId=-1; hintPair=null; history=[]; if(BA)BA.sfx("shuffle");   // scramble is an undo reset point
+  if(BM&&!headless){ BM.flash(fx,"#67E8F9",0.4); updateChrome(); }
 }
+// Recall: put the last matched pair back on the board.
+function doUndo(){
+  if(!history.length) return false;
+  const pr=history.pop(); const a=tileById(pr[0]), b=tileById(pr[1]);
+  if(a) a.gone=false; if(b) b.gone=false; selId=-1; hintPair=null;
+  if(BA)BA.sfx("select"); updateBanner();
+  if(!availableMatch()) autoShuffle();   // safety net
+  return true;
+}
+// Hint: highlight an available pair. Returns true only if one was actually shown
+// (so a wasted tap on a stuck board doesn't burn a charge — it just safety-mixes).
 function doHint(){
   const m=availableMatch();
-  if(m){ hintPair=m; hintUntil=nowMs+1400; if(BA)BA.sfx("select"); }
-  else autoShuffle();
+  if(m){ hintPair=m; hintUntil=nowMs+1400; if(BA)BA.sfx("select"); return true; }
+  autoShuffle(); return false;
 }
 function winGame(){
   elapsedMs=Date.now()-startedAt;
@@ -353,6 +372,13 @@ function pick(mx,my){
 function showChrome(on){ const c=document.getElementById("ctrls"),b=document.getElementById("banner");
   if(c) c.classList.toggle("hide",!on); if(b) b.classList.toggle("hide",!on); }
 function updateBanner(){ const el=document.getElementById("bLeft"); if(el) el.textContent="Tiles left: "+remaining(); }
+function updateChrome(){
+  const upd=(nId,n,btnId,off)=>{ const el=document.getElementById(nId); if(el) el.textContent=n;
+    const b=document.getElementById(btnId); if(b) b.classList.toggle("off", !!off); };
+  upd("undoN",undosLeft,"undoBtn", undosLeft<=0 || history.length===0);
+  upd("hintN",hintsLeft,"hintBtn", hintsLeft<=0);
+  upd("mixN", mixesLeft,"shufBtn", mixesLeft<=0);
+}
 
 // ---------- START SCREEN (BS) ----------
 let startScreen=null;
@@ -427,8 +453,9 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   document.getElementById("custDone").onclick=()=>{ document.getElementById("cust").classList.add("hide");
     if(startScreen&&startScreen.update) startScreen.update(buildStartCfg()); else mountStart(); };
   document.getElementById("soundBtn").onclick=()=>{ if(BA){BA.toggleMute();} };
-  document.getElementById("hintBtn").onclick=doHint;
-  document.getElementById("shufBtn").onclick=()=>{ autoShuffle(); };
+  document.getElementById("undoBtn").onclick=()=>{ if(state!=="play"||undosLeft<=0||!history.length) return; if(doUndo()){ undosLeft--; updateChrome(); } };
+  document.getElementById("hintBtn").onclick=()=>{ if(state!=="play"||hintsLeft<=0) return; if(doHint()){ hintsLeft--; updateChrome(); } };
+  document.getElementById("shufBtn").onclick=()=>{ if(state!=="play"||mixesLeft<=0) return; mixesLeft--; autoShuffle(); updateChrome(); };
   // bespoke created sounds (BA synth is the silent fallback only)
   if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
     select:"mahjong_pick", match:"mahjong_match", nomatch:"mahjong_nope",
