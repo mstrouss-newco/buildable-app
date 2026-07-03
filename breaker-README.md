@@ -44,15 +44,22 @@ buddy to score. **First to 5 wins.** On a touchscreen, each player slides their 
 screen; on a computer, the bottom player uses the **arrow keys** and the top player uses **A / D**.
 Same device, pass-and-play — no accounts or network needed.
 
-## Make It Mine (the customizing)
+## Make a level (the maker)
 
-The **Make It Mine** button opens three tabs (choices saved per kid):
+The **Make a level** button (start screen) opens the maker — kids build their own level, play it,
+and share it. Replaces the old "Make It Mine" settings screen. Four steps, saved per kid:
 
-- **Look** — backdrop (Meadow, Space, Candy, Ocean, Castle, Desert), ball (Glow, Star, Comet,
-  Berry), and paddle color.
-- **Power-ups** — turn each on/off: **Big Paddle**, **Multi Ball**, **Slow-Mo**, **Catch**,
-  **Extra Life**, **Laser** (paddle zaps bricks), **Fireball** (ball smashes straight through).
-- **How Hard** — Easy (5 lives, wide paddle, slow), Normal (3 lives), Hard (2 lives, narrow, fast).
+1. **Look** — backdrop (Meadow, Space, Candy, Ocean, Castle, Desert), ball, and paddle color.
+2. **Build** — tap a grid to place bricks. **Pick my bricks**: each type is a look *and* a
+   behavior — **Ice** (1 hit), **Wood** (2 hits), **Metal** (3 hits), **Candy** (bonus points),
+   **Star** (drops a power-up), **Bomb** (clears bricks around it). Plus an eraser.
+3. **How hard** — one **1-5 flame** dial. More flames = faster ball, smaller paddle, fewer lives.
+4. **Share** — a level must be **beaten once** (play-test gate) before sharing, so every shared
+   board is winnable. Shared levels are saved to **My levels** (local for now) with a flame badge.
+
+Custom levels run through the same engine (startCustomLevel -> buildCustomBricks) and have a
+headless harness hook: BUILDABLE_GAME.simCustom(board, diffN) / .makeTestBoard(cols,rows,type).
+Follow-up: real friend-to-friend sharing needs a backend table + a start-screen "Friends' levels" shelf.
 
 ## The eight levels
 
