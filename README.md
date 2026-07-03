@@ -123,6 +123,21 @@ Breaker (public/breaker-engine.html) no longer plays the generated /api/breaker-
 Bug: in the brick-breaker (public/breaker-engine.html), a ball caught by the sticky "Catch" power-up could get permanently stuck to the paddle, freezing the game with no way to relaunch. Reported after a multiball where the other balls fell off. Cause: the release input gated flingStuck() on `G.sticky && G.stuck`. When the Catch timer expired while a ball was still pinned, `G.stuck` stayed set but `G.sticky` went false, so Space/click/tap fell through to `launch()`, which no-ops because `G.onPaddle` is false, leaving the ball stranded. Fix: gate the release on `G.stuck` alone in both the pointerdown and keydown handlers, so a pinned ball is always releasable regardless of the power-up timer. Commit 8969f36.
 
 ## Castle Guard — kid-friendly tower defense, Tiny Swords art (June 28 2026)
+**Update (July 2 2026) — harder + more enemy variety (Mike: "too easy, graphics off"):**
+- **Real pressure, still no-lose.** Waves are now denser + faster with mixed enemy groups; the archer is a
+  bit tighter (range 178→150) so full-map coverage takes thought. The replay-a-wave safety net stays, so
+  no dead-ends. Measured difficulty curve (kid bot, N archers, no retry): **3 towers loses every level**
+  (was trivially winnable), **4 towers** clears L1-L3 (5/4/1 hearts left) but not the boss, **5 towers**
+  clears L1-L3 clean; a full-coverage bot still wins **every** level (no-lose floor holds).
+- **3 new enemy kinds** from the one goblin sheet via **sheet tinting + scaling**: fast green **Scout**,
+  big red tanky **Brute** (14 hits), and a purple **Goblin King BOSS** (44 hits, glow aura) on a new
+  **4th level "Goblin King"** finale. Bonk pips now cap at 6 so tanky foes don't show a scary long bar.
+- **Graphics fixes:** level-select cards now show a **mini-map preview** (path + castle) instead of flat
+  green; the guard-picker price now shows a clear **gold coin** (was a pale-blue blob); tower **range rings
+  no longer clutter** the field — they flash briefly on placement then fade.
+- **QA upgraded** (`qa-castleguard.mjs`): asserts BOTH the no-lose floor (full bot wins all) AND real
+  pressure (a 3-tower kid canNOT ace the boss finale), plus enemy-variety/boss checks. All green.
+
 **Update (June 28 2026):** added a second defender, the **Knight** — a short-range MELEE blocker (dmg 2 / range 98 / cost 25, `melee:true`, no projectile) that gently bonks goblins passing close, great at tight corners alongside the wide-reach Archer. New bottom **defender picker** (tap Archer/Knight chip → tap a slot). Knight art = Tiny Swords Blue Warrior; new `cg_bonk` sound; QA bot still beats every level (+ a knight smoke). Live via `?v=20260628b`.
 
 **New Track B engine `public/castle-guard.html`** (branch `claude/games-castle-guard`, **not** pushed to

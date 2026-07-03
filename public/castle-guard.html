@@ -95,7 +95,7 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   // melee blocker that bonks goblins passing close (great at tight path corners).
   // Adding another is just another entry here — engine is data-driven.
   defenders: [
-    { id: "archer", name: "Archer", cost: 20, range: 178, fireMs: 720, dmg: 1,
+    { id: "archer", name: "Archer", cost: 20, range: 150, fireMs: 720, dmg: 1,
       h: 104, idle: "archer_idle", shoot: "archer_shoot", arrow: "arrow",
       tint: "#3b6fd4" },
     { id: "knight", name: "Knight", cost: 25, range: 98, fireMs: 600, dmg: 2, melee: true,
@@ -104,27 +104,42 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   ],
   // baddie kinds (silly goblins). hits = soft bonks before it poofs.
   baddies: {
-    pawn: { name: "Goblin", sprite: "baddie_run", h: 84, speed: 42, hits: 3, reward: 5, r: 26 },
+    pawn:  { name: "Goblin", sprite: "baddie_run", h: 88,  speed: 46, hits: 4,  reward: 5,  r: 26 },
+    scout: { name: "Scout",  sprite: "baddie_run", h: 66,  speed: 86, hits: 2,  reward: 4,  r: 20, tint: "#8be24a", tintA: 0.5 },
+    brute: { name: "Brute",  sprite: "baddie_run", h: 124, speed: 30, hits: 14, reward: 16, r: 38, tint: "#c9432f", tintA: 0.5 },
+    boss:  { name: "Goblin King", sprite: "baddie_run", h: 156, speed: 26, hits: 44, reward: 60, r: 48, tint: "#8a3fd0", tintA: 0.45, boss: true },
   },
   econ: { startCoins: 80, perPoof: 5, waveBonus: 20 },
   build: { slotEvery: 158, slotOffset: 66 },   // build-slot auto-placement along the path
   levels: [
-    { n: 1, name: "First Steps", hearts: 5, startCoins: 90,
+    { n: 1, name: "First Steps", hearts: 5, startCoins: 85,
       path: [[0.00,0.32],[0.34,0.32],[0.34,0.66],[0.70,0.66],[0.70,0.38],[1.00,0.38]],
-      waves: [ { baddie: "pawn", count: 10, spacingMs: 2600, hits: 2, speed: 26 },
-               { baddie: "pawn", count: 11, spacingMs: 2500, hits: 2, speed: 26 },
-               { baddie: "pawn", count: 12, spacingMs: 2400, hits: 3, speed: 28 } ] },
+      waves: [
+        { baddie: "pawn", count: 14, spacingMs: 900, speed: 48 },
+        { groups: [ { baddie: "pawn", count: 12, spacingMs: 750, speed: 52 }, { baddie: "scout", count: 8, spacingMs: 450 } ] },
+        { groups: [ { baddie: "pawn", count: 14, spacingMs: 700, speed: 54 }, { baddie: "brute", count: 2, spacingMs: 700 } ] },
+      ] },
     { n: 2, name: "Two by Two", hearts: 5, startCoins: 95,
       path: [[0.00,0.52],[0.22,0.52],[0.22,0.22],[0.50,0.22],[0.50,0.74],[0.80,0.74],[0.80,0.42],[1.00,0.42]],
-      waves: [ { baddie: "pawn", count: 11, spacingMs: 2500, hits: 2, speed: 26 },
-               { baddie: "pawn", count: 12, spacingMs: 2400, hits: 3, speed: 28 },
-               { baddie: "pawn", count: 13, spacingMs: 2300, hits: 3, speed: 30 } ] },
+      waves: [
+        { groups: [ { baddie: "pawn", count: 14, spacingMs: 700, speed: 52 }, { baddie: "scout", count: 10, spacingMs: 420 } ] },
+        { groups: [ { baddie: "pawn", count: 16, spacingMs: 650, speed: 54 }, { baddie: "brute", count: 3, spacingMs: 850 } ] },
+        { groups: [ { baddie: "scout", count: 14, spacingMs: 340 }, { baddie: "pawn", count: 14, spacingMs: 600, speed: 56 }, { baddie: "brute", count: 3, spacingMs: 800 } ] },
+      ] },
     { n: 3, name: "Big Parade", hearts: 5, startCoins: 110,
       path: [[0.00,0.24],[0.26,0.24],[0.26,0.56],[0.10,0.56],[0.10,0.82],[0.56,0.82],[0.56,0.40],[0.80,0.40],[0.80,0.70],[1.00,0.70]],
-      waves: [ { baddie: "pawn", count: 11, spacingMs: 2000, hits: 2, speed: 26 },
-               { baddie: "pawn", count: 13, spacingMs: 1850, hits: 3, speed: 28 },
-               { baddie: "pawn", count: 13, spacingMs: 1750, hits: 3, speed: 30 },
-               { baddie: "pawn", count: 14, spacingMs: 1650, hits: 3, speed: 32 } ] },
+      waves: [
+        { groups: [ { baddie: "pawn", count: 16, spacingMs: 650, speed: 54 }, { baddie: "scout", count: 12, spacingMs: 360 } ] },
+        { groups: [ { baddie: "pawn", count: 16, spacingMs: 600, speed: 56 }, { baddie: "brute", count: 4, spacingMs: 700 } ] },
+        { groups: [ { baddie: "scout", count: 18, spacingMs: 300 }, { baddie: "brute", count: 4, spacingMs: 650 }, { baddie: "pawn", count: 14, spacingMs: 520, speed: 58 } ] },
+      ] },
+    { n: 4, name: "Goblin King", hearts: 5, startCoins: 125,
+      path: [[0.00,0.40],[0.20,0.40],[0.20,0.70],[0.45,0.70],[0.45,0.25],[0.72,0.25],[0.72,0.60],[1.00,0.60]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 14, spacingMs: 340 }, { baddie: "pawn", count: 16, spacingMs: 620, speed: 56 } ] },
+        { groups: [ { baddie: "pawn", count: 18, spacingMs: 520, speed: 58 }, { baddie: "brute", count: 5, spacingMs: 650 } ] },
+        { groups: [ { baddie: "scout", count: 20, spacingMs: 280 }, { baddie: "brute", count: 5, spacingMs: 600 }, { baddie: "pawn", count: 14, spacingMs: 480, speed: 60 }, { baddie: "boss", count: 1, spacingMs: 1500 } ] },
+      ] },
   ],
 };
 
@@ -141,6 +156,30 @@ function loadSprites() {
   const S = GAME_CONFIG.sprites, base = GAME_CONFIG.spriteBase;
   for (const k in S) IMG[k] = mkImg(base + S[k].file);
   imagesReady = true;
+  // once the castle art arrives, rebuild level thumbnails so cards aren't flat
+  try { if (IMG.castle && IMG.castle.addEventListener) IMG.castle.addEventListener("load", () => { for (const k in THUMB) delete THUMB[k]; if (state === "menu") showMenu(); }); } catch (e) {}
+}
+// tinted-sheet cache: recolor a whole sprite sheet once (source-atop keeps shading),
+// so one goblin art can read as several enemy kinds (scout / brute / boss).
+const TINT = {};
+function tintedSheet(name, tint, a) {
+  const key = name + "|" + tint + "|" + (a == null ? 0.5 : a);
+  if (key in TINT) return TINT[key];
+  const im = IMG[name];
+  if (!im || !im.complete || !(im.naturalWidth || im.width)) return null;  // not ready yet — retry later
+  try {
+    const cvs = document.createElement("canvas");
+    const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+    cvs.width = iw; cvs.height = ih;
+    const c = cvs.getContext("2d");
+    c.drawImage(im, 0, 0);
+    c.globalCompositeOperation = "source-atop";
+    c.globalAlpha = (a == null ? 0.5 : a);
+    c.fillStyle = tint; c.fillRect(0, 0, iw, ih);
+    c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+    if (!cvs.width) return null;                 // headless / unsupported — skip tint
+    TINT[key] = cvs; return cvs;
+  } catch (e) { return null; }
 }
 // draw one animation frame of a sheet sprite, centered at cx,cy, scaled to height h.
 function drawSprite(ctx, name, cx, cy, h, t, opt) {
@@ -148,6 +187,8 @@ function drawSprite(ctx, name, cx, cy, h, t, opt) {
   const meta = GAME_CONFIG.sprites[name], im = IMG[name];
   const ok = im && im.complete && (im.naturalWidth || im.width);
   if (!ok || !meta) return false;
+  let src = im;
+  if (opt.tint) { const ts = tintedSheet(name, opt.tint, opt.tintA); if (ts) src = ts; }
   const fw = meta.fw, fh = meta.fh, n = meta.n || 1;
   let f = 0;
   if (n > 1) f = (meta.fps ? Math.floor((t || 0) * meta.fps) : 0) % n;
@@ -158,7 +199,7 @@ function drawSprite(ctx, name, cx, cy, h, t, opt) {
   ctx.translate(cx, cy);
   if (opt.scale && opt.scale !== 1) ctx.scale(opt.scale, opt.scale);
   if (opt.flip) ctx.scale(-1, 1);
-  try { ctx.drawImage(im, sx, 0, fw, fh, -w / 2, -h / 2, w, h); } catch (e) { ctx.restore(); return false; }
+  try { ctx.drawImage(src, sx, 0, fw, fh, -w / 2, -h / 2, w, h); } catch (e) { ctx.restore(); return false; }
   ctx.restore();
   return true;
 }
@@ -284,8 +325,15 @@ function startLevel(idx) {
 function beginWave(wi) {
   const wv = S.W.L.waves[wi];
   S.waveIdx = wi;
-  S.spawnQueue = [];
-  for (let i = 0; i < wv.count; i++) S.spawnQueue.push(wv);
+  const q = [];
+  // a wave is either a single {baddie,count,...} or a set of mixed {groups:[...]}
+  const groups = wv.groups || [{ baddie: wv.baddie, count: wv.count, spacingMs: wv.spacingMs, speed: wv.speed, hits: wv.hits }];
+  for (const grp of groups) {
+    for (let i = 0; i < (grp.count || 0); i++) {
+      q.push({ baddie: grp.baddie, gap: grp.spacingMs || wv.spacingMs || 1500, speed: grp.speed, hits: grp.hits });
+    }
+  }
+  S.spawnQueue = q;
   S.spawnTimer = 1.0;          // small grace so the kid can place a tower first
 }
 
@@ -295,7 +343,7 @@ function placeDefender(slotIdx, defId) {
   const def = GAME_CONFIG.defenders.find(d => d.id === (defId || "archer")) || GAME_CONFIG.defenders[0];
   if (S.coins < def.cost) { toast("Need more coins!"); sfx("heart", { vol: 0.3 }); return false; }
   S.coins -= def.cost; slot.occupied = true;
-  S.defenders.push({ x: slot.x, y: slot.y, def, cool: 0, anim: 0, shootT: 0, face: 1 });
+  S.defenders.push({ x: slot.x, y: slot.y, def, cool: 0, anim: 0, shootT: 0, face: 1, ring: 1.6 });
   sfx("place");
   if (BM) BM.burst(fx.parts, slot.x, slot.y, "#ffe08a", 10);
   return true;
@@ -311,17 +359,18 @@ function step(dt) {
   if (S.spawnQueue.length) {
     S.spawnTimer -= dt;
     if (S.spawnTimer <= 0) {
-      const wv = S.spawnQueue.shift();
-      const kind = GAME_CONFIG.baddies[wv.baddie];
-      S.baddies.push({ dist: 0, hp: wv.hits || kind.hits, max: wv.hits || kind.hits,
-        speed: wv.speed || kind.speed, kind, r: kind.r || 26, poof: 0, hit: 0, gone: false, bob: Math.random() * 6 });
-      S.spawnTimer = (wv.spacingMs || 1500) / 1000;
+      const it = S.spawnQueue.shift();
+      const kind = GAME_CONFIG.baddies[it.baddie] || GAME_CONFIG.baddies.pawn;
+      const hits = it.hits || kind.hits, speed = it.speed || kind.speed;
+      S.baddies.push({ dist: 0, hp: hits, max: hits,
+        speed, kind, r: kind.r || 26, poof: 0, hit: 0, gone: false, bob: Math.random() * 6 });
+      S.spawnTimer = (S.spawnQueue[0] ? S.spawnQueue[0].gap : 0) / 1000;
     }
   }
 
   // defenders fire
   for (const g of S.defenders) {
-    g.anim += dt; if (g.shootT > 0) g.shootT -= dt;
+    g.anim += dt; if (g.shootT > 0) g.shootT -= dt; if (g.ring > 0) g.ring -= dt;
     g.cool -= dt;
     if (g.cool <= 0) {
       // nearest live baddie within range
@@ -530,8 +579,15 @@ function drawSlots() {
   }
 }
 function drawDefender(g) {
-  // range ring hint (subtle)
-  ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.beginPath(); ctx.arc(g.x, g.y - 24, g.def.range, 0, 7); ctx.fill();
+  // range ring — shown briefly right after placing, then fades (keeps the field clean)
+  if (g.ring > 0) {
+    const ra = Math.min(1, g.ring / 1.6);
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255," + (0.06 * ra) + ")"; ctx.beginPath(); ctx.arc(g.x, g.y - 24, g.def.range, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(255,231,138," + (0.55 * ra) + ")"; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+    ctx.beginPath(); ctx.arc(g.x, g.y - 24, g.def.range, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
   const sprite = (g.shootT > 0 ? g.def.shoot : g.def.idle);
   if (!drawSprite(ctx, sprite, g.x, g.y - g.def.h * 0.32, g.def.h, g.anim, { flip: g.face < 0 })) {
     // fallback drawn archer
@@ -543,17 +599,23 @@ function drawBaddie(b, p) {
   const bob = Math.sin(S.t * 8 + b.bob) * 2;
   const sc = b.poof > 0 ? Math.max(0.1, b.poof / 0.45) : 1;
   const flip = p.dx < 0;
-  if (!drawSprite(ctx, b.kind.sprite, p.x, p.y - b.kind.h * 0.30 + bob, b.kind.h, S.t, { flip, scale: sc, alpha: b.poof > 0 ? sc : 1 })) {
+  if (b.kind.boss && b.poof <= 0) {
+    const gr = ctx.createRadialGradient(p.x, p.y - 30, 6, p.x, p.y - 30, b.r * 1.9);
+    gr.addColorStop(0, "rgba(185,120,255,0.38)"); gr.addColorStop(1, "rgba(185,120,255,0)");
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(p.x, p.y - 30, b.r * 1.9, 0, 7); ctx.fill();
+  }
+  if (!drawSprite(ctx, b.kind.sprite, p.x, p.y - b.kind.h * 0.30 + bob, b.kind.h, S.t, { flip, scale: sc, alpha: b.poof > 0 ? sc : 1, tint: b.kind.tint, tintA: b.kind.tintA })) {
     if (BR && BR.enemy) BR.enemy(ctx, p.x, p.y - 20 + bob, (b.r || 24) * sc, "#cc5b4a", S.t * 3, false);
     else { ctx.fillStyle = "#cc5b4a"; ctx.beginPath(); ctx.arc(p.x, p.y - 20, (b.r || 22) * sc, 0, 7); ctx.fill(); }
   }
   if (b.hit > 0) { ctx.fillStyle = "rgba(255,255,255," + (b.hit / 0.18 * 0.5) + ")"; ctx.beginPath(); ctx.arc(p.x, p.y - 24, b.r || 24, 0, 7); ctx.fill(); }
   // gentle bonk pips (NOT a draining health bar): little dots that fill in as it's bonked
   if (b.poof <= 0 && b.max > 1) {
-    const done = b.max - b.hp;
-    for (let i = 0; i < b.max; i++) {
+    const nP = Math.min(b.max, 6);
+    const done = Math.round((b.max - b.hp) / b.max * nP);
+    for (let i = 0; i < nP; i++) {
       ctx.fillStyle = i < done ? "#ffd23f" : "rgba(255,255,255,0.35)";
-      ctx.beginPath(); ctx.arc(p.x - (b.max - 1) * 4 + i * 8, p.y - b.kind.h * 0.62, 2.6, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x - (nP - 1) * 4 + i * 8, p.y - b.kind.h * 0.62, 2.6, 0, 7); ctx.fill();
     }
   }
 }
@@ -616,7 +678,7 @@ function drawHUD() {
     ctx.fillStyle = sel ? "#23200a" : "#fff"; ctx.textBaseline = "middle";
     ctx.font = "bold 16px Fredoka,sans-serif"; ctx.textAlign = "left";
     ctx.fillText(def.name, dx + 56, dy + ch / 2);
-    if (BR && BR.coin) BR.coin(ctx, dx + cw - 42, dy + ch / 2, S.t, 1, "");
+    if (BR && BR.coin) BR.coin(ctx, dx + cw - 42, dy + ch / 2, S.t, 2, "");
     ctx.fillText(String(def.cost), dx + cw - 32, dy + ch / 2);
     ctx.globalAlpha = 1;
     defChips.push({ x: dx, y: dy, w: cw, h: ch, id: def.id });
@@ -683,11 +745,38 @@ if (cv) {
 /* ===================================================================== */
 /*  START SCREEN (BS) + NAV                                              */
 /* ===================================================================== */
+// mini map preview for each level-select card (grass + path + castle) as a data URL
+const THUMB = {};
+function makeThumb(idx) {
+  if (idx in THUMB) return THUMB[idx];
+  let url = "";
+  try {
+    const L = GAME_CONFIG.levels[idx], W = 320, H = 150, pad = 16;
+    const cv2 = document.createElement("canvas"); cv2.width = W; cv2.height = H;
+    const c = cv2.getContext("2d"); const w = GAME_CONFIG.world;
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, w.grassTop); g.addColorStop(1, w.grassBot);
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    const pts = L.path.map(p => ({ x: pad + p[0] * (W - pad * 2), y: pad + p[1] * (H - pad * 2) }));
+    c.lineCap = "round"; c.lineJoin = "round";
+    c.strokeStyle = w.pathEdge; c.lineWidth = 16; c.beginPath(); c.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y); c.stroke();
+    c.strokeStyle = w.path; c.lineWidth = 11; c.beginPath(); c.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y); c.stroke();
+    const e = pts[pts.length - 1], cim = IMG.castle, cm = GAME_CONFIG.sprites.castle;
+    if (cim && cim.complete && (cim.naturalWidth || cim.width)) {
+      const chh = 48, cww = chh * (cm.fw / cm.fh);
+      c.drawImage(cim, 0, 0, cm.fw, cm.fh, e.x - cww / 2, e.y - chh * 0.66, cww, chh);
+    } else { c.fillStyle = "#9fb6c9"; c.fillRect(e.x - 16, e.y - 18, 32, 26); c.fillStyle = "#6f879b"; c.fillRect(e.x - 18, e.y - 26, 8, 12); c.fillRect(e.x + 10, e.y - 26, 8, 12); }
+    const s0 = pts[0]; c.fillStyle = "rgba(40,30,20,0.3)"; c.beginPath(); c.ellipse(s0.x, s0.y, 10, 6, 0, 0, 7); c.fill();
+    url = cv2.toDataURL("image/png");
+    if (!url || url.length < 40) return "";      // headless / unsupported — fall back to color
+    THUMB[idx] = url;
+  } catch (e) { return ""; }
+  return url;
+}
 function levelCards() {
   return GAME_CONFIG.levels.map((l, i) => {
     const unlocked = PREFS.unlocked || 0;
     const st = i < unlocked ? "done" : (i === unlocked ? "next" : "locked");
-    return { n: l.n, name: l.name, color: "#2f6b34", stars: PREFS.stars[i] || 0, maxStars: 3, state: st };
+    return { n: l.n, name: l.name, img: makeThumb(i), color: "#2f6b34", stars: PREFS.stars[i] || 0, maxStars: 3, state: st };
   });
 }
 function showMenu() {
@@ -770,6 +859,9 @@ function _simBot(idx, maxFrames, defId) {
 }
 const API = {
   _cfg: () => GAME_CONFIG,
+  _S: () => S,
+  _place: (slotIdx, defId) => placeDefender(slotIdx, defId),
+  _rankSlots: () => S.W.slots.map((s, i) => ({ i, d: distToPath(S.W.segs, S.W.total, s.x, s.y) })).sort((a, b) => a.d - b.d).map(r => r.i),
   startLevel: (i) => startLevel(i),
   state: () => state,
   sim: (idx, maxFrames) => _simBot(idx, maxFrames),

@@ -1,5 +1,9 @@
-// Headless QA for public/castle-guard.html — a sensible-placement bot must beat EVERY level
-// (no harsh loss; goblins poof and go home). Model: qa-breaker.mjs.
+// Headless QA for public/castle-guard.html
+// Two guarantees, both must hold:
+//   1) NO-LOSE floor: a full-coverage bot must WIN every level (design = always winnable).
+//   2) REAL PRESSURE: a "kid" bot limited to few towers must NOT trivially ace it
+//      (proves the game is no longer too easy) — the boss finale must be lost with 3 towers.
+// Model: qa-breaker.mjs.
 import fs from 'fs'; import vm from 'vm';
 const dir = process.argv[2] || '.';
 const read = f => fs.readFileSync(dir + '/public/' + f, 'utf8');
@@ -25,32 +29,64 @@ if (!G) { console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
 if (sandbox.CASTLEGUARD_GAME !== G) { console.error('FAIL: CASTLEGUARD_GAME alias missing'); process.exit(2); }
 const cfg = G._cfg(); const n = cfg.levels.length; let ok = true;
 
-console.log('--- EVERY level beaten by a sensible-placement bot (5 runs each) ---');
+// ---- a "kid" run: only N archers, placed on the best slots, NO retry safety ----
+function kidRun(idx, N) {
+  G.startLevel(idx);
+  const ranked = G._rankSlots(); let placed = 0;
+  let f = 0;
+  while (f < 120000) {
+    const st = G.state();
+    if (st === 'play') {
+      const S = G._S(); const cost = cfg.defenders[0].cost;
+      while (placed < N && S.coins >= cost) { if (!G._place(ranked[placed], 'archer')) break; placed++; }
+      G._step(1);
+    } else if (st === 'wavebreak') { G._step(1); }
+    else break; // win or retry(=kid ran out of hearts)
+  }
+  const S = G._S();
+  return { result: G.state(), hearts: S ? S.hearts : 0 };
+}
+
+console.log('--- enemy variety: scout / brute + a boss must exist ---');
+const kinds = Object.keys(cfg.baddies);
+const hasBoss = Object.values(cfg.baddies).some(b => b.boss);
+console.log(`kinds = [${kinds.join(', ')}]  boss=${hasBoss}`);
+if (kinds.length < 4 || !hasBoss) { console.log('FAIL: need >=4 enemy kinds incl. a boss'); ok = false; }
+
+console.log('--- NO-LOSE floor: a full-coverage bot wins EVERY level (5 runs each) ---');
 for (let i = 0; i < n; i++) {
   let winAll = true, worst = 0, minHearts = 99;
   for (let t = 0; t < 5; t++) {
-    const r = G.sim(i, 90000);
+    const r = G.sim(i, 120000);
     if (r.result !== 'win') winAll = false;
     worst = Math.max(worst, r.frames); minHearts = Math.min(minHearts, r.hearts);
   }
   if (!winAll) ok = false;
-  console.log(`${winAll ? 'PASS' : 'FAIL'}  L${i + 1} ${cfg.levels[i].name.padEnd(13)} winAll5=${winAll} worst=${worst}f (~${(worst / 60).toFixed(0)}s) minHeartsLeft=${minHearts}`);
+  console.log(`${winAll ? 'PASS' : 'FAIL'}  L${i + 1} ${cfg.levels[i].name.padEnd(12)} winAll5=${winAll} worst=${worst}f (~${(worst / 60).toFixed(0)}s) fullHeartsLeft=${minHearts}`);
 }
 
-console.log('--- a careful first level should keep most hearts (3 stars achievable) ---');
-const s = G.sim(0, 90000);
-console.log(`L1 stars=${s.stars} heartsLeft=${s.hearts} defenders=${s.defenders} retries=${s.retries}`);
-if (s.stars < 1) ok = false;
+console.log('--- REAL PRESSURE: a 3-tower "kid" must LOSE the boss finale (game is not trivial) ---');
+const bossIdx = n - 1;
+let kidLost = false;
+for (let t = 0; t < 4; t++) { if (kidRun(bossIdx, 3).result !== 'win') kidLost = true; }
+console.log(`${kidLost ? 'PASS' : 'FAIL'}  3-tower kid cannot ace L${bossIdx + 1} ${cfg.levels[bossIdx].name}`);
+if (!kidLost) { console.log('  (too easy — a 3-tower setup should not beat the boss level)'); ok = false; }
+
+console.log('--- difficulty curve (kid endHearts, no retry) — informational ---');
+for (const N of [3, 4, 5]) {
+  const row = cfg.levels.map((_, i) => { const r = kidRun(i, N); return r.result === 'win' ? String(r.hearts) : 'X'; });
+  console.log(`  ${N} towers: [ ${row.join('  ')} ]   (X = ran out of hearts)`);
+}
 
 console.log('--- render smoke (menu + mid-level + win overlay) ---');
 console.log('menu render:', G._draw());
 G._begin(1); G._step(120); console.log('play render:', G._draw());
-const w = G.sim(0, 90000); const dw = G._draw(); console.log('post-win render:', dw);
+const w = G.sim(0, 120000); const dw = G._draw(); console.log('post-win render:', dw);
 if (G._draw() !== 'ok') ok = false;
 
 console.log('--- KNIGHT smoke: melee defender runs headlessly without error (level 1) ---');
 try {
-  const k = G.simWith(0, 'knight', 90000);
+  const k = G.simWith(0, 'knight', 120000);
   console.log(`knight run: result=${k.result} frames=${k.frames} defenders=${k.defenders} hearts=${k.hearts}`);
   if (!k || typeof k.frames !== 'number') ok = false;
 } catch (e) { console.log('FAIL knight smoke:', e.message); ok = false; }
