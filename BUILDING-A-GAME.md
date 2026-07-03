@@ -283,6 +283,12 @@ this is what you touch to make a NEW game playable together.
      `msg` prefix (chess uses `"chess"`, tic-tac-toe/board-shell `"bg"`, checkers `"checkers"`).
    - **Real-time**: the frozen `mp:` contract — post `mp:ready`, broadcast **positions not
      commands** via `mp:send`, apply `mp:peer`, honor `role`, end with `mp:result`.
+     **The guest must DEAD-RECKON any continuously-moving shared object (ball/puck), not
+     just lerp toward its last position** — integrate it forward each frame using the
+     host's broadcast velocity (`vx,vy`) and reconcile to the host's value on each packet;
+     a plain lerp toward a stale `x,y` feels laggy/delayed. Copy the `role === "guest"`
+     block in `public/tennis.html` `update()` as your template. Also keep the local kid's
+     own paddle 100% local (never network-gated). Full explanation: `MULTIPLAYER.md` Rule 4.
 2. **Add a lobby screen** in `src/BuildableKids.jsx` that renders the shared lobby with your
    game spec:
    ```jsx

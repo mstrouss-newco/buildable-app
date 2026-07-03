@@ -94,9 +94,22 @@ tolerate an occasional dropped message — which the rules below do by design.
    diverge and it looks glitchy. Each kid always broadcasts **only their own paddle**.
 3. **Keep the ball kid-friendly slow.** A gentle/medium volley feels great at ~50ms; a
    frantic fast ball feels slippy. Tune ball speed down on purpose — it's a feature.
-4. **Smooth the other player.** Lightly interpolate (lerp) the remote paddle and the ball
-   toward each newly-received position instead of snapping, so small gaps between messages
-   look smooth.
+4. **Smooth the other player — and DEAD-RECKON the ball, don't just lerp it.** For the
+   remote **paddle**, a light lerp toward each new position is fine. For the **ball**, a
+   plain lerp is NOT enough and *will* feel laggy: between the host's updates the ball has
+   nothing to move toward, so it stalls, then jumps when the next packet lands. Instead the
+   guest must **keep the ball moving on its own** between packets using the velocity the
+   host sends. Every frame the guest: (a) advances a predicted target forward along the
+   host's `vx/vy` (and bounces that target off the side walls so it stays in court),
+   (b) renders the ball quickly toward that prediction, and (c) whenever a fresh `ball`
+   packet arrives, snaps the target back to the host's authoritative position + velocity to
+   correct drift. This is "dead reckoning / client-side prediction" — it's why the host
+   broadcasts `vx,vy`, not just `x,y`. Tennis had exactly this bug (guest lerped toward a
+   stale `x,y` and ignored `vx,vy`, so the ball felt delayed); the fix lives in
+   `public/tennis.html` `update()` under the `role === "guest"` branch — copy that block as
+   the template for any new real-time game. Also send state a bit faster than you think you
+   need (~30–36/s) and keep the game's own paddle 100% local (never wait for the network to
+   move the paddle the kid is touching).
 5. **Lean on Pattern A for everything that isn't the live volley.** Use a match **row**
    (a `tennis_matches` table, same family-RLS shape as chess) for the lobby (one kid
    starts → sibling joins), the agreed world/settings, and the final score. Broadcast is
@@ -192,7 +205,7 @@ meet in the middle without either side waiting on the other.
   0–1 fraction so different screen sizes agree).
 - **Ball:** host only, each frame → `mp:send {event:"ball", data:{x,y,vx,vy,score}}`
   (also 0–1 coords). Guest applies it via `mp:peer` and does NOT run ball physics.
-- **Smooth the opponent:** lerp the remote paddle/ball toward each new value; don't snap.
+- **Smooth the opponent:** lerp the remote **paddle** toward each new value; **dead-reckon the ball** — integrate it forward with the host's `vx,vy` between packets and reconcile to truth on each `ball` packet (a plain lerp toward stale `x,y` feels laggy). See Rule 4 + `public/tennis.html` guest branch.
 - **Kid-friendly speed:** tune the ball slow enough to feel good at ~50 ms latency.
 
 ### The allowed canned reactions (no free text, ever)
