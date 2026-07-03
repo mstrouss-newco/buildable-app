@@ -215,7 +215,8 @@ function drawAnims(){ const now=Date.now();
     ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*0.5; ctx.drawImage(im,p.x-s/2,p.y-s/2,s,s); ctx.restore(); }
   for(let i=anims.length-1;i>=0;i--){ const a=anims[i], pr=(now-a.born)/a.dur; if(pr>=1){ anims.splice(i,1); continue; }
     const fi=Math.min(EXPLODE.length-1, Math.floor(pr*EXPLODE.length)), im=EXPLODE[fi]; if(!imReady(im))continue;
-    ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=pr<0.7?1:(1-(pr-0.7)/0.3);
+    // solid draw (not additive) so the blast reads on light backdrops too (meadow/candy)
+    ctx.save(); ctx.globalAlpha=pr<0.7?1:(1-(pr-0.7)/0.3);
     ctx.translate(a.x,a.y); ctx.rotate(a.rot); ctx.drawImage(im,-a.size/2,-a.size/2,a.size,a.size); ctx.restore(); }
 }
 // upgrade every particle burst to soft Kenney sprites instead of flat dots
