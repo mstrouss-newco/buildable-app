@@ -315,7 +315,7 @@ const DURATIONS = {
   tennis_boom:0.6, tennis_cheer:1.4,
   breaker_smash:0.5, breaker_break:0.6, breaker_power:0.8, breaker_miss:0.6,
   tumble_move:0.25, tumble_rotate:0.3, tumble_lock:0.45, tumble_clear:0.8, tumble_combo:1.2, tumble_levelup:1.1, tumble_win:1.6, tumble_reset:0.8,
-  select:0.4, win:1.6, lose:1.0, coin:0.5, collect:0.5, hit:0.4, shoot:0.4, explode:0.7, hurt:0.5, boss:0.8, error:0.6, celebrate:1.0,
+  select:0.5, win:1.6, lose:1.0, coin:0.5, collect:0.5, hit:0.5, shoot:0.5, explode:0.7, hurt:0.5, boss:0.8, error:0.6, celebrate:1.0,
   board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
   maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,
