@@ -17,14 +17,25 @@ function headers() {
     Prefer: "return=representation",
   };
 }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Resilient REST: turn-based moves/polls run over flaky mobile networks and the
+// backend occasionally 503s. Retry on network errors + 5xx (with small backoff)
+// and refresh the token once on 401, so a move is never silently lost on a blip.
 async function rest(path, init) {
   await ensureFreshToken();
   const doFetch = () => fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...(init || {}), headers: { ...headers(), ...((init && init.headers) || {}) } });
-  let r = await doFetch();
-  if (r.status === 401) {           // token expired mid-session -> refresh + retry once
-    const t = await refreshSession();
-    if (t) r = await doFetch();
+  let r = null, lastErr = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try { r = await doFetch(); }
+    catch (e) { lastErr = e; r = null; await sleep(300 * (attempt + 1)); continue; } // network blip -> retry
+    if (r.status === 401) {           // token expired mid-session -> refresh + retry
+      const t = await refreshSession();
+      if (t) { try { r = await doFetch(); } catch (e) { lastErr = e; r = null; await sleep(300); continue; } }
+    }
+    if (r && r.status >= 500) { await sleep(300 * (attempt + 1)); continue; } // 502/503/504 -> retry
+    break;
   }
+  if (!r) throw lastErr || new Error("Request failed");
   const data = await r.json().catch(() => []);
   if (!r.ok) throw new Error((data && data.message) || "Request failed");
   return data;

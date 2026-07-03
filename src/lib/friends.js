@@ -8,6 +8,7 @@ import { getSession, ensureFreshToken, isSignedIn, refreshSession } from "./acco
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function api(method, body, query) {
   await ensureFreshToken();
   const url = "/api/friends" + (query ? `?${query}` : "");
@@ -20,13 +21,20 @@ async function api(method, body, query) {
       body: method === "GET" ? undefined : JSON.stringify(body || {}),
     });
   };
-  let r = await doFetch();
-  // The access token can expire mid-session (aggressively on iPad Safari).
-  // Refresh once and retry so the friends list never silently comes back empty.
-  if (r.status === 401) {
-    const t = await refreshSession();
-    if (t) r = await doFetch();
+  // Retry on network errors + 5xx, and refresh the token once on 401 (iPad Safari
+  // expires tokens aggressively) so invites/inbox/accept don't fail on a blip.
+  let r = null, lastErr = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try { r = await doFetch(); }
+    catch (e) { lastErr = e; r = null; await sleep(300 * (attempt + 1)); continue; }
+    if (r.status === 401) {
+      const t = await refreshSession();
+      if (t) { try { r = await doFetch(); } catch (e) { lastErr = e; r = null; await sleep(300); continue; } }
+    }
+    if (r && r.status >= 500) { await sleep(300 * (attempt + 1)); continue; }
+    break;
   }
+  if (!r) throw lastErr || new Error("Something went wrong.");
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error((j && j.error) || "Something went wrong.");
   return j;
