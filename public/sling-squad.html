@@ -310,7 +310,7 @@ function update(){
     if(dd>POP_MOVE || sp>POP_SPD || t.position.y>GY+24 || t.position.x<-30 || t.position.x>W+30) popTarget(t);
   } }
   if(state==="win") return;
-  if(state==="flying" && G.ammoBody){
+  if(G.ammoBody._squad); }
     G.flyFrames++;
     var s=Math.hypot(G.ammoBody.velocity.x,G.ammoBody.velocity.y);
     var off=G.ammoBody.position.y>GY+70 || G.ammoBody.position.x>W+70 || G.ammoBody.position.x<-70;
@@ -412,7 +412,7 @@ function draw(){
   for(var j=0;j<G.targets.length;j++){ if(G.targets[j]._alive) drawTarget(G.targets[j]); }
   drawSling();
   // ammo: held in sling (ready/aiming) or in flight
-  if(state==="flying" && G.ammoBody){ drawBand(G.ammoBody.position.x,G.ammoBody.position.y); drawSquadFace(G.ammoBody.position.x,G.ammoBody.position.y,18,G.ammoBody._squad); }
+  if(state==="flying" && G.ammoBody){ drawSquadFace(G.ammoBody.position.x,G.ammoBody.position.y,18,G.ammoBody._squad); }
   else if(G.ammo){ var px=G.drag?G.drag.x:AX, py=G.drag?G.drag.y:AY; drawBand(px,py); drawSquadFace(px,py,18,G.ammo.squad);
     if(state==="aiming" && G.drag){ // trajectory preview dots (kid aim help)
       var dx=AX-G.drag.x, dy=AY-G.drag.y; var a=aimFromDrag(dx,dy);
