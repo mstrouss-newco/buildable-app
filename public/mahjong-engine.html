@@ -68,6 +68,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script>
 //  Buildable Mahjong (Solitaire) — hand-authored Track B engine.
 //  A game = this FIXED engine + GAME_CONFIG (data). Solo tile-matching puzzle.
@@ -467,7 +468,7 @@ function buildStartCfg(){
     title:GAME_CONFIG.title, subtitle:"Match free tiles in pairs to clear the board",
     sound: BA?!BA.muted:true, showBack:false,
     levels: GAME_CONFIG.levels.map((lv,i)=>{ const bs=getBestScore(i,PREFS.setIdx);
-      return { n:i+1, name:lv.name, state:"ready", img: flameIcon(lv.flames),
+      return { n:i+1, name:lv.name, state:"ready", img:(window.BuildableLevelThumb?window.BuildableLevelThumb.make("tiles",{layers:lv.layers},"mj"+i):flameIcon(lv.flames)),
         foot: lv.foot+" · "+curSet().name+(bs?" · Best "+bs:"") }; }),
     customizeLabel:"Pick your tiles",
   };

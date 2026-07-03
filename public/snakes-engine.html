@@ -35,6 +35,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script src="buildable-turns.js"></script>
 <script>
 //  Buildable Snakes & Ladders — hand-authored Track B engine. 2-4 players, same-device.
@@ -286,7 +287,7 @@ function buildStartCfg(){
   return { title:GAME_CONFIG.title, subtitle:"Roll, climb ladders, dodge snakes — race to the top!",
     sound:BA?!BA.muted:true, showBack:false,
     modes:["p2","p3","p4"], mode:"p"+PREFS.players,
-    levels: GAME_CONFIG.boards.map((b,i)=>({ n:i+1, name:b.name, state:"ready", color:b.color, foot:"Pure luck" })),
+    levels: GAME_CONFIG.boards.map((b,i)=>({ n:i+1, name:b.name, state:"ready", color:b.color, img:(window.BuildableLevelThumb&&window.BuildableLevelThumb.make("snakes",{color:b.color,cellA:b.cellA,cellB:b.cellB},"sk"+i)), foot:"Pure luck" })),
   };
 }
 let startScreen=null;

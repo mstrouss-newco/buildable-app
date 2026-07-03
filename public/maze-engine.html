@@ -81,6 +81,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script src="buildable-gamenav.js"></script>
 <script>
 // ============================================================================
@@ -636,8 +637,9 @@ function renderBuddies(){ const grid=el("buddyGrid"); if(!grid)return; grid.inne
 let startScreen=null;
 function buildStartCfg(){
   const un=PREFS.unlocked||0;
+  const BLT=window.BuildableLevelThumb;
   const levels=GAME_CONFIG.levels.map((l,i)=>{ const stt=i<un?"done":(i===un?"next":"locked");
-    return { n:i+1, name:l.name, color:l.wall, maxStars:3, stars: stt==="done"?(PREFS.stars[i]||0):undefined, state:stt }; });
+    return { n:i+1, name:l.name, color:l.wall, img: BLT&&BLT.make("maze",{cols:l.cols,rows:l.rows,bg:l.bg,wall:l.wall,pellet:l.pellet,hero:l.hero},"mz"+i), maxStars:3, stars: stt==="done"?(PREFS.stars[i]||0):undefined, state:stt }; });
   let total=0; for(const k in PREFS.stars) total+=PREFS.stars[k]||0;
   return { title:"Maze Munchers", subtitle:"Gobble every treat — dodge the friendly chasers!", coins:total, sound:!(BA&&BA.muted), showBack:false, levels, customizeLabel:"Make it mine" };
 }

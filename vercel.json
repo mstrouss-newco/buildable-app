@@ -280,6 +280,10 @@
       "dest": "/buildable-startscreen.js"
     },
     {
+      "src": "/buildable-levelthumb.js",
+      "dest": "/buildable-levelthumb.js"
+    },
+    {
       "src": "/buildable-gamenav.js",
       "dest": "/buildable-gamenav.js"
     },

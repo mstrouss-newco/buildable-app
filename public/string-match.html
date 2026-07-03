@@ -59,6 +59,7 @@
 
 <script src="/buildable-audio.js"></script>
 <script src="/buildable-startscreen.js"></script>
+<script src="/buildable-levelthumb.js"></script>
 <script>
 (function(){
 "use strict";
@@ -218,7 +219,7 @@ function toXY(e){ var r=svg.getBoundingClientRect(); return [(e.clientX-r.left)*
 /* ---------- start screen (shared BS) ---------- */
 function buildCfg(){
   var levels=WORLDS.map(function(w,i){ var st=i<unlocked?"done":(i===unlocked?"next":"locked");
-    return { n:i+1, name:w.name, color:"#2b4a6b", img:(st!=="locked"?BGSRC[w.bg]:undefined), maxStars:3, stars:(st==="done"?(starsMap[i]||3):undefined), state:st }; });
+    return { n:i+1, name:w.name, color:"#2b4a6b", img:BGSRC[w.bg], maxStars:3, stars:(st==="done"?(starsMap[i]||3):undefined), state:st }; });
   return { title:"String Match", subtitle:"Draw a string to connect the matching buddies — never cross or touch another!", sound:!(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels:levels };
 }
 function showMenu(){ screen="select"; ovWin.classList.add("hide"); statusBox.classList.add("hide");

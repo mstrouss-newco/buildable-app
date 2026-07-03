@@ -147,6 +147,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script src="buildable-hud.js?v=2"></script>
 <script>
 // ============================================================================
@@ -768,7 +769,7 @@ function buildStartCfg(){
     ? [{ n:1, name:"Pong Match", color:"#2b4a6b", state:"next" }]
     : GAME_CONFIG.levels.map((l,i)=>{ const unlocked=PREFS.unlocked||0;
         const st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
-        return { n:i+1, name:l.name, color:brickColorFor(i), img:(st!=="locked"?levelThumbURL(l,i):undefined), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st };
+        return { n:i+1, name:l.name, color:brickColorFor(i), img:levelThumbURL(l,i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st };
       });
   const cfg = { title:"Buildable Breaker",
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",

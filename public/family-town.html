@@ -98,6 +98,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="/buildable-audio.js"></script>
 <script src="/buildable-mechanics.js"></script>
 <script src="/buildable-startscreen.js"></script>
+<script src="/buildable-levelthumb.js"></script>
 <script>
 "use strict";
 /* ============================================================================
@@ -661,7 +662,7 @@ function mountStart(){
     coins: 0, sound: !(BA&&BA.muted), showBack:false,
     hero: { name:"Family Town", img: artURL("hero"), progressText:"3-4 players \u00b7 buy spots, collect coins" },
     modes:["solo","two"], mode:setupMode,
-    levels: LENGTHS.map(function(L,i){ return { n:i+1, name:L.name+" game", color:["#2DD4A7","#7C5CFC","#FF7A9A"][i], state:"ready", foot:L.hint }; }),
+    levels: LENGTHS.map(function(L,i){ return { n:i+1, name:L.name+" game", color:["#2DD4A7","#7C5CFC","#FF7A9A"][i], img:(window.BuildableLevelThumb&&window.BuildableLevelThumb.make("town",{color:["#2DD4A7","#7C5CFC","#FF7A9A"][i],laps:L.laps},"ft"+i)), state:"ready", foot:L.hint }; }),
   }, {
     onPlay:function(n){ openSetup(n); },
     onMode:function(m){ setupMode=m; },

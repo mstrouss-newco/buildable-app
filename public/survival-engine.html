@@ -74,6 +74,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -539,7 +540,7 @@ function heroName(){ const h=GEAR.hero.find(x=>x.id===(CHAR&&CHAR.equipped.hero)
 function bsLevels(){ const unlocked=CHAR?(CHAR.unlocked||0):0;
   return GAME_CONFIG.levels.map((lv,i)=>{ const st = i<unlocked?"done" : i===unlocked?"next" : "locked";
     const o={ n:i+1, name:lv.name, state:st };
-    if(st!=="locked") o.img = ART+lv.bossChar+"&style="+(GAME_CONFIG.artStyle||"modern3d")+"&emo=base";
+    o.img = ART+lv.bossChar+"&style="+(GAME_CONFIG.artStyle||"modern3d")+"&emo=base";
     if(st==="done"){ o.stars=3; o.maxStars=3; }
     return o; }); }
 function bsConfig(){ const unlocked=CHAR?(CHAR.unlocked||0):0; return {

@@ -52,6 +52,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script src="buildable-turns.js"></script>
 <script>
 //  Buildable Bingo — hand-authored Track B engine. 2-4 players, same-device, pass-and-play.
@@ -315,6 +316,7 @@ function buildStartCfg(){
     sound:BA?!BA.muted:true, showBack:false,
     modes:["p2","p3","p4"], mode:"p"+PREFS.players,
     levels: GAME_CONFIG.modes.map((m,i)=>({ n:i+1, name:m.name, state:"ready", color:curTheme().color,
+      img:(window.BuildableLevelThumb&&window.BuildableLevelThumb.make("bingo",{color:curTheme().color,accent:i?"#5BD6FF":"#ff6b9d"},"bg"+i+"_"+PREFS.themeIdx)),
       foot: m.key==="words"?"Spell & say":(curTheme().name+" pictures") })),
     customizeLabel:"Make it mine" };
 }

@@ -52,6 +52,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script src="buildable-turns.js"></script>
 <script>
 //  Buildable Memory/Match — hand-authored Track B engine.
@@ -308,7 +309,7 @@ function buildStartCfg(){
     sound: BA?!BA.muted:true, showBack:false,
     modes:["solo","p2","p3","p4"], mode: PREFS.solo?"solo":("p"+PREFS.players),
     levels: GAME_CONFIG.sizes.map((s,i)=>({ n:i+1, name:s.name, state:"ready",
-      color:curTheme().color, foot:s.foot+" · "+curTheme().name })),
+      color:curTheme().color, img:(window.BuildableLevelThumb&&window.BuildableLevelThumb.make("cards",{cols:s.cols,rows:s.rows,color:curTheme().color,faces:curTheme().faces},"mem"+i+"_"+PREFS.themeIdx)), foot:s.foot+" · "+curTheme().name })),
     customizeLabel:"Make it mine",
   };
 }

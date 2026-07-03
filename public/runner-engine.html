@@ -58,6 +58,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="GLTFLoader.js?v=1"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script>
 // ============================================================================
 //  SUNNY TOWN DRIVE — 3D FIXED ENGINE (never regenerated).
@@ -625,8 +626,9 @@ function totalStars(){ let t=0; for(const k in PREFS.stars) t+=(PREFS.stars[k]||
 function maxStars(){ return GAME_CONFIG.levels.length*3; }
 function buildStartCfg(){
   const unlocked=PREFS.unlocked||0;
+  const BLT=window.BuildableLevelThumb;
   const levels = GAME_CONFIG.levels.map((l,i)=>{ const st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
-    return { n:i+1, name:l.name, color:levelColor(i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
+    return { n:i+1, name:l.name, color:levelColor(i), img: BLT&&BLT.make("lanes",{sky:l.sky,grass:l.grass,treatColors:GAME_CONFIG.treatColors,car:levelColor(i)},"rn"+i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
   return { title:"Sunny Town Drive", subtitle:"Stars: "+totalStars()+" of "+maxStars(),
     coins: totalStars(), sound: !(BA&&BA.muted), showBack:false, levels };
 }

@@ -58,6 +58,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script>
 (function(){
 "use strict";
@@ -437,9 +438,10 @@ function ensureMusic(){ if(!BA||!BA.setMusic)return; var url="/api/library-music
 // ---------- screens ----------
 var startScreen=null;
 function levelCards(){
+  var BLT=window.BuildableLevelThumb, cmap={}; for(var kk in COLORS) cmap[kk]=COLORS[kk].css;
   return GAME_CONFIG.levels.map(function(lv,i){
     var st = i===0? "next" : "locked";   // simple linear unlock
-    return { n:i+1, name:lv.name, color:"#2b4a6b", state:st };
+    return { n:i+1, name:lv.name, color:"#2b4a6b", img: BLT&&BLT.make("bubbles",{rows:lv.rows,colorMap:cmap},"bb"+i), state:st };
   });
 }
 function toMenu(){

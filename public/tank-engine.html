@@ -101,6 +101,7 @@
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script>
 (function(){
   "use strict";
@@ -428,9 +429,10 @@
   // ---------- start screen (shared BS) ----------
   let startScreen = null;
   function buildStartCfg(){
+    const BLT=window.BuildableLevelThumb;
     const levels = GAME_CONFIG.levels.map((l,i)=>{
       const st = i<=PREFS.unlocked ? (PREFS.cleared[i]?"done":"next") : "locked";
-      return { n:i+1, name:l.name, color:"#4f9a44", state: st, maxStars:1, stars: PREFS.cleared[i]?1:undefined };
+      return { n:i+1, name:l.name, color:"#4f9a44", img: BLT&&BLT.make("hill",{leftH:l.leftH,rightH:l.rightH,spread:l.spread},"tk"+i), state: st, maxStars:1, stars: PREFS.cleared[i]?1:undefined };
     });
     return { title: "Hilltop Tanks", subtitle: "Aim across the hills and knock out the computer tank!",
              sound: !BA.muted, showBack:false, modes:["solo"], mode:"solo", levels };
