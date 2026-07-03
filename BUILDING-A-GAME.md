@@ -173,6 +173,16 @@ Mine button), with the bespoke customize overlay opened via `onCustomize`.
    `BM.explode(...)`, `BM.burst(...)`, `BM.shake(...)` for feel — no copy-pasted particle
    loop. (ElevenLabs only for real music.)
 
+   > **SFX gotcha — ElevenLabs has a 0.5s minimum.** Every sound in `DURATIONS`
+   > (`api/sfx.js`) MUST be **≥ 0.5 seconds**. ElevenLabs rejects a shorter
+   > `duration_seconds`, so `/api/sfx` returns **503** and the client silently falls
+   > back to the near-silent synth — the sound is just *gone* in-game. This is what
+   > killed Breaker's ball-launch/paddle/wall-bounce sounds (`tennis_hit` 0.35s,
+   > `tennis_wall` 0.3s) on 2026-07-02. There is now a `Math.max(0.5, …)` floor on the
+   > generation call as a safety net, **but still author every new one-shot at ≥ 0.5s**
+   > (very short taps: use exactly `0.5`). To verify a sound live: `fetch("/api/sfx?s=<key>")`
+   > — `200 audio/mpeg` = good, `503` = generation failing (usually a too-short duration).
+
 5. **Bake in always-winnable.** Cap difficulty in the level *builder* so a 4–8-year-old
    can always finish: gaps ≤ jump range; hero speed ≥ enemy speed; bosses on a timer with
    a mercy auto-win; `kill-then-boss` for a guaranteed level-end. (`MECHANICS.md` §4.)
