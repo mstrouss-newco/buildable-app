@@ -3017,3 +3017,16 @@ shows each drawing with Publish + Delete), a new `api/delete-art.js` endpoint (k
 supported it), and changed `api/list-art` to use the saved PNG itself as the thumbnail (kid
 galleries cap at 40, so shipping the small images is fine). Net: a saved drawing now shows its
 real picture in My Stuff, can be published/shared with family, and can be deleted.
+
+## Session log — 2026-07-02 (Hilltop Tanks — new artillery engine)
+
+New Track B engine `public/tank-engine.html` ("Hilltop Tanks"): solo artillery vs a
+friendly computer tank — two tanks on grassy-green mountains lob shells across a valley.
+Angle + power buttons, a dotted aim-preview arc (the key always-winnable helper), a big
+FIRE button; shared libs (BR/BA/BM/BS), Kenney Tank Pack art in `public/tank/` (green +
+grey tanks, barrels, flying shell, explosion frames) with drawn fallback. 3 green-hill
+levels as data. Forgiving damage model + high enemy aim-error so a young kid always wins;
+`qa-tank.mjs` perfect-player bot clears all 3 levels 8/8 runs. Win/lose posted to the app
+(helper + telemetry). Wired: vercel routes (`/tank-engine.html`, `/tank/*`), Games-picker
+tile + `SCREEN_TANK` + `TankScreen`, `api/images.js` tank thumbnail prompt. `vite build`
+clean.
