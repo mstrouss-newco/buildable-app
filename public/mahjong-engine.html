@@ -477,6 +477,7 @@ window.MAHJONG_GAME = {
     return out; },
   _draw:()=>{ try{ return draw(); }catch(e){ return "ERR:"+(e&&e.message||e); } },
   _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS, _remaining:()=>remaining(),
+  _win:()=>{ if(state==="play") winGame(); return {elapsedMs, isNewBest, wonBest}; },   // QA: force the win overlay
 };
 window.BUILDABLE_GAME = window.MAHJONG_GAME;
 </script>
