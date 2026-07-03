@@ -34,6 +34,14 @@
 
   BA.configure = function (o) { o = o || {}; if (o.sfxBase != null) BA.sfxBase = o.sfxBase; if (o.map) BA.map = o.map; if (BA._unlocked) BA.preload(); };
 
+  // Canonical shared one-shots (real ElevenLabs sounds in /api/sfx). Any game that
+  // triggers one of these bare event names resolves to the created sound even if it
+  // has no explicit map entry -> the synth beep below is never the shipped product.
+  const DEFAULTS = { select:"select", win:"win", lose:"lose", coin:"coin", collect:"collect",
+    hit:"hit", shoot:"shoot", explode:"explode", hurt:"hurt", boss:"boss", boom:"boom",
+    levelup:"levelup", pop:"pop", whoosh:"whoosh", sparkle:"sparkle", powerup:"powerup",
+    error:"error", celebrate:"celebrate" };
+
   // ---- real crafted sounds: fetch -> decode -> cache as AudioBuffer ----
   function load(key) {
     if (!key || BA.buffers[key] || BA._loading[key] || !BA.sfxBase) return;
@@ -46,7 +54,7 @@
       .catch(() => {})                  // leave undefined -> synth fallback
       .finally(() => { BA._loading[key] = false; });
   }
-  BA.preload = function () { const seen = {}; for (const k in BA.map) { const key = BA.map[k]; if (key && !seen[key]) { seen[key] = 1; load(key); } } };
+  BA.preload = function () { const seen = {}; const eat = (key) => { if (key && !seen[key]) { seen[key] = 1; load(key); } }; for (const k in BA.map) eat(BA.map[k]); for (const k in DEFAULTS) eat(DEFAULTS[k]); };
 
   function playBuf(b, rate, vol) {
     const ac = ctx(); if (!ac) return;
@@ -108,7 +116,7 @@
   BA.sfx = function (name, opt) {
     if (BA.muted) return; const ac = ctx(); if (!ac) return; if (!BA._unlocked) BA.unlock();
     const now = ac.currentTime, th = THROTTLE[name]; if (th && now - (BA._last[name]||0) < th) return; BA._last[name] = now;
-    const key = BA.map[name], b = key && BA.buffers[key];
+    const key = BA.map[name] || DEFAULTS[name], b = key && BA.buffers[key];
     if (b) { const tier = (opt && opt.tier) || 1; const rate = name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0; playBuf(b, rate, VOL[name]||1); }
     else { synth(name, opt); if (key) load(key); }   // real sound not ready -> synth now, fetch for next time
   };

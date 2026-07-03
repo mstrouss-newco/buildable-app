@@ -288,6 +288,22 @@ const SOUNDS = {
   tumble_levelup:"Cheerful rising magical power-up sparkle fanfare, moving to a new world, bright and proud, short, no music, no voices",
   tumble_win:    "Happy short gentle victory jingle with a warm sparkle, a cheerful kids puzzle win, no voices",
   tumble_reset:  "Short soft friendly swoosh and gentle plink, blocks tidying themselves away calmly, soothing not sad, single hit, no music, no voices",
+
+  // ---- SHARED CORE one-shots (canonical bare names) — punchy & satisfying, warm
+  // not shrill. These replace the tiny synth fallbacks in buildable-audio.js so NO
+  // game ever plays a beep. Any game can use them by their bare event name.
+  select:    "Short punchy satisfying UI select click, a warm rounded tick with a tiny bright ping, snappy and clean, kid-friendly, single hit, no music, no voices",
+  win:       "Short punchy triumphant win flourish, warm rounded bells popping upward to a satisfying bright finish, joyful and rewarding, not shrill, kid-friendly, no voices",
+  lose:      "Short gentle friendly cartoon fail sound, soft rounded descending wobble with a little bounce, playful and not harsh or scary, kid-friendly, single hit, no music, no voices",
+  coin:      "Short juicy satisfying coin pickup, warm bright ding with a crisp happy sparkle, rewarding and snappy, kid-friendly, single hit, no music, no voices",
+  collect:   "Short satisfying goody collect pop, warm rounded thock with a soft sparkle tail, happy and crisp, kid-friendly, single hit, no music, no voices",
+  hit:       "Short punchy satisfying soft impact, a warm rounded thock with a little body and thump, snappy not harsh, kid-friendly, single hit, no music, no voices",
+  shoot:     "Short punchy soft cartoon launch, warm rounded pew with a satisfying little thump, playful not harsh, kid-friendly, single hit, no music, no voices",
+  explode:   "Short satisfying soft cartoon poof burst, warm rounded low boom with a puff and a bit of crunch, bouncy not scary, kid-friendly, single hit, no music, no voices",
+  hurt:      "Short gentle friendly cartoon bonk, soft rounded boing-thud, a playful ouch that is not scary, kid-friendly, single hit, no music, no voices",
+  boss:      "Short punchy playful boss-appear stinger, warm rounded low horn hit with a little drama, fun not scary, kid-friendly, single hit, no music, no voices",
+  error:     "Short gentle friendly wrong-answer buzz, soft rounded low double blip, a playful nope that is not harsh, kid-friendly, single hit, no music, no voices",
+  celebrate: "Short punchy happy celebration burst, warm party-popper pop with a quick sprinkle of bright confetti sparkles, joyful and satisfying, kid-friendly, single hit, no music, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -299,6 +315,7 @@ const DURATIONS = {
   tennis_boom:0.6, tennis_cheer:1.4,
   breaker_smash:0.5, breaker_break:0.6, breaker_power:0.8, breaker_miss:0.6,
   tumble_move:0.25, tumble_rotate:0.3, tumble_lock:0.45, tumble_clear:0.8, tumble_combo:1.2, tumble_levelup:1.1, tumble_win:1.6, tumble_reset:0.8,
+  select:0.4, win:1.6, lose:1.0, coin:0.5, collect:0.5, hit:0.4, shoot:0.4, explode:0.7, hurt:0.5, boss:0.8, error:0.6, celebrate:1.0,
   board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
   maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,

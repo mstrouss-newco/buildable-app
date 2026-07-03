@@ -57,6 +57,10 @@ const SFX_THEME = {
   crowd: "sports", goal: "sports",
 };
 
+// Canonical shared one-shots (bare names) — reusable UI/game feedback sounds.
+const UI_ONESHOTS = new Set(["select","win","lose","coin","collect","hit","shoot","explode","hurt","boss","error","celebrate","boom","levelup","pop","whoosh","sparkle","powerup"]);
+for (const k of UI_ONESHOTS) if (!(k in SFX_THEME)) SFX_THEME[k] = "ui";
+
 const norm = (t) => String(t || "").trim().toLowerCase();
 const pretty = (s) => String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -113,7 +117,7 @@ export default async function handler(req, res) {
       name: pretty(key),
       kind: "sfx",
       theme: th,
-      role: isChess ? "one-shot" : "ambience",
+      role: (isChess || UI_ONESHOTS.has(key)) ? "one-shot" : "ambience",
       url: "/api/sfx?s=" + encodeURIComponent(key),
       source: isChess ? "chess" : "library",
     });
