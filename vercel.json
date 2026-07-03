@@ -400,6 +400,14 @@
       "dest": "/tank/$1"
     },
     {
+      "src": "/planner.html",
+      "dest": "/planner.html"
+    },
+    {
+      "src": "/planner",
+      "dest": "/planner.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

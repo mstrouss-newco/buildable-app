@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buildable — Update Planner</title>
+<link rel="icon" href="/favicon.svg">
+<style>
+  :root{
+    --bg:#f5f7fc; --card:#ffffff; --card2:#f1f3fa; --line:#e1e5f0;
+    --ink:#1b1f33; --muted:#5f6785; --accent:#6b4eff; --accent2:#00b488;
+    --warn:#b9770a; --danger:#e0384a; --ready:#00a37a; --chip:#eceffa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 20% -10%,#e9edfb 0%,var(--bg) 55%);color:var(--ink);min-height:100vh}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 16px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+  h1{font-size:23px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;line-height:1}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn.mini{padding:6px 10px;font-size:12px;border-radius:9px}
+  .btn.green{background:var(--accent2);color:#04231b}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .toprow{display:flex;gap:8px;flex-wrap:wrap;flex:0}
+  .toolbar{display:inline-flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:4px;box-shadow:0 1px 2px rgba(20,24,50,.04)}
+  .tbtn{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;background:transparent;border:0;color:var(--muted);font-weight:600;font-size:13px;padding:8px 13px;border-radius:9px;cursor:pointer;transition:.12s}
+  .tbtn:hover{background:var(--card2);color:var(--ink)}
+  .tbtn:active{transform:translateY(1px)}
+  .tbtn svg{width:15px;height:15px;flex:0 0 auto}
+  .tv{display:flex;flex-direction:column;gap:18px}
+  .tv-sec-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin-bottom:8px}
+  .tv-target{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+  .tv-target h4{margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .tv-badge{font-size:11px;font-weight:700;background:#e7eaf6;color:var(--accent);border-radius:999px;padding:2px 9px}
+  .tv-item{display:flex;gap:9px;font-size:14px;line-height:1.45;padding:3px 0}
+  .tv-item .n{color:var(--muted);min-width:16px;text-align:right;font-weight:600}
+
+  .addcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin:14px 0 20px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:150px}
+  label{font-size:12px;color:var(--muted);font-weight:600}
+  input,select,textarea{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px;font-size:14px;font-family:inherit}
+  textarea{resize:vertical;min-height:44px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent)}
+  .toggle{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .toggle button{background:transparent;border:0;color:var(--muted);font-weight:700;font-size:13px;padding:8px 14px;border-radius:8px;cursor:pointer}
+  .toggle button.on{background:var(--accent);color:#fff}
+
+  .daily{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:16px;flex-wrap:wrap}
+  .dots{display:flex;gap:6px}
+  .dot{width:16px;height:16px;border-radius:50%;background:var(--chip);border:1px solid var(--line)}
+  .dot.used{background:var(--accent2);border-color:var(--accent2)}
+  .daily .msg{color:var(--muted);font-size:13px}
+  .daily .msg.stop{color:var(--warn);font-weight:600}
+
+  .section-title{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin:22px 4px 10px;display:flex;align-items:center;gap:8px}
+  .section-title::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .bucket{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:14px;overflow:hidden}
+  .bhead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;cursor:pointer;flex-wrap:wrap}
+  .bhead h2{font-size:17px;margin:0;display:flex;align-items:center;gap:9px}
+  .count{color:var(--muted);font-size:12px;font-weight:600}
+  .status{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap}
+  .s-wait{background:#eceffa;color:var(--muted)}
+  .s-ready{background:rgba(0,163,122,.14);color:var(--ready);border:1px solid rgba(0,163,122,.4)}
+  .s-big{background:rgba(185,119,10,.14);color:var(--warn);border:1px solid rgba(185,119,10,.4)}
+
+  .body{padding:0 16px 16px;display:none}
+  .body.open{display:block}
+  .task{display:flex;align-items:flex-start;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:7px}
+  .task .num{color:var(--muted);font-size:13px;font-weight:700;min-width:18px;text-align:right}
+  .task .desc{flex:1;font-size:14px;line-height:1.4}
+  .task.done .desc{text-decoration:line-through;color:var(--muted)}
+  .x{color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;border-radius:6px}
+  .x:hover{color:var(--danger);background:rgba(224,56,74,.12)}
+  .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+  .donewrap{margin-top:12px}
+  .donewrap .gtag{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin:4px 0 6px}
+
+  .empty{text-align:center;color:var(--muted);padding:32px 10px;font-size:15px}
+  .empty b{color:var(--ink)}
+  .banner{background:#fff5e6;border:1px solid #f0d9a8;color:#7a5600;border-radius:12px;padding:12px 14px;margin:0 0 16px;font-size:14px;line-height:1.5}
+  .banner code{background:#fff;border:1px solid #eadcc0;padding:1px 6px;border-radius:6px}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(20,24,40,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:660px;width:100%;padding:20px;max-height:88vh;overflow:auto}
+  .modal h3{margin:0 0 4px}
+  .modal p.hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .promptbox{background:#f7f8fc;border:1px solid var(--line);border-radius:12px;padding:14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.55;white-space:pre-wrap;max-height:52vh;overflow:auto;color:#20243a}
+  .mfoot{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#04231b;font-weight:700;padding:11px 18px;border-radius:12px;opacity:0;transition:.25s;pointer-events:none;z-index:40}
+  .toast.show{opacity:1}
+  .legend{color:var(--muted);font-size:12px}
+  .syncing{font-size:12px;color:var(--muted)}
+
+  /* PIN gate */
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60}
+  #gate .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;width:min(340px,90vw);text-align:center}
+  #gate input{width:100%;text-align:center;font-size:20px;letter-spacing:4px;margin:12px 0}
+</style>
+</head>
+<body>
+<div id="gate"><div class="box">
+  <h2 style="margin:0 0 4px">Update Planner</h2>
+  <p class="legend">Enter your code to open your planner.</p>
+  <input id="pin" type="password" inputmode="numeric" placeholder="code" onkeydown="if(event.key==='Enter')tryPin()">
+  <button class="btn" style="width:100%" onclick="tryPin()">Open</button>
+  <p id="pinErr" class="legend" style="color:var(--danger);min-height:16px;margin-top:8px"></p>
+</div></div>
+
+<div class="wrap" id="appwrap" style="display:none">
+  <header>
+    <div>
+      <h1>Update Planner</h1>
+      <p class="sub">Add from any device — it stays in sync. <span class="syncing" id="syncState"></span></p>
+    </div>
+    <div class="toolbar">
+      <button class="tbtn" onclick="openTextView()" title="See the whole queue as text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Full list</button>
+      <button class="tbtn" onclick="load(true)" title="Pull the latest from your other devices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Refresh</button>
+      <button class="tbtn" onclick="openSettings()" title="Adjust the batch sizes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+    </div>
+  </header>
+
+  <div id="setupBanner"></div>
+
+  <div class="addcard">
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="flex:0">
+        <label>This is a…</label>
+        <div class="toggle">
+          <button id="k-game" class="on" onclick="setKind('game')">Game update</button>
+          <button id="k-plat" onclick="setKind('platform')">Platform update</button>
+        </div>
+      </div>
+      <div class="field" style="flex:1.2">
+        <label id="targetLabel">Which game?</label>
+        <input id="f-target" list="targetlist" placeholder="e.g. Breaker" autocomplete="off">
+        <datalist id="targetlist"></datalist>
+        <button class="btn ghost mini" id="addNewBtn" style="align-self:flex-start" onclick="addCustomTarget()">+ Add a new game</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="field">
+        <label>What needs doing?</label>
+        <textarea id="f-desc" placeholder="e.g. Fix HUD on mobile — chips overlap the bricks"></textarea>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;justify-content:space-between;align-items:center">
+      <span class="legend">One line per change. On a computer, ⌘/Ctrl + Enter adds fast.</span>
+      <button class="btn" id="addBtn" onclick="addTask()">+ Add to log</button>
+    </div>
+  </div>
+
+  <div class="daily">
+    <strong style="font-size:13px">Batches handed off today</strong>
+    <div class="dots" id="dailyDots"></div>
+    <span class="msg" id="dailyMsg"></span>
+  </div>
+
+  <div id="board"></div>
+</div>
+
+<!-- Prompt modal -->
+<div class="modal-bg" id="promptModal"><div class="modal">
+  <h3 id="pm-title">Batch ready for Claude</h3>
+  <p class="hint">Copy this and paste it to Claude. When it's done, come back and mark the batch sent.</p>
+  <div class="promptbox" id="pm-box"></div>
+  <div class="mfoot">
+    <button class="btn ghost" onclick="closeModal('promptModal')">Close</button>
+    <button class="btn" onclick="copyEl('pm-box')">Copy prompt</button>
+    <button class="btn green" onclick="markSent()">Copy &amp; mark sent</button>
+  </div>
+</div></div>
+
+<!-- Text view modal -->
+<div class="modal-bg" id="textModal"><div class="modal">
+  <h3>Everything in the queue</h3>
+  <p class="hint">A plain-text view of every open task. Copy it anywhere.</p>
+  <div class="tv" id="tv-box"></div>
+  <div class="mfoot">
+    <button class="btn ghost" onclick="closeModal('textModal')">Close</button>
+    <button class="btn" onclick="copyTextList()">Copy all</button>
+  </div>
+</div></div>
+
+<!-- Settings modal -->
+<div class="modal-bg" id="settingsModal"><div class="modal">
+  <h3>Settings</h3>
+  <p class="hint">Tune the numbers to how you like to work. Saved for all your devices.</p>
+  <div class="row">
+    <div class="field"><label>"Ready" when a log has (tasks)</label><input id="s-ready" type="number" min="1"></div>
+    <div class="field"><label>"Getting big" at (tasks)</label><input id="s-big" type="number" min="2"></div>
+    <div class="field"><label>Batches per day</label><input id="s-daily" type="number" min="1"></div>
+  </div>
+  <p class="hint" style="margin-top:12px"><b>Why:</b> a log is worth handing over once it has enough related items to pay back the setup + testing cost of a session (default <b id="whyReady"></b>), but small enough that quality stays high (split past <b id="whyBig"></b>). The daily cap is really your review-and-test bandwidth.</p>
+  <div class="mfoot">
+    <button class="btn ghost" onclick="closeModal('settingsModal')">Cancel</button>
+    <button class="btn" onclick="saveSettings()">Save</button>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const PIN="1379"; // change any time — it's just a light privacy gate
+const GAMES=["Breaker","Chess","Sling Squad","Tic-Tac-Toe","Survival","String Match",
+  "Bubble Buddies","Tennis","Croc Tot","Typing","Checkers","Maze Munchers","Hilltop Tanks",
+  "Mahjong","Castle Guard","Photo Booth","Sunny Town Drive","Sound Machine","Art Studio","Stories",
+  "Connect Four","Dots & Boxes","Memory","Bingo","Snakes & Ladders","Family Town"];
+const PLATFORM=["HUD","UI / Look & Feel","Multiplayer","Demo / Tutorial","Navigation",
+  "Backgrounds / Worlds","Sound & Music","Login & Accounts","Mobile / Responsive","Performance","Other"];
+const DEF_SETTINGS={readyAt:3,bigAt:8,daily:3};
+
+let kind="game";
+let state={tasks:[],meta:{settings:{...DEF_SETTINGS},sends:{},custom:{game:[],platform:[]}}};
+let activeBatch=null;
+
+/* ---- PIN gate ---- */
+function tryPin(){
+  const v=document.getElementById("pin").value.trim();
+  if(v===PIN){ try{localStorage.setItem("planner-ok","1");}catch(e){} openApp(); }
+  else{ document.getElementById("pinErr").textContent="Nope, try again."; }
+}
+function openApp(){
+  document.getElementById("gate").style.display="none";
+  document.getElementById("appwrap").style.display="block";
+  load(false);
+}
+
+/* ---- network ---- */
+async function apiGet(){ const r=await fetch("/api/planner",{cache:"no-store"}); return r.json(); }
+async function apiPost(body){ const r=await fetch("/api/planner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); return r.json(); }
+
+function setSync(t){ document.getElementById("syncState").textContent=t||""; }
+
+async function load(showToast){
+  setSync("loading…");
+  try{
+    const d=await apiGet();
+    if(!d.ok){
+      renderBanner(d.hint?("The database isn't set up yet — run "+d.hint+" in Supabase, then Refresh."):"Couldn't reach the store. Tap Refresh to retry.");
+      setSync("offline"); return;
+    }
+    state.tasks=(d.tasks||[]).map(normTask);
+    state.meta=normMeta(d.meta);
+    renderBanner("");
+    render(); setSync("in sync");
+    if(showToast)toast("Refreshed");
+  }catch(e){ setSync("offline"); renderBanner("Couldn't reach the store. Tap Refresh to retry."); }
+}
+function normTask(t){ return {id:t.id, kind:t.kind==="platform"?"platform":"game", target:t.target, desc:t.description, done:!!t.done, created:t.created_at}; }
+function normMeta(m){ m=m||{}; return {settings:Object.assign({...DEF_SETTINGS},m.settings||{}), sends:m.sends||{}, custom:Object.assign({game:[],platform:[]},m.custom||{})}; }
+
+async function saveMeta(){ setSync("saving…"); const r=await apiPost({op:"meta",data:state.meta}); setSync(r.ok?"in sync":"offline"); }
+
+/* ---- helpers ---- */
+function todayKey(){return new Date().toISOString().slice(0,10);}
+function sentToday(){return state.meta.sends[todayKey()]||0;}
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1600);}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function closeModal(id){document.getElementById(id).classList.remove("show");}
+function copyEl(id){navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>toast("Copied"));}
+
+function renderBanner(msg){
+  document.getElementById("setupBanner").innerHTML = msg ? `<div class="banner">${esc(msg)}</div>` : "";
+}
+
+/* ---- kind + targets ---- */
+function setKind(k){
+  kind=k;
+  document.getElementById("k-game").classList.toggle("on",k==="game");
+  document.getElementById("k-plat").classList.toggle("on",k==="platform");
+  document.getElementById("targetLabel").textContent=k==="game"?"Which game?":"Which platform area?";
+  document.getElementById("f-target").placeholder=k==="game"?"e.g. Breaker":"e.g. HUD";
+  document.getElementById("addNewBtn").textContent=k==="game"?"+ Add a new game":"+ Add a new area";
+  refreshTargetList();
+}
+function refreshTargetList(){
+  const base=kind==="game"?GAMES:PLATFORM;
+  const seen=state.tasks.filter(t=>t.kind===kind).map(t=>t.target);
+  document.getElementById("targetlist").innerHTML=
+    [...new Set([...base,...state.meta.custom[kind],...seen])].map(g=>`<option value="${esc(g)}">`).join("");
+}
+function addCustomTarget(){
+  const what=kind==="game"?"game":"platform area";
+  const name=(prompt("Name of the new "+what+":")||"").trim();
+  if(!name)return;
+  if(!state.meta.custom[kind].includes(name)){ state.meta.custom[kind].push(name); saveMeta(); }
+  refreshTargetList();
+  document.getElementById("f-target").value=name;
+  document.getElementById("f-desc").focus();
+  toast("Added "+name+" to the list");
+}
+
+/* ---- add / edit ---- */
+async function addTask(){
+  const target=document.getElementById("f-target").value.trim();
+  const desc=document.getElementById("f-desc").value.trim();
+  if(!target){toast(kind==="game"?"Add a game name":"Add a platform area");return;}
+  if(!desc){toast("Add what needs doing");return;}
+  const btn=document.getElementById("addBtn"); btn.disabled=true; setSync("saving…");
+  const r=await apiPost({op:"add",task:{kind,target,description:desc}});
+  btn.disabled=false;
+  if(!r.ok){ setSync("offline"); toast("Couldn't save — check connection"); return; }
+  state.tasks.push(normTask(r.task));
+  document.getElementById("f-desc").value=""; document.getElementById("f-desc").focus();
+  setSync("in sync"); render(); toast("Added to "+target);
+}
+async function toggleDone(id){
+  const t=state.tasks.find(x=>x.id===id); if(!t)return;
+  t.done=!t.done; render(); setSync("saving…");
+  const r=await apiPost({op:"update",id,fields:{done:t.done}});
+  if(!r.ok){ t.done=!t.done; render(); toast("Couldn't save"); setSync("offline"); } else setSync("in sync");
+}
+async function delTask(id){
+  const idx=state.tasks.findIndex(x=>x.id===id); if(idx<0)return;
+  const backup=state.tasks[idx];
+  state.tasks.splice(idx,1); render(); setSync("saving…");
+  const r=await apiPost({op:"delete",id});
+  if(!r.ok){ state.tasks.splice(idx,0,backup); render(); toast("Couldn't delete"); setSync("offline"); } else setSync("in sync");
+}
+
+/* ---- status ---- */
+function statusOf(n){
+  const s=state.meta.settings;
+  if(n>=s.bigAt) return {cls:"s-big",txt:"Getting big — consider splitting"};
+  if(n>=s.readyAt) return {cls:"s-ready",txt:"Ready to hand off"};
+  return {cls:"s-wait",txt:(s.readyAt-n)+" more to be worth a batch"};
+}
+function openCount(k,target){return state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done).length;}
+
+/* ---- render ---- */
+function render(){
+  refreshTargetList();
+  const cap=state.meta.settings.daily, used=sentToday();
+  let dots="";for(let i=0;i<cap;i++)dots+=`<span class="dot ${i<used?'used':''}"></span>`;
+  document.getElementById("dailyDots").innerHTML=dots;
+  const dm=document.getElementById("dailyMsg");
+  if(used>=cap){dm.className="msg stop";dm.textContent="You've hit today's max — let these land and test them before sending more.";}
+  else{dm.className="msg";dm.textContent=(cap-used)+" left today. Keep them at a pace you can review.";}
+
+  const board=document.getElementById("board");
+  if(state.tasks.length===0){
+    board.innerHTML=`<div class="empty"><b>Nothing logged yet.</b><br>Add your first update above — pick <b>Game</b> or <b>Platform</b>, then type what needs doing.</div>`;
+    return;
+  }
+  board.innerHTML=section("Games","game")+section("Platform","platform");
+}
+function section(title,k){
+  const targets=[...new Set(state.tasks.filter(t=>t.kind===k).map(t=>t.target))];
+  if(!targets.length) return "";
+  targets.sort((a,b)=>openCount(k,b)-openCount(k,a)||a.localeCompare(b));
+  return `<div class="section-title">${title}</div>`+targets.map(t=>bucket(k,t)).join("");
+}
+function bucket(k,target){
+  const all=state.tasks.filter(t=>t.kind===k&&t.target===target);
+  const open=all.filter(t=>!t.done), done=all.filter(t=>t.done);
+  const n=open.length, st=statusOf(n);
+  const openDefault=n>=state.meta.settings.readyAt?"open":"";
+  const canSend=n>=state.meta.settings.readyAt;
+  const list=open.length?open.map((t,i)=>taskRow(t,i+1)).join(""):'<p class="legend" style="padding:4px 0">No open tasks.</p>';
+  const doneHtml=done.length?`<div class="donewrap"><div class="gtag">done (${done.length})</div>${done.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:"";
+  return `<div class="bucket">
+    <div class="bhead" onclick="this.parentNode.querySelector('.body').classList.toggle('open')">
+      <h2>${esc(target)} <span class="count">${n} open${done.length?` · ${done.length} done`:""}</span></h2>
+      <span class="status ${st.cls}">${st.txt}</span>
+    </div>
+    <div class="body ${openDefault}">
+      ${list}
+      ${canSend?`<div class="bactions"><button class="btn green mini" onclick='openBatch(${JSON.stringify(k)},${JSON.stringify(target)})'>Prep prompt for Claude →</button></div>`:""}
+      ${doneHtml}
+    </div>
+  </div>`;
+}
+function taskRow(t,num){
+  return `<div class="task ${t.done?'done':''}">
+    <input type="checkbox" ${t.done?'checked':''} onchange="toggleDone(${t.id})" title="Mark done" style="margin-top:3px">
+    <span class="num">${num}.</span>
+    <span class="desc">${esc(t.desc)}</span>
+    <span class="x" onclick="delTask(${t.id})" title="Delete">✕</span>
+  </div>`;
+}
+
+/* ---- prompt ---- */
+function openBatch(k,target){
+  const open=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done);
+  activeBatch={kind:k,target,ids:open.map(t=>t.id)};
+  document.getElementById("pm-title").textContent=`${target} — ${open.length} tasks`;
+  document.getElementById("pm-box").textContent=buildPrompt(k,target,open);
+  document.getElementById("promptModal").classList.add("show");
+}
+function buildPrompt(k,target,tasks){
+  const lines=tasks.map((t,i)=>`${i+1}. ${t.desc}`).join("\n");
+  const where=k==="game"
+    ? `I'm working on the game "${target}" in the Buildable app.`
+    : `I'm making a platform-wide update to "${target}" across the Buildable app (this affects multiple games, so apply it consistently everywhere it's relevant).`;
+  return `${where} Please do this batch of updates together (they're related, so share context and test them as one set):\n\n${lines}\n\nWhen done: QA the live deploy, then merge to main and push. Update the README/memory as usual.`;
+}
+async function markSent(){
+  copyEl("pm-box");
+  const key=todayKey(); state.meta.sends[key]=(state.meta.sends[key]||0)+1;
+  const ids=activeBatch?activeBatch.ids.slice():[];
+  ids.forEach(id=>{const t=state.tasks.find(x=>x.id===id);if(t)t.done=true;});
+  closeModal("promptModal"); render(); setSync("saving…");
+  await Promise.all(ids.map(id=>apiPost({op:"update",id,fields:{done:true}})));
+  await saveMeta();
+  toast("Batch marked sent");
+}
+
+/* ---- text view ---- */
+let textPlain="";
+function openTextView(){
+  const open=state.tasks.filter(t=>!t.done);
+  let html="",plain="";
+  ["game","platform"].forEach(k=>{
+    const targets=[...new Set(open.filter(t=>t.kind===k).map(t=>t.target))];
+    if(!targets.length)return;
+    html+=`<div><div class="tv-sec-title">${k==="game"?"Games":"Platform"}</div>`;
+    plain+=(k==="game"?"=== GAMES ===\n":"\n=== PLATFORM ===\n");
+    targets.forEach(tg=>{
+      const items=open.filter(t=>t.kind===k&&t.target===tg);
+      html+=`<div class="tv-target"><h4>${esc(tg)} <span class="tv-badge">${items.length}</span></h4>`;
+      plain+=`\n${tg} (${items.length})\n`;
+      items.forEach((t,i)=>{ html+=`<div class="tv-item"><span class="n">${i+1}.</span><span>${esc(t.desc)}</span></div>`; plain+=`  ${i+1}. ${t.desc}\n`; });
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+  });
+  textPlain=plain.trim();
+  document.getElementById("tv-box").innerHTML=html||'<p class="legend">Nothing logged yet.</p>';
+  document.getElementById("textModal").classList.add("show");
+}
+function copyTextList(){ navigator.clipboard.writeText(textPlain||"Nothing logged yet.").then(()=>toast("Copied")); }
+
+/* ---- settings ---- */
+function openSettings(){
+  const s=state.meta.settings;
+  document.getElementById("s-ready").value=s.readyAt;
+  document.getElementById("s-big").value=s.bigAt;
+  document.getElementById("s-daily").value=s.daily;
+  document.getElementById("whyReady").textContent=s.readyAt;
+  document.getElementById("whyBig").textContent=s.bigAt;
+  document.getElementById("settingsModal").classList.add("show");
+}
+async function saveSettings(){
+  const s=state.meta.settings;
+  s.readyAt=Math.max(1,+document.getElementById("s-ready").value||3);
+  s.bigAt=Math.max(s.readyAt+1,+document.getElementById("s-big").value||8);
+  s.daily=Math.max(1,+document.getElementById("s-daily").value||3);
+  closeModal("settingsModal"); render(); await saveMeta(); toast("Settings saved");
+}
+
+document.getElementById("f-desc")&&document.getElementById("f-desc").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))addTask();});
+document.querySelectorAll(".modal-bg").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("show");}));
+setKind("game");
+if(localStorage.getItem("planner-ok")==="1"){ openApp(); } else { document.getElementById("pin").focus(); }
+</script>
+</body>
+</html>
