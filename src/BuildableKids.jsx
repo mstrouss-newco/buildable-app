@@ -204,7 +204,7 @@ function TennisScreen({ onHome, onPlayFriend }) {
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, [onPlayFriend]);
-  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=3" onHome={onHome} />;
+  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=4" onHome={onHome} />;
 }
 function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=2" onHome={onHome} />; }
 function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628c" onHome={onHome} bg="#2e7d32" />; }
@@ -434,7 +434,7 @@ function gameSpecFor(slug) {
     return { slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: { board: b, turn: "r" } };
   }
   if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
-  if (slug === "tennis") return { slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=3", transport: "realtime" };
+  if (slug === "tennis") return { slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" };
   return null;
 }
 const FRIEND_GAME_TITLES = { chess: "Chess", checkers: "Checkers", tictactoe: "Tic-Tac-Toe", tennis: "Tennis" };
@@ -802,7 +802,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_TENNIS_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=3", transport: "realtime" }}
+        game={{ slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" }}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_TENNIS)}
@@ -812,7 +812,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_TENNIS_FAMILY) {
-    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_GAME_PICKER); }} />;
+    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1&v=4", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_GAME_PICKER); }} />;
   }
   if (screen === SCREEN_TOWN) {
     return <TownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;

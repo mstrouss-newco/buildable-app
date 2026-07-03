@@ -318,18 +318,29 @@ function update(dt) {
     G.topX = clamp(G.topX + d);
   }
 
-  // ---- GUEST: never simulates the ball — just smooths toward host values ----
+  // ---- GUEST: dead-reckon the ball so it never stalls between host packets ----
+  // The host owns the ball and broadcasts {pos, vel} ~36x/s. Instead of chasing a
+  // stale position (which looks laggy), we advance a predicted target along the
+  // host's velocity every frame and quickly render toward it. When a fresh packet
+  // arrives, applyPeer() resets the target to the truth, correcting any drift.
   if (mode === "online" && role === "guest") {
-    G.bx += (G.bxT - G.bx) * Math.min(1, 12 * dt);
-    G.by += (G.byT - G.by) * Math.min(1, 12 * dt);
-    G.bottomX += (G.oppTargetX - G.bottomX) * Math.min(1, 14 * dt);   // host's paddle
+    var gr = GAME_CONFIG.ballR;
+    // predict: move the authoritative target forward along its velocity
+    G.bxT += G.vx * dt; G.byT += G.vy * dt;
+    // bounce the predicted target off the side walls so it stays in-court
+    if (G.bxT < gr) { G.bxT = gr; G.vx = Math.abs(G.vx); }
+    if (G.bxT > 1 - gr) { G.bxT = 1 - gr; G.vx = -Math.abs(G.vx); }
+    // render the ball quickly toward the prediction (smooth, no visible lag)
+    G.bx += (G.bxT - G.bx) * Math.min(1, 24 * dt);
+    G.by += (G.byT - G.by) * Math.min(1, 24 * dt);
+    G.bottomX += (G.oppTargetX - G.bottomX) * Math.min(1, 18 * dt);   // host's paddle
     return;
   }
 
   // ---- HOST / SOLO / TWO simulate the ball ----
   // smooth a remote opponent paddle (online host smooths guest's paddle)
   if (mode === "online" && role === "host") {
-    G.topX += (G.oppTargetX - G.topX) * Math.min(1, 14 * dt);
+    G.topX += (G.oppTargetX - G.topX) * Math.min(1, 18 * dt);
   }
 
   if (G.cool > 0) { G.cool -= dt; return; }
@@ -615,13 +626,13 @@ function mp(type, extra) {
 }
 function sendPaddle(nx) {
   var now = _now();
-  if (now - lastSentPaddle < 33) return;        // ~30/s
+  if (now - lastSentPaddle < 28) return;        // ~36/s
   lastSentPaddle = now;
   mp("mp:send", { event: "paddle", data: { x: nx } });
 }
 function sendBall() {
   var now = _now();
-  if (now - lastSentBall < 33) return;
+  if (now - lastSentBall < 28) return;          // ~36/s
   lastSentBall = now;
   mp("mp:send", { event: "ball", data: { x: G.bx, y: G.by, vx: G.vx, vy: G.vy, sB: G.sBottom, sT: G.sTop } });
 }
