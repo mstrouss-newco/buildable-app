@@ -148,7 +148,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
-<script src="buildable-hud.js?v=2"></script>
+<script src="buildable-hud.js?v=3"></script>
+<script src="buildable-gamenav.js?v=1"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -354,7 +355,7 @@ function startLevel(i, carryLives){
     speed, baseSpeed:speed, bricks:buildBricks(L,rng), balls:[], caps:[], lasers:[],
     onPaddle:true, sticky:false, stickyT:0, slowT:0, laserT:0, laserCd:0, fireT:0, score:0 };
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ]; G.onPaddle=true;
-  state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic();
+  state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic(); if(window.BuildableGameNav) window.BuildableGameNav.update();
 }
 // ---------- custom levels (built by kids in "Make a level") ----------
 let CUSTOM=null;              // { board, diffN, cleared }
@@ -384,7 +385,7 @@ function startCustomLevel(board, diffN){
     speed, baseSpeed:speed, bricks:buildCustomBricks(board), balls:[], caps:[], lasers:[],
     onPaddle:true, sticky:false, stickyT:0, slowT:0, laserT:0, laserCd:0, fireT:0, score:0 };
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ]; G.onPaddle=true;
-  state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic();
+  state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic(); if(window.BuildableGameNav) window.BuildableGameNav.update();
 }
 function launch(){ if(!G||G.mode!=="solo"||!G.onPaddle)return; G.onPaddle=false; started=true;
   if(!levelHintShown){ levelHintShown=true; firstHintUntil=Date.now()+3200; }
@@ -398,7 +399,7 @@ function startPong(){ currentMode="two"; resetFx(); applySize();
   const sp=5.2;
   G={ mode:"two", padW:120, p1x:W/2, p2x:W/2, s1:0, s2:0, target:5,
       ball:newBall(W/2,H/2,(Math.random()<.5?0.6:Math.PI-0.6),sp), speed:sp, serveDelay:50, winner:0 };
-  state="play"; started=true; ensureMusic();
+  state="play"; started=true; ensureMusic(); if(window.BuildableGameNav) window.BuildableGameNav.update();
 }
 function pongServe(towardBottom){ const a = towardBottom ? (Math.PI/2 + (Math.random()*0.6-0.3)) : (-Math.PI/2 + (Math.random()*0.6-0.3));
   G.ball=newBall(W/2,H/2,a,G.speed); G.serveDelay=45; }
@@ -724,10 +725,13 @@ function drawSolo(){
   drawPaddleAt(G.padX, PAD_Y, PREFS.paddle);
   // HUD — shared tinted chips (see buildable-hud.js). No longer painted on canvas.
   { const leftN=G.bricks.filter(b=>b.alive).length;
-    const left=[{ text:L.name, soft: G.custom ? undefined : ("Level "+(level+1)+"/"+GAME_CONFIG.levels.length) }];
+    const small=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth<560:false;
+    const left=[{ text:L.name, soft:(G.custom||small) ? undefined : ("Level "+(level+1)+"/"+GAME_CONFIG.levels.length) }];
     const tags=[]; if(G.fireT>0)tags.push("Fireball"); if(G.laserT>0)tags.push("Laser"); if(G.slowT>0)tags.push("Slow-Mo");
-    if(tags.length) left.push({ text:tags.join("  ") });
-    HUD().set({ left:left, right:[ { text:"Bricks: "+leftN }, { hearts:G.lives } ] }); }
+    if(tags.length && !small) left.push({ text:tags.join("  ") });
+    const right = small ? [{ text:String(leftN), heart:G.lives }]
+                        : [{ text:"Bricks: "+leftN }, { hearts:G.lives }];
+    HUD().set({ left:left, right:right }); }
 }
 function drawPong(){
   // center line
@@ -746,9 +750,10 @@ function drawPong(){
 function el(id){ const e=document.getElementById(id); return (e&&e.style)?e:null; }
 function show(id,on){ const e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
 function toast(msg){ const e=el("toast"); if(!e)return; e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{e.style.display="none";},2600); }
-function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
-function showInGameMute(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"block":"none"; }
-function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=on?"block":"none"; }
+function inApp(){ try { return window.parent && window.parent!==window; } catch(e){ return true; } }
+function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=(on&&!inApp())?"block":"none"; }   // in-app: shell owns Help
+function showInGameMute(on){ const mb=el("muteBtn"); if(mb)mb.style.display=(on&&!inApp())?"block":"none"; } // in-app: shell owns Sound
+function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=(on&&!inApp())?"block":"none"; } // in-app: shell owns Menu
 
 let startScreen=null;
 function totalStars(){ let t=0; for(const k in PREFS.stars) t+=(PREFS.stars[k]||0); return t; }
@@ -817,7 +822,7 @@ function renderHub(){ const body=document.getElementById("hubBody"); if(!body)re
   else { const list=document.createElement("div"); list.className="mkList"; for(const L0 of lv) list.appendChild(levelCard(L0)); shelf.appendChild(list); }
   body.appendChild(shelf);
 }
-function showMenu(){ state="title"; G=null; if(hud)hud.hide(); show("maker",false); show("home",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
+function showMenu(){ state="title"; G=null; if(hud)hud.hide(); if(window.BuildableGameNav) window.BuildableGameNav.update(); show("maker",false); show("home",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
   const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host){ return; }
   const cb={
@@ -830,7 +835,7 @@ function showMenu(){ state="title"; G=null; if(hud)hud.hide(); show("maker",fals
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb);
   else startScreen.update(buildStartCfg());
 }
-function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showHelpBtn(true); showInGameMute(true); showInGameBack(true); }
+function hideMenu(){ const host=document.getElementById("start"); if(host)host.style.display="none"; showHelpBtn(true); showInGameMute(true); showInGameBack(true); if(window.BuildableGameNav) window.BuildableGameNav.update(); }
 function startPlay(i){ if(BA)BA.unlock(); startLevel(i,null); }
 
 // ============================================================================
@@ -1022,6 +1027,19 @@ if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   levelup:"breaker_power", hurt:"breaker_miss", point:"tennis_point", win:"tennis_win", lose:"tennis_lose" } }); }
 // boot
 if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showHub(); }
+
+// ---- shared in-app nav: shell draws Home + Sound/Menu/Help; hide our own buttons in-app ----
+function navUpdate(){ if(window.BuildableGameNav) window.BuildableGameNav.update(); }
+if(typeof document!=="undefined" && window.BuildableGameNav){
+  window.BuildableGameNav.register({
+    hide:["muteBtn","helpBtn","backBtn"],
+    onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } const mb=el("muteBtn"); if(mb)mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); },
+    onMenu:()=>{ helpOpen=false; if(G&&G.custom){ showMaker("build"); } else { showMenu(); } },
+    onHelp:()=>{ helpOpen=true; },
+    soundOn:()=>!(BA&&BA.muted),
+    inGame:()=>state==="play"
+  });
+}
 // keep the play area filling the screen when the device rotates / resizes.
 // Skip re-fitting during a live rally so we never yank a moving ball; the next
 // level (or menu) picks up the new size.

@@ -237,7 +237,7 @@ function TennisScreen({ onHome, onPlayFriend }) {
   }, [onPlayFriend]);
   return <GameFrame title="Buildable Tennis" src="/tennis.html?v=4" onHome={onHome} />;
 }
-function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=2" onHome={onHome} />; }
+function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=3" onHome={onHome} />; }
 function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628c" onHome={onHome} bg="#2e7d32" />; }
 function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html" onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src, onPlayFriend }) {

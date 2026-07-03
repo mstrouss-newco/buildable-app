@@ -45,8 +45,12 @@
 '@media (max-width:560px){',
 '  .hud{top:10px;left:10px;right:10px;--hud-gap:6px;}',
 '  .hud-chip{font-size:12.5px;gap:8px;padding:7px 11px;}',
+'  .hud-group:first-child .hud-chip{max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
 '  .hud-heart{width:13px;height:13px;}',
-'}'
+'}',
+'/* inside the app shell: leave room for the shell Home (left) + Sound/Menu/Help (right) */',
+'.hud.hud-inshell{left:96px;right:64px;}',
+'@media (max-width:560px){ .hud.hud-inshell{left:90px;right:62px;} }'
   ].join('\n');
 
   function injectFont() {
@@ -89,6 +93,9 @@
     if (item.soft != null && item.soft !== '') {
       inner += ' <span class="hud-soft">' + esc(item.soft) + '</span>';
     }
+    if (typeof item.heart === 'number') {   // compact lives: one heart + a count (scales to any number)
+      inner += ' <span class="hud-hearts">' + heartSVG() + '</span><span class="hud-soft" style="margin-left:3px">' + item.heart + '</span>';
+    }
     return '<div class="hud-chip">' + inner + '</div>';
   }
 
@@ -106,6 +113,10 @@
       host.style.cssText = 'position:fixed;pointer-events:none;z-index:5;';
       var bar = g.document.createElement('div');
       bar.className = 'hud';
+      // In the app shell (iframe), the shell draws Home + Sound/Menu/Help in the
+      // corners, so inset the chips to never sit under them. Standalone: no inset.
+      try { if (g.parent && g.parent !== g) bar.className += ' hud-inshell'; }
+      catch (e) { bar.className += ' hud-inshell'; }
       host.appendChild(bar);
       g.document.body.appendChild(host);
 
