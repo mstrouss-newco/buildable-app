@@ -627,7 +627,7 @@ function drawSolo(){
   drawPaddleAt(G.padX, PAD_Y, PREFS.paddle);
   // HUD — shared tinted chips (see buildable-hud.js). No longer painted on canvas.
   { const leftN=G.bricks.filter(b=>b.alive).length;
-    const left=[{ text:L.name, soft: G.custom ? "Your level" : ("Level "+(level+1)+"/"+GAME_CONFIG.levels.length) }];
+    const left=[{ text:L.name, soft: G.custom ? undefined : ("Level "+(level+1)+"/"+GAME_CONFIG.levels.length) }];
     const tags=[]; if(G.fireT>0)tags.push("Fireball"); if(G.laserT>0)tags.push("Laser"); if(G.slowT>0)tags.push("Slow-Mo");
     if(tags.length) left.push({ text:tags.join("  ") });
     HUD().set({ left:left, right:[ { text:"Bricks left: "+leftN }, { hearts:G.lives } ] }); }
