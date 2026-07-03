@@ -311,10 +311,10 @@ const DURATIONS = {
   chess_win:1.6, chess_lose:1.0, chess_yourturn:0.5, chess_capture:0.8,
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,
   chess_capture_ocean:0.9, chess_capture_candy:0.8, chess_capture_desert:0.9,
-  tennis_hit:0.35, tennis_wall:0.3, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
+  tennis_hit:0.5, tennis_wall:0.5, tennis_point:0.6, tennis_win:1.6, tennis_lose:1.0,
   tennis_boom:0.6, tennis_cheer:1.4,
   breaker_smash:0.5, breaker_break:0.6, breaker_power:0.8, breaker_miss:0.6,
-  tumble_move:0.25, tumble_rotate:0.3, tumble_lock:0.45, tumble_clear:0.8, tumble_combo:1.2, tumble_levelup:1.1, tumble_win:1.6, tumble_reset:0.8,
+  tumble_move:0.5, tumble_rotate:0.5, tumble_lock:0.5, tumble_clear:0.8, tumble_combo:1.2, tumble_levelup:1.1, tumble_win:1.6, tumble_reset:0.8,
   select:0.5, win:1.6, lose:1.0, coin:0.5, collect:0.5, hit:0.5, shoot:0.5, explode:0.7, hurt:0.5, boss:0.8, error:0.6, celebrate:1.0,
   board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
@@ -349,7 +349,7 @@ export default async function handler(req,res){
     const elKey=process.env.ELEVENLABS_API_KEY;
     if(!elKey){ res.setHeader("Cache-Control","no-store"); return res.status(200).json({ok:true,configured:false}); }
     try{
-      const r=await fetch("https://api.elevenlabs.io/v1/sound-generation",{method:"POST",headers:{"xi-api-key":elKey,"Content-Type":"application/json"},body:JSON.stringify({text:SOUNDS[sName],duration_seconds:(DURATIONS[sName]||12),prompt_influence:0.7})});
+      const r=await fetch("https://api.elevenlabs.io/v1/sound-generation",{method:"POST",headers:{"xi-api-key":elKey,"Content-Type":"application/json"},body:JSON.stringify({text:SOUNDS[sName],duration_seconds:Math.max(0.5,(DURATIONS[sName]||12)),prompt_influence:0.7})});
       if(!r.ok){ res.setHeader("Cache-Control","no-store"); return res.status(503).json({ok:false,failed:true,status:r.status,detail:(await r.text()).slice(0,200)}); }
       const buf=Buffer.from(await r.arrayBuffer());
       b64=buf.toString("base64");
