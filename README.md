@@ -6,6 +6,9 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Games reorg — Platformer renamed "Hop Heroes", coming-soon QA gate (July 2 2026)
+In `src/BuildableKids.jsx` (`GamePicker`): the Platformer tile is renamed **Hop Heroes** and set to coming-soon (`soon=true`); **Family Town** is also now coming-soon. Coming-soon tiles are no longer just disabled — tapping one opens a small **QA password modal** (in-picker `gate`/`pw`/`err` state + `submitPw`). Entering **1111** dismisses the badge gate and opens the game so we can QA unreleased tiles; wrong password shows an inline error; Cancel/backdrop closes. To ship a coming-soon game for real, flip its tile `soon` arg back to `false`. To change the QA password, edit the `pw === "1111"` check in `GamePicker`. Live-QA'd on /app: both tiles show COMING SOON, 1111 opens Hop Heroes.
+
 ## Breaker — ball + paddle always visible on light backgrounds (July 2 2026)
 Owner reported the ball and paddle were hard to see when playing on the Candy background. Cause: drawBall() and drawPaddleAt() (public/breaker-engine.html) only had a color-matched glow (often white/light), no contrasting outline, so light-colored pieces washed out over light scenery. Fix: added a crisp semi-transparent dark stroke (rgba(20,22,45,~.5)) around both the ball (ring at its draw radius, incl. flame ball) and the paddle's rounded rect, drawn with shadowBlur reset to 0 so it stays sharp. Pieces now pop on every backdrop (candy image + light pink gradient fallback both browser-QA'd). Scoped to public/breaker-engine.html.
 
