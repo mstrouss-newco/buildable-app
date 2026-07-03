@@ -156,10 +156,26 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
         </button>
         <button class="btn btn-ghost mode-card" id="btn-two">
           <span id="two-art"></span>
-          <span><span class="mc-t">Two Players</span><span class="mc-s">Take turns on one screen</span></span>
+          <span><span class="mc-t">Two Players</span><span class="mc-s">Same screen or a friend</span></span>
         </button>
       </div>
       <span class="linklike" id="btn-guide">How do you play?</span>
+    </section>
+
+    <section class="screen" id="s-twochoice">
+      <div class="big-title" style="font-size:30px">Two Players</div>
+      <div class="big-sub">How do you want to play together?</div>
+      <div class="btn-row">
+        <button class="btn btn-ghost mode-card" id="btn-two-local">
+          <span id="tc-local-art"></span>
+          <span><span class="mc-t">Same device</span><span class="mc-s">Take turns on one screen</span></span>
+        </button>
+        <button class="btn btn-ghost mode-card" id="btn-two-friend">
+          <span id="tc-friend-art"></span>
+          <span><span class="mc-t">Play with a friend</span><span class="mc-s">On a different device</span></span>
+        </button>
+      </div>
+      <span class="linklike" id="btn-twochoice-back">← Back</span>
     </section>
 
     <!-- SETUP -->
@@ -751,7 +767,12 @@ function initWiring(){
   buildGuide();
 
   $("btn-solo").onclick=function(){ mode="solo"; $("diff-block").style.display="block"; $("p2-name").style.display="none"; $("setup-sub").textContent="Pick a world and the robot's level"; buildSceneGrid(); buildDiffGrid(); show("s-setup"); };
-  $("btn-two").onclick=function(){ mode="two"; $("diff-block").style.display="none"; $("p2-name").style.display="block"; $("setup-sub").textContent="Pick a world — then take turns!"; buildSceneGrid(); show("s-setup"); };
+  $("btn-two").onclick=function(){ show("s-twochoice"); };
+  $("btn-two-local").onclick=function(){ mode="two"; $("diff-block").style.display="none"; $("p2-name").style.display="block"; $("setup-sub").textContent="Pick a world — then take turns!"; buildSceneGrid(); show("s-setup"); };
+  $("btn-two-friend").onclick=function(){ try{ window.parent.postMessage({type:"checkersPlayFriend"},"*"); }catch(e){} };
+  $("btn-twochoice-back").onclick=function(){ show("s-home"); };
+  $("tc-local-art").innerHTML='<svg width="42" height="42" viewBox="0 0 48 48"><rect x="9" y="7" width="30" height="34" rx="5" fill="none" stroke="#F0972A" stroke-width="3"/><circle cx="19" cy="22" r="4.5" fill="#F0972A"/><circle cx="29" cy="22" r="4.5" fill="#7C5CFC"/><rect x="15" y="31" width="18" height="4" rx="2" fill="#F0972A"/></svg>';
+  $("tc-friend-art").innerHTML='<svg width="46" height="42" viewBox="0 0 58 48"><rect x="4" y="13" width="20" height="26" rx="4" fill="none" stroke="#7C5CFC" stroke-width="3"/><circle cx="14" cy="25" r="4" fill="#7C5CFC"/><rect x="34" y="13" width="20" height="26" rx="4" fill="none" stroke="#34D399" stroke-width="3"/><circle cx="44" cy="25" r="4" fill="#34D399"/><path d="M25 21 Q29 13 33 21" stroke="#A78BFF" stroke-width="2.5" fill="none" stroke-dasharray="3 3"/></svg>';
   $("btn-guide").onclick=function(){ $("guide-modal").classList.add("on"); };
   $("btn-guide-close").onclick=function(){ $("guide-modal").classList.remove("on"); };
   $("btn-back-home").onclick=function(){ resetMenuTheme(); show("s-home"); };

@@ -63,6 +63,8 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   const me = activeKid || getActiveKid();
   const signedIn = isSignedIn();
   const transport = (game && game.transport) || "turns";
+  const msg = (game && game.msg) || "chess"; // board postMessage prefix (chess/checkers/...)
+  const initState = () => (game && game.initialState) ? JSON.parse(JSON.stringify(game.initialState)) : initialBoard();
 
   const [phase, setPhase] = useState(entry === "friends" ? "friends" : "mode"); // mode | friends | waiting | playing
   const [friends, setFriends] = useState([]);
@@ -150,9 +152,9 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   function sendInitToBoard(m) {
     const ifr = iframeRef.current;
     if (!ifr || !ifr.contentWindow || !m) return;
-    const board = (m.state && m.state.board) ? m.state : initialBoard();
+    const board = (m.state && m.state.board) ? m.state : initState();
     ifr.contentWindow.postMessage({
-      type: "chessInit",
+      type: msg + "Init",
       myColor: myColor(m),
       world: m.world || "jungle",
       state: board,
@@ -166,20 +168,20 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   useEffect(() => {
     function onMsg(e) {
       const d = e.data || {}; const m = matchRef.current;
-      if (d.type === "chessReady") {
+      if (d.type === msg + "Ready") {
         readyRef.current = true;
         // Host seeds the opening position the first time (guest waits for it).
         if (m && roleFor(m, me.id) === "host" && !(m.state && m.state.board)) {
-          patchFriendMatch(m.id, { state: initialBoard(), turn: "w", status: "active" })
+          patchFriendMatch(m.id, { state: initState(), turn: initState().turn || "w", status: "active" })
             .then((row) => { if (row) { matchRef.current = row; setMatch(row); lastMoveKeyRef.current = moveKeyOf(row); sendInitToBoard(row); } })
             .catch(() => {});
         } else if (m) sendInitToBoard(m);
-      } else if (d.type === "chessMove" && m) {
+      } else if (d.type === msg + "Move" && m) {
         const p = d.payload; if (!p) return;
         const patch = { state: p.state, turn: p.turn, last_move: p.lastMove, status: p.over ? "done" : "active", winner: p.over ? (p.winner || null) : null };
         lastMoveKeyRef.current = moveKeyOf(patch);
         patchFriendMatch(m.id, patch).catch(() => {});
-      } else if (d.type === "chessReaction" && m) {
+      } else if (d.type === msg + "Reaction" && m) {
         const reaction = { text: String(d.text || "").slice(0, 40), by: me && me.id, at: new Date().toISOString() };
         lastReactionAtRef.current = reaction.at;
         patchFriendMatch(m.id, { reaction }).catch(() => {});
@@ -207,12 +209,12 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
         if (mk !== lastMoveKeyRef.current) {
           lastMoveKeyRef.current = mk;
           if ((row.status === "done" || row.turn === mine) && ifr && ifr.contentWindow && row.state && row.state.board) {
-            ifr.contentWindow.postMessage({ type: "chessOpponentMove", payload: { state: row.state, lastMove: row.last_move } }, "*");
+            ifr.contentWindow.postMessage({ type: msg + "OpponentMove", payload: { state: row.state, lastMove: row.last_move } }, "*");
           }
         }
         if (row.reaction && row.reaction.at !== lastReactionAtRef.current && row.reaction.by !== (me && me.id)) {
           lastReactionAtRef.current = row.reaction.at;
-          if (ifr && ifr.contentWindow) ifr.contentWindow.postMessage({ type: "chessShowReaction", text: row.reaction.text }, "*");
+          if (ifr && ifr.contentWindow) ifr.contentWindow.postMessage({ type: msg + "ShowReaction", text: row.reaction.text }, "*");
         }
       } catch (e) { /* keep polling */ }
     }, 2000);

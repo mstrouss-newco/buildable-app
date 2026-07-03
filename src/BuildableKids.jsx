@@ -52,6 +52,7 @@ const SCREEN_CHESS_LOBBY = "chess_lobby";
 const SCREEN_GROWNUP_FRIENDS = "grownup_friends";
 const SCREEN_CHECKERS = "checkers";
 const SCREEN_CHECKERS_FAMILY = "checkers_family";
+const SCREEN_CHECKERS_LOBBY = "checkers_lobby";
 const SCREEN_TENNIS = "tennis";
 const SCREEN_TENNIS_FAMILY = "tennis_family";
 const SCREEN_TOWN = "town";
@@ -601,7 +602,28 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHECKERS) {
-    return <CheckersScreen onHome={() => setScreen(returnTo === SCREEN_GAME_PICKER ? SCREEN_GAME_PICKER : SCREEN_HOME)} onFamily={() => setScreen(SCREEN_CHECKERS_FAMILY)} />;
+    return <CheckersScreen onHome={() => setScreen(returnTo === SCREEN_GAME_PICKER ? SCREEN_GAME_PICKER : SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
+  }
+
+  if (screen === SCREEN_CHECKERS_LOBBY) {
+    const checkersInitial = (() => {
+      const b = Array.from({ length: 8 }, () => Array(8).fill(null));
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+        if ((r + c) % 2 !== 1) continue;
+        if (r < 3) b[r][c] = { c: "b", k: false };
+        else if (r > 4) b[r][c] = { c: "r", k: false };
+      }
+      return { board: b, turn: "r" };
+    })();
+    return (
+      <GameLobby
+        game={{ slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: checkersInitial }}
+        activeKid={activeKid}
+        entry="friends"
+        onHome={() => setScreen(SCREEN_CHECKERS)}
+        onAddFriend={() => { setFriendsReturn(SCREEN_CHECKERS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
   }
 
   if (screen === SCREEN_CHECKERS_FAMILY) {
@@ -1313,7 +1335,12 @@ function ChessScreen({ onHome, onPlayFriend }) {
   );
 }
 
-function CheckersScreen({ onHome, onFamily }) {
+function CheckersScreen({ onHome, onPlayFriend }) {
+  useEffect(() => {
+    function onMsg(e) { if (e && e.data && e.data.type === "checkersPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [onPlayFriend]);
   const pillBtn = {
     fontFamily: NUN, fontWeight: 800, fontSize: "14px", color: "#fff",
     background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)",
@@ -1322,12 +1349,9 @@ function CheckersScreen({ onHome, onFamily }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#0F0E17", zIndex: 50 }}>
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
-      {onFamily && (
-        <button onClick={onFamily} style={{ position: "absolute", top: "14px", right: "14px", zIndex: 2, ...pillBtn, background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none" }}>Play a family member</button>
-      )}
       <iframe
         title="Buildable Checkers"
-        src="/buildable-checkers.html?v=1"
+        src="/buildable-checkers.html?v=2"
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
