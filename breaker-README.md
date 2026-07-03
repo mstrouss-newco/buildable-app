@@ -69,6 +69,20 @@ Follow-up: real friend-to-friend sharing needs a backend table + a start-screen 
 Bricks with a white dot drop a power-up; bricks with a light stripe take two hits. Levels get
 bigger and faster as you go.
 
+## Screen fit (phone / tablet, portrait)
+
+The play area **sizes itself to the screen** as a tall/portrait layout instead of a fixed
+900×600 box. `fitSize()` fills the viewport **height** and caps the **width** to ~0.72× the
+height, so on a phone it fills the whole screen (portrait) and on a wider tablet/desktop it
+stays a centered tall field. It re-fits when the device rotates (but never mid-rally, so a
+live ball is never yanked). Headless/QA has no window size, so it keeps the reference 900×600
+and the always-winnable sim is unchanged.
+
+A fixed **`HUD_STRIP`** (top band) is reserved for the score bar, and the bricks now start
+*below* that strip — so the score bar (`Level`, `Bricks:`, hearts) never sits on top of the
+bricks. The shared HUD (`buildable-hud.js`) keeps each chip on one line and shrinks slightly
+on narrow phones so both groups fit in the strip.
+
 ## Shared libraries it builds on (the playbook rules)
 
 - **`BM` (FX/juice)** — brick smashes call `BM.explode`/`BM.burst` for particles, `BM.pop` for

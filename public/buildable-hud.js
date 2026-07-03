@@ -33,14 +33,20 @@
 '  justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}',
 '.hud-group{display:flex;align-items:center;gap:var(--hud-gap);}',
 '.hud-chip{display:inline-flex;align-items:center;gap:12px;color:var(--hud-text);',
-'  font-family:var(--hud-font);',
+'  font-family:var(--hud-font);white-space:nowrap;',   /* keep each chip on ONE line so it never grows tall onto the play area */
 '  font-weight:700;font-size:15px;line-height:1;padding:9px 16px;border-radius:var(--hud-radius);',
 '  background:rgba(8,10,20,var(--hud-dark));border:1px solid rgba(255,255,255,0.18);',
 '  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);',
 '  box-shadow:0 3px 12px rgba(0,0,0,0.3);text-shadow:0 1px 3px rgba(0,0,0,0.5);}',
 '.hud-chip .hud-soft{font-weight:600;opacity:0.92;}',
 '.hud-hearts{display:inline-flex;gap:5px;}',
-'.hud-heart{width:15px;height:15px;display:inline-block;}'
+'.hud-heart{width:15px;height:15px;display:inline-block;}',
+'/* phones: shrink the bar so both groups fit on one line and stay in the top strip */',
+'@media (max-width:560px){',
+'  .hud{top:10px;left:10px;right:10px;--hud-gap:6px;}',
+'  .hud-chip{font-size:12.5px;gap:8px;padding:7px 11px;}',
+'  .hud-heart{width:13px;height:13px;}',
+'}'
   ].join('\n');
 
   function injectFont() {
