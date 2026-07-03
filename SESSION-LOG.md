@@ -1408,3 +1408,27 @@ system, and wired CHESS to it first (as requested — prove on one game). Branch
 
 **OWNER TODO:** run `db/create-friends.sql` in Supabase; set `RESEND_API_KEY` + `RESEND_FROM`
 (and optionally `APP_URL`) in Vercel. Then QA across two real accounts/devices.
+
+## Fix: kid creations leaking across profiles (device-fallback bug)
+Songs/games/stories were shown from the shared *device* list whenever a screen
+couldn't pin down a selected kid (stale profile w/o id, or no kid selected), so
+one kid's songs — even correctly-filed ones — surfaced on another profile like
+Dad's "Jump back in". Root cause: home + My Songs + MusicMaker queried
+`list-songs?deviceId=...` as a fallback; the device lane returns every row on the
+device regardless of owner.
+
+Changes (commit "Fix creations leaking across kid profiles"):
+- Home "Jump back in", My Songs library, and MusicMaker now query strictly by
+  `kidProfileId` and NEVER fall back to the device list. No kid selected -> show
+  nothing personal.
+- Saving a song now requires an active kid so every new creation is filed.
+- Grown-ups "Organize creations" now also lists this device's *unfiled* songs/
+  games and files them via new `/api/assign-creation` (service-key, verifies the
+  row's device_id == caller's deviceId). The parent JWT can't PATCH null-kid rows
+  under RLS, hence the service endpoint.
+
+Live-QA'd on buildablekids.com: Dad's home no longer shows other kids' songs;
+Riley (12) / Jack (4) filtered lists correct; assign endpoint returns the updated
+row. Data cleanup: filed the 4 unfiled songs on the demo device — "Riley stole
+the ball"→Riley, "Riley and Fiona's magical zoo"→Riley, "Jackson hit a home run"
+→Jack; left "Epic volcano Song" unfiled (no child named).
