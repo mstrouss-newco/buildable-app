@@ -6,6 +6,24 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Landing page — skip straight to the app for people we already know (July 2 2026)
+
+Visiting buildablekids.com (the marketing landing page) now auto-sends returning
+people straight into the app instead of showing them the "Log in / Try it free"
+marketing page again. An inline script at the very top of `public/landing.html`
+(runs before the page renders, so no flash) checks localStorage and redirects to
+`/app` when it finds either:
+- a signed-in grown-up session (`bk_parent_session_v1` with an access_token), or
+- a returning guest who already set up a kid on this device
+  (`bk_guest_kid_profiles_v1` non-empty, or an active kid in `bk_active_kid_v1`).
+
+Brand-new visitors (no saved data) still see the full marketing page. Escape
+hatch: `buildablekids.com/?stay=1` (or any `#section` deep-link) stays on the
+landing page, so a signed-in parent can still reach pricing/marketing on purpose.
+Uses `location.replace` so the back button doesn't bounce them in a loop.
+Live + browser-QA'd (fresh visitor, guest kid, account session, and ?stay=1 all
+verified on www.buildablekids.com).
+
 ## App-wide "someone invited you to play" alert + lobby consistency pass (July 2 2026)
 Owner ask: make sure all the multiplayer lobbies/connectors are consistent, and when someone invites you to play, alert you at the top of the screen **anywhere in the app** — auto-dismissing if ignored, or the kid can tap the × to close it. (1) Lobby audit: every online game already funnels through the ONE shared `src/GameLobby.jsx` (chess + checkers + tic-tac-toe on the turn-based "poll a row" transport, tennis on the real-time transport), and the inline lobby specs in `BuildableKids.jsx` match `gameSpecFor()` — so the invite→connect→play pipeline is a single consistent path. (Connect Four / Dots & Boxes share the board shell but are not yet wired online; Family Town keeps its own N-seat model — both pre-existing follow-ups, unchanged here.) (2) New `GlobalInviteAlert` component in `BuildableKids.jsx` is mounted once at the app root (outside the per-screen `__view` switch) so it floats over EVERY screen, not just Home. It polls the same shared sources the Home hub uses (`inboxInvites` for turn-based friend games + `listInvitesForKid` for real-time tennis/town), chimes, slides a banner down from the top ("X wants to play Chess!" with a Join button + × close). It auto-goes-away after ~9s if ignored and a dismissed/ignored invite is remembered so it never nags again. Tapping Join reuses the existing `openFriendInvite` / `openRtInvite` autoJoin routing. Suppressed on Home (which already shows invite cards) and on the friend-match screen itself. Scoped to `src/BuildableKids.jsx`.
 
