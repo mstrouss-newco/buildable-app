@@ -31,6 +31,14 @@
            color:#1a0f3a;background:#ffd86b;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
   #backBtn{position:fixed;left:12px;top:12px;z-index:30;display:none;font-family:inherit;font-weight:800;font-size:14px;
            color:#fff;background:rgba(26,20,64,.78);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+  /* gentle "turn your phone sideways" nudge — only while playing upright; never blocks taps */
+  #rotateHint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);transform:translateX(-50%);z-index:40;
+              display:none;align-items:center;gap:9px;pointer-events:none;font-family:inherit;font-weight:800;font-size:15px;color:#fff;
+              background:rgba(26,20,64,.82);border:1px solid #4a3c86;border-radius:22px;padding:9px 16px;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+  #rotateHint.show{display:flex;animation:rhpop .5s ease}
+  #rotateHint svg{width:22px;height:22px;flex:none;animation:rhtilt 1.8s ease-in-out infinite}
+  @keyframes rhpop{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  @keyframes rhtilt{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(78deg)}}
 </style>
 <style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
 html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -52,12 +60,14 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <button id="backBtn" title="Back to menu">‹ Menu</button>
 <button id="muteBtn">Sound: On</button>
 <button id="helpBtn" title="How to play">?</button>
+<div id="rotateHint"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd86b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><line x1="10.5" y1="18.5" x2="13.5" y2="18.5"/></svg><span>Turn sideways to play bigger!</span></div>
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
+<script src="buildable-viewport.js"></script>
 <script src="matter.min.js"></script>
 <script>
 // ============================================================================
@@ -70,7 +80,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 //  QA hook exposed as window.BUILDABLE_GAME (SLING_GAME kept as an alias).
 // ============================================================================
 var BR = window.BuildableRenders, BA = window.BuildableAudio, BM = window.BuildableMechanics,
-    BS = window.BuildableStartScreen, BN = window.BuildableGameNav, M = window.Matter;
+    BS = window.BuildableStartScreen, BN = window.BuildableGameNav, BV = window.BuildableViewport, M = window.Matter;
 
 // ---- logical world (canvas is scaled by CSS to fit any screen) ----
 var W = 960, H = 600, GY = 548;           // GY = top of the ground band
@@ -152,22 +162,32 @@ var ctx = canvas ? canvas.getContext("2d") : null;
 // ---- FILL-SCREEN: map the fixed 960x600 world onto the whole device screen. On a
 //  tall phone the world spans the full WIDTH and sits at the BOTTOM; the extra room
 //  above becomes open sky (no more letterbox / floating box). Physics stays 960x600.
-var VX = { scale:1, offx:0, offy:0 };   // design(960x600) -> canvas transform
+var VX = { scale:1, offx:0, offy:0 };   // design(960x600) -> canvas transform (cache of the viewport)
 var CW = W, CH = H;                     // physical canvas size in device pixels
+var VP = null, isPortrait = false;      // shared Buildable Viewport (landscape fills / portrait bottom-anchored)
 function resize(){
   if(!canvas) return;
+  if(BV && BV.make){                    // shared fit: landscape fills edge-to-edge; portrait anchors to bottom
+    if(!VP) VP = BV.make(canvas, { worldW:W, worldH:H });
+    VP.resize();
+    CW = VP.cw; CH = VP.ch; VX.scale = VP.scale; VX.offx = VP.offx; VX.offy = VP.offy; isPortrait = VP.portrait;
+    updateRotateHint(); return;
+  }
+  // fallback if the viewport lib isn't loaded (e.g. headless QA): fit width, bottom-anchored
   var vw = (typeof window!=="undefined" && window.innerWidth)  ? window.innerWidth  : W;
   var vh = (typeof window!=="undefined" && window.innerHeight) ? window.innerHeight : H;
   var dpr = (typeof window!=="undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1;
   CW = Math.max(1, Math.round(vw*dpr)); CH = Math.max(1, Math.round(vh*dpr));
-  canvas.width = CW; canvas.height = CH;
-  var sFit = CW / W;                    // scale so the world fills the full screen WIDTH
-  if(H*sFit <= CH){                     // portrait / tall: fill width, anchor world to bottom
-    VX.scale = sFit; VX.offx = 0; VX.offy = CH - H*sFit;
-  } else {                             // landscape / wide: fit height, center horizontally
-    var sH = CH / H; VX.scale = sH; VX.offx = (CW - W*sH)/2; VX.offy = 0;
-  }
+  canvas.width = CW; canvas.height = CH; isPortrait = vh > vw;
+  var sFit = CW / W;
+  if(H*sFit <= CH){ VX.scale = sFit; VX.offx = 0; VX.offy = CH - H*sFit; }
+  else { var sH = CH / H; VX.scale = sH; VX.offx = (CW - W*sH)/2; VX.offy = 0; }
+  updateRotateHint();
 }
+// show the "turn sideways" nudge only while playing upright (never on the menu, never in landscape)
+function updateRotateHint(){ var e = (typeof document!=="undefined") ? document.getElementById("rotateHint") : null;
+  if(!e) return; var playing = (state==="ready"||state==="aiming"||state==="flying"||state==="reload"||state==="clearing");
+  e.classList[(isPortrait && playing) ? "add" : "remove"]("show"); }
 var state = "title";            // title | ready | aiming | flying | reload | win | lose
 var level = 0, G = null, fx = (BM ? BM.makeFx() : null);
 var botMode = false, started = false;
@@ -348,9 +368,9 @@ function winLevel(){ if(state==="win")return; state="win";
   if(!PREFS.stars[level] || PREFS.stars[level]<stars) PREFS.stars[level]=stars;
   if(PREFS.unlocked < Math.min(level+1, GAME_CONFIG.levels.length)) PREFS.unlocked=Math.min(level+1,GAME_CONFIG.levels.length);
   savePrefs(); sfx("win"); if(fx&&BM) BM.explode(fx, W/2, 200, "#ffd86b", { n:30, pop:"You did it!", sfx:null });
-  signal("win");
+  signal("win"); updateRotateHint();
 }
-function loseLevel(){ if(state==="lose")return; state="lose"; sfx("lose"); signal("lose"); }
+function loseLevel(){ if(state==="lose")return; state="lose"; sfx("lose"); signal("lose"); updateRotateHint(); }
 
 // tell the app (helper reactions + per-kid telemetry) — exactly once per result
 function signal(kind){ try{ if(window.parent){ window.parent.postMessage({ source:"buildable", kind:kind }, "*"); } }catch(e){} }
@@ -687,7 +707,7 @@ function show(id,on){ var e=el(id); if(e)e.classList[on?"add":"remove"]("show");
 function inApp(){ try{ return typeof window!=="undefined" && window.parent && window.parent!==window; }catch(e){ return false; } }
 function showChrome(on){ if(inApp()) on=false;   // in the app, the shell draws Home/Sound/Help — never show the engine's own buttons (they overlapped)
   ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
-function showMenu(){ state="title"; G=null; show("help",false); showChrome(false);
+function showMenu(){ state="title"; G=null; show("help",false); showChrome(false); updateRotateHint();
   var host=el("start"); if(host)host.style.display="block"; if(!BS||!host)return;
   var cb={ onPlay:function(n){ if(BA)BA.unlock&&BA.unlock(); startLevel(n-1); },
            onSound:function(){ if(BA){BA.unlock&&BA.unlock();BA.toggleMute&&BA.toggleMute();} },
@@ -695,7 +715,7 @@ function showMenu(){ state="title"; G=null; show("help",false); showChrome(false
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg());
 }
 function hideMenu(){ var host=el("start"); if(host)host.style.display="none"; showChrome(true); }
-function startLevel(i){ level=i; buildWorld(i); started=true; hideMenu(); show("help",false); }
+function startLevel(i){ level=i; buildWorld(i); started=true; hideMenu(); show("help",false); updateRotateHint(); }
 
 function wireMenus(){
   var hb=el("helpBtn"); if(hb)hb.onclick=function(){ show("help",true); };

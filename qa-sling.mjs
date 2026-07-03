@@ -6,7 +6,7 @@ const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
 const html=read('sling-squad.html');
 // shared libs + the vendored physics engine, loaded into the sandbox like the browser would
 const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js',
-            'buildable-startscreen.js','buildable-gamenav.js','matter.min.js'].map(read).join('\n');
+            'buildable-startscreen.js','buildable-gamenav.js','buildable-viewport.js','matter.min.js'].map(read).join('\n');
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
 const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:960,height:600}:(typeof k==='string'?noop:undefined))});
