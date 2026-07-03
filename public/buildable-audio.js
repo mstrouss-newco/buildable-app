@@ -19,7 +19,7 @@
 // ============================================================================
 (function (g) {
   const BA = { ctx:null, master:null, music:null, muted:false, _unlocked:false,
-               sfxBase:"", sfxVer:"3", map:{}, buffers:{}, _loading:{}, _last:{} };
+               sfxBase:"", sfxVer:"4", map:{}, buffers:{}, _loading:{}, _last:{} };
 
   try { BA.muted = localStorage.getItem("bk_muted") === "1"; } catch (e) {}
 

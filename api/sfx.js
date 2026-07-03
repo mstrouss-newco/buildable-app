@@ -292,18 +292,18 @@ const SOUNDS = {
   // ---- SHARED CORE one-shots (canonical bare names) — punchy & satisfying, warm
   // not shrill. These replace the tiny synth fallbacks in buildable-audio.js so NO
   // game ever plays a beep. Any game can use them by their bare event name.
-  select:    "Short punchy satisfying UI select click, a warm rounded tick with a tiny bright ping, snappy and clean, kid-friendly, single hit, no music, no voices",
-  win:       "Short punchy triumphant win flourish, warm rounded bells popping upward to a satisfying bright finish, joyful and rewarding, not shrill, kid-friendly, no voices",
-  lose:      "Short gentle friendly cartoon fail sound, soft rounded descending wobble with a little bounce, playful and not harsh or scary, kid-friendly, single hit, no music, no voices",
-  coin:      "Short juicy satisfying coin pickup, warm bright ding with a crisp happy sparkle, rewarding and snappy, kid-friendly, single hit, no music, no voices",
-  collect:   "Short satisfying goody collect pop, warm rounded thock with a soft sparkle tail, happy and crisp, kid-friendly, single hit, no music, no voices",
-  hit:       "Short punchy satisfying soft impact, a warm rounded thock with a little body and thump, snappy not harsh, kid-friendly, single hit, no music, no voices",
-  shoot:     "Short punchy soft cartoon launch, warm rounded pew with a satisfying little thump, playful not harsh, kid-friendly, single hit, no music, no voices",
-  explode:   "Short satisfying soft cartoon poof burst, warm rounded low boom with a puff and a bit of crunch, bouncy not scary, kid-friendly, single hit, no music, no voices",
-  hurt:      "Short gentle friendly cartoon bonk, soft rounded boing-thud, a playful ouch that is not scary, kid-friendly, single hit, no music, no voices",
-  boss:      "Short punchy playful boss-appear stinger, warm rounded low horn hit with a little drama, fun not scary, kid-friendly, single hit, no music, no voices",
-  error:     "Short gentle friendly wrong-answer buzz, soft rounded low double blip, a playful nope that is not harsh, kid-friendly, single hit, no music, no voices",
-  celebrate: "Short punchy happy celebration burst, warm party-popper pop with a quick sprinkle of bright confetti sparkles, joyful and satisfying, kid-friendly, single hit, no music, no voices",
+  select:    "A single short soft wooden click, like a smooth marble tapping a wooden block one time, dry and clean, no reverb, no music, no voices",
+  win:       "A short cheerful triumphant fanfare on warm brass and glockenspiel, three quick rising notes ending on a bright happy chord, celebratory, no voices",
+  lose:      "A short funny cartoon fail sound, a comic descending slide-whistle sliding down to a soft tuba blat, playful and goofy, no voices",
+  coin:      "A classic bright arcade coin pickup, a crisp quick two-note metallic bling rising up, retro video-game coin, no voices",
+  collect:   "A single soft round water-drop bloop, one cute bubbly plop pop, clean and dry, no music, no voices",
+  hit:       "A single soft deep drum thud, a padded mallet striking a low tom one time, round and punchy, dry, no music, no voices",
+  shoot:     "A single soft cartoon laser pew, one quick descending sci-fi zap, playful toy blaster, no voices",
+  explode:   "A short soft cartoon explosion, a low muffled poof boom with a puff of air, bouncy and not scary, no voices",
+  hurt:      "A single funny cartoon boing bonk, a springy doing as something bumps its head, comic and light, no voices",
+  boss:      "A short dramatic low brass and gong stinger, a deep ominous bwaaam as a boss appears, playful-spooky, no voices",
+  error:     "A short gentle wrong-answer buzzer, two soft low bzzt bzzt honks, comedic and not harsh, no voices",
+  celebrate: "A short festive party celebration, a popping party-popper with a quick shower of confetti and a tiny kazoo toot, joyful, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -336,18 +336,20 @@ const DURATIONS = {
 };
 
 async function cacheGet(key){if(!SUPABASE_URL||!SUPABASE_SERVICE_KEY)return null;try{const r=await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}&select=audio_b64&limit=1`,{headers:{apikey:SUPABASE_SERVICE_KEY,Authorization:`Bearer ${SUPABASE_SERVICE_KEY}`}});if(!r.ok)return null;const rows=await r.json();return Array.isArray(rows)&&rows[0]?rows[0].audio_b64:null;}catch{return null;}}
+async function cacheDel(key){if(!SUPABASE_URL||!SUPABASE_SERVICE_KEY)return;try{await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}`,{method:"DELETE",headers:{apikey:SUPABASE_SERVICE_KEY,Authorization:`Bearer ${SUPABASE_SERVICE_KEY}`}});}catch{}}
 async function cachePut(key,b64){if(!SUPABASE_URL||!SUPABASE_SERVICE_KEY)return;try{await fetch(`${SUPABASE_URL}/rest/v1/narration_cache`,{method:"POST",headers:{apikey:SUPABASE_SERVICE_KEY,Authorization:`Bearer ${SUPABASE_SERVICE_KEY}`,"Content-Type":"application/json",Prefer:"resolution=ignore-duplicates"},body:JSON.stringify({cache_key:key,audio_b64:b64,word_timings:null})});}catch{}}
 
 export default async function handler(req,res){
   const sName=(req.query.s||"water").toString();
   if(!SOUNDS[sName]){ res.setHeader("Cache-Control","no-store"); return res.status(400).json({ok:false,error:"unknown sound"}); }
   const key="sfx:"+sName;
-  let b64=await cacheGet(key);
+  if(req.query.force) await cacheDel(key);
+  let b64=req.query.force?null:await cacheGet(key);
   if(!b64){
     const elKey=process.env.ELEVENLABS_API_KEY;
     if(!elKey){ res.setHeader("Cache-Control","no-store"); return res.status(200).json({ok:true,configured:false}); }
     try{
-      const r=await fetch("https://api.elevenlabs.io/v1/sound-generation",{method:"POST",headers:{"xi-api-key":elKey,"Content-Type":"application/json"},body:JSON.stringify({text:SOUNDS[sName],duration_seconds:(DURATIONS[sName]||12),prompt_influence:0.5})});
+      const r=await fetch("https://api.elevenlabs.io/v1/sound-generation",{method:"POST",headers:{"xi-api-key":elKey,"Content-Type":"application/json"},body:JSON.stringify({text:SOUNDS[sName],duration_seconds:(DURATIONS[sName]||12),prompt_influence:0.7})});
       if(!r.ok){ res.setHeader("Cache-Control","no-store"); return res.status(503).json({ok:false,failed:true,status:r.status,detail:(await r.text()).slice(0,200)}); }
       const buf=Buffer.from(await r.arrayBuffer());
       b64=buf.toString("base64");
