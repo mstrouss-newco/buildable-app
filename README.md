@@ -26,6 +26,9 @@ Browser-QA'd live on www.buildablekids.com/croctot.html: loading screen, Make-it
 
 ---
 
+## Survival: Black Hole power-up (July 3 2026)
+New level-up card in Space Sparkles (`public/survival-engine.html`): **Black Hole**. Every so often it opens a swirling star-vortex over the thickest part of the enemy swarm that drags nearby foes into its core and crushes them. Kept fair to the "always survivable" rule: it opens AWAY from the hero (so it pulls enemies off you) and bosses are only tugged gently, never yanked in or insta-crushed. Stacks make it bigger, more frequent, and hit harder. Rendered as a friendly sparkly swirl (not a scary void); card icon added to `buildable-renders.js` `puIcon`. Headless QA: all 6 levels + full campaign still win with the bot spamming it first. Commit 4dea553, live + browser-QA'd.
+
 ## Survival: full-screen on iPad/iPhone + gently-moving nature worlds (July 3 2026)
 Owner asks: make Space Sparkles (`public/survival-engine.html`) fill the whole screen on iPad/iPhone, and swap the single space backdrop for the new gently-moving parallax nature worlds.
 
