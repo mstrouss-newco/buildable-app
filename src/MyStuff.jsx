@@ -114,7 +114,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
     try {
       await fetch("/api/publish-creation", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, id, deviceId: getDeviceId(), publish: next }),
+        body: JSON.stringify({ kind, id, deviceId: getDeviceId(), kidProfileId: getKidProfileId() || undefined, publish: next }),
       });
     } catch { /* keep optimistic */ }
   }

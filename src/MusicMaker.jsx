@@ -299,7 +299,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     setSongs((prev) => prev.map((x) => x.song_id === song.song_id ? { ...x, published: next } : x));
     try {
       await fetch("/api/publish-creation", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "song", id: song.song_id, deviceId: getDeviceId(), publish: next }) });
+        body: JSON.stringify({ kind: "song", id: song.song_id, deviceId: getDeviceId(), kidProfileId: getKidProfileId() || undefined, publish: next }) });
     } catch { /* keep optimistic */ }
   }
   async function deleteSong(songId) {

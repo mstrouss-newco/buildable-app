@@ -85,7 +85,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
     const next=!st.published;
     setSaved(prev=>prev.map(x=>x.story_id===st.story_id?{...x,published:next}:x));
     try{ await fetch("/api/publish-creation",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({kind:"story",id:st.story_id,deviceId,publish:next})}); }catch{}
+      body:JSON.stringify({kind:"story",id:st.story_id,deviceId,kidProfileId:getKidProfileId()||undefined,publish:next})}); }catch{}
   }
 
   // Remix: open the picker pre-filled with the EXACT choices behind another kid's
