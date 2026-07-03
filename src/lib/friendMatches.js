@@ -38,6 +38,13 @@ export async function listFriendMatches(game, kidId) {
   const rows = await rest(`friend_matches?game=eq.${game}&status=eq.active&or=(host_kid.eq.${kidId},guest_kid.eq.${kidId})&order=updated_at.desc`, { method: "GET" });
   return rows || [];
 }
+// ALL active turn-based friend matches for a kid, across every game (drives the
+// app-wide "your move in <game>" home nudge). Turn-based only -- real-time games
+// (tennis) don't leave an async "your move" waiting.
+export async function listActiveFriendMatches(kidId) {
+  const rows = await rest(`friend_matches?transport=eq.turns&status=eq.active&or=(host_kid.eq.${kidId},guest_kid.eq.${kidId})&order=updated_at.desc`, { method: "GET" });
+  return rows || [];
+}
 // Which side is this kid? The inviter is 'host', the invitee is 'guest'.
 export function roleFor(match, kidId) {
   if (!match) return null;

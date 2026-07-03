@@ -20,6 +20,8 @@ import FamilyCheckers from "./FamilyCheckers";
 import FamilyRealtime from "./FamilyRealtime";
 import { listMyMatches } from "./lib/chessMatches";
 import { listInvitesForKid } from "./lib/rtMatch";
+import { startPresence, stopPresence, inboxInvites } from "./lib/friends";
+import { listActiveFriendMatches, roleFor } from "./lib/friendMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
 import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken, listKidProfiles } from "./lib/accounts";
 import { registerAudio } from "./lib/audioUnlock";
@@ -28,6 +30,7 @@ import { setCurrentGame, logGameEvent } from "./lib/gameLog";
 
 // Screens
 const SCREEN_HOME = "home";
+const SCREEN_FRIEND_MATCH = "friend_match"; // open a friend game straight from a home nudge
 const SCREEN_INTRO = "intro";
 const SCREEN_GAME_TYPE = "game_type";
 const SCREEN_CHARACTER_CREATOR = "character_creator";
@@ -293,10 +296,11 @@ function StuffGlyph() {
   );
 }
 
-function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite }) {
+function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendInvites = [], friendTurns = [], onJoinFriendInvite, onOpenFriendMatch }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
-  const count = (chessTurns > 0 ? chessTurns : 0) + (rtInvite ? 1 : 0);
+  const FTITLES = { chess: "Chess", checkers: "Checkers", tictactoe: "Tic-Tac-Toe", tennis: "Tennis" };
+  const count = (chessTurns > 0 ? chessTurns : 0) + (rtInvite ? 1 : 0) + (friendInvites ? friendInvites.length : 0) + (friendTurns ? friendTurns.length : 0);
   useEffect(() => {
     if (!open) return;
     const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
@@ -347,7 +351,7 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite }) {
       <button onClick={() => setOpen((o) => !o)} aria-label="Friends" style={pillBtn}>
         <People />Friends
         {count > 0 && <span style={badge}>{count}</span>}
-        {rtInvite && <span style={liveDot} />}
+        {(rtInvite || (friendInvites && friendInvites.length > 0)) && <span style={liveDot} />}
       </button>
       {open && (
         <div style={menu}>
@@ -379,6 +383,30 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite }) {
                 </span>
               </button>
             )}
+            {friendInvites && friendInvites.map((iv) => (
+              <button key={"fi_" + iv.id} style={row} onClick={() => { setOpen(false); onJoinFriendInvite && onJoinFriendInvite(iv); }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><Controller /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 800, fontSize: 14 }}>{iv.fromName} wants to play {FTITLES[iv.game] || "a game"}</span>
+                    <span style={chip("rgba(52,211,153,0.20)", "#7CF6B0")}>Join</span>
+                  </span>
+                  <span style={{ display: "block", fontSize: 12, color: "#bfe9d8", marginTop: 2 }}>Tap to join and play together</span>
+                </span>
+              </button>
+            ))}
+            {friendTurns && friendTurns.map((m) => (
+              <button key={"ft_" + m.id} style={row} onClick={() => { setOpen(false); onOpenFriendMatch && onOpenFriendMatch(m); }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Chess /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 800, fontSize: 14 }}>Your move in {FTITLES[m.game] || "a game"}</span>
+                    <span style={chip("#FFD66B", "#5a3d00")}>Your turn</span>
+                  </span>
+                  <span style={{ display: "block", fontSize: 12, color: "#c7bfe0", marginTop: 2 }}>A friend is waiting on you</span>
+                </span>
+              </button>
+            ))}
             {count === 0 && (
               <div style={{ textAlign: "center", color: "#b8b3d0", fontSize: 13, fontWeight: 600, padding: "20px 10px 24px" }}>
                 All caught up — no one's waiting on you right now.
@@ -390,6 +418,26 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite }) {
     </div>
   );
 }
+
+// Lobby props for each friend-playable game, keyed by the invite/match `game`.
+// Mirrors the inline specs in the SCREEN_*_LOBBY blocks so a home nudge can open
+// ANY friend game without knowing its screen. Keep url/version in sync with them.
+function gameSpecFor(slug) {
+  if (slug === "chess") return { slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=5", transport: "turns" };
+  if (slug === "checkers") {
+    const b = Array.from({ length: 8 }, () => Array(8).fill(null));
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      if ((r + c) % 2 !== 1) continue;
+      if (r < 3) b[r][c] = { c: "b", k: false };
+      else if (r > 4) b[r][c] = { c: "r", k: false };
+    }
+    return { slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: { board: b, turn: "r" } };
+  }
+  if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
+  if (slug === "tennis") return { slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=3", transport: "realtime" };
+  return null;
+}
+const FRIEND_GAME_TITLES = { chess: "Chess", checkers: "Checkers", tictactoe: "Tic-Tac-Toe", tennis: "Tennis" };
 
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
@@ -408,6 +456,7 @@ export default function BuildableKids() {
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
   const [rtAutoJoin, setRtAutoJoin] = useState(null);
+  const [friendAutoJoin, setFriendAutoJoin] = useState(null); // { game, inviteId? , matchId? }
   const [gameData, setGameData] = useState({
     playerName: "",
     age: null,
@@ -431,6 +480,16 @@ export default function BuildableKids() {
   // Keep the signed-in session alive: refresh an expired token on load.
   useEffect(() => { ensureFreshToken(); }, []);
 
+  // ---- APP-WIDE PRESENCE ----------------------------------------------------
+  // Stamp kid_profiles.last_seen every ~30s for as long as a kid is active in
+  // the app -- ANYWHERE, not just inside a game lobby. This is what makes a
+  // friend show "online" to someone else while they're playing/making things.
+  useEffect(() => {
+    if (isSignedIn() && activeKid && activeKid.id) startPresence(activeKid);
+    else stopPresence();
+  }, [activeKid]);
+  useEffect(() => () => stopPresence(), []);
+
   // Allow opening the admin dashboard directly by URL: /admin or /admin.html
   useEffect(() => {
     if (typeof window !== "undefined" && /\/admin(\.html)?\/?$/i.test(window.location.pathname)) {
@@ -439,6 +498,11 @@ export default function BuildableKids() {
   }, []);
 
   const goHome = () => setScreen(SCREEN_HOME);
+
+  // Open a friend game straight from a home nudge. An invite -> accept + play;
+  // an existing match ("your move") -> reopen it. Works for every friend game.
+  const openFriendInvite = (inv) => { if (!inv || !gameSpecFor(inv.game)) return; setFriendAutoJoin({ game: inv.game, inviteId: inv.id }); setScreen(SCREEN_FRIEND_MATCH); };
+  const openFriendMatch = (m) => { if (!m || !gameSpecFor(m.game)) return; setFriendAutoJoin({ game: m.game, matchId: m.id }); setScreen(SCREEN_FRIEND_MATCH); };
 
   // Per-kid game telemetry: log a "play" when a game screen opens, and remember
   // the current game so win/lose results get attributed to it (see gameLog +
@@ -508,6 +572,8 @@ export default function BuildableKids() {
         onAdmin={() => setScreen(SCREEN_ADMIN)}
         onHelper={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_HELPER); }}
         onJoinInvite={(m) => { setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); }}
+        onJoinFriendInvite={openFriendInvite}
+        onOpenFriendMatch={openFriendMatch}
       />
     );
   }
@@ -670,6 +736,21 @@ export default function BuildableKids() {
   if (screen === SCREEN_TICTACTOE) {
     return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=3" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TTT_LOBBY)} />;
   }
+  if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
+    const spec = gameSpecFor(friendAutoJoin.game);
+    if (!spec) return null; // never happens: openFriend* only route known games
+    return (
+      <GameLobby
+        game={spec}
+        activeKid={activeKid}
+        entry="friends"
+        autoJoin={friendAutoJoin}
+        onHome={() => { setFriendAutoJoin(null); setScreen(SCREEN_HOME); }}
+        onAddFriend={() => { setFriendsReturn(SCREEN_HOME); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
+  }
+
   if (screen === SCREEN_TTT_LOBBY) {
     return (
       <GameLobby
@@ -865,7 +946,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds, onJoinInvite }) {
+function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch }) {
   // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
   const AppIcon = ({ grad, size = 76, children }) => (
     <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
@@ -960,6 +1041,47 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
   const [chessTurns, setChessTurns] = useState(0);
   const prevTurnsRef = useRef(0);
   const [rtInvite, setRtInvite] = useState(null);
+  // NEW cross-account system (game_invites + friend_matches), polled app-wide so
+  // a kid sees "X wants to play" / "your move" ANYWHERE they open the home hub,
+  // not only inside a game's friends screen.
+  const [friendInvites, setFriendInvites] = useState([]); // pending invites TO this kid
+  const [friendTurns, setFriendTurns] = useState([]);     // turn-based matches where it's this kid's move
+  const prevFriendCountRef = useRef(0);
+  useEffect(() => {
+    let alive = true;
+    async function checkFriends() {
+      try {
+        if (!isSignedIn()) { if (alive) { setFriendInvites([]); setFriendTurns([]); } return; }
+        const meK = getActiveKid(); if (!meK || !meK.id) { if (alive) { setFriendInvites([]); setFriendTurns([]); } return; }
+        const [inv, matches] = await Promise.all([
+          inboxInvites().catch(() => []),
+          listActiveFriendMatches(meK.id).catch(() => []),
+        ]);
+        if (!alive) return;
+        const invs = (inv || []).filter((i) => i.toKid === meK.id);
+        const acceptedMatchIds = new Set(); // hide a "your move" that still has a live invite
+        invs.forEach((i) => { if (i.matchId) acceptedMatchIds.add(i.matchId); });
+        // Is it THIS kid's move? Host is always the first player. Turn is stored
+        // as "host"/"guest" before the board seeds, then as the board's own side
+        // token afterwards (chess/tic-tac-toe: w/b, checkers: r/b). Match the
+        // lobby's authority: host = first player (host|w|r), guest = (guest|b).
+        const isMyTurn = (m) => {
+          const role = roleFor(m, meK.id);
+          const t = String(m.turn || "host").toLowerCase();
+          return role === "host" ? (t === "host" || t === "w" || t === "r") : (t === "guest" || t === "b");
+        };
+        const turns = (matches || []).filter((m) => isMyTurn(m) && !acceptedMatchIds.has(m.id));
+        setFriendInvites(invs);
+        setFriendTurns(turns);
+        const total = invs.length + turns.length;
+        if (total > prevFriendCountRef.current) dingChime();
+        prevFriendCountRef.current = total;
+      } catch (e) { /* ignore */ }
+    }
+    checkFriends();
+    const iv = setInterval(checkFriends, 6000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [activeKid]);
   useEffect(() => {
     let alive = true;
     async function checkInvites() {
@@ -1214,7 +1336,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={onMyStuff} style={styles.myStuffButton}><StuffGlyph />My Stuff</button>
             <GrownUpButton onGrownUp={onGrownUp} />
-            <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} />
+            <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} />
           </div>
         </div>
 
@@ -1267,6 +1389,46 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#34D399", color: "#053d2b", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Join →</span>
           </button>
         )}
+
+        {/* friend invites (NEW cross-account system) — "X wants to play Y" */}
+        {friendInvites && friendInvites.map((iv) => (
+          <button key={"fic_" + iv.id} onClick={() => onJoinFriendInvite && onJoinFriendInvite(iv)} style={{
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 18,
+            display: "flex", gap: 12, alignItems: "center",
+            background: "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(14,165,233,0.18))",
+            border: "1px solid rgba(52,211,153,0.5)", borderRadius: 16, padding: "12px 14px", color: "#fff", fontFamily: NUN,
+          }}>
+            <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><ControllerGlyph /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                {iv.fromName} wants to play {FRIEND_GAME_TITLES[iv.game] || "a game"}!
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#34D399", color: "#053d2b", padding: "2px 7px", borderRadius: 999 }}>Invite</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#bfe9d8" }}>Tap to join and play together</div>
+            </div>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#34D399", color: "#053d2b", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Join &rarr;</span>
+          </button>
+        ))}
+
+        {/* friend turn-based "your move" (NEW cross-account system) */}
+        {friendTurns && friendTurns.map((m) => (
+          <button key={"ftc_" + m.id} onClick={() => onOpenFriendMatch && onOpenFriendMatch(m)} style={{
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 18,
+            display: "flex", gap: 12, alignItems: "center",
+            background: "linear-gradient(135deg, rgba(255,214,107,0.16), rgba(214,90,123,0.16))",
+            border: "1px solid rgba(255,214,107,0.45)", borderRadius: 16, padding: "12px 14px", color: "#fff", fontFamily: NUN,
+          }}>
+            <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><ChessGlyph /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                Your move in {FRIEND_GAME_TITLES[m.game] || "a game"}
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#FFD66B", color: "#5a3d00", padding: "2px 7px", borderRadius: 999 }}>Your turn</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#d9cfb0" }}>A friend is waiting on you</div>
+            </div>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Play &rarr;</span>
+          </button>
+        ))}
 
         {/* jump back in */}
         {jumpItems.length > 0 && (

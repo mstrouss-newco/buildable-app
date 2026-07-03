@@ -105,7 +105,7 @@ export default async function handler(req, res) {
       const out = [];
       for (const iv of inv) {
         const fk = await sb(`kid_profiles?id=eq.${iv.from_kid}&select=name,avatar&limit=1`, { method: "GET" });
-        out.push({ id: iv.id, game: iv.game, transport: iv.transport, world: iv.world, toKid: iv.to_kid, fromName: (fk && fk[0] && fk[0].name) || "A friend", fromAvatar: (fk && fk[0] && fk[0].avatar) || null });
+        out.push({ id: iv.id, game: iv.game, transport: iv.transport, world: iv.world, toKid: iv.to_kid, matchId: iv.match_id || null, fromName: (fk && fk[0] && fk[0].name) || "A friend", fromAvatar: (fk && fk[0] && fk[0].avatar) || null });
       }
       return res.status(200).json({ invites: out });
     }
@@ -206,8 +206,20 @@ export default async function handler(req, res) {
       const toRows = await sb(`kid_profiles?id=eq.${toKid}&select=id,parent_id,last_seen,name&limit=1`, { method: "GET" });
       const toRow = toRows && toRows[0];
       if (!toRow || !okParents.includes(toRow.parent_id)) return res.status(403).json({ error: "not an approved friend" });
+      // Turn-based games are ASYNC: create the shared match RIGHT NOW so the
+      // inviter can start playing immediately, no matter whether the friend is
+      // online. The invitee joins whenever they open the app (their turn waits
+      // for them, exactly like the "your move in chess" nudge). Real-time games
+      // (tennis) still create the match only when BOTH sides connect (on accept).
+      let matchId = null;
+      if (transport === "turns") {
+        const created = await sb(`friend_matches`, { method: "POST", headers: { Prefer: "return=representation" },
+          body: JSON.stringify({ game, transport, host_kid: fromKid, host_parent: me,
+            guest_kid: toKid, guest_parent: toRow.parent_id, world, state: {}, turn: "host", status: "active" }) });
+        matchId = created && created[0] && created[0].id;
+      }
       const rows = await sb(`game_invites`, { method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ game, transport, from_kid: fromKid, from_parent: me, to_kid: toKid, to_parent: toRow.parent_id, world, status: "pending" }) });
+        body: JSON.stringify({ game, transport, from_kid: fromKid, from_parent: me, to_kid: toKid, to_parent: toRow.parent_id, world, status: "pending", match_id: matchId }) });
       const inviteId = rows && rows[0] && rows[0].id;
       // offline friend? email their grown-up
       if (!isOnline(toRow.last_seen) && toRow.parent_id !== me) {
@@ -216,7 +228,7 @@ export default async function handler(req, res) {
         await sendEmail(op && op.email, `${fromName} invited ${toRow.name} to play on Buildable`,
           `<p><b>${fromName}</b> invited <b>${toRow.name}</b> to play ${game} on Buildable.</p><p>Open the app and tap ${toRow.name}'s player to join.</p><p><a href="${APP_URL}">Open Buildable</a></p>`);
       }
-      return res.status(200).json({ inviteId, online: isOnline(toRow.last_seen) });
+      return res.status(200).json({ inviteId, matchId, transport, online: isOnline(toRow.last_seen) });
     }
 
     if (action === "cancelInvite") {
@@ -237,14 +249,19 @@ export default async function handler(req, res) {
 
     if (action === "accept") {
       const id = (b.inviteId || "").toString();
-      const rows = await sb(`game_invites?id=eq.${id}&to_parent=eq.${me}&status=eq.pending&limit=1`, { method: "GET" });
+      const rows = await sb(`game_invites?id=eq.${id}&to_parent=eq.${me}&status=eq.pending&select=id,game,transport,from_kid,from_parent,to_kid,to_parent,world,match_id&limit=1`, { method: "GET" });
       const iv = rows && rows[0];
       if (!iv) return res.status(404).json({ error: "invite not available" });
-      // create the ONE shared cross-account match shell; host (inviter) seeds the board.
-      const created = await sb(`friend_matches`, { method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ game: iv.game, transport: iv.transport, host_kid: iv.from_kid, host_parent: iv.from_parent,
-          guest_kid: iv.to_kid, guest_parent: iv.to_parent, world: iv.world, state: {}, turn: "host", status: "active" }) });
-      const matchId = created && created[0] && created[0].id;
+      // Turn-based invites already have a match (created at invite time) -- just
+      // reuse it. Real-time invites create the shared match now, on accept, when
+      // both sides are connecting. Host (inviter) seeds the board.
+      let matchId = iv.match_id || null;
+      if (!matchId) {
+        const created = await sb(`friend_matches`, { method: "POST", headers: { Prefer: "return=representation" },
+          body: JSON.stringify({ game: iv.game, transport: iv.transport, host_kid: iv.from_kid, host_parent: iv.from_parent,
+            guest_kid: iv.to_kid, guest_parent: iv.to_parent, world: iv.world, state: {}, turn: "host", status: "active" }) });
+        matchId = created && created[0] && created[0].id;
+      }
       await sb(`game_invites?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ status: "accepted", match_id: matchId }) });
       return res.status(200).json({ matchId });
     }

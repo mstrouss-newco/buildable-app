@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { isSignedIn, getActiveKid, getSession } from "./lib/accounts";
 import {
   listFriends, sendInvite, cancelInvite, pollInvite, acceptInvite,
-  inboxInvites, startPresence, stopPresence,
+  inboxInvites,
 } from "./lib/friends";
 import { getFriendMatch, patchFriendMatch, roleFor, oppKidOf } from "./lib/friendMatches";
 import { openChannel } from "./lib/realtimeChannel";
@@ -62,7 +62,7 @@ const avatarText = (name) => (name || "?").trim().charAt(0).toUpperCase();
 
 const ALLOWED_REACTIONS = new Set(["Nice shot!","So close!","Good game!","Wow!","Let's go!","Haha!","Too slow!","You got this!","Great game!","Boop!","Bonk!","Wheee!","Is that all?","Wibble wobble!"]);
 
-export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend, entry }) {
+export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend, entry, autoJoin }) {
   const me = activeKid || getActiveKid();
   const signedIn = isSignedIn();
   const transport = (game && game.transport) || "turns";
@@ -79,10 +79,29 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   const [match, setMatch] = useState(null);
   const [rtConnecting, setRtConnecting] = useState(false);
 
-  // ---- presence: mark me online while this lobby is open ----
+  // ---- clean up any realtime channel on unmount ----
+  // (Presence/last_seen is now stamped app-wide from BuildableKids, so a kid
+  //  shows "online" everywhere in the app, not only inside this lobby.)
   useEffect(() => {
-    if (signedIn && me) startPresence(me);
-    return () => { stopPresence(); teardownRealtime(); };
+    return () => { teardownRealtime(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---- auto-join: opened straight from a home nudge (invite or your-move) ----
+  // autoJoin = { matchId } (reopen an existing match) OR { inviteId } (accept a
+  // pending invite, then drop into the match). Skips the friends list entirely.
+  useEffect(() => {
+    if (!autoJoin) return;
+    let alive = true;
+    (async () => {
+      try {
+        let m = null;
+        if (autoJoin.matchId) m = await getFriendMatch(autoJoin.matchId);
+        else if (autoJoin.inviteId) { const matchId = await acceptInvite(autoJoin.inviteId); m = await getFriendMatch(matchId); }
+        if (alive && m) enterMatch(m);
+      } catch (e) { /* fall back to the friends screen */ }
+    })();
+    return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -122,8 +141,15 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   async function invite(friend) {
     setErr("");
     try {
-      const { inviteId } = await sendInvite({ fromKid: me.id, toKid: friend.kidId, game: game.slug, transport, world: game.world || null });
-      setOutInvite({ id: inviteId, toName: friend.name, online: friend.online });
+      const r = await sendInvite({ fromKid: me.id, toKid: friend.kidId, game: game.slug, transport, world: game.world || null });
+      // Turn-based: the match already exists -> start playing right away, even if
+      // the friend is offline. They get a "join" nudge and play on their turn.
+      if (transport === "turns" && r && r.matchId) {
+        enterMatch(await getFriendMatch(r.matchId));
+        return;
+      }
+      // Real-time (tennis): keep the live handshake -- both must be connected.
+      setOutInvite({ id: r.inviteId, toName: friend.name, online: friend.online });
       setPhase("waiting");
     } catch (e) { setErr((e && e.message) || "Could not send the invite."); }
   }
@@ -343,10 +369,10 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
           <span style={C.ava}>{avatarText(f.name)}</span>
           <span>
             <span style={{ fontWeight: 800, fontSize: 17 }}>{f.name}</span>
-            <span style={{ display: "block", color: "#cfc9e6", fontSize: 13 }}>{f.online ? "Online now" : "Offline \u2014 we'll notify them"}</span>
+            <span style={{ display: "block", color: "#cfc9e6", fontSize: 13 }}>{f.online ? "Online now" : (transport === "turns" ? "Offline \u2014 they'll play on their turn" : "Offline \u2014 we'll notify them")}</span>
           </span>
         </span>
-        <button style={C.btn} onClick={() => invite(f)}>Invite</button>
+        <button style={C.btn} onClick={() => invite(f)}>{transport === "turns" ? "Start game" : "Invite"}</button>
       </div>
     );
     return (

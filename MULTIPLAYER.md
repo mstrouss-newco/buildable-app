@@ -285,3 +285,32 @@ lobby/score and layer the Pattern B Broadcast channel on top — that bridge is 
 2. Add env vars: `RESEND_API_KEY` and `RESEND_FROM` (a verified sender, e.g.
    `Buildable <hello@buildablekids.com>`), and optionally `APP_URL`. Email is skipped
    gracefully until `RESEND_API_KEY` is set — everything else works without it.
+
+---
+
+## Presence, offline turn-based play, and app-wide invite delivery (2026-07-02)
+
+Three fixes so the invite/presence experience holds up on real devices:
+
+- **Presence is app-wide.** `startPresence` / `stopPresence` now run from the top-level
+  `BuildableKids` component for as long as a kid profile is active — anywhere in the app,
+  not only inside `GameLobby`. So a kid making a song or playing a solo game still shows
+  **online** to their friends. (`kid_profiles.last_seen` stamped every ~30s; online = seen
+  in the last 90s.)
+- **Turn-based games start immediately, even if the friend is offline.** For
+  `transport:"turns"` (chess, checkers, tic-tac-toe), `api/friends.js`'s `invite` action
+  creates the shared `friend_matches` row **now** and stores its id on the invite. The
+  inviter sees **"Start game"** and drops straight into the board; the friend joins whenever
+  they next open the app and plays on their turn (async, exactly like the "your move in chess"
+  nudge). `accept` reuses that pre-created match. Only real-time games (tennis) still require
+  both sides online — they keep the live connect/waiting handshake.
+- **Invites reach the other kid anywhere.** The home hub (`HomeScreen`) polls the shared
+  system for the active kid — `inboxInvites()` (pending `game_invites`) and
+  `listActiveFriendMatches()` (turn-based `friend_matches` where it's this kid's move) — and
+  shows **"X wants to play <game> → Join"** and **"Your move in <game> → Play"** as both a
+  home-screen alert card and a Friends-pill entry with a badge. Tapping routes through a new
+  `SCREEN_FRIEND_MATCH` + `gameSpecFor()` into `GameLobby` with an `autoJoin` prop (accept the
+  invite / reopen the match, no friends-list detour).
+
+No schema change — this uses columns that already exist (`game_invites.match_id`,
+`friend_matches`). Nothing new for the owner to run.
