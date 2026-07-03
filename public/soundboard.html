@@ -71,6 +71,10 @@
   @keyframes pop { 0%{transform:scale(1)} 35%{transform:scale(1.08)} 100%{transform:scale(1)} }
   .hint { text-align:center; color:#A89CC4; font-weight:800; font-size:13.5px; margin-top:20px; }
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div class="wrap">

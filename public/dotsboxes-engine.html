@@ -32,6 +32,10 @@
          padding:14px 40px;cursor:pointer;box-shadow:0 6px 0 #4cba74}
   #again:active{transform:translateY(3px);box-shadow:0 3px 0 #4cba74}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="wrap"><canvas id="cv"></canvas></div>

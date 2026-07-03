@@ -51,6 +51,10 @@
   .court-card .thumb { width:100%; aspect-ratio:4/3; background-size:cover; background-position:center; display:block; }
   .court-card .nm { font-weight:800; font-size:14px; padding:8px 4px; }
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="wrap">

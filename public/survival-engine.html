@@ -47,6 +47,10 @@
            color:#0b1230;background:#ffe27a;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.3)}
   #start{position:fixed;inset:0;z-index:10;display:none}   /* shared start screen / level picker (BS) */
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="900" height="600"></canvas></div>

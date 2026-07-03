@@ -51,6 +51,10 @@
   .opt .sw{height:58px;border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center}
   .opt .nm{font-weight:700;font-size:15px}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="900" height="600"></canvas></div>

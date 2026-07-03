@@ -28,6 +28,10 @@
   #muteBtn { right: 12px; top: 12px; width: 44px; height: 44px; font-size: 13px; }
   .hidden { display: none !important; }
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="wrap"><div id="stage">

@@ -112,6 +112,10 @@ canvas{display:block;width:100%;height:auto;border-radius:10px;border:2px solid 
 }
 </style>
 
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="pwa-banner" style="display:none;background:#ff6600;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:700;width:100%;position:sticky;top:0;z-index:999;line-height:1.5;">

@@ -219,6 +219,10 @@ body.in-game .card{background:rgba(20,16,40,.34);border-color:rgba(255,255,255,.
 .react-toast.show{animation:reactpop 3.2s ease forwards}
 @keyframes reactpop{0%{opacity:0;transform:translateX(28px) scale(.9)}9%{opacity:1;transform:translateX(0) scale(1.04)}16%{transform:translateX(0) scale(1)}82%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(18px)}}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div class="world" id="world">

@@ -31,6 +31,10 @@
   .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;background:#ffd86b;color:#1a0f3a;
          font-weight:700;padding:12px 22px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="wrap">

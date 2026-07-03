@@ -134,6 +134,10 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 .guide-piece svg{width:46px;height:46px;flex:none}
 .guide-piece b{display:block;font-size:15px}.guide-piece span{font-size:13px;color:rgba(255,255,255,.6)}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div class="world" id="world-bg"></div>

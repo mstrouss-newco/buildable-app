@@ -91,6 +91,10 @@
   .dot.on{background:#9b7bff;box-shadow:0 0 0 3px rgba(155,123,255,.25)}
   .dot.done{background:#7ee0a0}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="900" height="600"></canvas></div>

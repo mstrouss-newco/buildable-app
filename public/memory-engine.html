@@ -29,6 +29,10 @@
   .sw{width:30px;height:30px;border-radius:9px}
   .cdone{margin-top:18px;width:100%;border:none;border-radius:999px;padding:13px;font-weight:900;font-size:15px;color:#16142b;background:#7CF6B0;cursor:pointer;font-family:inherit}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="wrap">

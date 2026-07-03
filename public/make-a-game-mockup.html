@@ -102,6 +102,10 @@
   .savedcover .h{position:absolute;right:4px;bottom:-4px;width:44px;height:44px;object-fit:contain;}
   .savedname{font-size:13px;font-weight:700;margin-top:6px;}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div class="wrap" id="app"></div>

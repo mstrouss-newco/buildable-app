@@ -35,6 +35,10 @@
   .who{color:var(--dim);font-size:14px;margin-top:14px}
   .err{color:#ff9a9a;font-size:14px;margin-top:10px;min-height:18px}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
 <div id="app"><div class="wrap" id="root">Loading…</div></div>

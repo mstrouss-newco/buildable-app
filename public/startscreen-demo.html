@@ -19,6 +19,10 @@
   #start{position:absolute;inset:0}
   #log{position:fixed;left:8px;bottom:8px;color:#6f6a93;font-size:12px;font-family:ui-monospace,monospace}
 </style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
 </head>
 <body>
   <div id="stage"><div id="frame"><div id="start"></div></div></div>
