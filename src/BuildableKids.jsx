@@ -223,7 +223,7 @@ function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/s
 function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=1" onHome={onHome} bg="#7fc7ff" />; }
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html" onHome={onHome} />; }
 function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
-function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=1" onHome={onHome} bg="#0b1030" />; }
+function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=2" onHome={onHome} bg="#0b1030" />; }
 function MemoryScreen({ onHome }) { return <GameFrame title="Buildable Memory Match" src="/memory-engine.html?v=1" onHome={onHome} bg="#131229" />; }
 function BingoScreen({ onHome }) { return <GameFrame title="Buildable Bingo" src="/bingo-engine.html?v=1" onHome={onHome} bg="#131229" />; }
 function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=1" onHome={onHome} bg="#131229" />; }
