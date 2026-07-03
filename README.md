@@ -151,6 +151,12 @@ Breaker (public/breaker-engine.html) no longer plays the generated /api/breaker-
 Bug: in the brick-breaker (public/breaker-engine.html), a ball caught by the sticky "Catch" power-up could get permanently stuck to the paddle, freezing the game with no way to relaunch. Reported after a multiball where the other balls fell off. Cause: the release input gated flingStuck() on `G.sticky && G.stuck`. When the Catch timer expired while a ball was still pinned, `G.stuck` stayed set but `G.sticky` went false, so Space/click/tap fell through to `launch()`, which no-ops because `G.onPaddle` is false, leaving the ball stranded. Fix: gate the release on `G.stuck` alone in both the pointerdown and keydown handlers, so a pinned ball is always releasable regardless of the power-up timer. Commit 8969f36.
 
 ## Castle Guard — kid-friendly tower defense, Tiny Swords art (June 28 2026)
+**Update (July 3 2026) — fills the whole screen on phone/tablet:** the playfield is now
+responsive — we anchor the SHORTER logical side to 600px (so sprites stay the same size) and grow
+the longer side to match the device shape, so it fills iPhone/iPad edge-to-edge with no letterbox
+bars (portrait or landscape). `computeDims()` runs on resize + `orientationchange`; a mid-level
+rotation rebuilds the path/slots but preserves placed towers + enemy progress (`rescaleLevel`).
+
 **Update (July 2 2026) — harder + more enemy variety (Mike: "too easy, graphics off"):**
 - **Real pressure, still no-lose.** Waves are now denser + faster with mixed enemy groups; the archer is a
   bit tighter (range 178→150) so full-map coverage takes thought. The replay-a-wave safety net stays, so

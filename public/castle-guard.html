@@ -65,8 +65,20 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 const BR = window.BuildableRenders, BA = window.BuildableAudio,
       BM = window.BuildableMechanics, BS = window.BuildableStartScreen;
 
-/* ---------- logical design resolution (all gameplay math uses these) ---------- */
-const LW = 960, LH = 600;
+/* ---------- logical design resolution (all gameplay math uses these) ----------
+   Responsive: anchor the SHORTER side to REF (keeps sprites the same size on every
+   device) and grow the longer side to match the screen shape, so the field fills the
+   whole screen on phone/tablet with no letterbox bars. */
+let LW = 960, LH = 600;
+const REF = 600;
+function computeDims() {
+  let cw = 960, ch = 600;
+  try { if (cv) { const r = cv.getBoundingClientRect(); if (r.width > 0 && r.height > 0) { cw = r.width; ch = r.height; } } } catch (e) {}
+  let aspect = cw / ch;
+  aspect = Math.max(0.42, Math.min(2.6, aspect));   // clamp extreme shapes
+  if (aspect >= 1) { LH = REF; LW = Math.round(REF * aspect); }
+  else { LW = REF; LH = Math.round(REF / aspect); }
+}
 
 /* ---------- content as data ---------- */
 const GAME_CONFIG = window.GAME_CONFIG || {
@@ -488,10 +500,35 @@ function resize() {
   if (!cv) return;
   const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = Math.max(1, r.width * dpr); cv.height = Math.max(1, r.height * dpr);
+  const oldLW = LW, oldLH = LH;
+  computeDims();
+  // orientation / big shape change mid-level: rebuild the field but keep towers + progress
+  if (S && (Math.abs(LW - oldLW) > 1 || Math.abs(LH - oldLH) > 1)) rescaleLevel(oldLW, oldLH);
   const scale = Math.min(cv.width / LW, cv.height / LH);
   VIEW = { scale, ox: (cv.width - LW * scale) / 2, oy: (cv.height - LH * scale) / 2, cw: cv.width, ch: cv.height };
 }
-if (cv) { window.addEventListener("resize", resize); }
+// rebuild path/slots/decor at the new LW/LH, preserving placed towers + enemy progress
+function rescaleLevel(oldLW, oldLH) {
+  try {
+    const defs = S.defenders.map(d => ({ def: d.def, cool: d.cool, x: d.x / (oldLW || 1), y: d.y / (oldLH || 1) }));
+    const oldTotal = S.W.total || 1;
+    const badFr = S.baddies.map(b => ({ b, fr: b.dist / oldTotal }));
+    const W = buildLevel(S.idx); S.W = W;
+    S.defenders = [];
+    for (const d of defs) {
+      const tx = d.x * LW, ty = d.y * LH;
+      let bi = -1, bd = 1e9;
+      W.slots.forEach((s, i) => { if (!s.occupied) { const dd = Math.hypot(s.x - tx, s.y - ty); if (dd < bd) { bd = dd; bi = i; } } });
+      if (bi >= 0) { W.slots[bi].occupied = true; S.defenders.push({ x: W.slots[bi].x, y: W.slots[bi].y, def: d.def, cool: d.cool, anim: 0, shootT: 0, face: 1, ring: 0 }); }
+    }
+    for (const bf of badFr) bf.b.dist = bf.fr * W.total;
+    S.arrows = [];
+    let bi = -1, bd = 1e9;
+    W.slots.forEach((s, i) => { const dd = Math.hypot(s.x - W.spawn.x, s.y - W.spawn.y); if (!s.occupied && dd < bd) { bd = dd; bi = i; } });
+    S.tutSlot = bi;
+  } catch (e) {}
+}
+if (cv) { window.addEventListener("resize", resize); window.addEventListener("orientationchange", () => setTimeout(resize, 120)); }
 
 function render() {
   if (!ctx) return;
