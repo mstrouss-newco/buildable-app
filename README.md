@@ -6,6 +6,9 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Breaker — level previews + livelier Play / Make a level hub (July 2 2026)
+Owner: the Breaker level cards showed blank flat-color tops ("previews don't load") and the home hub's Play / Make a level buttons felt "weak and boring." Two fixes in `public/breaker-engine.html`: (1) new `levelThumbURL(l,i)` draws a small canvas preview of each level's REAL brick layout (via `inPattern`) on a themed gradient + ball/paddle hint, cached, and `buildStartCfg()` now passes it as `img` for every unlocked level so cards look like actual mini-levels (locked levels stay dark with a lock, kept as mystery). (2) The hub `.hubBig` buttons were redesigned to be playful + animated: color gradients, a shine sweep, a bouncing ball over a rainbow brick row + paddle inside the green Play button, and stacking-blocks animation inside the purple Make a level button, with hover lift + tap bounce. Gameplay untouched (qa-breaker.mjs still clears all 8 levels). Scoped to public/breaker-engine.html.
+
 ## Games reorg — Platformer renamed "Hop Heroes", coming-soon QA gate (July 2 2026)
 In `src/BuildableKids.jsx` (`GamePicker`): the Platformer tile is renamed **Hop Heroes** and set to coming-soon (`soon=true`); **Family Town** is also now coming-soon. Coming-soon tiles are no longer just disabled — tapping one opens a small **QA password modal** (in-picker `gate`/`pw`/`err` state + `submitPw`). Entering **1111** dismisses the badge gate and opens the game so we can QA unreleased tiles; wrong password shows an inline error; Cancel/backdrop closes. To ship a coming-soon game for real, flip its tile `soon` arg back to `false`. To change the QA password, edit the `pw === "1111"` check in `GamePicker`. Live-QA'd on /app: both tiles show COMING SOON, 1111 opens Hop Heroes.
 

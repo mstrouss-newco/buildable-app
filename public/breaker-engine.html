@@ -76,12 +76,31 @@
   .mkLevel .lname{font-weight:700;font-size:14px;margin:8px 6px 2px}
   input.mkInput{font-family:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:2px solid #3a2c6e;background:#150f38;color:#fff;width:100%;box-sizing:border-box}
   .mkRowBtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0 2px}
-  /* ---- Breaker home hub ---- */
-  .hubBtns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:10px 0 6px}
-  .hubBig{width:220px;max-width:44vw;border:none;border-radius:18px;padding:22px 14px;cursor:pointer;font-family:inherit;color:#161a2e;text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.28)}
-  .hubBig:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.28)}
-  .hubBig .bt{font-size:22px;font-weight:800}
-  .hubBig .bs{font-size:12px;opacity:.82;margin-top:3px;font-weight:700}
+  /* ---- Breaker home hub (playful animated buttons) ---- */
+  .hubBtns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px}
+  .hubBig{position:relative;width:232px;max-width:44vw;border:none;border-radius:22px;padding:0 0 16px;cursor:pointer;font-family:inherit;text-align:center;overflow:hidden;box-shadow:0 12px 26px rgba(0,0,0,.4),0 7px 0 rgba(0,0,0,.22);transition:transform .12s,box-shadow .12s}
+  .hubBig:hover{transform:translateY(-3px)}
+  .hubBig:active{transform:translateY(4px);box-shadow:0 5px 12px rgba(0,0,0,.4),0 3px 0 rgba(0,0,0,.22)}
+  .hubBig .bt{font-size:26px;font-weight:800;margin-top:12px;position:relative;z-index:3}
+  .hubBig .bs{font-size:12.5px;opacity:.92;margin-top:3px;font-weight:700;position:relative;z-index:3}
+  .hubBig::before{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);animation:hubShine 3.4s ease-in-out infinite;z-index:2;pointer-events:none}
+  .hubPlay{background:linear-gradient(165deg,#8ef0ac,#3fc47b);color:#123322}
+  .hubMake{background:linear-gradient(165deg,#bda2ff,#7a54f0);color:#fff}
+  .hubMake::before{animation-delay:1.6s}
+  .hubField{position:relative;height:60px;overflow:hidden}
+  .hubFieldPlay{background:rgba(255,255,255,.18)}
+  .hubFieldMake{background:rgba(255,255,255,.15)}
+  .hubBrickRow{position:absolute;top:9px;left:0;right:0;display:flex;gap:4px;justify-content:center}
+  .hubBrick{width:20px;height:10px;border-radius:3px;box-shadow:0 1px 0 rgba(0,0,0,.18)}
+  .hubBall{position:absolute;left:50%;margin-left:-8px;width:15px;height:15px;border-radius:50%;background:#fff;border:2px solid #17331f;box-shadow:0 2px 4px rgba(0,0,0,.3);animation:hubBounce 1s cubic-bezier(.5,0,.5,1) infinite}
+  .hubPaddle{position:absolute;left:50%;margin-left:-20px;bottom:6px;width:40px;height:7px;border-radius:6px;background:#123322;opacity:.5}
+  @keyframes hubBounce{0%,100%{top:34px}50%{top:20px}}
+  @keyframes hubShine{0%{left:-70%}60%,100%{left:130%}}
+  .hubBlk{position:absolute;left:50%;margin-left:-16px;width:32px;height:11px;border-radius:3px;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.18)}
+  .hubBlk1{bottom:8px;animation:hubBuild 2.1s ease-in-out infinite}
+  .hubBlk2{bottom:22px;animation:hubBuild 2.1s ease-in-out infinite .35s}
+  .hubBlk3{bottom:36px;animation:hubBuild 2.1s ease-in-out infinite .7s}
+  @keyframes hubBuild{0%{transform:translateY(12px);opacity:0}18%{opacity:1}30%,78%{transform:translateY(0);opacity:1}94%,100%{transform:translateY(0);opacity:0}}
   .hubShelf{width:100%;max-width:600px;margin:16px auto 30px}
   .hubShelf .hh{font-weight:800;opacity:.85;margin:0 0 8px;padding:0 4px}
   /* ---- wizard progress ---- */
@@ -691,12 +710,35 @@ let startScreen=null;
 function totalStars(){ let t=0; for(const k in PREFS.stars) t+=(PREFS.stars[k]||0); return t; }
 function maxStars(){ return GAME_CONFIG.levels.length*3; }
 function isUnlocked(cost){ return (cost||0) <= totalStars(); }
+// ---- level preview thumbnails: draw the real brick layout so cards aren't blank ----
+const _thumbCache={};
+function _rr(g,x,y,w,h,r){ r=Math.min(r,w/2,h/2); g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function levelThumbURL(l,i){
+  const key=i+"_"+l.cols+"_"+l.rows+"_"+l.pattern;
+  if(_thumbCache[key]) return _thumbCache[key];
+  const CW=300, CH=140, cv=document.createElement("canvas"); cv.width=CW; cv.height=CH; const g=cv.getContext("2d");
+  const base=brickColorFor(i);
+  const grd=g.createLinearGradient(0,0,0,CH); grd.addColorStop(0,"#171433"); grd.addColorStop(1,shade(base,-96));
+  g.fillStyle=grd; g.fillRect(0,0,CW,CH);
+  const cols=l.cols||10, rows=Math.min(l.rows||6,7), cset=GAME_CONFIG.brickColors;
+  const padX=14, padTop=14, gap=4;
+  const bw=(CW-padX*2-gap*(cols-1))/cols;
+  const bh=Math.min(15,(CH-padTop-30-gap*(rows-1))/rows);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ if(!inPattern(l.pattern,r,c,rows,cols)) continue;
+    const x=padX+c*(bw+gap), y=padTop+r*(bh+gap);
+    g.fillStyle=cset[r%cset.length]; _rr(g,x,y,bw,bh,3); g.fill();
+    g.fillStyle="rgba(255,255,255,.22)"; g.fillRect(x+2,y+2,Math.max(2,bw-4),2); }
+  g.fillStyle="#fff"; g.beginPath(); g.arc(CW/2,CH-32,6,0,Math.PI*2); g.fill();
+  g.lineWidth=2; g.strokeStyle="rgba(0,0,0,.45)"; g.stroke();
+  g.fillStyle="rgba(255,255,255,.82)"; _rr(g,CW/2-26,CH-16,52,7,4); g.fill();
+  const url=cv.toDataURL("image/png"); _thumbCache[key]=url; return url;
+}
 function buildStartCfg(){
   const levels = currentMode==="two"
     ? [{ n:1, name:"Pong Match", color:"#2b4a6b", state:"next" }]
     : GAME_CONFIG.levels.map((l,i)=>{ const unlocked=PREFS.unlocked||0;
         const st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
-        return { n:i+1, name:l.name, color:brickColorFor(i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st };
+        return { n:i+1, name:l.name, color:brickColorFor(i), img:(st!=="locked"?levelThumbURL(l,i):undefined), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st };
       });
   const cfg = { title:"Buildable Breaker",
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",
@@ -710,11 +752,18 @@ function showHub(){ state="title"; G=null; if(hud)hud.hide();
   show("home",true); showHelpBtn(false); showInGameMute(false); showInGameBack(false); renderHub(); }
 function renderHub(){ const body=document.getElementById("hubBody"); if(!body)return; body.innerHTML="";
   const btns=document.createElement("div"); btns.className="hubBtns";
-  const play=document.createElement("button"); play.className="hubBig"; play.style.background="#7ee0a0";
-  play.innerHTML='<div class="bt">Play</div><div class="bs">'+GAME_CONFIG.levels.length+' levels · ★'+totalStars()+'</div>';
+  const play=document.createElement("button"); play.className="hubBig hubPlay";
+  play.innerHTML='<div class="hubField hubFieldPlay"><div class="hubBrickRow">'+
+    '<span class="hubBrick" style="background:#ff7aa8"></span><span class="hubBrick" style="background:#ffb04d"></span>'+
+    '<span class="hubBrick" style="background:#ffd86b"></span><span class="hubBrick" style="background:#62d0ff"></span>'+
+    '<span class="hubBrick" style="background:#9b7bff"></span></div>'+
+    '<span class="hubBall"></span><span class="hubPaddle"></span></div>'+
+    '<div class="bt">Play</div><div class="bs">'+GAME_CONFIG.levels.length+' levels · ★'+totalStars()+'</div>';
   play.onclick=()=>{ if(BA)BA.unlock(); currentMode="solo"; show("home",false); showMenu(); };
-  const make=document.createElement("button"); make.className="hubBig"; make.style.background="#9b7bff";
-  make.innerHTML='<div class="bt">Make a level</div><div class="bs">build + share</div>';
+  const make=document.createElement("button"); make.className="hubBig hubMake";
+  make.innerHTML='<div class="hubField hubFieldMake"><span class="hubBlk hubBlk1"></span>'+
+    '<span class="hubBlk hubBlk2"></span><span class="hubBlk hubBlk3"></span></div>'+
+    '<div class="bt">Make a level</div><div class="bs">build + share</div>';
   make.onclick=()=>{ if(BA)BA.unlock(); startNewLevel(); };
   btns.appendChild(play); btns.appendChild(make); body.appendChild(btns);
   const lv=loadLevels();
