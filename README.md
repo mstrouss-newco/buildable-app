@@ -159,6 +159,20 @@ critters that topple + POOF (no harm/weapons). Clear all targets to win.
 - **Owner action:** run `db/seed-sling-launch-mechanic.sql` once. On branch `claude/games-sling-squad`
   — **not** pushed to `main`; merge to deploy + live-QA on devices.
 
+### Update (July 2 2026) — animals, powers, softer clear (LIVE on main, live-QA'd)
+- **Slower level-clear:** when the last target pops the physics keeps rolling ~2.3s (new `clearing`
+  state + `winDelay`) before the "Level cleared!" banner — no more abrupt hard-stop.
+- **4 tap-to-trigger powers** (`SQUAD[i].power`; kid taps mid-flight): `split` (Splitz → 3 shots),
+  `bomb` (Boomer → blast radius), `heavy` (Bruno → slam down), `dash` (Zip → zoom). Never required
+  to win — the QA bot still clears all 5 levels with plain shots. Ammo is an array (`G.ammoBodies`)
+  so the splitter's 3 pieces all fly + pop.
+- **Real Kenney CC0 2D art** (replaces the old 3D `/api/list-characters` loader): flung animals =
+  "Animal Pack Remastered" (parrot/panda/hippo/chick), block towers = "Physics Assets" wood + stone,
+  targets = Physics Assets alien faces. Served from `public/kenney/sling/` (reuses the `/kenney/(.*)`
+  route — no vercel change). Drawn art stays the always-on fallback.
+- **Game tile thumbnail:** added a `sling` key to `api/images.js` GAMES (the tile already passed
+  `imgId "sling"`, so it was showing a flat gradient).
+
 ## Family Town — original 3-4 player Monopoly-STYLE board game (June 27 2026)
 **New Track B engine `public/family-town.html`** (branch `claude/games-family-town`) — an
 ORIGINAL board game (our own town, spaces, art, and name; never the Monopoly brand). 3-4 kids
