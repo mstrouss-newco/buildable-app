@@ -277,6 +277,55 @@ cross-device); every match table is family-RLS scoped (copy `chess_matches`/`rt_
 network-agnostic (all Supabase code lives in the React layer).
 
 
+## Make-a-level: the creation-maker pattern (optional — but the same shape every time)
+
+If your game lets a kid **build their own thing** (a level, a board, a track, a world) and
+share it, follow the pattern Breaker pilots (`public/breaker-engine.html`: the `#home` hub +
+the `#maker` wizard). It exists so every maker across games feels the same. Do NOT invent a
+new maker shape per game.
+
+**1. A home hub, then the maker.** The game opens on a small **hub** with two big equal
+buttons — **Play** (the built-in levels, via the shared `BS` picker) and **Make a level** —
+plus a **"My levels"** shelf of the kid's own creations (play / edit). "Make a level" is a
+first-class choice, never buried in a settings menu. (The hub currently sits in front of the
+`BS` level picker; the goal is to fold a "hub mode" into `BS` so it stays shared — until then,
+keep the hub thin and let `BS` still own the level grid, reachable via a Back that returns to
+the hub.)
+
+**2. One step at a time (a wizard, not a wall of options).** The maker is a linear wizard:
+**one decision per screen**, a progress row (Step X of N + dots), and only **Back / Next**.
+Breaker's steps: World → Ball → Paddle → Build → How hard → Play + share. Kids get overwhelmed
+by a single screen that asks for everything at once — split it.
+
+**3. "Pick my bricks" = look AND behavior.** Every buildable piece is both a look and a rule,
+so the creation actually *plays* differently. Breaker's brick types: ice (1 hit), wood (2),
+metal (3), candy (bonus points), star (drops a power-up), bomb (clears neighbors). The piece
+palette is where the kid designs the *challenge*, not just the colors.
+
+**4. Difficulty = ONE 1–5 dial, shown as flames.** A single dial scales the engine's knobs
+together (ball speed, paddle size, lives). **The displayed rating equals the dial the kid
+picked — do not inflate it with a computed "board weight" formula.** (We shipped that once; a
+full board always read 5 regardless of choice, and it confused the user. Keep the number
+honest: pick 3, it's a 3.) Show green→red flames, never a skull (too scary for little kids).
+
+**5. Play-test gate before sharing.** The kid must **beat their own creation once** before
+Share unlocks; editing the board or difficulty afterward resets the gate. This guarantees
+every shared creation is actually winnable — the single most important rule for keeping shared
+content fun instead of broken or impossible.
+
+**6. A creation is just DATA through the same engine.** Don't fork the engine. Build the
+kid's creation into the normal recipe and run it through the existing loop (Breaker:
+`startCustomLevel` → `buildCustomBricks`), guarded by a `custom` flag so it never touches
+campaign progress/stars. Add a **headless QA hook** proving custom creations are winnable by
+the sim bot (`BUILDABLE_GAME.simCustom(board, diffN)` + `makeTestBoard(...)`), same as the
+campaign `sim`/`campaign` harness.
+
+**7. Save / share / publish (non-negotiable).** A creation must save, share, and publish per
+`CREATIONS.md` — same as songs, stories, and art. Breaker today saves to a **local** "My
+levels" shelf; true friend-to-friend sharing still needs a backend table + a home-screen
+**"Friends' levels"** shelf (the cross-account creation model, sibling of `rt_matches`).
+
+
 ## The non-negotiable rules (from `AGENTS.md` / README — they apply here too)
 
 - **Every creation saves, shares, and publishes.** Songs, stories, games, drawings, and
