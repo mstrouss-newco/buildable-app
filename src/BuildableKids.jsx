@@ -152,9 +152,9 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Hop Heroes", "Run, jump and reach the flag!", onPlatformer, true, "platformer")}
         {tile("linear-gradient(160deg,#7C5CFC,#FF7A9A)", "Family Town", "Roll, move, collect coins \u2014 3-4 players!", onTown, true, "town")}
         {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, true, "runner")}
-        {tile("linear-gradient(160deg,#FFD23F,#FF8FB1)", "Bingo", "The device calls \u2014 daub a line to win, 2-4!", onBingo, true, "bingo")}
         {tile("linear-gradient(160deg,#8FD0F2,#4F9A44)", "Hilltop Tanks", "Aim across the hills and knock out the computer tank!", onTank, true, "tank")}
         {tile("linear-gradient(160deg,#F0577E,#9B7BFF)", "Maze Munchers", "Gobble the treats, dodge the chasers!", onMaze, true, "maze")}
+        {tile("linear-gradient(160deg,#FFD23F,#FF8FB1)", "Bingo", "The device calls \u2014 daub a line to win, 2-4!", onBingo, true, "bingo")}
       </div>
       {gate && (
         <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,8,24,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
