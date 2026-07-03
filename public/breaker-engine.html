@@ -313,6 +313,10 @@ function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=M
 let PAD_Y = H-42, TOP_Y = 42; const PAD_H = 18, BALL_R = 9;
 const HUD_STRIP = 66;   // reserved top band for the score bar — bricks start below it
 let G=null, level=0, L=null, state="title", started=false, botMode=false, helpOpen=false;
+// After the first launch of a level, keep showing the pointing hand (following the
+// paddle, no dark overlay) for a few seconds so the "slide to move" hint doesn't
+// vanish the instant the kid taps. Reset each new level.
+let firstHintUntil=0, levelHintShown=false;
 let currentMode="solo";   // "solo" (brick breaker) or "two" (pong)
 let stars=[]; function rebuildStars(){ stars.length=0; const r=mulberry(7); for(let i=0;i<70;i++) stars.push({x:r()*W,y:r()*H,s:0.6+r()*1.6,ph:r()*6.28,sp:0.5+r()*1.4}); } rebuildStars();
 
@@ -350,7 +354,7 @@ function startLevel(i, carryLives){
     speed, baseSpeed:speed, bricks:buildBricks(L,rng), balls:[], caps:[], lasers:[],
     onPaddle:true, sticky:false, stickyT:0, slowT:0, laserT:0, laserCd:0, fireT:0, score:0 };
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ]; G.onPaddle=true;
-  state="play"; started=false; ensureMusic();
+  state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic();
 }
 // ---------- custom levels (built by kids in "Make a level") ----------
 let CUSTOM=null;              // { board, diffN, cleared }
@@ -380,9 +384,10 @@ function startCustomLevel(board, diffN){
     speed, baseSpeed:speed, bricks:buildCustomBricks(board), balls:[], caps:[], lasers:[],
     onPaddle:true, sticky:false, stickyT:0, slowT:0, laserT:0, laserCd:0, fireT:0, score:0 };
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ]; G.onPaddle=true;
-  state="play"; started=false; ensureMusic();
+  state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic();
 }
 function launch(){ if(!G||G.mode!=="solo"||!G.onPaddle)return; G.onPaddle=false; started=true;
+  if(!levelHintShown){ levelHintShown=true; firstHintUntil=Date.now()+3200; }
   const b=G.balls[0], ang=-Math.PI/2+(Math.random()*0.5-0.25), sp=G.speed; b.vx=Math.cos(ang)*sp; b.vy=Math.sin(ang)*sp; sfx("shoot"); }
 function splitBalls(){ if(!G)return; const add=[];
   for(const b of G.balls){ const sp=Math.hypot(b.vx,b.vy)||G.speed, a0=Math.atan2(b.vy,b.vx);
@@ -660,6 +665,14 @@ function draw(){ if(!G){ return; }
   if(state==="play" && (!started||helpOpen) && G.mode!=="two") drawTutorial();
   if(state==="play" && helpOpen && G.mode==="two") drawTutorial();
   if(state==="play" && G.mode==="two" && G.serveDelay>30 && G.s1===0 && G.s2===0 && !botMode && !helpOpen) drawTutorial();
+  // finger keeps pointing at the paddle for a few seconds after the first launch
+  // (follows the paddle, fades out) — no dark overlay so play isn't blocked.
+  if(state==="play" && G.mode==="solo" && firstHintUntil && Date.now()<firstHintUntil){
+    const rem=(firstHintUntil-Date.now())/3200;      // 1 -> 0
+    ctx.save(); ctx.globalAlpha=Math.min(1, rem*2);  // solid, then fades over the last ~1.6s
+    drawTutorialHand(G.padX, PAD_Y+12);              // fingertip just under the real paddle
+    ctx.restore();
+  }
   if(state==="win" && G.custom){ banner("You beat it!", "Tap to share your level"); }
   else if(state==="win" && G.mode==="two"){ banner("Player "+G.winner+" wins!", "Tap for the menu"); }
   else if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); drawEarnedStars(PREFS.stars[level]||0); }
