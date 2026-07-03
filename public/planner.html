@@ -24,6 +24,7 @@
   .btn.mini{padding:6px 10px;font-size:12px;border-radius:9px}
   .btn.green{background:var(--accent2);color:#04231b}
   .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn svg{width:14px;height:14px;flex:0 0 auto}
   .toprow{display:flex;gap:8px;flex-wrap:wrap;flex:0}
   .toolbar{display:inline-flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:4px;box-shadow:0 1px 2px rgba(20,24,50,.04)}
   .tbtn{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;background:transparent;border:0;color:var(--muted);font-weight:600;font-size:13px;padding:8px 13px;border-radius:9px;cursor:pointer;transition:.12s}
@@ -372,7 +373,10 @@ function bucket(k,target){
     </div>
     <div class="body ${openDefault}">
       ${list}
-      ${canSend?`<div class="bactions"><button class="btn green mini" onclick='openBatch(${JSON.stringify(k)},${JSON.stringify(target)})'>Prep prompt for Claude →</button></div>`:""}
+      ${open.length?`<div class="bactions">
+        <button class="btn ghost mini" onclick='copyBucket(${JSON.stringify(k)},${JSON.stringify(target)})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy list</button>
+        ${canSend?`<button class="btn green mini" onclick='openBatch(${JSON.stringify(k)},${JSON.stringify(target)})'>Prep prompt for Claude →</button>`:""}
+      </div>`:""}
       ${doneHtml}
     </div>
   </div>`;
@@ -384,6 +388,14 @@ function taskRow(t,num){
     <span class="desc">${esc(t.desc)}</span>
     <span class="x" onclick="delTask(${t.id})" title="Delete">✕</span>
   </div>`;
+}
+
+/* ---- copy one group's list ---- */
+function copyBucket(k,target){
+  const items=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done);
+  if(!items.length){toast("Nothing to copy");return;}
+  const out=`${target} (${items.length})\n`+items.map((t,i)=>`${i+1}. ${t.desc}`).join("\n");
+  navigator.clipboard.writeText(out).then(()=>toast("Copied "+target+" list"));
 }
 
 /* ---- prompt ---- */
