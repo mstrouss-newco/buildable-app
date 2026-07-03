@@ -197,6 +197,7 @@
     else if (id === "magnet") { ctx.strokeStyle = P.gem; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(0, -2, 14, Math.PI, 0); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-14, -2); ctx.lineTo(-14, 16); ctx.moveTo(14, -2); ctx.lineTo(14, 16); ctx.stroke(); }
     else if (id === "heal") { ctx.fillStyle = P.hp; BR.heart(ctx, 0, -12, 16); }
     else if (id === "shield") { ctx.strokeStyle = P.visor; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 7); ctx.stroke(); ctx.fillStyle = "rgba(120,210,255,.25)"; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 7); ctx.fill(); }
+    else if (id === "blackhole") { ctx.strokeStyle = P.boss || "#c69bff"; ctx.lineWidth = 3; for (let a = 0; a < 3; a++) { ctx.beginPath(); for (let k = 0; k < 28; k++) { const ang = a * 2.1 + k * 0.32, rr = 3 + k * 0.68, px = Math.cos(ang) * rr, py = Math.sin(ang) * rr; if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); } ctx.stroke(); } ctx.fillStyle = "#0a0616"; ctx.beginPath(); ctx.arc(0, 0, 8, 0, 7); ctx.fill(); ctx.strokeStyle = P.spark || "#ffe27a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 10, 0, 7); ctx.stroke(); }
     ctx.restore();
   };
 
