@@ -6,6 +6,15 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Board games: painted world scenes behind Tic-Tac-Toe, Connect Four, Dots and Boxes (July 3 2026)
+The three board games (`public/tictactoe-engine.html`, `connectfour-engine.html`, `dotsboxes-engine.html`) sat on a flat dark navy page. They now show one of the shared painted world scenes (the same `chess-art/*_bg.jpg` set chess & breaker use: ocean, jungle, space, candy, castle, desert) behind the board, so they look modern and consistent with the rest of the app.
+- A full-screen `#world-bg` layer sits behind the board (`z-index:0`, board `#wrap` bumped to `z-index:1`) with a soft dark scrim (`linear-gradient(rgba(8,10,40,.40),.55)`) over the scene so the board, HUD, and buttons stay readable on bright worlds.
+- `setRandomWorld()` (added inline to each engine page) picks a random world on load and again on every new game via each spec's `init()`; the six scenes are preloaded so the swap is instant. No new assets, no picker UI — reuses existing art.
+- Owner context: a first pass tried a bespoke hand-drawn "playroom" scene; owner felt it read too childish and asked to just use the existing ocean/jungle/etc worlds — this is that.
+Browser-QA'd live: Tic-Tac-Toe (space), Connect Four (desert), Dots and Boxes (space) each loaded a random scene with the board/HUD fully readable and no console errors. Scoped to the three engine HTML files only.
+
+---
+
 ## Croc Tot: adopt the shared Breaker-format UI — loading screen, HUD, customize, nav (July 3 2026)
 Croc Tot (`public/croctot.html`) was the most "off" live game in the consistency audit: it was fully self-contained (no shared libs) with a hand-rolled tap-to-play + level overlay, a bespoke DOM status bar, and no customize step. Converted it to match Breaker's format using the shared building-blocks:
 - **Loading screen:** replaced the `#tapOverlay`/`#levelOverlay` with `buildable-startscreen.js` (BS) mounted into a full-screen `#start` — title, 5 level cards (Backyard/Kitchen/Night Sky/Jungle/Volcano), and a "Make it mine" button. `showStart()` drives it on boot, after Menu, and after game-over.
