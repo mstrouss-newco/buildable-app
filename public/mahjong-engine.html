@@ -523,7 +523,7 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   document.getElementById("hintBtn").onclick=()=>{ if(state!=="play"||hintsLeft<=0) return; if(doHint()){ hintsLeft--; updateChrome(); } };
   document.getElementById("shufBtn").onclick=()=>{ if(state!=="play"||mixesLeft<=0) return; mixesLeft--; autoShuffle(); updateChrome(); };
   // bespoke created sounds (BA synth is the silent fallback only)
-  if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+  if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?v=2&s=", map:{
     select:"mahjong_pick", match:"mahjong_match", match2:"mahjong_match2", match3:"mahjong_match3",
     combo:"mahjong_combo", nomatch:"mahjong_nope", shuffle:"mahjong_shuffle", win:"mahjong_win" } }); }
   showMenu(); requestAnimationFrame(frame);
