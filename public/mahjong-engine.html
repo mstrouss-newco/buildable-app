@@ -13,8 +13,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Buildable Mahjong — engine</title>
 <style>
-  html,body{margin:0;height:100%;background:#101a2e;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
-  #wrap{position:fixed;inset:0}
+  html,body{margin:0;height:100%;width:100%;background:#101a2e;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  /* fill the WHOLE screen on iPad/iPhone (dynamic viewport, address-bar-safe) */
+  #wrap{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh}
   canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
   .ov{position:absolute;inset:0;z-index:5}
   #start{position:absolute;inset:0;z-index:6}
@@ -311,10 +312,12 @@ function layout(){
   const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
   const b=bounds();
   const cols=(b.maxX-b.minX)/2, rows=(b.maxY-b.minY)/2;
-  const availW=vw*0.94, availH=(vh-70)*0.96;
+  const topRes=52;                              // space for the top banner
+  // fill as much of the screen as possible (whole-screen on iPad/iPhone)
+  const availW=vw*0.985, availH=(vh-topRes-6)*0.995;
   // tile aspect ~ 1.3 tall; reserve room for the layer lift (maxZ)
   let tw=Math.min(availW/(cols+0.9), availH/((rows*1.3)+0.9));
-  tw=Math.max(20,Math.min(tw,86));
+  tw=Math.max(18,Math.min(tw,140));            // allow big tiles on large iPad screens
   view.tileW=tw; view.tileH=tw*1.3; view.lx=tw*0.14; view.ly=tw*0.14;
   // pixel extents (include lift) to center
   let pminX=1e9,pmaxX=-1e9,pminY=1e9,pmaxY=-1e9;
@@ -324,7 +327,7 @@ function layout(){
     pminY=Math.min(pminY,py); pmaxY=Math.max(pmaxY,py+view.tileH); }
   view.b=b;
   view.ox=(vw-(pmaxX-pminX))/2 - pminX;
-  view.oy=(vh+50-(pmaxY-pminY))/2 - pminY;
+  view.oy=topRes + (vh-topRes-(pmaxY-pminY))/2 - pminY;
 }
 function tilePx(t){ return { x:view.ox+(t.x-view.b.minX)/2*view.tileW - t.z*view.lx,
                              y:view.oy+(t.y-view.b.minY)/2*view.tileH - t.z*view.ly }; }
