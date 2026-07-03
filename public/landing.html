@@ -2,6 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+/* Skip the marketing page for people we already know: a signed-in grown-up,
+   or a returning guest who has already set up a kid on this device. Send them
+   straight to the app. Brand-new visitors (no saved data) still see this page.
+   Escape hatch: visit buildablekids.com/?stay=1 (or any #section link) to stay. */
+(function () {
+  try {
+    var loc = window.location;
+    if (loc.hash || /(?:[?&])stay=1\b/.test(loc.search)) return;
+
+    var known = false;
+    try { var s = JSON.parse(localStorage.getItem("bk_parent_session_v1") || "null"); if (s && s.access_token) known = true; } catch (e) {}
+    try { var k = JSON.parse(localStorage.getItem("bk_guest_kid_profiles_v1") || "[]"); if (Array.isArray(k) && k.length) known = true; } catch (e) {}
+    try { if (JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null")) known = true; } catch (e) {}
+
+    if (known) loc.replace("/app");
+  } catch (e) {}
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Buildable Kids — Their imagination deserves a place to grow</title>
 <link rel="icon" href="/favicon.ico?v=4" sizes="any" />
