@@ -21,6 +21,11 @@ const MUSIC = {
     theme: "calm",
     prompt: "Warm happy children's spa music: soft mellow marimba and gentle glockenspiel over warm cushiony pads, a gentle steady heartbeat-style beat with a light playful bounce, cheerful and relaxing, warm rounded tones with a touch of soft sparkle but never shrill or piercing, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
   },
+  lofi_chill_upbeat: {
+    label: "Lofi Chill (Upbeat)",
+    theme: "calm",
+    prompt: "Warm calm lofi hip-hop: mellow dusty electric piano and soft jazzy chords over a relaxed head-nodding boom-bap groove with soft vinyl crackle and a warm round bassline, chilled and cozy but quietly upbeat and positive, warm rounded low-mid tones, no shrill or piercing highs, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
+  },
 };
 
 async function cacheGet(key){
