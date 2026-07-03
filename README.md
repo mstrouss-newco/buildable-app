@@ -6,6 +6,15 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Survival: full-screen on iPad/iPhone + gently-moving nature worlds (July 3 2026)
+Owner asks: make Space Sparkles (`public/survival-engine.html`) fill the whole screen on iPad/iPhone, and swap the single space backdrop for the new gently-moving parallax nature worlds.
+
+**Full screen.** The canvas used to sit letterboxed in a centered box (fixed 900x600, rounded corners). It now fills the entire viewport: CSS is `position:absolute;inset:0;width:100%;height:100%`, and a new `resizeCanvas()` makes the logical `W`/`H` adapt to the screen (short side pinned to 640 game units so heroes/enemies stay a comfy size, long side grows to fill — no stretching, no bars). DPR-aware so it stays crisp on retina. Headless QA keeps the old 900x600 (guarded on a real viewport).
+
+**Gently-moving parallax worlds.** Each of the 6 levels now gets its own layered pixel-art scene (CraftPix "Nature Landscapes", `public/parallax/nature/nature_*`). `drawParallax()` tiles each layer across the width and drifts it slowly — back layers barely move, each nearer layer a touch faster — for a calm sense of depth. Falls back to the old space art only until layers load. A soft vignette keeps the white HUD readable over bright daytime scenes.
+
+**Gotcha (fixed here):** `public/parallax/*` was never actually served — there was no `/parallax/(.*)` route in `vercel.json`, so those paths fell through the catch-all to `landing.html` (this had silently broken breaker's forest/hills backdrops too). Added the route. Every static `public/` subfolder needs its own explicit route; there is no filesystem fallback. Live-QA'd in browser: all 6 worlds load, canvas fills the viewport, no console errors.
+
 ## Parent login: one math check, not two + add a second parent (July 2 2026)
 Owner asks: (1) the grown-up login was weird — you'd tap "Grown-ups", answer a math check, land on the who's-playing screen, tap "For grown-ups", then answer a SECOND math check. (2) allow adding another parent to a family.
 
