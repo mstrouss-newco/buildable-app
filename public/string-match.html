@@ -66,42 +66,87 @@
 
 /* ---------- LEVELS (normalized 0..1, y down). Harder from the start. ---------- */
 var C={ red:"#E24B4A", blue:"#3E8FDC", green:"#57A93F", yellow:"#F0B429", purple:"#8B5CF6", pink:"#EC6AA8" };
+/* 10 levels, progressively harder. Characters are spaced far enough apart that
+   no two ever touch (min ~50px edge gap in every aspect); each level is
+   solver-verified beatable. Difficulty ramps: pairs 3..6, crossings 0..9. */
 var WORLDS=[
+  // L1 — 3 pairs, parallel, trivial
   { name:"Grass Meadow", bg:"grass", pairs:[
-    {c:"red",   a:[0.27,0.24], b:[0.73,0.66]},
-    {c:"blue",  a:[0.73,0.24], b:[0.27,0.66]},
-    {c:"green", a:[0.15,0.40], b:[0.15,0.58]},
-    {c:"yellow",a:[0.85,0.40], b:[0.85,0.58]}
+    {c:"red",   a:[0.20,0.28], b:[0.80,0.28]},
+    {c:"blue",  a:[0.20,0.50], b:[0.80,0.50]},
+    {c:"green", a:[0.20,0.72], b:[0.80,0.72]}
   ]},
+  // L2 — 3 pairs, one crossing to route around
+  { name:"Sunny Field", bg:"grass", pairs:[
+    {c:"red",   a:[0.24,0.28], b:[0.74,0.66]},
+    {c:"blue",  a:[0.74,0.28], b:[0.24,0.66]},
+    {c:"green", a:[0.28,0.88], b:[0.72,0.88]}
+  ]},
+  // L3 — 4 pairs
   { name:"Forest", bg:"forest", pairs:[
-    {c:"red",   a:[0.26,0.22], b:[0.60,0.50]},
-    {c:"blue",  a:[0.60,0.22], b:[0.26,0.50]},
-    {c:"green", a:[0.82,0.40], b:[0.82,0.60]},
-    {c:"yellow",a:[0.34,0.80], b:[0.62,0.80]},
-    {c:"purple",a:[0.15,0.60], b:[0.15,0.80]}
+    {c:"red",   a:[0.22,0.24], b:[0.58,0.50]},
+    {c:"blue",  a:[0.58,0.24], b:[0.22,0.50]},
+    {c:"green", a:[0.84,0.30], b:[0.84,0.62]},
+    {c:"yellow",a:[0.30,0.86], b:[0.70,0.86]}
   ]},
+  // L4 — 4 pairs, more tangle
+  { name:"Deep Woods", bg:"forest", pairs:[
+    {c:"red",   a:[0.20,0.24], b:[0.80,0.52]},
+    {c:"blue",  a:[0.80,0.24], b:[0.20,0.52]},
+    {c:"green", a:[0.20,0.84], b:[0.50,0.58]},
+    {c:"yellow",a:[0.80,0.84], b:[0.50,0.84]}
+  ]},
+  // L5 — 5 pairs
   { name:"Autumn", bg:"fall", pairs:[
-    {c:"red",   a:[0.22,0.22], b:[0.47,0.47]},
-    {c:"blue",  a:[0.47,0.22], b:[0.22,0.47]},
-    {c:"green", a:[0.78,0.22], b:[0.55,0.47]},
-    {c:"yellow",a:[0.55,0.22], b:[0.78,0.47]},
-    {c:"purple",a:[0.30,0.80], b:[0.70,0.80]}
+    {c:"red",   a:[0.20,0.22], b:[0.58,0.46]},
+    {c:"blue",  a:[0.58,0.22], b:[0.20,0.46]},
+    {c:"green", a:[0.84,0.30], b:[0.84,0.62]},
+    {c:"yellow",a:[0.38,0.86], b:[0.70,0.86]},
+    {c:"purple",a:[0.16,0.66], b:[0.16,0.88]}
   ]},
+  // L6 — 5 pairs, wider spread
+  { name:"Golden Grove", bg:"fall", pairs:[
+    {c:"red",   a:[0.16,0.22], b:[0.56,0.44]},
+    {c:"blue",  a:[0.56,0.22], b:[0.16,0.44]},
+    {c:"green", a:[0.80,0.22], b:[0.80,0.66]},
+    {c:"yellow",a:[0.16,0.66], b:[0.56,0.88]},
+    {c:"purple",a:[0.56,0.66], b:[0.16,0.88]}
+  ]},
+  // L7 — 6 pairs, three local crossings
   { name:"Desert", bg:"desert", pairs:[
-    {c:"red",   a:[0.20,0.18], b:[0.44,0.40]},
-    {c:"blue",  a:[0.44,0.18], b:[0.20,0.40]},
-    {c:"green", a:[0.80,0.18], b:[0.56,0.40]},
-    {c:"yellow",a:[0.56,0.18], b:[0.80,0.40]},
-    {c:"purple",a:[0.20,0.82], b:[0.40,0.62]},
-    {c:"pink",  a:[0.60,0.62], b:[0.80,0.82]}
+    {c:"red",   a:[0.14,0.20], b:[0.38,0.44]},
+    {c:"blue",  a:[0.38,0.20], b:[0.14,0.44]},
+    {c:"green", a:[0.62,0.20], b:[0.86,0.44]},
+    {c:"yellow",a:[0.86,0.20], b:[0.62,0.44]},
+    {c:"purple",a:[0.14,0.66], b:[0.38,0.88]},
+    {c:"pink",  a:[0.38,0.66], b:[0.14,0.88]}
   ]},
+  // L8 — 6 pairs, 3 crossings
+  { name:"Dune Sea", bg:"desert", pairs:[
+    {c:"red",   a:[0.62,0.20], b:[0.86,0.66]},
+    {c:"blue",  a:[0.38,0.44], b:[0.14,0.44]},
+    {c:"green", a:[0.62,0.44], b:[0.86,0.44]},
+    {c:"yellow",a:[0.62,0.66], b:[0.14,0.20]},
+    {c:"purple",a:[0.14,0.88], b:[0.86,0.88]},
+    {c:"pink",  a:[0.14,0.66], b:[0.38,0.20]}
+  ]},
+  // L9 — 6 pairs, 6 crossings
   { name:"Castle Kingdom", bg:"castles", pairs:[
-    {c:"red",   a:[0.20,0.17], b:[0.42,0.39]},
-    {c:"blue",  a:[0.42,0.17], b:[0.20,0.39]},
-    {c:"green", a:[0.80,0.17], b:[0.58,0.39]},
-    {c:"yellow",a:[0.58,0.17], b:[0.80,0.39]},
-    {c:"purple",a:[0.20,0.84], b:[0.42,0.62]},
-    {c:"pink",  a:[0.80,0.84], b:[0.58,0.62]}
+    {c:"red",   a:[0.38,0.44], b:[0.38,0.20]},
+    {c:"blue",  a:[0.38,0.66], b:[0.62,0.20]},
+    {c:"green", a:[0.14,0.20], b:[0.62,0.88]},
+    {c:"yellow",a:[0.86,0.44], b:[0.14,0.66]},
+    {c:"purple",a:[0.86,0.88], b:[0.62,0.66]},
+    {c:"pink",  a:[0.86,0.20], b:[0.14,0.44]}
+  ]},
+  // L10 — 6 pairs, 9 crossings, hardest
+  { name:"Royal Gauntlet", bg:"castles", pairs:[
+    {c:"red",   a:[0.38,0.44], b:[0.86,0.66]},
+    {c:"blue",  a:[0.38,0.66], b:[0.62,0.44]},
+    {c:"green", a:[0.62,0.20], b:[0.14,0.88]},
+    {c:"yellow",a:[0.14,0.66], b:[0.86,0.88]},
+    {c:"purple",a:[0.38,0.88], b:[0.62,0.66]},
+    {c:"pink",  a:[0.38,0.20], b:[0.62,0.88]}
   ]}
 ];
 
