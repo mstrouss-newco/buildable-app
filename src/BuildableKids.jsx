@@ -265,11 +265,27 @@ function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes an
 function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=20260627b" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TownScreen({ onHome, onFamily }) { return <GameFrame title="Family Town" src="/family-town.html?v=1" onHome={onHome} right={familyBtn(onFamily)} />; }
 
+// Shared slim icon-button style for the home top-nav (My Stuff / Grown-ups /
+// Friends). Keeping one style object here is what makes the three controls look
+// consistent instead of three different chunky buttons.
+const NAV_ICON_BTN = {
+  width: 40, height: 40, borderRadius: 12, padding: 0, position: "relative",
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.16)",
+  color: "#fff", cursor: "pointer",
+};
+const NAV_ICON_BADGE = {
+  position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 999,
+  padding: "0 5px", display: "inline-flex", alignItems: "center", justifyContent: "center",
+  fontSize: 11, fontWeight: 900, color: "#fff", background: "#E0609A", border: "2px solid #0d0b14",
+};
+
 // Shared top-nav Grown-ups control. Replaces the floating GrownUpFab + LearningControl
 // pills. One parent-gated button (math check) opens a small menu that collapses BOTH
 // controls: the Learning On/Off toggle and Open grown-ups area. `fixed` renders it as a
 // top-right overlay (hub screens); without it, inline (grouped with My Stuff in a header).
-function GrownUpButton({ onGrownUp, fixed }) {
+// `compact` renders it as a slim icon-only button for the home top-nav.
+function GrownUpButton({ onGrownUp, fixed, compact }) {
   const [step, setStep] = useState(null); // null | "gate" | "menu"
   const [ab, setAb] = useState({ a: 0, b: 0 });
   const [val, setVal] = useState("");
@@ -280,7 +296,9 @@ function GrownUpButton({ onGrownUp, fixed }) {
   function openGate() { setAb({ a: 3 + Math.floor(Math.random() * 7), b: 3 + Math.floor(Math.random() * 7) }); setVal(""); setErr(false); setStep("gate"); }
   function submitGate(e) { e.preventDefault(); if (parseInt(val, 10) === ab.a * ab.b) { setStep("menu"); } else { setErr(true); } }
   function toggleLearning() { try { setLearningSettings({ ...getLearningSettings(), enabled: !on }); } catch (e) {} force((x) => x + 1); }
-  const btnStyle = fixed
+  const btnStyle = compact
+    ? NAV_ICON_BTN
+    : fixed
     ? { position: "fixed", top: "calc(14px + env(safe-area-inset-top))", right: 14, zIndex: 9998, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "9px 15px", fontSize: 14, fontWeight: 800, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }
     : { ...styles.myStuffButton, display: "inline-flex", alignItems: "center", gap: 6 };
   const Shield = () => (
@@ -292,7 +310,7 @@ function GrownUpButton({ onGrownUp, fixed }) {
   const cancelBtn = { width: "100%", marginTop: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: 10, color: "#C9C2E0", fontFamily: NUN, fontSize: 13, cursor: "pointer" };
   return (
     <>
-      <button onClick={openGate} aria-label="Grown-ups" style={btnStyle}><Shield />Grown-ups</button>
+      <button onClick={openGate} aria-label="Grown-ups" style={btnStyle}><Shield />{!compact && "Grown-ups"}</button>
       {step === "gate" && (
         <div style={overlay}>
           <form onSubmit={submitGate} style={card}>
@@ -331,7 +349,7 @@ function StuffGlyph() {
   );
 }
 
-function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendInvites = [], friendTurns = [], onJoinFriendInvite, onOpenFriendMatch }) {
+function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendInvites = [], friendTurns = [], onJoinFriendInvite, onOpenFriendMatch, compact }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
   const FTITLES = { chess: "Chess", checkers: "Checkers", tictactoe: "Tic-Tac-Toe", tennis: "Tennis" };
@@ -383,10 +401,10 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
-      <button onClick={() => setOpen((o) => !o)} aria-label="Friends" style={pillBtn}>
-        <People />Friends
-        {count > 0 && <span style={badge}>{count}</span>}
-        {(rtInvite || (friendInvites && friendInvites.length > 0)) && <span style={liveDot} />}
+      <button onClick={() => setOpen((o) => !o)} aria-label="Friends" style={compact ? NAV_ICON_BTN : pillBtn}>
+        <People />{!compact && "Friends"}
+        {count > 0 && <span style={compact ? NAV_ICON_BADGE : badge}>{count}</span>}
+        {!compact && (rtInvite || (friendInvites && friendInvites.length > 0)) && <span style={liveDot} />}
       </button>
       {open && (
         <div style={menu}>
@@ -1497,10 +1515,10 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
               </span>
             )}
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={onMyStuff} style={styles.myStuffButton}><StuffGlyph />My Stuff</button>
-            <GrownUpButton onGrownUp={onGrownUp} />
-            <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onMyStuff} aria-label="My Stuff" style={NAV_ICON_BTN}><StuffGlyph /></button>
+            <GrownUpButton onGrownUp={onGrownUp} compact />
+            <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} compact />
           </div>
         </div>
 
@@ -1686,13 +1704,19 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
           )}
           <div style={{ position: "relative" }}>
             <button onClick={() => setHelperOpen((o) => { const n = !o; if (n) { speakHelper(); try { localStorage.setItem("bk_buddy_last_greet", String(Date.now())); } catch (e) {} } return n; })} aria-label={"Talk to " + helperName} className="bk-float" style={{
-              width: phone ? 66 : 76, height: phone ? 66 : 76, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.22)", cursor: "pointer", padding: 0, overflow: "hidden",
-              background: helperImg ? `center/cover no-repeat url(${helperImg})` : "linear-gradient(135deg,#9b7edd,#6f5bd6)",
-              boxShadow: "0 10px 28px rgba(155,126,221,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
+              display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer",
+              padding: "5px 14px 5px 5px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.22)",
+              background: "rgba(27,24,48,0.92)", boxShadow: "0 8px 22px rgba(0,0,0,0.4)",
+              fontFamily: NUN, fontWeight: 800, fontSize: 13, color: "#e9e5f7",
             }}>
-              {!helperImg && <BuddyGlyph size={phone ? 32 : 36} />}
+              <span style={{
+                width: 34, height: 34, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
+                border: "2px solid rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center",
+                background: helperImg ? `center/cover no-repeat url(${helperImg})` : "linear-gradient(135deg,#9b7edd,#6f5bd6)",
+              }}>{!helperImg && <BuddyGlyph size={20} />}</span>
+              Ask me
             </button>
-            <button onClick={() => setHelperHidden(true)} aria-label="Hide helper" style={{ position: "absolute", top: -5, right: -5, width: 22, height: 22, borderRadius: "50%", border: "2px solid #0a0a14", background: "#3a3550", color: "#fff", fontSize: 13, lineHeight: "16px", cursor: "pointer", padding: 0 }}>×</button>
+            <button onClick={() => setHelperHidden(true)} aria-label="Hide helper" style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "2px solid #0a0a14", background: "#3a3550", color: "#fff", fontSize: 12, lineHeight: "14px", cursor: "pointer", padding: 0 }}>×</button>
           </div>
         </div>
       )}
