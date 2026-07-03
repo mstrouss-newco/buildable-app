@@ -150,7 +150,7 @@ var state="title";   // title | play | win | lose
 var SIM=false;       // true while headless-simulating (skip visual spawns)
 var muted=false, curMusic=null;
 var moving=null;     // {x,y,vx,vy,code,target}
-var particles=[], pops=[], shakeT=0, aimA=0, pointerX=LX, pointerY=LY-200;
+var particles=[], pops=[], shakeT=0, aimA=0, pointerX=LX, pointerY=LY-200, aiming=false;
 
 function makeGrid(){ var g=[]; for(var r=0;r<GRID_ROWS;r++){ g.push(new Array(COLS).fill(null)); } return g; }
 
@@ -475,10 +475,14 @@ function boot(){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
   fit(); preload();
   window.addEventListener("resize",fit);
-  cv.addEventListener("pointermove",function(e){ var p=toStage(e); pointerX=p.x; pointerY=p.y; if(state==="play"&&!moving) setAimFromPointer(p.x,p.y); });
-  cv.addEventListener("pointerdown",function(e){ if(BA)BA.unlock(); var p=toStage(e); if(state==="play"){ setAimFromPointer(p.x,p.y); fire(); } });
+  // Aim while pressing/hovering; only SHOOT when the finger lifts (so touch users
+  // can drag to aim first instead of firing the instant they touch).
+  cv.addEventListener("pointermove",function(e){ e.preventDefault(); var p=toStage(e); pointerX=p.x; pointerY=p.y; if(state==="play"&&!moving) setAimFromPointer(p.x,p.y); });
+  cv.addEventListener("pointerdown",function(e){ e.preventDefault(); if(BA)BA.unlock(); var p=toStage(e); if(state==="play"&&!moving){ aiming=true; setAimFromPointer(p.x,p.y); } });
+  window.addEventListener("pointerup",function(e){ if(!aiming) return; aiming=false; if(state==="play"&&!moving) fire(); });
+  window.addEventListener("pointercancel",function(){ aiming=false; });
   var sb=document.getElementById("soundBtn"); if(sb) sb.onclick=function(){ if(BA){BA.unlock();BA.toggleMute();} };
-  var hb=document.getElementById("helpBtn"); if(hb) hb.onclick=function(){ alert("Aim with your finger, tap to shoot. Match 3 or more of the same buddy to pop them. Clear them all to win!"); };
+  var hb=document.getElementById("helpBtn"); if(hb) hb.onclick=function(){ alert("Drag to aim, then lift your finger to shoot. Match 3 or more of the same buddy to pop them. Clear them all to win!"); };
   toMenu(); loop();
 }
 function fit(){
