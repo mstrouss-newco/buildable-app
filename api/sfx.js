@@ -348,11 +348,11 @@ export default async function handler(req,res){
     if(!elKey){ res.setHeader("Cache-Control","no-store"); return res.status(200).json({ok:true,configured:false}); }
     try{
       const r=await fetch("https://api.elevenlabs.io/v1/sound-generation",{method:"POST",headers:{"xi-api-key":elKey,"Content-Type":"application/json"},body:JSON.stringify({text:SOUNDS[sName],duration_seconds:(DURATIONS[sName]||12),prompt_influence:0.5})});
-      if(!r.ok){ res.setHeader("Cache-Control","no-store"); return res.status(200).json({ok:false,failed:true,status:r.status,detail:(await r.text()).slice(0,200)}); }
+      if(!r.ok){ res.setHeader("Cache-Control","no-store"); return res.status(503).json({ok:false,failed:true,status:r.status,detail:(await r.text()).slice(0,200)}); }
       const buf=Buffer.from(await r.arrayBuffer());
       b64=buf.toString("base64");
       await cachePut(key,b64);
-    }catch(e){ res.setHeader("Cache-Control","no-store"); return res.status(200).json({ok:false,error:String(e&&e.message).slice(0,120)}); }
+    }catch(e){ res.setHeader("Cache-Control","no-store"); return res.status(503).json({ok:false,error:String(e&&e.message).slice(0,120)}); }
   }
   res.setHeader("Content-Type","audio/mpeg");
   res.setHeader("Access-Control-Allow-Origin","*");

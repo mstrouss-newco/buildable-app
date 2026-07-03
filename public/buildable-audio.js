@@ -19,7 +19,7 @@
 // ============================================================================
 (function (g) {
   const BA = { ctx:null, master:null, music:null, muted:false, _unlocked:false,
-               sfxBase:"", map:{}, buffers:{}, _loading:{}, _last:{} };
+               sfxBase:"", sfxVer:"3", map:{}, buffers:{}, _loading:{}, _last:{} };
 
   try { BA.muted = localStorage.getItem("bk_muted") === "1"; } catch (e) {}
 
@@ -47,7 +47,7 @@
     if (!key || BA.buffers[key] || BA._loading[key] || !BA.sfxBase) return;
     const ac = ctx(); if (!ac || typeof fetch === "undefined") return;
     BA._loading[key] = true;
-    fetch(BA.sfxBase + encodeURIComponent(key))
+    fetch(BA.sfxBase + encodeURIComponent(key) + (BA.sfxBase.indexOf("?")>=0?"&_v=":"?_v=") + BA.sfxVer)
       .then(r => r.arrayBuffer())
       .then(buf => ac.decodeAudioData(buf))
       .then(b => { BA.buffers[key] = b; })
