@@ -157,24 +157,25 @@ const ENEMY_SLUGS=["star-slime","comet-bug","puff-blob"];
 const enemyImgs=ENEMY_SLUGS.map(sl=>charImg(sl,"base"));   // preload bespoke space-critter art (drawn blob fallback)
 
 // ===== Gently-moving parallax worlds (one per level) =====
-// Each scene = a folder of stacked pixel-art layers (back→front). We draw them tiled
-// horizontally and drift each layer slowly (front faster than back) for a calm sense of
-// depth. Art: CraftPix "Nature Landscapes" (public/parallax/nature). Layer numbers are the
-// real filenames (some scenes skip numbers), listed back→front.
+// Each scene = a folder of smooth, painterly layers stacked back→front (1.png = far sky,
+// higher = nearer). We draw them tiled across the width and drift each layer slowly (front
+// a touch faster than back) for a calm sense of depth. An earth→space journey: green
+// village → pine forest → snowy peaks → desert → night city → the moon (finale).
 const SCENES=[
-  { dir:"parallax/nature/nature_1", layers:[1,2,3,5,6,7,8,10] }, // lush green meadow
-  { dir:"parallax/nature/nature_5", layers:[1,2,3,4,5] },        // soft hills
-  { dir:"parallax/nature/nature_2", layers:[1,2,3,4] },          // forest
-  { dir:"parallax/nature/nature_3", layers:[1,2,3,4] },          // woodland
-  { dir:"parallax/nature/nature_4", layers:[1,2,3,4] },          // valley
-  { dir:"parallax/nature/nature_6", layers:[1,2,3] },            // distant peaks
+  { dir:"parallax/atmos/rural",  n:10 }, // green mountain village
+  { dir:"parallax/atmos/forest", n:7  }, // pine forest
+  { dir:"parallax/atmos/peaks",  n:9  }, // snowy mountains
+  { dir:"parallax/atmos/desert", n:6  }, // warm desert spires
+  { dir:"parallax/atmos/city",   n:7  }, // night city skyline
+  { dir:"parallax/atmos/moon",   n:6  }, // moon with Earth rising (finale)
 ];
 const sceneCache={};
 function sceneLayers(i){ const s=SCENES[((i%SCENES.length)+SCENES.length)%SCENES.length];
-  if(!sceneCache[i]) sceneCache[i]=s.layers.map(k=>mkImg("/"+s.dir+"/"+k+".png"));
+  if(!sceneCache[i]){ const a=[]; for(let k=1;k<=s.n;k++) a.push(mkImg("/"+s.dir+"/"+k+".png")); sceneCache[i]=a; }
   return sceneCache[i]; }
-// preload every scene up front so worlds appear instantly when a level starts
-for(let i=0;i<SCENES.length;i++) sceneLayers(i);
+// lazy-load: warm the first world now; each other loads the moment its level starts
+// (see startLevel) so phones don't fetch all six worlds up front.
+sceneLayers(0);
 function imgReady(im){ return im && (im.complete||im.width) && (im.naturalWidth||im.width); }
 // one image tiled across the width, scaled to cover H, offset by ox (px) — seamless loop
 function drawScrollLayer(im,ox){ const iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height; if(!iw||!ih)return;
@@ -278,6 +279,8 @@ function applyGear(s){ BASE._bonusHearts=0; if(!CHAR)return; const eq=CHAR.equip
 function startLevel(i, carry){
   level=Math.max(0,Math.min(GAME_CONFIG.levels.length-1,i)); L=GAME_CONFIG.levels[level];
   bossImg = L.bossChar ? charImg(L.bossChar,"base") : null;   // start loading this level's boss art (base cutout)
+  if(typeof sceneLayers==="function") sceneLayers(level);     // warm this level's parallax world
+  if(typeof sceneLayers==="function" && level+1<GAME_CONFIG.levels.length) sceneLayers(level+1);  // and pre-warm the next
   const prevHearts = hero?hero.hearts:BASE.hearts;
   if(!carry || !stats){ stats=freshStats(); applyGear(stats); xp=0; plvl=1; xpNeed=START_NEED;
     // catch-up: starting a later level on its own grants the progress you'd have by then, so a retry is fair
