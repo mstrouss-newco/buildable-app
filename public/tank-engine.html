@@ -1,0 +1,494 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Hilltop Tanks — engine</title>
+<link rel="icon" href="/favicon.ico?v=3" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=3" />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<!-- kills the iOS long-press magnifier / Look-Up popup while keeping controls tappable -->
+<style id="no-longpress">
+  *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  input,textarea{-webkit-user-select:text;user-select:text}
+</style>
+<style>
+  html,body{margin:0;height:100%;background:#8fd0f2;overflow:hidden;touch-action:none;
+            font-family:'Fredoka',-apple-system,sans-serif}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{background:#bfe8ff;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  #start{position:fixed;inset:0;z-index:10;display:none}
+
+  /* bottom gameplay control bar (bottom is reserved for gameplay per house nav rules) */
+  #ctl{position:fixed;left:0;right:0;bottom:0;z-index:20;display:none;
+       justify-content:center;align-items:flex-end;gap:14px;padding:10px 12px 14px;
+       background:linear-gradient(0deg,rgba(10,30,20,.55),rgba(10,30,20,0));pointer-events:none}
+  #ctl .grp{pointer-events:auto;background:rgba(20,44,30,.82);border:2px solid #3e7d52;
+            border-radius:18px;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;
+            box-shadow:0 6px 18px rgba(0,0,0,.3)}
+  #ctl .lab{font-family:'Baloo 2';font-weight:800;font-size:13px;color:#bff0cf;letter-spacing:.5px}
+  #ctl .row{display:flex;align-items:center;gap:8px}
+  #ctl .rb{font-family:'Baloo 2';font-weight:800;font-size:24px;line-height:1;color:#0e2a18;
+           background:#8be0a3;border:none;border-radius:12px;width:46px;height:46px;cursor:pointer;
+           box-shadow:0 4px 0 #4fae70;touch-action:manipulation}
+  #ctl .rb:active{transform:translateY(3px);box-shadow:0 1px 0 #4fae70}
+  #ctl .val{font-family:'Baloo 2';font-weight:800;font-size:22px;color:#fff;min-width:64px;text-align:center}
+  #ctl .meter{width:66px;height:12px;border-radius:8px;background:#123;overflow:hidden;border:1px solid #3e7d52}
+  #ctl .meter > i{display:block;height:100%;background:linear-gradient(90deg,#ffe27a,#ff8a4c,#ff5a5a)}
+  #fire{pointer-events:auto;font-family:'Baloo 2';font-weight:800;font-size:26px;color:#4a0f0f;
+        background:linear-gradient(180deg,#ff9a5a,#ff5a5a);border:none;border-radius:20px;
+        padding:0 26px;height:74px;min-width:150px;cursor:pointer;box-shadow:0 7px 0 #b23a3a;touch-action:manipulation}
+  #fire:active{transform:translateY(3px);box-shadow:0 4px 0 #b23a3a}
+  #fire:disabled{filter:grayscale(.6) brightness(.8);cursor:default}
+
+  #muteBtn{position:fixed;right:12px;top:12px;z-index:30;display:none;font-family:'Baloo 2';font-weight:800;font-size:14px;
+           color:#eafff1;background:rgba(20,44,30,.72);border:1px solid #3e7d52;border-radius:12px;padding:8px 12px;cursor:pointer}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:25;background:#fff4c2;color:#3a2a0a;
+         font-family:'Baloo 2';font-weight:800;padding:10px 20px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.3);
+         display:none;font-size:18px}
+  .over{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;
+        background:rgba(8,26,16,.72);color:#fff}
+  .over.show{display:flex}
+  .over h1{font-family:'Baloo 2';font-weight:800;font-size:46px;margin:0 0 6px}
+  .over p{margin:0 0 18px;opacity:.9;font-size:18px}
+  .over .b{font-family:'Baloo 2';font-weight:800;font-size:22px;color:#0e2a18;background:#8be0a3;border:none;
+           border-radius:16px;padding:14px 30px;margin:6px;cursor:pointer;box-shadow:0 6px 0 #4fae70}
+  .over .b:active{transform:translateY(3px);box-shadow:0 3px 0 #4fae70}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="900" height="600"></canvas></div>
+
+<!-- shared start screen mounts here -->
+<div id="start"></div>
+
+<!-- gameplay controls -->
+<div id="ctl">
+  <div class="grp">
+    <div class="lab">ANGLE</div>
+    <div class="row">
+      <button class="rb" id="aDown">&#8722;</button>
+      <div class="val" id="aVal">45&deg;</div>
+      <button class="rb" id="aUp">+</button>
+    </div>
+  </div>
+  <button id="fire">FIRE</button>
+  <div class="grp">
+    <div class="lab">POWER</div>
+    <div class="row">
+      <button class="rb" id="pDown">&#8722;</button>
+      <div class="meter"><i id="pBar"></i></div>
+      <button class="rb" id="pUp">+</button>
+    </div>
+  </div>
+</div>
+
+<button id="muteBtn">Sound</button>
+<div id="toast" class="toast"></div>
+
+<div id="over" class="over">
+  <h1 id="overTitle">You win!</h1>
+  <p id="overSub"></p>
+  <div>
+    <button class="b" id="overNext">Play again</button>
+    <button class="b" id="overMenu" style="background:#cfd6ff">Menu</button>
+  </div>
+</div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script>
+(function(){
+  "use strict";
+  const W = 900, H = 600;
+  const BR = window.BuildableRenders || {};
+  const BA = window.BuildableAudio || { sfx(){}, unlock(){}, toggleMute(){return false;}, muted:false };
+  const BM = window.BuildableMechanics || null;
+  const BS = window.BuildableStartScreen || null;
+  const hasDoc = (typeof document !== "undefined");
+  const cvs = hasDoc ? document.getElementById("c") : null;
+  const ctx = cvs ? cvs.getContext("2d") : null;
+
+  // ---------- content as DATA (add a level = edit this, never the engine) ----------
+  // Grassy green-hills world. Each level = two mountains + a friendly computer tank.
+  const GAME_CONFIG = window.GAME_CONFIG || {
+    title: "Hilltop Tanks",
+    world: "meadow",
+    levels: [
+      { name: "Green Valley",  seed: 1.3, leftH: 150, rightH: 168, spread: 120, enemyHp: 90,  enemyErr: 14 },
+      { name: "Twin Peaks",    seed: 2.7, leftH: 176, rightH: 150, spread: 100, enemyHp: 105, enemyErr: 11 },
+      { name: "Big Bluffs",    seed: 4.1, leftH: 132, rightH: 196, spread: 92,  enemyHp: 120, enemyErr: 9  },
+    ],
+  };
+
+  // ---------- art (Kenney Tank Pack) with drawn fallback ----------
+  const IMG = {};
+  function loadImg(key, src){ if (typeof Image === "undefined") return; const i = new Image(); i.src = src; IMG[key] = i; }
+  function hasImg(k){ const i = IMG[k]; return !!(i && i.complete && i.naturalWidth); }
+  ["body_green","body_enemy","barrel_green","barrel_enemy","shell"].forEach(k => loadImg(k, "/tank/"+k+".png"));
+  const BOOM = []; for (let n=1;n<=8;n++){ loadImg("boom"+n, "/tank/boom"+n+".png"); BOOM.push("boom"+n); }
+
+  // ---------- state ----------
+  let level = 0;
+  let terrain = null;            // Array, ground-top y per x column
+  let player = null, enemy = null;
+  let aimAngle = 45, aimPower = 62;   // player's controls
+  let shell = null;              // {x,y,vx,vy,owner}
+  let fx = BM ? BM.makeFx() : null;
+  let booms = [];                // sprite explosions {x,y,t}
+  let state = "title";           // title | aim | fly | settle | enemyaim | win | lose
+  let phaseTimer = 0;
+  let turnMsg = "";
+  const GRAV = 0.28;
+  let enemyBarrelAngle = 45;
+  let turnShooterWasPlayer = true;
+
+  function terrainYAt(x){
+    if (!terrain) return H - 60;
+    x = Math.max(0, Math.min(W-1, Math.round(x)));
+    return terrain[x];
+  }
+
+  function buildTerrain(cfg){
+    const base = 470;                 // valley ground line
+    const lx = 150, rx = 750;         // mountain-peak x for the two tanks
+    const t = new Array(W);
+    for (let x=0;x<W;x++){
+      const lm = cfg.leftH  * Math.exp(-Math.pow((x-lx)/cfg.spread, 2));
+      const rm = cfg.rightH * Math.exp(-Math.pow((x-rx)/cfg.spread, 2));
+      const roll = 10*Math.sin(x*0.013 + cfg.seed) + 6*Math.sin(x*0.031 + cfg.seed*2);
+      t[x] = base - Math.max(lm, rm) - roll*0.35;
+    }
+    return { t, lx, rx };
+  }
+
+  function makeTank(x, sideSign, isEnemy){
+    return { x, y: 0, side: sideSign, isEnemy, hp: 100, hpMax: 100, w: 46, h: 30 };
+  }
+
+  function startLevel(idx){
+    level = ((idx|0) % GAME_CONFIG.levels.length + GAME_CONFIG.levels.length) % GAME_CONFIG.levels.length;
+    const cfg = GAME_CONFIG.levels[level];
+    const built = buildTerrain(cfg);
+    terrain = built.t;
+    player = makeTank(built.lx, +1, false);
+    enemy  = makeTank(built.rx, -1, true);
+    enemy.hp = enemy.hpMax = cfg.enemyHp;
+    player.hp = player.hpMax = 120;
+    player.y = terrainYAt(player.x) - player.h*0.5;
+    enemy.y  = terrainYAt(enemy.x)  - enemy.h*0.5;
+    aimAngle = 45; aimPower = 62;
+    shell = null; booms = []; if (BM) fx = BM.makeFx();
+    state = "aim"; phaseTimer = 0; turnMsg = "Your turn!";
+    enemyBarrelAngle = computeShot(enemy, player).angle;
+    showToast("Your turn!");
+    syncControls(); showCtl(true); showOver(false);
+    hideMenu();
+  }
+
+  // ---------- projectile helpers ----------
+  function muzzle(tank, angleDeg){
+    const aR = angleDeg * Math.PI/180;
+    const pivotX = tank.x, pivotY = tank.y - tank.h*0.35;
+    const L = 34;
+    const dx = tank.side * Math.cos(aR), dy = -Math.sin(aR);
+    return { x: pivotX + dx*L, y: pivotY + dy*L, dx, dy };
+  }
+  function powerToSpeed(p){ return 7 + p*0.092; }   // p 20..100 -> ~8.8..16.2 px/frame
+
+  function fireFrom(tank, angleDeg, power){
+    const m = muzzle(tank, angleDeg);
+    const sp = powerToSpeed(power);
+    shell = { x: m.x, y: m.y, vx: m.dx*sp, vy: m.dy*sp, owner: tank.isEnemy ? "enemy" : "player" };
+    if (BM && BM.muzzle) BM.muzzle(fx, m.x, m.y, "#ffd76b");
+    BA.sfx("shoot");
+  }
+
+  // simulate a shot, return the closest distance it ever gets to targetPos (headless-safe, no draw)
+  function simClosest(tank, angleDeg, power, targetPos){
+    const m = muzzle(tank, angleDeg);
+    const sp = powerToSpeed(power);
+    let x = m.x, y = m.y, vx = m.dx*sp, vy = m.dy*sp;
+    let best = 1e9;
+    for (let i=0;i<600;i++){
+      vy += GRAV; x += vx; y += vy;
+      const d = Math.hypot(x - targetPos.x, y - targetPos.y);
+      if (d < best) best = d;
+      if (x < -40 || x > W+40) break;
+      if (y >= terrainYAt(x)) break;
+      if (y > H+80) break;
+    }
+    return best;
+  }
+
+  // find a good (angle,power) for `tank` to hit `target`
+  function computeShot(tank, target){
+    const tgt = { x: target.x, y: target.y - target.h*0.3 };
+    let best = { angle: 45, power: 60, d: 1e9 };
+    for (let a=28; a<=78; a+=2){
+      for (let p=34; p<=100; p+=4){
+        const d = simClosest(tank, a, p, tgt);
+        if (d < best.d) best = { angle: a, power: p, d };
+      }
+    }
+    return best;
+  }
+
+  // ---------- damage ----------
+  function applyImpact(ix, iy, owner){
+    for (let x=Math.max(0,ix-26); x<Math.min(W,ix+26); x++){
+      const dd = 1 - Math.abs(x-ix)/26; terrain[x] += dd*10;
+    }
+    if (BM) BM.explode(fx, ix, iy, "#ffb14a", { big: owner==="player" });
+    booms.push({ x: ix, y: iy, t: 0 });
+    BA.sfx("explode");
+
+    const target = owner === "player" ? enemy : player;
+    const blast  = owner === "player" ? 92 : 66;   // player's shells more forgiving (always-winnable)
+    const maxDmg = owner === "player" ? 46 : 18;
+    const d = Math.hypot(ix - target.x, iy - (target.y - target.h*0.3));
+    if (d < blast){
+      const dmg = Math.round(maxDmg * (1 - d/blast));
+      target.hp = Math.max(0, target.hp - dmg);
+      if (BM && BM.pop) BM.pop(fx.pops, target.x, target.y - 46, "-"+dmg, "#ff6b6b");
+      if (BM && BM.shake) BM.shake(fx, 0.4);
+    }
+  }
+
+  // ---------- turn machine (frame-driven so the QA bot works headless) ----------
+  function fire(){
+    if (state !== "aim") return;
+    turnShooterWasPlayer = true;
+    showCtl(false);
+    fireFrom(player, aimAngle, aimPower);
+    state = "fly";
+  }
+
+  function enemyFire(){
+    const cfg = GAME_CONFIG.levels[level];
+    const shot = computeShot(enemy, player);
+    const err = cfg.enemyErr || 12;
+    const a = shot.angle + (Math.random()*2-1)*err;
+    const p = Math.max(30, Math.min(100, shot.power + (Math.random()*2-1)*err));
+    turnShooterWasPlayer = false;
+    fireFrom(enemy, a, p);
+    state = "fly";
+  }
+
+  function update(){
+    if (fx && BM) BM.update(fx, 1);
+    for (const b of booms) b.t++;
+    booms = booms.filter(b => b.t < BOOM.length*3);
+
+    if (state === "fly" && shell){
+      shell.vy += GRAV; shell.x += shell.vx; shell.y += shell.vy;
+      const offX = shell.x < -60 || shell.x > W+60;
+      const hitGround = shell.y >= terrainYAt(shell.x);
+      const owner = shell.owner;
+      const tgt = owner === "player" ? enemy : player;
+      const near = Math.hypot(shell.x - tgt.x, shell.y - (tgt.y - tgt.h*0.3)) < 26;
+      if (shell.y < 0 && !offX){
+        // still climbing above the top of the canvas — let it arc back down
+      } else if (hitGround || near || offX){
+        const ix = Math.round(shell.x), iy = near ? tgt.y - tgt.h*0.3 : Math.min(terrainYAt(shell.x), shell.y);
+        applyImpact(ix, iy, owner);
+        shell = null;
+        state = "settle"; phaseTimer = 30;
+      }
+    } else if (state === "settle"){
+      if (--phaseTimer <= 0){
+        if (enemy.hp <= 0){ win(); }
+        else if (player.hp <= 0){ lose(); }
+        else if (turnShooterWasPlayer){ state = "enemyaim"; phaseTimer = 34; showToast("Computer's turn"); }
+        else { state = "aim"; turnMsg = "Your turn!"; enemyBarrelAngle = computeShot(enemy, player).angle; showToast("Your turn!"); syncControls(); showCtl(true); }
+      }
+    } else if (state === "enemyaim"){
+      if (--phaseTimer <= 0){ enemyFire(); }
+    }
+    return state;
+  }
+
+  function win(){
+    state = "win"; showCtl(false); BA.sfx("win");
+    signal("win"); markCleared(level);
+    if (hasDoc){ setOver("You win!", "You knocked out the computer tank!"); showOver(true); }
+  }
+  function lose(){
+    state = "lose"; showCtl(false); BA.sfx("lose");
+    signal("lose");
+    if (hasDoc){ setOver("So close!", "Your tank is out of steam — give it another go!"); showOver(true); }
+  }
+
+  // tell the app (helper reaction + per-kid logging) — exactly once per result
+  function signal(kind){
+    try { if (window.parent) window.parent.postMessage({ source:"buildable", kind }, "*"); } catch(e){}
+  }
+
+  // ---------- progress ----------
+  const PREFS = loadPrefs();
+  function loadPrefs(){ try { return JSON.parse(localStorage.getItem("bk_tank")) || { unlocked:0, cleared:{} }; } catch(e){ return { unlocked:0, cleared:{} }; } }
+  function savePrefs(){ try { localStorage.setItem("bk_tank", JSON.stringify(PREFS)); } catch(e){} }
+  if (!PREFS.cleared) PREFS.cleared = {}; if (PREFS.unlocked == null) PREFS.unlocked = 0;
+  function markCleared(i){ PREFS.cleared[i] = true; PREFS.unlocked = Math.max(PREFS.unlocked, Math.min(GAME_CONFIG.levels.length-1, i+1)); savePrefs(); if (startScreen) startScreen.update(buildStartCfg()); }
+
+  // ---------- rendering ----------
+  function draw(){
+    if (!ctx) return;
+    ctx.save();
+    if (fx && BM){ const o = BM.shakeOffset(fx); ctx.translate(o.x||0, o.y||0); }
+    const sky = ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0, "#bfeaff"); sky.addColorStop(0.7, "#e9f9ff"); sky.addColorStop(1, "#f4ffe8");
+    ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = "#fff3b0"; ctx.beginPath(); ctx.arc(W-110, 90, 42, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.85)";
+    cloud(160,110,46); cloud(430,70,38); cloud(650,150,40);
+
+    ctx.beginPath(); ctx.moveTo(0, H);
+    for (let x=0;x<W;x++) ctx.lineTo(x, terrainYAt(x));
+    ctx.lineTo(W, H); ctx.closePath();
+    const g = ctx.createLinearGradient(0, 300, 0, H);
+    g.addColorStop(0, "#7ed36a"); g.addColorStop(1, "#3f9a44");
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = "#2f7d38"; ctx.lineWidth = 6; ctx.beginPath();
+    for (let x=0;x<W;x++){ if (x===0) ctx.moveTo(x, terrainYAt(x)); else ctx.lineTo(x, terrainYAt(x)); }
+    ctx.stroke();
+
+    drawTank(enemy); drawTank(player);
+    if (state === "aim") drawAimHelper();
+    if (shell) drawShell(shell);
+
+    for (const b of booms){ const idx = Math.min(BOOM.length-1, Math.floor(b.t/3)); const k = BOOM[idx];
+      if (hasImg(k)){ const im = IMG[k]; const s = 64; ctx.globalAlpha = Math.max(0, 1 - b.t/(BOOM.length*3));
+        ctx.drawImage(im, b.x-s/2, b.y-s/2, s, s); ctx.globalAlpha = 1; } }
+
+    if (fx && BM){ BM.drawParticles(ctx, fx.parts); BM.drawPops(ctx, fx.pops, "800 20px 'Baloo 2'"); }
+    ctx.restore();
+    if (fx && BM && BM.drawFlash) BM.drawFlash(ctx, fx, W, H);
+  }
+  function cloud(x,y,r){ ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.arc(x+r,y+6,r*0.8,0,7); ctx.arc(x-r*0.9,y+8,r*0.7,0,7); ctx.fill(); }
+
+  function drawTank(tk){
+    const bodyKey = tk.isEnemy ? "body_enemy" : "body_green";
+    const barrelKey = tk.isEnemy ? "barrel_enemy" : "barrel_green";
+    const ang = tk.isEnemy ? enemyBarrelAngle : aimAngle;
+    const aR = ang * Math.PI/180;
+    const rot = Math.atan2(-Math.sin(aR), tk.side*Math.cos(aR));
+    ctx.save(); ctx.translate(tk.x, tk.y - tk.h*0.35); ctx.rotate(rot);
+    if (hasImg(barrelKey)){ ctx.drawImage(IMG[barrelKey], -4, -6, 40, 12); }
+    else { ctx.fillStyle = tk.isEnemy ? "#7a7f88" : "#4f8a3f"; ctx.fillRect(0,-4,34,8); }
+    ctx.restore();
+    if (hasImg(bodyKey)){ const iw = 54, ih = 40; ctx.drawImage(IMG[bodyKey], tk.x-iw/2, tk.y-ih/2+4, iw, ih); }
+    else { ctx.fillStyle = tk.isEnemy ? "#8a9097" : "#5aa84a"; roundRect(tk.x-tk.w/2, tk.y-tk.h/2, tk.w, tk.h, 6); ctx.fill(); }
+    const bw = 48, bx = tk.x-bw/2, by = tk.y - tk.h/2 - 16;
+    ctx.fillStyle = "rgba(0,0,0,.35)"; roundRect(bx-2, by-2, bw+4, 10, 5); ctx.fill();
+    ctx.fillStyle = tk.isEnemy ? "#ff6b6b" : "#7ee06a"; roundRect(bx, by, Math.max(0,bw*(tk.hp/tk.hpMax)), 6, 3); ctx.fill();
+  }
+
+  function drawShell(s){
+    const ang = Math.atan2(s.vy, s.vx);
+    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(ang);
+    if (hasImg("shell")){ ctx.drawImage(IMG["shell"], -10, -6, 20, 12); }
+    else { ctx.fillStyle = "#2a2a2a"; roundRect(-8,-4,16,8,4); ctx.fill(); }
+    ctx.restore();
+  }
+
+  function drawAimHelper(){
+    const m = muzzle(player, aimAngle);
+    const sp = powerToSpeed(aimPower);
+    let x = m.x, y = m.y, vx = m.dx*sp, vy = m.dy*sp;
+    ctx.fillStyle = "rgba(255,255,255,.9)";
+    for (let i=0;i<70;i++){
+      vy += GRAV; x += vx; y += vy;
+      if (y >= terrainYAt(x) || x<0 || x>W || y>H) break;
+      if (i % 3 === 0){ ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill(); }
+    }
+  }
+
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  // ---------- loop ----------
+  function frame(){ if (state !== "title"){ update(); draw(); } requestAnimationFrame(frame); }
+
+  // ---------- controls / UI (DOM — guarded for headless) ----------
+  function $(id){ return hasDoc ? document.getElementById(id) : null; }
+  function showCtl(on){ const e = $("ctl"); if (e) e.style.display = on ? "flex" : "none"; const m=$("muteBtn"); if(m) m.style.display = (on||state==="fly"||state==="settle"||state==="enemyaim") ? "block":"none"; }
+  function showOver(on){ const e = $("over"); if (e) e.classList.toggle("show", !!on); }
+  function setOver(t, s){ const a=$("overTitle"), b=$("overSub"); if(a)a.textContent=t; if(b)b.textContent=s; }
+  let toastT = 0;
+  function showToast(msg){ const e = $("toast"); if (!e) return; e.textContent = msg; e.style.display="block"; clearTimeout(toastT); toastT = setTimeout(()=>{ e.style.display="none"; }, 1400); }
+  function syncControls(){ const a=$("aVal"); if(a) a.innerHTML = Math.round(aimAngle)+"&deg;"; const p=$("pBar"); if(p) p.style.width = Math.round((aimPower-20)/80*100)+"%"; const f=$("fire"); if(f) f.disabled = (state!=="aim"); }
+  function adjAngle(d){ if(state!=="aim")return; aimAngle = Math.max(15, Math.min(80, aimAngle+d)); syncControls(); BA.sfx("select"); }
+  function adjPower(d){ if(state!=="aim")return; aimPower = Math.max(20, Math.min(100, aimPower+d)); syncControls(); BA.sfx("select"); }
+
+  // ---------- start screen (shared BS) ----------
+  let startScreen = null;
+  function buildStartCfg(){
+    const levels = GAME_CONFIG.levels.map((l,i)=>{
+      const st = i<=PREFS.unlocked ? (PREFS.cleared[i]?"done":"next") : "locked";
+      return { n:i+1, name:l.name, color:"#4f9a44", state: st, maxStars:1, stars: PREFS.cleared[i]?1:undefined };
+    });
+    return { title: "Hilltop Tanks", subtitle: "Aim across the hills and knock out the computer tank!",
+             sound: !BA.muted, showBack:false, modes:["solo"], mode:"solo", levels };
+  }
+  function showMenu(){ state="title"; showCtl(false); showOver(false);
+    const host = $("start"); if (host) host.style.display = "block";
+    if (!BS || !host) return;
+    const cb = {
+      onPlay:(n)=>{ BA.unlock(); startLevel(n-1); },
+      onMode:()=>{},
+      onSound:(on)=>{ BA.unlock(); BA.toggleMute(); },
+      onBack:()=>{},
+    };
+    if (!startScreen) startScreen = BS.mount(host, buildStartCfg(), cb);
+    else startScreen.update(buildStartCfg());
+  }
+  function hideMenu(){ const host = $("start"); if (host) host.style.display = "none"; }
+
+  // ---------- wire DOM ----------
+  if (hasDoc){
+    const bind = (id, fn)=>{ const e=$(id); if(e){ e.addEventListener("click", fn); } };
+    bind("aUp",   ()=>adjAngle(+3)); bind("aDown", ()=>adjAngle(-3));
+    bind("pUp",   ()=>adjPower(+4)); bind("pDown", ()=>adjPower(-4));
+    bind("fire",  ()=>{ BA.unlock(); fire(); });
+    bind("muteBtn", ()=>{ BA.unlock(); const m = BA.toggleMute(); const e=$("muteBtn"); if(e) e.textContent = m ? "Sound off" : "Sound"; });
+    bind("overNext", ()=>{ startLevel(state==="win" ? Math.min(GAME_CONFIG.levels.length-1, level+1) : level); });
+    bind("overMenu", ()=>{ showMenu(); });
+    window.addEventListener("keydown", (e)=>{
+      if (e.key==="ArrowUp") adjAngle(+2); else if (e.key==="ArrowDown") adjAngle(-2);
+      else if (e.key==="ArrowRight") adjPower(+3); else if (e.key==="ArrowLeft") adjPower(-3);
+      else if (e.code==="Space"){ e.preventDefault(); BA.unlock(); fire(); }
+    });
+    showMenu();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- QA hook (perfect-player bot proves every level is winnable) ----------
+  function botAim(){ const s = computeShot(player, enemy); aimAngle = s.angle; aimPower = s.power; }
+  window.BUILDABLE_GAME = {
+    startLevel:(i)=>startLevel(i),
+    state:()=>state,
+    dbg:()=>({ state, level, playerHp:player&&player.hp, enemyHp:enemy&&enemy.hp, angle:aimAngle, power:aimPower, shell: shell?{x:Math.round(shell.x),y:Math.round(shell.y)}:null }),
+    sim:(idx, maxFrames)=>{ startLevel(idx); let f=0, cap=maxFrames||8000;
+      while(state!=="win" && state!=="lose" && f<cap){
+        if (state==="aim"){ botAim(); fire(); }
+        update(); f++;
+      }
+      return { level:idx, result:state, frames:f, playerHp:player.hp, enemyHp:enemy.hp }; },
+    campaign:(cap)=>{ const out=[]; cap=cap||8000;
+      for (let i=0;i<GAME_CONFIG.levels.length;i++){ startLevel(i); let f=0;
+        while(state!=="win" && state!=="lose" && f<cap){ if(state==="aim"){ botAim(); fire(); } update(); f++; }
+        out.push({ level:i+1, name:GAME_CONFIG.levels[i].name, result:state, frames:f, playerHp:player.hp, enemyHp:enemy.hp });
+        if (state==="lose") break; }
+      return out; },
+    _cfg:()=>GAME_CONFIG,
+  };
+  window.TANK_GAME = window.BUILDABLE_GAME;
+})();
+</script>
+</body>
+</html>

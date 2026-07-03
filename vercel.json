@@ -364,6 +364,18 @@
       "dest": "/tutorial-hand.png"
     },
     {
+      "src": "/tank-engine.html",
+      "dest": "/tank-engine.html"
+    },
+    {
+      "src": "/tank",
+      "dest": "/tank-engine.html"
+    },
+    {
+      "src": "/tank/(.*)",
+      "dest": "/tank/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

@@ -1442,3 +1442,12 @@ Riley (12) / Jack (4) filtered lists correct; assign endpoint returns the update
 row. Data cleanup: filed the 4 unfiled songs on the demo device — "Riley stole
 the ball"→Riley, "Riley and Fiona's magical zoo"→Riley, "Jackson hit a home run"
 →Jack; left "Epic volcano Song" unfiled (no child named).
+
+---
+## 2026-07-02 — Hilltop Tanks (tank artillery engine)
+- Built `public/tank-engine.html`: solo vs friendly computer tank; hill-to-hill lobbing.
+- Angle+power controls + dotted trajectory preview (always-winnable helper).
+- Kenney Tank Pack art -> public/tank/ (body_green, body_enemy, barrel_*, shell, boom1-8); drawn fallback.
+- Shared BR/BA/BM/BS; BS start screen (3 levels: Green Valley, Twin Peaks, Big Bluffs).
+- QA: qa-tank.mjs perfect-player bot clears all levels 8/8; full campaign win.
+- Routes in vercel.json; SCREEN_TANK + TankScreen + Games tile; api/images.js prompt.
