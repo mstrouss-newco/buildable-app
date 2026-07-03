@@ -75,6 +75,9 @@ session log below. **Never click "Create a New Game" / "Publish my game" in the 
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
 
+## Core SFX v2 — make them actually distinct (July 2 2026)
+Owner: the first shared one-shots "sound like a tambourine shake at different pitches, not unique." Cause: prompts shared vague sparkle/chime/ding wording + prompt_influence 0.5, so ElevenLabs produced one shimmer texture repitched. Fix: rewrote all 12 as concrete distinct sound FAMILIES (select=wooden click, win=brass+glockenspiel fanfare, lose=slide-whistle+tuba, coin=arcade bling, collect=water bloop, hit=low drum thud, shoot=laser pew, explode=poof boom, hurt=boing bonk, boss=gong stinger, error=buzzer, celebrate=party popper), raised prompt_influence to 0.7, and added ?force=1 (cacheDel+regen) to /api/sfx so a prompt can be re-rolled without wiping the DB by hand. Bumped BA.sfxVer to 4 so games fetch the new audio. All 12 force-regenerated + cached. Owner auditioning; re-roll any single sound with /api/sfx?s=<name>&force=1. Scoped to api/sfx.js, public/buildable-audio.js.
+
 ## Fix: SFX edge-cache poisoning (July 2 2026)
 Three new one-shots (hit/select/shoot) briefly errored (duration 0.4 < ElevenLabs min 0.5) before the fix, and Vercel's edge cached those failure responses under the bare /api/sfx?s=<name> URL, so they kept serving the old error even after the audio was fixed and cached in Supabase (same recurring poisoned-edge-cache issue as Sound Machine). Two-part fix: (1) buildable-audio.js now appends a version tag (BA.sfxVer, currently "3") to every /api/sfx fetch, so games request a fresh cache key and never hit a poisoned bare URL — bump BA.sfxVer when a prompt changes. (2) api/sfx.js failed generations now return 503 (still no-store) instead of 200, so a transient failure can't be cached as the sound. Verified all 12 shared one-shots return audio on a fresh key. Scoped to public/buildable-audio.js, api/sfx.js.
 
