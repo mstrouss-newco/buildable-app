@@ -126,8 +126,9 @@ const screen = BS.mount(document.getElementById("start"), {
 Rules: `state` is `"done"` | `"next"` | `"locked"` (lock the rest; mark the next playable
 one `"next"` so it gets the green Play highlight). Each level shows its **art thumbnail**
 (`img`; falls back to a solid `color`, then a drawn icon) and **stars earned** — wire
-`img` to the shared thumbnail/world art. The `"family"` mode is where the real-time
-multiplayer mechanic plugs in (launch `FamilyRealtime` — see `MULTIPLAYER.md`). Headless-
+`img` to the shared thumbnail/world art. The `"family"` mode is where
+multiplayer plugs in — launch the shared `GameLobby` (turn-based OR real-time), not a
+per-game component; see **Making it multiplayer** below and `MULTIPLAYER.md`. Headless-
 safe: with no DOM (QA sim), `BS.mount` is a no-op. Adopt it per engine one at a time, QA
 before/after (it replaces the engine's own menu code, not its gameplay). **`breaker-engine.html`
 is the first/reference adoption (2026-06-27):** its start screen + level picker are now
@@ -244,37 +245,87 @@ Rules when you DO use physics:
 
 ## Making it multiplayer (optional)
 
-Two kids can play together in two ways — pick by **how fast they need to see each other**.
-Full rules, the frozen message contract, and the tennis blueprint are in
-[`MULTIPLAYER.md`](./MULTIPLAYER.md); the short version:
+There is **ONE shared multiplayer system** now — reuse it, don't build a per-game
+table or lobby. It covers friends, presence, invites, delivery, and both transports.
+Full internals + the frozen message contracts are in [`MULTIPLAYER.md`](./MULTIPLAYER.md);
+this is what you touch to make a NEW game playable together.
 
-- **Same device** → local two-player (pass-and-play). No backend, no accounts. Done.
-- **Across devices, taking turns** (chess, board/card games) → **poll a row**: one
-  family-scoped Supabase row holds the whole game state; a move updates it; the other
-  device re-reads every ~2s. Reference: chess (`chess_matches` + `FamilyChess.jsx`).
-- **Across devices, continuous motion** (tennis, pong) → the **real-time mechanic**: a
-  Supabase Realtime **Broadcast** channel for the live ball/paddles, plus a row for the
-  lobby/score.
+### The shared pieces (already built — you only wire your game in)
 
-**To make a game use the real-time mechanic, do only two things** (everything else is
-inherited):
+- **`src/GameLobby.jsx`** — the one reusable lobby. Mode select (Solo / Same device /
+  Play a friend) → friends list → invite/Start game → embeds your board + bridges moves.
+- **`api/friends.js` + `src/lib/friends.js`** — friends list, presence heartbeat, invites,
+  inbox. **`src/lib/friendMatches.js`** — the turn-based "poll a row" transport.
+- **Tables** (already migrated, `db/create-friends.sql`): `friend_matches` (ONE match
+  table for every game — no new table per game), `game_invites`, plus `kid_profiles.last_seen`
+  for presence. Distinguished by `friend_matches.game`, so a new game needs **no schema change**.
+- Kids in one grown-up account are auto-friends (family lane); cross-account friends need a
+  friend code both grown-ups approve. **Cross-device play = the same grown-up account signed
+  in on each device**, each picking a different kid.
 
-1. **Build the game to the `mp:` contract** — it stays a normal network-agnostic
-   `public/<game>.html` engine that posts `mp:ready`, broadcasts **positions not
-   commands** via `mp:send`, applies `mp:peer`, honors its `role` (host owns the ball;
-   each kid broadcasts only their own paddle), and ends with `mp:result`.
-2. **Launch it through the shared layer**, not a bare iframe:
-   `<FamilyRealtime game={{ slug, url, title }} activeKid={…} />`. That gives you the
-   lobby, the live channel, role assignment, the reaction safety check, and the
-   score write-back for free, reusing the one `rt_matches` table.
+### Pick a transport by how fast the two kids must see each other
 
-A generation prompt can simply say **"use the real-time multiplayer mechanic"**
-(`game_mechanics` slug `mp-realtime-broadcast`).
+- **Same device** → local pass-and-play. No backend. Done.
+- **`transport: "turns"`** (chess, checkers, tic-tac-toe, board/card games) → poll a row:
+  the whole game state lives in the `friend_matches` row; a move patches it; the other
+  device re-reads every ~2s. **Works offline** — see "Start game" below.
+- **`transport: "realtime"`** (tennis, pong — continuous motion) → a Supabase Broadcast
+  channel for live positions, plus the `friend_matches` row for lobby/score. **Both kids
+  must be online at once** (keeps the live connect/waiting handshake).
 
-**Multiplayer rules (always):** requires the parent-account lane (guests can't play
-cross-device); every match table is family-RLS scoped (copy `chess_matches`/`rt_matches`);
-**canned reactions only — never free-text chat between kids**; the engine stays
-network-agnostic (all Supabase code lives in the React layer).
+### Wire a NEW game into multiplayer — the checklist
+
+1. **Build the board to the right contract** (it stays a network-agnostic `public/<game>.html`;
+   all Supabase code lives in the React layer):
+   - **Turn-based**: post `<msg>Ready` on load; accept `<msg>Init` (`{myColor,state,...}`)
+     and `<msg>OpponentMove` (`{state,lastMove}`); emit `<msg>Move`
+     (`{state,turn,lastMove,over,winner}`) on your own move only. `<msg>` is the game's
+     `msg` prefix (chess uses `"chess"`, tic-tac-toe/board-shell `"bg"`, checkers `"checkers"`).
+   - **Real-time**: the frozen `mp:` contract — post `mp:ready`, broadcast **positions not
+     commands** via `mp:send`, apply `mp:peer`, honor `role`, end with `mp:result`.
+2. **Add a lobby screen** in `src/BuildableKids.jsx` that renders the shared lobby with your
+   game spec:
+   ```jsx
+   <GameLobby
+     game={{ slug:"mygame", title:"My Game", url:"/mygame.html?online=1&v=1",
+             transport:"turns", msg:"bg", initialState:{ /* starting board */ } }}
+     activeKid={activeKid} entry="friends"
+     onHome={…} onAddFriend={…} />
+   ```
+   (`msg` + `initialState` are turn-based only; realtime needs neither.)
+3. **Give the game's start screen a "Play a friend" button** that routes to that lobby screen.
+4. **Register the game in `gameSpecFor(slug)`** (top of `src/BuildableKids.jsx`) with the SAME
+   spec. This is what lets a home nudge open your game directly via `SCREEN_FRIEND_MATCH` +
+   `autoJoin` — skip it and invites can't be joined from the home screen.
+
+Presence, the friends list, invite delivery, the home "X wants to play / your move" nudges,
+canned reactions, and role assignment are all **inherited** — do not re-implement them per game.
+
+### The end-to-end flow (how a game actually reaches the other kid)
+
+Presence (app-wide, stamped whenever a kid is active) → **one kid taps Start game / Invite**
+→ for `turns` the `friend_matches` row is created immediately and the starter drops into the
+board; for `realtime` both connect live → the invite lands on the **other kid's home screen**
+as "X wants to play <game> → Join" (and turn-based games also show "Your move in <game>") →
+they tap Join → `autoJoin` drops them straight into the same match → moves sync. **One kid
+starts, the other joins — they do NOT both invite.**
+
+### Gotchas we learned the hard way (bake these into any new game / any change here)
+
+- **Filter invites by the ACTIVE kid, not just by game.** Siblings share one parent account, so
+  the inbox returns invites for every kid in the family. Always require `toKid === me.id` or a
+  kid sees a sibling's invite — even their own outgoing invite bouncing back as "you invited you".
+- **Retry every friend/​match call.** `friends.js` `api()` and `friendMatches.js` `rest()` retry
+  on `401` (refresh the token) **and** on `5xx` / network errors with backoff. iPad Safari expires
+  tokens aggressively and the backend occasionally 503s; a single un-retried write **silently drops
+  a move** and the opponent gets stuck. Never write a move with a bare `.catch(()=>{})` and no retry.
+- **Presence is app-wide.** The heartbeat runs from `BuildableKids` whenever a kid profile is
+  active — NOT from inside the lobby. Don't add per-game presence.
+- **Turn-based "Start game" must work offline.** Create the `friend_matches` row at invite time so
+  the starter can play immediately; the friend plays on their turn whenever they next open the app
+  (like the "your move" nudge). Only `realtime` requires both online.
+- **Parent-account lane required** (guests can't play cross-device). **Canned reactions only — never
+  free-text chat between kids.** The engine stays network-agnostic.
 
 
 ## Make-a-level: the creation-maker pattern (optional — but the same shape every time)
