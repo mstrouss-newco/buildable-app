@@ -2847,3 +2847,17 @@ The 3D pointing hand is now the shared `BR.hand(ctx, x, y, s)` in `buildable-ren
 (tap-a-slot hint) picked it up with no per-game code. **Breaker** now calls the shared `BR.hand`
 too (single source of truth). Live-QA'd all three on buildablekids.com — hand shows/points
 correctly, no console errors.
+
+### Self-playing how-to-play demos — batch 1 (2026-07-02)
+Added wordless, self-playing intro demos (Breaker/Survival style) to **Tennis**, **Maze**, and
+**Croc**. Each freezes the game behind a scrim, animates the core move with the shared 3D hand
+(`BR.hand`), and dismisses on the kid's first real input:
+- Tennis (`tennis.html`): demo paddle slides + ball bounces, hand under the paddle. `demoOn`
+  armed in `newGame()` for non-online modes; dismiss on deliberate tap/key only (NOT mouse
+  hover — hover-dismiss was a bug that skipped the demo).
+- Maze (`maze-engine.html`): "Swipe to move" with the hand swiping; first world only; holds the
+  "ready" countdown until the first swipe/tap/key.
+- Croc (`croc-engine.html`): "Drag to move, you shoot automatically"; vertical drag hand +
+  auto-fire bullets; level 1 only.
+All three live-QA'd on buildablekids.com, no console errors. Remaining games still need demos:
+Chess, Checkers, Tetris, Bingo, Memory, Snakes & Ladders, Tic-Tac-Toe, Connect Four, Dots & Boxes.
