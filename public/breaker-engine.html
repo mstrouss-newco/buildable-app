@@ -242,12 +242,14 @@ function brickColorFor(i){ const c=GAME_CONFIG.brickColors; return c[i%c.length]
 
 // ---- look options kids can pick (the "Make It Mine" screen) ----
 const BACKDROPS = [
-  { id:"meadow", name:"Meadow",  c1:"#bff0d8", c2:"#7fd1a6" },
+  // real painted "worlds" (shared chess-art scenes) — rich art that contrasts the
+  // bright pastel bricks. "meadow" keeps its id (saved prefs) but now shows a jungle.
+  { id:"meadow", name:"Jungle",  img:"chess-art/jungle_bg.jpg", c1:"#bff0d8", c2:"#2f6d3a" },
+  { id:"ocean",  name:"Ocean",   img:"chess-art/ocean_bg.jpg",  c1:"#a8e6ff", c2:"#2a6f96" },
   { id:"space",  name:"Space",   img:"chess-art/space_bg.jpg",  c1:"#1a1546", c2:"#0a1030" },
+  { id:"castle", name:"Castle",  img:"chess-art/castle_bg.jpg", c1:"#e6d6ff", c2:"#6a4ad6" },
+  { id:"desert", name:"Desert",  img:"chess-art/desert_bg.jpg", c1:"#ffe6b0", c2:"#c8783f" },
   { id:"candy",  name:"Candy",   img:"chess-art/candy_bg.jpg",  c1:"#ffd6ec", c2:"#ff9ec4" },
-  { id:"ocean",  name:"Ocean",   img:"chess-art/ocean_bg.jpg",  c1:"#a8e6ff", c2:"#3aa0d6" },
-  { id:"castle", name:"Castle",  img:"chess-art/castle_bg.jpg", c1:"#e6d6ff", c2:"#9b7bff" },
-  { id:"desert", name:"Desert",  img:"chess-art/desert_bg.jpg", c1:"#ffe6b0", c2:"#e6b35a" },
 ];
 // cost = total stars needed to unlock (0 = free from the start)
 const BALLS = [
@@ -337,6 +339,16 @@ function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=M
 // ---- live game state ----
 let PAD_Y = H-42, TOP_Y = 42; const PAD_H = 18, BALL_R = 9;
 const HUD_STRIP = 66;   // reserved top band for the score bar — bricks start below it
+// On a real phone/tablet the canvas renders ~1:1 with CSS pixels, so the app-shell
+// nav buttons (Home / sound / menu / help) and the score chips sit over the TOP of
+// the play area. Reserve extra top room there so bricks never hide under them.
+// Headless QA (no window size) keeps the 900x600 reference (HUD_STRIP) unchanged.
+function topBand(){
+  var vw=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth:0;
+  if(!vw) return HUD_STRIP;
+  var inShell=true; try{ inShell=!!(window.parent&&window.parent!==window); }catch(e){}
+  return inShell ? 150 : 104;
+}
 let G=null, level=0, L=null, state="title", started=false, botMode=false, helpOpen=false;
 // After the first launch of a level, keep showing the pointing hand (following the
 // paddle, no dark overlay) for a few seconds so the "slide to move" hint doesn't
@@ -347,7 +359,7 @@ let stars=[]; function rebuildStars(){ stars.length=0; const r=mulberry(7); for(
 
 // ---------- SOLO: brick layout ----------
 function buildBricks(L, rng){
-  const cols=L.cols, rows=L.rows, top=HUD_STRIP+8, marginX=clamp(Math.round(W*0.05),14,40), gap=6;
+  const cols=L.cols, rows=L.rows, top=topBand()+8, marginX=clamp(Math.round(W*0.05),14,40), gap=6;
   const bw=(W-marginX*2-gap*(cols-1))/cols, bh=24, cset=GAME_CONFIG.brickColors, bricks=[];
   for(let r=0;r<rows;r++){ for(let cidx=0;cidx<cols;cidx++){ if(!inPattern(L.pattern,r,cidx,rows,cols)) continue;
     const tough=rng()<L.tough, hp=tough?2:1;
@@ -384,7 +396,7 @@ function startLevel(i, carryLives){
 // ---------- custom levels (built by kids in "Make a level") ----------
 let CUSTOM=null;              // { board, diffN, cleared }
 function buildCustomBricks(board){
-  const cols=board.cols, top=HUD_STRIP+8, marginX=clamp(Math.round(W*0.05),14,40), gap=6;
+  const cols=board.cols, top=topBand()+8, marginX=clamp(Math.round(W*0.05),14,40), gap=6;
   const bw=(W-marginX*2-gap*(cols-1))/cols, bh=24, bricks=[];
   for(const cell of board.cells){ const t=BRICK_TYPES[cell.type]||BRICK_TYPES.ice;
     const b={ x:marginX+cell.c*(bw+gap), y:top+cell.r*(bh+gap), w:bw, h:bh,
@@ -515,9 +527,12 @@ function updateSolo(){
   G.balls=G.balls.filter(b=> b===G.stuck || b.y<H+30);
   if(G.balls.length===0 && !G.stuck){ loseLife(); }
 
-  for(const cap of G.caps){ cap.y+=2.4;
+  for(const cap of G.caps){ cap.t=(cap.t||0)+1;
+    cap.vy=Math.min(3.7,(cap.vy||2.0)+0.02); cap.y+=cap.vy;                                  // gently speeds up as it drops
+    if(cap.x0==null)cap.x0=cap.x; cap.x=clamp(cap.x0+Math.sin(cap.t*0.13)*10,16,W-16);        // playful side-to-side wobble
+    if(BM && cap.t%2===0) BM.burst(fx.parts,cap.x,cap.y-9,cap.col,1,{spd:[10,45],life:[0.25,0.5],r:3});  // sparkle trail
     if(cap.y>PAD_Y-PAD_H/2-10 && cap.y<PAD_Y+PAD_H && cap.x>padL-12 && cap.x<padR+12){ cap.got=true; const p=POWERS[cap.id];
-      if(p){ p.apply(G); sfx("levelup"); if(BM)BM.explode(fx,cap.x,cap.y,cap.col,{n:14,pop:p.name,popCol:"#fff",shake:0.18,flash:0.1}); } } }
+      if(p){ p.apply(G); sfx("levelup"); if(BM){ BM.explode(fx,cap.x,cap.y,cap.col,{n:22,pop:p.name,popCol:"#fff",shake:0.24,flash:0.16}); BM.burst(fx.parts,cap.x,cap.y,"#ffffff",10,{tex:"star",additive:true,spd:[60,220],life:[0.3,0.6],r:6}); } } } }
   G.caps=G.caps.filter(cap=>!cap.got && cap.y<H+20);
 
   if(!G.bricks.some(b=>b.alive)){ winLevel(); }
@@ -537,7 +552,7 @@ function damageBrick(br,hx,hy,dmg){ br.hp-=dmg; const cx=br.x+br.w/2, cy=br.y+br
     const bonus = br.type==="candy" ? 40 : 10; G.score+=bonus;
     if(br.maxHp>=2||br.power||br.type==="candy"||br.type==="star") spawnBoom(cx,cy,Math.max(br.w,br.h)*1.6);
     if(BM){ if(br.maxHp>=2||br.power||br.type==="candy") BM.explode(fx,cx,cy,br.col,{n:14,pop:"+"+bonus,popCol:"#fff",shake:0.2,flash:0.08,sfx:()=>sfx("boom")});
-            else { BM.burst(fx.parts,cx,cy,br.col,7); BM.pop(fx.pops,cx,cy,"+"+bonus,br.col); sfx("coin",{tier:1}); } }
+            else { BM.burst(fx.parts,cx,cy,br.col,7); BM.pop(fx.pops,cx,cy,"+"+bonus,"#ffffff"); sfx("coin",{tier:1}); } }
     else sfx("coin",{tier:br.maxHp>=2?2:1});
     if(br.power){ G.caps.push({x:cx,y:cy,id:br.power,col:(POWERS[br.power]||{}).col||"#fff",got:false}); }
     if(br.type==="bomb"){ bombSplash(cx,cy); }
@@ -617,6 +632,9 @@ function rrect(x,y,w,h,r){ BR.rrect(ctx,x,y,w,h,r); }
 function drawBackdrop(){ const t=Date.now()/1000, img=bgImage();
   if(img && (img.complete||img.width) && (img.naturalWidth||img.width)){ BR.bgImage(ctx,img,W,H);
     const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.4,W/2,H/2,Math.max(W,H)*0.72); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.32)"); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+    // gentle darkening scrim (strongest at the top, where the bricks are) so the
+    // bright bricks / paddle / ball always pop on any world — even bright candy.
+    const sc=ctx.createLinearGradient(0,0,0,H); sc.addColorStop(0,"rgba(6,10,26,0.46)"); sc.addColorStop(0.55,"rgba(6,10,26,0.16)"); sc.addColorStop(1,"rgba(6,10,26,0.30)"); ctx.fillStyle=sc; ctx.fillRect(0,0,W,H);
   } else { const d=backdropDef(), g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,d.c1); g.addColorStop(1,d.c2); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     for(const st of stars){ const a=0.25*Math.abs(Math.sin(t*st.sp+st.ph)); ctx.fillStyle="rgba(255,255,255,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(st.x,st.y,st.s,0,7);ctx.fill(); } }
 }
@@ -692,7 +710,7 @@ function draw(){ if(!G){ return; }
   ctx.save(); ctx.translate(sh.x, sh.y);
   if(G.mode==="two") drawPong(); else drawSolo();
   ctx.restore();
-  if(BM) BM.draw(ctx, fx, { W, H, font:"bold 20px Fredoka,sans-serif" });
+  if(BM) BM.draw(ctx, fx, { W, H, font:"800 23px Fredoka,sans-serif" });
   drawAnims();   // animated explosions + fireball tail (over gameplay, under banners)
   // overlays (drawn unshaken)
   if(state==="play" && (!started||helpOpen) && G.mode!=="two") drawTutorial();
@@ -752,7 +770,18 @@ function star5s(g,cx,cy,r){ g.beginPath();
 function drawSolo(){
   for(const br of G.bricks){ if(!br.alive)continue; drawBrick(br); }
   for(const lz of G.lasers){ ctx.strokeStyle="#ff5da2"; ctx.lineWidth=3; ctx.shadowColor="#ff5da2"; ctx.shadowBlur=8; ctx.beginPath();ctx.moveTo(lz.x,lz.y);ctx.lineTo(lz.x,lz.y+14);ctx.stroke(); ctx.shadowBlur=0; }
-  for(const cap of G.caps){ ctx.save(); ctx.shadowColor=cap.col; ctx.shadowBlur=12; ctx.fillStyle=cap.col; rrect(cap.x-13,cap.y-8,26,16,8); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.9)"; ctx.beginPath();ctx.arc(cap.x,cap.y,3,0,7);ctx.fill(); ctx.restore(); }
+  for(const cap of G.caps){ const pulse=1+Math.sin(Date.now()/1000*6+(cap.t||0)*0.3)*0.14;
+    ctx.save(); ctx.translate(cap.x,cap.y);
+    ctx.shadowColor=cap.col; ctx.shadowBlur=20;
+    ctx.globalAlpha=0.35; ctx.fillStyle=cap.col; ctx.beginPath();ctx.arc(0,0,15*pulse,0,7);ctx.fill(); ctx.globalAlpha=1;      // glow halo
+    ctx.rotate((cap.t||0)*0.06); ctx.fillStyle="rgba(255,255,255,.92)";                                                      // rotating twinkle spikes
+    for(let i=0;i<4;i++){ ctx.rotate(Math.PI/2); ctx.beginPath();ctx.moveTo(0,-17*pulse);ctx.lineTo(3.2,-9);ctx.lineTo(-3.2,-9);ctx.closePath();ctx.fill(); }
+    ctx.rotate(-(cap.t||0)*0.06); ctx.shadowBlur=0;
+    const gg=ctx.createRadialGradient(-3,-3,1,0,0,12); gg.addColorStop(0,"#fff"); gg.addColorStop(1,cap.col);                 // bright gem body
+    ctx.fillStyle=gg; ctx.beginPath();ctx.arc(0,0,11,0,7);ctx.fill();
+    ctx.lineWidth=2.5; ctx.strokeStyle="rgba(20,22,45,.55)"; ctx.beginPath();ctx.arc(0,0,11,0,7);ctx.stroke();
+    ctx.fillStyle="#fff"; star5s(ctx,0,0,5);                                                                                 // white star emblem
+    ctx.restore(); }
   const fire=G.fireT>0; if(fire){ for(const b of G.balls) fireTrail.push({x:b.x,y:b.y,born:Date.now()}); if(fireTrail.length>60)fireTrail.splice(0,fireTrail.length-60); }
   for(const b of G.balls) drawBall(b,fire);
   drawPaddleAt(G.padX, PAD_Y, PREFS.paddle);

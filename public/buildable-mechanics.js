@@ -113,8 +113,10 @@
   BM.drawPops = function (ctx, arr, font) {
     if (!ctx || !arr) return;
     ctx.save(); ctx.textAlign = "center"; ctx.font = font || "700 18px system-ui, sans-serif";
+    ctx.lineJoin = "round"; ctx.lineWidth = 4; ctx.strokeStyle = "rgba(14,17,38,0.9)";  // dark outline so pop text shows on ANY color
     for (const p of arr) {
       ctx.globalAlpha = Math.max(0, Math.min(1, p.life / (p.max || 0.9)));
+      ctx.strokeText(p.txt, p.x, p.y);
       ctx.fillStyle = p.col; ctx.fillText(p.txt, p.x, p.y);
     }
     ctx.restore();
