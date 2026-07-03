@@ -281,6 +281,109 @@ function GrownUpButton({ onGrownUp, fixed }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Friends pill — a small always-present nav control that shows who's waiting on
+// you: your turn in a family game, plus real-time play invites. It uses the same
+// data as the big home cards, but lives in the top nav so it follows the child
+// on the home screen. Click a row to jump straight into that game.
+// ---------------------------------------------------------------------------
+function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const count = (chessTurns > 0 ? chessTurns : 0) + (rtInvite ? 1 : 0);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const People = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 11a3 3 0 100-6 3 3 0 000 6zm7 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-7 2c-2.7 0-6 1.35-6 4v2h12v-2c0-2.65-3.3-4-6-4zm7 .2c.3 0 .62.02.95.05C18.2 13.9 20 15 20 17v2h1.5v-2c0-2.2-2.6-3.5-5.5-3.8z" /></svg>
+  );
+  const Chess = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2l1 5h-2l1-5zm-3 7h6l1 11H8L9 9z" /></svg>
+  );
+  const Controller = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M7 6h10a3 3 0 013 3v6a3 3 0 01-3 3H7a3 3 0 01-3-3V9a3 3 0 013-3z" /></svg>
+  );
+
+  const pillBtn = {
+    position: "relative", display: "inline-flex", alignItems: "center", gap: 8,
+    background: "rgba(255,255,255,0.10)", color: "#fff", border: "1px solid rgba(255,255,255,0.22)",
+    borderRadius: 14, padding: "11px 16px", fontSize: 15, fontWeight: 800, fontFamily: NUN, cursor: "pointer",
+  };
+  const badge = {
+    minWidth: 20, height: 20, borderRadius: 999, padding: "0 6px", display: "inline-flex",
+    alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff",
+    background: "linear-gradient(135deg,#8A6BFF,#E0578F)",
+  };
+  const liveDot = {
+    position: "absolute", top: 6, left: 28, width: 8, height: 8, borderRadius: "50%",
+    background: "#34D399", border: "2px solid #1b1330",
+  };
+  const menu = {
+    position: "absolute", top: "calc(100% + 8px)", right: 0, width: 320, zIndex: 9999,
+    background: "#1B1533", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18,
+    boxShadow: "0 24px 60px rgba(0,0,0,0.55)", overflow: "hidden", fontFamily: NUN,
+  };
+  const rowWrap = { padding: "6px 10px 12px", display: "flex", flexDirection: "column", gap: 8 };
+  const row = {
+    display: "flex", gap: 11, alignItems: "flex-start", textAlign: "left", width: "100%",
+    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 14, padding: "11px 12px", color: "#fff", cursor: "pointer", fontFamily: NUN,
+  };
+  const chip = (bg, fg) => ({ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: bg, color: fg, padding: "2px 7px", borderRadius: 999 });
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button onClick={() => setOpen((o) => !o)} aria-label="Friends" style={pillBtn}>
+        <People />Friends
+        {count > 0 && <span style={badge}>{count}</span>}
+        {rtInvite && <span style={liveDot} />}
+      </button>
+      {open && (
+        <div style={menu}>
+          <div style={{ padding: "14px 16px 4px" }}>
+            <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 17, color: "#fff" }}>Friends</span>
+          </div>
+          <div style={rowWrap}>
+            {chessTurns > 0 && (
+              <button style={row} onClick={() => { setOpen(false); onChess && onChess(); }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><Chess /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 800, fontSize: 14 }}>Your move in chess</span>
+                    <span style={chip("#FFD66B", "#5a3d00")}>Your turn</span>
+                  </span>
+                  <span style={{ display: "block", fontSize: 12, color: "#c7bfe0", marginTop: 2 }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</span>
+                </span>
+              </button>
+            )}
+            {rtInvite && onJoinInvite && (
+              <button style={row} onClick={() => { setOpen(false); onJoinInvite(rtInvite.match); }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><Controller /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 800, fontSize: 14 }}>{rtInvite.hostName} wants to play {rtInvite.gameTitle}</span>
+                    <span style={chip("rgba(52,211,153,0.20)", "#7CF6B0")}>Invite</span>
+                  </span>
+                  <span style={{ display: "block", fontSize: 12, color: "#bfe9d8", marginTop: 2 }}>Tap to join and play together</span>
+                </span>
+              </button>
+            )}
+            {count === 0 && (
+              <div style={{ textAlign: "center", color: "#b8b3d0", fontSize: 13, fontWeight: 600, padding: "20px 10px 24px" }}>
+                All caught up — no one's waiting on you right now.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
   const [remixData, setRemixData] = useState(null);
@@ -1104,6 +1207,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
             <GrownUpButton onGrownUp={onGrownUp} />
+            <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} />
           </div>
         </div>
 
