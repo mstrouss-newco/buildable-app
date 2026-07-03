@@ -530,6 +530,9 @@ export default function BuildableKids() {
   // an existing match ("your move") -> reopen it. Works for every friend game.
   const openFriendInvite = (inv) => { if (!inv || !gameSpecFor(inv.game)) return; setFriendAutoJoin({ game: inv.game, inviteId: inv.id }); setScreen(SCREEN_FRIEND_MATCH); };
   const openFriendMatch = (m) => { if (!m || !gameSpecFor(m.game)) return; setFriendAutoJoin({ game: m.game, matchId: m.id }); setScreen(SCREEN_FRIEND_MATCH); };
+  // Open a REAL-TIME invite (tennis / family town) straight from a nudge, same as
+  // the home "your move" card does. Mirrors HomeScreen's onJoinInvite.
+  const openRtInvite = (m) => { if (!m) return; setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); };
 
   // Per-kid game telemetry: log a "play" when a game screen opens, and remember
   // the current game so win/lose results get attributed to it (see gameLog +
@@ -945,9 +948,117 @@ export default function BuildableKids() {
     <>
       {__view}
       {[SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <GrownUpButton onGrownUp={() => setScreen(SCREEN_GROWNUP)} fixed />}
+      {/* App-wide "someone invited you to play" alert. Floats at the top of ANY
+          screen (except Home, which already shows invites on its own cards), and
+          auto-goes-away if ignored -- or the kid can tap the x to dismiss it. */}
+      <GlobalInviteAlert
+        activeKid={activeKid}
+        hidden={screen === SCREEN_HOME || screen === SCREEN_FRIEND_MATCH}
+        onOpenFriendInvite={openFriendInvite}
+        onOpenRtInvite={openRtInvite}
+      />
     </>
   );
 }
+
+// ============ APP-WIDE INVITE ALERT ============
+// A single floating banner that surfaces "X wants to play Y!" no matter where the
+// kid is in the app. It polls the SAME shared invite sources the Home hub uses
+// (inboxInvites for turn-based friend games + listInvitesForKid for real-time
+// tennis/town), so there is one consistent invite pipeline everywhere. It rings a
+// soft chime, slides down, and disappears on its own after a few seconds if
+// ignored -- or the kid taps the x. A dismissed/ignored invite won't nag again.
+const RT_GAME_TITLES = { tennis: "Tennis", town: "Family Town" };
+function GlobalInviteAlert({ activeKid, hidden, onOpenFriendInvite, onOpenRtInvite }) {
+  const [alert, setAlert] = useState(null); // { key, kind:'friend'|'rt', from, game, payload }
+  const shownKeyRef = useRef(null);
+  const dismissedRef = useRef(new Set()); // keys the kid ignored/closed -> never nag again
+  const hideTimerRef = useRef(null);
+
+  const clearBanner = (permanent) => {
+    if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; }
+    if (permanent && shownKeyRef.current) dismissedRef.current.add(shownKeyRef.current);
+    shownKeyRef.current = null;
+    setAlert(null);
+  };
+
+  const chime = () => {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      const c = new AC();
+      [660, 990].forEach((f, i) => {
+        const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.value = f;
+        const t = c.currentTime + i * 0.13; o.connect(g); g.connect(c.destination);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        o.start(t); o.stop(t + 0.2);
+      });
+    } catch (e) { /* ignore */ }
+  };
+
+  const raise = (a) => {
+    if (shownKeyRef.current === a.key) return; // already showing this exact invite
+    shownKeyRef.current = a.key;
+    setAlert(a);
+    chime();
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    // Ignored == goes away by itself (and won't pop back for this invite).
+    hideTimerRef.current = setTimeout(() => clearBanner(true), 9000);
+  };
+
+  useEffect(() => {
+    if (hidden) { clearBanner(false); return; }
+    let alive = true;
+    async function check() {
+      try {
+        if (!isSignedIn()) return;
+        const meK = getActiveKid(); if (!meK || !meK.id) return;
+        // 1) turn-based friend games (chess / checkers / tic-tac-toe)
+        const inv = await inboxInvites().catch(() => []);
+        const fInv = (inv || []).find((i) => i.toKid === meK.id && gameSpecFor(i.game) && !dismissedRef.current.has("f_" + i.id));
+        if (fInv) { if (alive) raise({ key: "f_" + fInv.id, kind: "friend", from: fInv.fromName, game: fInv.game, payload: fInv }); return; }
+        // 2) real-time invites (tennis / family town)
+        const rts = await listInvitesForKid(meK.id).catch(() => []);
+        const rInv = (rts || []).find((m) => !dismissedRef.current.has("r_" + m.id));
+        if (rInv) { if (alive) raise({ key: "r_" + rInv.id, kind: "rt", from: null, game: rInv.game, payload: rInv }); }
+      } catch (e) { /* ignore */ }
+    }
+    check();
+    const iv = setInterval(check, 5000);
+    return () => { alive = false; clearInterval(iv); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKid, hidden]);
+
+  useEffect(() => () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }, []);
+
+  if (!alert) return null;
+  const title = FRIEND_GAME_TITLES[alert.game] || RT_GAME_TITLES[alert.game] || "a game";
+  const who = alert.from || "A friend";
+  const join = () => {
+    const a = alert;
+    clearBanner(false); // they said yes -> clear, but don't blacklist
+    if (a.kind === "friend") onOpenFriendInvite(a.payload);
+    else onOpenRtInvite(a.payload);
+  };
+  return (
+    <div style={GIA.wrap}>
+      <style>{"@keyframes giaDrop{from{transform:translate(-50%,-120%);opacity:0}to{transform:translate(-50%,0);opacity:1}}"}</style>
+      <div style={GIA.card}>
+        <span style={GIA.ava}>{(who || "?").trim().charAt(0).toUpperCase()}</span>
+        <span style={GIA.text}><b>{who}</b> wants to play <b>{title}</b>!</span>
+        <button style={GIA.join} onClick={join}>Join</button>
+        <button style={GIA.close} aria-label="Dismiss" onClick={() => clearBanner(true)}>&times;</button>
+      </div>
+    </div>
+  );
+}
+const GIA = {
+  wrap: { position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, display: "flex", justifyContent: "center", pointerEvents: "none", padding: "10px 12px" },
+  card: { pointerEvents: "auto", transform: "translate(-50%,0)", position: "relative", left: "50%", display: "flex", alignItems: "center", gap: 12, maxWidth: 460, width: "calc(100% - 24px)", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", color: "#fff", borderRadius: 16, padding: "12px 14px", boxShadow: "0 10px 30px rgba(0,0,0,0.35)", fontFamily: "'Nunito',sans-serif", animation: "giaDrop 0.35s cubic-bezier(.2,.9,.3,1.3)" },
+  ava: { width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, flex: "0 0 auto" },
+  text: { flex: 1, fontSize: 15, lineHeight: 1.25 },
+  join: { fontFamily: "'Fredoka',sans-serif", fontWeight: 800, fontSize: 15, color: "#5a3fd6", background: "#fff", border: "none", borderRadius: 12, padding: "9px 16px", cursor: "pointer", flex: "0 0 auto" },
+  close: { flex: "0 0 auto", width: 30, height: 30, borderRadius: 999, border: "none", background: "rgba(255,255,255,0.22)", color: "#fff", fontSize: 20, lineHeight: 1, cursor: "pointer", fontWeight: 700 },
+};
 
 // ============ TOP NAVIGATION BAR ============
 function TopNav({ onBack, onHome, onMyStuff }) {

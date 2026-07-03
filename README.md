@@ -6,6 +6,9 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## App-wide "someone invited you to play" alert + lobby consistency pass (July 2 2026)
+Owner ask: make sure all the multiplayer lobbies/connectors are consistent, and when someone invites you to play, alert you at the top of the screen **anywhere in the app** — auto-dismissing if ignored, or the kid can tap the × to close it. (1) Lobby audit: every online game already funnels through the ONE shared `src/GameLobby.jsx` (chess + checkers + tic-tac-toe on the turn-based "poll a row" transport, tennis on the real-time transport), and the inline lobby specs in `BuildableKids.jsx` match `gameSpecFor()` — so the invite→connect→play pipeline is a single consistent path. (Connect Four / Dots & Boxes share the board shell but are not yet wired online; Family Town keeps its own N-seat model — both pre-existing follow-ups, unchanged here.) (2) New `GlobalInviteAlert` component in `BuildableKids.jsx` is mounted once at the app root (outside the per-screen `__view` switch) so it floats over EVERY screen, not just Home. It polls the same shared sources the Home hub uses (`inboxInvites` for turn-based friend games + `listInvitesForKid` for real-time tennis/town), chimes, slides a banner down from the top ("X wants to play Chess!" with a Join button + × close). It auto-goes-away after ~9s if ignored and a dismissed/ignored invite is remembered so it never nags again. Tapping Join reuses the existing `openFriendInvite` / `openRtInvite` autoJoin routing. Suppressed on Home (which already shows invite cards) and on the friend-match screen itself. Scoped to `src/BuildableKids.jsx`.
+
 ## Sling Squad — a unique backdrop per level + parallax depth (July 2 2026)
 **LIVE on main + live-QA'd in Chrome.** Every Sling Squad level now shows its own place instead of
 the one drawn castle sky. Shipped 8 CC0 Kenney "Background Elements Remastered" scenes to
