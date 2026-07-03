@@ -546,15 +546,21 @@ function drawBackdrop(){ const t=Date.now()/1000, img=bgImage();
 }
 function drawBall(b,fire){ const sk=BALLS.find(x=>x.id===PREFS.ball)||BALLS[0];
   const useFlame = fire || sk.flame;
+  const outR = useFlame?BALL_R+2:BALL_R;
   ctx.save(); ctx.shadowColor=useFlame?"#ff8a3d":(sk.rainbow?"#fff":sk.glow); ctx.shadowBlur=useFlame?22:16;
   if(useFlame){ const g=ctx.createRadialGradient(b.x,b.y,1,b.x,b.y,BALL_R+3); g.addColorStop(0,"#fff"); g.addColorStop(0.5,"#ffd86b"); g.addColorStop(1,"#ff5a2c"); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R+2,0,7);ctx.fill(); }
   else if(sk.rainbow){ const hue=(Date.now()/12)%360, col="hsl("+hue.toFixed(0)+",90%,62%)"; const g=ctx.createRadialGradient(b.x-3,b.y-3,1,b.x,b.y,BALL_R); g.addColorStop(0,"#fff"); g.addColorStop(1,col); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R,0,7);ctx.fill(); }
   else if(sk.star){ BR.sparkle(ctx,b.x,b.y,BALL_R+2,Date.now()/200); }
   else { const g=ctx.createRadialGradient(b.x-3,b.y-3,1,b.x,b.y,BALL_R); g.addColorStop(0,"#fff"); g.addColorStop(1,sk.col); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R,0,7);ctx.fill(); }
+  // dark outline so the ball stays visible on light backgrounds (candy, etc.)
+  ctx.shadowBlur=0; ctx.lineWidth=2; ctx.strokeStyle="rgba(20,22,45,.55)"; ctx.beginPath(); ctx.arc(b.x,b.y,outR,0,7); ctx.stroke();
   ctx.restore(); }
 function drawPaddleAt(px,py,col){ const x=px-G.padW/2; ctx.save(); ctx.shadowColor=col; ctx.shadowBlur=12;
   const g=ctx.createLinearGradient(0,py-PAD_H/2,0,py+PAD_H/2); g.addColorStop(0,"#ffffff"); g.addColorStop(0.25,col); g.addColorStop(1,shade(col,-30));
-  ctx.fillStyle=g; rrect(x,py-PAD_H/2,G.padW,PAD_H,9); ctx.fill(); ctx.restore(); }
+  ctx.fillStyle=g; rrect(x,py-PAD_H/2,G.padW,PAD_H,9); ctx.fill();
+  // dark outline so the paddle stays visible on light backgrounds (candy, etc.)
+  ctx.shadowBlur=0; ctx.lineWidth=2.5; ctx.strokeStyle="rgba(20,22,45,.5)"; rrect(x,py-PAD_H/2,G.padW,PAD_H,9); ctx.stroke();
+  ctx.restore(); }
 function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt; r=clamp(r,0,255);g=clamp(g,0,255);b=clamp(b,0,255); return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
 function banner(t,s){ ctx.fillStyle="rgba(10,12,40,.66)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 48px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-6); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+36); }
 // a 5-point star (filled gold when earned, dim outline when not)
