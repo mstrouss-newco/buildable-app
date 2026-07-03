@@ -242,6 +242,7 @@ var BGSRC={grass:"/kenney/bg/grass.png",forest:"/kenney/bg/forest.png",fall:"/ke
 
 /* ---------- game state ---------- */
 var levelIdx=0, level=null, committed={}, cur=null, particles=[], clouds=[], celebrate=0;
+var blockEls=[], cloudEls=[], demoHand=null, demoLine=null, domLevel=-1;
 var demo=null, screen="select";
 var HALF=48, SW=22, HITR=70, GOAL=42;
 
@@ -280,10 +281,11 @@ function startLevel(i){
   ovSelect.classList.add("hide"); ovWin.classList.add("hide");
   statusBox.classList.remove("hide"); btnLevels.classList.remove("hide");
   screen="play";
-  // background
+  // background (created once)
   gBg.innerHTML=""; gBg.appendChild(el("image",{href:BGSRC[level.bg],x:0,y:0,width:VB,height:VB,preserveAspectRatio:"xMidYMid slice"}));
-  // clouds
+  // clouds data + persistent nodes
   clouds=[{x:120,y:150,s:1.0,v:0.25,src:"/kenney/bg/cloud1.png"},{x:640,y:110,s:1.3,v:0.16,src:"/kenney/bg/cloud2.png"}];
+  buildLevelDom();
   setStatus("Connect "+level.pairs.length+" pairs — don't cross the strings!");
   // demo only on first-ever play
   if(load("sm_demo","0")!=="1" && i===0){ startDemo(); } else { demo=null; }
@@ -383,22 +385,37 @@ btnNext.onclick=function(){ unlock();
 };
 
 /* ---------- render ---------- */
-function drawBlock(cx,cy,color,scale,happy){
-  var h=HALF*scale;
-  gBlocks.appendChild(el("image",{href:IMG[color],x:cx-h,y:cy-h,width:h*2,height:h*2,preserveAspectRatio:"xMidYMid meet"}));
-  gBlocks.appendChild(el("image",{href:happy?FACE_HAPPY:FACE_IDLE,x:cx-h,y:cy-h,width:h*2,height:h*2,preserveAspectRatio:"xMidYMid meet"}));
-}
 function polyStr(pts){ return pts.map(function(p){return p[0]+","+p[1];}).join(" "); }
 var pulses={};
+function setHref(node,url){ if(node._href!==url){ node.setAttribute("href",url); node._href=url; } }
+// Create the persistent <image> nodes ONCE per level (recreating them every frame
+// prevents async image decode from ever painting).
+function buildLevelDom(){
+  gClouds.innerHTML=""; gBlocks.innerHTML=""; gDemo.innerHTML="";
+  blockEls=[]; cloudEls=[];
+  for(var ci=0;ci<clouds.length;ci++){ var im=el("image",{href:clouds[ci].src,width:230*clouds[ci].s,height:120*clouds[ci].s,opacity:0.9,preserveAspectRatio:"xMidYMid meet"}); im._href=clouds[ci].src; gClouds.appendChild(im); cloudEls.push(im); }
+  level.pairs.forEach(function(p,idx){
+    ["a","b"].forEach(function(k){
+      var body=el("image",{href:IMG[p.c],preserveAspectRatio:"xMidYMid meet"}); body._href=IMG[p.c];
+      var face=el("image",{href:FACE_IDLE,preserveAspectRatio:"xMidYMid meet"}); face._href=FACE_IDLE;
+      gBlocks.appendChild(body); gBlocks.appendChild(face);
+      blockEls.push({body:body,face:face,c:p.c,idx:idx,pt:(k==="a"?p.a:p.b)});
+    });
+  });
+  demoLine=el("line",{stroke:C[level.pairs[0].c],"stroke-width":SW,"stroke-linecap":"round","stroke-dasharray":"4 20",opacity:0.85});
+  demoHand=el("image",{href:"/tutorial-hand.png",width:150,height:150,preserveAspectRatio:"xMidYMid meet"}); demoHand._href="/tutorial-hand.png";
+  demoLine.style.display="none"; demoHand.style.display="none";
+  gDemo.appendChild(demoLine); gDemo.appendChild(demoHand);
+}
 function draw(){
-  gClouds.innerHTML=""; gThreads.innerHTML=""; gFx.innerHTML=""; gBlocks.innerHTML=""; gDemo.innerHTML="";
-  // clouds
-  for(var ci=0;ci<clouds.length;ci++){ var cl=clouds[ci];
-    gClouds.appendChild(el("image",{href:cl.src,x:cl.x,y:cl.y,width:230*cl.s,height:120*cl.s,opacity:0.9,preserveAspectRatio:"xMidYMid meet"})); }
+  gThreads.innerHTML=""; gFx.innerHTML="";
+  if(!level) return;
+  // clouds (update persistent nodes)
+  for(var ci=0;ci<cloudEls.length;ci++){ cloudEls[ci].setAttribute("x",clouds[ci].x); cloudEls[ci].setAttribute("y",clouds[ci].y); }
   // committed strings
-  if(level){ level.pairs.forEach(function(p){ var P=committed[p.c]; if(P&&P.length>1){
+  level.pairs.forEach(function(p){ var P=committed[p.c]; if(P&&P.length>1){
     gThreads.appendChild(el("polyline",{points:polyStr(P),fill:"none",stroke:C[p.c],"stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round"}));
-  }}); }
+  }});
   // current
   if(cur&&cur.pts.length>1){ gThreads.appendChild(el("polyline",{points:polyStr(cur.pts),fill:"none",
     stroke:cur.crossed?"#E24B4A":C[cur.c],"stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round",
@@ -406,21 +423,22 @@ function draw(){
   // particles
   for(var i=0;i<particles.length;i++){ var q=particles[i];
     gFx.appendChild(el("circle",{cx:q.x,cy:q.y,r:q.r,fill:q.color,opacity:Math.max(0,q.life)})); }
-  // blocks
-  if(level){ level.pairs.forEach(function(p,idx){
-    var connected=!!committed[p.c];
-    var sc=1+(pulses[idx]||0)*0.28;
-    drawBlock(p.a[0],p.a[1],p.c,sc,connected);
-    drawBlock(p.b[0],p.b[1],p.c,sc,connected);
-  }); }
-  // demo hand
-  if(demo){
-    var t=demo.t, P0=demo.A, P1=demo.B;
-    var hx=P0[0]+(P1[0]-P0[0])*t, hy=P0[1]+(P1[1]-P0[1])*t;
-    gDemo.appendChild(el("line",{x1:P0[0],y1:P0[1],x2:hx,y2:hy,stroke:C[demo.color],"stroke-width":SW,
-      "stroke-linecap":"round","stroke-dasharray":"4 20",opacity:0.85}));
-    gDemo.appendChild(el("image",{href:"/tutorial-hand.png",x:hx-18,y:hy-6,width:150,height:150,preserveAspectRatio:"xMidYMid meet"}));
+  // blocks (update persistent nodes)
+  for(var b=0;b<blockEls.length;b++){ var be=blockEls[b];
+    var connected=!!committed[be.c];
+    var h=HALF*(1+(pulses[be.idx]||0)*0.28);
+    var x=be.pt[0]-h, y=be.pt[1]-h;
+    be.body.setAttribute("x",x); be.body.setAttribute("y",y); be.body.setAttribute("width",h*2); be.body.setAttribute("height",h*2);
+    be.face.setAttribute("x",x); be.face.setAttribute("y",y); be.face.setAttribute("width",h*2); be.face.setAttribute("height",h*2);
+    setHref(be.face, connected?FACE_HAPPY:FACE_IDLE);
   }
+  // demo hand (update persistent nodes)
+  if(demo&&demoHand){
+    var t=demo.t, P0=demo.A, P1=demo.B, hx=P0[0]+(P1[0]-P0[0])*t, hy=P0[1]+(P1[1]-P0[1])*t;
+    demoLine.style.display=""; demoHand.style.display="";
+    demoLine.setAttribute("x1",P0[0]); demoLine.setAttribute("y1",P0[1]); demoLine.setAttribute("x2",hx); demoLine.setAttribute("y2",hy);
+    demoHand.setAttribute("x",hx-18); demoHand.setAttribute("y",hy-6);
+  } else if(demoHand){ demoLine.style.display="none"; demoHand.style.display="none"; }
 }
 
 function loop(){
