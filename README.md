@@ -2830,3 +2830,11 @@ Reuse in other games: copy the small `tutHand` loader + `drawTutorialHand(px, to
 `/tutorial-hand.png` route in `vercel.json` (the catch-all otherwise serves landing.html).
 Live-QA'd on buildablekids.com/breaker-engine.html Level 1 — hand appears, slides, bars gone,
 no console errors.
+
+### Demo hand rolled out to all games via shared BR.hand (2026-07-02)
+The 3D pointing hand is now the shared `BR.hand(ctx, x, y, s)` in `buildable-renders.js`
+(fingertip at `(x, y - 30*s)`, drawn-hand fallback until the PNG loads). Any game that calls
+`BR.hand` gets it automatically — **Survival** (drag-to-move demo + cue box) and **Castle Guard**
+(tap-a-slot hint) picked it up with no per-game code. **Breaker** now calls the shared `BR.hand`
+too (single source of truth). Live-QA'd all three on buildablekids.com — hand shows/points
+correctly, no console errors.
