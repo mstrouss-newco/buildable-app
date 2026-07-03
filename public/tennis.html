@@ -99,17 +99,18 @@ var GAME_CONFIG = window.GAME_CONFIG || {
     { name: "Normal",  start: 0.52, max: 0.95, gain: 1.045, bot: 0.26 },
     { name: "Speedy",  start: 0.62, max: 1.12, gain: 1.055, bot: 0.34 },
   ],
-  // world -> AI backdrop (img:1 => /api/images?kind=tennis&id=<key>) + accent colors
-  // + ambient particle style `p`. Drawn gradient `bg` is the always-safe fallback.
+  // world -> pixel-art nature backdrop (img:1 => /tennis-bg/<key>.png) + accent colors
+  // + ambient particle style `p`. Drawn gradient `bg` (sampled from each scene's
+  // sky & ground) is the always-safe fallback.
   worlds: {
-    beach:   { name: "Sunny Beach",    bg: ["#2aa9d6", "#0e6ea0"], net: "#fff6cf", me: "#7ee0a0", opp: "#ff9ec4", ball: "#ffe27a", img: 1, p: "sun" },
-    space:   { name: "Space Station",  bg: ["#1a1240", "#0a0820"], net: "#c9b8ff", me: "#7ee0a0", opp: "#ff9ec4", ball: "#fff1a8", img: 1, p: "stars" },
-    jungle:  { name: "Jungle",         bg: ["#123a1f", "#0a2414"], net: "#a8f0b8", me: "#ffe27a", opp: "#7ad6ff", ball: "#ffd23f", img: 1, p: "leaves" },
-    ocean:   { name: "Underwater",     bg: ["#0a3550", "#062032"], net: "#bdeaff", me: "#ffe27a", opp: "#ff9ec4", ball: "#aef0ff", img: 1, p: "bubbles" },
-    candy:   { name: "Candy Land",     bg: ["#5a2f6e", "#3a1f49"], net: "#ffd0ec", me: "#aef0c0", opp: "#9fd0ff", ball: "#fff1a8", img: 1, p: "sweets" },
-    snow:    { name: "Snowy Peak",     bg: ["#2b5a78", "#16304a"], net: "#eaf6ff", me: "#ffd23f", opp: "#ff9ec4", ball: "#ffffff", img: 1, p: "snow" },
-    volcano: { name: "Volcano Arena",  bg: ["#5a1f1f", "#2a0e0e"], net: "#ffd0a0", me: "#7ee0a0", opp: "#ffd23f", ball: "#ffcaa0", img: 1, p: "embers" },
-    city:    { name: "Sunset Rooftop", bg: ["#6b2f5a", "#2a1330"], net: "#ffd6e6", me: "#7ee0a0", opp: "#ffd23f", ball: "#fff1a8", img: 1, p: "clouds" },
+    beach:   { name: "Seaside",         bg: ["#d8eff5", "#73914e"], net: "#fff6cf", me: "#7ee0a0", opp: "#ff9ec4", ball: "#ffe27a", img: 1, p: "clouds" },
+    space:   { name: "Northern Lights", bg: ["#002d49", "#02213c"], net: "#c9b8ff", me: "#7ee0a0", opp: "#ff9ec4", ball: "#fff1a8", img: 1, p: "stars" },
+    jungle:  { name: "Big Tree",        bg: ["#23a8b0", "#6bb65c"], net: "#a8f0b8", me: "#ffe27a", opp: "#7ad6ff", ball: "#ffd23f", img: 1, p: "leaves" },
+    ocean:   { name: "Pine Forest",     bg: ["#90b7c6", "#314d34"], net: "#bdeaff", me: "#ffe27a", opp: "#ff9ec4", ball: "#fff1a8", img: 1, p: "leaves" },
+    candy:   { name: "Sunny Meadow",    bg: ["#14709a", "#449851"], net: "#ffd0ec", me: "#aef0c0", opp: "#9fd0ff", ball: "#fff1a8", img: 1, p: "clouds" },
+    snow:    { name: "Snowy Peak",      bg: ["#7bbce4", "#30401e"], net: "#eaf6ff", me: "#ffd23f", opp: "#ff9ec4", ball: "#ffffff", img: 1, p: "snow" },
+    volcano: { name: "Stone Cliffs",    bg: ["#92c7e5", "#465619"], net: "#ffd0a0", me: "#7ee0a0", opp: "#ffd23f", ball: "#ffcaa0", img: 1, p: "clouds" },
+    city:    { name: "Green Hills",     bg: ["#7ac4e6", "#4eab5b"], net: "#ffd6e6", me: "#7ee0a0", opp: "#ffd23f", ball: "#fff1a8", img: 1, p: "clouds" },
   },
 };
 function worldTheme(k) { return GAME_CONFIG.worlds[k] || GAME_CONFIG.worlds.beach; }
@@ -155,7 +156,7 @@ function loadBg(key) {
     var im = new Image();
     im.onload = function () { if (bgKey === key) bgImg = im; };
     im.onerror = function () { if (bgKey === key) bgImg = null; };
-    im.src = "/api/images?kind=tennis&id=" + key;
+    im.src = "/tennis-bg/" + key + ".png?v=1";
   } catch (e) {}
 }
 
@@ -457,9 +458,14 @@ function draw() {
   ctx.save();
   ctx.translate(sh.x || 0, sh.y || 0);
 
-  // backdrop — AI art world (cover-fit) if loaded, else the safe drawn gradient
+  // backdrop — pixel-art nature scene (cover-fit) if loaded, else the safe drawn gradient
   var drewImg = false;
-  if (bgImg && BR && BR.bgImage) { try { drewImg = BR.bgImage(ctx, bgImg, VW, VH); } catch (e) {} }
+  if (bgImg && BR && BR.bgImage) {
+    var sm = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;   // keep pixel-art crisp when scaled up
+    try { drewImg = BR.bgImage(ctx, bgImg, VW, VH); } catch (e) {}
+    ctx.imageSmoothingEnabled = sm;
+  }
   if (!drewImg) {
     var g = ctx.createLinearGradient(0, 0, 0, VH);
     g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
@@ -748,10 +754,11 @@ function buildCourtGrid() {
     card.className = "court-card" + (key === worldKey ? " on" : "");
     var thumb = document.createElement("div"); thumb.className = "thumb";
     thumb.style.background = "linear-gradient(160deg," + w.bg[0] + "," + w.bg[1] + ")";
-    // overlay the cached AI art; if it isn't there yet, the gradient shows through
+    // overlay the pixel-art nature scene; if it isn't there yet, the gradient shows through
+    thumb.style.imageRendering = "pixelated";
     var im = new Image();
-    im.onload = function () { thumb.style.backgroundImage = "url('/api/images?kind=tennis&id=" + key + "')"; };
-    im.src = "/api/images?kind=tennis&id=" + key;
+    im.onload = function () { thumb.style.backgroundImage = "url('/tennis-bg/" + key + ".png?v=1')"; };
+    im.src = "/tennis-bg/" + key + ".png?v=1";
     var nm = document.createElement("div"); nm.className = "nm"; nm.textContent = w.name;
     card.appendChild(thumb); card.appendChild(nm);
     card.onclick = function () {
