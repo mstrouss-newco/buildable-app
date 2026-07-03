@@ -76,6 +76,20 @@
   .mkLevel .lname{font-weight:700;font-size:14px;margin:8px 6px 2px}
   input.mkInput{font-family:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:2px solid #3a2c6e;background:#150f38;color:#fff;width:100%;box-sizing:border-box}
   .mkRowBtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0 2px}
+  /* ---- Breaker home hub ---- */
+  .hubBtns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:10px 0 6px}
+  .hubBig{width:220px;max-width:44vw;border:none;border-radius:18px;padding:22px 14px;cursor:pointer;font-family:inherit;color:#161a2e;text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.28)}
+  .hubBig:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.28)}
+  .hubBig .bt{font-size:22px;font-weight:800}
+  .hubBig .bs{font-size:12px;opacity:.82;margin-top:3px;font-weight:700}
+  .hubShelf{width:100%;max-width:600px;margin:16px auto 30px}
+  .hubShelf .hh{font-weight:800;opacity:.85;margin:0 0 8px;padding:0 4px}
+  /* ---- wizard progress ---- */
+  .stepno{font-size:13px;color:#c7c3f2;font-weight:700;text-align:center;margin:2px 0 6px}
+  .dots{display:flex;gap:8px;justify-content:center;align-items:center;margin:0 0 14px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#3a2c6e;transition:background .15s}
+  .dot.on{background:#9b7bff;box-shadow:0 0 0 3px rgba(155,123,255,.25)}
+  .dot.done{background:#7ee0a0}
 </style>
 </head>
 <body>
@@ -83,6 +97,12 @@
 
 <!-- shared start screen mounts here -->
 <div id="start"></div>
+
+<div id="home" class="ov">
+  <h1 style="margin-bottom:2px">Breaker</h1>
+  <div class="sub">Smash the bricks. Make your own.</div>
+  <div id="hubBody" style="width:100%;max-width:620px;display:flex;flex-direction:column;align-items:center;padding:0 14px"></div>
+</div>
 
 <div id="maker" class="ov">
   <h1 id="mkTitle">Make a level</h1>
@@ -670,19 +690,39 @@ function buildStartCfg(){
       });
   const cfg = { title:"Buildable Breaker",
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",
-    sound: !(BA&&BA.muted), showBack:false, modes:[], mode:"solo", levels, customizeLabel:"Make a level" };
+    sound: !(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels };
   if(currentMode!=="two"){ cfg.coins = totalStars(); cfg.subtitle = "Stars: "+totalStars()+" of "+maxStars(); }   // total stars earned
   return cfg;
 }
-function showMenu(){ state="title"; G=null; if(hud)hud.hide(); show("maker",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
+// ---- Breaker home hub: big Play + Make a level buttons, plus a My levels shelf ----
+function showHub(){ state="title"; G=null; if(hud)hud.hide();
+  show("maker",false); const host=document.getElementById("start"); if(host)host.style.display="none";
+  show("home",true); showHelpBtn(false); showInGameMute(false); showInGameBack(false); renderHub(); }
+function renderHub(){ const body=document.getElementById("hubBody"); if(!body)return; body.innerHTML="";
+  const btns=document.createElement("div"); btns.className="hubBtns";
+  const play=document.createElement("button"); play.className="hubBig"; play.style.background="#7ee0a0";
+  play.innerHTML='<div class="bt">Play</div><div class="bs">'+GAME_CONFIG.levels.length+' levels · ★'+totalStars()+'</div>';
+  play.onclick=()=>{ if(BA)BA.unlock(); currentMode="solo"; show("home",false); showMenu(); };
+  const make=document.createElement("button"); make.className="hubBig"; make.style.background="#9b7bff";
+  make.innerHTML='<div class="bt">Make a level</div><div class="bs">build + share</div>';
+  make.onclick=()=>{ if(BA)BA.unlock(); startNewLevel(); };
+  btns.appendChild(play); btns.appendChild(make); body.appendChild(btns);
+  const lv=loadLevels();
+  const shelf=document.createElement("div"); shelf.className="hubShelf";
+  const hh=document.createElement("div"); hh.className="hh"; hh.textContent="My levels"; shelf.appendChild(hh);
+  if(!lv.length){ const p=document.createElement("div"); p.className="mkHint"; p.style.textAlign="left"; p.textContent="No levels yet — tap Make a level to build your first one!"; shelf.appendChild(p); }
+  else { const list=document.createElement("div"); list.className="mkList"; for(const L0 of lv) list.appendChild(levelCard(L0)); shelf.appendChild(list); }
+  body.appendChild(shelf);
+}
+function showMenu(){ state="title"; G=null; if(hud)hud.hide(); show("maker",false); show("home",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
   const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host){ return; }
   const cb={
     onPlay:(n)=>{ if(currentMode==="two")startPong(); else startPlay(n-1); hideMenu(); },
     onMode:(m)=>{ currentMode=m; if(startScreen)startScreen.update(buildStartCfg()); },
-    onCustomize:()=>showMaker("home"),
+    onCustomize:()=>{},
     onSound:(on)=>{ if(BA){ BA.unlock(); BA.toggleMute(); } },
-    onBack:()=>{},
+    onBack:()=>showHub(),
   };
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb);
   else startScreen.update(buildStartCfg());
@@ -699,13 +739,15 @@ const FLAME_NAMES=["Easy","Easy+","Medium","Hard","Max"];
 function flameSVG(col,sz){ sz=sz||16; return '<svg width="'+sz+'" height="'+Math.round(sz*1.12)+'" viewBox="0 0 16 18" aria-hidden="true" style="vertical-align:middle"><path d="M8 1 C10 5 13 6.5 12 11 C11.4 14 9.6 16.5 8 16.5 C6.4 16.5 4.4 14.2 4 11 C3.7 8.4 5.2 7.4 5.2 4.2 C6.2 6.2 6.9 5.2 8 1 Z" fill="'+col+'"/></svg>'; }
 function esc(s){ return String(s==null?"":s).replace(/[<>&]/g,m=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[m])); }
 
-let mkStep="home";                 // home | look | build | diff | share
+// one-step-at-a-time wizard (each screen asks ONE thing)
+let mkStep="world";
 let mkCols=10, mkRows=6, mkCells={}, mkBrush="ice", mkPainting=false;
 let mkLook={ backdrop:PREFS.backdrop, ball:PREFS.ball, paddle:PREFS.paddle };
 let mkDiff=3, mkName="My level", mkCleared=false, mkEditingId=null;
-const MK_STEPS=["look","build","diff","share"];
-const MK_LABELS={ look:"1 · Look", build:"2 · Build", diff:"3 · How hard", share:"4 · Play + share" };
-const MK_SUB={ look:"Pick how your level looks.", build:"Tap to place bricks. Pick a brick or the eraser.",
+const MK_STEPS=["world","ball","paddle","build","diff","share"];
+const MK_LABELS={ world:"World", ball:"Ball", paddle:"Paddle", build:"Build", diff:"How hard", share:"Play + share" };
+const MK_SUB={ world:"Pick your world.", ball:"Pick your ball.", paddle:"Pick your paddle.",
+  build:"Tap to place bricks. Pick a brick or the eraser.",
   diff:"How hard should it be? The flames scale everything.", share:"Play your level to beat it, then share it." };
 
 function levelsKey(){ const k=activeKidId(); return "bk_breaker_levels"+(k?("_"+k):""); }
@@ -718,48 +760,52 @@ function boardBrickCount(){ return Object.keys(mkCells).length; }
 function applyLookToPrefs(){ PREFS.backdrop=mkLook.backdrop; PREFS.ball=mkLook.ball; PREFS.paddle=mkLook.paddle; }
 
 // ---- open / close ----
-function showMaker(step){ const host=document.getElementById("start"); if(host)host.style.display="none";
+function showMaker(step){ const host=document.getElementById("start"); if(host)host.style.display="none"; show("home",false);
   show("maker",true); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
   if(CUSTOM && CUSTOM.cleared) mkCleared=true;
-  if(step) mkStep=step; renderMaker(); }
-function closeMaker(){ show("maker",false); showHelpBtn(true); showInGameMute(true); showInGameBack(true); }
-function newBlankLevel(){ mkCells={}; mkBrush="ice"; mkDiff=3; mkName="My level"; mkCleared=false; mkEditingId=null;
-  mkLook={ backdrop:PREFS.backdrop, ball:PREFS.ball, paddle:PREFS.paddle }; mkStep="look"; renderMaker(); }
+  if(step) mkStep=step; if(MK_STEPS.indexOf(mkStep)<0) mkStep=MK_STEPS[0]; renderMaker(); }
+function closeMaker(){ show("maker",false); show("home",false); showHelpBtn(true); showInGameMute(true); showInGameBack(true); }
+function startNewLevel(){ mkCells={}; mkBrush="ice"; mkDiff=3; mkName="My level"; mkCleared=false; mkEditingId=null;
+  mkLook={ backdrop:PREFS.backdrop, ball:PREFS.ball, paddle:PREFS.paddle }; showMaker(MK_STEPS[0]); }
 function loadBoardIntoEditor(L0){ mkCells={}; for(const cc of (L0.cells||[])) mkCells[cc.r+"_"+cc.c]=cc.type;
   mkCols=L0.cols||10; mkRows=L0.rows||6; mkName=L0.name||"My level"; mkDiff=L0.diffN||3; mkEditingId=L0.id||null;
   mkLook=Object.assign({backdrop:PREFS.backdrop,ball:PREFS.ball,paddle:PREFS.paddle}, L0.look||{}); mkCleared=false; }
-function loadIntoEditor(L0){ loadBoardIntoEditor(L0); mkStep="build"; renderMaker(); }
+function loadIntoEditor(L0){ loadBoardIntoEditor(L0); showMaker("build"); }
 function playSavedLevel(L0){ loadBoardIntoEditor(L0); applyLookToPrefs(); savePrefs(); if(BA)BA.unlock(); startCustomLevel(currentBoard(), mkDiff); closeMaker(); }
 function playTest(){ if(boardBrickCount()<4){ toast("Add a few more bricks first!"); return; }
   applyLookToPrefs(); savePrefs(); if(BA)BA.unlock(); startCustomLevel(currentBoard(), mkDiff); closeMaker(); }
 function doShare(){ const lv=loadLevels(); const board=currentBoard(); const fl=boardFlames(board,mkDiff);
   const rec={ id:mkEditingId||("L"+Date.now()), name:mkName||"My level", cols:mkCols, rows:mkRows, cells:board.cells, look:board.look, diffN:mkDiff, flames:fl, plays:0, clears:0, created:Date.now() };
   const i=lv.findIndex(x=>x.id===rec.id); if(i>=0)lv[i]=rec; else lv.unshift(rec); saveLevels(lv);
-  mkEditingId=rec.id; toast("Saved to your levels! Friends can play it soon."); mkStep="home"; renderMaker(); }
+  mkEditingId=rec.id; toast("Saved to your levels! Friends can play it soon."); showHub(); }
 
 // ---- footer nav ----
 function mkGoNext(){ const idx=MK_STEPS.indexOf(mkStep);
   if(mkStep==="build" && boardBrickCount()<4){ toast("Add a few more bricks first!"); return; }
   if(idx>=0 && idx<MK_STEPS.length-1){ mkStep=MK_STEPS[idx+1]; renderMaker(); } }
-function mkGoBack(){ if(mkStep==="home"){ showMenu(); return; } const idx=MK_STEPS.indexOf(mkStep);
-  if(idx<=0){ mkStep="home"; } else { mkStep=MK_STEPS[idx-1]; } renderMaker(); }
+function mkGoBack(){ const idx=MK_STEPS.indexOf(mkStep);
+  if(idx<=0){ showHub(); return; } mkStep=MK_STEPS[idx-1]; renderMaker(); }
 
-// ---- render ----
+// ---- render (one step at a time, with progress dots) ----
 function renderMaker(){ const steps=el("mkSteps"), body=el("mkBody"), sub=el("mkSub"), back=el("mkBack"), next=el("mkNext");
   if(!steps||!body)return;
+  const idx=MK_STEPS.indexOf(mkStep), N=MK_STEPS.length;
   steps.innerHTML="";
-  if(mkStep!=="home"){ for(const s of MK_STEPS){ const b=document.createElement("button"); b.className="tab"+(s===mkStep?" on":""); b.textContent=MK_LABELS[s];
-    b.onclick=()=>{ mkStep=s; renderMaker(); }; steps.appendChild(b); } }
-  if(sub) sub.textContent = mkStep==="home" ? "Build your own level, then share it." : (MK_SUB[mkStep]||"");
+  const sn=document.createElement("div"); sn.className="stepno"; sn.textContent="Step "+(idx+1)+" of "+N+"  ·  "+MK_LABELS[mkStep]; steps.appendChild(sn);
+  const dots=document.createElement("div"); dots.className="dots";
+  for(let i=0;i<N;i++){ const d=document.createElement("div"); d.className="dot"+(i===idx?" on":(i<idx?" done":"")); dots.appendChild(d); }
+  steps.appendChild(dots);
+  if(sub) sub.textContent = MK_SUB[mkStep]||"";
   body.innerHTML="";
-  if(mkStep==="home") renderMkHome(body);
-  else if(mkStep==="look") renderMkLook(body);
+  if(mkStep==="world") renderMkWorld(body);
+  else if(mkStep==="ball") renderMkBall(body);
+  else if(mkStep==="paddle") renderMkPaddle(body);
   else if(mkStep==="build") renderMkBuild(body);
   else if(mkStep==="diff") renderMkDiff(body);
   else if(mkStep==="share") renderMkShare(body);
-  if(back){ back.textContent = mkStep==="home" ? "‹ Menu" : "Back"; back.className="btn small ghost"; }
-  if(next){ next.className="btn small"; next.textContent = mkStep==="diff" ? "Next: play it" : "Next";
-    next.style.display = (mkStep==="home"||mkStep==="share") ? "none" : "inline-block"; }
+  if(back){ back.textContent="Back"; back.className="btn small ghost"; }
+  if(next){ next.className="btn small"; next.textContent = (mkStep==="diff") ? "Next: play it" : "Next";
+    next.style.display = (mkStep==="share") ? "none" : "inline-block"; }
 }
 
 function backdropThumb(d){ return d && d.img ? d.img.replace("_bg.jpg","_thumb.jpg") : null; }
@@ -773,15 +819,6 @@ function miniThumb(L0){ const cols=L0.cols||10, rows=L0.rows||6;
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ const t=map[r+"_"+c]; const col=t?((BRICK_TYPES[t]||{}).col||"#fff"):"transparent"; html+='<div style="background:'+col+';border-radius:1px;height:'+ch+'px"></div>'; }
   return html+'</div>';
 }
-function renderMkHome(body){
-  const nb=document.createElement("button"); nb.className="btn"; nb.textContent="+ New level"; nb.onclick=newBlankLevel; body.appendChild(nb);
-  const lv=loadLevels();
-  if(!lv.length){ const p=document.createElement("div"); p.className="mkHint"; p.style.marginTop="18px"; p.textContent="You haven't made a level yet. Tap + New level to start!"; body.appendChild(p); return; }
-  const h=document.createElement("div"); h.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:18px 0 2px"; h.textContent="My levels"; body.appendChild(h);
-  const list=document.createElement("div"); list.className="mkList";
-  for(const L0 of lv){ list.appendChild(levelCard(L0)); }
-  body.appendChild(list);
-}
 function levelCard(L0){ const card=document.createElement("div"); card.className="mkLevel";
   const fl=L0.flames||3; let flames=""; for(let i=0;i<fl;i++)flames+=flameSVG(FLAME_COLS[fl-1],13);
   card.innerHTML='<div class="thumb">'+miniThumb(L0)+'</div><div class="lname">'+esc(L0.name||"My level")+'</div><div style="min-height:18px">'+flames+'</div>';
@@ -790,22 +827,22 @@ function levelCard(L0){ const card=document.createElement("div"); card.className
   const edit=document.createElement("button"); edit.className="btn small"; edit.textContent="Edit"; edit.onclick=()=>loadIntoEditor(L0);
   btns.appendChild(play); btns.appendChild(edit); card.appendChild(btns); return card;
 }
-function mkSection(body,t){ const h=document.createElement("div"); h.style.cssText="width:100%;text-align:center;font-weight:800;opacity:.8;margin:6px 0 4px"; h.textContent=t; body.appendChild(h); }
-function renderMkLook(body){
-  mkSection(body,"Backdrop"); const gb=document.createElement("div"); gb.className="grid";
+function renderMkWorld(body){ const gb=document.createElement("div"); gb.className="grid";
   for(const d of BACKDROPS){ const on=mkLook.backdrop===d.id; const card=document.createElement("div"); card.className="opt"+(on?" on":"");
     const th=backdropThumb(d); const swBg = th ? "url('"+th+"') center/cover, linear-gradient(135deg,"+d.c1+","+d.c2+")" : "linear-gradient(135deg,"+d.c1+","+d.c2+")";
     card.innerHTML='<div class="sw"><div style="width:100%;height:100%;border-radius:10px;background:'+swBg+'"></div></div><div class="nm">'+d.name+'</div><div class="ds"></div>';
     card.onclick=()=>{ mkLook.backdrop=d.id; renderMaker(); }; gb.appendChild(card); }
   body.appendChild(gb);
-  mkSection(body,"Ball"); const gball=document.createElement("div"); gball.className="grid";
+}
+function renderMkBall(body){ const gball=document.createElement("div"); gball.className="grid";
   for(const b of BALLS){ const locked=!isUnlocked(b.cost); const on=mkLook.ball===b.id; const card=document.createElement("div"); card.className="opt"+(on?" on":"");
     card.innerHTML='<div class="sw"><div style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,'+b.col+');box-shadow:0 0 12px '+b.glow+';'+(locked?'opacity:.35':'')+'"></div></div><div class="nm">'+b.name+'</div><div class="ds">'+(locked?"Unlock at ★"+b.cost:"")+'</div>';
     card.onclick=()=>{ if(locked){ toast("Earn "+(b.cost-totalStars())+" more stars to unlock "+b.name); return; } mkLook.ball=b.id; renderMaker(); }; gball.appendChild(card); }
   body.appendChild(gball);
-  mkSection(body,"Paddle"); const row=document.createElement("div"); row.style.cssText="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;width:100%";
-  for(const pd of PADDLES){ const locked=!isUnlocked(pd.cost), sel=mkLook.paddle===pd.col; const wrap=document.createElement("div"); wrap.style.cssText="display:flex;flex-direction:column;align-items:center;gap:3px";
-    const sw=document.createElement("div"); sw.style.cssText="width:64px;height:30px;border-radius:8px;cursor:pointer;background:linear-gradient(180deg,#fff,"+pd.col+");border:3px solid "+(sel?"#7ee0a0":"transparent")+";box-shadow:0 0 0 2px "+(sel?"rgba(126,224,160,.4)":"transparent")+";"+(locked?"opacity:.35":"");
+}
+function renderMkPaddle(body){ const row=document.createElement("div"); row.style.cssText="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;width:100%;margin-top:6px";
+  for(const pd of PADDLES){ const locked=!isUnlocked(pd.cost), sel=mkLook.paddle===pd.col; const wrap=document.createElement("div"); wrap.style.cssText="display:flex;flex-direction:column;align-items:center;gap:4px";
+    const sw=document.createElement("div"); sw.style.cssText="width:88px;height:38px;border-radius:10px;cursor:pointer;background:linear-gradient(180deg,#fff,"+pd.col+");border:3px solid "+(sel?"#7ee0a0":"transparent")+";box-shadow:0 0 0 2px "+(sel?"rgba(126,224,160,.4)":"transparent")+";"+(locked?"opacity:.35":"");
     sw.onclick=()=>{ if(locked){ toast("Earn "+(pd.cost-totalStars())+" more stars to unlock this paddle"); return; } mkLook.paddle=pd.col; renderMaker(); };
     wrap.appendChild(sw); if(locked){ const t=document.createElement("div"); t.style.cssText="font-size:11px;font-weight:800;color:#ffd86b"; t.textContent="★"+pd.cost; wrap.appendChild(t); } row.appendChild(wrap); }
   body.appendChild(row);
@@ -870,7 +907,9 @@ function wireMenus(){ const bkm=el("mkBack"); if(bkm)bkm.onclick=mkGoBack; const
   window.addEventListener("pointerup",()=>{ mkPainting=false; });
   const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
   const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; };
-  const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; showMenu(); }; }
+  const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; if(G&&G.custom){ showMaker("build"); } else { showMenu(); } }; }
+// preload world art so the picker + game never flash blank
+(function preloadBackdrops(){ try{ for(const d of BACKDROPS){ if(d&&d.img){ new Image().src=d.img; new Image().src=d.img.replace("_bg.jpg","_thumb.jpg"); } } }catch(e){} })();
 
 function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
 // bespoke created sounds (ElevenLabs via /api/sfx) — synth stays as a silent fallback.
@@ -879,7 +918,7 @@ if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   shoot:"tennis_hit", select:"tennis_wall", coin:"breaker_smash", boom:"breaker_break",
   levelup:"breaker_power", hurt:"breaker_miss", point:"tennis_point", win:"tennis_win", lose:"tennis_lose" } }); }
 // boot
-if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showMenu(); }
+if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showHub(); }
 requestAnimationFrame(frame);
 
 // ---------- QA / picker hooks (standardized name; alias kept) ----------
