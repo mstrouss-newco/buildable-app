@@ -99,7 +99,7 @@ var GAME_CONFIG = window.GAME_CONFIG || {
     { name: "Normal",  start: 0.52, max: 0.95, gain: 1.045, bot: 0.26 },
     { name: "Speedy",  start: 0.62, max: 1.12, gain: 1.055, bot: 0.34 },
   ],
-  // world -> pixel-art nature backdrop (img:1 => /tennis-bg/<key>.png) + accent colors
+  // world -> smooth AI nature backdrop (img:1 => /api/images?kind=tennis&id=<key>) + accent colors
   // + ambient particle style `p`. Drawn gradient `bg` (sampled from each scene's
   // sky & ground) is the always-safe fallback.
   worlds: {
@@ -156,7 +156,7 @@ function loadBg(key) {
     var im = new Image();
     im.onload = function () { if (bgKey === key) bgImg = im; };
     im.onerror = function () { if (bgKey === key) bgImg = null; };
-    im.src = "/tennis-bg/" + key + ".png?v=1";
+    im.src = "/api/images?kind=tennis&id=" + key;   // smooth AI nature world (cached)
   } catch (e) {}
 }
 
@@ -458,9 +458,8 @@ function draw() {
   ctx.save();
   ctx.translate(sh.x || 0, sh.y || 0);
 
-  // backdrop — the world's sky->ground gradient fills the whole court, then the
-  // pixel-art nature scene is drawn ZOOMED OUT (0.75 of cover) so you see the
-  // whole landscape instead of a zoomed-in crop; exposed top/bottom = the gradient.
+  // backdrop — the world's sky->ground gradient fills the whole court (safe fallback),
+  // then the smooth AI nature scene is drawn COVER-FIT to fill the whole canvas.
   var g = ctx.createLinearGradient(0, 0, 0, VH);
   g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
   ctx.fillStyle = g; ctx.fillRect(-40, -40, VW + 80, VH + 80);
@@ -468,10 +467,10 @@ function draw() {
   if (bgImg) {
     var iw = bgImg.naturalWidth || bgImg.width, ih = bgImg.naturalHeight || bgImg.height;
     if (iw && ih) {
-      var s = Math.max(VW / iw, VH / ih) * 0.75;   // 0.75 = zoom out from cover-fit
+      var s = Math.max(VW / iw, VH / ih);          // cover-fit: fill the canvas
       var bw = iw * s, bh = ih * s;
       var sm = ctx.imageSmoothingEnabled;
-      ctx.imageSmoothingEnabled = false;           // keep pixel-art crisp
+      ctx.imageSmoothingEnabled = true;            // smooth (NOT pixelated)
       try { ctx.drawImage(bgImg, (VW - bw) / 2, (VH - bh) / 2, bw, bh); drewImg = true; } catch (e) {}
       ctx.imageSmoothingEnabled = sm;
     }
@@ -760,11 +759,11 @@ function buildCourtGrid() {
     card.className = "court-card" + (key === worldKey ? " on" : "");
     var thumb = document.createElement("div"); thumb.className = "thumb";
     thumb.style.background = "linear-gradient(160deg," + w.bg[0] + "," + w.bg[1] + ")";
-    // overlay the pixel-art nature scene; if it isn't there yet, the gradient shows through
-    thumb.style.imageRendering = "pixelated";
+    // overlay the smooth AI nature scene; if it isn't ready yet, the gradient shows through
+    var imgURL = "/api/images?kind=tennis&id=" + key;
     var im = new Image();
-    im.onload = function () { thumb.style.backgroundImage = "url('/tennis-bg/" + key + ".png?v=1')"; };
-    im.src = "/tennis-bg/" + key + ".png?v=1";
+    im.onload = function () { thumb.style.backgroundImage = "url('" + imgURL + "')"; };
+    im.src = imgURL;
     var nm = document.createElement("div"); nm.className = "nm"; nm.textContent = w.name;
     card.appendChild(thumb); card.appendChild(nm);
     card.onclick = function () {

@@ -168,20 +168,22 @@ function build(q) {
   }
   if (kind === "tennis") {
     const id = (q.id || "").toString();
-    const COURT_STYLE = "Vibrant dynamic background art for a children's tennis/pong arcade game, viewed straight on, with a WIDE OPEN clear empty central play area and all the exciting scenery framing the top, sides and edges, bold saturated colors, soft glossy painterly children's-book style, energetic sense of motion, dramatic lighting, no people, no characters, no text, no words, no letters, no UI, no net, no ball, child-friendly ages 4-8";
+    // Smooth painterly nature backdrops for the tennis court. Each id maps to the
+    // world's DISPLAY NAME (see tennis.html GAME_CONFIG.worlds). Absolutely NOT pixel art.
+    const COURT_STYLE = "Soft painterly children's storybook nature landscape, smooth gradients and gentle brushwork, warm cinematic lighting, calm and beautiful, high-resolution smooth digital painting (absolutely NOT pixel art — no pixelation, no visible pixels, no 8-bit, no retro, no dithering), a wide open calm sky filling the upper half and scenery framing the lower edges, no people, no characters, no text, no words, no letters, no UI, no tennis court, no net, no ball, child-friendly ages 4-8";
     const COURTS = {
-      beach:   "A sunny tropical beach arena at golden hour, palm trees and colorful beach umbrellas along the sides, sparkling turquoise sea and soft golden sand, fluffy clouds",
-      space:   "A glowing futuristic space-station arena floating among planets and twinkling stars, neon energy lines along the edges, a big ringed planet glowing in the sky",
-      jungle:  "A lush jungle clearing arena, giant leafy trees and hanging vines framing the sides, glowing tropical flowers and fireflies, warm dappled sunlight",
-      ocean:   "A magical underwater arena, colorful coral reefs and swaying seaweed along the sides, schools of tiny tropical fish, bright sun rays from above, gentle rising bubbles",
-      candy:   "A whimsical candy-land arena, giant lollipops, gumdrops and candy canes framing the sides, a flowing chocolate river, rainbow sprinkles, soft pastel sky",
-      snow:    "A sparkling snowy mountain-top arena, frosty pine trees and glittering snowdrifts along the sides, gentle falling snow, a soft blue winter sky with faint northern lights",
-      volcano: "A dramatic but friendly volcano arena, glowing orange lava rivers and rocky cliffs along the sides, floating embers, a warm red-orange sky, exciting but not scary",
-      city:    "A colorful city rooftop arena at sunset, glowing skyscrapers and twinkling string lights along the sides, a pink-and-orange sky, a few distant balloons",
+      beach:   "A tranquil tropical seaside at golden hour: calm turquoise ocean meeting a soft sandy shore, a few gentle palm trees leaning in from the sides, a couple of distant sailboats, a warm sun low on the horizon, soft fluffy clouds",   // "Seaside"
+      space:   "A serene arctic night sky glowing with green and violet northern lights (aurora borealis) rippling over a calm dark horizon, sparkling stars, a faint snowy tundra along the bottom, peaceful and magical",                          // "Northern Lights"
+      jungle:  "A lush green tropical jungle with one enormous ancient tree rising in the center, big leafy fronds and hanging vines framing the sides, soft dappled sunlight, glowing tropical flowers, warm misty air",                            // "Big Tree"
+      ocean:   "A calm evergreen pine forest beside a still mountain lake, tall pine trees framing the sides, soft mist drifting between the trunks, a gentle blue-grey morning sky, cool and peaceful",                                             // "Pine Forest"
+      candy:   "A bright sunny wildflower meadow rolling into soft green hills, colorful flowers and tall grass swaying, a big cheerful sun, fluffy white clouds in a clear blue sky, warm and joyful",                                             // "Sunny Meadow"
+      snow:    "A majestic snowy mountain peak under a crisp clear blue sky, glittering fresh snow, a few frosted pine trees along the lower edges, gentle falling snowflakes, cool and serene",                                                    // "Snowy Peak"
+      volcano: "Tall dramatic layered stone cliffs and rocky bluffs under a bright sky, warm sandstone rock formations framing the sides, a calm sea far below, soft golden afternoon light, grand and peaceful",                                  // "Stone Cliffs"
+      city:    "Gently rolling emerald-green hills under a big blue sky, soft warm sunlight, a winding grassy path, a few scattered round leafy trees, fluffy white clouds, calm cheerful countryside",                                            // "Green Hills"
     };
     const subject = COURTS[id];
     if (!subject) return null;
-    return { descriptor: `tennis|${id}`, prompt: `${subject}. ${COURT_STYLE}`, transparent: false, quality: "medium" };
+    return { descriptor: `tennis|nature|${id}`, prompt: `${subject}. ${COURT_STYLE}`, transparent: false, quality: "medium" };
   }
   if (kind === "soundfx") {
     const id = (q.id || "").toString();
