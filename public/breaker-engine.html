@@ -774,7 +774,7 @@ function loadIntoEditor(L0){ loadBoardIntoEditor(L0); showMaker("build"); }
 function playSavedLevel(L0){ loadBoardIntoEditor(L0); applyLookToPrefs(); savePrefs(); if(BA)BA.unlock(); startCustomLevel(currentBoard(), mkDiff); closeMaker(); }
 function playTest(){ if(boardBrickCount()<4){ toast("Add a few more bricks first!"); return; }
   applyLookToPrefs(); savePrefs(); if(BA)BA.unlock(); startCustomLevel(currentBoard(), mkDiff); closeMaker(); }
-function doShare(){ const lv=loadLevels(); const board=currentBoard(); const fl=boardFlames(board,mkDiff);
+function doShare(){ const lv=loadLevels(); const board=currentBoard(); const fl=mkDiff;   // save the chosen difficulty as the level's flame rating
   const rec={ id:mkEditingId||("L"+Date.now()), name:mkName||"My level", cols:mkCols, rows:mkRows, cells:board.cells, look:board.look, diffN:mkDiff, flames:fl, plays:0, clears:0, created:Date.now() };
   const i=lv.findIndex(x=>x.id===rec.id); if(i>=0)lv[i]=rec; else lv.unshift(rec); saveLevels(lv);
   mkEditingId=rec.id; toast("Saved to your levels! Friends can play it soon."); showHub(); }
@@ -879,7 +879,7 @@ function renderMkDiff(body){
   const tip=document.createElement("div"); tip.className="mkHint"; tip.textContent="More flames = faster ball, smaller paddle, fewer lives."; body.appendChild(tip);
 }
 function renderMkShare(body){
-  const board=currentBoard(); const fl=boardFlames(board,mkDiff);
+  const board=currentBoard(); const fl=mkDiff;   // the level's rating = the difficulty the kid picked
   const card=document.createElement("div"); card.className="mkCard";
   let flames=""; for(let i=0;i<fl;i++)flames+=flameSVG(FLAME_COLS[fl-1],15);
   card.innerHTML='<div class="thumb" style="border-radius:10px;overflow:hidden;margin-bottom:10px">'+miniThumb(board)+'</div>'
