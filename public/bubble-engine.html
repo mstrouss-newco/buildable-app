@@ -344,12 +344,13 @@ function draw(){
   drawLauncher();
   if(shakeT>0) shakeT-=1;
   ctx.setTransform(1,0,0,1,0,0);
-  // HUD
+  // HUD — both lines on the LEFT so they never sit under the top-right buttons
   if(state==="play"||state==="win"||state==="lose"){
-    ctx.fillStyle="rgba(255,255,255,.92)"; ctx.font="900 22px 'Baloo 2', Nunito, sans-serif"; ctx.textAlign="left";
-    ctx.fillText(G?G.name:"", WALL_L+4, 40);
-    ctx.textAlign="right"; ctx.fillText("Buddies left: "+(G?countLeft():0), WALL_R-4, 40);
     ctx.textAlign="left";
+    ctx.fillStyle="rgba(255,255,255,.95)"; ctx.font="900 22px 'Baloo 2', Nunito, sans-serif";
+    ctx.fillText(G?G.name:"", WALL_L+4, 36);
+    ctx.fillStyle="rgba(255,255,255,.78)"; ctx.font="800 17px 'Baloo 2', Nunito, sans-serif";
+    ctx.fillText("Buddies left: "+(G?countLeft():0), WALL_L+4, 62);
   }
   return "ok";
 }
@@ -365,10 +366,11 @@ function drawLauncher(){
     ctx.fillStyle="rgba(255,255,255,.6)"; ctx.font="800 12px Nunito, sans-serif"; ctx.textAlign="center"; ctx.fillText("next",LX+78,LY+46); ctx.textAlign="left"; }
 }
 function drawAimGuide(){
-  var speed=16, x=LX, y=LY, vx=Math.sin(aimA)*speed, vy=-Math.cos(aimA)*speed, steps=0, dot=0;
+  var speed=16, x=LX, y=LY, vx=Math.sin(aimA)*speed, vy=-Math.cos(aimA)*speed, steps=0, dot=0, bounces=0;
   ctx.fillStyle="rgba(255,255,255,.5)";
   while(steps++<400){ x+=vx; y+=vy;
-    if(x<WALL_L+R){x=WALL_L+R;vx=-vx;} else if(x>WALL_R-R){x=WALL_R-R;vx=-vx;}
+    if(x<WALL_L+R){x=WALL_L+R;vx=-vx;bounces++;} else if(x>WALL_R-R){x=WALL_R-R;vx=-vx;bounces++;}
+    if(bounces>2) break;                       // stop after 2 wall bounces (no unrealistic zig-zag)
     if(y<=TOPY+R) break;
     if(nearestOccupiedHit(x,y)) break;
     if((dot++ %6)===0){ ctx.beginPath(); ctx.arc(x,y,3.5,0,6.2832); ctx.fill(); } }
