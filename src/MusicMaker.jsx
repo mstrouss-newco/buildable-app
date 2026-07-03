@@ -209,8 +209,11 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   }
 
   async function refresh() {
+    // Only show this kid's own songs. Without a selected kid, show none rather
+    // than the shared device list (which would mix in other kids' songs).
+    if (!kidProfileId) { setSongs([]); setCount(0); return; }
     try {
-      const r = await fetch("/api/list-songs?deviceId=" + encodeURIComponent(deviceId) + (kidProfileId ? "&kidProfileId=" + encodeURIComponent(kidProfileId) : ""));
+      const r = await fetch("/api/list-songs?kidProfileId=" + encodeURIComponent(kidProfileId));
       const j = await r.json();
       if (j && j.configured && Array.isArray(j.songs)) { setSongs(j.songs); setCount(j.count || j.songs.length); }
     } catch {}
@@ -266,6 +269,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
 
   async function keepSong() {
     if (!draft) return;
+    if (!kidProfileId) { setStatus("Tap Grown-ups and pick who's playing first, so this song saves to the right kid."); return; }
     if (count >= MAX_SONGS) { setStatus("You have 10 songs! Delete one in My Songs to make room."); setTab("library"); return; }
     setStatus("Saving...");
     try {

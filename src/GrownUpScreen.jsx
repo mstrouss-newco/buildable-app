@@ -120,6 +120,15 @@ function GameGlyph() {
   );
 }
 
+// Device id for the no-login lane (shared with the rest of the app).
+function gsDeviceId() {
+  try {
+    let id = localStorage.getItem("deviceId");
+    if (!id) { id = "dev_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8); localStorage.setItem("deviceId", id); }
+    return id;
+  } catch { return "dev_anon"; }
+}
+
 export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends }) {
   // Flow steps. Start on the kid picker when already signed in (returning
   // parent); otherwise start on the lane chooser.
@@ -189,7 +198,27 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends }
 
   async function refreshProjects() {
     setLoadingProjects(true);
-    try { setProjects(await listFamilyProjects()); }
+    try {
+      const acct = await listFamilyProjects().catch(() => []); // filed rows (account, any device)
+      const did = gsDeviceId();
+      const dev = [];
+      try {
+        const [sg, gm] = await Promise.all([
+          fetch("/api/list-songs?deviceId=" + encodeURIComponent(did)).then((r) => r.json()).catch(() => ({})),
+          fetch("/api/list-games?deviceId=" + encodeURIComponent(did)).then((r) => r.json()).catch(() => ({})),
+        ]);
+        (sg && sg.songs || []).forEach((s) => dev.push({ kind: "song", projectId: s.song_id, title: s.title || "Untitled song", kidProfileId: s.kid_profile_id || null }));
+        (gm && gm.games || []).forEach((g) => dev.push({ kind: "game", projectId: g.game_id || g.id, title: g.title || "Untitled game", kidProfileId: g.kid_profile_id || null }));
+      } catch (e) { /* device lane optional */ }
+      // Merge + dedupe by kind:id, preferring a row that already names a kid.
+      const map = new Map();
+      for (const p of [...(acct || []), ...dev]) {
+        const key = p.kind + ":" + p.projectId;
+        const prev = map.get(key);
+        if (!prev || (!prev.kidProfileId && p.kidProfileId)) map.set(key, p);
+      }
+      setProjects([...map.values()]);
+    }
     catch (e) { setError(e.message); }
     finally { setLoadingProjects(false); }
   }
@@ -301,7 +330,12 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends }
   async function handleAssign(project, kidProfileId) {
     setBusy(true); setError(null);
     try {
-      await assignProjectToKid(project.kind, project.projectId, kidProfileId || null);
+      const r = await fetch("/api/assign-creation", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: project.kind, id: project.projectId, kidProfileId: kidProfileId || null, deviceId: gsDeviceId() }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || j.detail || ("Couldn't file this (error " + r.status + ")"));
       await refreshProjects();
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }

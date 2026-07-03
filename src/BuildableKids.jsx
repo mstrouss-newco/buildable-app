@@ -921,10 +921,12 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
     let alive = true;
     (async () => {
       try {
-        const did = deviceId();
         const kid = getActiveKid();
-        const kq = kid && kid.id ? "&kidProfileId=" + encodeURIComponent(kid.id) : "";
-        const q = "?deviceId=" + encodeURIComponent(did) + kq;
+        // Show ONLY the selected kid's own creations. Never fall back to the
+        // shared device list — that leaks other family members' songs onto a
+        // profile (e.g. a kid's songs showing up on the Dad profile).
+        if (!kid || !kid.id) { if (alive) setJumpItems([]); return; }
+        const q = "?kidProfileId=" + encodeURIComponent(kid.id);
         const [sg, st, gm] = await Promise.all([
           fetch("/api/list-songs" + q).then((r) => r.json()).catch(() => ({})),
           fetch("/api/list-stories" + q).then((r) => r.json()).catch(() => ({})),
@@ -1541,10 +1543,12 @@ function GameMusicPicker() {
   }
 
   useEffect(() => {
-    const deviceId = getDeviceId();
     const ak = getActiveKid();
     const kpId = ak && ak.id ? ak.id : null;
-    fetch("/api/list-songs?deviceId=" + encodeURIComponent(deviceId) + (kpId ? "&kidProfileId=" + encodeURIComponent(kpId) : ""))
+    // Only ever show the selected kid's own songs — no shared device fallback,
+    // which would mix in other kids' songs.
+    if (!kpId) { setSongs([]); return; }
+    fetch("/api/list-songs?kidProfileId=" + encodeURIComponent(kpId))
       .then((r) => r.json())
       .then((d) => {
         if (d && Array.isArray(d.songs)) setSongs(d.songs);
