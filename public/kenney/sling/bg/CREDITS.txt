@@ -1,0 +1,3 @@
+Backgrounds: Kenney "Background Elements Remastered" (CC0 1.0 Universal / Public Domain)
+Source: https://kenney.nl  — free to use, no attribution required.
+Files renamed for Sling Squad per-level scenes: grass, desert, forest, fall, castles, forest2, desert2, empty.

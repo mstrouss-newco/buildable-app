@@ -94,6 +94,25 @@ var SQUAD_IMGS = [];   // Kenney "Animal Pack Remastered" art for the flung pals
 var BLK_IMGS = {};     // Kenney "Physics Assets" block textures, keyed material+shape (woodW/stoneT/...)
 var TARGET_IMGS = [];  // Kenney "Physics Assets" alien faces = the goofy toppling targets
 
+// ---- per-level BACKDROPS (Kenney "Background Elements Remastered", CC0) ----
+// Each level gets its own scene so it looks fresh; parallax below adds depth.
+// A missing image can never break a kid's game — drawBgDrawn() is the fallback.
+var BG_IMGS = {};      // key -> loaded scene image (grass/desert/forest/fall/castles/...)
+var BG_THEMES = [      // cycles by level; ground band + sky tint match the scene art
+  { bg:"grass",   sky:["#8fd0ff","#eaf8ff"], g0:"#73c364", g1:"#4e9a45", top:"#86d172" },
+  { bg:"desert",  sky:["#ffe6ad","#fff6e2"], g0:"#e6c277", g1:"#c89646", top:"#f0d58f" },
+  { bg:"forest",  sky:["#bfe6c8","#effaf1"], g0:"#5aa86a", g1:"#3c7d4a", top:"#77c586" },
+  { bg:"fall",    sky:["#ffd7a3","#fff0dd"], g0:"#c98a4b", g1:"#9c6532", top:"#e0a662" },
+  { bg:"castles", sky:["#c9bce6","#efeaf9"], g0:"#8fae7a", g1:"#5f7d4e", top:"#a7c48f" }
+];
+function themeFor(i){                              // per-level backdrop + palette
+  var L = (GAME_CONFIG.levels[i]||{});
+  if(L.bg && BG_IMGS[L.bg]!==undefined) return { bg:L.bg, sky:L.sky||["#8fd0ff","#eaf8ff"],
+      g0:L.g0||"#73c364", g1:L.g1||"#4e9a45", top:L.top||"#86d172" };
+  return BG_THEMES[i % BG_THEMES.length];
+}
+var BG_T0 = (typeof Date!=="undefined") ? Date.now() : 0;  // clock for cloud drift
+
 // ============================================================================
 //  GAME_CONFIG — content as DATA. Adding a level = editing this, never the engine.
 //  Castle / blocks world (first world, picked with Mike). Coordinates are in the
@@ -406,27 +425,51 @@ function update(){
 // ============================================================================
 //  Rendering (drawn art = the always-on baseline; can never break a kid's game).
 // ============================================================================
-function drawBg(){
-  var g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,"#8fd0ff"); g.addColorStop(.55,"#bfe8ff"); g.addColorStop(1,"#e9f8ff");
+// Parallax read: how far the kid has pulled the sling (0 when idle/flying).
+function bgParallax(){ var px=0,py=0; if(G&&G.drag){ px=(AX-G.drag.x); py=(AY-G.drag.y); }
+  return { px:px, py:py, t:((typeof Date!=="undefined"?Date.now():0)-BG_T0)/1000 }; }
+// Drifting clouds — the NEAREST plane, so they move most = real sense of depth.
+function drawClouds(ox, t){
+  ctx.save(); ctx.fillStyle="rgba(255,255,255,.9)";
+  var drift=(t*10)%1200;                      // slow endless drift across the sky
+  [[300,86,1,0],[560,64,.8,400],[780,110,1.1,800],[120,132,.7,150]].forEach(function(c){
+    var cx=((c[0]+drift+c[3])%1120)-80 + ox;   // wrap so clouds never pop
+    ctx.save(); ctx.translate(cx,c[1]); ctx.scale(c[2],c[2]);
+    ctx.beginPath(); ctx.arc(-22,4,16,0,7); ctx.arc(0,-6,22,0,7); ctx.arc(24,4,18,0,7); ctx.rect(-22,4,46,14); ctx.fill();
+    ctx.restore(); });
+  ctx.restore();
+}
+// Themed ground band = the crisp play floor blocks rest on (matches the scene).
+function drawGround(th){
+  var gg=ctx.createLinearGradient(0,GY,0,H); gg.addColorStop(0,th.g0); gg.addColorStop(1,th.g1);
+  ctx.fillStyle=gg; ctx.fillRect(0,GY,W,H-GY);
+  ctx.fillStyle=th.top; ctx.fillRect(0,GY,W,7);
+}
+// Drawn fallback scene (tinted to the theme) — used until the art loads / in QA.
+function drawBgDrawn(th){
+  var g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,th.sky[0]); g.addColorStop(1,th.sky[1]);
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  // sun
   ctx.save(); ctx.globalAlpha=.9; ctx.fillStyle="#fff3b0"; ctx.beginPath(); ctx.arc(120,96,46,0,7); ctx.fill();
   ctx.globalAlpha=.35; ctx.beginPath(); ctx.arc(120,96,66,0,7); ctx.fill(); ctx.restore();
-  // soft clouds
-  ctx.fillStyle="rgba(255,255,255,.85)";
-  [[300,90,1],[560,70,.8],[780,120,1.1]].forEach(function(c){ ctx.save(); ctx.translate(c[0],c[1]); ctx.scale(c[2],c[2]);
-    ctx.beginPath(); ctx.arc(-22,4,16,0,7); ctx.arc(0,-6,22,0,7); ctx.arc(24,4,18,0,7); ctx.rect(-22,4,46,14); ctx.fill(); ctx.restore(); });
-  // distant castle hills
-  ctx.fillStyle="#a7d68a"; ctx.beginPath(); ctx.moveTo(0,470); ctx.quadraticCurveTo(260,400,520,460);
+  ctx.fillStyle=th.g0; ctx.beginPath(); ctx.moveTo(0,470); ctx.quadraticCurveTo(260,400,520,460);
   ctx.quadraticCurveTo(760,520,960,452); ctx.lineTo(960,GY); ctx.lineTo(0,GY); ctx.fill();
-  // a friendly far castle silhouette
-  ctx.fillStyle="#cdb79a"; var bx=380,by=372;
-  ctx.fillRect(bx,by,150,86); for(var i=0;i<5;i++) ctx.fillRect(bx+i*32,by-12,20,14);
-  ctx.fillStyle="#bda988"; ctx.fillRect(bx+58,by+34,34,52);
-  // grass ground band
-  var gg=ctx.createLinearGradient(0,GY,0,H); gg.addColorStop(0,"#73c364"); gg.addColorStop(1,"#4e9a45");
-  ctx.fillStyle=gg; ctx.fillRect(0,GY,W,H-GY);
-  ctx.fillStyle="#86d172"; ctx.fillRect(0,GY,W,7);
+}
+// Main backdrop: real Kenney scene (cover) with subtle parallax, drifting clouds,
+// and a themed ground band. Per level so every stage looks like a new place.
+function drawBg(){
+  var th=themeFor(level), img=BG_IMGS[th.bg], P=bgParallax();
+  if(img && (img.naturalWidth||img.width)){
+    var iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+    var s=Math.max(W/iw, H/ih)*1.10;            // slight over-scale hides parallax edges
+    var dw=iw*s, dh=ih*s;
+    var ox=(W-dw)/2 + P.px*0.03;                // FAR plane: shifts a little with the pull
+    var oy=(H-dh)/2 + P.py*0.03 - 6;
+    ctx.drawImage(img, ox, oy, dw, dh);
+  } else {
+    drawBgDrawn(th);                            // never-breaks fallback
+  }
+  drawClouds(P.px*0.10, P.t);                   // NEAR plane: shifts more -> depth
+  drawGround(th);                               // crisp themed play floor
 }
 function drawSling(){
   // wooden Y slingshot at the fork
@@ -660,6 +703,9 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   ["woodW","woodS","woodT","stoneW","stoneS","stoneT"].forEach(function(k){ L("/kenney/sling/blocks/"+k+".png",function(im){ BLK_IMGS[k]=im; }); });
   // toppling targets (Physics Assets alien faces)
   for(var i=0;i<5;i++){ (function(i){ L("/kenney/sling/targets/t"+i+".png",function(im){ TARGET_IMGS[i]=im; }); })(i); }
+  // per-level scene backdrops (Background Elements Remastered)
+  ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
+    L("/kenney/sling/bg/"+k+".png",function(im){ BG_IMGS[k]=im; }); });
 }catch(e){} }
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
 
