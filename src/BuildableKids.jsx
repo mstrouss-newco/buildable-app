@@ -773,7 +773,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_TYPING) {
-    return <TypingScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <TypingScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
 
   if (screen === SCREEN_GAME_PICKER) {
@@ -894,7 +894,7 @@ export default function BuildableKids() {
     return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_CHESS) {
-    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
+    return <ChessScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHESS_LOBBY) {
@@ -910,11 +910,11 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHESS_FAMILY) {
-    return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
+    return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
 
   if (screen === SCREEN_CHECKERS) {
-    return <CheckersScreen onHome={() => setScreen(returnTo === SCREEN_GAME_PICKER ? SCREEN_GAME_PICKER : SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
+    return <CheckersScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHECKERS_LOBBY) {
