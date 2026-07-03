@@ -407,13 +407,15 @@ function afterShot(){
 
 // ---------- win / lose ----------
 function endGame(won){
-  state=won?"win":"lose"; sfx(won?"win":"lose");
+  state=won?"win":"lose";
+  var last = G.level>=GAME_CONFIG.levels.length-1;
+  // gentle chime between levels; save the big celebration for finishing the last one
+  if(won) sfx(last?"celebrate":"coin"); else sfx("lose");
   signal(won?"win":"lose");
   if(HAS_DOM){
     var ov=document.getElementById("overlay"); ov.classList.remove("hide");
     document.getElementById("ovTitle").textContent = won? "You did it!" : "So close!";
     document.getElementById("ovSub").textContent = won? "All the buddies are free." : "The buddies reached the line — try again!";
-    var last = G.level>=GAME_CONFIG.levels.length-1;
     var nb=document.getElementById("ovNext");
     nb.textContent = !won? "Try again" : (last? "Play again" : "Next level");
     nb.onclick=function(){ ov.classList.add("hide");
