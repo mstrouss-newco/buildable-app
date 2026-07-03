@@ -112,7 +112,11 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
       const [fr, inv] = await Promise.all([listFriends(me.id), inboxInvites()]);
       const rank = (x) => (x.online ? 0 : 1);
       setFriends((fr || []).slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)));
-      setInbox((inv || []).filter((i) => i.game === game.slug));
+      // Only show invites addressed to THE ACTIVE KID for this game. Siblings share
+      // one parent account, so inboxInvites() returns invites for every kid in the
+      // family -- without the toKid check, a kid saw invites meant for a brother/
+      // sister (even their OWN outgoing invite bounced back as "you invited you").
+      setInbox((inv || []).filter((i) => i.game === game.slug && i.toKid === me.id));
     } catch (e) { setErr("Couldn\u2019t load your family. Make sure THIS device is signed in to your grown-up account (Grown-ups \u2192 sign in with the same email on every device)."); }
     setLoading(false);
   }
