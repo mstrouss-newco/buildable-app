@@ -562,7 +562,7 @@ function buildStartCfg(){
       });
   const cfg = { title:"Buildable Breaker",
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",
-    sound: !(BA&&BA.muted), showBack:false, modes:["solo","two"], mode:currentMode, levels, customizeLabel:"Make It Mine" };
+    sound: !(BA&&BA.muted), showBack:false, modes:[], mode:"solo", levels, customizeLabel:"Make It Mine" };
   if(currentMode!=="two"){ cfg.coins = totalStars(); cfg.subtitle = "Stars: "+totalStars()+" of "+maxStars(); }   // total stars earned
   return cfg;
 }
