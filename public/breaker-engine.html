@@ -448,7 +448,7 @@ function drawEarnedStars(earned){ const r=26, gap=72, y=H/2-86; const xs=[W/2-ga
 // --- Tutorial "demo hand": now uses the shared 3D hand (BR.hand) so every game
 //     stays in sync. topY = where the fingertip should touch (paddle bottom). ---
 function drawTutorialHand(px, topY){
-  if(window.BR && BR.hand) BR.hand(ctx, px, topY + 30*1.3, 1.3);   // ~91px tall, tip at topY
+  if(BR && BR.hand) BR.hand(ctx, px, topY + 30*1.3, 1.3);   // ~91px tall, tip at topY
 }
 
 function drawTutorial(){ const tt=Date.now()/1000;
