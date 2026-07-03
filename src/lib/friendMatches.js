@@ -3,7 +3,7 @@
 // exact chess model, but on the shared friend_matches table (dual-parent RLS
 // lets BOTH families read + patch the row). One table serves every turn-based
 // game; distinguished by friend_matches.game. Mirrors src/lib/chessMatches.js.
-import { getSession, ensureFreshToken } from "./accounts";
+import { getSession, ensureFreshToken, refreshSession } from "./accounts";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
@@ -19,7 +19,12 @@ function headers() {
 }
 async function rest(path, init) {
   await ensureFreshToken();
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...(init || {}), headers: { ...headers(), ...((init && init.headers) || {}) } });
+  const doFetch = () => fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...(init || {}), headers: { ...headers(), ...((init && init.headers) || {}) } });
+  let r = await doFetch();
+  if (r.status === 401) {           // token expired mid-session -> refresh + retry once
+    const t = await refreshSession();
+    if (t) r = await doFetch();
+  }
   const data = await r.json().catch(() => []);
   if (!r.ok) throw new Error((data && data.message) || "Request failed");
   return data;

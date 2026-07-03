@@ -3,21 +3,30 @@
 // plus the presence heartbeat. Every game reuses this -- there is exactly one
 // friends list, one online-status source, one invite system across all games.
 // Requires the parent-account lane (a signed-in grown-up) for cross-account play.
-import { getSession, ensureFreshToken, isSignedIn } from "./accounts";
+import { getSession, ensureFreshToken, isSignedIn, refreshSession } from "./accounts";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 async function api(method, body, query) {
   await ensureFreshToken();
-  const s = getSession();
-  const token = (s && s.access_token) || "";
   const url = "/api/friends" + (query ? `?${query}` : "");
-  const r = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: method === "GET" ? undefined : JSON.stringify(body || {}),
-  });
+  const doFetch = () => {
+    const s = getSession();
+    const token = (s && s.access_token) || "";
+    return fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: method === "GET" ? undefined : JSON.stringify(body || {}),
+    });
+  };
+  let r = await doFetch();
+  // The access token can expire mid-session (aggressively on iPad Safari).
+  // Refresh once and retry so the friends list never silently comes back empty.
+  if (r.status === 401) {
+    const t = await refreshSession();
+    if (t) r = await doFetch();
+  }
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error((j && j.error) || "Something went wrong.");
   return j;
