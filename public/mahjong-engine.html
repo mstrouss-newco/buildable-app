@@ -237,7 +237,9 @@ function tapTile(t){
     combo = (nowMs<comboUntil) ? combo+1 : 1; comboUntil = nowMs + 4500;
     const tier = combo>=5?3 : combo>=3?2 : 1;
     score += 10*combo;                                // faster chains => more points
-    if(BA){ BA.sfx(tier===3?"match3":tier===2?"match2":"match"); if(combo>=4 && combo%3===1) BA.sfx("combo"); }
+    if(BA){ BA.sfx(tier===3?"match3":tier===2?"match2":"match");
+      if(combo>=5 && combo%5===0) BA.sfx("jackpot");        // hit the jackpot on a big streak
+      else if(combo>=3 && combo%2===1) BA.sfx("combo"); }   // coin-cascade on a growing streak
     if(BM && !headless){ const cx=(tileCenter(a).x+tileCenter(b).x)/2, cy=(tileCenter(a).y+tileCenter(b).y)/2;
       const LABELS=["Match!","Nice!","Great!","Awesome!","Amazing!","On fire!","Unstoppable!"];
       const lab=(combo>1?LABELS[Math.min(combo-1,LABELS.length-1)]+"  x"+combo:"Match!");
@@ -523,9 +525,14 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   document.getElementById("hintBtn").onclick=()=>{ if(state!=="play"||hintsLeft<=0) return; if(doHint()){ hintsLeft--; updateChrome(); } };
   document.getElementById("shufBtn").onclick=()=>{ if(state!=="play"||mixesLeft<=0) return; mixesLeft--; autoShuffle(); updateChrome(); };
   // bespoke created sounds (BA synth is the silent fallback only)
-  if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?v=2&s=", map:{
+  if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?v=3&s=", map:{
     select:"mahjong_pick", match:"mahjong_match", match2:"mahjong_match2", match3:"mahjong_match3",
-    combo:"mahjong_combo", nomatch:"mahjong_nope", shuffle:"mahjong_shuffle", win:"mahjong_win" } }); }
+    combo:"mahjong_combo", jackpot:"mahjong_jackpot", nomatch:"mahjong_nope",
+    shuffle:"mahjong_shuffle", win:"mahjong_win" } }); }
+  // exciting textured burst art (CC0 Kenney Particle Pack, served from /fx/) — BM.explode
+  // auto-upgrades to spark + star + glow + shockwave ring once these are loaded.
+  if(BM&&BM.useTextures) BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/star_01.png",
+    star:"/fx/star_07.png", ring:"/fx/circle_01.png", smoke:"/fx/smoke_05.png", magic:"/fx/magic_05.png" });
   showMenu(); requestAnimationFrame(frame);
 }
 
