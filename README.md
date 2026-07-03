@@ -3058,3 +3058,22 @@ levels as data. Forgiving damage model + high enemy aim-error so a young kid alw
 (helper + telemetry). Wired: vercel routes (`/tank-engine.html`, `/tank/*`), Games-picker
 tile + `SCREEN_TANK` + `TankScreen`, `api/images.js` tank thumbnail prompt. `vite build`
 clean.
+
+## Level thumbnails — real generated previews on every game's level cards (2026-07-03)
+
+Owner: "the level thumbnails don't load on the games." Root cause: most games' level-select
+cards (the shared `public/buildable-startscreen.js` grid) only passed a flat `color` — never a
+preview picture — so every level looked like an empty coloured box; and the few games that DID
+draw previews (Breaker, String Match, Survival) only showed them for the *unlocked* level, leaving
+locked cards blank. Fix: new shared helper `public/buildable-levelthumb.js` (`window.BuildableLevelThumb`,
+BLT) — cached canvas "painters" that draw a little photo of each level from the game's own data:
+`maze` (walls + pellets + muncher), `bubbles` (the real cluster), `cards` (Memory grid + theme
+shapes), `bingo` card, `snakes` board (ladder + snake), `lanes` (Runner 3-lane road + car),
+`hill` (Tank hills + tanks), `town` (Family Town loop), `tiles` (Mahjong pyramid, scales with
+board size). Wired `img: BLT.make(...)` into every level (locked included — the start screen dims
+them) for Maze, Bubble, Memory, Bingo, Snakes, Runner, Tank, Family Town, Mahjong; and made
+Breaker + String Match + Survival draw their existing previews on locked levels too. All calls are
+guarded (`BLT && BLT.make(...)`) so a card safely falls back to its old colour if the helper is
+missing. Painters verified headlessly (node + @napi-rs/canvas render) and live-QA'd in-browser
+across Maze/Bubble/Tank/Mahjong/Breaker — no console errors. Scoped to `public/buildable-levelthumb.js`,
+`vercel.json`, and the 12 game pages. Commit on main; Vercel auto-deploys.
