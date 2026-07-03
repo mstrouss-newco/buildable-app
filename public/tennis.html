@@ -274,14 +274,14 @@ function onPointer(clientX, clientY) {
 function clamp(nx) { return Math.max(GAME_CONFIG.paddleW / 2, Math.min(1 - GAME_CONFIG.paddleW / 2, nx)); }
 
 if (canvas) {
-  canvas.addEventListener("pointermove", function (e) { if (demoOn && demoT > 0.8) demoOn = false; onPointer(e.clientX, e.clientY); }, { passive: true });
-  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); playMusic(); demoOn = false; onPointer(e.clientX, e.clientY); }, { passive: true });
+  canvas.addEventListener("pointermove", function (e) { onPointer(e.clientX, e.clientY); }, { passive: true });
+  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); playMusic(); if (demoOn && demoT > 0.25) demoOn = false; onPointer(e.clientX, e.clientY); }, { passive: true });
   canvas.addEventListener("touchmove", function (e) {
-    if (demoOn && demoT > 0.5) demoOn = false;
+    if (demoOn && demoT > 0.25) demoOn = false;
     for (var i = 0; i < e.touches.length; i++) onPointer(e.touches[i].clientX, e.touches[i].clientY);
   }, { passive: true });
 }
-window.addEventListener("keydown", function (e) { keys[e.key] = true; if (e.key === " " || e.key.indexOf("Arrow") === 0 || e.key.length === 1) demoOn = false; if (BA && (e.key === " " || e.key.indexOf("Arrow") === 0)) { BA.unlock(); playMusic(); } });
+window.addEventListener("keydown", function (e) { keys[e.key] = true; if (demoOn && demoT > 0.2 && (e.key === " " || e.key.indexOf("Arrow") === 0 || e.key.length === 1)) demoOn = false; if (BA && (e.key === " " || e.key.indexOf("Arrow") === 0)) { BA.unlock(); playMusic(); } });
 window.addEventListener("keyup", function (e) { keys[e.key] = false; });
 
 /* ---------- 5) UPDATE (physics) ---------- */
