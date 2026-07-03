@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     }
 
     // Light list (omit the big html column).
-    const cols = "select=id,game_id,title,theme,mechanic_name,character_name,creator_name,preview_image_url,play_count,created_at";
+    const cols = "select=id,game_id,title,theme,mechanic_name,character_name,creator_name,preview_image_url,play_count,created_at,moderation_status";
     const cap = Math.min(parseInt(limit, 10) || 30, 100);
     let url = supabaseUrl + "/rest/v1/published_games?" + cols + "&order=created_at.desc&limit=" + cap;
     if (deviceId) {
