@@ -68,14 +68,8 @@
       <button class="hudBtn" id="btnSound" aria-label="Sound"></button>
       <button class="hudBtn hide" id="btnLevels" aria-label="Levels"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
     </div>
-    <!-- Level select -->
-    <div class="overlay" id="ovSelect">
-      <div class="panel">
-        <h1>String Match</h1>
-        <p class="sub">Draw a string from a block to its matching buddy. Don't cross the strings!</p>
-        <div class="worlds" id="worldGrid"></div>
-      </div>
-    </div>
+    <!-- Shared start screen / level picker (buildable-startscreen.js) -->
+    <div id="start" style="position:absolute; inset:0; z-index:40; display:none;"></div>
     <!-- Win -->
     <div class="overlay hide" id="ovWin">
       <div class="panel">
@@ -88,6 +82,7 @@
 </div>
 
 <script src="/buildable-audio.js"></script>
+<script src="/buildable-startscreen.js"></script>
 <script>
 (function(){
 "use strict";
@@ -214,8 +209,7 @@ var gBg=document.getElementById("gBg"), gClouds=document.getElementById("gClouds
     gBlocks=document.getElementById("gBlocks"), gDemo=document.getElementById("gDemo"),
     board=document.getElementById("board"), stage=document.getElementById("stage"),
     statusBox=document.getElementById("status"), statusText=document.getElementById("statusText"),
-    ovSelect=document.getElementById("ovSelect"), ovWin=document.getElementById("ovWin"),
-    worldGrid=document.getElementById("worldGrid"),
+    startHost=document.getElementById("start"), ovWin=document.getElementById("ovWin"),
     btnSound=document.getElementById("btnSound"), btnLevels=document.getElementById("btnLevels"),
     btnNext=document.getElementById("btnNext"), winTitle=document.getElementById("winTitle"),
     winSub=document.getElementById("winSub");
@@ -227,6 +221,8 @@ var LOCK_SVG='<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor
 var STAR_SVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M12 2l3 6.9 7.5.6-5.7 4.9 1.8 7.3L12 17.8 5.1 21.7l1.8-7.3L1.2 9.5l7.5-.6z"/></svg>';
 
 var BA=(typeof window!=="undefined")?window.BuildableAudio:null;
+var BS=(typeof window!=="undefined")?window.BuildableStartScreen:null;
+var startScreen=null;
 var muted=false, musicOn=false;
 function unlock(){ if(BA){ BA.unlock&&BA.unlock(); if(BA.configure) BA.configure({sfxBase:"/api/sfx?s="});
   if(!musicOn && BA.setMusic){ try{ BA.setMusic("/api/library-music?name=spa_heartbeat_warm"); musicOn=true; }catch(e){} } } }
@@ -261,29 +257,38 @@ function toXY(e){ var r=svg.getBoundingClientRect(), k=VB/r.width;
   return [(e.clientX-r.left)*k, (e.clientY-r.top)*k]; }
 function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
 
-/* ---------- level select ---------- */
-function buildSelect(){
-  worldGrid.innerHTML="";
-  WORLDS.forEach(function(w,i){
-    var b=document.createElement("button"); b.className="world";
-    var locked=i>unlocked;
-    var st=starsMap[i]||0;
-    b.innerHTML='<img src="'+BGSRC[w.bg]+'" alt=""/>'+
-      '<div class="cap">'+w.name+' &middot; '+w.pairs.length+' pairs</div>'+
-      (st?'<div class="stars">'+STAR_SVG+' '+st+'</div>':'')+
-      (locked?'<div class="lock">'+LOCK_SVG+'</div>':'');
-    if(!locked) b.onclick=function(){ unlock(); startLevel(i); };
-    worldGrid.appendChild(b);
+/* ---------- start screen / level picker (shared buildable-startscreen.js) ---------- */
+function buildCfg(){
+  var levels=WORLDS.map(function(w,i){
+    var st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
+    return { n:i+1, name:w.name, color:"#2b4a6b",
+      img:(st!=="locked"?BGSRC[w.bg]:undefined), maxStars:3,
+      stars:(st==="done"?(starsMap[i]||3):undefined), state:st };
   });
+  return { title:"String Match",
+    subtitle:"Draw a string to connect the matching buddies \u2014 don't cross!",
+    sound:!(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels:levels };
 }
-function showSelect(){ screen="select"; ovSelect.classList.remove("hide"); ovWin.classList.add("hide");
-  statusBox.classList.add("hide"); btnLevels.classList.add("hide"); buildSelect(); }
+function showMenu(){
+  screen="select"; ovWin.classList.add("hide"); statusBox.classList.add("hide");
+  btnLevels.classList.add("hide"); btnSound.style.display="none";
+  if(startHost) startHost.style.display="block";
+  if(!BS||!startHost) return;
+  var cb={
+    onPlay:function(n){ unlock(); startLevel(n-1); },
+    onSound:function(on){ unlock(); muted=!muted; if(BA&&BA.toggleMute) BA.toggleMute(); },
+    onBack:function(){ try{ window.parent.postMessage("nav:exit","*"); }catch(e){} }
+  };
+  if(!startScreen) startScreen=BS.mount(startHost, buildCfg(), cb);
+  else startScreen.update(buildCfg());
+}
 
 /* ---------- start a level ---------- */
 function startLevel(i){
   levelIdx=i; level=WORLDS[i]; committed={}; cur=null; particles=[]; celebrate=0;
-  ovSelect.classList.add("hide"); ovWin.classList.add("hide");
-  statusBox.classList.remove("hide"); btnLevels.classList.remove("hide");
+  if(startHost) startHost.style.display="none";
+  ovWin.classList.add("hide");
+  statusBox.classList.remove("hide"); btnLevels.classList.remove("hide"); btnSound.style.display="";
   screen="play";
   // background (created once)
   gBg.innerHTML=""; gBg.appendChild(el("image",{href:BGSRC[level.bg],x:0,y:0,width:VB,height:VB,preserveAspectRatio:"xMidYMid slice"}));
@@ -384,7 +389,7 @@ function winLevel(){
   setTimeout(function(){ ovWin.classList.remove("hide"); },700);
 }
 btnNext.onclick=function(){ unlock();
-  if(levelIdx>=WORLDS.length-1){ showSelect(); }
+  if(levelIdx>=WORLDS.length-1){ showMenu(); }
   else startLevel(levelIdx+1);
 };
 
@@ -472,7 +477,7 @@ burst=function(p,color){ _burst(p,color); if(level){ level.pairs.forEach(functio
 /* ---------- controls ---------- */
 btnSound.onclick=function(){ unlock(); muted=!muted; if(BA&&BA.toggleMute) BA.toggleMute();
   btnSound.innerHTML=muted?SND_OFF:SND_ON; };
-btnLevels.onclick=function(){ showSelect(); };
+btnLevels.onclick=function(){ showMenu(); };
 
 board.addEventListener("pointerdown",down);
 board.addEventListener("pointermove",move);
@@ -480,7 +485,7 @@ board.addEventListener("pointerup",up);
 board.addEventListener("pointercancel",function(){ cur=null; });
 
 /* ---------- boot ---------- */
-btnSound.innerHTML=SND_ON; resize(); showSelect(); requestAnimationFrame(loop);
+btnSound.innerHTML=SND_ON; resize(); showMenu(); requestAnimationFrame(loop);
 })();
 </script>
 </body>
