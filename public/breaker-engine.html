@@ -445,6 +445,19 @@ function star5(cx,cy,r,filled){ ctx.beginPath();
 function drawEarnedStars(earned){ const r=26, gap=72, y=H/2-86; const xs=[W/2-gap,W/2,W/2+gap];
   for(let i=0;i<3;i++){ star5(xs[i], y, r, i<earned); } }
 
+// --- Tutorial "demo hand" (shared 3D pointing hand under the paddle) ---
+const tutHand = new Image(); let tutHandReady=false;
+tutHand.onload=()=>{ tutHandReady=true; };
+tutHand.src="/tutorial-hand.png?v=1";
+// Fraction across the art where the pointing fingertip sits (0=left,1=right).
+// Auto-measured from the transparent PNG; updated at build time.
+const TUT_HAND_TIP=0.696;
+function drawTutorialHand(px, topY){
+  if(!tutHandReady || !tutHand.width) return;
+  const h=92, w=h*(tutHand.width/tutHand.height);
+  ctx.drawImage(tutHand, px - w*TUT_HAND_TIP, topY, w, h);
+}
+
 function drawTutorial(){ const tt=Date.now()/1000;
   ctx.fillStyle="rgba(10,12,40,.82)"; ctx.fillRect(0,0,W,H);
   ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="bold 30px Fredoka,sans-serif";
@@ -461,9 +474,7 @@ function drawTutorial(){ const tt=Date.now()/1000;
     ctx.fillStyle="#9b7bff"; rrect(px-pw/2,py,pw,18,9); ctx.fill();
     const bx=W/2+Math.sin((tt-0.2)*1.4)*150, by=py-26-Math.abs(Math.sin(tt*3))*40;
     ctx.save(); ctx.shadowColor="#9b7bff"; ctx.shadowBlur=16; ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(bx,by,9,0,7);ctx.fill(); ctx.restore();
-    if(BR.hand)BR.hand(ctx, px, py+44, 1.2);
-    const cols=["#ff7aa8","#ffd86b","#7ee0a0","#62d0ff","#9b7bff"];
-    for(let i=0;i<5;i++){ ctx.fillStyle=cols[i]; rrect(W/2-160+i*66, H*0.30, 56, 22, 6); ctx.fill(); }
+    drawTutorialHand(px, py+18);
   }
   const pr=32+Math.sin(tt*3)*3, ay=H-72; ctx.fillStyle="rgba(155,123,255,.25)"; ctx.beginPath();ctx.arc(W/2,ay,pr+10,0,7);ctx.fill();
   ctx.fillStyle="#9b7bff"; ctx.beginPath();ctx.arc(W/2,ay,pr,0,7);ctx.fill();

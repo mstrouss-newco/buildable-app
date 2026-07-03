@@ -348,6 +348,10 @@
       "dest": "/matter.min.js"
     },
     {
+      "src": "/tutorial-hand.png",
+      "dest": "/tutorial-hand.png"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
