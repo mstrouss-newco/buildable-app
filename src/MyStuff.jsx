@@ -52,6 +52,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
   const [songs, setSongs] = useState([]);
   const [stories, setStories] = useState([]);
   const [games, setGames] = useState([]);
+  const [arts, setArts] = useState([]);
 
   async function loadSongs() {
     try {
@@ -99,17 +100,37 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
       setGames(Array.isArray(j.games) ? j.games : []);
     } catch { /* ignore */ }
   }
+  async function loadArt() {
+    try {
+      const deviceId = getDeviceId();
+      const kid = getKidProfileId();
+      const r = await fetch("/api/list-art?deviceId=" + encodeURIComponent(deviceId) +
+        (kid ? "&kidProfileId=" + encodeURIComponent(kid) : ""));
+      const j = await r.json();
+      setArts(Array.isArray(j.art) ? j.art : []);
+    } catch { /* ignore */ }
+  }
+  async function removeArt(artId) {
+    try {
+      await fetch("/api/delete-art", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: getDeviceId(), kidProfileId: getKidProfileId() || undefined, artId }),
+      });
+      setArts((prev) => prev.filter((x) => x.art_id !== artId));
+    } catch { /* ignore */ }
+  }
 
   // Publish / un-publish any creation from the library. Optimistic: flip the card
   // right away, then tell the server. kind is "song" | "story" | "game".
   async function togglePublish(kind, id, next) {
     const flip = (arr) => arr.map((x) => {
-      const key = kind === "song" ? "song_id" : kind === "story" ? "story_id" : "game_id";
+      const key = kind === "song" ? "song_id" : kind === "story" ? "story_id" : kind === "art" ? "art_id" : "game_id";
       if (x[key] !== id) return x;
       return kind === "game" ? { ...x, moderation_status: next ? "approved" : "hidden" } : { ...x, published: next };
     });
     if (kind === "song") setSongs(flip);
     else if (kind === "story") setStories(flip);
+    else if (kind === "art") setArts(flip);
     else setGames(flip);
     try {
       await fetch("/api/publish-creation", {
@@ -118,7 +139,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
       });
     } catch { /* keep optimistic */ }
   }
-  useEffect(() => { loadSongs(); loadStories(); loadGames(); }, []);
+  useEffect(() => { loadSongs(); loadStories(); loadGames(); loadArt(); }, []);
 
   // Refresh when the saved library finishes loading or anything is saved/deleted.
   useEffect(() => {
@@ -146,6 +167,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
     { id: "songs", label: "My Songs", count: songs.length },
     { id: "stories", label: "My Stories", count: stories.length },
     { id: "games", label: "My Games", count: games.length },
+    { id: "art", label: "My Art", count: arts.length },
   ];
 
   return (
@@ -309,6 +331,32 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
                 <div style={s.cardActions}>
                   <PublishBtn published={g.moderation_status === "approved"} onClick={() => togglePublish("game", g.game_id, g.moderation_status !== "approved")} />
                   <button style={s.shareBtn} onClick={() => { window.location.href = "/play/" + g.game_id; }}>Play</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* ---------- Art (drawings) ---------- */}
+      {tab === "art" && (
+        arts.length === 0 ? (
+          <div style={s.grid}><button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button></div>
+        ) : (
+          <div style={s.grid}>
+            <button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button>
+            {arts.map((a) => (
+              <div key={a.art_id} style={s.card}>
+                {a.thumbnail ? (
+                  <img src={a.thumbnail} alt={a.title} style={s.cardImage} />
+                ) : (
+                  <div style={s.noImage}><svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19a7 7 0 1 1 7-7c0 1.7-1.3 3-3 3h-1a2 2 0 0 0-1.5 3.3A1.5 1.5 0 0 1 12 19z"/><circle cx="8.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10.5" r="1"/></svg></div>
+                )}
+                <h3 style={s.cardTitle}>{a.title || "My drawing"}</h3>
+                <p style={s.cardDesc}>{a.theme || "A drawing"}</p>
+                <div style={s.cardActions}>
+                  <PublishBtn published={!!a.published} onClick={() => togglePublish("art", a.art_id, !a.published)} />
+                  <button style={s.deleteBtn} onClick={() => removeArt(a.art_id)}>Delete</button>
                 </div>
               </div>
             ))}

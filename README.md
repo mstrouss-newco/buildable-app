@@ -2874,3 +2874,18 @@ selects, tumble moves), and corrected the offending `tennis_*`/`tumble_*` values
 Live-QA'd on buildablekids.com — `/api/sfx?s=tennis_hit` and `?s=tennis_wall` now return real
 audio (200, audio/mpeg), and in-game every Breaker sound buffer loads and plays (measured audio
 output on all of shoot/select/coin/boom/levelup/hurt/win/lose), no console errors.
+
+### Kid drawings now save & show in My Stuff (2026-07-02)
+Art Studio drawings were saving, but never appeared in the **My Stuff** library — two root
+causes. (1) Art Studio wrote/read under its own private `localStorage` key (`artstudio:device`)
+instead of the app-wide `deviceId`, and never sent `kid_profile_id`, so its saves lived in a
+separate lane the library couldn't see. Art Studio now uses the shared `deviceId` (migrating any
+existing `artstudio:device` id so old drawings aren't orphaned) and sends the active kid's
+`kid_profile_id` on save + gallery list. (2) `My Stuff` had no drawings tab at all, and
+`api/list-art` deliberately dropped `data:` PNG thumbnails (showing a generic theme placeholder
+instead of the real picture). Added a **My Art** tab to `src/MyStuff.jsx` (loads `/api/list-art`,
+shows each drawing with Publish + Delete), a new `api/delete-art.js` endpoint (kid-scoped, mirrors
+`delete-song`), extended `togglePublish` to handle `kind:"art"` (publish-creation already
+supported it), and changed `api/list-art` to use the saved PNG itself as the thumbnail (kid
+galleries cap at 40, so shipping the small images is fine). Net: a saved drawing now shows its
+real picture in My Stuff, can be published/shared with family, and can be deleted.

@@ -343,9 +343,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       c.save(); c.translate(42,31); var k=46/110; c.scale(k,k); c.strokeStyle="#2a2a2a"; c.lineWidth=2.6/k; c.lineJoin="round"; c.lineCap="round"; try{ COLORING[id](c); }catch(e){} c.restore();
       var d=tileMedia(function(){ S.coloring=id; S.bg={type:"color",c:"#ffffff"}; S.style="paper"; redraw(); ov.classList.remove("show"); toast("Color it in! Try the Fill bucket."); }); d.appendChild(cv); wrap.appendChild(d); });
     ov.classList.add("show"); }
-  function deviceId(){ var k="artstudio:device" ,v=localStorage.getItem(k); if(!v){ v="dev_"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem(k,v); } return v; }
+  function deviceId(){ var k="deviceId",v=localStorage.getItem(k); if(!v){ var old=localStorage.getItem("artstudio:device"); v=old||("dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10)); localStorage.setItem(k,v); } return v; }
+  function kidId(){ try{ var kk=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return kk&&kk.id?kk.id:""; }catch(e){ return ""; } }
   function openGallery(){ var ov=document.getElementById("galleryOv"), wrap=document.getElementById("galleryWrap"); wrap.innerHTML="<p style='opacity:.7'>Loading…</p>"; ov.classList.add("show");
-    fetch("/api/list-art?deviceId="+encodeURIComponent(deviceId())).then(function(r){return r.ok?r.json():null;}).then(function(j){ var arr=(j&&j.art)||[];
+    fetch("/api/list-art?deviceId="+encodeURIComponent(deviceId())+(kidId()?"&kidProfileId="+encodeURIComponent(kidId()):"")).then(function(r){return r.ok?r.json():null;}).then(function(j){ var arr=(j&&j.art)||[];
       if(!arr.length){ wrap.innerHTML="<p style='opacity:.85'>No saved art yet — make something and tap the heart!</p>"; return; } wrap.innerHTML="";
       arr.forEach(function(it){ var d=tileMedia(function(){ loadArt(it.art_id); ov.classList.remove("show"); }); if(it.thumbnail){ var im=new Image(); im.src=it.thumbnail; d.appendChild(im); } else d.appendChild(document.createTextNode((it.title||"Art").slice(0,12))); wrap.appendChild(d); });
     }).catch(function(){ wrap.innerHTML="<p style='opacity:.85'>Couldn't load your art.</p>"; }); }
@@ -354,7 +355,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
   function doSave(){ var title=(document.getElementById("artTitle").value||"My masterpiece").slice(0,40), share=document.getElementById("shareChk").checked, image_b64="";
     try{ image_b64=paper.toDataURL("image/png"); }catch(e){}
-    var payload={ art_id:"art_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), device_id:deviceId(), title:title, theme:(S.bg&&S.bg.name)||S.style||"rainbow", image_b64:image_b64, art:{ops:S.ops,bg:S.bg,style:S.style,coloring:S.coloring}, published:!!share };
+    var payload={ art_id:"art_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), device_id:deviceId(), kid_profile_id:kidId()||undefined, title:title, theme:(S.bg&&S.bg.name)||S.style||"rainbow", image_b64:image_b64, art:{ops:S.ops,bg:S.bg,style:S.style,coloring:S.coloring}, published:!!share };
     document.getElementById("saveOv").classList.remove("show"); playSfx("art_save"); celebrate();
     fetch("/api/save-art",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).then(function(r){ if(r.ok) toast(share?"Saved & shared with family!":"Saved to your gallery!"); else downloadFallback(image_b64,title); }).catch(function(){ downloadFallback(image_b64,title); }); }
   function downloadFallback(data,title){ if(!data){ toast("Saved!"); return; } try{ var a=document.createElement("a"); a.href=data; a.download=(title||"art").replace(/\s+/g,"_")+".png"; document.body.appendChild(a); a.click(); a.remove(); toast("Saved a copy to your device!"); }catch(e){ toast("Saved!"); } }
