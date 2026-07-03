@@ -6,6 +6,9 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Breaker — ball + paddle always visible on light backgrounds (July 2 2026)
+Owner reported the ball and paddle were hard to see when playing on the Candy background. Cause: drawBall() and drawPaddleAt() (public/breaker-engine.html) only had a color-matched glow (often white/light), no contrasting outline, so light-colored pieces washed out over light scenery. Fix: added a crisp semi-transparent dark stroke (rgba(20,22,45,~.5)) around both the ball (ring at its draw radius, incl. flame ball) and the paddle's rounded rect, drawn with shadowBlur reset to 0 so it stays sharp. Pieces now pop on every backdrop (candy image + light pink gradient fallback both browser-QA'd). Scoped to public/breaker-engine.html.
+
 ## Notes for AI tools / agents (read this first)
 
 **What this is.** A no-login kids' game builder. A child enters a name + age, an AI
