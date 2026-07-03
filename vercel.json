@@ -220,6 +220,10 @@
       "dest": "/chess-art/$1"
     },
     {
+      "src": "/parallax/(.*)",
+      "dest": "/parallax/$1"
+    },
+    {
       "src": "/game-music/(.*)",
       "dest": "/game-music/$1"
     },
