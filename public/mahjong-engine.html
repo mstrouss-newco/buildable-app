@@ -44,7 +44,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <body>
 <div id="wrap">
   <canvas id="cv"></canvas>
-  <div id="banner" class="hide"><span id="bLeft">Tiles left: 0</span></div>
+  <div id="banner" class="hide"><span id="bLeft">Tiles left: 0</span><span id="bTime" style="opacity:.85">0:00</span></div>
   <div id="ctrls" class="hide">
     <button class="cbtn" id="soundBtn" aria-label="Sound"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9v6h4l5 4V5L9 9z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg></button>
     <button class="cbtn" id="hintBtn" aria-label="Hint"><span>Hint</span></button>
@@ -80,9 +80,11 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
   base:"/game-assets/mahjong-tiles/",
   // tile-face sets the kid can pick — CC0 Kenney art (see LICENSE.txt in that folder)
   sets:[
-    {key:"animals", name:"Animals", count:24},
-    {key:"cards",   name:"Cards",   count:24},
-    {key:"candy",   name:"Candy",   count:20},
+    {key:"animals",  name:"Animals",  count:24},
+    {key:"cards",    name:"Cards",    count:24},
+    {key:"candy",    name:"Candy",    count:20},
+    {key:"shapes",   name:"Shapes",   count:24},
+    {key:"stickers", name:"Stickers", count:20},
   ],
   // 1 / 2 / 3 fire difficulty = board size (concentric stacked rectangles; all peelable)
   levels:[
@@ -100,6 +102,14 @@ let selId=-1;                     // currently selected free tile id
 let hintPair=null, hintUntil=0;
 let nowMs=0, headless=false;
 let PREFS={ setIdx:0, lvlIdx:0 };
+let startedAt=0, elapsedMs=0, isNewBest=false, wonBest=0;   // clear timer + personal best
+
+// ---------- BEST TIME (per difficulty+set, saved on this device) ----------
+function fmtTime(ms){ const s=Math.max(0,Math.round(ms/1000)); const m=(s/60)|0; const r=s%60; return m+":"+(r<10?"0":"")+r; }
+function bestKey(){ return "L"+PREFS.lvlIdx+"S"+PREFS.setIdx; }
+function allBest(){ try{ return JSON.parse(localStorage.getItem("bk_mahjong_best")||"{}")||{}; }catch(e){ return (window.__mjBest=window.__mjBest||{}); } }
+function getBest(li,si){ const b=allBest(); return b["L"+li+"S"+si]||0; }
+function saveBest(ms){ const b=allBest(); b[bestKey()]=ms; try{ localStorage.setItem("bk_mahjong_best",JSON.stringify(b)); }catch(e){ window.__mjBest=b; } }
 const FACE_IMG=[];                // index -> HTMLImageElement for current set (optional; drawn fallback)
 let fx = BM?BM.makeFx():{parts:[],pops:[],shake:0,flash:0,flashCol:"#fff"};
 let cv, ctx, W=0, H=0, DPR=1;
@@ -171,6 +181,7 @@ function build(){
   for(let tryN=0; tryN<8 && !ord; tryN++) ord=assignSolvable(tiles, set.count);
   solution=ord||[];
   selId=-1; hintPair=null; state="play";
+  startedAt=Date.now(); elapsedMs=0; isNewBest=false; wonBest=0;
   if(!headless){ loadSetArt(set); layout(); showChrome(true); updateBanner(); }
 }
 
@@ -215,6 +226,9 @@ function doHint(){
   else autoShuffle();
 }
 function winGame(){
+  elapsedMs=Date.now()-startedAt;
+  const prev=getBest(PREFS.lvlIdx,PREFS.setIdx);
+  if(!headless){ isNewBest=(!prev || elapsedMs<prev); if(isNewBest) saveBest(elapsedMs); wonBest=isNewBest?elapsedMs:prev; }
   state="win"; showChrome(false);
   if(BA)BA.sfx("win");
   if(BM&&!headless){ for(let i=0;i<5;i++) BM.explode(fx, W*(0.15+0.175*i), H*0.4, i%2?"#FFD23F":"#7CF6B0", {n:16, pop:i===2?"You cleared it!":""}); }
@@ -292,6 +306,22 @@ function drawTile(t){
   if(!free){ ctx.fillStyle="rgba(10,18,34,.34)"; rr(ctx,p.x,p.y,w,h,r); ctx.fill(); }
   if(hinted){ ctx.lineWidth=w*0.06; ctx.strokeStyle="#33d17a"; rr(ctx,p.x-2,p.y-2,w+4,h+4,r+2); ctx.stroke(); }
 }
+function drawWin(){
+  const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
+  ctx.save();
+  ctx.fillStyle="rgba(8,12,24,.55)"; ctx.fillRect(0,0,vw,vh);
+  const pw=Math.min(360,vw*0.86), ph=210, px=(vw-pw)/2, py=(vh-ph)/2;
+  ctx.fillStyle="#16223c"; ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.lineWidth=2;
+  rr(ctx,px,py,pw,ph,22); ctx.fill(); ctx.stroke();
+  ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillStyle="#fff";
+  ctx.font="900 26px 'Baloo 2',Nunito,sans-serif"; ctx.fillText("You cleared it!", vw/2, py+54);
+  ctx.font="800 18px Nunito,sans-serif"; ctx.fillStyle="#cfe3ff";
+  ctx.fillText("Time  "+fmtTime(elapsedMs), vw/2, py+94);
+  if(isNewBest){ ctx.fillStyle="#7CF6B0"; ctx.font="900 20px 'Baloo 2',Nunito,sans-serif"; ctx.fillText("New best time!", vw/2, py+128); }
+  else if(wonBest){ ctx.fillStyle="#a7b6d6"; ctx.font="700 16px Nunito,sans-serif"; ctx.fillText("Best  "+fmtTime(wonBest), vw/2, py+126); }
+  ctx.fillStyle="#8fa0c4"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Tap to play again", vw/2, py+ph-24);
+  ctx.restore();
+}
 function draw(){
   if(!ctx) return;
   ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -307,6 +337,7 @@ function draw(){
   for(const t of order) drawTile(t);
   ctx.restore();
   if(BM){ BM.draw(ctx,fx,{W:W,H:H}); }
+  if(state==="win") drawWin();
   return "ok";
 }
 
@@ -342,8 +373,9 @@ function buildStartCfg(){
   return {
     title:GAME_CONFIG.title, subtitle:"Match free tiles in pairs to clear the board",
     sound: BA?!BA.muted:true, showBack:false,
-    levels: GAME_CONFIG.levels.map((lv,i)=>({ n:i+1, name:lv.name, state:"ready",
-      img: flameIcon(lv.flames), foot: lv.foot+" · "+curSet().name })),
+    levels: GAME_CONFIG.levels.map((lv,i)=>{ const bt=getBest(i,PREFS.setIdx);
+      return { n:i+1, name:lv.name, state:"ready", img: flameIcon(lv.flames),
+        foot: lv.foot+" · "+curSet().name+(bt?" · Best "+fmtTime(bt):"") }; }),
     customizeLabel:"Pick your tiles",
   };
 }
@@ -379,13 +411,15 @@ function resize(){ if(!cv) return; DPR=Math.min(2,(window.devicePixelRatio||1));
 let _last=0;
 function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
   nowMs+=dt*1000; if(BM)BM.update(fx,dt);
+  if(state==="play"){ elapsedMs=Date.now()-startedAt; const bt=document.getElementById("bTime"); if(bt) bt.textContent=fmtTime(elapsedMs); }
   try{ draw(); }catch(e){ if(typeof console!=="undefined") console.error("draw",e); }
   requestAnimationFrame(frame);
 }
 if(typeof document!=="undefined" && document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
   resize(); window.addEventListener("resize",resize);
-  const onTap=(e)=>{ if(state!=="play") return; const t=e.touches?e.touches[0]:e;
+  const onTap=(e)=>{ if(state==="win"){ if(BA)BA.unlock(); showMenu(); return; } if(state!=="play") return;
+    const t=e.touches?e.touches[0]:e;
     const rb=cv.getBoundingClientRect(); const hit=pick(t.clientX-rb.left, t.clientY-rb.top);
     if(hit) tapTile(hit); };
   cv.addEventListener("mousedown",onTap);

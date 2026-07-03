@@ -11,3 +11,5 @@ Sets:
 - candy/   -> Kenney "Platformer Assets Candy" (CC0)
 
 Files are renamed 01.png..NN.png; each is one distinct tile face.
+- shapes/   -> Kenney "Shape Characters"        (CC0)
+- stickers/ -> Kenney "Emote Pack"              (CC0)

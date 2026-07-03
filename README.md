@@ -917,7 +917,13 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
-<<<<<<< HEAD
+## Session log — 2026-07-02 (Mahjong: 2 more tile sets + best-time record)
+
+Follow-ups to the new Mahjong engine. (1) **Two more tile sets** — **Shapes** (Kenney Shape Characters, 24 colour×shape bodies) and **Stickers** (Kenney Emote Pack, 20 friendly symbols: happy face, heart, star, music, idea…), both CC0, served from `public/game-assets/mahjong-tiles/{shapes,stickers}/`; the "Pick your tiles" sheet now offers five sets (Animals / Cards / Candy / Shapes / Stickers). (2) **Best-time record** — a live m:ss timer in the banner; on a clear the time is compared to the personal best for that difficulty+set (saved in `localStorage` as `bk_mahjong_best`, with an in-memory fallback), and a win overlay shows the time plus "New best time!" or the current best and "Tap to play again" (tapping returns to the start screen). Each start-screen difficulty card shows the best time for the selected set. QA (`qa-mahjong.mjs`) now covers all 3×5 difficulty×set combos — all solvable, never-stuck, render ok.
+
+---
+
+---
 ## Session log — 2026-07-02 (New game: Mahjong Solitaire, kid version)
 
 Added a new hand-authored Track B engine, `public/mahjong-engine.html` — a calm Mahjong **Solitaire** (tile-matching) puzzle. The kid picks a **tile set** (Animals / Cards / Candy — CC0 Kenney art served from `public/game-assets/mahjong-tiles/<set>/`) and a **1 / 2 / 3 Fire** difficulty (small 36 / medium 72 / big 114 tiles), then clears the stacked board by matching free (uncovered, side-open) tiles in pairs.
@@ -925,11 +931,12 @@ Added a new hand-authored Track B engine, `public/mahjong-engine.html` — a cal
 Always-winnable by construction: boards are generated with a reverse **"peel" builder** (repeatedly assign a shared face to two currently-free positions and remove them), which guarantees a full solution exists. If the kid ever runs out of moves, the board silently **re-mixes** (still solvable), and there are **Hint** and **Mix** buttons — so a child can never get stuck. Uses the shared libs (BS start screen with drawn flame difficulty icons — no emoji; BM juice; BA audio) and five new bespoke ElevenLabs sounds registered in `api/sfx.js` (`mahjong_pick/match/nope/shuffle/win`). Standard nav (shell Home top-left, Sound/Hint/Mix top-right), favicon + no-longpress blocks, and posts `{source:"buildable",kind:"win"}` on a clear for helper + telemetry.
 
 Wired in: `vercel.json` route for `/mahjong-engine.html`; a **Mahjong** tile + `MahjongScreen` + `SCREEN_MAHJONG` (in `GAME_SLUGS`) in `src/BuildableKids.jsx`; a picker-thumbnail prompt in `api/images.js`. Headless QA `qa-mahjong.mjs` proves every difficulty×set board is solvable (guaranteed-solution replay clears with zero illegal moves) and the never-stuck greedy+mix player also clears; render smoke returns "ok". Tile art is CC0 Kenney (see `public/game-assets/mahjong-tiles/LICENSE.txt`).
-=======
+
+---
 ## Session log — 2026-07-02 (New game: String Match — draw-a-string connect puzzle, Kenney art)
 
 Added a new Track B engine **String Match** at `public/string-match.html` and wired it into the Games picker (`src/BuildableKids.jsx`: `SCREEN_STRINGMATCH`, `StringMatchScreen`, tile, `GAME_SLUGS`) with an explicit `vercel.json` route (`/string-match.html` + `/string-match`). Gameplay: kids **draw a freeform string with a finger from one block to its matching-color buddy**; strings may not cross. On a good connect the two blocks swap to a happy face, sparkles burst, and a coin chime plays; finishing a level celebrates and posts `{source:"buildable",kind:"win"}` for the helper + telemetry. Art is **Kenney (CC0)**: Shape Characters blocks (6 colors, `public/kenney/shapechars/`) and Background Elements Remastered full backdrops (`public/kenney/bg/` — grass/forest/fall/desert/castles) give 5 worlds of escalating pairs (3→6). First-play shows an **animated pointing-hand demo** drawing the first string. Sounds via `BA` (core sfx `select`/`coin`/`error`/`celebrate`/`win`) with library music `spa_heartbeat_warm`; nav via shared `GameFrame` (Home top-left), plus in-game top-right Sound + Levels buttons. **Always-winnable + QA:** engine exposes `window.STRINGMATCH_GAME` with a pure-geometry perfect-player solver; `qa-stringmatch.mjs` asserts all 5 levels are solvable without crossing (ALL PASS). Follow-ups: register the Kenney blocks/backgrounds in the shared asset library (`community_*`); add save/share/publish + a make-a-level; generate a picker thumbnail (`api/images` GAMES id `stringmatch`).
->>>>>>> 9607713 (Add String Match game: draw-a-string connect puzzle w/ Kenney art + demo + 5 worlds)
+
 
 ---
 ## Session log — 2026-07-02 (Sound Machine: start unmuted + graphic speaker icon)
