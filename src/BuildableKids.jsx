@@ -1041,7 +1041,7 @@ function GlobalInviteAlert({ activeKid, hidden, onOpenFriendInvite, onOpenRtInvi
   };
   return (
     <div style={GIA.wrap}>
-      <style>{"@keyframes giaDrop{from{transform:translate(-50%,-120%);opacity:0}to{transform:translate(-50%,0);opacity:1}}"}</style>
+      <style>{"@keyframes giaDrop{from{transform:translateY(-120%);opacity:0}to{transform:translateY(0);opacity:1}}"}</style>
       <div style={GIA.card}>
         <span style={GIA.ava}>{(who || "?").trim().charAt(0).toUpperCase()}</span>
         <span style={GIA.text}><b>{who}</b> wants to play <b>{title}</b>!</span>
@@ -1053,7 +1053,7 @@ function GlobalInviteAlert({ activeKid, hidden, onOpenFriendInvite, onOpenRtInvi
 }
 const GIA = {
   wrap: { position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, display: "flex", justifyContent: "center", pointerEvents: "none", padding: "10px 12px" },
-  card: { pointerEvents: "auto", transform: "translate(-50%,0)", position: "relative", left: "50%", display: "flex", alignItems: "center", gap: 12, maxWidth: 460, width: "calc(100% - 24px)", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", color: "#fff", borderRadius: 16, padding: "12px 14px", boxShadow: "0 10px 30px rgba(0,0,0,0.35)", fontFamily: "'Nunito',sans-serif", animation: "giaDrop 0.35s cubic-bezier(.2,.9,.3,1.3)" },
+  card: { pointerEvents: "auto", display: "flex", alignItems: "center", gap: 12, maxWidth: 460, width: "calc(100% - 24px)", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", color: "#fff", borderRadius: 16, padding: "12px 14px", boxShadow: "0 10px 30px rgba(0,0,0,0.35)", fontFamily: "'Nunito',sans-serif", animation: "giaDrop 0.35s cubic-bezier(.2,.9,.3,1.3)" },
   ava: { width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, flex: "0 0 auto" },
   text: { flex: 1, fontSize: 15, lineHeight: 1.25 },
   join: { fontFamily: "'Fredoka',sans-serif", fontWeight: 800, fontSize: 15, color: "#5a3fd6", background: "#fff", border: "none", borderRadius: 12, padding: "9px 16px", cursor: "pointer", flex: "0 0 auto" },
