@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Parent login: one math check, not two + add a second parent (July 2 2026)
+Owner asks: (1) the grown-up login was weird — you'd tap "Grown-ups", answer a math check, land on the who's-playing screen, tap "For grown-ups", then answer a SECOND math check. (2) allow adding another parent to a family.
+
+**(1) One gate, not two.** The top-nav "Grown-ups" button (`GrownUpButton` in `src/BuildableKids.jsx`) already runs its own math check. It now flags the visit as `grownVerified` and passes `preVerified` into `src/GrownUpScreen.jsx`, which (a) opens straight to the Parents area for signed-in grown-ups and (b) skips its own `openParents()` math gate. Reaching the Grown-ups screen any OTHER way (e.g. the auto-open on app launch for a signed-in parent) still shows a single gate, so kids can't wander in. Net: one math question to reach Parents.
+
+**(2) Add another parent (family code).** A second grown-up can now make their OWN login and share the SAME kids. In Parents there's an "Add another parent" card: the owner shares a short **family code**; the other grown-up signs up and types it under "Joining another parent's family?". Reuses the friend-code style (no email service needed).
+- DB: `db/create-coparents.sql` (run ONCE in Supabase, after the accounts files) — adds a `co_parents` link table, a `friend_code` default on `parent_accounts`, widens the kid/song/game RLS via `my_family_owner_ids()` so a co-parent sees the same family, and a `join_family_by_code()` security-definer function. Additive + idempotent; solo families are unaffected (the link table is empty for them).
+- Code: `src/lib/accounts.js` adds `getFamilyStatus` / `joinFamilyByCode` and files new kids under the family OWNER so both grown-ups share them; `src/GrownUpScreen.jsx` renders the card.
+- **Note for the DB step:** this needs `db/create-coparents.sql` run in the Supabase SQL editor before "Add another parent" works live.
+
 ## Landing page — skip straight to the app for people we already know (July 2 2026)
 
 Visiting buildablekids.com (the marketing landing page) now auto-sends returning

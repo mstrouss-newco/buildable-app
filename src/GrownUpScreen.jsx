@@ -33,6 +33,7 @@ import {
   setActiveKid, getActiveKid,
   listFamilyProjects, assignProjectToKid,
   signInWithGoogle, completeOAuthRedirect,
+  getFamilyStatus, joinFamilyByCode,
 } from "./lib/accounts";
 import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount } from "./store";
 
@@ -129,10 +130,14 @@ function gsDeviceId() {
   } catch { return "dev_anon"; }
 }
 
-export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends }) {
+export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, preVerified }) {
   // Flow steps. Start on the kid picker when already signed in (returning
   // parent); otherwise start on the lane chooser.
-  const [step, setStep] = useState(isSignedIn() ? "picker" : "choose");
+  const [step, setStep] = useState(
+    preVerified
+      ? (isSignedIn() ? "parents" : "choose")
+      : (isSignedIn() ? "picker" : "choose")
+  );
 
   // auth form
   const [mode, setMode] = useState("signup"); // 'signup' | 'signin'
@@ -155,13 +160,50 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends }
   const [gateInput, setGateInput] = useState("");
   const [gateError, setGateError] = useState(null);
   function openParents() {
-    if (!kids || kids.length === 0) { setStep("parents"); return; }
+    // Already math-gated by the top-nav Grown-ups button, or no kids yet
+    // to protect -> go straight in without a second math question.
+    if (preVerified || !kids || kids.length === 0) { setGateError(null); setStep("parents"); return; }
     setGateInput(""); setGateError(null); setStep("gate");
   }
   function submitGate(e) {
     e.preventDefault();
     if (parseInt(gateInput, 10) === gateA * gateB) { setGateError(null); setStep("parents"); }
     else { setGateError("Not quite — ask a grown-up to help."); }
+  }
+
+  // ---- co-parents (add another grown-up to this family) ----
+  const [familyCode, setFamilyCode] = useState(null);
+  const [memberCount, setMemberCount] = useState(0);
+  const [joinedFamily, setJoinedFamily] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [familyBusy, setFamilyBusy] = useState(false);
+  const [familyMsg, setFamilyMsg] = useState(null);
+  const [familyErr, setFamilyErr] = useState(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  async function refreshFamily() {
+    try {
+      const st = await getFamilyStatus();
+      setFamilyCode(st.code); setMemberCount(st.memberCount); setJoinedFamily(st.joinedFamily);
+    } catch (e) { /* backend not ready -> hide the section */ }
+  }
+  function copyCode() {
+    try {
+      navigator.clipboard.writeText(familyCode || "");
+      setCodeCopied(true); setTimeout(() => setCodeCopied(false), 1500);
+    } catch (e) { /* clipboard blocked -> code is visible to read out */ }
+  }
+  async function handleJoinFamily(e) {
+    e.preventDefault();
+    setFamilyErr(null); setFamilyMsg(null); setFamilyBusy(true);
+    try {
+      await joinFamilyByCode(joinCode);
+      setJoinCode("");
+      setFamilyMsg("Joined! You now share this family's kids.");
+      await refreshFamily();
+      await refreshKids();
+    } catch (err) { setFamilyErr(err.message || "Could not join that family"); }
+    finally { setFamilyBusy(false); }
   }
   const [active, setActive] = useState(getActiveKid());
 
@@ -195,6 +237,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends }
   }
 
   useEffect(() => { refreshKids(); }, [signedIn]);
+  useEffect(() => { if (signedIn) refreshFamily(); }, [signedIn]);
 
   async function refreshProjects() {
     setLoadingProjects(true);
@@ -514,6 +557,50 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends }
             </form>
 
             {error && <p style={S.error}>{error}</p>}
+
+            {signedIn && (
+              <div style={{ marginTop: 20, paddingTop: 18, borderTop: CARD_BORDER }}>
+                <h2 style={{ ...S.title, fontSize: 20, margin: "0 0 4px" }}>Add another parent</h2>
+                <p style={S.lead}>
+                  A second grown-up can make their own login and see the same kids.
+                  Share this family code with them:
+                </p>
+                {familyCode ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 4px" }}>
+                    <code style={{
+                      flex: 1, fontFamily: FRED, fontSize: 22, letterSpacing: 3, color: "#fff",
+                      background: "rgba(255,255,255,0.06)", border: CARD_BORDER, borderRadius: 12,
+                      padding: "12px 14px", textAlign: "center",
+                    }}>{familyCode}</code>
+                    <button type="button" style={S.miniBtn} onClick={copyCode}>
+                      {codeCopied ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                ) : (
+                  <p style={S.fineprint}>Your family code will appear here once accounts are set up.</p>
+                )}
+                {memberCount > 0 && (
+                  <p style={S.fineprint}>
+                    {memberCount} other grown-up{memberCount > 1 ? "s have" : " has"} joined your family.
+                  </p>
+                )}
+
+                <p style={{ ...S.fineprint, marginTop: 14 }}>
+                  Joining another parent's family? Enter their code:
+                </p>
+                <form onSubmit={handleJoinFamily} style={S.addRow}>
+                  <input style={S.input} value={joinCode} maxLength={12}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="Family code (e.g. ABC234)" />
+                  <button type="submit" style={S.primaryBig} disabled={familyBusy || !joinCode.trim()}>
+                    {familyBusy ? "Joining…" : "Join family"}
+                  </button>
+                </form>
+                {joinedFamily && <p style={S.fineprint}>You're linked to another grown-up's family.</p>}
+                {familyMsg && <p style={S.noticeBox}>{familyMsg}</p>}
+                {familyErr && <p style={S.error}>{familyErr}</p>}
+              </div>
+            )}
 
             <LearningModeCard />
 

@@ -468,6 +468,11 @@ const FRIEND_GAME_TITLES = { chess: "Chess", checkers: "Checkers", tictactoe: "T
 
 export default function BuildableKids() {
   const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
+  // The top-nav "Grown-ups" button already runs its own math check before it
+  // opens this area. When it does, mark the visit pre-verified so the Grown-ups
+  // screen does NOT ask a SECOND math question (one gate, not two).
+  const [grownVerified, setGrownVerified] = useState(false);
+  const openGrownups = () => { setGrownVerified(true); setScreen(SCREEN_GROWNUP); };
   const [remixData, setRemixData] = useState(null);
   const startRemix = (item) => {
     setRemixData(item);
@@ -598,7 +603,7 @@ export default function BuildableKids() {
         onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
         onChess={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
-        onGrownUp={() => setScreen(SCREEN_GROWNUP)}
+        onGrownUp={openGrownups}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
         onHelper={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_HELPER); }}
         onJoinInvite={(m) => { setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); }}
@@ -924,7 +929,8 @@ export default function BuildableKids() {
   if (screen === SCREEN_GROWNUP) {
     return (
       <GrownUpScreen
-        onBack={() => setScreen(SCREEN_HOME)}
+        preVerified={grownVerified}
+        onBack={() => { setGrownVerified(false); setScreen(SCREEN_HOME); }}
         onOpenFriends={() => { setFriendsReturn(SCREEN_GROWNUP); setScreen(SCREEN_GROWNUP_FRIENDS); }}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
@@ -947,7 +953,7 @@ export default function BuildableKids() {
   return (
     <>
       {__view}
-      {[SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <GrownUpButton onGrownUp={() => setScreen(SCREEN_GROWNUP)} fixed />}
+      {[SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <GrownUpButton onGrownUp={openGrownups} fixed />}
       {/* App-wide "someone invited you to play" alert. Floats at the top of ANY
           screen (except Home, which already shows invites on its own cards), and
           auto-goes-away if ignored -- or the kid can tap the x to dismiss it. */}

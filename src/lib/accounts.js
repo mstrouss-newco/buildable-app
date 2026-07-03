@@ -215,8 +215,10 @@ export async function createKidProfile(displayName, avatar) {
   if (isSignedIn()) {
     const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
     const parent = await restFetch(`parent_accounts?id=eq.${me.id}&select=id`, { method: "GET" });
-    const parentId = parent?.[0]?.id;
-    if (!parentId) throw new Error("No parent account found");
+    if (!parent?.[0]?.id) throw new Error("No parent account found");
+    // If this grown-up joined another family as a co-parent, new kids are
+    // filed under the family OWNER so both grown-ups share the same kids.
+    const parentId = await familyOwnerId(me.id);
     const rows = await restFetch("kid_profiles?select=id,display_name:name,avatar,created_at", {
       method: "POST",
       body: JSON.stringify({ parent_id: parentId, name: name.slice(0, 40), avatar: avatar || "🙂" }),
@@ -264,6 +266,65 @@ export async function deleteKidProfile(id) {
   }
   const active = getActiveKid();
   if (active && active.id === id) setActiveKid(null);
+  return true;
+}
+
+// ---- CO-PARENTS (a second grown-up sharing one family) ------------
+// Every family owner has a short shareable "family code". A second grown-up
+// creates their own login, then types that code to link into the family and
+// see/manage the same kids. Kids stay owned by the family OWNER, so a solo
+// family is never affected (co_parents is simply empty for them).
+
+// Which account "owns" this grown-up's family: their own id, unless they
+// joined someone else's family as a co-parent (then the primary owner's id).
+async function familyOwnerId(myId) {
+  try {
+    const rows = await restFetch(
+      `co_parents?member_parent_id=eq.${myId}&select=primary_parent_id&limit=1`,
+      { method: "GET" }
+    );
+    if (Array.isArray(rows) && rows.length && rows[0].primary_parent_id) {
+      return rows[0].primary_parent_id;
+    }
+  } catch (e) { /* co_parents table not created yet -> solo family */ }
+  return myId;
+}
+
+// The code THIS grown-up shares to invite a partner into their family.
+export async function getFamilyCode() {
+  if (!isSignedIn()) return null;
+  try {
+    const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
+    const rows = await restFetch(`parent_accounts?id=eq.${me.id}&select=friend_code`, { method: "GET" });
+    return rows?.[0]?.friend_code || null;
+  } catch (e) { return null; }
+}
+
+// Snapshot for the Parents screen: my share code, whether I've joined another
+// family, and how many grown-ups have joined mine.
+export async function getFamilyStatus() {
+  const out = { code: null, joinedFamily: false, memberCount: 0 };
+  if (!isSignedIn()) return out;
+  try {
+    const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
+    const own = await restFetch(`parent_accounts?id=eq.${me.id}&select=friend_code`, { method: "GET" });
+    out.code = own?.[0]?.friend_code || null;
+    const joined = await restFetch(`co_parents?member_parent_id=eq.${me.id}&select=primary_parent_id`, { method: "GET" });
+    out.joinedFamily = Array.isArray(joined) && joined.length > 0;
+    const members = await restFetch(`co_parents?primary_parent_id=eq.${me.id}&select=member_parent_id`, { method: "GET" });
+    out.memberCount = Array.isArray(members) ? members.length : 0;
+  } catch (e) { /* table may not exist yet */ }
+  return out;
+}
+
+// Link this signed-in grown-up into the family that owns `code`.
+export async function joinFamilyByCode(code) {
+  if (!isSignedIn()) throw new Error("Please sign in first");
+  const res = await restFetch("rpc/join_family_by_code", {
+    method: "POST",
+    body: JSON.stringify({ code: (code || "").trim() }),
+  });
+  if (res && res.ok === false) throw new Error(res.error || "Could not join that family");
   return true;
 }
 
