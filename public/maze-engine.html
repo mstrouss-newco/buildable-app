@@ -159,6 +159,7 @@ function currentBuddy(){ const b=(typeof PREFS!=="undefined"&&PREFS.buddy!=null)
 
 // ---- runtime state ----
 let level = 0, state = "title";   // title | ready | play | caught | levelwin | alldone
+let demoOn = false;               // wordless how-to-play demo (first world only)
 let lv = GAME_CONFIG.levels[0];
 let grid = [], GW = 0, GH = 0, tile = 32, ox = 0, oy = 0;
 let dots = [], dotsLeft = 0;
@@ -345,6 +346,7 @@ function startLevel(i, keepLives){
   lives = keepLives==null ? 3 : keepLives;
   spawnAmbient();
   state="ready"; readyTimer=botMode?6:90; toast("");
+  demoOn = (i===0 && !botMode);   // show the how-to demo on the first world
   sfx("select");
 }
 function resetPositions(){
@@ -387,7 +389,7 @@ function spawnBonus(){ const cells=[]; for(let y=0;y<GH;y++)for(let x=0;x<GW;x++
 // ---- main update ----
 function update(){
   t += 1/60;
-  if(state==="ready"){ readyTimer--; if(readyTimer<=0){ state="play"; sfx("select"); } if(BM)BM.update(fx,1/60); return; }
+  if(state==="ready"){ if(!demoOn){ readyTimer--; if(readyTimer<=0){ state="play"; sfx("select"); } } if(BM)BM.update(fx,1/60); return; }
   if(state!=="play"){ if(BM)BM.update(fx,1/60); return; }
   if(invuln>0) invuln--;
   if(powerTimer>0){ powerTimer--; if(powerTimer===0){ eatChain=0; } }
@@ -486,6 +488,27 @@ function drawHUD(){
   ctx.textAlign="left"; ctx.font="700 16px Fredoka,sans-serif"; ctx.fillStyle="#cde6ff"; ctx.fillText("Score "+score, 112, 33);
   if(frightened()){ const w=Math.min(220,W*0.3), bx=W/2-w/2, by=46; ctx.fillStyle="rgba(255,255,255,0.18)"; if(BR)BR.rrect(ctx,bx,by,w,6,3); ctx.fill(); ctx.fillStyle="#ffe27a"; if(BR)BR.rrect(ctx,bx,by,w*(powerTimer/lv.power),6,3); ctx.fill(); }
 }
+function dismissDemo(){ if(demoOn){ demoOn=false; if(state==="ready"){ state="play"; sfx("select"); } } }
+function drawMazeDemo(){
+  const tt=Date.now()/1000;
+  ctx.fillStyle="rgba(8,10,26,0.80)"; ctx.fillRect(0,0,W,H);
+  ctx.textAlign="center"; ctx.fillStyle="#fff"; ctx.font="800 40px Fredoka,sans-serif";
+  ctx.fillText("Swipe to move!", W/2, H*0.30);
+  ctx.fillStyle="#cde6ff"; ctx.font="600 21px Fredoka,sans-serif";
+  ctx.fillText("Gobble the glowing treats \u2014 dodge the ghosts", W/2, H*0.30+38);
+  const cy=H*0.56, span=120;
+  const phase=(tt%1.7)/1.7, ease=phase<0.75?(phase/0.75):1, x=W/2-span/2+span*ease;
+  ctx.strokeStyle="rgba(255,255,255,0.45)"; ctx.lineWidth=5; ctx.setLineDash([10,10]);
+  ctx.beginPath(); ctx.moveTo(W/2-span/2-8, cy); ctx.lineTo(W/2+span/2+14, cy); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle="rgba(255,255,255,0.7)";
+  ctx.beginPath(); ctx.moveTo(W/2+span/2+30, cy); ctx.lineTo(W/2+span/2+12, cy-11); ctx.lineTo(W/2+span/2+12, cy+11); ctx.closePath(); ctx.fill();
+  const fade=phase<0.75?1:(1-(phase-0.75)/0.25);
+  ctx.globalAlpha=0.4+0.6*fade;
+  if(BR&&BR.hand) BR.hand(ctx, x, cy+20, 1.2);
+  ctx.globalAlpha=1;
+  ctx.fillStyle="rgba(255,255,255,0.7)"; ctx.font="700 18px Fredoka,sans-serif";
+  ctx.fillText("Tap to start", W/2, H-28);
+}
 function overlay(title, sub, col){
   ctx.fillStyle="rgba(8,8,24,0.55)"; ctx.fillRect(0,0,W,H);
   ctx.textAlign="center"; ctx.fillStyle=col||"#fff"; ctx.font="800 48px Fredoka,sans-serif"; ctx.fillText(title, W/2, H/2-6);
@@ -510,7 +533,7 @@ function draw(){
   if(BM)BM.draw(ctx, fx, {W,H});
   ctx.restore();
   drawHUD();
-  if(state==="ready"){ const n=Math.ceil(readyTimer/30); overlay("Ready?", n>0?("Go in "+n+"..."):"Go!", lv.hero); }
+  if(state==="ready"){ if(demoOn) drawMazeDemo(); else { const n=Math.ceil(readyTimer/30); overlay("Ready?", n>0?("Go in "+n+"..."):"Go!", lv.hero); } }
   else if(state==="levelwin"){ const last = level>=GAME_CONFIG.levels.length-1;
     overlay(last?"You did it!":"World cleared!", (lastWin.nb?"New best! ":"")+"Score "+lastWin.score+"  -  Best "+lastWin.best, "#ffe27a");
     ctx.textAlign="center"; for(let i=0;i<3;i++){ ctx.fillStyle=i<lastWin.stars?"#ffd23f":"rgba(255,255,255,0.2)"; if(BR)BR.sparkle(ctx,W/2+(i-1)*46,H/2-58,16,t); }
@@ -536,7 +559,7 @@ function toast(msg){ const e=el("toast"); if(!e)return; if(!msg){ e.style.displa
 function showInGame(on){ const b=el("backBtn"),m=el("muteBtn"),d=el("dpad"); if(b)b.style.display=on?"block":"none"; if(m)m.style.display=on?"block":"none"; if(d)d.style.display=on?"block":"none"; }
 
 // ---- input ----
-function applyDir(d){ if(!d)return; if(BA)BA.unlock();
+function applyDir(d){ if(!d)return; dismissDemo(); if(BA)BA.unlock();
   // instant 180-degree reverse for snappy feel (don't wait for the next cell)
   if(hero && hero.moving && hero.dir && d.x===-hero.dir.x && d.y===-hero.dir.y){
     const ofx=hero.fx, ofy=hero.fy; hero.fx=hero.tx; hero.fy=hero.ty; hero.tx=ofx; hero.ty=ofy; hero.gx=hero.fx; hero.gy=hero.fy; hero.t=1-hero.t; hero.dir=d;
@@ -562,7 +585,7 @@ if(typeof document!=="undefined"){
   try{ window.addEventListener("keydown", onKey); }catch(e){}
   // swipe (drag) OR tap-toward-a-direction OR the on-screen d-pad all steer the muncher
   let sx=0, sy=0;
-  const startP=(x,y)=>{ sx=x; sy=y; focusGame(); };
+  const startP=(x,y)=>{ sx=x; sy=y; dismissDemo(); focusGame(); };
   const endP=(x,y)=>{ const dx=x-sx, dy=y-sy;
     if(Math.abs(dx)<14 && Math.abs(dy)<14){
       if(state==="levelwin"){ advance(); return; }

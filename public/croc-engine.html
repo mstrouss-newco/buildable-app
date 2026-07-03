@@ -157,6 +157,7 @@ function overlap(a,b,m=0){return a.x+m<b.x+b.w && a.x+a.w-m>b.x && a.y+m<b.y+b.h
 //  STATE
 // ===========================================================================
 let STATE = "title";          // title | play | clear | over
+let demoOn = false;           // wordless how-to-play demo (first level only)
 let botMode = false;
 let muted = false;
 let best = 0;
@@ -431,6 +432,7 @@ function setMsg(t,d){ msgTxt=t; msgT=d||0; if($("msg")) $("msg").textContent=t; 
 // ===========================================================================
 function startGame(level, bot){
   G=freshGame(level||1); STATE="play"; botMode=!!bot;
+  demoOn = (!bot && (level||1)===1);   // show the how-to demo on level 1
   for(let i=0;i<5;i++) spawnItem();
   for(let i=0;i<2;i++) spawnEnemy();
   hideMenus(); setMsg("Level 1: "+curLevel().name+"!",2.0);
@@ -471,6 +473,7 @@ function botThink(dt){
 
 function update(dt){
   if(STATE!=="play") return;
+  if(demoOn) return;                    // frozen behind the how-to demo
   dt=Math.min(dt,0.04);
   const t=G.tot, L=curLevel();
 
@@ -561,7 +564,7 @@ function update(dt){
 // ===========================================================================
 const keys={};
 if(typeof addEventListener==="function"){
-  addEventListener("keydown",e=>{ keys[e.key.toLowerCase()]=true; if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase()))e.preventDefault(); });
+  addEventListener("keydown",e=>{ keys[e.key.toLowerCase()]=true; if(demoOn)demoOn=false; if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase()))e.preventDefault(); });
   addEventListener("keyup",e=>{ keys[e.key.toLowerCase()]=false; });
 }
 function readKeys(){
@@ -574,7 +577,7 @@ function readKeys(){
 const drag={on:false,x:0,y:0};
 function canvasPt(e){ const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) }; }
 if(cv){
-  cv.addEventListener("pointerdown",e=>{ if(STATE!=="play")return; e.preventDefault(); const p=canvasPt(e); drag.on=true; drag.x=p.x; drag.y=p.y; });
+  cv.addEventListener("pointerdown",e=>{ if(STATE!=="play")return; if(demoOn)demoOn=false; e.preventDefault(); const p=canvasPt(e); drag.on=true; drag.x=p.x; drag.y=p.y; });
   cv.addEventListener("pointermove",e=>{ if(!drag.on)return; const p=canvasPt(e); drag.x=p.x; drag.y=p.y; });
   cv.addEventListener("pointerup",()=>{ drag.on=false; });
   cv.addEventListener("pointercancel",()=>{ drag.on=false; });
@@ -657,6 +660,29 @@ function draw(){
   if(G.flash>0){ ctx.fillStyle=BR._rgba(G.flashCol,G.flash*0.5); ctx.fillRect(0,0,W,H); }
   // overlay card
   if(G.overlay){ ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(0,0,W,H); ctx.fillStyle="#ffd23f"; ctx.font="bold 34px Fredoka,sans-serif"; ctx.textAlign="center"; ctx.fillText(G.overlay.title,W/2,H/2-6); ctx.fillStyle="#fff"; ctx.font="18px Fredoka,sans-serif"; ctx.fillText(G.overlay.sub,W/2,H/2+26); ctx.textAlign="left"; }
+  // how-to-play demo (wordless, plays itself until the kid takes over)
+  if(demoOn) drawCrocDemo();
+}
+function drawCrocDemo(){
+  const tt=now()/1000;
+  ctx.fillStyle="rgba(6,12,34,0.80)"; ctx.fillRect(0,0,W,H);
+  ctx.textAlign="center";
+  ctx.fillStyle="#fff"; ctx.font="800 30px Fredoka,sans-serif";
+  ctx.fillText("Drag to move!", W/2, H*0.26);
+  ctx.fillStyle="#bfe0ff"; ctx.font="600 16px Fredoka,sans-serif";
+  ctx.fillText("You shoot all by yourself", W/2, H*0.26+26);
+  ctx.fillStyle="#ffe27a";
+  for(let i=0;i<3;i++){ const bx=110+((tt*230+i*70)%250), by=H*0.52; BR.rrect(ctx,bx,by-3,12,6,3); ctx.fill(); }
+  const gx=150, top=H*0.34, bot=H*0.74;
+  ctx.strokeStyle="rgba(255,255,255,0.4)"; ctx.lineWidth=4; ctx.setLineDash([9,9]);
+  ctx.beginPath(); ctx.moveTo(gx,top); ctx.lineTo(gx,bot); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle="rgba(255,255,255,0.7)";
+  ctx.beginPath(); ctx.moveTo(gx,top-12); ctx.lineTo(gx-9,top+4); ctx.lineTo(gx+9,top+4); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(gx,bot+12); ctx.lineTo(gx-9,bot-4); ctx.lineTo(gx+9,bot-4); ctx.closePath(); ctx.fill();
+  const hy=(top+bot)/2 + Math.sin(tt*1.8)*((bot-top)/2-6);
+  if(BR&&BR.hand) BR.hand(ctx, gx, hy+16, 0.95);
+  ctx.fillStyle="rgba(255,255,255,0.7)"; ctx.font="700 15px Fredoka,sans-serif";
+  ctx.fillText("Tap to start", W/2, H-14);
 }
 
 // ===========================================================================

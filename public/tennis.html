@@ -130,6 +130,7 @@ var diff = 0;          // index into GAME_CONFIG.levels
 var worldKey = "beach";
 var paused = false;    // online: opponent left
 var started = false;
+var demoOn = false, demoT = 0;   // wordless self-playing intro demo
 
 // online bits
 var online = (function () { try { return new URLSearchParams(location.search).get("online") === "1"; } catch (e) { return false; } })();
@@ -228,6 +229,7 @@ function newGame() {
   bubbleTop = bubbleBot = null;
   loadBg(worldKey); initParticles(); playMusic();
   state = "play"; started = true; paused = false;
+  demoOn = (mode !== "online"); demoT = 0;   // show the how-to-play demo first
 }
 
 function serve(dir) {
@@ -272,18 +274,20 @@ function onPointer(clientX, clientY) {
 function clamp(nx) { return Math.max(GAME_CONFIG.paddleW / 2, Math.min(1 - GAME_CONFIG.paddleW / 2, nx)); }
 
 if (canvas) {
-  canvas.addEventListener("pointermove", function (e) { onPointer(e.clientX, e.clientY); }, { passive: true });
-  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); playMusic(); onPointer(e.clientX, e.clientY); }, { passive: true });
+  canvas.addEventListener("pointermove", function (e) { if (demoOn && demoT > 0.8) demoOn = false; onPointer(e.clientX, e.clientY); }, { passive: true });
+  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); playMusic(); demoOn = false; onPointer(e.clientX, e.clientY); }, { passive: true });
   canvas.addEventListener("touchmove", function (e) {
+    if (demoOn && demoT > 0.5) demoOn = false;
     for (var i = 0; i < e.touches.length; i++) onPointer(e.touches[i].clientX, e.touches[i].clientY);
   }, { passive: true });
 }
-window.addEventListener("keydown", function (e) { keys[e.key] = true; if (BA && (e.key === " " || e.key.indexOf("Arrow") === 0)) { BA.unlock(); playMusic(); } });
+window.addEventListener("keydown", function (e) { keys[e.key] = true; if (e.key === " " || e.key.indexOf("Arrow") === 0 || e.key.length === 1) demoOn = false; if (BA && (e.key === " " || e.key.indexOf("Arrow") === 0)) { BA.unlock(); playMusic(); } });
 window.addEventListener("keyup", function (e) { keys[e.key] = false; });
 
 /* ---------- 5) UPDATE (physics) ---------- */
 function update(dt) {
   if (!G || state !== "play" || paused) return;
+  if (demoOn) return;                              // frozen behind the how-to demo
   dt = Math.min(dt, 0.05);                       // clamp big frames
 
   // ---- keyboard paddle control ----
@@ -494,6 +498,9 @@ function draw() {
   if (bubbleTop) bubble(bubbleTop, c2x(0.5), court.y + court.h * 0.16);
   if (bubbleBot) bubble(bubbleBot, c2x(0.5), court.y + court.h * 0.84);
 
+  // how-to-play demo (wordless, plays itself until the kid takes over)
+  if (demoOn && state === "play" && mode !== "online") drawTennisDemo();
+
   // overlays
   if (paused) banner("Waiting for " + oppName + "…", "");
   else if (state === "over") {
@@ -501,12 +508,42 @@ function draw() {
     var iWon = (G.winner === "bottom") === myIsBottom2;
     banner(iWon ? "You win! 🎉".replace(" 🎉", "") : (mode === "solo" ? "Try again!" : "So close!"),
            mode === "online" ? "Tap to play again" : "Tap for the menu");
-  } else if (state === "play" && G.cool > 0) {
+  } else if (state === "play" && G.cool > 0 && !demoOn) {
     ctx.font = "800 22px Nunito, sans-serif"; ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,0.8)";
     ctx.fillText("Get ready!", c2x(0.5), c2y(0.5) - 30);
   }
   ctx.restore();
+}
+
+function drawTennisDemo() {
+  var tt = Date.now() / 1000;
+  var th = worldTheme(worldKey);
+  // freeze scrim over the court
+  ctx.fillStyle = "rgba(10,12,40,0.72)";
+  rrect(court.x, court.y, court.w, court.h, 18); ctx.fill();
+  // caption
+  ctx.textAlign = "center"; ctx.fillStyle = "#fff";
+  ctx.font = "900 34px Nunito, sans-serif";
+  ctx.fillText("Slide to move!", c2x(0.5), court.y + court.h * 0.20);
+  ctx.font = "700 20px Nunito, sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillText("Bounce the ball back", c2x(0.5), court.y + court.h * 0.20 + 34);
+  // cosmetic demo paddle sliding side to side
+  var swing = Math.sin(tt * 1.4) * 0.26, pnx = 0.5 + swing, pny = 0.72;
+  // demo ball bouncing just above the paddle, tracking it a beat behind
+  var bnx = 0.5 + Math.sin((tt - 0.25) * 1.4) * 0.26;
+  var bny = pny - 0.06 - Math.abs(Math.sin(tt * 3)) * 0.14;
+  var bx = c2x(bnx), by = c2y(bny), br = GAME_CONFIG.ballR * court.w;
+  ctx.fillStyle = "#fff"; ctx.shadowColor = th.ball; ctx.shadowBlur = 16;
+  ctx.beginPath(); ctx.arc(bx, by, br, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+  paddle(pnx, pny, th.me);
+  // 3D hand under the demo paddle, fingertip touching it, sliding along
+  var ph = 0.022 * court.h * 1.6, padBottom = c2y(pny) + ph / 2;
+  var s = Math.max(0.9, Math.min(1.7, court.w / 620));
+  if (BR && BR.hand) BR.hand(ctx, c2x(pnx), padBottom + 30 * s, s);
+  // gentle tap-to-start hint
+  ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.font = "800 18px Nunito, sans-serif";
+  ctx.fillText("Tap to play", c2x(0.5), court.y + court.h - 26);
 }
 
 function bubble(b, cx, cy) {
@@ -747,6 +784,7 @@ function frame(ts) {
   if (parts.length) updateParticles(dt);
   if (bubbleTop) { bubbleTop.t -= dt; if (bubbleTop.t <= 0) bubbleTop = null; }
   if (bubbleBot) { bubbleBot.t -= dt; if (bubbleBot.t <= 0) bubbleBot = null; }
+  if (demoOn) { demoT += dt; }
   update(dt);
   if (G) draw();
   requestAnimationFrame(frame);
