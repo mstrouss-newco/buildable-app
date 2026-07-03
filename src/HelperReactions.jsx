@@ -22,10 +22,12 @@ export default function HelperReactions() {
       const d = e && e.data;
       if (!d || d.source !== "buildable" || !d.kind) return;
       if (["win", "lose", "levelup", "cheer"].indexOf(d.kind) === -1) return;
-      if (d.kind === "win" || d.kind === "lose") { try { logGameEvent(d.kind); } catch (e) {} }
+      if (d.kind === "win" || d.kind === "lose") { try { logGameEvent(d.kind, null, d.meta); } catch (e) {} }
       const win = d.kind === "win" || d.kind === "levelup" || d.kind === "cheer";
       const pool = win ? WINS : LOSES;
-      const text = d.text || pool[Math.floor(Math.random() * pool.length)];
+      let text = d.text || pool[Math.floor(Math.random() * pool.length)];
+      // call out a new personal best (score logged in d.meta)
+      if (win && d.meta && d.meta.newBest && d.meta.score != null) text = "New best score \u2014 " + d.meta.score + "! That's your best ever!";
       setState({ win: win, text: text });
       setShow(true);
       try {

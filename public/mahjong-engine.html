@@ -166,9 +166,9 @@ function sideBlocked(t,arr,dir){ // dir -2 (left) or +2 (right)
   return false;
 }
 function isFree(t,arr){
-  if(t.gone) return false;
-  if(covered(t,arr)) return false;
-  return !sideBlocked(t,arr,-2) || !sideBlocked(t,arr,2);
+  // A tile is takeable as long as NOTHING is stacked on top of it — no left/right side
+  // rule. Any fully-uncovered tile (even in the bottom row) can be picked.
+  return !t.gone && !covered(t,arr);
 }
 function freeTiles(arr){ const f=[]; for(const t of arr){ if(isFree(t,arr)) f.push(t); } return f; }
 
@@ -286,7 +286,9 @@ function winGame(){
   state="win"; showChrome(false);
   if(BA)BA.sfx("win");
   if(BM&&!headless){ for(let i=0;i<5;i++) BM.explode(fx, W*(0.15+0.175*i), H*0.4, i%2?"#FFD23F":"#7CF6B0", {n:16, pop:i===2?"You cleared it!":""}); }
-  try{ if(window.parent) window.parent.postMessage({source:"buildable",kind:"win"},"*"); }catch(e){}
+  try{ if(window.parent) window.parent.postMessage({source:"buildable",kind:"win",
+    meta:{ game:"mahjong", score:score, best:Math.max(score,wonBest||0), newBest:!!isNewBest,
+      timeMs:elapsedMs, level:curLevel().name, set:curSet().name } },"*"); }catch(e){}
 }
 
 // ---------- ART ----------

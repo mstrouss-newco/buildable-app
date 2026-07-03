@@ -14,16 +14,18 @@ function deviceId() {
 }
 export function setCurrentGame(slug) { currentGame = slug || null; }
 export function getCurrentGame() { return currentGame; }
-export function logGameEvent(event, game) {
+export function logGameEvent(event, game, meta) {
   try {
     const g = game || currentGame;
     if (!g || ["play", "win", "lose"].indexOf(event) === -1) return;
     const kid = getActiveKid();
+    const body = { deviceId: deviceId(), kidProfileId: (kid && kid.id) || null, game: g, event };
+    if (meta && typeof meta === "object") body.meta = meta;   // e.g. { score, best, newBest } so bests are logged
     fetch("/api/log-game-event", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       keepalive: true,
-      body: JSON.stringify({ deviceId: deviceId(), kidProfileId: (kid && kid.id) || null, game: g, event }),
+      body: JSON.stringify(body),
     }).catch(() => {});
   } catch (e) {}
 }
