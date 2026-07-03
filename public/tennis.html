@@ -156,7 +156,7 @@ function loadBg(key) {
     var im = new Image();
     im.onload = function () { if (bgKey === key) bgImg = im; };
     im.onerror = function () { if (bgKey === key) bgImg = null; };
-    im.src = "/api/images?kind=tennis&id=" + key;   // smooth AI nature world (cached)
+    im.src = "/api/images?kind=tennis&id=" + key + "&v=2";   // smooth AI nature world (cached)
   } catch (e) {}
 }
 
@@ -760,7 +760,7 @@ function buildCourtGrid() {
     var thumb = document.createElement("div"); thumb.className = "thumb";
     thumb.style.background = "linear-gradient(160deg," + w.bg[0] + "," + w.bg[1] + ")";
     // overlay the smooth AI nature scene; if it isn't ready yet, the gradient shows through
-    var imgURL = "/api/images?kind=tennis&id=" + key;
+    var imgURL = "/api/images?kind=tennis&id=" + key + "&v=2";
     var im = new Image();
     im.onload = function () { thumb.style.backgroundImage = "url('" + imgURL + "')"; };
     im.src = imgURL;
