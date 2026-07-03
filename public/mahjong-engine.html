@@ -115,6 +115,7 @@ let nowMs=0, headless=false;
 let PREFS={ setIdx:0, lvlIdx:0 };
 let startedAt=0, elapsedMs=0, isNewBest=false, wonBest=0;   // clear timer + personal best
 let combo=0, comboUntil=0, score=0;                        // chain matches for excitement + score
+let tray=[]; const TRAY_CAP=4; let trayShake=0;            // HARD (3 Fire) tray mode: parked unmatched tiles; overfill it and it's game over
 
 // ---------- BACKGROUND MUSIC (shared reusable lofi track — calm but upbeat) ----------
 function ensureMusic(){ if(!BA||!BA.setMusic) return;
@@ -140,6 +141,7 @@ let view={tileW:44,tileH:58,ox:0,oy:0,lx:6,ly:6};
 
 function curSet(){ return GAME_CONFIG.sets[PREFS.setIdx]||GAME_CONFIG.sets[0]; }
 function curLevel(){ return GAME_CONFIG.levels[PREFS.lvlIdx]||GAME_CONFIG.levels[0]; }
+function trayMode(){ return curLevel().flames>=3; }   // 3 Fire = holding-tray challenge (you can lose)
 function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i];a[i]=a[j];a[j]=t; } return a; }
 
 // ---------- LAYOUT (concentric stacked rectangles → classic look, always peelable) ----------
@@ -204,7 +206,7 @@ function build(){
   for(let tryN=0; tryN<8 && !ord; tryN++) ord=assignSolvable(tiles, set.count);
   solution=ord||[];
   selId=-1; hintPair=null; state="play";
-  history=[]; undosLeft=CAP; hintsLeft=CAP; mixesLeft=CAP;
+  history=[]; undosLeft=CAP; hintsLeft=CAP; mixesLeft=CAP; tray=[]; trayShake=0;
   startedAt=Date.now(); elapsedMs=0; isNewBest=false; wonBest=0;
   combo=0; comboUntil=0; score=0; demo=null;
   if(!headless){ loadSetArt(set); layout(); showChrome(true); updateBanner(); updateChrome();
@@ -225,28 +227,32 @@ function availableMatch(){ // a free matching pair among present tiles, or null
   for(let i=0;i<f.length;i++) for(let j=i+1;j<f.length;j++) if(f[i].face===f[j].face) return [f[i].id,f[j].id];
   return null;
 }
+function celebrateMatch(cx,cy){
+  // COMBO: chaining matches quickly makes each one more exciting + worth more
+  combo = (nowMs<comboUntil) ? combo+1 : 1; comboUntil = nowMs + 4500;
+  const tier = combo>=5?3 : combo>=3?2 : 1;
+  score += 10*combo;                                // faster chains => more points
+  if(BA){ BA.sfx(tier===3?"match3":tier===2?"match2":"match");
+    if(combo>=5 && combo%5===0) BA.sfx("jackpot");        // hit the jackpot on a big streak
+    else if(combo>=3 && combo%2===1) BA.sfx("combo"); }   // coin-cascade on a growing streak
+  if(BM && !headless){
+    const LABELS=["Match!","Nice!","Great!","Awesome!","Amazing!","On fire!","Unstoppable!"];
+    const lab=(combo>1?LABELS[Math.min(combo-1,LABELS.length-1)]+"  x"+combo:"Match!");
+    const col=tier===3?"#FFD23F":tier===2?"#7CF6B0":"#67E8F9";
+    BM.explode(fx, cx, cy, col, {n:Math.min(9+combo*3,28), pop:lab, popCol:"#fff",
+      shake:Math.min(0.35,0.06+combo*0.03), flash:Math.min(0.28,0.05+combo*0.03)}); }
+}
 function tapTile(t){
   if(state!=="play"||!t||!isFree(t,tiles)) return;
   if(BA)BA.unlock();
   hintPair=null;
+  if(trayMode()){ tapTray(t); return; }              // HARD mode: holding-tray + game over
   if(selId===t.id){ selId=-1; return; }              // tap again = deselect
   if(selId<0){ selId=t.id; if(BA)BA.sfx("select"); return; }
   const a=tileById(selId), b=t;
   if(a && a.face===b.face){
     a.gone=true; b.gone=true; selId=-1; history.push([a.id,b.id]);
-    // COMBO: chaining matches quickly makes each one more exciting + worth more
-    combo = (nowMs<comboUntil) ? combo+1 : 1; comboUntil = nowMs + 4500;
-    const tier = combo>=5?3 : combo>=3?2 : 1;
-    score += 10*combo;                                // faster chains => more points
-    if(BA){ BA.sfx(tier===3?"match3":tier===2?"match2":"match");
-      if(combo>=5 && combo%5===0) BA.sfx("jackpot");        // hit the jackpot on a big streak
-      else if(combo>=3 && combo%2===1) BA.sfx("combo"); }   // coin-cascade on a growing streak
-    if(BM && !headless){ const cx=(tileCenter(a).x+tileCenter(b).x)/2, cy=(tileCenter(a).y+tileCenter(b).y)/2;
-      const LABELS=["Match!","Nice!","Great!","Awesome!","Amazing!","On fire!","Unstoppable!"];
-      const lab=(combo>1?LABELS[Math.min(combo-1,LABELS.length-1)]+"  x"+combo:"Match!");
-      const col=tier===3?"#FFD23F":tier===2?"#7CF6B0":"#67E8F9";
-      BM.explode(fx, cx, cy, col, {n:Math.min(9+combo*3,28), pop:lab, popCol:"#fff",
-        shake:Math.min(0.35,0.06+combo*0.03), flash:Math.min(0.28,0.05+combo*0.03)}); }
+    if(!headless){ const c1=tileCenter(a), c2=tileCenter(b); celebrateMatch((c1.x+c2.x)/2,(c1.y+c2.y)/2); } else celebrateMatch(0,0);
     updateBanner(); updateChrome();
     if(remaining()===0){ winGame(); }
     else if(!availableMatch()){ autoShuffle(); }     // safety net (uncapped): never let a kid get stuck
@@ -254,6 +260,28 @@ function tapTile(t){
     // wrong pair — keep the newly tapped one selected (friendly), tiny nudge
     selId=b.id; combo=0; if(BA)BA.sfx("nomatch"); if(BM&&!headless) BM.shake(fx,0.18);
   }
+}
+// HARD (3 Fire) TRAY MODE: tapping a free tile sends it up to a holding tray. Tap its
+// match on the board and the pair clears from the tray. Park too many un-matched tiles
+// (tray already holds TRAY_CAP and you tap a non-match) and it's game over.
+function tapTray(t){
+  const idx = tray.findIndex(u=>u.face===t.face);
+  if(idx>=0){                                        // partner is waiting in the tray -> clear the pair
+    t.gone=true; tray.splice(idx,1);
+    if(!headless){ const c=tileCenter(t); celebrateMatch(c.x,c.y); } else celebrateMatch(0,0);
+    updateBanner(); updateChrome();
+    if(remaining()===0 && tray.length===0) winGame();
+    return;
+  }
+  if(tray.length>=TRAY_CAP){ if(BA)BA.sfx("nomatch"); loseGame(); return; }   // no room -> game over
+  t.gone=true; tray.push({id:t.id, face:t.face}); combo=0;
+  if(tray.length>=TRAY_CAP-1){ trayShake=0.45; if(BM&&!headless) BM.shake(fx,0.22); }
+  if(BA)BA.sfx("select"); updateBanner(); updateChrome();
+}
+function loseGame(){
+  state="lose"; showChrome(false);
+  if(BA)BA.sfx("lose");
+  if(BM&&!headless){ BM.shake(fx,0.5); BM.flash(fx,"#ff6b6b",0.4); }
 }
 function autoShuffle(){
   const present=tiles.filter(t=>!t.gone);
@@ -264,6 +292,11 @@ function autoShuffle(){
 }
 // Recall: put the last matched pair back on the board.
 function doUndo(){
+  if(trayMode()){                        // hard mode: pull the last parked tile back onto the board
+    if(!tray.length) return false;
+    const u=tray.pop(); const t=tileById(u.id); if(t) t.gone=false;
+    hintPair=null; if(BA)BA.sfx("select"); updateBanner(); updateChrome(); return true;
+  }
   if(!history.length) return false;
   const pr=history.pop(); const a=tileById(pr[0]), b=tileById(pr[1]);
   if(a) a.gone=false; if(b) b.gone=false; selId=-1; hintPair=null;
@@ -273,7 +306,17 @@ function doUndo(){
 }
 // Hint: highlight an available pair. Returns true only if one was actually shown
 // (so a wasted tap on a stuck board doesn't burn a charge — it just safety-mixes).
+function trayMatchHint(){   // a free board tile whose match is already parked in the tray
+  const f=freeTiles(tiles);
+  for(const t of f){ if(tray.some(u=>u.face===t.face)) return [t.id,t.id]; }
+  return null;
+}
 function doHint(){
+  if(trayMode()){
+    const th=trayMatchHint(); if(th){ hintPair=th; hintUntil=nowMs+1400; if(BA)BA.sfx("select"); return true; }
+    const m=availableMatch(); if(m){ hintPair=m; hintUntil=nowMs+1400; if(BA)BA.sfx("select"); return true; }
+    return false;   // no auto-shuffle in tray mode — there's always a (risky) move
+  }
   const m=availableMatch();
   if(m){ hintPair=m; hintUntil=nowMs+1400; if(BA)BA.sfx("select"); return true; }
   autoShuffle(); return false;
@@ -318,8 +361,9 @@ function layout(){
   const b=bounds();
   const cols=(b.maxX-b.minX)/2, rows=(b.maxY-b.minY)/2;
   const topRes=52;                              // space for the top banner
+  const botRes=trayMode()?(Math.min(52,(vw*0.72)/TRAY_CAP)+40):0;   // reserve a bottom strip for the hard-mode tray
   // fill as much of the screen as possible (whole-screen on iPad/iPhone)
-  const availW=vw*0.985, availH=(vh-topRes-6)*0.995;
+  const availW=vw*0.985, availH=((vh-botRes)-topRes-6)*0.995;
   // tile aspect ~ 1.3 tall; reserve room for the layer lift (maxZ)
   let tw=Math.min(availW/(cols+0.9), availH/((rows*1.3)+0.9));
   tw=Math.max(18,Math.min(tw,140));            // allow big tiles on large iPad screens
@@ -332,7 +376,7 @@ function layout(){
     pminY=Math.min(pminY,py); pmaxY=Math.max(pmaxY,py+view.tileH); }
   view.b=b;
   view.ox=(vw-(pmaxX-pminX))/2 - pminX;
-  view.oy=topRes + (vh-topRes-(pmaxY-pminY))/2 - pminY;
+  view.oy=topRes + ((vh-botRes)-topRes-(pmaxY-pminY))/2 - pminY;
 }
 function tilePx(t){ return { x:view.ox+(t.x-view.b.minX)/2*view.tileW - t.z*view.lx,
                              y:view.oy+(t.y-view.b.minY)/2*view.tileH - t.z*view.ly }; }
@@ -386,9 +430,54 @@ function drawDemo(){
   // caption
   ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillStyle="#fff";
   ctx.font="900 "+Math.min(26,vw*0.052)+"px 'Baloo 2',Nunito,sans-serif";
-  ctx.fillText("Tap two matching tiles!", vw/2, 72);
+  ctx.fillText(trayMode()?"Match pairs before the tray fills!":"Tap two matching tiles!", vw/2, 72);
   ctx.fillStyle="#bcd0ee"; ctx.font="700 15px Nunito,sans-serif";
-  ctx.fillText("Clear the whole board to win", vw/2, 98);
+  ctx.fillText(trayMode()?"Tapped tiles wait in the tray at the bottom":"Clear the whole board to win", vw/2, 98);
+}
+function drawTray(){
+  const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
+  const n=TRAY_CAP, slot=Math.min(52,(vw*0.72)/n), gap=slot*0.22;
+  const totW=n*slot+(n-1)*gap, y0=vh-slot-18, x0=(vw-totW)/2;
+  // little label above the tray so kids know what it is
+  ctx.save(); ctx.globalAlpha=0.9; ctx.textAlign="center"; ctx.textBaseline="alphabetic";
+  ctx.fillStyle= tray.length>=TRAY_CAP?"#ff9a8a":(tray.length>=TRAY_CAP-1?"#ffd27a":"#e6eefc");
+  ctx.font="800 12px 'Baloo 2',Nunito,sans-serif";
+  ctx.fillText(tray.length>=TRAY_CAP?"Tray full — match one!":"Tray  ("+tray.length+"/"+TRAY_CAP+")", vw/2, y0-gap*1.4); ctx.restore();
+  const sh = trayShake>0 ? (Math.random()*2-1)*trayShake*6 : 0;
+  ctx.save(); ctx.translate(sh,0);
+  const filled=tray.length;
+  const warn = filled>=TRAY_CAP?"rgba(150,40,40,.72)" : filled>=TRAY_CAP-1?"rgba(150,110,40,.66)" : "rgba(16,26,46,.55)";
+  rr(ctx, x0-gap, y0-gap*0.9, totW+gap*2, slot+gap*1.8, 14); ctx.fillStyle=warn; ctx.fill();
+  for(let i=0;i<n;i++){
+    const sx=x0+i*(slot+gap);
+    rr(ctx, sx, y0, slot, slot, 10); ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fill();
+    ctx.lineWidth=2; ctx.strokeStyle=(i>=TRAY_CAP-1)?"rgba(255,150,130,.55)":"rgba(255,255,255,.20)"; ctx.stroke();
+    const held=tray[i];
+    if(held){
+      rr(ctx, sx+2, y0+2, slot-4, slot-4, 8); ctx.fillStyle="#fdf6e6"; ctx.fill();
+      const im=FACE_IMG[held.face];
+      if(im&&im.complete&&im.naturalWidth){ const sc=Math.min((slot-10)/im.naturalWidth,(slot-10)/im.naturalHeight);
+        const dw=im.naturalWidth*sc, dh=im.naturalHeight*sc;
+        try{ ctx.drawImage(im, sx+slot/2-dw/2, y0+slot/2-dh/2, dw, dh); }catch(e){}
+      } else { const cols=["#E8636F","#F5A623","#3AA655","#3B82F6","#9B7BFF","#EC4899","#14B8A6","#F97316"];
+        ctx.fillStyle=cols[held.face%cols.length]; ctx.beginPath(); ctx.arc(sx+slot/2,y0+slot/2,slot*0.28,0,7); ctx.fill(); }
+    }
+  }
+  ctx.restore();
+}
+function drawLose(){
+  const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
+  ctx.save();
+  ctx.fillStyle="rgba(8,12,24,.6)"; ctx.fillRect(0,0,vw,vh);
+  const pw=Math.min(370,vw*0.88), ph=214, px=(vw-pw)/2, py=(vh-ph)/2;
+  ctx.fillStyle="#16223c"; ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.lineWidth=2;
+  rr(ctx,px,py,pw,ph,22); ctx.fill(); ctx.stroke();
+  ctx.textAlign="center"; ctx.textBaseline="alphabetic";
+  ctx.fillStyle="#ff9a8a"; ctx.font="900 26px 'Baloo 2',Nunito,sans-serif"; ctx.fillText("The tray filled up!", vw/2, py+54);
+  ctx.fillStyle="#cfe3ff"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Clear pairs before the tray runs out of room", vw/2, py+88);
+  ctx.fillStyle="#a7b6d6"; ctx.font="700 16px Nunito,sans-serif"; ctx.fillText("Score  "+score, vw/2, py+124);
+  ctx.fillStyle="#8fa0c4"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Tap to try again", vw/2, py+ph-24);
+  ctx.restore();
 }
 function drawWin(){
   const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
@@ -574,8 +663,10 @@ function draw(){
   for(const t of order) drawTile(t);
   ctx.restore();
   if(BM){ BM.draw(ctx,fx,{W:W,H:H}); }
+  if(trayMode() && state!=="menu") drawTray();
   if(demo && state==="play") drawDemo();
   if(state==="win") drawWin();
+  if(state==="lose") drawLose();
   return "ok";
 }
 
@@ -595,9 +686,9 @@ function updateBanner(){ const el=document.getElementById("bLeft"); if(el) el.te
 function updateChrome(){
   const upd=(nId,n,btnId,off)=>{ const el=document.getElementById(nId); if(el) el.textContent=n;
     const b=document.getElementById(btnId); if(b) b.classList.toggle("off", !!off); };
-  upd("undoN",undosLeft,"undoBtn", undosLeft<=0 || history.length===0);
+  upd("undoN",undosLeft,"undoBtn", undosLeft<=0 || (trayMode()?tray.length===0:history.length===0));
   upd("hintN",hintsLeft,"hintBtn", hintsLeft<=0);
-  upd("mixN", mixesLeft,"shufBtn", mixesLeft<=0);
+  upd("mixN", mixesLeft,"shufBtn", mixesLeft<=0 || trayMode());
 }
 
 // ---------- START SCREEN (BS) ----------
@@ -620,8 +711,9 @@ function buildStartCfg(){
     title:GAME_CONFIG.title, subtitle:"Match free tiles in pairs to clear the board",
     sound: BA?!BA.muted:true, showBack:false,
     levels: GAME_CONFIG.levels.map((lv,i)=>{ const bs=getBestScore(i,PREFS.setIdx);
+      const base=(lv.flames>=3?"Tray mode — don't fill it up!":lv.foot);
       return { n:i+1, name:lv.name, state:"ready", img:(window.BuildableLevelThumb?window.BuildableLevelThumb.make("tiles",{layers:lv.layers},"mj"+i):flameIcon(lv.flames)),
-        foot: lv.foot+" · "+curSet().name+(bs?" · Best "+bs:"") }; }),
+        foot: base+" · "+curSet().name+(bs?" · Best "+bs:"") }; }),
     customizeLabel:"Pick your tiles",
   };
 }
@@ -656,7 +748,7 @@ function resize(){ if(!cv) return; DPR=Math.min(2,(window.devicePixelRatio||1));
   cv.width=W*DPR; cv.height=H*DPR; if(state==="play") layout(); }
 let _last=0;
 function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
-  nowMs+=dt*1000; if(BM)BM.update(fx,dt); if(demo) demo.t+=dt;
+  nowMs+=dt*1000; if(BM)BM.update(fx,dt); if(demo) demo.t+=dt; if(trayShake>0)trayShake=Math.max(0,trayShake-dt*1.5);
   if(state==="play"){ elapsedMs=Date.now()-startedAt; const bt=document.getElementById("bTime"); if(bt) bt.textContent=fmtTime(elapsedMs); }
   try{ draw(); }catch(e){ if(typeof console!=="undefined") console.error("draw",e); }
   requestAnimationFrame(frame);
@@ -664,7 +756,9 @@ function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>
 if(typeof document!=="undefined" && document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
   resize(); window.addEventListener("resize",resize);
-  const onTap=(e)=>{ if(state==="win"){ if(BA)BA.unlock(); showMenu(); return; } if(state!=="play") return;
+  const onTap=(e)=>{ if(state==="win"){ if(BA)BA.unlock(); showMenu(); return; }
+    if(state==="lose"){ if(BA)BA.unlock(); build(); return; }
+    if(state!=="play") return;
     if(demo) endDemo();
     const t=e.touches?e.touches[0]:e;
     const rb=cv.getBoundingClientRect(); const hit=pick(t.clientX-rb.left, t.clientY-rb.top);
@@ -676,12 +770,12 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   document.getElementById("soundBtn").onclick=()=>{ if(BA){BA.toggleMute();} };
   document.getElementById("undoBtn").onclick=()=>{ if(state!=="play"||undosLeft<=0||!history.length) return; if(doUndo()){ undosLeft--; updateChrome(); } };
   document.getElementById("hintBtn").onclick=()=>{ if(state!=="play"||hintsLeft<=0) return; if(doHint()){ hintsLeft--; updateChrome(); } };
-  document.getElementById("shufBtn").onclick=()=>{ if(state!=="play"||mixesLeft<=0) return; mixesLeft--; autoShuffle(); updateChrome(); };
+  document.getElementById("shufBtn").onclick=()=>{ if(state!=="play"||mixesLeft<=0||trayMode()) return; mixesLeft--; autoShuffle(); updateChrome(); };
   // bespoke created sounds (BA synth is the silent fallback only)
   if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?v=3&s=", map:{
     select:"mahjong_pick", match:"mahjong_match", match2:"mahjong_match2", match3:"mahjong_match3",
     combo:"mahjong_combo", jackpot:"mahjong_jackpot", nomatch:"mahjong_nope",
-    shuffle:"mahjong_shuffle", win:"mahjong_win" } }); }
+    shuffle:"mahjong_shuffle", win:"mahjong_win", lose:"mahjong_lose" } }); }
   // exciting textured burst art (CC0 Kenney Particle Pack, served from /fx/) — BM.explode
   // auto-upgrades to spark + star + glow + shockwave ring once these are loaded.
   if(BM&&BM.useTextures) BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/star_01.png",
@@ -717,11 +811,26 @@ function simGreedy(opts){
   }
   return { result: remaining()===0?"win":"stuck", cleared: remaining()===0, moves, mixes };
 }
+// Prove HARD tray mode is winnable with good play: playing the guaranteed solution
+// order (park a, then match b) keeps the tray tiny and always clears without a loss.
+function simTray(opts){
+  headlessBegin(Object.assign({}, opts||{}, {lvlIdx:2}));   // force 3 Fire (tray) level
+  let maxTray=0, moves=0;
+  for(const pr of solution){
+    const a=tileById(pr[0]), b=tileById(pr[1]);
+    tapTray(a); maxTray=Math.max(maxTray,tray.length);
+    tapTray(b); maxTray=Math.max(maxTray,tray.length); moves+=2;
+    if(state==="lose") break;
+  }
+  return { result:(remaining()===0&&tray.length===0)?"win":"stuck", cleared:remaining()===0,
+           maxTray, cap:TRAY_CAP, moves, lost:state==="lose" };
+}
 window.MAHJONG_GAME = {
   state:()=>state,
   begin:(o)=>headlessBegin(o),
   sim:(o)=>simSolution(o),
   simGreedy:(o)=>simGreedy(o),
+  simTray:(o)=>simTray(o),
   campaign:()=>{ const out=[];
     GAME_CONFIG.levels.forEach((lv,li)=>{ GAME_CONFIG.sets.forEach((st,si)=>{
       const r=simSolution({lvlIdx:li,setIdx:si}); const gr=simGreedy({lvlIdx:li,setIdx:si});
