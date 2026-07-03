@@ -203,6 +203,21 @@ Mine button), with the bespoke customize overlay opened via `onCustomize`.
    real library theme word; a published game can set `preview_image_url`. See the
    thumbnails note in `ASSET-LIBRARY.md`.
 
+   **Every finished game gets a picker thumbnail — this is required, not optional.**
+   A game tile that has no thumbnail shows a flat colored gradient, which looks broken next
+   to the other games. Wiring one takes **two** edits, and you need **both** or the tile
+   stays a plain gradient (this is the #1 thing people forget):
+     1. In `src/BuildableKids.jsx`, pass an `imgId` as the last argument to `tile(...)` for
+        the game (e.g. `tile(grad, "Bubble Buddies", desc, onBubble, false, "bubble")`).
+        The tile renders `/api/images?kind=game&id=<imgId>` and hides the `<img>` on error.
+     2. In `api/images.js`, add a matching `<imgId>:` key to the **`GAMES`** map (under
+        `kind === "game"`) with a short key-art prompt. No entry → the endpoint returns
+        `null` → flat gradient. Keep the id identical in both places.
+   Then **pre-warm the image** so the first kid doesn't wait on generation: hit
+   `/api/images?kind=game&id=<imgId>` once on the live site (it caches). `?manifest=1` lists
+   what's already cached. A game is not "done" until its tile shows real art on desktop,
+   iPad, and iPhone.
+
 8. **QA the live deploy, then log it.** Commit to `main` (Vercel auto-deploys in ~1–2
    min), confirm it actually renders in the iframe (not just a 200), then add a dated
    entry to **`SESSION-LOG.md`** and the README session log. This is required for every
