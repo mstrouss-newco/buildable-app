@@ -15,7 +15,7 @@
 <style>
   html,body{margin:0;height:100%;background:#0a1030;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  canvas{background:#7fc7ff;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
+  canvas{background:#7fc7ff;width:100%;height:100%;display:block;image-rendering:auto}
   #start{position:fixed;inset:0;z-index:10;display:none}
   .ov{position:fixed;inset:0;z-index:12;display:none;flex-direction:column;align-items:center;justify-content:center;
       background:linear-gradient(180deg,#0b1230,#241152);color:#fff;text-align:center;padding:24px}
@@ -75,7 +75,7 @@ var BR = window.BuildableRenders, BA = window.BuildableAudio, BM = window.Builda
 // ---- logical world (canvas is scaled by CSS to fit any screen) ----
 var W = 960, H = 600, GY = 548;           // GY = top of the ground band
 var AX = 168, AY = 360;                    // slingshot fork (where ammo loads)
-var MAXPULL = 132, MAXV = 27;              // very forgiving: big pull, strong launch
+var MAXPULL = 132, MAXV = 21;              // gentle, controllable fling (kid-friendly); still plenty of reach
 var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced OR knocked)
 
 // ---- the SQUAD: 4 friendly ANIMALS you fling, each with a tap-to-trigger POWER.
@@ -148,6 +148,26 @@ var GAME_CONFIG = window.GAME_CONFIG || {
 // ---- runtime state ----
 var canvas = (typeof document!=="undefined") ? document.getElementById("c") : null;
 var ctx = canvas ? canvas.getContext("2d") : null;
+
+// ---- FILL-SCREEN: map the fixed 960x600 world onto the whole device screen. On a
+//  tall phone the world spans the full WIDTH and sits at the BOTTOM; the extra room
+//  above becomes open sky (no more letterbox / floating box). Physics stays 960x600.
+var VX = { scale:1, offx:0, offy:0 };   // design(960x600) -> canvas transform
+var CW = W, CH = H;                     // physical canvas size in device pixels
+function resize(){
+  if(!canvas) return;
+  var vw = (typeof window!=="undefined" && window.innerWidth)  ? window.innerWidth  : W;
+  var vh = (typeof window!=="undefined" && window.innerHeight) ? window.innerHeight : H;
+  var dpr = (typeof window!=="undefined" && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+  CW = Math.max(1, Math.round(vw*dpr)); CH = Math.max(1, Math.round(vh*dpr));
+  canvas.width = CW; canvas.height = CH;
+  var sFit = CW / W;                    // scale so the world fills the full screen WIDTH
+  if(H*sFit <= CH){                     // portrait / tall: fill width, anchor world to bottom
+    VX.scale = sFit; VX.offx = 0; VX.offy = CH - H*sFit;
+  } else {                             // landscape / wide: fit height, center horizontally
+    var sH = CH / H; VX.scale = sH; VX.offx = (CW - W*sH)/2; VX.offy = 0;
+  }
+}
 var state = "title";            // title | ready | aiming | flying | reload | win | lose
 var level = 0, G = null, fx = (BM ? BM.makeFx() : null);
 var botMode = false, started = false;
@@ -576,7 +596,14 @@ function drawBlock(b){
 function hudIcon(x,y,sq){ drawSquadFace(x,y,11,sq); }
 function draw(){
   if(!ctx) return;
-  ctx.clearRect(0,0,W,H);
+  // fill-screen: paint sky across the WHOLE canvas, then map the world to full width
+  // anchored at the bottom (the extra room above becomes open sky).
+  var th0 = themeFor(level);
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,CW,CH);
+  ctx.fillStyle = (th0.sky && th0.sky[0]) || "#8fd0ff";
+  ctx.fillRect(0,0,CW,CH);
+  ctx.setTransform(VX.scale,0,0,VX.scale,VX.offx,VX.offy);
   ctx.save(); if(fx&&BM){ var sh=BM.shakeOffset(fx); ctx.translate(sh.x,sh.y); }
   drawBg();
   for(var i=0;i<G.blocks.length;i++) drawBlock(G.blocks[i]);
@@ -628,7 +655,8 @@ function banner(title,sub){
 function pt(ev){ var r=canvas.getBoundingClientRect();
   var cx=(ev.touches&&ev.touches[0])?ev.touches[0].clientX:ev.clientX;
   var cy=(ev.touches&&ev.touches[0])?ev.touches[0].clientY:ev.clientY;
-  return { x:(cx-r.left)/r.width*W, y:(cy-r.top)/r.height*H }; }
+  var bx=(cx-r.left)*(CW/(r.width||1)), by=(cy-r.top)*(CH/(r.height||1));   // client px -> canvas px
+  return { x:(bx-VX.offx)/VX.scale, y:(by-VX.offy)/VX.scale }; }             // -> world (960x600) px
 function clampDrag(p){ var dx=p.x-AX, dy=p.y-AY, d=Math.hypot(dx,dy);
   if(d>MAXPULL){ var k=MAXPULL/d; dx*=k; dy*=k; } return { x:AX+dx, y:AY+dy }; }
 function onDown(ev){ if(BA){BA.unlock&&BA.unlock();}
@@ -656,7 +684,9 @@ function buildStartCfg(){
 }
 function el(id){ return document.getElementById(id); }
 function show(id,on){ var e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
-function showChrome(on){ ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
+function inApp(){ try{ return typeof window!=="undefined" && window.parent && window.parent!==window; }catch(e){ return false; } }
+function showChrome(on){ if(inApp()) on=false;   // in the app, the shell draws Home/Sound/Help — never show the engine's own buttons (they overlapped)
+  ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
 function showMenu(){ state="title"; G=null; show("help",false); showChrome(false);
   var host=el("start"); if(host)host.style.display="block"; if(!BS||!host)return;
   var cb={ onPlay:function(n){ if(BA)BA.unlock&&BA.unlock(); startLevel(n-1); },
@@ -707,7 +737,9 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
     L("/kenney/sling/bg/"+k+".png",function(im){ BG_IMGS[k]=im; }); });
 }catch(e){} }
-if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
+if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); resize(); showMenu(); loadSquadArt();
+  if(typeof window!=="undefined" && window.addEventListener){ window.addEventListener("resize",resize); window.addEventListener("orientationchange",resize); }
+  requestAnimationFrame(frame); }
 
 // ============================================================================
 //  QA / picker hooks (standardized name; alias kept) — drives the sensible-aim bot.
