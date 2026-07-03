@@ -94,7 +94,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
       const rank = (x) => (x.online ? 0 : 1);
       setFriends((fr || []).slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)));
       setInbox((inv || []).filter((i) => i.game === game.slug));
-    } catch (e) { setErr((e && e.message) || "Could not load your friends."); }
+    } catch (e) { setErr("Couldn\u2019t load your family. Make sure THIS device is signed in to your grown-up account (Grown-ups \u2192 sign in with the same email on every device)."); }
     setLoading(false);
   }
   useEffect(() => {
@@ -383,7 +383,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
 
               <div style={C.sect}>Your family</div>
               {family.length === 0 ? (
-                <div style={C.note}>Add brothers &amp; sisters in <b>Grown-ups &rarr; Parents</b>. They show up here automatically &mdash; no code, no approval, just tap Invite.</div>
+                <div style={C.note}>Brothers &amp; sisters on your grown-up account show up here automatically. If they\u2019re missing, make sure <b>this device</b> is signed in to the <b>same grown-up account</b> (Grown-ups &rarr; sign in) &mdash; then add kids under Parents.</div>
               ) : family.map((f) => personRow(f))}
 
               <div style={C.sect}>Friends</div>
