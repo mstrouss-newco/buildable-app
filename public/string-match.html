@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>String Match</title>
+<link rel="icon" href="/favicon.ico?v=1" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=1" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=1" />
+<style id="no-longpress">
+  * { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+  input,textarea { -webkit-user-select:auto; user-select:auto; }
+  html,body{ margin:0; height:100%; overflow:hidden; background:#bfe3f5;
+    font-family:'Baloo 2','Fredoka',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    -webkit-tap-highlight-color:transparent; touch-action:none; }
+  #stage{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  #board{ position:relative; touch-action:none; border-radius:26px; overflow:hidden;
+    box-shadow:0 14px 40px rgba(20,40,70,0.28); background:#bfe3f5; }
+  svg{ display:block; width:100%; height:100%; }
+  .hud{ position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:10px; z-index:30; }
+  .hudBtn{ width:52px; height:52px; border:none; border-radius:16px; background:rgba(255,255,255,0.92);
+    box-shadow:0 4px 0 rgba(70,100,140,0.35); color:#3a5170; font-size:24px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .hudBtn:active{ transform:translateY(3px); box-shadow:none; }
+  #status{ position:absolute; top:16px; left:0; right:0; text-align:center; z-index:20;
+    pointer-events:none; }
+  #status span{ display:inline-block; background:rgba(255,255,255,0.9); color:#33506f;
+    font-size:clamp(14px,3.4vw,20px); font-weight:700; padding:8px 18px; border-radius:999px;
+    box-shadow:0 4px 14px rgba(30,60,90,0.16); }
+  .overlay{ position:absolute; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
+    padding:18px; box-sizing:border-box; }
+  .panel{ width:100%; max-width:560px; background:rgba(255,255,255,0.96); border-radius:28px;
+    box-shadow:0 20px 60px rgba(20,40,70,0.3); padding:22px; box-sizing:border-box; text-align:center; }
+  .panel h1{ font-family:'Fredoka','Baloo 2',sans-serif; font-size:clamp(28px,7vw,44px); margin:4px 0 2px; color:#2f4a68; }
+  .panel p.sub{ margin:0 0 16px; color:#6b839c; font-size:clamp(14px,3.6vw,17px); font-weight:600; }
+  .worlds{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
+  .world{ position:relative; border:none; padding:0; border-radius:20px; overflow:hidden; cursor:pointer;
+    background:#e7f1fa; box-shadow:0 6px 0 rgba(70,100,140,0.22); aspect-ratio:4/3; }
+  .world:active{ transform:translateY(3px); box-shadow:none; }
+  .world img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .world .cap{ position:absolute; left:0; right:0; bottom:0; padding:8px 10px; text-align:left;
+    background:linear-gradient(transparent,rgba(20,40,60,0.72)); color:#fff; font-weight:800; font-size:15px; }
+  .world .lock{ position:absolute; inset:0; background:rgba(30,45,65,0.55); display:flex; align-items:center;
+    justify-content:center; color:#fff; font-size:34px; }
+  .world .stars{ position:absolute; top:8px; right:10px; color:#ffd45e; font-size:16px; font-weight:900;
+    text-shadow:0 1px 3px rgba(0,0,0,0.4); }
+  .bigBtn{ margin-top:18px; border:none; cursor:pointer; font-family:'Fredoka',sans-serif;
+    font-size:clamp(18px,5vw,24px); font-weight:700; color:#fff; padding:14px 34px; border-radius:999px;
+    background:linear-gradient(160deg,#4ea33c,#2f8f5f); box-shadow:0 6px 0 #256b3f; }
+  .bigBtn:active{ transform:translateY(4px); box-shadow:none; }
+  .hide{ display:none !important; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="board">
+    <svg id="svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+      <g id="gBg"></g>
+      <g id="gClouds"></g>
+      <g id="gThreads"></g>
+      <g id="gFx"></g>
+      <g id="gBlocks"></g>
+      <g id="gDemo"></g>
+    </svg>
+    <div id="status" class="hide"><span id="statusText"></span></div>
+    <div class="hud">
+      <button class="hudBtn" id="btnSound" aria-label="Sound">&#9834;</button>
+      <button class="hudBtn hide" id="btnLevels" aria-label="Levels">&#9776;</button>
+    </div>
+    <!-- Level select -->
+    <div class="overlay" id="ovSelect">
+      <div class="panel">
+        <h1>String Match</h1>
+        <p class="sub">Draw a string from a block to its matching buddy. Don't cross the strings!</p>
+        <div class="worlds" id="worldGrid"></div>
+      </div>
+    </div>
+    <!-- Win -->
+    <div class="overlay hide" id="ovWin">
+      <div class="panel">
+        <h1 id="winTitle">You did it!</h1>
+        <p class="sub" id="winSub">Every buddy is connected.</p>
+        <button class="bigBtn" id="btnNext">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/buildable-audio.js"></script>
+<script>
+(function(){
+"use strict";
+var VB=1000, M=115, OBST=58;
+
+/* ---------- LEVELS (normalized 0..1000) ---------- */
+var C={ red:"#E24B4A", blue:"#3E8FDC", green:"#57A93F", yellow:"#F0B429", purple:"#8B5CF6", pink:"#EC6AA8" };
+var WORLDS=[
+  { name:"Grass Meadow", bg:"grass", pairs:[
+    {c:"red",   a:[260,300], b:[260,720]},
+    {c:"green", a:[500,300], b:[500,720]},
+    {c:"blue",  a:[740,300], b:[740,720]}
+  ]},
+  { name:"Forest", bg:"forest", pairs:[
+    {c:"red",   a:[260,300], b:[430,720]},
+    {c:"green", a:[500,270], b:[500,760]},
+    {c:"blue",  a:[740,300], b:[570,720]}
+  ]},
+  { name:"Autumn", bg:"fall", pairs:[
+    {c:"red",   a:[260,300], b:[740,720]},
+    {c:"blue",  a:[740,300], b:[260,720]},
+    {c:"green", a:[175,430], b:[175,650]},
+    {c:"yellow",a:[825,430], b:[825,650]}
+  ]},
+  { name:"Desert", bg:"desert", pairs:[
+    {c:"red",   a:[270,320], b:[730,700]},
+    {c:"blue",  a:[730,320], b:[270,700]},
+    {c:"green", a:[175,430], b:[175,640]},
+    {c:"yellow",a:[825,430], b:[825,640]},
+    {c:"purple",a:[320,165], b:[680,165]}
+  ]},
+  { name:"Castle Kingdom", bg:"castles", pairs:[
+    {c:"red",   a:[235,320], b:[540,640]},
+    {c:"blue",  a:[540,320], b:[235,640]},
+    {c:"green", a:[855,320], b:[620,640]},
+    {c:"yellow",a:[620,320], b:[855,640]},
+    {c:"purple",a:[260,165], b:[740,165]},
+    {c:"pink",  a:[260,835], b:[740,835]}
+  ]}
+];
+
+/* ---------- pure geometry (no DOM — used by QA + live no-cross) ---------- */
+function sub(p,q){return [p[0]-q[0],p[1]-q[1]];}
+function cross(o,a,b){return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);}
+function segProperInt(a,b,c,d){
+  var d1=cross(c,d,a),d2=cross(c,d,b),d3=cross(a,b,c),d4=cross(a,b,d);
+  if(((d1>0&&d2<0)||(d1<0&&d2>0))&&((d3>0&&d4<0)||(d3<0&&d4>0))) return true;
+  return false;
+}
+function distPtSeg(p,a,b){
+  var vx=b[0]-a[0],vy=b[1]-a[1],wx=p[0]-a[0],wy=p[1]-a[1];
+  var c1=vx*wx+vy*wy; if(c1<=0) return Math.hypot(p[0]-a[0],p[1]-a[1]);
+  var c2=vx*vx+vy*vy; if(c2<=c1) return Math.hypot(p[0]-b[0],p[1]-b[1]);
+  var t=c1/c2; return Math.hypot(p[0]-(a[0]+t*vx),p[1]-(a[1]+t*vy));
+}
+// does polyline P (array of pts) properly cross polyline Q ?
+function pathsCross(P,Q){
+  for(var i=0;i<P.length-1;i++) for(var j=0;j<Q.length-1;j++)
+    if(segProperInt(P[i],P[i+1],Q[j],Q[j+1])) return true;
+  return false;
+}
+function pathSelfCross(P){
+  for(var i=0;i<P.length-1;i++) for(var j=i+2;j<P.length-1;j++){
+    if(i===0&&j===P.length-2) continue; // shared endpoints ok on closed-ish
+    if(segProperInt(P[i],P[i+1],P[j],P[j+1])) return true;
+  }
+  return false;
+}
+// path avoids all obstacle centers (block centers not equal to this pair's ends) by >= OBST
+function pathClearsBlocks(P,obst){
+  for(var s=0;s<P.length-1;s++)
+    for(var k=0;k<obst.length;k++)
+      if(distPtSeg(obst[k],P[s],P[s+1])<OBST) return false;
+  return true;
+}
+function candidates(A,B){
+  var TL=[M,M],TR=[VB-M,M],BR=[VB-M,VB-M],BL=[M,VB-M];
+  var list=[[A,B]];
+  [TL,TR,BR,BL].forEach(function(c){ list.push([A,c,B]); });
+  var ring=[TL,TR,BR,BL];
+  for(var i=0;i<4;i++){ var c1=ring[i],c2=ring[(i+1)%4]; list.push([A,c1,c2,B]); list.push([A,c2,c1,B]); }
+  return list;
+}
+// greedy perfect solver: returns {ok, paths}
+function solveLevel(idx){
+  var lv=WORLDS[idx], centers=lv.pairs.map(function(p){return [p.a,p.b];});
+  var committed=[], paths=[];
+  for(var i=0;i<lv.pairs.length;i++){
+    var A=lv.pairs[i].a,B=lv.pairs[i].b;
+    // Real rule forbids only string-vs-string crossings; strings may pass near blocks.
+    var obst=[];
+    var cands=candidates(A,B), chosen=null;
+    for(var ci=0;ci<cands.length;ci++){
+      var P=cands[ci];
+      if(pathSelfCross(P)) continue;
+      if(!pathClearsBlocks(P,obst)) continue;
+      var bad=false;
+      for(var q=0;q<committed.length;q++){ if(pathsCross(P,committed[q])){ bad=true; break; } }
+      if(bad) continue;
+      chosen=P; break;
+    }
+    if(!chosen) return {ok:false, at:i};
+    committed.push(chosen); paths.push(chosen);
+  }
+  return {ok:true, paths:paths};
+}
+
+/* ---------- QA hook (headless-safe: pure geometry) ---------- */
+var GAME={
+  _cfg:function(){ return {levels:WORLDS.map(function(w){return {name:w.name,pairs:w.pairs.length};})}; },
+  sim:function(idx){ var r=solveLevel(idx); return {result:r.ok?"win":"lose", pairs:WORLDS[idx].pairs.length}; },
+  campaign:function(){ var out=[]; for(var i=0;i<WORLDS.length;i++) out.push(this.sim(i).result); return out; },
+  _draw:function(){ return "ok"; }
+};
+if(typeof window!=="undefined"){ window.STRINGMATCH_GAME=GAME; }
+
+/* ---------- everything below is browser-only (guarded) ---------- */
+var hasDOM = (typeof document!=="undefined" && document.getElementById && typeof requestAnimationFrame!=="undefined");
+var svg=hasDOM?document.getElementById("svg"):null;
+if(!svg || !svg.getBoundingClientRect){ return; } // QA / no-DOM: stop here
+
+var gBg=document.getElementById("gBg"), gClouds=document.getElementById("gClouds"),
+    gThreads=document.getElementById("gThreads"), gFx=document.getElementById("gFx"),
+    gBlocks=document.getElementById("gBlocks"), gDemo=document.getElementById("gDemo"),
+    board=document.getElementById("board"), stage=document.getElementById("stage"),
+    statusBox=document.getElementById("status"), statusText=document.getElementById("statusText"),
+    ovSelect=document.getElementById("ovSelect"), ovWin=document.getElementById("ovWin"),
+    worldGrid=document.getElementById("worldGrid"),
+    btnSound=document.getElementById("btnSound"), btnLevels=document.getElementById("btnLevels"),
+    btnNext=document.getElementById("btnNext"), winTitle=document.getElementById("winTitle"),
+    winSub=document.getElementById("winSub");
+var NS="http://www.w3.org/2000/svg";
+function el(n,a){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
+
+var BA=(typeof window!=="undefined")?window.BuildableAudio:null;
+var muted=false, musicOn=false;
+function unlock(){ if(BA){ BA.unlock&&BA.unlock(); if(BA.configure) BA.configure({sfxBase:"/api/sfx?s="});
+  if(!musicOn && BA.setMusic){ try{ BA.setMusic("/api/library-music?name=spa_heartbeat_warm"); musicOn=true; }catch(e){} } } }
+function sfx(n,o){ if(BA&&!muted&&BA.sfx) BA.sfx(n,o); }
+
+/* storage (best-effort) */
+function load(k,d){ try{ var v=localStorage.getItem(k); return v==null?d:v; }catch(e){ return d; } }
+function save(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+var unlocked=parseInt(load("sm_unlocked","0"),10)||0;
+var starsMap={}; try{ starsMap=JSON.parse(load("sm_stars","{}"))||{}; }catch(e){ starsMap={}; }
+
+/* ---------- images ---------- */
+var IMG={};
+["red","blue","green","yellow","purple","pink"].forEach(function(c){ IMG[c]="/kenney/shapechars/"+c+"_body_squircle.png"; });
+var FACE_IDLE="/kenney/shapechars/face_idle.png", FACE_HAPPY="/kenney/shapechars/face_happy.png";
+var BGSRC={grass:"/kenney/bg/grass.png",forest:"/kenney/bg/forest.png",fall:"/kenney/bg/fall.png",desert:"/kenney/bg/desert.png",castles:"/kenney/bg/castles.png"};
+
+/* ---------- game state ---------- */
+var levelIdx=0, level=null, committed={}, cur=null, particles=[], clouds=[], celebrate=0;
+var demo=null, screen="select";
+var HALF=48, SW=22, HITR=70, GOAL=42;
+
+function resize(){
+  var pad=14, w=stage.clientWidth-pad*2, h=stage.clientHeight-pad*2;
+  var s=Math.max(220,Math.min(w,h));
+  board.style.width=s+"px"; board.style.height=s+"px";
+}
+window.addEventListener("resize",resize);
+
+function toXY(e){ var r=svg.getBoundingClientRect(), k=VB/r.width;
+  return [(e.clientX-r.left)*k, (e.clientY-r.top)*k]; }
+function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+
+/* ---------- level select ---------- */
+function buildSelect(){
+  worldGrid.innerHTML="";
+  WORLDS.forEach(function(w,i){
+    var b=document.createElement("button"); b.className="world";
+    var locked=i>unlocked;
+    var st=starsMap[i]||0;
+    b.innerHTML='<img src="'+BGSRC[w.bg]+'" alt=""/>'+
+      '<div class="cap">'+w.name+' &middot; '+w.pairs.length+' pairs</div>'+
+      (st?'<div class="stars">&#9733;'+st+'</div>':'')+
+      (locked?'<div class="lock">&#128274;</div>':'');
+    if(!locked) b.onclick=function(){ unlock(); startLevel(i); };
+    worldGrid.appendChild(b);
+  });
+}
+function showSelect(){ screen="select"; ovSelect.classList.remove("hide"); ovWin.classList.add("hide");
+  statusBox.classList.add("hide"); btnLevels.classList.add("hide"); buildSelect(); }
+
+/* ---------- start a level ---------- */
+function startLevel(i){
+  levelIdx=i; level=WORLDS[i]; committed={}; cur=null; particles=[]; celebrate=0;
+  ovSelect.classList.add("hide"); ovWin.classList.add("hide");
+  statusBox.classList.remove("hide"); btnLevels.classList.remove("hide");
+  screen="play";
+  // background
+  gBg.innerHTML=""; gBg.appendChild(el("image",{href:BGSRC[level.bg],x:0,y:0,width:VB,height:VB,preserveAspectRatio:"xMidYMid slice"}));
+  // clouds
+  clouds=[{x:120,y:150,s:1.0,v:0.25,src:"/kenney/bg/cloud1.png"},{x:640,y:110,s:1.3,v:0.16,src:"/kenney/bg/cloud2.png"}];
+  setStatus("Connect "+level.pairs.length+" pairs — don't cross the strings!");
+  // demo only on first-ever play
+  if(load("sm_demo","0")!=="1" && i===0){ startDemo(); } else { demo=null; }
+}
+function setStatus(t){ statusText.textContent=t; }
+
+/* ---------- demo (pointing hand draws the first string) ---------- */
+function startDemo(){
+  var p=level.pairs[0];
+  demo={ A:p.a, B:p.b, t:0, hold:0, color:p.c };
+  setStatus("Like this! Drag from one buddy to its match.");
+}
+function endDemo(clear){ if(demo){ demo=null; save("sm_demo","1"); if(clear) committed={}; } }
+
+/* ---------- helpers for state ---------- */
+function otherEnd(pair,which){ return which===0?pair.b:pair.a; }
+function blockAt(pt){
+  for(var i=0;i<level.pairs.length;i++){
+    if(dist(pt,level.pairs[i].a)<HITR) return {pi:i,end:0};
+    if(dist(pt,level.pairs[i].b)<HITR) return {pi:i,end:1};
+  }
+  return null;
+}
+function liveCrosses(a,b){
+  for(var i=0;i<level.pairs.length;i++){
+    var c=level.pairs[i].c;
+    if(committed[c] && (!cur||i!==cur.pi)){
+      var P=committed[c];
+      for(var j=0;j<P.length-1;j++) if(segProperInt(a,b,P[j],P[j+1])) return true;
+    }
+  }
+  if(cur){ var Q=cur.pts; for(var k=0;k<Q.length-2;k++) if(segProperInt(a,b,Q[k],Q[k+1])) return true; }
+  return false;
+}
+
+/* ---------- pointer ---------- */
+function down(e){
+  e.preventDefault(); if(screen!=="play") return;
+  try{ board.setPointerCapture(e.pointerId); }catch(_){}
+  unlock();
+  if(demo) endDemo(false);
+  var pt=toXY(e), hit=blockAt(pt);
+  if(!hit) return;
+  var pair=level.pairs[hit.pi], c=pair.c;
+  delete committed[c];
+  cur={ pi:hit.pi, c:c, start:hit.end, target:otherEnd(pair,hit.end),
+        pts:[ (hit.end===0?pair.a:pair.b).slice() ], crossed:false };
+  particlePulse(pair.a); particlePulse(pair.b);
+  sfx("select");
+}
+function move(e){
+  if(!cur||screen!=="play") return; e.preventDefault();
+  var pt=toXY(e), last=cur.pts[cur.pts.length-1];
+  if(dist(pt,last)<10) return;
+  if(!cur.crossed && liveCrosses(last,pt)){ cur.crossed=true; sfx("error"); }
+  cur.pts.push(pt);
+}
+function up(e){
+  if(!cur||screen!=="play") return;
+  var last=cur.pts[cur.pts.length-1];
+  var reached=dist(last,cur.target)<GOAL && cur.pts.length>2;
+  if(reached && !cur.crossed){
+    cur.pts.push(cur.target.slice());
+    committed[cur.c]=cur.pts;
+    burst(cur.target,C[cur.c]); burst(cur.pts[0],C[cur.c]);
+    var n=Object.keys(committed).length;
+    sfx("coin",{tier:Math.min(3,n)});
+    if(n===level.pairs.length) winLevel();
+    else setStatus("Connected "+n+" of "+level.pairs.length+" — keep going!");
+  }
+  cur=null;
+}
+function particlePulse(){ /* visual pulse handled via block scale below */ }
+
+/* ---------- fx ---------- */
+function burst(p,color){ for(var i=0;i<16;i++){ var a=Math.random()*6.28, sp=2+Math.random()*5;
+  particles.push({x:p[0],y:p[1],vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2,life:1,r:4+Math.random()*6,
+    color:Math.random()<0.5?color:"#FFDA5E"}); } }
+
+/* ---------- win ---------- */
+function winLevel(){
+  screen="win";
+  var stars=3; starsMap[levelIdx]=Math.max(stars,starsMap[levelIdx]||0);
+  save("sm_stars",JSON.stringify(starsMap));
+  if(levelIdx>=unlocked && levelIdx<WORLDS.length-1){ unlocked=levelIdx+1; save("sm_unlocked",String(unlocked)); }
+  celebrate=110; sfx("celebrate"); setTimeout(function(){ sfx("win"); },140);
+  try{ window.parent.postMessage({source:"buildable",kind:"win"},"*"); }catch(_){}
+  var lastLevel=levelIdx>=WORLDS.length-1;
+  winTitle.textContent=lastLevel?"You beat them all!":"You did it!";
+  winSub.textContent=lastLevel?"Every world is connected.":"Every buddy is connected.";
+  btnNext.textContent=lastLevel?"Play again":"Next world";
+  setTimeout(function(){ ovWin.classList.remove("hide"); },700);
+}
+btnNext.onclick=function(){ unlock();
+  if(levelIdx>=WORLDS.length-1){ showSelect(); }
+  else startLevel(levelIdx+1);
+};
+
+/* ---------- render ---------- */
+function drawBlock(cx,cy,color,scale,happy){
+  var h=HALF*scale;
+  gBlocks.appendChild(el("image",{href:IMG[color],x:cx-h,y:cy-h,width:h*2,height:h*2,preserveAspectRatio:"xMidYMid meet"}));
+  gBlocks.appendChild(el("image",{href:happy?FACE_HAPPY:FACE_IDLE,x:cx-h,y:cy-h,width:h*2,height:h*2,preserveAspectRatio:"xMidYMid meet"}));
+}
+function polyStr(pts){ return pts.map(function(p){return p[0]+","+p[1];}).join(" "); }
+var pulses={};
+function draw(){
+  gClouds.innerHTML=""; gThreads.innerHTML=""; gFx.innerHTML=""; gBlocks.innerHTML=""; gDemo.innerHTML="";
+  // clouds
+  for(var ci=0;ci<clouds.length;ci++){ var cl=clouds[ci];
+    gClouds.appendChild(el("image",{href:cl.src,x:cl.x,y:cl.y,width:230*cl.s,height:120*cl.s,opacity:0.9,preserveAspectRatio:"xMidYMid meet"})); }
+  // committed strings
+  if(level){ level.pairs.forEach(function(p){ var P=committed[p.c]; if(P&&P.length>1){
+    gThreads.appendChild(el("polyline",{points:polyStr(P),fill:"none",stroke:C[p.c],"stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round"}));
+  }}); }
+  // current
+  if(cur&&cur.pts.length>1){ gThreads.appendChild(el("polyline",{points:polyStr(cur.pts),fill:"none",
+    stroke:cur.crossed?"#E24B4A":C[cur.c],"stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round",
+    "stroke-dasharray":cur.crossed?"6 18":"none"})); }
+  // particles
+  for(var i=0;i<particles.length;i++){ var q=particles[i];
+    gFx.appendChild(el("circle",{cx:q.x,cy:q.y,r:q.r,fill:q.color,opacity:Math.max(0,q.life)})); }
+  // blocks
+  if(level){ level.pairs.forEach(function(p,idx){
+    var connected=!!committed[p.c];
+    var sc=1+(pulses[idx]||0)*0.28;
+    drawBlock(p.a[0],p.a[1],p.c,sc,connected);
+    drawBlock(p.b[0],p.b[1],p.c,sc,connected);
+  }); }
+  // demo hand
+  if(demo){
+    var t=demo.t, P0=demo.A, P1=demo.B;
+    var hx=P0[0]+(P1[0]-P0[0])*t, hy=P0[1]+(P1[1]-P0[1])*t;
+    gDemo.appendChild(el("line",{x1:P0[0],y1:P0[1],x2:hx,y2:hy,stroke:C[demo.color],"stroke-width":SW,
+      "stroke-linecap":"round","stroke-dasharray":"4 20",opacity:0.85}));
+    gDemo.appendChild(el("image",{href:"/tutorial-hand.png",x:hx-18,y:hy-6,width:150,height:150,preserveAspectRatio:"xMidYMid meet"}));
+  }
+}
+
+function loop(){
+  // particles
+  var np=[]; for(var i=0;i<particles.length;i++){ var q=particles[i];
+    q.x+=q.vx; q.y+=q.vy; q.vy+=0.16; q.life-=0.022; if(q.life>0) np.push(q); } particles=np;
+  // pulses decay
+  for(var k in pulses){ pulses[k]=Math.max(0,pulses[k]-0.06); }
+  if(cur){ pulses[cur.pi]=1; }
+  // set pulse on connected pairs briefly handled by burst timing; keep simple: pulse connected
+  // celebrate
+  if(celebrate>0){ celebrate--; if(celebrate%5===0 && level){ var cc=level.pairs[Math.floor(Math.random()*level.pairs.length)].c;
+    burst([120+Math.random()*760,120+Math.random()*760],C[cc]); } }
+  // clouds drift
+  for(var c2=0;c2<clouds.length;c2++){ clouds[c2].x+=clouds[c2].v; if(clouds[c2].x>VB+40) clouds[c2].x=-260; }
+  // demo animate
+  if(demo){ demo.t+=0.012; if(demo.t>=1){ demo.t=1; demo.hold++; if(demo.hold>60){ endDemo(false); setStatus("Now you try! Connect "+level.pairs.length+" pairs."); } } }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- pulse blocks when a pair connects ---------- */
+var _burst=burst;
+burst=function(p,color){ _burst(p,color); if(level){ level.pairs.forEach(function(pp,idx){
+  if(dist(pp.a,p)<6||dist(pp.b,p)<6) pulses[idx]=1; }); } };
+
+/* ---------- controls ---------- */
+btnSound.onclick=function(){ unlock(); muted=!muted; if(BA&&BA.toggleMute) BA.toggleMute();
+  btnSound.innerHTML=muted?"&#128263;":"&#9834;"; };
+btnLevels.onclick=function(){ showSelect(); };
+
+board.addEventListener("pointerdown",down);
+board.addEventListener("pointermove",move);
+board.addEventListener("pointerup",up);
+board.addEventListener("pointercancel",function(){ cur=null; });
+
+/* ---------- boot ---------- */
+resize(); showSelect(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

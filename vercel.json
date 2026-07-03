@@ -344,6 +344,14 @@
       "dest": "/sling-squad.html"
     },
     {
+      "src": "/string-match.html",
+      "dest": "/string-match.html"
+    },
+    {
+      "src": "/string-match",
+      "dest": "/string-match.html"
+    },
+    {
       "src": "/sling",
       "dest": "/sling-squad.html"
     },

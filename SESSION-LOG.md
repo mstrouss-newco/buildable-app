@@ -1,5 +1,15 @@
 # Buildable Kids — Session Log
 
+## 2026-07-02 — New game: String Match (draw-a-string connect puzzle, Kenney art)
+New Track B engine `public/string-match.html` + Games-picker tile + `vercel.json` route. Kids draw a
+freeform finger-string from a block to its matching buddy without crossing other strings; good connects
+make the blocks smile (Kenney Shape Characters faces), burst sparkles, and chime. 5 worlds using Kenney
+Background Elements Remastered backdrops (grass/forest/fall/desert/castles), 3→6 pairs. First-play
+pointing-hand demo. Sounds via BA core sfx + `spa_heartbeat_warm` music; shared `GameFrame` nav.
+Always-winnable proven by a pure-geometry perfect-player solver exposed as `window.STRINGMATCH_GAME`;
+`qa-stringmatch.mjs` = all 5 levels solvable (PASS). Assets in `public/kenney/shapechars` + `public/kenney/bg`.
+Follow-ups: register assets in shared library, save/share/publish + make-a-level, picker thumbnail art.
+
 ## 2026-06-28 — Castle Guard polish: calm decor, no-words tutorial, 90s+ levels (Mike feedback)
 Three fixes from Mike playing the live build:
 - **Trees no longer "fly around."** Decor (trees/bushes/rocks) was cycling its sprite-sheet
