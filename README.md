@@ -2816,3 +2816,17 @@ modes; all 8 Solo levels still clear across repeated runs. Live-deploy verified 
 (BS menu, mode switch, Solo juice, Pong court) with no console errors. Always-winnable invariant
 unchanged (anti-vertical-bounce jitter). No DB changes — progress/stars/choices are per-kid in
 the browser.
+
+### Intro "demo hand" (2026-07-02)
+The Breaker start-of-level intro (`drawTutorial` in `public/breaker-engine.html`) now shows a
+real 3D pointing-hand image under the paddle instead of the small drawn hand, and the row of
+5 meaningless colored bars was removed. The hand:
+- loads `public/tutorial-hand.png` (white background erased, transparent),
+- slides horizontally with the demo paddle so its fingertip stays touching the paddle,
+- is sized (~92px tall) to stay clear of the green start button on the 900×600 canvas.
+
+Reuse in other games: copy the small `tutHand` loader + `drawTutorialHand(px, topY)` block from
+`breaker-engine.html`, call it under the game's paddle/player in the intro, and add an explicit
+`/tutorial-hand.png` route in `vercel.json` (the catch-all otherwise serves landing.html).
+Live-QA'd on buildablekids.com/breaker-engine.html Level 1 — hand appears, slides, bars gone,
+no console errors.
