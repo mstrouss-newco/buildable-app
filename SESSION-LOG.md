@@ -1443,6 +1443,7 @@ row. Data cleanup: filed the 4 unfiled songs on the demo device — "Riley stole
 the ball"→Riley, "Riley and Fiona's magical zoo"→Riley, "Jackson hit a home run"
 →Jack; left "Epic volcano Song" unfiled (no child named).
 
+<<<<<<< HEAD
 ---
 ## 2026-07-02 — Hilltop Tanks (tank artillery engine)
 - Built `public/tank-engine.html`: solo vs friendly computer tank; hill-to-hill lobbing.
@@ -1451,3 +1452,15 @@ the ball"→Riley, "Riley and Fiona's magical zoo"→Riley, "Jackson hit a home 
 - Shared BR/BA/BM/BS; BS start screen (3 levels: Green Valley, Twin Peaks, Big Bluffs).
 - QA: qa-tank.mjs perfect-player bot clears all levels 8/8; full campaign win.
 - Routes in vercel.json; SCREEN_TANK + TankScreen + Games tile; api/images.js prompt.
+=======
+## 2026-07-02 — New game: Bubble Buddies (Snood-style bubble shooter)
+New Track B engine public/bubble-engine.html. Aim+shoot up a hex grid; match 3+ same-colour
+"buddies" to pop, floating clusters drop. Kenney CC0 Shape Characters (6 circle bodies + faces:
+idle/pop/happy; added face_pop.png). 6 levels (2→6 colours). Shared BR/BA/BM/BS libs, GameFrame nav,
+core sfx + spa_heartbeat_warm music, win/lose postMessage. Colour feed = the best available move
+(never a useless bubble) + unlimited shots + far lose line = always-winnable. window.BUBBLE_GAME
+sim/campaign perfect-player bot; qa-bubble.mjs proves all 6 levels clear (5 seeds each) + render ok.
+Wired: vercel.json (/bubble-engine.html, /bubble), src/BuildableKids.jsx (SCREEN_BUBBLE, tile,
+BubbleScreen, GAME_SLUGS). TODO: asset-library registration, save/share/publish + make-a-level,
+picker thumbnail (api/images GAMES id bubble).
+>>>>>>> 30afe7d (New game: Bubble Buddies — Snood-style bubble shooter (Kenney Shape Characters))

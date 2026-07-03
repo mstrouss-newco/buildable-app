@@ -348,6 +348,14 @@
       "dest": "/string-match.html"
     },
     {
+      "src": "/bubble-engine.html",
+      "dest": "/bubble-engine.html"
+    },
+    {
+      "src": "/bubble",
+      "dest": "/bubble-engine.html"
+    },
+    {
       "src": "/string-match",
       "dest": "/string-match.html"
     },

@@ -1,0 +1,2 @@
+Kenney "Shape Characters" (CC0) — https://kenney.nl/assets/shape-characters
+Used in Buildable: bubble bodies (circle) + faces for Bubble Buddies, String Match.

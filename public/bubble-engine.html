@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="icon" href="/favicon.ico?v=4" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=4" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#7C5CFC" />
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Bubble Buddies — engine</title>
+<style>
+  html,body{margin:0;height:100%;background:#0e1830;overflow:hidden;font-family:'Nunito',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  #stage{position:relative}
+  canvas{display:block;touch-action:none;border-radius:0}
+  .ov{position:absolute;inset:0;z-index:5}
+  #start{position:absolute;inset:0;z-index:6}
+  .hide{display:none!important}
+  /* in-game controls: top-right vertical stack (Home is shell-owned, top-left) */
+  #ctrls{position:absolute;top:12px;right:12px;z-index:4;display:flex;flex-direction:column;gap:9px}
+  .cbtn{width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(16,26,46,.62);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;padding:0}
+  .cbtn:active{transform:scale(.92)}
+  .cbtn span{font-family:'Baloo 2','Nunito',sans-serif;font-weight:800;font-size:10px;line-height:1}
+  .cbtn b{font-family:'Baloo 2','Nunito',sans-serif;font-weight:900;font-size:11px;line-height:1;color:#7CF6B0}
+  #overlay{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;background:rgba(8,12,24,.55)}
+  .osheet{width:86%;max-width:360px;background:#16223c;border:1px solid rgba(255,255,255,.10);border-radius:24px;padding:26px 22px;color:#fff;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  .otitle{font-family:'Baloo 2','Nunito',sans-serif;font-size:30px;font-weight:900;margin:2px 0 6px}
+  .osub{font-size:15px;color:#a9b8d8;margin:0 0 18px}
+  .obtn{border:none;border-radius:999px;padding:14px 20px;font-weight:900;font-size:17px;color:#0d1424;background:#7CF6B0;cursor:pointer;font-family:'Baloo 2','Nunito',sans-serif;width:100%}
+  .obtn.ghost{background:transparent;color:#cdd9f2;border:1px solid rgba(255,255,255,.18);margin-top:10px}
+</style>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="ctrls" class="hide">
+    <button class="cbtn" id="soundBtn" aria-label="Sound"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9v6h4l5 4V5L9 9z"/><path d="M17 8a5 5 0 0 1 0 8"/></svg></button>
+    <button class="cbtn" id="helpBtn" aria-label="How to play"><span>How</span><b>?</b></button>
+  </div>
+  <div id="start" class="ov"></div>
+  <div id="overlay" class="hide"><div class="osheet">
+    <div class="otitle" id="ovTitle">You did it!</div>
+    <div class="osub" id="ovSub">All the buddies are free.</div>
+    <button class="obtn" id="ovNext">Next</button>
+    <button class="obtn ghost" id="ovMenu">Back to levels</button>
+  </div></div>
+</div></div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script>
+(function(){
+"use strict";
+var BR=window.BuildableRenders, BA=window.BuildableAudio, BM=window.BuildableMechanics, BS=window.BuildableStartScreen;
+var HAS_DOM = typeof document!=="undefined" && document.getElementById;
+
+// ---------- colours (Kenney Shape Characters, CC0) ----------
+var COLORS = {
+  R:{name:"red",    css:"#e8543d", body:"/kenney/shapechars/red_body_circle.png"},
+  B:{name:"blue",   css:"#3f9be0", body:"/kenney/shapechars/blue_body_circle.png"},
+  G:{name:"green",  css:"#8bc255", body:"/kenney/shapechars/green_body_circle.png"},
+  Y:{name:"yellow", css:"#f4c93b", body:"/kenney/shapechars/yellow_body_circle.png"},
+  U:{name:"purple", css:"#9a6fd0", body:"/kenney/shapechars/purple_body_circle.png"},
+  P:{name:"pink",   css:"#ef8fb6", body:"/kenney/shapechars/pink_body_circle.png"}
+};
+var FACE_IDLE="/kenney/shapechars/face_idle.png";
+var FACE_POP ="/kenney/shapechars/face_pop.png";
+var FACE_HAPPY="/kenney/shapechars/face_happy.png";
+
+// ---------- level data (rows of colour codes; '.' or ' ' = empty) ----------
+// Compact clusters so a 4-8yo (and the QA bot) can always clear them.
+var GAME_CONFIG = window.GAME_CONFIG || { levels:[
+  { name:"Sunny Meadow", colors:["R","Y"], rows:[
+    "RRRYYYRRR",
+    "RRRYYYRRR",
+    ".YYYRRRYY" ]},
+  { name:"Berry Splash", colors:["R","B","P"], rows:[
+    "BBBRRRPPP",
+    "BBBRRRPPP",
+    "PPPBBBRRR",
+    ".RRPPPBB." ]},
+  { name:"Leafy Grove", colors:["G","Y","B"], rows:[
+    "GGGYYYGGG",
+    "BBBGGGBBB",
+    "YYYBBBYYY",
+    "GGGYYYGGG" ]},
+  { name:"Grape Fizz", colors:["U","P","B","Y"], rows:[
+    "UUUYYYBBB",
+    "PPPUUUPPP",
+    "BBBPPPYYY",
+    "YYYBBBUUU",
+    ".UUPPPYY." ]},
+  { name:"Rainbow Reef", colors:["R","G","B","Y","U"], rows:[
+    "RRGGBBYYU",
+    "UUYYBBGGR",
+    "RRGGBBYYU",
+    "GGBBYYUUG",
+    "BBYYUUGGB" ]},
+  { name:"Bubble Party", colors:["R","B","G","Y","U","P"], rows:[
+    "RRBBGGYYU",
+    "PPUUYYGGB",
+    "RRBBGGYYU",
+    "GGYYPPBBR",
+    "UUGGRRPPY",
+    "BBPPUUGGR" ]}
+]};
+
+// ---------- geometry ----------
+var COLS=9, R=36, DIAM=72, ROWH=R*Math.sqrt(3);        // hex vertical spacing
+var MARGIN=18;                                          // left/right wall inset
+var DESIGN_W=720, DESIGN_H=1040;
+var TOPY=74;                                            // grid ceiling
+var GRIDW=2*R*COLS + R;                                 // width incl odd-row shift
+var GRIDX=(DESIGN_W-GRIDW)/2;                           // centre the grid
+var WALL_L=GRIDX, WALL_R=DESIGN_W-GRIDX;                // bounce walls
+var DEADLINE=DESIGN_H-150;                              // lose line
+var LX=DESIGN_W/2, LY=DESIGN_H-70;                      // launcher position
+var GRID_ROWS=40;                                       // fixed grid height
+
+function cellX(r,c){ return GRIDX + R + (r&1?R:0) + c*2*R; }
+function cellY(r){ return TOPY + R + r*ROWH; }
+
+// odd rows are shifted RIGHT by R  -> "odd-r" hex adjacency
+function neighbors(r,c){
+  var out, i, d;
+  var even=[[0,-1],[0,1],[-1,-1],[-1,0],[1,-1],[1,0]];
+  var odd =[[0,-1],[0,1],[-1,0],[-1,1],[1,0],[1,1]];
+  var set=(r&1)?odd:even; out=[];
+  for(i=0;i<set.length;i++){ d=set[i]; var nr=r+d[0], nc=c+d[1];
+    if(nr>=0 && nr<GRID_ROWS && nc>=0 && nc<COLS) out.push([nr,nc]); }
+  return out;
+}
+
+// ---------- seeded rng (deterministic for QA) ----------
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+// ---------- game state ----------
+var G=null;          // { grid, level, rows, rng, color, next, ... }
+var state="title";   // title | play | win | lose
+var SIM=false;       // true while headless-simulating (skip visual spawns)
+var muted=false, curMusic=null;
+var moving=null;     // {x,y,vx,vy,code,target}
+var particles=[], pops=[], shakeT=0, aimA=0, pointerX=LX, pointerY=LY-200;
+
+function makeGrid(){ var g=[]; for(var r=0;r<GRID_ROWS;r++){ g.push(new Array(COLS).fill(null)); } return g; }
+
+function buildLevel(idx, seed){
+  var lv=GAME_CONFIG.levels[idx];
+  var grid=makeGrid();
+  for(var r=0;r<lv.rows.length;r++){
+    var line=lv.rows[r];
+    for(var c=0;c<COLS && c<line.length;c++){
+      var ch=line[c];
+      if(COLORS[ch]) grid[r][c]=ch;
+    }
+  }
+  var rng=mulberry32(seed==null? (Date.now()&0xffffffff) : seed);
+  G={ grid:grid, level:idx, name:lv.name, palette:lv.colors.slice(), rng:rng, shots:0 };
+  G.color=pickColor(); G.next=pickColor();
+  moving=null; particles=[]; pops=[]; shakeT=0;
+  return G;
+}
+
+// colours still present on the board
+function boardColors(){
+  var seen={}, list=[];
+  for(var r=0;r<G.grid.length;r++)for(var c=0;c<COLS;c++){ var v=G.grid[r][c]; if(v&&!seen[v]){seen[v]=1;list.push(v);} }
+  return list;
+}
+function countLeft(){ var n=0; for(var r=0;r<G.grid.length;r++)for(var c=0;c<COLS;c++) if(G.grid[r][c]) n++; return n; }
+
+// Feed the kid a genuinely useful colour: the one whose best shot pops/drops the most.
+function pickColor(){
+  var cols=boardColors();
+  if(!cols.length) return G&&G.palette? G.palette[0] : "R";
+  var m=bestMoveAnyColor();
+  if(m && m.code) return m.code;
+  // no popping move: hand a colour that has the biggest group to build on
+  var best=cols[0], bestN=-1;
+  for(var i=0;i<cols.length;i++){ var n=maxGroupOf(cols[i]); if(n>bestN){bestN=n;best=cols[i];} }
+  return best;
+}
+// is there a spot where adding this colour would create a group of 3+?
+function hasCompletablePair(code){
+  for(var r=0;r<G.grid.length;r++)for(var c=0;c<COLS;c++){
+    if(G.grid[r][c]!==null) continue;
+    if(!isSupported(r,c)) continue;
+    // pretend to place, count same-colour group
+    G.grid[r][c]=code; var n=groupSize(r,c,code); G.grid[r][c]=null;
+    if(n>=3) return true;
+  }
+  return false;
+}
+function isSupported(r,c){
+  if(r===0) return true;
+  var nb=neighbors(r,c);
+  for(var i=0;i<nb.length;i++){ if(G.grid[nb[i][0]][nb[i][1]]!==null) return true; }
+  return false;
+}
+function groupSize(r,c,code){
+  var seen={}, stack=[[r,c]], n=0;
+  while(stack.length){ var p=stack.pop(), k=p[0]+","+p[1]; if(seen[k])continue; seen[k]=1;
+    if(G.grid[p[0]][p[1]]!==code) continue; n++;
+    var nb=neighbors(p[0],p[1]); for(var i=0;i<nb.length;i++) stack.push(nb[i]); }
+  return n;
+}
+
+// ---------- shot physics (shared by play + bot) ----------
+// trace a shot at angle a (radians from straight up) -> landing {r,c} or null
+function traceShot(a){
+  var speed=16, x=LX, y=LY, vx=Math.sin(a)*speed, vy=-Math.cos(a)*speed, steps=0;
+  while(steps++ < 4000){
+    x+=vx; y+=vy;
+    if(x<WALL_L+R){ x=WALL_L+R; vx=-vx; }
+    else if(x>WALL_R-R){ x=WALL_R-R; vx=-vx; }
+    if(y<=TOPY+R){ return snapCell(x, TOPY+R); }             // ceiling
+    // collision with an existing bubble
+    var hit=nearestOccupiedHit(x,y);
+    if(hit) return snapCell(x,y);
+    if(y>DESIGN_H+80) return null;                           // flew off (shouldn't)
+  }
+  return null;
+}
+function nearestOccupiedHit(x,y){
+  var r0=Math.max(0,Math.floor((y-TOPY-R)/ROWH)-1);
+  var r1=r0+3;
+  for(var r=r0;r<=r1;r++){ if(r<0||r>=G.grid.length)continue;
+    for(var c=0;c<COLS;c++){ if(!G.grid[r][c])continue;
+      var dx=x-cellX(r,c), dy=y-cellY(r); if(dx*dx+dy*dy < (DIAM*0.9)*(DIAM*0.9)) return true; } }
+  return false;
+}
+// nearest EMPTY supported cell to a pixel position
+function snapCell(x,y){
+  var r=Math.round((y-TOPY-R)/ROWH); if(r<0)r=0;
+  var best=null, bestD=1e9;
+  for(var rr=r-1; rr<=r+1; rr++){ if(rr<0||rr>=G.grid.length)continue;
+    for(var cc=0; cc<COLS; cc++){
+      if(G.grid[rr][cc]!==null) continue;
+      if(!(rr===0 || anyOccupiedNeighbor(rr,cc))) continue;
+      var dx=x-cellX(rr,cc), dy=y-cellY(rr), d=dx*dx+dy*dy;
+      if(d<bestD){ bestD=d; best=[rr,cc]; } } }
+  if(!best){ // fall back: closest empty cell anywhere near
+    for(var r2=r-1;r2<=r+2;r2++){ if(r2<0||r2>=G.grid.length)continue;
+      for(var c2=0;c2<COLS;c2++){ if(G.grid[r2][c2]!==null)continue;
+        var ddx=x-cellX(r2,c2), ddy=y-cellY(r2), dd=ddx*ddx+ddy*ddy;
+        if(dd<bestD){bestD=dd;best=[r2,c2];} } } }
+  return best;
+}
+function anyOccupiedNeighbor(r,c){ var nb=neighbors(r,c); for(var i=0;i<nb.length;i++) if(G.grid[nb[i][0]][nb[i][1]]!==null) return true; return false; }
+
+// place a colour at a cell and resolve matches; returns {popped,dropped}
+function placeAndResolve(r,c,code){
+  G.grid[r][c]=code;
+  var group=collectGroup(r,c,code);
+  var popped=0, dropped=0, i;
+  if(group.length>=3){
+    for(i=0;i<group.length;i++){ var p=group[i]; spawnPop(p[0],p[1],code); G.grid[p[0]][p[1]]=null; }
+    popped=group.length;
+    var floaters=findFloaters();
+    for(i=0;i<floaters.length;i++){ var f=floaters[i]; spawnDrop(f[0],f[1],G.grid[f[0]][f[1]]); G.grid[f[0]][f[1]]=null; }
+    dropped=floaters.length;
+  }
+  return {popped:popped, dropped:dropped};
+}
+function collectGroup(r,c,code){
+  var seen={}, stack=[[r,c]], out=[];
+  while(stack.length){ var p=stack.pop(), k=p[0]+","+p[1]; if(seen[k])continue; seen[k]=1;
+    if(G.grid[p[0]][p[1]]!==code) continue; out.push(p);
+    var nb=neighbors(p[0],p[1]); for(var i=0;i<nb.length;i++) stack.push(nb[i]); }
+  return out;
+}
+// bubbles not connected to the ceiling (row 0) fall away
+function findFloaters(){
+  var anchored={}, stack=[], r,c,i;
+  for(c=0;c<COLS;c++) if(G.grid[0][c]!==null){ stack.push([0,c]); }
+  while(stack.length){ var p=stack.pop(), k=p[0]+","+p[1]; if(anchored[k])continue;
+    if(G.grid[p[0]][p[1]]===null) continue; anchored[k]=1;
+    var nb=neighbors(p[0],p[1]); for(i=0;i<nb.length;i++) stack.push(nb[i]); }
+  var out=[];
+  for(r=0;r<G.grid.length;r++)for(c=0;c<COLS;c++){ if(G.grid[r][c]!==null && !anchored[r+","+c]) out.push([r,c]); }
+  return out;
+}
+function overflow(){
+  for(var r=0;r<G.grid.length;r++)for(var c=0;c<COLS;c++){ if(G.grid[r][c] && cellY(r)+R>=DEADLINE) return true; }
+  return false;
+}
+
+// ---------- effects ----------
+function spawnPop(r,c,code){ if(SIM)return; var x=cellX(r,c), y=cellY(r); pops.push({x:x,y:y,t:0,code:code}); quickBurst(x,y,COLORS[code].css); }
+function spawnDrop(r,c,code){ if(SIM)return; var x=cellX(r,c), y=cellY(r); pops.push({x:x,y:y,t:0,code:code,drop:true}); }
+function quickBurst(x,y,css){ for(var i=0;i<8;i++){ var a=Math.random()*6.28; particles.push({x:x,y:y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,life:1,css:css}); } }
+
+// ---------- rendering ----------
+var cv, ctx, IMG={};
+function loadImg(src){ if(IMG[src])return IMG[src]; var im=new Image(); im.src=src; IMG[src]=im; return im; }
+function preload(){ for(var k in COLORS) loadImg(COLORS[k].body); loadImg(FACE_IDLE); loadImg(FACE_POP); loadImg(FACE_HAPPY); }
+
+function drawBuddy(x,y,code,face,scale){
+  scale=scale||1; var d=DIAM*scale;
+  var body=loadImg(COLORS[code].body);
+  if(body&&body.complete&&body.naturalWidth){ ctx.drawImage(body,x-d/2,y-d/2,d,d); }
+  else { ctx.fillStyle=COLORS[code].css; ctx.beginPath(); ctx.arc(x,y,d/2,0,6.2832); ctx.fill(); }
+  var f=loadImg(face);
+  if(f&&f.complete&&f.naturalWidth){ var fw=d*0.55, fh=fw*(42/59); ctx.drawImage(f,x-fw/2,y-fh/2-d*0.02,fw,fh); }
+}
+
+function draw(){
+  if(!ctx) return "no-ctx";
+  var sx=(shakeT>0)?(Math.random()*2-1)*shakeT:0, sy=(shakeT>0)?(Math.random()*2-1)*shakeT:0;
+  ctx.setTransform(1,0,0,1,sx,sy);
+  // background
+  var g=ctx.createLinearGradient(0,0,0,DESIGN_H); g.addColorStop(0,"#12244a"); g.addColorStop(1,"#0c1730");
+  ctx.fillStyle=g; ctx.fillRect(-8,-8,DESIGN_W+16,DESIGN_H+16);
+  // side walls
+  ctx.fillStyle="rgba(255,255,255,.05)"; ctx.fillRect(0,0,WALL_L,DESIGN_H); ctx.fillRect(WALL_R,0,DESIGN_W-WALL_R,DESIGN_H);
+  // deadline
+  ctx.strokeStyle="rgba(255,120,120,.35)"; ctx.setLineDash([10,10]); ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(WALL_L,DEADLINE); ctx.lineTo(WALL_R,DEADLINE); ctx.stroke(); ctx.setLineDash([]);
+  // aim guide (dotted predicted path)
+  if(state==="play" && !moving) drawAimGuide();
+  // bubbles
+  if(G){ for(var r=0;r<G.grid.length;r++)for(var c=0;c<COLS;c++){ var v=G.grid[r][c]; if(v) drawBuddy(cellX(r,c),cellY(r),v,FACE_IDLE,1); } }
+  // pops (happy flash)
+  for(var i=pops.length-1;i>=0;i--){ var p=pops[i]; p.t+=1; var k=p.t/12;
+    if(k>=1){ pops.splice(i,1); continue; }
+    ctx.globalAlpha=1-k; drawBuddy(p.x,p.y-(p.drop?k*40:0),p.code,FACE_HAPPY,1-k*0.5); ctx.globalAlpha=1; }
+  // particles
+  for(var j=particles.length-1;j>=0;j--){ var pt=particles[j]; pt.x+=pt.vx; pt.y+=pt.vy; pt.vy+=0.25; pt.life-=0.045;
+    if(pt.life<=0){ particles.splice(j,1); continue; }
+    ctx.globalAlpha=Math.max(0,pt.life); ctx.fillStyle=pt.css; ctx.beginPath(); ctx.arc(pt.x,pt.y,5,0,6.2832); ctx.fill(); ctx.globalAlpha=1; }
+  // moving bubble
+  if(moving) drawBuddy(moving.x,moving.y,moving.code,FACE_POP,1);
+  // launcher
+  drawLauncher();
+  if(shakeT>0) shakeT-=1;
+  ctx.setTransform(1,0,0,1,0,0);
+  // HUD
+  if(state==="play"||state==="win"||state==="lose"){
+    ctx.fillStyle="rgba(255,255,255,.92)"; ctx.font="900 22px 'Baloo 2', Nunito, sans-serif"; ctx.textAlign="left";
+    ctx.fillText(G?G.name:"", WALL_L+4, 40);
+    ctx.textAlign="right"; ctx.fillText("Buddies left: "+(G?countLeft():0), WALL_R-4, 40);
+    ctx.textAlign="left";
+  }
+  return "ok";
+}
+function drawLauncher(){
+  // aim cannon
+  ctx.save(); ctx.translate(LX,LY); ctx.rotate(aimA);
+  ctx.fillStyle="rgba(255,255,255,.12)"; ctx.fillRect(-14,-64,28,64);
+  ctx.restore();
+  ctx.fillStyle="rgba(20,32,60,.9)"; ctx.beginPath(); ctx.arc(LX,LY,44,0,6.2832); ctx.fill();
+  if(G && !moving){ drawBuddy(LX,LY,G.color,FACE_POP,0.92); }
+  // next preview
+  if(G){ drawBuddy(LX+78,LY+8,G.next,FACE_IDLE,0.6);
+    ctx.fillStyle="rgba(255,255,255,.6)"; ctx.font="800 12px Nunito, sans-serif"; ctx.textAlign="center"; ctx.fillText("next",LX+78,LY+46); ctx.textAlign="left"; }
+}
+function drawAimGuide(){
+  var speed=16, x=LX, y=LY, vx=Math.sin(aimA)*speed, vy=-Math.cos(aimA)*speed, steps=0, dot=0;
+  ctx.fillStyle="rgba(255,255,255,.5)";
+  while(steps++<400){ x+=vx; y+=vy;
+    if(x<WALL_L+R){x=WALL_L+R;vx=-vx;} else if(x>WALL_R-R){x=WALL_R-R;vx=-vx;}
+    if(y<=TOPY+R) break;
+    if(nearestOccupiedHit(x,y)) break;
+    if((dot++ %6)===0){ ctx.beginPath(); ctx.arc(x,y,3.5,0,6.2832); ctx.fill(); } }
+}
+
+// ---------- input / firing ----------
+function setAimFromPointer(px,py){
+  var dx=px-LX, dy=py-LY; var a=Math.atan2(dx, -dy);   // 0 = straight up
+  var lim=1.35; if(a>lim)a=lim; if(a<-lim)a=-lim; aimA=a;
+}
+function fire(){
+  if(state!=="play"||moving||!G) return;
+  var target=traceShot(aimA);
+  if(!target) return;
+  var tx=cellX(target[0],target[1]), ty=cellY(target[0]);
+  var speed=17, dist=Math.hypot(tx-LX,ty-LY), n=Math.max(1,dist/speed);
+  moving={ x:LX,y:LY, vx:(tx-LX)/n, vy:(ty-LY)/n, code:G.color, target:target, steps:Math.ceil(n) };
+  G.shots++; sfx("shoot");
+}
+function stepMoving(){
+  if(!moving) return;
+  moving.x+=moving.vx; moving.y+=moving.vy; moving.steps--;
+  if(moving.steps<=0){
+    var t=moving.target, code=moving.code; moving=null;
+    var res=placeAndResolve(t[0],t[1],code);
+    if(res.popped){ sfx(res.dropped?"explode":"collect"); shakeT=Math.min(8,3+res.popped); }
+    else sfx("hit");
+    afterShot();
+  }
+}
+function afterShot(){
+  if(countLeft()===0){ endGame(true); return; }
+  if(overflow()){ endGame(false); return; }
+  G.color=G.next; G.next=pickColor();
+}
+
+// ---------- win / lose ----------
+function endGame(won){
+  state=won?"win":"lose"; sfx(won?"win":"lose");
+  signal(won?"win":"lose");
+  if(HAS_DOM){
+    var ov=document.getElementById("overlay"); ov.classList.remove("hide");
+    document.getElementById("ovTitle").textContent = won? "You did it!" : "So close!";
+    document.getElementById("ovSub").textContent = won? "All the buddies are free." : "The buddies reached the line — try again!";
+    var last = G.level>=GAME_CONFIG.levels.length-1;
+    var nb=document.getElementById("ovNext");
+    nb.textContent = !won? "Try again" : (last? "Play again" : "Next level");
+    nb.onclick=function(){ ov.classList.add("hide");
+      if(!won){ play(G.level); }
+      else if(last){ toMenu(); }
+      else { play(G.level+1); } };
+    var mb=document.getElementById("ovMenu"); if(mb) mb.onclick=function(){ ov.classList.add("hide"); toMenu(); };
+  }
+}
+function signal(kind){ try{ if(window.parent&&window.parent!==window) window.parent.postMessage({source:"buildable",kind:kind},"*"); }catch(e){} }
+
+// ---------- audio ----------
+function sfx(n){ if(BA&&BA.sfx)BA.sfx(n); }
+function ensureMusic(){ if(!BA||!BA.setMusic)return; var url="/api/library-music?name=spa_heartbeat_warm";
+  if(url!==curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); curMusic=url; } }
+
+// ---------- screens ----------
+var startScreen=null;
+function levelCards(){
+  return GAME_CONFIG.levels.map(function(lv,i){
+    var st = i===0? "next" : "locked";   // simple linear unlock
+    return { n:i+1, name:lv.name, color:"#2b4a6b", state:st };
+  });
+}
+function toMenu(){
+  state="title"; G=null; moving=null;
+  if(!HAS_DOM) return;
+  document.getElementById("ctrls").classList.add("hide");
+  document.getElementById("overlay").classList.add("hide");
+  var host=document.getElementById("start"); host.style.display="block";
+  var cfg={ title:"Bubble Buddies", subtitle:"Match 3 buddies to pop them and set them free!",
+    sound:!muted,
+    hero:{ name:"Poppy", img:COLORS.P.body, progressText:"Pop, match, and clear every buddy" },
+    levels:levelCards(),
+    customizeLabel:null };
+  var cb={ onPlay:function(n){ if(BA)BA.unlock(); play(n-1); },
+    onSound:function(on){ if(BA){BA.unlock();BA.toggleMute();} muted=BA&&BA.isMuted?BA.isMuted():!on; },
+    onBack:function(){ try{ window.parent.postMessage("nav:exit","*"); }catch(e){} } };
+  if(!startScreen) startScreen=BS.mount(host, cfg, cb); else startScreen.update({levels:levelCards(),sound:!muted});
+}
+function play(idx){
+  buildLevel(idx, null);
+  state="play";
+  if(HAS_DOM){
+    document.getElementById("start").style.display="none";
+    document.getElementById("ctrls").classList.remove("hide");
+    document.getElementById("overlay").classList.add("hide");
+  }
+  ensureMusic();
+}
+
+// ---------- loop ----------
+function loop(){ if(state==="play"&&moving) stepMoving(); draw(); requestAnimationFrame(loop); }
+
+// ---------- boot (DOM only) ----------
+function boot(){
+  cv=document.getElementById("cv"); ctx=cv.getContext("2d");
+  fit(); preload();
+  window.addEventListener("resize",fit);
+  cv.addEventListener("pointermove",function(e){ var p=toStage(e); pointerX=p.x; pointerY=p.y; if(state==="play"&&!moving) setAimFromPointer(p.x,p.y); });
+  cv.addEventListener("pointerdown",function(e){ if(BA)BA.unlock(); var p=toStage(e); if(state==="play"){ setAimFromPointer(p.x,p.y); fire(); } });
+  var sb=document.getElementById("soundBtn"); if(sb) sb.onclick=function(){ if(BA){BA.unlock();BA.toggleMute();} };
+  var hb=document.getElementById("helpBtn"); if(hb) hb.onclick=function(){ alert("Aim with your finger, tap to shoot. Match 3 or more of the same buddy to pop them. Clear them all to win!"); };
+  toMenu(); loop();
+}
+function fit(){
+  cv.width=DESIGN_W; cv.height=DESIGN_H;
+  var wrap=document.getElementById("wrap"); var W=wrap.clientWidth||window.innerWidth, H=wrap.clientHeight||window.innerHeight;
+  var s=Math.min(W/DESIGN_W, H/DESIGN_H);
+  var st=document.getElementById("stage");
+  cv.style.width=(DESIGN_W*s)+"px"; cv.style.height=(DESIGN_H*s)+"px";
+  st.style.width=(DESIGN_W*s)+"px"; st.style.height=(DESIGN_H*s)+"px";
+  cv._scale=s;
+}
+function toStage(e){ var rect=cv.getBoundingClientRect(); var s=cv._scale||1;
+  return { x:(e.clientX-rect.left)/s, y:(e.clientY-rect.top)/s }; }
+
+// ---------- the "brain" (shared by colour-feed, bot, and QA) ----------
+function serialize(){ var g=[]; for(var r=0;r<G.grid.length;r++) g.push(G.grid[r].slice()); return {g:g}; }
+function restore(s){ for(var r=0;r<G.grid.length;r++) G.grid[r]=s.g[r].slice(); }
+function maxGroupOf(code){ var best=0; for(var r=0;r<G.grid.length;r++)for(var c=0;c<COLS;c++){ if(G.grid[r][c]===code){ var n=groupSize(r,c,code); if(n>best)best=n; } } return best; }
+
+// best shot for ONE colour: returns {angle,pop,drop,score} or null
+function bestMoveForColor(code){
+  var snap=serialize(), sim0=SIM; SIM=true;
+  var best=null, a;
+  for(a=-1.34; a<=1.34; a+=0.02){
+    var t=traceShot(a); if(!t) continue;
+    restore(snap);
+    var res=placeAndResolve(t[0],t[1],code);
+    var score = res.popped*10 + res.dropped*12 + (res.popped?t[0]:-100);  // pop+drop, prefer high anchors
+    if(!best || score>best.score){ best={angle:a,pop:res.popped,drop:res.dropped,score:score}; }
+    restore(snap);
+  }
+  SIM=sim0;
+  return best;
+}
+// best shot over ALL board colours -> {code,angle,pop,drop}
+function bestMoveAnyColor(){
+  var cols=boardColors(), best=null;
+  for(var i=0;i<cols.length;i++){ var m=bestMoveForColor(cols[i]); if(!m) continue;
+    if(m.pop>0 && (!best || m.score>best.score)) best={code:cols[i],angle:m.angle,pop:m.pop,drop:m.drop,score:m.score}; }
+  return best;
+}
+
+// ---------- QA / headless harness ----------
+// "Perfect player": each turn pick the colour+angle that pops/drops the most.
+// Since the real game FEEDS the kid that same best colour, proving the perfect
+// player clears every level proves the level is always winnable.
+function simLevel(idx, seed, maxShots){
+  buildLevel(idx, seed==null?12345:seed);
+  state="play"; SIM=true; maxShots=maxShots||400;
+  var shots=0, res={level:idx,result:"timeout"};
+  while(shots < maxShots){
+    if(countLeft()===0){ res={level:idx,result:"win",shots:shots}; break; }
+    if(overflow()){ res={level:idx,result:"lose",shots:shots,left:countLeft()}; break; }
+    var m=bestMoveAnyColor();
+    if(!m){ // nothing pops: build toward the largest group, then continue
+      var code=pickColor(); var bm=bestMoveForColor(code);
+      if(!bm){ res={level:idx,result:"stuck",shots:shots,left:countLeft()}; break; }
+      var t0=traceShot(bm.angle); if(!t0){ res={level:idx,result:"stuck",shots:shots,left:countLeft()}; break; }
+      placeAndResolve(t0[0],t0[1],code); shots++; continue;
+    }
+    var t=traceShot(m.angle); placeAndResolve(t[0],t[1],m.code); shots++;
+  }
+  SIM=false;
+  return res;
+}
+
+var API={
+  _cfg:function(){ return { levels:GAME_CONFIG.levels.map(function(l){return {name:l.name,colors:l.colors.length,rows:l.rows.length};}) }; },
+  sim:function(idx,seed,maxShots){ return simLevel(idx,seed,maxShots); },
+  campaign:function(seed){ var out=[]; for(var i=0;i<GAME_CONFIG.levels.length;i++){ out.push(simLevel(i, seed==null?100+i:seed)); } return out; },
+  _begin:function(idx){ buildLevel(idx,7); state="play"; },
+  _draw:function(){ try{ return draw(); }catch(e){ return "ERR: "+(e&&e.message||e); } },
+  _remaining:function(){ return G?countLeft():0; },
+  _state:function(){ return state; }
+};
+window.BUBBLE_GAME=API; window.BUILDABLE_GAME=API;
+
+if(HAS_DOM && document.getElementById("cv")) boot();
+})();
+</script>
+</body>
+</html>
