@@ -42,7 +42,9 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <div id="start"></div>
 <div id="help" class="ov">
   <h1>How to play</h1>
-  <p>Drag your friendly Sling Squad pal back in the slingshot, aim, and let go to fling them!</p>
+  <p>Drag an animal back in the slingshot, aim, and let go to fling them!</p>
+  <p>Each animal has a super power — <b>tap the screen while they fly</b> to use it!
+     Splitz splits into 3, Boomer goes <b>BOOM</b>, Bruno smashes down heavy, and Zip zooms super fast.</p>
   <p>Knock over every silly block tower and bonk all the goofy targets until they go <b>POOF</b>.
      Clear them all before you run out of slings — but don't worry, you get plenty of tries.</p>
   <button class="btn" id="helpClose">Got it!</button>
@@ -76,16 +78,21 @@ var AX = 168, AY = 360;                    // slingshot fork (where ammo loads)
 var MAXPULL = 132, MAXV = 27;              // very forgiving: big pull, strong launch
 var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced OR knocked)
 
-// ---- the SQUAD: 3 simple friendly characters you fling (no powers in v1) ----
+// ---- the SQUAD: 4 friendly ANIMALS you fling, each with a tap-to-trigger POWER.
+//  (Kenney "Animal Pack Remastered" art dresses these when served; drawn fallback
+//   below can never break a kid's game.)  power: split | bomb | heavy | dash
 var SQUAD = [
-  { name:"Pip",   body:"#ff8fb1", cheek:"#ff6f9a" },
-  { name:"Bloop", body:"#6fd3ff", cheek:"#3fb8ee" },
-  { name:"Tace",  body:"#ffd45e", cheek:"#f0b431" }
+  { name:"Splitz", type:"bird",  power:"split", body:"#57c1ff", cheek:"#2f9fe0", tag:"Splits in 3!", img:"/kenney/sling/animals/parrot.png" },
+  { name:"Boomer", type:"bomb",  power:"bomb",  body:"#6b5aa0", cheek:"#4a3c7a", tag:"Kaboom!",      img:"/kenney/sling/animals/panda.png" },
+  { name:"Bruno",  type:"bear",  power:"heavy", body:"#c98a55", cheek:"#a86e3e", tag:"Big smash!",   img:"/kenney/sling/animals/hippo.png" },
+  { name:"Zip",    type:"chick", power:"dash",  body:"#ffd23e", cheek:"#f0a91f", tag:"Zoom!",        img:"/kenney/sling/animals/chick.png" }
 ];
 
 // ---- TARGET look (goofy castle critters that just topple + POOF, never hurt) ----
 var TARGET_COL = "#b6f06a", TARGET_CHEEK = "#8ed83f";
-var SQUAD_IMGS = [];   // OPTIONAL library character art for the flung pals (drawn squad = fallback)
+var SQUAD_IMGS = [];   // Kenney "Animal Pack Remastered" art for the flung pals (drawn animal = fallback)
+var BLK_IMGS = {};     // Kenney "Physics Assets" block textures, keyed material+shape (woodW/stoneT/...)
+var TARGET_IMGS = [];  // Kenney "Physics Assets" alien faces = the goofy toppling targets
 
 // ============================================================================
 //  GAME_CONFIG — content as DATA. Adding a level = editing this, never the engine.
@@ -171,15 +178,15 @@ function buildWorld(idx){
     body._kind="block"; body._w=b.w; body._h=b.h; blocks.push(body); M.Composite.add(world, body);
   });
   var targets = [];
-  (L.targets||[]).forEach(function(t){
+  (L.targets||[]).forEach(function(t,ti){
     var s=34; var body = M.Bodies.rectangle(t.x, t.y, s, s, mat({ density:0.0016, chamfer:{radius:9} }));
-    body._kind="target"; body._w=s; body._h=s; body._alive=true; body._sx=t.x; body._sy=t.y;
+    body._kind="target"; body._w=s; body._h=s; body._alive=true; body._sx=t.x; body._sy=t.y; body._ti=ti;
     targets.push(body); M.Composite.add(world, body);
   });
 
-  G = { L:L, blocks:blocks, targets:targets, ammo:null, ammoBody:null, slingIdx:0,
+  G = { L:L, blocks:blocks, targets:targets, ammo:null, ammoBody:null, ammoBodies:[], slingIdx:0,
         launchesLeft:L.launches, launchesUsed:0, restFrames:0, flyFrames:0, reload:0,
-        popped:0, totalTargets:targets.length, drag:null, armed:false };
+        popped:0, totalTargets:targets.length, drag:null, armed:false, powerUsed:false, winDelay:0 };
 
   // pop a target on a solid bonk from the flung ammo (direct hit always counts)
   M.Events.on(engine, "collisionStart", function(ev){
@@ -205,7 +212,7 @@ function loadAmmo(){
   if(G.launchesLeft<=0){ return; }
   G.slingIdx = (G.launchesUsed) % SQUAD.length;
   G.ammo = { x:AX, y:AY, squad:G.slingIdx };   // visual, held in the sling
-  G.ammoBody = null; G.drag=null; state = "ready";
+  G.ammoBody = null; G.ammoBodies=[]; G.powerUsed=false; G.drag=null; state = "ready";
 }
 
 function popTarget(t){
@@ -213,7 +220,16 @@ function popTarget(t){
   if(fx&&BM) BM.explode(fx, t.position.x, t.position.y, "#bdf06a", { n:16, pop:"POOF!", sfx:null });
   sfx("poof");
   M.Composite.remove(world, t);
-  if(G.popped>=G.totalTargets){ winLevel(); }
+  if(G.popped>=G.totalTargets){ startWinRoll(); }
+}
+
+// When the LAST target pops, DON'T freeze instantly. Enter a short "clearing"
+// phase: physics keeps running so the ammo + blocks keep tumbling/rolling for a
+// beat, then the "Level cleared!" banner shows. Fixes the abrupt hard-stop.
+function startWinRoll(){
+  if(state==="win" || state==="lose" || state==="clearing") return;
+  state="clearing";
+  G.winDelay = botMode ? 2 : 140;   // ~2.3s of "let it roll" before the banner
 }
 
 // ---- launch: drag vector -> velocity (clamped, forgiving) ----
@@ -225,10 +241,65 @@ function aimFromDrag(dx,dy){
 }
 function doLaunch(vx,vy){
   var b = M.Bodies.circle(AX, AY, 18, mat({ density:0.02, restitution:0.34, frictionAir:0.0016, friction:0.5 }));
-  b._kind="ammo"; b._squad=G.slingIdx; M.Composite.add(world, b);
+  b._kind="ammo"; b._squad=G.slingIdx; b._power=(SQUAD[G.slingIdx%SQUAD.length]||{}).power||null;
+  M.Composite.add(world, b);
   M.Body.setVelocity(b,{x:vx,y:vy});
-  G.ammoBody=b; G.ammo=null; G.flyFrames=0; G.restFrames=0; state="flying";
+  G.ammoBody=b; G.ammoBodies=[b]; G.ammo=null; G.flyFrames=0; G.restFrames=0; G.powerUsed=false; state="flying";
   sfx("launch"); if(fx&&BM) BM.shake(fx,0.18);
+}
+
+// ---- POWERS: kid taps the screen while the animal is in the air to trigger it.
+//  Never required to win (the QA bot clears every level with plain shots) — powers
+//  are pure fun/help on top.  One power per launch (G.powerUsed guards re-taps).
+function removeAmmo(b){ try{ M.Composite.remove(world, b); }catch(e){}
+  var i=G.ammoBodies.indexOf(b); if(i>=0) G.ammoBodies.splice(i,1);
+  if(G.ammoBody===b) G.ammoBody=G.ammoBodies[0]||null; }
+function tryPower(){
+  if(!G || G.powerUsed || !G.ammoBodies || !G.ammoBodies.length) return;
+  var b=G.ammoBodies[0]; if(!b || !b._power) return;
+  G.powerUsed=true;
+  if(b._power==="bomb") powerBomb(b);
+  else if(b._power==="split") powerSplit(b);
+  else if(b._power==="heavy") powerHeavy(b);
+  else if(b._power==="dash") powerDash(b);
+}
+function powerBomb(b){
+  var cx=b.position.x, cy=b.position.y, R=150;
+  if(fx&&BM){ BM.explode(fx, cx, cy, "#ffb038", { n:28, pop:"BOOM!", sfx:null }); BM.shake(fx,0.55); }
+  sfx("explode");
+  G.blocks.concat(G.targets).forEach(function(o){ if(!o||o.isStatic) return;
+    var dx=o.position.x-cx, dy=o.position.y-cy, d=Math.hypot(dx,dy)||1;
+    if(d<R){ var f=(1-d/R)*1.0, ux=dx/d, uy=dy/d-0.4;
+      M.Body.setVelocity(o,{x:o.velocity.x+ux*15*f, y:o.velocity.y+uy*15*f});
+      M.Body.setAngularVelocity(o,(Math.random()-0.5)*0.5); } });
+  G.targets.forEach(function(t){ if(t._alive){ var d=Math.hypot(t.position.x-cx,t.position.y-cy); if(d<R) popTarget(t); } });
+  removeAmmo(b);
+}
+function powerSplit(b){
+  var v=b.velocity, p={x:b.position.x,y:b.position.y}, sq=b._squad;
+  var base=Math.atan2(v.y,v.x), sp=Math.max(7,Math.hypot(v.x,v.y)*0.96);
+  removeAmmo(b);
+  [-0.30,0,0.30].forEach(function(off){
+    var nb=M.Bodies.circle(p.x,p.y,12, mat({ density:0.02, restitution:0.42, frictionAir:0.0016, friction:0.5 }));
+    nb._kind="ammo"; nb._squad=sq; nb._power=null; M.Composite.add(world,nb);
+    M.Body.setVelocity(nb,{x:Math.cos(base+off)*sp, y:Math.sin(base+off)*sp});
+    G.ammoBodies.push(nb);
+  });
+  G.ammoBody=G.ammoBodies[0]||null;
+  if(fx&&BM) BM.explode(fx, p.x, p.y, "#8fe0ff", { n:12, pop:"x3!", sfx:null });
+  sfx("launch");
+}
+function powerHeavy(b){
+  M.Body.setDensity(b, 0.06);
+  M.Body.setVelocity(b,{x:b.velocity.x*0.4, y:20});
+  if(fx&&BM) BM.shake(fx,0.45); sfx("thud");
+}
+function powerDash(b){
+  var v=b.velocity, f=2.0, nx=v.x*f, ny=v.y*f, ns=Math.hypot(nx,ny), cap=MAXV*1.7;
+  if(ns>cap){ var k=cap/ns; nx*=k; ny*=k; }
+  M.Body.setVelocity(b,{x:nx,y:ny});
+  if(fx&&BM) BM.explode(fx, b.position.x, b.position.y, "#ffe680", { n:10, pop:"ZOOM!", sfx:null });
+  sfx("launch");
 }
 
 // ---- win / lose (soft) ----
@@ -309,16 +380,21 @@ function update(){
     var sp=Math.hypot(t.velocity.x,t.velocity.y);
     if(dd>POP_MOVE || sp>POP_SPD || t.position.y>GY+24 || t.position.x<-30 || t.position.x>W+30) popTarget(t);
   } }
+  // "clearing" = last target down; keep the physics rolling for a beat, then win.
+  if(state==="clearing"){ if(fx&&BM) BM.update(fx,1/60); if(--G.winDelay<=0) winLevel(); return; }
   if(state==="win") return;
-  if(state==="flying" && G.ammoBody){
+  if(state==="flying" && G.ammoBodies && G.ammoBodies.length){
     G.flyFrames++;
-    var s=Math.hypot(G.ammoBody.velocity.x,G.ammoBody.velocity.y);
-    var off=G.ammoBody.position.y>GY+70 || G.ammoBody.position.x>W+70 || G.ammoBody.position.x<-70;
-    if(s<0.7) G.restFrames++; else G.restFrames=0;
-    if(off || G.restFrames>16 || G.flyFrames>340){
-      M.Composite.remove(world, G.ammoBody); G.ammoBody=null;
+    var maxS=0, anyOn=false;
+    for(var bi=0;bi<G.ammoBodies.length;bi++){ var bb=G.ammoBodies[bi];
+      var s=Math.hypot(bb.velocity.x,bb.velocity.y); if(s>maxS) maxS=s;
+      var boff=bb.position.y>GY+70 || bb.position.x>W+70 || bb.position.x<-70; if(!boff) anyOn=true; }
+    if(maxS<0.7 || !anyOn) G.restFrames++; else G.restFrames=0;
+    if(!anyOn || G.restFrames>16 || G.flyFrames>340){
+      for(var br=0;br<G.ammoBodies.length;br++) M.Composite.remove(world, G.ammoBodies[br]);
+      G.ammoBodies=[]; G.ammoBody=null;
       G.launchesUsed++; G.launchesLeft--;
-      if(state==="win") return;
+      if(state==="win" || state==="clearing") return;
       state="reload"; G.reload=botMode?2:14;
     }
   }
@@ -368,20 +444,63 @@ function drawBand(toX,toY){
 function drawSquadFace(x,y,r,sq){
   var c=SQUAD[sq%SQUAD.length];
   var im=SQUAD_IMGS[sq%SQUAD.length];
-  if(im && (im.naturalWidth||im.width) && BR && BR.sprite){ BR.sprite(ctx, im, x, y, r*2.2, { shadow:true }); return; }
+  // Kenney animal art dresses the pal when served; else the drawn animal below.
+  if(im && (im.naturalWidth||im.width) && BR && BR.sprite){ BR.sprite(ctx, im, x, y, r*2.3, { shadow:true }); return; }
+  drawAnimal(x,y,r,c);
+}
+// Cute round animal, drawn in the game's soft style (bird / bomb / bear / chick).
+function drawAnimal(x,y,r,c){
+  var t=c.type;
   ctx.save(); ctx.translate(x,y);
-  ctx.fillStyle="rgba(0,0,0,.12)"; ctx.beginPath(); ctx.ellipse(0,r*0.92,r*0.9,r*0.32,0,0,7); ctx.fill();
+  ctx.fillStyle="rgba(0,0,0,.12)"; ctx.beginPath(); ctx.ellipse(0,r*0.95,r*0.92,r*0.3,0,0,7); ctx.fill();
+  // top features drawn behind the body
+  if(t==="bear"){ ctx.fillStyle=c.body; ctx.beginPath(); ctx.arc(-r*0.62,-r*0.62,r*0.34,0,7); ctx.arc(r*0.62,-r*0.62,r*0.34,0,7); ctx.fill();
+    ctx.fillStyle=c.cheek; ctx.beginPath(); ctx.arc(-r*0.62,-r*0.62,r*0.17,0,7); ctx.arc(r*0.62,-r*0.62,r*0.17,0,7); ctx.fill(); }
+  if(t==="bird"){ ctx.fillStyle=c.cheek; ctx.beginPath();
+    ctx.moveTo(-r*0.22,-r*0.82); ctx.lineTo(-r*0.06,-r*1.32); ctx.lineTo(r*0.10,-r*0.86); ctx.closePath();
+    ctx.moveTo(r*0.04,-r*0.9); ctx.lineTo(r*0.24,-r*1.24); ctx.lineTo(r*0.34,-r*0.82); ctx.closePath(); ctx.fill(); }
+  if(t==="chick"){ ctx.fillStyle=c.cheek; ctx.beginPath();
+    ctx.moveTo(-r*0.08,-r*0.9); ctx.lineTo(r*0.0,-r*1.26); ctx.lineTo(r*0.12,-r*0.9); ctx.closePath(); ctx.fill(); }
+  // body
   ctx.fillStyle=c.body; ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.fill();
-  ctx.fillStyle=c.cheek; ctx.beginPath(); ctx.arc(-r*0.42,r*0.28,r*0.2,0,7); ctx.arc(r*0.42,r*0.28,r*0.2,0,7); ctx.fill();
-  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-r*0.34,-r*0.12,r*0.27,0,7); ctx.arc(r*0.34,-r*0.12,r*0.27,0,7); ctx.fill();
-  ctx.fillStyle="#23304a"; ctx.beginPath(); ctx.arc(-r*0.30,-r*0.10,r*0.14,0,7); ctx.arc(r*0.38,-r*0.10,r*0.14,0,7); ctx.fill();
-  ctx.strokeStyle="#23304a"; ctx.lineWidth=Math.max(2,r*0.12); ctx.lineCap="round";
-  ctx.beginPath(); ctx.arc(0,r*0.18,r*0.34,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
+  if(t==="bomb"){ // fuse + spark + shine
+    ctx.strokeStyle="#7a4a25"; ctx.lineWidth=Math.max(2,r*0.14); ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(r*0.08,-r*0.9); ctx.quadraticCurveTo(r*0.55,-r*1.2,r*0.36,-r*1.42); ctx.stroke();
+    ctx.fillStyle="#ffcf4d"; ctx.beginPath(); ctx.arc(r*0.36,-r*1.44,r*0.16,0,7); ctx.fill();
+    ctx.fillStyle="#fff"; ctx.globalAlpha=.16; ctx.beginPath(); ctx.arc(-r*0.32,-r*0.34,r*0.42,0,7); ctx.fill(); ctx.globalAlpha=1; }
+  if(t==="bear"){ ctx.fillStyle=c.cheek; ctx.beginPath(); ctx.ellipse(0,r*0.3,r*0.44,r*0.32,0,0,7); ctx.fill(); }
+  if(t==="bird"||t==="chick"){ ctx.fillStyle="#ff9f3e"; ctx.beginPath();
+    ctx.moveTo(-r*0.17,r*0.12); ctx.lineTo(r*0.17,r*0.12); ctx.lineTo(0,r*0.42); ctx.closePath(); ctx.fill(); }
+  if(t!=="bomb"){ ctx.fillStyle="rgba(255,120,120,.32)"; ctx.beginPath(); ctx.arc(-r*0.52,r*0.24,r*0.16,0,7); ctx.arc(r*0.52,r*0.24,r*0.16,0,7); ctx.fill(); }
+  // eyes
+  var ey=-r*0.12, ex=r*0.34, er=r*0.26;
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-ex,ey,er,0,7); ctx.arc(ex,ey,er,0,7); ctx.fill();
+  var pr=r*0.13; ctx.fillStyle="#23304a"; ctx.beginPath(); ctx.arc(-ex+r*0.02,ey+r*0.03,pr,0,7); ctx.arc(ex+r*0.02,ey+r*0.03,pr,0,7); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-ex+r*0.08,ey-r*0.05,pr*0.42,0,7); ctx.arc(ex+r*0.08,ey-r*0.05,pr*0.42,0,7); ctx.fill();
+  // mouth / snout
+  ctx.strokeStyle="#23304a"; ctx.lineWidth=Math.max(2,r*0.1); ctx.lineCap="round";
+  if(t==="bomb"){ ctx.beginPath(); ctx.arc(0,r*0.3,r*0.26,0.12*Math.PI,0.88*Math.PI); ctx.stroke(); }
+  else if(t==="bear"){ ctx.fillStyle="#23304a"; ctx.beginPath(); ctx.arc(0,r*0.16,r*0.08,0,7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,r*0.22); ctx.lineTo(0,r*0.34);
+    ctx.moveTo(0,r*0.34); ctx.quadraticCurveTo(r*0.16,r*0.44,r*0.24,r*0.34); ctx.stroke(); }
   ctx.restore();
+}
+// small pulsing "TAP!" bubble so kids learn the power is tap-to-trigger
+function drawPowerHint(b){
+  var c=SQUAD[b._squad%SQUAD.length]||{}; var x=b.position.x, y=b.position.y-38;
+  var label="TAP!  "+(c.tag||"Power!");
+  ctx.save(); ctx.font="700 14px Fredoka,sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  var w=ctx.measureText(label).width+22, ph=(Date.now()%700)/700, a=0.6+0.4*Math.sin(ph*6.28);
+  ctx.globalAlpha=a; ctx.fillStyle="rgba(20,16,48,.72)"; BR?BR.rrect(ctx,x-w/2,y-14,w,26,13):ctx.fillRect(x-w/2,y-14,w,26); ctx.fill();
+  ctx.globalAlpha=1; ctx.fillStyle="#ffd86b"; ctx.fillText(label,x,y);
+  ctx.restore(); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
 }
 function drawTarget(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
   var w=b._w,h=b._h;
+  // Kenney alien face (Physics Assets) when served; drawn critter is the fallback.
+  var tim=TARGET_IMGS[(b._ti||0)%(TARGET_IMGS.length||1)];
+  if(tim&&(tim.naturalWidth||tim.width)){ var ts=Math.max(w,h)*1.7; ctx.drawImage(tim,-ts/2,-ts/2,ts,ts); ctx.restore(); return; }
   ctx.fillStyle=TARGET_COL; BR? BR.rrect(ctx,-w/2,-h/2,w,h,9):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
   ctx.fillStyle=TARGET_CHEEK; BR? BR.rrect(ctx,-w/2,h*0.06,w,h*0.44,9):0; ctx.fill();
   ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-w*0.20,-h*0.12,w*0.16,0,7); ctx.arc(w*0.20,-h*0.12,w*0.16,0,7); ctx.fill();
@@ -393,9 +512,18 @@ function drawTarget(b){
   ctx.lineTo(0,-h*0.46); ctx.lineTo(w*0.10,-h*0.62); ctx.lineTo(w*0.22,-h*0.46); ctx.closePath(); ctx.fill();
   ctx.restore();
 }
+// pick a Kenney physics texture by shape: wide plank / tall pillar / square,
+// and material: tall-ish -> stone (castle pillars), else wood (beams).
+function blockImgFor(w,h){
+  var matl=(h>w*1.15)?"stone":"wood";
+  var shape=(w>h*1.35)?"W":(h>w*1.35?"T":"S");
+  return BLK_IMGS[matl+shape];
+}
 function drawBlock(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
   var w=b._w,h=b._h;
+  var bim=blockImgFor(w,h);
+  if(bim&&(bim.naturalWidth||bim.width)){ ctx.drawImage(bim,-w/2,-h/2,w,h); ctx.restore(); return; }
   ctx.fillStyle="#caa46a"; BR? BR.rrect(ctx,-w/2,-h/2,w,h,5):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
   ctx.strokeStyle="#9b7741"; ctx.lineWidth=3; ctx.stroke();
   ctx.strokeStyle="rgba(155,119,65,.6)"; ctx.lineWidth=2;
@@ -411,8 +539,13 @@ function draw(){
   for(var i=0;i<G.blocks.length;i++) drawBlock(G.blocks[i]);
   for(var j=0;j<G.targets.length;j++){ if(G.targets[j]._alive) drawTarget(G.targets[j]); }
   drawSling();
-  // ammo: held in sling (ready/aiming) or in flight
-  if(state==="flying" && G.ammoBody){ drawSquadFace(G.ammoBody.position.x,G.ammoBody.position.y,18,G.ammoBody._squad); }
+  // ammo: held in sling (ready/aiming) or in flight (one, or three after a split)
+  if((state==="flying"||state==="clearing") && G.ammoBodies && G.ammoBodies.length){
+    var lead=G.ammoBodies[0];
+    for(var ai=0;ai<G.ammoBodies.length;ai++){ var ab=G.ammoBodies[ai];
+      drawSquadFace(ab.position.x,ab.position.y,(ab._power===null?12:18),ab._squad); }
+    if(!G.powerUsed && lead && lead._power && state==="flying") drawPowerHint(lead);
+  }
   else if(G.ammo){ var px=G.drag?G.drag.x:AX, py=G.drag?G.drag.y:AY; drawBand(px,py); drawSquadFace(px,py,18,G.ammo.squad);
     if(state==="aiming" && G.drag){ // trajectory preview dots (kid aim help)
       var dx=AX-G.drag.x, dy=AY-G.drag.y; var a=aimFromDrag(dx,dy);
@@ -458,6 +591,7 @@ function clampDrag(p){ var dx=p.x-AX, dy=p.y-AY, d=Math.hypot(dx,dy);
 function onDown(ev){ if(BA){BA.unlock&&BA.unlock();}
   if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else showMenu(); return; }
   if(state==="lose"){ ev.preventDefault&&ev.preventDefault(); startLevel(level); return; }
+  if(state==="flying"){ ev.preventDefault&&ev.preventDefault(); tryPower(); return; }  // tap mid-air = fire the power
   if(state==="ready"){ ev.preventDefault&&ev.preventDefault(); state="aiming"; G.drag=clampDrag(pt(ev)); sfx("stretch"); }
 }
 function onMove(ev){ if(state==="aiming"){ ev.preventDefault&&ev.preventDefault(); G.drag=clampDrag(pt(ev)); } }
@@ -511,18 +645,22 @@ if(BN&&BN.register){ BN.register({ hide:["muteBtn","helpBtn","backBtn"],
 // created sounds (ElevenLabs via /api/sfx); BA synth stays a silent fallback only
 if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   stretch:"sling_stretch", launch:"sling_release", thud:"sling_thud", poof:"sling_poof",
-  win:"sling_win", lose:"tennis_lose" } }); }
+  explode:"explode", win:"sling_win", lose:"tennis_lose" } }); }
 
 function frame(){ update(); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requestAnimationFrame(frame); }
-// LIBRARY-FIRST (with fallback): try to dress the flung pals in real shared-library
-// characters (/api/list-characters). If anything is missing/offline, the drawn squad
-// stays — a library miss can never break a kid's game.
-function loadSquadArt(){ try{ if(typeof fetch!=="function") return;
-  fetch("/api/list-characters?limit=12").then(function(r){ return r.ok?r.json():null; }).then(function(d){
-    if(!d) return; var list=Array.isArray(d)?d:(d.items||d.characters||[]);
-    var urls=[]; list.forEach(function(c){ var u=c&&(c.image_url||c.image||c.url); if(u&&urls.length<SQUAD.length) urls.push(u); });
-    urls.forEach(function(u,i){ var im=new Image(); im.crossOrigin="anonymous"; im.onload=function(){ SQUAD_IMGS[i]=im; }; im.onerror=function(){}; im.src=u; });
-  }).catch(function(){}); }catch(e){} }
+// LIBRARY-FIRST (with fallback): dress the flung pals in real Kenney "Animal Pack
+// Remastered" art when it's served (each SQUAD[i].img). Any miss keeps the drawn
+// animal — a library miss can never break a kid's game. (The old /api/list-characters
+// storybook-hero loader was removed: those heroes rendered 3D in this 2D game.)
+function loadSquadArt(){ try{ if(typeof Image!=="function") return;
+  function L(src,cb){ var im=new Image(); im.crossOrigin="anonymous"; im.onload=function(){ cb(im); }; im.onerror=function(){}; im.src=src; }
+  // flung animals (Animal Pack Remastered)
+  SQUAD.forEach(function(c,i){ if(c.img) L(c.img,function(im){ SQUAD_IMGS[i]=im; }); });
+  // block towers (Physics Assets) — 6 material/shape textures
+  ["woodW","woodS","woodT","stoneW","stoneS","stoneT"].forEach(function(k){ L("/kenney/sling/blocks/"+k+".png",function(im){ BLK_IMGS[k]=im; }); });
+  // toppling targets (Physics Assets alien faces)
+  for(var i=0;i<5;i++){ (function(i){ L("/kenney/sling/targets/t"+i+".png",function(im){ TARGET_IMGS[i]=im; }); })(i); }
+}catch(e){} }
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
 
 // ============================================================================
@@ -546,7 +684,16 @@ window.BUILDABLE_GAME = {
   _begin:function(i){ botMode=false; startLevel(i||0); state="ready"; started=true; },
   _step:function(n){ for(var i=0;i<(n||1);i++) update(); },
   _draw:function(){ try{ if(G&&ctx) draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
-  _aimHeld:function(px,py){ if(G){ state="aiming"; G.drag=clampDrag({x:px,y:py}); } }
+  _aimHeld:function(px,py){ if(G){ state="aiming"; G.drag=clampDrag({x:px,y:py}); } },
+  // fire a specific power mid-flight and run to rest — verifies powers don't throw
+  _power:function(idx,pname){ botMode=false; startLevel(idx||0); state="ready";
+    var t=firstAlive(); var pl=t?planShot(t.position.x,t.position.y):{vx:14,vy:-10};
+    var si=SQUAD.map(function(s){return s.power;}).indexOf(pname); G.slingIdx=si<0?0:si;
+    doLaunch(pl.vx,pl.vy);
+    for(var i=0;i<8;i++) update();
+    try{ tryPower(); }catch(e){ return "ERR:"+(e&&e.message||e); }
+    for(var j=0;j<800 && state!=="win" && state!=="lose"; j++) update();
+    return { power:pname, state:state, popped:G?G.popped:0, targets:G?G.totalTargets:0, bodies:G?G.ammoBodies.length:0 }; }
 };
 window.SLING_GAME = window.BUILDABLE_GAME;   // back-compat / convenience alias
 </script>

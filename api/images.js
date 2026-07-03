@@ -234,6 +234,8 @@ function build(q) {
       mahjong: "A neat pyramid of stacked wooden mahjong tiles on a warm table, each tile face showing a big friendly kid-picture like a panda, a cherry and a playing card, two matching tiles glowing and lifting away with a soft sparkle, cozy inviting puzzle vibe",
       bingo: "A fun kids' bingo game scene, big colorful bingo cards covered in cheerful picture squares with bright stamp daubers marking them, a glowing called picture floating above, confetti and a happy BINGO sparkle, game-night energy",
       snakes: "A whimsical snakes-and-ladders board game viewed at a tilt, a winding numbered path climbing a colorful hill with friendly rope ladders going up and silly smiling cartoon snakes sliding down, cute colorful player tokens racing to a golden star at the top",
+
+      sling: "Cute round cartoon animals — a happy blue bird, a chubby brown bear and a little yellow chick — launching joyfully out of a big wooden slingshot and soaring through the air toward a wobbly tower of stacked wooden and stone blocks topped with goofy smiling castle creatures, blocks tumbling and toppling over with bursts of sparkles and a puff of POOF smoke, sunny grassy castle field with blue sky, strong sense of launch and motion",
     };
     const subject = GAMES[id];
     if (!subject) return null;
