@@ -114,3 +114,9 @@ modes — all headless, all green, with no console errors on the live deploy.
   `BreakerScreen`).
 
 No database changes — progress, stars, and look/play choices live in the browser per kid.
+
+## Live effects (2026-07-03)
+Bricks and the fireball now use real animated Kenney art (CC0, `/fx/`):
+- **Animated explosions** — a 9-frame flipbook (`explode0..8`) bursts on bombs and on tough/bonus/star bricks (see `spawnBoom` + `drawAnims` in `public/breaker-engine.html`).
+- **Living fireball** — while the Fireball power-up (or Flame ball skin) is active, the ball is two counter-rotating fire puffs (`fire1`/`fire2`) around a molten core, trailing a glowing tail (`fireTrail`).
+- Particle bursts upgraded to soft sprites via `BM.useTextures` (spark/star/smoke/glow).

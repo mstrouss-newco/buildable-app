@@ -196,7 +196,30 @@ function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
 // shared FX bag (BM). Fallback object keeps the engine working if BM is missing.
 let fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" };
-function resetFx(){ fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" }; }
+function resetFx(){ fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" }; anims=[]; fireTrail=[]; }
+
+// ---- sprite FX: animated explosion flipbooks + a living fireball (Kenney CC0 /fx) ----
+const FXI={};
+function fxImg(n){ if(!FXI[n]){ const im=new Image(); try{im.crossOrigin="anonymous";}catch(e){} im.src="/fx/"+n+".png?v=1"; FXI[n]=im; } return FXI[n]; }
+const EXPLODE=[]; for(let i=0;i<9;i++) EXPLODE.push(fxImg("explode"+i));
+const FIREPUFF=[fxImg("fire1"),fxImg("fire2")];
+function imReady(im){ return im && (im.complete||im.width) && (im.naturalWidth||im.width); }
+let anims=[];              // {x,y,size,born,dur,rot}
+let fireTrail=[];          // {x,y,born} — the fireball's glowing tail
+function resetSpriteFx(){ anims=[]; fireTrail=[]; }
+function spawnBoom(x,y,size){ anims.push({x,y,size,born:Date.now(),dur:size>90?560:430,rot:Math.random()*6.283}); }
+function drawAnims(){ const now=Date.now();
+  // fireball tail first (under the booms), oldest -> newest
+  for(let i=fireTrail.length-1;i>=0;i--){ const p=fireTrail[i], age=now-p.born; if(age>300){ fireTrail.splice(i,1); continue; }
+    const a=1-age/300, im=FIREPUFF[i%2]; if(!imReady(im))continue; const s=BALL_R*(2.2+a*1.4);
+    ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*0.5; ctx.drawImage(im,p.x-s/2,p.y-s/2,s,s); ctx.restore(); }
+  for(let i=anims.length-1;i>=0;i--){ const a=anims[i], pr=(now-a.born)/a.dur; if(pr>=1){ anims.splice(i,1); continue; }
+    const fi=Math.min(EXPLODE.length-1, Math.floor(pr*EXPLODE.length)), im=EXPLODE[fi]; if(!imReady(im))continue;
+    ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=pr<0.7?1:(1-(pr-0.7)/0.3);
+    ctx.translate(a.x,a.y); ctx.rotate(a.rot); ctx.drawImage(im,-a.size/2,-a.size/2,a.size,a.size); ctx.restore(); }
+}
+// upgrade every particle burst to soft Kenney sprites instead of flat dots
+if(BM&&BM.useTextures){ BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/spark_01.png", star:"/fx/star_01.png", smoke:"/fx/smoke_01.png" }); }
 
 // ---- data: the game recipe (safe to tweak freely; no code changes needed) ----
 const GAME_CONFIG = window.GAME_CONFIG || {
@@ -502,6 +525,7 @@ function updateSolo(){
 // bomb brick: when destroyed, clears the bricks around it (chain-safe: alive is
 // already false before we splash, so a bomb can trigger a neighbouring bomb once).
 function bombSplash(cx,cy){ const R=78;
+  spawnBoom(cx,cy,120);
   if(BM){ BM.explode(fx,cx,cy,"#ff6b6b",{n:20,pop:"BOOM",popCol:"#fff",shake:0.4,flash:0.14,sfx:()=>sfx("boom")}); }
   for(const nb of G.bricks){ if(!nb.alive)continue;
     const nx=nb.x+nb.w/2, ny=nb.y+nb.h/2; if((nx-cx)*(nx-cx)+(ny-cy)*(ny-cy) <= R*R){ damageBrick(nb,nx,ny,99); } }
@@ -510,6 +534,7 @@ function bombSplash(cx,cy){ const R=78;
 function damageBrick(br,hx,hy,dmg){ br.hp-=dmg; const cx=br.x+br.w/2, cy=br.y+br.h/2;
   if(br.hp<=0){ br.alive=false;
     const bonus = br.type==="candy" ? 40 : 10; G.score+=bonus;
+    if(br.maxHp>=2||br.power||br.type==="candy"||br.type==="star") spawnBoom(cx,cy,Math.max(br.w,br.h)*1.6);
     if(BM){ if(br.maxHp>=2||br.power||br.type==="candy") BM.explode(fx,cx,cy,br.col,{n:14,pop:"+"+bonus,popCol:"#fff",shake:0.2,flash:0.08,sfx:()=>sfx("boom")});
             else { BM.burst(fx.parts,cx,cy,br.col,7); BM.pop(fx.pops,cx,cy,"+"+bonus,br.col); sfx("coin",{tier:1}); } }
     else sfx("coin",{tier:br.maxHp>=2?2:1});
@@ -598,7 +623,12 @@ function drawBall(b,fire){ const sk=BALLS.find(x=>x.id===PREFS.ball)||BALLS[0];
   const useFlame = fire || sk.flame;
   const outR = useFlame?BALL_R+2:BALL_R;
   ctx.save(); ctx.shadowColor=useFlame?"#ff8a3d":(sk.rainbow?"#fff":sk.glow); ctx.shadowBlur=useFlame?22:16;
-  if(useFlame){ const g=ctx.createRadialGradient(b.x,b.y,1,b.x,b.y,BALL_R+3); g.addColorStop(0,"#fff"); g.addColorStop(0.5,"#ffd86b"); g.addColorStop(1,"#ff5a2c"); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R+2,0,7);ctx.fill(); }
+  if(useFlame){ const now=Date.now();
+    // animated flame body: two orange fire puffs that pulse + counter-rotate = "alive"
+    const im=FIREPUFF[Math.floor(now/90)%2];
+    if(imReady(im)){ const s=BALL_R*(4.4+Math.sin(now/110)*0.5); ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=0.9; ctx.translate(b.x,b.y); ctx.rotate(now/260); ctx.drawImage(im,-s/2,-s/2,s,s); ctx.rotate(-now/130); ctx.globalAlpha=0.7; ctx.drawImage(im,-s*0.72/2,-s*0.72/2,s*0.72,s*0.72); ctx.restore(); }
+    // solid molten core
+    const g=ctx.createRadialGradient(b.x,b.y,1,b.x,b.y,BALL_R+3); g.addColorStop(0,"#fff"); g.addColorStop(0.5,"#ffd86b"); g.addColorStop(1,"#ff5a2c"); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R+1,0,7);ctx.fill(); }
   else if(sk.rainbow){ const hue=(Date.now()/12)%360, col="hsl("+hue.toFixed(0)+",90%,62%)"; const g=ctx.createRadialGradient(b.x-3,b.y-3,1,b.x,b.y,BALL_R); g.addColorStop(0,"#fff"); g.addColorStop(1,col); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R,0,7);ctx.fill(); }
   else if(sk.star){ BR.sparkle(ctx,b.x,b.y,BALL_R+2,Date.now()/200); }
   else { const g=ctx.createRadialGradient(b.x-3,b.y-3,1,b.x,b.y,BALL_R); g.addColorStop(0,"#fff"); g.addColorStop(1,sk.col); ctx.fillStyle=g; ctx.beginPath();ctx.arc(b.x,b.y,BALL_R,0,7);ctx.fill(); }
@@ -662,6 +692,7 @@ function draw(){ if(!G){ return; }
   if(G.mode==="two") drawPong(); else drawSolo();
   ctx.restore();
   if(BM) BM.draw(ctx, fx, { W, H, font:"bold 20px Fredoka,sans-serif" });
+  drawAnims();   // animated explosions + fireball tail (over gameplay, under banners)
   // overlays (drawn unshaken)
   if(state==="play" && (!started||helpOpen) && G.mode!=="two") drawTutorial();
   if(state==="play" && helpOpen && G.mode==="two") drawTutorial();
@@ -721,7 +752,8 @@ function drawSolo(){
   for(const br of G.bricks){ if(!br.alive)continue; drawBrick(br); }
   for(const lz of G.lasers){ ctx.strokeStyle="#ff5da2"; ctx.lineWidth=3; ctx.shadowColor="#ff5da2"; ctx.shadowBlur=8; ctx.beginPath();ctx.moveTo(lz.x,lz.y);ctx.lineTo(lz.x,lz.y+14);ctx.stroke(); ctx.shadowBlur=0; }
   for(const cap of G.caps){ ctx.save(); ctx.shadowColor=cap.col; ctx.shadowBlur=12; ctx.fillStyle=cap.col; rrect(cap.x-13,cap.y-8,26,16,8); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.9)"; ctx.beginPath();ctx.arc(cap.x,cap.y,3,0,7);ctx.fill(); ctx.restore(); }
-  const fire=G.fireT>0; for(const b of G.balls) drawBall(b,fire);
+  const fire=G.fireT>0; if(fire){ for(const b of G.balls) fireTrail.push({x:b.x,y:b.y,born:Date.now()}); if(fireTrail.length>60)fireTrail.splice(0,fireTrail.length-60); }
+  for(const b of G.balls) drawBall(b,fire);
   drawPaddleAt(G.padX, PAD_Y, PREFS.paddle);
   // HUD — shared tinted chips (see buildable-hud.js). No longer painted on canvas.
   { const leftN=G.bricks.filter(b=>b.alive).length;
