@@ -2861,3 +2861,16 @@ Added wordless, self-playing intro demos (Breaker/Survival style) to **Tennis**,
   auto-fire bullets; level 1 only.
 All three live-QA'd on buildablekids.com, no console errors. Remaining games still need demos:
 Chess, Checkers, Tetris, Bingo, Memory, Snakes & Ladders, Tic-Tac-Toe, Connect Four, Dots & Boxes.
+
+### Fix silent Breaker sound effects (2026-07-02)
+Breaker's core play sounds — ball launch, paddle hit, and wall bounce (`shoot`→`tennis_hit`,
+`select`→`tennis_wall`) — had gone silent for multiple levels. Root cause was server-side in
+`api/sfx.js`: those two sounds requested ElevenLabs generation at 0.35s and 0.3s, below
+ElevenLabs' **0.5s minimum**, so generation failed, `/api/sfx` returned 503, and the client fell
+back to a near-silent synth. Brick smashes still worked because their durations were ≥0.5s.
+Fix: added a `Math.max(0.5, …)` floor on `duration_seconds` so no sound can ever request under
+the minimum again (this also protects other sub-0.5s entries: chess/checkers/castle-guard
+selects, tumble moves), and corrected the offending `tennis_*`/`tumble_*` values to 0.5.
+Live-QA'd on buildablekids.com — `/api/sfx?s=tennis_hit` and `?s=tennis_wall` now return real
+audio (200, audio/mpeg), and in-game every Breaker sound buffer loads and plays (measured audio
+output on all of shoot/select/coin/boom/levelup/hurt/win/lose), no console errors.
