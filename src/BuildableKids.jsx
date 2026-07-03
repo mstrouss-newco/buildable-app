@@ -59,6 +59,7 @@ const SCREEN_TENNIS_LOBBY = "tennis_lobby";
 const SCREEN_TOWN = "town";
 const SCREEN_TOWN_FAMILY = "town_family";
 const SCREEN_TICTACTOE = "tictactoe";
+const SCREEN_TTT_LOBBY = "ttt_lobby";
 const SCREEN_CONNECTFOUR = "connectfour";
 const SCREEN_DOTSBOXES = "dotsboxes";
 const SCREEN_CASTLE = "castle";
@@ -202,7 +203,15 @@ function TennisScreen({ onHome, onPlayFriend }) {
 function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=2" onHome={onHome} />; }
 function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628c" onHome={onHome} bg="#2e7d32" />; }
 function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html" onHome={onHome} bg="#0c1230" />; }
-function BoardGameScreen({ onHome, title, src }) { return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />; }
+function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
+  useEffect(() => {
+    if (!onPlayFriend) return;
+    function onMsg(e) { if (e && e.data && e.data.type === "bgPlayFriend") onPlayFriend(); }
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, [onPlayFriend]);
+  return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />;
+}
 function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=20260628a" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/sling-squad.html?v=1" onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html" onHome={onHome} />; }
@@ -545,8 +554,20 @@ export default function BuildableKids() {
     return <TetrisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=2" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TTT_LOBBY)} />;
   }
+  if (screen === SCREEN_TTT_LOBBY) {
+    return (
+      <GameLobby
+        game={{ slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=2", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } }}
+        activeKid={activeKid}
+        entry="friends"
+        onHome={() => setScreen(SCREEN_TICTACTOE)}
+        onAddFriend={() => { setFriendsReturn(SCREEN_TTT_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
+  }
+
   if (screen === SCREEN_CONNECTFOUR) {
     return <BoardGameScreen title="Buildable Connect Four" src="/connectfour-engine.html" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }

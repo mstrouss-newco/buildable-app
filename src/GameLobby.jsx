@@ -68,6 +68,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   const transport = (game && game.transport) || "turns";
   const msg = (game && game.msg) || "chess"; // board postMessage prefix (chess/checkers/...)
   const initState = () => (game && game.initialState) ? JSON.parse(JSON.stringify(game.initialState)) : initialBoard();
+  const hasState = (st) => !!(st && typeof st === "object" && Object.keys(st).length > 0);
 
   const [phase, setPhase] = useState(entry === "friends" ? "friends" : "mode"); // mode | friends | waiting | playing
   const [friends, setFriends] = useState([]);
@@ -164,7 +165,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   function sendInitToBoard(m) {
     const ifr = iframeRef.current;
     if (!ifr || !ifr.contentWindow || !m) return;
-    const board = (m.state && m.state.board) ? m.state : initState();
+    const board = hasState(m.state) ? m.state : initState();
     ifr.contentWindow.postMessage({
       type: msg + "Init",
       myColor: myColor(m),
@@ -184,7 +185,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
       if (d.type === msg + "Ready") {
         readyRef.current = true;
         // Host seeds the opening position the first time (guest waits for it).
-        if (m && roleFor(m, me.id) === "host" && !(m.state && m.state.board)) {
+        if (m && roleFor(m, me.id) === "host" && !hasState(m.state)) {
           patchFriendMatch(m.id, { state: initState(), turn: initState().turn || "w", status: "active" })
             .then((row) => { if (row) { matchRef.current = row; setMatch(row); lastMoveKeyRef.current = moveKeyOf(row); sendInitToBoard(row); } })
             .catch(() => {});
@@ -221,7 +222,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
         const mk = moveKeyOf(row);
         if (mk !== lastMoveKeyRef.current) {
           lastMoveKeyRef.current = mk;
-          if ((row.status === "done" || row.turn === mine) && ifr && ifr.contentWindow && row.state && row.state.board) {
+          if ((row.status === "done" || row.turn === mine) && ifr && ifr.contentWindow && hasState(row.state)) {
             ifr.contentWindow.postMessage({ type: msg + "OpponentMove", payload: { state: row.state, lastMove: row.last_move } }, "*");
           }
         }

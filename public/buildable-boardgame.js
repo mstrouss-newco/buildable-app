@@ -209,10 +209,12 @@
     function humanTap(ev) {
       if (ctrl.state !== "play" || ctrl.paused) return;
       if (ctrl.mode === "solo" && ctrl.turn === 2) return;   // not your turn
+      if (ctrl.online && ctrl.turn !== ctrl.myPlayer) return; // online: wait your turn
       if (BA) BA.unlock();
       const p = toLocal(ev);
       const out = S.tap(ctrl.G, p.x, p.y, api());
-      applyOutcome(out);
+      const moved = applyOutcome(out);
+      if (moved && ctrl.online) postMove();
     }
 
     function aiStep() {
@@ -263,7 +265,7 @@
       return {
         title: S.title, subtitle: S.subtitle,
         sound: !(BA && BA.muted), showBack: false,
-        modes: S.modes || ["solo", "two"], mode: ctrl.mode,
+        modes: (S.modes || ["solo", "two"]).concat(S.online ? ["family"] : []), mode: ctrl.mode,
         levels: S.choices
           ? S.choices.map(function (c, i) { return { n: i + 1, name: c.name, color: (S.players && S.players[0] && S.players[0].col) || "#5B8CFF", state: "ready", foot: c.foot }; })
           : [{ n: 1, name: ctrl.mode === "solo" ? ("Play " + (S.aiName || "the computer")) : "Two players", color: (S.players && S.players[0] && S.players[0].col) || "#5B8CFF", state: "ready", foot: ctrl.mode === "solo" ? "vs an easy computer" : "take turns on one screen" }],
@@ -273,7 +275,7 @@
       if (!BS || !D.start) return;
       const cb = {
         onPlay: (n) => { if (S.choices && S.applyChoice) { try { S.applyChoice(S.choices[(n || 1) - 1].value); } catch (e) {} } startGame(ctrl.mode); },
-        onMode: (m) => { ctrl.mode = m; startScreen && startScreen.update(startCfg()); },
+        onMode: (m) => { if (m === "family") { try { g.parent && g.parent.postMessage({ type: "bgPlayFriend" }, "*"); } catch (e) {} return; } ctrl.mode = m; startScreen && startScreen.update(startCfg()); },
         onSound: () => { if (BA) { BA.unlock(); BA.toggleMute(); } },
         onBack: () => { try { g.parent && g.parent.postMessage("nav:exit", "*"); } catch (e) {} },
       };
@@ -362,6 +364,48 @@
       g.requestAnimationFrame(frame);
     }
 
+    // ----- ONLINE (cross-device via the shared GameLobby; msg prefix "bg") -----
+    ctrl.online = false; ctrl.myPlayer = 1;
+    function bgPost(type, payload) { try { if (g.parent && g.parent !== g) g.parent.postMessage(payload ? { type: type, payload: payload } : { type: type }, "*"); } catch (e) {} }
+    function postMove() {
+      const res = S.result(ctrl.G) || {};
+      const over = !!res.over;
+      const winner = over ? (res.winner === 1 ? "w" : res.winner === 2 ? "b" : "draw") : null;
+      const turnColor = ctrl.turn === 1 ? "w" : "b";
+      bgPost("bgMove", { state: { G: ctrl.G, turn: turnColor }, turn: turnColor, lastMove: null, over: over, winner: winner });
+    }
+    function onNetMsg(e) {
+      const d = e.data || {}; if (!d.type) return;
+      if (d.type === "bgInit") {
+        ctrl.online = true; ctrl.mode = "two";
+        ctrl.myPlayer = (d.myColor === "b") ? 2 : 1;
+        const st = d.state || {};
+        ctrl.G = st.G ? st.G : S.init({ mode: "two", rng: ctrl.rnd });
+        ctrl.turn = (st.turn === "b") ? 2 : 1;
+        ctrl.winner = null; ctrl.line = null; ctrl.state = "play";
+        ctrl.fx = BM ? BM.makeFx() : null;
+        if (D.start) D.start.style.display = "none";
+        if (D.banner) D.banner.classList.remove("show");
+        navUpdate();
+      } else if (d.type === "bgOpponentMove") {
+        const p = d.payload || {}, st2 = p.state || {};
+        if (st2.G) ctrl.G = st2.G;
+        ctrl.turn = (st2.turn === "b") ? 2 : 1;
+        const res2 = S.result(ctrl.G) || {};
+        if (res2.over) { ctrl.state = "over"; ctrl.winner = res2.winner; ctrl.line = res2.line || null; showBanner(res2); }
+        else ctrl.state = "play";
+      }
+    }
+    function startOnlineIfRequested() {
+      let online = false;
+      try { online = new URLSearchParams(location.search).get("online") === "1"; } catch (e) {}
+      if (!online) return;
+      ctrl.online = true; ctrl.mode = "two";
+      if (D.start) D.start.style.display = "none";
+      g.addEventListener("message", onNetMsg);
+      bgPost("bgReady");
+    }
+
     // ----- boot (only with a real canvas) -----
     if (hasDoc && D.cv && ctx) {
       fit(); g.addEventListener("resize", fit);
@@ -371,6 +415,7 @@
       if (D.mute) { const upd = () => D.mute.textContent = "Sound: " + (BA && BA.muted ? "Off" : "On"); upd(); D.mute.onclick = () => { if (BA) { BA.unlock(); BA.toggleMute(); } upd(); navUpdate(); }; }
       injectChrome();
       toMenu();
+      startOnlineIfRequested();
       // Adopt the shared in-game nav (buildable-gamenav.js): in-app, hide our own
       // Home/Sound/Pause and let the React shell (GameFrame) draw ONE consistent set.
       if (g.BuildableGameNav) { g.BuildableGameNav.register({
