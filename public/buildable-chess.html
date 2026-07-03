@@ -95,7 +95,7 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 .iconbtn svg{width:22px;height:22px}
 
 /* Board */
-.board-wrap{position:relative;width:min(92vw,540px);margin:0 auto;aspect-ratio:1}
+.board-wrap{position:relative;width:min(100%,540px);margin:0 auto;aspect-ratio:1}
 .board{position:absolute;inset:0;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);
   border:5px solid rgba(255,255,255,.14)}
 .sq-layer,.piece-layer,.fx-layer{position:absolute;inset:0}
@@ -283,12 +283,6 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div id="diff-block" style="display:none">
         <div class="sect">How tough is the robot?</div>
         <div class="opt-grid" id="diff-grid"></div>
-      </div>
-
-      <div class="sect" id="players-sect">Who's playing?</div>
-      <div id="players-block">
-        <input class="name-in" id="p1-name" maxlength="14" placeholder="Your name">
-        <input class="name-in" id="p2-name" maxlength="14" placeholder="Player 2 (Coral)" style="display:none">
       </div>
 
       <div class="toggle-row" style="margin-top:14px">
@@ -1137,13 +1131,6 @@ document.getElementById('btn-back-home').onclick=()=>show('s-home');
 function openSetup(){
   document.getElementById('setup-sub').textContent = mode==='solo'?'Set up your match vs the robot':'Set up your two-player match';
   document.getElementById('diff-block').style.display = mode==='solo'?'block':'none';
-  // player name fields
-  const p1=document.getElementById('p1-name'),p2=document.getElementById('p2-name');
-  document.getElementById('players-sect').textContent = mode==='solo'?'Who is playing?':"Who's playing?";
-  p1.placeholder = mode==='solo'?'Your name':'Player 1 (Purple)';
-  p1.value = (pName && pName!=='Player 1') ? pName : '';
-  p2.style.display = mode==='solo'?'none':'block';
-  p2.value = (pName2 && pName2!=='Player 2') ? pName2 : '';
   buildSceneGrid();buildDiffGrid();show('s-setup');
 }
 function buildSceneGrid(){
