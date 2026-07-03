@@ -287,6 +287,12 @@ function GrownUpButton({ onGrownUp, fixed }) {
 // data as the big home cards, but lives in the top nav so it follows the child
 // on the home screen. Click a row to jump straight into that game.
 // ---------------------------------------------------------------------------
+function StuffGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z" /></svg>
+  );
+}
+
 function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
@@ -309,18 +315,19 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite }) {
   );
 
   const pillBtn = {
-    position: "relative", display: "inline-flex", alignItems: "center", gap: 8,
-    background: "rgba(255,255,255,0.10)", color: "#fff", border: "1px solid rgba(255,255,255,0.22)",
-    borderRadius: 14, padding: "11px 16px", fontSize: 15, fontWeight: 800, fontFamily: NUN, cursor: "pointer",
+    position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
+    background: GRAD, color: "#fff", border: "none",
+    borderRadius: 14, padding: "11px 22px", fontSize: 15, fontWeight: 800, fontFamily: NUN, cursor: "pointer",
+    boxShadow: "0 6px 22px rgba(155,126,221,0.45)",
   };
   const badge = {
     minWidth: 20, height: 20, borderRadius: 999, padding: "0 6px", display: "inline-flex",
-    alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#fff",
-    background: "linear-gradient(135deg,#8A6BFF,#E0578F)",
+    alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#b3457f",
+    background: "#fff",
   };
   const liveDot = {
     position: "absolute", top: 6, left: 28, width: 8, height: 8, borderRadius: "50%",
-    background: "#34D399", border: "2px solid #1b1330",
+    background: "#34D399", border: "2px solid #fff",
   };
   const menu = {
     position: "absolute", top: "calc(100% + 8px)", right: 0, width: 320, zIndex: 9999,
@@ -848,7 +855,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
         )}
       </div>
       <button onClick={onMyStuff} style={styles.myStuffButton}>
-        My Stuff{total ? ` (${total})` : ""}
+        <StuffGlyph />My Stuff{total ? ` (${total})` : ""}
       </button>
     </div>
   );
@@ -1205,7 +1212,7 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
             )}
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
+            <button onClick={onMyStuff} style={styles.myStuffButton}><StuffGlyph />My Stuff</button>
             <GrownUpButton onGrownUp={onGrownUp} />
             <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} />
           </div>
@@ -1526,7 +1533,7 @@ function IntroScreen({ onComplete, onHome, onMyStuff, activeKid }) {
     <div style={styles.container}>
       <div style={{ ...styles.introTopBar, justifyContent: "space-between" }}>
         <button onClick={onHome} style={styles.backButton}>← Home</button>
-        <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}><StuffGlyph />My Stuff</button>
       </div>
 
       <div style={styles.gameIcon}><GameGlyph id="controller" size={72} /></div>
@@ -1607,7 +1614,7 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
     <div style={styles.container}>
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
-        <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}><StuffGlyph />My Stuff</button>
       </div>
 
       <h1 style={styles.heading}>Pick your game</h1>
@@ -1922,7 +1929,7 @@ function PlayGameScreen({ gameData, onBack, onMyStuff }) {
       <LoadingGames isLoading={loading} operationType="game" onComplete={() => {}} />
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
-        <button onClick={onMyStuff} style={styles.myStuffButton}>My Stuff</button>
+        <button onClick={onMyStuff} style={styles.myStuffButton}><StuffGlyph />My Stuff</button>
       </div>
 
       <h1 style={styles.heading}>
@@ -2102,6 +2109,10 @@ const styles = {
   },
   myStuffButton: {
     padding: "11px 22px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
     background: GRAD,
     color: "#fff",
     border: "none",
