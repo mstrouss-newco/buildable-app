@@ -136,7 +136,6 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#6FCF6A,#2E8B57)", "Castle Guard", "Place archers and knights to stop the silly goblins!", onCastle, false, "castleguard")}
         {tile("linear-gradient(160deg,#67C7FF,#9B7BFF)", "Tumble Blocks", "Fill a row and watch it tumble away!", onTetris, false, "tetris")}
         {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false, "survival")}
-        {tile("linear-gradient(160deg,#F0577E,#9B7BFF)", "Maze Munchers", "Gobble the treats, dodge the chasers!", onMaze, false, "maze")}
         {tile("linear-gradient(160deg,#7BD0FF,#73C364)", "Sling Squad", "Fling your pals, topple every tower!", onSling, false, "sling")}
         {tile("linear-gradient(160deg,#7ED957,#3AA655)", "Croc Tot", "Blast the goofy flying snacks and beat the boss!", onCroc, false, "croctot")}
         {tile("linear-gradient(160deg,#7BD0FF,#57A93F)", "String Match", "Draw a string to connect the matching buddies!", onStringMatch, false, "stringmatch")}
@@ -155,6 +154,7 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
         {tile("linear-gradient(160deg,#7C5CFC,#FF7A9A)", "Family Town", "Roll, move, collect coins \u2014 3-4 players!", onTown, true, "town")}
         {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, true, "runner")}
         {tile("linear-gradient(160deg,#8FD0F2,#4F9A44)", "Hilltop Tanks", "Aim across the hills and knock out the computer tank!", onTank, true, "tank")}
+        {tile("linear-gradient(160deg,#F0577E,#9B7BFF)", "Maze Munchers", "Gobble the treats, dodge the chasers!", onMaze, true, "maze")}
       </div>
       {gate && (
         <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,8,24,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
