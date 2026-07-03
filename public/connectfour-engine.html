@@ -14,7 +14,8 @@
 <title>Buildable Connect Four</title>
 <style>
   html,body{margin:0;height:100%;background:#0b1030;overflow:hidden;touch-action:manipulation;font-family:'Fredoka',-apple-system,sans-serif;color:#fff}
-  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  #wrap{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center}
+  #world-bg{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none}
   canvas{display:block;border-radius:18px;touch-action:none}
   #start{position:fixed;inset:0;z-index:10;display:none}
   #hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;font-weight:700;font-size:18px;
@@ -52,6 +53,20 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-boardgame.js"></script>
 <script>
+/* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
+(function(){ if(typeof document==="undefined") return;
+  var WORLDS=["ocean","jungle","space","candy","castle","desert"];
+  window.setRandomWorld=function(){ try{
+    var bg=document.getElementById("world-bg");
+    if(!bg){ bg=document.createElement("div"); bg.id="world-bg"; document.body.insertBefore(bg, document.body.firstChild); }
+    var key=WORLDS[Math.floor(Math.random()*WORLDS.length)];
+    bg.style.backgroundImage="linear-gradient(rgba(8,10,40,.40),rgba(8,10,40,.55)), url('chess-art/"+key+"_bg.jpg?v=2')";
+  }catch(e){} };
+  try{ WORLDS.forEach(function(k){ new Image().src="chess-art/"+k+"_bg.jpg?v=2"; }); }catch(e){}
+  window.setRandomWorld();
+})();
+</script>
+<script>
 const BG = window.BuildableBoardGame, BR = window.BuildableRenders;
 const COLS=7, ROWS=6, NEED=4;
 const P = [{ name:"Red", col:"#FF5A6E", glow:"rgba(255,90,110,.6)" },
@@ -77,7 +92,7 @@ const spec = {
   sfx:{ place:"board_drop", win:"board_win", draw:"board_draw" },
   sfxPlace:"place", sfxWin:"win", sfxDraw:"draw",
 
-  init(){ return { cells:new Array(COLS*ROWS).fill(0), fall:{} }; },
+  init(){ try{ if(typeof window!=="undefined"&&window.setRandomWorld) window.setRandomWorld(); }catch(e){} return { cells:new Array(COLS*ROWS).fill(0), fall:{} }; },
   moves(G){ const m=[]; for(let c=0;c<COLS;c++) if(lowestEmpty(G.cells,c)>=0) m.push(c); return m; },
 
   move(G, col, api){
