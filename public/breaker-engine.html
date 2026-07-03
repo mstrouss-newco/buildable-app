@@ -670,7 +670,7 @@ function draw(){ if(!G){ return; }
   if(state==="play" && G.mode==="solo" && firstHintUntil && Date.now()<firstHintUntil){
     const rem=(firstHintUntil-Date.now())/3200;      // 1 -> 0
     ctx.save(); ctx.globalAlpha=Math.min(1, rem*2);  // solid, then fades over the last ~1.6s
-    drawTutorialHand(G.padX, PAD_Y+12);              // fingertip just under the real paddle
+    if(BR && BR.hand) BR.hand(ctx, G.padX, PAD_Y+4, 0.9);  // sits on the paddle, points up (fits above the bottom edge)
     ctx.restore();
   }
   if(state==="win" && G.custom){ banner("You beat it!", "Tap to share your level"); }
