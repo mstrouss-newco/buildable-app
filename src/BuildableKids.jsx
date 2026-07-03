@@ -201,7 +201,7 @@ function TennisScreen({ onHome, onPlayFriend }) {
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, [onPlayFriend]);
-  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=2" onHome={onHome} />;
+  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=3" onHome={onHome} />;
 }
 function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=2" onHome={onHome} />; }
 function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628c" onHome={onHome} bg="#2e7d32" />; }
@@ -558,12 +558,12 @@ export default function BuildableKids() {
     return <TetrisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=2" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TTT_LOBBY)} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=3" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TTT_LOBBY)} />;
   }
   if (screen === SCREEN_TTT_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=2", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } }}
+        game={{ slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } }}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_TICTACTOE)}
@@ -611,7 +611,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_TENNIS_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=2", transport: "realtime" }}
+        game={{ slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=3", transport: "realtime" }}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_TENNIS)}

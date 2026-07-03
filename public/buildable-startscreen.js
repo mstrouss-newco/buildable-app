@@ -65,7 +65,7 @@
     return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill || "none"}" stroke="${stroke || "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name] || ""}</svg>`;
   }
 
-  const MODE_LABEL = { solo: "Solo", two: "2 players", family: "Family", p2: "2 players", p3: "3 players", p4: "4 players" };
+  const MODE_LABEL = { solo: "Solo", two: "Same device", family: "Play a friend", p2: "Same device", p3: "3 players", p4: "4 players" };
 
   let styleInjected = false;
   function injectStyle(doc) {
