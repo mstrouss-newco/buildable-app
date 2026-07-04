@@ -26,6 +26,16 @@ Browser-QA'd live on www.buildablekids.com/croctot.html: loading screen, Make-it
 
 ---
 
+## Survival: new "Survival dalle" art pack + no push-ring (July 3 2026)
+Big art refresh for Space Sparkles (`public/survival-engine.html`), all data-driven so it applies to every level at once (only the backdrops are per-level):
+- **Removed the on-screen push-circle**: dragging still moves the hero, but the white joystick ring + ball no longer draw.
+- **New hero, foes, bosses**: hand-cut transparent frames sliced from the DALL-E sheets in `assets/Survival dalle assets` now live in `public/survival-dalle/` (jetpack-explorer hero, 9 foes: fairy-beetle, cloud, leaf, alien-saucer, balloon-pirate, jelly-octo, rock, tumbleweed, bat). Each level draws from its own `foes:[...]` list; each boss is a scaled-up foe with a friendly `bossName` (Thistle, Nightwing, Boulder, Inkling, Captain Bones, The Saucer). The level-picker thumbnails show the new boss art too.
+- **New helpers / "orbi tools" as power-ups**: the spinning orbit companions are now the new star / spark-bee / robo-dog sprites, and the "Power up! Pick one" cards show real helper artwork (Spinny Star = star, Bubble Shield/Heart = pink healer robot, Speedy Boots = dog, Homing = bee).
+- **New backgrounds**: four painted skies (sunset windmills, aurora islands, candy world, castle kingdom) in `public/survival-dalle/bg1..bg4.jpg`, mapped across the six levels via each level's `bgKey`. Retires the nature parallax worlds for Survival (SCENES/drawParallax kept dormant as a fallback; the up-front warm was removed so there are no more `/parallax/...` 404s).
+- **Upgrade "My Hero" shop** reflects the pack: cards use the real artwork where it matches (hero → new hero, Nova Staff → star, Guardian Shell → healer, Rocket Boots → dog).
+- Route `/survival-dalle/(.*)` added to `vercel.json` (the legacy catch-all would otherwise swallow it).
+- QA: headless bot wins all 6 levels cold-start and the full carry-forward campaign; a local Chromium render confirmed the new hero/foes/backgrounds/power-up cards/shop with zero 404s or console errors. Live + browser-QA'd.
+
 ## Survival: Black Hole power-up (July 3 2026)
 New level-up card in Space Sparkles (`public/survival-engine.html`): **Black Hole**. Every so often it opens a swirling star-vortex over the thickest part of the enemy swarm that drags nearby foes into its core and crushes them. Kept fair to the "always survivable" rule: it opens AWAY from the hero (so it pulls enemies off you) and bosses are only tugged gently, never yanked in or insta-crushed. Stacks make it bigger, more frequent, and hit harder. Rendered as a friendly sparkly swirl (not a scary void); card icon added to `buildable-renders.js` `puIcon`. Headless QA: all 6 levels + full campaign still win with the bot spamming it first. Commit 4dea553, live + browser-QA'd.
 

@@ -83,29 +83,31 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 //  hero so kiting always works => a level can always be survived (it's fair).
 // ============================================================================
 const ART="https://www.buildablekids.com/api/story-library?img=character:";
+const SD="/survival-dalle/";   // new hand-made "Survival dalle" art pack (hero, foes, helpers, backgrounds)
 const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Space Sparkles",
   theme: "space", artStyle: "modern3d",
-  bgImg: "chess-art/space_bg.jpg",                 // polished space backdrop (jpg is the real file)
+  bgImg: SD+"bg1.jpg",                             // fallback backdrop (per-level backgrounds set below)
   // Real ElevenLabs music (generated + cached) — never the old synth mp3s.
   musicUrl: "https://www.buildablekids.com/api/chess-music?world=space",
   // Bespoke Space Sparkles sound effects (ElevenLabs) from the shared /api/sfx library.
   sfxBase: "https://www.buildablekids.com/api/sfx?s=",
   // No per-shot fire sound (it's an auto-shooter). Sound plays on impact/kill/explode only.
   sfx: { hit:"spk_hit", coin:"spk_coin", levelup:"spk_levelup", hurt:"spk_hurt", boss:"spk_boss", win:"spk_win", lose:"spk_lose", explode:"spk_pop", boom:"spk_boom" },
-  heroUrl: ART+"robot&style=modern3d&emo=base",    // Bolt the Robot base cutout (drawn astronaut fallback)
+  heroUrl: SD+"hero.png",                          // new jetpack explorer hero (drawn astronaut fallback)
   palette: { hero:"#eaf2ff", visor:"#62d0ff", spark:"#ffe27a", gem:"#6ff0ff", hp:"#ff7aa8", xp:"#7ad0ff", boss:"#c69bff" },
   // base hero stats (level-ups stack on top of these during a run)
   hero: { speed:2.7, hearts:4, fireCd:23, projSpeed:7.0, projDmg:1, projR:0, projPerShot:1, pierce:0, pickupR:115 },
   // each level = a recipe. Survive its time, then beat the boss to win the level.
   // bossChar = which library character is that level's boss (real art, drawn fallback).
+  // foes = which new "Survival dalle" critters spawn here · bossKey = that boss's art · bgKey = which sky backdrop
   levels: [
-    { name:"Comet Meadow",   dur:28, spawnEvery:46, maxAlive:8,  eSpeed:1.30, eHp:2, eDmg:1, colors:["#7ee0a0","#8fd0ff"],                     boss:{ hp:26,  spd:1.05, dmg:1 }, bossChar:"dragon"  },
-    { name:"Nebula Drift",   dur:34, spawnEvery:40, maxAlive:11, eSpeed:1.45, eHp:3, eDmg:1, colors:["#ffd27a","#ff9ec4","#8fd0ff"],          boss:{ hp:42,  spd:1.15, dmg:1 }, bossChar:"tiger"   },
-    { name:"Asteroid Twirl", dur:40, spawnEvery:36, maxAlive:13, eSpeed:1.55, eHp:4, eDmg:1, colors:["#a99cff","#7ee0a0","#ff9ec4"],          boss:{ hp:60,  spd:1.22, dmg:1 }, bossChar:"bear"    },
-    { name:"Stardust Caves", dur:44, spawnEvery:34, maxAlive:14, eSpeed:1.62, eHp:4, eDmg:1, colors:["#8fd0ff","#a99cff","#ffd27a"],          boss:{ hp:74,  spd:1.26, dmg:1 }, bossChar:"unicorn" },
-    { name:"Rocket Rapids",  dur:48, spawnEvery:32, maxAlive:15, eSpeed:1.68, eHp:5, eDmg:1, colors:["#ff9ec4","#7ee0a0","#8fd0ff"],          boss:{ hp:86,  spd:1.30, dmg:1 }, bossChar:"wizard"  },
-    { name:"Galaxy Finale",  dur:52, spawnEvery:30, maxAlive:16, eSpeed:1.74, eHp:5, eDmg:1, colors:["#ff9ec4","#a99cff","#ffd27a","#8fd0ff"], boss:{ hp:104, spd:1.34, dmg:1 }, bossChar:"dragon"  },
+    { name:"Comet Meadow",   dur:28, spawnEvery:46, maxAlive:8,  eSpeed:1.30, eHp:2, eDmg:1, colors:["#7ee0a0","#8fd0ff"],                     foes:["enemy_leaf","enemy_cloud"],                         boss:{ hp:26,  spd:1.05, dmg:1 }, bossKey:"enemy_tumble", bossName:"Thistle", bgKey:1 },
+    { name:"Nebula Drift",   dur:34, spawnEvery:40, maxAlive:11, eSpeed:1.45, eHp:3, eDmg:1, colors:["#ffd27a","#ff9ec4","#8fd0ff"],          foes:["enemy_fairy","enemy_bat","enemy_cloud"],            boss:{ hp:42,  spd:1.15, dmg:1 }, bossKey:"enemy_bat",    bossName:"Nightwing", bgKey:2 },
+    { name:"Asteroid Twirl", dur:40, spawnEvery:36, maxAlive:13, eSpeed:1.55, eHp:4, eDmg:1, colors:["#a99cff","#7ee0a0","#ff9ec4"],          foes:["enemy_rock","enemy_tumble","enemy_leaf"],           boss:{ hp:60,  spd:1.22, dmg:1 }, bossKey:"enemy_rock",   bossName:"Boulder", bgKey:4 },
+    { name:"Stardust Caves", dur:44, spawnEvery:34, maxAlive:14, eSpeed:1.62, eHp:4, eDmg:1, colors:["#8fd0ff","#a99cff","#ffd27a"],          foes:["enemy_octo","enemy_fairy","enemy_bat"],             boss:{ hp:74,  spd:1.26, dmg:1 }, bossKey:"enemy_octo",   bossName:"Inkling", bgKey:3 },
+    { name:"Rocket Rapids",  dur:48, spawnEvery:32, maxAlive:15, eSpeed:1.68, eHp:5, eDmg:1, colors:["#ff9ec4","#7ee0a0","#8fd0ff"],          foes:["enemy_pirate","enemy_alien","enemy_cloud"],         boss:{ hp:86,  spd:1.30, dmg:1 }, bossKey:"enemy_pirate", bossName:"Captain Bones", bgKey:2 },
+    { name:"Galaxy Finale",  dur:52, spawnEvery:30, maxAlive:16, eSpeed:1.74, eHp:5, eDmg:1, colors:["#ff9ec4","#a99cff","#ffd27a","#8fd0ff"], foes:["enemy_alien","enemy_octo","enemy_fairy","enemy_rock"], boss:{ hp:104, spd:1.34, dmg:1 }, bossKey:"enemy_alien",  bossName:"The Saucer", bgKey:4 },
   ],
   // power-ups offered when the hero levels up (engine offers 3 random each time)
   powerups: ["fast","multi","big","pierce","orbit","nova","blackhole","frost","homing","swift","magnet","heal","regen","shield"],
@@ -153,8 +155,17 @@ const bgImg=mkImg(GAME_CONFIG.bgImg);
 const charCache={};
 function charImg(slug,emo){ const k=slug+":"+emo; if(!charCache[k]) charCache[k]=mkImg(ART+slug+"&style="+(GAME_CONFIG.artStyle||"modern3d")+"&emo="+emo); return charCache[k]; }
 let bossImg=null;
-const ENEMY_SLUGS=["star-slime","comet-bug","puff-blob"];
-const enemyImgs=ENEMY_SLUGS.map(sl=>charImg(sl,"base"));   // preload bespoke space-critter art (drawn blob fallback)
+// New "Survival dalle" foe cutouts (drawn blob fallback if an image is slow/missing)
+const SD_ENEMY_KEYS=["enemy_fairy","enemy_cloud","enemy_leaf","enemy_alien","enemy_pirate","enemy_octo","enemy_rock","enemy_tumble","enemy_bat"];
+const sdImg={};
+function sdGet(k){ if(!sdImg[k]) sdImg[k]=mkImg(SD+k+".png"); return sdImg[k]; }
+SD_ENEMY_KEYS.forEach(sdGet);                              // warm all foe cutouts up front
+// New helper "orbi tools" (double as power-ups): spinning star, spark bee, robo-dog, healer
+const HELPER_KEYS=["helper_star","helper_bee","helper_dog","helper_healer"];
+HELPER_KEYS.forEach(sdGet);
+// New per-level background skies (bg1..bg4 map across the six levels via level.bgKey)
+const sdBg={};
+function bgFor(i){ const L2=GAME_CONFIG.levels[i]||{}; const k=L2.bgKey||1; if(!sdBg[k]) sdBg[k]=mkImg(SD+"bg"+k+".jpg"); return sdBg[k]; }
 
 // ===== Gently-moving parallax worlds (one per level) =====
 // Each scene = a folder of smooth, painterly layers stacked back→front (1.png = far sky,
@@ -173,9 +184,8 @@ const sceneCache={};
 function sceneLayers(i){ const s=SCENES[((i%SCENES.length)+SCENES.length)%SCENES.length];
   if(!sceneCache[i]){ const a=[]; for(let k=1;k<=s.n;k++) a.push(mkImg("/"+s.dir+"/"+k+".png")); sceneCache[i]=a; }
   return sceneCache[i]; }
-// lazy-load: warm the first world now; each other loads the moment its level starts
-// (see startLevel) so phones don't fetch all six worlds up front.
-sceneLayers(0);
+// (Parallax worlds retired — the new "Survival dalle" sky backgrounds are used instead,
+// see bgFor(). SCENES/drawParallax are kept as a dormant fallback but no longer warmed.)
 function imgReady(im){ return im && (im.complete||im.width) && (im.naturalWidth||im.width); }
 // one image tiled across the width, scaled to cover H, offset by ox (px) — seamless loop
 function drawScrollLayer(im,ox){ const iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height; if(!iw||!ih)return;
@@ -280,9 +290,9 @@ function applyGear(s){ BASE._bonusHearts=0; if(!CHAR)return; const eq=CHAR.equip
 // carry=true keeps your upgrades & hearts into the next level; false = brand-new run
 function startLevel(i, carry){
   level=Math.max(0,Math.min(GAME_CONFIG.levels.length-1,i)); L=GAME_CONFIG.levels[level];
-  bossImg = L.bossChar ? charImg(L.bossChar,"base") : null;   // start loading this level's boss art (base cutout)
-  if(typeof sceneLayers==="function") sceneLayers(level);     // warm this level's parallax world
-  if(typeof sceneLayers==="function" && level+1<GAME_CONFIG.levels.length) sceneLayers(level+1);  // and pre-warm the next
+  bossImg = L.bossKey ? sdGet(L.bossKey) : null;             // this level's boss = a big new foe cutout
+  bgFor(level);                                              // warm this level's sky backdrop
+  if(level+1<GAME_CONFIG.levels.length) bgFor(level+1);      // and pre-warm the next
   const prevHearts = hero?hero.hearts:BASE.hearts;
   if(!carry || !stats){ stats=freshStats(); applyGear(stats); xp=0; plvl=1; xpNeed=START_NEED;
     // catch-up: starting a later level on its own grants the progress you'd have by then, so a retry is fair
@@ -337,7 +347,9 @@ function fire(){ const tgt=nearestEnemy(); if(!tgt)return; const base=Math.atan2
 function spawnEnemy(){ const r=spawnRng(); const edge=Math.floor(r*4); let x,y; const m=18;
   if(edge===0){x=-m;y=spawnRng()*H;} else if(edge===1){x=W+m;y=spawnRng()*H;} else if(edge===2){x=spawnRng()*W;y=-m;} else {x=spawnRng()*W;y=H+m;}
   const col=L.colors[Math.floor(spawnRng()*L.colors.length)];
-  enemies.push({ x,y, r:15, hp:L.eHp, maxHp:L.eHp, spd:L.eSpeed, dmg:L.eDmg, val:L.eValue, col, wob:spawnRng()*6.28, boss:false, orbCd:0, sprite:enemyImgs[Math.floor(spawnRng()*enemyImgs.length)] }); }
+  const foeKeys=(L.foes&&L.foes.length)?L.foes:SD_ENEMY_KEYS;
+  const fk=foeKeys[Math.floor(spawnRng()*foeKeys.length)];
+  enemies.push({ x,y, r:15, hp:L.eHp, maxHp:L.eHp, spd:L.eSpeed, dmg:L.eDmg, val:L.eValue, col, wob:spawnRng()*6.28, boss:false, orbCd:0, sprite:sdGet(fk) }); }
 function spawnBoss(){ const b=L.boss||{hp:30,spd:1.1,dmg:1}; boss={ x:W/2, y:-40, r:42, hp:b.hp, maxHp:b.hp, spd:b.spd, dmg:b.dmg, val:8, col:P.boss, wob:0, boss:true, orbCd:0 }; bossSpawned=true; sfx("boss"); }
 function burst(x,y,col,n){ if(BM&&fx){ BM.burst(fx.parts,x,y,col,n,{tex:"spark",additive:true,spd:[50,230],life:[0.28,0.55],r:3.5}); return; } for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=1+Math.random()*3; parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*12,col}); } }
 function hurtHero(dmg){ if(invuln>0)return; if(stats.shield){ stats.shield=false; invuln=70; burst(hero.x,hero.y,P.visor,12); sfx("hurt"); return; } hero.hearts-=dmg; invuln=80; burst(hero.x,hero.y,P.hp,14); sfx("hurt"); if(hero.hearts<=0){ hero.hearts=0; state="lose"; sfx("lose"); } }
@@ -460,7 +472,10 @@ function drawHero(){ const usingArt=GAME_CONFIG.heroUrl && heroImg.complete && h
   BR.hero(ctx, hero.x, hero.y, { img: usingArt?heroImg:null, palette:P, aim:hero.aim,
     blink:(invuln>0 && Math.floor(invuln/5)%2===0), shield:stats.shield }); }
 function cardRect(k){ const w=200,h=240,gap=24, total=3*w+2*gap, x0=(W-total)/2; return { x:x0+k*(w+gap), y:H/2-h/2, w, h }; }
-function drawPUicon(id,x,y){ BR.puIcon(ctx,id,x,y,P); }
+// Some power-ups now show their new helper artwork on the "Pick one" cards; the rest
+// keep the shared drawn icons.
+const PU_IMG={ orbit:"helper_star", swift:"helper_dog", homing:"helper_bee", heal:"helper_healer", regen:"helper_healer", shield:"helper_healer" };
+function drawPUicon(id,x,y){ const key=PU_IMG[id]; if(key){ const im=sdGet(key); if(im&&(im.naturalWidth||im.width)){ BR.sprite(ctx,im,x,y,68,{shadow:false}); return; } } BR.puIcon(ctx,id,x,y,P); }
 function banner(t,s){ ctx.fillStyle="rgba(5,8,24,.6)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 46px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-8); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
 // wordless how-to-play demo (for kids who can't read): animated hand dragging,
 // hero following, plus three picture cues, and a pulsing PLAY button.
@@ -511,11 +526,12 @@ function drawBlackHole(h,t){ const R=h.r, fade=Math.max(0,Math.min(1, Math.min(h
   ctx.restore(); }
 function draw(){
   const t=Date.now()/1000;
-  // background: gently-moving parallax world for this level; falls back to the old space
-  // art (or a drawn sky) only until the layer images finish loading.
-  if(drawParallax(level, t)){
-    // soft vignette keeps the white HUD readable over bright daytime worlds
-    const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.42,W/2,H/2,Math.max(W,H)*0.75); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.28)"); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+  // background: this level's new "Survival dalle" sky (cover-fit), with a soft vignette
+  // so the white HUD stays readable. Falls back to the old backdrop until it loads.
+  const sky=bgFor(level);
+  if(sky && (sky.complete||sky.width) && (sky.naturalWidth||sky.width)){
+    BR.bgImage(ctx,sky,W,H);
+    const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.42,W/2,H/2,Math.max(W,H)*0.78); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.30)"); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
   } else if(bgImg && (bgImg.complete||bgImg.width) && (bgImg.naturalWidth||bgImg.width)){
     BR.bgImage(ctx,bgImg,W,H);
     for(const st of stars){ if(st.s<1.4)continue; const a=0.3*Math.abs(Math.sin(t*st.sp+st.ph)); ctx.fillStyle="rgba(255,255,255,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(st.x,st.y,st.s*0.8,0,7);ctx.fill(); }
@@ -534,19 +550,20 @@ function draw(){
   if(boss){ const useArt=bossImg && (bossImg.naturalWidth||bossImg.width);
     if(useArt){ BR.sprite(ctx,bossImg,boss.x,boss.y,boss.r*2.5,{shadow:true,glow:"rgba(198,155,255,0.4)"}); }
     else blob(boss.x,boss.y,boss.r,boss.col,Date.now()/300,true);
-    const bw=180; ctx.fillStyle="rgba(0,0,0,.35)";rrect(W/2-bw/2,14,bw,11,6);ctx.fill(); ctx.fillStyle=P.boss;rrect(W/2-bw/2,14,bw*Math.max(0,boss.hp/boss.maxHp),11,6);ctx.fill(); ctx.fillStyle="#fff";ctx.font="bold 13px Fredoka,sans-serif";ctx.textAlign="center";ctx.fillText((L.bossChar?L.bossChar.toUpperCase():"BOSS"),W/2,33); }
+    const bw=180; ctx.fillStyle="rgba(0,0,0,.35)";rrect(W/2-bw/2,14,bw,11,6);ctx.fill(); ctx.fillStyle=P.boss;rrect(W/2-bw/2,14,bw*Math.max(0,boss.hp/boss.maxHp),11,6);ctx.fill(); ctx.fillStyle="#fff";ctx.font="bold 13px Fredoka,sans-serif";ctx.textAlign="center";ctx.fillText((L.bossName?L.bossName.toUpperCase():"BOSS"),W/2,33); }
   // projectiles (twinkly sparkles)
   for(const p of projs) BR.projectile(ctx,p.x,p.y,p.r,P.spark);
   // particles
   for(const pt of parts) BR.particle(ctx,pt);
   // hero
   drawHero();
-  // orbiting helper stars
-  if(stats.orbit>0){ for(let k=0;k<stats.orbit;k++){ const a=orbAngle+k*6.28/stats.orbit, ox=hero.x+Math.cos(a)*54, oy=hero.y+Math.sin(a)*54; BR.orbiter(ctx,ox,oy,P.spark); } }
+  // orbiting helper "orbi tools" — the new star / bee / dog sprites spin around the hero
+  if(stats.orbit>0){ for(let k=0;k<stats.orbit;k++){ const a=orbAngle+k*6.28/stats.orbit, ox=hero.x+Math.cos(a)*54, oy=hero.y+Math.sin(a)*54;
+      const him=sdGet(["helper_star","helper_bee","helper_dog"][k%3]);
+      if(him&&(him.naturalWidth||him.width)) BR.sprite(ctx,him,ox,oy,44,{shadow:false}); else BR.orbiter(ctx,ox,oy,P.spark); } }
   ctx.restore();                                  // end shake layer
   if(BM&&fx) BM.draw(ctx, fx, { W, H });          // shared FX particles + flash overlay
-  // joystick ring
-  if(joyOn){ ctx.strokeStyle="rgba(255,255,255,.25)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(joyOx,joyOy,34,0,7);ctx.stroke(); ctx.fillStyle="rgba(255,255,255,.3)";ctx.beginPath();ctx.arc(joyOx+inputDir.x*26,joyOy+inputDir.y*26,14,0,7);ctx.fill(); }
+  // (push-circle joystick ring removed — you just drag to move, no on-screen ring)
   // HUD
   ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.font="bold 22px Fredoka,sans-serif";
   ctx.fillText(L.name+"   Lv "+(level+1)+"/"+GAME_CONFIG.levels.length, 18, 32);
@@ -577,7 +594,7 @@ function heroName(){ const h=GEAR.hero.find(x=>x.id===(CHAR&&CHAR.equipped.hero)
 function bsLevels(){ const unlocked=CHAR?(CHAR.unlocked||0):0;
   return GAME_CONFIG.levels.map((lv,i)=>{ const st = i<unlocked?"done" : i===unlocked?"next" : "locked";
     const o={ n:i+1, name:lv.name, state:st };
-    o.img = ART+lv.bossChar+"&style="+(GAME_CONFIG.artStyle||"modern3d")+"&emo=base";
+    o.img = SD+(lv.bossKey||"enemy_fairy")+".png";
     if(st==="done"){ o.stars=3; o.maxStars=3; }
     return o; }); }
 function bsConfig(){ const unlocked=CHAR?(CHAR.unlocked||0):0; return {
@@ -604,12 +621,16 @@ function endRun(won){ if(!CHAR)CHAR=defaultChar();
   showMenu(); toast((won?"You won! ":"Good try! ")+"+"+reward+" coins"); }
 
 const SLOT_LABEL={weapon:"Weapon",armor:"Armor",boots:"Boots",hero:"Hero"};
-function gearIconSVG(slot,boost){ return BR.gearSVG(slot); }
+// Upgrade-shop cards use the real new artwork where it matches; other items keep the drawn icon.
+const GEAR_IMG={ hero:{astro:"hero.png"}, weapon:{nova:"helper_star.png"}, armor:{shell:"helper_healer.png"}, boots:{rocket:"helper_dog.png"} };
+function gearIcon(slot,item){ const m=(GEAR_IMG[slot]||{})[item.id];
+  if(m) return '<img src="'+SD+m+'" alt="" style="height:54px;width:auto;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))">';
+  return BR.gearSVG(slot); }
 function renderLocker(){ const tabs=el("lockerTabs"), grid=el("lockerGrid"); if(!tabs||!grid||!CHAR)return;
   tabs.innerHTML=""; for(const s of SLOTS){ const b=document.createElement("button"); b.className="tab"+(s===lockerTab?" on":""); b.textContent=SLOT_LABEL[s]; b.onclick=()=>{lockerTab=s;renderLocker();}; tabs.appendChild(b); }
   grid.innerHTML=""; for(const item of GEAR[lockerTab]){ const owned=CHAR.owned[lockerTab].includes(item.id); const eq=CHAR.equipped[lockerTab]===item.id;
     const card=document.createElement("div"); card.className="card"+(eq?" eq":"");
-    card.innerHTML='<div class="ico">'+gearIconSVG(lockerTab,item.boost)+'</div><div class="nm">'+item.name+'</div><div class="ds">'+item.desc+'</div>';
+    card.innerHTML='<div class="ico">'+gearIcon(lockerTab,item)+'</div><div class="nm">'+item.name+'</div><div class="ds">'+item.desc+'</div>';
     const btn=document.createElement("button"); btn.className="btn small"+(owned?"":" alt");
     if(eq){ btn.textContent="Equipped"; btn.disabled=true; btn.style.opacity=".6"; }
     else if(owned){ btn.textContent="Equip"; btn.onclick=()=>{ CHAR.equipped[lockerTab]=item.id; saveChar(); renderLocker(); }; }

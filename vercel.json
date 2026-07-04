@@ -232,6 +232,10 @@
       "dest": "/parallax/$1"
     },
     {
+      "src": "/survival-dalle/(.*)",
+      "dest": "/survival-dalle/$1"
+    },
+    {
       "src": "/game-music/(.*)",
       "dest": "/game-music/$1"
     },
