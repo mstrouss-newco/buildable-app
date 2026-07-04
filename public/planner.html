@@ -78,6 +78,9 @@
   .x{color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;border-radius:6px}
   .x:hover{color:var(--danger);background:rgba(224,56,74,.12)}
   .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+  .quickadd{display:flex;gap:8px;margin-top:10px}
+  .qa-input{flex:1;min-width:0;padding:8px 11px;font-size:13px}
+  #f-target{cursor:pointer}
   .donewrap{margin-top:12px}
   .donewrap .gtag{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin:4px 0 6px}
 
@@ -139,8 +142,7 @@
       </div>
       <div class="field" style="flex:1.2">
         <label id="targetLabel">Which game?</label>
-        <input id="f-target" list="targetlist" placeholder="e.g. Breaker" autocomplete="off">
-        <datalist id="targetlist"></datalist>
+        <select id="f-target"></select>
         <button class="btn ghost mini" id="addNewBtn" style="align-self:flex-start" onclick="addCustomTarget()">+ Add a new game</button>
       </div>
     </div>
@@ -220,6 +222,7 @@ const DEF_SETTINGS={readyAt:3,bigAt:8,daily:3};
 let kind="game";
 let state={tasks:[],meta:{settings:{...DEF_SETTINGS},sends:{},custom:{game:[],platform:[]}}};
 let activeBatch=null;
+let openState={};
 
 /* ---- PIN gate ---- */
 function tryPin(){
@@ -277,15 +280,16 @@ function setKind(k){
   document.getElementById("k-game").classList.toggle("on",k==="game");
   document.getElementById("k-plat").classList.toggle("on",k==="platform");
   document.getElementById("targetLabel").textContent=k==="game"?"Which game?":"Which platform area?";
-  document.getElementById("f-target").placeholder=k==="game"?"e.g. Breaker":"e.g. HUD";
   document.getElementById("addNewBtn").textContent=k==="game"?"+ Add a new game":"+ Add a new area";
   refreshTargetList();
 }
 function refreshTargetList(){
   const base=kind==="game"?GAMES:PLATFORM;
   const seen=state.tasks.filter(t=>t.kind===kind).map(t=>t.target);
-  document.getElementById("targetlist").innerHTML=
-    [...new Set([...base,...state.meta.custom[kind],...seen])].map(g=>`<option value="${esc(g)}">`).join("");
+  const all=[...new Set([...base,...state.meta.custom[kind],...seen])].sort((a,b)=>a.localeCompare(b));
+  const sel=document.getElementById("f-target"); const cur=sel.value;
+  sel.innerHTML=`<option value="" disabled selected>${kind==="game"?"Choose a game…":"Choose an area…"}</option>`+all.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join("");
+  if(cur && all.includes(cur)) sel.value=cur;
 }
 function addCustomTarget(){
   const what=kind==="game"?"game":"platform area";
@@ -309,6 +313,7 @@ async function addTask(){
   btn.disabled=false;
   if(!r.ok){ setSync("offline"); toast("Couldn't save — check connection"); return; }
   state.tasks.push(normTask(r.task));
+  openState[kind+"|"+target]=true;
   document.getElementById("f-desc").value=""; document.getElementById("f-desc").focus();
   setSync("in sync"); render(); toast("Added to "+target);
 }
@@ -324,6 +329,29 @@ async function delTask(id){
   state.tasks.splice(idx,1); render(); setSync("saving…");
   const r=await apiPost({op:"delete",id});
   if(!r.ok){ state.tasks.splice(idx,0,backup); render(); toast("Couldn't delete"); setSync("offline"); } else setSync("in sync");
+}
+
+/* ---- bucket open state + inline quick-add ---- */
+function qaSlug(k,target){return "qa-"+(k+"-"+target).replace(/[^a-z0-9]+/gi,"-");}
+function toggleBucket(k,target){const key=k+"|"+target;openState[key]=!openState[key];render();}
+function bindQuickAdd(){
+  document.querySelectorAll(".qa-input").forEach(inp=>{
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();quickAdd(inp.dataset.k,inp.dataset.target);}});
+  });
+  document.querySelectorAll(".qa-add").forEach(btn=>{
+    btn.addEventListener("click",()=>quickAdd(btn.dataset.k,btn.dataset.target));
+  });
+}
+async function quickAdd(k,target){
+  const inp=document.getElementById(qaSlug(k,target)); if(!inp)return;
+  const desc=inp.value.trim(); if(!desc){inp.focus();return;}
+  inp.disabled=true; openState[k+"|"+target]=true; setSync("saving…");
+  const r=await apiPost({op:"add",task:{kind:k,target,description:desc}});
+  if(!r.ok){ inp.disabled=false; setSync("offline"); toast("Couldn't save"); return; }
+  state.tasks.push(normTask(r.task));
+  setSync("in sync"); render();
+  const again=document.getElementById(qaSlug(k,target)); if(again) again.focus();
+  toast("Added to "+target);
 }
 
 /* ---- status ---- */
@@ -351,6 +379,7 @@ function render(){
     return;
   }
   board.innerHTML=section("Games","game")+section("Platform","platform");
+  bindQuickAdd();
 }
 function section(title,k){
   const targets=[...new Set(state.tasks.filter(t=>t.kind===k).map(t=>t.target))];
@@ -362,17 +391,24 @@ function bucket(k,target){
   const all=state.tasks.filter(t=>t.kind===k&&t.target===target);
   const open=all.filter(t=>!t.done), done=all.filter(t=>t.done);
   const n=open.length, st=statusOf(n);
-  const openDefault=n>=state.meta.settings.readyAt?"open":"";
+  const key=k+"|"+target;
+  if(openState[key]===undefined) openState[key]=(n>=state.meta.settings.readyAt);
+  const isOpen=openState[key]?"open":"";
   const canSend=n>=state.meta.settings.readyAt;
-  const list=open.length?open.map((t,i)=>taskRow(t,i+1)).join(""):'<p class="legend" style="padding:4px 0">No open tasks.</p>';
+  const slug=qaSlug(k,target);
+  const list=open.length?open.map((t,i)=>taskRow(t,i+1)).join(""):'<p class="legend" style="padding:4px 0">No open tasks yet — add one below.</p>';
   const doneHtml=done.length?`<div class="donewrap"><div class="gtag">done (${done.length})</div>${done.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:"";
   return `<div class="bucket">
-    <div class="bhead" onclick="this.parentNode.querySelector('.body').classList.toggle('open')">
+    <div class="bhead" onclick='toggleBucket(${JSON.stringify(k)},${JSON.stringify(target)})'>
       <h2>${esc(target)} <span class="count">${n} open${done.length?` · ${done.length} done`:""}</span></h2>
       <span class="status ${st.cls}">${st.txt}</span>
     </div>
-    <div class="body ${openDefault}">
+    <div class="body ${isOpen}">
       ${list}
+      <div class="quickadd">
+        <input class="qa-input" id="${slug}" data-k="${k}" data-target="${esc(target)}" placeholder="Add another to ${esc(target)}…" autocomplete="off">
+        <button class="btn mini qa-add" data-k="${k}" data-target="${esc(target)}">Add</button>
+      </div>
       ${open.length?`<div class="bactions">
         <button class="btn ghost mini" onclick='copyBucket(${JSON.stringify(k)},${JSON.stringify(target)})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy list</button>
         ${canSend?`<button class="btn green mini" onclick='openBatch(${JSON.stringify(k)},${JSON.stringify(target)})'>Prep prompt for Claude →</button>`:""}
