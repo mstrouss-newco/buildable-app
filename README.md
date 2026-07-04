@@ -26,6 +26,9 @@ Browser-QA'd live on www.buildablekids.com/croctot.html: loading screen, Make-it
 
 ---
 
+## Survival: characters are now frame-animated (July 3 2026)
+The new Space Sparkles cast (`public/survival-engine.html`) now plays real frame animation instead of a freeze-frame. Mike's DALL-E art was full flipbooks, so the idle/hover row of each sheet was sliced into 7-8 aligned square frames and packed into `public/survival-dalle/<key>_anim.png` strips. A tiny `drawAnimSprite(key,x,y,size)` flips frames by `Date.now()` (10-12 fps; each foe gets a random phase so they do not sync) and is used for the hero (jetpack flickers, scarf flutters), every foe, the bosses (scaled-up, with a soft glow), the orbiting helper "orbi tools", and the in-canvas power-up cards. Falls back to the still cutout, then the drawn blob, if a strip has not loaded — so nothing ever breaks. No new routes (served by the existing `/survival-dalle` rule). QA: headless bot still wins all 6 levels + campaign; local Chromium render advances frames with zero 404s/console errors; live browser-QA'd. LIVE on main.
+
 ## Survival: new "Survival dalle" art pack + no push-ring (July 3 2026)
 Big art refresh for Space Sparkles (`public/survival-engine.html`), all data-driven so it applies to every level at once (only the backdrops are per-level):
 - **Removed the on-screen push-circle**: dragging still moves the hero, but the white joystick ring + ball no longer draw.
