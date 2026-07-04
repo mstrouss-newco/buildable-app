@@ -6,6 +6,10 @@
   },
   "routes": [
     {
+      "src": "/demo/site.webmanifest",
+      "dest": "/site.webmanifest"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
