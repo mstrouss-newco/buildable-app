@@ -224,6 +224,10 @@
       "dest": "/chess-art/$1"
     },
     {
+      "src": "/breaker/(.*)",
+      "dest": "/breaker/$1"
+    },
+    {
       "src": "/tennis-bg/(.*)",
       "dest": "/tennis-bg/$1"
     },

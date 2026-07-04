@@ -226,15 +226,17 @@ if(BM&&BM.useTextures){ BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/sp
 const GAME_CONFIG = window.GAME_CONFIG || {
   name: "Buildable Breaker",
   // each level = a layout recipe (pattern + how tough + ball speed). Always clearable.
+  // theme = a full themed art pack (background + brick sprite sheet + ball + paddle).
+  // Levels cycle jungle -> space -> ocean so the whole adventure looks hand-painted.
   levels: [
-    { name:"First Bounce",  cols:8,  rows:3, pattern:"full",    tough:0.0,  speed:4.2 },
-    { name:"Step Pyramid",  cols:9,  rows:5, pattern:"pyramid", tough:0.1,  speed:4.6 },
-    { name:"Checker Castle",cols:10, rows:5, pattern:"checker", tough:0.2,  speed:5.0 },
-    { name:"Secret Gaps",   cols:10, rows:6, pattern:"gaps",    tough:0.3,  speed:5.3 },
-    { name:"Tall Towers",   cols:10, rows:6, pattern:"columns", tough:0.3,  speed:5.5 },
-    { name:"Castle Walls",  cols:11, rows:7, pattern:"frame",   tough:0.35, speed:5.6 },
-    { name:"Diamond Drop",  cols:11, rows:7, pattern:"diamond", tough:0.4,  speed:5.8 },
-    { name:"Brick Boss",    cols:12, rows:8, pattern:"full",    tough:0.55, speed:6.0 },
+    { name:"Jungle Ruins",  cols:8,  rows:3, pattern:"full",    tough:0.0,  speed:4.2, theme:"jungle" },
+    { name:"Star Pyramid",  cols:9,  rows:5, pattern:"pyramid", tough:0.1,  speed:4.6, theme:"space"  },
+    { name:"Coral Castle",  cols:10, rows:5, pattern:"checker", tough:0.2,  speed:5.0, theme:"ocean"  },
+    { name:"Vine Gaps",     cols:10, rows:6, pattern:"gaps",    tough:0.3,  speed:5.3, theme:"jungle" },
+    { name:"Comet Towers",  cols:10, rows:6, pattern:"columns", tough:0.3,  speed:5.5, theme:"space"  },
+    { name:"Reef Walls",    cols:11, rows:7, pattern:"frame",   tough:0.35, speed:5.6, theme:"ocean"  },
+    { name:"Temple Drop",   cols:11, rows:7, pattern:"diamond", tough:0.4,  speed:5.8, theme:"jungle" },
+    { name:"Galaxy Boss",   cols:12, rows:8, pattern:"full",    tough:0.55, speed:6.0, theme:"space"  },
   ],
   brickColors: ["#ff7aa8","#ffb04d","#ffd86b","#7ee0a0","#62d0ff","#9b7bff","#ff8fce"],
 };
@@ -269,6 +271,23 @@ const DIFFS = {
   normal: { name:"Normal", lives:3, padW:120, speedMul:1.0  },
   hard:   { name:"Hard",   lives:2, padW:92,  speedMul:1.18 },
 };
+// ---- themed art packs (hand-painted sprites, used by campaign levels) ----
+// Each pack: a full-scene background, a brick sprite sheet (3 frames wide:
+// intact | hit-flash | cracked ; 6 rows = 6 brick looks), a shatter sheet
+// (6 debris frames), a themed ball strip, and a themed paddle. fall = fallback
+// tint drawn until the images finish loading so a level never flashes blank.
+const THEMES = {
+  jungle: { bg:"breaker/jungle/bg.jpg", bricks:"breaker/jungle/bricks.png", shatter:"breaker/jungle/shatter.png", balls:"breaker/jungle/balls.png", paddle:"breaker/jungle/paddle.png", ball:0, fall:"#2f6d3a" },
+  space:  { bg:"breaker/space/bg.jpg",  bricks:"breaker/space/bricks.png",  shatter:"breaker/space/shatter.png",  balls:"breaker/space/balls.png",  paddle:"breaker/space/paddle.png",  ball:0, fall:"#1b1650" },
+  ocean:  { bg:"breaker/ocean/bg.jpg",  bricks:"breaker/ocean/bricks.png",  shatter:"breaker/ocean/shatter.png",  balls:"breaker/ocean/balls.png",  paddle:"breaker/ocean/paddle.png",  ball:0, fall:"#1a6fa0" },
+};
+const themeCache = {};
+function themeAssets(id){ const t=THEMES[id]; if(!t) return null;
+  if(!themeCache[id]) themeCache[id]={ def:t, bg:mkImg(t.bg), bricks:mkImg(t.bricks), shatter:mkImg(t.shatter), balls:mkImg(t.balls), paddle:mkImg(t.paddle) };
+  return themeCache[id]; }
+// the themed pack for the level being played (campaign solo only; kid-built
+// levels keep the drawn "Make It Mine" look so their world/ball/paddle choices show).
+function activeTheme(){ if(!G || G.mode!=="solo" || G.custom) return null; return (L&&L.theme)?L.theme:null; }
 // ---- 1-5 flame difficulty (used by "Make a level"). One dial; everything scales. ----
 // lives go down, paddle gets smaller, ball gets faster as flames go up.
 const DIFF5 = [
@@ -363,7 +382,7 @@ function buildBricks(L, rng){
   const bw=(W-marginX*2-gap*(cols-1))/cols, bh=24, cset=GAME_CONFIG.brickColors, bricks=[];
   for(let r=0;r<rows;r++){ for(let cidx=0;cidx<cols;cidx++){ if(!inPattern(L.pattern,r,cidx,rows,cols)) continue;
     const tough=rng()<L.tough, hp=tough?2:1;
-    bricks.push({ x:marginX+cidx*(bw+gap), y:top+r*(bh+gap), w:bw, h:bh, hp, maxHp:hp, col:cset[r%cset.length], alive:true, power:null }); } }
+    bricks.push({ x:marginX+cidx*(bw+gap), y:top+r*(bh+gap), w:bw, h:bh, hp, maxHp:hp, col:cset[r%cset.length], alive:true, power:null, variant:r%6, flashT:0 }); } }
   const onPowers=POWER_IDS.filter(k=>PREFS.powers[k]);
   if(onPowers.length){ const n=Math.min(bricks.length, 2+Math.floor(bricks.length*0.12));
     for(let i=0;i<n;i++){ const b=bricks[Math.floor(rng()*bricks.length)]; if(b) b.power=onPowers[Math.floor(rng()*onPowers.length)]; } }
@@ -388,7 +407,7 @@ function startLevel(i, carryLives){
   const diff=DIFFS[PREFS.difficulty]||DIFFS.normal, rng=mulberry(4242+level*131), speed=L.speed*diff.speedMul;
   G={ mode:"solo", padW:diff.padW, padX:W/2, padGrowT:0,
     lives:(carryLives!=null?carryLives:diff.lives), startLives:diff.lives, lostLives:0,
-    speed, baseSpeed:speed, bricks:buildBricks(L,rng), balls:[], caps:[], lasers:[],
+    speed, baseSpeed:speed, bricks:buildBricks(L,rng), balls:[], caps:[], lasers:[], shatters:[],
     onPaddle:true, sticky:false, stickyT:0, slowT:0, laserT:0, laserCd:0, fireT:0, score:0 };
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ]; G.onPaddle=true;
   state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic(); if(window.BuildableGameNav) window.BuildableGameNav.update();
@@ -418,7 +437,7 @@ function startCustomLevel(board, diffN){
   L={ name: board.name || "My level" }; level=0;
   G={ mode:"solo", custom:true, padW:d.padW, padX:W/2, padGrowT:0,
     lives:d.lives, startLives:d.lives, lostLives:0,
-    speed, baseSpeed:speed, bricks:buildCustomBricks(board), balls:[], caps:[], lasers:[],
+    speed, baseSpeed:speed, bricks:buildCustomBricks(board), balls:[], caps:[], lasers:[], shatters:[],
     onPaddle:true, sticky:false, stickyT:0, slowT:0, laserT:0, laserCd:0, fireT:0, score:0 };
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ]; G.onPaddle=true;
   state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic(); if(window.BuildableGameNav) window.BuildableGameNav.update();
@@ -455,6 +474,19 @@ c.addEventListener('pointermove',e=>{ const p=canvasPt(e);
   if(dragging)movePaddleTo(p.x); });
 function endPtr(e){ if(e&&e.pointerId!=null)delete pointers[e.pointerId]; dragging=false; }
 c.addEventListener('pointerup',endPtr); c.addEventListener('pointercancel',endPtr);
+// iOS "loupe"/magnifier fix: a long-press on the canvas would pop the empty
+// text-selection magnifier. touch-action:none + user-select:none isn't always
+// enough, so we also swallow the raw touch/selection/gesture defaults on the
+// canvas (pointer events still fire, so gameplay is unaffected).
+(function killLoupe(){
+  const stop=e=>{ if(e.cancelable) e.preventDefault(); };
+  c.addEventListener('touchstart', stop, {passive:false});
+  c.addEventListener('touchmove',  stop, {passive:false});
+  c.addEventListener('touchend',   stop, {passive:false});
+  c.addEventListener('contextmenu',e=>e.preventDefault());
+  c.addEventListener('selectstart',e=>e.preventDefault());
+  ['gesturestart','gesturechange','gestureend'].forEach(ev=>c.addEventListener(ev,e=>e.preventDefault()));
+})();
 
 const held={};
 addEventListener('keydown',e=>{ const k=e.key;
@@ -498,6 +530,9 @@ function updateSolo(){
   if(G.padGrowT>0){ G.padGrowT--; if(G.padGrowT===0){ const d=DIFFS[PREFS.difficulty]||DIFFS.normal; G.padW=d.padW; } }
   if(G.stickyT>0){ G.stickyT--; if(G.stickyT===0)G.sticky=false; }
   if(G.fireT>0)G.fireT--;
+  // themed brick animation timers: hit-flash fades, shatter debris ages out
+  for(const br of G.bricks){ if(br.flashT>0)br.flashT--; }
+  if(G.shatters&&G.shatters.length){ for(const s of G.shatters)s.t++; G.shatters=G.shatters.filter(s=>s.t<20); }
   const slow=G.slowT>0?0.55:1; if(G.slowT>0)G.slowT--;
   const padL=G.padX-G.padW/2, padR=G.padX+G.padW/2;
 
@@ -549,6 +584,8 @@ function bombSplash(cx,cy){ const R=78;
 // damage a brick (used by ball and laser); spawns juice + capsule on destroy
 function damageBrick(br,hx,hy,dmg){ br.hp-=dmg; const cx=br.x+br.w/2, cy=br.y+br.h/2;
   if(br.hp<=0){ br.alive=false;
+    // themed destroy: a flash->shatter flipbook plays where the brick was
+    if(G.shatters && activeTheme()){ G.shatters.push({ x:br.x, y:br.y, w:br.w, h:br.h, variant:br.variant||0, t:0 }); }
     const bonus = br.type==="candy" ? 40 : 10; G.score+=bonus;
     if(br.maxHp>=2||br.power||br.type==="candy"||br.type==="star") spawnBoom(cx,cy,Math.max(br.w,br.h)*1.6);
     if(BM){ if(br.maxHp>=2||br.power||br.type==="candy") BM.explode(fx,cx,cy,br.col,{n:14,pop:"+"+bonus,popCol:"#fff",shake:0.2,flash:0.08,sfx:()=>sfx("boom")});
@@ -557,7 +594,7 @@ function damageBrick(br,hx,hy,dmg){ br.hp-=dmg; const cx=br.x+br.w/2, cy=br.y+br
     if(br.power){ G.caps.push({x:cx,y:cy,id:br.power,col:(POWERS[br.power]||{}).col||"#fff",got:false}); }
     if(br.type==="bomb"){ bombSplash(cx,cy); }
     return true;
-  } else { if(BM)BM.burst(fx.parts,cx,cy,br.col,3); sfx("coin",{tier:1}); return false; }
+  } else { br.flashT=7; if(BM)BM.burst(fx.parts,cx,cy,br.col,3); sfx("coin",{tier:1}); return false; }
 }
 // ball vs bricks. fireball plows through (no bounce, destroys what it touches).
 function hitBricks(b){ const fire=G.fireT>0;
@@ -629,7 +666,16 @@ function advanceAfterEnd(){
 
 // ---------- draw ----------
 function rrect(x,y,w,h,r){ BR.rrect(ctx,x,y,w,h,r); }
-function drawBackdrop(){ const t=Date.now()/1000, img=bgImage();
+function drawBackdrop(){ const t=Date.now()/1000;
+  // themed campaign level: full-scene hand-painted background (falls back to a
+  // theme tint until the image loads so we never flash the wrong world)
+  const th0=activeTheme();
+  if(th0){ const A=themeAssets(th0);
+    if(A && imgReady(A.bg)){ BR.bgImage(ctx,A.bg,W,H);
+      const v=ctx.createRadialGradient(W/2,H*0.42,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.72); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.26)"); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+      const sc=ctx.createLinearGradient(0,0,0,H); sc.addColorStop(0,"rgba(6,10,26,0.34)"); sc.addColorStop(0.55,"rgba(6,10,26,0.10)"); sc.addColorStop(1,"rgba(6,10,26,0.18)"); ctx.fillStyle=sc; ctx.fillRect(0,0,W,H); return; }
+    ctx.fillStyle=(A&&A.def.fall)||"#122"; ctx.fillRect(0,0,W,H); return; }
+  const img=bgImage();
   if(img && (img.complete||img.width) && (img.naturalWidth||img.width)){ BR.bgImage(ctx,img,W,H);
     const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.4,W/2,H/2,Math.max(W,H)*0.72); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.32)"); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
     // gentle darkening scrim (strongest at the top, where the bricks are) so the
@@ -638,7 +684,10 @@ function drawBackdrop(){ const t=Date.now()/1000, img=bgImage();
   } else { const d=backdropDef(), g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,d.c1); g.addColorStop(1,d.c2); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     for(const st of stars){ const a=0.25*Math.abs(Math.sin(t*st.sp+st.ph)); ctx.fillStyle="rgba(255,255,255,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(st.x,st.y,st.s,0,7);ctx.fill(); } }
 }
-function drawBall(b,fire){ const sk=BALLS.find(x=>x.id===PREFS.ball)||BALLS[0];
+function drawBall(b,fire){
+  // themed campaign ball art (unless it's the fireball power-up, which keeps its flame look)
+  if(!fire){ const th0=activeTheme(); if(th0){ const A=themeAssets(th0); if(A && drawThemedBall(b,A)) return; } }
+  const sk=BALLS.find(x=>x.id===PREFS.ball)||BALLS[0];
   const useFlame = fire || sk.flame;
   const outR = useFlame?BALL_R+2:BALL_R;
   ctx.save(); ctx.shadowColor=useFlame?"#ff8a3d":(sk.rainbow?"#fff":sk.glow); ctx.shadowBlur=useFlame?22:16;
@@ -654,7 +703,10 @@ function drawBall(b,fire){ const sk=BALLS.find(x=>x.id===PREFS.ball)||BALLS[0];
   // dark outline so the ball stays visible on light backgrounds (candy, etc.)
   ctx.shadowBlur=0; ctx.lineWidth=2; ctx.strokeStyle="rgba(20,22,45,.55)"; ctx.beginPath(); ctx.arc(b.x,b.y,outR,0,7); ctx.stroke();
   ctx.restore(); }
-function drawPaddleAt(px,py,col){ const x=px-G.padW/2; ctx.save(); ctx.shadowColor=col; ctx.shadowBlur=12;
+function drawPaddleAt(px,py,col){
+  // themed campaign paddle art (solo campaign only; pong + custom keep the drawn bar)
+  { const th0=activeTheme(); if(th0){ const A=themeAssets(th0); if(A && drawThemedPaddle(px,py,A)) return; } }
+  const x=px-G.padW/2; ctx.save(); ctx.shadowColor=col; ctx.shadowBlur=12;
   const g=ctx.createLinearGradient(0,py-PAD_H/2,0,py+PAD_H/2); g.addColorStop(0,"#ffffff"); g.addColorStop(0.25,col); g.addColorStop(1,shade(col,-30));
   ctx.fillStyle=g; rrect(x,py-PAD_H/2,G.padW,PAD_H,9); ctx.fill();
   // dark outline so the paddle stays visible on light backgrounds (candy, etc.)
@@ -730,8 +782,40 @@ function draw(){ if(!G){ return; }
   if(state==="lose"){ banner("Out of lives!","Tap to try again"); }
   if(hud){ hud[(state==="play" && G.mode!=="two") ? "show" : "hide"](); }
 }
+// ---- themed sprite drawing (campaign levels) ----
+// brick sheet = 3 frames wide (0 intact, 1 hit-flash, 2 cracked) x 6 rows (looks)
+function drawThemedBrick(br,A){ const img=A.bricks; if(!imReady(img)) return false;
+  const cw=img.naturalWidth/3, ch=img.naturalHeight/6, v=(br.variant||0)%6;
+  let f=0; if(br.flashT>0) f=1; else if(br.hp<br.maxHp) f=2;
+  const ex=br.w*0.10, ey=br.h*0.62;   // a hair larger so the painted brick reads full-bleed
+  if(br.flashT>0){ ctx.save(); ctx.shadowColor="#fff"; ctx.shadowBlur=14; }
+  ctx.drawImage(img, f*cw, v*ch, cw, ch, br.x-ex/2, br.y-ey/2, br.w+ex, br.h+ey);
+  if(br.flashT>0) ctx.restore();
+  if(br.power){ ctx.fillStyle="rgba(255,255,255,.95)"; ctx.beginPath();ctx.arc(br.x+br.w/2,br.y+4,2.6,0,7);ctx.fill(); }
+  return true; }
+// destroy flipbook: brief flash frame, then the shatter debris expands + fades
+function drawShatters(A){ if(!G.shatters||!G.shatters.length) return;
+  const sh=A.shatter, br=A.bricks; const scw=imReady(sh)?sh.naturalWidth/6:0, sch=imReady(sh)?sh.naturalHeight:0;
+  const bcw=imReady(br)?br.naturalWidth/3:0, bch=imReady(br)?br.naturalHeight/6:0;
+  for(const s of G.shatters){ const v=(s.variant||0)%6;
+    if(s.t<5 && imReady(br)){ const ex=s.w*0.10, ey=s.h*0.62;
+      ctx.drawImage(br, 1*bcw, v*bch, bcw, bch, s.x-ex/2, s.y-ey/2, s.w+ex, s.h+ey);
+    } else if(imReady(sh)){ const q=(s.t-5)/15, sc=1+q*0.55; ctx.save(); ctx.globalAlpha=Math.max(0,1-q);
+      const dw=s.w*1.25*sc, dh=s.h*2.1*sc; ctx.drawImage(sh, v*scw, 0, scw, sch, s.x+s.w/2-dw/2, s.y+s.h*0.55-dh/2, dw, dh); ctx.restore(); } }
+}
+function drawThemedBall(b,A){ const img=A.balls; if(!imReady(img)) return false;
+  const n=Math.max(1,Math.round(img.naturalWidth/img.naturalHeight)), cw=img.naturalWidth/n, ch=img.naturalHeight;
+  const idx=(A.def.ball||0)%n, d=(BALL_R+3)*2;
+  ctx.save(); ctx.shadowColor="rgba(0,0,0,.5)"; ctx.shadowBlur=5;
+  ctx.drawImage(img, idx*cw,0,cw,ch, b.x-d/2, b.y-d/2, d, d); ctx.restore(); return true; }
+function drawThemedPaddle(px,py,A){ const img=A.paddle; if(!imReady(img)) return false;
+  const w=G.padW+10; let h=w*img.naturalHeight/img.naturalWidth; h=Math.min(h,34);
+  ctx.save(); ctx.shadowColor="rgba(0,0,0,.45)"; ctx.shadowBlur=8;
+  ctx.drawImage(img, px-w/2, py-h/2, w, h); ctx.restore(); return true; }
 // each backdrop gives its bricks a matching drawn style (the always-on art layer)
-function drawBrick(br){ const x=br.x,y=br.y,w=br.w,h=br.h; ctx.fillStyle=br.col; rrect(x,y,w,h,6); ctx.fill();
+function drawBrick(br){ const th0=activeTheme();
+  if(th0){ const A=themeAssets(th0); if(A && drawThemedBrick(br,A)) return; }
+  const x=br.x,y=br.y,w=br.w,h=br.h; ctx.fillStyle=br.col; rrect(x,y,w,h,6); ctx.fill();
   switch(backdropDef().id){
     case "space": // metal plate: top highlight, bottom shade, two rivets
       ctx.fillStyle="rgba(255,255,255,.22)"; rrect(x+3,y+3,w-6,h*0.32,4); ctx.fill();
@@ -769,6 +853,7 @@ function star5s(g,cx,cy,r){ g.beginPath();
 }
 function drawSolo(){
   for(const br of G.bricks){ if(!br.alive)continue; drawBrick(br); }
+  { const th0=activeTheme(); if(th0 && G.shatters && G.shatters.length){ const A=themeAssets(th0); if(A) drawShatters(A); } }
   for(const lz of G.lasers){ ctx.strokeStyle="#ff5da2"; ctx.lineWidth=3; ctx.shadowColor="#ff5da2"; ctx.shadowBlur=8; ctx.beginPath();ctx.moveTo(lz.x,lz.y);ctx.lineTo(lz.x,lz.y+14);ctx.stroke(); ctx.shadowBlur=0; }
   for(const cap of G.caps){ const pulse=1+Math.sin(Date.now()/1000*6+(cap.t||0)*0.3)*0.14;
     ctx.save(); ctx.translate(cap.x,cap.y);
@@ -1079,7 +1164,8 @@ function wireMenus(){ const bkm=el("mkBack"); if(bkm)bkm.onclick=mkGoBack; const
   const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; };
   const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; if(G&&G.custom){ showMaker("build"); } else { showMenu(); } }; }
 // preload world art so the picker + game never flash blank
-(function preloadBackdrops(){ try{ for(const d of BACKDROPS){ if(d&&d.img){ new Image().src=d.img; new Image().src=d.img.replace("_bg.jpg","_thumb.jpg"); } } }catch(e){} })();
+(function preloadBackdrops(){ try{ for(const d of BACKDROPS){ if(d&&d.img){ new Image().src=d.img; new Image().src=d.img.replace("_bg.jpg","_thumb.jpg"); } }
+  for(const id in THEMES) themeAssets(id); }catch(e){} })();   // warm the themed art packs
 
 function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
 // bespoke created sounds (ElevenLabs via /api/sfx) — synth stays as a silent fallback.

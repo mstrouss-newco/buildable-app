@@ -6,6 +6,15 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Breaker: hand-painted themed worlds (jungle / space / ocean) + true frame-animated bricks (July 3 2026)
+The campaign levels were all the same drawn-brick look on a flat backdrop. They now use full hand-painted art packs, cycling **jungle → space → ocean** across the 8 levels so the whole adventure looks bespoke. New assets live in `public/breaker/<theme>/` (background `bg.jpg`, brick sheet `bricks.png`, shatter sheet `shatter.png`, ball strip `balls.png`, paddle `paddle.png`) and are wired via a `THEMES` map + `activeTheme()` in `public/breaker-engine.html`; each campaign level carries a `theme` field.
+- **True frame animation on every brick.** The brick sheet is 3 frames wide (intact → hit-flash → cracked) × 6 looks per theme. A hit sets `flashT` so the brick plays its glowing hit-frame; a tough brick then shows the cracked frame; on destroy a flipbook plays where it stood — the flash frame, then the separate `shatter.png` debris frame expanding and fading (`G.shatters`, ticked in `updateSolo`, drawn in `drawShatters`).
+- **Themed ball + paddle + background.** `drawThemedBall` / `drawThemedPaddle` / the themed branch in `drawBackdrop` draw the painted sprites (scaled to the live hitbox / paddle width / viewport). The fireball power-up keeps its flame look; kid-built "Make a level" boards keep the drawn "Make It Mine" style so the kid's own world/ball/paddle choices still show.
+- **Art pipeline.** Source sheets were on a white studio background; a pass keys out the *border-connected* white (interior highlights kept), repacks each brick's intact-frame footprint into a tight uniform grid so bricks fill their slot with no gaps, and trims the balls/paddle. Sim harness confirms all 8 themed levels + a kid-built board stay always-winnable.
+- **iOS magnifier fix.** A long-press on the game canvas could pop the empty iOS text-selection "loupe." Added canvas-level guards that swallow the raw `touchstart/move/end`, `contextmenu`, `selectstart`, and `gesture*` defaults (pointer events still fire, so gameplay is unaffected).
+- **Gotcha:** the new `public/breaker/` folder needed its own `/breaker/(.*)` route in `vercel.json` — the catch-all otherwise serves `landing.html` for those asset paths.
+
+
 ## Board games: painted world scenes behind Tic-Tac-Toe, Connect Four, Dots and Boxes (July 3 2026)
 The three board games (`public/tictactoe-engine.html`, `connectfour-engine.html`, `dotsboxes-engine.html`) sat on a flat dark navy page. They now show one of the shared painted world scenes (the same `chess-art/*_bg.jpg` set chess & breaker use: ocean, jungle, space, candy, castle, desert) behind the board, so they look modern and consistent with the rest of the app.
 - A full-screen `#world-bg` layer sits behind the board (`z-index:0`, board `#wrap` bumped to `z-index:1`) with a soft dark scrim (`linear-gradient(rgba(8,10,40,.40),.55)`) over the scene so the board, HUD, and buttons stay readable on bright worlds.
