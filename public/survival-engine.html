@@ -171,7 +171,7 @@ function animGet(k){ if(!(k in animCache)) animCache[k]=mkImg(SD+k+"_anim.png");
 ["hero"].concat(SD_ENEMY_KEYS,HELPER_KEYS).forEach(animGet);   // warm every character's animation
 function drawAnimSprite(key,x,y,size,opts){ opts=opts||{};
   const im=animGet(key), h=im&&(im.naturalHeight||im.height), w=im&&(im.naturalWidth||im.width);
-  if(im && h && w){ const n=Math.max(1,Math.round(w/h)), fps=opts.fps||10;
+  if(im && h && w){ const n=Math.max(1,Math.round(w/h)), fps=opts.fps||5;   // gentle idle speed
     const f=Math.floor(Date.now()/(1000/fps)+(opts.phase||0))%n;
     if(opts.shadow){ ctx.save(); ctx.globalAlpha=0.22; ctx.fillStyle="#000"; ctx.beginPath(); ctx.ellipse(x,y+size*0.40,size*0.30,size*0.11,0,0,7); ctx.fill(); ctx.restore(); }
     ctx.drawImage(im, f*h,0,h,h, x-size/2,y-size/2,size,size); return true; }
@@ -484,7 +484,7 @@ function heart(x,y,s){ BR.heart(ctx,x,y,s); }
 function blob(x,y,r,col,wob,boss){ BR.enemy(ctx,x,y,r,col,wob,boss); }
 function drawHero(){ const blink=(invuln>0 && Math.floor(invuln/5)%2===0);
   // animated jetpack hero; on i-frames we blink (skip a beat) and fall back to the drawn hero
-  if(!blink && drawAnimSprite("hero", hero.x, hero.y, hero.r*3.1, {shadow:true, fps:12})){
+  if(!blink && drawAnimSprite("hero", hero.x, hero.y, hero.r*3.1, {shadow:true, fps:6})){
     if(stats.shield){ ctx.strokeStyle="rgba(122,208,255,.85)"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(hero.x,hero.y,hero.r*1.55,0,7); ctx.stroke(); }
     return; }
   const usingArt=GAME_CONFIG.heroUrl && heroImg.complete && heroImg.naturalWidth;
@@ -568,7 +568,7 @@ function draw(){
   if(boss){
     // soft menacing glow behind the (animated) boss
     const bg2=ctx.createRadialGradient(boss.x,boss.y,boss.r*0.4,boss.x,boss.y,boss.r*1.5); bg2.addColorStop(0,"rgba(198,155,255,0.45)"); bg2.addColorStop(1,"rgba(198,155,255,0)"); ctx.fillStyle=bg2; ctx.beginPath();ctx.arc(boss.x,boss.y,boss.r*1.5,0,7);ctx.fill();
-    if(!drawAnimSprite(L.bossKey, boss.x, boss.y, boss.r*2.5, {shadow:true, fps:9}))
+    if(!drawAnimSprite(L.bossKey, boss.x, boss.y, boss.r*2.5, {shadow:true, fps:4}))
       blob(boss.x,boss.y,boss.r,boss.col,Date.now()/300,true);
     const bw=180; ctx.fillStyle="rgba(0,0,0,.35)";rrect(W/2-bw/2,14,bw,11,6);ctx.fill(); ctx.fillStyle=P.boss;rrect(W/2-bw/2,14,bw*Math.max(0,boss.hp/boss.maxHp),11,6);ctx.fill(); ctx.fillStyle="#fff";ctx.font="bold 13px Fredoka,sans-serif";ctx.textAlign="center";ctx.fillText((L.bossName?L.bossName.toUpperCase():"BOSS"),W/2,33); }
   // projectiles (twinkly sparkles)
