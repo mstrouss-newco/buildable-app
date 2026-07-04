@@ -671,7 +671,7 @@ function drawBackdrop(){ const t=Date.now()/1000;
   // theme tint until the image loads so we never flash the wrong world)
   const th0=activeTheme();
   if(th0){ const A=themeAssets(th0);
-    if(A && imgReady(A.bg)){ BR.bgImage(ctx,A.bg,W,H);
+    if(A && imReady(A.bg)){ BR.bgImage(ctx,A.bg,W,H);
       const v=ctx.createRadialGradient(W/2,H*0.42,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.72); v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,0.26)"); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
       const sc=ctx.createLinearGradient(0,0,0,H); sc.addColorStop(0,"rgba(6,10,26,0.34)"); sc.addColorStop(0.55,"rgba(6,10,26,0.10)"); sc.addColorStop(1,"rgba(6,10,26,0.18)"); ctx.fillStyle=sc; ctx.fillRect(0,0,W,H); return; }
     ctx.fillStyle=(A&&A.def.fall)||"#122"; ctx.fillRect(0,0,W,H); return; }
