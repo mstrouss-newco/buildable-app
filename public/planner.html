@@ -77,6 +77,11 @@
   .task.done .desc{text-decoration:line-through;color:var(--muted)}
   .x{color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;border-radius:6px}
   .x:hover{color:var(--danger);background:rgba(224,56,74,.12)}
+  .later-btn{color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;padding:2px 4px;border-radius:6px}
+  .later-btn:hover{color:var(--accent);background:rgba(107,78,255,.1)}
+  .later-btn svg{width:15px;height:15px}
+  .task.later{opacity:.68}
+  .gtag.later{color:var(--accent)}
   .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
   .quickadd{display:flex;gap:8px;margin-top:10px}
   .qa-input{flex:1;min-width:0;padding:8px 11px;font-size:13px}
@@ -220,7 +225,7 @@ const PLATFORM=["HUD","UI / Look & Feel","Multiplayer","Demo / Tutorial","Naviga
 const DEF_SETTINGS={readyAt:3,bigAt:8,daily:3};
 
 let kind="game";
-let state={tasks:[],meta:{settings:{...DEF_SETTINGS},sends:{},custom:{game:[],platform:[]}}};
+let state={tasks:[],meta:{settings:{...DEF_SETTINGS},sends:{},custom:{game:[],platform:[]},later:[]}};
 let activeBatch=null;
 let openState={};
 
@@ -252,13 +257,14 @@ async function load(showToast){
     }
     state.tasks=(d.tasks||[]).map(normTask);
     state.meta=normMeta(d.meta);
+    state.tasks.forEach(t=>t.later=state.meta.later.includes(t.id));
     renderBanner("");
     render(); setSync("in sync");
     if(showToast)toast("Refreshed");
   }catch(e){ setSync("offline"); renderBanner("Couldn't reach the store. Tap Refresh to retry."); }
 }
 function normTask(t){ return {id:t.id, kind:t.kind==="platform"?"platform":"game", target:t.target, desc:t.description, done:!!t.done, created:t.created_at}; }
-function normMeta(m){ m=m||{}; return {settings:Object.assign({...DEF_SETTINGS},m.settings||{}), sends:m.sends||{}, custom:Object.assign({game:[],platform:[]},m.custom||{})}; }
+function normMeta(m){ m=m||{}; return {settings:Object.assign({...DEF_SETTINGS},m.settings||{}), sends:m.sends||{}, custom:Object.assign({game:[],platform:[]},m.custom||{}), later:Array.isArray(m.later)?m.later:[]}; }
 
 async function saveMeta(){ setSync("saving…"); const r=await apiPost({op:"meta",data:state.meta}); setSync(r.ok?"in sync":"offline"); }
 
@@ -330,6 +336,16 @@ async function delTask(id){
   const r=await apiPost({op:"delete",id});
   if(!r.ok){ state.tasks.splice(idx,0,backup); render(); toast("Couldn't delete"); setSync("offline"); } else setSync("in sync");
 }
+async function toggleLater(id){
+  const t=state.tasks.find(x=>x.id===id); if(!t)return;
+  t.later=!t.later;
+  const set=new Set(state.meta.later||[]);
+  if(t.later) set.add(id); else set.delete(id);
+  state.meta.later=[...set];
+  render(); setSync("saving…"); const r=await saveMetaR();
+  toast(t.later?"Set aside for later":"Back in the active list");
+}
+async function saveMetaR(){ const r=await apiPost({op:"meta",data:state.meta}); setSync(r.ok?"in sync":"offline"); return r; }
 
 /* ---- bucket open state + inline quick-add ---- */
 function qaSlug(k,target){return "qa-"+(k+"-"+target).replace(/[^a-z0-9]+/gi,"-");}
@@ -361,7 +377,7 @@ function statusOf(n){
   if(n>=s.readyAt) return {cls:"s-ready",txt:"Ready to hand off"};
   return {cls:"s-wait",txt:(s.readyAt-n)+" more to be worth a batch"};
 }
-function openCount(k,target){return state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done).length;}
+function openCount(k,target){return state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later).length;}
 
 /* ---- render ---- */
 function render(){
@@ -389,7 +405,7 @@ function section(title,k){
 }
 function bucket(k,target){
   const all=state.tasks.filter(t=>t.kind===k&&t.target===target);
-  const open=all.filter(t=>!t.done), done=all.filter(t=>t.done);
+  const open=all.filter(t=>!t.done&&!t.later), later=all.filter(t=>!t.done&&t.later), done=all.filter(t=>t.done);
   const n=open.length, st=statusOf(n);
   const key=k+"|"+target;
   if(openState[key]===undefined) openState[key]=(n>=state.meta.settings.readyAt);
@@ -400,7 +416,7 @@ function bucket(k,target){
   const doneHtml=done.length?`<div class="donewrap"><div class="gtag">done (${done.length})</div>${done.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:"";
   return `<div class="bucket">
     <div class="bhead" onclick='toggleBucket(${JSON.stringify(k)},${JSON.stringify(target)})'>
-      <h2>${esc(target)} <span class="count">${n} open${done.length?` · ${done.length} done`:""}</span></h2>
+      <h2>${esc(target)} <span class="count">${n} open${later.length?` · ${later.length} later`:""}${done.length?` · ${done.length} done`:""}</span></h2>
       <span class="status ${st.cls}">${st.txt}</span>
     </div>
     <div class="body ${isOpen}">
@@ -413,22 +429,25 @@ function bucket(k,target){
         <button class="btn ghost mini" onclick='copyBucket(${JSON.stringify(k)},${JSON.stringify(target)})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy list</button>
         ${canSend?`<button class="btn green mini" onclick='openBatch(${JSON.stringify(k)},${JSON.stringify(target)})'>Prep prompt for Claude →</button>`:""}
       </div>`:""}
+      ${later.length?`<div class="donewrap"><div class="gtag later">later (${later.length}) — parked until you're ready</div>${later.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:""}
       ${doneHtml}
     </div>
   </div>`;
 }
 function taskRow(t,num){
-  return `<div class="task ${t.done?'done':''}">
+  const laterBtn=t.done?"":`<span class="later-btn" onclick="toggleLater(${t.id})" title="${t.later?'Move back to active':'Set aside for later'}">${t.later?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 1.5"/></svg>'}</span>`;
+  return `<div class="task ${t.done?'done':''} ${t.later?'later':''}">
     <input type="checkbox" ${t.done?'checked':''} onchange="toggleDone(${t.id})" title="Mark done" style="margin-top:3px">
     <span class="num">${num}.</span>
     <span class="desc">${esc(t.desc)}</span>
+    ${laterBtn}
     <span class="x" onclick="delTask(${t.id})" title="Delete">✕</span>
   </div>`;
 }
 
 /* ---- copy one group's list ---- */
 function copyBucket(k,target){
-  const items=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done);
+  const items=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later);
   if(!items.length){toast("Nothing to copy");return;}
   const out=`${target} (${items.length})\n`+items.map((t,i)=>`${i+1}. ${t.desc}`).join("\n");
   navigator.clipboard.writeText(out).then(()=>toast("Copied "+target+" list"));
@@ -436,7 +455,7 @@ function copyBucket(k,target){
 
 /* ---- prompt ---- */
 function openBatch(k,target){
-  const open=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done);
+  const open=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later);
   activeBatch={kind:k,target,ids:open.map(t=>t.id)};
   document.getElementById("pm-title").textContent=`${target} — ${open.length} tasks`;
   document.getElementById("pm-box").textContent=buildPrompt(k,target,open);
