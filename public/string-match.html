@@ -17,11 +17,11 @@
   #stage{ position:absolute; inset:0; }
   #board{ position:absolute; inset:0; touch-action:none; overflow:hidden; background:#bfe3f5; }
   svg{ display:block; width:100%; height:100%; }
-  .hud{ position:absolute; top:12px; right:12px; display:flex; flex-direction:column; gap:10px; z-index:30; }
+  .hud{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 12px); right:12px; display:flex; flex-direction:column; gap:10px; z-index:30; }
   .hudBtn{ width:54px; height:54px; border:none; border-radius:16px; background:rgba(255,255,255,0.94);
     box-shadow:0 4px 0 rgba(70,100,140,0.32); color:#3a5170; display:flex; align-items:center; justify-content:center; cursor:pointer; }
   .hudBtn:active{ transform:translateY(3px); box-shadow:none; }
-  #status{ position:absolute; top:14px; left:0; right:0; text-align:center; z-index:20; pointer-events:none; padding:0 78px; box-sizing:border-box; }
+  #status{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 76px); left:0; right:0; text-align:center; z-index:20; pointer-events:none; padding:0 16px; box-sizing:border-box; }
   #status span{ display:inline-block; background:rgba(255,255,255,0.92); color:#33506f;
     font-size:clamp(14px,3.6vw,20px); font-weight:700; padding:8px 18px; border-radius:999px;
     box-shadow:0 4px 14px rgba(30,60,90,0.16); }
@@ -39,16 +39,9 @@
   <div id="board">
     <svg id="svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <!-- white sticker outline + soft drop shadow so buddies pop off any background -->
-        <filter id="pop" x="-55%" y="-55%" width="210%" height="210%">
-          <feMorphology in="SourceAlpha" operator="dilate" radius="6" result="sw"/>
-          <feFlood flood-color="#FFFFFF" flood-opacity="0.96" result="wc"/>
-          <feComposite in="wc" in2="sw" operator="in" result="outline"/>
-          <feGaussianBlur in="sw" stdDeviation="6" result="shb"/>
-          <feOffset in="shb" dx="0" dy="7" result="sho"/>
-          <feFlood flood-color="#14283f" flood-opacity="0.36" result="shc"/>
-          <feComposite in="shc" in2="sho" operator="in" result="shadow"/>
-          <feMerge><feMergeNode in="shadow"/><feMergeNode in="outline"/><feMergeNode in="SourceGraphic"/></feMerge>
+        <!-- soft drop shadow so buddies pop off any background (no outline halo) -->
+        <filter id="pop" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#0f2338" flood-opacity="0.42"/>
         </filter>
         <!-- gently calm the busy clay background -->
         <filter id="bgcalm"><feColorMatrix type="saturate" values="0.78"/></filter>
