@@ -214,22 +214,27 @@ function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=M
 function dist2(ax,ay,bx,by){const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;}
 
 // power-up catalogue
+// Each power-up has a fun kid name + a one-line description, plus (for buddies) the
+// helper sprite that becomes a visible pet pal. The `apply` effects are unchanged/balanced.
 const PU={
-  fast:  { name:"Faster Sparkles", apply:s=>{ s.fireCd=Math.max(13, s.fireCd*0.88); } },
-  multi: { name:"Extra Sparkle",   apply:s=>{ s.projPerShot+=1; } },
-  big:   { name:"Bigger Sparkles", apply:s=>{ s.projDmg+=1; s.projR+=2; } },
-  pierce:{ name:"Piercing Sparkles",apply:s=>{ s.pierce+=1; } },
-  orbit: { name:"Spinny Star",     apply:s=>{ s.orbit=(s.orbit||0)+1; } },
-  nova:  { name:"Star Nova",       apply:s=>{ s.nova=(s.nova||0)+1; } },        // AoE shockwave on a timer
-  blackhole:{ name:"Black Hole",   apply:s=>{ s.blackhole=(s.blackhole||0)+1; } }, // opens a swirl that vacuums foes in & crushes them
-  frost: { name:"Frost Shot",      apply:s=>{ s.frost=(s.frost||0)+1; } },      // shots slow the slimes they hit
-  homing:{ name:"Homing Sparkles", apply:s=>{ s.homing=(s.homing||0)+1; } },    // shots curve toward foes
-  swift: { name:"Speedy Boots",    apply:s=>{ s.speed+=0.35; } },
-  magnet:{ name:"Gem Magnet",      apply:s=>{ s.pickupR+=50; } },
-  heal:  { name:"Heart",           apply:(s,g)=>{ if(g.hearts<g.maxHearts) g.hearts++; else s.shield=true; } },
-  regen: { name:"Slow Heal",       apply:s=>{ s.regen = (s.regen>=1e9) ? 600 : Math.max(240, s.regen-180); } },
-  shield:{ name:"Bubble Shield",   apply:s=>{ s.shield=true; } },
+  // ---- Powers: fun weapon + gadget upgrades ----
+  fast:  { name:"Turbo Blaster",     desc:"Shoot sparkles way faster!",           apply:s=>{ s.fireCd=Math.max(13, s.fireCd*0.88); } },
+  multi: { name:"Confetti Cannon",   desc:"Fire an extra sparkle each shot!",     apply:s=>{ s.projPerShot+=1; } },
+  big:   { name:"Mega Sparkles",     desc:"Bigger, stronger sparkles!",           apply:s=>{ s.projDmg+=1; s.projR+=2; } },
+  pierce:{ name:"Laser Beam",        desc:"Zap right through the baddies!",        apply:s=>{ s.pierce+=1; } },
+  nova:  { name:"Sparkle Boom",      desc:"A big blast pops out all around you!", apply:s=>{ s.nova=(s.nova||0)+1; } },        // AoE shockwave on a timer
+  blackhole:{ name:"Cosmic Whirlpool", desc:"A magic swirl gulps up baddies!",    apply:s=>{ s.blackhole=(s.blackhole||0)+1; } }, // opens a swirl that vacuums foes in & crushes them
+  frost: { name:"Freeze Ray",        desc:"Baddies turn to slow-mo ice pops!",    apply:s=>{ s.frost=(s.frost||0)+1; } },      // shots slow the slimes they hit
+  magnet:{ name:"Treasure Magnet",   desc:"Coins zoom straight to you!",          apply:s=>{ s.pickupR+=50; } },
+  shield:{ name:"Bubble Shield",     desc:"A bouncy bubble guards you!",          apply:s=>{ s.shield=true; } },
+  heal:  { name:"Power Heart",       desc:"Get a heart back — you're okay!", apply:(s,g)=>{ if(g.hearts<g.maxHearts) g.hearts++; else s.shield=true; } },
+  // ---- Buddies: pet pals that join your crew as the game goes on (each joins once) ----
+  orbit: { name:"Twinkle the Star",  desc:"A star spins around you and bonks baddies!", buddy:"helper_star",   apply:s=>{ s.orbit=(s.orbit||0)+1; addBuddy(s,"helper_star"); } },
+  homing:{ name:"Buzz the Bee",      desc:"Your sparkles chase baddies like a bee!",    buddy:"helper_bee",    apply:s=>{ s.homing=(s.homing||0)+1; addBuddy(s,"helper_bee"); } },
+  swift: { name:"Comet the Space Pup", desc:"Your zoomy puppy makes you super fast!",   buddy:"helper_dog",    apply:s=>{ s.speed+=0.35; addBuddy(s,"helper_dog"); } },
+  regen: { name:"Petal the Healer",  desc:"A gentle friend slowly heals your hearts.",  buddy:"helper_healer", apply:s=>{ s.regen = (s.regen>=1e9) ? 600 : Math.max(240, s.regen-180); addBuddy(s,"helper_healer"); } },
 };
+function addBuddy(s,key){ s.buddies=s.buddies||[]; if(!s.buddies.includes(key)) s.buddies.push(key); }
 const BOT_PREF=["blackhole","nova","fast","big","homing","multi","frost","pierce","orbit","swift","heal","regen","shield","magnet"];  // QA bot's pick order
 
 // ---- game state ----
@@ -244,7 +249,7 @@ let holes=[], bhTimer=0;   // active black holes + its spawn timer
 function makeStars(){ const r=mulberry(9999); stars=[]; for(let i=0;i<90;i++) stars.push({x:r()*W,y:r()*H,s:0.6+r()*1.8,ph:r()*6.28,sp:0.5+r()*1.5}); }
 makeStars();
 
-function freshStats(){ return { speed:BASE.speed, fireCd:BASE.fireCd, projSpeed:BASE.projSpeed, projDmg:BASE.projDmg, projR:BASE.projR, projPerShot:BASE.projPerShot, pierce:BASE.pierce, pickupR:BASE.pickupR, shield:false, orbit:0, regen:1e9, nova:0, blackhole:0, frost:0, homing:0 }; }
+function freshStats(){ return { speed:BASE.speed, fireCd:BASE.fireCd, projSpeed:BASE.projSpeed, projDmg:BASE.projDmg, projR:BASE.projR, projPerShot:BASE.projPerShot, pierce:BASE.pierce, pickupR:BASE.pickupR, shield:false, orbit:0, regen:1e9, nova:0, blackhole:0, frost:0, homing:0, buddies:[] }; }
 
 // ===== Collectible gear (data). Change names/costs/boosts freely — no code edits. =====
 // boost keys: projDmg, projPerShot, pierce, fire(=lower cooldown), speed, pickupR, hearts, shield
@@ -348,7 +353,20 @@ function endJoy(){ joyOn=false; inputDir={x:0,y:0}; }
 c.addEventListener('pointerup',endJoy); c.addEventListener('pointercancel',endJoy);
 
 // ---------- level-up ----------
-function offerChoices(){ const pool=(GAME_CONFIG.powerups||Object.keys(PU)).slice(); const out=[]; while(out.length<3 && pool.length){ const k=Math.floor(offerRng()*pool.length); out.push(pool.splice(k,1)[0]); } choices=out; state="choose"; sfx("levelup"); }
+function offerChoices(){
+  const ids=(GAME_CONFIG.powerups||Object.keys(PU)).slice();
+  const powers=ids.filter(id=>PU[id] && !PU[id].buddy);
+  const owned=(stats&&stats.buddies)||[];
+  // Buddies appear "as the game goes on": only after your 3rd power-up, and each pet joins once.
+  const buddies=(plvl>=3) ? ids.filter(id=>PU[id] && PU[id].buddy && !owned.includes(PU[id].buddy)) : [];
+  const out=[];
+  // Give a fresh buddy a strong chance to show up so kids collect the whole crew over a run.
+  if(buddies.length && offerRng()<0.6){ out.push(buddies.splice(Math.floor(offerRng()*buddies.length),1)[0]); }
+  const rest=powers.slice();
+  while(out.length<3 && rest.length){ out.push(rest.splice(Math.floor(offerRng()*rest.length),1)[0]); }
+  while(out.length<3 && buddies.length){ out.push(buddies.splice(Math.floor(offerRng()*buddies.length),1)[0]); }
+  choices=out; state="choose"; sfx("levelup");
+}
 function applyChoice(id){ const p=PU[id]; if(p) p.apply(stats,hero); choices=[]; state="play"; }
 function gainXp(v){ xp+=v; while(xp>=xpNeed){ xp-=xpNeed; plvl++; xpNeed=Math.ceil(xpNeed*NEED_GROW); offerChoices(); } }
 
@@ -488,11 +506,27 @@ function drawHero(){ const blink=(invuln>0 && Math.floor(invuln/5)%2===0);
     return; }
   const usingArt=GAME_CONFIG.heroUrl && heroImg.complete && heroImg.naturalWidth;
   BR.hero(ctx, hero.x, hero.y, { img: usingArt?heroImg:null, palette:P, aim:hero.aim, blink, shield:stats.shield }); }
+// Draw the REAL jetpack-astronaut hero art at an arbitrary spot/size (used by the how-to
+// demo so the tutorial shows your actual hero, not a plain placeholder). Drawn hero is the fallback.
+function drawHeroArt(x,y,size){ if(drawAnimSprite("hero",x,y,size,{fps:6})) return;
+  const usingArt=GAME_CONFIG.heroUrl && heroImg.complete && heroImg.naturalWidth;
+  BR.hero(ctx, x, y, { img: usingArt?heroImg:null, palette:P, aim:0 }); }
 function cardRect(k){ const w=200,h=240,gap=24, total=3*w+2*gap, x0=(W-total)/2; return { x:x0+k*(w+gap), y:H/2-h/2, w, h }; }
-// Some power-ups now show their new helper artwork on the "Pick one" cards; the rest
-// keep the shared drawn icons.
-const PU_IMG={ orbit:"helper_star", swift:"helper_dog", homing:"helper_bee", heal:"helper_healer", regen:"helper_healer", shield:"helper_healer" };
-function drawPUicon(id,x,y){ const key=PU_IMG[id]; if(key && drawAnimSprite(key,x,y,68,{})) return; BR.puIcon(ctx,id,x,y,P); }
+// Power-up card art: BUDDIES show their hand-made helper sprite (always available);
+// POWERS show a generated "Survival dalle" gadget image (kind=survpu), with the shared
+// drawn icon as the fallback until the AI image has loaded.
+const puArtCache={};
+function puArt(id){ if(!(id in puArtCache)) puArtCache[id]=mkImg("/api/images?kind=survpu&id="+id+"&v=1"); return puArtCache[id]; }
+["fast","multi","big","pierce","nova","blackhole","frost","magnet","shield","heal"].forEach(puArt);   // warm the gadget art
+function drawPUicon(id,x,y){ const meta=PU[id]||{};
+  if(meta.buddy){ if(drawAnimSprite(meta.buddy,x,y,74,{})) return; }
+  else { const im=puArt(id); if(im && (im.naturalWidth||im.width) && (im.complete||im.width)){ const s=78; ctx.drawImage(im,x-s/2,y-s/2,s,s); return; } }
+  BR.puIcon(ctx,id,x,y,P); }
+// centered word-wrap for card descriptions (max 2 lines)
+function wrapCenter(txt,cx,y,maxW,lh){ const words=(txt||"").split(" "); let line="", lines=[];
+  for(const w of words){ const t=line?line+" "+w:w; if(ctx.measureText(t).width>maxW && line){ lines.push(line); line=w; } else line=t; }
+  if(line)lines.push(line); lines=lines.slice(0,2);
+  for(let i=0;i<lines.length;i++) ctx.fillText(lines[i],cx,y+i*lh); }
 function banner(t,s){ ctx.fillStyle="rgba(5,8,24,.6)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 46px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-8); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
 // wordless how-to-play demo (for kids who can't read): animated hand dragging,
 // hero following, plus three picture cues, and a pulsing PLAY button.
@@ -508,7 +542,7 @@ function drawTutorial(){
   ctx.beginPath();ctx.moveTo(cx-150,cy+34);ctx.lineTo(cx-132,cy+24);ctx.lineTo(cx-132,cy+44);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(cx+150,cy+34);ctx.lineTo(cx+132,cy+24);ctx.lineTo(cx+132,cy+44);ctx.closePath();ctx.fill();
   const heroFollow=cx+Math.sin((tt-0.22)*1.5)*120;
-  BR.hero(ctx, heroFollow, cy+34, { palette:P, aim:0 });
+  drawHeroArt(heroFollow, cy+34, 92);
   BR.hand(ctx, cx+swing, cy+70, 1.35);
   // --- three picture cues along the bottom ---
   const by=H*0.72, gap=235, xs=[W/2-gap, W/2, W/2+gap];
@@ -518,7 +552,7 @@ function drawTutorial(){
   ctx.fillStyle="rgba(255,255,255,.7)"; ctx.beginPath();ctx.moveTo(xs[0]-58,by+40);ctx.lineTo(xs[0]-40,by+30);ctx.lineTo(xs[0]-40,by+50);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(xs[0]+58,by+40);ctx.lineTo(xs[0]+40,by+30);ctx.lineTo(xs[0]+40,by+50);ctx.closePath();ctx.fill();
   // cue 2: hero auto-zaps slimes (hero -> sparkle -> slime)
-  BR.hero(ctx, xs[1]-44, by-4, { palette:P, aim:0 });
+  drawHeroArt(xs[1]-44, by-4, 60);
   BR.projectile(ctx, xs[1]+2+Math.sin(tt*6)*6, by-10, 8, P.spark);
   BR.enemy(ctx, xs[1]+52, by-6, 16, "#7ee0a0", tt*3, false);
   // cue 3: collect coins (three glowing coins)
@@ -576,10 +610,10 @@ function draw(){
   for(const pt of parts) BR.particle(ctx,pt);
   // hero
   drawHero();
-  // orbiting helper "orbi tools" — the new star / bee / dog sprites spin around the hero
-  if(stats.orbit>0){ for(let k=0;k<stats.orbit;k++){ const a=orbAngle+k*6.28/stats.orbit, ox=hero.x+Math.cos(a)*54, oy=hero.y+Math.sin(a)*54;
-      const hk=["helper_star","helper_bee","helper_dog"][k%3];
-      if(!drawAnimSprite(hk,ox,oy,46,{phase:k*4})) BR.orbiter(ctx,ox,oy,P.spark); } }
+  // Pet buddies orbit the hero — each helper you've collected shows up as a spinning pal.
+  const pets=(stats.buddies&&stats.buddies.length)?stats.buddies:(stats.orbit>0?["helper_star"]:[]);
+  if(pets.length){ for(let k=0;k<pets.length;k++){ const a=orbAngle+k*6.28/pets.length, ox=hero.x+Math.cos(a)*58, oy=hero.y+Math.sin(a)*58;
+      if(!drawAnimSprite(pets[k],ox,oy,48,{phase:k*4})) BR.orbiter(ctx,ox,oy,P.spark); } }
   ctx.restore();                                  // end shake layer
   if(BM&&fx) BM.draw(ctx, fx, { W, H });          // shared FX particles + flash overlay
   // (push-circle joystick ring removed — you just drag to move, no on-screen ring)
@@ -595,8 +629,13 @@ function draw(){
   ctx.fillText(bossSpawned?"BOSS!":("Boss in "+Math.ceil((levelDur-levelFrame)/60)+"s"), W-18, H-34);
   // overlays
   if(state==="choose"){ ctx.fillStyle="rgba(5,8,24,.72)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Fredoka,sans-serif";ctx.fillText("Power up! Pick one",W/2,H/2-160);
-    for(let k=0;k<choices.length;k++){ const cr=cardRect(k), id=choices[k]; ctx.fillStyle="#1b2350";rrect(cr.x,cr.y,cr.w,cr.h,18);ctx.fill(); ctx.strokeStyle=P.xp;ctx.lineWidth=3;rrect(cr.x,cr.y,cr.w,cr.h,18);ctx.stroke();
-      drawPUicon(id,cr.x+cr.w/2,cr.y+86); ctx.fillStyle="#fff";ctx.font="bold 22px Fredoka,sans-serif";ctx.fillText(PU[id].name,cr.x+cr.w/2,cr.y+cr.h-46); ctx.fillStyle="#9fb0ff";ctx.font="16px Fredoka,sans-serif";ctx.fillText("Tap to choose",cr.x+cr.w/2,cr.y+cr.h-22); } }
+    for(let k=0;k<choices.length;k++){ const cr=cardRect(k), id=choices[k], meta=PU[id]||{}, isBud=!!meta.buddy;
+      ctx.fillStyle=isBud?"#241a4d":"#1b2350"; rrect(cr.x,cr.y,cr.w,cr.h,18); ctx.fill();
+      ctx.strokeStyle=isBud?(P.spark||"#ffe27a"):P.xp; ctx.lineWidth=3; rrect(cr.x,cr.y,cr.w,cr.h,18); ctx.stroke();
+      if(isBud){ ctx.fillStyle=P.spark||"#ffe27a"; ctx.font="bold 13px Fredoka,sans-serif"; ctx.fillText("★ NEW BUDDY! ★",cr.x+cr.w/2,cr.y+24); }
+      drawPUicon(id,cr.x+cr.w/2,cr.y+96);
+      ctx.fillStyle="#fff"; ctx.font="bold 20px Fredoka,sans-serif"; ctx.fillText(meta.name||id,cr.x+cr.w/2,cr.y+cr.h-58);
+      ctx.fillStyle="#c7d2ff"; ctx.font="14px Fredoka,sans-serif"; wrapCenter(meta.desc||"",cr.x+cr.w/2,cr.y+cr.h-36,cr.w-26,16); } }
   if(state==="play" && (!started || helpOpen)) drawTutorial();
   if(state==="title"){ ctx.fillStyle="rgba(5,8,24,.55)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 44px Fredoka,sans-serif";ctx.fillText(GAME_CONFIG.name,W/2,H/2-10); ctx.font="22px Fredoka,sans-serif";ctx.fillText("Drag to move · Tap to start",W/2,H/2+30); }
   if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Boss beaten!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked — tap to go on":"Tap to collect your coins"); }

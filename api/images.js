@@ -394,6 +394,30 @@ function build(q) {
       transparent:false, quality:"medium",
     };
   }
+  if (kind === "survpu") {
+    // Power-up "gadget" art for the Survival game's Pick-a-Power screen. Cute glossy
+    // transparent cut-outs, one per power id. Buddies use their own hand-made sprites,
+    // so only the non-buddy powers are generated here.
+    const POW = {
+      fast:     "a glowing turbo rocket booster jet-pack with bright zooming speed streaks and a little lightning bolt",
+      multi:    "a colorful party confetti popper cannon bursting with star-shaped confetti and sparkles",
+      big:      "one huge plump glossy glowing golden five-pointed sparkle star, big and powerful",
+      pierce:   "a dazzling rainbow laser beam bolt shooting straight forward, like a magic ray of light",
+      nova:     "a bright starburst firework explosion, a glowing ring of light bursting outward with sparkles",
+      blackhole:"a friendly swirling purple-and-blue cosmic whirlpool galaxy spiral sparkling with tiny stars",
+      frost:    "a cute glossy bright-blue snowflake ice crystal glowing with a frosty sparkle",
+      magnet:   "a shiny red-and-silver horseshoe magnet pulling in glowing gold star coins",
+      shield:   "a shiny iridescent rainbow soap-bubble force-field orb, round and glossy",
+      heal:     "a glossy glowing bright-red heart with a soft warm sparkle, plump and cheerful",
+    };
+    const id=(q.id||"").toString(); const subj=POW[id];
+    if(!subj) return null;
+    return {
+      descriptor:`survpu|${id}`,
+      prompt:`${subj}. Modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded glossy shapes, vibrant cheerful saturated colors, thick clean forms. A SINGLE isolated icon, centered, full and complete, on a FULLY TRANSPARENT background. No ground, no floor line, no cast shadow, no other objects, no people, no text, no words, no letters. Child-friendly ages 4-8.`,
+      transparent:true, quality:"low",
+    };
+  }
   return null;
 }
 

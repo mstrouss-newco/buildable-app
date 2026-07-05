@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Survival (Space Sparkles): pet buddies, fun re-themed upgrades, cleaner tutorial (July 5 2026)
+Three connected upgrades to `public/survival-engine.html`, tested together and shipped as one set:
+- **No more "circle + ball" in the how-to demo.** The wordless tutorial used to draw a generic placeholder hero (a white capsule with a blue ball) that looked nothing like the real game hero. `drawTutorial()` now calls a new `drawHeroArt(x,y,size)` helper that draws the actual animated jetpack-astronaut sprite (with the drawn hero as fallback), so the demo shows the hero the kid really controls.
+- **The Pick-a-Power screen shows real art + descriptions.** Each power-up now has a fun kid name and a one-line description. Cards are bigger and show a real image: **buddies** use their hand-made helper sprites; **powers** use a generated "Survival dalle" gadget image via a new `kind=survpu` prompt set in `api/images.js` (gpt-image-1, cached), with the shared drawn icon as the fallback until the image loads.
+- **The DALL-E helpers are back as collectible pet buddies.** The four helper characters (star, bee, dog, healer) are now real companion upgrades — **Twinkle the Star**, **Buzz the Bee**, **Comet the Space Pup**, **Petal the Healer** — that visibly orbit the hero once collected. They appear "as the game goes on" (only offered after your 3rd power-up, each joins once) so kids assemble a crew of pals across a run. `offerChoices()` gates + weights them; `stats.buddies` tracks the crew and drives the orbiting-pet draw.
+- **Cooler upgrade lineup (no more boring "more sparkles").** Renamed/re-themed all ten powers: Turbo Blaster, Confetti Cannon, Mega Sparkles, Laser Beam, Sparkle Boom, Cosmic Whirlpool, Freeze Ray, Treasure Magnet, Bubble Shield, Power Heart. Mechanics/balance unchanged, so the always-winnable guarantee holds — the node campaign sim clears all six levels fresh and with carried upgrades.
+
+---
+
+
 ## Breaker: hand-painted themed worlds (jungle / space / ocean) + true frame-animated bricks (July 3 2026)
 The campaign levels were all the same drawn-brick look on a flat backdrop. They now use full hand-painted art packs, cycling **jungle → space → ocean** across the 8 levels so the whole adventure looks bespoke. New assets live in `public/breaker/<theme>/` (background `bg.jpg`, brick sheet `bricks.png`, shatter sheet `shatter.png`, ball strip `balls.png`, paddle `paddle.png`) and are wired via a `THEMES` map + `activeTheme()` in `public/breaker-engine.html`; each campaign level carries a `theme` field.
 - **True frame animation on every brick.** The brick sheet is 3 frames wide (intact → hit-flash → cracked) × 6 looks per theme. A hit sets `flashT` so the brick plays its glowing hit-frame; a tough brick then shows the cracked frame; on destroy a flipbook plays where it stood — the flash frame, then the separate `shatter.png` debris frame expanding and fading (`G.shatters`, ticked in `updateSolo`, drawn in `drawShatters`).
