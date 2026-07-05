@@ -39,9 +39,24 @@
   <div id="board">
     <svg id="svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <filter id="claySoft" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#1b3350" flood-opacity="0.28"/>
+        <!-- white sticker outline + soft drop shadow so buddies pop off any background -->
+        <filter id="pop" x="-55%" y="-55%" width="210%" height="210%">
+          <feMorphology in="SourceAlpha" operator="dilate" radius="6" result="sw"/>
+          <feFlood flood-color="#FFFFFF" flood-opacity="0.96" result="wc"/>
+          <feComposite in="wc" in2="sw" operator="in" result="outline"/>
+          <feGaussianBlur in="sw" stdDeviation="6" result="shb"/>
+          <feOffset in="shb" dx="0" dy="7" result="sho"/>
+          <feFlood flood-color="#14283f" flood-opacity="0.36" result="shc"/>
+          <feComposite in="shc" in2="sho" operator="in" result="shadow"/>
+          <feMerge><feMergeNode in="shadow"/><feMergeNode in="outline"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
+        <!-- gently calm the busy clay background -->
+        <filter id="bgcalm"><feColorMatrix type="saturate" values="0.78"/></filter>
+        <radialGradient id="vig" cx="50%" cy="45%" r="72%">
+          <stop offset="0%" stop-color="#0e2036" stop-opacity="0"/>
+          <stop offset="58%" stop-color="#0e2036" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#0e2036" stop-opacity="0.42"/>
+        </radialGradient>
       </defs>
       <g id="gBg"></g><g id="gThreads"></g><g id="gFx"></g><g id="gBlocks"></g><g id="gSmoosh"></g><g id="gDemo"></g>
     </svg>
@@ -254,8 +269,8 @@ try{ starsMap=JSON.parse(load("sm_stars","{}"))||{}; }catch(e){ starsMap={}; }
 /* ---------- state ---------- */
 var VW=1000, VH=1000, HALF=58, SW=24, GOAL=58, TOUCH=60;
 var levelIdx=0, level=null, committed={}, order=[], cur=null, particles=[], celebrate=0;
-var blockEls=[], bgImg=null, demo=null, demoHand=null, demoLine=null, screen="select", pulses={};
-var finale=null, smooshEls={};
+var blockEls=[], bgImg=null, vigRect=null, demo=null, demoHand=null, demoLine=null, screen="select", pulses={};
+var finale=null, smooshEls={}, hop={}, animT=0;
 
 function layout(){
   var w=stage.clientWidth||360, h=stage.clientHeight||640;
@@ -264,6 +279,7 @@ function layout(){
   svg.setAttribute("viewBox","0 0 "+VW+" "+VH);
   var mn=Math.min(VW,VH); HALF=mn*0.058; SW=HALF*0.42; GOAL=HALF*1.05; TOUCH=HALF*1.02;
   if(bgImg){ bgImg.setAttribute("width",VW); bgImg.setAttribute("height",VH); }
+  if(vigRect){ vigRect.setAttribute("width",VW); vigRect.setAttribute("height",VH); }
   if(level){ computePts();
     if(oldVH&&oldVH!==VH){ var ry=VH/oldVH;
       for(var c in committed){ committed[c]=committed[c].map(function(p){return [p[0],p[1]*ry];}); }
@@ -293,7 +309,7 @@ function showMenu(){ screen="select"; ovWin.classList.add("hide"); statusBox.cla
 
 /* ---------- start a level ---------- */
 function startLevel(i){
-  levelIdx=i; level=WORLDS[i]; committed={}; order=[]; cur=null; particles=[]; celebrate=0; pulses={}; finale=null;
+  levelIdx=i; level=WORLDS[i]; committed={}; order=[]; cur=null; particles=[]; celebrate=0; pulses={}; hop={}; finale=null;
   if(startHost) startHost.style.display="none"; ovWin.classList.add("hide");
   statusBox.classList.remove("hide"); btnLevels.classList.remove("hide"); btnSound.style.display="";
   updateUndo(); screen="play";
@@ -309,17 +325,18 @@ function endDemo(){ if(demo){ demo=null; save("sm_demo","1"); } }
 function setHref(node,url){ if(node._href!==url){ node.setAttribute("href",url); node._href=url; } }
 function buildLevelDom(){
   gBg.innerHTML=""; gBlocks.innerHTML=""; gSmoosh.innerHTML=""; gDemo.innerHTML=""; smooshEls={};
-  bgImg=el("image",{href:BGSRC[level.bg],x:0,y:0,width:VW,height:VH,preserveAspectRatio:"xMidYMid slice"}); gBg.appendChild(bgImg);
+  bgImg=el("image",{href:BGSRC[level.bg],x:0,y:0,width:VW,height:VH,preserveAspectRatio:"xMidYMid slice",filter:"url(#bgcalm)"}); gBg.appendChild(bgImg);
+  vigRect=el("rect",{x:0,y:0,width:VW,height:VH,fill:"url(#vig)"}); gBg.appendChild(vigRect);
   blockEls=[];
   level.P.forEach(function(p,idx){ ["a","b"].forEach(function(k){
-    var img=el("image",{href:claySrc(p.c,"idle"),preserveAspectRatio:"xMidYMid meet",filter:"url(#claySoft)"}); img._href=claySrc(p.c,"idle");
+    var img=el("image",{href:claySrc(p.c,"idle"),preserveAspectRatio:"xMidYMid meet",filter:"url(#pop)"}); img._href=claySrc(p.c,"idle");
     gBlocks.appendChild(img);
     blockEls.push({img:img,c:p.c,idx:idx,end:k});
   }); });
   // smoosh sprites (one splat + one blob per pair), hidden until the finale
   level.P.forEach(function(p,idx){
-    var splat=el("image",{href:claySrc(p.c,"splat"),preserveAspectRatio:"xMidYMid meet",filter:"url(#claySoft)",opacity:0}); splat._href=claySrc(p.c,"splat");
-    var blob=el("image",{href:claySrc(p.c,"blob"),preserveAspectRatio:"xMidYMid meet",filter:"url(#claySoft)",opacity:0}); blob._href=claySrc(p.c,"blob");
+    var splat=el("image",{href:claySrc(p.c,"splat"),preserveAspectRatio:"xMidYMid meet",filter:"url(#pop)",opacity:0}); splat._href=claySrc(p.c,"splat");
+    var blob=el("image",{href:claySrc(p.c,"blob"),preserveAspectRatio:"xMidYMid meet",filter:"url(#pop)",opacity:0}); blob._href=claySrc(p.c,"blob");
     gSmoosh.appendChild(splat); gSmoosh.appendChild(blob);
     smooshEls[idx]={splat:splat,blob:blob};
   });
@@ -353,7 +370,7 @@ function move(e){ if(!cur||screen!=="play")return; e.preventDefault();
 function up(){ if(!cur||screen!=="play")return;
   var last=cur.pts[cur.pts.length-1], reached=dist(last,cur.target)<GOAL&&cur.pts.length>2;
   if(reached&&!cur.crossed){ cur.pts.push(cur.target.slice()); committed[cur.c]=cur.pts; order.push(cur.c);
-    burst(cur.target,clayOf(cur.c).clay); burst(cur.pts[0],clayOf(cur.c).clay); pulses[cur.pi]=1;
+    burst(cur.target,clayOf(cur.c).clay); burst(cur.pts[0],clayOf(cur.c).clay); pulses[cur.pi]=1; hop[cur.pi]=1;
     var n=order.length; sfx("coin",{tier:Math.min(3,n)}); updateUndo();
     if(n===level.P.length) winLevel(); else setStatus("Connected "+n+" of "+level.P.length+" — keep going!");
   }
@@ -420,7 +437,10 @@ function drawClayRope(points,c,dashCrossed){
   gThreads.appendChild(el("polyline",{points:s,fill:"none",stroke:C.clay,"stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round"}));
   gThreads.appendChild(el("polyline",{points:s,fill:"none",stroke:C.lite,"stroke-width":SW*0.34,"stroke-linecap":"round","stroke-linejoin":"round",opacity:0.6}));
 }
-function placeSprite(node,cx,cy,h,ar){ var w=h*ar; node.setAttribute("x",cx-w/2); node.setAttribute("y",cy-h/2); node.setAttribute("width",w); node.setAttribute("height",h); }
+function placeSprite(node,cx,cy,h,ar){ var w=h*ar; if(node.hasAttribute("transform"))node.removeAttribute("transform"); node.setAttribute("x",cx-w/2); node.setAttribute("y",cy-h/2); node.setAttribute("width",w); node.setAttribute("height",h); }
+function placeSpriteT(node,cx,cy,h,ar,ang,sx,sy){ var w=h*ar;
+  node.setAttribute("x",0); node.setAttribute("y",0); node.setAttribute("width",w); node.setAttribute("height",h);
+  node.setAttribute("transform","translate("+cx.toFixed(2)+" "+cy.toFixed(2)+") rotate("+ang.toFixed(2)+") scale("+sx.toFixed(3)+" "+sy.toFixed(3)+") translate("+(-w/2).toFixed(2)+" "+(-h/2).toFixed(2)+")"); }
 
 /* ---------- render ---------- */
 function draw(){
@@ -441,8 +461,14 @@ function draw(){
   // buddies
   if(!finale){
     for(var b=0;b<blockEls.length;b++){ var be=blockEls[b], pt=(be.end==="a"?level.P[be.idx].a:level.P[be.idx].b);
-      var h=HALF*2*(1+(pulses[be.idx]||0)*0.24); be.img.style.display=""; be.img.setAttribute("opacity",1);
-      placeSprite(be.img,pt[0],pt[1],h,AR_IDLE[be.c]); }
+      var ph=be.idx*0.9+(be.end==="a"?0:0.5);
+      var sq=Math.sin(animT*2.1+ph), bob=sq*(HALF*0.11);
+      var ang=Math.sin(animT*1.6+ph)*3.2;
+      var pulse=pulses[be.idx]||0, hp=hop[be.idx]||0;
+      var hopOff=hp>0?-Math.sin(hp*Math.PI)*(HALF*0.62):0;
+      var base=1+pulse*0.12, sx=base*(1-0.05*sq), sy=base*(1+0.05*sq);
+      be.img.style.display=""; be.img.setAttribute("opacity",1);
+      placeSpriteT(be.img,pt[0],pt[1]+bob+hopOff,HALF*2,AR_IDLE[be.c],ang,sx,sy); }
   } else {
     drawFinaleSprites();
   }
@@ -475,8 +501,10 @@ function drawFinaleSprites(){
   }
 }
 function loop(){
+  animT+=0.016;
   var np=[]; for(var i=0;i<particles.length;i++){ var q=particles[i]; q.x+=q.vx; q.y+=q.vy; q.vy+=0.16*(HALF/58); q.life-=0.022; if(q.life>0)np.push(q); } particles=np;
   for(var k in pulses){ pulses[k]=Math.max(0,pulses[k]-0.06); } if(cur)pulses[cur.pi]=1;
+  for(var hk in hop){ hop[hk]=Math.max(0,hop[hk]-0.05); }
   if(finale) stepFinale();
   if(celebrate>0){ celebrate--; if(celebrate%5===0&&level){ var cc=level.P[Math.floor(Math.random()*level.P.length)].c; burst([VW*(0.12+Math.random()*0.76),VH*(0.12+Math.random()*0.76)],clayOf(cc).clay); } }
   if(demo){ demo.t+=0.012; if(demo.t>=1){ demo.t=1; demo.hold++; if(demo.hold>60){ endDemo(); setStatus("Now you try! Connect "+level.P.length+" pairs."); } } }
