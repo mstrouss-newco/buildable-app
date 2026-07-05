@@ -72,8 +72,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-gamenav.js"></script>
 <script src="buildable-levelthumb.js"></script>
 <script>
 // ============================================================================
@@ -527,7 +529,7 @@ function wrapCenter(txt,cx,y,maxW,lh){ const words=(txt||"").split(" "); let lin
   for(const w of words){ const t=line?line+" "+w:w; if(ctx.measureText(t).width>maxW && line){ lines.push(line); line=w; } else line=t; }
   if(line)lines.push(line); lines=lines.slice(0,2);
   for(let i=0;i<lines.length;i++) ctx.fillText(lines[i],cx,y+i*lh); }
-function banner(t,s){ ctx.fillStyle="rgba(5,8,24,.6)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 46px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-8); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
+function banner(t,s){ BuildableWin.card(ctx,W,H,[{t:t,s:34,w:800,c:"#fff"}].concat(s?[{t:s,s:18,w:600,c:"#cfd3ff"}]:[])); }
 // wordless how-to-play demo (for kids who can't read): animated hand dragging,
 // hero following, plus three picture cues, and a pulsing PLAY button.
 function drawTutorial(){
@@ -705,7 +707,7 @@ function showMuteBtn(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"blo
 
 function frame(){ update(); draw(); requestAnimationFrame(frame); }
 // boot: load the saved character, wire menus, show the shared start screen
-if(typeof document!=="undefined" && document.getElementById("start")){ if(BA){ BA.configure({sfxBase:GAME_CONFIG.sfxBase, map:GAME_CONFIG.sfx}); if(GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); } CHAR=localLoadChar()||defaultChar(); wireMenus(); showMenu(); loadChar();
+if(typeof document!=="undefined" && document.getElementById("start")){ if(BA){ BA.configure({sfxBase:GAME_CONFIG.sfxBase, map:GAME_CONFIG.sfx}); if(GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); } CHAR=localLoadChar()||defaultChar(); wireMenus(); if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["muteBtn","helpBtn"], onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } }, onMenu:()=>showMenu(), onHelp:()=>{ helpOpen=true; }, soundOn:()=>!(BA&&BA.muted) }); } showMenu(); loadChar();
   resizeCanvas(); addEventListener("resize",resizeCanvas); addEventListener("orientationchange",resizeCanvas); }
 requestAnimationFrame(frame);
 

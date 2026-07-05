@@ -228,18 +228,18 @@ function familyBtn(onFamily) {
   return <button onClick={onFamily} style={{ position: "absolute", top: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Play a sibling</button>;
 }
 
-function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html" onHome={onHome} />; }
+function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html?v=hud1" onHome={onHome} />; }
 function TennisScreen({ onHome, onPlayFriend }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "tennisPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, [onPlayFriend]);
-  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=4" onHome={onHome} />;
+  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=hud1" onHome={onHome} />;
 }
-function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=3" onHome={onHome} />; }
-function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=20260628c" onHome={onHome} bg="#2e7d32" />; }
-function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html" onHome={onHome} bg="#0c1230" />; }
+function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=hud1" onHome={onHome} />; }
+function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=hud1" onHome={onHome} bg="#2e7d32" />; }
+function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html?v=hud1" onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
   useEffect(() => {
     if (!onPlayFriend) return;
@@ -249,20 +249,20 @@ function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
   }, [onPlayFriend]);
   return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />;
 }
-function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=20260628a" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/sling-squad.html?v=1" onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=2" onHome={onHome} bg="#7fc7ff" />; }
+function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/sling-squad.html?v=hud1" onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=hud1" onHome={onHome} bg="#7fc7ff" />; }
 function StringMatchScreen({ onHome }) { return <GameFrame title="String Match" src="/string-match.html?v=1" onHome={onHome} bg="#bfe3f5" light />; }
-function BubbleScreen({ onHome }) { return <GameFrame title="Bubble Buddies" src="/bubble-engine.html?v=1" onHome={onHome} bg="#0e1830" />; }
-function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html" onHome={onHome} />; }
+function BubbleScreen({ onHome }) { return <GameFrame title="Bubble Buddies" src="/bubble-engine.html?v=hud1" onHome={onHome} bg="#0e1830" />; }
+function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
 function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
 function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=2" onHome={onHome} bg="#0b1030" />; }
-function MemoryScreen({ onHome }) { return <GameFrame title="Buildable Memory Match" src="/memory-engine.html?v=1" onHome={onHome} bg="#131229" />; }
-function MahjongScreen({ onHome }) { return <GameFrame title="Buildable Mahjong" src="/mahjong-engine.html?v=1" onHome={onHome} bg="#101a2e" />; }
-function BingoScreen({ onHome }) { return <GameFrame title="Buildable Bingo" src="/bingo-engine.html?v=1" onHome={onHome} bg="#131229" />; }
-function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=1" onHome={onHome} bg="#131229" />; }
-function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=20260627b" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function MemoryScreen({ onHome }) { return <GameFrame title="Buildable Memory Match" src="/memory-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
+function MahjongScreen({ onHome }) { return <GameFrame title="Buildable Mahjong" src="/mahjong-engine.html?v=hud1" onHome={onHome} bg="#101a2e" />; }
+function BingoScreen({ onHome }) { return <GameFrame title="Buildable Bingo" src="/bingo-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
+function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
+function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TownScreen({ onHome, onFamily }) { return <GameFrame title="Family Town" src="/family-town.html?v=1" onHome={onHome} right={familyBtn(onFamily)} />; }
 
 // Shared slim icon-button style for the home top-nav (My Stuff / Grown-ups /
@@ -795,7 +795,7 @@ export default function BuildableKids() {
     return <TetrisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=3" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TTT_LOBBY)} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TTT_LOBBY)} />;
   }
   if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
     const spec = gameSpecFor(friendAutoJoin.game);
@@ -825,10 +825,10 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CONNECTFOUR) {
-    return <BoardGameScreen title="Buildable Connect Four" src="/connectfour-engine.html" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BoardGameScreen title="Buildable Connect Four" src="/connectfour-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_DOTSBOXES) {
-    return <BoardGameScreen title="Buildable Dots and Boxes" src="/dotsboxes-engine.html" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BoardGameScreen title="Buildable Dots and Boxes" src="/dotsboxes-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_MAZE) {
     return <MazeScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;

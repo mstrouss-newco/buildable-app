@@ -64,6 +64,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
@@ -357,10 +358,7 @@ function drawPanel(){
   ctx.fillStyle="rgba(255,255,255,0.88)"; ctx.font="600 12px Fredoka,sans-serif"; txtShadow(true); ctx.fillText(W.hero, x+46, chipY+4); txtShadow(false);
 }
 function banner(title,sub){
-  ctx.save(); ctx.fillStyle="rgba(10,14,40,0.62)"; ctx.fillRect(0,0,CW,CH);
-  ctx.textAlign="center"; ctx.fillStyle="#fff"; ctx.font="bold 44px Fredoka,sans-serif"; ctx.fillText(title, CW/2, CH/2-10);
-  ctx.font="600 20px Fredoka,sans-serif"; ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.fillText(sub, CW/2, CH/2+30);
-  ctx.restore();
+  BuildableWin.card(ctx,CW,CH,[{t:title,s:32,w:800,c:"#fff"}].concat(sub?[{t:sub,s:18,w:600,c:"#cfd3ff"}]:[]));
 }
 // shown only if BS didn't load — keeps the game playable instead of a blank board
 function drawTitleFallback(){

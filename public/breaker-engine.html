@@ -145,6 +145,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
@@ -713,7 +714,7 @@ function drawPaddleAt(px,py,col){
   ctx.shadowBlur=0; ctx.lineWidth=2.5; ctx.strokeStyle="rgba(20,22,45,.5)"; rrect(x,py-PAD_H/2,G.padW,PAD_H,9); ctx.stroke();
   ctx.restore(); }
 function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt; r=clamp(r,0,255);g=clamp(g,0,255);b=clamp(b,0,255); return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
-function banner(t,s){ ctx.fillStyle="rgba(10,12,40,.66)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 48px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-6); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+36); }
+function banner(t,s){ BuildableWin.card(ctx,W,H,[{t:t,s:34,w:800,c:"#fff"}].concat(s?[{t:s,s:18,w:600,c:"#cfd3ff"}]:[])); }
 // a 5-point star (filled gold when earned, dim outline when not)
 function star5(cx,cy,r,filled){ ctx.beginPath();
   for(let i=0;i<10;i++){ const ang=-Math.PI/2+i*Math.PI/5, rad=(i%2===0)?r:r*0.45; const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
@@ -778,7 +779,7 @@ function draw(){ if(!G){ return; }
   }
   if(state==="win" && G.custom){ banner("You beat it!", "Tap to share your level"); }
   else if(state==="win" && G.mode==="two"){ banner("Player "+G.winner+" wins!", "Tap for the menu"); }
-  else if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); drawEarnedStars(PREFS.stars[level]||0); }
+  else if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); }
   if(state==="lose"){ banner("Out of lives!","Tap to try again"); }
   if(hud){ hud[(state==="play" && G.mode!=="two") ? "show" : "hide"](); }
 }
@@ -905,7 +906,7 @@ function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=(on&
 let startScreen=null;
 function totalStars(){ let t=0; for(const k in PREFS.stars) t+=(PREFS.stars[k]||0); return t; }
 function maxStars(){ return GAME_CONFIG.levels.length*3; }
-function isUnlocked(cost){ return (cost||0) <= totalStars(); }
+function isUnlocked(cost){ return true; }
 // ---- level preview thumbnails: draw the real brick layout so cards aren't blank ----
 const _thumbCache={};
 function _rr(g,x,y,w,h,r){ r=Math.min(r,w/2,h/2); g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
@@ -934,12 +935,11 @@ function buildStartCfg(){
     ? [{ n:1, name:"Pong Match", color:"#2b4a6b", state:"next" }]
     : GAME_CONFIG.levels.map((l,i)=>{ const unlocked=PREFS.unlocked||0;
         const st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
-        return { n:i+1, name:l.name, color:brickColorFor(i), img:levelThumbURL(l,i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st };
+        return { n:i+1, name:l.name, color:brickColorFor(i), img:levelThumbURL(l,i), state:st };
       });
   const cfg = { title:"Buildable Breaker",
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",
     sound: !(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels };
-  if(currentMode!=="two"){ cfg.coins = totalStars(); cfg.subtitle = "Stars: "+totalStars()+" of "+maxStars(); }   // total stars earned
   return cfg;
 }
 // ---- Breaker home hub: big Play + Make a level buttons, plus a My levels shelf ----

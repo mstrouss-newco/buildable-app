@@ -44,6 +44,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <!-- shared engine libraries (Track B) -->
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
@@ -742,14 +743,7 @@ function drawRetry() {
   ctx.restore();
 }
 function drawWin() {
-  ctx.save(); ctx.fillStyle = "rgba(15,30,15,0.55)"; ctx.fillRect(0, 0, LW, LH);
-  ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.font = "bold 52px Fredoka,sans-serif";
-  ctx.fillText("Castle Saved!", LW / 2, LH / 2 - 30);
-  const stars = S._stars || 1;
-  for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < stars ? 1 : 0.25; if (BR && BR.shape) BR.shape(ctx, "star", LW / 2 - 60 + i * 60, LH / 2 + 24, 26, "#ffd23f"); }
-  ctx.globalAlpha = 1; ctx.fillStyle = "#cfe9c0"; ctx.font = "22px Fredoka,sans-serif";
-  ctx.fillText("Tap to choose another level", LW / 2, LH / 2 + 84);
-  ctx.restore();
+  BuildableWin.card(ctx, LW, LH, [{t:"Castle Saved!",s:34,w:800,c:"#fff"},{t:"Tap to choose another level",s:18,w:700,c:"#cfe9c0"}]);
 }
 
 /* ===================================================================== */
@@ -813,7 +807,7 @@ function levelCards() {
   return GAME_CONFIG.levels.map((l, i) => {
     const unlocked = PREFS.unlocked || 0;
     const st = i < unlocked ? "done" : (i === unlocked ? "next" : "locked");
-    return { n: l.n, name: l.name, img: makeThumb(i), color: "#2f6b34", stars: PREFS.stars[i] || 0, maxStars: 3, state: st };
+    return { n: l.n, name: l.name, img: makeThumb(i), color: "#2f6b34", state: st };
   });
 }
 function showMenu() {

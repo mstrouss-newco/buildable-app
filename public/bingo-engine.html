@@ -50,6 +50,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
@@ -301,13 +302,8 @@ function drawCard(p){
   ctx.restore();
 }
 function drawWin(){
-  ctx.save(); ctx.fillStyle="rgba(8,5,18,0.62)"; ctx.fillRect(0,0,W,H);
   const w=match.winnerIdx>=0?match.players[match.winnerIdx]:match.leader();
-  ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.font="900 "+Math.min(50,W*0.1)+"px Nunito,sans-serif";
-  ctx.fillText("BINGO!",W/2,H*0.4);
-  ctx.fillStyle=w.color; ctx.font="900 "+Math.min(28,W*0.06)+"px Nunito,sans-serif"; ctx.fillText(w.name+" wins!",W/2,H*0.4+Math.min(54,W*0.11));
-  ctx.fillStyle="#7CF6B0"; ctx.font="800 16px Nunito,sans-serif"; ctx.fillText("Tap to play again",W/2,H*0.4+Math.min(104,W*0.21));
-  ctx.restore();
+  BuildableWin.card(ctx,W,H,[{t:"BINGO!",s:40,w:900,c:"#fff"},{t:w.name+" wins!",s:24,w:900,c:w.color},{t:"Tap to play again",s:16,w:800,c:"#7CF6B0"}]);
 }
 
 // ---------- START SCREEN (BS) ----------

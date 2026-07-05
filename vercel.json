@@ -276,6 +276,10 @@
       "dest": "/family-town.html"
     },
     {
+      "src": "/buildable-wincard.js",
+      "dest": "/buildable-wincard.js"
+    },
+    {
       "src": "/buildable-renders.js",
       "dest": "/buildable-renders.js"
     },

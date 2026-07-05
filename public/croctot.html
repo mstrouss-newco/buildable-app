@@ -192,6 +192,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <!-- Shared Buildable game building-blocks (same as Breaker): one loading screen,
      one in-game HUD, one shell-owned nav. -->
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-hud.js?v=1"></script>
 <script src="buildable-gamenav.js"></script>
 <script>
@@ -1563,15 +1564,12 @@ function drawNotifs(){
 }
 
 function drawOverlay(){
-  const fade=Math.min(1,oT/0.25);CX.fillStyle="rgba(0,0,0,"+fade*0.8+")";CX.fillRect(0,0,W,H);
-  const shake=oT<0.5?Math.sin(oT*60)*4*(1-oT*2):0;
-  CX.save();CX.globalAlpha=fade;CX.shadowColor=oCol;CX.shadowBlur=35;CX.strokeStyle=oCol;CX.lineWidth=3;
-  CX.beginPath();CX.arc(W/2+shake,H/2,80+10*Math.sin(oT*8),0,Math.PI*2);CX.stroke();
-  CX.beginPath();CX.arc(W/2+shake,H/2,55+8*Math.sin(oT*6+1),0,Math.PI*2);CX.stroke();
-  CX.shadowBlur=0;CX.shadowColor=oCol;CX.shadowBlur=25;CX.fillStyle=oCol;
-  const sz=Math.max(24,Math.min(44,44-oMsg.length*0.5));CX.font="bold "+sz+"px Arial";CX.textAlign="center";CX.textBaseline="middle";CX.fillText(oMsg,W/2+shake,H/2-20);
-  CX.shadowBlur=0;CX.fillStyle="#fff";CX.font="bold 20px Arial";CX.fillText(oSub,W/2,H/2+22);
-  const prog=Math.min(1,oT/oDur);for(let i=0;i<5;i++){CX.fillStyle=i/5<prog?oCol:"rgba(255,255,255,0.25)";CX.beginPath();CX.arc(W/2-40+i*20,H/2+55,5,0,Math.PI*2);CX.fill();}
+  const fade=Math.min(1,oT/0.25);
+  CX.save();CX.globalAlpha=fade;
+  BuildableWin.card(CX,W,H,[{t:oMsg,s:32,w:800,c:oCol}].concat(oSub?[{t:oSub,s:18,w:700,c:"#fff"}]:[]),{accent:oCol});
+  // timed auto-advance dots just under the card
+  const prog=Math.min(1,oT/oDur);for(let i=0;i<5;i++){CX.fillStyle=i/5<prog?oCol:"rgba(255,255,255,0.25)";CX.beginPath();CX.arc(W/2-40+i*20,H/2+64,5,0,Math.PI*2);CX.fill();}
+  // gentle confetti — celebration without dimming the screen
   if(Math.random()<0.3&&G.parts&&G.parts.length<140){const cols=["#FFD700","#ff4400","#fff","#44ffaa","#ff44ff","#44aaff"];burst(W/2+rnd(-100,100),H/2+rnd(-60,60),cols[rndi(0,cols.length)],2,true);}
   CX.restore();
 }

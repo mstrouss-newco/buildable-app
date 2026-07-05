@@ -57,6 +57,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
@@ -746,9 +747,7 @@ function draw(){
   ctx.textAlign="left"; ctx.textBaseline="alphabetic";
 }
 function banner(title,sub){
-  ctx.save(); ctx.fillStyle="rgba(12,14,36,.55)"; ctx.fillRect(0,0,W,H);
-  ctx.textAlign="center"; ctx.fillStyle="#ffd86b"; ctx.font="800 52px Fredoka,sans-serif"; ctx.fillText(title,W/2,H/2-12);
-  ctx.fillStyle="#fff"; ctx.font="700 24px Fredoka,sans-serif"; ctx.fillText(sub,W/2,H/2+38); ctx.restore();
+  BuildableWin.card(ctx,W,H,[{t:title,s:34,w:800,c:"#ffd86b"}].concat(sub?[{t:sub,s:19,w:700,c:"#fff"}]:[]));
 }
 
 // ============================================================================

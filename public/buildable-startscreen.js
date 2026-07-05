@@ -133,7 +133,7 @@
     if (state === "locked") foot = `<div class="bss-note">Locked</div>`;
     else if (state === "next") foot = `<div class="bss-note go">Next up</div>`;
     else if (state === "ready") foot = lv.foot ? `<div class="bss-note">${lv.foot}</div>` : `<div class="bss-note"></div>`;
-    else foot = (lv.stars != null) ? `<div class="bss-stars">${starRow(lv.stars, lv.maxStars)}</div>` : `<div class="bss-note">Cleared</div>`;
+    else foot = `<div class="bss-note">Cleared</div>`;
     const icon = state === "locked" ? svg("lock", 25, "#6f6a93") : "";
     return `<div class="${cls}" data-n="${lv.n}" role="button" tabindex="0">
       <div class="bss-thumb" style="${thumbBg}">${lv.img ? "" : icon}${overlay}</div>

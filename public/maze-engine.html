@@ -79,6 +79,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
@@ -515,10 +516,7 @@ function drawMazeDemo(){
   ctx.fillText("Tap to start", W/2, H-28);
 }
 function overlay(title, sub, col){
-  ctx.fillStyle="rgba(8,8,24,0.55)"; ctx.fillRect(0,0,W,H);
-  ctx.textAlign="center"; ctx.fillStyle=col||"#fff"; ctx.font="800 48px Fredoka,sans-serif"; ctx.fillText(title, W/2, H/2-6);
-  if(sub){ ctx.fillStyle="#cdd0ff"; ctx.font="600 22px Fredoka,sans-serif"; ctx.fillText(sub, W/2, H/2+34); }
-  ctx.textAlign="left";
+  BuildableWin.card(ctx, W, H, [{t:title,s:34,w:800,c:col||"#fff"}].concat(sub?[{t:sub,s:18,w:600,c:"#cdd0ff"}]:[]));
 }
 function drawBonus(){ if(!bonus)return; const cc=center(bonus.gx,bonus.gy), pulse=0.7+0.3*Math.sin(t*7);
   const gg=ctx.createRadialGradient(cc.x,cc.y,1,cc.x,cc.y,tile*0.7); gg.addColorStop(0,"rgba(255,210,63,"+(0.55*pulse)+")"); gg.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cc.x,cc.y,tile*0.7,0,7); ctx.fill();
@@ -541,7 +539,6 @@ function draw(){
   if(state==="ready"){ if(demoOn) drawMazeDemo(); else { const n=Math.ceil(readyTimer/30); overlay("Ready?", n>0?("Go in "+n+"..."):"Go!", lv.hero); } }
   else if(state==="levelwin"){ const last = level>=GAME_CONFIG.levels.length-1;
     overlay(last?"You did it!":"World cleared!", (lastWin.nb?"New best! ":"")+"Score "+lastWin.score+"  -  Best "+lastWin.best, "#ffe27a");
-    ctx.textAlign="center"; for(let i=0;i<3;i++){ ctx.fillStyle=i<lastWin.stars?"#ffd23f":"rgba(255,255,255,0.2)"; if(BR)BR.sparkle(ctx,W/2+(i-1)*46,H/2-58,16,t); }
     ctx.fillStyle="#9fe6c0"; ctx.font="600 18px Fredoka,sans-serif"; ctx.fillText(last?"Tap for the menu":"Tap to play the next world", W/2, H/2+72); ctx.textAlign="left"; }
   if(DBG){ const dd=el("dbg"); if(dd){ const now=(typeof performance!=="undefined"?performance.now():Date.now()); const fresh=(now-lastTap.at)<450;
     dd.textContent = "MAZE "+VERSION
@@ -639,9 +636,8 @@ function buildStartCfg(){
   const un=PREFS.unlocked||0;
   const BLT=window.BuildableLevelThumb;
   const levels=GAME_CONFIG.levels.map((l,i)=>{ const stt=i<un?"done":(i===un?"next":"locked");
-    return { n:i+1, name:l.name, color:l.wall, img: BLT&&BLT.make("maze",{cols:l.cols,rows:l.rows,bg:l.bg,wall:l.wall,pellet:l.pellet,hero:l.hero},"mz"+i), maxStars:3, stars: stt==="done"?(PREFS.stars[i]||0):undefined, state:stt }; });
-  let total=0; for(const k in PREFS.stars) total+=PREFS.stars[k]||0;
-  return { title:"Maze Munchers", subtitle:"Gobble every treat — dodge the friendly chasers!", coins:total, sound:!(BA&&BA.muted), showBack:false, levels, customizeLabel:"Make it mine" };
+    return { n:i+1, name:l.name, color:l.wall, img: BLT&&BLT.make("maze",{cols:l.cols,rows:l.rows,bg:l.bg,wall:l.wall,pellet:l.pellet,hero:l.hero},"mz"+i), state:stt }; });
+  return { title:"Maze Munchers", subtitle:"Gobble every treat — dodge the friendly chasers!", sound:!(BA&&BA.muted), showBack:false, levels, customizeLabel:"Make it mine" };
 }
 function showMenu(){ state="title"; showInGame(false); show("customize",false); navUpdate(); if(BA&&BA.stopMusic)BA.stopMusic(); _curMusic=null; const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host) return;

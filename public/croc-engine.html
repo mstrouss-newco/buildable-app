@@ -97,6 +97,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-buddy.js?v=1"></script>
 <script>
 // ===========================================================================
@@ -663,7 +664,7 @@ function draw(){
   // hit flash
   if(G.flash>0){ ctx.fillStyle=BR._rgba(G.flashCol,G.flash*0.5); ctx.fillRect(0,0,W,H); }
   // overlay card
-  if(G.overlay){ ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(0,0,W,H); ctx.fillStyle="#ffd23f"; ctx.font="bold 34px Fredoka,sans-serif"; ctx.textAlign="center"; ctx.fillText(G.overlay.title,W/2,H/2-6); ctx.fillStyle="#fff"; ctx.font="18px Fredoka,sans-serif"; ctx.fillText(G.overlay.sub,W/2,H/2+26); ctx.textAlign="left"; }
+  if(G.overlay){ BuildableWin.card(ctx,W,H,[{t:G.overlay.title,s:30,w:800,c:"#ffd23f"}].concat(G.overlay.sub?[{t:G.overlay.sub,s:17,w:600,c:"#fff"}]:[])); }
   // how-to-play demo (wordless, plays itself until the kid takes over)
   if(demoOn) drawCrocDemo();
 }

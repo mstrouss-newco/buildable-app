@@ -57,7 +57,9 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="three.min.js?v=r128"></script>
 <script src="GLTFLoader.js?v=1"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-gamenav.js"></script>
 <script src="buildable-levelthumb.js"></script>
 <script>
 // ============================================================================
@@ -580,7 +582,7 @@ function heart(cx,cy,s,col){ hctx.fillStyle=col; hctx.beginPath();
 function star5(cx,cy,r,filled){ hctx.beginPath();
   for(let i=0;i<10;i++){ const ang=-Math.PI/2+i*Math.PI/5, rad=(i%2===0)?r:r*0.45; const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad; i?hctx.lineTo(x,y):hctx.moveTo(x,y); }
   hctx.closePath(); if(filled){ hctx.fillStyle="#ffd54a"; hctx.fill(); hctx.strokeStyle="#caa42a"; hctx.lineWidth=2; hctx.stroke(); } else { hctx.fillStyle="rgba(255,255,255,.14)"; hctx.fill(); hctx.strokeStyle="rgba(255,255,255,.5)"; hctx.lineWidth=2; hctx.stroke(); } }
-function banner(t,s){ hctx.fillStyle="rgba(10,12,40,.55)";hctx.fillRect(0,0,W,H); hctx.textAlign="center"; hctx.fillStyle="#fff";hctx.font="bold 40px Fredoka,sans-serif";hctx.fillText(t,W/2,H/2-6); hctx.font="20px Fredoka,sans-serif";hctx.fillText(s,W/2,H/2+34); }
+function banner(t,s){ BuildableWin.card(hctx,W,H,[{t:t,s:32,w:800,c:"#fff"}].concat(s?[{t:s,s:18,w:600,c:"#cfd3ff"}]:[])); }
 function drawTutorial(){ const tt=Date.now()/1000;
   hctx.fillStyle="rgba(10,12,40,.45)"; hctx.fillRect(0,0,W,H);
   hctx.fillStyle="#fff"; hctx.textAlign="center"; hctx.font="bold 26px Fredoka,sans-serif"; hctx.fillText("Tap a side to move!", W/2, 110);
@@ -606,8 +608,7 @@ function drawHUD(){ if(!hctx||!G) return; hctx.clearRect(0,0,W,H);
   hctx.fillStyle="#1a0f3a"; hctx.beginPath();hctx.arc(bx+bw*pct,by+6,9,0,7);hctx.fill();
   // overlays
   if(state==="play" && (!started||helpOpen)) drawTutorial();
-  if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Town Cleared!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next town unlocked - tap to drive on":"Tap to finish");
-    const earned=PREFS.stars[level]||0, r=24, gap=64, y=H/2-78; const xs=[W/2-gap,W/2,W/2+gap]; for(let i=0;i<3;i++) star5(xs[i],y,r,i<earned); }
+  if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Town Cleared!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next town unlocked - tap to drive on":"Tap to finish"); }
   if(state==="lose"){ banner("Crashed out!","Tap to try again"); }
 }
 
@@ -628,9 +629,9 @@ function buildStartCfg(){
   const unlocked=PREFS.unlocked||0;
   const BLT=window.BuildableLevelThumb;
   const levels = GAME_CONFIG.levels.map((l,i)=>{ const st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
-    return { n:i+1, name:l.name, color:levelColor(i), img: BLT&&BLT.make("lanes",{sky:l.sky,grass:l.grass,treatColors:GAME_CONFIG.treatColors,car:levelColor(i)},"rn"+i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
-  return { title:"Sunny Town Drive", subtitle:"Stars: "+totalStars()+" of "+maxStars(),
-    coins: totalStars(), sound: !(BA&&BA.muted), showBack:false, levels };
+    return { n:i+1, name:l.name, color:levelColor(i), img: BLT&&BLT.make("lanes",{sky:l.sky,grass:l.grass,treatColors:GAME_CONFIG.treatColors,car:levelColor(i)},"rn"+i), state:st }; });
+  return { title:"Sunny Town Drive", subtitle:"Dodge and collect across sunny towns!",
+    sound: !(BA&&BA.muted), showBack:false, levels };
 }
 function showMenu(){ state="title"; G=null; stopMusic(); engineHum(false); clearHUD(); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
   if(renderer){ renderer.render(scene,camera); }
@@ -650,6 +651,7 @@ function wireMenus(){
   const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
   const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; };
   const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; showMenu(); };
+  if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["backBtn","muteBtn","helpBtn"], onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } }, onMenu:()=>{ helpOpen=false; showMenu(); }, onHelp:()=>{ helpOpen=true; }, soundOn:()=>!(BA&&BA.muted) }); }
 }
 
 function drawNo3D(){ if(!hctx)return; hctx.clearRect(0,0,W,H);

@@ -66,8 +66,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-gamenav.js"></script>
 <script src="buildable-levelthumb.js"></script>
 <script>
 //  Buildable Mahjong (Solitaire) — hand-authored Track B engine.
@@ -482,7 +484,6 @@ function drawLose(){
 function drawWin(){
   const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
   ctx.save();
-  ctx.fillStyle="rgba(8,12,24,.55)"; ctx.fillRect(0,0,vw,vh);
   const pw=Math.min(370,vw*0.88), ph=246, px=(vw-pw)/2, py=(vh-ph)/2;
   ctx.fillStyle="#16223c"; ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.lineWidth=2;
   rr(ctx,px,py,pw,ph,22); ctx.fill(); ctx.stroke();
@@ -768,6 +769,7 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   document.getElementById("custDone").onclick=()=>{ document.getElementById("cust").classList.add("hide");
     if(startScreen&&startScreen.update) startScreen.update(buildStartCfg()); else mountStart(); };
   document.getElementById("soundBtn").onclick=()=>{ if(BA){BA.toggleMute();} };
+  if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["soundBtn"], onSound:()=>{ if(BA){ BA.toggleMute(); } }, onMenu:()=>showMenu(), soundOn:()=>(BA?!BA.muted:true) }); }
   document.getElementById("undoBtn").onclick=()=>{ if(state!=="play"||undosLeft<=0||!history.length) return; if(doUndo()){ undosLeft--; updateChrome(); } };
   document.getElementById("hintBtn").onclick=()=>{ if(state!=="play"||hintsLeft<=0) return; if(doHint()){ hintsLeft--; updateChrome(); } };
   document.getElementById("shufBtn").onclick=()=>{ if(state!=="play"||mixesLeft<=0||trayMode()) return; mixesLeft--; autoShuffle(); updateChrome(); };

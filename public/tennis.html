@@ -73,6 +73,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <!-- shared engine libraries (drawn art, sound, juice, start screen) -->
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
+<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js?v=2"></script>
 
@@ -597,11 +598,7 @@ function rrect(x, y, w, h, r) {
   ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
 function banner(title, sub) {
-  ctx.fillStyle = "rgba(10,8,20,0.62)"; ctx.fillRect(court.x, court.y, court.w, court.h);
-  ctx.textAlign = "center"; ctx.fillStyle = "#fff";
-  ctx.font = "900 40px Nunito, sans-serif"; ctx.fillText(title, c2x(0.5), c2y(0.5) - 6);
-  if (sub) { ctx.font = "700 18px Nunito, sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.fillText(sub, c2x(0.5), c2y(0.5) + 30); }
+  BuildableWin.card(ctx, court.w, court.h, [{t:title,s:32,w:900,c:"#fff"}].concat(sub?[{t:sub,s:18,w:700,c:"#cfd3ff"}]:[]), { cx:c2x(0.5), cy:c2y(0.5) });
 }
 
 /* ---------- 7) AUDIO: bespoke ElevenLabs one-shots (synth fallback) ---------- */
