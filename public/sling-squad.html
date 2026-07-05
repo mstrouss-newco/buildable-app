@@ -78,6 +78,7 @@ var BR = window.BuildableRenders, BA = window.BuildableAudio, BM = window.Builda
 // ---- logical world (canvas is scaled by CSS to fit any screen) ----
 var W = 960, H = 600, GY = 548;           // GY = top of the ground band
 var AX = 168, AY = 360;                    // slingshot fork (where ammo loads)
+var TILE = 72, PAD_TOP = GY - TILE;        // platformer tile size + top of the launcher pad
 var MAXPULL = 132, MAXV = 21;              // gentle, controllable fling (kid-friendly); still plenty of reach
 var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced OR knocked)
 
@@ -109,21 +110,23 @@ var PROP_IMGS = {};    // prop name -> Image (Kenney "Platformer Pack Remastered
 var PAR_COUNT = { rural:10, forest:7, peaks:9, desert:6, moon:6 };   // layers per theme
 // per-level: parallax theme + ground palette (matched to the scene) + which prop set.
 // Ordered cozy -> epic: green fields, pine forest, snowy peaks, desert, moon finale.
+// terr = which Kenney platformer TILESET builds this world's ground + launcher pad.
 var BG_THEMES = [
-  { par:"rural",  sky:["#7fb4e6","#dff0ff"], g0:"#79c46a", g1:"#4e9a45", top:"#8fdc74", props:"rural"  },
-  { par:"forest", sky:["#79b0e0","#dfeffb"], g0:"#4f9a5f", g1:"#356b43", top:"#77c586", props:"forest" },
-  { par:"peaks",  sky:["#8fc0ef","#eef6ff"], g0:"#e3edf5", g1:"#aebfcf", top:"#ffffff", props:"peaks"  },
-  { par:"desert", sky:["#7fb2e6","#ffe6b8"], g0:"#e6c277", g1:"#c07d3e", top:"#f0d58f", props:"desert" },
-  { par:"moon",   sky:["#0b1024","#121838"], g0:"#8d92a0", g1:"#4a4f5c", top:"#b7bcc7", props:"moon"   }
+  { par:"rural",  sky:["#7fb4e6","#dff0ff"], g0:"#79c46a", g1:"#4e9a45", top:"#8fdc74", props:"rural",  terr:"grass" },
+  { par:"forest", sky:["#79b0e0","#dfeffb"], g0:"#4f9a5f", g1:"#356b43", top:"#77c586", props:"forest", terr:"grass" },
+  { par:"peaks",  sky:["#8fc0ef","#eef6ff"], g0:"#e3edf5", g1:"#aebfcf", top:"#ffffff", props:"peaks",  terr:"snow"  },
+  { par:"desert", sky:["#7fb2e6","#ffe6b8"], g0:"#e6c277", g1:"#c07d3e", top:"#f0d58f", props:"desert", terr:"sand"  },
+  { par:"moon",   sky:["#0b1024","#121838"], g0:"#8d92a0", g1:"#4a4f5c", top:"#b7bcc7", props:"moon",   terr:"stone" }
 ];
 // decorative props per world — [name, x-center, height-px] placed on the ground.
-// Purely visual + kept left of the tower zone (x<520) so they never touch physics/aim.
+// Kept BETWEEN the launcher pad (~x<300) and the tower zone (x>560) so they never
+// overlap the pad or touch physics/aim.
 var PROPS = {
-  rural:  [["sign",118,74],["bush",250,88],["flagRed1",316,86],["plantPurple",470,56]],
-  forest: [["mushroomRed",250,74],["bush",384,86],["mushroomBrown",486,58]],
-  peaks:  [["rock",250,80],["bush",402,70],["rock",496,50]],
-  desert: [["cactus",250,90],["rock",404,70],["cactus",500,54]],
-  moon:   [["flagBlue1",286,88],["rock",404,74],["rock",496,50]]
+  rural:  [["sign",330,72],["bush",420,84],["plantPurple",500,54]],
+  forest: [["mushroomRed",330,72],["bush",430,84],["mushroomBrown",520,56]],
+  peaks:  [["rock",340,78],["bush",440,66],["rock",520,48]],
+  desert: [["cactus",330,88],["rock",430,66],["cactus",516,52]],
+  moon:   [["rock",340,72],["flagBlue1",448,84],["rock",524,50]]
 };
 function themeFor(i){                              // per-level scene + palette (L.par overrides)
   var L = (GAME_CONFIG.levels[i]||{}), t = BG_THEMES[i % BG_THEMES.length];
@@ -481,11 +484,19 @@ function drawClouds(ox, t){
     ctx.restore(); });
   ctx.restore();
 }
-// Themed ground band = the crisp play floor blocks rest on (matches the scene).
+// Themed TILED ground: a row of Kenney platformer surface tiles across the floor
+// (per-world tileset: grass / snow / sand / stone). Gradient band = drawn fallback.
+function groundTile(th,which){ return PROP_IMGS[(th.terr||"grass")+which]; }
 function drawGround(th){
-  var gg=ctx.createLinearGradient(0,GY,0,H); gg.addColorStop(0,th.g0); gg.addColorStop(1,th.g1);
-  ctx.fillStyle=gg; ctx.fillRect(0,GY,W,H-GY);
-  ctx.fillStyle=th.top; ctx.fillRect(0,GY,W,7);
+  var mid=groundTile(th,"Mid");
+  if(mid&&(mid.naturalWidth||mid.width)){
+    // one surface row from GY down; the tile's dirt body fills the band to the bottom
+    for(var x=0;x<W;x+=TILE) ctx.drawImage(mid,x,GY,TILE,TILE);
+  } else {                                                // never-break fallback band
+    var gg=ctx.createLinearGradient(0,GY,0,H); gg.addColorStop(0,th.g0); gg.addColorStop(1,th.g1);
+    ctx.fillStyle=gg; ctx.fillRect(0,GY,W,H-GY);
+    ctx.fillStyle=th.top; ctx.fillRect(0,GY,W,7);
+  }
 }
 // Drawn fallback scene (tinted to the theme) — used until the art loads / in QA.
 function drawBgDrawn(th){
@@ -511,48 +522,49 @@ function parCache(theme){
   }
   return arr;
 }
-// The layered parallax scene: each layer slides a bit more than the one behind it
-// (depth from the sling pull), and the far sky layers auto-drift slowly = "scroller".
+// The layered parallax scene, drawn STATIC — the world sits still (Mike: a drifting
+// background looks wrong for a slingshot game). Layers are just centered + covered;
+// depth still reads from the art itself, only the birds/towers move.
 function drawParallax(th,P){
   var arr=parCache(th.par); if(!arr) return false;
   var n=PAR_COUNT[th.par]||arr.length, drew=false;
   for(var i=0;i<n;i++){ var e=arr[i]; if(!e) continue; drew=true;
-    var depth=(i+1)/n;                                    // 0(far)..1(near)
-    var drift=(depth<0.6)?(P.t*(0.6-depth)*10):0;         // gentle auto-scroll on far layers only
-    var offX=(W-e.dw)/2 - drift + P.px*(depth*0.05);      // + parallax from the sling pull
+    var offX=(W-e.dw)/2;                                  // centered, no drift/parallax = still
     var x0=offX - Math.ceil(offX/e.dw)*e.dw;              // wrap so there's never a seam
     for(var xx=x0; xx<W; xx+=e.dw) ctx.drawImage(e.cv, Math.round(xx), 0);
   }
   return drew;
 }
-// Main backdrop: parallax scroller scene (with drawn fallback), then themed ground
-// band, then the grass mound + per-world props. Per level = every stage a new place.
+// Main backdrop: STATIC parallax scene (with drawn fallback), then the tiled ground,
+// the tiled launcher pad, and per-world props. Per level = every stage a new place.
 function drawBg(){
   var th=themeFor(level), P=bgParallax();
-  if(!drawParallax(th,P)){ drawBgDrawn(th); drawClouds(P.px*0.10, P.t); }  // fallback scene
-  drawGround(th);                               // crisp themed play floor
-  drawProps(th);                                // grass mound under the sling + world decor
+  if(!drawParallax(th,P)){ drawBgDrawn(th); drawClouds(0, P.t); }  // fallback scene (still)
+  drawGround(th);                               // themed tiled play floor
+  drawPad(th);                                  // tiled launcher pad (the sling stands on it)
+  drawProps(th);                                // per-world decor
 }
-// A little mound the slingshot is planted on (so it stops floating), tinted to the
-// world (green field / sandy / snowy / grey moon) using the same palette as the floor.
-function drawMound(th){
-  var mx=AX, topY=AY+44, baseY=GY+4, hw=150;
-  ctx.save();
-  ctx.beginPath(); ctx.moveTo(mx-hw, baseY);
-  ctx.quadraticCurveTo(mx-hw*0.5, topY, mx, topY);
-  ctx.quadraticCurveTo(mx+hw*0.5, topY, mx+hw, baseY); ctx.closePath();
-  var g=ctx.createLinearGradient(0,topY,0,baseY); g.addColorStop(0,th.g0); g.addColorStop(1,th.g1);
-  ctx.fillStyle=g; ctx.fill();
-  ctx.lineWidth=9; ctx.lineCap="round"; ctx.strokeStyle=th.top;   // grassy/snowy cap on the crest
-  ctx.beginPath(); ctx.moveTo(mx-hw+8, baseY-3);
-  ctx.quadraticCurveTo(mx-hw*0.5, topY-2, mx, topY-2);
-  ctx.quadraticCurveTo(mx+hw*0.5, topY-2, mx+hw-8, baseY-3); ctx.stroke();
-  ctx.restore();
+// The launcher PAD: a flat-topped block of Kenney platformer tiles the slingshot is
+// planted on (same tileset as the ground), so it looks built, not a floating blob.
+// Top sits at PAD_TOP; the post (drawSling) ends there so nothing shows below ground.
+function drawPad(th){
+  var mid=groundTile(th,"Mid"), left=groundTile(th,"Left"), right=groundTile(th,"Right"), cen=groundTile(th,"Center");
+  var startX=Math.round(AX - 1.5*TILE);         // 3 tiles wide, centered on the fork
+  if(mid&&(mid.naturalWidth||mid.width)){
+    var caps=[left||mid, mid, right||mid];
+    for(var i=0;i<3;i++){ var tx=startX+i*TILE;
+      ctx.drawImage(caps[i], tx, PAD_TOP, TILE, TILE);                 // grassy/snowy cap row
+      for(var y=PAD_TOP+TILE; y<H; y+=TILE) ctx.drawImage(cen||mid, tx, y, TILE, TILE); // fill to ground
+    }
+  } else {                                        // fallback block
+    var x0=startX, w=3*TILE;
+    ctx.fillStyle=th.g1||"#4e9a45"; if(BR){BR.rrect(ctx,x0,PAD_TOP,w,H-PAD_TOP,10);ctx.fill();} else ctx.fillRect(x0,PAD_TOP,w,H-PAD_TOP);
+    ctx.fillStyle=th.top||"#86d172"; ctx.fillRect(x0,PAD_TOP,w,8);
+  }
 }
 // Per-world Kenney platformer props sitting on the ground (bush/mushroom/rock/cactus/
 // sign/flag...). Each gets a soft contact shadow so it reads as planted on the floor.
 function drawProps(th){
-  drawMound(th);
   var list=PROPS[th.props]||[];
   for(var i=0;i<list.length;i++){ var p=list[i], im=PROP_IMGS[p[0]], h=p[2], x=p[1];
     if(!im||!(im.naturalWidth||im.width)) continue;
@@ -563,9 +575,9 @@ function drawProps(th){
   }
 }
 function drawSling(){
-  // wooden Y slingshot at the fork
+  // wooden Y slingshot at the fork; post ENDS at the pad top so none shows below ground
   ctx.strokeStyle="#7a4a25"; ctx.lineWidth=11; ctx.lineCap="round";
-  ctx.beginPath(); ctx.moveTo(AX,AY+96); ctx.lineTo(AX,AY+12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(AX,PAD_TOP); ctx.lineTo(AX,AY+12); ctx.stroke();
   ctx.lineWidth=9;
   ctx.beginPath(); ctx.moveTo(AX,AY+22); ctx.lineTo(AX-16,AY-6); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(AX,AY+22); ctx.lineTo(AX+16,AY-6); ctx.stroke();
@@ -829,10 +841,14 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   Object.keys(PAR_COUNT).forEach(function(th){ PAR[th]=PAR[th]||[];
     for(var i=1;i<=PAR_COUNT[th];i++){ (function(th,i){
       L("/parallax/atmos/"+th+"/"+i+".png", function(im){ PAR[th][i-1]=im; PAR_CACHE[th]=null; }); })(th,i); } });
-  // Kenney "Platformer Pack Remastered" props — ground the sling + per-world decor
+  // Kenney "Platformer Pack Remastered" props — per-world decor
   ["bush","mushroomRed","mushroomBrown","rock","cactus","fence","sign","plantPurple",
    "flagRed1","flagGreen1","flagBlue1"].forEach(function(k){
      L("/kenney/sling/props/"+k+".png", function(im){ PROP_IMGS[k]=im; }); });
+  // Kenney platformer GROUND TILES — build the tiled floor + launcher pad per world
+  ["grass","snow","sand","stone"].forEach(function(t){
+    ["Mid","Center","Left","Right"].forEach(function(part){
+      L("/kenney/sling/props/"+t+part+".png", function(im){ PROP_IMGS[t+part]=im; }); }); });
 }catch(e){} }
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); resize(); showMenu(); loadSquadArt();
   if(typeof window!=="undefined" && window.addEventListener){ window.addEventListener("resize",resize); window.addEventListener("orientationchange",resize); }
