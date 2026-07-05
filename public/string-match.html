@@ -38,7 +38,12 @@
 <div id="stage">
   <div id="board">
     <svg id="svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet">
-      <g id="gBg"></g><g id="gClouds"></g><g id="gThreads"></g><g id="gFx"></g><g id="gBlocks"></g><g id="gDemo"></g>
+      <defs>
+        <filter id="claySoft" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#1b3350" flood-opacity="0.28"/>
+        </filter>
+      </defs>
+      <g id="gBg"></g><g id="gThreads"></g><g id="gFx"></g><g id="gBlocks"></g><g id="gSmoosh"></g><g id="gDemo"></g>
     </svg>
     <div id="status" class="hide"><span id="statusText"></span></div>
     <div class="hud">
@@ -50,7 +55,7 @@
     <div class="overlay hide" id="ovWin">
       <div class="panel">
         <h1 id="winTitle">You did it!</h1>
-        <p class="sub" id="winSub">Every buddy is connected.</p>
+        <p class="sub" id="winSub">Every buddy smooshed together.</p>
         <button class="bigBtn" id="btnNext">Next</button>
       </div>
     </div>
@@ -64,89 +69,99 @@
 (function(){
 "use strict";
 
-/* ---------- LEVELS (normalized 0..1, y down). Harder from the start. ---------- */
-var C={ red:"#E24B4A", blue:"#3E8FDC", green:"#57A93F", yellow:"#F0B429", purple:"#8B5CF6", pink:"#EC6AA8" };
-/* 10 levels, progressively harder. Characters are spaced far enough apart that
-   no two ever touch (min ~50px edge gap in every aspect); each level is
-   solver-verified beatable. Difficulty ramps: pairs 3..6, crossings 0..9. */
+/* ---------- CLAY BUDDIES: 8 hand-made playdough characters. Each pair connects,
+   then at level-end the two buddies smoosh together into a happy blob. ---------- */
+var CLAY={
+  water:  {clay:"#2E97E0", edge:"#12629E", lite:"#8FCBF2"},
+  star:   {clay:"#F4B81E", edge:"#B77E00", lite:"#FCE08A"},
+  ball:   {clay:"#2C82D8", edge:"#144F92", lite:"#8FBEEC"},
+  cube:   {clay:"#CDBB97", edge:"#8F7E58", lite:"#EBE0C7"},
+  cloud:  {clay:"#D2DEEC", edge:"#8598B4", lite:"#F3F7FC"},
+  crystal:{clay:"#9147DE", edge:"#5B2392", lite:"#C79BF0"},
+  bolt:   {clay:"#F7CE1E", edge:"#C69A00", lite:"#FCE985"},
+  fire:   {clay:"#F5641A", edge:"#B23A00", lite:"#FBA872"}
+};
+/* sprite aspect ratios (w/h) so every buddy is drawn to the same height */
+var AR_IDLE={water:0.96,star:0.95,ball:0.82,cube:1.10,cloud:1.20,crystal:0.74,bolt:0.66,fire:0.83};
+var AR_SPLAT={water:1.34,star:1.73,ball:1.84,cube:1.44,cloud:1.69,crystal:1.20,bolt:1.23,fire:1.29};
+var AR_BLOB={water:1.97,star:2.68,ball:2.83,cube:2.75,cloud:2.91,crystal:2.10,bolt:1.80,fire:1.91};
+function claySrc(key,pose){ return "/claymatch/"+key+"_"+pose+".png"; }
+
+/* ---------- 8 clay worlds ---------- */
+var BGSRC={ sky:"/claymatch/bg/sky.jpg", jungle:"/claymatch/bg/jungle.jpg", candy:"/claymatch/bg/candy.jpg",
+  craft:"/claymatch/bg/craft.jpg", sports:"/claymatch/bg/sports.jpg", lava:"/claymatch/bg/lava.jpg",
+  space:"/claymatch/bg/space.jpg", crystal:"/claymatch/bg/crystal.jpg" };
+
+/* ---------- LEVELS (normalized 0..1, y down). Same solver-verified geometry,
+   now with clay buddies + clay worlds. Difficulty ramps: pairs 3..6. ---------- */
 var WORLDS=[
-  // L1 — 3 pairs, parallel, trivial
-  { name:"Grass Meadow", bg:"grass", pairs:[
-    {c:"red",   a:[0.20,0.28], b:[0.80,0.28]},
-    {c:"blue",  a:[0.20,0.50], b:[0.80,0.50]},
-    {c:"green", a:[0.20,0.72], b:[0.80,0.72]}
+  { name:"Fluffy Sky", bg:"sky", pairs:[
+    {c:"water", a:[0.20,0.28], b:[0.80,0.28]},
+    {c:"star",  a:[0.20,0.50], b:[0.80,0.50]},
+    {c:"fire",  a:[0.20,0.72], b:[0.80,0.72]}
   ]},
-  // L2 — 3 pairs, one crossing to route around
-  { name:"Sunny Field", bg:"grass", pairs:[
-    {c:"red",   a:[0.24,0.28], b:[0.74,0.66]},
-    {c:"blue",  a:[0.74,0.28], b:[0.24,0.66]},
-    {c:"green", a:[0.28,0.88], b:[0.72,0.88]}
+  { name:"Jungle Jam", bg:"jungle", pairs:[
+    {c:"crystal",a:[0.24,0.28], b:[0.74,0.66]},
+    {c:"fire",   a:[0.74,0.28], b:[0.24,0.66]},
+    {c:"cube",   a:[0.28,0.88], b:[0.72,0.88]}
   ]},
-  // L3 — 4 pairs
-  { name:"Forest", bg:"forest", pairs:[
-    {c:"red",   a:[0.22,0.24], b:[0.58,0.50]},
-    {c:"blue",  a:[0.58,0.24], b:[0.22,0.50]},
-    {c:"green", a:[0.84,0.30], b:[0.84,0.62]},
-    {c:"yellow",a:[0.30,0.86], b:[0.70,0.86]}
+  { name:"Candy Land", bg:"candy", pairs:[
+    {c:"water",  a:[0.22,0.24], b:[0.58,0.50]},
+    {c:"star",   a:[0.58,0.24], b:[0.22,0.50]},
+    {c:"fire",   a:[0.84,0.30], b:[0.84,0.62]},
+    {c:"crystal",a:[0.30,0.86], b:[0.70,0.86]}
   ]},
-  // L4 — 4 pairs, more tangle
-  { name:"Deep Woods", bg:"forest", pairs:[
-    {c:"red",   a:[0.20,0.24], b:[0.80,0.52]},
-    {c:"blue",  a:[0.80,0.24], b:[0.20,0.52]},
-    {c:"green", a:[0.20,0.84], b:[0.50,0.58]},
-    {c:"yellow",a:[0.80,0.84], b:[0.50,0.84]}
+  { name:"Craft Corner", bg:"craft", pairs:[
+    {c:"cloud",  a:[0.20,0.24], b:[0.80,0.52]},
+    {c:"star",   a:[0.80,0.24], b:[0.20,0.52]},
+    {c:"fire",   a:[0.20,0.84], b:[0.50,0.58]},
+    {c:"crystal",a:[0.80,0.84], b:[0.50,0.84]}
   ]},
-  // L5 — 5 pairs
-  { name:"Autumn", bg:"fall", pairs:[
-    {c:"red",   a:[0.20,0.22], b:[0.58,0.46]},
-    {c:"blue",  a:[0.58,0.22], b:[0.20,0.46]},
-    {c:"green", a:[0.84,0.30], b:[0.84,0.62]},
-    {c:"yellow",a:[0.38,0.86], b:[0.70,0.86]},
-    {c:"purple",a:[0.16,0.66], b:[0.16,0.88]}
+  { name:"Sports Yard", bg:"sports", pairs:[
+    {c:"water",  a:[0.20,0.22], b:[0.58,0.46]},
+    {c:"star",   a:[0.58,0.22], b:[0.20,0.46]},
+    {c:"fire",   a:[0.84,0.30], b:[0.84,0.62]},
+    {c:"crystal",a:[0.38,0.86], b:[0.70,0.86]},
+    {c:"cube",   a:[0.16,0.66], b:[0.16,0.88]}
   ]},
-  // L6 — 5 pairs, wider spread
-  { name:"Golden Grove", bg:"fall", pairs:[
-    {c:"red",   a:[0.16,0.22], b:[0.56,0.44]},
-    {c:"blue",  a:[0.56,0.22], b:[0.16,0.44]},
-    {c:"green", a:[0.80,0.22], b:[0.80,0.66]},
-    {c:"yellow",a:[0.16,0.66], b:[0.56,0.88]},
-    {c:"purple",a:[0.56,0.66], b:[0.16,0.88]}
+  { name:"Lava Land", bg:"lava", pairs:[
+    {c:"water",  a:[0.16,0.22], b:[0.56,0.44]},
+    {c:"bolt",   a:[0.56,0.22], b:[0.16,0.44]},
+    {c:"fire",   a:[0.80,0.22], b:[0.80,0.66]},
+    {c:"crystal",a:[0.16,0.66], b:[0.56,0.88]},
+    {c:"cube",   a:[0.56,0.66], b:[0.16,0.88]}
   ]},
-  // L7 — 6 pairs, three local crossings
-  { name:"Desert", bg:"desert", pairs:[
-    {c:"red",   a:[0.14,0.20], b:[0.38,0.44]},
-    {c:"blue",  a:[0.38,0.20], b:[0.14,0.44]},
-    {c:"green", a:[0.62,0.20], b:[0.86,0.44]},
-    {c:"yellow",a:[0.86,0.20], b:[0.62,0.44]},
-    {c:"purple",a:[0.14,0.66], b:[0.38,0.88]},
-    {c:"pink",  a:[0.38,0.66], b:[0.14,0.88]}
+  { name:"Deep Space", bg:"space", pairs:[
+    {c:"water",  a:[0.14,0.20], b:[0.38,0.44]},
+    {c:"star",   a:[0.38,0.20], b:[0.14,0.44]},
+    {c:"fire",   a:[0.62,0.20], b:[0.86,0.44]},
+    {c:"crystal",a:[0.86,0.20], b:[0.62,0.44]},
+    {c:"cube",   a:[0.14,0.66], b:[0.38,0.88]},
+    {c:"cloud",  a:[0.38,0.66], b:[0.14,0.88]}
   ]},
-  // L8 — 6 pairs, 3 crossings
-  { name:"Dune Sea", bg:"desert", pairs:[
-    {c:"red",   a:[0.62,0.20], b:[0.86,0.66]},
-    {c:"blue",  a:[0.38,0.44], b:[0.14,0.44]},
-    {c:"green", a:[0.62,0.44], b:[0.86,0.44]},
-    {c:"yellow",a:[0.62,0.66], b:[0.14,0.20]},
-    {c:"purple",a:[0.14,0.88], b:[0.86,0.88]},
-    {c:"pink",  a:[0.14,0.66], b:[0.38,0.20]}
+  { name:"Crystal Cave", bg:"crystal", pairs:[
+    {c:"water",  a:[0.62,0.20], b:[0.86,0.66]},
+    {c:"star",   a:[0.38,0.44], b:[0.14,0.44]},
+    {c:"fire",   a:[0.62,0.44], b:[0.86,0.44]},
+    {c:"crystal",a:[0.62,0.66], b:[0.14,0.20]},
+    {c:"cube",   a:[0.14,0.88], b:[0.86,0.88]},
+    {c:"cloud",  a:[0.14,0.66], b:[0.38,0.20]}
   ]},
-  // L9 — 6 pairs, 6 crossings
-  { name:"Castle Kingdom", bg:"castles", pairs:[
-    {c:"red",   a:[0.38,0.44], b:[0.38,0.20]},
-    {c:"blue",  a:[0.38,0.66], b:[0.62,0.20]},
-    {c:"green", a:[0.14,0.20], b:[0.62,0.88]},
-    {c:"yellow",a:[0.86,0.44], b:[0.14,0.66]},
-    {c:"purple",a:[0.86,0.88], b:[0.62,0.66]},
-    {c:"pink",  a:[0.86,0.20], b:[0.14,0.44]}
+  { name:"Star Voyage", bg:"space", pairs:[
+    {c:"ball",   a:[0.38,0.44], b:[0.38,0.20]},
+    {c:"bolt",   a:[0.38,0.66], b:[0.62,0.20]},
+    {c:"fire",   a:[0.14,0.20], b:[0.62,0.88]},
+    {c:"crystal",a:[0.86,0.44], b:[0.14,0.66]},
+    {c:"cube",   a:[0.86,0.88], b:[0.62,0.66]},
+    {c:"cloud",  a:[0.86,0.20], b:[0.14,0.44]}
   ]},
-  // L10 — 6 pairs, 9 crossings, hardest
-  { name:"Royal Gauntlet", bg:"castles", pairs:[
-    {c:"red",   a:[0.38,0.44], b:[0.86,0.66]},
-    {c:"blue",  a:[0.38,0.66], b:[0.62,0.44]},
-    {c:"green", a:[0.62,0.20], b:[0.14,0.88]},
-    {c:"yellow",a:[0.14,0.66], b:[0.86,0.88]},
-    {c:"purple",a:[0.38,0.88], b:[0.62,0.66]},
-    {c:"pink",  a:[0.38,0.20], b:[0.62,0.88]}
+  { name:"Gem Gauntlet", bg:"crystal", pairs:[
+    {c:"water",  a:[0.38,0.44], b:[0.86,0.66]},
+    {c:"star",   a:[0.38,0.66], b:[0.62,0.44]},
+    {c:"fire",   a:[0.62,0.20], b:[0.14,0.88]},
+    {c:"crystal",a:[0.14,0.66], b:[0.86,0.88]},
+    {c:"cube",   a:[0.38,0.88], b:[0.62,0.66]},
+    {c:"cloud",  a:[0.38,0.20], b:[0.62,0.88]}
   ]}
 ];
 
@@ -159,8 +174,7 @@ function distPtSeg(p,a,b){var vx=b[0]-a[0],vy=b[1]-a[1],wx=p[0]-a[0],wy=p[1]-a[1
   var c2=vx*vx+vy*vy; if(c2<=c1)return Math.hypot(p[0]-b[0],p[1]-b[1]);
   var t=c1/c2; return Math.hypot(p[0]-(a[0]+t*vx),p[1]-(a[1]+t*vy));}
 
-/* ---------- QA: grid-pathfinder perfect player (proves each level solvable with
-   the real rule = strings avoid every other character AND never cross). ---------- */
+/* ---------- QA: grid-pathfinder perfect player (proves each level solvable). ---------- */
 function solveLevelAt(idx,W,H){
   var lv=WORLDS[idx];
   var P=lv.pairs.map(function(p){return {a:[p.a[0]*W,p.a[1]*H], b:[p.b[0]*W,p.b[1]*H]};});
@@ -208,8 +222,9 @@ var hasDOM=(typeof document!=="undefined"&&document.getElementById&&typeof reque
 var svg=hasDOM?document.getElementById("svg"):null;
 if(!svg||!svg.getBoundingClientRect) return;
 
-var gBg=document.getElementById("gBg"),gClouds=document.getElementById("gClouds"),gThreads=document.getElementById("gThreads"),
-    gFx=document.getElementById("gFx"),gBlocks=document.getElementById("gBlocks"),gDemo=document.getElementById("gDemo"),
+var gBg=document.getElementById("gBg"),gThreads=document.getElementById("gThreads"),
+    gFx=document.getElementById("gFx"),gBlocks=document.getElementById("gBlocks"),
+    gSmoosh=document.getElementById("gSmoosh"),gDemo=document.getElementById("gDemo"),
     board=document.getElementById("board"),stage=document.getElementById("stage"),
     statusBox=document.getElementById("status"),statusText=document.getElementById("statusText"),
     startHost=document.getElementById("start"),ovWin=document.getElementById("ovWin"),
@@ -218,6 +233,8 @@ var gBg=document.getElementById("gBg"),gClouds=document.getElementById("gClouds"
 var NS="http://www.w3.org/2000/svg";
 function el(n,a){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
 function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+function lerp(a,b,t){return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];}
+function clayOf(c){ return CLAY[c]||CLAY.water; }
 
 var SND_ON='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.8 5.2a9 9 0 0 1 0 13.6"/></svg>';
 var SND_OFF='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><line x1="16" y1="9" x2="22" y2="15"/><line x1="22" y1="9" x2="16" y2="15"/></svg>';
@@ -225,7 +242,8 @@ var UNDO_SVG='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke
 var MENU_SVG='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>';
 
 var BA=window.BuildableAudio||null, BS=window.BuildableStartScreen||null, startScreen=null, muted=false, musicOn=false;
-function unlock(){ if(BA){ BA.unlock&&BA.unlock(); if(BA.configure)BA.configure({sfxBase:"/api/sfx?s="});
+function unlock(){ if(BA){ BA.unlock&&BA.unlock();
+  if(BA.configure)BA.configure({sfxBase:"/api/sfx?s=", map:{ smoosh:"clay_smoosh", splat:"clay_splat", claypop:"clay_pop" }});
   if(!musicOn&&BA.setMusic){ try{ BA.setMusic("/api/library-music?name=spa_heartbeat_warm"); musicOn=true; }catch(e){} } } }
 function sfx(n,o){ if(BA&&!muted&&BA.sfx)BA.sfx(n,o); }
 function load(k,d){ try{var v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;} }
@@ -233,14 +251,11 @@ function save(k,v){ try{localStorage.setItem(k,v);}catch(e){} }
 var unlocked=parseInt(load("sm_unlocked","0"),10)||0, starsMap={};
 try{ starsMap=JSON.parse(load("sm_stars","{}"))||{}; }catch(e){ starsMap={}; }
 
-var IMG={}; ["red","blue","green","yellow","purple","pink"].forEach(function(c){IMG[c]="/kenney/shapechars/"+c+"_body_squircle.png";});
-var FACE_IDLE="/kenney/shapechars/face_idle.png", FACE_HAPPY="/kenney/shapechars/face_happy.png";
-var BGSRC={grass:"/kenney/bg/grass.png",forest:"/kenney/bg/forest.png",fall:"/kenney/bg/fall.png",desert:"/kenney/bg/desert.png",castles:"/kenney/bg/castles.png"};
-
 /* ---------- state ---------- */
 var VW=1000, VH=1000, HALF=58, SW=24, GOAL=58, TOUCH=60;
-var levelIdx=0, level=null, committed={}, order=[], cur=null, particles=[], clouds=[], celebrate=0;
-var blockEls=[], cloudEls=[], demoHand=null, demoLine=null, bgImg=null, demo=null, screen="select", pulses={};
+var levelIdx=0, level=null, committed={}, order=[], cur=null, particles=[], celebrate=0;
+var blockEls=[], bgImg=null, demo=null, demoHand=null, demoLine=null, screen="select", pulses={};
+var finale=null, smooshEls={};
 
 function layout(){
   var w=stage.clientWidth||360, h=stage.clientHeight||640;
@@ -265,7 +280,7 @@ function toXY(e){ var r=svg.getBoundingClientRect(); return [(e.clientX-r.left)*
 function buildCfg(){
   var levels=WORLDS.map(function(w,i){ var st=i<unlocked?"done":(i===unlocked?"next":"locked");
     return { n:i+1, name:w.name, color:"#2b4a6b", img:BGSRC[w.bg], maxStars:3, stars:(st==="done"?(starsMap[i]||3):undefined), state:st }; });
-  return { title:"String Match", subtitle:"Draw a string to connect the matching buddies — never cross or touch another!", sound:!(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels:levels };
+  return { title:"String Match", subtitle:"Draw a clay string to connect the matching buddies — never cross or touch another!", sound:!(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels:levels };
 }
 function showMenu(){ screen="select"; ovWin.classList.add("hide"); statusBox.classList.add("hide");
   btnLevels.classList.add("hide"); btnUndo.classList.add("hide"); btnSound.style.display="none";
@@ -278,7 +293,7 @@ function showMenu(){ screen="select"; ovWin.classList.add("hide"); statusBox.cla
 
 /* ---------- start a level ---------- */
 function startLevel(i){
-  levelIdx=i; level=WORLDS[i]; committed={}; order=[]; cur=null; particles=[]; celebrate=0; pulses={};
+  levelIdx=i; level=WORLDS[i]; committed={}; order=[]; cur=null; particles=[]; celebrate=0; pulses={}; finale=null;
   if(startHost) startHost.style.display="none"; ovWin.classList.add("hide");
   statusBox.classList.remove("hide"); btnLevels.classList.remove("hide"); btnSound.style.display="";
   updateUndo(); screen="play";
@@ -293,18 +308,22 @@ function endDemo(){ if(demo){ demo=null; save("sm_demo","1"); } }
 /* ---------- persistent DOM ---------- */
 function setHref(node,url){ if(node._href!==url){ node.setAttribute("href",url); node._href=url; } }
 function buildLevelDom(){
-  gBg.innerHTML=""; gClouds.innerHTML=""; gBlocks.innerHTML=""; gDemo.innerHTML="";
+  gBg.innerHTML=""; gBlocks.innerHTML=""; gSmoosh.innerHTML=""; gDemo.innerHTML=""; smooshEls={};
   bgImg=el("image",{href:BGSRC[level.bg],x:0,y:0,width:VW,height:VH,preserveAspectRatio:"xMidYMid slice"}); gBg.appendChild(bgImg);
-  clouds=[{x:0.12,y:0.14,s:1.0,v:0.00016,src:"/kenney/bg/cloud1.png"},{x:0.62,y:0.10,s:1.3,v:0.0001,src:"/kenney/bg/cloud2.png"}];
-  cloudEls=[]; clouds.forEach(function(cl){ var im=el("image",{href:cl.src,opacity:0.9,preserveAspectRatio:"xMidYMid meet"}); im._href=cl.src; gClouds.appendChild(im); cloudEls.push(im); });
   blockEls=[];
   level.P.forEach(function(p,idx){ ["a","b"].forEach(function(k){
-    var body=el("image",{href:IMG[p.c],preserveAspectRatio:"xMidYMid meet"}); body._href=IMG[p.c];
-    var face=el("image",{href:FACE_IDLE,preserveAspectRatio:"xMidYMid meet"}); face._href=FACE_IDLE;
-    gBlocks.appendChild(body); gBlocks.appendChild(face);
-    blockEls.push({body:body,face:face,c:p.c,idx:idx,end:k});
+    var img=el("image",{href:claySrc(p.c,"idle"),preserveAspectRatio:"xMidYMid meet",filter:"url(#claySoft)"}); img._href=claySrc(p.c,"idle");
+    gBlocks.appendChild(img);
+    blockEls.push({img:img,c:p.c,idx:idx,end:k});
   }); });
-  demoLine=el("line",{stroke:C[level.P[0].c],"stroke-width":SW,"stroke-linecap":"round","stroke-dasharray":"4 20",opacity:0.85});
+  // smoosh sprites (one splat + one blob per pair), hidden until the finale
+  level.P.forEach(function(p,idx){
+    var splat=el("image",{href:claySrc(p.c,"splat"),preserveAspectRatio:"xMidYMid meet",filter:"url(#claySoft)",opacity:0}); splat._href=claySrc(p.c,"splat");
+    var blob=el("image",{href:claySrc(p.c,"blob"),preserveAspectRatio:"xMidYMid meet",filter:"url(#claySoft)",opacity:0}); blob._href=claySrc(p.c,"blob");
+    gSmoosh.appendChild(splat); gSmoosh.appendChild(blob);
+    smooshEls[idx]={splat:splat,blob:blob};
+  });
+  demoLine=el("line",{stroke:clayOf(level.P[0].c).clay,"stroke-width":SW,"stroke-linecap":"round","stroke-dasharray":"4 20",opacity:0.85});
   demoHand=el("image",{href:"/tutorial-hand.png",width:150,height:150,preserveAspectRatio:"xMidYMid meet"}); demoHand._href="/tutorial-hand.png";
   demoLine.style.display="none"; demoHand.style.display="none"; gDemo.appendChild(demoLine); gDemo.appendChild(demoHand);
 }
@@ -312,12 +331,9 @@ function buildLevelDom(){
 /* ---------- interaction ---------- */
 function blockAt(pt){ for(var i=0;i<level.P.length;i++){ if(dist(pt,level.P[i].a)<GOAL*1.25)return{pi:i,end:0}; if(dist(pt,level.P[i].b)<GOAL*1.25)return{pi:i,end:1}; } return null; }
 function invalidSeg(a,b){
-  // cross another committed string?
   for(var i=0;i<level.P.length;i++){ var c=level.P[i].c; if(committed[c]&&(!cur||i!==cur.pi)){ var Pp=committed[c];
     for(var j=0;j<Pp.length-1;j++) if(segInt(a,b,Pp[j],Pp[j+1])) return true; } }
-  // self-cross current
   if(cur){ var Q=cur.pts; for(var k=0;k<Q.length-2;k++) if(segInt(a,b,Q[k],Q[k+1])) return true; }
-  // touch ANY other character (block)?
   for(var m=0;m<level.P.length;m++){ if(cur&&m===cur.pi) continue;
     if(distPtSeg(level.P[m].a,a,b)<TOUCH) return true; if(distPtSeg(level.P[m].b,a,b)<TOUCH) return true; }
   return false;
@@ -337,7 +353,7 @@ function move(e){ if(!cur||screen!=="play")return; e.preventDefault();
 function up(){ if(!cur||screen!=="play")return;
   var last=cur.pts[cur.pts.length-1], reached=dist(last,cur.target)<GOAL&&cur.pts.length>2;
   if(reached&&!cur.crossed){ cur.pts.push(cur.target.slice()); committed[cur.c]=cur.pts; order.push(cur.c);
-    burst(cur.target,C[cur.c]); burst(cur.pts[0],C[cur.c]); pulses[cur.pi]=1;
+    burst(cur.target,clayOf(cur.c).clay); burst(cur.pts[0],clayOf(cur.c).clay); pulses[cur.pi]=1;
     var n=order.length; sfx("coin",{tier:Math.min(3,n)}); updateUndo();
     if(n===level.P.length) winLevel(); else setStatus("Connected "+n+" of "+level.P.length+" — keep going!");
   }
@@ -348,55 +364,121 @@ function undo(){ unlock();
   if(!order.length) return;
   var c=order.pop(); delete committed[c]; updateUndo();
   var pi=-1; for(var i=0;i<level.P.length;i++) if(level.P[i].c===c) pi=i;
-  if(pi>=0){ pulses[pi]=1; burst(level.P[pi].a,C[c]); }
+  if(pi>=0){ pulses[pi]=1; burst(level.P[pi].a,clayOf(c).clay); }
   setStatus("Undone — "+order.length+" of "+level.P.length+" connected.");
 }
 function updateUndo(){ if(order.length>0) btnUndo.classList.remove("hide"); else btnUndo.classList.add("hide"); }
 
-/* ---------- fx / win ---------- */
+/* ---------- fx ---------- */
 function burst(p,color){ for(var i=0;i<16;i++){ var a=Math.random()*6.28,sp=(2+Math.random()*5)*(HALF/58);
   particles.push({x:p[0],y:p[1],vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2*(HALF/58),life:1,r:(4+Math.random()*6)*(HALF/58),color:Math.random()<0.5?color:"#FFDA5E"}); }
   if(level){ level.P.forEach(function(pp,idx){ if(dist(pp.a,p)<HALF*0.2||dist(pp.b,p)<HALF*0.2) pulses[idx]=1; }); } }
-function winLevel(){ screen="win"; starsMap[levelIdx]=Math.max(3,starsMap[levelIdx]||0); save("sm_stars",JSON.stringify(starsMap));
+
+/* ---------- SMOOSH FINALE (level complete): every pair rushes together + splats. ---------- */
+function pairIndexOf(c){ for(var i=0;i<level.P.length;i++) if(level.P[i].c===c) return i; return -1; }
+function winLevel(){ screen="finale";
+  starsMap[levelIdx]=Math.max(3,starsMap[levelIdx]||0); save("sm_stars",JSON.stringify(starsMap));
   if(levelIdx>=unlocked&&levelIdx<WORLDS.length-1){ unlocked=levelIdx+1; save("sm_unlocked",String(unlocked)); }
-  celebrate=110; sfx("celebrate"); setTimeout(function(){sfx("win");},140);
+  btnUndo.classList.add("hide"); setStatus("Smoosh time!");
   try{ window.parent.postMessage({source:"buildable",kind:"win"},"*"); }catch(_){}
-  btnUndo.classList.add("hide");
-  var lastL=levelIdx>=WORLDS.length-1;
-  winTitle.textContent=lastL?"You beat them all!":"You did it!";
-  winSub.textContent=lastL?"Every world is connected.":"Every buddy is connected.";
+  var items=order.map(function(c,i){ var pi=pairIndexOf(c); var A=level.P[pi].a.slice(), B=level.P[pi].b.slice();
+    return { c:c, pi:pi, A:A, B:B, mid:[(A[0]+B[0])/2,(A[1]+B[1])/2], start:i*13, ph:0, phase:"wait", timer:0 }; });
+  finale={ items:items, frame:0, allDone:false, overlayShown:false, endTimer:0 };
+}
+function stepFinale(){
+  finale.frame++;
+  var everDone=true;
+  for(var i=0;i<finale.items.length;i++){ var it=finale.items[i];
+    if(finale.frame<it.start){ everDone=false; continue; }
+    if(it.phase==="wait"){ it.phase="move"; it.ph=0; }
+    if(it.phase==="move"){ it.ph+=0.055; everDone=false;
+      if(it.ph>=1){ it.ph=1; it.phase="splat"; it.timer=0; sfx("smoosh"); burst(it.mid,clayOf(it.c).clay); burst(it.mid,clayOf(it.c).lite); pulses[it.pi]=0; }
+    } else if(it.phase==="splat"){ it.timer++; everDone=false;
+      if(it.timer>=9){ it.phase="blob"; it.timer=0; sfx("claypop"); burst(it.mid,clayOf(it.c).lite); }
+    } else if(it.phase==="blob"){ it.timer++; if(it.timer<26) everDone=false; }
+  }
+  if(everDone&&!finale.overlayShown){ finale.endTimer++;
+    if(finale.endTimer===1){ celebrate=90; sfx("celebrate"); setTimeout(function(){sfx("win");},160); }
+    if(finale.endTimer>=34){ finale.overlayShown=true; showWinOverlay(); }
+  }
+}
+function showWinOverlay(){ var lastL=levelIdx>=WORLDS.length-1;
+  winTitle.textContent=lastL?"You smooshed them all!":"Smoosh!";
+  winSub.textContent=lastL?"Every world is connected.":"Every buddy smooshed together.";
   btnNext.textContent=lastL?"Play again":"Next world";
-  setTimeout(function(){ ovWin.classList.remove("hide"); },700);
+  ovWin.classList.remove("hide");
 }
 btnNext.onclick=function(){ unlock(); if(levelIdx>=WORLDS.length-1) showMenu(); else startLevel(levelIdx+1); };
 
-/* ---------- render ---------- */
+/* ---------- render helpers ---------- */
 function polyStr(p){ return p.map(function(q){return q[0]+","+q[1];}).join(" "); }
+function drawClayRope(points,c,dashCrossed){
+  if(!points||points.length<2) return;
+  var C=clayOf(c), s=polyStr(points);
+  if(dashCrossed){ gThreads.appendChild(el("polyline",{points:s,fill:"none",stroke:"#E24B4A","stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round","stroke-dasharray":String(SW*0.3)+" "+String(SW*0.9)})); return; }
+  gThreads.appendChild(el("polyline",{points:s,fill:"none",stroke:C.edge,"stroke-width":SW*1.34,"stroke-linecap":"round","stroke-linejoin":"round"}));
+  gThreads.appendChild(el("polyline",{points:s,fill:"none",stroke:C.clay,"stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round"}));
+  gThreads.appendChild(el("polyline",{points:s,fill:"none",stroke:C.lite,"stroke-width":SW*0.34,"stroke-linecap":"round","stroke-linejoin":"round",opacity:0.6}));
+}
+function placeSprite(node,cx,cy,h,ar){ var w=h*ar; node.setAttribute("x",cx-w/2); node.setAttribute("y",cy-h/2); node.setAttribute("width",w); node.setAttribute("height",h); }
+
+/* ---------- render ---------- */
 function draw(){
   gThreads.innerHTML=""; gFx.innerHTML=""; if(!level)return;
-  for(var ci=0;ci<cloudEls.length;ci++){ var cl=clouds[ci], cw=VW*0.24*cl.s, chh=cw*0.52;
-    cloudEls[ci].setAttribute("x",cl.x*VW); cloudEls[ci].setAttribute("y",cl.y*VH); cloudEls[ci].setAttribute("width",cw); cloudEls[ci].setAttribute("height",chh); }
-  level.P.forEach(function(p){ var P=committed[p.c]; if(P&&P.length>1)
-    gThreads.appendChild(el("polyline",{points:polyStr(P),fill:"none",stroke:C[p.c],"stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round"})); });
-  if(cur&&cur.pts.length>1) gThreads.appendChild(el("polyline",{points:polyStr(cur.pts),fill:"none",stroke:cur.crossed?"#E24B4A":C[cur.c],"stroke-width":SW,"stroke-linecap":"round","stroke-linejoin":"round","stroke-dasharray":cur.crossed?String(SW*0.3)+" "+String(SW*0.9):"none"}));
+
+  // clay strings (skip during finale — the ropes retract with the buddies)
+  if(!finale){
+    level.P.forEach(function(p){ var P=committed[p.c]; if(P&&P.length>1) drawClayRope(P,p.c,false); });
+    if(cur&&cur.pts.length>1) drawClayRope(cur.pts,cur.c,cur.crossed);
+  } else {
+    // retracting straight ropes between the two converging buddies
+    finale.items.forEach(function(it){ if(it.phase==="move"){ var a=lerp(it.A,it.mid,it.ph), b=lerp(it.B,it.mid,it.ph); drawClayRope([a,b],it.c,false); } });
+  }
+
+  // particles
   for(var i=0;i<particles.length;i++){ var q=particles[i]; gFx.appendChild(el("circle",{cx:q.x,cy:q.y,r:q.r,fill:q.color,opacity:Math.max(0,q.life)})); }
-  for(var b=0;b<blockEls.length;b++){ var be=blockEls[b], pt=(be.end==="a"?level.P[be.idx].a:level.P[be.idx].b);
-    var connected=!!committed[be.c], h=HALF*(1+(pulses[be.idx]||0)*0.28), x=pt[0]-h, y=pt[1]-h;
-    be.body.setAttribute("x",x); be.body.setAttribute("y",y); be.body.setAttribute("width",h*2); be.body.setAttribute("height",h*2);
-    be.face.setAttribute("x",x); be.face.setAttribute("y",y); be.face.setAttribute("width",h*2); be.face.setAttribute("height",h*2);
-    setHref(be.face, connected?FACE_HAPPY:FACE_IDLE); }
+
+  // buddies
+  if(!finale){
+    for(var b=0;b<blockEls.length;b++){ var be=blockEls[b], pt=(be.end==="a"?level.P[be.idx].a:level.P[be.idx].b);
+      var h=HALF*2*(1+(pulses[be.idx]||0)*0.24); be.img.style.display=""; be.img.setAttribute("opacity",1);
+      placeSprite(be.img,pt[0],pt[1],h,AR_IDLE[be.c]); }
+  } else {
+    drawFinaleSprites();
+  }
+
+  // demo hand
   if(demo&&demoHand){ var A=level.P[0].a,B=level.P[0].b,t=demo.t,hx=A[0]+(B[0]-A[0])*t,hy=A[1]+(B[1]-A[1])*t;
     demoLine.style.display=""; demoHand.style.display="";
-    demoLine.setAttribute("stroke",C[level.P[0].c]); demoLine.setAttribute("stroke-width",SW);
+    demoLine.setAttribute("stroke",clayOf(level.P[0].c).clay); demoLine.setAttribute("stroke-width",SW);
     demoLine.setAttribute("x1",A[0]); demoLine.setAttribute("y1",A[1]); demoLine.setAttribute("x2",hx); demoLine.setAttribute("y2",hy);
     var hs=HALF*2.6; demoHand.setAttribute("width",hs); demoHand.setAttribute("height",hs); demoHand.setAttribute("x",hx-hs*0.12); demoHand.setAttribute("y",hy-hs*0.04);
   } else if(demoHand){ demoLine.style.display="none"; demoHand.style.display="none"; }
 }
+function drawFinaleSprites(){
+  // hide idle sprites for pairs that have smooshed; reposition the ones still moving
+  var moving={};
+  finale.items.forEach(function(it){
+    var se=smooshEls[it.pi]; if(!se) return;
+    if(it.phase==="wait"){ moving[it.pi]="idle"; se.splat.setAttribute("opacity",0); se.blob.setAttribute("opacity",0); }
+    else if(it.phase==="move"){ moving[it.pi]="move"; se.splat.setAttribute("opacity",0); se.blob.setAttribute("opacity",0); }
+    else if(it.phase==="splat"){ moving[it.pi]="hide"; var hs=HALF*2*(1.55-it.timer*0.02); placeSprite(se.splat,it.mid[0],it.mid[1],hs,AR_SPLAT[it.c]); se.splat.setAttribute("opacity",1); se.blob.setAttribute("opacity",0); }
+    else { moving[it.pi]="hide"; var bounce=it.timer<10?1+(10-it.timer)*0.02:1; var hb=HALF*2*1.15*bounce; placeSprite(se.blob,it.mid[0],it.mid[1],hb,AR_BLOB[it.c]); se.splat.setAttribute("opacity",0); se.blob.setAttribute("opacity",1); }
+  });
+  for(var b=0;b<blockEls.length;b++){ var be=blockEls[b], st=moving[be.idx];
+    if(st==="hide"){ be.img.setAttribute("opacity",0); continue; }
+    var it=null; for(var m=0;m<finale.items.length;m++) if(finale.items[m].pi===be.idx) it=finale.items[m];
+    var pt=(be.end==="a"?level.P[be.idx].a:level.P[be.idx].b);
+    if(it&&st==="move"){ pt=lerp(be.end==="a"?it.A:it.B, it.mid, it.ph); }
+    var scale=(it&&st==="move")?(1-it.ph*0.28):1;
+    be.img.setAttribute("opacity",1); placeSprite(be.img,pt[0],pt[1],HALF*2*scale,AR_IDLE[be.c]);
+  }
+}
 function loop(){
   var np=[]; for(var i=0;i<particles.length;i++){ var q=particles[i]; q.x+=q.vx; q.y+=q.vy; q.vy+=0.16*(HALF/58); q.life-=0.022; if(q.life>0)np.push(q); } particles=np;
   for(var k in pulses){ pulses[k]=Math.max(0,pulses[k]-0.06); } if(cur)pulses[cur.pi]=1;
-  if(celebrate>0){ celebrate--; if(celebrate%5===0&&level){ var cc=level.P[Math.floor(Math.random()*level.P.length)].c; burst([VW*(0.12+Math.random()*0.76),VH*(0.12+Math.random()*0.76)],C[cc]); } }
-  for(var c2=0;c2<clouds.length;c2++){ clouds[c2].x+=clouds[c2].v; if(clouds[c2].x>1.05)clouds[c2].x=-0.28; }
+  if(finale) stepFinale();
+  if(celebrate>0){ celebrate--; if(celebrate%5===0&&level){ var cc=level.P[Math.floor(Math.random()*level.P.length)].c; burst([VW*(0.12+Math.random()*0.76),VH*(0.12+Math.random()*0.76)],clayOf(cc).clay); } }
   if(demo){ demo.t+=0.012; if(demo.t>=1){ demo.t=1; demo.hold++; if(demo.hold>60){ endDemo(); setStatus("Now you try! Connect "+level.P.length+" pairs."); } } }
   draw(); requestAnimationFrame(loop);
 }

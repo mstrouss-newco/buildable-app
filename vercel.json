@@ -112,6 +112,10 @@
       "dest": "/kenney/$1"
     },
     {
+      "src": "/claymatch/(.*)",
+      "dest": "/claymatch/$1"
+    },
+    {
       "src": "/rileys-garden.html",
       "dest": "/rileys-garden.html"
     },

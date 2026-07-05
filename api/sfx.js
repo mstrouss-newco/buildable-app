@@ -313,6 +313,11 @@ const SOUNDS = {
   boss:      "A short dramatic low brass and gong stinger, a deep ominous bwaaam as a boss appears, playful-spooky, no voices",
   error:     "A short gentle wrong-answer buzzer, two soft low bzzt bzzt honks, comedic and not harsh, no voices",
   celebrate: "A short festive party celebration, a popping party-popper with a quick shower of confetti and a tiny kazoo toot, joyful, no voices",
+
+  // ---- String Match (clay buddies smooshing together) one-shots ----
+  clay_smoosh: "A short satisfying playdough smoosh, two lumps of soft clay squishing and mushing together with a wet squelchy stretch, tactile and gooey, single hit, no music, no voices",
+  clay_splat:  "A short fun soft clay splat, a wet lump of playdough slapping and squashing flat with a bouncy squelch, playful and cute, single hit, no music, no voices",
+  clay_pop:    "A short cute soft squishy pop, a little wobbly playdough boop settling with a gentle rubbery bounce, cheerful and light, single hit, no music, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -329,6 +334,7 @@ const DURATIONS = {
   board_place:0.5, board_drop:0.5, board_line:0.5, board_claim:0.6, board_win:1.6, board_draw:0.7,
   checkers_select:0.4, checkers_move:0.5, checkers_capture:0.6, checkers_king:1.0, checkers_win:1.6, checkers_lose:1.0,
   maze_chomp:0.5, maze_power:0.8, maze_eat:0.6, maze_win:1.6, maze_caught:0.7, maze_start:0.6,
+  clay_smoosh:0.6, clay_splat:0.6, clay_pop:0.5,
   cg_place:0.45, cg_twang:0.4, cg_poof:0.55, cg_coin:0.5, cg_oops:0.6, cg_cheer:1.3,
   cg_bonk:0.4,
   sling_stretch:0.5, sling_release:0.5, sling_thud:0.6, sling_poof:0.5, sling_win:1.6,
