@@ -84,11 +84,12 @@ var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced
 // ---- the SQUAD: 4 friendly ANIMALS you fling, each with a tap-to-trigger POWER.
 //  (Kenney "Animal Pack Remastered" art dresses these when served; drawn fallback
 //   below can never break a kid's game.)  power: split | bomb | heavy | dash
+//  tag = short shout used mid-air; does = the plain "what it does" line shown by the sling.
 var SQUAD = [
-  { name:"Splitz", type:"bird",  power:"split", body:"#57c1ff", cheek:"#2f9fe0", tag:"Splits in 3!", img:"/kenney/sling/animals/parrot.png" },
-  { name:"Boomer", type:"bomb",  power:"bomb",  body:"#6b5aa0", cheek:"#4a3c7a", tag:"Kaboom!",      img:"/kenney/sling/animals/panda.png" },
-  { name:"Bruno",  type:"bear",  power:"heavy", body:"#c98a55", cheek:"#a86e3e", tag:"Big smash!",   img:"/kenney/sling/animals/hippo.png" },
-  { name:"Zip",    type:"chick", power:"dash",  body:"#ffd23e", cheek:"#f0a91f", tag:"Zoom!",        img:"/kenney/sling/animals/chick.png" }
+  { name:"Splitz", type:"bird",  power:"split", body:"#57c1ff", cheek:"#2f9fe0", tag:"Splits in 3!", does:"splits into 3 birds",     img:"/kenney/sling/animals/parrot.png" },
+  { name:"Boomer", type:"bomb",  power:"bomb",  body:"#6b5aa0", cheek:"#4a3c7a", tag:"Kaboom!",      does:"blows up nearby blocks",  img:"/kenney/sling/animals/panda.png" },
+  { name:"Bruno",  type:"bear",  power:"heavy", body:"#c98a55", cheek:"#a86e3e", tag:"Big smash!",   does:"drops down for a big smash", img:"/kenney/sling/animals/hippo.png" },
+  { name:"Zip",    type:"chick", power:"dash",  body:"#ffd23e", cheek:"#f0a91f", tag:"Zoom!",        does:"zooms super fast",        img:"/kenney/sling/animals/chick.png" }
 ];
 
 // ---- TARGET look (goofy castle critters that just topple + POOF, never hurt) ----
@@ -97,24 +98,38 @@ var SQUAD_IMGS = [];   // Kenney "Animal Pack Remastered" art for the flung pals
 var BLK_IMGS = {};     // Kenney "Physics Assets" block textures, keyed material+shape (woodW/stoneT/...)
 var TARGET_IMGS = [];  // Kenney "Physics Assets" alien faces = the goofy toppling targets
 
-// ---- per-level BACKDROPS (Kenney "Background Elements Remastered", CC0) ----
-// Each level gets its own scene so it looks fresh; parallax below adds depth.
-// A missing image can never break a kid's game — drawBgDrawn() is the fallback.
-var BG_IMGS = {};      // key -> loaded scene image (grass/desert/forest/fall/castles/...)
-var BG_THEMES = [      // cycles by level; ground band + sky tint match the scene art
-  { bg:"grass",   sky:["#8fd0ff","#eaf8ff"], g0:"#73c364", g1:"#4e9a45", top:"#86d172" },
-  { bg:"desert",  sky:["#ffe6ad","#fff6e2"], g0:"#e6c277", g1:"#c89646", top:"#f0d58f" },
-  { bg:"forest",  sky:["#bfe6c8","#effaf1"], g0:"#5aa86a", g1:"#3c7d4a", top:"#77c586" },
-  { bg:"fall",    sky:["#ffd7a3","#fff0dd"], g0:"#c98a4b", g1:"#9c6532", top:"#e0a662" },
-  { bg:"castles", sky:["#c9bce6","#efeaf9"], g0:"#8fae7a", g1:"#5f7d4e", top:"#a7c48f" }
+// ---- per-level SCENES: layered PARALLAX SCROLLER art + Kenney platformer PROPS ----
+// Backdrop = a stack of wide pixel-art layers (public/parallax/atmos/<theme>/1..N.png,
+// far sky -> near foreground) that slide with depth. On top we plant a grass MOUND
+// under the slingshot (so it no longer floats) and scatter per-world Kenney props.
+// A missing image can never break a kid's game — drawBgDrawn() + a drawn mound fall back.
+var PAR = {};          // theme -> [layer Image, ...]  (index 0 = farthest)
+var PAR_CACHE = {};    // theme -> [{cv,dw}, ...]  height-scaled offscreen layers (fast blit)
+var PROP_IMGS = {};    // prop name -> Image (Kenney "Platformer Pack Remastered", CC0)
+var PAR_COUNT = { rural:10, forest:7, peaks:9, desert:6, moon:6 };   // layers per theme
+// per-level: parallax theme + ground palette (matched to the scene) + which prop set.
+// Ordered cozy -> epic: green fields, pine forest, snowy peaks, desert, moon finale.
+var BG_THEMES = [
+  { par:"rural",  sky:["#7fb4e6","#dff0ff"], g0:"#79c46a", g1:"#4e9a45", top:"#8fdc74", props:"rural"  },
+  { par:"forest", sky:["#79b0e0","#dfeffb"], g0:"#4f9a5f", g1:"#356b43", top:"#77c586", props:"forest" },
+  { par:"peaks",  sky:["#8fc0ef","#eef6ff"], g0:"#e3edf5", g1:"#aebfcf", top:"#ffffff", props:"peaks"  },
+  { par:"desert", sky:["#7fb2e6","#ffe6b8"], g0:"#e6c277", g1:"#c07d3e", top:"#f0d58f", props:"desert" },
+  { par:"moon",   sky:["#0b1024","#121838"], g0:"#8d92a0", g1:"#4a4f5c", top:"#b7bcc7", props:"moon"   }
 ];
-function themeFor(i){                              // per-level backdrop + palette
-  var L = (GAME_CONFIG.levels[i]||{});
-  if(L.bg && BG_IMGS[L.bg]!==undefined) return { bg:L.bg, sky:L.sky||["#8fd0ff","#eaf8ff"],
-      g0:L.g0||"#73c364", g1:L.g1||"#4e9a45", top:L.top||"#86d172" };
-  return BG_THEMES[i % BG_THEMES.length];
+// decorative props per world — [name, x-center, height-px] placed on the ground.
+// Purely visual + kept left of the tower zone (x<520) so they never touch physics/aim.
+var PROPS = {
+  rural:  [["sign",118,74],["bush",250,88],["flagRed1",316,86],["plantPurple",470,56]],
+  forest: [["mushroomRed",250,74],["bush",384,86],["mushroomBrown",486,58]],
+  peaks:  [["rock",250,80],["bush",402,70],["rock",496,50]],
+  desert: [["cactus",250,90],["rock",404,70],["cactus",500,54]],
+  moon:   [["flagBlue1",286,88],["rock",404,74],["rock",496,50]]
+};
+function themeFor(i){                              // per-level scene + palette (L.par overrides)
+  var L = (GAME_CONFIG.levels[i]||{}), t = BG_THEMES[i % BG_THEMES.length];
+  return L.par ? Object.assign({}, t, { par:L.par }) : t;
 }
-var BG_T0 = (typeof Date!=="undefined") ? Date.now() : 0;  // clock for cloud drift
+var BG_T0 = (typeof Date!=="undefined") ? Date.now() : 0;  // clock for parallax drift
 
 // ============================================================================
 //  GAME_CONFIG — content as DATA. Adding a level = editing this, never the engine.
@@ -481,22 +496,71 @@ function drawBgDrawn(th){
   ctx.fillStyle=th.g0; ctx.beginPath(); ctx.moveTo(0,470); ctx.quadraticCurveTo(260,400,520,460);
   ctx.quadraticCurveTo(760,520,960,452); ctx.lineTo(960,GY); ctx.lineTo(0,GY); ctx.fill();
 }
-// Main backdrop: real Kenney scene (cover) with subtle parallax, drifting clouds,
-// and a themed ground band. Per level so every stage looks like a new place.
-function drawBg(){
-  var th=themeFor(level), img=BG_IMGS[th.bg], P=bgParallax();
-  if(img && (img.naturalWidth||img.width)){
-    var iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
-    var s=Math.max(W/iw, H/ih)*1.10;            // slight over-scale hides parallax edges
-    var dw=iw*s, dh=ih*s;
-    var ox=(W-dw)/2 + P.px*0.03;                // FAR plane: shifts a little with the pull
-    var oy=(H-dh)/2 + P.py*0.03 - 6;
-    ctx.drawImage(img, ox, oy, dw, dh);
-  } else {
-    drawBgDrawn(th);                            // never-breaks fallback
+// Build (once) height-scaled offscreen copies of a theme's parallax layers so the
+// per-frame redraw is a cheap blit, not a re-scale of ~2000px-wide art every frame.
+function parCache(theme){
+  if(typeof document==="undefined") return null;
+  var imgs=PAR[theme]; if(!imgs) return null;
+  var arr=PAR_CACHE[theme]; if(!arr){ arr=PAR_CACHE[theme]=[]; }
+  var n=PAR_COUNT[theme]||imgs.length;
+  for(var i=0;i<n;i++){ if(arr[i]) continue;
+    var img=imgs[i]; if(!img||!(img.naturalWidth||img.width)) continue;
+    var s=H/(img.naturalHeight||img.height), dw=Math.max(1,Math.round((img.naturalWidth||img.width)*s));
+    try{ var cv=document.createElement("canvas"); cv.width=dw; cv.height=H;
+      cv.getContext("2d").drawImage(img,0,0,dw,H); arr[i]={cv:cv,dw:dw}; }catch(e){}
   }
-  drawClouds(P.px*0.10, P.t);                   // NEAR plane: shifts more -> depth
+  return arr;
+}
+// The layered parallax scene: each layer slides a bit more than the one behind it
+// (depth from the sling pull), and the far sky layers auto-drift slowly = "scroller".
+function drawParallax(th,P){
+  var arr=parCache(th.par); if(!arr) return false;
+  var n=PAR_COUNT[th.par]||arr.length, drew=false;
+  for(var i=0;i<n;i++){ var e=arr[i]; if(!e) continue; drew=true;
+    var depth=(i+1)/n;                                    // 0(far)..1(near)
+    var drift=(depth<0.6)?(P.t*(0.6-depth)*10):0;         // gentle auto-scroll on far layers only
+    var offX=(W-e.dw)/2 - drift + P.px*(depth*0.05);      // + parallax from the sling pull
+    var x0=offX - Math.ceil(offX/e.dw)*e.dw;              // wrap so there's never a seam
+    for(var xx=x0; xx<W; xx+=e.dw) ctx.drawImage(e.cv, Math.round(xx), 0);
+  }
+  return drew;
+}
+// Main backdrop: parallax scroller scene (with drawn fallback), then themed ground
+// band, then the grass mound + per-world props. Per level = every stage a new place.
+function drawBg(){
+  var th=themeFor(level), P=bgParallax();
+  if(!drawParallax(th,P)){ drawBgDrawn(th); drawClouds(P.px*0.10, P.t); }  // fallback scene
   drawGround(th);                               // crisp themed play floor
+  drawProps(th);                                // grass mound under the sling + world decor
+}
+// A little mound the slingshot is planted on (so it stops floating), tinted to the
+// world (green field / sandy / snowy / grey moon) using the same palette as the floor.
+function drawMound(th){
+  var mx=AX, topY=AY+44, baseY=GY+4, hw=150;
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(mx-hw, baseY);
+  ctx.quadraticCurveTo(mx-hw*0.5, topY, mx, topY);
+  ctx.quadraticCurveTo(mx+hw*0.5, topY, mx+hw, baseY); ctx.closePath();
+  var g=ctx.createLinearGradient(0,topY,0,baseY); g.addColorStop(0,th.g0); g.addColorStop(1,th.g1);
+  ctx.fillStyle=g; ctx.fill();
+  ctx.lineWidth=9; ctx.lineCap="round"; ctx.strokeStyle=th.top;   // grassy/snowy cap on the crest
+  ctx.beginPath(); ctx.moveTo(mx-hw+8, baseY-3);
+  ctx.quadraticCurveTo(mx-hw*0.5, topY-2, mx, topY-2);
+  ctx.quadraticCurveTo(mx+hw*0.5, topY-2, mx+hw-8, baseY-3); ctx.stroke();
+  ctx.restore();
+}
+// Per-world Kenney platformer props sitting on the ground (bush/mushroom/rock/cactus/
+// sign/flag...). Each gets a soft contact shadow so it reads as planted on the floor.
+function drawProps(th){
+  drawMound(th);
+  var list=PROPS[th.props]||[];
+  for(var i=0;i<list.length;i++){ var p=list[i], im=PROP_IMGS[p[0]], h=p[2], x=p[1];
+    if(!im||!(im.naturalWidth||im.width)) continue;
+    var w=h*((im.naturalWidth||im.width)/(im.naturalHeight||im.height));
+    ctx.save(); ctx.fillStyle="rgba(0,0,0,.12)"; ctx.beginPath();
+    ctx.ellipse(x, GY+7, w*0.42, 6, 0,0,7); ctx.fill(); ctx.restore();
+    ctx.drawImage(im, x-w/2, GY+9-h, w, h);
+  }
 }
 function drawSling(){
   // wooden Y slingshot at the fork
@@ -565,6 +629,24 @@ function drawPowerHint(b){
   ctx.globalAlpha=1; ctx.fillStyle="#ffd86b"; ctx.fillText(label,x,y);
   ctx.restore(); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
 }
+// Always-on "who's loaded + what they do" card by the sling, so a kid knows each
+// pal's power/damage BEFORE flinging (paired with the mid-air TAP hint above).
+function drawSlingLabel(sq){
+  var c=SQUAD[sq%SQUAD.length]||{}; var name=c.name||"Pal", does=c.does||c.tag||"a special power";
+  var sub="Tap in the air: "+does;
+  ctx.save(); ctx.textBaseline="alphabetic"; ctx.textAlign="left";
+  function meas(s,fallback){ try{ var m=ctx.measureText(s); return (m&&m.width)||fallback; }catch(e){ return fallback; } }
+  ctx.font="800 18px Fredoka,sans-serif"; var wN=meas(name, name.length*11);
+  ctx.font="700 13px Fredoka,sans-serif"; var wS=meas(sub, sub.length*7.2);
+  var faceR=15, padx=13, gap=12, tw=Math.max(wN,wS), w=padx+faceR*2+gap+tw+padx, h=50;
+  var x0=40, y0=AY-104;                                   // above the fork, clear of the HUD
+  ctx.fillStyle="rgba(20,16,48,.72)"; if(BR){BR.rrect(ctx,x0,y0,w,h,15);ctx.fill();} else ctx.fillRect(x0,y0,w,h);
+  drawSquadFace(x0+padx+faceR, y0+h/2, faceR, sq);        // mini portrait
+  var tx=x0+padx+faceR*2+gap;
+  ctx.fillStyle="#ffd86b"; ctx.font="800 18px Fredoka,sans-serif"; ctx.fillText(name, tx, y0+22);
+  ctx.fillStyle="#e7e9ff"; ctx.font="700 13px Fredoka,sans-serif"; ctx.fillText(sub, tx, y0+40);
+  ctx.restore(); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+}
 function drawTarget(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
   var w=b._w,h=b._h;
@@ -624,6 +706,7 @@ function draw(){
     if(!G.powerUsed && lead && lead._power && state==="flying") drawPowerHint(lead);
   }
   else if(G.ammo){ var px=G.drag?G.drag.x:AX, py=G.drag?G.drag.y:AY; drawBand(px,py); drawSquadFace(px,py,18,G.ammo.squad);
+    if(state==="ready"||state==="aiming") drawSlingLabel(G.ammo.squad);   // who's loaded + what they do
     if(state==="aiming" && G.drag){ // trajectory preview dots (kid aim help)
       var dx=AX-G.drag.x, dy=AY-G.drag.y; var a=aimFromDrag(dx,dy);
       var x=AX,y=AY,ux=a.vx,uy=a.vy; ctx.fillStyle="rgba(255,255,255,.85)";
@@ -742,9 +825,14 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   ["woodW","woodS","woodT","stoneW","stoneS","stoneT"].forEach(function(k){ L("/kenney/sling/blocks/"+k+".png",function(im){ BLK_IMGS[k]=im; }); });
   // toppling targets (Physics Assets alien faces)
   for(var i=0;i<5;i++){ (function(i){ L("/kenney/sling/targets/t"+i+".png",function(im){ TARGET_IMGS[i]=im; }); })(i); }
-  // per-level scene backdrops (Background Elements Remastered)
-  ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
-    L("/kenney/sling/bg/"+k+".png",function(im){ BG_IMGS[k]=im; }); });
+  // NEW: layered parallax SCROLLER scenes (public/parallax/atmos/<theme>/1..N.png, far->near)
+  Object.keys(PAR_COUNT).forEach(function(th){ PAR[th]=PAR[th]||[];
+    for(var i=1;i<=PAR_COUNT[th];i++){ (function(th,i){
+      L("/parallax/atmos/"+th+"/"+i+".png", function(im){ PAR[th][i-1]=im; PAR_CACHE[th]=null; }); })(th,i); } });
+  // Kenney "Platformer Pack Remastered" props — ground the sling + per-world decor
+  ["bush","mushroomRed","mushroomBrown","rock","cactus","fence","sign","plantPurple",
+   "flagRed1","flagGreen1","flagBlue1"].forEach(function(k){
+     L("/kenney/sling/props/"+k+".png", function(im){ PROP_IMGS[k]=im; }); });
 }catch(e){} }
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); resize(); showMenu(); loadSquadArt();
   if(typeof window!=="undefined" && window.addEventListener){ window.addEventListener("resize",resize); window.addEventListener("orientationchange",resize); }

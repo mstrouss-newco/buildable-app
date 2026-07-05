@@ -1,0 +1,3 @@
+Kenney "Platformer Pack Remastered" (CC0) — ground tiles + props used to ground the
+slingshot on a grass mound and add per-world decorative scenery in Sling Squad.
+Source: kenney.nl. Public Domain (CC0).
