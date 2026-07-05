@@ -634,7 +634,7 @@ function draw(){
       ctx.strokeStyle=isBud?(P.spark||"#ffe27a"):P.xp; ctx.lineWidth=3; rrect(cr.x,cr.y,cr.w,cr.h,18); ctx.stroke();
       if(isBud){ ctx.fillStyle=P.spark||"#ffe27a"; ctx.font="bold 13px Fredoka,sans-serif"; ctx.fillText("★ NEW BUDDY! ★",cr.x+cr.w/2,cr.y+24); }
       drawPUicon(id,cr.x+cr.w/2,cr.y+96);
-      ctx.fillStyle="#fff"; ctx.font="bold 20px Fredoka,sans-serif"; ctx.fillText(meta.name||id,cr.x+cr.w/2,cr.y+cr.h-58);
+      ctx.fillStyle="#fff"; { const nm=meta.name||id; let fs=20; do{ ctx.font="bold "+fs+"px Fredoka,sans-serif"; if(ctx.measureText(nm).width<=cr.w-22)break; fs--; }while(fs>13); ctx.fillText(nm,cr.x+cr.w/2,cr.y+cr.h-58); }
       ctx.fillStyle="#c7d2ff"; ctx.font="14px Fredoka,sans-serif"; wrapCenter(meta.desc||"",cr.x+cr.w/2,cr.y+cr.h-36,cr.w-26,16); } }
   if(state==="play" && (!started || helpOpen)) drawTutorial();
   if(state==="title"){ ctx.fillStyle="rgba(5,8,24,.55)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 44px Fredoka,sans-serif";ctx.fillText(GAME_CONFIG.name,W/2,H/2-10); ctx.font="22px Fredoka,sans-serif";ctx.fillText("Drag to move · Tap to start",W/2,H/2+30); }
