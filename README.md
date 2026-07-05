@@ -6,6 +6,14 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: parallax scroller worlds + clear power labels + grounded catapult (July 5 2026)
+**LIVE on main + live-QA'd in Chrome.** Three related upgrades to `public/sling-squad.html`, shipped and tested as one set.
+- **Parallax scroller backgrounds.** Each level now uses the layered pixel-art scroller pack in `public/parallax/atmos/<theme>/` (far→near layers `1..N.png`) instead of a single flat scene. Five worlds cycle cozy→epic: **rural → forest → peaks (snow) → desert → moon finale**. Layers slide with depth from the sling pull and the far sky layers auto-drift slowly (`drawParallax`); each theme's height-scaled layers are cached to an offscreen canvas so the per-frame redraw is a cheap blit. The old drawn scene + clouds stay the never-break fallback (also what headless QA uses).
+- **Clear "who does what" for damage.** Each pal now shows an always-on card by the slingshot — mini portrait + name + `Tap in the air: <does>` (e.g. *Boomer — blows up nearby blocks*, *Bruno — drops down for a big smash*). Added a plain-language `does` field to each `SQUAD` entry; the mid-air `TAP!` hint is unchanged. (`drawSlingLabel`, shown in ready/aiming.)
+- **Catapult no longer floats.** The slingshot is planted on a themed grass/earth **mound** (`drawMound`, tinted to each world's palette) and each world gets decorative **Kenney "Platformer Pack Remastered"** props (`public/kenney/sling/props/`): rural=sign/bush/flag/plant, forest=mushrooms/bush, peaks=rocks/bush, desert=cactus/rocks, moon=planted flag/moon-rocks. Props are purely visual and kept left of the tower zone (x<520) so they never touch physics or aim.
+- **QA:** `qa-sling.mjs` still clears all 5 levels (5× each) with launches to spare + render smoke passes; live-verified rural/forest/moon render with the mound, props, and power card, no console errors. Routes for `/parallax/` and `/kenney/` already existed in `vercel.json` (no route change needed).
+
+
 ## Survival (Space Sparkles): pet buddies, fun re-themed upgrades, cleaner tutorial (July 5 2026)
 Three connected upgrades to `public/survival-engine.html`, tested together and shipped as one set:
 - **No more "circle + ball" in the how-to demo.** The wordless tutorial used to draw a generic placeholder hero (a white capsule with a blue ball) that looked nothing like the real game hero. `drawTutorial()` now calls a new `drawHeroArt(x,y,size)` helper that draws the actual animated jetpack-astronaut sprite (with the drawn hero as fallback), so the demo shows the hero the kid really controls.
