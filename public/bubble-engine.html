@@ -449,6 +449,7 @@ function endGame(won){
     var mb=document.getElementById("ovMenu"); if(mb) mb.onclick=function(){ ov.classList.add("hide"); toMenu(); };
   }
 }
+function inApp(){ try{ return !!(window.parent && window.parent!==window); }catch(e){ return false; } }
 function signal(kind){ try{ if(window.parent&&window.parent!==window) window.parent.postMessage({source:"buildable",kind:kind},"*"); }catch(e){} }
 
 // ---------- audio ----------
@@ -486,7 +487,7 @@ function play(idx){
   state="play";
   if(HAS_DOM){
     document.getElementById("start").style.display="none";
-    document.getElementById("ctrls").classList.remove("hide");
+    if(!inApp()) document.getElementById("ctrls").classList.remove("hide");
     document.getElementById("overlay").classList.add("hide");
   }
   ensureMusic();

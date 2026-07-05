@@ -618,9 +618,10 @@ function draw(){ if(!renderer) return; renderScene(); drawHUD(); }
 // ---------- shared start screen (BS) ----------
 function el(id){ const e=document.getElementById(id); return (e&&e.style)?e:null; }
 function toast(msg){ const e=el("toast"); if(!e)return; e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{e.style.display="none";},2600); }
-function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
-function showInGameMute(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"block":"none"; }
-function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=on?"block":"none"; }
+function inApp(){ try{ return !!(window.parent && window.parent!==window); }catch(e){ return false; } }
+function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=(on&&!inApp())?"block":"none"; }
+function showInGameMute(on){ const mb=el("muteBtn"); if(mb)mb.style.display=(on&&!inApp())?"block":"none"; }
+function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=(on&&!inApp())?"block":"none"; }
 function clearHUD(){ if(hctx) hctx.clearRect(0,0,W,H); }
 
 let startScreen=null;

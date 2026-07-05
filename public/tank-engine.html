@@ -418,7 +418,8 @@
 
   // ---------- controls / UI (DOM — guarded for headless) ----------
   function $(id){ return hasDoc ? document.getElementById(id) : null; }
-  function showCtl(on){ const e = $("ctl"); if (e) e.style.display = on ? "flex" : "none"; const m=$("muteBtn"); if(m) m.style.display = (on||state==="fly"||state==="settle"||state==="enemyaim") ? "block":"none"; }
+  function inApp(){ try{ return !!(window.parent && window.parent!==window); }catch(e){ return false; } }
+  function showCtl(on){ const e = $("ctl"); if (e) e.style.display = on ? "flex" : "none"; const m=$("muteBtn"); if(m) m.style.display = ((on||state==="fly"||state==="settle"||state==="enemyaim")&&!inApp()) ? "block":"none"; }
   function showOver(on){ const e = $("over"); if (e) e.classList.toggle("show", !!on); }
   function setOver(t, s){ const a=$("overTitle"), b=$("overSub"); if(a)a.textContent=t; if(b)b.textContent=s; }
   let toastT = 0;

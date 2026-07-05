@@ -703,8 +703,9 @@ function showLocker(){ lockerTab="weapon"; const s=el("start"); if(s)s.style.dis
 function wireMenus(){ const bk=el("lockerBack"); if(bk)bk.onclick=showMenu;   // start screen + level picker are the shared BS overlay now
   const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
   const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; }; }
-function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
-function showMuteBtn(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"block":"none"; }
+function inApp(){ try{ return !!(window.parent && window.parent!==window); }catch(e){ return false; } }
+function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=(on&&!inApp())?"block":"none"; }
+function showMuteBtn(on){ const mb=el("muteBtn"); if(mb)mb.style.display=(on&&!inApp())?"block":"none"; }
 
 function frame(){ update(); draw(); requestAnimationFrame(frame); }
 // boot: load the saved character, wire menus, show the shared start screen
