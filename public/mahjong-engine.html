@@ -69,7 +69,6 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
-<script src="buildable-gamenav.js"></script>
 <script src="buildable-levelthumb.js"></script>
 <script>
 //  Buildable Mahjong (Solitaire) — hand-authored Track B engine.
@@ -769,7 +768,6 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   document.getElementById("custDone").onclick=()=>{ document.getElementById("cust").classList.add("hide");
     if(startScreen&&startScreen.update) startScreen.update(buildStartCfg()); else mountStart(); };
   document.getElementById("soundBtn").onclick=()=>{ if(BA){BA.toggleMute();} };
-  if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["soundBtn"], onSound:()=>{ if(BA){ BA.toggleMute(); } }, onMenu:()=>showMenu(), soundOn:()=>(BA?!BA.muted:true) }); }
   document.getElementById("undoBtn").onclick=()=>{ if(state!=="play"||undosLeft<=0||!history.length) return; if(doUndo()){ undosLeft--; updateChrome(); } };
   document.getElementById("hintBtn").onclick=()=>{ if(state!=="play"||hintsLeft<=0) return; if(doHint()){ hintsLeft--; updateChrome(); } };
   document.getElementById("shufBtn").onclick=()=>{ if(state!=="play"||mixesLeft<=0||trayMode()) return; mixesLeft--; autoShuffle(); updateChrome(); };

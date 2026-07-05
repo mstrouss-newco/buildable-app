@@ -619,10 +619,11 @@ function draw(){
   ctx.restore();                                  // end shake layer
   if(BM&&fx) BM.draw(ctx, fx, { W, H });          // shared FX particles + flash overlay
   // (push-circle joystick ring removed — you just drag to move, no on-screen ring)
-  // HUD
+  // HUD (inset in-app so it clears the shell's Home + Sound/Menu/Help)
+  const _il=(function(){try{return window.parent&&window.parent!==window;}catch(e){return false;}})()?92:0, _ir=_il?56:0;
   ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.font="bold 22px Fredoka,sans-serif";
-  ctx.fillText(L.name+"   Lv "+(level+1)+"/"+GAME_CONFIG.levels.length, 18, 32);
-  for(let i=0;i<hero.maxHearts;i++){ const hx=W-28-i*30, hy=20; ctx.fillStyle=(i<hero.hearts)?P.hp:"rgba(255,255,255,.18)"; heart(hx,hy,10); }
+  ctx.fillText(L.name+"   Lv "+(level+1)+"/"+GAME_CONFIG.levels.length, 18+_il, 32);
+  for(let i=0;i<hero.maxHearts;i++){ const hx=W-28-_ir-i*30, hy=20; ctx.fillStyle=(i<hero.hearts)?P.hp:"rgba(255,255,255,.18)"; heart(hx,hy,10); }
   // xp bar + hero level
   ctx.fillStyle="rgba(255,255,255,.2)"; rrect(18,H-26,W-36,10,5);ctx.fill(); ctx.fillStyle=P.xp; rrect(18,H-26,(W-36)*Math.min(1,xp/xpNeed),10,5);ctx.fill();
   ctx.fillStyle="#fff";ctx.font="bold 16px Fredoka,sans-serif";ctx.textAlign="left";ctx.fillText("Power Lv "+plvl,18,H-34);

@@ -596,10 +596,11 @@ function drawHUD(){ if(!hctx||!G) return; hctx.clearRect(0,0,W,H);
   const tg=hctx.createLinearGradient(0,0,0,76); tg.addColorStop(0,"rgba(12,14,42,0.62)"); tg.addColorStop(1,"rgba(12,14,42,0)");
   hctx.fillStyle=tg; hctx.fillRect(0,0,W,76);
   // top bar (light text on the strip)
+  const _il=(function(){try{return window.parent&&window.parent!==window;}catch(e){return false;}})()?92:0, _ir=_il?56:0;
   hctx.textAlign="left"; hctx.fillStyle="#ffffff"; hctx.font="bold 20px Fredoka,sans-serif";
-  hctx.fillText((L?L.name:"")+"  ·  "+(level+1)+"/"+GAME_CONFIG.levels.length, 16, 30);
-  for(let i=0;i<G.hearts;i++){ heart(W-22-i*30, 26, 9, "#ff6f9d"); }
-  hctx.fillStyle="#ffe2a6"; hctx.font="bold 16px Fredoka,sans-serif"; hctx.fillText("Treats: "+G.treatsGot, 16, 52);
+  hctx.fillText((L?L.name:"")+"  ·  "+(level+1)+"/"+GAME_CONFIG.levels.length, 16+_il, 30);
+  for(let i=0;i<G.hearts;i++){ heart(W-22-_ir-i*30, 26, 9, "#ff6f9d"); }
+  hctx.fillStyle="#ffe2a6"; hctx.font="bold 16px Fredoka,sans-serif"; hctx.fillText("Treats: "+G.treatsGot, 16+_il, 52);
   // progress bar (with its own readable backing pill)
   const pct=clamp(G.dist/L.dist,0,1), bw=W-120, bx=60, by=H-26;
   hctx.fillStyle="rgba(12,14,42,0.45)"; rrect(bx-10,by-7,bw+20,26,13); hctx.fill();

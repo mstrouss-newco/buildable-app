@@ -44,8 +44,13 @@ game's own buttons keep working — so every engine is still usable on its own.
 
 Adopted by: breaker, tetris, castle-guard, croc (croctot), the board games
 (connect four / dots & boxes / tic-tac-toe, via `buildable-boardgame.js`), and —
-added in this pass — runner, survival, tank, bubble, mahjong. Bingo / memory /
-snakes have no own nav buttons and rely on the shell Home only.
+added in this pass — runner, survival, tank, bubble. Bingo / memory / snakes have
+no own nav buttons and rely on the shell Home only.
+
+Exception: a game that has its OWN essential top-right *game* controls (not nav) —
+e.g. Mahjong's Recall / Hint / Mix — does NOT adopt the shell's Sound/Menu/Help
+cluster, because it would land on top of those controls. It keeps its own compact
+controls (which already sit clear of the top-left Home) instead.
 
 ## Rule 2 — Use the shared HUD, which auto-clears the nav
 
@@ -54,7 +59,10 @@ The score/lives bar comes from `buildable-hud.js`. It insets itself in-app
 Home (left) or Sound/Menu/Help (right). If a game paints its HUD straight onto the
 canvas instead, it must keep the same clearance: start the left group after ~96px
 and end the right group before ~64px from the edges, and keep it inside the top ~52px
-band only if that band is clear of the shell nav.
+band only if that band is clear of the shell nav. Games that paint a canvas HUD and
+can't easily move to the shared HUD (survival, runner) add an in-app-only inset:
+shift the top-left title right ~90px and the top-right chips left ~55px when
+`window.parent !== window`, so standalone layout is unchanged.
 
 ## Rule 3 — Win / "You win" prompts are floating cards, never a screen dim
 
