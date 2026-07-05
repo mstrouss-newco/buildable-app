@@ -6,6 +6,12 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: static backgrounds + tiled platformer ground/pad (July 5 2026, follow-up)
+Two fixes on top of the parallax-worlds update, per Mike's feedback.
+- **Backgrounds no longer move.** The far parallax layers were slowly auto-drifting (mountains sliding), which looked wrong for a slingshot game. `drawParallax` is now fully static (removed the auto-drift + the sling-pull parallax) — the scene sits still, only the birds/towers move. Live-verified: a sampled background pixel hash is identical across seconds.
+- **Ground + launcher pad are now real platformer TILES, not a drawn mound.** Replaced the plain drawn mound + gradient floor with Kenney "Platformer Pack Remastered" ground tiles, themed per world: **grass** (rural/forest), **snow** (peaks), **sand** (desert), **stone** (moon). `drawGround` tiles a surface row across the floor; `drawPad` builds a flat 3-tile pad the slingshot stands on (`BG_THEMES[i].terr` picks the tileset; tiles in `public/kenney/sling/props/`). The wooden post now ends exactly at the pad top (`PAD_TOP`) so none shows below ground, and props were moved to sit between the pad and the tower zone. Drawn gradient/block remain the never-break fallback. QA: qa-sling.mjs still clears all 5 + render smoke; live Chrome-verified snow/sand/grass worlds.
+
+
 ## Platform-wide HUD pass: floating win cards, no dead stars, one nav rule (July 5 2026)
 A batch of three related fixes across every game, plus a written contract so they stay consistent (`HUD-AND-NAV-RULES.md`).
 - **Win prompts are small floating cards now, never a screen dim.** New shared `public/buildable-wincard.js` (`BuildableWin.card(ctx, W, H, lines)`) draws one compact rounded card centered on the play area — no full-screen shade (a partial shade over just the canvas read like a bug). Rewired every canvas win/level-complete draw to use it: breaker, survival, runner, tetris, tennis, sling, play, bingo, memory, snakes, mahjong, castle-guard, croc (croctot's animated overlay keeps its confetti + auto-advance dots, just no dim), maze (its `overlay()` for Ready/win is now a card too). DOM-overlay games (connect four, dots & boxes, tic-tac-toe, bubble) had their full-screen `#banner`/`#overlay` background made transparent so only the inner card floats. Tank's `.over` became a centered card.
