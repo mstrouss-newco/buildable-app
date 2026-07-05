@@ -91,6 +91,11 @@
   .gtag.later{color:var(--accent)}
   .gtag.sent{color:var(--warn)}
   .task.sent{background:#fff8ec;border-color:#f0d9a8}
+  .gtag.clk{cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none}
+  .gtag.clk .chev{width:14px;height:14px;transition:transform .15s}
+  .collapsible.open .gtag.clk .chev{transform:rotate(90deg)}
+  .collapsible .collapse-body{display:none}
+  .collapsible.open .collapse-body{display:block}
   .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
   .quickadd{display:flex;gap:8px;margin-top:10px}
   .qa-input{flex:1;min-width:0;padding:8px 11px;font-size:13px}
@@ -226,6 +231,7 @@ let state={tasks:[],meta:{settings:{...DEF_SETTINGS},sends:{},custom:{game:[],pl
 let activeBatch=null;
 let openState={};
 let editingId=null;
+let doneExpanded={};
 
 /* ---- PIN gate ---- */
 function tryPin(){
@@ -358,6 +364,7 @@ async function returnToActive(id){
 /* ---- bucket open state + inline quick-add ---- */
 function qaSlug(k,target){return "qa-"+(k+"-"+target).replace(/[^a-z0-9]+/gi,"-");}
 function toggleBucket(k,target){const key=k+"|"+target;openState[key]=!openState[key];render();}
+function toggleDoneBox(k,target){const key=k+"|"+target;doneExpanded[key]=!doneExpanded[key];render();}
 function startEdit(id){ editingId=id; render(); }
 function cancelEdit(){ editingId=null; render(); }
 async function saveEdit(id){
@@ -434,7 +441,10 @@ function bucket(k,target){
   const canSend=n>=state.meta.settings.readyAt;
   const slug=qaSlug(k,target);
   const list=open.length?open.map((t,i)=>taskRow(t,i+1)).join(""):'<p class="legend" style="padding:4px 0">No open tasks yet — add one below.</p>';
-  const doneHtml=done.length?`<div class="donewrap"><div class="gtag">done (${done.length})</div>${done.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:"";
+  const doneHtml=done.length?`<div class="donewrap collapsible ${doneExpanded[key]?'open':''}">
+    <div class="gtag clk" onclick='toggleDoneBox(${JSON.stringify(k)},${JSON.stringify(target)})'><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>done (${done.length})</div>
+    <div class="collapse-body">${done.map((t,i)=>taskRow(t,i+1)).join("")}</div>
+  </div>`:"";
   return `<div class="bucket">
     <div class="bhead" onclick='toggleBucket(${JSON.stringify(k)},${JSON.stringify(target)})'>
       <h2>${esc(target)} <span class="count">${n} open${sent.length?` · ${sent.length} with Claude`:""}${later.length?` · ${later.length} later`:""}${done.length?` · ${done.length} done`:""}</span></h2>
