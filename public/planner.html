@@ -85,6 +85,8 @@
   .edit-input{flex:1;min-width:0;padding:7px 10px;font-size:14px}
   .later-btn.ok:hover{color:var(--ready);background:rgba(0,163,122,.12)}
   .gtag.later{color:var(--accent)}
+  .gtag.sent{color:var(--warn)}
+  .task.sent{background:#fff8ec;border-color:#f0d9a8}
   .bactions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
   .quickadd{display:flex;gap:8px;margin-top:10px}
   .qa-input{flex:1;min-width:0;padding:8px 11px;font-size:13px}
@@ -228,7 +230,7 @@ const PLATFORM=["HUD","UI / Look & Feel","Multiplayer","Demo / Tutorial","Naviga
 const DEF_SETTINGS={readyAt:3,bigAt:8,daily:3};
 
 let kind="game";
-let state={tasks:[],meta:{settings:{...DEF_SETTINGS},sends:{},custom:{game:[],platform:[]},later:[]}};
+let state={tasks:[],meta:{settings:{...DEF_SETTINGS},sends:{},custom:{game:[],platform:[]},later:[],sent:[]}};
 let activeBatch=null;
 let openState={};
 let editingId=null;
@@ -261,14 +263,14 @@ async function load(showToast){
     }
     state.tasks=(d.tasks||[]).map(normTask);
     state.meta=normMeta(d.meta);
-    state.tasks.forEach(t=>t.later=state.meta.later.includes(t.id));
+    state.tasks.forEach(t=>{ t.later=state.meta.later.includes(t.id); t.sent=state.meta.sent.includes(t.id); });
     renderBanner("");
     render(); setSync("in sync");
     if(showToast)toast("Refreshed");
   }catch(e){ setSync("offline"); renderBanner("Couldn't reach the store. Tap Refresh to retry."); }
 }
 function normTask(t){ return {id:t.id, kind:t.kind==="platform"?"platform":"game", target:t.target, desc:t.description, done:!!t.done, created:t.created_at}; }
-function normMeta(m){ m=m||{}; return {settings:Object.assign({...DEF_SETTINGS},m.settings||{}), sends:m.sends||{}, custom:Object.assign({game:[],platform:[]},m.custom||{}), later:Array.isArray(m.later)?m.later:[]}; }
+function normMeta(m){ m=m||{}; return {settings:Object.assign({...DEF_SETTINGS},m.settings||{}), sends:m.sends||{}, custom:Object.assign({game:[],platform:[]},m.custom||{}), later:Array.isArray(m.later)?m.later:[], sent:Array.isArray(m.sent)?m.sent:[]}; }
 
 async function saveMeta(){ setSync("saving…"); const r=await apiPost({op:"meta",data:state.meta}); setSync(r.ok?"in sync":"offline"); }
 
@@ -329,9 +331,12 @@ async function addTask(){
 }
 async function toggleDone(id){
   const t=state.tasks.find(x=>x.id===id); if(!t)return;
-  t.done=!t.done; render(); setSync("saving…");
+  t.done=!t.done; let metaChanged=false;
+  if(t.done && t.sent){ t.sent=false; const set=new Set(state.meta.sent||[]); set.delete(id); state.meta.sent=[...set]; metaChanged=true; }
+  render(); setSync("saving…");
   const r=await apiPost({op:"update",id,fields:{done:t.done}});
-  if(!r.ok){ t.done=!t.done; render(); toast("Couldn't save"); setSync("offline"); } else setSync("in sync");
+  if(!r.ok){ t.done=!t.done; render(); toast("Couldn't save"); setSync("offline"); return; }
+  if(metaChanged) await saveMetaR(); else setSync("in sync");
 }
 async function delTask(id){
   const idx=state.tasks.findIndex(x=>x.id===id); if(idx<0)return;
@@ -350,6 +355,11 @@ async function toggleLater(id){
   toast(t.later?"Set aside for later":"Back in the active list");
 }
 async function saveMetaR(){ const r=await apiPost({op:"meta",data:state.meta}); setSync(r.ok?"in sync":"offline"); return r; }
+async function returnToActive(id){
+  const t=state.tasks.find(x=>x.id===id); if(!t)return;
+  t.sent=false; const set=new Set(state.meta.sent||[]); set.delete(id); state.meta.sent=[...set];
+  render(); setSync("saving…"); await saveMetaR(); toast("Back in the active list");
+}
 
 /* ---- bucket open state + inline quick-add ---- */
 function qaSlug(k,target){return "qa-"+(k+"-"+target).replace(/[^a-z0-9]+/gi,"-");}
@@ -393,7 +403,7 @@ function statusOf(n){
   if(n>=s.readyAt) return {cls:"s-ready",txt:"Ready to hand off"};
   return {cls:"s-wait",txt:(s.readyAt-n)+" more to be worth a batch"};
 }
-function openCount(k,target){return state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later).length;}
+function openCount(k,target){return state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later&&!t.sent).length;}
 
 /* ---- render ---- */
 function render(){
@@ -422,10 +432,10 @@ function section(title,k){
 }
 function bucket(k,target){
   const all=state.tasks.filter(t=>t.kind===k&&t.target===target);
-  const open=all.filter(t=>!t.done&&!t.later), later=all.filter(t=>!t.done&&t.later), done=all.filter(t=>t.done);
+  const open=all.filter(t=>!t.done&&!t.later&&!t.sent), sent=all.filter(t=>!t.done&&!t.later&&t.sent), later=all.filter(t=>!t.done&&t.later), done=all.filter(t=>t.done);
   const n=open.length, st=statusOf(n);
   const key=k+"|"+target;
-  if(openState[key]===undefined) openState[key]=(n>=state.meta.settings.readyAt);
+  if(openState[key]===undefined) openState[key]=(n>=state.meta.settings.readyAt || sent.length>0);
   const isOpen=openState[key]?"open":"";
   const canSend=n>=state.meta.settings.readyAt;
   const slug=qaSlug(k,target);
@@ -433,7 +443,7 @@ function bucket(k,target){
   const doneHtml=done.length?`<div class="donewrap"><div class="gtag">done (${done.length})</div>${done.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:"";
   return `<div class="bucket">
     <div class="bhead" onclick='toggleBucket(${JSON.stringify(k)},${JSON.stringify(target)})'>
-      <h2>${esc(target)} <span class="count">${n} open${later.length?` · ${later.length} later`:""}${done.length?` · ${done.length} done`:""}</span></h2>
+      <h2>${esc(target)} <span class="count">${n} open${sent.length?` · ${sent.length} with Claude`:""}${later.length?` · ${later.length} later`:""}${done.length?` · ${done.length} done`:""}</span></h2>
       <span class="status ${st.cls}">${st.txt}</span>
     </div>
     <div class="body ${isOpen}">
@@ -446,6 +456,7 @@ function bucket(k,target){
         <button class="btn ghost mini" onclick='copyBucket(${JSON.stringify(k)},${JSON.stringify(target)})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy list</button>
         ${canSend?`<button class="btn green mini" onclick='openBatch(${JSON.stringify(k)},${JSON.stringify(target)})'>Prep prompt for Claude →</button>`:""}
       </div>`:""}
+      ${sent.length?`<div class="donewrap"><div class="gtag sent">with Claude (${sent.length}) — check off what cleared, or send back to active</div>${sent.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:""}
       ${later.length?`<div class="donewrap"><div class="gtag later">later (${later.length}) — parked until you're ready</div>${later.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:""}
       ${doneHtml}
     </div>
@@ -461,12 +472,14 @@ function taskRow(t,num){
     </div>`;
   }
   const editBtn=`<span class="later-btn" onclick="startEdit(${t.id})" title="Edit"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'/></svg></span>`;
-  const laterBtn=t.done?"":`<span class="later-btn" onclick="toggleLater(${t.id})" title="${t.later?'Move back to active':'Set aside for later'}">${t.later?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 1.5"/></svg>'}</span>`;
-  return `<div class="task ${t.done?'done':''} ${t.later?'later':''}">
-    <input type="checkbox" ${t.done?'checked':''} onchange="toggleDone(${t.id})" title="Mark done" style="margin-top:3px">
+  const laterBtn=(t.done||t.sent)?"":`<span class="later-btn" onclick="toggleLater(${t.id})" title="${t.later?'Move back to active':'Set aside for later'}">${t.later?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 1.5"/></svg>'}</span>`;
+  const returnBtn=(t.sent&&!t.done)?`<span class="later-btn" onclick="returnToActive(${t.id})" title="Send back to active (not finished yet)"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 14l-4-4 4-4'/><path d='M5 10h11a4 4 0 0 1 0 8h-2'/></svg></span>`:"";
+  return `<div class="task ${t.done?'done':''} ${t.later?'later':''} ${t.sent?'sent':''}">
+    <input type="checkbox" ${t.done?'checked':''} onchange="toggleDone(${t.id})" title="${t.sent?'Mark cleared':'Mark done'}" style="margin-top:3px">
     <span class="num">${num}.</span>
     <span class="desc">${esc(t.desc)}</span>
     ${editBtn}
+    ${returnBtn}
     ${laterBtn}
     <span class="x" onclick="delTask(${t.id})" title="Delete">✕</span>
   </div>`;
@@ -474,7 +487,7 @@ function taskRow(t,num){
 
 /* ---- copy one group's list ---- */
 function copyBucket(k,target){
-  const items=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later);
+  const items=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later&&!t.sent);
   if(!items.length){toast("Nothing to copy");return;}
   const out=`${target} (${items.length})\n`+items.map((t,i)=>`${i+1}. ${t.desc}`).join("\n");
   navigator.clipboard.writeText(out).then(()=>toast("Copied "+target+" list"));
@@ -482,7 +495,7 @@ function copyBucket(k,target){
 
 /* ---- prompt ---- */
 function openBatch(k,target){
-  const open=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later);
+  const open=state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later&&!t.sent);
   activeBatch={kind:k,target,ids:open.map(t=>t.id)};
   document.getElementById("pm-title").textContent=`${target} — ${open.length} tasks`;
   document.getElementById("pm-box").textContent=buildPrompt(k,target,open);
@@ -497,13 +510,14 @@ function buildPrompt(k,target,tasks){
 }
 async function markSent(){
   copyEl("pm-box");
-  const key=todayKey(); state.meta.sends[key]=(state.meta.sends[key]||0)+1;
   const ids=activeBatch?activeBatch.ids.slice():[];
-  ids.forEach(id=>{const t=state.tasks.find(x=>x.id===id);if(t)t.done=true;});
+  const set=new Set(state.meta.sent||[]);
+  ids.forEach(id=>{ set.add(id); const t=state.tasks.find(x=>x.id===id); if(t) t.sent=true; });
+  state.meta.sent=[...set];
+  const key=todayKey(); state.meta.sends[key]=(state.meta.sends[key]||0)+1;
   closeModal("promptModal"); render(); setSync("saving…");
-  await Promise.all(ids.map(id=>apiPost({op:"update",id,fields:{done:true}})));
-  await saveMeta();
-  toast("Batch marked sent");
+  await saveMetaR();
+  toast("Sent to Claude — check off what clears");
 }
 
 /* ---- text view ---- */
