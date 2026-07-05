@@ -40,6 +40,10 @@
   .tv-item .n{color:var(--muted);min-width:16px;text-align:right;font-weight:600}
 
   .addcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin:14px 0 20px}
+  .pickrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pickrow #f-target{flex:1 1 220px;max-width:360px;cursor:pointer}
+  .addcard textarea#f-desc{width:100%;margin-top:12px}
+  .addfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
   .row{display:flex;gap:10px;flex-wrap:wrap}
   .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:150px}
   label{font-size:12px;color:var(--muted);font-weight:600}
@@ -142,28 +146,16 @@
   <div id="setupBanner"></div>
 
   <div class="addcard">
-    <div class="row" style="align-items:flex-end">
-      <div class="field" style="flex:0">
-        <label>This is a…</label>
-        <div class="toggle">
-          <button id="k-game" class="on" onclick="setKind('game')">Game update</button>
-          <button id="k-plat" onclick="setKind('platform')">Platform update</button>
-        </div>
+    <div class="pickrow">
+      <div class="toggle">
+        <button id="k-game" class="on" onclick="setKind('game')">Game</button>
+        <button id="k-plat" onclick="setKind('platform')">Platform</button>
       </div>
-      <div class="field" style="flex:1.2">
-        <label id="targetLabel">Which game?</label>
-        <select id="f-target"></select>
-        <button class="btn ghost mini" id="addNewBtn" style="align-self:flex-start" onclick="addCustomTarget()">+ Add a new game</button>
-      </div>
+      <select id="f-target" onchange="onTargetChange()"></select>
     </div>
-    <div class="row" style="margin-top:10px">
-      <div class="field">
-        <label>What needs doing?</label>
-        <textarea id="f-desc" placeholder="e.g. Fix HUD on mobile — chips overlap the bricks"></textarea>
-      </div>
-    </div>
-    <div class="row" style="margin-top:10px;justify-content:space-between;align-items:center">
-      <span class="legend">One line per change. On a computer, ⌘/Ctrl + Enter adds fast.</span>
+    <textarea id="f-desc" placeholder="What needs doing?   e.g. Fix HUD on mobile — chips overlap the bricks"></textarea>
+    <div class="addfoot">
+      <span class="legend">One line per change. ⌘/Ctrl + Enter to add fast.</span>
       <button class="btn" id="addBtn" onclick="addTask()">+ Add to log</button>
     </div>
   </div>
@@ -291,8 +283,6 @@ function setKind(k){
   kind=k;
   document.getElementById("k-game").classList.toggle("on",k==="game");
   document.getElementById("k-plat").classList.toggle("on",k==="platform");
-  document.getElementById("targetLabel").textContent=k==="game"?"Which game?":"Which platform area?";
-  document.getElementById("addNewBtn").textContent=k==="game"?"+ Add a new game":"+ Add a new area";
   refreshTargetList();
 }
 function refreshTargetList(){
@@ -300,8 +290,12 @@ function refreshTargetList(){
   const seen=state.tasks.filter(t=>t.kind===kind).map(t=>t.target);
   const all=[...new Set([...base,...state.meta.custom[kind],...seen])].sort((a,b)=>a.localeCompare(b));
   const sel=document.getElementById("f-target"); const cur=sel.value;
-  sel.innerHTML=`<option value="" disabled selected>${kind==="game"?"Choose a game…":"Choose an area…"}</option>`+all.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join("");
-  if(cur && all.includes(cur)) sel.value=cur;
+  sel.innerHTML=`<option value="" disabled selected>${kind==="game"?"Choose a game…":"Choose an area…"}</option>`+all.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join("")+`<option value="__add__">＋ Add a new ${kind==="game"?"game":"area"}…</option>`;
+  if(cur && cur!=="__add__" && all.includes(cur)) sel.value=cur;
+}
+function onTargetChange(){
+  const sel=document.getElementById("f-target");
+  if(sel.value==="__add__"){ sel.value=""; addCustomTarget(); }
 }
 function addCustomTarget(){
   const what=kind==="game"?"game":"platform area";
