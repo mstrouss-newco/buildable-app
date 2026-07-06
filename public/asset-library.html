@@ -59,6 +59,9 @@
   .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent;border:0;color:var(--txt);font-size:26px;cursor:pointer}
   .muted{color:var(--mut);font-size:12px}
   .note{font-size:11px;color:var(--mut);margin-top:2px}
+  .fld{font-size:12px;color:var(--mut)}
+  .fld select,.fld input{display:block;margin-top:3px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px 8px;font:inherit;min-width:130px}
+  .checker{background-color:#20263f;background-image:linear-gradient(45deg,#2b3151 25%,transparent 25%),linear-gradient(-45deg,#2b3151 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2b3151 75%),linear-gradient(-45deg,transparent 75%,#2b3151 75%);background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}
 </style>
 <script src="/three.min.js?v=r128"></script>
 <script src="/GLTFLoader.js?v=1"></script>
@@ -75,6 +78,11 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   </div>
   <div class="sub" id="counts" style="margin-bottom:14px">Loading…</div>
 
+  <div class="seg" id="tabs" style="margin-bottom:16px">
+    <button data-t="browse" class="on">Browse</button><button data-t="create">Create</button>
+  </div>
+
+  <div id="browseView">
   <div class="bar">
     <div class="seg" id="dim">
       <button data-d="all" class="on">All</button><button data-d="2d">2D</button><button data-d="3d">3D</button>
@@ -95,6 +103,61 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   </div>
 
   <div id="sections"></div>
+  </div><!-- /browseView -->
+
+  <div id="createView" style="display:none">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="cs-newgame" class="chip">+ New game</button>
+      <span class="muted" style="align-self:center">add a game once, then it shows in the dropdown like Breaker</span>
+    </div>
+    <div id="cs-builder" class="panel" style="display:none">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <label class="fld">Game name<br><input id="ng-name" placeholder="Match Three"></label>
+        <label class="fld" style="flex:1;min-width:220px">Describe it in one line<br><input id="ng-desc" placeholder="a candy match-3 game with gem sprites and themed worlds" style="width:100%"></label>
+        <button id="ng-suggest" class="chip" style="background:var(--acc);color:#0b0e1c;font-weight:600;border-color:var(--acc)">Auto-suggest assets</button>
+      </div>
+      <div id="ng-status" class="muted" style="margin-top:8px"></div>
+      <div id="ng-assets" style="margin-top:6px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="ng-add" class="chip" style="display:none">+ Add asset</button>
+        <button id="ng-save" class="chip" style="display:none;background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Save game</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="note" style="margin-bottom:12px">Make a whole asset sheet in one go (many bricks / balls on one page), then keep the sliced pieces. No downloading, renaming, or uploading.</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <label class="fld">Game<br><select id="cs-game"></select></label>
+        <label class="fld">Asset<br><select id="cs-asset"></select></label>
+        <label class="fld">Theme<br><input type="text" id="cs-theme" list="cs-themes" value="jungle"></label>
+        <datalist id="cs-themes"><option>jungle</option><option>space</option><option>ocean</option><option>candy</option><option>snow</option><option>volcano</option><option>desert</option><option>castle</option></datalist>
+        <label class="fld">Quality<br><select id="cs-quality"><option value="auto">auto (by rules)</option><option value="medium">standard</option><option value="high">high</option><option value="low">draft (cheap)</option></select></label>
+      </div>
+      <div id="cs-layout" class="note" style="margin-top:10px"></div>
+      <div style="margin-top:12px">
+        <div class="lbl">Prompt (auto-filled, editable)</div>
+        <textarea id="cs-prompt" style="width:100%;min-height:82px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px;font:inherit"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <button id="cs-gen" class="chip" style="background:var(--acc);color:#0b0e1c;font-weight:600;border-color:var(--acc)">Generate preview</button>
+        <span id="cs-status" class="muted"></span>
+      </div>
+    </div>
+
+    <div id="cs-result" style="display:none">
+      <div class="seclbl"><b>Generated sheet</b><span class="muted">check it, tweak names if needed, then keep</span></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <img id="cs-sheet" class="checker" style="max-width:340px;border:1px solid var(--line);border-radius:12px" />
+        <div style="flex:1;min-width:260px">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button id="cs-keep" class="chip" style="background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Keep all pieces</button>
+            <button id="cs-download" class="chip">Download files</button>
+            <span id="cs-keepstatus" class="muted"></span>
+          </div>
+          <div id="cs-pieces" class="grid"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /createView -->
 </div>
 
 <div id="preview" style="display:none;position:fixed;inset:0;background:rgba(8,10,20,.88);z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:12px">
@@ -290,6 +353,267 @@ document.querySelectorAll("#dim button").forEach(b=>b.onclick=()=>{setDim(b.data
 document.getElementById("search").oninput=e=>{state.q=e.target.value.toLowerCase().trim();render();};
 document.getElementById("refresh").onclick=load;
 load();
+</script>
+
+<script>
+/* ============ Asset Studio (Create tab) ============
+   Sheet-first generation: one gpt-image-1 call makes a whole grid of assets,
+   the browser slices it into named pieces, "Keep" stores each via /api/asset-studio.
+   Recipes live here so the form knows what a game's pieces are. Add more games by
+   adding a recipe block. */
+const STUDIO_STYLE_BREAKER="soft painterly children's-book game art with a glossy polished finish, bright bold saturated colors, thick clean rounded shapes, cute and inviting, child-friendly ages 4-8";
+/* RULES: one place every generation obeys. Change here to change everything. */
+const RULES={
+  globalTail:" No text, no words, no letters, no numbers, no UI, no watermark. Child-friendly ages 4-8.",
+  quality:{ background:"high", sprite:"medium", default:"medium" }, // "auto" picks by role
+  minW:{ background:900, sprite:48 },  // sliced piece narrower than this => "soft" warning badge
+};
+function assetRole(a){ return a.role || (a.mode==="single"&&a.transparent===false ? "background" : "sprite"); }
+function assetQuality(a){ const sel=$("cs-quality").value; if(sel&&sel!=="auto")return sel; return RULES.quality[assetRole(a)]||RULES.quality.default; }
+function assetSize(a){ if(assetRole(a)==="background")return a.size==="tall"?"tall":"wide"; return a.size||"wide"; } // backgrounds -> biggest supported
+/* Recipes: subject is a string with a {theme} token so built-in and saved recipes are the same shape. */
+const RECIPES={
+  breaker:{
+    label:"Breaker", style:STUDIO_STYLE_BREAKER,
+    assets:{
+      bricks:{ label:"Brick set (sheet)", mode:"sheet", size:"wide", transparent:true, role:"sprite",
+        rows:["ice","wood","metal","candy","star","bomb"], cols:["intact","hit","cracked"],
+        subject:"brick-breaker bricks for a {theme} themed world. Each row is one brick material (ice, wood, metal, candy, a golden star brick, a round bomb brick). Each column is that same brick in three states: fresh and intact, just hit with a bright crack flash, then badly cracked about to shatter" },
+      ball:{ label:"Ball set (sheet)", mode:"sheet", size:"wide", transparent:true, role:"sprite",
+        rows:["classic","beach","soccer","smiley"], cols:["ball"],
+        subject:"a row of round game balls for a {theme} themed brick-breaker: a classic glossy ball, a colorful beach ball, a soccer ball, and a cute smiley-face ball" },
+      paddle:{ label:"Paddle (single)", mode:"single", size:"wide", transparent:true, role:"sprite",
+        subject:"a single horizontal brick-breaker paddle bar for a {theme} themed world, glossy rounded capsule shape, centered, seen straight on" },
+      background:{ label:"World background (single)", mode:"single", size:"tall", transparent:false, role:"background",
+        subject:"a full-screen {theme} themed background scene for a kids brick-breaker game, dreamy and inviting, portrait orientation, plenty of calm open space in the upper area where bricks will sit, no characters" },
+    },
+  },
+};
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+
+const $=id=>document.getElementById(id);
+let CS={recipe:null,asset:null,pieces:[]};
+
+function csGame(){ return $("cs-game").value; }
+function csAsset(){ const r=RECIPES[csGame()]; return r?r.assets[$("cs-asset").value]:null; }
+
+function csBuildPrompt(){
+  const r=RECIPES[csGame()], a=csAsset(); if(!r||!a)return "";
+  const theme=($("cs-theme").value||"jungle").trim();
+  let p=String(a.subject||"").replace(/\{theme\}/g,theme)+". "+(r.style||STUDIO_STYLE_BREAKER)+".";
+  if(a.mode==="sheet"){
+    p+=` Arrange them as a neat ${(a.cols||[]).length}-column by ${(a.rows||[]).length}-row grid, evenly spaced, all the same size, each item fully separated with clear empty space around it.`;
+  } else {
+    p+=" A single item, centered, filling the frame.";
+  }
+  if(assetRole(a)==="background") p+=" High detail and crisp, suitable for a large tablet screen.";
+  p+= a.transparent? " Fully transparent background, no ground line, no cast shadow." : "";
+  p+= RULES.globalTail;
+  return p;
+}
+function csRefreshForm(){
+  const r=RECIPES[csGame()]; const sel=$("cs-asset");
+  sel.innerHTML=Object.keys(r.assets).map(k=>`<option value="${k}">${r.assets[k].label}</option>`).join("");
+  csRefreshLayout();
+}
+function csRefreshLayout(){
+  const a=csAsset(); if(!a)return;
+  $("cs-layout").textContent = a.mode==="sheet"
+    ? `Sheet: ${a.rows.length} rows x ${a.cols.length} cols = ${a.rows.length*a.cols.length} pieces (${a.rows.join(", ")}).`
+    : "Single image (one piece).";
+  $("cs-prompt").value=csBuildPrompt();
+}
+
+/* ---- image helpers ---- */
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
+function contentBox(ctx,x,y,w,h,transparent){
+  const d=ctx.getImageData(x,y,w,h).data; let minX=w,minY=h,maxX=-1,maxY=-1;
+  for(let j=0;j<h;j++)for(let i=0;i<w;i++){ const o=(j*w+i)*4;
+    const fg = transparent ? d[o+3]>18 : !(d[o]>242&&d[o+1]>242&&d[o+2]>242&&d[o+3]>18);
+    if(fg){ if(i<minX)minX=i; if(i>maxX)maxX=i; if(j<minY)minY=j; if(j>maxY)maxY=j; } }
+  if(maxX<0)return null;
+  const pad=2; return {x:x+Math.max(0,minX-pad),y:y+Math.max(0,minY-pad),
+    w:Math.min(w-minX+pad,maxX-minX+1+pad*2),h:Math.min(h-minY+pad,maxY-minY+1+pad*2)};
+}
+function cropFrom(srcCanvas,box){
+  const c=document.createElement("canvas");c.width=box.w;c.height=box.h;
+  c.getContext("2d").drawImage(srcCanvas,box.x,box.y,box.w,box.h,0,0,box.w,box.h);
+  return c.toDataURL("image/png");
+}
+async function csSlice(b64,a){
+  const img=await loadImg("data:image/png;base64,"+b64);
+  const W=img.naturalWidth,H=img.naturalHeight;
+  const sc=document.createElement("canvas");sc.width=W;sc.height=H;
+  const sx=sc.getContext("2d");sx.drawImage(img,0,0);
+  const out=[];
+  if(a.mode==="single"){
+    const box=a.transparent?(contentBox(sx,0,0,W,H,true)||{x:0,y:0,w:W,h:H}):{x:0,y:0,w:W,h:H};
+    out.push({name:"main",dataURL:cropFrom(sc,box),w:box.w,h:box.h});
+    return out;
+  }
+  const cols=(a.cols||["x"]).length,rows=(a.rows||["x"]).length, cw=Math.floor(W/cols), ch=Math.floor(H/rows);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const box=contentBox(sx,c*cw,r*ch,cw,ch,a.transparent)||{x:c*cw,y:r*ch,w:cw,h:ch};
+    const name= cols>1 ? (a.rows[r]+"_"+a.cols[c]) : a.rows[r];
+    out.push({name,dataURL:cropFrom(sc,box),w:box.w,h:box.h});
+  }
+  return out;
+}
+
+/* ---- render sliced pieces ---- */
+function csRenderPieces(){
+  const a=RECIPES[CS.recipe].assets[CS.asset], role=assetRole(a), minW=RULES.minW[role]||0;
+  $("cs-pieces").innerHTML=CS.pieces.map((p,i)=>{
+    const soft=(p.w||0)<minW;
+    const meta=`<div class="badges" style="margin-top:4px"><span class="b">${p.w}x${p.h}</span>${soft?'<span class="b warn">may look soft</span>':''}</div>`;
+    return `<div class="card"><div class="thumb checker"><img src="${p.dataURL}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain"></div>`+
+    `<div class="cbody"><input class="cs-name" data-i="${i}" value="${esc(p.name)}" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt);padding:4px 6px;font:inherit;font-size:12px">${meta}</div></div>`;
+  }).join("");
+  $("cs-pieces").querySelectorAll(".cs-name").forEach(inp=>inp.oninput=()=>{CS.pieces[+inp.dataset.i].name=inp.value;});
+}
+
+/* ---- generate ---- */
+async function csGenerate(){
+  const a=csAsset(); if(!a)return;
+  CS.recipe=csGame(); CS.asset=$("cs-asset").value;
+  const btn=$("cs-gen"); btn.disabled=true;
+  $("cs-status").textContent="Generating sheet… (10-40s)";
+  $("cs-result").style.display="none";
+  try{
+    const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"generate",prompt:$("cs-prompt").value,size:assetSize(a),transparent:a.transparent,quality:assetQuality(a)})});
+    if(!r.ok){ const e=await r.json().catch(()=>({}));
+      $("cs-status").textContent="Could not generate ("+(e.error||r.status)+")."; btn.disabled=false; return; }
+    const j=await r.json();
+    $("cs-sheet").src="data:image/png;base64,"+j.b64;
+    $("cs-sheet").classList.toggle("checker",a.transparent);
+    CS.pieces=await csSlice(j.b64,a);
+    csRenderPieces();
+    $("cs-result").style.display="";
+    $("cs-status").textContent="Done. "+CS.pieces.length+" piece(s) sliced.";
+  }catch(e){ $("cs-status").textContent="Error: "+e.message; }
+  btn.disabled=false;
+}
+
+/* ---- keep + download ---- */
+async function csKeep(){
+  if(!CS.pieces.length)return;
+  const a=RECIPES[CS.recipe].assets[CS.asset];
+  $("cs-keepstatus").textContent="Saving…";
+  const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action:"keep",game:CS.recipe,type:CS.asset,theme:($("cs-theme").value||"default").trim(),
+      pieces:CS.pieces.map(p=>({slug:p.name,b64:p.dataURL}))})});
+  if(!r.ok){ $("cs-keepstatus").textContent="Save failed."; return; }
+  const j=await r.json();
+  const base=(j.saved&&j.saved[0])?j.saved[0].slug.split("/").slice(0,3).join("/"):"";
+  $("cs-keepstatus").textContent="Kept "+j.count+" piece(s). URL: /api/asset-studio?asset="+base+"/<name>";
+}
+function csDownload(){
+  CS.pieces.forEach(p=>{const a=document.createElement("a");a.href=p.dataURL;a.download=p.name+".png";document.body.appendChild(a);a.click();a.remove();});
+}
+
+/* ============ New Game builder (form + AI auto-suggest) ============ */
+let NG={label:"",assets:[]};
+function csRebuildGameList(sel){
+  const g=$("cs-game"); g.innerHTML=Object.keys(RECIPES).map(k=>`<option value="${k}">${esc(RECIPES[k].label||k)}</option>`).join("");
+  if(sel)g.value=sel;
+}
+function ngFromRecipe(rec){
+  NG.label=rec.label||"";
+  NG.assets=Object.keys(rec.assets||{}).map(k=>{const a=rec.assets[k];return {
+    key:k, label:a.label||k, mode:a.mode==="single"?"single":"sheet", size:a.size||"wide",
+    transparent:a.transparent!==false, role:a.role||"",
+    rows:(a.rows||[]).join(", "), cols:(a.cols||[]).join(", "), subject:a.subject||"" };});
+}
+function ngRender(){
+  $("ng-assets").innerHTML=NG.assets.map((a,i)=>`
+    <div class="panel" style="background:var(--panel2);padding:10px;margin:8px 0">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <label class="fld">Key<br><input data-i="${i}" data-f="key" value="${esc(a.key)}" style="min-width:80px"></label>
+        <label class="fld">Label<br><input data-i="${i}" data-f="label" value="${esc(a.label)}"></label>
+        <label class="fld">Mode<br><select data-i="${i}" data-f="mode"><option ${a.mode==="sheet"?"selected":""}>sheet</option><option ${a.mode==="single"?"selected":""}>single</option></select></label>
+        <label class="fld">Size<br><select data-i="${i}" data-f="size">${["wide","tall","square"].map(s=>`<option ${a.size===s?"selected":""}>${s}</option>`).join("")}</select></label>
+        <label class="fld">Transparent<br><input type="checkbox" data-i="${i}" data-f="transparent" ${a.transparent?"checked":""}></label>
+        <button class="chip ng-del" data-i="${i}">remove</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <label class="fld" style="flex:1;min-width:160px">Rows / variants (comma-sep)<br><input data-i="${i}" data-f="rows" value="${esc(a.rows)}" style="width:100%"></label>
+        <label class="fld" style="flex:1;min-width:160px">Cols / states (comma-sep)<br><input data-i="${i}" data-f="cols" value="${esc(a.cols)}" style="width:100%"></label>
+      </div>
+      <label class="fld" style="display:block;margin-top:6px">Describe the art (use {theme})<br><textarea data-i="${i}" data-f="subject" style="width:100%;min-height:44px;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px;font:inherit">${esc(a.subject)}</textarea></label>
+    </div>`).join("");
+  $("ng-assets").querySelectorAll("[data-f]").forEach(el=>el.oninput=()=>{const i=+el.dataset.i,f=el.dataset.f;NG.assets[i][f]=el.type==="checkbox"?el.checked:el.value;});
+  $("ng-assets").querySelectorAll(".ng-del").forEach(b=>b.onclick=()=>{NG.assets.splice(+b.dataset.i,1);ngRender();});
+}
+function ngToRecipe(){
+  const csv=s=>String(s||"").split(",").map(x=>x.trim()).filter(Boolean);
+  const assets={};
+  NG.assets.forEach(a=>{
+    const key=(a.key||a.label||"asset").toLowerCase().replace(/[^a-z0-9_]+/g,"_")||"asset";
+    assets[key]={ label:a.label||key, mode:a.mode, size:a.size, transparent:!!a.transparent,
+      role:a.role||(a.mode==="single"&&!a.transparent?"background":"sprite"),
+      rows:csv(a.rows), cols:csv(a.cols)||[], subject:a.subject||"" };
+    if(!assets[key].cols.length)assets[key].cols=["x"];
+    if(!assets[key].rows.length)assets[key].rows=[key];
+  });
+  return { label:NG.label||$("ng-name").value||"Game", style:STUDIO_STYLE_BREAKER, assets };
+}
+async function ngSuggest(){
+  const desc=$("ng-desc").value.trim(); if(!desc){$("ng-status").textContent="Type a one-line description first.";return;}
+  $("ng-status").textContent="Thinking up the asset list…"; $("ng-suggest").disabled=true;
+  try{
+    const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"suggest-recipe",name:$("ng-name").value,description:desc})});
+    if(!r.ok){$("ng-status").textContent="Could not suggest ("+r.status+"). You can add assets by hand.";}
+    else{ const j=await r.json();
+      if(j.recipe&&j.recipe.assets){ NG.label=j.recipe.label||$("ng-name").value; ngFromRecipe(j.recipe); ngRender();
+        $("ng-status").textContent="Draft ready. Edit anything, then Save game."; }
+      else $("ng-status").textContent="No suggestion came back. Add assets by hand.";
+    }
+  }catch(e){ $("ng-status").textContent="Error: "+e.message; }
+  $("ng-add").style.display=""; $("ng-save").style.display=""; $("ng-suggest").disabled=false;
+}
+async function ngSave(){
+  if(!NG.assets.length){$("ng-status").textContent="Add at least one asset first.";return;}
+  const rec=ngToRecipe();
+  const slug=($("ng-name").value||rec.label).toLowerCase().replace(/[^a-z0-9_]+/g,"_")||"game";
+  $("ng-status").textContent="Saving…";
+  const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action:"save-recipe",slug,recipe:rec})});
+  if(!r.ok){$("ng-status").textContent="Save failed.";return;}
+  RECIPES[slug]=rec; csRebuildGameList(slug); csRefreshForm();
+  $("ng-status").textContent='Saved. "'+rec.label+'" is now in the Game dropdown.';
+  $("cs-builder").style.display="none";
+}
+async function csLoadRecipes(){
+  try{ const j=await (await fetch("/api/asset-studio?recipes=1")).json();
+    if(j&&j.recipes)Object.keys(j.recipes).forEach(k=>{ if(!RECIPES[k])RECIPES[k]=j.recipes[k]; });
+  }catch(e){}
+}
+
+/* ---- wire up ---- */
+(async function initStudio(){
+  await csLoadRecipes();
+  csRebuildGameList();
+  $("cs-game").onchange=csRefreshForm;
+  $("cs-asset").onchange=csRefreshLayout;
+  $("cs-quality").onchange=()=>{$("cs-prompt").value=csBuildPrompt();};
+  $("cs-theme").oninput=()=>{$("cs-prompt").value=csBuildPrompt();};
+  $("cs-gen").onclick=csGenerate;
+  $("cs-keep").onclick=csKeep;
+  $("cs-download").onclick=csDownload;
+  $("cs-newgame").onclick=()=>{const b=$("cs-builder");b.style.display=(b.style.display==="none")?"":"none";};
+  $("ng-suggest").onclick=ngSuggest;
+  $("ng-add").onclick=()=>{NG.assets.push({key:"asset"+(NG.assets.length+1),label:"New asset",mode:"sheet",size:"wide",transparent:true,role:"",rows:"",cols:"",subject:"{theme} ..."});ngRender();$("ng-save").style.display="";};
+  $("ng-save").onclick=ngSave;
+  document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
+    const t=b.dataset.t;
+    $("browseView").style.display=t==="browse"?"":"none";
+    $("createView").style.display=t==="create"?"":"none";
+    document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));
+  });
+  csRefreshForm();
+})();
 </script>
 </body>
 </html>
