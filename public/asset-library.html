@@ -14,7 +14,7 @@
 <meta name="robots" content="noindex,nofollow" />
 <title>Asset Library — internal</title>
 <style>
-  :root{ --bg:#0e1120; --panel:#161a2e; --panel2:#1d2238; --line:#2b3151; --txt:#e7e9f5; --mut:#9aa0c4; --acc:#7c8cff; --accbg:#23284a; --teal:#3ddc97; --warn:#ffcf6b; --warnbg:#3a3320; }
+  :root{ --bg:#f6f7fb; --panel:#ffffff; --panel2:#eef1f8; --line:#e2e6f0; --txt:#1d2333; --mut:#6c7391; --acc:#6b5cff; --accbg:#ece9ff; --teal:#17b877; --warn:#b07d0a; --warnbg:#fbf1d6; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5}
   .wrap{max-width:1100px;margin:0 auto;padding:18px 20px 60px}
@@ -24,12 +24,12 @@
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
   .seg button{background:transparent;color:var(--mut);border:0;padding:6px 16px;font:inherit;cursor:pointer}
   .seg button+button{border-left:1px solid var(--line)}
-  .seg button.on{background:var(--acc);color:#0b0e1c;font-weight:600}
+  .seg button.on{background:var(--acc);color:#fff;font-weight:600}
   .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
   .lbl{font-size:12px;color:var(--mut);margin-right:2px}
   .chip{font-size:12px;padding:5px 12px;border-radius:99px;border:1px solid var(--line);color:var(--txt);background:transparent;cursor:pointer}
-  .chip.on{background:var(--accbg);border-color:var(--acc);color:#c9d0ff}
-  .chip.kind.on{background:var(--acc);color:#0b0e1c;font-weight:600;border-color:var(--acc)}
+  .chip.on{background:var(--accbg);border-color:var(--acc);color:var(--acc);font-weight:600}
+  .chip.kind.on{background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)}
   .chip:disabled{opacity:.35;cursor:not-allowed}
   input[type=text]{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:7px 10px;font:inherit;min-width:200px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:16px 0}
@@ -51,7 +51,7 @@
   .cname{font-size:13px;margin-bottom:4px;word-break:break-word}
   .badges{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
   .b{font-size:10px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
-  .b.src{background:var(--accbg);border-color:var(--acc);color:#c9d0ff}
+  .b.src{background:var(--accbg);border-color:var(--acc);color:var(--acc)}
   .b.warn{background:var(--warnbg);border-color:var(--warn);color:var(--warn)}
   .b.cc0{background:#16331f;border-color:#3ddc97;color:#7ef0bd}
   .copy{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:6px;font-size:10px;padding:1px 7px;cursor:pointer}
@@ -61,7 +61,7 @@
   .note{font-size:11px;color:var(--mut);margin-top:2px}
   .fld{font-size:12px;color:var(--mut)}
   .fld select,.fld input{display:block;margin-top:3px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px 8px;font:inherit;min-width:130px}
-  .checker{background-color:#20263f;background-image:linear-gradient(45deg,#2b3151 25%,transparent 25%),linear-gradient(-45deg,#2b3151 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2b3151 75%),linear-gradient(-45deg,transparent 75%,#2b3151 75%);background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}
+  .checker{background-color:#ffffff;background-image:linear-gradient(45deg,#e9edf5 25%,transparent 25%),linear-gradient(-45deg,#e9edf5 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9edf5 75%),linear-gradient(-45deg,transparent 75%,#e9edf5 75%);background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}
 </style>
 <script src="/three.min.js?v=r128"></script>
 <script src="/GLTFLoader.js?v=1"></script>
@@ -114,7 +114,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
         <label class="fld">Game name<br><input id="ng-name" placeholder="Match Three"></label>
         <label class="fld" style="flex:1;min-width:220px">Describe it in one line<br><input id="ng-desc" placeholder="a candy match-3 game with gem sprites and themed worlds" style="width:100%"></label>
-        <button id="ng-suggest" class="chip" style="background:var(--acc);color:#0b0e1c;font-weight:600;border-color:var(--acc)">Auto-suggest assets</button>
+        <button id="ng-suggest" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Auto-suggest assets</button>
       </div>
       <div id="ng-status" class="muted" style="margin-top:8px"></div>
       <div id="ng-assets" style="margin-top:6px"></div>
@@ -135,10 +135,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div id="cs-layout" class="note" style="margin-top:10px"></div>
       <div style="margin-top:12px">
         <div class="lbl">Prompt (auto-filled, editable)</div>
-        <textarea id="cs-prompt" style="width:100%;min-height:82px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px;font:inherit"></textarea>
+        <textarea id="cs-prompt" style="width:100%;min-height:210px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:10px;font:inherit;line-height:1.5"></textarea>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-        <button id="cs-gen" class="chip" style="background:var(--acc);color:#0b0e1c;font-weight:600;border-color:var(--acc)">Generate preview</button>
+        <button id="cs-gen" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Generate preview</button>
         <span id="cs-status" class="muted"></span>
       </div>
     </div>
@@ -376,9 +376,9 @@ const RECIPES={
   breaker:{
     label:"Breaker", style:STUDIO_STYLE_BREAKER,
     assets:{
-      bricks:{ label:"Brick set (sheet)", mode:"sheet", size:"wide", transparent:true, role:"sprite",
-        rows:["ice","wood","metal","candy","star","bomb"], cols:["intact","hit","cracked"],
-        subject:"brick-breaker bricks for a {theme} themed world. Each row is one brick material (ice, wood, metal, candy, a golden star brick, a round bomb brick). Each column is that same brick in three states: fresh and intact, just hit with a bright crack flash, then badly cracked about to shatter" },
+      bricks:{ label:"Brick set (sheet)", mode:"sheet", size:"tall", transparent:true, role:"sprite",
+        rows:["ice","wood","metal","candy","star","bomb"], cols:["intact","hit","cracked","shattered"],
+        subject:"rounded rectangular brick-breaker bricks with beveled glossy borders for a {theme} themed world. Each row is one brick material (ice, wood, metal, candy, a golden star brick, a round bomb brick). The four columns show that SAME brick going through four stages left to right: (1) whole and intact, (2) glowing and flashing brightly right after a hit, (3) badly cracked with dark fracture lines, (4) smashed apart into a small scattered pile of separate broken debris chunks" },
       ball:{ label:"Ball set (sheet)", mode:"sheet", size:"wide", transparent:true, role:"sprite",
         rows:["classic","beach","soccer","smiley"], cols:["ball"],
         subject:"a row of round game balls for a {theme} themed brick-breaker: a classic glossy ball, a colorful beach ball, a soccer ball, and a cute smiley-face ball" },
@@ -402,12 +402,12 @@ function csBuildPrompt(){
   const theme=($("cs-theme").value||"jungle").trim();
   let p=String(a.subject||"").replace(/\{theme\}/g,theme)+". "+(r.style||STUDIO_STYLE_BREAKER)+".";
   if(a.mode==="sheet"){
-    p+=` Arrange them as a neat ${(a.cols||[]).length}-column by ${(a.rows||[]).length}-row grid, evenly spaced, all the same size, each item fully separated with clear empty space around it.`;
+    p+=` Lay them out as a clean evenly-spaced grid of exactly ${(a.cols||[]).length} columns and ${(a.rows||[]).length} rows, every item the same size and centered in its own cell with generous equal margins, none touching or overlapping.`;
   } else {
     p+=" A single item, centered, filling the frame.";
   }
-  if(assetRole(a)==="background") p+=" High detail and crisp, suitable for a large tablet screen.";
-  p+= a.transparent? " Fully transparent background, no ground line, no cast shadow." : "";
+  if(assetRole(a)==="background"){ p+=" High detail and crisp, suitable for a large tablet screen."; }
+  else { p+=" Place every item on a pure solid plain white background (#ffffff) with clear even white space around each one, nothing touching, no cast shadows, no drop shadows."; }
   p+= RULES.globalTail;
   return p;
 }
@@ -440,20 +440,38 @@ function cropFrom(srcCanvas,box){
   c.getContext("2d").drawImage(srcCanvas,box.x,box.y,box.w,box.h,0,0,box.w,box.h);
   return c.toDataURL("image/png");
 }
+// Turn the sheet's white background transparent: flood-fill near-white pixels that
+// are connected to the outer edge, so white GAPS between items disappear but white
+// details INSIDE an item (a star's glow) are kept. Matches the proven white-bg workflow.
+function keyOutWhite(ctx,W,H){
+  const img=ctx.getImageData(0,0,W,H), d=img.data, N=W*H;
+  const seen=new Uint8Array(N), st=[];
+  const isWhite=p=>{const o=p*4;return d[o]>236&&d[o+1]>236&&d[o+2]>236&&d[o+3]>8;};
+  const seed=(x,y)=>{ if(x<0||y<0||x>=W||y>=H)return; const p=y*W+x; if(seen[p])return; seen[p]=1; if(isWhite(p))st.push(p); };
+  for(let x=0;x<W;x++){seed(x,0);seed(x,H-1);}
+  for(let y=0;y<H;y++){seed(0,y);seed(W-1,y);}
+  while(st.length){ const p=st.pop(); d[p*4+3]=0; const x=p%W,y=(p/W)|0;
+    const nb=[[x+1,y],[x-1,y],[x,y+1],[x,y-1]];
+    for(let k=0;k<4;k++){ const nx=nb[k][0],ny=nb[k][1]; if(nx<0||ny<0||nx>=W||ny>=H)continue;
+      const np=ny*W+nx; if(seen[np])continue; seen[np]=1; if(isWhite(np))st.push(np); } }
+  ctx.putImageData(img,0,0);
+}
 async function csSlice(b64,a){
   const img=await loadImg("data:image/png;base64,"+b64);
   const W=img.naturalWidth,H=img.naturalHeight;
   const sc=document.createElement("canvas");sc.width=W;sc.height=H;
-  const sx=sc.getContext("2d");sx.drawImage(img,0,0);
+  const sx=sc.getContext("2d",{willReadFrequently:true});sx.drawImage(img,0,0);
+  const key=assetRole(a)!=="background";     // sprites/sheets: drop the white bg
+  if(key) keyOutWhite(sx,W,H);
   const out=[];
   if(a.mode==="single"){
-    const box=a.transparent?(contentBox(sx,0,0,W,H,true)||{x:0,y:0,w:W,h:H}):{x:0,y:0,w:W,h:H};
+    const box=key?(contentBox(sx,0,0,W,H,true)||{x:0,y:0,w:W,h:H}):{x:0,y:0,w:W,h:H};
     out.push({name:"main",dataURL:cropFrom(sc,box),w:box.w,h:box.h});
     return out;
   }
   const cols=(a.cols||["x"]).length,rows=(a.rows||["x"]).length, cw=Math.floor(W/cols), ch=Math.floor(H/rows);
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    const box=contentBox(sx,c*cw,r*ch,cw,ch,a.transparent)||{x:c*cw,y:r*ch,w:cw,h:ch};
+    const box=contentBox(sx,c*cw,r*ch,cw,ch,true)||{x:c*cw,y:r*ch,w:cw,h:ch};
     const name= cols>1 ? (a.rows[r]+"_"+a.cols[c]) : a.rows[r];
     out.push({name,dataURL:cropFrom(sc,box),w:box.w,h:box.h});
   }
@@ -481,7 +499,7 @@ async function csGenerate(){
   $("cs-result").style.display="none";
   try{
     const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"generate",prompt:$("cs-prompt").value,size:assetSize(a),transparent:a.transparent,quality:assetQuality(a)})});
+      body:JSON.stringify({action:"generate",prompt:$("cs-prompt").value,size:assetSize(a),transparent:false,quality:assetQuality(a)})});
     if(!r.ok){ const e=await r.json().catch(()=>({}));
       $("cs-status").textContent="Could not generate ("+(e.error||r.status)+")."; btn.disabled=false; return; }
     const j=await r.json();

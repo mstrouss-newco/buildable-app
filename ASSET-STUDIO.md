@@ -132,8 +132,12 @@ recipes persisted in the DB and loaded into the dropdown.
 - gpt-image-1 does not place items on a perfect grid. We tell it to lay assets on a
   clean evenly-spaced grid with clear gaps, then slice + trim. If a sheet comes out
   crooked, redo it or lower the row/col count.
-- Transparent PNGs come straight from the model (`background:"transparent"`), so the
-  old "checkerboard grid, key out the background" step is gone.
+- Sprites/sheets generate on a PURE WHITE background (not native transparency). White
+  backgrounds make the model lay assets on a clean, well-spaced grid; native
+  transparency made it bunch pieces together and slice badly. The browser then keys
+  out the white (edge-connected near-white -> transparent via `keyOutWhite`), so white
+  GAPS vanish but white details inside a piece (a star's glow) stay. Backgrounds keep
+  their full color and are not keyed. This mirrors Mike's proven manual workflow.
 - Kept art is immutable-cached by URL; if you re-Keep the same slug it replaces the
   old bytes, but browsers may hold the old one. Add `&v=N` to bust it (same rule as
   the rest of the app).
