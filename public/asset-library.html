@@ -745,7 +745,8 @@ const GAME_SLOTS={
   ],
   sling:[
     {key:"background",label:"Background scene",mode:"single",role:"background",prefix:"bg",prompt:"a wide side-view {theme} background scene for a physics slingshot game, ground along the bottom"},
-    {key:"pals",label:"Pals (sheet)",mode:"sheet",rows:4,cols:1,rowNames:"pal_one, pal_two, pal_three, pal_four",colNames:"",role:"sprite",prefix:"pal",prompt:"a column of 4 cute round {theme} characters to fling in a slingshot game, each centered, plain white background"},
+    {key:"pals",label:"Pals — what you fling (sheet)",mode:"sheet",rows:4,cols:1,rowNames:"pal_one, pal_two, pal_three, pal_four",colNames:"",role:"sprite",prefix:"pal",prompt:"a column of 4 cute round {theme} characters to fling in a slingshot game, each centered, plain white background"},
+    {key:"foes",label:"Bad guys — what gets hit (sheet)",mode:"sheet",rows:5,cols:1,rowNames:"foe_one, foe_two, foe_three, foe_four, foe_five",colNames:"",role:"sprite",prefix:"foe",prompt:"a column of 5 goofy harmless {theme} target critters for a slingshot game, the kind that topple over and go poof when bonked, each centered, plain white background"},
   ],
 };
 function upTypes(){

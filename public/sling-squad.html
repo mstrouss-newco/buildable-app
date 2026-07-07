@@ -91,12 +91,14 @@ var SQUAD = [
 // ---- TARGET look (goofy castle critters that just topple + POOF, never hurt) ----
 var TARGET_COL = "#b6f06a", TARGET_CHEEK = "#8ed83f";
 var SQUAD_IMGS = [];   // Kenney "Animal Pack Remastered" art for the flung pals (drawn animal = fallback)
-var LIB_SCENE=null, LIB_PALS=[];   // Asset Studio world reskin (filled below if a sling world is assigned)
+var LIB_SCENE=null, LIB_PALS=[], LIB_TARGETS=[];   // Asset Studio world reskin (filled below if a sling world is assigned)
 (function(){ try{ fetch("/api/asset-studio?world=sling").then(function(r){return r.json();}).then(function(wj){ var world=wj&&wj.world; if(!world)return;
   fetch("/api/asset-studio?manifest=1&game=sling").then(function(r){return r.json();}).then(function(mj){ var rows=(mj&&mj.assets)||[];
     rows.forEach(function(a){ var seg=(a.slug||"").split("/"); if(seg.length<4||seg[2]!==world)return; var name=seg.slice(3).join("/");
       var im=new Image(); try{im.crossOrigin="anonymous";}catch(e){} im.src=a.url;
-      if(name==="bg"||name==="background"||name==="main"||/^bg/.test(name)) LIB_SCENE=im; else LIB_PALS.push(im); }); }); }).catch(function(){}); }catch(e){} })();
+      if(name==="bg"||name==="background"||name==="main"||/^bg/.test(name)) LIB_SCENE=im;
+      else if(/^foe/.test(name)) LIB_TARGETS.push(im);   // bad guys (what gets hit)
+      else LIB_PALS.push(im); }); }); }).catch(function(){}); }catch(e){} })();
 var BLK_IMGS = {};     // Kenney "Physics Assets" block textures, keyed material+shape (woodW/stoneT/...)
 var TARGET_IMGS = [];  // Kenney "Physics Assets" alien faces = the goofy toppling targets
 
@@ -548,7 +550,7 @@ function drawTarget(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
   var w=b._w,h=b._h;
   // Kenney alien face (Physics Assets) when served; drawn critter is the fallback.
-  var tim=TARGET_IMGS[(b._ti||0)%(TARGET_IMGS.length||1)];
+  var _tp=(LIB_TARGETS.length?LIB_TARGETS:TARGET_IMGS); var tim=_tp[(b._ti||0)%(_tp.length||1)];
   if(tim&&(tim.naturalWidth||tim.width)){ var ts=Math.max(w,h)*1.7; ctx.drawImage(tim,-ts/2,-ts/2,ts,ts); ctx.restore(); return; }
   ctx.fillStyle=TARGET_COL; BR? BR.rrect(ctx,-w/2,-h/2,w,h,9):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
   ctx.fillStyle=TARGET_CHEEK; BR? BR.rrect(ctx,-w/2,h*0.06,w,h*0.44,9):0; ctx.fill();
