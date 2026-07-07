@@ -362,6 +362,7 @@ load();
    Recipes live here so the form knows what a game's pieces are. Add more games by
    adding a recipe block. */
 const STUDIO_STYLE_BREAKER="soft painterly children's-book game art with a glossy polished finish, bright bold saturated colors, thick clean rounded shapes, cute and inviting, child-friendly ages 4-8";
+const STUDIO_STYLE_DETAILED="high-detail polished mobile-game asset art, rich realistic material textures, thick beveled glossy borders, dramatic directional lighting with crisp highlights and soft shadows, vibrant saturated colors, sharp clean professional finish, appealing and colorful for kids but NOT flat, NOT plain, NOT an oversimplified cartoon";
 /* RULES: one place every generation obeys. Change here to change everything. */
 const RULES={
   globalTail:" No text, no words, no letters, no numbers, no UI, no watermark. Child-friendly ages 4-8.",
@@ -369,16 +370,19 @@ const RULES={
   minW:{ background:900, sprite:48 },  // sliced piece narrower than this => "soft" warning badge
 };
 function assetRole(a){ return a.role || (a.mode==="single"&&a.transparent===false ? "background" : "sprite"); }
-function assetQuality(a){ const sel=$("cs-quality").value; if(sel&&sel!=="auto")return sel; return RULES.quality[assetRole(a)]||RULES.quality.default; }
+function assetQuality(a){ const sel=$("cs-quality").value; if(sel&&sel!=="auto")return sel;
+  if(assetRole(a)==="background")return "high";
+  if(a.mode==="sheet")return "high";   // detailed sheets need the detail to render
+  return RULES.quality.default; }
 function assetSize(a){ if(assetRole(a)==="background")return a.size==="tall"?"tall":"wide"; return a.size||"wide"; } // backgrounds -> biggest supported
 /* Recipes: subject is a string with a {theme} token so built-in and saved recipes are the same shape. */
 const RECIPES={
   breaker:{
     label:"Breaker", style:STUDIO_STYLE_BREAKER,
     assets:{
-      bricks:{ label:"Brick set (sheet)", mode:"sheet", size:"tall", transparent:true, role:"sprite",
+      bricks:{ label:"Brick set (sheet)", mode:"sheet", size:"tall", transparent:true, role:"sprite", style:STUDIO_STYLE_DETAILED,
         rows:["ice","wood","metal","candy","star","bomb"], cols:["intact","hit","cracked","shattered"],
-        subject:"rounded rectangular brick-breaker bricks with beveled glossy borders for a {theme} themed world. Each row is one brick material (ice, wood, metal, candy, a golden star brick, a round bomb brick). The four columns show that SAME brick going through four stages left to right: (1) whole and intact, (2) glowing and flashing brightly right after a hit, (3) badly cracked with dark fracture lines, (4) smashed apart into a small scattered pile of separate broken debris chunks" },
+        subject:"a professional brick-breaker brick sheet for a {theme} themed world. Six rows, each a distinct brick material rendered with rich detailed texture and a thick beveled glossy border: row 1 glassy crystal ice with inner shine, row 2 natural wood planks with visible grain and knots, row 3 riveted brushed metal plate, row 4 glossy striped candy, row 5 a golden brick with a raised star emblem, row 6 a dark heavy bomb brick. Every brick is a rounded rectangle. The FOUR columns are an animation sequence of that same brick, left to right: (1) whole and intact, (2) energized and glowing with a bright light-burst flash right after being hit, (3) badly cracked with dark fracture lines running across it, (4) smashed apart into a small pile of separate broken debris chunks with a little scattered dust" },
       ball:{ label:"Ball set (sheet)", mode:"sheet", size:"wide", transparent:true, role:"sprite",
         rows:["classic","beach","soccer","smiley"], cols:["ball"],
         subject:"a row of round game balls for a {theme} themed brick-breaker: a classic glossy ball, a colorful beach ball, a soccer ball, and a cute smiley-face ball" },
@@ -400,7 +404,7 @@ function csAsset(){ const r=RECIPES[csGame()]; return r?r.assets[$("cs-asset").v
 function csBuildPrompt(){
   const r=RECIPES[csGame()], a=csAsset(); if(!r||!a)return "";
   const theme=($("cs-theme").value||"jungle").trim();
-  let p=String(a.subject||"").replace(/\{theme\}/g,theme)+". "+(r.style||STUDIO_STYLE_BREAKER)+".";
+  let p=String(a.subject||"").replace(/\{theme\}/g,theme)+". "+(a.style||r.style||STUDIO_STYLE_BREAKER)+".";
   if(a.mode==="sheet"){
     p+=` Lay them out as a clean evenly-spaced grid of exactly ${(a.cols||[]).length} columns and ${(a.rows||[]).length} rows, every item the same size and centered in its own cell with generous equal margins, none touching or overlapping.`;
   } else {
@@ -456,6 +460,27 @@ function keyOutWhite(ctx,W,H){
       const np=ny*W+nx; if(seen[np])continue; seen[np]=1; if(isWhite(np))st.push(np); } }
   ctx.putImageData(img,0,0);
 }
+// occupancy per row/column: count of SOLID pixels (alpha>60 so faint glow/shadow is
+// ignored) so the real gaps between bricks stand out even when a hit-frame glows.
+function occRows(ctx,x0,y0,w,h){ const d=ctx.getImageData(x0,y0,w,h).data,a=new Array(h).fill(0);
+  for(let j=0;j<h;j++){let n=0;for(let i=0;i<w;i++)if(d[(j*w+i)*4+3]>60)n++;a[j]=n;} return a; }
+function occCols(ctx,x0,y0,w,h){ const d=ctx.getImageData(x0,y0,w,h).data,a=new Array(w).fill(0);
+  for(let i=0;i<w;i++){let n=0;for(let j=0;j<h;j++)if(d[(j*w+i)*4+3]>60)n++;a[i]=n;} return a; }
+// Divide an occupancy profile into n bands by cutting at the n-1 WIDEST interior gaps.
+// This ignores small gaps (e.g. between debris chunks) and finds the true cell margins,
+// even when spacing is uneven. Falls back to even division if not enough gaps exist.
+function splitBands(occ,n,minOcc){
+  const L=occ.length; let s=0; while(s<L&&occ[s]<minOcc)s++; let e=L-1; while(e>=0&&occ[e]<minOcc)e--;
+  if(e<=s) return [[0,L]];
+  const gaps=[]; let g=null;
+  for(let k=s;k<=e;k++){ if(occ[k]<minOcc){ if(!g)g={a:k,b:k}; else g.b=k; } else { if(g){gaps.push(g);g=null;} } }
+  if(g)gaps.push(g);
+  let cuts;
+  if(gaps.length>=n-1){
+    cuts=gaps.slice().sort((x,y)=>(y.b-y.a)-(x.b-x.a)).slice(0,n-1).map(x=>Math.round((x.a+x.b)/2)).sort((x,y)=>x-y);
+  } else { cuts=[]; for(let i=1;i<n;i++)cuts.push(Math.round(s+(e-s+1)*i/n)); }
+  const bounds=[s,...cuts,e+1],bands=[]; for(let i=0;i<n;i++)bands.push([bounds[i],bounds[i+1]]); return bands;
+}
 async function csSlice(b64,a){
   const img=await loadImg("data:image/png;base64,"+b64);
   const W=img.naturalWidth,H=img.naturalHeight;
@@ -469,11 +494,18 @@ async function csSlice(b64,a){
     out.push({name:"main",dataURL:cropFrom(sc,box),w:box.w,h:box.h});
     return out;
   }
-  const cols=(a.cols||["x"]).length,rows=(a.rows||["x"]).length, cw=Math.floor(W/cols), ch=Math.floor(H/rows);
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    const box=contentBox(sx,c*cw,r*ch,cw,ch,true)||{x:c*cw,y:r*ch,w:cw,h:ch};
-    const name= cols>1 ? (a.rows[r]+"_"+a.cols[c]) : a.rows[r];
-    out.push({name,dataURL:cropFrom(sc,box),w:box.w,h:box.h});
+  const cols=(a.cols||["x"]).length,rows=(a.rows||["x"]).length;
+  // 1) find the real row bands by the widest empty gaps, then 2) columns within each row
+  const rBands=splitBands(occRows(sx,0,0,W,H),rows,3);
+  for(let r=0;r<rows;r++){
+    const ry0=rBands[r][0], rh=Math.max(1,rBands[r][1]-ry0);
+    const cBands=splitBands(occCols(sx,0,ry0,W,rh),cols,3);
+    for(let c=0;c<cols;c++){
+      const cx0=cBands[c][0], cw=Math.max(1,cBands[c][1]-cx0);
+      const box=contentBox(sx,cx0,ry0,cw,rh,true)||{x:cx0,y:ry0,w:cw,h:rh};
+      const name= cols>1 ? (a.rows[r]+"_"+a.cols[c]) : a.rows[r];
+      out.push({name,dataURL:cropFrom(sc,box),w:box.w,h:box.h});
+    }
   }
   return out;
 }

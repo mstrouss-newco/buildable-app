@@ -30,10 +30,15 @@ Single mode still exists for one-offs (a lone paddle, a full-screen background).
   background, and for sheets the `rows` (variants) and `cols` (states/frames).
 - The form auto-writes the prompt from the chosen recipe + theme. The prompt box is
   editable before you generate.
-- Slicing is done in the browser on a `<canvas>`. Sheets are cut on an even
-  rows-by-cols grid, then each cell is trimmed to its content (transparent margins
-  or near-white background removed). Each piece gets a name from the recipe
-  (e.g. `ice_intact`), editable before Keep.
+- Slicing is done in the browser on a `<canvas>`. After the white background is keyed
+  out, the cutter finds the REAL rows and columns by their widest empty gaps
+  (`occRows`/`occCols` + `splitBands`), not a fixed even grid, so uneven spacing and
+  margins don't cause pieces to bleed into each other. Small gaps (between debris
+  chunks) are ignored so a shatter cluster stays whole. Each cell is then trimmed to
+  its content and named from the recipe (e.g. `ice_intact`), editable before Keep.
+- Recipe assets can carry their own `style` string (overrides the recipe style).
+  Breaker bricks use `STUDIO_STYLE_DETAILED` for a rich textured look; sheets default
+  to `high` quality so that detail renders.
 
 **Backend:** `api/asset-studio.js`.
 - `POST {action:"generate", prompt, size, transparent, quality}` -> `{b64}`. Calls
@@ -117,10 +122,12 @@ per-piece rename, Keep to cache, Download files. Serve + manifest endpoints.
 backgrounds forced to max size + high quality, New Game builder with AI auto-suggest,
 recipes persisted in the DB and loaded into the dropdown.
 
+**V1.2 (built):** detailed textured brick style as the Breaker default (per-asset
+`style` override), sheets default to high quality, gap-detecting slicer (widest-gap
+row/column bands) replacing the fixed grid.
+
 **V2 (planned):**
 - Autopilot: "make 3 more worlds for Breaker" fills the whole recipe unattended.
-- Blob auto-detect slicing (find each sprite as a shape) as a fallback when the grid
-  is uneven, instead of a fixed rows-by-cols cut.
 - Strip export: pack an asset's frames into one horizontal `<name>_anim.png`.
 - Write kept files straight into the repo's game folders + commit, so file-based
   games need zero manual placement.
