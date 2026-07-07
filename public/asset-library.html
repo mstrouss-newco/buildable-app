@@ -189,8 +189,21 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     </div>
     <div id="up-result" style="display:none">
       <div class="seclbl"><b>Sliced pieces</b><span class="muted">check names, then keep</span></div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <button id="up-keep" class="chip" style="background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Keep all pieces</button>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px;background:var(--panel2)">
+        <div class="lbl" style="margin-bottom:8px">Put this art in the game</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <label class="fld">Do<br><select id="up-lvmode"><option value="new">Make a new level</option><option value="replace">Replace a level's art</option></select></label>
+          <label class="fld" id="up-lvname-w">Level name<br><input id="up-lvname" value=""></label>
+          <label class="fld" id="up-lvpick-w" style="display:none">Level<br><select id="up-lvpick"></select></label>
+          <label class="fld" id="up-lvtpl-w">Layout<br><select id="up-lvtpl"></select></label>
+          <label class="fld" id="up-lvdiff-w">Difficulty<br><select id="up-lvdiff"></select></label>
+          <button id="up-makelevel" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Save to game</button>
+        </div>
+        <div id="up-lvstatus" class="muted" style="margin-top:8px"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <span class="muted">Just saving the art? </span>
+        <button id="up-keep" class="chip">Keep pieces only</button>
         <button id="up-download" class="chip">Download files</button>
         <span id="up-keepstatus" class="muted"></span>
       </div>
@@ -781,6 +794,7 @@ async function upSliceSheet(){
     return {name,dataURL:cropFrom(sc,tb),w:tb.w,h:tb.h}; });
   upRenderPieces();
   $("up-result").style.display="";
+  $("up-lvname").value=($("up-theme").value||"level").trim(); upLevelForm();
   $("up-status").textContent="Done. "+UP.pieces.length+" piece(s) sliced.";
 }
 async function upKeep(){
@@ -793,6 +807,31 @@ async function upKeep(){
   const j=await r.json(); $("up-keepstatus").textContent="Kept "+j.count+" piece(s) to "+$("up-game").value+".";
 }
 function upDownload(){ UP.pieces.forEach(p=>{const a=document.createElement("a");a.href=p.dataURL;a.download=p.name+".png";document.body.appendChild(a);a.click();a.remove();}); }
+function upLevelForm(){
+  const game=$("up-game").value, reg=GAME_LEVELS[game];
+  $("up-lvtpl").innerHTML=((reg&&reg.templates)||["full"]).map(t=>`<option>${t}</option>`).join("");
+  const names=(reg?reg.builtin:[]).map(b=>typeof b==="string"?b:b.name);
+  $("up-lvpick").innerHTML=names.length?names.map(n=>`<option>${esc(n)}</option>`).join(""):'<option value="">(no known levels)</option>';
+  $("up-lvdiff").innerHTML=[1,2,3,4,5].map(d=>`<option>${d}</option>`).join(""); $("up-lvdiff").value="3";
+  const rep=$("up-lvmode").value==="replace";
+  $("up-lvname-w").style.display=rep?"none":""; $("up-lvtpl-w").style.display=rep?"none":""; $("up-lvdiff-w").style.display=rep?"none":"";
+  $("up-lvpick-w").style.display=rep?"":"none";
+}
+async function upMakeLevel(){
+  if(!UP.pieces.length){$("up-lvstatus").textContent="Slice a sheet first.";return;}
+  const game=$("up-game").value, theme=($("up-theme").value||"default").trim();
+  $("up-lvstatus").textContent="Saving art…";
+  const kr=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"keep",game,type:UP.type,theme,pieces:UP.pieces.map(p=>({slug:p.name,b64:p.dataURL}))})});
+  if(!kr.ok){$("up-lvstatus").textContent="Save failed.";return;}
+  $("up-lvstatus").textContent="Adding to the game…";
+  const lv=await getJSON("/api/asset-studio?levels="+game); let levels=(lv&&lv.levels)||[]; const reg=GAME_LEVELS[game];
+  if(!levels.length && reg) levels=reg.builtin.map(b=> typeof b==="string"?{name:b,world:"",builtin:true}:{name:b.name,world:b.world||"",builtin:true});
+  let msg;
+  if($("up-lvmode").value==="new"){ const nm=($("up-lvname").value||theme); levels.push({name:nm,world:theme,template:$("up-lvtpl").value,difficulty:+$("up-lvdiff").value||3,builtin:false}); msg='Made a new level "'+nm+'"'; }
+  else { const pick=$("up-lvpick").value; const e=levels.find(l=>l.name===pick); if(e) e.world=theme; else if(pick) levels.push({name:pick,world:theme,builtin:true}); msg='Replaced the art on "'+pick+'"'; }
+  const sr=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-levels",game,levels})});
+  $("up-lvstatus").textContent=sr.ok?(msg+". Reload the game to play it."):"Level save failed.";
+}
 
 /* ============ Worlds + Levels tab (reskin levels / add levels) ============ */
 const GAME_LEVELS={
@@ -876,6 +915,10 @@ async function wlSave(){
   $("up-slice").onclick=upSliceSheet;
   $("up-keep").onclick=upKeep;
   $("up-download").onclick=upDownload;
+  $("up-makelevel").onclick=upMakeLevel;
+  $("up-lvmode").onchange=upLevelForm;
+  $("up-game").onchange=upLevelForm;
+  upLevelForm();
 
   // worlds + levels tab
   $("wl-game").innerHTML=GAMES.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("");
