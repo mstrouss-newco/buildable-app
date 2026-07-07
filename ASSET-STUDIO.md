@@ -66,6 +66,22 @@ then Keep (same `keep` endpoint) or Download. Backbone of the "make hero art any
 let the tool organize it" workflow, which is more reliable than trying to match
 ChatGPT's polish through the raw API.
 
+## Per-game asset slots (each type has its own rules + prompt)
+
+`GAME_SLOTS` in `asset-library.html` defines, per game, the asset types that game needs,
+each carrying its own slicing rules and its own generator prompt. Breaker: bricks (sheet,
+6 materials x 4 states, `material_state` naming), ball (single, named `ball`), paddle
+(single, `paddle`), background (single, `bg`). Survival: hero, enemies (sheet), sky/bg.
+Sling: background, pals (sheet). The slot names match what each game's engine looks for.
+
+When you pick a game in Upload, the asset-type buttons come from that game's slots (not
+the generic character/background list, which is the fallback for games with no slots).
+Selecting a slot auto-fills the layout (single vs grid, rows/cols, row/column names) and
+shows the slot's generator prompt with a copy button ("what to ask the image generator
+for this"). So break states only appear on bricks; a ball slices as one piece named
+`ball`, not intact/hit/cracked/shattered. This is the per-type spec shared by generation
+and slicing.
+
 ## Rules layer
 
 `RULES` (top of the Create-tab script) is the one place every generation obeys, so
