@@ -41,9 +41,13 @@ Single mode still exists for one-offs (a lone paddle, a full-screen background).
   to `high` quality so that detail renders.
 
 **Backend:** `api/asset-studio.js`.
-- `POST {action:"generate", prompt, size, transparent, quality}` -> `{b64}`. Calls
-  gpt-image-1 (sizes: wide `1536x1024`, tall `1024x1536`, square). Not cached; it is
-  a preview. Honors the same daily budget guard as `images.js`.
+- `POST {action:"generate", engine, prompt, size, transparent, quality}` -> `{b64}`.
+  Two engines: `openai` (gpt-image-1, sizes wide `1536x1024` / tall `1024x1536` /
+  square) and `flux` (FLUX Pro via fal.ai, reuses the existing `FAL_KEY`, same
+  submit->poll pattern as `animate-page.js`, model overridable with `FAL_IMAGE_MODEL`,
+  default `fal-ai/flux-pro/v1.1`). FLUX renders on white like gpt-image, so the same
+  white key-out slicing applies. Not cached; it is a preview. Honors the daily budget
+  guard. Pick the engine in the Create tab's Engine dropdown to A/B them.
 - `POST {action:"keep", game, type, theme, pieces:[{slug,b64}]}` -> saves each piece.
 - `GET ?asset=<slug>` -> the PNG bytes, for use in a game: `<img src="/api/asset-studio?asset=breaker/bricks/jungle/ice_intact">`.
 - `GET ?manifest=1[&game=breaker]` -> JSON list of what has been made.

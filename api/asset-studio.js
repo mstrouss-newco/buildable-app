@@ -100,6 +100,41 @@ async function generateSheet(prompt, key, { size = "wide", transparent = true, q
   return null;
 }
 
+/* ---------------- FLUX via fal.ai (reuses the FAL_KEY already set up) -------- */
+// Same submit->poll pattern as animate-page.js. FLUX renders on white (no native
+// transparency), which the browser keys out just like the gpt-image path.
+async function generateFlux(prompt, { size = "tall" } = {}, timeoutMs = 180000) {
+  const key = process.env.FAL_KEY;
+  if (!key) return { err: "no_fal_key" };
+  const MODEL = process.env.FAL_IMAGE_MODEL || "fal-ai/flux-pro/v1.1";
+  const imgSize = size === "wide" ? "landscape_4_3" : size === "square" ? "square_hd" : "portrait_4_3";
+  const auth = { Authorization: "Key " + key };
+  const sub = await fetch("https://queue.fal.run/" + MODEL, {
+    method: "POST", headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, image_size: imgSize, num_images: 1, output_format: "png", safety_tolerance: "5" }),
+  });
+  const sj = await sub.json().catch(() => ({}));
+  if (!sub.ok || !sj.status_url) return { err: "fal_submit_failed", detail: JSON.stringify(sj).slice(0, 200) };
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const sr = await fetch(sj.status_url, { headers: auth });
+    const st = await sr.json().catch(() => ({}));
+    if (st.status === "COMPLETED") {
+      const rr = await fetch(sj.response_url, { headers: auth });
+      const result = await rr.json().catch(() => ({}));
+      const url = result.images && result.images[0] && result.images[0].url;
+      if (!url) return { err: "fal_no_image" };
+      if (url.startsWith("data:")) return { b64: url.split(",")[1] };
+      const ir = await fetch(url);
+      const ab = await ir.arrayBuffer();
+      return { b64: Buffer.from(ab).toString("base64") };
+    }
+    if (st.status && st.status !== "IN_QUEUE" && st.status !== "IN_PROGRESS") return { err: "fal_bad_status", detail: st.status };
+    await new Promise((r) => setTimeout(r, 2500));
+  }
+  return { err: "fal_timeout" };
+}
+
 /* ---------------- helpers ---------------- */
 function readBody(req) {
   return new Promise((resolve) => {
@@ -215,16 +250,25 @@ export default async function handler(req, res) {
   if (action === "generate") {
     const prompt = (body.prompt || "").toString().trim();
     if (!prompt) return res.status(400).json({ error: "no_prompt" });
+    if (!(await underBudget())) return res.status(503).json({ error: "over_budget" });
+    const engine = body.engine === "flux" ? "flux" : "openai";
+
+    if (engine === "flux") {
+      const out = await generateFlux(prompt, { size: body.size });
+      if (out.err) return res.status(502).json({ error: out.err, detail: out.detail });
+      await logCost(0.05);
+      return res.status(200).json({ b64: out.b64, mime: "image/png", engine: "flux" });
+    }
+
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(503).json({ error: "no_openai_key" });
-    if (!(await underBudget())) return res.status(503).json({ error: "over_budget" });
     const quality = ["low", "medium", "high"].includes(body.quality) ? body.quality : "medium";
     const b64 = await generateSheet(prompt, openaiKey, {
       size: body.size, transparent: body.transparent !== false, quality,
     });
     if (!b64) return res.status(502).json({ error: "image_provider_failed" });
     await logCost(COST[quality] || 0.07);
-    return res.status(200).json({ b64, mime: "image/png" });
+    return res.status(200).json({ b64, mime: "image/png", engine: "openai" });
   }
 
   // --- keep the sliced pieces (each already named by the browser from the recipe) ---

@@ -130,6 +130,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
         <label class="fld">Asset<br><select id="cs-asset"></select></label>
         <label class="fld">Theme<br><input type="text" id="cs-theme" list="cs-themes" value="jungle"></label>
         <datalist id="cs-themes"><option>jungle</option><option>space</option><option>ocean</option><option>candy</option><option>snow</option><option>volcano</option><option>desert</option><option>castle</option></datalist>
+        <label class="fld">Engine<br><select id="cs-engine"><option value="openai">gpt-image-1</option><option value="flux">FLUX (fal.ai)</option></select></label>
         <label class="fld">Quality<br><select id="cs-quality"><option value="auto">auto (by rules)</option><option value="medium">standard</option><option value="high">high</option><option value="low">draft (cheap)</option></select></label>
       </div>
       <div id="cs-layout" class="note" style="margin-top:10px"></div>
@@ -527,11 +528,12 @@ async function csGenerate(){
   const a=csAsset(); if(!a)return;
   CS.recipe=csGame(); CS.asset=$("cs-asset").value;
   const btn=$("cs-gen"); btn.disabled=true;
-  $("cs-status").textContent="Generating sheet… (10-40s)";
+  const engine=$("cs-engine").value;
+  $("cs-status").textContent="Generating sheet on "+(engine==="flux"?"FLUX":"gpt-image-1")+"… (10-60s)";
   $("cs-result").style.display="none";
   try{
     const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"generate",prompt:$("cs-prompt").value,size:assetSize(a),transparent:false,quality:assetQuality(a)})});
+      body:JSON.stringify({action:"generate",engine,prompt:$("cs-prompt").value,size:assetSize(a),transparent:false,quality:assetQuality(a)})});
     if(!r.ok){ const e=await r.json().catch(()=>({}));
       $("cs-status").textContent="Could not generate ("+(e.error||r.status)+")."; btn.disabled=false; return; }
     const j=await r.json();
