@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buildable — Share Feedback</title>
+<link rel="icon" href="/favicon.svg">
+<style>
+  :root{
+    --bg:#f5f7fc; --card:#ffffff; --card2:#f1f3fa; --line:#e1e5f0;
+    --ink:#1b1f33; --muted:#5f6785; --accent:#6b4eff; --accent2:#00b488;
+    --danger:#e0384a; --chip:#eceffa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 20% -10%,#e9edfb 0%,var(--bg) 55%);color:var(--ink);min-height:100vh}
+  .wrap{max-width:860px;margin:0 auto;padding:20px 16px 80px}
+  header{margin-bottom:8px}
+  h1{font-size:23px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin:3px 0 0}
+  .who{color:var(--muted);font-size:13px;margin-top:4px}
+  .who a{color:var(--accent);cursor:pointer;text-decoration:underline}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;line-height:1}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.mini{padding:6px 10px;font-size:12px;border-radius:9px}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  input,select,textarea{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px;font-size:14px;font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent)}
+
+  .addcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin:14px 0 22px}
+  .pickrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pickrow #f-target{flex:1 1 220px;max-width:360px;cursor:pointer}
+  .addcard textarea#f-desc{width:100%;margin-top:12px;resize:vertical;min-height:46px}
+  .addfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .legend{color:var(--muted);font-size:12px}
+  .toggle{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .toggle button{background:transparent;border:0;color:var(--muted);font-weight:700;font-size:13px;padding:8px 14px;border-radius:8px;cursor:pointer}
+  .toggle button.on{background:var(--accent);color:#fff}
+
+  .section-title{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin:22px 4px 10px;display:flex;align-items:center;gap:8px}
+  .section-title::after{content:"";flex:1;height:1px;background:var(--line)}
+  .bucket{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:14px;padding:13px 16px}
+  .bucket h2{font-size:17px;margin:0 0 8px}
+  .bucket .count{color:var(--muted);font-size:12px;font-weight:600}
+  .entry{background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px}
+  .entry.mine{border-color:#cdb8ff;background:#f6f3ff}
+  .entry .txt{font-size:14px;line-height:1.45}
+  .entry .meta{color:var(--muted);font-size:12px;margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .entry .meta .you{background:var(--accent);color:#fff;border-radius:999px;padding:1px 8px;font-weight:700;font-size:11px}
+  .entry .acts{display:inline-flex;gap:6px;margin-left:auto}
+  .ilink{color:var(--muted);cursor:pointer;font-size:12px;font-weight:600;padding:2px 6px;border-radius:6px}
+  .ilink:hover{background:#fff;color:var(--ink)}
+  .ilink.del:hover{color:var(--danger)}
+  .edit-input{width:100%;padding:8px 10px;font-size:14px}
+  .empty{text-align:center;color:var(--muted);padding:36px 10px;font-size:15px}
+  .empty b{color:var(--ink)}
+  .banner{background:#fff5e6;border:1px solid #f0d9a8;color:#7a5600;border-radius:12px;padding:12px 14px;margin:0 0 16px;font-size:14px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#04231b;font-weight:700;padding:11px 18px;border-radius:12px;opacity:0;transition:.25s;pointer-events:none;z-index:40}
+  .toast.show{opacity:1}
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
+  #gate .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;width:min(380px,92vw);text-align:center}
+  #gate input{width:100%;text-align:center;font-size:17px;margin:12px 0}
+  #gate h2{margin:0 0 4px}
+</style>
+</head>
+<body>
+<div id="gate"><div class="box">
+  <h2>Share your feedback</h2>
+  <p class="legend">What should we call you? (just a first name or nickname)</p>
+  <input id="nameIn" placeholder="Your name" onkeydown="if(event.key==='Enter')saveName()">
+  <button class="btn" style="width:100%" onclick="saveName()">Start</button>
+</div></div>
+
+<div class="wrap" id="appwrap" style="display:none">
+  <header>
+    <h1>Buildable — Feedback</h1>
+    <p class="sub">Tell us what to fix or add in the games. You can edit or remove your own notes; everyone else's are read-only.</p>
+    <p class="who">You're posting as <b id="whoName"></b>. <a onclick="changeName()">Not you?</a> · <a onclick="load()">Refresh</a></p>
+  </header>
+
+  <div id="setupBanner"></div>
+
+  <div class="addcard">
+    <div class="pickrow">
+      <div class="toggle">
+        <button id="k-game" class="on" onclick="setKind('game')">Game</button>
+        <button id="k-plat" onclick="setKind('platform')">Platform</button>
+      </div>
+      <select id="f-target" onchange="onTargetChange()"></select>
+    </div>
+    <textarea id="f-desc" placeholder="What's the feedback?   e.g. On Breaker, the ball is hard to see on the candy world"></textarea>
+    <div class="addfoot">
+      <span class="legend">One idea per note. ⌘/Ctrl + Enter to add.</span>
+      <button class="btn" id="addBtn" onclick="addFeedback()">+ Add feedback</button>
+    </div>
+  </div>
+
+  <div id="board"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const GAMES=["Breaker","Chess","Sling Squad","Tic-Tac-Toe","Survival","String Match",
+  "Bubble Buddies","Tennis","Croc Tot","Typing","Checkers","Maze Munchers","Hilltop Tanks",
+  "Mahjong","Castle Guard","Photo Booth","Sunny Town Drive","Sound Machine","Art Studio","Stories",
+  "Connect Four","Dots & Boxes","Memory","Bingo","Snakes & Ladders","Family Town"];
+const PLATFORM=["HUD","UI / Look & Feel","Multiplayer","Demo / Tutorial","Navigation",
+  "Backgrounds / Worlds","Sound & Music","Login & Accounts","Mobile / Responsive","Performance","Other"];
+let kind="game", me="", tasks=[], editingId=null;
+
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1600);}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* name */
+function saveName(){
+  const v=document.getElementById("nameIn").value.trim();
+  if(!v){document.getElementById("nameIn").focus();return;}
+  me=v; try{localStorage.setItem("planner-feedback-name",v);}catch(e){}
+  document.getElementById("gate").style.display="none";
+  document.getElementById("appwrap").style.display="block";
+  document.getElementById("whoName").textContent=me;
+  setKind("game"); load();
+}
+function changeName(){ try{localStorage.removeItem("planner-feedback-name");}catch(e){} location.reload(); }
+
+/* network */
+async function api(body){ const r=await fetch("/api/planner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); return r.json(); }
+async function load(){
+  try{
+    const r=await fetch("/api/planner?scope=tester",{cache:"no-store"});
+    const d=await r.json();
+    if(!d.ok){ document.getElementById("setupBanner").innerHTML='<div class="banner">Feedback isn’t set up yet — check back soon.</div>'; return; }
+    document.getElementById("setupBanner").innerHTML="";
+    tasks=d.tasks||[]; render();
+  }catch(e){ document.getElementById("setupBanner").innerHTML='<div class="banner">Couldn’t load feedback. Tap Refresh to retry.</div>'; }
+}
+
+/* picker */
+function setKind(k){
+  kind=k;
+  document.getElementById("k-game").classList.toggle("on",k==="game");
+  document.getElementById("k-plat").classList.toggle("on",k==="platform");
+  refreshTargetList();
+}
+function refreshTargetList(){
+  const base=kind==="game"?GAMES:PLATFORM;
+  const seen=tasks.filter(t=>t.kind===kind).map(t=>t.target);
+  const all=[...new Set([...base,...seen])].sort((a,b)=>a.localeCompare(b));
+  const sel=document.getElementById("f-target"); const cur=sel.value;
+  sel.innerHTML=`<option value="" disabled selected>${kind==="game"?"Which game?":"Which area?"}</option>`+all.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join("");
+  if(cur && all.includes(cur)) sel.value=cur;
+}
+function onTargetChange(){}
+
+/* add */
+async function addFeedback(){
+  const target=document.getElementById("f-target").value.trim();
+  const desc=document.getElementById("f-desc").value.trim();
+  if(!target){toast(kind==="game"?"Pick a game":"Pick an area");return;}
+  if(!desc){toast("Add your feedback");return;}
+  const btn=document.getElementById("addBtn"); btn.disabled=true;
+  const r=await api({op:"add",task:{kind,target,description:desc,source:"tester",author:me}});
+  btn.disabled=false;
+  if(!r.ok){toast("Couldn't save — try again");return;}
+  tasks.push(r.task);
+  document.getElementById("f-desc").value=""; document.getElementById("f-desc").focus();
+  render(); toast("Thanks! Feedback added");
+}
+
+/* edit / delete own */
+function startEdit(id){ editingId=id; render(); const e=document.getElementById("edit-"+id); if(e){e.focus();e.select();} }
+function cancelEdit(){ editingId=null; render(); }
+async function saveEdit(id){
+  const inp=document.getElementById("edit-"+id); if(!inp)return;
+  const val=inp.value.trim(); const t=tasks.find(x=>x.id===id);
+  if(!val){inp.focus();return;}
+  if(t && val!==t.description){ const r=await api({op:"update",id,fields:{description:val},author:me}); if(r.ok){t.description=val;toast("Updated");} else {toast("Couldn't update");} }
+  editingId=null; render();
+}
+async function delFeedback(id){
+  if(!confirm("Remove your feedback?"))return;
+  const r=await api({op:"delete",id,author:me});
+  if(r.ok){ tasks=tasks.filter(t=>t.id!==id); render(); toast("Removed"); }
+  else toast("Couldn't remove");
+}
+
+function ago(iso){
+  const s=Math.max(1,(Date.now()-new Date(iso).getTime())/1000);
+  if(s<60)return "just now"; const m=s/60; if(m<60)return Math.floor(m)+"m ago";
+  const h=m/60; if(h<24)return Math.floor(h)+"h ago"; const d=h/24; return Math.floor(d)+"d ago";
+}
+
+/* render */
+function render(){
+  refreshTargetList();
+  const board=document.getElementById("board");
+  if(!tasks.length){ board.innerHTML='<div class="empty"><b>No feedback yet.</b><br>Be the first — pick a game above and tell us what you think.</div>'; return; }
+  board.innerHTML=section("Games","game")+section("Platform","platform");
+}
+function section(title,k){
+  const targets=[...new Set(tasks.filter(t=>t.kind===k).map(t=>t.target))].sort((a,b)=>a.localeCompare(b));
+  if(!targets.length) return "";
+  return `<div class="section-title">${title}</div>`+targets.map(tg=>{
+    const items=tasks.filter(t=>t.kind===k&&t.target===tg).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    return `<div class="bucket"><h2>${esc(tg)} <span class="count">${items.length}</span></h2>${items.map(entry).join("")}</div>`;
+  }).join("");
+}
+function entry(t){
+  const mine=t.author===me;
+  if(editingId===t.id){
+    return `<div class="entry mine">
+      <input class="edit-input" id="edit-${t.id}" value="${esc(t.description)}" onkeydown="if(event.key==='Enter'){saveEdit(${t.id})}else if(event.key==='Escape'){cancelEdit()}">
+      <div class="meta"><span class="acts"><span class="ilink" onclick="saveEdit(${t.id})">Save</span><span class="ilink" onclick="cancelEdit()">Cancel</span></span></div>
+    </div>`;
+  }
+  const acts=mine?`<span class="acts"><span class="ilink" onclick="startEdit(${t.id})">Edit</span><span class="ilink del" onclick="delFeedback(${t.id})">Delete</span></span>`:"";
+  return `<div class="entry ${mine?'mine':''}">
+    <div class="txt">${esc(t.description)}</div>
+    <div class="meta">${mine?'<span class="you">you</span>':esc(t.author||'someone')} · ${ago(t.created_at)}${acts}</div>
+  </div>`;
+}
+
+document.getElementById("f-desc")&&document.getElementById("f-desc").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))addFeedback();});
+me=(function(){try{return localStorage.getItem("planner-feedback-name")||"";}catch(e){return "";}})();
+if(me){ document.getElementById("gate").style.display="none"; document.getElementById("appwrap").style.display="block"; document.getElementById("whoName").textContent=me; setKind("game"); load(); }
+else { document.getElementById("nameIn").focus(); }
+</script>
+</body>
+</html>

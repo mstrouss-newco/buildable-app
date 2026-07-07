@@ -4,6 +4,9 @@
 // POST { op:'update', id, fields } -> patch a task (e.g. done:true)
 // POST { op:'delete', id }        -> remove a task
 // POST { op:'meta', data }        -> replace the meta row (settings/sends/custom)
+// GET ?scope=tester                -> only tester feedback rows (source='tester')
+// Tester adds pass source:'tester' + author; tester edit/delete pass author so
+// PostgREST filters restrict them to their OWN feedback rows (edit-your-own).
 // Uses the service key server-side (like log-game-event / play-creation), so no
 // user auth; the page keeps a light PIN gate for privacy. If the tables aren't
 // created yet (db/create-planner-tasks.sql) it returns ok:false with a hint.
@@ -22,8 +25,11 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
+      const _qs = String(req.url || "").split("?")[1] || "";
+      const scope = /(?:^|&)scope=tester(?:&|$)/.test(_qs) ? "tester" : "";
+      const tFilter = scope === "tester" ? "select=*&source=eq.tester&order=created_at.asc" : "select=*&order=created_at.asc";
       const [tr, mr] = await Promise.all([
-        fetch(`${URL}/rest/v1/planner_tasks?select=*&order=created_at.asc`, { headers: H }),
+        fetch(`${URL}/rest/v1/planner_tasks?${tFilter}`, { headers: H }),
         fetch(`${URL}/rest/v1/planner_meta?id=eq.1&select=data`, { headers: H }),
       ]);
       if (!tr.ok) { const d = await tr.text().catch(() => ""); return res.status(200).json({ ok: false, status: tr.status, hint: "run db/create-planner-tasks.sql", detail: d.slice(0, 160) }); }
@@ -42,8 +48,10 @@ export default async function handler(req, res) {
         const kind = t.kind === "platform" ? "platform" : "game";
         const target = clip(t.target, 60).trim();
         const description = clip(t.description, 500).trim();
+        const source = t.source === "tester" ? "tester" : "me";
+        const author = source === "tester" ? (clip(t.author, 40).trim() || "anon") : null;
         if (!target || !description) return res.status(400).json({ ok: false, error: "target and description required" });
-        const r = await fetch(`${URL}/rest/v1/planner_tasks`, { method: "POST", headers: { ...H, Prefer: "return=representation" }, body: JSON.stringify({ kind, target, description }) });
+        const r = await fetch(`${URL}/rest/v1/planner_tasks`, { method: "POST", headers: { ...H, Prefer: "return=representation" }, body: JSON.stringify({ kind, target, description, source, author }) });
         if (!r.ok) { const d = await r.text().catch(() => ""); return res.status(200).json({ ok: false, detail: d.slice(0, 160) }); }
         const rows = await r.json();
         return res.status(200).json({ ok: true, task: rows[0] });
@@ -57,7 +65,9 @@ export default async function handler(req, res) {
         if (f.description != null) fields.description = clip(f.description, 500).trim();
         if (f.target != null) fields.target = clip(f.target, 60).trim();
         fields.updated_at = new Date().toISOString();
-        const r = await fetch(`${URL}/rest/v1/planner_tasks?id=eq.${id}`, { method: "PATCH", headers: H, body: JSON.stringify(fields) });
+        let uq = `id=eq.${id}`;
+        if (b.author) uq += `&source=eq.tester&author=eq.${encodeURIComponent(String(b.author))}`;
+        const r = await fetch(`${URL}/rest/v1/planner_tasks?${uq}`, { method: "PATCH", headers: H, body: JSON.stringify(fields) });
         if (!r.ok) { const d = await r.text().catch(() => ""); return res.status(200).json({ ok: false, detail: d.slice(0, 160) }); }
         return res.status(200).json({ ok: true });
       }
@@ -65,7 +75,9 @@ export default async function handler(req, res) {
       if (op === "delete") {
         const id = parseInt(b.id, 10);
         if (!id) return res.status(400).json({ ok: false, error: "id required" });
-        const r = await fetch(`${URL}/rest/v1/planner_tasks?id=eq.${id}`, { method: "DELETE", headers: H });
+        let dq = `id=eq.${id}`;
+        if (b.author) dq += `&source=eq.tester&author=eq.${encodeURIComponent(String(b.author))}`;
+        const r = await fetch(`${URL}/rest/v1/planner_tasks?${dq}`, { method: "DELETE", headers: H });
         if (!r.ok) { const d = await r.text().catch(() => ""); return res.status(200).json({ ok: false, detail: d.slice(0, 160) }); }
         return res.status(200).json({ ok: true });
       }

@@ -91,6 +91,9 @@
   .gtag.later{color:var(--accent)}
   .gtag.sent{color:var(--warn)}
   .task.sent{background:#fff8ec;border-color:#f0d9a8}
+  .gtag.fb{color:var(--accent2)}
+  .task.feedback{background:#eefaf6;border-color:#bfe9dc}
+  .fbfrom{color:var(--muted);font-size:12px;font-weight:600;white-space:nowrap}
   .gtag.clk{cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none}
   .gtag.clk .chev{width:14px;height:14px;transition:transform .15s}
   .collapsible.open .gtag.clk .chev{transform:rotate(90deg)}
@@ -267,7 +270,7 @@ async function load(showToast){
     if(showToast)toast("Refreshed");
   }catch(e){ setSync("offline"); renderBanner("Couldn't reach the store. Tap Refresh to retry."); }
 }
-function normTask(t){ return {id:t.id, kind:t.kind==="platform"?"platform":"game", target:t.target, desc:t.description, done:!!t.done, created:t.created_at}; }
+function normTask(t){ return {id:t.id, kind:t.kind==="platform"?"platform":"game", target:t.target, desc:t.description, done:!!t.done, created:t.created_at, source:t.source||"me", author:t.author||null}; }
 function normMeta(m){ m=m||{}; return {settings:Object.assign({...DEF_SETTINGS},m.settings||{}), sends:m.sends||{}, custom:Object.assign({game:[],platform:[]},m.custom||{}), later:Array.isArray(m.later)?m.later:[], sent:Array.isArray(m.sent)?m.sent:[]}; }
 
 async function saveMeta(){ setSync("saving…"); const r=await apiPost({op:"meta",data:state.meta}); setSync(r.ok?"in sync":"offline"); }
@@ -404,7 +407,7 @@ function statusOf(n){
   if(n>=s.readyAt) return {cls:"s-ready",txt:"Ready to hand off"};
   return {cls:"s-wait",txt:(s.readyAt-n)+" more to be worth a batch"};
 }
-function openCount(k,target){return state.tasks.filter(t=>t.kind===k&&t.target===target&&!t.done&&!t.later&&!t.sent).length;}
+function openCount(k,target){return state.tasks.filter(t=>t.kind===k&&t.target===target&&t.source!=="tester"&&!t.done&&!t.later&&!t.sent).length;}
 
 /* ---- render ---- */
 function render(){
@@ -433,7 +436,8 @@ function section(title,k){
 }
 function bucket(k,target){
   const all=state.tasks.filter(t=>t.kind===k&&t.target===target);
-  const open=all.filter(t=>!t.done&&!t.later&&!t.sent), sent=all.filter(t=>!t.done&&!t.later&&t.sent), later=all.filter(t=>!t.done&&t.later), done=all.filter(t=>t.done);
+  const own=all.filter(t=>t.source!=="tester");
+  const open=own.filter(t=>!t.done&&!t.later&&!t.sent), sent=own.filter(t=>!t.done&&!t.later&&t.sent), later=own.filter(t=>!t.done&&t.later), feedback=all.filter(t=>t.source==="tester"&&!t.done), done=all.filter(t=>t.done);
   const n=open.length, st=statusOf(n);
   const key=k+"|"+target;
   if(openState[key]===undefined) openState[key]=(n>=state.meta.settings.readyAt || sent.length>0);
@@ -447,7 +451,7 @@ function bucket(k,target){
   </div>`:"";
   return `<div class="bucket">
     <div class="bhead" onclick='toggleBucket(${JSON.stringify(k)},${JSON.stringify(target)})'>
-      <h2>${esc(target)} <span class="count">${n} open${sent.length?` · ${sent.length} with Claude`:""}${later.length?` · ${later.length} later`:""}${done.length?` · ${done.length} done`:""}</span></h2>
+      <h2>${esc(target)} <span class="count">${n} open${feedback.length?` · ${feedback.length} feedback`:""}${sent.length?` · ${sent.length} with Claude`:""}${later.length?` · ${later.length} later`:""}${done.length?` · ${done.length} done`:""}</span></h2>
       <span class="status ${st.cls}">${st.txt}</span>
     </div>
     <div class="body ${isOpen}">
@@ -460,6 +464,7 @@ function bucket(k,target){
         <button class="btn ghost mini" onclick='copyBucket(${JSON.stringify(k)},${JSON.stringify(target)})'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy list</button>
         ${canSend?`<button class="btn green mini" onclick='openBatch(${JSON.stringify(k)},${JSON.stringify(target)})'>Prep prompt for Claude →</button>`:""}
       </div>`:""}
+      ${feedback.length?`<div class="donewrap"><div class="gtag fb">tester feedback (${feedback.length}) — sort through these</div>${feedback.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:""}
       ${sent.length?`<div class="donewrap"><div class="gtag sent">with Claude (${sent.length}) — check off what cleared, or send back to active</div>${sent.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:""}
       ${later.length?`<div class="donewrap"><div class="gtag later">later (${later.length}) — parked until you're ready</div>${later.map((t,i)=>taskRow(t,i+1)).join("")}</div>`:""}
       ${doneHtml}
@@ -473,6 +478,14 @@ function taskRow(t,num){
       <input class="edit-input" id="edit-${t.id}" value="${esc(t.desc)}" onkeydown="if(event.key==='Enter'){saveEdit(${t.id})}else if(event.key==='Escape'){cancelEdit()}">
       <span class="later-btn ok" onclick="saveEdit(${t.id})" title="Save"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6L9 17l-5-5'/></svg></span>
       <span class="x" onclick="cancelEdit()" title="Cancel">✕</span>
+    </div>`;
+  }
+  if(t.source==="tester"){
+    return `<div class="task feedback">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleDone(${t.id})" title="Mark reviewed (archive)" style="margin-top:3px">
+      <span class="num">${num}.</span>
+      <span class="desc">${esc(t.desc)} <span class="fbfrom">— ${esc(t.author||'tester')}</span></span>
+      <span class="x" onclick="delTask(${t.id})" title="Delete">✕</span>
     </div>`;
   }
   const editBtn=`<span class="later-btn" onclick="startEdit(${t.id})" title="Edit"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'/></svg></span>`;

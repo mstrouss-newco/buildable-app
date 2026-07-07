@@ -428,6 +428,14 @@
       "dest": "/planner.html"
     },
     {
+      "src": "/feedback.html",
+      "dest": "/feedback.html"
+    },
+    {
+      "src": "/feedback",
+      "dest": "/feedback.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
