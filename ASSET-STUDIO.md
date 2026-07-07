@@ -151,8 +151,28 @@ as the `"__lib"` theme over campaign play. So the loop is: make art in Create/Up
 keep it under a world name → Worlds tab, set it active for the game → the game is
 reskinned. Same wiring copies to Sling next (read active world, feed its draw code).
 
-Next layer (not built): data-driven LEVELS (a level = world + layout + difficulty as
-saved data instead of a hardcoded array), so new levels can be made without code too.
+## Levels layer (reskin a level / add a level)
+
+The Worlds tab is now a game + levels manager. Per game it shows a default world and a
+list of levels; each level can be assigned a world (reskin that level), and you can add
+a level (name + layout template + 1-5 difficulty). Saved via:
+- `GET ?levels=<game>` -> `{levels:[{name,world,builtin,template,difficulty}]}`
+- `POST {action:"set-levels", game, levels}` (stored `image_cache` kind="levels").
+
+Engine reads (all gated, safe fallback to built-in art):
+- Breaker (full): `applyLevelsConfig()` sets each built-in level's `_world` and appends
+  new levels from the template (`TPL` map -> cols/rows/pattern) + difficulty. `curWorld()`
+  picks the current level's world, else the default, else built-in. Appended levels may
+  need a reload to show in the picker.
+- Survival (reskin): `loadSurvivalWorld()` swaps sky (`bgFor`), hero (`drawHero`), and
+  enemy cutouts (`sdGet`) for the assigned world's pieces (named bg/hero/enemy_*).
+- Sling (reskin): swaps the backdrop scene (`drawBg`) and the flung pals
+  (`drawSquadFace`) for the world's background + character pieces.
+
+Naming for each game's world slots: Breaker = `material_state` bricks + ball/paddle/bg.
+Survival = `hero`, `enemy_*`, `bg`. Sling = `bg`/background + character pieces (pals).
+Per-level worlds + template new-levels are full on Breaker; Sling/Survival apply the
+world game-wide for now (per-level + new-level layouts for those two are the next step).
 
 ## Animation (full frames)
 

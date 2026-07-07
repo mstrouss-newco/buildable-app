@@ -304,10 +304,22 @@ async function loadLibrary(){
     const has=t=>LIBPACKS[t]&&LIBPACKS[t].materials.length;
     if(LIB_THEME && has(LIB_THEME)) LIB_WORLD=LIB_THEME;
     else { try{ const wr=await fetch("/api/asset-studio?world=breaker"); const wj=await wr.json(); if(wj&&wj.world&&has(wj.world)) LIB_WORLD=wj.world; }catch(e){} }
+    await applyLevelsConfig();
+  }catch(e){}
+}
+const TPL={ full:{cols:10,rows:6,pattern:"full"}, pyramid:{cols:9,rows:5,pattern:"pyramid"}, checker:{cols:10,rows:5,pattern:"checker"}, gaps:{cols:10,rows:6,pattern:"gaps"}, columns:{cols:10,rows:6,pattern:"columns"}, frame:{cols:11,rows:7,pattern:"frame"}, diamond:{cols:11,rows:7,pattern:"diamond"} };
+async function applyLevelsConfig(){
+  try{ const r=await fetch("/api/asset-studio?levels=breaker"); if(!r.ok)return; const j=await r.json(); const cfg=(j&&j.levels)||[]; if(!cfg.length)return;
+    const byName={}; GAME_CONFIG.levels.forEach(l=>{byName[l.name]=l;}); const news=[];
+    for(const e of cfg){ if(e.builtin){ const l=byName[e.name]; if(l&&e.world) l._world=e.world; }
+      else { const t=TPL[e.template]||TPL.full, d=clamp((+e.difficulty||3),1,5);
+        news.push({ name:e.name||"New level", cols:t.cols, rows:t.rows, pattern:t.pattern, tough:(d-1)*0.12, speed:3.8+d*0.5, theme:"jungle", _world:e.world||"" }); } }
+    if(news.length) GAME_CONFIG.levels=GAME_CONFIG.levels.concat(news);
   }catch(e){}
 }
 loadLibrary();
-function libPack(){ return LIB_WORLD?LIBPACKS[LIB_WORLD]:null; }
+function curWorld(){ if(L&&L._world&&LIBPACKS[L._world]&&LIBPACKS[L._world].materials.length) return L._world; if(LIB_WORLD) return LIB_WORLD; return null; }
+function libPack(){ const w=curWorld(); return w?LIBPACKS[w]:null; }
 function themeAssets(id){
   if(id==="__lib"){ const p=libPack(); return p ? { def:{ball:0,lib:true}, lib:p, bg:p.bg } : null; }
   const t=THEMES[id]; if(!t) return null;

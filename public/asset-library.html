@@ -200,10 +200,16 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
   <div id="worldsView" style="display:none">
     <div class="panel">
-      <div class="note" style="margin-bottom:12px">A world is a full set of art for a game (bricks, ball, paddle, background). Pick which world a game uses. Switch it anytime to reskin the whole game. Worlds come from what you keep in Create or Upload.</div>
-      <label class="fld">Game<br><select id="wl-game"></select></label>
-      <div id="wl-list" class="grid" style="margin-top:14px"></div>
-      <div id="wl-status" class="muted" style="margin-top:10px"></div>
+      <div class="note" style="margin-bottom:12px">A world is a game's art set (bricks/ball/paddle/bg, or hero/enemies/sky). A level is a challenge that wears a world. Assign a world to a level to reskin it, or add a new level (pick a layout template and difficulty). The default world dresses any level left on built-in art.</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <label class="fld">Game<br><select id="wl-game"></select></label>
+        <label class="fld">Default world<br><select id="wl-def"></select></label>
+        <button id="wl-save" class="chip" style="background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Save</button>
+        <span id="wl-status" class="muted"></span>
+      </div>
+      <div id="wl-worlds" class="chips" style="margin:12px 0 4px"></div>
+      <div class="seclbl" style="margin:14px 0 6px"><b>Levels</b><button id="wl-add" class="chip">+ Add level</button></div>
+      <div id="wl-levels"></div>
     </div>
   </div><!-- /worldsView -->
 </div>
@@ -788,30 +794,53 @@ async function upKeep(){
 }
 function upDownload(){ UP.pieces.forEach(p=>{const a=document.createElement("a");a.href=p.dataURL;a.download=p.name+".png";document.body.appendChild(a);a.click();a.remove();}); }
 
-/* ============ Worlds tab (assign a library world to a game) ============ */
+/* ============ Worlds + Levels tab (reskin levels / add levels) ============ */
+const GAME_LEVELS={
+  breaker:{ templates:["full","pyramid","checker","gaps","columns","frame","diamond"],
+    builtin:["Jungle Ruins","Star Pyramid","Coral Castle","Vine Gaps","Comet Towers","Reef Walls","Temple Drop","Galaxy Boss"] },
+  sling:{ templates:["tower","wall","pyramid","scatter"],
+    builtin:["Wobbly Gate","Tilty Tower","Double Trouble","Castle Keep","Grand Topple"] },
+  survival:{ templates:["swarm","mixed","rush"],
+    builtin:["Comet Meadow","Nebula Drift","Asteroid Twirl","Stardust Caves","Rocket Rapids","Galaxy Finale"] },
+};
+let WL={game:null,worlds:[],def:"",levels:[]};
 async function wlLoad(){
-  const game=$("wl-game").value; $("wl-list").innerHTML='<div class="muted">Loading…</div>'; $("wl-status").textContent="";
-  const [mf,act]=await Promise.all([ getJSON("/api/asset-studio?manifest=1&game="+game), getJSON("/api/asset-studio?world="+game) ]);
-  const active=(act&&act.world)||null, rows=(mf&&mf.assets)||[];
-  const worlds={}, order=[];
-  for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length<4)continue; const theme=seg[2], name=seg.slice(3).join("/");
-    if(!worlds[theme]){worlds[theme]={thumb:null,count:0};order.push(theme);}
-    worlds[theme].count++;
-    if(!worlds[theme].thumb || /_intact$/.test(name)) worlds[theme].thumb=a.url;
-  }
-  let html='<div class="card" style="'+(active?'':'border:2px solid var(--acc)')+'"><div class="thumb"><span class="ic">▦</span></div><div class="cbody"><div class="cname">Built-in art</div><div class="badges"><button class="wl-set chip" data-w="">'+(active?'Use':'Active')+'</button></div></div></div>';
-  html+=order.map(k=>{const wd=worlds[k],on=active===k;
-    return '<div class="card" style="'+(on?'border:2px solid var(--acc)':'')+'"><div class="thumb checker">'+(wd.thumb?'<img src="'+wd.thumb+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain">':'')+'</div><div class="cbody"><div class="cname">'+esc(k)+'</div><div class="badges"><span class="b">'+wd.count+' pieces</span><button class="wl-set chip" data-w="'+esc(k)+'">'+(on?'Active':'Use')+'</button></div></div></div>';}).join("");
-  if(!order.length) html+='<div class="muted">No worlds yet for this game. Make some in Create or Upload, keep them, then they show here.</div>';
-  $("wl-list").innerHTML=html;
-  $("wl-list").querySelectorAll(".wl-set").forEach(b=>b.onclick=()=>wlSet(b.dataset.w));
-  $("wl-status").textContent=active?("Active world: "+active):"Using built-in art.";
+  const game=$("wl-game").value; WL.game=game; $("wl-status").textContent="Loading…"; $("wl-levels").innerHTML="";
+  const [mf,act,lv]=await Promise.all([
+    getJSON("/api/asset-studio?manifest=1&game="+game),
+    getJSON("/api/asset-studio?world="+game),
+    getJSON("/api/asset-studio?levels="+game) ]);
+  const rows=(mf&&mf.assets)||[], wset=[];
+  for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length>=4 && wset.indexOf(seg[2])<0) wset.push(seg[2]); }
+  WL.worlds=wset; WL.def=(act&&act.world)||"";
+  const saved=(lv&&lv.levels)||[];
+  if(saved.length) WL.levels=saved;
+  else { const reg=GAME_LEVELS[game]; WL.levels=(reg?reg.builtin:[]).map(n=>({name:n,world:"",builtin:true})); }
+  wlRender();
 }
-async function wlSet(world){
-  const game=$("wl-game").value; $("wl-status").textContent="Saving…";
-  const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-world",game,world})});
-  if(!r.ok){$("wl-status").textContent="Save failed.";return;}
-  wlLoad();
+function worldOpts(sel){ return '<option value="">Default</option>'+WL.worlds.map(w=>`<option ${sel===w?"selected":""}>${esc(w)}</option>`).join(""); }
+function wlRender(){
+  $("wl-def").innerHTML='<option value="">Built-in art</option>'+WL.worlds.map(w=>`<option ${WL.def===w?"selected":""}>${esc(w)}</option>`).join("");
+  $("wl-def").onchange=()=>{WL.def=$("wl-def").value;};
+  $("wl-worlds").innerHTML='<span class="lbl">Worlds:</span>'+(WL.worlds.length?WL.worlds.map(w=>`<span class="chip">${esc(w)}</span>`).join(""):'<span class="muted">none yet — make some in Create or Upload</span>');
+  const reg=GAME_LEVELS[WL.game], tmpl=(reg&&reg.templates)||["full"];
+  $("wl-levels").innerHTML=WL.levels.map((L,i)=>{
+    const world=`<select data-i="${i}" data-f="world">${worldOpts(L.world)}</select>`;
+    if(L.builtin) return `<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)"><span style="flex:1;font-size:13px">${esc(L.name)}</span><span class="fld">World ${world}</span></div>`;
+    const tsel=`<select data-i="${i}" data-f="template">${tmpl.map(t=>`<option ${L.template===t?"selected":""}>${t}</option>`).join("")}</select>`;
+    const dsel=`<select data-i="${i}" data-f="difficulty">${[1,2,3,4,5].map(d=>`<option ${(+L.difficulty||3)===d?"selected":""}>${d}</option>`).join("")}</select>`;
+    return `<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);flex-wrap:wrap"><input data-i="${i}" data-f="name" value="${esc(L.name)}" style="flex:1;min-width:110px"><span class="fld">World ${world}</span><span class="fld">Layout ${tsel}</span><span class="fld">Diff ${dsel}</span><button class="wl-del chip" data-i="${i}">remove</button></div>`;
+  }).join("");
+  $("wl-levels").querySelectorAll("[data-f]").forEach(el=>{el.oninput=el.onchange=()=>{WL.levels[+el.dataset.i][el.dataset.f]=el.value;};});
+  $("wl-levels").querySelectorAll(".wl-del").forEach(b=>b.onclick=()=>{WL.levels.splice(+b.dataset.i,1);wlRender();});
+  $("wl-status").textContent="";
+}
+function wlAdd(){ const reg=GAME_LEVELS[WL.game]; WL.levels.push({name:"New level",world:WL.def||"",template:(reg&&reg.templates?reg.templates[0]:"full"),difficulty:3,builtin:false}); wlRender(); }
+async function wlSave(){
+  $("wl-status").textContent="Saving…";
+  await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-world",game:WL.game,world:WL.def})});
+  const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-levels",game:WL.game,levels:WL.levels})});
+  $("wl-status").textContent=r.ok?"Saved. Reload the game to see the changes.":"Save failed.";
 }
 
 /* ---- wire up ---- */
@@ -842,9 +871,11 @@ async function wlSet(world){
   $("up-keep").onclick=upKeep;
   $("up-download").onclick=upDownload;
 
-  // worlds tab
+  // worlds + levels tab
   $("wl-game").innerHTML=GAMES.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("");
   $("wl-game").onchange=wlLoad;
+  $("wl-add").onclick=wlAdd;
+  $("wl-save").onclick=wlSave;
 
   document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
     const t=b.dataset.t;

@@ -189,6 +189,14 @@ export default async function handler(req, res) {
     return res.status(200).json({ world: v ? Buffer.from(v, "base64").toString("utf8") : null });
   }
 
+  // --- get a game's levels config: GET ?levels=breaker -> {levels:[...]} ---
+  if (req.method === "GET" && q.levels) {
+    const v = await cacheGet("setting:levels:" + cleanSlug(q.levels));
+    let levels = [];
+    if (v) { try { levels = JSON.parse(Buffer.from(v, "base64").toString("utf8")); } catch {} }
+    return res.status(200).json({ levels: Array.isArray(levels) ? levels : [] });
+  }
+
   // --- list saved game recipes (built by the New Game form) ---
   if (req.method === "GET" && q.recipes) {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return res.status(200).json({ recipes: {} });
@@ -251,6 +259,16 @@ export default async function handler(req, res) {
     if (!world) { await sb(`image_cache?cache_key=eq.${encodeURIComponent(key)}`, { method: "DELETE" }); return res.status(200).json({ ok: true, world: null }); }
     const ok = await cachePut(key, "world:" + game, "setting", Buffer.from(world, "utf8").toString("base64"));
     return res.status(ok ? 200 : 502).json({ ok, world });
+  }
+
+  // --- save a game's levels config (name, world, template, difficulty per level) ---
+  if (action === "set-levels") {
+    const game = cleanSlug(body.game || "");
+    if (!game) return res.status(400).json({ error: "no_game" });
+    const levels = Array.isArray(body.levels) ? body.levels : [];
+    const ok = await cachePut("setting:levels:" + game, "levels:" + game, "levels",
+      Buffer.from(JSON.stringify(levels), "utf8").toString("base64"));
+    return res.status(ok ? 200 : 502).json({ ok, count: levels.length });
   }
 
   // --- save a recipe (from the New Game form) so it persists + shows in the dropdown ---
