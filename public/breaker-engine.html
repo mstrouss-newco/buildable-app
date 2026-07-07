@@ -286,31 +286,36 @@ const themeCache = {};
 // Pulls the individual "material_state" pieces you kept from /api/asset-studio and
 // uses them as the live brick art. Only turns on when ?libtheme= is present, so
 // normal campaign / custom play is completely unaffected.
-const LIB_THEME = new URLSearchParams(location.search).get("libtheme");
-let LIBPACK = null;   // { materials:[key], bricks:{key:{intact,hit,cracked,shattered:Image}}, ball, paddle, bg }
-async function loadLibPack(theme){
+const LIB_THEME = new URLSearchParams(location.search).get("libtheme"); // test override
+let LIBPACKS = {};      // theme -> pack (all library worlds for this game)
+let LIB_WORLD = null;   // active library world name (from ?libtheme or the saved setting)
+async function loadLibrary(){
   try{ const r=await fetch("/api/asset-studio?manifest=1&game=breaker"); if(!r.ok)return;
-    const j=await r.json(), rows=(j&&j.assets)||[], pack={materials:[],bricks:{},ball:null,paddle:null,bg:null};
-    for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length<4||seg[2]!==theme)continue;
-      const name=seg.slice(3).join("/");
-      if(name==="ball"||name==="ball_1"){pack.ball=mkImg(a.url);continue;}
-      if(name==="paddle"||name==="paddle_1"){pack.paddle=mkImg(a.url);continue;}
-      if(name==="bg"||name==="background"||name==="main"){pack.bg=mkImg(a.url);continue;}
+    const j=await r.json(), rows=(j&&j.assets)||[];
+    for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length<4)continue;
+      const theme=seg[2], name=seg.slice(3).join("/");
+      let p=LIBPACKS[theme]; if(!p) p=LIBPACKS[theme]={materials:[],bricks:{},ball:null,paddle:null,bg:null};
+      if(name==="ball"||name==="ball_1"){p.ball=mkImg(a.url);continue;}
+      if(name==="paddle"||name==="paddle_1"){p.paddle=mkImg(a.url);continue;}
+      if(name==="bg"||name==="background"||name==="main"){p.bg=mkImg(a.url);continue;}
       const m=name.match(/^(.*)_(intact|hit|cracked|shattered)$/); if(!m)continue;
-      const mat=m[1]; if(!pack.bricks[mat]){pack.bricks[mat]={};pack.materials.push(mat);} pack.bricks[mat][m[2]]=mkImg(a.url);
+      const mat=m[1]; if(!p.bricks[mat]){p.bricks[mat]={};p.materials.push(mat);} p.bricks[mat][m[2]]=mkImg(a.url);
     }
-    if(pack.materials.length) LIBPACK=pack;
+    const has=t=>LIBPACKS[t]&&LIBPACKS[t].materials.length;
+    if(LIB_THEME && has(LIB_THEME)) LIB_WORLD=LIB_THEME;
+    else { try{ const wr=await fetch("/api/asset-studio?world=breaker"); const wj=await wr.json(); if(wj&&wj.world&&has(wj.world)) LIB_WORLD=wj.world; }catch(e){} }
   }catch(e){}
 }
-if(LIB_THEME) loadLibPack(LIB_THEME);
+loadLibrary();
+function libPack(){ return LIB_WORLD?LIBPACKS[LIB_WORLD]:null; }
 function themeAssets(id){
-  if(id==="__lib") return LIBPACK ? { def:{ball:0,lib:true}, lib:LIBPACK, bg:LIBPACK.bg } : null;
+  if(id==="__lib"){ const p=libPack(); return p ? { def:{ball:0,lib:true}, lib:p, bg:p.bg } : null; }
   const t=THEMES[id]; if(!t) return null;
   if(!themeCache[id]) themeCache[id]={ def:t, bg:mkImg(t.bg), bricks:mkImg(t.bricks), shatter:mkImg(t.shatter), balls:mkImg(t.balls), paddle:mkImg(t.paddle) };
   return themeCache[id]; }
 // the themed pack for the level being played (campaign solo only; kid-built
 // levels keep the drawn "Make It Mine" look so their world/ball/paddle choices show).
-function activeTheme(){ if(LIBPACK) return "__lib"; if(!G || G.mode!=="solo" || G.custom) return null; return (L&&L.theme)?L.theme:null; }
+function activeTheme(){ if(libPack()) return "__lib"; if(!G || G.mode!=="solo" || G.custom) return null; return (L&&L.theme)?L.theme:null; }
 // ---- 1-5 flame difficulty (used by "Make a level"). One dial; everything scales. ----
 // lives go down, paddle gets smaller, ball gets faster as flames go up.
 const DIFF5 = [

@@ -134,6 +134,26 @@ game "breaker".
 
 To add art to another game, repeat steps 1-4 against that game's own draw code.
 
+## Worlds layer (reskin a game, no code)
+
+A "world" is a full set of art for a game (its bricks/ball/paddle/background), which
+is just a theme name under that game in the library. The Worlds tab in
+`asset-library.html` lists the worlds discovered for a game (from the manifest's theme
+segment) plus a "Built-in art" option, and lets you set which one is active. The
+active world is stored per game via the endpoint:
+- `POST {action:"set-world", game, world}` (empty world clears back to built-in).
+- `GET ?world=<game>` -> `{world}`. Stored in `image_cache` as `kind="setting"`,
+  `cache_key="setting:world:<game>"` (base64 world name). No migration.
+
+Breaker reads this on load (`loadLibrary()` builds `LIBPACKS` for every world, then
+picks the active one from `?libtheme=` first, else the saved setting) and applies it
+as the `"__lib"` theme over campaign play. So the loop is: make art in Create/Upload →
+keep it under a world name → Worlds tab, set it active for the game → the game is
+reskinned. Same wiring copies to Sling next (read active world, feed its draw code).
+
+Next layer (not built): data-driven LEVELS (a level = world + layout + difficulty as
+saved data instead of a hardcoded array), so new levels can be made without code too.
+
 ## Animation (full frames)
 
 Animation states are the sheet's columns. A Breaker brick sheet is 6 materials

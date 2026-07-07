@@ -79,7 +79,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div class="sub" id="counts" style="margin-bottom:14px">Loading…</div>
 
   <div class="seg" id="tabs" style="margin-bottom:16px">
-    <button data-t="browse" class="on">Browse</button><button data-t="create">Create</button><button data-t="upload">Upload</button>
+    <button data-t="browse" class="on">Browse</button><button data-t="create">Create</button><button data-t="upload">Upload</button><button data-t="worlds">Worlds</button>
   </div>
 
   <div id="browseView">
@@ -197,6 +197,15 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div id="up-pieces" class="grid"></div>
     </div>
   </div><!-- /uploadView -->
+
+  <div id="worldsView" style="display:none">
+    <div class="panel">
+      <div class="note" style="margin-bottom:12px">A world is a full set of art for a game (bricks, ball, paddle, background). Pick which world a game uses. Switch it anytime to reskin the whole game. Worlds come from what you keep in Create or Upload.</div>
+      <label class="fld">Game<br><select id="wl-game"></select></label>
+      <div id="wl-list" class="grid" style="margin-top:14px"></div>
+      <div id="wl-status" class="muted" style="margin-top:10px"></div>
+    </div>
+  </div><!-- /worldsView -->
 </div>
 
 <div id="preview" style="display:none;position:fixed;inset:0;background:rgba(8,10,20,.88);z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:12px">
@@ -779,6 +788,32 @@ async function upKeep(){
 }
 function upDownload(){ UP.pieces.forEach(p=>{const a=document.createElement("a");a.href=p.dataURL;a.download=p.name+".png";document.body.appendChild(a);a.click();a.remove();}); }
 
+/* ============ Worlds tab (assign a library world to a game) ============ */
+async function wlLoad(){
+  const game=$("wl-game").value; $("wl-list").innerHTML='<div class="muted">Loading…</div>'; $("wl-status").textContent="";
+  const [mf,act]=await Promise.all([ getJSON("/api/asset-studio?manifest=1&game="+game), getJSON("/api/asset-studio?world="+game) ]);
+  const active=(act&&act.world)||null, rows=(mf&&mf.assets)||[];
+  const worlds={}, order=[];
+  for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length<4)continue; const theme=seg[2], name=seg.slice(3).join("/");
+    if(!worlds[theme]){worlds[theme]={thumb:null,count:0};order.push(theme);}
+    worlds[theme].count++;
+    if(!worlds[theme].thumb || /_intact$/.test(name)) worlds[theme].thumb=a.url;
+  }
+  let html='<div class="card" style="'+(active?'':'border:2px solid var(--acc)')+'"><div class="thumb"><span class="ic">▦</span></div><div class="cbody"><div class="cname">Built-in art</div><div class="badges"><button class="wl-set chip" data-w="">'+(active?'Use':'Active')+'</button></div></div></div>';
+  html+=order.map(k=>{const wd=worlds[k],on=active===k;
+    return '<div class="card" style="'+(on?'border:2px solid var(--acc)':'')+'"><div class="thumb checker">'+(wd.thumb?'<img src="'+wd.thumb+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain">':'')+'</div><div class="cbody"><div class="cname">'+esc(k)+'</div><div class="badges"><span class="b">'+wd.count+' pieces</span><button class="wl-set chip" data-w="'+esc(k)+'">'+(on?'Active':'Use')+'</button></div></div></div>';}).join("");
+  if(!order.length) html+='<div class="muted">No worlds yet for this game. Make some in Create or Upload, keep them, then they show here.</div>';
+  $("wl-list").innerHTML=html;
+  $("wl-list").querySelectorAll(".wl-set").forEach(b=>b.onclick=()=>wlSet(b.dataset.w));
+  $("wl-status").textContent=active?("Active world: "+active):"Using built-in art.";
+}
+async function wlSet(world){
+  const game=$("wl-game").value; $("wl-status").textContent="Saving…";
+  const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-world",game,world})});
+  if(!r.ok){$("wl-status").textContent="Save failed.";return;}
+  wlLoad();
+}
+
 /* ---- wire up ---- */
 (async function initStudio(){
   await csLoadRecipes();
@@ -807,11 +842,17 @@ function upDownload(){ UP.pieces.forEach(p=>{const a=document.createElement("a")
   $("up-keep").onclick=upKeep;
   $("up-download").onclick=upDownload;
 
+  // worlds tab
+  $("wl-game").innerHTML=GAMES.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("");
+  $("wl-game").onchange=wlLoad;
+
   document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
     const t=b.dataset.t;
     $("browseView").style.display=t==="browse"?"":"none";
     $("createView").style.display=t==="create"?"":"none";
     $("uploadView").style.display=t==="upload"?"":"none";
+    $("worldsView").style.display=t==="worlds"?"":"none";
+    if(t==="worlds")wlLoad();
     document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));
   });
   csRefreshForm();

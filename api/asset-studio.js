@@ -183,6 +183,12 @@ export default async function handler(req, res) {
     } catch { return res.status(200).json({ assets: [] }); }
   }
 
+  // --- get the active world for a game: GET ?world=breaker -> {world} ---
+  if (req.method === "GET" && q.world) {
+    const v = await cacheGet("setting:world:" + cleanSlug(q.world));
+    return res.status(200).json({ world: v ? Buffer.from(v, "base64").toString("utf8") : null });
+  }
+
   // --- list saved game recipes (built by the New Game form) ---
   if (req.method === "GET" && q.recipes) {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return res.status(200).json({ recipes: {} });
@@ -234,6 +240,17 @@ export default async function handler(req, res) {
       let recipe; try { recipe = JSON.parse(txt); } catch { return res.status(502).json({ error: "bad_json" }); }
       return res.status(200).json({ recipe });
     } catch { return res.status(502).json({ error: "suggest_error" }); }
+  }
+
+  // --- set (or clear) the active world for a game (reskin the whole game) ---
+  if (action === "set-world") {
+    const game = cleanSlug(body.game || "");
+    if (!game) return res.status(400).json({ error: "no_game" });
+    const key = "setting:world:" + game;
+    const world = body.world ? cleanSlug(body.world) : "";
+    if (!world) { await sb(`image_cache?cache_key=eq.${encodeURIComponent(key)}`, { method: "DELETE" }); return res.status(200).json({ ok: true, world: null }); }
+    const ok = await cachePut(key, "world:" + game, "setting", Buffer.from(world, "utf8").toString("base64"));
+    return res.status(ok ? 200 : 502).json({ ok, world });
   }
 
   // --- save a recipe (from the New Game form) so it persists + shows in the dropdown ---
