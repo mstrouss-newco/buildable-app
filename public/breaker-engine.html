@@ -311,14 +311,19 @@ const TPL={ full:{cols:10,rows:6,pattern:"full"}, pyramid:{cols:9,rows:5,pattern
 async function applyLevelsConfig(){
   try{ const r=await fetch("/api/asset-studio?levels=breaker"); if(!r.ok)return; const j=await r.json(); const cfg=(j&&j.levels)||[]; if(!cfg.length)return;
     const byName={}; GAME_CONFIG.levels.forEach(l=>{byName[l.name]=l;}); const news=[];
-    for(const e of cfg){ if(e.builtin){ const l=byName[e.name]; if(l&&e.world) l._world=e.world; }
-      else { const t=TPL[e.template]||TPL.full, d=clamp((+e.difficulty||3),1,5);
-        news.push({ name:e.name||"New level", cols:t.cols, rows:t.rows, pattern:t.pattern, tough:(d-1)*0.12, speed:3.8+d*0.5, theme:"jungle", _world:e.world||"" }); } }
+    const builtinW=w=>!!THEMES[w];   // jungle/space/ocean = shipped worlds; anything else = a library world
+    for(const e of cfg){ if(e.builtin){ const l=byName[e.name]; if(l&&e.world){ if(builtinW(e.world)){ l._theme=e.world; l._world=""; } else { l._world=e.world; l._theme=null; } } }
+      else { const t=TPL[e.template]||TPL.full, d=clamp((+e.difficulty||3),1,5), bw=builtinW(e.world);
+        news.push({ name:e.name||"New level", cols:t.cols, rows:t.rows, pattern:t.pattern, tough:(d-1)*0.12, speed:3.8+d*0.5, theme:bw?e.world:"jungle", _theme:bw?e.world:null, _world:bw?"":(e.world||"") }); } }
     if(news.length) GAME_CONFIG.levels=GAME_CONFIG.levels.concat(news);
   }catch(e){}
 }
 loadLibrary();
-function curWorld(){ if(L&&L._world&&LIBPACKS[L._world]&&LIBPACKS[L._world].materials.length) return L._world; if(LIB_WORLD) return LIB_WORLD; return null; }
+function curWorld(){ const ok=w=>w&&LIBPACKS[w]&&LIBPACKS[w].materials.length;
+  if(L&&ok(L._world)) return L._world;      // this level explicitly uses a library world
+  if(L&&L._theme) return null;              // this level explicitly uses a shipped world -> no library
+  if(LIB_WORLD) return LIB_WORLD;           // game-wide default library world
+  return null; }
 function libPack(){ const w=curWorld(); return w?LIBPACKS[w]:null; }
 function themeAssets(id){
   if(id==="__lib"){ const p=libPack(); return p ? { def:{ball:0,lib:true}, lib:p, bg:p.bg } : null; }
@@ -327,7 +332,7 @@ function themeAssets(id){
   return themeCache[id]; }
 // the themed pack for the level being played (campaign solo only; kid-built
 // levels keep the drawn "Make It Mine" look so their world/ball/paddle choices show).
-function activeTheme(){ if(libPack()) return "__lib"; if(!G || G.mode!=="solo" || G.custom) return null; return (L&&L.theme)?L.theme:null; }
+function activeTheme(){ if(libPack()) return "__lib"; if(!G || G.mode!=="solo" || G.custom) return null; return (L&&(L._theme||L.theme))||null; }
 // ---- 1-5 flame difficulty (used by "Make a level"). One dial; everything scales. ----
 // lives go down, paddle gets smaller, ball gets faster as flames go up.
 const DIFF5 = [

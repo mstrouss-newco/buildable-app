@@ -796,8 +796,8 @@ function upDownload(){ UP.pieces.forEach(p=>{const a=document.createElement("a")
 
 /* ============ Worlds + Levels tab (reskin levels / add levels) ============ */
 const GAME_LEVELS={
-  breaker:{ templates:["full","pyramid","checker","gaps","columns","frame","diamond"],
-    builtin:["Jungle Ruins","Star Pyramid","Coral Castle","Vine Gaps","Comet Towers","Reef Walls","Temple Drop","Galaxy Boss"] },
+  breaker:{ templates:["full","pyramid","checker","gaps","columns","frame","diamond"], builtinWorlds:["jungle","space","ocean"],
+    builtin:[{name:"Jungle Ruins",world:"jungle"},{name:"Star Pyramid",world:"space"},{name:"Coral Castle",world:"ocean"},{name:"Vine Gaps",world:"jungle"},{name:"Comet Towers",world:"space"},{name:"Reef Walls",world:"ocean"},{name:"Temple Drop",world:"jungle"},{name:"Galaxy Boss",world:"space"}] },
   sling:{ templates:["tower","wall","pyramid","scatter"],
     builtin:["Wobbly Gate","Tilty Tower","Double Trouble","Castle Keep","Grand Topple"] },
   survival:{ templates:["swarm","mixed","rush"],
@@ -815,10 +815,16 @@ async function wlLoad(){
   WL.worlds=wset; WL.def=(act&&act.world)||"";
   const saved=(lv&&lv.levels)||[];
   if(saved.length) WL.levels=saved;
-  else { const reg=GAME_LEVELS[game]; WL.levels=(reg?reg.builtin:[]).map(n=>({name:n,world:"",builtin:true})); }
+  else { const reg=GAME_LEVELS[game]; WL.levels=(reg?reg.builtin:[]).map(b=> typeof b==="string"?{name:b,world:"",builtin:true}:{name:b.name,world:b.world||"",builtin:true}); }
   wlRender();
 }
-function worldOpts(sel){ return '<option value="">Default</option>'+WL.worlds.map(w=>`<option ${sel===w?"selected":""}>${esc(w)}</option>`).join(""); }
+function worldOpts(sel){
+  const bw=(GAME_LEVELS[WL.game]&&GAME_LEVELS[WL.game].builtinWorlds)||[];
+  let o='<option value="">Default</option>';
+  if(bw.length) o+='<optgroup label="Built-in art">'+bw.map(w=>`<option ${sel===w?"selected":""}>${esc(w)}</option>`).join("")+'</optgroup>';
+  if(WL.worlds.length) o+='<optgroup label="Your worlds">'+WL.worlds.map(w=>`<option ${sel===w?"selected":""}>${esc(w)}</option>`).join("")+'</optgroup>';
+  return o;
+}
 function wlRender(){
   $("wl-def").innerHTML='<option value="">Built-in art</option>'+WL.worlds.map(w=>`<option ${WL.def===w?"selected":""}>${esc(w)}</option>`).join("");
   $("wl-def").onchange=()=>{WL.def=$("wl-def").value;};
