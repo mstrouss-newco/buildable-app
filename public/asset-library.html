@@ -79,7 +79,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div class="sub" id="counts" style="margin-bottom:14px">Loading…</div>
 
   <div class="seg" id="tabs" style="margin-bottom:16px">
-    <button data-t="browse" class="on">Browse</button><button data-t="create">Create</button>
+    <button data-t="browse" class="on">Browse</button><button data-t="create">Create</button><button data-t="upload">Upload</button>
   </div>
 
   <div id="browseView">
@@ -159,6 +159,42 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       </div>
     </div>
   </div><!-- /createView -->
+
+  <div id="uploadView" style="display:none">
+    <div class="panel">
+      <div class="note" style="margin-bottom:12px">Made a sheet in ChatGPT or anywhere? Drop it here and the tool slices it, names every piece, and files it to a game. No renaming or uploading by hand.</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <label class="fld">Game<br><select id="up-game"></select></label>
+        <label class="fld">Theme / name<br><input type="text" id="up-theme" value="candy"></label>
+        <label class="fld">Name prefix<br><input type="text" id="up-prefix" value="brick"></label>
+      </div>
+      <div class="lbl" style="margin-top:12px">What kind of asset is this?</div>
+      <div id="up-types" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 12px"></div>
+      <div class="lbl">How is it laid out?</div>
+      <div id="up-layouts" class="chips" style="margin:6px 0 8px"></div>
+      <div id="up-gridfields" style="display:none;gap:10px;margin-bottom:10px">
+        <label class="fld">Rows<br><input type="number" id="up-rows" value="6" min="1" max="20" style="min-width:70px"></label>
+        <label class="fld">Columns<br><input type="number" id="up-cols" value="4" min="1" max="20" style="min-width:70px"></label>
+      </div>
+      <input type="file" id="up-file" accept="image/*" style="display:none">
+      <div id="up-drop" style="border:1.5px dashed var(--line);border-radius:12px;padding:22px;text-align:center;cursor:pointer;margin-bottom:12px">
+        <div id="up-dropinner"><div style="font-weight:600;margin-bottom:2px">Drop your sheet here, or click to browse</div><div class="note">PNG or JPG</div></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="up-slice" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Slice sheet</button>
+        <span id="up-status" class="muted"></span>
+      </div>
+    </div>
+    <div id="up-result" style="display:none">
+      <div class="seclbl"><b>Sliced pieces</b><span class="muted">check names, then keep</span></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button id="up-keep" class="chip" style="background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Keep all pieces</button>
+        <button id="up-download" class="chip">Download files</button>
+        <span id="up-keepstatus" class="muted"></span>
+      </div>
+      <div id="up-pieces" class="grid"></div>
+    </div>
+  </div><!-- /uploadView -->
 </div>
 
 <div id="preview" style="display:none;position:fixed;inset:0;background:rgba(8,10,20,.88);z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:12px">
@@ -643,6 +679,98 @@ async function csLoadRecipes(){
   }catch(e){}
 }
 
+/* ============ Upload tab (bring your own sheet) ============
+   Reuses the same slicer as Create (keyOutWhite + occRows/occCols + splitBands),
+   but the grid comes from what the user tells us instead of a recipe. */
+const UPTYPES={
+  character:{label:"Character",prefix:"hero",bg:false},
+  background:{label:"Background",prefix:"bg",bg:true},
+  weapon:{label:"Weapon / item",prefix:"item",bg:false},
+  blocks:{label:"Blocks / tiles",prefix:"brick",bg:false},
+  collectible:{label:"Collectible",prefix:"coin",bg:false},
+  ui:{label:"UI / icon",prefix:"ui",bg:false},
+  effect:{label:"Effect",prefix:"fx",bg:false},
+};
+const UPLAYOUTS=[["auto","Auto-detect"],["grid","Grid (rows x cols)"],["row","One row"],["single","Single image"]];
+let UP={type:"blocks",layout:"grid",img:null,pieces:[]};
+
+// split by the widest gaps but auto-decide the count: cut at every gap at least
+// half as wide as the biggest one (ignores tiny gaps like between debris chunks).
+function autoSplit(occ,minOcc){
+  const L=occ.length; let s=0; while(s<L&&occ[s]<minOcc)s++; let e=L-1; while(e>=0&&occ[e]<minOcc)e--;
+  if(e<=s) return [[0,L]];
+  const gaps=[]; let g=null;
+  for(let k=s;k<=e;k++){ if(occ[k]<minOcc){ if(!g)g={a:k,b:k}; else g.b=k; } else { if(g){gaps.push(g);g=null;} } }
+  if(g)gaps.push(g);
+  if(!gaps.length) return [[s,e+1]];
+  const maxLen=Math.max.apply(null,gaps.map(x=>x.b-x.a+1)), th=Math.max(4,maxLen*0.5);
+  const seps=gaps.filter(x=>(x.b-x.a+1)>=th).map(x=>Math.round((x.a+x.b)/2)).sort((a,b)=>a-b);
+  const bounds=[s,...seps,e+1],bands=[]; for(let i=0;i+1<bounds.length;i++)bands.push([bounds[i],bounds[i+1]]);
+  return bands.length?bands:[[s,e+1]];
+}
+function upRenderTypes(){
+  const w=$("up-types");
+  w.innerHTML=Object.keys(UPTYPES).map(k=>{const on=UP.type===k;
+    return `<button data-k="${k}" class="chip" style="text-align:left;padding:9px 12px;${on?'border:2px solid var(--acc);background:var(--accbg);color:var(--acc);font-weight:600':''}">${UPTYPES[k].label}</button>`;}).join("");
+  w.querySelectorAll("button").forEach(b=>b.onclick=()=>{UP.type=b.dataset.k;$("up-prefix").value=UPTYPES[b.dataset.k].prefix;upRenderTypes();});
+}
+function upRenderLayouts(){
+  const w=$("up-layouts");
+  w.innerHTML=UPLAYOUTS.map(([k,l])=>`<button data-k="${k}" class="chip ${UP.layout===k?'on':''}">${l}</button>`).join("");
+  w.querySelectorAll("button").forEach(b=>b.onclick=()=>{UP.layout=b.dataset.k;$("up-gridfields").style.display=(b.dataset.k==="grid")?"flex":"none";upRenderLayouts();});
+}
+function upLoadFile(file){
+  if(!file)return; const rd=new FileReader();
+  rd.onload=()=>{ const im=new Image(); im.onload=()=>{ UP.img=im;
+    $("up-dropinner").innerHTML='<img src="'+im.src+'" style="max-height:150px;max-width:100%;border-radius:8px"><div class="note">'+file.name+' — '+im.naturalWidth+'x'+im.naturalHeight+'</div>'; };
+    im.src=rd.result; };
+  rd.readAsDataURL(file);
+}
+function upRenderPieces(){
+  $("up-pieces").innerHTML=UP.pieces.map((p,i)=>
+    `<div class="card"><div class="thumb checker"><img src="${p.dataURL}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain"></div>`+
+    `<div class="cbody"><input class="up-name" data-i="${i}" value="${esc(p.name)}" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt);padding:4px 6px;font:inherit;font-size:12px"><div class="badges" style="margin-top:4px"><span class="b">${p.w}x${p.h}</span></div></div></div>`
+  ).join("");
+  $("up-pieces").querySelectorAll(".up-name").forEach(inp=>inp.oninput=()=>{UP.pieces[+inp.dataset.i].name=inp.value;});
+}
+async function upSliceSheet(){
+  if(!UP.img){$("up-status").textContent="Drop a sheet first.";return;}
+  const t=UPTYPES[UP.type], key=!t.bg, img=UP.img, W=img.naturalWidth, H=img.naturalHeight;
+  const sc=document.createElement("canvas");sc.width=W;sc.height=H;
+  const sx=sc.getContext("2d",{willReadFrequently:true});sx.drawImage(img,0,0);
+  if(key)keyOutWhite(sx,W,H);
+  const mode=UP.layout, cells=[];
+  if(mode==="single"){ cells.push({x:0,y:0,w:W,h:H}); }
+  else {
+    let rBands;
+    if(mode==="grid") rBands=splitBands(occRows(sx,0,0,W,H),Math.max(1,+$("up-rows").value||1),3);
+    else if(mode==="row") rBands=[[0,H]];
+    else rBands=autoSplit(occRows(sx,0,0,W,H),3);
+    for(const [ry0,ry1] of rBands){ const rh=Math.max(1,ry1-ry0);
+      const cBands = mode==="grid"
+        ? splitBands(occCols(sx,0,ry0,W,rh),Math.max(1,+$("up-cols").value||1),3)
+        : autoSplit(occCols(sx,0,ry0,W,rh),3);
+      for(const [cx0,cx1] of cBands) cells.push({x:cx0,y:ry0,w:Math.max(1,cx1-cx0),h:rh});
+    }
+  }
+  const prefix=($("up-prefix").value||t.prefix).trim();
+  UP.pieces=cells.map((box,i)=>{ const tb=key?(contentBox(sx,box.x,box.y,box.w,box.h,true)||box):box;
+    return {name:prefix+"_"+(i+1),dataURL:cropFrom(sc,tb),w:tb.w,h:tb.h}; });
+  upRenderPieces();
+  $("up-result").style.display="";
+  $("up-status").textContent="Done. "+UP.pieces.length+" piece(s) sliced.";
+}
+async function upKeep(){
+  if(!UP.pieces.length)return;
+  $("up-keepstatus").textContent="Saving…";
+  const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action:"keep",game:$("up-game").value,type:UP.type,theme:($("up-theme").value||"default").trim(),
+      pieces:UP.pieces.map(p=>({slug:p.name,b64:p.dataURL}))})});
+  if(!r.ok){$("up-keepstatus").textContent="Save failed.";return;}
+  const j=await r.json(); $("up-keepstatus").textContent="Kept "+j.count+" piece(s) to "+$("up-game").value+".";
+}
+function upDownload(){ UP.pieces.forEach(p=>{const a=document.createElement("a");a.href=p.dataURL;a.download=p.name+".png";document.body.appendChild(a);a.click();a.remove();}); }
+
 /* ---- wire up ---- */
 (async function initStudio(){
   await csLoadRecipes();
@@ -658,10 +786,24 @@ async function csLoadRecipes(){
   $("ng-suggest").onclick=ngSuggest;
   $("ng-add").onclick=()=>{NG.assets.push({key:"asset"+(NG.assets.length+1),label:"New asset",mode:"sheet",size:"wide",transparent:true,role:"",rows:"",cols:"",subject:"{theme} ..."});ngRender();$("ng-save").style.display="";};
   $("ng-save").onclick=ngSave;
+
+  // upload tab
+  $("up-game").innerHTML=Object.keys(RECIPES).map(k=>`<option value="${k}">${esc(RECIPES[k].label||k)}</option>`).join("");
+  upRenderTypes(); upRenderLayouts(); $("up-gridfields").style.display="flex"; $("up-prefix").value=UPTYPES[UP.type].prefix;
+  $("up-drop").onclick=()=>$("up-file").click();
+  $("up-file").onchange=e=>upLoadFile(e.target.files[0]);
+  $("up-drop").ondragover=e=>{e.preventDefault();$("up-drop").style.borderColor="var(--acc)";};
+  $("up-drop").ondragleave=()=>{$("up-drop").style.borderColor="var(--line)";};
+  $("up-drop").ondrop=e=>{e.preventDefault();$("up-drop").style.borderColor="var(--line)";if(e.dataTransfer.files&&e.dataTransfer.files[0])upLoadFile(e.dataTransfer.files[0]);};
+  $("up-slice").onclick=upSliceSheet;
+  $("up-keep").onclick=upKeep;
+  $("up-download").onclick=upDownload;
+
   document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
     const t=b.dataset.t;
     $("browseView").style.display=t==="browse"?"":"none";
     $("createView").style.display=t==="create"?"":"none";
+    $("uploadView").style.display=t==="upload"?"":"none";
     document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));
   });
   csRefreshForm();

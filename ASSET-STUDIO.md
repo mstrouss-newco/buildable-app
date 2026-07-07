@@ -52,6 +52,20 @@ Single mode still exists for one-offs (a lone paddle, a full-screen background).
 - `GET ?asset=<slug>` -> the PNG bytes, for use in a game: `<img src="/api/asset-studio?asset=breaker/bricks/jungle/ice_intact">`.
 - `GET ?manifest=1[&game=breaker]` -> JSON list of what has been made.
 
+## Upload tab (bring your own sheet)
+
+A third tab next to Browse and Create. For when you make a sheet elsewhere (ChatGPT,
+Midjourney) where the art quality is best, and just want the tool's slicing and
+filing. Flow: pick game + theme + name prefix, pick an asset type (character,
+background, weapon/item, blocks/tiles, collectible, UI/icon, effect), pick a layout
+(auto-detect, grid rows×cols, one row, or single), drag-drop the image, hit Slice.
+It reuses the exact same slicer as Create (`keyOutWhite` + `occRows`/`occCols` +
+`splitBands`, plus `autoSplit` which auto-picks the count by cutting at the widest
+gaps). Background type skips the white key-out. Pieces are named `prefix_N`, editable,
+then Keep (same `keep` endpoint) or Download. Backbone of the "make hero art anywhere,
+let the tool organize it" workflow, which is more reliable than trying to match
+ChatGPT's polish through the raw API.
+
 ## Rules layer
 
 `RULES` (top of the Create-tab script) is the one place every generation obeys, so
