@@ -172,9 +172,11 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div id="up-types" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 12px"></div>
       <div class="lbl">How is it laid out?</div>
       <div id="up-layouts" class="chips" style="margin:6px 0 8px"></div>
-      <div id="up-gridfields" style="display:none;gap:10px;margin-bottom:10px">
+      <div id="up-gridfields" style="display:none;flex-wrap:wrap;gap:10px;margin-bottom:10px">
         <label class="fld">Rows<br><input type="number" id="up-rows" value="6" min="1" max="20" style="min-width:70px"></label>
         <label class="fld">Columns<br><input type="number" id="up-cols" value="4" min="1" max="20" style="min-width:70px"></label>
+        <label class="fld" style="flex:1;min-width:220px">Row names — one per material (comma-sep)<br><input type="text" id="up-rownames" placeholder="chocolate, peppermint, gummy, cookie, cottoncandy, garden" style="width:100%"></label>
+        <label class="fld" style="flex:1;min-width:220px">Column names — the states (comma-sep)<br><input type="text" id="up-colnames" value="intact, hit, cracked, shattered" style="width:100%"></label>
       </div>
       <input type="file" id="up-file" accept="image/*" style="display:none">
       <div id="up-drop" style="border:1.5px dashed var(--line);border-radius:12px;padding:22px;text-align:center;cursor:pointer;margin-bottom:12px">
@@ -692,7 +694,9 @@ const UPTYPES={
   effect:{label:"Effect",prefix:"fx",bg:false},
 };
 const UPLAYOUTS=[["auto","Auto-detect"],["grid","Grid (rows x cols)"],["row","One row"],["single","Single image"]];
+const GAMES=[["breaker","Breaker"],["survival","Survival"],["sling","Sling Squad"],["castle-guard","Castle Guard"],["croc","Croc Tot"],["maze","Maze Munchers"],["bubble","Bubble Buddies"],["tank","Hilltop Tanks"],["mahjong","Mahjong"],["tennis","Tennis"],["chess","Chess"],["runner","Sunny Town Drive"],["typing","Typing"],["string-match","String Match"],["tictactoe","Tic-Tac-Toe"],["connectfour","Connect Four"],["dotsboxes","Dots & Boxes"],["checkers","Checkers"],["memory","Memory"],["bingo","Bingo"],["snakes","Snakes & Ladders"],["town","Family Town"]];
 let UP={type:"blocks",layout:"grid",img:null,pieces:[]};
+const parseList=s=>String(s||"").split(",").map(x=>x.trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")).filter(Boolean);
 
 // split by the widest gaps but auto-decide the count: cut at every gap at least
 // half as wide as the biggest one (ignores tiny gaps like between debris chunks).
@@ -740,22 +744,26 @@ async function upSliceSheet(){
   const sx=sc.getContext("2d",{willReadFrequently:true});sx.drawImage(img,0,0);
   if(key)keyOutWhite(sx,W,H);
   const mode=UP.layout, cells=[];
-  if(mode==="single"){ cells.push({x:0,y:0,w:W,h:H}); }
+  if(mode==="single"){ cells.push({x:0,y:0,w:W,h:H,r:0,c:0}); }
   else {
     let rBands;
     if(mode==="grid") rBands=splitBands(occRows(sx,0,0,W,H),Math.max(1,+$("up-rows").value||1),3);
     else if(mode==="row") rBands=[[0,H]];
     else rBands=autoSplit(occRows(sx,0,0,W,H),3);
-    for(const [ry0,ry1] of rBands){ const rh=Math.max(1,ry1-ry0);
+    rBands.forEach(([ry0,ry1],r)=>{ const rh=Math.max(1,ry1-ry0);
       const cBands = mode==="grid"
         ? splitBands(occCols(sx,0,ry0,W,rh),Math.max(1,+$("up-cols").value||1),3)
         : autoSplit(occCols(sx,0,ry0,W,rh),3);
-      for(const [cx0,cx1] of cBands) cells.push({x:cx0,y:ry0,w:Math.max(1,cx1-cx0),h:rh});
-    }
+      cBands.forEach(([cx0,cx1],c)=>cells.push({x:cx0,y:ry0,w:Math.max(1,cx1-cx0),h:rh,r,c}));
+    });
   }
-  const prefix=($("up-prefix").value||t.prefix).trim();
+  const prefix=(($("up-prefix").value||t.prefix).trim().toLowerCase().replace(/[^a-z0-9]+/g,"_"))||"asset";
+  const rn=parseList($("up-rownames")&&$("up-rownames").value), cn=parseList($("up-colnames")&&$("up-colnames").value);
   UP.pieces=cells.map((box,i)=>{ const tb=key?(contentBox(sx,box.x,box.y,box.w,box.h,true)||box):box;
-    return {name:prefix+"_"+(i+1),dataURL:cropFrom(sc,tb),w:tb.w,h:tb.h}; });
+    const name = mode==="grid"
+      ? (rn[box.r]||(prefix+"_"+(box.r+1)))+"_"+(cn[box.c]||("s"+(box.c+1)))
+      : prefix+"_"+(i+1);
+    return {name,dataURL:cropFrom(sc,tb),w:tb.w,h:tb.h}; });
   upRenderPieces();
   $("up-result").style.display="";
   $("up-status").textContent="Done. "+UP.pieces.length+" piece(s) sliced.";
@@ -788,7 +796,7 @@ function upDownload(){ UP.pieces.forEach(p=>{const a=document.createElement("a")
   $("ng-save").onclick=ngSave;
 
   // upload tab
-  $("up-game").innerHTML=Object.keys(RECIPES).map(k=>`<option value="${k}">${esc(RECIPES[k].label||k)}</option>`).join("");
+  $("up-game").innerHTML=GAMES.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("");
   upRenderTypes(); upRenderLayouts(); $("up-gridfields").style.display="flex"; $("up-prefix").value=UPTYPES[UP.type].prefix;
   $("up-drop").onclick=()=>$("up-file").click();
   $("up-file").onchange=e=>upLoadFile(e.target.files[0]);
