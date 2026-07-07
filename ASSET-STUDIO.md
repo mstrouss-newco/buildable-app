@@ -112,6 +112,28 @@ By URL, no files:
 `<img src="/api/asset-studio?asset=breaker/bricks/jungle/ice_hit">`
 or fetch the manifest (`/api/asset-studio?manifest=1&game=breaker`) to list a set.
 
+## Wiring a game to the library (the reusable pattern)
+
+Breaker is the first game wired (see `public/breaker-engine.html`). The pattern, which
+repeats for any game:
+1. On load, if a switch is present (Breaker uses `?libtheme=<theme>`), fetch
+   `/api/asset-studio?manifest=1&game=<game>`.
+2. Filter slugs to that theme and group the `material_state` pieces into a pack
+   (`{materials, bricks:{mat:{intact,hit,cracked,shattered}}, ball, paddle, bg}`).
+3. Feed that pack into the game's existing art path. Breaker slots it in through
+   `activeTheme()`/`themeAssets()` as a virtual `"__lib"` theme, and the draw
+   functions (`drawThemedBrick`/`drawShatters`/`drawThemedBall`/`drawThemedPaddle`)
+   branch on `A.lib` to draw the individual pieces.
+4. Gate it so it can't affect normal play: everything is behind the switch and every
+   draw path falls back to the built-in art if a piece isn't loaded yet.
+
+Naming matters: the `material_state` convention (from the Upload tab's row/column name
+fields) is what lets a game group four states into one animated brick. Test URL:
+`/breaker-engine.html?libtheme=candy` after keeping candy `material_state` pieces to
+game "breaker".
+
+To add art to another game, repeat steps 1-4 against that game's own draw code.
+
 ## Animation (full frames)
 
 Animation states are the sheet's columns. A Breaker brick sheet is 6 materials

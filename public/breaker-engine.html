@@ -145,7 +145,6 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
-<script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
@@ -283,12 +282,35 @@ const THEMES = {
   ocean:  { bg:"breaker/ocean/bg.jpg",  bricks:"breaker/ocean/bricks.png",  shatter:"breaker/ocean/shatter.png",  balls:"breaker/ocean/balls.png",  paddle:"breaker/ocean/paddle.png",  ball:0, fall:"#1a6fa0" },
 };
 const themeCache = {};
-function themeAssets(id){ const t=THEMES[id]; if(!t) return null;
+// ---- library-backed pack: play brick art made in Asset Studio (?libtheme=<theme>) ----
+// Pulls the individual "material_state" pieces you kept from /api/asset-studio and
+// uses them as the live brick art. Only turns on when ?libtheme= is present, so
+// normal campaign / custom play is completely unaffected.
+const LIB_THEME = new URLSearchParams(location.search).get("libtheme");
+let LIBPACK = null;   // { materials:[key], bricks:{key:{intact,hit,cracked,shattered:Image}}, ball, paddle, bg }
+async function loadLibPack(theme){
+  try{ const r=await fetch("/api/asset-studio?manifest=1&game=breaker"); if(!r.ok)return;
+    const j=await r.json(), rows=(j&&j.assets)||[], pack={materials:[],bricks:{},ball:null,paddle:null,bg:null};
+    for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length<4||seg[2]!==theme)continue;
+      const name=seg.slice(3).join("/");
+      if(name==="ball"||name==="ball_1"){pack.ball=mkImg(a.url);continue;}
+      if(name==="paddle"||name==="paddle_1"){pack.paddle=mkImg(a.url);continue;}
+      if(name==="bg"||name==="background"||name==="main"){pack.bg=mkImg(a.url);continue;}
+      const m=name.match(/^(.*)_(intact|hit|cracked|shattered)$/); if(!m)continue;
+      const mat=m[1]; if(!pack.bricks[mat]){pack.bricks[mat]={};pack.materials.push(mat);} pack.bricks[mat][m[2]]=mkImg(a.url);
+    }
+    if(pack.materials.length) LIBPACK=pack;
+  }catch(e){}
+}
+if(LIB_THEME) loadLibPack(LIB_THEME);
+function themeAssets(id){
+  if(id==="__lib") return LIBPACK ? { def:{ball:0,lib:true}, lib:LIBPACK, bg:LIBPACK.bg } : null;
+  const t=THEMES[id]; if(!t) return null;
   if(!themeCache[id]) themeCache[id]={ def:t, bg:mkImg(t.bg), bricks:mkImg(t.bricks), shatter:mkImg(t.shatter), balls:mkImg(t.balls), paddle:mkImg(t.paddle) };
   return themeCache[id]; }
 // the themed pack for the level being played (campaign solo only; kid-built
 // levels keep the drawn "Make It Mine" look so their world/ball/paddle choices show).
-function activeTheme(){ if(!G || G.mode!=="solo" || G.custom) return null; return (L&&L.theme)?L.theme:null; }
+function activeTheme(){ if(LIBPACK) return "__lib"; if(!G || G.mode!=="solo" || G.custom) return null; return (L&&L.theme)?L.theme:null; }
 // ---- 1-5 flame difficulty (used by "Make a level"). One dial; everything scales. ----
 // lives go down, paddle gets smaller, ball gets faster as flames go up.
 const DIFF5 = [
@@ -714,7 +736,7 @@ function drawPaddleAt(px,py,col){
   ctx.shadowBlur=0; ctx.lineWidth=2.5; ctx.strokeStyle="rgba(20,22,45,.5)"; rrect(x,py-PAD_H/2,G.padW,PAD_H,9); ctx.stroke();
   ctx.restore(); }
 function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt; r=clamp(r,0,255);g=clamp(g,0,255);b=clamp(b,0,255); return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
-function banner(t,s){ BuildableWin.card(ctx,W,H,[{t:t,s:34,w:800,c:"#fff"}].concat(s?[{t:s,s:18,w:600,c:"#cfd3ff"}]:[])); }
+function banner(t,s){ ctx.fillStyle="rgba(10,12,40,.66)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 48px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-6); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+36); }
 // a 5-point star (filled gold when earned, dim outline when not)
 function star5(cx,cy,r,filled){ ctx.beginPath();
   for(let i=0;i<10;i++){ const ang=-Math.PI/2+i*Math.PI/5, rad=(i%2===0)?r:r*0.45; const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
@@ -779,13 +801,23 @@ function draw(){ if(!G){ return; }
   }
   if(state==="win" && G.custom){ banner("You beat it!", "Tap to share your level"); }
   else if(state==="win" && G.mode==="two"){ banner("Player "+G.winner+" wins!", "Tap for the menu"); }
-  else if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); }
+  else if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); drawEarnedStars(PREFS.stars[level]||0); }
   if(state==="lose"){ banner("Out of lives!","Tap to try again"); }
   if(hud){ hud[(state==="play" && G.mode!=="two") ? "show" : "hide"](); }
 }
 // ---- themed sprite drawing (campaign levels) ----
 // brick sheet = 3 frames wide (0 intact, 1 hit-flash, 2 cracked) x 6 rows (looks)
-function drawThemedBrick(br,A){ const img=A.bricks; if(!imReady(img)) return false;
+function drawThemedBrick(br,A){
+  if(A.lib){ const p=A.lib, mat=p.materials[(br.variant||0)%p.materials.length], set=p.bricks[mat]; if(!set) return false;
+    let st="intact"; if(br.flashT>0) st="hit"; else if(br.hp<br.maxHp) st="cracked";
+    const im=set[st]||set.intact; if(!imReady(im)) return false;
+    const ex=br.w*0.10, ey=br.h*0.62;
+    if(br.flashT>0){ ctx.save(); ctx.shadowColor="#fff"; ctx.shadowBlur=14; }
+    ctx.drawImage(im, br.x-ex/2, br.y-ey/2, br.w+ex, br.h+ey);
+    if(br.flashT>0) ctx.restore();
+    if(br.power){ ctx.fillStyle="rgba(255,255,255,.95)"; ctx.beginPath();ctx.arc(br.x+br.w/2,br.y+4,2.6,0,7);ctx.fill(); }
+    return true; }
+  const img=A.bricks; if(!imReady(img)) return false;
   const cw=img.naturalWidth/3, ch=img.naturalHeight/6, v=(br.variant||0)%6;
   let f=0; if(br.flashT>0) f=1; else if(br.hp<br.maxHp) f=2;
   const ex=br.w*0.10, ey=br.h*0.62;   // a hair larger so the painted brick reads full-bleed
@@ -796,6 +828,11 @@ function drawThemedBrick(br,A){ const img=A.bricks; if(!imReady(img)) return fal
   return true; }
 // destroy flipbook: brief flash frame, then the shatter debris expands + fades
 function drawShatters(A){ if(!G.shatters||!G.shatters.length) return;
+  if(A.lib){ const p=A.lib;
+    for(const s of G.shatters){ const mat=p.materials[(s.variant||0)%p.materials.length], set=p.bricks[mat]||{}; const im=set.shattered||set.cracked; if(!imReady(im))continue;
+      const q=Math.min(1,s.t/18), sc=1+q*0.4; ctx.save(); ctx.globalAlpha=Math.max(0,1-q); const dw=s.w*1.2*sc, dh=s.h*1.5*sc;
+      ctx.drawImage(im, s.x+s.w/2-dw/2, s.y+s.h*0.5-dh/2, dw, dh); ctx.restore(); }
+    return; }
   const sh=A.shatter, br=A.bricks; const scw=imReady(sh)?sh.naturalWidth/6:0, sch=imReady(sh)?sh.naturalHeight:0;
   const bcw=imReady(br)?br.naturalWidth/3:0, bch=imReady(br)?br.naturalHeight/6:0;
   for(const s of G.shatters){ const v=(s.variant||0)%6;
@@ -804,12 +841,16 @@ function drawShatters(A){ if(!G.shatters||!G.shatters.length) return;
     } else if(imReady(sh)){ const q=(s.t-5)/15, sc=1+q*0.55; ctx.save(); ctx.globalAlpha=Math.max(0,1-q);
       const dw=s.w*1.25*sc, dh=s.h*2.1*sc; ctx.drawImage(sh, v*scw, 0, scw, sch, s.x+s.w/2-dw/2, s.y+s.h*0.55-dh/2, dw, dh); ctx.restore(); } }
 }
-function drawThemedBall(b,A){ const img=A.balls; if(!imReady(img)) return false;
+function drawThemedBall(b,A){
+  if(A.lib){ const im=A.lib.ball; if(!imReady(im)) return false; const d=(BALL_R+3)*2;
+    ctx.save(); ctx.shadowColor="rgba(0,0,0,.5)"; ctx.shadowBlur=5; ctx.drawImage(im,b.x-d/2,b.y-d/2,d,d); ctx.restore(); return true; }
+  const img=A.balls; if(!imReady(img)) return false;
   const n=Math.max(1,Math.round(img.naturalWidth/img.naturalHeight)), cw=img.naturalWidth/n, ch=img.naturalHeight;
   const idx=(A.def.ball||0)%n, d=(BALL_R+3)*2;
   ctx.save(); ctx.shadowColor="rgba(0,0,0,.5)"; ctx.shadowBlur=5;
   ctx.drawImage(img, idx*cw,0,cw,ch, b.x-d/2, b.y-d/2, d, d); ctx.restore(); return true; }
-function drawThemedPaddle(px,py,A){ const img=A.paddle; if(!imReady(img)) return false;
+function drawThemedPaddle(px,py,A){
+  const img=(A.lib?A.lib.paddle:A.paddle); if(!imReady(img)) return false;
   const w=G.padW+10; let h=w*img.naturalHeight/img.naturalWidth; h=Math.min(h,34);
   ctx.save(); ctx.shadowColor="rgba(0,0,0,.45)"; ctx.shadowBlur=8;
   ctx.drawImage(img, px-w/2, py-h/2, w, h); ctx.restore(); return true; }
@@ -906,7 +947,7 @@ function showInGameBack(on){ const bb=el("backBtn"); if(bb)bb.style.display=(on&
 let startScreen=null;
 function totalStars(){ let t=0; for(const k in PREFS.stars) t+=(PREFS.stars[k]||0); return t; }
 function maxStars(){ return GAME_CONFIG.levels.length*3; }
-function isUnlocked(cost){ return true; }
+function isUnlocked(cost){ return (cost||0) <= totalStars(); }
 // ---- level preview thumbnails: draw the real brick layout so cards aren't blank ----
 const _thumbCache={};
 function _rr(g,x,y,w,h,r){ r=Math.min(r,w/2,h/2); g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
@@ -935,11 +976,12 @@ function buildStartCfg(){
     ? [{ n:1, name:"Pong Match", color:"#2b4a6b", state:"next" }]
     : GAME_CONFIG.levels.map((l,i)=>{ const unlocked=PREFS.unlocked||0;
         const st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
-        return { n:i+1, name:l.name, color:brickColorFor(i), img:levelThumbURL(l,i), state:st };
+        return { n:i+1, name:l.name, color:brickColorFor(i), img:levelThumbURL(l,i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st };
       });
   const cfg = { title:"Buildable Breaker",
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",
     sound: !(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels };
+  if(currentMode!=="two"){ cfg.coins = totalStars(); cfg.subtitle = "Stars: "+totalStars()+" of "+maxStars(); }   // total stars earned
   return cfg;
 }
 // ---- Breaker home hub: big Play + Make a level buttons, plus a My levels shelf ----
