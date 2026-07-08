@@ -162,57 +162,25 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
   <div id="uploadView" style="display:none">
     <div class="panel">
-      <div class="note" style="margin-bottom:12px">Made a sheet in ChatGPT or anywhere? Drop it here and the tool slices it, names every piece, and files it to a game. No renaming or uploading by hand.</div>
+      <div class="note" style="margin-bottom:12px">Build a world by filling in its parts, then add it to the game. Each part saves on its own, so you can do them in any order and come back later.</div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
-        <label class="fld">Game<br><select id="up-game"></select></label>
-        <label class="fld">Theme / name<br><input type="text" id="up-theme" value="candy"></label>
-        <label class="fld">Name prefix<br><input type="text" id="up-prefix" value="brick"></label>
+        <label class="fld">Game<br><select id="wb-game"></select></label>
+        <label class="fld">World name<br><input type="text" id="wb-world" value="candy"></label>
+        <span id="wb-progress" class="muted" style="align-self:center;margin-left:auto"></span>
       </div>
-      <div class="lbl" style="margin-top:12px">What kind of asset is this?</div>
-      <div id="up-types" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 12px"></div>
-      <div class="lbl">How is it laid out?</div>
-      <div id="up-layouts" class="chips" style="margin:6px 0 8px"></div>
-      <div id="up-gridfields" style="display:none;flex-wrap:wrap;gap:10px;margin-bottom:10px">
-        <label class="fld">Rows<br><input type="number" id="up-rows" value="6" min="1" max="20" style="min-width:70px"></label>
-        <label class="fld">Columns<br><input type="number" id="up-cols" value="4" min="1" max="20" style="min-width:70px"></label>
-        <label class="fld" style="flex:1;min-width:220px">Row names — one per material (comma-sep)<br><input type="text" id="up-rownames" placeholder="chocolate, peppermint, gummy, cookie, cottoncandy, garden" style="width:100%"></label>
-        <label class="fld" style="flex:1;min-width:220px">Column names — the states (comma-sep)<br><input type="text" id="up-colnames" value="intact, hit, cracked, shattered" style="width:100%"></label>
-      </div>
-      <div id="up-prompt-w" style="display:none;margin:2px 0 12px">
-        <div class="lbl" style="margin-bottom:4px">What to ask the image generator for this <button id="up-prompt-copy" class="copy" style="margin-left:6px">copy</button></div>
-        <textarea id="up-prompt" readonly style="width:100%;min-height:64px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px;font:inherit;line-height:1.5"></textarea>
-      </div>
-      <input type="file" id="up-file" accept="image/*" style="display:none">
-      <div id="up-drop" style="border:1.5px dashed var(--line);border-radius:12px;padding:22px;text-align:center;cursor:pointer;margin-bottom:12px">
-        <div id="up-dropinner"><div style="font-weight:600;margin-bottom:2px">Drop your sheet here, or click to browse</div><div class="note">PNG or JPG</div></div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button id="up-slice" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Slice sheet</button>
-        <span id="up-status" class="muted"></span>
+      <div id="wb-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:14px"></div>
+      <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <span style="font-weight:600;align-self:center">Add this world to the game:</span>
+        <label class="fld">Do<br><select id="wb-lvmode"><option value="new">Make a new level</option><option value="replace">Replace a level's art</option></select></label>
+        <label class="fld" id="wb-lvname-w">Level name<br><input id="wb-lvname" value=""></label>
+        <label class="fld" id="wb-lvpick-w" style="display:none">Level<br><select id="wb-lvpick"></select></label>
+        <label class="fld" id="wb-lvtpl-w">Layout<br><select id="wb-lvtpl"></select></label>
+        <label class="fld" id="wb-lvdiff-w">Difficulty<br><select id="wb-lvdiff"></select></label>
+        <button id="wb-add" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Add to game</button>
+        <span id="wb-status" class="muted"></span>
       </div>
     </div>
-    <div id="up-result" style="display:none">
-      <div class="seclbl"><b>Sliced pieces</b><span class="muted">check names, then keep</span></div>
-      <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px;background:var(--panel2)">
-        <div class="lbl" style="margin-bottom:8px">Put this art in the game</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-          <label class="fld">Do<br><select id="up-lvmode"><option value="new">Make a new level</option><option value="replace">Replace a level's art</option></select></label>
-          <label class="fld" id="up-lvname-w">Level name<br><input id="up-lvname" value=""></label>
-          <label class="fld" id="up-lvpick-w" style="display:none">Level<br><select id="up-lvpick"></select></label>
-          <label class="fld" id="up-lvtpl-w">Layout<br><select id="up-lvtpl"></select></label>
-          <label class="fld" id="up-lvdiff-w">Difficulty<br><select id="up-lvdiff"></select></label>
-          <button id="up-makelevel" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Save to game</button>
-        </div>
-        <div id="up-lvstatus" class="muted" style="margin-top:8px"></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
-        <span class="muted">Just saving the art? </span>
-        <button id="up-keep" class="chip">Keep pieces only</button>
-        <button id="up-download" class="chip">Download files</button>
-        <span id="up-keepstatus" class="muted"></span>
-      </div>
-      <div id="up-pieces" class="grid"></div>
-    </div>
+    <input type="file" id="wb-file" accept="image/*" style="display:none">
   </div><!-- /uploadView -->
 
   <div id="worldsView" style="display:none">
@@ -877,6 +845,108 @@ async function upMakeLevel(){
   $("up-lvstatus").textContent=sr.ok?(msg+". Reload the game to play it."):"Level save failed.";
 }
 
+/* ============ WORLD BUILDER (the Upload tab) ============
+   Fill in a game's parts (slots) one at a time; each part saves on its own to the
+   named world; then attach the world to a level (new or replace). Same slicer as
+   before, driven by each slot's spec. This is the infra kids will use to customize. */
+function sliceImage(img,o){
+  const W=img.naturalWidth,H=img.naturalHeight;
+  const sc=document.createElement("canvas");sc.width=W;sc.height=H;
+  const sx=sc.getContext("2d",{willReadFrequently:true});sx.drawImage(img,0,0);
+  const key=o.role!=="background"; if(key)keyOutWhite(sx,W,H);
+  const prefix=((o.prefix||"asset").toLowerCase().replace(/[^a-z0-9]+/g,"_"))||"asset";
+  if(o.mode==="single"){ const box=key?(contentBox(sx,0,0,W,H,true)||{x:0,y:0,w:W,h:H}):{x:0,y:0,w:W,h:H};
+    return [{name:prefix,dataURL:cropFrom(sc,box),w:box.w,h:box.h}]; }
+  const rows=Math.max(1,o.rows||1), cols=Math.max(1,o.cols||1), rn=parseList(o.rowNames), cn=parseList(o.colNames), out=[];
+  splitBands(occRows(sx,0,0,W,H),rows,3).forEach((rb,r)=>{ const ry0=rb[0],rh=Math.max(1,rb[1]-ry0);
+    splitBands(occCols(sx,0,ry0,W,rh),cols,3).forEach((cb,c)=>{ const cx0=cb[0],cw=Math.max(1,cb[1]-cx0);
+      const box=contentBox(sx,cx0,ry0,cw,rh,true)||{x:cx0,y:ry0,w:cw,h:rh};
+      const name = cols>1 ? (rn[r]||(prefix+"_"+(r+1)))+"_"+(cn[c]||("s"+(c+1))) : (rn[r]||(prefix+"_"+(r+1)));
+      out.push({name,dataURL:cropFrom(sc,box),w:box.w,h:box.h}); }); });
+  return out;
+}
+let WB={game:null,world:"",slots:{},activeSlot:null};
+function wbSlots(){ return GAME_SLOTS[WB.game]||[]; }
+function wbPrompt(spec){ const t=($("wb-world").value||"candy").trim();
+  return String(spec.prompt||"").replace(/\{theme\}/g,t)+". "+(spec.mode==="single"?"One item, centered, on a plain solid white background.":`Lay it out as a clean ${spec.cols||1}-column by ${spec.rows||1}-row grid on a plain solid white background, evenly spaced, nothing touching.`)+" No text, no words.";
+}
+async function wbInit(){
+  WB.game=$("wb-game").value; WB.world=($("wb-world").value||"world").trim().toLowerCase(); WB.slots={}; WB.activeSlot=null;
+  wbSlots().forEach(s=>{ WB.slots[s.key]={spec:s,pieces:[],saved:false,editing:false,thumbs:[]}; });
+  wbLevelForm();
+  const mf=await getJSON("/api/asset-studio?manifest=1&game="+WB.game); const rows=(mf&&mf.assets)||[];
+  rows.forEach(a=>{ const seg=(a.slug||"").split("/"); if(seg.length<4)return; const type=seg[1], theme=seg[2];
+    if(theme!==WB.world)return; if(WB.slots[type]){ WB.slots[type].saved=true; WB.slots[type].thumbs.push(a.url); } });
+  wbRender();
+}
+function wbCard(s){ const spec=s.spec, k=spec.key, nm=esc(spec.label.replace(/\s*\(sheet\)/,""));
+  let body, badge;
+  if(s.editing && s.pieces.length){
+    badge='<span style="margin-left:auto;font-size:12px;color:var(--acc)">review</span>';
+    body='<div id="wb-'+k+'-pieces" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:6px;margin-bottom:8px">'+
+      s.pieces.map((p,i)=>'<div class="card" style="position:relative"><div class="thumb checker" style="height:48px"><img src="'+p.dataURL+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain"></div><button class="wb-x" data-i="'+i+'" title="remove" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:0;background:var(--warn);color:#fff;font-size:12px;line-height:18px;cursor:pointer;padding:0">&times;</button><input class="wb-name" data-i="'+i+'" value="'+esc(p.name)+'" style="width:100%;border:0;border-top:1px solid var(--line);font-size:10px;padding:2px 3px;background:var(--panel2);color:var(--txt)"></div>').join("")+'</div>'+
+      '<div style="display:flex;gap:6px"><button id="wb-'+k+'-save" class="chip" style="background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Save this part</button><button id="wb-'+k+'-cancel" class="chip">Cancel</button></div>';
+  } else if(s.saved){
+    badge='<span style="margin-left:auto;font-size:12px;color:var(--teal)">saved</span>';
+    body='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">'+s.thumbs.slice(0,8).map(u=>'<div class="thumb checker" style="width:38px;height:26px;border-radius:6px;position:relative"><img src="'+u+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain"></div>').join("")+'</div>'+
+      '<div style="display:flex;gap:8px;align-items:center"><span class="muted" style="font-size:12px">'+s.thumbs.length+' piece(s)</span><button id="wb-'+k+'-replace" class="chip" style="margin-left:auto">Replace</button></div>';
+  } else {
+    badge='<span style="margin-left:auto;font-size:12px;color:var(--mut)">empty</span>';
+    body='<div id="wb-'+k+'-drop" style="border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;cursor:pointer"><div style="font-weight:600;font-size:13px">Drop art here</div><div class="note">'+(spec.mode==="single"?"one image":(spec.rows+" x "+(spec.cols||1)+" grid")+'')+'</div></div>'+
+      '<div class="note" style="margin-top:6px">'+(spec.mode==="single"?"one piece":"names: "+(spec.rowNames||"")+(spec.colNames?" x "+spec.colNames:""))+' <button id="wb-'+k+'-copy" class="copy" style="margin-left:4px">copy prompt</button></div>';
+  }
+  return '<div class="panel" style="background:var(--panel2);padding:12px 14px;margin:0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:14px;font-weight:600">'+nm+'</span>'+badge+'</div>'+body+'</div>';
+}
+function wbRender(){
+  const done=Object.values(WB.slots).filter(s=>s.saved).length, total=Object.keys(WB.slots).length;
+  $("wb-progress").textContent = total?(done+" of "+total+" parts done"):"";
+  $("wb-slots").innerHTML = wbSlots().length ? wbSlots().map(spec=>wbCard(WB.slots[spec.key])).join("") : '<div class="muted">This game has no customizable parts set up yet.</div>';
+  wbSlots().forEach(spec=>{ const k=spec.key, el=id=>document.getElementById("wb-"+k+"-"+id);
+    const drop=el("drop"); if(drop){ drop.onclick=()=>{WB.activeSlot=k;$("wb-file").value="";$("wb-file").click();};
+      drop.ondragover=e=>{e.preventDefault();drop.style.borderColor="var(--acc)";};
+      drop.ondragleave=()=>{drop.style.borderColor="var(--line)";};
+      drop.ondrop=e=>{e.preventDefault();drop.style.borderColor="var(--line)";WB.activeSlot=k;if(e.dataTransfer.files&&e.dataTransfer.files[0])wbLoadFile(e.dataTransfer.files[0]);}; }
+    const cp=el("copy"); if(cp) cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(wbPrompt(spec));cp.textContent="copied";setTimeout(()=>cp.textContent="copy prompt",900);};
+    const rep=el("replace"); if(rep) rep.onclick=()=>{const s=WB.slots[k];s.saved=false;s.thumbs=[];s.pieces=[];s.editing=false;wbRender();};
+    const save=el("save"); if(save) save.onclick=()=>wbSavePart(k);
+    const cancel=el("cancel"); if(cancel) cancel.onclick=()=>{const s=WB.slots[k];s.editing=false;s.pieces=[];wbRender();};
+    const box=el("pieces"); if(box){ box.querySelectorAll(".wb-name").forEach(inp=>inp.oninput=()=>{WB.slots[k].pieces[+inp.dataset.i].name=inp.value;});
+      box.querySelectorAll(".wb-x").forEach(b=>b.onclick=()=>{WB.slots[k].pieces.splice(+b.dataset.i,1);wbRender();}); }
+  });
+}
+function wbLoadFile(file){ if(!file||!WB.activeSlot)return; const k=WB.activeSlot, rd=new FileReader();
+  rd.onload=()=>{ const im=new Image(); im.onload=()=>{ const s=WB.slots[k];
+    s.pieces=sliceImage(im,{mode:s.spec.mode,rows:s.spec.rows,cols:s.spec.cols,rowNames:s.spec.rowNames,colNames:s.spec.colNames,role:s.spec.role,prefix:s.spec.prefix});
+    s.editing=true; s.saved=false; wbRender(); };
+    im.src=rd.result; };
+  rd.readAsDataURL(file); }
+async function wbSavePart(k){ const s=WB.slots[k]; if(!s.pieces.length)return;
+  const btn=document.getElementById("wb-"+k+"-save"); if(btn){btn.textContent="Saving…";btn.disabled=true;}
+  const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"keep",game:WB.game,type:k,theme:WB.world,pieces:s.pieces.map(p=>({slug:p.name,b64:p.dataURL}))})});
+  if(!r.ok){ if(btn){btn.textContent="Save this part";btn.disabled=false;} $("wb-status").textContent="Save failed."; return; }
+  s.thumbs=s.pieces.map(p=>p.dataURL); s.pieces=[]; s.editing=false; s.saved=true; wbRender();
+}
+function wbLevelForm(){ const game=WB.game||$("wb-game").value, reg=GAME_LEVELS[game];
+  $("wb-lvtpl").innerHTML=((reg&&reg.templates)||["full"]).map(t=>`<option>${t}</option>`).join("");
+  const names=(reg?reg.builtin:[]).map(b=>typeof b==="string"?b:b.name);
+  $("wb-lvpick").innerHTML=names.length?names.map(n=>`<option>${esc(n)}</option>`).join(""):'<option value="">(none)</option>';
+  $("wb-lvdiff").innerHTML=[1,2,3,4,5].map(d=>`<option>${d}</option>`).join(""); $("wb-lvdiff").value="3";
+  if(!$("wb-lvname").value)$("wb-lvname").value=WB.world||"New level";
+  const rep=$("wb-lvmode").value==="replace";
+  $("wb-lvname-w").style.display=rep?"none":""; $("wb-lvtpl-w").style.display=rep?"none":""; $("wb-lvdiff-w").style.display=rep?"none":""; $("wb-lvpick-w").style.display=rep?"":"none";
+}
+async function wbAddToGame(){
+  if(!Object.values(WB.slots).some(s=>s.saved)){ $("wb-status").textContent="Save at least one part first."; return; }
+  $("wb-status").textContent="Adding to the game…";
+  const lv=await getJSON("/api/asset-studio?levels="+WB.game); let levels=(lv&&lv.levels)||[]; const reg=GAME_LEVELS[WB.game];
+  if(!levels.length && reg) levels=reg.builtin.map(b=> typeof b==="string"?{name:b,world:"",builtin:true}:{name:b.name,world:b.world||"",builtin:true});
+  let msg;
+  if($("wb-lvmode").value==="new"){ const nm=($("wb-lvname").value||WB.world); levels.push({name:nm,world:WB.world,template:$("wb-lvtpl").value,difficulty:+$("wb-lvdiff").value||3,builtin:false}); msg='Made a new level "'+nm+'"'; }
+  else { const pick=$("wb-lvpick").value; const e=levels.find(l=>l.name===pick); if(e)e.world=WB.world; else if(pick)levels.push({name:pick,world:WB.world,builtin:true}); msg='Set "'+pick+'" to the '+WB.world+' world'; }
+  const sr=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-levels",game:WB.game,levels})});
+  $("wb-status").textContent=sr.ok?(msg+". Reload the game to play it."):"Save failed.";
+}
+
 /* ============ Worlds + Levels tab (reskin levels / add levels) ============ */
 const GAME_LEVELS={
   breaker:{ templates:["full","pyramid","checker","gaps","columns","frame","diamond"], builtinWorlds:["jungle","space","ocean"],
@@ -949,22 +1019,13 @@ async function wlSave(){
   $("ng-save").onclick=ngSave;
 
   // upload tab
-  $("up-game").innerHTML=GAMES.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("");
-  upRenderLayouts(); const uft=upTypes(); if(uft.length) upSelectType(uft[0]);
-  $("up-theme").oninput=upSetPrompt;
-  $("up-prompt-copy").onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($("up-prompt").value);$("up-prompt-copy").textContent="copied";setTimeout(()=>$("up-prompt-copy").textContent="copy",900);};
-  $("up-drop").onclick=()=>$("up-file").click();
-  $("up-file").onchange=e=>upLoadFile(e.target.files[0]);
-  $("up-drop").ondragover=e=>{e.preventDefault();$("up-drop").style.borderColor="var(--acc)";};
-  $("up-drop").ondragleave=()=>{$("up-drop").style.borderColor="var(--line)";};
-  $("up-drop").ondrop=e=>{e.preventDefault();$("up-drop").style.borderColor="var(--line)";if(e.dataTransfer.files&&e.dataTransfer.files[0])upLoadFile(e.dataTransfer.files[0]);};
-  $("up-slice").onclick=upSliceSheet;
-  $("up-keep").onclick=upKeep;
-  $("up-download").onclick=upDownload;
-  $("up-makelevel").onclick=upMakeLevel;
-  $("up-lvmode").onchange=upLevelForm;
-  $("up-game").onchange=()=>{ const l=upTypes(); if(l.length) upSelectType(l[0]); upLevelForm(); };
-  upLevelForm();
+  // world builder (Upload tab): only games that have parts defined
+  $("wb-game").innerHTML=GAMES.filter(g=>GAME_SLOTS[g[0]]).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("");
+  $("wb-game").onchange=wbInit;
+  $("wb-world").onchange=wbInit;
+  $("wb-file").onchange=e=>wbLoadFile(e.target.files[0]);
+  $("wb-add").onclick=wbAddToGame;
+  $("wb-lvmode").onchange=wbLevelForm;
 
   // worlds + levels tab
   $("wl-game").innerHTML=GAMES.map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("");
@@ -978,6 +1039,7 @@ async function wlSave(){
     $("createView").style.display=t==="create"?"":"none";
     $("uploadView").style.display=t==="upload"?"":"none";
     $("worldsView").style.display=t==="worlds"?"":"none";
+    if(t==="upload")wbInit();
     if(t==="worlds")wlLoad();
     document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));
   });

@@ -66,6 +66,18 @@ then Keep (same `keep` endpoint) or Download. Backbone of the "make hero art any
 let the tool organize it" workflow, which is more reliable than trying to match
 ChatGPT's polish through the raw API.
 
+## World builder (the Upload tab)
+
+The Upload tab is a world builder. You pick a game and name a world, then fill in the
+game's parts (slots) as cards on one page. Drop art into a part, it slices in place
+(`sliceImage` + each slot's spec), you X out bad pieces and rename, then "Save this
+part" keeps just that part to the world. Each part saves independently, so you fill
+them in any order and the page reloads what's already saved for that world (from the
+manifest, grouped by world/slot). A bottom bar attaches the world to a level: "Make a
+new level" (name + template + difficulty) or "Replace a level's art". State lives in
+`WB`; slot cards render from `GAME_SLOTS[game]`. (The old single-sheet upload functions
+`up*` remain in the file as dead code, not wired to anything, pending cleanup.)
+
 ## Per-game asset slots (each type has its own rules + prompt)
 
 `GAME_SLOTS` in `asset-library.html` defines, per game, the asset types that game needs,
