@@ -145,6 +145,13 @@
   .rm-addnote{margin-top:9px}
   .rm-card.editing .edit-input{width:100%}
 
+  .rm-addbar{margin:0 0 14px}
+  .rm-reorder{display:inline-flex;flex-direction:column;gap:1px;vertical-align:middle;margin-right:5px}
+  .rm-arrow{background:var(--card2);border:1px solid var(--line);color:var(--muted);border-radius:6px;font-size:9px;line-height:1;padding:2px 5px;cursor:pointer}
+  .rm-arrow:hover{color:var(--accent);border-color:var(--accent)}
+  .rm-manual{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#fff1d9;color:#8a5a00;border:1px solid #f0d9a8;border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:middle}
+  .rm-addsess{margin-top:10px}
+
   /* PIN gate */
   #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60}
   #gate .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;width:min(340px,90vw);text-align:center}
@@ -670,22 +677,26 @@ function parseRoadmap(text){
 
 /* ---- merge, preserving done/edits/notes by ID ---- */
 function mergeRoadmap(parsed){
-  const cur=rmData(); const prevById={};
-  (cur.sessions||[]).forEach(s=>prevById[s.id]=s);
-  (cur.archived||[]).forEach(s=>{ if(!prevById[s.id]) prevById[s.id]=s; });
-  const newIds=new Set(parsed.sessions.map(s=>s.id));
-  const sessions=parsed.sessions.map(p=>{
-    const prev=prevById[p.id];
-    if(prev){
-      return {id:p.id, phaseNum:p.phaseNum,
-        name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc,
-        done:!!prev.done, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited};
-    }
-    return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false};
+  const cur=rmData();
+  // upsert imported phases; keep manual phases + existing order; append new imported phases at end
+  const byNum={}; (cur.phases||[]).forEach(p=>byNum[p.num]=p);
+  parsed.phases.forEach(pp=>{
+    if(byNum[pp.num]){ byNum[pp.num].title=pp.title; byNum[pp.num].doneWhen=pp.doneWhen; byNum[pp.num].manual=false; }
+    else { const np={num:pp.num,title:pp.title,doneWhen:pp.doneWhen,manual:false}; cur.phases.push(np); byNum[pp.num]=np; }
   });
-  const archived=(cur.archived||[]).filter(s=>!newIds.has(s.id));
-  (cur.sessions||[]).forEach(s=>{ if(!newIds.has(s.id)) archived.push(Object.assign({},s)); });
-  state.meta.roadmap={phases:parsed.phases, sessions, archived};
+  const prevAll={}; (cur.sessions||[]).forEach(s=>prevAll[s.id]=s); (cur.archived||[]).forEach(s=>{ if(!prevAll[s.id]) prevAll[s.id]=s; });
+  const parsedIds=new Set(parsed.sessions.map(s=>s.id));
+  const sessions=parsed.sessions.map(p=>{
+    const prev=prevAll[p.id];
+    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false}; }
+    return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false, manual:false};
+  });
+  // keep manual sessions not present in the paste
+  (cur.sessions||[]).forEach(s=>{ if(s.manual && !parsedIds.has(s.id)) sessions.push(s); });
+  // archive: previously archived still gone + imported sessions dropped from the paste (manual ones are never archived)
+  const archived=(cur.archived||[]).filter(s=>!parsedIds.has(s.id));
+  (cur.sessions||[]).forEach(s=>{ if(!s.manual && !parsedIds.has(s.id)) archived.push(Object.assign({},s)); });
+  state.meta.roadmap={phases:cur.phases, sessions, archived};
 }
 
 async function importRoadmap(){
@@ -706,23 +717,31 @@ function renderRoadmap(){
   const board=document.getElementById("rm-board"); if(!board) return;
   const rd=rmData();
   if(!rd.sessions.length && !rd.archived.length){
-    board.innerHTML='<div class="empty"><b>No roadmap yet.</b><br>Paste your roadmap above and tap <b>Import roadmap</b>.</div>';
+    board.innerHTML=rmAddBar()+'<div class="empty"><b>No roadmap yet.</b><br>Paste a roadmap above, or tap <b>+ New phase</b> to build one yourself.</div>';
     return;
   }
-  let html="";
+  let html=rmAddBar();
   rd.phases.forEach(ph=>{
     const pr=phaseProgress(ph.num);
     if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true;
     const open=rmOpen[ph.num]?"open":"";
     const ss=rd.sessions.filter(s=>s.phaseNum===ph.num);
     const doneCls=(pr.total&&pr.done>=pr.total)?"s-ready":"s-wait";
+    const canDel=!!ph.manual;
     html+='<div class="bucket">'
       +'<div class="bhead" onclick=\'rmToggle('+JSON.stringify(ph.num)+')\'>'
-      +'<h2>Phase '+esc(ph.num)+' <span style="font-weight:600">'+esc(ph.title)+'</span></h2>'
-      +'<span class="status '+doneCls+'">'+pr.done+' of '+pr.total+' done</span></div>'
+      +'<h2><span class="rm-reorder">'
+        +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMovePhase('+JSON.stringify(ph.num)+',-1)\'>&#9650;</button>'
+        +'<button class="rm-arrow" title="Move down" onclick=\'event.stopPropagation();rmMovePhase('+JSON.stringify(ph.num)+',1)\'>&#9660;</button>'
+      +'</span>Phase '+esc(ph.num)+' <span style="font-weight:600">'+esc(ph.title)+'</span>'
+      +(canDel?'<span class="rm-manual">yours</span>':'')+'</h2>'
+      +'<span class="status '+doneCls+'">'+pr.done+' of '+pr.total+' done</span>'
+      +(canDel?'<span class="x" title="Delete phase" onclick=\'event.stopPropagation();rmDeletePhase('+JSON.stringify(ph.num)+')\'>✕</span>':'')
+      +'</div>'
       +'<div class="body '+open+'">'
       +(ph.doneWhen?'<div class="rm-donewhen">Done when: '+esc(ph.doneWhen)+'</div>':'')
-      +(ss.length?ss.map(s=>rmCard(s,false)).join(""):'<p class="legend" style="padding:4px 0">No sessions in this phase.</p>')
+      +(ss.length?ss.map(s=>rmCard(s,false)).join(""):'<p class="legend" style="padding:4px 0">No sessions yet.</p>')
+      +'<div class="quickadd rm-addsess"><button class="btn mini" onclick=\'rmAddSession('+JSON.stringify(ph.num)+')\'>+ Add session</button></div>'
       +'</div></div>';
   });
   const phaseNums=new Set(rd.phases.map(p=>p.num));
@@ -763,7 +782,7 @@ function rmCard(s, archived){
     +notesHtml
     +(archived?"":'<div class="rm-btns">'
       +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
-      +'<button class="btn ghost mini" onclick=\'rmEdit('+JSON.stringify(s.id)+')\'>Edit</button></div>'
+      +'<button class="btn ghost mini" onclick=\'rmEdit('+JSON.stringify(s.id)+')\'>Edit</button>'+(s.manual?'<button class="btn ghost mini" onclick=\'rmDeleteSession('+JSON.stringify(s.id)+')\'>Delete</button>':'')+'</div>'
       +'<div class="quickadd rm-addnote">'
       +'<input class="qa-input rm-note-input" id="'+rmSlug(s.id)+'" data-id="'+esc(s.id)+'" placeholder="Add a note for this session..." autocomplete="off">'
       +'<button class="btn mini rm-note-add" data-id="'+esc(s.id)+'">Add note</button></div>')
@@ -801,6 +820,53 @@ async function rmAddNote(id){
 async function rmDelNote(id,i){
   const s=rmData().sessions.find(x=>x.id===id); if(!s||!Array.isArray(s.notes)) return;
   s.notes.splice(i,1); renderRoadmap(); setSync("saving..."); await saveMetaR();
+}
+
+function rmAddBar(){
+  return '<div class="rm-addbar"><button class="btn" onclick="rmAddPhase()">+ New phase</button></div>';
+}
+function nextPhaseNum(){
+  const rd=rmData(); let mx=0;
+  rd.phases.forEach(p=>{ const n=parseInt(p.num,10); if(!isNaN(n)&&n>mx) mx=n; });
+  return String(mx+1);
+}
+async function rmAddPhase(){
+  const title=(prompt("Name for the new phase (e.g. Speed fix):")||"").trim(); if(!title) return;
+  const dw=(prompt("Optional \"Done when\" goal for this phase (leave blank to skip):")||"").trim();
+  const rd=rmData(); const num=nextPhaseNum();
+  rd.phases.push({num, title, doneWhen:dw, manual:true}); rmOpen[num]=true;
+  renderRoadmap(); setSync("saving..."); await saveMetaR(); toast("Added Phase "+num);
+}
+function genSessionId(phaseNum){
+  const rd=rmData(); const ids=new Set([].concat(rd.sessions,rd.archived).map(s=>s.id));
+  for(let i=0;i<26;i++){ const c=phaseNum+String.fromCharCode(65+i); if(!ids.has(c)) return c; }
+  let n=1,c; do{ c=phaseNum+"_"+n; n++; } while(ids.has(c)); return c;
+}
+async function rmAddSession(phaseNum){
+  const name=(prompt("Session name:")||"").trim(); if(!name) return;
+  const desc=(prompt("Description (optional):")||"").trim();
+  const rd=rmData(); const id=genSessionId(phaseNum);
+  rd.sessions.push({id, phaseNum, name, desc, done:false, notes:[], edited:false, manual:true}); rmOpen[phaseNum]=true;
+  renderRoadmap(); setSync("saving..."); await saveMetaR(); toast("Added "+id);
+}
+async function rmMovePhase(num,dir){
+  const rd=rmData(); const i=rd.phases.findIndex(p=>p.num===num); if(i<0) return;
+  const j=i+dir; if(j<0||j>=rd.phases.length) return;
+  const t=rd.phases[i]; rd.phases[i]=rd.phases[j]; rd.phases[j]=t;
+  renderRoadmap(); setSync("saving..."); await saveMetaR();
+}
+async function rmDeletePhase(num){
+  if(!confirm("Delete this phase? Its sessions move to Archived.")) return;
+  const rd=rmData(); rd.phases=rd.phases.filter(p=>p.num!==num);
+  const move=rd.sessions.filter(s=>s.phaseNum===num);
+  rd.sessions=rd.sessions.filter(s=>s.phaseNum!==num);
+  move.forEach(s=>rd.archived.push(s));
+  renderRoadmap(); setSync("saving..."); await saveMetaR(); toast("Phase deleted");
+}
+async function rmDeleteSession(id){
+  if(!confirm("Delete this session?")) return;
+  const rd=rmData(); rd.sessions=rd.sessions.filter(s=>s.id!==id);
+  renderRoadmap(); setSync("saving..."); await saveMetaR();
 }
 
 function buildSessionPrompt(s){
