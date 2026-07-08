@@ -860,6 +860,17 @@ function contentBands(occ,n,minOcc){
   return runs.map((r,i)=>{ const pe=i>0?runs[i-1][1]:0, ns=i<runs.length-1?runs[i+1][0]:L;
     return [Math.max(r[0]-3,Math.floor((pe+r[0])/2),0), Math.min(r[1]+3,Math.ceil((r[1]+ns)/2),L)]; });
 }
+// Divide the content span into n even cells, then inside EACH cell keep only the
+// single biggest solid run (the real item), dropping thin strips bled in from a
+// neighbor. Robust to shadows/uneven spacing; used for rows (one item per row).
+function bandsByCell(occ,n,minOcc){
+  return splitBands(occ,n,minOcc).map(([c0,c1])=>{   // robust cell boundaries (at gaps)
+    let best=null,cur=null;                          // then keep only the biggest solid run
+    for(let k=c0;k<c1;k++){ if(occ[k]>=minOcc){ if(!cur)cur={a:k,b:k}; else cur.b=k; } else if(cur){ if(!best||(cur.b-cur.a)>(best.b-best.a))best=cur; cur=null; } }
+    if(cur&&(!best||(cur.b-cur.a)>(best.b-best.a)))best=cur;
+    return best?[Math.max(c0,best.a-2),Math.min(c1,best.b+3)]:[c0,c1];
+  });
+}
 function sliceImage(img,o){
   const W=img.naturalWidth,H=img.naturalHeight;
   const sc=document.createElement("canvas");sc.width=W;sc.height=H;
@@ -869,7 +880,7 @@ function sliceImage(img,o){
   if(o.mode==="single"){ const box=key?(contentBox(sx,0,0,W,H,true)||{x:0,y:0,w:W,h:H}):{x:0,y:0,w:W,h:H};
     return [{name:prefix,dataURL:cropFrom(sc,box),w:box.w,h:box.h}]; }
   const rows=Math.max(1,o.rows||1), cols=Math.max(1,o.cols||1), rn=parseList(o.rowNames), cn=parseList(o.colNames), out=[];
-  contentBands(occRows(sx,0,0,W,H),rows,3).forEach((rb,r)=>{ const ry0=rb[0],rh=Math.max(1,rb[1]-ry0);
+  bandsByCell(occRows(sx,0,0,W,H),rows,3).forEach((rb,r)=>{ const ry0=rb[0],rh=Math.max(1,rb[1]-ry0);
     contentBands(occCols(sx,0,ry0,W,rh),cols,3).forEach((cb,c)=>{ const cx0=cb[0],cw=Math.max(1,cb[1]-cx0);
       const box=contentBox(sx,cx0,ry0,cw,rh,true)||{x:cx0,y:ry0,w:cw,h:rh};
       const name = cols>1 ? (rn[r]||(prefix+"_"+(r+1)))+"_"+(cn[c]||("s"+(c+1))) : (rn[r]||(prefix+"_"+(r+1)));
