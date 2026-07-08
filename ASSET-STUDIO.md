@@ -140,6 +140,32 @@ By URL, no files:
 `<img src="/api/asset-studio?asset=breaker/bricks/jungle/ice_hit">`
 or fetch the manifest (`/api/asset-studio?manifest=1&game=breaker`) to list a set.
 
+## The shared world loader (how every game wires art the same)
+
+`public/buildable-worlds.js` is the ONE loader every game uses. A game includes it
+(`<script src="buildable-worlds.js?v=1">`, after `buildable-renders.js`) and calls:
+
+```js
+BuildableWorlds.load("<game>", function(pack){
+  // pack.active = active world (from ?libtheme=/?world= test override, else saved setting)
+  // pack.worlds = { world: { slots: { slotKey: {pieces:{name:Image}, list:[{name,img}]} } } }
+  // pack.slot("bricks")           -> active world's bricks slot
+  // pack.slot("bricks", "candy")  -> a specific world's slot (Breaker uses this per level)
+});
+```
+
+The loader does all the identical boilerplate (resolve active world, fetch manifest,
+group by slot=slug seg[1] and name). Each game only maps its slots to its own draw code.
+Breaker/Sling/Survival are all on it now:
+- Sling: `LIB_SCENE = slot("background")[0]`, `LIB_PALS = slot("pals")`, `LIB_TARGETS = slot("foes")`.
+- Survival: `LIB_SKY = slot("bg")[0]`, `LIB_HERO = slot("hero")[0]`, enemies from `slot("enemies")`.
+- Breaker: `breakerInterpret()` turns each world's `bricks/ball/paddle/background` slots into
+  its brick pack; loads ALL worlds so per-level worlds work.
+
+To wire a NEW game: include the script, call `BuildableWorlds.load`, point its art draw
+calls at the returned slots, and add its slots to `GAME_SLOTS` in the builder. Slot names
+must match between the builder (what you upload) and the engine (what it reads).
+
 ## Wiring a game to the library (the reusable pattern)
 
 Breaker is the first game wired (see `public/breaker-engine.html`). The pattern, which

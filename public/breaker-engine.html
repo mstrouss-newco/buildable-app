@@ -144,6 +144,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <button id="helpBtn" title="How to play">?</button>
 
 <script src="buildable-renders.js"></script>
+<script src="buildable-worlds.js?v=1"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
@@ -287,25 +288,23 @@ const themeCache = {};
 // uses them as the live brick art. Only turns on when ?libtheme= is present, so
 // normal campaign / custom play is completely unaffected.
 const LIB_THEME = new URLSearchParams(location.search).get("libtheme"); // test override
-let LIBPACKS = {};      // theme -> pack (all library worlds for this game)
-let LIB_WORLD = null;   // active library world name (from ?libtheme or the saved setting)
-async function loadLibrary(){
-  try{ const r=await fetch("/api/asset-studio?manifest=1&game=breaker"); if(!r.ok)return;
-    const j=await r.json(), rows=(j&&j.assets)||[];
-    for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length<4)continue;
-      const theme=seg[2], name=seg.slice(3).join("/");
-      let p=LIBPACKS[theme]; if(!p) p=LIBPACKS[theme]={materials:[],bricks:{},ball:null,paddle:null,bg:null};
-      if(name==="ball"||name==="ball_1"){p.ball=mkImg(a.url);continue;}
-      if(name==="paddle"||name==="paddle_1"){p.paddle=mkImg(a.url);continue;}
-      if(name==="bg"||name==="background"||name==="main"){p.bg=mkImg(a.url);continue;}
-      const m=name.match(/^(.*)_(intact|hit|cracked|shattered)$/); if(!m)continue;
-      const mat=m[1]; if(!p.bricks[mat]){p.bricks[mat]={};p.materials.push(mat);} p.bricks[mat][m[2]]=mkImg(a.url);
-    }
-    const has=t=>LIBPACKS[t]&&LIBPACKS[t].materials.length;
-    if(LIB_THEME && has(LIB_THEME)) LIB_WORLD=LIB_THEME;
-    else { try{ const wr=await fetch("/api/asset-studio?world=breaker"); const wj=await wr.json(); if(wj&&wj.world&&has(wj.world)) LIB_WORLD=wj.world; }catch(e){} }
-    await applyLevelsConfig();
-  }catch(e){}
+let LIBPACKS = {};      // theme -> breaker-interpreted pack (all library worlds)
+let LIB_WORLD = null;   // active library world name
+// Turn a shared-loader world (slots of pieces) into Breaker's brick/ball/paddle/bg pack.
+function breakerInterpret(wd){ const pk={materials:[],bricks:{},ball:null,paddle:null,bg:null};
+  const bs=wd.slots.bricks; if(bs) bs.list.forEach(x=>{ const m=x.name.match(/^(.*)_(intact|hit|cracked|shattered)$/); if(!m)return; if(!pk.bricks[m[1]]){pk.bricks[m[1]]={};pk.materials.push(m[1]);} pk.bricks[m[1]][m[2]]=x.img; });
+  const ba=wd.slots.ball; if(ba&&ba.list[0])pk.ball=ba.list[0].img;
+  const pa=wd.slots.paddle; if(pa&&pa.list[0])pk.paddle=pa.list[0].img;
+  const bg=wd.slots.background; if(bg&&bg.list[0])pk.bg=bg.list[0].img;
+  return pk.materials.length?pk:null; }
+function loadLibrary(){
+  if(!window.BuildableWorlds){ applyLevelsConfig(); return; }
+  BuildableWorlds.load("breaker", function(p){
+    p.worldNames().forEach(function(w){ const pk=breakerInterpret(p.worlds[w]); if(pk)LIBPACKS[w]=pk; });
+    if(LIB_THEME && LIBPACKS[LIB_THEME]) LIB_WORLD=LIB_THEME;
+    else if(p.active && LIBPACKS[p.active]) LIB_WORLD=p.active;
+    applyLevelsConfig();
+  });
 }
 const TPL={ full:{cols:10,rows:6,pattern:"full"}, pyramid:{cols:9,rows:5,pattern:"pyramid"}, checker:{cols:10,rows:5,pattern:"checker"}, gaps:{cols:10,rows:6,pattern:"gaps"}, columns:{cols:10,rows:6,pattern:"columns"}, frame:{cols:11,rows:7,pattern:"frame"}, diamond:{cols:11,rows:7,pattern:"diamond"} };
 async function applyLevelsConfig(){

@@ -276,12 +276,12 @@
       "dest": "/family-town.html"
     },
     {
-      "src": "/buildable-wincard.js",
-      "dest": "/buildable-wincard.js"
-    },
-    {
       "src": "/buildable-renders.js",
       "dest": "/buildable-renders.js"
+    },
+    {
+      "src": "/buildable-worlds.js",
+      "dest": "/buildable-worlds.js"
     },
     {
       "src": "/buildable-audio.js",
@@ -426,14 +426,6 @@
     {
       "src": "/planner",
       "dest": "/planner.html"
-    },
-    {
-      "src": "/feedback.html",
-      "dest": "/feedback.html"
-    },
-    {
-      "src": "/feedback",
-      "dest": "/feedback.html"
     },
     {
       "src": "/(.*)",

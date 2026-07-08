@@ -54,6 +54,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <button id="helpBtn" title="How to play">?</button>
 
 <script src="buildable-renders.js"></script>
+<script src="buildable-worlds.js?v=1"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
@@ -91,18 +92,12 @@ var SQUAD = [
 // ---- TARGET look (goofy castle critters that just topple + POOF, never hurt) ----
 var TARGET_COL = "#b6f06a", TARGET_CHEEK = "#8ed83f";
 var SQUAD_IMGS = [];   // Kenney "Animal Pack Remastered" art for the flung pals (drawn animal = fallback)
-var LIB_SCENE=null, LIB_PALS=[], LIB_TARGETS=[];   // Asset Studio world reskin (?libtheme= tests a world, else the saved setting)
-(function(){ try{
-  var useWorld=function(world){ if(!world)return;
-    fetch("/api/asset-studio?manifest=1&game=sling").then(function(r){return r.json();}).then(function(mj){ var rows=(mj&&mj.assets)||[];
-      rows.forEach(function(a){ var seg=(a.slug||"").split("/"); if(seg.length<4||seg[2]!==world)return; var name=seg.slice(3).join("/");
-        var im=new Image(); try{im.crossOrigin="anonymous";}catch(e){} im.src=a.url;
-        if(name==="bg"||name==="background"||name==="main"||/^bg/.test(name)) LIB_SCENE=im;
-        else if(/^foe/.test(name)) LIB_TARGETS.push(im);   // bad guys (what gets hit)
-        else LIB_PALS.push(im); }); }); };
-  var qp=new URLSearchParams(location.search).get("libtheme");
-  if(qp) useWorld(qp); else fetch("/api/asset-studio?world=sling").then(function(r){return r.json();}).then(function(wj){ useWorld(wj&&wj.world); }).catch(function(){});
-}catch(e){} })();
+var LIB_SCENE=null, LIB_PALS=[], LIB_TARGETS=[];   // Asset Studio world reskin (shared loader)
+if(window.BuildableWorlds) BuildableWorlds.load("sling", function(p){
+  var b=(p.slot("background").list[0]||p.slot("bg").list[0]); if(b)LIB_SCENE=b.img;
+  LIB_PALS=p.slot("pals").list.map(function(x){return x.img;});
+  LIB_TARGETS=p.slot("foes").list.map(function(x){return x.img;});
+});
 var BLK_IMGS = {};     // Kenney "Physics Assets" block textures, keyed material+shape (woodW/stoneT/...)
 var TARGET_IMGS = [];  // Kenney "Physics Assets" alien faces = the goofy toppling targets
 

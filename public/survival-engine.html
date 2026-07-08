@@ -71,6 +71,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <button id="helpBtn" title="How to play">?</button>
 
 <script src="buildable-renders.js"></script>
+<script src="buildable-worlds.js?v=1"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
@@ -165,18 +166,11 @@ SD_ENEMY_KEYS.forEach(sdGet);                              // warm all foe cutou
 const HELPER_KEYS=["helper_star","helper_bee","helper_dog","helper_healer"];
 HELPER_KEYS.forEach(sdGet);
 // ---- library world reskin: swap sky/hero/enemies for a world made in Asset Studio ----
-(async function loadSurvivalWorld(){
-  try{ const qp=new URLSearchParams(location.search).get("libtheme");
-    let world=qp; if(!world){ const wr=await fetch("/api/asset-studio?world=survival"); const wj=await wr.json(); world=wj&&wj.world; }
-    if(!world)return;
-    const mr=await fetch("/api/asset-studio?manifest=1&game=survival"); const mj=await mr.json(); const rows=(mj&&mj.assets)||[];
-    for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length<4||seg[2]!==world)continue; const name=seg.slice(3).join("/");
-      if(name==="bg"||name==="background"||name==="main"||/^bg/.test(name)) LIB_SKY=mkImg(a.url);
-      else if(/^hero/.test(name)) LIB_HERO=mkImg(a.url);
-      else { const m=name.match(/^(enemy_[a-z]+)/); if(m) LIB_ENEMIES[m[1]]=mkImg(a.url); }
-    }
-  }catch(e){}
-})();
+if(window.BuildableWorlds) BuildableWorlds.load("survival", function(p){   // shared world loader
+  var b=(p.slot("bg").list[0]||p.slot("background").list[0]); if(b)LIB_SKY=b.img;
+  var h=p.slot("hero").list[0]; if(h)LIB_HERO=h.img;
+  p.slot("enemies").list.forEach(function(x){ var m=x.name.match(/^(enemy_[a-z]+)/); LIB_ENEMIES[m?m[1]:x.name]=x.img; });
+});
 // Animated frame-strips: "<key>_anim.png" is N square cells in a row (idle/hover loop).
 // drawAnimSprite() flips through them by time; if the strip isn't loaded yet it falls back
 // to the still cutout (sdGet), then to the drawn blob. So the game always looks right.
