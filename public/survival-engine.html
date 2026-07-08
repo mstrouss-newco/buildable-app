@@ -166,7 +166,9 @@ const HELPER_KEYS=["helper_star","helper_bee","helper_dog","helper_healer"];
 HELPER_KEYS.forEach(sdGet);
 // ---- library world reskin: swap sky/hero/enemies for a world made in Asset Studio ----
 (async function loadSurvivalWorld(){
-  try{ const wr=await fetch("/api/asset-studio?world=survival"); const wj=await wr.json(); const world=wj&&wj.world; if(!world)return;
+  try{ const qp=new URLSearchParams(location.search).get("libtheme");
+    let world=qp; if(!world){ const wr=await fetch("/api/asset-studio?world=survival"); const wj=await wr.json(); world=wj&&wj.world; }
+    if(!world)return;
     const mr=await fetch("/api/asset-studio?manifest=1&game=survival"); const mj=await mr.json(); const rows=(mj&&mj.assets)||[];
     for(const a of rows){ const seg=(a.slug||"").split("/"); if(seg.length<4||seg[2]!==world)continue; const name=seg.slice(3).join("/");
       if(name==="bg"||name==="background"||name==="main"||/^bg/.test(name)) LIB_SKY=mkImg(a.url);

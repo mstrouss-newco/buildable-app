@@ -176,6 +176,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
         <label class="fld" id="wb-lvpick-w" style="display:none">Level<br><select id="wb-lvpick"></select></label>
         <label class="fld" id="wb-lvtpl-w">Layout<br><select id="wb-lvtpl"></select></label>
         <label class="fld" id="wb-lvdiff-w">Difficulty<br><select id="wb-lvdiff"></select></label>
+        <button id="wb-test" class="chip">Test this world</button>
         <button id="wb-add" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Add to game</button>
         <span id="wb-status" class="muted"></span>
       </div>
@@ -887,7 +888,11 @@ function sliceImage(img,o){
       out.push({name,dataURL:cropFrom(sc,box),w:box.w,h:box.h}); }); });
   return out;
 }
-let WB={game:null,world:"",slots:{},activeSlot:null};
+let WB={game:null,world:"",slots:{},activeSlot:null,levelNames:[]};
+const GAME_URL={breaker:"/breaker-engine.html",sling:"/sling-squad.html",survival:"/survival-engine.html"};
+function wbTest(){ const u=GAME_URL[WB.game]; if(!u){$("wb-status").textContent="No preview for this game yet.";return;}
+  if(!Object.values(WB.slots).some(s=>s.saved)){$("wb-status").textContent="Save at least one part first.";return;}
+  window.open(u+"?libtheme="+encodeURIComponent(WB.world),"_blank"); }
 function wbSlots(){ return GAME_SLOTS[WB.game]||[]; }
 function wbPrompt(spec){ const t=($("wb-world").value||"candy").trim();
   return String(spec.prompt||"").replace(/\{theme\}/g,t)+". "+(spec.mode==="single"?"One item, centered, on a plain solid white background.":`Lay it out as a clean ${spec.cols||1}-column by ${spec.rows||1}-row grid on a plain solid white background, evenly spaced, nothing touching.`)+" No text, no words.";
@@ -895,8 +900,11 @@ function wbPrompt(spec){ const t=($("wb-world").value||"candy").trim();
 async function wbInit(){
   WB.game=$("wb-game").value; WB.world=($("wb-world").value||"world").trim().toLowerCase(); WB.slots={}; WB.activeSlot=null;
   wbSlots().forEach(s=>{ WB.slots[s.key]={spec:s,pieces:[],saved:false,editing:false,thumbs:[]}; });
+  const [mf,lv]=await Promise.all([ getJSON("/api/asset-studio?manifest=1&game="+WB.game), getJSON("/api/asset-studio?levels="+WB.game) ]);
+  const reg0=GAME_LEVELS[WB.game], base=(reg0?reg0.builtin:[]).map(b=>typeof b==="string"?b:b.name), sv=(lv&&lv.levels)||[];
+  WB.levelNames=[...new Set(base.concat(sv.map(l=>l.name)))];
   wbLevelForm();
-  const mf=await getJSON("/api/asset-studio?manifest=1&game="+WB.game); const rows=(mf&&mf.assets)||[];
+  const rows=(mf&&mf.assets)||[];
   rows.forEach(a=>{ const seg=(a.slug||"").split("/"); if(seg.length<4)return; const type=seg[1], theme=seg[2];
     if(theme!==WB.world)return; if(WB.slots[type]){ WB.slots[type].saved=true; WB.slots[type].thumbs.push(a.url); } });
   wbRender();
@@ -950,7 +958,7 @@ async function wbSavePart(k){ const s=WB.slots[k]; if(!s.pieces.length)return;
 }
 function wbLevelForm(){ const game=WB.game||$("wb-game").value, reg=GAME_LEVELS[game];
   $("wb-lvtpl").innerHTML=((reg&&reg.templates)||["full"]).map(t=>`<option>${t}</option>`).join("");
-  const names=(reg?reg.builtin:[]).map(b=>typeof b==="string"?b:b.name);
+  const names=(WB.levelNames&&WB.levelNames.length)?WB.levelNames:(reg?reg.builtin:[]).map(b=>typeof b==="string"?b:b.name);
   $("wb-lvpick").innerHTML=names.length?names.map(n=>`<option>${esc(n)}</option>`).join(""):'<option value="">(none)</option>';
   $("wb-lvdiff").innerHTML=[1,2,3,4,5].map(d=>`<option>${d}</option>`).join(""); $("wb-lvdiff").value="3";
   if(!$("wb-lvname").value)$("wb-lvname").value=WB.world||"New level";
@@ -966,7 +974,10 @@ async function wbAddToGame(){
   if($("wb-lvmode").value==="new"){ const nm=($("wb-lvname").value||WB.world); levels.push({name:nm,world:WB.world,template:$("wb-lvtpl").value,difficulty:+$("wb-lvdiff").value||3,builtin:false}); msg='Made a new level "'+nm+'"'; }
   else { const pick=$("wb-lvpick").value; const e=levels.find(l=>l.name===pick); if(e)e.world=WB.world; else if(pick)levels.push({name:pick,world:WB.world,builtin:true}); msg='Set "'+pick+'" to the '+WB.world+' world'; }
   const sr=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-levels",game:WB.game,levels})});
-  $("wb-status").textContent=sr.ok?(msg+". Reload the game to play it."):"Save failed.";
+  if(!sr.ok){ $("wb-status").textContent="Save failed."; return; }
+  if($("wb-lvmode").value==="new"){ const nm=($("wb-lvname").value||WB.world); WB.levelNames=[...new Set((WB.levelNames||[]).concat([nm]))]; wbLevelForm(); }
+  const u=GAME_URL[WB.game];
+  $("wb-status").innerHTML=esc(msg)+". "+(u?'<a href="'+u+'" target="_blank" style="color:var(--acc)">Open game</a>':"Reload the game to play it.");
 }
 
 /* ============ Worlds + Levels tab (reskin levels / add levels) ============ */
@@ -1047,6 +1058,7 @@ async function wlSave(){
   $("wb-world").onchange=wbInit;
   $("wb-file").onchange=e=>wbLoadFile(e.target.files[0]);
   $("wb-add").onclick=wbAddToGame;
+  $("wb-test").onclick=wbTest;
   $("wb-lvmode").onchange=wbLevelForm;
 
   // worlds + levels tab
