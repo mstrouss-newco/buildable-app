@@ -849,6 +849,17 @@ async function upMakeLevel(){
    Fill in a game's parts (slots) one at a time; each part saves on its own to the
    named world; then attach the world to a level (new or replace). Same slicer as
    before, driven by each slot's spec. This is the infra kids will use to customize. */
+// Prefer TIGHT bands: bound each item to its own solid run of pixels (no neighbor
+// shadow bleeding in from the gap). Only when the run count doesn't match the expected
+// count (e.g. a debris column that breaks into many pieces) fall back to widest-gap cuts.
+function contentBands(occ,n,minOcc){
+  const L=occ.length, runs=[]; let st=-1;
+  for(let k=0;k<L;k++){ if(occ[k]>=minOcc){ if(st<0)st=k; } else { if(st>=0){runs.push([st,k]);st=-1;} } }
+  if(st>=0)runs.push([st,L]);
+  if(runs.length!==n) return splitBands(occ,n,minOcc);
+  return runs.map((r,i)=>{ const pe=i>0?runs[i-1][1]:0, ns=i<runs.length-1?runs[i+1][0]:L;
+    return [Math.max(r[0]-3,Math.floor((pe+r[0])/2),0), Math.min(r[1]+3,Math.ceil((r[1]+ns)/2),L)]; });
+}
 function sliceImage(img,o){
   const W=img.naturalWidth,H=img.naturalHeight;
   const sc=document.createElement("canvas");sc.width=W;sc.height=H;
@@ -858,8 +869,8 @@ function sliceImage(img,o){
   if(o.mode==="single"){ const box=key?(contentBox(sx,0,0,W,H,true)||{x:0,y:0,w:W,h:H}):{x:0,y:0,w:W,h:H};
     return [{name:prefix,dataURL:cropFrom(sc,box),w:box.w,h:box.h}]; }
   const rows=Math.max(1,o.rows||1), cols=Math.max(1,o.cols||1), rn=parseList(o.rowNames), cn=parseList(o.colNames), out=[];
-  splitBands(occRows(sx,0,0,W,H),rows,3).forEach((rb,r)=>{ const ry0=rb[0],rh=Math.max(1,rb[1]-ry0);
-    splitBands(occCols(sx,0,ry0,W,rh),cols,3).forEach((cb,c)=>{ const cx0=cb[0],cw=Math.max(1,cb[1]-cx0);
+  contentBands(occRows(sx,0,0,W,H),rows,3).forEach((rb,r)=>{ const ry0=rb[0],rh=Math.max(1,rb[1]-ry0);
+    contentBands(occCols(sx,0,ry0,W,rh),cols,3).forEach((cb,c)=>{ const cx0=cb[0],cw=Math.max(1,cb[1]-cx0);
       const box=contentBox(sx,cx0,ry0,cw,rh,true)||{x:cx0,y:ry0,w:cw,h:rh};
       const name = cols>1 ? (rn[r]||(prefix+"_"+(r+1)))+"_"+(cn[c]||("s"+(c+1))) : (rn[r]||(prefix+"_"+(r+1)));
       out.push({name,dataURL:cropFrom(sc,box),w:box.w,h:box.h}); }); });
