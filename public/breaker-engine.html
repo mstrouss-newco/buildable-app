@@ -414,7 +414,7 @@ function topBand(){
   var inShell=true; try{ inShell=!!(window.parent&&window.parent!==window); }catch(e){}
   return inShell ? 150 : 104;
 }
-let G=null, level=0, L=null, state="title", started=false, botMode=false, helpOpen=false;
+let G=null, level=0, L=null, state="title", started=false, botMode=false, helpOpen=false, PLAYTEST=false;
 // After the first launch of a level, keep showing the pointing hand (following the
 // paddle, no dark overlay) for a few seconds so the "slide to move" hint doesn't
 // vanish the instant the kid taps. Reset each new level.
@@ -704,6 +704,7 @@ function pongScore(scorer){ if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ffffff",0.25
 }
 
 function advanceAfterEnd(){
+  if(PLAYTEST){ startLevel(level,null); return; }   // playtest: just replay, never leak to the menu
   if(G && G.custom){ const won=(state==="win"); showMaker(won?"share":"build"); if(!won)toast("So close! Tweak it and try again."); return; }
   if(G && G.mode==="two"){ showMenu(); return; }
   if(state==="win"){ if(level<GAME_CONFIG.levels.length-1){ startLevel(level+1, G.lives); } else { showMenu(); toast("You beat every level!"); } }
@@ -1246,9 +1247,11 @@ if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs
   const t=(TPL[P.get("template")]||TPL.full), d=clamp((+P.get("diff")||3),1,5), world=P.get("libtheme")||"";
   const lvl={ name:P.get("name")||"Playtest", cols:t.cols, rows:t.rows, pattern:t.pattern, tough:(d-1)*0.12, speed:3.8+d*0.5,
     theme:(world&&THEMES[world])?world:"jungle", _theme:(world&&THEMES[world])?world:null, _world:(world&&!THEMES[world])?world:"" };
-  GAME_CONFIG.levels.push(lvl); const idx=GAME_CONFIG.levels.length-1;
-  if(typeof BA!=="undefined"&&BA)BA.unlock(); startLevel(idx,null);
-  if(typeof toast==="function") toast("Playtest — not published");
+  PLAYTEST=true; GAME_CONFIG.levels.push(lvl); const idx=GAME_CONFIG.levels.length-1;
+  if(typeof BA!=="undefined"&&BA)BA.unlock();
+  show("home",false); const host=document.getElementById("start"); if(host)host.style.display="none";   // clear the menus
+  startLevel(idx,null); hideMenu();                                                                     // take over + show play UI
+  if(typeof toast==="function") toast("Playtest · nothing is saved");
 }catch(e){} })();
 
 // ---- shared in-app nav: shell draws Home + Sound/Menu/Help; hide our own buttons in-app ----
