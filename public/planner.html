@@ -123,6 +123,28 @@
   .legend{color:var(--muted);font-size:12px}
   .syncing{font-size:12px;color:var(--muted)}
 
+  /* ---- Roadmap tab ---- */
+  .maintabs{display:inline-flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:4px;margin:6px 0 16px}
+  .mt{background:transparent;border:0;color:var(--muted);font-weight:700;font-size:14px;padding:9px 18px;border-radius:9px;cursor:pointer;transition:.12s}
+  .mt:hover{color:var(--ink)}
+  .mt.on{background:var(--accent);color:#fff}
+  .rm-paste-card textarea{width:100%;min-height:120px;margin-top:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+  .rm-donewhen{background:#eef1fb;border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:13px;color:var(--muted);margin-bottom:10px}
+  .rm-card{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px}
+  .rm-card.done{opacity:.62}
+  .rm-card.done .rm-name{text-decoration:line-through}
+  .rm-top{display:flex;align-items:center;gap:9px}
+  .rm-top input[type=checkbox]{width:17px;height:17px;flex:0 0 auto}
+  .rm-id{font-size:11px;font-weight:800;background:#e7eaf6;color:var(--accent);border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .rm-name{font-size:14px;font-weight:700}
+  .rm-desc{font-size:13px;line-height:1.45;color:var(--ink);margin:7px 0 0;padding-left:2px}
+  .rm-notes{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+  .rm-note{display:flex;gap:8px;align-items:flex-start;background:#eefaf6;border:1px solid #bfe9dc;border-radius:8px;padding:5px 9px;font-size:12.5px;line-height:1.4}
+  .rm-note span:first-child{flex:1}
+  .rm-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .rm-addnote{margin-top:9px}
+  .rm-card.editing .edit-input{width:100%}
+
   /* PIN gate */
   #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60}
   #gate .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;width:min(340px,90vw);text-align:center}
@@ -153,6 +175,13 @@
 
   <div id="setupBanner"></div>
 
+  <div class="maintabs">
+    <button id="mt-log" class="mt on" onclick="switchTab('log')">Log</button>
+    <button id="mt-road" class="mt" onclick="switchTab('roadmap')">Roadmap</button>
+  </div>
+
+  <div id="logView">
+
   <div class="addcard">
     <div class="pickrow">
       <div class="toggle">
@@ -175,6 +204,19 @@
   </div>
 
   <div id="board"></div>
+  </div>
+
+  <div id="roadmapView" style="display:none">
+    <div class="addcard rm-paste-card">
+      <label>Paste your roadmap (markdown), then Import. Re-importing keeps your checkmarks, edits, and notes.</label>
+      <textarea id="rm-paste" placeholder="## Phase 1 - Speed fix (do first)&#10;Done when: the app feels fast on a phone&#10;- [ ] Session 1A - Compression pass. Compress all images and audio so pages load faster."></textarea>
+      <div class="addfoot">
+        <span class="legend">Phases, Session lines, and "Done when:" lines are read. Everything else is ignored.</span>
+        <button class="btn" onclick="importRoadmap()">Import roadmap</button>
+      </div>
+    </div>
+    <div id="rm-board"></div>
+  </div>
 </div>
 
 <!-- Prompt modal -->
@@ -213,6 +255,17 @@
   <div class="mfoot">
     <button class="btn ghost" onclick="closeModal('settingsModal')">Cancel</button>
     <button class="btn" onclick="saveSettings()">Save</button>
+  </div>
+</div></div>
+
+<!-- Roadmap session prompt modal -->
+<div class="modal-bg" id="rmPromptModal"><div class="modal">
+  <h3 id="rm-pm-title">Session prompt</h3>
+  <p class="hint">Copy this and paste it to Claude.</p>
+  <div class="promptbox" id="rm-pm-box"></div>
+  <div class="mfoot">
+    <button class="btn ghost" onclick="closeModal('rmPromptModal')">Close</button>
+    <button class="btn" onclick="copyEl('rm-pm-box')">Copy prompt</button>
   </div>
 </div></div>
 
@@ -266,12 +319,13 @@ async function load(showToast){
     state.meta=normMeta(d.meta);
     state.tasks.forEach(t=>{ t.later=state.meta.later.includes(t.id); t.sent=state.meta.sent.includes(t.id); });
     renderBanner("");
-    render(); setSync("in sync");
+    render(); renderRoadmap(); setSync("in sync");
     if(showToast)toast("Refreshed");
   }catch(e){ setSync("offline"); renderBanner("Couldn't reach the store. Tap Refresh to retry."); }
 }
 function normTask(t){ return {id:t.id, kind:t.kind==="platform"?"platform":"game", target:t.target, desc:t.description, done:!!t.done, created:t.created_at, source:t.source||"me", author:t.author||null}; }
-function normMeta(m){ m=m||{}; return {settings:Object.assign({...DEF_SETTINGS},m.settings||{}), sends:m.sends||{}, custom:Object.assign({game:[],platform:[]},m.custom||{}), later:Array.isArray(m.later)?m.later:[], sent:Array.isArray(m.sent)?m.sent:[]}; }
+function normMeta(m){ m=m||{}; return {settings:Object.assign({...DEF_SETTINGS},m.settings||{}), sends:m.sends||{}, custom:Object.assign({game:[],platform:[]},m.custom||{}), later:Array.isArray(m.later)?m.later:[], sent:Array.isArray(m.sent)?m.sent:[], roadmap:normRoadmap(m.roadmap)}; }
+function normRoadmap(r){ r=r||{}; return { phases:Array.isArray(r.phases)?r.phases:[], sessions:Array.isArray(r.sessions)?r.sessions:[], archived:Array.isArray(r.archived)?r.archived:[] }; }
 
 async function saveMeta(){ setSync("saving…"); const r=await apiPost({op:"meta",data:state.meta}); setSync(r.ok?"in sync":"offline"); }
 
@@ -578,6 +632,194 @@ async function saveSettings(){
   s.bigAt=Math.max(s.readyAt+1,+document.getElementById("s-big").value||8);
   s.daily=Math.max(1,+document.getElementById("s-daily").value||3);
   closeModal("settingsModal"); render(); await saveMeta(); toast("Settings saved");
+}
+
+/* ================= ROADMAP TAB ================= */
+let rmOpen={}, rmArchOpen=false, rmEditingId=null;
+
+function switchTab(which){
+  const log=which!=="roadmap";
+  document.getElementById("logView").style.display=log?"block":"none";
+  document.getElementById("roadmapView").style.display=log?"none":"block";
+  document.getElementById("mt-log").classList.toggle("on",log);
+  document.getElementById("mt-road").classList.toggle("on",!log);
+  if(!log) renderRoadmap();
+}
+function rmSlug(id){ return "rm-note-"+String(id).replace(/[^a-z0-9]+/gi,"-"); }
+function rmData(){ return state.meta.roadmap || (state.meta.roadmap={phases:[],sessions:[],archived:[]}); }
+
+/* ---- parse pasted markdown ---- */
+function parseRoadmap(text){
+  const phases=[], sessions=[]; let curPhase=null;
+  const lines=String(text||"").split(/\r?\n/);
+  for(let raw of lines){
+    const line=raw.trim(); if(!line) continue; let m;
+    if(m=line.match(/^#{1,6}\s*Phase\s+([\w.]+)\s*[—–-]+\s*(.+)$/i)){
+      curPhase={num:m[1], title:m[2].trim(), doneWhen:""}; phases.push(curPhase); continue;
+    }
+    if(m=line.match(/^[-*]\s*\[\s*([ xX])\s*\]\s*Session\s+([\w.]+)\s*[—–-]+\s*(.+)$/)){
+      const done=/[xX]/.test(m[1]); const id=m[2]; const rest=m[3].trim();
+      let name=rest, desc=""; const dot=rest.match(/^(.*?[^.\s])\.\s+(.+)$/);
+      if(dot){ name=dot[1].trim(); desc=dot[2].trim(); }
+      sessions.push({id, name, desc, phaseNum:curPhase?curPhase.num:"", doneFromPaste:done}); continue;
+    }
+    if(m=line.match(/^Done when:\s*(.+)$/i)){ if(curPhase) curPhase.doneWhen=m[1].trim(); continue; }
+  }
+  return {phases, sessions};
+}
+
+/* ---- merge, preserving done/edits/notes by ID ---- */
+function mergeRoadmap(parsed){
+  const cur=rmData(); const prevById={};
+  (cur.sessions||[]).forEach(s=>prevById[s.id]=s);
+  (cur.archived||[]).forEach(s=>{ if(!prevById[s.id]) prevById[s.id]=s; });
+  const newIds=new Set(parsed.sessions.map(s=>s.id));
+  const sessions=parsed.sessions.map(p=>{
+    const prev=prevById[p.id];
+    if(prev){
+      return {id:p.id, phaseNum:p.phaseNum,
+        name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc,
+        done:!!prev.done, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited};
+    }
+    return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false};
+  });
+  const archived=(cur.archived||[]).filter(s=>!newIds.has(s.id));
+  (cur.sessions||[]).forEach(s=>{ if(!newIds.has(s.id)) archived.push(Object.assign({},s)); });
+  state.meta.roadmap={phases:parsed.phases, sessions, archived};
+}
+
+async function importRoadmap(){
+  const text=document.getElementById("rm-paste").value;
+  const parsed=parseRoadmap(text);
+  if(!parsed.sessions.length && !parsed.phases.length){ toast("Couldn't find any phases or sessions"); return; }
+  mergeRoadmap(parsed);
+  renderRoadmap(); setSync("saving..."); await saveMetaR();
+  toast("Imported "+parsed.sessions.length+" session"+(parsed.sessions.length===1?"":"s"));
+}
+
+/* ---- render ---- */
+function phaseProgress(num){
+  const ss=rmData().sessions.filter(s=>s.phaseNum===num);
+  return {done:ss.filter(s=>s.done).length, total:ss.length};
+}
+function renderRoadmap(){
+  const board=document.getElementById("rm-board"); if(!board) return;
+  const rd=rmData();
+  if(!rd.sessions.length && !rd.archived.length){
+    board.innerHTML='<div class="empty"><b>No roadmap yet.</b><br>Paste your roadmap above and tap <b>Import roadmap</b>.</div>';
+    return;
+  }
+  let html="";
+  rd.phases.forEach(ph=>{
+    const pr=phaseProgress(ph.num);
+    if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true;
+    const open=rmOpen[ph.num]?"open":"";
+    const ss=rd.sessions.filter(s=>s.phaseNum===ph.num);
+    const doneCls=(pr.total&&pr.done>=pr.total)?"s-ready":"s-wait";
+    html+='<div class="bucket">'
+      +'<div class="bhead" onclick=\'rmToggle('+JSON.stringify(ph.num)+')\'>'
+      +'<h2>Phase '+esc(ph.num)+' <span style="font-weight:600">'+esc(ph.title)+'</span></h2>'
+      +'<span class="status '+doneCls+'">'+pr.done+' of '+pr.total+' done</span></div>'
+      +'<div class="body '+open+'">'
+      +(ph.doneWhen?'<div class="rm-donewhen">Done when: '+esc(ph.doneWhen)+'</div>':'')
+      +(ss.length?ss.map(s=>rmCard(s,false)).join(""):'<p class="legend" style="padding:4px 0">No sessions in this phase.</p>')
+      +'</div></div>';
+  });
+  const phaseNums=new Set(rd.phases.map(p=>p.num));
+  const orphans=rd.sessions.filter(s=>!phaseNums.has(s.phaseNum));
+  if(orphans.length){
+    html+='<div class="bucket"><div class="bhead"><h2>Other sessions</h2></div><div class="body open">'+orphans.map(s=>rmCard(s,false)).join("")+'</div></div>';
+  }
+  if(rd.archived.length){
+    html+='<div class="bucket">'
+      +'<div class="bhead" onclick="rmArchOpen=!rmArchOpen;renderRoadmap()">'
+      +'<h2>Archived <span class="count">'+rd.archived.length+'</span></h2>'
+      +'<span class="status s-wait">removed from latest paste</span></div>'
+      +'<div class="body '+(rmArchOpen?"open":"")+'">'+rd.archived.map(s=>rmCard(s,true)).join("")+'</div></div>';
+  }
+  board.innerHTML=html;
+  bindRmNotes();
+}
+function rmToggle(num){ rmOpen[num]=!rmOpen[num]; renderRoadmap(); }
+
+function rmCard(s, archived){
+  if(rmEditingId===s.id && !archived){
+    return '<div class="rm-card editing">'
+      +'<div class="rm-top"><span class="rm-id">'+esc(s.id)+'</span></div>'
+      +'<input class="edit-input" id="rm-ename-'+esc(s.id)+'" value="'+esc(s.name)+'" placeholder="Session name" style="margin-top:6px">'
+      +'<textarea class="edit-input" id="rm-edesc-'+esc(s.id)+'" style="margin-top:6px;min-height:60px" placeholder="Description">'+esc(s.desc)+'</textarea>'
+      +'<div class="rm-btns">'
+      +'<button class="btn green mini" onclick=\'rmSaveEdit('+JSON.stringify(s.id)+')\'>Save</button>'
+      +'<button class="btn ghost mini" onclick="rmEditingId=null;renderRoadmap()">Cancel</button></div></div>';
+  }
+  const notes=Array.isArray(s.notes)?s.notes:[];
+  const notesHtml=notes.length?'<div class="rm-notes">'+notes.map((n,i)=>'<div class="rm-note"><span>'+esc(n)+'</span>'+(archived?"":'<span class="x" onclick=\'rmDelNote('+JSON.stringify(s.id)+','+i+')\' title="Remove note">✕</span>')+'</div>').join("")+'</div>':"";
+  return '<div class="rm-card '+(s.done?"done":"")+'">'
+    +'<div class="rm-top">'
+    +(archived?"":'<input type="checkbox" '+(s.done?"checked":"")+' onchange=\'rmToggleDone('+JSON.stringify(s.id)+')\'>')
+    +'<span class="rm-id">'+esc(s.id)+'</span>'
+    +'<span class="rm-name">'+esc(s.name)+'</span></div>'
+    +(s.desc?'<div class="rm-desc">'+esc(s.desc)+'</div>':"")
+    +notesHtml
+    +(archived?"":'<div class="rm-btns">'
+      +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
+      +'<button class="btn ghost mini" onclick=\'rmEdit('+JSON.stringify(s.id)+')\'>Edit</button></div>'
+      +'<div class="quickadd rm-addnote">'
+      +'<input class="qa-input rm-note-input" id="'+rmSlug(s.id)+'" data-id="'+esc(s.id)+'" placeholder="Add a note for this session..." autocomplete="off">'
+      +'<button class="btn mini rm-note-add" data-id="'+esc(s.id)+'">Add note</button></div>')
+    +'</div>';
+}
+function bindRmNotes(){
+  document.querySelectorAll(".rm-note-input").forEach(inp=>{
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();rmAddNote(inp.dataset.id);}});
+  });
+  document.querySelectorAll(".rm-note-add").forEach(btn=>{
+    btn.addEventListener("click",()=>rmAddNote(btn.dataset.id));
+  });
+}
+
+async function rmToggleDone(id){
+  const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  s.done=!s.done; renderRoadmap(); setSync("saving..."); await saveMetaR();
+}
+function rmEdit(id){ rmEditingId=id; renderRoadmap(); }
+async function rmSaveEdit(id){
+  const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  const nn=document.getElementById("rm-ename-"+id), nd=document.getElementById("rm-edesc-"+id);
+  const name=(nn?nn.value:"").trim(), desc=(nd?nd.value:"").trim();
+  if(!name){ toast("Name can't be empty"); return; }
+  s.name=name; s.desc=desc; s.edited=true; rmEditingId=null;
+  renderRoadmap(); setSync("saving..."); await saveMetaR(); toast("Saved");
+}
+async function rmAddNote(id){
+  const inp=document.getElementById(rmSlug(id)); if(!inp) return;
+  const v=inp.value.trim(); if(!v){ inp.focus(); return; }
+  const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  if(!Array.isArray(s.notes)) s.notes=[];
+  s.notes.push(v); renderRoadmap(); setSync("saving..."); await saveMetaR(); toast("Note added");
+}
+async function rmDelNote(id,i){
+  const s=rmData().sessions.find(x=>x.id===id); if(!s||!Array.isArray(s.notes)) return;
+  s.notes.splice(i,1); renderRoadmap(); setSync("saving..."); await saveMetaR();
+}
+
+function buildSessionPrompt(s){
+  const ph=rmData().phases.find(p=>p.num===s.phaseNum);
+  const doneWhen=ph&&ph.doneWhen?ph.doneWhen:"";
+  const name=(s.name||"").replace(/[.\s]+$/,"");
+  const desc=(s.desc||"").replace(/[.\s]+$/,"");
+  let p="Pull the latest from GitHub before touching any files. Read buildable-rebuild-roadmap.md and buildable-manifest-v2.md in the repo root for context. Do ONLY Session "+s.id+" — "+name+": "+desc+".";
+  if(doneWhen) p+=" Done when: "+doneWhen.replace(/[.\s]+$/,"")+".";
+  p+=" When finished: run the QA scripts for any games touched, update the roadmap checkboxes and SESSION-LOG.md, then give me a recap of what was completed and what remains in this phase. Do not start the next session block.";
+  const notes=Array.isArray(s.notes)?s.notes:[];
+  if(notes.length) p+="\n\nAlso address these notes: "+notes.join("; ");
+  return p;
+}
+function openSessionPrompt(id){
+  const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  document.getElementById("rm-pm-title").textContent="Session "+s.id+": "+s.name;
+  document.getElementById("rm-pm-box").textContent=buildSessionPrompt(s);
+  document.getElementById("rmPromptModal").classList.add("show");
 }
 
 document.getElementById("f-desc")&&document.getElementById("f-desc").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))addTask();});
