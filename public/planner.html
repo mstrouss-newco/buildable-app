@@ -661,11 +661,11 @@ function parseRoadmap(text){
   const lines=String(text||"").split(/\r?\n/);
   for(let raw of lines){
     const line=raw.trim(); if(!line) continue; let m;
-    if(m=line.match(/^#{1,6}\s*Phase\s+([\w.]+)\s*[—–-]+\s*(.+)$/i)){
+    if(m=line.match(/^#{0,6}\s*(?:[-*]\s*)?Phase\s+([\w.]+)\s*[—–:-]+\s*(.+)$/i)){
       curPhase={num:m[1], title:m[2].trim(), doneWhen:""}; phases.push(curPhase); continue;
     }
-    if(m=line.match(/^[-*]\s*\[\s*([ xX])\s*\]\s*Session\s+([\w.]+)\s*[—–-]+\s*(.+)$/)){
-      const done=/[xX]/.test(m[1]); const id=m[2]; const rest=m[3].trim();
+    if(m=line.match(/^(?:[-*]\s*)?(?:\[\s*([ xX])\s*\]\s*)?Session\s+([\w.]+)\s*[—–:-]+\s*(.+)$/i)){
+      const done=m[1]?/[xX]/.test(m[1]):false; const id=m[2]; const rest=m[3].trim();
       let name=rest, desc=""; const dot=rest.match(/^(.*?[^.\s])\.\s+(.+)$/);
       if(dot){ name=dot[1].trim(); desc=dot[2].trim(); }
       sessions.push({id, name, desc, phaseNum:curPhase?curPhase.num:"", doneFromPaste:done}); continue;
