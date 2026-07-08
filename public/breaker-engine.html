@@ -312,7 +312,10 @@ async function applyLevelsConfig(){
   try{ const r=await fetch("/api/asset-studio?levels=breaker"); if(!r.ok)return; const j=await r.json(); const cfg=(j&&j.levels)||[]; if(!cfg.length)return;
     const byName={}; GAME_CONFIG.levels.forEach(l=>{byName[l.name]=l;}); const news=[];
     const builtinW=w=>!!THEMES[w];   // jungle/space/ocean = shipped worlds; anything else = a library world
-    for(const e of cfg){ if(e.builtin){ const l=byName[e.name]; if(l&&e.world){ if(builtinW(e.world)){ l._theme=e.world; l._world=""; } else { l._world=e.world; l._theme=null; } } }
+    for(const e of cfg){ if(e.builtin){ const l=byName[e.name]; if(l){
+        if(e.world){ if(builtinW(e.world)){ l._theme=e.world; l._world=""; } else { l._world=e.world; l._theme=null; } }
+        if(e.template && TPL[e.template]){ const t=TPL[e.template]; l.cols=t.cols; l.rows=t.rows; l.pattern=t.pattern; }
+        if(e.difficulty){ const d=clamp(+e.difficulty,1,5); l.tough=(d-1)*0.12; l.speed=3.8+d*0.5; } } }
       else { if(e.target==="kids") continue;   // player-created levels are not in the main campaign
         const t=TPL[e.template]||TPL.full, d=clamp((+e.difficulty||3),1,5), bw=builtinW(e.world);
         news.push({ name:e.name||"New level", cols:t.cols, rows:t.rows, pattern:t.pattern, tough:(d-1)*0.12, speed:3.8+d*0.5, theme:bw?e.world:"jungle", _theme:bw?e.world:null, _world:bw?"":(e.world||"") }); } }

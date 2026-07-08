@@ -79,7 +79,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div class="sub" id="counts" style="margin-bottom:14px">Loading…</div>
 
   <div class="seg" id="tabs" style="margin-bottom:16px">
-    <button data-t="browse" class="on">Browse</button><button data-t="create">Create</button><button data-t="upload">Upload</button><button data-t="worlds">Worlds</button>
+    <button data-t="browse" class="on">Browse</button><button data-t="create">Create</button><button data-t="upload">Build</button>
   </div>
 
   <div id="browseView">
@@ -170,16 +170,16 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       </div>
       <div id="wb-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:14px"></div>
       <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-        <span style="font-weight:600;align-self:center">Add this world to the game:</span>
-        <label class="fld">Do<br><select id="wb-lvmode"><option value="new">Make a new level</option><option value="replace">Replace a level's art</option></select></label>
-        <label class="fld" id="wb-lvname-w">Level name<br><input id="wb-lvname" value=""></label>
-        <label class="fld" id="wb-lvpick-w" style="display:none">Level<br><select id="wb-lvpick"></select></label>
-        <label class="fld" id="wb-lvtpl-w">Layout<br><select id="wb-lvtpl"></select></label>
-        <label class="fld" id="wb-lvdiff-w">Difficulty<br><select id="wb-lvdiff"></select></label>
-        <label class="fld" id="wb-where-w">Publish to<br><select id="wb-where"><option value="main">Main game</option><option value="kids">Player-created</option></select></label>
+        <span style="font-weight:600;align-self:center">Level:</span>
+        <label class="fld">Which<br><select id="wb-level"></select></label>
+        <label class="fld">Name<br><input id="wb-lvname" value=""></label>
+        <label class="fld">Layout<br><select id="wb-lvtpl"></select></label>
+        <label class="fld">Difficulty<br><select id="wb-lvdiff"></select></label>
+        <label class="fld">Publish to<br><select id="wb-where"><option value="main">Main game</option><option value="kids">Player-created</option></select></label>
         <label class="fld" id="wb-creator-w" style="display:none">Created by<br><input id="wb-creator" value="Buildable Kids"></label>
-        <button id="wb-test" class="chip">Test this world</button>
-        <button id="wb-add" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Add to game</button>
+        <button id="wb-test" class="chip">Test</button>
+        <button id="wb-del" class="chip" style="display:none">Delete</button>
+        <button id="wb-add" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Save to game</button>
         <span id="wb-status" class="muted"></span>
       </div>
     </div>
@@ -895,23 +895,35 @@ const GAME_URL={breaker:"/breaker-engine.html",sling:"/sling-squad.html",surviva
 function wbTest(){ const u=GAME_URL[WB.game]; if(!u){$("wb-status").textContent="No preview for this game yet.";return;}
   if(!Object.values(WB.slots).some(s=>s.saved)){$("wb-status").textContent="Save at least one part first.";return;}
   let q="?libtheme="+encodeURIComponent(WB.world);
-  if(WB.game==="breaker" && $("wb-lvmode").value==="new"){ q+="&playtest=1&template="+encodeURIComponent($("wb-lvtpl").value)+"&diff="+encodeURIComponent($("wb-lvdiff").value)+"&name="+encodeURIComponent($("wb-lvname").value||WB.world); }
+  if(WB.game==="breaker"){ const e=wbEff(); q+="&playtest=1&template="+encodeURIComponent(e.tpl)+"&diff="+encodeURIComponent(e.diff)+"&name="+encodeURIComponent($("wb-lvname").value||WB.world); }
   window.open(u+q,"_blank"); }
 function wbSlots(){ return GAME_SLOTS[WB.game]||[]; }
 function wbPrompt(spec){ const t=($("wb-world").value||"candy").trim();
   return String(spec.prompt||"").replace(/\{theme\}/g,t)+". "+(spec.mode==="single"?"One item, centered, on a plain solid white background.":`Lay it out as a clean ${spec.cols||1}-column by ${spec.rows||1}-row grid on a plain solid white background, evenly spaced, nothing touching.`)+" No text, no words.";
 }
+function wbLevelDropdown(){ return '<option value="new">+ New level</option>'+WB.levels.map((l,i)=>`<option value="${i}">${esc(l.name)}${l.builtin?" (built-in)":""}</option>`).join(""); }
 async function wbInit(){
-  WB.game=$("wb-game").value; WB.world=($("wb-world").value||"world").trim().toLowerCase(); WB.slots={}; WB.activeSlot=null;
-  wbSlots().forEach(s=>{ WB.slots[s.key]={spec:s,pieces:[],saved:false,editing:false,thumbs:[]}; });
-  const [mf,lv]=await Promise.all([ getJSON("/api/asset-studio?manifest=1&game="+WB.game), getJSON("/api/asset-studio?levels="+WB.game) ]);
-  const reg0=GAME_LEVELS[WB.game], base=(reg0?reg0.builtin:[]).map(b=>typeof b==="string"?b:b.name), sv=(lv&&lv.levels)||[];
-  WB.levelNames=[...new Set(base.concat(sv.map(l=>l.name)))];
+  WB.game=$("wb-game").value; WB.activeSlot=null;
+  const lv=await getJSON("/api/asset-studio?levels="+WB.game); const reg0=GAME_LEVELS[WB.game]; let levels=(lv&&lv.levels)||[];
+  if(!levels.length && reg0) levels=reg0.builtin.map(b=> typeof b==="string"?{name:b,world:"",builtin:true}:{name:b.name,world:b.world||"",builtin:true});
+  WB.levels=levels;
+  $("wb-level").innerHTML=wbLevelDropdown(); $("wb-level").value="new"; WB.sel="new";
   wbLevelForm();
-  const rows=(mf&&mf.assets)||[];
-  rows.forEach(a=>{ const seg=(a.slug||"").split("/"); if(seg.length<4)return; const type=seg[1], theme=seg[2];
-    if(theme!==WB.world)return; if(WB.slots[type]){ WB.slots[type].saved=true; WB.slots[type].thumbs.push(a.url); } });
+  await wbLoadParts(($("wb-world").value||"candy").trim().toLowerCase());
+}
+async function wbLoadParts(world){
+  WB.world=world; if($("wb-world").value!==world) $("wb-world").value=world;
+  WB.slots={}; wbSlots().forEach(s=>{ WB.slots[s.key]={spec:s,pieces:[],saved:false,editing:false,thumbs:[]}; });
+  const mf=await getJSON("/api/asset-studio?manifest=1&game="+WB.game); const rows=(mf&&mf.assets)||[];
+  rows.forEach(a=>{ const seg=(a.slug||"").split("/"); if(seg.length<4)return; if(seg[2]!==WB.world)return; const type=seg[1]; if(WB.slots[type]){ WB.slots[type].saved=true; WB.slots[type].thumbs.push(a.url); } });
   wbRender();
+}
+function wbPickLevel(){
+  WB.sel=$("wb-level").value; const reg=GAME_LEVELS[WB.game];
+  if(WB.sel==="new"){ $("wb-lvname").value=""; $("wb-lvtpl").value=(reg&&reg.templates?reg.templates[0]:"full"); $("wb-lvdiff").value="3"; }
+  else { const L=WB.levels[+WB.sel]||{}; $("wb-lvname").value=L.name||""; $("wb-lvtpl").value=L.template||"keep"; $("wb-lvdiff").value=L.difficulty?String(L.difficulty):"keep";
+    if(L.world) wbLoadParts(String(L.world).toLowerCase()); }
+  wbLevelForm();
 }
 function wbCard(s){ const spec=s.spec, k=spec.key, nm=esc(spec.label.replace(/\s*\(sheet\)/,""));
   let body, badge;
@@ -961,36 +973,51 @@ async function wbSavePart(k){ const s=WB.slots[k]; if(!s.pieces.length)return;
   s.thumbs=s.pieces.map(p=>p.dataURL); s.pieces=[]; s.editing=false; s.saved=true; wbRender();
 }
 function wbLevelForm(){ const game=WB.game||$("wb-game").value, reg=GAME_LEVELS[game];
-  $("wb-lvtpl").innerHTML=((reg&&reg.templates)||["full"]).map(t=>`<option>${t}</option>`).join("");
-  const names=(WB.levelNames&&WB.levelNames.length)?WB.levelNames:(reg?reg.builtin:[]).map(b=>typeof b==="string"?b:b.name);
-  $("wb-lvpick").innerHTML=names.length?names.map(n=>`<option>${esc(n)}</option>`).join(""):'<option value="">(none)</option>';
-  $("wb-lvdiff").innerHTML=[1,2,3,4,5].map(d=>`<option>${d}</option>`).join(""); $("wb-lvdiff").value="3";
-  if(!$("wb-lvname").value)$("wb-lvname").value=WB.world||"New level";
-  const rep=$("wb-lvmode").value==="replace";
-  $("wb-lvname-w").style.display=rep?"none":""; $("wb-lvtpl-w").style.display=rep?"none":""; $("wb-lvdiff-w").style.display=rep?"none":""; $("wb-lvpick-w").style.display=rep?"":"none";
-  $("wb-where-w").style.display=rep?"none":""; $("wb-creator-w").style.display=(!rep && $("wb-where").value==="kids")?"":"none";
+  if($("wb-lvtpl").dataset.g!==game){ $("wb-lvtpl").innerHTML='<option value="keep">(keep layout)</option>'+((reg&&reg.templates)||["full"]).map(t=>`<option value="${t}">${t}</option>`).join(""); $("wb-lvtpl").dataset.g=game; }
+  if(!$("wb-lvdiff").options.length){ $("wb-lvdiff").innerHTML='<option value="keep">(keep)</option>'+[1,2,3,4,5].map(d=>`<option value="${d}">${d}</option>`).join(""); }
+  $("wb-del").style.display=($("wb-level").value!=="new")?"":"none";
+  $("wb-creator-w").style.display=($("wb-where").value==="kids")?"":"none";
 }
+function wbEff(){ const reg=GAME_LEVELS[WB.game], tplSel=$("wb-lvtpl").value, diffSel=$("wb-lvdiff").value;
+  const cur=(WB.sel!=="new")?(WB.levels[+WB.sel]||{}):{};
+  const tpl=(tplSel==="keep")?(cur.template||(reg&&reg.templates?reg.templates[0]:"full")):tplSel;
+  const diff=(diffSel==="keep")?(+cur.difficulty||3):(+diffSel||3);
+  return {tpl,diff,tplSel,diffSel}; }
 async function wbAddToGame(){
-  if(!Object.values(WB.slots).some(s=>s.saved)){ $("wb-status").textContent="Save at least one part first."; return; }
-  $("wb-status").textContent="Adding to the game…";
+  if(!Object.values(WB.slots).some(s=>s.saved)){ $("wb-status").textContent="Fill and save at least one part first."; return; }
+  $("wb-status").textContent="Saving…";
   const lv=await getJSON("/api/asset-studio?levels="+WB.game); let levels=(lv&&lv.levels)||[]; const reg=GAME_LEVELS[WB.game];
   if(!levels.length && reg) levels=reg.builtin.map(b=> typeof b==="string"?{name:b,world:"",builtin:true}:{name:b.name,world:b.world||"",builtin:true});
-  let msg;
-  if($("wb-lvmode").value==="new"){ const nm=($("wb-lvname").value||WB.world), where=$("wb-where").value, creator=($("wb-creator").value||"Buildable Kids").trim();
-    const entry={name:nm,world:WB.world,template:$("wb-lvtpl").value,difficulty:+$("wb-lvdiff").value||3,builtin:false,target:where};
-    if(where==="kids") entry.creator=creator;
-    const ex=levels.find(l=>l.name===nm && !l.builtin);
-    if(ex){ Object.assign(ex,entry); msg='Updated "'+nm+'"'; }
-    else { levels.push(entry); msg=(where==="kids"?('Published "'+nm+'" by '+creator):('Added "'+nm+'" to the main game')); }
-    WB.levelNames=[...new Set((WB.levelNames||[]).concat([nm]))];
+  const name=($("wb-lvname").value||WB.world), where=$("wb-where").value, creator=($("wb-creator").value||"Buildable Kids").trim();
+  const eff=wbEff(); let msg;
+  if(WB.sel==="new"){
+    const ex=levels.find(l=>l.name===name && !l.builtin);
+    const entry={name,world:WB.world,template:eff.tpl,difficulty:eff.diff,builtin:false,target:where}; if(where==="kids")entry.creator=creator;
+    if(ex){ Object.assign(ex,entry); msg='Updated "'+name+'"'; } else { levels.push(entry); msg=(where==="kids"?('Published "'+name+'" by '+creator):('Added "'+name+'" to the main game')); }
+  } else {
+    const i=+WB.sel, orig=WB.levels[i]||{}; const t=(levels[i]&&levels[i].name===orig.name)?levels[i]:levels.find(l=>l.name===orig.name);
+    if(!t){ $("wb-status").textContent="Could not find that level."; return; }
+    t.world=WB.world; if(eff.tplSel!=="keep")t.template=eff.tplSel; if(eff.diffSel!=="keep")t.difficulty=+eff.diffSel||3;
+    if(!t.builtin){ t.target=where; if(where==="kids")t.creator=creator; else delete t.creator; if(name)t.name=name; }
+    msg='Updated "'+(t.name)+'"';
   }
-  else { const pick=$("wb-lvpick").value; const e=levels.find(l=>l.name===pick); if(e)e.world=WB.world; else if(pick)levels.push({name:pick,world:WB.world,builtin:true}); msg='Set "'+pick+'" to the '+WB.world+' world'; }
   const sr=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-levels",game:WB.game,levels})});
   if(!sr.ok){ $("wb-status").textContent="Save failed."; return; }
-  wbLevelForm();
+  WB.levels=levels; const keep=$("wb-level").value; $("wb-level").innerHTML=wbLevelDropdown(); $("wb-level").value=keep; wbLevelForm();
   const u=GAME_URL[WB.game]; let href=u;
-  if(u && WB.game==="breaker" && $("wb-lvmode").value==="new"){ href=u+"?playtest=1&template="+encodeURIComponent($("wb-lvtpl").value)+"&diff="+encodeURIComponent($("wb-lvdiff").value)+"&libtheme="+encodeURIComponent(WB.world)+"&name="+encodeURIComponent($("wb-lvname").value||WB.world); }
+  if(u && WB.game==="breaker"){ href=u+"?playtest=1&template="+encodeURIComponent(eff.tpl)+"&diff="+encodeURIComponent(eff.diff)+"&libtheme="+encodeURIComponent(WB.world)+"&name="+encodeURIComponent(name); }
   $("wb-status").innerHTML=esc(msg)+". "+(u?'<a href="'+href+'" target="_blank" style="color:var(--acc)">Open game</a>':"Reload the game to play it.");
+}
+async function wbDelete(){
+  if(WB.sel==="new")return;
+  const lv=await getJSON("/api/asset-studio?levels="+WB.game); let levels=(lv&&lv.levels)||[]; const i=+WB.sel, orig=WB.levels[i]||{};
+  let idx=(levels[i]&&levels[i].name===orig.name)?i:levels.findIndex(l=>l.name===orig.name);
+  if(idx<0){ $("wb-status").textContent="Not found."; return; }
+  const nm=levels[idx].name; levels.splice(idx,1);
+  const sr=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-levels",game:WB.game,levels})});
+  if(!sr.ok){ $("wb-status").textContent="Delete failed."; return; }
+  WB.levels=levels; $("wb-level").innerHTML=wbLevelDropdown(); $("wb-level").value="new"; WB.sel="new"; wbLevelForm();
+  $("wb-status").textContent='Removed "'+nm+'".';
 }
 
 /* ============ Worlds + Levels tab (reskin levels / add levels) ============ */
@@ -1068,11 +1095,12 @@ async function wlSave(){
   // world builder (Upload tab): only games that have parts defined
   $("wb-game").innerHTML=GAMES.filter(g=>GAME_SLOTS[g[0]]).map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join("");
   $("wb-game").onchange=wbInit;
-  $("wb-world").onchange=wbInit;
+  $("wb-world").onchange=()=>wbLoadParts(($("wb-world").value||"candy").trim().toLowerCase());
   $("wb-file").onchange=e=>wbLoadFile(e.target.files[0]);
   $("wb-add").onclick=wbAddToGame;
   $("wb-test").onclick=wbTest;
-  $("wb-lvmode").onchange=wbLevelForm;
+  $("wb-del").onclick=wbDelete;
+  $("wb-level").onchange=wbPickLevel;
   $("wb-where").onchange=wbLevelForm;
 
   // worlds + levels tab
