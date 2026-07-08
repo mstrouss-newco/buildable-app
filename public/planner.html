@@ -657,20 +657,30 @@ function rmData(){ return state.meta.roadmap || (state.meta.roadmap={phases:[],s
 
 /* ---- parse pasted markdown ---- */
 function parseRoadmap(text){
-  const phases=[], sessions=[]; let curPhase=null;
+  const phases=[], sessions=[]; let curPhase=null, curLater=false;
   const lines=String(text||"").split(/\r?\n/);
   for(let raw of lines){
     const line=raw.trim(); if(!line) continue; let m;
     if(m=line.match(/^#{0,6}\s*(?:[-*]\s*)?Phase\s+([\w.]+)\s*[—–:-]+\s*(.+)$/i)){
-      curPhase={num:m[1], title:m[2].trim(), doneWhen:""}; phases.push(curPhase); continue;
+      curPhase={num:m[1], title:m[2].trim(), doneWhen:""}; phases.push(curPhase); curLater=false; continue;
+    }
+    const low=line.toLowerCase().replace(/^#+\s*/,"").replace(/^[-*]\s*/,"").trim();
+    if(low==="later"||low==="parked"||low==="later / parked"||low.indexOf("later /")===0||low.indexOf("later/")===0||low.indexOf("parked")===0){
+      curLater=true; curPhase=null; continue;
     }
     if(m=line.match(/^(?:[-*]\s*)?(?:\[\s*([ xX])\s*\]\s*)?Session\s+([\w.]+)\s*[—–:-]+\s*(.+)$/i)){
       const done=m[1]?/[xX]/.test(m[1]):false; const id=m[2]; const rest=m[3].trim();
       let name=rest, desc=""; const dot=rest.match(/^(.*?[^.\s])\.\s+(.+)$/);
       if(dot){ name=dot[1].trim(); desc=dot[2].trim(); }
-      sessions.push({id, name, desc, phaseNum:curPhase?curPhase.num:"", doneFromPaste:done}); continue;
+      sessions.push({id, name, desc, phaseNum:curPhase?curPhase.num:"", doneFromPaste:done, later:curLater}); continue;
     }
     if(m=line.match(/^Done when:\s*(.+)$/i)){ if(curPhase) curPhase.doneWhen=m[1].trim(); continue; }
+    if(curLater && (m=line.match(/^[-*]\s+(.+)$/))){
+      const nm=m[1].trim();
+      const slug=nm.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
+      sessions.push({id:"later:"+slug, name:nm, desc:"", phaseNum:"", doneFromPaste:false, later:true}); continue;
+    }
+    curLater=false; // a non-bullet, non-session line ends the Later run
   }
   return {phases, sessions};
 }
@@ -688,8 +698,8 @@ function mergeRoadmap(parsed){
   const parsedIds=new Set(parsed.sessions.map(s=>s.id));
   const sessions=parsed.sessions.map(p=>{
     const prev=prevAll[p.id];
-    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false}; }
-    return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false, manual:false};
+    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false, later:!!prev.later}; }
+    return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false, manual:false, later:!!p.later};
   });
   // keep manual sessions not present in the paste
   (cur.sessions||[]).forEach(s=>{ if(s.manual && !parsedIds.has(s.id)) sessions.push(s); });
@@ -710,7 +720,7 @@ async function importRoadmap(){
 
 /* ---- render ---- */
 function phaseProgress(num){
-  const ss=rmData().sessions.filter(s=>s.phaseNum===num);
+  const ss=rmData().sessions.filter(s=>s.phaseNum===num&&!s.later);
   return {done:ss.filter(s=>s.done).length, total:ss.length};
 }
 function renderRoadmap(){
@@ -725,7 +735,7 @@ function renderRoadmap(){
     const pr=phaseProgress(ph.num);
     if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true;
     const open=rmOpen[ph.num]?"open":"";
-    const ss=rd.sessions.filter(s=>s.phaseNum===ph.num);
+    const ss=rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
     const doneCls=(pr.total&&pr.done>=pr.total)?"s-ready":"s-wait";
     const canDel=!!ph.manual;
     html+='<div class="bucket">'
@@ -745,9 +755,22 @@ function renderRoadmap(){
       +'</div></div>';
   });
   const phaseNums=new Set(rd.phases.map(p=>p.num));
-  const orphans=rd.sessions.filter(s=>!phaseNums.has(s.phaseNum));
+  const orphans=rd.sessions.filter(s=>!phaseNums.has(s.phaseNum)&&!s.later);
   if(orphans.length){
     html+='<div class="bucket"><div class="bhead"><h2>Other sessions</h2></div><div class="body open">'+orphans.map(s=>rmCard(s,false)).join("")+'</div></div>';
+  }
+  {
+    const later=rd.sessions.filter(s=>s.later);
+    if(rmOpen["__later__"]===undefined) rmOpen["__later__"]=later.length>0;
+    const lopen=rmOpen["__later__"]?"open":"";
+    html+='<div class="bucket">'
+      +'<div class="bhead" onclick=\'rmToggle("__later__")\'>'
+      +'<h2>Later / parked <span class="count">'+later.length+'</span></h2>'
+      +'<span class="status s-wait">no rush</span></div>'
+      +'<div class="body '+lopen+'">'
+      +(later.length?later.map(s=>rmCard(s,false)).join(""):'<p class="legend" style="padding:4px 0">Nothing parked yet. Use the Later button on any session, or add one below.</p>')
+      +'<div class="quickadd rm-addsess"><button class="btn mini" onclick="rmAddLater()">+ Add to Later</button></div>'
+      +'</div></div>';
   }
   if(rd.archived.length){
     html+='<div class="bucket">'
@@ -782,7 +805,7 @@ function rmCard(s, archived){
     +notesHtml
     +(archived?"":'<div class="rm-btns">'
       +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
-      +'<button class="btn ghost mini" onclick=\'rmEdit('+JSON.stringify(s.id)+')\'>Edit</button>'+(s.manual?'<button class="btn ghost mini" onclick=\'rmDeleteSession('+JSON.stringify(s.id)+')\'>Delete</button>':'')+'</div>'
+      +'<button class="btn ghost mini" onclick=\'rmEdit('+JSON.stringify(s.id)+')\'>Edit</button>'+'<button class="btn ghost mini" onclick=\'rmPark('+JSON.stringify(s.id)+','+(!s.later)+')\'>'+(s.later?'To phases':'Later')+'</button>'+(s.manual?'<button class="btn ghost mini" onclick=\'rmDeleteSession('+JSON.stringify(s.id)+')\'>Delete</button>':'')+'</div>'
       +'<div class="quickadd rm-addnote">'
       +'<input class="qa-input rm-note-input" id="'+rmSlug(s.id)+'" data-id="'+esc(s.id)+'" placeholder="Add a note for this session..." autocomplete="off">'
       +'<button class="btn mini rm-note-add" data-id="'+esc(s.id)+'">Add note</button></div>')
@@ -867,6 +890,21 @@ async function rmDeleteSession(id){
   if(!confirm("Delete this session?")) return;
   const rd=rmData(); rd.sessions=rd.sessions.filter(s=>s.id!==id);
   renderRoadmap(); setSync("saving..."); await saveMetaR();
+}
+
+async function rmPark(id,val){
+  const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  s.later=val; if(val) rmOpen["__later__"]=true;
+  renderRoadmap(); setSync("saving..."); await saveMetaR();
+  toast(val?"Parked in Later":"Back in its phase");
+}
+async function rmAddLater(){
+  const name=(prompt("What do you want to park for later?")||"").trim(); if(!name) return;
+  const desc=(prompt("Details (optional):")||"").trim();
+  const rd=rmData(); const id=genSessionId("L");
+  rd.sessions.push({id, phaseNum:"", name, desc, done:false, notes:[], edited:false, manual:true, later:true});
+  rmOpen["__later__"]=true;
+  renderRoadmap(); setSync("saving..."); await saveMetaR(); toast("Added to Later");
 }
 
 function buildSessionPrompt(s){
