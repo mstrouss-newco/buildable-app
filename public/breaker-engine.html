@@ -313,7 +313,8 @@ async function applyLevelsConfig(){
     const byName={}; GAME_CONFIG.levels.forEach(l=>{byName[l.name]=l;}); const news=[];
     const builtinW=w=>!!THEMES[w];   // jungle/space/ocean = shipped worlds; anything else = a library world
     for(const e of cfg){ if(e.builtin){ const l=byName[e.name]; if(l&&e.world){ if(builtinW(e.world)){ l._theme=e.world; l._world=""; } else { l._world=e.world; l._theme=null; } } }
-      else { const t=TPL[e.template]||TPL.full, d=clamp((+e.difficulty||3),1,5), bw=builtinW(e.world);
+      else { if(e.target==="kids") continue;   // player-created levels are not in the main campaign
+        const t=TPL[e.template]||TPL.full, d=clamp((+e.difficulty||3),1,5), bw=builtinW(e.world);
         news.push({ name:e.name||"New level", cols:t.cols, rows:t.rows, pattern:t.pattern, tough:(d-1)*0.12, speed:3.8+d*0.5, theme:bw?e.world:"jungle", _theme:bw?e.world:null, _world:bw?"":(e.world||"") }); } }
     if(news.length) GAME_CONFIG.levels=GAME_CONFIG.levels.concat(news);
   }catch(e){}
@@ -1239,6 +1240,16 @@ if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   levelup:"breaker_power", hurt:"breaker_miss", point:"tennis_point", win:"tennis_win", lose:"tennis_lose" } }); }
 // boot
 if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showHub(); }
+// Private playtest: ?playtest=1&template=&diff=&libtheme=&name= builds ONE throwaway
+// level and plays it straight away (nothing saved). Used by the world builder's "Test".
+(function(){ try{ const P=new URLSearchParams(location.search); if(!P.get("playtest")) return;
+  const t=(TPL[P.get("template")]||TPL.full), d=clamp((+P.get("diff")||3),1,5), world=P.get("libtheme")||"";
+  const lvl={ name:P.get("name")||"Playtest", cols:t.cols, rows:t.rows, pattern:t.pattern, tough:(d-1)*0.12, speed:3.8+d*0.5,
+    theme:(world&&THEMES[world])?world:"jungle", _theme:(world&&THEMES[world])?world:null, _world:(world&&!THEMES[world])?world:"" };
+  GAME_CONFIG.levels.push(lvl); const idx=GAME_CONFIG.levels.length-1;
+  if(typeof BA!=="undefined"&&BA)BA.unlock(); startLevel(idx,null);
+  if(typeof toast==="function") toast("Playtest — not published");
+}catch(e){} })();
 
 // ---- shared in-app nav: shell draws Home + Sound/Menu/Help; hide our own buttons in-app ----
 function navUpdate(){ if(window.BuildableGameNav) window.BuildableGameNav.update(); }
