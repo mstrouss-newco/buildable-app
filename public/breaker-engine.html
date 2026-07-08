@@ -298,12 +298,11 @@ function breakerInterpret(wd){ const pk={materials:[],bricks:{},ball:null,paddle
   const bg=wd.slots.background; if(bg&&bg.list[0])pk.bg=bg.list[0].img;
   return pk.materials.length?pk:null; }
 function loadLibrary(){
-  if(!window.BuildableWorlds){ applyLevelsConfig(); return; }
-  BuildableWorlds.load("breaker", function(p){
+  applyLevelsConfig();   // levels populate independently of art (never blocked by it)
+  if(window.BuildableWorlds) BuildableWorlds.load("breaker", function(p){
     p.worldNames().forEach(function(w){ const pk=breakerInterpret(p.worlds[w]); if(pk)LIBPACKS[w]=pk; });
     if(LIB_THEME && LIBPACKS[LIB_THEME]) LIB_WORLD=LIB_THEME;
     else if(p.active && LIBPACKS[p.active]) LIB_WORLD=p.active;
-    applyLevelsConfig();
   });
 }
 const TPL={ full:{cols:10,rows:6,pattern:"full"}, pyramid:{cols:9,rows:5,pattern:"pyramid"}, checker:{cols:10,rows:5,pattern:"checker"}, gaps:{cols:10,rows:6,pattern:"gaps"}, columns:{cols:10,rows:6,pattern:"columns"}, frame:{cols:11,rows:7,pattern:"frame"}, diamond:{cols:11,rows:7,pattern:"diamond"} };
@@ -318,7 +317,8 @@ async function applyLevelsConfig(){
       else { if(e.target==="kids") continue;   // player-created levels are not in the main campaign
         const t=TPL[e.template]||TPL.full, d=clamp((+e.difficulty||3),1,5), bw=builtinW(e.world);
         news.push({ name:e.name||"New level", cols:t.cols, rows:t.rows, pattern:t.pattern, tough:(d-1)*0.12, speed:3.8+d*0.5, theme:bw?e.world:"jungle", _theme:bw?e.world:null, _world:bw?"":(e.world||"") }); } }
-    if(news.length) GAME_CONFIG.levels=GAME_CONFIG.levels.concat(news);
+    if(news.length){ news.forEach(l=>GAME_CONFIG.levels.push(l));
+      try{ if(state==="title"){ const hm=document.getElementById("home"); if(hm&&hm.classList.contains("show")) renderHub(); if(startScreen) startScreen.update(buildStartCfg()); } }catch(e){} }
   }catch(e){}
 }
 loadLibrary();
