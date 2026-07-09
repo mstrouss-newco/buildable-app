@@ -879,6 +879,25 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
 // Lobby props for each friend-playable game, keyed by the invite/match `game`.
 // Mirrors the inline specs in the SCREEN_*_LOBBY blocks so a home nudge can open
 // ANY friend game without knowing its screen. Keep url/version in sync with them.
+// ── Multiplayer switch (Session 6A): manifest features.multiplayer -> lane ──
+// A game's multiplayer LANE now comes from its manifest, not a hardcoded string.
+// features.multiplayer: off -> no lane, turn-based -> "turns" (poll-a-row),
+// realtime -> "realtime" (Broadcast). We warm a tiny cache from the manifest at
+// startup so the synchronous gameSpecFor can read it; the hardcoded value stays
+// a fallback so a missing/late manifest never breaks play. This is the one switch
+// the shell reads to open the turn-based lobby vs the realtime lane (MULTIPLAYER.md).
+const MP_TO_TRANSPORT = { "off": null, "turn-based": "turns", "realtime": "realtime" };
+const mpTransportCache = {}; // slug -> "turns" | "realtime" | null (once its manifest is read)
+function mpTransport(slug, fallback) { return (slug in mpTransportCache) ? mpTransportCache[slug] : fallback; }
+function warmMultiplayerSwitch(slug) {
+  return loadGameManifest(slug)
+    .then((m) => {
+      const v = m && m.features && m.features.multiplayer;
+      mpTransportCache[slug] = Object.prototype.hasOwnProperty.call(MP_TO_TRANSPORT, v) ? MP_TO_TRANSPORT[v] : null;
+    })
+    .catch(() => {});
+}
+
 function gameSpecFor(slug) {
   if (slug === "chess") return { slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=5", transport: "turns" };
   if (slug === "checkers") {
@@ -890,7 +909,7 @@ function gameSpecFor(slug) {
     }
     return { slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: { board: b, turn: "r" } };
   }
-  if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
+  if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: mpTransport("tictactoe", "turns"), msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
   if (slug === "tennis") return { slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" };
   return null;
 }
@@ -947,6 +966,10 @@ export default function BuildableKids() {
 
   // Keep the signed-in session alive: refresh an expired token on load.
   useEffect(() => { ensureFreshToken(); }, []);
+
+  // Read the multiplayer switch from each manifest-driven game's manifest once,
+  // so gameSpecFor / the lobby open exactly the lane the manifest declares (6A).
+  useEffect(() => { warmMultiplayerSwitch("tictactoe"); }, []);
 
   // ---- APP-WIDE PRESENCE ----------------------------------------------------
   // Stamp kid_profiles.last_seen every ~30s for as long as a kid is active in
@@ -1265,7 +1288,7 @@ export default function BuildableKids() {
     return <TetrisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TTT_LOBBY)} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
   }
   if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
     const spec = gameSpecFor(friendAutoJoin.game);
@@ -1285,7 +1308,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_TTT_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } }}
+        game={gameSpecFor("tictactoe")}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_TICTACTOE)}
