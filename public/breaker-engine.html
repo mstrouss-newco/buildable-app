@@ -153,6 +153,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-hud.js?v=3"></script>
 <script src="buildable-gamenav.js?v=1"></script>
 <script src="buildable-manifest.js?v=1"></script>
+<script src="buildable-wallet.js?v=1"></script>
+<script src="buildable-buddy.js?v=1"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -359,6 +361,16 @@ try{
     });
   }
 }catch(e){}
+// ---- Session 2C: manifest feature switches -> existing shared systems --------
+// Read features off the loaded manifest (window.BUILDABLE_MANIFEST). Safe defaults
+// when the manifest hasn't loaded (headless QA / offline) so nothing crashes, and
+// every call below is also guarded by the system's own presence check.
+function bkFeatures(){ try{ return (window.BUILDABLE_MANIFEST && window.BUILDABLE_MANIFEST.features) || {}; }catch(e){ return {}; } }
+function bkDemoOn(){ return bkFeatures().demoOnLoad!==false; }                 // demoOnLoad -> demo/tutorial hand (default on)
+function bkBuddyOn(){ var f=bkFeatures(); return !!(f.buddy && f.buddy.on); }  // buddy -> buildable-buddy bridge
+function bkCoinsOn(){ return bkFeatures().coins!==false; }                     // coins -> shared wallet (default on)
+function bkLearnBeforeUnlock(){ var f=bkFeatures(); return !!(f.learning && f.learning.beforeUnlock); } // learning -> QuizGate (in-app)
+function bkLearnSubjects(){ var f=bkFeatures(); return (f.learning && Array.isArray(f.learning.subjects) && f.learning.subjects.length) ? f.learning.subjects : ["math"]; }
 function curWorld(){ const ok=w=>w&&LIBPACKS[w]&&LIBPACKS[w].materials.length;
   if(L&&ok(L._world)) return L._world;      // this level explicitly uses a library world
   if(L&&L._theme) return null;              // this level explicitly uses a shipped world -> no library
@@ -529,7 +541,7 @@ function startCustomLevel(board, diffN){
   state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic(); if(window.BuildableGameNav) window.BuildableGameNav.update();
 }
 function launch(){ if(!G||G.mode!=="solo"||!G.onPaddle)return; G.onPaddle=false; started=true;
-  if(!levelHintShown){ levelHintShown=true; firstHintUntil=Date.now()+3200; }
+  if(!levelHintShown && bkDemoOn()){ levelHintShown=true; firstHintUntil=Date.now()+3200; }
   const b=G.balls[0], ang=-Math.PI/2+(Math.random()*0.5-0.25), sp=G.speed; b.vx=Math.cos(ang)*sp; b.vy=Math.sin(ang)*sp; sfx("shoot"); }
 function splitBalls(){ if(!G)return; const add=[];
   for(const b of G.balls){ const sp=Math.hypot(b.vx,b.vy)||G.speed, a0=Math.atan2(b.vy,b.vx);
@@ -694,7 +706,7 @@ function hitBricks(b){ const fire=G.fireT>0;
   }
 }
 function loseLife(){ G.lives--; G.lostLives++; if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ff4444",0.3); } sfx("hurt");
-  if(G.lives<=0){ state="lose"; sfx("lose"); return; }
+  if(G.lives<=0){ state="lose"; sfx("lose"); if(bkBuddyOn() && window.BB) BB.lose(); return; }
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, G.speed) ]; G.onPaddle=true; G.stuck=null; started=false; }
 function winLevel(){ state="win"; sfx("win");
   if(G&&G.custom){ if(CUSTOM)CUSTOM.cleared=true;
@@ -705,6 +717,12 @@ function winLevel(){ state="win"; sfx("win");
   PREFS.stars[level]=Math.max(PREFS.stars[level]||0, earned);
   const u=Math.min(GAME_CONFIG.levels.length-1, level+1); if(u>(PREFS.unlocked||0)){ PREFS.unlocked=u; }
   PREFS.bestLevel=Math.max(PREFS.bestLevel||0, level+1); savePrefs();
+  // Session 2C: award this level's manifest coins into the shared wallet (first clear
+  // only, so replays can't farm), and let the kid's buddy react. Both no-op if their
+  // systems aren't loaded (e.g. headless QA, or a cold standalone deep link).
+  var _lvl=GAME_CONFIG.levels[level];
+  if(bkCoinsOn() && window.BuildableWallet && _lvl){ var _amt=(_lvl.coins!=null?_lvl.coins:0); if(_amt>0) BuildableWallet.awardOnce("breaker:"+(_lvl.id||level), _amt); }
+  if(bkBuddyOn() && window.BB){ if(level<GAME_CONFIG.levels.length-1) BB.levelup(); else BB.win(); }
   if(BM){ for(let i=0;i<3;i++) BM.burst(fx.parts, W*(0.3+0.2*i), H*0.4, GAME_CONFIG.brickColors[i*2], 22, {gravity:18,spd:[2,6],life:[0.7,1.4]}); BM.flash(fx,"#ffffff",0.2); } }
 
 function updatePong(){
@@ -743,11 +761,34 @@ function pongScore(scorer){ if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ffffff",0.25
   pongServe(scorer===1);   // serve toward the player who just got scored on
 }
 
+// Session 2C: learning gate. Before a NEW level unlocks, if the manifest asks for a
+// beforeUnlock question AND we're inside the Buildable app (iframe), ask the parent to
+// show its QuizGate and resume only when it replies. Cold standalone deep links have no
+// parent app, so they simply continue with no gate (expected).
+var bkPendingLevel=null, bkPendingLives=null;
+function bkAdvanceOrGate(nextIdx, lives){
+  if(bkPendingLevel!=null) return;                       // already waiting on a gate
+  if(inApp() && bkLearnBeforeUnlock()){
+    bkPendingLevel=nextIdx; bkPendingLives=lives;
+    try{ window.parent.postMessage({source:"buildable", kind:"quizRequest", moment:"beforeUnlock", subjects:bkLearnSubjects(), gameType:"breaker"}, "*"); }
+    catch(e){ bkPendingLevel=null; bkPendingLives=null; startLevel(nextIdx, lives); }
+    return;
+  }
+  startLevel(nextIdx, lives);
+}
+if(typeof window!=="undefined" && window.addEventListener){
+  window.addEventListener("message", function(ev){
+    var d=ev && ev.data; if(!d || d.type!=="bk:quizDone") return;
+    if(bkPendingLevel==null) return;
+    var i=bkPendingLevel, lv=bkPendingLives; bkPendingLevel=null; bkPendingLives=null;
+    try{ startLevel(i, lv); }catch(e){}
+  });
+}
 function advanceAfterEnd(){
   if(PLAYTEST){ startLevel(level,null); return; }   // playtest: just replay, never leak to the menu
   if(G && G.custom){ const won=(state==="win"); showMaker(won?"share":"build"); if(!won)toast("So close! Tweak it and try again."); return; }
   if(G && G.mode==="two"){ showMenu(); return; }
-  if(state==="win"){ if(level<GAME_CONFIG.levels.length-1){ startLevel(level+1, G.lives); } else { showMenu(); toast("You beat every level!"); } }
+  if(state==="win"){ if(level<GAME_CONFIG.levels.length-1){ bkAdvanceOrGate(level+1, G.lives); } else { showMenu(); toast("You beat every level!"); } }
   else { showMenu(); }
 }
 
@@ -852,9 +893,9 @@ function draw(){ if(!G){ return; }
   if(BM) BM.draw(ctx, fx, { W, H, font:"800 23px Fredoka,sans-serif" });
   drawAnims();   // animated explosions + fireball tail (over gameplay, under banners)
   // overlays (drawn unshaken)
-  if(state==="play" && (!started||helpOpen) && G.mode!=="two") drawTutorial();
+  if(state==="play" && ((!started&&bkDemoOn())||helpOpen) && G.mode!=="two") drawTutorial();
   if(state==="play" && helpOpen && G.mode==="two") drawTutorial();
-  if(state==="play" && G.mode==="two" && G.serveDelay>30 && G.s1===0 && G.s2===0 && !botMode && !helpOpen) drawTutorial();
+  if(state==="play" && G.mode==="two" && G.serveDelay>30 && G.s1===0 && G.s2===0 && !botMode && !helpOpen && bkDemoOn()) drawTutorial();
   // finger keeps pointing at the paddle for a few seconds after the first launch
   // (follows the paddle, fades out) — no dark overlay so play isn't blocked.
   if(state==="play" && G.mode==="solo" && firstHintUntil && Date.now()<firstHintUntil){
@@ -1045,7 +1086,7 @@ function buildStartCfg(){
   const cfg = { title:"Buildable Breaker",
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",
     sound: !(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels };
-  if(currentMode!=="two"){ cfg.coins = totalStars(); cfg.subtitle = "Stars: "+totalStars()+" of "+maxStars(); }   // total stars earned
+  if(currentMode!=="two"){ cfg.coins = (window.BuildableWallet?BuildableWallet.balance():totalStars()); cfg.subtitle = "Stars: "+totalStars()+" of "+maxStars(); }   // coins = shared wallet balance; stars = level progress
   return cfg;
 }
 // ---- Breaker home hub: big Play + Make a level buttons, plus a My levels shelf ----
