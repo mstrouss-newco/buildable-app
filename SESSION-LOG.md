@@ -1,5 +1,35 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 6E: Buddy 2.0 (moments, not chatter)
+
+Swapped the always-on assistant for an **event-driven buddy** and deleted the persistent
+"Ask me" chat bubble from Home.
+
+**What shipped.**
+- `src/lib/buddy.js` (new): the brain. `decideMoment()` crosses a contract message
+  (win / levelup / levelComplete / score / coins / welcome) with per-kid history
+  (attempts before a win, personal bests, favorite game). Enforces the hard rules —
+  max a few moments per session, a min gap between them, and a parent toggle
+  (`isBuddyEnabled` / `setBuddyEnabled`). Per-game personalities (cheerleader / coach /
+  chill), no emojis.
+- `src/HelperReactions.jsx`: the single renderer. Reads the current game's personality
+  from its `manifest.json`, asks the brain, and only pops + voices when it's a real
+  moment (new best, hard-won level, first win of a game this sitting, encouraging nudge
+  after a losing streak, welcome-back naming a favorite). Never interrupts play.
+- `src/BuildableKids.jsx` (Home): removed the floating helper pill + auto-greet. Added a
+  small drawn buddy button in the header so Helper Lab stays reachable (replace-first).
+  The top moment card is now moment-based (welcome-back names favorite + streak /
+  Brain-Boost milestones), no always-on daily hello.
+- `src/GrownUpScreen.jsx`: **Buddy moments** on/off switch (on by default).
+- `CARTRIDGE-CONTRACT.md`: noted Buddy 2.0 consumes the buddy events + which `meta`
+  fields it reads.
+
+**QA.** `vite build` green. Buddy-brain smoke test 8/8. `qa-breaker`, `qa-survival`,
+`qa-sling` all PASS (unchanged — no engine/manifest touched). Buddy is shell-side and has
+no dedicated harness; verified by build + the brain smoke test.
+
+**Remaining in Phase 6:** none — 6A–6E complete. Did not start Phase 7 (per session rule).
+
 ## 2026-07-09 — Session 6D: Guest play links (the grandma flow)
 
 Taught the zero-account guest invite tool to carry **chess** and finished its safety

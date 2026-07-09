@@ -15,7 +15,12 @@ The shell treats every game as "a thing I embed at its entry URL." It never assu
 ## Messages: game to shell (shipped - these are the real, canonical names)
 - `nav:state` - reports sound/menu/help/in-game status so the shell can draw its nav chrome (`buildable-gamenav.js`)
 - `quizRequest` - kid hit a learning-gate moment (e.g. before a level unlocks); asks the shell to show the QuizGate
-- `win` / `lose` / `levelup` / `cheer` - buddy events (`buildable-buddy.js`, BB) that drive the kid's helper reactions
+- `win` / `lose` / `levelup` / `cheer` - buddy events (`buildable-buddy.js`, BB) that drive the kid's helper reactions.
+  Buddy 2.0 (`src/lib/buddy.js` + `HelperReactions.jsx`) consumes these and speaks rarely +
+  specifically. It reads optional `meta` on the message when present: `score`, `newBest`
+  (personal best), and treats a large loss streak / hard-won level specially. Sending a
+  richer `meta` (e.g. `{ score, newBest: true }`) lets the buddy name a personal best;
+  omitting it is fine (the buddy falls back to its own per-game tracking).
 - `coins` - coins earned this moment (see the wallet note below - not shell-owned yet)
 
 ## Messages: shell to game (shipped)

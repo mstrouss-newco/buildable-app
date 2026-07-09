@@ -6,6 +6,41 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 6E: Buddy 2.0 — moments, not chatter (July 9 2026)
+
+Replaced the always-on helper with an **event-driven buddy** that speaks rarely and
+specifically, and removed the persistent floating "Ask me" chat bubble from Home.
+
+**What shipped.**
+- `src/lib/buddy.js` (new) — the buddy brain. Decides *whether* and *what* to say by
+  crossing a contract message (win / levelup / levelComplete / score / coins) with the
+  kid's own history: how many tries a win took, personal bests, and their favorite game.
+  Hard rules live here: at most a few moments per sitting, a quiet gap between them, and
+  a parent off switch. Per-game **personality** (cheerleader / coach / chill) with no
+  emojis anywhere.
+- `src/HelperReactions.jsx` — now the single on-screen surface. Listens for the game
+  messages, reads the current game's personality from its manifest, hands the event to
+  the brain, and only pops + voices a line when the brain says the moment is worth it.
+  Never fires during play (wins/level-clears/game-overs are the break points; score and
+  coins are context only).
+- `src/BuildableKids.jsx` (Home) — removed the persistent floating helper pill and its
+  auto-greeting. Helper Lab stays reachable via a small drawn buddy button in the header.
+  The top "buddy moment" card is now genuinely moment-based: a dismissible welcome-back
+  that names the kid's favorite game, plus streak / Brain-Boost milestones (no more
+  always-on daily hello).
+- `src/GrownUpScreen.jsx` — a **Buddy moments** on/off switch in the Grown-ups portal
+  (on by default), mirroring the Learning Mode card.
+- `CARTRIDGE-CONTRACT.md` — clarified that the buddy events now feed Buddy 2.0 and which
+  `meta` fields it reads.
+
+**QA.** `vite build` green. Buddy brain unit smoke: 8/8 (parent-off silence, first-win
+speaks, repeat-win quiet, personal-best names score, hard-won grind line, welcome names
+favorite, session cap holds, single loss quiet). Reference games unchanged and still
+green: `qa-breaker`, `qa-survival`, `qa-sling` all PASS. No engine or manifest files were
+changed, so no game QA regressed; the buddy is shell-side and has no separate harness.
+
+**Remaining in Phase 6:** none — 6A–6E are done. (Do not start Phase 7.)
+
 ## Session 6D: Guest play links — the grandma flow (July 9 2026)
 
 A kid or parent can send a one-tap link that lets anyone play them instantly with
