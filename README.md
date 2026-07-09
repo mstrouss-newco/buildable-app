@@ -57,6 +57,27 @@ repo-root master plan `buildable-rebuild-roadmap.md` with the v2 (July 9) versio
 Files: `AGENTS.md`, `buildable-rebuild-roadmap.md`, `SESSION-LOG.md`, `README.md`. No
 `src/`/`api/`/engine changes, so no QA harness run needed.
 
+## Bug fixes: dead Home button (iPhone) + brick "residue" slicer (July 9 2026)
+
+Two scoped bug fixes, no redesigns.
+
+- **Home button dead during gameplay on iPhone.** In-app the shell draws Home over the
+  game's full-screen iframe; on iOS a touch over an iframe is delivered into the iframe,
+  so the tap hit the game canvas and Home never fired (desktop mouse worked, hiding it).
+  Fixed once in the shared nav bridge `public/buildable-gamenav.js`: when embedded it drops
+  an invisible catcher in the reserved top-left Home corner inside the game and forwards
+  `nav:exit` to the shell. Survival now loads the bridge too (`survival-engine.html`);
+  Breaker + Sling already did. Verified live.
+- **Bricks left a residue band; slicer grabbed neighbour pixels.** Re-sliced + recommitted
+  every Breaker theme sheet (`public/breaker/{jungle,space,ocean}/bricks.png|webp`) so each
+  frame is trimmed tight and re-centred with a transparent safety margin (the big draw-time
+  overscan no longer reveals a neighbour). Fixed the shared browser slicer
+  (`public/asset-library.html` `contentBox`) which padded the crop 2px OUTWARD into the
+  neighbour — now trims tight + 1px inset. Survival/Sling sprites spot-checked clean.
+- QA: `qa-breaker`, `qa-survival`, `qa-sling` all PASS. Files: `public/buildable-gamenav.js`,
+  `public/survival-engine.html`, `public/asset-library.html`, `public/breaker/*/bricks.*`,
+  `SESSION-LOG.md`, `README.md`.
+
 ## Session 5B: Sling converts to the manifest (July 9 2026)
 
 Sling Squad is now the third manifest-driven game (after Breaker + Survival).

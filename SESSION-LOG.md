@@ -1,5 +1,43 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Bug fixes: dead Home button (iPhone) + brick "residue" slicer
+
+Two targeted bug fixes, no redesigns.
+
+**Bug 1 — Home button did nothing during gameplay on iPhone.** In-app the shell
+(`GameFrame`) draws the Home button (top-left) floating OVER the game's full-screen
+iframe. On a desktop mouse this works; on iOS Safari a *touch* on an element that
+overlaps an iframe is delivered INTO the iframe instead — so the tap landed on the
+game canvas (nudging the paddle) and Home never fired. Reproduced live: before the
+fix, the top-left Home spot inside the Breaker iframe is covered by the game's
+`#wrap` canvas, which swallows the touch. Fix is one shared place: the in-game nav
+bridge (`public/buildable-gamenav.js`) now, when embedded, drops an invisible catcher
+in the reserved top-left Home corner INSIDE the game and forwards `nav:exit` to the
+shell (which the shell already handles → returns to the hub). The corner is already
+reserved for Home platform-wide, so it never steals a gameplay tap; desktop clicks
+still hit the shell button directly. Survival didn't load the bridge, so it now does
+(`survival-engine.html`); Breaker and Sling already did. Verified end-to-end on the
+live site (simulated iframe tap → shell navigated Home).
+
+**Bug 2 — bricks left a "residue" band; slicer grabbed neighbour pixels.** The brick
+sprite sheets are cut on an even 3×6 grid and each brick is painted with a large
+vertical overscan (`ey = brick.h * 0.62`) so it "reads full-bleed." Rows whose art
+filled the cell almost edge-to-edge (only ~4px margin) were therefore painted well
+past their slot; when a neighbour was smashed, that overhang stayed on screen as a
+stray band. Fix: re-sliced and recommitted every Breaker theme sheet
+(`public/breaker/{jungle,space,ocean}/bricks.png|webp`) so each frame is trimmed
+tight and re-centred with a transparent safety margin (≈20% vertical / 5% horizontal,
+one common transform per row so intact/hit/cracked stay the same size). Verified: 0
+content beyond the slot for all 18 frames per theme; gaps between bricks are now clean
+transparent. Also fixed the shared browser slicer used by the editor's drop-in / Asset
+Studio Build flow (`public/asset-library.html`, `contentBox`): it padded the crop 2px
+OUTWARD (literally pulling in the neighbour's pixels) — now it trims tight, ignores
+faint neighbour bleed (alpha>40), and insets 1px as a safety margin. Spot-checked
+Survival's animation strips and Sling's sprites — both clean (Sling draws whole
+sprites; Survival frame boundaries are all transparent).
+
+QA: `qa-breaker`, `qa-survival`, `qa-sling` all PASS.
+
 ## 2026-07-09 — Session 6B: Learning + parent controls + onboarding
 
 Turned the manifest's dead `features.learning` block into a real system, gave
@@ -69,6 +107,7 @@ Files: `db/6b-kid-profile-grade-pin.sql`, `db/6b-question-bank.sql`,
 `src/BuildableKids.jsx`, `src/GrownUpScreen.jsx`, `src/lib/accounts.js`,
 `api/generate-quiz.js`, `api/log-learning-event.js` (new), `api/parent-digest.js`
 (new), `vercel.json`, plus this log + README.
+
 
 ## 2026-07-09 — Session 6A: Multiplayer switch (manifest -> the existing lanes)
 
