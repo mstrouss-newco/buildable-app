@@ -414,6 +414,14 @@
       "dest": "/buildable-viewport.js"
     },
     {
+      "src": "/buildable-wallet.js",
+      "dest": "/buildable-wallet.js"
+    },
+    {
+      "src": "/buildable-buddy.js",
+      "dest": "/buildable-buddy.js"
+    },
+    {
       "src": "/buildable-boardgame.js",
       "dest": "/buildable-boardgame.js"
     },
