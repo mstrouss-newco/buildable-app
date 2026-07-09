@@ -703,7 +703,7 @@ function frame(){ update(); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requ
 // animal — a library miss can never break a kid's game. (The old /api/list-characters
 // storybook-hero loader was removed: those heroes rendered 3D in this 2D game.)
 function loadSquadArt(){ try{ if(typeof Image!=="function") return;
-  function L(src,cb){ var im=new Image(); im.crossOrigin="anonymous"; im.onload=function(){ cb(im); }; im.onerror=function(){}; im.src=src; }
+  function L(src,cb){ var im=new Image(); im.crossOrigin="anonymous"; im.onload=function(){ cb(im); }; im.onerror=function(){ if(/\.webp/i.test(src)){ var im2=new Image(); im2.crossOrigin="anonymous"; im2.onload=function(){ cb(im2); }; im2.src=src.replace(/\.webp/i,".png"); } }; im.src=src; }
   // flung animals (Animal Pack Remastered)
   SQUAD.forEach(function(c,i){ if(c.img) L(c.img,function(im){ SQUAD_IMGS[i]=im; }); });
   // block towers (Physics Assets) — 6 material/shape textures
@@ -712,7 +712,7 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   for(var i=0;i<5;i++){ (function(i){ L("/kenney/sling/targets/t"+i+".png",function(im){ TARGET_IMGS[i]=im; }); })(i); }
   // per-level scene backdrops (Background Elements Remastered)
   ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
-    L("/kenney/sling/bg/"+k+".png",function(im){ BG_IMGS[k]=im; }); });
+    L("/kenney/sling/bg/"+k+".webp",function(im){ BG_IMGS[k]=im; }); });
 }catch(e){} }
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
 

@@ -192,7 +192,7 @@ const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThi
 const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
 const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
 function sfx(n,o){ if(BA)BA.sfx(n,o); }
-function mkImg(src){ const im=(typeof Image!=="undefined")?new Image():{}; try{ im.crossOrigin="anonymous"; }catch(e){} if(src&&"src" in im) im.src=src; return im; }
+function mkImg(src){ const im=(typeof Image!=="undefined")?new Image():{}; try{ im.crossOrigin="anonymous"; }catch(e){} if(src&&"src" in im){ if(/\.webp(\?|$)/i.test(src)){ let st=0; im.onerror=function(){ if(st===0){st=1; im.src=src.replace(/\.webp/i,".png");} else if(st===1){st=2; im.src=src.replace(/\.webp/i,".jpg");} }; } im.src=src; } return im; }
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
 // shared FX bag (BM). Fallback object keeps the engine working if BM is missing.
@@ -278,9 +278,9 @@ const DIFFS = {
 // (6 debris frames), a themed ball strip, and a themed paddle. fall = fallback
 // tint drawn until the images finish loading so a level never flashes blank.
 const THEMES = {
-  jungle: { bg:"breaker/jungle/bg.jpg", bricks:"breaker/jungle/bricks.png", shatter:"breaker/jungle/shatter.png", balls:"breaker/jungle/balls.png", paddle:"breaker/jungle/paddle.png", ball:0, fall:"#2f6d3a" },
-  space:  { bg:"breaker/space/bg.jpg",  bricks:"breaker/space/bricks.png",  shatter:"breaker/space/shatter.png",  balls:"breaker/space/balls.png",  paddle:"breaker/space/paddle.png",  ball:0, fall:"#1b1650" },
-  ocean:  { bg:"breaker/ocean/bg.jpg",  bricks:"breaker/ocean/bricks.png",  shatter:"breaker/ocean/shatter.png",  balls:"breaker/ocean/balls.png",  paddle:"breaker/ocean/paddle.png",  ball:0, fall:"#1a6fa0" },
+  jungle: { bg:"breaker/jungle/bg.webp", bricks:"breaker/jungle/bricks.webp", shatter:"breaker/jungle/shatter.webp", balls:"breaker/jungle/balls.webp", paddle:"breaker/jungle/paddle.webp", ball:0, fall:"#2f6d3a" },
+  space:  { bg:"breaker/space/bg.webp",  bricks:"breaker/space/bricks.webp",  shatter:"breaker/space/shatter.webp",  balls:"breaker/space/balls.webp",  paddle:"breaker/space/paddle.webp",  ball:0, fall:"#1b1650" },
+  ocean:  { bg:"breaker/ocean/bg.webp",  bricks:"breaker/ocean/bricks.webp",  shatter:"breaker/ocean/shatter.webp",  balls:"breaker/ocean/balls.webp",  paddle:"breaker/ocean/paddle.webp",  ball:0, fall:"#1a6fa0" },
 };
 const themeCache = {};
 // ---- library-backed pack: play brick art made in Asset Studio (?libtheme=<theme>) ----

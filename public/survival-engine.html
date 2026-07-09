@@ -150,7 +150,7 @@ if(BM&&BM.useTextures) BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/sta
 // shared start screen / level picker (BS) — the consistent launch screen for every game
 const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
 // art: hero, background, per-level boss character — all transparent library cut-outs
-function mkImg(src){ const im=(typeof Image!=="undefined")?new Image():{}; try{ im.crossOrigin="anonymous"; }catch(e){} if(src&&"src" in im) im.src=src; return im; }
+function mkImg(src){ const im=(typeof Image!=="undefined")?new Image():{}; try{ im.crossOrigin="anonymous"; }catch(e){} if(src&&"src" in im){ if(/\.webp(\?|$)/i.test(src)){ let st=0; im.onerror=function(){ if(st===0){st=1; im.src=src.replace(/\.webp/i,".png");} else if(st===1){st=2; im.src=src.replace(/\.webp/i,".jpg");} }; } im.src=src; } return im; }
 const heroImg=mkImg(GAME_CONFIG.heroUrl);
 const bgImg=mkImg(GAME_CONFIG.bgImg);
 const charCache={};
@@ -160,7 +160,7 @@ let bossImg=null;
 const SD_ENEMY_KEYS=["enemy_fairy","enemy_cloud","enemy_leaf","enemy_alien","enemy_pirate","enemy_octo","enemy_rock","enemy_tumble","enemy_bat"];
 const sdImg={};
 let LIB_SKY=null, LIB_HERO=null, LIB_ENEMIES={};   // Asset Studio world reskin (filled below if a world is assigned)
-function sdGet(k){ if(LIB_ENEMIES[k]) return LIB_ENEMIES[k]; if(!sdImg[k]) sdImg[k]=mkImg(SD+k+".png"); return sdImg[k]; }
+function sdGet(k){ if(LIB_ENEMIES[k]) return LIB_ENEMIES[k]; if(!sdImg[k]) sdImg[k]=mkImg(SD+k+".webp"); return sdImg[k]; }
 SD_ENEMY_KEYS.forEach(sdGet);                              // warm all foe cutouts up front
 // New helper "orbi tools" (double as power-ups): spinning star, spark bee, robo-dog, healer
 const HELPER_KEYS=["helper_star","helper_bee","helper_dog","helper_healer"];
@@ -175,7 +175,7 @@ if(window.BuildableWorlds) BuildableWorlds.load("survival", function(p){   // sh
 // drawAnimSprite() flips through them by time; if the strip isn't loaded yet it falls back
 // to the still cutout (sdGet), then to the drawn blob. So the game always looks right.
 const animCache={};
-function animGet(k){ if(!(k in animCache)) animCache[k]=mkImg(SD+k+"_anim.png"); return animCache[k]; }
+function animGet(k){ if(!(k in animCache)) animCache[k]=mkImg(SD+k+"_anim.webp"); return animCache[k]; }
 ["hero"].concat(SD_ENEMY_KEYS,HELPER_KEYS).forEach(animGet);   // warm every character's animation
 function drawAnimSprite(key,x,y,size,opts){ opts=opts||{};
   const im=animGet(key), h=im&&(im.naturalHeight||im.height), w=im&&(im.naturalWidth||im.width);
@@ -186,7 +186,7 @@ function drawAnimSprite(key,x,y,size,opts){ opts=opts||{};
   return false; }
 // New per-level background skies (bg1..bg4 map across the six levels via level.bgKey)
 const sdBg={};
-function bgFor(i){ if(LIB_SKY) return LIB_SKY; const L2=GAME_CONFIG.levels[i]||{}; const k=L2.bgKey||1; if(!sdBg[k]) sdBg[k]=mkImg(SD+"bg"+k+".jpg"); return sdBg[k]; }
+function bgFor(i){ if(LIB_SKY) return LIB_SKY; const L2=GAME_CONFIG.levels[i]||{}; const k=L2.bgKey||1; if(!sdBg[k]) sdBg[k]=mkImg(SD+"bg"+k+".webp"); return sdBg[k]; }
 
 // ===== Gently-moving parallax worlds (one per level) =====
 // Each scene = a folder of smooth, painterly layers stacked back→front (1.png = far sky,
@@ -203,7 +203,7 @@ const SCENES=[
 ];
 const sceneCache={};
 function sceneLayers(i){ const s=SCENES[((i%SCENES.length)+SCENES.length)%SCENES.length];
-  if(!sceneCache[i]){ const a=[]; for(let k=1;k<=s.n;k++) a.push(mkImg("/"+s.dir+"/"+k+".png")); sceneCache[i]=a; }
+  if(!sceneCache[i]){ const a=[]; for(let k=1;k<=s.n;k++) a.push(mkImg("/"+s.dir+"/"+k+".webp")); sceneCache[i]=a; }
   return sceneCache[i]; }
 // (Parallax worlds retired — the new "Survival dalle" sky backgrounds are used instead,
 // see bgFor(). SCENES/drawParallax are kept as a dormant fallback but no longer warmed.)

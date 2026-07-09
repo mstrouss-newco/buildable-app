@@ -21,7 +21,7 @@ The master plan. Lives in the repo root. Every build session starts here.
 
 **Goal: nothing on any page takes 10 seconds to appear.**
 
-- [ ] **Session 1A — Compression pass.** Scan public/ for oversized images (breaker theme PNGs are 0.5–1.3MB each; whole folders are 4MB+). Resize every image to its actual display size, convert to compressed WebP with PNG fallback where needed, update references. Target: any single level's art under ~400KB total. Run QA scripts on breaker, survival, sling to confirm nothing broke visually.
+- [x] **Session 1A — Compression pass.** (done 2026-07-08: public gameplay art 23.5MB->3.5MB WebP, every Breaker level <400KB, QA green) Scan public/ for oversized images (breaker theme PNGs are 0.5–1.3MB each; whole folders are 4MB+). Resize every image to its actual display size, convert to compressed WebP with PNG fallback where needed, update references. Target: any single level's art under ~400KB total. Run QA scripts on breaker, survival, sling to confirm nothing broke visually.
 - [ ] **Session 1B — Art serving.** Cached/generated art (game-art, images API) must serve as plain static files with proper caching headers, never through a slow function per load, and never generate-on-demand while a kid waits. If a piece is missing, show instantly with a fallback and generate in the background.
 
 Done when: cold-load of Breaker on iPad wifi shows gameplay art in under 2 seconds.

@@ -1,5 +1,28 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Session 1A: Compression pass (Phase 1 speed fix)
+Converted the oversized gameplay art in public/ to WebP. Originals kept as fallback: image loaders
+now retry `.webp` -> `.png`/`.jpg` on error, so a kid never sees a blank tile.
+- **Breaker themes (jungle/ocean/space): 11.0MB -> 1.1MB.** Bricks/shatter/bg recompressed at native
+  size (canvas draws them at ~2x already). Balls resized to 72px-tall strips (drawn ~24px on-screen)
+  and paddle to 480px wide (max ~230px on-screen), then WebP. Every level's art now under 400KB
+  (jungle 355, ocean 383, space 339).
+- **Survival (survival-dalle sprites + bg): 4.6MB -> 0.9MB.** Canvas is devicePixelRatio-aware, so
+  dimensions kept and WebP-only (no shrink below 2x on-screen use).
+- **Survival parallax/atmos (dormant fallback, the 7MB folder the roadmap flagged): 7.0MB -> 1.4MB**,
+  WebP-only, dims kept.
+- **Sling backgrounds (kenney/sling):** WebP; sling art was already small so nothing else touched.
+- Refs updated in breaker-engine.html, survival-engine.html, sling-squad.html.
+- **Total: ~23.5MB -> 3.5MB across 100 files (85% smaller).**
+- Sizing rule honored: checked how each image is drawn before choosing a size; never shrank below 2x
+  its largest on-screen use; resized only the two truly oversized Breaker sprites (balls, paddle).
+- QA: `qa-breaker` (8/8 levels win + render smoke) PASS, `qa-sling` (5/5 + render) PASS, survival
+  smoke (SURV_GAME sims L1/L4/L8 win) PASS. All 100 WebP verified present + decodable.
+- Remaining in Phase 1: **Session 1B — art serving** (static files + cache headers, no generate-on-demand).
+  Not touched (out of scope / not the 3 priority games): chess-art backdrops (~1.7MB, shared with Chess),
+  /fx shared particles, models/ and kenney/previews. Final "under 2s on iPad wifi" confirmation is a
+  live-deploy check on Mike's device.
+
 ## 2026-07-08 — Planner Roadmap tab: prompt tightening + Next-up indicator; add rebuild docs
 Added `buildable-rebuild-roadmap.md` and `buildable-manifest-v2.md` to the repo root (the two context
 docs each session prompt tells Claude to read). Surgical changes to the Roadmap tab of
