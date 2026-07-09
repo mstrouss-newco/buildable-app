@@ -1,39 +1,89 @@
-// HelperReactions — a global layer (mounted once in main.jsx, OUTSIDE the screen
-// switch) that listens for win/lose messages posted by games (BB.win()/BB.lose()
-// -> postMessage {source:"buildable", kind}). When one arrives it pops the kid's
-// helper into the bottom of the screen, speaks a cheer/encouragement in the
-// helper's voice (/api/narrate-story-page), bounces, then auto-hides.
+// HelperReactions — the ONE place the Buddy 2.0 moment shows on screen. Mounted
+// once in main.jsx, outside the screen switch. It listens for contract messages
+// posted by games (BB.win()/BB.lose()/... -> postMessage {source:"buildable"})
+// and for the Home "welcome" message, hands each event to the buddy brain
+// (src/lib/buddy.js), and — only when the brain decides the moment is worth it —
+// pops the kid's helper, speaks one short line, bounces, then hides.
+//
+// The brain owns the hard rules (rare + specific, a few per session, quiet gaps,
+// parent off switch). This file only renders and voices. It never pops during
+// play: wins/level clears/game-overs are natural break points, and score/coins
+// are treated as context, never an interruption.
 import { useEffect, useRef, useState } from "react";
 import { getActiveKid, getKidHelper } from "./lib/accounts";
 import { playVoiceUrl } from "./lib/voiceBus";
-import { logGameEvent } from "./lib/gameLog";
+import { logGameEvent, getCurrentGame } from "./lib/gameLog";
+import { decideMoment, isBuddyEnabled } from "./lib/buddy";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-const WINS = ["You did it! Woohoo!", "Amazing job!", "You're a superstar!", "That was awesome!", "Yes! You win!", "Incredible! High five!"];
-const LOSES = ["So close! Try again!", "Don't give up — you've got this!", "Almost! One more go?", "Nice try! Let's beat it next time!", "Oof! You'll get it next time!"];
+const KINDS = ["win", "lose", "levelup", "cheer", "levelComplete", "score", "coins", "welcome"];
+
+// Friendly display names for games without a manifest yet (used only in buddy
+// lines). Manifest games supply their own name.
+const NAME_FALLBACK = {
+  platformer: "Platformer", survival: "Survival", breaker: "Breaker", castle: "Castle Guard",
+  croc: "Croc Tot", tetris: "Tetris", chess: "Chess", typing: "Typing", tennis: "Tennis",
+  town: "Family Town", tictactoe: "Tic-Tac-Toe", connectfour: "Connect Four", dotsboxes: "Dots and Boxes",
+  sling: "Sling Squad", tank: "Hilltop Tanks", mahjong: "Mahjong", stringmatch: "String Match",
+  bubble: "Bubble Buddies", generated: "your game",
+};
+
+// Per-game buddy config from the manifest (personality + on/off + display name),
+// fetched once per game and cached.
+const manifestCache = {};
+async function loadBuddyManifest(slug) {
+  if (!slug) return null;
+  if (slug in manifestCache) return manifestCache[slug];
+  try {
+    const r = await fetch("/" + slug + "/manifest.json", { cache: "force-cache" });
+    if (!r.ok) { manifestCache[slug] = null; return null; }
+    const m = await r.json();
+    const b = (m.features && m.features.buddy) || {};
+    const info = { personality: b.personality || "cheerleader", on: b.on !== false, name: m.name || null };
+    manifestCache[slug] = info; return info;
+  } catch (e) { manifestCache[slug] = null; return null; }
+}
 
 export default function HelperReactions() {
   const [show, setShow] = useState(false);
-  const [state, setState] = useState({ win: true, text: "" });
+  const [state, setState] = useState({ tone: "win", text: "" });
   const hideRef = useRef(null);
 
   useEffect(() => {
-    const onMsg = (e) => {
+    const onMsg = async (e) => {
       const d = e && e.data;
-      if (!d || d.source !== "buildable" || !d.kind) return;
-      if (["win", "lose", "levelup", "cheer"].indexOf(d.kind) === -1) return;
-      if (d.kind === "win" || d.kind === "lose") { try { logGameEvent(d.kind, null, d.meta); } catch (e) {} }
-      const win = d.kind === "win" || d.kind === "levelup" || d.kind === "cheer";
-      const pool = win ? WINS : LOSES;
-      let text = d.text || pool[Math.floor(Math.random() * pool.length)];
-      // call out a new personal best (score logged in d.meta)
-      if (win && d.meta && d.meta.newBest && d.meta.score != null) text = "New best score \u2014 " + d.meta.score + "! That's your best ever!";
-      setState({ win: win, text: text });
+      if (!d || d.source !== "buildable" || !d.kind || KINDS.indexOf(d.kind) === -1) return;
+
+      // Telemetry stays independent of whether the buddy speaks.
+      if (d.kind === "win" || d.kind === "lose") { try { logGameEvent(d.kind, null, d.meta); } catch (err) {} }
+      if (!isBuddyEnabled()) return;
+
+      // Resolve the game + its personality (welcome is a home moment, no game).
+      const slug = d.kind === "welcome" ? null : (d.game || getCurrentGame());
+      let personality = "cheerleader", gameName = null;
+      if (slug) {
+        const info = await loadBuddyManifest(slug);
+        if (info && info.on === false) return; // buddy switched off for this game
+        if (info) { personality = info.personality; gameName = info.name; }
+        if (!gameName) gameName = NAME_FALLBACK[slug] || null;
+      }
+
+      const kid = getActiveKid();
+      const kidName = (kid && kid.display_name) || "friend";
+      const meta = d.meta || (d.text ? { text: d.text } : {});
+      const moment = decideMoment({
+        kind: d.kind, meta, game: slug, gameName, personality, kidName,
+        favoriteGameName: d.favoriteGameName || null,
+      });
+      if (!moment) return; // brain decided to stay quiet (the common case)
+
+      setState({ tone: moment.tone || "win", text: moment.text });
       setShow(true);
+      // Speak the line in the kid's helper voice; silent if voice isn't set up.
       try {
         const helper = getKidHelper(getActiveKid());
         const vid = helper && helper.voice;
-        fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vid ? { text: text, voiceId: vid } : { text: text }) })
+        fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vid ? { text: moment.text, voiceId: vid } : { text: moment.text }) })
           .then((r) => r.json())
           .then((j) => { if (j && j.configured && j.audioUrl) playVoiceUrl(j.audioUrl); })
           .catch(() => {});
@@ -48,7 +98,7 @@ export default function HelperReactions() {
   if (!show) return null;
   const helper = getKidHelper(getActiveKid());
   const img = helper && helper.image;
-  const accent = state.win ? "#7CF6B0" : "#FFD66B";
+  const accent = state.tone === "win" ? "#7CF6B0" : "#FFD66B";
   return (
     <div style={{ position: "fixed", left: 0, right: 0, bottom: 24, zIndex: 100000, display: "flex", justifyContent: "center", pointerEvents: "none", fontFamily: NUN }}>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 12, maxWidth: "92%" }}>
