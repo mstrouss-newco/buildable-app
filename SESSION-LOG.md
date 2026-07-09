@@ -1,5 +1,60 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Session 3A: manifest-driven picker + shell game landing (Phase 3 start)
+
+Phase 3 (the "paint layer"). The games picker and Breaker's front door are now shell-
+generated from data instead of hand-placed. Only the picker + Breaker were touched;
+journey (3B) and loadout (3C) are intentionally left engine-owned so no kid gets stranded.
+
+- **Manifest-driven picker.** The ~23 hand-placed `<tile>` calls in `GamePicker`
+  (`src/BuildableKids.jsx`) are gone. Every card now renders from a new `GAME_CATALOG`
+  identity layer — one row per game: `{ id, name, category, color (signature), imgId
+  (badge art), type (game/studio), handler, desc, soon }`. A single `PickerCard`
+  component draws badge art + name + a category chip + a signature-color accent dot/border,
+  tags `type:"studio"` with a "Studio" chip, and keeps the coming-soon 1111 password gate.
+  Breaker's row mirrors its real `/breaker/manifest.json` identity (`#FF6B6B`, Arcade); the
+  other games are lightweight stubs that get enriched into full manifests as they convert
+  (Phase 5+). Adding/converting a game is now a catalog edit, not a component edit. Card
+  order preserved (front 8 unchanged).
+
+- **Shell game landing with demo.** New `GameLanding` component — a converted game's front
+  door, fully identity-driven (badge art, name, category, signature color). Its demo panel
+  embeds the game's own engine at `?screen=demo` with `pointer-events:none`: a self-playing
+  "attract" loop where the perfect-player bot plays level 1 over and over (silent — no user
+  gesture unlocks audio). Big **Play** + secondary **Make a level** buttons. Breaker's
+  picker card now opens `SCREEN_BREAKER_LANDING` → landing → Play/Make.
+
+- **Killed Breaker's homemade front door (in-app).** The engine used to boot to its own
+  Play/Make hub + start screen when embedded. Now `BreakerScreen` loads
+  `/breaker-engine.html?v=3a&screen=journey|maker`, and the engine's in-app boot reads
+  `?screen=` and goes straight to the requested screen — it NEVER renders its hub in-app.
+  `?screen=demo` runs the attract loop (new `demoStart()` + DEMO branches in `winLevel`/
+  `loseLife` that re-loop level 1). In-game **Home** now returns to the landing (the game's
+  shell front door), and the landing's **Games** button returns to the picker.
+  Standalone deep links (`/breaker...`, Session 2B) are unchanged — still engine-routed.
+
+- **Deferred on purpose (front-door-only, Mike's call):** the engine's level-picker
+  (journey) and customize (loadout) stay engine-owned until Session 3B / 3C replace them.
+  Removing them now would strand level-select and loadout. Standalone `/breaker` still shows
+  the engine hub; converging it onto the shell landing is a later step.
+
+- **Bug caught + fixed by QA:** switching the in-app boot from `showHub()` to `showMenu()`
+  surfaced a headless crash — `levelThumbURL()` called `canvas.toDataURL`, absent in the QA
+  sandbox. Guarded it to return "" when there's no real canvas (thumbnails are cosmetic).
+
+- **Verified:** `vite build` clean; `qa-breaker.mjs .` = manifest PASS + all 8 levels win
+  (5 runs each) + pong + render smoke = ALL CHECKS PASS. Live browser QA on the deploy to
+  follow (sandbox can't reach the live site).
+
+- **Files:** `src/BuildableKids.jsx` (GAME_CATALOG, PickerCard, GamePicker, GameLanding,
+  SCREEN_BREAKER_LANDING, breakerEntry state), `public/breaker-engine.html` (screen-param
+  boot, demoStart + DEMO loop, headless-safe thumbnails), roadmap 3A checked.
+
+- **Remaining in Phase 3 (do NOT start unprompted):** 3B journey, 3C loadout + one HUD,
+  3D Feel Kit (the phase "done-when" — all of Breaker's out-of-game UI shell-generated with
+  feel from the Feel Kit — needs 3B–3D, not just 3A).
+
+
 ## 2026-07-08 — Cartridge contract doc alignment + log cleanup
 
 Docs-only pass, no code changes. `CARTRIDGE-CONTRACT.md` now documents the messages that
