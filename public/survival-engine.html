@@ -76,6 +76,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
+<script src="buildable-manifest.js?v=1"></script>
+<script src="buildable-hud.js?v=4"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -149,6 +151,12 @@ const fx=BM?BM.makeFx():null;   // flash+shake live here; the engine keeps its o
 if(BM&&BM.useTextures) BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/star_01.png", star:"/fx/star_07.png", ring:"/fx/circle_01.png", smoke:"/fx/smoke_05.png", fire:"/fx/fire_01.png", muzzle:"/fx/light_03.png", magic:"/fx/magic_05.png" });
 // shared start screen / level picker (BS) — the consistent launch screen for every game
 const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
+// shared HUD (buildable-hud.js) — the ONE info-bar system for every game.
+// Headless/QA or a load failure -> a no-op HUD so the engine never crashes.
+let survHud=null;
+function HUD(){ if(survHud) return survHud;
+  if(typeof BuildableHUD==="undefined"||!BuildableHUD||!BuildableHUD.mount){ return (survHud={set:function(){},show:function(){},hide:function(){},destroy:function(){}}); }
+  return (survHud=BuildableHUD.mount(c)); }
 // art: hero, background, per-level boss character — all transparent library cut-outs
 function mkImg(src){ const im=(typeof Image!=="undefined")?new Image():{}; try{ im.crossOrigin="anonymous"; }catch(e){} if(src&&"src" in im){ if(/\.webp(\?|$)/i.test(src)){ let st=0; im.onerror=function(){ if(st===0){st=1; im.src=src.replace(/\.webp/i,".png");} else if(st===1){st=2; im.src=src.replace(/\.webp/i,".jpg");} }; } im.src=src; } return im; }
 const heroImg=mkImg(GAME_CONFIG.heroUrl);
@@ -594,16 +602,21 @@ function draw(){
   ctx.restore();                                  // end shake layer
   if(BM&&fx) BM.draw(ctx, fx, { W, H });          // shared FX particles + flash overlay
   // (push-circle joystick ring removed — you just drag to move, no on-screen ring)
-  // HUD
-  ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.font="bold 22px Fredoka,sans-serif";
-  ctx.fillText(L.name+"   Lv "+(level+1)+"/"+GAME_CONFIG.levels.length, 18, 32);
-  for(let i=0;i<hero.maxHearts;i++){ const hx=W-28-i*30, hy=20; ctx.fillStyle=(i<hero.hearts)?P.hp:"rgba(255,255,255,.18)"; heart(hx,hy,10); }
-  // xp bar + hero level
-  ctx.fillStyle="rgba(255,255,255,.2)"; rrect(18,H-26,W-36,10,5);ctx.fill(); ctx.fillStyle=P.xp; rrect(18,H-26,(W-36)*Math.min(1,xp/xpNeed),10,5);ctx.fill();
-  ctx.fillStyle="#fff";ctx.font="bold 16px Fredoka,sans-serif";ctx.textAlign="left";ctx.fillText("Power Lv "+plvl,18,H-34);
-  // wave/boss timer
-  ctx.textAlign="right"; ctx.fillStyle="#cdd6ff"; ctx.font="bold 18px Fredoka,sans-serif";
-  ctx.fillText(bossSpawned?"BOSS!":("Boss in "+Math.ceil((levelDur-levelFrame)/60)+"s"), W-18, H-34);
+  // HUD — shared tinted chips (buildable-hud.js). The standard info (level, lives,
+  // power level, boss timer) now lives in the ONE shared bar; only the live XP
+  // gauge stays painted on canvas. Shown during play, hidden on menus/overlays.
+  var _hud=HUD();
+  if(state==="play"){
+    if(_hud) _hud.show();
+    try{ _hud.set({
+      left:[{ text:L.name, soft:"Lv "+(level+1)+"/"+GAME_CONFIG.levels.length }],
+      right:[ { text:"Power "+plvl },
+              { text: bossSpawned?"BOSS!":("Boss "+Math.ceil(Math.max(0,(levelDur-levelFrame))/60)+"s") },
+              { hearts: hero.hearts } ]
+    }); }catch(e){}
+    // xp gauge (bottom) — a live power-up progress bar, not HUD chrome
+    ctx.fillStyle="rgba(255,255,255,.2)"; rrect(18,H-26,W-36,10,5);ctx.fill(); ctx.fillStyle=P.xp; rrect(18,H-26,(W-36)*Math.min(1,xp/xpNeed),10,5);ctx.fill();
+  } else if(_hud){ _hud.hide(); }
   // overlays
   if(state==="choose"){ ctx.fillStyle="rgba(5,8,24,.72)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Fredoka,sans-serif";ctx.fillText("Power up! Pick one",W/2,H/2-160);
     for(let k=0;k<choices.length;k++){ const cr=cardRect(k), id=choices[k]; ctx.fillStyle="#1b2350";rrect(cr.x,cr.y,cr.w,cr.h,18);ctx.fill(); ctx.strokeStyle=P.xp;ctx.lineWidth=3;rrect(cr.x,cr.y,cr.w,cr.h,18);ctx.stroke();
@@ -681,6 +694,29 @@ if(typeof document!=="undefined" && document.getElementById("start")){ if(BA){ B
   resizeCanvas(); addEventListener("resize",resizeCanvas); addEventListener("orientationchange",resizeCanvas); }
 requestAnimationFrame(frame);
 
+// ---- SHELL: load /survival/manifest.json and drive levels/identity from it ----
+// The built-in GAME_CONFIG above is the headless/QA + offline fallback. In the
+// browser the manifest is the source of the level list (names, difficulty 1-5 ->
+// engine tuning, which foes/boss/sky each level uses) and the game's signature
+// colour (HUD accent). Only the campaign levels are replaced; the engine's own
+// palette, hero stats, sounds and gear store stay put. (QA calls _applyManifest
+// directly, so this async fetch path is browser-only.)
+function applyManifest(cfg, raw){
+  if(!cfg || !Array.isArray(cfg.levels) || !cfg.levels.length) return;
+  try{ window.BUILDABLE_MANIFEST = raw; }catch(e){}
+  try{ if(window.BuildableHUD && BuildableHUD.setAccent && raw && raw.color) BuildableHUD.setAccent(raw.color); }catch(e){}
+  GAME_CONFIG.levels.length = cfg.levels.length;
+  for(var i=0;i<cfg.levels.length;i++){ GAME_CONFIG.levels[i]=cfg.levels[i]; }
+  try{ if(bsScreen && typeof bsConfig==="function") bsScreen.update(bsConfig()); }catch(e){}
+}
+try{
+  if(window.BuildableManifest && window.BuildableManifest.load){
+    window.BuildableManifest.load("survival", applyManifest, function(errs){
+      try{ console.warn("[survival] manifest not applied, using built-in levels:", errs); }catch(e){}
+    });
+  }
+}catch(e){}
+
 // ---------- QA / picker hooks ----------
 window.SURV_GAME = {
   startLevel:(i)=>{ startLevel(i); },
@@ -702,7 +738,13 @@ window.SURV_GAME = {
   // render debug hooks (used by qa-render.mjs)
   _begin:(i)=>{ if(!CHAR)CHAR=defaultChar(); stats=null; startLevel(i||0,false); state="play"; botMode=true; started=true; },
   _step:(n)=>{ for(let i=0;i<(n||1);i++) update(); }, _draw:()=>{ try{ draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
+  // Session 5A: manifest hooks (mirror Breaker/Sling). _cfg is the live config;
+  // _applyManifest lets the QA robot drive the engine from the manifest.
+  _cfg:()=>GAME_CONFIG,
+  _applyManifest:(cfg,raw)=>applyManifest(cfg,raw),
 };
+// normalize on the platform game handle (Breaker/Sling expose BUILDABLE_GAME)
+try{ window.BUILDABLE_GAME = window.SURV_GAME; }catch(e){}
 </script>
 </body>
 </html>
