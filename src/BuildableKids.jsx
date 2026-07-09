@@ -49,6 +49,7 @@ const SCREEN_SURVIVAL = "survival";
 const SCREEN_BREAKER = "breaker";
 const SCREEN_BREAKER_LANDING = "breaker_landing";
 const SCREEN_BREAKER_JOURNEY = "breaker_journey";
+const SCREEN_BREAKER_LOADOUT = "breaker_loadout";
 const SCREEN_TANK = "tank";
 const SCREEN_RUNNER = "runner";
 const SCREEN_TETRIS = "tetris";
@@ -284,11 +285,17 @@ function BreakerScreen({ onHome, entry = "journey" }) {
       <QuizGate goal={getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
     </div>
   ) : null;
+  // hand the kid's equipped loadout (Session 3C) to the engine as tiny params so
+  // gameplay reflects their picks; the shell owns the choices, the engine just reads.
+  const eq = readEquipped("breaker");
+  const eqParams = (typeof eq.Paddle === "number" ? `&pad=${eq.Paddle}` : "") +
+                   (typeof eq.Ball === "number" ? `&ball=${eq.Ball}` : "") +
+                   (typeof eq.Trail === "number" ? `&trail=${eq.Trail}` : "");
   let src;
   if (typeof entry === "string" && entry.indexOf("play:") === 0) {
-    src = `/breaker-engine.html?v=3b&screen=play&level=${encodeURIComponent(entry.slice(5))}`;
+    src = `/breaker-engine.html?v=3c&screen=play&level=${encodeURIComponent(entry.slice(5))}${eqParams}`;
   } else {
-    src = `/breaker-engine.html?v=3b&screen=${entry}`;
+    src = `/breaker-engine.html?v=3c&screen=${entry}`;
   }
   return <GameFrame title="Buildable Breaker" src={src} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} />;
 }
@@ -298,7 +305,7 @@ function BreakerScreen({ onHome, entry = "journey" }) {
 // color). The demo panel embeds the game's own engine in a self-playing "attract"
 // mode (?screen=demo, input disabled). This REPLACES the engine's homemade start
 // screen + Play/Make hub. Generic — any converted game can use it.
-function GameLanding({ game, demoSrc, onPlay, onMake, onBack }) {
+function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
   const accent = game.color;
   return (
     <div style={{ ...styles.container, justifyContent: "flex-start" }}>
@@ -314,7 +321,10 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onBack }) {
           <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 11px", borderRadius: 999, background: "rgba(12,10,24,0.66)", color: "#fff" }}>Demo</span>
         </div>
         <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 9px 0 ${accent}88, 0 16px 30px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play</button>
-        {onMake && <button onClick={onMake} style={{ marginTop: 12, width: "100%", maxWidth: 360, borderRadius: 16, padding: "13px 20px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer" }}>Make a level</button>}
+        <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 360, marginTop: 12 }}>
+          {onLoadout && <button onClick={onLoadout} style={{ flex: 1, borderRadius: 16, padding: "13px 12px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: `linear-gradient(160deg, ${accent}55, ${accent}22)`, border: `1px solid ${accent}88`, cursor: "pointer" }}>Make it mine</button>}
+          {onMake && <button onClick={onMake} style={{ flex: 1, borderRadius: 16, padding: "13px 12px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer" }}>Make a level</button>}
+        </div>
       </div>
     </div>
   );
@@ -454,6 +464,153 @@ function BreakerJourney({ game, onBack, onPlay }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================================
+//  Loadout store (Session 3C) — the kid's owned + equipped customization, owned
+//  by the SHELL (never the engine). Keyed per game + per kid. Options are stored
+//  by their index in the manifest's customization slot, so the engine can be told
+//  the equipped look with tiny params and the store never hardcodes art. Coins are
+//  spent through the shell-owned wallet (window.BuildableWallet, loaded in index.html).
+// ============================================================================
+function loadoutKey(gameId) {
+  let kid = "";
+  try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); if (k && k.id) kid = "_" + k.id; } catch (e) {}
+  return "bk_loadout_v1_" + gameId + kid;
+}
+function readLoadout(gameId, slots) {
+  let store = { owned: {}, equipped: {} };
+  try { const s = JSON.parse(localStorage.getItem(loadoutKey(gameId)) || "null"); if (s && typeof s === "object") store = { owned: s.owned || {}, equipped: s.equipped || {} }; } catch (e) {}
+  (slots || []).forEach((slot) => {
+    const name = slot.slot, opts = slot.options || [];
+    const owned = new Set(store.owned[name] || []);
+    opts.forEach((o, i) => { if ((o.price || 0) === 0) owned.add(i); }); // free options are always owned
+    store.owned[name] = Array.from(owned).sort((a, b) => a - b);
+    if (store.equipped[name] == null || !store.owned[name].includes(store.equipped[name])) {
+      store.equipped[name] = store.owned[name].length ? store.owned[name][0] : 0; // default-equip first owned
+    }
+  });
+  return store;
+}
+function writeLoadout(gameId, store) { try { localStorage.setItem(loadoutKey(gameId), JSON.stringify(store)); } catch (e) {} }
+function readEquipped(gameId) { try { const s = JSON.parse(localStorage.getItem(loadoutKey(gameId)) || "null"); return (s && s.equipped) || {}; } catch (e) { return {}; } }
+function walletBalance() { try { return (window.BuildableWallet && window.BuildableWallet.balance()) || 0; } catch (e) { return 0; } }
+
+function CoinGlyph({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+      <circle cx="12" cy="12" r="10" fill="#FFD24A" stroke="#E0A200" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="6.2" fill="none" stroke="#E0A200" strokeWidth="1.1" opacity="0.7" />
+      <path d="M12 8.2l1.1 2.3 2.5.3-1.85 1.75.5 2.5L12 15.9l-2.25 1.15.5-2.5L8.4 10.8l2.5-.3z" fill="#B67A00" />
+    </svg>
+  );
+}
+// ============================================================================
+//  BreakerLoadout (Session 3C) — the SHELL-generated customization screen, built
+//  straight from the manifest's `customization` slots. Free looks are owned; priced
+//  looks unlock by spending coins from the shell-owned wallet; a tap equips. The
+//  kid's picks live in the shell loadout store, and are handed to the engine as
+//  tiny equip params when a level launches. Generic enough for any converted game.
+// ============================================================================
+function BreakerLoadout({ game, onBack, onPlay }) {
+  const accent = (game && game.color) || "#FF6B6B";
+  const gameId = (game && game.id) || "breaker";
+  const [manifest, setManifest] = useState(null);
+  const [coins, setCoins] = useState(() => walletBalance());
+  const [store, setStore] = useState({ owned: {}, equipped: {} });
+  const [flash, setFlash] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    fetch("/breaker/manifest.json?v=" + Date.now()).then((r) => r.json())
+      .then((m) => { if (!live) return; setManifest(m); setStore(readLoadout(gameId, m.customization || [])); })
+      .catch(() => {});
+    const onWallet = () => setCoins(walletBalance());
+    window.addEventListener("bk-wallet", onWallet);
+    setCoins(walletBalance());
+    return () => { live = false; window.removeEventListener("bk-wallet", onWallet); };
+  }, [gameId]);
+
+  const slots = (manifest && Array.isArray(manifest.customization)) ? manifest.customization : [];
+  function equip(slotName, i) {
+    setStore((prev) => { const next = { owned: { ...prev.owned }, equipped: { ...prev.equipped, [slotName]: i } }; writeLoadout(gameId, next); return next; });
+  }
+  function buy(slotName, i, price) {
+    let ok = false;
+    try { ok = window.BuildableWallet ? window.BuildableWallet.spend(price) : false; } catch (e) { ok = false; }
+    if (!ok) { setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return; }
+    setStore((prev) => {
+      const owned = { ...prev.owned }; const list = (owned[slotName] || []).slice(); if (!list.includes(i)) list.push(i);
+      owned[slotName] = list.sort((a, b) => a - b);
+      const next = { owned, equipped: { ...prev.equipped, [slotName]: i } }; writeLoadout(gameId, next); return next;
+    });
+    setCoins(walletBalance());
+  }
+
+  return (
+    <div style={{ ...styles.container, padding: "18px 14px 44px", justifyContent: "flex-start" }}>
+      <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center", marginBottom: 12, maxWidth: 680 }}>
+        <button onClick={onBack} style={styles.backButton}>Back</button>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 999, background: "rgba(245,217,118,.16)", border: "1px solid rgba(245,217,118,.4)", fontWeight: 900, color: "#FFE08A" }}>
+          <CoinGlyph size={18} /> {coins}
+        </div>
+      </div>
+
+      <div style={{ width: "100%", maxWidth: 680, textAlign: "center" }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Make it mine</div>
+        <h1 style={{ ...styles.logo, fontSize: "clamp(32px,7vw,52px)", margin: "2px 0 4px" }}>Loadout</h1>
+        <p style={{ ...styles.tagline, fontSize: 15, marginBottom: 16 }}>Spend coins to unlock looks, then tap to equip.</p>
+        {flash && <div style={{ margin: "0 auto 14px", maxWidth: 380, background: "rgba(255,120,120,.14)", border: "1px solid rgba(255,120,120,.4)", color: "#ffc6c6", borderRadius: 12, padding: "9px 14px", fontWeight: 800 }}>{flash}</div>}
+      </div>
+
+      {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>Loading your loadout...</div>}
+
+      <div style={{ width: "100%", maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
+        {slots.map((slot) => {
+          const name = slot.slot, opts = slot.options || [];
+          const owned = new Set(store.owned[name] || []);
+          const eq = store.equipped[name];
+          return (
+            <div key={name}>
+              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, margin: "0 0 8px" }}>{name}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
+                {opts.map((o, i) => {
+                  const isOwned = owned.has(i) || (o.price || 0) === 0;
+                  const isEq = eq === i;
+                  const canAfford = coins >= (o.price || 0);
+                  return (
+                    <div key={i} style={{
+                      borderRadius: 16, padding: "12px 12px 10px",
+                      background: isEq ? `linear-gradient(160deg, ${accent}44, ${accent}18)` : "rgba(255,255,255,0.05)",
+                      border: isEq ? `2px solid ${accent}` : "1px solid rgba(255,255,255,0.14)",
+                    }}>
+                      <div style={{ height: 54, borderRadius: 12, marginBottom: 9, background: `linear-gradient(160deg, ${accent}, ${accent}55)`, opacity: isOwned ? 1 : 0.4, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 13, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{o.name}</div>
+                      {isOwned ? (
+                        <button onClick={() => equip(name, i)} disabled={isEq} style={{
+                          width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: isEq ? "default" : "pointer",
+                          border: "none", color: isEq ? "#12102a" : "#fff",
+                          background: isEq ? `linear-gradient(160deg,#fff,${accent})` : "rgba(255,255,255,0.1)",
+                        }}>{isEq ? "Equipped" : "Equip"}</button>
+                      ) : (
+                        <button onClick={() => buy(name, i, o.price || 0)} disabled={!canAfford} style={{
+                          width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: canAfford ? "pointer" : "not-allowed",
+                          border: "none", color: canAfford ? "#12102a" : "#9a97b5",
+                          background: canAfford ? "linear-gradient(160deg,#FFE08A,#FFD24A)" : "rgba(255,255,255,0.06)",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                        }}><CoinGlyph size={15} /> {o.price}</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {onPlay && manifest && <button onClick={onPlay} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 8px 0 ${accent}88, 0 14px 28px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play with this look</button>}
     </div>
   );
 }
@@ -1008,8 +1165,9 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER_LANDING) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
-    return <GameLanding game={bk} demoSrc="/breaker-engine.html?v=3b&screen=demo"
+    return <GameLanding game={bk} demoSrc="/breaker-engine.html?v=3c&screen=demo"
       onPlay={() => setScreen(SCREEN_BREAKER_JOURNEY)}
+      onLoadout={() => setScreen(SCREEN_BREAKER_LOADOUT)}
       onMake={() => { setBreakerEntry("maker"); setScreen(SCREEN_BREAKER); }}
       onBack={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
@@ -1018,6 +1176,12 @@ export default function BuildableKids() {
     return <BreakerJourney game={bk}
       onBack={() => setScreen(SCREEN_BREAKER_LANDING)}
       onPlay={(lv) => { setBreakerEntry("play:" + lv.id); setScreen(SCREEN_BREAKER); }} />;
+  }
+  if (screen === SCREEN_BREAKER_LOADOUT) {
+    const bk = GAME_CATALOG.find((g) => g.id === "breaker");
+    return <BreakerLoadout game={bk}
+      onBack={() => setScreen(SCREEN_BREAKER_LANDING)}
+      onPlay={() => setScreen(SCREEN_BREAKER_JOURNEY)} />;
   }
   if (screen === SCREEN_BREAKER) {
     const backToJourney = typeof breakerEntry === "string" && breakerEntry.indexOf("play:") === 0;

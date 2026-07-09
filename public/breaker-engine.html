@@ -153,7 +153,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-hud.js?v=3"></script>
 <script src="buildable-gamenav.js?v=1"></script>
 <script src="buildable-manifest.js?v=1"></script>
-<script src="buildable-wallet.js?v=2"></script>
+<script src="buildable-wallet.js?v=1"></script>
 <script src="buildable-buddy.js?v=1"></script>
 <script>
 // ============================================================================
@@ -1375,6 +1375,19 @@ function bkInAppPlay(id){
     return; }
   currentMode="solo"; startPlay(idx);
 }
+// Session 3C: the shell-owned Loadout hands the kid's equipped look to the engine as
+// tiny params (?pad=&ball=), by their index in the manifest's customization slots.
+// The engine just reads and applies them to the in-memory look (never saved, so a
+// standalone kid's own prefs are untouched). Maps follow the manifest slot order.
+var LOADOUT_PADDLE_COLS=["#9b7bff","#ff7aa8","#62d0ff"];   // Paddle: Classic, Rainbow, Rocket
+var LOADOUT_BALL_IDS=["glow","comet"];                     // Ball: Glow, Meteor(~comet)
+function bkApplyEquipParams(){
+  try{ var q=new URLSearchParams(location.search);
+    var p=q.get("pad"), b=q.get("ball");
+    if(p!=null && p!=="" && !isNaN(+p) && LOADOUT_PADDLE_COLS[+p]) PREFS.paddle=LOADOUT_PADDLE_COLS[+p];
+    if(b!=null && b!=="" && !isNaN(+b) && LOADOUT_BALL_IDS[+b]) PREFS.ball=LOADOUT_BALL_IDS[+b];
+  }catch(e){}
+}
 // boot
 if(typeof document!=="undefined" && document.getElementById("start")){
   loadPrefs(); wireMenus();
@@ -1392,7 +1405,7 @@ if(typeof document!=="undefined" && document.getElementById("start")){
     var _scr=""; try{ _scr=(new URLSearchParams(location.search)).get("screen")||""; }catch(e){}
     if(_scr==="demo"){ DEMO=true; demoStart(); }
     else if(_scr==="maker"){ startNewLevel(); }
-    else if(_scr==="play"){ var _lid=""; try{ _lid=(new URLSearchParams(location.search)).get("level")||""; }catch(e){} bkInAppPlay(_lid); }
+    else if(_scr==="play"){ var _lid=""; try{ _lid=(new URLSearchParams(location.search)).get("level")||""; }catch(e){} bkApplyEquipParams(); bkInAppPlay(_lid); }
     else { currentMode="solo"; showMenu(); }   // fallback only — in-app the SHELL owns the journey (Session 3B); the engine's menu is now the standalone /breaker/journey deep-link handler
   }
 }
