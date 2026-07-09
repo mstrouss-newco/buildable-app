@@ -146,8 +146,57 @@
     resolveAsset: function(){ return null; }   // the survival engine maps its own art keys (enemy_*, bgKey)
   };
 
+  // ===========================================================================
+  //  SLING profile (slingshot towers). Session 5B.
+  // ===========================================================================
+  // Named tower LAYOUTS own the geometry (blocks + targets); the manifest never
+  // stores raw coordinates (golden rule 2) — a level just NAMES a layout. The one
+  // tunable is difficulty 1-5, which DERIVES how many slings the kid gets; the
+  // floor keeps it at (targets + 2) so the sensible-aim bot always clears with a
+  // sling to spare. Art (which backdrop scene) is declared per level in `parts`.
+  var SLING_LAYOUTS = {
+    gate:   { blocks:[ {x:705,y:520,w:30,h:60},{x:775,y:520,w:30,h:60},{x:740,y:476,w:120,h:26} ],
+              targets:[ {x:740,y:445} ] },
+    tower:  { blocks:[ {x:690,y:520,w:32,h:60},{x:760,y:520,w:32,h:60},{x:725,y:476,w:110,h:26},{x:725,y:438,w:30,h:50} ],
+              targets:[ {x:725,y:395},{x:600,y:530} ] },
+    double: { blocks:[ {x:620,y:520,w:30,h:60},{x:620,y:474,w:64,h:24},{x:820,y:520,w:30,h:60},{x:820,y:474,w:64,h:24} ],
+              targets:[ {x:620,y:444},{x:820,y:444} ] },
+    keep:   { blocks:[ {x:660,y:520,w:30,h:60},{x:740,y:520,w:30,h:60},{x:700,y:476,w:130,h:26},{x:672,y:440,w:30,h:46},{x:728,y:440,w:30,h:46},{x:700,y:408,w:90,h:24} ],
+              targets:[ {x:700,y:378},{x:560,y:530},{x:840,y:530} ] },
+    grand:  { blocks:[ {x:700,y:520,w:34,h:60},{x:780,y:520,w:34,h:60},{x:740,y:476,w:128,h:26},{x:712,y:440,w:30,h:46},{x:768,y:440,w:30,h:46},{x:740,y:408,w:96,h:24},{x:740,y:376,w:30,h:42} ],
+              targets:[ {x:740,y:337},{x:600,y:530},{x:860,y:530} ] }
+  };
+  function slingLaunches(d, tCount){ d=clamp(d,1,5); return Math.max(3+d, tCount+2); }
+  var slingProfile = {
+    validateLevel: function(lv, at, errors){
+      if(!lv.layout || !SLING_LAYOUTS[lv.layout]) errors.push(at+" 'layout' must be one of "+Object.keys(SLING_LAYOUTS).join("/")+" (got "+lv.layout+")");
+      if(lv.parts!=null && typeof lv.parts!=="object") errors.push(at+" 'parts' must be an object");
+    },
+    toLevel: function(lv){
+      var d = clamp(lv.difficulty,1,5);
+      var geo = SLING_LAYOUTS[lv.layout] || SLING_LAYOUTS.gate;
+      var blocks  = geo.blocks.map(function(b){ return { x:b.x, y:b.y, w:b.w, h:b.h }; });
+      var targets = geo.targets.map(function(t){ return { x:t.x, y:t.y }; });
+      var parts = lv.parts || {};
+      return {
+        id: lv.id, name: lv.name, difficulty: d,
+        launches: slingLaunches(d, targets.length),   // engine tuning derived from difficulty 1-5
+        blocks: blocks, targets: targets,
+        bg: (parts.scene || null),                    // which backdrop scene (engine falls back if art missing)
+        coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
+        unlocked: !!lv.unlocked,
+        journeyBadge: lv.journeyBadge || null,
+        parts: parts
+      };
+    },
+    toConfig: function(m, levels){
+      return { id:m.id, name:m.name, color:m.color, world:"castle", levels:levels, _manifest:m };
+    },
+    resolveAsset: function(){ return null; }   // the sling engine maps its own art keys (scene/pals/targets)
+  };
+
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile };
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile };
   function profileFor(m){ var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
 
   // back-compat export (Breaker convention). Kept so anything importing
