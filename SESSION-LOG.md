@@ -1,5 +1,37 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Session 2B: Real URLs (Phase 2 shell v2)
+Breaker now has real, shareable, refresh-safe web addresses. Texting someone
+`buildablekids.com/breaker/journey` opens Breaker straight to its level picker; a refresh
+stays put and the browser Back button steps back through the screens. No gameplay changed —
+this is routing plumbing on top of the Session 2A manifest.
+- **Routes (all driven off the existing screens):** `/breaker` -> home + demo (showHub),
+  `/breaker/journey` -> level picker (showMenu), `/breaker/play/{levelId}` -> that level by its
+  manifest level id (e.g. `/breaker/play/coral-castle`), `/breaker/loadout` -> the customize / "Make
+  It Mine" look flow (a standalone loadout screen is Phase 3C; the link lands somewhere sensible now).
+- **Hosting decision (Vercel):** added rewrite routes in vercel.json so those paths serve
+  breaker-engine.html with the clean URL preserved, placed AFTER `/breaker/manifest.json` and BEFORE
+  the static `/breaker/(.*)` art route, so the jungle/ocean/space art folders still serve as files.
+  Vercel handles deep links natively (rewrite, not redirect) so refresh works with no SPA server.
+- **`<base href="/">` in breaker-engine.html:** the engine loads several scripts/images with relative
+  paths; at a deep URL like `/breaker/journey` those would 404. The base tag makes every relative
+  asset resolve from the site root. It's a no-op when the page is served at the root as before.
+- **Router in the engine (standalone-only):** `BK_ROUTE` turns on only when Breaker is the top window
+  at a `/breaker...` path. On load it reads the path and shows the matching screen — a `/play/{id}`
+  link waits for the manifest so level ids resolve (safety timeout + the manifest callbacks). Navigating
+  pushes the matching URL (dedup-guarded), and a popstate handler restores the screen on Back. Inside
+  the app picker (iframe) `BK_ROUTE` is false, so the existing embedded flow is untouched.
+- **Verified:** JS syntax check; pure routing logic (path -> screen, level-id round-trip for all 8
+  levels, unknown id falls back to level 1); a headless VM run of the real engine confirming BK_ROUTE
+  on standalone / off in an iframe, boot routing, pushState trail (journey->breaker->journey), and
+  popstate restoring the right level; and qa-breaker.mjs = MANIFEST PASS + all 8 levels win + pong +
+  render smoke = ALL CHECKS PASS.
+- **Left in the block:** none — 2B is complete. `/` intentionally left as the marketing landing
+  (picker stays at /app) per Mike. Standalone loadout screen + generalizing routes to all games are
+  later phases. Heads-up: SESSION-LOG.md has old unresolved git conflict markers from a 2026-07-02
+  entry (Hilltop Tanks vs Bubble Buddies) — untouched here, worth a cleanup.
+
+
 ## 2026-07-08 — Session 2A: Manifest plumbing (Phase 2 shell v2)
 Breaker is now the first manifest-driven game: the level list, layouts, difficulty and per-level art
 all come from a manifest file instead of the engine's internal GAME_CONFIG. No gameplay systems were
