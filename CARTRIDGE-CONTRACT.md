@@ -28,8 +28,20 @@ The shell treats every game as "a thing I embed at its entry URL." It never assu
 ## Not yet implemented (future vocabulary - no code behind these yet)
 `ready`, `loading` (with a percent), `score`, `levelComplete` (with stars earned), `needsCoins`, `setAudio`. These remain reserved names for when a game needs them; sound today goes through the `nav:sound` round trip instead of `setAudio`.
 
-## Wallet note
-Coins are not shell-owned yet. `buildable-wallet.js` currently runs inside each game page and reads/writes localStorage directly - the balance is shared across games only because they share an origin, not because the shell owns it. That's a real violation of the messages-only rule. Moving wallet state into the shell, so games only ever announce `coins` deltas as messages, is planned for **Session 3C**.
+## Wallet note (Session 3C: DONE)
+The shell now owns the wallet. `buildable-wallet.js` decides its role from where it
+is loaded: in the top window (the app shell, or a game opened standalone) it is the
+OWNER and reads/writes localStorage; inside a shell iframe it is an ANNOUNCER that
+never touches storage and only posts `coins` deltas up to the shell. The shell credits
+them (de-duping by the level key so replays can't farm) and broadcasts the new balance
+back down. Games no longer read or write shared storage from inside the iframe; they
+only announce, per the messages-only rule. The loadout spends in the shell, where the
+number lives.
+
+Messages used by the wallet:
+- game -> shell: `coins` `{ delta, key? }` (announce coins earned; `key` makes it award-once)
+- game -> shell: `walletHello` (a freshly-loaded game asking for the current balance)
+- shell -> game: `walletBalance` `{ balance }` (broadcast so a game's cached balance matches)
 
 ## The art rule (protects the editor)
 Cartridges MUST fetch their art at load time from the URLs the manifest resolves. Art is never baked into a game or a bundle. This is what makes drop-in art swapping in the editor work on every game, regardless of engine. Engine-built games load their textures from these URLs the same as canvas games do.
