@@ -94,7 +94,7 @@ function buildMathLocal(age, level) {
   }
   const distractors = [answer + 1, answer - 1, answer + 2, answer + 10].filter((n) => n >= 0);
   const { choices, correctIndex } = shuffleWithCorrect(answer, distractors);
-  return { type: "math", question, choices, correctIndex, local: true };
+  return { type: "math", question, choices, correctIndex, skill: useSub ? "subtraction-within-20" : "addition-within-20", local: true };
 }
 
 const SHAPE_SIDES = [
@@ -111,7 +111,7 @@ function buildGeometryLocal() {
   const question = `How many sides does a ${pick.name} have?`;
   const distractors = [pick.sides + 1, pick.sides - 1, pick.sides + 2, pick.sides + 3].filter((n) => n > 0);
   const { choices, correctIndex } = shuffleWithCorrect(pick.sides, distractors);
-  return { type: "geometry", question, choices, correctIndex, local: true };
+  return { type: "geometry", question, choices, correctIndex, skill: "shape-sides", local: true };
 }
 
 // Tiny offline word bank so spelling/reading still works if the model is down.
@@ -131,14 +131,14 @@ function buildSpellingLocal() {
     if (!distractors.includes(c)) distractors.push(c);
   }
   const { choices, correctIndex } = shuffleWithCorrect(missing, distractors);
-  return { type: "spelling", clue: `This word means: ${word}.`, word_template: template, choices, correctIndex, answer: word, local: true };
+  return { type: "spelling", clue: `This word means: ${word}.`, word_template: template, choices, correctIndex, answer: word, skill: "spelling-fill", local: true };
 }
 
 function buildReadingLocal() {
   const story = "Maya found a tiny blue bird in her garden.";
   const question = "Where did Maya find the bird?";
   const { choices, correctIndex } = shuffleWithCorrect("garden", ["school", "park", "store"]);
-  return { type: "reading", story, question, choices, correctIndex, local: true };
+  return { type: "reading", story, question, choices, correctIndex, skill: "reading-comprehension", local: true };
 }
 
 function localFallback(quizType, age, level) {
@@ -160,18 +160,76 @@ function buildReadingPrompt(age, level) {
   return `You are creating a short reading comprehension question for a child age ${age}, level ${level}. Do not use emoji or symbols. Return ONLY raw JSON: {"type":"reading","story":"Maya found a tiny blue bird in her garden.","question":"Where did Maya find the bird?","choices":["garden","school","park","store"],"correctIndex":0}`;
 }
 
+// ---------------- Curriculum-tagged question bank (Session 6B) ----------------
+// The bank is a REVIEWED pool: only status='approved' rows are ever served, and
+// AI-generated questions enter as status='pending' (the review gate). Serving
+// prefers a bank question that matches the kid's grade/subject/skill (adaptive:
+// the caller passes the kid's recently-missed skill), and only falls back to
+// on-the-fly generation when the bank has nothing suitable. See db/6b-question-bank.sql.
+const QUIZ_SUBJECT = { math: "math", geometry: "geometry", spelling: "spelling", reading: "reading" };
+
+function bankContentHash(payload) {
+  const basis = [payload.type, payload.question, payload.story, payload.clue, payload.word_template, (payload.choices || []).join("|")].join("~");
+  return crypto.createHash("sha256").update(basis).digest("hex").slice(0, 24);
+}
+
+// Pull ONE approved bank question, biased to `skill` when given (adaptive).
+async function fetchBankQuestion(url, key, { subject, grade, skill }) {
+  const headers = { apikey: key, Authorization: `Bearer ${key}` };
+  const base = `${url}/rest/v1/question_bank?status=eq.approved&subject=eq.${encodeURIComponent(subject)}&select=id,payload,grade,skill&limit=40`;
+  const gradeFilter = grade ? `&grade=eq.${encodeURIComponent(grade)}` : "";
+  async function tryUrl(u) {
+    try {
+      const r = await fetch(u, { headers });
+      if (!r.ok) return null;
+      const rows = await r.json();
+      return Array.isArray(rows) && rows.length ? rows : null;
+    } catch (e) { return null; }
+  }
+  // 1) skill + grade match (most adaptive), 2) grade match, 3) subject only.
+  let rows = null;
+  if (skill) rows = await tryUrl(base + gradeFilter + `&skill=eq.${encodeURIComponent(skill)}`);
+  if (!rows) rows = await tryUrl(base + gradeFilter);
+  if (!rows && grade) rows = await tryUrl(base);
+  if (!rows) return null;
+  const pick = rows[Math.floor(Math.random() * rows.length)];
+  const payload = pick.payload || null;
+  if (!payload) return null;
+  return { ...payload, source: "bank", questionId: pick.id };
+}
+
+// Write an AI-generated question into the bank as PENDING (review gate). Never
+// served until a grown-up approves it. De-duped on content_hash.
+async function insertBankPending(url, key, { grade, subject, skill, quiz_type, payload }) {
+  try {
+    await fetch(`${url}/rest/v1/question_bank`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates" },
+      body: JSON.stringify({ grade: grade || null, subject, skill: skill || null, quiz_type, payload, source: "ai", status: "pending", content_hash: bankContentHash(payload) }),
+    });
+  } catch (e) {}
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
-  const { age = 7, level = 1, gameType = "runner", quizType = "spelling" } = req.body || {};
+  const { age = 7, level = 1, gameType = "runner", quizType = "spelling", grade = null, skill = null } = req.body || {};
+  const subject = QUIZ_SUBJECT[quizType] || "math";
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  // Bank FIRST: an approved, curriculum-matched question (adaptive to the kid's
+  // recently-missed skill) beats on-the-fly generation. Silent fallback if none.
+  if (supabaseUrl && supabaseKey) {
+    const banked = await fetchBankQuestion(supabaseUrl, supabaseKey, { subject, grade, skill });
+    if (banked) return res.status(200).json(banked);
+  }
 
   // Math and geometry are deterministic-local: instant and never need the API.
   if (quizType === "math" || quizType === "geometry") {
     return res.status(200).json(localFallback(quizType, age, level));
   }
-
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
   // No model key -> safe local fallback instead of a dead end.
   if (!anthropicKey) return res.status(200).json(localFallback(quizType, age, level));
@@ -209,7 +267,14 @@ export default async function handler(req, res) {
     }
     // Defensively drop any legacy emoji field if a cached/old response carries one.
     if ("emoji" in payload) delete payload.emoji;
-    if (supabaseUrl && supabaseKey) await saveCache(supabaseUrl, supabaseKey, key, payload);
+    if (!payload.skill) payload.skill = quizType === "reading" ? "reading-comprehension" : "spelling-fill";
+    if (supabaseUrl && supabaseKey) {
+      await saveCache(supabaseUrl, supabaseKey, key, payload);
+      // Review gate: the fresh AI question ENTERS the bank as pending (never
+      // served from the bank until a grown-up approves it). The kid still gets
+      // this freshly-generated, safety-checked question right now.
+      await insertBankPending(supabaseUrl, supabaseKey, { grade, subject, skill: payload.skill, quiz_type: quizType, payload });
+    }
     return res.status(200).json(payload);
   } catch (e) {
     console.error("generate-quiz error:", e);

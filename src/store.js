@@ -709,6 +709,16 @@ async function loadReviewForScope() {
 
 // Add a missed question to the review queue (newest last). No-op unless Learning
 // Mode is on. De-duped by signature; capped at REVIEW_MAX (drops oldest).
+// Newest recently-missed skill (peek, no mutation) so fresh questions can be
+// biased toward it. Returns null when the review queue has no skill-tagged item.
+export function recentMissSkill() {
+  for (let i = reviewCache.length - 1; i >= 0; i--) {
+    const q = reviewCache[i];
+    if (q && typeof q.skill === "string") return q.skill;
+  }
+  return null;
+}
+
 export function recordMiss(question) {
   if (!learningCache.enabled || !question || typeof question !== "object") return;
   if (!Array.isArray(question.choices) || typeof question.correctIndex !== "number") return;

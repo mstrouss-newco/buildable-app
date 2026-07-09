@@ -14,7 +14,7 @@
 //   title    string  heading shown above the question (optional)
 // -------------------------------------------------------------
 import { useEffect, useRef, useState } from "react";
-import { recordAnswer, BADGES, getReviewItem, recordMiss, clearMiss, weakestSubject, getLearningSettings, effectiveLearning, topUpAward } from "./store";
+import { recordAnswer, BADGES, getReviewItem, recordMiss, clearMiss, weakestSubject, getLearningSettings, effectiveLearning, topUpAward, recentMissSkill } from "./store";
 
 // Map a learning goal to a concrete quizType for the API. "mix" alternates so a
 // child gets variety across moments.
@@ -34,6 +34,12 @@ function subjectToQuizType(s) {
   if (s === "spelling") return "spelling";
   if (s === "reading") return "reading";
   return "math";
+}
+
+// Active kid id (for per-kid learning-event logging). Read straight from the
+// same localStorage key the wallet/account layer uses; null when none.
+function activeKidId() {
+  try { return localStorage.getItem("bk_active_kid_v1") || null; } catch (e) { return null; }
 }
 
 export function questionText(q) {
@@ -112,7 +118,7 @@ export default function QuizGate({ age, goal = "math", onPass, gameType = "creat
       const r = await fetch("/api/generate-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ age: effectiveAge, level: levelRef.current, gameType, quizType }),
+        body: JSON.stringify({ age: effectiveAge, level: levelRef.current, gameType, quizType, grade: getLearningSettings().grade || null, skill: recentMissSkill() }),
       });
       const data = await r.json();
       if (!alive.current) return;
@@ -139,6 +145,28 @@ export default function QuizGate({ age, goal = "math", onPass, gameType = "creat
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Best-effort server log of this answer (skills dashboard over time, streaks,
+  // adaptive recent-misses, weekly digest). Never blocks or throws on the client.
+  function logAnswer(subject, correct) {
+    try {
+      fetch("/api/log-learning-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kidProfileId: activeKidId(),
+          subject,
+          skill: (q && q.skill) || null,
+          grade: getLearningSettings().grade || null,
+          quizType: (q && q.type) || null,
+          correct,
+          questionId: (q && q.questionId) || null,
+          game: gameType,
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
   function choose(i) {
     if (!q || picked === q.correctIndex) return;
     setPicked(i);
@@ -146,6 +174,7 @@ export default function QuizGate({ age, goal = "math", onPass, gameType = "creat
     if (i === q.correctIndex) {
       levelRef.current = Math.min(10, levelRef.current + 1); // adapt up for next time
       const newly = recordAnswer({ subject, correct: true }); // no-op unless Learning Mode on
+      logAnswer(subject, true);
       clearMiss(q); // mastered — remove from the review queue
       // Session 6B: practicing earns coins. Every 3rd correct = 10 coins, when
       // the parent's "Earn coins by practicing" toggle is on. awardOnce keeps it
@@ -172,6 +201,7 @@ export default function QuizGate({ age, goal = "math", onPass, gameType = "creat
     } else {
       levelRef.current = Math.max(1, levelRef.current - 1); // ease down
       recordAnswer({ subject, correct: false }); // no-op unless Learning Mode on
+      logAnswer(subject, false);
       recordMiss(q); // queue it to practice again later
       setWrong(true);
     }
