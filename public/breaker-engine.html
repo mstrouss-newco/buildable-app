@@ -155,6 +155,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-manifest.js?v=1"></script>
 <script src="buildable-wallet.js?v=1"></script>
 <script src="buildable-buddy.js?v=1"></script>
+<script src="buildable-wincard.js?v=1"></script>
+<script src="buildable-feel.js?v=1"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -195,13 +197,15 @@ const BR=(typeof window!=="undefined"&&window.BuildableRenders)||(typeof globalT
 const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThis!=="undefined"&&globalThis.BuildableAudio);
 const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
 const BS=(typeof window!=="undefined"&&window.BuildableStartScreen)||(typeof globalThis!=="undefined"&&globalThis.BuildableStartScreen);
-function sfx(n,o){ if(BA)BA.sfx(n,o); }
+const FEEL=(typeof window!=="undefined"&&window.BuildableFeel)||(typeof globalThis!=="undefined"&&globalThis.BuildableFeel);
+function sfx(n,o){ if(FEEL)FEEL.sfx(n,o); else if(BA)BA.sfx(n,o); }
 function mkImg(src){ const im=(typeof Image!=="undefined")?new Image():{}; try{ im.crossOrigin="anonymous"; }catch(e){} if(src&&"src" in im){ if(/\.webp(\?|$)/i.test(src)){ let st=0; im.onerror=function(){ if(st===0){st=1; im.src=src.replace(/\.webp/i,".png");} else if(st===1){st=2; im.src=src.replace(/\.webp/i,".jpg");} }; } im.src=src; } return im; }
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
 // shared FX bag (BM). Fallback object keeps the engine working if BM is missing.
 let fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" };
-function resetFx(){ fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" }; anims=[]; fireTrail=[]; }
+if(FEEL)FEEL.setFx(fx);
+function resetFx(){ fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" }; if(FEEL)FEEL.setFx(fx); anims=[]; fireTrail=[]; }
 
 // ---- sprite FX: animated explosion flipbooks + a living fireball (Kenney CC0 /fx) ----
 const FXI={};
@@ -338,6 +342,8 @@ function applyManifest(cfg, raw){
   // Session 3C: the shared HUD (the one HUD system) is tinted by the manifest's
   // signature color, so the info bar matches the game with no per-game HUD styling.
   try{ if(window.BuildableHUD && BuildableHUD.setAccent && raw && raw.color) BuildableHUD.setAccent(raw.color); }catch(e){}
+  // Session 3D: the Feel Kit takes the game's accent (win-card border) + feel presets from the manifest.
+  try{ if(FEEL) FEEL.configure({ accent: raw && raw.color, feel: raw && raw.feel }); }catch(e){}
   // register each level's art pack from its manifest asset IDs (never hardcoded)
   cfg.levels.forEach(function(l){
     if(l.theme && l.art){
@@ -672,7 +678,7 @@ function updateSolo(){
     if(cap.x0==null)cap.x0=cap.x; cap.x=clamp(cap.x0+Math.sin(cap.t*0.13)*10,16,W-16);        // playful side-to-side wobble
     if(BM && cap.t%2===0) BM.burst(fx.parts,cap.x,cap.y-9,cap.col,1,{spd:[10,45],life:[0.25,0.5],r:3});  // sparkle trail
     if(cap.y>PAD_Y-PAD_H/2-10 && cap.y<PAD_Y+PAD_H && cap.x>padL-12 && cap.x<padR+12){ cap.got=true; const p=POWERS[cap.id];
-      if(p){ p.apply(G); sfx("levelup"); if(BM){ BM.explode(fx,cap.x,cap.y,cap.col,{n:22,pop:p.name,popCol:"#fff",shake:0.24,flash:0.16}); BM.burst(fx.parts,cap.x,cap.y,"#ffffff",10,{tex:"star",additive:true,spd:[60,220],life:[0.3,0.6],r:6}); } } } }
+      if(p){ p.apply(G); if(FEEL){ FEEL.explode(cap.x,cap.y,cap.col,{pop:p.name,sound:"levelup",shake:0.24,flash:0.16}); } else { sfx("levelup"); if(BM)BM.explode(fx,cap.x,cap.y,cap.col,{n:22,pop:p.name,popCol:"#fff",shake:0.24,flash:0.16}); } if(BM)BM.burst(fx.parts,cap.x,cap.y,"#ffffff",10,{tex:"star",additive:true,spd:[60,220],life:[0.3,0.6],r:6}); } } }
   G.caps=G.caps.filter(cap=>!cap.got && cap.y<H+20);
 
   if(!G.bricks.some(b=>b.alive)){ winLevel(); }
@@ -682,7 +688,7 @@ function updateSolo(){
 // already false before we splash, so a bomb can trigger a neighbouring bomb once).
 function bombSplash(cx,cy){ const R=78;
   spawnBoom(cx,cy,120);
-  if(BM){ BM.explode(fx,cx,cy,"#ff6b6b",{n:20,pop:"BOOM",popCol:"#fff",shake:0.4,flash:0.14,sfx:()=>sfx("boom")}); }
+  if(FEEL){ FEEL.explode(cx,cy,"#ff6b6b",{n:20,pop:"BOOM",sound:"boom",shake:0.4,flash:0.14}); } else if(BM){ BM.explode(fx,cx,cy,"#ff6b6b",{n:20,pop:"BOOM",popCol:"#fff",shake:0.4,flash:0.14,sfx:()=>sfx("boom")}); }
   for(const nb of G.bricks){ if(!nb.alive)continue;
     const nx=nb.x+nb.w/2, ny=nb.y+nb.h/2; if((nx-cx)*(nx-cx)+(ny-cy)*(ny-cy) <= R*R){ damageBrick(nb,nx,ny,99); } }
 }
@@ -693,7 +699,8 @@ function damageBrick(br,hx,hy,dmg){ br.hp-=dmg; const cx=br.x+br.w/2, cy=br.y+br
     if(G.shatters && activeTheme()){ G.shatters.push({ x:br.x, y:br.y, w:br.w, h:br.h, variant:br.variant||0, t:0 }); }
     const bonus = br.type==="candy" ? 40 : 10; G.score+=bonus;
     if(br.maxHp>=2||br.power||br.type==="candy"||br.type==="star") spawnBoom(cx,cy,Math.max(br.w,br.h)*1.6);
-    if(BM){ if(br.maxHp>=2||br.power||br.type==="candy") BM.explode(fx,cx,cy,br.col,{n:14,pop:"+"+bonus,popCol:"#fff",shake:0.2,flash:0.08,sfx:()=>sfx("boom")});
+    if(FEEL){ if(br.maxHp>=2||br.power||br.type==="candy") FEEL.explode(cx,cy,br.col,{n:14,pop:"+"+bonus,sound:"boom",shake:0.2,flash:0.08}); else FEEL.coinBurst(cx,cy,bonus,{color:br.col}); }
+    else if(BM){ if(br.maxHp>=2||br.power||br.type==="candy") BM.explode(fx,cx,cy,br.col,{n:14,pop:"+"+bonus,popCol:"#fff",shake:0.2,flash:0.08,sfx:()=>sfx("boom")});
             else { BM.burst(fx.parts,cx,cy,br.col,7); BM.pop(fx.pops,cx,cy,"+"+bonus,"#ffffff"); sfx("coin",{tier:1}); } }
     else sfx("coin",{tier:br.maxHp>=2?2:1});
     if(br.power){ G.caps.push({x:cx,y:cy,id:br.power,col:(POWERS[br.power]||{}).col||"#fff",got:false}); }
@@ -712,13 +719,13 @@ function hitBricks(b){ const fire=G.fireT>0;
     break;
   }
 }
-function loseLife(){ G.lives--; G.lostLives++; if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ff4444",0.3); } sfx("hurt");
+function loseLife(){ G.lives--; G.lostLives++; if(FEEL){ FEEL.miss(); } else { if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ff4444",0.3); } sfx("hurt"); }
   if(G.lives<=0){ if(DEMO){ clearTimeout(demoStart._t); demoStart._t=setTimeout(demoStart,1100); state="title"; return; } state="lose"; sfx("lose"); if(bkBuddyOn() && window.BB) BB.lose(); return; }
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, G.speed) ]; G.onPaddle=true; G.stuck=null; started=false; }
 function winLevel(){ if(DEMO){ clearTimeout(demoStart._t); demoStart._t=setTimeout(demoStart,1600); state="title"; return; }
-  state="win"; sfx("win");
+  state="win";
   if(G&&G.custom){ if(CUSTOM)CUSTOM.cleared=true;
-    if(BM){ for(let i=0;i<3;i++) BM.burst(fx.parts, W*(0.3+0.2*i), H*0.4, GAME_CONFIG.brickColors[i*2], 22, {gravity:18,spd:[2,6],life:[0.7,1.4]}); BM.flash(fx,"#ffffff",0.2); }
+    if(FEEL)FEEL.celebrate(W,H); else if(BM){ for(let i=0;i<3;i++) BM.burst(fx.parts, W*(0.3+0.2*i), H*0.4, GAME_CONFIG.brickColors[i*2], 22, {gravity:18,spd:[2,6],life:[0.7,1.4]}); BM.flash(fx,"#ffffff",0.2); }
     return; }
   PREFS.totalWins++;
   const earned = G.lostLives<=0?3 : (G.lostLives===1?2:1);
@@ -731,7 +738,7 @@ function winLevel(){ if(DEMO){ clearTimeout(demoStart._t); demoStart._t=setTimeo
   var _lvl=GAME_CONFIG.levels[level];
   if(bkCoinsOn() && window.BuildableWallet && _lvl){ var _amt=(_lvl.coins!=null?_lvl.coins:0); if(_amt>0) BuildableWallet.awardOnce("breaker:"+(_lvl.id||level), _amt); }
   if(bkBuddyOn() && window.BB){ if(level<GAME_CONFIG.levels.length-1) BB.levelup(); else BB.win(); }
-  if(BM){ for(let i=0;i<3;i++) BM.burst(fx.parts, W*(0.3+0.2*i), H*0.4, GAME_CONFIG.brickColors[i*2], 22, {gravity:18,spd:[2,6],life:[0.7,1.4]}); BM.flash(fx,"#ffffff",0.2); } }
+  if(FEEL)FEEL.celebrate(W,H); else if(BM){ for(let i=0;i<3;i++) BM.burst(fx.parts, W*(0.3+0.2*i), H*0.4, GAME_CONFIG.brickColors[i*2], 22, {gravity:18,spd:[2,6],life:[0.7,1.4]}); BM.flash(fx,"#ffffff",0.2); } }
 
 function updatePong(){
   const b=G.ball; if(!b)return;
@@ -852,13 +859,11 @@ function drawPaddleAt(px,py,col){
   ctx.shadowBlur=0; ctx.lineWidth=2.5; ctx.strokeStyle="rgba(20,22,45,.5)"; rrect(x,py-PAD_H/2,G.padW,PAD_H,9); ctx.stroke();
   ctx.restore(); }
 function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt; r=clamp(r,0,255);g=clamp(g,0,255);b=clamp(b,0,255); return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
-function banner(t,s){ ctx.fillStyle="rgba(10,12,40,.66)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 48px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-6); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+36); }
-// a 5-point star (filled gold when earned, dim outline when not)
-function star5(cx,cy,r,filled){ ctx.beginPath();
-  for(let i=0;i<10;i++){ const ang=-Math.PI/2+i*Math.PI/5, rad=(i%2===0)?r:r*0.45; const x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
-  ctx.closePath(); if(filled){ ctx.fillStyle="#ffd54a"; ctx.fill(); ctx.strokeStyle="#caa42a"; ctx.lineWidth=2; ctx.stroke(); } else { ctx.fillStyle="rgba(255,255,255,.12)"; ctx.fill(); ctx.strokeStyle="rgba(255,255,255,.35)"; ctx.lineWidth=2; ctx.stroke(); } }
-function drawEarnedStars(earned){ const r=26, gap=72, y=H/2-86; const xs=[W/2-gap,W/2,W/2+gap];
-  for(let i=0;i<3;i++){ star5(xs[i], y, r, i<earned); } }
+// End-of-round card: the ONE shared floating win/try-again card, drawn by the Feel
+// Kit (buildable-feel.js -> buildable-wincard.js). No full-screen dim and no stars
+// painted here — feel is platform law (see GAME-FEEL.md), identical across games.
+function bkAccent(){ try{ return (window.BUILDABLE_MANIFEST&&window.BUILDABLE_MANIFEST.color)||"#FF6B6B"; }catch(e){ return "#FF6B6B"; } }
+function endCard(title,sub){ if(FEEL&&FEEL.winCard) FEEL.winCard(ctx,W,H,[{t:title,s:34,w:800,c:"#ffffff"},{t:sub,s:18,w:600,c:"#cfd3ff"}],{accent:bkAccent()}); }
 
 // --- Tutorial "demo hand": now uses the shared 3D hand (BR.hand) so every game
 //     stays in sync. topY = where the fingertip should touch (paddle bottom). ---
@@ -915,10 +920,10 @@ function draw(){ if(!G){ return; }
     if(BR && BR.hand) BR.hand(ctx, G.padX, PAD_Y+4, 0.9);  // sits on the paddle, points up (fits above the bottom edge)
     ctx.restore();
   }
-  if(state==="win" && G.custom){ banner("You beat it!", "Tap to share your level"); }
-  else if(state==="win" && G.mode==="two"){ banner("Player "+G.winner+" wins!", "Tap for the menu"); }
-  else if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); drawEarnedStars(PREFS.stars[level]||0); }
-  if(state==="lose"){ banner("Out of lives!","Tap to try again"); }
+  if(state==="win" && G.custom){ endCard("You beat it!", "Tap to share your level"); }
+  else if(state==="win" && G.mode==="two"){ endCard("Player "+G.winner+" wins!", "Tap for the menu"); }
+  else if(state==="win"){ endCard(level<GAME_CONFIG.levels.length-1?"Level Clear!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked - tap to go on":"Tap to finish"); }
+  if(state==="lose"){ endCard("Nice try!","Tap to play again"); }
   if(hud){ hud[(state==="play" && G.mode!=="two") ? "show" : "hide"](); }
 }
 // ---- themed sprite drawing (campaign levels) ----
@@ -1329,7 +1334,10 @@ function wireMenus(){ const bkm=el("mkBack"); if(bkm)bkm.onclick=mkGoBack; const
 function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
 // bespoke created sounds (ElevenLabs via /api/sfx) — synth stays as a silent fallback.
 // Reuses tennis's paddle-game one-shots; adds Breaker-specific brick sounds.
-if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
+if(FEEL){ FEEL.configure({ sfxBase:"/api/sfx?s=", sfxMap:{
+  shoot:"tennis_hit", select:"tennis_wall", coin:"breaker_smash", boom:"breaker_break",
+  levelup:"breaker_power", hurt:"breaker_miss", point:"tennis_point", win:"tennis_win", lose:"tennis_lose" } }); }
+else if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   shoot:"tennis_hit", select:"tennis_wall", coin:"breaker_smash", boom:"breaker_break",
   levelup:"breaker_power", hurt:"breaker_miss", point:"tennis_point", win:"tennis_win", lose:"tennis_lose" } }); }
 // ============================================================================
