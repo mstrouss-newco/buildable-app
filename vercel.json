@@ -22,6 +22,14 @@
       "dest": "/asset-library.html"
     },
     {
+      "src": "/partner.html",
+      "dest": "/partner.html"
+    },
+    {
+      "src": "/partner",
+      "dest": "/partner.html"
+    },
+    {
       "src": "/app/assets/(.*)",
       "dest": "/assets/$1"
     },
