@@ -288,6 +288,13 @@
       }
     },
     {
+      "src": "/tictactoe/manifest.json",
+      "dest": "/tictactoe/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
       "src": "/breaker",
       "dest": "/breaker-engine.html"
     },

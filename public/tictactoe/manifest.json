@@ -1,0 +1,13 @@
+{
+  "id": "tictactoe",
+  "name": "Tic-Tac-Toe",
+  "type": "game",
+  "category": "Board",
+  "color": "#5B8CFF",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+  "features": {
+    "multiplayer": "turn-based"
+  },
+  "note": "Session 6A wires ONLY the multiplayer switch: features.multiplayer -> the existing turn-based poll-a-row lane (see MULTIPLAYER.md). Levels/journey/loadout/art are added when Tic-Tac-Toe fully converts to the level system in Phase 7; the shell reads only features.multiplayer here."
+}
