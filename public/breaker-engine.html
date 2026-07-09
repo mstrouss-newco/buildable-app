@@ -150,7 +150,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
-<script src="buildable-hud.js?v=3"></script>
+<script src="buildable-hud.js?v=4"></script>
 <script src="buildable-gamenav.js?v=1"></script>
 <script src="buildable-manifest.js?v=1"></script>
 <script src="buildable-wallet.js?v=1"></script>
@@ -335,6 +335,9 @@ loadLibrary();
 function applyManifest(cfg, raw){
   if(!cfg || !Array.isArray(cfg.levels) || !cfg.levels.length) return;
   try{ window.BUILDABLE_MANIFEST = raw; }catch(e){}
+  // Session 3C: the shared HUD (the one HUD system) is tinted by the manifest's
+  // signature color, so the info bar matches the game with no per-game HUD styling.
+  try{ if(window.BuildableHUD && BuildableHUD.setAccent && raw && raw.color) BuildableHUD.setAccent(raw.color); }catch(e){}
   // register each level's art pack from its manifest asset IDs (never hardcoded)
   cfg.levels.forEach(function(l){
     if(l.theme && l.art){

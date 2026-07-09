@@ -28,6 +28,8 @@
 '  --hud-text:   #ffffff;/* text color inside the panels */',
 '  --hud-gap:    10px;   /* space between the little panels */',
 '  --hud-font:   \'Baloo 2\', system-ui, sans-serif; /* the HUD text font */',
+'  --hud-accent:      #ffffff;               /* the game\'s signature color (set from its manifest) */',
+'  --hud-accent-soft: rgba(255,255,255,0.18);/* accent tint for the chip outline; default = neutral */',
 '}',
 '.hud{position:absolute;top:18px;left:20px;right:20px;display:flex;',
 '  justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}',
@@ -35,7 +37,7 @@
 '.hud-chip{display:inline-flex;align-items:center;gap:12px;color:var(--hud-text);',
 '  font-family:var(--hud-font);white-space:nowrap;',   /* keep each chip on ONE line so it never grows tall onto the play area */
 '  font-weight:700;font-size:15px;line-height:1;padding:9px 16px;border-radius:var(--hud-radius);',
-'  background:rgba(8,10,20,var(--hud-dark));border:1px solid rgba(255,255,255,0.18);',
+'  background:rgba(8,10,20,var(--hud-dark));border:1px solid var(--hud-accent-soft);',
 '  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);',
 '  box-shadow:0 3px 12px rgba(0,0,0,0.3);text-shadow:0 1px 3px rgba(0,0,0,0.5);}',
 '.hud-chip .hud-soft{font-weight:600;opacity:0.92;}',
@@ -104,8 +106,28 @@
     return '<div class="hud-group">' + list.map(chipHTML).join('') + '</div>';
   }
 
+  // turn a #rrggbb (or #rgb) into an rgba() string at the given alpha
+  function hexToRgba(hex, a) {
+    if (typeof hex !== 'string') return 'rgba(255,255,255,' + a + ')';
+    var h = hex.trim().replace('#', '');
+    if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    if (h.length !== 6) return 'rgba(255,255,255,' + a + ')';
+    var n = parseInt(h, 16); if (isNaN(n)) return 'rgba(255,255,255,' + a + ')';
+    return 'rgba(' + ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255) + ',' + a + ')';
+  }
+
   var BuildableHUD = {
-    version: '1.0.0',
+    version: '1.1.0',
+    // Tint the whole HUD with the game's signature color (from its manifest `color`).
+    // ONE call restyles every chip's outline; falls back to neutral if never called.
+    setAccent: function (color) {
+      injectStyle();
+      try {
+        var r = g.document.documentElement;
+        r.style.setProperty('--hud-accent', color);
+        r.style.setProperty('--hud-accent-soft', hexToRgba(color, 0.55));
+      } catch (e) {}
+    },
     // attach an overlay to `canvas`; returns { set, show, hide, destroy }
     mount: function (canvas) {
       injectStyle();

@@ -54,6 +54,15 @@ controls (which already sit clear of the top-left Home) instead.
 
 ## Rule 2 — Use the shared HUD, which auto-clears the nav
 
+**Session 3C decision — there is ONE HUD.** `buildable-hud.js` is the single, shell-
+owned HUD system for every converted game. The competing idea of a per-game HUD
+stylesheet ("game-hud.css") is retired: converted games do not ship their own HUD
+CSS or paint a canvas HUD. The one HUD is tinted per game by the manifest's
+signature `color` via `BuildableHUD.setAccent(color)` (the engine calls it when the
+manifest loads), so the info bar matches each game with zero per-game styling.
+Breaker runs on this one HUD with no HUD code of its own.
+
+
 The score/lives bar comes from `buildable-hud.js`. It insets itself in-app
 (`.hud-inshell → left:96px; right:64px`) so the chips never sit under the shell's
 Home (left) or Sound/Menu/Help (right). If a game paints its HUD straight onto the
