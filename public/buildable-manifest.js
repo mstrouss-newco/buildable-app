@@ -4,6 +4,11 @@
 //  manifest to build every screen around it; the engine reads it for its levels,
 //  layouts, difficulty and art. Games never hardcode art or difficulty.
 //
+//  Per-game details (how a level's layout/parts read, how difficulty 1-5 becomes
+//  engine tuning) live in a small PROFILE, keyed by the manifest's id (or an
+//  explicit `levelProfile`). Breaker was the first; Session 5A adds Survival.
+//  Adding a game = adding a profile here, never special-casing the loader.
+//
 //  Works in the browser (fetch) AND headless (Node/VM, no fetch) so the QA robot
 //  can validate the same file and play the manifest's levels.
 //  Exposes window.BuildableManifest = { validate, resolveAsset, toEngineConfig, load }.
@@ -12,6 +17,11 @@
   "use strict";
   function clamp(v,a,b){ v=+v; if(isNaN(v))v=a; return Math.max(a,Math.min(b,v)); }
 
+  var COIN_BY_DIFF = { 1:10, 2:15, 3:20, 4:25, 5:30 };
+
+  // ===========================================================================
+  //  BREAKER profile (brick layouts). Unchanged behaviour from Sessions 2A-4A.
+  // ===========================================================================
   // Layout templates own geometry (cols/rows/pattern). Same table the engine uses,
   // so "layout" in the manifest == the engine's pattern + board size. One template,
   // one size — no raw cols/rows knobs live in the manifest (manifest golden rule 2).
@@ -25,77 +35,41 @@
     diamond: { cols:11, rows:7, pattern:"diamond" }
   };
   var DEFAULT_BRICK_COLORS = ["#ff7aa8","#ffb04d","#ffd86b","#7ee0a0","#62d0ff","#9b7bff","#ff8fce"];
-  var COIN_BY_DIFF  = { 1:10, 2:15, 3:20, 4:25, 5:30 };
-  var THEME_FALL    = { jungle:"#2f6d3a", space:"#1b1650", ocean:"#1a6fa0" };
+  var THEME_FALL = { jungle:"#2f6d3a", space:"#1b1650", ocean:"#1a6fa0" };
 
-  // ---- asset library ID -> URL (Breaker convention for now) -----------------
-  // e.g. "breaker/bg/jungle-v1" -> "/breaker/jungle/bg.webp". Unknown IDs return
-  // null so the engine can fall back to its built-in art rather than 404.
-  function resolveAsset(id){
+  // asset library ID -> URL (Breaker convention). e.g. "breaker/bg/jungle-v1"
+  // -> "/breaker/jungle/bg.webp". Unknown IDs return null so the engine can fall
+  // back to its built-in art rather than 404.
+  function breakerResolveAsset(id){
     if(!id || typeof id!=="string") return null;
     var m = /^breaker\/(bg|bricks|balls|paddle|shatter)\/([a-z0-9]+)-v\d+$/.exec(id);
     if(m){ return "/breaker/"+m[2]+"/"+m[1]+".webp"; }
-    return null;   // badges, hero, shared/* etc. are wired by later sessions
+    return null;
   }
-
   function themeFromParts(parts){
     parts = parts||{};
     var src = parts.background || parts.bricks || "";
     var m = /^breaker\/(?:bg|bricks)\/([a-z0-9]+)-v\d+$/.exec(src);
     return (m && m[1]) ? m[1] : "jungle";
   }
-
-  // resolved art pack for one level, built from its part asset IDs
   function resolvePack(parts, theme){
     parts = parts||{};
     return {
-      bg:      resolveAsset(parts.background) || ("/breaker/"+theme+"/bg.webp"),
-      bricks:  resolveAsset(parts.bricks)     || ("/breaker/"+theme+"/bricks.webp"),
-      balls:   resolveAsset(parts.balls)      || ("/breaker/"+theme+"/balls.webp"),
-      paddle:  resolveAsset(parts.paddle)     || ("/breaker/"+theme+"/paddle.webp"),
+      bg:      breakerResolveAsset(parts.background) || ("/breaker/"+theme+"/bg.webp"),
+      bricks:  breakerResolveAsset(parts.bricks)     || ("/breaker/"+theme+"/bricks.webp"),
+      balls:   breakerResolveAsset(parts.balls)      || ("/breaker/"+theme+"/balls.webp"),
+      paddle:  breakerResolveAsset(parts.paddle)     || ("/breaker/"+theme+"/paddle.webp"),
       shatter: "/breaker/"+theme+"/shatter.webp",
       fall:    THEME_FALL[theme] || "#2f6d3a"
     };
   }
-
-  // ---- validation -----------------------------------------------------------
-  // Returns { ok, errors:[...], warnings:[...] }. Errors block the manifest from
-  // being applied (engine keeps its built-in levels); warnings just log.
-  function validate(m){
-    var errors=[], warnings=[];
-    if(!m || typeof m!=="object"){ return { ok:false, errors:["manifest is not an object"], warnings:warnings }; }
-    if(!m.id || typeof m.id!=="string")   errors.push("missing string 'id'");
-    if(!m.name || typeof m.name!=="string") errors.push("missing string 'name'");
-    if(m.type!=="game" && m.type!=="studio") errors.push("'type' must be 'game' or 'studio'");
-    if(m.shellVersion!==2) warnings.push("shellVersion is not 2 (got "+m.shellVersion+")");
-
-    if(m.type==="game"){
-      if(!Array.isArray(m.levels) || !m.levels.length){ errors.push("'levels' must be a non-empty array"); }
-      else {
-        var seen={};
-        m.levels.forEach(function(lv,i){
-          var at="levels["+i+"]";
-          if(!lv || typeof lv!=="object"){ errors.push(at+" is not an object"); return; }
-          if(!lv.id || typeof lv.id!=="string") errors.push(at+" missing string 'id'");
-          else if(seen[lv.id]) errors.push(at+" duplicate id '"+lv.id+"'"); else seen[lv.id]=1;
-          if(!lv.name || typeof lv.name!=="string") errors.push(at+" missing string 'name'");
-          if(!lv.layout || !TPL[lv.layout]) errors.push(at+" 'layout' must be one of "+Object.keys(TPL).join("/")+" (got "+lv.layout+")");
-          var d=lv.difficulty;
-          if(typeof d!=="number" || d<1 || d>5 || (d|0)!==d) errors.push(at+" 'difficulty' must be an integer 1-5 (got "+d+")");
-          if(!lv.parts || typeof lv.parts!=="object") errors.push(at+" missing 'parts' object");
-          else if(!lv.parts.bricks) errors.push(at+" parts.bricks is required");
-        });
-      }
-    }
-    if(m.customization && !Array.isArray(m.customization)) errors.push("'customization' must be an array");
-    return { ok: errors.length===0, errors: errors, warnings: warnings };
-  }
-
-  // ---- manifest -> engine config (pure; browser + Node safe) ----------------
-  // Produces the shape breaker-engine.html consumes: levels with cols/rows/pattern,
-  // difficulty translated to tough+speed, theme + resolved art pack.
-  function toEngineConfig(m){
-    var levels = (m.levels||[]).map(function(lv){
+  var breakerProfile = {
+    validateLevel: function(lv, at, errors){
+      if(!lv.layout || !TPL[lv.layout]) errors.push(at+" 'layout' must be one of "+Object.keys(TPL).join("/")+" (got "+lv.layout+")");
+      if(!lv.parts || typeof lv.parts!=="object") errors.push(at+" missing 'parts' object");
+      else if(!lv.parts.bricks) errors.push(at+" parts.bricks is required");
+    },
+    toLevel: function(lv){
       var t = TPL[lv.layout] || TPL.full;
       var d = clamp(lv.difficulty,1,5);
       var theme = themeFromParts(lv.parts);
@@ -112,8 +86,116 @@
         parts: lv.parts || null,
         art: resolvePack(lv.parts, theme)
       };
-    });
-    return { id:m.id, name:m.name, levels:levels, brickColors:DEFAULT_BRICK_COLORS.slice(), _manifest:m };
+    },
+    toConfig: function(m, levels){
+      return { id:m.id, name:m.name, levels:levels, brickColors:DEFAULT_BRICK_COLORS.slice(), _manifest:m };
+    },
+    resolveAsset: breakerResolveAsset
+  };
+
+  // ===========================================================================
+  //  SURVIVAL profile (survivor "recipes"). Session 5A.
+  // ===========================================================================
+  // Difficulty 1-5 is the ONLY tunable knob; the engine tuning (survive duration,
+  // spawn cadence, enemy speed/hp, boss stats) is DERIVED here — no raw numbers
+  // live in the manifest (golden rule 2). Art/content (which foes, which boss,
+  // which sky) is declared per level in `parts`. The curve is calibrated to sit
+  // at or under the pre-5A hand-tuned values (proven winnable), trending slightly
+  // easier so the QA robot stays green.
+  function survTune(d){
+    d = clamp(d,1,5);
+    return {
+      dur:        22 + d*6,                       // d1..d5 = 28,34,40,46,52 s
+      spawnEvery: 48 - d*3,                       // slower spawns as d rises stays fair
+      maxAlive:   6 + d*2,                        // 8,10,12,14,16
+      eSpeed:     +(1.20 + d*0.11).toFixed(2),    // kept under the hero's speed so kiting always works
+      eHp:        Math.min(5, 1 + d),             // 2,3,4,5,5
+      eDmg:       1,
+      boss:       { hp: 8 + d*18, spd: +(1.00 + d*0.06).toFixed(2), dmg: 1 }
+    };
+  }
+  var survivalProfile = {
+    validateLevel: function(lv, at, errors){
+      if(!lv.parts || typeof lv.parts!=="object"){ errors.push(at+" missing 'parts' object"); return; }
+      if(!Array.isArray(lv.parts.foes) || !lv.parts.foes.length) errors.push(at+" parts.foes must be a non-empty array");
+      if(!lv.parts.boss || typeof lv.parts.boss!=="string") errors.push(at+" parts.boss is required");
+    },
+    toLevel: function(lv){
+      var d = clamp(lv.difficulty,1,5);
+      var t = survTune(d);
+      var parts = lv.parts || {};
+      return {
+        id: lv.id, name: lv.name, difficulty: d,
+        dur: t.dur, spawnEvery: t.spawnEvery, maxAlive: t.maxAlive,
+        eSpeed: t.eSpeed, eHp: t.eHp, eDmg: t.eDmg,
+        colors: (Array.isArray(lv.colors) && lv.colors.length) ? lv.colors : ["#8fd0ff","#7ee0a0","#ff9ec4"],
+        foes: parts.foes || [],
+        boss: t.boss,
+        bossKey: parts.boss || "enemy_rock",
+        bossName: lv.bossName || "Boss",
+        bgKey: (parts.bgKey != null ? parts.bgKey : 1),
+        coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
+        unlocked: !!lv.unlocked,
+        journeyBadge: lv.journeyBadge || null,
+        parts: parts
+      };
+    },
+    toConfig: function(m, levels){
+      return { id:m.id, name:m.name, color:m.color, levels:levels, _manifest:m };
+    },
+    resolveAsset: function(){ return null; }   // the survival engine maps its own art keys (enemy_*, bgKey)
+  };
+
+  // ---- profile registry -----------------------------------------------------
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile };
+  function profileFor(m){ var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
+
+  // back-compat export (Breaker convention). Kept so anything importing
+  // resolveAsset keeps resolving Breaker asset IDs exactly as before.
+  function resolveAsset(id){ return breakerResolveAsset(id); }
+
+  // ---- validation -----------------------------------------------------------
+  // Returns { ok, errors:[...], warnings:[...] }. Errors block the manifest from
+  // being applied (engine keeps its built-in levels); warnings just log. The
+  // universal fields are checked here; per-game level fields are checked by the
+  // active profile so each game type validates its own level shape.
+  function validate(m){
+    var errors=[], warnings=[];
+    if(!m || typeof m!=="object"){ return { ok:false, errors:["manifest is not an object"], warnings:warnings }; }
+    if(!m.id || typeof m.id!=="string")   errors.push("missing string 'id'");
+    if(!m.name || typeof m.name!=="string") errors.push("missing string 'name'");
+    if(m.type!=="game" && m.type!=="studio") errors.push("'type' must be 'game' or 'studio'");
+    if(m.shellVersion!==2) warnings.push("shellVersion is not 2 (got "+m.shellVersion+")");
+    var prof = profileFor(m);
+
+    if(m.type==="game"){
+      if(!Array.isArray(m.levels) || !m.levels.length){ errors.push("'levels' must be a non-empty array"); }
+      else {
+        var seen={};
+        m.levels.forEach(function(lv,i){
+          var at="levels["+i+"]";
+          if(!lv || typeof lv!=="object"){ errors.push(at+" is not an object"); return; }
+          if(!lv.id || typeof lv.id!=="string") errors.push(at+" missing string 'id'");
+          else if(seen[lv.id]) errors.push(at+" duplicate id '"+lv.id+"'"); else seen[lv.id]=1;
+          if(!lv.name || typeof lv.name!=="string") errors.push(at+" missing string 'name'");
+          var d=lv.difficulty;
+          if(typeof d!=="number" || d<1 || d>5 || (d|0)!==d) errors.push(at+" 'difficulty' must be an integer 1-5 (got "+d+")");
+          if(prof.validateLevel) prof.validateLevel(lv, at, errors);
+        });
+      }
+    }
+    if(m.customization && !Array.isArray(m.customization)) errors.push("'customization' must be an array");
+    return { ok: errors.length===0, errors: errors, warnings: warnings };
+  }
+
+  // ---- manifest -> engine config (pure; browser + Node safe) ----------------
+  // The active profile turns each manifest level into the shape its engine wants
+  // (Breaker: cols/rows/pattern/tough/speed/art pack; Survival: a survivor recipe)
+  // and wraps them in that engine's config envelope.
+  function toEngineConfig(m){
+    var prof = profileFor(m);
+    var levels = (m.levels||[]).map(prof.toLevel);
+    return prof.toConfig(m, levels);
   }
 
   // ---- browser loader: fetch -> validate -> onReady(engineCfg, manifest) ----
