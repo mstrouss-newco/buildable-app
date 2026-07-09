@@ -1,0 +1,86 @@
+{
+  "id": "breaker",
+  "name": "Buildable Breaker",
+  "type": "game",
+  "category": "Arcade",
+  "color": "#FF6B6B",
+  "ageBand": "8-12",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "cheerleader" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": true, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math", "reading"] }
+  },
+
+  "art": {
+    "badge": "breaker/badge/v1",
+    "hero": "breaker/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "breaker/loading/v1",
+    "music": "audio/breaker/theme-v1"
+  },
+
+  "levels": [
+    {
+      "id": "jungle-ruins", "name": "Jungle Ruins", "layout": "full", "difficulty": 1, "unlocked": true,
+      "journeyBadge": "badges/jungle/v1",
+      "parts": { "background": "breaker/bg/jungle-v1", "bricks": "breaker/bricks/jungle-v1", "balls": "breaker/balls/jungle-v1", "paddle": "breaker/paddle/jungle-v1" }
+    },
+    {
+      "id": "star-pyramid", "name": "Star Pyramid", "layout": "pyramid", "difficulty": 2,
+      "journeyBadge": "badges/space/v1",
+      "parts": { "background": "breaker/bg/space-v1", "bricks": "breaker/bricks/space-v1", "balls": "breaker/balls/space-v1", "paddle": "breaker/paddle/space-v1" }
+    },
+    {
+      "id": "coral-castle", "name": "Coral Castle", "layout": "checker", "difficulty": 2,
+      "journeyBadge": "badges/ocean/v1",
+      "parts": { "background": "breaker/bg/ocean-v1", "bricks": "breaker/bricks/ocean-v1", "balls": "breaker/balls/ocean-v1", "paddle": "breaker/paddle/ocean-v1" }
+    },
+    {
+      "id": "vine-gaps", "name": "Vine Gaps", "layout": "gaps", "difficulty": 3,
+      "journeyBadge": "badges/jungle/v1",
+      "parts": { "background": "breaker/bg/jungle-v1", "bricks": "breaker/bricks/jungle-v1", "balls": "breaker/balls/jungle-v1", "paddle": "breaker/paddle/jungle-v1" }
+    },
+    {
+      "id": "comet-towers", "name": "Comet Towers", "layout": "columns", "difficulty": 3,
+      "journeyBadge": "badges/space/v1",
+      "parts": { "background": "breaker/bg/space-v1", "bricks": "breaker/bricks/space-v1", "balls": "breaker/balls/space-v1", "paddle": "breaker/paddle/space-v1" }
+    },
+    {
+      "id": "reef-walls", "name": "Reef Walls", "layout": "frame", "difficulty": 4,
+      "journeyBadge": "badges/ocean/v1",
+      "parts": { "background": "breaker/bg/ocean-v1", "bricks": "breaker/bricks/ocean-v1", "balls": "breaker/balls/ocean-v1", "paddle": "breaker/paddle/ocean-v1" }
+    },
+    {
+      "id": "temple-drop", "name": "Temple Drop", "layout": "diamond", "difficulty": 4,
+      "journeyBadge": "badges/jungle/v1",
+      "parts": { "background": "breaker/bg/jungle-v1", "bricks": "breaker/bricks/jungle-v1", "balls": "breaker/balls/jungle-v1", "paddle": "breaker/paddle/jungle-v1" }
+    },
+    {
+      "id": "galaxy-boss", "name": "Galaxy Boss", "layout": "full", "difficulty": 5,
+      "journeyBadge": "badges/space/v1",
+      "parts": { "background": "breaker/bg/space-v1", "bricks": "breaker/bricks/space-v1", "balls": "breaker/balls/space-v1", "paddle": "breaker/paddle/space-v1" }
+    }
+  ],
+
+  "customization": [
+    { "slot": "Paddle", "options": [
+      { "name": "Classic", "asset": "breaker/paddle/jungle-v1", "price": 0 },
+      { "name": "Rainbow", "asset": "breaker/paddle/rainbow-v1", "price": 50 },
+      { "name": "Rocket", "asset": "breaker/paddle/rocket-v1", "price": 120 }
+    ]},
+    { "slot": "Ball", "options": [
+      { "name": "Glow", "asset": "breaker/balls/jungle-v1", "price": 0 },
+      { "name": "Meteor", "asset": "breaker/balls/meteor-v1", "price": 80 }
+    ]},
+    { "slot": "Trail", "options": [
+      { "name": "None", "asset": "shared/trail/none", "price": 0 },
+      { "name": "Bubbles", "asset": "shared/trail/bubbles-v1", "price": 60 }
+    ]}
+  ]
+}

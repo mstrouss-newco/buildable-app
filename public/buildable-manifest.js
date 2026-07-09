@@ -1,0 +1,141 @@
+// ============================================================================
+//  buildable-manifest.js  —  the SHELL's manifest loader + validator.
+//  One shared contract (see buildable-manifest-v2.md). The shell reads a game's
+//  manifest to build every screen around it; the engine reads it for its levels,
+//  layouts, difficulty and art. Games never hardcode art or difficulty.
+//
+//  Works in the browser (fetch) AND headless (Node/VM, no fetch) so the QA robot
+//  can validate the same file and play the manifest's levels.
+//  Exposes window.BuildableManifest = { validate, resolveAsset, toEngineConfig, load }.
+// ============================================================================
+(function(root){
+  "use strict";
+  function clamp(v,a,b){ v=+v; if(isNaN(v))v=a; return Math.max(a,Math.min(b,v)); }
+
+  // Layout templates own geometry (cols/rows/pattern). Same table the engine uses,
+  // so "layout" in the manifest == the engine's pattern + board size. One template,
+  // one size — no raw cols/rows knobs live in the manifest (manifest golden rule 2).
+  var TPL = {
+    full:    { cols:10, rows:6, pattern:"full"    },
+    pyramid: { cols:9,  rows:5, pattern:"pyramid" },
+    checker: { cols:10, rows:5, pattern:"checker" },
+    gaps:    { cols:10, rows:6, pattern:"gaps"    },
+    columns: { cols:10, rows:6, pattern:"columns" },
+    frame:   { cols:11, rows:7, pattern:"frame"   },
+    diamond: { cols:11, rows:7, pattern:"diamond" }
+  };
+  var DEFAULT_BRICK_COLORS = ["#ff7aa8","#ffb04d","#ffd86b","#7ee0a0","#62d0ff","#9b7bff","#ff8fce"];
+  var COIN_BY_DIFF  = { 1:10, 2:15, 3:20, 4:25, 5:30 };
+  var THEME_FALL    = { jungle:"#2f6d3a", space:"#1b1650", ocean:"#1a6fa0" };
+
+  // ---- asset library ID -> URL (Breaker convention for now) -----------------
+  // e.g. "breaker/bg/jungle-v1" -> "/breaker/jungle/bg.webp". Unknown IDs return
+  // null so the engine can fall back to its built-in art rather than 404.
+  function resolveAsset(id){
+    if(!id || typeof id!=="string") return null;
+    var m = /^breaker\/(bg|bricks|balls|paddle|shatter)\/([a-z0-9]+)-v\d+$/.exec(id);
+    if(m){ return "/breaker/"+m[2]+"/"+m[1]+".webp"; }
+    return null;   // badges, hero, shared/* etc. are wired by later sessions
+  }
+
+  function themeFromParts(parts){
+    parts = parts||{};
+    var src = parts.background || parts.bricks || "";
+    var m = /^breaker\/(?:bg|bricks)\/([a-z0-9]+)-v\d+$/.exec(src);
+    return (m && m[1]) ? m[1] : "jungle";
+  }
+
+  // resolved art pack for one level, built from its part asset IDs
+  function resolvePack(parts, theme){
+    parts = parts||{};
+    return {
+      bg:      resolveAsset(parts.background) || ("/breaker/"+theme+"/bg.webp"),
+      bricks:  resolveAsset(parts.bricks)     || ("/breaker/"+theme+"/bricks.webp"),
+      balls:   resolveAsset(parts.balls)      || ("/breaker/"+theme+"/balls.webp"),
+      paddle:  resolveAsset(parts.paddle)     || ("/breaker/"+theme+"/paddle.webp"),
+      shatter: "/breaker/"+theme+"/shatter.webp",
+      fall:    THEME_FALL[theme] || "#2f6d3a"
+    };
+  }
+
+  // ---- validation -----------------------------------------------------------
+  // Returns { ok, errors:[...], warnings:[...] }. Errors block the manifest from
+  // being applied (engine keeps its built-in levels); warnings just log.
+  function validate(m){
+    var errors=[], warnings=[];
+    if(!m || typeof m!=="object"){ return { ok:false, errors:["manifest is not an object"], warnings:warnings }; }
+    if(!m.id || typeof m.id!=="string")   errors.push("missing string 'id'");
+    if(!m.name || typeof m.name!=="string") errors.push("missing string 'name'");
+    if(m.type!=="game" && m.type!=="studio") errors.push("'type' must be 'game' or 'studio'");
+    if(m.shellVersion!==2) warnings.push("shellVersion is not 2 (got "+m.shellVersion+")");
+
+    if(m.type==="game"){
+      if(!Array.isArray(m.levels) || !m.levels.length){ errors.push("'levels' must be a non-empty array"); }
+      else {
+        var seen={};
+        m.levels.forEach(function(lv,i){
+          var at="levels["+i+"]";
+          if(!lv || typeof lv!=="object"){ errors.push(at+" is not an object"); return; }
+          if(!lv.id || typeof lv.id!=="string") errors.push(at+" missing string 'id'");
+          else if(seen[lv.id]) errors.push(at+" duplicate id '"+lv.id+"'"); else seen[lv.id]=1;
+          if(!lv.name || typeof lv.name!=="string") errors.push(at+" missing string 'name'");
+          if(!lv.layout || !TPL[lv.layout]) errors.push(at+" 'layout' must be one of "+Object.keys(TPL).join("/")+" (got "+lv.layout+")");
+          var d=lv.difficulty;
+          if(typeof d!=="number" || d<1 || d>5 || (d|0)!==d) errors.push(at+" 'difficulty' must be an integer 1-5 (got "+d+")");
+          if(!lv.parts || typeof lv.parts!=="object") errors.push(at+" missing 'parts' object");
+          else if(!lv.parts.bricks) errors.push(at+" parts.bricks is required");
+        });
+      }
+    }
+    if(m.customization && !Array.isArray(m.customization)) errors.push("'customization' must be an array");
+    return { ok: errors.length===0, errors: errors, warnings: warnings };
+  }
+
+  // ---- manifest -> engine config (pure; browser + Node safe) ----------------
+  // Produces the shape breaker-engine.html consumes: levels with cols/rows/pattern,
+  // difficulty translated to tough+speed, theme + resolved art pack.
+  function toEngineConfig(m){
+    var levels = (m.levels||[]).map(function(lv){
+      var t = TPL[lv.layout] || TPL.full;
+      var d = clamp(lv.difficulty,1,5);
+      var theme = themeFromParts(lv.parts);
+      return {
+        id: lv.id, name: lv.name,
+        cols: t.cols, rows: t.rows, pattern: t.pattern,
+        difficulty: d,
+        tough: (d-1)*0.12,          // engine tuning derived from difficulty 1-5
+        speed: 3.8 + d*0.5,
+        coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
+        theme: theme,
+        unlocked: !!lv.unlocked,
+        journeyBadge: lv.journeyBadge || null,
+        parts: lv.parts || null,
+        art: resolvePack(lv.parts, theme)
+      };
+    });
+    return { id:m.id, name:m.name, levels:levels, brickColors:DEFAULT_BRICK_COLORS.slice(), _manifest:m };
+  }
+
+  // ---- browser loader: fetch -> validate -> onReady(engineCfg, manifest) ----
+  function load(id, onReady, onError){
+    var hasFetch = (typeof fetch==="function");
+    if(!hasFetch){ if(onError) onError(["fetch unavailable (headless) — skipping load"]); return; }
+    var url = "/"+id+"/manifest.json?v=" + Date.now();
+    fetch(url).then(function(r){
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return r.json();
+    }).then(function(m){
+      var v = validate(m);
+      if(v.warnings.length) try{ console.warn("["+id+"] manifest warnings:", v.warnings); }catch(e){}
+      if(!v.ok){ if(onError) onError(v.errors); else try{ console.error("["+id+"] manifest invalid:", v.errors); }catch(e){} return; }
+      if(onReady) onReady(toEngineConfig(m), m);
+    }).catch(function(err){
+      if(onError) onError([String(err && err.message || err)]);
+      else try{ console.error("["+id+"] manifest load failed:", err); }catch(e){}
+    });
+  }
+
+  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL };
+  root.BuildableManifest = API;
+  if(typeof module!=="undefined" && module.exports) module.exports = API;
+})(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));
