@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
 <head>
+    <base href="/" />   <!-- deep URLs (/breaker/journey etc.) resolve assets from site root -->
     <link rel="icon" href="/favicon.ico?v=4" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
@@ -348,11 +349,13 @@ function applyManifest(cfg, raw){
   try{ if(state==="title"){ var hm=document.getElementById("home");
     if(hm&&hm.classList.contains("show")) renderHub();
     if(startScreen) startScreen.update(buildStartCfg()); } }catch(e){}
+  if(typeof bkBootRoute==="function") bkBootRoute();
 }
 try{
   if(window.BuildableManifest && window.BuildableManifest.load){
     window.BuildableManifest.load("breaker", applyManifest, function(errs){
       try{ console.warn("[breaker] manifest not applied, using built-in levels:", errs); }catch(e){}
+      if(typeof bkBootRoute==="function") bkBootRoute();
     });
   }
 }catch(e){}
@@ -493,6 +496,7 @@ function startLevel(i, carryLives){
     onPaddle:true, sticky:false, stickyT:0, slowT:0, laserT:0, laserCd:0, fireT:0, score:0 };
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, speed) ]; G.onPaddle=true;
   state="play"; started=false; firstHintUntil=0; levelHintShown=false; ensureMusic(); if(window.BuildableGameNav) window.BuildableGameNav.update();
+  bkSetURL("/breaker/play/"+encodeURIComponent(bkLevelId(level)));
 }
 // ---------- custom levels (built by kids in "Make a level") ----------
 let CUSTOM=null;              // { board, diffN, cleared }
@@ -1047,7 +1051,7 @@ function buildStartCfg(){
 // ---- Breaker home hub: big Play + Make a level buttons, plus a My levels shelf ----
 function showHub(){ state="title"; G=null; if(hud)hud.hide();
   show("maker",false); const host=document.getElementById("start"); if(host)host.style.display="none";
-  show("home",true); showHelpBtn(false); showInGameMute(false); showInGameBack(false); renderHub(); }
+  show("home",true); showHelpBtn(false); showInGameMute(false); showInGameBack(false); renderHub(); bkSetURL("/breaker"); }
 function renderHub(){ const body=document.getElementById("hubBody"); if(!body)return; body.innerHTML="";
   const btns=document.createElement("div"); btns.className="hubBtns";
   const play=document.createElement("button"); play.className="hubBig hubPlay";
@@ -1071,7 +1075,7 @@ function renderHub(){ const body=document.getElementById("hubBody"); if(!body)re
   else { const list=document.createElement("div"); list.className="mkList"; for(const L0 of lv) list.appendChild(levelCard(L0)); shelf.appendChild(list); }
   body.appendChild(shelf);
 }
-function showMenu(){ state="title"; G=null; if(hud)hud.hide(); if(window.BuildableGameNav) window.BuildableGameNav.update(); show("maker",false); show("home",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false);
+function showMenu(){ state="title"; G=null; if(hud)hud.hide(); if(window.BuildableGameNav) window.BuildableGameNav.update(); show("maker",false); show("home",false); showHelpBtn(false); showInGameMute(false); showInGameBack(false); bkSetURL("/breaker/journey");
   const host=document.getElementById("start"); if(host)host.style.display="block";
   if(!BS||!host){ return; }
   const cb={
@@ -1275,8 +1279,49 @@ function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
 if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   shoot:"tennis_hit", select:"tennis_wall", coin:"breaker_smash", boom:"breaker_break",
   levelup:"breaker_power", hurt:"breaker_miss", point:"tennis_point", win:"tennis_win", lose:"tennis_lose" } }); }
+// ============================================================================
+//  DEEP-LINK ROUTING (Session 2B) — real, shareable, refresh-safe URLs.
+//  Active ONLY when Breaker is opened directly at /breaker/... in the top
+//  window (a texted link). Inside the app picker (iframe) the flow is untouched.
+//    /breaker            -> home + demo   (showHub)
+//    /breaker/journey    -> level picker  (showMenu)
+//    /breaker/play/{id}  -> that level    (startPlay by manifest level id)
+//    /breaker/loadout    -> customize     (Make It Mine look flow, for now)
+// ============================================================================
+var BK_ROUTE = (typeof location!=="undefined") && !inApp() && /^\/breaker(\/|$)/.test(location.pathname);
+var bkSuppressURL=false, bkBooted=false;
+function bkLevelIndexById(id){ for(var i=0;i<GAME_CONFIG.levels.length;i++){ if(GAME_CONFIG.levels[i] && GAME_CONFIG.levels[i].id===id) return i; } return -1; }
+function bkLevelId(i){ var l=GAME_CONFIG.levels[i]; return (l && l.id)?l.id:String(i+1); }
+function bkSetURL(path){ if(!BK_ROUTE || bkSuppressURL) return;
+  try{ if(location.pathname!==path){ history.pushState({bk:path}, "", path); } }catch(e){} }
+function showLoadout(){ startNewLevel(); }   // 2B: loadout link opens the customize/look flow; standalone loadout screen lands in Phase 3C
+function bkApplyRoute(path){
+  path=(path||"/breaker").replace(/\/+$/,"")||"/breaker"; var m;
+  if(path==="/breaker"){ showHub(); }
+  else if(path==="/breaker/journey"){ currentMode="solo"; showMenu(); }
+  else if(path==="/breaker/loadout"){ showLoadout(); }
+  else if((m=path.match(/^\/breaker\/play\/(.+)$/))){ var id=decodeURIComponent(m[1]); var idx=bkLevelIndexById(id); if(idx<0)idx=0; currentMode="solo"; startPlay(idx); }
+  else { showHub(); }
+}
+function bkBootRoute(){ if(!BK_ROUTE || bkBooted) return; bkBooted=true;
+  bkSuppressURL=true; try{ bkApplyRoute(location.pathname); }catch(e){ try{ showHub(); }catch(_){} } bkSuppressURL=false; }
+if(BK_ROUTE && typeof window!=="undefined"){
+  window.addEventListener("popstate", function(){ bkSuppressURL=true; try{ bkApplyRoute(location.pathname); }catch(e){} bkSuppressURL=false; });
+}
 // boot
-if(typeof document!=="undefined" && document.getElementById("start")){ loadPrefs(); wireMenus(); showHub(); }
+if(typeof document!=="undefined" && document.getElementById("start")){
+  loadPrefs(); wireMenus();
+  if(BK_ROUTE){
+    // A /play/{id} link needs the manifest's level ids; wait for it (the manifest
+    // callbacks call bkBootRoute). Other screens can show right away.
+    if(/^\/breaker\/play\//.test(location.pathname)){
+      setTimeout(bkBootRoute, 1500);   // safety net if the manifest never answers
+      if(!(window.BuildableManifest && window.BuildableManifest.load)) bkBootRoute();
+    } else { bkBootRoute(); }
+  } else {
+    showHub();
+  }
+}
 // Private playtest: ?playtest=1&template=&diff=&libtheme=&name= builds ONE throwaway
 // level and plays it straight away (nothing saved). Used by the world builder's "Test".
 (function(){ try{ const P=new URLSearchParams(location.search); if(!P.get("playtest")) return;
