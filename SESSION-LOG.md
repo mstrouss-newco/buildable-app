@@ -1,5 +1,75 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 6B: Learning + parent controls + onboarding
+
+Turned the manifest's dead `features.learning` block into a real system, gave
+parents per-kid control that OVERRIDES the game defaults, upgraded the grown-ups
+dashboard from counts to skills, added a curriculum-tagged question bank with a
+review gate + adaptive serving, a weekly parent email digest, and an onboarding
+pass (grade, drawn-icon avatars, optional kid PIN). Question-bank depth kept
+LIGHTWEIGHT per plan (scheduled bulk generation stays Phase 8A).
+
+**DB (owner runs in Supabase — additive + idempotent):**
+`db/6b-kid-profile-grade-pin.sql` (kid `grade` + optional `pin_hash`),
+`db/6b-question-bank.sql` (curriculum-tagged bank, everything enters `pending`,
+only `approved` is served — the review gate), `db/6b-quiz-cache.sql` (backfills
+the table `generate-quiz.js` already used but was never checked in),
+`db/6b-learning-events.sql` (one row per answer: skills-over-time, streaks,
+adaptive recent-misses, digest source).
+
+**Manifest wiring** (`public/buildable-manifest.js`): new `learningDefaults(m)`
+reads `beforeUnlock`/`coinTopUp`/`bonusAfterWin`/`subjects`; `toEngineConfig`
+stamps `cfg.learning`. Parent overrides live per-kid in the learning settings
+(`src/store.js` `effectiveLearning(manifestLearning)` merges parent-over-manifest;
+tri-state Auto/On/Off). The Breaker gate is now SHELL-authoritative: the engine
+always asks at a level unlock (passing its manifest default) and the shell
+resolves the parent override (`src/BuildableKids.jsx`, `public/breaker-engine.html`).
+
+**Coin top-up** (`src/QuizGate.jsx` + `store.js` `topUpAward`): every 3rd correct
+answer = 10 coins via the wallet's replay-proof `awardOnce`, gated by the parent's
+"Earn coins by practicing" toggle. Short-on-coins in the loadout now opens a
+practice `TopUpGate` instead of a dead end.
+
+**Skills dashboard** (`src/GrownUpScreen.jsx`): mastered vs practicing per subject,
+a 7-day trend, streak, and a "practice next" nudge; rolling daily history added to
+the progress blob (cross-device when signed in). Parent card gains grade + the
+three moment toggles.
+
+**Question bank** (`api/generate-quiz.js`): serves an approved, curriculum-matched
+question FIRST (adaptive to the kid's recently-missed skill), falling back to the
+existing on-the-fly generation; AI questions are written to the bank as `pending`
+(never served from the bank until approved). Answers logged via new
+`api/log-learning-event.js`.
+
+**Weekly digest** (`api/parent-digest.js` + `vercel.json` cron, Mondays 14:00 UTC):
+per-kid learning + play summary emailed via the existing Resend path. Dormant if
+`RESEND_API_KEY` is unset; `?dry=1` returns a JSON preview without sending; guarded
+by `CRON_SECRET` when set.
+
+**Onboarding** (`src/lib/accounts.js` + `GrownUpScreen.jsx`): kid profiles gain
+`grade` (drives the learning level, applied after the kid's learning scope loads)
+and an optional 4-digit `pin` (hashed; siblings must enter it at the picker). New
+drawn-icon avatar catalog (`AVATARS`, no emoji) replaces the emoji default. Writes
+are resilient: they retry without the new columns if the migration has not run yet,
+so nothing breaks pre-migration. The avatar picker already shows on every open
+(July 9 profile gate).
+
+**QA:** `qa-breaker`, `qa-survival`, `qa-sling` = ALL CHECKS PASS (shared-loader +
+engine change safe). Full app bundles clean (esbuild, no missing exports). Per-file
+esbuild transpile clean on every touched `src/` file.
+
+**Owner to-dos (flagged, not silently assumed):** run the four `db/6b-*.sql` files;
+set `RESEND_API_KEY`/`RESEND_FROM` (digest) and `CRON_SECRET` in Vercel; approve
+questions in `question_bank` (flip `status` to `approved`) before bank serving
+kicks in; confirm the Google sign-in + Vercel cron on the live deploy.
+
+Files: `db/6b-kid-profile-grade-pin.sql`, `db/6b-question-bank.sql`,
+`db/6b-quiz-cache.sql`, `db/6b-learning-events.sql`, `public/buildable-manifest.js`,
+`public/breaker-engine.html`, `src/store.js`, `src/QuizGate.jsx`,
+`src/BuildableKids.jsx`, `src/GrownUpScreen.jsx`, `src/lib/accounts.js`,
+`api/generate-quiz.js`, `api/log-learning-event.js` (new), `api/parent-digest.js`
+(new), `vercel.json`, plus this log + README.
+
 ## 2026-07-09 — Session 6A: Multiplayer switch (manifest -> the existing lanes)
 
 The manifest's `features.multiplayer` was a dead field: every manifest declared

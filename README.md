@@ -6,6 +6,30 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 6B: Learning + parent controls + onboarding (July 9 2026)
+
+The manifest's `features.learning` block is now a real system. `buildable-manifest.js`
+reads the learning defaults (`learningDefaults`), and per-kid **parent toggles override
+them** (`store.js` `effectiveLearning`, tri-state Auto/On/Off) — the Breaker gate is now
+shell-authoritative so a parent can force a "question before a new level" on or off.
+**Coin top-up**: every 3rd correct answer = 10 coins (wallet `awardOnce`, replay-proof),
+with a practice `TopUpGate` when a kid is short in the loadout. The grown-ups **dashboard**
+now reports skills (mastered vs practicing per subject, a 7-day trend, streak, and a
+practice-next nudge) instead of raw counts. A curriculum-tagged **question bank**
+(`db/6b-question-bank.sql`) serves approved, skill-adaptive questions first and gates every
+AI question behind a review step (`pending` -> `approved`); answers log to
+`learning_events`. A **weekly parent email digest** (`api/parent-digest.js` + a Monday
+Vercel cron) reuses the existing Resend path (dormant without the key; `?dry=1` previews).
+**Onboarding**: kid profiles gain a grade (drives the learning level) and an optional PIN,
+plus a drawn-icon avatar picker (no emoji). Writes retry without the new columns so nothing
+breaks before the migrations run. QA: `qa-breaker`/`qa-survival`/`qa-sling` ALL PASS; full
+app bundles clean. Owner to-dos: run the four `db/6b-*.sql`, set `RESEND_API_KEY` +
+`CRON_SECRET` in Vercel, and approve `question_bank` rows. Files: `db/6b-*.sql` (4 new),
+`public/buildable-manifest.js`, `public/breaker-engine.html`, `src/store.js`,
+`src/QuizGate.jsx`, `src/BuildableKids.jsx`, `src/GrownUpScreen.jsx`, `src/lib/accounts.js`,
+`api/generate-quiz.js`, `api/log-learning-event.js` (new), `api/parent-digest.js` (new),
+`vercel.json`, plus SESSION-LOG + this entry.
+
 ## Rules file consolidation — one law file (July 9 2026)
 
 Docs-only cleanup. `CLAUDE.md` and `AGENTS.md` had overlapping rules, so everything
