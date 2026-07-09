@@ -288,6 +288,26 @@
       }
     },
     {
+      "src": "/breaker",
+      "dest": "/breaker-engine.html"
+    },
+    {
+      "src": "/breaker/",
+      "dest": "/breaker-engine.html"
+    },
+    {
+      "src": "/breaker/journey",
+      "dest": "/breaker-engine.html"
+    },
+    {
+      "src": "/breaker/loadout",
+      "dest": "/breaker-engine.html"
+    },
+    {
+      "src": "/breaker/play/(.*)",
+      "dest": "/breaker-engine.html"
+    },
+    {
       "src": "/breaker/(.*)",
       "dest": "/breaker/$1",
       "headers": {
