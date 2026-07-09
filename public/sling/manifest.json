@@ -1,0 +1,53 @@
+{
+  "id": "sling",
+  "name": "Sling Squad",
+  "type": "game",
+  "category": "Arcade",
+  "color": "#7C5CFC",
+  "ageBand": "5-9",
+  "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/sling-squad.html",
+
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "cheerleader" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": true, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math", "reading"] }
+  },
+
+  "feel": { "pace": "normal", "celebration": "big", "haptics": "on" },
+
+  "art": {
+    "badge": "sling/badge/v1",
+    "hero": "sling/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "sling/loading/v1",
+    "music": "audio/sling/theme-v1"
+  },
+
+  "levels": [
+    { "id": "wobbly-gate",   "name": "Wobbly Gate",   "layout": "gate",   "difficulty": 1, "unlocked": true, "journeyBadge": "badges/gate/v1",
+      "parts": { "scene": "grass" } },
+    { "id": "tilty-tower",   "name": "Tilty Tower",   "layout": "tower",  "difficulty": 2, "journeyBadge": "badges/tower/v1",
+      "parts": { "scene": "desert" } },
+    { "id": "double-trouble","name": "Double Trouble", "layout": "double", "difficulty": 3, "journeyBadge": "badges/double/v1",
+      "parts": { "scene": "forest" } },
+    { "id": "castle-keep",   "name": "Castle Keep",   "layout": "keep",   "difficulty": 4, "journeyBadge": "badges/keep/v1",
+      "parts": { "scene": "fall" } },
+    { "id": "grand-topple",  "name": "Grand Topple",  "layout": "grand",  "difficulty": 5, "journeyBadge": "badges/grand/v1",
+      "parts": { "scene": "castles" } }
+  ],
+
+  "customization": [
+    { "slot": "Squad", "options": [
+      { "name": "Animal Friends", "asset": "sling/squad/v1", "price": 0 }
+    ]},
+    { "slot": "Music", "options": [
+      { "name": "Bouncy", "asset": "audio/sling/theme-v1", "price": 0 }
+    ]}
+  ]
+}
