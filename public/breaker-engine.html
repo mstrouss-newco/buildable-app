@@ -347,6 +347,7 @@ function applyManifest(cfg, raw){
   // that applyLevelsConfig appended past the campaign are preserved.
   for(var i=0;i<cfg.levels.length;i++){ GAME_CONFIG.levels[i]=cfg.levels[i]; }
   if(cfg.brickColors) GAME_CONFIG.brickColors=cfg.brickColors;
+  if(bkPendingPlay!=null){ var _pj=bkLevelIndexById(bkPendingPlay); bkPendingPlay=null; currentMode="solo"; startPlay(_pj<0?0:_pj); }
   // refresh whatever's on screen (mirrors applyLevelsConfig)
   try{ if(state==="title"){ var hm=document.getElementById("home");
     if(hm&&hm.classList.contains("show")) renderHub();
@@ -1360,6 +1361,20 @@ if(BK_ROUTE && typeof window!=="undefined"){
 // Self-playing "attract" demo for the shell game-landing (?screen=demo). The perfect-
 // player bot plays level 1 on a loop; audio stays silent (no user gesture unlocks it).
 function demoStart(){ try{ startLevel(0); }catch(e){} state="play"; botMode=true; started=true; }
+
+// In-app play launch (Session 3B): the shell's shell-generated journey asks the
+// engine to play ONE level by manifest id via ?screen=play&level=<id>. The manifest
+// loads async, so if the ids aren't resolved yet we stash the request and let
+// applyManifest fire it (with a timeout safety net for offline/invalid manifests).
+var bkPendingPlay=null;
+function bkInAppPlay(id){
+  var idx = (id!=null && id!=="") ? bkLevelIndexById(id) : -1;
+  if(idx<0 && /^[0-9]+$/.test(String(id))) idx=+id;        // tolerate a raw index
+  if(idx<0){ bkPendingPlay=String(id);                     // manifest not applied yet -> defer
+    setTimeout(function(){ if(bkPendingPlay!=null){ var j=bkLevelIndexById(bkPendingPlay); bkPendingPlay=null; currentMode="solo"; startPlay(j<0?0:j); } }, 1600);
+    return; }
+  currentMode="solo"; startPlay(idx);
+}
 // boot
 if(typeof document!=="undefined" && document.getElementById("start")){
   loadPrefs(); wireMenus();
@@ -1377,7 +1392,8 @@ if(typeof document!=="undefined" && document.getElementById("start")){
     var _scr=""; try{ _scr=(new URLSearchParams(location.search)).get("screen")||""; }catch(e){}
     if(_scr==="demo"){ DEMO=true; demoStart(); }
     else if(_scr==="maker"){ startNewLevel(); }
-    else { currentMode="solo"; showMenu(); }   // "journey"/default -> the level path (engine-owned until 3B)
+    else if(_scr==="play"){ var _lid=""; try{ _lid=(new URLSearchParams(location.search)).get("level")||""; }catch(e){} bkInAppPlay(_lid); }
+    else { currentMode="solo"; showMenu(); }   // fallback only — in-app the SHELL owns the journey (Session 3B); the engine's menu is now the standalone /breaker/journey deep-link handler
   }
 }
 // Private playtest: ?playtest=1&template=&diff=&libtheme=&name= builds ONE throwaway
