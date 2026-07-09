@@ -1,5 +1,40 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Session 2C: Shared systems wiring, part 1 (Phase 2 shell v2)
+The Breaker manifest's `features` switches now actually drive the platform's shared systems.
+No system was rebuilt; the switches were wired to what already exists (plus one small new
+shared wallet, because there wasn't one to wire coins into). Only Breaker was touched.
+- **demoOnLoad → demo/tutorial:** the engine's on-load gesture demo (the tutorial overlay +
+  the 3D pointing hand after the first launch) now shows only when the manifest says
+  `demoOnLoad: true`. The Help button's tutorial is always available (manual, not the demo).
+- **buddy → buildable-buddy (BB):** the engine now includes `buildable-buddy.js` and pings the
+  kid's helper — `BB.levelup()` on a level clear, `BB.win()` on the final level, `BB.lose()` when
+  lives run out — gated on `features.buddy.on`. BB posts up to the app's existing HelperReactions
+  layer; standalone (no parent) it harmlessly no-ops.
+- **coins → shared wallet (NEW small system):** there was no platform-wide wallet to wire into, so
+  added `public/buildable-wallet.js` (BW) — ONE coin balance per kid in the browser, shared across
+  every game because they share an origin (a game in an iframe writes the same localStorage the app
+  reads). Beating a level awards that level's manifest `coins` via `BW.awardOnce()` (first clear only,
+  so replays can't farm), gated on `features.coins`. The start-screen pill now shows the wallet
+  balance. Added explicit `vercel.json` routes for `buildable-wallet.js` and `buildable-buddy.js`
+  (the catch-all otherwise serves landing.html for unrouted files).
+- **learning → QuizGate (in-app only):** when `features.learning.beforeUnlock` is on AND Breaker is
+  running inside the app (iframe), the engine asks the parent (postMessage `quizRequest`) before a
+  new level unlocks and waits; the parent shows the EXISTING `QuizGate` — but only if the grown-ups'
+  Learning Mode is on (their setting wins; off = resume with no gate) — and posts `bk:quizDone` back
+  to resume. `GameFrame` gained a small child-message + overlay hook to host the gate. A cold texted
+  deep link (`/breaker/journey`) has no parent app around it, so it just plays with no gate (expected;
+  QuizGate is React-in-app only — a standalone quiz was deliberately not built, per the roadmap's
+  "don't rebuild" rule).
+- **Safety:** every call is guarded by its system's presence (`window.BuildableWallet`, `window.BB`,
+  `inApp()`) and by manifest defaults, so headless QA and offline loads are unaffected.
+- **Verified:** JSX parse (esbuild) on the edited app file; `qa-breaker.mjs` = MANIFEST PASS + all 8
+  levels win (5 runs each) + pong + render smoke = ALL CHECKS PASS.
+- **Left in the block:** none — 2C is complete. Coin *display* is just the existing start-screen pill
+  (a proper coin HUD + the loadout that spends coins are Phase 3C). Wiring coins/learning into the
+  OTHER games comes when they convert (Phase 5+). Multiplayer + the coin top-up gate are Phase 6.
+
+
 ## 2026-07-08 — Session 2B: Real URLs (Phase 2 shell v2)
 Breaker now has real, shareable, refresh-safe web addresses. Texting someone
 `buildablekids.com/breaker/journey` opens Breaker straight to its level picker; a refresh

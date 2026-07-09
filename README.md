@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 2C: manifest switches drive the shared systems (July 8 2026)
+Phase 2 continues. The Breaker manifest's `features` block now actually turns real platform systems on and off (Session 2A read the manifest for levels/art; 2B added real URLs; 2C wires the feature switches). Only Breaker was touched.
+- **`demoOnLoad`** gates the engine's on-load gesture demo (tutorial overlay + the pointing hand after first launch). The manual Help tutorial stays available regardless.
+- **`buddy.on`** makes the engine ping the kid's helper through the existing `buildable-buddy.js` bridge (BB): level-up on a clear, win on the last level, lose when out of lives. It posts up to the app's HelperReactions layer; standalone it no-ops.
+- **`coins`** awards each level's manifest coin value into a NEW shared, platform-wide wallet, `public/buildable-wallet.js` (there wasn't one to wire into). One balance per kid in the browser, shared across games via same-origin localStorage; `awardOnce()` credits first clear only so replays can't farm. Shown on the start-screen pill. New explicit `vercel.json` routes for `buildable-wallet.js` + `buildable-buddy.js` (the catch-all serves landing.html for unrouted files).
+- **`learning.beforeUnlock`** asks the parent app to show the existing `QuizGate` before a new level unlocks — in-app only, and only when the grown-ups' Learning Mode is on (their setting wins). `GameFrame` gained a child-message + overlay hook to host it. A cold texted deep link has no parent app, so it just plays with no gate (expected; QuizGate is React-in-app only, and a duplicate standalone quiz was deliberately not built).
+- **Gotcha reused:** any new `public/*.js` needs its own `vercel.json` route or the catch-all swallows it.
+- **Verified:** esbuild JSX parse on the app file; `qa-breaker.mjs` = manifest PASS + all 8 levels win + pong + render smoke = ALL CHECKS PASS.
+
+
 ## Sling Squad: static backgrounds + tiled platformer ground/pad (July 5 2026, follow-up)
 Two fixes on top of the parallax-worlds update, per Mike's feedback.
 - **Backgrounds no longer move.** The far parallax layers were slowly auto-drifting (mountains sliding), which looked wrong for a slingshot game. `drawParallax` is now fully static (removed the auto-drift + the sling-pull parallax) — the scene sits still, only the birds/towers move. Live-verified: a sampled background pixel hash is identical across seconds.
