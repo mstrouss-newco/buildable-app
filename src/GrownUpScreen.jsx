@@ -37,6 +37,7 @@ import {
   AVATARS, DEFAULT_AVATAR, kidHasPin, verifyKidPin,
 } from "./lib/accounts";
 import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, learningGradeOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount, subjectMastery, progressHistory } from "./store";
+import { isBuddyEnabled, setBuddyEnabled } from "./lib/buddy";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -692,6 +693,8 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
 
             <LearningModeCard />
 
+            <BuddyMomentsCard />
+
             <LearningProgressCard />
 
             {signedIn && (
@@ -741,6 +744,32 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
 }
 
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// Buddy moments card (grown-ups). On by default. The Buddy 2.0 helper speaks
+// rarely and specifically — a hard-won level, a new personal best, a welcome
+// back that names a favorite game — a few times per sitting and never during
+// play. This switch turns all of that off for families who want it quiet.
+// No emojis: the control is a CSS switch.
+// -------------------------------------------------------------
+function BuddyMomentsCard() {
+  const [on, setOn] = useState(() => isBuddyEnabled());
+  function toggle() { const next = !on; setBuddyEnabled(next); setOn(next); }
+  return (
+    <div style={LM.wrap}>
+      <div style={LM.headerRow}>
+        <div>
+          <div style={LM.title}>Buddy moments</div>
+          <div style={LM.sub}>The buddy cheers now and then — beating a tough level, a new best score, a welcome back. A few times a session, never during play.</div>
+        </div>
+        <button type="button" role="switch" aria-checked={on} onClick={toggle} style={{ ...LM.switch, ...(on ? LM.switchOn : {}) }}>
+          <span style={{ ...LM.knob, ...(on ? LM.knobOn : {}) }} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 // Learning Mode card (grown-ups). Off by default. When on, the app turns
 // render-wait mini-games and quick moments into one real practice question.
 // No emojis: the on/off control is a CSS switch, the goal picker is buttons.
