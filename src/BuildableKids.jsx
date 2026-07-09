@@ -870,7 +870,12 @@ function gameSpecFor(slug) {
 const FRIEND_GAME_TITLES = { chess: "Chess", checkers: "Checkers", tictactoe: "Tic-Tac-Toe", tennis: "Tennis" };
 
 export default function BuildableKids() {
-  const [screen, setScreen] = useState(isSignedIn() ? SCREEN_GROWNUP : SCREEN_HOME);
+  // PROFILE GATE: always start on the "who's playing" picker (inside
+  // GrownUpScreen) so the app never boots straight to Home without an
+  // active kid profile chosen THIS session -- every fresh open re-asks,
+  // even on a device that picked a kid last time. See onBack below for the
+  // matching guard that stops the picker's Back button from leaking to Home.
+  const [screen, setScreen] = useState(SCREEN_GROWNUP);
   // The top-nav "Grown-ups" button already runs its own math check before it
   // opens this area. When it does, mark the visit pre-verified so the Grown-ups
   // screen does NOT ask a SECOND math question (one gate, not two).
@@ -992,7 +997,24 @@ export default function BuildableKids() {
   };
 
   // ============ HOME HUB ============
+  // Safety net for the profile gate: Home must never render without an
+  // active kid profile, no matter which code path set the screen. If that
+  // ever happens, fall through to the picker instead of a blank "friend".
   const __view = (() => {
+  if (screen === SCREEN_HOME && !activeKid) {
+    return (
+      <GrownUpScreen
+        preVerified={false}
+        onBack={() => setScreen(SCREEN_GROWNUP)}
+        onOpenFriends={() => { setFriendsReturn(SCREEN_GROWNUP); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+        onProfileChosen={(kid) => {
+          setActiveKidState(kid);
+          reloadLearningForActiveKid();
+          setScreen(getKidHelper(kid) ? SCREEN_HOME : SCREEN_HELPER);
+        }}
+      />
+    );
+  }
   if (screen === SCREEN_HOME) {
     return (
       <HomeScreen
@@ -1361,7 +1383,7 @@ export default function BuildableKids() {
     return (
       <GrownUpScreen
         preVerified={grownVerified}
-        onBack={() => { setGrownVerified(false); setScreen(SCREEN_HOME); }}
+        onBack={() => { setGrownVerified(false); setScreen(activeKid ? SCREEN_HOME : SCREEN_GROWNUP); }}
         onOpenFriends={() => { setFriendsReturn(SCREEN_GROWNUP); setScreen(SCREEN_GROWNUP_FRIENDS); }}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);

@@ -1,5 +1,38 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Fix: profile gate bypassed, Home rendered with no active kid
+
+Bug report: the "who's playing" picker no longer appeared before Home; the app opened
+straight to Home showing "Welcome back, friend!" with no kid profile loaded.
+
+**Cause.** `BuildableKids.jsx`'s initial screen state was `isSignedIn() ? SCREEN_GROWNUP :
+SCREEN_HOME` — a guest (not signed in as a parent, the default/no-login lane) always
+booted straight to `SCREEN_HOME` on a fresh app open, with zero check for whether a kid
+profile had ever been chosen. `HomeScreen` has no guard of its own (`kidName` silently
+falls back to `"friend"` when `activeKid` is null), so it rendered anyway. Checked whether
+Session 3A's front-door changes (GameLanding, Breaker routing) caused this: they did not
+touch this code path — `git log -S` on the offending line shows it dates to a June 24
+parent/kid-flow redesign and was never modified since. The "who's playing" picker
+(`GrownUpScreen`, step `"picker"`/`"choose"`) was always fully built and working — it was
+just never reached on a guest's fresh open, and its own `onBack` button could return
+straight to `SCREEN_HOME` without a kid ever picked, an additional leak.
+
+**Fix (`src/BuildableKids.jsx`, no redesign):**
+1. Initial `screen` state is always `SCREEN_GROWNUP` now, so every fresh app open shows
+   the picker (or its guest/sign-in lane chooser) first, regardless of sign-in state.
+2. `GrownUpScreen`'s `onBack` only returns to `SCREEN_HOME` if an `activeKid` is already
+   set; otherwise it stays on the picker so there's no way to back out to a profile-less
+   Home.
+3. Added a safety-net guard where `SCREEN_HOME` is rendered: if `screen === SCREEN_HOME`
+   and `!activeKid` ever occurs (any future code path), it falls through to the picker
+   instead of rendering Home. Belt-and-suspenders on top of (1) and (2).
+
+Once a kid is picked (`onProfileChosen`), the flow is unchanged: straight to Home (or the
+one-time Helper setup) as before. `npm run build` clean; `qa-breaker.mjs` ALL CHECKS PASS
+(untouched by this change, run per standing QA practice). Scoped entirely to
+`src/BuildableKids.jsx`.
+
+
 ## 2026-07-09 — Session 3D: Feel Kit + GAME-FEEL.md
 
 Phase 3 (the "paint layer") gets its feel layer. Every game's "juice" — the sounds,
