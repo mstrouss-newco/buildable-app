@@ -47,6 +47,7 @@ const SCREEN_GAME_PICKER = "game_picker";
 const SCREEN_PLATFORMER = "platformer";
 const SCREEN_SURVIVAL = "survival";
 const SCREEN_BREAKER = "breaker";
+const SCREEN_BREAKER_LANDING = "breaker_landing";
 const SCREEN_TANK = "tank";
 const SCREEN_RUNNER = "runner";
 const SCREEN_TETRIS = "tetris";
@@ -266,7 +267,7 @@ function TennisScreen({ onHome, onPlayFriend }) {
   }, [onPlayFriend]);
   return <GameFrame title="Buildable Tennis" src="/tennis.html?v=hud1" onHome={onHome} />;
 }
-function BreakerScreen({ onHome }) {
+function BreakerScreen({ onHome, entry = "journey" }) {
   const [quiz, setQuiz] = useState(null); // { reply } while a learning gate is showing
   const onChildMessage = (d, post) => {
     if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
@@ -282,7 +283,34 @@ function BreakerScreen({ onHome }) {
       <QuizGate goal={getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
     </div>
   ) : null;
-  return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=2c" onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} />;
+  return <GameFrame title="Buildable Breaker" src={`/breaker-engine.html?v=3a&screen=${entry}`} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} />;
+}
+
+// Shell-generated game landing (Session 3A) — a converted game's front door.
+// Everything here is manifest/identity-driven (badge art, name, category, signature
+// color). The demo panel embeds the game's own engine in a self-playing "attract"
+// mode (?screen=demo, input disabled). This REPLACES the engine's homemade start
+// screen + Play/Make hub. Generic — any converted game can use it.
+function GameLanding({ game, demoSrc, onPlay, onMake, onBack }) {
+  const accent = game.color;
+  return (
+    <div style={{ ...styles.container, justifyContent: "flex-start" }}>
+      <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
+        <button onClick={onBack} style={styles.backButton}>Games</button>
+      </div>
+      <div style={{ width: "100%", maxWidth: 540, marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>{game.category}{game.type === "studio" ? " \u00b7 Studio" : ""}</div>
+        <h1 style={{ ...styles.logo, margin: "2px 0 0" }}>{game.name}</h1>
+        <p style={{ ...styles.tagline, margin: "4px 0 10px" }}>{game.desc}</p>
+        <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4", maxHeight: "50vh", borderRadius: 26, overflow: "hidden", border: `2px solid ${accent}66`, boxShadow: `0 18px 44px rgba(0,0,0,0.5), 0 0 0 4px ${accent}22`, background: `linear-gradient(160deg, ${accent}, ${accent}66)` }}>
+          {demoSrc && <iframe title={`${game.name} demo`} src={demoSrc} scrolling="no" style={{ width: "100%", height: "100%", border: "none", display: "block", pointerEvents: "none" }} />}
+          <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 11px", borderRadius: 999, background: "rgba(12,10,24,0.66)", color: "#fff" }}>Demo</span>
+        </div>
+        <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 9px 0 ${accent}88, 0 16px 30px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play</button>
+        {onMake && <button onClick={onMake} style={{ marginTop: 12, width: "100%", maxWidth: 360, borderRadius: 16, padding: "13px 20px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer" }}>Make a level</button>}
+      </div>
+    </div>
+  );
 }
 function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=hud1" onHome={onHome} bg="#2e7d32" />; }
 function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html?v=hud1" onHome={onHome} bg="#0c1230" />; }
@@ -558,6 +586,7 @@ export default function BuildableKids() {
   };
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
+  const [breakerEntry, setBreakerEntry] = useState("journey"); // which engine screen the Breaker landing launches into
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
   const [rtAutoJoin, setRtAutoJoin] = useState(null);
   const [friendAutoJoin, setFriendAutoJoin] = useState(null); // { game, inviteId? , matchId? }
@@ -823,7 +852,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onMahjong={() => setScreen(SCREEN_MAHJONG)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} onSling={() => setScreen(SCREEN_SLING)} onCroc={() => setScreen(SCREEN_CROC)} onStringMatch={() => setScreen(SCREEN_STRINGMATCH)} onTank={() => setScreen(SCREEN_TANK)} onBubble={() => setScreen(SCREEN_BUBBLE)} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onMahjong={() => setScreen(SCREEN_MAHJONG)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} onSling={() => setScreen(SCREEN_SLING)} onCroc={() => setScreen(SCREEN_CROC)} onStringMatch={() => setScreen(SCREEN_STRINGMATCH)} onTank={() => setScreen(SCREEN_TANK)} onBubble={() => setScreen(SCREEN_BUBBLE)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -831,8 +860,15 @@ export default function BuildableKids() {
   if (screen === SCREEN_SURVIVAL) {
     return <SurvivalScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
+  if (screen === SCREEN_BREAKER_LANDING) {
+    const bk = GAME_CATALOG.find((g) => g.id === "breaker");
+    return <GameLanding game={bk} demoSrc="/breaker-engine.html?v=3a&screen=demo"
+      onPlay={() => { setBreakerEntry("journey"); setScreen(SCREEN_BREAKER); }}
+      onMake={() => { setBreakerEntry("maker"); setScreen(SCREEN_BREAKER); }}
+      onBack={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
   if (screen === SCREEN_BREAKER) {
-    return <BreakerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BreakerScreen entry={breakerEntry} onHome={() => setScreen(SCREEN_BREAKER_LANDING)} />;
   }
   if (screen === SCREEN_CASTLE) {
     return <CastleGuardScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
