@@ -1,5 +1,25 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Cartridge contract doc alignment + log cleanup
+
+Docs-only pass, no code changes. `CARTRIDGE-CONTRACT.md` now documents the messages that
+actually shipped instead of the original placeholder vocabulary: `nav:state` / `nav:sound`
+/ `nav:menu` / `nav:help` / `nav:exit` (the gamenav chrome bridge), `quizRequest` /
+`bk:quizDone` (the learning gate), the buddy events `win` / `lose` / `levelup` / `cheer`,
+and `pause` / `resume` are now the canonical contract messages. Added a level-loading tier
+rule: canvas games may keep using their own real deep-link URLs, embedded engine games
+(Phaser/Godot/etc., mounted once at their `entry` URL) must support a `start` message
+carrying the level id instead. The messages-only rule, the art-at-runtime rule, and the
+`engine`/`entry` manifest fields are unchanged. Noted that wallet ownership (currently
+`buildable-wallet.js` reading/writing localStorage inside each game page, flagged in the
+July 8 audit above) is planned to move to the shell in **Session 3C**. Old aspirational
+names with no shipped equivalent (`ready`, `loading`, `score`, `levelComplete`,
+`needsCoins`, `setAudio`) are kept in the doc as reserved future vocabulary, not canonical.
+
+Also cleaned up an old unresolved git merge conflict block in this file (further down,
+around the July 2 2026 Hilltop Tanks / Bubble Buddies entries — flagged but left alone in
+the audit above) — both sides' history are preserved as two separate dated entries.
+
 ## 2026-07-08 — Cartridge contract adoption + wiring audit
 
 `CARTRIDGE-CONTRACT.md` committed to the repo root: the single source of truth for how
@@ -1673,7 +1693,6 @@ row. Data cleanup: filed the 4 unfiled songs on the demo device — "Riley stole
 the ball"→Riley, "Riley and Fiona's magical zoo"→Riley, "Jackson hit a home run"
 →Jack; left "Epic volcano Song" unfiled (no child named).
 
-<<<<<<< HEAD
 ---
 ## 2026-07-02 — Hilltop Tanks (tank artillery engine)
 - Built `public/tank-engine.html`: solo vs friendly computer tank; hill-to-hill lobbing.
@@ -1682,7 +1701,7 @@ the ball"→Riley, "Riley and Fiona's magical zoo"→Riley, "Jackson hit a home 
 - Shared BR/BA/BM/BS; BS start screen (3 levels: Green Valley, Twin Peaks, Big Bluffs).
 - QA: qa-tank.mjs perfect-player bot clears all levels 8/8; full campaign win.
 - Routes in vercel.json; SCREEN_TANK + TankScreen + Games tile; api/images.js prompt.
-=======
+
 ## 2026-07-02 — New game: Bubble Buddies (Snood-style bubble shooter)
 New Track B engine public/bubble-engine.html. Aim+shoot up a hex grid; match 3+ same-colour
 "buddies" to pop, floating clusters drop. Kenney CC0 Shape Characters (6 circle bodies + faces:
@@ -1693,4 +1712,3 @@ sim/campaign perfect-player bot; qa-bubble.mjs proves all 6 levels clear (5 seed
 Wired: vercel.json (/bubble-engine.html, /bubble), src/BuildableKids.jsx (SCREEN_BUBBLE, tile,
 BubbleScreen, GAME_SLUGS). TODO: asset-library registration, save/share/publish + make-a-level,
 picker thumbnail (api/images GAMES id bubble).
->>>>>>> 30afe7d (New game: Bubble Buddies — Snood-style bubble shooter (Kenney Shape Characters))
