@@ -188,12 +188,43 @@ function saveGuestKids(arr) {
   localStorage.setItem(GUEST_KIDS_KEY, JSON.stringify(arr || []));
 }
 
+// ---- Avatars + kid PIN (Session 6B onboarding) --------------------
+// Drawn-icon avatars (NO emoji, product rule). Each is an icon key + a color;
+// the UI draws the matching SVG (see GrownUpScreen AvatarMark). Legacy color-key
+// avatars ("purple".."teal") still render via the initial-on-gradient fallback.
+export const AVATARS = [
+  { key: "fox", color: "#F59E3C" },
+  { key: "owl", color: "#7C4DFF" },
+  { key: "cat", color: "#EC4899" },
+  { key: "frog", color: "#22B573" },
+  { key: "bear", color: "#8B5E3C" },
+  { key: "fish", color: "#37B6F5" },
+  { key: "star", color: "#FFC24A" },
+  { key: "robot", color: "#5B7CFA" },
+];
+export const DEFAULT_AVATAR = AVATARS[0].key;
+
+// Tiny non-secret hash for a 4-digit kid PIN (snoop guard for siblings, NOT
+// security). Raw PINs are never stored; only this hash is. djb2 -> base36.
+export function hashPin(pin) {
+  const s = String(pin || "").trim();
+  if (!/^[0-9]{4}$/.test(s)) return null;
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return "p" + h.toString(36);
+}
+export function kidHasPin(kid) { return !!(kid && kid.pin_hash); }
+export function verifyKidPin(kid, pin) {
+  if (!kid || !kid.pin_hash) return true; // no PIN set -> always allowed
+  return hashPin(pin) === kid.pin_hash;
+}
+
 // ---- KID PROFILES (branch: account -> Supabase, else -> guest) ----
 export async function listKidProfiles() {
   if (isSignedIn()) {
     try {
       return await restFetch(
-        "kid_profiles?select=id,display_name:name,avatar,helper,created_at&order=created_at.asc",
+        "kid_profiles?select=id,display_name:name,avatar,grade,pin_hash,helper,created_at&order=created_at.asc",
         { method: "GET" }
       );
     } catch (e) {
@@ -208,9 +239,11 @@ export async function listKidProfiles() {
   return loadGuestKids();
 }
 
-export async function createKidProfile(displayName, avatar) {
+export async function createKidProfile(displayName, avatar, opts = {}) {
   const name = (displayName || "").trim();
   if (!name) throw new Error("Please enter a name");
+  const grade = opts.grade || null;
+  const pin_hash = opts.pin ? hashPin(opts.pin) : null;
 
   if (isSignedIn()) {
     const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
@@ -219,18 +252,65 @@ export async function createKidProfile(displayName, avatar) {
     // If this grown-up joined another family as a co-parent, new kids are
     // filed under the family OWNER so both grown-ups share the same kids.
     const parentId = await familyOwnerId(me.id);
-    const rows = await restFetch("kid_profiles?select=id,display_name:name,avatar,created_at", {
-      method: "POST",
-      body: JSON.stringify({ parent_id: parentId, name: name.slice(0, 40), avatar: avatar || "🙂" }),
-    });
-    return rows?.[0];
+    const base = { parent_id: parentId, name: name.slice(0, 40), avatar: avatar || DEFAULT_AVATAR };
+    // Try WITH the new columns; if the 6B migration has not run yet, retry with
+    // just the base columns so profile creation never breaks (replace-first rule).
+    try {
+      const rows = await restFetch("kid_profiles?select=id,display_name:name,avatar,grade,pin_hash,created_at", {
+        method: "POST",
+        body: JSON.stringify({ ...base, grade, pin_hash }),
+      });
+      return rows?.[0];
+    } catch (e) {
+      const rows = await restFetch("kid_profiles?select=id,display_name:name,avatar,created_at", {
+        method: "POST",
+        body: JSON.stringify(base),
+      });
+      return rows?.[0];
+    }
   }
 
   const kids = loadGuestKids();
-  const kid = { id: makeId(), display_name: name.slice(0, 40), avatar: avatar || "🙂", created_at: new Date().toISOString() };
+  const kid = { id: makeId(), display_name: name.slice(0, 40), avatar: avatar || DEFAULT_AVATAR, grade, pin_hash, created_at: new Date().toISOString() };
   kids.push(kid);
   saveGuestKids(kids);
   return kid;
+}
+
+// General profile update for the onboarding fields (name/avatar/grade/pin).
+// pin: pass a 4-digit string to set, "" to clear, or omit to leave unchanged.
+export async function updateKidProfile(id, patch = {}) {
+  const body = {};
+  if (typeof patch.name === "string" && patch.name.trim()) body.name = patch.name.trim().slice(0, 40);
+  if (typeof patch.avatar === "string") body.avatar = patch.avatar;
+  if ("grade" in patch) body.grade = patch.grade || null;
+  if ("pin" in patch) body.pin_hash = patch.pin ? hashPin(patch.pin) : null;
+
+  if (isSignedIn()) {
+    // Resilient: retry without the 6B columns if they are not present yet.
+    const trySelects = ["id,display_name:name,avatar,grade,pin_hash,created_at", "id,display_name:name,avatar,created_at"];
+    for (let i = 0; i < trySelects.length; i++) {
+      try {
+        const b = i === 0 ? body : (({ grade, pin_hash, ...rest }) => rest)(body);
+        const rows = await restFetch(`kid_profiles?id=eq.${id}&select=${trySelects[i]}`, { method: "PATCH", body: JSON.stringify(b) });
+        const updated = rows?.[0];
+        const active = getActiveKid();
+        if (active && active.id === id && updated) setActiveKid(updated);
+        return updated;
+      } catch (e) { if (i === trySelects.length - 1) throw e; }
+    }
+  }
+  const kids = loadGuestKids();
+  const k = kids.find((x) => x.id === id);
+  if (!k) throw new Error("Profile not found");
+  if ("name" in body) k.display_name = body.name;
+  if ("avatar" in body) k.avatar = body.avatar;
+  if ("grade" in body) k.grade = body.grade;
+  if ("pin_hash" in body) k.pin_hash = body.pin_hash;
+  saveGuestKids(kids);
+  const active = getActiveKid();
+  if (active && active.id === id) setActiveKid(k);
+  return k;
 }
 
 export async function renameKidProfile(id, displayName) {

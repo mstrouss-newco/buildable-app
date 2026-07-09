@@ -34,6 +34,7 @@ import {
   listFamilyProjects, assignProjectToKid,
   signInWithGoogle, completeOAuthRedirect,
   getFamilyStatus, joinFamilyByCode,
+  AVATARS, DEFAULT_AVATAR, kidHasPin, verifyKidPin,
 } from "./lib/accounts";
 import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, learningGradeOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount, subjectMastery, progressHistory } from "./store";
 
@@ -67,6 +68,37 @@ function avatarGrad(kid) {
 function initialOf(kid) {
   const n = ((kid && kid.display_name) || "").trim();
   return n ? n[0].toUpperCase() : "?";
+}
+
+// Drawn-icon avatars (Session 6B). Each AVATARS key maps to a simple white SVG
+// motif on the catalog color — NO emoji. Legacy color-key / old rows fall back
+// to the initial-on-gradient look above so nothing breaks.
+const AVATAR_COLOR = Object.fromEntries(AVATARS.map((a) => [a.key, a.color]));
+function AvatarMotif({ k }) {
+  const w = "#fff";
+  switch (k) {
+    case "fox": return (<g><path d="M18 20 L26 30 L14 30 Z" fill={w}/><path d="M46 20 L50 30 L38 30 Z" fill={w}/><circle cx="26" cy="38" r="3" fill={w}/><circle cx="38" cy="38" r="3" fill={w}/><path d="M28 44 h8" stroke={w} strokeWidth="3" strokeLinecap="round"/></g>);
+    case "owl": return (<g><circle cx="25" cy="30" r="8" fill={w}/><circle cx="39" cy="30" r="8" fill={w}/><circle cx="25" cy="30" r="3" fill="#333"/><circle cx="39" cy="30" r="3" fill="#333"/><path d="M30 38 l2 4 l2 -4 Z" fill={w}/></g>);
+    case "cat": return (<g><path d="M18 18 L24 28 L14 28 Z" fill={w}/><path d="M46 18 L50 28 L40 28 Z" fill={w}/><circle cx="26" cy="36" r="3" fill={w}/><circle cx="38" cy="36" r="3" fill={w}/><path d="M20 40 h8 M36 40 h8" stroke={w} strokeWidth="2" strokeLinecap="round"/></g>);
+    case "frog": return (<g><circle cx="24" cy="24" r="7" fill={w}/><circle cx="40" cy="24" r="7" fill={w}/><circle cx="24" cy="24" r="3" fill="#333"/><circle cx="40" cy="24" r="3" fill="#333"/><path d="M22 40 q10 8 20 0" fill="none" stroke={w} strokeWidth="3" strokeLinecap="round"/></g>);
+    case "bear": return (<g><circle cx="20" cy="22" r="6" fill={w}/><circle cx="44" cy="22" r="6" fill={w}/><circle cx="26" cy="34" r="3" fill={w}/><circle cx="38" cy="34" r="3" fill={w}/><circle cx="32" cy="42" r="4" fill={w}/></g>);
+    case "fish": return (<g><path d="M18 32 q10 -12 24 0 q-10 12 -24 0 Z" fill={w}/><path d="M42 32 l10 -7 v14 Z" fill={w}/><circle cx="26" cy="30" r="2.5" fill="#333"/></g>);
+    case "star": return (<path d="M32 16 l5 12 13 1 -10 8 3 13 -11 -7 -11 7 3 -13 -10 -8 13 -1 Z" fill={w}/>);
+    case "robot": return (<g><rect x="20" y="22" width="24" height="20" rx="4" fill={w}/><circle cx="27" cy="32" r="3" fill="#333"/><circle cx="37" cy="32" r="3" fill="#333"/><path d="M32 16 v6" stroke={w} strokeWidth="3"/><circle cx="32" cy="15" r="2.5" fill={w}/></g>);
+    default: return null;
+  }
+}
+function AvatarMark({ kid, size = 56 }) {
+  const key = kid && kid.avatar;
+  const color = key && AVATAR_COLOR[key];
+  if (color) {
+    return (
+      <span style={{ display: "inline-flex", width: size, height: size, borderRadius: "50%", overflow: "hidden", background: color }}>
+        <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true"><AvatarMotif k={key} /></svg>
+      </span>
+    );
+  }
+  return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: size, height: size, borderRadius: "50%", background: avatarGrad(kid), color: "#fff", fontWeight: 800, fontSize: size * 0.4 }}>{initialOf(kid)}</span>;
 }
 
 // The brand wordmark, used in place of the old family emoji.
@@ -152,7 +184,9 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
   const [kids, setKids] = useState([]);
   const [loadingKids, setLoadingKids] = useState(true);
   const [newName, setNewName] = useState("");
-  const [newAvatar, setNewAvatar] = useState(COLORS[0].key);
+  const [newAvatar, setNewAvatar] = useState(DEFAULT_AVATAR);
+  const [newGrade, setNewGrade] = useState("");
+  const [newPin, setNewPin] = useState("");
 
   // grown-up gate (simple check so kids can't wander into the Parents area)
   const [gateA] = useState(() => 3 + Math.floor(Math.random() * 7));
@@ -322,18 +356,27 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
     if (!newName.trim()) return;
     setBusy(true); setError(null);
     try {
-      await createKidProfile(newName.trim(), newAvatar);
+      await createKidProfile(newName.trim(), newAvatar, { grade: newGrade || null, pin: /^[0-9]{4}$/.test(newPin) ? newPin : null });
       setNewName("");
-      setNewAvatar(COLORS[0].key);
+      setNewAvatar(DEFAULT_AVATAR);
+      setNewGrade("");
+      setNewPin("");
       await refreshKids();
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
 
   function chooseKid(kid) {
+    // Optional kid PIN: siblings who snoop must know the 4 digits to enter.
+    if (kidHasPin(kid)) {
+      const entered = window.prompt(`Enter ${kid.display_name}'s PIN`);
+      if (entered == null) return;              // cancelled
+      if (!verifyKidPin(kid, entered.trim())) { setError("That PIN was not right."); return; }
+    }
+    setError(null);
     setActiveKid(kid);
     setActive(kid);
-    if (onProfileChosen) onProfileChosen(kid);
+    if (onProfileChosen) onProfileChosen(kid); // parent applies the kid's grade after loading their learning scope
   }
 
   async function handleRename(kid) {
@@ -481,7 +524,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                 <div style={S.kidGrid}>
                   {kids.map((k) => (
                     <button key={k.id} onClick={() => chooseKid(k)} style={S.kidWrap}>
-                      <span style={{ ...S.kidAvatar, background: avatarGrad(k) }}>{initialOf(k)}</span>
+                      <AvatarMark kid={k} size={56} />
                       <span style={S.kidName}>{k.display_name}</span>
                     </button>
                   ))}
@@ -528,7 +571,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                 {kids.map((k) => (
                   <div key={k.id} style={S.kidManageWrap}>
                     <div style={S.kidWrap}>
-                      <span style={{ ...S.kidAvatar, background: avatarGrad(k) }}>{initialOf(k)}</span>
+                      <AvatarMark kid={k} size={56} />
                       <span style={S.kidName}>{k.display_name}</span>
                     </div>
                     <div style={S.kidActions}>
@@ -544,15 +587,26 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
               <input style={S.input} value={newName} maxLength={40}
                 onChange={(e) => setNewName(e.target.value)} placeholder="Add a child's name" />
               <div style={S.avatarRow}>
-                {COLORS.map((c) => (
-                  <button type="button" key={c.key} onClick={() => setNewAvatar(c.key)}
-                    aria-label={"Color " + c.key}
-                    style={{
-                      ...S.colorPick, background: c.grad,
-                      ...(newAvatar === c.key ? S.colorPickActive : {}),
-                    }} />
+                {AVATARS.map((a) => (
+                  <button type="button" key={a.key} onClick={() => setNewAvatar(a.key)}
+                    aria-label={"Avatar " + a.key}
+                    style={{ ...S.avatarPick, ...(newAvatar === a.key ? S.avatarPickActive : {}) }}>
+                    <AvatarMark kid={{ avatar: a.key }} size={40} />
+                  </button>
                 ))}
               </div>
+              <div style={S.fieldLabel}>Grade (sets the learning level)</div>
+              <div style={S.avatarRow}>
+                {learningGradeOptions().map((g) => (
+                  <button type="button" key={g} onClick={() => setNewGrade(newGrade === g ? "" : g)}
+                    style={{ ...S.gradePick, ...(newGrade === g ? S.gradePickActive : {}) }}>
+                    {g === "k" ? "K" : g}
+                  </button>
+                ))}
+              </div>
+              <input style={S.input} value={newPin} inputMode="numeric" maxLength={4}
+                onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                placeholder="Optional 4-digit PIN (for snoopy siblings)" />
               <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>Add child</button>
             </form>
 
@@ -1144,6 +1198,11 @@ const S = {
     cursor: "pointer", padding: 0,
   },
   colorPickActive: { border: "2px solid #fff", boxShadow: "0 0 0 2px rgba(255,255,255,0.35)" },
+  avatarPick: { padding: 3, borderRadius: "50%", border: "2px solid transparent", background: "transparent", cursor: "pointer", lineHeight: 0 },
+  avatarPickActive: { border: "2px solid #fff", boxShadow: "0 0 0 2px rgba(255,255,255,0.35)" },
+  gradePick: { minWidth: 40, padding: "8px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.1)", color: "#fff", fontWeight: 800, cursor: "pointer", fontFamily: NUN },
+  gradePickActive: { background: "#fff", color: "#b3477a", borderColor: "#fff" },
+  fieldLabel: { fontSize: 12.5, fontWeight: 700, opacity: 0.85, margin: "6px 0 2px", textAlign: "center" },
   projList: { display: "flex", flexDirection: "column", gap: 8, margin: "6px 0 14px" },
   projRow: {
     display: "flex", alignItems: "center", gap: 10,

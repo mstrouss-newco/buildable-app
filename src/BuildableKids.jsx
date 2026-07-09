@@ -1108,7 +1108,9 @@ export default function BuildableKids() {
         onOpenFriends={() => { setFriendsReturn(SCREEN_GROWNUP); setScreen(SCREEN_GROWNUP_FRIENDS); }}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
-          reloadLearningForActiveKid();
+          // Load this kid's learning scope, THEN stamp their onboarding grade so
+          // it drives the learning level (Session 6B). Self-corrects each open.
+          reloadLearningForActiveKid().then(() => { try { if (kid && kid.grade) setLearningSettings({ grade: kid.grade }); } catch (e) {} });
           setScreen(getKidHelper(kid) ? SCREEN_HOME : SCREEN_HELPER);
         }}
       />
@@ -1508,7 +1510,9 @@ export default function BuildableKids() {
         onOpenFriends={() => { setFriendsReturn(SCREEN_GROWNUP); setScreen(SCREEN_GROWNUP_FRIENDS); }}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
-          reloadLearningForActiveKid();
+          // Load this kid's learning scope, THEN stamp their onboarding grade so
+          // it drives the learning level (Session 6B). Self-corrects each open.
+          reloadLearningForActiveKid().then(() => { try { if (kid && kid.grade) setLearningSettings({ grade: kid.grade }); } catch (e) {} });
           setScreen(getKidHelper(kid) ? SCREEN_HOME : SCREEN_HELPER);
         }}
       />
