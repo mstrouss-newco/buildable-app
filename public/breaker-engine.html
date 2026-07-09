@@ -783,9 +783,13 @@ function pongScore(scorer){ if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ffffff",0.25
 var bkPendingLevel=null, bkPendingLives=null;
 function bkAdvanceOrGate(nextIdx, lives){
   if(bkPendingLevel!=null) return;                       // already waiting on a gate
-  if(inApp() && bkLearnBeforeUnlock()){
+  if(inApp()){
+    // Session 6B: the SHELL is the authority on learning moments so a parent's
+    // toggle can OVERRIDE the manifest default. We always ASK (passing our
+    // manifest default); the shell either shows its QuizGate or replies
+    // bk:quizDone at once. Standalone deep links (no parent app) skip the gate.
     bkPendingLevel=nextIdx; bkPendingLives=lives;
-    try{ window.parent.postMessage({source:"buildable", kind:"quizRequest", moment:"beforeUnlock", subjects:bkLearnSubjects(), gameType:"breaker"}, "*"); }
+    try{ window.parent.postMessage({source:"buildable", kind:"quizRequest", moment:"beforeUnlock", manifestBeforeUnlock:bkLearnBeforeUnlock(), subjects:bkLearnSubjects(), gameType:"breaker"}, "*"); }
     catch(e){ bkPendingLevel=null; bkPendingLives=null; startLevel(nextIdx, lives); }
     return;
   }

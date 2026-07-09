@@ -35,7 +35,7 @@ import {
   signInWithGoogle, completeOAuthRedirect,
   getFamilyStatus, joinFamilyByCode,
 } from "./lib/accounts";
-import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount } from "./store";
+import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, learningGradeOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount } from "./store";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -674,6 +674,27 @@ function LearningModeCard() {
     const clamped = Math.min(ageRange.max, Math.max(ageRange.min, next));
     setSettings(setLearningSettings({ age: clamped }));
   }
+  const grades = learningGradeOptions();
+  const gradeLabel = (g) => (g === "k" ? "K" : g);
+  function pickGrade(g) {
+    // Toggling a grade off ("") falls back to the age stepper.
+    setSettings(setLearningSettings({ grade: settings.grade === g ? "" : g }));
+  }
+  // Parent per-moment overrides (Auto follows the game; On/Off force it).
+  const MOMENTS = [
+    { key: "beforeUnlock", label: "Question before a new level" },
+    { key: "coinTopUp", label: "Earn coins by practicing" },
+    { key: "bonusAfterWin", label: "Bonus question after a win" },
+  ];
+  const TRI = [
+    { v: "auto", label: "Auto" },
+    { v: "on", label: "On" },
+    { v: "off", label: "Off" },
+  ];
+  function setMoment(key, v) {
+    const moments = { ...(settings.moments || {}), [key]: v };
+    setSettings(setLearningSettings({ moments }));
+  }
 
   return (
     <div style={LM.wrap}>
@@ -709,37 +730,77 @@ function LearningModeCard() {
             ))}
           </div>
 
-          <div style={LM.ageLabel}>Child's age</div>
-          <div style={LM.ageRow}>
-            <button
-              type="button"
-              aria-label="Younger"
-              disabled={settings.age <= ageRange.min}
-              onClick={() => setAge(settings.age - 1)}
-              style={{ ...LM.ageStep, ...(settings.age <= ageRange.min ? LM.ageStepOff : {}) }}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <rect x="3" y="7" width="10" height="2" rx="1" fill="currentColor" />
-              </svg>
-            </button>
-            <div style={LM.ageValue}>
-              <span style={LM.ageNum}>{settings.age}</span>
-              <span style={LM.ageUnit}>years</span>
-            </div>
-            <button
-              type="button"
-              aria-label="Older"
-              disabled={settings.age >= ageRange.max}
-              onClick={() => setAge(settings.age + 1)}
-              style={{ ...LM.ageStep, ...(settings.age >= ageRange.max ? LM.ageStepOff : {}) }}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <rect x="3" y="7" width="10" height="2" rx="1" fill="currentColor" />
-                <rect x="7" y="3" width="2" height="10" rx="1" fill="currentColor" />
-              </svg>
-            </button>
+          <div style={LM.ageLabel}>Grade</div>
+          <div style={LM.goalsRow}>
+            {grades.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => pickGrade(g)}
+                style={{ ...LM.gradeBtn, ...(settings.grade === g ? LM.goalBtnActive : {}) }}
+              >
+                {gradeLabel(g)}
+              </button>
+            ))}
           </div>
-          <div style={LM.ageHint}>Sets how hard the practice questions are.</div>
+          {!settings.grade && (
+            <>
+              <div style={LM.ageLabel}>Or set an exact age</div>
+              <div style={LM.ageRow}>
+                <button
+                  type="button"
+                  aria-label="Younger"
+                  disabled={settings.age <= ageRange.min}
+                  onClick={() => setAge(settings.age - 1)}
+                  style={{ ...LM.ageStep, ...(settings.age <= ageRange.min ? LM.ageStepOff : {}) }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="3" y="7" width="10" height="2" rx="1" fill="currentColor" />
+                  </svg>
+                </button>
+                <div style={LM.ageValue}>
+                  <span style={LM.ageNum}>{settings.age}</span>
+                  <span style={LM.ageUnit}>years</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Older"
+                  disabled={settings.age >= ageRange.max}
+                  onClick={() => setAge(settings.age + 1)}
+                  style={{ ...LM.ageStep, ...(settings.age >= ageRange.max ? LM.ageStepOff : {}) }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="3" y="7" width="10" height="2" rx="1" fill="currentColor" />
+                    <rect x="7" y="3" width="2" height="10" rx="1" fill="currentColor" />
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
+          <div style={LM.ageHint}>Grade sets how hard the practice questions are.</div>
+
+          <div style={LM.ageLabel}>Learning moments</div>
+          <div style={LM.momentsHint}>Auto follows each game. On or Off overrides it everywhere.</div>
+          {MOMENTS.map((m) => {
+            const cur = (settings.moments && settings.moments[m.key]) || "auto";
+            return (
+              <div key={m.key} style={LM.momentRow}>
+                <span style={LM.momentLabel}>{m.label}</span>
+                <span style={LM.triWrap}>
+                  {TRI.map((t) => (
+                    <button
+                      key={t.v}
+                      type="button"
+                      onClick={() => setMoment(m.key, t.v)}
+                      style={{ ...LM.triBtn, ...(cur === t.v ? LM.triBtnActive : {}) }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -924,6 +985,20 @@ const LM = {
   ageNum: { fontFamily: FRED, fontSize: 26, fontWeight: 700, color: "#fff" },
   ageUnit: { fontSize: 11.5, opacity: 0.7, marginTop: 2 },
   ageHint: { fontSize: 12, opacity: 0.7, marginTop: 8, lineHeight: 1.4 },
+  gradeBtn: {
+    background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)",
+    borderRadius: 12, padding: "8px 12px", minWidth: 40, fontSize: 14, fontWeight: 800,
+    cursor: "pointer", fontFamily: NUN,
+  },
+  momentsHint: { fontSize: 12, opacity: 0.7, margin: "0 0 8px", lineHeight: 1.4 },
+  momentRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, margin: "8px 0" },
+  momentLabel: { fontSize: 13.5, fontWeight: 600, opacity: 0.95, flex: 1 },
+  triWrap: { display: "inline-flex", flex: "0 0 auto", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.22)" },
+  triBtn: {
+    background: "transparent", color: "#fff", border: "none", borderLeft: "1px solid rgba(255,255,255,0.18)",
+    padding: "6px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: NUN,
+  },
+  triBtnActive: { background: "#fff", color: "#b3477a" },
 };
 
 const S = {

@@ -269,7 +269,17 @@ const LEARNING_KEY = "learning";
 const AGE_MIN = 3;
 const AGE_MAX = 13;
 const AGE_DEFAULT = 7;
-const LEARNING_DEFAULTS = { enabled: false, goal: "math", age: AGE_DEFAULT };
+const GRADE_OPTIONS = ["k", "1", "2", "3", "4", "5", "6"];
+// Grade -> a representative age, so a kid's GRADE drives quiz difficulty
+// (onboarding sets grade; the quiz engine still reads `age`). K=5 ... 6th=11.
+const GRADE_AGE = { k: 5, "1": 6, "2": 7, "3": 8, "4": 9, "5": 10, "6": 11 };
+// Parent per-moment overrides. Tri-state: "auto" follows the game manifest's
+// default; "on"/"off" force it. This is how "parent toggles override manifest
+// defaults" is stored (per kid, cloud-synced with the rest of learning settings).
+const MOMENT_KEYS = ["beforeUnlock", "coinTopUp", "bonusAfterWin"];
+const TRI = ["auto", "on", "off"];
+const DEFAULT_MOMENTS = { beforeUnlock: "auto", coinTopUp: "auto", bonusAfterWin: "auto" };
+const LEARNING_DEFAULTS = { enabled: false, goal: "math", age: AGE_DEFAULT, grade: "", moments: { ...DEFAULT_MOMENTS } };
 const GOAL_OPTIONS = ["math", "reading", "mix"];
 let learningCache = { ...LEARNING_DEFAULTS };
 let learningChangedAt = 0; // ms of last local settings change (for cloud merge tie-break)
@@ -289,8 +299,53 @@ function normalizeLearning(raw) {
   const src = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const enabled = src.enabled === true;
   const goal = GOAL_OPTIONS.includes(src.goal) ? src.goal : LEARNING_DEFAULTS.goal;
-  const age = clampAge(src.age == null ? AGE_DEFAULT : src.age);
-  return { enabled, goal, age };
+  const grade = GRADE_OPTIONS.includes(src.grade) ? src.grade : "";
+  // Grade is authoritative for difficulty when set; otherwise fall back to age.
+  const age = grade ? GRADE_AGE[grade] : clampAge(src.age == null ? AGE_DEFAULT : src.age);
+  const moments = {};
+  MOMENT_KEYS.forEach((k) => {
+    const v = src.moments && src.moments[k];
+    moments[k] = TRI.includes(v) ? v : "auto";
+  });
+  return { enabled, goal, age, grade, moments };
+}
+
+// Grade helpers (used by onboarding + the grown-ups picker).
+export function learningGradeOptions() {
+  return [...GRADE_OPTIONS];
+}
+export function gradeToAge(grade) {
+  return GRADE_AGE[grade] || AGE_DEFAULT;
+}
+
+// Merge the game manifest's learning DEFAULTS with the parent's per-kid
+// overrides. Parent wins: "on"/"off" force a moment; "auto" follows the game.
+// `manifestLearning` is the object from BuildableManifest.learningDefaults(...)
+// (or the engine cfg.learning). Returns the effective moment switches plus the
+// master `enabled` (parent's Learning Mode toggle) and `subjects`.
+export function effectiveLearning(manifestLearning) {
+  const s = getLearningSettings();
+  const md = manifestLearning && typeof manifestLearning === "object" ? manifestLearning : {};
+  const resolve = (key, dflt) => {
+    const ov = s.moments && s.moments[key];
+    if (ov === "on") return true;
+    if (ov === "off") return false;
+    return md[key] != null ? !!md[key] : !!dflt; // auto -> game default
+  };
+  // Subjects: parent goal narrows the pool when set to a single subject;
+  // "mix" (or unset) uses the game's declared subjects.
+  let subjects = Array.isArray(md.subjects) && md.subjects.length ? md.subjects : ["math"];
+  if (s.goal === "math" || s.goal === "reading") subjects = [s.goal];
+  return {
+    enabled: s.enabled,               // parent master switch (nothing gates if off)
+    beforeUnlock: resolve("beforeUnlock", false),
+    coinTopUp: resolve("coinTopUp", true),
+    bonusAfterWin: resolve("bonusAfterWin", false),
+    subjects,
+    goal: s.goal,
+    age: s.age,
+    grade: s.grade,
+  };
 }
 
 // Load persisted learning settings for the current scope into the cache.

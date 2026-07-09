@@ -34,6 +34,29 @@
   function multiplayerTransport(m){ return MP_TO_TRANSPORT[multiplayerMode(m)]; }
 
   // ===========================================================================
+  //  LEARNING switch (Session 6B). The manifest's features.learning declares the
+  //  DEFAULTS for a game's learning moments. Parents override these per-kid from
+  //  the grown-ups area (their setting wins); this only reads the game defaults.
+  //    beforeUnlock  -> one skippable question before a new level unlocks
+  //    coinTopUp     -> short on coins? 3 correct answers = 10 coins
+  //    bonusAfterWin -> optional post-win question for extra coins
+  //    subjects      -> which subjects to draw from (grade drives difficulty)
+  //  Pure + headless-safe; reads ONLY features.
+  // ===========================================================================
+  var LEARN_SUBJECTS = { math:1, geometry:1, spelling:1, reading:1, mix:1 };
+  function learningDefaults(m){
+    var L = (m && m.features && m.features.learning) || {};
+    var subs = Array.isArray(L.subjects) ? L.subjects.filter(function(s){ return LEARN_SUBJECTS[s]; }) : [];
+    if(!subs.length) subs = ["math"];
+    return {
+      beforeUnlock:  !!L.beforeUnlock,          // default OFF: fewer interruptions
+      coinTopUp:     L.coinTopUp !== false,      // default ON: practicing can always earn coins
+      bonusAfterWin: !!L.bonusAfterWin,          // default OFF
+      subjects:      subs
+    };
+  }
+
+  // ===========================================================================
   //  BREAKER profile (brick layouts). Unchanged behaviour from Sessions 2A-4A.
   // ===========================================================================
   // Layout templates own geometry (cols/rows/pattern). Same table the engine uses,
@@ -233,6 +256,8 @@
 
     if(m.features && ("multiplayer" in m.features) && !MP_MODES[m.features.multiplayer])
       errors.push("features.multiplayer must be off/turn-based/realtime (got "+m.features.multiplayer+")");
+    if(m.features && m.features.learning && ("subjects" in m.features.learning) && !Array.isArray(m.features.learning.subjects))
+      errors.push("features.learning.subjects must be an array");
 
     if(m.type==="game"){
       if(!Array.isArray(m.levels) || !m.levels.length){ errors.push("'levels' must be a non-empty array"); }
@@ -264,6 +289,7 @@
     var cfg = prof.toConfig(m, levels);
     cfg.multiplayer = multiplayerMode(m);       // off | turn-based | realtime (the switch)
     cfg.transport   = multiplayerTransport(m);  // null | turns | realtime (the existing lane)
+    cfg.learning    = learningDefaults(m);      // per-game learning-moment defaults (parents override)
     return cfg;
   }
 
@@ -297,7 +323,7 @@
       .catch(fromStatic);
   }
 
-  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport };
+  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));

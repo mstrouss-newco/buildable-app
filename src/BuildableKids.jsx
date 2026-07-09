@@ -22,7 +22,7 @@ import { listMyMatches } from "./lib/chessMatches";
 import { listInvitesForKid } from "./lib/rtMatch";
 import { startPresence, stopPresence, inboxInvites } from "./lib/friends";
 import { listActiveFriendMatches, roleFor } from "./lib/friendMatches";
-import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings, getProgress, dailyLearningProgress } from "./store";
+import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings, getProgress, dailyLearningProgress, effectiveLearning } from "./store";
 import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken, listKidProfiles } from "./lib/accounts";
 import { registerAudio } from "./lib/audioUnlock";
 import { playVoiceUrl } from "./lib/voiceBus";
@@ -273,16 +273,20 @@ function BreakerScreen({ onHome, entry = "journey" }) {
   const [quiz, setQuiz] = useState(null); // { reply } while a learning gate is showing
   const onChildMessage = (d, post) => {
     if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
-    let enabled = false;
-    try { enabled = !!getLearningSettings().enabled; } catch (e) {}
-    if (!enabled) { post({ type: "bk:quizDone" }); return; } // Learning Mode off -> parent settings win, no gate
+    // Session 6B: parent settings OVERRIDE the game's manifest default. The
+    // engine passes its manifest default (manifestBeforeUnlock); effectiveLearning
+    // merges the parent's per-kid toggle on top. Nothing gates unless the parent
+    // has Learning Mode on AND the resolved beforeUnlock moment is on.
+    let eff = null;
+    try { eff = effectiveLearning({ beforeUnlock: d.manifestBeforeUnlock, subjects: d.subjects }); } catch (e) {}
+    if (!eff || !eff.enabled || !eff.beforeUnlock) { post({ type: "bk:quizDone" }); return; }
     post({ type: "pause" }); // cartridge contract: freeze the game while the quiz gate is up
-    setQuiz({ reply: post });
+    setQuiz({ reply: post, goal: eff.goal });
   };
   const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
   const overlay = quiz ? (
     <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <QuizGate goal={getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
+      <QuizGate goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
     </div>
   ) : null;
   // hand the kid's equipped loadout (Session 3C) to the engine as tiny params so
