@@ -106,24 +106,74 @@ const SCREEN_MEMORY = "memory";
 const SCREEN_BINGO = "bingo";
 const SCREEN_SNAKES = "snakes";
 const SCREEN_MAZE = "maze";
-function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onChess, onCheckers, onTyping, onTennis, onSounds, onTown, onTicTacToe, onConnectFour, onDotsBoxes, onMemory, onBingo, onSnakes, onMaze, onTetris, onCastle, onSling, onCroc, onMahjong, onStringMatch, onTank, onBubble }) {
-  // QA gate: coming-soon tiles ask for a password (1111) before opening.
+// ---------------------------------------------------------------------------
+// GAME_CATALOG — the picker's manifest/identity layer (Session 3A). Every card on
+// the picker is GENERATED from this list, never hand-placed. Each entry is the
+// identity slice of a game's manifest: badge art (imgId), display name, category,
+// signature color, and whether it is a game or a studio. Breaker's identity mirrors
+// its real /breaker/manifest.json; the rest are lightweight stubs that get enriched
+// into full manifests as each game converts (Phase 5+). `handler` is the shell
+// callback prop that opens the game; `soon` keeps the coming-soon password gate.
+// ---------------------------------------------------------------------------
+const GAME_CATALOG = [
+  { id: "breaker",     name: "Breaker",          category: "Arcade",   color: "#FF6B6B", type: "game", imgId: "breaker",     handler: "onBreaker",     desc: "Bounce the ball, smash every brick!" },
+  { id: "chess",       name: "Chess",            category: "Board",    color: "#F0972A", type: "game", imgId: "chess",       handler: "onChess",       desc: "Play solo, 2-player, or with family!" },
+  { id: "sling",       name: "Sling Squad",      category: "Action",   color: "#7BD0FF", type: "game", imgId: "sling",       handler: "onSling",       desc: "Fling your pals, topple every tower!" },
+  { id: "tictactoe",   name: "Tic-Tac-Toe",      category: "Board",    color: "#5B8CFF", type: "game", imgId: "tictactoe",   handler: "onTicTacToe",   desc: "Three in a row — solo or 2 players!" },
+  { id: "survival",    name: "Survival",         category: "Action",   color: "#8A6BFF", type: "game", imgId: "survival",    handler: "onSurvival",    desc: "Dodge the swarm and beat the boss!" },
+  { id: "stringmatch", name: "String Match",     category: "Puzzle",   color: "#57A93F", type: "game", imgId: "stringmatch", handler: "onStringMatch", desc: "Draw a string to connect the matching buddies!" },
+  { id: "bubble",      name: "Bubble Buddies",   category: "Arcade",   color: "#5BC0EB", type: "game", imgId: "bubble",      handler: "onBubble",      desc: "Aim and pop — match 3 buddies to set them free!" },
+  { id: "tennis",      name: "Tennis",           category: "Sports",   color: "#34D399", type: "game", imgId: "tennis",      handler: "onTennis",      desc: "Bounce it back — solo, 2 players, or family!" },
+  { id: "castleguard", name: "Castle Guard",     category: "Strategy", color: "#2E8B57", type: "game", imgId: "castleguard", handler: "onCastle",      desc: "Place archers and knights to stop the silly goblins!" },
+  { id: "tetris",      name: "Tumble Blocks",    category: "Puzzle",   color: "#67C7FF", type: "game", imgId: "tetris",      handler: "onTetris",      desc: "Fill a row and watch it tumble away!" },
+  { id: "croctot",     name: "Croc Tot",         category: "Action",   color: "#3AA655", type: "game", imgId: "croctot",     handler: "onCroc",        desc: "Blast the goofy flying snacks and beat the boss!" },
+  { id: "connectfour", name: "Connect Four",     category: "Board",    color: "#FF5A6E", type: "game", imgId: "connectfour", handler: "onConnectFour", desc: "Drop discs, line up four to win!" },
+  { id: "dotsboxes",   name: "Dots and Boxes",   category: "Board",    color: "#36D6C3", type: "game", imgId: "dotsboxes",   handler: "onDotsBoxes",   desc: "Close a box to claim it — most wins!" },
+  { id: "checkers",    name: "Checkers",         category: "Board",    color: "#8E6BFF", type: "game", imgId: "checkers",    handler: "onCheckers",    desc: "Hop, jump and crown your kings!" },
+  { id: "typing",      name: "Typing",           category: "Learn",    color: "#1FA897", type: "game", imgId: "typing",      handler: "onTyping",      desc: "Learn to type — defend the castle!" },
+  { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!" },
+  { id: "mahjong",     name: "Mahjong",          category: "Puzzle",   color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
+  { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
+  { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true },
+  { id: "runner",      name: "Sunny Town Drive", category: "Arcade",   color: "#FF8FB1", type: "game", imgId: "runner",      handler: "onRunner",      desc: "Drive through town, dodge and grab treats!", soon: true },
+  { id: "tank",        name: "Hilltop Tanks",    category: "Action",   color: "#4F9A44", type: "game", imgId: "tank",        handler: "onTank",        desc: "Aim across the hills and knock out the computer tank!", soon: true },
+  { id: "maze",        name: "Maze Munchers",    category: "Arcade",   color: "#F0577E", type: "game", imgId: "maze",        handler: "onMaze",        desc: "Gobble the treats, dodge the chasers!", soon: true },
+  { id: "bingo",       name: "Bingo",            category: "Board",    color: "#FFD23F", type: "game", imgId: "bingo",       handler: "onBingo",       desc: "The device calls — daub a line to win, 2-4!", soon: true },
+];
+
+// One picker card, generated entirely from a GAME_CATALOG entry (badge art, name,
+// category, signature color, studio tag). No card is hand-placed anymore.
+function PickerCard({ g, onOpen }) {
+  const accent = g.color;
+  return (
+    <button onClick={onOpen} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: `1px solid ${accent}55`, background: CARD_BG, color: "#fff", cursor: "pointer", opacity: g.soon ? 0.6 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px", boxShadow: "0 10px 26px rgba(0,0,0,0.4)" }}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: `linear-gradient(160deg, ${accent}, ${accent}88)`, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
+        {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        {g.type === "studio" && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999, background: "rgba(12,10,24,0.72)", color: "#fff" }}>Studio</span>}
+      </div>
+      {g.soon && <span style={{ position: "absolute", top: 28, right: 28, fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 12px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
+      <div style={{ padding: "0 8px 6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <span style={{ width: 11, height: 11, borderRadius: 3, background: accent, flex: "0 0 auto", boxShadow: `0 0 10px ${accent}` }} />
+          <div style={{ fontFamily: FRED, fontSize: 26, fontWeight: 700 }}>{g.name}</div>
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", color: accent, marginTop: 7 }}>{g.category}{g.type === "studio" ? " · Studio" : ""}</div>
+        <div style={{ fontSize: 15, color: "#cfc9e6", marginTop: 6 }}>{g.desc}</div>
+      </div>
+    </button>
+  );
+}
+
+// The picker is now a pure map over GAME_CATALOG (the manifest/identity layer).
+// Adding or converting a game means editing the catalog, never this component.
+function GamePicker(props) {
+  const { onHome } = props;
+  // QA gate: coming-soon cards ask for a password (1111) before opening.
   const [gate, setGate] = useState(null);
   const [pw, setPw] = useState("");
   const [err, setErr] = useState(false);
   const submitPw = () => { if (pw === "1111") { const go = gate; setGate(null); setPw(""); setErr(false); if (go) go(); } else { setErr(true); } };
-  const tile = (grad, title, desc, onClick, soon, imgId) => (
-    <button onClick={soon ? () => { setGate(() => onClick); setPw(""); setErr(false); } : onClick} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: "pointer", opacity: soon ? 0.55 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px" }}>
-      <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: grad, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
-        {imgId && <img src={`/api/images?kind=game&id=${imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
-      </div>
-      {soon && <span style={{ position: "absolute", top: 28, right: 28, fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 12px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
-      <div style={{ padding: "0 8px 6px" }}>
-        <div style={{ fontFamily: FRED, fontSize: 26, fontWeight: 700 }}>{title}</div>
-        <div style={{ fontSize: 15, color: "#cfc9e6", marginTop: 8 }}>{desc}</div>
-      </div>
-    </button>
-  );
+  const openGame = (g) => { const go = props[g.handler]; if (!go) return; if (g.soon) { setGate(() => go); setPw(""); setErr(false); } else { go(); } };
   return (
     <div style={styles.container}>
       <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
@@ -132,29 +182,7 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
       <h1 style={{ ...styles.logo, marginTop: 8 }}>Games</h1>
       <p style={styles.tagline}>Pick a game to play!</p>
       <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        {tile("linear-gradient(160deg,#9B7BFF,#67E8F9)", "Breaker", "Bounce the ball, smash every brick!", onBreaker, false, "breaker")}
-        {tile("linear-gradient(160deg,#FFC75A,#F0972A)", "Chess", "Play solo, 2-player, or with family!", onChess, false, "chess")}
-        {tile("linear-gradient(160deg,#7BD0FF,#73C364)", "Sling Squad", "Fling your pals, topple every tower!", onSling, false, "sling")}
-        {tile("linear-gradient(160deg,#5B8CFF,#FF7DB0)", "Tic-Tac-Toe", "Three in a row \u2014 solo or 2 players!", onTicTacToe, false, "tictactoe")}
-        {tile("linear-gradient(160deg,#8A6BFF,#6A4FE0)", "Survival", "Dodge the swarm and beat the boss!", onSurvival, false, "survival")}
-        {tile("linear-gradient(160deg,#7BD0FF,#57A93F)", "String Match", "Draw a string to connect the matching buddies!", onStringMatch, false, "stringmatch")}
-        {tile("linear-gradient(160deg,#5BC0EB,#EF8FB6)", "Bubble Buddies", "Aim and pop — match 3 buddies to set them free!", onBubble, false, "bubble")}
-        {tile("linear-gradient(160deg,#34D399,#0EA5E9)", "Tennis", "Bounce it back \u2014 solo, 2 players, or family!", onTennis, false, "tennis")}
-        {tile("linear-gradient(160deg,#6FCF6A,#2E8B57)", "Castle Guard", "Place archers and knights to stop the silly goblins!", onCastle, false, "castleguard")}
-        {tile("linear-gradient(160deg,#67C7FF,#9B7BFF)", "Tumble Blocks", "Fill a row and watch it tumble away!", onTetris, false, "tetris")}
-        {tile("linear-gradient(160deg,#7ED957,#3AA655)", "Croc Tot", "Blast the goofy flying snacks and beat the boss!", onCroc, false, "croctot")}
-        {tile("linear-gradient(160deg,#FF5A6E,#FFC94D)", "Connect Four", "Drop discs, line up four to win!", onConnectFour, false, "connectfour")}
-        {tile("linear-gradient(160deg,#36D6C3,#FF8A5B)", "Dots and Boxes", "Close a box to claim it \u2014 most wins!", onDotsBoxes, false, "dotsboxes")}
-        {tile("linear-gradient(160deg,#E8636F,#8E6BFF)", "Checkers", "Hop, jump and crown your kings!", onCheckers, false, "checkers")}
-        {tile("linear-gradient(160deg,#46D7C0,#1FA897)", "Typing", "Learn to type — defend the castle!", onTyping, false, "typing")}
-        {tile("linear-gradient(160deg,#7DD3FC,#A78BFF)", "Memory Match", "Flip cards, find the pairs \u2014 solo or 2-4!", onMemory, false, "memory")}
-        {tile("linear-gradient(160deg,#F0B429,#E8636F)", "Mahjong", "Match free tiles in pairs to clear the board!", onMahjong, false, "mahjong")}
-        {tile("linear-gradient(160deg,#4FA6E8,#2F8FD6)", "Hop Heroes", "Run, jump and reach the flag!", onPlatformer, true, "platformer")}
-        {tile("linear-gradient(160deg,#7C5CFC,#FF7A9A)", "Family Town", "Roll, move, collect coins \u2014 3-4 players!", onTown, true, "town")}
-        {tile("linear-gradient(160deg,#FF8FB1,#FFC75A)", "Sunny Town Drive", "Drive through town, dodge and grab treats!", onRunner, true, "runner")}
-        {tile("linear-gradient(160deg,#8FD0F2,#4F9A44)", "Hilltop Tanks", "Aim across the hills and knock out the computer tank!", onTank, true, "tank")}
-        {tile("linear-gradient(160deg,#F0577E,#9B7BFF)", "Maze Munchers", "Gobble the treats, dodge the chasers!", onMaze, true, "maze")}
-        {tile("linear-gradient(160deg,#FFD23F,#FF8FB1)", "Bingo", "The device calls \u2014 daub a line to win, 2-4!", onBingo, true, "bingo")}
+        {GAME_CATALOG.map((g) => <PickerCard key={g.id} g={g} onOpen={() => openGame(g)} />)}
       </div>
       {gate && (
         <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,8,24,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
@@ -173,7 +201,6 @@ function GamePicker({ onHome, onPlatformer, onSurvival, onBreaker, onRunner, onC
     </div>
   );
 }
-
 // ---- ONE consistent game frame for every full-screen game/maker ----
 // Home is always top-left; games never draw their own back button (BS showBack:false).
 // Also returns to the hub on a nav:exit message (string, {type:"nav:exit"}, or legacy bk:home).
