@@ -40,6 +40,66 @@ all 8 levels clear 5/5, pong, render smoke — unaffected by either change, sinc
 drives `update()` directly and never goes through `frame()`); custom Hz-comparison
 harness confirms frame-rate-independent ball speed after the fix.
 
+
+## 2026-07-09 — Session 3E: Home screen redesign
+
+Kid-facing Home rebuilt to the approved chat mock. Scope: `HomeScreen` in
+`src/BuildableKids.jsx` only (plus a small `src/store.js` addition to feed it) —
+no other screen was reskinned.
+
+**Theme.** Cream/light only on this one screen (`#FFF8EE` background, white
+cards, `#3A2E4D` ink text). No dark-mode toggle, no dark palette anywhere on
+Home, including the floating "Ask me" helper bubble and the header's My
+Stuff/Grown-ups/notification icon chips, all re-themed light (their other call
+sites elsewhere in the app are untouched and stay dark). No emojis — every new
+icon is hand-drawn SVG (`StreakGlyph`, `HeartGlyph`, `BellGlyph`) following the
+existing glyph-component pattern; all art is still `/api/images?kind=...&id=...`
+slots.
+
+**New stack, top to bottom:**
+1. Header — avatar (existing initial-pill), kid's name, a streak line read from
+   `getProgress().streakDays`, a drawn bell with a badge (reused `FriendsPill`,
+   re-skinned light + re-iconed as a bell — its only call site was already Home),
+   and a live coin pill (`window.BuildableWallet.balance()`, updates on the
+   `bk-wallet` event).
+2. Buddy moment — a small dismissible card, shown only when a real condition is
+   true (brain-boost finished today, a 5-day streak multiple, a favorite-game
+   nudge from telemetry, else a rotating daily hello). Dismissal is stored in
+   localStorage keyed by kid + day + trigger id, so it can reappear tomorrow but
+   not the same day once closed. Kept intentionally simple — a handful of
+   priority-ordered conditions, not a full event bus.
+3. Your move — unchanged turn/invite plumbing (`chessTurns`, `rtInvite`,
+   `friendInvites`, `friendTurns`), re-themed light.
+4. Jump back in — unchanged recent-creations plumbing, re-themed light.
+5. Today's Brain Boost — rendered only when `getLearningSettings().enabled`.
+   Shows a progress bar toward a small daily quota (3 correct answers) and a
+   +10 coin reward. NEW in `src/store.js`: `recordAnswer()` now also updates a
+   day-keyed `dailyCount` on the progress record (resets each calendar day, no
+   new storage key), and a new `dailyLearningProgress(goal)` reader derives
+   `{count, goal, done}` from it. When the goal is met, the card shows a "Done
+   for today" badge instead of disappearing, and Home awards the coins exactly
+   once via `BW.awardOnce("brainboost:<date>", 10)` so refreshing can't farm it.
+6. Play shelf — a horizontally-scrolling row of cards generated straight from
+   `GAME_CATALOG`, one card per game with real art (`imgId`), real category, and
+   a real per-game deep link. `<HomeScreen>`'s call site in the top-level app
+   now also passes every game handler (`onBreaker`, `onSling`, `onTennis`, etc.
+   — the same set already wired to `<GamePicker>`), and coming-soon games reuse
+   the same 1111 QA password gate, re-themed light.
+7. Make shelf — same side-scrolling card treatment, for the 5 creation entry
+   points Home already exposed (`onMusic`, `onArt`, `onStories`, `onSounds`,
+   `onMakeGame`).
+8. Trending — unchanged top-creations plumbing, re-themed light, each row now
+   also shows a drawn heart glyph + `heart_count`.
+
+The upstream Home guard (`SCREEN_HOME` never renders without `activeKid` —
+falls through to the profile picker otherwise) was not touched.
+
+`npm run build` (Vite) is clean. Nothing in `public/breaker-engine.html` or the
+shared `public/buildable-*.js` libs changed, so `qa-breaker.mjs` was not run
+(not applicable to this change) — spot-checked `breaker-engine.html` for any
+leftover homemade menu/HUD/banner code per the session brief and found none.
+
+
 ## 2026-07-09 — Fix: profile gate bypassed, Home rendered with no active kid
 
 Bug report: the "who's playing" picker no longer appeared before Home; the app opened
