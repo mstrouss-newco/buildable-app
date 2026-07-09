@@ -62,7 +62,7 @@ const avatarText = (name) => (name || "?").trim().charAt(0).toUpperCase();
 
 const ALLOWED_REACTIONS = new Set(["Nice shot!","So close!","Good game!","Wow!","Let's go!","Haha!","Too slow!","You got this!","Great game!","Boop!","Bonk!","Wheee!","Is that all?","Wibble wobble!"]);
 
-export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend, entry, autoJoin }) {
+export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend, onGuestLink, entry, autoJoin }) {
   const me = activeKid || getActiveKid();
   const signedIn = isSignedIn();
   const transport = (game && game.transport) || "turns";
@@ -386,6 +386,16 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
           <h1 style={C.h1}>Family &amp; friends</h1>
           <p style={C.sub}>Pick who to play with. Family is always here &mdash; green dot means they're online right now.</p>
 
+          {onGuestLink && (
+            <button style={{ ...C.bigBtn, marginBottom: 14 }} onClick={() => onGuestLink()}>
+              <span style={{ ...C.ava, width: 46, height: 46, fontSize: 22 }}>&#8599;</span>
+              <span>
+                <p style={C.bigTitle}>Play a grown-up</p>
+                <p style={C.bigSub}>Send a link to a grown-up or friend. They tap it and play you, no sign-up.</p>
+              </span>
+            </button>
+          )}
+
           {!signedIn && (
             <div style={C.note}>Playing with friends needs a grown-up account so friends stay safe and approved. Ask a grown-up to tap <b>Grown-ups</b> on the home screen and sign in.</div>
           )}
@@ -452,6 +462,16 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
             <p style={C.bigSub}>Invite a brother, sister, or approved friend on their own device.</p>
           </span>
         </button>
+
+        {onGuestLink && (
+          <button style={C.bigBtn} onClick={() => onGuestLink()}>
+            <span style={{ ...C.ava, width: 46, height: 46, fontSize: 22 }}>&#8599;</span>
+            <span>
+              <p style={C.bigTitle}>Play a grown-up</p>
+              <p style={C.bigSub}>Send a link to a grown-up or friend. They tap it and play you, no sign-up.</p>
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

@@ -147,15 +147,38 @@ const GAME_CATALOG = [
   { id: "bingo",       name: "Bingo",            category: "Board",    color: "#FFD23F", type: "game", imgId: "bingo",       handler: "onBingo",       desc: "The device calls — daub a line to win, 2-4!", soon: true },
 ];
 
+// Games that support the zero-account "play a friend by link" flow (the grandma flow).
+// Maps a catalog id -> the /api/invite game code. Add a game here once play-invite.html
+// speaks its online contract (chess relay + ttt server-referee are wired today).
+const GUEST_SHAREABLE = { chess: "chess", tictactoe: "ttt" };
+
+// Create a guest invite tied to the signed-in kid, then hand this device the host
+// seat on the standalone link page (where the "send link" buttons live).
+async function startGuestLink(catalogId) {
+  const code = GUEST_SHAREABLE[catalogId];
+  if (!code) return;
+  const kid = getActiveKid();
+  let dev = localStorage.getItem("bk_guest_device");
+  if (!dev) { dev = "g_" + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("bk_guest_device", dev); }
+  const name = (kid && kid.display_name) || "Me";
+  localStorage.setItem("bk_guest_name", name);
+  try {
+    const r = await fetch("/api/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", game: code, name, device: dev, world: "jungle", hostKid: kid && kid.id }) });
+    const j = await r.json().catch(() => ({}));
+    if (j && j.token) window.location.href = "/play-invite.html?t=" + encodeURIComponent(j.token) + "&g=" + code;
+  } catch (e) { /* offline: silently no-op */ }
+}
+
 // One picker card, generated entirely from a GAME_CATALOG entry (badge art, name,
 // category, signature color, studio tag). No card is hand-placed anymore.
-function PickerCard({ g, onOpen }) {
+function PickerCard({ g, onOpen, onShare }) {
   const accent = g.color;
   return (
     <button onClick={onOpen} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: `1px solid ${accent}55`, background: CARD_BG, color: "#fff", cursor: "pointer", opacity: g.soon ? 0.6 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px", boxShadow: "0 10px 26px rgba(0,0,0,0.4)" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: `linear-gradient(160deg, ${accent}, ${accent}88)`, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
         {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
         {g.type === "studio" && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999, background: "rgba(12,10,24,0.72)", color: "#fff" }}>Studio</span>}
+        {onShare && !g.soon && <span role="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onShare(); }} style={{ position: "absolute", top: 10, right: 10, fontSize: 11, fontWeight: 900, letterSpacing: "0.3px", padding: "6px 11px", borderRadius: 999, background: "rgba(12,10,24,0.8)", color: "#fff", border: `1px solid ${accent}`, cursor: "pointer" }}>Play a friend</span>}
       </div>
       {g.soon && <span style={{ position: "absolute", top: 28, right: 28, fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 12px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
       <div style={{ padding: "0 8px 6px" }}>
@@ -188,7 +211,7 @@ function GamePicker(props) {
       <h1 style={{ ...styles.logo, marginTop: 8 }}>Games</h1>
       <p style={styles.tagline}>Pick a game to play!</p>
       <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        {GAME_CATALOG.map((g) => <PickerCard key={g.id} g={g} onOpen={() => openGame(g)} />)}
+        {GAME_CATALOG.map((g) => <PickerCard key={g.id} g={g} onOpen={() => openGame(g)} onShare={GUEST_SHAREABLE[g.id] ? () => startGuestLink(g.id) : null} />)}
       </div>
       {gate && (
         <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,8,24,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
@@ -1469,6 +1492,7 @@ export default function BuildableKids() {
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_CHESS)}
+        onGuestLink={() => startGuestLink("chess")}
         onAddFriend={() => { setFriendsReturn(SCREEN_CHESS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
       />
     );

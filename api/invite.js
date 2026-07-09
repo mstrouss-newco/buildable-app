@@ -74,10 +74,14 @@ export default async function handler(req, res) {
   if (!URL || !KEY) return res.status(500).json({ error: "server not configured" });
   try {
     if (req.method === "GET") {
-      // Parent-portal listing: a family's guest games by owner id.
+      // Parent-portal listing: a family's guest games by owner id OR by kid ids.
       const parent = (req.query.parent || "").toString();
-      if (parent) {
-        const r = await fetch(`${URL}/rest/v1/invite_matches?host_parent=eq.${encodeURIComponent(parent)}&select=token,game,status,host,guest,winner,created_at,updated_at,expires_at&order=updated_at.desc&limit=50`, { headers: H });
+      const kids = (req.query.kids || "").toString();
+      if (parent || kids) {
+        const filter = parent
+          ? `host_parent=eq.${encodeURIComponent(parent)}`
+          : `host_kid=in.(${kids.split(",").map((k) => encodeURIComponent(k.trim())).filter(Boolean).join(",")})`;
+        const r = await fetch(`${URL}/rest/v1/invite_matches?${filter}&select=token,game,status,host,guest,winner,created_at,updated_at,expires_at&order=updated_at.desc&limit=50`, { headers: H });
         const rows = await r.json().catch(() => []);
         const list = (Array.isArray(rows) ? rows : []).map((m) => ({
           token: m.token, game: m.game, status: m.status,

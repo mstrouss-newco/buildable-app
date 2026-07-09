@@ -273,6 +273,20 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
   useEffect(() => { refreshKids(); }, [signedIn]);
   useEffect(() => { if (signedIn) refreshFamily(); }, [signedIn]);
 
+  // Guest games: zero-account "play a friend by link" matches this family's kids
+  // started (the grandma flow). Read-only visibility, per the safety shape.
+  const [guestGames, setGuestGames] = useState([]);
+  async function refreshGuestGames(kidList) {
+    const ids = (kidList || []).map((k) => k.id).filter(Boolean);
+    if (!ids.length) { setGuestGames([]); return; }
+    try {
+      const r = await fetch("/api/invite?kids=" + encodeURIComponent(ids.join(",")));
+      const j = await r.json().catch(() => ({}));
+      setGuestGames(Array.isArray(j.matches) ? j.matches : []);
+    } catch (e) { /* backend not ready -> hide the section */ }
+  }
+  useEffect(() => { if (signedIn) refreshGuestGames(kids); }, [signedIn, kids]);
+
   async function refreshProjects() {
     setLoadingProjects(true);
     try {
@@ -611,6 +625,26 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             </form>
 
             {error && <p style={S.error}>{error}</p>}
+
+            {signedIn && guestGames.length > 0 && (
+              <div style={{ marginTop: 20, paddingTop: 18, borderTop: CARD_BORDER }}>
+                <h2 style={{ ...S.title, fontSize: 20, margin: "0 0 4px" }}>Guest games</h2>
+                <p style={S.lead}>Quick games your kids started by sending a link. Guests play one match only, with canned cheers, and the link expires on its own.</p>
+                {guestGames.map((m) => {
+                  const gameName = m.game === "chess" ? "Chess" : m.game === "ttt" ? "Tic-Tac-Toe" : m.game;
+                  const state = m.status === "open" ? "Waiting for a friend" : m.status === "done" ? "Finished" : "In progress";
+                  const when = m.updated_at ? new Date(m.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+                  return (
+                    <div key={m.token} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 12px", marginTop: 8, borderRadius: 12, border: CARD_BORDER }}>
+                      <span>
+                        <span style={{ fontWeight: 800, fontSize: 15 }}>{(m.host && m.host.name) || "Your kid"}{m.guest ? " vs " + m.guest.name : ""}</span>
+                        <span style={{ display: "block", color: "#8a86a8", fontSize: 13 }}>{gameName} &middot; {state}{when ? " · " + when : ""}</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {signedIn && (
               <div style={{ marginTop: 20, paddingTop: 18, borderTop: CARD_BORDER }}>
