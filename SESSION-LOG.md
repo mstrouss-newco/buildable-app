@@ -1,5 +1,51 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 6A: Multiplayer switch (manifest -> the existing lanes)
+
+The manifest's `features.multiplayer` was a dead field: every manifest declared
+`off` / `turn-based` / `realtime` but nothing read it. The multiplayer *lane* a
+game opened was hardcoded in the shell (`gameSpecFor`, `transport: "turns"`).
+Session 6A makes the manifest the source of truth for the lane, wired into the
+EXISTING multiplayer system (poll-a-row + Broadcast, per `MULTIPLAYER.md`) — no
+new networking, no new tables. Proven on Tic-Tac-Toe.
+
+**Loader** (`public/buildable-manifest.js`): validate `features.multiplayer` is
+one of `off`/`turn-based`/`realtime` (a bad value is a hard error), plus one pure,
+headless-safe helper `multiplayerTransport(m)` mapping `off -> null`,
+`turn-based -> "turns"`, `realtime -> "realtime"` (and `multiplayerMode(m)`). It
+reads ONLY the `features` block, so it also works for board games / studios that
+have no breaker-style levels. `toEngineConfig` now stamps `cfg.multiplayer` +
+`cfg.transport` so engine and QA read the same switch.
+
+**Tic-Tac-Toe manifest** (`public/tictactoe/manifest.json`, new): a lightweight
+manifest declaring `features.multiplayer: "turn-based"` — the switch only. (Full
+levels/journey/loadout arrive when TTT converts to the level system in Phase 7.)
+Added the explicit `vercel.json` route for `/tictactoe/manifest.json` (the
+new-manifest-folder routing gotcha).
+
+**Shell** (`src/BuildableKids.jsx`): a tiny startup warmer reads TTT's manifest
+once into a cache; `gameSpecFor("tictactoe")` and the TTT lobby now take their
+`transport` from that manifest value (hardcoded `"turns"` kept as a fallback so a
+missing/late manifest never breaks play), and the "Play with a friend" entry is
+gated on the switch. So: `turn-based` -> opens the poll-a-row lobby (today);
+`realtime` -> would open the Broadcast lane; `off` -> single-player only, friend
+entry hidden. The two hardcoded TTT specs are collapsed to one manifest-driven spec.
+
+**QA:** `qa-tictactoe.mjs` = ALL CHECKS PASS (termination, perfect-vs-AI never
+loses, beatable AI, render). Shared-loader safety: `qa-breaker`, `qa-survival`,
+`qa-sling` all still ALL CHECKS PASS. Node sim of the shell helpers confirms the
+three switch values map to the right lane/availability. `npm run build` clean.
+
+Files: `public/buildable-manifest.js`, `public/tictactoe/manifest.json` (new),
+`vercel.json`, `src/BuildableKids.jsx`, plus this log + README.
+
+**Remaining in Phase 6:** 6A is done for the turn-based lane (proven on TTT). The
+realtime mapping is wired (`realtime -> "realtime"`) but not yet exercised by a
+manifest game — the natural next proof is Tennis once it carries a manifest. 6B
+(learning + parent controls + onboarding) and 6C–6E are untouched. Not started.
+
+---
+
 ## 2026-07-09 — Rules file consolidation (docs only, no code)
 
 CLAUDE.md and AGENTS.md had overlapping rules. Consolidated so there is ONE law file.
