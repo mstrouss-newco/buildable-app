@@ -1,5 +1,44 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Session 3B: shell-generated Journey (winding level path)
+
+Phase 3 (the "paint layer") continues. Breaker's level menu is no longer drawn by the
+engine — the shell now builds the whole out-of-game journey from the manifest.
+
+- **Shell-generated `BreakerJourney`.** New React component in `src/BuildableKids.jsx`.
+  It fetches `/breaker/manifest.json`, reads the ordered `levels` list, and draws a
+  winding path: stops are absolutely placed along a smooth SVG S-curve that weaves
+  left/right (`x = 50 + 30*sin(i)`), so it reads as a tight vertical trail on a phone and
+  a wider wander on iPad/desktop from the SAME layout (responsive by width, one code path).
+- **Stops show badge art, stars, locked state.** Each stop is a round medallion using the
+  level's theme art (`/breaker/<theme>/bg.webp`, already compressed) as its placeholder
+  badge until real `journeyBadge` art lands (roadmap's current-art-in-slots rule). Level
+  number overlays the medallion; 0-3 gold stars sit under unlocked stops; locked stops are
+  greyed with a lock glyph. Progress is read from the SAME `bk_breaker_prefs` (+ active-kid
+  suffix) localStorage the engine writes — `unlocked` gates the locks, `stars[i]` fills the
+  stars — so a clear in the engine lights up the path when the kid returns.
+- **Current level auto-scrolls into view.** The highest unlocked stop gets a signature-color
+  ring and `scrollIntoView({block:"center"})` once the manifest is in.
+- **Flow rewired.** Landing **Play** now opens the shell Journey (was: the engine's own
+  menu). Tapping a stop sets `breakerEntry="play:<id>"` and the engine boots straight into
+  that level via a new in-app `?screen=play&level=<id>` handler (which waits for the manifest,
+  with a timeout safety net, then `startPlay`s the matching level). **Home** from a played
+  level returns to the Journey (not the landing) so the newly-earned star/unlock shows. Make
+  a level still routes to the engine maker.
+- **Engine menu retired in-app.** `breaker-engine.html`'s homemade level menu (`showMenu`)
+  is no longer the in-app front door; it survives only as the standalone `/breaker/journey`
+  deep-link handler (texted links unchanged — no 2B regression).
+
+**QA:** `node qa-breaker.mjs .` — manifest valid, all 8 manifest levels beatable (5 runs
+each), stars/pong/render smoke all PASS. `npm run build` compiles clean.
+
+**What's left in Phase 3:** 3C (loadout + one HUD system) and 3D (Feel Kit + GAME-FEEL.md).
+Breaker's HUD and its feedback/sounds/celebrations are NOT yet Feel-Kit-driven — that's 3C/3D,
+not started per the one-block-per-session rule.
+
+---
+
+
 ## 2026-07-08 — Session 3A: manifest-driven picker + shell game landing (Phase 3 start)
 
 Phase 3 (the "paint layer"). The games picker and Breaker's front door are now shell-
