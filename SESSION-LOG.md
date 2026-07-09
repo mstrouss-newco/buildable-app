@@ -1,5 +1,31 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Rules file consolidation (docs only, no code)
+
+CLAUDE.md and AGENTS.md had overlapping rules. Consolidated so there is ONE law file.
+
+**Merged into `AGENTS.md`** (in its existing structure/style, no duplication) everything
+CLAUDE.md had that AGENTS.md lacked, as three new sections: **Session workflow** (pull
+latest first; read roadmap + manifest-v2 before rebuild work; do ONLY the given block;
+state approach and wait for OK on architecture work; commit in logical chunks; QA honesty
+— run `qa-{game}.mjs` and never claim QA passed if it did not run; log every session in
+SESSION-LOG.md; the `/planner` planner is the source of truth for progress and the owner
+ticks roadmap boxes himself; plain-language recap for a non-technical owner), **Stack &
+manifest conventions** (plain HTML/JS single-file games in `public/`, shared
+`buildable-*.js`; `public/{game}/manifest.json` per manifest-v2 via `buildable-manifest.js`;
+never hardcode art — asset IDs via manifest; difficulty is a 1-5 preset, never raw tuning
+numbers; kids-on-iPads UX — instant feedback, no punishing lose states, generous touch
+targets, 2x retina art), and **Priority games** (Breaker, Survival, Sling). Rules already
+in AGENTS.md (Vercel/Supabase hosting, cross-platform + shared nav, the dated README log,
+secrets/DB guardrails) were referenced, not duplicated.
+
+**`CLAUDE.md` is now a two-line pointer** at the repo root: it says the rules live in
+AGENTS.md and to read that file, so any tool that auto-loads CLAUDE.md still lands on the
+law. No longer/duplicate CLAUDE.md copies existed to delete.
+
+Docs only: `AGENTS.md`, `CLAUDE.md`, `SESSION-LOG.md`, `README.md`. No code/engine change,
+so no QA harness run required.
+
 ## 2026-07-09 — Law updates + roadmap v2 (docs only, no code)
 
 Housekeeping session: two standing rules promoted to law, and the master roadmap

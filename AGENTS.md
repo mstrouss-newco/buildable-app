@@ -113,3 +113,49 @@ first tap; test portrait phone — a desktop-only feature is not done). Use **co
 game navigation** — the shared start screen (`buildable-startscreen.js`) and one shared
 nav frame (Home top-left exits to the hub, Sound/Pause top-right), never a bespoke
 per-game back button. See [`./BUILDING-A-GAME.md`](./BUILDING-A-GAME.md).
+
+## Session workflow (how to run a session)
+
+The owner is **non-technical**, so all recaps and questions to him use plain language,
+no jargon.
+
+- **Pull latest first.** Always pull `main` before touching any files.
+- **For platform-rebuild work, read the plan first:** `buildable-rebuild-roadmap.md` and
+  `buildable-manifest-v2.md` in the repo root. If either is missing, stop and say so
+  before proceeding.
+- **Do ONLY the task or session block you were given.** Never start the next block, even
+  if you finish early.
+- **On architecture-level work, state your approach in a few sentences and wait for an
+  OK** before writing code.
+- **Commit in logical chunks** with clear messages.
+- **QA honesty.** Any session that touches a game ends by running that game's QA script
+  (`qa-{game}.mjs`). If a game has no QA script, say so plainly. **Never claim QA passed
+  if it did not actually run.**
+- **Log every session in `SESSION-LOG.md`** at the end: date, block ID, what shipped,
+  what remains, anything flagged. (This is in addition to the dated README log entry
+  noted at the top of this file.)
+- **The planner is the source of truth for progress.** `public/planner.html` (live at
+  `/planner`) tracks what is done. Do NOT tick roadmap checkboxes yourself — the owner
+  checks things off after testing on his own devices.
+- **End every session with a plain-language recap:** what was completed, what remains in
+  the phase, and anything surprising — flagged honestly.
+
+## Stack & manifest conventions
+
+- **Platform-rebuild games are plain HTML/JS single files in `public/`** (no build step);
+  shared systems are the `buildable-*.js` files. (The legacy React app in `src/` still
+  exists — see the README for the full stack.)
+- **Converted games ship a `public/{game}/manifest.json`** per the manifest-v2 spec. The
+  shared loader `public/buildable-manifest.js` validates manifests and translates them
+  for the engines.
+- **Never hardcode art in a game.** Art is asset IDs resolved through the manifest (see
+  the Shared Asset Library rule above). **Difficulty is a 1-5 preset — never raw tuning
+  numbers in a manifest.**
+- **The audience is kids on iPads:** instant feedback on every tap, no punishing lose
+  states, generous touch targets, and images sized at 2x for retina. (Complements the
+  desktop/iPad/iPhone + shared-nav rule above.)
+
+## Priority games
+
+Breaker, Survival, Sling — in that order. They are the reference set for all platform
+patterns.

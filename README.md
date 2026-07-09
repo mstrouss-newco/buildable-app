@@ -6,6 +6,21 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Rules file consolidation — one law file (July 9 2026)
+
+Docs-only cleanup. `CLAUDE.md` and `AGENTS.md` had overlapping rules, so everything
+CLAUDE.md had that AGENTS.md lacked was merged into **AGENTS.md** as three new sections —
+**Session workflow** (pull first, do only the given block, state approach + wait on
+architecture work, commit in chunks, QA honesty / never claim QA passed if it did not
+run, log to SESSION-LOG.md, `/planner` is the source of truth for progress and the owner
+ticks roadmap boxes himself, plain-language recaps for a non-technical owner), **Stack &
+manifest conventions** (plain HTML/JS single-file games in `public/`, `public/{game}/
+manifest.json` per manifest-v2 via `buildable-manifest.js`, never hardcode art, difficulty
+is a 1-5 preset not raw numbers, kids-on-iPads UX), and **Priority games** (Breaker,
+Survival, Sling). Overlapping rules were referenced, not duplicated. `CLAUDE.md` is now a
+two-line pointer to AGENTS.md so tools that auto-load it still land on the law. Files:
+`AGENTS.md`, `CLAUDE.md`, `SESSION-LOG.md`, `README.md`. No code/engine change.
+
 ## Law updates + roadmap v2 (July 9 2026)
 
 Docs-only housekeeping — no product code touched. Two standing practices promoted to
