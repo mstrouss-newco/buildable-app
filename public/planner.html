@@ -133,6 +133,9 @@
   .rm-card{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px}
   .rm-card.done{opacity:.62}
   .rm-card.done .rm-name{text-decoration:line-through}
+  .rm-card.next{border-color:var(--accent);box-shadow:0 0 0 2px rgba(107,78,255,.18)}
+  .rm-next-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px;white-space:nowrap}
+  .rm-startnext{margin:0 0 14px}
   .rm-top{display:flex;align-items:center;gap:9px}
   .rm-top input[type=checkbox]{width:17px;height:17px;flex:0 0 auto}
   .rm-id{font-size:11px;font-weight:800;background:#e7eaf6;color:var(--accent);border-radius:999px;padding:2px 9px;white-space:nowrap}
@@ -723,14 +726,30 @@ function phaseProgress(num){
   const ss=rmData().sessions.filter(s=>s.phaseNum===num&&!s.later);
   return {done:ss.filter(s=>s.done).length, total:ss.length};
 }
+let rmNextId=null;
+function nextSession(){
+  const rd=rmData();
+  for(const ph of rd.phases){
+    const ss=rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
+    for(const s of ss){ if(!s.done) return s; }
+  }
+  return null;
+}
+function startNextSession(){
+  const s=nextSession();
+  if(!s){ toast("All sessions are done or parked"); return; }
+  openSessionPrompt(s.id);
+}
 function renderRoadmap(){
   const board=document.getElementById("rm-board"); if(!board) return;
   const rd=rmData();
+  const ns=nextSession(); rmNextId=ns?ns.id:null;
   if(!rd.sessions.length && !rd.archived.length){
     board.innerHTML=rmAddBar()+'<div class="empty"><b>No roadmap yet.</b><br>Paste a roadmap above, or tap <b>+ New phase</b> to build one yourself.</div>';
     return;
   }
   let html=rmAddBar();
+  if(ns) html+='<div class="rm-startnext"><button class="btn green" onclick="startNextSession()">Start next session — '+esc(ns.id)+(ns.name?' '+esc(ns.name):'')+'</button></div>';
   rd.phases.forEach(ph=>{
     const pr=phaseProgress(ph.num);
     if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true;
@@ -796,11 +815,13 @@ function rmCard(s, archived){
   }
   const notes=Array.isArray(s.notes)?s.notes:[];
   const notesHtml=notes.length?'<div class="rm-notes">'+notes.map((n,i)=>'<div class="rm-note"><span>'+esc(n)+'</span>'+(archived?"":'<span class="x" onclick=\'rmDelNote('+JSON.stringify(s.id)+','+i+')\' title="Remove note">✕</span>')+'</div>').join("")+'</div>':"";
-  return '<div class="rm-card '+(s.done?"done":"")+'">'
+  const isNext=!archived&&s.id===rmNextId;
+  return '<div class="rm-card '+(s.done?"done":"")+(isNext?" next":"")+'">'
     +'<div class="rm-top">'
     +(archived?"":'<input type="checkbox" '+(s.done?"checked":"")+' onchange=\'rmToggleDone('+JSON.stringify(s.id)+')\'>')
     +'<span class="rm-id">'+esc(s.id)+'</span>'
-    +'<span class="rm-name">'+esc(s.name)+'</span></div>'
+    +'<span class="rm-name">'+esc(s.name)+'</span>'
+    +(isNext?'<span class="rm-next-badge">next</span>':'')+'</div>'
     +(s.desc?'<div class="rm-desc">'+esc(s.desc)+'</div>':"")
     +notesHtml
     +(archived?"":'<div class="rm-btns">'
@@ -912,9 +933,9 @@ function buildSessionPrompt(s){
   const doneWhen=ph&&ph.doneWhen?ph.doneWhen:"";
   const name=(s.name||"").replace(/[.\s]+$/,"");
   const desc=(s.desc||"").replace(/[.\s]+$/,"");
-  let p="Pull the latest from GitHub before touching any files. Read buildable-rebuild-roadmap.md and buildable-manifest-v2.md in the repo root for context. Do ONLY Session "+s.id+" — "+name+": "+desc+".";
+  let p="Pull the latest from GitHub before touching any files. Read buildable-rebuild-roadmap.md and buildable-manifest-v2.md in the repo root for context. If either doc is missing, tell me before proceeding. Do ONLY Session "+s.id+" — "+name+(desc?": "+desc:"")+".";
   if(doneWhen) p+=" Done when: "+doneWhen.replace(/[.\s]+$/,"")+".";
-  p+=" When finished: run the QA scripts for any games touched, update the roadmap checkboxes and SESSION-LOG.md, then give me a recap of what was completed and what remains in this phase. Do not start the next session block.";
+  p+=" Commit in logical chunks with clear messages. When finished: run the QA scripts for any games touched, update SESSION-LOG.md, then give me a recap of what was completed and what remains in this phase. Do not start the next session block.";
   const notes=Array.isArray(s.notes)?s.notes:[];
   if(notes.length) p+="\n\nAlso address these notes: "+notes.join("; ");
   return p;
