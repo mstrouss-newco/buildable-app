@@ -509,11 +509,30 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
   );
 }
 
+/* ---- background warm: build a missing image WITHOUT blocking the kid ---- */
+const _inflight = new Set();
+async function bgWarm(key, spec, kind) {
+  if (_inflight.has(key)) return;               // one build per image at a time
+  _inflight.add(key);
+  try {
+    if (!process.env.OPENAI_API_KEY) return;
+    if (!(await underBudget())) return;
+    const b64 = await generateImage(spec.prompt, process.env.OPENAI_API_KEY,
+      { transparent: spec.transparent, quality: spec.quality, format: spec.format });
+    if (!b64) return;
+    await cachePut(key, spec.descriptor, (kind || "").toString(), b64);
+    const COST = { low: 0.011, medium: 0.042, high: 0.167 };
+    await logCost(COST[spec.quality] || IMG_COST_USD);
+  } catch {} finally { _inflight.delete(key); }
+}
+
 /* ---------------- handler ---------------- */
 function sendPng(res, b64, contentType) {
   const buf = Buffer.from(b64, "base64");
   res.setHeader("Content-Type", contentType || "image/png");
-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  // s-maxage lets Vercel's edge cache the response, so this function runs once
+  // globally per image instead of on every load. Browser keeps it a year.
+  res.setHeader("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable, stale-while-revalidate=86400");
   res.status(200).send(buf);
 }
 
@@ -545,6 +564,18 @@ export default async function handler(req, res) {
   }
 
   const openaiKey = process.env.OPENAI_API_KEY;
+
+  // Kid-facing default: NEVER generate while a kid waits. Return an instant
+  // fallback (the <img onError> handler swaps in local art) and warm the cache
+  // in the background so the next load is an edge-served hit. Pre-warm scripts
+  // and the admin "regenerate" button pass ?wait=1 (or ?force) to block.
+  const waitForIt = q.wait === "1" || q.force;
+  if (!waitForIt) {
+    if (openaiKey) bgWarm(key, spec, q.kind);              // fire-and-forget
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(503).json({ error: "warming" });     // instant fallback signal
+  }
+
   if (!openaiKey) return res.status(503).json({ error: "no_openai_key" });      // <img onError> -> fallback
   if (!(await underBudget())) return res.status(503).json({ error: "over_budget" });
 

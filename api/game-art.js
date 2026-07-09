@@ -259,7 +259,8 @@ export default async function handler(req, res) {
     if (!b64) { res.status(404).json({ error: "not built", world: w, piece: p }); return; }
     res.setHeader("Content-Type", "image/png");
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    // s-maxage: edge-cache the response so this function runs once globally per image.
+    res.setHeader("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable, stale-while-revalidate=86400");
     res.status(200).send(Buffer.from(b64, "base64"));
     return;
   }

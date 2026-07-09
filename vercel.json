@@ -97,7 +97,10 @@
     },
     {
       "src": "/three.min.js",
-      "dest": "/three.min.js"
+      "dest": "/three.min.js",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/GLTFLoader.js",
@@ -105,23 +108,38 @@
     },
     {
       "src": "/models/(.*)",
-      "dest": "/models/$1"
+      "dest": "/models/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/fx/(.*)",
-      "dest": "/fx/$1"
+      "dest": "/fx/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/packs/(.*)",
-      "dest": "/packs/$1"
+      "dest": "/packs/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/kenney/(.*)",
-      "dest": "/kenney/$1"
+      "dest": "/kenney/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/claymatch/(.*)",
-      "dest": "/claymatch/$1"
+      "dest": "/claymatch/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/rileys-garden.html",
@@ -197,31 +215,52 @@
     },
     {
       "src": "/favicon.ico",
-      "dest": "/favicon.ico"
+      "dest": "/favicon.ico",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/favicon.svg",
-      "dest": "/favicon.svg"
+      "dest": "/favicon.svg",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/favicon-16.png",
-      "dest": "/favicon-16.png"
+      "dest": "/favicon-16.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/favicon-32.png",
-      "dest": "/favicon-32.png"
+      "dest": "/favicon-32.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/apple-touch-icon.png",
-      "dest": "/apple-touch-icon.png"
+      "dest": "/apple-touch-icon.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/icon-192.png",
-      "dest": "/icon-192.png"
+      "dest": "/icon-192.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/icon-512.png",
-      "dest": "/icon-512.png"
+      "dest": "/icon-512.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/site.webmanifest",
@@ -229,31 +268,52 @@
     },
     {
       "src": "/music-library/(.*)",
-      "dest": "/music-library/$1"
+      "dest": "/music-library/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/chess-art/(.*)",
-      "dest": "/chess-art/$1"
+      "dest": "/chess-art/$1",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
+      }
     },
     {
       "src": "/breaker/(.*)",
-      "dest": "/breaker/$1"
+      "dest": "/breaker/$1",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
+      }
     },
     {
       "src": "/tennis-bg/(.*)",
-      "dest": "/tennis-bg/$1"
+      "dest": "/tennis-bg/$1",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
+      }
     },
     {
       "src": "/parallax/(.*)",
-      "dest": "/parallax/$1"
+      "dest": "/parallax/$1",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
+      }
     },
     {
       "src": "/survival-dalle/(.*)",
-      "dest": "/survival-dalle/$1"
+      "dest": "/survival-dalle/$1",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
+      }
     },
     {
       "src": "/game-music/(.*)",
-      "dest": "/game-music/$1"
+      "dest": "/game-music/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/survival-engine.html",
@@ -269,7 +329,10 @@
     },
     {
       "src": "/game-assets/(.*)",
-      "dest": "/game-assets/$1"
+      "dest": "/game-assets/$1",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
+      }
     },
     {
       "src": "/tetris-engine.html",
@@ -409,11 +472,17 @@
     },
     {
       "src": "/matter.min.js",
-      "dest": "/matter.min.js"
+      "dest": "/matter.min.js",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/tutorial-hand.png",
-      "dest": "/tutorial-hand.png"
+      "dest": "/tutorial-hand.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/tank-engine.html",
@@ -425,7 +494,10 @@
     },
     {
       "src": "/tank/(.*)",
-      "dest": "/tank/$1"
+      "dest": "/tank/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/planner.html",

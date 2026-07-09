@@ -1,5 +1,30 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Session 1B: Art serving (Phase 1 speed fix)
+Made cached/generated art serve like static files and stopped any on-demand generation from
+blocking a kid. No game engine or art files changed — routing + the two image functions only.
+- **Static art folders now cache hard.** Added `Cache-Control` to every art/media route in
+  `vercel.json`: editable game art (`/breaker/`, `/survival-dalle/`, `/parallax/`, `/tennis-bg/`,
+  `/chess-art/`, `/game-assets/`) uses `max-age=3600, stale-while-revalidate=604800` (instant from
+  cache, self-heals within the hour if Mike swaps art); never-change packs (`/kenney/`, `/packs/`,
+  `/models/`, `/fx/`, `/claymatch/`, `/music-library/`, `/game-music/`, `/tank/`, three.min.js,
+  matter.min.js, icons) use `max-age=31536000, immutable`. 24 routes patched.
+- **images.js never makes a kid wait.** On a cache miss the kid path now returns an instant
+  fallback (`503` -> existing `<img onError>` swaps in local art) and warms the picture in the
+  background (in-flight-locked so one build per image). Pre-warm scripts and the admin regenerate
+  button pass `?wait=1` (or `?force`) to build synchronously. Cache hits gained `s-maxage` so
+  Vercel's edge serves them and the function runs once globally, not per load.
+- **game-art.js** already served-or-404 (no on-demand gen); added the same `s-maxage` edge header.
+- **QA:** qa-breaker ALL PASS (8 levels win + pong + render), qa-sling ALL PASS, qa-art ALL PASS.
+  Pre-existing/unrelated: qa-tennis sim loses 0-0 (a tennis game-logic issue, fails identically on
+  the clean baseline; not touched here). Also fixed a QA-harness-only gap so Breaker's QA can run at
+  all: qa-breaker.mjs sandbox now defines `URLSearchParams` + `location` (test file only, no shipped
+  code touched).
+- Done-when (Breaker cold-load art < 2s on iPad wifi): each level is ~350-390KB of edge-cached WebP
+  and the engine draws a fallback tint immediately, so gameplay never blocks on art. Final on-device
+  confirmation is Mike testing after this deploys.
+
+
 ## 2026-07-08 — Session 1A: Compression pass (Phase 1 speed fix)
 Converted the oversized gameplay art in public/ to WebP. Originals kept as fallback: image loaders
 now retry `.webp` -> `.png`/`.jpg` on error, so a kid never sees a blank tile.

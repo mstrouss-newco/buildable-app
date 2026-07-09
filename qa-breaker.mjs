@@ -12,7 +12,7 @@ function el(withAppend){ const e={ style:{setProperty:noop}, classList:{add:noop
 class ImageStub{set src(v){this._src=v;}get src(){return this._src;}addEventListener(){}}
 // "start" host lacks appendChild → BS.mount uses its headless stub (no DOM needed)
 const documentStub={ getElementById:(id)=> id==='start'? el(false): el(true), querySelector:()=>el(true), addEventListener:noop, createElement:()=>el(true), head:el(true), documentElement:el(true) };
-const sandbox={ document:documentStub, window:{}, Image:ImageStub, requestAnimationFrame:noop, cancelAnimationFrame:noop, addEventListener:noop, removeEventListener:noop, setTimeout:()=>0, clearTimeout:noop, performance:{now:()=>Date.now()}, Date, Math, console };
+const sandbox={ document:documentStub, window:{}, Image:ImageStub, requestAnimationFrame:noop, cancelAnimationFrame:noop, addEventListener:noop, removeEventListener:noop, setTimeout:()=>0, clearTimeout:noop, performance:{now:()=>Date.now()}, URLSearchParams, location:{search:''}, Date, Math, console };
 sandbox.window=sandbox; sandbox.globalThis=sandbox;
 vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:'breaker'});
 const BK=sandbox.BUILDABLE_GAME; if(!BK){ console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
