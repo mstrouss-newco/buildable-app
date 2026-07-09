@@ -60,6 +60,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
 <script src="matter.min.js"></script>
+<script src="buildable-manifest.js?v=1"></script>
+<script src="buildable-hud.js?v=4"></script>
 <script>
 // ============================================================================
 //  SLING SQUAD — a FIXED Track B engine. A game = this engine + GAME_CONFIG (data).
@@ -155,6 +157,12 @@ var GAME_CONFIG = window.GAME_CONFIG || {
 // ---- runtime state ----
 var canvas = (typeof document!=="undefined") ? document.getElementById("c") : null;
 var ctx = canvas ? canvas.getContext("2d") : null;
+// shared HUD (buildable-hud.js) — the ONE info-bar system for every game.
+// Headless/QA or a load failure -> a no-op HUD so the engine never crashes.
+var slingHud=null;
+function HUD(){ if(slingHud) return slingHud;
+  if(typeof BuildableHUD==="undefined"||!BuildableHUD||!BuildableHUD.mount||!canvas){ return (slingHud={set:function(){},show:function(){},hide:function(){},destroy:function(){}}); }
+  return (slingHud=BuildableHUD.mount(canvas)); }
 var state = "title";            // title | ready | aiming | flying | reload | win | lose
 var level = 0, G = null, fx = (BM ? BM.makeFx() : null);
 var botMode = false, started = false;
@@ -605,19 +613,18 @@ function draw(){
   }
   ctx.restore();
   if(fx&&BM) BM.draw(ctx,fx,{W:W,H:H});
-  // HUD
-  ctx.fillStyle="rgba(20,16,48,.42)"; BR?BR.rrect(ctx,14,12,250,40,12):ctx.fillRect(14,12,250,40); ctx.fill();
-  ctx.fillStyle="#fff"; ctx.font="700 20px Fredoka,sans-serif"; ctx.textBaseline="middle"; ctx.textAlign="left";
-  ctx.fillText(G.L.name,28,33);
-  // slings left
-  var left=G.launchesLeft - ((state==="flying")?0:0);
-  ctx.fillStyle="rgba(20,16,48,.42)"; BR?BR.rrect(ctx,W-210,12,196,40,12):0; ctx.fill();
-  ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.fillText("Slings",W-200,33);
-  for(var s=0;s<Math.max(0,left);s++) hudIcon(W-118+s*26,33,(G.launchesUsed+s)%SQUAD.length);
-  // targets left badge
-  var tl=G.totalTargets-G.popped;
-  ctx.fillStyle="rgba(20,16,48,.42)"; BR?BR.rrect(ctx,W/2-70,12,140,40,12):0; ctx.fill();
-  ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.fillText("Topple: "+tl,W/2,33);
+  // HUD — shared tinted chips (buildable-hud.js). The old on-canvas scoreboard
+  // (level name / slings / topple) is retired; this is the ONE info bar every
+  // game shares. Shown during play, hidden on menus + win/lose overlays.
+  var _hud=HUD();
+  var inPlay=(state==="ready"||state==="aiming"||state==="flying"||state==="reload"||state==="clearing");
+  if(inPlay){ if(_hud)_hud.show();
+    try{ _hud.set({
+      left:[{ text:G.L.name, soft:"Lvl "+(level+1)+"/"+GAME_CONFIG.levels.length }],
+      right:[ { text:"Topple", soft:String(Math.max(0,G.totalTargets-G.popped)) },
+              { text:"Slings", soft:String(Math.max(0,G.launchesLeft)) } ]
+    }); }catch(e){}
+  } else if(_hud){ _hud.hide(); }
   // banners
   if(state==="win"){ banner("Level cleared!", (level+1<GAME_CONFIG.levels.length)?"Tap for the next one":"Tap to play again"); }
   if(state==="lose"){ banner("Out of slings!","Tap to try again"); }
@@ -717,10 +724,36 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
 
 // ============================================================================
+//  SHELL: load /sling/manifest.json and drive levels/identity from it.
+// ============================================================================
+// The built-in GAME_CONFIG above is the headless/QA + offline fallback. In the
+// browser the manifest is the source of the level list (names, layout template,
+// difficulty 1-5 -> derived sling count, which backdrop scene) and the game's
+// signature colour (HUD accent). Only the levels are replaced; the engine's own
+// squad, art loaders, sounds and physics stay put. (QA calls _applyManifest
+// directly, so this async fetch path is browser-only.)
+function applyManifest(cfg, raw){
+  if(!cfg || !Array.isArray(cfg.levels) || !cfg.levels.length) return;
+  try{ window.BUILDABLE_MANIFEST = raw; }catch(e){}
+  try{ if(window.BuildableHUD && BuildableHUD.setAccent && raw && raw.color) BuildableHUD.setAccent(raw.color); }catch(e){}
+  GAME_CONFIG.levels.length = cfg.levels.length;
+  for(var i=0;i<cfg.levels.length;i++){ GAME_CONFIG.levels[i]=cfg.levels[i]; }
+  try{ if(startScreen && typeof buildStartCfg==="function") startScreen.update(buildStartCfg()); }catch(e){}
+}
+try{
+  if(window.BuildableManifest && window.BuildableManifest.load){
+    window.BuildableManifest.load("sling", applyManifest, function(errs){
+      try{ console.warn("[sling] manifest not applied, using built-in levels:", errs); }catch(e){}
+    });
+  }
+}catch(e){}
+
+// ============================================================================
 //  QA / picker hooks (standardized name; alias kept) — drives the sensible-aim bot.
 // ============================================================================
 window.BUILDABLE_GAME = {
   _cfg:function(){ return GAME_CONFIG; },
+  _applyManifest:function(cfg,raw){ return applyManifest(cfg,raw); },
   state:function(){ return state; },
   effG:function(){ return EFF_G; },
   dbg:function(){ return { level:level, state:state, launchesLeft:G&&G.launchesLeft, used:G&&G.launchesUsed,
