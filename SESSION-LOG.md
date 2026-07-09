@@ -1,5 +1,40 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Session 3C: Loadout + one HUD + shell-owned wallet
+
+Phase 3 (the "paint layer") continues. Breaker's customization and its HUD are now
+shell-owned, and the coin wallet finally moves out of the game and into the shell.
+
+- **Shell-generated `BreakerLoadout`.** New React component in `src/BuildableKids.jsx`,
+  built straight from the manifest's `customization` slots (Paddle / Ball / Trail). Free
+  looks are owned from the start; priced looks show a coin cost and unlock by spending from
+  the wallet; a tap equips. The kid's owned + equipped picks live in a per-kid, per-game
+  shell store (`bk_loadout_v1_breaker_<kid>`), stored by option index so nothing hardcodes
+  art. Reached from a new "Make it mine" button on the game landing (`SCREEN_BREAKER_LOADOUT`).
+- **Equipped look handed to the engine.** On play, `BreakerScreen` reads the equipped
+  indices and appends tiny `?pad=&ball=` params to the engine URL. The engine maps them
+  (manifest slot order → its look) and applies them in memory only, so a standalone kid's
+  own saved prefs are never clobbered. No params in headless QA, so the sim is unaffected.
+- **ONE HUD, tinted by the manifest.** `buildable-hud.js` is confirmed as the single HUD
+  system; the competing per-game HUD-stylesheet idea ("game-hud.css") is formally retired
+  (recorded in HUD-AND-NAV-RULES.md). New `BuildableHUD.setAccent(color)` sets a CSS accent
+  var that tints every chip's outline; the engine calls it when the manifest loads, so the
+  info bar matches Breaker's signature color with zero per-game HUD code. Falls back to the
+  old neutral outline when never called, so other games are unchanged. HUD ref v3->v4.
+- **Wallet ownership moves to the shell (CARTRIDGE-CONTRACT.md).** `buildable-wallet.js` is
+  now role-aware: in the top window (the app shell, or a game opened standalone) it is the
+  OWNER and reads/writes localStorage; inside a shell iframe it is an ANNOUNCER that never
+  touches storage and only posts `coins` deltas up. The shell credits them (award-once by
+  level key, so replays still can't farm) and broadcasts the balance back down. `index.html`
+  loads the wallet as owner; the loadout spends there. Engine wallet ref v1->v2. This closes
+  the "messages only" violation the contract flagged for 3C.
+- **Verification.** `npm run build` compiles the shell; `qa-breaker.mjs` = ALL CHECKS PASS
+  (manifest valid, all 8 levels beatable x5, pong winner, render smoke).
+
+What's left in this block: nothing — 3C is complete. (3D, the Feel Kit + GAME-FEEL.md, is a
+separate session and was not started.) No punch-list items added.
+
+
 ## 2026-07-08 — Session 3B: shell-generated Journey (winding level path)
 
 Phase 3 (the "paint layer") continues. Breaker's level menu is no longer drawn by the

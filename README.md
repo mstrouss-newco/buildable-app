@@ -6,6 +6,28 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 3C: Loadout + one HUD + shell-owned wallet (July 8 2026)
+
+Breaker's customization and HUD are now shell-owned, and the coin wallet moved out of
+the game into the shell.
+
+- **`BreakerLoadout`** (in `src/BuildableKids.jsx`) is built straight from the manifest's
+  `customization` slots. Free looks are owned; priced looks unlock by spending coins; a tap
+  equips. Picks live in a per-kid shell store (`bk_loadout_v1_breaker_<kid>`), by option
+  index, so nothing hardcodes art. Reached from a new **Make it mine** button on the landing.
+- **Equipped look → engine.** On play, the shell appends `?pad=&ball=` (equipped indices) to
+  the engine URL; the engine maps them to its look and applies in memory only (standalone
+  saved prefs untouched; no params in headless QA).
+- **ONE HUD.** `buildable-hud.js` is the single HUD; the per-game HUD-stylesheet idea
+  ("game-hud.css") is retired. New `BuildableHUD.setAccent(color)` tints every chip with the
+  manifest's signature color; the engine calls it when the manifest loads. HUD ref v3->v4.
+- **Wallet ownership → shell.** `buildable-wallet.js` is now OWNER in the top window (the app
+  shell, or a game opened standalone) and ANNOUNCER inside a game iframe — announcers only
+  post `coins` deltas up and never touch storage. The shell credits (award-once by level key)
+  and broadcasts the balance down. `index.html` loads it as owner; the loadout spends there.
+  Closes the "messages only" wallet violation from CARTRIDGE-CONTRACT.md. Engine ref v1->v2.
+- **QA:** `npm run build` green; `qa-breaker.mjs` ALL CHECKS PASS.
+
 ## Session 3B: shell-generated Journey — the winding level path (July 8 2026)
 Phase 3 continues. Breaker's level menu is no longer drawn by the game engine; the shell
 now builds the whole out-of-game journey from the manifest.
