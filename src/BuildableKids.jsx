@@ -48,6 +48,7 @@ const SCREEN_PLATFORMER = "platformer";
 const SCREEN_SURVIVAL = "survival";
 const SCREEN_BREAKER = "breaker";
 const SCREEN_BREAKER_LANDING = "breaker_landing";
+const SCREEN_BREAKER_JOURNEY = "breaker_journey";
 const SCREEN_TANK = "tank";
 const SCREEN_RUNNER = "runner";
 const SCREEN_TETRIS = "tetris";
@@ -283,7 +284,13 @@ function BreakerScreen({ onHome, entry = "journey" }) {
       <QuizGate goal={getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
     </div>
   ) : null;
-  return <GameFrame title="Buildable Breaker" src={`/breaker-engine.html?v=3a&screen=${entry}`} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} />;
+  let src;
+  if (typeof entry === "string" && entry.indexOf("play:") === 0) {
+    src = `/breaker-engine.html?v=3b&screen=play&level=${encodeURIComponent(entry.slice(5))}`;
+  } else {
+    src = `/breaker-engine.html?v=3b&screen=${entry}`;
+  }
+  return <GameFrame title="Buildable Breaker" src={src} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} />;
 }
 
 // Shell-generated game landing (Session 3A) — a converted game's front door.
@@ -312,6 +319,145 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onBack }) {
     </div>
   );
 }
+// ============================================================================
+//  BreakerJourney (Session 3B) — the SHELL-generated winding level path.
+//  Replaces the engine's homemade level menu. Reads /breaker/manifest.json for
+//  the ordered level list; reads the same localStorage the engine writes for
+//  unlock + star progress. Stops show theme art (placeholder badge until the new
+//  journeyBadge art lands), 0-3 stars, and a lock on levels not yet reached. The
+//  path weaves left/right down a vertical scroll — tight vertical on phones, a
+//  wider wander on iPad/desktop. The current level auto-scrolls into view.
+// ============================================================================
+function readBreakerProgress() {
+  let unlocked = 0, stars = {};
+  try {
+    const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
+    const key = "bk_breaker_prefs" + (k && k.id ? ("_" + k.id) : "");
+    const s = JSON.parse(localStorage.getItem(key) || "null");
+    if (s) { unlocked = Math.max(0, s.unlocked || 0); if (s.stars && typeof s.stars === "object") stars = s.stars; }
+  } catch (e) {}
+  return { unlocked, stars };
+}
+function breakerLevelTheme(level) {
+  const src = (level.parts && (level.parts.background || level.parts.bricks)) || "";
+  const m = /^breaker\/(?:bg|bricks)\/([a-z0-9]+)-v\d+$/.exec(src);
+  return (m && m[1]) || "jungle";
+}
+function JourneyStar({ filled, size = 15 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }} aria-hidden="true">
+      <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 18.9 6.1 21.2l1.3-6.6L2.5 9.9l6.6-.8z"
+        fill={filled ? "#FFD24A" : "rgba(255,255,255,0.14)"}
+        stroke={filled ? "#E0A200" : "rgba(255,255,255,0.28)"} strokeWidth="1.1" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function JourneyLock({ size = 26 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4.5" y="10.5" width="15" height="10.5" rx="2.4" fill="rgba(15,14,30,0.82)" stroke="rgba(255,255,255,0.55)" strokeWidth="1.4" />
+      <path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="12" cy="15.5" r="1.7" fill="#fff" />
+    </svg>
+  );
+}
+function BreakerJourney({ game, onBack, onPlay }) {
+  const accent = (game && game.color) || "#FF6B6B";
+  const [manifest, setManifest] = useState(null);
+  const [prog, setProg] = useState(() => readBreakerProgress());
+  const currentRef = useRef(null);
+  useEffect(() => {
+    let live = true;
+    fetch("/breaker/manifest.json?v=" + Date.now())
+      .then((r) => r.json())
+      .then((m) => { if (live) setManifest(m); })
+      .catch(() => {});
+    setProg(readBreakerProgress()); // re-read on (re)entry so a fresh clear lights the path
+    return () => { live = false; };
+  }, []);
+  const levels = (manifest && Array.isArray(manifest.levels)) ? manifest.levels : [];
+  const lastIdx = Math.max(0, levels.length - 1);
+  const currentIdx = Math.min(prog.unlocked, lastIdx);
+  useEffect(() => {
+    if (currentRef.current) { try { currentRef.current.scrollIntoView({ block: "center" }); } catch (e) {} }
+  }, [manifest]);
+
+  const ROW = 150;                   // px of scroll height per stop
+  const V_PER_ROW = 26;              // viewBox units per stop (path coordinate space)
+  const totalV = levels.length ? levels.length * V_PER_ROW : V_PER_ROW;
+  const xPctAt = (i) => 50 + 30 * Math.sin(i * 1.05);   // 20%..80% weave
+  const yVAt = (i) => 13 + i * V_PER_ROW;
+  // smooth vertical S-curve path through the stops (control handles at mid-height)
+  let pathD = "";
+  levels.forEach((_, i) => {
+    const x = xPctAt(i), y = yVAt(i);
+    if (i === 0) { pathD += `M ${x} ${y}`; }
+    else {
+      const px = xPctAt(i - 1), py = yVAt(i - 1), my = (py + y) / 2;
+      pathD += ` C ${px} ${my}, ${x} ${my}, ${x} ${y}`;
+    }
+  });
+
+  return (
+    <div style={{ ...styles.container, padding: "18px 14px 0", height: "100vh", overflow: "hidden" }}>
+      <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center", marginBottom: 10, maxWidth: 680 }}>
+        <button onClick={onBack} style={styles.backButton}>Games</button>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Journey</div>
+          <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 22, lineHeight: 1 }}>{(game && game.name) || "Breaker"}</div>
+        </div>
+      </div>
+
+      <div style={{ width: "100%", maxWidth: 680, flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", paddingBottom: 40 }}>
+        {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 40, fontWeight: 700 }}>Loading your journey...</div>}
+        {manifest && (
+          <div style={{ position: "relative", width: "100%", height: levels.length * ROW }}>
+            <svg viewBox={`0 0 100 ${totalV}`} preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+              <path d={pathD} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.4" strokeLinecap="round" strokeDasharray="0.6 3.2" vectorEffect="non-scaling-stroke" />
+            </svg>
+            {levels.map((lv, i) => {
+              const theme = breakerLevelTheme(lv);
+              const locked = i > prog.unlocked;
+              const isCurrent = i === currentIdx;
+              const stars = Math.max(0, Math.min(3, prog.stars[i] || 0));
+              const img = `/breaker/${theme}/bg.webp`;
+              const leftPct = xPctAt(i);
+              const topPx = i * ROW + ROW / 2;
+              return (
+                <div key={lv.id || i} ref={isCurrent ? currentRef : null}
+                  style={{ position: "absolute", top: topPx, left: `${leftPct}%`, transform: "translate(-50%,-50%)", display: "flex", flexDirection: "column", alignItems: "center", width: 148 }}>
+                  <button
+                    onClick={() => { if (!locked) onPlay(lv, i); }}
+                    disabled={locked}
+                    aria-label={lv.name + (locked ? " (locked)" : "")}
+                    style={{
+                      position: "relative", width: 96, height: 96, borderRadius: "50%", padding: 0, overflow: "hidden",
+                      border: isCurrent ? `4px solid ${accent}` : "4px solid rgba(255,255,255,0.35)",
+                      boxShadow: isCurrent ? `0 0 0 6px ${accent}44, 0 12px 26px rgba(0,0,0,0.45)` : "0 8px 18px rgba(0,0,0,0.4)",
+                      cursor: locked ? "default" : "pointer", background: `linear-gradient(160deg, ${accent}, ${accent}55)`,
+                      filter: locked ? "grayscale(0.7) brightness(0.6)" : "none", transition: "transform .12s",
+                    }}>
+                    <img src={img} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                    <span style={{ position: "absolute", top: 4, left: 6, fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,0.7)" }}>{i + 1}</span>
+                    {locked && <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><JourneyLock /></span>}
+                  </button>
+                  <div style={{ marginTop: 7, fontFamily: NUN, fontWeight: 800, fontSize: 13, color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.6)", textAlign: "center", maxWidth: 140 }}>{lv.name}</div>
+                  {!locked && (
+                    <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
+                      {[0, 1, 2].map((s) => <JourneyStar key={s} filled={s < stars} />)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=hud1" onHome={onHome} bg="#2e7d32" />; }
 function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html?v=hud1" onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
@@ -862,13 +1008,20 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER_LANDING) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
-    return <GameLanding game={bk} demoSrc="/breaker-engine.html?v=3a&screen=demo"
-      onPlay={() => { setBreakerEntry("journey"); setScreen(SCREEN_BREAKER); }}
+    return <GameLanding game={bk} demoSrc="/breaker-engine.html?v=3b&screen=demo"
+      onPlay={() => setScreen(SCREEN_BREAKER_JOURNEY)}
       onMake={() => { setBreakerEntry("maker"); setScreen(SCREEN_BREAKER); }}
       onBack={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
+  if (screen === SCREEN_BREAKER_JOURNEY) {
+    const bk = GAME_CATALOG.find((g) => g.id === "breaker");
+    return <BreakerJourney game={bk}
+      onBack={() => setScreen(SCREEN_BREAKER_LANDING)}
+      onPlay={(lv) => { setBreakerEntry("play:" + lv.id); setScreen(SCREEN_BREAKER); }} />;
+  }
   if (screen === SCREEN_BREAKER) {
-    return <BreakerScreen entry={breakerEntry} onHome={() => setScreen(SCREEN_BREAKER_LANDING)} />;
+    const backToJourney = typeof breakerEntry === "string" && breakerEntry.indexOf("play:") === 0;
+    return <BreakerScreen entry={breakerEntry} onHome={() => setScreen(backToJourney ? SCREEN_BREAKER_JOURNEY : SCREEN_BREAKER_LANDING)} />;
   }
   if (screen === SCREEN_CASTLE) {
     return <CastleGuardScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
