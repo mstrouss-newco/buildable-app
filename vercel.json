@@ -343,6 +343,13 @@
       }
     },
     {
+      "src": "/survival/manifest.json",
+      "dest": "/survival/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
       "src": "/survival-engine.html",
       "dest": "/survival-engine.html"
     },

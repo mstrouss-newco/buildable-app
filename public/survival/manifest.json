@@ -1,0 +1,61 @@
+{
+  "id": "survival",
+  "name": "Space Sparkles",
+  "type": "game",
+  "category": "Action",
+  "color": "#7C4DFF",
+  "ageBand": "6-10",
+  "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/survival-engine.html",
+
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "cheerleader" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": true, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math", "reading"] }
+  },
+
+  "feel": { "pace": "normal", "celebration": "big", "haptics": "on" },
+
+  "art": {
+    "badge": "survival/badge/v1",
+    "hero": "survival/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "survival/loading/v1",
+    "music": "audio/survival/theme-v1"
+  },
+
+  "levels": [
+    { "id": "comet-meadow", "name": "Comet Meadow", "difficulty": 1, "unlocked": true, "bossName": "Thistle", "journeyBadge": "badges/meadow/v1",
+      "colors": ["#7ee0a0", "#8fd0ff"],
+      "parts": { "bgKey": 1, "foes": ["enemy_leaf", "enemy_cloud"], "boss": "enemy_tumble" } },
+    { "id": "nebula-drift", "name": "Nebula Drift", "difficulty": 2, "bossName": "Nightwing", "journeyBadge": "badges/nebula/v1",
+      "colors": ["#ffd27a", "#ff9ec4", "#8fd0ff"],
+      "parts": { "bgKey": 2, "foes": ["enemy_fairy", "enemy_bat", "enemy_cloud"], "boss": "enemy_bat" } },
+    { "id": "asteroid-twirl", "name": "Asteroid Twirl", "difficulty": 3, "bossName": "Boulder", "journeyBadge": "badges/asteroid/v1",
+      "colors": ["#a99cff", "#7ee0a0", "#ff9ec4"],
+      "parts": { "bgKey": 4, "foes": ["enemy_rock", "enemy_tumble", "enemy_leaf"], "boss": "enemy_rock" } },
+    { "id": "stardust-caves", "name": "Stardust Caves", "difficulty": 3, "bossName": "Inkling", "journeyBadge": "badges/stardust/v1",
+      "colors": ["#8fd0ff", "#a99cff", "#ffd27a"],
+      "parts": { "bgKey": 3, "foes": ["enemy_octo", "enemy_fairy", "enemy_bat"], "boss": "enemy_octo" } },
+    { "id": "rocket-rapids", "name": "Rocket Rapids", "difficulty": 4, "bossName": "Captain Bones", "journeyBadge": "badges/rocket/v1",
+      "colors": ["#ff9ec4", "#7ee0a0", "#8fd0ff"],
+      "parts": { "bgKey": 2, "foes": ["enemy_pirate", "enemy_alien", "enemy_cloud"], "boss": "enemy_pirate" } },
+    { "id": "galaxy-finale", "name": "Galaxy Finale", "difficulty": 5, "bossName": "The Saucer", "journeyBadge": "badges/galaxy/v1",
+      "colors": ["#ff9ec4", "#a99cff", "#ffd27a", "#8fd0ff"],
+      "parts": { "bgKey": 4, "foes": ["enemy_alien", "enemy_octo", "enemy_fairy", "enemy_rock"], "boss": "enemy_alien" } }
+  ],
+
+  "customization": [
+    { "slot": "Character", "options": [
+      { "name": "Star Explorer", "asset": "survival/hero/v1", "price": 0 }
+    ]},
+    { "slot": "Music", "options": [
+      { "name": "Cosmic", "asset": "audio/survival/theme-v1", "price": 0 }
+    ]}
+  ]
+}
