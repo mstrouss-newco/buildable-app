@@ -1,5 +1,11 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Planner Roadmap: reorder sessions too
+Session cards now have the same up/down arrows phases already had. New `rmMoveSession(id,dir)` swaps a
+session with its neighbour **within its own group only** — phase siblings, orphan "Other sessions", or
+the Later/parked list — so a move never jumps a session across phases or into/out of parked. Guards at
+the top/bottom of each group (no-op). Order persists via `saveMetaR`; storage shape unchanged.
+
 ## 2026-07-08 — Session 1B: Art serving (Phase 1 speed fix)
 Made cached/generated art serve like static files and stopped any on-demand generation from
 blocking a kid. No game engine or art files changed — routing + the two image functions only.

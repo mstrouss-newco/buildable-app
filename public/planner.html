@@ -818,6 +818,10 @@ function rmCard(s, archived){
   const isNext=!archived&&s.id===rmNextId;
   return '<div class="rm-card '+(s.done?"done":"")+(isNext?" next":"")+'">'
     +'<div class="rm-top">'
+    +(archived?"":'<span class="rm-reorder">'
+      +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMoveSession('+JSON.stringify(s.id)+',-1)\'>&#9650;</button>'
+      +'<button class="rm-arrow" title="Move down" onclick=\'event.stopPropagation();rmMoveSession('+JSON.stringify(s.id)+',1)\'>&#9660;</button>'
+      +'</span>')
     +(archived?"":'<input type="checkbox" '+(s.done?"checked":"")+' onchange=\'rmToggleDone('+JSON.stringify(s.id)+')\'>')
     +'<span class="rm-id">'+esc(s.id)+'</span>'
     +'<span class="rm-name">'+esc(s.name)+'</span>'
@@ -897,6 +901,19 @@ async function rmMovePhase(num,dir){
   const rd=rmData(); const i=rd.phases.findIndex(p=>p.num===num); if(i<0) return;
   const j=i+dir; if(j<0||j>=rd.phases.length) return;
   const t=rd.phases[i]; rd.phases[i]=rd.phases[j]; rd.phases[j]=t;
+  renderRoadmap(); setSync("saving..."); await saveMetaR();
+}
+async function rmMoveSession(id,dir){
+  const rd=rmData();
+  const phaseNums=new Set(rd.phases.map(p=>p.num));
+  const keyOf=s=> s.later ? "later" : (phaseNums.has(s.phaseNum) ? "p:"+s.phaseNum : "orphan");
+  const s=rd.sessions.find(x=>x.id===id); if(!s) return;
+  const key=keyOf(s);
+  const sib=[]; rd.sessions.forEach((x,idx)=>{ if(keyOf(x)===key) sib.push(idx); });
+  const pos=sib.findIndex(idx=>rd.sessions[idx].id===id);
+  const tp=pos+dir; if(tp<0||tp>=sib.length) return;
+  const a=sib[pos], b=sib[tp];
+  const t=rd.sessions[a]; rd.sessions[a]=rd.sessions[b]; rd.sessions[b]=t;
   renderRoadmap(); setSync("saving..."); await saveMetaR();
 }
 async function rmDeletePhase(num){
