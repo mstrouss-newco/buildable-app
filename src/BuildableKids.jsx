@@ -39,6 +39,8 @@ const SCREEN_PLAY = "play";
 const SCREEN_MY_STUFF = "my_stuff";
 const SCREEN_ADMIN = "admin";
 const SCREEN_MUSIC = "music";
+const SCREEN_MUSIC_LANDING = "music_landing"; // Session 6C: studio front door (shell-generated)
+const SCREEN_MUSIC_LOADOUT = "music_loadout"; // Session 6C: studio loadout (instrument packs)
 const SCREEN_GROWNUP = "grownup";
 const SCREEN_STORY = "story";
 const SCREEN_TYPING = "typing";
@@ -120,6 +122,7 @@ const SCREEN_MAZE = "maze";
 // ---------------------------------------------------------------------------
 const GAME_CATALOG = [
   { id: "breaker",     name: "Breaker",          category: "Arcade",   color: "#FF6B6B", type: "game", imgId: "breaker",     handler: "onBreaker",     desc: "Bounce the ball, smash every brick!" },
+  { id: "music-maker", name: "Music Maker",      category: "Studio",   color: "#37B6F5", type: "studio", imgId: "music",     handler: "onMusicMaker",  desc: "Make your own songs — pick a vibe and press go!" },
   { id: "chess",       name: "Chess",            category: "Board",    color: "#F0972A", type: "game", imgId: "chess",       handler: "onChess",       desc: "Play solo, 2-player, or with family!" },
   { id: "sling",       name: "Sling Squad",      category: "Action",   color: "#7BD0FF", type: "game", imgId: "sling",       handler: "onSling",       desc: "Fling your pals, topple every tower!" },
   { id: "tictactoe",   name: "Tic-Tac-Toe",      category: "Board",    color: "#5B8CFF", type: "game", imgId: "tictactoe",   handler: "onTicTacToe",   desc: "Three in a row — solo or 2 players!" },
@@ -1271,6 +1274,24 @@ export default function BuildableKids() {
     );
   }
 
+  if (screen === SCREEN_MUSIC_LANDING) {
+    const st = GAME_CATALOG.find((g) => g.id === "music-maker");
+    // Studio front door: same shell landing every converted game uses. No demo
+    // engine (studios have no attract mode) and no "Make a level" — just Play
+    // (open the maker) and "Make it mine" (instrument-pack loadout).
+    return <GameLanding game={st}
+      onPlay={() => { setReturnTo(SCREEN_MUSIC_LANDING); setScreen(SCREEN_MUSIC); }}
+      onLoadout={() => setScreen(SCREEN_MUSIC_LOADOUT)}
+      onBack={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_MUSIC_LOADOUT) {
+    const st = GAME_CATALOG.find((g) => g.id === "music-maker");
+    // Same shell-generated loadout as games; reads the studio manifest's
+    // customization (instrument packs), spends shared-wallet coins to unlock.
+    return <BreakerLoadout game={st}
+      onBack={() => setScreen(SCREEN_MUSIC_LANDING)}
+      onPlay={() => { setReturnTo(SCREEN_MUSIC_LANDING); setScreen(SCREEN_MUSIC); }} />;
+  }
   if (screen === SCREEN_MUSIC) {
     return (
       <MusicMaker
@@ -1300,7 +1321,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onMahjong={() => setScreen(SCREEN_MAHJONG)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} onSling={() => setScreen(SCREEN_SLING)} onCroc={() => setScreen(SCREEN_CROC)} onStringMatch={() => setScreen(SCREEN_STRINGMATCH)} onTank={() => setScreen(SCREEN_TANK)} onBubble={() => setScreen(SCREEN_BUBBLE)} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onMahjong={() => setScreen(SCREEN_MAHJONG)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} onSling={() => setScreen(SCREEN_SLING)} onCroc={() => setScreen(SCREEN_CROC)} onStringMatch={() => setScreen(SCREEN_STRINGMATCH)} onTank={() => setScreen(SCREEN_TANK)} onBubble={() => setScreen(SCREEN_BUBBLE)} onMusicMaker={() => setScreen(SCREEN_MUSIC_LANDING)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
