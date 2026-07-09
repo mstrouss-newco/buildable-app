@@ -1,5 +1,21 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Planner Roadmap tab: prompt tightening + Next-up indicator; add rebuild docs
+Added `buildable-rebuild-roadmap.md` and `buildable-manifest-v2.md` to the repo root (the two context
+docs each session prompt tells Claude to read). Surgical changes to the Roadmap tab of
+`public/planner.html` only (log tab, parser, merge logic, and storage shape untouched):
+- **buildSessionPrompt** now (a) tells Claude "If either doc is missing, tell me before proceeding.",
+  (b) adds "Commit in logical chunks with clear messages." before the "When finished" line,
+  (c) says "update SESSION-LOG.md" instead of "update the roadmap checkboxes and SESSION-LOG.md"
+  (the planner tracks progress now), and (d) omits the colon/empty description when a session has no
+  description so the sentence reads cleanly ("Session 1B — Lazy load." not "…— Lazy load: .").
+- **Next-up indicator:** the first not-done, not-parked session in phase order gets a small "next"
+  badge + highlighted card (`.rm-card.next`), and a "Start next session" button near the top of the
+  roadmap opens that session's prompt modal directly (new `nextSession()`/`startNextSession()`,
+  `rmNextId` runtime var — nothing persisted).
+Verified with a jsdom render harness: both tabs render + re-render with no console errors, the badge
+and highlight land on exactly the next session, and "Start next session" opens the right prompt.
+
 ## 2026-07-02 — New game: String Match (draw-a-string connect puzzle, Kenney art)
 New Track B engine `public/string-match.html` + Games-picker tile + `vercel.json` route. Kids draw a
 freeform finger-string from a block to its matching buddy without crossing other strings; good connects
