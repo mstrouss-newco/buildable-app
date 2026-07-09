@@ -151,6 +151,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-levelthumb.js"></script>
 <script src="buildable-hud.js?v=3"></script>
 <script src="buildable-gamenav.js?v=1"></script>
+<script src="buildable-manifest.js?v=1"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -322,6 +323,39 @@ async function applyLevelsConfig(){
   }catch(e){}
 }
 loadLibrary();
+
+// ---- SHELL: load /breaker/manifest.json and drive levels/art from it -------
+// The built-in GAME_CONFIG above is now just the headless/QA + offline fallback.
+// In the browser the manifest is the source of the level list, layouts,
+// difficulty (1-5 -> engine tuning) and the art asset IDs for every level.
+// (QA injects window.GAME_CONFIG directly, so this async path is browser-only.)
+function applyManifest(cfg, raw){
+  if(!cfg || !Array.isArray(cfg.levels) || !cfg.levels.length) return;
+  try{ window.BUILDABLE_MANIFEST = raw; }catch(e){}
+  // register each level's art pack from its manifest asset IDs (never hardcoded)
+  cfg.levels.forEach(function(l){
+    if(l.theme && l.art){
+      THEMES[l.theme] = { bg:l.art.bg, bricks:l.art.bricks, shatter:l.art.shatter,
+                          balls:l.art.balls, paddle:l.art.paddle, ball:0, fall:l.art.fall };
+      delete themeCache[l.theme];
+    }
+  });
+  // replace the campaign levels in place (index 0..n-1) so any kid-made levels
+  // that applyLevelsConfig appended past the campaign are preserved.
+  for(var i=0;i<cfg.levels.length;i++){ GAME_CONFIG.levels[i]=cfg.levels[i]; }
+  if(cfg.brickColors) GAME_CONFIG.brickColors=cfg.brickColors;
+  // refresh whatever's on screen (mirrors applyLevelsConfig)
+  try{ if(state==="title"){ var hm=document.getElementById("home");
+    if(hm&&hm.classList.contains("show")) renderHub();
+    if(startScreen) startScreen.update(buildStartCfg()); } }catch(e){}
+}
+try{
+  if(window.BuildableManifest && window.BuildableManifest.load){
+    window.BuildableManifest.load("breaker", applyManifest, function(errs){
+      try{ console.warn("[breaker] manifest not applied, using built-in levels:", errs); }catch(e){}
+    });
+  }
+}catch(e){}
 function curWorld(){ const ok=w=>w&&LIBPACKS[w]&&LIBPACKS[w].materials.length;
   if(L&&ok(L._world)) return L._world;      // this level explicitly uses a library world
   if(L&&L._theme) return null;              // this level explicitly uses a shipped world -> no library
