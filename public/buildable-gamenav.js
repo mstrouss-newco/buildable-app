@@ -57,6 +57,47 @@
     let n = 0; const iv = setInterval(function () { postState(); if (++n >= 6) clearInterval(iv); }, 350);
   };
 
+  // --------------------------------------------------------------------------
+  //  iOS Home-tap fix. In-app the shell draws the Home button (top-left) OUTSIDE
+  //  this game, floating over our full-screen iframe. On iOS Safari a *touch* on
+  //  an element that overlaps an iframe is routed INTO the iframe (it lands on our
+  //  game canvas and moves the paddle) instead of the shell's button — so Home
+  //  "does nothing" on iPhone while working fine with a desktop mouse. Fix: put an
+  //  invisible catcher in the reserved top-left Home corner INSIDE the game (which
+  //  reliably receives that stray touch) and forward nav:exit to the shell, which
+  //  returns to the hub. The corner is already reserved for Home platform-wide, so
+  //  this never steals a gameplay tap. Desktop clicks still land on the shell
+  //  button directly; at worst both fire and onHome runs twice (harmless).
+  function installHomeCatcher() {
+    try {
+      if (!iframed() || !g.document || !g.document.body) return;
+      if (g.document.getElementById("bkNavHomeCatcher")) return;
+      var z = g.document.createElement("div");
+      z.id = "bkNavHomeCatcher";
+      z.setAttribute("aria-hidden", "true");
+      z.style.cssText = "position:fixed;top:0;left:0;width:96px;height:54px;z-index:2147483000;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;";
+      var last = 0;
+      var fire = function (ev) {
+        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+        var t = Date.now(); if (t - last < 500) return; last = t;   // one exit per tap
+        try { g.parent.postMessage("nav:exit", "*"); } catch (e) {}
+        try { g.parent.postMessage({ type: "nav:exit" }, "*"); } catch (e) {}
+      };
+      var shield = function (ev) { try { ev.stopPropagation(); } catch (e) {} };
+      z.addEventListener("touchstart", shield, { passive: true });
+      z.addEventListener("pointerdown", shield);
+      z.addEventListener("touchend", fire, { passive: false });
+      z.addEventListener("pointerup", fire);
+      z.addEventListener("click", fire);
+      g.document.body.appendChild(z);
+    } catch (e) {}
+  }
+  BN.installHomeCatcher = installHomeCatcher;
+  if (typeof document !== "undefined") {
+    if (document.body) installHomeCatcher();
+    else document.addEventListener("DOMContentLoaded", installHomeCatcher);
+  }
+
   g.BuildableGameNav = BN;
   if (typeof module !== "undefined" && module.exports) module.exports = BN;
 })(typeof window !== "undefined" ? window : globalThis);
