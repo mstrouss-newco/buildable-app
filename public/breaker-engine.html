@@ -465,7 +465,7 @@ function topBand(){
   var inShell=true; try{ inShell=!!(window.parent&&window.parent!==window); }catch(e){}
   return inShell ? 150 : 104;
 }
-let G=null, level=0, L=null, state="title", started=false, botMode=false, helpOpen=false, PLAYTEST=false;
+let G=null, level=0, L=null, state="title", started=false, botMode=false, helpOpen=false, PLAYTEST=false, DEMO=false;
 // Cartridge contract: the shell can send {type:"pause"}/{type:"resume"} to freeze/continue
 // this game NOW (quiz gates, parent interruptions, tab switches) — see CARTRIDGE-CONTRACT.md.
 let bkPaused=false;
@@ -709,9 +709,10 @@ function hitBricks(b){ const fire=G.fireT>0;
   }
 }
 function loseLife(){ G.lives--; G.lostLives++; if(BM){ BM.shake(fx,0.5); BM.flash(fx,"#ff4444",0.3); } sfx("hurt");
-  if(G.lives<=0){ state="lose"; sfx("lose"); if(bkBuddyOn() && window.BB) BB.lose(); return; }
+  if(G.lives<=0){ if(DEMO){ clearTimeout(demoStart._t); demoStart._t=setTimeout(demoStart,1100); state="title"; return; } state="lose"; sfx("lose"); if(bkBuddyOn() && window.BB) BB.lose(); return; }
   G.balls=[ newBall(G.padX, PAD_Y-BALL_R-PAD_H/2, -Math.PI/2, G.speed) ]; G.onPaddle=true; G.stuck=null; started=false; }
-function winLevel(){ state="win"; sfx("win");
+function winLevel(){ if(DEMO){ clearTimeout(demoStart._t); demoStart._t=setTimeout(demoStart,1600); state="title"; return; }
+  state="win"; sfx("win");
   if(G&&G.custom){ if(CUSTOM)CUSTOM.cleared=true;
     if(BM){ for(let i=0;i<3;i++) BM.burst(fx.parts, W*(0.3+0.2*i), H*0.4, GAME_CONFIG.brickColors[i*2], 22, {gravity:18,spd:[2,6],life:[0.7,1.4]}); BM.flash(fx,"#ffffff",0.2); }
     return; }
@@ -1066,6 +1067,7 @@ function levelThumbURL(l,i){
   const key=i+"_"+l.cols+"_"+l.rows+"_"+l.pattern;
   if(_thumbCache[key]) return _thumbCache[key];
   const CW=300, CH=140, cv=document.createElement("canvas"); cv.width=CW; cv.height=CH; const g=cv.getContext("2d");
+  if(typeof cv.toDataURL!=="function") return "";   // headless (QA sandbox) has no real canvas — thumbnails are cosmetic
   const base=brickColorFor(i);
   const grd=g.createLinearGradient(0,0,0,CH); grd.addColorStop(0,"#171433"); grd.addColorStop(1,shade(base,-96));
   g.fillStyle=grd; g.fillRect(0,0,CW,CH);
@@ -1355,6 +1357,9 @@ function bkBootRoute(){ if(!BK_ROUTE || bkBooted) return; bkBooted=true;
 if(BK_ROUTE && typeof window!=="undefined"){
   window.addEventListener("popstate", function(){ bkSuppressURL=true; try{ bkApplyRoute(location.pathname); }catch(e){} bkSuppressURL=false; });
 }
+// Self-playing "attract" demo for the shell game-landing (?screen=demo). The perfect-
+// player bot plays level 1 on a loop; audio stays silent (no user gesture unlocks it).
+function demoStart(){ try{ startLevel(0); }catch(e){} state="play"; botMode=true; started=true; }
 // boot
 if(typeof document!=="undefined" && document.getElementById("start")){
   loadPrefs(); wireMenus();
@@ -1366,7 +1371,13 @@ if(typeof document!=="undefined" && document.getElementById("start")){
       if(!(window.BuildableManifest && window.BuildableManifest.load)) bkBootRoute();
     } else { bkBootRoute(); }
   } else {
-    showHub();
+    // In-app (embedded by the shell). The shell now owns the front door — picker +
+    // game landing — so the engine NEVER shows its old Play/Make hub in-app. It boots
+    // straight into the screen the shell asks for via ?screen=.
+    var _scr=""; try{ _scr=(new URLSearchParams(location.search)).get("screen")||""; }catch(e){}
+    if(_scr==="demo"){ DEMO=true; demoStart(); }
+    else if(_scr==="maker"){ startNewLevel(); }
+    else { currentMode="solo"; showMenu(); }   // "journey"/default -> the level path (engine-owned until 3B)
   }
 }
 // Private playtest: ?playtest=1&template=&diff=&libtheme=&name= builds ONE throwaway
