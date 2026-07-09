@@ -6,6 +6,41 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 6D: Guest play links — the grandma flow (July 9 2026)
+
+A kid or parent can send a one-tap link that lets anyone play them instantly with
+no account. Built earlier for tic-tac-toe only; this session taught it **chess** and
+finished the safety + entry-point wiring.
+
+- **Backend (`api/invite.js`, `db/6d-guest-invite-chess.sql`).** The zero-auth
+  `invite_matches` table (unguessable token = the capability, RLS on, service-role
+  only) gains `world`, `last_move`, `reaction`, `host_kid`, `host_parent`. Tic-tac-toe
+  stays server-refereed; **chess is a relay** — the on-device engine enforces the rules
+  and the endpoint just passes state between the two phones, the same model the
+  in-family chess lobby uses. A `react` action relays canned cheers; links expire (410
+  after 7 days); `create` resolves the family owner from the kid id so the match shows
+  in the right parent portal.
+- **The link page (`public/play-invite.html`).** Chess now embeds the real
+  `buildable-chess.html` in guest mode and bridges moves + reactions over `/api/invite`.
+  The host lands on a "waiting + send link" screen; the guest types a name and joins.
+  It is a standalone static page, so a guest never loads the app — no picker, no profile
+  gate, no Home guard can touch them.
+- **Guest lock (`public/buildable-chess.html`, `?guest=1`).** Hides the escape-to-menu
+  buttons so a guest only ever sees this one match; rematch routes back through the link.
+  Family-lobby behavior is unchanged (it does not pass `guest=1`). v=6 cache bump.
+- **Entry points.** A "Play a friend" pill on the shareable 2-player picker cards (chess
+  + tic-tac-toe) and a "Play a grown-up" option in the chess lobby, both creating a link
+  tied to the signed-in kid. Grown-ups -> Parents shows a read-only **Guest games** list
+  of matches the family's kids started.
+- **QA.** `qa-invite.mjs` drives the whole flow against an in-memory DB stub: create ->
+  join -> a chess match both directions -> canned reaction -> checkmate -> parent listing
+  -> expiry, plus tic-tac-toe server-referee. 22/22 checks pass. Chess has no engine QA
+  harness (noted). `vite build` green; both link pages parse.
+
+**Owner to run:** `db/6d-guest-invite-chess.sql` in the Supabase SQL editor (idempotent,
+non-destructive). Then test on two real devices: from a kid's profile tap a game's
+"Play a friend", send the link, open it on another phone, and play both ways.
+
 ## Session 6C: First studio converts — Music Maker (July 9 2026)
 
 The first `type:studio` on the shared shell. A **studio** skips levels/journey and

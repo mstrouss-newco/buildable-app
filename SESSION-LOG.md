@@ -1,5 +1,31 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 6D: Guest play links (the grandma flow)
+
+Taught the zero-account guest invite tool to carry **chess** and finished its safety
+shape + entry points. It was built for tic-tac-toe only and never tested.
+
+**What shipped.**
+- `db/6d-guest-invite-chess.sql` (idempotent): `invite_matches` gains world/last_move/
+  reaction/host_kid/host_parent + a parent index. RLS unchanged (service-role only).
+- `api/invite.js`: chess relay (engine referees, server passes state), `react` action,
+  link-expiry 410, parent-portal listing (`?parent=` or `?kids=`), host_parent resolved
+  from the kid id server-side. Tic-tac-toe stays server-refereed.
+- `public/play-invite.html`: chess embeds the real engine and bridges moves + canned
+  reactions; host gets a share-link waiting screen. Standalone page, so it bypasses the
+  app profile gate/picker/Home guard by construction.
+- `public/buildable-chess.html`: `?guest=1` hides escape-to-menu; rematch via the link.
+  v=6 cache bump. Family lobby untouched.
+- Entry points: picker "Play a friend" pill on chess + tic-tac-toe cards; chess-lobby
+  "Play a grown-up"; Grown-ups -> Parents "Guest games" read-only list.
+
+**QA.** `qa-invite.mjs` — 22/22 (both directions, reactions, expiry, listing, ttt
+referee, stranger blocked, no device-id leak). `vite build` green. Both link pages parse.
+Chess has no per-engine QA harness (flagged). Live two-device test is the owner's step
+after running the SQL.
+
+**Remaining in Phase 6:** 6E (Buddy 2.0). Not started.
+
 ## 2026-07-09 — Session 6C: First studio converts (Music Maker → type:studio)
 
 Proves the manifest contract for the **studio** type — the first non-game to run
