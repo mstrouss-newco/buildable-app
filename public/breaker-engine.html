@@ -1331,7 +1331,24 @@ function wireMenus(){ const bkm=el("mkBack"); if(bkm)bkm.onclick=mkGoBack; const
 (function preloadBackdrops(){ try{ for(const d of BACKDROPS){ if(d&&d.img){ new Image().src=d.img; new Image().src=d.img.replace("_bg.jpg","_thumb.jpg"); } }
   for(const id in THEMES) themeAssets(id); }catch(e){} })();   // warm the themed art packs
 
-function frame(){ update(); if(G)draw(); requestAnimationFrame(frame); }
+// Fixed-timestep driver: every physics/AI constant in this file (ball speed,
+// paddle tracking, etc.) is tuned as "pixels per tick" assuming ~60 ticks/sec.
+// requestAnimationFrame fires at the SCREEN's actual refresh rate though (120Hz/
+// 144Hz displays are now common on laptops, iPads, phones) -- without this, the
+// whole game (including the self-playing demo) visibly runs 2x+ too fast on
+// those screens. Accumulate real elapsed time and run update() at a steady 60Hz
+// regardless of how often the browser paints; draw() still paints every paint.
+let __frameLastT=null, __frameAcc=0;
+const __FRAME_STEP_MS=1000/60;
+function frame(ts){
+  if(typeof ts!=="number"){ update(); if(G)draw(); requestAnimationFrame(frame); return; } // headless/no-timestamp safety net
+  if(__frameLastT==null) __frameLastT=ts;
+  __frameAcc += Math.min(ts-__frameLastT, 250); // cap so a backgrounded tab doesn't "catch up" in a burst
+  __frameLastT=ts;
+  while(__frameAcc>=__FRAME_STEP_MS){ update(); __frameAcc-=__FRAME_STEP_MS; }
+  if(G)draw();
+  requestAnimationFrame(frame);
+}
 // bespoke created sounds (ElevenLabs via /api/sfx) — synth stays as a silent fallback.
 // Reuses tennis's paddle-game one-shots; adds Breaker-specific brick sounds.
 if(FEEL){ FEEL.configure({ sfxBase:"/api/sfx?s=", sfxMap:{
@@ -1453,6 +1470,14 @@ if(typeof window!=="undefined" && window.addEventListener){
     const liveRally = (state==="play" && started && G && !G.onPaddle && G.mode!=="two");
     if(liveRally) return;
     applySize();
+    // The self-playing attract demo (?screen=demo) sits in a small, aspect-ratio-sized
+    // card on the shell's game-landing page; that box can fire a resize event (or two)
+    // while the page's own layout settles right after load. Re-fitting the canvas is
+    // fine, but restarting the level here would yank the paddle back to center and
+    // rebuild the board mid-demo -- a visible "reset" flash for a viewer who never
+    // touched anything. The demo doesn't need to react live to a resize; it always
+    // re-fits (above) and simply keeps playing at the new size.
+    if(DEMO) return;
     if(state==="play" && G && G.onPaddle){
       if(G.custom && CUSTOM){ startCustomLevel(CUSTOM.board, CUSTOM.diffN); }
       else { startLevel(level, G.lives); }

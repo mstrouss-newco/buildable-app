@@ -1,5 +1,45 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Fix: Breaker landing demo running too fast + flickering
+
+Bug report: on Breaker's landing page, the self-playing demo ball zips across the
+screen far too fast and the paddle flickers on and off. Diagnosed with a headless
+simulation harness (drives the engine's own frame driver frame-by-frame, same
+technique as `qa-breaker.mjs`) rather than guessing. Ruled out the two other suspects
+first: the manifest's level 1 (`jungle-ruins`, difficulty 1) tunes to nearly the same
+speed as the built-in fallback, so Session 2A's manifest-driven level sizes are not
+the cause; and there is only one `frame()` loop registered (one inline `<script>`
+block, one `requestAnimationFrame` call site) so there's no literal double loop from
+the Session 3A front-door rework.
+
+Actual cause: `breaker-engine.html`'s game loop called `update()` once per
+`requestAnimationFrame` tick with no delta-time normalization — every physics constant
+(ball speed, paddle tracking) is tuned as "pixels per tick" assuming ~60 ticks/second.
+`requestAnimationFrame` fires at the screen's real refresh rate, though, and 120Hz/
+144Hz displays are now common (many laptops, iPads, phones). On those screens the
+whole engine — including the unskippable, unattended attract-mode demo — visibly ran
+2x+ too fast. Simulated this directly: stepped the engine's real frame driver at
+60Hz/120Hz/144Hz and measured the ball's position at the same elapsed wall-clock time;
+before the fix it diverged with refresh rate, after the fix it lands in the same place
+regardless of the simulated screen's Hz. Separately, the demo's small landing-page card
+is sized via CSS `aspect-ratio` inside a flex column, which can fire one or two
+`resize` events on the iframe while the page's own layout settles right after load; the
+existing resize handler would restart the level (`startLevel()`) if that raced the
+demo's very first tick, snapping the paddle back to center — a plausible source of the
+reported "flicker" on top of the speed issue.
+
+Fix (`public/breaker-engine.html`): (1) `frame()` now accumulates real elapsed time
+and runs `update()` on a fixed 60Hz step regardless of the display's actual paint
+rate (capped so a backgrounded tab doesn't burst-catch-up) — `draw()` still paints
+every frame; (2) the window `resize` handler now skips the level-restart branch
+entirely while `DEMO` is true — the demo always re-fits the canvas to the new size but
+never yanks the paddle/board mid-preview.
+
+Verified: `npm run build` clean; `qa-breaker.mjs` ALL CHECKS PASS (manifest validate,
+all 8 levels clear 5/5, pong, render smoke — unaffected by either change, since QA
+drives `update()` directly and never goes through `frame()`); custom Hz-comparison
+harness confirms frame-rate-independent ball speed after the fix.
+
 ## 2026-07-09 — Fix: profile gate bypassed, Home rendered with no active kid
 
 Bug report: the "who's playing" picker no longer appeared before Home; the app opened
