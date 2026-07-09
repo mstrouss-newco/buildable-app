@@ -364,6 +364,7 @@ function progressDefaults() {
     streakDays: 0,
     badges: [],
     created: Date.now(),
+    dailyCount: { date: null, count: 0 },
   };
 }
 
@@ -384,6 +385,11 @@ function normalizeProgress(raw) {
   out.streakDays = Number.isFinite(src.streakDays) ? src.streakDays : 0;
   out.badges = Array.isArray(src.badges) ? src.badges.filter((b) => typeof b === "string") : [];
   out.created = Number.isFinite(src.created) ? src.created : Date.now();
+  const dc = src.dailyCount && typeof src.dailyCount === "object" ? src.dailyCount : {};
+  out.dailyCount = {
+    date: typeof dc.date === "string" ? dc.date : null,
+    count: Number.isFinite(dc.count) ? dc.count : 0,
+  };
   return out;
 }
 
@@ -503,6 +509,19 @@ export function recordAnswer({ subject, correct } = {}) {
     else p.bySubject[subject].wrong += 1;
   }
 
+  // Daily Brain Boost counter — how many QUESTIONS ANSWERED CORRECTLY today,
+  // keyed on the calendar day so it resets each morning. Feeds the Home
+  // screen's "Today's Brain Boost" progress bar (Session 3E).
+  if (correct) {
+    if (!p.dailyCount || p.dailyCount.date !== today) {
+      p.dailyCount = { date: today, count: 1 };
+    } else {
+      p.dailyCount = { date: today, count: (p.dailyCount.count || 0) + 1 };
+    }
+  } else if (!p.dailyCount || p.dailyCount.date !== today) {
+    p.dailyCount = { date: today, count: 0 };
+  }
+
   const newly = recomputeBadges(p);
 
   progressCache = p;
@@ -514,6 +533,19 @@ export function recordAnswer({ subject, correct } = {}) {
 
 export function progressSubjects() {
   return [...SUBJECTS];
+}
+
+// ---------------- Daily Brain Boost (Home screen) ----------------
+// A tiny daily quota on top of the existing progress store: "answer `goal`
+// questions correctly today". Purely derived from progressCache.dailyCount
+// (see recordAnswer above) — no new storage key, no network. Synchronous, so
+// the Home screen can read it straight into render like getProgress().
+const BRAIN_BOOST_GOAL = 3;
+export function dailyLearningProgress(goal = BRAIN_BOOST_GOAL) {
+  const p = getProgress();
+  const today = todayKey();
+  const count = (p.dailyCount && p.dailyCount.date === today) ? (p.dailyCount.count || 0) : 0;
+  return { count, goal, done: count >= goal, todayKey: today };
 }
 
 // ---------------- Practice what you missed ----------------
