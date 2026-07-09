@@ -371,6 +371,16 @@ function JourneyLock({ size = 26 }) {
     </svg>
   );
 }
+// Session 4A: read a game's manifest through /api/manifest so an editor-saved override shows
+// live in the shell too (journey, loadout); if that endpoint is unreachable, fall back to the
+// static file so screens always load. Resolves to the manifest object.
+function loadGameManifest(id) {
+  const stamp = "?v=" + Date.now();
+  return fetch("/api/manifest?game=" + encodeURIComponent(id) + "&v=" + Date.now())
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((d) => (d && d.manifest ? d.manifest : Promise.reject()))
+    .catch(() => fetch("/" + id + "/manifest.json" + stamp).then((r) => r.json()));
+}
 function BreakerJourney({ game, onBack, onPlay }) {
   const accent = (game && game.color) || "#FF6B6B";
   const [manifest, setManifest] = useState(null);
@@ -378,8 +388,7 @@ function BreakerJourney({ game, onBack, onPlay }) {
   const currentRef = useRef(null);
   useEffect(() => {
     let live = true;
-    fetch("/breaker/manifest.json?v=" + Date.now())
-      .then((r) => r.json())
+    loadGameManifest("breaker")
       .then((m) => { if (live) setManifest(m); })
       .catch(() => {});
     setProg(readBreakerProgress()); // re-read on (re)entry so a fresh clear lights the path
@@ -524,7 +533,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
 
   useEffect(() => {
     let live = true;
-    fetch("/breaker/manifest.json?v=" + Date.now()).then((r) => r.json())
+    loadGameManifest(gameId)
       .then((m) => { if (!live) return; setManifest(m); setStore(readLoadout(gameId, m.customization || [])); })
       .catch(() => {});
     const onWallet = () => setCoins(walletBalance());

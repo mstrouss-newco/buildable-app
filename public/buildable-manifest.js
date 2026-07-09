@@ -120,19 +120,30 @@
   function load(id, onReady, onError){
     var hasFetch = (typeof fetch==="function");
     if(!hasFetch){ if(onError) onError(["fetch unavailable (headless) — skipping load"]); return; }
-    var url = "/"+id+"/manifest.json?v=" + Date.now();
-    fetch(url).then(function(r){
-      if(!r.ok) throw new Error("HTTP "+r.status);
-      return r.json();
-    }).then(function(m){
+    // Session 4A: the level editor can save a LIVE override, served by /api/manifest. Read that
+    // first (an override wins; otherwise the endpoint returns the static file). If the endpoint is
+    // unreachable, fall straight back to the static /<id>/manifest.json so the game always loads.
+    var apiUrl    = "/api/manifest?game=" + encodeURIComponent(id) + "&v=" + Date.now();
+    var staticUrl = "/" + id + "/manifest.json?v=" + Date.now();
+    function apply(m){
       var v = validate(m);
       if(v.warnings.length) try{ console.warn("["+id+"] manifest warnings:", v.warnings); }catch(e){}
       if(!v.ok){ if(onError) onError(v.errors); else try{ console.error("["+id+"] manifest invalid:", v.errors); }catch(e){} return; }
       if(onReady) onReady(toEngineConfig(m), m);
-    }).catch(function(err){
-      if(onError) onError([String(err && err.message || err)]);
-      else try{ console.error("["+id+"] manifest load failed:", err); }catch(e){}
-    });
+    }
+    function fromStatic(){
+      fetch(staticUrl).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+        .then(apply)
+        .catch(function(err){ if(onError) onError([String(err && err.message || err)]);
+          else try{ console.error("["+id+"] manifest load failed:", err); }catch(e){} });
+    }
+    fetch(apiUrl).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(function(d){
+        var m = (d && d.manifest) ? d.manifest : d;
+        if(!m || typeof m!=="object" || (!m.levels && m.type!=="studio")) throw new Error("no manifest");
+        apply(m);
+      })
+      .catch(fromStatic);
   }
 
   var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL };
