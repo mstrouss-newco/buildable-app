@@ -1,5 +1,52 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 5A: Survival converts to the manifest
+
+Second game onto the manifest rails (after Breaker), and the first real test of the
+promise "if it isn't faster, the shell has a gap — fix the shell, not the game." It
+surfaced exactly one gap and it was in the shell.
+
+**The shell gap (fixed in the shell, not the game).** `public/buildable-manifest.js`
+was Breaker-only: its validator required a brick `layout` + `parts.bricks`, and its
+`toEngineConfig` produced Breaker-shaped levels (cols/rows/pattern/tough/speed/art pack).
+A survivor game has none of that. Rather than special-case Survival in the loader, the
+loader is now **profile-based**: a small `PROFILES` registry keyed off the manifest id
+(`breaker`, `survival`). Each profile owns its own level validation and its own
+difficulty-1-5 -> engine-tuning translation. Breaker's profile is its old code verbatim,
+so Breaker output is byte-identical (qa-breaker still green). Adding the next game is now
+"add a profile," never "edit the loader."
+
+**Survival's manifest** (`public/survival/manifest.json`): identity + features + feel +
+art slots + 6 levels + cosmetic customization. Each level declares only its difficulty
+(1-5) and its content/art (`parts`: which foes, which boss, which sky) — the survivor
+tuning (survive duration, spawn cadence, enemy speed/hp, boss hp/speed) is DERIVED from
+difficulty by the survival profile, so no raw knobs live in the manifest (golden rule 2).
+The derived curve is calibrated to sit at or under the pre-5A hand-tuned values (which
+5C proved winnable), trending slightly easier, so the robot stays green.
+
+**Engine wiring** (`public/survival-engine.html`): loads the shared shell loader + HUD;
+an `applyManifest()` (mirroring Breaker) replaces just the campaign level list from the
+manifest and tints the HUD with the manifest's signature colour, leaving the engine's own
+palette/hero-stats/sounds/gear untouched. The homemade on-canvas scoreboard (level name,
+lives, power level, boss timer) is deleted in favour of the ONE shared HUD bar
+(`buildable-hud.js`); only the live XP gauge stays painted on canvas (it's a gameplay
+gauge, not HUD chrome). Per the 5A decision, Survival's "My Hero" gear locker is KEPT —
+it sells gameplay upgrades (extra shots, hearts, shields), which the shell's
+cosmetic-only loadout can't yet represent. Normalized the game handle: real `_cfg()`,
+`_applyManifest()`, and a `window.BUILDABLE_GAME` alias (the two structural gaps 5C
+flagged), plus a `/survival/manifest.json` route in `vercel.json`.
+
+**QA:** `qa-survival.mjs` rewritten to be manifest-driven (mirrors qa-breaker): validates
+the manifest, builds the engine config through the shared loader, applies it via the real
+`_applyManifest` hook, then proves all 6 MANIFEST levels win isolated (5x each) AND in one
+carry-forward campaign, plus a render smoke test. ALL CHECKS PASS. `qa-breaker.mjs` still
+ALL CHECKS PASS (shell refactor is transparent to Breaker). App builds clean.
+
+**Left in this block:** none — 5A is done. **Shell gap noted for later (not a bug):** the
+shell has no gameplay upgrade-store system, so the survivor gear locker stays engine-owned
+until a future session adds one. Do not start 5B (Sling) unprompted.
+
+
 ## 2026-07-09 — Session 5C: Survival QA baseline harness
 
 Wrote `qa-survival.mjs` (model: `qa-breaker.mjs` / `qa-sling.mjs`) and ran it against

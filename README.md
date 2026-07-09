@@ -6,6 +6,29 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 5A: Survival converts to the manifest (July 9 2026)
+
+Survival is now the second manifest-driven game (after Breaker).
+
+- The shared shell loader `public/buildable-manifest.js` is now **profile-based**
+  (`breaker`, `survival`) instead of Breaker-only: each profile owns its level
+  validation and its difficulty-1-5 -> engine-tuning translation. Breaker's output is
+  byte-identical.
+- `public/survival/manifest.json` declares identity, features, feel, art slots, 6 levels
+  (each: difficulty + which foes/boss/sky) and cosmetic customization. Survivor tuning
+  (duration, spawn cadence, enemy speed/hp, boss stats) is DERIVED from difficulty, not
+  stored as raw knobs.
+- `public/survival-engine.html` reads the manifest via `applyManifest` (replaces the level
+  list, tints the ONE shared HUD `buildable-hud.js` with the manifest colour). The homemade
+  on-canvas scoreboard is gone; the gameplay gear locker is intentionally kept (it's
+  gameplay, not cosmetic). Game handle normalized: `_cfg()`, `_applyManifest()`,
+  `window.BUILDABLE_GAME`. Route added in `vercel.json`.
+- **QA:** `qa-survival.mjs` rewritten manifest-driven — validates the manifest, applies it
+  through the real engine hook, all 6 levels beatable (isolated 5x + campaign) + render
+  smoke. ALL CHECKS PASS. `qa-breaker.mjs` still green; app builds clean.
+
+---
+
 ## Session 3D: Feel Kit + GAME-FEEL.md (July 9 2026)
 
 Every game's "juice" now comes from ONE shared kit instead of each game reinventing it.
