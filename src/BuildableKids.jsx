@@ -2032,24 +2032,6 @@ function HomeScreen(props) {
     : ((GAME_NAMES[favGame.game] || favGame.game) + " is your favorite — want to play it again?")) : null;
 
   const kidName = (activeKid && activeKid.display_name) || "friend";
-  // A pool of friendly default lines so the buddy doesn't say the same thing every time.
-  const HELPER_DEFAULTS = [
-    "What should we make today? Tap a tile and I'll help!",
-    "So many things to make! Pick a tile and let's go.",
-    "Ready for some fun? Tap anything and I'll help you start.",
-    "What are we making today? A game, a song, or a story?",
-    "Let's build something awesome. Tap a tile to begin!",
-    "I'm ready when you are! Pick something and we'll make it.",
-    "Feeling creative? Tap a tile and let's get started.",
-    "Ooh, what should we dream up today? Tap a tile!",
-  ];
-  // Pick one line for this visit and keep it steady, so the bubble and the voice match.
-  const [defaultLine] = useState(() => HELPER_DEFAULTS[Math.floor(Math.random() * HELPER_DEFAULTS.length)]);
-  const helperLine = chessTurns > 0
-    ? `It's your move in ${chessTurns} chess game${chessTurns > 1 ? "s" : ""}. Want to play?`
-    : favLine
-    ? favLine
-    : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”? Or make something new!` : defaultLine);
 
   // ---- Today's Brain Boost (Learning Mode only) ----
   const learningOn = (() => { try { return !!(getLearningSettings() && getLearningSettings().enabled); } catch (e) { return false; } })();
@@ -2072,53 +2054,13 @@ function HomeScreen(props) {
     const candidates = [];
     if (learningOn && brainBoost.done) candidates.push({ id: "brainboost-done", text: "You finished today's Brain Boost! Amazing work today." });
     if (streakDays >= 5 && streakDays % 5 === 0) candidates.push({ id: `streak-${streakDays}`, text: `Wow, ${streakDays} days in a row! You're on fire.` });
-    if (favLine) candidates.push({ id: "fav-game", text: favLine });
-    candidates.push({ id: "daily-hello", text: jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”? Or make something new!` : defaultLine });
+    if (favLine) candidates.push({ id: "fav-" + todayStr(), text: "Welcome back, " + kidName + "! " + favLine });
     return candidates.find((c) => !isBuddyDismissed(c.id)) || null;
   })();
 
-  // ---- floating helper (bottom-right): the kid's own helper character ----
-  const [helperOpen, setHelperOpen] = useState(false);
-  const [helperHidden, setHelperHidden] = useState(false);
-  const [defaultHelperImg, setDefaultHelperImg] = useState(null);
-  const [localHelper] = useState(() => getKidHelper(activeKid) || (() => { try { return JSON.parse(localStorage.getItem("bk_helper_v1") || "null"); } catch { return null; } })());
-  const helper = (activeKid && activeKid.helper) || localHelper || null;
-  const voiceRef = useRef(null);
-  const playClip = (j) => { if (j && j.configured && j.audioUrl) { playVoiceUrl(j.audioUrl); return true; } return false; };
-  const speakHelper = () => {
-    try {
-      const text = `Hi ${kidName}! ${helperLine}`;
-      const vid = (helper && helper.voice) || null;
-      fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vid ? { text, voiceId: vid } : { text }) })
-        .then((r) => r.json())
-        .then((j) => { if (!playClip(j) && vid) { fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }).then((r) => r.json()).then(playClip).catch(() => {}); } })
-        .catch(() => {});
-    } catch (e) {}
-  };
-  useEffect(() => {
-    const COOLDOWN_MS = 30 * 60 * 1000; // only auto-greet once every 30 minutes
-    let last = 0;
-    try { last = parseInt(localStorage.getItem("bk_buddy_last_greet") || "0", 10) || 0; } catch (e) {}
-    if (Date.now() - last < COOLDOWN_MS) return; // greeted recently, stay quiet this visit
-    const t = setTimeout(() => {
-      setHelperOpen(true);
-      speakHelper();
-      try { localStorage.setItem("bk_buddy_last_greet", String(Date.now())); } catch (e) {}
-    }, 900);
-    return () => clearTimeout(t);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (helper && helper.image) return; // already have a real helper image
-    let alive = true;
-    fetch("/api/list-characters?limit=1").then((r) => r.json()).then((d) => {
-      const arr = (d && (d.characters || d.items)) || (Array.isArray(d) ? d : []);
-      const img = arr && arr[0] && (arr[0].image_url || arr[0].image);
-      if (alive && img) setDefaultHelperImg(img);
-    }).catch(() => {});
-    return () => { alive = false; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const helperImg = (helper && helper.image) || defaultHelperImg || null;
-  const helperName = (helper && helper.name) || "your buddy";
+  // (Buddy 2.0) The persistent floating helper was removed. In-game moments
+  // now come from the event-driven buddy (HelperReactions + lib/buddy.js);
+  // the Home welcome-back/streak moment is the dismissible card below.
 
   // ---- Play shelf (manifest-driven from GAME_CATALOG) + its coming-soon gate ----
   const [catalogGate, setCatalogGate] = useState(null);
@@ -2202,6 +2144,7 @@ function HomeScreen(props) {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <button onClick={onHelper} aria-label="Your buddy" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", border: "1px solid rgba(58,46,77,0.12)", cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><BuddyGlyph size={22} /></button>
             <button onClick={onMyStuff} aria-label="My Stuff" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: HOME_INK, cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><StuffGlyph /></button>
             <GrownUpButton onGrownUp={onGrownUp} compact />
             <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} compact />
@@ -2419,37 +2362,6 @@ function HomeScreen(props) {
         </div>
       )}
 
-      {/* floating helper — the kid's own helper character, friendly + floating */}
-      {!helperHidden && (
-        <div style={{ position: "fixed", right: phone ? 14 : 22, bottom: phone ? 14 : 22, zIndex: 9000, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, fontFamily: NUN }}>
-          {helperOpen && (
-            <div style={{ maxWidth: 250, background: "#fff", border: HOME_CARD_BORDER, borderRadius: "16px 16px 4px 16px", padding: "12px 14px", color: HOME_INK, boxShadow: "0 12px 34px rgba(58,46,77,0.25)", position: "relative", animation: "bkpop 0.18s ease-out" }}>
-              <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>Hi {kidName}!</div>
-              <div style={{ fontSize: 13, lineHeight: 1.45 }}>{helperLine}</div>
-              <button onClick={onHelper} style={{ marginTop: 9, background: "rgba(155,126,221,0.14)", border: "1px solid rgba(155,126,221,0.35)", color: "#6A4FE0", fontFamily: NUN, fontWeight: 800, fontSize: 12, borderRadius: 999, padding: "6px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 3l2.2 6.3L22 11l-6.8 1.7L13 19l-2.2-6.3L4 11l6.8-1.7z" /><path d="M5 4v3M3.5 5.5h3" /></svg>
-                Helper Lab
-              </button>
-            </div>
-          )}
-          <div style={{ position: "relative" }}>
-            <button onClick={() => setHelperOpen((o) => { const n = !o; if (n) { speakHelper(); try { localStorage.setItem("bk_buddy_last_greet", String(Date.now())); } catch (e) {} } return n; })} aria-label={"Talk to " + helperName} className="bk-float" style={{
-              display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer",
-              padding: "5px 14px 5px 5px", borderRadius: 999, border: "1px solid rgba(58,46,77,0.14)",
-              background: "#fff", boxShadow: "0 8px 22px rgba(58,46,77,0.18)",
-              fontFamily: NUN, fontWeight: 800, fontSize: 13, color: HOME_INK,
-            }}>
-              <span style={{
-                width: 34, height: 34, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
-                border: "2px solid rgba(58,46,77,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
-                background: helperImg ? `center/cover no-repeat url(${helperImg})` : "linear-gradient(135deg,#9b7edd,#6f5bd6)",
-              }}>{!helperImg && <BuddyGlyph size={20} />}</span>
-              Ask me
-            </button>
-            <button onClick={() => setHelperHidden(true)} aria-label="Hide helper" style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "2px solid #FFF8EE", background: "#fff", color: HOME_INK, fontSize: 12, lineHeight: "14px", cursor: "pointer", padding: 0, boxShadow: "0 2px 6px rgba(58,46,77,0.2)" }}>×</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
