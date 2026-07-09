@@ -1,0 +1,39 @@
+{
+  "id": "music-maker",
+  "name": "Music Maker",
+  "type": "studio",
+  "category": "Studio",
+  "color": "#37B6F5",
+  "ageBand": "5-10",
+  "shellVersion": 2,
+  "engine": "react",
+  "entry": "/app",
+
+  "produces": "songs",
+  "savesTo": "saved_songs",
+
+  "features": {
+    "demoOnLoad": false,
+    "coins": true,
+    "buddy": { "on": false, "personality": "cheerleader" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": true, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math", "reading"] }
+  },
+
+  "feel": { "pace": "normal", "celebration": "big", "haptics": "on" },
+
+  "art": {
+    "badge": "music-maker/badge/v1",
+    "hero": "music-maker/hero/v1",
+    "loadingScreen": "music-maker/loading/v1"
+  },
+
+  "customization": [
+    { "slot": "Instrument packs", "options": [
+      { "name": "Starter",     "asset": "audio/packs/starter", "price": 0 },
+      { "name": "Brass Band",  "asset": "audio/packs/brass",   "price": 100 },
+      { "name": "Strings",     "asset": "audio/packs/strings", "price": 120 },
+      { "name": "World Beats", "asset": "audio/packs/world",   "price": 150 }
+    ]}
+  ]
+}
