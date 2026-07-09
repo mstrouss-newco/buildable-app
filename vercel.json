@@ -587,5 +587,11 @@
       "src": "/(.*)",
       "dest": "/landing.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/parent-digest",
+      "schedule": "0 14 * * 1"
+    }
   ]
 }
