@@ -20,6 +20,20 @@
   var COIN_BY_DIFF = { 1:10, 2:15, 3:20, 4:25, 5:30 };
 
   // ===========================================================================
+  //  MULTIPLAYER switch (Session 6A). The manifest's features.multiplayer picks a
+  //  LANE in the EXISTING multiplayer system (see MULTIPLAYER.md):
+  //    off        -> single-player (no lane)
+  //    turn-based -> poll-a-row      ("turns")
+  //    realtime   -> Broadcast       ("realtime")
+  //  Pure + headless-safe; reads ONLY features, so it also works for board games
+  //  and studios that have no breaker-style levels.
+  // ===========================================================================
+  var MP_MODES        = { "off":1, "turn-based":1, "realtime":1 };
+  var MP_TO_TRANSPORT = { "off":null, "turn-based":"turns", "realtime":"realtime" };
+  function multiplayerMode(m){ var v = m && m.features && m.features.multiplayer; return MP_MODES[v] ? v : "off"; }
+  function multiplayerTransport(m){ return MP_TO_TRANSPORT[multiplayerMode(m)]; }
+
+  // ===========================================================================
   //  BREAKER profile (brick layouts). Unchanged behaviour from Sessions 2A-4A.
   // ===========================================================================
   // Layout templates own geometry (cols/rows/pattern). Same table the engine uses,
@@ -217,6 +231,9 @@
     if(m.shellVersion!==2) warnings.push("shellVersion is not 2 (got "+m.shellVersion+")");
     var prof = profileFor(m);
 
+    if(m.features && ("multiplayer" in m.features) && !MP_MODES[m.features.multiplayer])
+      errors.push("features.multiplayer must be off/turn-based/realtime (got "+m.features.multiplayer+")");
+
     if(m.type==="game"){
       if(!Array.isArray(m.levels) || !m.levels.length){ errors.push("'levels' must be a non-empty array"); }
       else {
@@ -244,7 +261,10 @@
   function toEngineConfig(m){
     var prof = profileFor(m);
     var levels = (m.levels||[]).map(prof.toLevel);
-    return prof.toConfig(m, levels);
+    var cfg = prof.toConfig(m, levels);
+    cfg.multiplayer = multiplayerMode(m);       // off | turn-based | realtime (the switch)
+    cfg.transport   = multiplayerTransport(m);  // null | turns | realtime (the existing lane)
+    return cfg;
   }
 
   // ---- browser loader: fetch -> validate -> onReady(engineCfg, manifest) ----
@@ -277,7 +297,7 @@
       .catch(fromStatic);
   }
 
-  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL };
+  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));
