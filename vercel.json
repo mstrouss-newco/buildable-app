@@ -555,6 +555,14 @@
       "dest": "/planner.html"
     },
     {
+      "src": "/editor.html",
+      "dest": "/editor.html"
+    },
+    {
+      "src": "/editor",
+      "dest": "/editor.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
