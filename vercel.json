@@ -281,6 +281,13 @@
       }
     },
     {
+      "src": "/breaker/manifest.json",
+      "dest": "/breaker/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
       "src": "/breaker/(.*)",
       "dest": "/breaker/$1",
       "headers": {

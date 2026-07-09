@@ -1,9 +1,14 @@
-// Headless QA for public/breaker-engine.html — solo (all levels win) + pong (a winner emerges) + render smoke.
+// Headless QA for public/breaker-engine.html.
+// NEW (Session 2A): also validates /breaker/manifest.json and drives the engine
+// FROM the manifest — the sim plays the manifest's levels (same config the browser
+// builds), proving the manifest is valid AND every manifest level is beatable.
+// Then: solo (all levels win) + pong (a winner emerges) + render smoke.
 import fs from 'fs'; import vm from 'vm';
 const dir=process.argv[2]||'.';
 const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
 const html=read('breaker-engine.html');
 const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js'].map(read).join('\n');
+const manifestLib=read('buildable-manifest.js');
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
 const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:900,height:600}:(typeof k==='string'?noop:undefined))});
@@ -14,11 +19,28 @@ class ImageStub{set src(v){this._src=v;}get src(){return this._src;}addEventList
 const documentStub={ getElementById:(id)=> id==='start'? el(false): el(true), querySelector:()=>el(true), addEventListener:noop, createElement:()=>el(true), head:el(true), documentElement:el(true) };
 const sandbox={ document:documentStub, window:{}, Image:ImageStub, requestAnimationFrame:noop, cancelAnimationFrame:noop, addEventListener:noop, removeEventListener:noop, setTimeout:()=>0, clearTimeout:noop, performance:{now:()=>Date.now()}, URLSearchParams, location:{search:''}, Date, Math, console };
 sandbox.window=sandbox; sandbox.globalThis=sandbox;
-vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:'breaker'});
+vm.createContext(sandbox);
+
+// --- 1) load the shell loader, then validate + inject the manifest ---
+vm.runInContext(manifestLib, sandbox, {filename:'buildable-manifest'});
+const BM=sandbox.BuildableManifest;
+if(!BM||!BM.validate){ console.error('FAIL: BuildableManifest not exposed'); process.exit(2); }
+const manifest=JSON.parse(fs.readFileSync(dir+'/public/breaker/manifest.json','utf8'));
+const v=BM.validate(manifest);
+console.log('--- MANIFEST: validate /breaker/manifest.json ---');
+console.log(`${v.ok?'PASS':'FAIL'}  ok=${v.ok} errors=${JSON.stringify(v.errors)} warnings=${JSON.stringify(v.warnings)}`);
+if(!v.ok){ console.error('MANIFEST INVALID — aborting'); process.exit(2); }
+// drive the engine from the manifest (exactly what the browser builds at runtime)
+sandbox.window.GAME_CONFIG=BM.toEngineConfig(manifest);
+console.log('manifest -> engine levels:', sandbox.window.GAME_CONFIG.levels.map(l=>`${l.name}[${l.pattern} d${l.difficulty}]`).join(', '));
+
+// --- 2) run the engine against the manifest-driven config ---
+vm.runInContext(libs+'\n'+engine, sandbox, {filename:'breaker'});
 const BK=sandbox.BUILDABLE_GAME; if(!BK){ console.error('FAIL: BUILDABLE_GAME not exposed'); process.exit(2); }
 if(sandbox.BREAKER_GAME!==BK){ console.error('FAIL: BREAKER_GAME alias missing'); process.exit(2); }
 const cfg=BK._cfg(); const n=cfg.levels.length; let ok=true;
-console.log('--- SOLO: every level clears (5 runs each) ---');
+if(n!==manifest.levels.length){ console.error(`FAIL: engine level count ${n} != manifest ${manifest.levels.length}`); ok=false; }
+console.log('--- SOLO: every manifest level clears (5 runs each) ---');
 for(let i=0;i<n;i++){ let win=true,maxF=0; for(let t=0;t<5;t++){ const r=BK.sim(i,60000); if(r.result!=='win')win=false; maxF=Math.max(maxF,r.frames); } if(!win)ok=false; console.log(`${win?'PASS':'FAIL'}  L${i+1} ${cfg.levels[i].name.padEnd(15)} winAll5=${win} worst=${maxF}f (~${(maxF/60).toFixed(0)}s)`); }
 console.log('--- stars: a clean run earns 3 ---');
 const s=BK.sim(0,40000); console.log(`stars(L1)=${s.stars} livesLeft=${s.livesLeft}`);
