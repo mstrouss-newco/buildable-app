@@ -195,7 +195,7 @@ function NavBtn({ kind, muted, top, onClick }) {
 // shared nav bridge (buildable-gamenav.js -> posts "nav:state"), the shell also renders
 // its Sound/Menu/Help cluster top-right and the game draws NO nav buttons of its own
 // (nothing per-game to drift or overlap). Games that don't opt in render exactly as before.
-function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = null, iframeProps = {} }) {
+function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = null, iframeProps = {}, onChildMessage = null, overlay = null }) {
   const ref = useRef(null);
   const [nav, setNav] = useState(null);
   useEffect(() => {
@@ -203,10 +203,11 @@ function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = 
       const d = e && e.data;
       if (d === "nav:exit" || d === "bk:home" || (d && d.type === "nav:exit")) { onHome(); return; }
       if (d && d.type === "nav:state") setNav({ sound: !!d.sound, hasMenu: !!d.hasMenu, hasHelp: !!d.hasHelp, inGame: d.inGame !== false });
+      if (onChildMessage) { try { onChildMessage(d, (msg) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage(msg, "*"); } catch (e) {} }); } catch (e) {} }
     };
     window.addEventListener("message", h);
     return () => window.removeEventListener("message", h);
-  }, [onHome]);
+  }, [onHome, onChildMessage]);
   const send = (type) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type }, "*"); } catch (e) {} };
   const homeStyle = light
     ? { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }
@@ -220,6 +221,7 @@ function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = 
       {showMenuBtn && <NavBtn kind="menu" top={58} onClick={() => send("nav:menu")} />}
       {nav && nav.hasHelp && <NavBtn kind="help" top={showMenuBtn ? 102 : 58} onClick={() => send("nav:help")} />}
       <iframe ref={ref} title={title} src={src} {...iframeProps} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+      {overlay}
     </div>
   );
 }
@@ -237,7 +239,23 @@ function TennisScreen({ onHome, onPlayFriend }) {
   }, [onPlayFriend]);
   return <GameFrame title="Buildable Tennis" src="/tennis.html?v=hud1" onHome={onHome} />;
 }
-function BreakerScreen({ onHome }) { return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=hud1" onHome={onHome} />; }
+function BreakerScreen({ onHome }) {
+  const [quiz, setQuiz] = useState(null); // { reply } while a learning gate is showing
+  const onChildMessage = (d, post) => {
+    if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
+    let enabled = false;
+    try { enabled = !!getLearningSettings().enabled; } catch (e) {}
+    if (!enabled) { post({ type: "bk:quizDone" }); return; } // Learning Mode off -> parent settings win, no gate
+    setQuiz({ reply: post });
+  };
+  const finish = () => { if (quiz && quiz.reply) quiz.reply({ type: "bk:quizDone" }); setQuiz(null); };
+  const overlay = quiz ? (
+    <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <QuizGate goal={getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
+    </div>
+  ) : null;
+  return <GameFrame title="Buildable Breaker" src="/breaker-engine.html?v=2c" onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} />;
+}
 function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=hud1" onHome={onHome} bg="#2e7d32" />; }
 function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html?v=hud1" onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
