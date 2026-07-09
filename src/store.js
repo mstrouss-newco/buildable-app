@@ -419,6 +419,7 @@ export function topUpAward() {
 //   }
 const PROGRESS_KEY = "progress";
 const SUBJECTS = ["math", "geometry", "spelling", "reading"];
+const HISTORY_DAYS = 14; // how many days of daily right/wrong to keep for the trend
 
 function emptySubjects() {
   const out = {};
@@ -436,6 +437,7 @@ function progressDefaults() {
     badges: [],
     created: Date.now(),
     dailyCount: { date: null, count: 0 },
+    history: [], // rolling last ~14 days: [{ date:"YYYY-MM-DD", right, wrong }]
   };
 }
 
@@ -461,6 +463,11 @@ function normalizeProgress(raw) {
     date: typeof dc.date === "string" ? dc.date : null,
     count: Number.isFinite(dc.count) ? dc.count : 0,
   };
+  const hist = Array.isArray(src.history) ? src.history : [];
+  out.history = hist
+    .filter((h) => h && typeof h.date === "string")
+    .map((h) => ({ date: h.date, right: Number.isFinite(h.right) ? h.right : 0, wrong: Number.isFinite(h.wrong) ? h.wrong : 0 }))
+    .slice(-HISTORY_DAYS);
   return out;
 }
 
@@ -593,6 +600,15 @@ export function recordAnswer({ subject, correct } = {}) {
     p.dailyCount = { date: today, count: 0 };
   }
 
+  // Rolling daily history for the "over time" trend on the parent dashboard.
+  {
+    const h = Array.isArray(p.history) ? p.history.slice() : [];
+    let last = h[h.length - 1];
+    if (!last || last.date !== today) { last = { date: today, right: 0, wrong: 0 }; h.push(last); }
+    if (correct) last.right += 1; else last.wrong += 1;
+    p.history = h.slice(-HISTORY_DAYS);
+  }
+
   const newly = recomputeBadges(p);
 
   progressCache = p;
@@ -604,6 +620,42 @@ export function recordAnswer({ subject, correct } = {}) {
 
 export function progressSubjects() {
   return [...SUBJECTS];
+}
+
+// ---------------- Skills view (Session 6B) ----------------
+// The parent dashboard reports SKILLS, not raw counts. subjectMastery() turns
+// per-subject right/wrong into a friendly status: "mastered" once the kid has
+// enough attempts at a high accuracy, "practicing" once they have started, else
+// "new". Thresholds are deliberately gentle for young kids.
+const MASTERY_MIN_ATTEMPTS = 5;
+const MASTERY_MIN_ACCURACY = 0.85;
+export function subjectMastery() {
+  const p = getProgress();
+  return SUBJECTS.map((subject) => {
+    const e = p.bySubject[subject] || { right: 0, wrong: 0 };
+    const attempts = e.right + e.wrong;
+    const pct = attempts ? Math.round((e.right / attempts) * 100) : 0;
+    let status = "new";
+    if (attempts >= MASTERY_MIN_ATTEMPTS && e.right / attempts >= MASTERY_MIN_ACCURACY) status = "mastered";
+    else if (attempts > 0) status = "practicing";
+    return { subject, right: e.right, wrong: e.wrong, attempts, pct, status };
+  });
+}
+
+// Last N days of daily correct/total, oldest-first, filled with zeros so the
+// trend always renders a full week even on quiet days.
+export function progressHistory(days = 7) {
+  const p = getProgress();
+  const map = {};
+  (p.history || []).forEach((h) => { map[h.date] = h; });
+  const out = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = todayKey(d);
+    const h = map[key] || { right: 0, wrong: 0 };
+    out.push({ date: key, right: h.right || 0, total: (h.right || 0) + (h.wrong || 0) });
+  }
+  return out;
 }
 
 // ---------------- Daily Brain Boost (Home screen) ----------------

@@ -35,7 +35,7 @@ import {
   signInWithGoogle, completeOAuthRedirect,
   getFamilyStatus, joinFamilyByCode,
 } from "./lib/accounts";
-import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, learningGradeOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount } from "./store";
+import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, learningGradeOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount, subjectMastery, progressHistory } from "./store";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -834,62 +834,93 @@ function BadgeIcon({ on, size = 40 }) {
   );
 }
 
+function StatusChip({ status }) {
+  const map = {
+    mastered: { label: "Mastered", bg: "rgba(0,196,140,0.18)", bd: "rgba(0,196,140,0.5)", fg: "#7dffce" },
+    practicing: { label: "Practicing", bg: "rgba(255,199,90,0.16)", bd: "rgba(255,199,90,0.45)", fg: "#ffd98a" },
+    new: { label: "Not started", bg: "rgba(255,255,255,0.06)", bd: "rgba(255,255,255,0.18)", fg: "rgba(255,255,255,0.6)" },
+  };
+  const c = map[status] || map.new;
+  return <span style={{ fontSize: 11.5, fontWeight: 800, padding: "3px 9px", borderRadius: 999, background: c.bg, border: `1px solid ${c.bd}`, color: c.fg }}>{c.label}</span>;
+}
+
+// Tiny 7-day bar trend of correct answers (no library, pure divs). Height maps
+// to that day's correct count against the busiest day in the window.
+function TrendBars({ data }) {
+  const max = Math.max(1, ...data.map((d) => d.right));
+  const dayLetters = ["S", "M", "T", "W", "T", "F", "S"];
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 46, marginTop: 6 }}>
+      {data.map((d) => {
+        const h = Math.round((d.right / max) * 38);
+        const dow = new Date(d.date + "T00:00:00").getDay();
+        return (
+          <div key={d.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+            <div title={`${d.right} right`} style={{ width: "100%", maxWidth: 22, height: Math.max(3, h), borderRadius: 5, background: d.right ? "#00c48c" : "rgba(255,255,255,0.14)" }} />
+            <span style={{ fontSize: 9.5, opacity: 0.55 }}>{dayLetters[dow]}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function LearningProgressCard() {
   const p = getProgress();
-  const subjects = progressSubjects();
+  const skills = subjectMastery();
+  const trend = progressHistory(7);
   const earnedSet = new Set(p.badges || []);
   const attempted = p.totalCorrect + p.totalWrong;
   const weak = weakestSubject();
   const queued = reviewCount();
+  const masteredCount = skills.filter((k) => k.status === "mastered").length;
   const SUBJECT_LABEL = { math: "Math", geometry: "Shapes", spelling: "Spelling", reading: "Reading" };
 
   return (
     <div style={LP.wrap}>
-      <div style={LP.title}>Learning progress</div>
-      <div style={LP.sub}>Saved on this device. Builds up as your kid plays in Learning Mode.</div>
+      <div style={LP.title}>Skills progress</div>
+      <div style={LP.sub}>Follows your kid across devices when you're signed in.</div>
 
       <div style={LP.statRow}>
         <div style={LP.stat}>
-          <div style={LP.statNum}>{p.totalCorrect}</div>
-          <div style={LP.statLabel}>Questions right</div>
+          <div style={LP.statNum}>{masteredCount}</div>
+          <div style={LP.statLabel}>Skills mastered</div>
         </div>
         <div style={LP.stat}>
           <div style={LP.statNum}>{p.streakDays}</div>
           <div style={LP.statLabel}>Day streak</div>
         </div>
         <div style={LP.stat}>
-          <div style={LP.statNum}>{(p.badges || []).length}</div>
-          <div style={LP.statLabel}>Badges</div>
+          <div style={LP.statNum}>{p.totalCorrect}</div>
+          <div style={LP.statLabel}>Questions right</div>
         </div>
       </div>
 
       {attempted > 0 && (weak || queued > 0) && (
         <div style={LP.practice}>
-          {weak ? <>Now practicing: <strong>{SUBJECT_LABEL[weak] || weak}</strong></> : null}
+          {weak ? <>Practice next: <strong>{SUBJECT_LABEL[weak] || weak}</strong></> : null}
           {weak && queued > 0 ? " · " : null}
           {queued > 0 ? <>{queued} to review again</> : null}
         </div>
       )}
 
       {attempted === 0 ? (
-        <div style={LP.empty}>No practice yet. Turn on Learning Mode above, then progress shows up here.</div>
+        <div style={LP.empty}>No practice yet. Turn on Learning Mode above, then skills show up here.</div>
       ) : (
-        <div style={LP.bars}>
-          {subjects.map((s) => {
-            const e = p.bySubject[s] || { right: 0, wrong: 0 };
-            const att = e.right + e.wrong;
-            const pct = att ? Math.round((e.right / att) * 100) : 0;
-            return (
-              <div key={s} style={LP.barRow}>
-                <span style={LP.barLabel}>{SUBJECT_LABEL[s] || s}</span>
-                <span style={LP.barTrack}>
-                  <span style={{ ...LP.barFill, width: pct + "%" }} />
-                </span>
-                <span style={LP.barNum}>{e.right}/{att}</span>
+        <>
+          <div style={LP.bars}>
+            {skills.map((k) => (
+              <div key={k.subject} style={LP.skillRow}>
+                <span style={LP.skillLabel}>{SUBJECT_LABEL[k.subject] || k.subject}</span>
+                <StatusChip status={k.status} />
+                <span style={LP.skillNum}>{k.attempts ? k.pct + "%" : "—"}</span>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+
+          <div style={LP.trendLabel}>This week</div>
+          <TrendBars data={trend} />
+        </>
       )}
 
       <div style={LP.shelfLabel}>Badge shelf</div>
@@ -936,6 +967,10 @@ const LP = {
     background: "linear-gradient(90deg,#8A6BFF,#E0578F)",
   },
   barNum: { width: 44, textAlign: "right", fontSize: 12, fontWeight: 700, opacity: 0.85, flex: "0 0 auto" },
+  skillRow: { display: "flex", alignItems: "center", gap: 10, padding: "3px 0" },
+  skillLabel: { width: 70, fontSize: 13, fontWeight: 700, color: "#D8D2EC", flex: "0 0 auto" },
+  skillNum: { marginLeft: "auto", fontSize: 12.5, fontWeight: 800, opacity: 0.85, flex: "0 0 auto" },
+  trendLabel: { fontSize: 12.5, fontWeight: 700, opacity: 0.85, margin: "14px 0 0" },
   shelfLabel: { fontSize: 13, fontWeight: 700, opacity: 0.9, margin: "16px 0 8px" },
   shelf: { display: "flex", flexWrap: "wrap", gap: 12 },
   badge: { display: "flex", flexDirection: "column", alignItems: "center", gap: 4, width: 72 },
