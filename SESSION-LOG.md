@@ -1,5 +1,48 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 5B: Sling converts to the manifest
+
+Third game onto the manifest rails (Breaker, Survival, now Sling). The 5A promise —
+"if it isn't faster, the shell has a gap, fix the shell not the game" — held: this
+conversion added a profile and touched no shell plumbing. Sling is a physics/aim game,
+the most different shape yet from Breaker, and it still slotted in as data.
+
+**Shell loader** (`public/buildable-manifest.js`): added a `sling` profile alongside
+`breaker` + `survival`. Named tower LAYOUTS (`gate`/`tower`/`double`/`keep`/`grand`) own
+the block + target geometry inside the profile, so a manifest level just NAMES a layout —
+no raw coordinates live in the manifest (golden rule 2), the same way Breaker names a
+brick layout. Difficulty 1-5 is the only knob and DERIVES the sling (launch) count,
+floored at `targets + 2` so the sensible-aim bot always clears with a sling to spare.
+Breaker + Survival profiles are byte-untouched (both still green).
+
+**Sling's manifest** (`public/sling/manifest.json`): identity + features + feel + art
+slots + 5 levels + cosmetic customization. Each level declares only its layout name,
+difficulty (1-5) and backdrop scene (`parts.scene`); the sling count and coins are
+derived. Difficulties 1..5 across the five towers give slings 4/5/6/7/8 — at or above the
+old hand-set 4/5/5/6/6, so nothing got harder and the robot stays green. Added the
+`/sling/manifest.json` route to `vercel.json`.
+
+**Engine wiring** (`public/sling-squad.html`): loads the shared shell loader + HUD; an
+`applyManifest()` (mirroring Breaker/Survival) replaces just the level list from the
+manifest and tints the ONE shared HUD (`buildable-hud.js`) with the manifest's signature
+colour, leaving the squad, physics, art loaders and sounds intact. The homemade on-canvas
+scoreboard (level name / slings / topple count) is retired for the shared HUD chips; the
+win/lose banners stay (they're gameplay overlays, not HUD chrome). Normalized the handle:
+real `_cfg()` + `_applyManifest()` on the existing `window.BUILDABLE_GAME` (the
+`SLING_GAME` alias was already there).
+
+**QA:** `qa-sling.mjs` rewritten manifest-driven (mirrors qa-survival/qa-breaker):
+validates `/sling/manifest.json`, builds the engine config through the shared loader,
+applies it via the real `_applyManifest` hook, then proves the aim bot clears all 5
+MANIFEST levels (5x each, slings to spare) plus a render smoke test. ALL CHECKS PASS.
+`qa-survival.mjs` and `qa-breaker.mjs` both still ALL CHECKS PASS (shell change is
+transparent to them). App builds clean.
+
+**Left in this block:** none — 5B is done, and conversion is now a known-cost, repeatable
+job (add a profile + a manifest + wire the engine + a manifest-driven QA). Next up is
+Phase 6 (shared-systems wiring part 2 + studios) — do not start it unprompted.
+
+
 ## 2026-07-09 — Session 5A: Survival converts to the manifest
 
 Second game onto the manifest rails (after Breaker), and the first real test of the

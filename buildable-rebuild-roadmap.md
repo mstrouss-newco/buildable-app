@@ -69,7 +69,7 @@ Done when: Mike can change a level's bricks, set difficulty to 4, hit save, and 
 ## Phase 5 — Prove the pattern: Survival, then Sling
 
 - [x] **Session 5A — Survival converts.** (done 2026-07-09: profile-based shell loader (breaker+survival) so a survivor game validates + translates through the same shared `buildable-manifest.js`; `public/survival/manifest.json` (difficulty-1-5 -> derived survivor tuning, at/under the proven-winnable curve); engine reads it via `applyManifest` (levels + HUD accent), homemade canvas scoreboard replaced by the ONE shared HUD, gear locker KEPT (gameplay, not cosmetic), `_cfg()`/`_applyManifest()`/`BUILDABLE_GAME` normalized, manifest route added; qa-survival rewritten manifest-driven — ALL PASS, qa-breaker still green, build clean. Shell gap noted: no upgrade-store system yet.) Write its manifest, wire its engine to read it, delete its homemade menus/HUD. Should be much faster than Breaker was; if it isn't, the shell has a gap — fix the shell, not the game.
-- [ ] **Session 5B — Sling converts.** Same. After this, conversion is a known-cost, repeatable job.
+- [x] **Session 5B — Sling converts.** (done 2026-07-09: `sling` profile added to the shared loader — named tower layouts own geometry, difficulty 1-5 derives the sling count; `public/sling/manifest.json` with 5 levels; engine reads it via `applyManifest` + the ONE shared HUD, homemade scoreboard retired, `_cfg`/`_applyManifest`/`BUILDABLE_GAME` normalized; `/sling/manifest.json` route added; qa-sling rewritten manifest-driven — ALL PASS, qa-survival + qa-breaker still green, build clean. No shell gap surfaced — conversion is now a repeatable job.) Same. After this, conversion is a known-cost, repeatable job.
 
 ---
 

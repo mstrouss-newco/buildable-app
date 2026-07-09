@@ -6,6 +6,25 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 5B: Sling converts to the manifest (July 9 2026)
+
+Sling Squad is now the third manifest-driven game (after Breaker + Survival).
+
+- The shared shell loader `public/buildable-manifest.js` gains a `sling` profile: named
+  tower layouts (`gate`/`tower`/`double`/`keep`/`grand`) own the block + target geometry,
+  so a manifest level just names a layout. Difficulty 1-5 is the only knob and derives the
+  sling count (floored at targets+2 so the aim bot always clears with a spare). Breaker +
+  Survival profiles are untouched.
+- `public/sling/manifest.json` declares identity, features, feel, art slots, 5 levels
+  (each names a layout + difficulty 1-5 + backdrop scene) and cosmetic customization.
+- `public/sling-squad.html` reads the manifest via `applyManifest` (replaces the level
+  list, tints the ONE shared HUD `buildable-hud.js` with the manifest colour). The homemade
+  on-canvas scoreboard is retired; `_cfg`/`_applyManifest`/`BUILDABLE_GAME` normalized.
+  Added the `/sling/manifest.json` route to `vercel.json`.
+- **QA:** `qa-sling.mjs` rewritten manifest-driven — validates the manifest, applies it via
+  the real hook, proves all 5 levels beatable (5x each, slings to spare) + render smoke.
+  ALL CHECKS PASS; qa-survival + qa-breaker still green; app builds clean.
+
 ## Session 5A: Survival converts to the manifest (July 9 2026)
 
 Survival is now the second manifest-driven game (after Breaker).
