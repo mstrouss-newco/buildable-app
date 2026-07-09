@@ -1,5 +1,39 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 5C: Survival QA baseline harness
+
+Wrote `qa-survival.mjs` (model: `qa-breaker.mjs` / `qa-sling.mjs`) and ran it against
+Survival exactly as it exists today, BEFORE any 5A conversion work, to get an honest
+baseline. This session only measures — it fixes nothing.
+
+The harness loads `public/survival-engine.html` plus its shared libs into a headless VM
+(same stub pattern as the other QA files), grabs the engine's exposed `SURV_GAME` test
+API, and runs three checks. (1) ISOLATED: each of the 6 levels started from base stats,
+5 runs each, must reach `win`. (2) CAMPAIGN: one run from level 1 with upgrades carrying
+forward — the real roguelite experience — must clear all 6. Survival is a carry-forward
+roguelite, so both views are reported; a late level could fail isolated-from-base yet
+still be fine in the real campaign, which is why both exist. (3) A render smoke test
+(`_begin`/`_step`/`_draw`) at an early level, a late level, and post-win.
+
+Result: ALL CHECKS PASS, and it's stable (green across repeated runs). Every level is
+winnable both isolated and in campaign; render is clean. Frames show the bot really
+plays 40–73s per level, so the passes are genuine, not early exits. The QA bot is an
+evasive kite-bot (flees the nearest foes, only grabs gems when the threat is far), so it
+clears every run at full hearts — damage IS wired (hero/enemy collision calls
+`hurtHero`), the bot just dodges well. So the harness proves winnability but does not
+stress the fail state; a damage-pressure assertion could be added later if wanted.
+
+Pre-conversion notes for 5A (structural, not bugs): the engine exposes the old
+`SURV_GAME` name rather than the `BUILDABLE_GAME` convention Breaker/Sling adopted, and
+has no `_cfg()` accessor — the harness reads the level list via a small harness-side shim
+(the game file is untouched). 5A should normalize the name, add a `BUILDABLE_GAME` alias,
+and expose `_cfg()`. No punch-list items added: the baseline surfaced no game bugs.
+
+What's left in Phase 5 (do NOT start unprompted): 5A — Survival converts (write its
+manifest, wire the engine to read it, delete its homemade menus/HUD), then 5B — Sling
+converts.
+
+
 ## 2026-07-09 — Session 4A: Level-first game editor
 
 Shipped the internal editor's first half (Phase 4A of the rebuild roadmap): one page
