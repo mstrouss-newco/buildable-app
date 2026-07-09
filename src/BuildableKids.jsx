@@ -951,7 +951,7 @@ function warmMultiplayerSwitch(slug) {
 }
 
 function gameSpecFor(slug) {
-  if (slug === "chess") return { slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=5", transport: "turns" };
+  if (slug === "chess") return { slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=6", transport: "turns" };
   if (slug === "checkers") {
     const b = Array.from({ length: 8 }, () => Array(8).fill(null));
     for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
@@ -1465,7 +1465,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_CHESS_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=5", transport: "turns" }}
+        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=6", transport: "turns" }}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_CHESS)}
@@ -2545,7 +2545,7 @@ function ChessScreen({ onHome, onPlayFriend }) {
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       <iframe
         title="Buildable Chess"
-        src="/buildable-chess.html?v=5"
+        src="/buildable-chess.html?v=6"
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>

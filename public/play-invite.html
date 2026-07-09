@@ -17,6 +17,7 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:'Nunito',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
   #app{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+  #app.game{padding:0;display:block}
   .wrap{width:100%;max-width:420px}
   h1{font-size:28px;font-weight:900;margin:0 0 4px}
   .sub{color:var(--dim);font-size:15px;margin:0 0 22px;line-height:1.4}
@@ -34,6 +35,8 @@
   .linkbox input{margin:0;border:none;background:transparent;font-size:13px;text-align:left;color:var(--dim);padding:0}
   .who{color:var(--dim);font-size:14px;margin-top:14px}
   .err{color:#ff9a9a;font-size:14px;margin-top:10px;min-height:18px}
+  /* full-screen game frame (chess engine iframe) */
+  #frame{position:fixed;inset:0;width:100%;height:100%;border:none;display:block;background:var(--bg)}
 </style>
 <style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
 html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -44,11 +47,19 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <div id="app"><div class="wrap" id="root">Loading…</div></div>
 <script>
 const API="/api/invite";
+const app=document.getElementById("app");
 const root=document.getElementById("root");
+// Friendly names + engine details per game type. Add a game here to support it.
+const GAMES={
+  ttt:   { title:"Tic-Tac-Toe" },
+  chess: { title:"Chess", engine:"/buildable-chess.html?online=1&guest=1&v=6", msg:"chess" },
+};
 function device(){ let d=localStorage.getItem("bk_guest_device"); if(!d){ d="g_"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem("bk_guest_device",d);} return d; }
 function myName(){ return localStorage.getItem("bk_guest_name")||""; }
 function setName(n){ localStorage.setItem("bk_guest_name",n); }
-function tokenFromUrl(){ return new URLSearchParams(location.search).get("t")||""; }
+function qp(k){ return new URLSearchParams(location.search).get(k)||""; }
+function tokenFromUrl(){ return qp("t"); }
+function gameFromUrl(){ return qp("g")||"ttt"; }
 function setUrlToken(t){ const u=new URL(location.href); u.searchParams.set("t",t); history.replaceState(null,"",u); }
 async function api(method,body){
   const opt={method,headers:{"Content-Type":"application/json"}};
@@ -58,48 +69,66 @@ async function api(method,body){
   const r=await fetch(url,opt); const j=await r.json().catch(()=>({error:"network"}));
   if(!r.ok) throw new Error(j.error||"error"); return j;
 }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function gameTitle(g){ return (GAMES[g]&&GAMES[g].title)||"a game"; }
 
-let poll=null, view=null, token=tokenFromUrl();
+let poll=null, view=null, token=tokenFromUrl(), game=gameFromUrl();
 function stopPoll(){ if(poll){ clearInterval(poll); poll=null; } }
-function startPoll(){ stopPoll(); poll=setInterval(async()=>{ try{ const v=await api("GET",{token}); if(JSON.stringify(v)!==JSON.stringify(view)){ view=v; renderGame(); } }catch(e){} },1500); }
 
-// ---------- screens ----------
+// ---------- shared: link share buttons ----------
+function shareBarHTML(){
+  return '<div class="sub" style="margin-top:6px">Send this link so they can play you:</div>'+
+    '<div class="linkbox"><input id="lk" readonly value="'+esc(location.href)+'"/></div>'+
+    '<div><button class="btn" id="share">Send link</button><button class="btn alt" id="copy">Copy link</button></div>';
+}
+function wireShareButtons(){
+  const sh=document.getElementById("share"); if(sh) sh.onclick=async()=>{ const url=location.href;
+    if(navigator.share){ try{ await navigator.share({title:"Play me at "+gameTitle(game)+"!",text:"Tap to play a quick game with me on Buildable Kids:",url}); }catch(e){} }
+    else { try{ await navigator.clipboard.writeText(url); sh.textContent="Copied!"; }catch(e){} } };
+  const cp=document.getElementById("copy"); if(cp) cp.onclick=async()=>{ try{ await navigator.clipboard.writeText(location.href); cp.textContent="Copied!"; setTimeout(()=>cp.textContent="Copy link",1500);}catch(e){} };
+}
+
+// ---------- start / join screens (shared by all games) ----------
 function screenStart(){
-  stopPoll();
+  stopPoll(); app.className="";
   root.innerHTML=
     '<h1>Play a Friend</h1>'+
-    '<p class="sub">Start a Tic-Tac-Toe game, then send the link to a grown-up or friend. They tap it and play you — no sign-up.</p>'+
+    '<p class="sub">Start a game of '+esc(gameTitle(game))+', then send the link to a grown-up or friend. They tap it and play you — no sign-up.</p>'+
     '<input id="nm" maxlength="24" placeholder="Your name" />'+
     '<div><button class="btn" id="go">Make a game link</button></div>'+
     '<div class="err" id="err"></div>';
   const nm=document.getElementById("nm"); nm.value=myName();
   document.getElementById("go").onclick=async()=>{
     const name=(nm.value||"").trim()||"Me"; setName(name);
-    try{ const r=await api("POST",{action:"create",game:"ttt",name}); token=r.token; setUrlToken(token); view=await api("GET",{token}); renderGame(); }
+    try{ const r=await api("POST",{action:"create",game,name}); token=r.token; setUrlToken(token); view=await api("GET",{token}); route(); }
     catch(e){ document.getElementById("err").textContent=e.message; }
   };
 }
 function screenJoin(){
-  stopPoll();
+  stopPoll(); app.className="";
   const host=(view&&view.host&&view.host.name)||"A friend";
   root.innerHTML=
     '<h1>'+esc(host)+' invited you!</h1>'+
-    '<p class="sub">Play a game of Tic-Tac-Toe together. Just type your name to start.</p>'+
+    '<p class="sub">Play a game of '+esc(gameTitle(game))+' together. Just type your name to start.</p>'+
     '<input id="nm" maxlength="24" placeholder="Your name" />'+
     '<div><button class="btn go" id="join">Join the game</button></div>'+
     '<div class="err" id="err"></div>';
   const nm=document.getElementById("nm"); nm.value=myName();
   document.getElementById("join").onclick=async()=>{
     const name=(nm.value||"").trim()||"Friend"; setName(name);
-    try{ view=await api("POST",{action:"join",token,name}); renderGame(); startPoll(); }
+    try{ view=await api("POST",{action:"join",token,name}); route(); }
     catch(e){ document.getElementById("err").textContent=e.message; }
   };
 }
-function screenFull(){ stopPoll(); root.innerHTML='<h1>Game is full</h1><p class="sub">This game already has two players. Ask for a fresh link to play.</p>'; }
+function screenFull(){ stopPoll(); app.className=""; root.innerHTML='<h1>Game is full</h1><p class="sub">This game already has two players. Ask for a fresh link to play.</p>'; }
+function screenExpired(){ stopPoll(); app.className=""; root.innerHTML='<h1>Hmm…</h1><p class="sub">This game link isn\'t working. It may have expired. Ask for a new link.</p>'; }
 
-function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-
-function renderGame(){
+// ============================================================
+// TIC-TAC-TOE (server-authoritative) — original flow, unchanged
+// ============================================================
+function tttStartPoll(){ stopPoll(); poll=setInterval(async()=>{ try{ const v=await api("GET",{token}); if(JSON.stringify(v)!==JSON.stringify(view)){ view=v; tttRender(); } }catch(e){} },1500); }
+function tttRender(){
+  app.className="";
   if(!view){ return; }
   const st=view.state||{board:Array(9).fill(null),turn:"X",winner:null};
   const me=view.yourMark, oppName=(view.you==="host"?(view.guest&&view.guest.name):(view.host&&view.host.name));
@@ -119,20 +148,94 @@ function renderGame(){
     html+='<div class="cell'+k+dis+'" data-i="'+i+'">'+(v||"")+'</div>'; }
   html+='</div>';
   if(st.winner){ html+='<div><button class="btn go" id="again">Play again</button></div>'; }
-  if(!view.guest && view.you==="host"){
-    html+='<div class="sub" style="margin-top:6px">Send this link so they can play you:</div>'+
-          '<div class="linkbox"><input id="lk" readonly value="'+esc(location.href)+'"/></div>'+
-          '<div><button class="btn" id="share">Send link</button><button class="btn alt" id="copy">Copy link</button></div>';
-  }
+  if(!view.guest && view.you==="host"){ html+=shareBarHTML(); }
   root.innerHTML=html;
 
   if(myTurn){ root.querySelectorAll(".cell").forEach(c=>{ if(!st.board[+c.dataset.i]) c.onclick=async()=>{
-    try{ view=await api("POST",{action:"move",token,index:+c.dataset.i}); renderGame(); }catch(e){} }; }); }
-  const again=document.getElementById("again"); if(again) again.onclick=async()=>{ try{ view=await api("POST",{action:"reset",token}); renderGame(); }catch(e){} };
-  const sh=document.getElementById("share"); if(sh) sh.onclick=async()=>{ const url=location.href;
-    if(navigator.share){ try{ await navigator.share({title:"Play me at Tic-Tac-Toe!",text:"Tap to play a quick game with me on Buildable Kids:",url}); }catch(e){} }
-    else { try{ await navigator.clipboard.writeText(url); sh.textContent="Copied!"; }catch(e){} } };
-  const cp=document.getElementById("copy"); if(cp) cp.onclick=async()=>{ try{ await navigator.clipboard.writeText(location.href); cp.textContent="Copied!"; setTimeout(()=>cp.textContent="Copy link",1500);}catch(e){} };
+    try{ view=await api("POST",{action:"move",token,index:+c.dataset.i}); tttRender(); }catch(e){} }; }); }
+  const again=document.getElementById("again"); if(again) again.onclick=async()=>{ try{ view=await api("POST",{action:"reset",token}); tttRender(); }catch(e){} };
+  wireShareButtons();
+}
+
+// ============================================================
+// CHESS (relay) — embeds the real chess engine, syncs via /api/invite
+// ============================================================
+let chessReady=false, chessInitSent=false, lastMoveKey=null, lastReactionAt=null, chessLive=false;
+function moveKeyOf(v){ return JSON.stringify(v&&v.lastMove||null)+"|"+(v&&v.status)+"|"+(v&&v.turn); }
+function frame(){ return document.getElementById("frame"); }
+function postFrame(m){ const f=frame(); if(f&&f.contentWindow) f.contentWindow.postMessage(m,"*"); }
+
+function chessWaiting(){
+  stopPoll(); app.className="";
+  root.innerHTML=
+    '<h1>Chess</h1>'+
+    '<p class="status">Waiting for a friend to join…</p>'+
+    '<p class="sub">You are the first player. Send the link, then play the moment they join.</p>'+
+    shareBarHTML();
+  wireShareButtons();
+  poll=setInterval(async()=>{ try{ const v=await api("GET",{token}); view=v; if(v.guest){ stopPoll(); chessGame(); } }catch(e){} },1500);
+}
+
+function chessGame(){
+  stopPoll();
+  chessReady=false; chessInitSent=false; chessLive=true;
+  lastMoveKey=moveKeyOf(view); lastReactionAt=(view.reaction&&view.reaction.at)||null;
+  app.className="game";
+  root.innerHTML="";
+  const f=document.createElement("iframe"); f.id="frame"; f.title="Chess"; f.setAttribute("allow","autoplay");
+  f.src=GAMES.chess.engine; document.body.appendChild(f);
+  chessStartPoll();
+}
+function sendChessInit(){
+  const oppName=(view.you==="host"?(view.guest&&view.guest.name):(view.host&&view.host.name))||"Friend";
+  const meName=(view.you==="host"?(view.host&&view.host.name):(view.guest&&view.guest.name))||"You";
+  postFrame({ type:"chessInit", myColor:(view.you==="host"?"w":"b"), world:view.world||"jungle",
+    state:view.state||null, lastMove:view.lastMove||null, oppName, myName:meName });
+  chessInitSent=true;
+}
+function chessStartPoll(){
+  stopPoll();
+  poll=setInterval(async()=>{
+    try{
+      const v=await api("GET",{token}); const prev=view; view=v;
+      // opponent reset the board (rematch) -> reload to re-init cleanly
+      if(prev&&prev.lastMove&&!v.lastMove&&v.status==="playing"){ location.reload(); return; }
+      const k=moveKeyOf(v);
+      if(k!==lastMoveKey){
+        lastMoveKey=k;
+        const mine=view.yourMark; // 'w' | 'b'
+        if((v.status==="done"||v.turn===mine)&&v.state){ postFrame({ type:"chessOpponentMove", payload:{ state:v.state, lastMove:v.lastMove } }); }
+      }
+      if(v.reaction&&v.reaction.at!==lastReactionAt&&v.reaction.by!==device()){
+        lastReactionAt=v.reaction.at; postFrame({ type:"chessShowReaction", text:v.reaction.text });
+      }
+    }catch(e){}
+  },1500);
+}
+// messages FROM the chess engine
+window.addEventListener("message",async function(e){
+  const d=e.data||{}; if(!chessLive) return;
+  if(d.type==="chessReady"){ chessReady=true; if(!chessInitSent) sendChessInit(); }
+  else if(d.type==="chessMove"){
+    const p=d.payload||{}; lastMoveKey=JSON.stringify(p.lastMove||null)+"|"+(p.over?"done":"playing")+"|"+((p.state&&p.state.turn)||"");
+    try{ view=await api("POST",{action:"move",token,payload:p}); }catch(err){}
+  }
+  else if(d.type==="chessReaction"){ try{ await api("POST",{action:"react",token,text:d.text}); }catch(err){} }
+  else if(d.type==="chessRematch"){ try{ await api("POST",{action:"reset",token}); location.reload(); }catch(err){} }
+});
+
+// ---------- router: pick the right screen for the current view ----------
+function route(){
+  if(game==="chess"){
+    if(view.you){ if(view.you==="host"&&!view.guest) chessWaiting(); else chessGame(); }
+    else if(!view.guest) screenJoin();
+    else screenFull();
+    return;
+  }
+  // ttt (default)
+  if(view.you){ tttRender(); tttStartPoll(); }
+  else if(!view.guest) screenJoin();
+  else screenFull();
 }
 
 // ---------- boot ----------
@@ -140,12 +243,9 @@ function renderGame(){
   if(!token){ screenStart(); return; }
   try{
     view=await api("GET",{token});
-    if(view.you){ renderGame(); startPoll(); }          // I'm already a player -> resume
-    else if(!view.guest){ screenJoin(); }                // open seat -> join screen
-    else { screenFull(); }                               // two players already, not me
-  }catch(e){
-    root.innerHTML='<h1>Hmm…</h1><p class="sub">This game link isn\'t working. It may have expired. Ask for a new link.</p>';
-  }
+    game=view.game||game;
+    route();
+  }catch(e){ screenExpired(); }
 })();
 </script>
 </body>

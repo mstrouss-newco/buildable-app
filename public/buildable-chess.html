@@ -1190,9 +1190,10 @@ function resumePlay(){paused=false;document.getElementById('menu-modal').classLi
   if(pendingBot){pendingBot=false;busy=true;setTimeout(()=>{const bm=botMove(S,difficulty);if(bm)finishMove(bm);else busy=false;},200);}}
 document.getElementById('menu-btn').onclick=openPause;
 document.getElementById('btn-resume').onclick=resumePlay;
-document.getElementById('btn-restart').onclick=()=>{paused=false;document.getElementById('menu-modal').classList.remove('on');startGame();};
+const GUESTLINK=!!new URLSearchParams(location.search).get('guest'); // the "grandma flow" link page
+document.getElementById('btn-restart').onclick=()=>{paused=false;document.getElementById('menu-modal').classList.remove('on');if(mode==='online'&&GUESTLINK){try{window.parent&&window.parent.postMessage({type:'chessRematch'},'*');}catch(e){}return;}startGame();};
 document.getElementById('btn-quit').onclick=()=>{paused=false;document.getElementById('menu-modal').classList.remove('on');resetMenuTheme();show('s-home');};
-document.getElementById('btn-rematch').onclick=()=>{document.getElementById('over-modal').classList.remove('on');startGame();};
+document.getElementById('btn-rematch').onclick=()=>{document.getElementById('over-modal').classList.remove('on');if(mode==='online'&&GUESTLINK){try{window.parent&&window.parent.postMessage({type:'chessRematch'},'*');}catch(e){}return;}startGame();};
 document.getElementById('btn-tomenu').onclick=()=>{document.getElementById('over-modal').classList.remove('on');resetMenuTheme();show('s-home');};
 
 /* guide */
@@ -1279,6 +1280,11 @@ if(new URLSearchParams(location.search).get('online')){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   setTip('Connecting...');
   try{window.parent&&window.parent.postMessage({type:'chessReady'},'*');}catch(e){}
+}
+// Guest-link mode (the "grandma flow"): the player must only ever see THIS match —
+// no escape to the engine's own menus. Hide the exit buttons; Resume + Rematch stay.
+if(new URLSearchParams(location.search).get('guest')){
+  ['btn-quit','btn-tomenu'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
 }
 </script>
 </body>
