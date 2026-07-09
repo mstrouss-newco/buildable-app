@@ -466,6 +466,9 @@ function topBand(){
   return inShell ? 150 : 104;
 }
 let G=null, level=0, L=null, state="title", started=false, botMode=false, helpOpen=false, PLAYTEST=false;
+// Cartridge contract: the shell can send {type:"pause"}/{type:"resume"} to freeze/continue
+// this game NOW (quiz gates, parent interruptions, tab switches) — see CARTRIDGE-CONTRACT.md.
+let bkPaused=false;
 // After the first launch of a level, keep showing the pointing hand (following the
 // paddle, no dark overlay) for a few seconds so the "slide to move" hint doesn't
 // vanish the instant the kid taps. Reset each new level.
@@ -616,7 +619,7 @@ function botThinkPong(){ if(!G||!G.ball)return; const b=G.ball;
 
 // ---------- update (pure logic; headless-safe) ----------
 function update(){
-  if(state!=="play"||helpOpen||!G) return;
+  if(state!=="play"||helpOpen||bkPaused||!G) return;
   if(G.mode==="two") updatePong(); else updateSolo();
   if(BM) BM.update(fx);
 }
@@ -778,7 +781,10 @@ function bkAdvanceOrGate(nextIdx, lives){
 }
 if(typeof window!=="undefined" && window.addEventListener){
   window.addEventListener("message", function(ev){
-    var d=ev && ev.data; if(!d || d.type!=="bk:quizDone") return;
+    var d=ev && ev.data; if(!d || !d.type) return;
+    if(d.type==="pause"){ bkPaused=true; return; }        // cartridge contract: freeze NOW
+    if(d.type==="resume"){ bkPaused=false; return; }       // cartridge contract: continue exactly where paused
+    if(d.type!=="bk:quizDone") return;
     if(bkPendingLevel==null) return;
     var i=bkPendingLevel, lv=bkPendingLives; bkPendingLevel=null; bkPendingLives=null;
     try{ startLevel(i, lv); }catch(e){}

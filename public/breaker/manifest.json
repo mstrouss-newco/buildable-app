@@ -6,6 +6,8 @@
   "color": "#FF6B6B",
   "ageBand": "8-12",
   "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/breaker-engine.html",
 
   "features": {
     "demoOnLoad": true,

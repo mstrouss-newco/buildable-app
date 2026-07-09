@@ -1,5 +1,65 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Cartridge contract adoption + wiring audit
+
+`CARTRIDGE-CONTRACT.md` committed to the repo root: the single source of truth for how
+the shell and any game ("cartridge") talk — messages only, no reaching into a game's
+internals in either direction, so a future Phaser or Godot game can slot in with zero
+shell changes. Added the two fields it introduces, `engine` (`canvas` today, later
+`phaser`/`godot`) and `entry` (the URL the shell embeds), to `buildable-manifest-v2.md`
+(new section 1b + the worked Breaker example) and to `public/breaker/manifest.json`
+(`"engine": "canvas"`, `"entry": "/breaker-engine.html"`). `qa-breaker.mjs`'s manifest
+validator does not yet enforce these two fields (still passes without them) — worth a
+follow-up in the validator when a second engine type actually shows up.
+
+**Audit: Sessions 2A-2C wiring vs. the contract.**
+- **Messages that exist today** (none use the contract's literal names yet — all
+  Buildable-specific extensions built before the contract existed): `nav:state` /
+  `nav:sound` / `nav:menu` / `nav:help` / `nav:exit` (the `buildable-gamenav.js` chrome
+  bridge), `quizRequest` / `bk:quizDone` (the learning gate), `win` / `lose` / `levelup` /
+  `cheer` (`buildable-buddy.js`, BB — genuinely message-only, postMessage up to the
+  parent, no shared state). None of the contract's own vocabulary (`ready`, `loading`,
+  `score`, `coins`, `levelComplete`, `needsCoins`, `start`, `setAudio`) is implemented.
+- **One real "reaches into the boundary" violation: coins.** `buildable-wallet.js` is
+  loaded as a script INSIDE each game page (not the shell) and reads/writes
+  `localStorage["bk_wallet_v1:<kidId>"]` directly; the balance is shared across games only
+  because they share an origin, not because the shell owns it. It does also announce a
+  `kind:"coins"` postMessage up to the parent, but the shell doesn't listen for it today,
+  and the source of truth is the shared storage key, not shell-owned state. This is the
+  opposite of the contract's model ("`coins` — the shell owns the wallet and the coin
+  animation"). Fixing it properly means moving wallet state into the shell and having
+  games only ever announce `coins` deltas as messages — that's a real restructure of the
+  2C wallet wiring, not a small fix, so it was left as-is and is called out here rather
+  than touched.
+- **URLs vs. the contract's `start` message.** Session 2B gave Breaker real deep links
+  (`/breaker/play/{levelId}` etc.) that the engine's own router resolves on load; the
+  contract's model is closer to "the shell embeds one `entry` URL once and sends `start`
+  with the level id + loadout." Both get to a working, refresh-safe game, but they're two
+  different mechanisms. Also left alone — re-plumbing level selection through a `start`
+  message instead of routed URLs is a restructure, not a small fix.
+- **Pause/resume — fixed.** There was no formal `pause`/`resume` message pair at all. The
+  learning gate happened to look safe only because it always fires right after a level is
+  already won (nothing moving to freeze). Added the contract's actual mechanism: Breaker
+  now honors `{type:"pause"}` / `{type:"resume"}` from the shell (a `bkPaused` flag gates
+  `update()`, same pattern as the existing `helpOpen` gate), and the shell
+  (`BreakerScreen` in `src/BuildableKids.jsx`) sends `pause` right before showing the
+  QuizGate overlay and `resume` right before `bk:quizDone`. Small, additive, mirrors
+  existing code style — not a restructure.
+- **Not touched, not urgent:** `ready`/`loading`/`score`/`levelComplete`/`needsCoins`/
+  `setAudio` have no equivalents yet; sound is currently handled through the nav bridge's
+  own `nav:sound` round trip instead. Building the full contract vocabulary — and moving
+  the wallet to be shell-owned — is real work for a dedicated session, not a gap-fill.
+
+**Verified:** `qa-breaker.mjs` = manifest PASS (validates fine with the new `engine`/
+`entry` fields present) + all 8 levels win (5 runs each) + pong + render smoke = ALL
+CHECKS PASS. `esbuild` JSX parse clean on `src/BuildableKids.jsx`.
+
+**Also noticed, unrelated:** this file (`SESSION-LOG.md`) has an old unresolved git merge
+conflict block (`<<<<<<< HEAD` / `=======` / `>>>>>>>`) still sitting in it further down,
+around the July 2 Hilltop Tanks / Bubble Buddies entries. Left it alone since it wasn't
+part of this task, but it should get cleaned up.
+
+
 ## 2026-07-08 — Session 2C: Shared systems wiring, part 1 (Phase 2 shell v2)
 The Breaker manifest's `features` switches now actually drive the platform's shared systems.
 No system was rebuilt; the switches were wired to what already exists (plus one small new

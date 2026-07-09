@@ -23,6 +23,12 @@
 - `ageBand` — e.g. 5-8 or 8-12
 - `shellVersion` — which shell version this manifest was built for
 
+### 1b. Engine (how the game runs) — see CARTRIDGE-CONTRACT.md
+- `engine` - `canvas` today; later `phaser` or `godot`. Tells the shell how to treat the game.
+- `entry` - the URL the shell embeds (for canvas games, the game's HTML file). The shell treats every game as "a thing I embed at its entry URL" and never assumes a game is a single HTML file.
+
+These two fields are what let a future Phaser or Godot game slot into the shell with zero shell changes: the shell only ever embeds `entry` and talks to it using the cartridge contract's messages (see CARTRIDGE-CONTRACT.md at the repo root) — it never reaches into a game's internals.
+
 ### 2. Shell features (on/off)
 - `demoOnLoad` — gesture demo with the green go button
 - `journey` — the winding level path (vertical on phones, auto-generated from the levels list)
@@ -98,6 +104,8 @@ Refresh anywhere restores that spot. Every screen is shareable.
   "color": "#FF6B6B",
   "ageBand": "8-12",
   "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/breaker-engine.html",
 
   "features": {
     "demoOnLoad": true,

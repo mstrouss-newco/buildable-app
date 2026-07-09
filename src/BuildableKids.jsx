@@ -246,9 +246,10 @@ function BreakerScreen({ onHome }) {
     let enabled = false;
     try { enabled = !!getLearningSettings().enabled; } catch (e) {}
     if (!enabled) { post({ type: "bk:quizDone" }); return; } // Learning Mode off -> parent settings win, no gate
+    post({ type: "pause" }); // cartridge contract: freeze the game while the quiz gate is up
     setQuiz({ reply: post });
   };
-  const finish = () => { if (quiz && quiz.reply) quiz.reply({ type: "bk:quizDone" }); setQuiz(null); };
+  const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
   const overlay = quiz ? (
     <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <QuizGate goal={getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
