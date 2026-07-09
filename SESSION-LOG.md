@@ -1,5 +1,44 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 6C: First studio converts (Music Maker → type:studio)
+
+Proves the manifest contract for the **studio** type — the first non-game to run
+on the shared shell, so future creative tools (Story maker, Art studio, Sound
+machine) convert the same known-cost way.
+
+**The manifest.** New `public/music-maker/manifest.json` (`type: "studio"`). Per
+buildable-manifest-v2.md section 7 a studio skips levels/journey and instead
+declares `produces` ("songs") and `savesTo` ("saved_songs"). Everything else is
+identical to a game: a badge, `features.coins`, `customization` (an **Instrument
+packs** slot: Starter free, Brass/Strings/World Beats as coin unlocks), and
+`features.learning` gates. Served via an explicit `vercel.json` route (the
+static-routes gotcha — new `public/` folders get swallowed by the legacy catch-all).
+
+**The loader.** `buildable-manifest.js` gains a `studioProfile`; `profileFor()`
+routes any `type:studio` manifest to it so a studio is never forced through the
+level-based game path. `toEngineConfig()` now yields a studio-shaped config
+(`produces`/`savesTo`/`customization`), and `validate()` requires a studio to
+declare `produces` + `savesTo` (mirrored server-side in `api/manifest.js`). Games
+are untouched — breaker/survival/sling still validate green.
+
+**The shell.** Music Maker now appears on the games picker with the shared **Studio**
+badge (added to `GAME_CATALOG` as `type:studio`). Opening it shows the same
+shell-generated `GameLanding` (Play → the maker; "Make it mine" → loadout) and the
+loadout reuses `BreakerLoadout`, which reads the manifest's instrument packs and
+spends shared-wallet coins to unlock them. The existing Home → Make → Music path is
+unchanged (replace-first: nothing removed).
+
+**Learning.** `MusicMaker.jsx`'s render learning-moment now reads the studio
+manifest's `features.learning` defaults blended with the parent's per-kid overrides
+via `effectiveLearning()` — the same path games use — instead of the raw global
+toggle. Still fully skippable.
+
+**QA.** New `qa-music.mjs` runs the studio through the shared loader headless:
+validates the manifest, proves the studio config shape, coins + instrument-pack
+customization + learning gates, that a malformed studio (no produces/savesTo) is
+rejected, and that the game manifests still validate. `qa-music`, `qa-breaker`,
+`qa-survival`, `qa-sling` all PASS.
+
 ## 2026-07-09 — Bug fixes: dead Home button (iPhone) + brick "residue" slicer
 
 Two targeted bug fixes, no redesigns.

@@ -6,6 +6,27 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 6C: First studio converts — Music Maker (July 9 2026)
+
+The first `type:studio` on the shared shell. A **studio** skips levels/journey and
+instead declares `produces` + `savesTo`; everything else (badge, coins,
+customization, learning) works exactly like a game and is read from the manifest.
+
+- **`public/music-maker/manifest.json`** — `type:"studio"`, `produces:"songs"`,
+  `savesTo:"saved_songs"`, `features.coins`, an **Instrument packs** customization
+  slot (free Starter + coin-unlock packs), and `features.learning` gates. Served via
+  an explicit `vercel.json` route.
+- **`buildable-manifest.js`** — new `studioProfile`; `profileFor()` sends any studio
+  to it (no fake levels). `toEngineConfig()` emits a studio-shaped config;
+  `validate()` requires `produces` + `savesTo` (also enforced in `api/manifest.js`).
+- **`BuildableKids.jsx`** — Music Maker joins `GAME_CATALOG` as a studio (Studio badge
+  on the picker) with a shell `GameLanding` + `BreakerLoadout` loadout for the
+  instrument packs. Home → Make → Music path unchanged.
+- **`MusicMaker.jsx`** — the render learning-moment is now manifest-driven via
+  `effectiveLearning()` (manifest defaults + parent overrides).
+- **QA:** new `qa-music.mjs` (studio contract) plus `qa-breaker`/`qa-survival`/`qa-sling`
+  regression — all PASS.
+
 ## Session 6B: Learning + parent controls + onboarding (July 9 2026)
 
 The manifest's `features.learning` block is now a real system. `buildable-manifest.js`
