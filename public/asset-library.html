@@ -474,12 +474,17 @@ function csRefreshLayout(){
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
 function contentBox(ctx,x,y,w,h,transparent){
   const d=ctx.getImageData(x,y,w,h).data; let minX=w,minY=h,maxX=-1,maxY=-1;
+  // alpha>40 (was 18): ignore the faint anti-aliased bleed of a NEIGHBOURING sprite
+  // that leaked to this cell's edge, so it never counts as this piece's content.
   for(let j=0;j<h;j++)for(let i=0;i<w;i++){ const o=(j*w+i)*4;
-    const fg = transparent ? d[o+3]>18 : !(d[o]>242&&d[o+1]>242&&d[o+2]>242&&d[o+3]>18);
+    const fg = transparent ? d[o+3]>40 : !(d[o]>242&&d[o+1]>242&&d[o+2]>242&&d[o+3]>18);
     if(fg){ if(i<minX)minX=i; if(i>maxX)maxX=i; if(j<minY)minY=j; if(j>maxY)maxY=j; } }
   if(maxX<0)return null;
-  const pad=2; return {x:x+Math.max(0,minX-pad),y:y+Math.max(0,minY-pad),
-    w:Math.min(w-minX+pad,maxX-minX+1+pad*2),h:Math.min(h-minY+pad,maxY-minY+1+pad*2)};
+  // Trim TIGHT to the sprite, then a 1px safety INSET so no sliver of a touching
+  // neighbour rides along an edge. (The old code padded 2px OUTWARD — that is exactly
+  // what pulled the neighbour's pixels into the crop and left the stray band.)
+  const bw=maxX-minX+1, bh=maxY-minY+1, ix=bw>4?1:0, iy=bh>4?1:0;
+  return {x:x+minX+ix, y:y+minY+iy, w:bw-2*ix, h:bh-2*iy};
 }
 function cropFrom(srcCanvas,box){
   const c=document.createElement("canvas");c.width=box.w;c.height=box.h;
