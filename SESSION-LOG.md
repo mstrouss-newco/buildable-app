@@ -1,5 +1,44 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 4A: Level-first game editor
+
+Shipped the internal editor's first half (Phase 4A of the rebuild roadmap): one page
+per game that reads and writes the game's manifest, with the "worlds" layer removed
+from the UI entirely — levels point straight at their parts.
+
+New page `public/editor.html` (open at `/editor`, `?game=breaker` by default, behind a
+light PIN gate like the planner tool). Layout matches the approved mock: the whole-game
+art slots (badge, hero, win art, loading, music) sit up top as editable asset-ID fields;
+below them is one row per level with reorder up/down arrows (order is the journey and
+unlock order), an editable name, a parts strip for background/bricks/balls/paddle (each
+a theme picker — jungle/ocean/space — with a live thumbnail), a layout dropdown, the
+difficulty 1–5 chips, a Test button (opens `/breaker/play/<id>`), Remove, and an Add
+level button at the bottom. No worlds tab anywhere.
+
+Save is live-on-save (Mike's choice): a new `api/manifest.js` endpoint stores an
+override so the change shows up in the real game immediately. GET returns the effective
+manifest (an editor override wins, otherwise the static `public/<game>/manifest.json`
+that ships in the repo); POST validates the manifest and saves the override. Storage
+reuses images.js's `image_cache` table (kind="manifest"), so there is NO new database
+migration — same trick asset-studio.js uses. The shell loader `buildable-manifest.js`
+and the shell's Journey + Loadout screens now read through `/api/manifest` first and
+fall back to the static file if the endpoint is unreachable, so a saved edit goes live
+everywhere and the game still loads if the function is down. On save the editor also
+enforces the invariant that the first level in order stays unlocked, and de-dups level
+ids, so reordering can't strand kids.
+
+Verified: `qa-breaker.mjs` ALL CHECKS PASS (manifest still validates and every level is
+beatable), `npm run build` clean, and a round-trip test through the real shared
+validator — change level 1's bricks, set its difficulty to 4, reorder, add a level —
+produces a valid manifest and correct engine config, while a bad edit (difficulty 6,
+unknown layout, missing bricks) is rejected with clear messages. Live save/QA on the
+deployed site is Mike's to confirm after this pushes.
+
+What's left in Phase 4 (Session 4B, do NOT start unprompted): the "Drop in art" flow
+(wire each slot/part to the existing auto-slicer, saving straight to the asset ID) and
+the "Library" picker, plus making Save run the QA robot BEFORE it goes live (4A
+publishes directly after a structural check). Punch list: none added.
+
 ## 2026-07-09 — Fix: Breaker landing demo running too fast + flickering
 
 Bug report: on Breaker's landing page, the self-playing demo ball zips across the

@@ -59,7 +59,7 @@ Done when: Breaker's entire out-of-game experience is shell-generated, none of i
 
 **Goal: the internal editor per the approved mock (v2), built ON the existing upload/slicer code.**
 
-- [ ] **Session 4A — Level-first editor.** One page per game: game art slots up top; level rows (name, parts strip, layout, difficulty 1–5 chips, Test button, reorder, remove, add). Remove the "worlds" layer from the UI; levels point directly at parts. Reads/writes the manifest.
+- [x] **Session 4A — Level-first editor.** (done 2026-07-09: `public/editor.html` at `/editor`, PIN-gated; whole-game art slots up top; one row per level with reorder arrows, name, parts strip (theme picker + live thumbnails), layout dropdown, difficulty 1–5 chips, Test, Remove, Add; no worlds layer. New `api/manifest.js` reads/writes the manifest as a live override (image_cache, no migration); loader + shell Journey/Loadout read it with static fallback; qa-breaker green, build clean.) One page per game: game art slots up top; level rows (name, parts strip, layout, difficulty 1–5 chips, Test button, reorder, remove, add). Remove the "worlds" layer from the UI; levels point directly at parts. Reads/writes the manifest.
 - [ ] **Session 4B — Drop-in art flow.** "Drop in art" on any slot/part = the existing auto-slicer, saving straight to that slot's asset ID. "Library" = pick existing assets. Save = QA robot runs, then live.
 
 Done when: Mike can change a level's bricks, set difficulty to 4, hit save, and see it live after the robot passes, with zero code touched.
