@@ -1,5 +1,51 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 3D: Feel Kit + GAME-FEEL.md
+
+Phase 3 (the "paint layer") gets its feel layer. Every game's "juice" — the sounds,
+the celebrations, the coin bursts, the way a fail feels — now comes from ONE shared
+kit instead of each game reinventing it. Breaker is the first game converted.
+
+- **GAME-FEEL.md (new, repo root).** The feel standard: the six feel laws (instant tap
+  feedback, one shared win celebration, coins land with a burst, no punishing fail
+  states, generous kid-sized hitboxes, one shared sound palette), what the Feel Kit
+  exposes, the three constrained presets, and the rules for adding a new game.
+- **The Feel Kit (`public/buildable-feel.js`, new).** `window.BuildableFeel` (alias
+  `Feel`) is a thin facade over the pieces games used to call one by one: sound
+  (`buildable-audio.js`), effects (`buildable-mechanics.js` + `buildable-renders.js`),
+  the win card (`buildable-wincard.js`), and haptics (`navigator.vibrate`). Games call
+  `Feel.tap / hit / coinBurst / explode / miss / celebrate / winCard / sfx`, plus one
+  `Feel.configure` from the manifest. Every call is a safe no-op if a piece isn't loaded
+  (headless QA, cold offline page) so nothing crashes. Celebration size, haptics, and
+  pace all obey the manifest presets — games never read them directly.
+- **Manifest gains feel presets.** `public/breaker/manifest.json` now has a `feel` block
+  (`pace: normal`, `celebration: big`, `haptics: on`), per buildable-manifest-v2.md §5b.
+- **Breaker converted to the Kit.** It loads `buildable-feel.js` + `buildable-wincard.js`
+  and calls `Feel.configure` when the manifest loads (sound palette + signature-color
+  accent + feel presets). Coins → `Feel.coinBurst` (gold sparkle + chime + buzz); tough
+  bricks / bombs / powerups → `Feel.explode` (scaled by the celebration preset); a lost
+  life → `Feel.miss` (a gentle amber nudge + light buzz, replacing the old harsh red
+  slam); a win → `Feel.celebrate` (confetti + chime + success buzz). All sound routes
+  through `Feel.sfx`.
+- **Old menu/HUD overlay code removed.** The end-of-round screen is now the ONE shared
+  floating card drawn by the Kit (`Feel.winCard`), tinted by the manifest accent. The
+  engine's old full-screen `banner()` dim, `drawEarnedStars()` and `star5()` are deleted
+  (stars stay as saved progress the shell Journey reads; they're just no longer painted
+  on the play canvas). Fail wording softened ("Nice try! / Tap to play again").
+- **Plumbing.** `vercel.json` gets explicit routes for `buildable-feel.js` AND
+  `buildable-wincard.js` (the latter was previously unrouted — a latent bug for the other
+  games that use it). `qa-breaker.mjs` now loads both new libs so the sim exercises them.
+- **Verification.** `qa-breaker.mjs` = ALL CHECKS PASS (manifest valid, all 8 levels
+  beatable x5, pong winner, render smoke including the new win-card draw path).
+
+**What's left in Phase 3:** the Feel Kit + GAME-FEEL.md are done and Breaker's feedback /
+sounds / celebrations are fully Kit-driven. The engine's standalone start-screen menu and
+"Make it mine" maker still live in the engine as the standalone deep-link handlers that
+Sessions 3B/3C intentionally kept (the in-app front door is already the shell's); formally
+retiring that in-engine menu/maker is Phase 7 cleanup ("Retire superseded ... per-game
+menus"), not a Feel-Kit task. No punch-list items added.
+
+
 ## 2026-07-08 — Session 3C: Loadout + one HUD + shell-owned wallet
 
 Phase 3 (the "paint layer") continues. Breaker's customization and its HUD are now

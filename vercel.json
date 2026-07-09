@@ -390,6 +390,14 @@
       "dest": "/buildable-audio.js"
     },
     {
+      "src": "/buildable-wincard.js",
+      "dest": "/buildable-wincard.js"
+    },
+    {
+      "src": "/buildable-feel.js",
+      "dest": "/buildable-feel.js"
+    },
+    {
       "src": "/buildable-mechanics.js",
       "dest": "/buildable-mechanics.js"
     },

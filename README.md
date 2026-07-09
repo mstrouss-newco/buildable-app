@@ -6,6 +6,32 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 3D: Feel Kit + GAME-FEEL.md (July 9 2026)
+
+Every game's "juice" now comes from ONE shared kit instead of each game reinventing it.
+
+- **`GAME-FEEL.md`** (repo root) is the feel standard: instant tap feedback, one shared
+  win celebration, coins land with a burst, no punishing fail states, generous kid-sized
+  hitboxes, one shared sound palette — plus the three constrained presets and the rules
+  for adding a new game.
+- **`public/buildable-feel.js`** (`window.BuildableFeel` / `Feel`) is a thin facade over
+  sound (`buildable-audio.js`), effects (`buildable-mechanics.js` + `buildable-renders.js`),
+  the win card (`buildable-wincard.js`), and haptics. Games call `Feel.tap / hit /
+  coinBurst / explode / miss / celebrate / winCard / sfx` and one `Feel.configure` from
+  the manifest; every call is a safe no-op if a piece isn't loaded (headless QA / offline).
+- **Manifest feel presets.** `public/breaker/manifest.json` gains a `feel` block
+  (`pace` / `celebration` / `haptics`). The Kit obeys them; games never read them directly.
+- **Breaker converted.** Coins → `Feel.coinBurst`, tough hits/bombs/powerups →
+  `Feel.explode`, a lost life → `Feel.miss` (a gentle amber nudge, not the old harsh red
+  slam), a win → `Feel.celebrate`. The end-of-round screen is the ONE shared floating card
+  (`Feel.winCard`, tinted by the manifest accent); the old full-screen `banner()` dim,
+  `drawEarnedStars()` and `star5()` are deleted (stars remain as saved progress the shell
+  Journey reads).
+- **Plumbing.** `vercel.json` gets routes for `buildable-feel.js` and `buildable-wincard.js`
+  (the latter was previously unrouted). `qa-breaker.mjs` loads both new libs.
+- **QA:** `qa-breaker.mjs` ALL CHECKS PASS (manifest valid, 8 levels beatable x5, pong
+  winner, render smoke incl. the new win-card draw).
+
 ## Session 3C: Loadout + one HUD + shell-owned wallet (July 8 2026)
 
 Breaker's customization and HUD are now shell-owned, and the coin wallet moved out of
