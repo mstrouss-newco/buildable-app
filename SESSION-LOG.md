@@ -1,5 +1,38 @@
 # Buildable Kids — Session Log
 
+## 2026-07-08 — Session 2A: Manifest plumbing (Phase 2 shell v2)
+Breaker is now the first manifest-driven game: the level list, layouts, difficulty and per-level art
+all come from a manifest file instead of the engine's internal GAME_CONFIG. No gameplay systems were
+rebuilt — this is plumbing.
+- **New `/breaker/manifest.json`** (public/breaker/manifest.json), built to buildable-manifest-v2.md:
+  identity + signature color, shell features (demoOnLoad/journey/customization/coins/buddy/multiplayer/
+  learning), whole-game art slots, 8 campaign levels (id, name, layout, difficulty 1-5, part asset IDs,
+  journeyBadge) and customization slots. Each level's art is an asset-library ID (e.g.
+  `breaker/bg/jungle-v1`), never a hardcoded path.
+- **New shell loader `public/buildable-manifest.js`** (shared, browser + Node/VM safe):
+  `validate(m)` (blocks a bad manifest with clear errors, warns on soft issues), `resolveAsset(id)`
+  (asset ID -> URL), and `toEngineConfig(m)` which translates `layout` -> pattern + board geometry
+  (via the shared template table) and `difficulty` 1-5 -> the engine's tuning (`tough=(d-1)*0.12`,
+  `speed=3.8+d*0.5`), plus `load(id,onReady,onError)` (fetch + validate in the browser). Exposed as
+  `window.BuildableManifest`.
+- **Engine reads the manifest.** breaker-engine.html now includes the loader and, on load, applies the
+  manifest over its levels + registers each level's art pack from the manifest asset IDs, stashing the
+  raw manifest on `window.BUILDABLE_MANIFEST` for later sessions (URLs/feature wiring). The built-in
+  GAME_CONFIG stays as the offline/headless fallback; campaign levels are replaced in place so any
+  kid-made levels appended by the asset-studio path are preserved.
+- **QA now validates + plays the manifest.** qa-breaker.mjs loads the shell, validates
+  /breaker/manifest.json (fails hard if invalid), injects `toEngineConfig` as `window.GAME_CONFIG`,
+  then sims — so the robot proves every *manifest* level is beatable, not just the built-ins.
+  Result: MANIFEST PASS + all 8 levels win (5/5 runs each) + pong + render smoke = ALL CHECKS PASS.
+- **vercel.json:** added an explicit `no-cache` route for /breaker/manifest.json (the editor will
+  rewrite it in later sessions), ahead of the cached `/breaker/(.*)` art route.
+- **Note / feel:** because layout templates now own board geometry, a few levels changed size vs the
+  old hand-tuned cols/rows (e.g. L1 "full" is 10x6, not 8x3). All still beatable per QA; if any feel
+  too big, that's a manifest content tweak (layout/difficulty), no code — a later session.
+- **Scope guard:** this is 2A only. Real routes (/breaker/journey etc.) = 2B; wiring demo/coins/buddy/
+  quiz switches to the shared systems = 2C. Not started.
+
+
 ## 2026-07-08 — Planner Roadmap: reorder sessions too
 Session cards now have the same up/down arrows phases already had. New `rmMoveSession(id,dir)` swaps a
 session with its neighbour **within its own group only** — phase siblings, orphan "Other sessions", or
