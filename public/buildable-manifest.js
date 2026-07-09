@@ -232,9 +232,36 @@
     resolveAsset: function(){ return null; }   // the sling engine maps its own art keys (scene/pals/targets)
   };
 
+  // ===========================================================================
+  //  STUDIO profile (type: studio). Session 6C — Music Maker is the first.
+  // ===========================================================================
+  // Studios have NO levels and NO journey (manifest-v2 section 7). Instead they
+  // declare `produces` (what creations come out) and `savesTo` (which library they
+  // publish into). Everything else — badge, coins, customization (e.g. instrument
+  // packs), learning moments — works exactly like a game and is read straight from
+  // the manifest by the shell. This profile just gives the loader a clean studio
+  // shape so a studio never gets pushed through the level-based game path.
+  var studioProfile = {
+    validateLevel: function(){},          // studios have no levels to validate
+    toLevel: function(lv){ return lv; },  // defensive: a stray level passes through untouched
+    toConfig: function(m, levels){
+      return {
+        id: m.id, name: m.name, color: m.color, type: "studio",
+        produces: (m.produces || null),
+        savesTo:  (m.savesTo  || null),
+        customization: (m.customization || []),
+        levels: levels,                   // normally [] for a studio
+        _manifest: m
+      };
+    },
+    resolveAsset: function(){ return null; }
+  };
+
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile };
-  function profileFor(m){ var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile };
+  // Studios always use the studio profile (they have no levelProfile/levels); every
+  // other game keys off its id (or an explicit levelProfile), falling back to breaker.
+  function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
 
   // back-compat export (Breaker convention). Kept so anything importing
   // resolveAsset keeps resolving Breaker asset IDs exactly as before.
@@ -259,6 +286,10 @@
     if(m.features && m.features.learning && ("subjects" in m.features.learning) && !Array.isArray(m.features.learning.subjects))
       errors.push("features.learning.subjects must be an array");
 
+    if(m.type==="studio"){
+      if(!m.produces || typeof m.produces!=="string") errors.push("studio 'produces' must be a non-empty string");
+      if(!m.savesTo  || typeof m.savesTo!=="string")  errors.push("studio 'savesTo' must be a non-empty string");
+    }
     if(m.type==="game"){
       if(!Array.isArray(m.levels) || !m.levels.length){ errors.push("'levels' must be a non-empty array"); }
       else {
@@ -285,7 +316,7 @@
   // and wraps them in that engine's config envelope.
   function toEngineConfig(m){
     var prof = profileFor(m);
-    var levels = (m.levels||[]).map(prof.toLevel);
+    var levels = (Array.isArray(m.levels)?m.levels:[]).map(prof.toLevel);
     var cfg = prof.toConfig(m, levels);
     cfg.multiplayer = multiplayerMode(m);       // off | turn-based | realtime (the switch)
     cfg.transport   = multiplayerTransport(m);  // null | turns | realtime (the existing lane)

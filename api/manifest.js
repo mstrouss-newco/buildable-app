@@ -33,6 +33,10 @@ function validate(m) {
   if (!m.id || typeof m.id !== "string") e.push("missing id");
   if (!m.name || typeof m.name !== "string") e.push("missing name");
   if (m.type !== "game" && m.type !== "studio") e.push("type must be game or studio");
+  if (m.type === "studio") {
+    if (!m.produces || typeof m.produces !== "string") e.push("studio produces must be a non-empty string");
+    if (!m.savesTo || typeof m.savesTo !== "string") e.push("studio savesTo must be a non-empty string");
+  }
   if (m.type === "game") {
     if (!Array.isArray(m.levels) || !m.levels.length) e.push("levels must be a non-empty array");
     else {
