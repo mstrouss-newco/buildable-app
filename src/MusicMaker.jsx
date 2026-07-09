@@ -11,7 +11,7 @@ import CoverThumb from "./lib/CoverThumb";
 import IconImg from "./lib/IconImg";
 import SongPlayer from "./lib/SongPlayer";
 import QuizGate from "./QuizGate";
-import { getLearningSettings } from "./store";
+import { getLearningSettings, effectiveLearning } from "./store";
 import { registerAudio } from './lib/audioUnlock.js';
 
 const MAX_SONGS = 100000; // testing: effectively unlimited (was 10)
@@ -145,6 +145,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   const [msgI, setMsgI] = useState(0);
   const [justFinished, setJustFinished] = useState(false); // learning gate: only after a real finish
   const [gateNext, setGateNext] = useState(null);          // pending action awaiting a quick question
+  const [mfLearn, setMfLearn] = useState(null);            // Session 6C: this studio's manifest learning defaults
   const audioRef = useRef(null);
   const voiceRef = useRef(true);
   voiceRef.current = voiceOn;
@@ -153,6 +154,18 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   const speakSeqRef = useRef(0);
 
   useEffect(() => { injectKeyframes(); refresh(); QUESTION_PHRASES.forEach(preload); }, []);
+
+  // Session 6C — read the studio's own manifest so the learning gate is manifest-
+  // driven (features.learning), like every converted game. Parent overrides still
+  // win via effectiveLearning(); a missing/late manifest just means null defaults.
+  useEffect(() => {
+    let live = true;
+    fetch("/music-maker/manifest.json?v=" + Date.now())
+      .then((r) => r.json())
+      .then((m) => { if (live && m && m.features) setMfLearn(m.features.learning || null); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
 
   function audioEl() {
     if (!audioElRef.current && typeof window !== "undefined") { const a = new Audio(); a.preload = "auto"; registerAudio(a); audioElRef.current = a; }
@@ -260,10 +273,12 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
 
   function doRender() { if (busy || locking) return; speak("Rendering your song!"); setLocking(true); setTimeout(() => { setLocking(false); makeSong(); }, 1450); }
   function startRender() {
-    const ls = getLearningSettings();
-    // Learning Mode on: always gate the render with one quick question (every
-    // song, not only the second one). Skippable via QuizGate; never traps a kid.
-    if (ls.enabled) { setJustFinished(false); setGateNext(() => doRender); return; }
+    // Session 6C: the render learning-moment now reads THIS studio's manifest
+    // defaults (features.learning.beforeUnlock) blended with the parent's per-kid
+    // overrides — the same effectiveLearning path games use — instead of the raw
+    // global toggle. Still fully skippable via QuizGate; never traps a kid.
+    const eff = effectiveLearning(mfLearn);
+    if (eff.enabled && eff.beforeUnlock) { setJustFinished(false); setGateNext(() => doRender); return; }
     doRender();
   }
 
@@ -379,7 +394,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     const proceed = gateNext;
     return (
       <QuizGate
-        goal={getLearningSettings().goal}
+        goal={effectiveLearning(mfLearn).goal}
         gameType="song"
         title="One quick question first!"
         onPass={() => { setGateNext(null); proceed(); }}
