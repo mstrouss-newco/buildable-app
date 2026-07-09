@@ -19,6 +19,8 @@
     "learning": { "beforeUnlock": true, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math", "reading"] }
   },
 
+  "feel": { "pace": "normal", "celebration": "big", "haptics": "on" },
+
   "art": {
     "badge": "breaker/badge/v1",
     "hero": "breaker/hero/v1",
