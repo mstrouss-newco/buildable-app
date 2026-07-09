@@ -521,6 +521,42 @@ function CoinGlyph({ size = 16 }) {
   );
 }
 // ============================================================================
+//  TopUpGate (Session 6B) — "short on coins? practice to earn some". Reuses the
+//  QuizGate; the passive top-up rule (every 3rd correct = 10 coins, see
+//  QuizGate/store) does the crediting, so this just presents questions and
+//  celebrates when the shared wallet balance goes up. A Done button always exits.
+// ============================================================================
+function TopUpGate({ onClose }) {
+  const [round, setRound] = useState(0);
+  const [earned, setEarned] = useState(0);
+  const startBal = useRef(walletBalance());
+  useEffect(() => {
+    const onW = () => {
+      const now = walletBalance();
+      if (now > startBal.current) { setEarned(now - startBal.current); }
+    };
+    window.addEventListener("bk-wallet", onW);
+    return () => window.removeEventListener("bk-wallet", onW);
+  }, []);
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ position: "relative", width: "100%", maxWidth: 460 }}>
+        <button onClick={onClose} style={{ position: "absolute", top: -6, right: -6, zIndex: 2, background: "rgba(255,255,255,0.14)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 999, padding: "6px 14px", fontWeight: 800, cursor: "pointer" }}>Done</button>
+        {earned > 0 ? (
+          <div style={{ background: "#1b1b3a", border: "1px solid rgba(255,210,74,0.4)", borderRadius: 20, padding: "28px 22px", textAlign: "center" }}>
+            <div style={{ fontFamily: FRED, fontSize: 24, fontWeight: 900, color: "#FFD98A" }}>You earned {earned} coins!</div>
+            <p style={{ opacity: 0.85, marginTop: 8 }}>Nice practicing. Keep going for more, or tap Done.</p>
+            <button onClick={() => { startBal.current = walletBalance(); setEarned(0); setRound((r) => r + 1); }} style={{ marginTop: 12, background: "#FFD24A", color: "#5a3d00", border: "none", borderRadius: 14, padding: "10px 20px", fontWeight: 900, cursor: "pointer" }}>Keep practicing</button>
+          </div>
+        ) : (
+          <QuizGate key={round} goal={getLearningSettings().goal} gameType="topup" title="Answer 3 to earn 10 coins!" onPass={() => setRound((r) => r + 1)} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 //  BreakerLoadout (Session 3C) — the SHELL-generated customization screen, built
 //  straight from the manifest's `customization` slots. Free looks are owned; priced
 //  looks unlock by spending coins from the shell-owned wallet; a tap equips. The
@@ -534,6 +570,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
   const [coins, setCoins] = useState(() => walletBalance());
   const [store, setStore] = useState({ owned: {}, equipped: {} });
   const [flash, setFlash] = useState("");
+  const [topUp, setTopUp] = useState(null); // {slotName,i,price} when offering a practice top-up
 
   useEffect(() => {
     let live = true;
@@ -551,6 +588,13 @@ function BreakerLoadout({ game, onBack, onPlay }) {
     setStore((prev) => { const next = { owned: { ...prev.owned }, equipped: { ...prev.equipped, [slotName]: i } }; writeLoadout(gameId, next); return next; });
   }
   function buy(slotName, i, price) {
+    // Session 6B: short on coins? If the parent's "Earn coins by practicing"
+    // toggle is on, offer a practice top-up instead of a dead-end message.
+    if (coins < (price || 0)) {
+      let eff = null; try { eff = effectiveLearning({}); } catch (e) {}
+      if (eff && eff.enabled && eff.coinTopUp) { setTopUp({ slotName, i, price }); return; }
+      setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return;
+    }
     let ok = false;
     try { ok = window.BuildableWallet ? window.BuildableWallet.spend(price) : false; } catch (e) { ok = false; }
     if (!ok) { setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return; }
@@ -564,6 +608,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
 
   return (
     <div style={{ ...styles.container, padding: "18px 14px 44px", justifyContent: "flex-start" }}>
+      {topUp && <TopUpGate onClose={() => { setTopUp(null); setCoins(walletBalance()); }} />}
       <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center", marginBottom: 12, maxWidth: 680 }}>
         <button onClick={onBack} style={styles.backButton}>Back</button>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 999, background: "rgba(245,217,118,.16)", border: "1px solid rgba(245,217,118,.4)", fontWeight: 900, color: "#FFE08A" }}>

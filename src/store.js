@@ -388,6 +388,22 @@ export function learningGoalOptions() {
   return [...GOAL_OPTIONS];
 }
 
+// ---------------- Coin top-up (Session 6B) ----------------
+// Practicing earns coins: every 3rd correct answer in Learning Mode is worth
+// 10 coins. topUpAward() returns { key, coins } exactly on a 3-answer boundary
+// (otherwise null). The caller credits via the shared wallet, whose
+// awardOnce(key) makes the grant replay-proof per kid. Gated at the call site by
+// the parent's "Earn coins by practicing" toggle (effectiveLearning.coinTopUp).
+const TOPUP_EVERY = 3;
+const TOPUP_COINS = 10;
+export const topUpEvery = TOPUP_EVERY;
+export const topUpCoins = TOPUP_COINS;
+export function topUpAward() {
+  const n = getProgress().totalCorrect || 0;
+  if (n <= 0 || n % TOPUP_EVERY !== 0) return null;
+  return { key: "topup:" + n / TOPUP_EVERY, coins: TOPUP_COINS };
+}
+
 // ---------------- Progress + badges ----------------
 // On-device learning progress, only ever updated when Learning Mode is ON
 // (callers gate this; recordAnswer also no-ops if Learning Mode is off). Kept

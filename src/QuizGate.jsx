@@ -14,7 +14,7 @@
 //   title    string  heading shown above the question (optional)
 // -------------------------------------------------------------
 import { useEffect, useRef, useState } from "react";
-import { recordAnswer, BADGES, getReviewItem, recordMiss, clearMiss, weakestSubject, getLearningSettings } from "./store";
+import { recordAnswer, BADGES, getReviewItem, recordMiss, clearMiss, weakestSubject, getLearningSettings, effectiveLearning, topUpAward } from "./store";
 
 // Map a learning goal to a concrete quizType for the API. "mix" alternates so a
 // child gets variety across moments.
@@ -70,6 +70,18 @@ function BadgeMark({ size = 64 }) {
   );
 }
 
+// Small drawn coin for the top-up reward moment (no emoji).
+function CoinMark({ size = 40 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="24" fill="#FFD24A" stroke="#E0A21C" strokeWidth="3" />
+      <circle cx="32" cy="32" r="17" fill="none" stroke="#E0A21C" strokeWidth="2" opacity="0.6" />
+      <path d="M32 20 v24 M27 25 h8 a4 4 0 0 1 0 8 h-8 M27 33 h9 a4 4 0 0 1 0 8 h-9"
+        fill="none" stroke="#8a5a00" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function QuizGate({ age, goal = "math", onPass, gameType = "creation", title = "Quick question!" }) {
   // Fall back to the active kid's saved age when no explicit age is passed.
   const effectiveAge = age == null ? (getLearningSettings().age || 7) : age;
@@ -78,6 +90,7 @@ export default function QuizGate({ age, goal = "math", onPass, gameType = "creat
   const [picked, setPicked] = useState(null);
   const [wrong, setWrong] = useState(false);
   const [earnedBadge, setEarnedBadge] = useState(null);
+  const [coinAward, setCoinAward] = useState(0); // coins earned by this correct answer (top-up)
   const levelRef = useRef(1);
   const alive = useRef(true);
 
@@ -134,6 +147,20 @@ export default function QuizGate({ age, goal = "math", onPass, gameType = "creat
       levelRef.current = Math.min(10, levelRef.current + 1); // adapt up for next time
       const newly = recordAnswer({ subject, correct: true }); // no-op unless Learning Mode on
       clearMiss(q); // mastered — remove from the review queue
+      // Session 6B: practicing earns coins. Every 3rd correct = 10 coins, when
+      // the parent's "Earn coins by practicing" toggle is on. awardOnce keeps it
+      // replay-proof per kid, so reloading never double-credits.
+      try {
+        const eff = effectiveLearning({});
+        if (eff.enabled && eff.coinTopUp && window.BuildableWallet) {
+          const award = topUpAward();
+          if (award) {
+            const before = window.BuildableWallet.balance();
+            window.BuildableWallet.awardOnce(award.key, award.coins);
+            if (window.BuildableWallet.balance() > before) setCoinAward(award.coins);
+          }
+        }
+      } catch (e) {}
       const badge = newly && newly.length ? BADGES.find((b) => b.id === newly[0]) : null;
       if (badge) {
         // Brief celebration, then proceed.
@@ -185,6 +212,12 @@ export default function QuizGate({ age, goal = "math", onPass, gameType = "creat
                 <p style={QS.badgeText}>New badge: {earnedBadge.label}!</p>
               </div>
             )}
+            {coinAward > 0 && (
+              <div style={QS.coinCelebrate}>
+                <CoinMark />
+                <p style={QS.coinText}>You earned {coinAward} coins!</p>
+              </div>
+            )}
             {wrong && <p style={QS.tryAgain}>Not quite — try again!</p>}
             <button style={QS.skip} onClick={() => onPass && onPass()}>Skip for now</button>
           </>
@@ -227,6 +260,12 @@ const QS = {
     background: "rgba(255,199,90,0.12)", border: "1px solid rgba(255,199,90,0.35)",
   },
   badgeText: { fontFamily: FRED, fontSize: 17, fontWeight: 800, color: "#FFD98A", margin: 0 },
+  coinCelebrate: {
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+    margin: "12px 0 0", padding: "10px 12px", borderRadius: 14,
+    background: "rgba(255,210,74,0.14)", border: "1px solid rgba(255,210,74,0.4)",
+  },
+  coinText: { fontFamily: FRED, fontSize: 16, fontWeight: 800, color: "#FFD98A", margin: 0 },
   skip: {
     marginTop: 18, background: "transparent", color: "#fff",
     border: "1px solid rgba(255,255,255,0.35)", borderRadius: 14,
