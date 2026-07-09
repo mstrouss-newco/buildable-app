@@ -6,6 +6,18 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Law updates + roadmap v2 (July 9 2026)
+
+Docs-only housekeeping — no product code touched. Two standing practices promoted to
+written law in `AGENTS.md` (the guardrail list): (1) **no emojis anywhere in the
+product** — all icons are drawn SVG geometry or art slots, covering UI, buddy messages,
+celebrations, and notifications; (2) **replace first, remove second** — because `main`
+auto-deploys to the live site, a working feature is never removed before its replacement
+is live (ship + verify on production, then remove the old thing). Also replaced the
+repo-root master plan `buildable-rebuild-roadmap.md` with the v2 (July 9) version.
+Files: `AGENTS.md`, `buildable-rebuild-roadmap.md`, `SESSION-LOG.md`, `README.md`. No
+`src/`/`api/`/engine changes, so no QA harness run needed.
+
 ## Session 5B: Sling converts to the manifest (July 9 2026)
 
 Sling Squad is now the third manifest-driven game (after Breaker + Survival).

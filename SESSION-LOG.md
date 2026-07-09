@@ -1,5 +1,27 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Law updates + roadmap v2 (docs only, no code)
+
+Housekeeping session: two standing rules promoted to law, and the master roadmap
+refreshed. No product code touched.
+
+**Two laws added to `AGENTS.md`** (the agent guardrails — the "do NOT do these even if
+asked" list the README points to). (1) **No emojis anywhere in the product.** All icons
+are drawn SVG geometry or art slots; the rule now explicitly covers UI, buddy messages,
+celebrations, and notifications, so the long-standing no-emoji practice is a written law
+rather than folklore scattered through the session log. (2) **Replace first, remove
+second.** Because `main` auto-deploys to the live site, a working feature is never
+removed before its replacement is live — ship the replacement, verify on production, then
+remove the old thing. (This generalizes the asset-library "migration is additive" rule to
+the whole product.)
+
+**Roadmap refreshed:** `buildable-rebuild-roadmap.md` at the repo root replaced with the
+v2 (July 9) plan — the session-ritual + priority-order master plan (Breaker → Survival →
+Sling). Old file overwritten in place, same filename.
+
+Docs only: `AGENTS.md`, `buildable-rebuild-roadmap.md`, `SESSION-LOG.md`, `README.md`.
+No `src/`, `api/`, or game engine changes, so no QA harness run was required.
+
 ## 2026-07-09 — Session 5B: Sling converts to the manifest
 
 Third game onto the manifest rails (Breaker, Survival, now Sling). The 5A promise —

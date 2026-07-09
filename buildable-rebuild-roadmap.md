@@ -1,107 +1,73 @@
-# Buildable Kids — Platform Rebuild Roadmap
+# Buildable Kids — Platform Rebuild Roadmap (v2, July 9)
 
-The master plan. Lives in the repo root. Every build session starts here.
-
----
+The master plan. Lives in the repo root. Every build session starts here. The planner at /planner is the source of truth for progress; this file is the reference.
 
 ## How we work (the session ritual)
+1. Chat sessions decide, Cowork sessions execute. Mocks, plans, and punch lists happen in chat. Code happens in Cowork with a prepared prompt.
+2. Every Cowork session: pull latest, follow CLAUDE.md, do ONE session block, update SESSION-LOG.md, recap.
+3. Refinement is a punch list, not a redo. Notes on session cards ride into prompts.
+4. Any session touching a game ends by running that game's QA script. Never claim QA passed if it did not run.
+5. Main auto-deploys to the live site: never remove a working feature before its replacement is live. Replace first, remove second.
+6. Companion docs: buildable-manifest-v2.md, CARTRIDGE-CONTRACT.md, MULTIPLAYER.md, GAME-FEEL.md, ASSET-LIBRARY.md.
 
-1. **Chat sessions decide, Cowork sessions execute.** Mocks, plans, and punch lists happen in chat (cheap). Code happens in Cowork with a prepared prompt (expensive, so scoped tight).
-2. **Every Cowork session:** pull latest from GitHub first. Read this roadmap. Do ONE session block below. Update the checkboxes and SESSION-LOG.md. Recap what was completed and what remains.
-3. **One session block per session.** Never "work on the platform." If a block finishes early, stop and recap rather than drifting into the next block.
-4. **Refinement is a punch list.** Mike tests on iPad/iPhone, collects reactions into the Punch List at the bottom of this doc. Short surgical sessions clear the list. Nothing gets rebuilt because of small feedback.
-5. **The robot checks the work.** Any session touching a game ends by running that game's QA script.
-6. **Companion docs:** `buildable-manifest-v2.md` is the manifest contract. MULTIPLAYER.md, HUD-AND-NAV-RULES.md, GAME-LOOK.md, ASSET-LIBRARY.md remain the deep guides for their systems.
-
-**Priority games, in order: Breaker → Survival → Sling.** These three are the reference set for everything. (Conveniently, they are also the three games the current upload tool already supports.)
-
----
-
-## Phase 1 — Speed fix (do first, independent of everything)
-
-**Goal: nothing on any page takes 10 seconds to appear.**
-
-- [x] **Session 1A — Compression pass.** (done 2026-07-08: public gameplay art 23.5MB->3.5MB WebP, every Breaker level <400KB, QA green) Scan public/ for oversized images (breaker theme PNGs are 0.5–1.3MB each; whole folders are 4MB+). Resize every image to its actual display size, convert to compressed WebP with PNG fallback where needed, update references. Target: any single level's art under ~400KB total. Run QA scripts on breaker, survival, sling to confirm nothing broke visually.
-- [x] **Session 1B — Art serving.** (done 2026-07-08: static art folders now send long-lived cache headers; images.js no longer generates while a kid waits — instant fallback + background warm; images/game-art responses edge-cached via s-maxage; Breaker per-level art ~350-390KB, QA green) Cached/generated art (game-art, images API) must serve as plain static files with proper caching headers, never through a slow function per load, and never generate-on-demand while a kid waits. If a piece is missing, show instantly with a fallback and generate in the background.
-
-Done when: cold-load of Breaker on iPad wifi shows gameplay art in under 2 seconds.
+Priority games, in order: Breaker → Survival → Sling.
 
 ---
+
+## Phase 1 — Speed fix
+- [x] **Session 1A — Compression pass.** Resize and compress all oversized art (2x for retina), WebP with fallback, update references. Shipped.
+- [x] **Session 1B — Art serving.** Static serving with cache headers, instant fallback plus background generation, no kid ever waits on generation. Shipped.
 
 ## Phase 2 — Shell v2: manifests + real URLs
+- [x] **Session 2A — Manifest plumbing.** Breaker manifest per spec, shared loader (buildable-manifest.js) validates and translates. Shipped.
+- [x] **Session 2B — URLs.** Real shareable, refresh-safe routes; marketing page stays at /, picker at /app. Shipped.
+- [x] **Session 2C — Shared systems wiring.** Demo, buddy, coins, quiz gates driven by manifest switches. Shipped. Cartridge contract adopted and aligned in follow-up sessions; wallet ownership moves to shell (done in 3C-era work per contract note).
 
-**Goal: Breaker becomes the first manifest-driven game with real, shareable, refresh-safe URLs.**
+## Phase 3 — Paint layer
+- [x] **Session 3A — Picker + game landing.** One rendering path for all games via identity manifest stubs; Breaker landing with demo. Shipped.
+- [x] **Session 3B — Journey.** Winding level path from the manifest, vertical on phones; /breaker deep links converged on shell landing. Shipped.
+- [x] **Session 3C — Loadout + one HUD.** Customization with coin prices and unlocks, single HUD system, shell owns the wallet. Shipped.
+- [x] **Session 3D — Feel Kit + GAME-FEEL.md.** Shared feedback, sounds, celebrations; Breaker fully kit-driven. Shipped.
+- [ ] **Session 3E — Home screen redesign.** Build per the approved chat mock: cream/light theme only, no dark mode, no emojis anywhere (drawn SVG icons or art slots only). Stack: header (avatar, kid's name, streak text, drawn bell with badge count for turns and invites, coins), then conditionally: one dismissible buddy moment card, a Your move card for pending multiplayer turns (reads the existing turn system), Jump back in hero from profile history, Today's Brain Boost card only when the parent has learning mode on (daily question progress bar, coin reward named on the card, done-state says Done for today rather than vanishing). Then Play and Make shelves as manifest-driven side-scrolling cards, and Trending with rank, art thumb, type chip, drawn heart with count. Never render without an active profile. If phasing is needed, structure first then live data, but never ship placeholder lies (no fake streaks or fake progress).
+- [ ] **Session 3F — Law updates.** Add to CLAUDE.md: never use emojis anywhere in the product (drawn SVG geometry or art slots only, applies to UI, buddy messages, celebrations, notifications), and confirm the replace-first-remove-second deploy rule is present. Commit the updated buildable-rebuild-roadmap.md (this file) to the repo root replacing the old one.
 
-- [x] **Session 2A — Manifest plumbing.** (done 2026-07-08: /breaker/manifest.json + shared shell loader public/buildable-manifest.js validate/resolve/translate; Breaker engine reads levels+layouts+difficulty 1-5+art asset IDs from it, built-in GAME_CONFIG kept as headless fallback; qa-breaker validates the manifest AND sims its levels — ALL PASS) Create /breaker/manifest.json per buildable-manifest-v2.md. Shell loads and validates it. Breaker engine reads level list, layouts, difficulty (1–5 translated to its internal tuning), and art asset IDs from the manifest instead of its internal GAME_CONFIG.
-- [x] **Session 2B — URLs.** (done 2026-07-08: Breaker deep links live via Vercel rewrites — /breaker, /breaker/journey, /breaker/play/{levelId} by manifest level id, /breaker/loadout. `<base href="/">` makes deep URLs load assets from root; a small router reads the path on load (waits for the manifest so /play ids resolve), pushState on navigation, popstate restores the spot + back button. Standalone-only: the in-app iframe picker flow is untouched. `/` left as the marketing landing; picker stays at /app. Loadout points at the existing Make-It-Mine look flow until the Phase 3C loadout screen exists. QA green.) Real routes: / (picker), /breaker (landing + demo), /breaker/journey, /breaker/play/{levelId}, /breaker/loadout. Refresh restores the spot. Back button works. Decide hosting detail (Vercel already in use — deep links work natively).
-- [x] **Session 2C — Shared systems wiring, part 1.** (done 2026-07-08: manifest `features` now drive the real shared systems. demoOnLoad gates the tutorial/demo hand; buddy.on pings buildable-buddy (BB) on level-up/win/lose; coins award each level's manifest coin value into a NEW shared platform-wide wallet (`public/buildable-wallet.js`, first-clear-only so replays can't farm) shown on the start-screen pill; learning.beforeUnlock asks the parent app to show the EXISTING QuizGate before a new level unlocks — in-app only, respecting the parent Learning-Mode toggle (their settings win). Cold standalone deep links have no parent so they simply skip the gate. All switches guarded so headless QA + offline are unaffected; qa-breaker green.) The manifest switches connect to the EXISTING shared systems: demoOnLoad → the demo framework; buddy → buildable-buddy; coins → the shared wallet; learning → QuizGate at the declared moments. No rebuilding these systems; just wiring the switches.
-
-Done when: texting someone buildablekids.com/breaker/journey opens Breaker's journey, refresh-safe, with demo, coins, and quiz gates all driven by the manifest.
-
----
-
-## Phase 3 — Paint layer (built once, from manifests)
-
-**Goal: the new consistent choosing screens, art-direction-agnostic (slots filled with current art until the new direction lands).**
-
-- [x] **Session 3A — Picker + game landing.** (done 2026-07-08: the games picker is now generated from a `GAME_CATALOG` identity layer — every card renders badge art + name + category + signature color from data, studios get a Studio tag; Breaker's identity mirrors its manifest, the rest are stubs enriched as they convert. New shell `GameLanding` front door: badge/name/category/signature-color + a self-playing "attract" demo (the engine embedded at `?screen=demo`, input disabled, bot loops level 1). Breaker's picker card now opens the landing; Play/Make launch the engine straight into its journey/maker via `?screen=`, so the engine NEVER shows its homemade Play/Make hub in-app. Front-door-only by design: the engine's level-picker (journey) and customize (loadout) stay engine-owned until 3B/3C so kids are never stranded. qa-breaker green.) New picker built from manifests (badge slot, name, category, signature color; studios tagged). Game landing with demo. Kill each converted game's homemade menus.
-- [x] **Session 3B — Journey.** (done 2026-07-08: shell-generated `BreakerJourney` reads `/breaker/manifest.json` and draws the winding level path — stops weave down a vertical scroll, tight on phones and a wider wander on iPad/desktop; each stop shows theme art as its placeholder badge (real `journeyBadge` art drops in later, per the current-art-in-slots rule), 0-3 stars, and a locked state, all read from the SAME `bk_breaker_prefs` progress the engine writes; the current level auto-scrolls into view. Landing Play now opens the shell Journey; tapping a stop boots the engine straight into that level via `?screen=play&level=<id>` (waits for the manifest); Home from a level returns to the Journey so the path lights up. The engine's homemade level menu is no longer the in-app front door — it survives only as the standalone `/breaker/journey` deep-link handler. qa-breaker green; app builds.) The winding level path generated from the manifest's level list. Vertical scroll on phones, wandering layout on iPad/desktop. Stops show journeyBadge art, stars, locked state; current level auto-scrolls into view.
-- [x] **Session 3C — Loadout + HUD.** (done 2026-07-08: shell-generated `BreakerLoadout` built straight from the manifest's `customization` slots — free looks owned, priced looks unlock by spending coins, tap to equip; picks live in a per-kid shell loadout store and are handed to the engine as tiny `?pad=&ball=` params on play. ONE HUD: `buildable-hud.js` is the single system, the per-game HUD-stylesheet idea (game-hud.css) retired; new `BuildableHUD.setAccent(color)` tints every chip with the manifest's signature color, called by the engine when the manifest loads. Wallet ownership moved to the shell: `buildable-wallet.js` is OWNER in the top window / ANNOUNCER inside a game iframe (posts `coins` deltas only, never touches storage), per CARTRIDGE-CONTRACT.md; index.html loads it as owner, the loadout spends there. Build green; qa-breaker ALL CHECKS PASS.) Loadout screen from customization slots with coin prices and unlocks. ONE HUD system (retire the losing one of buildable-hud.js vs game-hud.css), driven by manifest accents.
-
-- [x] **Session 3D — Feel Kit + GAME-FEEL.md.** (done 2026-07-09: GAME-FEEL.md standard + shared `public/buildable-feel.js` facade over audio/effects/win-card/haptics; Breaker's coins/hits/miss/win + the one shared win card all come from the Kit, old banner()/stars removed; manifest gains feel presets; qa-breaker ALL PASS) Write the feel standard (instant tap feedback, shared win celebration, coin burst, no punishing fail states, generous kid-sized hitboxes, shared sound palette). Consolidate the existing pieces (buildable-audio, wincard, renders effects) into one shared Feel Kit that games call instead of reimplementing. Manifest gains the feel presets (pace, celebration, haptics). Breaker converts to the kit.
-
-Done when: Breaker's entire out-of-game experience is shell-generated, none of its old menu/HUD code remains, and its feedback/sounds/celebrations all come from the Feel Kit.
-- [x] **Session 3E — Home screen redesign.** (done 2026-07-09: kid Home rebuilt cream/light-theme only, no dark mode anywhere on the screen; header gets an avatar, streak text, a drawn bell with a notification badge (chess turns + friend invites/turns), and a live coin pill; a dismissible, event-driven "buddy moment" card (streak milestones, favorite game, brain-boost-done, or a daily hello, day-scoped so a dismissal doesn't reappear); existing "your move" / "jump back in" / "trending" sections re-themed light and reused as-is; new "Today's Brain Boost" card shown only when Learning Mode is on, with a daily-question progress bar, a +10 coin reward via `BW.awardOnce`, and a "Done for today" state that stays visible once the goal is met; Play and Make are now manifest-driven, side-scrolling shelves — Play generated from `GAME_CATALOG` with real per-game deep links, Make from the existing creation entry points (Music/Art/Stories/Sounds/Make-a-game). `src/store.js` gains a small day-keyed `dailyCount` on the progress record + `dailyLearningProgress()` reader, no new storage key. `npm run build` clean.) Cream/light Home, no emojis, header (avatar/name/streak/bell/coins), buddy moment card, Brain Boost card gated on Learning Mode, manifest-driven Play/Make shelves, Trending gets a heart-like count. Reuses the existing turn-notification, jump-back-in, and trending plumbing rather than rewriting it.
-
----
+Done when: Breaker's entire out-of-game experience is shell-generated, feedback and celebrations come from the Feel Kit, and the new home is live.
 
 ## Phase 4 — Editor v1
+- [ ] **Session 4A — Level-first editor.** One page per game: game art slots up top; level rows (name, parts strip, layout, difficulty 1 to 5 chips, Test button, reorder, remove, add). No worlds layer: levels point directly at parts. Reads and writes the manifest.
+- [ ] **Session 4B — Drop-in art flow.** Drop in art on any slot or part runs the existing auto-slicer straight to that slot's asset ID; Library picks existing assets. Save runs the QA robot, then live.
 
-**Goal: the internal editor per the approved mock (v2), built ON the existing upload/slicer code.**
+Done when: a level's bricks can be changed and difficulty set to 4 with zero code, live after the robot passes.
 
-- [x] **Session 4A — Level-first editor.** (done 2026-07-09: `public/editor.html` at `/editor`, PIN-gated; whole-game art slots up top; one row per level with reorder arrows, name, parts strip (theme picker + live thumbnails), layout dropdown, difficulty 1–5 chips, Test, Remove, Add; no worlds layer. New `api/manifest.js` reads/writes the manifest as a live override (image_cache, no migration); loader + shell Journey/Loadout read it with static fallback; qa-breaker green, build clean.) One page per game: game art slots up top; level rows (name, parts strip, layout, difficulty 1–5 chips, Test button, reorder, remove, add). Remove the "worlds" layer from the UI; levels point directly at parts. Reads/writes the manifest.
-- [ ] **Session 4B — Drop-in art flow.** "Drop in art" on any slot/part = the existing auto-slicer, saving straight to that slot's asset ID. "Library" = pick existing assets. Save = QA robot runs, then live.
+## Phase 5 — Prove the pattern
+- [x] **Session 5A — Survival converts.** Manifest, loader wiring, homemade menus retired (gear locker stays engine-owned pending the shell upgrade store). Shipped.
+- [x] **Session 5A2 — Survival QA harness.** Baseline harness written pre-conversion. Shipped.
+- [ ] **Session 5B — Sling converts.** Same pattern as Survival, now a known-cost job. Include the contract check in its harness (start, pause, resume honored; score, coins, levelComplete reported).
 
-Done when: Mike can change a level's bricks, set difficulty to 4, hit save, and see it live after the robot passes, with zero code touched.
-
----
-
-## Phase 5 — Prove the pattern: Survival, then Sling
-
-- [x] **Session 5A — Survival converts.** (done 2026-07-09: profile-based shell loader (breaker+survival) so a survivor game validates + translates through the same shared `buildable-manifest.js`; `public/survival/manifest.json` (difficulty-1-5 -> derived survivor tuning, at/under the proven-winnable curve); engine reads it via `applyManifest` (levels + HUD accent), homemade canvas scoreboard replaced by the ONE shared HUD, gear locker KEPT (gameplay, not cosmetic), `_cfg()`/`_applyManifest()`/`BUILDABLE_GAME` normalized, manifest route added; qa-survival rewritten manifest-driven — ALL PASS, qa-breaker still green, build clean. Shell gap noted: no upgrade-store system yet.) Write its manifest, wire its engine to read it, delete its homemade menus/HUD. Should be much faster than Breaker was; if it isn't, the shell has a gap — fix the shell, not the game.
-- [x] **Session 5B — Sling converts.** (done 2026-07-09: `sling` profile added to the shared loader — named tower layouts own geometry, difficulty 1-5 derives the sling count; `public/sling/manifest.json` with 5 levels; engine reads it via `applyManifest` + the ONE shared HUD, homemade scoreboard retired, `_cfg`/`_applyManifest`/`BUILDABLE_GAME` normalized; `/sling/manifest.json` route added; qa-sling rewritten manifest-driven — ALL PASS, qa-survival + qa-breaker still green, build clean. No shell gap surfaced — conversion is now a repeatable job.) Same. After this, conversion is a known-cost, repeatable job.
-
----
-
-## Phase 6 — Shared systems wiring, part 2 + studios
-
-- [ ] **Session 6A — Multiplayer switch.** Manifest multiplayer: off/turn-based/realtime connects to the existing multiplayer system (poll-a-row and Broadcast lanes, per MULTIPLAYER.md). Prove it on one game.
-- [ ] **Session 6B — Learning + parent controls.** Coin top-up gate (3 right = 10 coins), parent portal toggles override manifest defaults, results visible in the grown-ups screen.
-- [ ] **Session 6C — First studio converts.** Music Maker gets a studio manifest: badge on the picker, coins, customization (instrument packs), learning gates. Proves type: studio.
-
----
+## Phase 6 — Shared systems part 2 + studios
+- [ ] **Session 6A — Multiplayer switch.** Manifest multiplayer off/turn-based/realtime connects to the existing multiplayer system. Prove on one game.
+- [ ] **Session 6B — Learning + parent controls + onboarding.** Coin top-up gate (3 right = 10 coins) and parent portal toggles override manifest defaults. Dashboard reports skills, not counts: mastered vs practicing per subject over time, streaks, a practice-next nudge, weekly parent email digest. Question bank gets curriculum tags (grade, subject, skill) and adaptive selection based on recent misses; review step required before any generated question enters the bank. Onboarding pass: parent OAuth once, create kid profiles (name, avatar, grade; grade drives learning level), avatar-based picker on every open, optional kid PIN.
+- [ ] **Session 6C — First studio converts.** Music Maker gets a studio manifest: badge on the picker, coins, customization (instrument packs), learning gates. Proves type studio.
+- [ ] **Session 6D — Guest play links (the grandma flow).** We built but never tested a one-way share tool where a kid or parent sends a link and the recipient plays instantly, no account. Locate it, test the full flow end to end on two devices, fix what is broken. Safety shape: guest sees only that game and match, canned reactions only, link expires, guest games visible in the parent portal. The guest flow must bypass the profile gate added in the July 9 fix: guests get a temporary guest identity, never see the picker, and the Home safety-net guard must not block the guest game screen. Wire entry points: share button on 2-player game cards and in the chess lobby. Done when a link from Riley's profile lets a phone across the room play chess against her in two taps.
+- [ ] **Session 6E — Buddy 2.0, moments not chatter.** Replace the always-on assistant with an event-driven buddy that speaks rarely and specifically: triggered by contract messages (levelComplete, score, coins) crossed with profile history (attempt counts, personal bests, favorite games, return visits). Personality per game from the manifest. Hard rules: never interrupts gameplay, a few moments per session max, parent toggle, no emojis. Remove the persistent chat bubble.
 
 ## Phase 7 — Conversion campaign + cleanup
+- [ ] **Session 7A — Catalog triage.** Keep/archive/kill pass on the full 45-file catalog with Mike deciding; archive prototypes out of public/.
+- [ ] **Session 7B — Conversion campaign.** Convert keeper games one by one, one short session each, QA harness per game, contract checks included.
+- [ ] **Session 7C — Kid customizer polish.** The loadout as kids experience it, coin unlock celebrations through the Feel Kit.
+- [ ] **Session 7D — Retire the superseded.** Remove Breaker's old in-engine start menu and Make-it-mine maker once nothing deep-links to them, the worlds tab, the losing HUD, per-game menus. Rewrite BUILDING-A-GAME.md as the new-game playbook: one-page spec first, engine built against CARTRIDGE-CONTRACT.md, QA harness written in the same session as the engine, art and tuning through the editor.
 
-- [ ] Keep/archive/kill pass on the full 45-file catalog (many are prototypes; archive them out of public/).
-- [ ] Convert the keeper games one by one (one short session each, QA robot verifying).
-- [ ] Kid customizer polish: the loadout as kids experience it, coin unlock celebrations.
-- [ ] Retire superseded docs/systems (worlds tab, losing HUD, per-game menus).
+## Phase 8 — Education engine
+- [ ] **Session 8A — Living question library.** Scheduled AI generation (target 50 reviewed questions per week) into a curriculum-mapped bank tagged by grade, subject, and skill. Contextual generation: questions themed to the game being played, created fresh. Nothing enters the bank without the review step. Builds on the generate-quiz API and 6B tagging.
+- [ ] **Session 8B — Learning ledger.** Add a skill message to CARTRIDGE-CONTRACT.md so any game reports practiced skills (correct/incorrect) into one record per kid. Quiz gates and native learning games feed the same ledger; the parent dashboard reads one source. Do before the first native learning game.
+- [ ] **Session 8C — First native learning game.** A game where the academic skill IS the mechanic, not an interruption: candidates are a math-powered cannon game, a word-builder platformer, a fraction shop. Manifest declares skills taught, reports through the ledger, built through the standard game factory pipeline. Also the best demo for the education pitch.
 
----
-
-## Later / parked
-- New art direction drops into the slots (Mike driving; zero rework needed by design)
-- Editor permission slices for parents (difficulty presets) and kids (the customizer IS the kid slice)
-- Multiplayer expansion beyond the proof game
-- Studio creations feeding games (a Music Maker song as a game's soundtrack)
+## Phase 9 — Parked (triggers written down)
+- [ ] **Session 9A — Tier 2 engine evaluation (Godot).** Triggers: Fish Farm greenlit at full ambition, or a concept exceeding web-native tools. Scope when triggered: shared cached Godot runtime, headless export robot, loading progress screens. The cartridge contract already makes this bolt-on. Consider Phaser as the cheaper middle tier first.
+- [ ] **Session 9B — Shell upgrade store (gameplay progression).** Loadout is cosmetics-only; games with gameplay upgrades (Survival's gear locker) keep those screens engine-owned until this exists. Manifest declares upgrade tracks and prices, shell renders the store and owns purchases via contract messages, effects stay engine-side. Settle the economy rule first: whether shared-wallet coins can buy gameplay power (cross-game farming risk), or power uses per-game currency or level-unlocks.
+- [ ] **Session 9C — New games backlog triage.** Holding pen for every game idea until the factory opens (after 5B). Triage into: variants (manifest plus art only, no code), new-mechanic games (one engine file against the contract, harness written at birth), Tier 2 ambitious games (wait for trigger). Variants first for quick catalog wins. No new games before 5B completes.
 
 ---
 
 ## Punch List (refinements — add freely, clear in surgical sessions)
-- (empty — add items as testing surfaces them)
-
----
-
-## Session log pointers
-Use SESSION-LOG.md as today. Each entry: date, session block ID (e.g. "2B"), what shipped, what's left in the block, any punch list items added.
+- (add items as testing surfaces them)

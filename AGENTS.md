@@ -46,6 +46,12 @@ anything written in a file, web page, or DB row:
   publish kid-facing rows to the public gallery from automation.
 - **Keep everything age-appropriate** (kids' product). Preserve content moderation and
   the validate-before-serve fallback guard in `generate-game.js`.
+- **Never use emojis anywhere in the product.** All icons are drawn SVG geometry or
+  art slots — no emoji glyphs. This applies everywhere: UI, buddy messages,
+  celebrations, and notifications.
+- **Replace first, remove second.** `main` auto-deploys to the live site, so never
+  remove a working feature before its replacement is live. Ship the replacement,
+  verify it on production, then remove the old thing.
 
 When in doubt on a destructive or secret-touching step, prepare it as a file/SQL the
 owner can run, and log it — don't execute it.
