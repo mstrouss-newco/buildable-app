@@ -358,6 +358,10 @@
       "dest": "/buildable-renders.js"
     },
     {
+      "src": "/buildable-manifest.js",
+      "dest": "/buildable-manifest.js"
+    },
+    {
       "src": "/buildable-worlds.js",
       "dest": "/buildable-worlds.js"
     },
