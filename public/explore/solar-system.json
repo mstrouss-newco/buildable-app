@@ -4,7 +4,7 @@
   "template": "orbit-explorer",
   "topic": "space",
   "ageBand": "5-10",
-  "status": "approved",
+  "status": "in-review",
   "skills": [
     "space-facts",
     "reading"
@@ -21,6 +21,12 @@
     "size": 3.4,
     "colorHex": "#FFC542",
     "fact": "The Sun is a star, a giant ball of super hot glowing gas. It is so big that more than one million Earths could fit inside it!",
+    "facts": [
+      "The Sun is a star, a giant ball of super hot glowing gas. It is so big that more than one million Earths could fit inside it!",
+      "The Sun's light is so fast, but it still takes about 8 minutes to reach us. So the sunshine you feel left the Sun 8 minutes ago!",
+      "Every planet, including Earth, travels in a big loop around the Sun. The Sun's strong pull is what keeps us all from floating away.",
+      "The Sun is middle-aged for a star, about 4.6 billion years old, and it has enough fuel to keep shining for billions more years."
+    ],
     "stats": [
       {
         "label": "How hot",
@@ -50,6 +56,12 @@
       "years": 9,
       "colorHex": "#B8A99A",
       "fact": "Mercury is the smallest planet and the closest to the Sun. A whole year on Mercury takes only 88 days, so you would have a birthday every three months!",
+      "facts": [
+        "Mercury is the smallest planet and the closest to the Sun. A whole year on Mercury takes only 88 days, so you would have a birthday every three months!",
+        "Even though Mercury is closest to the Sun, it is not the hottest planet. At night it turns freezing cold because it has almost no air to hold in the heat.",
+        "Mercury is covered in craters, a lot like our Moon, from space rocks that bumped into it long, long ago.",
+        "A day on Mercury is super slow. The Sun takes so long to rise and set that one Mercury day lasts about 59 Earth days!"
+      ],
       "stats": [
         {
           "label": "A year lasts",
@@ -78,6 +90,12 @@
       "years": 14,
       "colorHex": "#EFC27B",
       "fact": "Venus is the hottest planet, even hotter than Mercury, because its thick clouds trap heat like a giant blanket. It spins backwards compared to Earth!",
+      "facts": [
+        "Venus is the hottest planet, even hotter than Mercury, because its thick clouds trap heat like a giant blanket. It spins backwards compared to Earth!",
+        "Venus is almost the same size as Earth, so it is sometimes called Earth's twin, but it is far too hot for anyone to live there.",
+        "On Venus the Sun rises in the west and sets in the east, the opposite of here, because Venus spins the other way around.",
+        "Venus is the brightest planet in our sky. People sometimes call it the Morning Star or the Evening Star, even though it is really a planet."
+      ],
       "stats": [
         {
           "label": "How hot",
@@ -106,6 +124,12 @@
       "years": 20,
       "colorHex": "#3E8ED6",
       "fact": "Earth is our home, and the only place we know of with living things. It looks like a beautiful blue marble from space because most of it is covered in ocean.",
+      "facts": [
+        "Earth is our home, and the only place we know of with living things. It looks like a beautiful blue marble from space because most of it is covered in ocean.",
+        "Earth sits at just the right distance from the Sun, not too hot and not too cold, so it can have liquid water and air we can breathe.",
+        "Our planet is always spinning like a top. That spin gives us day when we face the Sun and night when we turn away.",
+        "Earth has one Moon and a blanket of air around it that keeps us warm and gives us the sky, the wind, and the clouds."
+      ],
       "stats": [
         {
           "label": "Covered in water",
@@ -134,6 +158,12 @@
       "years": 21,
       "colorHex": "#C7C2B8",
       "fact": "The Moon is Earth's closest neighbor in space and the only other world people have ever walked on. It has no air at all, and its gray, dusty ground is covered in craters from rocks that crashed into it long ago.",
+      "facts": [
+        "The Moon is Earth's closest neighbor in space and the only other world people have ever walked on. It has no air at all, and its gray, dusty ground is covered in craters from rocks that crashed into it long ago.",
+        "The Moon does not make its own light. It shines because it bounces the Sun's light back to us, like a giant mirror in the sky.",
+        "The Moon seems to change shape through the month, from a thin sliver to a full circle. Those shapes are called phases, and they come from how the sunlight hits it.",
+        "The Moon's gentle pull tugs on Earth's oceans and helps make the tides, the slow way the sea rises and falls at the beach."
+      ],
       "stats": [
         {
           "label": "How far away",
@@ -161,6 +191,12 @@
       "years": 28,
       "colorHex": "#E2704A",
       "fact": "Mars is called the Red Planet because its ground is covered in rusty red dust. It has the biggest volcano in the whole solar system, three times taller than Mount Everest!",
+      "facts": [
+        "Mars is called the Red Planet because its ground is covered in rusty red dust. It has the biggest volcano in the whole solar system, three times taller than Mount Everest!",
+        "Mars has two tiny, potato-shaped moons named Phobos and Deimos, both much smaller than our own Moon.",
+        "Robots called rovers are driving around on Mars right now, taking pictures and looking for signs that water once flowed there.",
+        "Mars has seasons like Earth, and giant dust storms that can sometimes cover the entire planet for weeks."
+      ],
       "stats": [
         {
           "label": "Biggest volcano",
@@ -189,6 +225,12 @@
       "years": 44,
       "colorHex": "#D9A566",
       "fact": "Jupiter is the biggest planet, a giant ball of swirling gas. Its Great Red Spot is a storm bigger than the whole Earth that has been blowing for hundreds of years!",
+      "facts": [
+        "Jupiter is the biggest planet, a giant ball of swirling gas. Its Great Red Spot is a storm bigger than the whole Earth that has been blowing for hundreds of years!",
+        "Jupiter is so enormous that all of the other planets could fit inside it with room to spare.",
+        "Jupiter spins faster than any other planet. One whole day there is less than 10 hours long!",
+        "Jupiter has dozens and dozens of moons. Its four biggest were the first moons ever seen circling another planet through a telescope."
+      ],
       "stats": [
         {
           "label": "Fun size fact",
@@ -218,6 +260,12 @@
       "colorHex": "#EAD298",
       "ring": true,
       "fact": "Saturn is famous for its beautiful rings, which are made of billions of pieces of ice and rock. Saturn is so light that it could float in a giant bathtub!",
+      "facts": [
+        "Saturn is famous for its beautiful rings, which are made of billions of pieces of ice and rock. Saturn is so light that it could float in a giant bathtub!",
+        "Saturn's rings are very wide but very thin. From far away they would look like a giant flat pancake wrapped around the planet.",
+        "Saturn is a giant ball of gas with no solid ground to stand on, a lot like its big neighbor Jupiter.",
+        "Saturn has more than 100 moons. Its biggest moon, Titan, is even larger than the planet Mercury!"
+      ],
       "stats": [
         {
           "label": "Rings made of",
@@ -247,6 +295,12 @@
       "years": 80,
       "colorHex": "#4C6FE0",
       "fact": "Neptune is the farthest planet, a deep blue world with the fastest winds anywhere, over 1,000 miles per hour. One year there lasts 165 Earth years!",
+      "facts": [
+        "Neptune is the farthest planet, a deep blue world with the fastest winds anywhere, over 1,000 miles per hour. One year there lasts 165 Earth years!",
+        "Neptune is so far from the Sun that it is very cold and dark, and from there the Sun looks like just a bright star.",
+        "Neptune's pretty blue color comes from a gas called methane high up in its icy clouds.",
+        "Neptune is so far away that we cannot see it without a telescope. It was the very first planet found using math, before anyone spotted it in the sky."
+      ],
       "stats": [
         {
           "label": "Wind speed",
