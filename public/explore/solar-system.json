@@ -126,6 +126,33 @@
       "factAudio": "solar-system-earth"
     },
     {
+      "id": "moon",
+      "name": "The Moon",
+      "art": "explore/solar-system/textures/moon",
+      "size": 0.25,
+      "orbit": 13.2,
+      "years": 21,
+      "colorHex": "#C7C2B8",
+      "fact": "The Moon is Earth's closest neighbor in space and the only other world people have ever walked on. It has no air at all, and its gray, dusty ground is covered in craters from rocks that crashed into it long ago.",
+      "stats": [
+        {
+          "label": "How far away",
+          "value": "About 239,000 miles"
+        },
+        {
+          "label": "People who walked there",
+          "value": "12 astronauts"
+        }
+      ],
+      "asks": [
+        "Why does the Moon change shape?",
+        "Has anyone walked on the Moon?"
+      ],
+      "quiz": [
+        "space-moon"
+      ]
+    },
+    {
       "id": "mars",
       "name": "Mars",
       "art": "explore/solar-system/textures/mars",
@@ -208,7 +235,8 @@
       "quiz": [
         "space-saturn"
       ],
-      "factAudio": "solar-system-saturn"
+      "factAudio": "solar-system-saturn",
+      "ringArt": "explore/solar-system/textures/saturn_ring"
     },
     {
       "id": "neptune",

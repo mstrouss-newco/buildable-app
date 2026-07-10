@@ -250,18 +250,17 @@ function initScene(data) {
     const m = new THREE.Mesh(geo, mat);
     m.userData.id = p.id;
     loadArtTexture(p, mat); // art-slot rule: instant color, texture swaps in when ready — never blocks
-    if (isCenter) {
-      const glow = new THREE.Mesh(new THREE.SphereGeometry((p.size || 1) * 1.25, 32, 24),
-        new THREE.MeshBasicMaterial({ color: parseInt(hex), transparent: true, opacity: .18 }));
-      scene.add(glow);
-    } else {
+    if (!isCenter) {
       const pts = [];
       for (let a = 0; a <= 64; a++) { const t = a / 64 * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(t) * p.orbit, 0, Math.sin(t) * p.orbit)); }
       scene.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: .16 })));
       if (p.ring) {
-        const rg = new THREE.RingGeometry((p.size || 1) * 1.4, (p.size || 1) * 2.2, 48);
-        const rm = new THREE.MeshBasicMaterial({ color: parseInt(hex), side: THREE.DoubleSide, transparent: true, opacity: .55 });
+        const innerR = (p.size || 1) * 1.35, outerR = (p.size || 1) * 2.3;
+        const rg = new THREE.RingGeometry(innerR, outerR, 64, 1);
+        mapRingUV(rg, innerR, outerR);
+        const rm = new THREE.MeshBasicMaterial({ color: parseInt(hex), side: THREE.DoubleSide, transparent: true, opacity: .85 });
         const ring = new THREE.Mesh(rg, rm); ring.rotation.x = Math.PI / 2.25; m.add(ring);
+        if (p.ringArt) loadRingTexture(p, rm); // art-slot rule: instant colorHex ring, real texture swaps in when ready
       }
       p.__angle = Math.random() * Math.PI * 2;
     }
@@ -316,6 +315,46 @@ function loadArtTexture(item, mat) {
     // instant-fallback color already showing, nothing more to do
   };
   img.src = explorerArtUrl(item, "webp");
+}
+
+// Saturn's ring geometry (a flat disc) needs UV coordinates that run radially
+// from the inner edge to the outer edge, because the ring texture is a thin
+// strip (inner-to-outer band), not a square planet map. RingGeometry's default
+// UVs don't match that, so remap: U = normalized radial distance, V constant.
+function mapRingUV(geometry, innerRadius, outerRadius) {
+  const pos = geometry.attributes.position;
+  const uv = geometry.attributes.uv;
+  if (!pos || typeof pos.count !== "number") return; // defensive: no real geometry (e.g. WebGL unavailable)
+  const v3 = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v3.fromBufferAttribute(pos, i);
+    const u = Math.min(1, Math.max(0, (v3.length() - innerRadius) / (outerRadius - innerRadius)));
+    uv.setXY(i, u, 1);
+  }
+}
+
+// Real ring texture (transparent PNG-derived webp/jpg), same art-slot rule as
+// loadArtTexture: the colorHex ring already shows instantly, the real texture
+// swaps in once it loads, and a load failure silently keeps the color ring.
+function loadRingTexture(item, mat) {
+  if (!item.ringArt) return;
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  const url = (ext) => `/${item.ringArt}.${ext}`;
+  img.onload = () => {
+    try {
+      const tex = new THREE.Texture(img);
+      tex.needsUpdate = true;
+      mat.map = tex;
+      mat.color.set(0xffffff);
+      mat.needsUpdate = true;
+    } catch (e) {}
+  };
+  img.onerror = () => {
+    if (img.src.endsWith(".webp")) { img.src = url("jpg"); return; }
+    // instant colorHex ring fallback already showing, nothing more to do
+  };
+  img.src = url("webp");
 }
 
 function wireInteraction(canvas) {

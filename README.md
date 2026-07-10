@@ -6,6 +6,23 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 8K: Saturn's rings, the Moon, sun glow removed (July 9 2026)
+
+Saturn now shows a real ring texture (`2k_saturn_ring_alpha.png` resized to 1024x62,
+`saturn_ring.webp`/`.jpg`) mapped radially onto its existing RingGeometry disc via a new
+`mapRingUV()` helper, swapped in over the instant colorHex ring the same art-slot way every
+other texture loads. Added the Moon as its own small body (`size: 0.25`, `orbit: 13.2`,
+just outside Earth's `orbit: 12`) with real kid-facing facts and its own quiz id
+(`space-moon`) and texture (`2k_moon.jpg` resized to 1024x512) — this template has no
+parent-orbits-planet relationship (every body orbits the sun directly), so a literal
+moon-orbits-Earth link would need an architecture change; this is the simplest placement
+that still looks and feels right. Removed the persistent glow sphere that was drawn only
+around the Sun (`if (isCenter)` in `initScene()`); the separate selection `halo` that
+follows whichever body is tapped is untouched, since it's a shared UI feature for every
+body, not a sun-only effect. Uranus, the other 7 planet textures, and the starfield backdrop
+are out of scope and untouched. QA: `qa-explore.mjs` ALL CHECKS PASS. See SESSION-LOG.md
+Session 8K for the full writeup. main 5485441
+
 ## Session 8J: solar-system exhibit gets real planet textures (July 9 2026)
 
 Kidspedia's solar-system exhibit now shows real NASA-based photo textures (Solar System

@@ -1,5 +1,44 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09: Session 8K - Saturn's rings, the Moon, sun glow removed
+
+Three small fixes to the Kidspedia solar-system exhibit, all data + `orbit-explorer.html`
+changes only (no template/architecture rework).
+
+**Rings.** Source `2k_saturn_ring_alpha.png` (2048x125, transparent, Solar System Scope /
+NASA data) resized to 1024x62 and saved as `saturn_ring.webp` (2.7KB) + `.jpg` fallback
+(6.2KB, alpha flattened to black since JPG has no alpha channel). Saturn's `ring: true`
+already drew a flat colorHex RingGeometry disc; added `ringArt` to its JSON entry and a
+`loadRingTexture()` art-slot loader (same instant-color-then-swap pattern as
+`loadArtTexture`). RingGeometry's default UVs don't fit a radial ring texture, so added
+`mapRingUV()` to remap U to normalized radial distance (inner to outer edge) before the
+texture is applied.
+
+**The Moon.** Source `2k_moon.jpg` (2048x1024) resized to 1024x512, same webp+jpg pattern
+as the other 8 textures (128KB webp / 153KB jpg). This template has no parent-orbits-planet
+relationship (every body's `orbit` is a radius around the sun at (0,0,0) — there is no
+nesting), so a literal moon-orbits-Earth link would need an architecture change, out of
+scope for this session. Simplest reasonable placement instead: Moon is its own small body
+(`size: 0.25`) with an `orbit` (13.2) just outside Earth's (12) and a close `years` (21 vs
+20), so it visually rides near Earth's path without literally being tied to it. Fully
+interactable like every other body (tappable, own fact card, own quiz id `space-moon`), real
+kid-facing facts (distance, Apollo astronaut count, no air, craters).
+
+**Sun glow removed.** `initScene()` had two separate effects: a persistent glow sphere
+drawn only `if (isCenter)` around the Sun (opacity .18, never removed), and a separate
+generic `halo` mesh that follows whichever body is currently *selected* (used for every
+body, not sun-specific). Removed only the former; the selection halo is untouched since
+it's a shared UI feature, not a sun effect.
+
+Out of scope, left untouched: Uranus, the other 7 planet textures, the starfield backdrop.
+
+**QA.** `node qa-explore.mjs .` ALL CHECKS PASS (now 9 items: Sun + 8 bodies). Live iPad
+viewport check: rings visible on Saturn, Moon visible and tappable with its own card, Sun
+renders with no glow/halo around it, drag/pinch/tap all still work, other 7 planets still
+show their textures.
+
+main 5485441
+
 ## 2026-07-09: Session 8J - solar-system exhibit gets real planet textures
 
 Kidspedia's solar-system exhibit (`public/explore/solar-system.json`, `orbit-explorer.html`)
@@ -2642,6 +2681,45 @@ element is drawn with shapes, so nothing new to generate). New level recipe knob
   No new env vars or SQL — reuses OPENAI_API_KEY + image_cache already in place.
 
 # Buildable Kids — Session Log
+
+## 2026-07-09: Session 8K - Saturn's rings, the Moon, sun glow removed
+
+Three small fixes to the Kidspedia solar-system exhibit, all data + `orbit-explorer.html`
+changes only (no template/architecture rework).
+
+**Rings.** Source `2k_saturn_ring_alpha.png` (2048x125, transparent, Solar System Scope /
+NASA data) resized to 1024x62 and saved as `saturn_ring.webp` (2.7KB) + `.jpg` fallback
+(6.2KB, alpha flattened to black since JPG has no alpha channel). Saturn's `ring: true`
+already drew a flat colorHex RingGeometry disc; added `ringArt` to its JSON entry and a
+`loadRingTexture()` art-slot loader (same instant-color-then-swap pattern as
+`loadArtTexture`). RingGeometry's default UVs don't fit a radial ring texture, so added
+`mapRingUV()` to remap U to normalized radial distance (inner to outer edge) before the
+texture is applied.
+
+**The Moon.** Source `2k_moon.jpg` (2048x1024) resized to 1024x512, same webp+jpg pattern
+as the other 8 textures (128KB webp / 153KB jpg). This template has no parent-orbits-planet
+relationship (every body's `orbit` is a radius around the sun at (0,0,0) — there is no
+nesting), so a literal moon-orbits-Earth link would need an architecture change, out of
+scope for this session. Simplest reasonable placement instead: Moon is its own small body
+(`size: 0.25`) with an `orbit` (13.2) just outside Earth's (12) and a close `years` (21 vs
+20), so it visually rides near Earth's path without literally being tied to it. Fully
+interactable like every other body (tappable, own fact card, own quiz id `space-moon`), real
+kid-facing facts (distance, Apollo astronaut count, no air, craters).
+
+**Sun glow removed.** `initScene()` had two separate effects: a persistent glow sphere
+drawn only `if (isCenter)` around the Sun (opacity .18, never removed), and a separate
+generic `halo` mesh that follows whichever body is currently *selected* (used for every
+body, not sun-specific). Removed only the former; the selection halo is untouched since
+it's a shared UI feature, not a sun effect.
+
+Out of scope, left untouched: Uranus, the other 7 planet textures, the starfield backdrop.
+
+**QA.** `node qa-explore.mjs .` ALL CHECKS PASS (now 9 items: Sun + 8 bodies). Live iPad
+viewport check: rings visible on Saturn, Moon visible and tappable with its own card, Sun
+renders with no glow/halo around it, drag/pinch/tap all still work, other 7 planets still
+show their textures.
+
+main 5485441
 
 
 ## Account creation fix — email confirmation (Option B)
