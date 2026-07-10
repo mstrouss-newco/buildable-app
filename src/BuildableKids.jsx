@@ -618,11 +618,15 @@ function TopUpGate({ onClose }) {
 }
 
 // ============================================================================
-//  BreakerLoadout (Session 3C) — the SHELL-generated customization screen, built
-//  straight from the manifest's `customization` slots. Free looks are owned; priced
-//  looks unlock by spending coins from the shell-owned wallet; a tap equips. The
-//  kid's picks live in the shell loadout store, and are handed to the engine as
-//  tiny equip params when a level launches. Generic enough for any converted game.
+//  BreakerLoadout (Session 3C; Feel Kit polish Session 7C) — the SHELL-generated
+//  customization screen, built straight from the manifest's `customization` slots.
+//  Free looks are owned; priced looks unlock by spending coins from the shell-owned
+//  wallet; a tap equips. The kid's picks live in the shell loadout store, and are
+//  handed to the engine as tiny equip params when a level launches. Generic enough
+//  for any converted game (Breaker + Music Maker today). Session 7C wired the
+//  shared Feel Kit in: tap feedback on every button, a gentle miss nudge when
+//  short on coins, and a real celebration (particles + sound + haptic + a glow on
+//  the tile) when a look unlocks — see GAME-FEEL.md.
 // ============================================================================
 function BreakerLoadout({ game, onBack, onPlay }) {
   const accent = (game && game.color) || "#FF6B6B";
@@ -632,6 +636,10 @@ function BreakerLoadout({ game, onBack, onPlay }) {
   const [store, setStore] = useState({ owned: {}, equipped: {} });
   const [flash, setFlash] = useState("");
   const [topUp, setTopUp] = useState(null); // {slotName,i,price} when offering a practice top-up
+  const [justUnlocked, setJustUnlocked] = useState(null); // "slot|i" — brief glow on the tile just bought
+  const fxCanvasRef = useRef(null);
+  const fxRef = useRef(null);
+  const fxRafRef = useRef(null);
 
   useEffect(() => {
     let live = true;
@@ -644,34 +652,82 @@ function BreakerLoadout({ game, onBack, onPlay }) {
     return () => { live = false; window.removeEventListener("bk-wallet", onWallet); };
   }, [gameId]);
 
+  // Session 7C: wire the shared Feel Kit into the loadout — the SAME sounds,
+  // haptics and celebration presets every game uses (GAME-FEEL.md), so unlocking
+  // a look here feels like the rest of Buildable, not a bare menu. Every call is
+  // a safe no-op if the Kit isn't loaded (buildable-feel.js degrades gracefully).
+  useEffect(() => {
+    if (!manifest) return;
+    try {
+      const Feel = window.BuildableFeel;
+      if (!Feel) return;
+      Feel.configure({ accent, feel: manifest.feel, sfxBase: "/api/sfx?s=" });
+      if (!fxRef.current) fxRef.current = Feel.makeFx();
+      Feel.setFx(fxRef.current);
+    } catch (e) {}
+  }, [manifest, accent]);
+  useEffect(() => () => { if (fxRafRef.current) cancelAnimationFrame(fxRafRef.current); }, []);
+
+  function feelTap() { try { window.BuildableFeel && window.BuildableFeel.tap(); } catch (e) {} }
+  function feelMiss() { try { window.BuildableFeel && window.BuildableFeel.miss(); } catch (e) {} }
+  // The loadout's one celebration moment: a kid spent coins and got a new look.
+  // Fires from the tile itself — this is the Kit's documented "powerup grab" case
+  // (GAME-FEEL.md), not a bespoke effect, scaled by the manifest's celebration
+  // preset. The canvas overlay runs for a bounded time only, never in the background.
+  function celebrateUnlock(evt, key) {
+    setJustUnlocked(key);
+    setTimeout(() => setJustUnlocked((k) => (k === key ? null : k)), 900);
+    try {
+      const Feel = window.BuildableFeel; const c = fxCanvasRef.current;
+      if (!Feel || !c || !evt || !evt.currentTarget) return;
+      const r = evt.currentTarget.getBoundingClientRect();
+      c.width = window.innerWidth; c.height = window.innerHeight;
+      Feel.explode(r.left + r.width / 2, r.top + r.height / 2, accent, { sound: "powerup", pop: "Unlocked!", popCol: "#fff" });
+      const ctx = c.getContext("2d");
+      let last = performance.now(); const end = last + 1100;
+      if (fxRafRef.current) cancelAnimationFrame(fxRafRef.current);
+      const tick = (ts) => {
+        const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
+        ctx.clearRect(0, 0, c.width, c.height);
+        Feel.update(fxRef.current, dt); Feel.draw(ctx, fxRef.current, { W: c.width, H: c.height });
+        if (ts < end) fxRafRef.current = requestAnimationFrame(tick); else ctx.clearRect(0, 0, c.width, c.height);
+      };
+      fxRafRef.current = requestAnimationFrame(tick);
+    } catch (e) {}
+  }
+
   const slots = (manifest && Array.isArray(manifest.customization)) ? manifest.customization : [];
   function equip(slotName, i) {
+    feelTap();
     setStore((prev) => { const next = { owned: { ...prev.owned }, equipped: { ...prev.equipped, [slotName]: i } }; writeLoadout(gameId, next); return next; });
   }
-  function buy(slotName, i, price) {
+  function buy(slotName, i, price, evt) {
     // Session 6B: short on coins? If the parent's "Earn coins by practicing"
     // toggle is on, offer a practice top-up instead of a dead-end message.
     if (coins < (price || 0)) {
       let eff = null; try { eff = effectiveLearning({}); } catch (e) {}
-      if (eff && eff.enabled && eff.coinTopUp) { setTopUp({ slotName, i, price }); return; }
-      setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return;
+      if (eff && eff.enabled && eff.coinTopUp) { feelTap(); setTopUp({ slotName, i, price }); return; }
+      feelMiss(); setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return;
     }
     let ok = false;
     try { ok = window.BuildableWallet ? window.BuildableWallet.spend(price) : false; } catch (e) { ok = false; }
-    if (!ok) { setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return; }
+    if (!ok) { feelMiss(); setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return; }
     setStore((prev) => {
       const owned = { ...prev.owned }; const list = (owned[slotName] || []).slice(); if (!list.includes(i)) list.push(i);
       owned[slotName] = list.sort((a, b) => a - b);
       const next = { owned, equipped: { ...prev.equipped, [slotName]: i } }; writeLoadout(gameId, next); return next;
     });
     setCoins(walletBalance());
+    celebrateUnlock(evt, slotName + "|" + i);
   }
 
   return (
     <div style={{ ...styles.container, padding: "18px 14px 44px", justifyContent: "flex-start" }}>
+      <style>{"@keyframes bkUnlockPop{0%{transform:scale(1)}45%{transform:scale(1.08)}100%{transform:scale(1)}}@keyframes bkUnlockGlow{0%{box-shadow:0 0 0 0 rgba(255,217,138,0)}40%{box-shadow:0 0 0 4px rgba(255,217,138,.9),0 0 26px rgba(255,217,138,.75)}100%{box-shadow:0 0 0 2px rgba(255,217,138,.5)}}"}</style>
+      <canvas ref={fxCanvasRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 9990, pointerEvents: "none" }} />
       {topUp && <TopUpGate onClose={() => { setTopUp(null); setCoins(walletBalance()); }} />}
       <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center", marginBottom: 12, maxWidth: 680 }}>
-        <button onClick={onBack} style={styles.backButton}>Back</button>
+        <button onClick={() => { feelTap(); onBack(); }} style={styles.backButton}>Back</button>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 999, background: "rgba(245,217,118,.16)", border: "1px solid rgba(245,217,118,.4)", fontWeight: 900, color: "#FFE08A" }}>
           <CoinGlyph size={18} /> {coins}
         </div>
@@ -681,10 +737,10 @@ function BreakerLoadout({ game, onBack, onPlay }) {
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Make it mine</div>
         <h1 style={{ ...styles.logo, fontSize: "clamp(32px,7vw,52px)", margin: "2px 0 4px" }}>Loadout</h1>
         <p style={{ ...styles.tagline, fontSize: 15, marginBottom: 16 }}>Spend coins to unlock looks, then tap to equip.</p>
-        {flash && <div style={{ margin: "0 auto 14px", maxWidth: 380, background: "rgba(255,120,120,.14)", border: "1px solid rgba(255,120,120,.4)", color: "#ffc6c6", borderRadius: 12, padding: "9px 14px", fontWeight: 800 }}>{flash}</div>}
+        {flash && <div style={{ margin: "0 auto 14px", maxWidth: 380, background: "rgba(255,176,77,.16)", border: "1px solid rgba(255,176,77,.45)", color: "#FFE0B0", borderRadius: 12, padding: "9px 14px", fontWeight: 800 }}>{flash}</div>}
       </div>
 
-      {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>Loading your loadout...</div>}
+      {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>Getting your looks ready...</div>}
 
       <div style={{ width: "100%", maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
         {slots.map((slot) => {
@@ -699,11 +755,14 @@ function BreakerLoadout({ game, onBack, onPlay }) {
                   const isOwned = owned.has(i) || (o.price || 0) === 0;
                   const isEq = eq === i;
                   const canAfford = coins >= (o.price || 0);
+                  const key = name + "|" + i;
+                  const glowing = justUnlocked === key;
                   return (
                     <div key={i} style={{
                       borderRadius: 16, padding: "12px 12px 10px",
                       background: isEq ? `linear-gradient(160deg, ${accent}44, ${accent}18)` : "rgba(255,255,255,0.05)",
                       border: isEq ? `2px solid ${accent}` : "1px solid rgba(255,255,255,0.14)",
+                      animation: glowing ? "bkUnlockPop .5s ease-out, bkUnlockGlow .9s ease-out" : "none",
                     }}>
                       <div style={{ height: 54, borderRadius: 12, marginBottom: 9, background: `linear-gradient(160deg, ${accent}, ${accent}55)`, opacity: isOwned ? 1 : 0.4, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 13, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{o.name}</div>
                       {isOwned ? (
@@ -713,7 +772,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
                           background: isEq ? `linear-gradient(160deg,#fff,${accent})` : "rgba(255,255,255,0.1)",
                         }}>{isEq ? "Equipped" : "Equip"}</button>
                       ) : (
-                        <button onClick={() => buy(name, i, o.price || 0)} disabled={!canAfford} style={{
+                        <button onClick={(e) => buy(name, i, o.price || 0, e)} disabled={!canAfford} style={{
                           width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: canAfford ? "pointer" : "not-allowed",
                           border: "none", color: canAfford ? "#12102a" : "#9a97b5",
                           background: canAfford ? "linear-gradient(160deg,#FFE08A,#FFD24A)" : "rgba(255,255,255,0.06)",
@@ -729,7 +788,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
         })}
       </div>
 
-      {onPlay && manifest && <button onClick={onPlay} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 8px 0 ${accent}88, 0 14px 28px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play with this look</button>}
+      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 8px 0 ${accent}88, 0 14px 28px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play with this look</button>}
     </div>
   );
 }
