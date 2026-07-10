@@ -30,6 +30,32 @@ message drives the freeze/continue contract for gameplay.
 (no disk space for install); JSX change mirrors the adjacent working handler and the Vercel
 branch preview build was used to confirm the app compiles. On-device iPad Safari lock-screen
 test to be confirmed by the owner.
+## 2026-07-09 — Session 7B: Typing converts (light emoji fix + manifest)
+
+Resolved the Typing flag. Mike chose the LIGHT FIX (Typing already has real AI art, so no full
+redraw was needed).
+
+**Light emoji fix.** Typing showed ~40 emoji glyphs: hero-select card faces (persistent) and a
+per-foe/boss emoji shown as an instant placeholder before the real `/api/images?kind=type` art
+loads. Replaced the hero faces with a small drawn friendly-face SVG (tinted per hero), swapped
+the emoji placeholder in `setSprite` for a neutral drawn dot (cleared the moment the real art
+loads), drew the fort as an SVG castle (it was a lone emoji, never replaced by art), and stripped
+the now-dead emoji data fields. The file is **100% emoji-free** and the real AI art stays the
+primary visual (verified in QA).
+
+**Conversion.** New `public/typing/manifest.json` (croc stage profile): its six worlds (Space,
+Jungle, Sea, Candy Land, Ice World, Volcano) are the levels; category `Classic`, single-player.
+Engine reads the world names from the manifest for the level select with the built-in names as a
+FULL fallback. Registered `typing` on the `croc` profile; added its vercel route. New
+`qa-typing.mjs`: asserts the file is emoji-free, the drawn replacements are present, the real art
+is still primary, the manifest validates + maps to the six worlds, the engine reads it with a
+fallback, and the win signal is wired. ALL CHECKS PASSED. Regression across all 15 manifest QAs
+green.
+
+**Remaining in 7B (Mike's order):** Tumble Blocks (Tetris rename + mechanical twist), Tennis,
+Castle Guard, Bubble. This finishes the Classic-category conversions.
+
+
 ## 2026-07-09: Session 8K - Saturn's rings, the Moon, sun glow removed
 
 Three small fixes to the Kidspedia solar-system exhibit, all data + `orbit-explorer.html`

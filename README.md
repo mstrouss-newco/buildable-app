@@ -136,6 +136,15 @@ play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/w
 untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
 difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
 
+## Session 7B: Typing converts — light emoji fix + manifest (July 9 2026)
+
+Mike chose the light fix (Typing already has real AI art). Replaced hero-card faces with drawn
+face SVGs, swapped the emoji instant-placeholder for a neutral drawn dot, drew the fort as an SVG
+castle, and stripped the dead emoji data — file is now 100% emoji-free with the real AI art still
+primary. Then converted: `public/typing/manifest.json` (croc profile, 6 worlds as levels, Classic),
+engine reads world names w/ fallback, route, new `qa-typing.mjs` (emoji-free + manifest + wiring +
+win signal). ALL CHECKS PASSED; 15-game regression green.
+
 ## Session 7B: String Match + Memory convert (July 9 2026)
 
 String Match: 10 clay worlds as levels (difficulty from pair count), `croc` profile, engine reads
