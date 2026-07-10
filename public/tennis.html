@@ -76,6 +76,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js?v=2"></script>
+<script src="buildable-manifest.js"></script>
 
 <script>
 /* =====================================================================
@@ -114,6 +115,20 @@ var GAME_CONFIG = window.GAME_CONFIG || {
     city:    { name: "Green Hills",     bg: ["#7ac4e6", "#4eab5b"], net: "#ffd6e6", me: "#7ee0a0", opp: "#ffd23f", ball: "#fff1a8", img: 1, p: "clouds" },
   },
 };
+/* Session 7B: difficulty-tier names can come from /tennis/manifest.json, FULL fallback. */
+(function loadTennisManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("tennis", function(cfg){
+      try{
+        if(cfg && cfg.stages && cfg.stages.length){
+          for(var i=0;i<GAME_CONFIG.levels.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) GAME_CONFIG.levels[i].name = cfg.stages[i].name; }
+          try{ if(typeof startUI!=="undefined" && startUI && startUI.update && typeof startConfig==="function") startUI.update(startConfig()); }catch(e){}
+        }
+      }catch(e){}
+    }, function(){ /* missing/invalid -> keep built-in tiers */ });
+  }catch(e){}
+})();
 function worldTheme(k) { return GAME_CONFIG.worlds[k] || GAME_CONFIG.worlds.beach; }
 function mapWorld(k) { return GAME_CONFIG.worlds[k] ? k : "beach"; }   // online lobby may send unknown keys
 

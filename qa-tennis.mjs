@@ -39,5 +39,22 @@ for (let i = 0; i < cfg.levels.length; i++) {
 }
 // render smoke test
 T._begin(1); T._step(120); const d = T._draw(); console.log('render:', d);
-console.log(allWin ? 'ALL DIFFICULTIES WINNABLE' : 'SOME FAILED');
-process.exit(allWin && d === 'ok' ? 0 : 1);
+let mok=true;
+console.log('--- MANIFEST (Session 7B): /tennis/manifest.json through the shared loader ---');
+const bmSb={console,Math,Date,JSON,Object,Array,String}; bmSb.window=bmSb; bmSb.globalThis=bmSb; vm.createContext(bmSb);
+vm.runInContext(fs.readFileSync(dir+'/public/buildable-manifest.js','utf8'), bmSb, {filename:'buildable-manifest'});
+const BM=bmSb.BuildableManifest;
+const manifest=JSON.parse(fs.readFileSync(dir+'/public/tennis/manifest.json','utf8'));
+const mv=BM.validate(manifest);
+console.log((mv.ok?'PASS':'FAIL')+'  manifest validates  errors='+JSON.stringify(mv.errors)); if(!mv.ok)mok=false;
+console.log((manifest.category==='Sports'?'PASS':'FAIL')+'  category is Sports'); if(manifest.category!=='Sports')mok=false;
+const mcfg=mv.ok?BM.toEngineConfig(manifest):{stages:[]};
+const lineUp = mcfg.stages.length===3 && mcfg.stages.every((st,i)=>st.name===manifest.levels[i].name);
+console.log((lineUp?'PASS':'FAIL')+'  3 difficulty tiers line up (Gentle/Normal/Speedy)  ::  '+mcfg.stages.map(st=>st.name).join(', ')); if(!lineUp)mok=false;
+console.log((mcfg.multiplayer==='realtime'&&mcfg.transport==='realtime'?'PASS':'FAIL')+'  multiplayer -> realtime lane (family play)'); if(!(mcfg.multiplayer==='realtime'&&mcfg.transport==='realtime'))mok=false;
+const worldSlot=(manifest.customization||[]).find(c=>/world/i.test(c.slot));
+console.log((worldSlot&&worldSlot.options.length===8?'PASS':'FAIL')+'  8-world loadout'); if(!(worldSlot&&worldSlot.options.length===8))mok=false;
+console.log((/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("tennis"/.test(html)?'PASS':'FAIL')+'  engine loads the shared manifest'); if(!(/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("tennis"/.test(html)))mok=false;
+
+console.log((allWin && d === 'ok' && mok) ? 'ALL DIFFICULTIES WINNABLE + MANIFEST OK' : 'SOME FAILED');
+process.exit(allWin && d === 'ok' && mok ? 0 : 1);
