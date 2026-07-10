@@ -559,6 +559,21 @@
       "dest": "/editor.html"
     },
     {
+      "src": "/orbit-explorer.html",
+      "dest": "/orbit-explorer.html"
+    },
+    {
+      "src": "/explore/(.*)\\.json",
+      "dest": "/explore/$1.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/explore/(.*)",
+      "dest": "/orbit-explorer.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

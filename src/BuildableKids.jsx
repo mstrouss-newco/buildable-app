@@ -77,6 +77,7 @@ const SCREEN_CROC = "croc";
 const SCREEN_MAHJONG = "mahjong";
 const SCREEN_STRINGMATCH = "stringmatch";
 const SCREEN_BUBBLE = "bubble";
+const SCREEN_EXPLORE = "explore"; // Session 8G: Kidspedia exhibit viewer (orbit-explorer template)
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
 // log under the base game; SCREEN_PLAY = a generated "Make a game" creation.
@@ -146,6 +147,15 @@ const GAME_CATALOG = [
   { id: "tank",        name: "Hilltop Tanks",    category: "Action",   color: "#4F9A44", type: "game", imgId: "tank",        handler: "onTank",        desc: "Aim across the hills and knock out the computer tank!", soon: true },
   { id: "maze",        name: "Maze Munchers",    category: "Arcade",   color: "#F0577E", type: "game", imgId: "maze",        handler: "onMaze",        desc: "Gobble the treats, dodge the chasers!", soon: true },
   { id: "bingo",       name: "Bingo",            category: "Classic",  color: "#FFD23F", type: "game", imgId: "bingo",       handler: "onBingo",       desc: "The device calls — daub a line to win, 2-4!", soon: true },
+];
+
+// EXHIBIT_CATALOG — Kidspedia exhibits for the Home Explore shelf (Session 8G).
+// Mirrors EXHIBIT-MANIFEST.md's shared fields. Only status:"approved" exhibits ever
+// appear here or are servable at /explore/{id} (the template itself re-checks this
+// against the live JSON file, so this list is a display-only convenience, not the
+// source of truth).
+const EXHIBIT_CATALOG = [
+  { id: "solar-system", title: "Our Solar System", topic: "space", color: "#4C6FE0", heroArt: "explore-solar-system-hero", status: "approved" },
 ];
 
 // Games that support the zero-account "play a friend by link" flow (the grandma flow).
@@ -288,6 +298,30 @@ function familyBtn(onFamily) {
 }
 
 function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html?v=hud1" onHome={onHome} />; }
+
+// Kidspedia exhibit viewer (Session 8G). One shell wrapper for every orbit-explorer
+// exhibit: same GameFrame as a game, same quizRequest/pause/resume bridge as Breaker
+// (CARTRIDGE-CONTRACT.md), except the quiz is kid-initiated ("Quick quiz" tap inside
+// the exhibit) rather than a level-unlock gate, so it always shows — no Learning
+// Mode gating check, matching the existing kid-initiated coin top-up quiz flow.
+// Answers log to learning_events (the Session 6B ledger) via QuizGate's existing
+// api/log-learning-event call, tagged gameType="explore" so Kidspedia practice is
+// visible in the parent skills dashboard alongside game quiz gates.
+function ExploreScreen({ onHome, exhibitId }) {
+  const [quiz, setQuiz] = useState(null); // { reply, itemName } while the quiz gate is showing
+  const onChildMessage = (d, post) => {
+    if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
+    post({ type: "pause" }); // cartridge contract: freeze the exhibit while the quiz gate is up
+    setQuiz({ reply: post, itemName: d.itemName });
+  };
+  const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
+  const overlay = quiz ? (
+    <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <QuizGate goal="reading" gameType="explore" title={`Quick quiz: ${quiz.itemName || "Kidspedia"}!`} onPass={finish} />
+    </div>
+  ) : null;
+  return <GameFrame title="Kidspedia" src={`/explore/${encodeURIComponent(exhibitId)}`} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} bg="#0B0A18" />;
+}
 function TennisScreen({ onHome, onPlayFriend }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "tennisPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
@@ -1017,6 +1051,7 @@ export default function BuildableKids() {
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
   const [breakerEntry, setBreakerEntry] = useState("journey"); // which engine screen the Breaker landing launches into
+  const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
   const [rtAutoJoin, setRtAutoJoin] = useState(null);
   const [friendAutoJoin, setFriendAutoJoin] = useState(null); // { game, inviteId? , matchId? }
@@ -1185,6 +1220,7 @@ export default function BuildableKids() {
         onStringMatch={() => setScreen(SCREEN_STRINGMATCH)}
         onTank={() => setScreen(SCREEN_TANK)}
         onBubble={() => setScreen(SCREEN_BUBBLE)}
+        onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
       />
     );
   }
@@ -1376,6 +1412,9 @@ export default function BuildableKids() {
   if (screen === SCREEN_BREAKER) {
     const backToJourney = typeof breakerEntry === "string" && breakerEntry.indexOf("play:") === 0;
     return <BreakerScreen entry={breakerEntry} onHome={() => setScreen(backToJourney ? SCREEN_BREAKER_JOURNEY : SCREEN_BREAKER_LANDING)} />;
+  }
+  if (screen === SCREEN_EXPLORE) {
+    return <ExploreScreen exhibitId={exploreId} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CASTLE) {
     return <CastleGuardScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -2121,6 +2160,23 @@ function HomeScreen(props) {
     </button>
   );
 
+  // ---- shelf card (Explore): Kidspedia exhibits, art-slot hero image (Session 8G) ----
+  const approvedExhibits = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved");
+  const ExploreShelfCard = ({ ex }) => (
+    <button onClick={() => props.onExplore && props.onExplore(ex.id)} style={shelfCardStyle}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${ex.color}, ${ex.color}99)` }}>
+        <img src={`/api/images?kind=explore&id=${encodeURIComponent(ex.heroArt)}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      </div>
+      <div style={{ padding: "9px 11px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 3, background: ex.color, flex: "0 0 auto" }} />
+          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.title}</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>Kidspedia</div>
+      </div>
+    </button>
+  );
+
   const sectionTitle = { fontFamily: FRED, fontWeight: 700, fontSize: 17, color: HOME_INK };
   const shelfRow = { display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollSnapType: "x proximity", paddingBottom: 6, marginBottom: 26 };
 
@@ -2307,6 +2363,16 @@ function HomeScreen(props) {
         <div style={shelfRow}>
           {MAKE_ITEMS.map((item) => <MakeShelfCard key={item.id} item={item} />)}
         </div>
+
+        {/* ---- 7b. Explore shelf: Kidspedia exhibits, only when there is at least one approved ---- */}
+        {approvedExhibits.length > 0 && (
+          <>
+            <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Explore</span></div>
+            <div style={shelfRow}>
+              {approvedExhibits.map((ex) => <ExploreShelfCard key={ex.id} ex={ex} />)}
+            </div>
+          </>
+        )}
 
         {/* ---- 8. Trending from other kids ---- */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
