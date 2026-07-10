@@ -221,9 +221,9 @@
       <label>Paste anything from chat: a whole roadmap, a new phase, or just one session like "Session 5B - ...". It gets sorted into place without overwriting what's already here.</label>
       <textarea id="rm-paste" placeholder="Paste a section or a single session, e.g.&#10;Session 5B - Sling converts. Same as Survival: manifest, wire engine, delete menus."></textarea>
       <div class="addfoot">
-        <span class="legend">Understands a full roadmap, a single "Session 5B - ...", "New card in Phase 7: Title... Description...", and "Note on the 7B card: ...". Add / merge in keeps everything; Replace all reconciles a full paste.</span>
+        <span class="legend">Type or paste anything in plain words. It reads it and files it into the right phase, session, or note, without overwriting what is already here. Replace all reconciles a full master paste.</span>
         <span style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" onclick="importRoadmapAdd()">Add / merge in</button>
+          <button class="btn" onclick="importRoadmapAdd()">Add / sort it in</button>
           <button class="btn ghost" onclick="importRoadmap()">Replace all</button>
         </span>
       </div>
@@ -737,7 +737,7 @@ function mergeRoadmapAdd(parsed){
   const cur=rmData();
   const byNum={}; (cur.phases||[]).forEach(p=>byNum[p.num]=p);
   parsed.phases.forEach(pp=>{
-    if(byNum[pp.num]){ byNum[pp.num].title=pp.title; if(pp.doneWhen) byNum[pp.num].doneWhen=pp.doneWhen; }
+    if(byNum[pp.num]){ if(pp.doneWhen && !byNum[pp.num].doneWhen) byNum[pp.num].doneWhen=pp.doneWhen; }
     else { const np={num:pp.num,title:pp.title,doneWhen:pp.doneWhen,manual:false}; cur.phases.push(np); byNum[pp.num]=np; }
   });
   const byId={}; (cur.sessions||[]).forEach(s=>byId[s.id]=s);
@@ -778,10 +778,30 @@ function applyNotes(notes){
   });
   return n;
 }
+async function aiParse(text){
+  try{
+    const rd=rmData();
+    const body={ text, phases:(rd.phases||[]).map(p=>({num:p.num,title:p.title})), ids:[].concat(rd.sessions,rd.archived).map(s=>s.id) };
+    const r=await fetch("/api/roadmap-parse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d && d.ok && d.roadmap){
+      const rm=d.roadmap;
+      return {
+        phases:(rm.phases||[]).map(p=>({num:String(p.num),title:p.title,doneWhen:p.doneWhen||""})),
+        sessions:(rm.sessions||[]).map(s=>({id:s.id||null,name:s.name,desc:s.desc||"",phaseNum:String(s.phaseNum||""),doneFromPaste:!!s.done,later:!!s.later})),
+        notes:(rm.notes||[]).map(n=>({id:String(n.id),text:n.text}))
+      };
+    }
+  }catch(e){}
+  return null;
+}
 async function importRoadmapAdd(){
   const text=document.getElementById("rm-paste").value;
-  const parsed=parseRoadmap(text);
-  if(!parsed.sessions.length && !parsed.phases.length && !parsed.notes.length){ toast("Couldn't find anything to add"); return; }
+  if(!text.trim()){ toast("Type or paste something first"); return; }
+  setSync("reading...");
+  let parsed=await aiParse(text);        // AI understands plain words
+  if(!parsed) parsed=parseRoadmap(text); // fallback: local rules parser
+  if(!parsed.sessions.length && !parsed.phases.length && !parsed.notes.length){ setSync("in sync"); toast("Couldn't find anything to add"); return; }
   assignAutoIds(parsed);
   mergeRoadmapAdd(parsed);
   const noteN=applyNotes(parsed.notes);
