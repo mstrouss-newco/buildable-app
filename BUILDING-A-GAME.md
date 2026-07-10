@@ -100,7 +100,7 @@ Every game shows the SAME launch experience — title, hero, mode row, level car
 art + stars + lock state, and an optional customize button — instead of each engine
 hand-rolling its own `#menu`/`showMenu`/`buildLevelPicker`. (This is the start screen of a
 *built* game — NOT the AI game builder.) The engine supplies a config; `BS` renders the
-DOM and calls back on tap. Demo: `public/startscreen-demo.html`.
+DOM and calls back on tap. Demo: `archive/startscreen-demo.html` (prototype, archived out of `public/` in Session 7A).
 
 ```js
 const screen = BS.mount(document.getElementById("start"), {
