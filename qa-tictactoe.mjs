@@ -7,7 +7,7 @@ import fs from 'fs'; import vm from 'vm';
 const dir = process.argv[2] || '.';
 const read = f => fs.readFileSync(dir + '/public/' + f, 'utf8');
 const html = read('tictactoe-engine.html');
-const libs = ['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-boardgame.js'].map(read).join('\n');
+const libs = ['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-manifest.js','buildable-boardgame.js'].map(read).join('\n');
 const engine = [...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 
 const noop=()=>{};
@@ -38,5 +38,33 @@ console.log(`${wins>=40?'PASS':'WARN'}  perfect player won ${wins}/120 (>=40 exp
 
 console.log('--- render smoke ---');
 TG._begin('two'); TG._play(0); TG._play(4); const d=TG._draw(); console.log('render:', d); if(d!=='ok')ok=false;
+
+console.log('--- MANIFEST (Session 7B): /tictactoe/manifest.json through the shared loader ---');
+const bmSb={console,Math,Date,JSON,Object,Array,String}; bmSb.window=bmSb; bmSb.globalThis=bmSb; vm.createContext(bmSb);
+vm.runInContext(read('buildable-manifest.js'), bmSb, {filename:'buildable-manifest'});
+const BM=bmSb.BuildableManifest;
+const manifest=JSON.parse(fs.readFileSync(dir+'/public/tictactoe/manifest.json','utf8'));
+const mv=BM.validate(manifest);
+console.log(`${mv.ok?'PASS':'FAIL'}  manifest validates  errors=${JSON.stringify(mv.errors)}`); if(!mv.ok)ok=false;
+const mcfg=mv.ok?BM.toEngineConfig(manifest):{tiers:[],worlds:[]};
+console.log(`${manifest.category==='Classic'?'PASS':'FAIL'}  category is Classic (full conversion, not features-only)`); if(manifest.category!=='Classic')ok=false;
+console.log(`${(Array.isArray(manifest.levels)&&manifest.levels.length===3)?'PASS':'FAIL'}  now has 3 levels (was features-only)`); if(!(Array.isArray(manifest.levels)&&manifest.levels.length===3))ok=false;
+const tunes=['easy','medium','hard'];
+const tiersOk=mcfg.tiers.length===3 && mcfg.tiers.every(t=>tunes.includes(t.bot));
+console.log(`${tiersOk?'PASS':'FAIL'}  3 tiers map to real AI levels  ::  ${mcfg.tiers.map(t=>t.name+'->'+t.bot).join(', ')}`); if(!tiersOk)ok=false;
+const worldsOk=mcfg.worlds.length===6 && mcfg.worlds.every(w=>w.price===0);
+console.log(`${worldsOk?'PASS':'FAIL'}  6 free worlds in loadout  ::  ${mcfg.worlds.map(w=>w.key).join(',')}`); if(!worldsOk)ok=false;
+console.log(`${(mcfg.multiplayer==='turn-based'&&mcfg.transport==='turns')?'PASS':'FAIL'}  multiplayer -> turn-based lane`); if(!(mcfg.multiplayer==='turn-based'&&mcfg.transport==='turns'))ok=false;
+const choicesOk=Array.isArray(TG._choices())&&TG._choices().length===3;
+console.log(`${choicesOk?'PASS':'FAIL'}  engine exposes 3 start-screen choices  ::  ${JSON.stringify(TG._choices().map(c=>c.value))}`); if(!choicesOk)ok=false;
+
+console.log('--- per-tier: perfect player never loses at ANY tier; easy clearly beatable ---');
+for(const lvl of ['easy','medium','hard']){
+  TG.setLevel(lvl); let w=0,l=0,d=0,bad=0;
+  for(let s=0;s<90;s++){ const r=TG.simVsAI(s*5+2); if(r.result!=='over')bad++; if(r.winner===1)w++; else if(r.winner===2)l++; else d++; }
+  const clean=bad===0, neverLoses=l===0, easyBeatable=(lvl!=='easy'||w>=30);
+  const pass=clean&&neverLoses&&easyBeatable;
+  console.log(`${pass?'PASS':'FAIL'}  tier ${lvl}: perfect wins=${w} draws=${d} losses=${l} (clean=${clean})`); if(!pass)ok=false;
+}
 
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);

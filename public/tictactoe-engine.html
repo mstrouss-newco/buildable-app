@@ -51,6 +51,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js?v=2"></script>
 <script src="buildable-gamenav.js"></script>
+<script src="buildable-manifest.js"></script>
 <script src="buildable-boardgame.js"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
@@ -91,11 +92,22 @@ function drawMark(ctx, player, cx, cy, s, a){
   ctx.restore();
 }
 
+/* Session 7B: honest difficulty tiers (start-screen choices / manifest) drive the robot. */
+let AI_LEVEL = "medium";
+const AI_TUNE = {
+  easy:   { block:0.40, center:0.30 },
+  medium: { block:0.75, center:0.55 },
+  hard:   { block:0.98, center:0.90 },
+};
 const spec = {
   id:"tictactoe", title:"Tic-Tac-Toe", subtitle:"Get three in a row to win!",
   modes:["solo","two"], online:true, aiName:"Robo", players:P, aspect:1,
   sfx:{ place:"board_place", win:"board_win", draw:"board_draw" },
   sfxPlace:"place", sfxWin:"win", sfxDraw:"draw",
+  // start-screen "levels" = opponent tiers (manifest overrides these when present)
+  choices:[ {name:"Easy",value:"easy",foot:"a friendly robot"}, {name:"Medium",value:"medium",foot:"a real game"}, {name:"Hard",value:"hard",foot:"blocks like a pro"} ],
+  applyChoice(v){ AI_LEVEL = (AI_TUNE[v] ? v : "medium"); },
+  applyManifestTiers(cfg){ try{ if(cfg&&cfg.tiers&&cfg.tiers.length) spec.choices = cfg.tiers.map(function(t){ return { name:t.name, value:(AI_TUNE[t.bot]?t.bot:"medium"), foot:t.desc||"" }; }); }catch(e){} },
 
   init(){ try{ if(typeof window!=="undefined"&&window.setRandomWorld) window.setRandomWorld(); }catch(e){} return { cells:new Array(9).fill(0) }; },
   moves(G){ const m=[]; for(let i=0;i<9;i++) if(!G.cells[i]) m.push(i); return m; },
@@ -109,14 +121,16 @@ const spec = {
   tap(G,x,y,api){ const g=geo(api.W,api.H); const c=Math.floor((x-g.x0)/g.cell), r=Math.floor((y-g.y0)/g.cell);
     if(c<0||r<0||c>2||r>2) return { moved:false }; return spec.move(G, r*3+c, api); },
 
-  // EASY computer: takes an obvious win, sometimes blocks, otherwise playful/random.
-  ai(G,api){ const me=2, you=1, empty=spec.moves(G);
+  // Difficulty-aware computer (AI_LEVEL): always takes a win; blocks + plays the center/
+  // corners more often as the tier rises. Even "hard" never forces a win (perfect play in
+  // tic-tac-toe only draws), so a sharp kid can always at least draw — no punishing loss.
+  ai(G,api){ const me=2, you=1, empty=spec.moves(G); const T=AI_TUNE[AI_LEVEL]||AI_TUNE.medium;
     const winSpot=(p)=>{ for(const i of empty){ G.cells[i]=p; const w=BG.lineWinner(G.cells,3,3,3); G.cells[i]=0; if(w) return i; } return -1; };
-    let pick = winSpot(me);
-    if(pick<0 && api.rng()<0.55){ const b=winSpot(you); if(b>=0) pick=b; }   // only blocks ~55% (beatable)
+    let pick = winSpot(me);                                       // take a win (all tiers)
+    if(pick<0 && api.rng()<T.block){ const b=winSpot(you); if(b>=0) pick=b; }   // block (beatable at low tiers)
     if(pick<0){ const corners=[0,2,6,8].filter(i=>!G.cells[i]);
-      if(!G.cells[4] && api.rng()<0.5) pick=4;
-      else if(corners.length && api.rng()<0.5) pick=BG.pick(corners,api.rng);
+      if(!G.cells[4] && api.rng()<T.center) pick=4;
+      else if(corners.length && api.rng()<T.center) pick=BG.pick(corners,api.rng);
       else pick=BG.pick(empty,api.rng); }
     return spec.move(G, pick, api);
   },
@@ -166,14 +180,18 @@ function fullGame(opts){ opts=opts||{}; const mode=opts.mode||"two", cap=opts.ca
   return { result: ctrl._state(), winner:r.winner, moves:n, filled:BG.boardFull(ctrl.G.cells) };
 }
 // perfect minimax player (used by QA to prove the easy AI is always beatable / never forces a loss)
-function minimax(cells, player, me){
+function minimax(cells, player, me, alpha, beta){        // alpha-beta pruned (same optimal play, ~instant)
+  alpha = (alpha==null? -1e9 : alpha); beta = (beta==null? 1e9 : beta);
   const w=BG.lineWinner(cells,3,3,3);
   if(w) return { score: w.player===me?10:-10, move:-1 };
   const empty=[]; for(let i=0;i<9;i++) if(!cells[i]) empty.push(i);
   if(!empty.length) return { score:0, move:-1 };
-  let best={ score: player===me?-999:999, move:empty[0] };
-  for(const i of empty){ cells[i]=player; const s=minimax(cells, player===1?2:1, me).score; cells[i]=0;
-    if(player===me ? s>best.score : s<best.score) best={ score:s, move:i }; }
+  const maxing = player===me;
+  let best={ score: maxing?-999:999, move:empty[0] };
+  for(const i of empty){ cells[i]=player; const s=minimax(cells, player===1?2:1, me, alpha, beta).score; cells[i]=0;
+    if(maxing){ if(s>best.score) best={score:s,move:i}; if(best.score>alpha) alpha=best.score; }
+    else      { if(s<best.score) best={score:s,move:i}; if(best.score<beta ) beta =best.score; }
+    if(beta<=alpha) break; }
   return best;
 }
 window.BUILDABLE_GAME = {
@@ -184,6 +202,7 @@ window.BUILDABLE_GAME = {
   moves:()=>ctrl.moves(), _play:(t)=>ctrl._play(t), _ai:()=>ctrl._ai(),
   _turn:()=>ctrl._turn(), _state:()=>ctrl._state(), result:()=>spec.result(ctrl.G),
   _begin:(m)=>ctrl.startGame(m||"two"), _draw:()=>ctrl._draw(), _G:()=>ctrl.G,
+  setLevel:(v)=>spec.applyChoice(v), _choices:()=>spec.choices,
 };
 window.TICTACTOE_GAME = window.BUILDABLE_GAME;
 </script>
