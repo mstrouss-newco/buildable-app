@@ -133,6 +133,14 @@ visible to kids until then.
 
 **Remaining in this phase (Phase 3).** Sessions 3E (home screen redesign) and 3F (law updates)
 are still open; not started this session per the one-block rule.
+
+**Follow-ups (same session, owner-requested polish).** (1) Selection halo redesigned: the old
+filled translucent gold sphere (a muddy brown ball on the Sun) is replaced by a "reticle" -
+a thin gold ring plus four tick marks that face the camera and slowly rotate, with a gentle
+pulse, drawn on top so it always reads crisply. (2) Jupiter texture: the Great Red Spot was
+real but very faint in the NASA-style map, so the bands were enriched (saturation/contrast)
+and the spot warmed locally so kids can actually see it. Texture-only + orbit-explorer.html
+changes; qa-explore ALL CHECKS PASS.
 ## 2026-07-09 — Session 7B batch: Bubble, Castle Guard, Tennis convert
 
 Three more keepers onto the manifest, one commit each. All GAME_CONFIG-driven, so the engine
