@@ -3781,3 +3781,13 @@ guarded (`BLT && BLT.make(...)`) so a card safely falls back to its old colour i
 missing. Painters verified headlessly (node + @napi-rs/canvas render) and live-QA'd in-browser
 across Maze/Bubble/Tank/Mahjong/Breaker — no console errors. Scoped to `public/buildable-levelthumb.js`,
 `vercel.json`, and the 12 game pages. Commit on main; Vercel auto-deploys.
+
+## Session log — 2026-07-10 (real screenshots on landing + partner education section)
+Landing page fake CSS/emoji game art replaced with REAL gameplay screenshots (new
+public/landing-shots/, 20 WebP ~300KB, vercel route + immutable cache): creation card =
+Breaker Jungle Ruins, evo timeline = Coral Cove -> Star Fields -> Survival published band,
+all 10 arcade leaderboard thumbs real. Partner deck: new "The education layer" slide —
+Kidspedia 3D solar system + Math Cannon shots, earn-to-learn coin economy, exhibits-as-data,
+human-reviewed weekly question factory, one learning ledger + parent dashboard/weekly digest;
+stale Learn blurbs refreshed. Shots captured headlessly (Playwright + local static serve;
+gate bypassed for QA only). Commit: 69d5d07.
