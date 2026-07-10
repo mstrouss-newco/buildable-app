@@ -26,7 +26,10 @@
   .hd{display:flex;align-items:center;gap:12px}
   .dot{width:46px;height:46px;border-radius:50%;flex:none;box-shadow:0 4px 10px rgba(15,14,23,.15);background-size:cover;background-position:center}
   .card h2{font-family:'Fredoka';font-weight:700;font-size:24px;flex:1;min-width:0}
-  .say{border:none;background:var(--ink);color:#fff;font-family:'Nunito';font-weight:900;font-size:12px;padding:10px 16px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:7px;flex:none}
+  .say{border:none;background:var(--gold);color:var(--ink);width:54px;height:54px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 4px 12px rgba(15,14,23,.18);transition:transform .08s ease,background .15s ease}
+  .say:active{transform:scale(.93)}
+  .say.playing{background:var(--mint);color:#fff}
+  .say svg{width:26px;height:26px}
   .say[disabled]{opacity:.4;cursor:default}
   .another{margin-top:12px;display:inline-flex;align-items:center;gap:7px;border:2px solid rgba(15,14,23,.15);background:none;border-radius:999px;padding:8px 14px;font-family:'Nunito';font-weight:800;font-size:12px;color:var(--ink);cursor:pointer}
   .fact{font-size:15px;font-weight:700;line-height:1.55;margin-top:12px}
@@ -76,9 +79,8 @@
     <div class="hd">
       <span class="dot" id="cDot"></span>
       <h2 id="cName">&nbsp;</h2>
-      <button class="say" id="sayBtn" onclick="readAloud()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l6 5V4L7 9H3z"/><path d="M16 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-        <span id="sayLabel">Read to me</span>
+      <button class="say" id="sayBtn" type="button" onclick="readAloud()" aria-label="Read to me">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
       </button>
     </div>
     <p class="fact" id="cFact"></p>
@@ -143,6 +145,8 @@ let soundOn = true;      // ambient + tap sounds; the shell Sound button toggles
 let audioUnlocked = false;
 let ambientAudio = null; // the soft per-exhibit background bed (an /api/sfx loop)
 let narrAudio = null;    // the currently playing "Read to me" narration clip
+let speaking = false;    // is "Read to me" currently reading? (drives the play/stop button)
+let sayToken = 0;        // bumps on every start/stop so stale async callbacks are ignored
 
 // In-shell vs standalone: tag the body so the CSS defers the top-left corner to
 // the shell's Home button (HUD-AND-NAV-RULES.md — the shell owns that corner).
@@ -627,37 +631,51 @@ function pick(id, fly) {
 // EXHIBIT-MANIFEST.md: if this fact has factAudio, "Read to me" plays the
 // pre-generated narrator voice; the serve endpoint 404s instantly when a clip
 // isn't made yet, so we drop to the browser voice with no waiting.
-function stopNarration() {
-  try { if (narrAudio) { narrAudio.pause(); narrAudio = null; } } catch (e) {}
-  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+function setSayButton(isPlaying) {
+  const b = document.getElementById("sayBtn"); if (!b) return;
+  b.classList.toggle("playing", !!isPlaying);
+  if (b.setAttribute) b.setAttribute("aria-label", isPlaying ? "Stop reading" : "Read to me");
+  b.innerHTML = isPlaying
+    ? '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
 }
-function browserVoice(p, text) {
-  if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); return; }
+function stopNarration() {
+  sayToken++; // invalidate any pending clip/voice callbacks so they cannot resume
+  try { if (narrAudio) { narrAudio.onended = null; narrAudio.onerror = null; narrAudio.pause(); narrAudio = null; } } catch (e) {}
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+  speaking = false; setSayButton(false);
+}
+function browserVoice(p, text, token) {
+  if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); if (token === sayToken) { speaking = false; setSayButton(false); } return; }
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(p.name + ". " + (text != null ? text : (p.fact || "")));
     u.rate = .92; u.pitch = 1.05;
+    u.onend = function () { if (token === sayToken) { speaking = false; setSayButton(false); } };
     speechSynthesis.speak(u);
-  } catch (e) { showToast("Couldn't read that aloud right now."); }
+  } catch (e) { showToast("Couldn't read that aloud right now."); if (token === sayToken) { speaking = false; setSayButton(false); } }
 }
 function readAloud() {
+  if (speaking) { stopNarration(); return; } // already reading: a tap stops it, never overlaps
   if (!current) return;
   const p = ITEMS[current]; if (!p) return;
   const fs = factsFor(p); const text = fs[Math.min(factIdx, fs.length - 1)] || "";
   stopNarration();
+  const token = ++sayToken; speaking = true; setSayButton(true);
   // The narrator clip is generated from the primary fact only, so use it for
   // fact #1; any "Another fact" is read by the browser voice (still no waiting).
   if (factIdx === 0 && p.factAudio) {
     try {
       const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(p.factAudio));
       narrAudio = a;
-      a.onerror = function () { narrAudio = null; browserVoice(p, text); };
+      a.onended = function () { if (token === sayToken) { speaking = false; setSayButton(false); } };
+      a.onerror = function () { if (token !== sayToken) return; narrAudio = null; browserVoice(p, text, token); };
       const pr = a.play();
-      if (pr && pr.catch) pr.catch(function () { narrAudio = null; browserVoice(p, text); });
+      if (pr && pr.catch) pr.catch(function () { if (token !== sayToken) return; narrAudio = null; browserVoice(p, text, token); });
       return;
     } catch (e) { /* fall through to browser voice */ }
   }
-  browserVoice(p, text);
+  browserVoice(p, text, token);
 }
 
 // ================= quiz bridge (CARTRIDGE-CONTRACT.md: quizRequest / pause / resume / bk:quizDone) =================
