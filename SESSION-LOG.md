@@ -38,6 +38,39 @@ renders with no glow/halo around it, drag/pinch/tap all still work, other 7 plan
 show their textures.
 
 main d054079
+## 2026-07-09 — Session 7B batch: String Match + Memory convert (Typing flagged)
+
+Two more onto the manifest; Typing surfaced an emoji decision and was NOT converted yet
+(flag below).
+
+**String Match -> the manifest.** Its 10 clay worlds are the levels (a real journey);
+difficulty is derived from each world's pair count (3-6 pairs). Kept category `Classic`.
+Registered `stringmatch` on the `croc` (ordered-stages) profile; engine reads the world
+names from the manifest for the level select, with the built-in names as a FULL fallback.
+Manifest + route added. `qa-stringmatch.mjs` gained manifest checks on top of its
+"every world solvable" sweep (all 10 solve at every aspect). ALL PASS.
+
+**Memory Match -> the manifest.** Its three board sizes (Easy 6 / Medium 8 / Hard 12 pairs)
+are the levels; the six themes are the loadout. Honest category `Puzzle`; solo + local 2-4
+pass-and-play, so the cross-account multiplayer switch is off. Registered `memory` on the
+`croc` profile; engine reads the size names with fallback. Manifest + route. Also FIXED the
+same pre-existing win-render QA gap 7A flagged for the turn-based games (harness now loads
+`buildable-wincard.js` + a `measureText` stub); the win render genuinely passes now, plus
+the new manifest checks. ALL CHECKS PASS.
+
+**Typing — flagged, not converted (needs Mike's call).** Converting the levels is trivial
+(its worlds are a clean journey), but Typing still shows emojis: the hero-select cards use
+emoji faces, and each foe/boss shows an emoji as an INSTANT FALLBACK before its real
+AI-generated art (`/api/images?kind=type`) loads (~40 glyphs total). Unlike Riley's Garden
+(where emojis WERE the only art), Typing already has real primary art — so the fix is
+smaller (replace the hero faces + swap the emoji instant-fallback for a drawn placeholder),
+but it is still a decision for Mike given the no-emoji law. Left untouched pending his call.
+
+**Regression.** All manifest games re-run green.
+
+**Remaining in 7B (Mike's order):** Typing (pending the emoji decision), Tumble Blocks
+(Tetris rename + mechanical twist), Tennis, Castle Guard, Bubble.
+
 
 ## 2026-07-09: Session 8J - solar-system exhibit gets real planet textures
 

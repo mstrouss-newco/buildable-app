@@ -122,6 +122,14 @@ play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/w
 untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
 difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
 
+## Session 7B: String Match + Memory convert (July 9 2026)
+
+String Match: 10 clay worlds as levels (difficulty from pair count), `croc` profile, engine reads
+world names w/ fallback; qa += manifest. Memory Match: 3 size levels + 6-theme loadout, Puzzle,
+multiplayer off; also fixed its pre-existing win-render QA gap (wincard + measureText). Both green;
+regression across manifest games green. Typing flagged (still shows ~40 emoji: hero faces + foe
+instant-fallbacks) — pending Mike's decision, like Riley's Garden.
+
 ## Session 7B: Dots & Boxes, Mahjong, Bingo convert (July 9 2026)
 
 Three more Classics onto the manifest (commit-per-game). Dots & Boxes: board sizes as levels
