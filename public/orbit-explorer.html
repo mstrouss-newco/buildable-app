@@ -242,6 +242,7 @@ function setPaused(v) {
 
 // ================= three.js scene =================
 let renderer, scene, camera, bodies3d = {}, pickables = [], halo, clock;
+let haloBase = 1, reticleSpin = 0, haloT = 0; // selection reticle: size, spin, pulse clock
 let theta = 0.9, phi = 1.05, dist = 46;
 const target = { x: 0, y: 0, z: 0 };
 // Fly-to focus (Session 3H): tapping a body flies the camera in to frame it.
@@ -308,7 +309,21 @@ function initScene(data) {
     scene.add(m); bodies3d[p.id] = m; pickables.push(m);
   });
 
-  halo = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 18), new THREE.MeshBasicMaterial({ color: 0xFFC542, transparent: true, opacity: .25, side: THREE.BackSide }));
+  // Selection reticle: a thin ring + four tick marks that frame the selected
+  // body. It faces the camera (billboarded in tick) so it always reads as a
+  // clean circle, and draws on top (depthTest off) so it never muddies.
+  halo = new THREE.Group();
+  const reticleMat = new THREE.MeshBasicMaterial({ color: 0xFFC542, transparent: true, opacity: .92, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
+  const rRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.0, 64), reticleMat);
+  rRing.renderOrder = 999; halo.add(rRing);
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    const tick = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.3), reticleMat);
+    tick.position.set(Math.cos(a) * 1.18, Math.sin(a) * 1.18, 0);
+    tick.rotation.z = a - Math.PI / 2; // tall axis points radially outward
+    tick.renderOrder = 999; halo.add(tick);
+  }
+  halo.visible = false;
   scene.add(halo);
 
   wireInteraction(canvas);
@@ -452,7 +467,19 @@ function tick() {
       bodies3d[p.id].rotation.y += dt * .6;
     }
   });
-  if (current && bodies3d[current]) halo.position.copy(bodies3d[current].position);
+  // Selection reticle: follow the body, face the camera, spin the ticks slowly,
+  // and breathe with a gentle pulse. Drawn on top so it always reads crisply.
+  if (halo) {
+    if (current && bodies3d[current]) {
+      halo.visible = true;
+      halo.position.copy(bodies3d[current].position);
+      halo.quaternion.copy(camera.quaternion);
+      reticleSpin += (dt || 0) * 0.5;
+      halo.rotateZ(reticleSpin);
+      haloT += (dt || 0);
+      halo.scale.setScalar(haloBase * (1 + 0.05 * Math.sin(haloT * 2.2)));
+    } else { halo.visible = false; }
+  }
   // Fly-to + follow: ease `target` toward the focused body (origin for the wide
   // view); ease `dist` only while flying, then release it so pinch-zoom is free.
   const fb = focusId && bodies3d[focusId] ? bodies3d[focusId].position : null;
@@ -588,7 +615,7 @@ function pick(id, fly) {
   quizBtn.onclick = () => requestQuiz(p);
   qr.appendChild(quizBtn);
 
-  if (halo) halo.scale.setScalar((p.size || 1) * 1.35);
+  haloBase = (p.size || 1) * 1.3; // reticle sits just outside the body
   if (fly) setFocus(id); // interactions fly the camera in; boot's first pick stays wide
   stopNarration();
 }
