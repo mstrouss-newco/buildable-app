@@ -271,6 +271,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 </div></div>
 
 <script src="buildable-audio.js"></script>
+<script src="buildable-manifest.js"></script>
 <script>
 /* ============================================================================
    Buildable Checkers — a kid-friendly draughts engine.
@@ -435,6 +436,26 @@ var SCENE_KEYS=Object.keys(SCENES);
 
 // game state
 var mode="solo", difficulty="easy", sceneKey="jungle", mustJump=false, hintsOn=true, flip=false;
+/* Session 7B: worlds + opponent tiers can be read from /checkers/manifest.json, with FULL fallback. */
+var DIFF_TIERS = [["easy","Easy"],["normal","Normal"],["tricky","Tricky"]];
+var WORLD_KEYS = SCENE_KEYS.slice();
+(function loadCheckersManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("checkers", function(cfg){
+      if(cfg && cfg.tiers && cfg.tiers.length){
+        DIFF_TIERS = cfg.tiers.map(function(t){ return [t.bot||"easy", t.name||"Bot"]; });
+        if(!DIFF_TIERS.some(function(t){ return t[0]===difficulty; })) difficulty = DIFF_TIERS[0][0];
+      }
+      if(cfg && cfg.worlds && cfg.worlds.length){
+        var keys = cfg.worlds.map(function(w){ return w.key; }).filter(function(k){ return SCENES[k]; });
+        if(keys.length){ WORLD_KEYS = keys; if(WORLD_KEYS.indexOf(sceneKey)<0) sceneKey = WORLD_KEYS[0]; }
+      }
+      try{ if(typeof buildDiffGrid==="function" && document.getElementById("diff-grid")) buildDiffGrid();
+           if(typeof buildSceneGrid==="function" && document.getElementById("scene-grid")) buildSceneGrid(); }catch(e){}
+    }, function(){ /* missing/invalid manifest -> keep built-in fallback */ });
+  }catch(e){}
+})();
 var humanColor="r", oppName="Friend", pName="You", pName2="Coral";
 var soundOn=true, musicOn=true, paused=false, gameOver=false, busy=false;
 var S=initialBoard();
@@ -722,7 +743,7 @@ function stopMusic(){ if(BA)BA.stopMusic(); }
    ==================================================================== */
 function buildSceneGrid(){
   var g=$("scene-grid"); g.innerHTML="";
-  SCENE_KEYS.forEach(function(k){ var sc=SCENES[k];
+  WORLD_KEYS.forEach(function(k){ var sc=SCENES[k];
     var o=document.createElement("div"); o.className="opt"+(k===sceneKey?" sel":"");
     o.innerHTML='<div class="scene-chip" style="background:linear-gradient(135deg,'+sc.pageA+','+sc.pageB+');background-image:url(\'chess-art/'+k+'_thumb.jpg?v=2\')"></div><div class="ot">'+sc.name+'</div>';
     o.onclick=function(){ sceneKey=k; buildSceneGrid(); };
@@ -731,7 +752,7 @@ function buildSceneGrid(){
 }
 function buildDiffGrid(){
   var g=$("diff-grid"); g.innerHTML="";
-  [["easy","Easy"],["normal","Normal"],["tricky","Tricky"]].forEach(function(d){
+  DIFF_TIERS.forEach(function(d){
     var o=document.createElement("div"); o.className="opt"+(d[0]===difficulty?" sel":"");
     o.innerHTML='<div class="ot">'+d[1]+'</div>';
     o.onclick=function(){ difficulty=d[0]; buildDiffGrid(); };

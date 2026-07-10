@@ -59,5 +59,24 @@ for(const d of ['easy','normal','tricky']){
   check(`difficulty ${d} runs to a result`, okRun, sample?`(last: ${sample.winner} in ${sample.moves} moves, ${sample.reason})`:'');
 }
 
-console.log(ok ? '\nALL CHECKS PASS' : '\nSOME CHECKS FAILED');
-process.exit(ok?0:1);
+
+// 7) MANIFEST (Session 7B): validate /checkers/manifest.json through the shared loader
+const bmSb = { console, Math, Date, JSON, Object, Array, String }; bmSb.window = bmSb; bmSb.globalThis = bmSb;
+vm.createContext(bmSb);
+vm.runInContext(fs.readFileSync(dir + '/public/buildable-manifest.js','utf8'), bmSb, { filename:'buildable-manifest' });
+const BM = bmSb.BuildableManifest;
+const manifest = JSON.parse(fs.readFileSync(dir + '/public/checkers/manifest.json','utf8'));
+const mv2 = BM.validate(manifest);
+check('manifest validates', mv2.ok, 'errors='+JSON.stringify(mv2.errors));
+const mcfg = mv2.ok ? BM.toEngineConfig(manifest) : { tiers:[], worlds:[] };
+check('category is Classic', manifest.category==='Classic');
+// tiers must map to the engine's REAL bot strings (botPick handles easy/normal/tricky)
+const engineTiers = ['easy','normal','tricky'];
+check('3 tiers map to real engine strengths', mcfg.tiers.length===3 && mcfg.tiers.every(t=>engineTiers.includes(t.bot)), mcfg.tiers.map(t=>t.name+'->'+t.bot).join(', '));
+check('6 free worlds in loadout', mcfg.worlds.length===6 && mcfg.worlds.every(w=>w.price===0), mcfg.worlds.map(w=>w.key).join(','));
+check('multiplayer -> turn-based lane', mcfg.multiplayer==='turn-based' && mcfg.transport==='turns');
+// contract wiring present in the shipped engine
+check('engine loads the shared manifest + turn-based move relay', /buildable-manifest\.js/.test(html) && /BuildableManifest\.load\("checkers"/.test(html) && /postMessage\(\{type:"checkersMove"/.test(html));
+
+console.log('\n' + (ok ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED'));
+process.exit(ok ? 0 : 1);
