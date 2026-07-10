@@ -6,6 +6,21 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 8A: Living question library — scheduled generation + review gate (July 10 2026)
+
+Phase 8 education engine, supply side. New weekly **question factory** (`api/generate-question-bank.js`)
+fills the curriculum-mapped `question_bank` (from 6B) with ~50 questions per run, all as `status=pending`
+— nothing reaches a kid until a grown-up approves it. New **curriculum map** (`api/_curriculum.js`,
+grade k-6 x math/geometry/spelling/reading x skill) drives a balanced batch; **shared builders**
+(`api/_quizgen.js`) make basic math/shapes locally (no model) and everything else via Claude Haiku.
+**Contextual generation**: `generate-quiz.js` now themes fresh spelling/reading questions to the game
+being played (`gameType` -> setting, tagged `game_theme`). New **review surface**:
+`api/review-questions.js` + PIN-gated `public/question-review.html` (Approve / Reject / Approve-all).
+DB: `db/8a-question-bank-review.sql` (adds `game_theme` + `question_bank_runs` log; idempotent).
+`vercel.json`: `/question-review` routes + weekly cron (Sun 09:00 UTC). QA: `qa-question-bank.mjs`
+PASSED (no game engines touched). Owner: run the SQL, ensure `ANTHROPIC_API_KEY` set, optionally
+`CRON_SECRET`, then review at `/question-review` (PIN 1025).
+
 ## Session 8H: Kidspedia iPad fix — exhibit load + single header (July 10 2026)
 
 Two scoped fixes on the solar-system exhibit (`/explore/solar-system`), reported blank on iPad Safari

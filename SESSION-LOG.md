@@ -1,5 +1,52 @@
 # Buildable Kids — Session Log
 
+## 2026-07-10 — Session 8A: Living question library — scheduled AI generation + review gate (Phase 8, Education engine)
+
+Built the education engine's supply side: a weekly factory that fills a curriculum-mapped question
+bank, with a review step so nothing reaches a kid unapproved. Builds on 6B (the `question_bank` table,
+its pending/approved review gate, and adaptive serving in `generate-quiz`).
+
+**Curriculum map (`api/_curriculum.js`).** One plain-data file: grade (k-6) x subject
+(math / geometry / spelling / reading) x skill tags (e.g. `addition-within-20`, `shape-sides`,
+`prefixes`, `inference`). `generationTargets(50)` returns a balanced weekly batch spread evenly across
+grades and subjects, so a run never skews to one area.
+
+**Shared builders (`api/_quizgen.js`).** Local generators for the basic skills (addition/subtraction
+within 5/20/100, shape names/sides) run instantly with no model call; everything else (spelling,
+reading, advanced math/geometry) goes to Claude Haiku with a skill-specific, optionally game-themed
+prompt. `bankContentHash` matches `generate-quiz.js` exactly so the factory and the live endpoint
+de-dupe against each other.
+
+**Weekly factory (`api/generate-question-bank.js`).** Generates ~50 candidates and writes them to
+`question_bank` as `status='pending'` — never served until approved. Cron-safe (CRON_SECRET auth like
+parent-digest), dormant without Supabase env, `?dry=1` / `?local=1` / `?limit=N` / `?theme=space` for
+manual runs, de-dupes by content_hash, and logs every run to a new `question_bank_runs` table.
+
+**Contextual generation (`api/generate-quiz.js`).** A kid playing a space game can now get space-flavored
+questions, created fresh in the moment: `gameType` maps to a kid-friendly setting that flavors the
+spelling/reading prompt, and the fresh AI question is tagged with `game_theme` when it enters the bank.
+Backward compatible; local fallbacks untouched.
+
+**Review surface (new).** `api/review-questions.js` lists pending/approved/rejected with counts and
+approves or rejects single or in bulk (records reviewed_at/reviewed_by; no destructive ops).
+`public/question-review.html` is a PIN-gated grown-up page (cream/light, no emojis) showing each
+question with its choices and the correct one marked, with Approve / Reject and Approve-all-shown.
+
+**DB (`db/8a-question-bank-review.sql`).** Additive + idempotent: `game_theme` column on `question_bank`
+plus the `question_bank_runs` log table. Owner must run it in the Supabase SQL editor.
+
+**Wiring.** `vercel.json`: `/question-review` page routes + a weekly cron for the factory (Sun 09:00 UTC).
+
+**QA.** No game engines were touched, so no game QA scripts apply. Added `qa-question-bank.mjs` (curriculum
+balance, local builders over repeated draws, factory dry-run, cron-auth rejection) — `node
+qa-question-bank.mjs` from the repo root: ALL CHECKS PASSED.
+
+**Owner to-dos before it's live end-to-end:** (1) run `db/8a-question-bank-review.sql` in Supabase;
+(2) confirm `ANTHROPIC_API_KEY` is set in Vercel (spelling/reading/advanced skills need it; math/shapes
+work without it); (3) optionally set `CRON_SECRET`; (4) after the first weekly run, open `/question-review`
+(PIN 1025) and approve the good ones. Left for later phases: 8B learning ledger, 8C first native
+learning game.
+
 ## 2026-07-09 — Session 7B batch: Croc Tot converts (+ Riley's Garden flagged)
 
 Continued the 7B campaign (next in Mike's order after the three Classics). Croc Tot fully
@@ -30,7 +77,6 @@ is a fully self-contained KID creation ("Built by Riley") that uses **96 emoji g
 official picker would put emojis into the product (against the hard no-emoji law), and
 stripping them would mean rebuilding a child's game with drawn art — a destructive rewrite I
 won't do unasked. Left untouched pending Mike's decision on how to treat it.
-
 
 ## 2026-07-10 — Session 8H: Kidspedia iPad fix — exhibit load + single header (Phase 8, Kidspedia track)
 
