@@ -31,6 +31,15 @@ The shell treats every game as "a thing I embed at its entry URL." It never assu
 - `resume` - continue exactly where paused
 - `start` with a level id (+ the kid's equipped customization) - required for embedded engine games; canvas games may skip it in favor of their own routed URLs (see Level loading above)
 
+## The upgrade store handoff (Session 9B)
+Some games have **gameplay upgrades** (a stronger weapon, an extra heart), declared in the manifest's `upgrades` tracks (see buildable-manifest-v2.md section 5c). The rule mirrors the wallet and the loadout: the **shell renders the store and owns the purchase**, the **engine owns the effect**.
+
+- The shell draws the store from the manifest, spends the shared wallet on a buy (`BuildableWallet.spend`), and remembers what each kid owns and has equipped (per game + per kid, shell-side only). Coins are the shared platform wallet — one number, spendable on power in any game (owner's economy decision, see the manifest doc).
+- The shell then tells the engine **only which id is equipped per track** — never the effect. Handoff, by engine type:
+  - **Canvas games** (today): the equipped ids ride in as launch params on the game's URL, exactly like equipped looks do (`?up=weapon:twin,armor:vest,boots:rocket,hero:astro`). The engine reads them on load and maps each id to its own power. Refresh-safe, no live channel needed.
+  - **Embedded engine games** (Phaser/Godot): the same equipped map rides on the `start` message alongside the level id.
+- The engine trusts the equipped ids the shell sends (the shell is the source of truth for ownership); it only decides what each id *does*. A game that bakes prices or ownership into itself, or that reaches into shell storage to read coins, fails the contract — same messages-only rule as the wallet.
+
 ## Not yet implemented (future vocabulary - no code behind these yet)
 `ready`, `loading` (with a percent), `score`, `levelComplete` (with stars earned), `needsCoins`, `setAudio`. These remain reserved names for when a game needs them; sound today goes through the `nav:sound` round trip instead of `setAudio`.
 

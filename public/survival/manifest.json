@@ -57,5 +57,30 @@
     { "slot": "Music", "options": [
       { "name": "Cosmic", "asset": "audio/survival/theme-v1", "price": 0 }
     ]}
+  ],
+
+  "upgrades": [
+    { "track": "Weapon", "options": [
+      { "id": "wand", "name": "Star Wand",      "price": 0,   "desc": "Your trusty starter wand" },
+      { "id": "twin", "name": "Twin Wand",      "price": 40,  "desc": "Throws one extra sparkle" },
+      { "id": "bow",  "name": "Comet Bow",      "price": 90,  "desc": "Stronger, pierces a slime" },
+      { "id": "nova", "name": "Nova Staff",     "price": 160, "desc": "Bigger and faster sparkles" }
+    ]},
+    { "track": "Armor", "options": [
+      { "id": "suit",  "name": "Play Suit",      "price": 0,   "desc": "Comfy starter suit" },
+      { "id": "vest",  "name": "Bubble Vest",    "price": 50,  "desc": "One extra heart" },
+      { "id": "star",  "name": "Star Armor",     "price": 110, "desc": "Two extra hearts" },
+      { "id": "shell", "name": "Guardian Shell", "price": 180, "desc": "Two hearts and a starting shield" }
+    ]},
+    { "track": "Boots", "options": [
+      { "id": "sneak",  "name": "Sneakers",      "price": 0,   "desc": "Everyday shoes" },
+      { "id": "jet",    "name": "Jet Boots",     "price": 45,  "desc": "Move a little faster" },
+      { "id": "rocket", "name": "Rocket Boots",  "price": 120, "desc": "Move a lot faster" }
+    ]},
+    { "track": "Hero", "options": [
+      { "id": "astro",  "name": "Astro",         "price": 0,   "desc": "The classic astronaut" },
+      { "id": "foxy",   "name": "Cosmo Fox",     "price": 140, "desc": "Scoops gems from farther away" },
+      { "id": "sparky", "name": "Sparky",        "price": 200, "desc": "Sparkles fire a touch faster" }
+    ]}
   ]
 }

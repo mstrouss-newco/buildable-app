@@ -70,6 +70,22 @@ Feel is mostly platform law: shared feedback, sounds, celebrations, and input st
 - `celebration` — calm / big
 - `haptics` — on / off
 
+### 5c. Upgrade tracks (gameplay power) — the difference from section 5
+Section 5 customization is **looks only** (a paddle skin never makes you win faster). Some games also have **gameplay upgrades** — power that changes how the game plays (a stronger weapon, an extra heart). Those live here, in `upgrades`, so the shell can draw the store and own the purchase, while the *effect* of each upgrade stays inside the game engine.
+
+Each entry is a track (a category the kid equips one thing from):
+- `track` — name shown as a heading (Weapon, Armor, Boots, Hero)
+- `options` — list of:
+  - `id` — a **stable short name** (`twin`, `vest`, `rocket`). The shell hands this id to the engine; the engine maps it to the actual power. Ids never change once shipped.
+  - `name` — display name
+  - `price` — cost in coins (0 = free; at least one free option per track, and it's owned from the start)
+  - `desc` — one plain-English line (what it does, no numbers-as-knobs)
+  - `art` — optional asset library ID for the tile image
+
+The manifest deliberately holds **no boost numbers**. "Twin Wand = +1 sparkle" is the engine's business; the manifest only says the track, the name, the price, and the stable id. This is the wall that keeps the editor safe: changing a price or adding an option is a manifest edit, never a code edit; changing what a power *does* is an engine change.
+
+**The economy rule (owner decision, July 10):** gameplay power is bought with the **shared platform coin wallet** — the same coins that buy looks. One wallet, one number the kid understands, coins earned in any game can be spent on power in any game. (The alternative, a per-game power currency to prevent "farm an easy game, dump it into a hard one," was considered and set aside in favor of the simpler single wallet.) The shell spends the wallet on purchase (`BuildableWallet.spend`), records what's owned and equipped per game + per kid, and only tells the engine which id is equipped. See CARTRIDGE-CONTRACT.md for that handoff.
+
 ### 6. Learning moments
 Defaults set per game; parents can adjust from their portal (their settings win):
 - `beforeUnlock` — one question before a new level unlocks (always skippable)
