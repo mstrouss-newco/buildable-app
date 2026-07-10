@@ -69,6 +69,25 @@ play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/w
 untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
 difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
 
+## Session 7B batch: Checkers, Connect Four, Tic-Tac-Toe convert (July 9 2026)
+
+Three board classics onto the manifest, one commit each. Recipe = the Chess worked example:
+manifest `levels` are opponent TIERS, worlds are a free customization slot, engine reads its
+menu from the manifest with a full built-in fallback. All stay category `Classic`.
+
+- New generic **`board` profile** in `buildable-manifest.js` (tiers + worlds; each engine
+  names its own tiers) + a fallback-safe **manifest preload in `buildable-boardgame.js`** so
+  the shared board shell drives its start-screen choices from a game's manifest.
+- **Checkers**: manifest with its real Easy/Normal/Tricky tiers + 6 worlds; engine reads the
+  difficulty + world grids (fallback kept); `checkersMove` relay intact.
+- **Connect Four**: gave the robot honest Easy/Medium/Hard (was one strength); Classic, 6-world
+  loadout, multiplayer honestly `off` (hot-seat only). Per-tier QA: beatable, always winnable.
+- **Tic-Tac-Toe**: upgraded the 6A features-only manifest to a FULL one (3 tiers, loadout,
+  learning); honest difficulty; QA minimax now alpha-beta pruned. Perfect player never loses
+  at any tier; easy clearly beatable.
+- QA: `qa-checkers/connectfour/tictactoe` all green + regression `qa-chess/dotsandboxes/
+  breaker/survival/sling/music` all PASS.
+
 ## Session 7B: Conversion campaign — Chess converts to the manifest (July 9 2026)
 
 First game of the 7B conversion campaign (Chess first: it pairs with the guest-links

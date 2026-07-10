@@ -51,6 +51,56 @@ screens and re-runs `qa-breaker.mjs`.
 **QA.** No game engine was touched this session (docs + this log only), so no `qa-<game>`
 script was required or run. `qa-breaker.mjs` will be run in the follow-up that actually
 edits the engine.
+## 2026-07-09 — Session 7B batch: three Classics convert (Checkers, Connect Four, Tic-Tac-Toe)
+
+Second 7B batch after Chess. Three board classics onto the manifest rails, one commit each
+so a bad conversion reverts alone. Same recipe as the Chess worked example: a board game's
+manifest "levels" are OPPONENT TIERS (difficulty 1-5 derives the engine's bot strength),
+worlds/themes are a free customization slot (loadout), and the engine reads its menu from
+the manifest with the built-in menu kept as a FULL fallback (never breaks). All three keep
+category "Classic".
+
+**Shared plumbing (one commit, additive + fallback-safe).**
+- New generic `board` profile in `public/buildable-manifest.js` (tiers + worlds, no fixed
+  bot vocabulary — each engine names its own tiers); registered for board/checkers/
+  tictactoe/connectfour.
+- `public/buildable-boardgame.js` (the shared hot-seat shell for TTT/C4/Dots) gained a
+  manifest preload: if a game has a manifest, its tiers drive the start-screen choices;
+  no loader / no manifest / invalid -> the engine keeps its built-in choices, unchanged.
+  Dots (no manifest this batch) is untouched by design.
+
+**Checkers** (chess-shaped standalone). Manifest with its three REAL tiers (Easy/Normal/
+Tricky — the strings `botPick` already understands) + six worlds; engine now reads the
+difficulty grid + world grid from the manifest with fallback. Turn-based online move relay
+(`checkersMove`) left intact. `qa-checkers.mjs` gained manifest + contract checks on top of
+its rules/beatability tests. ALL CHECKS PASSED.
+
+**Connect Four** (shared board shell). Gave the robot honest Easy/Medium/Hard tiers (it had
+one strength): each tier raises how often it blocks, avoids handing a win, and plays the
+center — but "Hard" is still a 1-ply blocker so a thoughtful kid can win (no unbeatable
+lose state). Tiers show as start-screen choices and are manifest-overridable. Manifest is
+Classic with a six-world loadout; multiplayer honestly "off" (hot-seat only — no cross-
+account lane). `qa-connectfour.mjs` proves per-tier: clean termination, easy clearly
+beatable, every tier still winnable. ALL CHECKS PASS.
+
+**Tic-Tac-Toe** (shared board shell; was features-only from 6A). Upgraded to a FULL manifest
+(three tiers, six-world loadout, learning, art slots) — turn-based multiplayer kept. Added
+the same honest Easy/Medium/Hard robot; even "Hard" only ever draws under perfect play, so a
+sharp kid can always at least draw. Sped up the QA's perfect player with alpha-beta pruning
+(same optimal play, ~30x faster) so the per-tier suite fits the budget. `qa-tictactoe.mjs`
+proves the perfect player NEVER loses at any tier and easy is clearly beatable. ALL CHECKS
+PASS.
+
+**QA (regression too).** All three new suites green, plus re-ran everything the shared
+changes touch: `qa-chess`, `qa-dotsandboxes`, `qa-breaker`, `qa-survival`, `qa-sling`,
+`qa-music` — all PASS.
+
+**Remaining in 7B (Mike's order).** Next: Croc Tot, then Riley's Garden (has a game file but
+no picker card — like Snakes; its identity stub is a create-on-conversion step). Then the
+rest of the Classics/keepers (Typing, Mahjong, Bingo, String Match, Dots & Boxes fully),
+plus Tumble Blocks (Tetris rename + mechanical twist), Tennis, Castle Guard, Bubble, Memory.
+Stopped after these three per instructions.
+
 
 ## 2026-07-10 — Session 7C: Kid customizer polish — Feel Kit celebrations in the loadout (Phase 7)
 
