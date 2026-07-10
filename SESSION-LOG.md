@@ -1,5 +1,36 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09: Bug fix - audio no longer plays when the app is backgrounded
+
+Locking the screen or switching apps on iPad/iPhone left sound playing: the exhibit's
+read-aloud voice and ambient bed kept going, and game music (an HTML `Audio` bed driven by
+the shared audio system) did too, because a game's `pause` only froze gameplay, not the
+music. Fixed once at the shell/shared-system level, per CARTRIDGE-CONTRACT.md.
+
+**What changed (3 files, no new deps):**
+- `public/buildable-audio.js` - the shared audio system now listens for its own frame's
+  `visibilitychange`/`pagehide`. When hidden it stops the music bed and suspends the audio
+  graph; on return it resumes the music only if it was playing and not muted. Every game
+  that uses the shared system gets this for free - one edit, all game music.
+- `public/orbit-explorer.html` (the Kidspedia exhibit) - added an in-frame
+  `visibilitychange` handler that, on hide, stops the ambient bed and cancels read-aloud
+  (`speechSynthesis.cancel()` + narrator clip) synchronously, so speech never keeps talking
+  as iOS freezes the page. On return the ambient may come back but read-aloud never
+  auto-restarts mid-sentence, and the quiz pause veil is left untouched.
+- `src/BuildableKids.jsx` (`GameFrame`, the one shell wrapper for every game + exhibit)  - 
+  on hide it posts `pause` to the embedded iframe, and `resume` on return, so games freeze
+  and continue cleanly through the existing cartridge pause path.
+
+Why both an in-frame handler and a shell message: a shell `postMessage` can arrive too late
+as iOS freezes the page, so audio is stopped inside each frame (reliable), while the shell
+message drives the freeze/continue contract for gameplay.
+
+**QA.** `node qa-breaker.mjs` ALL CHECKS PASS; `node qa-explore.mjs` ALL CHECKS PASS
+(incl. read-aloud fires + honors pause/resume). Full `vite build` not run in the sandbox
+(no disk space for install); JSX change mirrors the adjacent working handler and the Vercel
+branch preview build was used to confirm the app compiles. On-device iPad Safari lock-screen
+test to be confirmed by the owner.
+
 ## 2026-07-09: Session 8J - solar-system exhibit gets real planet textures
 
 Kidspedia's solar-system exhibit (`public/explore/solar-system.json`, `orbit-explorer.html`)

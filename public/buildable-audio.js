@@ -123,5 +123,28 @@
 
   if (g.addEventListener) { const u=()=>BA.unlock(); ["pointerdown","touchend","mousedown","keydown","click"].forEach(ev=>{ try{ g.addEventListener(ev,u,{passive:true}); }catch(e){} }); }
 
+  // Background = silence. When the tab/app is hidden (iOS screen-lock or app-switch),
+  // stop the music bed and suspend the audio graph so nothing keeps playing behind a
+  // locked phone; on return, resume the music only if it was playing before (and not
+  // muted). This runs per-frame, so every game that uses the shared audio system gets
+  // the fix for free — see CARTRIDGE-CONTRACT.md (pause on tab switches).
+  if (g.document && g.addEventListener) {
+    const onHide = function () {
+      try { BA._bgWasPlaying = !!(BA.music && !BA.music.paused); } catch (e) { BA._bgWasPlaying = false; }
+      BA.stopMusic();
+      try { if (BA.ctx && BA.ctx.state === "running") BA.ctx.suspend(); } catch (e) {}
+    };
+    const onShow = function () {
+      if (g.document.hidden) return;
+      try { if (BA.ctx && BA.ctx.state === "suspended" && !BA.muted) BA.ctx.resume(); } catch (e) {}
+      if (BA._bgWasPlaying && !BA.muted && BA._unlocked) BA.playMusic();
+      BA._bgWasPlaying = false;
+    };
+    try {
+      g.document.addEventListener("visibilitychange", function () { if (g.document.hidden) onHide(); else onShow(); });
+      g.addEventListener("pagehide", onHide);
+    } catch (e) {}
+  }
+
   g.BuildableAudio = BA;
 })(typeof window !== "undefined" ? window : globalThis);
