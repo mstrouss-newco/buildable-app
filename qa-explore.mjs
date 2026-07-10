@@ -300,8 +300,13 @@ for (const exhibit of approved) {
 // Static check: the read-aloud browser-voice fallback path exists in the source
 // (can't easily flip `"speechSynthesis" in window` to false mid-vm-run for the
 // same script instance, so this is verified as source text instead of runtime).
-if (inlineScript && inlineScript.indexOf('Read-aloud not on this device') !== -1) pass('read-aloud has a browser-voice-missing fallback label');
-else fail('read-aloud fallback label not found in source');
+if (inlineScript && /function browserVoice\(/.test(inlineScript) && inlineScript.indexOf('factAudio') !== -1 && inlineScript.indexOf('/api/explore-audio') !== -1)
+  pass('read-aloud: plays factAudio narration when present, falls back to the browser voice (browserVoice)');
+else fail('read-aloud factAudio + browser-voice fallback not found in source');
+// Audio wiring (Session 8I): soft ambient bed + Feel Kit tap feedback + shell Sound toggle.
+if (inlineScript && inlineScript.indexOf('/api/sfx?s=') !== -1 && /function startAmbient\(/.test(inlineScript) && /Feel\.tap/.test(inlineScript) && /BuildableGameNav\.register/.test(inlineScript))
+  pass('audio wired: ambient bed (/api/sfx), Feel.tap tap feedback, and the shell Sound toggle (BuildableGameNav)');
+else fail('Session 8I audio wiring (ambient / Feel.tap / Sound toggle) not found in source');
 
 console.log(ok ? 'ALL CHECKS PASS' : 'SOME CHECKS FAILED');
 process.exit(ok ? 0 : 1);

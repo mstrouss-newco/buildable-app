@@ -93,6 +93,8 @@
 <div class="toast" id="toast"></div>
 
 <script src="/buildable-gamenav.js"></script>
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-feel.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 "use strict";
@@ -125,6 +127,10 @@ let DATA = null;       // the loaded exhibit file
 let ITEMS = {};        // id -> item (center + bodies), for chip/card lookups
 let current = null;    // currently selected item id
 let paused = false;
+let soundOn = true;      // ambient + tap sounds; the shell Sound button toggles this
+let audioUnlocked = false;
+let ambientAudio = null; // the soft per-exhibit background bed (an /api/sfx loop)
+let narrAudio = null;    // the currently playing "Read to me" narration clip
 
 // In-shell vs standalone: tag the body so the CSS defers the top-left corner to
 // the shell's Home button (HUD-AND-NAV-RULES.md — the shell owns that corner).
@@ -179,6 +185,8 @@ function boot(data) {
   // catcher for the reserved corner. Standalone keeps the back button working.
   document.getElementById("back").onclick = exitToShell;
 
+  initAudio(data);
+
   // Honor pause/resume from the shell around the quiz gate (CARTRIDGE-CONTRACT.md — mandatory).
   window.addEventListener("message", (e) => {
     const d = e && e.data;
@@ -205,6 +213,7 @@ function boot(data) {
 function setPaused(v) {
   paused = v;
   document.getElementById("pauseveil").classList.toggle("show", v);
+  if (v) { stopAmbient(); stopNarration(); } else { startAmbient(); }
 }
 
 // ================= three.js scene =================
@@ -304,7 +313,7 @@ function wireInteraction(canvas) {
       const v = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       const rc = new THREE.Raycaster(); rc.setFromCamera(v, camera);
       const hit = rc.intersectObjects(pickables)[0];
-      if (hit) pick(hit.object.userData.id);
+      if (hit) { tapFx(); pick(hit.object.userData.id); }
     }
   });
   canvas.addEventListener("wheel", (e) => { e.preventDefault(); dist = Math.min(90, Math.max(12, dist + e.deltaY * .04)); }, { passive: false });
@@ -346,6 +355,62 @@ function tick() {
   placeCam(); sizeStage(); renderer.render(scene, camera);
 }
 
+// ================= sound: tap feedback + soft ambient (Feel Kit + shell toggle) =================
+// EXHIBIT-MANIFEST.md: every tap gets Feel Kit feedback; each exhibit may name a
+// soft ambient bed; the shell's Sound button (nav:sound) mutes/unmutes both.
+function tapFx() { try { if (window.Feel && Feel.tap) Feel.tap(); } catch (e) {} }
+
+function initAudio(data) {
+  try { if (window.Feel && Feel.configure) Feel.configure({ sfxBase: "/api/sfx?s=" }); } catch (e) {}
+  try { soundOn = !(window.BuildableAudio && window.BuildableAudio.muted); } catch (e) { soundOn = true; }
+
+  // The shell owns the Sound button in-app; register so it drives our audio.
+  try {
+    if (window.BuildableGameNav) BuildableGameNav.register({
+      hide: [],
+      onSound: function () { setSound(!soundOn); },
+      soundOn: function () { return soundOn; },
+      inGame: function () { return true; },
+    });
+  } catch (e) {}
+
+  // Audio unlocks on the first tap (iOS + product rule); start the ambient bed then.
+  var unlock = function () {
+    if (audioUnlocked) return; audioUnlocked = true;
+    try { if (window.Feel && Feel.unlock) Feel.unlock(); } catch (e) {}
+    startAmbient();
+    document.removeEventListener("pointerdown", unlock);
+    document.removeEventListener("touchstart", unlock);
+  };
+  document.addEventListener("pointerdown", unlock, { passive: true });
+  document.addEventListener("touchstart", unlock, { passive: true });
+}
+
+function startAmbient() {
+  if (!DATA || !DATA.ambient || !audioUnlocked || !soundOn || paused) return;
+  if (!ambientAudio) {
+    try {
+      ambientAudio = new Audio("/api/sfx?s=" + encodeURIComponent(DATA.ambient));
+      ambientAudio.loop = true; ambientAudio.volume = 0.15;
+    } catch (e) { return; }
+  }
+  try { var p = ambientAudio.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+}
+function stopAmbient() { if (ambientAudio) { try { ambientAudio.pause(); } catch (e) {} } }
+
+function setSound(on) {
+  soundOn = on;
+  // keep Feel/BuildableAudio mute in sync so tap sounds match the toggle
+  try {
+    if (window.BuildableAudio) {
+      if (on && window.BuildableAudio.muted) window.BuildableAudio.toggleMute();
+      else if (!on && !window.BuildableAudio.muted) window.BuildableAudio.toggleMute();
+    }
+  } catch (e) {}
+  if (on) startAmbient(); else { stopAmbient(); stopNarration(); }
+  try { if (window.BuildableGameNav) BuildableGameNav.update(); } catch (e) {}
+}
+
 // ================= chips + fact card =================
 function buildChips(data) {
   const chips = document.getElementById("chips");
@@ -353,7 +418,7 @@ function buildChips(data) {
     const c = document.createElement("button");
     c.className = "chip"; c.id = "ch-" + p.id;
     c.innerHTML = `<b style="background:${p.colorHex || "#999"}"></b>${escapeHtml(p.name)}`;
-    c.onclick = () => pick(p.id);
+    c.onclick = () => { tapFx(); pick(p.id); };
     chips.appendChild(c);
   });
 }
@@ -389,26 +454,41 @@ function pick(id) {
   qr.appendChild(quizBtn);
 
   if (halo) halo.scale.setScalar((p.size || 1) * 1.35);
-  speechSynthesis && speechSynthesis.cancel && speechSynthesis.cancel();
+  stopNarration();
 }
 
-// ================= read aloud (with browser-voice fallback) =================
-const sayBtn = () => document.getElementById("sayBtn");
-if (!("speechSynthesis" in window)) {
-  document.addEventListener("DOMContentLoaded", () => {
-    sayBtn().disabled = true;
-    document.getElementById("sayLabel").textContent = "Read-aloud not on this device";
-  });
+// ================= read aloud: narrator clip first, browser voice as fallback =================
+// EXHIBIT-MANIFEST.md: if this fact has factAudio, "Read to me" plays the
+// pre-generated narrator voice; the serve endpoint 404s instantly when a clip
+// isn't made yet, so we drop to the browser voice with no waiting.
+function stopNarration() {
+  try { if (narrAudio) { narrAudio.pause(); narrAudio = null; } } catch (e) {}
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
 }
-function readAloud() {
-  if (!("speechSynthesis" in window) || !current) return;
-  const p = ITEMS[current];
+function browserVoice(p) {
+  if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); return; }
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(p.name + ". " + (p.fact || ""));
     u.rate = .92; u.pitch = 1.05;
     speechSynthesis.speak(u);
   } catch (e) { showToast("Couldn't read that aloud right now."); }
+}
+function readAloud() {
+  if (!current) return;
+  const p = ITEMS[current]; if (!p) return;
+  stopNarration();
+  if (p.factAudio) {
+    try {
+      const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(p.factAudio));
+      narrAudio = a;
+      a.onerror = function () { narrAudio = null; browserVoice(p); };
+      const pr = a.play();
+      if (pr && pr.catch) pr.catch(function () { narrAudio = null; browserVoice(p); });
+      return;
+    } catch (e) { /* fall through to browser voice */ }
+  }
+  browserVoice(p);
 }
 
 // ================= quiz bridge (CARTRIDGE-CONTRACT.md: quizRequest / pause / resume / bk:quizDone) =================
