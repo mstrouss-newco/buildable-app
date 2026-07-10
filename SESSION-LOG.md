@@ -1,5 +1,56 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 7B: Conversion campaign — Chess converts to the manifest (Phase 7)
+
+First game of the 7B conversion campaign. Chess was chosen first on purpose: a
+converted Chess plus the working guest links (the grandma-across-the-country demo) is
+the single best investor-facing demo, so it gets polished before anything else. Done
+one game at a time, QA robot verifying — exactly the campaign shape 7B calls for.
+
+**What shipped.**
+- **Chess board profile in the shared loader** (`public/buildable-manifest.js`). Chess has
+  no brick-style levels, so its manifest "levels" are OPPONENT TIERS — a real little
+  journey (beat the friendly bot, then the clever one, then the grandmaster). The one
+  tunable stays difficulty 1-5, which DERIVES the engine's bot-strength string
+  (easy/medium/hard) — no raw search-depth numbers in the manifest (golden rule 2).
+  Worlds (jungle/ocean/space/candy/castle/desert) are picked freely, so they are a
+  customization slot, not an unlock chain; the engine keeps its own per-world art and
+  falls back if a slot is missing.
+- **`public/chess/manifest.json`** per manifest-v2: identity (Board, `#F0972A`), features
+  (multiplayer turn-based, coach buddy, coin top-up learning in math, coins on), the five
+  art slots, three opponent tiers (Easy d1 / Medium d3 / Hard d5), and a free six-world
+  customization slot. Added its `vercel.json` route (no-cache, like the other manifests).
+- **Engine reads its manifest** (`public/buildable-chess.html`). The engine now pulls in
+  `buildable-manifest.js` and, on load, builds its opponent-tier grid and world grid FROM
+  the manifest — with the built-in tiers/worlds kept as a fallback so a manifest miss or
+  outage can never break the game (AGENTS.md: read on render, always with a fallback).
+  Guest links and turn-based online play (the grandma flow) are untouched.
+- **New QA robot `qa-chess.mjs`** (Chess had none). It validates the manifest through the
+  shared loader, then loads the engine's real move logic and proves: the opening has 20
+  legal moves, a checkmate is reachable AND reported (a scripted Fool's mate returns
+  `result:'mate'`), every opponent tier plays only legal moves to a natural end, and the
+  manifest loader + turn-based relay signals are wired into the shipped file.
+
+**QA.** `node qa-chess.mjs .` — ALL CHECKS PASSED (manifest valid; tiers Easy/Medium/Hard;
+6 free worlds; turn-based -> turns lane; 20 opening moves; Fool's-mate checkmate detected;
+easy/medium/hard all play legally). Because this touched the shared loader, re-ran the
+other manifest games as a regression guard: `qa-breaker`, `qa-survival`, `qa-sling`,
+`qa-tictactoe` all still PASS.
+
+**Note carried forward — Tumble Blocks (the Tetris rename).** Mike confirmed the name
+stays **Tumble Blocks** for when its conversion comes up later in 7B. The catalog display
+name is already safe; the remaining work at conversion time is the `id`/file/handler
+rename off "tetris" plus a visible mechanical twist (blocks tumble/settle on a row clear)
+so it plays clearly different from Tetris. Not touched this session.
+
+**Remaining in Phase 7 / the 7B campaign.** Still to convert (Mike's order): Croc Tot and
+Riley's Garden next, then the Classics batch (String Match, Connect Four, Dots & Boxes,
+Checkers, Typing, Mahjong, Bingo), plus Tumble Blocks (with the rename), Tennis, Castle
+Guard, Bubble, Memory. Riley's Garden has a file but no picker card (like Snakes) — flag,
+not invented. Then 7C (kid-customizer polish) and 7D (retire the superseded). Stopped
+here per the one-block rule.
+
+
 ## 2026-07-09 — Session 7A: Catalog triage (Phase 7)
 
 Executed the already-decided keep/archive verdicts on the catalog. No new features; this

@@ -6,6 +6,27 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 7B: Conversion campaign — Chess converts to the manifest (July 9 2026)
+
+First game of the 7B conversion campaign (Chess first: it pairs with the guest-links
+"grandma" demo, the best investor-facing pairing). Chess is a board game, so its manifest
+`levels` are opponent TIERS (Easy d1 / Medium d3 / Hard d5) — difficulty 1-5 derives the
+engine bot strength, no raw knobs. Worlds became a free customization slot.
+
+- New **chess board profile** in `public/buildable-manifest.js` (validate + `toEngineConfig`
+  emit `tiers` + `worlds`); registered in `PROFILES`.
+- New **`public/chess/manifest.json`** (multiplayer turn-based, coach buddy, coin top-up,
+  three tiers, six free worlds) + `vercel.json` route.
+- **`public/buildable-chess.html`** now loads `buildable-manifest.js` and builds its
+  difficulty + world menus from the manifest, with the built-in tiers/worlds as a fallback
+  (never breaks). Guest links + turn-based online play untouched.
+- New **`qa-chess.mjs`**: manifest validity, 20 opening moves, a scripted Fool's-mate
+  checkmate is detected + reported, every tier plays only legal moves to an end, loader +
+  relay wiring present. `ALL CHECKS PASSED`. Regression: `qa-breaker/survival/sling/tictactoe`
+  still pass after the shared-loader change.
+- Note: **Tumble Blocks** name confirmed for the later Tetris conversion (rename + a
+  mechanical twist still to do when its turn comes).
+
 ## Session 7A: Catalog triage (July 9 2026)
 
 Cleanup pass ahead of the conversion campaign. Archived 9 prototypes out of `public/` into
