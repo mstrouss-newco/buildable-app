@@ -41,7 +41,7 @@ The earlier same-day audio fix covered game music and exhibit read-aloud/ambient
 Home screen's spoken buddy lines (`voiceBus`, played outside any game frame). Added a small
 app-root handler in `src/BuildableKids.jsx` that stops the buddy voice + cancels browser
 read-aloud on `visibilitychange`/`pagehide` and never auto-restarts on return. QA:
-`qa-breaker` + `qa-explore` ALL CHECKS PASS. main e1522d5
+`qa-breaker` + `qa-explore` ALL CHECKS PASS. main 4c07171
 
 ## Bug fix: audio stops when the app is backgrounded (July 9 2026)
 

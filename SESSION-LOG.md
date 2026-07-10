@@ -193,7 +193,7 @@ exhibit handlers.
 JSX syntax-checked with esbuild (bundles clean). On-device iPad Safari lock-screen check to
 be confirmed by the owner.
 
-main e1522d5
+main 4c07171
 
 ## 2026-07-09: Bug fix - audio no longer plays when the app is backgrounded
 
