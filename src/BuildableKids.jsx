@@ -48,6 +48,7 @@ const SCREEN_CHESS = "chess";
 const SCREEN_GAME_PICKER = "game_picker";
 const SCREEN_PLATFORMER = "platformer";
 const SCREEN_SURVIVAL = "survival";
+const SCREEN_SURVIVAL_UPGRADES = "survival_upgrades"; // Session 9B: shell gameplay-upgrade store
 const SCREEN_BREAKER = "breaker";
 const SCREEN_BREAKER_LANDING = "breaker_landing";
 const SCREEN_BREAKER_JOURNEY = "breaker_journey";
@@ -322,7 +323,26 @@ function familyBtn(onFamily) {
   return <button onClick={onFamily} style={{ position: "absolute", top: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Play a sibling</button>;
 }
 
-function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html?v=hud1" onHome={onHome} />; }
+// Session 9B: hand the kid's equipped GAMEPLAY upgrades to the engine as tiny
+// launch params (the same handoff the loadout uses for looks) — the shell owns the
+// purchases, the engine just reads which power id is equipped and applies its effect.
+// The "Gear up" button opens the shell upgrade store (bottom-right so it clears the
+// engine's own Home / mute / help / hint controls).
+const SURV_TRACK_SLOT = { Weapon: "weapon", Armor: "armor", Boots: "boots", Hero: "hero" };
+function survivalUpParam() {
+  const eq = readEquippedUpgrades("survival");
+  const pairs = Object.keys(SURV_TRACK_SLOT)
+    .map((t) => (eq[t] ? SURV_TRACK_SLOT[t] + ":" + eq[t] : null))
+    .filter(Boolean);
+  return pairs.length ? "&up=" + encodeURIComponent(pairs.join(",")) : "";
+}
+function SurvivalScreen({ onHome, onUpgrades }) {
+  const src = "/survival-engine.html?v=9b" + survivalUpParam();
+  const right = onUpgrades ? (
+    <button onClick={onUpgrades} style={{ position: "absolute", bottom: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Gear up</button>
+  ) : null;
+  return <GameFrame title="Buildable Survival" src={src} onHome={onHome} right={right} />;
+}
 
 // Kidspedia exhibit viewer (Session 8G). One shell wrapper for every orbit-explorer
 // exhibit: same GameFrame as a game, same quizRequest/pause/resume bridge as Breaker
@@ -597,6 +617,36 @@ function writeLoadout(gameId, store) { try { localStorage.setItem(loadoutKey(gam
 function readEquipped(gameId) { try { const s = JSON.parse(localStorage.getItem(loadoutKey(gameId)) || "null"); return (s && s.equipped) || {}; } catch (e) { return {}; } }
 function walletBalance() { try { return (window.BuildableWallet && window.BuildableWallet.balance()) || 0; } catch (e) { return 0; } }
 
+// ============================================================================
+//  Upgrade store (Session 9B) — the kid's owned + equipped GAMEPLAY upgrades,
+//  owned by the SHELL (never the engine), keyed per game + per kid. Unlike the
+//  cosmetics loadout (which stores by option index), upgrades are stored by the
+//  manifest option's STABLE id, because that id is what the shell hands the engine
+//  so it can apply the power's effect. Coins spend through the shared wallet, the
+//  same one that buys looks (the owner's one-wallet economy — see manifest doc 5c).
+// ============================================================================
+function upgradeKey(gameId) {
+  let kid = "";
+  try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); if (k && k.id) kid = "_" + k.id; } catch (e) {}
+  return "bk_upgrades_v1_" + gameId + kid;
+}
+function readUpgrades(gameId, tracks) {
+  let store = { owned: {}, equipped: {} };
+  try { const s = JSON.parse(localStorage.getItem(upgradeKey(gameId)) || "null"); if (s && typeof s === "object") store = { owned: s.owned || {}, equipped: s.equipped || {} }; } catch (e) {}
+  (tracks || []).forEach((tr) => {
+    const name = tr.track, opts = tr.options || [];
+    const owned = new Set(store.owned[name] || []);
+    opts.forEach((o) => { if (o.id && (o.price || 0) === 0) owned.add(o.id); }); // free power is always owned
+    store.owned[name] = Array.from(owned);
+    if (!store.equipped[name] || !store.owned[name].includes(store.equipped[name])) {
+      store.equipped[name] = store.owned[name].length ? store.owned[name][0] : null; // default-equip first owned
+    }
+  });
+  return store;
+}
+function writeUpgrades(gameId, store) { try { localStorage.setItem(upgradeKey(gameId), JSON.stringify(store)); } catch (e) {} }
+function readEquippedUpgrades(gameId) { try { const s = JSON.parse(localStorage.getItem(upgradeKey(gameId)) || "null"); return (s && s.equipped) || {}; } catch (e) { return {}; } }
+
 function CoinGlyph({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -814,6 +864,174 @@ function BreakerLoadout({ game, onBack, onPlay }) {
       </div>
 
       {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 8px 0 ${accent}88, 0 14px 28px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play with this look</button>}
+    </div>
+  );
+}
+
+// ============================================================================
+//  UpgradeStore (Session 9B) — the SHELL-generated GAMEPLAY-power store, built
+//  straight from the manifest's `upgrades` tracks. It is the loadout's twin, but
+//  for POWER instead of looks: the shell draws it, spends the SHARED wallet on a
+//  buy, and remembers what each kid owns + has equipped (per game + per kid). The
+//  engine is only handed which id is equipped (as launch params) and owns what the
+//  power actually does — the shell never knows an effect. Same Feel Kit celebration
+//  on unlock and same practice top-up when short on coins as the loadout, so power
+//  shopping feels like the rest of Buildable, not a bare menu.
+// ============================================================================
+function UpgradeStore({ game, onBack, onPlay }) {
+  const accent = (game && game.color) || "#8A6BFF";
+  const gameId = (game && game.id) || "survival";
+  const [manifest, setManifest] = useState(null);
+  const [coins, setCoins] = useState(() => walletBalance());
+  const [store, setStore] = useState({ owned: {}, equipped: {} });
+  const [flash, setFlash] = useState("");
+  const [topUp, setTopUp] = useState(null);
+  const [justUnlocked, setJustUnlocked] = useState(null);
+  const fxCanvasRef = useRef(null);
+  const fxRef = useRef(null);
+  const fxRafRef = useRef(null);
+
+  useEffect(() => {
+    let live = true;
+    loadGameManifest(gameId)
+      .then((m) => { if (!live) return; setManifest(m); setStore(readUpgrades(gameId, m.upgrades || [])); })
+      .catch(() => {});
+    const onWallet = () => setCoins(walletBalance());
+    window.addEventListener("bk-wallet", onWallet);
+    setCoins(walletBalance());
+    return () => { live = false; window.removeEventListener("bk-wallet", onWallet); };
+  }, [gameId]);
+
+  useEffect(() => {
+    if (!manifest) return;
+    try {
+      const Feel = window.BuildableFeel;
+      if (!Feel) return;
+      Feel.configure({ accent, feel: manifest.feel, sfxBase: "/api/sfx?s=" });
+      if (!fxRef.current) fxRef.current = Feel.makeFx();
+      Feel.setFx(fxRef.current);
+    } catch (e) {}
+  }, [manifest, accent]);
+  useEffect(() => () => { if (fxRafRef.current) cancelAnimationFrame(fxRafRef.current); }, []);
+
+  function feelTap() { try { window.BuildableFeel && window.BuildableFeel.tap(); } catch (e) {} }
+  function feelMiss() { try { window.BuildableFeel && window.BuildableFeel.miss(); } catch (e) {} }
+  function celebrateUnlock(evt, key) {
+    setJustUnlocked(key);
+    setTimeout(() => setJustUnlocked((k) => (k === key ? null : k)), 900);
+    try {
+      const Feel = window.BuildableFeel; const c = fxCanvasRef.current;
+      if (!Feel || !c || !evt || !evt.currentTarget) return;
+      const r = evt.currentTarget.getBoundingClientRect();
+      c.width = window.innerWidth; c.height = window.innerHeight;
+      Feel.explode(r.left + r.width / 2, r.top + r.height / 2, accent, { sound: "powerup", pop: "Unlocked!", popCol: "#fff" });
+      const ctx = c.getContext("2d");
+      let last = performance.now(); const end = last + 1100;
+      if (fxRafRef.current) cancelAnimationFrame(fxRafRef.current);
+      const tick = (ts) => {
+        const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
+        ctx.clearRect(0, 0, c.width, c.height);
+        Feel.update(fxRef.current, dt); Feel.draw(ctx, fxRef.current, { W: c.width, H: c.height });
+        if (ts < end) fxRafRef.current = requestAnimationFrame(tick); else ctx.clearRect(0, 0, c.width, c.height);
+      };
+      fxRafRef.current = requestAnimationFrame(tick);
+    } catch (e) {}
+  }
+
+  const tracks = (manifest && Array.isArray(manifest.upgrades)) ? manifest.upgrades : [];
+  function equip(trackName, id) {
+    feelTap();
+    setStore((prev) => { const next = { owned: { ...prev.owned }, equipped: { ...prev.equipped, [trackName]: id } }; writeUpgrades(gameId, next); return next; });
+  }
+  function buy(trackName, id, price, evt) {
+    if (coins < (price || 0)) {
+      let eff = null; try { eff = effectiveLearning({}); } catch (e) {}
+      if (eff && eff.enabled && eff.coinTopUp) { feelTap(); setTopUp({ trackName, id, price }); return; }
+      feelMiss(); setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return;
+    }
+    let ok = false;
+    try { ok = window.BuildableWallet ? window.BuildableWallet.spend(price) : false; } catch (e) { ok = false; }
+    if (!ok) { feelMiss(); setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return; }
+    setStore((prev) => {
+      const owned = { ...prev.owned }; const list = (owned[trackName] || []).slice(); if (!list.includes(id)) list.push(id);
+      owned[trackName] = list;
+      const next = { owned, equipped: { ...prev.equipped, [trackName]: id } }; writeUpgrades(gameId, next); return next;
+    });
+    setCoins(walletBalance());
+    celebrateUnlock(evt, trackName + "|" + id);
+  }
+
+  return (
+    <div style={{ ...styles.container, padding: "18px 14px 44px", justifyContent: "flex-start" }}>
+      <style>{"@keyframes bkUnlockPop{0%{transform:scale(1)}45%{transform:scale(1.08)}100%{transform:scale(1)}}@keyframes bkUnlockGlow{0%{box-shadow:0 0 0 0 rgba(255,217,138,0)}40%{box-shadow:0 0 0 4px rgba(255,217,138,.9),0 0 26px rgba(255,217,138,.75)}100%{box-shadow:0 0 0 2px rgba(255,217,138,.5)}}"}</style>
+      <canvas ref={fxCanvasRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 9990, pointerEvents: "none" }} />
+      {topUp && <TopUpGate onClose={() => { setTopUp(null); setCoins(walletBalance()); }} />}
+      <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center", marginBottom: 12, maxWidth: 680 }}>
+        <button onClick={() => { feelTap(); onBack(); }} style={styles.backButton}>Back</button>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 999, background: "rgba(245,217,118,.16)", border: "1px solid rgba(245,217,118,.4)", fontWeight: 900, color: "#FFE08A" }}>
+          <CoinGlyph size={18} /> {coins}
+        </div>
+      </div>
+
+      <div style={{ width: "100%", maxWidth: 680, textAlign: "center" }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Power up</div>
+        <h1 style={{ ...styles.logo, fontSize: "clamp(32px,7vw,52px)", margin: "2px 0 4px" }}>Gear Up</h1>
+        <p style={{ ...styles.tagline, fontSize: 15, marginBottom: 16 }}>Spend coins to unlock power, then tap to equip.</p>
+        {flash && <div style={{ margin: "0 auto 14px", maxWidth: 380, background: "rgba(255,176,77,.16)", border: "1px solid rgba(255,176,77,.45)", color: "#FFE0B0", borderRadius: 12, padding: "9px 14px", fontWeight: 800 }}>{flash}</div>}
+      </div>
+
+      {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>Getting your gear ready...</div>}
+      {manifest && !tracks.length && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>This game has no gear to buy yet.</div>}
+
+      <div style={{ width: "100%", maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
+        {tracks.map((tr) => {
+          const name = tr.track, opts = tr.options || [];
+          const owned = new Set(store.owned[name] || []);
+          const eq = store.equipped[name];
+          return (
+            <div key={name}>
+              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, margin: "0 0 8px" }}>{name}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
+                {opts.map((o) => {
+                  const id = o.id;
+                  const isOwned = owned.has(id) || (o.price || 0) === 0;
+                  const isEq = eq === id;
+                  const canAfford = coins >= (o.price || 0);
+                  const key = name + "|" + id;
+                  const glowing = justUnlocked === key;
+                  return (
+                    <div key={id} style={{
+                      borderRadius: 16, padding: "12px 12px 10px",
+                      background: isEq ? `linear-gradient(160deg, ${accent}44, ${accent}18)` : "rgba(255,255,255,0.05)",
+                      border: isEq ? `2px solid ${accent}` : "1px solid rgba(255,255,255,0.14)",
+                      animation: glowing ? "bkUnlockPop .5s ease-out, bkUnlockGlow .9s ease-out" : "none",
+                    }}>
+                      <div style={{ height: 54, borderRadius: 12, marginBottom: 8, background: `linear-gradient(160deg, ${accent}, ${accent}55)`, opacity: isOwned ? 1 : 0.4, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 13, textAlign: "center", padding: "0 6px", textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{o.name}</div>
+                      {o.desc && <div style={{ fontSize: 11.5, lineHeight: 1.25, opacity: 0.8, minHeight: 30, margin: "0 0 8px" }}>{o.desc}</div>}
+                      {isOwned ? (
+                        <button onClick={() => equip(name, id)} disabled={isEq} style={{
+                          width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: isEq ? "default" : "pointer",
+                          border: "none", color: isEq ? "#12102a" : "#fff",
+                          background: isEq ? `linear-gradient(160deg,#fff,${accent})` : "rgba(255,255,255,0.1)",
+                        }}>{isEq ? "Equipped" : "Equip"}</button>
+                      ) : (
+                        <button onClick={(e) => buy(name, id, o.price || 0, e)} disabled={!canAfford} style={{
+                          width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: canAfford ? "pointer" : "not-allowed",
+                          border: "none", color: canAfford ? "#12102a" : "#9a97b5",
+                          background: canAfford ? "linear-gradient(160deg,#FFE08A,#FFD24A)" : "rgba(255,255,255,0.06)",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                        }}><CoinGlyph size={15} /> {o.price}</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 8px 0 ${accent}88, 0 14px 28px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play with this power</button>}
     </div>
   );
 }
@@ -1499,7 +1717,13 @@ export default function BuildableKids() {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_SURVIVAL) {
-    return <SurvivalScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <SurvivalScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onUpgrades={() => setScreen(SCREEN_SURVIVAL_UPGRADES)} />;
+  }
+  if (screen === SCREEN_SURVIVAL_UPGRADES) {
+    const sv = GAME_CATALOG.find((g) => g.id === "survival");
+    return <UpgradeStore game={sv}
+      onBack={() => setScreen(SCREEN_SURVIVAL)}
+      onPlay={() => setScreen(SCREEN_SURVIVAL)} />;
   }
   if (screen === SCREEN_BREAKER_LANDING) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
