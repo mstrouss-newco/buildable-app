@@ -1,5 +1,34 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 7C: Tennis logic fix — the 0-0 self-loss (Phase 7)
+
+A prerequisite fix, not a conversion. `qa-tennis` was failing because Tennis lost 0-0 in
+its own simulation on every difficulty — a game-logic bug that predates the rebuild. Fixed
+so the harness passes; Tennis can now join the 7B conversion queue.
+
+**Root cause.** `newGame()` turns on the wordless how-to-play demo (`demoOn = true`), and
+`update()` returned early every frame while the demo was up. The demo was only ever
+dismissed by a real pointer/keydown event — there was no automatic timeout. So with no
+input the ball never served: the flawless headless player in `qa-tennis` (and, in the real
+app, any kid who sets the phone down without tapping) sat frozen at center, the score
+stayed 0-0, and after the frame cap the match was scored as a loss.
+
+**Fix.** The demo now advances its own timer inside `update()` and auto-dismisses after
+`DEMO_MAX` (6s), so play always begins whether or not anyone taps. Tap/keypress dismissal
+is unchanged; the duplicate `demoT` increment in `frame()` was removed so the timer counts
+once. Six-line change in `public/tennis.html`; no scoring math or win-condition constants
+were altered — the scoring was correct, it was simply never reached.
+
+**QA.** `node qa-tennis.mjs .` — PASS on all three difficulties (Gentle / Normal / Speedy),
+flawless player wins 7-0 each; render smoke test ok. This was the only file touched, so no
+other harnesses needed re-running.
+
+**Note for Mike.** The roadmap lists Session 7C as "Kid customizer polish"; this session
+used the 7C slot for the Tennis logic fix per the session brief. The customizer-polish work
+is still open under Phase 7. Stopped here per the one-block rule.
+
+
+
 ## 2026-07-09 — Session 7B: Conversion campaign — Chess converts to the manifest (Phase 7)
 
 First game of the 7B conversion campaign. Chess was chosen first on purpose: a
