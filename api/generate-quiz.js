@@ -16,6 +16,27 @@ import crypto from "crypto";
 
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 
+// Contextual generation (Session 8A): questions can be themed to the game a kid
+// is playing, created fresh in the moment. Map a gameType to a kid-friendly
+// setting; unknown games get no theme (a plain question). No emojis.
+const GAME_THEME = {
+  runner: "a car zooming through a sunny town",
+  survival: "space explorers dodging sparkles",
+  breaker: "knocking down colorful bricks",
+  croc: "a friendly crocodile adventure",
+  "croc-tot": "a friendly crocodile adventure",
+  sling: "launching buddies with a slingshot",
+  tennis: "a lively tennis match",
+  maze: "finding the way through a maze",
+  bubble: "popping bubbles",
+  chess: "a royal chess kingdom",
+  tank: "gentle hilltop tanks",
+  typing: "a typing quest",
+};
+function themeForGame(gameType) {
+  return GAME_THEME[String(gameType || "").toLowerCase()] || null;
+}
+
 function quizCacheKey({ age, level, gameType, quizType, seedBucket }) {
   return crypto
     .createHash("sha256")
@@ -152,12 +173,14 @@ function localFallback(quizType, age, level) {
 }
 
 // ---------------- Claude prompts (no emojis) ----------------
-function buildSpellingPrompt(age, level) {
-  return `You are creating a spelling question for a child age ${age}, level ${level}. The question must be UNAMBIGUOUS. Give a short plain-text clue describing the word (no emoji, no symbols). Return ONLY raw JSON in this exact shape: {"type":"spelling","clue":"A pet that barks.","word_template":"D_G","choices":["O","A","E","U"],"correctIndex":0,"answer":"dog"}`;
+function buildSpellingPrompt(age, level, theme) {
+  const themeLine = theme ? ` If it fits naturally, flavor the clue around ${theme}, but keep the word simple.` : "";
+  return `You are creating a spelling question for a child age ${age}, level ${level}. The question must be UNAMBIGUOUS. Give a short plain-text clue describing the word (no emoji, no symbols).${themeLine} Return ONLY raw JSON in this exact shape: {"type":"spelling","clue":"A pet that barks.","word_template":"D_G","choices":["O","A","E","U"],"correctIndex":0,"answer":"dog"}`;
 }
 
-function buildReadingPrompt(age, level) {
-  return `You are creating a short reading comprehension question for a child age ${age}, level ${level}. Do not use emoji or symbols. Return ONLY raw JSON: {"type":"reading","story":"Maya found a tiny blue bird in her garden.","question":"Where did Maya find the bird?","choices":["garden","school","park","store"],"correctIndex":0}`;
+function buildReadingPrompt(age, level, theme) {
+  const themeLine = theme ? ` Set the little story around ${theme}.` : "";
+  return `You are creating a short reading comprehension question for a child age ${age}, level ${level}. Do not use emoji or symbols.${themeLine} Return ONLY raw JSON: {"type":"reading","story":"Maya found a tiny blue bird in her garden.","question":"Where did Maya find the bird?","choices":["garden","school","park","store"],"correctIndex":0}`;
 }
 
 // ---------------- Curriculum-tagged question bank (Session 6B) ----------------
@@ -200,19 +223,20 @@ async function fetchBankQuestion(url, key, { subject, grade, skill }) {
 
 // Write an AI-generated question into the bank as PENDING (review gate). Never
 // served until a grown-up approves it. De-duped on content_hash.
-async function insertBankPending(url, key, { grade, subject, skill, quiz_type, payload }) {
+async function insertBankPending(url, key, { grade, subject, skill, quiz_type, payload, game_theme = null }) {
   try {
     await fetch(`${url}/rest/v1/question_bank`, {
       method: "POST",
       headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates" },
-      body: JSON.stringify({ grade: grade || null, subject, skill: skill || null, quiz_type, payload, source: "ai", status: "pending", content_hash: bankContentHash(payload) }),
+      body: JSON.stringify({ grade: grade || null, subject, skill: skill || null, quiz_type, payload, source: "ai", status: "pending", game_theme: game_theme || null, content_hash: bankContentHash(payload) }),
     });
   } catch (e) {}
 }
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
-  const { age = 7, level = 1, gameType = "runner", quizType = "spelling", grade = null, skill = null } = req.body || {};
+  const { age = 7, level = 1, gameType = "runner", quizType = "spelling", grade = null, skill = null, theme = null } = req.body || {};
+  const gameTheme = theme || themeForGame(gameType); // contextual flavor (Session 8A)
   const subject = QUIZ_SUBJECT[quizType] || "math";
 
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -241,7 +265,7 @@ export default async function handler(req, res) {
     if (cached) return res.status(200).json({ ...cached, cached: true });
   }
 
-  const prompt = quizType === "reading" ? buildReadingPrompt(age, level) : buildSpellingPrompt(age, level);
+  const prompt = quizType === "reading" ? buildReadingPrompt(age, level, gameTheme) : buildSpellingPrompt(age, level, gameTheme);
   try {
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -273,7 +297,7 @@ export default async function handler(req, res) {
       // Review gate: the fresh AI question ENTERS the bank as pending (never
       // served from the bank until a grown-up approves it). The kid still gets
       // this freshly-generated, safety-checked question right now.
-      await insertBankPending(supabaseUrl, supabaseKey, { grade, subject, skill: payload.skill, quiz_type: quizType, payload });
+      await insertBankPending(supabaseUrl, supabaseKey, { grade, subject, skill: payload.skill, quiz_type: quizType, payload, game_theme: gameTheme });
     }
     return res.status(200).json(payload);
   } catch (e) {
