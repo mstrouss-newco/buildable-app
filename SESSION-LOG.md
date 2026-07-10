@@ -1,5 +1,56 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 7A: Catalog triage (Phase 7)
+
+Executed the already-decided keep/archive verdicts on the catalog. No new features; this
+was cleanup to clear the way for the conversion campaign (7B).
+
+**What shipped.**
+- **Archived 9 prototypes out of `public/`** into a new `archive/` folder at the repo
+  root, so they are no longer deployed or reachable on the live site: `glow.html`,
+  `living-scene.html`, `make-a-game-mockup.html`, `qa-expr.html`, `scene-proto.html`,
+  `startscreen-demo.html`, `story-demo.html`, `water.html`, `water-seg.html`.
+- **Updated references so nothing live links to them:** removed all 10 matching routes
+  from `vercel.json` (the 9 files plus the `/make-a-game` alias), added `archive/README.md`
+  explaining the folder, and repointed the one doc reference (`BUILDING-A-GAME.md`, the
+  start-screen demo path) at the new archive location. Confirmed zero remaining live
+  references in `src/`, `public/`, or `vercel.json`.
+- **Labeled 8 catalog keepers as category `Classic`** in `GAME_CATALOG`
+  (`src/BuildableKids.jsx`): Tic-Tac-Toe, String Match, Connect Four, Dots and Boxes,
+  Checkers, Typing, Mahjong, Bingo. Column alignment preserved.
+- **Flagged Tetris for a pre-conversion rename (trademark).** Kept as-is; added an inline
+  code comment on its catalog entry to rename the `id`/file/handler off "tetris" before its
+  manifest conversion. Its display name ("Tumble Blocks") is already safe.
+
+**Croc comparison (recommendation only — nothing deleted).** `croctot.html` (154 KB, 1858
+lines) is the newer and more complete file and is the one the live app serves
+(`CrocScreen` → `/croctot.html`). It received the July 3 Breaker-format adoption (shared
+loading screen, HUD, nav, Make-it-mine customize) that `croc-engine.html` (44 KB, 803
+lines) never got. `croc-engine.html` is the earlier standalone side-shooter engine, now
+effectively superseded and referenced only by its own Vercel route, not by the app.
+**Recommendation: keep `croctot.html` as the Croc keeper; `croc-engine.html` is the
+retire candidate for a later session (7B/7D).** Left in place per instructions.
+
+**Flag for Mike — the 9th keeper, Snakes.** `snakes-engine.html` is a keeper but has **no
+picker card** in `GAME_CATALOG` (it exists only as a wired screen/handler), so there was no
+category label to set to Classic for it. Nothing was invented. If you want Snakes to show
+in the picker as a Classic, that's a small follow-up (add a catalog entry) — flagging
+rather than doing it unasked.
+
+**QA.** Ran the QA scripts for every touched keeper that has one:
+- All-pass: Tic-Tac-Toe, String Match, Connect Four, Dots and Boxes, Checkers, Mahjong.
+- Bingo and Tetris pass every gameplay/logic check but each fail one render-smoke
+  sub-check (`BuildableWin is not defined` on the win banner) — a **pre-existing harness
+  gap** (the QA sandboxes don't load `buildable-wincard.js`), not caused by this session:
+  neither engine nor its QA script was touched here. Flagging honestly for a harness fix
+  later.
+- Typing has no QA script.
+- Picker/games-library code (`src/BuildableKids.jsx`) verified to transform cleanly (esbuild
+  JSX parse) after the edits.
+
+**Remaining in Phase 7:** 7B conversion campaign, 7C kid-customizer polish, 7D retire the
+superseded. Not started (per the one-block rule).
+
 ## 2026-07-09 — Session 6E: Buddy 2.0 (moments, not chatter)
 
 Swapped the always-on assistant for an **event-driven buddy** and deleted the persistent

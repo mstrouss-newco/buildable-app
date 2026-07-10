@@ -6,6 +6,22 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 7A: Catalog triage (July 9 2026)
+
+Cleanup pass ahead of the conversion campaign. Archived 9 prototypes out of `public/` into
+a new root `archive/` folder (`glow`, `living-scene`, `make-a-game-mockup`, `qa-expr`,
+`scene-proto`, `startscreen-demo`, `story-demo`, `water`, `water-seg`) and removed their
+routes from `vercel.json` so nothing live links to them. Labeled 8 keeper cards as category
+**Classic** in `GAME_CATALOG` (Tic-Tac-Toe, String Match, Connect Four, Dots and Boxes,
+Checkers, Typing, Mahjong, Bingo). Flagged **Tetris** to be renamed off the trademark before
+its manifest conversion (kept for now; display name "Tumble Blocks" is already safe).
+Compared the two Croc files: `croctot.html` is the newer/more complete keeper the app
+actually serves; `croc-engine.html` is the superseded older engine (retire candidate for
+7B/7D, not deleted). Note: **Snakes** is a keeper but has no picker card yet, so it got no
+Classic label. QA: touched keepers pass their scripts; Bingo/Tetris fail only a pre-existing
+win-render smoke sub-check (harness doesn't load `buildable-wincard.js`), unrelated to this
+session. See SESSION-LOG.md for the full entry.
+
 ## Session 6E: Buddy 2.0 — moments, not chatter (July 9 2026)
 
 Replaced the always-on helper with an **event-driven buddy** that speaks rarely and
