@@ -1,5 +1,57 @@
 # Buildable Kids — Session Log
 
+## 2026-07-10 — Session 7D: Retire the superseded (Phase 7) — PARTIAL
+
+Pulled latest `main` first (HEAD `c0ad20d`, the 7C customizer polish). Read
+`buildable-rebuild-roadmap.md` and `buildable-manifest-v2.md` per the session workflow.
+Both present.
+
+**What shipped: BUILDING-A-GAME.md rewritten as the v2 new-game playbook.** Restructured
+end to end around the four moves the roadmap specifies, in order: (1) write the one-page
+spec first — the manifest in plain English, agreed in chat before any code; (2) build the
+engine as a *cartridge* against `CARTRIDGE-CONTRACT.md` — it only plays, honors
+pause/resume/start, reports win/lose/coins/nav, never draws shell screens, never hardcodes
+art; (3) write the `qa-<game>.mjs` harness in the SAME session as the engine, with the
+contract checks (start/pause/resume honored, coins/score/levelComplete reported, no
+hardcoded art, no emojis) folded into the win-sim; (4) art and tuning go through the
+level-first editor (asset IDs + a 1–5 difficulty dial, save = the QA robot, no worlds
+layer). Retired the doc's old framing (Track A/Track B, the `buildable-startscreen.js`
+"BS" start-screen section, the make-a-level maker pattern) and kept the still-valid
+references (shared libs BR/BA/BM, the Feel Kit, multiplayer wiring, the SFX 0.5s gotcha,
+shell-owned nav, win/lose signalling). Commit `3f6826f`.
+
+**What did NOT ship, and why: the code removals are blocked on an enabling build.** The
+roadmap gates the removals with "once nothing deep-links to them." Audit result: nothing
+is actually dead yet.
+- **Start menu / journey / loadout.** Replaced *inside the app* by the shell
+  (`GameLanding`, `BreakerJourney`, `BreakerLoadout`), but `vercel.json` still routes the
+  standalone deep-links `/breaker`, `/breaker/journey`, `/breaker/loadout` **straight to
+  `breaker-engine.html`**, where the engine's own `showHub`/`showMenu`/`showLoadout` are
+  the live handlers. Deleting them now would break those shared links.
+- **The reroute the owner approved ("reroute links to the shell first, then delete") needs
+  a real build.** The React app (`src/BuildableKids.jsx`) always boots to the profile
+  picker (the "PROFILE GATE") and only path-routes `/admin` — it has **no** path-based
+  deep-link routing, so a standalone `/breaker/journey` can't land on the shell's journey
+  screen today. Enabling it also raises a product decision: those links currently play with
+  **no** profile/login, so moving them to the shell means either requiring a profile pick or
+  giving them a guest path. That decision is the owner's and is pending.
+- **Make-a-level maker + its worlds tab.** Owner decided to KEEP it until its replacement
+  (the editor / a kid maker) is live — replace-first. So the `#maker` wizard and the World
+  step stay for now.
+- **Losing HUD + per-game menu.** Deferred. The lose end-card fires during real play (a
+  gameplay-feel change, not dead code — "no punishing lose states" needs a designed
+  behavior + QA), and the bespoke menu is already suppressed in-app (the shell owns nav via
+  `buildable-gamenav.js`); its standalone fallback is still needed until the reroute lands.
+
+**Next step (needs owner input):** a follow-up session that adds shell deep-link routing for
+`/breaker*` (so the app boots into the right screen from the URL) and resolves the
+profile-vs-guest question for shared game links, THEN deletes the engine's superseded
+screens and re-runs `qa-breaker.mjs`.
+
+**QA.** No game engine was touched this session (docs + this log only), so no `qa-<game>`
+script was required or run. `qa-breaker.mjs` will be run in the follow-up that actually
+edits the engine.
+
 ## 2026-07-10 — Session 7C: Kid customizer polish — Feel Kit celebrations in the loadout (Phase 7)
 
 The roadmap's actual Session 7C ("The loadout as kids experience it, coin unlock

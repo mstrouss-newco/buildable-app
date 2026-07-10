@@ -6,6 +6,24 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 7D: Retire the superseded — PARTIAL (July 10 2026)
+
+Rewrote `BUILDING-A-GAME.md` as the v2 new-game playbook: one-page spec (the manifest in
+plain English) first, engine built as a cartridge against `CARTRIDGE-CONTRACT.md`, the
+`qa-<game>.mjs` harness written in the same session as the engine (contract checks
+included), and all art + tuning through the level-first editor (asset IDs + a 1–5
+difficulty dial, no worlds layer). Dropped the old Track A/B + `buildable-startscreen.js` +
+make-a-level framing; kept the shared libs, Feel Kit, multiplayer, SFX-0.5s, and win/lose
+references. The engine-code removals are deferred: the "superseded" Breaker screens
+(start menu, journey, loadout) are still the live handlers for the standalone deep-links
+`/breaker`, `/breaker/journey`, `/breaker/loadout` (routed to `breaker-engine.html` in
+`vercel.json`), and the app can't serve those from the shell yet (it boots to the profile
+gate, no path routing). Owner chose reroute-first-then-delete and to keep the maker; the
+reroute + a profile-vs-guest decision for shared links come in a follow-up. No game engine
+was touched, so no `qa-<game>` script was run. See `SESSION-LOG.md`. Commit `3f6826f`.
+
+---
+
 ## Session 7C: Kid customizer polish — Feel Kit celebrations in the loadout (July 10 2026)
 
 The roadmap's actual Session 7C brief (the "7C" slot in the log was used July 9 for the
