@@ -6,6 +6,36 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 9B: Shell upgrade store — gameplay progression (July 10 2026)
+
+The shell can now render a **gameplay-power store**, not just the cosmetics loadout. Games with
+real upgrades (Survival's weapon/armor/boots/hero gear) can move that screen out of the engine
+the way looks already did: the **manifest declares** the tracks + prices, the **shell renders**
+the store and **owns the purchase**, and the **engine keeps the effect**.
+
+- **Economy rule (owner decision):** power is bought with the **shared platform wallet** — one
+  coin balance earned anywhere, spendable on power in any game. The store spends
+  `BuildableWallet.spend`, same as the loadout. See `buildable-manifest-v2.md` §5c and
+  `CARTRIDGE-CONTRACT.md`.
+- **Manifest `upgrades`:** tracks (Weapon/Armor/Boots/Hero) of options with a stable `id`,
+  `name`, `price`, `desc` — **no boost numbers** (those stay in the engine, so a price is a
+  manifest edit and a power's effect is an engine edit). `public/survival/manifest.json` lists
+  all 14 gear options.
+- **`UpgradeStore` (`src/BuildableKids.jsx`):** the loadout's twin for power — shared-wallet buy,
+  owned/equipped recorded per game+kid in the shell, Feel-Kit unlock celebration, practice
+  top-up. Opened from a "Gear up" button on the Survival frame (`SCREEN_SURVIVAL_UPGRADES`).
+- **Handoff (messages-only):** the shell passes only equipped ids to the engine as a launch
+  param `?up=weapon:twin,armor:vest,...`; Survival reads it (`applyShellUpgrades`) and applies
+  each id's boost via its existing `applyGear`. No param → the engine's own saved gear (nothing
+  regresses).
+- **Replace-first:** Survival's in-engine gear locker stays live as a fallback this session;
+  retiring it + unifying Survival's coin counter into the shared wallet is a follow-up.
+- **QA:** `qa-survival.mjs` green incl. a new upgrade-handoff check (all 14 ids valid; `?up=`
+  Nova+Star raised damage 1→2, +2 hearts). `qa-breaker.mjs` green. No DB change. Did not start 9C.
+  Commits: `fa43e41`, `e006d49`, `92d8181`.
+
+---
+
 ## Session 3H: Kidspedia orbit-explorer enrichments — fly-to, real chip icons, multiple facts (July 9 2026)
 
 Three additive, backward-compatible upgrades to the shared orbit-explorer template

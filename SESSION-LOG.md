@@ -1,5 +1,53 @@
 # Buildable Kids — Session Log
 
+## 2026-07-10: Session 9B — Shell upgrade store (gameplay progression)
+
+Phase 9. Until now the shell only owned **cosmetics** (the loadout: paddle skins, trails —
+looks that never change how a game plays). Games with real **gameplay upgrades** — Survival's
+gear locker (weapon / armor / boots / hero, each with a boost) — kept those screens inside the
+engine, spending an engine-local coin counter. This session gives the shell a second store for
+**power**, so that locker can move out of the engine the same way cosmetics did.
+
+**The economy rule (owner decision, settled first).** The roadmap flagged one question to
+answer before building: what currency buys power, given the "farm an easy game, dump it into a
+hard one" risk. Mike chose the **shared platform wallet** — one coin balance, earned anywhere,
+spendable on power in any game. Simple for a kid to understand; the store spends
+`BuildableWallet.spend` exactly like the cosmetics loadout. Recorded in
+`buildable-manifest-v2.md` §5c and `CARTRIDGE-CONTRACT.md`.
+
+**Manifest declares, shell renders, engine keeps the effect.** New manifest section
+`upgrades`: a list of tracks (Weapon, Armor, Boots, Hero), each with options carrying a stable
+`id`, `name`, `price`, and plain-English `desc`. Deliberately **no boost numbers** — "Twin Wand
+= +1 sparkle" stays the engine's business, so changing a price is a manifest edit and changing
+what a power does is an engine edit (the wall that keeps the editor safe). Survival's manifest
+(`public/survival/manifest.json`) now lists all 14 gear options mirroring the engine's `GEAR`.
+
+**The store (`UpgradeStore` in `src/BuildableKids.jsx`).** The cosmetics loadout's twin, for
+power: reads `manifest.upgrades`, spends the shared wallet on a buy, records owned + equipped
+per game + per kid in the shell (never the engine), Feel-Kit unlock celebration, and the same
+practice top-up when short on coins. Reachable from a "Gear up" button on the Survival game
+frame (bottom-right, clear of the engine's own controls) → new `SCREEN_SURVIVAL_UPGRADES`.
+
+**Handoff (messages-only, per the contract).** The shell hands the engine only *which id is
+equipped* — never an effect — as a launch param, the same pattern the loadout already uses for
+looks: `?up=weapon:twin,armor:vest,boots:rocket,hero:astro`. Survival's engine reads it on load
+(`applyShellUpgrades`) and trusts those ids as the source of truth (the shell already spent the
+coins and owns the record), then applies each id's boost through its existing `applyGear`. With
+no param (offline / standalone) the engine's own saved gear is used, so nothing regresses.
+
+**Replace-first, remove-second.** Survival's in-engine gear locker is **left live as a
+fallback** this session; retiring it (and unifying Survival's own coin counter into the shared
+wallet) is a punch-list follow-up once the shell store is proven on production.
+
+**QA.** `qa-survival.mjs` green — all 6 manifest levels winnable (isolated + campaign) AND a new
+**upgrade-handoff** check: all 14 manifest upgrade ids exist in the engine, and the `?up=` param
+path actually changes a run (equipping Nova Staff + Star Armor raised damage 1→2 and gave +2
+hearts). `qa-breaker.mjs` green (shared shell file touched; cosmetics loadout path unchanged).
+Shell JSX compiles clean (esbuild).
+
+Commits: schema/docs `fa43e41`, shell store `e006d49`, engine + QA `92d8181`. Only Survival and
+shared shell touched; no DB change. Did NOT start 9C.
+
 ## 2026-07-09: Session 8C — First native learning game (Math Cannon)
 
 Phase 8, the payoff of 8A/8B: a game where the academic skill IS the mechanic, not a
