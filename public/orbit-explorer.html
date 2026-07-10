@@ -194,6 +194,17 @@ function boot(data) {
     else if (d === "resume" || (d && d.type === "resume")) setPaused(false);
   });
 
+  // Background = silence, iOS-reliably. When the tab/app is hidden (screen-lock or
+  // app-switch) stop the ambient bed and cancel any read-aloud NOW, in this frame,
+  // so speech never keeps talking behind a locked phone (a shell postMessage can
+  // arrive too late as iOS freezes the page). On return, the soft ambient may come
+  // back but read-aloud never auto-restarts mid-sentence. We do NOT touch the quiz
+  // pause veil here, so a quiz gate stays put across a background trip.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { stopAmbient(); stopNarration(); }
+    else if (!paused) { startAmbient(); }
+  });
+
   // three.js loads from a CDN and WebGL can be unavailable on some devices; never
   // let either failure leave a blank exhibit — show the friendly oops instead.
   if (typeof THREE === "undefined") {

@@ -6,6 +6,20 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Bug fix: audio stops when the app is backgrounded (July 9 2026)
+
+Locking the screen or switching apps on iPad/iPhone used to leave sound playing - the
+Kidspedia exhibit's read-aloud and ambient bed, and game music too. Fixed once at the
+shared-system / shell level (CARTRIDGE-CONTRACT.md). `public/buildable-audio.js` now stops
+the music bed + suspends the audio graph on its own frame's `visibilitychange`/`pagehide`
+and resumes music on return (only if it was playing, and not muted), so every game gets it
+for free. `public/orbit-explorer.html` stops ambient + cancels read-aloud
+(`speechSynthesis.cancel()`) synchronously in-frame on hide (reliable before iOS freezes the
+page); on return ambient may resume but read-aloud never auto-restarts. `src/BuildableKids.jsx`
+(`GameFrame`) posts `pause`/`resume` to the embedded game/exhibit so games freeze and
+continue cleanly. QA: `qa-breaker.mjs` + `qa-explore.mjs` ALL CHECKS PASS. Files:
+`public/buildable-audio.js`, `public/orbit-explorer.html`, `src/BuildableKids.jsx`,
+`SESSION-LOG.md`, `README.md`.
 ## Session 8K: Saturn's rings, the Moon, sun glow removed (July 9 2026)
 
 Saturn now shows a real ring texture (`2k_saturn_ring_alpha.png` resized to 1024x62,

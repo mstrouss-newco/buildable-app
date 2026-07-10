@@ -278,6 +278,19 @@ function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = 
     window.addEventListener("message", h);
     return () => window.removeEventListener("message", h);
   }, [onHome, onChildMessage]);
+  // Shell-level background pause: when the tab/app is hidden (iOS screen-lock or
+  // app-switch), freeze whatever is embedded via the cartridge pause path so games
+  // stop cleanly; resume on return. Audio is stopped in-frame by the shared audio
+  // system + the exhibit's own visibility handler, so this handler only drives the
+  // freeze/continue contract (CARTRIDGE-CONTRACT.md: pause on tab switches).
+  useEffect(() => {
+    const post = (type) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type }, "*"); } catch (e) {} };
+    const onVis = () => post(document.hidden ? "pause" : "resume");
+    const onHide = () => post("pause");
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", onHide);
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", onHide); };
+  }, []);
   const send = (type) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type }, "*"); } catch (e) {} };
   const homeStyle = light
     ? { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }
