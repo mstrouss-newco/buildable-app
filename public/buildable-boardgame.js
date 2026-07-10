@@ -416,6 +416,14 @@
       injectChrome();
       toMenu();
       startOnlineIfRequested();
+      // Session 7B: if a manifest exists for this game, its opponent TIERS drive the
+      // start-screen choices (the shell reads loadout/themes). FULL fallback: no loader,
+      // no manifest, or an invalid one -> the engine keeps its built-in choices, unchanged.
+      if (g.BuildableManifest && S.id && typeof g.BuildableManifest.load === "function" && typeof S.applyManifestTiers === "function") {
+        try { g.BuildableManifest.load(S.id, function (cfg) {
+          try { if (cfg && Array.isArray(cfg.tiers) && cfg.tiers.length) { S.applyManifestTiers(cfg); if (ctrl.state === "title" && !ctrl.online) toMenu(); } } catch (e) {}
+        }, function () {}); } catch (e) {}
+      }
       // Adopt the shared in-game nav (buildable-gamenav.js): in-app, hide our own
       // Home/Sound/Pause and let the React shell (GameFrame) draw ONE consistent set.
       if (g.BuildableGameNav) { g.BuildableGameNav.register({

@@ -308,8 +308,54 @@
     resolveAsset: function(){ return null; }   // chess maps its own art keys
   };
 
+  // ===========================================================================
+  //  BOARD profile (generic board games). Session 7B batch — Checkers, Connect
+  //  Four, Tic-Tac-Toe. Like chess, a board game's manifest "levels" are OPPONENT
+  //  TIERS (Easy / Medium / Hard, or a game's own words like Tricky). Difficulty
+  //  1-5 DERIVES a bot-strength string; a level may also state its exact engine
+  //  string in parts.opponent (no fixed vocabulary here — each engine names its
+  //  own tiers). Worlds/themes are a free customization slot (loadout), not an
+  //  unlock chain; engines keep their own art and fall back if a slot is missing.
+  function boardBot(parts, d){
+    var o = parts && parts.opponent;
+    if(o && typeof o==="string") return o;   // engine's own tier word wins (easy/normal/tricky/...)
+    d = clamp(d,1,5);
+    return d<=1 ? "easy" : (d>=4 ? "hard" : "medium");   // else derive from difficulty 1-5
+  }
+  var boardProfile = {
+    validateLevel: function(lv, at, errors){
+      if(lv.parts!=null && typeof lv.parts!=="object"){ errors.push(at+" 'parts' must be an object"); return; }
+      if(lv.parts && lv.parts.opponent!=null && typeof lv.parts.opponent!=="string")
+        errors.push(at+" parts.opponent must be a string tier name");
+    },
+    toLevel: function(lv){
+      var d = clamp(lv.difficulty,1,5);
+      var parts = lv.parts || {};
+      return {
+        id: lv.id, name: lv.name, difficulty: d,
+        bot: boardBot(parts, d),                 // engine tier string
+        desc: lv.desc || "",
+        world: parts.world || null,
+        coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
+        unlocked: !!lv.unlocked,
+        parts: parts
+      };
+    },
+    toConfig: function(m, levels){
+      var worlds = [];
+      (m.customization||[]).forEach(function(slot){
+        if(slot && /world/i.test(slot.slot||"")) (slot.options||[]).forEach(function(o){
+          var key = String(o.asset||"").split("/").pop();
+          if(key) worlds.push({ key:key, name:(o.name||key), price:(o.price||0) });
+        });
+      });
+      return { id:m.id, name:m.name, color:m.color, tiers:levels, worlds:worlds, levels:levels, _manifest:m };
+    },
+    resolveAsset: function(){ return null; }   // board engines map their own art keys
+  };
+
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile };
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile };
   // Studios always use the studio profile (they have no levelProfile/levels); every
   // other game keys off its id (or an explicit levelProfile), falling back to breaker.
   function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
