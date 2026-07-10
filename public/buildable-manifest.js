@@ -257,8 +257,59 @@
     resolveAsset: function(){ return null; }
   };
 
+  // ===========================================================================
+  //  CHESS profile (board game). Session 7B.
+  // ===========================================================================
+  // Chess has no brick-style levels; instead its manifest "levels" are OPPONENT
+  // TIERS (a real journey: beat the friendly bot, unlock the clever one, then the
+  // grandmaster). The one tunable is difficulty 1-5, which DERIVES the engine's bot
+  // strength string (easy/medium/hard) — no raw search-depth numbers live in the
+  // manifest (golden rule 2). Worlds (jungle/ocean/space/...) are picked freely, so
+  // they are a customization slot, not an unlock chain; the engine keeps its own
+  // world art (chess-art/, /api/images chesspiece) and falls back if a slot is missing.
+  var CHESS_BOTS = { easy:1, medium:1, hard:1 };
+  function chessBot(parts, d){
+    var o = parts && parts.opponent;
+    if(CHESS_BOTS[o]) return o;              // explicit tier wins
+    d = clamp(d,1,5);
+    return d<=1 ? "easy" : (d>=4 ? "hard" : "medium");   // else derive from difficulty 1-5
+  }
+  var chessProfile = {
+    validateLevel: function(lv, at, errors){
+      if(lv.parts!=null && typeof lv.parts!=="object"){ errors.push(at+" 'parts' must be an object"); return; }
+      if(lv.parts && lv.parts.opponent!=null && !CHESS_BOTS[lv.parts.opponent])
+        errors.push(at+" parts.opponent must be easy/medium/hard (got "+lv.parts.opponent+")");
+    },
+    toLevel: function(lv){
+      var d = clamp(lv.difficulty,1,5);
+      var parts = lv.parts || {};
+      return {
+        id: lv.id, name: lv.name, difficulty: d,
+        bot: chessBot(parts, d),                 // engine bot-strength string (easy/medium/hard)
+        desc: lv.desc || "",
+        world: parts.world || null,              // suggested world for this tier (engine falls back)
+        coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
+        unlocked: !!lv.unlocked,
+        parts: parts
+      };
+    },
+    toConfig: function(m, levels){
+      // Available worlds = the customization "World" slot options; the engine keeps its
+      // own per-world art and just honours which world keys are offered (asset tail == key).
+      var worlds = [];
+      (m.customization||[]).forEach(function(slot){
+        if(slot && /world/i.test(slot.slot||"")) (slot.options||[]).forEach(function(o){
+          var key = String(o.asset||"").split("/").pop();
+          if(key) worlds.push({ key:key, name:(o.name||key), price:(o.price||0) });
+        });
+      });
+      return { id:m.id, name:m.name, color:m.color, tiers:levels, worlds:worlds, levels:levels, _manifest:m };
+    },
+    resolveAsset: function(){ return null; }   // chess maps its own art keys
+  };
+
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile };
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile };
   // Studios always use the studio profile (they have no levelProfile/levels); every
   // other game keys off its id (or an explicit levelProfile), falling back to breaker.
   function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
