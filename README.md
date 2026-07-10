@@ -105,6 +105,15 @@ play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/w
 untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
 difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
 
+## Session 7B: Dots & Boxes, Mahjong, Bingo convert (July 9 2026)
+
+Three more Classics onto the manifest (commit-per-game). Dots & Boxes: board sizes as levels
+(`applyManifestTiers` renames the size choices, engine keeps the grid), 6-world loadout, multiplayer
+off. Mahjong: 3 board sizes (1/2/3 Fire) as levels + 5 tile-set loadout, engine reads level names w/
+fallback. Bingo: Easy/Normal size levels + Pictures/Words + 6-theme loadout; also FIXED the
+pre-existing qa-bingo win-render gap from 7A (load buildable-wincard.js + measureText stub). New
+manifest checks added to each QA; regression across all manifest games green.
+
 ## Session 7B: Riley's Garden converts — art pass + identity stub (July 9 2026)
 
 Mike chose the art pass. Riley's Garden (a self-contained kid creation) used 96 emoji glyphs as

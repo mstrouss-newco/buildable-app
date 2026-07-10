@@ -32,6 +32,39 @@ resolves ahead of the exhibit-page catch-all using the same route-order model th
 uses. Live iPad-viewport check pending (see README log entry).
 
 main b64c951
+## 2026-07-09 — Session 7B batch: Dots & Boxes, Mahjong, Bingo convert (Classics)
+
+Three more Classics onto the manifest, one commit each. Same recipe: manifest levels are the
+game's real axis, a loadout is declared for the shell, and the engine reads its menu names from
+the manifest with the built-in config kept as a FULL fallback. All stay category `Classic`.
+
+**Dots & Boxes** (shared board shell). Its board SIZES are the levels (Small / Medium / Large);
+added `applyManifestTiers` so the manifest renames/reorders the size choices while the engine
+keeps the actual grid geometry. Classic, 6-world loadout, multiplayer off (hot-seat). Registered
+`dotsboxes` on the generic `board` profile. `qa-dotsandboxes.mjs` gained manifest + per-size
+checks (beatable AI on every size). ALL CHECKS PASS.
+
+**Mahjong** (standalone, GAME_CONFIG-driven). Levels are the three board sizes (1 / 2 / 3 Fire,
+difficulty 1/3/5); the five CC0 tile-face sets (Animals, Cards, Candy, Shapes, Stickers) are a
+real kid loadout. Engine reads the level names from the manifest and refreshes the start screen,
+keeping the layer geometry engine-owned as a fallback. Solo puzzle (multiplayer off). Registered
+`mahjong` on the `croc` (ordered-stages) profile. `qa-mahjong.mjs` gained manifest checks on top
+of its guaranteed-solvable board sweep. ALL CHECKS PASS.
+
+**Bingo** (standalone, same-device 2-4 player pass-and-play). The two board sizes (Easy 3x3 /
+Normal 4x4) are the levels; the play mode (Pictures / Words) and six themes are the loadout. Engine
+reads the size names from the manifest with fallback. Multiplayer off (local party game, not the
+cross-account lane). Registered `bingo` on the `croc` profile. **Also fixed a pre-existing QA gap
+flagged back in 7A:** `qa-bingo.mjs` failed its win-render smoke because the harness never loaded
+`buildable-wincard.js` (and its canvas stub lacked `measureText`). Loaded the lib + added the stub;
+the win render now genuinely passes. Plus the new manifest checks. ALL CHECKS PASS.
+
+**Regression.** Everything the shared loader touches re-run green: dots/mahjong/bingo + croc,
+rileys, chess, checkers, connectfour, tictactoe, breaker, survival, sling — all PASS.
+
+**Remaining in 7B (Mike's order):** String Match, Typing, plus Tumble Blocks (Tetris rename +
+mechanical twist), Tennis, Castle Guard, Bubble, Memory.
+
 
 ## 2026-07-09 — Session 8I: Kidspedia exhibit voice + sound pipeline
 
