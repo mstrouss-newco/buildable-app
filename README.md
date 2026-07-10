@@ -6,6 +6,18 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 7C: Tennis logic fix — the 0-0 self-loss (July 9 2026)
+
+Prerequisite fix so Tennis can enter the 7B conversion queue. `qa-tennis` was failing
+because the game lost 0-0 in its own simulation on every difficulty — a pre-rebuild
+game-logic bug. Cause: `newGame()` raises the how-to-play demo (`demoOn`), and `update()`
+returned early each frame while it was up; the demo was only dismissed by a real tap/key,
+with no timeout. No input meant the ball never served, score stayed 0-0, and the match was
+scored a loss. Fix: the demo now advances its own timer inside `update()` and auto-starts
+play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/win math
+untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
+difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
+
 ## Session 7B: Conversion campaign — Chess converts to the manifest (July 9 2026)
 
 First game of the 7B conversion campaign (Chess first: it pairs with the guest-links
