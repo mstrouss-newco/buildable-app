@@ -29,3 +29,32 @@ export function logGameEvent(event, game, meta) {
     }).catch(() => {});
   } catch (e) {}
 }
+
+// logSkillEvent - one practiced skill (correct/incorrect) into the SAME per-kid
+// learning ledger (learning_events, Session 6B) that the shell's quiz gates write
+// to. This is the shell side of the CARTRIDGE-CONTRACT `skill` message: a native
+// learning game posts {source:"buildable", kind:"skill", subject, skill, correct,
+// questionId?, quizType?} and the shell relays it here. Best-effort, fire-and-forget,
+// never blocks or throws on the client, and a dropped report can never break play.
+export function logSkillEvent(ev) {
+  try {
+    if (!ev || typeof ev.correct !== "boolean" || !ev.subject) return;
+    const kid = getActiveKid();
+    fetch("/api/log-learning-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        kidProfileId: (kid && kid.id) || null,
+        deviceId: deviceId(),
+        subject: ev.subject,
+        skill: ev.skill || null,
+        grade: ev.grade || null,
+        quizType: ev.quizType || null,
+        correct: ev.correct,
+        questionId: ev.questionId || null,
+        game: ev.game || currentGame || null,
+      }),
+    }).catch(() => {});
+  } catch (e) {}
+}

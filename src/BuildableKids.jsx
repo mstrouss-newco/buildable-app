@@ -26,7 +26,7 @@ import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibrary
 import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken, listKidProfiles } from "./lib/accounts";
 import { registerAudio } from "./lib/audioUnlock";
 import { playVoiceUrl } from "./lib/voiceBus";
-import { setCurrentGame, logGameEvent } from "./lib/gameLog";
+import { setCurrentGame, logGameEvent, logSkillEvent } from "./lib/gameLog";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -273,6 +273,12 @@ function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = 
       const d = e && e.data;
       if (d === "nav:exit" || d === "bk:home" || (d && d.type === "nav:exit")) { onHome(); return; }
       if (d && d.type === "nav:state") setNav({ sound: !!d.sound, hasMenu: !!d.hasMenu, hasHelp: !!d.hasHelp, inGame: d.inGame !== false });
+      // CARTRIDGE-CONTRACT `skill`: any embedded game reports a practiced skill; the
+      // shell relays it into the shared learning_events ledger (one record per kid,
+      // same source the quiz gates write to). Best-effort, never blocks play.
+      if (d && d.source === "buildable" && d.kind === "skill") {
+        try { logSkillEvent({ subject: d.subject, skill: d.skill, correct: d.correct, questionId: d.questionId, quizType: d.quizType, grade: (getLearningSettings() || {}).grade || null, game: d.game }); } catch (e) {}
+      }
       if (onChildMessage) { try { onChildMessage(d, (msg) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage(msg, "*"); } catch (e) {} }); } catch (e) {} }
     };
     window.addEventListener("message", h);
