@@ -28,6 +28,7 @@
   .card h2{font-family:'Fredoka';font-weight:700;font-size:24px;flex:1;min-width:0}
   .say{border:none;background:var(--ink);color:#fff;font-family:'Nunito';font-weight:900;font-size:12px;padding:10px 16px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:7px;flex:none}
   .say[disabled]{opacity:.4;cursor:default}
+  .another{margin-top:12px;display:inline-flex;align-items:center;gap:7px;border:2px solid rgba(15,14,23,.15);background:none;border-radius:999px;padding:8px 14px;font-family:'Nunito';font-weight:800;font-size:12px;color:var(--ink);cursor:pointer}
   .fact{font-size:15px;font-weight:700;line-height:1.55;margin-top:12px}
   .stats{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
   .stat{background:#F1EDE4;border-radius:14px;padding:10px 14px;flex:1;min-width:100px}
@@ -75,6 +76,10 @@
       </button>
     </div>
     <p class="fact" id="cFact"></p>
+    <button class="another" id="anotherBtn" onclick="nextFact()" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+      <span>Another fact</span>
+    </button>
     <div class="stats">
       <div class="stat"><small id="s1l"></small><b id="s1"></b></div>
       <div class="stat"><small id="s2l"></small><b id="s2"></b></div>
@@ -126,6 +131,7 @@ function showToast(msg) {
 let DATA = null;       // the loaded exhibit file
 let ITEMS = {};        // id -> item (center + bodies), for chip/card lookups
 let current = null;    // currently selected item id
+let factIdx = 0;       // which fact of the current item is showing (facts list)
 let paused = false;
 let soundOn = true;      // ambient + tap sounds; the shell Sound button toggles this
 let audioUnlocked = false;
@@ -495,6 +501,24 @@ function buildChips(data) {
 
 function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+// ================= facts list (backward compatible with a single `fact`) =================
+// EXHIBIT-MANIFEST.md: an item may carry `facts` (a short list). The card shows
+// one at a time; "Another fact" cycles; "Read to me" reads whichever is showing.
+function factsFor(item) { return (item && Array.isArray(item.facts) && item.facts.length) ? item.facts : [ (item && item.fact) || "" ]; }
+function showFact() {
+  const p = ITEMS[current]; if (!p) return;
+  const fs = factsFor(p); if (factIdx >= fs.length) factIdx = 0;
+  document.getElementById("cFact").textContent = fs[factIdx] || "";
+  const btn = document.getElementById("anotherBtn"); if (btn) btn.style.display = fs.length > 1 ? "inline-flex" : "none";
+}
+function nextFact() {
+  const p = ITEMS[current]; if (!p) return;
+  const fs = factsFor(p); if (fs.length < 2) return;
+  factIdx = (factIdx + 1) % fs.length;
+  document.getElementById("cFact").textContent = fs[factIdx] || "";
+  stopNarration();
+}
+
 function pick(id) {
   const p = ITEMS[id];
   if (!p) return;
@@ -502,7 +526,7 @@ function pick(id) {
   document.querySelectorAll(".chip").forEach((x) => x.classList.remove("sel"));
   const chip = document.getElementById("ch-" + id); if (chip) chip.classList.add("sel");
   document.getElementById("cName").textContent = p.name;
-  document.getElementById("cFact").textContent = p.fact || "";
+  factIdx = 0; showFact();
   const dot = document.getElementById("cDot");
   dot.style.background = p.colorHex || "#999";
   dot.style.backgroundImage = `url(${explorerArtUrl(p, "webp")})`;
@@ -535,11 +559,11 @@ function stopNarration() {
   try { if (narrAudio) { narrAudio.pause(); narrAudio = null; } } catch (e) {}
   try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
 }
-function browserVoice(p) {
+function browserVoice(p, text) {
   if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); return; }
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(p.name + ". " + (p.fact || ""));
+    const u = new SpeechSynthesisUtterance(p.name + ". " + (text != null ? text : (p.fact || "")));
     u.rate = .92; u.pitch = 1.05;
     speechSynthesis.speak(u);
   } catch (e) { showToast("Couldn't read that aloud right now."); }
@@ -547,18 +571,21 @@ function browserVoice(p) {
 function readAloud() {
   if (!current) return;
   const p = ITEMS[current]; if (!p) return;
+  const fs = factsFor(p); const text = fs[Math.min(factIdx, fs.length - 1)] || "";
   stopNarration();
-  if (p.factAudio) {
+  // The narrator clip is generated from the primary fact only, so use it for
+  // fact #1; any "Another fact" is read by the browser voice (still no waiting).
+  if (factIdx === 0 && p.factAudio) {
     try {
       const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(p.factAudio));
       narrAudio = a;
-      a.onerror = function () { narrAudio = null; browserVoice(p); };
+      a.onerror = function () { narrAudio = null; browserVoice(p, text); };
       const pr = a.play();
-      if (pr && pr.catch) pr.catch(function () { narrAudio = null; browserVoice(p); });
+      if (pr && pr.catch) pr.catch(function () { narrAudio = null; browserVoice(p, text); });
       return;
     } catch (e) { /* fall through to browser voice */ }
   }
-  browserVoice(p);
+  browserVoice(p, text);
 }
 
 // ================= quiz bridge (CARTRIDGE-CONTRACT.md: quizRequest / pause / resume / bk:quizDone) =================

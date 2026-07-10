@@ -37,7 +37,8 @@ Every Kidspedia exhibit is a data file poured into a shared template. Templates 
 Each item, whatever the template calls it (a planet, a layer, an animal, a moment):
 - `name`
 - `fact` — one great paragraph, written to be read aloud, kid voice, no jargon
-- `factAudio` — (optional) audio asset ID for this fact, the id `{exhibitId}-{itemId}` (e.g. `solar-system-sun`). When present, the "Read to me" button plays this pre-generated narrator clip via `/api/explore-audio?id=...`; when it is missing (or the clip is not made yet) the button falls back to the browser's built-in voice, with no waiting. Clips are made by the generation step below, never live while a kid waits.
+- `facts` — (optional) a short list of 3-4 kid-voiced facts for this item, each its own read-aloud-ready paragraph. The card shows one at a time with an "Another fact" button that cycles through them, and "Read to me" reads whichever fact is showing. Backward compatible: an item with only `fact` still works and is treated as a one-fact list. When `facts` is present, `facts[0]` must equal `fact` so the single-`fact` field, the narrator clip, and older readers stay in sync.
+- `factAudio` — (optional) audio asset ID for this fact, the id `{exhibitId}-{itemId}` (e.g. `solar-system-sun`). When present, the "Read to me" button plays this pre-generated narrator clip via `/api/explore-audio?id=...`; when it is missing (or the clip is not made yet) the button falls back to the browser's built-in voice, with no waiting. Clips are made by the generation step below, never live while a kid waits. (With a `facts` list the clip covers the primary fact only, `facts[0]`; any "Another fact" is read by the browser voice, still with no waiting.)
 - `stats` — exactly two: label + value, short enough for a tile
 - `asks` — two "ask more" questions, answered from the library first
 - `quiz` — one or more tagged question IDs from the question bank
