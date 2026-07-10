@@ -37,7 +37,7 @@ viewport check: rings visible on Saturn, Moon visible and tappable with its own 
 renders with no glow/halo around it, drag/pinch/tap all still work, other 7 planets still
 show their textures.
 
-main 5485441
+main d054079
 
 ## 2026-07-09: Session 8J - solar-system exhibit gets real planet textures
 
@@ -2719,7 +2719,7 @@ viewport check: rings visible on Saturn, Moon visible and tappable with its own 
 renders with no glow/halo around it, drag/pinch/tap all still work, other 7 planets still
 show their textures.
 
-main 5485441
+main d054079
 
 
 ## Account creation fix — email confirmation (Option B)

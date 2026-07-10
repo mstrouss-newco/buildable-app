@@ -21,7 +21,7 @@ around the Sun (`if (isCenter)` in `initScene()`); the separate selection `halo`
 follows whichever body is tapped is untouched, since it's a shared UI feature for every
 body, not a sun-only effect. Uranus, the other 7 planet textures, and the starfield backdrop
 are out of scope and untouched. QA: `qa-explore.mjs` ALL CHECKS PASS. See SESSION-LOG.md
-Session 8K for the full writeup. main 5485441
+Session 8K for the full writeup. main d054079
 
 ## Session 8J: solar-system exhibit gets real planet textures (July 9 2026)
 
