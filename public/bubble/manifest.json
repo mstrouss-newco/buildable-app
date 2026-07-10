@@ -1,0 +1,92 @@
+{
+  "id": "bubble",
+  "name": "Bubble Buddies",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Arcade",
+  "color": "#5BC0EB",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": false,
+    "coins": true,
+    "buddy": {
+      "on": true,
+      "personality": "cheerleader"
+    },
+    "multiplayer": "off",
+    "learning": {
+      "beforeUnlock": false,
+      "coinTopUp": true,
+      "bonusAfterWin": false,
+      "subjects": [
+        "math"
+      ]
+    }
+  },
+  "art": {
+    "badge": "bubble/badge/v1",
+    "hero": "bubble/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "bubble/loading/v1"
+  },
+  "levels": [
+    {
+      "id": "sunny-meadow",
+      "name": "Sunny Meadow",
+      "difficulty": 1,
+      "journeyBadge": "badges/sunny-meadow/v1",
+      "parts": {
+        "stage": "sunny-meadow"
+      },
+      "unlocked": true
+    },
+    {
+      "id": "berry-splash",
+      "name": "Berry Splash",
+      "difficulty": 2,
+      "journeyBadge": "badges/berry-splash/v1",
+      "parts": {
+        "stage": "berry-splash"
+      }
+    },
+    {
+      "id": "leafy-grove",
+      "name": "Leafy Grove",
+      "difficulty": 3,
+      "journeyBadge": "badges/leafy-grove/v1",
+      "parts": {
+        "stage": "leafy-grove"
+      }
+    },
+    {
+      "id": "grape-fizz",
+      "name": "Grape Fizz",
+      "difficulty": 4,
+      "journeyBadge": "badges/grape-fizz/v1",
+      "parts": {
+        "stage": "grape-fizz"
+      }
+    },
+    {
+      "id": "rainbow-reef",
+      "name": "Rainbow Reef",
+      "difficulty": 4,
+      "journeyBadge": "badges/rainbow-reef/v1",
+      "parts": {
+        "stage": "rainbow-reef"
+      }
+    },
+    {
+      "id": "bubble-party",
+      "name": "Bubble Party",
+      "difficulty": 5,
+      "journeyBadge": "badges/bubble-party/v1",
+      "parts": {
+        "stage": "bubble-party"
+      }
+    }
+  ]
+}

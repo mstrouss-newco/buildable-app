@@ -60,6 +60,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-levelthumb.js"></script>
+<script src="buildable-manifest.js"></script>
 <script>
 (function(){
 "use strict";
@@ -116,6 +117,20 @@ var GAME_CONFIG = window.GAME_CONFIG || { levels:[
     "UUGGRRPPY",
     "BBPPUUGGR" ]}
 ]};
+/* Session 7B: level names can come from /bubble/manifest.json, FULL fallback. */
+(function loadBubbleManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("bubble", function(cfg){
+      try{
+        if(cfg && cfg.stages && cfg.stages.length){
+          for(var i=0;i<GAME_CONFIG.levels.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) GAME_CONFIG.levels[i].name = cfg.stages[i].name; }
+          try{ if(typeof startScreen!=="undefined" && startScreen && startScreen.update && typeof levelCards==="function") startScreen.update({levels:levelCards(),sound:!muted}); }catch(e){}
+        }
+      }catch(e){}
+    }, function(){ /* missing/invalid -> keep built-in levels */ });
+  }catch(e){}
+})();
 
 // ---------- geometry ----------
 var COLS=9, R=36, DIAM=72, ROWH=R*Math.sqrt(3);        // hex vertical spacing

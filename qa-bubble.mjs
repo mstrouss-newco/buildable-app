@@ -37,4 +37,20 @@ console.log('--- render smoke ---');
 G._begin(0); const d=G._draw();
 console.log('render:',d,'remaining=',G._remaining()); if(d!=='ok') ok=false;
 
+console.log('--- MANIFEST (Session 7B): /bubble/manifest.json through the shared loader ---');
+const bmSb={console,Math,Date,JSON,Object,Array,String}; bmSb.window=bmSb; bmSb.globalThis=bmSb; vm.createContext(bmSb);
+vm.runInContext(read('buildable-manifest.js'), bmSb, {filename:'buildable-manifest'});
+const BM=bmSb.BuildableManifest;
+const manifest=JSON.parse(fs.readFileSync(dir+'/public/bubble/manifest.json','utf8'));
+const mv=BM.validate(manifest);
+console.log(`${mv.ok?'PASS':'FAIL'}  manifest validates  errors=${JSON.stringify(mv.errors)}`); if(!mv.ok)ok=false;
+console.log(`${manifest.category==='Arcade'?'PASS':'FAIL'}  category is Arcade`); if(manifest.category!=='Arcade')ok=false;
+const mcfg=mv.ok?BM.toEngineConfig(manifest):{stages:[]};
+const eng=G._cfg().levels||G._cfg();
+const engN=Array.isArray(eng)?eng.length:(eng.levels?eng.levels.length:0);
+const lineUp = mcfg.stages.length===6 && mcfg.stages.every((s,i)=>s.name===manifest.levels[i].name);
+console.log(`${lineUp?'PASS':'FAIL'}  6 levels line up  ::  ${mcfg.stages.map(s=>s.name).join(', ')}`); if(!lineUp)ok=false;
+console.log(`${mcfg.multiplayer==='off'?'PASS':'FAIL'}  single-player (multiplayer off)`); if(mcfg.multiplayer!=='off')ok=false;
+console.log(`${/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("bubble"/.test(html)?'PASS':'FAIL'}  engine loads the shared manifest`); if(!(/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("bubble"/.test(html)))ok=false;
+
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);
