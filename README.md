@@ -6,6 +6,18 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Bug fix: Music Maker duplicated on Home (Play shelf leak) (July 9 2026)
+
+The Home screen's Play shelf listed Music Maker twice - correctly under Make ("Make a
+song") and again as a broken blank-blue "Studio" card in Play. The Play shelf mapped over
+the full `GAME_CATALOG` with no type filter, so `music-maker` (`type: "studio"`) leaked
+in; its `imgId` has no matching `kind=game` art asset, hence the empty placeholder.
+`src/BuildableKids.jsx` now filters `GAME_CATALOG.filter((g) => g.type === "game")` before
+building the Play shelf, so any `type: "studio"` entry (current or future) is excluded
+automatically. Make shelf and the full picker page (which intentionally shows studios with
+a badge) are unchanged. QA: `npm run build` clean; no other file reads `GAME_CATALOG`, so
+no other picker/landing surface has this leak. Files: `src/BuildableKids.jsx`,
+`SESSION-LOG.md`, `README.md`.
 ## Bug fix: audio stops when the app is backgrounded (July 9 2026)
 
 Locking the screen or switching apps on iPad/iPhone used to leave sound playing - the

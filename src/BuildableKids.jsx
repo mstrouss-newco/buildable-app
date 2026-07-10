@@ -2449,7 +2449,7 @@ function HomeScreen(props) {
         {/* ---- 6. Play shelf: manifest-driven from GAME_CATALOG, side-scrolling ---- */}
         <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Play</span></div>
         <div style={shelfRow}>
-          {GAME_CATALOG.map((g) => <PlayShelfCard key={g.id} g={g} />)}
+          {GAME_CATALOG.filter((g) => g.type === "game").map((g) => <PlayShelfCard key={g.id} g={g} />)}
         </div>
 
         {/* ---- 7. Make shelf: creation tools, same side-scrolling treatment ---- */}

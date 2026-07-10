@@ -1,5 +1,36 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09: Bug fix - Music Maker duplicated on Home (Play shelf leak)
+
+Home screen's Play shelf (`src/BuildableKids.jsx`, `HomeScreen`) showed Music Maker twice:
+once correctly in the Make shelf as "Make a song", and once wrongly in the Play shelf as a
+blank blue "Studio" card. Root cause: the Play shelf rendered `GAME_CATALOG.map(...)` with
+no type filter at all, so it iterated every entry in `GAME_CATALOG` including
+`music-maker`, whose `type` field is `"studio"` (added earlier so the full picker page can
+show the "Studio" badge). The Play shelf card (`PlayShelfCard`) expects game-shaped fields
+(`imgId` pointing at `/api/images?kind=game&id=...`) — Music Maker's `imgId: "music"` has
+no matching `kind=game` asset, hence the empty blue placeholder art.
+
+**Fix (1 line, `src/BuildableKids.jsx`):** the Play shelf now filters to
+`GAME_CATALOG.filter((g) => g.type === "game")` before mapping to `PlayShelfCard`, so any
+current or future `type: "studio"` entry in `GAME_CATALOG` is excluded from Play
+automatically — data-driven off the existing `type` field, no per-studio special-casing.
+The Make shelf (`MAKE_ITEMS`) already listed Music Maker ("Make a song") correctly and is
+untouched; Story, Sound Machine, and Art Studio are not in `GAME_CATALOG` at all (only in
+`MAKE_ITEMS`), so they were never at risk of this leak. The full picker page (the other
+`GAME_CATALOG.map(...)` call, `PickerCard`) intentionally shows every type including
+studios with a "Studio" badge — that is by design, not part of this bug, and was left
+unchanged. Grepped the rest of `src/` for other `GAME_CATALOG` consumers (e.g. potential
+GamePicker/GameLanding duplicates) - none found; `GAME_CATALOG` is only read in
+`src/BuildableKids.jsx`.
+
+**QA.** `npm run build` (vite build) - clean, no errors. No dedicated Home-screen qa-*.mjs
+script exists yet, so verified by code read: Play shelf array has zero `type: "studio"`
+entries after the filter, Make shelf still has exactly one entry per studio, no duplicates.
+Both shelves are existing horizontally-scrolling flex rows (`shelfRow`,
+`overflowX: "auto"`, `scrollSnapType`), unchanged by this fix, so iPad/iPhone responsiveness
+is unaffected. Files: `src/BuildableKids.jsx`, `SESSION-LOG.md`, `README.md`.
+
 ## 2026-07-09: Bug fix - audio no longer plays when the app is backgrounded
 
 Locking the screen or switching apps on iPad/iPhone left sound playing: the exhibit's
