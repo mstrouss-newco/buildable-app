@@ -308,7 +308,21 @@ function saveChar(){ localSaveChar(); const kid=activeKidId(); if(kid && typeof 
 async function loadChar(){ CHAR=localLoadChar()||defaultChar();
   const kid=activeKidId();
   if(kid && typeof fetch!=="undefined"){ try{ const r=await fetch("/api/get-character?kidProfileId="+encodeURIComponent(kid)); const j=await r.json(); if(j&&j.ok&&j.data){ CHAR=mergeChar(j.data); localSaveChar(); } }catch{} }
-  refreshMenu(); }
+  applyShellUpgrades(); refreshMenu(); }
+
+// Session 9B: the SHELL owns upgrade purchases (see CARTRIDGE-CONTRACT.md). When it
+// launches this game it hands the kid's equipped power as a launch param, e.g.
+// ?up=weapon:twin,armor:vest,boots:rocket,hero:astro . We TRUST those ids as the
+// source of truth (the shell already spent the coins and recorded ownership) and
+// only apply their EFFECT below via applyGear. With no param present (offline or
+// standalone play) the engine's own saved gear is used, so nothing regresses.
+function shellUpgrades(){ try{
+  const q=new URLSearchParams(location.search).get("up"); if(!q) return null;
+  const map={}; q.split(",").forEach(p=>{ const kv=p.split(":"); if(kv[0]&&kv[1]) map[kv[0]]=kv[1]; }); return map;
+}catch(e){ return null; } }
+function applyShellUpgrades(){ const up=shellUpgrades(); if(!up||!CHAR) return; CHAR.equipped=CHAR.equipped||{}; CHAR.owned=CHAR.owned||{};
+  for(const slot of SLOTS){ if(up[slot]){ CHAR.equipped[slot]=up[slot];
+    if(Array.isArray(CHAR.owned[slot]) && !CHAR.owned[slot].includes(up[slot])) CHAR.owned[slot].push(up[slot]); } } }
 
 // equipped gear permanently boosts the run's starting stats (called on a fresh run)
 function applyGear(s){ BASE._bonusHearts=0; if(!CHAR)return; const eq=CHAR.equipped||{};
@@ -691,7 +705,7 @@ function showMuteBtn(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"blo
 
 function frame(){ update(); draw(); requestAnimationFrame(frame); }
 // boot: load the saved character, wire menus, show the shared start screen
-if(typeof document!=="undefined" && document.getElementById("start")){ if(BA){ BA.configure({sfxBase:GAME_CONFIG.sfxBase, map:GAME_CONFIG.sfx}); if(GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); } CHAR=localLoadChar()||defaultChar(); wireMenus(); showMenu(); loadChar();
+if(typeof document!=="undefined" && document.getElementById("start")){ if(BA){ BA.configure({sfxBase:GAME_CONFIG.sfxBase, map:GAME_CONFIG.sfx}); if(GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); } CHAR=localLoadChar()||defaultChar(); applyShellUpgrades(); wireMenus(); showMenu(); loadChar();
   resizeCanvas(); addEventListener("resize",resizeCanvas); addEventListener("orientationchange",resizeCanvas); }
 requestAnimationFrame(frame);
 
@@ -735,6 +749,10 @@ window.SURV_GAME = {
     return out; },
   // gear/save debug hooks (used by qa.mjs)
   _char:()=>CHAR, _setChar:(c)=>{ CHAR=mergeChar(c); }, _equip:(slot,id)=>{ CHAR.equipped[slot]=id; },
+  // Session 9B: expose the engine's real gear ids per slot + the shell-param handoff
+  // so QA can prove every manifest upgrade id maps to a real, applyable power.
+  _gearIds:()=>{ const o={}; for(const s of SLOTS) o[s]=(GEAR[s]||[]).map(x=>x.id); return o; },
+  _applyShellUpgrades:()=>applyShellUpgrades(),
   _gearTest:()=>{ const s=freshStats(); applyGear(s); return { dmg:s.projDmg, shots:s.projPerShot, pierce:s.pierce, fireCd:s.fireCd, speed:Math.round(s.speed*100)/100, pickupR:s.pickupR, shield:s.shield, bonusHearts:BASE._bonusHearts }; },
   // render debug hooks (used by qa-render.mjs)
   _begin:(i)=>{ if(!CHAR)CHAR=defaultChar(); stats=null; startLevel(i||0,false); state="play"; botMode=true; started=true; },

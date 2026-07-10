@@ -89,5 +89,26 @@ smoke('early L1', 0, 200);
 smoke('mid L'+n, n-1, 400);
 SG.sim(0,CAP); { const d=SG._draw(); console.log(`${d==='ok'?'PASS':'FAIL'}  post-sim render: ${d}`); if(d!=='ok')ok=false; }
 
+console.log('--- UPGRADE HANDOFF (Session 9B): shell store ids map to real engine power ---');
+const gearIds=SG._gearIds();
+const T2S={Weapon:'weapon',Armor:'armor',Boots:'boots',Hero:'hero'};
+let upOk=true, upCount=0;
+for(const tr of (manifest.upgrades||[])){ const slot=T2S[tr.track];
+  if(!slot||!gearIds[slot]){ console.log(`FAIL  unknown track "${tr.track}"`); upOk=false; continue; }
+  for(const o of (tr.options||[])){ upCount++;
+    if(!gearIds[slot].includes(o.id)){ console.log(`FAIL  ${tr.track} id "${o.id}" not in engine gear [${gearIds[slot].join(',')}]`); upOk=false; } } }
+if(upOk) console.log(`PASS  all ${upCount} manifest upgrade ids exist in the engine (shell can equip every one)`);
+else ok=false;
+// prove the shell's ?up= launch param actually reaches gameplay: equip the top
+// weapon + armor via the param path and confirm the run's stats change.
+SG._setChar({}); const baseDmg=SG._gearTest().dmg;
+sandbox.location.search='?up=weapon:nova,armor:star';
+SG._applyShellUpgrades();
+const eq=SG._char().equipped; const boosted=SG._gearTest();
+const applied = eq.weapon==='nova' && eq.armor==='star' && boosted.dmg>baseDmg && boosted.bonusHearts>0;
+console.log(`${applied?'PASS':'FAIL'}  shell param equips nova+star -> dmg ${baseDmg}->${boosted.dmg}, bonusHearts=${boosted.bonusHearts}`);
+if(!applied) ok=false;
+sandbox.location.search='';
+
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED');
 process.exit(ok?0:1);
