@@ -1,5 +1,49 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 3H: Kidspedia orbit-explorer enrichments — fly-to, real chip icons, multiple facts
+
+Three upgrades to the Kidspedia orbit-explorer template (the shared 3D "things orbiting a
+center" exhibit) and the solar-system exhibit that uses it. Template is code, exhibits are
+data, so all three are additive and backward compatible.
+
+**1. Fly-to on select.** Tapping a planet (or its chip) now smoothly flies the camera in to
+frame that planet up close. While a planet is framed the orbits slow to a gentle crawl so it
+stays put, and a "Back to space" pill appears at the top to return to the wide view. Dragging
+to spin and pinching to zoom keep working the whole time: the fly-to only drives the look-at
+point and the zoom-in distance, then hands zoom back to the child.
+
+**2. Real chip icons.** The little dots in the planet picker row are now round thumbnails cut
+from each planet's own texture instead of flat colored dots. The planet's color still shows
+instantly underneath, so if a texture is slow or missing the color dot is the fallback and
+nothing ever looks broken. (The round crop is done in CSS from the real committed textures, so
+there is no new build step.)
+
+**3. Multiple facts.** Each planet can now carry a short list of facts instead of just one. The
+card shows one fact at a time with a drawn "Another fact" button that cycles through them, and
+"Read to me" reads whichever fact is showing. Items with only the old single `fact` still work
+unchanged. The narrator clip covers the first fact; extra facts use the browser voice.
+
+**Content.** Wrote 4 kid-voiced facts each for the Sun and all 8 bodies (Mercury through
+Neptune plus the Moon), consistent with the exhibit's NASA sources. The exhibit status is set to
+`in-review`, so the new facts are NOT live to kids until you approve them.
+
+**Files:** `public/orbit-explorer.html` (template), `public/explore/solar-system.json` (facts +
+status), `EXHIBIT-MANIFEST.md` (the `facts` field added to the item contract), `qa-explore.mjs`
+(now checks facts lists and fly-to, and runs the runtime test on in-review exhibits too).
+
+**QA.** `node qa-explore.mjs` ALL CHECKS PASS, including the two new checks (facts cycle via
+"Another fact"; fly-to shows and clears "Back to space") plus all existing ones (every item
+tappable, read-aloud, quiz bridge, pause/resume, real-route load). The sandbox has no browser or
+3D graphics, so the on-screen iPad look (the fly-to motion and the round chip icons) is for you
+to eyeball on your iPad.
+
+**To review / approve.** Open the exhibit, tap planets to fly in, try "Another fact" and "Read
+to me," then tap "Back to space." When the facts read right, change `"status": "in-review"` to
+`"status": "approved"` in `public/explore/solar-system.json` (or tell me to). Nothing new is
+visible to kids until then.
+
+**Remaining in this phase (Phase 3).** Sessions 3E (home screen redesign) and 3F (law updates)
+are still open; not started this session per the one-block rule.
 ## 2026-07-09: Session 8B - Learning ledger (the `skill` cartridge message)
 
 Phase 8 groundwork before the first native learning game (8C). Made "how is my kid

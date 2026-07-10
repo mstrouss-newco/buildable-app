@@ -6,6 +6,23 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 3H: Kidspedia orbit-explorer enrichments — fly-to, real chip icons, multiple facts (July 9 2026)
+
+Three additive, backward-compatible upgrades to the shared orbit-explorer template
+(`public/orbit-explorer.html`) and the solar-system exhibit. (1) **Fly-to on select:** tapping a
+body (or its chip) smoothly flies the camera in to frame it; orbits slow to a crawl while
+focused; a "Back to space" pill returns to the wide view; drag-to-spin and pinch-zoom stay live
+throughout (the fly-to only drives look-at + zoom-in distance, then releases zoom). (2) **Real
+chip icons:** the picker dots are now round thumbnails cropped in CSS from each body's own
+texture, layered over its `colorHex` as the instant fallback (no new build step). (3) **Multiple
+facts:** items may carry a `facts` list; the card shows one with a drawn "Another fact" button
+that cycles, and "Read to me" reads the shown fact (narrator clip covers fact #1, browser voice
+covers the rest). `EXHIBIT-MANIFEST.md` gains the `facts` field. `solar-system.json` gets 4
+kid-voiced, NASA-sourced facts per body and is set to `status: in-review` (not live to kids until
+Mike approves). `qa-explore.mjs` now validates facts lists and fly-to selection and runs the
+runtime check on in-review candidates too. QA: `node qa-explore.mjs` ALL CHECKS PASS. On-device
+iPad visual pass (fly-to motion, round chips) is for the owner. main 87664f3
+
 ## Bug fix: Music Maker duplicated on Home (Play shelf leak) (July 9 2026)
 
 The Home screen's Play shelf listed Music Maker twice - correctly under Make ("Make a
