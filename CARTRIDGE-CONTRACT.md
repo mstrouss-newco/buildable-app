@@ -22,6 +22,7 @@ The shell treats every game as "a thing I embed at its entry URL." It never assu
   richer `meta` (e.g. `{ score, newBest: true }`) lets the buddy name a personal best;
   omitting it is fine (the buddy falls back to its own per-game tracking).
 - `coins` - coins earned this moment (see the wallet note below - not shell-owned yet)
+- `skill` - the game practiced ONE academic skill and reports how it went, so native learning games and the shell's quiz gates feed the SAME per-kid record. Shape: `{ source: "buildable", kind: "skill", subject, skill?, correct, questionId?, quizType? }` where `subject` is math / reading / spelling / geometry, `skill` is an optional specific tag, and `correct` is true or false. The shell relays it to the learning ledger (`/api/log-learning-event` -> the `learning_events` table from Session 6B) and never blocks gameplay on it. See "The learning ledger" below.
 
 ## Messages: shell to game (shipped)
 - `nav:sound` / `nav:menu` / `nav:help` / `nav:exit` - shell-driven nav chrome actions (toggle sound, open menu, open help, exit to the hub)
@@ -50,6 +51,9 @@ Messages used by the wallet:
 
 ## The art rule (protects the editor)
 Cartridges MUST fetch their art at load time from the URLs the manifest resolves. Art is never baked into a game or a bundle. This is what makes drop-in art swapping in the editor work on every game, regardless of engine. Engine-built games load their textures from these URLs the same as canvas games do.
+
+## The learning ledger (one record per kid)
+Every practiced skill lands in ONE place per kid, no matter where it came from. Two sources feed it: the shell's own quiz gates (`QuizGate`, which already writes to `learning_events` via `/api/log-learning-event`) and native learning games (which report through the `skill` message above; the shell relays them to the same endpoint). Because there is a single source, the parent skills dashboard reads one table and "how is my kid doing" never depends on which game the kid played. Games only REPORT skills across the message boundary - they never read or own the ledger, and a dropped report can never break play (best-effort, fire-and-forget). This ledger exists BEFORE the first native learning game (Session 8C) so that game has somewhere to report the moment it ships.
 
 ## Rules
 - Messages only. No shared variables, no reaching across the boundary in either direction.
