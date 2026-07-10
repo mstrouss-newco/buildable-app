@@ -178,6 +178,23 @@ Both shelves are existing horizontally-scrolling flex rows (`shelfRow`,
 `overflowX: "auto"`, `scrollSnapType`), unchanged by this fix, so iPad/iPhone responsiveness
 is unaffected. Files: `src/BuildableKids.jsx`, `SESSION-LOG.md`, `README.md`.
 
+## 2026-07-10: Session 2D follow-on - stop the Home buddy voice on background
+
+The audio-backgrounding fix landed earlier the same day (commit 82298d3) stops game music
+and the exhibit read-aloud + ambient, but the Home screen's spoken buddy lines (the
+greeting/reactions played through `voiceBus`, outside any game frame) were not covered - they
+kept talking if you locked the screen or switched apps on the Home screen. Added a small
+app-root handler in `src/BuildableKids.jsx`: on `visibilitychange`/`pagehide` it stops the
+buddy voice and cancels browser read-aloud (`speechSynthesis.cancel()`), and never
+auto-restarts them on return. One file, ~10 lines; no change to the already-landed game +
+exhibit handlers.
+
+**QA.** `node qa-breaker.mjs .` ALL CHECKS PASS; `node qa-explore.mjs .` ALL CHECKS PASS.
+JSX syntax-checked with esbuild (bundles clean). On-device iPad Safari lock-screen check to
+be confirmed by the owner.
+
+main e1522d5
+
 ## 2026-07-09: Bug fix - audio no longer plays when the app is backgrounded
 
 Locking the screen or switching apps on iPad/iPhone left sound playing: the exhibit's
