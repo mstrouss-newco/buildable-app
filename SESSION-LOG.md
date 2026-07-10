@@ -1,5 +1,63 @@
 # Buildable Kids — Session Log
 
+## 2026-07-10 — Session 7C: Kid customizer polish — Feel Kit celebrations in the loadout (Phase 7)
+
+The roadmap's actual Session 7C ("The loadout as kids experience it, coin unlock
+celebrations through the Feel Kit"). Note: the 7C slot in this log was used on 2026-07-09
+for the Tennis logic fix instead — that entry says so and leaves this work open. This
+session finally does the customizer-polish brief; the two share a session number because
+of that earlier substitution.
+
+Pulled latest `main` first (HEAD was `2c8c624`, unchanged since — no conflicts). Read
+`buildable-rebuild-roadmap.md` and `buildable-manifest-v2.md` per the session workflow.
+
+**What shipped.**
+- **The Feel Kit now loads in the shell, not just game engines.** `index.html` adds
+  `buildable-audio.js`, `buildable-mechanics.js`, and `buildable-feel.js` alongside the
+  existing `buildable-wallet.js` script tag (all already routed in `vercel.json` — no new
+  routes needed). `window.BuildableFeel` is now available to React shell screens the same
+  way it's available inside every game's canvas, degrading to a safe no-op if anything
+  isn't loaded (unchanged behavior for every existing engine).
+- **`BreakerLoadout` (the shell-generated customizer, shared by Breaker and Music Maker)
+  is Feel-Kit-driven.** On manifest load it calls `Feel.configure` with the game's accent
+  color and `feel` preset block (pace/celebration/haptics), exactly like an engine does.
+  Every button (Back, Equip, Play with this look) fires `Feel.tap()` — instant sound + a
+  light buzz, Law 1. Short on coins now fires `Feel.miss()` — a gentle amber nudge instead
+  of a silent state change, Law 4 — and the insufficient-funds message itself was restyled
+  from a red/pink flash to warm amber to match (the old red tint read as a scold, which the
+  Feel laws explicitly rule out).
+- **The actual "coin unlock celebration."** Unlocking a look by spending coins now fires
+  `Feel.explode()` from the tile the kid tapped — GAME-FEEL.md's documented "powerup grab"
+  case, scaled by the manifest's celebration preset, not a bespoke effect invented for this
+  screen. It plays the `powerup` sound, a `+Unlocked!` pop, particles, and a success buzz. A
+  small canvas overlay (`fxCanvasRef`), sized to the viewport and driven by
+  `Feel.update`/`Feel.draw` in a bounded ~1.1s `requestAnimationFrame` loop, renders the
+  burst then clears itself — it never runs in the background between celebrations. Paired
+  with a ~0.9s gold pop + glow directly on the unlocked tile (new `@keyframes`), so the
+  moment still reads if a kid's device is muted or the particles are missed.
+- Loading copy softened ("Getting your looks ready...").
+
+**QA.** This session touches the shell (`src/BuildableKids.jsx`, `index.html`), not either
+game's canvas engine, so the loadout logic itself isn't inside a `qa-*.mjs` harness —
+flagging that plainly, as the workflow requires. As the regression check: `npm run build`
+(vite) — clean, 69 modules, no errors. `node qa-breaker.mjs .` — ALL CHECKS PASS (manifest
+valid, all 8 levels beatable x5, pong winner, render smoke). `node qa-music.mjs .` — ALL
+PASS (studio contract, customization, learning, breaker/survival/sling manifests still
+valid). Those are the only two games currently wired to this shell loadout screen.
+
+**Scope note.** Chess, Survival, and Sling manifests already have `customization` blocks but
+aren't yet routed through a shell `GameLanding`/loadout screen (they still go straight from
+picker into the engine) — that's part of the still-open 7B conversion campaign, not 7C. Once
+they're wired up, they inherit this same Feel-Kit-driven loadout for free since the component
+is generic. The tile art itself is still the Phase-3 placeholder (a color swatch + the look's
+name) — real asset-library thumbnails for customization options weren't part of this
+session's brief and are a separate follow-up.
+
+**What remains in Phase 7.** 7B conversion campaign continues (Croc Tot, Riley's Garden, the
+Classics batch, Tumble Blocks rename, Tennis, Castle Guard, Bubble, Memory — Mike's stated
+order). 7D (retire the superseded in-engine menus/maker, the worlds tab, per-game menus) is
+still not started. Stopped here per the one-block rule — did not start 7D or continue 7B.
+
 ## 2026-07-10 — Session 8G: Kidspedia preview — orbit-explorer template + solar-system (Phase 8, new track)
 
 First Kidspedia build. Not on the original roadmap — this session ran against EXHIBIT-MANIFEST.md

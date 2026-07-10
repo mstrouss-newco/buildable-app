@@ -6,6 +6,24 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 7C: Kid customizer polish — Feel Kit celebrations in the loadout (July 10 2026)
+
+The roadmap's actual Session 7C brief (the "7C" slot in the log was used July 9 for the
+Tennis logic fix instead; that entry flagged this work as still open). `index.html` now
+loads the Feel Kit (`buildable-audio.js`, `buildable-mechanics.js`, `buildable-feel.js`)
+alongside the wallet script, so shell screens — not just game engines — can call
+`window.BuildableFeel`. `BreakerLoadout` (the shared shell customizer used by Breaker and
+Music Maker) is now Feel-Kit-driven: `Feel.configure` from the manifest's accent/feel
+presets, `Feel.tap()` on every button, `Feel.miss()` (gentle amber nudge, not a red flash)
+when short on coins, and a real "coin unlock celebration" — `Feel.explode()` fired from the
+tile a kid just bought (particles, the `powerup` sound, success buzz, a bounded-duration
+canvas overlay) paired with a brief gold glow on the tile so the moment reads even muted.
+QA: this touches the shell, not a game engine, so no `qa-*.mjs` covers the loadout logic
+itself (flagged plainly) — `npm run build` clean, and both games currently wired to this
+screen re-verified: `node qa-breaker.mjs .` and `node qa-music.mjs .` both ALL PASS. Chess/
+Survival/Sling have `customization` manifests but aren't yet routed through this shell
+screen (7B conversion campaign, not 7C) — they'll inherit this polish once wired up. Tile
+art is still the Phase-3 color-swatch placeholder; real asset thumbnails weren't in scope.
 ## Session 8G: Kidspedia preview — orbit-explorer template + solar-system (July 10 2026)
 
 First Kidspedia build, run against a new `EXHIBIT-MANIFEST.md` contract (committed to the
