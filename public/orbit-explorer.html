@@ -278,6 +278,19 @@ function initScene(data) {
   sizeStage();
 }
 
+// Art-slot convention: an "art" value with a slash (e.g.
+// "explore/solar-system/textures/sun") is a real static asset in public/,
+// served as {path}.webp with a {path}.jpg fallback. A flat hyphenated value
+// (e.g. "explore-mercury") is a generative placeholder id, resolved through
+// the shared /api/images AI pipeline. Either way, the caller's onerror chain
+// keeps the flat colorHex fallback as the last resort (art-slot rule below).
+function explorerArtUrl(item, ext) {
+  const art = item.art || "";
+  if (art.indexOf("/") !== -1) return `/${art}.${ext || "webp"}`;
+  return `/api/images?kind=explore&id=${encodeURIComponent(art)}`;
+}
+function isRealStaticArt(item) { return (item.art || "").indexOf("/") !== -1; }
+
 // Art rule (CARTRIDGE-CONTRACT.md): fetch art at load time, never bake it in.
 // The sphere already shows its colorHex; swap in the real texture only once it
 // loads, and silently keep the color if it never resolves.
@@ -294,8 +307,15 @@ function loadArtTexture(item, mat) {
       mat.needsUpdate = true;
     } catch (e) {}
   };
-  img.onerror = () => {}; // instant-fallback color already showing, nothing to do
-  img.src = `/api/images?kind=explore&id=${encodeURIComponent(item.art)}`;
+  img.onerror = () => {
+    if (isRealStaticArt(item) && img.src.endsWith(".webp")) {
+      // webp missed (old browser, bad deploy): retry the jpg fallback once.
+      img.src = explorerArtUrl(item, "jpg");
+      return;
+    }
+    // instant-fallback color already showing, nothing more to do
+  };
+  img.src = explorerArtUrl(item, "webp");
 }
 
 function wireInteraction(canvas) {
@@ -435,7 +455,7 @@ function pick(id) {
   document.getElementById("cFact").textContent = p.fact || "";
   const dot = document.getElementById("cDot");
   dot.style.background = p.colorHex || "#999";
-  dot.style.backgroundImage = `url(/api/images?kind=explore&id=${encodeURIComponent(p.art || "")})`;
+  dot.style.backgroundImage = `url(${explorerArtUrl(p, "webp")})`;
   const stats = p.stats || [];
   document.getElementById("s1l").textContent = (stats[0] && stats[0].label) || "";
   document.getElementById("s1").textContent = (stats[0] && stats[0].value) || "";

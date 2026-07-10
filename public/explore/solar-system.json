@@ -17,7 +17,7 @@
   "center": {
     "id": "sun",
     "name": "The Sun",
-    "art": "explore-sun",
+    "art": "explore/solar-system/textures/sun",
     "size": 3.4,
     "colorHex": "#FFC542",
     "fact": "The Sun is a star, a giant ball of super hot glowing gas. It is so big that more than one million Earths could fit inside it!",
@@ -44,7 +44,7 @@
     {
       "id": "mercury",
       "name": "Mercury",
-      "art": "explore-mercury",
+      "art": "explore/solar-system/textures/mercury",
       "size": 0.55,
       "orbit": 6.5,
       "years": 9,
@@ -72,7 +72,7 @@
     {
       "id": "venus",
       "name": "Venus",
-      "art": "explore-venus",
+      "art": "explore/solar-system/textures/venus",
       "size": 0.85,
       "orbit": 9,
       "years": 14,
@@ -100,7 +100,7 @@
     {
       "id": "earth",
       "name": "Earth",
-      "art": "explore-earth",
+      "art": "explore/solar-system/textures/earth",
       "size": 0.9,
       "orbit": 12,
       "years": 20,
@@ -128,7 +128,7 @@
     {
       "id": "mars",
       "name": "Mars",
-      "art": "explore-mars",
+      "art": "explore/solar-system/textures/mars",
       "size": 0.7,
       "orbit": 15,
       "years": 28,
@@ -156,7 +156,7 @@
     {
       "id": "jupiter",
       "name": "Jupiter",
-      "art": "explore-jupiter",
+      "art": "explore/solar-system/textures/jupiter",
       "size": 2,
       "orbit": 19.5,
       "years": 44,
@@ -184,7 +184,7 @@
     {
       "id": "saturn",
       "name": "Saturn",
-      "art": "explore-saturn",
+      "art": "explore/solar-system/textures/saturn",
       "size": 1.7,
       "orbit": 24.5,
       "years": 60,
@@ -213,7 +213,7 @@
     {
       "id": "neptune",
       "name": "Neptune",
-      "art": "explore-neptune",
+      "art": "explore/solar-system/textures/neptune",
       "size": 1.1,
       "orbit": 29,
       "years": 80,

@@ -614,6 +614,13 @@
       }
     },
     {
+      "src": "/explore/solar-system/textures/(.*)",
+      "dest": "/explore/solar-system/textures/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
       "src": "/explore/(.*)",
       "dest": "/orbit-explorer.html"
     },
