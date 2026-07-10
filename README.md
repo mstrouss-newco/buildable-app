@@ -165,6 +165,15 @@ play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/w
 untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
 difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
 
+## Session 7B: Bubble, Castle Guard, Tennis convert (July 9 2026)
+
+Three more keepers onto the manifest (commit-per-game), all GAME_CONFIG-driven on the `croc`
+profile, engine reads level names w/ fallback. Bubble (Arcade, 6 levels). Castle Guard (Strategy,
+4 tower-defense levels; also fixed its pre-existing win-render QA gap). Tennis (Sports, 3 difficulty
+tiers + 8-world loadout; multiplayer `realtime` — the family-play lane). New manifest checks on each
+QA; 18-game regression green. Remaining in 7B: only Tumble Blocks (Tetris rename + mechanical twist,
+pending Mike's design call).
+
 ## Session 7B: Typing converts — light emoji fix + manifest (July 9 2026)
 
 Mike chose the light fix (Typing already has real AI art). Replaced hero-card faces with drawn

@@ -44,6 +44,34 @@ visible to kids until then.
 
 **Remaining in this phase (Phase 3).** Sessions 3E (home screen redesign) and 3F (law updates)
 are still open; not started this session per the one-block rule.
+## 2026-07-09 — Session 7B batch: Bubble, Castle Guard, Tennis convert
+
+Three more keepers onto the manifest, one commit each. All GAME_CONFIG-driven, so the engine
+reads its level names from the manifest with the built-in config kept as a FULL fallback.
+Registered all three on the `croc` (ordered-stages) profile.
+
+**Bubble Buddies** (Arcade). Its six named levels (Sunny Meadow -> Bubble Party) are the
+levels; single-player. Engine reads the level names for the start-screen cards with fallback.
+`qa-bubble.mjs` += manifest checks on top of its "every level clearable" sweep. ALL CHECKS PASS.
+
+**Castle Guard** (Strategy, tower defense). Its four levels (First Steps -> Goblin King) are the
+journey; single-player. Engine reads the level names with fallback. Also FIXED the same
+pre-existing win-render QA gap (harness now loads `buildable-wincard.js` + a `measureText`
+stub) — the win render genuinely passes now. Plus the new manifest checks. ALL CHECKS PASS.
+
+**Tennis** (Sports). Its three difficulty tiers (Gentle / Normal / Speedy) are the levels and
+the eight nature backdrops are the loadout. This is the platform's real-time game, so the
+manifest's multiplayer switch is `realtime` (the family-play lane), unlike the hot-seat games
+that are off. Engine reads the tier names with fallback. `qa-tennis.mjs` += manifest checks on
+top of its "all difficulties winnable" sim. ALL DIFFICULTIES WINNABLE + MANIFEST OK.
+
+**Regression.** All 18 manifest QAs re-run green.
+
+**Remaining in 7B:** only Tumble Blocks (the Tetris rename) — it needs a name/file/handler
+rename off "tetris" AND a visible mechanical twist so it plays clearly different from Tetris.
+That mechanical change is a design decision for Mike, so it is flagged rather than guessed.
+
+
 ## 2026-07-09: Session 8B - Learning ledger (the `skill` cartridge message)
 
 Phase 8 groundwork before the first native learning game (8C). Made "how is my kid
