@@ -30,17 +30,32 @@ Every Kidspedia exhibit is a data file poured into a shared template. Templates 
 - `status` — draft | in-review | approved. Only approved is ever served.
 - `skills` — learning ledger tags this exhibit practices (e.g. space-facts, reading)
 - `heroArt` — asset ID for the Explore shelf card
+- `ambient` — (optional) an ambient-sound asset ID from the shared audio library (an `/api/sfx` key, e.g. `space`, `waves`, `forest`). The template plays it softly on a loop as the exhibit's bed. The shell's Sound button mutes/unmutes it; it never autoplays before the first tap.
 - `sources` — where the facts were checked (for the reviewer, never shown to kids)
 
 ## Exhibit file: items (the tappable things)
 Each item, whatever the template calls it (a planet, a layer, an animal, a moment):
 - `name`
 - `fact` — one great paragraph, written to be read aloud, kid voice, no jargon
+- `factAudio` — (optional) audio asset ID for this fact, the id `{exhibitId}-{itemId}` (e.g. `solar-system-sun`). When present, the "Read to me" button plays this pre-generated narrator clip via `/api/explore-audio?id=...`; when it is missing (or the clip is not made yet) the button falls back to the browser's built-in voice, with no waiting. Clips are made by the generation step below, never live while a kid waits.
 - `stats` — exactly two: label + value, short enough for a tile
 - `asks` — two "ask more" questions, answered from the library first
 - `quiz` — one or more tagged question IDs from the question bank
 - `art` — asset ID(s) the template needs (a surface texture, a sprite, a photo)
 - template-specific numbers (orbit radius and speed for orbit-explorer, layer order for cutaway, position for habitat, date for timeline, real-world size for comparator)
+
+## Audio: narration, ambient, and tap feedback
+Three sound layers, all optional and all degrading gracefully:
+- **Fact narration (`factAudio`).** Each item may carry a `factAudio` asset ID. "Read to me" plays that pre-generated clip in the one configured narrator voice. If the id is absent, or the clip hasn't been generated, or playback fails, the template instantly uses the browser's built-in voice instead. Kids are NEVER made to wait on a live generation.
+- **Ambient bed (`ambient`).** An exhibit may name one soft looping ambient from the shared audio library (an `/api/sfx` key). It plays quietly under the exhibit and starts only after the first tap (audio-unlock rule). The shell's Sound button mutes/unmutes it.
+- **Tap feedback (Feel Kit).** Every tap on a chip or a body fires `Feel.tap()` (a soft click + a light haptic) from the shared Feel Kit, so exhibits feel like the games. Tap sounds follow the same Sound toggle.
+
+## Generating fact narration (server-side, ElevenLabs, one narrator voice)
+Narration audio is made by a MANUAL, server-side step, never in the browser and never live while a kid waits:
+- Endpoint: `GET /api/gen-exhibit-audio?exhibit={id}` (owner-run after approval; `?dry=1` reports what it would make and spends nothing; `?force=1` regenerates, gated by `EXHIBIT_GEN_TOKEN` when set).
+- It loads the approved exhibit, and for every fact with no clip yet, speaks `"{name}. {fact}"` once with the one configured narrator voice (`ELEVENLABS_NARRATOR_VOICE_ID`, else `ELEVENLABS_VOICE_ID`), saving the mp3 to the audio path (cache key `exhibit-audio:{exhibitId}-{itemId}`). Generate-once + skip-if-present, so re-running costs nothing.
+- The ElevenLabs key lives ONLY in Vercel env. Cost is per character, so the endpoint returns `totalCharsGenerated` for the session recap.
+- After generating, set `factAudio` on each item in the exhibit file (the id `{exhibitId}-{itemId}`) and commit. The serve endpoint `/api/explore-audio?id=...` streams clips to the template and 404s (no generation) when one is missing.
 
 ## The pipeline (same machine as the question bank)
 1. Draft: AI writes the exhibit file in chat or the editor, with sources.
