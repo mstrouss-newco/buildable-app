@@ -55,6 +55,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
 <script src="buildable-turns.js"></script>
+<script src="buildable-manifest.js"></script>
 <script>
 //  Buildable Memory/Match — hand-authored Track B engine.
 //  A game = this FIXED engine + GAME_CONFIG (data). Solo or 2-4 players, pass-and-play.
@@ -84,6 +85,24 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
     {key:"hard",   name:"Hard",   cols:4, rows:6, foot:"12 pairs"},
   ],
 };
+
+/* Session 7B: board-size names can come from /memory/manifest.json, FULL fallback to GAME_CONFIG. */
+(function loadMemoryManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("memory", function(cfg){
+      try{
+        if(cfg && cfg.stages && cfg.stages.length){
+          for(var i=0;i<GAME_CONFIG.sizes.length && i<cfg.stages.length;i++){
+            if(cfg.stages[i].name) GAME_CONFIG.sizes[i].name = cfg.stages[i].name;
+            if(cfg.stages[i].desc) GAME_CONFIG.sizes[i].foot = cfg.stages[i].desc;
+          }
+          try{ if(typeof state!=="undefined" && state==="menu" && typeof startScreen!=="undefined" && startScreen && startScreen.update) startScreen.update(buildStartCfg()); }catch(e){}
+        }
+      }catch(e){}
+    }, function(){ /* missing/invalid -> keep built-in GAME_CONFIG */ });
+  }catch(e){}
+})();
 
 // ---------- STATE ----------
 let state="menu";

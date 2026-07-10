@@ -1,0 +1,44 @@
+{
+  "id": "memory",
+  "name": "Memory Match",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Puzzle",
+  "color": "#A78BFF",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "coach" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+  },
+
+  "art": {
+    "badge": "memory/badge/v1",
+    "hero": "memory/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "memory/loading/v1"
+  },
+
+  "levels": [
+    { "id": "easy",   "name": "Easy",   "desc": "6 pairs",  "difficulty": 1, "unlocked": true, "journeyBadge": "badges/easy/v1",   "parts": { "pairs": 6 } },
+    { "id": "medium", "name": "Medium", "desc": "8 pairs",  "difficulty": 3,                   "journeyBadge": "badges/medium/v1", "parts": { "pairs": 8 } },
+    { "id": "hard",   "name": "Hard",   "desc": "12 pairs", "difficulty": 5,                   "journeyBadge": "badges/hard/v1",   "parts": { "pairs": 12 } }
+  ],
+
+  "customization": [
+    { "slot": "World", "options": [
+      { "name": "Space",  "asset": "memory/world/space",  "price": 0 },
+      { "name": "Jungle", "asset": "memory/world/jungle", "price": 0 },
+      { "name": "Candy",  "asset": "memory/world/candy",  "price": 0 },
+      { "name": "Ocean",  "asset": "memory/world/ocean",  "price": 0 },
+      { "name": "Castle", "asset": "memory/world/castle", "price": 0 },
+      { "name": "Desert", "asset": "memory/world/desert", "price": 0 }
+    ]}
+  ]
+}
