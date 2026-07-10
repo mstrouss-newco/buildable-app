@@ -1,5 +1,39 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09: Session 8B - Learning ledger (the `skill` cartridge message)
+
+Phase 8 groundwork before the first native learning game (8C). Made "how is my kid
+doing at academics" read from ONE place per kid, no matter which game they played.
+
+**Contract first (`CARTRIDGE-CONTRACT.md`).** Added a new game -> shell message,
+`skill`: a game reports ONE practiced skill and whether it was right or wrong. Shape
+`{ source: "buildable", kind: "skill", subject, skill?, correct, questionId?, quizType? }`
+(subject = math / reading / spelling / geometry). Added a "The learning ledger (one
+record per kid)" section: quiz gates and native learning games both feed the same
+`learning_events` table (Session 6B), so the parent skills dashboard reads a single
+source. Games only report across the boundary; they never read or own the ledger, and a
+dropped report can never break play. Per the contract's own rule (new messages added to
+the file first, then implemented).
+
+**Shell relay.** `src/lib/gameLog.js` gains `logSkillEvent()`, a best-effort,
+fire-and-forget POST to `/api/log-learning-event` (the existing 6B endpoint), mirroring
+`logGameEvent` (active kid + deviceId, keepalive, never throws). The shell's shared
+`GameFrame` wrapper in `src/BuildableKids.jsx` now relays any embedded game's
+`kind:"skill"` message into `logSkillEvent`, attaching the active kid and grade. This is
+generic: EVERY game embedded through `GameFrame` feeds the ledger with zero per-game
+wiring.
+
+**Additive and safe.** No game engine changed. No current game emits `kind:"skill"`, so
+the relay is dormant and every existing game behaves exactly as before; 8C's native
+learning game just starts emitting it. No DB change (the `learning_events` table and
+`log-learning-event` API already exist from 6B).
+
+**QA.** esbuild JSX parse OK on both changed files. `qa-breaker.mjs` (the reference game
+that uses the same shell bridge): ALL CHECKS PASS (8/8 manifest levels clear, pong,
+render smoke). Full `vite build` and Playwright not run in this sandbox (disk full); the
+change is shell-only and parse-verified.
+
+Commits: `1c3e897` (contract doc), `a24d2d1` (shell relay).
 ## 2026-07-09: Bug fix - Music Maker duplicated on Home (Play shelf leak)
 
 Home screen's Play shelf (`src/BuildableKids.jsx`, `HomeScreen`) showed Music Maker twice:
