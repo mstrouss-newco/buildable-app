@@ -1,0 +1,34 @@
+{
+  "id": "castleguard",
+  "name": "Castle Guard",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Strategy",
+  "color": "#2E8B57",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": false,
+    "coins": true,
+    "buddy": { "on": true, "personality": "coach" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+  },
+
+  "art": {
+    "badge": "castleguard/badge/v1",
+    "hero": "castleguard/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "castleguard/loading/v1"
+  },
+
+  "levels": [
+    { "id": "first-steps",  "name": "First Steps", "difficulty": 1, "unlocked": true, "journeyBadge": "badges/l1/v1", "parts": { "wave": 1 } },
+    { "id": "two-by-two",   "name": "Two by Two",  "difficulty": 2,                   "journeyBadge": "badges/l2/v1", "parts": { "wave": 2 } },
+    { "id": "big-parade",   "name": "Big Parade",  "difficulty": 4,                   "journeyBadge": "badges/l3/v1", "parts": { "wave": 3 } },
+    { "id": "goblin-king",  "name": "Goblin King", "difficulty": 5,                   "journeyBadge": "badges/l4/v1", "parts": { "wave": 4, "boss": "Goblin King" } }
+  ]
+}

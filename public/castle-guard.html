@@ -48,6 +48,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
+<script src="buildable-manifest.js"></script>
 
 <script>
 /* =====================================================================
@@ -155,6 +156,20 @@ const GAME_CONFIG = window.GAME_CONFIG || {
       ] },
   ],
 };
+/* Session 7B: level names can come from /castleguard/manifest.json, FULL fallback. */
+(function loadCastleManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("castleguard", function(cfg){
+      try{
+        if(cfg && cfg.stages && cfg.stages.length){
+          for(var i=0;i<GAME_CONFIG.levels.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) GAME_CONFIG.levels[i].name = cfg.stages[i].name; }
+          try{ if(typeof state!=="undefined" && state==="menu" && typeof showMenu==="function") showMenu(); }catch(e){}
+        }
+      }catch(e){}
+    }, function(){ /* missing/invalid -> keep built-in levels */ });
+  }catch(e){}
+})();
 
 /* ---------- image loading + frame slicing (with graceful fallback) ---------- */
 const IMG = {};            // name -> HTMLImageElement (or stub)

@@ -8,10 +8,10 @@ import fs from 'fs'; import vm from 'vm';
 const dir = process.argv[2] || '.';
 const read = f => fs.readFileSync(dir + '/public/' + f, 'utf8');
 const html = read('castle-guard.html');
-const libs = ['buildable-renders.js', 'buildable-audio.js', 'buildable-mechanics.js', 'buildable-startscreen.js', 'buildable-gamenav.js'].map(read).join('\n');
+const libs = ['buildable-renders.js', 'buildable-audio.js', 'buildable-mechanics.js', 'buildable-startscreen.js', 'buildable-gamenav.js', 'buildable-wincard.js', 'buildable-manifest.js'].map(read).join('\n');
 const engine = [...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).join('\n');
 const noop = () => {};
-const ctxStub = new Proxy({}, { get: (_, k) => (k === 'createLinearGradient' || k === 'createRadialGradient') ? () => ({ addColorStop: noop }) : (k === 'canvas' ? { width: 960, height: 600 } : (typeof k === 'string' ? noop : undefined)) });
+const ctxStub = new Proxy({}, { get: (_, k) => (k === 'createLinearGradient' || k === 'createRadialGradient') ? () => ({ addColorStop: noop }) : (k === 'measureText' ? ((t)=>({width:(String(t||'').length*8)})) : (k === 'canvas' ? { width: 960, height: 600 } : (typeof k === 'string' ? noop : undefined))) });
 function el(withAppend) {
   const e = { style: { setProperty: noop }, classList: { add: noop, remove: noop, contains: () => false }, addEventListener: noop, removeEventListener: noop, getContext: () => ctxStub, onclick: null, textContent: '', width: 960, height: 600, naturalWidth: 0, complete: false, getBoundingClientRect: () => ({ left: 0, top: 0, width: 960, height: 600 }) };
   Object.defineProperty(e, 'innerHTML', { set() {}, get() { return ''; } });
@@ -90,6 +90,20 @@ try {
   console.log(`knight run: result=${k.result} frames=${k.frames} defenders=${k.defenders} hearts=${k.hearts}`);
   if (!k || typeof k.frames !== 'number') ok = false;
 } catch (e) { console.log('FAIL knight smoke:', e.message); ok = false; }
+
+console.log('--- MANIFEST (Session 7B): /castleguard/manifest.json through the shared loader ---');
+const bmSb={console,Math,Date,JSON,Object,Array,String}; bmSb.window=bmSb; bmSb.globalThis=bmSb; vm.createContext(bmSb);
+vm.runInContext(read('buildable-manifest.js'), bmSb, {filename:'buildable-manifest'});
+const BM=bmSb.BuildableManifest;
+const manifest=JSON.parse(fs.readFileSync(dir+'/public/castleguard/manifest.json','utf8'));
+const mv=BM.validate(manifest);
+console.log((mv.ok?'PASS':'FAIL')+'  manifest validates  errors='+JSON.stringify(mv.errors)); if(!mv.ok)ok=false;
+console.log((manifest.category==='Strategy'?'PASS':'FAIL')+'  category is Strategy'); if(manifest.category!=='Strategy')ok=false;
+const mcfg=mv.ok?BM.toEngineConfig(manifest):{stages:[]};
+const lineUp = mcfg.stages.length===n && mcfg.stages.every((s,i)=>s.name===manifest.levels[i].name);
+console.log((lineUp?'PASS':'FAIL')+'  '+n+' levels line up with the engine  ::  '+mcfg.stages.map(s=>s.name).join(', ')); if(!lineUp)ok=false;
+console.log((mcfg.multiplayer==='off'?'PASS':'FAIL')+'  single-player (multiplayer off)'); if(mcfg.multiplayer!=='off')ok=false;
+console.log((/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("castleguard"/.test(html)?'PASS':'FAIL')+'  engine loads the shared manifest'); if(!(/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("castleguard"/.test(html)))ok=false;
 
 console.log(ok ? 'ALL CHECKS PASS' : 'SOME CHECKS FAILED');
 process.exit(ok ? 0 : 1);
