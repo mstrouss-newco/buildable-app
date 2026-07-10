@@ -366,6 +366,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   </div>
 </div></div>
 
+<script src="/buildable-manifest.js"></script>
 <script>
 /* ================= ENGINE (validated to perft4 + Kiwipete) ================= */
 function startState(){
@@ -1135,7 +1136,7 @@ function openSetup(){
 }
 function buildSceneGrid(){
   const g=document.getElementById('scene-grid');g.innerHTML='';
-  SCENE_KEYS.forEach(k=>{
+  WORLD_KEYS.forEach(k=>{
     const sc=SCENES[k];const o=document.createElement('div');o.className='opt'+(k===sceneKey?' sel':'');
     o.innerHTML=`<div class="scene-chip" style="background:linear-gradient(135deg,${sc.pageA},${sc.pageB});background-image:url('chess-art/${k}_thumb.jpg?v=2');background-size:cover;background-position:center"></div><div class="ot">${sc.name}</div>`;
     o.onclick=()=>{sceneKey=k;buildSceneGrid();};
@@ -1143,9 +1144,31 @@ function buildSceneGrid(){
   });
 }
 const DIFFS=[['easy','Easy','Just learning'],['medium','Medium','A real game'],['hard','Hard','Watch out!']];
+/* ===== Manifest (Session 7B): opponent tiers + worlds read from /chess/manifest.json, with full fallback ===== */
+// Built-in DIFFS/SCENES stay as the fallback so a manifest miss or outage can never
+// break the game (AGENTS.md: read on render, always with a fallback).
+let DIFF_TIERS = DIFFS.map(function(d){ return {bot:d[0], name:d[1], desc:d[2]}; });
+let WORLD_KEYS = SCENE_KEYS.slice();
+(function loadChessManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=='function') return;
+    window.BuildableManifest.load('chess', function(cfg){
+      if(cfg && Array.isArray(cfg.tiers) && cfg.tiers.length){
+        DIFF_TIERS = cfg.tiers.map(function(t){ return {bot:(t.bot||'medium'), name:(t.name||'Bot'), desc:(t.desc||'')}; });
+        if(!DIFF_TIERS.some(function(t){return t.bot===difficulty;})) difficulty = DIFF_TIERS[0].bot;
+      }
+      if(cfg && Array.isArray(cfg.worlds) && cfg.worlds.length){
+        var keys = cfg.worlds.map(function(w){return w.key;}).filter(function(k){return SCENES[k];});
+        if(keys.length){ WORLD_KEYS = keys; if(WORLD_KEYS.indexOf(sceneKey)<0) sceneKey = WORLD_KEYS[0]; }
+      }
+      // if the setup screen is already open, redraw the grids from the manifest
+      try{ var st=document.getElementById('s-setup'); if(st && st.classList && st.classList.contains('on')){ buildSceneGrid(); buildDiffGrid(); } }catch(e){}
+    }, function(){ /* manifest missing/invalid -> keep the built-in fallback (never breaks) */ });
+  }catch(e){}
+})();
 function buildDiffGrid(){
   const g=document.getElementById('diff-grid');g.innerHTML='';
-  DIFFS.forEach(([k,nm,ds])=>{
+  DIFF_TIERS.forEach(t=>{const k=t.bot,nm=t.name,ds=t.desc;
     const o=document.createElement('div');o.className='opt'+(k===difficulty?' sel':'');
     o.innerHTML=`<div class="ot">${nm}</div><div class="os">${ds}</div>`;
     o.onclick=()=>{difficulty=k;buildDiffGrid();};
