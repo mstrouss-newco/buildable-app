@@ -78,6 +78,7 @@ const SCREEN_RILEYS = "rileys";
 const SCREEN_MAHJONG = "mahjong";
 const SCREEN_STRINGMATCH = "stringmatch";
 const SCREEN_BUBBLE = "bubble";
+const SCREEN_MATHCANNON = "mathcannon";
 const SCREEN_EXPLORE = "explore"; // Session 8G: Kidspedia exhibit viewer (orbit-explorer template)
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
@@ -88,6 +89,7 @@ const GAME_SLUGS = {
   [SCREEN_BREAKER]: "breaker",
   [SCREEN_CASTLE]: "castle",
   [SCREEN_CROC]: "croc",
+  [SCREEN_MATHCANNON]: "mathcannon",
   [SCREEN_RILEYS]: "rileys",
   [SCREEN_TETRIS]: "tetris",
   [SCREEN_CHESS]: "chess",
@@ -144,6 +146,7 @@ const GAME_CATALOG = [
   { id: "typing",      name: "Typing",           category: "Classic",  color: "#1FA897", type: "game", imgId: "typing",      handler: "onTyping",      desc: "Learn to type — defend the castle!" },
   { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!" },
   { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
+  { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
   { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true },
   { id: "runner",      name: "Sunny Town Drive", category: "Arcade",   color: "#FF8FB1", type: "game", imgId: "runner",      handler: "onRunner",      desc: "Drive through town, dodge and grab treats!", soon: true },
@@ -830,6 +833,7 @@ function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/
 function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/sling-squad.html?v=hud1" onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=hud1" onHome={onHome} bg="#7fc7ff" />; }
+function MathCannonScreen({ onHome }) { return <GameFrame title="Math Cannon" src="/mathcannon-engine.html?v=1" onHome={onHome} bg="#12102a" />; }
 function RileysScreen({ onHome }) { return <GameFrame title="Riley's Garden" src="/rileys-garden.html?v=art1" onHome={onHome} bg="#87CEEB" />; }
 function StringMatchScreen({ onHome }) { return <GameFrame title="String Match" src="/string-match.html?v=1" onHome={onHome} bg="#bfe3f5" light />; }
 function BubbleScreen({ onHome }) { return <GameFrame title="Bubble Buddies" src="/bubble-engine.html?v=hud1" onHome={onHome} bg="#0e1830" />; }
@@ -1313,7 +1317,7 @@ export default function BuildableKids() {
         onMaze={() => setScreen(SCREEN_MAZE)}
         onCastle={() => setScreen(SCREEN_CASTLE)}
         onSling={() => setScreen(SCREEN_SLING)}
-        onCroc={() => setScreen(SCREEN_CROC)}
+        onCroc={() => setScreen(SCREEN_CROC)} onMathCannon={() => setScreen(SCREEN_MATHCANNON)}
         onStringMatch={() => setScreen(SCREEN_STRINGMATCH)}
         onTank={() => setScreen(SCREEN_TANK)}
         onBubble={() => setScreen(SCREEN_BUBBLE)}
@@ -1566,6 +1570,9 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_CROC) {
     return <CrocScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_MATHCANNON) {
+    return <MathCannonScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_RILEYS) {
     return <RileysScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
