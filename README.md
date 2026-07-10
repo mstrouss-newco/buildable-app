@@ -20,7 +20,7 @@ references. The engine-code removals are deferred: the "superseded" Breaker scre
 `vercel.json`), and the app can't serve those from the shell yet (it boots to the profile
 gate, no path routing). Owner chose reroute-first-then-delete and to keep the maker; the
 reroute + a profile-vs-guest decision for shared links come in a follow-up. No game engine
-was touched, so no `qa-<game>` script was run. See `SESSION-LOG.md`. Commit `3f6826f`.
+was touched, so no `qa-<game>` script was run. UPDATE: the front-door reroute for /breaker, /breaker/journey and /breaker/loadout also shipped this session (308 to /app?bk=..., app reads it on boot, no login), verified on a Vercel preview in a real browser before merge; /breaker/play/{id} still serves the engine. See `SESSION-LOG.md`. Commits `3f6826f`, reroute on `main`.
 
 ---
 

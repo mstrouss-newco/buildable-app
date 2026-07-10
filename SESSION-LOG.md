@@ -2,6 +2,22 @@
 
 ## 2026-07-10 — Session 7D: Retire the superseded (Phase 7) — PARTIAL
 
+**UPDATE (same session) — the front-door deep-link reroute shipped and is preview-verified.**
+After the owner chose "open Breaker straight away, no login" for shared links, the reroute
+was built and tested on a Vercel preview before touching main. `vercel.json` now
+308-redirects `/breaker`, `/breaker/journey`, `/breaker/loadout` to `/app?bk=landing|journey|
+loadout`, and `src/BuildableKids.jsx` reads `?bk=` on boot (mirroring the existing `/admin`
+deep-link) to open `GameLanding` / `BreakerJourney` / `BreakerLoadout` directly, with no
+profile pick. `/breaker/play/{id}` still serves the engine for actual play. Verified in a
+real browser on the branch preview: `/breaker/journey` shows the shell journey (real level
+art), `/breaker/loadout` shows the shell loadout, `/breaker` shows the shell landing + demo,
+and `/breaker/play/jungle-ruins` still loads the engine and plays. The engine's
+`showHub`/`showMenu`/`showLoadout` code STAYS (still used by standalone play, the kept
+maker, and the in-app end-of-campaign screen) — this is the replace-first reroute of the
+front doors, not the deletion. Full code deletion still waits on the editor replacing the
+maker.
+
+
 Pulled latest `main` first (HEAD `c0ad20d`, the 7C customizer polish). Read
 `buildable-rebuild-roadmap.md` and `buildable-manifest-v2.md` per the session workflow.
 Both present.
