@@ -50,6 +50,8 @@
      One header, no stacking. Standalone (opened directly) keeps its own back button. */
   body.in-app #back{display:none}
   body.in-app .top{padding-left:96px}
+  .tospace{position:fixed;top:62px;left:50%;transform:translateX(-50%) translateY(-6px);z-index:6;display:inline-flex;align-items:center;gap:7px;border:none;background:rgba(11,10,24,.72);color:var(--cream);font-family:'Nunito';font-weight:900;font-size:12.5px;padding:9px 15px;border-radius:999px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .28s ease,transform .28s ease;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.3)}
+  .tospace.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
   .pauseveil{position:fixed;inset:0;background:rgba(11,10,24,.55);z-index:40;display:none;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:16px}
   .pauseveil.show{display:flex}
 </style>
@@ -64,6 +66,10 @@
   </div>
 
   <canvas id="stage"></canvas>
+  <button id="tospace" class="tospace" type="button">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/></svg>
+    <span>Back to space</span>
+  </button>
   <div class="chips" id="chips"></div>
 
   <div class="card" id="card">
@@ -190,6 +196,7 @@ function boot(data) {
   // by the body.in-app CSS, and buildable-gamenav.js installs the iOS Home-tap
   // catcher for the reserved corner. Standalone keeps the back button working.
   document.getElementById("back").onclick = exitToShell;
+  document.getElementById("tospace").onclick = () => { tapFx(); backToSpace(); };
 
   initAudio(data);
 
@@ -237,6 +244,23 @@ function setPaused(v) {
 let renderer, scene, camera, bodies3d = {}, pickables = [], halo, clock;
 let theta = 0.9, phi = 1.05, dist = 46;
 const target = { x: 0, y: 0, z: 0 };
+// Fly-to focus (Session 3H): tapping a body flies the camera in to frame it.
+// We only drive `target` (always, to follow the focused body) and `dist` (only
+// during the flight, then released so pinch-zoom stays free); `theta`/`phi` are
+// left entirely to the user's drag, so dragging keeps working the whole time.
+let focusId = null;       // which body the camera is framed on (null = wide view)
+let flying = false;       // true while dist is easing to the framed distance
+let desiredDist = 46;     // where dist is easing to
+const FOCUS_ORBIT_SLOW = 0.12; // orbit-speed multiplier while focused (near-frozen)
+function framingDist(size) { return Math.min(40, Math.max(8, (size || 1) * 4.5 + 4.5)); }
+function setFocus(id) {
+  const btn = document.getElementById("tospace");
+  if (!id || !ITEMS[id]) { focusId = null; desiredDist = 46; flying = true; if (btn) btn.classList.remove("show"); return; }
+  focusId = id; desiredDist = framingDist(ITEMS[id].size); flying = true;
+  if (btn) btn.classList.add("show");
+}
+function backToSpace() { setFocus(null); }
+
 
 function initScene(data) {
   const canvas = document.getElementById("stage");
@@ -389,7 +413,7 @@ function wireInteraction(canvas) {
       const v = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       const rc = new THREE.Raycaster(); rc.setFromCamera(v, camera);
       const hit = rc.intersectObjects(pickables)[0];
-      if (hit) { tapFx(); pick(hit.object.userData.id); }
+      if (hit) { tapFx(); pick(hit.object.userData.id, true); }
     }
   });
   canvas.addEventListener("wheel", (e) => { e.preventDefault(); dist = Math.min(90, Math.max(12, dist + e.deltaY * .04)); }, { passive: false });
@@ -418,16 +442,29 @@ function sizeStage() {
 function tick() {
   requestAnimationFrame(tick);
   const dt = paused ? 0 : clock.getDelta();
+  const orbitMul = focusId ? FOCUS_ORBIT_SLOW : 1; // orbits crawl while a body is framed
   const allItems = [DATA.center].concat(DATA.bodies);
   allItems.forEach((p) => {
     if (p.id === DATA.center.id) return;
     if (dt) {
-      p.__angle += dt * (2 * Math.PI / (p.years || 20));
+      p.__angle += dt * orbitMul * (2 * Math.PI / (p.years || 20));
       bodies3d[p.id].position.set(Math.cos(p.__angle) * p.orbit, 0, Math.sin(p.__angle) * p.orbit);
       bodies3d[p.id].rotation.y += dt * .6;
     }
   });
   if (current && bodies3d[current]) halo.position.copy(bodies3d[current].position);
+  // Fly-to + follow: ease `target` toward the focused body (origin for the wide
+  // view); ease `dist` only while flying, then release it so pinch-zoom is free.
+  const fb = focusId && bodies3d[focusId] ? bodies3d[focusId].position : null;
+  const destX = fb ? fb.x : 0, destY = fb ? fb.y : 0, destZ = fb ? fb.z : 0;
+  const sm = 1 - Math.exp(-(dt || 0) * 5);
+  target.x += (destX - target.x) * sm;
+  target.y += (destY - target.y) * sm;
+  target.z += (destZ - target.z) * sm;
+  if (flying) {
+    dist += (desiredDist - dist) * sm;
+    if (Math.abs(dist - desiredDist) < 0.4) { dist = desiredDist; flying = false; }
+  }
   placeCam(); sizeStage(); renderer.render(scene, camera);
 }
 
@@ -498,7 +535,7 @@ function buildChips(data) {
     // texture swaps in when it loads — a miss silently keeps the color dot.
     const thumb = p.art ? `background-image:url(${explorerArtUrl(p, "webp")});` : "";
     c.innerHTML = `<b style="background-color:${p.colorHex || "#999"};${thumb}"></b>${escapeHtml(p.name)}`;
-    c.onclick = () => { tapFx(); pick(p.id); };
+    c.onclick = () => { tapFx(); pick(p.id, true); };
     chips.appendChild(c);
   });
 }
@@ -523,7 +560,7 @@ function nextFact() {
   stopNarration();
 }
 
-function pick(id) {
+function pick(id, fly) {
   const p = ITEMS[id];
   if (!p) return;
   current = id;
@@ -552,6 +589,7 @@ function pick(id) {
   qr.appendChild(quizBtn);
 
   if (halo) halo.scale.setScalar((p.size || 1) * 1.35);
+  if (fly) setFocus(id); // interactions fly the camera in; boot's first pick stays wide
   stopNarration();
 }
 
