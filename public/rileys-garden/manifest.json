@@ -1,0 +1,34 @@
+{
+  "id": "rileys-garden",
+  "name": "Riley's Garden",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Action",
+  "color": "#4CAF50",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": false,
+    "coins": false,
+    "buddy": { "on": false },
+    "multiplayer": "off"
+  },
+
+  "art": {
+    "badge": "rileys-garden/badge/v1",
+    "hero": "rileys-garden/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "rileys-garden/loading/v1"
+  },
+
+  "levels": [
+    { "id": "sunny-garden",   "name": "Sunny Garden",     "difficulty": 1, "unlocked": true, "journeyBadge": "badges/garden/v1",   "parts": { "theme": "garden" } },
+    { "id": "apple-orchard",  "name": "Apple Orchard",    "difficulty": 2,                   "journeyBadge": "badges/orchard/v1",  "parts": { "theme": "orchard" } },
+    { "id": "rainy-garden",   "name": "Rainy Garden",     "difficulty": 3,                   "journeyBadge": "badges/rain/v1",     "parts": { "theme": "rainy" } },
+    { "id": "night-garden",   "name": "Nighttime Garden", "difficulty": 4,                   "journeyBadge": "badges/night/v1",    "parts": { "theme": "night" } },
+    { "id": "big-beehive",    "name": "The Big Beehive!", "difficulty": 5,                   "journeyBadge": "badges/beehive/v1",  "parts": { "theme": "beehive", "boss": "Bear Boss" } }
+  ]
+}

@@ -74,6 +74,7 @@ const SCREEN_DOTSBOXES = "dotsboxes";
 const SCREEN_CASTLE = "castle";
 const SCREEN_SLING = "sling";
 const SCREEN_CROC = "croc";
+const SCREEN_RILEYS = "rileys";
 const SCREEN_MAHJONG = "mahjong";
 const SCREEN_STRINGMATCH = "stringmatch";
 const SCREEN_BUBBLE = "bubble";
@@ -87,6 +88,7 @@ const GAME_SLUGS = {
   [SCREEN_BREAKER]: "breaker",
   [SCREEN_CASTLE]: "castle",
   [SCREEN_CROC]: "croc",
+  [SCREEN_RILEYS]: "rileys",
   [SCREEN_TETRIS]: "tetris",
   [SCREEN_CHESS]: "chess",
   [SCREEN_CHESS_FAMILY]: "chess",
@@ -135,6 +137,7 @@ const GAME_CATALOG = [
   // FLAG (Session 7A): rename id/file/handler off "tetris" before its manifest conversion (trademark). Display name "Tumble Blocks" is already safe.
   { id: "tetris",      name: "Tumble Blocks",    category: "Puzzle",   color: "#67C7FF", type: "game", imgId: "tetris",      handler: "onTetris",      desc: "Fill a row and watch it tumble away!" },
   { id: "croctot",     name: "Croc Tot",         category: "Action",   color: "#3AA655", type: "game", imgId: "croctot",     handler: "onCroc",        desc: "Blast the goofy flying snacks and beat the boss!" },
+  { id: "rileys-garden", name: "Riley's Garden",    category: "Action",   color: "#4CAF50", type: "game", imgId: "rileys",      handler: "onRileys",      desc: "Grow a garden, blast the bees, beat the bear!" },
   { id: "connectfour", name: "Connect Four",     category: "Classic",  color: "#FF5A6E", type: "game", imgId: "connectfour", handler: "onConnectFour", desc: "Drop discs, line up four to win!" },
   { id: "dotsboxes",   name: "Dots and Boxes",   category: "Classic",  color: "#36D6C3", type: "game", imgId: "dotsboxes",   handler: "onDotsBoxes",   desc: "Close a box to claim it — most wins!" },
   { id: "checkers",    name: "Checkers",         category: "Classic",  color: "#8E6BFF", type: "game", imgId: "checkers",    handler: "onCheckers",    desc: "Hop, jump and crown your kings!" },
@@ -808,6 +811,7 @@ function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/
 function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/sling-squad.html?v=hud1" onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=hud1" onHome={onHome} bg="#7fc7ff" />; }
+function RileysScreen({ onHome }) { return <GameFrame title="Riley's Garden" src="/rileys-garden.html?v=art1" onHome={onHome} bg="#87CEEB" />; }
 function StringMatchScreen({ onHome }) { return <GameFrame title="String Match" src="/string-match.html?v=1" onHome={onHome} bg="#bfe3f5" light />; }
 function BubbleScreen({ onHome }) { return <GameFrame title="Bubble Buddies" src="/bubble-engine.html?v=hud1" onHome={onHome} bg="#0e1830" />; }
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
@@ -1455,7 +1459,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onMahjong={() => setScreen(SCREEN_MAHJONG)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} onSling={() => setScreen(SCREEN_SLING)} onCroc={() => setScreen(SCREEN_CROC)} onStringMatch={() => setScreen(SCREEN_STRINGMATCH)} onTank={() => setScreen(SCREEN_TANK)} onBubble={() => setScreen(SCREEN_BUBBLE)} onMusicMaker={() => setScreen(SCREEN_MUSIC_LANDING)} />;
+    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onMahjong={() => setScreen(SCREEN_MAHJONG)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} onSling={() => setScreen(SCREEN_SLING)} onCroc={() => setScreen(SCREEN_CROC)} onRileys={() => setScreen(SCREEN_RILEYS)} onStringMatch={() => setScreen(SCREEN_STRINGMATCH)} onTank={() => setScreen(SCREEN_TANK)} onBubble={() => setScreen(SCREEN_BUBBLE)} onMusicMaker={() => setScreen(SCREEN_MUSIC_LANDING)} />;
   }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
@@ -1543,6 +1547,9 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_CROC) {
     return <CrocScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  }
+  if (screen === SCREEN_RILEYS) {
+    return <RileysScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
   }
   if (screen === SCREEN_STRINGMATCH) {
     return <StringMatchScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
