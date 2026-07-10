@@ -284,19 +284,23 @@
 
     {
       "src": "/breaker",
-      "dest": "/breaker-engine.html"
+      "status": 308,
+      "headers": { "Location": "/app?bk=landing" }
     },
     {
       "src": "/breaker/",
-      "dest": "/breaker-engine.html"
+      "status": 308,
+      "headers": { "Location": "/app?bk=landing" }
     },
     {
       "src": "/breaker/journey",
-      "dest": "/breaker-engine.html"
+      "status": 308,
+      "headers": { "Location": "/app?bk=journey" }
     },
     {
       "src": "/breaker/loadout",
-      "dest": "/breaker-engine.html"
+      "status": 308,
+      "headers": { "Location": "/app?bk=loadout" }
     },
     {
       "src": "/breaker/play/(.*)",

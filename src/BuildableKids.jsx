@@ -1158,6 +1158,21 @@ export default function BuildableKids() {
     }
   }, []);
 
+  // Open a Breaker shell screen directly from a shared link. The front-door
+  // Breaker URLs (/breaker, /breaker/journey, /breaker/loadout) 308-redirect to
+  // /app?bk=... (see vercel.json), so a shared link lands straight on the shell
+  // screen with no profile pick required -- the shell now owns these front doors
+  // instead of the engine's old in-game menu (Session 7D). Mirrors the /admin
+  // deep-link above. The engine still serves /breaker/play/{id} (actual play).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let bk = "";
+    try { bk = (new URLSearchParams(window.location.search)).get("bk") || ""; } catch (e) {}
+    if (bk === "journey") setScreen(SCREEN_BREAKER_JOURNEY);
+    else if (bk === "loadout") setScreen(SCREEN_BREAKER_LOADOUT);
+    else if (bk === "landing") setScreen(SCREEN_BREAKER_LANDING);
+  }, []);
+
   const goHome = () => setScreen(SCREEN_HOME);
 
   // Open a friend game straight from a home nudge. An invite -> accept + play;
