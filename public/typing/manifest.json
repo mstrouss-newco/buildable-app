@@ -1,0 +1,92 @@
+{
+  "id": "typing",
+  "name": "Typing",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Classic",
+  "color": "#1FA897",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": false,
+    "coins": true,
+    "buddy": {
+      "on": true,
+      "personality": "coach"
+    },
+    "multiplayer": "off",
+    "learning": {
+      "beforeUnlock": false,
+      "coinTopUp": true,
+      "bonusAfterWin": false,
+      "subjects": [
+        "spelling"
+      ]
+    }
+  },
+  "art": {
+    "badge": "typing/badge/v1",
+    "hero": "typing/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "typing/loading/v1"
+  },
+  "levels": [
+    {
+      "id": "space",
+      "name": "Space",
+      "difficulty": 1,
+      "journeyBadge": "badges/space/v1",
+      "parts": {
+        "theme": "space"
+      },
+      "unlocked": true
+    },
+    {
+      "id": "jungle",
+      "name": "Jungle",
+      "difficulty": 2,
+      "journeyBadge": "badges/jungle/v1",
+      "parts": {
+        "theme": "jungle"
+      }
+    },
+    {
+      "id": "sea",
+      "name": "Sea",
+      "difficulty": 3,
+      "journeyBadge": "badges/sea/v1",
+      "parts": {
+        "theme": "sea"
+      }
+    },
+    {
+      "id": "candy-land",
+      "name": "Candy Land",
+      "difficulty": 4,
+      "journeyBadge": "badges/candy-land/v1",
+      "parts": {
+        "theme": "candy-land"
+      }
+    },
+    {
+      "id": "ice-world",
+      "name": "Ice World",
+      "difficulty": 4,
+      "journeyBadge": "badges/ice-world/v1",
+      "parts": {
+        "theme": "ice-world"
+      }
+    },
+    {
+      "id": "volcano",
+      "name": "Volcano",
+      "difficulty": 5,
+      "journeyBadge": "badges/volcano/v1",
+      "parts": {
+        "theme": "volcano"
+      }
+    }
+  ]
+}

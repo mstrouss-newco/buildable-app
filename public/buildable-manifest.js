@@ -385,7 +385,7 @@
   };
 
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, dotsboxes: boardProfile, croc: crocProfile, croctot: crocProfile, "rileys-garden": crocProfile, mahjong: crocProfile, bingo: crocProfile, stringmatch: crocProfile, memory: crocProfile };
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, dotsboxes: boardProfile, croc: crocProfile, croctot: crocProfile, "rileys-garden": crocProfile, mahjong: crocProfile, bingo: crocProfile, stringmatch: crocProfile, memory: crocProfile, typing: crocProfile };
   // Studios always use the studio profile (they have no levelProfile/levels); every
   // other game keys off its id (or an explicit levelProfile), falling back to breaker.
   function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }

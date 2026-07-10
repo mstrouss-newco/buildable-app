@@ -268,9 +268,9 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
         <div class="ground"></div>
         <div class="bosshp" id="bossHp"></div>
         <div class="tag" id="enemyTag"></div>
-        <div class="foe" id="foe">👾</div>
-        <div class="defender" id="defender">🚀</div>
-        <div class="fort" id="fort">🏰</div>
+        <div class="foe" id="foe"></div>
+        <div class="defender" id="defender"></div>
+        <div class="fort" id="fort"><svg viewBox="0 0 48 48" width="1.2em" height="1.2em" style="display:block"><path d="M5 44V19l5 4 5-4 5 4 4-4 4 4 5-4 5 4 5-4v25z" fill="#c39a5a"/><path d="M5 19h6v-6H5zm9-2h6v-6h-6zm9 0h6v-6h-6zm9 2h6v-6h-6z" fill="#a2763b"/><rect x="20" y="30" width="8" height="14" rx="1" fill="#6e4a24"/></svg></div>
       </div>
 
       <div class="cheer" id="cheer">Nice!</div>
@@ -326,6 +326,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   </div>
 </div>
 
+<script src="/buildable-manifest.js"></script>
 <script>
 (function(){
   const ART_BASE='typing-art/';
@@ -336,51 +337,65 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   const IC_TROPHY='<svg viewBox="0 0 24 24" width="64" height="64"><path d="M6 4h12v3a4 4 0 01-4 4h-4A4 4 0 016 7zM4 5h2v2a3 3 0 01-2-2zm16 0a3 3 0 01-2 2V5zM9 13h6l-.5 4h-5zM8 18h8v2H8z" fill="#F59E0B"/></svg>';
 
   const HEROES=[
-    {id:'rocket',name:'Rocket',emoji:'🚀',accent:'#7C5CFC',accent2:'#A78BFF',unlock:0,art:'hero_rocket'},
-    {id:'fox',   name:'Foxy',  emoji:'🦊',accent:'#FF6B6B',accent2:'#FF9898',unlock:0,art:'hero_fox'},
-    {id:'dragon',name:'Sparky',emoji:'🐉',accent:'#00C48C',accent2:'#00EAA7',unlock:0,art:'hero_dragon'},
-    {id:'wizard',name:'Pip',   emoji:'🧙',accent:'#A78BFF',accent2:'#C9B6FF',unlock:12,art:'hero_wizard'},
-    {id:'robot', name:'Bolt',  emoji:'🤖',accent:'#38BDF8',accent2:'#7DD3FC',unlock:26,art:'hero_robot'},
-    {id:'knight',name:'Sir Pim',emoji:'🛡️',accent:'#F59E0B',accent2:'#FFD479',unlock:42,art:'hero_knight'}
+    {id:'rocket',name:'Rocket',emoji:'',accent:'#7C5CFC',accent2:'#A78BFF',unlock:0,art:'hero_rocket'},
+    {id:'fox',   name:'Foxy',  emoji:'',accent:'#FF6B6B',accent2:'#FF9898',unlock:0,art:'hero_fox'},
+    {id:'dragon',name:'Sparky',emoji:'',accent:'#00C48C',accent2:'#00EAA7',unlock:0,art:'hero_dragon'},
+    {id:'wizard',name:'Pip',   emoji:'',accent:'#A78BFF',accent2:'#C9B6FF',unlock:12,art:'hero_wizard'},
+    {id:'robot', name:'Bolt',  emoji:'',accent:'#38BDF8',accent2:'#7DD3FC',unlock:26,art:'hero_robot'},
+    {id:'knight',name:'Sir Pim',emoji:'',accent:'#F59E0B',accent2:'#FFD479',unlock:42,art:'hero_knight'}
   ];
   const WORLDS=[
     {id:'space',name:'Space',sub:'Zap the alien invaders',tint:'#7C5CFC',
      body:'radial-gradient(900px 600px at 20% 0%,#3b1d6e,transparent 60%),radial-gradient(800px 600px at 80% 100%,#10233f,transparent 60%),#150d2e',
      lane:'linear-gradient(180deg,#241456,#10233f)',
-     mobs:[{w:'sun',type:'normal',emoji:'👾',art:'foe_space_1'},{w:'jet',type:'fast',emoji:'🛸',art:'foe_space_2'},
-           {w:'bug',type:'normal',emoji:'👽',art:'foe_space_3'},{w:'star',type:'big',emoji:'☄️',art:'foe_space_4'}],
-     boss:{words:['comet','rocket'],emoji:'🛸',name:'Mega UFO',art:'boss_space'}},
+     mobs:[{w:'sun',type:'normal',emoji:'',art:'foe_space_1'},{w:'jet',type:'fast',emoji:'',art:'foe_space_2'},
+           {w:'bug',type:'normal',emoji:'',art:'foe_space_3'},{w:'star',type:'big',emoji:'',art:'foe_space_4'}],
+     boss:{words:['comet','rocket'],emoji:'',name:'Mega UFO',art:'boss_space'}},
     {id:'jungle',name:'Jungle',sub:'Tame the wild beasts',tint:'#2bb673',
      body:'radial-gradient(900px 600px at 20% 0%,#1d6e3b,transparent 60%),radial-gradient(800px 600px at 80% 100%,#0f3a23,transparent 60%),#0c2a1a',
      lane:'linear-gradient(180deg,#1d6e3b,#0f3a23)',
-     mobs:[{w:'cat',type:'normal',emoji:'🐍',art:'foe_jungle_1'},{w:'fox',type:'fast',emoji:'🐒',art:'foe_jungle_2'},
-           {w:'frog',type:'normal',emoji:'🐊',art:'foe_jungle_3'},{w:'bug',type:'big',emoji:'🦏',art:'foe_jungle_4'}],
-     boss:{words:['tiger','vines'],emoji:'🦍',name:'King Gorilla',art:'boss_jungle'}},
+     mobs:[{w:'cat',type:'normal',emoji:'',art:'foe_jungle_1'},{w:'fox',type:'fast',emoji:'',art:'foe_jungle_2'},
+           {w:'frog',type:'normal',emoji:'',art:'foe_jungle_3'},{w:'bug',type:'big',emoji:'',art:'foe_jungle_4'}],
+     boss:{words:['tiger','vines'],emoji:'',name:'King Gorilla',art:'boss_jungle'}},
     {id:'sea',name:'Sea',sub:'Splash the deep-sea crew',tint:'#2a9fd6',
      body:'radial-gradient(900px 600px at 20% 0%,#11507e,transparent 60%),radial-gradient(800px 600px at 80% 100%,#06283d,transparent 60%),#06223a',
      lane:'linear-gradient(180deg,#11507e,#06283d)',
-     mobs:[{w:'fish',type:'normal',emoji:'🐠',art:'foe_sea_1'},{w:'crab',type:'fast',emoji:'🦀',art:'foe_sea_2'},
-           {w:'eel',type:'normal',emoji:'🐙',art:'foe_sea_3'},{w:'shark',type:'big',emoji:'🦈',art:'foe_sea_4'}],
-     boss:{words:['whale','wave'],emoji:'🐳',name:'Big Blue',art:'boss_sea'}},
+     mobs:[{w:'fish',type:'normal',emoji:'',art:'foe_sea_1'},{w:'crab',type:'fast',emoji:'',art:'foe_sea_2'},
+           {w:'eel',type:'normal',emoji:'',art:'foe_sea_3'},{w:'shark',type:'big',emoji:'',art:'foe_sea_4'}],
+     boss:{words:['whale','wave'],emoji:'',name:'Big Blue',art:'boss_sea'}},
     {id:'candy',name:'Candy Land',sub:'Tickle the sweet treats',tint:'#e85aa8',
      body:'radial-gradient(900px 600px at 20% 0%,#a8327f,transparent 60%),radial-gradient(800px 600px at 80% 100%,#5a1e6e,transparent 60%),#3d1340',
      lane:'linear-gradient(180deg,#a8327f,#5a1e6e)',
-     mobs:[{w:'gum',type:'normal',emoji:'🍬',art:'foe_candy_1'},{w:'pie',type:'fast',emoji:'🥧',art:'foe_candy_2'},
-           {w:'jam',type:'normal',emoji:'🍩',art:'foe_candy_3'},{w:'cake',type:'big',emoji:'🧁',art:'foe_candy_4'}],
-     boss:{words:['candy','sweet'],emoji:'🍭',name:'Lolly King',art:'boss_candy'}},
+     mobs:[{w:'gum',type:'normal',emoji:'',art:'foe_candy_1'},{w:'pie',type:'fast',emoji:'',art:'foe_candy_2'},
+           {w:'jam',type:'normal',emoji:'',art:'foe_candy_3'},{w:'cake',type:'big',emoji:'',art:'foe_candy_4'}],
+     boss:{words:['candy','sweet'],emoji:'',name:'Lolly King',art:'boss_candy'}},
     {id:'ice',name:'Ice World',sub:'Chill the frosty friends',tint:'#5cc0f0',
      body:'radial-gradient(900px 600px at 20% 0%,#2a6f9e,transparent 60%),radial-gradient(800px 600px at 80% 100%,#163a52,transparent 60%),#0e2535',
      lane:'linear-gradient(180deg,#2a6f9e,#163a52)',
-     mobs:[{w:'ice',type:'normal',emoji:'🐧',art:'foe_ice_1'},{w:'owl',type:'fast',emoji:'🦉',art:'foe_ice_2'},
-           {w:'seal',type:'normal',emoji:'🦭',art:'foe_ice_3'},{w:'bear',type:'big',emoji:'🐻‍❄️',art:'foe_ice_4'}],
-     boss:{words:['frost','snow'],emoji:'☃️',name:'Frosty King',art:'boss_ice'}},
+     mobs:[{w:'ice',type:'normal',emoji:'',art:'foe_ice_1'},{w:'owl',type:'fast',emoji:'',art:'foe_ice_2'},
+           {w:'seal',type:'normal',emoji:'',art:'foe_ice_3'},{w:'bear',type:'big',emoji:'',art:'foe_ice_4'}],
+     boss:{words:['frost','snow'],emoji:'',name:'Frosty King',art:'boss_ice'}},
     {id:'volcano',name:'Volcano',sub:'Cool down the hot heads',tint:'#f0703c',
      body:'radial-gradient(900px 600px at 20% 0%,#a83a1d,transparent 60%),radial-gradient(800px 600px at 80% 100%,#5a1410,transparent 60%),#3d0f0c',
      lane:'linear-gradient(180deg,#a83a1d,#5a1410)',
-     mobs:[{w:'hot',type:'normal',emoji:'🦎',art:'foe_volcano_1'},{w:'bat',type:'fast',emoji:'🦇',art:'foe_volcano_2'},
-           {w:'ash',type:'normal',emoji:'🪨',art:'foe_volcano_3'},{w:'rock',type:'big',emoji:'🗿',art:'foe_volcano_4'}],
-     boss:{words:['lava','fire'],emoji:'🐲',name:'Lava Lord',art:'boss_volcano'}}
+     mobs:[{w:'hot',type:'normal',emoji:'',art:'foe_volcano_1'},{w:'bat',type:'fast',emoji:'',art:'foe_volcano_2'},
+           {w:'ash',type:'normal',emoji:'',art:'foe_volcano_3'},{w:'rock',type:'big',emoji:'',art:'foe_volcano_4'}],
+     boss:{words:['lava','fire'],emoji:'',name:'Lava Lord',art:'boss_volcano'}}
   ];
+  /* Session 7B: world names can come from /typing/manifest.json, FULL fallback. */
+  (function loadTypingManifest(){
+    try{
+      if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+      window.BuildableManifest.load("typing", function(cfg){
+        try{
+          if(cfg && cfg.stages && cfg.stages.length){
+            for(var i=0;i<WORLDS.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) WORLDS[i].name = cfg.stages[i].name; }
+            try{ if(typeof renderWorlds==="function" && document.getElementById("worldList")) renderWorlds(); }catch(e){}
+          }
+        }catch(e){}
+      }, function(){ /* missing/invalid -> keep built-in world names */ });
+    }catch(e){}
+  })();
   const TYPE_SPEED={normal:1,fast:1.7,big:0.65};
   const TYPE_LABEL={normal:'',fast:'fast!',big:'tough!'};
   const CHEERS=['Nice!','Yay!','Wow!','Great!','Super!','Cool!','Woohoo!','Awesome!','Boom!','You got it!'];
@@ -496,12 +511,12 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     s.style.left=Math.random()*100+'%';s.style.top=Math.random()*52+'%';s.style.opacity=.3+Math.random()*.5;
     elLane.insertBefore(s,elLane.firstChild);}
 
-  function setSprite(el,emoji,artKey){el.textContent=emoji;el.style.backgroundImage='';
+  function setSprite(el,emoji,artKey){el.textContent='';el.style.backgroundImage='';el.style.background='radial-gradient(circle at 40% 35%,rgba(255,255,255,.4),rgba(255,255,255,.1) 55%,transparent 72%)';el.style.borderRadius='50%';
     if(!artKey)return;
     var us=artKey.indexOf('_'),cat=us<0?artKey:artKey.slice(0,us),id=us<0?'':artKey.slice(us+1);
     var url='/api/images?kind=type&cat='+encodeURIComponent(cat)+'&id='+encodeURIComponent(id);
     var img=new Image();
-    img.onload=function(){el.textContent='';el.style.backgroundImage='url('+url+')';
+    img.onload=function(){el.textContent='';el.style.background='';el.style.borderRadius='0';el.style.backgroundImage='url('+url+')';
       el.style.backgroundSize='contain';el.style.backgroundRepeat='no-repeat';el.style.backgroundPosition='center';
       el.style.width='1.25em';el.style.height='1.25em';};
     img.src=url;}
@@ -509,7 +524,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   function renderHeroes(){$('bankPill').innerHTML=IC_STAR+' '+totalStars+' stars';const grid=$('heroGrid');grid.innerHTML='';
     HEROES.forEach(h=>{const unlocked=totalStars>=h.unlock;
       const card=document.createElement('div');card.className='hero-card'+(unlocked?'':' locked');if(unlocked)card.tabIndex=0;
-      card.innerHTML='<span class="face">'+h.emoji+'</span><div class="name">'+h.name+'</div><span class="wdot" style="background:'+h.accent2+';color:'+h.accent2+'"></span>'+
+      card.innerHTML='<span class="face"><svg viewBox="0 0 48 48" width="48" height="48" style="display:block;margin:0 auto"><circle cx="24" cy="24" r="21" fill="'+h.accent2+'"/><circle cx="17" cy="20" r="3.6" fill="#fff"/><circle cx="31" cy="20" r="3.6" fill="#fff"/><circle cx="17" cy="21" r="1.7" fill="#222"/><circle cx="31" cy="21" r="1.7" fill="#222"/><path d="M16 30 Q24 37 32 30" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg></span><div class="name">'+h.name+'</div><span class="wdot" style="background:'+h.accent2+';color:'+h.accent2+'"></span>'+
         (unlocked?'':'<div class="lock"><span class="lk">'+h.unlock+' stars</span></div>');
       if(unlocked){const pick=()=>{hero=h;audio();applyHero();renderWorlds();show('worlds');};
         card.addEventListener('click',pick);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick();}});}
