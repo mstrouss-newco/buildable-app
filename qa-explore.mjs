@@ -45,12 +45,85 @@ for (const f of files) {
 }
 if (ok) pass(`${files.length} exhibit file(s) match the contract shape (${approved.length} approved: ${approved.map(a => a.data.id).join(', ') || 'none'})`);
 
-// ---------------- PART B: runtime check per approved exhibit ----------------
-console.log('--- runtime check: orbit-explorer.html against each approved exhibit ---');
+// ---------------- REAL-ROUTE MODEL (Session 8H) ----------------
+// The template is served at the PRETTY url /explore/{id} (a vercel rewrite), not
+// at /orbit-explorer.html. So a RELATIVE asset path in the template resolves
+// against /explore/ and gets swallowed by the /explore/(.*) -> orbit-explorer.html
+// rewrite (it comes back as the HTML page, not the asset). That is exactly what
+// blanked the live exhibit on iPad while the old, stub-only QA still passed.
+// This model reproduces Vercel's serving order — an existing static file first,
+// then vercel.json "routes" in order — so that class of bug can never pass again.
+const publicDir = path.join(dir, 'public');
+const vercelRoutes = (() => {
+  try { return JSON.parse(fs.readFileSync(path.join(dir, 'vercel.json'), 'utf8')).routes || []; }
+  catch (e) { fail('could not read vercel.json routes: ' + e.message); return []; }
+})();
+function fileUnderPublic(urlPath) {
+  const rel = (urlPath || '').replace(/^\/+/, '').split('?')[0];
+  if (!rel) return null;
+  const p = path.join(publicDir, rel);
+  if (!p.startsWith(publicDir)) return null;
+  try { return fs.statSync(p).isFile() ? p : null; } catch (e) { return null; }
+}
+function resolveRoute(urlPath) {
+  const clean = (urlPath || '').split('?')[0];
+  const direct = fileUnderPublic(clean);      // filesystem first
+  if (direct) return direct;
+  for (const r of vercelRoutes) {             // then routes, in order, first match wins
+    if (!r.src || !r.dest) continue;
+    let re; try { re = new RegExp('^' + r.src + '$'); } catch (e) { continue; }
+    const m = clean.match(re);
+    if (m) { const dest = r.dest.replace(/\$(\d+)/g, (_, n) => m[Number(n)] || ''); return fileUnderPublic(dest); }
+  }
+  return null;
+}
+function serve(urlPath) {
+  const f = resolveRoute(urlPath);
+  if (!f) return null;
+  const body = fs.readFileSync(f, 'utf8');
+  return { file: f, body, isHtml: /^\s*(<!doctype html|<html)/i.test(body) };
+}
+// URL resolution the way a browser does it for the page at /explore/{id}.
+function resolveUrl(base, ref) {
+  if (/^[a-z]+:\/\//i.test(ref)) return null; // external (CDN) — not our route to serve
+  if (ref.startsWith('/')) return ref;
+  return base.replace(/[^/]*$/, '') + ref;    // relative to the page's directory
+}
+
+// ---------------- PART A2: every local asset the page needs loads through the real route ----------------
+console.log('--- real-route check: /explore/{id} and its local assets resolve to real files ---');
 const templateHtml = fs.readFileSync(path.join(dir, 'public', 'orbit-explorer.html'), 'utf8');
 const gamenavJs = fs.readFileSync(path.join(dir, 'public', 'buildable-gamenav.js'), 'utf8');
 const inlineScript = [...templateHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).pop();
 if (!inlineScript) fail('orbit-explorer.html: could not extract the inline template script');
+// Collect the page's local <script src> and <link href> refs (external CDNs skipped).
+const scriptSrcs = [...templateHtml.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)].map((m) => m[1]);
+const linkHrefs = [...templateHtml.matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)].map((m) => m[1]);
+for (const ex of approved) {
+  const base = `/explore/${ex.data.id}`;
+  // 1) the exhibit DATA must load through the real route (not be served the HTML page).
+  const jsonServed = serve(`/explore/${ex.data.id}.json`);
+  if (!jsonServed || jsonServed.isHtml) { fail(`${ex.data.id}: /explore/${ex.data.id}.json did NOT resolve to the JSON file through the real route`); }
+  else { try { const d = JSON.parse(jsonServed.body); if (!Array.isArray(d.bodies) || !d.bodies.length) fail(`${ex.data.id}: served JSON has no bodies`); else pass(`${ex.data.id}: exhibit data loads through the real route (/explore/${ex.data.id}.json, ${d.bodies.length} bodies)`); } catch (e) { fail(`${ex.data.id}: served /explore/${ex.data.id}.json is not parseable JSON (route served the wrong file)`); } }
+  // 2) the page opened at /explore/{id} — every local script it loads must resolve to the real asset, not the swallowed HTML page.
+  for (const ref of [...scriptSrcs, ...linkHrefs]) {
+    const abs = resolveUrl(base, ref);
+    if (abs === null) continue; // external CDN
+    const got = serve(abs);
+    if (!got || got.isHtml) fail(`orbit-explorer.html loaded at ${base}: asset "${ref}" resolves to ${abs} and is served the HTML page, not the file (use a root-absolute "/${ref.replace(/^\//, '')}" path)`);
+  }
+}
+// The nav helper in particular must arrive as JS at whatever path the page requests.
+const gamenavRef = scriptSrcs.find((s) => /buildable-gamenav\.js/.test(s));
+if (!gamenavRef) fail('orbit-explorer.html: no buildable-gamenav.js script tag found');
+else {
+  const got = serve(resolveUrl(`/explore/solar-system`, gamenavRef));
+  if (!got || got.isHtml || got.body.indexOf('BuildableGameNav') === -1) fail(`buildable-gamenav.js ("${gamenavRef}") does not load as JS through the real route — the iOS Home-tap catcher would be missing`);
+  else pass(`buildable-gamenav.js loads as real JS through the real route ("${gamenavRef}")`);
+}
+
+// ---------------- PART B: runtime check per approved exhibit ----------------
+console.log('--- runtime check: orbit-explorer.html against each approved exhibit (loaded through the real route) ---');
 
 // A THREE.js stand-in for the vm sandbox: an infinitely chainable/callable/
 // constructible stub, since we only need the template's own JS logic (pick,
@@ -100,10 +173,11 @@ async function runExhibit(exhibit) {
 
   // Pre-register the static ids the HTML shell declares.
   ['app', 'pageTitle', 'back', 'stage', 'chips', 'card', 'cDot', 'cName', 'sayBtn', 'sayLabel',
-    'cFact', 's1l', 's1', 's2l', 's2', 'qrow', 'notready', 'notreadyMsg', 'pauseveil', 'toast'
+    'cFact', 's1l', 's1', 's2l', 's2', 'qrow', 'notready', 'notreadyTitle', 'notreadyMsg', 'notreadyBtn', 'pauseveil', 'toast'
   ].forEach((id) => { const e = makeEl('div'); e.id = id; });
 
   const documentStub = {
+    body: makeEl('body'),
     getElementById: (id) => registry[id] || (() => { const e = makeEl('div'); e.id = id; return e; })(),
     createElement: (tag) => makeEl(tag),
     querySelectorAll: (sel) => {
@@ -129,14 +203,25 @@ async function runExhibit(exhibit) {
     addEventListener: (type, fn) => { (globalListeners[type] = globalListeners[type] || []).push(fn); },
     removeEventListener: (type, fn) => { if (globalListeners[type]) globalListeners[type] = globalListeners[type].filter((f) => f !== fn); },
     URLSearchParams,
-    fetch: () => Promise.resolve({ ok: true, json: async () => exhibit.data }),
+    // Real-route fetch: the template requests /explore/{id}.json — serve it the
+    // way Vercel would. If the route ever served the HTML page instead, json()
+    // throws and the template shows its fallback (which is the faithful outcome).
+    fetch: (url) => {
+      const got = serve(url);
+      if (!got) return Promise.resolve({ ok: false, status: 404, json: async () => { throw new Error('404'); } });
+      return Promise.resolve({ ok: true, status: 200, json: async () => JSON.parse(got.body) });
+    },
     console, Math, Date, JSON, Array, Object,
   };
   sandbox.window = sandbox;
   sandbox.parent = fakeParent; // iframed() => window.parent !== window => true
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(gamenavJs, sandbox, { filename: 'buildable-gamenav.js' });
+  // Load the nav helper the way the page does — through the resolved <script src>.
+  // If the path were wrong it would come back as HTML, so we would NOT run it
+  // (matching the browser, where the script would fail to execute).
+  const navServed = serve(resolveUrl(`/explore/${exhibit.data.id}`, gamenavRef || '/buildable-gamenav.js'));
+  if (navServed && !navServed.isHtml) vm.runInContext(navServed.body, sandbox, { filename: 'buildable-gamenav.js' });
   vm.runInContext(inlineScript, sandbox, { filename: 'orbit-explorer-inline' });
 
   // The template's own top-level fetch(...).then(data => { DATA = data; boot(data); })
@@ -145,6 +230,17 @@ async function runExhibit(exhibit) {
   for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
 
   const results = { exhibit: exhibit.data.id, itemChecks: [], quizChecked: false, readAloudChecked: false, navRegistered: false };
+
+  // Boot ran to completion off the REAL-route fetch: the scene/chips were built
+  // and the center was auto-selected. If the data route had served the HTML page
+  // instead (the live iPad failure), json() would have thrown, the fallback would
+  // show, and none of this would be populated — so this is the "at least one body
+  // renders through the real route" guard the old stub-only QA was missing.
+  const firstBody = (exhibit.data.bodies || [])[0];
+  const centerPicked = registry.cName.textContent === exhibit.data.center.name;
+  const bodyChipBuilt = !!firstBody && !!registry['ch-' + firstBody.id];
+  const notFallenBack = registry.notready.style.display !== 'flex';
+  results.bootRendered = centerPicked && bodyChipBuilt && notFallenBack;
 
   // Every item (center + bodies) tappable: call the real pick() for each and
   // verify the fact card reflects that item.
@@ -172,9 +268,10 @@ async function runExhibit(exhibit) {
   const q = postedMessages.find((m) => m && m.kind === 'quizRequest');
   results.quizChecked = !!q && q.source === 'buildable' && q.itemName === lastItem.name && q.exhibitId === exhibit.data.id;
 
-  // BuildableGameNav registered (own back button hidden in-app) without throwing,
-  // and honors pause/resume from the shell.
-  results.navRegistered = registry.back.classList !== undefined; // register() ran inside boot() with no throw
+  // Honors pause/resume from the shell around the quiz gate (CARTRIDGE-CONTRACT.md).
+  // (The in-app back button is hidden by body.in-app CSS and the shell draws Home;
+  // the exhibit no longer calls BuildableGameNav.register, so there is no dead
+  // Sound button — it relies on the shell Home only, like bingo/memory/snakes.)
   globalListeners['message'] && globalListeners['message'].forEach((fn) => fn({ data: { type: 'pause' } }));
   const pausedOk = registry.pauseveil.classList.contains('show');
   globalListeners['message'] && globalListeners['message'].forEach((fn) => fn({ data: { type: 'resume' } }));
@@ -187,6 +284,8 @@ async function runExhibit(exhibit) {
 for (const exhibit of approved) {
   let r;
   try { r = await runExhibit(exhibit); } catch (e) { fail(`${exhibit.data.id}: threw during runtime check — ${e.message}`); continue; }
+  if (!r.bootRendered) fail(`${r.exhibit}: exhibit did NOT render through the real route (data never loaded, or the scene/chips never built) — this is the live iPad failure`);
+  else pass(`${r.exhibit}: renders through the real route — data loaded and the scene built (center + bodies)`);
   const badItems = r.itemChecks.filter((c) => !c.ok);
   if (badItems.length) fail(`${r.exhibit}: item(s) not tappable/correct: ${badItems.map((b) => b.id).join(', ')}`);
   else pass(`${r.exhibit}: every item (${r.itemChecks.length}) tappable and fact card updates correctly`);

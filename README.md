@@ -6,42 +6,25 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
-## Session 7D: Retire the superseded — PARTIAL (July 10 2026)
+## Session 8H: Kidspedia iPad fix — exhibit load + single header (July 10 2026)
 
-Rewrote `BUILDING-A-GAME.md` as the v2 new-game playbook: one-page spec (the manifest in
-plain English) first, engine built as a cartridge against `CARTRIDGE-CONTRACT.md`, the
-`qa-<game>.mjs` harness written in the same session as the engine (contract checks
-included), and all art + tuning through the level-first editor (asset IDs + a 1–5
-difficulty dial, no worlds layer). Dropped the old Track A/B + `buildable-startscreen.js` +
-make-a-level framing; kept the shared libs, Feel Kit, multiplayer, SFX-0.5s, and win/lose
-references. The engine-code removals are deferred: the "superseded" Breaker screens
-(start menu, journey, loadout) are still the live handlers for the standalone deep-links
-`/breaker`, `/breaker/journey`, `/breaker/loadout` (routed to `breaker-engine.html` in
-`vercel.json`), and the app can't serve those from the shell yet (it boots to the profile
-gate, no path routing). Owner chose reroute-first-then-delete and to keep the maker; the
-reroute + a profile-vs-guest decision for shared links come in a follow-up. No game engine
-was touched, so no `qa-<game>` script was run. UPDATE: the front-door reroute for /breaker, /breaker/journey and /breaker/loadout also shipped this session (308 to /app?bk=..., app reads it on boot, no login), verified on a Vercel preview in a real browser before merge; /breaker/play/{id} still serves the engine. See `SESSION-LOG.md`. Commits `3f6826f`, reroute on `main`.
+Two scoped fixes on the solar-system exhibit (`/explore/solar-system`), reported blank on iPad Safari
+plus a header overlap. **Bug 1 (blank exhibit):** the template loaded its nav helper with a relative
+`<script src="buildable-gamenav.js">`. At the pretty url `/explore/solar-system` that resolves to
+`/explore/buildable-gamenav.js`, which the `/explore/(.*)` rewrite serves as the HTML page, so
+`BuildableGameNav` was undefined and the old `boot()` threw at `register(...)` before the scene/chips/
+card ran — framed but empty (on any browser via that route, not just iPad; the JSON loaded fine).
+Fixed to absolute `/buildable-gamenav.js`, decoupled `boot()` from the helper, and added a friendly
+no-emoji "Oops!" fallback for every failure path (fetch, not-approved, missing three.js, WebGL
+unavailable) so an exhibit is never blank. **Bug 2 (double nav):** in-shell, a `body.in-app` class now
+hides the exhibit's own back button and pads the title clear of the shell's Home pill — one header, the
+shell's; standalone is unchanged. **QA:** `qa-explore.mjs` was passing while live was broken because it
+stubbed fetch and hand-injected the helper; it now models Vercel's real routing (static file first,
+then routes) and verifies the data loads and the scene renders through the real `/explore/{id}` route,
+and that no local asset resolves to the swallowed HTML page. `node qa-explore.mjs .` ALL CHECKS PASS;
+regression-proved to fail if the relative path returns. Files: `public/orbit-explorer.html`,
+`qa-explore.mjs`. Flagged (out of scope): `solar-system.json` has 7 bodies — Uranus is missing.
 
----
-
-## Session 7C: Kid customizer polish — Feel Kit celebrations in the loadout (July 10 2026)
-
-The roadmap's actual Session 7C brief (the "7C" slot in the log was used July 9 for the
-Tennis logic fix instead; that entry flagged this work as still open). `index.html` now
-loads the Feel Kit (`buildable-audio.js`, `buildable-mechanics.js`, `buildable-feel.js`)
-alongside the wallet script, so shell screens — not just game engines — can call
-`window.BuildableFeel`. `BreakerLoadout` (the shared shell customizer used by Breaker and
-Music Maker) is now Feel-Kit-driven: `Feel.configure` from the manifest's accent/feel
-presets, `Feel.tap()` on every button, `Feel.miss()` (gentle amber nudge, not a red flash)
-when short on coins, and a real "coin unlock celebration" — `Feel.explode()` fired from the
-tile a kid just bought (particles, the `powerup` sound, success buzz, a bounded-duration
-canvas overlay) paired with a brief gold glow on the tile so the moment reads even muted.
-QA: this touches the shell, not a game engine, so no `qa-*.mjs` covers the loadout logic
-itself (flagged plainly) — `npm run build` clean, and both games currently wired to this
-screen re-verified: `node qa-breaker.mjs .` and `node qa-music.mjs .` both ALL PASS. Chess/
-Survival/Sling have `customization` manifests but aren't yet routed through this shell
-screen (7B conversion campaign, not 7C) — they'll inherit this polish once wired up. Tile
-art is still the Phase-3 color-swatch placeholder; real asset thumbnails weren't in scope.
 ## Session 8G: Kidspedia preview — orbit-explorer template + solar-system (July 10 2026)
 
 First Kidspedia build, run against a new `EXHIBIT-MANIFEST.md` contract (committed to the
@@ -68,25 +51,6 @@ scored a loss. Fix: the demo now advances its own timer inside `update()` and au
 play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/win math
 untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
 difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
-
-## Session 7B batch: Checkers, Connect Four, Tic-Tac-Toe convert (July 9 2026)
-
-Three board classics onto the manifest, one commit each. Recipe = the Chess worked example:
-manifest `levels` are opponent TIERS, worlds are a free customization slot, engine reads its
-menu from the manifest with a full built-in fallback. All stay category `Classic`.
-
-- New generic **`board` profile** in `buildable-manifest.js` (tiers + worlds; each engine
-  names its own tiers) + a fallback-safe **manifest preload in `buildable-boardgame.js`** so
-  the shared board shell drives its start-screen choices from a game's manifest.
-- **Checkers**: manifest with its real Easy/Normal/Tricky tiers + 6 worlds; engine reads the
-  difficulty + world grids (fallback kept); `checkersMove` relay intact.
-- **Connect Four**: gave the robot honest Easy/Medium/Hard (was one strength); Classic, 6-world
-  loadout, multiplayer honestly `off` (hot-seat only). Per-tier QA: beatable, always winnable.
-- **Tic-Tac-Toe**: upgraded the 6A features-only manifest to a FULL one (3 tiers, loadout,
-  learning); honest difficulty; QA minimax now alpha-beta pruned. Perfect player never loses
-  at any tier; easy clearly beatable.
-- QA: `qa-checkers/connectfour/tictactoe` all green + regression `qa-chess/dotsandboxes/
-  breaker/survival/sling/music` all PASS.
 
 ## Session 7B: Conversion campaign — Chess converts to the manifest (July 9 2026)
 
