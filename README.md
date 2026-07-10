@@ -21,7 +21,7 @@ covers the rest). `EXHIBIT-MANIFEST.md` gains the `facts` field. `solar-system.j
 kid-voiced, NASA-sourced facts per body and is set to `status: in-review` (not live to kids until
 Mike approves). `qa-explore.mjs` now validates facts lists and fly-to selection and runs the
 runtime check on in-review candidates too. QA: `node qa-explore.mjs` ALL CHECKS PASS. On-device
-iPad visual pass (fly-to motion, round chips) is for the owner. main 87664f3
+iPad visual pass (fly-to motion, round chips) is for the owner. main 0456a77
 
 ## Bug fix: Music Maker duplicated on Home (Play shelf leak) (July 9 2026)
 
