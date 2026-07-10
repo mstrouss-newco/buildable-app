@@ -137,6 +137,7 @@ var worldKey = "beach";
 var paused = false;    // online: opponent left
 var started = false;
 var demoOn = false, demoT = 0;   // wordless self-playing intro demo
+var DEMO_MAX = 6;                // seconds: demo auto-starts play if untouched
 
 // online bits
 var online = (function () { try { return new URLSearchParams(location.search).get("online") === "1"; } catch (e) { return false; } })();
@@ -293,7 +294,11 @@ window.addEventListener("keyup", function (e) { keys[e.key] = false; });
 /* ---------- 5) UPDATE (physics) ---------- */
 function update(dt) {
   if (!G || state !== "play" || paused) return;
-  if (demoOn) return;                              // frozen behind the how-to demo
+  if (demoOn) {                                    // how-to demo overlay
+    demoT += dt;                                   // advance here so play works headlessly too
+    if (demoT > DEMO_MAX) demoOn = false;          // auto-start if the kid never taps
+    else return;                                   // frozen behind the how-to demo
+  }
   dt = Math.min(dt, 0.05);                       // clamp big frames
 
   // ---- keyboard paddle control ----
@@ -808,7 +813,6 @@ function frame(ts) {
   if (parts.length) updateParticles(dt);
   if (bubbleTop) { bubbleTop.t -= dt; if (bubbleTop.t <= 0) bubbleTop = null; }
   if (bubbleBot) { bubbleBot.t -= dt; if (bubbleBot.t <= 0) bubbleBot = null; }
-  if (demoOn) { demoT += dt; }
   update(dt);
   if (G) draw();
   requestAnimationFrame(frame);
