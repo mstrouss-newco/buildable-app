@@ -1,5 +1,43 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 8I: Kidspedia exhibit voice + sound pipeline
+
+Gave Kidspedia exhibits their own audio per `EXHIBIT-MANIFEST.md` — fact narration, a soft
+ambient bed, and tap feedback — all optional and all degrading gracefully so nothing ever
+leaves a kid waiting or a screen silent-broken.
+
+**Contract + template.** `EXHIBIT-MANIFEST.md` now defines per-item `factAudio` (a narrator
+clip, id `{exhibitId}-{itemId}`), per-exhibit `ambient` (a shared `/api/sfx` key), and Feel
+Kit tap feedback. In `public/orbit-explorer.html`, "Read to me" plays the pre-generated
+narrator clip via `/api/explore-audio?id=...` and drops to the browser voice the instant a
+clip is missing (the serve endpoint 404s — no live wait); a soft looping ambient bed plays
+under the exhibit (starts on first tap, volume 0.15); every chip/planet tap fires
+`Feel.tap()`; and the shell's Sound button (`nav:sound`, via `BuildableGameNav`) mutes/unmutes
+ambient + taps, with pause/resume honored.
+
+**Generation — server-side, manual, never live while a kid waits.** New `api/gen-exhibit-audio.js`:
+for an approved exhibit it speaks each fact once with the one configured narrator voice
+(ElevenLabs; key stays in Vercel env only, never in the browser/repo), saves the mp3 to the
+audio path (cache key `exhibit-audio:<id>`), is generate-once + skip-if-present (re-runs cost
+nothing), and returns the characters generated. `?dry=1` estimates spend for free; `?force=1`
+is gated by `EXHIBIT_GEN_TOKEN` when set. New serve endpoint `api/explore-audio.js` is
+read-only and 404s on a miss (it never generates).
+
+**Ran on solar-system.** All 8 facts (Sun + 7 planets) generated in the narrator voice
+(default Rachel, `eleven_turbo_v2_5`) = **1,281 characters total** — one-time; ElevenLabs
+bills per character. Set `ambient: "space"` and `factAudio` on all 8 items. Confirmed live:
+a clip serves as `audio/mpeg`, a missing id 404s to the browser-voice fallback, the deployed
+JSON carries the new fields, and the space ambient is pre-warmed so the first kid doesn't
+wait on it.
+
+**QA.** `node qa-explore.mjs .` ALL CHECKS PASS — added assertions for the factAudio →
+browser-voice fallback and for the ambient / `Feel.tap` / shell-Sound wiring.
+
+**Remains / flagged.** Owner can set `ELEVENLABS_NARRATOR_VOICE_ID` to choose a specific
+narrator (else `ELEVENLABS_VOICE_ID`, else Rachel). Only solar-system has narration so far;
+any future approved exhibit just needs one run of `/api/gen-exhibit-audio`. Pre-existing and
+out of 8I scope: solar-system is still missing Uranus (flagged in 8H).
+
 ## 2026-07-10 — Session 8A: Living question library — scheduled AI generation + review gate (Phase 8, Education engine)
 
 Built the education engine's supply side: a weekly factory that fills a curriculum-mapped question

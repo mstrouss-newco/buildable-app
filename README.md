@@ -21,6 +21,29 @@ DB: `db/8a-question-bank-review.sql` (adds `game_theme` + `question_bank_runs` l
 PASSED (no game engines touched). Owner: run the SQL, ensure `ANTHROPIC_API_KEY` set, optionally
 `CRON_SECRET`, then review at `/question-review` (PIN 1025).
 
+## Session 8I: Kidspedia exhibit voice + sound (July 10 2026)
+
+Gave exhibits their own audio, all optional and all with graceful fallback. **Contract
+(`EXHIBIT-MANIFEST.md`):** per-item `factAudio` (a narrator clip id `{exhibitId}-{itemId}`),
+per-exhibit `ambient` (a shared `/api/sfx` key), and Feel Kit tap feedback. **Template
+(`public/orbit-explorer.html`):** "Read to me" plays the pre-generated narrator clip via
+`/api/explore-audio?id=...` and falls back to the browser voice the instant a clip is missing
+(the serve endpoint 404s — no waiting); a soft looping ambient bed plays under the exhibit
+(starts on first tap, low volume); every chip/planet tap fires `Feel.tap()`; and the shell's
+Sound button (`nav:sound`) mutes/unmutes ambient + taps with pause/resume honored. **Generation
+(`api/gen-exhibit-audio.js`, server-side, manual, owner-run):** for an approved exhibit it
+speaks each fact once with the one configured narrator voice (ElevenLabs, key in Vercel env
+only), saves the mp3 to the audio path (cache key `exhibit-audio:<id>`), generate-once +
+skip-if-present so re-running is free, and returns the characters generated; a kid-facing page
+never triggers it. **Serve (`api/explore-audio.js`):** read-only, 404 on a miss. **Ran on
+solar-system:** all 8 facts generated in the narrator voice = **1,281 characters** (one-time;
+ElevenLabs bills per character); `ambient: "space"` set; confirmed live — a clip serves as
+`audio/mpeg`, a missing id 404s to the browser-voice fallback, and the space ambient is
+pre-warmed. **QA:** `node qa-explore.mjs .` ALL CHECKS PASS (adds the factAudio fallback +
+ambient/Feel/Sound wiring checks). Files: `EXHIBIT-MANIFEST.md`, `public/orbit-explorer.html`,
+`public/explore/solar-system.json`, `api/explore-audio.js`, `api/gen-exhibit-audio.js`,
+`qa-explore.mjs`.
+
 ## Session 8H: Kidspedia iPad fix — exhibit load + single header (July 10 2026)
 
 Two scoped fixes on the solar-system exhibit (`/explore/solar-system`), reported blank on iPad Safari
