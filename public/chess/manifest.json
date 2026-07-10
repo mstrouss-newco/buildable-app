@@ -1,0 +1,66 @@
+{
+  "id": "chess",
+  "name": "Chess",
+  "type": "game",
+  "category": "Board",
+  "color": "#F0972A",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "coach" },
+    "multiplayer": "turn-based",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+  },
+
+  "art": {
+    "badge": "chess/badge/v1",
+    "hero": "chess/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "chess/loading/v1",
+    "music": "audio/chess/theme-v1"
+  },
+
+  "levels": [
+    {
+      "id": "friendly-bot",
+      "name": "Easy",
+      "desc": "Just learning",
+      "difficulty": 1,
+      "unlocked": true,
+      "journeyBadge": "badges/jungle/v1",
+      "parts": { "opponent": "easy", "world": "jungle" }
+    },
+    {
+      "id": "clever-bot",
+      "name": "Medium",
+      "desc": "A real game",
+      "difficulty": 3,
+      "journeyBadge": "badges/ocean/v1",
+      "parts": { "opponent": "medium", "world": "ocean" }
+    },
+    {
+      "id": "grandmaster-bot",
+      "name": "Hard",
+      "desc": "Watch out!",
+      "difficulty": 5,
+      "journeyBadge": "badges/space/v1",
+      "parts": { "opponent": "hard", "world": "space" }
+    }
+  ],
+
+  "customization": [
+    { "slot": "World", "options": [
+      { "name": "Jungle", "asset": "chess/world/jungle", "price": 0 },
+      { "name": "Ocean",  "asset": "chess/world/ocean",  "price": 0 },
+      { "name": "Space",  "asset": "chess/world/space",  "price": 0 },
+      { "name": "Candy",  "asset": "chess/world/candy",  "price": 0 },
+      { "name": "Castle", "asset": "chess/world/castle", "price": 0 },
+      { "name": "Desert", "asset": "chess/world/desert", "price": 0 }
+    ]}
+  ]
+}

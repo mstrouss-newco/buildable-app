@@ -259,6 +259,14 @@
       }
     },
     {
+      "src": "/chess/manifest.json",
+      "dest": "/chess/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+
+    {
       "src": "/breaker",
       "dest": "/breaker-engine.html"
     },
