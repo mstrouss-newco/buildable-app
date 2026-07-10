@@ -307,6 +307,14 @@
         "cache-control": "no-cache, must-revalidate"
       }
     },
+    {
+      "src": "/bingo/manifest.json",
+      "dest": "/bingo/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+
 
 
 

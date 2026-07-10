@@ -51,6 +51,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-wincard.js"></script>
+<script src="buildable-manifest.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
@@ -89,6 +90,24 @@ const GAME_CONFIG=(typeof window!=="undefined"&&window.GAME_CONFIG)||{
     {key:"castle",name:"Castle",color:"#6e5a2f"},{key:"desert",name:"Desert",color:"#6e4a2f"}],
   sizes:[{key:"easy",name:"Easy",n:3,foot:"3 x 3"},{key:"normal",name:"Normal",n:4,foot:"4 x 4"}],
 };
+
+/* Session 7B: board-size names can come from /bingo/manifest.json, FULL fallback to GAME_CONFIG. */
+(function loadBingoManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("bingo", function(cfg){
+      try{
+        if(cfg && cfg.stages && cfg.stages.length){
+          for(var i=0;i<GAME_CONFIG.sizes.length && i<cfg.stages.length;i++){
+            if(cfg.stages[i].name) GAME_CONFIG.sizes[i].name = cfg.stages[i].name;
+            if(cfg.stages[i].desc) GAME_CONFIG.sizes[i].foot = cfg.stages[i].desc;
+          }
+          try{ if(typeof state!=="undefined" && state==="menu" && typeof startScreen!=="undefined" && startScreen && startScreen.update) startScreen.update(buildStartCfg()); }catch(e){}
+        }
+      }catch(e){}
+    }, function(){ /* missing/invalid -> keep built-in GAME_CONFIG */ });
+  }catch(e){}
+})();
 
 // ---------- STATE ----------
 let state="menu";

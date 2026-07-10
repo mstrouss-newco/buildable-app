@@ -1,0 +1,47 @@
+{
+  "id": "bingo",
+  "name": "Bingo",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Classic",
+  "color": "#FFD23F",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "announcer" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["reading"] }
+  },
+
+  "art": {
+    "badge": "bingo/badge/v1",
+    "hero": "bingo/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "bingo/loading/v1"
+  },
+
+  "levels": [
+    { "id": "easy",   "name": "Easy",   "desc": "3 x 3", "difficulty": 1, "unlocked": true, "journeyBadge": "badges/easy/v1",   "parts": { "size": "3x3" } },
+    { "id": "normal", "name": "Normal", "desc": "4 x 4", "difficulty": 2,                   "journeyBadge": "badges/normal/v1", "parts": { "size": "4x4" } }
+  ],
+
+  "customization": [
+    { "slot": "Cards", "options": [
+      { "name": "Pictures", "asset": "bingo/cards/pictures", "price": 0 },
+      { "name": "Words",    "asset": "bingo/cards/words",    "price": 0 }
+    ]},
+    { "slot": "World", "options": [
+      { "name": "Space",  "asset": "bingo/world/space",  "price": 0 },
+      { "name": "Jungle", "asset": "bingo/world/jungle", "price": 0 },
+      { "name": "Candy",  "asset": "bingo/world/candy",  "price": 0 },
+      { "name": "Ocean",  "asset": "bingo/world/ocean",  "price": 0 },
+      { "name": "Castle", "asset": "bingo/world/castle", "price": 0 },
+      { "name": "Desert", "asset": "bingo/world/desert", "price": 0 }
+    ]}
+  ]
+}
