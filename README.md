@@ -52,6 +52,17 @@ play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/w
 untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
 difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
 
+## Session 7B: Croc Tot converts (July 9 2026)
+
+Next in the 7B campaign. Croc Tot (single-player action) onto the manifest: new `croc` profile
+(levels = ordered themed stages Backyard->Volcano, difficulty 1-5 = the ramp, parts name
+theme+boss); `public/croctot/manifest.json` + route; engine reads its stage names for the
+shared level-select with a built-in fallback. New `qa-croc.mjs` (manifest + wiring + contract
+signals; no live sim — the engine has no headless hook). ALL CHECKS PASSED.
+
+Riley's Garden flagged, not converted: a self-contained kid creation whose sprites are 96
+emoji glyphs — publishing it conflicts with the no-emoji law; pending Mike's decision.
+
 ## Session 7B: Conversion campaign — Chess converts to the manifest (July 9 2026)
 
 First game of the 7B conversion campaign (Chess first: it pairs with the guest-links

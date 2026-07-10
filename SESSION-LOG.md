@@ -1,5 +1,37 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09 — Session 7B batch: Croc Tot converts (+ Riley's Garden flagged)
+
+Continued the 7B campaign (next in Mike's order after the three Classics). Croc Tot fully
+converted; Riley's Garden surfaced a decision and was NOT converted (see the flag below).
+
+**Croc Tot -> the manifest.** Croc is a single-player ACTION game with a real 5-stage
+journey (Backyard, Kitchen, Night Sky, Jungle, Volcano), each a themed world with a boss,
+plus a play-assist mode (Chill / Just Right / Spicy = lives). Kept its honest category
+`Action` (not a board Classic).
+- New `croc` profile in `public/buildable-manifest.js`: levels are ordered stages
+  (difficulty 1-5 = the ramp), parts name each stage's theme + boss; deep art/tuning stays
+  engine-owned with a fallback (golden rule 2 — no raw knobs in the manifest).
+- `public/croctot/manifest.json`: 5 stages, `Action`, coins/buddy/learning on, multiplayer
+  off (single-player), the lives mode as a "Mode" customization slot. Added its vercel route.
+- Engine (`public/croctot.html`) now reads its stage names from the manifest for the shared
+  level-select, with the built-in names kept as a FULL fallback (a manifest miss never
+  breaks the game). Shared nav / start screen / HUD / win path untouched.
+- New `qa-croc.mjs`. Croc is a real-time canvas game with no headless logic hook, so this
+  harness is honestly scoped: it proves the manifest is valid + maps to 5 ascending stages
+  (theme + boss each), the engine is wired to read it with a matching built-in fallback, and
+  the shell contract signals (shared nav, start screen, HUD, a win path) are present. It does
+  NOT sim live gameplay (no hook to do so). ALL CHECKS PASSED.
+
+**Riley's Garden — flagged, not converted (needs Mike's call).** It has a game file but no
+picker card, so per the batch rule its identity stub would be created on conversion. But it
+is a fully self-contained KID creation ("Built by Riley") that uses **96 emoji glyphs across
+53 lines as its actual game sprites** (bees, flowers, apples, etc.). Publishing it into the
+official picker would put emojis into the product (against the hard no-emoji law), and
+stripping them would mean rebuilding a child's game with drawn art — a destructive rewrite I
+won't do unasked. Left untouched pending Mike's decision on how to treat it.
+
+
 ## 2026-07-10 — Session 8H: Kidspedia iPad fix — exhibit load + single header (Phase 8, Kidspedia track)
 
 Two-bug fix pass on the solar-system exhibit (`/explore/solar-system`), reported blank on iPad Safari
