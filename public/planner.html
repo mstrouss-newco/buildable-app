@@ -155,6 +155,15 @@
   .rm-manual{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#fff1d9;color:#8a5a00;border:1px solid #f0d9a8;border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:middle}
   .rm-addsess{margin-top:10px}
 
+  .rm-upnext{background:linear-gradient(135deg,#efeaff,#e7f7f1);border:1px solid #d6ccff;border-radius:16px;padding:14px 16px;margin:0 0 14px;box-shadow:0 2px 10px rgba(107,78,255,.10)}
+  .rm-upnext.allclear{background:var(--card2);border-color:var(--line);box-shadow:none}
+  .rm-up-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px}
+  .rm-up-main{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .rm-up-name{font-size:16px;font-weight:800}
+  .rm-up-phase{font-size:12px;color:var(--muted);font-weight:600}
+  .rm-up-desc{font-size:13px;line-height:1.45;color:var(--ink);margin:8px 0 0}
+  .rm-up-body{font-size:14px;color:var(--muted)}
+
   /* PIN gate */
   #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60}
   #gate .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;width:min(340px,90vw);text-align:center}
@@ -841,6 +850,28 @@ function startNextSession(){
   if(!s){ toast("All sessions are done or parked"); return; }
   openSessionPrompt(s.id);
 }
+function nextSession(){
+  const rd=rmData();
+  for(const ph of rd.phases){
+    const ss=rd.sessions.filter(s=>s.phaseNum===ph.num && !s.later);
+    for(const s of ss){ if(!s.done) return {s:s, ph:ph}; }
+  }
+  return null;
+}
+function upNextCard(){
+  const nx=nextSession();
+  if(!nx) return '<div class="rm-upnext allclear"><div class="rm-up-label">Up next</div><div class="rm-up-body">All caught up. Nothing queued right now.</div></div>';
+  const s=nx.s, ph=nx.ph;
+  return '<div class="rm-upnext">'
+    +'<div class="rm-up-label">Up next</div>'
+    +'<div class="rm-up-main"><span class="rm-id">'+esc(s.id)+'</span><span class="rm-up-name">'+esc(s.name)+'</span><span class="rm-up-phase">Phase '+esc(ph.num)+' &middot; '+esc(ph.title)+'</span></div>'
+    +(s.desc?'<div class="rm-up-desc">'+esc(s.desc)+'</div>':'')
+    +'<div class="rm-btns"><button class="btn green" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
+    +'<button class="btn ghost mini" onclick=\'rmJumpTo('+JSON.stringify(ph.num)+')\'>Show in list</button></div>'
+  +'</div>';
+}
+function rmJumpTo(num){ rmOpen[num]=true; renderRoadmap(); const el=document.getElementById("ph-"+num); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"start"}); }
+
 function renderRoadmap(){
   const board=document.getElementById("rm-board"); if(!board) return;
   const rd=rmData();
@@ -849,16 +880,16 @@ function renderRoadmap(){
     board.innerHTML=rmAddBar()+'<div class="empty"><b>No roadmap yet.</b><br>Paste a roadmap above, or tap <b>+ New phase</b> to build one yourself.</div>';
     return;
   }
-  let html=rmAddBar();
+  let html=upNextCard()+rmAddBar();
   if(ns) html+='<div class="rm-startnext"><button class="btn green" onclick="startNextSession()">Start next session — '+esc(ns.id)+(ns.name?' '+esc(ns.name):'')+'</button></div>';
   rd.phases.forEach(ph=>{
     const pr=phaseProgress(ph.num);
-    if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true;
+    if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=!(pr.total>0 && pr.done>=pr.total);
     const open=rmOpen[ph.num]?"open":"";
     const ss=rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
     const doneCls=(pr.total&&pr.done>=pr.total)?"s-ready":"s-wait";
     const canDel=!!ph.manual;
-    html+='<div class="bucket">'
+    html+='<div class="bucket" id="ph-'+esc(ph.num)+'">'
       +'<div class="bhead" onclick=\'rmToggle('+JSON.stringify(ph.num)+')\'>'
       +'<h2><span class="rm-reorder">'
         +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMovePhase('+JSON.stringify(ph.num)+',-1)\'>&#9650;</button>'
