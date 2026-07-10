@@ -1,5 +1,38 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09: Session 8J - solar-system exhibit gets real planet textures
+
+Kidspedia's solar-system exhibit (`public/explore/solar-system.json`, `orbit-explorer.html`)
+now shows real NASA-based photo textures instead of AI-generated placeholder art, for the
+Sun and the 7 planets already in the exhibit (Mercury, Venus, Earth, Mars, Jupiter, Saturn,
+Neptune). Source: Solar System Scope 2k equirectangular maps (free license, based on NASA
+data), supplied in a working folder outside the repo.
+
+**Assets.** Each source JPG was resized to 1024x512 (2:1 equirectangular, comfortably above
+the largest on-screen sphere size across the zoom range) and saved as
+`public/explore/solar-system/textures/{body}.webp` (primary, quality 80) with a same-size
+`.jpg` fallback (quality 85). Total: 8 bodies, webp 304KB combined, jpg 811KB combined,
+against 4.7MB of original source JPGs.
+
+**Wiring.** `orbit-explorer.html` now treats an item's `art` value as a real static asset
+path when it contains a slash (`explore/solar-system/textures/sun`), tried as `.webp` first
+with a `.jpg` retry on error; a flat hyphenated value (`explore-mercury`) still goes through
+the existing generative `/api/images` pipeline unchanged. The instant colorHex fallback is
+untouched either way. `solar-system.json`'s center + 8 body `art` fields point at the new
+paths; nothing else in the file changed. `vercel.json` gets an explicit route for
+`/explore/solar-system/textures/(.*)` ahead of the generic `/explore/(.*)` exhibit rewrite,
+so the new texture URLs resolve to real files instead of being swallowed by that rewrite
+(the known Vercel static routes gotcha).
+
+Out of scope, left untouched: Uranus (not a body in this exhibit), the Moon, and the
+starfield backdrop images supplied in the same source pack.
+
+**QA.** `node qa-explore.mjs .` ALL CHECKS PASS. Hand-verified the new texture route
+resolves ahead of the exhibit-page catch-all using the same route-order model the QA script
+uses. Live iPad-viewport check pending (see README log entry).
+
+main b64c951
+
 ## 2026-07-09 — Session 8I: Kidspedia exhibit voice + sound pipeline
 
 Gave Kidspedia exhibits their own audio per `EXHIBIT-MANIFEST.md` — fact narration, a soft

@@ -6,6 +6,21 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 8J: solar-system exhibit gets real planet textures (July 9 2026)
+
+Kidspedia's solar-system exhibit now shows real NASA-based photo textures (Solar System
+Scope 2k maps, free license) for the Sun and its 7 planets, instead of AI-generated
+placeholder art. Assets resized to 1024x512 and saved as
+`public/explore/solar-system/textures/{body}.webp` (+ `.jpg` fallback). `orbit-explorer.html`
+now treats a slash-containing `art` value as a real static asset (webp first, jpg retry),
+leaving the existing generative `/api/images` path untouched for flat ids (hero art, other
+exhibits) and the instant colorHex fallback untouched either way. `solar-system.json`'s
+`art` fields updated for the center + 8 bodies; `vercel.json` gets an explicit route for the
+new texture path ahead of the generic `/explore/(.*)` exhibit rewrite (the known Vercel
+static routes gotcha). Uranus, the Moon and the starfield backdrop from the same source pack
+are out of scope and untouched. QA: `qa-explore.mjs` ALL CHECKS PASS. See SESSION-LOG.md
+Session 8J for the full writeup. main b64c951
+
 ## Session 8A: Living question library — scheduled generation + review gate (July 10 2026)
 
 Phase 8 education engine, supply side. New weekly **question factory** (`api/generate-question-bank.js`)
