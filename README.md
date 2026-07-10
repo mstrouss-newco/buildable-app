@@ -90,6 +90,16 @@ play after `DEMO_MAX` (6s), so a kid who never taps still gets a game. Scoring/w
 untouched — it was correct, just never reached. QA: `node qa-tennis.mjs .` PASS on all three
 difficulties (flawless player 7-0). Six-line change in `public/tennis.html`.
 
+## Session 7B: Riley's Garden converts — art pass + identity stub (July 9 2026)
+
+Mike chose the art pass. Riley's Garden (a self-contained kid creation) used 96 emoji glyphs as
+its sprites; replaced them all with drawn vector art (`drawItem` for 9 fruit/flowers,
+`drawBeeBody`, redrawn FX/magnet/honey) and clean text/SVG UI — the file is now 100%
+emoji-free. Then converted: `public/rileys-garden/manifest.json` (croc stage profile, 5 stages,
+honest Action + no coins/loadout), engine reads stage names with fallback, vercel route, and an
+identity stub in `BuildableKids.jsx` (card + screen + route). New `qa-rileys.mjs` (emoji-free +
+sprite runtime + manifest + stub) — ALL CHECKS PASSED; regression green.
+
 ## Session 7B: Croc Tot converts (July 9 2026)
 
 Next in the 7B campaign. Croc Tot (single-player action) onto the manifest: new `croc` profile

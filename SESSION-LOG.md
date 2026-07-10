@@ -84,6 +84,45 @@ qa-question-bank.mjs` from the repo root: ALL CHECKS PASSED.
 work without it); (3) optionally set `CRON_SECRET`; (4) after the first weekly run, open `/question-review`
 (PIN 1025) and approve the good ones. Left for later phases: 8B learning ledger, 8C first native
 learning game.
+## 2026-07-09 — Session 7B batch: Riley's Garden converts (art pass + identity stub)
+
+Resolved the Riley's Garden flag from the Croc session. Mike chose the ART PASS: replace the
+game's emoji sprites with drawn art, then convert. Done.
+
+**The art pass (the hard part).** Riley's Garden is a self-contained kid creation ("Built by
+Riley") that used **96 emoji glyphs across 53 lines as its actual game art** (fruit, flowers,
+a bee, weapon FX, plus UI). Replaced all of it with drawn vector art and clean text, keeping
+Riley's game intact:
+- New inline vector-art module: `drawItem()` draws the 9 collectibles (orange, apple,
+  strawberry, blueberry, grapes, sunflower, rose, tulip, moonflower), `drawBeeBody()` draws
+  the bee (normal + angry), plus `rgStar`/`rgLeaf` helpers. The weapon FX (fairy dust, glitter
+  bomb, toxic slime, lightning, vortex) already had rich vector rendering underneath the tiny
+  emoji glyph, so those glyphs were dropped and the vector FX kept. Magnet + honey drops
+  redrawn as small vectors.
+- UI de-emoji: score/lives/boss bars, level buttons, title/instructions, win/lose/pause
+  screens, weapon popup + weapon bar, mute button — all now drawn marks (SVG heart lives, a
+  colour-dot weapon icon) or plain words. A final sweep cleared residual emoji from comments
+  and unused data, so **the file is 100% emoji-free** (verified in QA).
+
+**Then the conversion.** New `public/rileys-garden/manifest.json` (reuses the `croc` stage
+profile): 5 ordered stages (Sunny Garden -> The Big Beehive!), honest `Action` category, and
+honest features (no coins/loadout/multiplayer — it is a simple standalone game). Engine reads
+its stage names from the manifest with the built-in names as a fallback. Added its vercel
+route.
+
+**Identity stub (it had no picker card).** Added to `src/BuildableKids.jsx`: a GAME_CATALOG
+card (`handler onRileys`), `SCREEN_RILEYS` + slug, a `RileysScreen` (GameFrame), the picker
+prop, and the render route. App compiles clean (esbuild).
+
+**QA.** New `qa-rileys.mjs`: asserts the file is emoji-free (the whole point), runs all 14
+drawn sprites without error, validates the manifest (5 ascending stages), checks the engine
+reads it with a fallback, and confirms the identity stub exists. ALL CHECKS PASSED. Regression:
+qa-croc / qa-chess / qa-checkers / qa-connectfour / qa-tictactoe all still PASS.
+
+**Remaining in 7B (Mike's order):** the rest of the Classics/keepers — Typing, Mahjong, Bingo,
+String Match, Dots & Boxes (full), plus Tumble Blocks (Tetris rename + mechanical twist),
+Tennis, Castle Guard, Bubble, Memory.
+
 
 ## 2026-07-09 — Session 7B batch: Croc Tot converts (+ Riley's Garden flagged)
 
