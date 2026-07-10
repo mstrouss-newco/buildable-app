@@ -250,6 +250,32 @@ function build(q) {
       transparent: false, quality: "medium",
     };
   }
+  if (kind === "explore") {
+    // Kidspedia exhibits (EXHIBIT-MANIFEST.md): one photographic "surface" texture
+    // per exhibit item, plus a hero card image for the Explore shelf. Art rule: the
+    // template fetches this at load time and shows a flat color fallback until it
+    // resolves, so a kid never waits (see CARTRIDGE-CONTRACT.md).
+    const id = (q.id || "").toString();
+    const EXPLORE_STYLE = "Photorealistic, richly detailed, natural lighting, no text, no words, no letters, no UI elements, child-friendly, seamless enough to wrap softly around a sphere";
+    const EXPLORE = {
+      "explore-sun": "The surface of the Sun up close, swirling super-hot golden and orange plasma with glowing solar flares",
+      "explore-mercury": "The cratered grey-brown rocky surface of Mercury seen up close, sun-scorched and heavily pockmarked",
+      "explore-venus": "The thick swirling pale yellow-gold cloud tops of Venus seen from above, smooth and stormy",
+      "explore-earth": "Earth seen from space, vivid blue oceans, swirling white clouds and green-brown continents",
+      "explore-mars": "The rusty red dusty rocky surface of Mars up close, with distant orange dust and rocky terrain",
+      "explore-jupiter": "The swirling cream, tan and orange banded cloud surface of Jupiter with a hint of the Great Red Spot storm",
+      "explore-saturn": "The pale gold banded cloud surface of Saturn up close, soft and creamy swirls",
+      "explore-neptune": "The deep vivid blue windswept cloud surface of Neptune up close, with faint white streaks",
+      "explore-solar-system-hero": "A wide dramatic view of the whole solar system, the glowing Sun and all eight colorful planets lined up along their orbits with soft starry space behind them, storybook wonder",
+    };
+    const subject = EXPLORE[id];
+    if (!subject) return null;
+    return {
+      descriptor: `explore|${id}`,
+      prompt: `${subject}. ${EXPLORE_STYLE}`,
+      transparent: false, quality: "medium",
+    };
+  }
   if (kind === "town") {
     // Family Town (original board game): a board scene, a start-screen hero, 4 cute
     // animal tokens, and a charming icon per shop / corner. id picks which.
