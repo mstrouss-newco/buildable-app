@@ -32,7 +32,7 @@ the store and **owns the purchase**, and the **engine keeps the effect**.
   retiring it + unifying Survival's coin counter into the shared wallet is a follow-up.
 - **QA:** `qa-survival.mjs` green incl. a new upgrade-handoff check (all 14 ids valid; `?up=`
   Nova+Star raised damage 1→2, +2 hearts). `qa-breaker.mjs` green. No DB change. Did not start 9C.
-  Commits: `fa43e41`, `e006d49`, `92d8181`.
+  Commits: `4a1cf44`, `d9ccaee`, `3764af0`.
 
 ---
 

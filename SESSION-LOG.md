@@ -45,7 +45,7 @@ path actually changes a run (equipping Nova Staff + Star Armor raised damage 1â†
 hearts). `qa-breaker.mjs` green (shared shell file touched; cosmetics loadout path unchanged).
 Shell JSX compiles clean (esbuild).
 
-Commits: schema/docs `fa43e41`, shell store `e006d49`, engine + QA `92d8181`. Only Survival and
+Commits: schema/docs `4a1cf44`, shell store `d9ccaee`, engine + QA `3764af0`. Only Survival and
 shared shell touched; no DB change. Did NOT start 9C.
 
 ## 2026-07-09: Session 8C â€” First native learning game (Math Cannon)
