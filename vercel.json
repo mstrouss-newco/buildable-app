@@ -293,6 +293,14 @@
         "cache-control": "no-cache, must-revalidate"
       }
     },
+    {
+      "src": "/dotsboxes/manifest.json",
+      "dest": "/dotsboxes/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+
 
 
 

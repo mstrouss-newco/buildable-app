@@ -51,6 +51,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
+<script src="buildable-manifest.js"></script>
 <script src="buildable-boardgame.js"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
@@ -92,6 +93,8 @@ const spec = {
   id:"dotsboxes", title:"Dots and Boxes", subtitle:"Pick a size, then close boxes to win!",
   modes:["solo","two"], aiName:"Robo", players:P, aspect:1,
   choices: SIZES, applyChoice(v){ pendingSize=v; },
+  // Session 7B: manifest tiers rename/reorder the size choices; the engine keeps the grid values.
+  applyManifestTiers(cfg){ try{ if(cfg&&cfg.tiers&&cfg.tiers.length) spec.choices = cfg.tiers.map(function(t,i){ return { name:t.name, foot:(t.desc||(SIZES[i]&&SIZES[i].foot)||''), value:(SIZES[i]?SIZES[i].value:SIZES[0].value) }; }); }catch(e){} },
   sfx:{ place:"board_line", claim:"board_claim", win:"board_win", draw:"board_draw" },
   sfxPlace:"place", sfxWin:"win", sfxDraw:"draw",
 
@@ -181,6 +184,7 @@ window.BUILDABLE_GAME = {
   moves:()=>ctrl.moves(), _play:(t)=>ctrl._play(t), _ai:()=>ctrl._ai(),
   _turn:()=>ctrl._turn(), _state:()=>ctrl._state(), result:()=>spec.result(ctrl.G),
   _begin:(m)=>ctrl.startGame(m||"two"), _draw:()=>ctrl._draw(), _G:()=>ctrl.G,
+  _choices:()=>spec.choices,
 };
 window.DOTSBOXES_GAME = window.BUILDABLE_GAME;
 </script>

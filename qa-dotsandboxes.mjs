@@ -7,7 +7,7 @@ import fs from 'fs'; import vm from 'vm';
 const dir=process.argv[2]||'.';
 const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
 const html=read('dotsboxes-engine.html');
-const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-boardgame.js'].map(read).join('\n');
+const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-manifest.js','buildable-boardgame.js'].map(read).join('\n');
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
 const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:900,height:600}:(typeof k==='string'?noop:undefined))});
@@ -41,5 +41,21 @@ for(const sz of SIZES){ let wins=0,losses=0,draws=0;
 
 console.log('--- render smoke ---');
 DG._begin('two'); DG._play({kind:'h',i:0}); DG._play({kind:'v',i:0}); const d=DG._draw(); console.log('render:', d); if(d!=='ok')ok=false;
+
+console.log('--- MANIFEST (Session 7B): /dotsboxes/manifest.json through the shared loader ---');
+const bmSb={console,Math,Date,JSON,Object,Array,String}; bmSb.window=bmSb; bmSb.globalThis=bmSb; vm.createContext(bmSb);
+vm.runInContext(read('buildable-manifest.js'), bmSb, {filename:'buildable-manifest'});
+const BM=bmSb.BuildableManifest;
+const manifest=JSON.parse(fs.readFileSync(dir+'/public/dotsboxes/manifest.json','utf8'));
+const mv=BM.validate(manifest);
+console.log(`${mv.ok?'PASS':'FAIL'}  manifest validates  errors=${JSON.stringify(mv.errors)}`); if(!mv.ok)ok=false;
+console.log(`${manifest.category==='Classic'?'PASS':'FAIL'}  category is Classic`); if(manifest.category!=='Classic')ok=false;
+const mcfg=mv.ok?BM.toEngineConfig(manifest):{tiers:[],worlds:[]};
+const sizeNames=mcfg.tiers.map(t=>t.name).join(',');
+console.log(`${mcfg.tiers.length===3?'PASS':'FAIL'}  3 size levels  ::  ${sizeNames}`); if(mcfg.tiers.length!==3)ok=false;
+console.log(`${mcfg.worlds.length===6?'PASS':'FAIL'}  6 free worlds in loadout`); if(mcfg.worlds.length!==6)ok=false;
+console.log(`${mcfg.multiplayer==='off'?'PASS':'FAIL'}  multiplayer off (hot-seat only)`); if(mcfg.multiplayer!=='off')ok=false;
+const chOk=Array.isArray(DG._choices())&&DG._choices().length>=3;
+console.log(`${chOk?'PASS':'FAIL'}  engine exposes size choices  ::  ${JSON.stringify(DG._choices().map(c=>c.name))}`); if(!chOk)ok=false;
 
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);

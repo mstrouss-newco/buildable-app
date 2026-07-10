@@ -1,0 +1,44 @@
+{
+  "id": "dotsboxes",
+  "name": "Dots and Boxes",
+  "type": "game",
+  "levelProfile": "board",
+  "category": "Classic",
+  "color": "#36D6C3",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "coach" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+  },
+
+  "art": {
+    "badge": "dotsboxes/badge/v1",
+    "hero": "dotsboxes/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "dotsboxes/loading/v1"
+  },
+
+  "levels": [
+    { "id": "small",  "name": "Small",  "desc": "3 x 3 boxes", "difficulty": 1, "unlocked": true, "journeyBadge": "badges/small/v1",  "parts": { "grid": "small" } },
+    { "id": "medium", "name": "Medium", "desc": "5 x 5 boxes", "difficulty": 2,                   "journeyBadge": "badges/medium/v1", "parts": { "grid": "medium" } },
+    { "id": "large",  "name": "Large",  "desc": "7 x 6 boxes", "difficulty": 3,                   "journeyBadge": "badges/large/v1",  "parts": { "grid": "large" } }
+  ],
+
+  "customization": [
+    { "slot": "World", "options": [
+      { "name": "Jungle", "asset": "dotsboxes/world/jungle", "price": 0 },
+      { "name": "Ocean",  "asset": "dotsboxes/world/ocean",  "price": 0 },
+      { "name": "Space",  "asset": "dotsboxes/world/space",  "price": 0 },
+      { "name": "Candy",  "asset": "dotsboxes/world/candy",  "price": 0 },
+      { "name": "Castle", "asset": "dotsboxes/world/castle", "price": 0 },
+      { "name": "Desert", "asset": "dotsboxes/world/desert", "price": 0 }
+    ]}
+  ]
+}
