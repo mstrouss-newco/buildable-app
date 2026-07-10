@@ -1,502 +1,291 @@
-# BUILDING-A-GAME.md — start here for a new game, world, or game type
+# BUILDING-A-GAME.md — the new-game playbook
 
-**Agents: read this before building any new game, engine, world, or game mode.**
-This is the single entry point that ties together the four playbooks. Each one owns a
-different question; this doc tells you when to open which:
+**Agents: read this before building any new game, engine, world, or game type.**
+
+Buildable v2 has one rule that shapes everything below: **the shell owns everything
+outside gameplay, the game only plays.** A game is a *cartridge* — a thing the shell
+embeds at a URL and talks to through a small, fixed set of messages. The picker card,
+landing, journey, loadout, HUD, learning moments, coins, and buddy are all rendered by
+the shell from the game's **manifest**. The engine never draws its own menus and never
+hardcodes art.
+
+Build a new game in four moves, in this order:
+
+1. **Write the one-page spec first** — the manifest in plain English. No code yet.
+2. **Build the engine as a cartridge** — against [`CARTRIDGE-CONTRACT.md`](./CARTRIDGE-CONTRACT.md). It only plays.
+3. **Write the QA harness in the same session** — `qa-<game>.mjs`, contract checks included.
+4. **Art and tuning go through the editor** — asset IDs and a 1–5 difficulty dial, never numbers in code.
+
+The north star: anything you build — an engine, a mechanic, a world, a hero — should be
+**storable, trackable, and reusable by the next game.** Pull from the shared libraries and
+write back to them; don't invent a one-off.
 
 | Open this | To answer |
 |---|---|
 | **BUILDING-A-GAME.md** (this file) | "I'm making a new game — what's the whole process?" |
-| [`MECHANICS.md`](./MECHANICS.md) | "How does it *play*? What proven mechanic do I reuse, and where do I store a new one?" |
-| [`GAME-LOOK.md`](./GAME-LOOK.md) | "How does it *look and sound*? Layers, parallax, art pipeline, audio unlock." |
+| [`buildable-manifest-v2.md`](./buildable-manifest-v2.md) | "What goes in the manifest — every field the shell reads?" |
+| [`CARTRIDGE-CONTRACT.md`](./CARTRIDGE-CONTRACT.md) | "How do the shell and the game talk? Which messages are real?" |
+| [`GAME-FEEL.md`](./GAME-FEEL.md) | "How does it *feel*? Shared feedback, sounds, celebrations (the Feel Kit)." |
+| [`MECHANICS.md`](./MECHANICS.md) | "How does it *play*? Which proven mechanic do I reuse, where do I store a new one?" |
+| [`GAME-LOOK.md`](./GAME-LOOK.md) | "How does it *look*? Layers, parallax, art pipeline." |
 | [`ASSET-LIBRARY.md`](./ASSET-LIBRARY.md) | "What do I *render with*? Where to find assets, where to send new ones." |
-| **Asset Library** — `/asset-library.html` (internal) | "What do we already HAVE? Browse everything by 2D/3D · theme · kind, with previews + a coverage matrix." |
-| [`MULTIPLAYER.md`](./MULTIPLAYER.md) | "Two kids playing together? Turn-based (poll a row) vs real-time (Broadcast), and the shared rules." |
-
-The north star (same as the asset rule): anything you build — an engine, a mechanic, a
-world, a hero — should be **storable, trackable, and reusable by the next game.** Don't
-invent a one-off; pull from the shared libraries and write back to them.
+| **Asset Library** — `/asset-library.html` (internal) | "What do we already HAVE? Browse by 2D/3D · theme · kind, with previews + a coverage matrix." |
+| [`MULTIPLAYER.md`](./MULTIPLAYER.md) | "Two kids together? Turn-based vs real-time, and the shared rules." |
 
 ---
 
-## First — agree the asset plan (ASK before you build)
+## Step 1 — Write the one-page spec first (before any code)
 
-**Before any code, plan the assets WITH the user — give 3 options, each shown as a picture.** Open the internal **Asset Library**
-(`/asset-library.html`) — it browses everything we have by **2D/3D**, **theme**, and
-**kind** (`character` · `world` · `element` · `effect` · `music` · `sfx`), with live
-previews, a **coverage matrix** (what we have vs. gaps), our 3D model packs, and the
-downloaded CC0 packs. Then, in chat:
+The spec **is the manifest, in plain English.** One page. Agree it in chat before writing a
+line of engine code. It answers every question the shell will ask, so nothing about the
+game's framing gets improvised later. Fill in each section of
+[`buildable-manifest-v2.md`](./buildable-manifest-v2.md):
 
-1. **Offer THREE distinct asset-set options** from the library — don't pick for the user.
-   Each option is a concrete set with real names/ids (vary the theme/style; keep one
-   dimension), e.g. for a platformer: **A · Dino Jungle** (jungle world + dino hero + leafy
-   element/spark effects), **B · Candy Land** (candy world + a sweet hero + gem pickups),
-   **C · Space Station** (space world + robot hero + star effects).
-2. **Show a quick visual MOCKUP (screenshot) of the game for EACH of the 3 options** so the
-   user decides by SEEING, not by reading names. For each option, lay its assets into a
-   rough game screen — hero + world background + a couple of elements + the HUD — and
-   present the three previews together (use the visual/mockup tool or a small HTML preview
-   that pulls the real asset URLs). Pictures first, then the asset list under each.
-3. **Surface the gaps** per option (what's missing vs the coverage matrix) and how you'd
-   fill each — generate it, CREATE the sound (new engine = new sounds), or curate from a pack.
-4. **Ask the user to pick one (or mix across options)** — and whether to **go get a new
-   asset pack** (prefer CC0 / Kenney — see `ASSET-LIBRARY.md`) if none of the three looks
-   are right. The user downloads packs; you inventory, tag, and register.
+- **Identity** — `id` (URL name), `name`, `type` (`game` or `studio`), `category`, signature
+  `color`, `ageBand`, `shellVersion`.
+- **Engine** — `engine` (`canvas` today; later `phaser`/`godot`) and `entry` (the URL the
+  shell embeds). These two fields are the whole reason a future engine slots in with zero
+  shell changes: the shell only ever embeds `entry` and talks via the contract.
+- **Features (on/off)** — `demoOnLoad`, `journey`, `customization`, `coins`, `buddy`
+  (+ personality), `multiplayer` (`off`/`turn-based`/`real-time`), `learning` defaults.
+- **Art slots** — whole-game art as `slot → asset library ID`: `badge`, `hero`,
+  `winCelebration`, `loadingScreen`, `music`. Never a hardcoded image.
+- **Levels** (games only) — an ordered list; order **is** the journey and unlock order.
+  Each level: `id`, `name`, `layout`, `difficulty` **1–5**, `coins`, `parts`
+  (each part → asset ID), `journeyBadge`. **There is no worlds layer** — a level points
+  directly at its parts; two levels reusing art just point at the same IDs.
+- **Customization slots** — what the kid can swap (Paddle, Ball, Trail, …), each option a
+  name + asset ID + coin price; at least one free option per slot.
+- **Feel** — presets only: `pace` (chill/normal/zippy), `celebration` (calm/big),
+  `haptics` (on/off). Everything else about feel is platform law (the Feel Kit).
+- **Learning moments** — `beforeUnlock`, `coinTopUp`, `bonusAfterWin`, `subjects`.
+  Parents override these from their portal; their settings win.
+- **Studios (`type: studio`)** skip levels/journey and instead declare `produces` and
+  `savesTo` (see manifest-v2 §7). Music Maker is the reference studio.
 
-Only once the asset set is agreed do you pick a track and build. This keeps every game
-built from the shared shelf — and grows it on purpose.
+### Agree the asset plan as part of the spec (ASK — give 3 options, each a picture)
+Open the internal **Asset Library** (`/asset-library.html`) — browse everything by
+**2D/3D**, **theme**, and **kind** (`character` · `world` · `element` · `effect` · `music`
+· `sfx`), with a **coverage matrix**. Then in chat:
 
----
+1. **Offer THREE distinct asset-set options** with real ids (vary theme/style, keep one
+   dimension). e.g. **A · Dino Jungle**, **B · Candy Land**, **C · Space Station**.
+2. **Show a quick visual MOCKUP for EACH** so the user decides by SEEING — lay the assets
+   into a rough game screen (hero + background + a couple elements + HUD).
+3. **Surface the gaps** per option (vs the coverage matrix) and how you'd fill them —
+   generate, CREATE the sound (a new engine = new sounds), or curate a CC0 pack.
+4. **Ask the user to pick one (or mix)**, and whether to go get a new pack (prefer CC0 /
+   Kenney). The user downloads packs; you inventory, tag, and register.
 
-## Step 0 — Pick your track (there are two, on purpose)
-
-Buildable has two ways to make a game. Choose deliberately; don't blend them in one file.
-
-### Track A — the AI generator (`api/generate-game.js`)
-A child's choices become a **Phaser 3.60** game, generated as standalone HTML in a
-sandboxed iframe. The generator is **library-driven**: it assembles a game from reusable
-Supabase rows — sprites (`community_sprites`), layers (`community_layers`), and
-**mechanics (`game_mechanics`)** — instead of improvising. Today it supports
-`gameData.gameType` = `"platformer"` (default) and `"breakout"`.
-
-Use Track A when: the game should be generated per-kid from a prompt, and fits a genre
-the generator knows (or you're adding a new genre to the generator). New genres
-(e.g. Tetris) are a generator/architecture change, not just a prompt.
-
-### Track B — a hand-authored engine (`public/*.html`)
-A fixed, hand-built engine you ship as one static HTML page, launched full-screen in an
-iframe. These are **data-driven + always-clearable + QA-simmed**, and they draw/sound/
-feel through the three shared engine libraries. Current Track B engines:
-`public/play.html` (platformer), `survival-engine.html`, `croc-engine.html`,
-`breaker-engine.html` (solo brick-breaker + a same-device 2-player pong mode).
-
-Use Track B when: you want a polished, bespoke engine for one game type with full control
-over feel — the survival/croc/breaker model.
-
-> **This guide focuses on Track B** (new hand-authored engines), and points to
-> `MECHANICS.md` §7–8 for how Track A consumes the same mechanics library. The goal of
-> the current **unification** effort is that BOTH tracks read the same mechanics catalog.
+Output of Step 1: an approved one-page spec **and** a filled `manifest.json` stub in the
+game's folder. Only then do you build.
 
 ---
 
-## The four shared engine libraries (use them — don't reinvent)
+## Step 2 — Build the engine as a cartridge (against CARTRIDGE-CONTRACT.md)
 
-Every Track B engine loads these four `<script>`s and builds on them. They are the
-reason a new game is cheap:
+The engine **only plays.** It is embedded at its `entry` URL and communicates with the
+shell **only** through the messages in [`CARTRIDGE-CONTRACT.md`](./CARTRIDGE-CONTRACT.md).
+It never reaches into the shell, and the shell never reaches into it. Anything that can
+send and receive those messages can be a Buildable game — today's canvas games, later
+Phaser or Godot — with zero shell changes.
 
-| Library | Global | Owns | Never instead… |
-|---|---|---|---|
-| `public/buildable-renders.js` | `BR` (`window.BuildableRenders`) | All drawn-shape art: hero, enemy, coin, sprite, background, hearts | …inline your own canvas shapes |
-| `public/buildable-audio.js` | `BA` (`window.BuildableAudio`) | Synth SFX, music loop, mute, the iPad audio-unlock | …hand-roll your own beep synth |
-| `public/buildable-mechanics.js` | `BM` (`window.BuildableMechanics`) | FX/"juice": particle bursts, screen shake, screen flash, floating pop text, `explode()` | …copy-paste a `burst()`/`flash()` again |
-| `public/buildable-startscreen.js` | `BS` (`window.BuildableStartScreen`) | The start screen / level picker: title, hero, mode row, level cards (art + stars + lock), customize | …hand-roll a `showMenu`/level picker again |
+**What the engine must do (the contract, in short):**
 
-`buildable-mechanics.js` is new — it extracts the `burst()` / flash / shake / `pop()`
-code that survival, croc, and breaker were each copy-pasting. See `MECHANICS.md` §9.
+- **Honor `pause` / `resume`.** The shell sends `pause` for quiz gates, parent
+  interruptions, and tab switches. Every game freezes NOW and resumes exactly where it
+  was. A game that ignores `pause` fails its QA contract check.
+- **Support `start` with a level id** (embedded engines). Canvas games *may* instead use
+  their own refresh-safe deep-link URLs (e.g. `/breaker/play/{levelId}`) resolved by the
+  game's own router on load — that stays fine. Anything mounted once at `entry` with no
+  per-level route MUST accept `start`.
+- **Report play events up:** `win` / `lose` / `levelup` / `cheer` (buddy events),
+  `coins` `{delta, key?}` (announce coins; `key` makes it award-once), and `nav:state`
+  (sound/menu/help/in-game status so the shell draws its nav chrome). Ask for a learning
+  gate with `quizRequest`; continue when the shell replies `bk:quizDone`.
+- **Never draw shell screens.** No start menu, no journey, no loadout, no worlds tab, no
+  bespoke per-game menu, no HUD chrome — the **shell** renders all of those from the
+  manifest. Use the one shared HUD (`public/buildable-hud.js`) for in-play info, and the
+  shared nav bridge (`public/buildable-gamenav.js`) so the shell owns Home/Sound/Help.
+- **Announce coins, don't store them.** The shell owns the wallet
+  (`buildable-wallet.js`): inside a shell iframe your game only posts `coins` deltas up;
+  the shell credits (de-duping by `key`) and broadcasts the balance back.
 
-### The start screen / level picker (`buildable-startscreen.js`)
+**The art rule (this is what protects the editor):** fetch every texture at load time from
+the URLs the manifest resolves. **Art is never baked into a game or a bundle.** This is
+what makes drop-in art swapping work on every game, regardless of engine.
 
-Every game shows the SAME launch experience — title, hero, mode row, level cards with
-art + stars + lock state, and an optional customize button — instead of each engine
-hand-rolling its own `#menu`/`showMenu`/`buildLevelPicker`. (This is the start screen of a
-*built* game — NOT the AI game builder.) The engine supplies a config; `BS` renders the
-DOM and calls back on tap. Demo: `archive/startscreen-demo.html` (prototype, archived out of `public/` in Session 7A).
+**Difficulty is a 1–5 preset.** The engine translates the dial into its own tuning (speed,
+counts, timing) internally. Nobody edits raw knobs, ever — not in the manifest, not in the
+engine's public surface.
 
-```js
-const screen = BS.mount(document.getElementById("start"), {
-  title: "Space Sparkles", subtitle: "Beat each boss to unlock the next world",
-  coins: 24, sound: true,
-  hero: { name: "Pip", img: "<character url>", progressText: "2 of 6 worlds cleared" },
-  modes: ["solo", "two", "family"], mode: "solo",   // omit modes a game doesn't support
-  levels: [
-    { n: 1, name: "Comet Meadow",  img: "<thumb>", stars: 3, maxStars: 3, state: "done" },
-    { n: 2, name: "Nebula Drift",  img: "<thumb>", stars: 2, state: "done" },
-    { n: 3, name: "Asteroid Twirl", color: "#2b4a6b", state: "next" },   // highlighted "Play"
-    { n: 4, name: "Stardust Caves", state: "locked" },
-  ],
-  customizeLabel: "Make it mine",                    // omit to hide
-}, {
-  onPlay: (n) => startLevel(n),   onMode: (m) => { /* solo|two|family */ },
-  onHero: () => openHeroPicker(),  onCustomize: () => openCustomize(),
-  onSound: (on) => BA.toggleMute(), onBack: () => goHome(),
-});
-// later: screen.update({ coins: 30, levels: [...] });
-```
+**Content is data, not code.** Read `GAME_CONFIG` (levels = recipe cards of layout +
+difficulty + asset references) from the manifest via the shared loader
+`public/buildable-manifest.js`. Adding a level is editing data, never engine code.
 
-Rules: `state` is `"done"` | `"next"` | `"locked"` (lock the rest; mark the next playable
-one `"next"` so it gets the green Play highlight). Each level shows its **art thumbnail**
-(`img`; falls back to a solid `color`, then a drawn icon) and **stars earned** — wire
-`img` to the shared thumbnail/world art. The `"family"` mode is where
-multiplayer plugs in — launch the shared `GameLobby` (turn-based OR real-time), not a
-per-game component; see **Making it multiplayer** below and `MULTIPLAYER.md`. Headless-
-safe: with no DOM (QA sim), `BS.mount` is a no-op. Adopt it per engine one at a time, QA
-before/after (it replaces the engine's own menu code, not its gameplay). **`breaker-engine.html`
-is the first/reference adoption (2026-06-27):** its start screen + level picker are now
-rendered by `BS` (Solo / 2-player mode row, level cards with stars + lock state, Make It
-Mine button), with the bespoke customize overlay opened via `onCustomize`.
+### The shared engine libraries (use them — don't reinvent)
 
+| Library | Global | Owns |
+|---|---|---|
+| `public/buildable-renders.js` | `BR` | All drawn-shape fallback art: hero, enemy, coin, sprite, background, hearts |
+| `public/buildable-audio.js` | `BA` | Created SFX + music, mute, the iPad audio-unlock |
+| `public/buildable-mechanics.js` | `BM` | FX/"juice": particle bursts, screen shake, flash, floating pop text |
+| `public/buildable-feel.js` | `Feel` | The **Feel Kit** — shared taps, misses, celebrations, haptics (see `GAME-FEEL.md`) |
+| `public/buildable-hud.js` | — | The **one** in-play HUD (hearts, score, level) — never hand-roll a HUD |
+| `public/buildable-manifest.js` | `BuildableManifest` | Loads + validates the manifest, translates it for the engine |
+| `public/buildable-gamenav.js` | `BuildableGameNav` | Bridges nav so the shell draws Home/Sound/Help in-app |
+
+**Feel comes from the Kit, not the engine.** Route feedback through `Feel` (`Feel.tap()`,
+`Feel.miss()`, `Feel.explode()`, celebrations) so every game feels identical. The manifest
+exposes only the constrained presets (`pace`/`celebration`/`haptics`).
+
+**CREATE fresh sounds for a new engine.** We ship only unique created audio (ElevenLabs);
+the `BA` synth is a silent fallback ONLY, never the product. A new engine/type is the
+moment to create bespoke sounds + music and register them (`SOUNDS` in `api/sfx.js`) so
+the company library grows.
+
+> **SFX gotcha — ElevenLabs has a 0.5s minimum.** Every sound in `DURATIONS`
+> (`api/sfx.js`) MUST be **≥ 0.5 seconds**, or `/api/sfx` returns **503** and the client
+> silently falls back to the near-silent synth — the sound is just *gone* in-game. (This
+> killed Breaker's ball-launch/paddle/wall sounds on 2026-07-02.) There is a
+> `Math.max(0.5, …)` floor as a safety net, but still author every one-shot at ≥ 0.5s. To
+> verify live: `fetch("/api/sfx?s=<key>")` — `200 audio/mpeg` = good, `503` = failing.
+
+**Bake in always-winnable.** Cap difficulty so a 4–8-year-old can always finish: gaps ≤
+jump range; hero speed ≥ enemy speed; bosses on a mercy timer; a guaranteed level-end
+(`kill-then-boss`). See `MECHANICS.md` §4. No punishing lose states — the shell, not the
+engine, decides what a miss looks like.
 
 ---
 
-## Step-by-step: a new Track B engine
+## Step 3 — Write the QA harness in the same session as the engine
 
-1. **Define content as data, not code.** One `GAME_CONFIG = window.GAME_CONFIG || {…}`
-   with a `levels[]` array of recipe cards (numbers + colors + asset references). Adding
-   a level/world must be editing data, never engine code. (See `MECHANICS.md` §1 — the
-   THEME / LEVELS / ENGINE split.)
+**A game is not built until its QA robot is.** Write `qa-<game>.mjs` alongside the engine,
+in the same session — never "later." Model it on `qa-breaker.mjs`.
 
-2. **Reuse mechanics; store new ones.** Before inventing a behavior, check
-   `MECHANICS.md` and the `game_mechanics` table for a proven one (enemy movement
-   patterns, the `kill-then-boss` guaranteed level-end, win conditions). If you invent a
-   new reusable mechanic — gameplay OR FX (an explosion style, a boss attack) — **write
-   it back**: gameplay rules → a `game_mechanics` row via an idempotent `db/seed-*.sql`;
-   shared FX code → a function in `buildable-mechanics.js`. Keep `MECHANICS.md` in sync.
+- **Expose a headless hook.** Export a game object with `sim(idx, maxFrames)` and (ideally)
+  `campaign(cap)` that runs a perfect-player bot with no DOM. The harness drives it in Node
+  and **asserts ALL LEVELS WIN.**
+- **Include the contract checks** — this is what makes it a v2 harness, not just a win-sim:
+  - `start` loads the right level; `pause` freezes and `resume` continues.
+  - the game reports `win`/`lose`, `coins`, and (when it has them) `score`/`levelComplete`.
+  - **no hardcoded art** (textures resolve from manifest URLs) and **no emojis anywhere**.
+- **Run it before and after every change**, and again on the live deploy. **Never claim QA
+  passed if it did not actually run** (`AGENTS.md`). If a game genuinely has no harness yet,
+  say so plainly.
 
-3. **Pull art AND audio from the library (per the agreed asset plan), with a fallback.**
-   Characters via `/api/list-characters`, worlds/elements via `/api/list-assets`, music +
-   sfx via `/api/list-audio`, **3D models** via `/models/manifest.json` (auto-discovered
-   from `public/models/<pack>/`), **effect art** in `/fx/`, generated world art via
-   `/api/game-art` — all filterable by `theme` (a label, not a fence: you may mix themes)
-   and split by `dimension` (2D vs 3D never mix). Browse it all in the Asset Library page.
-   Reference by id/url in the level card. **Always** keep a fallback (`BR.*` drawn art;
-   `BA` synth sound) so a missing asset can never break a kid's game. Where to find/send
-   each kind (incl. downloaded packs + the curate→serve→register flow): `ASSET-LIBRARY.md`.
-   How to make it look alive: `GAME-LOOK.md`.
+---
 
-4. **Wire sound + FX through the shared libs — and CREATE new sounds for a new engine.**
-   Play audio through `BA` — `BA.setMusic(url)`, `BA.configure({sfxBase, map})`,
-   `BA.sfx(...)`, `BA.unlock()` on the first tap. **Sound rule (see `ASSET-LIBRARY.md`):**
-   we ship only **unique created sounds** (ElevenLabs), never computer beeps — the `BA`
-   synth is a silent dev/offline fallback ONLY. A kid building a game just uses the
-   catalog; but **building a NEW engine/type is the moment to CREATE fresh bespoke sounds
-   + music** that fit it and register them (`SOUNDS` in `api/sfx.js`, worlds in
-   `api/chess-music.js`) so they grow the company library for every other game. Then
-   `BM.explode(...)`, `BM.burst(...)`, `BM.shake(...)` for feel — no copy-pasted particle
-   loop. (ElevenLabs only for real music.)
+## Step 4 — Art and tuning go through the editor
 
-   > **SFX gotcha — ElevenLabs has a 0.5s minimum.** Every sound in `DURATIONS`
-   > (`api/sfx.js`) MUST be **≥ 0.5 seconds**. ElevenLabs rejects a shorter
-   > `duration_seconds`, so `/api/sfx` returns **503** and the client silently falls
-   > back to the near-silent synth — the sound is just *gone* in-game. This is what
-   > killed Breaker's ball-launch/paddle/wall-bounce sounds (`tennis_hit` 0.35s,
-   > `tennis_wall` 0.3s) on 2026-07-02. There is now a `Math.max(0.5, …)` floor on the
-   > generation call as a safety net, **but still author every new one-shot at ≥ 0.5s**
-   > (very short taps: use exactly `0.5`). To verify a sound live: `fetch("/api/sfx?s=<key>")`
-   > — `200 audio/mpeg` = good, `503` = generation failing (usually a too-short duration).
+Once the engine reads its manifest, **all** content changes happen in the level-first
+**editor** — never by hand-editing engine code:
 
-5. **Bake in always-winnable.** Cap difficulty in the level *builder* so a 4–8-year-old
-   can always finish: gaps ≤ jump range; hero speed ≥ enemy speed; bosses on a timer with
-   a mercy auto-win; `kill-then-boss` for a guaranteed level-end. (`MECHANICS.md` §4.)
+- **One page per game.** Game art slots up top; level rows below (name, parts strip,
+  layout, **difficulty 1–5 chips**, Test, reorder, remove, add). No worlds layer — levels
+  point directly at parts.
+- **Drop-in art** on any slot or part runs the existing auto-slicer straight to that slot's
+  asset ID; **Library** picks an existing asset. Replacing one part touches only that level.
+- **The editor is the only tool that writes a manifest.** **Save = the QA robot plays every
+  level and confirms it's beatable, then the change goes live.** A change that fails the
+  robot never ships.
 
-6. **Expose the QA hook.** Export a `window.*_GAME` object with `sim(idx,maxFrames)` and
-   (ideally) `campaign(cap)` that runs a perfect-player bot headlessly. The shared runner
-   `qa/sim-node.mjs` drives `BK_GAME.sim()` in Node and asserts ALL LEVELS WIN. Add a
-   `qa-<game>.mjs` (model: `qa-breaker.mjs`) and run it before and after every change.
-   _(Convergence note: hooks are currently named `BK_GAME` / `SURV_GAME` / `CROC_GAME`;
-   the target is one shared name — see `MECHANICS.md` roadmap.)_
+This is why Steps 1–3 are strict about the art rule and the 1–5 dial: they are what let a
+level's bricks change and difficulty go to 4 with **zero code**, live after the robot passes.
 
-7. **Route it + give it a face.** Every `public/*.html` needs its **own explicit route in
-   `vercel.json` before** the `/(.*)` → `landing.html` catch-all, or it serves the landing
-   page. Add a tile/launch path in `src/BuildableKids.jsx` (full-screen iframe, like
-   Typing/Chess). Creations get a **list/menu thumbnail auto-derived from their own art**
-   (`api/_thumbs.js`): a saved game's thumbnail comes from its `world`/`theme`, so use a
-   real library theme word; a published game can set `preview_image_url`. See the
-   thumbnails note in `ASSET-LIBRARY.md`.
+---
 
-   **Every finished game gets a picker thumbnail — this is required, not optional.**
-   A game tile that has no thumbnail shows a flat colored gradient, which looks broken next
-   to the other games. Wiring one takes **two** edits, and you need **both** or the tile
-   stays a plain gradient (this is the #1 thing people forget):
-     1. In `src/BuildableKids.jsx`, pass an `imgId` as the last argument to `tile(...)` for
-        the game (e.g. `tile(grad, "Bubble Buddies", desc, onBubble, false, "bubble")`).
-        The tile renders `/api/images?kind=game&id=<imgId>` and hides the `<img>` on error.
-     2. In `api/images.js`, add a matching `<imgId>:` key to the **`GAMES`** map (under
-        `kind === "game"`) with a short key-art prompt. No entry → the endpoint returns
-        `null` → flat gradient. Keep the id identical in both places.
-   Then **pre-warm the image** so the first kid doesn't wait on generation: hit
-   `/api/images?kind=game&id=<imgId>` once on the live site (it caches). `?manifest=1` lists
-   what's already cached. A game is not "done" until its tile shows real art on desktop,
-   iPad, and iPhone.
+## Making it multiplayer (optional — manifest-driven)
 
-8. **QA the live deploy, then log it.** Commit to `main` (Vercel auto-deploys in ~1–2
-   min), confirm it actually renders in the iframe (not just a 200), then add a dated
-   entry to **`SESSION-LOG.md`** and the README session log. This is required for every
-   change (`AGENTS.md`). _Gotcha: the library GET endpoints are edge-cached — when QA-ing
-   an API live, bust the cache with a throwaway `?cb=<n>` or you'll read a stale copy._
+Turn it on with `features.multiplayer` in the manifest (`off` / `turn-based` /
+`real-time`); the shell wires it into the **one shared multiplayer system**. Reuse it —
+never build a per-game table or lobby. Full internals + frozen contracts:
+[`MULTIPLAYER.md`](./MULTIPLAYER.md).
+
+- **Shared pieces (already built):** `src/GameLobby.jsx` (the one lobby),
+  `api/friends.js` + `src/lib/friends.js` (friends, presence, invites),
+  `src/lib/friendMatches.js` (the turn-based "poll a row" transport), and the tables in
+  `db/create-friends.sql` — `friend_matches` is ONE table for every game (distinguished by
+  `friend_matches.game`), so a new game needs **no schema change**.
+- **Pick a transport by speed:** same-device = local pass-and-play (no backend);
+  `turns` (chess, checkers, board games) = the state lives in the row, a move patches it,
+  the other device re-reads every ~2s (**works offline**); `realtime` (tennis, pong) = a
+  Supabase Broadcast channel for live positions (**both kids online at once**).
+- **Build the board network-agnostic** to the right message contract (turn-based:
+  `Ready`/`Init`/`OpponentMove`/`Move`; realtime: the frozen `mp:` contract — broadcast
+  **positions not commands**, and the guest must **dead-reckon** a continuously-moving ball
+  using the host's velocity, not lerp to a stale point — copy the `role === "guest"` block
+  in `public/tennis.html`).
+
+**Multiplayer gotchas (bake in):** filter invites by the **active kid** (`toKid === me.id`)
+or siblings see each other's invites; **retry every friend/match call** (401 refresh + 5xx
+backoff) or a dropped write silently loses a move; presence is app-wide (from
+`BuildableKids`, not per game); turn-based "Start game" must work offline (create the row at
+invite time). Canned reactions only — never free-text chat between kids.
 
 ---
 
 ## Physics (optional — for NEW toy/sandbox game types only)
 
-Our level engines are **scripted and deterministic** on purpose — that's what makes
-levels *always-winnable* and lets the QA bot prove every level is beatable. **Do NOT
-bolt a physics engine onto those engines** (survival, croc, platformer, breaker): loose
-physics can make a "reach the exit" level un-winnable and breaks the sim.
-
-Where physics is great: a **brand-new sandbox/toy game type where unpredictability is
-the fun** — a block stacker, marble run, slingshot/launcher (Angry-Birds style),
-pinball, "knock it down". These pair beautifully with Kenney's blocky 3D kits and 2D
-shape packs (Asset Library → Kenney catalog).
-
-Approved libraries (all free, MIT-ish, load from a CDN like `three.min.js` — no download):
-
-| Need | Use | Notes |
-|---|---|---|
-| Simple 2D gravity + collisions | **Phaser Arcade Physics** | already in the AI generator (Track A) — free |
-| Fun 2D rigid bodies | **Matter.js** | stacking, launchers, marbles, ragdolls, pinball; lightweight |
-| Accurate 2D (Box2D) | **Planck.js** | only if you need precise platformer physics; heavier |
-| 3D rigid bodies | **Cannon-es** | light, pairs with Three.js — good for a 3D physics toy |
-| Top performance 2D/3D | **Rapier** (`@dimforge/rapier`) | Rust/WASM, fast; more setup |
-
-Rules when you DO use physics:
-- **New game type only** — never the guaranteed-clearable level engines.
-- **Don't make winning physics-fragile.** Prefer score/sandbox goals over "physics must
-  land the ball in the exact spot," or give a deterministic assist so a kid can't soft-lock.
-- **It needs its own QA** (fixed timestep / seeded, or assert "can't get permanently
-  stuck") — the standard always-winnable sim assumes determinism and won't fit.
-- Keep the no-emoji + library-first-with-fallback rules; load the lib from cdnjs/jsdelivr.
+Our level engines are **scripted and deterministic** on purpose — that's what makes levels
+always-winnable and lets the QA bot prove it. **Do NOT bolt a physics engine onto them.**
+Physics belongs only in a **brand-new sandbox/toy type where unpredictability is the fun**
+(block stacker, marble run, slingshot, pinball). Approved CDN libs: Phaser Arcade or
+**Matter.js** (2D fun), Planck.js (accurate 2D), Cannon-es (3D), Rapier (top performance).
+Rules: new type only; don't make winning physics-fragile (give a deterministic assist so a
+kid can't soft-lock); it needs its **own** seeded QA; keep no-emoji + library-first.
 
 ---
 
-## Making it multiplayer (optional)
+## The non-negotiable rules
 
-There is **ONE shared multiplayer system** now — reuse it, don't build a per-game
-table or lobby. It covers friends, presence, invites, delivery, and both transports.
-Full internals + the frozen message contracts are in [`MULTIPLAYER.md`](./MULTIPLAYER.md);
-this is what you touch to make a NEW game playable together.
-
-### The shared pieces (already built — you only wire your game in)
-
-- **`src/GameLobby.jsx`** — the one reusable lobby. Mode select (Solo / Same device /
-  Play a friend) → friends list → invite/Start game → embeds your board + bridges moves.
-- **`api/friends.js` + `src/lib/friends.js`** — friends list, presence heartbeat, invites,
-  inbox. **`src/lib/friendMatches.js`** — the turn-based "poll a row" transport.
-- **Tables** (already migrated, `db/create-friends.sql`): `friend_matches` (ONE match
-  table for every game — no new table per game), `game_invites`, plus `kid_profiles.last_seen`
-  for presence. Distinguished by `friend_matches.game`, so a new game needs **no schema change**.
-- Kids in one grown-up account are auto-friends (family lane); cross-account friends need a
-  friend code both grown-ups approve. **Cross-device play = the same grown-up account signed
-  in on each device**, each picking a different kid.
-
-### Pick a transport by how fast the two kids must see each other
-
-- **Same device** → local pass-and-play. No backend. Done.
-- **`transport: "turns"`** (chess, checkers, tic-tac-toe, board/card games) → poll a row:
-  the whole game state lives in the `friend_matches` row; a move patches it; the other
-  device re-reads every ~2s. **Works offline** — see "Start game" below.
-- **`transport: "realtime"`** (tennis, pong — continuous motion) → a Supabase Broadcast
-  channel for live positions, plus the `friend_matches` row for lobby/score. **Both kids
-  must be online at once** (keeps the live connect/waiting handshake).
-
-### Wire a NEW game into multiplayer — the checklist
-
-1. **Build the board to the right contract** (it stays a network-agnostic `public/<game>.html`;
-   all Supabase code lives in the React layer):
-   - **Turn-based**: post `<msg>Ready` on load; accept `<msg>Init` (`{myColor,state,...}`)
-     and `<msg>OpponentMove` (`{state,lastMove}`); emit `<msg>Move`
-     (`{state,turn,lastMove,over,winner}`) on your own move only. `<msg>` is the game's
-     `msg` prefix (chess uses `"chess"`, tic-tac-toe/board-shell `"bg"`, checkers `"checkers"`).
-   - **Real-time**: the frozen `mp:` contract — post `mp:ready`, broadcast **positions not
-     commands** via `mp:send`, apply `mp:peer`, honor `role`, end with `mp:result`.
-     **The guest must DEAD-RECKON any continuously-moving shared object (ball/puck), not
-     just lerp toward its last position** — integrate it forward each frame using the
-     host's broadcast velocity (`vx,vy`) and reconcile to the host's value on each packet;
-     a plain lerp toward a stale `x,y` feels laggy/delayed. Copy the `role === "guest"`
-     block in `public/tennis.html` `update()` as your template. Also keep the local kid's
-     own paddle 100% local (never network-gated). Full explanation: `MULTIPLAYER.md` Rule 4.
-2. **Add a lobby screen** in `src/BuildableKids.jsx` that renders the shared lobby with your
-   game spec:
-   ```jsx
-   <GameLobby
-     game={{ slug:"mygame", title:"My Game", url:"/mygame.html?online=1&v=1",
-             transport:"turns", msg:"bg", initialState:{ /* starting board */ } }}
-     activeKid={activeKid} entry="friends"
-     onHome={…} onAddFriend={…} />
-   ```
-   (`msg` + `initialState` are turn-based only; realtime needs neither.)
-3. **Give the game's start screen a "Play a friend" button** that routes to that lobby screen.
-4. **Register the game in `gameSpecFor(slug)`** (top of `src/BuildableKids.jsx`) with the SAME
-   spec. This is what lets a home nudge open your game directly via `SCREEN_FRIEND_MATCH` +
-   `autoJoin` — skip it and invites can't be joined from the home screen.
-
-Presence, the friends list, invite delivery, the home "X wants to play / your move" nudges,
-canned reactions, and role assignment are all **inherited** — do not re-implement them per game.
-
-### The end-to-end flow (how a game actually reaches the other kid)
-
-Presence (app-wide, stamped whenever a kid is active) → **one kid taps Start game / Invite**
-→ for `turns` the `friend_matches` row is created immediately and the starter drops into the
-board; for `realtime` both connect live → the invite lands on the **other kid's home screen**
-as "X wants to play <game> → Join" (and turn-based games also show "Your move in <game>") →
-they tap Join → `autoJoin` drops them straight into the same match → moves sync. **One kid
-starts, the other joins — they do NOT both invite.**
-
-### Gotchas we learned the hard way (bake these into any new game / any change here)
-
-- **Filter invites by the ACTIVE kid, not just by game.** Siblings share one parent account, so
-  the inbox returns invites for every kid in the family. Always require `toKid === me.id` or a
-  kid sees a sibling's invite — even their own outgoing invite bouncing back as "you invited you".
-- **Retry every friend/​match call.** `friends.js` `api()` and `friendMatches.js` `rest()` retry
-  on `401` (refresh the token) **and** on `5xx` / network errors with backoff. iPad Safari expires
-  tokens aggressively and the backend occasionally 503s; a single un-retried write **silently drops
-  a move** and the opponent gets stuck. Never write a move with a bare `.catch(()=>{})` and no retry.
-- **Presence is app-wide.** The heartbeat runs from `BuildableKids` whenever a kid profile is
-  active — NOT from inside the lobby. Don't add per-game presence.
-- **Turn-based "Start game" must work offline.** Create the `friend_matches` row at invite time so
-  the starter can play immediately; the friend plays on their turn whenever they next open the app
-  (like the "your move" nudge). Only `realtime` requires both online.
-- **Parent-account lane required** (guests can't play cross-device). **Canned reactions only — never
-  free-text chat between kids.** The engine stays network-agnostic.
-
-
-## Make-a-level: the creation-maker pattern (optional — but the same shape every time)
-
-If your game lets a kid **build their own thing** (a level, a board, a track, a world) and
-share it, follow the pattern Breaker pilots (`public/breaker-engine.html`: the `#home` hub +
-the `#maker` wizard). It exists so every maker across games feels the same. Do NOT invent a
-new maker shape per game.
-
-**1. A home hub, then the maker.** The game opens on a small **hub** with two big equal
-buttons — **Play** (the built-in levels, via the shared `BS` picker) and **Make a level** —
-plus a **"My levels"** shelf of the kid's own creations (play / edit). "Make a level" is a
-first-class choice, never buried in a settings menu. (The hub currently sits in front of the
-`BS` level picker; the goal is to fold a "hub mode" into `BS` so it stays shared — until then,
-keep the hub thin and let `BS` still own the level grid, reachable via a Back that returns to
-the hub.)
-
-**2. One step at a time (a wizard, not a wall of options).** The maker is a linear wizard:
-**one decision per screen**, a progress row (Step X of N + dots), and only **Back / Next**.
-Breaker's steps: World → Ball → Paddle → Build → How hard → Play + share. Kids get overwhelmed
-by a single screen that asks for everything at once — split it.
-
-**3. "Pick my bricks" = look AND behavior.** Every buildable piece is both a look and a rule,
-so the creation actually *plays* differently. Breaker's brick types: ice (1 hit), wood (2),
-metal (3), candy (bonus points), star (drops a power-up), bomb (clears neighbors). The piece
-palette is where the kid designs the *challenge*, not just the colors.
-
-**4. Difficulty = ONE 1–5 dial, shown as flames.** A single dial scales the engine's knobs
-together (ball speed, paddle size, lives). **The displayed rating equals the dial the kid
-picked — do not inflate it with a computed "board weight" formula.** (We shipped that once; a
-full board always read 5 regardless of choice, and it confused the user. Keep the number
-honest: pick 3, it's a 3.) Show green→red flames, never a skull (too scary for little kids).
-
-**5. Play-test gate before sharing.** The kid must **beat their own creation once** before
-Share unlocks; editing the board or difficulty afterward resets the gate. This guarantees
-every shared creation is actually winnable — the single most important rule for keeping shared
-content fun instead of broken or impossible.
-
-**6. A creation is just DATA through the same engine.** Don't fork the engine. Build the
-kid's creation into the normal recipe and run it through the existing loop (Breaker:
-`startCustomLevel` → `buildCustomBricks`), guarded by a `custom` flag so it never touches
-campaign progress/stars. Add a **headless QA hook** proving custom creations are winnable by
-the sim bot (`BUILDABLE_GAME.simCustom(board, diffN)` + `makeTestBoard(...)`), same as the
-campaign `sim`/`campaign` harness.
-
-**7. Save / share / publish (non-negotiable).** A creation must save, share, and publish per
-`CREATIONS.md` — same as songs, stories, and art. Breaker today saves to a **local** "My
-levels" shelf; true friend-to-friend sharing still needs a backend table + a home-screen
-**"Friends' levels"** shelf (the cross-account creation model, sibling of `rt_matches`).
-
-
-## The non-negotiable rules (from `AGENTS.md` / README — they apply here too)
-
-- **Every creation saves, shares, and publishes.** Songs, stories, games, drawings, and
-  any new maker support all three (save to library · private share link · moderated
-  publish) — reuse the shared mechanisms in `CREATIONS.md`. Not done until all three work.
+- **The shell owns everything outside gameplay.** The engine only plays. No start menu,
+  journey, loadout, worlds tab, or bespoke menu in an engine — the shell renders those from
+  the manifest.
+- **Messages only.** Shell ↔ game talk exclusively through `CARTRIDGE-CONTRACT.md`. New
+  message types get added to that file first, then implemented.
+- **If it's visual, it's an art slot** pointing at an asset library ID. **If it's tunable,
+  it's a manifest field** — never a number in game code. **Difficulty is a 1–5 preset.**
+- **Never hardcode art; fetch it at load from manifest URLs**, always with a `BR` drawn /
+  `BA` synth fallback so an outage can't break play.
+- **No emojis anywhere** — drawn `BR` art or library images only (UI, buddy, celebrations,
+  notifications).
+- **Replace first, remove second.** `main` auto-deploys; never remove a working feature
+  before its replacement is live and verified on production.
+- **Every creation saves, shares, and publishes** (save to library · private share link ·
+  moderated publish) — reuse the shared mechanisms in `CREATIONS.md`. Not done until all
+  three work.
 - **Build for desktop, iPad, and iPhone.** Touch-first; audio-unlock on first tap; test
   portrait phone. A desktop-only feature is not done.
-- **Consistent game navigation.** Use the shared start screen (`BS`) + one shared nav
-  frame — Home top-left (exits to the hub), Sound/Pause top-right, sub-screen Back returns
-  to the start screen. Never hand-roll a bespoke per-game back button (see "Consistent
-  game navigation").
-
-- **Kids' product.** Age-appropriate always; preserve content moderation and the
-  validate-before-serve fallback in `generate-game.js`.
-- **One shared start screen — change it once, every game updates.** Every game's
-  launch / level-select screen is rendered by `buildable-startscreen.js` (`BS`). Do NOT
-  hand-roll a per-game menu (`showMenu`/`buildLevelPicker`/`#levelSelect`) or fork BS's
-  markup into an engine — feed `BS` a config and keep a tiny fallback. Editing that one
-  file restyles the start experience across survival, croc, breaker, platformer, and
-  tennis at once, instead of changing each game 1×1. (Breaker is the reference adoption.)
-- **No emojis** in the hand-authored engines — use `BR` drawn art or library images.
-  (Track A's legacy emoji-sprite shortcut is being replaced by library sprites.)
-- **Library-first, always with a fallback.** Read shared assets/mechanics on render;
-  keep a drawn/local fallback so an outage can't break play.
-- **Additive migration.** Never delete or re-path an asset/mechanic a live game loads
-  until its replacement is verified live. (The Survival `space_bg.png`→`.jpg` miss.)
+- **Additive migration.** Never delete or re-path an asset a live game loads until its
+  replacement is verified live.
 - **Never handle secrets; never run destructive DB ops.** Ship DB changes as idempotent
   `db/seed-*.sql` for the owner to run.
-- **Canonical source is the repo.** Loose copies in any working folder may be stale
-  (e.g. a root `platformer-engine.html` predates `public/play.html`). Build from `public/`.
+- **Canonical source is the repo `public/`.** Loose copies in working folders may be stale.
 
 ---
 
-## Consistent game navigation
+## Consistent game navigation (shell-owned)
 
-Every game must feel the same to get into, move around, and get out of — the kid should
-never have to relearn "how do I leave / pause" per game. Today this is inconsistent: the
-app wraps each game in its own copy-pasted Back button (survival/breaker/platformer repeat
-the same inline style; tennis differs), in-game controls vary (chess has Pause, others
-don't), and labels drift (Back vs Home). The standard fixes that.
-
-**The three fixed nav positions (same in every game):**
-
-- **Top-left = Home** — leaves the game and returns to the Games hub. One label
-  ("Home"), one style, one position, everywhere. *Within* a game's own sub-screens
-  (a customize panel, a hero locker), the top-left is a **Back** that returns to the
-  start screen — never a second way out of the game.
-- **Top-right = Sound** (and Pause if the game pauses) — matches the start screen header.
-- **Start screen = `buildable-startscreen.js` (BS)** — the consistent way *in* (pick a
-  level / mode). Its back button is wired to the same Home action.
-
-**In-game controls have fixed homes too — top-left is for Home only.** While playing, a
-game's own controls (Menu/Sound/Music/Help) sit in a **top-right vertical stack** at
-`right:12px`, `top:12px / 56px / 100px …`. The **top-left is reserved for the shell Home**
-(a game must never place a button there), and the **bottom corners are reserved for
-gameplay** (D-pad, jump, paddle). That's why controls go top-right, not bottom — some
-games use the bottom for movement. (play/runner/breaker/maze/survival/board standardized
-to this 2026-06-27.)
-
-**Shell-owned chrome (the durable end state).** The most robust version is for the React
-shell (`GameFrame`) to render ALL the chrome — Home (top-left) AND the Sound/Menu/Help
-cluster (top-right) — so an engine draws NO nav buttons of its own. Then there is nothing
-per-game to drift, get clobbered by a concurrent edit, or overlap a game's HUD. A game
-opts in via the shared bridge `public/buildable-gamenav.js` (`BuildableGameNav`):
+Every game gets into, moves around, and exits the same way — the kid never relearns it per
+game, because the **shell** draws the chrome. A game opts in via the shared bridge
+`public/buildable-gamenav.js`:
 
 ```js
-// after the engine's own controls are wired (kept for standalone use):
 BuildableGameNav.register({
-  hide: ["muteBtn","helpBtn","backBtn"],     // the engine's own button ids (hidden in-app)
-  onSound: () => toggleMute(), onMenu: () => showMenu(), onHelp: () => openHelp(),
+  hide: ["muteBtn","helpBtn","backBtn"],       // the engine's own button ids (hidden in-app)
+  onSound: () => toggleMute(), onMenu: () => openMenu(), onHelp: () => openHelp(),
   soundOn: () => !muted, inGame: () => state === "play",
 });
 // call BuildableGameNav.update() whenever sound/inGame changes.
 ```
-Also pass `hideSound: true` to `BS.mount(...)` so the start screen's own sound icon yields
-to the shell's. In-app the bridge hides the engine's buttons and reports state; the shell
-renders the cluster and sends back `nav:sound`/`nav:menu`/`nav:help`. **Standalone**
-(engine opened directly) the bridge does nothing, so the engine's own buttons still work.
-Rollout is capability-based and per-engine: until an engine calls `register`, `GameFrame`
-shows only Home (today's behavior), so converting one engine never affects the others.
 
-**One shared wrapper, not four.** The React shell wraps every game iframe in a single
-`GameFrame` component that renders the iframe + the standard Home control (consistent
-pill, top-left) and owns the exit. The per-game `SurvivalScreen`/`BreakerScreen`/
-`TennisScreen`/`PlatformerScreen` inline back buttons collapse into this one wrapper, so
-changing the nav once changes it for every game — the same "edit one file" principle as
-the start screen.
-
-**The exit contract (for in-game Home/Back).** A game asks to leave by posting
-`nav:exit` to its parent; the shell returns to the hub. (Mirrors the `mp:`/`BS` pattern —
-the engine stays network-agnostic and shell-agnostic; it just signals intent.)
-`BS`'s back button and any in-game Home button post `nav:exit`.
-
-**Rules:** never hand-roll a bespoke per-game back button or put the exit in a different
-corner; Home is always top-left, Sound/Pause top-right; sub-screen Back returns to the
-start screen, not out of the game; and it all works the same on desktop, iPad, and iPhone
-(big touch targets). Adopt the shared `GameFrame` + `BS` per engine, one at a time, QA
-before/after — breaker is the first start-screen adoption; the nav wrapper rolls out the
-same way.
+In-app the bridge hides the engine's own buttons and reports `nav:state`; the shell renders
+the fixed cluster — **Home top-left** (posts `nav:exit`, returns to the hub), **Sound/Pause
+top-right** — and sends back `nav:sound`/`nav:menu`/`nav:help`. **Standalone** (engine
+opened directly) the bridge does nothing, so the engine's own fallback buttons still work.
+Rules: Home is always top-left; Sound/Pause top-right; the **bottom corners are reserved
+for gameplay** (D-pad, jump, paddle); never hand-roll a bespoke per-game back button.
 
 ---
 
@@ -504,56 +293,54 @@ same way.
 
 ```
 buildable-app/
-├─ BUILDING-A-GAME.md   ← you are here (new-game entry point)
-├─ MECHANICS.md         ← reusable gameplay + FX mechanics catalog  (+ game_mechanics table)
-├─ GAME-LOOK.md         ← look & feel: layers, art pipeline, audio unlock
-├─ ASSET-LIBRARY.md     ← where to find / send characters, worlds, elements, music, sfx
-├─ AGENTS.md            ← scope, guardrails, the asset rule
-├─ README.md            ← architecture, env, session log (source of truth for changes)
+├─ BUILDING-A-GAME.md        ← you are here (new-game entry point)
+├─ buildable-manifest-v2.md  ← every manifest field the shell reads
+├─ CARTRIDGE-CONTRACT.md     ← the shell ↔ game message contract (single source of truth)
+├─ GAME-FEEL.md              ← the Feel Kit: shared feedback, sounds, celebrations
+├─ MECHANICS.md              ← reusable gameplay + FX mechanics (+ game_mechanics table)
+├─ GAME-LOOK.md              ← look & feel: layers, art pipeline, audio unlock
+├─ ASSET-LIBRARY.md          ← where to find / send characters, worlds, elements, music, sfx
+├─ MULTIPLAYER.md            ← turn-based vs real-time, the shared lobby + contracts
+├─ AGENTS.md / README.md     ← scope, guardrails, architecture, the dated session log
 ├─ public/
-│  ├─ buildable-renders.js     (BR — drawn art)        ← shared engine lib
-│  ├─ buildable-audio.js       (BA — sound)            ← shared engine lib
-│  ├─ buildable-mechanics.js   (BM — FX/juice)         ← shared engine lib (new)
-│  ├─ play.html, survival-engine.html, croc-engine.html, breaker-engine.html  (Track B engines)
-│  └─ …                        (each needs a vercel.json route)
-├─ api/
-│  ├─ generate-game.js  (Track A generator — reads community_* + game_mechanics)
-│  ├─ list-assets.js, list-characters.js, game-art.js   (asset reads)
-│  └─ …
-├─ db/                  (idempotent SQL seeds — incl. seed-*-mechanic.sql)
-└─ qa/                  (sim-node.mjs + game-qa-harness.html — the robot tester)
+│  ├─ buildable-manifest.js  (loads + validates the manifest)      ← shared shell lib
+│  ├─ buildable-renders.js   (BR — drawn fallback art)             ← shared engine lib
+│  ├─ buildable-audio.js     (BA — created sound)                  ← shared engine lib
+│  ├─ buildable-mechanics.js (BM — FX/juice)                       ← shared engine lib
+│  ├─ buildable-feel.js      (Feel — the Feel Kit)                 ← shared engine lib
+│  ├─ buildable-hud.js       (the one in-play HUD)                 ← shared engine lib
+│  ├─ buildable-gamenav.js   (shell-owned nav bridge)              ← shared engine lib
+│  ├─ <game>/manifest.json   (one per game — the settings sheet)
+│  ├─ breaker-engine.html, survival-engine.html, sling-squad.html  (canvas cartridges)
+│  └─ …                      (each engine needs a vercel.json route before the catch-all)
+├─ api/    (list-assets.js, list-characters.js, game-art.js, sfx.js, manifest.js, …)
+├─ db/     (idempotent SQL seeds — incl. seed-*-mechanic.sql)
+└─ qa-<game>.mjs             (the robot tester — one per game, written with the engine)
 ```
 
-That's the whole loop: **pick a track → build content as data on a shared engine →
-reuse/store mechanics → pull/store assets → guarantee winnable → QA → route → log.**
+The whole loop: **spec first → engine as a cartridge → QA harness same session → art &
+tuning through the editor → QA the live deploy → log it.**
 
 ---
 
-## Non-negotiable: signal win/lose (helper reactions + per-kid logging)
+## Signal win/lose (buddy reactions + per-kid logging)
 
-Every game MUST tell the app when the player wins or loses. ONE signal powers two
-things: the kid's helper popping in to cheer/console, AND per-kid telemetry
-(favorite games + progress, and later helper/AI personalization).
-
-**How (from inside the game / engine iframe), exactly once per game-over:**
+Every game MUST tell the shell when the player wins or loses — this is part of the cartridge
+contract. ONE signal powers two things: the buddy popping in to cheer/console, AND per-kid
+telemetry (favorite games + progress).
 
 ```js
-// raw (works everywhere, incl. generated blob games):
+// from inside the game iframe, exactly once per game-over:
 window.parent.postMessage({ source: "buildable", kind: "win"  }, "*"); // on WIN
 window.parent.postMessage({ source: "buildable", kind: "lose" }, "*"); // on LOSE
-// or, if the page already loads buildable-buddy.js:  BB.win();  BB.lose();
+// optional richer meta lets the buddy name a personal best:
+//   { source:"buildable", kind:"win", meta:{ score, newBest:true } }
 ```
 
-- Send it the moment the win / Game-Over screen shows. Never more than once per result.
-- A game with its OWN celebration voice (chess, tennis) should STILL send win/lose
-  for logging — add `silent: true` to the message if you don't want the helper to
-  also speak (logging still happens). (Today chess/tennis don't send yet — TODO.)
-
-**Plays** are logged automatically by the app: when a game opens, `BuildableKids.jsx`
-maps its screen to a slug in `GAME_SLUGS` and logs a `play`. When you add a new
-in-app game screen, add it to `GAME_SLUGS` so its plays are counted.
-
-**Where it goes:** `/api/log-game-event` → `kid_game_events` table
-(`db/create-kid-game-events.sql` — run once in Supabase). Rows are
-`{kid_profile_id, device_id, game, event: play|win|lose, created_at}`. Best-effort;
-never block gameplay on it.
+- Send it the moment the result shows. Never more than once per result.
+- A game with its own celebration voice should STILL send win/lose for logging — add
+  `silent: true` if you don't want the buddy to also speak.
+- **Plays** are logged automatically: when a new in-app game screen is added, add its slug
+  to `GAME_SLUGS` in `src/BuildableKids.jsx` so plays are counted.
+- **Where it goes:** `/api/log-game-event` → `kid_game_events`
+  (`db/create-kid-game-events.sql`). Best-effort; never block gameplay on it.
