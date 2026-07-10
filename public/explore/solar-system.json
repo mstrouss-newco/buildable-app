@@ -321,5 +321,6 @@
       "factAudio": "solar-system-neptune"
     }
   ],
-  "ambient": "space"
+  "ambient": "space",
+  "assetVersion": 2
 }

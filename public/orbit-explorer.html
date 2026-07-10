@@ -341,7 +341,10 @@ function initScene(data) {
 // keeps the flat colorHex fallback as the last resort (art-slot rule below).
 function explorerArtUrl(item, ext) {
   const art = item.art || "";
-  if (art.indexOf("/") !== -1) return `/${art}.${ext || "webp"}`;
+  // Static textures are served immutable for a year, so an updated same-name file
+  // would serve stale. A per-exhibit assetVersion query busts the cache when bumped.
+  const v = (DATA && DATA.assetVersion) ? `?v=${encodeURIComponent(DATA.assetVersion)}` : "";
+  if (art.indexOf("/") !== -1) return `/${art}.${ext || "webp"}${v}`;
   return `/api/images?kind=explore&id=${encodeURIComponent(art)}`;
 }
 function isRealStaticArt(item) { return (item.art || "").indexOf("/") !== -1; }
@@ -363,7 +366,7 @@ function loadArtTexture(item, mat) {
     } catch (e) {}
   };
   img.onerror = () => {
-    if (isRealStaticArt(item) && img.src.endsWith(".webp")) {
+    if (isRealStaticArt(item) && /\.webp(\?|$)/.test(img.src)) {
       // webp missed (old browser, bad deploy): retry the jpg fallback once.
       img.src = explorerArtUrl(item, "jpg");
       return;
