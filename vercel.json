@@ -425,6 +425,13 @@
       }
     },
     {
+      "src": "/landing-shots/(.*)",
+      "dest": "/landing-shots/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
       "src": "/survival-dalle/(.*)",
       "dest": "/survival-dalle/$1",
       "headers": {

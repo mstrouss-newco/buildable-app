@@ -3369,3 +3369,19 @@ sim/campaign perfect-player bot; qa-bubble.mjs proves all 6 levels clear (5 seed
 Wired: vercel.json (/bubble-engine.html, /bubble), src/BuildableKids.jsx (SCREEN_BUBBLE, tile,
 BubbleScreen, GAME_SLUGS). TODO: asset-library registration, save/share/publish + make-a-level,
 picker thumbnail (api/images GAMES id bubble).
+
+## 2026-07-10 — Marketing pass: real screenshots on landing + partner education section
+Captured REAL gameplay screenshots headlessly (Playwright vs local static serve; cdnjs three.js
+served from public/three.min.js) and shipped them to public/landing-shots/ (20 WebP, ~300KB total):
+Breaker jungle/space/ocean (demo + playtest params), Survival, Sunny Town Drive, Sling, Chess
+(space world board), Bubble, Math Cannon, Solar System exhibit, + 10 leaderboard thumbs.
+landing.html: fake CSS/emoji game cards replaced with real shots — Creation phone card (Breaker
+jungle), evo timeline (Coral Cove -> Star Fields -> Survival published band), all 10 arcade
+leaderboard thumbs now real gameplay with matching names. vercel.json: /landing-shots/ static
+route (immutable cache, ?v= to bust).
+partner.html: new dark "The education layer" slide (before Prodigy playbook): Kidspedia solar
+system + Math Cannon screenshot duo, earn-to-learn hero card (questions -> coins -> spend in any
+game), skill-is-mechanic games, exhibits-as-data, human-reviewed question factory, one learning
+ledger + parent dashboard/digest, learning woven into pauses. Refreshed the two stale Learn
+blurbs (block b4 + factory Learning & telemetry card) to match what shipped in 6B/8A/8B/8C/3H.
+QA: both pages rendered headlessly (gate bypassed via sessionStorage), sections verified visually.
