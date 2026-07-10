@@ -1,0 +1,44 @@
+{
+  "id": "croctot",
+  "name": "Croc Tot",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Action",
+  "color": "#3AA655",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "cheerleader" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+  },
+
+  "art": {
+    "badge": "croctot/badge/v1",
+    "hero": "croctot/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "croctot/loading/v1",
+    "music": "audio/croctot/theme-v1"
+  },
+
+  "levels": [
+    { "id": "backyard",  "name": "Backyard",  "difficulty": 1, "unlocked": true, "journeyBadge": "badges/backyard/v1", "parts": { "theme": "backyard",  "boss": "HOMEWORK MONSTER" } },
+    { "id": "kitchen",   "name": "Kitchen",   "difficulty": 2,                   "journeyBadge": "badges/kitchen/v1",  "parts": { "theme": "kitchen",   "boss": "THE EVIL POT" } },
+    { "id": "night-sky", "name": "Night Sky", "difficulty": 3,                   "journeyBadge": "badges/night/v1",    "parts": { "theme": "underwater","boss": "CAPTAIN SPUD" } },
+    { "id": "jungle",    "name": "Jungle",    "difficulty": 4,                   "journeyBadge": "badges/jungle/v1",   "parts": { "theme": "jungle",    "boss": "MOSQUITO MAXIMUS" } },
+    { "id": "volcano",   "name": "Volcano",   "difficulty": 5,                   "journeyBadge": "badges/volcano/v1",  "parts": { "theme": "volcano",   "boss": "JELLY DRAGON" } }
+  ],
+
+  "customization": [
+    { "slot": "Mode", "options": [
+      { "name": "Chill",      "asset": "croctot/mode/chill",  "price": 0 },
+      { "name": "Just Right", "asset": "croctot/mode/normal", "price": 0 },
+      { "name": "Spicy",      "asset": "croctot/mode/spicy",  "price": 0 }
+    ]}
+  ]
+}

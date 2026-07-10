@@ -279,6 +279,14 @@
         "cache-control": "no-cache, must-revalidate"
       }
     },
+    {
+      "src": "/croctot/manifest.json",
+      "dest": "/croctot/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+
 
 
 

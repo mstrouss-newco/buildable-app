@@ -192,6 +192,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <!-- Shared Buildable game building-blocks (same as Breaker): one loading screen,
      one in-game HUD, one shell-owned nav. -->
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-manifest.js"></script>
 <script src="buildable-wincard.js"></script>
 <script src="buildable-hud.js?v=1"></script>
 <script src="buildable-gamenav.js"></script>
@@ -243,7 +244,21 @@ const DIFFS=[
   {key:"normal",name:"Just Right", lives:5, note:"5 lives · the classic"},
   {key:"spicy", name:"Spicy",      lives:3, note:"3 lives · for brave crocs"},
 ];
-const LEVEL_NAMES=["Backyard","Kitchen","Night Sky","Jungle","Volcano"];
+let LEVEL_NAMES=["Backyard","Kitchen","Night Sky","Jungle","Volcano"];
+/* Session 7B: stage names for the level-select can come from /croctot/manifest.json, FULL fallback. */
+(function loadCrocManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("croctot", function(cfg){
+      try{
+        if(cfg && cfg.stages && cfg.stages.length){
+          LEVEL_NAMES = cfg.stages.map(function(st){ return st.name; });
+          if(typeof ST!=="undefined" && ST==="title" && typeof showStart==="function") showStart();
+        }
+      }catch(e){}
+    }, function(){ /* missing/invalid manifest -> keep built-in stage names */ });
+  }catch(e){}
+})();
 function fmtTime(ms){ const s=Math.max(0,Math.floor(ms/1000)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
 
 // Build the shared HUD chips from game state (called every frame while playing).

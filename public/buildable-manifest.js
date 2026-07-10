@@ -354,8 +354,38 @@
     resolveAsset: function(){ return null; }   // board engines map their own art keys
   };
 
+  // ===========================================================================
+  //  CROC profile (single-player ACTION journey). Session 7B batch — Croc Tot.
+  //  Levels are ORDERED STAGES (a real journey), each a themed world with a boss.
+  //  Difficulty 1-5 is the stage's slot on the ramp; the engine derives its own
+  //  spawn/speed tuning from the running level (golden rule 2 — no raw knobs here).
+  //  Art (backdrop, boss art, enemies) stays engine-owned with a fallback; the
+  //  manifest just names the stages + their theme/boss so the shell/start-screen
+  //  can build the level select. A play-assist mode (lives) stays engine-owned.
+  var crocProfile = {
+    validateLevel: function(lv, at, errors){
+      if(lv.parts!=null && typeof lv.parts!=="object") errors.push(at+" 'parts' must be an object");
+    },
+    toLevel: function(lv){
+      var d = clamp(lv.difficulty,1,5);
+      var parts = lv.parts || {};
+      return {
+        id: lv.id, name: lv.name, difficulty: d,
+        theme: parts.theme || null,
+        boss: parts.boss || null,
+        coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
+        unlocked: !!lv.unlocked,
+        parts: parts
+      };
+    },
+    toConfig: function(m, levels){
+      return { id:m.id, name:m.name, color:m.color, levels:levels, stages:levels, _manifest:m };
+    },
+    resolveAsset: function(){ return null; }   // croc maps its own art keys
+  };
+
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile };
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, croc: crocProfile, croctot: crocProfile };
   // Studios always use the studio profile (they have no levelProfile/levels); every
   // other game keys off its id (or an explicit levelProfile), falling back to breaker.
   function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
