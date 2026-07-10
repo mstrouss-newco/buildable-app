@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="icon" href="/favicon.ico?v=4" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=4" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Math Cannon">
+<meta name="application-name" content="Math Cannon">
+<meta name="theme-color" content="#F4A63B">
+<title>Math Cannon</title>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+*{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+input,textarea{-webkit-user-select:text;user-select:text;}
+</style>
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#12102a;overflow:hidden;font-family:'Baloo 2','Nunito',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+  #start{position:absolute;inset:0;display:none;z-index:20;overflow:auto;}
+  /* level-clear / win overlay (drawn separately from the start screen) */
+  #over{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:15;background:rgba(12,10,30,.55);}
+  #overCard{background:#fff;border-radius:22px;padding:26px 30px;text-align:center;max-width:80%;box-shadow:0 12px 40px rgba(0,0,0,.35);}
+  #overTitle{font-size:26px;font-weight:800;color:#2a2450;margin:0 0 6px;}
+  #overMsg{font-size:16px;color:#5a5580;margin:0 0 18px;}
+  #overBtn{border:none;background:#F4A63B;color:#3a2600;font-weight:800;font-size:18px;padding:12px 26px;border-radius:14px;cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="start"></div>
+  <div id="over"><div id="overCard"><div id="overTitle"></div><div id="overMsg"></div><button id="overBtn">Next</button></div></div>
+</div>
+
+<script src="buildable-audio.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-manifest.js"></script>
+<script src="buildable-hud.js?v=1"></script>
+<script src="buildable-gamenav.js"></script>
+<script src="buildable-wallet.js"></script>
+<script src="buildable-feel.js"></script>
+<script src="buildable-wincard.js"></script>
+<script>
+"use strict";
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var BA = window.BuildableAudio || { unlock:function(){}, sfx:function(){}, toggleMute:function(){return false;}, muted:false };
+  var BS = window.BuildableStartScreen;
+  var BW = window.BuildableWallet;
+  var Feel = window.Feel;
+
+  // ---- signature color (kept in sync with /mathcannon/manifest.json "color") ----
+  var ACCENT = "#F4A63B";
+
+  // ======================================================================
+  //  STAGES — built-in FALLBACK so a manifest miss NEVER breaks the game.
+  //  Kept consistent with /mathcannon/manifest.json (same names/difficulty/skill).
+  //  The live values are replaced by the manifest through the shared loader on load.
+  //  ops + maxN + target come from the mathProfile (difficulty 1-5 -> number band).
+  // ======================================================================
+  var FALLBACK_STAGES = [
+    { id:"adding-up",    name:"Adding Up",    difficulty:1, skill:"addition",       ops:["+"],        maxN:10, target:5, theme:"meadow"  },
+    { id:"take-away",    name:"Take Away",    difficulty:2, skill:"subtraction",    ops:["-"],        maxN:20, target:5, theme:"beach"   },
+    { id:"mix-it-up",    name:"Mix It Up",    difficulty:3, skill:"mixed",          ops:["+","-"],    maxN:30, target:5, theme:"canyon"  },
+    { id:"times-fun",    name:"Times Fun",    difficulty:4, skill:"multiplication", ops:["x"],        maxN:12, target:5, theme:"space"   },
+    { id:"grand-finale", name:"Grand Finale", difficulty:5, skill:"mixed",          ops:["+","-","x"],maxN:20, target:5, theme:"volcano" }
+  ];
+  var STAGES = FALLBACK_STAGES.slice();
+
+  var OP_SKILL   = { "+":"addition", "-":"subtraction", "x":"multiplication" };
+  var OP_GLYPH   = { "+":"+", "-":"−", "x":"×" };   // real minus + times glyphs, no emoji
+
+  // theme -> sky/ground colors (drawn geometry, no art files)
+  var THEMES = {
+    meadow:  { sky:["#bfe9ff","#eafbf0"], ground:"#7ec46a", accent:"#2f8f4e" },
+    beach:   { sky:["#a9e4ff","#fff4cf"], ground:"#f2d79a", accent:"#e0a94a" },
+    canyon:  { sky:["#ffd6a5","#ffe9c7"], ground:"#d98a4e", accent:"#a85a2c" },
+    space:   { sky:["#20204a","#0d0d24"], ground:"#3a2f6b", accent:"#8a6bff" },
+    volcano: { sky:["#ffb199","#ffe0d0"], ground:"#a3453a", accent:"#e05a3a" }
+  };
+
+  // ---------- canvas ----------
+  var CV = $("cv"), X = CV.getContext("2d");
+  var W = 0, H = 0, DPR = 1;
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    CV.width = Math.floor(W*DPR); CV.height = Math.floor(H*DPR);
+    X.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener("resize", resize); resize();
+
+  // ---------- HUD ----------
+  var _hud = null;
+  function HUD(){ try{ return _hud || (_hud = window.BuildableHUD.mount(CV)); }catch(e){ return { set:function(){}, show:function(){}, hide:function(){} }; } }
+  try{ if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT); }catch(e){}
+
+  // ---------- progress (per-kid, local) ----------
+  function loadPrefs(){ try{ return JSON.parse(localStorage.getItem("bk_mathcannon")) || { unlocked:0, cleared:{} }; }catch(e){ return { unlocked:0, cleared:{} }; } }
+  function savePrefs(){ try{ localStorage.setItem("bk_mathcannon", JSON.stringify(PREFS)); }catch(e){} }
+  var PREFS = loadPrefs();
+  if(!PREFS.cleared) PREFS.cleared = {};
+  if(PREFS.unlocked == null) PREFS.unlocked = 0;
+
+  // ---------- state ----------
+  var state = "menu";           // menu | playing | over
+  var bkPaused = false;         // cartridge contract: shell can freeze us
+  var level = 0, stage = STAGES[0];
+  var correctCount = 0, target = 5;
+  var problem = null;           // { a, b, op, answer, text }
+  var balloons = [];            // floating answer choices
+  var cannon = { x:0, y:0, angle:-Math.PI/2, targetAngle:-Math.PI/2 };
+  var shot = null;              // { x, y, vx, vy, target } in-flight cannonball
+  var locked = false;          // input locked while a shot is flying / between problems
+  var stars = [];              // space theme twinkles
+  var fx = (Feel && Feel.makeFx) ? Feel.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff" };
+  if(Feel){ try{ Feel.configure({ accent:ACCENT, feel:{pace:"normal",celebration:"big",haptics:"on"} }); Feel.setFx(fx); }catch(e){} }
+
+  // ---------- messages to the shell (cartridge contract) ----------
+  function signal(kind, meta){ try{ if(window.parent) window.parent.postMessage(meta?{source:"buildable",kind:kind,meta:meta}:{source:"buildable",kind:kind}, "*"); }catch(e){} }
+  // The learning ledger (Session 8B): every answer is one practiced skill. Best-effort,
+  // fire-and-forget — a dropped report never affects play.
+  function reportSkill(correct){
+    var sk = (stage.skill === "mixed") ? (OP_SKILL[problem.op] || "math") : stage.skill;
+    try{ if(window.parent) window.parent.postMessage({ source:"buildable", kind:"skill", subject:"math", skill:sk, correct:!!correct, quizType:"native", game:"mathcannon" }, "*"); }catch(e){}
+  }
+
+  // ---------- problem + balloon generation ----------
+  function rnd(n){ return Math.floor(Math.random()*n); }
+  function makeProblem(){
+    var op = stage.ops[rnd(stage.ops.length)];
+    var a, b, ans;
+    if(op === "+"){ a = 1 + rnd(stage.maxN-1); b = 1 + rnd(Math.max(1, stage.maxN - a)); ans = a + b; }
+    else if(op === "-"){ a = 2 + rnd(stage.maxN-1); b = 1 + rnd(a-1); ans = a - b; }        // never negative
+    else { var f = Math.min(stage.maxN, 12); a = 1 + rnd(f); b = 1 + rnd(f); ans = a * b; }  // multiplication factors
+    return { a:a, b:b, op:op, answer:ans, text: a + " " + OP_GLYPH[op] + " " + b + " = ?" };
+  }
+  function spawnBalloons(){
+    balloons = [];
+    var ans = problem.answer;
+    var vals = [ans];
+    var guard = 0;
+    while(vals.length < 4 && guard++ < 200){
+      var spread = Math.max(3, Math.round(ans*0.4)+2);
+      var cand = ans + (rnd(2*spread+1) - spread);
+      if(cand < 0) cand = ans + 1 + rnd(spread);
+      if(cand === ans) continue;
+      if(vals.indexOf(cand) >= 0) continue;
+      vals.push(cand);
+    }
+    // shuffle
+    for(var i=vals.length-1;i>0;i--){ var j=rnd(i+1); var t=vals[i]; vals[i]=vals[j]; vals[j]=t; }
+    var cols = ["#ff6b8a","#5bc0ff","#ffd23f","#8a6bff","#48c78e"];
+    var n = vals.length;
+    var topY = Math.max(120, H*0.16);
+    var laneW = W / n;
+    for(var k=0;k<n;k++){
+      balloons.push({
+        value: vals[k],
+        x: laneW*(k+0.5) + (rnd(30)-15),
+        y: topY + rnd(Math.max(20, H*0.14)),
+        r: Math.max(34, Math.min(52, W/13)),
+        col: cols[k % cols.length],
+        driftX: (Math.random()*0.5+0.2) * (Math.random()<0.5?-1:1),
+        driftPhase: Math.random()*6.28,
+        pop: 0, wrong: 0
+      });
+    }
+  }
+  function nextProblem(){ problem = makeProblem(); spawnBalloons(); locked = false; }
+
+  // ---------- flow ----------
+  function startLevel(i){
+    level = Math.max(0, Math.min(STAGES.length-1, i|0));
+    stage = STAGES[level];
+    target = stage.target || 5;
+    correctCount = 0;
+    state = "playing"; bkPaused = false; locked = false;
+    stars = [];
+    if(stage.theme === "space"){ for(var s=0;s<60;s++) stars.push({ x:Math.random()*W, y:Math.random()*H*0.7, r:Math.random()*1.6+0.4, tw:Math.random()*6.28 }); }
+    hideMenu(); $("over").style.display = "none";
+    cannon.angle = cannon.targetAngle = -Math.PI/2;
+    nextProblem();
+    HUD().show(); syncHud();
+    if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
+  }
+  function syncHud(){
+    HUD().set({
+      left:  [{ text:"Level "+(level+1)+"/"+STAGES.length }],
+      right: [{ text:"Solved "+correctCount+"/"+target }, { text:"Coins "+(BW?BW.balance():0) }]
+    });
+  }
+
+  function fireAt(b){
+    locked = true;
+    // aim the cannon barrel at the chosen balloon, then launch
+    var dx = b.x - cannon.x, dy = b.y - cannon.y;
+    cannon.targetAngle = Math.atan2(dy, dx);
+    var d = Math.max(1, Math.hypot(dx,dy));
+    var sp = 16;
+    shot = { x:cannon.x, y:cannon.y, vx:dx/d*sp, vy:dy/d*sp, target:b };
+    BA.sfx("whoosh");
+  }
+
+  function onCorrect(b){
+    reportSkill(true);
+    correctCount++;
+    b.pop = 1;
+    BA.sfx("pop"); BA.sfx("coin",{tier:2});
+    if(Feel){ try{ Feel.explode(b.x, b.y, b.col); Feel.coinBurst(b.x, b.y, 10); }catch(e){} }
+    syncHud();
+    if(correctCount >= target){ levelClear(); }
+    else { setTimeout(function(){ if(state==="playing"){ nextProblem(); } }, 420); }
+  }
+  function onWrong(b){
+    reportSkill(false);
+    b.wrong = 18;
+    fx.shake = Math.max(fx.shake||0, 10);
+    BA.sfx("select");
+    if(Feel){ try{ Feel.miss(); }catch(e){} }
+    locked = false; shot = null;   // let the kid try again immediately, no penalty
+  }
+
+  function levelClear(){
+    state = "over";
+    var isLast = (level >= STAGES.length-1);
+    // award this stage's coins once (shell de-dupes by key so replays can't farm)
+    var award = stage.coins || 0;
+    try{ if(BW && award>0) BW.awardOnce("mathcannon:"+stage.id, award); }catch(e){}
+    PREFS.cleared[level] = true;
+    PREFS.unlocked = Math.max(PREFS.unlocked, Math.min(STAGES.length-1, level+1));
+    savePrefs();
+    BA.sfx(isLast ? "win" : "levelup");
+    signal("win", { newBest:true });
+    if(!isLast) signal("levelup");
+    if(Feel && isLast){ try{ Feel.celebrate(W,H); }catch(e){} }
+    $("overTitle").textContent = isLast ? "You did it!" : "Stage clear!";
+    $("overMsg").textContent   = isLast
+      ? "You cleared every stage of Math Cannon. Amazing brain power!"
+      : "You solved " + target + " problems. On to " + STAGES[level+1].name + "!";
+    $("overBtn").textContent   = isLast ? "Back to stages" : "Next stage";
+    $("over").style.display = "flex";
+  }
+  function afterOver(){
+    $("over").style.display = "none";
+    if(level >= STAGES.length-1){ showMenu(); }
+    else { startLevel(level+1); }
+  }
+
+  // ---------- input ----------
+  function pointer(ev){
+    var r = CV.getBoundingClientRect();
+    var t = ev.touches && ev.touches[0] ? ev.touches[0] : ev;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  }
+  function tap(ev){
+    BA.unlock();
+    if(state !== "playing" || locked || bkPaused) return;
+    var p = pointer(ev);
+    for(var i=0;i<balloons.length;i++){
+      var b = balloons[i];
+      if(b.pop) continue;
+      if(Math.hypot(p.x-b.x, p.y-b.y) <= b.r+6){
+        if(b.value === problem.answer){ fireAt(b); }
+        else { onWrong(b); }
+        return;
+      }
+    }
+  }
+  CV.addEventListener("mousedown", function(e){ tap(e); });
+  CV.addEventListener("touchstart", function(e){ e.preventDefault(); tap(e); }, { passive:false });
+
+  // ---------- update ----------
+  var last = performance.now();
+  function update(dt, now){
+    if(state !== "playing") return;
+    // rotate barrel toward target angle
+    var da = cannon.targetAngle - cannon.angle;
+    while(da > Math.PI) da -= Math.PI*2; while(da < -Math.PI) da += Math.PI*2;
+    cannon.angle += da * Math.min(1, dt*14);
+    // balloons gentle drift
+    for(var i=0;i<balloons.length;i++){
+      var b = balloons[i];
+      if(b.pop){ b.pop = 0; continue; }
+      b.x += Math.sin(now/900 + b.driftPhase) * b.driftX;
+      if(b.wrong>0) b.wrong--;
+    }
+    // cannonball flight
+    if(shot){
+      shot.x += shot.vx; shot.y += shot.vy;
+      var b2 = shot.target;
+      if(b2 && !b2.pop && Math.hypot(shot.x-b2.x, shot.y-b2.y) <= b2.r){ shot = null; onCorrect(b2); }
+      else if(shot && (shot.x<-40||shot.x>W+40||shot.y<-60)){ shot = null; locked = false; }
+    }
+    if(Feel){ try{ Feel.update(fx, dt); }catch(e){} }
+  }
+
+  // ---------- render ----------
+  function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+  function drawBg(){
+    var th = THEMES[stage.theme] || THEMES.meadow;
+    var g = X.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]);
+    X.fillStyle = g; X.fillRect(0,0,W,H);
+    if(stage.theme === "space"){
+      for(var i=0;i<stars.length;i++){ var s=stars[i]; X.globalAlpha=0.5+0.5*Math.abs(Math.sin(performance.now()/700+s.tw)); X.fillStyle="#fff"; X.beginPath(); X.arc(s.x,s.y,s.r,0,6.28); X.fill(); }
+      X.globalAlpha=1;
+    }
+    // ground
+    X.fillStyle = th.ground; X.fillRect(0, H-90, W, 90);
+    X.fillStyle = th.accent; X.fillRect(0, H-90, W, 6);
+  }
+  function drawCannon(){
+    var cx = cannon.x, cy = cannon.y;
+    // barrel
+    X.save(); X.translate(cx, cy); X.rotate(cannon.angle);
+    X.fillStyle = "#3a3550"; roundRect(X, 0, -13, 62, 26, 12); X.fill();
+    X.fillStyle = "#565073"; roundRect(X, 40, -13, 16, 26, 7); X.fill();
+    X.restore();
+    // wheel + base
+    X.fillStyle = "#2a2540"; X.beginPath(); X.arc(cx, cy, 30, 0, 6.28); X.fill();
+    X.fillStyle = ACCENT; X.beginPath(); X.arc(cx, cy, 20, 0, 6.28); X.fill();
+    X.fillStyle = "#2a2540"; X.beginPath(); X.arc(cx, cy, 7, 0, 6.28); X.fill();
+  }
+  function drawBalloon(b){
+    if(b.pop) return;
+    var wob = b.wrong>0 ? Math.sin(b.wrong*1.2)*5 : 0;
+    var x = b.x + wob, y = b.y;
+    // string
+    X.strokeStyle = "rgba(0,0,0,.25)"; X.lineWidth = 2; X.beginPath(); X.moveTo(x, y+b.r); X.lineTo(x, y+b.r+22); X.stroke();
+    // body
+    X.fillStyle = b.wrong>0 ? "#e0575e" : b.col;
+    X.beginPath(); X.ellipse(x, y, b.r*0.92, b.r, 0, 0, 6.28); X.fill();
+    X.fillStyle = "rgba(255,255,255,.35)"; X.beginPath(); X.ellipse(x-b.r*0.3, y-b.r*0.35, b.r*0.22, b.r*0.3, -0.4, 0, 6.28); X.fill();
+    // number
+    X.fillStyle = "#fff"; X.font = "800 " + Math.round(b.r*0.9) + "px 'Baloo 2','Nunito',sans-serif";
+    X.textAlign = "center"; X.textBaseline = "middle";
+    X.fillText(String(b.value), x, y+1);
+  }
+  function drawProblem(){
+    var bw = Math.min(W*0.86, 460), bh = 74, bx = (W-bw)/2, by = 22;
+    X.fillStyle = "rgba(255,255,255,.92)"; roundRect(X, bx, by, bw, bh, 18); X.fill();
+    X.strokeStyle = ACCENT; X.lineWidth = 4; roundRect(X, bx, by, bw, bh, 18); X.stroke();
+    X.fillStyle = "#2a2450"; X.font = "800 40px 'Baloo 2','Nunito',sans-serif";
+    X.textAlign = "center"; X.textBaseline = "middle";
+    X.fillText(problem.text, W/2, by+bh/2+2);
+    // tiny hint under banner
+    X.fillStyle = "#7a749c"; X.font = "700 15px 'Nunito',sans-serif";
+    X.fillText("Tap the balloon with the answer", W/2, by+bh+16);
+  }
+  function drawShot(){ if(!shot) return; X.fillStyle="#2a2540"; X.beginPath(); X.arc(shot.x,shot.y,9,0,6.28); X.fill(); }
+  function drawFx(){
+    if(!fx) return;
+    var i, p;
+    if(fx.parts) for(i=0;i<fx.parts.length;i++){ p=fx.parts[i]; if(p.life<=0) continue; X.globalAlpha=Math.max(0,Math.min(1,p.life)); X.fillStyle=p.c||ACCENT; X.beginPath(); X.arc(p.x,p.y,p.r||3,0,6.28); X.fill(); }
+    X.globalAlpha=1;
+    if(fx.pops) for(i=0;i<fx.pops.length;i++){ p=fx.pops[i]; if(p.life<=0) continue; X.globalAlpha=Math.max(0,p.life); X.strokeStyle=p.c||"#fff"; X.lineWidth=3; X.beginPath(); X.arc(p.x,p.y,(1-p.life)*40+8,0,6.28); X.stroke(); }
+    X.globalAlpha=1;
+  }
+  function render(){
+    cannon.x = W/2; cannon.y = H-90;
+    var sh = (fx && fx.shake) ? fx.shake : 0;
+    X.save();
+    if(sh>0){ X.translate((Math.random()-0.5)*sh, (Math.random()-0.5)*sh); if(fx) fx.shake *= 0.85; }
+    drawBg();
+    if(state === "playing" || state === "over"){
+      for(var i=0;i<balloons.length;i++) drawBalloon(balloons[i]);
+      drawShot();
+      drawCannon();
+      drawProblem();
+      drawFx();
+      // progress dots
+      var dn = target, dx = W/2 - (dn*18)/2, dy = H-58;
+      for(var k=0;k<dn;k++){ X.fillStyle = k<correctCount ? ACCENT : "rgba(255,255,255,.5)"; X.beginPath(); X.arc(dx+k*18+9, dy, 6, 0, 6.28); X.fill(); }
+    }
+    X.restore();
+  }
+
+  function frame(now){
+    var dt = Math.min(0.05, (now-last)/1000); last = now;
+    if(!bkPaused) update(dt, now);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- start screen (level select) ----------
+  function buildStartCfg(){
+    var levels = STAGES.map(function(l, i){
+      var st = i <= PREFS.unlocked ? (PREFS.cleared[i] ? "done" : "next") : "locked";
+      var th = THEMES[l.theme] || THEMES.meadow;
+      return { n:i+1, name:l.name, color:th.accent, state:st, maxStars:1, stars: PREFS.cleared[i]?1:undefined };
+    });
+    return { title:"Math Cannon", subtitle:"Solve the problem, tap the right answer, fire!", sound:!BA.muted, showBack:false, levels:levels };
+  }
+  var startScreen = null;
+  function showMenu(){
+    state = "menu";
+    if(_hud) _hud.hide();
+    var host = $("start"); if(host) host.style.display = "block";
+    if(!BS || !host) return;
+    var cb = { onPlay:function(n){ BA.unlock(); startLevel(n-1); }, onSound:function(){ BA.unlock(); BA.toggleMute(); }, onBack:function(){}, onMode:function(){} };
+    if(!startScreen) startScreen = BS.mount(host, buildStartCfg(), cb);
+    else startScreen.update(buildStartCfg());
+    if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
+  }
+  function hideMenu(){ var host=$("start"); if(host) host.style.display="none"; }
+
+  // ---------- shared nav (Home exits to hub, Sound toggle) ----------
+  if(window.BuildableGameNav){
+    window.BuildableGameNav.register({
+      onSound:function(){ BA.unlock(); BA.toggleMute(); if(startScreen) startScreen.update(buildStartCfg()); },
+      onMenu:function(){ showMenu(); },
+      soundOn:function(){ return !BA.muted; }
+    });
+  }
+
+  // ---------- cartridge contract: shell -> game messages ----------
+  window.addEventListener("message", function(ev){
+    var d = ev && ev.data; if(!d || !d.type) return;
+    if(d.type === "pause"){ bkPaused = true; return; }     // freeze NOW
+    if(d.type === "resume"){ bkPaused = false; last = performance.now(); return; }
+    // bk:quizDone / walletBalance are handled by the shared libs; nothing extra needed here
+  });
+
+  $("overBtn").addEventListener("click", function(){ BA.unlock(); afterOver(); });
+
+  // ---------- boot: read the manifest, keep the built-in fallback ----------
+  function applyStages(sgs){
+    if(sgs && sgs.length){
+      STAGES = sgs.map(function(s){ return {
+        id:s.id, name:s.name, difficulty:s.difficulty, skill:s.skill,
+        ops:(s.ops&&s.ops.length)?s.ops:["+"], maxN:s.maxN||10, target:s.target||5,
+        theme:(s.theme||(s.parts&&s.parts.theme)||"meadow"), coins:s.coins
+      }; });
+    }
+  }
+  function boot(){
+    try{
+      if(window.BuildableManifest && window.BuildableManifest.load){
+        window.BuildableManifest.load("mathcannon", function(cfg){
+          try{ applyStages(cfg && (cfg.stages||cfg.levels)); }catch(e){}
+          showMenu();
+        }, function(){ showMenu(); });   // manifest miss -> built-in fallback
+      } else { showMenu(); }
+    }catch(e){ showMenu(); }
+  }
+  boot();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
