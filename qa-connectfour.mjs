@@ -7,7 +7,7 @@ import fs from 'fs'; import vm from 'vm';
 const dir=process.argv[2]||'.';
 const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
 const html=read('connectfour-engine.html');
-const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-boardgame.js'].map(read).join('\n');
+const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-manifest.js','buildable-boardgame.js'].map(read).join('\n');
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
 const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:900,height:600}:(typeof k==='string'?noop:undefined))});
@@ -42,5 +42,35 @@ console.log(`${losses<=25?'PASS':'WARN'}  smart player rarely loses (<=25)`);
 
 console.log('--- render smoke ---');
 CG._begin('two'); CG._play(3); CG._play(3); CG._play(4); const d=CG._draw(); console.log('render:', d); if(d!=='ok')ok=false;
+
+console.log('--- MANIFEST (Session 7B): /connectfour/manifest.json through the shared loader ---');
+const bmSb={console,Math,Date,JSON,Object,Array,String}; bmSb.window=bmSb; bmSb.globalThis=bmSb; vm.createContext(bmSb);
+vm.runInContext(read('buildable-manifest.js'), bmSb, {filename:'buildable-manifest'});
+const BM=bmSb.BuildableManifest;
+const manifest=JSON.parse(fs.readFileSync(dir+'/public/connectfour/manifest.json','utf8'));
+const mv=BM.validate(manifest);
+console.log(`${mv.ok?'PASS':'FAIL'}  manifest validates  errors=${JSON.stringify(mv.errors)}`); if(!mv.ok)ok=false;
+const mcfg=mv.ok?BM.toEngineConfig(manifest):{tiers:[],worlds:[]};
+console.log(`${manifest.category==='Classic'?'PASS':'FAIL'}  category is Classic`); if(manifest.category!=='Classic')ok=false;
+const tunes=['easy','medium','hard'];
+const tiersOk = mcfg.tiers.length===3 && mcfg.tiers.every(t=>tunes.includes(t.bot));
+console.log(`${tiersOk?'PASS':'FAIL'}  3 tiers map to real AI levels  ::  ${mcfg.tiers.map(t=>t.name+'->'+t.bot).join(', ')}`); if(!tiersOk)ok=false;
+const worldsOk = mcfg.worlds.length===6 && mcfg.worlds.every(w=>w.price===0);
+console.log(`${worldsOk?'PASS':'FAIL'}  6 free worlds in loadout  ::  ${mcfg.worlds.map(w=>w.key).join(',')}`); if(!worldsOk)ok=false;
+console.log(`${mcfg.multiplayer==='off'?'PASS':'FAIL'}  multiplayer off (hot-seat only, honest)`); if(mcfg.multiplayer!=='off')ok=false;
+// engine exposes the tiers as start-screen choices, and honours applyManifestTiers via the shell preload
+const choicesOk = Array.isArray(CG._choices()) && CG._choices().length===3;
+console.log(`${choicesOk?'PASS':'FAIL'}  engine exposes 3 start-screen choices  ::  ${JSON.stringify(CG._choices().map(c=>c.value))}`); if(!choicesOk)ok=false;
+
+console.log('--- per-tier: each level plays cleanly; easy clearly beatable; no unbeatable tier ---');
+for(const lvl of ['easy','medium','hard']){
+  CG.setLevel(lvl); let w=0,l=0,d=0,bad=0;
+  for(let s=0;s<80;s++){ const r=CG.simVsAI(s*13+1); if(!(r.result==='over'))bad++; if(r.winner===1)w++; else if(r.winner===2)l++; else d++; }
+  const clean=bad===0;
+  const winnable = w>=1;                      // a smart player can still win at every tier (no unbeatable lose state)
+  const easyBeatable = lvl!=='easy' || w>=48; // easy: smart wins the clear majority
+  const pass = clean && winnable && easyBeatable;
+  console.log(`${pass?'PASS':'FAIL'}  tier ${lvl}: smart wins=${w} draws=${d} losses=${l} (clean=${clean})`); if(!pass)ok=false;
+}
 
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);

@@ -51,6 +51,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
+<script src="buildable-manifest.js"></script>
 <script src="buildable-boardgame.js"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
@@ -86,11 +87,22 @@ function disc(ctx,x,y,r,player){ const col=P[player-1].col;
   ctx.strokeStyle="rgba(255,255,255,.25)"; ctx.lineWidth=Math.max(1,r*0.08); ctx.beginPath(); ctx.arc(x,y,r*0.78,0,7); ctx.stroke();
 }
 
+/* Session 7B: honest difficulty tiers (start-screen choices / manifest) drive the robot. */
+let AI_LEVEL = "medium";
+const AI_TUNE = {
+  easy:   { block:0.35, avoid:0.30, center:0.40 },
+  medium: { block:0.75, avoid:0.70, center:0.60 },
+  hard:   { block:1.00, avoid:1.00, center:1.00 },
+};
 const spec = {
   id:"connectfour", title:"Connect Four", subtitle:"Drop discs — line up four to win!",
   modes:["solo","two"], aiName:"Robo", players:P, aspect:COLS/ROWS,
   sfx:{ place:"board_drop", win:"board_win", draw:"board_draw" },
   sfxPlace:"place", sfxWin:"win", sfxDraw:"draw",
+  // start-screen "levels" = opponent tiers (manifest overrides these when present)
+  choices:[ {name:"Easy",value:"easy",foot:"a gentle robot"}, {name:"Medium",value:"medium",foot:"a real game"}, {name:"Hard",value:"hard",foot:"sharp — watch out!"} ],
+  applyChoice(v){ AI_LEVEL = (AI_TUNE[v] ? v : "medium"); },
+  applyManifestTiers(cfg){ try{ if(cfg&&cfg.tiers&&cfg.tiers.length) spec.choices = cfg.tiers.map(function(t){ return { name:t.name, value:(AI_TUNE[t.bot]?t.bot:"medium"), foot:t.desc||"" }; }); }catch(e){} },
 
   init(){ try{ if(typeof window!=="undefined"&&window.setRandomWorld) window.setRandomWorld(); }catch(e){} return { cells:new Array(COLS*ROWS).fill(0), fall:{} }; },
   moves(G){ const m=[]; for(let c=0;c<COLS;c++) if(lowestEmpty(G.cells,c)>=0) m.push(c); return m; },
@@ -106,17 +118,19 @@ const spec = {
   tap(G,x,y,api){ const g=geo(api.W,api.H); const c=Math.floor((x-g.x0)/g.cell);
     if(c<0||c>=COLS) return { moved:false }; return spec.move(G,c,api); },
 
-  // EASY computer: takes a win, usually blocks, avoids handing a win, prefers the middle.
-  ai(G,api){ const me=2, you=1, legal=spec.moves(G);
+  // Difficulty-aware computer (AI_LEVEL): always takes a win; blocks / avoids handing a
+  // win / plays the center more often as the tier rises. Even "hard" is a 1-ply blocker
+  // (no deep search) so a thoughtful kid can still win — no unbeatable lose state.
+  ai(G,api){ const me=2, you=1, legal=spec.moves(G); const T=AI_TUNE[AI_LEVEL]||AI_TUNE.medium;
     const wins=(p,col)=>{ const r=lowestEmpty(G.cells,col); if(r<0) return false; G.cells[r*COLS+col]=p; const w=BG.lineWinner(G.cells,COLS,ROWS,NEED); G.cells[r*COLS+col]=0; return !!w; };
     let pick=-1;
-    for(const c of legal) if(wins(me,c)){ pick=c; break; }                       // win now
-    if(pick<0 && api.rng()<0.6){ for(const c of legal) if(wins(you,c)){ pick=c; break; } }  // block ~60%
-    if(pick<0){ // avoid moves that let the opponent win immediately (when we notice ~70%)
+    for(const c of legal) if(wins(me,c)){ pick=c; break; }                       // win now (all tiers)
+    if(pick<0 && api.rng()<T.block){ for(const c of legal) if(wins(you,c)){ pick=c; break; } }  // block
+    if(pick<0){ // avoid moves that hand the opponent an immediate win
       let safe=legal;
-      if(api.rng()<0.7){ safe=legal.filter(c=>{ const r=lowestEmpty(G.cells,c); G.cells[r*COLS+c]=me; const bad=spec.moves(G).some(cc=>wins(you,cc)); G.cells[r*COLS+c]=0; return !bad; }); if(!safe.length) safe=legal; }
+      if(api.rng()<T.avoid){ safe=legal.filter(c=>{ const r=lowestEmpty(G.cells,c); G.cells[r*COLS+c]=me; const bad=spec.moves(G).some(cc=>wins(you,cc)); G.cells[r*COLS+c]=0; return !bad; }); if(!safe.length) safe=legal; }
       const order=[3,2,4,1,5,0,6].filter(c=>safe.includes(c));
-      pick = (api.rng()<0.6 && order.length) ? order[Math.floor(api.rng()*Math.min(3,order.length))] : BG.pick(safe,api.rng);
+      pick = (api.rng()<T.center && order.length) ? order[Math.floor(api.rng()*Math.min(3,order.length))] : BG.pick(safe,api.rng);
     }
     return spec.move(G, pick, api);
   },
@@ -181,6 +195,7 @@ window.BUILDABLE_GAME = {
   moves:()=>ctrl.moves(), _play:(t)=>ctrl._play(t), _ai:()=>ctrl._ai(),
   _turn:()=>ctrl._turn(), _state:()=>ctrl._state(), result:()=>spec.result(ctrl.G),
   _begin:(m)=>ctrl.startGame(m||"two"), _draw:()=>ctrl._draw(), _G:()=>ctrl.G,
+  setLevel:(v)=>spec.applyChoice(v), _choices:()=>spec.choices,
 };
 window.CONNECTFOUR_GAME = window.BUILDABLE_GAME;
 </script>

@@ -272,6 +272,14 @@
         "cache-control": "no-cache, must-revalidate"
       }
     },
+    {
+      "src": "/connectfour/manifest.json",
+      "dest": "/connectfour/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+
 
 
     {
