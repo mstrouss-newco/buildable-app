@@ -1,5 +1,73 @@
 # Buildable Kids — Session Log
 
+## 2026-07-10 — Session 8G: Kidspedia preview — orbit-explorer template + solar-system (Phase 8, new track)
+
+First Kidspedia build. Not on the original roadmap — this session ran against EXHIBIT-MANIFEST.md
+and an approved 3D mock Mike supplied directly (the roadmap doc only carried Phase 8 through 8C;
+this opens a parallel Kidspedia track under Phase 8 that the roadmap should get updated to reflect).
+
+**What shipped.**
+- **EXHIBIT-MANIFEST.md** committed to the repo root — the exhibit contract: templates are code,
+  exhibits are data, kids only ever see status "approved", every visual is an art slot, every fact
+  is read-aloud-able, every quiz question is tagged and reports to the learning ledger.
+- **`public/orbit-explorer.html`** — the first template, productionized from the approved mock and
+  made fully generic (no exhibit-specific code): three.js scene, drag to spin, pinch to zoom, tap to
+  select, chip row, fact card with two stats. Art slots fetch `/api/images?kind=explore&id=` at load
+  time with an instant colorHex fallback, matching the cartridge contract's art rule (never blocks).
+  Read-aloud via `speechSynthesis` with a disabled-button fallback when the browser has no voices.
+  "Quick quiz" posts a `quizRequest` to the shell and the template honors `pause`/`resume` from it,
+  same bridge Breaker uses. The template itself re-checks `status === "approved"` before rendering
+  anything, so a kid can never land on a draft exhibit even by guessing a URL.
+- **`public/explore/solar-system.json`** — first exhibit, converted from the approved mock: the Sun
+  plus 8 planets, each with a fact, two stats, two "ask more" questions, and quiz tags. `status:
+  "approved"`.
+- **`api/images.js`** — new `kind=explore` art-prompt dictionary (Sun, 8 planets, Explore-shelf hero
+  card), same convention as every other game's art (ICON_STYLE/GAME_STYLE dictionaries).
+- **Shell wiring** (`src/BuildableKids.jsx`) — `ExploreScreen` wraps `/explore/{id}` in the same
+  `GameFrame` every game uses, with the same quiz/pause/resume bridge as Breaker's — except the quiz
+  is kid-initiated (a tap, not an unlock gate), so it always shows, matching the existing kid-initiated
+  coin-top-up quiz flow rather than the gated-by-Learning-Mode pattern. Answers log through the
+  existing `QuizGate` -> `api/log-learning-event` -> `learning_events` pipeline (the Session 6B
+  ledger already built this table), tagged `gameType="explore"` so Kidspedia practice shows up in the
+  parent skills dashboard alongside game quiz gates. New **Explore shelf** on Home, below Play/Make,
+  sourced from an `EXHIBIT_CATALOG` filtered to approved exhibits (only renders when at least one
+  exists) — same shelf-card visual language as Play.
+- **`vercel.json`** — `/orbit-explorer.html` passthrough, `/explore/(.*).json` static passthrough
+  (no-cache, mirrors how `breaker/manifest.json` is served), `/explore/(.*)` page route to the
+  template, all inserted before the `landing.html` catch-all (the known "new public/ folder gets
+  swallowed" gotcha from a prior session).
+- **`qa-explore.mjs`** — new QA harness, same Node-vm-sandbox pattern as the repo's other
+  `qa-*.mjs` engines. Part A validates every `public/explore/*.json` against the contract's required
+  shape and status enum. Part B runs the real `orbit-explorer.html` script against every approved
+  exhibit: every item (center + bodies) is tappable via `pick()` and updates the fact card correctly,
+  read-aloud fires through `speechSynthesis`, "Quick quiz" reaches the shell's `quizRequest` bridge,
+  and pause/resume from the shell is honored.
+
+**QA.** `node qa-explore.mjs .` — ALL CHECKS PASS: 1 exhibit file validated (1 approved: solar-system),
+all 8 items tappable, read-aloud fires, quiz bridge opens, pause/resume honored, fallback label
+present in source. `npm run build` (vite) — clean, 69 modules, no errors.
+
+**Known limitation (by design, flagged for Mike).** Each exhibit item's `quiz` field carries IDs like
+`space-mercury`, but Session 8A (the scheduled question-bank generator) hasn't run yet, so
+`question_bank` has no rows tagged to those IDs. "Quick quiz" currently opens the same
+age/grade-adaptive generator every other quiz gate uses (goal="reading"), not a specific tagged bank
+question — the bridge and the ledger logging are real and wired correctly, but per-item tagged
+content is still pending 8A. The "ask more" buttons show a "coming soon" toast rather than a real
+answer library, since no Kidspedia Q&A backend exists yet — that infra wasn't part of this session's
+brief.
+
+**Done per the session brief:** orbit-explorer template live with the solar-system exhibit, Explore
+shelf on Home, QA harness in place and green.
+
+**Not done (exhibit editor):** the session brief said "exhibit editor in place for #2 onward" as a
+done-when condition, but no editor UI was built this pass — exhibit #2 today would still require a
+hand-authored JSON file + a code session to review/flip it to approved, the same way solar-system was
+built. Flagging this as the clear next step rather than claiming it's done.
+
+**Roadmap note:** the repo's `buildable-rebuild-roadmap.md` doesn't have a Kidspedia section (Phase 8
+lists only 8A/8B/8C). Worth a punch-list session to fold this track into the roadmap doc explicitly.
+
+
 ## 2026-07-09 — Session 7C: Tennis logic fix — the 0-0 self-loss (Phase 7)
 
 A prerequisite fix, not a conversion. `qa-tennis` was failing because Tennis lost 0-0 in

@@ -6,6 +6,21 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 8G: Kidspedia preview — orbit-explorer template + solar-system (July 10 2026)
+
+First Kidspedia build, run against a new `EXHIBIT-MANIFEST.md` contract (committed to the
+repo root) and an approved 3D mock. Templates are code, exhibits are data — a new exhibit
+never needs a code session. Shipped: `public/orbit-explorer.html` (three.js, drag/pinch/tap,
+chip row, fact card, art slots via `kind=explore` in `api/images.js`, read-aloud with a
+no-voices fallback, "Quick quiz" -> shell `quizRequest`/`pause`/`resume` bridge, refuses to
+render anything that isn't `status: "approved"`); `public/explore/solar-system.json` (Sun +
+8 planets, approved); shell `ExploreScreen` + Explore shelf on Home; `vercel.json` routes;
+`qa-explore.mjs` (contract validation + Node-vm runtime check). QA: `node qa-explore.mjs .`
+ALL CHECKS PASS. Not done: an exhibit editor UI (exhibit #2 still needs a hand-authored JSON
++ a code session), and per-item tagged question-bank content (Session 8A hasn't run yet, so
+"Quick quiz" uses the same adaptive generator every other quiz gate uses rather than a
+specific tagged bank question).
+
 ## Session 7C: Tennis logic fix — the 0-0 self-loss (July 9 2026)
 
 Prerequisite fix so Tennis can enter the 7B conversion queue. `qa-tennis` was failing
