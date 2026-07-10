@@ -1,5 +1,46 @@
 # Buildable Kids — Session Log
 
+## 2026-07-09: Session 8C — First native learning game (Math Cannon)
+
+Phase 8, the payoff of 8A/8B: a game where the academic skill IS the mechanic, not a
+quiz that interrupts play. The demo piece for the education pitch.
+
+**The game (`public/mathcannon-engine.html`).** Solve the problem on the banner, tap the
+balloon showing the answer, and the cannon fires at it. That tap-the-answer act is the
+whole loop — the math is the aiming, not a popup. Drawn-canvas geometry only (no art
+files, no emoji). 5 themed stages ramp difficulty 1-5: Adding Up, Take Away, Mix It Up,
+Times Fun, Grand Finale (add -> subtract -> mixed -> multiply -> all mixed). Always
+winnable, no lose state: a wrong tap just wobbles and lets the kid try again, no penalty.
+Solve 5 to clear a stage. Shared start screen, HUD, game-nav (Home/Sound), wallet
+(coins awarded once per stage), and Feel Kit celebrations; honors the shell's
+pause/resume.
+
+**Reports through the ledger (the point of 8B).** Every answer posts the `skill`
+cartridge message `{ source:"buildable", kind:"skill", subject:"math", skill, correct }`
+(skill = addition / subtraction / multiplication). The shell's existing `GameFrame`
+relay logs it to `/api/log-learning-event` -> the 6B `learning_events` table with zero
+new per-game wiring, so the parent skills dashboard now shows real practice from a game,
+not just quiz gates. Best-effort and fire-and-forget — a dropped report never affects
+play.
+
+**Standard factory pipeline.** Manifest `public/mathcannon/manifest.json` declares what
+it teaches (`teaches: { subject, skills }`) and its 5 stages by difficulty 1-5 only —
+never raw number ranges. New `mathProfile` in `buildable-manifest.js` translates each
+stage's difficulty into a number band and its skill label into an operation set; the
+engine reads that (with a built-in fallback that matches the manifest, no drift).
+Vercel routes for the engine + manifest. Shell wiring in `src/BuildableKids.jsx`:
+GAME_CATALOG card (category "Learning"), `MathCannonScreen`, picker handler, GAME_SLUGS.
+
+**QA.** New `qa-mathcannon.mjs`: 33/33 PASS — manifest validates and declares its
+skills, 5 ascending stages, sane number bands, fallback matches the manifest, and the
+engine carries every contract signal (nav, start screen, HUD, pause/resume, the skill
+ledger report for correct AND incorrect, a win path), no emojis. Same honest scope as
+`qa-croc` — a real-time canvas game with no headless hook, so it does not sim live
+gameplay; the deterministic pieces are all proven. JSX parse (esbuild) OK.
+
+Commits: `2ccefcf` (manifest + profile + routes), `1bc8f3b` (engine), `2921b87` (shell
+wiring), plus qa-mathcannon.mjs. Remaining in Phase 8: 8C was the last listed block;
+9A/9B/9C are parked with triggers. (Did not start any next block.)
 ## 2026-07-09 — Session 3H: Kidspedia orbit-explorer enrichments — fly-to, real chip icons, multiple facts
 
 Three upgrades to the Kidspedia orbit-explorer template (the shared 3D "things orbiting a

@@ -49,6 +49,27 @@ page); on return ambient may resume but read-aloud never auto-restarts. `src/Bui
 continue cleanly. QA: `qa-breaker.mjs` + `qa-explore.mjs` ALL CHECKS PASS. Files:
 `public/buildable-audio.js`, `public/orbit-explorer.html`, `src/BuildableKids.jsx`,
 `SESSION-LOG.md`, `README.md`.
+## Session 8C: First native learning game — Math Cannon (July 9 2026)
+
+Phase 8 payoff: a game where the academic skill IS the mechanic. Solve the problem, tap
+the balloon with the answer, the cannon fires — the math is the aiming, not a quiz popup.
+`public/mathcannon-engine.html` (drawn canvas geometry, no art files, no emoji): 5 themed
+stages ramp difficulty 1-5 (add -> subtract -> mixed -> multiply -> all), always
+winnable (wrong tap = retry, no lose state), solve 5 to clear. Every answer posts the
+`skill` cartridge message (`subject:"math"`, skill add/sub/mult, correct bool); the
+existing `GameFrame` relay in `src/BuildableKids.jsx` feeds it to
+`/api/log-learning-event` -> the 6B `learning_events` table, so the parent skills
+dashboard now shows real game practice, not just quiz gates. Manifest
+`public/mathcannon/manifest.json` declares what it teaches and its stages by difficulty
+1-5 (no raw number ranges); new `mathProfile` in `buildable-manifest.js` maps difficulty
+-> number band and skill -> operation set; engine reads it with a matching built-in
+fallback. Shared start screen + HUD + nav + wallet + Feel Kit; honors pause/resume.
+Vercel routes added; picker card in category "Learning". QA: new `qa-mathcannon.mjs`
+33/33 PASS (manifest + number band + no-drift fallback + every contract signal + no
+emoji; honest scope, no live sim like qa-croc). Files: `public/mathcannon-engine.html`,
+`public/mathcannon/manifest.json`, `public/buildable-manifest.js`, `vercel.json`,
+`src/BuildableKids.jsx`, `qa-mathcannon.mjs`, `SESSION-LOG.md`, `README.md`.
+
 ## Session 8K: Saturn's rings, the Moon, sun glow removed (July 9 2026)
 
 Saturn now shows a real ring texture (`2k_saturn_ring_alpha.png` resized to 1024x62,
