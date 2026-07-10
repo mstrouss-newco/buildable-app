@@ -221,7 +221,7 @@
       <label>Paste anything from chat: a whole roadmap, a new phase, or just one session like "Session 5B - ...". It gets sorted into place without overwriting what's already here.</label>
       <textarea id="rm-paste" placeholder="Paste a section or a single session, e.g.&#10;Session 5B - Sling converts. Same as Survival: manifest, wire engine, delete menus."></textarea>
       <div class="addfoot">
-        <span class="legend">Add / merge in keeps everything and files new items into their phase (5B goes to Phase 5). Replace all is for pasting the full master doc.</span>
+        <span class="legend">Understands a full roadmap, a single "Session 5B - ...", "New card in Phase 7: Title... Description...", and "Note on the 7B card: ...". Add / merge in keeps everything; Replace all reconciles a full paste.</span>
         <span style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" onclick="importRoadmapAdd()">Add / merge in</button>
           <button class="btn ghost" onclick="importRoadmap()">Replace all</button>
@@ -662,8 +662,15 @@ function rmSlug(id){ return "rm-note-"+String(id).replace(/[^a-z0-9]+/gi,"-"); }
 function rmData(){ return state.meta.roadmap || (state.meta.roadmap={phases:[],sessions:[],archived:[]}); }
 
 /* ---- parse pasted markdown ---- */
+function splitCard(rem){
+  rem=String(rem||"").trim(); let m;
+  if(m=rem.match(/title:\s*([\s\S]*?)\s*[.:]?\s*description:\s*([\s\S]+)$/i)) return {name:m[1].trim().replace(/[.:]+$/,""), desc:m[2].trim()};
+  if(m=rem.match(/^(.*?[^.\s])\.\s+([\s\S]+)$/)) return {name:m[1].trim(), desc:m[2].trim()};
+  if(m=rem.match(/^(.+?)\s+[—–-]\s+([\s\S]+)$/)) return {name:m[1].trim(), desc:m[2].trim()};
+  return {name:rem, desc:""};
+}
 function parseRoadmap(text){
-  const phases=[], sessions=[]; let curPhase=null, curLater=false;
+  const phases=[], sessions=[], notes=[]; let curPhase=null, curLater=false;
   const lines=String(text||"").split(/\r?\n/);
   for(let raw of lines){
     const line=raw.trim(); if(!line) continue; let m;
@@ -674,11 +681,19 @@ function parseRoadmap(text){
     if(low==="later"||low==="parked"||low==="later / parked"||low.indexOf("later /")===0||low.indexOf("later/")===0||low.indexOf("parked")===0){
       curLater=true; curPhase=null; continue;
     }
+    // explicit "Session 1A — Name. desc"
     if(m=line.match(/^(?:[-*]\s*)?(?:\[\s*([ xX])\s*\]\s*)?Session\s+([\w.]+)\s*[—–:-]+\s*(.+)$/i)){
-      const done=m[1]?/[xX]/.test(m[1]):false; const id=m[2]; const rest=m[3].trim();
-      let name=rest, desc=""; const dot=rest.match(/^(.*?[^.\s])\.\s+(.+)$/);
-      if(dot){ name=dot[1].trim(); desc=dot[2].trim(); }
-      sessions.push({id, name, desc, phaseNum:curPhase?curPhase.num:"", doneFromPaste:done, later:curLater}); continue;
+      const done=m[1]?/[xX]/.test(m[1]):false; const id=m[2]; const sp=splitCard(m[3].trim());
+      sessions.push({id, name:sp.name, desc:sp.desc, phaseNum:curPhase?curPhase.num:"", doneFromPaste:done, later:curLater}); continue;
+    }
+    // loose: "Note on the 7B card: ..."  or  "7B note: ..."
+    if((m=line.match(/^(?:add\s+)?note\s+(?:on|to|for|against)\s+(?:the\s+)?(?:card\s+)?([\w.:]+?)(?:\s+card)?\s*[:—–-]\s*(.+)$/i)) || (m=line.match(/^([\w.:]+)\s+note\s*[:—–-]\s*(.+)$/i))){
+      notes.push({id:m[1], text:m[2].trim()}); continue;
+    }
+    // loose: "New card in Phase 7: Title... Description..." / "Add a card to Phase 7 — ..."
+    if(m=line.match(/^(?:new\s+|add\s+(?:a\s+)?(?:new\s+)?)?(?:card|item|task|session)\s+(?:in|for|to|under)\s+phase\s+([\w.]+)\s*[:.\-—–]*\s*(.+)$/i)){
+      const sp=splitCard(m[2].trim());
+      sessions.push({id:null, name:sp.name, desc:sp.desc, phaseNum:m[1], doneFromPaste:false, later:false}); continue;
     }
     if(m=line.match(/^Done when:\s*(.+)$/i)){ if(curPhase) curPhase.doneWhen=m[1].trim(); continue; }
     if(curLater && (m=line.match(/^[-*]\s+(.+)$/))){
@@ -688,7 +703,7 @@ function parseRoadmap(text){
     }
     curLater=false; // a non-bullet, non-session line ends the Later run
   }
-  return {phases, sessions};
+  return {phases, sessions, notes};
 }
 
 /* ---- merge, preserving done/edits/notes by ID ---- */
@@ -744,21 +759,45 @@ function mergeRoadmapAdd(parsed){
   });
   state.meta.roadmap={phases:cur.phases, sessions:cur.sessions, archived:cur.archived};
 }
+function assignAutoIds(parsed){
+  const used=new Set([].concat(rmData().sessions,rmData().archived).map(x=>x.id));
+  parsed.sessions.forEach(s=>{
+    if(s.id){ used.add(s.id); return; }
+    const pn=s.phaseNum||"7"; let id="";
+    for(let i=0;i<26;i++){ const c=pn+String.fromCharCode(65+i); if(!used.has(c)){ id=c; break; } }
+    if(!id){ let n=1; do{ id=pn+"_"+n; n++; }while(used.has(id)); }
+    s.id=id; used.add(id);
+  });
+}
+function applyNotes(notes){
+  if(!notes||!notes.length) return 0;
+  const rd=rmData(); let n=0;
+  notes.forEach(o=>{
+    const s=rd.sessions.find(x=>x.id===o.id)||rd.archived.find(x=>x.id===o.id);
+    if(s){ if(!Array.isArray(s.notes)) s.notes=[]; s.notes.push(o.text); n++; }
+  });
+  return n;
+}
 async function importRoadmapAdd(){
   const text=document.getElementById("rm-paste").value;
   const parsed=parseRoadmap(text);
-  if(!parsed.sessions.length && !parsed.phases.length){ toast("Couldn't find any phases or sessions"); return; }
+  if(!parsed.sessions.length && !parsed.phases.length && !parsed.notes.length){ toast("Couldn't find anything to add"); return; }
+  assignAutoIds(parsed);
   mergeRoadmapAdd(parsed);
+  const noteN=applyNotes(parsed.notes);
   document.getElementById("rm-paste").value="";
   renderRoadmap(); setSync("saving..."); await saveMetaR();
-  toast("Merged in "+parsed.sessions.length+" session"+(parsed.sessions.length===1?"":"s"));
+  const parts=[]; if(parsed.sessions.length) parts.push(parsed.sessions.length+" card"+(parsed.sessions.length===1?"":"s")); if(noteN) parts.push(noteN+" note"+(noteN===1?"":"s"));
+  toast(parts.length?("Added "+parts.join(" + ")):"Nothing new to add");
 }
 
 async function importRoadmap(){
   const text=document.getElementById("rm-paste").value;
   const parsed=parseRoadmap(text);
-  if(!parsed.sessions.length && !parsed.phases.length){ toast("Couldn't find any phases or sessions"); return; }
+  if(!parsed.sessions.length && !parsed.phases.length && !parsed.notes.length){ toast("Couldn't find anything to import"); return; }
+  assignAutoIds(parsed);
   mergeRoadmap(parsed);
+  applyNotes(parsed.notes);
   renderRoadmap(); setSync("saving..."); await saveMetaR();
   toast("Imported "+parsed.sessions.length+" session"+(parsed.sessions.length===1?"":"s"));
 }
