@@ -287,6 +287,21 @@
       }
     },
     {
+      "src": "/mathcannon-engine.html",
+      "dest": "/mathcannon-engine.html"
+    },
+    {
+      "src": "/mathcannon",
+      "dest": "/mathcannon-engine.html"
+    },
+    {
+      "src": "/mathcannon/manifest.json",
+      "dest": "/mathcannon/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
       "src": "/rileys-garden/manifest.json",
       "dest": "/rileys-garden/manifest.json",
       "headers": {
@@ -356,20 +371,6 @@
         "cache-control": "no-cache, must-revalidate"
       }
     },
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     {
       "src": "/breaker",
       "status": 308,

@@ -1,0 +1,36 @@
+{
+  "id": "mathcannon",
+  "name": "Math Cannon",
+  "type": "game",
+  "category": "Learning",
+  "color": "#F4A63B",
+  "ageBand": "5-10",
+  "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/mathcannon-engine.html",
+
+  "teaches": { "subject": "math", "skills": ["addition", "subtraction", "multiplication"] },
+
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": false,
+    "coins": true,
+    "buddy": { "on": true, "personality": "cheerleader" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+  },
+
+  "art": {
+    "badge": "mathcannon/badge/v1",
+    "loadingScreen": "mathcannon/loading/v1"
+  },
+
+  "levels": [
+    { "id": "adding-up",     "name": "Adding Up",     "difficulty": 1, "unlocked": true, "parts": { "theme": "meadow",  "skill": "addition" } },
+    { "id": "take-away",     "name": "Take Away",     "difficulty": 2,                   "parts": { "theme": "beach",   "skill": "subtraction" } },
+    { "id": "mix-it-up",     "name": "Mix It Up",     "difficulty": 3,                   "parts": { "theme": "canyon",  "skill": "mixed" } },
+    { "id": "times-fun",     "name": "Times Fun",     "difficulty": 4,                   "parts": { "theme": "space",   "skill": "multiplication" } },
+    { "id": "grand-finale",  "name": "Grand Finale",  "difficulty": 5,                   "parts": { "theme": "volcano", "skill": "mixed" } }
+  ]
+}

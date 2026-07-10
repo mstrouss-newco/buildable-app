@@ -384,8 +384,51 @@
     resolveAsset: function(){ return null; }   // croc maps its own art keys
   };
 
+  // ===========================================================================
+  //  MATH CANNON profile (Session 8C — first native learning game). The academic
+  //  skill IS the mechanic: the manifest's "levels" are math STAGES. Each stage
+  //  names a theme + which skill it practices (addition / subtraction /
+  //  multiplication / mixed). Difficulty 1-5 (manifest golden rule) is the ONLY
+  //  tuning knob — the profile translates it into a number band; nobody writes raw
+  //  ranges in the manifest. The engine reads ops + maxN + target and generates
+  //  fresh problems, reporting each answer to the learning ledger via the `skill`
+  //  cartridge message. Pure + headless-safe.
+  // ===========================================================================
+  var MATH_BAND   = { 1:{ maxN:10 }, 2:{ maxN:20 }, 3:{ maxN:30 }, 4:{ maxN:12 }, 5:{ maxN:20 } };
+  var SKILL_OPS   = { addition:["+"], subtraction:["-"], multiplication:["x"], mixed:["+","-"] };
+  var DIFF_SKILL  = { 1:"addition", 2:"subtraction", 3:"mixed", 4:"multiplication", 5:"mixed" };
+  function mathSkill(lv){ var parts=lv.parts||{}; return (parts.skill && SKILL_OPS[parts.skill]) ? parts.skill : (DIFF_SKILL[clamp(lv.difficulty,1,5)]||"addition"); }
+  var mathProfile = {
+    validateLevel: function(lv, at, errors){
+      if(lv.parts!=null && typeof lv.parts!=="object"){ errors.push(at+" 'parts' must be an object"); return; }
+      var sk = lv.parts && lv.parts.skill;
+      if(sk!=null && !SKILL_OPS[sk]) errors.push(at+" parts.skill must be one of "+Object.keys(SKILL_OPS).join("/")+" (got "+sk+")");
+    },
+    toLevel: function(lv){
+      var d = clamp(lv.difficulty,1,5);
+      var parts = lv.parts || {};
+      var skill = mathSkill(lv);
+      var ops = (skill==="mixed" && d>=5) ? ["+","-","x"] : SKILL_OPS[skill].slice();
+      return {
+        id: lv.id, name: lv.name, difficulty: d,
+        theme: parts.theme || null,
+        skill: skill,           // which academic skill this stage practices
+        ops: ops,               // operation set the engine draws problems from
+        maxN: MATH_BAND[d].maxN, // biggest operand/result for this difficulty band
+        target: 5,              // correct answers needed to clear the stage
+        coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
+        unlocked: !!lv.unlocked,
+        parts: parts
+      };
+    },
+    toConfig: function(m, levels){
+      return { id:m.id, name:m.name, color:m.color, levels:levels, stages:levels, teaches:(m.teaches||null), _manifest:m };
+    },
+    resolveAsset: function(){ return null; }   // math cannon draws its own art (geometry)
+  };
+
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, dotsboxes: boardProfile, croc: crocProfile, croctot: crocProfile, "rileys-garden": crocProfile, mahjong: crocProfile, bingo: crocProfile, stringmatch: crocProfile, memory: crocProfile, typing: crocProfile, bubble: crocProfile, castleguard: crocProfile, tennis: crocProfile };
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, dotsboxes: boardProfile, croc: crocProfile, croctot: crocProfile, "rileys-garden": crocProfile, mahjong: crocProfile, bingo: crocProfile, stringmatch: crocProfile, memory: crocProfile, typing: crocProfile, bubble: crocProfile, castleguard: crocProfile, tennis: crocProfile, mathcannon: mathProfile };
   // Studios always use the studio profile (they have no levelProfile/levels); every
   // other game keys off its id (or an explicit levelProfile), falling back to breaker.
   function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
