@@ -43,6 +43,12 @@
   .notready{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;flex-direction:column;gap:10px}
   .notready h2{font-family:'Fredoka';font-size:22px}
   .notready p{font-size:14px;color:rgba(253,250,245,.7);max-width:280px}
+  .notready button{margin-top:6px;border:none;background:var(--gold);color:var(--ink);font-family:'Nunito';font-weight:900;font-size:14px;padding:11px 20px;border-radius:999px;cursor:pointer}
+  /* In-shell (loaded inside the app's GameFrame): the shell owns the top-left Home,
+     so hide the exhibit's own back button and slide the title clear of the Home pill.
+     One header, no stacking. Standalone (opened directly) keeps its own back button. */
+  body.in-app #back{display:none}
+  body.in-app .top{padding-left:96px}
   .pauseveil{position:fixed;inset:0;background:rgba(11,10,24,.55);z-index:40;display:none;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:16px}
   .pauseveil.show{display:flex}
 </style>
@@ -78,14 +84,15 @@
 </div>
 
 <div id="notready" class="notready" style="display:none">
-  <h2>Not ready yet</h2>
+  <h2 id="notreadyTitle">Not ready yet</h2>
   <p id="notreadyMsg">This exhibit isn't open yet. Check back soon!</p>
+  <button id="notreadyBtn" type="button">Back to Explore</button>
 </div>
 
 <div class="pauseveil" id="pauseveil">Paused</div>
 <div class="toast" id="toast"></div>
 
-<script src="buildable-gamenav.js"></script>
+<script src="/buildable-gamenav.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 "use strict";
@@ -119,18 +126,43 @@ let ITEMS = {};        // id -> item (center + bodies), for chip/card lookups
 let current = null;    // currently selected item id
 let paused = false;
 
+// In-shell vs standalone: tag the body so the CSS defers the top-left corner to
+// the shell's Home button (HUD-AND-NAV-RULES.md — the shell owns that corner).
+if (iframed()) document.body.classList.add("in-app");
+
+function exitToShell() {
+  postToShell("nav:exit");
+  if (!iframed()) { history.length > 1 ? history.back() : (location.href = "/"); }
+}
+
+// One friendly failure surface — an exhibit is NEVER left as a blank space.
+// kind "notready" = not approved yet; kind "error" = it couldn't load/render.
+// No emojis anywhere (product rule).
+function showFallback(kind, msg) {
+  try { document.getElementById("app").style.display = "none"; } catch (e) {}
+  const title = document.getElementById("notreadyTitle");
+  const body = document.getElementById("notreadyMsg");
+  if (kind === "error") {
+    title.textContent = "Oops!";
+    body.textContent = msg || "This exhibit had trouble loading. Let's try again in a moment.";
+  } else {
+    title.textContent = "Not ready yet";
+    body.textContent = msg || "This exhibit isn't open yet. Check back soon!";
+  }
+  document.getElementById("notready").style.display = "flex";
+}
+document.getElementById("notreadyBtn").onclick = exitToShell;
+
 fetch(`/explore/${encodeURIComponent(EXHIBIT_ID)}.json`, { cache: "no-store" })
   .then((r) => { if (!r.ok) throw new Error("missing"); return r.json(); })
   .then((data) => {
     // Golden rule #2: kids only ever see status "approved". No exception.
-    if (!data || data.status !== "approved") throw new Error("not approved");
-    if (data.template !== "orbit-explorer") throw new Error("wrong template");
+    if (!data || data.status !== "approved") { showFallback("notready"); return; }
+    if (data.template !== "orbit-explorer") { showFallback("error"); return; }
     DATA = data;
     boot(data);
   })
-  .catch(() => {
-    document.getElementById("notready").style.display = "flex";
-  });
+  .catch(() => { showFallback("error"); });
 
 function boot(data) {
   document.getElementById("app").style.display = "block";
@@ -140,8 +172,12 @@ function boot(data) {
   ITEMS[data.center.id] = data.center;
   data.bodies.forEach((b) => { ITEMS[b.id] = b; });
 
-  BuildableGameNav.register({ hide: ["back"] }); // shell draws Home in-app; standalone keeps this button
-  document.getElementById("back").onclick = () => { postToShell("nav:exit"); history.length > 1 ? history.back() : (location.href = "/"); };
+  // Nav: the shell owns the top-left Home in-app (HUD-AND-NAV-RULES.md). This
+  // exhibit has no in-app sound/menu/help of its own, so it relies on the shell
+  // Home only (like bingo/memory/snakes) — its own back button is hidden in-app
+  // by the body.in-app CSS, and buildable-gamenav.js installs the iOS Home-tap
+  // catcher for the reserved corner. Standalone keeps the back button working.
+  document.getElementById("back").onclick = exitToShell;
 
   // Honor pause/resume from the shell around the quiz gate (CARTRIDGE-CONTRACT.md — mandatory).
   window.addEventListener("message", (e) => {
@@ -150,7 +186,18 @@ function boot(data) {
     else if (d === "resume" || (d && d.type === "resume")) setPaused(false);
   });
 
-  initScene(data);
+  // three.js loads from a CDN and WebGL can be unavailable on some devices; never
+  // let either failure leave a blank exhibit — show the friendly oops instead.
+  if (typeof THREE === "undefined") {
+    showFallback("error", "The 3D view couldn't load. Please check your connection and try again.");
+    return;
+  }
+  try {
+    initScene(data);
+  } catch (e) {
+    showFallback("error", "This device couldn't open the 3D view. Try another browser or device.");
+    return;
+  }
   buildChips(data);
   pick(data.center.id);
 }
