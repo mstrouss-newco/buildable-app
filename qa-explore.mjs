@@ -25,6 +25,7 @@ const exploreDir = path.join(dir, 'public', 'explore');
 const files = fs.readdirSync(exploreDir).filter((f) => f.endsWith('.json'));
 if (!files.length) fail('no exhibit files found in public/explore/');
 const approved = [];
+const candidates = []; // approved + in-review — exhibits runtime QA should exercise before approval
 for (const f of files) {
   const raw = fs.readFileSync(path.join(exploreDir, f), 'utf8');
   let data;
@@ -37,13 +38,24 @@ for (const f of files) {
   const checkItem = (item, label) => {
     ['id', 'name', 'fact', 'stats', 'asks', 'quiz'].forEach((k) => { if (item[k] === undefined) fail(`${f} ${label}: missing "${k}"`); });
     if (Array.isArray(item.stats) && item.stats.length !== 2) fail(`${f} ${label}: stats must be exactly two (got ${item.stats.length})`);
+    // Optional `facts` list (EXHIBIT-MANIFEST.md): non-empty array of non-empty
+    // strings, and facts[0] must equal the single `fact` field (kept in sync).
+    if (item.facts !== undefined) {
+      if (!Array.isArray(item.facts) || !item.facts.length) fail(`${f} ${label}: facts must be a non-empty array when present`);
+      else {
+        if (item.facts.some((x) => typeof x !== 'string' || !x.trim())) fail(`${f} ${label}: every fact must be a non-empty string`);
+        if (item.facts[0] !== item.fact) fail(`${f} ${label}: facts[0] must equal fact (keep the single-fact field in sync)`);
+      }
+    }
   };
   checkItem(data.center, 'center');
   (data.bodies || []).forEach((b, i) => checkItem(b, `bodies[${i}]`));
   if (!Array.isArray(data.sources) || !data.sources.length) fail(f + ': sources must be a non-empty array (facts must be human-verified)');
   if (data.status === 'approved') approved.push({ file: f, data });
+  if (data.status === 'approved' || data.status === 'in-review') candidates.push({ file: f, data });
 }
 if (ok) pass(`${files.length} exhibit file(s) match the contract shape (${approved.length} approved: ${approved.map(a => a.data.id).join(', ') || 'none'})`);
+if (ok) pass(`runtime QA exercises ${candidates.length} candidate exhibit(s) (approved + in-review): ${candidates.map(a => a.data.id).join(', ') || 'none'}`);
 
 // ---------------- REAL-ROUTE MODEL (Session 8H) ----------------
 // The template is served at the PRETTY url /explore/{id} (a vercel rewrite), not
@@ -99,7 +111,7 @@ if (!inlineScript) fail('orbit-explorer.html: could not extract the inline templ
 // Collect the page's local <script src> and <link href> refs (external CDNs skipped).
 const scriptSrcs = [...templateHtml.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)].map((m) => m[1]);
 const linkHrefs = [...templateHtml.matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)].map((m) => m[1]);
-for (const ex of approved) {
+for (const ex of candidates) {
   const base = `/explore/${ex.data.id}`;
   // 1) the exhibit DATA must load through the real route (not be served the HTML page).
   const jsonServed = serve(`/explore/${ex.data.id}.json`);
@@ -123,7 +135,7 @@ else {
 }
 
 // ---------------- PART B: runtime check per approved exhibit ----------------
-console.log('--- runtime check: orbit-explorer.html against each approved exhibit (loaded through the real route) ---');
+console.log('--- runtime check: orbit-explorer.html against each candidate exhibit — approved + in-review — loaded through the real route ---');
 
 // A THREE.js stand-in for the vm sandbox: an infinitely chainable/callable/
 // constructible stub, since we only need the template's own JS logic (pick,
@@ -173,7 +185,7 @@ async function runExhibit(exhibit) {
 
   // Pre-register the static ids the HTML shell declares.
   ['app', 'pageTitle', 'back', 'stage', 'chips', 'card', 'cDot', 'cName', 'sayBtn', 'sayLabel',
-    'cFact', 's1l', 's1', 's2l', 's2', 'qrow', 'notready', 'notreadyTitle', 'notreadyMsg', 'notreadyBtn', 'pauseveil', 'toast'
+    'cFact', 's1l', 's1', 's2l', 's2', 'qrow', 'anotherBtn', 'tospace', 'notready', 'notreadyTitle', 'notreadyMsg', 'notreadyBtn', 'pauseveil', 'toast'
   ].forEach((id) => { const e = makeEl('div'); e.id = id; });
 
   const documentStub = {
@@ -209,7 +221,14 @@ async function runExhibit(exhibit) {
     fetch: (url) => {
       const got = serve(url);
       if (!got) return Promise.resolve({ ok: false, status: 404, json: async () => { throw new Error('404'); } });
-      return Promise.resolve({ ok: true, status: 200, json: async () => JSON.parse(got.body) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => {
+        const d = JSON.parse(got.body);
+        // This harness tests the TEMPLATE against candidate exhibits, so force the
+        // status the template requires to boot — an in-review exhibit still exercises
+        // the full runtime. PART A separately enforces that only "approved" is servable.
+        if (got.file && /\/explore\/[^/]+\.json$/.test(url)) d.status = 'approved';
+        return d;
+      } });
     },
     console, Math, Date, JSON, Array, Object,
   };
@@ -278,10 +297,36 @@ async function runExhibit(exhibit) {
   const resumedOk = !registry.pauseveil.classList.contains('show');
   results.pauseResumeChecked = pausedOk && resumedOk;
 
+  // Facts list (Session 3H): for an item with more than one fact, the card shows
+  // fact #1 with the "Another fact" button visible, and nextFact() cycles it.
+  const multi = allItems.find((it) => Array.isArray(it.facts) && it.facts.length > 1);
+  results.factsExercised = !!multi;
+  if (multi) {
+    sandbox.pick(multi.id);
+    const f0 = registry.cFact.textContent === multi.facts[0];
+    const btnShown = registry.anotherBtn.style.display === 'inline-flex';
+    sandbox.nextFact();
+    const f1 = registry.cFact.textContent === multi.facts[1];
+    results.factsChecked = f0 && btnShown && f1;
+  } else { results.factsChecked = true; }
+
+  // Fly-to selection (Session 3H): tapping a body with fly=true shows the
+  // "Back to space" control; tapping that control returns to the wide view.
+  // (The camera easing runs in the render loop, which this headless harness
+  // does not drive — we assert the selection/return state it toggles.)
+  const flyBody = (exhibit.data.bodies || [])[0];
+  if (flyBody) {
+    sandbox.pick(flyBody.id, true);
+    const on = registry.tospace.classList.contains('show');
+    if (registry.tospace.onclick) registry.tospace.onclick();
+    const off = !registry.tospace.classList.contains('show');
+    results.flyChecked = on && off;
+  } else { results.flyChecked = false; }
+
   return results;
 }
 
-for (const exhibit of approved) {
+for (const exhibit of candidates) {
   let r;
   try { r = await runExhibit(exhibit); } catch (e) { fail(`${exhibit.data.id}: threw during runtime check — ${e.message}`); continue; }
   if (!r.bootRendered) fail(`${r.exhibit}: exhibit did NOT render through the real route (data never loaded, or the scene/chips never built) — this is the live iPad failure`);
@@ -295,6 +340,10 @@ for (const exhibit of approved) {
   else pass(`${r.exhibit}: Quick quiz opens the shell's quizRequest bridge`);
   if (!r.pauseResumeChecked) fail(`${r.exhibit}: pause/resume from the shell was not honored`);
   else pass(`${r.exhibit}: honors pause/resume from the shell (CARTRIDGE-CONTRACT.md)`);
+  if (!r.factsChecked) fail(`${r.exhibit}: multiple-facts cycling failed ("Another fact" / fact card)`);
+  else pass(`${r.exhibit}: ${r.factsExercised ? "multiple facts cycle via \"Another fact\" and the card updates" : "single-fact items OK (no multi-fact item to cycle)"}`);
+  if (!r.flyChecked) fail(`${r.exhibit}: fly-to selection did not engage/clear the "Back to space" control`);
+  else pass(`${r.exhibit}: fly-to selection frames the body and "Back to space" returns to the wide view`);
 }
 
 // Static check: the read-aloud browser-voice fallback path exists in the source
