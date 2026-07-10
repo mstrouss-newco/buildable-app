@@ -38,4 +38,21 @@ cfg.levels.forEach((lv,li)=>{ cfg.sets.forEach((st,si)=>{
 console.log('--- render smoke ---');
 G.begin({lvlIdx:2,setIdx:0}); const d=G._draw(); console.log('render:',d, 'remaining=',G._remaining()); if(d!=='ok') ok=false;
 
+console.log('--- MANIFEST (Session 7B): /mahjong/manifest.json through the shared loader ---');
+const bmSb={console,Math,Date,JSON,Object,Array,String}; bmSb.window=bmSb; bmSb.globalThis=bmSb; vm.createContext(bmSb);
+vm.runInContext(read('buildable-manifest.js'), bmSb, {filename:'buildable-manifest'});
+const BM=bmSb.BuildableManifest;
+const manifest=JSON.parse(fs.readFileSync(dir+'/public/mahjong/manifest.json','utf8'));
+const mv=BM.validate(manifest);
+console.log(`${mv.ok?'PASS':'FAIL'}  manifest validates  errors=${JSON.stringify(mv.errors)}`); if(!mv.ok)ok=false;
+console.log(`${manifest.category==='Classic'?'PASS':'FAIL'}  category is Classic`); if(manifest.category!=='Classic')ok=false;
+const mcfg=mv.ok?BM.toEngineConfig(manifest):{stages:[]};
+const namesMatch = mcfg.stages.length===3 && G._cfg().levels.every((lv,i)=>mcfg.stages[i] && mcfg.stages[i].name===manifest.levels[i].name);
+console.log(`${namesMatch?'PASS':'FAIL'}  3 board levels line up with the engine  ::  ${mcfg.stages.map(s=>s.name).join(', ')}`); if(!namesMatch)ok=false;
+const tilesSlot=(manifest.customization||[]).find(c=>/tiles/i.test(c.slot));
+const setsMatch = tilesSlot && tilesSlot.options.length===G._cfg().sets.length;
+console.log(`${setsMatch?'PASS':'FAIL'}  tile-set loadout matches engine sets (${G._cfg().sets.length})`); if(!setsMatch)ok=false;
+console.log(`${mcfg.multiplayer==='off'?'PASS':'FAIL'}  single-player (multiplayer off)`); if(mcfg.multiplayer!=='off')ok=false;
+console.log(`${/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("mahjong"/.test(html)?'PASS':'FAIL'}  engine loads the shared manifest`); if(!(/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("mahjong"/.test(html)))ok=false;
+
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);

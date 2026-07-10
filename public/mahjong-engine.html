@@ -70,6 +70,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
+<script src="buildable-manifest.js"></script>
 <script>
 //  Buildable Mahjong (Solitaire) — hand-authored Track B engine.
 //  A game = this FIXED engine + GAME_CONFIG (data). Solo tile-matching puzzle.
@@ -101,6 +102,24 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
     {key:"three", name:"3 Fire", flames:3, foot:"Big board",    layers:[[10,6],[8,4],[6,3],[4,1]]},    // 114 tiles
   ],
 };
+
+/* Session 7B: level names can come from /mahjong/manifest.json (menu), FULL fallback to GAME_CONFIG. */
+(function loadMahjongManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("mahjong", function(cfg){
+      try{
+        if(cfg && cfg.stages && cfg.stages.length){
+          for(var i=0;i<GAME_CONFIG.levels.length && i<cfg.stages.length;i++){
+            if(cfg.stages[i].name) GAME_CONFIG.levels[i].name = cfg.stages[i].name;
+            if(cfg.stages[i].desc) GAME_CONFIG.levels[i].foot = cfg.stages[i].desc;
+          }
+          try{ if(typeof state!=="undefined" && state==="menu" && typeof startScreen!=="undefined" && startScreen && startScreen.update) startScreen.update(buildStartCfg()); }catch(e){}
+        }
+      }catch(e){}
+    }, function(){ /* missing/invalid -> keep built-in GAME_CONFIG */ });
+  }catch(e){}
+})();
 
 // ---------- STATE ----------
 let state="menu";                 // menu | play | win
