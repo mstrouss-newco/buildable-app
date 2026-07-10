@@ -25,7 +25,7 @@ import { listActiveFriendMatches, roleFor } from "./lib/friendMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings, getProgress, dailyLearningProgress, effectiveLearning } from "./store";
 import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken, listKidProfiles } from "./lib/accounts";
 import { registerAudio } from "./lib/audioUnlock";
-import { playVoiceUrl } from "./lib/voiceBus";
+import { playVoiceUrl, stopVoice } from "./lib/voiceBus";
 import { setCurrentGame, logGameEvent, logSkillEvent } from "./lib/gameLog";
 
 // Screens
@@ -1118,6 +1118,17 @@ export default function BuildableKids() {
   // even on a device that picked a kid last time. See onBack below for the
   // matching guard that stops the picker's Back button from leaking to Home.
   const [screen, setScreen] = useState(SCREEN_GROWNUP);
+  // Background = silence, for shell-side speech too. The landed audio fix stops game
+  // music and the exhibit read-aloud in-frame, but the Home buddy's spoken lines
+  // (voiceBus) + browser read-aloud play outside any game frame. Stop them when the app
+  // is hidden (screen-lock / app-switch) and never auto-restart them on return.
+  useEffect(() => {
+    const hush = () => { try { stopVoice(); } catch (e) {} try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {} };
+    const onVis = () => { if (document.hidden) hush(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", hush);
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", hush); };
+  }, []);
   // The top-nav "Grown-ups" button already runs its own math check before it
   // opens this area. When it does, mark the visit pre-verified so the Grown-ups
   // screen does NOT ask a SECOND math question (one gate, not two).
