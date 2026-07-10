@@ -71,6 +71,7 @@
 </div>
 
 <script src="/buildable-audio.js"></script>
+<script src="/buildable-manifest.js"></script>
 <script src="/buildable-startscreen.js"></script>
 <script src="/buildable-levelthumb.js"></script>
 <script>
@@ -172,6 +173,20 @@ var WORLDS=[
     {c:"cloud",  a:[0.38,0.20], b:[0.62,0.88]}
   ]}
 ];
+/* Session 7B: world names can come from /stringmatch/manifest.json (level select), FULL fallback. */
+(function loadStringManifest(){
+  try{
+    if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
+    window.BuildableManifest.load("stringmatch", function(cfg){
+      try{
+        if(cfg && cfg.stages && cfg.stages.length){
+          for(var i=0;i<WORLDS.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) WORLDS[i].name = cfg.stages[i].name; }
+          try{ if(typeof startScreen!=="undefined" && startScreen && startScreen.update && typeof buildCfg==="function") startScreen.update(buildCfg()); }catch(e){}
+        }
+      }catch(e){}
+    }, function(){ /* missing/invalid -> keep built-in world names */ });
+  }catch(e){}
+})();
 
 /* ---------- pure geometry ---------- */
 function cross(o,a,b){return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);}

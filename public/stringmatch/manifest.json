@@ -1,0 +1,138 @@
+{
+  "id": "stringmatch",
+  "name": "String Match",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Classic",
+  "color": "#57A93F",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": false,
+    "coins": true,
+    "buddy": {
+      "on": true,
+      "personality": "coach"
+    },
+    "multiplayer": "off",
+    "learning": {
+      "beforeUnlock": false,
+      "coinTopUp": true,
+      "bonusAfterWin": false,
+      "subjects": [
+        "geometry"
+      ]
+    }
+  },
+  "art": {
+    "badge": "stringmatch/badge/v1",
+    "hero": "stringmatch/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "stringmatch/loading/v1"
+  },
+  "levels": [
+    {
+      "id": "fluffy-sky",
+      "name": "Fluffy Sky",
+      "desc": "3 pairs",
+      "difficulty": 1,
+      "journeyBadge": "badges/fluffy-sky/v1",
+      "parts": {
+        "pairs": 3
+      },
+      "unlocked": true
+    },
+    {
+      "id": "jungle-jam",
+      "name": "Jungle Jam",
+      "desc": "3 pairs",
+      "difficulty": 1,
+      "journeyBadge": "badges/jungle-jam/v1",
+      "parts": {
+        "pairs": 3
+      }
+    },
+    {
+      "id": "candy-land",
+      "name": "Candy Land",
+      "desc": "4 pairs",
+      "difficulty": 2,
+      "journeyBadge": "badges/candy-land/v1",
+      "parts": {
+        "pairs": 4
+      }
+    },
+    {
+      "id": "craft-corner",
+      "name": "Craft Corner",
+      "desc": "4 pairs",
+      "difficulty": 2,
+      "journeyBadge": "badges/craft-corner/v1",
+      "parts": {
+        "pairs": 4
+      }
+    },
+    {
+      "id": "sports-yard",
+      "name": "Sports Yard",
+      "desc": "5 pairs",
+      "difficulty": 3,
+      "journeyBadge": "badges/sports-yard/v1",
+      "parts": {
+        "pairs": 5
+      }
+    },
+    {
+      "id": "lava-land",
+      "name": "Lava Land",
+      "desc": "5 pairs",
+      "difficulty": 3,
+      "journeyBadge": "badges/lava-land/v1",
+      "parts": {
+        "pairs": 5
+      }
+    },
+    {
+      "id": "deep-space",
+      "name": "Deep Space",
+      "desc": "6 pairs",
+      "difficulty": 4,
+      "journeyBadge": "badges/deep-space/v1",
+      "parts": {
+        "pairs": 6
+      }
+    },
+    {
+      "id": "crystal-cave",
+      "name": "Crystal Cave",
+      "desc": "6 pairs",
+      "difficulty": 4,
+      "journeyBadge": "badges/crystal-cave/v1",
+      "parts": {
+        "pairs": 6
+      }
+    },
+    {
+      "id": "star-voyage",
+      "name": "Star Voyage",
+      "desc": "6 pairs",
+      "difficulty": 4,
+      "journeyBadge": "badges/star-voyage/v1",
+      "parts": {
+        "pairs": 6
+      }
+    },
+    {
+      "id": "gem-gauntlet",
+      "name": "Gem Gauntlet",
+      "desc": "6 pairs",
+      "difficulty": 4,
+      "journeyBadge": "badges/gem-gauntlet/v1",
+      "parts": {
+        "pairs": 6
+      }
+    }
+  ]
+}
