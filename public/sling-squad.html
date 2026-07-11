@@ -527,13 +527,14 @@ function drawBg(){
     var g=ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0,"#a6d8ef"); g.addColorStop(0.62,"#cdeecb"); g.addColorStop(1,"#d9f0d1");
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    drawPaintedClouds(P.px*0.05, P.t);
-    bgLayer(BGART.hills, W*1.06, 486, P.px*0.04);
-    bgLayer(BGART.trees, W*1.02, 524, P.px*0.07);
+    // scene is STATIC (no pull-parallax) so the ground never slides under the platform
+    drawPaintedClouds(0, P.t);                              // clouds drift on their own (time only)
+    bgLayer(BGART.hills, W*1.06, 486, 0);
+    bgLayer(BGART.trees, W*1.02, 524, 0);
     drawPlatform();
     ctx.fillStyle="#773f08"; ctx.fillRect(0,545,W,H-545);   // SOLID DIRT below the grass floor
     ctx.fillStyle="#92500a"; ctx.fillRect(0,545,W,40);      // lighter topsoil band
-    bgLayer(BGART.ground, W*1.04, null, P.px*0.10, 516);    // grass-edge strip on top
+    bgLayer(BGART.ground, W*1.04, null, 0, 516);            // grass-edge strip on top
     return;
   }
   var _sc=curScene(), img=(_sc&&(_sc.naturalWidth||_sc.width))?_sc:BG_IMGS[th.bg];
