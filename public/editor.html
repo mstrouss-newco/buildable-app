@@ -117,6 +117,10 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
   <div class="section-label">Whole-game art (badges, menus, music)</div>
   <div class="card"><div class="slots" id="slots"></div></div>
 
+  <div class="section-label" id="worldsLabel" style="display:none;">Worlds (art per world)</div>
+  <div class="hint" id="worldsHint" style="display:none;margin:-2px 2px 10px;">Each world's own backgrounds, characters, and board colours. Drop in art applies to that world everywhere it's used.</div>
+  <div id="worlds" style="display:none;"></div>
+
   <div class="section-label" id="levelsLabel">Levels</div>
   <div class="hint" id="levelsHint" style="margin:-2px 2px 10px;"></div>
   <div id="levels"></div>
@@ -237,11 +241,16 @@ function renderAll(){
   document.getElementById("levelsLabel").style.display = levelBased?"":"none";
   document.getElementById("addBtn").style.display = (levelBased && hasLayout())?"":"none";
   document.getElementById("levels").style.display = levelBased?"":"none";
+  var wcfg=WORLD_ART[state.game];
+  document.getElementById("worldsLabel").style.display=wcfg?"":"none";
+  document.getElementById("worldsHint").style.display=wcfg?"":"none";
+  document.getElementById("worlds").style.display=wcfg?"":"none";
+  if(wcfg) renderWorlds();
   var hint=document.getElementById("levelsHint");
   if(hint) hint.textContent = levelBased ? "Each level's own art. Drop in art on a level changes only that level." : "";
   if(levelBased) renderLevels();
 }
-function loadLib(){ return fetch("/api/asset-studio?manifest=1&game="+encodeURIComponent(state.game)+"&v="+Date.now()).then(function(r){return r.json();}).then(function(j){ state.lib=(j&&j.assets)||[]; if(!state.board) renderLevels(); }).catch(function(){ state.lib=state.lib||[]; }); }
+function loadLib(){ return fetch("/api/asset-studio?manifest=1&game="+encodeURIComponent(state.game)+"&v="+Date.now()).then(function(r){return r.json();}).then(function(j){ state.lib=(j&&j.assets)||[]; if(!state.board) renderLevels(); if(WORLD_ART[state.game]) renderWorlds(); }).catch(function(){ state.lib=state.lib||[]; }); }
 function hasLayout(){ return state.game==="breaker" || (state.manifest.levels && state.manifest.levels[0] && state.manifest.levels[0].layout && window.BuildableManifest && window.BuildableManifest.TPL); }
 
 function renderSlots(){
@@ -350,7 +359,8 @@ function worldSlotControl(lv, slot){
   ]);
   wrap.appendChild(thumb); wrap.appendChild(info); return wrap;
 }
-function dropInWorld(lv, slot, refresh){
+function dropInWorld(lv, slot, refresh){ dropInWorldKey(levelWorld(lv), slot, refresh, lv); }
+function dropInWorldKey(worldKey, slot, refresh, lv){
   var inp=el("input",{type:"file", accept:"image/*"});
   inp.addEventListener("change", function(){
     var f=inp.files&&inp.files[0]; if(!f) return;
@@ -359,13 +369,45 @@ function dropInWorld(lv, slot, refresh){
       BuildableSlicer.loadImage(rd.result).then(function(img){
         var spec=Object.assign({key:slot.key}, slot.spec);
         var pieces=BuildableSlicer.sliceSheet(img, spec);
-        MODAL={pieces:pieces, spec:spec, theme:levelWorld(lv), mode:"world", lv:lv, slot:slot, cb:refresh};
+        MODAL={pieces:pieces, spec:spec, theme:worldKey, mode:"world", lv:lv||null, slot:slot, cb:refresh};
         showPiecesModal();
       }).catch(function(e){ alert("Could not read that image."); });
     };
     rd.readAsDataURL(f);
   });
   inp.click();
+}
+// Per-world art control (drop-in only; the world auto-loads whatever art it has).
+function worldArtControl(worldKey, slot){
+  var wrap=el("div",{class:"asset part"});
+  var thumb=el("div",{class:"athumb"});
+  var idline=el("div",{class:"aid"});
+  function refresh(){ var hit=(state.lib||[]).filter(function(a){ return a.slug.indexOf("/"+slot.key+"/"+worldKey+"/")>-1; })[0];
+    thumb.style.backgroundImage=hit?("url('"+hit.url+"')"):""; idline.textContent=hit?"custom art":"(using built-in)"; }
+  refresh();
+  var info=el("div",{class:"ainfo"},[ el("div",{class:"aslot"},[slot.label]), idline,
+    el("div",{class:"arow"},[ el("button",{class:"btn sm", onclick:function(){ dropInWorldKey(worldKey, slot, refresh, null); }},["Drop in art"]) ]) ]);
+  wrap.appendChild(thumb); wrap.appendChild(info); return wrap;
+}
+function renderWorlds(){
+  var cfg=WORLD_ART[state.game]; var host=document.getElementById("worlds"); if(!cfg||!host) return; host.innerHTML="";
+  var worlds=worldsOf(state.manifest);
+  state.manifest.worldArt=state.manifest.worldArt||{};
+  worlds.forEach(function(w){
+    var card=el("div",{class:"level"});
+    card.appendChild(el("div",{style:"font-weight:700;margin-bottom:8px;"},[w.name]));
+    var parts=el("div",{class:"parts"});
+    cfg.slots.forEach(function(slot){ parts.appendChild(worldArtControl(w.key, slot)); });
+    card.appendChild(parts);
+    if(cfg.board){
+      var wa=state.manifest.worldArt[w.key]||{};
+      var li=el("input",{type:"color", value:wa.light||"#e8e0c8", onchange:function(){ var o=state.manifest.worldArt[w.key]=state.manifest.worldArt[w.key]||{}; o.light=li.value; setDirty(); }});
+      var di=el("input",{type:"color", value:wa.dark||"#9b8f6b", onchange:function(){ var o=state.manifest.worldArt[w.key]=state.manifest.worldArt[w.key]||{}; o.dark=di.value; setDirty(); }});
+      card.appendChild(el("div",{class:"parts", style:"margin-top:10px;align-items:center;gap:8px;"},[
+        el("span",{class:"fieldlbl"},["Board look:"]), el("span",{class:"aslot"},["Light"]), li, el("span",{class:"aslot"},["Dark"]), di ]));
+    }
+    host.appendChild(card);
+  });
 }
 function pickLibraryWorld(lv, slot, refresh){
   document.getElementById("mtitle").textContent="Library — "+slot.label;
@@ -429,7 +471,7 @@ function mKeep(){
     .then(function(r){ return r.json(); })
     .then(function(j){
       if(!j || !j.count){ throw new Error((j&&j.error)||"save failed"); }
-      if(MODAL.mode==="world"){ MODAL.lv.parts=MODAL.lv.parts||{}; MODAL.lv.parts.world=theme; return "world"; }
+      if(MODAL.mode==="world"){ if(MODAL.lv){ MODAL.lv.parts=MODAL.lv.parts||{}; MODAL.lv.parts.world=theme; } return "world"; }
       // For a sheet an engine runtime-slices, also keep one clean recomposed grid sheet
       // and point the slot at it. For a single, point at the one saved piece.
       if(spec.mode==="sheet"){

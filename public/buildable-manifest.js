@@ -307,7 +307,7 @@
           if(key) worlds.push({ key:key, name:(o.name||key), price:(o.price||0) });
         });
       });
-      return { id:m.id, name:m.name, color:m.color, tiers:levels, worlds:worlds, levels:levels, _manifest:m };
+      return { id:m.id, name:m.name, color:m.color, tiers:levels, worlds:worlds, worldArt:(m.worldArt||{}), levels:levels, _manifest:m };
     },
     resolveAsset: function(){ return null; }   // chess maps its own art keys
   };
@@ -353,7 +353,7 @@
           if(key) worlds.push({ key:key, name:(o.name||key), price:(o.price||0) });
         });
       });
-      return { id:m.id, name:m.name, color:m.color, tiers:levels, worlds:worlds, levels:levels, _manifest:m };
+      return { id:m.id, name:m.name, color:m.color, tiers:levels, worlds:worlds, worldArt:(m.worldArt||{}), levels:levels, _manifest:m };
     },
     resolveAsset: function(){ return null; }   // board engines map their own art keys
   };

@@ -367,6 +367,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 </div></div>
 
 <script src="/buildable-manifest.js"></script>
+<script src="/buildable-worlds.js"></script>
 <script>
 /* ================= ENGINE (validated to perft4 + Kiwipete) ================= */
 function startState(){
@@ -548,7 +549,8 @@ const SCENES={
 const SCENE_KEYS=Object.keys(SCENES);
 function applyScene(key){
   const sc=SCENES[key];const r=document.documentElement.style;
-  r.setProperty('--light',sc.light);r.setProperty('--dark',sc.dark);
+  const wa=(CHESS_WORLDART&&CHESS_WORLDART[key])||{};
+  r.setProperty('--light',wa.light||sc.light);r.setProperty('--dark',wa.dark||sc.dark);
   r.setProperty('--pageA',sc.pageA);r.setProperty('--pageB',sc.pageB);
 }
 function clearAmbient(){document.getElementById('ambient').innerHTML='';}
@@ -565,11 +567,12 @@ function setLayer(id,url){
   el.style.backgroundImage="url('"+url+"')";
   el.classList.add('on');
 }
+function chessArtUrl(key, slot){ try{ if(CHESS_PACK && CHESS_PACK.hasWorld && CHESS_PACK.hasWorld(key)){ var l=CHESS_PACK.list(slot,key); if(l && l.length && l[0].img) return l[0].img.src; } }catch(e){} return null; }
 function buildWorld(key){
   const sc=SCENES[key];
   applyScene(key);
-  setLayer('world-bg','chess-art/'+key+'_bg.jpg?v=2');
-  setLayer('world-fg','chess-art/'+key+'_fg.jpg?v=2');
+  setLayer('world-bg', chessArtUrl(key,'background') || ('chess-art/'+key+'_bg.jpg?v=2'));
+  setLayer('world-fg', chessArtUrl(key,'foreground') || ('chess-art/'+key+'_fg.jpg?v=2'));
   document.getElementById('world-rays').style.display = sc.rays?'block':'none';
   buildParticles(sc.amb);
 }
@@ -760,8 +763,9 @@ function renderPieces(){
     const d=disp(r,c);
     const el=document.createElement('div');
     el.className='piece';el.style.left=pct(d.dc);el.style.top=pct(d.dr);
-    if(AIWORLDS[sceneKey]){
-      const url='/api/images?kind=chesspiece&world='+sceneKey+'&piece='+p.t;
+    var _pc=null; try{ if(CHESS_PACK && CHESS_PACK.hasWorld && CHESS_PACK.hasWorld(sceneKey)){ var _pp=CHESS_PACK.piece('pieces', p.t, sceneKey); if(_pp && _pp.src) _pc=_pp.src; } }catch(e){}
+    if(_pc || AIWORLDS[sceneKey]){
+      const url=_pc || ('/api/images?kind=chesspiece&world='+sceneKey+'&piece='+p.t);
       el.innerHTML='<div class="pbase '+(p.c==='w'?'tw':'tb')+'"></div><div class="pfallback">'+withBadge(pieceSVG(p.t,p.c,sceneKey),p.t)+'</div><img class="paimg" alt="" onload="this.parentNode.classList.add(\'img-on\')" src="'+url+'">';
     } else {
       el.innerHTML=withBadge(pieceSVG(p.t,p.c,sceneKey),p.t);
@@ -1147,6 +1151,8 @@ const DIFFS=[['easy','Easy','Just learning'],['medium','Medium','A real game'],[
 /* ===== Manifest (Session 7B): opponent tiers + worlds read from /chess/manifest.json, with full fallback ===== */
 // Built-in DIFFS/SCENES stay as the fallback so a manifest miss or outage can never
 // break the game (AGENTS.md: read on render, always with a fallback).
+var CHESS_PACK=null;            // shared library art per world (drop-in backgrounds/pieces)
+var CHESS_WORLDART={};          // per-world board look (light/dark) from the manifest
 let DIFF_TIERS = DIFFS.map(function(d){ return {bot:d[0], name:d[1], desc:d[2]}; });
 let WORLD_KEYS = SCENE_KEYS.slice();
 (function loadChessManifest(){
@@ -1161,11 +1167,18 @@ let WORLD_KEYS = SCENE_KEYS.slice();
         var keys = cfg.worlds.map(function(w){return w.key;}).filter(function(k){return SCENES[k];});
         if(keys.length){ WORLD_KEYS = keys; if(WORLD_KEYS.indexOf(sceneKey)<0) sceneKey = WORLD_KEYS[0]; }
       }
+      CHESS_WORLDART = (cfg && cfg.worldArt) || {};
+      try{ if(document.body.classList.contains('in-game')){ applyScene(sceneKey); } }catch(e){}
       // if the setup screen is already open, redraw the grids from the manifest
       try{ var st=document.getElementById('s-setup'); if(st && st.classList && st.classList.contains('on')){ buildSceneGrid(); buildDiffGrid(); } }catch(e){}
     }, function(){ /* manifest missing/invalid -> keep the built-in fallback (never breaks) */ });
   }catch(e){}
 })();
+// Load per-world drop-in art (backgrounds / foreground / pieces) from the shared library.
+// Everything below falls back to the built-in chess-art files + /api/images + drawn SVG,
+// so a library miss or outage can never break the game.
+try{ if(window.BuildableWorlds) BuildableWorlds.load('chess', function(pk){ CHESS_PACK=pk;
+  try{ if(document.body.classList.contains('in-game')){ buildWorld(sceneKey); renderPieces(); } }catch(e){} }); }catch(e){}
 function buildDiffGrid(){
   const g=document.getElementById('diff-grid');g.innerHTML='';
   DIFF_TIERS.forEach(t=>{const k=t.bot,nm=t.name,ds=t.desc;

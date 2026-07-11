@@ -1,5 +1,29 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on 2 — Chess editable per-world art
+
+Owner wants to edit each game's real art (not just menu slots): change a world's background and
+add his own characters. Chess first. Chess picks WORLDS as a separate axis (jungle/ocean/space/
+candy/castle/desert) and loaded art from fixed files + an image API, so it needed both an editor
+section and engine wiring.
+
+- **Editor (`editor.html`).** New "Worlds (art per world)" section for Chess: one card per world
+  with Drop in art for Background, Foreground, and Pieces (characters; a 6-piece sheet named
+  k/q/r/b/n/p), plus Light/Dark board-colour pickers. Backgrounds/pieces save to the shared
+  library under that world; board colours save into the manifest (`worldArt`).
+- **Chess engine (`buildable-chess.html`).** Now includes `buildable-worlds.js` and reads its art
+  per world from the shared library with FULL fallback: `buildWorld` uses a library background/
+  foreground if present else the `chess-art/*.jpg` files; piece render prefers a library piece for
+  the world+type else `/api/images` else the drawn SVG; `applyScene` uses per-world `worldArt`
+  light/dark if set else the built-in SCENES. A library miss or outage can never break the game.
+- **Manifest.** Chess profile passes `worldArt` through to the engine config.
+- **QA.** `qa-chess` + `qa-sling` + `qa-breaker` ALL CHECKS PASS (all changes additive/guarded).
+  Live per-world drop-in is Mike's on-device check. Rollout continues game by game; only Breaker,
+  Sling, Survival use the shared art system today, the other engines each need the same wiring.
+
+Files: `public/editor.html`, `public/buildable-chess.html`, `public/buildable-manifest.js`,
+`SESSION-LOG.md`.
+
 ## 2026-07-11: One front door — retire the legacy dark Games picker + fix back-nav
 
 Bug (owner report): pressing Home/back from inside a game landed a kid on the OLD dark
