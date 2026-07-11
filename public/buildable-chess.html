@@ -1322,6 +1322,27 @@ if(new URLSearchParams(location.search).get('online')){
 if(new URLSearchParams(location.search).get('guest')){
   ['btn-quit','btn-tomenu'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
 }
+// Session 7E: the shell's single landing owns mode + difficulty and hands them here
+// as ?start=solo&bot=<easy|medium|hard>&world=<key> (Solo) or ?start=local (Same
+// device / pass-and-play). Additive — with no ?start param the engine shows its own
+// menu exactly as before (retiring that menu is a later session). Online/guest links
+// keep their own bootstrap above and are ignored here.
+(function(){
+  try{
+    var q=new URLSearchParams(location.search);
+    var st=q.get('start');
+    if(!st || q.get('online') || q.get('guest')) return;
+    if(st==='solo'){
+      mode='solo';
+      var b=q.get('bot'); if(b) difficulty=b;
+      var w=q.get('world'); if(w && SCENES[w]) sceneKey=w;
+    } else if(st==='local' || st==='two'){
+      mode='two';
+      var w2=q.get('world'); if(w2 && SCENES[w2]) sceneKey=w2;
+    } else { return; }
+    startGame();
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
