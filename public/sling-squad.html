@@ -531,7 +531,9 @@ function drawBg(){
     bgLayer(BGART.hills, W*1.06, 486, P.px*0.04);
     bgLayer(BGART.trees, W*1.02, 524, P.px*0.07);
     drawPlatform();
-    bgLayer(BGART.ground, W*1.04, null, P.px*0.10, 516);
+    ctx.fillStyle="#773f08"; ctx.fillRect(0,545,W,H-545);   // SOLID DIRT below the grass floor
+    ctx.fillStyle="#92500a"; ctx.fillRect(0,545,W,40);      // lighter topsoil band
+    bgLayer(BGART.ground, W*1.04, null, P.px*0.10, 516);    // grass-edge strip on top
     return;
   }
   var _sc=curScene(), img=(_sc&&(_sc.naturalWidth||_sc.width))?_sc:BG_IMGS[th.bg];
