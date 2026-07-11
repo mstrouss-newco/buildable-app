@@ -173,7 +173,7 @@ async function runExhibit(exhibit) {
   const fakeParent = { postMessage: (msg) => postedMessages.push(msg) };
   const sandbox = {
     document: documentStub,
-    Image: class { constructor() { this.width = 0; this.height = 0; } set src(v) { this._src = v; } get src() { return this._src; } },
+    Image: class { constructor() { this.width = 0; this.height = 0; this.style = {}; this.alt = ""; } set src(v) { this._src = v; } get src() { return this._src; } },
     Audio: class { constructor(s) { this._s = s; } set src(v) { this._src = v; } play() { return Promise.reject(new Error('no clip')); } pause() {} },
     speechSynthesis: { cancel() {}, speak(u) { spoken.push(u); } },
     SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } },

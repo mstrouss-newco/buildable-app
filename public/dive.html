@@ -274,13 +274,15 @@ function shapeFor(c) { return SHAPES[c.shape] || SHAPES.blob; }
 // Art-slot url (same convention as the orbit template): a value with a slash is a
 // real static asset served as {path}.webp with a {path}.jpg fallback; a flat id is
 // resolved through the shared /api/images pipeline. assetVersion busts the cache.
-function creatureArtUrl(c, ext) {
-  const art = c.art || "";
+function artBaseUrl(art, suffix, ext) {
   const v = (DATA && DATA.assetVersion) ? "?v=" + encodeURIComponent(DATA.assetVersion) : "";
-  if (art.indexOf("/") !== -1) return "/" + art + "." + (ext || "webp") + v;
-  return "/api/images?kind=explore&id=" + encodeURIComponent(art);
+  if (/^https?:\/\//.test(art)) return art + suffix + "." + (ext || "webp") + v;      // absolute (preview)
+  if (art.indexOf("/") !== -1) return "/" + art + suffix + "." + (ext || "webp") + v;    // static slot in public/
+  return "/api/images?kind=explore&id=" + encodeURIComponent(art);                        // generative id
 }
-function isRealStaticArt(c) { return (c.art || "").indexOf("/") !== -1; }
+function creatureArtUrl(c, ext) { return artBaseUrl(c.art || "", "", ext); }
+function frameUrl(c, i, ext) { return artBaseUrl(c.art || "", "-" + i, ext); }
+function isRealStaticArt(c) { const a = c.art || ""; return a.indexOf("/") !== -1 || /^https?:/.test(a); }
 
 fetch("/explore/" + encodeURIComponent(EXHIBIT_ID) + ".json", { cache: "no-store" })
   .then((r) => { if (!r.ok) throw new Error("missing"); return r.json(); })
@@ -404,15 +406,42 @@ function data_finish() { return (DATA && DATA.finish) ? DATA.finish : null; }
 // keep the drawing if the slot is empty or the file never resolves.
 function loadCreatureArt(c, holder) {
   if (!c.art) return;
+  const dispH = c.artH || 68;
+  // Animated art: a creature can carry `frames` (e.g. 3), served as {slot}-1..N.webp.
+  // The frames stack and cross-fade in a gentle loop; a missing set keeps the SVG.
+  if (c.frames && c.frames > 1) {
+    const wrap = document.createElement("span");
+    wrap.style.display = "inline-block"; wrap.style.position = "relative"; wrap.style.fontSize = "0";
+    const imgs = []; let shown = false, failed = false;
+    for (let i = 1; i <= c.frames; i++) {
+      (function (i) {
+        const im = new Image();
+        im.alt = ""; im.style.height = dispH + "px"; im.style.width = "auto"; im.style.display = "block";
+        im.style.transition = "opacity .12s linear";
+        if (i > 1) { im.style.position = "absolute"; im.style.left = "0"; im.style.top = "0"; im.style.opacity = "0"; }
+        im.onload = () => { if (!shown && !failed) { shown = true; try { holder.innerHTML = ""; holder.appendChild(wrap); } catch (e) {} startFrameCycle(imgs); } };
+        im.onerror = () => { if (/\.webp(\?|$)/.test(im.src)) { im.src = frameUrl(c, i, "jpg"); return; } failed = true; };
+        im.src = frameUrl(c, i, "webp");
+        imgs.push(im); wrap.appendChild(im);
+      })(i);
+    }
+    return;
+  }
   const img = new Image();
-  img.width = c.artW || 78; img.height = c.artH || 58;
-  img.alt = "";
+  img.alt = ""; img.style.height = dispH + "px"; img.style.width = "auto"; img.style.display = "block";
   img.onload = () => { try { holder.innerHTML = ""; holder.appendChild(img); } catch (e) {} };
-  img.onerror = () => {
-    if (isRealStaticArt(c) && /\.webp(\?|$)/.test(img.src)) { img.src = creatureArtUrl(c, "jpg"); return; }
-    // drawn SVG fallback already showing, nothing more to do
-  };
+  img.onerror = () => { if (isRealStaticArt(c) && /\.webp(\?|$)/.test(img.src)) { img.src = creatureArtUrl(c, "jpg"); return; } };
   img.src = creatureArtUrl(c, "webp");
+}
+function startFrameCycle(imgs) {
+  if (!imgs || imgs.length < 2) return;
+  let idx = 0;
+  setInterval(() => {
+    if (document.body.classList.contains("paused")) return; // freeze during the quiz gate
+    imgs[idx].style.opacity = "0";
+    idx = (idx + 1) % imgs.length;
+    imgs[idx].style.opacity = "1";
+  }, 400);
 }
 
 function escapeHtml(s) { return (s || "").replace(/[&<>"\']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "\'": "&#39;" }[c])); }
