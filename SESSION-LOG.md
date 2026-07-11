@@ -1,5 +1,27 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on 5 — Memory editable art + editor fix
+
+Fifth game (owner: Memory) plus an important editor bug fix found while wiring it.
+
+- **BUG FIX (editor).** The Chess follow-on's editor edit had silently no-op'd its `WORLD_ART`
+  config + `worldsOf` insertion (anchor mismatch), so `editor.html` REFERENCED `WORLD_ART` in
+  `renderAll` without ever defining it -> the editor threw at load for every game since that
+  deploy. Restored `var WORLD_ART` (Memory + Chess) and `function worldsOf`. Verified by a
+  headless load of the editor script (no undefined-reference; `WORLD_ART` = memory,chess;
+  `worldsOf` returns the 6 themes; `LEVEL_ART` = sling,bubble,survival).
+- **Memory engine (`memory-engine.html`).** Includes `buildable-worlds.js`; per-theme drop-in
+  art via the shared library: `applyLibFaces()` fills `FACE_IMG[theme:index]` from each theme's
+  `faces` (sorted), and `draw()` paints a per-theme `background` image over the gradient when
+  present. Guarded, with fallback to the existing `/api/list-assets` faces and the drawn shapes.
+- **Editor.** Memory gets a Worlds section (its 6 themes) with Card faces (a 3x4 sheet) + a
+  Background drop-in per theme.
+- **QA.** `qa-memory` ALL CHECKS PASS. Fully editable now: Breaker, Sling, Chess, Survival,
+  Bubble, Memory. **Note:** the editor fix should reach production; the earlier Chess deploy
+  shipped a broken editor.
+
+Files: `public/editor.html`, `public/memory-engine.html`, `SESSION-LOG.md`.
+
 ## 2026-07-11: Session 4B follow-on 4 — Bubble editable per-level art
 
 Fourth game in the rollout (owner: Bubble). Bubble drew a plain gradient background and used the

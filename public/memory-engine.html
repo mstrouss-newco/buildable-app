@@ -56,6 +56,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-levelthumb.js"></script>
 <script src="buildable-turns.js"></script>
 <script src="buildable-manifest.js"></script>
+<script src="buildable-worlds.js"></script>
 <script>
 //  Buildable Memory/Match — hand-authored Track B engine.
 //  A game = this FIXED engine + GAME_CONFIG (data). Solo or 2-4 players, pass-and-play.
@@ -113,6 +114,10 @@ let lockUntil=0;                       // ms timestamp: input locked while a mis
 let nowMs=0, headless=false;
 let PREFS={ players:2, solo:false, sizeIdx:1, themeIdx:0 };
 const FACE_IMG={};                     // faceKey -> HTMLImageElement (library art; optional)
+var LIB_PACK=null;                     // drop-in art per theme (Asset Studio), fallback to drawn faces
+function applyLibFaces(){ if(!LIB_PACK) return; try{ GAME_CONFIG.themes.forEach(function(t){ var l=LIB_PACK.list("faces",t.key).slice().sort(function(a,b){return a.name<b.name?-1:(a.name>b.name?1:0);}); l.forEach(function(x,i){ if(i<12 && x.img) FACE_IMG[t.key+":"+i]=x.img; }); }); }catch(e){} }
+function themeBg(key){ try{ if(LIB_PACK){ var l=LIB_PACK.list("background",key); if(l[0]&&l[0].img) return l[0].img; } }catch(e){} return null; }
+try{ if(window.BuildableWorlds) BuildableWorlds.load("memory", function(p){ LIB_PACK=p; applyLibFaces(); }); }catch(e){}
 let fx = BM?BM.makeFx():{parts:[],pops:[],shake:0,flash:0,flashCol:"#fff"};
 let amb=[];                            // ambient particles
 let cv, ctx, W=0, H=0, DPR=1;
@@ -152,7 +157,7 @@ function build(){
   faceUp=[]; lockUntil=0;
   match=BT.create({ count: PREFS.solo?1:PREFS.players,
     onWin:(p)=>{ if(BA)BA.sfx("win"); if(BM){ for(let i=0;i<4;i++) BM.explode(fx, W*(0.2+0.2*i), H*0.4, theme.color, {n:16,pop:i===0?"You win!":""}); } } });
-  loadThemeArt(theme);
+  loadThemeArt(theme); applyLibFaces();
   makeAmbient(theme);
   state="play";
 }
@@ -257,6 +262,7 @@ function draw(){
   // backdrop
   const grad=ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0,"#16142e"); grad.addColorStop(1,theme.color);
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  var _bgw=themeBg(theme.key); if(_bgw && (_bgw.naturalWidth||_bgw.width)){ ctx.drawImage(_bgw,0,0,W,H); }
   // ambient
   ctx.save(); for(const p of amb){ ctx.globalAlpha=0.25+0.35*(0.5+0.5*Math.sin(p.tw)); ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(p.x*W,p.y*H,p.r,0,7); ctx.fill(); } ctx.restore();
 

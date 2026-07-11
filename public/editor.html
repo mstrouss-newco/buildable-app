@@ -190,6 +190,26 @@ var LEVEL_ART = {
   }
 };
 
+// Games where the player picks a WORLD (a separate axis from levels), each world with its
+// own art. Chess: 6 worlds (background/foreground/pieces + board colours). Memory: 6 themes
+// (card faces + background).
+var WORLD_ART = {
+  memory: { board:false, slots:[
+    {key:"faces", label:"Card faces (characters)", spec:{mode:"sheet",role:"sprite",rows:["r1","r2","r3"],cols:["c1","c2","c3","c4"]}},
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}}
+  ] },
+  chess: { board:true, slots:[
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
+    {key:"foreground", label:"Foreground", spec:{mode:"single",role:"sprite"}},
+    {key:"pieces", label:"Pieces (characters)", spec:{mode:"sheet",role:"sprite",rows:["k","q","r","b","n","p"],cols:["x"]}}
+  ] }
+};
+function worldsOf(m){
+  var out=[]; (m.customization||[]).forEach(function(slot){ if(slot && /world/i.test(slot.slot||"")) (slot.options||[]).forEach(function(o){ var k=String(o.asset||"").split("/").pop(); if(k) out.push({key:k, name:o.name||k}); }); });
+  if(!out.length) ["jungle","ocean","space","candy","castle","desert"].forEach(function(k){ out.push({key:k,name:k}); });
+  return out;
+}
+
 // Slicing specs per game slot (mode + grid). Anything not listed defaults to a single image.
 var SLOT_SPECS = {
   breaker:{ background:{mode:"single",role:"background"},
