@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: de-cluttered scene + painted clouds + planted platform (July 11 2026)
+
+Reworked the parallax scene after feedback that it was too busy and the slingshot floated. Dropped
+the heavy foreground bush layer. Now: sky gradient + Mike's painted 3D CLOUDS (cut from white via
+low-threshold floodfill, drifting) + far hills + a moderate treeline + ground strip. The old
+stump base was replaced by Mike's new flat grassy PLATFORM (`bg/platform.png`), drawn in drawBg
+BEFORE the ground so the ground hides its base = planted on the ground, not floating; the slingshot
+sits on it. New drawPlatform() + drawPaintedClouds(); cloud sprites cut to `bg/cloud1..4.png`.
+Layout was QA'd as a faithful scale mock before shipping. qa-sling green.
+
 ## Sling Squad: painted 3D parallax background + slingshot base (July 11 2026)
 
 Replaced the flat cartoon backdrop with a layered painted scene (our art) matching the 3D

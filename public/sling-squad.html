@@ -507,18 +507,31 @@ function bgLayer(img,width,bottom,shift,top){
   var y=(top!==undefined&&top!==null)? top : (bottom-nh);
   ctx.drawImage(img,x,y,nw,nh);
 }
+function drawPlatform(){
+  var p=BGART.platform; if(!p||!(p.naturalWidth||p.width)) return;
+  var pw=235, ph=(p.naturalHeight||p.height)*(pw/(p.naturalWidth||p.width));
+  ctx.drawImage(p, AX-pw/2, 452, pw, ph);          // planted: base hidden by the ground layer
+}
+function drawPaintedClouds(shift,t){
+  var span=W+420, drift=(t*8)%span;
+  var cs=[["cloud1",250,52,0],["cloud2",300,40,430],["cloud3",230,92,820]];
+  for(var i=0;i<cs.length;i++){ var im=BGART[cs[i][0]]; if(!im||!(im.naturalWidth||im.width)) continue;
+    var cw=cs[i][1], ch=(im.naturalHeight||im.height)*(cw/(im.naturalWidth||im.width));
+    var x=((cs[i][3]+drift)%span)-210 + (shift||0);
+    ctx.drawImage(im, x-cw/2, cs[i][2], cw, ch); }
+}
 function drawBg(){
   var th=themeFor(level), P=bgParallax();
-  // painted parallax scene (our art): sky + clouds + hills + trees + ground + bushes
+  // painted 3D scene (our art): sky + drifting clouds + hills + treeline + platform + ground
   if(BGART.ground&&(BGART.ground.naturalWidth||BGART.ground.width)){
     var g=ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0,"#a6d8ef"); g.addColorStop(0.62,"#cdeecb"); g.addColorStop(1,"#d9f0d1");
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    drawClouds(P.px*0.06, P.t);
-    bgLayer(BGART.hills,  W*1.06, 470, P.px*0.04);
-    bgLayer(BGART.trees,  W*1.02, 488, P.px*0.07);
-    bgLayer(BGART.ground, W*1.02, null, 0, 524);
-    bgLayer(BGART.bushes, W*1.04, 568, P.px*0.12);
+    drawPaintedClouds(P.px*0.05, P.t);
+    bgLayer(BGART.hills, W*1.06, 486, P.px*0.04);
+    bgLayer(BGART.trees, W*1.02, 524, P.px*0.07);
+    drawPlatform();
+    bgLayer(BGART.ground, W*1.04, null, P.px*0.10, 516);
     return;
   }
   var _sc=curScene(), img=(_sc&&(_sc.naturalWidth||_sc.width))?_sc:BG_IMGS[th.bg];
@@ -531,11 +544,6 @@ function drawBg(){
   drawGround(th);
 }
 function drawSling(){
-  // painted mound/stump base so the slingshot is planted, not floating
-  if(BGART.base&&(BGART.base.naturalWidth||BGART.base.width)){
-    var biw=BGART.base.naturalWidth||BGART.base.width, bih=BGART.base.naturalHeight||BGART.base.height;
-    var bw=210, bh=bih*(bw/biw); ctx.drawImage(BGART.base, AX-bw/2, 560-bh, bw, bh);
-  }
   // painted wooden slingshot (our art); the drawn Y below is the never-break fallback
   if(SLINGSHOT&&(SLINGSHOT.naturalWidth||SLINGSHOT.width)){
     var dh=SLING_DW*SLINGSHOT.height/SLINGSHOT.width;
@@ -830,7 +838,7 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
     ["idle","bonked","poof"].forEach(function(st){
       L("/sling/targets/"+m+"_"+st+".png?v=2",function(im){ TARGETS_ART[i][st]=im; }); }); });
   L("/sling/slingshot.png?v=2",function(im){ SLINGSHOT=im; });
-  ["hills","trees","bushes","ground","base"].forEach(function(k){ L("/sling/bg/"+k+".png?v=1",function(im){ BGART[k]=im; }); });
+  ["hills","trees","ground","platform","cloud1","cloud2","cloud3","cloud4"].forEach(function(k){ L("/sling/bg/"+k+".png?v=1",function(im){ BGART[k]=im; }); });
   // per-level scene backdrops (Background Elements Remastered)
   ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
     L("/kenney/sling/bg/"+k+".webp",function(im){ BG_IMGS[k]=im; }); });
