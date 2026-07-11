@@ -171,6 +171,7 @@
         colors: (Array.isArray(lv.colors) && lv.colors.length) ? lv.colors : ["#8fd0ff","#7ee0a0","#ff9ec4"],
         foes: parts.foes || [],
         boss: t.boss,
+        world: parts.world || null,                 // per-level art world (hero/enemies/boss/bg); null = whole-game set
         bossKey: parts.boss || "enemy_rock",
         bossName: lv.bossName || "Boss",
         bgKey: (parts.bgKey != null ? parts.bgKey : 1),

@@ -170,7 +170,20 @@ var LEVEL_ART = {
     {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
     {key:"pals", label:"Helpers", spec:{mode:"sheet",role:"sprite",rows:["pal_one","pal_two","pal_three","pal_four"],cols:["x"]}},
     {key:"foes", label:"Bad guys", spec:{mode:"sheet",role:"sprite",rows:["foe_one","foe_two","foe_three","foe_four","foe_five"],cols:["x"]}}
-  ]
+  ],
+  // Survival dresses each level from its own world; the bad-guy sheet rows are THIS level's
+  // foe keys, and the boss is a single piece named this level's boss key.
+  survival: function(lv){
+    var parts=lv.parts||{};
+    var foes=(Array.isArray(parts.foes)&&parts.foes.length)?parts.foes:["enemy_one","enemy_two"];
+    var boss=parts.boss||"boss";
+    return [
+      {key:"bg", label:"Background", spec:{mode:"single",role:"background"}},
+      {key:"hero", label:"Hero", spec:{mode:"single",role:"sprite"}},
+      {key:"enemies", label:"Bad guys", spec:{mode:"sheet",role:"sprite",rows:foes,cols:["x"]}},
+      {key:"enemies", label:"Boss", spec:{mode:"single",role:"sprite",prefix:boss}}
+    ];
+  }
 };
 
 // Slicing specs per game slot (mode + grid). Anything not listed defaults to a single image.
@@ -303,9 +316,10 @@ function levelRow(lv, idx, total){
 
   // per-level art: games with a LEVEL_ART set dress each level from its OWN world.
   var la=LEVEL_ART[state.game];
-  if(la){
+  var laSlots = la ? (typeof la==="function" ? la(lv) : la) : null;
+  if(laSlots){
     var parts=el("div",{class:"parts", style:"margin-top:10px;"});
-    la.forEach(function(slot){ parts.appendChild(worldSlotControl(lv, slot)); });
+    laSlots.forEach(function(slot){ parts.appendChild(worldSlotControl(lv, slot)); });
     row.appendChild(parts);
   } else {
     var artParts=Object.keys(lv.parts).filter(function(k){ return typeof lv.parts[k]==="string" && k!=="world"; });

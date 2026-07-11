@@ -1,5 +1,25 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on 3 — Survival editable per-level art
+
+Third game in the editable-art rollout (owner: Survival next). Survival already used the shared
+world loader whole-game; now each level dresses from its OWN world.
+
+- **Survival engine (`survival-engine.html`).** Added `LIB_PACK` + `curWorld()` + `worldCustom()`;
+  `sdGet` (enemies + boss), `drawAnimSprite` (hero + enemies), and `bgFor` (background) now prefer
+  the playing level's own world art, falling back to the whole-game reskin, then the built-in
+  Survival-dalle art / drawn blob. Fully guarded (try/catch, TDZ-safe at warm time), so a level
+  with no `parts.world` behaves exactly as before.
+- **Manifest.** Survival profile passes per-level `world` to the engine config.
+- **Editor (`editor.html`).** `LEVEL_ART` now supports a per-level function; Survival levels show
+  Background, Hero, Bad guys (the sheet rows are THIS level's foe keys), and Boss (a single piece
+  named this level's boss key), each with Drop in art saving to that level's own world.
+- **QA.** `qa-survival` ALL CHECKS PASS (additive/guarded). Live per-level drop-in is Mike's
+  on-device check. Fully editable now: Breaker, Sling, Chess, Survival.
+
+Files: `public/survival-engine.html`, `public/buildable-manifest.js`, `public/editor.html`,
+`SESSION-LOG.md`.
+
 ## 2026-07-11: Session 4B follow-on 2 — Chess editable per-world art
 
 Owner wants to edit each game's real art (not just menu slots): change a world's background and
