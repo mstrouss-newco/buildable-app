@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: painted slingshot + bad guys on all levels (July 11 2026)
+
+Painted wooden slingshot (our art) replaces the drawn Y. `public/sling/slingshot.png` (white bg
+removed by flood fill). `drawSling` draws the image centered on the fork (SLING_DW/SLING_TOP);
+`drawBand` now attaches the elastic at the gold-stud points (FORKLX/Y, FORKRX/Y) measured from the
+art, so the bands line up with the frame and the character nestles in the fork. Alignment was
+verified with a scale mock before wiring. Drawn Y kept as fallback if the image misses. Also
+DROPPED the level-1 gate on the painted bad guys: the 6 monsters (idle/bonked/poof) now render on
+every level (cycled by target index), poof sprite on every pop. qa-sling green.
+
 ## Sling Squad: painted bad guys on level 1 (July 11 2026)
 
 New hand-painted "bad guy" targets (our art) piloted on level 1. A 6-monster x 3-state sheet
