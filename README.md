@@ -3791,3 +3791,11 @@ Kidspedia 3D solar system + Math Cannon shots, earn-to-learn coin economy, exhib
 human-reviewed weekly question factory, one learning ledger + parent dashboard/weekly digest;
 stale Learn blurbs refreshed. Shots captured headlessly (Playwright + local static serve;
 gate bypassed for QA only). Commit: 69d5d07.
+
+## Session log — 2026-07-10b (home page restructure: deck is the north star)
+Home page realigned to the partner deck: builder hero (games live, not "coming soon"),
+problem strip, learning = coin economy + Kidspedia exhibits block (solar system + Saturn
+fly-to shots), arcade honesty pass (fake stats/kid personas removed, 9 real worlds), parents
+copy matches shipped 6B features, pricing now matches deck (Free incl. teachers-forever /
+Premium $5 / AI Creator $10 + learn-to-earn credits). Math Cannon imagery removed everywhere
+until its art is redone (deck figure now Saturn fly-to). See 2026-07-10 entry for shot pipeline.

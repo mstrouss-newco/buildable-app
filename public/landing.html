@@ -485,6 +485,7 @@ h2 {
 /* ═══════════════════════════════════════
    COMMUNITY / ARCADE (cream)
 ═══════════════════════════════════════ */
+@media(max-width:720px){ .edu-shots{grid-template-columns:1fr !important} }
 .section-arcade {
   padding: 120px 24px;
   background: var(--cream);
@@ -2076,20 +2077,21 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   </div>
 
   <h1>
-    <span class="h1-line1">Their imagination</span>
-    <span class="h1-line2">deserves a place to grow.</span>
+    <span class="h1-line1">Kids don't just play games here.</span>
+    <span class="h1-line2">They build them.</span>
   </h1>
 
   <p class="hero-sub">
-    Buildable Kids is the creative studio where children make their own music and stories — then share them and remix each other's creations into something brand new.
+    Buildable Kids is the safe creative studio where children make their own games, music, art, and stories, share them with the people they love, and learn while they do it.
   </p>
 
   <!-- Three pillars — what kids make -->
   <div class="hero-edu-row">
-    <span class="edu-chip" style="background:rgba(124,92,252,.15);color:var(--purple2)">🎵 Music</span>
-    <span class="edu-chip" style="background:rgba(255,107,107,.12);color:var(--coral2)">📖 Stories</span>
-    <span class="edu-chip" style="background:rgba(245,158,11,.12);color:var(--gold)">🎮 Games — coming soon</span>
-    <span class="edu-chip-note">create, share &amp; remix</span>
+    <span class="edu-chip" style="background:rgba(124,92,252,.15);color:var(--purple2)">Games</span>
+    <span class="edu-chip" style="background:rgba(255,107,107,.12);color:var(--coral2)">Music</span>
+    <span class="edu-chip" style="background:rgba(0,196,140,.12);color:var(--mint)">Art</span>
+    <span class="edu-chip" style="background:rgba(245,158,11,.12);color:var(--gold)">Stories</span>
+    <span class="edu-chip-note">all live today · create, share &amp; remix</span>
   </div>
 
   <div class="hero-btns">
@@ -2103,6 +2105,20 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 </section>
 
+<!-- ═══════ THE WORRY ═══════ -->
+<section style="background:var(--cream,#FDFAF5);padding:72px 24px">
+  <div class="wrap" style="max-width:1060px;margin:0 auto">
+    <div class="eyebrow" style="color:var(--violet)">The problem</div>
+    <h2 style="color:var(--ink)">Most screen time is watch, tap, repeat.<br>And it's lonely.</h2>
+    <p class="section-sub" style="color:rgba(15,14,23,.55)">Kids are handed apps that entertain them but ask nothing of them. And parents are left worrying about the same three things.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:8px">
+      <div style="background:#fff;border:2px solid #F5F0E8;border-radius:18px;padding:20px 22px"><div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--purple)">Passive</div><p style="font-size:14.5px;color:#666;margin-top:4px">They watch and tap. They rarely make anything of their own.</p></div>
+      <div style="background:#fff;border:2px solid #F5F0E8;border-radius:18px;padding:20px 22px"><div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--coral)">Unsafe</div><p style="font-size:14.5px;color:#666;margin-top:4px">Open chat and strangers are one wrong tap away.</p></div>
+      <div style="background:#fff;border:2px solid #F5F0E8;border-radius:18px;padding:20px 22px"><div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--gold)">Empty</div><p style="font-size:14.5px;color:#666;margin-top:4px">Hours go by, and parents wonder if any of it taught their kid a thing.</p></div>
+    </div>
+  </div>
+</section>
+
 <!-- ═══════ CREATION ═══════ -->
 <section class="section-creation" id="create">
   <div class="orb" style="width:400px;height:400px;background:radial-gradient(circle,rgba(92,33,182,.35),transparent 70%);top:-100px;right:-100px"></div>
@@ -2112,14 +2128,14 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
         <div class="eyebrow">How it works</div>
         <h2>Describe it.<br>Build it.<br>Own it.</h2>
         <p class="section-sub">
-          A child hums a melody or dreams up <em style="color:var(--purple2);font-style:normal;font-weight:800">"a song about a brave little fox"</em> — and Buildable helps them turn it into a real track or a story they can read back. Then they share it, and other kids remix it into something all their own.
+          No coding, no blank canvas. Kids start from polished games and creative studios, then make them their own: characters, worlds, art, music, levels, and difficulty. The AI handles the hard parts. Then they share it, and other kids remix it into something all their own.
         </p>
         <div class="creation-features">
           <div class="creation-feature">
             <div class="feat-icon" style="background:rgba(124,92,252,.15)">🎵</div>
             <div>
-              <div class="feat-title">Make music &amp; stories from their ideas</div>
-              <div class="feat-desc">Songs, beats, and stories — built from whatever they can imagine. No templates. No limits. Games are coming soon.</div>
+              <div class="feat-title">Games, music, art &amp; stories</div>
+              <div class="feat-desc">Real games they customize and publish, plus studios for songs, drawings, and stories. All live today.</div>
             </div>
           </div>
           <div class="creation-feature">
@@ -2132,8 +2148,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
           <div class="creation-feature">
             <div class="feat-icon" style="background:rgba(0,196,140,.1)">🔁</div>
             <div>
-              <div class="feat-title">Share it — and remix each other's</div>
-              <div class="feat-desc">Publish a song or story for friends to enjoy, and remix theirs into something new. Every creation sparks the next.</div>
+              <div class="feat-title">Share it, and remix each other's</div>
+              <div class="feat-desc">One tap publishes to family and approved friends. Grandma plays it that night. A friend remixes it tomorrow.</div>
             </div>
           </div>
         </div>
@@ -2145,9 +2161,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
           <div class="cp-share-text">
             <div class="cp-share-title">A world worth sharing</div>
             <div class="cp-share-stats">
-              <span>⭐ 4.9</span>
-              <span>❤️ 1,284</span>
-              <span>▶ 4,201 plays</span>
+              <span>Shared with family</span>
+              <span>Remixed by friends</span>
             </div>
           </div>
         </div>
@@ -2339,9 +2354,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
               <div class="evo-pub-desc">A hero soaring through a sunset sky kingdom of floating islands and hot-air balloons. Powers earned through math, spelling, and STEM. Ready for the world.</div>
             </div>
             <div class="evo-pub-stats">
-              <div class="evo-pub-stat" style="color:var(--gold)">⭐ 4.9</div>
-              <div class="evo-pub-stat" style="color:var(--coral2)">❤️ 1,284</div>
-              <div class="evo-pub-stat" style="color:rgba(255,255,255,.5)">▶ 4,201 plays</div>
+              <div class="evo-pub-stat" style="color:var(--gold)">Shared with family</div>
+              <div class="evo-pub-stat" style="color:var(--coral2)">Ready to remix</div>
             </div>
           </div>
         </div>
@@ -2354,7 +2368,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div class="ev-stat"><div class="ev-stat-n">5</div><div class="ev-stat-l">Levels built</div></div>
       <div class="ev-stat"><div class="ev-stat-n">3</div><div class="ev-stat-l">STEM challenges answered</div></div>
       <div class="ev-stat"><div class="ev-stat-n">3</div><div class="ev-stat-l">New powers unlocked</div></div>
-      <div class="ev-stat"><div class="ev-stat-n">❤️ 1,284</div><div class="ev-stat-l">Players worldwide</div></div>
+      <div class="ev-stat"><div class="ev-stat-n">1</div><div class="ev-stat-l">Proud world published</div></div>
     </div>
 
   </div>
@@ -2366,35 +2380,35 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div class="wrap">
     <div class="learning-grid">
       <div>
-        <div class="eyebrow">How learning happens</div>
-        <h2>Leveling up<br>is how they learn.</h2>
+        <div class="eyebrow">The education layer</div>
+        <h2>Learning isn't a mode.<br>It's the economy.</h2>
         <p class="section-sub">
-          Math challenges unlock new weapons. Spelling opens new characters. Science reveals new worlds. Learning isn't layered on top — it's woven into every moment of creation.
+          Kids earn coins by answering real, grade-matched questions, and spend them on powers and upgrades in any game. Every question is written to the curriculum and approved by a human before a kid ever sees it. Parents can switch the whole layer on or off.
         </p>
         <div class="subjects">
           <div class="subject-card sc-math">
             <span class="subj-icon">➕</span>
             <div class="subj-name">Math</div>
-            <div class="subj-desc">Addition, fractions, multiplication, geometry — age-matched per child</div>
-            <div class="subj-unlock">✦ Unlocks new weapons</div>
+            <div class="subj-desc">Addition, fractions, multiplication, geometry, matched to each kid's grade</div>
+            <div class="subj-unlock">✦ Earns coins to spend anywhere</div>
           </div>
           <div class="subject-card sc-spell">
             <span class="subj-icon">📖</span>
             <div class="subj-name">Spelling</div>
             <div class="subj-desc">Vocabulary, phonics, and word formation through every new world</div>
-            <div class="subj-unlock">✦ Unlocks new characters</div>
+            <div class="subj-unlock">✦ Earns coins to spend anywhere</div>
           </div>
           <div class="subject-card sc-stem">
             <span class="subj-icon">🔬</span>
             <div class="subj-name">STEM</div>
-            <div class="subj-desc">Logic, patterns, and problem solving built into every level</div>
-            <div class="subj-unlock">✦ Unlocks new bosses</div>
+            <div class="subj-desc">Logic, patterns, and problem solving woven into natural pauses in play</div>
+            <div class="subj-unlock">✦ Earns coins to spend anywhere</div>
           </div>
           <div class="subject-card sc-sci">
             <span class="subj-icon">🌍</span>
             <div class="subj-name">Science</div>
-            <div class="subj-desc">Nature, physics, and discovery revealed as worlds expand</div>
-            <div class="subj-unlock">✦ Unlocks new worlds</div>
+            <div class="subj-desc">Nature, physics, and discovery, from quizzes to full 3D exhibits</div>
+            <div class="subj-unlock">✦ Earns coins to spend anywhere</div>
           </div>
         </div>
         <p style="font-size:13px;color:rgba(255,255,255,.3);margin-top:24px;font-weight:600;font-style:italic">
@@ -2431,8 +2445,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
           <!-- XP + level progress -->
           <div class="lp-xp-row">
             <div class="lp-xp">
-              <span class="lp-xp-n">+150</span>
-              <span class="lp-xp-l">XP earned</span>
+              <span class="lp-xp-n">+10</span>
+              <span class="lp-xp-l">coins earned</span>
             </div>
             <div class="lp-level">
               <span class="lp-level-from">Lv 3</span>
@@ -2441,6 +2455,25 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Kidspedia exhibits -->
+    <div style="margin-top:56px">
+      <div class="eyebrow">Kidspedia</div>
+      <h2 style="color:#fff;font-size:clamp(24px,3.4vw,34px)">A museum in their pocket.</h2>
+      <p class="section-sub" style="color:rgba(255,255,255,.5);max-width:640px">
+        Interactive exhibits kids explore like games. The 3D solar system is live now: spin it, zoom it, tap a planet and fly in. Every fact is kid-voiced and read aloud. The atom, the heart, and dinosaurs come next.
+      </p>
+      <div class="edu-shots" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <figure style="margin:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:18px;overflow:hidden">
+          <img src="/landing-shots/orbit.webp?v=1" alt="Kidspedia: Our Solar System, a 3D exhibit kids spin, zoom, and fly through" style="display:block;width:100%;aspect-ratio:16/10;object-fit:cover" loading="lazy">
+          <figcaption style="padding:12px 16px;font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.5"><b style="color:rgba(255,255,255,.85)">Our Solar System.</b> A real 3D exhibit. Drag to spin, pinch to zoom, tap to select.</figcaption>
+        </figure>
+        <figure style="margin:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:18px;overflow:hidden">
+          <img src="/landing-shots/orbit-saturn.webp?v=1" alt="Tap Saturn and the camera flies in, with facts read aloud" style="display:block;width:100%;aspect-ratio:16/10;object-fit:cover" loading="lazy">
+          <figcaption style="padding:12px 16px;font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.5"><b style="color:rgba(255,255,255,.85)">Tap a planet and fly in.</b> Facts in kid language, read aloud with one tap.</figcaption>
+        </figure>
       </div>
     </div>
   </div>
@@ -2454,16 +2487,16 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     <div class="arcade-header-row">
       <div class="arcade-intro">
         <div class="eyebrow" style="color:var(--violet)">A living creative ecosystem</div>
-        <h2 style="color:var(--ink)">Every world here<br>started as a kid's idea.</h2>
+        <h2 style="color:var(--ink)">Every world here<br>is ready to become theirs.</h2>
         <p class="platform-sub">
-          Kids build. Other kids play. Creations evolve. Every game in this arcade was imagined, built, and published by a child — and they keep growing.
+          Kids don't just play these games. They repaint them, rebuild them, and publish their own versions to family and approved friends. The arcade grows with every remix.
         </p>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px">
         <div class="arcade-tabs">
-          <div class="atab on" onclick="switchTab(this)">🔥 Trending</div>
-          <div class="atab" onclick="switchTab(this)">⭐ Most Played</div>
-          <div class="atab" onclick="switchTab(this)">✨ Just Published</div>
+          <div class="atab on" onclick="switchTab(this)">Featured</div>
+          <div class="atab" onclick="switchTab(this)">Classics</div>
+          <div class="atab" onclick="switchTab(this)">Just added</div>
         </div>
         <div style="font-size:12px;font-weight:700;color:rgba(15,14,23,.35);text-align:right">
           These worlds keep growing as kids build on them →
@@ -2475,23 +2508,23 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     <div class="ecosystem-bar">
       <div class="eco-stat">
         <div class="eco-live">Live</div>
-        <div class="eco-n">12,400+</div>
-        <div class="eco-l">Worlds published by kids</div>
-      </div>
-      <div class="eco-stat">
-        <div class="eco-live">This month</div>
-        <div class="eco-n">847K</div>
-        <div class="eco-l">Times played worldwide</div>
+        <div class="eco-n">25+</div>
+        <div class="eco-l">Games &amp; creative studios</div>
       </div>
       <div class="eco-stat">
         <div class="eco-live">Growing</div>
-        <div class="eco-n">340+</div>
-        <div class="eco-l">New worlds added this week</div>
+        <div class="eco-n">Weekly</div>
+        <div class="eco-l">New games, art &amp; exhibits</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-live">Reviewed</div>
+        <div class="eco-n">100%</div>
+        <div class="eco-l">Learning content approved by humans</div>
       </div>
       <div class="eco-stat">
         <div style="margin-bottom:6px;font-size:10px;font-weight:800;color:rgba(15,14,23,.3);text-transform:uppercase;letter-spacing:1px">Ages</div>
         <div class="eco-n">4–12</div>
-        <div class="eco-l">Kids across 42 countries</div>
+        <div class="eco-l">One studio for the whole crew</div>
       </div>
     </div>
 
@@ -2500,192 +2533,157 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div class="lb-head">
         <div></div>
         <div></div>
-        <div>Creation &amp; Creator</div>
-        <div class="lb-plays-col" style="text-align:center">Players</div>
-        <div style="text-align:center">Hearts</div>
+        <div>Creation</div>
+        <div class="lb-plays-col" style="text-align:center"></div>
+        <div style="text-align:center"></div>
         <div style="text-align:center">Growing</div>
-        <div style="text-align:center">Score</div>
+        <div style="text-align:center"></div>
         <div></div>
       </div>
 
       <div class="lb-row">
-        <div class="lb-rank gold">🥇</div>
+        <div class="lb-rank">1</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-survival.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Sky Kingdom Sparkles</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Riley</span>
-            <span class="lb-creator-age">· age 7</span>
-            <span class="creator-badge cb-top">Top Creator</span>
+            <span class="lb-creator-name">Survival adventure · remixable</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">5 levels</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">6 sky worlds</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 4,201</div>
-        <div class="lb-hearts">❤️ 1,284</div>
-        <div class="lb-growth"><span class="growth-tag">+3 levels</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(0,196,140,.1);color:#00C48C">⭐ 4.9</span></div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
+        <div class="lb-growth"><span class="growth-tag">Growing</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
       <div class="lb-row">
-        <div class="lb-rank silver">🥈</div>
+        <div class="lb-rank">2</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-chess.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Space Hero Chess</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Marco</span>
-            <span class="lb-creator-age">· age 9</span>
-            <span class="creator-badge cb-top">Top Creator</span>
+            <span class="lb-creator-name">Chess with hero pieces · robot or a friend</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">4 levels</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">6 worlds</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 3,104</div>
-        <div class="lb-hearts">❤️ 892</div>
-        <div class="lb-growth"><span class="growth-tag">+2 worlds</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(0,196,140,.1);color:#00C48C">⭐ 4.8</span></div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
+        <div class="lb-growth"><span class="growth-tag">Expanding</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
       <div class="lb-row">
-        <div class="lb-rank bronze">🥉</div>
+        <div class="lb-rank">3</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-breaker.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Jungle Ruins Breaker</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Zoe</span>
-            <span class="lb-creator-age">· age 11</span>
-            <span class="creator-badge cb-top">Top Creator</span>
+            <span class="lb-creator-name">Brick breaker · make your own levels</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">6 levels</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">8 levels</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 2,887</div>
-        <div class="lb-hearts">❤️ 743</div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
         <div class="lb-growth"><span class="growth-tag">Expanding</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(0,196,140,.1);color:#00C48C">⭐ 4.7</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
       <div class="lb-row">
-        <div class="lb-rank ">4</div>
+        <div class="lb-rank">4</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-sling.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Wobbly Gate Sling</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Aiden</span>
-            <span class="lb-creator-age">· age 6</span>
-            <span class="creator-badge cb-rising">Rising Fast</span>
+            <span class="lb-creator-name">Slingshot puzzles · remixable</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">3 levels</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">5 levels</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 2,103</div>
-        <div class="lb-hearts">❤️ 621</div>
-        <div class="lb-growth"><span class="growth-tag">+1 level</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(245,158,11,.1);color:#F59E0B">⭐ 4.6</span></div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
+        <div class="lb-growth"><span class="growth-tag">Growing</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
       <div class="lb-row">
-        <div class="lb-rank ">5</div>
+        <div class="lb-rank">5</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-runner.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Sunny Town Drive</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Sofia</span>
-            <span class="lb-creator-age">· age 10</span>
-            <span class="creator-badge cb-rising">Rising Fast</span>
+            <span class="lb-creator-name">3D driving adventure</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">4 levels</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">6 towns</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 1,892</div>
-        <div class="lb-hearts">❤️ 518</div>
-        <div class="lb-growth"><span class="growth-tag">+2 levels</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(245,158,11,.1);color:#F59E0B">⭐ 4.6</span></div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
+        <div class="lb-growth"><span class="growth-tag">Growing</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
       <div class="lb-row">
-        <div class="lb-rank ">6</div>
+        <div class="lb-rank">6</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-ocean.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Coral Cove</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Liam</span>
-            <span class="lb-creator-age">· age 8</span>
-            <span class="creator-badge cb-rising">Rising Fast</span>
+            <span class="lb-creator-name">Brick breaker · an underwater world</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">3 levels</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">8 levels</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 1,644</div>
-        <div class="lb-hearts">❤️ 447</div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
         <div class="lb-growth"><span class="growth-tag">Growing</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(245,158,11,.1);color:#F59E0B">⭐ 4.5</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
       <div class="lb-row">
-        <div class="lb-rank ">7</div>
+        <div class="lb-rank">7</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-space.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Star Fields</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Mia</span>
-            <span class="lb-creator-age">· age 9</span>
-            <span class="creator-badge cb-new">New Creator</span>
+            <span class="lb-creator-name">Brick breaker · a space world</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">2 levels</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">8 levels</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 1,320</div>
-        <div class="lb-hearts">❤️ 389</div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
         <div class="lb-growth"><span class="growth-tag">Growing</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(245,158,11,.1);color:#F59E0B">⭐ 4.5</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
+      
       <div class="lb-row">
-        <div class="lb-rank ">8</div>
-        <div class="lb-thumb" style="background:url(/landing-shots/thumb-mathcannon.webp?v=1) center/cover"></div>
-        <div class="lb-info">
-          <div class="lb-name">Balloon Math Blast</div>
-          <div class="lb-creator-row">
-            <span class="lb-creator-name">Noah</span>
-            <span class="lb-creator-age">· age 10</span>
-            <span class="creator-badge cb-new">New Creator</span>
-          </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">2 levels</div>
-        </div>
-        <div class="lb-plays lb-plays-col">▶ 1,198</div>
-        <div class="lb-hearts">❤️ 312</div>
-        <div class="lb-growth"><span class="growth-tag">+1 world</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(245,158,11,.1);color:#F59E0B">⭐ 4.4</span></div>
-        <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
-      </div>
-      <div class="lb-row">
-        <div class="lb-rank ">9</div>
+        <div class="lb-rank">8</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-bubble.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Sunny Meadow Bubbles</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Emma</span>
-            <span class="lb-creator-age">· age 7</span>
-            <span class="creator-badge cb-new">New Creator</span>
+            <span class="lb-creator-name">Bubble popper · sunny match-3</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">1 level</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">6 levels</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 998</div>
-        <div class="lb-hearts">❤️ 278</div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
         <div class="lb-growth"><span class="growth-tag">Just added</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(245,158,11,.1);color:#F59E0B">⭐ 4.4</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
       <div class="lb-row">
-        <div class="lb-rank ">10</div>
+        <div class="lb-rank">9</div>
         <div class="lb-thumb" style="background:url(/landing-shots/thumb-orbit.webp?v=1) center/cover"></div>
         <div class="lb-info">
           <div class="lb-name">Solar Explorer</div>
           <div class="lb-creator-row">
-            <span class="lb-creator-name">Ava</span>
-            <span class="lb-creator-age">· age 8</span>
-            <span class="creator-badge cb-new">New Creator</span>
+            <span class="lb-creator-name">Kidspedia 3D exhibit</span>
           </div>
-          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">1 level</div>
+          <div style="font-size:10px;color:rgba(15,14,23,.35);font-weight:600;margin-top:2px">9 planets &amp; moons</div>
         </div>
-        <div class="lb-plays lb-plays-col">▶ 887</div>
-        <div class="lb-hearts">❤️ 241</div>
+        <div class="lb-plays lb-plays-col"></div>
+        <div class="lb-hearts"></div>
         <div class="lb-growth"><span class="growth-tag">Just added</span></div>
-        <div class="lb-stars"><span class="lb-star-badge" style="background:rgba(245,158,11,.1);color:#F59E0B">⭐ 4.3</span></div>
+        <div class="lb-stars"></div>
         <div class="lb-play"><span class="lb-play-btn">▶ Play</span></div>
       </div>
 
@@ -2700,7 +2698,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div class="lb-footer">
         <div>
           <div class="lb-footer-msg">Your child's world could be next.</div>
-          <div class="lb-footer-sub">Join 12,400+ young creators already building on Buildable.</div>
+          <div class="lb-footer-sub">Join the first families building on Buildable.</div>
         </div>
         <button onclick="document.getElementById('beta').scrollIntoView({behavior:'smooth'})" style="font-family:Nunito,sans-serif;font-weight:800;font-size:13px;background:var(--ink);color:#fff;border:none;padding:10px 22px;border-radius:100px;cursor:pointer">Get Early Access</button>
       </div>
@@ -2732,14 +2730,14 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
             <div class="trust-icon">📊</div>
             <div>
               <div class="trust-title">Weekly progress reports</div>
-              <div class="trust-desc">Every subject practiced, every challenge answered, every level reached — summarized clearly every week.</div>
+              <div class="trust-desc">A weekly email digest plus a live skills dashboard: every subject practiced, every skill earned, in every game they play.</div>
             </div>
           </div>
           <div class="trust-point">
             <div class="trust-icon">🎚️</div>
             <div>
-              <div class="trust-title">You control the difficulty</div>
-              <div class="trust-desc">Set challenges to Easy, Medium, or Hard per child. Change it anytime. Their progress adapts with them.</div>
+              <div class="trust-title">You set the level</div>
+              <div class="trust-desc">Set each child's grade level and switch the learning layer on or off, per kid, anytime. Difficulty adapts as they grow.</div>
             </div>
           </div>
           <div class="trust-point">
@@ -2767,7 +2765,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
           <div class="db-head-row">
             <div>
               <div class="db-name">Riley's progress — Apr 14–20</div>
-              <div class="db-date">Playing: Fairy Garden Adventure (Level 3)</div>
+              <div class="db-date">Playing: Jungle Ruins (Buildable Breaker)</div>
             </div>
             <div class="db-badge">42 min this week</div>
           </div>
@@ -2793,7 +2791,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
             <div class="db-score" style="color:var(--gold)">5/8</div>
           </div>
           <div class="diff-row">
-            <div class="diff-lbl">Challenge level for Riley</div>
+            <div class="diff-lbl">Learning level for Riley</div>
             <div class="diff-btns">
               <div class="diff-btn">Easy</div>
               <div class="diff-btn on med">Medium</div>
@@ -2816,11 +2814,11 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       <div class="vis-card pub">
         <span class="vis-icon">🌍</span>
         <div class="vis-h">Public</div>
-        <div class="vis-desc">Publish to the buildable arcade. Other kids can play it, heart it, and discover it. Watch their creation reach players worldwide.</div>
+        <div class="vis-desc">Publish to the Buildable arcade, a moderated marketplace built around creativity, not social networking. Other kids play it and remix it.</div>
         <ul class="vis-list">
-          <li>Visible to the buildable community</li>
-          <li>Earns hearts, plays, and ratings</li>
-          <li>Appears in the global arcade</li>
+          <li>Lives in the moderated arcade</li>
+          <li>Other kids can play and remix it</li>
+          <li>No open chat, no strangers, ever</li>
           <li>Parent-reviewed before publishing</li>
         </ul>
       </div>
@@ -2843,8 +2841,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <section class="section-pricing" id="pricing">
   <div class="wrap">
     <div class="eyebrow">Pricing</div>
-    <h2 style="color:#fff">Start building for free.<br>Unlock the full studio.</h2>
-    <p class="section-sub" style="color:rgba(255,255,255,.45)">One full world is always free. No credit card. No hidden limits. Upgrade when they're ready to build more.</p>
+    <h2 style="color:#fff">Start building for free.<br>Free for teachers, forever.</h2>
+    <p class="section-sub" style="color:rgba(255,255,255,.45)">Play and create for free, no credit card. Teachers and schools never pay. Upgrade when they're ready to build more.</p>
     <div class="price-cards">
       <div class="pc">
         <div class="p-tier">Free</div>
@@ -2852,49 +2850,48 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
         <div class="p-per">always free · no card needed</div>
         <div class="p-div"></div>
         <ul class="p-feats">
-          <li>1 complete world with 3 levels</li>
-          <li>Unlimited play &amp; customization</li>
-          <li>Age-matched learning challenges</li>
-          <li>Publish to the arcade</li>
-          <li class="off">Unlimited worlds</li>
-          <li class="off">Parent dashboard</li>
+          <li>Play and create the basics</li>
+          <li>Grade-matched learning, human-reviewed</li>
+          <li>Join a classroom</li>
+          <li>Free for teachers &amp; schools, forever</li>
+          <li class="off">Safe sharing with friends</li>
+          <li class="off">The full AI studio</li>
         </ul>
         <button class="p-btn outline" onclick="document.getElementById('beta').scrollIntoView({behavior:'smooth'})">Get Early Access</button>
       </div>
       <div class="pc feat">
         <div class="feat-badge">Most Popular</div>
-        <div class="p-tier">Family Studio</div>
-        <div class="p-amt"><sup>$</sup>9</div>
-        <div class="p-per">per month · up to 4 creators</div>
+        <div class="p-tier">Premium</div>
+        <div class="p-amt"><sup>$</sup>5</div>
+        <div class="p-per">per month · the whole family</div>
         <div class="p-div"></div>
         <ul class="p-feats">
-          <li>Unlimited worlds &amp; levels</li>
-          <li>Unlimited play &amp; customization</li>
-          <li>Advanced creative tools</li>
-          <li>Full parent dashboard</li>
-          <li>Weekly progress reports</li>
-          <li>Challenge difficulty controls</li>
+          <li>More building, more games</li>
+          <li>Safe sharing with approved friends</li>
+          <li>Full parent view: skills dashboard</li>
+          <li>Weekly email digest</li>
+          <li>Grade level &amp; learning controls</li>
           <li>Public &amp; private sharing</li>
-          <li>Priority world creation</li>
         </ul>
         <button class="p-btn solid" onclick="document.getElementById('beta').scrollIntoView({behavior:'smooth'})">Join the Beta</button>
       </div>
       <div class="pc">
-        <div class="p-tier">School</div>
-        <div class="p-amt"><sup>$</sup>4</div>
-        <div class="p-per">per student · per month</div>
+        <div class="p-tier">AI Creator</div>
+        <div class="p-amt"><sup>$</sup>10</div>
+        <div class="p-per">per month · for nonstop makers</div>
         <div class="p-div"></div>
         <ul class="p-feats">
-          <li>Everything in Family Studio</li>
-          <li>Classroom creator dashboard</li>
-          <li>Curriculum-aligned challenges</li>
-          <li>Teacher challenge controls</li>
-          <li>Class arcade &amp; sharing</li>
-          <li>LMS integration</li>
+          <li>Everything in Premium</li>
+          <li>The full AI studio</li>
+          <li>Generate art, music &amp; worlds</li>
+          <li>Build whole games with AI</li>
+          <li>Monthly creation credits</li>
+          <li>Kids earn extra credits by learning</li>
         </ul>
-        <button class="p-btn outline">Contact Us</button>
+        <button class="p-btn outline" onclick="document.getElementById('beta').scrollIntoView({behavior:'smooth'})">Get Early Access</button>
       </div>
     </div>
+    <p style="text-align:center;margin-top:26px;font-size:13.5px;color:rgba(255,255,255,.45);font-weight:600">Heavy AI use (music, advanced art, books) runs on a simple credit system, and kids can <b style="color:rgba(255,255,255,.75)">earn credits by learning.</b></p>
   </div>
 </section>
 

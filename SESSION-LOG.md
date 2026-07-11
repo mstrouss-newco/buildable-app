@@ -3385,3 +3385,19 @@ game), skill-is-mechanic games, exhibits-as-data, human-reviewed question factor
 ledger + parent dashboard/digest, learning woven into pauses. Refreshed the two stale Learn
 blurbs (block b4 + factory Learning & telemetry card) to match what shipped in 6B/8A/8B/8C/3H.
 QA: both pages rendered headlessly (gate bypassed via sessionStorage), sections verified visually.
+
+## 2026-07-10b — Home page restructure to match the partner deck (north star)
+landing.html realigned to partner.html messaging: hero now "Kids don't just play games
+here. They build them." (games/music/art/stories ALL LIVE — removed stale "Games coming
+soon"); new problem strip (Passive/Unsafe/Empty); creation copy = polished games + studios,
+grandma share moment; learning section reframed as THE ECONOMY (earn coins from real
+human-reviewed grade-matched questions, spend in any game; subject cards now "Earns coins";
+celebrate card +10 coins) + new Kidspedia block ("A museum in their pocket") with solar
+system wide + Saturn fly-to shots; arcade honesty pass (fake 12,400/847K/42-country stats ->
+25+ games/weekly/100% human-reviewed; leaderboard fake kid names/ages/play counts removed,
+9 real worlds w/ type + real level counts; Balloon Math Blast row removed); parents copy =
+weekly email digest + skills dashboard + grade level + learning toggle; visibility = moderated
+marketplace; PRICING NOW MATCHES DECK: Free (free for teachers & schools forever) /
+Premium $5 / AI Creator $10 + credits earned by learning (was $9 Family + $4 School).
+partner.html: Math Cannon screenshot replaced with Saturn fly-to (art not ready — Mike);
+text card no longer name-drops Math Cannon. New shot public/landing-shots/orbit-saturn.webp.
