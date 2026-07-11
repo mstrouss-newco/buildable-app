@@ -27,8 +27,8 @@
 
   .world{position:relative;z-index:2;max-width:620px;margin:0 auto}
   .zone{position:absolute;left:16px;right:16px}
-  .zone h2{font-family:'Fredoka';font-weight:700;font-size:21px;text-shadow:0 2px 8px rgba(0,0,0,.35)}
-  .zone .zr{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:rgba(253,250,245,.6)}
+  .zone h2{font-family:'Fredoka';font-weight:700;font-size:21px;text-shadow:0 0 16px rgba(150,220,255,.9),0 0 34px rgba(120,200,255,.55),0 2px 8px rgba(0,0,0,.4)}
+  .zone .zr{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:rgba(190,235,255,.8);text-shadow:0 0 12px rgba(150,220,255,.7)}
   .zone p{font-size:12.5px;font-weight:700;line-height:1.45;color:rgba(253,250,245,.85);margin-top:6px;max-width:420px}
 
   .cr{position:absolute;border:none;background:none;cursor:pointer;z-index:2;padding:6px}
@@ -346,6 +346,7 @@ function buildWorld() {
     b.style.top = top + "px";
     b.dataset.id = c.id;
     if (c.lure) b.dataset.lure = "1";
+    if (c.glow) b.dataset.glow = "1";
     const art = document.createElement("span");
     art.className = "art " + (c.anim || "a-bob");
     art.style.display = "block";
@@ -475,18 +476,44 @@ function tick(t) {
     dctx.globalCompositeOperation = "destination-out";
     const FLR = 260; // flashlight radius — big and easy for little fingers to aim
     const g = dctx.createRadialGradient(light.x, light.y, 18, light.x, light.y, FLR);
-    g.addColorStop(0, "rgba(0,0,0,.97)"); g.addColorStop(0.62, "rgba(0,0,0,.5)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(0.68, "rgba(0,0,0,.5)"); g.addColorStop(1, "rgba(0,0,0,0)");
     dctx.fillStyle = g; dctx.beginPath(); dctx.arc(light.x, light.y, FLR, 0, Math.PI * 2); dctx.fill();
-    // the anglerfish lure burns through the dark on its own
+    // the anglerfish lure burns through the dark on its own (brightest)
     document.querySelectorAll("[data-lure]").forEach((el) => {
       const r = el.getBoundingClientRect();
       if (r.top < H && r.bottom > 0) {
         const lx = r.left + r.width * 0.62, ly = r.top + 10;
-        const lg = dctx.createRadialGradient(lx, ly, 2, lx, ly, 60);
-        lg.addColorStop(0, "rgba(0,0,0,.9)"); lg.addColorStop(1, "rgba(0,0,0,0)");
-        dctx.fillStyle = lg; dctx.beginPath(); dctx.arc(lx, ly, 60, 0, Math.PI * 2); dctx.fill();
+        const lg = dctx.createRadialGradient(lx, ly, 2, lx, ly, 66);
+        lg.addColorStop(0, "rgba(0,0,0,.92)"); lg.addColorStop(1, "rgba(0,0,0,0)");
+        dctx.fillStyle = lg; dctx.beginPath(); dctx.arc(lx, ly, 66, 0, Math.PI * 2); dctx.fill();
       }
     });
+    // zone sections glow through the dark like lit underwater signs
+    document.querySelectorAll(".zone").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < H && r.bottom > 0) {
+        const gx = Math.min(r.left + 120, W * 0.5), gy = r.top + 26;
+        const gg = dctx.createRadialGradient(gx, gy, 6, gx, gy, 190);
+        gg.addColorStop(0, "rgba(0,0,0,.82)"); gg.addColorStop(0.55, "rgba(0,0,0,.4)"); gg.addColorStop(1, "rgba(0,0,0,0)");
+        dctx.fillStyle = gg; dctx.beginPath(); dctx.arc(gx, gy, 190, 0, Math.PI * 2); dctx.fill();
+      }
+    });
+    // bioluminescent creatures glow on their own, softly, in the dark
+    document.querySelectorAll("[data-glow]").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < H && r.bottom > 0) {
+        const cx = r.left + r.width / 2, cy = r.top + r.height * 0.42;
+        const cg = dctx.createRadialGradient(cx, cy, 3, cx, cy, 74);
+        cg.addColorStop(0, "rgba(0,0,0,.7)"); cg.addColorStop(1, "rgba(0,0,0,0)");
+        dctx.fillStyle = cg; dctx.beginPath(); dctx.arc(cx, cy, 74, 0, Math.PI * 2); dctx.fill();
+      }
+    });
+    dctx.globalCompositeOperation = "source-over";
+    // a bright, cool light beam so the flashlight itself glows (additive)
+    dctx.globalCompositeOperation = "lighter";
+    const beam = dctx.createRadialGradient(light.x, light.y, 8, light.x, light.y, FLR * 0.85);
+    beam.addColorStop(0, "rgba(170,220,255,.26)"); beam.addColorStop(0.5, "rgba(150,210,255,.10)"); beam.addColorStop(1, "rgba(150,210,255,0)");
+    dctx.fillStyle = beam; dctx.beginPath(); dctx.arc(light.x, light.y, FLR * 0.85, 0, Math.PI * 2); dctx.fill();
     dctx.globalCompositeOperation = "source-over";
   }
 }
