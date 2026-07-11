@@ -1,5 +1,39 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: One front door — retire the legacy dark Games picker + fix back-nav
+
+Bug (owner report): pressing Home/back from inside a game landed a kid on the OLD dark
+Games picker at `/app` instead of the new light Home. That legacy picker also still
+showed stale content (Music Maker listed under Games with a doubled "STUDIO · STUDIO"
+label). Root cause: every game screen's `onHome` was hard-wired to `SCREEN_GAME_PICKER`,
+and Home's "Games" affordance + its Play-shelf fallback also opened that picker — so the
+old page was a second, competing front door sitting in the nav chain.
+
+Fix (one front door only, replace-first):
+- **Back from every game now returns to the new Home**, not the picker. All 31 game/back
+  `onHome`/`onBack` targets repointed from `SCREEN_GAME_PICKER` to `SCREEN_HOME`
+  (engines, board games, family/realtime games, Breaker + Music landings). The GameLanding
+  back button was relabeled "Games" → "Home" to match where it now goes.
+- **Legacy picker retired via redirect.** The `SCREEN_GAME_PICKER` render no longer draws
+  `GamePicker`; it redirects to `SCREEN_HOME` and renders nothing, so any stray/bookmarked
+  path can never surface the old dark page. `GamePicker`/`PickerCard` components are left in
+  the file (unused) per replace-first — remove in a later pass once verified live.
+- **Home is the single catalog surface.** Home's Play shelf already maps the whole
+  `GAME_CATALOG`. Home was missing the `onRileys` handler, so Riley's Garden's card fell
+  through to `onGames` → the old picker; added `onRileys`, and repointed `onGames` itself to
+  Home. Verified programmatically: all 25 `type:"game"` catalog handlers are now passed to
+  Home, so no card can fall back.
+- **STUDIO · STUDIO doubled label fixed.** The category line appended " · Studio" even when
+  the category was already "Studio" (Music Maker). Now only appends when the category differs,
+  so the Music landing reads "Studio" once. Guarded in both the picker card and the shared
+  GameLanding.
+
+QA: `npm run build` passes; esbuild parse clean; static check confirms 0 remaining
+`setScreen(SCREEN_GAME_PICKER)` and full Home handler coverage. iPad-viewport live walk
+(picker→home→game, back at each step, direct `/app`) done on the deploy.
+
+Files: `src/BuildableKids.jsx`, `SESSION-LOG.md`, `README.md`.
+
 ## 2026-07-11: Session 4B follow-on — per-level art (Sling) + editor clarity
 
 Owner feedback after testing 4B: the editor didn't make clear what each art slot was, and it

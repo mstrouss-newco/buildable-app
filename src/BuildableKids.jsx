@@ -207,7 +207,7 @@ function PickerCard({ g, onOpen, onShare }) {
           <span style={{ width: 11, height: 11, borderRadius: 3, background: accent, flex: "0 0 auto", boxShadow: `0 0 10px ${accent}` }} />
           <div style={{ fontFamily: FRED, fontSize: 26, fontWeight: 700 }}>{g.name}</div>
         </div>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", color: accent, marginTop: 7 }}>{g.category}{g.type === "studio" ? " · Studio" : ""}</div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", color: accent, marginTop: 7 }}>{g.category}{g.type === "studio" && g.category !== "Studio" ? " · Studio" : ""}</div>
         <div style={{ fontSize: 15, color: "#cfc9e6", marginTop: 6 }}>{g.desc}</div>
       </div>
     </button>
@@ -423,10 +423,10 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
   return (
     <div style={{ ...styles.container, justifyContent: "flex-start" }}>
       <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
-        <button onClick={onBack} style={styles.backButton}>Games</button>
+        <button onClick={onBack} style={styles.backButton}>Home</button>
       </div>
       <div style={{ width: "100%", maxWidth: 540, marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>{game.category}{game.type === "studio" ? " \u00b7 Studio" : ""}</div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>{game.category}{game.type === "studio" && game.category !== "Studio" ? " \u00b7 Studio" : ""}</div>
         <h1 style={{ ...styles.logo, margin: "2px 0 0" }}>{game.name}</h1>
         <p style={{ ...styles.tagline, margin: "4px 0 10px" }}>{game.desc}</p>
         <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4", maxHeight: "50vh", borderRadius: 26, overflow: "hidden", border: `2px solid ${accent}66`, boxShadow: `0 18px 44px rgba(0,0,0,0.5), 0 0 0 4px ${accent}22`, background: `linear-gradient(160deg, ${accent}, ${accent}66)` }}>
@@ -1517,7 +1517,7 @@ export default function BuildableKids() {
         activeKid={activeKid}
         onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
         onTop={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TOP); }}
-        onGames={() => setScreen(SCREEN_GAME_PICKER)}
+        onGames={() => setScreen(SCREEN_HOME)}
         onMakeGame={() => setScreen(SCREEN_INTRO)}
         onSounds={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_SOUNDS); }}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
@@ -1550,6 +1550,7 @@ export default function BuildableKids() {
         onCastle={() => setScreen(SCREEN_CASTLE)}
         onSling={() => setScreen(SCREEN_SLING)}
         onCroc={() => setScreen(SCREEN_CROC)} onMathCannon={() => setScreen(SCREEN_MATHCANNON)}
+        onRileys={() => setScreen(SCREEN_RILEYS)}
         onStringMatch={() => setScreen(SCREEN_STRINGMATCH)}
         onTank={() => setScreen(SCREEN_TANK)}
         onBubble={() => setScreen(SCREEN_BUBBLE)}
@@ -1675,7 +1676,7 @@ export default function BuildableKids() {
     return <GameLanding game={st}
       onPlay={() => { setReturnTo(SCREEN_MUSIC_LANDING); setScreen(SCREEN_MUSIC); }}
       onLoadout={() => setScreen(SCREEN_MUSIC_LOADOUT)}
-      onBack={() => setScreen(SCREEN_GAME_PICKER)} />;
+      onBack={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_MUSIC_LOADOUT) {
     const st = GAME_CATALOG.find((g) => g.id === "music-maker");
@@ -1710,17 +1711,22 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_TYPING) {
-    return <TypingScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <TypingScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
   if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onMahjong={() => setScreen(SCREEN_MAHJONG)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} onSling={() => setScreen(SCREEN_SLING)} onCroc={() => setScreen(SCREEN_CROC)} onRileys={() => setScreen(SCREEN_RILEYS)} onStringMatch={() => setScreen(SCREEN_STRINGMATCH)} onTank={() => setScreen(SCREEN_TANK)} onBubble={() => setScreen(SCREEN_BUBBLE)} onMusicMaker={() => setScreen(SCREEN_MUSIC_LANDING)} />;
+    // Legacy dark Games picker retired: the new Home is the single front door
+    // (its Play shelf lists the whole GAME_CATALOG). Any stray path that still
+    // asks for the old picker is redirected Home per the replace-first rule, so
+    // nothing can land a kid back on the old page.
+    if (screen !== SCREEN_HOME) setTimeout(() => setScreen(SCREEN_HOME), 0);
+    return null;
   }
   if (screen === SCREEN_PLATFORMER) {
-    return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <PlatformerScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SURVIVAL) {
-    return <SurvivalScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onUpgrades={() => setScreen(SCREEN_SURVIVAL_UPGRADES)} />;
+    return <SurvivalScreen onHome={() => setScreen(SCREEN_HOME)} onUpgrades={() => setScreen(SCREEN_SURVIVAL_UPGRADES)} />;
   }
   if (screen === SCREEN_SURVIVAL_UPGRADES) {
     const sv = GAME_CATALOG.find((g) => g.id === "survival");
@@ -1734,7 +1740,7 @@ export default function BuildableKids() {
       onPlay={() => setScreen(SCREEN_BREAKER_JOURNEY)}
       onLoadout={() => setScreen(SCREEN_BREAKER_LOADOUT)}
       onMake={() => { setBreakerEntry("maker"); setScreen(SCREEN_BREAKER); }}
-      onBack={() => setScreen(SCREEN_GAME_PICKER)} />;
+      onBack={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_BREAKER_JOURNEY) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
@@ -1756,13 +1762,13 @@ export default function BuildableKids() {
     return <ExploreScreen exhibitId={exploreId} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CASTLE) {
-    return <CastleGuardScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <CastleGuardScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TETRIS) {
-    return <TetrisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <TetrisScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=hud1" onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
   }
   if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
     const spec = gameSpecFor(friendAutoJoin.game);
@@ -1792,49 +1798,49 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CONNECTFOUR) {
-    return <BoardGameScreen title="Buildable Connect Four" src="/connectfour-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BoardGameScreen title="Buildable Connect Four" src="/connectfour-engine.html?v=hud1" onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_DOTSBOXES) {
-    return <BoardGameScreen title="Buildable Dots and Boxes" src="/dotsboxes-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BoardGameScreen title="Buildable Dots and Boxes" src="/dotsboxes-engine.html?v=hud1" onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_MAZE) {
-    return <MazeScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <MazeScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SLING) {
-    return <SlingScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <SlingScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TANK) {
-    return <TankScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <TankScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CROC) {
-    return <CrocScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <CrocScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_MATHCANNON) {
-    return <MathCannonScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <MathCannonScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_RILEYS) {
-    return <RileysScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <RileysScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_STRINGMATCH) {
-    return <StringMatchScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <StringMatchScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_BUBBLE) {
-    return <BubbleScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BubbleScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_RUNNER) {
-    return <SunnyTownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <SunnyTownScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_MEMORY) {
-    return <MemoryScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <MemoryScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_MAHJONG) {
-    return <MahjongScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <MahjongScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_BINGO) {
-    return <BingoScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BingoScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SNAKES) {
-    return <SnakesScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <SnakesScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SOUNDS) {
     return <SoundboardScreen onHome={() => setScreen(returnTo || SCREEN_HOME)} />;
@@ -1843,7 +1849,7 @@ export default function BuildableKids() {
     return <ArtStudioScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TENNIS) {
-    return <TennisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
+    return <TennisScreen onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
   }
   if (screen === SCREEN_TENNIS_LOBBY) {
     return (
@@ -1858,16 +1864,16 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_TENNIS_FAMILY) {
-    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1&v=4", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_GAME_PICKER); }} />;
+    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1&v=4", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TOWN) {
-    return <TownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
+    return <TownScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
   }
   if (screen === SCREEN_TOWN_FAMILY) {
-    return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CHESS) {
-    return <ChessScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
+    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHESS_LOBBY) {
@@ -1884,11 +1890,11 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHESS_FAMILY) {
-    return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
   if (screen === SCREEN_CHECKERS) {
-    return <CheckersScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
+    return <CheckersScreen onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHECKERS_LOBBY) {
@@ -1913,7 +1919,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHECKERS_FAMILY) {
-    return <FamilyCheckers activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <FamilyCheckers activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
   if (screen === SCREEN_MY_STUFF) {

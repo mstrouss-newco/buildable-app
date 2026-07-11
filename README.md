@@ -16,6 +16,18 @@ BEFORE the ground so the ground hides its base = planted on the ground, not floa
 sits on it. New drawPlatform() + drawPaintedClouds(); cloud sprites cut to `bg/cloud1..4.png`.
 Layout was QA'd as a faithful scale mock before shipping. qa-sling green.
 
+## One front door: retire legacy Games picker + fix back-nav (July 11 2026)
+
+Pressing Home from inside a game landed kids on the OLD dark Games picker instead of the new
+light Home (which also showed a stale "STUDIO · STUDIO" double label on Music Maker). Every
+game's `onHome` was hard-wired to `SCREEN_GAME_PICKER`. Repointed all 31 game/back targets to
+`SCREEN_HOME`; the `SCREEN_GAME_PICKER` screen now redirects to Home and renders nothing
+(GamePicker component kept but unused, replace-first). Home is the single catalog surface (its
+Play shelf maps the whole `GAME_CATALOG`); added the missing `onRileys` handler and repointed
+`onGames` to Home so no card falls back to the old picker. Fixed the doubled Studio label
+(append " · Studio" only when the category isn't already "Studio"). `npm run build` green;
+0 remaining `setScreen(SCREEN_GAME_PICKER)`; all 25 game handlers verified passed to Home.
+
 ## Sling Squad: painted 3D parallax background + slingshot base (July 11 2026)
 
 Replaced the flat cartoon backdrop with a layered painted scene (our art) matching the 3D
