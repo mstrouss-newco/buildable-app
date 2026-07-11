@@ -6,6 +6,30 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 4B: Drop-in art flow + editor completion (July 11 2026)
+
+Phase 4 editor finished. **Slicer bug fixed first:** sliced pieces carried a thin sliver of a
+touching neighbour along an edge (the residue on Breaker bricks). The slice/trim rules now live
+once in `public/buildable-slicer.js`; `contentBox` shaves any thin (<=6px), gap-separated,
+low-ink edge strip, hugs the sprite, then insets 1px (interior gaps / shatter debris kept).
+`asset-library.html` delegates to it. The three Breaker brick sheets were re-cleaned in place and
+recommitted (bodies + positions unchanged); the recommitted sheets slice to 0 slivers under both
+the engine's even-grid runtime cut and the shared `sliceSheet` (headless, all themes), plus a
+synthetic sliver unit-test passes. **Multi-game editor:** `editor.html` now opens a picker over
+every converted game and edits each manifest-driven (art slots from `manifest.art`, level rows
+from each level's parts). Breaker keeps its full level editor; board games (Chess, Tic-Tac-Toe,)
+show art slots only. **Drop in art + Library** replace the raw asset-id inputs on every slot and
+part: Drop in uploads, auto-slices via the shared slicer, and keeps straight to that slot's asset
+ID (`/api/asset-studio`, compressed); Library picks an existing asset. Dropped-in art uses a
+`studio:` id that `buildable-manifest.js`'s resolver maps to its served bytes. The Save banner is
+now honest (structural + loader checks now; play-test gate next), and the `/api/manifest` server
+validator was generalised from Breaker-only to a game-agnostic net so every game can save.
+QA: `qa-breaker` + `qa-sling` ALL CHECKS PASS; shared-slicer headless slice clean on all three
+sheets. On-device (Mike): push, then one real drop-in through the live editor to confirm clean
+pieces render. Files: `public/buildable-slicer.js` (new), `public/editor.html`,
+`public/asset-library.html`, `public/buildable-manifest.js`, `api/manifest.js`,
+`public/breaker/*/bricks.{png,webp}`, `SESSION-LOG.md`, `README.md`.
+
 ## Session 8L: Kidspedia dive template — layers-cutaway + Journey to the Deep (July 11 2026)
 
 Kidspedia's **second exhibit template**. Where `orbit-explorer` is 3D bodies you spin,

@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <style id="no-longpress">*{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; } input,textarea,select{ -webkit-user-select:text; user-select:text; }</style>
 <style>
-:root{ --ink:#2b2b2b; --muted:#7a756c; --line:#e7e1d5; --card:#fffdf8; --page:#f6f1e7; --accent:#FF6B6B; }
+:root{ --ink:#2b2b2b; --muted:#7a756c; --line:#e7e1d5; --card:#fffdf8; --page:#f6f1e7; --accent:#FF6B6B; --teal:#2ec4b6; }
 *{ box-sizing:border-box; }
 body{ margin:0; font-family:"Baloo 2",system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--page); color:var(--ink); }
 h1{ font-size:20px; margin:0; font-weight:700; }
@@ -18,7 +18,7 @@ h1{ font-size:20px; margin:0; font-weight:700; }
 .dot{ width:14px; height:14px; border-radius:4px; display:inline-block; }
 .badge{ font-size:12px; padding:2px 8px; border-radius:999px; background:#efe9dc; color:#6b655c; }
 .badge.live{ background:#e4f6ea; color:#1f7a42; }
-.grow{ flex:1; }
+.grow,.spacer{ flex:1; }
 .btn{ font-family:inherit; font-size:14px; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:10px; padding:8px 12px; cursor:pointer; }
 .btn:hover{ background:#fff; }
 .btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent); font-weight:700; }
@@ -29,9 +29,7 @@ h1{ font-size:20px; margin:0; font-weight:700; }
 .status.err{ color:#b23b3b; }
 .section-label{ font-size:13px; color:var(--muted); margin:18px 2px 8px; }
 .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
-.slots{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
-.slot label{ display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
-.slot input{ width:100%; }
+.slots{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
 input,select{ font-family:inherit; font-size:14px; border:1px solid var(--line); border-radius:9px; padding:7px 9px; background:#fff; color:var(--ink); }
 input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent); }
 .level{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:10px; }
@@ -41,22 +39,46 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
 .reorder button:disabled{ opacity:.35; cursor:default; }
 .lvl-name{ width:150px; font-weight:700; }
 .lvl-id{ font-size:11px; color:var(--muted); margin-top:3px; }
-.parts{ display:flex; gap:8px; }
-.part{ text-align:center; }
-.part .thumb{ width:44px; height:44px; border-radius:9px; border:1px solid var(--line); background:#efe9dc center/cover no-repeat; display:block; }
-.part select{ width:74px; margin-top:3px; padding:3px 4px; font-size:11px; }
-.part span.plabel{ display:block; font-size:10px; color:var(--muted); }
 .chips{ display:flex; gap:5px; }
 .chip{ width:30px; height:30px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--muted); font-weight:700; font-size:14px; cursor:pointer; }
 .chip.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
-.spacer{ flex:1; }
+.fieldlbl{ font-size:11px; color:var(--muted); display:block; }
 .addbtn{ width:100%; border:1.5px dashed #cdbfae; background:transparent; color:#8a7c68; border-radius:14px; padding:12px; font-family:inherit; font-size:15px; cursor:pointer; }
 .addbtn:hover{ background:#fbf7ee; }
+/* asset control */
+.asset{ display:flex; gap:10px; align-items:center; border:1px solid var(--line); border-radius:11px; padding:8px; background:#fff; }
+.athumb{ width:52px; height:52px; border-radius:9px; border:1px solid var(--line); background:#efe9dc center/contain no-repeat; flex:none; }
+.ainfo{ flex:1; min-width:0; }
+.aslot{ font-size:12px; color:var(--muted); }
+.aid{ font-size:11px; color:#9a938a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.arow{ display:flex; gap:6px; margin-top:5px; }
+.part{ min-width:150px; }
+.parts{ display:flex; gap:10px; flex-wrap:wrap; }
+/* picker */
+.pcards{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+.pcard{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; cursor:pointer; text-align:left; }
+.pcard:hover{ background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+.pcard .pd{ width:12px; height:12px; border-radius:4px; display:inline-block; margin-right:6px; vertical-align:middle; }
+.pcard .pt{ font-weight:700; font-size:15px; }
+.pcard .ps{ font-size:11px; color:var(--muted); margin-top:4px; }
+/* gate + modal */
 .gate{ position:fixed; inset:0; background:var(--page); display:flex; align-items:center; justify-content:center; z-index:50; }
 .gate .box{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; width:280px; text-align:center; }
 .gate input{ width:100%; text-align:center; font-size:20px; letter-spacing:4px; margin:12px 0; }
 .hint{ font-size:12px; color:var(--muted); }
-.fieldlbl{ font-size:11px; color:var(--muted); display:block; }
+.modal{ position:fixed; inset:0; background:rgba(20,18,14,.45); display:none; align-items:center; justify-content:center; z-index:60; padding:16px; }
+.modal.on{ display:flex; }
+.msheet{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; width:min(560px,96vw); max-height:90vh; overflow:auto; }
+.mpieces{ display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:8px; margin:10px 0; }
+.mp{ border:1px solid var(--line); border-radius:8px; padding:4px; text-align:center; background:#fbf7ee; }
+.mp .mimg{ width:100%; height:52px; background:center/contain no-repeat; }
+.mp .mn{ font-size:9px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mfoot{ display:flex; gap:8px; align-items:center; margin-top:10px; }
+.libgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); gap:8px; margin:10px 0; max-height:50vh; overflow:auto; }
+.lib{ border:1px solid var(--line); border-radius:8px; padding:4px; cursor:pointer; background:#fbf7ee; text-align:center; }
+.lib:hover{ background:#fff; }
+.lib .limg{ width:100%; height:52px; background:center/contain no-repeat; }
+.lib .ln{ font-size:9px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 </style>
 </head>
 <body>
@@ -66,12 +88,22 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
     <div class="hint" style="margin-top:6px;">Enter the editor PIN</div>
     <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" />
     <button class="btn primary" style="width:100%;" onclick="unlock()">Open</button>
-    <div class="hint err" id="gateErr" style="min-height:16px;margin-top:8px;"></div>
+    <div class="hint err" id="gateErr" style="min-height:16px;margin-top:8px;color:#b23b3b;"></div>
   </div>
 </div>
 
+<!-- PICKER -->
+<div class="wrap" id="picker" style="display:none;">
+  <div class="topbar"><h1>Game Editor</h1><span class="grow"></span><button class="btn ghost sm" onclick="loadPicker()">Reload</button></div>
+  <div class="hint" style="margin:8px 2px 14px;">Pick a game to edit its art and levels. Every change goes live after Save.</div>
+  <div class="pcards" id="pcards"></div>
+  <div class="status" id="pstatus" style="margin-top:12px;"></div>
+</div>
+
+<!-- EDITOR -->
 <div class="wrap" id="app" style="display:none;">
   <div class="topbar">
+    <button class="btn ghost sm" onclick="backToPicker()">‹ All games</button>
     <span class="dot" id="dot"></span>
     <h1 id="gname">Editor</h1>
     <span class="badge" id="srcBadge">loading</span>
@@ -80,71 +112,135 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
     <button class="btn ghost sm" onclick="reload()">Reload</button>
     <button class="btn primary" id="saveBtn" onclick="save()">Save (goes live)</button>
   </div>
-  <div class="hint" style="margin:8px 2px 0;">Order the levels below is the journey order. The robot safety-check before a save goes live arrives in Session 4B; for now Save checks the basics, then publishes.</div>
+  <div class="hint" id="banner" style="margin:8px 2px 0;"></div>
 
   <div class="section-label">Game art slots</div>
   <div class="card"><div class="slots" id="slots"></div></div>
 
-  <div class="section-label">Levels</div>
+  <div class="section-label" id="levelsLabel">Levels</div>
   <div id="levels"></div>
-  <button class="addbtn" onclick="addLevel()">+ Add level</button>
+  <button class="addbtn" id="addBtn" onclick="addLevel()">+ Add level</button>
 </div>
 
+<!-- DROP-IN / LIBRARY MODAL -->
+<div class="modal" id="modal"><div class="msheet">
+  <div id="mtitle" style="font-weight:700;"></div>
+  <div class="hint" id="mhint" style="margin-top:4px;"></div>
+  <div id="mbody"></div>
+  <div class="mfoot">
+    <span class="status" id="mstat"></span><span class="spacer"></span>
+    <button class="btn sm" onclick="closeModal()">Cancel</button>
+    <button class="btn primary sm" id="mkeep" style="display:none;" onclick="mKeep()">Keep + use</button>
+  </div>
+</div></div>
+
 <script src="/buildable-manifest.js?v=1"></script>
+<script src="/buildable-slicer.js?v=1"></script>
 <script>
-var GAME = (new URLSearchParams(location.search).get("game") || "breaker").toLowerCase().replace(/[^a-z0-9-]/g,"") || "breaker";
+"use strict";
 var PIN = "";
-var state = { manifest:null, source:"" };
-var dirty = false;
+var state = { game:null, manifest:null, source:"", board:false, dirty:false };
 
-var LAYOUTS = (window.BuildableManifest && window.BuildableManifest.TPL) ? Object.keys(window.BuildableManifest.TPL) : ["full","pyramid","checker","gaps","columns","frame","diamond"];
-var THEMES = ["jungle","ocean","space"];
-var PARTS = [["background","bg","Background"],["bricks","bricks","Bricks"],["balls","balls","Balls"],["paddle","paddle","Paddle"]];
-var ART_SLOTS = [["badge","Badge"],["hero","Hero"],["winCelebration","Win art"],["loadingScreen","Loading"],["music","Music"]];
+// Games the picker offers (every converted game with a manifest; asset-only packs excluded).
+var CATALOG = [
+  {id:"breaker",label:"Breaker"},{id:"survival",label:"Survival"},{id:"sling",label:"Sling"},
+  {id:"chess",label:"Chess"},{id:"tictactoe",label:"Tic-Tac-Toe"},{id:"checkers",label:"Checkers"},
+  {id:"connectfour",label:"Connect Four"},{id:"dotsboxes",label:"Dots & Boxes"},{id:"memory",label:"Memory"},
+  {id:"mahjong",label:"Mahjong"},{id:"tennis",label:"Tennis"},{id:"typing",label:"Typing"},
+  {id:"bubble",label:"Bubble"},{id:"castleguard",label:"Castle Guard"},{id:"mathcannon",label:"Math Cannon"},
+  {id:"croctot",label:"Croc Tot"},{id:"rileys-garden",label:"Riley's Garden"},{id:"music-maker",label:"Music Maker"},
+  {id:"stringmatch",label:"String Match"},{id:"snakes",label:"Snakes"}
+];
+// Board / no-level games: art slots + drop-in only (no level rows).
+var BOARD = {chess:1,tictactoe:1,checkers:1,connectfour:1,dotsboxes:1,memory:1,mahjong:1};
 
-function assetUrl(id){ try{ return (window.BuildableManifest && window.BuildableManifest.resolveAsset(id)) || null; }catch(e){ return null; } }
-function themeOf(id){ var m=/^breaker\/(?:bg|bricks|balls|paddle)\/([a-z0-9]+)-v\d+$/.exec(id||""); return m?m[1]:null; }
-function partAsset(seg, theme){ return "breaker/"+seg+"/"+theme+"-v1"; }
-function slugify(s){ return String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"").slice(0,40) || "level"; }
-function el(tag, attrs, kids){ var e=document.createElement(tag); attrs=attrs||{}; for(var k in attrs){ if(k==="class")e.className=attrs[k]; else if(k==="html")e.innerHTML=attrs[k]; else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]); else e.setAttribute(k,attrs[k]); } (kids||[]).forEach(function(c){ if(c) e.appendChild(typeof c==="string"?document.createTextNode(c):c); }); return e; }
-function setDirty(){ dirty=true; setStatus("Unsaved changes"); srcBadge(state.source,true); }
-function setStatus(t, err){ var s=document.getElementById("status"); s.textContent=t||""; s.className="status"+(err?" err":""); }
-function srcBadge(src, unsaved){ var b=document.getElementById("srcBadge"); if(unsaved){ b.textContent="unsaved"; b.className="badge"; return; } if(src==="override"){ b.textContent="live (edited)"; b.className="badge live"; } else { b.textContent="default"; b.className="badge"; } }
+var SLOT_LABELS = {badge:"Badge",hero:"Hero",winCelebration:"Win art",loadingScreen:"Loading",music:"Music",
+  background:"Background",bg:"Background",bricks:"Bricks",balls:"Balls",paddle:"Paddle",
+  enemies:"Enemies",pals:"Pals",foes:"Bad guys",boss:"Boss",sky:"Sky",opponent:"Opponent",world:"World"};
 
-function unlock(){
-  var v=document.getElementById("pin").value.trim();
-  if(!v){ document.getElementById("gateErr").textContent="Enter the PIN"; return; }
-  PIN=v; document.getElementById("gate").style.display="none"; document.getElementById("app").style.display="block";
-  load();
+// Slicing specs per game slot (mode + grid). Anything not listed defaults to a single image.
+var SLOT_SPECS = {
+  breaker:{ background:{mode:"single",role:"background"},
+    bricks:{mode:"sheet",role:"sprite",rows:["ice","wood","metal","candy","star","bomb"],cols:["intact","hit","cracked"]},
+    balls:{mode:"single",role:"sprite"}, paddle:{mode:"single",role:"sprite"} },
+  survival:{ hero:{mode:"single",role:"sprite"}, bg:{mode:"single",role:"background"},
+    enemies:{mode:"sheet",role:"sprite",rows:["enemy_one","enemy_two","enemy_three"],cols:["x"]} },
+  sling:{ background:{mode:"single",role:"background"},
+    pals:{mode:"sheet",role:"sprite",rows:["pal_one","pal_two","pal_three","pal_four"],cols:["x"]},
+    foes:{mode:"sheet",role:"sprite",rows:["foe_one","foe_two","foe_three","foe_four","foe_five"],cols:["x"]} }
+};
+function specFor(slot){
+  var g = SLOT_SPECS[state.game] || {};
+  if(g[slot]) return Object.assign({key:slot}, g[slot]);
+  var bg = (slot==="background"||slot==="bg"||slot==="sky"||slot==="loadingScreen"||slot==="winCelebration"||slot==="hero");
+  return {key:slot, mode:"single", role: bg?"background":"sprite"};
 }
-document.getElementById("pin").addEventListener("keydown",function(e){ if(e.key==="Enter") unlock(); });
+function labelOf(k){ return SLOT_LABELS[k] || (k.charAt(0).toUpperCase()+k.slice(1)); }
 
+/* ---------- helpers ---------- */
+function el(tag, attrs, kids){ var e=document.createElement(tag); attrs=attrs||{}; for(var k in attrs){ if(k==="class")e.className=attrs[k]; else if(k==="html")e.innerHTML=attrs[k]; else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]); else if(attrs[k]!=null) e.setAttribute(k,attrs[k]); } (kids||[]).forEach(function(c){ if(c) e.appendChild(typeof c==="string"?document.createTextNode(c):c); }); return e; }
+function assetUrl(id){ if(!id) return null; if(String(id).indexOf("studio:")===0) return "/api/asset-studio?asset="+encodeURI(id.slice(7)); try{ return (window.BuildableManifest && window.BuildableManifest.resolveAsset(id)) || null; }catch(e){ return null; } }
+function slugify(s){ return String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"").slice(0,40) || "item"; }
+function setStatus(t,err){ var s=document.getElementById("status"); s.textContent=t||""; s.className="status"+(err?" err":""); }
+function setDirty(){ state.dirty=true; setStatus("Unsaved changes"); srcBadge(state.source,true); }
+function srcBadge(src,unsaved){ var b=document.getElementById("srcBadge"); if(unsaved){ b.textContent="unsaved"; b.className="badge"; return; } if(src==="override"){ b.textContent="live (edited)"; b.className="badge live"; } else { b.textContent="default"; b.className="badge"; } }
+
+/* ---------- gate + routing ---------- */
+function unlock(){ var v=document.getElementById("pin").value.trim(); if(!v){ document.getElementById("gateErr").textContent="Enter the PIN"; return; } PIN=v; document.getElementById("gate").style.display="none"; route(); }
+document.getElementById("pin").addEventListener("keydown",function(e){ if(e.key==="Enter") unlock(); });
+function route(){ var g=(new URLSearchParams(location.search).get("game")||"").toLowerCase().replace(/[^a-z0-9-]/g,""); if(g){ openGame(g); } else { loadPicker(); } }
+window.addEventListener("popstate", route);
+
+function loadPicker(){
+  document.getElementById("app").style.display="none";
+  document.getElementById("picker").style.display="block";
+  var host=document.getElementById("pcards"); host.innerHTML="";
+  CATALOG.forEach(function(g){
+    host.appendChild(el("button",{class:"pcard", onclick:function(){ openGame(g.id); }},[
+      el("div",{},[ el("span",{class:"pd", id:"pd-"+g.id, style:"background:#ddd"}), el("span",{class:"pt"},[g.label]) ]),
+      el("div",{class:"ps"},[ BOARD[g.id]?"art only":"art + levels" ])
+    ]));
+  });
+  document.getElementById("pstatus").textContent="";
+}
+function backToPicker(){ if(state.dirty && !confirm("Discard unsaved changes and leave?")) return; state.dirty=false; history.pushState({}, "", location.pathname); loadPicker(); }
+function openGame(g){ state.game=g; state.board=!!BOARD[g]; history.pushState({}, "", location.pathname+"?game="+encodeURIComponent(g)); document.getElementById("picker").style.display="none"; document.getElementById("app").style.display="block"; load(); }
+
+/* ---------- load / render ---------- */
 function load(){
   setStatus("Loading…");
-  fetch("/api/manifest?game="+encodeURIComponent(GAME)+"&v="+Date.now())
+  fetch("/api/manifest?game="+encodeURIComponent(state.game)+"&v="+Date.now())
     .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(!d || !d.manifest){ throw new Error(d && d.error || "no manifest"); }
-      state.manifest = d.manifest; state.source = d.source||"";
-      renderAll(); setStatus(""); srcBadge(state.source);
-    })
+    .then(function(d){ if(!d||!d.manifest) throw new Error(d&&d.error||"no manifest"); state.manifest=d.manifest; state.source=d.source||""; renderAll(); setStatus(""); srcBadge(state.source); })
     .catch(function(err){ setStatus("Could not load: "+(err.message||err), true); });
 }
-function reload(){ if(dirty && !confirm("Discard unsaved changes and reload?")) return; dirty=false; load(); }
+function reload(){ if(state.dirty && !confirm("Discard unsaved changes and reload?")) return; state.dirty=false; load(); }
 
 function renderAll(){
   var m=state.manifest;
-  document.getElementById("gname").textContent=(m.name||GAME)+" — Editor";
+  document.getElementById("gname").textContent=(m.name||state.game)+" — Editor";
   document.getElementById("dot").style.background=m.color||"var(--accent)";
-  renderSlots(); renderLevels();
+  document.getElementById("banner").textContent="Save runs the built-in checks (structure + every rule the game loader enforces) before it goes live. The full play-test robot (test-plays every level) is the next step in this phase.";
+  renderSlots();
+  var levelBased = !state.board && Array.isArray(m.levels) && m.levels.length;
+  document.getElementById("levelsLabel").style.display = levelBased?"":"none";
+  document.getElementById("addBtn").style.display = (levelBased && hasLayout())?"":"none";
+  document.getElementById("levels").style.display = levelBased?"":"none";
+  if(levelBased) renderLevels();
 }
+function hasLayout(){ return state.game==="breaker" || (state.manifest.levels && state.manifest.levels[0] && state.manifest.levels[0].layout && window.BuildableManifest && window.BuildableManifest.TPL); }
 
 function renderSlots(){
-  var host=document.getElementById("slots"); host.innerHTML=""; var art=state.manifest.art=state.manifest.art||{};
-  ART_SLOTS.forEach(function(pair){
-    var key=pair[0], label=pair[1];
-    var inp=el("input",{ value:art[key]||"", placeholder:"asset id", oninput:function(){ art[key]=inp.value.trim(); setDirty(); } });
-    host.appendChild(el("div",{class:"slot"},[ el("label",{},[label]), inp ]));
+  var host=document.getElementById("slots"); host.innerHTML="";
+  var art=state.manifest.art=state.manifest.art||{};
+  var keys=Object.keys(art); if(!keys.length){ host.appendChild(el("div",{class:"hint"},["This game has no art slots."])); return; }
+  keys.forEach(function(key){
+    if(key==="music"){ // audio slot: keep a plain id field
+      var inp=el("input",{ value:art[key]||"", placeholder:"audio asset id", oninput:function(){ art[key]=inp.value.trim(); setDirty(); } });
+      host.appendChild(el("div",{class:"asset"},[ el("div",{class:"ainfo"},[ el("div",{class:"aslot"},["Music"]), inp ]) ]));
+      return;
+    }
+    host.appendChild(assetControl(labelOf(key), function(){return art[key];}, function(v){ art[key]=v; setDirty(); }, specFor(key), "default"));
   });
 }
 
@@ -153,99 +249,173 @@ function renderLevels(){
   var levels=state.manifest.levels||(state.manifest.levels=[]);
   levels.forEach(function(lv,idx){ host.appendChild(levelRow(lv,idx,levels.length)); });
 }
-
 function levelRow(lv, idx, total){
   lv.parts=lv.parts||{};
   var row=el("div",{class:"level"});
   var top=el("div",{class:"lvl-top"});
-
-  var up=el("button",{ title:"move up", disabled: idx===0?"":null, onclick:function(){ moveLevel(idx,-1); } },["▲"]);
-  var down=el("button",{ title:"move down", disabled: idx===total-1?"":null, onclick:function(){ moveLevel(idx,1); } },["▼"]);
+  var up=el("button",{ title:"move up", onclick:function(){ moveLevel(idx,-1); } },["▲"]);
+  var down=el("button",{ title:"move down", onclick:function(){ moveLevel(idx,1); } },["▼"]);
   if(idx===0) up.disabled=true; if(idx===total-1) down.disabled=true;
   top.appendChild(el("div",{class:"reorder"},[up,down]));
-
   var nameWrap=el("div",{});
-  var name=el("input",{ class:"lvl-name", value:lv.name||"", placeholder:"Level name", oninput:function(){ lv.name=name.value; idlbl.textContent="id: "+(lv.id||""); setDirty(); } });
   var idlbl=el("div",{class:"lvl-id"},["id: "+(lv.id||"")]);
-  nameWrap.appendChild(name); nameWrap.appendChild(idlbl);
-  top.appendChild(nameWrap);
+  var name=el("input",{ class:"lvl-name", value:lv.name||"", placeholder:"Level name", oninput:function(){ lv.name=name.value; setDirty(); } });
+  nameWrap.appendChild(name); nameWrap.appendChild(idlbl); top.appendChild(nameWrap);
 
-  var parts=el("div",{class:"parts"});
-  PARTS.forEach(function(p){
-    var key=p[0], seg=p[1], plabel=p[2];
-    var cur=lv.parts[key]||"";
-    var curTheme=themeOf(cur);
-    var thumb=el("span",{class:"thumb"});
-    var u=assetUrl(cur); if(u) thumb.style.backgroundImage="url('"+u+"')";
-    var opts=THEMES.slice(); if(curTheme && opts.indexOf(curTheme)<0) opts.unshift(curTheme);
-    var sel=el("select",{ onchange:function(){ lv.parts[key]=partAsset(seg, sel.value); var nu=assetUrl(lv.parts[key]); thumb.style.backgroundImage=nu?"url('"+nu+"')":""; setDirty(); } });
-    opts.forEach(function(t){ var o=el("option",{value:t},[t]); if(t===curTheme)o.selected=true; sel.appendChild(o); });
-    parts.appendChild(el("div",{class:"part"},[ thumb, sel, el("span",{class:"plabel"},[plabel]) ]));
-  });
-  top.appendChild(parts);
-
-  var lay=el("select",{ onchange:function(){ lv.layout=lay.value; setDirty(); } });
-  LAYOUTS.forEach(function(L){ var o=el("option",{value:L},[L]); if(L===lv.layout)o.selected=true; lay.appendChild(o); });
-  top.appendChild(el("div",{},[ el("span",{class:"fieldlbl"},["Layout"]), lay ]));
-
+  // layout (breaker templates only)
+  if(hasLayout()){
+    var LAYOUTS=(window.BuildableManifest&&window.BuildableManifest.TPL)?Object.keys(window.BuildableManifest.TPL):["full"];
+    var lay=el("select",{ onchange:function(){ lv.layout=lay.value; setDirty(); } });
+    LAYOUTS.forEach(function(L){ var o=el("option",{value:L},[L]); if(L===lv.layout)o.selected=true; lay.appendChild(o); });
+    top.appendChild(el("div",{},[ el("span",{class:"fieldlbl"},["Layout"]), lay ]));
+  }
+  // difficulty chips
   var chips=el("div",{class:"chips"});
   for(var d=1; d<=5; d++){ (function(dd){ var c=el("button",{ class:"chip"+(lv.difficulty===dd?" on":""), onclick:function(){ lv.difficulty=dd; Array.prototype.forEach.call(chips.children,function(ch,ci){ ch.className="chip"+(ci+1===dd?" on":""); }); setDirty(); } },[String(dd)]); chips.appendChild(c); })(d); }
   top.appendChild(el("div",{},[ el("span",{class:"fieldlbl"},["Difficulty"]), chips ]));
-
   top.appendChild(el("span",{class:"spacer"}));
-  top.appendChild(el("button",{ class:"btn sm", title:"Play this level", onclick:function(){ testLevel(lv); } },["▶ Test"]));
-  top.appendChild(el("button",{ class:"btn sm danger", title:"Remove level", onclick:function(){ removeLevel(idx); } },["Remove"]));
-
+  if(state.game==="breaker") top.appendChild(el("button",{ class:"btn sm", title:"Play this level", onclick:function(){ testLevel(lv); } },["▶ Test"]));
+  top.appendChild(el("button",{ class:"btn sm danger", onclick:function(){ removeLevel(idx); } },["Remove"]));
   row.appendChild(top);
+
+  // art parts (only string-valued parts are art; arrays/numbers are gameplay config, left as-is)
+  var artParts=Object.keys(lv.parts).filter(function(k){ return typeof lv.parts[k]==="string"; });
+  if(artParts.length){
+    var parts=el("div",{class:"parts", style:"margin-top:10px;"});
+    artParts.forEach(function(k){
+      parts.appendChild(assetControl(labelOf(k), function(){return lv.parts[k];}, function(v){ lv.parts[k]=v; setDirty(); }, specFor(k), lv.id||"level"));
+    });
+    row.appendChild(parts);
+  }
   return row;
 }
 
-function moveLevel(idx, dir){ var L=state.manifest.levels; var j=idx+dir; if(j<0||j>=L.length) return; var t=L[idx]; L[idx]=L[j]; L[j]=t; setDirty(); renderLevels(); }
-function removeLevel(idx){ var L=state.manifest.levels; if(L.length<=1){ setStatus("A game needs at least one level.",true); return; } if(!confirm("Remove \""+(L[idx].name||"this level")+"\"?")) return; L.splice(idx,1); setDirty(); renderLevels(); }
+/* ---------- AssetControl: thumbnail + Drop in art + Library ---------- */
+function assetControl(label, getId, setId, spec, theme){
+  var wrap=el("div",{class:"asset part"});
+  var thumb=el("div",{class:"athumb"});
+  var idline=el("div",{class:"aid"});
+  function refresh(){ var id=getId(); idline.textContent=id||"(empty)"; var u=assetUrl(id); thumb.style.backgroundImage=u?("url('"+u+"')"):""; }
+  refresh();
+  var info=el("div",{class:"ainfo"},[
+    el("div",{class:"aslot"},[label]), idline,
+    el("div",{class:"arow"},[
+      el("button",{class:"btn sm", onclick:function(){ dropIn(spec, theme, function(newId){ setId(newId); refresh(); }); }},["Drop in art"]),
+      el("button",{class:"btn sm ghost", onclick:function(){ pickLibrary(spec, function(newId){ setId(newId); refresh(); }); }},["Library"])
+    ])
+  ]);
+  wrap.appendChild(thumb); wrap.appendChild(info);
+  return wrap;
+}
 
+/* ---------- modal ---------- */
+var MODAL={pieces:null, spec:null, theme:null, cb:null};
+function openModal(){ document.getElementById("modal").classList.add("on"); }
+function closeModal(){ document.getElementById("modal").classList.remove("on"); document.getElementById("mkeep").style.display="none"; document.getElementById("mstat").textContent=""; }
+
+function dropIn(spec, theme, cb){
+  var inp=el("input",{type:"file", accept:"image/*"});
+  inp.addEventListener("change", function(){
+    var f=inp.files&&inp.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      BuildableSlicer.loadImage(rd.result).then(function(img){
+        var pieces=BuildableSlicer.sliceSheet(img, spec);
+        MODAL={pieces:pieces, spec:spec, theme:theme, cb:cb};
+        showPiecesModal();
+      }).catch(function(e){ alert("Could not read that image."); });
+    };
+    rd.readAsDataURL(f);
+  });
+  inp.click();
+}
+function showPiecesModal(){
+  document.getElementById("mtitle").textContent="Drop in art — "+labelOf(MODAL.spec.key);
+  document.getElementById("mhint").textContent=MODAL.pieces.length+" piece(s) sliced. They save straight to this slot when you keep.";
+  var body=document.getElementById("mbody"); body.innerHTML="";
+  var themeRow=el("div",{style:"margin:8px 0;"},[ el("span",{class:"fieldlbl"},["Set name (theme)"]),
+    el("input",{id:"mtheme", value:slugify(MODAL.theme||"custom"), style:"width:180px;margin-left:6px;"}) ]);
+  body.appendChild(themeRow);
+  var grid=el("div",{class:"mpieces"});
+  MODAL.pieces.forEach(function(p){ grid.appendChild(el("div",{class:"mp"},[ el("div",{class:"mimg", style:"background-image:url('"+p.dataURL+"')"}), el("div",{class:"mn"},[p.name+" "+p.w+"x"+p.h]) ])); });
+  body.appendChild(grid);
+  document.getElementById("mkeep").style.display="";
+  openModal();
+}
+function mKeep(){
+  var theme=slugify(document.getElementById("mtheme").value||"custom");
+  var spec=MODAL.spec, pieces=MODAL.pieces;
+  document.getElementById("mstat").textContent="Saving…"; document.getElementById("mkeep").disabled=true;
+  var keepBody={ action:"keep", game:state.game, type:spec.key, theme:theme, pieces:pieces.map(function(p){ return {slug:p.name, b64:p.dataURL}; }) };
+  fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(keepBody)})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j || !j.count){ throw new Error((j&&j.error)||"save failed"); }
+      // For a sheet an engine runtime-slices, also keep one clean recomposed grid sheet
+      // and point the slot at it. For a single, point at the one saved piece.
+      if(spec.mode==="sheet"){
+        var rows=(spec.rows||["x"]).length, cols=(spec.cols||["x"]).length;
+        return BuildableSlicer.recomposeGrid(pieces, rows, cols).then(function(sheetURL){
+          return fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"keep",game:state.game,type:spec.key,theme:theme,pieces:[{slug:"sheet",b64:sheetURL}]})})
+            .then(function(){ return "studio:"+state.game+"/"+spec.key+"/"+theme+"/sheet"; });
+        });
+      }
+      return "studio:"+state.game+"/"+spec.key+"/"+theme+"/"+pieces[0].name;
+    })
+    .then(function(newId){ document.getElementById("mkeep").disabled=false; setDirty(); MODAL.cb(newId); closeModal(); })
+    .catch(function(e){ document.getElementById("mkeep").disabled=false; document.getElementById("mstat").textContent="Save failed: "+(e.message||e); });
+}
+
+function pickLibrary(spec, cb){
+  document.getElementById("mtitle").textContent="Library — "+labelOf(spec.key);
+  document.getElementById("mhint").textContent="Loading saved assets…";
+  document.getElementById("mbody").innerHTML=""; document.getElementById("mkeep").style.display="none"; openModal();
+  fetch("/api/asset-studio?manifest=1&game="+encodeURIComponent(state.game)+"&v="+Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      var assets=(j&&j.assets)||[];
+      // prefer this slot's assets, but show all for the game
+      var mine=assets.filter(function(a){ return a.slug.indexOf("/"+spec.key+"/")>-1; });
+      var list=mine.length?mine:assets;
+      document.getElementById("mhint").textContent=list.length?(list.length+" saved asset(s). Tap one to use it."):"No saved assets for this game yet. Use Drop in art to add some.";
+      var grid=el("div",{class:"libgrid"});
+      list.forEach(function(a){ grid.appendChild(el("div",{class:"lib", onclick:function(){ cb("studio:"+a.slug); setDirty(); closeModal(); }},[
+        el("div",{class:"limg", style:"background-image:url('"+a.url+"')"}), el("div",{class:"ln"},[a.slug.split("/").slice(2).join("/")]) ])); });
+      var body=document.getElementById("mbody"); body.innerHTML=""; body.appendChild(grid);
+    })
+    .catch(function(e){ document.getElementById("mhint").textContent="Could not load library: "+(e.message||e); });
+}
+
+/* ---------- level ops ---------- */
+function moveLevel(idx,dir){ var L=state.manifest.levels; var j=idx+dir; if(j<0||j>=L.length) return; var t=L[idx]; L[idx]=L[j]; L[j]=t; setDirty(); renderLevels(); }
+function removeLevel(idx){ var L=state.manifest.levels; if(L.length<=1){ setStatus("A game needs at least one level.",true); return; } if(!confirm("Remove \""+(L[idx].name||"this level")+"\"?")) return; L.splice(idx,1); setDirty(); renderLevels(); }
 function addLevel(){
   var L=state.manifest.levels; var base=L[L.length-1]||{};
   var id="level-"+(L.length+1); var n=1; var ids={}; L.forEach(function(x){ ids[x.id]=1; }); while(ids[id]){ n++; id="level-"+(L.length+n); }
-  var nu={ id:id, name:"New Level", layout:"full", difficulty:2,
-    journeyBadge:(base.journeyBadge||null),
-    parts:{ background:(base.parts&&base.parts.background)||"breaker/bg/jungle-v1", bricks:(base.parts&&base.parts.bricks)||"breaker/bricks/jungle-v1", balls:(base.parts&&base.parts.balls)||"breaker/balls/jungle-v1", paddle:(base.parts&&base.parts.paddle)||"breaker/paddle/jungle-v1" } };
-  L.push(nu); setDirty(); renderLevels();
-  window.scrollTo(0, document.body.scrollHeight);
+  var nu=JSON.parse(JSON.stringify(base)); nu.id=id; nu.name="New Level"; nu.difficulty=base.difficulty||2; delete nu.unlocked;
+  L.push(nu); setDirty(); renderLevels(); window.scrollTo(0, document.body.scrollHeight);
 }
+function testLevel(lv){ if(state.dirty){ if(!confirm("Save first so Test plays your latest change? (Cancel = test the last saved version)")){ openTest(lv); return; } save(function(){ openTest(lv); }); return; } openTest(lv); }
+function openTest(lv){ window.open("/"+state.game+"/play/"+encodeURIComponent(lv.id), "_blank"); }
 
-function testLevel(lv){
-  if(dirty){ if(!confirm("Save first so Test plays your latest change? (Cancel = test the last saved version)")) { openTest(lv); return; } save(function(){ openTest(lv); }); return; }
-  openTest(lv);
-}
-function openTest(lv){ window.open("/"+GAME+"/play/"+encodeURIComponent(lv.id), "_blank"); }
-
+/* ---------- save ---------- */
 function ensureInvariants(){
-  var L=state.manifest.levels||[];
-  L.forEach(function(lv,i){
-    if(!lv.id) lv.id=slugify(lv.name);
-    lv.name=lv.name||lv.id;
-    lv.difficulty=Math.max(1,Math.min(5, parseInt(lv.difficulty,10)||2));
-    if(i===0) lv.unlocked=true; else if(lv.unlocked) delete lv.unlocked;
-  });
-  // de-dup ids
-  var seen={}; L.forEach(function(lv){ var b=lv.id, k=lv.id, c=2; while(seen[k]){ k=b+"-"+(c++); } lv.id=k; seen[k]=1; });
+  var L=state.manifest.levels; if(!Array.isArray(L)) return;
+  L.forEach(function(lv,i){ if(!lv.id) lv.id=slugify(lv.name); lv.name=lv.name||lv.id; lv.difficulty=Math.max(1,Math.min(5,parseInt(lv.difficulty,10)||2)); if(i===0) lv.unlocked=true; else if(lv.unlocked) delete lv.unlocked; });
+  var seen={}; L.forEach(function(lv){ var b=lv.id,k=lv.id,c=2; while(seen[k]){ k=b+"-"+(c++); } lv.id=k; seen[k]=1; });
 }
-
 function save(after){
-  ensureInvariants(); renderLevels();
+  ensureInvariants(); if(!state.board) renderLevels();
   var v=window.BuildableManifest ? window.BuildableManifest.validate(state.manifest) : {ok:true,errors:[]};
   if(!v.ok){ setStatus("Fix first: "+v.errors.join("; "), true); return; }
   var btn=document.getElementById("saveBtn"); btn.disabled=true; setStatus("Saving…");
-  fetch("/api/manifest",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ game:GAME, manifest:state.manifest, pin:PIN }) })
+  fetch("/api/manifest",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ game:state.game, manifest:state.manifest, pin:PIN }) })
     .then(function(r){ return r.json(); })
-    .then(function(d){
-      btn.disabled=false;
-      if(d.ok){ dirty=false; state.source="override"; srcBadge("override"); setStatus("Saved — live now."); if(typeof after==="function") after(); }
-      else { setStatus("Save failed: "+((d.errors&&d.errors.join("; "))||d.error||d.detail||"unknown"), true); }
-    })
+    .then(function(d){ btn.disabled=false; if(d.ok){ state.dirty=false; state.source="override"; srcBadge("override"); setStatus("Saved — live now."); if(typeof after==="function") after(); } else { setStatus("Save failed: "+((d.errors&&d.errors.join("; "))||d.error||d.detail||"unknown"), true); } })
     .catch(function(err){ btn.disabled=false; setStatus("Save failed: "+(err.message||err), true); });
 }
-window.addEventListener("beforeunload", function(e){ if(dirty){ e.preventDefault(); e.returnValue=""; } });
+window.addEventListener("beforeunload", function(e){ if(state.dirty){ e.preventDefault(); e.returnValue=""; } });
 </script>
 </body>
 </html>

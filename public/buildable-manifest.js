@@ -79,6 +79,9 @@
   // back to its built-in art rather than 404.
   function breakerResolveAsset(id){
     if(!id || typeof id!=="string") return null;
+    // Editor drop-in / Library assets are stored in the shared studio; a "studio:"
+    // id resolves to its served bytes. Works for every slot and every game.
+    if(id.indexOf("studio:")===0) return "/api/asset-studio?asset="+encodeURI(id.slice(7));
     var m = /^breaker\/(bg|bricks|balls|paddle|shatter)\/([a-z0-9]+)-v\d+$/.exec(id);
     if(m){ return "/breaker/"+m[2]+"/"+m[1]+".webp"; }
     return null;
@@ -435,7 +438,10 @@
 
   // back-compat export (Breaker convention). Kept so anything importing
   // resolveAsset keeps resolving Breaker asset IDs exactly as before.
-  function resolveAsset(id){ return breakerResolveAsset(id); }
+  function resolveAsset(id){
+    if(typeof id==="string" && id.indexOf("studio:")===0) return "/api/asset-studio?asset="+encodeURI(id.slice(7));
+    return breakerResolveAsset(id);
+  }
 
   // ---- validation -----------------------------------------------------------
   // Returns { ok, errors:[...], warnings:[...] }. Errors block the manifest from

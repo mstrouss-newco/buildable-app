@@ -25,8 +25,13 @@ function readBody(req) {
 }
 const slug = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
 
-// Structural validation — same rules the shell loader (buildable-manifest.js) enforces, server-side.
-const LAYOUTS = ["full", "pyramid", "checker", "gaps", "columns", "frame", "diamond"];
+// Structural validation — GAME-AGNOSTIC server-side guard (Session 4B: the editor now
+// saves every game, not just Breaker). Universal fields only: id, name, type, and — for
+// games — a non-empty levels array where each level has a unique id, a name, and a
+// difficulty 1-5. The deep, per-game level shape (Breaker layout/parts, Survival recipes,
+// board opponents, …) is validated CLIENT-side by the shared loader (BuildableManifest.
+// validate) before the editor ever POSTs, so this stays a lightweight safety net that
+// never wrongly rejects a valid non-Breaker manifest.
 function validate(m) {
   const e = [];
   if (!m || typeof m !== "object") return ["manifest is not an object"];
@@ -47,10 +52,8 @@ function validate(m) {
         if (!lv.id || typeof lv.id !== "string") e.push(at + " missing id");
         else if (seen[lv.id]) e.push(at + " duplicate id '" + lv.id + "'"); else seen[lv.id] = 1;
         if (!lv.name) e.push(at + " missing name");
-        if (!LAYOUTS.includes(lv.layout)) e.push(at + " layout must be one of " + LAYOUTS.join("/") + " (got " + lv.layout + ")");
         const d = lv.difficulty;
         if (typeof d !== "number" || d < 1 || d > 5 || (d | 0) !== d) e.push(at + " difficulty must be an integer 1-5");
-        if (!lv.parts || typeof lv.parts !== "object" || !lv.parts.bricks) e.push(at + " parts.bricks is required");
       });
     }
   }

@@ -1,5 +1,60 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B — Drop-in art flow + editor completion (Phase 4)
+
+Finished the Phase 4 editor. Three parts, plus the known slicer bug fixed first.
+
+**1) Slicer sliver bug (fixed FIRST, verified).** Sliced pieces were carrying a thin
+strip of a touching neighbour along an edge (the residue seen on Breaker bricks). Root
+cause: after trimming a cell tight, a thin, gap-separated strip of a neighbour's ink at
+the edge still counted as this piece's content, and the old 1px inset was too small to
+drop it. Fix lives in ONE place now — a new shared `public/buildable-slicer.js` whose
+`contentBox` shaves any thin (<=6px), gap-separated, low-ink edge strip off each side,
+then hugs the sprite, then applies a 1px safety inset. Interior gaps and real chunks
+(shatter debris) are preserved. `asset-library.html` now delegates to the shared slicer,
+so Asset Studio and the Editor cut identically. Re-cleaned and recommitted the three
+Breaker brick sheets (`public/breaker/{jungle,ocean,space}/bricks.{png,webp}`) by erasing
+the foreign slivers IN PLACE (jungle 4 strips, ocean 6, space 4) with every brick body and
+cell position unchanged. Verified: (a) even-grid runtime slice of the recommitted sheets =
+0 slivers; (b) the shared `sliceSheet` run headlessly over each committed sheet through a
+canvas stub = 18/18 clean pieces, all themes; (c) a synthetic sliver unit-test trims and
+hugs the sprite. The one thing left for on-device: a real drop-in through the live editor
+(Mike's laptop step, needs the deployed backend).
+
+**2) Multi-game editor + picker.** `public/editor.html` is no longer Breaker-only. It opens
+a game picker that lists every converted game/studio (Breaker, Survival, Sling, Chess,
+Tic-Tac-Toe, and the rest; asset-only packs excluded), and edits each one manifest-driven:
+art slots come from `manifest.art`, level rows from each level's own parts. Breaker keeps its
+full level editor (layout template + difficulty + parts). Other level-based games get name +
+difficulty + their string art-parts. Board games (Chess, Tic-Tac-Toe, Checkers, Connect Four,
+Dots & Boxes, Memory, Mahjong) show art slots + drop-in only, no level rows (owner decision).
+
+**3) Drop in art + Library on every slot and part.** The raw asset-id text boxes are replaced
+by two controls: **Drop in art** (upload -> auto-slice via the shared slicer -> keep straight
+to that slot's asset ID via the existing `/api/asset-studio` keep endpoint, compressed) and
+**Library** (pick an existing saved asset). Sheet slots also keep one clean recomposed grid
+sheet so an engine that runtime-slices always gets clean cells. Dropped-in / library art is
+referenced by a `studio:` asset id; `buildable-manifest.js`'s resolver now maps a `studio:` id
+to its served bytes, so a dropped-in Breaker part renders through the normal load path.
+
+**Save honesty + server validate.** The editor banner no longer promises a play-test robot it
+does not run; it states Save runs the structural + loader-rule checks now, with the full
+play-test gate as the next step (owner chose "structure check now, play-test next"). The
+`/api/manifest` server validator was Breaker-only (it required `parts.bricks` and a Breaker
+layout on every level, which would have rejected Survival/Sling/Chess/etc.); it is now a
+game-agnostic structural net (id, name, type, non-empty levels with unique ids + difficulty
+1-5). The deep, per-game level check runs client-side via the shared loader before any POST.
+
+**QA.** `node qa-breaker.mjs .` ALL CHECKS PASS. `node qa-sling.mjs .` ALL CHECKS PASS. New
+shared-slicer headless slice test = clean on all three Breaker sheets. Did NOT start any other
+session. **On-device (Mike):** push to main, then one real drop-in through the live editor on a
+laptop viewport to confirm clean pieces render in-game; and confirm dropped-in art routing for
+the non-Breaker engines (they save to the shared library; Breaker's render path is wired).
+
+Files: `public/buildable-slicer.js` (new), `public/editor.html`, `public/asset-library.html`,
+`public/buildable-manifest.js`, `api/manifest.js`, `public/breaker/{jungle,ocean,space}/bricks.{png,webp}`,
+`SESSION-LOG.md`, `README.md`.
+
 ## 2026-07-11: Session 8L — Kidspedia dive template (layers-cutaway) + Journey to the Deep
 
 Kidspedia's second exhibit template, and the first that is not 3D. `orbit-explorer` (Session 8G) was
