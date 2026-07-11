@@ -800,7 +800,8 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   // flung animals (Animal Pack Remastered)
   SQUAD.forEach(function(c,i){ if(c.img) L(c.img,function(im){ SQUAD_IMGS[i]=im; }); });
   // block towers (Physics Assets) — 6 material/shape textures
-  ["woodW","woodS","woodT","stoneW","stoneS","stoneT"].forEach(function(k){ L("/kenney/sling/blocks/"+k+".png",function(im){ BLK_IMGS[k]=im; }); });
+  // painted platform blocks (our art); Kenney path kept as fallback if a piece misses
+  ["woodW","woodS","woodT","stoneW","stoneS","stoneT"].forEach(function(k){ L("/sling/blocks/"+k+".png?v=1",function(im){ BLK_IMGS[k]=im; }); });
   // toppling targets (Physics Assets alien faces)
   for(var i=0;i<5;i++){ (function(i){ L("/kenney/sling/targets/t"+i+".png",function(im){ TARGET_IMGS[i]=im; }); })(i); }
   // painted bad guys (our art) — 6 monsters x idle/bonked/poof

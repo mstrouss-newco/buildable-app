@@ -6,6 +6,14 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: painted platform blocks (July 11 2026)
+
+Replaced the placeholder wood/gray block art with painted 3D blocks (our art). One 6-piece sheet
+(WOOD + STONE, each wide/square/tall) sliced by connected-component detection + the two-pass
+shadow-safe cutout to `public/sling/blocks/{woodW,woodS,woodT,stoneW,stoneS,stoneT}.png` (keys the
+engine already uses via blockImgFor). Block loader repointed from /kenney to /sling/blocks; drawn
+block stays as the never-break fallback. qa-sling green.
+
 ## Sling Squad: shadow cleanup + slingshot alignment fix (July 11 2026)
 
 Fixed two issues on the painted art. (1) DROP SHADOWS: the slice kept each sprite's soft
