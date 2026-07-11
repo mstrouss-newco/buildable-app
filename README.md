@@ -6,6 +6,24 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Raccoon poses in Sling Squad (July 11 2026)
+
+First hand-painted character animation for Sling Squad. A 5-character reference sheet
+("animation bible") was sliced into 7 transparent raccoon poses (idle, pulledback, flying,
+split, impact, dazed, victory) in `public/sling/raccoon/`, white background removed by
+edge-flood fill so the cream fur is kept. `sling-squad.html` now renders the raccoon via a
+`raccoonPose()` state picker + `drawRaccoon()` tweener: one frame per state, and the engine
+tilts / squashes / pops BETWEEN them (velocity-based flight rotation, impact squash, split
+pop, dazed wobble, idle breathe, victory bounce) so it reads as smooth motion without a large
+frame count. Pose moments are driven by real signals: `_hitT` set on hard ammo collisions
+(impact), `G._powerAt` on power trigger (split/ability), body speed (dazed), aim-drag distance
+(pulledback), win state (victory). `RACCOON_ON` (default true) shows the raccoon for every shot;
+flip to false to restore the prior Kenney/drawn look. If a pose PNG fails to load the code falls
+back to the existing art, so it can never break a kid's game. New `/sling/(.*)` static route
+added to `vercel.json`. QA: `qa-sling.mjs` green (all 5 levels clear with spare launches, render
+smoke passes). Other four characters (squirrel, skunk, beaver, frog) are next once the feel is
+approved.
+
 ## Session 4B: Drop-in art flow + editor completion (July 11 2026)
 
 Phase 4 editor finished. **Slicer bug fixed first:** sliced pieces carried a thin sliver of a

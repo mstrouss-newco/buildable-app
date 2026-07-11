@@ -728,6 +728,13 @@
       "dest": "/question-review.html"
     },
     {
+      "src": "/sling/(.*)",
+      "dest": "/sling/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
