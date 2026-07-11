@@ -13,6 +13,7 @@ const SOUNDS = {
   wind:    "Soft gentle wind blowing across a wide snowy mountain landscape, calm airy whoosh, seamless ambient loop, no music, no voices",
   jungle:  "Lush tropical jungle ambience, distant exotic birds and soft chirping insects, gentle and warm, seamless ambient loop, no music, no voices",
   space:   "Soft calm cosmic outer-space ambience, gentle airy hum with faint twinkles, dreamy, seamless ambient loop, no music, no voices",
+  ocean:   "Calm deep underwater ocean ambience, soft muffled water movement and gentle low swells with faint distant whale song, peaceful and immersive, seamless ambient loop, no music, no voices",
   candy:   "Light whimsical magical sparkle chimes and soft twinkles, cheerful and gentle, seamless ambient loop, no music, no voices",
   rain:    "Gentle soft steady rainfall, soothing calm raindrops, seamless ambient loop, no music, no voices",
   city:    "Gentle friendly daytime town-square ambience, soft distant footsteps, a faint fountain, a far-off bicycle bell and a few birds, calm and warm, seamless ambient loop, no music, no voices",
@@ -321,6 +322,7 @@ const SOUNDS = {
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
+  ocean:15,
   chess_select:0.4, chess_move:0.5, chess_check:0.7, chess_castle:0.7, chess_promote:1.0,
   chess_win:1.6, chess_lose:1.0, chess_yourturn:0.5, chess_capture:0.8,
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,

@@ -107,7 +107,8 @@
         "ocean-albatross"
       ],
       "factAudio": "ocean-deep-albatross",
-      "source": "National Geographic Kids; NOAA Ocean Service"
+      "source": "National Geographic Kids; NOAA Ocean Service",
+      "sound": "bird"
     },
     {
       "id": "pelican",
@@ -142,7 +143,8 @@
         "ocean-pelican"
       ],
       "factAudio": "ocean-deep-pelican",
-      "source": "Audubon Society; National Geographic Kids"
+      "source": "Audubon Society; National Geographic Kids",
+      "sound": "bird"
     },
     {
       "id": "turtle",
@@ -212,7 +214,8 @@
         "ocean-dolphin"
       ],
       "factAudio": "ocean-deep-dolphin",
-      "source": "NOAA Fisheries; Dolphin Communication Project"
+      "source": "NOAA Fisheries; Dolphin Communication Project",
+      "sound": "dolphin"
     },
     {
       "id": "clownfish",
