@@ -1,5 +1,32 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on — per-level art (Sling) + editor clarity
+
+Owner feedback after testing 4B: the editor didn't make clear what each art slot was, and it
+only exposed a level's background, not its helpers/bad guys. Owner wants each level dressed from
+the art it needs (per level), starting with Sling.
+
+- **Editor clarity.** Top section renamed to "Whole-game art (badges, menus, music)". Per-level
+  section gained a one-line note ("Each level's own art. Drop in art on a level changes only that
+  level."). Plain labels everywhere: Background (was "Scene"), Helpers (pals), Bad guys (foes/
+  enemies), Boss, Hero.
+- **Per-level art, Sling first.** Each Sling level now shows Background, Helpers, and Bad guys,
+  each with Drop in art + Library. Drop-in slices and saves to that LEVEL's own world (theme =
+  the level id) via `/api/asset-studio`; Library assigns an existing world to the level. The
+  level records `parts.world`.
+- **Sling engine (`public/sling-squad.html`).** Added per-level art selection that reads the
+  playing level's own world from the shared world pack (`BuildableWorlds` already loads every
+  world): `curWorld/curScene/curPals/curTargets` replace the three whole-game globals at the
+  three render sites. Fully guarded: a level with no `parts.world` falls back to the whole-game
+  set, then to drawn art, so nothing regresses. `buildable-manifest.js` sling profile now passes
+  `world` through to the engine level config.
+- **QA.** `qa-sling` + `qa-breaker` ALL CHECKS PASS (per-level art is additive; beatability
+  unchanged). Live drop-in per level is Mike's on-device check. Other games keep the clearer
+  labels; making their bad guys/helpers per-level (Survival next) is the same additive pattern.
+
+Files: `public/editor.html`, `public/sling-squad.html`, `public/buildable-manifest.js`,
+`SESSION-LOG.md`.
+
 ## 2026-07-11: Session 4B — Drop-in art flow + editor completion (Phase 4)
 
 Finished the Phase 4 editor. Three parts, plus the known slicer bug fixed first.

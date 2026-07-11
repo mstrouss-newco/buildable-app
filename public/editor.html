@@ -114,10 +114,11 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
   </div>
   <div class="hint" id="banner" style="margin:8px 2px 0;"></div>
 
-  <div class="section-label">Game art slots</div>
+  <div class="section-label">Whole-game art (badges, menus, music)</div>
   <div class="card"><div class="slots" id="slots"></div></div>
 
   <div class="section-label" id="levelsLabel">Levels</div>
+  <div class="hint" id="levelsHint" style="margin:-2px 2px 10px;"></div>
   <div id="levels"></div>
   <button class="addbtn" id="addBtn" onclick="addLevel()">+ Add level</button>
 </div>
@@ -155,8 +156,18 @@ var CATALOG = [
 var BOARD = {chess:1,tictactoe:1,checkers:1,connectfour:1,dotsboxes:1,memory:1,mahjong:1};
 
 var SLOT_LABELS = {badge:"Badge",hero:"Hero",winCelebration:"Win art",loadingScreen:"Loading",music:"Music",
-  background:"Background",bg:"Background",bricks:"Bricks",balls:"Balls",paddle:"Paddle",
-  enemies:"Enemies",pals:"Pals",foes:"Bad guys",boss:"Boss",sky:"Sky",opponent:"Opponent",world:"World"};
+  background:"Background",scene:"Background",bg:"Background",bricks:"Bricks",balls:"Balls",paddle:"Paddle",
+  enemies:"Bad guys",pals:"Helpers",foes:"Bad guys",boss:"Boss",sky:"Sky",opponent:"Opponent",world:"World"};
+
+// Per-level art sets for games that dress each level from its own world (helpers/bad
+// guys/background per page). Each slot's drop-in saves to that LEVEL's own world.
+var LEVEL_ART = {
+  sling: [
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
+    {key:"pals", label:"Helpers", spec:{mode:"sheet",role:"sprite",rows:["pal_one","pal_two","pal_three","pal_four"],cols:["x"]}},
+    {key:"foes", label:"Bad guys", spec:{mode:"sheet",role:"sprite",rows:["foe_one","foe_two","foe_three","foe_four","foe_five"],cols:["x"]}}
+  ]
+};
 
 // Slicing specs per game slot (mode + grid). Anything not listed defaults to a single image.
 var SLOT_SPECS = {
@@ -211,7 +222,7 @@ function load(){
   setStatus("Loading…");
   fetch("/api/manifest?game="+encodeURIComponent(state.game)+"&v="+Date.now())
     .then(function(r){ return r.json(); })
-    .then(function(d){ if(!d||!d.manifest) throw new Error(d&&d.error||"no manifest"); state.manifest=d.manifest; state.source=d.source||""; renderAll(); setStatus(""); srcBadge(state.source); })
+    .then(function(d){ if(!d||!d.manifest) throw new Error(d&&d.error||"no manifest"); state.manifest=d.manifest; state.source=d.source||""; renderAll(); setStatus(""); srcBadge(state.source); loadLib(); })
     .catch(function(err){ setStatus("Could not load: "+(err.message||err), true); });
 }
 function reload(){ if(state.dirty && !confirm("Discard unsaved changes and reload?")) return; state.dirty=false; load(); }
@@ -226,8 +237,11 @@ function renderAll(){
   document.getElementById("levelsLabel").style.display = levelBased?"":"none";
   document.getElementById("addBtn").style.display = (levelBased && hasLayout())?"":"none";
   document.getElementById("levels").style.display = levelBased?"":"none";
+  var hint=document.getElementById("levelsHint");
+  if(hint) hint.textContent = levelBased ? "Each level's own art. Drop in art on a level changes only that level." : "";
   if(levelBased) renderLevels();
 }
+function loadLib(){ return fetch("/api/asset-studio?manifest=1&game="+encodeURIComponent(state.game)+"&v="+Date.now()).then(function(r){return r.json();}).then(function(j){ state.lib=(j&&j.assets)||[]; if(!state.board) renderLevels(); }).catch(function(){ state.lib=state.lib||[]; }); }
 function hasLayout(){ return state.game==="breaker" || (state.manifest.levels && state.manifest.levels[0] && state.manifest.levels[0].layout && window.BuildableManifest && window.BuildableManifest.TPL); }
 
 function renderSlots(){
@@ -278,14 +292,21 @@ function levelRow(lv, idx, total){
   top.appendChild(el("button",{ class:"btn sm danger", onclick:function(){ removeLevel(idx); } },["Remove"]));
   row.appendChild(top);
 
-  // art parts (only string-valued parts are art; arrays/numbers are gameplay config, left as-is)
-  var artParts=Object.keys(lv.parts).filter(function(k){ return typeof lv.parts[k]==="string"; });
-  if(artParts.length){
+  // per-level art: games with a LEVEL_ART set dress each level from its OWN world.
+  var la=LEVEL_ART[state.game];
+  if(la){
     var parts=el("div",{class:"parts", style:"margin-top:10px;"});
-    artParts.forEach(function(k){
-      parts.appendChild(assetControl(labelOf(k), function(){return lv.parts[k];}, function(v){ lv.parts[k]=v; setDirty(); }, specFor(k), lv.id||"level"));
-    });
+    la.forEach(function(slot){ parts.appendChild(worldSlotControl(lv, slot)); });
     row.appendChild(parts);
+  } else {
+    var artParts=Object.keys(lv.parts).filter(function(k){ return typeof lv.parts[k]==="string" && k!=="world"; });
+    if(artParts.length){
+      var parts2=el("div",{class:"parts", style:"margin-top:10px;"});
+      artParts.forEach(function(k){
+        parts2.appendChild(assetControl(labelOf(k), function(){return lv.parts[k];}, function(v){ lv.parts[k]=v; setDirty(); }, specFor(k), lv.id||"level"));
+      });
+      row.appendChild(parts2);
+    }
   }
   return row;
 }
@@ -308,6 +329,63 @@ function assetControl(label, getId, setId, spec, theme){
   return wrap;
 }
 
+/* ---------- per-level world art (helpers / bad guys / background per page) ---------- */
+function levelWorld(lv){ return (lv.parts && lv.parts.world) ? lv.parts.world : slugify(lv.id||lv.name||"level"); }
+function worldSlotControl(lv, slot){
+  var wrap=el("div",{class:"asset part"});
+  var thumb=el("div",{class:"athumb"});
+  var idline=el("div",{class:"aid"});
+  function refresh(){
+    var w=levelWorld(lv); idline.textContent="world: "+w;
+    var hit=(state.lib||[]).filter(function(a){ return a.slug.indexOf("/"+slot.key+"/"+w+"/")>-1; })[0];
+    thumb.style.backgroundImage=hit?("url('"+hit.url+"')"):"";
+  }
+  refresh();
+  var info=el("div",{class:"ainfo"},[
+    el("div",{class:"aslot"},[slot.label]), idline,
+    el("div",{class:"arow"},[
+      el("button",{class:"btn sm", onclick:function(){ dropInWorld(lv, slot, refresh); }},["Drop in art"]),
+      el("button",{class:"btn sm ghost", onclick:function(){ pickLibraryWorld(lv, slot, refresh); }},["Library"])
+    ])
+  ]);
+  wrap.appendChild(thumb); wrap.appendChild(info); return wrap;
+}
+function dropInWorld(lv, slot, refresh){
+  var inp=el("input",{type:"file", accept:"image/*"});
+  inp.addEventListener("change", function(){
+    var f=inp.files&&inp.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      BuildableSlicer.loadImage(rd.result).then(function(img){
+        var spec=Object.assign({key:slot.key}, slot.spec);
+        var pieces=BuildableSlicer.sliceSheet(img, spec);
+        MODAL={pieces:pieces, spec:spec, theme:levelWorld(lv), mode:"world", lv:lv, slot:slot, cb:refresh};
+        showPiecesModal();
+      }).catch(function(e){ alert("Could not read that image."); });
+    };
+    rd.readAsDataURL(f);
+  });
+  inp.click();
+}
+function pickLibraryWorld(lv, slot, refresh){
+  document.getElementById("mtitle").textContent="Library — "+slot.label;
+  document.getElementById("mhint").textContent="Loading saved art…";
+  document.getElementById("mbody").innerHTML=""; document.getElementById("mkeep").style.display="none"; openModal();
+  fetch("/api/asset-studio?manifest=1&game="+encodeURIComponent(state.game)+"&v="+Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      var assets=(j&&j.assets)||[];
+      var mine=assets.filter(function(a){ return a.slug.indexOf("/"+slot.key+"/")>-1; });
+      document.getElementById("mhint").textContent=mine.length?("Pick a "+slot.label.toLowerCase()+" set. That world dresses this level."):"No saved "+slot.label.toLowerCase()+" yet. Use Drop in art.";
+      var grid=el("div",{class:"libgrid"}), seenW={};
+      mine.forEach(function(a){ var w=a.slug.split("/")[2]; if(seenW[w])return; seenW[w]=1;
+        grid.appendChild(el("div",{class:"lib", onclick:function(){ lv.parts=lv.parts||{}; lv.parts.world=w; setDirty(); refresh(); closeModal(); }},[
+          el("div",{class:"limg", style:"background-image:url('"+a.url+"')"}), el("div",{class:"ln"},[w]) ])); });
+      var body=document.getElementById("mbody"); body.innerHTML=""; body.appendChild(grid);
+    })
+    .catch(function(e){ document.getElementById("mhint").textContent="Could not load library: "+(e.message||e); });
+}
+
 /* ---------- modal ---------- */
 var MODAL={pieces:null, spec:null, theme:null, cb:null};
 function openModal(){ document.getElementById("modal").classList.add("on"); }
@@ -321,7 +399,7 @@ function dropIn(spec, theme, cb){
     rd.onload=function(){
       BuildableSlicer.loadImage(rd.result).then(function(img){
         var pieces=BuildableSlicer.sliceSheet(img, spec);
-        MODAL={pieces:pieces, spec:spec, theme:theme, cb:cb};
+        MODAL={pieces:pieces, spec:spec, theme:theme, mode:"slot", cb:cb};
         showPiecesModal();
       }).catch(function(e){ alert("Could not read that image."); });
     };
@@ -351,6 +429,7 @@ function mKeep(){
     .then(function(r){ return r.json(); })
     .then(function(j){
       if(!j || !j.count){ throw new Error((j&&j.error)||"save failed"); }
+      if(MODAL.mode==="world"){ MODAL.lv.parts=MODAL.lv.parts||{}; MODAL.lv.parts.world=theme; return "world"; }
       // For a sheet an engine runtime-slices, also keep one clean recomposed grid sheet
       // and point the slot at it. For a single, point at the one saved piece.
       if(spec.mode==="sheet"){
@@ -363,7 +442,9 @@ function mKeep(){
       }
       return "studio:"+state.game+"/"+spec.key+"/"+theme+"/"+pieces[0].name;
     })
-    .then(function(newId){ document.getElementById("mkeep").disabled=false; setDirty(); MODAL.cb(newId); closeModal(); })
+    .then(function(newId){ document.getElementById("mkeep").disabled=false; setDirty();
+      if(newId==="world"){ loadLib().then(function(){ if(MODAL.cb)MODAL.cb(); closeModal(); }); return; }
+      MODAL.cb(newId); closeModal(); })
     .catch(function(e){ document.getElementById("mkeep").disabled=false; document.getElementById("mstat").textContent="Save failed: "+(e.message||e); });
 }
 

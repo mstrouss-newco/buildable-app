@@ -94,12 +94,21 @@ var SQUAD = [
 // ---- TARGET look (goofy castle critters that just topple + POOF, never hurt) ----
 var TARGET_COL = "#b6f06a", TARGET_CHEEK = "#8ed83f";
 var SQUAD_IMGS = [];   // Kenney "Animal Pack Remastered" art for the flung pals (drawn animal = fallback)
-var LIB_SCENE=null, LIB_PALS=[], LIB_TARGETS=[];   // Asset Studio world reskin (shared loader)
+var LIB_SCENE=null, LIB_PALS=[], LIB_TARGETS=[];   // whole-game default reskin (shared loader)
+var LIB_PACK=null;                                  // full world pack (all worlds) for per-level art
 if(window.BuildableWorlds) BuildableWorlds.load("sling", function(p){
+  LIB_PACK=p;
   var b=(p.slot("background").list[0]||p.slot("bg").list[0]); if(b)LIB_SCENE=b.img;
   LIB_PALS=p.slot("pals").list.map(function(x){return x.img;});
   LIB_TARGETS=p.slot("foes").list.map(function(x){return x.img;});
 });
+// Per-level art: a level may name its OWN world (level.world) so each page can carry its
+// own helpers / bad guys / background. Falls back to the whole-game set, then to drawn art,
+// so a level with no per-level world behaves EXACTLY as before (never regresses).
+function curWorld(){ var L=(GAME_CONFIG.levels[level]||{}); return L.world||null; }
+function curScene(){ var w=curWorld(); if(LIB_PACK&&w&&LIB_PACK.hasWorld(w)){ var b=(LIB_PACK.slot("background",w).list[0]||LIB_PACK.slot("bg",w).list[0]); if(b)return b.img; } return LIB_SCENE; }
+function curPals(){ var w=curWorld(); if(LIB_PACK&&w&&LIB_PACK.hasWorld(w)){ var a=LIB_PACK.list("pals",w).map(function(x){return x.img;}); if(a.length)return a; } return LIB_PALS; }
+function curTargets(){ var w=curWorld(); if(LIB_PACK&&w&&LIB_PACK.hasWorld(w)){ var a=LIB_PACK.list("foes",w).map(function(x){return x.img;}); if(a.length)return a; } return LIB_TARGETS; }
 var BLK_IMGS = {};     // Kenney "Physics Assets" block textures, keyed material+shape (woodW/stoneT/...)
 var TARGET_IMGS = [];  // Kenney "Physics Assets" alien faces = the goofy toppling targets
 
@@ -472,7 +481,7 @@ function drawBgDrawn(th){
 // Main backdrop: real Kenney scene (cover) with subtle parallax, drifting clouds,
 // and a themed ground band. Per level so every stage looks like a new place.
 function drawBg(){
-  var th=themeFor(level), img=(LIB_SCENE&&(LIB_SCENE.naturalWidth||LIB_SCENE.width))?LIB_SCENE:BG_IMGS[th.bg], P=bgParallax();
+  var th=themeFor(level), _sc=curScene(), img=(_sc&&(_sc.naturalWidth||_sc.width))?_sc:BG_IMGS[th.bg], P=bgParallax();
   if(img && (img.naturalWidth||img.width)){
     var iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
     var s=Math.max(W/iw, H/ih)*1.10;            // slight over-scale hides parallax edges
@@ -501,7 +510,7 @@ function drawBand(toX,toY){
 }
 function drawSquadFace(x,y,r,sq){
   var c=SQUAD[sq%SQUAD.length];
-  var im=(LIB_PALS.length?LIB_PALS[sq%LIB_PALS.length]:SQUAD_IMGS[sq%SQUAD.length]);
+  var _pl=curPals(); var im=(_pl.length?_pl[sq%_pl.length]:SQUAD_IMGS[sq%SQUAD.length]);
   // Kenney animal art dresses the pal when served; else the drawn animal below.
   if(im && (im.naturalWidth||im.width) && BR && BR.sprite){ BR.sprite(ctx, im, x, y, r*2.3, { shadow:true }); return; }
   drawAnimal(x,y,r,c);
@@ -557,7 +566,7 @@ function drawTarget(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
   var w=b._w,h=b._h;
   // Kenney alien face (Physics Assets) when served; drawn critter is the fallback.
-  var _tp=(LIB_TARGETS.length?LIB_TARGETS:TARGET_IMGS); var tim=_tp[(b._ti||0)%(_tp.length||1)];
+  var _tp=(curTargets().length?curTargets():TARGET_IMGS); var tim=_tp[(b._ti||0)%(_tp.length||1)];
   if(tim&&(tim.naturalWidth||tim.width)){ var ts=Math.max(w,h)*1.7; ctx.drawImage(tim,-ts/2,-ts/2,ts,ts); ctx.restore(); return; }
   ctx.fillStyle=TARGET_COL; BR? BR.rrect(ctx,-w/2,-h/2,w,h,9):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
   ctx.fillStyle=TARGET_CHEEK; BR? BR.rrect(ctx,-w/2,h*0.06,w,h*0.44,9):0; ctx.fill();

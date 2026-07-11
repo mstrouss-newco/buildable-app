@@ -223,6 +223,7 @@
         launches: slingLaunches(d, targets.length),   // engine tuning derived from difficulty 1-5
         blocks: blocks, targets: targets,
         bg: (parts.scene || null),                    // which backdrop scene (engine falls back if art missing)
+        world: (parts.world || null),                 // per-level art world (helpers/bad guys/background); null = whole-game set
         coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
         unlocked: !!lv.unlocked,
         journeyBadge: lv.journeyBadge || null,
