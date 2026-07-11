@@ -6,6 +6,17 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: painted 3D parallax background + slingshot base (July 11 2026)
+
+Replaced the flat cartoon backdrop with a layered painted scene (our art) matching the 3D
+characters. Cut 5 layers to `public/sling/bg/` (hills, trees, bushes, ground, base) via floodfill
+cutout. `drawBg` now composes, back to front: sky gradient, drifting clouds, far hills, mid trees,
+ground strip, foreground bushes, each with a small pull-based parallax shift (far shifts least,
+near most). New `bgLayer()` helper. The slingshot now sits on a painted mound/stump base
+(`bg/base.png`, drawn in drawSling) so it is planted, not floating. Applies to all levels; the old
+themed/scene background path is kept as fallback if the layers do not load. Composition was
+mock-verified at game scale. qa-sling green.
+
 ## Sling Squad: painted platform blocks (July 11 2026)
 
 Replaced the placeholder wood/gray block art with painted 3D blocks (our art). One 6-piece sheet

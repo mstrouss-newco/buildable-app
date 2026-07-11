@@ -79,6 +79,7 @@ var BR = window.BuildableRenders, BA = window.BuildableAudio, BM = window.Builda
 var W = 960, H = 600, GY = 548;           // GY = top of the ground band
 var AX = 168, AY = 360;                    // slingshot fork (where ammo loads)
 var SLINGSHOT=null;                        // painted slingshot art (our own); drawn Y = fallback
+var BGART={};                              // painted parallax layers: hills/trees/bushes/ground/base
 var SLING_DW=129, SLING_TOP=307;           // slingshot image draw box (centered on AX)
 var FORKLX=117, FORKLY=317, FORKRX=216, FORKRY=317;  // elastic-band attach points (fork tips)
 var MAXPULL = 132, MAXV = 27;              // very forgiving: big pull, strong launch
@@ -499,22 +500,42 @@ function drawBgDrawn(th){
 }
 // Main backdrop: real Kenney scene (cover) with subtle parallax, drifting clouds,
 // and a themed ground band. Per level so every stage looks like a new place.
+function bgLayer(img,width,bottom,shift,top){
+  if(!img||!(img.naturalWidth||img.width)) return;
+  var iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+  var nw=width, nh=ih*(width/iw), x=(W-width)/2+(shift||0);
+  var y=(top!==undefined&&top!==null)? top : (bottom-nh);
+  ctx.drawImage(img,x,y,nw,nh);
+}
 function drawBg(){
-  var th=themeFor(level), _sc=curScene(), img=(_sc&&(_sc.naturalWidth||_sc.width))?_sc:BG_IMGS[th.bg], P=bgParallax();
+  var th=themeFor(level), P=bgParallax();
+  // painted parallax scene (our art): sky + clouds + hills + trees + ground + bushes
+  if(BGART.ground&&(BGART.ground.naturalWidth||BGART.ground.width)){
+    var g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,"#a6d8ef"); g.addColorStop(0.62,"#cdeecb"); g.addColorStop(1,"#d9f0d1");
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    drawClouds(P.px*0.06, P.t);
+    bgLayer(BGART.hills,  W*1.06, 470, P.px*0.04);
+    bgLayer(BGART.trees,  W*1.02, 488, P.px*0.07);
+    bgLayer(BGART.ground, W*1.02, null, 0, 524);
+    bgLayer(BGART.bushes, W*1.04, 568, P.px*0.12);
+    return;
+  }
+  var _sc=curScene(), img=(_sc&&(_sc.naturalWidth||_sc.width))?_sc:BG_IMGS[th.bg];
   if(img && (img.naturalWidth||img.width)){
     var iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
-    var s=Math.max(W/iw, H/ih)*1.10;            // slight over-scale hides parallax edges
-    var dw=iw*s, dh=ih*s;
-    var ox=(W-dw)/2 + P.px*0.03;                // FAR plane: shifts a little with the pull
-    var oy=(H-dh)/2 + P.py*0.03 - 6;
-    ctx.drawImage(img, ox, oy, dw, dh);
-  } else {
-    drawBgDrawn(th);                            // never-breaks fallback
-  }
-  drawClouds(P.px*0.10, P.t);                   // NEAR plane: shifts more -> depth
-  drawGround(th);                               // crisp themed play floor
+    var sc=Math.max(W/iw, H/ih)*1.10, dw=iw*sc, dh=ih*sc;
+    ctx.drawImage(img,(W-dw)/2+P.px*0.03,(H-dh)/2+P.py*0.03-6,dw,dh);
+  } else { drawBgDrawn(th); }
+  drawClouds(P.px*0.10, P.t);
+  drawGround(th);
 }
 function drawSling(){
+  // painted mound/stump base so the slingshot is planted, not floating
+  if(BGART.base&&(BGART.base.naturalWidth||BGART.base.width)){
+    var biw=BGART.base.naturalWidth||BGART.base.width, bih=BGART.base.naturalHeight||BGART.base.height;
+    var bw=210, bh=bih*(bw/biw); ctx.drawImage(BGART.base, AX-bw/2, 560-bh, bw, bh);
+  }
   // painted wooden slingshot (our art); the drawn Y below is the never-break fallback
   if(SLINGSHOT&&(SLINGSHOT.naturalWidth||SLINGSHOT.width)){
     var dh=SLING_DW*SLINGSHOT.height/SLINGSHOT.width;
@@ -809,6 +830,7 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
     ["idle","bonked","poof"].forEach(function(st){
       L("/sling/targets/"+m+"_"+st+".png?v=2",function(im){ TARGETS_ART[i][st]=im; }); }); });
   L("/sling/slingshot.png?v=2",function(im){ SLINGSHOT=im; });
+  ["hills","trees","bushes","ground","base"].forEach(function(k){ L("/sling/bg/"+k+".png?v=1",function(im){ BGART[k]=im; }); });
   // per-level scene backdrops (Background Elements Remastered)
   ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
     L("/kenney/sling/bg/"+k+".webp",function(im){ BG_IMGS[k]=im; }); });
