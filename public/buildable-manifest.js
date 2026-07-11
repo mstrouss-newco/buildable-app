@@ -439,6 +439,24 @@
   // other game keys off its id (or an explicit levelProfile), falling back to breaker.
   function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }
 
+  // ---------------------------------------------------------------------------
+  //  LANDING KIND (Session 7E). The shell draws ONE landing for every game; this
+  //  tells it which body to draw under the shared header + mode row:
+  //    "studio"  -> no levels, no journey (type: studio; manifest-v2 section 7)
+  //    "board"   -> board game: "levels" are OPPONENT tiers, so the landing shows a
+  //                 simple pick-difficulty-and-play frame (chess/checkers/ttt/...)
+  //    "journey" -> level game: "levels" are an ordered path, so the landing opens
+  //                 the winding journey (breaker/survival/sling/croc/...)
+  //  Derived from the same PROFILE registry the loader already uses, so there is
+  //  ONE source of truth and zero per-game logic in the shell. Pure + headless-safe.
+  // ---------------------------------------------------------------------------
+  function landingKind(m){
+    if(m && m.type==="studio") return "studio";
+    var p = profileFor(m);
+    if(p===boardProfile || p===chessProfile) return "board";
+    return "journey";
+  }
+
   // back-compat export (Breaker convention). Kept so anything importing
   // resolveAsset keeps resolving Breaker asset IDs exactly as before.
   function resolveAsset(id){
@@ -533,7 +551,7 @@
       .catch(fromStatic);
   }
 
-  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults };
+  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));
