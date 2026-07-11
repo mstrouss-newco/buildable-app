@@ -79,8 +79,8 @@ var BR = window.BuildableRenders, BA = window.BuildableAudio, BM = window.Builda
 var W = 960, H = 600, GY = 548;           // GY = top of the ground band
 var AX = 168, AY = 360;                    // slingshot fork (where ammo loads)
 var SLINGSHOT=null;                        // painted slingshot art (our own); drawn Y = fallback
-var SLING_DW=125, SLING_TOP=281;           // slingshot image draw box (centered on AX)
-var FORKLX=146, FORKLY=351, FORKRX=190, FORKRY=353;  // elastic-band attach points (gold studs)
+var SLING_DW=129, SLING_TOP=307;           // slingshot image draw box (centered on AX)
+var FORKLX=117, FORKLY=317, FORKRX=216, FORKRY=317;  // elastic-band attach points (fork tips)
 var MAXPULL = 132, MAXV = 27;              // very forgiving: big pull, strong launch
 var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced OR knocked)
 
@@ -806,15 +806,15 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   // painted bad guys (our art) — 6 monsters x idle/bonked/poof
   TARGET_MONSTERS.forEach(function(m,i){ TARGETS_ART[i]={};
     ["idle","bonked","poof"].forEach(function(st){
-      L("/sling/targets/"+m+"_"+st+".png?v=1",function(im){ TARGETS_ART[i][st]=im; }); }); });
-  L("/sling/slingshot.png?v=1",function(im){ SLINGSHOT=im; });
+      L("/sling/targets/"+m+"_"+st+".png?v=2",function(im){ TARGETS_ART[i][st]=im; }); }); });
+  L("/sling/slingshot.png?v=2",function(im){ SLINGSHOT=im; });
   // per-level scene backdrops (Background Elements Remastered)
   ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
     L("/kenney/sling/bg/"+k+".webp",function(im){ BG_IMGS[k]=im; }); });
   // animal "animation bible" poses (our art) — sliced from the reference sheet
   ["raccoon","squirrel","skunk","beaver","frog"].forEach(function(an){ ANIMALS[an]={};
     ["idle","pulledback","flying","ability","impact","dazed","victory"].forEach(function(k){
-      L("/sling/"+an+"/"+an+"_"+k+".png?v=2",function(im){ ANIMALS[an][k]=im; }); }); });
+      L("/sling/"+an+"/"+an+"_"+k+".png?v=3",function(im){ ANIMALS[an][k]=im; }); }); });
 }catch(e){} }
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
 

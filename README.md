@@ -6,6 +6,20 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: shadow cleanup + slingshot alignment fix (July 11 2026)
+
+Fixed two issues on the painted art. (1) DROP SHADOWS: the slice kept each sprite's soft
+drop-shadow ellipse (the "white circle" under characters/slingshot). New two-pass cutout: pass 1
+flood-removes white/light-gray background (sat<38 & min>178), pass 2 grows the background only into
+the leftover light-gray shadow (sat<34 & min>150), which erases the shadow while preserving light
+fur (raccoon cream, skunk white) and saturated art. All 35 character poses, 18 target sprites, and
+the slingshot were re-cut. (2) SLINGSHOT ALIGNMENT: bands were attached at the gold studs (mid
+frame) so the character sat in the middle and looked disconnected. Re-measured the actual fork
+TIPS; bands now attach there (FORKLX/Y, FORKRX/Y) and the frame is repositioned (SLING_TOP 281->307,
+DW 125->129) so the character cradles at the top of the V with the elastic converging from the
+tips. Alignment verified with a scale mock. Art `?v` bumped (immutable CDN cache) so the fixed
+sprites reload. qa-sling green.
+
 ## Sling Squad: painted slingshot + bad guys on all levels (July 11 2026)
 
 Painted wooden slingshot (our art) replaces the drawn Y. `public/sling/slingshot.png` (white bg
