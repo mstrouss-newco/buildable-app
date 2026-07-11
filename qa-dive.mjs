@@ -221,6 +221,8 @@ async function runExhibit(exhibit) {
     const sheetOpen = registry.sheetbg.classList.contains('open');
     r.itemChecks.push({ id: c.id, ok: nameOk && factOk && s1Ok && sheetOpen });
   }
+  // creatures-found counter reached the full roster as each was opened
+  r.foundChecked = registry.foundN.textContent === String(exhibit.data.creatures.length);
 
   // facts cycle: a creature with >1 fact shows fact#1, then nextFact() advances.
   const multi = exhibit.data.creatures.find((c) => Array.isArray(c.facts) && c.facts.length > 1);
@@ -276,6 +278,8 @@ for (const exhibit of candidates) {
   const bad = r.itemChecks.filter((c) => !c.ok);
   if (bad.length) fail(`${r.exhibit}: creature(s) not tappable/correct: ${bad.map((b) => b.id).join(', ')}`);
   else pass(`${r.exhibit}: every creature (${r.itemChecks.length}) tappable and the fact sheet updates correctly`);
+  if (!r.foundChecked) fail(`${r.exhibit}: creatures-found counter did not reach ${r.itemChecks.length} as each creature was opened`);
+  else pass(`${r.exhibit}: creatures-found counter fills to ${r.itemChecks.length}/${r.itemChecks.length} as creatures are opened`);
   if (!r.factsChecked) fail(`${r.exhibit}: multiple-facts cycling failed ("Another fact")`);
   else pass(`${r.exhibit}: facts cycle via "Another fact" and the sheet updates`);
   if (!r.readAloudChecked) fail(`${r.exhibit}: read-aloud did not fire`);
@@ -298,6 +302,10 @@ else fail('read-aloud factAudio + browser-voice fallback not found in source');
 if (inlineScript && inlineScript.indexOf('/api/sfx?s=') !== -1 && /function startAmbient\(/.test(inlineScript) && /Feel\.tap/.test(inlineScript) && /BuildableGameNav\.register/.test(inlineScript))
   pass('audio wired: ambient bed (/api/sfx), Feel.tap tap feedback, and the shell Sound toggle');
 else fail('audio wiring (ambient / Feel.tap / Sound toggle) not found in source');
+
+if (inlineScript && /function scrollToZone\(/.test(inlineScript) && /function buildZoneJump\(/.test(inlineScript) && /function updateFound\(/.test(inlineScript))
+  pass('navigation: depth-gauge zone jump + creatures-found counter present (scrollToZone / buildZoneJump / updateFound)');
+else fail('depth-gauge zone jump / found counter not found in source');
 
 console.log(ok ? 'ALL CHECKS PASS' : 'SOME CHECKS FAILED');
 process.exit(ok ? 0 : 1);

@@ -22,8 +22,22 @@
   #back{width:38px;height:38px;border-radius:13px;border:none;background:rgba(255,255,255,.15);color:var(--cream);font-size:17px;font-weight:900;cursor:pointer;font-family:'Nunito'}
   .top h1{font-family:'Fredoka';font-weight:700;font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .top h1 small{display:block;font-family:'Nunito';font-weight:900;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
-  .meter{text-align:right;font-weight:900;font-size:13px;flex:none}
+  .found{display:flex;align-items:center;gap:6px;flex:none;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 11px;font-weight:900;font-size:12.5px;color:var(--cream)}
+  .meter{display:flex;align-items:center;gap:7px;flex:none;border:none;background:rgba(255,255,255,.12);border-radius:13px;padding:6px 10px;cursor:pointer;color:var(--cream);font-family:'Nunito'}
+  .meter .mtxt{text-align:right;line-height:1.05;font-weight:900;font-size:13px}
   .meter small{display:block;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(253,250,245,.55)}
+  .meter .chev{opacity:.7}
+  .zjbg{position:fixed;inset:0;z-index:19;display:none}
+  .zjbg.open{display:block}
+  .zjump{position:fixed;top:60px;right:12px;z-index:20;width:238px;max-height:72vh;overflow:auto;
+        background:rgba(4,12,28,.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+        border-radius:16px;padding:8px;display:none;box-shadow:0 12px 34px rgba(0,0,0,.55)}
+  .zjump.open{display:block}
+  .zjump h3{font-family:'Nunito';font-weight:900;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:rgba(253,250,245,.5);padding:6px 8px 4px}
+  .zj{display:block;width:100%;text-align:left;border:none;background:none;color:var(--cream);font-family:'Nunito';font-weight:800;font-size:14px;padding:9px 10px;border-radius:10px;cursor:pointer}
+  .zj:active{background:rgba(255,255,255,.10)}
+  .zj.cur{background:rgba(255,197,66,.20)}
+  .zj small{display:block;font-weight:800;font-size:10px;color:rgba(190,235,255,.72);margin-top:1px;text-transform:none;letter-spacing:0}
 
   .world{position:relative;z-index:2;max-width:620px;margin:0 auto}
   .zone{position:absolute;left:16px;right:16px}
@@ -108,8 +122,18 @@
   <div class="top">
     <button id="back">&lsaquo;</button>
     <h1><small>Kidspedia</small><span id="pageTitle">Loading…</span></h1>
-    <div class="meter"><small>Your depth</small><span id="depth">0 ft</span></div>
+    <div class="found" id="found" aria-label="Creatures found">
+      <svg width="16" height="14" viewBox="0 0 24 20" fill="currentColor" aria-hidden="true"><ellipse cx="10" cy="10" rx="7.5" ry="5"/><path d="M17 10l6-4v8z"/><circle cx="7" cy="9" r="1.1" fill="#06203a"/></svg>
+      <span><span id="foundN">0</span>/<span id="foundT">0</span></span>
+    </div>
+    <button class="meter" id="depthBtn" type="button" aria-label="Jump to a depth">
+      <span class="mtxt"><small>Your depth</small><span id="depth">0 ft</span></span>
+      <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
   </div>
+
+  <div class="zjbg" id="zjbg"></div>
+  <div class="zjump" id="zjump"><h3>Jump to a depth</h3><div id="zjList"></div></div>
 
   <div id="flashHint" class="flashhint">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7h-4z"/><path d="M10 10h4v4a2 2 0 0 1-4 0z"/><path d="M12 18v3"/></svg>
@@ -195,6 +219,8 @@ let ambientAudio = null;  // soft per-exhibit background bed (an /api/sfx loop)
 let narrAudio = null;     // currently playing "Read to me" clip
 let speaking = false;
 let sayToken = 0;
+const found = new Set();      // which creatures the kid has opened
+let allFoundCelebrated = false;
 const ZH = 1500;          // pixel height of each zone band (matches the mock)
 let WORLD_H = 0, MAXFT = 35876, DARK_START = 1e9;
 
@@ -286,6 +312,11 @@ function boot(data) {
   DARK_START = firstDark >= 0 ? ZH * (firstDark + 0.15) : 1e9;
 
   buildWorld();
+  const ft = document.getElementById("foundT"); if (ft) ft.textContent = String(CREATURES.length);
+  updateFound();
+  buildZoneJump();
+  const dBtn = document.getElementById("depthBtn"); if (dBtn) dBtn.onclick = toggleZoneJump;
+  const zbg = document.getElementById("zjbg"); if (zbg) zbg.onclick = closeZoneJump;
   document.getElementById("back").onclick = exitToShell;
   initAudio(data);
 
@@ -384,7 +415,54 @@ function loadCreatureArt(c, holder) {
   img.src = creatureArtUrl(c, "webp");
 }
 
-function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function escapeHtml(s) { return (s || "").replace(/[&<>"\']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "\'": "&#39;" }[c])); }
+
+// ---- creatures-found counter + depth-gauge zone jump (in-world navigation) ----
+// The dive is a long descent; rather than a busy menu, the depth gauge itself is
+// the control (tap it to glide to a zone) and a small "found X of N" rewards
+// finding every creature — both data-driven from the exhibit, so any future dive
+// gets them for free.
+function updateFound() {
+  const n = document.getElementById("foundN"); if (n) n.textContent = String(found.size);
+  if (CREATURES.length && found.size >= CREATURES.length && !allFoundCelebrated) {
+    allFoundCelebrated = true;
+    showToast("You found all " + CREATURES.length + " creatures! Amazing diving!");
+  }
+}
+function buildZoneJump() {
+  const list = document.getElementById("zjList"); if (!list) return;
+  list.innerHTML = "";
+  ZONES.forEach((z) => {
+    const b = document.createElement("button");
+    b.className = "zj"; b.dataset.zone = z.id;
+    b.innerHTML = escapeHtml(z.name) + "<small>" + escapeHtml(z.range || "") + "</small>";
+    b.onclick = () => { scrollToZone(z.id); closeZoneJump(); };
+    list.appendChild(b);
+  });
+}
+function scrollToZone(id) {
+  const y = (ZONE_TOP[id] || 0) + 70; // land just inside the band, header clear of the top bar
+  try { window.scrollTo({ top: y, behavior: "smooth" }); } catch (e) { window.scrollTo(0, y); }
+}
+function currentZoneId() {
+  let cur = ZONES[0] && ZONES[0].id;
+  const sy = scrollY + 120;
+  ZONES.forEach((z) => { if ((ZONE_TOP[z.id] || 0) <= sy) cur = z.id; });
+  return cur;
+}
+function toggleZoneJump() {
+  const panel = document.getElementById("zjump"); if (!panel) return;
+  const isOpen = panel.classList.toggle("open");
+  const bg = document.getElementById("zjbg"); if (bg) bg.classList.toggle("open", isOpen);
+  if (isOpen) {
+    const cur = currentZoneId();
+    document.querySelectorAll(".zj").forEach((el) => el.classList.toggle("cur", el.dataset.zone === cur));
+  }
+}
+function closeZoneJump() {
+  const panel = document.getElementById("zjump"); if (panel) panel.classList.remove("open");
+  const bg = document.getElementById("zjbg"); if (bg) bg.classList.remove("open");
+}
 
 function setPaused(v) {
   paused = v;
@@ -578,6 +656,7 @@ function setSound(on) {
 function factsFor(item) { return (item && Array.isArray(item.facts) && item.facts.length) ? item.facts : [(item && item.fact) || ""]; }
 function open(id) {
   const c = ITEMS[id]; if (!c) return;
+  if (!found.has(id)) { found.add(id); updateFound(); }
   current = id; factIdx = 0;
   document.getElementById("cName").textContent = c.name;
   const stats = c.stats || [];
