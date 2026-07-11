@@ -1,5 +1,22 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on 6 — Tic-Tac-Toe editable art
+
+Sixth game (owner: next game). Tic-Tac-Toe puts a random world scene behind the board and draws
+X/O as shapes; now the background and the two marks (characters) can be dropped in per world.
+
+- **Engine (`tictactoe-engine.html`).** Includes `buildable-worlds.js`; loads its art per world
+  from the shared library (`__tttPack`). `setRandomWorld` uses a library background for the chosen
+  world if present, else the `chess-art/<world>_bg.jpg` file; `drawMark` uses a per-world library
+  mark image (markx for player 1, marko for player 2) when present, else the drawn X/O. Guarded,
+  full fallback.
+- **Editor.** Tic-Tac-Toe gets a Worlds section (its 6 worlds) with Background, Player 1 mark (X),
+  and Player 2 mark (O) drop-in per world.
+- **QA.** `qa-tictactoe` ALL CHECKS PASS. Fully editable now: Breaker, Sling, Chess, Survival,
+  Bubble, Memory, Tic-Tac-Toe. Editor headless-load re-verified (WORLD_ART = tictactoe,memory,chess).
+
+Files: `public/tictactoe-engine.html`, `public/editor.html`, `SESSION-LOG.md`.
+
 ## 2026-07-11: Session 4B follow-on 5 — Memory editable art + editor fix
 
 Fifth game (owner: Memory) plus an important editor bug fix found while wiring it.

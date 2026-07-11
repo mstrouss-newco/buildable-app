@@ -52,16 +52,21 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-startscreen.js?v=2"></script>
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-manifest.js"></script>
+<script src="buildable-worlds.js"></script>
 <script src="buildable-boardgame.js"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
 (function(){ if(typeof document==="undefined") return;
   var WORLDS=["ocean","jungle","space","candy","castle","desert"];
-  window.setRandomWorld=function(){ try{
+  window.__tttWorld="ocean"; window.__tttPack=null;
+  try{ if(window.BuildableWorlds) BuildableWorlds.load("tictactoe", function(p){ window.__tttPack=p; window.setRandomWorld(window.__tttWorld); }); }catch(e){}
+  function tttBg(key){ try{ var p=window.__tttPack; if(p&&p.hasWorld&&p.hasWorld(key)){ var l=p.list("background",key); if(l[0]&&l[0].img&&l[0].img.src) return l[0].img.src; } }catch(e){} return "chess-art/"+key+"_bg.jpg?v=2"; }
+  window.setRandomWorld=function(fixed){ try{
     var bg=document.getElementById("world-bg");
     if(!bg){ bg=document.createElement("div"); bg.id="world-bg"; document.body.insertBefore(bg, document.body.firstChild); }
-    var key=WORLDS[Math.floor(Math.random()*WORLDS.length)];
-    bg.style.backgroundImage="linear-gradient(rgba(8,10,40,.40),rgba(8,10,40,.55)), url('chess-art/"+key+"_bg.jpg?v=2')";
+    var key=fixed||WORLDS[Math.floor(Math.random()*WORLDS.length)];
+    window.__tttWorld=key;
+    bg.style.backgroundImage="linear-gradient(rgba(8,10,40,.40),rgba(8,10,40,.55)), url('"+tttBg(key)+"')";
   }catch(e){} };
   try{ WORLDS.forEach(function(k){ new Image().src="chess-art/"+k+"_bg.jpg?v=2"; }); }catch(e){}
   window.setRandomWorld();
@@ -78,7 +83,9 @@ function geo(W,H){ const m=Math.min(W,H)*0.82; const x0=(W-m)/2, y0=(H-m)/2, cel
 function cellCenter(W,H,idx){ const g=geo(W,H), c=idx%3, r=(idx/3|0); return { x:g.x0+(c+.5)*g.cell, y:g.y0+(r+.5)*g.cell }; }
 
 // ---- mark art (NO emoji — drawn shapes) ----
+function markImg(player){ try{ var p=window.__tttPack, w=window.__tttWorld; if(p&&p.hasWorld&&p.hasWorld(w)){ var slot=player===1?"markx":"marko"; var l=p.list(slot,w); if(l[0]&&l[0].img&&(l[0].img.naturalWidth||l[0].img.width)) return l[0].img; } }catch(e){} return null; }
 function drawMark(ctx, player, cx, cy, s, a){
+  var _mi=markImg(player); if(_mi){ ctx.save(); ctx.globalAlpha=a==null?1:a; var d=s*1.7; ctx.drawImage(_mi, cx-d/2, cy-d/2, d, d); ctx.restore(); return; }
   ctx.save(); ctx.globalAlpha = a==null?1:a; const col=P[player-1].col;
   ctx.lineCap="round"; ctx.lineJoin="round";
   // soft glow

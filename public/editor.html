@@ -194,6 +194,11 @@ var LEVEL_ART = {
 // own art. Chess: 6 worlds (background/foreground/pieces + board colours). Memory: 6 themes
 // (card faces + background).
 var WORLD_ART = {
+  tictactoe: { board:false, slots:[
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
+    {key:"markx", label:"Player 1 mark (X)", spec:{mode:"single",role:"sprite"}},
+    {key:"marko", label:"Player 2 mark (O)", spec:{mode:"single",role:"sprite"}}
+  ] },
   memory: { board:false, slots:[
     {key:"faces", label:"Card faces (characters)", spec:{mode:"sheet",role:"sprite",rows:["r1","r2","r3"],cols:["c1","c2","c3","c4"]}},
     {key:"background", label:"Background", spec:{mode:"single",role:"background"}}
