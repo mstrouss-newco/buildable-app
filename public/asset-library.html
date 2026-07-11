@@ -473,16 +473,34 @@ function csRefreshLayout(){
 /* ---- image helpers ---- */
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
 function contentBox(ctx,x,y,w,h,transparent){
-  const d=ctx.getImageData(x,y,w,h).data; let minX=w,minY=h,maxX=-1,maxY=-1;
-  // alpha>40 (was 18): ignore the faint anti-aliased bleed of a NEIGHBOURING sprite
-  // that leaked to this cell's edge, so it never counts as this piece's content.
-  for(let j=0;j<h;j++)for(let i=0;i<w;i++){ const o=(j*w+i)*4;
-    const fg = transparent ? d[o+3]>40 : !(d[o]>242&&d[o+1]>242&&d[o+2]>242&&d[o+3]>18);
-    if(fg){ if(i<minX)minX=i; if(i>maxX)maxX=i; if(j<minY)minY=j; if(j>maxY)maxY=j; } }
+  const d=ctx.getImageData(x,y,w,h).data;
+  const isFg=(i,j)=>{ const o=(j*w+i)*4; return transparent ? d[o+3]>40 : !(d[o]>242&&d[o+1]>242&&d[o+2]>242&&d[o+3]>18); };
+  let minX=w,minY=h,maxX=-1,maxY=-1;
+  for(let j=0;j<h;j++)for(let i=0;i<w;i++){ if(isFg(i,j)){ if(i<minX)minX=i; if(i>maxX)maxX=i; if(j<minY)minY=j; if(j>maxY)maxY=j; } }
   if(maxX<0)return null;
-  // Trim TIGHT to the sprite, then a 1px safety INSET so no sliver of a touching
-  // neighbour rides along an edge. (The old code padded 2px OUTWARD — that is exactly
-  // what pulled the neighbour's pixels into the crop and left the stray band.)
+  // Occupancy of the tight bbox, so we can spot a thin edge STRIP that is a sliver of a
+  // touching neighbour (a few px wide, separated from the sprite's main mass by a gap)
+  // and shave it off before cropping. Interior gaps and real chunks (shatter debris) are
+  // kept — only a thin, gap-separated, low-ink strip AT AN EDGE is treated as a sliver.
+  const cols=[],rows=[]; let total=0;
+  for(let i=minX;i<=maxX;i++){ let n=0; for(let j=minY;j<=maxY;j++) if(isFg(i,j)) n++; cols.push(n); total+=n; }
+  for(let j=minY;j<=maxY;j++){ let n=0; for(let i=minX;i<=maxX;i++) if(isFg(i,j)) n++; rows.push(n); }
+  const MAXW=4, FRAC=0.25;
+  // returns how many leading cells to drop from an occupancy array (one thin edge run
+  // followed by an empty gap), scanning from the given end.
+  function edgeDrop(occ, fromEnd){
+    const n=occ.length; let i0=fromEnd?n-1:0, step=fromEnd?-1:1, k=0, ink=0;
+    while(k<n && occ[fromEnd?n-1-k:k]>0){ ink+=occ[fromEnd?n-1-k:k]; k++; }
+    if(k===0) return 0;                        // edge already empty
+    const gapNext = k<n && occ[fromEnd?n-1-k:k]===0;
+    if(k<=MAXW && gapNext && ink < FRAC*total) return k;
+    return 0;
+  }
+  const dl=edgeDrop(cols,false), dr=edgeDrop(cols,true);
+  const dt=edgeDrop(rows,false), db=edgeDrop(rows,true);
+  minX+=dl; maxX-=dr; minY+=dt; maxY-=db;
+  if(maxX<minX||maxY<minY){ minX-=dl; maxX+=dr; minY-=dt; maxY+=db; } // never trim to nothing
+  // Then a 1px safety INSET so no faint anti-aliased bleed rides along an edge.
   const bw=maxX-minX+1, bh=maxY-minY+1, ix=bw>4?1:0, iy=bh>4?1:0;
   return {x:x+minX+ix, y:y+minY+iy, w:bw-2*ix, h:bh-2*iy};
 }
