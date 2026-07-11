@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 3,
+  "assetVersion": 4,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -144,8 +144,7 @@
       ],
       "factAudio": "ocean-deep-pelican",
       "source": "Audubon Society; National Geographic Kids",
-      "sound": "bird",
-      "frames": 3
+      "sound": "bird"
     },
     {
       "id": "turtle",
@@ -180,8 +179,7 @@
         "ocean-turtle"
       ],
       "factAudio": "ocean-deep-turtle",
-      "source": "NOAA Fisheries; National Geographic Kids",
-      "frames": 3
+      "source": "NOAA Fisheries; National Geographic Kids"
     },
     {
       "id": "dolphin",
@@ -217,8 +215,7 @@
       ],
       "factAudio": "ocean-deep-dolphin",
       "source": "NOAA Fisheries; Dolphin Communication Project",
-      "sound": "dolphin",
-      "frames": 3
+      "sound": "dolphin"
     },
     {
       "id": "clownfish",
@@ -253,8 +250,7 @@
         "ocean-clownfish"
       ],
       "factAudio": "ocean-deep-clownfish",
-      "source": "NOAA National Ocean Service; Monterey Bay Aquarium",
-      "frames": 3
+      "source": "NOAA National Ocean Service; Monterey Bay Aquarium"
     },
     {
       "id": "reefshark",
@@ -289,8 +285,7 @@
         "ocean-reefshark"
       ],
       "factAudio": "ocean-deep-reefshark",
-      "source": "NOAA Fisheries; Monterey Bay Aquarium",
-      "frames": 3
+      "source": "NOAA Fisheries; Monterey Bay Aquarium"
     },
     {
       "id": "jelly",
@@ -326,8 +321,7 @@
       ],
       "factAudio": "ocean-deep-jelly",
       "source": "Monterey Bay Aquarium; NOAA Ocean Exploration",
-      "glow": true,
-      "frames": 3
+      "glow": true
     },
     {
       "id": "hatchetfish",
@@ -363,8 +357,7 @@
       ],
       "factAudio": "ocean-deep-hatchetfish",
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
-      "glow": true,
-      "frames": 3
+      "glow": true
     },
     {
       "id": "angler",
@@ -401,8 +394,7 @@
       "factAudio": "ocean-deep-angler",
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
       "glow": true,
-      "lure": true,
-      "frames": 3
+      "lure": true
     },
     {
       "id": "squid",
@@ -439,8 +431,7 @@
       "factAudio": "ocean-deep-squid",
       "source": "Smithsonian Ocean; NOAA Ocean Exploration",
       "glow": true,
-      "jet": true,
-      "frames": 3
+      "jet": true
     },
     {
       "id": "gulpereel",
@@ -476,8 +467,7 @@
       ],
       "factAudio": "ocean-deep-gulpereel",
       "source": "NOAA Ocean Exploration; Monterey Bay Aquarium Research Institute",
-      "glow": true,
-      "frames": 3
+      "glow": true
     },
     {
       "id": "dumbo",
@@ -513,8 +503,7 @@
       ],
       "factAudio": "ocean-deep-dumbo",
       "source": "MBARI; NOAA Ocean Exploration",
-      "glow": true,
-      "frames": 3
+      "glow": true
     },
     {
       "id": "snail",
@@ -550,8 +539,7 @@
       ],
       "factAudio": "ocean-deep-snail",
       "source": "University of Washington; NOAA Ocean Exploration",
-      "glow": true,
-      "frames": 3
+      "glow": true
     },
     {
       "id": "tubeworm",
@@ -586,8 +574,7 @@
         "ocean-tubeworm"
       ],
       "factAudio": "ocean-deep-tubeworm",
-      "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution",
-      "frames": 3
+      "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution"
     },
     {
       "id": "yeticrab",
@@ -622,8 +609,7 @@
         "ocean-yeticrab"
       ],
       "factAudio": "ocean-deep-yeticrab",
-      "source": "MBARI; Woods Hole Oceanographic Institution",
-      "frames": 3
+      "source": "MBARI; Woods Hole Oceanographic Institution"
     },
     {
       "id": "ventshrimp",
@@ -658,8 +644,7 @@
         "ocean-ventshrimp"
       ],
       "factAudio": "ocean-deep-ventshrimp",
-      "source": "NOAA Ocean Exploration; Smithsonian Ocean",
-      "frames": 3
+      "source": "NOAA Ocean Exploration; Smithsonian Ocean"
     }
   ]
 }
