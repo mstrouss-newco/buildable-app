@@ -59,6 +59,8 @@ const SCREEN_TETRIS = "tetris";
 const SCREEN_SOUNDS = "sounds";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_CHESS_LOBBY = "chess_lobby";
+const SCREEN_CHESS_LANDING = "chess_landing"; // Session 7E: chess uses the one shell landing (board frame)
+const SCREEN_CHESS_SOLO = "chess_solo";       // Session 7E: board "pick difficulty & play" frame
 const SCREEN_GROWNUP_FRIENDS = "grownup_friends";
 const SCREEN_CHECKERS = "checkers";
 const SCREEN_CHECKERS_FAMILY = "checkers_family";
@@ -418,8 +420,28 @@ function BreakerScreen({ onHome, entry = "journey" }) {
 // color). The demo panel embeds the game's own engine in a self-playing "attract"
 // mode (?screen=demo, input disabled). This REPLACES the engine's homemade start
 // screen + Play/Make hub. Generic — any converted game can use it.
-function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
+// ============================================================================
+//  GameLanding — the ONE shell landing every game shows (Sessions 3A, 7E).
+//  Header + demo are the same for all games. The Play area has two shapes:
+//    - single-player (manifest features.multiplayer "off"): one big Play button
+//      (level games open the journey; board games open the pick-difficulty frame)
+//    - multiplayer (turn-based / realtime): a MODE ROW (Solo / Same device /
+//      Play a friend) driven straight off the manifest switch (Session 6A). A
+//      button only appears when the shell was handed its callback, so nothing
+//      per-game is hardcoded here — the router wires each manifest's modes.
+// ============================================================================
+function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multiplayer, onSolo, onSameDevice, onPlayFriend }) {
   const accent = game.color;
+  const modeOn = (multiplayer === "turn-based" || multiplayer === "realtime") && (onSolo || onSameDevice || onPlayFriend);
+  const modeBtnStyle = (primary) => ({
+    flex: 1, minWidth: 0, borderRadius: 16, padding: "14px 8px", cursor: "pointer",
+    fontFamily: NUN, fontWeight: 800, fontSize: 15,
+    color: primary ? "#12102a" : "#fff",
+    background: primary ? `linear-gradient(160deg, #fff, ${accent})` : `linear-gradient(160deg, ${accent}55, ${accent}22)`,
+    border: primary ? "none" : `1px solid ${accent}88`,
+    boxShadow: primary ? `0 6px 0 ${accent}88, 0 12px 22px rgba(0,0,0,0.35)` : "none",
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+  });
   return (
     <div style={{ ...styles.container, justifyContent: "flex-start" }}>
       <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
@@ -433,7 +455,17 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
           {demoSrc && <iframe title={`${game.name} demo`} src={demoSrc} scrolling="no" style={{ width: "100%", height: "100%", border: "none", display: "block", pointerEvents: "none" }} />}
           <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 11px", borderRadius: 999, background: "rgba(12,10,24,0.66)", color: "#fff" }}>Demo</span>
         </div>
-        <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 9px 0 ${accent}88, 0 16px 30px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play</button>
+        {!modeOn && <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 9px 0 ${accent}88, 0 16px 30px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play</button>}
+        {modeOn && (
+          <div style={{ width: "100%", maxWidth: 360, marginTop: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", color: accent, textAlign: "center", marginBottom: 8 }}>Pick a way to play</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              {onSolo && <button onClick={onSolo} style={modeBtnStyle(true)}><span>Solo</span><span style={{ fontSize: 11, fontWeight: 700, opacity: 0.7 }}>vs computer</span></button>}
+              {onSameDevice && <button onClick={onSameDevice} style={modeBtnStyle(false)}><span>Same device</span><span style={{ fontSize: 11, fontWeight: 700, opacity: 0.7 }}>2 players</span></button>}
+              {onPlayFriend && <button onClick={onPlayFriend} style={modeBtnStyle(false)}><span>Play a friend</span><span style={{ fontSize: 11, fontWeight: 700, opacity: 0.7 }}>online</span></button>}
+            </div>
+          </div>
+        )}
         <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 360, marginTop: 12 }}>
           {onLoadout && <button onClick={onLoadout} style={{ flex: 1, borderRadius: 16, padding: "13px 12px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: `linear-gradient(160deg, ${accent}55, ${accent}22)`, border: `1px solid ${accent}88`, cursor: "pointer" }}>Make it mine</button>}
           {onMake && <button onClick={onMake} style={{ flex: 1, borderRadius: 16, padding: "13px 12px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer" }}>Make a level</button>}
@@ -443,7 +475,7 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
   );
 }
 // ============================================================================
-//  BreakerJourney (Session 3B) — the SHELL-generated winding level path.
+//  GameJourney (Session 3B; generalized 7E) — the SHELL-generated winding level path.
 //  Replaces the engine's homemade level menu. Reads /breaker/manifest.json for
 //  the ordered level list; reads the same localStorage the engine writes for
 //  unlock + star progress. Stops show theme art (placeholder badge until the new
@@ -451,11 +483,11 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
 //  path weaves left/right down a vertical scroll — tight vertical on phones, a
 //  wider wander on iPad/desktop. The current level auto-scrolls into view.
 // ============================================================================
-function readBreakerProgress() {
+function readBreakerProgress(gameId) {
   let unlocked = 0, stars = {};
   try {
     const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
-    const key = "bk_breaker_prefs" + (k && k.id ? ("_" + k.id) : "");
+    const key = "bk_" + (gameId || "breaker") + "_prefs" + (k && k.id ? ("_" + k.id) : "");
     const s = JSON.parse(localStorage.getItem(key) || "null");
     if (s) { unlocked = Math.max(0, s.unlocked || 0); if (s.stars && typeof s.stars === "object") stars = s.stars; }
   } catch (e) {}
@@ -494,19 +526,19 @@ function loadGameManifest(id) {
     .then((d) => (d && d.manifest ? d.manifest : Promise.reject()))
     .catch(() => fetch("/" + id + "/manifest.json" + stamp).then((r) => r.json()));
 }
-function BreakerJourney({ game, onBack, onPlay }) {
+function GameJourney({ game, gameId = "breaker", onBack, onPlay }) {
   const accent = (game && game.color) || "#FF6B6B";
   const [manifest, setManifest] = useState(null);
-  const [prog, setProg] = useState(() => readBreakerProgress());
+  const [prog, setProg] = useState(() => readBreakerProgress(gameId));
   const currentRef = useRef(null);
   useEffect(() => {
     let live = true;
-    loadGameManifest("breaker")
+    loadGameManifest(gameId)
       .then((m) => { if (live) setManifest(m); })
       .catch(() => {});
-    setProg(readBreakerProgress()); // re-read on (re)entry so a fresh clear lights the path
+    setProg(readBreakerProgress(gameId)); // re-read on (re)entry so a fresh clear lights the path
     return () => { live = false; };
-  }, []);
+  }, [gameId]);
   const levels = (manifest && Array.isArray(manifest.levels)) ? manifest.levels : [];
   const lastIdx = Math.max(0, levels.length - 1);
   const currentIdx = Math.min(prog.unlocked, lastIdx);
@@ -552,7 +584,7 @@ function BreakerJourney({ game, onBack, onPlay }) {
               const locked = i > prog.unlocked;
               const isCurrent = i === currentIdx;
               const stars = Math.max(0, Math.min(3, prog.stars[i] || 0));
-              const img = `/breaker/${theme}/bg.webp`;
+              const img = `/${gameId}/${theme}/bg.webp`;
               const leftPct = xPctAt(i);
               const topPx = i * ROW + ROW / 2;
               return (
@@ -585,6 +617,60 @@ function BreakerJourney({ game, onBack, onPlay }) {
             })}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Difficulty as the 1-5 preset, drawn as five pips (manifest golden rule: nobody
+// edits raw knobs; the level's difficulty 1-5 is the only tuning the kid sees).
+function DiffPips({ n, accent }) {
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i <= n ? accent : "rgba(255,255,255,0.18)" }} />
+      ))}
+    </div>
+  );
+}
+// ============================================================================
+//  BoardSoloFrame (Session 7E) — the "simple mode-and-play frame" for BOARD
+//  games (chess, checkers, tic-tac-toe...). A board game has no journey path;
+//  its manifest "levels" are opponent tiers, so Solo just picks a difficulty
+//  (the existing 1-5 preset) and plays. Reads the tiers straight from the
+//  manifest — no per-game content lives here. onPlay hands the chosen tier
+//  (with its difficulty + parts) back to the shell to launch the engine.
+// ============================================================================
+function BoardSoloFrame({ game, gameId, onBack, onPlay }) {
+  const accent = (game && game.color) || "#F0972A";
+  const [manifest, setManifest] = useState(null);
+  useEffect(() => {
+    let live = true;
+    loadGameManifest(gameId).then((m) => { if (live) setManifest(m); }).catch(() => {});
+    return () => { live = false; };
+  }, [gameId]);
+  const tiers = (manifest && Array.isArray(manifest.levels)) ? manifest.levels : [];
+  return (
+    <div style={{ ...styles.container, justifyContent: "flex-start" }}>
+      <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
+        <button onClick={onBack} style={styles.backButton}>Back</button>
+      </div>
+      <div style={{ width: "100%", maxWidth: 480, marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Solo</div>
+        <h1 style={{ ...styles.logo, margin: "2px 0 2px" }}>Pick your level</h1>
+        <p style={{ ...styles.tagline, margin: "0 0 14px" }}>How tricky should {(game && game.name) || "the game"} be?</p>
+        {!manifest && <div style={{ opacity: 0.7, marginTop: 20, fontWeight: 700 }}>Loading...</div>}
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+          {tiers.map((lv, i) => (
+            <button key={lv.id || i} onClick={() => onPlay(lv)} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%", borderRadius: 16, padding: "14px 16px", cursor: "pointer", color: "#fff", background: `linear-gradient(160deg, ${accent}44, ${accent}18)`, border: `1px solid ${accent}77` }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20 }}>{lv.name}</div>
+                {lv.desc && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 1 }}>{lv.desc}</div>}
+              </div>
+              <DiffPips n={Math.max(1, Math.min(5, lv.difficulty || 1))} accent={accent} />
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -1369,6 +1455,7 @@ export default function BuildableKids() {
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
   const [breakerEntry, setBreakerEntry] = useState("journey"); // which engine screen the Breaker landing launches into
+  const [chessStart, setChessStart] = useState(null); // Session 7E: deep-link params handed to the chess engine (solo tier / same-device)
   const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
   const [rtAutoJoin, setRtAutoJoin] = useState(null);
@@ -1523,7 +1610,8 @@ export default function BuildableKids() {
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
         onArt={() => setScreen(SCREEN_ART)}
         onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
-        onChess={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
+        onChess={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS_LANDING); }}
+        onChessResume={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
         onGrownUp={openGrownups}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
@@ -1744,7 +1832,7 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER_JOURNEY) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
-    return <BreakerJourney game={bk}
+    return <GameJourney game={bk} gameId="breaker"
       onBack={() => setScreen(SCREEN_BREAKER_LANDING)}
       onPlay={(lv) => { setBreakerEntry("play:" + lv.id); setScreen(SCREEN_BREAKER); }} />;
   }
@@ -1872,8 +1960,32 @@ export default function BuildableKids() {
   if (screen === SCREEN_TOWN_FAMILY) {
     return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
+  if (screen === SCREEN_CHESS_LANDING) {
+    // Session 7E: chess enters through the one shell landing. multiplayer is
+    // "turn-based" in its manifest, so the mode row shows Solo / Same device /
+    // Play a friend. Solo opens the board frame (pick difficulty); Same device
+    // launches the engine in pass-and-play; Play a friend opens the lobby.
+    const cg = GAME_CATALOG.find((g) => g.id === "chess");
+    return <GameLanding game={cg}
+      multiplayer="turn-based"
+      onSolo={() => setScreen(SCREEN_CHESS_SOLO)}
+      onSameDevice={() => { setChessStart("start=local"); setScreen(SCREEN_CHESS); }}
+      onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)}
+      onBack={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_CHESS_SOLO) {
+    const cg = GAME_CATALOG.find((g) => g.id === "chess");
+    return <BoardSoloFrame game={cg} gameId="chess"
+      onBack={() => setScreen(SCREEN_CHESS_LANDING)}
+      onPlay={(tier) => {
+        const bot = (tier && tier.parts && tier.parts.opponent) || "medium";
+        const world = (tier && tier.parts && tier.parts.world) || "";
+        setChessStart("start=solo&bot=" + bot + (world ? ("&world=" + world) : ""));
+        setScreen(SCREEN_CHESS);
+      }} />;
+  }
   if (screen === SCREEN_CHESS) {
-    return <ChessScreen onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
+    return <ChessScreen start={chessStart} onHome={() => setScreen(SCREEN_CHESS_LANDING)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHESS_LOBBY) {
@@ -1882,7 +1994,7 @@ export default function BuildableKids() {
         game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=6", transport: "turns" }}
         activeKid={activeKid}
         entry="friends"
-        onHome={() => setScreen(SCREEN_CHESS)}
+        onHome={() => setScreen(SCREEN_CHESS_LANDING)}
         onGuestLink={() => startGuestLink("chess")}
         onAddFriend={() => { setFriendsReturn(SCREEN_CHESS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
       />
@@ -2111,7 +2223,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
 function HomeScreen(props) {
-  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch } = props;
+  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onChessResume, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch } = props;
   // ---------------------------------------------------------------------------
   // Session 3E — Home screen redesign. Cream/light theme ONLY on this screen
   // (no dark mode toggle, no dark palette). Everything below re-presents data
@@ -2555,7 +2667,7 @@ function HomeScreen(props) {
             <button onClick={onHelper} aria-label="Your buddy" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", border: "1px solid rgba(58,46,77,0.12)", cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><BuddyGlyph size={22} /></button>
             <button onClick={onMyStuff} aria-label="My Stuff" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: HOME_INK, cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><StuffGlyph /></button>
             <GrownUpButton onGrownUp={onGrownUp} compact />
-            <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} compact />
+            <FriendsPill chessTurns={chessTurns} onChess={onChessResume || onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} compact />
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 6, background: "#fff",
               border: "1px solid rgba(240,151,42,0.30)", borderRadius: 999, padding: "9px 14px",
@@ -2582,7 +2694,7 @@ function HomeScreen(props) {
 
         {/* ---- 3. Your move: pending multiplayer turns/invites ---- */}
         {chessTurns > 0 && (
-          <button onClick={onChess} style={{
+          <button onClick={onChessResume || onChess} style={{
             width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
             display: "flex", gap: 12, alignItems: "center",
             background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.35)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
@@ -2883,7 +2995,7 @@ function TypingScreen({ onHome }) {
   );
 }
 
-function ChessScreen({ onHome, onPlayFriend }) {
+function ChessScreen({ onHome, onPlayFriend, start }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "chessPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
@@ -2899,7 +3011,7 @@ function ChessScreen({ onHome, onPlayFriend }) {
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       <iframe
         title="Buildable Chess"
-        src="/buildable-chess.html?v=6"
+        src={"/buildable-chess.html?v=6" + (start ? ("&" + start) : "")}
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
