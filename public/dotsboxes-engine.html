@@ -52,16 +52,21 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-manifest.js"></script>
+<script src="buildable-worlds.js"></script>
 <script src="buildable-boardgame.js"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
 (function(){ if(typeof document==="undefined") return;
   var WORLDS=["ocean","jungle","space","candy","castle","desert"];
-  window.setRandomWorld=function(){ try{
+  window.__wbWorld="ocean"; window.__wbPack=null;
+  try{ if(window.BuildableWorlds) BuildableWorlds.load("dotsboxes", function(p){ window.__wbPack=p; window.setRandomWorld(window.__wbWorld); }); }catch(e){}
+  function wbBg(key){ try{ var p=window.__wbPack; if(p&&p.hasWorld&&p.hasWorld(key)){ var l=p.list("background",key); if(l[0]&&l[0].img&&l[0].img.src) return l[0].img.src; } }catch(e){} return "chess-art/"+key+"_bg.jpg?v=2"; }
+  window.setRandomWorld=function(fixed){ try{
     var bg=document.getElementById("world-bg");
     if(!bg){ bg=document.createElement("div"); bg.id="world-bg"; document.body.insertBefore(bg, document.body.firstChild); }
-    var key=WORLDS[Math.floor(Math.random()*WORLDS.length)];
-    bg.style.backgroundImage="linear-gradient(rgba(8,10,40,.40),rgba(8,10,40,.55)), url('chess-art/"+key+"_bg.jpg?v=2')";
+    var key=fixed||WORLDS[Math.floor(Math.random()*WORLDS.length)];
+    window.__wbWorld=key;
+    bg.style.backgroundImage="linear-gradient(rgba(8,10,40,.40),rgba(8,10,40,.55)), url('"+wbBg(key)+"')";
   }catch(e){} };
   try{ WORLDS.forEach(function(k){ new Image().src="chess-art/"+k+"_bg.jpg?v=2"; }); }catch(e){}
   window.setRandomWorld();

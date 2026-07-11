@@ -272,6 +272,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script src="buildable-audio.js"></script>
 <script src="buildable-manifest.js"></script>
+<script src="buildable-worlds.js"></script>
 <script>
 /* ============================================================================
    Buildable Checkers — a kid-friendly draughts engine.
@@ -512,7 +513,7 @@ function renderPieces(){
   for(var r=0;r<N;r++)for(var c=0;c<N;c++){ var p=S.board[r][c]; if(!p)continue;
     var v=vrc(r,c); var d=document.createElement("div"); d.className="piece";
     d.style.left=(v[1]*12.5)+"%"; d.style.top=(v[0]*12.5)+"%";
-    d.innerHTML=discSVG(p.c,p.k); layer.appendChild(d);
+    var _pu=chkPieceImg(p.c,p.k); d.innerHTML = _pu ? ('<img src="'+_pu+'" style="width:100%;height:100%;object-fit:contain">') : discSVG(p.c,p.k); layer.appendChild(d);
   }
 }
 function clearHighlights(){
@@ -707,11 +708,15 @@ function applyScene(key){ var sc=SCENES[key]; var r=document.documentElement.sty
 function buildWorld(key){
   applyScene(key);
   var bg=$("world-bg"), fg=$("world-fg");
-  bg.style.backgroundImage="url('chess-art/"+key+"_bg.jpg?v=2')"; bg.classList.add("on");
-  fg.style.backgroundImage="url('chess-art/"+key+"_fg.jpg?v=2')"; fg.classList.add("on");
+  bg.style.backgroundImage="url('"+(chkArt(key,'background')||("chess-art/"+key+"_bg.jpg?v=2"))+"')"; bg.classList.add("on");
+  fg.style.backgroundImage="url('"+(chkArt(key,'foreground')||("chess-art/"+key+"_fg.jpg?v=2"))+"')"; fg.classList.add("on");
   buildAmbient(SCENES[key].amb);
   document.body.style.background="radial-gradient(120% 120% at 50% 0%,var(--pageA),var(--pageB))";
 }
+var CHK_PACK=null;
+function chkArt(key,slot){ try{ if(CHK_PACK&&CHK_PACK.hasWorld&&CHK_PACK.hasWorld(key)){ var l=CHK_PACK.list(slot,key); if(l[0]&&l[0].img&&l[0].img.src) return l[0].img.src; } }catch(e){} return null; }
+function chkPieceImg(col,king){ try{ if(CHK_PACK&&CHK_PACK.hasWorld&&CHK_PACK.hasWorld(sceneKey)){ var im=CHK_PACK.piece("pieces", col+(king?"_king":"_man"), sceneKey); if(im&&im.src) return im.src; } }catch(e){} return null; }
+try{ if(window.BuildableWorlds) BuildableWorlds.load("checkers", function(p){ CHK_PACK=p; try{ if(document.body.classList.contains("in-game")){ buildWorld(sceneKey); renderPieces(); } }catch(e){} }); }catch(e){}
 function resetMenuTheme(){ var r=document.documentElement.style; r.setProperty("--pageA","#1a1830"); r.setProperty("--pageB","#0F0E17");
   $("ambient").innerHTML=""; ["world-bg","world-fg"].forEach(function(id){var e=$(id); e.classList.remove("on"); e.style.backgroundImage="";}); stopMusic();
 }

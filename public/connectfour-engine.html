@@ -52,16 +52,21 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-manifest.js"></script>
+<script src="buildable-worlds.js"></script>
 <script src="buildable-boardgame.js"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
 (function(){ if(typeof document==="undefined") return;
   var WORLDS=["ocean","jungle","space","candy","castle","desert"];
-  window.setRandomWorld=function(){ try{
+  window.__wbWorld="ocean"; window.__wbPack=null;
+  try{ if(window.BuildableWorlds) BuildableWorlds.load("connectfour", function(p){ window.__wbPack=p; window.setRandomWorld(window.__wbWorld); }); }catch(e){}
+  function wbBg(key){ try{ var p=window.__wbPack; if(p&&p.hasWorld&&p.hasWorld(key)){ var l=p.list("background",key); if(l[0]&&l[0].img&&l[0].img.src) return l[0].img.src; } }catch(e){} return "chess-art/"+key+"_bg.jpg?v=2"; }
+  window.setRandomWorld=function(fixed){ try{
     var bg=document.getElementById("world-bg");
     if(!bg){ bg=document.createElement("div"); bg.id="world-bg"; document.body.insertBefore(bg, document.body.firstChild); }
-    var key=WORLDS[Math.floor(Math.random()*WORLDS.length)];
-    bg.style.backgroundImage="linear-gradient(rgba(8,10,40,.40),rgba(8,10,40,.55)), url('chess-art/"+key+"_bg.jpg?v=2')";
+    var key=fixed||WORLDS[Math.floor(Math.random()*WORLDS.length)];
+    window.__wbWorld=key;
+    bg.style.backgroundImage="linear-gradient(rgba(8,10,40,.40),rgba(8,10,40,.55)), url('"+wbBg(key)+"')";
   }catch(e){} };
   try{ WORLDS.forEach(function(k){ new Image().src="chess-art/"+k+"_bg.jpg?v=2"; }); }catch(e){}
   window.setRandomWorld();
@@ -79,7 +84,8 @@ function geo(W,H){ const pad=Math.min(W,H)*0.06; const availW=W-pad*2, availH=H-
 function slot(W,H,col,row){ const g=geo(W,H); return { x:g.x0+(col+.5)*g.cell, y:g.y0+(row+.5)*g.cell, g }; }
 function lowestEmpty(cells,col){ for(let r=ROWS-1;r>=0;r--){ if(!cells[r*COLS+col]) return r; } return -1; }
 
-function disc(ctx,x,y,r,player){ const col=P[player-1].col;
+function discImg(player){ try{ var p=window.__wbPack, w=window.__wbWorld; if(p&&p.hasWorld&&p.hasWorld(w)){ var slot=player===1?"disc1":"disc2"; var l=p.list(slot,w); if(l[0]&&l[0].img&&(l[0].img.naturalWidth||l[0].img.width)) return l[0].img; } }catch(e){} return null; }
+function disc(ctx,x,y,r,player){ var _di=discImg(player); if(_di){ ctx.save(); var d=r*2.1; ctx.drawImage(_di,x-d/2,y-d/2,d,d); ctx.restore(); return; } const col=P[player-1].col;
   const gg=ctx.createRadialGradient(x,y,1,x,y,r*1.5); gg.addColorStop(0,P[player-1].glow); gg.addColorStop(1,"rgba(0,0,0,0)");
   ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(x,y,r*1.5,0,7); ctx.fill();
   const cg=ctx.createRadialGradient(x-r*0.35,y-r*0.4,1,x,y,r); cg.addColorStop(0,BR._lighten(col,0.5)); cg.addColorStop(1,col);

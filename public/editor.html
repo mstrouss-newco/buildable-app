@@ -194,6 +194,19 @@ var LEVEL_ART = {
 // own art. Chess: 6 worlds (background/foreground/pieces + board colours). Memory: 6 themes
 // (card faces + background).
 var WORLD_ART = {
+  connectfour: { board:false, slots:[
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
+    {key:"disc1", label:"Player 1 disc", spec:{mode:"single",role:"sprite"}},
+    {key:"disc2", label:"Player 2 disc", spec:{mode:"single",role:"sprite"}}
+  ] },
+  dotsboxes: { board:false, slots:[
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}}
+  ] },
+  checkers: { board:false, slots:[
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
+    {key:"foreground", label:"Foreground", spec:{mode:"single",role:"sprite"}},
+    {key:"pieces", label:"Pieces (characters)", spec:{mode:"sheet",role:"sprite",rows:["r_man","r_king","b_man","b_king"],cols:["x"]}}
+  ] },
   tictactoe: { board:false, slots:[
     {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
     {key:"markx", label:"Player 1 mark (X)", spec:{mode:"single",role:"sprite"}},

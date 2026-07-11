@@ -1,5 +1,26 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on 7 — Connect Four, Dots & Boxes, Checkers editable art
+
+Board-games batch (owner: Connect Four + a batch of the board games).
+
+- **Connect Four (`connectfour-engine.html`).** Includes `buildable-worlds.js`; per-world library
+  background (fallback to `chess-art`), and `disc()` uses per-world library disc images
+  (disc1/disc2) when present, else the drawn discs.
+- **Dots & Boxes (`dotsboxes-engine.html`).** Per-world library background with fallback.
+- **Checkers (`buildable-checkers.html`).** Includes `buildable-worlds.js`; `buildWorld` uses a
+  per-world library background/foreground (fallback to `chess-art`); `renderPieces` uses per-world
+  library piece images (r_man/r_king/b_man/b_king) when present, else the drawn disc/crown SVG.
+- **Editor.** Worlds sections added for Connect Four (Background + two discs), Dots & Boxes
+  (Background), and Checkers (Background + Foreground + Pieces), per world.
+- **QA.** `qa-connectfour`, `qa-dotsandboxes`, `qa-checkers` ALL CHECKS PASS. Editor headless-load
+  re-verified (WORLD_ART = connectfour,dotsboxes,checkers,tictactoe,memory,chess). Everything
+  guarded with fallback so nothing regresses. Fully editable now: Breaker, Sling, Chess, Survival,
+  Bubble, Memory, Tic-Tac-Toe, Connect Four, Dots & Boxes, Checkers.
+
+Files: `public/connectfour-engine.html`, `public/dotsboxes-engine.html`,
+`public/buildable-checkers.html`, `public/editor.html`, `SESSION-LOG.md`.
+
 ## 2026-07-11: Session 4B follow-on 6 — Tic-Tac-Toe editable art
 
 Sixth game (owner: next game). Tic-Tac-Toe puts a random world scene behind the board and draws
