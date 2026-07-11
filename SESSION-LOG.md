@@ -1,5 +1,30 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on 9 — Tennis, String Match, Tetris editable art
+
+Three more games (owner: Tennis, then String Match, then Tetris).
+
+- **Tennis (`tennis.html`).** Includes `buildable-worlds.js`; `loadBg` uses a per-world (court)
+  library background when present, else the existing `/api/images?kind=tennis` art. `qa-tennis`
+  ALL DIFFICULTIES WINNABLE + MANIFEST OK.
+- **String Match (`string-match.html`).** Includes `buildable-worlds.js`; the per-scene
+  background (`sky/jungle/candy/craft/sports/lava/space/crystal`) is library-first with fallback
+  to `/claymatch/bg/*.jpg`; re-applies if the pack loads after the level is up. `qa-stringmatch`
+  ALL PASS. (Buddy-character art is a separate per-type axis — a good follow-up.)
+- **Tetris (`tetris-engine.html`).** Includes `buildable-worlds.js`; `sceneImg` is library-first
+  per world (keyed by the world name slug) with fallback to the built-in scene URL. Added Tetris
+  to the editor picker (it was missing). NOTE: `qa-tetris` has a PRE-EXISTING failure unrelated to
+  this change (`BuildableWin is not defined` in the harness's win-render check) — verified
+  identical on the pristine file before/after my edit; my change is additive and node-checked.
+- **Editor.** Worlds sections added for Tennis (8 courts), String Match (8 scenes), Tetris
+  (6 worlds), each with a Background drop-in. Editor headless-load re-verified.
+
+Fully editable now (14 games): Breaker, Sling, Survival, Bubble, Memory, Chess, Tic-Tac-Toe,
+Checkers, Connect Four, Dots & Boxes, Mahjong, Tennis, String Match, Tetris.
+
+Files: `public/tennis.html`, `public/string-match.html`, `public/tetris-engine.html`,
+`public/editor.html`, `SESSION-LOG.md`.
+
 ## 2026-07-11: Session 4B follow-on 8 — Mahjong editable tile faces (board games complete)
 
 Last board game. Mahjong lets the kid pick a tile-face SET (animals/cards/candy/shapes/stickers);

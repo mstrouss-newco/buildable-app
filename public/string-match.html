@@ -72,6 +72,7 @@
 
 <script src="/buildable-audio.js"></script>
 <script src="/buildable-manifest.js"></script>
+<script src="/buildable-worlds.js"></script>
 <script src="/buildable-startscreen.js"></script>
 <script src="/buildable-levelthumb.js"></script>
 <script>
@@ -100,6 +101,9 @@ function claySrc(key,pose){ return "/claymatch/"+key+"_"+pose+".png"; }
 var BGSRC={ sky:"/claymatch/bg/sky.jpg", jungle:"/claymatch/bg/jungle.jpg", candy:"/claymatch/bg/candy.jpg",
   craft:"/claymatch/bg/craft.jpg", sports:"/claymatch/bg/sports.jpg", lava:"/claymatch/bg/lava.jpg",
   space:"/claymatch/bg/space.jpg", crystal:"/claymatch/bg/crystal.jpg" };
+var SM_PACK=null;
+function smBg(key){ try{ if(SM_PACK&&SM_PACK.hasWorld&&SM_PACK.hasWorld(key)){ var l=SM_PACK.list("background",key); if(l[0]&&l[0].img&&l[0].img.src) return l[0].img.src; } }catch(e){} return null; }
+try{ if(window.BuildableWorlds) BuildableWorlds.load("stringmatch", function(p){ SM_PACK=p; try{ if(typeof bgImg!=="undefined" && bgImg && bgImg._bgkey) setHref(bgImg, smBg(bgImg._bgkey)||BGSRC[bgImg._bgkey]); }catch(e){} }); }catch(e){}
 
 /* ---------- LEVELS (normalized 0..1, y down). Same solver-verified geometry,
    now with clay buddies + clay worlds. Difficulty ramps: pairs 3..6. ---------- */
@@ -333,7 +337,7 @@ function endDemo(){ if(demo){ demo=null; save("sm_demo","1"); } }
 function setHref(node,url){ if(node._href!==url){ node.setAttribute("href",url); node._href=url; } }
 function buildLevelDom(){
   gBg.innerHTML=""; gBlocks.innerHTML=""; gSmoosh.innerHTML=""; gDemo.innerHTML=""; smooshEls={};
-  bgImg=el("image",{href:BGSRC[level.bg],x:0,y:0,width:VW,height:VH,preserveAspectRatio:"xMidYMid slice",filter:"url(#bgcalm)"}); gBg.appendChild(bgImg);
+  bgImg=el("image",{href:(smBg(level.bg)||BGSRC[level.bg]),x:0,y:0,width:VW,height:VH,preserveAspectRatio:"xMidYMid slice",filter:"url(#bgcalm)"}); bgImg._bgkey=level.bg; gBg.appendChild(bgImg);
   vigRect=el("rect",{x:0,y:0,width:VW,height:VH,fill:"url(#vig)"}); gBg.appendChild(vigRect);
   blockEls=[];
   level.P.forEach(function(p,idx){ ["a","b"].forEach(function(k){

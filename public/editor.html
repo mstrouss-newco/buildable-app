@@ -154,7 +154,8 @@ var CATALOG = [
   {id:"mahjong",label:"Mahjong"},{id:"tennis",label:"Tennis"},{id:"typing",label:"Typing"},
   {id:"bubble",label:"Bubble"},{id:"castleguard",label:"Castle Guard"},{id:"mathcannon",label:"Math Cannon"},
   {id:"croctot",label:"Croc Tot"},{id:"rileys-garden",label:"Riley's Garden"},{id:"music-maker",label:"Music Maker"},
-  {id:"stringmatch",label:"String Match"},{id:"snakes",label:"Snakes"}
+  {id:"stringmatch",label:"String Match"},{id:"snakes",label:"Snakes"},
+  {id:"tetris",label:"Tetris"}
 ];
 // Board / no-level games: art slots + drop-in only (no level rows).
 var BOARD = {chess:1,tictactoe:1,checkers:1,connectfour:1,dotsboxes:1,memory:1,mahjong:1};
@@ -194,6 +195,15 @@ var LEVEL_ART = {
 // own art. Chess: 6 worlds (background/foreground/pieces + board colours). Memory: 6 themes
 // (card faces + background).
 var WORLD_ART = {
+  stringmatch: { board:false, worlds:[{key:"sky",name:"Sky"},{key:"jungle",name:"Jungle"},{key:"candy",name:"Candy"},{key:"craft",name:"Craft"},{key:"sports",name:"Sports"},{key:"lava",name:"Lava"},{key:"space",name:"Space"},{key:"crystal",name:"Crystal"}], slots:[
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}}
+  ] },
+  tennis: { board:false, worlds:[{key:"beach",name:"Seaside"},{key:"space",name:"Northern Lights"},{key:"jungle",name:"Big Tree"},{key:"ocean",name:"Pine Forest"},{key:"candy",name:"Sunny Meadow"},{key:"snow",name:"Snowy Peak"},{key:"volcano",name:"Stone Cliffs"},{key:"city",name:"Green Hills"}], slots:[
+    {key:"background", label:"Court background", spec:{mode:"single",role:"background"}}
+  ] },
+  tetris: { board:false, worlds:[{key:"sunny-meadow",name:"Sunny Meadow"},{key:"candy-land",name:"Candy Land"},{key:"coral-reef",name:"Coral Reef"},{key:"snowy-peak",name:"Snowy Peak"},{key:"space-station",name:"Space Station"},{key:"volcano-fest",name:"Volcano Fest"}], slots:[
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}}
+  ] },
   mahjong: { board:false, worlds:[{key:"animals",name:"Animals"},{key:"cards",name:"Cards"},{key:"candy",name:"Candy"},{key:"shapes",name:"Shapes"},{key:"stickers",name:"Stickers"}], slots:[
     {key:"faces", label:"Tile faces (characters)", spec:{mode:"sheet",role:"sprite",rows:["r1","r2","r3","r4"],cols:["c1","c2","c3","c4","c5","c6"]}}
   ] },

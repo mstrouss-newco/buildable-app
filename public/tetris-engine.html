@@ -68,6 +68,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-gamenav.js"></script>
+<script src="buildable-worlds.js"></script>
 <script>
 /* ===========================================================================
    TUMBLE BLOCKS — a gentle, kid-friendly falling-block engine (Track B).
@@ -250,7 +251,10 @@ function by(r){ return BY + r*CELL; }
 // ---------------- DRAW ----------------
 const _bgCache={};
 function mkImg(src){ try{ if(typeof Image==="undefined") return null; const im=new Image(); try{ im.crossOrigin="anonymous"; }catch(e){} im.src=src; return im; }catch(e){ return null; } }
-function sceneImg(){ if(!W.scene) return null; if(_bgCache[W.scene]===undefined) _bgCache[W.scene]=mkImg(W.scene); return _bgCache[W.scene]; }
+var TET_PACK=null; try{ if(window.BuildableWorlds) BuildableWorlds.load("tetris", function(p){ TET_PACK=p; }); }catch(e){}
+function tetWorldKey(){ return String(W&&W.name||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+function libScene(){ try{ if(TET_PACK&&TET_PACK.hasWorld){ var w=tetWorldKey(); if(TET_PACK.hasWorld(w)){ var l=TET_PACK.list("background",w); if(l[0]&&l[0].img&&(l[0].img.naturalWidth||l[0].img.width)) return l[0].img; } } }catch(e){} return null; }
+function sceneImg(){ var _lib=libScene(); if(_lib) return _lib; if(!W.scene) return null; if(_bgCache[W.scene]===undefined) _bgCache[W.scene]=mkImg(W.scene); return _bgCache[W.scene]; }
 // chess/tennis-style photo backdrop behind the board, with a readability scrim + gradient fallback
 function drawBackdrop(){
   const im=sceneImg();
