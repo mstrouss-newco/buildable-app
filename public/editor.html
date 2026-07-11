@@ -194,6 +194,9 @@ var LEVEL_ART = {
 // own art. Chess: 6 worlds (background/foreground/pieces + board colours). Memory: 6 themes
 // (card faces + background).
 var WORLD_ART = {
+  mahjong: { board:false, worlds:[{key:"animals",name:"Animals"},{key:"cards",name:"Cards"},{key:"candy",name:"Candy"},{key:"shapes",name:"Shapes"},{key:"stickers",name:"Stickers"}], slots:[
+    {key:"faces", label:"Tile faces (characters)", spec:{mode:"sheet",role:"sprite",rows:["r1","r2","r3","r4"],cols:["c1","c2","c3","c4","c5","c6"]}}
+  ] },
   connectfour: { board:false, slots:[
     {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
     {key:"disc1", label:"Player 1 disc", spec:{mode:"single",role:"sprite"}},
@@ -447,7 +450,7 @@ function worldArtControl(worldKey, slot){
 }
 function renderWorlds(){
   var cfg=WORLD_ART[state.game]; var host=document.getElementById("worlds"); if(!cfg||!host) return; host.innerHTML="";
-  var worlds=worldsOf(state.manifest);
+  var worlds=cfg.worlds||worldsOf(state.manifest);
   state.manifest.worldArt=state.manifest.worldArt||{};
   worlds.forEach(function(w){
     var card=el("div",{class:"level"});

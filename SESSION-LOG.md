@@ -1,5 +1,24 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on 8 — Mahjong editable tile faces (board games complete)
+
+Last board game. Mahjong lets the kid pick a tile-face SET (animals/cards/candy/shapes/stickers);
+now each set's faces can be dropped in.
+
+- **Engine (`mahjong-engine.html`).** Includes `buildable-worlds.js`; `loadSetArt` now calls
+  `applyLibFaces(set)` which overrides `FACE_IMG` with the set's drop-in faces from the shared
+  library (sorted) when present, else the built-in `/game-assets/mahjong-tiles/<set>/NN.png`.
+  Guarded; a library miss keeps the built-in faces.
+- **Editor.** Mahjong gets a Worlds section keyed by its five tile SETS (not the generic world
+  list) with a Tile faces (4x6) drop-in per set. `renderWorlds` now honours a `WORLD_ART.worlds`
+  override so a game can supply its own axis of worlds.
+- **QA.** `qa-mahjong` ALL CHECKS PASS. Editor headless-load verified (WORLD_ART includes mahjong).
+
+**Board games are now all editable:** Chess, Tic-Tac-Toe, Checkers, Connect Four, Dots & Boxes,
+Memory, Mahjong — plus the level games Breaker, Sling, Survival, Bubble. Ten games total.
+
+Files: `public/mahjong-engine.html`, `public/editor.html`, `SESSION-LOG.md`.
+
 ## 2026-07-11: Session 4B follow-on 7 — Connect Four, Dots & Boxes, Checkers editable art
 
 Board-games batch (owner: Connect Four + a batch of the board games).

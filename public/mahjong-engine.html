@@ -71,6 +71,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
 <script src="buildable-manifest.js"></script>
+<script src="buildable-worlds.js"></script>
 <script>
 //  Buildable Mahjong (Solitaire) — hand-authored Track B engine.
 //  A game = this FIXED engine + GAME_CONFIG (data). Solo tile-matching puzzle.
@@ -358,6 +359,9 @@ function winGame(){
 }
 
 // ---------- ART ----------
+var MJ_PACK=null;
+function applyLibFaces(set){ try{ if(MJ_PACK && MJ_PACK.hasWorld && MJ_PACK.hasWorld(set.key)){ var l=MJ_PACK.list("faces",set.key).slice().sort(function(a,b){return a.name<b.name?-1:(a.name>b.name?1:0);}); l.forEach(function(x,i){ if(i<set.count && x.img) FACE_IMG[i]=x.img; }); } }catch(e){} }
+try{ if(window.BuildableWorlds) BuildableWorlds.load("mahjong", function(p){ MJ_PACK=p; try{ applyLibFaces(curSet()); }catch(e){} }); }catch(e){}
 function loadSetArt(set){
   FACE_IMG.length=0;
   if(headless||typeof Image==="undefined") return;
@@ -366,6 +370,7 @@ function loadSetArt(set){
     im.src=GAME_CONFIG.base+set.key+"/"+String(i+1).padStart(2,"0")+".png";
     FACE_IMG[i]=im;
   }
+  applyLibFaces(set);
 }
 
 // ---------- VIEW / DRAW ----------
