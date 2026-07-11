@@ -118,6 +118,8 @@ function curPals(){ var w=curWorld(); if(LIB_PACK&&w&&LIB_PACK.hasWorld(w)){ var
 function curTargets(){ var w=curWorld(); if(LIB_PACK&&w&&LIB_PACK.hasWorld(w)){ var a=LIB_PACK.list("foes",w).map(function(x){return x.img;}); if(a.length)return a; } return LIB_TARGETS; }
 var BLK_IMGS = {};     // Kenney "Physics Assets" block textures, keyed material+shape (woodW/stoneT/...)
 var TARGET_IMGS = [];  // Kenney "Physics Assets" alien faces = the goofy toppling targets
+// painted bad-guy monsters (our art): [{idle,bonked,poof},...]. PILOT: level 1 only.
+var TARGETS_ART=[]; var TARGET_MONSTERS=["dirtball","gnome","mossrock","pot","acorn","mine"];
 
 // ---- per-level BACKDROPS (Kenney "Background Elements Remastered", CC0) ----
 // Each level gets its own scene so it looks fresh; parallax below adds depth.
@@ -236,7 +238,7 @@ function buildWorld(idx){
 
   G = { L:L, blocks:blocks, targets:targets, ammo:null, ammoBody:null, ammoBodies:[], slingIdx:0,
         launchesLeft:L.launches, launchesUsed:0, restFrames:0, flyFrames:0, reload:0,
-        popped:0, totalTargets:targets.length, drag:null, armed:false, powerUsed:false, winDelay:0 };
+        popped:0, totalTargets:targets.length, drag:null, armed:false, powerUsed:false, winDelay:0, poofs:[] };
 
   // pop a target on a solid bonk from the flung ammo (direct hit always counts)
   M.Events.on(engine, "collisionStart", function(ev){
@@ -245,6 +247,7 @@ function buildWorld(idx){
       var t = a._kind==="target"?a:(b._kind==="target"?b:null);
       var o = (t===a)?b:a;
       if(t && t._alive && (o._kind==="ammo" || o._kind==="block")){
+        t._hitAt=nowMs();                         // drives the bad-guy BONKED pose
         var spd = Math.hypot(o.velocity.x,o.velocity.y);
         if(o._kind==="ammo" || spd>2.2) popTarget(t);
       }
@@ -270,6 +273,9 @@ function loadAmmo(){
 
 function popTarget(t){
   if(!t._alive) return; t._alive=false; G.popped++;
+  if(level===0 && TARGETS_ART.length){ var _ms=TARGETS_ART[(t._ti||0)%TARGETS_ART.length];
+    if(_ms&&_ms.poof){ G.poofs.push({x:t.position.x,y:t.position.y,w:t._w,h:t._h,art:_ms.poof,t0:nowMs()});
+      if(G.poofs.length>24) G.poofs.shift(); } }
   if(fx&&BM) BM.explode(fx, t.position.x, t.position.y, "#bdf06a", { n:16, pop:"POOF!", sfx:null });
   sfx("poof");
   M.Composite.remove(world, t);
@@ -619,6 +625,10 @@ function drawPowerHint(b){
 function drawTarget(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
   var w=b._w,h=b._h;
+  // painted bad guys (level 1 pilot): idle, or bonked briefly after a hit
+  if(level===0 && TARGETS_ART.length){ var mset=TARGETS_ART[(b._ti||0)%TARGETS_ART.length];
+    if(mset && mset.idle){ var mp=(b._hitAt && nowMs()-b._hitAt<180 && mset.bonked)?mset.bonked:mset.idle;
+      if(mp&&(mp.naturalWidth||mp.width)){ var msz=Math.max(w,h)*1.95; ctx.drawImage(mp,-msz/2,-msz/2,msz,msz); ctx.restore(); return; } } }
   // Kenney alien face (Physics Assets) when served; drawn critter is the fallback.
   var _tp=(curTargets().length?curTargets():TARGET_IMGS); var tim=_tp[(b._ti||0)%(_tp.length||1)];
   if(tim&&(tim.naturalWidth||tim.width)){ var ts=Math.max(w,h)*1.7; ctx.drawImage(tim,-ts/2,-ts/2,ts,ts); ctx.restore(); return; }
@@ -659,6 +669,11 @@ function draw(){
   drawBg();
   for(var i=0;i<G.blocks.length;i++) drawBlock(G.blocks[i]);
   for(var j=0;j<G.targets.length;j++){ if(G.targets[j]._alive) drawTarget(G.targets[j]); }
+  if(G.poofs && G.poofs.length){ var _np=nowMs();
+    for(var pi=G.poofs.length-1;pi>=0;pi--){ var pf=G.poofs[pi], age=(_np-pf.t0)/500;
+      if(age>=1){ G.poofs.splice(pi,1); continue; }
+      if(pf.art&&(pf.art.naturalWidth||pf.art.width)){ var psz=Math.max(pf.w,pf.h)*1.95*(1+age*0.4);
+        ctx.save(); ctx.globalAlpha=Math.max(0,1-age*age); ctx.drawImage(pf.art,pf.x-psz/2,pf.y-psz/2,psz,psz); ctx.restore(); } } }
   drawSling();
   // ammo: held in sling (ready/aiming) or in flight (one, or three after a split)
   if((state==="flying"||state==="clearing") && G.ammoBodies && G.ammoBodies.length){
@@ -781,6 +796,10 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   ["woodW","woodS","woodT","stoneW","stoneS","stoneT"].forEach(function(k){ L("/kenney/sling/blocks/"+k+".png",function(im){ BLK_IMGS[k]=im; }); });
   // toppling targets (Physics Assets alien faces)
   for(var i=0;i<5;i++){ (function(i){ L("/kenney/sling/targets/t"+i+".png",function(im){ TARGET_IMGS[i]=im; }); })(i); }
+  // painted bad guys (our art) — 6 monsters x idle/bonked/poof
+  TARGET_MONSTERS.forEach(function(m,i){ TARGETS_ART[i]={};
+    ["idle","bonked","poof"].forEach(function(st){
+      L("/sling/targets/"+m+"_"+st+".png?v=1",function(im){ TARGETS_ART[i][st]=im; }); }); });
   // per-level scene backdrops (Background Elements Remastered)
   ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
     L("/kenney/sling/bg/"+k+".webp",function(im){ BG_IMGS[k]=im; }); });

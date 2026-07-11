@@ -6,6 +6,20 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: painted bad guys on level 1 (July 11 2026)
+
+New hand-painted "bad guy" targets (our art) piloted on level 1. A 6-monster x 3-state sheet
+(dirtball, gnome, mossrock, pot, acorn, mine; states idle/bonked/poof) was sliced to
+`public/sling/targets/<monster>_<state>.png`; the source had a baked checkerboard which was
+removed by a grayish-and-light color mask + edge flood fill. `sling-squad.html`: `TARGETS_ART`
+registry loaded via the `/sling/` route; `drawTarget` shows the painted monster on level 1 only
+(`level===0` gate) with a BONKED pose for 180ms after a hit (`target._hitAt` set in
+collisionStart), else IDLE. On pop, a POOF sprite is pushed to `G.poofs` and drawn expanding +
+fading over 500ms (in addition to the existing particle burst). Everything is gated to level 1 as
+a pilot and falls back to the prior Kenney/drawn targets elsewhere or if art fails to load, so
+qa-sling stays green (all levels clear, render smoke passes). Next: if approved, drop the gate to
+roll the monsters across all levels, and assign specific monsters per level/world.
+
 ## Full Sling Squad: all 5 animals animated (July 11 2026)
 
 Extended the raccoon pose system to the whole reference sheet. All 5 characters
