@@ -377,6 +377,7 @@
       return {
         id: lv.id, name: lv.name, difficulty: d,
         theme: parts.theme || null,
+        world: parts.world || parts.stage || parts.theme || null,   // per-level art world (null = built-in art)
         boss: parts.boss || null,
         coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
         unlocked: !!lv.unlocked,

@@ -173,6 +173,10 @@ var LEVEL_ART = {
   ],
   // Survival dresses each level from its own world; the bad-guy sheet rows are THIS level's
   // foe keys, and the boss is a single piece named this level's boss key.
+  bubble: [
+    {key:"background", label:"Background", spec:{mode:"single",role:"background"}},
+    {key:"bubbles", label:"Bubbles (characters)", spec:{mode:"sheet",role:"sprite",rows:["red","blue","green","yellow","purple","pink"],cols:["x"]}}
+  ],
   survival: function(lv){
     var parts=lv.parts||{};
     var foes=(Array.isArray(parts.foes)&&parts.foes.length)?parts.foes:["enemy_one","enemy_two"];

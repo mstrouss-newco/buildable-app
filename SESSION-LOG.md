@@ -1,5 +1,27 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 4B follow-on 4 — Bubble editable per-level art
+
+Fourth game in the rollout (owner: Bubble). Bubble drew a plain gradient background and used the
+Kenney bubble bodies whole-game; now each level can drop in its own background image and its own
+bubble characters.
+
+- **Bubble engine (`bubble-engine.html`).** Includes `buildable-worlds.js`; `LIB_PACK` + `curWorld`
+  + `worldBubble`/`worldBg`. `drawBuddy` prefers the playing level's own bubble art (by colour name
+  or code) over the Kenney body; `draw()` paints a per-level world background image over the
+  gradient when present. All guarded with fallback to the built-in art. `loadBubbleManifest` copies
+  each level's `world` (from `stages[i].world`/`parts.stage`) into the engine level config.
+- **Manifest.** The shared `crocProfile` (used by Bubble and several others) now passes a per-level
+  `world` (`parts.world || parts.stage || parts.theme`) to the engine config, so the same wiring
+  benefits future croc-profile games.
+- **Editor (`editor.html`).** Bubble levels show Background + Bubbles (characters; a 6-colour sheet:
+  red/blue/green/yellow/purple/pink) with Drop in art saving to that level's own world.
+- **QA.** `qa-bubble` ALL CHECKS PASS (additive/guarded). Live per-level drop-in is Mike's
+  on-device check. Fully editable now: Breaker, Sling, Chess, Survival, Bubble.
+
+Files: `public/bubble-engine.html`, `public/buildable-manifest.js`, `public/editor.html`,
+`SESSION-LOG.md`.
+
 ## 2026-07-11: Session 4B follow-on 3 — Survival editable per-level art
 
 Third game in the editable-art rollout (owner: Survival next). Survival already used the shared

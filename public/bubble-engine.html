@@ -61,6 +61,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-levelthumb.js"></script>
 <script src="buildable-manifest.js"></script>
+<script src="buildable-worlds.js"></script>
 <script>
 (function(){
 "use strict";
@@ -124,13 +125,20 @@ var GAME_CONFIG = window.GAME_CONFIG || { levels:[
     window.BuildableManifest.load("bubble", function(cfg){
       try{
         if(cfg && cfg.stages && cfg.stages.length){
-          for(var i=0;i<GAME_CONFIG.levels.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) GAME_CONFIG.levels[i].name = cfg.stages[i].name; }
+          for(var i=0;i<GAME_CONFIG.levels.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) GAME_CONFIG.levels[i].name = cfg.stages[i].name; var _w=cfg.stages[i].world||(cfg.stages[i].parts&&cfg.stages[i].parts.stage); if(_w) GAME_CONFIG.levels[i].world=_w; }
           try{ if(typeof startScreen!=="undefined" && startScreen && startScreen.update && typeof levelCards==="function") startScreen.update({levels:levelCards(),sound:!muted}); }catch(e){}
         }
       }catch(e){}
     }, function(){ /* missing/invalid -> keep built-in levels */ });
   }catch(e){}
 })();
+
+// ---- per-level art (drop-in backgrounds + bubble characters), library with fallback ----
+var LIB_PACK=null;
+try{ if(window.BuildableWorlds) BuildableWorlds.load("bubble", function(p){ LIB_PACK=p; }); }catch(e){}
+function curWorld(){ try{ var i=(typeof G!=="undefined"&&G)?G.level:0; return (GAME_CONFIG.levels[i]||{}).world||null; }catch(e){ return null; } }
+function worldBubble(code){ try{ var w=curWorld(); if(LIB_PACK&&w&&LIB_PACK.hasWorld&&LIB_PACK.hasWorld(w)){ var nm=(COLORS[code]&&COLORS[code].name)||code; var pc=LIB_PACK.piece("bubbles",nm,w)||LIB_PACK.piece("bubbles",String(code).toLowerCase(),w); if(pc) return pc; } }catch(e){} return null; }
+function worldBg(){ try{ var w=curWorld(); if(LIB_PACK&&w&&LIB_PACK.hasWorld&&LIB_PACK.hasWorld(w)){ var l=LIB_PACK.list("background",w); if(l[0]&&l[0].img) return l[0].img; } }catch(e){} return null; }
 
 // ---------- geometry ----------
 var COLS=9, R=36, DIAM=72, ROWH=R*Math.sqrt(3);        // hex vertical spacing
@@ -326,7 +334,7 @@ function preload(){ for(var k in COLORS) loadImg(COLORS[k].body); loadImg(FACE_I
 
 function drawBuddy(x,y,code,face,scale){
   scale=scale||1; var d=DIAM*scale;
-  var body=loadImg(COLORS[code].body);
+  var body=worldBubble(code)||loadImg(COLORS[code].body);
   if(body&&body.complete&&body.naturalWidth){ ctx.drawImage(body,x-d/2,y-d/2,d,d); }
   else { ctx.fillStyle=COLORS[code].css; ctx.beginPath(); ctx.arc(x,y,d/2,0,6.2832); ctx.fill(); }
   var f=loadImg(face);
@@ -340,6 +348,7 @@ function draw(){
   // background
   var g=ctx.createLinearGradient(0,0,0,DESIGN_H); g.addColorStop(0,"#12244a"); g.addColorStop(1,"#0c1730");
   ctx.fillStyle=g; ctx.fillRect(-8,-8,DESIGN_W+16,DESIGN_H+16);
+  var _bgw=worldBg(); if(_bgw && (_bgw.naturalWidth||_bgw.width)){ ctx.drawImage(_bgw,-8,-8,DESIGN_W+16,DESIGN_H+16); }
   // side walls
   ctx.fillStyle="rgba(255,255,255,.05)"; ctx.fillRect(0,0,WALL_L,DESIGN_H); ctx.fillRect(WALL_R,0,DESIGN_W-WALL_R,DESIGN_H);
   // deadline
