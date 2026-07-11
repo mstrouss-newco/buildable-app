@@ -82,9 +82,19 @@ Two firm rules for audio, because sound is part of the brand:
    back to the shelf.
 
 How to add a created sound: add a named prompt to `SOUNDS` in `api/sfx.js`
-(one-shots + ambience) and/or a world to `api/chess-music.js` (music); name it
-`<theme>_<action>` or `game_<action>`; hit the endpoint once to generate + cache it;
-it then appears in `/api/list-audio` automatically.
+(one-shots + ambience); name it `<theme>_<action>` or `game_<action>`; hit the
+endpoint once to generate + cache it; it then appears in `/api/list-audio`
+automatically.
+
+**Background music: `api/library-music.js` is the one shared home.** Add a named,
+reusable mood to its `MUSIC` map (label + theme + prompt) and every game can pull it
+by URL: `/api/library-music?name=<name>` (generated once on ElevenLabs, cached in
+`narration_cache`, auto-listed in `/api/list-audio`). Wire it in a game with the shared
+player: `BA.setMusic("/api/library-music?name=<name>")` then `BA.playMusic()`. This is
+the pattern to use for all new games. The older per-game music endpoints
+(`api/breaker-music.js`, `chess-music.js`, `maze-music.js`, `runner-music.js`,
+`tennis-music.js`) are **legacy**. Keep them working for the games that use them, but
+do NOT add new ones; put new moods in `library-music` so every game shares them.
 
 ---
 
@@ -99,7 +109,8 @@ it then appears in `/api/list-audio` automatically.
 | ALL music + sfx (one catalog) | `GET /api/list-audio?theme=<t>` | music-library files + /api/chess-music + /api/sfx |
 | Reusable music loops | `public/music-library/` (+ `MANIFEST.md`) | static files |
 | Sound effects + ambience | `GET /api/sfx?s=<name>` | `narration_cache` (generated once, cached) |
-| Per-world music (chess style) | `GET /api/chess-music?world=<theme>` | `narration_cache` |
+| Reusable named music (shared, any game) | `GET /api/library-music?name=<name>` | `narration_cache` |
+| Per-game music (legacy: breaker/chess/maze/runner/tennis) | `GET /api/<game>-music?...` | `narration_cache` |
 | Kids' saved songs | `GET /api/list-songs` | `saved_songs` |
 | Shared drawing code (always-available fallback) | `public/buildable-renders.js` (`window.BuildableRenders`) | — |
 | Shared audio PLAYER + offline-fallback synth | `public/buildable-audio.js` (`window.BuildableAudio`) — plays created sounds; synth is fallback only | — |

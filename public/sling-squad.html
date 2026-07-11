@@ -199,6 +199,12 @@ function maxStars(){ return GAME_CONFIG.levels.length*3; }
 
 // ---- audio helper (created sounds via /api/sfx; synth is silent fallback only) ----
 function sfx(n){ try{ if(BA&&BA.sfx) BA.sfx(n); }catch(e){} }
+// background music: reusable shared-library track (see /api/library-music). Warm,
+// no shrill highs. Any future game can pull the same named track by URL.
+var _curMusic=null;
+function ensureMusic(){ try{ if(!BA||!BA.setMusic)return; var url="/api/library-music?name=adventure_sunny_bounce";
+  if(url!==_curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); _curMusic=url; }
+  if(BA.playMusic)BA.playMusic(); }catch(e){} }
 
 // ============================================================================
 //  Matter.js world — the real physics. One engine per level.
@@ -768,7 +774,7 @@ function pt(ev){ var r=canvas.getBoundingClientRect();
   return { x:(cx-r.left)/r.width*W, y:(cy-r.top)/r.height*H }; }
 function clampDrag(p){ var dx=p.x-AX, dy=p.y-AY, d=Math.hypot(dx,dy);
   if(d>MAXPULL){ var k=MAXPULL/d; dx*=k; dy*=k; } return { x:AX+dx, y:AY+dy }; }
-function onDown(ev){ if(BA){BA.unlock&&BA.unlock();}
+function onDown(ev){ if(BA){BA.unlock&&BA.unlock();} ensureMusic();
   if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else showMenu(); return; }
   if(state==="lose"){ ev.preventDefault&&ev.preventDefault(); startLevel(level); return; }
   if(state==="flying"){ ev.preventDefault&&ev.preventDefault(); tryPower(); return; }  // tap mid-air = fire the power
@@ -802,7 +808,7 @@ function showMenu(){ state="title"; G=null; show("help",false); showChrome(false
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg());
 }
 function hideMenu(){ var host=el("start"); if(host)host.style.display="none"; showChrome(true); }
-function startLevel(i){ level=i; buildWorld(i); started=true; hideMenu(); show("help",false); }
+function startLevel(i){ level=i; buildWorld(i); started=true; hideMenu(); show("help",false); ensureMusic(); }
 
 function wireMenus(){
   var hb=el("helpBtn"); if(hb)hb.onclick=function(){ show("help",true); };

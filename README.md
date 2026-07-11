@@ -1878,6 +1878,27 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-11 (Sling gets music + shared music library cleanup)
+
+**New:** Sling Squad now plays background music. It uses the shared music library
+(`BA.setMusic("/api/library-music?name=adventure_sunny_bounce")` + `playMusic()`,
+started on level start and first tap), the same pattern Breaker uses. No more silence
+between the pops.
+
+**Shared library grew:** two new reusable ElevenLabs moods added to `api/library-music.js`
+so any future game can pull them by name: `adventure_sunny_bounce` (Sunny Adventure /
+Bounce) and `adventure_meadow_soft` (Meadow Explore / Soft). Warm, rounded, no shrill
+highs, per the sound rule. They auto-appear in `/api/list-audio`.
+
+**Cleanup:** documented `api/library-music.js` as the ONE shared home for background
+music in `ASSET-LIBRARY.md`. The per-game endpoints (breaker/chess/maze/runner/tennis
+music) are now marked legacy: keep them working, but put new moods in `library-music`
+so games share them instead of each inventing its own endpoint.
+
+QA: `node qa-sling.mjs .` all green (manifest valid, bot clears all 5 levels, render
+smoke passes); both edited files pass `node --check`. Tracks generate + cache on first
+play (or prime with `?name=<name>&force=1`).
+
 ## Session log — 2026-07-09 (Session 8B: learning ledger, the `skill` cartridge message)
 
 Groundwork before the first native learning game (8C). Added a game -> shell `skill` message to `CARTRIDGE-CONTRACT.md` so any game can report ONE practiced skill (`subject`, `correct` true/false, optional `skill`/`questionId`/`quizType`), plus a "learning ledger" section: quiz gates and native learning games both write to the same `learning_events` table (6B), so the parent skills dashboard reads one source. Implemented the shell side: `logSkillEvent()` in `src/lib/gameLog.js` posts to the existing `/api/log-learning-event`, and the shared `GameFrame` wrapper in `src/BuildableKids.jsx` relays any embedded game's `kind:"skill"` into it (active kid + grade attached). Additive and dormant: no game emits it yet, no engine changed, no DB change. esbuild JSX parse OK; `qa-breaker.mjs` ALL CHECKS PASS. Commits `1c3e897`, `a24d2d1`.

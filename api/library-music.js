@@ -26,6 +26,16 @@ const MUSIC = {
     theme: "calm",
     prompt: "Warm calm lofi hip-hop: mellow dusty electric piano and soft jazzy chords over a relaxed head-nodding boom-bap groove with soft vinyl crackle and a warm round bassline, chilled and cozy but quietly upbeat and positive, warm rounded low-mid tones, no shrill or piercing highs, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
   },
+  adventure_sunny_bounce: {
+    label: "Sunny Adventure (Bounce)",
+    theme: "adventure",
+    prompt: "Warm playful outdoor adventure music for kids: bouncy mellow marimba and cheerful soft ukulele plucks over warm rounded acoustic bass with a light hand-clap and shaker groove, sunny upbeat and adventurous with a gentle spring in its step, all warm rounded low-mid tones, absolutely no shrill or piercing high notes, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
+  },
+  adventure_meadow_soft: {
+    label: "Meadow Explore (Soft)",
+    theme: "adventure",
+    prompt: "Warm gentle outdoor exploration music for kids: soft mellow acoustic guitar and light marimba over warm rounded pads and a slow easy shaker pulse, curious and adventurous but relaxed and cozy like a sunny meadow stroll, warm rounded low-mid tones, no shrill or piercing highs, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
+  },
 };
 
 async function cacheGet(key){
