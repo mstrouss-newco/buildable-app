@@ -6,6 +6,23 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Full Sling Squad: all 5 animals animated (July 11 2026)
+
+Extended the raccoon pose system to the whole reference sheet. All 5 characters
+(raccoon, squirrel, skunk, beaver, frog) are sliced into 7 transparent poses each
+(idle, pulledback, flying, ability, impact, dazed, victory) under `public/sling/<animal>/`,
+white removed by edge-flood fill. The raccoon-specific code is now animal-generic: `ANIMALS`
+registry (per-animal pose sets), `animalPose(set,opts)` + `drawAnimalPose(set,...)`, driven by
+`SQUAD[slot].animal`. `SQUAD` is now 5 members, each skinned to a distinct animal (Rocky/raccoon
+split, Nutkin/squirrel split, Stinky/skunk bomb, Chip/beaver heavy, Hopper/frog dash) so every
+animal appears in rotation; each shows its OWN ability pose on tap (acorn spray, stink cloud, chew
+drill, sticky tongue). Powers reuse the existing 4 mechanics (no new physics/level balancing), so
+`qa-sling.mjs` stays green (all 5 levels clear with spare launches, render smoke passes). Pose
+ability key renamed split->ability; old `raccoon_split.png` removed. `ANIMALS_ON` (default true)
+toggles the whole system. Falls back to prior art per-pose if any file fails to load. Next: give
+each animal its OWN real power (acorn burst, stink cloud, chew drill, sticky tongue) instead of
+reusing the 4 mechanics.
+
 ## Raccoon poses in Sling Squad (July 11 2026)
 
 First hand-painted character animation for Sling Squad. A 5-character reference sheet

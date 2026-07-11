@@ -85,10 +85,11 @@ var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced
 //  (Kenney "Animal Pack Remastered" art dresses these when served; drawn fallback
 //   below can never break a kid's game.)  power: split | bomb | heavy | dash
 var SQUAD = [
-  { name:"Splitz", type:"bird",  power:"split", body:"#57c1ff", cheek:"#2f9fe0", tag:"Splits in 3!", img:"/kenney/sling/animals/parrot.png" },
-  { name:"Boomer", type:"bomb",  power:"bomb",  body:"#6b5aa0", cheek:"#4a3c7a", tag:"Kaboom!",      img:"/kenney/sling/animals/panda.png" },
-  { name:"Bruno",  type:"bear",  power:"heavy", body:"#c98a55", cheek:"#a86e3e", tag:"Big smash!",   img:"/kenney/sling/animals/hippo.png" },
-  { name:"Zip",    type:"chick", power:"dash",  body:"#ffd23e", cheek:"#f0a91f", tag:"Zoom!",        img:"/kenney/sling/animals/chick.png" }
+  { name:"Rocky",  animal:"raccoon",  type:"bird",  power:"split", body:"#8a8f98", cheek:"#5a5f66", tag:"Splits in 3!", img:"/kenney/sling/animals/parrot.png" },
+  { name:"Nutkin", animal:"squirrel", type:"chick", power:"split", body:"#c8813f", cheek:"#a86a2e", tag:"Acorn spray!", img:"/kenney/sling/animals/chick.png" },
+  { name:"Stinky", animal:"skunk",    type:"bomb",  power:"bomb",  body:"#3a3a40", cheek:"#e8e8ee", tag:"Stink cloud!", img:"/kenney/sling/animals/panda.png" },
+  { name:"Chip",   animal:"beaver",   type:"bear",  power:"heavy", body:"#a86a3e", cheek:"#7a4a28", tag:"Chew smash!",  img:"/kenney/sling/animals/hippo.png" },
+  { name:"Hopper", animal:"frog",     type:"chick", power:"dash",  body:"#7bc043", cheek:"#5a9a2e", tag:"Sticky zoom!", img:"/kenney/sling/animals/chick.png" }
 ];
 
 // ---- TARGET look (goofy castle critters that just topple + POOF, never hurt) ----
@@ -96,11 +97,11 @@ var TARGET_COL = "#b6f06a", TARGET_CHEEK = "#8ed83f";
 var SQUAD_IMGS = [];   // Kenney "Animal Pack Remastered" art for the flung pals (drawn animal = fallback)
 var LIB_SCENE=null, LIB_PALS=[], LIB_TARGETS=[];   // whole-game default reskin (shared loader)
 var LIB_PACK=null;                                  // full world pack (all worlds) for per-level art
-// ---- RACCOON pose set (our own hand-painted "animation bible" sprites). One frame
+// ---- ANIMAL pose sets (our own hand-painted "animation bible" sprites). One frame
 //  per state; the engine tweens BETWEEN them (tilt / squash / pop) so it reads as
-//  smooth motion without a big frame count.  RACCOON_ON = show it for every shot.
-var RACCOON = {};                 // { idle, pulledback, flying, split, impact, dazed, victory }
-var RACCOON_ON = true;
+//  smooth motion without a big frame count.  ANIMALS_ON = show them for every shot.
+var ANIMALS = {};                 // { raccoon:{idle,...}, squirrel, skunk, beaver, frog }
+var ANIMALS_ON = true;
 function nowMs(){ return (typeof performance!=="undefined"&&performance.now)?performance.now():Date.now(); }
 if(window.BuildableWorlds) BuildableWorlds.load("sling", function(p){
   LIB_PACK=p;
@@ -518,37 +519,38 @@ function drawBand(toX,toY){
   ctx.beginPath(); ctx.moveTo(AX+16,AY-6); ctx.lineTo(toX,toY); ctx.stroke();
 }
 function drawSquadFace(x,y,r,sq,opts){
-  // raccoon "animation bible": swap the right pose for the moment, tween the rest
-  if(RACCOON_ON && RACCOON.idle && drawRaccoon(x,y,r,raccoonPose(opts),opts)) return;
+  // animal "animation bible": swap the right pose for the moment, tween the rest
+  if(ANIMALS_ON){ var _an=(SQUAD[sq%SQUAD.length]||{}).animal, _set=_an&&ANIMALS[_an];
+    if(_set && _set.idle && drawAnimalPose(_set,x,y,r,animalPose(_set,opts),opts)) return; }
   var c=SQUAD[sq%SQUAD.length];
   var _pl=curPals(); var im=(_pl.length?_pl[sq%_pl.length]:SQUAD_IMGS[sq%SQUAD.length]);
   // Kenney animal art dresses the pal when served; else the drawn animal below.
   if(im && (im.naturalWidth||im.width) && BR && BR.sprite){ BR.sprite(ctx, im, x, y, r*2.3, { shadow:true }); return; }
   drawAnimal(x,y,r,c);
 }
-// Pick which raccoon pose fits this exact game moment.
-function raccoonPose(opts){
+// Pick which pose fits this exact game moment for a given animal's set.
+function animalPose(set,opts){
   opts=opts||{};
   if(opts.icon) return "idle";
   if(state==="win") return "victory";
   var b=opts.body, t=nowMs();
   if(b){
-    if(b._hitT && t-b._hitT<230 && RACCOON.impact) return "impact";
-    if(G && G.powerUsed && G._powerAt && t-G._powerAt<320 && RACCOON.split) return "split";
-    if(Math.hypot(b.velocity.x,b.velocity.y)<0.8 && RACCOON.dazed) return "dazed";
+    if(b._hitT && t-b._hitT<230 && set.impact) return "impact";
+    if(G && G.powerUsed && G._powerAt && t-G._powerAt<320 && set.ability) return "ability";
+    if(Math.hypot(b.velocity.x,b.velocity.y)<0.8 && set.dazed) return "dazed";
     return "flying";
   }
   if(state==="aiming" && G && G.drag){
-    if(Math.hypot(AX-G.drag.x,AY-G.drag.y)>16 && RACCOON.pulledback) return "pulledback";
+    if(Math.hypot(AX-G.drag.x,AY-G.drag.y)>16 && set.pulledback) return "pulledback";
   }
   return "idle";
 }
 // Draw a pose sprite with a small code-driven tween so a single frame feels alive.
-function drawRaccoon(x,y,r,pose,opts){
+function drawAnimalPose(set,x,y,r,pose,opts){
   opts=opts||{};
-  var im=RACCOON[pose]||RACCOON.idle; if(!im||!(im.naturalWidth||im.width)) return false;
+  var im=set[pose]||set.idle; if(!im||!(im.naturalWidth||im.width)) return false;
   var t=nowMs()/1000;
-  var K=(pose==="split")?2.15:2.55;               // draw height in world px
+  var K=(pose==="ability")?2.15:2.55;             // draw height in world px
   var dh=r*K, dw=im.width*(dh/im.height);
   var rot=0, sx=1, sy=1, oy=0;
   if(pose==="idle"){ var bob=Math.sin(t*3); oy=bob*r*0.05; sx=1+bob*0.03; sy=1-bob*0.03; }
@@ -557,7 +559,7 @@ function drawRaccoon(x,y,r,pose,opts){
       rot=Math.max(-0.6,Math.min(0.6,va*0.4))+(bf.angle||0)*0.4; } }
   else if(pose==="impact"){ var bi=opts.body, p=(bi&&bi._hitT)?Math.min(1,(nowMs()-bi._hitT)/230):1;
       var e=1-p; sx=1+0.35*e; sy=1-0.28*e; }
-  else if(pose==="split"){ var ps=(G&&G._powerAt)?Math.min(1,(nowMs()-G._powerAt)/320):1;
+  else if(pose==="ability"){ var ps=(G&&G._powerAt)?Math.min(1,(nowMs()-G._powerAt)/320):1;
       var sc=1+0.25*Math.sin(ps*Math.PI); sx=sc; sy=sc; }
   else if(pose==="dazed"){ rot=Math.sin(t*6)*0.12; sy=0.96; }
   else if(pose==="victory"){ var bo=Math.abs(Math.sin(t*4)); oy=-bo*r*0.28; sx=1+bo*0.06; sy=1+bo*0.06; }
@@ -672,7 +674,7 @@ function draw(){
       for(var k=0;k<26;k++){ x+=ux; y+=uy; uy+=EFF_G; if(k%2===0){ ctx.beginPath(); ctx.arc(x,y,3.2,0,7); ctx.fill(); } if(y>GY||x>W) break; }
     }
   }
-  if(state==="win" && RACCOON_ON && RACCOON.victory) drawSquadFace(AX,AY-6,24,0,{});
+  if(state==="win" && ANIMALS_ON) drawSquadFace(AX,AY-6,24,0,{});
   ctx.restore();
   if(fx&&BM) BM.draw(ctx,fx,{W:W,H:H});
   // HUD — shared tinted chips (buildable-hud.js). The old on-canvas scoreboard
@@ -782,9 +784,10 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
   // per-level scene backdrops (Background Elements Remastered)
   ["grass","desert","forest","fall","castles","forest2","desert2","empty"].forEach(function(k){
     L("/kenney/sling/bg/"+k+".webp",function(im){ BG_IMGS[k]=im; }); });
-  // raccoon "animation bible" poses (our art) — sliced from the reference sheet
-  ["idle","pulledback","flying","split","impact","dazed","victory"].forEach(function(k){
-    L("/sling/raccoon/raccoon_"+k+".png?v=1",function(im){ RACCOON[k]=im; }); });
+  // animal "animation bible" poses (our art) — sliced from the reference sheet
+  ["raccoon","squirrel","skunk","beaver","frog"].forEach(function(an){ ANIMALS[an]={};
+    ["idle","pulledback","flying","ability","impact","dazed","victory"].forEach(function(k){
+      L("/sling/"+an+"/"+an+"_"+k+".png?v=2",function(im){ ANIMALS[an][k]=im; }); }); });
 }catch(e){} }
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
 
