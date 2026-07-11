@@ -30,6 +30,10 @@ for (const f of files) {
   const raw = fs.readFileSync(path.join(exploreDir, f), 'utf8');
   let data;
   try { data = JSON.parse(raw); } catch (e) { fail(f + ' is not valid JSON: ' + e.message); continue; }
+  // This QA owns the orbit-explorer template only. Other templates (e.g. the
+  // layers-cutaway "dive") carry their own born-with-it QA (qa-dive.mjs), so skip
+  // their exhibit files here rather than fail them against the orbit shape.
+  if (data.template && data.template !== 'orbit-explorer') { console.log('SKIP: ' + f + ' (template "' + data.template + '") — checked by its own template QA'); continue; }
   const req = ['id', 'title', 'template', 'topic', 'ageBand', 'status', 'heroArt', 'center', 'bodies'];
   const missing = req.filter((k) => data[k] === undefined);
   if (missing.length) { fail(f + ' missing required field(s): ' + missing.join(', ')); continue; }

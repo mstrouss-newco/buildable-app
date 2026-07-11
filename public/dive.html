@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Kidspedia — Explore</title>
+<link rel="icon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0F0E17;--cream:#FDFAF5;--gold:#FFC542;--mint:#2FAE68}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{overscroll-behavior:none}
+  body{font-family:'Nunito',sans-serif;color:var(--cream);min-height:100vh;
+       background:linear-gradient(#8FDAF2 0%, #37AEDD 5%, #1173B4 14%, #0B4E8C 26%, #082F62 38%, #061D46 52%, #040E2C 66%, #02061A 80%, #01030E 100%);}
+
+  canvas.fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+  #fx{z-index:1}
+  #dark{z-index:3}
+
+  .top{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;gap:10px;padding:12px 16px;
+       background:rgba(2,8,24,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  #back{width:38px;height:38px;border-radius:13px;border:none;background:rgba(255,255,255,.15);color:var(--cream);font-size:17px;font-weight:900;cursor:pointer;font-family:'Nunito'}
+  .top h1{font-family:'Fredoka';font-weight:700;font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top h1 small{display:block;font-family:'Nunito';font-weight:900;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+  .meter{text-align:right;font-weight:900;font-size:13px;flex:none}
+  .meter small{display:block;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(253,250,245,.55)}
+
+  .world{position:relative;z-index:2;max-width:620px;margin:0 auto}
+  .zone{position:absolute;left:16px;right:16px}
+  .zone h2{font-family:'Fredoka';font-weight:700;font-size:21px;text-shadow:0 2px 8px rgba(0,0,0,.35)}
+  .zone .zr{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:rgba(253,250,245,.6)}
+  .zone p{font-size:12.5px;font-weight:700;line-height:1.45;color:rgba(253,250,245,.85);margin-top:6px;max-width:420px}
+
+  .cr{position:absolute;border:none;background:none;cursor:pointer;z-index:2;padding:6px}
+  .cr .nm{display:block;text-align:center;font-family:'Nunito';font-weight:900;font-size:10.5px;color:rgba(253,250,245,.85);
+          letter-spacing:.05em;margin-top:2px;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+  .cr .art{display:block;margin:0 auto}
+  .cr .art svg,.cr .art img{display:block;margin:0 auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.3))}
+  .glow .art svg,.glow .art img{filter:drop-shadow(0 0 10px rgba(150,220,255,.85))}
+  .cr:active .art{transform:scale(1.15)}
+  /* idle animations */
+  @keyframes sway{0%,100%{transform:rotate(-4deg) translateX(0)}50%{transform:rotate(4deg) translateX(10px)}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  @keyframes pulse{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.86) translateY(4px)}}
+  @keyframes drift{0%,100%{transform:translateX(0) rotate(2deg)}50%{transform:translateX(-18px) rotate(-3deg)}}
+  .a-sway{animation:sway 5s ease-in-out infinite}
+  .a-bob{animation:bob 3.6s ease-in-out infinite}
+  .a-pulse{animation:pulse 2.8s ease-in-out infinite}
+  .a-drift{animation:drift 7s ease-in-out infinite}
+  @keyframes flick{0%,88%,100%{opacity:1}92%{opacity:.25}96%{opacity:.9}}
+  .lure{animation:flick 3.2s linear infinite}
+  @keyframes jet{0%{transform:translateX(0)}30%{transform:translateX(-46px) rotate(-8deg)}100%{transform:translateX(0)}}
+  .jetting{animation:jet .7s ease-out}
+  .paused .a-sway,.paused .a-bob,.paused .a-pulse,.paused .a-drift,.paused .lure{animation-play-state:paused}
+
+  .hint{position:absolute;left:16px;right:16px;text-align:center;font-weight:900;font-size:13px;color:rgba(253,250,245,.9);
+        text-shadow:0 1px 6px rgba(0,0,0,.6)}
+  .bottom{position:absolute;left:16px;right:16px;text-align:center}
+  .bottom .fl{font-family:'Fredoka';font-weight:700;font-size:20px}
+  .bottom p{font-size:12px;font-weight:800;color:rgba(253,250,245,.65);margin-top:6px}
+
+  /* fact sheet */
+  .sheetbg{position:fixed;inset:0;background:rgba(1,3,16,.6);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .sheetbg.open{display:flex}
+  .sheet{background:var(--cream);color:var(--ink);border-radius:24px 24px 0 0;width:100%;max-width:560px;padding:20px 18px 34px}
+  .hd{display:flex;align-items:center;gap:12px}
+  .hd h2{font-family:'Fredoka';font-weight:700;font-size:23px;flex:1;min-width:0}
+  .say{border:none;background:var(--gold);color:var(--ink);width:52px;height:52px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 4px 12px rgba(15,14,23,.18);transition:transform .08s ease,background .15s ease}
+  .say:active{transform:scale(.93)}
+  .say.playing{background:var(--mint);color:#fff}
+  .say svg{width:24px;height:24px}
+  .fact{font-size:15px;font-weight:700;line-height:1.55;margin-top:12px;min-height:70px}
+  .stats{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .stat{background:#F1EDE4;border-radius:14px;padding:10px 14px;flex:1;min-width:120px}
+  .stat small{display:block;font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:rgba(15,14,23,.45)}
+  .stat b{font-family:'Fredoka';font-weight:600;font-size:15px}
+  .more{margin-top:14px}
+  .more small{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,14,23,.45)}
+  .rowb{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .q{border:2px solid rgba(15,14,23,.15);background:none;border-radius:999px;padding:9px 14px;font-family:'Nunito';font-weight:800;font-size:12px;color:var(--ink);cursor:pointer}
+  .q.next{background:none;border-color:rgba(15,14,23,.15)}
+  .q.quiz{background:var(--mint);border-color:var(--mint);color:#fff}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;font-family:'Nunito';font-weight:800;font-size:13px;padding:10px 18px;border-radius:999px;z-index:80;opacity:0;pointer-events:none;transition:opacity .25s ease}
+  .toast.show{opacity:1}
+  .notready{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;flex-direction:column;gap:10px}
+  .notready h2{font-family:'Fredoka';font-size:22px}
+  .notready p{font-size:14px;color:rgba(253,250,245,.7);max-width:280px}
+  .notready button{margin-top:6px;border:none;background:var(--gold);color:var(--ink);font-family:'Nunito';font-weight:900;font-size:14px;padding:11px 20px;border-radius:999px;cursor:pointer}
+  /* In-shell (loaded inside the app's GameFrame): the shell owns the top-left Home,
+     so hide the exhibit's own back button and slide the title clear of the Home pill. */
+  body.in-app #back{display:none}
+  body.in-app .top{padding-left:96px}
+  .pauseveil{position:fixed;inset:0;background:rgba(11,10,24,.55);z-index:40;display:none;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:16px}
+  .pauseveil.show{display:flex}
+</style>
+</head>
+<body>
+
+<div id="app" style="display:none">
+  <canvas class="fx" id="fx"></canvas>
+
+  <div class="top">
+    <button id="back">&lsaquo;</button>
+    <h1><small>Kidspedia</small><span id="pageTitle">Loading…</span></h1>
+    <div class="meter"><small>Your depth</small><span id="depth">0 ft</span></div>
+  </div>
+
+  <div class="world" id="world"></div>
+
+  <canvas class="fx" id="dark"></canvas>
+
+  <div class="sheetbg" id="sheetbg">
+    <div class="sheet">
+      <div class="hd">
+        <h2 id="cName">&nbsp;</h2>
+        <button class="say" id="sayBtn" type="button" onclick="readAloud()" aria-label="Read to me">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+      </div>
+      <p class="fact" id="cFact"></p>
+      <div class="stats">
+        <div class="stat"><small id="s1l"></small><b id="s1"></b></div>
+        <div class="stat"><small id="s2l"></small><b id="s2"></b></div>
+      </div>
+      <div class="more"><small>Keep exploring</small>
+        <div class="rowb" id="qrow"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="notready" class="notready" style="display:none">
+  <h2 id="notreadyTitle">Not ready yet</h2>
+  <p id="notreadyMsg">This exhibit isn't open yet. Check back soon!</p>
+  <button id="notreadyBtn" type="button">Back to Explore</button>
+</div>
+
+<div class="pauseveil" id="pauseveil">Paused</div>
+<div class="toast" id="toast"></div>
+
+<script src="/buildable-gamenav.js"></script>
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-feel.js"></script>
+<script>
+"use strict";
+// =====================================================================
+// Kidspedia layers-cutaway template ("dive") — a scrollable descent.
+// Templates are code, exhibits are data (EXHIBIT-MANIFEST.md). This file
+// knows nothing about "the ocean" specifically: every zone, every creature,
+// every fact, every stat comes from the exhibit's JSON file. Built to the
+// approved motion mock (Journey to the Deep). No emojis (product rule) —
+// creature art is an art slot, with the drawn SVGs below as the fallback
+// until real art drops in.
+// =====================================================================
+
+function exhibitIdFromLocation() {
+  const m = location.pathname.match(/\/explore\/([a-z0-9-]+)/i);
+  if (m) return m[1];
+  const q = new URLSearchParams(location.search).get("exhibit");
+  return q || "ocean-deep";
+}
+const EXHIBIT_ID = exhibitIdFromLocation();
+
+function iframed() { try { return window.parent && window.parent !== window; } catch (e) { return false; } }
+function postToShell(msg) { if (iframed()) { try { window.parent.postMessage(msg, "*"); } catch (e) {} } }
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+let DATA = null;          // the loaded exhibit file
+let ZONES = [];           // the water-column bands, top to bottom
+let CREATURES = [];       // every tappable creature, placed in the scene
+let ITEMS = {};           // id -> creature, for card lookups
+let ZONE_TOP = {};        // zone id -> pixel top of its band
+let current = null;       // currently open creature id
+let factIdx = 0;          // which fact of the current creature is showing
+let paused = false;
+let soundOn = true;
+let audioUnlocked = false;
+let ambientAudio = null;  // soft per-exhibit background bed (an /api/sfx loop)
+let narrAudio = null;     // currently playing "Read to me" clip
+let speaking = false;
+let sayToken = 0;
+const ZH = 1500;          // pixel height of each zone band (matches the mock)
+let WORLD_H = 0, MAXFT = 35876, DARK_START = 1e9;
+
+if (iframed()) document.body.classList.add("in-app");
+
+function exitToShell() {
+  postToShell("nav:exit");
+  if (!iframed()) { history.length > 1 ? history.back() : (location.href = "/"); }
+}
+
+function showFallback(kind, msg) {
+  try { document.getElementById("app").style.display = "none"; } catch (e) {}
+  const title = document.getElementById("notreadyTitle");
+  const body = document.getElementById("notreadyMsg");
+  if (kind === "error") {
+    title.textContent = "Oops!";
+    body.textContent = msg || "This exhibit had trouble loading. Let's try again in a moment.";
+  } else {
+    title.textContent = "Not ready yet";
+    body.textContent = msg || "This exhibit isn't open yet. Check back soon!";
+  }
+  document.getElementById("notready").style.display = "flex";
+}
+document.getElementById("notreadyBtn").onclick = exitToShell;
+
+// ---------- drawn SVG fallbacks (art slots override these when real art drops in) ----------
+// The mock's seven creatures are ported verbatim; the rest are drawn in the same
+// flat, friendly style. A creature names its drawing with `shape`; an unknown
+// shape falls back to a soft blob so an exhibit is never a blank space.
+const SHAPES = {
+ turtle:'<svg width="72" height="54" viewBox="0 0 64 48"><ellipse cx="30" cy="24" rx="18" ry="13" fill="#2FAE68"/><path d="M30,11 a18,13 0 0 1 0,26" fill="#1C7A46"/><circle cx="50" cy="20" r="7" fill="#7ED09A"/><circle cx="52.5" cy="18.5" r="1.6" fill="#0F0E17"/><ellipse cx="16" cy="12" rx="7" ry="3.5" fill="#7ED09A" transform="rotate(-30 16 12)"/><ellipse cx="16" cy="36" rx="7" ry="3.5" fill="#7ED09A" transform="rotate(30 16 36)"/></svg>',
+ dolphin:'<svg width="76" height="48" viewBox="0 0 66 42"><path d="M6,26 Q20,6 44,12 Q58,16 62,24 Q52,24 46,28 Q30,38 14,32 Q8,30 6,26 Z" fill="#8FB9D9"/><path d="M30,12 L36,2 L40,13 Z" fill="#8FB9D9"/><path d="M6,26 L-2,20 L2,30 Z" fill="#8FB9D9"/><circle cx="52" cy="20" r="1.8" fill="#0F0E17"/></svg>',
+ jelly:'<svg width="58" height="64" viewBox="0 0 52 58"><path d="M6,26 a20,20 0 0 1 40,0 Z" fill="rgba(180,150,255,.85)"/><path d="M10,28 q3,14 0,26 M20,28 q-3,16 2,28 M32,28 q3,16 -2,28 M42,28 q-3,14 0,26" stroke="rgba(180,150,255,.7)" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
+ angler:'<svg width="82" height="62" viewBox="0 0 70 54"><circle cx="30" cy="34" r="18" fill="#2E3A56"/><path d="M46,30 L62,24 L58,38 Z" fill="#2E3A56"/><path d="M20,44 q10,6 20,0" stroke="#fff" stroke-width="2.5" fill="none"/><path d="M22,44 l2,-5 M28,46 l1.5,-5 M34,46 l-1.5,-5 M40,44 l-2,-5" stroke="#fff" stroke-width="2"/><circle cx="24" cy="30" r="3.5" fill="#fff"/><circle cx="24" cy="30" r="1.6" fill="#0F0E17"/><path d="M30,16 Q34,4 44,8" stroke="#2E3A56" stroke-width="3" fill="none"/><circle class="lure" cx="45" cy="8" r="4.5" fill="#CFF0FF"/></svg>',
+ squid:'<svg width="82" height="60" viewBox="0 0 70 52"><path d="M4,26 L26,14 L26,38 Z" fill="#D96A8B"/><ellipse cx="34" cy="26" rx="12" ry="13" fill="#D96A8B"/><circle cx="38" cy="22" r="4.5" fill="#fff"/><circle cx="38" cy="22" r="2" fill="#0F0E17"/><path d="M44,18 q16,-4 22,2 M44,24 q18,0 24,4 M44,30 q16,4 20,10 M44,34 q12,8 12,14" stroke="#D96A8B" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>',
+ dumbo:'<svg width="66" height="60" viewBox="0 0 58 52"><path d="M12,30 a17,17 0 0 1 34,0 q0,12 -17,12 q-17,0 -17,-12 Z" fill="#F0A2B8"/><ellipse cx="14" cy="16" rx="7" ry="9" fill="#F0A2B8" transform="rotate(-20 14 16)"/><ellipse cx="44" cy="16" rx="7" ry="9" fill="#F0A2B8" transform="rotate(20 44 16)"/><circle cx="23" cy="28" r="2.2" fill="#0F0E17"/><circle cx="35" cy="28" r="2.2" fill="#0F0E17"/><path d="M25,35 q4,3 8,0" stroke="#0F0E17" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+ snail:'<svg width="76" height="42" viewBox="0 0 66 36"><path d="M8,18 Q20,4 40,10 Q54,14 60,18 Q54,22 40,26 Q20,32 8,18 Z" fill="rgba(220,225,240,.78)"/><circle cx="48" cy="16" r="1.8" fill="#0F0E17"/><path d="M8,18 L0,12 L2,22 Z" fill="rgba(220,225,240,.78)"/></svg>',
+ albatross:'<svg width="90" height="46" viewBox="0 0 80 40"><path d="M40,22 q-22,-14 -38,-4 q14,2 20,8 q-12,0 -18,6 q18,4 34,-2 Z" fill="#F3F1EA"/><path d="M40,22 q22,-14 38,-4 q-14,2 -20,8 q12,0 18,6 q-18,4 -34,-2 Z" fill="#E7E4DA"/><ellipse cx="40" cy="22" rx="9" ry="6" fill="#FBFAF6"/><path d="M48,21 l8,1 l-8,3 Z" fill="#FFC542"/><circle cx="45" cy="20" r="1.5" fill="#0F0E17"/></svg>',
+ pelican:'<svg width="76" height="56" viewBox="0 0 66 50"><ellipse cx="28" cy="28" rx="17" ry="12" fill="#E8E4D8"/><path d="M40,22 q10,-10 18,-6 q-4,6 -10,8 Z" fill="#F3F1EA"/><path d="M44,26 q10,2 12,12 q-9,-2 -14,-6 Z" fill="#FFC542"/><circle cx="47" cy="20" r="1.6" fill="#0F0E17"/><path d="M12,30 q-8,2 -10,8 q9,0 14,-4 Z" fill="#E8E4D8"/></svg>',
+ clownfish:'<svg width="70" height="52" viewBox="0 0 62 46"><path d="M40,10 q-8,-2 -14,4 q-4,-6 -10,-4 q3,6 1,10 q-10,4 -12,14 q10,4 20,2 q6,6 14,4 q-3,-6 -1,-10 q8,-4 12,-14 q-6,-6 -10,-4 Z" fill="#F08A3C"/><ellipse cx="34" cy="24" rx="20" ry="12" fill="#F4964B"/><path d="M22,14 q3,10 0,20 M34,12 q3,12 0,24" stroke="#FDFAF5" stroke-width="4" fill="none"/><circle cx="46" cy="22" r="2" fill="#0F0E17"/></svg>',
+ shark:'<svg width="88" height="46" viewBox="0 0 78 40"><path d="M4,22 Q26,6 58,12 Q72,15 76,22 Q64,24 58,28 Q34,36 12,30 Q6,27 4,22 Z" fill="#8A97A6"/><path d="M34,10 L40,-1 L46,12 Z" fill="#8A97A6"/><path d="M4,22 L-4,15 L0,26 Z" fill="#8A97A6"/><path d="M20,30 q10,5 20,1" stroke="#5C6875" stroke-width="2" fill="none"/><circle cx="62" cy="20" r="1.8" fill="#0F0E17"/></svg>',
+ hatchetfish:'<svg width="58" height="56" viewBox="0 0 52 50"><path d="M18,10 q14,-4 22,6 q4,6 0,12 q-8,8 -20,6 q-10,-2 -12,-10 q6,2 10,-2 q-4,-8 0,-18 Z" fill="#C8D2DE"/><circle cx="34" cy="18" r="4.5" fill="#fff"/><circle cx="34" cy="18" r="2" fill="#0F0E17"/><circle cx="16" cy="34" r="2" fill="#CFF0FF"/><circle cx="24" cy="37" r="2" fill="#CFF0FF"/><circle cx="32" cy="36" r="2" fill="#CFF0FF"/></svg>',
+ gulpereel:'<svg width="92" height="46" viewBox="0 0 82 40"><path d="M6,18 q10,-10 22,-6 q6,2 6,8 q0,8 -8,10 q-12,2 -20,-4 Z" fill="#3A2E4A"/><path d="M34,20 q18,4 42,-2 q-6,10 -20,12 q-16,2 -22,-4 Z" fill="#2E2440"/><circle cx="14" cy="14" r="1.6" fill="#CFF0FF"/><circle cx="70" cy="30" r="3" fill="#CFF0FF"/></svg>',
+ tubeworm:'<svg width="64" height="72" viewBox="0 0 56 64"><rect x="14" y="26" width="7" height="36" rx="3" fill="#F0EAE0"/><rect x="26" y="18" width="7" height="44" rx="3" fill="#F5F0E6"/><rect x="36" y="30" width="7" height="32" rx="3" fill="#EFE9DF"/><ellipse cx="17.5" cy="24" rx="6" ry="7" fill="#E24A4A"/><ellipse cx="29.5" cy="16" rx="6" ry="8" fill="#E85C5C"/><ellipse cx="39.5" cy="28" rx="6" ry="7" fill="#E24A4A"/></svg>',
+ yeticrab:'<svg width="76" height="52" viewBox="0 0 66 46"><ellipse cx="33" cy="28" rx="15" ry="11" fill="#F3EFE7"/><path d="M20,26 q-12,-2 -16,-10 M46,26 q12,-2 16,-10" stroke="#EDE7DB" stroke-width="6" fill="none" stroke-linecap="round"/><ellipse cx="6" cy="15" rx="5" ry="4" fill="#F3EFE7"/><ellipse cx="60" cy="15" rx="5" ry="4" fill="#F3EFE7"/><path d="M24,38 l-6,6 M33,40 l0,7 M42,38 l6,6" stroke="#EDE7DB" stroke-width="4" stroke-linecap="round"/><circle cx="28" cy="24" r="1.6" fill="#0F0E17"/><circle cx="38" cy="24" r="1.6" fill="#0F0E17"/></svg>',
+ ventshrimp:'<svg width="66" height="44" viewBox="0 0 58 38"><path d="M8,20 q6,-12 22,-12 q16,0 20,10 q2,8 -6,12 q-6,-6 -14,-6 q-12,0 -18,8 q-6,-4 -4,-10 Z" fill="#F2A6A0"/><path d="M50,18 q6,2 6,8 M50,22 q6,4 4,10" stroke="#F2A6A0" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="18" cy="16" r="1.6" fill="#0F0E17"/></svg>',
+ blob:'<svg width="60" height="52" viewBox="0 0 54 46"><ellipse cx="27" cy="24" rx="18" ry="14" fill="rgba(200,210,235,.85)"/><circle cx="33" cy="20" r="2" fill="#0F0E17"/></svg>'
+};
+function shapeFor(c) { return SHAPES[c.shape] || SHAPES.blob; }
+
+// Art-slot url (same convention as the orbit template): a value with a slash is a
+// real static asset served as {path}.webp with a {path}.jpg fallback; a flat id is
+// resolved through the shared /api/images pipeline. assetVersion busts the cache.
+function creatureArtUrl(c, ext) {
+  const art = c.art || "";
+  const v = (DATA && DATA.assetVersion) ? "?v=" + encodeURIComponent(DATA.assetVersion) : "";
+  if (art.indexOf("/") !== -1) return "/" + art + "." + (ext || "webp") + v;
+  return "/api/images?kind=explore&id=" + encodeURIComponent(art);
+}
+function isRealStaticArt(c) { return (c.art || "").indexOf("/") !== -1; }
+
+fetch("/explore/" + encodeURIComponent(EXHIBIT_ID) + ".json", { cache: "no-store" })
+  .then((r) => { if (!r.ok) throw new Error("missing"); return r.json(); })
+  .then((data) => {
+    // Golden rule #2: kids only ever see status "approved". No exception.
+    if (!data || data.status !== "approved") { showFallback("notready"); return; }
+    if (data.template !== "layers-cutaway") { showFallback("error"); return; }
+    DATA = data;
+    boot(data);
+  })
+  .catch(() => { showFallback("error"); });
+
+function boot(data) {
+  document.getElementById("app").style.display = "block";
+  document.title = "Kidspedia — " + data.title;
+  document.getElementById("pageTitle").textContent = data.title;
+
+  ZONES = data.zones || [];
+  CREATURES = data.creatures || [];
+  ITEMS = {};
+  CREATURES.forEach((c) => { ITEMS[c.id] = c; });
+
+  // Depth model: each zone is a band ZH tall, stacked top to bottom. The screen
+  // starts to darken at the first zone flagged dark, which is where the flashlight
+  // takes over (past the midnight line in the mock).
+  WORLD_H = ZH * ZONES.length + 900;
+  MAXFT = data.maxDepthFt || 35876;
+  let firstDark = ZONES.findIndex((z) => z.dark);
+  DARK_START = firstDark >= 0 ? ZH * (firstDark + 0.15) : 1e9;
+
+  buildWorld();
+  document.getElementById("back").onclick = exitToShell;
+  initAudio(data);
+
+  // Honor pause/resume from the shell around the quiz gate (CARTRIDGE-CONTRACT.md — mandatory).
+  window.addEventListener("message", (e) => {
+    const d = e && e.data;
+    if (d === "pause" || (d && d.type === "pause")) setPaused(true);
+    else if (d === "resume" || (d && d.type === "resume")) setPaused(false);
+  });
+
+  // Background = silence, iOS-reliably (stop ambient + cancel read-aloud when hidden).
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { stopAmbient(); stopNarration(); }
+    else if (!paused) { startAmbient(); }
+  });
+
+  // sheet backdrop closes on tap-outside
+  document.getElementById("sheetbg").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeSheet(); });
+
+  size(); startFx();
+}
+
+function buildWorld() {
+  const world = document.getElementById("world");
+  world.innerHTML = "";
+  world.style.height = WORLD_H + "px";
+  ZONE_TOP = {};
+  ZONES.forEach((z, i) => {
+    ZONE_TOP[z.id] = i * ZH;
+    const d = document.createElement("div");
+    d.className = "zone"; d.style.top = (i * ZH + 140) + "px";
+    d.innerHTML = "<h2>" + escapeHtml(z.name) + "</h2><div class=\"zr\">" + escapeHtml(z.range || "") + "</div><p>" + escapeHtml(z.blurb || "") + "</p>";
+    world.appendChild(d);
+  });
+
+  // The flashlight hint sits just inside the first dark zone.
+  if (DARK_START < 1e9) {
+    const hint = document.createElement("div");
+    hint.className = "hint"; hint.style.top = (DARK_START + 260) + "px";
+    hint.textContent = "It is dark down here. Your finger is your flashlight.";
+    world.appendChild(hint);
+  }
+
+  // Bottom card (data-driven finish line).
+  const fin = data_finish();
+  if (fin) {
+    const end = document.createElement("div");
+    end.className = "bottom"; end.style.top = (WORLD_H - 380) + "px";
+    end.innerHTML = "<div class=\"fl\">" + escapeHtml(fin.title) + "</div><p>" + escapeHtml(fin.blurb) + "</p>";
+    world.appendChild(end);
+  }
+
+  CREATURES.forEach((c, i) => {
+    const top = (ZONE_TOP[c.zone] || 0) + (c.y || 300);
+    const b = document.createElement("button");
+    b.className = "cr " + (c.glow ? "glow" : "");
+    b.style.left = (c.x != null ? c.x : 40) + "%";
+    b.style.top = top + "px";
+    b.dataset.id = c.id;
+    if (c.lure) b.dataset.lure = "1";
+    const art = document.createElement("span");
+    art.className = "art " + (c.anim || "a-bob");
+    art.style.display = "block";
+    art.style.animationDelay = (-i * 1.3) + "s";
+    art.innerHTML = shapeFor(c);          // instant drawn fallback
+    loadCreatureArt(c, art);              // swap in real art if the slot is filled
+    const nm = document.createElement("span");
+    nm.className = "nm"; nm.textContent = c.name;
+    b.appendChild(art); b.appendChild(nm);
+    b.onclick = () => {
+      if (paused) return;
+      tapFx();
+      if (c.jet) { art.classList.add("jetting"); setTimeout(() => art.classList.remove("jetting"), 700); }
+      setTimeout(() => open(c.id), c.jet ? 350 : 0);
+    };
+    world.appendChild(b);
+  });
+}
+function data_finish() { return (DATA && DATA.finish) ? DATA.finish : null; }
+
+// Art rule (CARTRIDGE-CONTRACT.md): fetch art at load time, never bake it in. The
+// drawn SVG already shows; swap in the real art only once it loads, and silently
+// keep the drawing if the slot is empty or the file never resolves.
+function loadCreatureArt(c, holder) {
+  if (!c.art) return;
+  const img = new Image();
+  img.width = c.artW || 78; img.height = c.artH || 58;
+  img.alt = "";
+  img.onload = () => { try { holder.innerHTML = ""; holder.appendChild(img); } catch (e) {} };
+  img.onerror = () => {
+    if (isRealStaticArt(c) && /\.webp(\?|$)/.test(img.src)) { img.src = creatureArtUrl(c, "jpg"); return; }
+    // drawn SVG fallback already showing, nothing more to do
+  };
+  img.src = creatureArtUrl(c, "webp");
+}
+
+function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function setPaused(v) {
+  paused = v;
+  document.getElementById("pauseveil").classList.toggle("show", v);
+  document.body.classList.toggle("paused", v);
+  if (v) { stopAmbient(); stopNarration(); } else { startAmbient(); }
+}
+
+// ================= living water + flashlight (canvas), ported from the mock =================
+let fx, fctx, dark, dctx, W = 0, H = 0;
+let bubbles = [], snow = [], beams = [];
+let light = { x: 0, y: 0 };
+let lastT = 0, fxStarted = false;
+
+function size() {
+  fx = document.getElementById("fx"); fctx = fx.getContext("2d");
+  dark = document.getElementById("dark"); dctx = dark.getContext("2d");
+  W = innerWidth; H = innerHeight;
+  [fx, dark].forEach((c) => { c.width = W * devicePixelRatio; c.height = H * devicePixelRatio; c.getContext("2d").setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); });
+}
+function startFx() {
+  if (fxStarted) return; fxStarted = true;
+  light = { x: innerWidth / 2, y: innerHeight * 0.45 };
+  bubbles = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random() * WORLD_H, r: 2 + Math.random() * 4, v: 14 + Math.random() * 22 }));
+  const belowTwilight = ZH; // marine snow begins below the sunlight band
+  snow = Array.from({ length: 80 }, () => ({ x: Math.random(), y: belowTwilight + Math.random() * (WORLD_H - belowTwilight), r: 0.8 + Math.random() * 1.6, v: 5 + Math.random() * 9, drift: Math.random() * 2 - 1 }));
+  beams = Array.from({ length: 5 }, (_, i) => ({ x: 0.12 + i * 0.18, w: 0.05 + Math.random() * 0.05, ph: Math.random() * 6 }));
+  addEventListener("resize", size);
+  addEventListener("pointermove", (e) => { light.x = e.clientX; light.y = e.clientY; }, { passive: true });
+  addEventListener("pointerdown", (e) => { light.x = e.clientX; light.y = e.clientY; }, { passive: true });
+  requestAnimationFrame(tick);
+}
+
+function whale(ctx, x, y, s) { ctx.beginPath(); ctx.ellipse(x, y, 90 * s, 26 * s, 0, 0, Math.PI * 2); ctx.moveTo(x + 80 * s, y); ctx.lineTo(x + 120 * s, y - 22 * s); ctx.lineTo(x + 120 * s, y + 22 * s); ctx.closePath(); ctx.fill(); }
+
+// The darkness amount at a given scroll position — pure, so QA can assert the
+// flashlight zone activates without driving the render loop.
+function darknessAt(sy) { return Math.min(0.9, Math.max(0, (sy - DARK_START) / 600 * 0.9)); }
+
+function tick(t) {
+  requestAnimationFrame(tick);
+  const dt = paused ? 0 : Math.min((t - lastT) / 1000, 0.05); lastT = t;
+  const sy = scrollY;
+  const depthEl = document.getElementById("depth");
+  if (depthEl) depthEl.textContent = (Math.round((sy / Math.max(document.body.scrollHeight - H, 1)) * MAXFT / 10) * 10).toLocaleString() + " ft";
+
+  fctx.clearRect(0, 0, W, H);
+  // sunbeams near the surface
+  if (sy < ZH * 0.9) {
+    const a = Math.max(0, 1 - sy / (ZH * 0.9));
+    beams.forEach((b) => {
+      const sway = Math.sin(t / 1800 + b.ph) * 30;
+      const g = fctx.createLinearGradient(0, 0, 0, H * 0.9);
+      g.addColorStop(0, "rgba(255,255,240," + (0.16 * a) + ")"); g.addColorStop(1, "rgba(255,255,240,0)");
+      fctx.fillStyle = g; fctx.beginPath();
+      fctx.moveTo(b.x * W + sway - ((b.w * W) / 2), 0); fctx.lineTo(b.x * W + sway + ((b.w * W) / 2), 0);
+      fctx.lineTo(b.x * W + sway + ((b.w * W) * 1.6), H * 0.9); fctx.lineTo(b.x * W + sway - ((b.w * W) * 1.6), H * 0.9); fctx.closePath(); fctx.fill();
+    });
+  }
+  // far silhouettes (parallax .55): a distant whale + trench walls near the deepest bands
+  fctx.fillStyle = "rgba(4,14,34,.45)";
+  const py = (y) => y - sy * 0.55;
+  const wy = py(ZH * 1.5 + 300); if (wy > -80 && wy < H + 80) whale(fctx, W * 0.78 + Math.sin(t / 4000) * 24, wy, 1);
+  const twTop = py(WORLD_H - ZH * 1.4);
+  if (twTop < H) {
+    fctx.fillStyle = "rgba(2,6,18,.7)";
+    fctx.beginPath(); fctx.moveTo(0, twTop); fctx.lineTo(W * 0.18, twTop + 300); fctx.lineTo(W * 0.10, twTop + 900); fctx.lineTo(0, twTop + 1400); fctx.closePath(); fctx.fill();
+    fctx.beginPath(); fctx.moveTo(W, twTop + 120); fctx.lineTo(W * 0.84, twTop + 500); fctx.lineTo(W * 0.92, twTop + 1100); fctx.lineTo(W, twTop + 1500); fctx.closePath(); fctx.fill();
+  }
+  // rising bubbles (parallax .85)
+  fctx.fillStyle = "rgba(255,255,255,.35)";
+  bubbles.forEach((b) => { b.y -= b.v * dt; if (b.y < 0) b.y = WORLD_H; const yy = b.y - sy * 0.85; if (yy > -10 && yy < H + 10) { fctx.beginPath(); fctx.arc(b.x * W + Math.sin(t / 900 + b.y) * 6, yy, b.r, 0, Math.PI * 2); fctx.fill(); } });
+  // marine snow below the sunlight band (parallax .9, falling)
+  fctx.fillStyle = "rgba(235,240,255,.5)";
+  snow.forEach((s) => { s.y += s.v * dt; if (s.y > WORLD_H) s.y = ZH; const yy = s.y - sy * 0.9; if (yy > -6 && yy < H + 6) { fctx.beginPath(); fctx.arc(s.x * W + Math.sin(t / 1400 + s.y) * 10 * s.drift, yy, s.r, 0, Math.PI * 2); fctx.fill(); } });
+
+  // darkness + flashlight
+  dctx.clearRect(0, 0, W, H);
+  const dAmt = darknessAt(sy);
+  if (dAmt > 0) {
+    dctx.fillStyle = "rgba(1,3,12," + dAmt + ")"; dctx.fillRect(0, 0, W, H);
+    dctx.globalCompositeOperation = "destination-out";
+    const g = dctx.createRadialGradient(light.x, light.y, 10, light.x, light.y, 170);
+    g.addColorStop(0, "rgba(0,0,0,.95)"); g.addColorStop(0.6, "rgba(0,0,0,.55)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    dctx.fillStyle = g; dctx.beginPath(); dctx.arc(light.x, light.y, 170, 0, Math.PI * 2); dctx.fill();
+    // the anglerfish lure burns through the dark on its own
+    document.querySelectorAll("[data-lure]").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < H && r.bottom > 0) {
+        const lx = r.left + r.width * 0.62, ly = r.top + 10;
+        const lg = dctx.createRadialGradient(lx, ly, 2, lx, ly, 60);
+        lg.addColorStop(0, "rgba(0,0,0,.9)"); lg.addColorStop(1, "rgba(0,0,0,0)");
+        dctx.fillStyle = lg; dctx.beginPath(); dctx.arc(lx, ly, 60, 0, Math.PI * 2); dctx.fill();
+      }
+    });
+    dctx.globalCompositeOperation = "source-over";
+  }
+}
+
+// ================= sound: tap feedback + soft ambient (Feel Kit + shell toggle) =================
+function tapFx() { try { if (window.Feel && Feel.tap) Feel.tap(); } catch (e) {} }
+function initAudio(data) {
+  try { if (window.Feel && Feel.configure) Feel.configure({ sfxBase: "/api/sfx?s=" }); } catch (e) {}
+  try { soundOn = !(window.BuildableAudio && window.BuildableAudio.muted); } catch (e) { soundOn = true; }
+  try {
+    if (window.BuildableGameNav) BuildableGameNav.register({
+      hide: [],
+      onSound: function () { setSound(!soundOn); },
+      soundOn: function () { return soundOn; },
+      inGame: function () { return true; },
+    });
+  } catch (e) {}
+  var unlock = function () {
+    if (audioUnlocked) return; audioUnlocked = true;
+    try { if (window.Feel && Feel.unlock) Feel.unlock(); } catch (e) {}
+    startAmbient();
+    document.removeEventListener("pointerdown", unlock);
+    document.removeEventListener("touchstart", unlock);
+  };
+  document.addEventListener("pointerdown", unlock, { passive: true });
+  document.addEventListener("touchstart", unlock, { passive: true });
+}
+function startAmbient() {
+  if (!DATA || !DATA.ambient || !audioUnlocked || !soundOn || paused) return;
+  if (!ambientAudio) {
+    try { ambientAudio = new Audio("/api/sfx?s=" + encodeURIComponent(DATA.ambient)); ambientAudio.loop = true; ambientAudio.volume = 0.15; } catch (e) { return; }
+  }
+  try { var p = ambientAudio.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+}
+function stopAmbient() { if (ambientAudio) { try { ambientAudio.pause(); } catch (e) {} } }
+function setSound(on) {
+  soundOn = on;
+  try {
+    if (window.BuildableAudio) {
+      if (on && window.BuildableAudio.muted) window.BuildableAudio.toggleMute();
+      else if (!on && !window.BuildableAudio.muted) window.BuildableAudio.toggleMute();
+    }
+  } catch (e) {}
+  if (on) startAmbient(); else { stopAmbient(); stopNarration(); }
+  try { if (window.BuildableGameNav) BuildableGameNav.update(); } catch (e) {}
+}
+
+// ================= fact sheet =================
+function factsFor(item) { return (item && Array.isArray(item.facts) && item.facts.length) ? item.facts : [(item && item.fact) || ""]; }
+function open(id) {
+  const c = ITEMS[id]; if (!c) return;
+  current = id; factIdx = 0;
+  document.getElementById("cName").textContent = c.name;
+  const stats = c.stats || [];
+  document.getElementById("s1l").textContent = (stats[0] && stats[0].label) || "";
+  document.getElementById("s1").textContent = (stats[0] && stats[0].value) || "";
+  document.getElementById("s2l").textContent = (stats[1] && stats[1].label) || "";
+  document.getElementById("s2").textContent = (stats[1] && stats[1].value) || "";
+
+  const qr = document.getElementById("qrow"); qr.innerHTML = "";
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "q next"; nextBtn.textContent = "Another fact";
+  nextBtn.onclick = nextFact; qr.appendChild(nextBtn);
+  (c.asks || []).forEach((q) => {
+    const b = document.createElement("button"); b.className = "q"; b.textContent = q;
+    b.onclick = () => showToast("More Kidspedia answers are coming soon!");
+    qr.appendChild(b);
+  });
+  const quizBtn = document.createElement("button");
+  quizBtn.className = "q quiz"; quizBtn.textContent = "Quick quiz";
+  quizBtn.onclick = () => requestQuiz(c); qr.appendChild(quizBtn);
+
+  showFact();
+  document.getElementById("sheetbg").classList.add("open");
+  stopNarration();
+}
+function showFact() {
+  const c = ITEMS[current]; if (!c) return;
+  const fs = factsFor(c); if (factIdx >= fs.length) factIdx = 0;
+  document.getElementById("cFact").textContent = fs[factIdx] || "";
+}
+function nextFact() {
+  const c = ITEMS[current]; if (!c) return;
+  const fs = factsFor(c); if (fs.length < 2) return;
+  factIdx = (factIdx + 1) % fs.length;
+  document.getElementById("cFact").textContent = fs[factIdx] || "";
+  stopNarration();
+}
+function closeSheet() { document.getElementById("sheetbg").classList.remove("open"); stopNarration(); }
+
+// ================= read aloud: narrator clip first, browser voice as fallback =================
+function setSayButton(isPlaying) {
+  const b = document.getElementById("sayBtn"); if (!b) return;
+  b.classList.toggle("playing", !!isPlaying);
+  if (b.setAttribute) b.setAttribute("aria-label", isPlaying ? "Stop reading" : "Read to me");
+  b.innerHTML = isPlaying
+    ? '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+}
+function stopNarration() {
+  sayToken++;
+  try { if (narrAudio) { narrAudio.onended = null; narrAudio.onerror = null; narrAudio.pause(); narrAudio = null; } } catch (e) {}
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+  speaking = false; setSayButton(false);
+}
+function browserVoice(c, text, token) {
+  if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); if (token === sayToken) { speaking = false; setSayButton(false); } return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(c.name + ". " + (text != null ? text : (c.fact || "")));
+    u.rate = 0.92; u.pitch = 1.05;
+    u.onend = function () { if (token === sayToken) { speaking = false; setSayButton(false); } };
+    speechSynthesis.speak(u);
+  } catch (e) { showToast("Couldn't read that aloud right now."); if (token === sayToken) { speaking = false; setSayButton(false); } }
+}
+function readAloud() {
+  if (speaking) { stopNarration(); return; }
+  if (!current) return;
+  const c = ITEMS[current]; if (!c) return;
+  const fs = factsFor(c); const text = fs[Math.min(factIdx, fs.length - 1)] || "";
+  stopNarration();
+  const token = ++sayToken; speaking = true; setSayButton(true);
+  if (factIdx === 0 && c.factAudio) {
+    try {
+      const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(c.factAudio));
+      narrAudio = a;
+      a.onended = function () { if (token === sayToken) { speaking = false; setSayButton(false); } };
+      a.onerror = function () { if (token !== sayToken) return; narrAudio = null; browserVoice(c, text, token); };
+      const pr = a.play();
+      if (pr && pr.catch) pr.catch(function () { if (token !== sayToken) return; narrAudio = null; browserVoice(c, text, token); });
+      return;
+    } catch (e) { /* fall through to browser voice */ }
+  }
+  browserVoice(c, text, token);
+}
+
+// ================= quiz bridge (CARTRIDGE-CONTRACT.md: quizRequest / pause / resume / bk:quizDone) =================
+function requestQuiz(item) {
+  if (!iframed()) { showToast("Open this inside Buildable Kids to take the quiz."); return; }
+  const onDone = (e) => { const d = e && e.data; if (d && d.type === "bk:quizDone") { window.removeEventListener("message", onDone); } };
+  window.addEventListener("message", onDone);
+  postToShell({
+    source: "buildable",
+    kind: "quizRequest",
+    exhibitId: DATA.id,
+    topic: DATA.topic,
+    skills: DATA.skills || [],
+    itemName: item.name,
+    quiz: item.quiz || [],
+  });
+}
+</script>
+</body>
+</html>

@@ -701,6 +701,21 @@
       }
     },
     {
+      "src": "/dive.html",
+      "dest": "/dive.html"
+    },
+    {
+      "src": "/explore/ocean-deep/creatures/(.*)",
+      "dest": "/explore/ocean-deep/creatures/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/explore/ocean-deep",
+      "dest": "/dive.html"
+    },
+    {
       "src": "/explore/(.*)",
       "dest": "/orbit-explorer.html"
     },

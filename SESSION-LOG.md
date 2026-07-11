@@ -1,5 +1,63 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 8L — Kidspedia dive template (layers-cutaway) + Journey to the Deep
+
+Kidspedia's second exhibit template, and the first that is not 3D. `orbit-explorer` (Session 8G) was
+bodies orbiting a center. This one, **`layers-cutaway`** — the "dive", `public/dive.html` — is a
+scrollable descent, built to the approved motion mock (`kidspedia-ocean-deep-motion.html`). Same rule
+as always: **templates are code, exhibits are data**, so this file knows nothing about the ocean; a
+future dive (inside the Earth, a tree trunk, the skin) is a new JSON, not a new code session.
+
+**Contract reuse (no new vocabulary).** The dive is a cartridge like every game and like the orbit
+template: it fetches `/explore/{id}.json`, refuses anything not `status:"approved"` (golden rule #2),
+and talks to the shell only through the shipped messages — `quizRequest` out for the kid-initiated
+"Quick quiz", `pause` / `resume` honored around the gate (a veil freezes the scene and the idle
+animations), `nav:exit` for Home, and it registers with `buildable-gamenav.js` for the shell Sound
+button. Art follows the art-slot rule: each creature names a static slot
+(`explore/ocean-deep/creatures/{id}`) that serves webp → jpg when real art drops in, and shows the
+mock's **drawn SVG** meanwhile — so no creature is ever a blank space. Read-aloud plays a `factAudio`
+clip if present and falls back to the browser voice; a soft ambient bed (`/api/sfx?s=ocean`) is wired
+and silent until the pipeline fills it.
+
+**The dive mechanics, ported from the mock.** Deep-gradient water, a fixed top bar with a live depth
+meter, zone headers, and two stacked canvases: living water in front (surface sunbeams, rising
+bubbles, marine snow below the twilight line, a parallax whale, trench walls) and darkness on top. The
+flashlight is data-driven: the first zone flagged `dark` sets where the screen dims and the
+pointer/finger becomes a soft light, with the anglerfish `lure` burning through on its own. Creatures
+carry an idle animation (sway/bob/pulse/drift) and a tap reaction (the giant squid jets before its
+card opens).
+
+**The exhibit.** `public/explore/ocean-deep.json` — "Journey to the Deep", **status in-review**. Seven
+zones: Above the Waves (albatross, pelican), the Sunlight Zone with a reef moment (sea turtle, dolphin,
+clownfish & anemone, reef shark), Twilight (glowing jellyfish, hatchetfish), Midnight (anglerfish,
+giant squid, gulper eel), the Abyss (dumbo octopus), the Trench (hadal snailfish), and the Hydrothermal
+Vents (giant tube worms, yeti crab, vent shrimp) — 16 creatures, three kid-voiced facts each, two stat
+tiles, two "ask more" questions, a quiz tag, and a per-item source for the fact check. The seven
+creatures already in the mock keep their exact facts; the other nine are drafted for review. Nothing is
+approved by an agent — Mike flips `status` to `approved` in both the JSON and `EXHIBIT_CATALOG` after
+checking the facts.
+
+**Wiring.** `vercel.json`: `/explore/ocean-deep` → `/dive.html` and a `/explore/ocean-deep/creatures/*`
+immutable route for the eventual art, both ahead of the generic `/explore/(.*)` → orbit catch-all.
+`EXHIBIT_CATALOG` in `src/BuildableKids.jsx` gains an `ocean-deep` entry at `status:"in-review"`, so the
+Explore shelf hero card is ready but stays hidden (the shelf renders approved only). The shell's
+`ExploreScreen` already embeds any `/explore/{id}` and relays the quiz, so it needed no change.
+
+**QA born with the template.** New `qa-dive.mjs`: validates the layers-cutaway shape (shared fields +
+zones + creatures, `facts[0]===fact`, every creature's zone real, exactly two stats, non-empty sources),
+proves `/explore/ocean-deep` resolves to `dive.html` (not the orbit template) and the data loads as JSON
+through the real Vercel route order, then loads the real inline script and checks every creature is
+tappable, facts cycle, read-aloud fires, the quiz reaches the shell, pause/resume is honored, and the
+flashlight zone activates (dark past the midnight line, clear above it). `qa-explore.mjs` is now scoped
+to `template === "orbit-explorer"` so each template owns its checks. Beyond the harness, verified in a
+real DOM (jsdom) at an iPad-sized viewport (834×1112): app renders, all 7 zones and 16 creatures build,
+every creature shows its SVG, a dispatched tap opens the correct fact sheet, "Another fact" cycles, and
+`darknessAt(0)===0` while `darknessAt(deep)>0`.
+
+**Follow-ups.** Real creature art into the slots (drawn SVGs are the fallback today); a generated
+`factAudio` narration pass and an `ocean` ambient track; and Mike's fact check → approve. Shipped to
+`main`.
+
 ## 2026-07-10: Session 9B — Shell upgrade store (gameplay progression)
 
 Phase 9. Until now the shell only owned **cosmetics** (the loadout: paddle skins, trails —

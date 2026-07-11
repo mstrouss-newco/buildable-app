@@ -6,6 +6,35 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 8L: Kidspedia dive template — layers-cutaway + Journey to the Deep (July 11 2026)
+
+Kidspedia's **second exhibit template**. Where `orbit-explorer` is 3D bodies you spin,
+`layers-cutaway` (the "dive", `public/dive.html`) is a scrollable descent you sink through, built to
+the approved motion mock. It speaks the same contract as the orbit template — loads
+`/explore/{id}.json`, honors the approved-gate (kids only ever see `status:"approved"`), the
+`quizRequest` / `pause` / `resume` bridge (CARTRIDGE-CONTRACT.md), art slots with a
+webp → jpg → drawn-SVG fallback, read-aloud (a `factAudio` clip, then the browser voice), and a soft
+ambient bed — and adds the dive mechanics from the mock: a live depth meter, zone headers, living
+water (surface sunbeams, rising bubbles, marine snow below the twilight line, a parallax whale and
+trench walls), creatures placed in the scene with idle animations and tap reactions (the squid jets),
+and the flashlight: past the first zone flagged `dark`, the screen darkens and the pointer/finger
+becomes a soft light while the anglerfish lure glows through on its own. Templates are code, exhibits
+are data — the dive knows nothing about the ocean.
+
+First exhibit for it: `public/explore/ocean-deep.json` — **"Journey to the Deep", status in-review**
+(hidden from kids until Mike fact-checks and flips it to approved). Seven zones from Above the Waves
+down to the Hydrothermal Vents (life on chemical energy, no sunlight at all), 16 creatures across the
+whole water column, three kid-voiced facts each with per-item sources. The mock's seven creatures keep
+their exact facts; the rest are drafted for review. Route `/explore/ocean-deep` → `dive.html`
+(vercel.json, ahead of the generic orbit catch-all); an Explore hero card is wired into
+`EXHIBIT_CATALOG` but stays hidden while in-review.
+
+QA born with the template: `qa-dive.mjs` (contract shape + real-route load + every creature tappable,
+facts cycle, flashlight zone activates, quiz bridge, pause/resume). `qa-explore.mjs` is now scoped to
+the orbit template only, so each template owns its own checks. Verified headlessly and in a real DOM at
+an iPad-sized viewport (834×1112): all 7 zones and 16 creatures render, a real tap opens the fact
+sheet, "Another fact" cycles, and the flashlight darkness curve is correct. Shipped to `main`.
+
 ## Session 9B: Shell upgrade store — gameplay progression (July 10 2026)
 
 The shell can now render a **gameplay-power store**, not just the cosmetics loadout. Games with

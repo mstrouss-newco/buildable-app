@@ -1,0 +1,647 @@
+{
+  "id": "ocean-deep",
+  "title": "Journey to the Deep",
+  "template": "layers-cutaway",
+  "topic": "ocean",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": [
+    "ocean-facts",
+    "reading"
+  ],
+  "heroArt": "explore-ocean-deep-hero",
+  "sources": [
+    "NOAA Ocean Exploration (oceanexplorer.noaa.gov)",
+    "NOAA National Ocean Service (oceanservice.noaa.gov)",
+    "Monterey Bay Aquarium and MBARI (montereybayaquarium.org, mbari.org)",
+    "Smithsonian Ocean (ocean.si.edu)",
+    "Woods Hole Oceanographic Institution (whoi.edu)",
+    "National Geographic Kids (kids.nationalgeographic.com)"
+  ],
+  "ambient": "ocean",
+  "maxDepthFt": 35876,
+  "assetVersion": 1,
+  "finish": {
+    "title": "Challenger Deep",
+    "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
+  },
+  "zones": [
+    {
+      "id": "surface",
+      "name": "Above the Waves",
+      "range": "At the ocean's surface",
+      "blurb": "Sunny open water and sky, where sea birds soar and dive."
+    },
+    {
+      "id": "sunlight",
+      "name": "The Sunlight Zone",
+      "range": "0 to 660 feet down",
+      "blurb": "Bright warm water where almost all ocean life lives, including the coral reefs."
+    },
+    {
+      "id": "twilight",
+      "name": "The Twilight Zone",
+      "range": "660 to 3,300 feet down",
+      "blurb": "Only a whisper of blue light. Many animals here make their own glow."
+    },
+    {
+      "id": "midnight",
+      "name": "The Midnight Zone",
+      "range": "3,300 to 13,000 feet down",
+      "blurb": "No sunlight ever reaches here. It is always pitch black.",
+      "dark": true
+    },
+    {
+      "id": "abyss",
+      "name": "The Abyss",
+      "range": "13,000 to 20,000 feet down",
+      "blurb": "Near-freezing water and crushing pressure.",
+      "dark": true
+    },
+    {
+      "id": "trench",
+      "name": "The Trench",
+      "range": "20,000 to 36,000 feet down",
+      "blurb": "The deepest cracks in the whole ocean floor.",
+      "dark": true
+    },
+    {
+      "id": "vents",
+      "name": "Hydrothermal Vents",
+      "range": "On the deepest sea floor",
+      "blurb": "Cracks in the sea floor gush water hotter than an oven, and life crowds around them.",
+      "dark": true
+    }
+  ],
+  "creatures": [
+    {
+      "id": "albatross",
+      "name": "Albatross",
+      "zone": "surface",
+      "x": 18,
+      "y": 440,
+      "shape": "albatross",
+      "anim": "a-drift",
+      "art": "explore/ocean-deep/creatures/albatross",
+      "fact": "The wandering albatross has the longest wings of any bird alive, wider than a car is long, so it can glide over the ocean for hours without flapping.",
+      "facts": [
+        "The wandering albatross has the longest wings of any bird alive, wider than a car is long, so it can glide over the ocean for hours without flapping.",
+        "Albatrosses can even sleep while they fly, catching little naps in the air as they glide over the open sea.",
+        "An albatross can spend years out at sea without ever touching land, only coming ashore to raise a chick."
+      ],
+      "stats": [
+        {
+          "label": "Wingspan",
+          "value": "Up to 11 feet across"
+        },
+        {
+          "label": "Time at sea",
+          "value": "Years without landing"
+        }
+      ],
+      "asks": [
+        "How does it glide for so long?",
+        "Where do albatrosses sleep?"
+      ],
+      "quiz": [
+        "ocean-albatross"
+      ],
+      "factAudio": "ocean-deep-albatross",
+      "source": "National Geographic Kids; NOAA Ocean Service"
+    },
+    {
+      "id": "pelican",
+      "name": "Pelican",
+      "zone": "surface",
+      "x": 64,
+      "y": 780,
+      "shape": "pelican",
+      "anim": "a-bob",
+      "art": "explore/ocean-deep/creatures/pelican",
+      "fact": "A pelican scoops up fish in the big stretchy pouch under its beak, like catching them in a net, then tips its head to drain the water out.",
+      "facts": [
+        "A pelican scoops up fish in the big stretchy pouch under its beak, like catching them in a net, then tips its head to drain the water out.",
+        "Brown pelicans dive from high in the air and hit the water with a big splash to surprise the fish below.",
+        "A pelican's pouch can hold more water than its stomach can, so it always drains the water before swallowing its catch."
+      ],
+      "stats": [
+        {
+          "label": "Beak pouch",
+          "value": "Holds about 3 gallons"
+        },
+        {
+          "label": "Dives from",
+          "value": "Up to 60 feet high"
+        }
+      ],
+      "asks": [
+        "Why does a pelican have a pouch?",
+        "How deep do pelicans dive?"
+      ],
+      "quiz": [
+        "ocean-pelican"
+      ],
+      "factAudio": "ocean-deep-pelican",
+      "source": "Audubon Society; National Geographic Kids"
+    },
+    {
+      "id": "turtle",
+      "name": "Sea Turtle",
+      "zone": "sunlight",
+      "x": 14,
+      "y": 560,
+      "shape": "turtle",
+      "anim": "a-sway",
+      "art": "explore/ocean-deep/creatures/turtle",
+      "fact": "Sea turtles can hold their breath for hours while they rest, and they cry salty tears to get rid of extra sea salt.",
+      "facts": [
+        "Sea turtles can hold their breath for hours while they rest, and they cry salty tears to get rid of extra sea salt.",
+        "Some sea turtles swim across entire oceans and return to the exact beach where they hatched.",
+        "Sea turtles have been around for more than 100 million years, since the dinosaurs!"
+      ],
+      "stats": [
+        {
+          "label": "Breath hold",
+          "value": "Up to 7 hours resting"
+        },
+        {
+          "label": "On Earth for",
+          "value": "100+ million years"
+        }
+      ],
+      "asks": [
+        "How do turtles find their home beach?",
+        "How long do sea turtles live?"
+      ],
+      "quiz": [
+        "ocean-turtle"
+      ],
+      "factAudio": "ocean-deep-turtle",
+      "source": "NOAA Fisheries; National Geographic Kids"
+    },
+    {
+      "id": "dolphin",
+      "name": "Dolphin",
+      "zone": "sunlight",
+      "x": 58,
+      "y": 860,
+      "shape": "dolphin",
+      "anim": "a-bob",
+      "art": "explore/ocean-deep/creatures/dolphin",
+      "fact": "Dolphins talk with clicks and whistles, and each dolphin has its own special name-whistle!",
+      "facts": [
+        "Dolphins talk with clicks and whistles, and each dolphin has its own special name-whistle!",
+        "Dolphins sleep with one half of their brain at a time so they can keep swimming and breathing.",
+        "Dolphins find fish with sound, sending out clicks and listening for the echoes."
+      ],
+      "stats": [
+        {
+          "label": "Sleeps with",
+          "value": "Half a brain at a time"
+        },
+        {
+          "label": "Finds food by",
+          "value": "Echoes, like sonar"
+        }
+      ],
+      "asks": [
+        "How do dolphins use sound to see?",
+        "Do dolphins really have names?"
+      ],
+      "quiz": [
+        "ocean-dolphin"
+      ],
+      "factAudio": "ocean-deep-dolphin",
+      "source": "NOAA Fisheries; Dolphin Communication Project"
+    },
+    {
+      "id": "clownfish",
+      "name": "Clownfish and Anemone",
+      "zone": "sunlight",
+      "x": 30,
+      "y": 1080,
+      "shape": "clownfish",
+      "anim": "a-bob",
+      "art": "explore/ocean-deep/creatures/clownfish",
+      "fact": "A clownfish lives right inside a stinging sea anemone, which would hurt most fish, but a slimy coat keeps the clownfish safe from the sting.",
+      "facts": [
+        "A clownfish lives right inside a stinging sea anemone, which would hurt most fish, but a slimy coat keeps the clownfish safe from the sting.",
+        "The clownfish and the anemone help each other: the anemone hides the clownfish, and the clownfish chases away fish that would nibble the anemone.",
+        "Every clownfish is born male, and the biggest one in the group can turn into a female. The whole family shares one anemone home."
+      ],
+      "stats": [
+        {
+          "label": "Home",
+          "value": "Inside a sea anemone"
+        },
+        {
+          "label": "Team-up",
+          "value": "Both help each other"
+        }
+      ],
+      "asks": [
+        "Why doesn't the anemone sting it?",
+        "What is a sea anemone?"
+      ],
+      "quiz": [
+        "ocean-clownfish"
+      ],
+      "factAudio": "ocean-deep-clownfish",
+      "source": "NOAA National Ocean Service; Monterey Bay Aquarium"
+    },
+    {
+      "id": "reefshark",
+      "name": "Reef Shark",
+      "zone": "sunlight",
+      "x": 70,
+      "y": 1250,
+      "shape": "shark",
+      "anim": "a-drift",
+      "art": "explore/ocean-deep/creatures/reefshark",
+      "fact": "Reef sharks patrol the coral reef looking for fish, and they help keep the reef healthy by catching the sick and slow ones.",
+      "facts": [
+        "Reef sharks patrol the coral reef looking for fish, and they help keep the reef healthy by catching the sick and slow ones.",
+        "Sharks can smell a tiny drop of blood in the water from far away, and they feel the wiggles of other fish with special sense spots on their skin.",
+        "A shark's skeleton is made of bendy cartilage, the same stuff inside your ears and nose, not hard bone like ours."
+      ],
+      "stats": [
+        {
+          "label": "Skeleton",
+          "value": "Bendy cartilage"
+        },
+        {
+          "label": "Super sense",
+          "value": "Smell and water-wiggles"
+        }
+      ],
+      "asks": [
+        "How do sharks smell so well?",
+        "Are reef sharks dangerous to people?"
+      ],
+      "quiz": [
+        "ocean-reefshark"
+      ],
+      "factAudio": "ocean-deep-reefshark",
+      "source": "NOAA Fisheries; Monterey Bay Aquarium"
+    },
+    {
+      "id": "jelly",
+      "name": "Glowing Jellyfish",
+      "zone": "twilight",
+      "x": 26,
+      "y": 560,
+      "shape": "jelly",
+      "anim": "a-pulse",
+      "art": "explore/ocean-deep/creatures/jelly",
+      "fact": "Many deep-sea jellyfish glow in the dark, making light with special chemicals, like living lanterns.",
+      "facts": [
+        "Many deep-sea jellyfish glow in the dark, making light with special chemicals, like living lanterns.",
+        "Jellyfish have no brain, no heart, and no bones, and they have drifted the oceans for 500 million years.",
+        "Some jellyfish flash bright patterns to startle predators, then slip away into the dark."
+      ],
+      "stats": [
+        {
+          "label": "Brain",
+          "value": "None at all"
+        },
+        {
+          "label": "Superpower",
+          "value": "Glows in the dark"
+        }
+      ],
+      "asks": [
+        "How does a jellyfish glow?",
+        "Can a jellyfish think without a brain?"
+      ],
+      "quiz": [
+        "ocean-jelly"
+      ],
+      "factAudio": "ocean-deep-jelly",
+      "source": "Monterey Bay Aquarium; NOAA Ocean Exploration",
+      "glow": true
+    },
+    {
+      "id": "hatchetfish",
+      "name": "Hatchetfish",
+      "zone": "twilight",
+      "x": 66,
+      "y": 980,
+      "shape": "hatchetfish",
+      "anim": "a-bob",
+      "art": "explore/ocean-deep/creatures/hatchetfish",
+      "fact": "The hatchetfish has rows of tiny lights on its belly that glow softly, so from below it blends into the faint light and hungry fish cannot see its shadow.",
+      "facts": [
+        "The hatchetfish has rows of tiny lights on its belly that glow softly, so from below it blends into the faint light and hungry fish cannot see its shadow.",
+        "Its huge eyes point upward to catch the last bits of sunlight and spot food drifting down from above.",
+        "A hatchetfish is thin and shiny like a coin standing on its edge, which is how it got its hatchet shape and name."
+      ],
+      "stats": [
+        {
+          "label": "Belly lights",
+          "value": "Hide its shadow"
+        },
+        {
+          "label": "Eyes",
+          "value": "Big, pointing up"
+        }
+      ],
+      "asks": [
+        "Why does it glow on its belly?",
+        "How big is a hatchetfish?"
+      ],
+      "quiz": [
+        "ocean-hatchetfish"
+      ],
+      "factAudio": "ocean-deep-hatchetfish",
+      "source": "NOAA Ocean Exploration; Smithsonian Ocean",
+      "glow": true
+    },
+    {
+      "id": "angler",
+      "name": "Anglerfish",
+      "zone": "midnight",
+      "x": 22,
+      "y": 520,
+      "shape": "angler",
+      "anim": "a-drift",
+      "art": "explore/ocean-deep/creatures/angler",
+      "fact": "The anglerfish carries a glowing light above its mouth like a fishing rod. Curious fish swim to the light, and SNAP!",
+      "facts": [
+        "The anglerfish carries a glowing light above its mouth like a fishing rod. Curious fish swim to the light, and SNAP!",
+        "An anglerfish's teeth point inward, so anything that swims in cannot swim back out.",
+        "The lure's light comes from billions of tiny glowing bacteria that live inside it. The fish and the bacteria help each other!"
+      ],
+      "stats": [
+        {
+          "label": "Hunts with",
+          "value": "A glowing lure"
+        },
+        {
+          "label": "Light made by",
+          "value": "Glowing bacteria"
+        }
+      ],
+      "asks": [
+        "How does the lure light up?",
+        "Why point its teeth inward?"
+      ],
+      "quiz": [
+        "ocean-angler"
+      ],
+      "factAudio": "ocean-deep-angler",
+      "source": "NOAA Ocean Exploration; Smithsonian Ocean",
+      "glow": true,
+      "lure": true
+    },
+    {
+      "id": "squid",
+      "name": "Giant Squid",
+      "zone": "midnight",
+      "x": 60,
+      "y": 900,
+      "shape": "squid",
+      "anim": "a-drift",
+      "art": "explore/ocean-deep/creatures/squid",
+      "fact": "The giant squid has the biggest eyes of any animal on Earth, each about the size of a dinner plate.",
+      "facts": [
+        "The giant squid has the biggest eyes of any animal on Earth, each about the size of a dinner plate.",
+        "Giant squid can grow longer than a school bus, but are so shy that one was not filmed alive until 2004.",
+        "Their arms are covered in suckers ringed with tiny teeth for gripping slippery prey."
+      ],
+      "stats": [
+        {
+          "label": "Eyes",
+          "value": "Big as dinner plates"
+        },
+        {
+          "label": "First filmed alive",
+          "value": "2004"
+        }
+      ],
+      "asks": [
+        "Why are its eyes so big?",
+        "How long is a giant squid?"
+      ],
+      "quiz": [
+        "ocean-squid"
+      ],
+      "factAudio": "ocean-deep-squid",
+      "source": "Smithsonian Ocean; NOAA Ocean Exploration",
+      "glow": true,
+      "jet": true
+    },
+    {
+      "id": "gulpereel",
+      "name": "Gulper Eel",
+      "zone": "midnight",
+      "x": 34,
+      "y": 1200,
+      "shape": "gulpereel",
+      "anim": "a-drift",
+      "art": "explore/ocean-deep/creatures/gulpereel",
+      "fact": "The gulper eel has a giant mouth that opens like a balloon, so it can swallow prey much bigger than itself.",
+      "facts": [
+        "The gulper eel has a giant mouth that opens like a balloon, so it can swallow prey much bigger than itself.",
+        "Its long thin tail has a glowing pink tip that it can wave like a lure to draw curious animals close in the dark.",
+        "Most of the gulper eel is really just its stretchy mouth and belly, made to grab any rare meal that comes along where food is scarce."
+      ],
+      "stats": [
+        {
+          "label": "Mouth",
+          "value": "Opens huge like a balloon"
+        },
+        {
+          "label": "Tail tip",
+          "value": "Glows pink"
+        }
+      ],
+      "asks": [
+        "How wide can its mouth open?",
+        "Why is food so rare down here?"
+      ],
+      "quiz": [
+        "ocean-gulpereel"
+      ],
+      "factAudio": "ocean-deep-gulpereel",
+      "source": "NOAA Ocean Exploration; Monterey Bay Aquarium Research Institute",
+      "glow": true
+    },
+    {
+      "id": "dumbo",
+      "name": "Dumbo Octopus",
+      "zone": "abyss",
+      "x": 40,
+      "y": 650,
+      "shape": "dumbo",
+      "anim": "a-bob",
+      "art": "explore/ocean-deep/creatures/dumbo",
+      "fact": "The dumbo octopus flaps two fins like elephant ears to swim, which is how it got its name.",
+      "facts": [
+        "The dumbo octopus flaps two fins like elephant ears to swim, which is how it got its name.",
+        "It lives deeper than almost any other octopus, gliding where the water is near freezing.",
+        "It does not squirt ink like other octopuses. Down here, there is almost nobody to hide from!"
+      ],
+      "stats": [
+        {
+          "label": "Swims with",
+          "value": "Ear-like fins"
+        },
+        {
+          "label": "Ink",
+          "value": "Does not need any"
+        }
+      ],
+      "asks": [
+        "Why doesn't it need ink?",
+        "How deep does it live?"
+      ],
+      "quiz": [
+        "ocean-dumbo"
+      ],
+      "factAudio": "ocean-deep-dumbo",
+      "source": "MBARI; NOAA Ocean Exploration",
+      "glow": true
+    },
+    {
+      "id": "snail",
+      "name": "Hadal Snailfish",
+      "zone": "trench",
+      "x": 50,
+      "y": 700,
+      "shape": "snail",
+      "anim": "a-sway",
+      "art": "explore/ocean-deep/creatures/snail",
+      "fact": "The deepest-living fish ever found, seen more than 27,000 feet down, deeper than Mount Everest is tall!",
+      "facts": [
+        "The deepest-living fish ever found, seen more than 27,000 feet down, deeper than Mount Everest is tall!",
+        "Snailfish look soft and ghostly with see-through skin, perfect for surviving the crushing pressure.",
+        "At these depths the pressure would crush a submarine's windows, but the snailfish wiggles happily along."
+      ],
+      "stats": [
+        {
+          "label": "Seen at",
+          "value": "27,000+ feet down"
+        },
+        {
+          "label": "Body",
+          "value": "Soft and see-through"
+        }
+      ],
+      "asks": [
+        "How does it survive the pressure?",
+        "What does it eat down there?"
+      ],
+      "quiz": [
+        "ocean-snail"
+      ],
+      "factAudio": "ocean-deep-snail",
+      "source": "University of Washington; NOAA Ocean Exploration",
+      "glow": true
+    },
+    {
+      "id": "tubeworm",
+      "name": "Giant Tube Worms",
+      "zone": "vents",
+      "x": 20,
+      "y": 560,
+      "shape": "tubeworm",
+      "anim": "a-sway",
+      "art": "explore/ocean-deep/creatures/tubeworm",
+      "fact": "Giant tube worms live in tall white tubes near hot cracks in the sea floor and can grow taller than a grown-up, with no eyes and no mouth at all.",
+      "facts": [
+        "Giant tube worms live in tall white tubes near hot cracks in the sea floor and can grow taller than a grown-up, with no eyes and no mouth at all.",
+        "They never eat food. Tiny bacteria live inside them and make food from the chemicals in the hot water, then share it with the worm.",
+        "Their bright red plumes are full of blood that soaks up chemicals from the vent water to feed the bacteria inside."
+      ],
+      "stats": [
+        {
+          "label": "Height",
+          "value": "Taller than a person"
+        },
+        {
+          "label": "Food",
+          "value": "Made by inside bacteria"
+        }
+      ],
+      "asks": [
+        "How do they eat with no mouth?",
+        "What comes out of the vents?"
+      ],
+      "quiz": [
+        "ocean-tubeworm"
+      ],
+      "factAudio": "ocean-deep-tubeworm",
+      "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution"
+    },
+    {
+      "id": "yeticrab",
+      "name": "Yeti Crab",
+      "zone": "vents",
+      "x": 52,
+      "y": 820,
+      "shape": "yeticrab",
+      "anim": "a-bob",
+      "art": "explore/ocean-deep/creatures/yeticrab",
+      "fact": "The yeti crab has fuzzy, hairy arms that look like a tiny snow monster, which is how it got its nickname.",
+      "facts": [
+        "The yeti crab has fuzzy, hairy arms that look like a tiny snow monster, which is how it got its nickname.",
+        "It grows gardens of bacteria on its hairy arms, waves them over the warm vent water to help the bacteria grow, then eats them like a farmer eats crops.",
+        "Yeti crabs were only discovered in 2005, deep near vents in the cold dark, far from any sunlight."
+      ],
+      "stats": [
+        {
+          "label": "Fuzzy arms",
+          "value": "Farm bacteria to eat"
+        },
+        {
+          "label": "Discovered",
+          "value": "In 2005"
+        }
+      ],
+      "asks": [
+        "Why are its arms hairy?",
+        "How does it farm its food?"
+      ],
+      "quiz": [
+        "ocean-yeticrab"
+      ],
+      "factAudio": "ocean-deep-yeticrab",
+      "source": "MBARI; Woods Hole Oceanographic Institution"
+    },
+    {
+      "id": "ventshrimp",
+      "name": "Vent Shrimp",
+      "zone": "vents",
+      "x": 74,
+      "y": 1040,
+      "shape": "ventshrimp",
+      "anim": "a-drift",
+      "art": "explore/ocean-deep/creatures/ventshrimp",
+      "fact": "Thousands of vent shrimp swarm over the hot vents, so many that they pile right on top of each other near the warm water.",
+      "facts": [
+        "Thousands of vent shrimp swarm over the hot vents, so many that they pile right on top of each other near the warm water.",
+        "Vent shrimp have no normal eyes. Instead they have a special patch on their back that senses the faint glow of the super hot vents, so they do not cook.",
+        "Like their vent neighbors, they live on bacteria that make food from vent chemicals, with no sunlight at all."
+      ],
+      "stats": [
+        {
+          "label": "Eyes",
+          "value": "A glow-sensing back patch"
+        },
+        {
+          "label": "Lives on",
+          "value": "Vent chemicals"
+        }
+      ],
+      "asks": [
+        "How do they see with no eyes?",
+        "Why don't they get cooked?"
+      ],
+      "quiz": [
+        "ocean-ventshrimp"
+      ],
+      "factAudio": "ocean-deep-ventshrimp",
+      "source": "NOAA Ocean Exploration; Smithsonian Ocean"
+    }
+  ]
+}
