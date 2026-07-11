@@ -507,6 +507,7 @@ function bgLayer(img,width,bottom,shift,top){
   var y=(top!==undefined&&top!==null)? top : (bottom-nh);
   ctx.drawImage(img,x,y,nw,nh);
 }
+function playShadowOn(){ ctx.shadowColor="rgba(0,0,0,0.30)"; ctx.shadowBlur=9; ctx.shadowOffsetX=1; ctx.shadowOffsetY=5; }
 function drawPlatform(){
   var p=BGART.platform; if(!p||!(p.naturalWidth||p.width)) return;
   var pw=235, ph=(p.naturalHeight||p.height)*(pw/(p.naturalWidth||p.width));
@@ -528,9 +529,13 @@ function drawBg(){
     g.addColorStop(0,"#a6d8ef"); g.addColorStop(0.62,"#cdeecb"); g.addColorStop(1,"#d9f0d1");
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     // scene is STATIC (no pull-parallax) so the ground never slides under the platform
+    // MUTE the far scenery (desaturate + lighten) so the play pieces read clearly
+    ctx.save(); ctx.filter="saturate(0.66) brightness(1.10)";
     drawPaintedClouds(0, P.t);                              // clouds drift on their own (time only)
     bgLayer(BGART.hills, W*1.06, 486, 0);
     bgLayer(BGART.trees, W*1.02, 524, 0);
+    ctx.restore();
+    ctx.fillStyle="rgba(228,239,233,0.24)"; ctx.fillRect(0,0,W,H);  // haze pushes the background back
     drawPlatform();
     ctx.fillStyle="#773f08"; ctx.fillRect(0,545,W,H-545);   // SOLID DIRT below the grass floor
     ctx.fillStyle="#92500a"; ctx.fillRect(0,545,W,40);      // lighter topsoil band
@@ -550,7 +555,7 @@ function drawSling(){
   // painted wooden slingshot (our art); the drawn Y below is the never-break fallback
   if(SLINGSHOT&&(SLINGSHOT.naturalWidth||SLINGSHOT.width)){
     var dh=SLING_DW*SLINGSHOT.height/SLINGSHOT.width;
-    ctx.drawImage(SLINGSHOT, AX-SLING_DW/2, SLING_TOP, SLING_DW, dh); return;
+    ctx.save(); playShadowOn(); ctx.drawImage(SLINGSHOT, AX-SLING_DW/2, SLING_TOP, SLING_DW, dh); ctx.restore(); return;
   }
   ctx.strokeStyle="#7a4a25"; ctx.lineWidth=11; ctx.lineCap="round";
   ctx.beginPath(); ctx.moveTo(AX,AY+96); ctx.lineTo(AX,AY+12); ctx.stroke();
@@ -610,7 +615,7 @@ function drawAnimalPose(set,x,y,r,pose,opts){
   else if(pose==="victory"){ var bo=Math.abs(Math.sin(t*4)); oy=-bo*r*0.28; sx=1+bo*0.06; sy=1+bo*0.06; }
   ctx.save();
   ctx.translate(x, y+oy); ctx.rotate(rot); ctx.scale(sx,sy);
-  ctx.drawImage(im, -dw/2, -dh/2, dw, dh);
+  playShadowOn(); ctx.drawImage(im, -dw/2, -dh/2, dw, dh);
   ctx.restore();
   return true;
 }
@@ -667,7 +672,7 @@ function drawTarget(b){
   // painted bad guys (level 1 pilot): idle, or bonked briefly after a hit
   if(TARGETS_ART.length){ var mset=TARGETS_ART[(b._ti||0)%TARGETS_ART.length];
     if(mset && mset.idle){ var mp=(b._hitAt && nowMs()-b._hitAt<180 && mset.bonked)?mset.bonked:mset.idle;
-      if(mp&&(mp.naturalWidth||mp.width)){ var msz=Math.max(w,h)*1.95; ctx.drawImage(mp,-msz/2,-msz/2,msz,msz); ctx.restore(); return; } } }
+      if(mp&&(mp.naturalWidth||mp.width)){ var msz=Math.max(w,h)*1.95; playShadowOn(); ctx.drawImage(mp,-msz/2,-msz/2,msz,msz); ctx.restore(); return; } } }
   // Kenney alien face (Physics Assets) when served; drawn critter is the fallback.
   var _tp=(curTargets().length?curTargets():TARGET_IMGS); var tim=_tp[(b._ti||0)%(_tp.length||1)];
   if(tim&&(tim.naturalWidth||tim.width)){ var ts=Math.max(w,h)*1.7; ctx.drawImage(tim,-ts/2,-ts/2,ts,ts); ctx.restore(); return; }
@@ -693,7 +698,7 @@ function drawBlock(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
   var w=b._w,h=b._h;
   var bim=blockImgFor(w,h);
-  if(bim&&(bim.naturalWidth||bim.width)){ ctx.drawImage(bim,-w/2,-h/2,w,h); ctx.restore(); return; }
+  if(bim&&(bim.naturalWidth||bim.width)){ playShadowOn(); ctx.drawImage(bim,-w/2,-h/2,w,h); ctx.restore(); return; }
   ctx.fillStyle="#caa46a"; BR? BR.rrect(ctx,-w/2,-h/2,w,h,5):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
   ctx.strokeStyle="#9b7741"; ctx.lineWidth=3; ctx.stroke();
   ctx.strokeStyle="rgba(155,119,65,.6)"; ctx.lineWidth=2;

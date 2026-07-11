@@ -6,6 +6,17 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sling Squad: mute background + drop shadows so play pieces pop (July 11 2026)
+
+Feedback: hard to tell characters/platform from the busy background. drawBg now MUTES the far
+scenery (clouds/hills/trees drawn with ctx.filter "saturate(0.66) brightness(1.10)") plus a light
+haze overlay (rgba(228,239,233,0.24)) to push it back. The play pieces are drawn full-color with a
+soft canvas drop shadow (playShadowOn: rgba(0,0,0,0.30), blur 9, offsetY 5) on the character/ammo,
+targets, blocks, and slingshot, so they lift off the background. Also fixed the ground: it is only
+a thin grass-edge strip, so solid dirt is now filled from the floor line to screen bottom; and the
+scene is locked static (pull-parallax removed) so the ground no longer slides under the platform.
+qa green.
+
 ## Sling Squad: de-cluttered scene + painted clouds + planted platform (July 11 2026)
 
 Reworked the parallax scene after feedback that it was too busy and the slingshot floated. Dropped
