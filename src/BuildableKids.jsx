@@ -82,6 +82,10 @@ const SCREEN_MAHJONG = "mahjong";
 const SCREEN_STRINGMATCH = "stringmatch";
 const SCREEN_BUBBLE = "bubble";
 const SCREEN_MATHCANNON = "mathcannon";
+const SCREEN_GAME_LANDING = "game_landing";   // Session 7F: shared landing as the front door for every keeper
+const SCREEN_GAME_LOADOUT = "game_loadout";   // Session 7F: shared "Make it mine" loadout for the landed game
+const SCREEN_TENNIS_LANDING = "tennis_landing"; // Session 7F: Tennis on the shared landing (mode row + court skins)
+const SCREEN_TENNIS_LOADOUT = "tennis_loadout"; // Session 7F: Tennis court skins in the shared loadout
 const SCREEN_EXPLORE = "explore"; // Session 8G: Kidspedia exhibit viewer (orbit-explorer template)
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
@@ -119,6 +123,35 @@ const SCREEN_MEMORY = "memory";
 const SCREEN_BINGO = "bingo";
 const SCREEN_SNAKES = "snakes";
 const SCREEN_MAZE = "maze";
+
+// Session 7F — shared-landing wrap table. Each keeper's Play launches its existing
+// engine screen (engines untouched); loadout:true means the manifest carries a
+// "Make it mine" slot. Adding a game to the shared front door is one data row here,
+// not new screen code. (Breaker/Chess/Music/Tennis keep their own richer blocks.)
+const LANDING_WRAP = {
+  survival: { play: SCREEN_SURVIVAL, loadout: true },
+  sling: { play: SCREEN_SLING, loadout: true },
+  tictactoe: { play: SCREEN_TICTACTOE, loadout: true },
+  connectfour: { play: SCREEN_CONNECTFOUR, loadout: true },
+  dotsboxes: { play: SCREEN_DOTSBOXES, loadout: true },
+  checkers: { play: SCREEN_CHECKERS, loadout: true },
+  memory: { play: SCREEN_MEMORY, loadout: true },
+  mahjong: { play: SCREEN_MAHJONG, loadout: true },
+  bingo: { play: SCREEN_BINGO, loadout: true },
+  croctot: { play: SCREEN_CROC, loadout: true },
+  stringmatch: { play: SCREEN_STRINGMATCH },
+  bubble: { play: SCREEN_BUBBLE },
+  castleguard: { play: SCREEN_CASTLE },
+  tetris: { play: SCREEN_TETRIS },
+  "rileys-garden": { play: SCREEN_RILEYS },
+  typing: { play: SCREEN_TYPING },
+  mathcannon: { play: SCREEN_MATHCANNON },
+  platformer: { play: SCREEN_PLATFORMER },
+  town: { play: SCREEN_TOWN },
+  runner: { play: SCREEN_RUNNER },
+  tank: { play: SCREEN_TANK },
+  maze: { play: SCREEN_MAZE },
+};
 // ---------------------------------------------------------------------------
 // GAME_CATALOG — the picker's manifest/identity layer (Session 3A). Every card on
 // the picker is GENERATED from this list, never hand-placed. Each entry is the
@@ -372,13 +405,23 @@ function ExploreScreen({ onHome, exhibitId }) {
   ) : null;
   return <GameFrame title="Kidspedia" src={`/explore/${encodeURIComponent(exhibitId)}`} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} bg="#0B0A18" />;
 }
-function TennisScreen({ onHome, onPlayFriend }) {
+// Session 7F: the shared landing hands Tennis its mode ("solo" | "local") and the
+// equipped court from the shared loadout, so the engine skips its own start screen
+// and court picker. TENNIS_COURTS mirrors the manifest "World" slot order. With no
+// mode (opened directly) the engine still falls back to its built-in menu.
+const TENNIS_COURTS = ["beach", "space", "jungle", "ocean", "candy", "snow", "volcano", "city"];
+function TennisScreen({ onHome, onPlayFriend, start }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "tennisPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, [onPlayFriend]);
-  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=hud1" onHome={onHome} />;
+  let src = "/tennis.html?v=7f";
+  if (start) {
+    const court = TENNIS_COURTS[(readEquipped("tennis").World) || 0] || "beach";
+    src += "&mode=" + (start === "local" ? "two" : "solo") + "&world=" + court;
+  }
+  return <GameFrame title="Buildable Tennis" src={src} onHome={onHome} />;
 }
 function BreakerScreen({ onHome, entry = "journey" }) {
   const [quiz, setQuiz] = useState(null); // { reply } while a learning gate is showing
@@ -1456,6 +1499,9 @@ export default function BuildableKids() {
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
   const [breakerEntry, setBreakerEntry] = useState("journey"); // which engine screen the Breaker landing launches into
   const [chessStart, setChessStart] = useState(null); // Session 7E: deep-link params handed to the chess engine (solo tier / same-device)
+  const [landingId, setLandingId] = useState(null); // Session 7F: which game the shared landing is showing
+  const [tennisStart, setTennisStart] = useState(null); // Session 7F: "solo" | "local" handoff to the Tennis engine
+  const openLanding = (id) => { setLandingId(id); setScreen(SCREEN_GAME_LANDING); };
   const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
   const [rtAutoJoin, setRtAutoJoin] = useState(null);
@@ -1619,29 +1665,29 @@ export default function BuildableKids() {
         onJoinInvite={(m) => { setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); }}
         onJoinFriendInvite={openFriendInvite}
         onOpenFriendMatch={openFriendMatch}
-        onPlatformer={() => setScreen(SCREEN_PLATFORMER)}
-        onSurvival={() => setScreen(SCREEN_SURVIVAL)}
+        onPlatformer={() => openLanding("platformer")}
+        onSurvival={() => openLanding("survival")}
         onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)}
-        onTetris={() => setScreen(SCREEN_TETRIS)}
-        onRunner={() => setScreen(SCREEN_RUNNER)}
-        onCheckers={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHECKERS); }}
-        onTennis={() => setScreen(SCREEN_TENNIS)}
-        onTown={() => setScreen(SCREEN_TOWN)}
-        onTicTacToe={() => setScreen(SCREEN_TICTACTOE)}
-        onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)}
-        onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)}
-        onMemory={() => setScreen(SCREEN_MEMORY)}
-        onMahjong={() => setScreen(SCREEN_MAHJONG)}
-        onBingo={() => setScreen(SCREEN_BINGO)}
+        onTetris={() => openLanding("tetris")}
+        onRunner={() => openLanding("runner")}
+        onCheckers={() => openLanding("checkers")}
+        onTennis={() => { setTennisStart(null); setScreen(SCREEN_TENNIS_LANDING); }}
+        onTown={() => openLanding("town")}
+        onTicTacToe={() => openLanding("tictactoe")}
+        onConnectFour={() => openLanding("connectfour")}
+        onDotsBoxes={() => openLanding("dotsboxes")}
+        onMemory={() => openLanding("memory")}
+        onMahjong={() => openLanding("mahjong")}
+        onBingo={() => openLanding("bingo")}
         onSnakes={() => setScreen(SCREEN_SNAKES)}
-        onMaze={() => setScreen(SCREEN_MAZE)}
-        onCastle={() => setScreen(SCREEN_CASTLE)}
-        onSling={() => setScreen(SCREEN_SLING)}
-        onCroc={() => setScreen(SCREEN_CROC)} onMathCannon={() => setScreen(SCREEN_MATHCANNON)}
-        onRileys={() => setScreen(SCREEN_RILEYS)}
-        onStringMatch={() => setScreen(SCREEN_STRINGMATCH)}
-        onTank={() => setScreen(SCREEN_TANK)}
-        onBubble={() => setScreen(SCREEN_BUBBLE)}
+        onMaze={() => openLanding("maze")}
+        onCastle={() => openLanding("castleguard")}
+        onSling={() => openLanding("sling")}
+        onCroc={() => openLanding("croctot")} onMathCannon={() => openLanding("mathcannon")}
+        onRileys={() => openLanding("rileys-garden")}
+        onStringMatch={() => openLanding("stringmatch")}
+        onTank={() => openLanding("tank")}
+        onBubble={() => openLanding("bubble")}
         onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
       />
     );
@@ -1802,6 +1848,47 @@ export default function BuildableKids() {
     return <TypingScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
+  // ============ SHARED LANDING (Session 7F) ============
+  // Every keeper game now enters through the ONE shell landing (GameLanding) instead
+  // of a bespoke start screen. The engines are untouched -- Play just launches the
+  // existing engine screen (see LANDING_WRAP). "Make it mine" opens the same shared
+  // loadout used by Breaker/Chess/Music, reading the game's manifest customization.
+  if (screen === SCREEN_GAME_LANDING) {
+    const g = GAME_CATALOG.find((x) => x.id === landingId);
+    const cfg = g && LANDING_WRAP[landingId];
+    if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    return <GameLanding game={g}
+      onPlay={() => setScreen(cfg.play)}
+      onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
+      onBack={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_GAME_LOADOUT) {
+    const g = GAME_CATALOG.find((x) => x.id === landingId);
+    const cfg = g && LANDING_WRAP[landingId];
+    if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    return <BreakerLoadout game={g}
+      onBack={() => setScreen(SCREEN_GAME_LANDING)}
+      onPlay={() => setScreen(cfg.play)} />;
+  }
+  // Tennis (Session 7F): the shared landing replaces Tennis's own start screen; its
+  // "Choose your court" picker becomes court skins in the shared loadout. multiplayer
+  // is "realtime" so the mode row shows Solo / Same device / Play a friend.
+  if (screen === SCREEN_TENNIS_LANDING) {
+    const tn = GAME_CATALOG.find((g) => g.id === "tennis");
+    return <GameLanding game={tn}
+      multiplayer="realtime"
+      onSolo={() => { setTennisStart("solo"); setScreen(SCREEN_TENNIS); }}
+      onSameDevice={() => { setTennisStart("local"); setScreen(SCREEN_TENNIS); }}
+      onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)}
+      onLoadout={() => setScreen(SCREEN_TENNIS_LOADOUT)}
+      onBack={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_TENNIS_LOADOUT) {
+    const tn = GAME_CATALOG.find((g) => g.id === "tennis");
+    return <BreakerLoadout game={tn}
+      onBack={() => setScreen(SCREEN_TENNIS_LANDING)}
+      onPlay={() => { setTennisStart("solo"); setScreen(SCREEN_TENNIS); }} />;
+  }
   if (screen === SCREEN_GAME_PICKER) {
     // Legacy dark Games picker retired: the new Home is the single front door
     // (its Play shelf lists the whole GAME_CATALOG). Any stray path that still
@@ -1937,7 +2024,7 @@ export default function BuildableKids() {
     return <ArtStudioScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TENNIS) {
-    return <TennisScreen onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
+    return <TennisScreen start={tennisStart} onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
   }
   if (screen === SCREEN_TENNIS_LOBBY) {
     return (
@@ -1945,7 +2032,7 @@ export default function BuildableKids() {
         game={{ slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" }}
         activeKid={activeKid}
         entry="friends"
-        onHome={() => setScreen(SCREEN_TENNIS)}
+        onHome={() => setScreen(SCREEN_TENNIS_LANDING)}
         onAddFriend={() => { setFriendsReturn(SCREEN_TENNIS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
       />
     );
