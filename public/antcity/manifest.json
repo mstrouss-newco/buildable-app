@@ -1,0 +1,195 @@
+{
+  "id": "antcity",
+  "name": "Ant City",
+  "type": "game",
+  "category": "Colony",
+  "color": "#E9A23B",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/antcity-engine.html",
+
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "guide" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": true, "subjects": ["math", "reading"] }
+  },
+
+  "art": {
+    "badge": "antcity/badge/v1",
+    "hero": "antcity/hero/queen-v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "antcity/loading/v1",
+    "music": "audio/antcity/meadow-v1"
+  },
+
+  "levels": [
+    {
+      "id": "first-tunnel",
+      "name": "First Tunnel",
+      "layout": "tutorial-tunnel",
+      "difficulty": 1,
+      "coins": 10,
+      "unlocked": true,
+      "journeyBadge": "antcity/badges/first-tunnel/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/dig-marker-v1"
+      }
+    },
+    {
+      "id": "first-forage",
+      "name": "First Forage",
+      "layout": "forage",
+      "difficulty": 1,
+      "coins": 10,
+      "journeyBadge": "antcity/badges/first-forage/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/crumb-v1"
+      }
+    },
+    {
+      "id": "build-nursery",
+      "name": "Build a Nursery",
+      "layout": "build-room-nursery",
+      "difficulty": 2,
+      "coins": 15,
+      "journeyBadge": "antcity/badges/build-nursery/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/nursery-v1"
+      }
+    },
+    {
+      "id": "hatch-a-baby",
+      "name": "Hatch a Baby",
+      "layout": "hatch",
+      "difficulty": 2,
+      "coins": 15,
+      "journeyBadge": "antcity/badges/hatch-a-baby/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/egg-v1"
+      }
+    },
+    {
+      "id": "reach-10-ants",
+      "name": "Reach 10 Ants",
+      "layout": "grow-population",
+      "difficulty": 3,
+      "coins": 20,
+      "journeyBadge": "antcity/badges/reach-10-ants/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/colony-v1"
+      }
+    },
+    {
+      "id": "storage-room",
+      "name": "Storage Room",
+      "layout": "build-room-storage",
+      "difficulty": 3,
+      "coins": 20,
+      "journeyBadge": "antcity/badges/storage-room/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/storage-v1"
+      }
+    },
+    {
+      "id": "rainy-day",
+      "name": "Rainy Day",
+      "layout": "setback-rain",
+      "difficulty": 3,
+      "coins": 20,
+      "journeyBadge": "antcity/badges/rainy-day/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-rain-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/flood-v1"
+      }
+    },
+    {
+      "id": "reach-25-ants",
+      "name": "Reach 25 Ants",
+      "layout": "grow-population",
+      "difficulty": 4,
+      "coins": 25,
+      "journeyBadge": "antcity/badges/reach-25-ants/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/colony-v1"
+      }
+    },
+    {
+      "id": "resting-den",
+      "name": "Resting Den",
+      "layout": "build-room-den",
+      "difficulty": 4,
+      "coins": 25,
+      "journeyBadge": "antcity/badges/resting-den/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/sandy-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/den-v1"
+      }
+    },
+    {
+      "id": "dig-deep",
+      "name": "Dig Deep",
+      "layout": "dig-deep-find",
+      "difficulty": 5,
+      "coins": 30,
+      "journeyBadge": "antcity/badges/dig-deep/v1",
+      "parts": {
+        "surface": "antcity/surface/meadow-v1",
+        "soil": "antcity/soil/deep-v1",
+        "ant": "antcity/ant/classic-v1",
+        "prop": "antcity/prop/buried-find-v1"
+      }
+    }
+  ],
+
+  "customization": [
+    { "slot": "Ant", "options": [
+      { "name": "Classic", "asset": "antcity/ant/classic-v1", "price": 0 },
+      { "name": "Ruby", "asset": "antcity/ant/ruby-v1", "price": 40 },
+      { "name": "Emerald", "asset": "antcity/ant/emerald-v1", "price": 40 }
+    ]},
+    { "slot": "Meadow", "options": [
+      { "name": "Mushroom Patch", "asset": "antcity/surface/meadow-v1", "price": 0 },
+      { "name": "Berry Bushes", "asset": "antcity/surface/meadow-berry-v1", "price": 60 }
+    ]},
+    { "slot": "Dirt", "options": [
+      { "name": "Sandy", "asset": "antcity/soil/sandy-v1", "price": 0 },
+      { "name": "Rich Loam", "asset": "antcity/soil/loam-v1", "price": 60 }
+    ]}
+  ],
+
+  "feel": {
+    "pace": "chill",
+    "celebration": "calm",
+    "haptics": "on"
+  }
+}
