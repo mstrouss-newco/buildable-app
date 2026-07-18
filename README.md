@@ -131,6 +131,26 @@ added to `vercel.json`. QA: `qa-sling.mjs` green (all 5 levels clear with spare 
 smoke passes). Other four characters (squirrel, skunk, beaver, frog) are next once the feel is
 approved.
 
+## Session 7F: Landing migration - every keeper on the shared landing (July 18 2026)
+
+7E built the shared shell landing (proven on Breaker + Chess); 7F rolls it across the rest of the
+catalog so no keeper opens on a bespoke start screen. (7E had never reached main; it was landed
+from the saved `7E-delivery/` patches first, then 7F built on top.) A `LANDING_WRAP` table in
+`src/BuildableKids.jsx` maps each catalog id to the engine screen its Play launches and whether its
+manifest has a Make-it-mine loadout; two generic screens (`SCREEN_GAME_LANDING`,
+`SCREEN_GAME_LOADOUT`) render `GameLanding` + `BreakerLoadout` from it, so every keeper (Survival,
+Sling, Tic-Tac-Toe, Connect Four, Dots and Boxes, Checkers, Memory, Mahjong, Bingo, Croc Tot,
+String Match, Bubble, Castle Guard, Tumble Blocks, Riley's Garden, Typing, Math Cannon, plus the
+coming-soon Town/Runner/Tank/Maze/Hop Heroes) now enters through the shared front door. Simple
+wrap: the engines are untouched and keep their own in-game menus (retiring those is 7D). Tennis is
+the deep case: its start screen and Choose-your-court overlay are retired from the kid flow (mode
+row on the landing, 8 courts moved into the shared loadout as court skins); `tennis.html` reads
+`?mode=` + `?world=` to launch straight into play, falling back to its built-in menu with no params
+(replace-first). QA: `qa-tennis` ALL DIFFICULTIES WINNABLE + MANIFEST OK, and the full migrated-game
+QA suite passes except the three pre-existing engine/harness failures (tetris, rileys, maze) that
+are byte-identical to the pre-7F base; `vite build` clean. Files: `src/BuildableKids.jsx`,
+`public/tennis.html`, `SESSION-LOG.md`, `README.md`.
+
 ## Session 7E: One landing template for every game (July 11 2026)
 
 The Breaker landing flow is now the single shell landing every game runs through, with a

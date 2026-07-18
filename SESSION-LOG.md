@@ -1,5 +1,45 @@
 # Buildable Kids — Session Log
 
+## 2026-07-18: Session 7F - Landing migration (every keeper on the shared landing)
+
+7E built the shared shell landing and proved it on Breaker and Chess; 7F rolls it
+across the rest of the catalog so no keeper opens on an old-generation or bespoke
+start screen. (7E itself had never reached main; it was landed from the saved
+`7E-delivery/` patches at the start of this session, then 7F built on top.)
+
+- **One front door for every keeper.** A new `LANDING_WRAP` table in
+  `src/BuildableKids.jsx` maps each catalog id to the engine screen its Play button
+  launches and whether its manifest carries a Make-it-mine loadout. Two new generic
+  screens (`SCREEN_GAME_LANDING`, `SCREEN_GAME_LOADOUT`) render `GameLanding` and
+  `BreakerLoadout` from that table, so every keeper (Survival, Sling, Tic-Tac-Toe,
+  Connect Four, Dots and Boxes, Checkers, Memory, Mahjong, Bingo, Croc Tot, String
+  Match, Bubble, Castle Guard, Tumble Blocks, Riley's Garden, Typing, Math Cannon,
+  plus the coming-soon Town/Runner/Tank/Maze/Hop Heroes) now enters through the
+  shared landing. Adding a game to the front door is one data row, not new code.
+- **Engines untouched (simple wrap).** Per the agreed scope, Play launches each
+  existing engine screen unchanged; retiring the games' own in-engine menus stays
+  7D's job. Home from a game still exits to the hub (One-front-door law).
+- **Tennis is the deep one.** Its bespoke start screen and Choose-your-court overlay
+  are retired from the kid flow: the shared landing shows the mode row (Solo, Same
+  device, Play a friend) and the 8 courts moved into the shared loadout as court
+  skins. The engine (`tennis.html`) now reads `?mode=` plus `?world=` and launches
+  straight into play; with no params (or online family mode) it still falls back to
+  its built-in menu, so nothing is removed before its replacement is proven (replace
+  first). End-of-game tap replays the same mode instead of showing the retired menu.
+- **QA.** `qa-tennis` ALL DIFFICULTIES WINNABLE plus MANIFEST OK. Re-ran the QA suite
+  for every migrated game: survival, sling, tictactoe, connectfour, dotsandboxes,
+  checkers, memory, mahjong, bingo, croc, stringmatch, bubble, castleguard, typing,
+  mathcannon, tank, runner all PASS. Three fail (tetris, rileys, maze) but those are
+  PRE-EXISTING engine/harness failures (e.g. maze's `BuildableWin is not defined`),
+  byte-identical to the pre-7F base; 7F changed only `src/BuildableKids.jsx` and
+  `public/tennis.html`, no engine files. Full production build (`vite build`) is clean.
+  On-device visual check of the landings is Mike's step.
+- **Remaining in this phase (7C/7D):** kid-customizer polish through the Feel Kit, and
+  retiring the games' in-engine start menus now that the shell fronts them all. Tumble
+  Blocks still awaits its trademark-safe id/file rename before manifest work.
+
+Files: `src/BuildableKids.jsx`, `public/tennis.html`, `SESSION-LOG.md`, `README.md`.
+
 ## 2026-07-11: Session 7E — One landing template for every game
 
 The Breaker landing flow becomes the single shell landing every game runs through,
