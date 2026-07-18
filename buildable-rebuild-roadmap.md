@@ -71,3 +71,4 @@ Done when: a level's bricks can be changed and difficulty set to 4 with zero cod
 
 ## Punch List (refinements — add freely, clear in surgical sessions)
 - (add items as testing surfaces them)
+- **Shared-landing demo box (from 7F on-device QA, July 18).** The shell landing shows a colored placeholder box with a "Demo" tag for every game that has no attract loop; only Breaker passes a real `demoSrc`. Follow-up: either give each converted engine a lightweight `?screen=demo` attract mode the landing can embed, or hide the box + "Demo" badge when there is no demo, so the tag never implies gameplay that is not there. Cosmetic only; not blocking.
