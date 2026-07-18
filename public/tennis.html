@@ -157,6 +157,11 @@ var DEMO_MAX = 6;                // seconds: demo auto-starts play if untouched
 
 // online bits
 var online = (function () { try { return new URLSearchParams(location.search).get("online") === "1"; } catch (e) { return false; } })();
+// Session 7F: the shell's shared landing hands us mode + equipped court, so Tennis
+// skips its own start screen and court picker in the normal kid flow. No params
+// (or online) -> the built-in menu still mounts, so opening it directly still works.
+var shellMode = (function () { try { var m = new URLSearchParams(location.search).get("mode"); return (m === "solo" || m === "two") ? m : null; } catch (e) { return null; } })();
+var shellWorld = (function () { try { return new URLSearchParams(location.search).get("world") || null; } catch (e) { return null; } })();
 var _now = function () { try { return performance.now(); } catch (e) { return Date.now(); } };
 var role = "host";     // host owns the ball
 var flip = false;      // guest renders the field upside-down (self at bottom)
@@ -806,7 +811,7 @@ function backToMenu() {
 
 // tap on the end screen
 if (canvas) canvas.addEventListener("pointerdown", function () {
-  if (state === "over") { if (mode === "online") { if (role === "host") newGame(); } else backToMenu(); }
+  if (state === "over") { if (mode === "online") { if (role === "host") newGame(); } else if (shellMode) { newGame(); } else backToMenu(); }
 });
 
 /* ---------- 10) RESIZE + MAIN LOOP ---------- */
@@ -840,8 +845,11 @@ function frame(ts) {
 // boot
 if (typeof document !== "undefined" && canvas) {
   resize();
+  if (shellWorld) worldKey = mapWorld(shellWorld);   // Session 7F: shell-equipped court
   newGame(); state = "title";       // have a field to draw behind the menu
-  if (!online) mountStart();
+  if (online) { /* online: the lobby drives start */ }
+  else if (shellMode) { mode = shellMode; newGame(); }   // Session 7F: launch straight into the chosen mode, no start screen
+  else mountStart();
   requestAnimationFrame(frame);
 }
 
