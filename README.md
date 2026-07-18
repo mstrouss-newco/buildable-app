@@ -131,6 +131,24 @@ added to `vercel.json`. QA: `qa-sling.mjs` green (all 5 levels clear with spare 
 smoke passes). Other four characters (squirrel, skunk, beaver, frog) are next once the feel is
 approved.
 
+## Session 7E: One landing template for every game (July 11 2026)
+
+The Breaker landing flow is now the single shell landing every game runs through, with a
+multiplayer mode row added where the manifest allows. Architecture session; proven on Breaker
+(level game) and Chess (board game). `buildable-manifest.js` exposes `landingKind(m)` ->
+`board`/`journey`/`studio` (derived from the existing PROFILE registry, one source of truth), and
+`index.html` loads the loader so the React shell can read it. `GameLanding` shows the Solo / Same
+device / Play a friend mode row only when `features.multiplayer` is turn-based or realtime (6A);
+Breaker (`off`) keeps a single Play. `BreakerJourney` generalised to `GameJourney(gameId)` (progress
+key + journey art derive from the id). New `BoardSoloFrame` is the pick-difficulty-1-5 frame for board
+games, read from the manifest's opponent tiers. Chess enters through `SCREEN_CHESS_LANDING` (Solo ->
+board frame -> engine, Same device -> pass-and-play, Play a friend -> existing lobby) via an additive
+engine deep-link `?start=solo&bot=...&world=...` / `?start=local`; with no param the engine menu behaves
+exactly as before (retiring it is 7D). Turn nudges keep resuming live games via `onChessResume`. QA:
+`qa-chess` and `qa-breaker` both ALL CHECKS PASS; shell bundles clean (esbuild). Live on-device visual
+check of the two landings is Mike's step. Files: `public/buildable-manifest.js`, `index.html`,
+`src/BuildableKids.jsx`, `public/buildable-chess.html`.
+
 ## Session 4B: Drop-in art flow + editor completion (July 11 2026)
 
 Phase 4 editor finished. **Slicer bug fixed first:** sliced pieces carried a thin sliver of a

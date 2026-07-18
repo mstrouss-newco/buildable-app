@@ -1,5 +1,40 @@
 # Buildable Kids — Session Log
 
+## 2026-07-11: Session 7E — One landing template for every game
+
+The Breaker landing flow becomes the single shell landing every game runs through,
+with a multiplayer mode row added where the manifest allows it. Architecture session;
+proven on Breaker (level game) and Chess (board game).
+
+- **Landing kind is manifest-derived.** `buildable-manifest.js` gains `landingKind(m)`
+  -> `studio` | `board` | `journey`, read off the existing PROFILE registry (board
+  games = opponent-tier profiles, level games = ordered-level profiles). One source
+  of truth, zero per-game logic in the shell. `index.html` now loads the loader so
+  `window.BuildableManifest` is available to the React shell.
+- **Mode row (Session 6A switch).** `GameLanding` shows Solo / Same device / Play a
+  friend only when the manifest's `features.multiplayer` is turn-based or realtime; a
+  button renders only when the router hands it a callback. Breaker (`off`) keeps its
+  single Play; Chess (`turn-based`) shows all three.
+- **Generic journey.** `BreakerJourney` -> `GameJourney(gameId)`: the progress key
+  (`bk_<id>_prefs`) and journey art path (`/<id>/<theme>/bg.webp`) derive from the id,
+  so any level game reuses the winding path. Breaker behaviour unchanged.
+- **Board frame.** New `BoardSoloFrame`: the simple pick-difficulty-1-5-and-play frame
+  for board games, read straight from the manifest's opponent tiers.
+- **Chess through the shell.** Chess now enters `SCREEN_CHESS_LANDING`: Solo -> board
+  frame -> engine; Same device -> pass-and-play; Play a friend -> existing lobby. The
+  engine accepts an additive deep-link (`?start=solo&bot=...&world=...` / `?start=local`);
+  with no param it shows its own menu exactly as before (retiring that menu is 7D). The
+  turn nudges (FriendsPill, "your move" card) keep resuming the live game via a separate
+  `onChessResume` handler, so multiplayer resume is unchanged.
+- **QA.** `qa-chess` and `qa-breaker` both ALL CHECKS PASS; the shell bundles clean
+  (esbuild). Live on-device visual check of the two landings is Mike's step.
+- **Remaining in this phase:** roll the same landing across the other converted games
+  (this session wired Breaker + Chess as the proof); 7D still owns retiring the chess
+  engine's in-game menu.
+
+Files: `public/buildable-manifest.js`, `index.html`, `src/BuildableKids.jsx`,
+`public/buildable-chess.html`, `SESSION-LOG.md`, `README.md`.
+
 ## 2026-07-11: Session 4B follow-on 9 — Tennis, String Match, Tetris editable art
 
 Three more games (owner: Tennis, then String Match, then Tetris).
