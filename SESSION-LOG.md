@@ -1,5 +1,14 @@
 # Buildable Kids — Session Log
 
+## 2026-07-19: Breaker demo paddle twitch fix
+
+The self-playing attract demo's solo bot (`botThinkSolo` in `public/breaker-engine.html`)
+teleported the paddle to a target that flipped left/right every tick, causing the paddle to
+twitch across the screen. Fixed: paddle now glides toward its target (capped 9px/tick, same
+approach as the Pong bot) and tracks the ball straight-on once it nears the paddle rather than
+flip-flopping its aim behind the nearest brick. Demo is calm; still clears every level.
+QA `qa-breaker.mjs` green. Next: roll the same smoothing to Survival / Croc / Maze / Platformer demos.
+
 ## 2026-07-18: Session 8N - Mahjong real art (traditional tiles + painted scenes)
 
 Replaced the AI-generated mahjong backgrounds with 4 hand-painted scene webps Mike supplied

@@ -619,8 +619,15 @@ function botThinkSolo(){ if(!G)return; if(G.onPaddle){ launch(); return; } if(G.
   let ball=null,low=-1; for(const b of G.balls){ if(b===G.stuck)continue; if(b.vy>0&&b.y>low){low=b.y;ball=b;} }
   if(!ball){ let by=-1; for(const b of G.balls){ if(b.y>by){by=b.y;ball=b;} } } if(!ball)return;
   let tb=null,bd=1e9; for(const br of G.bricks){ if(!br.alive)continue; const cx=br.x+br.w/2,cy=br.y+br.h/2,d=(cx-ball.x)*(cx-ball.x)+(cy-ball.y)*(cy-ball.y); if(d<bd){bd=d;tb=br;} }
-  let target=ball.x; if(tb){ const dir=(tb.x+tb.w/2)>ball.x?1:-1; target=ball.x-dir*G.padW*0.42; }
-  movePaddleTo(target); }
+  let target=ball.x;
+  if(tb){ const dir=(tb.x+tb.w/2)>ball.x?1:-1;
+    // aim to nudge the ball toward bricks, but only while it's still high up; as it
+    // nears the paddle, track it straight-on for a clean catch (avoids the aim-side flip)
+    if(ball.y < PAD_Y-150) target=ball.x-dir*G.padW*0.42; }
+  // glide toward the target instead of teleporting: a capped step per tick keeps the
+  // self-playing demo paddle from twitching across the screen when the target jumps
+  const step=9, dx=clamp(target-G.padX,-step,step);
+  movePaddleTo(G.padX+dx); }
 function botThinkPong(){ if(!G||!G.ball)return; const b=G.ball;
   // QA bots only (botMode): P1 is a strong tracker, P2 plays loose (eases back to
   // center) so balls that top out off-center get past it -> a winner reliably emerges.

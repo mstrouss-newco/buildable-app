@@ -6,6 +6,15 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Breaker: demo paddle no longer twitches (July 19 2026)
+The self-playing attract demo (`?screen=demo`) had the solo bot teleport the paddle
+straight to a target that flipped side-to-side each tick, so the paddle jittered across
+the screen. Fixed `botThinkSolo` in `public/breaker-engine.html`: the paddle now GLIDES
+toward its target (capped 9px/tick, like the Pong bot) and tracks the ball straight-on
+once it nears the paddle instead of flip-flopping its aim behind bricks. Demo looks calm
+and still clears every level. QA: `qa-breaker.mjs` green (all 8 levels win x5, pong,
+render smoke). Commit on main; Vercel auto-deploys.
+
 ## Session 8N: Mahjong real art — traditional tiles + 4 painted scenes (July 18 2026)
 
 Swapped Mahjong's AI-prompt backgrounds and the placeholder tile look for real hand-painted art Mike provided.
