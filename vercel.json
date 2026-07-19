@@ -14,6 +14,14 @@
       "dest": "/api/$1"
     },
     {
+      "src": "/antcity-art-gallery.html",
+      "dest": "/antcity-art-gallery.html"
+    },
+    {
+      "src": "/antcity-art",
+      "dest": "/antcity-art-gallery.html"
+    },
+    {
       "src": "/asset-library.html",
       "dest": "/asset-library.html"
     },
