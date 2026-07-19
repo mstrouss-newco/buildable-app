@@ -950,11 +950,11 @@ function drawThemedBrick(br,A){
     if(br.power){ ctx.fillStyle="rgba(255,255,255,.95)"; ctx.beginPath();ctx.arc(br.x+br.w/2,br.y+4,2.6,0,7);ctx.fill(); }
     return true; }
   const img=A.bricks; if(!imReady(img)) return false;
-  const cw=img.naturalWidth/3, ch=img.naturalHeight/6, v=(br.variant||0)%6;
+  const cw=img.naturalWidth/3, ch=img.naturalHeight/6, v=(br.variant||0)%6, ix=cw*0.02, iy=ch*0.02;
   let f=0; if(br.flashT>0) f=1; else if(br.hp<br.maxHp) f=2;
   const ex=br.w*0.10, ey=br.h*0.62;   // a hair larger so the painted brick reads full-bleed
   if(br.flashT>0){ ctx.save(); ctx.shadowColor="#fff"; ctx.shadowBlur=14; }
-  ctx.drawImage(img, f*cw, v*ch, cw, ch, br.x-ex/2, br.y-ey/2, br.w+ex, br.h+ey);
+  ctx.drawImage(img, f*cw+ix, v*ch+iy, cw-2*ix, ch-2*iy, br.x-ex/2, br.y-ey/2, br.w+ex, br.h+ey);
   if(br.flashT>0) ctx.restore();
   if(br.power){ ctx.fillStyle="rgba(255,255,255,.95)"; ctx.beginPath();ctx.arc(br.x+br.w/2,br.y+4,2.6,0,7);ctx.fill(); }
   return true; }
@@ -969,7 +969,7 @@ function drawShatters(A){ if(!G.shatters||!G.shatters.length) return;
   const bcw=imReady(br)?br.naturalWidth/3:0, bch=imReady(br)?br.naturalHeight/6:0;
   for(const s of G.shatters){ const v=(s.variant||0)%6;
     if(s.t<5 && imReady(br)){ const ex=s.w*0.10, ey=s.h*0.62;
-      ctx.drawImage(br, 1*bcw, v*bch, bcw, bch, s.x-ex/2, s.y-ey/2, s.w+ex, s.h+ey);
+      ctx.drawImage(br, 1*bcw+bcw*0.02, v*bch+bch*0.02, bcw*0.96, bch*0.96, s.x-ex/2, s.y-ey/2, s.w+ex, s.h+ey);
     } else if(imReady(sh)){ const q=(s.t-5)/15, sc=1+q*0.55; ctx.save(); ctx.globalAlpha=Math.max(0,1-q);
       const dw=s.w*1.25*sc, dh=s.h*2.1*sc; ctx.drawImage(sh, v*scw, 0, scw, sch, s.x+s.w/2-dw/2, s.y+s.h*0.55-dh/2, dw, dh); ctx.restore(); } }
 }
