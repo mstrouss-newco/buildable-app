@@ -49,7 +49,9 @@
     var grid = document.createElement("div"); grid.className = "grid";
     g[1].forEach(function(item){
       var card = document.createElement("div"); card.className = "card";
-      card.innerHTML = '<div class="thumb"><img loading="lazy" src="'+BASE+item[0]+'" alt="'+item[1]+'"></div><div class="lbl">'+item[1]+'</div>';
+      var p = item[0].split("/");
+      var url = BASE + p[0] + "/meadow/" + p.slice(1).join("/");
+      card.innerHTML = '<div class="thumb"><img loading="lazy" src="'+url+'" alt="'+item[1]+'"></div><div class="lbl">'+item[1]+'</div>';
       grid.appendChild(card);
     });
     app.appendChild(grid);
