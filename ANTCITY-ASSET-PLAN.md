@@ -51,3 +51,13 @@ the shared `community_*` tables (tagged `kind` + `theme`), then swap the manifes
 placeholder IDs for the real registered IDs. Reused Kenney/Sling files get registered the
 same way so they load like any other library asset. Additive only; never re-path a live
 asset.
+
+## Colony-builder note (grow huge)
+
+Because the colony grows without limit into a free-build sandbox, the underground art must
+**tile and repeat** cleanly, not be a single fixed scene: the soil, tunnel walls, and each
+room type need to read well when there are many of them stacked and side by side. Draw the
+tunnels and rooms as repeatable pieces the engine places on a grid, and make the ant sprite
+readable when it is small (a huge colony shows many small ants at once). A simple zoomed-out
+"whole colony" look is a nice-to-have for the picker badge and share snapshot. This is art
+guidance only; the growth math lives in the engine, not the art.

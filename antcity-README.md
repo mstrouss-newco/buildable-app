@@ -7,6 +7,10 @@ carve the tunnels for you (you never dig yourself), and the colony keeps growing
 real time, even while you are away. Nothing is ever erased and the colony never resets.
 It is the kid's own little world, and a snapshot can be shared.
 
+The point is not to win and stop, it is to keep building. Recruit more ants, dig more
+rooms, and grow the colony as big as you can, a friendly ant-sized take on a
+build-your-empire game. The colony can grow huge with no cap and no ending.
+
 It is a brand-new **game type** for the Games section (a persistent colony grow game),
 alongside Breaker, Survival, and Sling. Like those, it is a fixed **engine** plus a
 data-driven **recipe** (`GAME_CONFIG` + the manifest): you tune numbers and pick art,
@@ -45,10 +49,34 @@ There is no lose state and no game over. This is a keep-forever world, not a win
 round. A wordless demo shows how to draw a first tunnel on first launch, and the **?**
 button replays it.
 
-## The journey: 10 first missions (these are the tutorial)
+## The colony builder loop (grow it huge)
 
-The missions sit on top of the colony as the journey, and the first ten teach the game one
-step at a time. Order is the unlock order, each opens after the one before it is done:
+Ant City is a kid-simple colony builder. The feel is a friendly ant version of a
+build-your-empire game: more workers means more gets done, so the colony keeps growing.
+The loop the kid repeats is:
+
+1. **Gather.** Foragers bring in food, diggers open up new space.
+2. **Grow.** Feeding the nursery hatches more ants (more workers).
+3. **Assign.** Slide the new ants across the four jobs to decide what to work on.
+4. **Build.** Dig more tunnels and build more rooms (nursery, storage, den, and more).
+5. **Repeat, bigger.** A larger colony gathers faster, which grows it faster again.
+
+After the ten tutorial missions, the game opens into **free-build**: no cap, no ending,
+keep growing the colony as big as you like. Gentle milestones (reach 50 ants, dig five
+levels deep) pop a reward and unlock new room types, but they never block building. The
+colony always keeps its own pace in real time, including while the kid is away.
+
+**How it stays huge without slowing down (engine note):** the colony runs on counts and
+rates under the hood, like a tycoon or idle game, so the ant number can climb into the
+hundreds cheaply. The kid sees a lively sample of ants walking the tunnels, not every ant
+drawn at once. This keeps it smooth at any size and keeps the world scripted and
+deterministic, so the QA robot can still prove every mission and milestone is reachable.
+
+## The journey: 10 first missions (the tutorial into free-build)
+
+The missions sit on top of the colony as the journey. The first ten teach the builder loop
+one step at a time, then hand off to free-build. Order is the unlock order, each opens
+after the one before it is done:
 
 1. **First Tunnel** - draw a path and watch a digger carve it.
 2. **First Forage** - send a forager up to bring back food.
