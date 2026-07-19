@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 84">
+  <g>
+    <!-- legs (behind body) -->
+    <g stroke="#33241d" stroke-width="3.4" fill="none" stroke-linecap="round">
+      <path d="M60 52 Q56 66 48 72"/><path d="M66 53 Q66 68 62 76"/><path d="M72 52 Q78 66 80 74"/>
+      <path d="M60 52 Q54 62 46 64"/><path d="M66 53 Q64 64 58 68"/><path d="M72 52 Q80 60 88 62"/>
+    </g>
+    
+    <!-- abdomen -->
+    <ellipse cx="34" cy="44" rx="23" ry="18" fill="#4a3527"/>
+    <ellipse cx="30" cy="48" rx="15" ry="10" fill="#5e4636" opacity="0.7"/>
+    <!-- thorax -->
+    <ellipse cx="64" cy="45" rx="13" ry="12" fill="#4a3527"/>
+    <!-- head -->
+    <circle cx="88" cy="42" r="15" fill="#4a3527"/>
+    <!-- antennae -->
+    <g stroke="#33241d" stroke-width="3" fill="none" stroke-linecap="round">
+      <path d="M96 31 Q104 18 112 16"/><path d="M92 28 Q96 14 103 10"/>
+    </g>
+    <circle cx="112" cy="16" r="2.6" fill="#33241d"/><circle cx="103" cy="10" r="2.6" fill="#33241d"/>
+    <!-- mandibles -->
+    <path d="M101 46 l8 3 l-8 2 z" fill="#33241d"/>
+    <!-- big friendly eye -->
+    <circle cx="92" cy="39" r="6.2" fill="#fdf6ee"/><circle cx="93.5" cy="39.5" r="3" fill="#2a2320"/><circle cx="95" cy="38" r="1" fill="#fff"/>
+    <!-- smile -->
+    <path d="M86 49 Q90 53 95 50" stroke="#33241d" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    
+  </g></svg>

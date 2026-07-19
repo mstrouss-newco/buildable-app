@@ -35,6 +35,29 @@ Reuse is CC0 (Kenney) or our own art (Sling), so hosting and modifying is fine.
 | `antcity/surface/meadow-berry-v1` | Berry Bushes meadow customization variant. |
 | `antcity/badge/v1`, `antcity/loading/v1` | Picker badge + loading screen. |
 
+## Delivered this session (hand-crafted Style A vector set)
+
+A cohesive cartoon starter set is done and lives in `public/antcity/art/` as clean SVG
+(no API key needed, loads in the engine as images, drawn `BR` fallback still applies).
+Preview: `public/antcity/art/_preview.svg`. Files and the manifest IDs they fill:
+
+| File | Fills manifest ID |
+|---|---|
+| `ant-classic.svg` | `antcity/ant/classic-v1` |
+| `ant-ruby.svg`, `ant-emerald.svg` | `antcity/ant/ruby-v1`, `antcity/ant/emerald-v1` |
+| `queen.svg` | `antcity/hero/queen-v1` |
+| `egg.svg` | `antcity/prop/egg-v1` |
+| `room-nursery.svg`, `room-storage.svg`, `room-den.svg` | `antcity/prop/{nursery,storage,den}-v1` |
+| `crumb.svg` | `antcity/prop/crumb-v1` |
+| `buried-find.svg` | `antcity/prop/buried-find-v1` |
+| `soil-tile.svg` | `antcity/soil/sandy-v1` (tiles cleanly for the huge colony) |
+| `badge.svg` | `antcity/badge/v1` |
+
+Still to do (follow-ups): loading screen, rainy-meadow + flood overlay, `colony`/anthill
+icon, and the Berry Bushes / Rich Loam customization variants. Registering these to the
+shared `community_*` tables happens once the game deploys (so the URLs resolve). Any piece
+can later be swapped for an AI-pipeline render without touching the engine.
+
 ## Coverage gaps (honest)
 
 - **Ants, eggs, rooms, buried find, badge, loading:** no ant or bug art exists in the
