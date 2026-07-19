@@ -6,6 +6,35 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 7G: Routes and retirement — one front door, old picker page redirected (July 18 2026)
+
+Cleanup pass that finishes retiring the old Games picker. Two things shipped, and one is
+deliberately deferred (replace-first, remove-second).
+
+- **Old standalone picker page redirected.** `/games`, `/library`, and `/games-library.html`
+  now `308`-redirect to `/app` in `vercel.json` (they used to serve the legacy
+  `public/games-library.html` "Top Games" page). Nothing in the app linked to that page
+  anymore, so this is the replacement step: the old URLs now land on the single Home front
+  door. The `games-library.html` file itself is LEFT in place until the redirect is verified
+  live, then it gets deleted next session.
+- **Dead internal picker code removed.** The unused `GamePicker` React component, the
+  `SCREEN_GAME_PICKER` constant, its redirect-to-Home stub, and its `GrownUpButton`
+  reference are gone from `src/BuildableKids.jsx`. The redirect stub had been live for a week
+  (the July 11 "One front door" work), nothing routed to it, and Home already carries the same
+  1111 coming-soon gate — so this is pure dead-code removal. esbuild bundles clean.
+- **Back-from-game audit.** Every game's Home/Back reaches `/app`: simple games return to Home
+  directly; landing-layer games (Breaker, Chess, Checkers, Tic-Tac-Toe, Tennis) return to their
+  own shared landing, whose Back returns to Home (the 7E/7F shell design). No game routes to the
+  retired picker.
+- **Swept.** Zero remaining references to `SCREEN_GAME_PICKER` / `game_picker` / `games-library`
+  in `src/` or `public/`. One stray leftover flagged: `api/vercel.json` (a duplicate routing file
+  Vercel ignores — only the root `vercel.json` is used) still names the old page; flagged for
+  deletion in the same pass as `games-library.html`.
+- **QA.** `qa-breaker` ALL CHECKS PASS (no engine file was touched — only the shell and routing).
+  Live on-device check of the `/games` -> `/app` redirect is Mike's step.
+
+Files: `vercel.json`, `src/BuildableKids.jsx`, `SESSION-LOG.md`, `README.md`.
+
 ## Sling Squad: mute background + drop shadows so play pieces pop (July 11 2026)
 
 Feedback: hard to tell characters/platform from the busy background. drawBg now MUTES the far

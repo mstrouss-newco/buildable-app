@@ -1,5 +1,36 @@
 # Buildable Kids — Session Log
 
+## 2026-07-18: Session 7G - Routes and retirement (folds into 7D)
+
+Small cleanup session: finish retiring the old Games picker so Home is the one and only
+front door. Follows the July 11 "One front door" work and the 7E/7F shared landings.
+Replace-first, remove-second: the redirect ships now; the old page file is deleted next
+session after Mike confirms the redirect is live.
+
+- **Old standalone picker page now redirects to /app.** `/games`, `/library`, and
+  `/games-library.html` used to serve the legacy `public/games-library.html` "Top Games"
+  page. Nothing in the app links to it anymore, so all three now `308`-redirect to `/app`
+  in `vercel.json`. The `games-library.html` file is LEFT in place (replace-first); it gets
+  deleted next session once the redirect is verified live.
+- **Dead internal picker code removed.** Deleted the unused `GamePicker` component, the
+  `SCREEN_GAME_PICKER` constant, its redirect-to-Home stub, and its `GrownUpButton`
+  reference from `src/BuildableKids.jsx`. That stub had been live and unreachable for a week;
+  Home already carries the same 1111 coming-soon gate. esbuild bundles clean, no behavior
+  change.
+- **Back-from-any-game returns to /app.** Audited every `onHome`/`onBack`: simple games go to
+  Home directly; landing-layer games (Breaker, Chess, Checkers, Tic-Tac-Toe, Tennis) return to
+  their own shared landing, whose Back returns to Home. Nothing routes to the retired picker.
+- **Deep-link sweep clean.** Zero remaining `SCREEN_GAME_PICKER` / `game_picker` / `games-library`
+  references in `src/` or `public/`. Flagged one stray: `api/vercel.json` (a duplicate routing
+  file Vercel ignores) still names the old page - to be deleted with `games-library.html`.
+- **QA.** `qa-breaker` ALL CHECKS PASS. No game engine file was touched (only the React shell and
+  `vercel.json`), so engine QA is unchanged; the shell was verified via a clean esbuild bundle.
+- **Deferred to next session (after live check):** delete `public/games-library.html` and the
+  stray `api/vercel.json`. Do NOT start the next session block.
+
+Files: `vercel.json`, `src/BuildableKids.jsx`, `SESSION-LOG.md`, `README.md`.
+
+
 ## 2026-07-18: Session 7F - Landing migration (every keeper on the shared landing)
 
 7E built the shared shell landing and proved it on Breaker and Chess; 7F rolls it
