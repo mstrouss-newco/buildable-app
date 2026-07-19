@@ -516,6 +516,14 @@ function JourneyStar({ filled, size = 15 }) {
     </svg>
   );
 }
+function JourneyBadgeImg({ srcs }) {
+  const [idx, setIdx] = useState(0);
+  if (!srcs.length || idx >= srcs.length) return null;
+  return (
+    <img src={srcs[idx]} alt="" onError={() => setIdx((n) => n + 1)}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+  );
+}
 function JourneyLock({ size = 26 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
@@ -593,7 +601,9 @@ function GameJourney({ game, gameId = "breaker", onBack, onPlay }) {
               const locked = i > prog.unlocked;
               const isCurrent = i === currentIdx;
               const stars = Math.max(0, Math.min(3, prog.stars[i] || 0));
-              const img = `/${gameId}/${theme}/bg.webp`;
+              const badgeSrcs = [];
+              if (lv.journeyBadge && /^(https?:|\/)/.test(lv.journeyBadge)) badgeSrcs.push(lv.journeyBadge);
+              badgeSrcs.push(`/${gameId}/${theme}/bg.webp`);
               const leftPct = xPctAt(i);
               const topPx = i * ROW + ROW / 2;
               return (
@@ -610,8 +620,7 @@ function GameJourney({ game, gameId = "breaker", onBack, onPlay }) {
                       cursor: locked ? "default" : "pointer", background: `linear-gradient(160deg, ${accent}, ${accent}55)`,
                       filter: locked ? "grayscale(0.7) brightness(0.6)" : "none", transition: "transform .12s",
                     }}>
-                    <img src={img} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                    <JourneyBadgeImg srcs={badgeSrcs} />
                     <span style={{ position: "absolute", top: 4, left: 6, fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,0.7)" }}>{i + 1}</span>
                     {locked && <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><JourneyLock /></span>}
                   </button>
