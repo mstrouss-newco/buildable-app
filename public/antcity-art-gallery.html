@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ant City - AI Art (live)</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#fbf6ec;color:#2b2b2b}
+  header{padding:24px 20px 8px}
+  h1{margin:0 0 4px;font-size:22px}
+  p.sub{margin:0;color:#6b6b6b;font-size:13px}
+  h2{margin:28px 20px 10px;font-size:16px;color:#8a5a1e}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:0 20px}
+  .card{background:#fff;border:1px solid #ece2cf;border-radius:14px;overflow:hidden;text-align:center}
+  .thumb{height:130px;display:flex;align-items:center;justify-content:center;background:#f6f0e4}
+  .thumb img{max-width:100%;max-height:122px;object-fit:contain}
+  .lbl{font-size:12px;padding:8px 6px;color:#3a2a22}
+  footer{padding:24px 20px 40px;color:#8a8a8a;font-size:12px}
+  code{background:#f0e8d8;padding:1px 5px;border-radius:5px;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Ant City - AI art set (Style A, live)</h1>
+  <p class="sub">Loaded from the shared library. Base: <code>/api/asset-studio?asset=ant_city/&lt;type&gt;/meadow/&lt;name&gt;</code></p>
+</header>
+<div id="app"></div>
+<footer>Generated with the Asset Studio pipeline (gpt-image-1, high quality).</footer>
+<script>
+  var BASE = "/api/asset-studio?asset=ant_city/";
+  var groups = [
+    ["Queen (hero)", [["queen_ant/main","queen"]]],
+    ["Worker ants", [
+      ["worker_ants/idle_normal","idle_normal"],["worker_ants/idle_happy","idle_happy"],["worker_ants/idle_tired","idle_tired"],
+      ["worker_ants/carrying_normal","carrying_normal"],["worker_ants/carrying_happy","carrying_happy"],["worker_ants/carrying_tired","carrying_tired"],
+      ["worker_ants/digging_normal","digging_normal"],["worker_ants/digging_happy","digging_happy"],["worker_ants/digging_tired","digging_tired"]
+    ]],
+    ["Eggs", [["ant_eggs/main","eggs"]]],
+    ["Rooms", [["prop/nursery","nursery"],["prop/storage","storage"],["prop/den","resting den"]]],
+    ["Props", [["prop/food","food"],["prop/buried_find","buried find"],["prop/badge","badge"]]],
+    ["Tunnels", [
+      ["tunnels/entrance_normal","entrance"],["tunnels/entrance_decorated","entrance decorated"],
+      ["tunnels/junction_normal","junction"],["tunnels/junction_decorated","junction decorated"]
+    ]]
+  ];
+  var app = document.getElementById("app");
+  groups.forEach(function(g){
+    var h = document.createElement("h2"); h.textContent = g[0]; app.appendChild(h);
+    var grid = document.createElement("div"); grid.className = "grid";
+    g[1].forEach(function(item){
+      var card = document.createElement("div"); card.className = "card";
+      card.innerHTML = '<div class="thumb"><img loading="lazy" src="'+BASE+item[0]+'" alt="'+item[1]+'"></div><div class="lbl">'+item[1]+'</div>';
+      grid.appendChild(card);
+    });
+    app.appendChild(grid);
+  });
+</script>
+</body>
+</html>
