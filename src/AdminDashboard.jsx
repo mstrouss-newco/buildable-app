@@ -93,6 +93,7 @@ export default function AdminDashboard({ onExit }) {
 
   return (
     <div className="admin-dashboard">
+      <BackOfficeNav active="admin" onKids={onExit} />
       <AdminHeader onLogout={handleLogout} onExit={onExit} />
       <AdminTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       <AdminContent activeTab={activeTab} />
@@ -117,6 +118,24 @@ function AdminLoginPage({ onLogin, password, setPassword, error }) {
         </form>
         <p className="admin-login__hint">Secure access only</p>
       </div>
+    </div>
+  );
+}
+
+function BackOfficeNav({ active, onKids }) {
+  const wrap = { display: 'flex', alignItems: 'center', gap: '14px', background: '#151833', padding: '10px 16px', borderRadius: '12px', margin: '0 0 16px', flexWrap: 'wrap' };
+  const brand = { color: '#fff', fontWeight: 600, fontSize: '15px', textDecoration: 'none', cursor: 'pointer' };
+  const tab = (on) => ({ color: on ? '#fff' : '#b8bce0', background: on ? '#6b4eff' : 'transparent', fontSize: '13px', fontWeight: 600, padding: '7px 13px', borderRadius: '9px', textDecoration: 'none' });
+  const kids = { marginLeft: 'auto', color: '#8388b5', fontSize: '13px', textDecoration: 'none', cursor: 'pointer', background: 'none', border: 0 };
+  return (
+    <div style={wrap}>
+      <span style={brand} onClick={onKids}>Buildable Studio</span>
+      <span style={{ display: 'flex', gap: '4px', marginLeft: '6px' }}>
+        <a href="/admin" style={tab(active === 'admin')}>Admin</a>
+        <a href="/planner" style={tab(active === 'planner')}>Planner</a>
+        <a href="/asset-library" style={tab(active === 'assets')}>Assets</a>
+      </span>
+      <button style={kids} onClick={onKids}>Kids app &rarr;</button>
     </div>
   );
 }
