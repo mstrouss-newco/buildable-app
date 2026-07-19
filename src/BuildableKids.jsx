@@ -1249,6 +1249,18 @@ function StuffGlyph() {
   );
 }
 
+// Switch-player icon: two heads + a swap arrow. No emoji (drawn SVG geometry).
+function SwitchPlayerGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="8" cy="8" r="3" />
+      <circle cx="16" cy="8" r="3" />
+      <path d="M4.5 19a3.5 3.5 0 017 0" />
+      <path d="M12.5 19a3.5 3.5 0 017 0" />
+    </svg>
+  );
+}
+
 function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendInvites = [], friendTurns = [], onJoinFriendInvite, onOpenFriendMatch, compact }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
@@ -1428,12 +1440,13 @@ function gameSpecFor(slug) {
 const FRIEND_GAME_TITLES = { chess: "Chess", checkers: "Checkers", tictactoe: "Tic-Tac-Toe", tennis: "Tennis" };
 
 export default function BuildableKids() {
-  // PROFILE GATE: always start on the "who's playing" picker (inside
-  // GrownUpScreen) so the app never boots straight to Home without an
-  // active kid profile chosen THIS session -- every fresh open re-asks,
-  // even on a device that picked a kid last time. See onBack below for the
-  // matching guard that stops the picker's Back button from leaking to Home.
-  const [screen, setScreen] = useState(SCREEN_GROWNUP);
+  // RETURN EXPERIENCE (Session 6F): a returning visit boots straight to the
+  // last kid's Home -- never re-ask "who's playing?". If a kid was restored
+  // (bk_active_kid_v1, also written for guests), open on Home; otherwise the
+  // first-time flow opens the picker. Switching kids is manual via the Home
+  // header "Switch player" entry. A fresh Google sign-in still routes to the
+  // picker (see the OAuth-redirect effect below).
+  const [screen, setScreen] = useState(getActiveKid() ? SCREEN_HOME : SCREEN_GROWNUP);
   // Background = silence, for shell-side speech too. The landed audio fix stops game
   // music and the exhibit read-aloud in-frame, but the Home buddy's spoken lines
   // (voiceBus) + browser read-aloud play outside any game frame. Stop them when the app
@@ -1627,6 +1640,7 @@ export default function BuildableKids() {
         onChessResume={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
         onGrownUp={openGrownups}
+        onSwitchPlayer={() => { setGrownVerified(false); setScreen(SCREEN_GROWNUP); }}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
         onHelper={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_HELPER); }}
         onJoinInvite={(m) => { setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); }}
@@ -2276,7 +2290,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
 function HomeScreen(props) {
-  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onChessResume, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch } = props;
+  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onChessResume, onMyStuff, onGrownUp, onSwitchPlayer, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch } = props;
   // ---------------------------------------------------------------------------
   // Session 3E — Home screen redesign. Cream/light theme ONLY on this screen
   // (no dark mode toggle, no dark palette). Everything below re-presents data
@@ -2718,6 +2732,9 @@ function HomeScreen(props) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <button onClick={onHelper} aria-label="Your buddy" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", border: "1px solid rgba(58,46,77,0.12)", cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><BuddyGlyph size={22} /></button>
+            {onSwitchPlayer && (
+              <button onClick={onSwitchPlayer} aria-label="Switch player" title="Switch player" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: HOME_INK, cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><SwitchPlayerGlyph /></button>
+            )}
             <button onClick={onMyStuff} aria-label="My Stuff" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: HOME_INK, cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><StuffGlyph /></button>
             <GrownUpButton onGrownUp={onGrownUp} compact />
             <FriendsPill chessTurns={chessTurns} onChess={onChessResume || onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} compact />
@@ -2970,7 +2987,9 @@ function HelperLabScreen({ activeKid, onHome, onDone }) {
   };
   const finish = () => {
     const helper = { name: (pending && pending.name) || "Buddy", image: (pending && pending.image) || null, description: (pending && pending.description) || "", voice };
-    saveKidHelper(activeKid, helper);
+    // saveKidHelper logs + rethrows a failed DB save so it is visible; the local
+    // copy is already written, so let the UI proceed and just catch the reject.
+    Promise.resolve(saveKidHelper(activeKid, helper)).catch(() => {});
     onDone(activeKid ? { ...activeKid, helper } : null);
   };
   const PlayDot = () => (<svg width="11" height="11" viewBox="0 0 10 10" aria-hidden="true" style={{ marginRight: 4 }}><path d="M2 1 L9 5 L2 9 Z" fill="currentColor" /></svg>);
