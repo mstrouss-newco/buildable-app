@@ -191,9 +191,21 @@ var botMode = false, started = false;
 var EFF_G = 0.45;               // per-frame gravity accel (auto-calibrated below)
 
 // ---- progress (best-effort localStorage; headless-safe) ----
+// The standalone game keeps its own "sling.prefs". When embedded in the shell the
+// winding Journey picker reads a per-kid key ("bk_sling_prefs[_<kidId>]") in the
+// SAME shape — so we mirror progress into it, and the path lights up as levels clear.
 var PREFS = { unlocked:0, stars:[] };
-function loadPrefs(){ try{ var s=localStorage.getItem("sling.prefs"); if(s){ var p=JSON.parse(s); PREFS.unlocked=p.unlocked||0; PREFS.stars=p.stars||[]; } }catch(e){} }
-function savePrefs(){ try{ localStorage.setItem("sling.prefs", JSON.stringify(PREFS)); }catch(e){} }
+function _bkKey(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");
+  return "bk_sling_prefs"+((k&&k.id)?("_"+k.id):""); }catch(e){ return "bk_sling_prefs"; } }
+function loadPrefs(){ try{
+  var s=localStorage.getItem(_bkKey()) || localStorage.getItem("sling.prefs");
+  if(s){ var p=JSON.parse(s); PREFS.unlocked=p.unlocked||0; PREFS.stars=p.stars||[]; }
+}catch(e){} }
+function savePrefs(){ try{
+  var json=JSON.stringify({ unlocked:PREFS.unlocked, stars:PREFS.stars });
+  localStorage.setItem("sling.prefs", json);
+  localStorage.setItem(_bkKey(), json);   // shell Journey reads this
+}catch(e){} }
 function totalStars(){ return (PREFS.stars||[]).reduce(function(a,b){return a+(b||0);},0); }
 function maxStars(){ return GAME_CONFIG.levels.length*3; }
 
@@ -861,7 +873,24 @@ function loadSquadArt(){ try{ if(typeof Image!=="function") return;
     ["idle","pulledback","flying","ability","impact","dazed","victory"].forEach(function(k){
       L("/sling/"+an+"/"+an+"_"+k+".png?v=3",function(im){ ANIMALS[an][k]=im; }); }); });
 }catch(e){} }
-if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus(); showMenu(); loadSquadArt(); requestAnimationFrame(frame); }
+// The shell's Journey picker launches us with ?level=<index> to open one level
+// directly (skipping our own menu). We remember it and jump once the manifest's
+// full level list is in (built-in fallback is only 5, so we wait for applyManifest).
+var START_LEVEL = null, _startDone = false;
+try{ if(typeof location!=="undefined" && location.search){
+  var _m=/[?&]level=(\d+)/.exec(location.search); if(_m) START_LEVEL=parseInt(_m[1],10); } }catch(e){}
+function tryStartLevel(){
+  if(_startDone || START_LEVEL==null) return;
+  if(!GAME_CONFIG.levels.length) return;
+  _startDone=true; var i=Math.max(0,Math.min(START_LEVEL, GAME_CONFIG.levels.length-1));
+  START_LEVEL=null; startLevel(i);
+}
+if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus();
+  if(START_LEVEL==null) showMenu();
+  loadSquadArt(); requestAnimationFrame(frame);
+  // safety net: if the manifest never applies, don't leave the kid on a blank canvas
+  if(START_LEVEL!=null) setTimeout(function(){ if(!_startDone){ tryStartLevel(); if(!_startDone) showMenu(); } }, 1800);
+}
 
 // ============================================================================
 //  SHELL: load /sling/manifest.json and drive levels/identity from it.
@@ -879,6 +908,7 @@ function applyManifest(cfg, raw){
   GAME_CONFIG.levels.length = cfg.levels.length;
   for(var i=0;i<cfg.levels.length;i++){ GAME_CONFIG.levels[i]=cfg.levels[i]; }
   try{ if(startScreen && typeof buildStartCfg==="function") startScreen.update(buildStartCfg()); }catch(e){}
+  try{ tryStartLevel(); }catch(e){}   // shell deep-link: jump to ?level=<i> now that all levels are in
 }
 try{
   if(window.BuildableManifest && window.BuildableManifest.load){

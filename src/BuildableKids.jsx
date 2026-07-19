@@ -75,6 +75,7 @@ const SCREEN_CONNECTFOUR = "connectfour";
 const SCREEN_DOTSBOXES = "dotsboxes";
 const SCREEN_CASTLE = "castle";
 const SCREEN_SLING = "sling";
+const SCREEN_SLING_JOURNEY = "sling_journey"; // Sling uses the shared winding Journey picker (like Breaker)
 const SCREEN_CROC = "croc";
 const SCREEN_RILEYS = "rileys";
 const SCREEN_MAHJONG = "mahjong";
@@ -129,7 +130,7 @@ const SCREEN_MAZE = "maze";
 // not new screen code. (Breaker/Chess/Music/Tennis keep their own richer blocks.)
 const LANDING_WRAP = {
   survival: { play: SCREEN_SURVIVAL, loadout: true },
-  sling: { play: SCREEN_SLING, loadout: true },
+  sling: { play: SCREEN_SLING_JOURNEY, loadout: true },
   tictactoe: { play: SCREEN_TICTACTOE, loadout: true },
   connectfour: { play: SCREEN_CONNECTFOUR, loadout: true },
   dotsboxes: { play: SCREEN_DOTSBOXES, loadout: true },
@@ -1145,7 +1146,7 @@ function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
   return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />;
 }
 function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/sling-squad.html?v=hud1" onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function SlingScreen({ onHome, level }) { const lv = (typeof level === "number") ? `&level=${level}` : ""; return <GameFrame title="Sling Squad" src={`/sling-squad.html?v=hud2${lv}`} onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=hud1" onHome={onHome} bg="#7fc7ff" />; }
 function MathCannonScreen({ onHome }) { return <GameFrame title="Math Cannon" src="/mathcannon-engine.html?v=1" onHome={onHome} bg="#12102a" />; }
@@ -1466,6 +1467,7 @@ export default function BuildableKids() {
   const [chessStart, setChessStart] = useState(null); // Session 7E: deep-link params handed to the chess engine (solo tier / same-device)
   const [landingId, setLandingId] = useState(null); // Session 7F: which game the shared landing is showing
   const [tennisStart, setTennisStart] = useState(null); // Session 7F: "solo" | "local" handoff to the Tennis engine
+  const [slingLevel, setSlingLevel] = useState(null); // which level index the Sling Journey launched into
   const openLanding = (id) => { setLandingId(id); setScreen(SCREEN_GAME_LANDING); };
   const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
@@ -1938,8 +1940,15 @@ export default function BuildableKids() {
   if (screen === SCREEN_MAZE) {
     return <MazeScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
+  if (screen === SCREEN_SLING_JOURNEY) {
+    const sl = GAME_CATALOG.find((g) => g.id === "sling");
+    return <GameJourney game={sl} gameId="sling"
+      onBack={() => setScreen(SCREEN_GAME_LANDING)}
+      onPlay={(lv, i) => { setSlingLevel(i); setScreen(SCREEN_SLING); }} />;
+  }
   if (screen === SCREEN_SLING) {
-    return <SlingScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <SlingScreen level={slingLevel}
+      onHome={() => setScreen(slingLevel != null ? SCREEN_SLING_JOURNEY : SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TANK) {
     return <TankScreen onHome={() => setScreen(SCREEN_HOME)} />;
