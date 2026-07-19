@@ -34,8 +34,9 @@ deliberately deferred (replace-first, remove-second).
   now `308`-redirect to `/app` in `vercel.json` (they used to serve the legacy
   `public/games-library.html` "Top Games" page). Nothing in the app linked to that page
   anymore, so this is the replacement step: the old URLs now land on the single Home front
-  door. The `games-library.html` file itself is LEFT in place until the redirect is verified
-  live, then it gets deleted next session.
+  door. Redirect verified live in production, then `public/games-library.html` (the old page)
+  and the stray `api/vercel.json` (a duplicate routing file Vercel ignores) were deleted from
+  `main` — replace-first, remove-second closed out in the same session.
 - **Dead internal picker code removed.** The unused `GamePicker` React component, the
   `SCREEN_GAME_PICKER` constant, its redirect-to-Home stub, and its `GrownUpButton`
   reference are gone from `src/BuildableKids.jsx`. The redirect stub had been live for a week

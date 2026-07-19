@@ -35,10 +35,14 @@ session after Mike confirms the redirect is live.
   file Vercel ignores) still names the old page - to be deleted with `games-library.html`.
 - **QA.** `qa-breaker` ALL CHECKS PASS. No game engine file was touched (only the React shell and
   `vercel.json`), so engine QA is unchanged; the shell was verified via a clean esbuild bundle.
-- **Deferred to next session (after live check):** delete `public/games-library.html` and the
-  stray `api/vercel.json`. Do NOT start the next session block.
+- **Live check + deletions (done same session).** Confirmed on production that
+  `www.buildablekids.com/games` and `/games-library.html` both `308`-redirect to `/app`. With
+  the redirect proven live, deleted `public/games-library.html` (the old page) and the stray
+  `api/vercel.json` (a duplicate routing file Vercel ignores) from `main`. Replace-first,
+  remove-second fully closed out. Did NOT start the next session block.
 
-Files: `vercel.json`, `src/BuildableKids.jsx`, `SESSION-LOG.md`, `README.md`.
+Files: `vercel.json`, `src/BuildableKids.jsx`, `public/games-library.html` (deleted),
+`api/vercel.json` (deleted), `SESSION-LOG.md`, `README.md`.
 
 
 ## 2026-07-18: Session 7F - Landing migration (every keeper on the shared landing)
