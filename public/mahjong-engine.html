@@ -38,6 +38,7 @@
   .setbtn{border:2px solid rgba(255,255,255,.1);background:#1f2c49;color:#fff;border-radius:16px;padding:12px 6px 10px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:8px}
   .setbtn.on{border-color:#7CF6B0;background:#233457}
   .setbtn img{width:46px;height:60px;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.4))}
+  .setbtn.scene img{width:76px;height:50px;object-fit:cover;border-radius:9px;filter:none;background:#0d1424}
   .cdone{margin-top:18px;width:100%;border:none;border-radius:999px;padding:14px;font-weight:900;font-size:16px;color:#0d1424;background:#7CF6B0;cursor:pointer;font-family:inherit}
 </style>
 <style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
@@ -60,6 +61,9 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     <p class="ctitle">Pick your tiles</p>
     <p class="csub">Choose the pictures you want to match</p>
     <div class="cgrid" id="setGrid"></div>
+    <p class="ctitle" style="margin-top:20px">Pick your scene</p>
+    <p class="csub">Choose the world behind your tiles</p>
+    <div class="cgrid" id="sceneGrid"></div>
     <button class="cdone" id="custDone">Done</button>
   </div></div>
 </div>
@@ -102,6 +106,17 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
     {key:"two",   name:"2 Fire", flames:2, foot:"Medium board", layers:[[8,5],[6,4],[4,2]]},           // 72 tiles
     {key:"three", name:"3 Fire", flames:3, foot:"Big board",    layers:[[10,6],[8,4],[6,3],[4,1]]},    // 114 tiles
   ],
+  // painted world behind the tiles (img => /api/images?kind=mahjongbg&id=<key>).
+  // grad = two-stop fallback sampled from the scene (always safe if art not cached yet);
+  // p = ambient drifting particle style; garden also falls back to the drawn koi pond.
+  worlds:[
+    {key:"garden", name:"Koi Garden",  grad:["#9cc2d6","#3d7a76"], p:"petal"},
+    {key:"candy",  name:"Candy Land",  grad:["#bfe3f2","#f4b9d4"], p:"sprinkle"},
+    {key:"jungle", name:"Jungle",      grad:["#8fd6c2","#2f7a52"], p:"leaf"},
+    {key:"space",  name:"Starry Sky",  grad:["#2b2b57","#0d1030"], p:"star"},
+    {key:"snow",   name:"Snowy Hills", grad:["#c9d8ee","#8aa6c8"], p:"snow"},
+    {key:"sunset", name:"Sunset",      grad:["#ffd9a8","#d98fae"], p:"petal"},
+  ],
 };
 
 /* Session 7B: level names can come from /mahjong/manifest.json (menu), FULL fallback to GAME_CONFIG. */
@@ -133,8 +148,12 @@ let history=[];                   // stack of removed [idA,idB] pairs (for Recal
 const CAP=3;                      // each helper (Recall / Hint / Mix) is capped at 3 per game
 let undosLeft=CAP, hintsLeft=CAP, mixesLeft=CAP;
 let nowMs=0, headless=false;
-let PREFS={ setIdx:0, lvlIdx:0 };
+let PREFS={ setIdx:0, lvlIdx:0, worldKey:"garden" };
+try{ const w=localStorage.getItem("bk_mahjong_world"); if(w) PREFS.worldKey=w; }catch(e){}
 let startedAt=0, elapsedMs=0, isNewBest=false, wonBest=0;   // clear timer + personal best
+let mistakes=0, wonStars=3, wonCheer="";                    // wrong taps this game + earned stars (1-3) + cheer line
+let matchAnims=[];                                          // matched tiles flying together as they pop
+let wrongFlash=[];                                          // {id,until,dur} red wobble on a wrong tap
 let combo=0, comboUntil=0, score=0;                        // chain matches for excitement + score
 let tray=[]; const TRAY_CAP=4; let trayShake=0;            // HARD (3 Fire) tray mode: parked unmatched tiles; overfill it and it's game over
 
@@ -230,6 +249,7 @@ function build(){
   history=[]; undosLeft=CAP; hintsLeft=CAP; mixesLeft=CAP; tray=[]; trayShake=0;
   startedAt=Date.now(); elapsedMs=0; isNewBest=false; wonBest=0;
   combo=0; comboUntil=0; score=0; demo=null;
+  mistakes=0; wonStars=3; matchAnims=[]; wrongFlash=[];
   if(!headless){ loadSetArt(set); layout(); showChrome(true); updateBanner(); updateChrome();
     ensureMusic(); if(!demoSeen()) startDemo(); }
 }
@@ -263,6 +283,28 @@ function celebrateMatch(cx,cy){
     BM.explode(fx, cx, cy, col, {n:Math.min(9+combo*3,28), pop:lab, popCol:"#fff",
       shake:Math.min(0.35,0.06+combo*0.03), flash:Math.min(0.28,0.05+combo*0.03)}); }
 }
+function flashWrong(id){ const dur=360; wrongFlash=wrongFlash.filter(f=>f.id!==id); wrongFlash.push({id,until:nowMs+dur,dur}); }
+function pushMatchAnim(a,b){
+  const w=view.tileW, h=view.tileH, pa=tilePx(a), pb=tilePx(b);
+  const mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+  matchAnims.push({face:a.face,x0:pa.x,y0:pa.y,mx,my,w,h,t0:nowMs});
+  matchAnims.push({face:b.face,x0:pb.x,y0:pb.y,mx,my,w,h,t0:nowMs});
+}
+function drawMatchAnims(){
+  if(!matchAnims.length) return; const DUR=300;
+  for(let i=matchAnims.length-1;i>=0;i--){ const m=matchAnims[i];
+    const k=(nowMs-m.t0)/DUR; if(k>=1){ matchAnims.splice(i,1); continue; }
+    const e=1-Math.pow(1-k,3), sc=1-0.5*e, al=1-e;
+    const cx=(m.x0+(m.mx-m.x0)*e)+m.w/2, cy=(m.y0+(m.my-m.y0)*e)+m.h/2;
+    const w=m.w*sc, h=m.h*sc, r=Math.max(4,w*0.14), dx=cx-w/2, dy=cy-h/2;
+    ctx.save(); ctx.globalAlpha=al;
+    ctx.fillStyle="#fff7df"; rr(ctx,dx,dy,w,h,r); ctx.fill();
+    const im=FACE_IMG[m.face], pad=w*0.12, iw=w-pad*2, ih=h-pad*2;
+    if(im&&im.complete&&im.naturalWidth){ const s=Math.min(iw/im.naturalWidth,ih/im.naturalHeight);
+      const dw=im.naturalWidth*s, dh=im.naturalHeight*s; try{ ctx.drawImage(im,dx+w/2-dw/2,dy+h/2-dh/2,dw,dh); }catch(e){} }
+    ctx.restore();
+  }
+}
 function tapTile(t){
   if(state!=="play"||!t||!isFree(t,tiles)) return;
   if(BA)BA.unlock();
@@ -272,13 +314,15 @@ function tapTile(t){
   if(selId<0){ selId=t.id; if(BA)BA.sfx("select"); return; }
   const a=tileById(selId), b=t;
   if(a && a.face===b.face){
+    if(!headless) pushMatchAnim(a,b);                 // tiles fly together as they pop
     a.gone=true; b.gone=true; selId=-1; history.push([a.id,b.id]);
     if(!headless){ const c1=tileCenter(a), c2=tileCenter(b); celebrateMatch((c1.x+c2.x)/2,(c1.y+c2.y)/2); } else celebrateMatch(0,0);
     updateBanner(); updateChrome();
     if(remaining()===0){ winGame(); }
     else if(!availableMatch()){ autoShuffle(); }     // safety net (uncapped): never let a kid get stuck
   } else {
-    // wrong pair — keep the newly tapped one selected (friendly), tiny nudge
+    // wrong pair — keep the newly tapped one selected (friendly), red wobble on both
+    mistakes++; flashWrong(a.id); flashWrong(b.id);
     selId=b.id; combo=0; if(BA)BA.sfx("nomatch"); if(BM&&!headless) BM.shake(fx,0.18);
   }
 }
@@ -347,12 +391,20 @@ function winGame(){
   // SPEED BONUS: clearing faster than "par" (tiles * 1.4s) adds points → quicker = better score
   const parSec=tiles.length*1.4, spent=elapsedMs/1000;
   score += Math.max(0, Math.round((parSec-spent)*15));
+  // STARS: 3 for a fast, clean clear; lose one for being slow, one for lots of misses
+  wonStars=3;
+  if(spent > parSec*1.5) wonStars--;
+  if(mistakes > Math.max(3, tiles.length*0.12)) wonStars--;
+  wonStars=Math.max(1,wonStars);
+  const CHEERS={3:["Perfect!","Superstar!","Wonderful!"],2:["Great job!","Well done!","Nicely done!"],1:["You did it!","Good work!","Cleared!"]};
+  const pool=CHEERS[wonStars]; wonCheer=pool[(Math.random()*pool.length)|0];
   const prevScore=getBestScore(PREFS.lvlIdx,PREFS.setIdx);
   if(!headless){ isNewBest=(score>prevScore); if(isNewBest) saveBestScore(score); wonBest=isNewBest?score:prevScore;
     const pt=getBest(PREFS.lvlIdx,PREFS.setIdx); if(elapsedMs && (!pt||elapsedMs<pt)) saveBest(elapsedMs); }
   state="win"; showChrome(false);
   if(BA)BA.sfx("win");
-  if(BM&&!headless){ for(let i=0;i<5;i++) BM.explode(fx, W*(0.15+0.175*i), H*0.4, i%2?"#FFD23F":"#7CF6B0", {n:16, pop:i===2?"You cleared it!":""}); }
+  if(BM&&!headless){ const conf=["#FFD23F","#7CF6B0","#67E8F9","#ff9ec4","#9B7BFF"];
+    for(let i=0;i<7;i++) BM.explode(fx, W*(0.12+0.13*i), H*(0.30+0.12*(i%2)), conf[i%conf.length], {n:26, shake:i===3?0.3:0, flash:i===3?0.25:0, pop:i===3?wonCheer:""}); }
   try{ if(window.parent) window.parent.postMessage({source:"buildable",kind:"win",
     meta:{ game:"mahjong", score:score, best:Math.max(score,wonBest||0), newBest:!!isNewBest,
       timeMs:elapsedMs, level:curLevel().name, set:curSet().name } },"*"); }catch(e){}
@@ -412,6 +464,14 @@ function drawTile(t){
   const free=isFree(t,tiles), sel=(t.id===selId);
   const hinted = hintPair && (t.id===hintPair[0]||t.id===hintPair[1]) && nowMs<hintUntil;
   const th=Math.max(3,w*0.11);
+  // wrong-tap wobble (a friendly little shake, fades out)
+  const wf=wrongFlash.find(f=>f.id===t.id && nowMs<f.until);
+  const wob = wf ? Math.sin(nowMs*0.045)*((wf.until-nowMs)/wf.dur)*5 : 0;
+  ctx.save(); if(wob) ctx.translate(wob,0);
+  // soft pulsing glow under the selected tile so the pick reads clearly
+  if(sel){ const pulse=0.5+0.5*Math.sin(nowMs*0.006);
+    ctx.save(); ctx.shadowColor="rgba(245,166,35,"+(0.55+0.4*pulse)+")"; ctx.shadowBlur=w*0.55;
+    ctx.fillStyle="#fff7df"; rr(ctx,p.x,p.y,w,h,r); ctx.fill(); ctx.restore(); }
   // 3D side/thickness (bottom-right)
   ctx.fillStyle="#b9843e"; rr(ctx,p.x+th,p.y+th,w,h,r); ctx.fill();
   // tile body
@@ -435,6 +495,8 @@ function drawTile(t){
   // dim blocked tiles so free ones read as tappable
   if(!free){ ctx.fillStyle="rgba(10,18,34,.34)"; rr(ctx,p.x,p.y,w,h,r); ctx.fill(); }
   if(hinted){ ctx.lineWidth=w*0.06; ctx.strokeStyle="#33d17a"; rr(ctx,p.x-2,p.y-2,w+4,h+4,r+2); ctx.stroke(); }
+  if(wf){ ctx.lineWidth=w*0.07; ctx.strokeStyle="rgba(255,90,90,"+((wf.until-nowMs)/wf.dur)+")"; rr(ctx,p.x-2,p.y-2,w+4,h+4,r+2); ctx.stroke(); }
+  ctx.restore();
 }
 function drawDemo(){
   const A=tileById(demo.a), B=tileById(demo.b);
@@ -504,22 +566,91 @@ function drawLose(){
   ctx.fillStyle="#8fa0c4"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Tap to try again", vw/2, py+ph-24);
   ctx.restore();
 }
+function drawStar(cx,cy,R,filled,ms){
+  ctx.save(); ctx.translate(cx,cy);
+  const pop=filled?(0.9+0.1*Math.sin(ms*0.006+cx)):1; ctx.scale(pop,pop);
+  ctx.beginPath();
+  for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, rr2=(i%2?R*0.44:R); const x=Math.cos(a)*rr2, y=Math.sin(a)*rr2; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.closePath();
+  if(filled){ ctx.fillStyle="#FFD23F"; ctx.fill(); ctx.lineWidth=R*0.12; ctx.strokeStyle="#F5A623"; ctx.stroke(); }
+  else { ctx.fillStyle="rgba(255,255,255,.10)"; ctx.fill(); ctx.lineWidth=R*0.1; ctx.strokeStyle="rgba(255,255,255,.28)"; ctx.stroke(); }
+  ctx.restore();
+}
 function drawWin(){
   const vw=(W&&isFinite(W)&&W>0)?W:900, vh=(H&&isFinite(H)&&H>0)?H:600;
   ctx.save();
-  const pw=Math.min(370,vw*0.88), ph=246, px=(vw-pw)/2, py=(vh-ph)/2;
+  const pw=Math.min(370,vw*0.88), ph=300, px=(vw-pw)/2, py=(vh-ph)/2;
   ctx.fillStyle="#16223c"; ctx.strokeStyle="rgba(255,255,255,.12)"; ctx.lineWidth=2;
   rr(ctx,px,py,pw,ph,22); ctx.fill(); ctx.stroke();
   ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillStyle="#fff";
-  ctx.font="900 26px 'Baloo 2',Nunito,sans-serif"; ctx.fillText("You cleared it!", vw/2, py+50);
-  ctx.fillStyle="#FFD23F"; ctx.font="900 34px 'Baloo 2',Nunito,sans-serif"; ctx.fillText(String(score), vw/2, py+96);
-  ctx.fillStyle="#a7b6d6"; ctx.font="800 13px Nunito,sans-serif"; ctx.fillText("SCORE", vw/2, py+114);
-  if(isNewBest){ ctx.fillStyle="#7CF6B0"; ctx.font="900 20px 'Baloo 2',Nunito,sans-serif"; ctx.fillText("New best score!", vw/2, py+148); }
-  else if(wonBest){ ctx.fillStyle="#a7b6d6"; ctx.font="700 16px Nunito,sans-serif"; ctx.fillText("Best  "+wonBest, vw/2, py+146); }
-  ctx.fillStyle="#cfe3ff"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Time  "+fmtTime(elapsedMs)+"  ·  faster = higher score", vw/2, py+178);
+  ctx.font="900 26px 'Baloo 2',Nunito,sans-serif"; ctx.fillText(wonCheer||"You cleared it!", vw/2, py+46);
+  const sr=20, gap=52;
+  for(let i=0;i<3;i++){ const cx=vw/2+(i-1)*gap, cy=py+92+(i===1?-8:0); drawStar(cx,cy,sr,i<wonStars,nowMs); }
+  ctx.fillStyle="#FFD23F"; ctx.font="900 34px 'Baloo 2',Nunito,sans-serif"; ctx.fillText(String(score), vw/2, py+150);
+  ctx.fillStyle="#a7b6d6"; ctx.font="800 13px Nunito,sans-serif"; ctx.fillText("SCORE", vw/2, py+168);
+  if(isNewBest){ ctx.fillStyle="#7CF6B0"; ctx.font="900 20px 'Baloo 2',Nunito,sans-serif"; ctx.fillText("New best score!", vw/2, py+200); }
+  else if(wonBest){ ctx.fillStyle="#a7b6d6"; ctx.font="700 16px Nunito,sans-serif"; ctx.fillText("Best  "+wonBest, vw/2, py+200); }
+  ctx.fillStyle="#cfe3ff"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Time  "+fmtTime(elapsedMs)+"  ·  faster = higher score", vw/2, py+232);
   ctx.fillStyle="#8fa0c4"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Tap to play again", vw/2, py+ph-22);
   ctx.restore();
 }
+// ---------- PAINTED WORLD BACKDROP (AI art via /api/images) + AMBIENT PARTICLES ----------
+// Each world pulls a soft painted scene; the drawn koi pond below is the always-safe
+// fallback for the Garden world while art loads (or if it never does).
+let bgImg=null, bgKey=null;
+function curWorld(){ return (GAME_CONFIG.worlds||[]).find(w=>w.key===PREFS.worldKey)||(GAME_CONFIG.worlds||[])[0]||{key:"garden",grad:["#9cc2d6","#3d7a76"],p:"petal"}; }
+function loadBg(){
+  const key=curWorld().key; if(bgKey===key) return; bgKey=key; bgImg=null;
+  if(headless||typeof Image==="undefined") return;
+  const im=new Image(); im.decoding="async";
+  im.onload=()=>{ if(bgKey===key) bgImg=im; };
+  im.onerror=()=>{ if(bgKey===key) bgImg=null; };
+  im.src="/api/images?kind=mahjongbg&id="+key+"&v=1";
+}
+let _parts=[], _partKey=null, _lastPMs=0;
+function seedParticles(){ const p=curWorld().p; _parts=[]; const n=(p==="star")?46:26;
+  for(let i=0;i<n;i++) _parts.push({x:Math.random(),y:Math.random(),r:0.5+Math.random(),sp:0.25+Math.random()*0.6,sw:Math.random()*6.28,ph:Math.random()*6.28});
+  _partKey=p; }
+function drawParticles(c,W,H){
+  const p=curWorld().p; if(_partKey!==p) seedParticles();
+  const dt=_lastPMs?Math.min(0.05,(nowMs-_lastPMs)/1000):0; _lastPMs=nowMs;
+  const U=Math.max(6,Math.min(W,H)/85);
+  c.save();
+  for(const q of _parts){
+    if(p==="star"){
+      c.globalAlpha=(0.3+0.6*(0.5+0.5*Math.sin(nowMs*0.002*q.sp*3+q.ph)))*0.9; c.fillStyle="#fff";
+      c.beginPath(); c.arc(q.x*W,q.y*H,q.r*U*0.32,0,7); c.fill(); continue;
+    }
+    q.y+=dt*q.sp*0.05; q.sw+=dt*1.5;
+    if(q.y>1.06){ q.y=-0.05; q.x=Math.random(); }
+    const x=(q.x+Math.sin(q.sw)*0.02)*W, y=q.y*H, s=q.r*U;
+    c.globalAlpha=0.5;
+    if(p==="snow"){ c.fillStyle="#fff"; c.beginPath(); c.arc(x,y,s*0.38,0,7); c.fill(); }
+    else if(p==="leaf"){ c.fillStyle="#7bbf72"; c.save(); c.translate(x,y); c.rotate(q.sw); c.beginPath(); c.ellipse(0,0,s*0.55,s*0.26,0,0,7); c.fill(); c.restore(); }
+    else if(p==="sprinkle"){ const cols=["#ff9ec4","#ffe27a","#7ee0a0","#9fd0ff"]; c.fillStyle=cols[(q.ph*7|0)%4]; c.save(); c.translate(x,y); c.rotate(q.sw); c.fillRect(-s*0.1,-s*0.38,s*0.2,s*0.76); c.restore(); }
+    else { c.fillStyle="rgba(255,200,222,0.9)"; c.save(); c.translate(x,y); c.rotate(q.sw*0.5); c.beginPath(); c.ellipse(0,0,s*0.5,s*0.27,0,0,7); c.fill(); c.restore(); }
+  }
+  c.restore(); c.globalAlpha=1;
+}
+function drawBackdrop(c,W,H,ms){
+  const wd=curWorld();
+  let g=c.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,wd.grad[0]); g.addColorStop(1,wd.grad[1]);
+  c.fillStyle=g; c.fillRect(0,0,W,H);
+  if(bgImg){
+    const iw=bgImg.naturalWidth||bgImg.width, ih=bgImg.naturalHeight||bgImg.height;
+    if(iw&&ih){ const s=Math.max(W/iw,H/ih), bw=iw*s, bh=ih*s;
+      try{ c.drawImage(bgImg,(W-bw)/2,(H-bh)/2,bw,bh); }catch(e){} }
+  } else if(wd.key==="garden"){
+    drawScene(c,W,H,ms);   // gorgeous drawn koi pond while the painted art loads
+  }
+  // soft center light so the cream tiles always pop
+  let vg=c.createRadialGradient(W/2,H*0.5,Math.min(W,H)*0.24,W/2,H*0.5,Math.max(W,H)*0.72);
+  vg.addColorStop(0,"rgba(255,252,240,0.12)"); vg.addColorStop(1,"rgba(10,16,30,0.30)");
+  c.fillStyle=vg; c.fillRect(0,0,W,H);
+  drawParticles(c,W,H);
+}
+
 // ---------- SERENE GARDEN / KOI-POND BACKDROP (procedural, gently animated) ----------
 // Calm koi-pond scene drawn behind the tiles: dawn sky, swaying bamboo, hanging
 // paper lanterns, a teal pond with shimmering ripples, lily pads + lotus, and a few
@@ -678,13 +809,14 @@ function draw(){
   ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.clearRect(0,0,W,H);
   // serene garden / koi-pond backdrop (procedural, gently animated)
-  drawScene(ctx,W,H,nowMs);
+  drawBackdrop(ctx,W,H,nowMs);
   const so=(BM&&fx)?BM.shakeOffset(fx):{x:0,y:0};
   ctx.save(); ctx.translate(so.x,so.y);
   if(!view.b && tiles.length) layout();
   // paint back-to-front: lower z first, then top rows, so covers read correctly
   const order=tiles.filter(t=>!t.gone).sort((a,b)=> a.z-b.z || a.y-b.y || a.x-b.x );
   for(const t of order) drawTile(t);
+  drawMatchAnims();
   ctx.restore();
   if(BM){ BM.draw(ctx,fx,{W:W,H:H}); }
   if(trayMode() && state!=="menu") drawTray();
@@ -763,6 +895,14 @@ function openCustomize(){
     b.className="setbtn"+(i===PREFS.setIdx?" on":"");
     b.innerHTML='<img src="'+GAME_CONFIG.base+s.key+'/01.png" alt=""><span>'+s.name+'</span>';
     b.onclick=()=>{ PREFS.setIdx=i; openCustomize(); }; g.appendChild(b); });
+  const sg=document.getElementById("sceneGrid");
+  if(sg){ sg.innerHTML="";
+    (GAME_CONFIG.worlds||[]).forEach((w)=>{ const b=document.createElement("button");
+      b.className="setbtn scene"+(w.key===PREFS.worldKey?" on":"");
+      b.innerHTML='<img src="/api/images?kind=mahjongbg&id='+w.key+'&v=1" alt=""><span>'+w.name+'</span>';
+      b.onclick=()=>{ PREFS.worldKey=w.key; try{ localStorage.setItem("bk_mahjong_world",w.key); }catch(e){} loadBg(); openCustomize(); };
+      sg.appendChild(b); });
+  }
   el.classList.remove("hide");
 }
 
@@ -779,7 +919,7 @@ function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>
 }
 if(typeof document!=="undefined" && document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
-  resize(); window.addEventListener("resize",resize);
+  resize(); window.addEventListener("resize",resize); loadBg();
   const onTap=(e)=>{ if(state==="win"){ if(BA)BA.unlock(); showMenu(); return; }
     if(state==="lose"){ if(BA)BA.unlock(); build(); return; }
     if(state!=="play") return;

@@ -185,6 +185,24 @@ function build(q) {
     if (!subject) return null;
     return { descriptor: `tennis|nature|${id}`, prompt: `${subject}. ${COURT_STYLE}`, transparent: false, quality: "medium" };
   }
+  if (kind === "mahjongbg") {
+    const id = (q.id || "").toString();
+    // Soft painted world scenes drawn BEHIND the mahjong tile pyramid. Kept calm, low
+    // contrast and open in the center so the cream tiles pop on top. id maps to a world
+    // key in mahjong-engine.html GAME_CONFIG.worlds. Absolutely NOT pixel art.
+    const MJ_STYLE = "Soft painterly children's storybook scene, smooth gentle brushwork and soft gradients, calm muted low-contrast colors, warm soft lighting, high-resolution smooth digital painting (absolutely NOT pixel art — no pixelation, no visible pixels, no 8-bit, no retro, no dithering), the middle of the image kept soft, open and uncluttered with the scenery framing the top and edges, dreamy and peaceful, no people, no characters, no tiles, no board, no game pieces, no text, no words, no letters, no UI, child-friendly ages 4-8";
+    const SCENES = {
+      garden:  "A serene Japanese koi garden at soft dawn: a calm teal pond, a few floating lily pads and a pink lotus, slender green bamboo and a red paper lantern framing the edges, gentle morning mist, pastel sky",
+      candy:   "A dreamy pastel candy land: rolling pink and mint cotton-candy hills, lollipop trees and gumdrops framing the edges, a soft baby-blue sky with fluffy clouds, sprinkles drifting, sweet and gentle",
+      jungle:  "A lush calm storybook jungle clearing: big soft leafy fronds, hanging vines and glowing tropical flowers framing the edges, warm dappled green light, a soft misty background, peaceful",
+      space:   "A gentle dreamy night sky: deep soft indigo and violet with a scatter of twinkling stars, a soft glowing crescent moon and a faint pastel nebula toward the edges, calm and magical",
+      snow:    "A peaceful pastel winter scene: soft snowy hills, a few frosted pine trees and gentle rounded snowdrifts framing the edges, a pale lavender-blue sky, soft falling snowflakes, calm and cozy",
+      sunset:  "A calm warm sunset over still water: soft peach, coral and lavender sky with a low glowing sun, gentle silhouetted reeds and hills framing the edges, soft reflections, tranquil and dreamy",
+    };
+    const subject = SCENES[id];
+    if (!subject) return null;
+    return { descriptor: `mahjongbg|scene|${id}`, prompt: `${subject}. ${MJ_STYLE}`, transparent: false, quality: "medium" };
+  }
   if (kind === "soundfx") {
     const id = (q.id || "").toString();
     const FX_STYLE = "bright bold glossy 3D cartoon icon, a single centered subject filling the frame, vibrant candy colors, soft studio lighting, thick clean rounded shapes, cute friendly and child-friendly ages 4-8, no text, no words, no letters, no UI, transparent background";

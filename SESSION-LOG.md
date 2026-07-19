@@ -1,5 +1,15 @@
 # Buildable Kids — Session Log
 
+## 2026-07-18: Session 8M - Mahjong polish (painted worlds + juice + stars)
+
+Mahjong got a visual + feel pass. Backgrounds are now real painted worlds pulled from the
+image service (`kind=mahjongbg`) instead of only the code-drawn koi pond; the pond stays as
+the Garden fallback. Kids pick a scene from a new grid in the customize sheet (saved to
+localStorage). Added per-world ambient particles, a glowing selected tile, matched-pair
+fly-together, a red wobble on wrong taps, and a star-rated confetti win screen. Only
+`api/images.js` and `public/mahjong-engine.html` changed; `qa-mahjong.mjs` stays green.
+
+
 ## 2026-07-18: Session 7G - Routes and retirement (folds into 7D)
 
 Small cleanup session: finish retiring the old Games picker so Home is the one and only

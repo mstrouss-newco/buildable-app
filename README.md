@@ -6,6 +6,25 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 8M: Mahjong polish — painted worlds, match juice, star win screen (July 18 2026)
+
+Leveled up Mahjong Solitaire (`public/mahjong-engine.html`) beyond the code-drawn koi pond.
+
+- **Painted world backdrops.** New `kind=mahjongbg` in `api/images.js` serves six soft
+  painterly scenes (Koi Garden, Candy Land, Jungle, Starry Sky, Snowy Hills, Sunset),
+  same pattern as Tennis worlds. Engine adds a `worlds` config + `loadBg()` that cover-fits
+  the art, with a two-stop gradient fallback and the original drawn koi pond as the Garden
+  fallback while art loads. A "Pick your scene" grid sits under the tile picker; choice is
+  saved to `localStorage` (`bk_mahjong_world`).
+- **Ambient particles.** Per-world drifting petals / sprinkles / leaves / twinkling stars /
+  snow behind the tiles, low alpha so tiles still pop.
+- **Match juice.** Selected tile gets a soft pulsing glow, matched pairs fly together as
+  they pop, and a wrong tap gives both tiles a friendly red wobble.
+- **Win screen.** 1-3 star rating (by speed + mistakes), a cheer line, and a bigger
+  confetti burst. Loser/tray flow unchanged.
+- **QA:** `qa-mahjong.mjs` green (all difficulty x set boards solvable + never-stuck,
+  render smoke ok, shared manifest still loads).
+
 ## Session 7G: Routes and retirement — one front door, old picker page redirected (July 18 2026)
 
 Cleanup pass that finishes retiring the old Games picker. Two things shipped, and one is
