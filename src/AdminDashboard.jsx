@@ -133,6 +133,7 @@ function BackOfficeNav({ active, onKids }) {
       <span style={{ display: 'flex', gap: '4px', marginLeft: '6px' }}>
         <a href="/admin" style={tab(active === 'admin')}>Admin</a>
         <a href="/planner" style={tab(active === 'planner')}>Planner</a>
+        <a href="/editor" style={tab(active === 'editor')}>Editor</a>
         <a href="/asset-library" style={tab(active === 'assets')}>Assets</a>
       </span>
       <button style={kids} onClick={onKids}>Kids app &rarr;</button>
