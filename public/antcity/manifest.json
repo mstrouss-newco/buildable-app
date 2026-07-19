@@ -21,7 +21,7 @@
 
   "art": {
     "badge": "antcity/badge/v1",
-    "hero": "antcity/hero/queen-v1",
+    "hero": "/api/asset-studio?asset=ant_city/queen_ant/meadow/main",
     "winCelebration": "shared/win/confetti-v1",
     "loadingScreen": "antcity/loading/v1",
     "music": "audio/antcity/meadow-v1"
@@ -39,7 +39,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/dig-marker-v1"
       }
     },
@@ -53,7 +53,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/crumb-v1"
       }
     },
@@ -67,7 +67,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/nursery-v1"
       }
     },
@@ -81,8 +81,8 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
-        "prop": "antcity/prop/egg-v1"
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
+        "prop": "/api/asset-studio?asset=ant_city/ant_eggs/meadow/main"
       }
     },
     {
@@ -95,7 +95,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/colony-v1"
       }
     },
@@ -109,7 +109,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/storage-v1"
       }
     },
@@ -123,7 +123,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-rain-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/flood-v1"
       }
     },
@@ -137,7 +137,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/colony-v1"
       }
     },
@@ -151,7 +151,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/den-v1"
       }
     },
@@ -165,7 +165,7 @@
       "parts": {
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/deep-v1",
-        "ant": "antcity/ant/classic-v1",
+        "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
         "prop": "antcity/prop/buried-find-v1"
       }
     }
@@ -173,7 +173,7 @@
 
   "customization": [
     { "slot": "Ant", "options": [
-      { "name": "Classic", "asset": "antcity/ant/classic-v1", "price": 0 },
+      { "name": "Classic", "asset": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal", "price": 0 },
       { "name": "Ruby", "asset": "antcity/ant/ruby-v1", "price": 40 },
       { "name": "Emerald", "asset": "antcity/ant/emerald-v1", "price": 40 }
     ]},

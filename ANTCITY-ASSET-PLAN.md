@@ -58,6 +58,27 @@ icon, and the Berry Bushes / Rich Loam customization variants. Registering these
 shared `community_*` tables happens once the game deploys (so the URLs resolve). Any piece
 can later be swapped for an AI-pipeline render without touching the engine.
 
+## Delivered via the AI pipeline (LIVE in the shared library)
+
+Generated at high quality through the Asset Studio (Create tab, gpt-image-1) and kept, so
+each is addressable now at `/api/asset-studio?asset=<slug>`. Style: glossy storybook
+cartoon (the house look, matches the other games). These supersede the vector starters for
+the pieces they cover; the vectors remain the drawn fallback.
+
+| Manifest ID | Live asset slug (`/api/asset-studio?asset=`) |
+|---|---|
+| `antcity/hero/queen-v1` | `ant_city/queen_ant/meadow/main` |
+| `antcity/ant/classic-v1` | `ant_city/worker_ants/meadow/idle_normal` |
+| worker poses (9) | `ant_city/worker_ants/meadow/{idle,carrying,digging}_{normal,happy,tired}` |
+| `antcity/prop/egg-v1` | `ant_city/ant_eggs/meadow/main` |
+| tunnel decor (4) | `ant_city/tunnels/meadow/{entrance,junction}_{normal,decorated}` |
+
+Notes: the meadow background also generated nicely but was too large to store (HTTP 413),
+so keep using the Sling + Kenney meadow for the surface. A couple worker-sheet cells came
+out off-model (one strawberry, one ant-in-a-hole); the clean poses (idle_normal,
+idle_happy, the digging/carrying ants) are plenty. Still to generate later if wanted:
+rooms (nursery/storage/den), food, buried find, badge, loading (vectors cover these today).
+
 ## Coverage gaps (honest)
 
 - **Ants, eggs, rooms, buried find, badge, loading:** no ant or bug art exists in the
