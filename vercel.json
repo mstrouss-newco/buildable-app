@@ -73,15 +73,18 @@
     },
     {
       "src": "/games-library.html",
-      "dest": "/games-library.html"
+      "status": 308,
+      "headers": { "Location": "/app" }
     },
     {
       "src": "/games",
-      "dest": "/games-library.html"
+      "status": 308,
+      "headers": { "Location": "/app" }
     },
     {
       "src": "/library",
-      "dest": "/games-library.html"
+      "status": 308,
+      "headers": { "Location": "/app" }
     },
     {
       "src": "/croctot.html",
