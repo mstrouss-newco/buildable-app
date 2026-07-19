@@ -7,17 +7,25 @@
   "color": "#F0B429",
   "ageBand": "5-8",
   "shellVersion": 2,
-
   "features": {
     "demoOnLoad": true,
     "journey": true,
     "customization": true,
     "coins": true,
-    "buddy": { "on": true, "personality": "coach" },
+    "buddy": {
+      "on": true,
+      "personality": "coach"
+    },
     "multiplayer": "off",
-    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+    "learning": {
+      "beforeUnlock": false,
+      "coinTopUp": true,
+      "bonusAfterWin": false,
+      "subjects": [
+        "math"
+      ]
+    }
   },
-
   "art": {
     "badge": "mahjong/badge/v1",
     "hero": "mahjong/hero/v1",
@@ -25,20 +33,74 @@
     "loadingScreen": "mahjong/loading/v1",
     "music": "audio/mahjong/lofi-v1"
   },
-
   "levels": [
-    { "id": "one-fire",   "name": "1 Fire", "desc": "Small board",  "difficulty": 1, "unlocked": true, "journeyBadge": "badges/one/v1",   "parts": { "board": "small" } },
-    { "id": "two-fire",   "name": "2 Fire", "desc": "Medium board", "difficulty": 3,                   "journeyBadge": "badges/two/v1",   "parts": { "board": "medium" } },
-    { "id": "three-fire", "name": "3 Fire", "desc": "Big board",    "difficulty": 5,                   "journeyBadge": "badges/three/v1", "parts": { "board": "big" } }
+    {
+      "id": "one-fire",
+      "name": "1 Fire",
+      "desc": "Small board",
+      "difficulty": 1,
+      "unlocked": true,
+      "journeyBadge": "badges/one/v1",
+      "parts": {
+        "board": "small"
+      }
+    },
+    {
+      "id": "two-fire",
+      "name": "2 Fire",
+      "desc": "Medium board",
+      "difficulty": 3,
+      "journeyBadge": "badges/two/v1",
+      "parts": {
+        "board": "medium"
+      }
+    },
+    {
+      "id": "three-fire",
+      "name": "3 Fire",
+      "desc": "Big board",
+      "difficulty": 5,
+      "journeyBadge": "badges/three/v1",
+      "parts": {
+        "board": "big"
+      }
+    }
   ],
-
   "customization": [
-    { "slot": "Tiles", "options": [
-      { "name": "Animals",  "asset": "mahjong/tiles/animals",  "price": 0 },
-      { "name": "Cards",    "asset": "mahjong/tiles/cards",    "price": 0 },
-      { "name": "Candy",    "asset": "mahjong/tiles/candy",    "price": 0 },
-      { "name": "Shapes",   "asset": "mahjong/tiles/shapes",   "price": 0 },
-      { "name": "Stickers", "asset": "mahjong/tiles/stickers", "price": 0 }
-    ]}
+    {
+      "slot": "Tiles",
+      "options": [
+        {
+          "name": "Classic",
+          "asset": "mahjong/tiles/classic",
+          "price": 0
+        },
+        {
+          "name": "Animals",
+          "asset": "mahjong/tiles/animals",
+          "price": 0
+        },
+        {
+          "name": "Cards",
+          "asset": "mahjong/tiles/cards",
+          "price": 0
+        },
+        {
+          "name": "Candy",
+          "asset": "mahjong/tiles/candy",
+          "price": 0
+        },
+        {
+          "name": "Shapes",
+          "asset": "mahjong/tiles/shapes",
+          "price": 0
+        },
+        {
+          "name": "Stickers",
+          "asset": "mahjong/tiles/stickers",
+          "price": 0
+        }
+      ]
+    }
   ]
 }

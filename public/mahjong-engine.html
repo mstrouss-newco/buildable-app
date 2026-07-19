@@ -94,6 +94,7 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
   base:"/game-assets/mahjong-tiles/",
   // tile-face sets the kid can pick — CC0 Kenney art (see LICENSE.txt in that folder)
   sets:[
+    {key:"classic",  name:"Classic",  count:24, full:true},
     {key:"animals",  name:"Animals",  count:24},
     {key:"cards",    name:"Cards",    count:24},
     {key:"candy",    name:"Candy",    count:20},
@@ -106,16 +107,14 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
     {key:"two",   name:"2 Fire", flames:2, foot:"Medium board", layers:[[8,5],[6,4],[4,2]]},           // 72 tiles
     {key:"three", name:"3 Fire", flames:3, foot:"Big board",    layers:[[10,6],[8,4],[6,3],[4,1]]},    // 114 tiles
   ],
-  // painted world behind the tiles (img => /api/images?kind=mahjongbg&id=<key>).
-  // grad = two-stop fallback sampled from the scene (always safe if art not cached yet);
-  // p = ambient drifting particle style; garden also falls back to the drawn koi pond.
+  // painted world behind the tiles — real hand-painted scene art under
+  // /game-assets/mahjong-tiles/backgrounds/. grad = two-stop fallback shown while the
+  // image loads; p = ambient drifting particle style layered on top.
   worlds:[
-    {key:"garden", name:"Koi Garden",  grad:["#9cc2d6","#3d7a76"], p:"petal"},
-    {key:"candy",  name:"Candy Land",  grad:["#bfe3f2","#f4b9d4"], p:"sprinkle"},
-    {key:"jungle", name:"Jungle",      grad:["#8fd6c2","#2f7a52"], p:"leaf"},
-    {key:"space",  name:"Starry Sky",  grad:["#2b2b57","#0d1030"], p:"star"},
-    {key:"snow",   name:"Snowy Hills", grad:["#c9d8ee","#8aa6c8"], p:"snow"},
-    {key:"sunset", name:"Sunset",      grad:["#ffd9a8","#d98fae"], p:"petal"},
+    {key:"bamboo",  name:"Bamboo Garden", src:"/game-assets/mahjong-tiles/backgrounds/bamboo.webp?v=1",  grad:["#cfe0cf","#8fae7e"], p:"leaf"},
+    {key:"koi",     name:"Koi Pond",      src:"/game-assets/mahjong-tiles/backgrounds/koi.webp?v=1",     grad:["#bcd9cf","#5f9e94"], p:"petal"},
+    {key:"moonlit", name:"Moonlit Night", src:"/game-assets/mahjong-tiles/backgrounds/moonlit.webp?v=1", grad:["#2b3a63","#141d3a"], p:"star"},
+    {key:"blossom", name:"Cherry Blossom",src:"/game-assets/mahjong-tiles/backgrounds/blossom.webp?v=1", grad:["#ffe6d2","#e9b8c4"], p:"petal"},
   ],
 };
 
@@ -148,7 +147,7 @@ let history=[];                   // stack of removed [idA,idB] pairs (for Recal
 const CAP=3;                      // each helper (Recall / Hint / Mix) is capped at 3 per game
 let undosLeft=CAP, hintsLeft=CAP, mixesLeft=CAP;
 let nowMs=0, headless=false;
-let PREFS={ setIdx:0, lvlIdx:0, worldKey:"garden" };
+let PREFS={ setIdx:0, lvlIdx:0, worldKey:"bamboo" };
 try{ const w=localStorage.getItem("bk_mahjong_world"); if(w) PREFS.worldKey=w; }catch(e){}
 let startedAt=0, elapsedMs=0, isNewBest=false, wonBest=0;   // clear timer + personal best
 let mistakes=0, wonStars=3, wonCheer="";                    // wrong taps this game + earned stars (1-3) + cheer line
@@ -480,7 +479,12 @@ function drawTile(t){
   // inset face panel
   const pad=w*0.12, iw=w-pad*2, ih=h-pad*2;
   const im=FACE_IMG[t.face];
-  if(im && im.complete && im.naturalWidth){
+  if(curSet().full && im && im.complete && im.naturalWidth){
+    // Classic tiles are whole-tile art (cream body + symbol) — fill the tile face
+    ctx.save(); rr(ctx,p.x,p.y,w,h,r); ctx.clip();
+    try{ ctx.drawImage(im, p.x, p.y, w, h); }catch(e){}
+    ctx.restore();
+  } else if(im && im.complete && im.naturalWidth){
     const s=Math.min(iw/im.naturalWidth, ih/im.naturalHeight);
     const dw=im.naturalWidth*s, dh=im.naturalHeight*s;
     try{ ctx.drawImage(im, p.x+w/2-dw/2, p.y+h/2-dh/2, dw, dh); }catch(e){}
@@ -605,7 +609,7 @@ function loadBg(){
   const im=new Image(); im.decoding="async";
   im.onload=()=>{ if(bgKey===key) bgImg=im; };
   im.onerror=()=>{ if(bgKey===key) bgImg=null; };
-  im.src="/api/images?kind=mahjongbg&id="+key+"&v=1";
+  im.src=curWorld().src;
 }
 let _parts=[], _partKey=null, _lastPMs=0;
 function seedParticles(){ const p=curWorld().p; _parts=[]; const n=(p==="star")?46:26;
@@ -899,7 +903,7 @@ function openCustomize(){
   if(sg){ sg.innerHTML="";
     (GAME_CONFIG.worlds||[]).forEach((w)=>{ const b=document.createElement("button");
       b.className="setbtn scene"+(w.key===PREFS.worldKey?" on":"");
-      b.innerHTML='<img src="/api/images?kind=mahjongbg&id='+w.key+'&v=1" alt=""><span>'+w.name+'</span>';
+      b.innerHTML='<img src="'+w.src+'" alt=""><span>'+w.name+'</span>';
       b.onclick=()=>{ PREFS.worldKey=w.key; try{ localStorage.setItem("bk_mahjong_world",w.key); }catch(e){} loadBg(); openCustomize(); };
       sg.appendChild(b); });
   }

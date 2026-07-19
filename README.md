@@ -6,6 +6,22 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 8N: Mahjong real art — traditional tiles + 4 painted scenes (July 18 2026)
+
+Swapped Mahjong's AI-prompt backgrounds and the placeholder tile look for real hand-painted art Mike provided.
+
+- **4 painted world scenes** (static art, free + instant) under
+  `public/game-assets/mahjong-tiles/backgrounds/`: Bamboo Garden (default), Koi Pond,
+  Moonlit Night, Cherry Blossom. `worlds` now carry a `src` (the webp) with a gradient
+  fallback while it loads; the Scene picker and `loadBg()` read `src` instead of `/api/images`.
+- **New "Classic" tile set** (traditional dots / bamboo / characters / winds / dragons /
+  flowers) sliced from Mike's atlas to `public/game-assets/mahjong-tiles/classic/01..24.png`.
+  It is the default set. Sets flagged `full:true` render as whole-tile art (the tile image
+  fills the face over the cream backing) so real mahjong tiles read authentically; other
+  picture sets keep the inset look. Added Classic to `public/mahjong/manifest.json` tiles.
+- **QA:** `qa-mahjong.mjs` green (all 6 sets x 3 boards solvable + never-stuck, render ok,
+  manifest validates, tile loadout matches 6 sets).
+
 ## Session 8M: Mahjong polish — painted worlds, match juice, star win screen (July 18 2026)
 
 Leveled up Mahjong Solitaire (`public/mahjong-engine.html`) beyond the code-drawn koi pond.

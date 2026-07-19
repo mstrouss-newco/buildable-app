@@ -1,5 +1,14 @@
 # Buildable Kids — Session Log
 
+## 2026-07-18: Session 8N - Mahjong real art (traditional tiles + painted scenes)
+
+Replaced the AI-generated mahjong backgrounds with 4 hand-painted scene webps Mike supplied
+(Bamboo Garden default, Koi Pond, Moonlit Night, Cherry Blossom) served from
+game-assets/mahjong-tiles/backgrounds; worlds now point at a static `src`. Added a traditional
+"Classic" tile set (24 tiles sliced from Mike's atlas) as the default set, rendered full-tile
+via a `full:true` flag. Manifest tiles slot updated to 6 options; qa-mahjong.mjs stays green.
+
+
 ## 2026-07-18: Session 8M - Mahjong polish (painted worlds + juice + stars)
 
 Mahjong got a visual + feel pass. Backgrounds are now real painted worlds pulled from the
