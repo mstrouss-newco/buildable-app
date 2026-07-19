@@ -222,14 +222,24 @@ export function verifyKidPin(kid, pin) {
 // ---- KID PROFILES (branch: account -> Supabase, else -> guest) ----
 export async function listKidProfiles() {
   if (isSignedIn()) {
-    // The DB is the source of truth for the buddy: ALWAYS request the helper
-    // column (it exists in prod). We deliberately do NOT fall back to a
-    // helper-less select on error -- a helper-less list would falsely re-trigger
-    // buddy onboarding, so we surface the error instead of hiding it.
-    const kids = await restFetch(
-      "kid_profiles?select=id,display_name:name,avatar,grade,pin_hash,helper,created_at&order=created_at.asc",
-      { method: "GET" }
-    );
+    let kids;
+    try {
+      // Ideal query -- works once the 6B migration adds grade + pin_hash.
+      kids = await restFetch(
+        "kid_profiles?select=id,display_name:name,avatar,grade,pin_hash,helper,created_at&order=created_at.asc",
+        { method: "GET" }
+      );
+    } catch (e) {
+      // grade / pin_hash may not exist in prod yet. Fall back to a select that
+      // STILL includes helper: the buddy is DB-sourced, so helper must NEVER be
+      // dropped -- dropping it (the old fallback did) is exactly what re-triggered
+      // buddy onboarding. Log it (not silent) so a real outage is visible.
+      console.warn("listKidProfiles: full select failed (missing grade/pin_hash column?), retrying with a helper-preserving select", e);
+      kids = await restFetch(
+        "kid_profiles?select=id,display_name:name,avatar,helper,created_at&order=created_at.asc",
+        { method: "GET" }
+      );
+    }
     // Seed the per-device copy (bk_helper_<id>) from the DB value so getKidHelper
     // is trustworthy on a brand-new browser and never re-creates an existing buddy.
     try {
