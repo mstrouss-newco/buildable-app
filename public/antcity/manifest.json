@@ -20,7 +20,7 @@
   },
 
   "art": {
-    "badge": "antcity/badge/v1",
+    "badge": "/api/asset-studio?asset=ant_city/prop/meadow/badge",
     "hero": "/api/asset-studio?asset=ant_city/queen_ant/meadow/main",
     "winCelebration": "shared/win/confetti-v1",
     "loadingScreen": "antcity/loading/v1",
@@ -54,7 +54,7 @@
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
         "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
-        "prop": "antcity/prop/crumb-v1"
+        "prop": "/api/asset-studio?asset=ant_city/prop/meadow/food"
       }
     },
     {
@@ -68,7 +68,7 @@
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
         "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
-        "prop": "antcity/prop/nursery-v1"
+        "prop": "/api/asset-studio?asset=ant_city/prop/meadow/nursery"
       }
     },
     {
@@ -110,7 +110,7 @@
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
         "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
-        "prop": "antcity/prop/storage-v1"
+        "prop": "/api/asset-studio?asset=ant_city/prop/meadow/storage"
       }
     },
     {
@@ -152,7 +152,7 @@
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/sandy-v1",
         "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
-        "prop": "antcity/prop/den-v1"
+        "prop": "/api/asset-studio?asset=ant_city/prop/meadow/den"
       }
     },
     {
@@ -166,7 +166,7 @@
         "surface": "antcity/surface/meadow-v1",
         "soil": "antcity/soil/deep-v1",
         "ant": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
-        "prop": "antcity/prop/buried-find-v1"
+        "prop": "/api/asset-studio?asset=ant_city/prop/meadow/buried_find"
       }
     }
   ],

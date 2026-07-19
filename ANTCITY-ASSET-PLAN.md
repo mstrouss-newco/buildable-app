@@ -72,12 +72,19 @@ the pieces they cover; the vectors remain the drawn fallback.
 | worker poses (9) | `ant_city/worker_ants/meadow/{idle,carrying,digging}_{normal,happy,tired}` |
 | `antcity/prop/egg-v1` | `ant_city/ant_eggs/meadow/main` |
 | tunnel decor (4) | `ant_city/tunnels/meadow/{entrance,junction}_{normal,decorated}` |
+| `antcity/prop/nursery-v1` | `ant_city/prop/meadow/nursery` |
+| `antcity/prop/storage-v1` | `ant_city/prop/meadow/storage` |
+| `antcity/prop/den-v1` | `ant_city/prop/meadow/den` |
+| `antcity/prop/crumb-v1` (food) | `ant_city/prop/meadow/food` |
+| `antcity/prop/buried-find-v1` | `ant_city/prop/meadow/buried_find` |
+| `antcity/badge/v1` | `ant_city/prop/meadow/badge` |
 
 Notes: the meadow background also generated nicely but was too large to store (HTTP 413),
 so keep using the Sling + Kenney meadow for the surface. A couple worker-sheet cells came
 out off-model (one strawberry, one ant-in-a-hole); the clean poses (idle_normal,
-idle_happy, the digging/carrying ants) are plenty. Still to generate later if wanted:
-rooms (nursery/storage/den), food, buried find, badge, loading (vectors cover these today).
+idle_happy, the digging/carrying ants) are plenty. Still on vectors (not yet AI): the
+dig-marker, colony/anthill icon, rainy-meadow + flood overlay, loading screen, and the
+ruby/emerald ant + berry/loam customization variants.
 
 ## Coverage gaps (honest)
 
