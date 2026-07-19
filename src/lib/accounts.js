@@ -222,19 +222,22 @@ export function verifyKidPin(kid, pin) {
 // ---- KID PROFILES (branch: account -> Supabase, else -> guest) ----
 export async function listKidProfiles() {
   if (isSignedIn()) {
+    // The DB is the source of truth for the buddy: ALWAYS request the helper
+    // column (it exists in prod). We deliberately do NOT fall back to a
+    // helper-less select on error -- a helper-less list would falsely re-trigger
+    // buddy onboarding, so we surface the error instead of hiding it.
+    const kids = await restFetch(
+      "kid_profiles?select=id,display_name:name,avatar,grade,pin_hash,helper,created_at&order=created_at.asc",
+      { method: "GET" }
+    );
+    // Seed the per-device copy (bk_helper_<id>) from the DB value so getKidHelper
+    // is trustworthy on a brand-new browser and never re-creates an existing buddy.
     try {
-      return await restFetch(
-        "kid_profiles?select=id,display_name:name,avatar,grade,pin_hash,helper,created_at&order=created_at.asc",
-        { method: "GET" }
-      );
-    } catch (e) {
-      // helper column may not exist yet (db/add-kid-helper.sql not run) -> fall
-      // back to the base columns so profiles always load.
-      return restFetch(
-        "kid_profiles?select=id,display_name:name,avatar,created_at&order=created_at.asc",
-        { method: "GET" }
-      );
-    }
+      (kids || []).forEach((k) => {
+        if (k && k.id && k.helper) localStorage.setItem("bk_helper_" + k.id, JSON.stringify(k.helper));
+      });
+    } catch (e) {}
+    return kids;
   }
   return loadGuestKids();
 }
@@ -540,6 +543,18 @@ export async function saveKidHelper(kid, helper) {
   const active = getActiveKid();
   if (active && active.id === id) setActiveKid({ ...active, helper });
   if (isSignedIn()) {
-    try { await restFetch(`kid_profiles?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ helper }) }); } catch (e) { /* column may not exist yet */ }
+    // The DB PATCH must succeed -- a silently dropped save is exactly why a buddy
+    // gets re-created on the next device. Retry once, then surface the failure
+    // loudly instead of swallowing it.
+    try {
+      await restFetch(`kid_profiles?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ helper }) });
+    } catch (e) {
+      try {
+        await restFetch(`kid_profiles?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ helper }) });
+      } catch (e2) {
+        console.error("saveKidHelper: could not persist helper to DB for kid", id, e2);
+        throw e2;
+      }
+    }
   }
 }
