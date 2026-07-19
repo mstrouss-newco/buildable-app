@@ -45,7 +45,6 @@ const SCREEN_GROWNUP = "grownup";
 const SCREEN_STORY = "story";
 const SCREEN_TYPING = "typing";
 const SCREEN_CHESS = "chess";
-const SCREEN_GAME_PICKER = "game_picker";
 const SCREEN_PLATFORMER = "platformer";
 const SCREEN_SURVIVAL = "survival";
 const SCREEN_SURVIVAL_UPGRADES = "survival_upgrades"; // Session 9B: shell gameplay-upgrade store
@@ -249,43 +248,9 @@ function PickerCard({ g, onOpen, onShare }) {
   );
 }
 
-// The picker is now a pure map over GAME_CATALOG (the manifest/identity layer).
-// Adding or converting a game means editing the catalog, never this component.
-function GamePicker(props) {
-  const { onHome } = props;
-  // QA gate: coming-soon cards ask for a password (1111) before opening.
-  const [gate, setGate] = useState(null);
-  const [pw, setPw] = useState("");
-  const [err, setErr] = useState(false);
-  const submitPw = () => { if (pw === "1111") { const go = gate; setGate(null); setPw(""); setErr(false); if (go) go(); } else { setErr(true); } };
-  const openGame = (g) => { const go = props[g.handler]; if (!go) return; if (g.soon) { setGate(() => go); setPw(""); setErr(false); } else { go(); } };
-  return (
-    <div style={styles.container}>
-      <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
-        <button onClick={onHome} style={styles.backButton}>Home</button>
-      </div>
-      <h1 style={{ ...styles.logo, marginTop: 8 }}>Games</h1>
-      <p style={styles.tagline}>Pick a game to play!</p>
-      <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        {GAME_CATALOG.map((g) => <PickerCard key={g.id} g={g} onOpen={() => openGame(g)} onShare={GUEST_SHAREABLE[g.id] ? () => startGuestLink(g.id) : null} />)}
-      </div>
-      {gate && (
-        <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,8,24,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 340, background: "#1b1533", border: CARD_BORDER, borderRadius: 24, padding: "26px 22px", fontFamily: NUN, color: "#fff", boxShadow: "0 18px 50px rgba(0,0,0,0.5)" }}>
-            <div style={{ fontFamily: FRED, fontSize: 22, fontWeight: 700, textAlign: "center" }}>Coming soon</div>
-            <div style={{ fontSize: 14, color: "#cfc9e6", textAlign: "center", marginTop: 8 }}>Enter the password to preview this game.</div>
-            <input value={pw} onChange={(e) => { setPw(e.target.value); setErr(false); }} onKeyDown={(e) => { if (e.key === "Enter") submitPw(); }} type="password" inputMode="numeric" autoFocus placeholder="Password" style={{ width: "100%", boxSizing: "border-box", marginTop: 16, padding: "12px 14px", borderRadius: 14, border: err ? "2px solid #FF6B81" : "1px solid rgba(255,255,255,0.2)", background: "#12102a", color: "#fff", fontFamily: NUN, fontSize: 18, textAlign: "center", letterSpacing: "4px" }} />
-            {err && <div style={{ color: "#FF9BAA", fontSize: 13, textAlign: "center", marginTop: 8 }}>Wrong password. Try again.</div>}
-            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-              <button onClick={() => setGate(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.2)", background: "transparent", color: "#cfc9e6", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Cancel</button>
-              <button onClick={submitPw} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "linear-gradient(160deg,#9B7BFF,#67E8F9)", color: "#12102a", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Enter</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+// Legacy GamePicker removed (Session 7G): Home is the single front door (its Play
+// shelf maps the whole GAME_CATALOG). The coming-soon password gate now lives on
+// the Home shelf cards. Nothing renders or routes to the old picker anymore.
 // ---- ONE consistent game frame for every full-screen game/maker ----
 // Home is always top-left; games never draw their own back button (BS showBack:false).
 // Also returns to the hub on a nav:exit message (string, {type:"nav:exit"}, or legacy bk:home).
@@ -1889,14 +1854,6 @@ export default function BuildableKids() {
       onBack={() => setScreen(SCREEN_TENNIS_LANDING)}
       onPlay={() => { setTennisStart("solo"); setScreen(SCREEN_TENNIS); }} />;
   }
-  if (screen === SCREEN_GAME_PICKER) {
-    // Legacy dark Games picker retired: the new Home is the single front door
-    // (its Play shelf lists the whole GAME_CATALOG). Any stray path that still
-    // asks for the old picker is redirected Home per the replace-first rule, so
-    // nothing can land a kid back on the old page.
-    if (screen !== SCREEN_HOME) setTimeout(() => setScreen(SCREEN_HOME), 0);
-    return null;
-  }
   if (screen === SCREEN_PLATFORMER) {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
@@ -2166,7 +2123,7 @@ export default function BuildableKids() {
   return (
     <>
       {__view}
-      {[SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <GrownUpButton onGrownUp={openGrownups} fixed />}
+      {[SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <GrownUpButton onGrownUp={openGrownups} fixed />}
       {/* App-wide "someone invited you to play" alert. Floats at the top of ANY
           screen (except Home, which already shows invites on its own cards), and
           auto-goes-away if ignored -- or the kid can tap the x to dismiss it. */}
