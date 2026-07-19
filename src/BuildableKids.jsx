@@ -448,7 +448,7 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multipl
     color: primary ? "#12102a" : "#fff",
     background: primary ? `linear-gradient(160deg, #fff, ${accent})` : `linear-gradient(160deg, ${accent}55, ${accent}22)`,
     border: primary ? "none" : `1px solid ${accent}88`,
-    boxShadow: primary ? `0 6px 0 ${accent}88, 0 12px 22px rgba(0,0,0,0.35)` : "none",
+    boxShadow: primary ? `0 10px 24px ${accent}44, 0 5px 14px rgba(0,0,0,0.25)` : "none",
     display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
   });
   return (
@@ -961,7 +961,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
         })}
       </div>
 
-      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 8px 0 ${accent}88, 0 14px 28px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play with this look</button>}
+      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play with this look</button>}
     </div>
   );
 }
@@ -1129,7 +1129,7 @@ function UpgradeStore({ game, onBack, onPlay }) {
         })}
       </div>
 
-      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 8px 0 ${accent}88, 0 14px 28px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play with this power</button>}
+      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play with this power</button>}
     </div>
   );
 }
