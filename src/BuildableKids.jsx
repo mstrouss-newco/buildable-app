@@ -464,7 +464,7 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multipl
           {demoSrc && <iframe title={`${game.name} demo`} src={demoSrc} scrolling="no" style={{ width: "100%", height: "100%", border: "none", display: "block", pointerEvents: "none" }} />}
           <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 11px", borderRadius: 999, background: "rgba(12,10,24,0.66)", color: "#fff" }}>Demo</span>
         </div>
-        {!modeOn && <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 9px 0 ${accent}88, 0 16px 30px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play</button>}
+        {!modeOn && <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play</button>}
         {modeOn && (
           <div style={{ width: "100%", maxWidth: 360, marginTop: 18 }}>
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", color: accent, textAlign: "center", marginBottom: 8 }}>Pick a way to play</div>
