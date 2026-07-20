@@ -137,6 +137,13 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
 })();
 
 // ---------- STATE ----------
+/* Session 7I: shell URL params. ?level=N (0-based) skips the menu and starts that
+   board directly; ?screen=demo = silent self-playing attract loop for the landing
+   demo box (input ignored, no audio, no win/lose cards, loops forever). */
+const MJ_Q=(()=>{ try{ return new URLSearchParams(location.search); }catch(e){ return null; } })();
+const MJ_DEMO=!!(MJ_Q && MJ_Q.get("screen")==="demo");
+const MJ_LEVEL=(()=>{ if(!MJ_Q) return null; const l=MJ_Q.get("level");
+  return (l!=null && l!=="" && !isNaN(+l)) ? Math.floor(+l) : null; })();
 let state="menu";                 // menu | play | win
 let tiles=[];                     // {x,y,z,id,face,gone}
 let solution=[];                  // recorded guaranteed-solvable pair order [[idA,idB],...]
@@ -249,8 +256,9 @@ function build(){
   startedAt=Date.now(); elapsedMs=0; isNewBest=false; wonBest=0;
   combo=0; comboUntil=0; score=0; demo=null;
   mistakes=0; wonStars=3; matchAnims=[]; wrongFlash=[];
-  if(!headless){ loadSetArt(set); layout(); showChrome(true); updateBanner(); updateChrome();
-    ensureMusic(); if(!demoSeen()) startDemo(); }
+  if(!headless){ loadSetArt(set); layout(); showChrome(!MJ_DEMO); updateBanner(); updateChrome();
+    if(!MJ_DEMO) ensureMusic();
+    if(!MJ_DEMO && !demoSeen()) startDemo(); }
 }
 
 // ---------- FIRST-PLAY DEMO (shared 3D pointing hand — same mechanic as other games) ----------
@@ -306,7 +314,7 @@ function drawMatchAnims(){
 }
 function tapTile(t){
   if(state!=="play"||!t||!isFree(t,tiles)) return;
-  if(BA)BA.unlock();
+  if(BA&&!MJ_DEMO)BA.unlock();
   hintPair=null;
   if(trayMode()){ tapTray(t); return; }              // HARD mode: holding-tray + game over
   if(selId===t.id){ selId=-1; return; }              // tap again = deselect
@@ -386,6 +394,7 @@ function doHint(){
   autoShuffle(); return false;
 }
 function winGame(){
+  if(MJ_DEMO){ state="win"; showChrome(false); return; }   // 7I attract: no card/score/saves; the bot restarts us
   elapsedMs=Date.now()-startedAt;
   // SPEED BONUS: clearing faster than "par" (tiles * 1.4s) adds points → quicker = better score
   const parSec=tiles.length*1.4, spent=elapsedMs/1000;
@@ -825,8 +834,12 @@ function draw(){
   if(BM){ BM.draw(ctx,fx,{W:W,H:H}); }
   if(trayMode() && state!=="menu") drawTray();
   if(demo && state==="play") drawDemo();
-  if(state==="win") drawWin();
-  if(state==="lose") drawLose();
+  if(MJ_DEMO && state==="play" && mjBot && mjBot.hand && BR && BR.hand){
+    const _hs=Math.max(0.95,(view.tileW||46)/46);
+    try{ BR.hand(ctx, mjBot.hand.x, mjBot.hand.y+26*_hs+mjBot.dip*7, _hs); }catch(e){}
+  }
+  if(state==="win"&&!MJ_DEMO) drawWin();
+  if(state==="lose"&&!MJ_DEMO) drawLose();
   return "ok";
 }
 
@@ -917,6 +930,7 @@ function resize(){ if(!cv) return; DPR=Math.min(2,(window.devicePixelRatio||1));
 let _last=0;
 function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
   nowMs+=dt*1000; if(BM)BM.update(fx,dt); if(demo) demo.t+=dt; if(trayShake>0)trayShake=Math.max(0,trayShake-dt*1.5);
+  if(MJ_DEMO) mjDemoTick(dt);
   if(state==="play"){ elapsedMs=Date.now()-startedAt; const bt=document.getElementById("bTime"); if(bt) bt.textContent=fmtTime(elapsedMs); }
   try{ draw(); }catch(e){ if(typeof console!=="undefined") console.error("draw",e); }
   requestAnimationFrame(frame);
@@ -924,7 +938,8 @@ function frame(ts){ if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>
 if(typeof document!=="undefined" && document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
   resize(); window.addEventListener("resize",resize); loadBg();
-  const onTap=(e)=>{ if(state==="win"){ if(BA)BA.unlock(); showMenu(); return; }
+  const onTap=(e)=>{ if(MJ_DEMO) return;
+    if(state==="win"){ if(BA)BA.unlock(); showMenu(); return; }
     if(state==="lose"){ if(BA)BA.unlock(); build(); return; }
     if(state!=="play") return;
     if(demo) endDemo();
@@ -948,7 +963,47 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   // auto-upgrades to spark + star + glow + shockwave ring once these are loaded.
   if(BM&&BM.useTextures) BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/star_01.png",
     star:"/fx/star_07.png", ring:"/fx/circle_01.png", smoke:"/fx/smoke_05.png", magic:"/fx/magic_05.png" });
-  showMenu(); requestAnimationFrame(frame);
+  if(MJ_DEMO){ if(BA)BA.muted=true;                                    // 7I attract: small board, silent, no menus
+    PREFS.lvlIdx=0; document.getElementById("start").classList.add("hide"); build(); }
+  else if(MJ_LEVEL!=null){                                             // 7I deep-link: same as tapping that level card
+    PREFS.lvlIdx=Math.max(0,Math.min(GAME_CONFIG.levels.length-1,MJ_LEVEL));
+    document.getElementById("start").classList.add("hide"); build(); }
+  else showMenu();
+  requestAnimationFrame(frame);
+}
+
+// ---------- Session 7I attract bot: the Hint brain picks a free matching pair,
+// the tutorial hand GLIDES to one tile (capped per-frame step -- never teleports),
+// taps it, pauses, then glides to its match. Quiet restart ~1.2s after a clear. ----
+let mjBot={ phase:"pick", a:-1, b:-1, wait:0.8, hand:null, dip:0, restart:0 };
+function mjDemoTick(dt){
+  if(state==="win"||state==="lose"){ mjBot.restart+=dt;
+    if(mjBot.restart>=1.2){ mjBot.restart=0; mjBot.phase="pick"; mjBot.wait=0.6; build(); }
+    return; }
+  if(state!=="play"||!tiles.length||!view.b) return;
+  if(!mjBot.hand) mjBot.hand={x:W/2,y:H+40};
+  mjBot.dip=Math.max(0,mjBot.dip-dt*4);
+  if(mjBot.wait>0){ mjBot.wait-=dt; return; }
+  if(mjBot.phase==="pick"){
+    const m=availableMatch();                 // same free-pair logic Hint uses
+    if(!m){ mjBot.wait=0.5; return; }         // engine auto-mixes; try again shortly
+    mjBot.a=m[0]; mjBot.b=m[1]; mjBot.phase="goA";
+    hintPair=m; hintUntil=nowMs+2600;         // green glow = the pair the "player" spotted
+  }
+  const glide=(id,next)=>{
+    const t=tileById(id);
+    if(!t||t.gone||!isFree(t,tiles)){ mjBot.phase="pick"; return; }
+    const c=tileCenter(t);
+    const dx=c.x-mjBot.hand.x, dy=c.y-mjBot.hand.y, d=Math.hypot(dx,dy);
+    const STEP=Math.max(6,Math.min(W,H)*0.018);   // capped step -- glide, never teleport
+    if(d>STEP){ mjBot.hand.x+=dx/d*STEP; mjBot.hand.y+=dy/d*STEP; return; }
+    mjBot.hand.x=c.x; mjBot.hand.y=c.y; mjBot.dip=1;
+    const hp=hintPair; tapTile(t); hintPair=hp;    // keep the pair glow through the first tap
+    mjBot.phase=next; mjBot.wait=(next==="pick")?1.0:0.7;
+    if(next==="pick") hintPair=null;
+  };
+  if(mjBot.phase==="goA") glide(mjBot.a,"goB");
+  else if(mjBot.phase==="goB") glide(mjBot.b,"pick");
 }
 
 // ---------- QA / SIM HOOKS ----------

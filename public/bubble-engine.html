@@ -67,6 +67,12 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 "use strict";
 var BR=window.BuildableRenders, BA=window.BuildableAudio, BM=window.BuildableMechanics, BS=window.BuildableStartScreen;
 var HAS_DOM = typeof document!=="undefined" && document.getElementById;
+/* Session 7I: shell URL params. ?level=N (0-based) skips the menu and starts that
+   level directly; ?screen=demo = silent self-playing attract loop for the landing
+   demo box (input ignored, audio never plays, no win/lose sheets, loops forever). */
+var BB_DEMO=false, BB_LEVEL=null;
+try{ var _bq=new URLSearchParams(location.search); BB_DEMO=_bq.get("screen")==="demo";
+  var _bl=_bq.get("level"); if(_bl!=null&&_bl!==""&&!isNaN(+_bl)) BB_LEVEL=Math.floor(+_bl); }catch(e){}
 
 // ---------- colours (Kenney Shape Characters, CC0) ----------
 var COLORS = {
@@ -382,7 +388,7 @@ function draw(){
   }
   // wordless tutorial: pointing hand under the launcher (shows until the first shot,
   // then fades out over a couple seconds) + a one-line "how to" before any shot.
-  if(state==="play" && G){
+  if(state==="play" && G && !BB_DEMO){
     var halpha=0;
     if(G.shots===0) halpha=1;
     else if(bubbleHintUntil && Date.now()<bubbleHintUntil) halpha=Math.min(1,(bubbleHintUntil-Date.now())/1300);
@@ -397,6 +403,13 @@ function draw(){
       }
       ctx.restore();
     }
+  }
+  // Session 7I attract: the tutorial hand rides the aim line (aimA glides, so the
+  // hand glides with it -- never teleports), with a little press dip on each shot.
+  if(BB_DEMO && state==="play" && G && BR && BR.hand){
+    ctx.save(); ctx.globalAlpha=0.95;
+    BR.hand(ctx, LX+Math.sin(aimA)*200, LY-Math.cos(aimA)*200+(moving?12:0), 1.1);
+    ctx.restore();
   }
   return "ok";
 }
@@ -456,6 +469,7 @@ function afterShot(){
 // ---------- win / lose ----------
 function endGame(won){
   state=won?"win":"lose";
+  if(BB_DEMO){ setTimeout(function(){ if(state==="win"||state==="lose") play(0); },1200); return; }
   var last = G.level>=GAME_CONFIG.levels.length-1;
   // gentle chime between levels; save the big celebration for finishing the last one
   if(won) sfx(last?"celebrate":"coin"); else sfx("lose");
@@ -474,11 +488,11 @@ function endGame(won){
   }
 }
 function inApp(){ try{ return !!(window.parent && window.parent!==window); }catch(e){ return false; } }
-function signal(kind){ try{ if(window.parent&&window.parent!==window) window.parent.postMessage({source:"buildable",kind:kind},"*"); }catch(e){} }
+function signal(kind){ if(BB_DEMO)return; try{ if(window.parent&&window.parent!==window) window.parent.postMessage({source:"buildable",kind:kind},"*"); }catch(e){} }
 
 // ---------- audio ----------
-function sfx(n){ if(BA&&BA.sfx)BA.sfx(n); }
-function ensureMusic(){ if(!BA||!BA.setMusic)return; var url="/api/library-music?name=spa_heartbeat_warm";
+function sfx(n){ if(BB_DEMO)return; if(BA&&BA.sfx)BA.sfx(n); }
+function ensureMusic(){ if(BB_DEMO)return; if(!BA||!BA.setMusic)return; var url="/api/library-music?name=spa_heartbeat_warm";
   if(url!==curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); curMusic=url; } }
 
 // ---------- screens ----------
@@ -511,14 +525,30 @@ function play(idx){
   state="play";
   if(HAS_DOM){
     document.getElementById("start").style.display="none";
-    if(!inApp()) document.getElementById("ctrls").classList.remove("hide");
+    if(!inApp() && !BB_DEMO) document.getElementById("ctrls").classList.remove("hide");
     document.getElementById("overlay").classList.add("hide");
   }
   ensureMusic();
 }
 
 // ---------- loop ----------
-function loop(){ if(state==="play"&&moving) stepMoving(); draw(); requestAnimationFrame(loop); }
+function loop(){ if(BB_DEMO) demoTick(); if(state==="play"&&moving) stepMoving(); draw(); requestAnimationFrame(loop); }
+// Session 7I attract bot: pick the best shot for the fed colour (same brain the
+// colour-feed uses), GLIDE the aim there with a capped per-frame step, then fire.
+var demoAim=null, demoFireAt=0;
+function demoTick(){
+  if(state!=="play"||!G||moving){ return; }
+  if(demoAim==null){
+    if(!demoFireAt) demoFireAt=Date.now()+900;
+    if(Date.now()<demoFireAt) return;
+    var m=bestMoveForColor(G.color);
+    demoAim=(m!=null&&m.angle!=null)?m.angle:((Math.random()*2-1)*0.9);
+    return;
+  }
+  var d=demoAim-aimA, STEP=0.035;                     // capped step -- glide, never teleport
+  if(Math.abs(d)>STEP){ aimA+=(d>0?STEP:-STEP); }
+  else { aimA=demoAim; demoAim=null; demoFireAt=Date.now()+1400; fire(); }
+}
 
 // ---------- boot (DOM only) ----------
 function boot(){
@@ -527,14 +557,17 @@ function boot(){
   window.addEventListener("resize",fit);
   // Aim while pressing/hovering; only SHOOT when the finger lifts (so touch users
   // can drag to aim first instead of firing the instant they touch).
-  cv.addEventListener("pointermove",function(e){ e.preventDefault(); var p=toStage(e); pointerX=p.x; pointerY=p.y; if(state==="play"&&!moving) setAimFromPointer(p.x,p.y); });
-  cv.addEventListener("pointerdown",function(e){ e.preventDefault(); if(BA)BA.unlock(); var p=toStage(e); if(state==="play"&&!moving){ aiming=true; setAimFromPointer(p.x,p.y); } });
-  window.addEventListener("pointerup",function(e){ if(!aiming) return; aiming=false; if(state==="play"&&!moving) fire(); });
+  cv.addEventListener("pointermove",function(e){ if(BB_DEMO)return; e.preventDefault(); var p=toStage(e); pointerX=p.x; pointerY=p.y; if(state==="play"&&!moving) setAimFromPointer(p.x,p.y); });
+  cv.addEventListener("pointerdown",function(e){ if(BB_DEMO)return; e.preventDefault(); if(BA)BA.unlock(); var p=toStage(e); if(state==="play"&&!moving){ aiming=true; setAimFromPointer(p.x,p.y); } });
+  window.addEventListener("pointerup",function(e){ if(BB_DEMO)return; if(!aiming) return; aiming=false; if(state==="play"&&!moving) fire(); });
   window.addEventListener("pointercancel",function(){ aiming=false; });
   var sb=document.getElementById("soundBtn"); if(sb) sb.onclick=function(){ if(BA){BA.unlock();BA.toggleMute();} };
   var hb=document.getElementById("helpBtn"); if(hb) hb.onclick=function(){ alert("Drag to aim, then lift your finger to shoot. Match 3 or more of the same buddy to pop them. Clear them all to win!"); };
   if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["soundBtn","helpBtn"], onSound:function(){ if(BA){ BA.unlock(); BA.toggleMute(); } }, onMenu:function(){ toMenu(); }, onHelp:function(){ alert("Drag to aim, then lift your finger to shoot. Match 3 or more of the same buddy to pop them. Clear them all to win!"); }, soundOn:function(){ return !muted; } }); }
-  toMenu(); loop();
+  if(BB_DEMO){ if(BA)BA.muted=true; play(0); }                                   // 7I attract: level 1, silent, no menus
+  else if(BB_LEVEL!=null){ play(Math.max(0,Math.min(GAME_CONFIG.levels.length-1,BB_LEVEL))); }   // 7I deep-link (levels are built-in; manifest only renames)
+  else toMenu();
+  loop();
 }
 function fit(){
   cv.width=DESIGN_W; cv.height=DESIGN_H;

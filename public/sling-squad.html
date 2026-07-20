@@ -188,6 +188,10 @@ function HUD(){ if(slingHud) return slingHud;
 var state = "title";            // title | ready | aiming | flying | reload | win | lose
 var level = 0, G = null, fx = (BM ? BM.makeFx() : null);
 var botMode = false, started = false;
+// Session 7I: ?screen=demo = silent self-playing attract loop for the shell's
+// landing demo box. Input is ignored, audio never unlocks, no win/lose banners --
+// the bot plays level 1 forever (restart ~1.2s after each win/lose).
+var SLING_DEMO=false; try{ SLING_DEMO=(typeof location!=="undefined") && /[?&]screen=demo(&|$)/.test(location.search); }catch(e){}
 var EFF_G = 0.45;               // per-frame gravity accel (auto-calibrated below)
 
 // ---- progress (best-effort localStorage; headless-safe) ----
@@ -201,7 +205,7 @@ function loadPrefs(){ try{
   var s=localStorage.getItem(_bkKey()) || localStorage.getItem("sling.prefs");
   if(s){ var p=JSON.parse(s); PREFS.unlocked=p.unlocked||0; PREFS.stars=p.stars||[]; }
 }catch(e){} }
-function savePrefs(){ try{
+function savePrefs(){ if(SLING_DEMO) return; try{
   var json=JSON.stringify({ unlocked:PREFS.unlocked, stars:PREFS.stars });
   localStorage.setItem("sling.prefs", json);
   localStorage.setItem(_bkKey(), json);   // shell Journey reads this
@@ -210,11 +214,11 @@ function totalStars(){ return (PREFS.stars||[]).reduce(function(a,b){return a+(b
 function maxStars(){ return GAME_CONFIG.levels.length*3; }
 
 // ---- audio helper (created sounds via /api/sfx; synth is silent fallback only) ----
-function sfx(n){ try{ if(BA&&BA.sfx) BA.sfx(n); }catch(e){} }
+function sfx(n){ try{ if(SLING_DEMO) return; if(BA&&BA.sfx) BA.sfx(n); }catch(e){} }
 // background music: reusable shared-library track (see /api/library-music). Warm,
 // no shrill highs. Any future game can pull the same named track by URL.
 var _curMusic=null;
-function ensureMusic(){ try{ if(!BA||!BA.setMusic)return; var url="/api/library-music?name=adventure_sunny_bounce";
+function ensureMusic(){ try{ if(SLING_DEMO) return; if(!BA||!BA.setMusic)return; var url="/api/library-music?name=adventure_sunny_bounce";
   if(url!==_curMusic){ if(BA.stopMusic)BA.stopMusic(); BA.setMusic(url); _curMusic=url; }
   if(BA.playMusic)BA.playMusic(); }catch(e){} }
 
@@ -395,7 +399,7 @@ function winLevel(){ if(state==="win")return; state="win";
 function loseLevel(){ if(state==="lose")return; state="lose"; sfx("lose"); signal("lose"); }
 
 // tell the app (helper reactions + per-kid telemetry) — exactly once per result
-function signal(kind){ try{ if(window.parent){ window.parent.postMessage({ source:"buildable", kind:kind }, "*"); } }catch(e){} }
+function signal(kind){ if(SLING_DEMO) return; try{ if(window.parent){ window.parent.postMessage({ source:"buildable", kind:kind }, "*"); } }catch(e){} }
 
 // ============================================================================
 //  Aim predictor (shared by the kid's trajectory dots AND the QA bot).
@@ -767,8 +771,9 @@ function draw(){
     }); }catch(e){}
   } else if(_hud){ _hud.hide(); }
   // banners
-  if(state==="win"){ banner("Level cleared!", (level+1<GAME_CONFIG.levels.length)?"Tap for the next one":"Tap to play again"); }
-  if(state==="lose"){ banner("Out of slings!","Tap to try again"); }
+  if(state==="win" && !SLING_DEMO){ banner("Level cleared!", (level+1<GAME_CONFIG.levels.length)?"Tap for the next one":"Tap to play again"); }
+  if(state==="lose" && !SLING_DEMO){ banner("Out of slings!","Tap to try again"); }
+  if(SLING_DEMO) drawDemoHand();
   ctx.textAlign="left"; ctx.textBaseline="alphabetic";
 }
 function banner(title,sub){
@@ -786,14 +791,14 @@ function pt(ev){ var r=canvas.getBoundingClientRect();
   return { x:(cx-r.left)/r.width*W, y:(cy-r.top)/r.height*H }; }
 function clampDrag(p){ var dx=p.x-AX, dy=p.y-AY, d=Math.hypot(dx,dy);
   if(d>MAXPULL){ var k=MAXPULL/d; dx*=k; dy*=k; } return { x:AX+dx, y:AY+dy }; }
-function onDown(ev){ if(BA){BA.unlock&&BA.unlock();} ensureMusic();
+function onDown(ev){ if(SLING_DEMO) return; if(BA){BA.unlock&&BA.unlock();} ensureMusic();
   if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else showMenu(); return; }
   if(state==="lose"){ ev.preventDefault&&ev.preventDefault(); startLevel(level); return; }
   if(state==="flying"){ ev.preventDefault&&ev.preventDefault(); tryPower(); return; }  // tap mid-air = fire the power
   if(state==="ready"){ ev.preventDefault&&ev.preventDefault(); state="aiming"; G.drag=clampDrag(pt(ev)); sfx("stretch"); }
 }
-function onMove(ev){ if(state==="aiming"){ ev.preventDefault&&ev.preventDefault(); G.drag=clampDrag(pt(ev)); } }
-function onUp(ev){ if(state==="aiming"){ ev.preventDefault&&ev.preventDefault();
+function onMove(ev){ if(SLING_DEMO) return; if(state==="aiming"){ ev.preventDefault&&ev.preventDefault(); G.drag=clampDrag(pt(ev)); } }
+function onUp(ev){ if(SLING_DEMO) return; if(state==="aiming"){ ev.preventDefault&&ev.preventDefault();
   var dx=AX-G.drag.x, dy=AY-G.drag.y; var pull=Math.hypot(dx,dy);
   if(pull<14){ state="ready"; G.drag=null; return; }   // too gentle — reload, no waste
   var a=aimFromDrag(dx,dy); doLaunch(a.vx,a.vy); } }
@@ -811,7 +816,7 @@ function buildStartCfg(){
 }
 function el(id){ return document.getElementById(id); }
 function show(id,on){ var e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
-function showChrome(on){ ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
+function showChrome(on){ if(SLING_DEMO) on=false; ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
 function showMenu(){ state="title"; G=null; show("help",false); showChrome(false);
   var host=el("start"); if(host)host.style.display="block"; if(!BS||!host)return;
   var cb={ onPlay:function(n){ if(BA)BA.unlock&&BA.unlock(); startLevel(n-1); },
@@ -845,7 +850,47 @@ if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   stretch:"sling_stretch", launch:"sling_release", thud:"sling_thud", poof:"sling_poof",
   explode:"explode", win:"sling_win", lose:"tennis_lose" } }); }
 
-function frame(){ update(); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requestAnimationFrame(frame); }
+function frame(){ update(); if(SLING_DEMO) demoTick(); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requestAnimationFrame(frame); }
+// ---- Session 7I attract bot: plan like the QA bot, but PULL the sling visibly.
+// The pull point + tutorial hand GLIDE with a capped per-frame step (never teleport).
+var demoBot={ want:null, hold:0, wait:0, restartAt:0, hand:{x:AX,y:AY}, dip:0 };
+function demoTick(){
+  if(!G) return;
+  if(state==="win"||state==="lose"){
+    if(!demoBot.restartAt) demoBot.restartAt=nowMs()+1200;
+    if(nowMs()>=demoBot.restartAt){ demoBot.restartAt=0; demoBot.want=null; startLevel(0); }
+    return;
+  }
+  demoBot.restartAt=0;
+  if(state==="ready"){
+    if(demoBot.wait>0){ demoBot.wait--; }
+    else if(!demoBot.want){
+      var alive=G.targets.filter(function(t){return t._alive;});
+      if(alive.length){
+        var best=null, bestScore=1e9;
+        for(var i=0;i<alive.length;i++){ var pl=planShot(alive[i].position.x, alive[i].position.y);
+          var score=(pl.good?0:1000)+(pl.minDist||0)+(pl.T||40)*0.05;
+          if(score<bestScore){ bestScore=score; best=pl; } }
+        best.vx+=(Math.random()-0.5)*1.6; best.vy-=Math.random()*1.2;   // vary the aim a touch
+        var sp=Math.hypot(best.vx,best.vy); if(sp>MAXV){ var k=MAXV/sp; best.vx*=k; best.vy*=k; }
+        var dx=best.vx*(MAXPULL/MAXV), dy=best.vy*(MAXPULL/MAXV);       // invert aimFromDrag
+        demoBot.want=clampDrag({x:AX-dx, y:AY-dy}); demoBot.hold=0;
+        state="aiming"; G.drag={x:AX,y:AY};
+      }
+    }
+  }
+  if(state==="aiming" && demoBot.want && G.drag){
+    var d=G.drag, ddx=demoBot.want.x-d.x, ddy=demoBot.want.y-d.y, dd=Math.hypot(ddx,ddy), STEP=5;
+    if(dd>STEP){ d.x+=ddx/dd*STEP; d.y+=ddy/dd*STEP; }
+    else { d.x=demoBot.want.x; d.y=demoBot.want.y; demoBot.hold++;
+      if(demoBot.hold>26){ var a=aimFromDrag(AX-d.x,AY-d.y); G.drag=null; demoBot.want=null; demoBot.wait=90; doLaunch(a.vx,a.vy); } }
+  }
+  var hx=(state==="aiming"&&G.drag)?G.drag.x:AX, hy=(state==="aiming"&&G.drag)?G.drag.y:AY;
+  var hdx=hx-demoBot.hand.x, hdy=hy-demoBot.hand.y, hd=Math.hypot(hdx,hdy), HS=7;
+  if(hd>HS){ demoBot.hand.x+=hdx/hd*HS; demoBot.hand.y+=hdy/hd*HS; } else { demoBot.hand.x=hx; demoBot.hand.y=hy; }
+  demoBot.dip=(state==="aiming")?Math.min(1,demoBot.dip+0.15):Math.max(0,demoBot.dip-0.15);
+}
+function drawDemoHand(){ try{ if(BR&&BR.hand) BR.hand(ctx, demoBot.hand.x, demoBot.hand.y+6+demoBot.dip*4, 1.05); }catch(e){} }
 // LIBRARY-FIRST (with fallback): dress the flung pals in real Kenney "Animal Pack
 // Remastered" art when it's served (each SQUAD[i].img). Any miss keeps the drawn
 // animal — a library miss can never break a kid's game. (The old /api/list-characters
@@ -886,7 +931,8 @@ function tryStartLevel(){
   START_LEVEL=null; startLevel(i);
 }
 if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus();
-  if(START_LEVEL==null) showMenu();
+  if(SLING_DEMO){ if(BA) BA.muted=true; START_LEVEL=null; _startDone=true; startLevel(0); }   // 7I attract: no menu, level 1, silent
+  else if(START_LEVEL==null) showMenu();
   loadSquadArt(); requestAnimationFrame(frame);
   // safety net: if the manifest never applies, don't leave the kid on a blank canvas
   if(START_LEVEL!=null) setTimeout(function(){ if(!_startDone){ tryStartLevel(); if(!_startDone) showMenu(); } }, 1800);

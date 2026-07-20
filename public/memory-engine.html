@@ -106,6 +106,13 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
 })();
 
 // ---------- STATE ----------
+/* Session 7I: shell URL params. ?level=N (0-based board-size index) skips the menu
+   and starts that board directly; ?screen=demo = silent self-playing attract loop
+   for the landing demo box (input ignored, no audio, no win card, loops forever). */
+const MEM_Q=(()=>{ try{ return new URLSearchParams(location.search); }catch(e){ return null; } })();
+const MEM_DEMO=!!(MEM_Q && MEM_Q.get("screen")==="demo");
+const MEM_LEVEL=(()=>{ if(!MEM_Q) return null; const l=MEM_Q.get("level");
+  return (l!=null && l!=="" && !isNaN(+l)) ? Math.floor(+l) : null; })();
 let state="menu";
 let match=null;                       // BT match object
 let deck=[];                          // cards
@@ -293,7 +300,8 @@ function draw(){
   ctx.restore();
 
   drawHUD();
-  if(state==="win") drawWin();
+  if(state==="win"&&!MEM_DEMO) drawWin();
+  if(MEM_DEMO) drawDemoHand();
   return "ok";
 }
 function drawHUD(){
@@ -370,19 +378,61 @@ let _last=0;
 function frame(ts){
   if(!_last)_last=ts; let dt=(ts-_last)/1000; _last=ts; if(dt>0.05)dt=0.05;
   if(state==="play") update(dt); else { nowMs+=dt*1000; if(BM)BM.update(fx,dt); for(const p of amb){ p.y-=p.s*dt; if(p.y<-0.05)p.y=1.05; } }
+  if(MEM_DEMO) demoTick(dt);
   try{ draw(); }catch(e){ if(typeof console!=="undefined") console.error("draw",e); }
   requestAnimationFrame(frame);
 }
 if(typeof document!=="undefined" && document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
   resize(); window.addEventListener("resize",resize);
-  const onTap=(e)=>{ const t=e.touches?e.touches[0]:e; const rb=cv.getBoundingClientRect(); tapAt(t.clientX-rb.left, t.clientY-rb.top); if(BA)BA.unlock(); };
+  const onTap=(e)=>{ if(MEM_DEMO) return; const t=e.touches?e.touches[0]:e; const rb=cv.getBoundingClientRect(); tapAt(t.clientX-rb.left, t.clientY-rb.top); if(BA)BA.unlock(); };
   cv.addEventListener("mousedown",onTap); cv.addEventListener("touchstart",(e)=>{ e.preventDefault(); onTap(e); },{passive:false});
   document.getElementById("custDone").onclick=()=>{ document.getElementById("cust").classList.add("hide"); if(startScreen&&startScreen.update) startScreen.update(buildStartCfg()); else mountStart(); };
   // audio map — bespoke created sounds (BA synth is the silent fallback only)
   if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
     select:"mem_flip", match:"mem_match", flipback:"mem_flipback", win:"party_win", lose:"tennis_lose" } }); }
-  showMenu(); requestAnimationFrame(frame);
+  if(MEM_DEMO){ if(BA)BA.muted=true;                                   // 7I attract: Easy board, solo, silent, no menus
+    PREFS.solo=true; PREFS.players=1; PREFS.sizeIdx=0;
+    document.getElementById("start").classList.add("hide"); build(); }
+  else if(MEM_LEVEL!=null){                                            // 7I deep-link: same as tapping that level card
+    PREFS.sizeIdx=Math.max(0,Math.min(GAME_CONFIG.sizes.length-1,MEM_LEVEL));
+    document.getElementById("start").classList.add("hide"); build(); }
+  else showMenu();
+  requestAnimationFrame(frame);
+}
+
+// ---------- Session 7I attract bot: flip a card, pause, flip its match (perfect
+// memory). The tutorial hand GLIDES to each card with a capped per-frame step
+// (never teleports), dips like a press, then the flip happens. ----------
+let demoBot={ phase:"pick", a:-1, b:-1, wait:0.8, hand:null, dip:0, restart:0 };
+function demoTick(dt){
+  if(state==="win"){ demoBot.restart+=dt;
+    if(demoBot.restart>=1.2){ demoBot.restart=0; demoBot.phase="pick"; demoBot.wait=0.6; build(); }
+    return; }
+  if(state!=="play"||!deck.length) return;
+  if(!demoBot.hand) demoBot.hand={x:W/2,y:H+40};
+  demoBot.dip=Math.max(0,demoBot.dip-dt*4);
+  if(demoBot.wait>0){ demoBot.wait-=dt; return; }
+  if(demoBot.phase==="pick"){
+    const byFace={}; deck.forEach((c,i)=>{ if(!c.matched)(byFace[c.face]=byFace[c.face]||[]).push(i); });
+    let pair=null; for(const f in byFace){ if(byFace[f].length===2){ pair=byFace[f]; break; } }
+    if(!pair) return;
+    demoBot.a=pair[0]; demoBot.b=pair[1]; demoBot.phase="goA";
+  }
+  const glide=(idx,next)=>{
+    const r=cardRect(idx), tx=r.x+r.w/2, ty=r.y+r.h/2;
+    const dx=tx-demoBot.hand.x, dy=ty-demoBot.hand.y, d=Math.hypot(dx,dy);
+    const STEP=Math.max(6,Math.min(W,H)*0.016);   // capped step -- glide, never teleport
+    if(d>STEP){ demoBot.hand.x+=dx/d*STEP; demoBot.hand.y+=dy/d*STEP; return; }
+    demoBot.hand.x=tx; demoBot.hand.y=ty; demoBot.dip=1;
+    flip(idx); demoBot.phase=next; demoBot.wait=0.9;
+  };
+  if(demoBot.phase==="goA") glide(demoBot.a,"goB");
+  else if(demoBot.phase==="goB") glide(demoBot.b,"pick");
+}
+function drawDemoHand(){
+  if(!demoBot.hand||!BR||!BR.hand) return;
+  try{ BR.hand(ctx, demoBot.hand.x, demoBot.hand.y+18+demoBot.dip*8, Math.max(0.9,Math.min(W,H)/640)); }catch(e){}
 }
 
 // ---------- QA / SIM HOOKS ----------

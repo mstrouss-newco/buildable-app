@@ -202,7 +202,7 @@ function distPtSeg(p,a,b){var vx=b[0]-a[0],vy=b[1]-a[1],wx=p[0]-a[0],wy=p[1]-a[1
   var t=c1/c2; return Math.hypot(p[0]-(a[0]+t*vx),p[1]-(a[1]+t*vy));}
 
 /* ---------- QA: grid-pathfinder perfect player (proves each level solvable). ---------- */
-function solveLevelAt(idx,W,H){
+function solveLevelAt(idx,W,H,wantPaths){
   var lv=WORLDS[idx];
   var P=lv.pairs.map(function(p){return {a:[p.a[0]*W,p.a[1]*H], b:[p.b[0]*W,p.b[1]*H]};});
   var mn=Math.min(W,H), R=mn*0.085, RS=mn*0.05;
@@ -232,7 +232,7 @@ function solveLevelAt(idx,W,H){
     var path=[],c2=goal; while(c2!==-1){var px=Math.floor(c2/rows),py=c2%rows; path.push(cc(px,py)); c2=prev[c2];}
     path.reverse(); path.unshift(A); path.push(B); committed.push(path);
   }
-  return true;
+  return wantPaths?committed:true;
 }
 function solveLevel(idx){ return solveLevelAt(idx,1000,1000) && solveLevelAt(idx,1000,1500) && solveLevelAt(idx,1000,760); }
 
@@ -269,10 +269,16 @@ var UNDO_SVG='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke
 var MENU_SVG='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>';
 
 var BA=window.BuildableAudio||null, BS=window.BuildableStartScreen||null, startScreen=null, muted=false, musicOn=false;
-function unlock(){ if(BA){ BA.unlock&&BA.unlock();
+/* Session 7I: shell URL params. ?level=N (0-based) skips the menu and starts that
+   world directly; ?screen=demo = silent self-playing attract loop for the landing
+   demo box (input ignored, audio never plays, no win overlay, loops forever). */
+var SM_ATTRACT=false, SM_LEVEL=null;
+try{ var _sq=new URLSearchParams(location.search); SM_ATTRACT=_sq.get("screen")==="demo";
+  var _sl=_sq.get("level"); if(_sl!=null&&_sl!==""&&!isNaN(+_sl)) SM_LEVEL=Math.floor(+_sl); }catch(e){}
+function unlock(){ if(SM_ATTRACT) return; if(BA){ BA.unlock&&BA.unlock();
   if(BA.configure)BA.configure({sfxBase:"/api/sfx?s=", map:{ smoosh:"clay_smoosh", splat:"clay_splat", claypop:"clay_pop" }});
   if(!musicOn&&BA.setMusic){ try{ BA.setMusic("/api/library-music?name=spa_heartbeat_warm"); musicOn=true; }catch(e){} } } }
-function sfx(n,o){ if(BA&&!muted&&BA.sfx)BA.sfx(n,o); }
+function sfx(n,o){ if(SM_ATTRACT) return; if(BA&&!muted&&BA.sfx)BA.sfx(n,o); }
 function load(k,d){ try{var v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;} }
 function save(k,v){ try{localStorage.setItem(k,v);}catch(e){} }
 var unlocked=parseInt(load("sm_unlocked","0"),10)||0, starsMap={};
@@ -323,11 +329,11 @@ function showMenu(){ screen="select"; ovWin.classList.add("hide"); statusBox.cla
 function startLevel(i){
   levelIdx=i; level=WORLDS[i]; committed={}; order=[]; cur=null; particles=[]; celebrate=0; pulses={}; hop={}; finale=null;
   if(startHost) startHost.style.display="none"; ovWin.classList.add("hide");
-  statusBox.classList.remove("hide"); btnLevels.classList.remove("hide"); btnSound.style.display="";
+  if(!SM_ATTRACT){ statusBox.classList.remove("hide"); btnLevels.classList.remove("hide"); btnSound.style.display=""; }
   updateUndo(); screen="play";
   computePts(); buildLevelDom();
   setStatus("Connect "+level.pairs.length+" pairs — never cross or touch another buddy!");
-  if(load("sm_demo","0")!=="1" && i===0) startDemo(); else demo=null;
+  if(!SM_ATTRACT && load("sm_demo","0")!=="1" && i===0) startDemo(); else demo=null;
 }
 function setStatus(t){ statusText.textContent=t; }
 function startDemo(){ demo={ t:0, hold:0 }; setStatus("Like this! Drag from one buddy to its match."); }
@@ -367,19 +373,19 @@ function invalidSeg(a,b){
     if(distPtSeg(level.P[m].a,a,b)<TOUCH) return true; if(distPtSeg(level.P[m].b,a,b)<TOUCH) return true; }
   return false;
 }
-function down(e){ e.preventDefault(); if(screen!=="play")return; try{board.setPointerCapture(e.pointerId);}catch(_){}
+function down(e){ if(SM_ATTRACT) return; e.preventDefault(); if(screen!=="play")return; try{board.setPointerCapture(e.pointerId);}catch(_){}
   unlock(); if(demo)endDemo();
   var pt=toXY(e), hit=blockAt(pt); if(!hit)return;
   var pr=level.P[hit.pi], c=pr.c; delete committed[c]; var oi=order.indexOf(c); if(oi>=0)order.splice(oi,1); updateUndo();
   cur={ pi:hit.pi, c:c, target:(hit.end===0?pr.b:pr.a), pts:[(hit.end===0?pr.a:pr.b).slice()], crossed:false };
   pulses[hit.pi]=1; sfx("select");
 }
-function move(e){ if(!cur||screen!=="play")return; e.preventDefault();
+function move(e){ if(SM_ATTRACT) return; if(!cur||screen!=="play")return; e.preventDefault();
   var pt=toXY(e), last=cur.pts[cur.pts.length-1]; if(dist(pt,last)<HALF*0.18)return;
   if(!cur.crossed&&invalidSeg(last,pt)){ cur.crossed=true; sfx("error"); }
   cur.pts.push(pt);
 }
-function up(){ if(!cur||screen!=="play")return;
+function up(){ if(SM_ATTRACT) return; if(!cur||screen!=="play")return;
   var last=cur.pts[cur.pts.length-1], reached=dist(last,cur.target)<GOAL&&cur.pts.length>2;
   if(reached&&!cur.crossed){ cur.pts.push(cur.target.slice()); committed[cur.c]=cur.pts; order.push(cur.c);
     burst(cur.target,clayOf(cur.c).clay); burst(cur.pts[0],clayOf(cur.c).clay); pulses[cur.pi]=1; hop[cur.pi]=1;
@@ -406,10 +412,12 @@ function burst(p,color){ for(var i=0;i<16;i++){ var a=Math.random()*6.28,sp=(2+M
 /* ---------- SMOOSH FINALE (level complete): every pair rushes together + splats. ---------- */
 function pairIndexOf(c){ for(var i=0;i<level.P.length;i++) if(level.P[i].c===c) return i; return -1; }
 function winLevel(){ screen="finale";
-  starsMap[levelIdx]=Math.max(3,starsMap[levelIdx]||0); save("sm_stars",JSON.stringify(starsMap));
-  if(levelIdx>=unlocked&&levelIdx<WORLDS.length-1){ unlocked=levelIdx+1; save("sm_unlocked",String(unlocked)); }
+  if(!SM_ATTRACT){
+    starsMap[levelIdx]=Math.max(3,starsMap[levelIdx]||0); save("sm_stars",JSON.stringify(starsMap));
+    if(levelIdx>=unlocked&&levelIdx<WORLDS.length-1){ unlocked=levelIdx+1; save("sm_unlocked",String(unlocked)); }
+    try{ window.parent.postMessage({source:"buildable",kind:"win"},"*"); }catch(_){}
+  }
   btnUndo.classList.add("hide"); setStatus("Smoosh time!");
-  try{ window.parent.postMessage({source:"buildable",kind:"win"},"*"); }catch(_){}
   var items=order.map(function(c,i){ var pi=pairIndexOf(c); var A=level.P[pi].a.slice(), B=level.P[pi].b.slice();
     return { c:c, pi:pi, A:A, B:B, mid:[(A[0]+B[0])/2,(A[1]+B[1])/2], start:i*13, ph:0, phase:"wait", timer:0 }; });
   finale={ items:items, frame:0, allDone:false, overlayShown:false, endTimer:0 };
@@ -431,7 +439,9 @@ function stepFinale(){
     if(finale.endTimer>=34){ finale.overlayShown=true; showWinOverlay(); }
   }
 }
-function showWinOverlay(){ var lastL=levelIdx>=WORLDS.length-1;
+function showWinOverlay(){
+  if(SM_ATTRACT){ setTimeout(function(){ if(screen==="finale"){ startLevel(0); attractStart(); } },1200); return; }
+  var lastL=levelIdx>=WORLDS.length-1;
   winTitle.textContent=lastL?"You smooshed them all!":"Smoosh!";
   winSub.textContent=lastL?"Every world is connected.":"Every buddy smooshed together.";
   btnNext.textContent=lastL?"Play again":"Next world";
@@ -491,7 +501,7 @@ function draw(){
     demoLine.setAttribute("stroke",clayOf(level.P[0].c).clay); demoLine.setAttribute("stroke-width",SW);
     demoLine.setAttribute("x1",A[0]); demoLine.setAttribute("y1",A[1]); demoLine.setAttribute("x2",hx); demoLine.setAttribute("y2",hy);
     var hs=HALF*2.6; demoHand.setAttribute("width",hs); demoHand.setAttribute("height",hs); demoHand.setAttribute("x",hx-hs*0.12); demoHand.setAttribute("y",hy-hs*0.04);
-  } else if(demoHand){ demoLine.style.display="none"; demoHand.style.display="none"; }
+  } else if(demoHand && !SM_ATTRACT){ demoLine.style.display="none"; demoHand.style.display="none"; }
 }
 function drawFinaleSprites(){
   // hide idle sprites for pairs that have smooshed; reposition the ones still moving
@@ -517,10 +527,65 @@ function loop(){
   var np=[]; for(var i=0;i<particles.length;i++){ var q=particles[i]; q.x+=q.vx; q.y+=q.vy; q.vy+=0.16*(HALF/58); q.life-=0.022; if(q.life>0)np.push(q); } particles=np;
   for(var k in pulses){ pulses[k]=Math.max(0,pulses[k]-0.06); } if(cur)pulses[cur.pi]=1;
   for(var hk in hop){ hop[hk]=Math.max(0,hop[hk]-0.05); }
+  if(attract) attractTick();
   if(finale) stepFinale();
   if(celebrate>0){ celebrate--; if(celebrate%5===0&&level){ var cc=level.P[Math.floor(Math.random()*level.P.length)].c; burst([VW*(0.12+Math.random()*0.76),VH*(0.12+Math.random()*0.76)],clayOf(cc).clay); } }
   if(demo){ demo.t+=0.012; if(demo.t>=1){ demo.t=1; demo.hold++; if(demo.hold>60){ endDemo(); setStatus("Now you try! Connect "+level.P.length+" pairs."); } } }
   draw(); requestAnimationFrame(loop);
+}
+
+/* ---------- Session 7I attract loop: the game plays itself for the landing demo.
+   For each pair it GLIDES the tutorial hand to the buddy (capped per-frame step --
+   never teleports), presses, then draws the solver's real string point-by-point. */
+var attract=null;
+function attractStart(){ attract={ paths:null, i:0, seg:0, phase:"plan", wait:30, hand:null, dip:0 }; }
+function attractHand(hx,hy,show){
+  if(!demoHand) return;
+  if(!show){ demoHand.style.display="none"; return; }
+  demoHand.style.display=""; if(demoLine) demoLine.style.display="none";
+  var hs=HALF*2.6+attract.dip*HALF*0.3;
+  demoHand.setAttribute("width",hs); demoHand.setAttribute("height",hs);
+  demoHand.setAttribute("x",hx-hs*0.12); demoHand.setAttribute("y",hy-hs*0.04);
+}
+function attractTick(){
+  var A=attract; if(!A) return;
+  if(screen==="finale"){ attractHand(0,0,false); return; }   // smoosh plays itself; showWinOverlay restarts us
+  if(screen!=="play"||!level) return;
+  A.dip=Math.max(0,A.dip-0.06);
+  if(A.wait>0){ A.wait--; if(A.hand) attractHand(A.hand[0],A.hand[1],true); return; }
+  if(A.phase==="plan"){
+    var paths=null; try{ paths=solveLevelAt(levelIdx,VW,VH,true); }catch(e){}
+    if(!paths||!paths.length) paths=level.P.map(function(p){ return [p.a.slice(),p.b.slice()]; });
+    A.paths=paths; A.i=0; A.phase="travel";
+    if(!A.hand) A.hand=[VW/2,VH*0.9];
+  }
+  if(A.i>=level.P.length){ A.phase="done"; attractHand(A.hand[0],A.hand[1],false); winLevel(); return; }
+  var path=A.paths[A.i]||[level.P[A.i].a.slice(),level.P[A.i].b.slice()], c=level.P[A.i].c;
+  var STEP=Math.min(VW,VH)*0.014;                             // capped per-frame step
+  if(A.phase==="travel"){                                     // glide the hand to the next buddy
+    var t0=path[0], dx=t0[0]-A.hand[0], dy=t0[1]-A.hand[1], d=Math.hypot(dx,dy);
+    if(d>STEP){ A.hand[0]+=dx/d*STEP; A.hand[1]+=dy/d*STEP; }
+    else { A.hand=[t0[0],t0[1]]; A.dip=1; pulses[A.i]=1; A.phase="draw"; A.seg=0;
+      committed[c]=[[t0[0],t0[1]]]; }
+    attractHand(A.hand[0],A.hand[1],true); return;
+  }
+  if(A.phase==="draw"){                                       // draw the string point-by-point
+    var pts=committed[c], guard=0, adv=STEP*1.35;
+    while(adv>0 && A.seg<path.length-1 && guard++<200){
+      var from=pts[pts.length-1], to=path[A.seg+1];
+      var ddx=to[0]-from[0], ddy=to[1]-from[1], dd=Math.hypot(ddx,ddy);
+      if(dd<=adv){ pts.push([to[0],to[1]]); adv-=dd; A.seg++; }
+      else { pts.push([from[0]+ddx/dd*adv, from[1]+ddy/dd*adv]); adv=0; }
+    }
+    var lp=pts[pts.length-1]; A.hand=[lp[0],lp[1]]; pulses[A.i]=1;
+    attractHand(A.hand[0],A.hand[1],true);
+    if(A.seg>=path.length-1){                                 // pair connected
+      order.push(c); hop[A.i]=1; burst(path[0],clayOf(c).clay); burst(path[path.length-1],clayOf(c).clay);
+      setStatus("Connected "+order.length+" of "+level.P.length);
+      A.i++; A.phase="travel"; A.wait=55;                     // roughly one pair every ~2s
+    }
+    return;
+  }
 }
 
 /* ---------- controls ---------- */
@@ -531,7 +596,11 @@ btnUndo.innerHTML=UNDO_SVG; btnLevels.innerHTML=MENU_SVG;
 board.addEventListener("pointerdown",down); board.addEventListener("pointermove",move);
 board.addEventListener("pointerup",up); board.addEventListener("pointercancel",function(){ cur=null; });
 
-btnSound.innerHTML=SND_ON; layout(); showMenu(); requestAnimationFrame(loop);
+btnSound.innerHTML=SND_ON; layout();
+if(SM_ATTRACT){ if(BA)BA.muted=true; btnSound.style.display="none"; startLevel(0); attractStart(); }   // 7I attract: world 1, silent, no menus
+else if(SM_LEVEL!=null){ startLevel(Math.max(0,Math.min(WORLDS.length-1,SM_LEVEL))); }                 // 7I deep-link (worlds are built-in; manifest only renames)
+else showMenu();
+requestAnimationFrame(loop);
 })();
 </script>
 </body>
