@@ -6,6 +6,10 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Favicon now shows on the app, not just admin tools (July 20 2026)
+The kid app (`/app`) had no favicon while the landing page and admin tools did. The Vite build uses `base: '/demo/'`, so the app's built `index.html` requests its icons at `/demo/favicon.*`, but `vercel.json` only rerouted `/demo/site.webmanifest` to the real root file, not the icons — so `/demo/favicon.svg` fell through the `/demo/(.*)` redirect and returned the SPA HTML instead of an image (no icon). Landing and admin pages point at the root `/favicon.*` directly, which is why they always worked. Fix: added five routes in `vercel.json`, right after the `/demo/site.webmanifest` route, mapping `/demo/favicon.ico|favicon.svg|favicon-32.png|favicon-16.png|apple-touch-icon.png` to their root `/favicon.*` counterparts. Commit `0676ace` on `main`; Vercel auto-deployed. QA (live): `/demo/favicon.svg` now returns the real SVG and the app tab shows the B icon.
+
+
 ## Breaker: demo paddle no longer twitches (July 19 2026)
 The self-playing attract demo (`?screen=demo`) had the solo bot teleport the paddle
 straight to a target that flipped side-to-side each tick, so the paddle jittered across
