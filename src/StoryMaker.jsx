@@ -43,7 +43,6 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   const deviceId=getDeviceId(); const kidProfileId=getKidProfileId();
   const [view,setView]=useState("landing");   // landing | pick | generating | reading
   const [step,setStep]=useState(0);
-  const [locking,setLocking]=useState(false);
 
   const [guide,setGuide]=useState("unicorn");
   const [style,setStyle]=useState("watercolor");
@@ -57,9 +56,8 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   const [name,setName]=useState(DEFAULT_NAME["bunny"]);
 
   const [story,setStory]=useState(null);
-  const [scenes,setScenes]=useState({});
-  const paintStartedRef=useRef(false);
   const [error,setError]=useState(null);
+  const prewriteRef=useRef({sig:null,promise:null,name:null}); // write-while-naming
   const [genMsg,setGenMsg]=useState("Writing your story");
   const [saved,setSaved]=useState([]);
   const [saving,setSaving]=useState(false);
@@ -199,32 +197,8 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   function labelOf(st){const o=st.opts.find(x=>x[0]===st.val);return o?o[1]:"";}
   function cycle(st,dir){const i=st.opts.findIndex(o=>o[0]===st.val);const ni=((i<0?0:i)+dir+st.opts.length)%st.opts.length;st.set(st.opts[ni][0]);}
   function pickOpt(st,id){st.set(id);}
-  // PAINT THE STORY: pre-generate every page's woven scene at creation time, so
-  // the reader opens already painted (and saved stories cache them forever).
-  useEffect(()=>{
-    if(view!=="painting" || !story || !Array.isArray(story.pages)) return;
-    if(paintStartedRef.current) return; paintStartedRef.current=true;
-    let cancelled=false;
-    const token = story.scene_token || story.story_id || (Math.random().toString(36).slice(2,10));
-    const pages=story.pages, slug=story.character_slug||"bunny", style=story.style||"watercolor";
-    let qi=0, active=0;
-    const pump=()=>{
-      while(!cancelled && active<3 && qi<pages.length){
-        const i=qi++; const pg=pages[i]; if(!pg||!pg.text){ continue; }
-        active++;
-        const ck=token+"|"+i+"|"+(pg.emotion||"happy");
-        const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),120000);
-        fetch("/api/story-library",{method:"POST",headers:{"Content-Type":"application/json"},signal:ctrl.signal,
-          body:JSON.stringify({pageScene:true,slug,style,emo:pg.emotion||"happy",world:pg.world_slug,action:pg.text,pageIndex:i,cacheKey:ck,companion:story.companion_slug||""})})
-          .then(r=>r.json())
-          .then(j=>{ clearTimeout(to); if(!cancelled && j && (j.generated||j.cached)) setScenes(m=>({...m,[i]:"/api/story-library?pimg=1&k="+encodeURIComponent(ck)})); })
-          .catch(()=>clearTimeout(to))
-          .finally(()=>{ active--; if(!cancelled) pump(); });
-      }
-    };
-    pump();
-    return ()=>{ cancelled=true; };
-  },[view,story]);
+  // Page painting now lives ENTIRELY in StoryReader (one paint owner): it shows the
+  // layered art instantly and crossfades each painted page in as its gen finishes.
 
   function next(){setStep(s=>Math.min(TOTAL,s+1));}
   function back(){ if(atEnd){setStep(TOTAL-1);return;} if(step>0)setStep(step-1); else setView("landing"); }
@@ -238,28 +212,67 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   }
   function surprise(){ primeSound(); maybeGate(doSurprise); }
 
-  function doMake(){ if(locking) return; setLocking(true); setTimeout(()=>{ setLocking(false); makeStory(); }, 1350); }
-
-  async function makeStory(payload){
-    const body = payload || { guide, style, characterSlug:hero, characterName:(name||DEFAULT_NAME[hero]||""), worldSlug:world,
-      quest, mood, ending, spark:(customSpark.trim()||spark) };
-    setError(null); setGenMsg("Writing your story"); setView("generating");
+  // Open a finished story straight into the reader — no Painting screen. The reader
+  // shows layered art instantly and paints each page in as its gen finishes.
+  function openFreshStory(st){ setStory(st); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); setView("reading"); }
+  async function generateStoryRaw(body){
     try{
       const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body, age:6, deviceId, kidProfileId})});
       const j=await r.json();
-      if(!(j&&j.ok&&j.story)){ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); return; }
-      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); paintStartedRef.current=false; setScenes({}); setView("painting");
-    }catch{ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); }
+      return (j&&j.ok&&j.story)?j.story:null;
+    }catch{ return null; }
+  }
+  // Swap the placeholder default hero name for the name the kid typed, client-side,
+  // across the title + every page + dialogue. Never cuts mid-word.
+  function swapHeroName(st, from, to){
+    if(!st||!from||!to||from===to) return st;
+    const first=String(from).split(" ")[0];
+    const esc=(x)=>x.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    const rep=(sv)=>{ if(!sv) return sv; let out=String(sv).split(from).join(to);
+      if(first && first!==from) out=out.replace(new RegExp("\\b"+esc(first)+"\\b","g"), to); return out; };
+    const pages=Array.isArray(st.pages)?st.pages.map(p=>({...p, text:rep(p.text),
+      lines:Array.isArray(p.lines)?p.lines.map(l=>({...l, say:rep(l.say)})):p.lines })):st.pages;
+    return {...st, title:rep(st.title), character_name:to, pages, created_with:{...(st.created_with||{}), characterName:to}};
+  }
+  const pickSig=()=>[guide,style,hero,world,quest,mood,ending,(customSpark.trim()||spark)].join("|");
+  function pickBody(nm){ return { guide, style, characterSlug:hero, characterName:nm, worldSlug:world, quest, mood, ending, spark:(customSpark.trim()||spark) }; }
+
+  // WRITE-WHILE-NAMING: the moment the naming screen is up, quietly start writing the
+  // story with the hero's DEFAULT name. On Make we swap in the kid's typed name.
+  // Debounced so cycling the chips doesn't spam the writer.
+  useEffect(()=>{
+    if(view!=="pick"||!atEnd) return;
+    const sig=pickSig();
+    if(prewriteRef.current.sig===sig && prewriteRef.current.promise) return;
+    const t=setTimeout(()=>{ const nm=DEFAULT_NAME[hero]||"Hero";
+      prewriteRef.current={ sig, name:nm, promise:generateStoryRaw(pickBody(nm)) }; }, 500);
+    return ()=>clearTimeout(t);
+  },[view,step,guide,style,hero,world,quest,mood,ending,spark,customSpark]);
+
+  async function doMake(){
+    const typed=(name||"").trim()||DEFAULT_NAME[hero]||"Hero";
+    const sig=pickSig(); setError(null);
+    const pw=prewriteRef.current;
+    if(pw.sig===sig && pw.promise){
+      setGenMsg("Writing your story"); setView("generating");
+      const st=await pw.promise;
+      if(st){ openFreshStory(swapHeroName(st, pw.name||DEFAULT_NAME[hero], typed)); return; }
+    }
+    makeStory(); // no prewrite ready (or it failed) — write fresh with the typed name
+  }
+  async function makeStory(payload){
+    const body = payload || pickBody(name||DEFAULT_NAME[hero]||"");
+    setError(null); setGenMsg("Writing your story"); setView("generating");
+    const st=await generateStoryRaw(body);
+    if(!st){ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); return; }
+    openFreshStory(st);
   }
   async function makeSequel(prev){
     const c=(prev&&prev.created_with)||{};
     setError(null); setGenMsg("Starting a new adventure"); setView("generating");
-    try{
-      const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...c, age:6, deviceId, kidProfileId})});
-      const j=await r.json();
-      if(!(j&&j.ok&&j.story)){ setError("Hmm, that didn't work."); setView("reading"); return; }
-      setStory(j.story); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); paintStartedRef.current=false; setScenes({}); setView("painting");
-    }catch{ setError("Hmm, that didn't work."); setView("reading"); }
+    const st=await generateStoryRaw(c);
+    if(!st){ setError("Hmm, that didn't work."); setView("reading"); return; }
+    openFreshStory(st);
   }
 
   async function saveStory(toSave){
@@ -306,26 +319,6 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
     </div>);
   }
 
-  // ---------- PAINTING (pre-generate the woven scenes) ----------
-  if(view==="painting" && story && Array.isArray(story.pages)){
-    const total=story.pages.length, done=Object.keys(scenes).length, allDone=done>=total;
-    return (<div style={{...s.container,justifyContent:"center"}}>
-      <h2 style={s.genTitle}>Painting your story…</h2>
-      <p style={s.genSub}>{allDone?"All done! Tap to read.":(done+" of "+total+" pages painted")}</p>
-      <div style={s.paintGrid}>
-        {story.pages.map((_,i)=>(
-          <div key={i} style={s.paintCell}>
-            {scenes[i] ? <img src={scenes[i]} alt="" style={s.paintImg}/> : <div style={s.paintShimmer}/>}
-          </div>
-        ))}
-      </div>
-      <button style={{...s.makeBtn,...(done<1?{opacity:.5}:{}),...(allDone?{animation:"bkLock .6s cubic-bezier(.2,.9,.3,1.5) both"}:{})}} disabled={done<1} onClick={()=>setView("reading")}>
-        {allDone?"Read my story!":(done>=1?"Start reading":"Painting…")}
-      </button>
-      <style>{spin+lock+shimmer}</style>
-    </div>);
-  }
-
   // ---------- PICKER ----------
   if(view==="pick"){
     return (<div style={s.container}>
@@ -356,16 +349,16 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
             {SPARKS.map((txt)=>(<button key={txt} onClick={()=>{setSpark(txt===spark&&!customSpark?"":txt);setCustomSpark("");}} style={{...s.sparkCard,...((spark===txt&&!customSpark)?s.tileOn:{})}}>{SPARK_ICON[txt]&&<img src={iconImg(SPARK_ICON[txt])} alt="" style={s.sparkImg}/>}{txt}</button>))}
           </div>
           <input style={s.bigInput} value={customSpark} maxLength={140} placeholder="…or type your own idea" onChange={(e)=>{setCustomSpark(e.target.value);if(e.target.value)setSpark("");}}/>
-          <button style={{...s.makeBtn,...(locking?s.makeBtnLock:{})}} onClick={doMake} disabled={locking}>{locking?"Making it!":"Make my story!"}</button>
+          <button style={s.makeBtn} onClick={doMake}>Make my story!</button>
         </div>
       </>)}
 
       {/* STORY SO FAR — carry choices along; change any inline */}
       <div style={s.sofarWrap}>
-        <div style={s.sofarHead}>{locking?"Locking it in…":"Your story so far — change anything"}</div>
+        <div style={s.sofarHead}>Your story so far — change anything</div>
         <div style={s.chipStrip}>
           {STEPS.filter((_,i)=>i<step||atEnd).map((st,i)=>(
-            <div key={st.key} style={{...s.chip,...(locking?{animation:"bkLock .5s cubic-bezier(.2,.9,.3,1.5) "+(i*0.1)+"s both"}:{})}}>
+            <div key={st.key} style={s.chip}>
               <button style={s.chev} onClick={()=>cycle(st,-1)} aria-label={"Change "+st.q}><Chevron dir="up"/></button>
               {st.img && <img src={st.img(st.val)} alt="" style={s.chipImg}/>}
               <div style={s.chipVal}>{labelOf(st)}</div>
