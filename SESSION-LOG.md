@@ -12,7 +12,9 @@ logic (flood-fill white background out from the edges, then tight-crop each bric
 sliver-trim), and re-packed uniform `bricks.webp` (intact/hit/cracked x 6) + `shatter.webp`
 (6-wide strip) so every cell is full-bleed. Removed the padding-compensation stretch in
 breaker-engine.html (drawThemedBrick / drawShatters): source the full cell, drop the ey=0.62
-hack to a tiny 0.06 grid-touch bleed. Bricks now render solid, no slits.
+hack. NOTE follow-up same day: the layout uses a fixed bh=24 with a 6px inter-row gap; the
+old 0.62 stretch had been hiding those gaps by overdrawing. Replaced the tiny bleed with a
+fixed 7px bleed so full-bleed bricks tile over the 6px gap - solid wall, no lines.
 
 ## 2026-07-20: Favicon fix — /app now shows the B icon
 
