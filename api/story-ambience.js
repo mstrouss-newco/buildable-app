@@ -15,15 +15,24 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
 
 // Calm, loopable ambience per world. Kept gentle (background, not distracting).
+// Keys MUST match the real story world slugs (story.start_world / page.world_slug)
+// used by src/StoryMaker.jsx + api/story-library.js — otherwise ambience never plays.
 const AMBIENCE = {
-  snowy_forest: "gentle calm winter wind softly blowing through snowy pine trees, peaceful, seamless loop",
-  outer_space: "soft calm ambient outer-space hum with faint twinkling tones, peaceful, seamless loop",
-  underwater: "calm underwater ambience, gentle bubbles and soft flowing water, peaceful, seamless loop",
-  candy_land: "soft whimsical magical sparkle chimes, light playful and gentle, seamless loop",
-  enchanted_woods: "peaceful enchanted forest, gentle birdsong and soft rustling leaves, seamless loop",
-  desert_oasis: "warm gentle desert breeze with faint distant birds, calm, seamless loop",
-  cloud_castle: "soft airy high-altitude wind with gentle magical chimes, dreamy, seamless loop",
-  pirate_cove: "gentle calm ocean waves lapping with soft distant seagulls, peaceful, seamless loop",
+  "snowy-village":    "gentle calm winter wind softly blowing through snowy pine trees, peaceful, seamless loop",
+  "coral-reef":       "calm underwater ambience, gentle bubbles and soft flowing water, peaceful, seamless loop",
+  "enchanted-forest": "peaceful enchanted forest, gentle birdsong and soft rustling leaves, seamless loop",
+  "dragon-mountain":  "soft airy high-altitude mountain wind with faint gentle magical chimes, dreamy, seamless loop",
+  "dino-jungle":      "lush calm jungle ambience, distant soft birdcalls and gentle rustling leaves, peaceful, seamless loop",
+  "space-station":    "soft calm ambient outer-space hum with faint twinkling tones, peaceful, seamless loop",
+  "desert-oasis":     "warm gentle desert breeze with faint distant birds, calm, seamless loop",
+  "candy-land":       "soft whimsical magical sparkle chimes, light playful and gentle, seamless loop",
+  "city-town":        "gentle cheerful town ambience, soft distant birds and a light breeze, calm, seamless loop",
+};
+// Back-compat: old callers that still send legacy world names resolve to the real slug.
+const ALIAS = {
+  snowy_forest: "snowy-village", outer_space: "space-station", underwater: "coral-reef",
+  candy_land: "candy-land", enchanted_woods: "enchanted-forest", desert_oasis: "desert-oasis",
+  cloud_castle: "dragon-mountain", pirate_cove: "coral-reef",
 };
 
 async function cacheGet(key) {
@@ -73,7 +82,8 @@ async function logCost(cost) {
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
-  const world = (req.query.world || "").toString();
+  const raw = (req.query.world || "").toString();
+  const world = ALIAS[raw] || raw;
   const prompt = AMBIENCE[world];
   if (!prompt) return res.status(200).json({ ok: true, configured: false, reason: "unknown_world" });
 

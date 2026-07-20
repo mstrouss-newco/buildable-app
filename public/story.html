@@ -90,7 +90,14 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <script>
   // ---- world look (matches the app's calm placeholder scenes) ----
-  var PALETTE={snowy_forest:["#2b3a55","#5d7a9e"],outer_space:["#1b1240","#5b3a86"],underwater:["#0d3b53","#1f8aa6"],
+  var PALETTE={
+    // real story world slugs (match src/StoryMaker.jsx + api/story-library.js)
+    "snowy-village":["#2b3a55","#5d7a9e"],"coral-reef":["#0d3b53","#1f8aa6"],
+    "enchanted-forest":["#1f3d2f","#4a7a55"],"dragon-mountain":["#5a3a2a","#a86a4a"],
+    "dino-jungle":["#22401f","#5a8a3a"],"space-station":["#1b1240","#5b3a86"],
+    "desert-oasis":["#6b4a1f","#caa05a"],"candy-land":["#7a2f5f","#d4789e"],"city-town":["#3a4a86","#8aa0d4"],
+    // legacy aliases (older saved stories)
+    snowy_forest:["#2b3a55","#5d7a9e"],outer_space:["#1b1240","#5b3a86"],underwater:["#0d3b53","#1f8aa6"],
     candy_land:["#7a2f5f","#d4789e"],enchanted_woods:["#1f3d2f","#4a7a55"],desert_oasis:["#6b4a1f","#caa05a"],
     cloud_castle:["#3a4a86","#8aa0d4"],pirate_cove:["#2a3d4a","#5a86a0"],space:["#1b1240","#5b3a86"],
     forest:["#1f3d2f","#4a7a55"],desert:["#6b4a1f","#caa05a"],castle:["#3a4a86","#8aa0d4"],
@@ -113,7 +120,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     var art=document.getElementById("pageArt");
     if(p.art_url){art.innerHTML='<img alt="" src="'+p.art_url+'">';}
     else{
-      var pal=PALETTE[state.world]||["#3a2a5e","#7c5cfc"];
+      var pal=PALETTE[p.world_slug||state.world]||["#3a2a5e","#7c5cfc"];
       art.innerHTML='<div class="scene" style="background:linear-gradient(160deg,'+pal[0]+','+pal[1]+')"></div>';
     }
     // word spans (for read-aloud highlight)
@@ -146,7 +153,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     var s=(data&&data.story)||{};
     var book=s.story||s; // accept {story:{...}} row or raw story
     state.pages=(book&&book.pages)||[];
-    state.world=(book&&book.world)||s.world||"";
+    state.world=(book&&(book.start_world||book.world))||s.world||"";
     state.idx=0;
     if(!state.pages.length){show("missing");return;}
     document.getElementById("bookTitle").textContent=(book&&book.title)||s.title||"My Story";
