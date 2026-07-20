@@ -125,29 +125,35 @@ const SCREEN_MEMORY = "memory";
 const SCREEN_BINGO = "bingo";
 const SCREEN_SNAKES = "snakes";
 const SCREEN_MAZE = "maze";
+const SCREEN_WRAP_JOURNEY = "wrapjourney";   // Session 7I: the ONE shared journey for every wrapped game
+const SCREEN_BOARD_SOLO = "boardsolo";       // Session 7I: the ONE shared board difficulty picker (non-chess)
 
 // Session 7F — shared-landing wrap table. Each keeper's Play launches its existing
 // engine screen (engines untouched); loadout:true means the manifest carries a
 // "Make it mine" slot. Adding a game to the shared front door is one data row here,
 // not new screen code. (Breaker/Chess/Music/Tennis keep their own richer blocks.)
+// Session 7I adds per-game `journey` (Play routes to the shared GameJourney and the
+// engine is deep-linked with ?level=) and `demo` (the landing demo box URL — every
+// engine now has a Breaker-style ?screen=demo attract mode). Games without `demo`
+// show no demo box at all (never an empty box that implies gameplay).
 const LANDING_WRAP = {
-  survival: { play: SCREEN_SURVIVAL, loadout: true },
-  sling: { play: SCREEN_SLING_JOURNEY, loadout: true },
-  tictactoe: { play: SCREEN_TICTACTOE, loadout: true },
-  connectfour: { play: SCREEN_CONNECTFOUR, loadout: true },
-  dotsboxes: { play: SCREEN_DOTSBOXES, loadout: true },
-  checkers: { play: SCREEN_CHECKERS, loadout: true },
-  memory: { play: SCREEN_MEMORY, loadout: true },
-  mahjong: { play: SCREEN_MAHJONG, loadout: true },
+  survival: { play: SCREEN_SURVIVAL, loadout: true, journey: true, demo: "/survival-engine.html?v=9c&screen=demo" },
+  sling: { play: SCREEN_SLING, loadout: true, journey: true, demo: "/sling-squad.html?v=hud3&screen=demo" },
+  tictactoe: { play: SCREEN_TICTACTOE, loadout: true, demo: "/tictactoe-engine.html?v=hud2&screen=demo" },
+  connectfour: { play: SCREEN_CONNECTFOUR, loadout: true, demo: "/connectfour-engine.html?v=hud2&screen=demo" },
+  dotsboxes: { play: SCREEN_DOTSBOXES, loadout: true, demo: "/dotsboxes-engine.html?v=hud2&screen=demo" },
+  checkers: { play: SCREEN_CHECKERS, loadout: true, demo: "/buildable-checkers.html?v=3&screen=demo" },
+  memory: { play: SCREEN_MEMORY, loadout: true, journey: true, demo: "/memory-engine.html?v=hud2&screen=demo" },
+  mahjong: { play: SCREEN_MAHJONG, loadout: true, journey: true, demo: "/mahjong-engine.html?v=hud2&screen=demo" },
   bingo: { play: SCREEN_BINGO, loadout: true },
-  croctot: { play: SCREEN_CROC, loadout: true },
-  stringmatch: { play: SCREEN_STRINGMATCH },
-  bubble: { play: SCREEN_BUBBLE },
-  castleguard: { play: SCREEN_CASTLE },
-  tetris: { play: SCREEN_TETRIS },
-  "rileys-garden": { play: SCREEN_RILEYS },
-  typing: { play: SCREEN_TYPING },
-  mathcannon: { play: SCREEN_MATHCANNON },
+  croctot: { play: SCREEN_CROC, loadout: true, journey: true, demo: "/croctot.html?v=hud2&screen=demo" },
+  stringmatch: { play: SCREEN_STRINGMATCH, journey: true, demo: "/string-match.html?v=2&screen=demo" },
+  bubble: { play: SCREEN_BUBBLE, journey: true, demo: "/bubble-engine.html?v=hud2&screen=demo" },
+  castleguard: { play: SCREEN_CASTLE, journey: true, demo: "/castle-guard.html?v=hud2&screen=demo" },
+  tetris: { play: SCREEN_TETRIS, demo: "/tetris-engine.html?v=hud2&screen=demo" },   // demo only: manifest waits on the 7A rename off "tetris"
+  "rileys-garden": { play: SCREEN_RILEYS, journey: true, demo: "/rileys-garden.html?v=art2&screen=demo" },
+  typing: { play: SCREEN_TYPING, journey: true, demo: "/typing.html?v=2&screen=demo" },
+  mathcannon: { play: SCREEN_MATHCANNON, journey: true, demo: "/mathcannon-engine.html?v=2&screen=demo" },
   platformer: { play: SCREEN_PLATFORMER },
   town: { play: SCREEN_TOWN },
   runner: { play: SCREEN_RUNNER },
@@ -354,8 +360,8 @@ function survivalUpParam() {
     .filter(Boolean);
   return pairs.length ? "&up=" + encodeURIComponent(pairs.join(",")) : "";
 }
-function SurvivalScreen({ onHome, onUpgrades }) {
-  const src = "/survival-engine.html?v=9b" + survivalUpParam();
+function SurvivalScreen({ onHome, onUpgrades, level }) {
+  const src = "/survival-engine.html?v=9c" + survivalUpParam() + (level != null ? "&level=" + level : "");
   const right = onUpgrades ? (
     <button onClick={onUpgrades} style={{ position: "absolute", bottom: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Gear up</button>
   ) : null;
@@ -474,10 +480,10 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multipl
         <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>{game.category}{game.type === "studio" && game.category !== "Studio" ? " \u00b7 Studio" : ""}</div>
         <h1 style={{ ...styles.logo, margin: "2px 0 0" }}>{game.name}</h1>
         <p style={{ ...styles.tagline, margin: "4px 0 10px" }}>{game.desc}</p>
-        <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4", maxHeight: "50vh", borderRadius: 26, overflow: "hidden", border: `2px solid ${accent}66`, boxShadow: `0 18px 44px rgba(0,0,0,0.5), 0 0 0 4px ${accent}22`, background: `linear-gradient(160deg, ${accent}, ${accent}66)` }}>
+        {demoSrc && <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4", maxHeight: "50vh", borderRadius: 26, overflow: "hidden", border: `2px solid ${accent}66`, boxShadow: `0 18px 44px rgba(0,0,0,0.5), 0 0 0 4px ${accent}22`, background: `linear-gradient(160deg, ${accent}, ${accent}66)` }}>
           {demoSrc && <iframe title={`${game.name} demo`} src={demoSrc} scrolling="no" style={{ width: "100%", height: "100%", border: "none", display: "block", pointerEvents: "none" }} />}
           <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 11px", borderRadius: 999, background: "rgba(12,10,24,0.66)", color: "#fff" }}>Demo</span>
-        </div>
+        </div>}
         {!modeOn && <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play</button>}
         {modeOn && (
           <div style={{ width: "100%", maxWidth: 360, marginTop: 18 }}>
@@ -507,14 +513,37 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multipl
 //  wider wander on iPad/desktop. The current level auto-scrolls into view.
 // ============================================================================
 function readBreakerProgress(gameId) {
-  let unlocked = 0, stars = {};
+  // Session 7I: the journey mirrors each engine's OWN save (most engines predate the
+  // shared bk_{game}_prefs shape), so nothing a kid could already play ever locks.
   try {
+    const id = gameId || "breaker";
+    // free-choice games: their menus never locked levels, so every stop stays open
+    if (id === "croctot" || id === "memory" || id === "mahjong" || id === "rileys-garden" || id === "typing") return { unlocked: 9999, stars: {} };
+    if (id === "survival") {
+      const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
+      const d = JSON.parse(localStorage.getItem("bk_survival_char" + (k && k.id ? ("_" + k.id) : "")) || "null");
+      return { unlocked: (d && d.unlocked) || 0, stars: {} };
+    }
+    if (id === "stringmatch") {
+      let st = {}; try { st = JSON.parse(localStorage.getItem("sm_stars") || "{}") || {}; } catch (e) {}
+      return { unlocked: parseInt(localStorage.getItem("sm_unlocked") || "0", 10) || 0, stars: st };
+    }
+    if (id === "castleguard") {
+      const d = JSON.parse(localStorage.getItem("castleguard") || "null");
+      return { unlocked: (d && d.unlocked) || 0, stars: (d && d.stars) || {} };
+    }
+    if (id === "mathcannon") {
+      const d = JSON.parse(localStorage.getItem("bk_mathcannon") || "null");
+      const st = {}; if (d && d.cleared) Object.keys(d.cleared).forEach((i) => { if (d.cleared[i]) st[i] = 3; });
+      return { unlocked: (d && d.unlocked) || 0, stars: st };
+    }
+    // default (breaker, sling, bubble...): the shared bk_{game}_prefs shape
     const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
-    const key = "bk_" + (gameId || "breaker") + "_prefs" + (k && k.id ? ("_" + k.id) : "");
+    const key = "bk_" + id + "_prefs" + (k && k.id ? ("_" + k.id) : "");
     const s = JSON.parse(localStorage.getItem(key) || "null");
-    if (s) { unlocked = Math.max(0, s.unlocked || 0); if (s.stars && typeof s.stars === "object") stars = s.stars; }
+    if (s) return { unlocked: Math.max(0, s.unlocked || 0), stars: (s.stars && typeof s.stars === "object") ? s.stars : {} };
   } catch (e) {}
-  return { unlocked, stars };
+  return { unlocked: 0, stars: {} };
 }
 function breakerLevelTheme(level) {
   const src = (level.parts && (level.parts.background || level.parts.bricks)) || "";
@@ -694,7 +723,7 @@ function BoardSoloFrame({ game, gameId, onBack, onPlay }) {
         {!manifest && <div style={{ opacity: 0.7, marginTop: 20, fontWeight: 700 }}>Loading...</div>}
         <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
           {tiers.map((lv, i) => (
-            <button key={lv.id || i} onClick={() => onPlay(lv)} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%", borderRadius: 16, padding: "14px 16px", cursor: "pointer", color: "#fff", background: `linear-gradient(160deg, ${accent}44, ${accent}18)`, border: `1px solid ${accent}77` }}>
+            <button key={lv.id || i} onClick={() => onPlay(lv, i)} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%", borderRadius: 16, padding: "14px 16px", cursor: "pointer", color: "#fff", background: `linear-gradient(160deg, ${accent}44, ${accent}18)`, border: `1px solid ${accent}77` }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20 }}>{lv.name}</div>
                 {lv.desc && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 1 }}>{lv.desc}</div>}
@@ -1157,8 +1186,8 @@ function UpgradeStore({ game, onBack, onPlay }) {
   );
 }
 
-function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=hud1" onHome={onHome} bg="#2e7d32" />; }
-function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html?v=hud1" onHome={onHome} bg="#0c1230" />; }
+function CastleGuardScreen({ onHome, level }) { return <GameFrame title="Castle Guard" src={"/castle-guard.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#2e7d32" />; }
+function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html?v=hud2" onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
   useEffect(() => {
     if (!onPlayFriend) return;
@@ -1169,18 +1198,18 @@ function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
   return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />;
 }
 function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function SlingScreen({ onHome, level }) { const lv = (typeof level === "number") ? `&level=${level}` : ""; return <GameFrame title="Sling Squad" src={`/sling-squad.html?v=hud2${lv}`} onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function SlingScreen({ onHome, level }) { const lv = (typeof level === "number") ? `&level=${level}` : ""; return <GameFrame title="Sling Squad" src={`/sling-squad.html?v=hud3${lv}`} onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=hud1" onHome={onHome} bg="#7fc7ff" />; }
-function MathCannonScreen({ onHome }) { return <GameFrame title="Math Cannon" src="/mathcannon-engine.html?v=1" onHome={onHome} bg="#12102a" />; }
-function RileysScreen({ onHome }) { return <GameFrame title="Riley's Garden" src="/rileys-garden.html?v=art1" onHome={onHome} bg="#87CEEB" />; }
-function StringMatchScreen({ onHome }) { return <GameFrame title="String Match" src="/string-match.html?v=1" onHome={onHome} bg="#bfe3f5" light />; }
-function BubbleScreen({ onHome }) { return <GameFrame title="Bubble Buddies" src="/bubble-engine.html?v=hud1" onHome={onHome} bg="#0e1830" />; }
+function CrocScreen({ onHome, level }) { return <GameFrame title="Croc Tot" src={"/croctot.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#7fc7ff" />; }
+function MathCannonScreen({ onHome, level }) { return <GameFrame title="Math Cannon" src={"/mathcannon-engine.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#12102a" />; }
+function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Garden" src={"/rileys-garden.html?v=art2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#87CEEB" />; }
+function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
+function BubbleScreen({ onHome, level }) { return <GameFrame title="Bubble Buddies" src={"/bubble-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0e1830" />; }
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
 function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
 function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=2" onHome={onHome} bg="#0b1030" />; }
-function MemoryScreen({ onHome }) { return <GameFrame title="Buildable Memory Match" src="/memory-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
-function MahjongScreen({ onHome }) { return <GameFrame title="Buildable Mahjong" src="/mahjong-engine.html?v=hud1" onHome={onHome} bg="#101a2e" />; }
+function MemoryScreen({ onHome, level }) { return <GameFrame title="Buildable Memory Match" src={"/memory-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#131229" />; }
+function MahjongScreen({ onHome, level }) { return <GameFrame title="Buildable Mahjong" src={"/mahjong-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#101a2e" />; }
 function BingoScreen({ onHome }) { return <GameFrame title="Buildable Bingo" src="/bingo-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
 function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
 function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
@@ -1454,15 +1483,15 @@ function gameSpecFor(slug) {
       if (r < 3) b[r][c] = { c: "b", k: false };
       else if (r > 4) b[r][c] = { c: "r", k: false };
     }
-    return { slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: { board: b, turn: "r" } };
+    return { slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=3", transport: "turns", msg: "checkers", initialState: { board: b, turn: "r" } };
   }
-  if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: mpTransport("tictactoe", "turns"), msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
+  if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=4", transport: mpTransport("tictactoe", "turns"), msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
   // Session 7H: Connect Four + Dots and Boxes share the buildable-boardgame.js harness
   // (msg "bg"), so the generic GameLobby drives their online play with no engine edits.
   // The seed state is each engine's fresh S.init() board (Connect Four: an empty 7x6
   // grid; Dots and Boxes: the default 3x3 board the engine boots to in online mode).
-  if (slug === "connectfour") return { slug: "connectfour", title: "Buildable Connect Four", url: "/connectfour-engine.html?online=1&v=hud1", transport: "turns", msg: "bg", initialState: { G: { cells: new Array(42).fill(0), fall: {} }, turn: "w" } };
-  if (slug === "dotsboxes") return { slug: "dotsboxes", title: "Buildable Dots and Boxes", url: "/dotsboxes-engine.html?online=1&v=hud1", transport: "turns", msg: "bg", initialState: { G: { cols: 3, rows: 3, NH: 12, NV: 12, total: 9, h: new Array(12).fill(0), v: new Array(12).fill(0), owner: new Array(9).fill(0), scores: [0, 0], last: null }, turn: "w" } };
+  if (slug === "connectfour") return { slug: "connectfour", title: "Buildable Connect Four", url: "/connectfour-engine.html?online=1&v=hud2", transport: "turns", msg: "bg", initialState: { G: { cells: new Array(42).fill(0), fall: {} }, turn: "w" } };
+  if (slug === "dotsboxes") return { slug: "dotsboxes", title: "Buildable Dots and Boxes", url: "/dotsboxes-engine.html?online=1&v=hud2", transport: "turns", msg: "bg", initialState: { G: { cols: 3, rows: 3, NH: 12, NV: 12, total: 9, h: new Array(12).fill(0), v: new Array(12).fill(0), owner: new Array(9).fill(0), scores: [0, 0], last: null }, turn: "w" } };
   if (slug === "tennis") return { slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" };
   return null;
 }
@@ -1510,6 +1539,8 @@ export default function BuildableKids() {
   const [landingId, setLandingId] = useState(null); // Session 7F: which game the shared landing is showing
   const [tennisStart, setTennisStart] = useState(null); // Session 7F: "solo" | "local" handoff to the Tennis engine
   const [slingLevel, setSlingLevel] = useState(null); // which level index the Sling Journey launched into
+  const [wrapLevel, setWrapLevel] = useState(null); // Session 7I: level index the shared journey hands to a wrapped engine (?level=)
+  const [boardDiff, setBoardDiff] = useState(null); // Session 7I: manifest tier index the shared board picker hands to a board engine (?diff=)
   const openLanding = (id) => { setLandingId(id); setScreen(SCREEN_GAME_LANDING); };
   const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
@@ -1855,7 +1886,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_TYPING) {
-    return <TypingScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <TypingScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
 
   // ============ SHARED LANDING (Session 7F) ============
@@ -1871,16 +1902,16 @@ export default function BuildableKids() {
     // (their manifest multiplayer is turn-based). Everyone else keeps one Play button.
     const mp = BOARD_MP_LANDING[landingId];
     if (mp) {
-      return <GameLanding game={g}
+      return <GameLanding game={g} demoSrc={cfg.demo}
         multiplayer="turn-based"
-        onSolo={() => setScreen(mp.play)}
-        onSameDevice={() => setScreen(mp.play)}
+        onSolo={() => { setBoardDiff(null); setScreen(SCREEN_BOARD_SOLO); }}
+        onSameDevice={() => { setBoardDiff(null); setScreen(mp.play); }}
         onPlayFriend={() => setScreen(mp.lobby)}
         onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
         onBack={() => setScreen(SCREEN_HOME)} />;
     }
-    return <GameLanding game={g}
-      onPlay={() => setScreen(cfg.play)}
+    return <GameLanding game={g} demoSrc={cfg.demo}
+      onPlay={() => { if (cfg.journey) { setWrapLevel(null); setScreen(SCREEN_WRAP_JOURNEY); } else setScreen(cfg.play); }}
       onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
       onBack={() => setScreen(SCREEN_HOME)} />;
   }
@@ -1890,7 +1921,26 @@ export default function BuildableKids() {
     if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
     return <BreakerLoadout game={g}
       onBack={() => setScreen(SCREEN_GAME_LANDING)}
-      onPlay={() => setScreen(cfg.play)} />;
+      onPlay={() => { if (cfg.journey) { setWrapLevel(null); setScreen(SCREEN_WRAP_JOURNEY); } else setScreen(cfg.play); }} />;
+  }
+  // Session 7I — ONE journey and ONE board picker for every wrapped game. Picking a
+  // stop deep-links the engine (?level= / ?diff=), so the engine's own menu never
+  // shows in-app; it stays reachable standalone as the replace-first fallback.
+  if (screen === SCREEN_WRAP_JOURNEY) {
+    const g = GAME_CATALOG.find((x) => x.id === landingId);
+    const cfg = g && LANDING_WRAP[landingId];
+    if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    return <GameJourney game={g} gameId={landingId}
+      onBack={() => setScreen(SCREEN_GAME_LANDING)}
+      onPlay={(lv, i) => { setWrapLevel(i); setScreen(cfg.play); }} />;
+  }
+  if (screen === SCREEN_BOARD_SOLO) {
+    const g = GAME_CATALOG.find((x) => x.id === landingId);
+    const mp = g && BOARD_MP_LANDING[landingId];
+    if (!g || !mp) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    return <BoardSoloFrame game={g} gameId={landingId}
+      onBack={() => setScreen(SCREEN_GAME_LANDING)}
+      onPlay={(tier, i) => { setBoardDiff(i == null ? 0 : i); setScreen(mp.play); }} />;
   }
   // Tennis (Session 7F): the shared landing replaces Tennis's own start screen; its
   // "Choose your court" picker becomes court skins in the shared loadout. multiplayer
@@ -1915,7 +1965,7 @@ export default function BuildableKids() {
     return <PlatformerScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SURVIVAL) {
-    return <SurvivalScreen onHome={() => setScreen(SCREEN_HOME)} onUpgrades={() => setScreen(SCREEN_SURVIVAL_UPGRADES)} />;
+    return <SurvivalScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} onUpgrades={() => setScreen(SCREEN_SURVIVAL_UPGRADES)} />;
   }
   if (screen === SCREEN_SURVIVAL_UPGRADES) {
     const sv = GAME_CATALOG.find((g) => g.id === "survival");
@@ -1951,13 +2001,13 @@ export default function BuildableKids() {
     return <ExploreScreen exhibitId={exploreId} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CASTLE) {
-    return <CastleGuardScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <CastleGuardScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TETRIS) {
     return <TetrisScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=hud1" onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
   }
   if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
     const spec = gameSpecFor(friendAutoJoin.game);
@@ -2012,10 +2062,10 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CONNECTFOUR) {
-    return <BoardGameScreen title="Buildable Connect Four" src="/connectfour-engine.html?v=hud1" onHome={() => setScreen(SCREEN_HOME)} />;
+    return <BoardGameScreen title="Buildable Connect Four" src={"/connectfour-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_DOTSBOXES) {
-    return <BoardGameScreen title="Buildable Dots and Boxes" src="/dotsboxes-engine.html?v=hud1" onHome={() => setScreen(SCREEN_HOME)} />;
+    return <BoardGameScreen title="Buildable Dots and Boxes" src={"/dotsboxes-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MAZE) {
     return <MazeScreen onHome={() => setScreen(SCREEN_HOME)} />;
@@ -2027,35 +2077,36 @@ export default function BuildableKids() {
       onPlay={(lv, i) => { setSlingLevel(i); setScreen(SCREEN_SLING); }} />;
   }
   if (screen === SCREEN_SLING) {
-    return <SlingScreen level={slingLevel}
-      onHome={() => setScreen(slingLevel != null ? SCREEN_SLING_JOURNEY : SCREEN_HOME)} />;
+    const slv = wrapLevel != null ? wrapLevel : slingLevel;
+    return <SlingScreen level={slv}
+      onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : (slingLevel != null ? SCREEN_SLING_JOURNEY : SCREEN_HOME)); }} />;
   }
   if (screen === SCREEN_TANK) {
     return <TankScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CROC) {
-    return <CrocScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <CrocScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MATHCANNON) {
-    return <MathCannonScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <MathCannonScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_RILEYS) {
-    return <RileysScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <RileysScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_STRINGMATCH) {
-    return <StringMatchScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <StringMatchScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_BUBBLE) {
-    return <BubbleScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <BubbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_RUNNER) {
     return <SunnyTownScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_MEMORY) {
-    return <MemoryScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <MemoryScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MAHJONG) {
-    return <MahjongScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <MahjongScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_BINGO) {
     return <BingoScreen onHome={() => setScreen(SCREEN_HOME)} />;
@@ -2139,7 +2190,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHECKERS) {
-    return <CheckersScreen onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
+    return <CheckersScreen diff={boardDiff} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHECKERS_LOBBY) {
@@ -2154,7 +2205,7 @@ export default function BuildableKids() {
     })();
     return (
       <GameLobby
-        game={{ slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: checkersInitial }}
+        game={{ slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=3", transport: "turns", msg: "checkers", initialState: checkersInitial }}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_CHECKERS)}
@@ -3099,7 +3150,7 @@ function HelperLabScreen({ activeKid, onHome, onDone }) {
   );
 }
 
-function TypingScreen({ onHome }) {
+function TypingScreen({ onHome, level }) {
   // Learning Mode: one quick question before the typing game opens. Shows once
   // per entry; Skip/pass both proceed so a kid is never trapped. Off by default.
   const [gate, setGate] = useState(() => getLearningSettings().enabled);
@@ -3126,7 +3177,7 @@ function TypingScreen({ onHome }) {
       >← Home</button>
       <iframe
         title="Buildable Typing"
-        src="/typing.html"
+        src={"/typing.html?v=2" + (level != null ? "&level=" + level : "")}
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
@@ -3156,7 +3207,7 @@ function ChessScreen({ onHome, onPlayFriend, start }) {
   );
 }
 
-function CheckersScreen({ onHome, onPlayFriend }) {
+function CheckersScreen({ onHome, onPlayFriend, diff }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "checkersPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
@@ -3172,7 +3223,7 @@ function CheckersScreen({ onHome, onPlayFriend }) {
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       <iframe
         title="Buildable Checkers"
-        src="/buildable-checkers.html?v=2"
+        src={"/buildable-checkers.html?v=3" + (diff != null ? "&diff=" + diff : "")}
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
