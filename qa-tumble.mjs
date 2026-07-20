@@ -1,14 +1,14 @@
-// Headless QA for public/tetris-engine.html (Tumble Blocks).
+// Headless QA for public/tumble-engine.html (Tumble Blocks).
 // A perfect El-Tetris bot must clear EVERY world's goal (adventure), Calm/endless
 // must survive a long run without throwing (you can never lose), + render smoke.
 import fs from 'fs'; import vm from 'vm';
 const dir=process.argv[2]||'.';
 const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
-const html=read('tetris-engine.html');
-const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js'].map(read).join('\n');
+const html=read('tumble-engine.html');
+const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-wincard.js'].map(read).join('\n');
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
-const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:600,height:820}:(typeof k==='string'?noop:undefined))});
+const ctxStub=new Proxy({},{get:(_,k)=>{ if(k==='createLinearGradient'||k==='createRadialGradient') return ()=>({addColorStop:noop}); if(k==='measureText') return (t)=>({width:(String(t||'').length*8)}); if(k==='canvas') return {width:600,height:820}; return (typeof k==='string')?noop:undefined; }});
 const dropL={};
 function el(withAppend,id){ const e={ style:{setProperty:noop,display:''}, classList:{add:noop,remove:noop,contains:()=>false}, addEventListener:(t,fn)=>{ if(id==='bDrop'){ (dropL[t]=dropL[t]||[]).push(fn); } }, removeEventListener:noop, getContext:()=>ctxStub, onclick:null, textContent:'', width:600, height:820, naturalWidth:0, complete:false, getBoundingClientRect:()=>({left:0,top:0,width:600,height:820}) };
   Object.defineProperty(e,'innerHTML',{set(){},get(){return''}}); if(withAppend){ e.appendChild=noop; e.removeChild=noop; } return e; }
