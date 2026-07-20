@@ -592,8 +592,44 @@ var HOUSE_STYLES={
 };
 var ENGINE_NOTES={ openai:"Reliable and follows the prompt closely. Clean, but can look a touch flat.", flux:"Richer, more painterly detail. Can wander from small instructions. Great for backgrounds and characters." };
 var QUALITY_NOTES={ auto:"Smart: sharp for backgrounds, standard for small pieces. Recommended.", high:"Sharpest. Best for backgrounds and heroes. Costs a bit more.", medium:"Good detail, cheaper.", low:"Rough draft, cheapest. For quick tries." };
-var GEN={ style:"storybook", engine:"openai", quality:"auto" };
+var GEN={ style:"storybook", engine:"openai", quality:"auto", multi:"pieces" };
 var GENCTX={};
+var PIECE_WORDS={ k:"king",q:"queen",r:"rook",b:"bishop",n:"knight",p:"pawn",
+  r_man:"red checker piece",r_king:"red king checker",b_man:"black checker piece",b_king:"black king checker",
+  disc1:"round game disc",disc2:"round game disc",markx:"X mark",marko:"O mark" };
+function singular(w){ var m={enemies:"enemy",faces:"face",pieces:"piece",bubbles:"bubble",foes:"foe",pals:"pal",bricks:"brick",balls:"ball",markx:"mark",marko:"mark"}; return m[w]||w.replace(/s$/,""); }
+function humanize(nm){ if(PIECE_WORDS[nm]) return PIECE_WORDS[nm]; if(/^[rc][0-9]+(_[rc][0-9]+)?$/.test(nm)) return ""; return String(nm).replace(/_/g," "); }
+function isMulti(spec){ var cols=spec.cols||[], rows=spec.rows||[]; var nC=(cols.length&&cols[0]!=="x")?cols.length:1; return spec.mode==="sheet" && (rows.length||1)*nC>1; }
+function pieceList(spec){ var rows=spec.rows||["x"], cols=spec.cols||["x"]; var multiCol=(cols.length&&cols[0]!=="x"); var out=[], n=0;
+  for(var r=0;r<rows.length;r++){ if(multiCol){ for(var c=0;c<cols.length;c++){ n++; out.push({name:rows[r]+"_"+cols[c], idx:n}); } } else { n++; out.push({name:rows[r], idx:n}); } }
+  return out; }
+function genPromptPiece(spec, theme, name, idx){
+  var game=(CATALOG.filter(function(c){return c.id===state.game;})[0]||{}).label||state.game;
+  var look=slugify(theme||"custom").replace(/-/g," ");
+  var lbl=singular(labelOf(spec.key).toLowerCase());
+  var h=humanize(name);
+  var who=h?(h+(/(piece|mark|disc|checker)/.test(h)?"":" "+lbl)):(lbl+" design number "+idx);
+  var subj="a single "+look+"-themed "+who+" for the kids game "+game+", one item only, centered and complete";
+  return subj+". "+HOUSE_STYLES[GEN.style].str+". A SINGLE isolated item, centered, filling the frame, on a fully transparent background. No other objects, no people, no text, no words, no letters, no numbers, no UI, no watermark. Child-friendly ages 4-8.";
+}
+function doGeneratePieces(){
+  var spec=GENCTX.spec, list=pieceList(spec);
+  var stat=document.getElementById("mstat"), go=document.getElementById("g-go");
+  go.disabled=true;
+  var out=[], i=0, singleSpec={key:spec.key, mode:"single", role:"sprite"};
+  var q=(GEN.quality!=="auto")?GEN.quality:"medium";
+  function next(){
+    if(i>=list.length){ MODAL={pieces:out, spec:spec, theme:GENCTX.theme, mode:GENCTX.mode, lv:GENCTX.lv, slot:GENCTX.slot, cb:GENCTX.cb}; showPiecesModal(); return; }
+    var it=list[i]; stat.textContent="Making piece "+(i+1)+" of "+list.length+" ("+(humanize(it.name)||("#"+(i+1)))+")…";
+    fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"generate", engine:GEN.engine, prompt:genPromptPiece(spec, GENCTX.theme, it.name, i+1), size:"square", transparent:(GEN.engine!=="flux"), quality:q})})
+      .then(function(r){ return r.json().then(function(j){return {ok:r.ok,j:j};}); })
+      .then(function(res){ if(!res.ok||!res.j||!res.j.b64) throw new Error((res.j&&res.j.error)||"generate failed"); return BuildableSlicer.loadImage("data:image/png;base64,"+res.j.b64); })
+      .then(function(img){ var pcs=BuildableSlicer.sliceSheet(img, singleSpec); var d=(pcs&&pcs[0])?pcs[0]:{dataURL:img.src,w:0,h:0}; out.push({name:it.name, dataURL:d.dataURL, w:d.w||0, h:d.h||0}); i++; next(); })
+      .catch(function(e){ go.disabled=false; stat.textContent="Stopped at piece "+(i+1)+": "+(e.message||e); });
+  }
+  next();
+}
 function meaningfulNames(arr){ return (arr||[]).filter(function(n){ return n && n!=="x" && !/^[rc][0-9]+$/.test(n); }); }
 function genPrompt(spec, theme){
   var game=(CATALOG.filter(function(c){return c.id===state.game;})[0]||{}).label||state.game;
@@ -632,17 +668,21 @@ function genIn(spec, theme, cb, mode, lv, slot){
   showGenModal();
 }
 function showGenModal(){
-  var spec=GENCTX.spec;
+  var spec=GENCTX.spec, multi=isMulti(spec);
   document.getElementById("mtitle").textContent="Generate with AI — "+labelOf(spec.key);
-  document.getElementById("mhint").textContent="Pick a look, then Generate. You'll see the pieces before anything saves.";
+  document.getElementById("mhint").textContent = multi
+    ? "Pick a look. “Separate pieces” makes each one on its own, so there is no cutting to go wrong."
+    : "Pick a look, then Generate. You'll see the result before it saves.";
   document.getElementById("mkeep").style.display="none";
   document.getElementById("mstat").textContent="";
   var styleOpts=Object.keys(HOUSE_STYLES).map(function(k){return '<option value="'+k+'"'+(GEN.style===k?' selected':'')+'>'+HOUSE_STYLES[k].label+'</option>';}).join("");
   var engOpts='<option value="openai"'+(GEN.engine==="openai"?' selected':'')+'>gpt-image-1 (reliable)</option><option value="flux"'+(GEN.engine==="flux"?' selected':'')+'>FLUX (richer)</option>';
   var qOpts='<option value="auto"'+(GEN.quality==="auto"?' selected':'')+'>Smart (recommended)</option><option value="high"'+(GEN.quality==="high"?' selected':'')+'>High (sharpest)</option><option value="medium"'+(GEN.quality==="medium"?' selected':'')+'>Standard</option><option value="low"'+(GEN.quality==="low"?' selected':'')+'>Draft (cheap)</option>';
+  var makeOpts='<option value="pieces"'+(GEN.multi==="pieces"?' selected':'')+'>Separate pieces — no cutting</option><option value="sheet"'+(GEN.multi==="sheet"?' selected':'')+'>One sheet — then cut</option>';
   var body=document.getElementById("mbody");
   body.innerHTML=''
     +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 4px;">'
+    + (multi ? '<label class="fieldlbl">Make as<br><select id="g-multi">'+makeOpts+'</select></label>' : '')
     +'<label class="fieldlbl">Look<br><select id="g-style">'+styleOpts+'</select></label>'
     +'<label class="fieldlbl">Art engine<br><select id="g-engine">'+engOpts+'</select></label>'
     +'<label class="fieldlbl">Quality<br><select id="g-quality">'+qOpts+'</select></label>'
@@ -650,20 +690,31 @@ function showGenModal(){
     +'<div class="aslot" id="g-style-note" style="margin:2px 0;"></div>'
     +'<div class="aslot" id="g-engine-note" style="margin:2px 0;"></div>'
     +'<div class="aslot" id="g-quality-note" style="margin:2px 0 8px;"></div>'
-    +'<span class="fieldlbl">What we will ask for (you can edit this)</span>'
-    +'<textarea id="g-prompt" style="width:100%;min-height:120px;margin-top:4px;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;line-height:1.4;"></textarea>'
+    +'<div id="g-area"></div>'
     +'<div style="margin-top:10px;"><button class="btn primary sm" id="g-go">Generate</button></div>';
-  document.getElementById("g-prompt").value=genPrompt(spec, GENCTX.theme);
   function notes(){
     document.getElementById("g-style-note").textContent=HOUSE_STYLES[GEN.style].note;
     document.getElementById("g-engine-note").textContent=ENGINE_NOTES[GEN.engine];
     document.getElementById("g-quality-note").textContent=QUALITY_NOTES[GEN.quality];
   }
-  notes();
-  document.getElementById("g-style").onchange=function(){ GEN.style=this.value; document.getElementById("g-prompt").value=genPrompt(spec, GENCTX.theme); notes(); };
+  function renderArea(){
+    var area=document.getElementById("g-area");
+    if(multi && GEN.multi==="pieces"){
+      var list=pieceList(spec);
+      var names=list.map(function(x){return humanize(x.name)||("#"+x.idx);}).join(", ");
+      area.innerHTML='<div class="aslot" style="line-height:1.5;">Will make <b>'+list.length+'</b> separate transparent images, one per piece, so nothing needs cutting: '+names+'.</div>';
+    } else {
+      area.innerHTML='<span class="fieldlbl">What we will ask for (you can edit this)</span>'
+        +'<textarea id="g-prompt" style="width:100%;min-height:120px;margin-top:4px;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;line-height:1.4;"></textarea>';
+      document.getElementById("g-prompt").value=genPrompt(spec, GENCTX.theme);
+    }
+  }
+  notes(); renderArea();
+  document.getElementById("g-style").onchange=function(){ GEN.style=this.value; renderArea(); notes(); };
   document.getElementById("g-engine").onchange=function(){ GEN.engine=this.value; notes(); };
   document.getElementById("g-quality").onchange=function(){ GEN.quality=this.value; notes(); };
-  document.getElementById("g-go").onclick=doGenerate;
+  if(document.getElementById("g-multi")) document.getElementById("g-multi").onchange=function(){ GEN.multi=this.value; renderArea(); };
+  document.getElementById("g-go").onclick=function(){ if(isMulti(spec) && GEN.multi==="pieces") doGeneratePieces(); else doGenerate(); };
   openModal();
 }
 function doGenerate(){

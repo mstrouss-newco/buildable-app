@@ -3956,3 +3956,13 @@ library, and save paths unchanged; music/audio slots skip Generate. This folds t
 Library Create tool into the editor (editor is now the single home for making + editing game
 art). FOLLOW-UP: per-piece generation (skip slicing), auto grid-vs-scattered CV cutter, and
 real built-in-art thumbnails in the editor (most slots show blank today).
+
+## 2026-07-20 — Editor Generate: per-piece mode (no slicing)
+public/editor.html: multi-piece slots (chess/checkers/bubble/memory/mahjong etc.) now
+default to "Separate pieces — no cutting": the Generate panel makes each piece as its own
+transparent gpt-image-1 image (background:transparent) and hands them straight to Keep, so
+there is no sheet to slice. "One sheet — then cut" remains as a fallback. Per-piece prompts
+are built from the piece name (king/queen/…, red checker, X mark, etc.; placeholder r1/c1
+names become "design number N"). FLUX pieces still key out white via the single-image
+slicer. Single-image slots (backgrounds/hero) unchanged. Next: auto grid-vs-scattered CV
+cutter for brought-in sheets; real built-in-art thumbnails in the editor.
