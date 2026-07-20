@@ -104,6 +104,50 @@
     return [];
   }
 
+  // ---- robust grid slicing -------------------------------------------------
+  // 1/0 ink mask: for keyed/transparent art use alpha; for solid art treat
+  // near-white low-saturation "paper" as background so tiles stand out.
+  function inkMask(sx, W, H, transparent) {
+    var d = sx.getImageData(0, 0, W, H).data, m = new Uint8Array(W * H);
+    for (var p = 0; p < m.length; p++) {
+      var o = p * 4;
+      if (transparent) { m[p] = d[o + 3] > 40 ? 1 : 0; }
+      else { var r = d[o], g = d[o + 1], b = d[o + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b); m[p] = (mx < 232 || (mx - mn) > 40) ? 1 : 0; }
+    }
+    return m;
+  }
+  function maskBBox(m, W, H) {
+    var x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (var y = 0; y < H; y++) { var row = y * W; for (var x = 0; x < W; x++) { if (m[row + x]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } } }
+    if (x1 < 0) return null; return { x0: x0, y0: y0, x1: x1, y1: y1 };
+  }
+  function projX(m, W, y0, y1, x0, x1) { var a = new Array(W).fill(0); for (var y = y0; y <= y1; y++) { var row = y * W; for (var x = x0; x <= x1; x++) if (m[row + x]) a[x]++; } return a; }
+  function projY(m, W, x0, x1, y0, y1) { var a = new Array(y1 + 1).fill(0); for (var y = y0; y <= y1; y++) { var row = y * W, n = 0; for (var x = x0; x <= x1; x++) if (m[row + x]) n++; a[y] = n; } return a; }
+  // Split [lo..hi] into n bands. Prefer real low-ink gaps when they line up with a
+  // uniform grid; otherwise divide evenly. Robust for tidy sprite sheets whether the
+  // gaps are obvious (clean grid) or the tiles are packed tight (same-colour gaps).
+  function gridBands(proj, n, lo, hi) {
+    if (n <= 1) return [[lo, hi + 1]];
+    var span = hi - lo + 1, even = [], k, i, j;
+    for (k = 1; k < n; k++) even.push(lo + Math.round(span * k / n));
+    var mx = 0; for (i = lo; i <= hi; i++) if (proj[i] > mx) mx = proj[i];
+    var thr = mx * 0.18, gaps = [], st = -1;
+    for (i = lo; i <= hi; i++) { if (proj[i] <= thr) { if (st < 0) st = i; } else { if (st >= 0) { gaps.push((st + i - 1) / 2); st = -1; } } }
+    if (st >= 0) gaps.push((st + hi) / 2);
+    gaps = gaps.filter(function (g) { return g > lo + span * 0.03 && g < hi - span * 0.03; });
+    var tol = (span / n) * 0.45, cuts = [], ok = true;
+    for (k = 0; k < even.length; k++) {
+      var best = null, bd = 1e9;
+      for (j = 0; j < gaps.length; j++) { var dd = Math.abs(gaps[j] - even[k]); if (dd < bd) { bd = dd; best = gaps[j]; } }
+      if (best != null && bd <= tol) cuts.push(Math.round(best)); else { ok = false; break; }
+    }
+    if (!ok || cuts.length !== n - 1) cuts = even.slice();
+    cuts.sort(function (a, b) { return a - b; });
+    var bounds = [lo].concat(cuts, [hi + 1]), bands = [];
+    for (var bi = 0; bi < n; bi++) bands.push([bounds[bi], bounds[bi + 1]]);
+    return bands;
+  }
+
   function sliceSheet(img, spec) {
     spec = spec || {};
     var W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
@@ -119,15 +163,36 @@
     }
     var rowNames = asNames(spec.rows), colNames = asNames(spec.cols);
     var rows = rowNames.length || 1, cols = colNames.length || 1;
-    var rBands = splitBands(occRows(sx, 0, 0, W, H), rows, 3);
-    for (var r = 0; r < rows; r++) {
-      var ry0 = rBands[r][0], rh = Math.max(1, rBands[r][1] - ry0);
-      var cBands = splitBands(occCols(sx, 0, ry0, W, rh), cols, 3);
-      for (var c = 0; c < cols; c++) {
-        var cx0 = cBands[c][0], cw = Math.max(1, cBands[c][1] - cx0);
-        var b = contentBox(sx, cx0, ry0, cw, rh, transparent) || { x: cx0, y: ry0, w: cw, h: rh };
-        var name = cols > 1 ? (rowNames[r] + "_" + colNames[c]) : rowNames[r];
-        out.push({ name: name, dataURL: cropFrom(sc, b), w: b.w, h: b.h });
+    // Robust grid: find the artwork bounds, split into rows x cols snapping to real
+    // gaps when they match an even grid, else divide evenly. Falls back to the older
+    // widest-gap bands if the mask comes back empty for any reason.
+    var mask = inkMask(sx, W, H, transparent);
+    var bb = maskBBox(mask, W, H);
+    if (bb) {
+      var rProj = projY(mask, W, bb.x0, bb.x1, bb.y0, bb.y1);
+      var rBands = gridBands(rProj, rows, bb.y0, bb.y1);
+      for (var r = 0; r < rows; r++) {
+        var ry0 = rBands[r][0], ry1 = rBands[r][1] - 1, rh = Math.max(1, ry1 - ry0 + 1);
+        var cProj = projX(mask, W, ry0, ry1, bb.x0, bb.x1);
+        var cBands = gridBands(cProj, cols, bb.x0, bb.x1);
+        for (var c = 0; c < cols; c++) {
+          var cx0 = cBands[c][0], cx1 = cBands[c][1] - 1, cw = Math.max(1, cx1 - cx0 + 1);
+          var b = contentBox(sx, cx0, ry0, cw, rh, transparent) || { x: cx0, y: ry0, w: cw, h: rh };
+          var name = cols > 1 ? (rowNames[r] + "_" + colNames[c]) : rowNames[r];
+          out.push({ name: name, dataURL: cropFrom(sc, b), w: b.w, h: b.h });
+        }
+      }
+      return out;
+    }
+    var rBands0 = splitBands(occRows(sx, 0, 0, W, H), rows, 3);
+    for (var r2 = 0; r2 < rows; r2++) {
+      var ry0b = rBands0[r2][0], rhb = Math.max(1, rBands0[r2][1] - ry0b);
+      var cBands0 = splitBands(occCols(sx, 0, ry0b, W, rhb), cols, 3);
+      for (var c2 = 0; c2 < cols; c2++) {
+        var cx0b = cBands0[c2][0], cwb = Math.max(1, cBands0[c2][1] - cx0b);
+        var bb2 = contentBox(sx, cx0b, ry0b, cwb, rhb, transparent) || { x: cx0b, y: ry0b, w: cwb, h: rhb };
+        var name2 = cols > 1 ? (rowNames[r2] + "_" + colNames[c2]) : rowNames[r2];
+        out.push({ name: name2, dataURL: cropFrom(sc, bb2), w: bb2.w, h: bb2.h });
       }
     }
     return out;

@@ -3984,3 +3984,12 @@ are built from the piece name (king/queen/…, red checker, X mark, etc.; placeh
 names become "design number N"). FLUX pieces still key out white via the single-image
 slicer. Single-image slots (backgrounds/hero) unchanged. Next: auto grid-vs-scattered CV
 cutter for brought-in sheets; real built-in-art thumbnails in the editor.
+
+## 2026-07-20 — Reliable cutter + documented as the standard
+public/buildable-slicer.js: sliceSheet grid path rewritten — find the artwork bounding box
+(ink mask: alpha for keyed art, non-paper for solid), split into rows×cols snapping to real
+gaps only when they match an even grid, else divide evenly. Fixes the mahjong-style case
+(tiles same colour as paper) the old widest-gap heuristic mangled; old path kept as empty-mask
+fallback. Documented the standard in ASSET-STUDIO.md and added an AGENTS.md rule so agents use
+per-piece Generate + BuildableSlicer and don't hand-roll slicers. Verified 45/45 on the real
+mahjong sheet.

@@ -282,3 +282,29 @@ row/column bands) replacing the fixed grid.
 - Kept art is immutable-cached by URL; if you re-Keep the same slug it replaces the
   old bytes, but browsers may hold the old one. Add `&v=N` to bust it (same rule as
   the rest of the app).
+
+
+## Making set art reliably — per-piece first, robust grid slice second (the standard)
+
+Cutting a generated sheet into pieces is error-prone: the image model rarely spaces a
+grid evenly, and reversing that grid from pixels is fragile. Two rules make art reliable.
+Use them; do NOT fall back to the old sheet-and-guess flow.
+
+1. **Generate per piece, not per sheet (default).** The editor's per-slot **Generate**
+   defaults to "Separate pieces": each piece is its own `gpt-image-1` image with
+   `background:"transparent"`, saved straight through Keep — no slicing at all. This is the
+   reliable default for any multi-piece slot (bricks, faces, pieces, bubbles, enemies). Use
+   "One sheet — then cut" only if you specifically need a single-call sheet.
+
+2. **Slice with the robust grid cutter (for brought-in sheets).** When you DO cut a sheet
+   (art made in ChatGPT/Midjourney, etc.), use `BuildableSlicer.sliceSheet(img, spec)`. Its
+   grid path (2026-07-20) finds the artwork bounding box and splits it into the slot's known
+   `rows`×`cols`, snapping to real gaps only when they line up with an even grid and dividing
+   evenly otherwise. This stays reliable even when tiles are the same colour as the paper
+   (the mahjong case) where the old widest-gap heuristic merged or split tiles. Do NOT
+   hand-roll a slicer or reintroduce the `splitBands`-first path; it is kept only as a
+   last-resort fallback for when the ink mask comes back empty.
+
+**For a NEW game:** declare the slot's `rows`/`cols` in `GAME_SLOTS` / `WORLD_ART` (the exact
+names the engine reads), then make its set art with per-piece Generate. The editor and slicer
+both read those slot specs, so a new game needs NO per-game slicing code — it just works.

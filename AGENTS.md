@@ -99,6 +99,12 @@ that already works**:
   assets flow between projects; preserve content moderation.
 - **Roll out one project at a time**, QA the live deploy, and log it in the README.
 
+- **Art slicing/generation is standardised — do not hand-roll it.** Make set art
+  (bricks, tiles, pieces, faces, bubbles) with the editor's per-slot **per-piece
+  Generate** (each piece its own transparent image, no slicing). When you must cut a
+  brought-in sheet, use `BuildableSlicer.sliceSheet` (robust grid cutter). Never
+  reintroduce a bespoke or widest-gap-first slicer. See `ASSET-STUDIO.md`.
+
 **Asset organization:** see [`./ASSET-LIBRARY.md`](./ASSET-LIBRARY.md) for exactly where to find and where to send every kind of asset.
 
 ## Creations rule (save · share · publish) + cross-platform + navigation
