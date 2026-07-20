@@ -1,5 +1,37 @@
 # Buildable Kids — Session Log
 
+## 2026-07-20: Session 7H - Multiplayer row on the shared landing (board games)
+
+Finished the first move of the 7D consistency plan (Phase 1): the shared landing now
+shows the Solo / Same device / Play a friend mode row for Tic-Tac-Toe, Connect Four,
+Dots and Boxes, and Checkers, matching Chess and Tennis. Until now only Chess and Tennis
+passed the multiplayer flag into `GameLanding`, so everyone else showed a single Play
+button and the online lobbies were unreachable from the front door. Pure shell change in
+`src/BuildableKids.jsx`; **no engine files touched.**
+
+- **Landing wiring.** New `BOARD_MP_LANDING` table routes the four board games through a
+  multiplayer-aware branch of the generic `SCREEN_GAME_LANDING` render. It passes
+  `multiplayer="turn-based"` plus `onSolo` / `onSameDevice` / `onPlayFriend`. Solo and
+  Same device both enter the engine's own menu (the Phase-2 `?diff` deep-links that would
+  let them preselect a mode are not in yet); Play a friend opens the shared `GameLobby`.
+- **New online lobbies for Connect Four + Dots and Boxes.** These two only had solo +
+  same-device before (no `online` in their engine config, no lobby). Rather than skip
+  their friend button, added shell-only lobbies: `gameSpecFor` now returns specs for
+  `connectfour` and `dotsboxes` (`msg: "bg"`, `turns` transport, fresh-board seed state)
+  and two new screens `SCREEN_C4_LOBBY` / `SCREEN_DOTS_LOBBY` reuse the generic
+  `GameLobby`. The shared `buildable-boardgame.js` online path already honors `?online=1`
+  regardless of the engine's own `online` flag, so this needed zero engine edits. TTT and
+  Checkers reuse their existing lobbies.
+- **QA.** `qa-tictactoe`, `qa-connectfour`, `qa-dotsandboxes`, `qa-checkers` all green
+  (engines unchanged). `esbuild` parses the shell clean.
+
+Known follow-ups (not this session): (1) the Connect Four / Dots manifests still declare
+`multiplayer: off` (honest before today) — their QA asserts that, so left untouched; a
+later pass can reconcile the manifest to "turn-based" and update those assertions.
+(2) Solo vs Same device are not yet distinct entries for these engines — that lands with
+the Phase-2 shared picker `?diff` deep-links. Next block is Phase 2 (shared level picker);
+not started per instructions.
+
 ## 2026-07-19: Session 6F - Return experience (remember me)
 
 The app now remembers who was playing. A returning visit boots straight to the last
