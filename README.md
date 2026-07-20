@@ -4165,3 +4165,11 @@ fly-to shots), arcade honesty pass (fake stats/kid personas removed, 9 real worl
 copy matches shipped 6B features, pricing now matches deck (Free incl. teachers-forever /
 Premium $5 / AI Creator $10 + learn-to-earn credits). Math Cannon imagery removed everywhere
 until its art is redone (deck figure now Saturn fly-to). See 2026-07-10 entry for shot pipeline.
+
+---
+## Session log — 2026-07-20b (roadmap: Phase 10 easy parent login)
+
+Planning only, no product code. Added Phase 10 to buildable-rebuild-roadmap.md:
+Session 10A (magic link sign-in + co-parent family-code QR, no DB changes) and
+Session 10B (QR new-device sign-in via one-time device_link_tokens + api/device-link.js,
+reusing the invite-token pattern). 10A ships the QR drawing library 10B reuses.
