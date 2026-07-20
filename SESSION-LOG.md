@@ -1,5 +1,51 @@
 # Buildable Kids — Session Log
 
+## 2026-07-20: Session 7I - ONE shared level picker + a Breaker-style demo on every game
+
+Finished what 7D started. Every game now enters play through the SHARED picker instead of
+its own homemade menu, and every landing demo box actually plays the game.
+
+Engine passes (one per game, all additive / replace-first):
+- ?level=N deep-link (0-based manifest index) on the 12 journey games: Sling, Survival,
+  Croc Tot, Riley's Garden, Castle Guard, Bubble, String Match, Math Cannon, Memory,
+  Mahjong, Typing (Sling already had it; verified). ?diff=N on the 4 board games
+  (Tic-Tac-Toe, Connect Four, Dots and Boxes via ONE change to the shared board harness
+  buildable-boardgame.js; Checkers bespoke). With the param the engine skips its own menu
+  and starts that level/tier directly; with no param nothing changes.
+- ?screen=demo attract mode on ALL 16: the game plays itself silently (input off, no
+  audio, no win cards, quiet loop restart) with the shared pointing tutorial hand gliding
+  to each action (capped-step glide, never teleports). Math Cannon's demo bot fires at the
+  CORRECT answer. Demo never saves progress or posts win/telemetry.
+- Tumble Blocks is demo-only: its manifest conversion waits on the 7A rename off
+  "tetris" (trademark flag) - explicitly out of scope here.
+
+Shell (src/BuildableKids.jsx):
+- ONE generic journey screen (GameJourney) + ONE board picker screen (BoardSoloFrame) for
+  every wrapped game; LANDING_WRAP rows now carry journey + demo. Play (and the loadout's
+  Play) route through the picker; picking a stop launches the engine with ?level=/?diff=.
+  Board Solo goes to the shared difficulty picker; Same device keeps the engine's own menu
+  (its 2-player lane still lives there).
+- Journey progress adapters: the journey mirrors each engine's OWN save key (survival
+  char, sm_unlocked, castleguard, bk_mathcannon, shared bk_{game}_prefs). Free-choice
+  games (Croc, Memory, Mahjong, Riley's, Typing) never show locks - nothing a kid could
+  already play is ever locked.
+- Demo box: filled for all 16; hidden entirely when a game has no demo (clears the
+  punch-list item about the empty "Demo" placeholder box lying about gameplay).
+- Old in-engine menus: no longer reachable in-app (the shell always deep-links); the menu
+  code stays as the standalone/deep-link fallback per replace-first. True deletion waits
+  for live soak.
+
+QA: qa-tictactoe, qa-connectfour, qa-dotsandboxes, qa-checkers, qa-checkers-dom, qa-sling,
+qa-bubble, qa-stringmatch, qa-memory, qa-mahjong, qa-survival, qa-croc, qa-castleguard,
+qa-mathcannon, qa-typing, plus qa-breaker and qa-chess (shared code): ALL PASS.
+qa-tetris and qa-rileys FAIL, but identically on unmodified HEAD (pre-existing:
+BuildableWin undefined in the win-render smoke; stale 7F-era picker-stub regex) - not from
+this session. vite build green.
+
+Commits: f75b544 (boards), 2abb360 (journey g1), 006841b (g2), 3b88795 (g3), 5b61d06 (shell).
+Remains in 7D/7I: Tumble Blocks rename + manifest; same-device board lane still uses the
+engine menu; delete menu code after live soak; Tennis/Chess demo boxes (not in this batch).
+
 ## 2026-07-20: Breaker bricks recut — kills the see-through slits
 
 The themed Breaker bricks (jungle/space/ocean) showed a see-through slit across every brick.

@@ -1994,6 +1994,17 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-20 (Session 7I: shared level picker + demo on every game)
+
+Every game's Play now goes through the ONE shared journey/board picker (only Breaker and
+Chess used it before), and every landing demo box plays the game itself: all 16 engines got
+a Breaker-style `?screen=demo` attract mode (silent self-play + gliding tutorial hand) and a
+`?level=N` (journey) / `?diff=N` (board) deep-link, additive and replace-first (no param =
+unchanged). The shell journey reads each engine's own save for unlocks, free-choice games
+never lock, and the demo box hides when a game has no demo. Tumble Blocks is demo-only until
+its 7A rename. QA: all touched scripts pass except qa-tetris/qa-rileys, which fail
+identically on unmodified HEAD (pre-existing). Details in SESSION-LOG.md.
+
 ## Session log — 2026-07-19 (Session 6F: return experience — remember me)
 
 **Boots to Home on return.** A returning visit now opens straight to the last kid's Home
