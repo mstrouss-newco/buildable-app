@@ -1,5 +1,23 @@
 # Buildable Kids — Session Log
 
+## 2026-07-20: Favicon fix — /app now shows the B icon
+
+The kid app (`/app`) had no favicon while the landing page and admin tools did. The Vite
+build's `base: '/demo/'` stamps the app's icon links as `/demo/favicon.*`, but `vercel.json`
+only rerouted `/demo/site.webmanifest` to the real root file — never the icons — so
+`/demo/favicon.svg` fell through the `/demo/(.*)` redirect and returned the SPA HTML instead
+of an image (no icon). Landing and admin pages point at the root `/favicon.*` directly, which
+is why they always worked.
+
+Fix: added five routes to `vercel.json` right after the `/demo/site.webmanifest` route,
+mapping `/demo/favicon.ico|favicon.svg|favicon-32.png|favicon-16.png|apple-touch-icon.png` to
+their root `/favicon.*` files (immutable cache headers, mirroring the webmanifest route). Not
+`index.html` — Vite would just re-prefix it.
+
+Commit: 0676ace (on `main`, via GitHub web editor). QA (live, buildablekids.com): `/demo/favicon.svg`
+now serves the real SVG, `/demo/favicon.ico` and apple-touch-icon resolve; the app tab shows
+the B favicon.
+
 ## 2026-07-20: Session 7H - Multiplayer row on the shared landing (board games)
 
 Finished the first move of the 7D consistency plan (Phase 1): the shared landing now
