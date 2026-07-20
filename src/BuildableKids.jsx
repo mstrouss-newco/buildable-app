@@ -210,6 +210,57 @@ const GAME_CATALOG = [
   { id: "bingo",       name: "Bingo",            category: "Classic",  color: "#FFD23F", type: "game", imgId: "bingo",       handler: "onBingo",       desc: "The device calls — daub a line to win, 2-4!", soon: true },
 ];
 
+// ===========================================================================
+//  Session 2E — reload-safe addresses inside /app. The shell mirrors every
+//  STABLE destination (Home, a game's landing, Kidspedia, Creations) into the
+//  address bar so a refresh restores that spot and the browser Back button steps
+//  back through screens. Transient screens (in-game play, journeys, lobbies, the
+//  make-a-game build flow, grown-ups, admin) get NO address of their own, so a
+//  reload on them falls back to the last stable address — a game's landing, or
+//  Home — never deeper. (Saving mid-build progress is a later job.) Hosting
+//  already routes /app/(.*) to the shell, so no vercel/routing change is needed.
+// ===========================================================================
+const URL_STABLE_LANDINGS = {
+  [SCREEN_BREAKER_LANDING]: "breaker",
+  [SCREEN_BREAKER_JOURNEY]: "breaker/journey",
+  [SCREEN_BREAKER_LOADOUT]: "breaker/loadout",
+  [SCREEN_TENNIS_LANDING]: "tennis",
+  [SCREEN_CHESS_LANDING]: "chess",
+  [SCREEN_MUSIC_LANDING]: "music-maker",
+};
+// screen (+ its params) -> the /app path it should show, or null when the screen
+// is transient (keep the last stable address instead of writing a new one).
+function viewToPath(screen, landingId, exploreId) {
+  if (screen === SCREEN_HOME) return "/app";
+  if (screen === SCREEN_MY_STUFF) return "/app/creations";
+  if (screen === SCREEN_EXPLORE) return "/app/explore" + (exploreId ? "/" + exploreId : "");
+  if (URL_STABLE_LANDINGS[screen]) return "/app/" + URL_STABLE_LANDINGS[screen];
+  if (screen === SCREEN_GAME_LANDING && landingId) return "/app/" + landingId;
+  return null;
+}
+// The reverse: an /app path -> which stable screen (+ params) to restore. Returns
+// null for anything outside /app or not a recognized stable address, so the other
+// deep-link paths (?bk=, /admin, OAuth) and every transient screen are left alone.
+function screenForPath(pathname) {
+  if (typeof pathname !== "string" || !/^\/app(\/|$)/.test(pathname)) return null;
+  const seg = pathname.replace(/^\/app\/?/, "").replace(/\/+$/, "");
+  if (!seg) return { screen: SCREEN_HOME };
+  if (seg === "creations") return { screen: SCREEN_MY_STUFF };
+  if (seg === "explore" || seg.indexOf("explore/") === 0) {
+    const id = seg.split("/")[1];
+    return { screen: SCREEN_EXPLORE, exploreId: id || undefined };
+  }
+  if (seg === "breaker") return { screen: SCREEN_BREAKER_LANDING };
+  if (seg === "breaker/journey") return { screen: SCREEN_BREAKER_JOURNEY };
+  if (seg === "breaker/loadout") return { screen: SCREEN_BREAKER_LOADOUT };
+  if (seg === "tennis") return { screen: SCREEN_TENNIS_LANDING };
+  if (seg === "chess") return { screen: SCREEN_CHESS_LANDING };
+  if (seg === "music-maker") return { screen: SCREEN_MUSIC_LANDING };
+  const id = seg.split("/")[0];
+  if (GAME_CATALOG.some((g) => g.id === id) && LANDING_WRAP[id]) return { screen: SCREEN_GAME_LANDING, landingId: id };
+  return null;
+}
+
 // EXHIBIT_CATALOG — Kidspedia exhibits for the Home Explore shelf (Session 8G).
 // Mirrors EXHIBIT-MANIFEST.md's shared fields. Only status:"approved" exhibits ever
 // appear here or are servable at /explore/{id} (the template itself re-checks this
@@ -1608,6 +1659,52 @@ export default function BuildableKids() {
     else if (bk === "loadout") setScreen(SCREEN_BREAKER_LOADOUT);
     else if (bk === "landing") setScreen(SCREEN_BREAKER_LANDING);
   }, []);
+
+  // ---- Session 2E: reload-safe addresses inside /app -------------------------
+  // Mirror every STABLE screen (Home, a game landing, Kidspedia, Creations) into
+  // the address bar; restore that spot on load; let Back step through screens.
+  const urlHydratedRef = useRef(false);   // block the write until we've read the URL
+  const fromPopRef = useRef(false);        // a change caused BY Back/forward must not re-push
+  const firstWriteRef = useRef(true);      // skip the mount write so a deep link isn't clobbered
+
+  // LOAD: restore the stable screen the address points at (shared links + refresh).
+  useEffect(() => {
+    if (typeof window === "undefined") { urlHydratedRef.current = true; return; }
+    try {
+      const parsed = screenForPath(window.location.pathname);
+      if (parsed && parsed.screen !== SCREEN_HOME) {
+        if (parsed.landingId != null) setLandingId(parsed.landingId);
+        if (parsed.exploreId != null) setExploreId(parsed.exploreId);
+        setScreen(parsed.screen);
+      }
+    } catch (e) {}
+    urlHydratedRef.current = true;
+  }, []);
+
+  // BACK / FORWARD: map the address the browser popped back onto a screen.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onPop = () => {
+      const parsed = screenForPath(window.location.pathname) || { screen: SCREEN_HOME };
+      fromPopRef.current = true;
+      if (parsed.landingId != null) setLandingId(parsed.landingId);
+      if (parsed.exploreId != null) setExploreId(parsed.exploreId);
+      setScreen(parsed.screen);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // WRITE: on every stable screen change, push its address. Transient screens
+  // write nothing, so a refresh on them returns to the last stable address.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (firstWriteRef.current) { firstWriteRef.current = false; return; } // URL already matches reality on mount
+    if (fromPopRef.current) { fromPopRef.current = false; return; }       // change came FROM Back/forward
+    const path = viewToPath(screen, landingId, exploreId);
+    if (!path) return;
+    try { if (window.location.pathname !== path) window.history.pushState({ screen }, "", path); } catch (e) {}
+  }, [screen, landingId, exploreId]);
 
   const goHome = () => setScreen(SCREEN_HOME);
 
