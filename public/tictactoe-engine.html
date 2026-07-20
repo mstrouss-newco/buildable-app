@@ -53,7 +53,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-manifest.js"></script>
 <script src="buildable-worlds.js"></script>
-<script src="buildable-boardgame.js"></script>
+<script src="buildable-boardgame.js?v=2"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
 (function(){ if(typeof document==="undefined") return;
@@ -140,6 +140,17 @@ const spec = {
       else if(corners.length && api.rng()<T.center) pick=BG.pick(corners,api.rng);
       else pick=BG.pick(empty,api.rng); }
     return spec.move(G, pick, api);
+  },
+
+  // 7I attract demo: choose the robot's move on a SCRATCH board so the shared
+  // tutorial hand can hover the square BEFORE the mark lands. token = cell idx.
+  demoMove(G, api){
+    const snap={ cells:G.cells.slice() };
+    try{ spec.ai(snap, api); }catch(e){ return null; }
+    let idx=-1; for(let i=0;i<9;i++) if(snap.cells[i]!==G.cells[i]){ idx=i; break; }
+    if(idx<0) return null;
+    const c=cellCenter(api.W,api.H,idx);
+    return { x:c.x, y:c.y, token:idx };
   },
 
   result(G){ const w=BG.lineWinner(G.cells,3,3,3);

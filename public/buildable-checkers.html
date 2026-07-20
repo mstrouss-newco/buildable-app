@@ -454,7 +454,8 @@ var WORLD_KEYS = SCENE_KEYS.slice();
       }
       try{ if(typeof buildDiffGrid==="function" && document.getElementById("diff-grid")) buildDiffGrid();
            if(typeof buildSceneGrid==="function" && document.getElementById("scene-grid")) buildSceneGrid(); }catch(e){}
-    }, function(){ /* missing/invalid manifest -> keep built-in fallback */ });
+      try{ chkFlushPendingDiff(); }catch(e){}   /* 7I: a waiting ?diff deep-link starts now, on the fresh tiers */
+    }, function(){ /* missing/invalid manifest -> keep built-in fallback */ try{ chkFlushPendingDiff(); }catch(e){} });
   }catch(e){}
 })();
 var humanColor="r", oppName="Friend", pName="You", pName2="Coral";
@@ -527,6 +528,7 @@ function paintLastMove(){
 
 /* ---- selection + hops ---- */
 function myTurnNow(){
+  if(chkDemoOn)return false;                 /* 7I: attract demo ignores ALL input */
   if(gameOver||paused||busy)return false;
   if(mode==="online") return S.turn===humanColor;
   if(mode==="solo")   return S.turn==="r";   // human is red in solo
@@ -662,6 +664,11 @@ function spark(r,c,col,n){
 
 /* ---- game over ---- */
 function finish(winner){
+  if(chkDemoOn){                             /* 7I: no dialog, no sound — quietly restart the attract loop */
+    gameOver=true; busy=false; selected=null; clearHighlights();
+    setTimeout(function(){ if(chkDemoOn) chkDemoNewGame(); },1200);
+    return;
+  }
   gameOver=true; busy=false; clearHighlights();
   var iWon;
   if(mode==="online") iWon = winner===humanColor;
@@ -858,6 +865,64 @@ function startOnlineGame(d){
   setTip(S.turn===humanColor?"Your turn — tap a piece!":("Waiting for "+oppName+"..."));
 }
 
+/* ---- Session 7I helpers (deep link + attract demo) ---- */
+var chkPendingDiff=null, chkDemoOn=false, chkHandEl=null;
+function chkStartDiff(n){
+  var i=Math.max(0,Math.min(DIFF_TIERS.length-1,n|0));
+  mode="solo"; difficulty=DIFF_TIERS[i][0];
+  startGame();
+}
+function chkFlushPendingDiff(){ if(chkPendingDiff==null)return; var n=chkPendingDiff; chkPendingDiff=null; chkStartDiff(n); }
+function chkHand(r,c,press){
+  if(!chkHandEl)return; var v=vrc(r,c);
+  chkHandEl.style.left=((v[1]+0.45)*12.5)+"%";
+  chkHandEl.style.top=((v[0]+0.45)*12.5)+"%";
+  chkHandEl.style.transform=press?"scale(.82)":"scale(1)";
+}
+function chkStartDemo(){
+  chkDemoOn=true; mode="two"; soundOn=false; musicOn=false; hintsOn=true;
+  sceneKey=WORLD_KEYS[(Math.random()*WORLD_KEYS.length)|0]||sceneKey;
+  var hb=document.querySelector(".hud-btns"); if(hb)hb.style.display="none";   /* no pause/sound buttons in the demo */
+  startGame();
+  chkHandEl=document.createElement("img");
+  chkHandEl.src="/tutorial-hand.png"; chkHandEl.alt="";
+  chkHandEl.style.cssText="position:absolute;height:72px;width:auto;left:45%;top:60%;z-index:8;pointer-events:none;"+
+    "transition:left .5s ease,top .5s ease,transform .15s ease;transform-origin:22% 12%;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45))";
+  $("board-wrap").appendChild(chkHandEl);
+  setTimeout(chkDemoTurn,900);
+}
+function chkDemoNewGame(){
+  gameOver=false; busy=false; paused=false; selected=null; midJump=false; turnStart=null; turnCaps=[]; lastMove=null;
+  S=initialBoard();
+  buildBoard(); renderPieces(); clearHighlights(); updateTurnUI();
+  setTimeout(chkDemoTurn,900);
+}
+function chkDemoTurn(){
+  if(!chkDemoOn||gameOver||paused)return;
+  var mv=botPick(S.board,S.turn,"normal",mustJump);
+  if(!mv){ var w=winnerIfOver(S.board,S.turn,mustJump); if(w)finish(w); return; }
+  chkHand(mv.from[0],mv.from[1],false);                                                                              /* glide over the piece... */
+  setTimeout(function(){ if(!chkDemoOn||gameOver)return; chkHand(mv.from[0],mv.from[1],true); selectPiece(mv.from[0],mv.from[1]); },560);   /* ...tap it (shows the move dots) */
+  setTimeout(function(){ if(!chkDemoOn||gameOver)return; chkHand(mv.to[0],mv.to[1],false); },900);                   /* glide to the landing square... */
+  setTimeout(function(){ if(!chkDemoOn||gameOver)return; chkHand(mv.to[0],mv.to[1],true); chkDemoApply(mv); },1450); /* ...tap, and the move lands */
+}
+function chkDemoApply(mv){
+  turnStart=[mv.from[0],mv.from[1]];
+  var cr=mv.from[0],cc=mv.from[1],i=0;
+  function step(){
+    if(!chkDemoOn||gameOver)return;
+    if(i>=mv.path.length){ selected=[cr,cc]; busy=false; chkHand(cr,cc,false); endTurn(); if(!gameOver)setTimeout(chkDemoTurn,1000); return; }
+    var cap=(mv.caps&&mv.caps[i])?mv.caps[i]:null;
+    var ap=applyHop(S.board,cr,cc,{to:mv.path[i],cap:cap}); S.board=ap.board;
+    if(cap)spark(cap[0],cap[1],"#A78BFF",8);
+    cr=mv.path[i][0]; cc=mv.path[i][1]; i++;
+    renderPieces();
+    setTimeout(step,280);
+  }
+  step();
+}
+
+
 if(HAS_DOM){
   window.addEventListener("message",function(e){
     var d=e.data||{};
@@ -872,6 +937,29 @@ if(HAS_DOM){
     document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("on");});
     setTip("Connecting...");
     try{ window.parent && window.parent.postMessage({type:"checkersReady"}, "*"); }catch(e){}
+  }
+  /* ==================================================================
+     Session 7I (additive): shell deep links. With NO param nothing here
+     runs and the page behaves exactly as before.
+       ?diff=N       skip the menus, start SOLO vs tier N (0-based index
+                     into the manifest "levels" order: 0=Easy 1=Normal
+                     2=Tricky; clamped). Deferred until the manifest
+                     tiers apply (~1.6s safety timeout).
+       ?screen=demo  silent attract mode for the landing demo box: the
+                     bot plays BOTH colors forever, no audio, no dialogs,
+                     input ignored; the shared tutorial hand glides to
+                     the piece, then to the landing square, then moves.
+     ================================================================== */
+  var _chkQ=null; try{ _chkQ=new URLSearchParams(location.search); }catch(e){}
+  if(_chkQ && !_chkQ.get("online")){
+    if(_chkQ.get("screen")==="demo"){ chkStartDemo(); }
+    else if(_chkQ.get("diff")!=null && _chkQ.get("diff")!=="" && !isNaN(+_chkQ.get("diff"))){
+      document.querySelectorAll(".screen").forEach(function(sc){sc.classList.remove("on");});   /* never flash the menu */
+      if(window.BuildableManifest && typeof window.BuildableManifest.load==="function"){
+        chkPendingDiff=+_chkQ.get("diff");   /* manifest lands async -> defer (Breaker's bkPendingPlay pattern) */
+        setTimeout(function(){ try{ chkFlushPendingDiff(); }catch(e){} },1600);
+      } else chkStartDiff(+_chkQ.get("diff"));
+    }
   }
 }
 

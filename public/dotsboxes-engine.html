@@ -53,7 +53,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-manifest.js"></script>
 <script src="buildable-worlds.js"></script>
-<script src="buildable-boardgame.js"></script>
+<script src="buildable-boardgame.js?v=2"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
 (function(){ if(typeof document==="undefined") return;
@@ -130,6 +130,21 @@ const spec = {
     for(const t of legal){ const arr=t.kind==="h"?G.h:G.v; arr[t.i]=2; const c=BG.boxesNewlyClosed(G.h,G.v,G.cols,G.rows,t.kind,t.i); arr[t.i]=0; if(c.length) return spec.move(G,t,api); }
     let safe=legal.filter(t=>{ const arr=t.kind==="h"?G.h:G.v; arr[t.i]=2; const bad=anyThreeSide(G); arr[t.i]=0; return !bad; });
     const pool = safe.length?safe:legal; return spec.move(G, BG.pick(pool,api.rng), api);
+  },
+
+  // 7I attract demo: pick the robot's edge on a SCRATCH board so the tutorial
+  // hand can hover the edge midpoint BEFORE the line is drawn. token = edge.
+  demoMove(G, api){
+    let snap=null; try{ snap=JSON.parse(JSON.stringify(G)); }catch(e){ return null; }
+    try{ spec.ai(snap, api); }catch(e){ return null; }
+    let tk=null;
+    for(let i=0;i<G.NH;i++) if(snap.h[i]!==G.h[i]){ tk={kind:"h",i:i}; break; }
+    if(!tk) for(let i=0;i<G.NV;i++) if(snap.v[i]!==G.v[i]){ tk={kind:"v",i:i}; break; }
+    if(!tk) return null;
+    let a,b;
+    if(tk.kind==="h"){ const c=tk.i%G.cols, r=(tk.i/G.cols|0); a=dot(api.W,api.H,G,c,r); b=dot(api.W,api.H,G,c+1,r); }
+    else { const c=tk.i%(G.cols+1), r=(tk.i/(G.cols+1)|0); a=dot(api.W,api.H,G,c,r); b=dot(api.W,api.H,G,c,r+1); }
+    return { x:(a.x+b.x)/2, y:(a.y+b.y)/2, token:tk };
   },
 
   result(G){ const done=G.scores[0]+G.scores[1]>=G.total;

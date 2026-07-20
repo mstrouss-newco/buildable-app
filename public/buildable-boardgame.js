@@ -130,12 +130,12 @@
       spec: S, state: "title",        // title | play | over
       mode: "two", turn: null, G: null, winner: null, line: null,
       W: 900, H: 600, t: 0, fx: BM ? BM.makeFx() : null, rnd: BG.rng(12345),
-      aiPending: 0, paused: false, _hasSave: false,
+      aiPending: 0, paused: false, _hasSave: false, demo: false,   // demo: 7I attract mode (?screen=demo)
     };
 
     // ----- sound: configure BA with this game's map (bespoke ElevenLabs) -----
     if (BA && BA.configure && S.sfx) BA.configure({ sfxBase: "/api/sfx?s=", map: S.sfx });
-    function sfx(n) { try { if (BA && n) BA.sfx(n); } catch (e) {} }
+    function sfx(n) { if (ctrl.demo) return; try { if (BA && n) BA.sfx(n); } catch (e) {} }   // demo NEVER makes a sound
 
     // ----- DOM handles (guarded; null when headless) -----
     const D = hasDoc ? {
@@ -207,6 +207,7 @@
     }
 
     function humanTap(ev) {
+      if (ctrl.demo) return;                                 // 7I: attract demo ignores ALL input
       if (ctrl.state !== "play" || ctrl.paused) return;
       if (ctrl.mode === "solo" && ctrl.turn === 2) return;   // not your turn
       if (ctrl.online && ctrl.turn !== ctrl.myPlayer) return; // online: wait your turn
@@ -225,6 +226,7 @@
 
     // ----- banner / start screen -----
     function showBanner(res) {
+      if (ctrl.demo) return;                                 // 7I: no win/lose dialogs in the attract demo
       if (!D.banner) return;
       const names = S.players || [{ name: "Player 1" }, { name: "Player 2" }];
       let title;
@@ -246,7 +248,7 @@
       if (D.banner) D.banner.classList.remove("show");
       if (D.start) D.start.style.display = "none";
       if (D.hud) D.hud.textContent = S.hud ? S.hud(ctrl.G, ctrl) : "";
-      if (BA) BA.unlock();
+      if (BA && !ctrl.demo) BA.unlock();                     // 7I: the demo never unlocks audio
       if (ctrl.mode === "solo" && ctrl.turn === 2) ctrl.aiPending = 24;
       navUpdate();
     }
@@ -285,9 +287,9 @@
 
     // ----- save / continue (localStorage; no backend) -----
     const SAVE_KEY = "bg_save_" + (S.id || "game");
-    function saveGame() { if (!hasDoc) return; try { if (ctrl.state !== "play") return;
+    function saveGame() { if (!hasDoc || ctrl.demo) return; try { if (ctrl.state !== "play") return;
       localStorage.setItem(SAVE_KEY, JSON.stringify({ G: ctrl.G, turn: ctrl.turn, mode: ctrl.mode })); ctrl._hasSave = true; } catch (e) {} }
-    function clearSave() { if (hasDoc) { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} } ctrl._hasSave = false; }
+    function clearSave() { if (ctrl.demo) return; if (hasDoc) { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} } ctrl._hasSave = false; }   // demo never touches a kid's save
     function hasSave() { if (!hasDoc) return false; try { const r = localStorage.getItem(SAVE_KEY); if (!r) return false; const o = JSON.parse(r); return !!(o && o.G); } catch (e) { return false; } }
     function resumeSave() { if (!hasDoc) return; try { const r = localStorage.getItem(SAVE_KEY); if (!r) return; const o = JSON.parse(r); if (!o || !o.G) return;
       ctrl.mode = o.mode || ctrl.mode; ctrl.G = o.G; ctrl.turn = o.turn || 1; ctrl.winner = null; ctrl.line = null; ctrl.state = "play"; ctrl.paused = false;
@@ -344,6 +346,11 @@
       pauseOv.querySelector("#bgHomeB").onclick = function () { try { g.parent && g.parent.postMessage("nav:exit", "*"); } catch (e) {} };
     }
     function updateChrome() {
+      if (ctrl.demo || bgPendingDiff != null) {              // 7I: no chrome in the demo / while a ?diff link waits
+        if (pauseBtn) pauseBtn.style.display = "none";
+        if (contBtn) contBtn.style.display = "none";
+        return;
+      }
       if (pauseBtn) pauseBtn.style.display = (ctrl.state === "play" && !ctrl.paused) ? "block" : "none";
       if (contBtn) contBtn.style.display = (ctrl.state === "title" && ctrl._hasSave) ? "block" : "none";
     }
@@ -422,7 +429,8 @@
       if (g.BuildableManifest && S.id && typeof g.BuildableManifest.load === "function" && typeof S.applyManifestTiers === "function") {
         try { g.BuildableManifest.load(S.id, function (cfg) {
           try { if (cfg && Array.isArray(cfg.tiers) && cfg.tiers.length) { S.applyManifestTiers(cfg); if (ctrl.state === "title" && !ctrl.online) toMenu(); } } catch (e) {}
-        }, function () {}); } catch (e) {}
+          bgFlushPendingDiff();                              // 7I: a waiting ?diff deep-link starts now, on the fresh tiers
+        }, function () { bgFlushPendingDiff(); }); } catch (e) {}
       }
       // Adopt the shared in-game nav (buildable-gamenav.js): in-app, hide our own
       // Home/Sound/Pause and let the React shell (GameFrame) draw ONE consistent set.
@@ -433,6 +441,86 @@
         soundOn: function () { return !(BA && BA.muted); },
         inGame: function () { return ctrl.state === "play"; },
       }); }
+      // =====================================================================
+      // Session 7I (additive) — two shell-facing URL params. With NEITHER
+      // param present none of this runs; behavior is unchanged (replace-first).
+      //   ?diff=N       skip the menu, start a SOLO game at tier N (0-based
+      //                 index into the manifest "levels" order — the same list
+      //                 the start screen shows). Out-of-range N is clamped.
+      //                 The manifest loads async, so the start is deferred
+      //                 until it applies (Breaker's bkPendingPlay pattern,
+      //                 ~1.6s safety timeout).
+      //   ?screen=demo  silent attract mode for the landing demo box: the
+      //                 computer plays BOTH sides forever, no audio, no win
+      //                 dialogs, all input ignored; the shared tutorial hand
+      //                 glides to each move first so the demo teaches the tap.
+      // =====================================================================
+      var bgPendingDiff = null;
+      function bgStartDiff(n) {
+        const ch = S.choices || [];
+        const i = Math.max(0, Math.min(ch.length ? ch.length - 1 : 0, n | 0));
+        try { if (ch[i] && S.applyChoice) S.applyChoice(ch[i].value); } catch (e) {}
+        startGame("solo");
+      }
+      function bgFlushPendingDiff() { if (bgPendingDiff == null) return; const n = bgPendingDiff; bgPendingDiff = null; bgStartDiff(n); }
+      var demoHandEl = null;
+      function demoHandMake() {
+        if (demoHandEl || !document.body) return;
+        demoHandEl = document.createElement("img");
+        demoHandEl.src = "/tutorial-hand.png"; demoHandEl.alt = "";
+        demoHandEl.style.cssText = "position:fixed;height:76px;width:auto;left:50%;top:62%;z-index:60;pointer-events:none;" +
+          "transition:left .55s ease,top .55s ease,transform .15s ease;transform-origin:22% 12%;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45))";
+        document.body.appendChild(demoHandEl);
+      }
+      function demoHandTo(x, y, press) {   // logical canvas coords -> page px; CSS transition = glide, never a teleport
+        if (!demoHandEl || !D.cv) return;
+        try {
+          const r = D.cv.getBoundingClientRect();
+          demoHandEl.style.left = (r.left + x * (r.width / ctrl.W) - 12) + "px";
+          demoHandEl.style.top = (r.top + y * (r.height / ctrl.H) - 8) + "px";
+          demoHandEl.style.transform = press ? "scale(.82)" : "scale(1)";
+        } catch (e) {}
+      }
+      function demoLoop() {
+        if (!ctrl.demo) return;
+        if (ctrl.state === "over") {       // quiet restart -> loop forever
+          setTimeout(function () { if (ctrl.demo) { startGame(ctrl.mode); setTimeout(demoLoop, 700); } }, 1200);
+          return;
+        }
+        if (ctrl.state !== "play") { setTimeout(demoLoop, 700); return; }
+        let plan = null;
+        try { plan = (typeof S.demoMove === "function") ? S.demoMove(ctrl.G, api()) : null; } catch (e) { plan = null; }
+        if (!plan || plan.token == null) { // no planner -> move directly (still silent)
+          try { applyOutcome(S.ai(ctrl.G, api())); } catch (e) {}
+          setTimeout(demoLoop, 1250); return;
+        }
+        demoHandTo(plan.x, plan.y, false);                                       // hover the move first...
+        setTimeout(function () { if (ctrl.demo && ctrl.state === "play") demoHandTo(plan.x, plan.y, true); }, 620);   // ...small press dip...
+        setTimeout(function () {                                                 // ...then the move lands
+          if (!ctrl.demo || ctrl.state !== "play") return;
+          try { applyOutcome(S.move ? S.move(ctrl.G, plan.token, api()) : S.ai(ctrl.G, api())); } catch (e) {}
+          demoHandTo(plan.x, plan.y, false);
+        }, 800);
+        setTimeout(demoLoop, 1400);
+      }
+      var bgQ = null; try { bgQ = new URLSearchParams(location.search); } catch (e) {}
+      var bgDiffP = bgQ ? bgQ.get("diff") : null;
+      if (bgQ && bgQ.get("screen") === "demo" && !ctrl.online) {
+        ctrl.demo = true;                  // "two" mode keeps the built-in solo bot queue off; demoLoop moves BOTH sides
+        if (D.home) D.home.style.display = "none";
+        if (D.mute) D.mute.style.display = "none";
+        demoHandMake();
+        startGame("two");
+        setTimeout(demoLoop, 900);
+      } else if (!ctrl.online && bgDiffP != null && bgDiffP !== "" && !isNaN(+bgDiffP)) {
+        if (D.start) D.start.style.display = "none";                 // a deep link never flashes the menu
+        if (g.BuildableManifest && S.id && typeof g.BuildableManifest.load === "function" && typeof S.applyManifestTiers === "function") {
+          bgPendingDiff = +bgDiffP;        // defer until the manifest tiers apply; safety timeout below
+          setTimeout(function () { bgFlushPendingDiff(); }, 1600);
+        } else {
+          bgStartDiff(+bgDiffP);
+        }
+      }
       g.requestAnimationFrame(frame);
     }
 
