@@ -3913,3 +3913,14 @@ marketplace; PRICING NOW MATCHES DECK: Free (free for teachers & schools forever
 Premium $5 / AI Creator $10 + credits earned by learning (was $9 Family + $4 School).
 partner.html: Math Cannon screenshot replaced with Saturn fly-to (art not ready — Mike);
 text card no longer name-drops Math Cannon. New shot public/landing-shots/orbit-saturn.webp.
+
+## 2026-07-20 — Editor: Generate-with-AI on every art slot
+public/editor.html: every art slot (whole-game, per-level world, per-world) now has a
+Generate button beside Drop in art. It builds a prompt from the slot + a plain-English
+Look/Engine/Quality picker (Storybook/Detailed/3D; gpt-image-1 vs FLUX; Smart/High/Standard/
+Draft, each with a what-to-expect note), calls /api/asset-studio generate, slices with the
+shared BuildableSlicer, and saves through the existing Keep modal. Additive only — drop-in,
+library, and save paths unchanged; music/audio slots skip Generate. This folds the Asset
+Library Create tool into the editor (editor is now the single home for making + editing game
+art). FOLLOW-UP: per-piece generation (skip slicing), auto grid-vs-scattered CV cutter, and
+real built-in-art thumbnails in the editor (most slots show blank today).

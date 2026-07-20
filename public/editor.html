@@ -420,6 +420,7 @@ function assetControl(label, getId, setId, spec, theme){
     el("div",{class:"aslot"},[label]), idline,
     el("div",{class:"arow"},[
       el("button",{class:"btn sm", onclick:function(){ dropIn(spec, theme, function(newId){ setId(newId); refresh(); }); }},["Drop in art"]),
+      (spec.key!=="music" && spec.mode!=="audio") ? el("button",{class:"btn sm", onclick:function(){ genIn(spec, theme, function(newId){ setId(newId); refresh(); }, "slot"); }},["Generate"]) : null,
       el("button",{class:"btn sm ghost", onclick:function(){ pickLibrary(spec, function(newId){ setId(newId); refresh(); }); }},["Library"])
     ])
   ]);
@@ -443,6 +444,7 @@ function worldSlotControl(lv, slot){
     el("div",{class:"aslot"},[slot.label]), idline,
     el("div",{class:"arow"},[
       el("button",{class:"btn sm", onclick:function(){ dropInWorld(lv, slot, refresh); }},["Drop in art"]),
+      el("button",{class:"btn sm", onclick:function(){ genIn(Object.assign({key:slot.key}, slot.spec), levelWorld(lv), refresh, "world", lv, slot); }},["Generate"]),
       el("button",{class:"btn sm ghost", onclick:function(){ pickLibraryWorld(lv, slot, refresh); }},["Library"])
     ])
   ]);
@@ -475,7 +477,10 @@ function worldArtControl(worldKey, slot){
     thumb.style.backgroundImage=hit?("url('"+hit.url+"')"):""; idline.textContent=hit?"custom art":"(using built-in)"; }
   refresh();
   var info=el("div",{class:"ainfo"},[ el("div",{class:"aslot"},[slot.label]), idline,
-    el("div",{class:"arow"},[ el("button",{class:"btn sm", onclick:function(){ dropInWorldKey(worldKey, slot, refresh, null); }},["Drop in art"]) ]) ]);
+    el("div",{class:"arow"},[
+      el("button",{class:"btn sm", onclick:function(){ dropInWorldKey(worldKey, slot, refresh, null); }},["Drop in art"]),
+      el("button",{class:"btn sm", onclick:function(){ genIn(Object.assign({key:slot.key}, slot.spec), worldKey, refresh, "world", null, slot); }},["Generate"])
+    ]) ]);
   wrap.appendChild(thumb); wrap.appendChild(info); return wrap;
 }
 function renderWorlds(){
@@ -577,6 +582,108 @@ function mKeep(){
       if(newId==="world"){ loadLib().then(function(){ if(MODAL.cb)MODAL.cb(); closeModal(); }); return; }
       MODAL.cb(newId); closeModal(); })
     .catch(function(e){ document.getElementById("mkeep").disabled=false; document.getElementById("mstat").textContent="Save failed: "+(e.message||e); });
+}
+
+/* ---------- Generate with AI (folds the Create tool into each slot) ---------- */
+var HOUSE_STYLES={
+  storybook:{label:"Storybook (soft)", str:"soft painterly children's-book game art with a glossy polished finish, bright bold saturated colors, thick clean rounded shapes, cute and inviting, child-friendly ages 4-8", note:"Soft watercolor picture-book look, warm and gentle."},
+  detailed:{label:"Extra detailed", str:"high-detail polished mobile-game asset art, rich material textures, thick beveled glossy borders, dramatic lighting with crisp highlights and soft shadows, vibrant saturated colors, sharp clean professional finish, appealing and colorful for kids but NOT flat, NOT plain, NOT oversimplified", note:"Richer textures, lighting and depth. Less flat and plain."},
+  modern3d:{label:"3D cartoon", str:"glossy modern 3D animated-movie style (Pixar/DreamWorks feel), soft cinematic lighting, cute rounded glossy shapes, vibrant cheerful colors, polished", note:"Glossy 3D cartoon, like a modern animated movie."}
+};
+var ENGINE_NOTES={ openai:"Reliable and follows the prompt closely. Clean, but can look a touch flat.", flux:"Richer, more painterly detail. Can wander from small instructions. Great for backgrounds and characters." };
+var QUALITY_NOTES={ auto:"Smart: sharp for backgrounds, standard for small pieces. Recommended.", high:"Sharpest. Best for backgrounds and heroes. Costs a bit more.", medium:"Good detail, cheaper.", low:"Rough draft, cheapest. For quick tries." };
+var GEN={ style:"storybook", engine:"openai", quality:"auto" };
+var GENCTX={};
+function meaningfulNames(arr){ return (arr||[]).filter(function(n){ return n && n!=="x" && !/^[rc][0-9]+$/.test(n); }); }
+function genPrompt(spec, theme){
+  var game=(CATALOG.filter(function(c){return c.id===state.game;})[0]||{}).label||state.game;
+  var look=slugify(theme||"custom").replace(/-/g," ");
+  var isBg=spec.role==="background";
+  var lbl=labelOf(spec.key).toLowerCase();
+  var rows=spec.rows||[], cols=spec.cols||[];
+  var nCols=(cols.length && cols[0]!=="x")?cols.length:1;
+  var nPieces=(rows.length||1)*nCols;
+  var mr=meaningfulNames(rows);
+  var subj;
+  if(spec.mode==="sheet" && nPieces>1){
+    if(mr.length===rows.length && nCols===1){
+      subj="a set of "+lbl+" for a "+look+" "+game+": "+mr.join(", ")+", each a distinct clear design";
+    } else {
+      subj=nPieces+" different cute "+look+"-themed "+lbl+" for the kids game "+game+", each one unique and clearly different from the others";
+    }
+  } else if(isBg){
+    subj="a full-screen "+look+"-themed background scene for the kids game "+game+", calm and inviting, no characters, no text";
+  } else {
+    subj="a single "+look+"-themed "+lbl+" for the kids game "+game+", centered, full and complete";
+  }
+  var p=subj+". "+HOUSE_STYLES[GEN.style].str+".";
+  if(spec.mode==="sheet" && nPieces>1){
+    p+=" Lay them out as a clean evenly-spaced grid of "+nCols+" column"+(nCols>1?"s":"")+" and "+(rows.length||1)+" rows, every item the same size and centered in its own cell with generous equal margins, none touching or overlapping.";
+  } else { p+=" A single item, centered, filling the frame."; }
+  if(isBg){ p+=" High detail and crisp, suitable for a large tablet screen."; }
+  else { p+=" Place every item on a pure solid plain white background (#ffffff) with clear white space around each one, nothing touching, no cast shadows."; }
+  p+=" No text, no words, no letters, no numbers, no UI, no watermark. Child-friendly ages 4-8.";
+  return p;
+}
+function genSize(spec){ if(spec.role==="background") return "wide"; if(spec.mode==="sheet") return "wide"; return "square"; }
+function genQuality(spec){ if(GEN.quality!=="auto") return GEN.quality; if(spec.role==="background") return "high"; if(spec.mode==="sheet") return "high"; return "medium"; }
+function genIn(spec, theme, cb, mode, lv, slot){
+  GENCTX={spec:spec, theme:theme, cb:cb, mode:mode||"slot", lv:lv||null, slot:slot||null};
+  showGenModal();
+}
+function showGenModal(){
+  var spec=GENCTX.spec;
+  document.getElementById("mtitle").textContent="Generate with AI — "+labelOf(spec.key);
+  document.getElementById("mhint").textContent="Pick a look, then Generate. You'll see the pieces before anything saves.";
+  document.getElementById("mkeep").style.display="none";
+  document.getElementById("mstat").textContent="";
+  var styleOpts=Object.keys(HOUSE_STYLES).map(function(k){return '<option value="'+k+'"'+(GEN.style===k?' selected':'')+'>'+HOUSE_STYLES[k].label+'</option>';}).join("");
+  var engOpts='<option value="openai"'+(GEN.engine==="openai"?' selected':'')+'>gpt-image-1 (reliable)</option><option value="flux"'+(GEN.engine==="flux"?' selected':'')+'>FLUX (richer)</option>';
+  var qOpts='<option value="auto"'+(GEN.quality==="auto"?' selected':'')+'>Smart (recommended)</option><option value="high"'+(GEN.quality==="high"?' selected':'')+'>High (sharpest)</option><option value="medium"'+(GEN.quality==="medium"?' selected':'')+'>Standard</option><option value="low"'+(GEN.quality==="low"?' selected':'')+'>Draft (cheap)</option>';
+  var body=document.getElementById("mbody");
+  body.innerHTML=''
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 4px;">'
+    +'<label class="fieldlbl">Look<br><select id="g-style">'+styleOpts+'</select></label>'
+    +'<label class="fieldlbl">Art engine<br><select id="g-engine">'+engOpts+'</select></label>'
+    +'<label class="fieldlbl">Quality<br><select id="g-quality">'+qOpts+'</select></label>'
+    +'</div>'
+    +'<div class="aslot" id="g-style-note" style="margin:2px 0;"></div>'
+    +'<div class="aslot" id="g-engine-note" style="margin:2px 0;"></div>'
+    +'<div class="aslot" id="g-quality-note" style="margin:2px 0 8px;"></div>'
+    +'<span class="fieldlbl">What we will ask for (you can edit this)</span>'
+    +'<textarea id="g-prompt" style="width:100%;min-height:120px;margin-top:4px;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;line-height:1.4;"></textarea>'
+    +'<div style="margin-top:10px;"><button class="btn primary sm" id="g-go">Generate</button></div>';
+  document.getElementById("g-prompt").value=genPrompt(spec, GENCTX.theme);
+  function notes(){
+    document.getElementById("g-style-note").textContent=HOUSE_STYLES[GEN.style].note;
+    document.getElementById("g-engine-note").textContent=ENGINE_NOTES[GEN.engine];
+    document.getElementById("g-quality-note").textContent=QUALITY_NOTES[GEN.quality];
+  }
+  notes();
+  document.getElementById("g-style").onchange=function(){ GEN.style=this.value; document.getElementById("g-prompt").value=genPrompt(spec, GENCTX.theme); notes(); };
+  document.getElementById("g-engine").onchange=function(){ GEN.engine=this.value; notes(); };
+  document.getElementById("g-quality").onchange=function(){ GEN.quality=this.value; notes(); };
+  document.getElementById("g-go").onclick=doGenerate;
+  openModal();
+}
+function doGenerate(){
+  var spec=GENCTX.spec;
+  var prompt=document.getElementById("g-prompt").value;
+  var stat=document.getElementById("mstat"), go=document.getElementById("g-go");
+  stat.textContent="Generating on "+(GEN.engine==="flux"?"FLUX":"gpt-image-1")+"… (10-60s)"; go.disabled=true;
+  fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action:"generate", engine:GEN.engine, prompt:prompt, size:genSize(spec), transparent:false, quality:genQuality(spec)})})
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+    .then(function(res){
+      if(!res.ok || !res.j || !res.j.b64){ throw new Error((res.j&&res.j.error)||"generate failed"); }
+      return BuildableSlicer.loadImage("data:image/png;base64,"+res.j.b64);
+    })
+    .then(function(img){
+      var pieces=BuildableSlicer.sliceSheet(img, spec);
+      MODAL={pieces:pieces, spec:spec, theme:GENCTX.theme, mode:GENCTX.mode, lv:GENCTX.lv, slot:GENCTX.slot, cb:GENCTX.cb};
+      showPiecesModal();
+    })
+    .catch(function(e){ go.disabled=false; stat.textContent="Could not generate: "+(e.message||e); });
 }
 
 function pickLibrary(spec, cb){
