@@ -135,6 +135,8 @@
   .rm-card.done .rm-name{text-decoration:line-through}
   .rm-card.next{border-color:var(--accent);box-shadow:0 0 0 2px rgba(107,78,255,.18)}
   .rm-next-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px;white-space:nowrap}
+  .rm-deploy-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:var(--warn);color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px;white-space:nowrap}
+  .rm-card.deployed{background:#fff8ec;border-color:#f0d9a8}
   .rm-startnext{margin:0 0 14px}
   .rm-top{display:flex;align-items:center;gap:9px}
   .rm-top input[type=checkbox]{width:17px;height:17px;flex:0 0 auto}
@@ -154,15 +156,6 @@
   .rm-arrow:hover{color:var(--accent);border-color:var(--accent)}
   .rm-manual{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#fff1d9;color:#8a5a00;border:1px solid #f0d9a8;border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:middle}
   .rm-addsess{margin-top:10px}
-
-  .rm-upnext{background:linear-gradient(135deg,#efeaff,#e7f7f1);border:1px solid #d6ccff;border-radius:16px;padding:14px 16px;margin:0 0 14px;box-shadow:0 2px 10px rgba(107,78,255,.10)}
-  .rm-upnext.allclear{background:var(--card2);border-color:var(--line);box-shadow:none}
-  .rm-up-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px}
-  .rm-up-main{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .rm-up-name{font-size:16px;font-weight:800}
-  .rm-up-phase{font-size:12px;color:var(--muted);font-weight:600}
-  .rm-up-desc{font-size:13px;line-height:1.45;color:var(--ink);margin:8px 0 0}
-  .rm-up-body{font-size:14px;color:var(--muted)}
 
   /* PIN gate */
   #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60}
@@ -185,7 +178,6 @@
     <span style="display:flex;gap:4px;margin-left:6px">
       <a href="/admin" style="color:#b8bce0;font-size:13px;font-weight:600;padding:7px 13px;border-radius:9px;text-decoration:none">Admin</a>
       <a href="/planner" style="background:#6b4eff;color:#fff;font-size:13px;font-weight:600;padding:7px 13px;border-radius:9px;text-decoration:none">Planner</a>
-      <a href="/editor" style="color:#b8bce0;font-size:13px;font-weight:600;padding:7px 13px;border-radius:9px;text-decoration:none">Editor</a>
       <a href="/asset-library" style="color:#b8bce0;font-size:13px;font-weight:600;padding:7px 13px;border-radius:9px;text-decoration:none">Assets</a>
     </span>
     <a href="/app" style="margin-left:auto;color:#8388b5;font-size:13px;text-decoration:none">Kids app &rarr;</a>
@@ -237,14 +229,11 @@
 
   <div id="roadmapView" style="display:none">
     <div class="addcard rm-paste-card">
-      <label>Paste anything from chat: a whole roadmap, a new phase, or just one session like "Session 5B - ...". It gets sorted into place without overwriting what's already here.</label>
-      <textarea id="rm-paste" placeholder="Paste a section or a single session, e.g.&#10;Session 5B - Sling converts. Same as Survival: manifest, wire engine, delete menus."></textarea>
+      <label>Paste your roadmap (markdown), then Import. Re-importing keeps your checkmarks, edits, and notes.</label>
+      <textarea id="rm-paste" placeholder="## Phase 1 - Speed fix (do first)&#10;Done when: the app feels fast on a phone&#10;- [ ] Session 1A - Compression pass. Compress all images and audio so pages load faster."></textarea>
       <div class="addfoot">
-        <span class="legend">Type or paste anything in plain words. It reads it and files it into the right phase, session, or note, without overwriting what is already here. Replace all reconciles a full master paste.</span>
-        <span style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" onclick="importRoadmapAdd()">Add / sort it in</button>
-          <button class="btn ghost" onclick="importRoadmap()">Replace all</button>
-        </span>
+        <span class="legend">Phases, Session lines, and "Done when:" lines are read. Everything else is ignored.</span>
+        <button class="btn" onclick="importRoadmap()">Import roadmap</button>
       </div>
     </div>
     <div id="rm-board"></div>
@@ -298,6 +287,7 @@
   <div class="mfoot">
     <button class="btn ghost" onclick="closeModal('rmPromptModal')">Close</button>
     <button class="btn" onclick="copyEl('rm-pm-box')">Copy prompt</button>
+    <button class="btn green" onclick="rmMarkDeployed()">Copy &amp; mark deployed</button>
   </div>
 </div></div>
 
@@ -681,15 +671,8 @@ function rmSlug(id){ return "rm-note-"+String(id).replace(/[^a-z0-9]+/gi,"-"); }
 function rmData(){ return state.meta.roadmap || (state.meta.roadmap={phases:[],sessions:[],archived:[]}); }
 
 /* ---- parse pasted markdown ---- */
-function splitCard(rem){
-  rem=String(rem||"").trim(); let m;
-  if(m=rem.match(/title:\s*([\s\S]*?)\s*[.:]?\s*description:\s*([\s\S]+)$/i)) return {name:m[1].trim().replace(/[.:]+$/,""), desc:m[2].trim()};
-  if(m=rem.match(/^(.*?[^.\s])\.\s+([\s\S]+)$/)) return {name:m[1].trim(), desc:m[2].trim()};
-  if(m=rem.match(/^(.+?)\s+[—–-]\s+([\s\S]+)$/)) return {name:m[1].trim(), desc:m[2].trim()};
-  return {name:rem, desc:""};
-}
 function parseRoadmap(text){
-  const phases=[], sessions=[], notes=[]; let curPhase=null, curLater=false;
+  const phases=[], sessions=[]; let curPhase=null, curLater=false;
   const lines=String(text||"").split(/\r?\n/);
   for(let raw of lines){
     const line=raw.trim(); if(!line) continue; let m;
@@ -700,19 +683,11 @@ function parseRoadmap(text){
     if(low==="later"||low==="parked"||low==="later / parked"||low.indexOf("later /")===0||low.indexOf("later/")===0||low.indexOf("parked")===0){
       curLater=true; curPhase=null; continue;
     }
-    // explicit "Session 1A — Name. desc"
     if(m=line.match(/^(?:[-*]\s*)?(?:\[\s*([ xX])\s*\]\s*)?Session\s+([\w.]+)\s*[—–:-]+\s*(.+)$/i)){
-      const done=m[1]?/[xX]/.test(m[1]):false; const id=m[2]; const sp=splitCard(m[3].trim());
-      sessions.push({id, name:sp.name, desc:sp.desc, phaseNum:curPhase?curPhase.num:"", doneFromPaste:done, later:curLater}); continue;
-    }
-    // loose: "Note on the 7B card: ..."  or  "7B note: ..."
-    if((m=line.match(/^(?:add\s+)?note\s+(?:on|to|for|against)\s+(?:the\s+)?(?:card\s+)?([\w.:]+?)(?:\s+card)?\s*[:—–-]\s*(.+)$/i)) || (m=line.match(/^([\w.:]+)\s+note\s*[:—–-]\s*(.+)$/i))){
-      notes.push({id:m[1], text:m[2].trim()}); continue;
-    }
-    // loose: "New card in Phase 7: Title... Description..." / "Add a card to Phase 7 — ..."
-    if(m=line.match(/^(?:new\s+|add\s+(?:a\s+)?(?:new\s+)?)?(?:card|item|task|session)\s+(?:in|for|to|under)\s+phase\s+([\w.]+)\s*[:.\-—–]*\s*(.+)$/i)){
-      const sp=splitCard(m[2].trim());
-      sessions.push({id:null, name:sp.name, desc:sp.desc, phaseNum:m[1], doneFromPaste:false, later:false}); continue;
+      const done=m[1]?/[xX]/.test(m[1]):false; const id=m[2]; const rest=m[3].trim();
+      let name=rest, desc=""; const dot=rest.match(/^(.*?[^.\s])\.\s+(.+)$/);
+      if(dot){ name=dot[1].trim(); desc=dot[2].trim(); }
+      sessions.push({id, name, desc, phaseNum:curPhase?curPhase.num:"", doneFromPaste:done, later:curLater}); continue;
     }
     if(m=line.match(/^Done when:\s*(.+)$/i)){ if(curPhase) curPhase.doneWhen=m[1].trim(); continue; }
     if(curLater && (m=line.match(/^[-*]\s+(.+)$/))){
@@ -722,7 +697,7 @@ function parseRoadmap(text){
     }
     curLater=false; // a non-bullet, non-session line ends the Later run
   }
-  return {phases, sessions, notes};
+  return {phases, sessions};
 }
 
 /* ---- merge, preserving done/edits/notes by ID ---- */
@@ -738,7 +713,7 @@ function mergeRoadmap(parsed){
   const parsedIds=new Set(parsed.sessions.map(s=>s.id));
   const sessions=parsed.sessions.map(p=>{
     const prev=prevAll[p.id];
-    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false, later:!!prev.later}; }
+    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, deployed:!!prev.deployed, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false, later:!!prev.later}; }
     return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false, manual:false, later:!!p.later};
   });
   // keep manual sessions not present in the paste
@@ -749,94 +724,11 @@ function mergeRoadmap(parsed){
   state.meta.roadmap={phases:cur.phases, sessions, archived};
 }
 
-function derivePhase(id){ const m=String(id||"").match(/^(\d+)/); return m?m[1]:""; }
-
-/* additive merge: add or update from the paste, never archive anything */
-function mergeRoadmapAdd(parsed){
-  const cur=rmData();
-  const byNum={}; (cur.phases||[]).forEach(p=>byNum[p.num]=p);
-  parsed.phases.forEach(pp=>{
-    if(byNum[pp.num]){ if(pp.doneWhen && !byNum[pp.num].doneWhen) byNum[pp.num].doneWhen=pp.doneWhen; }
-    else { const np={num:pp.num,title:pp.title,doneWhen:pp.doneWhen,manual:false}; cur.phases.push(np); byNum[pp.num]=np; }
-  });
-  const byId={}; (cur.sessions||[]).forEach(s=>byId[s.id]=s);
-  parsed.sessions.forEach(p=>{
-    const pn = p.phaseNum || derivePhase(p.id);
-    let ex=byId[p.id];
-    if(!ex){
-      const ai=(cur.archived||[]).findIndex(a=>a.id===p.id);
-      if(ai>=0){ ex=cur.archived[ai]; cur.archived.splice(ai,1); cur.sessions.push(ex); byId[p.id]=ex; }
-    }
-    if(ex){
-      if(pn) ex.phaseNum=pn;
-      if(!ex.edited){ ex.name=p.name; if(p.desc) ex.desc=p.desc; }
-      if(p.later) ex.later=true;
-    } else {
-      const ns={id:p.id, phaseNum:pn, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false, manual:false, later:!!p.later};
-      cur.sessions.push(ns); byId[p.id]=ns;
-    }
-  });
-  state.meta.roadmap={phases:cur.phases, sessions:cur.sessions, archived:cur.archived};
-}
-function assignAutoIds(parsed){
-  const used=new Set([].concat(rmData().sessions,rmData().archived).map(x=>x.id));
-  parsed.sessions.forEach(s=>{
-    if(s.id){ used.add(s.id); return; }
-    const pn=s.phaseNum||"7"; let id="";
-    for(let i=0;i<26;i++){ const c=pn+String.fromCharCode(65+i); if(!used.has(c)){ id=c; break; } }
-    if(!id){ let n=1; do{ id=pn+"_"+n; n++; }while(used.has(id)); }
-    s.id=id; used.add(id);
-  });
-}
-function applyNotes(notes){
-  if(!notes||!notes.length) return 0;
-  const rd=rmData(); let n=0;
-  notes.forEach(o=>{
-    const s=rd.sessions.find(x=>x.id===o.id)||rd.archived.find(x=>x.id===o.id);
-    if(s){ if(!Array.isArray(s.notes)) s.notes=[]; s.notes.push(o.text); n++; }
-  });
-  return n;
-}
-async function aiParse(text){
-  try{
-    const rd=rmData();
-    const body={ text, phases:(rd.phases||[]).map(p=>({num:p.num,title:p.title})), ids:[].concat(rd.sessions,rd.archived).map(s=>s.id) };
-    const r=await fetch("/api/roadmap-parse",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-    const d=await r.json();
-    if(d && d.ok && d.roadmap){
-      const rm=d.roadmap;
-      return {
-        phases:(rm.phases||[]).map(p=>({num:String(p.num),title:p.title,doneWhen:p.doneWhen||""})),
-        sessions:(rm.sessions||[]).map(s=>({id:s.id||null,name:s.name,desc:s.desc||"",phaseNum:String(s.phaseNum||""),doneFromPaste:!!s.done,later:!!s.later})),
-        notes:(rm.notes||[]).map(n=>({id:String(n.id),text:n.text}))
-      };
-    }
-  }catch(e){}
-  return null;
-}
-async function importRoadmapAdd(){
-  const text=document.getElementById("rm-paste").value;
-  if(!text.trim()){ toast("Type or paste something first"); return; }
-  setSync("reading...");
-  let parsed=await aiParse(text);        // AI understands plain words
-  if(!parsed) parsed=parseRoadmap(text); // fallback: local rules parser
-  if(!parsed.sessions.length && !parsed.phases.length && !parsed.notes.length){ setSync("in sync"); toast("Couldn't find anything to add"); return; }
-  assignAutoIds(parsed);
-  mergeRoadmapAdd(parsed);
-  const noteN=applyNotes(parsed.notes);
-  document.getElementById("rm-paste").value="";
-  renderRoadmap(); setSync("saving..."); await saveMetaR();
-  const parts=[]; if(parsed.sessions.length) parts.push(parsed.sessions.length+" card"+(parsed.sessions.length===1?"":"s")); if(noteN) parts.push(noteN+" note"+(noteN===1?"":"s"));
-  toast(parts.length?("Added "+parts.join(" + ")):"Nothing new to add");
-}
-
 async function importRoadmap(){
   const text=document.getElementById("rm-paste").value;
   const parsed=parseRoadmap(text);
-  if(!parsed.sessions.length && !parsed.phases.length && !parsed.notes.length){ toast("Couldn't find anything to import"); return; }
-  assignAutoIds(parsed);
+  if(!parsed.sessions.length && !parsed.phases.length){ toast("Couldn't find any phases or sessions"); return; }
   mergeRoadmap(parsed);
-  applyNotes(parsed.notes);
   renderRoadmap(); setSync("saving..."); await saveMetaR();
   toast("Imported "+parsed.sessions.length+" session"+(parsed.sessions.length===1?"":"s"));
 }
@@ -851,7 +743,7 @@ function nextSession(){
   const rd=rmData();
   for(const ph of rd.phases){
     const ss=rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
-    for(const s of ss){ if(!s.done) return s; }
+    for(const s of ss){ if(!s.done && !s.deployed) return s; }
   }
   return null;
 }
@@ -860,28 +752,6 @@ function startNextSession(){
   if(!s){ toast("All sessions are done or parked"); return; }
   openSessionPrompt(s.id);
 }
-function nextSession(){
-  const rd=rmData();
-  for(const ph of rd.phases){
-    const ss=rd.sessions.filter(s=>s.phaseNum===ph.num && !s.later);
-    for(const s of ss){ if(!s.done) return {s:s, ph:ph}; }
-  }
-  return null;
-}
-function upNextCard(){
-  const nx=nextSession();
-  if(!nx) return '<div class="rm-upnext allclear"><div class="rm-up-label">Up next</div><div class="rm-up-body">All caught up. Nothing queued right now.</div></div>';
-  const s=nx.s, ph=nx.ph;
-  return '<div class="rm-upnext">'
-    +'<div class="rm-up-label">Up next</div>'
-    +'<div class="rm-up-main"><span class="rm-id">'+esc(s.id)+'</span><span class="rm-up-name">'+esc(s.name)+'</span><span class="rm-up-phase">Phase '+esc(ph.num)+' &middot; '+esc(ph.title)+'</span></div>'
-    +(s.desc?'<div class="rm-up-desc">'+esc(s.desc)+'</div>':'')
-    +'<div class="rm-btns"><button class="btn green" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
-    +'<button class="btn ghost mini" onclick=\'rmJumpTo('+JSON.stringify(ph.num)+')\'>Show in list</button></div>'
-  +'</div>';
-}
-function rmJumpTo(num){ rmOpen[num]=true; renderRoadmap(); const el=document.getElementById("ph-"+num); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"start"}); }
-
 function renderRoadmap(){
   const board=document.getElementById("rm-board"); if(!board) return;
   const rd=rmData();
@@ -890,16 +760,16 @@ function renderRoadmap(){
     board.innerHTML=rmAddBar()+'<div class="empty"><b>No roadmap yet.</b><br>Paste a roadmap above, or tap <b>+ New phase</b> to build one yourself.</div>';
     return;
   }
-  let html=upNextCard()+rmAddBar();
+  let html=rmAddBar();
   if(ns) html+='<div class="rm-startnext"><button class="btn green" onclick="startNextSession()">Start next session — '+esc(ns.id)+(ns.name?' '+esc(ns.name):'')+'</button></div>';
   rd.phases.forEach(ph=>{
     const pr=phaseProgress(ph.num);
-    if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=!(pr.total>0 && pr.done>=pr.total);
+    if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true;
     const open=rmOpen[ph.num]?"open":"";
     const ss=rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
     const doneCls=(pr.total&&pr.done>=pr.total)?"s-ready":"s-wait";
     const canDel=!!ph.manual;
-    html+='<div class="bucket" id="ph-'+esc(ph.num)+'">'
+    html+='<div class="bucket">'
       +'<div class="bhead" onclick=\'rmToggle('+JSON.stringify(ph.num)+')\'>'
       +'<h2><span class="rm-reorder">'
         +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMovePhase('+JSON.stringify(ph.num)+',-1)\'>&#9650;</button>'
@@ -958,7 +828,8 @@ function rmCard(s, archived){
   const notes=Array.isArray(s.notes)?s.notes:[];
   const notesHtml=notes.length?'<div class="rm-notes">'+notes.map((n,i)=>'<div class="rm-note"><span>'+esc(n)+'</span>'+(archived?"":'<span class="x" onclick=\'rmDelNote('+JSON.stringify(s.id)+','+i+')\' title="Remove note">✕</span>')+'</div>').join("")+'</div>':"";
   const isNext=!archived&&s.id===rmNextId;
-  return '<div class="rm-card '+(s.done?"done":"")+(isNext?" next":"")+'">'
+  const isDeployed=!archived&&!!s.deployed&&!s.done;
+  return '<div class="rm-card '+(s.done?"done":"")+(isNext?" next":"")+(isDeployed?" deployed":"")+'">'
     +'<div class="rm-top">'
     +(archived?"":'<span class="rm-reorder">'
       +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMoveSession('+JSON.stringify(s.id)+',-1)\'>&#9650;</button>'
@@ -967,11 +838,13 @@ function rmCard(s, archived){
     +(archived?"":'<input type="checkbox" '+(s.done?"checked":"")+' onchange=\'rmToggleDone('+JSON.stringify(s.id)+')\'>')
     +'<span class="rm-id">'+esc(s.id)+'</span>'
     +'<span class="rm-name">'+esc(s.name)+'</span>'
-    +(isNext?'<span class="rm-next-badge">next</span>':'')+'</div>'
+    +(isNext?'<span class="rm-next-badge">next</span>':'')
+    +(isDeployed?'<span class="rm-deploy-badge">with Claude</span>':'')+'</div>'
     +(s.desc?'<div class="rm-desc">'+esc(s.desc)+'</div>':"")
     +notesHtml
     +(archived?"":'<div class="rm-btns">'
       +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
+      +(s.done?'':(s.deployed?'<button class="btn ghost mini" onclick=\'rmSetDeployed('+JSON.stringify(s.id)+',false)\'>Undo deploy</button>':'<button class="btn ghost mini" onclick=\'rmSetDeployed('+JSON.stringify(s.id)+',true)\'>Mark deployed</button>'))
       +'<button class="btn ghost mini" onclick=\'rmEdit('+JSON.stringify(s.id)+')\'>Edit</button>'+'<button class="btn ghost mini" onclick=\'rmPark('+JSON.stringify(s.id)+','+(!s.later)+')\'>'+(s.later?'To phases':'Later')+'</button>'+(s.manual?'<button class="btn ghost mini" onclick=\'rmDeleteSession('+JSON.stringify(s.id)+')\'>Delete</button>':'')+'</div>'
       +'<div class="quickadd rm-addnote">'
       +'<input class="qa-input rm-note-input" id="'+rmSlug(s.id)+'" data-id="'+esc(s.id)+'" placeholder="Add a note for this session..." autocomplete="off">'
@@ -989,7 +862,13 @@ function bindRmNotes(){
 
 async function rmToggleDone(id){
   const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
-  s.done=!s.done; renderRoadmap(); setSync("saving..."); await saveMetaR();
+  s.done=!s.done; if(s.done) s.deployed=false; renderRoadmap(); setSync("saving..."); await saveMetaR();
+}
+async function rmSetDeployed(id,val){
+  const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  s.deployed=!!val; if(s.deployed) s.done=false;
+  renderRoadmap(); setSync("saving..."); await saveMetaR();
+  toast(val?"Marked deployed — sent to Claude":"Back to not deployed");
 }
 function rmEdit(id){ rmEditingId=id; renderRoadmap(); }
 async function rmSaveEdit(id){
@@ -1099,11 +978,18 @@ function buildSessionPrompt(s){
   if(notes.length) p+="\n\nAlso address these notes: "+notes.join("; ");
   return p;
 }
+let rmPromptId=null;
 function openSessionPrompt(id){
   const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  rmPromptId=id;
   document.getElementById("rm-pm-title").textContent="Session "+s.id+": "+s.name;
   document.getElementById("rm-pm-box").textContent=buildSessionPrompt(s);
   document.getElementById("rmPromptModal").classList.add("show");
+}
+async function rmMarkDeployed(){
+  copyEl("rm-pm-box");
+  closeModal("rmPromptModal");
+  if(rmPromptId!=null) await rmSetDeployed(rmPromptId,true);
 }
 
 document.getElementById("f-desc")&&document.getElementById("f-desc").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))addTask();});
