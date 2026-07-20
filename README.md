@@ -6,6 +6,21 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Reload-safe addresses inside the app (Session 2E, July 20 2026)
+Every screen inside `/app` used to share one web address, so a refresh or a shared link
+always bounced you back to the start. The shell (`src/BuildableKids.jsx`) now gives each
+main destination its own address and keeps the browser in sync: it writes the address when
+you change screens, reads it on load (so a refresh keeps you put), and the Back button steps
+back through screens. Addresses: Home `/app`, Creations `/app/creations`, Kidspedia
+`/app/explore/<exhibit>`, and every game's landing at `/app/<game>` (Breaker also
+`/app/breaker/journey` and `/app/breaker/loadout`). Build/in-game/lobby/grown-ups screens are
+deliberately address-less, so a refresh there returns to that game's landing (or Home), never
+deeper — saving half-built progress is a later job. Purely additive; hosting already sends
+`/app/(.*)` to the shell so no `vercel.json` change was needed. QA: `vite build` clean; the
+routing helpers pass 76 assertions and a mock-history simulation passes 13 sequencing checks.
+No game engine was touched.
+
+
 ## Favicon now shows on the app, not just admin tools (July 20 2026)
 The kid app (`/app`) had no favicon while the landing page and admin tools did. The Vite build uses `base: '/demo/'`, so the app's built `index.html` requests its icons at `/demo/favicon.*`, but `vercel.json` only rerouted `/demo/site.webmanifest` to the real root file, not the icons — so `/demo/favicon.svg` fell through the `/demo/(.*)` redirect and returned the SPA HTML instead of an image (no icon). Landing and admin pages point at the root `/favicon.*` directly, which is why they always worked. Fix: added five routes in `vercel.json`, right after the `/demo/site.webmanifest` route, mapping `/demo/favicon.ico|favicon.svg|favicon-32.png|favicon-16.png|apple-touch-icon.png` to their root `/favicon.*` counterparts. Commit `0676ace` on `main`; Vercel auto-deployed. QA (live): `/demo/favicon.svg` now returns the real SVG and the app tab shows the B icon.
 

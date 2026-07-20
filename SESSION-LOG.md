@@ -1,5 +1,42 @@
 # Buildable Kids — Session Log
 
+## 2026-07-20: Session 2E — reload-safe addresses everywhere inside /app
+
+Gave the shell real, refresh-safe web addresses. Until now every screen inside
+`/app` shared one address, so a refresh or a shared link always dropped you back at
+the start. The shell now mirrors each STABLE destination into the address bar, reads
+it on load, and lets the browser Back button step through screens.
+
+Shell (`src/BuildableKids.jsx`), additive only:
+- Two pure helpers: `viewToPath(screen, landingId, exploreId)` maps a stable screen to
+  its `/app/...` path (or `null` for transient screens); `screenForPath(pathname)` is the
+  reverse and returns `null` for anything outside `/app` or unrecognized (so the existing
+  `?bk=`, `/admin` and OAuth deep-links are untouched).
+- Stable addresses: Home `/app`, Creations (My Stuff) `/app/creations`, Kidspedia
+  `/app/explore/<exhibit>`, each game's landing `/app/<game>` (shared landing games by
+  catalog id), Breaker `/app/breaker` + `/app/breaker/journey` + `/app/breaker/loadout`,
+  Tennis `/app/tennis`, Chess `/app/chess`, Music Maker `/app/music-maker`.
+- Three effects: LOAD restores the stable screen the address points at on first paint;
+  POPSTATE maps Back/forward onto a screen; WRITE pushes the address on each stable screen
+  change. Guards (`firstWriteRef`, `fromPopRef`, `urlHydratedRef`) stop the mount write from
+  clobbering a deep link and stop a Back-driven change from re-pushing.
+- Mid-build / in-game / lobby / grown-ups / admin screens are TRANSIENT: they write no
+  address, so a refresh on them falls back to the last stable address — the game's landing,
+  or Home — never deeper. Saving mid-build progress stays a later job (per plan).
+
+Hosting already routes `/app/(.*)` to the shell (and `/demo/(.*)` 308-redirects to `/app`),
+so no `vercel.json` change was needed.
+
+QA: `vite build` clean (69 modules). Routing verified out-of-band — the two helpers pulled
+straight from source pass 76 assertions (every shared-landing game, the Breaker set,
+Tennis/Chess/Music, Explore, Creations round-trip; transient screens → no address; non-`/app`
+and unknown paths → ignored), and a mock-history simulation passes 13 sequencing checks
+(play screen keeps the landing address; Back steps landing→Home; reload on a transient play
+URL restores the landing; reload on `/app/creations` restores Creations; Explore round-trip +
+Back). No game engine was touched, so no per-game `qa-*.mjs` applies.
+
+Commits: see below.
+
 ## 2026-07-20: Tumble Blocks rename + manifest (7A flag cleared)
 
 Owner approved the rename. public/tetris-engine.html is now public/tumble-engine.html
