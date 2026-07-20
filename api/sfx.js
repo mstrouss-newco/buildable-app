@@ -289,7 +289,7 @@ const SOUNDS = {
   snl_ladder:   "Short cheerful rising sparkle slide-whistle climb up, going up a ladder, bright and happy, single hit, no music, no voices",
   snl_snake:    "Short playful descending wobble slide-whistle whoosh, sliding down a snake, silly not scary, single hit, no music, no voices",
 
-  // ---- Tumble Blocks (gentle kid Tetris, public/tetris-engine.html) — bespoke one-shots ----
+  // ---- Tumble Blocks (gentle kid Tetris, public/tumble-engine.html) — bespoke one-shots ----
   tumble_move:   "Very short soft gentle wooden tick, a friendly block nudging sideways, tiny and quiet, single hit, no music, no voices",
   tumble_rotate: "Very short soft springy cartoon twist whoosh, a block turning, light and cute, single hit, no music, no voices",
   tumble_lock:   "Short soft rounded cartoon block settling and clicking gently into place, cozy and satisfying, not harsh, single hit, no music, no voices",

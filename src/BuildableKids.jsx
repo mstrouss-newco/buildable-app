@@ -54,7 +54,7 @@ const SCREEN_BREAKER_JOURNEY = "breaker_journey";
 const SCREEN_BREAKER_LOADOUT = "breaker_loadout";
 const SCREEN_TANK = "tank";
 const SCREEN_RUNNER = "runner";
-const SCREEN_TETRIS = "tetris";
+const SCREEN_TUMBLE = "tumble";
 const SCREEN_SOUNDS = "sounds";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_CHESS_LOBBY = "chess_lobby";
@@ -100,7 +100,7 @@ const GAME_SLUGS = {
   [SCREEN_CROC]: "croc",
   [SCREEN_MATHCANNON]: "mathcannon",
   [SCREEN_RILEYS]: "rileys",
-  [SCREEN_TETRIS]: "tetris",
+  [SCREEN_TUMBLE]: "tumble",
   [SCREEN_CHESS]: "chess",
   [SCREEN_CHESS_FAMILY]: "chess",
   [SCREEN_TYPING]: "typing",
@@ -150,7 +150,7 @@ const LANDING_WRAP = {
   stringmatch: { play: SCREEN_STRINGMATCH, journey: true, demo: "/string-match.html?v=2&screen=demo" },
   bubble: { play: SCREEN_BUBBLE, journey: true, demo: "/bubble-engine.html?v=hud2&screen=demo" },
   castleguard: { play: SCREEN_CASTLE, journey: true, demo: "/castle-guard.html?v=hud2&screen=demo" },
-  tetris: { play: SCREEN_TETRIS, demo: "/tetris-engine.html?v=hud2&screen=demo" },   // demo only: manifest waits on the 7A rename off "tetris"
+  tumble: { play: SCREEN_TUMBLE, journey: true, demo: "/tumble-engine.html?v=1&screen=demo" },
   "rileys-garden": { play: SCREEN_RILEYS, journey: true, demo: "/rileys-garden.html?v=art2&screen=demo" },
   typing: { play: SCREEN_TYPING, journey: true, demo: "/typing.html?v=2&screen=demo" },
   mathcannon: { play: SCREEN_MATHCANNON, journey: true, demo: "/mathcannon-engine.html?v=2&screen=demo" },
@@ -192,8 +192,7 @@ const GAME_CATALOG = [
   { id: "bubble",      name: "Bubble Buddies",   category: "Arcade",   color: "#5BC0EB", type: "game", imgId: "bubble",      handler: "onBubble",      desc: "Aim and pop — match 3 buddies to set them free!" },
   { id: "tennis",      name: "Tennis",           category: "Sports",   color: "#34D399", type: "game", imgId: "tennis",      handler: "onTennis",      desc: "Bounce it back — solo, 2 players, or family!" },
   { id: "castleguard", name: "Castle Guard",     category: "Strategy", color: "#2E8B57", type: "game", imgId: "castleguard", handler: "onCastle",      desc: "Place archers and knights to stop the silly goblins!" },
-  // FLAG (Session 7A): rename id/file/handler off "tetris" before its manifest conversion (trademark). Display name "Tumble Blocks" is already safe.
-  { id: "tetris",      name: "Tumble Blocks",    category: "Puzzle",   color: "#67C7FF", type: "game", imgId: "tetris",      handler: "onTetris",      desc: "Fill a row and watch it tumble away!" },
+  { id: "tumble",      name: "Tumble Blocks",    category: "Puzzle",   color: "#67C7FF", type: "game", imgId: "tetris",      handler: "onTumble",      desc: "Fill a row and watch it tumble away!" },
   { id: "croctot",     name: "Croc Tot",         category: "Action",   color: "#3AA655", type: "game", imgId: "croctot",     handler: "onCroc",        desc: "Blast the goofy flying snacks and beat the boss!" },
   { id: "rileys-garden", name: "Riley's Garden",    category: "Action",   color: "#4CAF50", type: "game", imgId: "rileys",      handler: "onRileys",      desc: "Grow a garden, blast the bees, beat the bear!" },
   { id: "connectfour", name: "Connect Four",     category: "Classic",  color: "#FF5A6E", type: "game", imgId: "connectfour", handler: "onConnectFour", desc: "Drop discs, line up four to win!" },
@@ -531,6 +530,11 @@ function readBreakerProgress(gameId) {
     if (id === "castleguard") {
       const d = JSON.parse(localStorage.getItem("castleguard") || "null");
       return { unlocked: (d && d.unlocked) || 0, stars: (d && d.stars) || {} };
+    }
+    if (id === "tumble") {
+      const d = JSON.parse(localStorage.getItem("tumble_prefs") || "null");
+      const st = {}; if (d && d.cleared) Object.keys(d.cleared).forEach((i) => { if (d.cleared[i]) st[i] = 3; });
+      return { unlocked: (d && d.unlocked) || 0, stars: st };
     }
     if (id === "mathcannon") {
       const d = JSON.parse(localStorage.getItem("bk_mathcannon") || "null");
@@ -1187,7 +1191,7 @@ function UpgradeStore({ game, onBack, onPlay }) {
 }
 
 function CastleGuardScreen({ onHome, level }) { return <GameFrame title="Castle Guard" src={"/castle-guard.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#2e7d32" />; }
-function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html?v=hud2" onHome={onHome} bg="#0c1230" />; }
+function TumbleScreen({ onHome, level }) { return <GameFrame title="Tumble Blocks" src={"/tumble-engine.html?v=1" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
   useEffect(() => {
     if (!onPlayFriend) return;
@@ -1709,7 +1713,7 @@ export default function BuildableKids() {
         onPlatformer={() => openLanding("platformer")}
         onSurvival={() => openLanding("survival")}
         onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)}
-        onTetris={() => openLanding("tetris")}
+        onTumble={() => openLanding("tumble")}
         onRunner={() => openLanding("runner")}
         onCheckers={() => openLanding("checkers")}
         onTennis={() => { setTennisStart(null); setScreen(SCREEN_TENNIS_LANDING); }}
@@ -2003,8 +2007,8 @@ export default function BuildableKids() {
   if (screen === SCREEN_CASTLE) {
     return <CastleGuardScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
-  if (screen === SCREEN_TETRIS) {
-    return <TetrisScreen onHome={() => setScreen(SCREEN_HOME)} />;
+  if (screen === SCREEN_TUMBLE) {
+    return <TumbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TICTACTOE) {
     return <BoardGameScreen title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;

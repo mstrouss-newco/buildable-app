@@ -22,7 +22,7 @@ const KINDS = ["win", "lose", "levelup", "cheer", "levelComplete", "score", "coi
 // lines). Manifest games supply their own name.
 const NAME_FALLBACK = {
   platformer: "Platformer", survival: "Survival", breaker: "Breaker", castle: "Castle Guard",
-  croc: "Croc Tot", tetris: "Tetris", chess: "Chess", typing: "Typing", tennis: "Tennis",
+  croc: "Croc Tot", tumble: "Tumble Blocks", chess: "Chess", typing: "Typing", tennis: "Tennis",
   town: "Family Town", tictactoe: "Tic-Tac-Toe", connectfour: "Connect Four", dotsboxes: "Dots and Boxes",
   sling: "Sling Squad", tank: "Hilltop Tanks", mahjong: "Mahjong", stringmatch: "String Match",
   bubble: "Bubble Buddies", generated: "your game",
