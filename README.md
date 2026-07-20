@@ -1994,6 +1994,14 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-20 (Tumble Blocks rename + manifest)
+
+Tumble Blocks is fully off the "tetris" name: engine file, catalog id, screen, and QA
+script renamed (old /tetris-engine.html URL still routes to the new file), a real
+manifest with its 6 worlds as journey levels, and it now uses the shared journey +
+landing demo like every other game. qa-tumble.mjs is fully green (fixed its
+pre-existing win-render failure). Details in SESSION-LOG.md.
+
 ## Session log — 2026-07-20 (Session 7I: shared level picker + demo on every game)
 
 Every game's Play now goes through the ONE shared journey/board picker (only Breaker and

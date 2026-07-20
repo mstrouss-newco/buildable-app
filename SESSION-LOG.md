@@ -1,5 +1,18 @@
 # Buildable Kids — Session Log
 
+## 2026-07-20: Tumble Blocks rename + manifest (7A flag cleared)
+
+Owner approved the rename. public/tetris-engine.html is now public/tumble-engine.html
+(the old URL still works - vercel.json routes it to the new file), catalog id/handler/
+screen are `tumble` (imgId stays "tetris" so the existing picker tile art keeps
+serving; telemetry logs `tumble` going forward). New public/tumble/manifest.json (6
+worlds as journey levels, difficulty 1-5), engine got the 7I `?level=N` deep-link, and
+Tumble Blocks now rides the shared journey + landing demo like everything else. The
+journey reads the engine's own `tumble_prefs` save. qa-tetris.mjs is now qa-tumble.mjs
+and its long-red win-render smoke is FIXED (missing buildable-wincard.js in the vm libs
++ a measureText stub) - the script is fully green. Editor and helper-reactions renamed.
+Commits: 435a1ee, 29bd170, c32853b.
+
 ## 2026-07-20: Session 7I - ONE shared level picker + a Breaker-style demo on every game
 
 Finished what 7D started. Every game now enters play through the SHARED picker instead of
