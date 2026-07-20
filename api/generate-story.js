@@ -95,6 +95,17 @@ function readBody(req) {
   return new Promise((resolve) => { let raw = ""; req.on("data", (c) => (raw += c)); req.on("end", () => { try { resolve(JSON.parse(raw || "{}")); } catch { resolve({}); } }); });
 }
 function clampText(t, max) { return String(t || "").replace(/\s+/g, " ").trim().slice(0, max); }
+// Like clampText but NEVER cuts mid-word: trim back to the last full sentence that
+// fits (a "." "!" "?"), or if there's no sentence break, to the last whole word.
+function trimToSentence(t, max) {
+  const s = String(t || "").replace(/\s+/g, " ").trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max);
+  const sentEnd = Math.max(cut.lastIndexOf("."), cut.lastIndexOf("!"), cut.lastIndexOf("?"));
+  if (sentEnd >= max * 0.5) return cut.slice(0, sentEnd + 1).trim();
+  const sp = cut.lastIndexOf(" ");
+  return (sp > 0 ? cut.slice(0, sp) : cut).trim();
+}
 
 async function underBudget() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return true;
@@ -172,7 +183,7 @@ function validateStory(obj, inp) {
     const emotion = EMO_SET.has(p && p.emotion) ? p.emotion : "happy";
     const effect = EFFECT_SET.has(p && p.effect) ? p.effect : WORLDS[world_slug].fx;
     const sfx = Array.isArray(p && p.sfx) ? p.sfx.filter((x) => SFX_OK.has(x)).slice(0, 2) : [];
-    const text = clampText(p && p.text, 260);
+    const text = trimToSentence(p && p.text, 320);
     if (!text) return null;
     return { text, world_slug, emotion, effect, effects: [effect], sfx };
   });
@@ -227,7 +238,7 @@ export default async function handler(req, res) {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1700, messages: [{ role: "user", content: buildPrompt(inp, age) }] }),
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 3200, messages: [{ role: "user", content: buildPrompt(inp, age) }] }),
       signal: ctrl.signal,
     });
     clearTimeout(to);
