@@ -1,5 +1,35 @@
 # Buildable Kids — Session Log
 
+## 2026-07-19: Session 6F - Return experience (remember me)
+
+The app now remembers who was playing. A returning visit boots straight to the last
+kid's Home instead of the "who's playing?" picker (`src/BuildableKids.jsx`:
+`useState(getActiveKid() ? SCREEN_HOME : SCREEN_GROWNUP)`); guests included, and a
+fresh Google sign-in still routes to the picker. Added a kid-facing **Switch player**
+button in the Home header that opens the existing picker with no math gate (new
+`SwitchPlayerGlyph`, drawn SVG, no emoji).
+
+Buddy done-flag now trusts the database (`src/lib/accounts.js`). Root cause found during
+live QA: prod `kid_profiles` is missing the `grade` and `pin_hash` columns (Session 6B
+migration never run), so the full profile select was always 400ing and the OLD fallback
+dropped the `helper` column with it -- which is exactly why kids kept being asked to
+re-create their buddy. Fix: `listKidProfiles` keeps a fallback that STILL includes
+`helper` (never dropped) and seeds the per-device `bk_helper_<id>` copy from the DB;
+`saveKidHelper` retries the PATCH once then logs/throws instead of swallowing failures.
+Only `SCREEN_HELPER` shows when the account truly has no helper for that kid.
+
+Commits: 8c1e105, 3b2a56c, dc3f958 (on `main`, deployed).
+
+QA (live, buildablekids.com/app): return visit lands on the last kid's Home with no buddy
+prompt; Switch player opens "Who's playing?" listing all 4 kids (Riley, Jack, Dad, Mom);
+picking Riley (has a helper) goes straight to her Home, no Helper Lab. DB confirms 3 of 4
+kids have a saved helper. No game engines were touched, so no game QA scripts apply.
+
+Flagged for owner: prod `kid_profiles` still lacks `grade` + `pin_hash` (run the Session 6B
+migration `db/6b-*.sql`) -- learning-by-grade and kid PIN stay inert until then. Live-tested
+only on an already-signed-in browser; the incognito/fresh-localStorage and brand-new-family
+onboarding paths still need on-device verification.
+
 ## 2026-07-19: Breaker demo paddle twitch fix
 
 The self-playing attract demo's solo bot (`botThinkSolo` in `public/breaker-engine.html`)

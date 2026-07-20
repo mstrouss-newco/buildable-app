@@ -1990,6 +1990,23 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-19 (Session 6F: return experience — remember me)
+
+**Boots to Home on return.** A returning visit now opens straight to the last kid's Home
+instead of re-asking "who's playing?" every time (`src/BuildableKids.jsx` boot state uses
+the already-restored active kid; guests included; a fresh Google sign-in still routes to the
+picker). Added a kid-facing **Switch player** button in the Home header that opens the
+existing picker with no math gate (drawn `SwitchPlayerGlyph`, no emoji).
+
+**Buddy is DB-sourced now.** Live QA revealed prod `kid_profiles` is missing the `grade` and
+`pin_hash` columns (Session 6B migration never run), so the profile select always failed and
+the old fallback dropped the saved `helper` — the real reason kids were re-asked to make a
+buddy. Fixed in `src/lib/accounts.js`: `listKidProfiles` keeps a fallback that still includes
+`helper` and seeds the per-device copy from the DB; `saveKidHelper` retries then logs/throws.
+Commits 8c1e105, 3b2a56c, dc3f958. **Owner TODO:** run the Session 6B migration so `grade`
+(learning level) and `pin_hash` (kid PIN) exist in prod.
+
+---
 ## Session log — 2026-07-11 (Sling gets music + shared music library cleanup)
 
 **New:** Sling Squad now plays background music. It uses the shared music library
