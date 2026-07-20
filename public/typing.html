@@ -412,7 +412,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
   // audio
   let actx=null;
-  function audio(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(actx&&actx.state==='suspended'){try{actx.resume();}catch(e){}}return actx;}
+  function audio(){if(TY_DEMO)return null;/* demo is always silent */if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(actx&&actx.state==='suspended'){try{actx.resume();}catch(e){}}return actx;}
   const SCALE=[523.25,587.33,659.25,783.99,880.00,1046.50];
   function note(step){const ac=audio();if(!ac)return;const f=SCALE[Math.min(step,SCALE.length-1)];
     const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.value=f;
@@ -604,7 +604,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       setTimeout(()=>sp.remove(),540);}
     elLane.classList.add('shake');setTimeout(()=>elLane.classList.remove('shake'),400);boom();}
 
-  function handle(ch){
+  function handle(ch,fromBot){
+    if(TY_DEMO&&!fromBot)return;   // demo: real input is ignored, only the bot types
     if(lock||!running||paused)return;ch=ch.toLowerCase();if(!/^[a-z]$/.test(ch))return;
     if(ch===expected()){
       const key=keyEls[ch];key.classList.remove('next');key.classList.add('good');setTimeout(()=>key.classList.remove('good'),260);
@@ -643,7 +644,9 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     setStars(0);setStreak(0);setCharge(0);document.body.style.background=W.body;elLane.style.background=W.lane;applyHero();
     $('pauseOverlay').classList.remove('on');$('helpOverlay').classList.remove('on');show('game');loadEncounter();startTimer();}
 
-  function winWorld(){gen++;running=false;lock=true;clearInterval(timer);try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){};
+  function winWorld(){gen++;running=false;lock=true;clearInterval(timer);
+    if(TY_DEMO){setTimeout(function(){try{startWorld(0);}catch(e){}},1200);return;}   // demo: no win card, just loop
+    try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){};
     const before=totalStars;totalStars+=runStars;saveStars(totalStars);
     let unlocked=HEROES.find(h=>h.unlock>before&&h.unlock<=totalStars);const last=worldIdx>=WORLDS.length-1;
     $('winFace').innerHTML=IC_TROPHY;
@@ -689,6 +692,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   $('btnWinHeroes').addEventListener('click',()=>{renderHeroes();show('heroes');});
 
   document.addEventListener('keydown',e=>{
+    if(TY_DEMO)return;
     if(!screens.game.classList.contains('on'))return;
     audio();
     if(e.key==='Escape'){paused?doResume():doPause();return;}
@@ -697,6 +701,57 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
   // init
   setStars(0);setStreak(0);startDemo();fit();
+
+  /* ── Session 7I: shell URL params — additive, no params = unchanged ──
+     ?level=N      0-based index into /typing/manifest.json levels (same order as
+                   WORLDS); starts that world immediately, exactly like a menu tap.
+                   The manifest only renames worlds async, so no waiting is needed.
+     ?screen=demo  silent attract mode for the landing demo box: the bot types the
+                   right key at a calm kid pace, all real input is ignored, no win
+                   card — on a world clear it quietly loops back to world 1. */
+  var TY_Q=null;try{TY_Q=new URLSearchParams(location.search);}catch(e){}
+  var TY_DEMO=!!(TY_Q&&TY_Q.get('screen')==='demo');
+  var tyBotT=null,tyHand=null,tyHX=0,tyHY=0,tyHTX=0,tyHTY=0,tyDip=0;
+  function tyBotStart(){
+    if(tyBotT)clearInterval(tyBotT);
+    tyBotT=setInterval(function(){
+      try{
+        if(!screens.game.classList.contains('on'))return;
+        if(!running||lock||paused)return;
+        tyDip=8;                      // hand presses as the bot types
+        handle(expected(),true);
+      }catch(e){}
+    },700);                            // ~1 key per 0.7s — slow, steady kid pace
+  }
+  // demo tutorial hand: glides to the glowing key with a capped step (never teleports)
+  function tyHandInit(){
+    tyHand=document.createElement('img');tyHand.src='/tutorial-hand.png';tyHand.alt='';
+    tyHand.style.cssText='position:fixed;left:0;top:0;height:76px;z-index:80;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45));will-change:transform;';
+    document.body.appendChild(tyHand);
+    tyHX=window.innerWidth/2;tyHY=window.innerHeight+40;tyHTX=tyHX;tyHTY=window.innerHeight*0.8;
+    requestAnimationFrame(tyHandFrame);
+  }
+  function tyHandFrame(){
+    try{
+      var el=document.querySelector('.key.next');
+      if(el){var r=el.getBoundingClientRect();tyHTX=r.left+r.width/2;tyHTY=r.top+r.height*0.62;}
+      var dx=tyHTX-tyHX,dy=tyHTY-tyHY,d=Math.sqrt(dx*dx+dy*dy),STEP=7;
+      if(d>0.5){var f=Math.min(1,STEP/d);tyHX+=dx*f;tyHY+=dy*f;}
+      if(tyDip>0)tyDip--;
+      tyHand.style.transform='translate('+(tyHX-14)+'px,'+(tyHY-6+(tyDip>0?6:0))+'px)';
+    }catch(e){}
+    requestAnimationFrame(tyHandFrame);
+  }
+  if(TY_DEMO){
+    // door-level input block (the bot drives handle() directly, so it is unaffected)
+    ['pointerdown','mousedown','touchstart','click'].forEach(function(t){
+      window.addEventListener(t,function(e){try{e.stopPropagation();e.preventDefault();}catch(_){}},{capture:true,passive:false});
+    });
+    startWorld(0);tyBotStart();tyHandInit();
+  }else if(TY_Q&&TY_Q.get('level')!=null&&TY_Q.get('level')!==''){
+    var tyL=parseInt(TY_Q.get('level'),10);if(!(tyL>=0))tyL=0;if(tyL>WORLDS.length-1)tyL=WORLDS.length-1;
+    audio();startWorld(tyL);           // same two calls a world-card tap makes
+  }
 })();
 </script>
 </body>

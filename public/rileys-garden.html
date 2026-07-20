@@ -692,7 +692,9 @@ function hitPlayer(){
   lives--;updHUD();inv=true;invT=1200;stingFlash();sfx('sting');
   if(lives<=0)endGame();
 }
-function endGame(){GS='over';stopBuzz();stopMusic();setTimeout(()=>{sfx('over');showScr('gos');},300);}
+function endGame(){GS='over';stopBuzz();stopMusic();
+  if(RG_DEMO){setTimeout(()=>{try{startGame(0);}catch(e){}},1200);return;}   // demo: no cards, just loop
+  setTimeout(()=>{sfx('over');showScr('gos');},300);}
 function checkWinCondition(){
   if(GS!=='play')return;
   const allBeesGone=bees.filter(b=>!b._dead).length===0;
@@ -702,7 +704,9 @@ function checkWinCondition(){
   const minDone=lvTimer>=lvMinDur;
   if(allBeesGone&&allSnakesGone&&bossGone&&minDone)finishLevel();
 }
-function finishLevel(){GS='lc';stopBuzz();stopMusic();setTimeout(()=>{sfx('lc');const lvBonus=collected*10;$('lcsub').textContent='Level '+(LI+1)+' done! +'+lvBonus+' pts';score+=lvBonus;if(score>hiscore){hiscore=score;localStorage.setItem('riley_hiscore',hiscore);}showScr('lcs');},200);}
+function finishLevel(){GS='lc';stopBuzz();stopMusic();
+  if(RG_DEMO){setTimeout(()=>{try{startGame(0);}catch(e){}},1200);return;}   // demo: no cards, just loop
+  setTimeout(()=>{sfx('lc');const lvBonus=collected*10;$('lcsub').textContent='Level '+(LI+1)+' done! +'+lvBonus+' pts';score+=lvBonus;if(score>hiscore){hiscore=score;localStorage.setItem('riley_hiscore',hiscore);}showScr('lcs');},200);}
 
 // ── Main loop ─────────────────────────────────────────────────
 function loop(ts){
@@ -1081,7 +1085,7 @@ function drawBoss(){
 }
 
 // ── Input ─────────────────────────────────────────────────────
-function inp(cx,cy){if(GS!=='play')return;const g=toGame(cx,cy);PL.tx=g.x;PL.ty=g.y;}
+function inp(cx,cy){if(RG_DEMO)return;if(GS!=='play')return;const g=toGame(cx,cy);PL.tx=g.x;PL.ty=g.y;}
 gc.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];inp(t.clientX,t.clientY);},{passive:false});
 gc.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];inp(t.clientX,t.clientY);},{passive:false});
 gc.addEventListener('mousedown',e=>inp(e.clientX,e.clientY));
@@ -1145,6 +1149,77 @@ function mainLoop(ts){
 }
 
 raf=requestAnimationFrame(titleLoop);
+
+/* == Session 7I: shell URL params - additive, no params = unchanged ==========
+   ?level=N      0-based index into /rileys-garden/manifest.json levels (same
+                 order as LVS); starts it immediately, exactly like a level-menu
+                 tap. The manifest only renames stages async - no waiting needed.
+   ?screen=demo  silent attract mode for the landing demo box: Riley chases the
+                 fruit, keeps a safe distance from bees/snakes/the bear, the
+                 auto-weapons do the blasting, and on win or lose it quietly
+                 restarts level 1 after ~1.2s. All real input is ignored. */
+let RG_DEMO=false,rgBotT=null,rgHand=null,rgHX=0,rgHY=0;
+function rgBotThink(){
+  if(GS!=='play')return;
+  const gh=GH();let tx=null,ty=null;
+  // nearest threat (bee, snake head, or the bear boss)
+  let th=null,td=1e9;
+  bees.forEach(b=>{if(b._dead)return;const d=D(PL.x,PL.y,b.x,b.y);if(d<td){td=d;th=b;}});
+  snakes.forEach(sn=>{if(sn._dead)return;const h=sn.segs[0],d=D(PL.x,PL.y,h.x,h.y);if(d<td){td=d;th=h;}});
+  const bossD=boss?D(PL.x,PL.y,boss.x,boss.y):1e9;
+  if(bossD<110||(th&&td<80)){
+    // dodge: slide AWAY from the closest danger (the engine glide keeps it smooth)
+    const fx2=bossD<110?boss.x:th.x,fy2=bossD<110?boss.y:th.y;
+    const ax=PL.x-fx2,ay=PL.y-fy2,m=Math.sqrt(ax*ax+ay*ay)||1;
+    tx=PL.x+ax/m*130;ty=PL.y+ay/m*130;
+  }else{
+    // head for the nearest uncollected fruit/flower; auto-weapons handle shooting
+    let it=null,idd=1e9;
+    items.forEach(o=>{if(o.col)return;const d=D(PL.x,PL.y,o.x,o.y);if(d<idd){idd=d;it=o;}});
+    if(it){tx=it.x;ty=it.y;}
+    else{const t=performance.now()*.0006;tx=W*.5+Math.cos(t)*W*.28;ty=(H-gh)*.5+Math.sin(t*1.3)*H*.16;}
+  }
+  // the main loop already GLIDES PL toward tx/ty with a capped per-frame step,
+  // so retargeting here can never make Riley teleport
+  PL.tx=cl(tx,PL.w/2,W-PL.w/2);PL.ty=cl(ty,PL.h/2,H-gh-PL.h/2-5);
+}
+function rgBotStart(){if(rgBotT)clearInterval(rgBotT);rgBotT=setInterval(()=>{try{rgBotThink();}catch(e){}},180);}
+// demo tutorial hand: follows the drag point with a capped step (never teleports)
+function rgHandInit(){
+  rgHand=document.createElement('img');rgHand.src='/tutorial-hand.png';rgHand.alt='';
+  rgHand.style.cssText='position:fixed;left:0;top:0;height:80px;z-index:60;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4));will-change:transform;';
+  document.body.appendChild(rgHand);
+  rgHX=window.innerWidth/2;rgHY=window.innerHeight+40;
+  requestAnimationFrame(rgHandFrame);
+}
+function rgHandFrame(){
+  try{
+    const r=gc.getBoundingClientRect();
+    const tx=r.left+PL.tx,ty=r.top+PL.ty;
+    const dx=tx-rgHX,dy=ty-rgHY,d=Math.sqrt(dx*dx+dy*dy),STEP=8;
+    if(d>0.5){const f=Math.min(1,STEP/d);rgHX+=dx*f;rgHY+=dy*f;}
+    const dip=Math.sin(performance.now()*.004)*3;   // gentle press bob
+    rgHand.style.transform='translate('+(rgHX-12)+'px,'+(rgHY-6+dip)+'px)';
+  }catch(e){}
+  requestAnimationFrame(rgHandFrame);
+}
+(function rgBoot(){
+  let q=null;try{q=new URLSearchParams(location.search);}catch(e){}
+  if(!q)return;
+  if(q.get('screen')==='demo'){
+    RG_DEMO=true;muted=true;                        // demo is always silent
+    ['pointerdown','mousedown','mousemove','touchstart','touchmove','click','keydown'].forEach(t=>{
+      window.addEventListener(t,e=>{try{e.stopPropagation();e.preventDefault();}catch(_){}},{capture:true,passive:false});
+    });
+    startGame(0);rgBotStart();rgHandInit();
+    return;
+  }
+  const lp=q.get('level');
+  if(lp!=null&&lp!==''){
+    let i=parseInt(lp,10);if(!(i>=0))i=0;if(i>LVS.length-1)i=LVS.length-1;
+    startGame(i);                                   // exactly what a .lvbtn tap does
+  }
+})();
 
 if(ctx.roundRect===undefined){
   CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){

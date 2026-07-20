@@ -227,6 +227,7 @@ function clearLines(){
   return full.length;
 }
 function winWorld(){
+  if(TDEMO){ state="demowait"; setTimeout(()=>{ try{ startWorld(0,"adventure"); }catch(e){} },1200); return; }   // demo: quiet loop, nothing saved
   state="win"; navUpdate(); PREFS.cleared[worldIdx]=true;
   if(!PREFS.best[worldIdx] || score>PREFS.best[worldIdx]) PREFS.best[worldIdx]=score;
   const u=Math.min(WORLDS.length-1, worldIdx+1); if(u>(PREFS.unlocked||0)) PREFS.unlocked=u;
@@ -288,6 +289,7 @@ function draw(){
   if(state==="title" && (!BS || !bsMounted)) drawTitleFallback();
   else if(state==="win") banner(worldIdx<WORLDS.length-1?"World Cleared!":"You did it!", "Score "+score+(worldIdx<WORLDS.length-1?" — tap for the next world":" — tap to celebrate"));
   else if(state==="pause") banner("Paused","Tap to keep playing");
+  if(TDEMO) tdemoHand();
 }
 function shade(c,t){ const h=BR._hex(c[0]==="#"?c:"#888888"); const m=v=>Math.round(v*(1-t)); return "rgb("+m(h[0])+","+m(h[1])+","+m(h[2])+")"; }
 function lite(c,t){ return BR._lighten?BR._lighten(c,t):c; }
@@ -379,6 +381,7 @@ function update(dt){
   if(helperPulse>0) helperPulse=Math.max(0,helperPulse-(dt||0.016)*2);
   if(state!=="play"){ if(BM) BM.update(fx, dt); return; }
   if(botMode){ botStep(); if(BM) BM.update(fx, dt); return; }
+  if(TDEMO){ tdemoStep((dt||0.016)*1000); if(BM) BM.update(fx, dt); return; }
   if(!cur){ if(BM) BM.update(fx, dt); return; }
   const ms=(dt||0.016)*1000;
   const fall = mode==="endless" ? GAME_CONFIG.endlessFall : (W.fall - Math.min(W.fall*0.35, rowsCleared*9));
@@ -425,7 +428,7 @@ function startWorld(i, m){
   ensureMusic(); spawn();
 }
 function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
-function ensureMusic(){ if(!BA||!BA.setMusic) return; const url="/api/sfx?s="+(W.ambience||"forest");
+function ensureMusic(){ if(TDEMO) return; if(!BA||!BA.setMusic) return; const url="/api/sfx?s="+(W.ambience||"forest");
   if(url!==_curMusic){ if(BA.stopMusic) BA.stopMusic(); BA.setMusic(url); _curMusic=url; if(BA.playMusic) BA.playMusic(); } }
 
 let toastT=null;
@@ -556,11 +559,55 @@ if(BA && BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   move:"tumble_move", rotate:"tumble_rotate", lock:"tumble_lock", clear:"tumble_clear",
   combo:"tumble_combo", levelup:"tumble_levelup", win:"tumble_win", reset:"tumble_reset" } }); }
 
+// ---------------- ATTRACT DEMO (?screen=demo - Session 7I) ----------------
+// The landing's little demo box embeds this page (pointer-events:none) and the
+// game plays itself: a PACED bot that glides pieces one rotate/shift/row per
+// beat (never the instant QA bot - that one teleports), all real input blocked
+// at the door, audio hard-muted, no win banner, quiet ~1.2s loop forever.
+// NOTE: no ?level here on purpose - repo law (7A) renames this game before any
+// manifest conversion; demo only.
+const TDEMO=(function(){ try{ return new URLSearchParams(location.search).get("screen")==="demo"; }catch(e){ return false; } })();
+let tdPlan=null, tdT=0, tdHX=-1, tdHY=-1, tdTick=0;
+function demoBoot(){
+  try{ if(BA){ BA.muted=true; if(BA.stopMusic) BA.stopMusic(); } }catch(e){}   // silent, without touching saved sound prefs
+  ["pointerdown","pointerup","pointermove","mousedown","touchstart","touchmove","click","keydown","keyup"].forEach((t)=>{
+    window.addEventListener(t,(e)=>{ try{ e.stopPropagation(); e.preventDefault(); }catch(_){} },{capture:true,passive:false});
+  });
+  showPad(false); showNav(false);
+  const host=document.getElementById("start"); if(host) host.style.display="none";
+  startWorld(0,"adventure");
+}
+function tdemoStep(ms){
+  if(!cur){ tdPlan=null; return; }
+  tdT+=ms;
+  const BEAT=110;                          // one small action per beat - calm kid pace
+  while(tdT>=BEAT){
+    tdT-=BEAT;
+    if(!cur){ tdPlan=null; break; }
+    if(!tdPlan) tdPlan=bestPlacement();
+    if(tdPlan && (cur.rot&3)!==tdPlan.rot){ if(!tryRotate()) tdPlan.rot=cur.rot&3; continue; }
+    if(tdPlan && cur.px!==tdPlan.px){ if(!tryMove(cur.px<tdPlan.px?1:-1,0)) tdPlan.px=cur.px; continue; }
+    if(!tryMove(0,1)){ lockPiece(); tdPlan=null; }  // glide down a row per beat, then settle - never a teleport drop
+  }
+}
+function tdemoHand(){
+  if(!BR || !BR.hand || !cur) return;
+  // the hand glides under the piece's target column with a capped step (no teleporting)
+  const col=Math.max(0,Math.min(COLS-1,(tdPlan?tdPlan.px:cur.px)+1));
+  const tx=bx(col)+CELL*0.5, ty=Math.min(CH-24, BY+BH+30);
+  if(tdHX<0){ tdHX=CW*0.5; tdHY=CH+60; }
+  const dx=tx-tdHX, dy=ty-tdHY, d=Math.sqrt(dx*dx+dy*dy), STEP=9;
+  if(d>0.5){ const f=Math.min(1,STEP/d); tdHX+=dx*f; tdHY+=dy*f; }
+  tdTick=(tdTick+1)%70;
+  try{ BR.hand(ctx, tdHX, tdHY+(tdTick<9?5:0), 1.1); }catch(e){}   // small press dip on the beat
+}
+
 // boot
 const g_addEvent = (typeof window!=="undefined" && window.addEventListener);
 if(typeof document!=="undefined" && document.getElementById("start")){
   cv=document.getElementById("c"); if(cv&&cv.getContext) ctx=cv.getContext("2d");
-  loadPrefs(); bindInput(); updateSoundBtn(); showMenu();
+  loadPrefs(); bindInput(); updateSoundBtn();
+  if(TDEMO) demoBoot(); else showMenu();
   if(!bsMounted){ showNav(true); }   // fallback menu: still show Sound/Pause? keep Home hidden on title
   if(typeof window!=="undefined" && window.BuildableGameNav){ window.BuildableGameNav.register({
     hide:["homeBtn","pauseBtn","soundBtn"],     // shell draws Home/Sound/Menu instead (in-app)
