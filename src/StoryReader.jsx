@@ -92,7 +92,10 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
   const tokenRef = useRef((story && (story.scene_token || story.story_id)) || (Math.random().toString(36).slice(2,10) + Date.now().toString(36)));
   const startedScenesRef = useRef(false);
 
-  const page = pages[idx] || {};
+  // Defensive clamp: the index can never point past the last page, so paging can
+  // never fall into an empty "Page 7 of 6" — the last page routes to The End.
+  const safeIdx = pages.length ? Math.min(Math.max(idx, 0), pages.length - 1) : 0;
+  const page = pages[safeIdx] || {};
   const words = wordsOf(page.text);
   const pageLines = (Array.isArray(page.lines) && page.lines.length) ? page.lines : parseLines(page.text, story.character_name, story.companion_name);
   const palette = WORLD_PALETTE[page.world_slug] || ["#3a2c63", "#7a4a86"];
@@ -368,10 +371,10 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
       <audio ref={waterAudioRef} style={{ display: "none" }} />
       <audio ref={sfxRef} style={{ display: "none" }} />
 
-      <div key={idx} style={{ width: "100%", maxWidth: 760, animation: (dir >= 0 ? "bk-turn-next" : "bk-turn-prev") + " 0.5s cubic-bezier(.2,.7,.3,1) both", transformOrigin: dir >= 0 ? "left center" : "right center" }}>
-        {sceneUrl[idx]
-          ? <SceneStage url={sceneUrl[idx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={idx} style={s.page} />
-          : <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={idx} style={s.page} />}
+      <div key={safeIdx} style={{ width: "100%", maxWidth: 760, animation: (dir >= 0 ? "bk-turn-next" : "bk-turn-prev") + " 0.5s cubic-bezier(.2,.7,.3,1) both", transformOrigin: dir >= 0 ? "left center" : "right center" }}>
+        {sceneUrl[safeIdx]
+          ? <SceneStage url={sceneUrl[safeIdx]} effects={page.effects || [page.effect]} world={page.world_slug} pageIndex={safeIdx} style={s.page} />
+          : <LayeredPage bgUrl={bgUrl} charUrl={charUrl} charSlug={charSlug} effects={page.effects || [page.effect]} palette={palette} world={page.world_slug} pageIndex={safeIdx} style={s.page} />}
       </div>
 
       <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">Repaint this page</button>
@@ -394,7 +397,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
         <button style={s.circleBtn} onClick={() => { if (isLast) { setEnded(true); } else { setDir(1); setIdx((i) => i + 1); } }}><Chevron dir="right"/></button>
       </div>
 
-      <p style={s.pageNum}>Page {idx + 1} of {pages.length}</p>
+      <p style={s.pageNum}>Page {safeIdx + 1} of {pages.length}</p>
 
       <audio ref={audioRef} style={{ display: "none" }} />
 

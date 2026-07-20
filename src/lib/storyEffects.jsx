@@ -65,6 +65,7 @@ function injectKeyframes() {
 @keyframes bk-parallax { 0%,100%{transform:translateX(-4px)} 50%{transform:translateX(4px)} }
 @keyframes bk-sweep { 0%{background-position:200% 0} 100%{background-position:-120% 0} }
 @keyframes bk-kenburns { 0%{transform:scale(1.05) translate(0%,0%)} 100%{transform:scale(1.20) translate(-2.5%,-1.5%)} }
+@keyframes bk-scene-in { 0%{opacity:0} 100%{opacity:1} }
 @keyframes bk-flow { 0%{background-position:0 0} 100%{background-position:220% 0} }
 @keyframes bk-sunpulse { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.85;transform:scale(1.12)} }
 @keyframes bk-shimmer { 0%,100%{opacity:.15;transform:translateX(0)} 50%{opacity:.7;transform:translateX(6px)} }
@@ -321,6 +322,23 @@ function hsl(h, sP, l) { return `hsl(${((h % 360) + 360) % 360}, ${Math.max(0, M
 
 const NIGHT_EFFECTS = new Set(["twinkling_stars", "candle_glow", "fireplace_flicker", "magic_sparkles"]);
 
+// A soft DRAWN creature silhouette used as the loading placeholder hero.
+// No emoji anywhere in the product (product law) — pure SVG geometry.
+function CreatureBlob({ size = 100, tone = "#caa6ff", delay = 0 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true"
+      style={{ filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.4))", animation: `bk-bob 3.4s ease-in-out ${delay}s infinite` }}>
+      <ellipse cx="34" cy="22" rx="9" ry="16" fill={tone} />
+      <ellipse cx="66" cy="22" rx="9" ry="16" fill={tone} />
+      <ellipse cx="50" cy="60" rx="30" ry="34" fill={tone} />
+      <ellipse cx="50" cy="68" rx="18" ry="22" fill="rgba(255,255,255,0.32)" />
+      <circle cx="41" cy="52" r="3.6" fill="#2a2140" />
+      <circle cx="59" cy="52" r="3.6" fill="#2a2140" />
+      <path d="M44 63 Q50 69 56 63" stroke="#2a2140" strokeWidth="3" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function PlaceholderScene({ palette, world, heroEmoji, helperEmoji, effect, pageIndex = 0 }) {
   const [skyHex, groundHex] = palette && palette.length >= 2 ? palette : ["#3a2c63", "#7a4a86"];
   const [h0, s0, l0] = hexToHsl(skyHex);
@@ -331,9 +349,9 @@ function PlaceholderScene({ palette, world, heroEmoji, helperEmoji, effect, page
   const skyTop = hsl(h0 + shift, s0, l0 + lift);
   const skyBot = hsl(h1 + shift, s1, l1 + lift + 6);
   const celestialSun = !night;
-  const isForest = world === "enchanted_woods" || world === "snowy_forest";
-  const isUnderwater = world === "underwater";
-  const showClouds = effect === "drifting_clouds" || world === "cloud_castle";
+  const isForest = world === "enchanted-forest" || world === "dino-jungle" || world === "snowy-village";
+  const isUnderwater = world === "coral-reef";
+  const showClouds = effect === "drifting_clouds" || world === "candy-land" || world === "city-town";
 
   return (
     <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden",
@@ -352,17 +370,21 @@ function PlaceholderScene({ palette, world, heroEmoji, helperEmoji, effect, page
         <path d="M0 14 Q 25 4 50 12 T 100 10 L100 30 L0 30 Z" fill="rgba(0,0,0,0.18)" />
         <path d="M0 20 Q 30 12 60 18 T 100 16 L100 30 L0 30 Z" fill="rgba(0,0,0,0.30)" />
       </svg>
-      {isForest && [18, 78, 90].map((x, i) => (
-        <div key={i} style={{ position: "absolute", bottom: "26%", left: `${x}%`, fontSize: 30 + (i % 2) * 10, filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.4))" }}>🌲</div>
+      {isForest && [16, 76, 90].map((x, i) => (
+        <svg key={i} viewBox="0 0 40 56" width={38 + (i % 2) * 10} style={{ position: "absolute", bottom: "26%", left: `${x}%`, filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.4))" }} aria-hidden="true">
+          <polygon points="20,2 34,24 6,24" fill="#2f6b43" />
+          <polygon points="20,14 36,40 4,40" fill="#357a4c" />
+          <rect x="17" y="40" width="6" height="12" rx="2" fill="#6b4a2a" />
+        </svg>
       ))}
       {isUnderwater && [0, 1, 2, 3, 4].map((i) => (
         <div key={i} style={{ position: "absolute", bottom: `${10 + (i * 13) % 50}%`, left: `${(i * 21 + pageIndex * 9) % 90}%`,
           width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.35)" }} />
       ))}
-      {/* hero (and helper) characters */}
+      {/* hero (and helper) — soft DRAWN silhouettes (no emoji, per product law) */}
       <div style={{ position: "absolute", left: 0, right: 0, bottom: "30%", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 18 }}>
-        <span style={{ fontSize: 88, filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.45))", animation: "bk-bob 3.4s ease-in-out infinite" }}>{heroEmoji || "🐰"}</span>
-        {helperEmoji && <span style={{ fontSize: 50, filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))", animation: "bk-bob 3.4s ease-in-out 0.6s infinite" }}>{helperEmoji}</span>}
+        <CreatureBlob size={112} tone={groundHex} />
+        {helperEmoji && <CreatureBlob size={64} tone={skyHex} delay={0.6} />}
       </div>
     </div>
   );
@@ -454,7 +476,7 @@ export function SceneStage({ url, effect, effects, world, pageIndex, style, wate
   const glow = layers.some((e) => GLOW_FX.has(e)) || GLOW_FX.has(FG_BY_WORLD[world]);
   return (
     <div style={{ position: "relative", overflow: "hidden", ...style }}>
-      <img src={url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-kenburns 22s ease-in-out infinite alternate" }} />
+      <img src={url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, animation: "bk-scene-in 0.6s ease both, bk-kenburns 22s ease-in-out infinite alternate" }} />
       {glow && <img src={url} aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", transformOrigin: origin, filter: "blur(7px) brightness(1.55) saturate(1.15)", mixBlendMode: "screen", opacity: 0.42, animation: "bk-kenburns 22s ease-in-out infinite alternate, bk-bloom 3.4s ease-in-out infinite", pointerEvents: "none" }} />}
       {glow && <div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "inherit", background: "radial-gradient(65% 55% at 50% 58%, rgba(255,184,92,0.16), transparent 72%)", mixBlendMode: "screen", animation: "bk-bloom 2.6s ease-in-out infinite", pointerEvents: "none" }} />}
       {layers.map((e, i) => <LivingLayer key={i + ":" + e} effect={e} />)}
