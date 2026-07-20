@@ -1,5 +1,19 @@
 # Buildable Kids — Session Log
 
+## 2026-07-20: Breaker bricks recut — kills the see-through slits
+
+The themed Breaker bricks (jungle/space/ocean) showed a see-through slit across every brick.
+Root cause: the packed `breaker/<theme>/bricks.webp` cells had transparent padding baked in —
+the painted brick only filled the middle ~60% of each cell, so drawing the full cell left a
+gap top and bottom. No slicing math fixes art that has empty space in it.
+
+Fix: re-cut the RAW brick sheets from `Assets for Builable/breaker/*` with the shared slicer
+logic (flood-fill white background out from the edges, then tight-crop each brick with
+sliver-trim), and re-packed uniform `bricks.webp` (intact/hit/cracked x 6) + `shatter.webp`
+(6-wide strip) so every cell is full-bleed. Removed the padding-compensation stretch in
+breaker-engine.html (drawThemedBrick / drawShatters): source the full cell, drop the ey=0.62
+hack to a tiny 0.06 grid-touch bleed. Bricks now render solid, no slits.
+
 ## 2026-07-20: Favicon fix — /app now shows the B icon
 
 The kid app (`/app`) had no favicon while the landing page and admin tools did. The Vite
