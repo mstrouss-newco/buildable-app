@@ -233,9 +233,14 @@ function drawSprite(ctx, name, cx, cy, h, t, opt) {
 }
 
 /* ---------- audio: created sounds via BA; synth is the silent fallback only ---------- */
-function sfx(n, o) { try { if (BA) BA.sfx(n, o); } catch (e) {} }
+/* Session 7I: ?screen=demo attract mode (self-playing, silent, input ignored) and
+   ?level=N deep-link (N = 0-based index into the level list; clamped). */
+let DEMO = false, CG_LVL = null;
+try { const _q = new URLSearchParams(location.search); DEMO = _q.get("screen") === "demo";
+  const _lv = _q.get("level"); if (_lv != null && _lv !== "" && !isNaN(+_lv)) CG_LVL = +_lv; } catch (e) {}
+function sfx(n, o) { if (DEMO) return; try { if (BA) BA.sfx(n, o); } catch (e) {} }
 let _voiceEl = null;
-function sayVoice(t) { try { if (!BA || BA.muted) return; if (!_voiceEl) _voiceEl = new Audio(); _voiceEl.src = "/api/say?t=" + encodeURIComponent(t); const pr = _voiceEl.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {} }
+function sayVoice(t) { if (DEMO) return; try { if (!BA || BA.muted) return; if (!_voiceEl) _voiceEl = new Audio(); _voiceEl.src = "/api/say?t=" + encodeURIComponent(t); const pr = _voiceEl.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {} }
 if (BA && BA.configure) {
   BA.configure({ sfxBase: "/api/sfx?s=", map: {
     place:   "cg_place",      // place a tower
@@ -263,7 +268,7 @@ let fx = BM ? BM.makeFx() : { parts: [], pops: [], shake: 0, flash: 0, flashCol:
 let toastMsg = "", toastT = 0;
 let selDef = "archer";        // currently-selected defender to build
 let defChips = [];            // bottom-bar picker hit-rects (logical coords)
-function toast(m) { toastMsg = m; toastT = 2.2; }
+function toast(m) { if (DEMO) return; toastMsg = m; toastT = 2.2; }
 
 function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 
@@ -491,6 +496,7 @@ function retryWave() {
 }
 function winLevel() {
   state = "win";
+  if (DEMO) return;   // attract mode: no stars, no saves, no win signal — the quiet loop restarts
   const stars = S.hearts >= S.maxHearts ? 3 : S.hearts >= Math.ceil(S.maxHearts * 0.6) ? 2 : 1;
   PREFS.stars[S.idx] = Math.max(PREFS.stars[S.idx] || 0, stars);
   if (S.idx + 1 > PREFS.unlocked) PREFS.unlocked = Math.min(GAME_CONFIG.levels.length - 1, S.idx + 1);
@@ -568,13 +574,14 @@ function render() {
     draws.sort((a, b) => a.y - b.y);
     for (const d of draws) d.fn();
     for (const a of S.arrows) drawArrow(a);
-    if (state === "play" && S.defenders.length === 0 && S.tutSlot >= 0) drawTutorialHand();
+    if (state === "play" && S.defenders.length === 0 && S.tutSlot >= 0 && !DEMO) drawTutorialHand();
   }
   if (BM) BM.draw(ctx, fx, { W: LW, H: LH });
   if (S) drawHUD();
   drawToast();
-  if (state === "retry") drawRetry();
-  if (state === "win") drawWin();
+  if (state === "retry" && !DEMO) drawRetry();
+  if (state === "win" && !DEMO) drawWin();
+  if (DEMO) cgDemoDrawHand();
 }
 
 function drawWorld() {
@@ -770,6 +777,7 @@ function toLogical(clientX, clientY) {
   return { x: (px - VIEW.ox) / VIEW.scale, y: (py - VIEW.oy) / VIEW.scale };
 }
 function onTap(clientX, clientY) {
+  if (DEMO) return;                    // attract mode: all input ignored
   if (BA) BA.unlock();
   if (state === "retry") { retryWave(); return; }
   if (state === "win") { showMenu(); return; }
@@ -865,20 +873,82 @@ let last = 0;
 function frame(ts) {
   const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
   if (toastT > 0) toastT -= dt;
+  if (DEMO) cgDemoTick(dt);
   if (state === "play") step(dt); else tickNonPlay(dt);
   render();
   requestAnimationFrame(frame);
 }
 
 /* ---------- boot ---------- */
+var cgHand = { x: 0, y: 0, init: false, target: -1, timer: 0.8, press: 0 };   // declared before boot: the demo path uses it right away
 if (typeof document !== "undefined" && cv) {
-  loadPrefs(); loadSprites(); resize(); showMenu();
+  loadPrefs(); loadSprites(); resize();
+  /* Session 7I: the castleguard manifest only renames the levels (count is fixed),
+     so starting by index immediately is exactly what tapping that level card does. */
+  if (DEMO) { cgDemoStart(); }
+  else if (CG_LVL != null) { cgHideStart(); startLevel(Math.max(0, Math.min(GAME_CONFIG.levels.length - 1, Math.floor(CG_LVL)))); }
+  else { showMenu(); }
   requestAnimationFrame(frame);
+}
+
+/* ===================================================================== */
+/*  Session 7I: attract mode (?screen=demo)                              */
+/*  The game plays itself for the landing demo box: the shared hand      */
+/*  GLIDES (capped step, never teleports — Breaker ea01edf) to the best  */
+/*  open slot every few seconds, presses, and an archer appears. Never   */
+/*  game-over: lost waves quietly retry, wins quietly restart level 1.   */
+/* ===================================================================== */
+function cgHideStart() { const host = document.getElementById("start"); if (host) host.style.display = "none"; }
+function cgDemoStart() {
+  cgHideStart();
+  startLevel(0);
+  cgHand.target = -1; cgHand.timer = 0.8; cgHand.press = 0;
+}
+function cgBestSlot() {
+  let bi = -1, bd = 1e9;
+  S.W.slots.forEach((sl, i) => { if (!sl.occupied) { const d = distToPath(S.W.segs, S.W.total, sl.x, sl.y); if (d < bd) { bd = d; bi = i; } } });
+  return bi;
 }
 
 /* ===================================================================== */
 /*  QA / HEADLESS HOOK (standardized name + alias)                       */
 /* ===================================================================== */
+function cgDemoTick(dt) {
+  if (!S) return;
+  if (state === "retry") {   // never-game-over: quietly replay the wave
+    if (!cgDemoTick._r) cgDemoTick._r = setTimeout(() => { cgDemoTick._r = null; retryWave(); }, 1200);
+    return;
+  }
+  if (state === "win") {     // quiet loop: back to level 1
+    if (!cgDemoTick._w) cgDemoTick._w = setTimeout(() => { cgDemoTick._w = null; cgDemoStart(); }, 1200);
+    return;
+  }
+  if (state !== "play" && state !== "wavebreak") return;
+  if (cgHand.target < 0) {
+    cgHand.timer -= dt;
+    if (cgHand.timer <= 0) {
+      const cost = (GAME_CONFIG.defenders.find(d => d.id === "archer") || GAME_CONFIG.defenders[0]).cost;
+      if (S.coins >= cost) { const bi = cgBestSlot(); if (bi >= 0) cgHand.target = bi; else cgHand.timer = 2.5; }
+      else cgHand.timer = 1.0;
+    }
+  } else {
+    const slot = S.W.slots[cgHand.target];
+    if (!slot || slot.occupied) { cgHand.target = -1; cgHand.timer = 2.5; return; }
+    if (!cgHand.init) { cgHand.x = LW / 2; cgHand.y = LH + 40; cgHand.init = true; }
+    const dx = slot.x - cgHand.x, dy = slot.y - cgHand.y, d = Math.hypot(dx, dy), cap = 260 * dt;
+    if (d > cap) { cgHand.x += dx / d * cap; cgHand.y += dy / d * cap; }   // glide, capped step
+    else {
+      cgHand.x = slot.x; cgHand.y = slot.y;
+      cgHand.press += dt;                       // small press dip, then place
+      if (cgHand.press > 0.28) { placeDefender(cgHand.target, "archer"); cgHand.target = -1; cgHand.timer = 2.6; cgHand.press = 0; }
+    }
+  }
+}
+function cgDemoDrawHand() {
+  if (!cgHand.init || !(BR && BR.hand)) return;
+  const dip = (cgHand.target >= 0 && cgHand.press > 0) ? 7 : Math.max(0, Math.sin((S ? S.t : 0) * 3)) * 6;
+  ctx.save(); ctx.globalAlpha = 0.95; BR.hand(ctx, cgHand.x + 20, cgHand.y + 12 + dip, 1.1); ctx.restore();
+}
 function _simBot(idx, maxFrames, defId) {
   defId = defId || "archer";
   // "sensible placement" bot: build the cheapest covering set, then top up as

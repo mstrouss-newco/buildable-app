@@ -334,6 +334,12 @@ JACKSON_PHOTO=(()=>{const i=new Image();i.src="data:image/jpeg;base64,/9j/4AAQSk
 
 let ST="title",best=0,titleT=0,paused=false;
 let MUTED=false;                              // shell Sound button toggles this
+// Session 7I: ?screen=demo attract mode (self-playing, silent, input ignored) and
+// ?level=N deep-link (N = 0-based index into the manifest stages; clamped).
+let DEMO=false, CROC_LVL=null;
+try{ const _q=new URLSearchParams(location.search); DEMO=_q.get("screen")==="demo";
+  const _lv=_q.get("level"); if(_lv!=null&&_lv!==""&&!isNaN(+_lv)) CROC_LVL=+_lv; }catch(e){}
+if(DEMO) MUTED=true;                          // demo NEVER makes a sound (beeps, music, voice)
 let crocDiff={key:"normal",lives:5};          // chosen on the "Make it mine" screen
 let notifs=[]; // {msg, icon, col, t, dur}
 let oActive=false,oT=0,oDur=3,oMsg="",oSub="",oCol="#fff",oDone=null;
@@ -481,6 +487,7 @@ function speak(txt,pitch,rate){
   try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.pitch=pitch||2.0;u.rate=rate||1.0;u.volume=1.0;speechSynthesis.speak(u);}catch(e){}
 }
 function tryVoice(){
+  if(DEMO)return;
   if(voiceDone)return;voiceDone=true;
   try{
     speechSynthesis.cancel();
@@ -680,6 +687,7 @@ function hitPlayer(){
   pop(G.tot.x+G.tot.w/2,G.tot.y,"-1 Life!","#ff4444");
   G.lives--;UI.lv.textContent=G.lives;G.tot.inv=1.8;G.flash=0.22;G.flashCol="#ff4400";SFX.hit();
   if(G.lives<=0){
+    if(DEMO){ crocDemoOver(); return; }        // attract mode: no game-over card, just loop
     SFX.die();stopBg();paused=false;
     ST="initials";deathActive=false;initWon=false;initStr="";
     setTimeout(()=>{showInitOverlay();UI.btnR.style.display="";if(UI.btnP)UI.btnP.style.display="none";},100);
@@ -694,6 +702,7 @@ function defeatBoss(){
   G.score+=bonus;UI.sc.textContent=G.score;if(G.score>best){best=G.score;UI.bs.textContent=best;}
   G.flash=0.5;G.flashCol="#FFD700";
   const wins={1:"HOMEWORK DONE!",2:"POT SMASHED!",3:"PIRATE SUNK!",4:"SQUASHED!",5:"DRAGON SLAIN!"};
+  if(DEMO){ crocDemoOver(); return; }          // attract mode: no win card, just loop
   if(G.level===5){
     stopBg();
     showOverlay(wins[5],"YOU WIN!! +"+bonus+" pts!","#FFD700",4.0,()=>{ST="initials";initWon=true;initStr="";UI.btnR.style.display="none";if(UI.btnP)UI.btnP.style.display="none";setTimeout(showInitOverlay,200);});
@@ -819,6 +828,7 @@ function update(now){
   if(G.flash>0)G.flash=Math.max(0,G.flash-f);
 
   // movement — crisp and snappy
+  if(DEMO) crocBot(t);                         // attract mode: bot steers via the keys
   const _uwSlow=G.level===3?0.7:1.0;
   const A=1800*_uwSlow,MX=430*_uwSlow;
   if(keys.ArrowLeft||keys.KeyA){t.vx-=A*f;t.dir=-1;}
@@ -1703,6 +1713,7 @@ function loop(now){
   try{draw();}catch(e){console.error("DRAW:",e.message);}
   try{update(now);}catch(e){console.error("UPDATE:",e.message);if(G.lastTime)G.lastTime=now;}
   if(ST==="playing"){ try{ HUD().show(); syncHud(); }catch(e){} } else if(_hud){ _hud.hide(); }
+  if(DEMO) demoHandUpdate();
   requestAnimationFrame(loop);
 }
 
@@ -1736,6 +1747,7 @@ function submitInitials(){
 }
 
 document.addEventListener("keydown",e=>{
+  if(DEMO)return;                              // attract mode: all input ignored
   keys[e.code]=true;
   if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();
   if(e.code==="KeyP"&&ST==="playing"){
@@ -1760,7 +1772,7 @@ document.addEventListener("keydown",e=>{
   }
   if(e.code==="Enter"&&(ST==="title"||ST==="gameover"))startGame();
 });
-document.addEventListener("keyup",e=>{keys[e.code]=false;});
+document.addEventListener("keyup",e=>{if(DEMO)return;keys[e.code]=false;});
 
 // mobile touch drag
 let _tid=null;
@@ -1782,6 +1794,7 @@ function _getTouchCanvas(touch){
 
 CV.addEventListener("touchstart",e=>{
   e.preventDefault();
+  if(DEMO)return;
   // Joystick — only during gameplay
   if(ST==="playing"&&!paused){
     const firstTouch=e.changedTouches[0];
@@ -1795,6 +1808,7 @@ CV.addEventListener("touchstart",e=>{
 
 CV.addEventListener("touchmove",e=>{
   e.preventDefault();
+  if(DEMO)return;
   for(const t of e.changedTouches){
     if(t.identifier===_tid&&_joyActive&&ST==="playing"&&!paused){
       const p=_getTouchCanvas(t);
@@ -1809,6 +1823,7 @@ CV.addEventListener("touchmove",e=>{
 },{passive:false});
 
 CV.addEventListener("touchend",e=>{
+  if(DEMO)return;
   for(const t of e.changedTouches){
     if(t.identifier===_tid){
       _tid=null;_joyActive=false;
@@ -1817,9 +1832,10 @@ CV.addEventListener("touchend",e=>{
   }
 },{passive:false});
 
-UI.btnS.addEventListener("click",startGame);
-UI.btnR.addEventListener("click",startGame);
+UI.btnS.addEventListener("click",()=>{if(!DEMO)startGame();});
+UI.btnR.addEventListener("click",()=>{if(!DEMO)startGame();});
 if(UI.btnP)UI.btnP.addEventListener("click",()=>{
+  if(DEMO)return;
   if(ST!=="playing")return;
   paused=!paused;
   UI.btnP.innerHTML=paused?"&#9654; Resume (P)":"&#9646;&#9646; Pause (P)";
@@ -1868,7 +1884,67 @@ setTimeout(_resizeCanvas, 100);
 setTimeout(_resizeCanvas, 500);
 requestAnimationFrame(loop);
 // Show the shared loading / level-select screen on boot (replaces the old tap-to-play).
-showStart();
+// Session 7I: ?screen=demo plays itself for the landing box; ?level=N (0-based) starts
+// that level exactly like its level card. The croc manifest only renames the stages
+// (count is fixed), so an immediate start matches the card tap — no defer needed.
+if(DEMO){ crocDemoStart(); }
+else if(CROC_LVL!=null){ G.startLevel=Math.max(1,Math.min(LEVEL_NAMES.length,Math.floor(CROC_LVL)+1)); hideStart(); startGame(); }
+else { showStart(); }
+
+// ── Session 7I: attract-mode brain + restart loop + demo tutorial hand ───────
+function crocDemoStart(){
+  voiceDone=true; MUTED=true; hideStart();
+  const cz=document.getElementById("crocCustomize"); if(cz)cz.style.display="none";
+  if(ST==="playing")ST="title";                // let startGame run again on a loop restart
+  paused=false; G.startLevel=1; startGame();
+}
+function crocDemoOver(){                        // quiet loop: wait ~1.2s, then go again
+  ST="gameover";
+  if(crocDemoOver._t)return;
+  crocDemoOver._t=setTimeout(()=>{ crocDemoOver._t=null; crocDemoStart(); },1200);
+}
+// Bot: chase the nearest snack's row, dodge anything scary that gets close. It only
+// presses the arrow keys, so the croc keeps the normal accel+velocity glide — the
+// known attract-bot twitch (fixed for Breaker in ea01edf) cannot happen here.
+function crocBot(t){
+  const cx=t.x+t.w/2, cy=t.y+t.h/2;
+  let tx=W*0.28, ty=H*0.5;                     // default: drift toward mid-left
+  let best=null,bd=1e9;
+  for(const it of G.items){ if(it.spent)continue; const d=(it.x-cx)*(it.x-cx)+(it.y-cy)*(it.y-cy); if(d<bd){bd=d;best=it;} }
+  if(best){ tx=best.x; ty=best.y; }
+  let ax=0, ay=0;                              // steer away from close threats
+  const scary=[];
+  for(const e of G.enemies) scary.push(e);
+  for(const fr of (G.fries||[])) scary.push(fr);
+  if(G.boss){ scary.push(G.boss); for(const p of (G.boss.projs||[])) scary.push(p); }
+  for(const s2 of scary){ const sx=(s2.x||0)+((s2.w||0)/2), sy=(s2.y||0)+((s2.h||0)/2);
+    const dx=cx-sx, dy=cy-sy, d=Math.hypot(dx,dy)||1; if(d<95){ ax+=dx/d*(95-d); ay+=dy/d*(95-d); } }
+  if(Math.abs(ax)+Math.abs(ay)>1){ tx=cx+ax; ty=cy+ay; }   // dodging beats snacking
+  const dead=14;                               // deadzone stops key flicker
+  keys.ArrowLeft = tx<cx-dead; keys.ArrowRight = tx>cx+dead;
+  keys.ArrowUp   = ty<cy-dead; keys.ArrowDown  = ty>cy+dead;
+}
+// Shared pointing hand (/tutorial-hand.png) glides after the croc with a capped
+// per-frame step + a small press dip — shows the drag-to-move gesture wordlessly.
+let _demoHand=null,_dhx=-9999,_dhy=0;
+function demoHandUpdate(){
+  if(!_demoHand){
+    _demoHand=document.createElement("img"); _demoHand.src="/tutorial-hand.png";
+    _demoHand.alt="";
+    _demoHand.style.cssText="position:fixed;height:76px;z-index:40;pointer-events:none;display:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));";
+    document.body.appendChild(_demoHand);
+  }
+  if(ST!=="playing"||!G.tot){ _demoHand.style.display="none"; return; }
+  const r=CV.getBoundingClientRect(), sx=r.width/W, sy=r.height/H;
+  const t=G.tot, tx=r.left+(t.x+t.w/2)*sx+12, ty=r.top+(t.y+t.h)*sy+4;
+  if(_dhx<-5000){ _dhx=tx; _dhy=ty; }
+  const dx=tx-_dhx, dy=ty-_dhy, d=Math.hypot(dx,dy), cap=6;   // capped glide, never teleports
+  if(d>cap){ _dhx+=dx/d*cap; _dhy+=dy/d*cap; } else { _dhx=tx; _dhy=ty; }
+  const dip=Math.max(0,Math.sin(performance.now()/380))*6;
+  _demoHand.style.display="block";
+  _demoHand.style.left=Math.round(_dhx)+"px";
+  _demoHand.style.top=Math.round(_dhy+dip)+"px";
+}
 </script>
 </body>
 </html>

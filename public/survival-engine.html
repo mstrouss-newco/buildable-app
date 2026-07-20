@@ -144,7 +144,10 @@ const BR=(typeof window!=="undefined"&&window.BuildableRenders)||(typeof globalT
 
 // shared audio library (synth SFX + space music); safe if missing (node QA)
 const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThis!=="undefined"&&globalThis.BuildableAudio);
-function sfx(n,o){ if(BA)BA.sfx(n,o); }
+// Session 7I: ?screen=demo attract mode — the game plays ITSELF silently for the
+// landing demo box. No menus, no audio ever, all input ignored, quiet restart loop.
+var DEMO=false; try{ DEMO=(typeof location!=="undefined") && new URLSearchParams(location.search).get("screen")==="demo"; }catch(e){}
+function sfx(n,o){ if(DEMO)return; if(BA)BA.sfx(n,o); }
 // shared FX/"juice" library (particles, flash, shake, explode) — headless-safe
 const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
 const fx=BM?BM.makeFx():null;   // flash+shake live here; the engine keeps its own particles/rings
@@ -370,16 +373,17 @@ function pickByIndex(k){ if(state==="choose" && k>=0 && k<choices.length){ apply
 function setDirFromKeys(){ /* keyboard handled below via held set */ }
 const held={};
 addEventListener('keydown',e=>{
+  if(DEMO) return;                                   // attract mode: all input ignored
   if(e.key==='b'){ botMode=!botMode; started=true; if(state==="title") state="play"; return; }
   if(state==="title"){ if(typeof startRun==="function")startRun(); else {state="play";started=true;} return; }
   if(state==="choose"){ if(e.key==='1')pickByIndex(0); if(e.key==='2')pickByIndex(1); if(e.key==='3')pickByIndex(2); return; }
   if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","w","a","s","d","W","A","S","D"].includes(e.key)){ held[e.key.toLowerCase().replace("arrow","")]=true; e.preventDefault(); started=true; }
 });
-addEventListener('keyup',e=>{ held[e.key.toLowerCase().replace("arrow","")]=false; });
+addEventListener('keyup',e=>{ if(DEMO) return; held[e.key.toLowerCase().replace("arrow","")]=false; });
 function readKeys(){ let x=0,y=0; if(held.left||held.a)x-=1; if(held.right||held.d)x+=1; if(held.up||held.w)y-=1; if(held.down||held.s)y+=1; if(x||y){const m=Math.hypot(x,y);inputDir={x:x/m,y:y/m};} else if(!joyOn) inputDir={x:0,y:0}; }
 
 function canvasPt(e){ const r=c.getBoundingClientRect(); return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) }; }
-c.addEventListener('pointerdown',e=>{ e.preventDefault(); if(BA)BA.unlock(); if(helpOpen){ helpOpen=false; return; } const p=canvasPt(e);
+c.addEventListener('pointerdown',e=>{ e.preventDefault(); if(DEMO) return; if(BA)BA.unlock(); if(helpOpen){ helpOpen=false; return; } const p=canvasPt(e);
   if(state==="title"){ return; }   // the DOM menu handles starting a run
   if(state==="win"){ runLevelsCleared++; if(level<GAME_CONFIG.levels.length-1){ startLevel(level+1, true); started=false; } else { endRun(true); } return; }
   if(state==="lose"){ endRun(false); return; }
@@ -423,11 +427,18 @@ function botThink(){
   let g=null,gd=1e9; for(const k of gems){ if(k.got)continue; const d=dist2(hero.x,hero.y,k.x,k.y); if(d<gd){gd=d;g=k;} }
   let ax=fx, ay=fy;
   if(threat>95 && g){ const dx=g.x-hero.x, dy=g.y-hero.y, d=Math.hypot(dx,dy)||1; ax=dx/d*1.0 + fx*0.4; ay=dy/d*1.0 + fy*0.4; }   // safe-ish: grab gems
-  const m=Math.hypot(ax,ay); inputDir = m>0.0001 ? {x:ax/m,y:ay/m} : {x:0,y:0};
+  const m=Math.hypot(ax,ay); const want = m>0.0001 ? {x:ax/m,y:ay/m} : {x:0,y:0};
+  // demo glide: ease the virtual stick toward the new direction with a capped step so
+  // the attract-mode hero never twitches when the bot flips targets (Breaker ea01edf)
+  if(DEMO){ const cap=0.09, gx=want.x-inputDir.x, gy=want.y-inputDir.y, gm=Math.hypot(gx,gy);
+    inputDir = gm>cap ? {x:inputDir.x+gx/gm*cap, y:inputDir.y+gy/gm*cap} : want; }
+  else inputDir=want;
 }
 
 // ---------- update (pure logic, no canvas — so QA can run it headless) ----------
 function update(){
+  if(DEMO && (state==="win"||state==="lose") && !survDemoRestartT){
+    survDemoRestartT=setTimeout(function(){ survDemoRestartT=null; survDemoStart(); },1200); }
   if(state==="win"||state==="lose"||state==="title") return;
   if(botMode) botThink(); else readKeys();
   if(!started) return;
@@ -505,7 +516,7 @@ function update(){
   // win when the boss is beaten (boss only appears after surviving the timer).
   // Beating the boss is the gate: it permanently unlocks the next level.
   if(bossSpawned && !boss){ state="win"; sfx("win");
-    if(CHAR){ const u=Math.min(GAME_CONFIG.levels.length-1, level+1); if(u>(CHAR.unlocked||0)){ CHAR.unlocked=u; saveChar(); } } }
+    if(CHAR && !DEMO){ const u=Math.min(GAME_CONFIG.levels.length-1, level+1); if(u>(CHAR.unlocked||0)){ CHAR.unlocked=u; saveChar(); } } }
 }
 // coin tiers: 1 (=1, common) · 2 (=5, rare) · 3 (=10, boss/lucky). Higher levels drop a bit more.
 function rollTier(){ const r=(dropRng?dropRng():Math.random())-level*0.012; if(r>0.965) return 3; if(r>0.80) return 2; return 1; }
@@ -650,8 +661,9 @@ function draw(){
       drawPUicon(id,cr.x+cr.w/2,cr.y+86); ctx.fillStyle="#fff";ctx.font="bold 22px Fredoka,sans-serif";ctx.fillText(PU[id].name,cr.x+cr.w/2,cr.y+cr.h-46); ctx.fillStyle="#9fb0ff";ctx.font="16px Fredoka,sans-serif";ctx.fillText("Tap to choose",cr.x+cr.w/2,cr.y+cr.h-22); } }
   if(state==="play" && (!started || helpOpen)) drawTutorial();
   if(state==="title"){ ctx.fillStyle="rgba(5,8,24,.55)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 44px Fredoka,sans-serif";ctx.fillText(GAME_CONFIG.name,W/2,H/2-10); ctx.font="22px Fredoka,sans-serif";ctx.fillText("Drag to move · Tap to start",W/2,H/2+30); }
-  if(state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Boss beaten!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked — tap to go on":"Tap to collect your coins"); }
-  if(state==="lose"){ banner("Oops! Out of hearts","Tap to collect your coins"); }
+  if(DEMO && state==="play") drawDemoHand();
+  if(!DEMO && state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Boss beaten!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked — tap to go on":"Tap to collect your coins"); }
+  if(!DEMO && state==="lose"){ banner("Oops! Out of hearts","Tap to collect your coins"); }
 }
 
 // ===== menus, locker, runs, coins (DOM — guarded so headless QA never touches it) =====
@@ -717,7 +729,13 @@ function showMuteBtn(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"blo
 
 function frame(){ update(); draw(); requestAnimationFrame(frame); }
 // boot: load the saved character, wire menus, show the shared start screen
-if(typeof document!=="undefined" && document.getElementById("start")){ if(BA){ BA.configure({sfxBase:GAME_CONFIG.sfxBase, map:GAME_CONFIG.sfx}); if(GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); } CHAR=localLoadChar()||defaultChar(); applyShellUpgrades(); wireMenus(); showMenu(); loadChar();
+if(typeof document!=="undefined" && document.getElementById("start")){
+  if(DEMO){ CHAR=defaultChar(); survDemoStart(); }   // attract mode: no music, no menus, no saves
+  else {
+    if(BA){ BA.configure({sfxBase:GAME_CONFIG.sfxBase, map:GAME_CONFIG.sfx}); if(GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); }
+    CHAR=localLoadChar()||defaultChar(); applyShellUpgrades(); wireMenus(); showMenu(); loadChar();
+    survReadLevelParam();   // Session 7I: ?level=N (0-based) -> start that level like its card tap
+  }
   resizeCanvas(); addEventListener("resize",resizeCanvas); addEventListener("orientationchange",resizeCanvas); }
 requestAnimationFrame(frame);
 
@@ -734,6 +752,7 @@ function applyManifest(cfg, raw){
   try{ if(window.BuildableHUD && BuildableHUD.setAccent && raw && raw.color) BuildableHUD.setAccent(raw.color); }catch(e){}
   GAME_CONFIG.levels.length = cfg.levels.length;
   for(var i=0;i<cfg.levels.length;i++){ GAME_CONFIG.levels[i]=cfg.levels[i]; }
+  try{ survPlayPending(); }catch(e){}   // a ?level= deep-link waits for the manifest's level list
   try{ if(bsScreen && typeof bsConfig==="function") bsScreen.update(bsConfig()); }catch(e){}
 }
 try{
@@ -743,6 +762,40 @@ try{
     });
   }
 }catch(e){}
+
+// ---------- Session 7I: ?level=N deep-link + ?screen=demo attract mode ----------
+// Deep-link: N is a 0-based index into the manifest levels array. The manifest
+// applies async, so the request is stashed and fired by applyManifest (with a
+// 1.6s safety timeout — same shape as Breaker's bkPendingPlay). Out-of-range
+// indexes clamp. Composes with ?up= (applyShellUpgrades already ran at boot).
+var survPendingLevel, survDemoRestartT;   // no initializer: boot (above) may have already stashed a pending ?level=
+function survClampLevel(n){ return Math.max(0, Math.min(GAME_CONFIG.levels.length-1, Math.floor(n))); }
+function survPlayPending(){ if(survPendingLevel==null) return; var n=survPendingLevel; survPendingLevel=null; startRunAt(survClampLevel(n)); }
+function survReadLevelParam(){ var v=null; try{ v=new URLSearchParams(location.search).get("level"); }catch(e){}
+  if(v==null || v==="" || isNaN(+v)) return;
+  if(window.BuildableManifest && window.BuildableManifest.load && !window.BUILDABLE_MANIFEST){
+    survPendingLevel=+v;                     // manifest still applying -> defer
+    setTimeout(survPlayPending, 1600);       // safety net if the manifest never answers
+  } else { startRunAt(survClampLevel(+v)); }
+}
+// Attract mode: start world 1 with the QA bot driving (weapons already auto-fire);
+// on win/lose the update loop quietly restarts after ~1.2s. Never saves, never beeps.
+function survDemoStart(){
+  runGems=0; runLevelsCleared=0; hero=null; stats=null; startLevel(0,false);
+  state="play"; botMode=true; started=true;
+  var s=el("start"); if(s)s.style.display="none"; show("locker",false); showHelpBtn(false); showMuteBtn(false);
+}
+// Demo tutorial hand: the shared 3D hand (BR.hand) glides after the hero with a
+// capped per-frame step (never teleports) + a small press dip — shows the drag gesture.
+var demoHand={x:0,y:0,init:false};
+function drawDemoHand(){ if(!hero || !(BR&&BR.hand)) return; const t=Date.now()/1000;
+  const tx=hero.x+Math.cos(t*1.1)*30, ty=hero.y+58+Math.sin(t*2.2)*6;
+  if(!demoHand.init){ demoHand.x=tx; demoHand.y=ty; demoHand.init=true; }
+  const dx=tx-demoHand.x, dy=ty-demoHand.y, d=Math.hypot(dx,dy), cap=4.5;
+  if(d>cap){ demoHand.x+=dx/d*cap; demoHand.y+=dy/d*cap; } else { demoHand.x=tx; demoHand.y=ty; }
+  const dip=Math.max(0,Math.sin(t*2.6))*8;
+  ctx.save(); ctx.globalAlpha=0.92; BR.hand(ctx,demoHand.x,demoHand.y+dip,0.95); ctx.restore();
+}
 
 // ---------- QA / picker hooks ----------
 window.SURV_GAME = {

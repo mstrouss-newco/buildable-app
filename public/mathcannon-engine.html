@@ -109,6 +109,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   if(PREFS.unlocked == null) PREFS.unlocked = 0;
 
   // ---------- state ----------
+  // Session 7I: ?screen=demo attract mode (self-playing, silent, input ignored)
+  // and ?level=N deep-link (N = 0-based index into the manifest stages; clamped).
+  var DEMO = false, DEEP_LVL = null;
+  try{ var _q = new URLSearchParams(location.search); DEMO = _q.get("screen") === "demo";
+    var _lv = _q.get("level"); if(_lv != null && _lv !== "" && !isNaN(+_lv)) DEEP_LVL = +_lv; }catch(e){}
+  if(DEMO){ BA = { unlock:function(){}, sfx:function(){}, toggleMute:function(){ return false; }, muted:true }; }
+
   var state = "menu";           // menu | playing | over
   var bkPaused = false;         // cartridge contract: shell can freeze us
   var level = 0, stage = STAGES[0];
@@ -127,6 +134,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // The learning ledger (Session 8B): every answer is one practiced skill. Best-effort,
   // fire-and-forget — a dropped report never affects play.
   function reportSkill(correct){
+    if(DEMO) return;            // attract mode: not a real kid answering
     var sk = (stage.skill === "mixed") ? (OP_SKILL[problem.op] || "math") : stage.skill;
     try{ if(window.parent) window.parent.postMessage({ source:"buildable", kind:"skill", subject:"math", skill:sk, correct:!!correct, quizType:"native", game:"mathcannon" }, "*"); }catch(e){}
   }
@@ -215,7 +223,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     BA.sfx("pop"); BA.sfx("coin",{tier:2});
     if(Feel){ try{ Feel.explode(b.x, b.y, b.col); Feel.coinBurst(b.x, b.y, 10); }catch(e){} }
     syncHud();
-    if(correctCount >= target){ levelClear(); }
+    if(correctCount >= target){ if(DEMO){ demoLoopEnd(); } else { levelClear(); } }
     else { setTimeout(function(){ if(state==="playing"){ nextProblem(); } }, 420); }
   }
   function onWrong(b){
@@ -260,6 +268,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     return { x: t.clientX - r.left, y: t.clientY - r.top };
   }
   function tap(ev){
+    if(DEMO) return;            // attract mode: all input ignored
     BA.unlock();
     if(state !== "playing" || locked || bkPaused) return;
     var p = pointer(ev);
@@ -385,8 +394,50 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function frame(now){
     var dt = Math.min(0.05, (now-last)/1000); last = now;
     if(!bkPaused) update(dt, now);
+    if(DEMO && !bkPaused) demoTick(dt);
     render();
     requestAnimationFrame(frame);
+  }
+
+  // ---------- Session 7I: attract mode (?screen=demo) ----------
+  // The cannon demos the learning mechanic honestly: every ~2.5s the shared
+  // pointing hand GLIDES (capped step, never teleports — Breaker ea01edf) to the
+  // balloon holding the CORRECT answer, presses, and the cannon fires at it.
+  // Stage clear -> quiet restart of stage 1 after ~1.2s. No cards, no ledger.
+  var handEl = null, handX = 0, handY = 0, handT = 0, handPress = 0;
+  function demoHandEl(){
+    if(handEl) return handEl;
+    handEl = document.createElement("img"); handEl.src = "/tutorial-hand.png"; handEl.alt = "";
+    handEl.style.cssText = "position:fixed;height:80px;z-index:30;pointer-events:none;display:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));";
+    document.body.appendChild(handEl); return handEl;
+  }
+  function demoLoopEnd(){
+    locked = true;              // freeze the round quietly, then go again
+    setTimeout(function(){ if(DEMO) startLevel(0); }, 1200);
+  }
+  function correctBalloon(){
+    for(var i=0;i<balloons.length;i++){ if(!balloons[i].pop && balloons[i].value === problem.answer) return balloons[i]; }
+    return null;
+  }
+  function demoTick(dt){
+    var el = demoHandEl();
+    if(state !== "playing"){ el.style.display = "none"; return; }
+    if(!locked) handT += dt;    // think time between shots (~2.5s)
+    var b = correctBalloon();
+    var tx = b ? b.x : W/2, ty = b ? b.y + b.r*0.4 : H*0.5;
+    if(handX === 0 && handY === 0){ handX = W/2; handY = H - 160; }
+    var dx = tx-handX, dy = ty-handY, d = Math.hypot(dx,dy), cap = Math.max(3, 340*dt);
+    if(d > cap){ handX += dx/d*cap; handY += dy/d*cap; }   // glide, capped step
+    else {
+      handX = tx; handY = ty;
+      if(!locked && handT > 2.5 && b){ handPress = 0.22; fireAt(b); handT = 0; }
+    }
+    if(handPress > 0) handPress -= dt;
+    var dip = handPress > 0 ? 10 : Math.max(0, Math.sin(performance.now()/450))*5;
+    var r = CV.getBoundingClientRect();
+    el.style.display = "block";
+    el.style.left = Math.round(r.left + handX + 8) + "px";
+    el.style.top  = Math.round(r.top + handY + dip) + "px";
   }
 
   // ---------- start screen (level select) ----------
@@ -440,15 +491,23 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       }; });
     }
   }
+  var booted = false;
+  function bootScreen(){
+    if(booted) return; booted = true;
+    if(DEMO){ startLevel(0); }                      // attract mode: straight into stage 1
+    else if(DEEP_LVL != null){ startLevel(DEEP_LVL); }   // ?level=N (0-based; startLevel clamps)
+    else { showMenu(); }
+  }
   function boot(){
     try{
       if(window.BuildableManifest && window.BuildableManifest.load){
         window.BuildableManifest.load("mathcannon", function(cfg){
           try{ applyStages(cfg && (cfg.stages||cfg.levels)); }catch(e){}
-          showMenu();
-        }, function(){ showMenu(); });   // manifest miss -> built-in fallback
-      } else { showMenu(); }
-    }catch(e){ showMenu(); }
+          bootScreen();
+        }, function(){ bootScreen(); });   // manifest miss -> built-in fallback
+        if(DEMO || DEEP_LVL != null) setTimeout(bootScreen, 1600);   // safety net if the manifest never answers
+      } else { bootScreen(); }
+    }catch(e){ bootScreen(); }
   }
   boot();
   requestAnimationFrame(frame);
