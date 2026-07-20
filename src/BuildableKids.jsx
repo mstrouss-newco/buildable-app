@@ -154,6 +154,18 @@ const LANDING_WRAP = {
   tank: { play: SCREEN_TANK },
   maze: { play: SCREEN_MAZE },
 };
+
+// Session 7H — the four board games that get a multiplayer mode row on the shared
+// landing (Solo / Same device / Play a friend), matching Chess and Tennis. Solo and
+// Same device enter the engine's own menu (the Phase-2 ?diff deep-links are not in
+// yet); Play a friend opens the shared GameLobby. TTT + Checkers already had lobbies;
+// Connect Four + Dots use the same board harness online path via gameSpecFor (7H).
+const BOARD_MP_LANDING = {
+  tictactoe:   { play: SCREEN_TICTACTOE,   lobby: SCREEN_TTT_LOBBY },
+  connectfour: { play: SCREEN_CONNECTFOUR, lobby: SCREEN_C4_LOBBY },
+  dotsboxes:   { play: SCREEN_DOTSBOXES,   lobby: SCREEN_DOTS_LOBBY },
+  checkers:    { play: SCREEN_CHECKERS,    lobby: SCREEN_CHECKERS_LOBBY },
+};
 // ---------------------------------------------------------------------------
 // GAME_CATALOG — the picker's manifest/identity layer (Session 3A). Every card on
 // the picker is GENERATED from this list, never hand-placed. Each entry is the
@@ -1855,6 +1867,18 @@ export default function BuildableKids() {
     const g = GAME_CATALOG.find((x) => x.id === landingId);
     const cfg = g && LANDING_WRAP[landingId];
     if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    // Session 7H: board games show the Solo / Same device / Play a friend mode row
+    // (their manifest multiplayer is turn-based). Everyone else keeps one Play button.
+    const mp = BOARD_MP_LANDING[landingId];
+    if (mp) {
+      return <GameLanding game={g}
+        multiplayer="turn-based"
+        onSolo={() => setScreen(mp.play)}
+        onSameDevice={() => setScreen(mp.play)}
+        onPlayFriend={() => setScreen(mp.lobby)}
+        onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
+        onBack={() => setScreen(SCREEN_HOME)} />;
+    }
     return <GameLanding game={g}
       onPlay={() => setScreen(cfg.play)}
       onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
