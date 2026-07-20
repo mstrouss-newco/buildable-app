@@ -72,7 +72,9 @@ const SCREEN_TOWN_FAMILY = "town_family";
 const SCREEN_TICTACTOE = "tictactoe";
 const SCREEN_TTT_LOBBY = "ttt_lobby";
 const SCREEN_CONNECTFOUR = "connectfour";
+const SCREEN_C4_LOBBY = "c4_lobby";
 const SCREEN_DOTSBOXES = "dotsboxes";
+const SCREEN_DOTS_LOBBY = "dots_lobby";
 const SCREEN_CASTLE = "castle";
 const SCREEN_SLING = "sling";
 const SCREEN_SLING_JOURNEY = "sling_journey"; // Sling uses the shared winding Journey picker (like Breaker)
@@ -1443,6 +1445,12 @@ function gameSpecFor(slug) {
     return { slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: { board: b, turn: "r" } };
   }
   if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: mpTransport("tictactoe", "turns"), msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
+  // Session 7H: Connect Four + Dots and Boxes share the buildable-boardgame.js harness
+  // (msg "bg"), so the generic GameLobby drives their online play with no engine edits.
+  // The seed state is each engine's fresh S.init() board (Connect Four: an empty 7x6
+  // grid; Dots and Boxes: the default 3x3 board the engine boots to in online mode).
+  if (slug === "connectfour") return { slug: "connectfour", title: "Buildable Connect Four", url: "/connectfour-engine.html?online=1&v=hud1", transport: "turns", msg: "bg", initialState: { G: { cells: new Array(42).fill(0), fall: {} }, turn: "w" } };
+  if (slug === "dotsboxes") return { slug: "dotsboxes", title: "Buildable Dots and Boxes", url: "/dotsboxes-engine.html?online=1&v=hud1", transport: "turns", msg: "bg", initialState: { G: { cols: 3, rows: 3, NH: 12, NV: 12, total: 9, h: new Array(12).fill(0), v: new Array(12).fill(0), owner: new Array(9).fill(0), scores: [0, 0], last: null }, turn: "w" } };
   if (slug === "tennis") return { slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" };
   return null;
 }
@@ -1950,6 +1958,31 @@ export default function BuildableKids() {
         entry="friends"
         onHome={() => setScreen(SCREEN_TICTACTOE)}
         onAddFriend={() => { setFriendsReturn(SCREEN_TTT_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
+  }
+
+  // Session 7H: Connect Four + Dots and Boxes online lobbies. Same shared GameLobby +
+  // board "bg" protocol as Tic-Tac-Toe; opened from the landing's Play a friend button.
+  if (screen === SCREEN_C4_LOBBY) {
+    return (
+      <GameLobby
+        game={gameSpecFor("connectfour")}
+        activeKid={activeKid}
+        entry="friends"
+        onHome={() => setScreen(SCREEN_CONNECTFOUR)}
+        onAddFriend={() => { setFriendsReturn(SCREEN_C4_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
+  }
+  if (screen === SCREEN_DOTS_LOBBY) {
+    return (
+      <GameLobby
+        game={gameSpecFor("dotsboxes")}
+        activeKid={activeKid}
+        entry="friends"
+        onHome={() => setScreen(SCREEN_DOTSBOXES)}
+        onAddFriend={() => { setFriendsReturn(SCREEN_DOTS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
       />
     );
   }
