@@ -1,0 +1,36 @@
+{
+  "id": "tumble",
+  "name": "Tumble Blocks",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Puzzle",
+  "color": "#67C7FF",
+  "ageBand": "5-8",
+  "shellVersion": 2,
+
+  "features": {
+    "demoOnLoad": false,
+    "journey": true,
+    "customization": false,
+    "coins": true,
+    "buddy": { "on": true, "personality": "coach" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+  },
+
+  "art": {
+    "badge": "tumble/badge/v1",
+    "hero": "tumble/hero/v1",
+    "winCelebration": "shared/win/confetti-v1",
+    "loadingScreen": "tumble/loading/v1"
+  },
+
+  "levels": [
+    { "id": "sunny-meadow",  "name": "Sunny Meadow",  "desc": "Fill 8 rows with Bramble Bunny",  "difficulty": 1, "unlocked": true, "journeyBadge": "badges/sunny-meadow/v1",  "parts": { "world": "sunny-meadow" } },
+    { "id": "candy-land",    "name": "Candy Land",    "desc": "Fill 9 rows with Pip Gumdrop",    "difficulty": 2, "journeyBadge": "badges/candy-land/v1",    "parts": { "world": "candy-land" } },
+    { "id": "coral-reef",    "name": "Coral Reef",    "desc": "Fill 10 rows with Bubbles Fish",  "difficulty": 3, "journeyBadge": "badges/coral-reef/v1",    "parts": { "world": "coral-reef" } },
+    { "id": "snowy-peak",    "name": "Snowy Peak",    "desc": "Fill 11 rows with Frosty Cub",    "difficulty": 3, "journeyBadge": "badges/snowy-peak/v1",    "parts": { "world": "snowy-peak" } },
+    { "id": "space-station", "name": "Space Station", "desc": "Fill 12 rows with Comet Robot",   "difficulty": 4, "journeyBadge": "badges/space-station/v1", "parts": { "world": "space-station" } },
+    { "id": "volcano-fest",  "name": "Volcano Fest",  "desc": "Fill 14 rows with Ember Dragon",  "difficulty": 5, "journeyBadge": "badges/volcano-fest/v1", "parts": { "world": "volcano-fest" } }
+  ]
+}

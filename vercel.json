@@ -526,7 +526,15 @@
     },
     {
       "src": "/tetris-engine.html",
-      "dest": "/tetris-engine.html"
+      "dest": "/tumble-engine.html"
+    },
+    {
+      "src": "/tumble-engine.html",
+      "dest": "/tumble-engine.html"
+    },
+    {
+      "src": "/tumble/manifest.json",
+      "dest": "/tumble/manifest.json"
     },
     {
       "src": "/tennis.html",

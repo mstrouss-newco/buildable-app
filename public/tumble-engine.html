@@ -607,7 +607,10 @@ const g_addEvent = (typeof window!=="undefined" && window.addEventListener);
 if(typeof document!=="undefined" && document.getElementById("start")){
   cv=document.getElementById("c"); if(cv&&cv.getContext) ctx=cv.getContext("2d");
   loadPrefs(); bindInput(); updateSoundBtn();
-  if(TDEMO) demoBoot(); else showMenu();
+  var _tlv=null; try{ _tlv=new URLSearchParams(location.search).get("level"); }catch(e){}
+  if(TDEMO) demoBoot();
+  else if(_tlv!=null && _tlv!=="" && !isNaN(+_tlv)){ try{ startWorld(Math.max(0,Math.min(WORLDS.length-1,+_tlv)),"adventure"); }catch(e){ showMenu(); } }  // Session 7I: shell journey deep-link; no param = menu (standalone fallback)
+  else showMenu();
   if(!bsMounted){ showNav(true); }   // fallback menu: still show Sound/Pause? keep Home hidden on title
   if(typeof window!=="undefined" && window.BuildableGameNav){ window.BuildableGameNav.register({
     hide:["homeBtn","pauseBtn","soundBtn"],     // shell draws Home/Sound/Menu instead (in-app)
