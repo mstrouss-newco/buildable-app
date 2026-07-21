@@ -11,7 +11,32 @@
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const EDITOR_PIN = process.env.EDITOR_PIN || "1025"; // light gate, mirrors the planner tool's PIN model
+
+// Owner-only editor: saves must come from an authenticated Buildable account on the
+// allowlist (the parent Supabase login the app already uses). No more shared PIN.
+const OWNER_EMAILS = (process.env.EDITOR_ALLOWED_EMAILS || "mstrouss@gmail.com")
+  .toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+const OWNER_SUBS = (process.env.EDITOR_ALLOWED_SUBS || "1cb8cd9e-fba0-4fcc-850a-5b6afb677b87")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+
+// Verify the caller's Supabase access token and confirm they are on the allowlist.
+async function verifyOwner(req) {
+  const auth = req.headers.authorization || req.headers.Authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  if (!token) return { ok: false, code: 401, error: "sign in required" };
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return { ok: false, code: 500, error: "no supabase env" };
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) return { ok: false, code: 401, error: "session expired — sign in again" };
+    const u = await r.json();
+    const email = String(u.email || "").toLowerCase();
+    const id = String(u.id || "");
+    if (OWNER_EMAILS.includes(email) || OWNER_SUBS.includes(id)) return { ok: true, email };
+    return { ok: false, code: 403, error: "not authorized for this account" };
+  } catch { return { ok: false, code: 401, error: "could not verify session" }; }
+}
 
 const sb = (path, init) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
   ...init,
@@ -92,8 +117,9 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return res.status(200).json({ ok: false, error: "no supabase env" });
+    const owner = await verifyOwner(req);
+    if (!owner.ok) return res.status(owner.code || 403).json({ ok: false, error: owner.error });
     const b = await readBody(req);
-    if (String(b.pin || "") !== EDITOR_PIN) return res.status(403).json({ ok: false, error: "bad pin" });
     const g = slug(b.game || game) || "breaker";
     const m = b.manifest;
     const errs = validate(m);
