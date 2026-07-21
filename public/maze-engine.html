@@ -558,7 +558,8 @@ function savePrefs(){ try{ localStorage.setItem('mz_prefs', JSON.stringify(PREFS
 // ---- ui helpers ----
 function el(id){ const e=document.getElementById(id); return (e&&e.style)?e:null; }
 function toast(msg){ const e=el("toast"); if(!e)return; if(!msg){ e.style.display="none"; return; } e.textContent=msg; e.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>{ e.style.display="none"; }, 1800); }
-function showInGame(on){ const b=el("backBtn"),m=el("muteBtn"),d=el("dpad"); if(b)b.style.display=on?"block":"none"; if(m)m.style.display=on?"block":"none"; if(d)d.style.display=on?"block":"none"; }
+function inApp(){ try{ return !!(window.parent && window.parent!==window); }catch(e){ return true; } }
+function showInGame(on){ const b=el("backBtn"),m=el("muteBtn"),d=el("dpad"); const nav=on&&!inApp(); /* in-app: shell owns Menu/Sound; dpad is gameplay, always follows on */ if(b)b.style.display=nav?"block":"none"; if(m)m.style.display=nav?"block":"none"; if(d)d.style.display=on?"block":"none"; }
 
 // ---- input ----
 function applyDir(d){ if(!d)return; dismissDemo(); if(BA)BA.unlock();
