@@ -272,6 +272,9 @@ let xp, plvl, xpNeed, invuln, boss, bossSpawned, choices=[];
 let inputDir={x:0,y:0}, orbAngle=0, regenTimer=0;
 let runGems=0, runLevelsCleared=0, lockerTab="weapon", novaTimer=0, rings=[], helpOpen=false;
 let holes=[], bhTimer=0, bolts=[], stormTimer=0;   // black holes + lightning bolts + their timers
+let drops=[], dropTimer=0;   // collectable walk-over power drops (magnet/bomb/freeze/heart)
+const DROP_COL={magnet:"#6ff0ff",bomb:"#ffb03a",freeze:"#bfeaff",heart:"#ff7aa8"};
+const DROP_ICON={magnet:"magnet",bomb:"nova",freeze:"frost",heart:"heal"};
 
 function makeStars(){ const r=mulberry(9999); stars=[]; for(let i=0;i<90;i++) stars.push({x:r()*W,y:r()*H,s:0.6+r()*1.8,ph:r()*6.28,sp:0.5+r()*1.5}); }
 makeStars();
@@ -359,7 +362,7 @@ function startLevel(i, carry){
     for(let k=0;k<grants;k++){ PU[cyc[k%cyc.length]].apply(stats,{hearts:BASE.hearts,maxHearts:BASE.hearts}); plvl++; } }
   const maxH=BASE.hearts+(BASE._bonusHearts||0);
   hero={ x:W/2, y:H/2, r:16, hearts:(carry?Math.min(maxH,prevHearts+1):maxH), maxHearts:maxH, cd:0, aim:0, vx:0, vy:0 };
-  enemies=[]; projs=[]; gems=[]; parts=[]; rings=[]; holes=[]; bhTimer=0; bolts=[]; stormTimer=0;
+  enemies=[]; projs=[]; gems=[]; parts=[]; rings=[]; holes=[]; bhTimer=0; bolts=[]; stormTimer=0; drops=[]; dropTimer=0;
   levelFrame=0; levelDur=Math.round((L.dur||30)*60); spawnTimer=0; spawnCount=0; orbAngle=0; regenTimer=0; novaTimer=0;
   spawnRng=mulberry(1234+level*101); offerRng=mulberry(5678+level*211); dropRng=mulberry(4242+level*131);
   invuln=0; boss=null; bossSpawned=false; choices=[];
@@ -519,6 +522,15 @@ function update(){
         for(const e of tg){ e.hp -= e.boss ? Math.max(1,stats.storm) : (2+stats.storm); bolts.push({x1:hero.x,y1:hero.y,x2:e.x,y2:e.y,life:9}); burst(e.x,e.y,"#cfeaff",6); if(e.hp<=0)killEnemy(e); }
         if(BM&&fx)BM.flash(fx,"#bfe0ff",0.10); sfx("hit"); } } }
   for(const b of bolts) b.life--; bolts=bolts.filter(b=>b.life>0);
+  // Collectable power drops: from ~a third into the level, a glowing pickup appears now and
+  // then. Walk over it for an instant treat — Magnet (bank every coin), Bomb (clear the foes),
+  // Freeze (freeze everything), or Heart (full heal).
+  if(levelFrame>levelDur*0.3){ dropTimer++;
+    if(dropTimer>=760 && drops.length<2){ dropTimer=0; const kinds=["magnet","bomb","freeze","heart"]; const rr=dropRng||Math.random;
+      const kind=kinds[Math.floor(rr()*kinds.length)];
+      drops.push({ x:80+rr()*(W-160), y:120+rr()*(H-240), kind, age:0, life:660 }); sfx("levelup"); } }
+  for(const dp of drops){ dp.age++; dp.life--; if(Math.hypot(hero.x-dp.x,hero.y-dp.y)<hero.r+26){ collectDrop(dp.kind); dp.life=0; } }
+  drops=drops.filter(dp=>dp.life>0);
   // gems drift to hero within pickup range, collected when close
   for(const g of gems){ if(g.got)continue; const dx=hero.x-g.x, dy=hero.y-g.y, d=Math.hypot(dx,dy)||1;
     if(d<stats.pickupR){ g.x+=dx/d*Math.min(6,d*0.25); g.y+=dy/d*Math.min(6,d*0.25); }
@@ -544,6 +556,13 @@ function killEnemy(e){
   else { dropCoin(e.x,e.y);
     if(BM&&fx) BM.explode(fx, e.x, e.y, e.col, { sfx:"explode" }); else { burst(e.x,e.y,e.col,10); sfx("explode"); }
     const i=enemies.indexOf(e); if(i>=0)enemies.splice(i,1); } }
+// walk-over drop effects (instant, one-time treats)
+function collectDrop(kind){
+  if(kind==="magnet"){ for(const g of gems){ runGems+=g.val; gainXp(g.val); } gems=[]; sfx("coin",{tier:3}); if(BM&&fx){ BM.ring(fx,hero.x,hero.y,150,P.gem); BM.flash(fx,P.gem,0.12); } }
+  else if(kind==="bomb"){ const all2=(boss?enemies.concat([boss]):enemies).slice(); for(const e of all2){ e.hp -= e.boss?8:999; burst(e.x,e.y,e.col,6); if(e.hp<=0)killEnemy(e); } if(BM&&fx) BM.explode(fx,hero.x,hero.y,P.spark,{big:true,sfx:"boom"}); else sfx("boom"); }
+  else if(kind==="freeze"){ for(const e of enemies){ e.slowT=Math.max(e.slowT||0,220); } if(boss)boss.slowT=Math.max(boss.slowT||0,130); if(BM&&fx){ BM.flash(fx,"#bfeaff",0.18); BM.ring(fx,hero.x,hero.y,170,"#bfeaff"); } sfx("levelup"); }
+  else if(kind==="heart"){ if(hero)hero.hearts=hero.maxHearts; if(hero)burst(hero.x,hero.y,P.hp,16); if(BM&&fx)BM.flash(fx,P.hp,0.14); sfx("levelup"); }
+}
 
 // ---------- draw ----------
 // thin wrappers → the shared renders library (BuildableRenders)
@@ -631,6 +650,14 @@ function draw(){
   let _so={x:0,y:0}; if(BM&&fx){ _so=BM.shakeOffset(fx); } ctx.save(); ctx.translate(_so.x,_so.y);
   // coins (glowing, tiered)
   for(const g of gems) BR.coin(ctx,g.x,g.y,t,g.tier,g.val);
+  // collectable power drops (glowing tokens; artwork upgraded in the icon pass)
+  for(const dp of drops){ const R=20*(1+Math.sin(dp.age/8)*0.09), col=DROP_COL[dp.kind]||"#ffe27a", fade=Math.min(1,dp.life/40);
+    ctx.save(); ctx.globalAlpha=fade;
+    const gg=ctx.createRadialGradient(dp.x,dp.y,2,dp.x,dp.y,R+12); gg.addColorStop(0,col); gg.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.globalAlpha=0.5*fade; ctx.fillStyle=gg; ctx.beginPath();ctx.arc(dp.x,dp.y,R+12,0,7);ctx.fill();
+    ctx.globalAlpha=fade; ctx.fillStyle="#0b1230"; ctx.beginPath();ctx.arc(dp.x,dp.y,R,0,7);ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=3; ctx.beginPath();ctx.arc(dp.x,dp.y,R,0,7);ctx.stroke();
+    BR.puIcon(ctx, DROP_ICON[dp.kind], dp.x, dp.y, P); ctx.restore(); }
   // nova shockwave rings
   for(const rg of rings){ const a=Math.min(0.55,rg.life/22*0.55); ctx.strokeStyle="rgba(255,226,122,"+a.toFixed(2)+")"; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(rg.x,rg.y,rg.r,0,7); ctx.stroke(); }
   // black holes (drawn under the foes so they look like they're being pulled in)

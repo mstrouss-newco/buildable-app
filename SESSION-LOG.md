@@ -1,6 +1,16 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-21: Survival — collectable walk-over power drops (shipped)
+
+Owner ask: upgrades should also be COLLECTABLE — e.g. a magnet that drops mid/late level and grabs
+every coin on screen. Added a drop system in `public/survival-engine.html`. From ~30% into a level a
+glowing token appears now and then (max 2 at once, ~every 760 frames); walk over it for an instant
+effect: **Magnet** banks every coin on screen (awards + XP), **Bomb** clears the foes (999 dmg normal,
+8 chip to a boss) with a big boom, **Freeze** freezes all enemies (+boss) for ~3s, **Heart** full-heals
+(the sustain that Lightning-replacing-regen removed). Tokens draw as pulsing glow discs with the drawn
+`puIcon` glyph for now (artwork upgraded in the generated icon pass). QA: `qa-survival.mjs` all pass.
+
 ## 2026-07-21: Survival — remove in-game demo, Journey uses level art, Lightning replaces Slow Heal (shipped)
 
 Owner follow-ups after Phase 1. Files: `public/survival-engine.html`, `public/buildable-renders.js`.
