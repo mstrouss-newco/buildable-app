@@ -161,13 +161,14 @@ function normalizeInput(body) {
   return { style, characterSlug, worldSlug, characterName, quest, mood, ending, spark, favColor, favFood, petName, lesson, companionSlug, companionName, chapter, priorTitle, priorPages, isSequel, seriesId };
 }
 
-function buildPrompt(inp, age) {
+function buildPrompt(inp, age, young) {
   const ch = CHARACTERS[inp.characterSlug];
   const w = WORLDS[inp.worldSlug];
   const worldList = WORLD_SLUGS.map((s) => `"${s}" (${WORLDS[s].desc})`).join(", ");
   return [
     `You are a beloved children's picture-book author writing for a child age ${age}.`,
     `Write a gentle, wholesome, age-appropriate 6-page story. NO violence, scary peril, romance, or anything a parent wouldn't want a young child to hear.`,
+    young ? `The reader is very young (kindergarten to first grade). Keep EACH page to just 1 or 2 SHORT, simple sentences using easy words a 5 year old knows (about 12 words per sentence at most). Short and clear beats long every time.` : ``,
     inp.isSequel ? `THIS IS CHAPTER ${inp.chapter} of an ongoing series${inp.priorTitle ? ` that began with "${inp.priorTitle}"` : ""}. Here is what happened in the previous chapter (a short recap): ${inp.priorPages.join(" ")}` : ``,
     inp.isSequel ? `CONTINUE the SAME adventure with the SAME hero and friend — pick up where it left off. Do NOT retell or repeat the earlier events. Bring a fresh little problem or discovery for this chapter and resolve it warmly by the end. Give this chapter its own new short title (never "Part 2" or "Chapter 2" — a real title).` : ``,
     `The hero is ${inp.characterName}, ${ch.desc}. The story BEGINS in ${w.name} (${w.desc}).`,
@@ -184,29 +185,50 @@ function buildPrompt(inp, age) {
     `Also choose one ambient "effect" per page from EXACTLY this list: ${JSON.stringify(EFFECTS)}.`,
     `Make the pages LIVELY: on most pages have ${inp.characterName} and ${inp.companionName} actually TALK to each other in quotation marks, and make clear who is speaking, like: ${inp.characterName} said, "..." and ${inp.companionName} replied, "...". Keep lines short, simple and kind.`,
     `Also return "sfx": an array of 0-2 sound cues that fit the page, chosen ONLY from this list: ["door","knock","thunder","firewhoosh","splash","magic","pop","whoosh","footsteps","bell","rustle","sparkle"]. Use them only where they clearly fit (a door opening, a storm, a campfire, a splash, a bit of magic). Leave empty if none fit.`,
+    `CHOOSE-YOUR-PATH: on PAGE 4 (the low point), let the child decide what the hero does next. Add to page 4's object a "choice" field: {"prompt": a short kind question to the child (max 8 words, e.g. "What should ${inp.characterName} do?"), "a": a short button label (max 3 words), "b": a different short button label (max 3 words)}. Both options must be safe, kind choices — never a mean or scary one.`,
+    `Then PAGES 5 and 6 must EACH provide two versions of the page: "text_a" (how the story continues if the child picked option A) and "text_b" (if they picked option B). Both paths still reach a warm, happy ending; they just get there a little differently. Both versions of a page MUST keep the SAME world_slug, emotion and effect — only the words change. Also set the normal "text" field on pages 5 and 6 equal to "text_a".`,
     `Return ONLY raw JSON (no markdown), shape:`,
     `{"title": string (max 6 words), "pages": [ {"text": string (the page as a flowing paragraph for on-screen reading; refer to the hero as ${inp.characterName}), "sfx": ["..."], "world_slug": one of the world slugs above, "emotion": one of ${JSON.stringify(EMOS)}, "effect": one of the effect ids above } ]}`,
+    `Additionally: page 4 (the 4th item) also has a "choice" object as described, and pages 5 and 6 (the 5th and 6th items) also have "text_a" and "text_b" strings as described.`,
     `Use exactly 6 pages. Page 1 must use world_slug "${inp.worldSlug}". Keep every page kind and clear.`,
   ].filter(Boolean).join("\n");
 }
 
-function validateStory(obj, inp) {
+function validateStory(obj, inp, maxChars) {
   if (!obj || typeof obj !== "object") return null;
+  const cap = maxChars || 320;
   const title = clampText(obj.title, 70);
   let pages = Array.isArray(obj.pages) ? obj.pages : null;
   if (!title || !pages || pages.length < 4) return null;
   const WHO = new Set(["narrator", "hero", "friend", "other"]);
   const SFX_OK = new Set(["door","knock","thunder","firewhoosh","splash","magic","pop","whoosh","footsteps","bell","rustle","sparkle"]);
-  pages = pages.slice(0, 6).map((p) => {
+  pages = pages.slice(0, 6).map((p, i) => {
     const world_slug = WORLDS[p && p.world_slug] ? p.world_slug : inp.worldSlug;
     const emotion = EMO_SET.has(p && p.emotion) ? p.emotion : "happy";
     const effect = EFFECT_SET.has(p && p.effect) ? p.effect : WORLDS[world_slug].fx;
     const sfx = Array.isArray(p && p.sfx) ? p.sfx.filter((x) => SFX_OK.has(x)).slice(0, 2) : [];
-    const text = trimToSentence(p && p.text, 320);
+    const text = trimToSentence(p && p.text, cap);
     if (!text) return null;
-    return { text, world_slug, emotion, effect, effects: [effect], sfx };
+    const page = { text, world_slug, emotion, effect, effects: [effect], sfx };
+    // PAGE 4 (index 3): optional choose-your-path prompt with two safe options.
+    if (i === 3 && p && p.choice && typeof p.choice === "object") {
+      const cprompt = clampText(p.choice.prompt, 80);
+      const ca = clampText(p.choice.a, 24), cb = clampText(p.choice.b, 24);
+      if (cprompt && ca && cb && ca !== cb && sparkSafe(cprompt + " " + ca + " " + cb)) page.choice = { prompt: cprompt, a: ca, b: cb };
+    }
+    // PAGES 5 & 6 (index 4,5): optional branch resolutions, reusing the same art.
+    if ((i === 4 || i === 5) && p) {
+      const ta = trimToSentence(p.text_a, cap), tb = trimToSentence(p.text_b, cap);
+      if (ta && tb && sparkSafe(ta) && sparkSafe(tb)) { page.text_a = ta; page.text_b = tb; }
+    }
+    return page;
   });
   if (pages.some((p) => p === null) || pages.length < 4) return null;
+  // Only keep the page-4 choice if BOTH branch pages actually delivered two versions,
+  // otherwise the choice would lead nowhere — fall back to a normal linear story.
+  const branchesOk = pages.length >= 6 && pages[4] && pages[4].text_a && pages[5] && pages[5].text_a;
+  if (!branchesOk && pages[3]) delete pages[3].choice;
+  if (!branchesOk) { if (pages[4]) { delete pages[4].text_a; delete pages[4].text_b; } if (pages[5]) { delete pages[5].text_a; delete pages[5].text_b; } }
   return wrap(title, pages, inp);
 }
 
@@ -237,11 +259,23 @@ function fallbackStory(inp) {
     { t: `${name} woke up happy in ${WORLDS[w0].name}.`, w: w0, e: "happy" },
     { t: `Then ${name} saw something sparkle far away. What could it be?`, w: w0, e: "surprised" },
     { t: `The path led somewhere strange, and the shadows grew big.`, w: w1, e: "scared" },
-    { t: `For a moment ${name} felt lost and alone.`, w: w1, e: "sad" },
-    { t: `But a kind new friend showed ${name} the way, and everything was wonderful!`, w: w2, e: "happy" },
-    { t: `Full of happy memories, ${name} headed home for a cozy rest.`, w: w0, e: "sleepy" },
+    { t: `For a moment ${name} felt lost and alone. What should ${name} do?`, w: w1, e: "sad",
+      choice: { prompt: `What should ${name} do?`, a: "Call for help", b: "Look around" },
+      // resolutions live on the next pages
+    },
+    { t: `A kind new friend heard ${name} and hurried over to help.`, w: w2, e: "happy",
+      text_a: `${name} called out, and a kind new friend heard and hurried over to help.`,
+      text_b: `${name} looked around and spotted a friendly face waving nearby.` },
+    { t: `Together they found the way home, full of happy memories, for a cozy rest.`, w: w0, e: "sleepy",
+      text_a: `The new friend walked ${name} all the way home for a cozy, happy rest.`,
+      text_b: `Side by side they found the way home, full of happy memories, for a cozy rest.` },
   ];
-  const pages = beats.map((b) => ({ text: b.t, world_slug: b.w, emotion: b.e, effect: WORLDS[b.w].fx, effects: [WORLDS[b.w].fx] }));
+  const pages = beats.map((b) => {
+    const pg = { text: b.t, world_slug: b.w, emotion: b.e, effect: WORLDS[b.w].fx, effects: [WORLDS[b.w].fx] };
+    if (b.choice) pg.choice = b.choice;
+    if (b.text_a) { pg.text_a = b.text_a; pg.text_b = b.text_b; pg.text = b.text_a; }
+    return pg;
+  });
   return { ...wrap(`${name}'s Big Adventure`, pages, inp), fallback: true };
 }
 
@@ -250,6 +284,10 @@ export default async function handler(req, res) {
   const body = await readBody(req);
   const inp = normalizeInput(body);
   const age = Math.max(3, Math.min(12, parseInt(body.age || 6, 10) || 6));
+  // Grade-based text length: kindergarten and first grade (age 5-6) get 1-2 short
+  // sentences per page (~130 char cap); older kids keep the fuller length.
+  const young = age <= 6;
+  const maxChars = young ? 130 : 320;
 
   const claudeKey = process.env.ANTHROPIC_API_KEY;
   if (!claudeKey || !(await underBudget())) {
@@ -261,7 +299,7 @@ export default async function handler(req, res) {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": claudeKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 3200, messages: [{ role: "user", content: buildPrompt(inp, age) }] }),
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4000, messages: [{ role: "user", content: buildPrompt(inp, age, young) }] }),
       signal: ctrl.signal,
     });
     clearTimeout(to);
@@ -272,7 +310,7 @@ export default async function handler(req, res) {
     const first = txt.indexOf("{"), last = txt.lastIndexOf("}");
     let parsed = null;
     if (first !== -1 && last !== -1) { try { parsed = JSON.parse(txt.slice(first, last + 1)); } catch { parsed = null; } }
-    const story = validateStory(parsed, inp);
+    const story = validateStory(parsed, inp, maxChars);
     await logCost(STORY_COST_USD);
     if (!story) return res.status(200).json({ ok: true, source: "fallback", story: fallbackStory(inp) });
     return res.status(200).json({ ok: true, source: "ai", story });

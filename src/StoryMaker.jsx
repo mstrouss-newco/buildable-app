@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import StoryReader from "./StoryReader";
 import QuizGate from "./QuizGate";
-import { getLearningSettings } from "./store";
+import { getLearningSettings, gradeToAge } from "./store";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -258,7 +258,11 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   function openFreshStory(st){ setStory(st); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); setView("reading"); }
   async function generateStoryRaw(body){
     try{
-      const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body, age:6, deviceId, kidProfileId})});
+      // Grade-based text length: send the kid's grade (from parent settings) and the
+      // age it maps to, so K-1 stories come back in short 1-2 sentence pages.
+      const ls=getLearningSettings()||{}; const grade=ls.grade||"";
+      const age=grade?gradeToAge(grade):6;
+      const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body, grade, age, deviceId, kidProfileId})});
       const j=await r.json();
       return (j&&j.ok&&j.story)?j.story:null;
     }catch{ return null; }
@@ -272,6 +276,8 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
     const rep=(sv)=>{ if(!sv) return sv; let out=String(sv).split(from).join(to);
       if(first && first!==from) out=out.replace(new RegExp("\\b"+esc(first)+"\\b","g"), to); return out; };
     const pages=Array.isArray(st.pages)?st.pages.map(p=>({...p, text:rep(p.text),
+      text_a:rep(p.text_a), text_b:rep(p.text_b),
+      choice:p.choice?{...p.choice, prompt:rep(p.choice.prompt)}:p.choice,
       lines:Array.isArray(p.lines)?p.lines.map(l=>({...l, say:rep(l.say)})):p.lines })):st.pages;
     return {...st, title:rep(st.title), character_name:to, pages, created_with:{...(st.created_with||{}), characterName:to}};
   }
@@ -356,6 +362,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   // ---------- READING ----------
   if(view==="reading"&&story){
     return <StoryReader story={story} storyId={currentStoryId} deviceId={deviceId} kidProfileId={kidProfileId}
+      grade={(getLearningSettings()||{}).grade||""}
       onExit={()=>setView("landing")} onSave={saveStory} saving={saving} savedMsg={savedMsg} onContinue={continueStory} />;
   }
   if(view==="generating"){
