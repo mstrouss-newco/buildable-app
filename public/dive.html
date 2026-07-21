@@ -347,6 +347,25 @@ function boot(data) {
   size(); startFx();
 }
 
+// ---- placement rules: a creature's `habitat` puts it in the right vertical band
+// of its zone (air / open water / seafloor), auto-spread so nothing stacks. An
+// explicit x or y on a creature overrides. This is the rule every zone follows.
+const HABITAT_BANDS = { air: [0.12, 0.44], open: [0.22, 0.60], floor: [0.66, 0.88] };
+const SPREAD_X = [58, 28, 72, 42, 34, 64];
+function computePlacements() {
+  const groups = {};
+  CREATURES.forEach((c) => { const k = c.zone + "|" + (c.habitat || "open"); (groups[k] = groups[k] || []).push(c); });
+  Object.keys(groups).forEach((k) => {
+    const g = groups[k];
+    const band = HABITAT_BANDS[g[0].habitat || "open"] || HABITAT_BANDS.open;
+    const n = g.length;
+    g.forEach((c, i) => {
+      const frac = n === 1 ? 0.5 : (i + 0.5) / n;
+      c._y = (c.y != null) ? c.y : Math.round(ZH * (band[0] + frac * (band[1] - band[0])));
+      c._x = (c.x != null) ? c.x : SPREAD_X[i % SPREAD_X.length];
+    });
+  });
+}
 function buildScenes() {
   const layer = document.getElementById("scenes"); if (!layer) return;
   layer.innerHTML = "";
@@ -365,6 +384,7 @@ function buildWorld() {
   world.innerHTML = "";
   world.style.height = WORLD_H + "px";
   buildScenes();
+  computePlacements();
   ZONE_TOP = {};
   ZONES.forEach((z, i) => {
     ZONE_TOP[z.id] = i * ZH;
@@ -392,10 +412,10 @@ function buildWorld() {
   }
 
   CREATURES.forEach((c, i) => {
-    const top = (ZONE_TOP[c.zone] || 0) + (c.y || 300);
+    const top = (ZONE_TOP[c.zone] || 0) + (c._y != null ? c._y : 300);
     const b = document.createElement("button");
     b.className = "cr " + (c.glow ? "glow" : "");
-    b.style.left = (c.x != null ? c.x : 40) + "%";
+    b.style.left = (c._x != null ? c._x : 40) + "%";
     b.style.top = top + "px";
     b.dataset.id = c.id;
     if (c.lure) b.dataset.lure = "1";

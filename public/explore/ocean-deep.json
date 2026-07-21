@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 8,
+  "assetVersion": 9,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -82,8 +82,6 @@
       "id": "albatross",
       "name": "Albatross",
       "zone": "surface",
-      "x": 18,
-      "y": 230,
       "shape": "albatross",
       "anim": "a-drift",
       "art": "/api/asset-studio?asset=explore/creature/ocean-photo/albatross",
@@ -113,14 +111,13 @@
       "factAudio": "ocean-deep-albatross",
       "source": "National Geographic Kids; NOAA Ocean Service",
       "sound": "bird",
-      "artH": 82
+      "artH": 82,
+      "habitat": "air"
     },
     {
       "id": "pelican",
       "name": "Pelican",
       "zone": "surface",
-      "x": 64,
-      "y": 470,
       "shape": "pelican",
       "anim": "a-bob",
       "art": "/api/asset-studio?asset=explore/creature/ocean-photo/pelican",
@@ -150,14 +147,13 @@
       "factAudio": "ocean-deep-pelican",
       "source": "Audubon Society; National Geographic Kids",
       "sound": "bird",
-      "artH": 78
+      "artH": 78,
+      "habitat": "air"
     },
     {
       "id": "turtle",
       "name": "Sea Turtle",
       "zone": "sunlight",
-      "x": 14,
-      "y": 560,
       "shape": "turtle",
       "anim": "a-sway",
       "art": "/api/asset-studio?asset=explore/creature/ocean-photo/turtle",
@@ -186,14 +182,13 @@
       ],
       "factAudio": "ocean-deep-turtle",
       "source": "NOAA Fisheries; National Geographic Kids",
-      "artH": 100
+      "artH": 100,
+      "habitat": "open"
     },
     {
       "id": "dolphin",
       "name": "Dolphin",
       "zone": "sunlight",
-      "x": 58,
-      "y": 860,
       "shape": "dolphin",
       "anim": "a-bob",
       "art": "/api/asset-studio?asset=explore/creature/ocean-photo/dolphin",
@@ -223,14 +218,13 @@
       "factAudio": "ocean-deep-dolphin",
       "source": "NOAA Fisheries; Dolphin Communication Project",
       "sound": "dolphin",
-      "artH": 165
+      "artH": 165,
+      "habitat": "open"
     },
     {
       "id": "clownfish",
       "name": "Clownfish and Anemone",
       "zone": "sunlight",
-      "x": 30,
-      "y": 1080,
       "shape": "clownfish",
       "anim": "a-bob",
       "art": "/api/asset-studio?asset=explore/creature/ocean-photo/clownfish",
@@ -259,14 +253,13 @@
       ],
       "factAudio": "ocean-deep-clownfish",
       "source": "NOAA National Ocean Service; Monterey Bay Aquarium",
-      "artH": 60
+      "artH": 60,
+      "habitat": "floor"
     },
     {
       "id": "reefshark",
       "name": "Reef Shark",
       "zone": "sunlight",
-      "x": 70,
-      "y": 1250,
       "shape": "shark",
       "anim": "a-drift",
       "art": "/api/asset-studio?asset=explore/creature/ocean-photo/reefshark",
@@ -295,14 +288,13 @@
       ],
       "factAudio": "ocean-deep-reefshark",
       "source": "NOAA Fisheries; Monterey Bay Aquarium",
-      "artH": 140
+      "artH": 140,
+      "habitat": "open"
     },
     {
       "id": "jelly",
       "name": "Glowing Jellyfish",
       "zone": "twilight",
-      "x": 26,
-      "y": 560,
       "shape": "jelly",
       "anim": "a-pulse",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/jelly",
@@ -331,14 +323,13 @@
       ],
       "factAudio": "ocean-deep-jelly",
       "source": "Monterey Bay Aquarium; NOAA Ocean Exploration",
-      "glow": true
+      "glow": true,
+      "habitat": "open"
     },
     {
       "id": "hatchetfish",
       "name": "Hatchetfish",
       "zone": "twilight",
-      "x": 66,
-      "y": 980,
       "shape": "hatchetfish",
       "anim": "a-bob",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/hatchetfish",
@@ -367,14 +358,13 @@
       ],
       "factAudio": "ocean-deep-hatchetfish",
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
-      "glow": true
+      "glow": true,
+      "habitat": "open"
     },
     {
       "id": "angler",
       "name": "Anglerfish",
       "zone": "midnight",
-      "x": 22,
-      "y": 520,
       "shape": "angler",
       "anim": "a-drift",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/angler",
@@ -404,14 +394,13 @@
       "factAudio": "ocean-deep-angler",
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
       "glow": true,
-      "lure": true
+      "lure": true,
+      "habitat": "open"
     },
     {
       "id": "squid",
       "name": "Giant Squid",
       "zone": "midnight",
-      "x": 60,
-      "y": 900,
       "shape": "squid",
       "anim": "a-drift",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/squid",
@@ -441,14 +430,13 @@
       "factAudio": "ocean-deep-squid",
       "source": "Smithsonian Ocean; NOAA Ocean Exploration",
       "glow": true,
-      "jet": true
+      "jet": true,
+      "habitat": "open"
     },
     {
       "id": "gulpereel",
       "name": "Gulper Eel",
       "zone": "midnight",
-      "x": 34,
-      "y": 1200,
       "shape": "gulpereel",
       "anim": "a-drift",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/gulpereel",
@@ -477,14 +465,13 @@
       ],
       "factAudio": "ocean-deep-gulpereel",
       "source": "NOAA Ocean Exploration; Monterey Bay Aquarium Research Institute",
-      "glow": true
+      "glow": true,
+      "habitat": "open"
     },
     {
       "id": "dumbo",
       "name": "Dumbo Octopus",
       "zone": "abyss",
-      "x": 40,
-      "y": 650,
       "shape": "dumbo",
       "anim": "a-bob",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/dumbo",
@@ -513,14 +500,13 @@
       ],
       "factAudio": "ocean-deep-dumbo",
       "source": "MBARI; NOAA Ocean Exploration",
-      "glow": true
+      "glow": true,
+      "habitat": "floor"
     },
     {
       "id": "snail",
       "name": "Hadal Snailfish",
       "zone": "trench",
-      "x": 50,
-      "y": 700,
       "shape": "snail",
       "anim": "a-sway",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/snail",
@@ -549,14 +535,13 @@
       ],
       "factAudio": "ocean-deep-snail",
       "source": "University of Washington; NOAA Ocean Exploration",
-      "glow": true
+      "glow": true,
+      "habitat": "floor"
     },
     {
       "id": "tubeworm",
       "name": "Giant Tube Worms",
       "zone": "vents",
-      "x": 20,
-      "y": 560,
       "shape": "tubeworm",
       "anim": "a-sway",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/tubeworm",
@@ -584,14 +569,13 @@
         "ocean-tubeworm"
       ],
       "factAudio": "ocean-deep-tubeworm",
-      "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution"
+      "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution",
+      "habitat": "floor"
     },
     {
       "id": "yeticrab",
       "name": "Yeti Crab",
       "zone": "vents",
-      "x": 52,
-      "y": 820,
       "shape": "yeticrab",
       "anim": "a-bob",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/yeticrab",
@@ -619,14 +603,13 @@
         "ocean-yeticrab"
       ],
       "factAudio": "ocean-deep-yeticrab",
-      "source": "MBARI; Woods Hole Oceanographic Institution"
+      "source": "MBARI; Woods Hole Oceanographic Institution",
+      "habitat": "floor"
     },
     {
       "id": "ventshrimp",
       "name": "Vent Shrimp",
       "zone": "vents",
-      "x": 74,
-      "y": 1040,
       "shape": "ventshrimp",
       "anim": "a-drift",
       "art": "/api/asset-studio?asset=explore/creature/ocean-deep/ventshrimp",
@@ -654,7 +637,8 @@
         "ocean-ventshrimp"
       ],
       "factAudio": "ocean-deep-ventshrimp",
-      "source": "NOAA Ocean Exploration; Smithsonian Ocean"
+      "source": "NOAA Ocean Exploration; Smithsonian Ocean",
+      "habitat": "floor"
     }
   ]
 }
