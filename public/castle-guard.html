@@ -674,9 +674,6 @@ function drawPath() {
   ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
   ctx.strokeStyle = wc.path; ctx.lineWidth = 44;
   ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
-  // start marker (goblin gate)
-  const s = S.W.spawn;
-  ctx.fillStyle = "rgba(40,30,20,0.25)"; ctx.beginPath(); ctx.ellipse(Math.max(s.x + 6, 26), s.y, 26, 14, 0, 0, 7); ctx.fill();
 }
 // The tree sheet's frame 0 bleeds a sliver of the next frame's tree in on the right
 // (main tree = source cols 33-159; sliver = cols 230-255). Draw only the clean tree.
@@ -690,8 +687,6 @@ function drawTreeClean(cx, groundY, h) {
 }
 function drawDecor(d) {
   const sway = Math.sin(S ? S.t * 1.2 + d.ph : d.ph) * 2;
-  const shR = d.kind === "tree" ? d.h * 0.20 : d.kind.startsWith("bush") ? d.h * 0.42 : d.h * 0.42;
-  drawShadow(d.x, d.y + d.h * 0.08, shR, 0.13);
   if (d.kind === "tree") { if (drawTreeClean(d.x + sway, d.y + d.h * 0.10, d.h)) return; }
   if (!drawSprite(ctx, d.kind, d.x + sway, d.y - d.h * 0.4, d.h, 0, { frame: 0 })) {
     // fallback drawn decor
@@ -712,7 +707,6 @@ function drawCastle() {
   // keep the whole castle on-screen (art fix: it used to hang off the right edge)
   const ch = 150, cw = ch * (GAME_CONFIG.sprites.castle.fw / GAME_CONFIG.sprites.castle.fh);
   const cx = Math.max(cw / 2 + 8, Math.min(LW - cw / 2 - 8, c.x - 4));
-  drawShadow(cx, c.y + 30, cw * 0.30, 0.16);
   if (!drawSprite(ctx, "castle", cx, c.y - 34, 150, S.t)) {
     ctx.fillStyle = "#9fb6c9"; BR && BR.rrect ? BR.rrect(ctx, c.x - 50, c.y - 70, 100, 90, 10) : ctx.fillRect(c.x - 50, c.y - 70, 100, 90); ctx.fill();
     ctx.fillStyle = "#6f879b"; ctx.fillRect(c.x - 56, c.y - 96, 26, 34); ctx.fillRect(c.x + 30, c.y - 96, 26, 34);
