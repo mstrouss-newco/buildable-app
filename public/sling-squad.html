@@ -792,7 +792,7 @@ function pt(ev){ var r=canvas.getBoundingClientRect();
 function clampDrag(p){ var dx=p.x-AX, dy=p.y-AY, d=Math.hypot(dx,dy);
   if(d>MAXPULL){ var k=MAXPULL/d; dx*=k; dy*=k; } return { x:AX+dx, y:AY+dy }; }
 function onDown(ev){ if(SLING_DEMO) return; if(BA){BA.unlock&&BA.unlock();} ensureMusic();
-  if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else { if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else showMenu(); } return; }  // 7J: last level done + opened from the Journey -> go back to it (not the engine's own grid)
+  if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else { if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else showMenu(); } return; }  // 7J: last level done + opened from the Journey -> go back to it (not the engine own grid)
   if(state==="lose"){ ev.preventDefault&&ev.preventDefault(); startLevel(level); return; }
   if(state==="flying"){ ev.preventDefault&&ev.preventDefault(); tryPower(); return; }  // tap mid-air = fire the power
   if(state==="ready"){ ev.preventDefault&&ev.preventDefault(); state="aiming"; G.drag=clampDrag(pt(ev)); sfx("stretch"); }
@@ -816,7 +816,8 @@ function buildStartCfg(){
 }
 function el(id){ return document.getElementById(id); }
 function show(id,on){ var e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
-function showChrome(on){ if(SLING_DEMO) on=false; ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
+function inApp(){ try{ return !!(window.parent && window.parent!==window); }catch(e){ return true; } }
+function showChrome(on){ if(SLING_DEMO) on=false; if(inApp()) on=false; /* in-app: shell owns Home/Sound/Menu via nav bridge */ ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
 function showMenu(){ state="title"; G=null; show("help",false); showChrome(false);
   var host=el("start"); if(host)host.style.display="block"; if(!BS||!host)return;
   var cb={ onPlay:function(n){ if(BA)BA.unlock&&BA.unlock(); startLevel(n-1); },
