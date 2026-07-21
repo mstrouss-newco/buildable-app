@@ -70,6 +70,12 @@
   @keyframes jet{0%{transform:translateX(0)}30%{transform:translateX(-46px) rotate(-8deg)}100%{transform:translateX(0)}}
   .jetting{animation:jet .7s ease-out}
   .paused .a-sway,.paused .a-bob,.paused .a-pulse,.paused .a-drift,.paused .lure{animation-play-state:paused}
+  @keyframes swim{0%,100%{transform:translateX(-15px)}50%{transform:translateX(15px)}}
+  .cr.swim{animation:swim 11s ease-in-out infinite}
+  .paused .cr.swim{animation-play-state:paused}
+  @keyframes caustic{0%{transform:translate(-2%,-1%) scale(1.06)}50%{transform:translate(2%,1.5%) scale(1.14)}100%{transform:translate(-2%,-1%) scale(1.06)}}
+  .caustics{position:absolute;left:-8%;right:-8%;background-size:cover;background-position:center;mix-blend-mode:screen;opacity:.34;animation:caustic 15s ease-in-out infinite;pointer-events:none}
+  .paused .caustics{animation-play-state:paused}
 
   .hint{position:absolute;left:16px;right:16px;text-align:center;font-weight:900;font-size:16px;color:rgba(253,250,245,.95);
         text-shadow:0 1px 6px rgba(0,0,0,.7)}
@@ -358,6 +364,14 @@ function buildScenes() {
     d.style.backgroundImage = "url('" + z.scene + "')";
     if (z.scenePos) d.style.backgroundPosition = z.scenePos;
     layer.appendChild(d);
+    if (z.caustics && DATA.caustics) {           // dancing sunlight over underwater scenes
+      const ca = document.createElement("div");
+      ca.className = "caustics";
+      ca.style.top = (i * ZH) + "px"; ca.style.height = ZH + "px";
+      ca.style.backgroundImage = "url('" + DATA.caustics + "')";
+      ca.style.animationDelay = (-Math.random() * 8) + "s";
+      layer.appendChild(ca);
+    }
   });
 }
 function buildWorld() {
@@ -406,6 +420,7 @@ function buildWorld() {
     art.style.animationDelay = (-i * 1.3) + "s";
     art.innerHTML = shapeFor(c);          // instant drawn fallback
     loadCreatureArt(c, art);              // swap in real art if the slot is filled
+    if (!c.still) { b.classList.add("swim"); b.style.animationDuration = (9 + Math.random() * 6).toFixed(1) + "s"; b.style.animationDelay = (-Math.random() * 8).toFixed(1) + "s"; }
     const nm = document.createElement("span");
     nm.className = "nm"; nm.textContent = c.name;
     b.appendChild(art); b.appendChild(nm);
