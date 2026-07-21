@@ -6,26 +6,30 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
-
-## Story Maker 2.0 — ST1: speed + relaunch QA blockers (July 20 2026)
-
-First relaunch block for Stories (still COMING SOON; Mike decides the LIVE flip after his
-own ST1 QA). Speed: the story is written in the BACKGROUND the moment the naming screen
-appears (hero's default name), and the kid's typed name is swapped in client-side on
-"Make my story!" (never mid-word); the fake 1350ms "Locking it in" delay is gone; and the
-Painting screen is gone — Make jumps straight to the book cover, each page shows layered
-art instantly and the painted scene crossfades in, with the reader as the single paint
-owner (the maker's duplicate paint loop was removed). QA blockers from the July 20
-walkthrough: picker tiles never flash blank — every tile shows a friendly DRAWN no-emoji
-placeholder instantly and the real painted art fades in (with retries so it warms in);
-mid-word truncation fixed (generate-story max_tokens 1700->3200 + sentence-boundary trim);
-The End is reachable and an out-of-range page can't render ("Page 7 of 6" clamp); the emoji
-rabbit/tree fallback placeholders are replaced with SVG. Soundscapes: story-ambience world
-slugs were stale (snowy_forest vs snowy-village) so ambience never played — rekeyed to the
-real slugs (+ alias map), and story.html now colors each page by its world. Removed orphan
-files api/generate-story-art.js, api/story-style-sample.js, api/animate-page.js. `vite
-build` green. Files: src/StoryMaker.jsx, src/StoryReader.jsx, src/lib/storyEffects.jsx,
-api/generate-story.js, api/story-ambience.js, public/story.html, SESSION-LOG.md, README.md.
+## Music Maker: instant + speakable, no reading needed (Session MM1, July 20 2026)
+Rebuilt the Music Maker "Make a Song" flow (`src/MusicMaker.jsx`) so a child who can't
+read can make a song alone. The old seven-question wizard is replaced by three big spoken
+steps, and every option now speaks or plays a sound. **Step 1 "What is your song about?"**
+= ten picture topic chips (dog, cat, dinosaur, space, pancakes, princess, trucks, ocean,
+robots, my family) that speak their name when tapped, plus a "Put my name in the song"
+switch (free typing optional). **Step 2 "Pick your sound!"** = eight style cards merging a
+vibe + genre into one tap (Happy Pop, Dance Party, Spooky Rock, Silly Country, Sleepy
+Lullaby, Epic Movie, K-Pop Energy, Chill Reggae), each mapped to vibe/genre values
+`/api/generate-song` already accepts and each playing a ~2s preview. **Step 3 "Who sings
+it?"** = singer cards with short voice previews. Then one big **GO** plus a one-tap
+**Surprise me**; the classic drums/guitar/strings/speed pickers moved behind an optional
+**Tweak my band** (kept, not deleted). Tap-to-hear previews are new `mm_*` entries in the
+shared sound catalog (`api/sfx.js`), generated once via ElevenLabs, cached, and auto-listed
+in `/api/list-audio`; they play synchronously on tap (iOS audio holds) and silent-fail if
+missing. Icons preload on open; `IconImg` gained an instant static path
+(`/music-maker/icons/{cat}-{id}.webp`) with the image API as fallback (static WebP baking is
+a follow-up — falls back to the API today so nothing regresses), and `api/images.js` gained
+the `topic` icon subjects. No emojis. QA: `qa-music.mjs` ALL PASS; `api/*.js` pass
+`node --check`; the two JSX files transpile clean via esbuild; full `vite build` not run this
+session (sandbox disk limit). Files: `src/MusicMaker.jsx`, `src/lib/IconImg.jsx`,
+`api/images.js`, `api/sfx.js`, `SESSION-LOG.md`. Live device check is the owner's step after
+deploy. Session MM2 (covers, waiting show, title reveal, make-another, pack unlocks) not
+started.
 
 ## Reload-safe addresses inside the app (Session 2E, July 20 2026)
 Every screen inside `/app` used to share one web address, so a refresh or a shared link
@@ -4186,11 +4190,3 @@ fly-to shots), arcade honesty pass (fake stats/kid personas removed, 9 real worl
 copy matches shipped 6B features, pricing now matches deck (Free incl. teachers-forever /
 Premium $5 / AI Creator $10 + learn-to-earn credits). Math Cannon imagery removed everywhere
 until its art is redone (deck figure now Saturn fly-to). See 2026-07-10 entry for shot pipeline.
-
----
-## Session log — 2026-07-20b (roadmap: Phase 10 easy parent login)
-
-Planning only, no product code. Added Phase 10 to buildable-rebuild-roadmap.md:
-Session 10A (magic link sign-in + co-parent family-code QR, no DB changes) and
-Session 10B (QR new-device sign-in via one-time device_link_tokens + api/device-link.js,
-reusing the invite-token pattern). 10A ships the QR drawing library 10B reuses.
