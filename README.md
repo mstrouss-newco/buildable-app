@@ -6,6 +6,24 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Survival — win-shake fix + upgrades you can feel + strong Black Hole (July 21 2026)
+Phase 1 of the Survival upgrade pass (all engine code, no new art; Phase 2 = a consistent
+generated power-up icon set). One file: `public/survival-engine.html`.
+- **Win-shake bug:** beating the boss kicked a screen shake, then `state="win"` made
+  `update()` early-return before `BM.update(fx)`, so `fx.shake` never decayed and the
+  gameplay layer jittered forever behind the banner. The win/lose/title early-return now
+  still advances the FX bag, so the shake settles.
+- **Every pick is felt:** `applyChoice()` now fires a burst + flash + small shake + spark
+  ring + a floating `BM.pop` label of the upgrade name.
+- **Upgrades made visible/stronger:** Frost (deeper+longer slow, icy-blue shots), Speedy
+  Boots (motion trail, +0.45), Gem Magnet (dashed reach-ring, +70), Faster Sparkles
+  (x0.83), Bigger Sparkles (projR +3).
+- **Black Hole = strong auto-vortex:** opens often, bigger/longer, hauls foes in hard and
+  crushes them; opens over the swarm away from the hero; bosses only gently tugged (stays
+  fair). Ring + shake + whoosh on open.
+QA: `qa-survival.mjs` all pass (6/6 isolated, 6/6 campaign, render smoke). Ref:
+SESSION-LOG.md entry of the same date.
+
 ## Session 7K — Sling & Maze in-app nav overlap fixed (July 21 2026)
 In-app, Sling and Maze re-drew their own nav buttons once a level started, on top of
 the shell's Home / Sound / Menu (Sling's "‹ Menu" over the top-left Home; Maze's

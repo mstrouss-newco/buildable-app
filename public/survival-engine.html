@@ -247,17 +247,17 @@ function dist2(ax,ay,bx,by){const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;}
 
 // power-up catalogue
 const PU={
-  fast:  { name:"Faster Sparkles", apply:s=>{ s.fireCd=Math.max(13, s.fireCd*0.88); } },
+  fast:  { name:"Faster Sparkles", apply:s=>{ s.fireCd=Math.max(11, s.fireCd*0.83); } },
   multi: { name:"Extra Sparkle",   apply:s=>{ s.projPerShot+=1; } },
-  big:   { name:"Bigger Sparkles", apply:s=>{ s.projDmg+=1; s.projR+=2; } },
+  big:   { name:"Bigger Sparkles", apply:s=>{ s.projDmg+=1; s.projR+=3; } },
   pierce:{ name:"Piercing Sparkles",apply:s=>{ s.pierce+=1; } },
   orbit: { name:"Spinny Star",     apply:s=>{ s.orbit=(s.orbit||0)+1; } },
   nova:  { name:"Star Nova",       apply:s=>{ s.nova=(s.nova||0)+1; } },        // AoE shockwave on a timer
   blackhole:{ name:"Black Hole",   apply:s=>{ s.blackhole=(s.blackhole||0)+1; } }, // opens a swirl that vacuums foes in & crushes them
   frost: { name:"Frost Shot",      apply:s=>{ s.frost=(s.frost||0)+1; } },      // shots slow the slimes they hit
   homing:{ name:"Homing Sparkles", apply:s=>{ s.homing=(s.homing||0)+1; } },    // shots curve toward foes
-  swift: { name:"Speedy Boots",    apply:s=>{ s.speed+=0.35; } },
-  magnet:{ name:"Gem Magnet",      apply:s=>{ s.pickupR+=50; } },
+  swift: { name:"Speedy Boots",    apply:s=>{ s.speed+=0.45; } },
+  magnet:{ name:"Gem Magnet",      apply:s=>{ s.pickupR+=70; } },
   heal:  { name:"Heart",           apply:(s,g)=>{ if(g.hearts<g.maxHearts) g.hearts++; else s.shield=true; } },
   regen: { name:"Slow Heal",       apply:s=>{ s.regen = (s.regen>=1e9) ? 600 : Math.max(240, s.regen-180); } },
   shield:{ name:"Bubble Shield",   apply:s=>{ s.shield=true; } },
@@ -396,7 +396,14 @@ c.addEventListener('pointerup',endJoy); c.addEventListener('pointercancel',endJo
 
 // ---------- level-up ----------
 function offerChoices(){ const pool=(GAME_CONFIG.powerups||Object.keys(PU)).slice(); const out=[]; while(out.length<3 && pool.length){ const k=Math.floor(offerRng()*pool.length); out.push(pool.splice(k,1)[0]); } choices=out; state="choose"; sfx("levelup"); }
-function applyChoice(id){ const p=PU[id]; if(p) p.apply(stats,hero); choices=[]; state="play"; }
+function applyChoice(id){ const p=PU[id]; if(p) p.apply(stats,hero);
+  // "power surge": every pick is felt — a burst around the hero, a screen flash, a small
+  // shake, a spark ring, and a floating label of what you just got.
+  if(hero){ burst(hero.x,hero.y,P.spark,18);
+    if(BM&&fx){ BM.flash(fx,P.xp,0.22); BM.shake(fx,0.16); BM.ring(fx,hero.x,hero.y,95,P.spark);
+      if(BM.pop) BM.pop(fx.pops, hero.x, hero.y-46, (p&&p.name)||"", P.spark); } }
+  sfx("levelup");
+  choices=[]; state="play"; }
 function gainXp(v){ xp+=v; while(xp>=xpNeed){ xp-=xpNeed; plvl++; xpNeed=Math.ceil(xpNeed*NEED_GROW); offerChoices(); } }
 
 // ---------- combat ----------
@@ -439,7 +446,7 @@ function botThink(){
 function update(){
   if(DEMO && (state==="win"||state==="lose") && !survDemoRestartT){
     survDemoRestartT=setTimeout(function(){ survDemoRestartT=null; survDemoStart(); },1200); }
-  if(state==="win"||state==="lose"||state==="title") return;
+  if(state==="win"||state==="lose"||state==="title"){ if(BM&&fx) BM.update(fx); return; }   // keep FX (shake/flash) settling so the win screen doesn't jitter forever
   if(botMode) botThink(); else readKeys();
   if(!started) return;
   if(state==="choose") return;     // action pauses while choosing a power-up
@@ -457,7 +464,7 @@ function update(){
   else if(!bossSpawned){ spawnBoss(); }
   // enemies chase + separate a little so they don't all stack on the hero
   const all=boss?enemies.concat([boss]):enemies;
-  for(const e of all){ if(e.slowT>0)e.slowT--; const sp=e.spd*(e.slowT>0?0.45:1); const dx=hero.x-e.x, dy=hero.y-e.y, d=Math.hypot(dx,dy)||1; e.x+=dx/d*sp; e.y+=dy/d*sp; e.wob+=0.15;
+  for(const e of all){ if(e.slowT>0)e.slowT--; const sp=e.spd*(e.slowT>0?0.32:1); const dx=hero.x-e.x, dy=hero.y-e.y, d=Math.hypot(dx,dy)||1; e.x+=dx/d*sp; e.y+=dy/d*sp; e.wob+=0.15;
     for(const o of enemies){ if(o===e)continue; const ox=e.x-o.x, oy=e.y-o.y, od=Math.hypot(ox,oy); if(od>0 && od<e.r+o.r){ e.x+=ox/od*0.6; e.y+=oy/od*0.6; } }
     if(d<e.r+hero.r){ hurtHero(e.dmg); const k=e.boss?6:10; e.x-=dx/d*k; e.y-=dy/d*k; }
   }
@@ -467,7 +474,7 @@ function update(){
       if(tg){ const ang=Math.atan2(tg.y-p.y,tg.x-p.x), cur=Math.atan2(p.vy,p.vx); let diff=ang-cur; while(diff>Math.PI)diff-=6.283; while(diff<-Math.PI)diff+=6.283; const na=cur+diff*Math.min(0.28,stats.homing*0.09), sp=Math.hypot(p.vx,p.vy); p.vx=Math.cos(na)*sp; p.vy=Math.sin(na)*sp; } }
     p.x+=p.vx; p.y+=p.vy; p.life--;
     for(const e of all){ if(p.hit.has(e))continue; if(dist2(p.x,p.y,e.x,e.y) < (p.r+e.r)*(p.r+e.r)){ e.hp-=p.dmg; p.hit.add(e); burst(p.x,p.y,e.col,4);
-      if(stats.frost) e.slowT=Math.max(e.slowT||0, 60+stats.frost*30);
+      if(stats.frost) e.slowT=Math.max(e.slowT||0, 90+stats.frost*45);
       if(p.pierce>0)p.pierce--; else p.life=0;
       if(e.hp<=0){ killEnemy(e); } else { sfx("hit"); }   // soft impact only when it survives; kill plays the pop
       break; } }
@@ -481,19 +488,23 @@ function update(){
   // Black Hole: every so often opens a swirling singularity over the swarm that drags nearby
   // foes into its core and crushes them. Kept fair: it opens AWAY from the hero (so it pulls
   // enemies off you), and bosses only get tugged gently, never yanked or insta-crushed.
-  if(stats.blackhole>0){ const cd=Math.max(150,430-stats.blackhole*46); bhTimer++;
+  // Black Hole (STRONG auto-vortex): opens OFTEN, right over the swarm, and powerfully
+  // hauls every nearby foe into its core and crushes them. Big, loud, clearly felt.
+  // Still fair: it opens AWAY from the hero (pulling enemies OFF you) and only tugs a
+  // boss gently so a boss fight is never trivialised.
+  if(stats.blackhole>0){ const cd=Math.max(80,165-stats.blackhole*22); bhTimer++;
     if(bhTimer>=cd && enemies.length>0){ bhTimer=0;
       let cx=0,cy=0; for(const e of enemies){ cx+=e.x; cy+=e.y; } cx/=enemies.length; cy/=enemies.length;   // over the thickest part of the swarm
-      const dh=Math.hypot(cx-hero.x,cy-hero.y); if(dh<150){ const a=Math.atan2((cy-hero.y)||1,(cx-hero.x)||1); cx=hero.x+Math.cos(a)*180; cy=hero.y+Math.sin(a)*180; }
-      cx=Math.max(46,Math.min(W-46,cx)); cy=Math.max(46,Math.min(H-46,cy));
-      holes.push({ x:cx, y:cy, r:120+stats.blackhole*30, life:90+stats.blackhole*18, age:0, dmg:1+Math.floor(stats.blackhole/2) });
-      if(BM&&fx) BM.ring(fx,cx,cy,70,P.boss); sfx("boss"); }
+      const dh=Math.hypot(cx-hero.x,cy-hero.y); if(dh<180){ const a=Math.atan2((cy-hero.y)||1,(cx-hero.x)||1); cx=hero.x+Math.cos(a)*210; cy=hero.y+Math.sin(a)*210; }
+      cx=Math.max(60,Math.min(W-60,cx)); cy=Math.max(60,Math.min(H-60,cy));
+      holes.push({ x:cx, y:cy, r:155+stats.blackhole*34, life:160+stats.blackhole*34, age:0, dmg:1+Math.floor(stats.blackhole/2) });
+      if(BM&&fx){ BM.ring(fx,cx,cy,120,P.boss); BM.shake(fx,0.3); } sfx("boss"); }
   }
   if(holes.length){ const all2=(boss?enemies.concat([boss]):enemies).slice();
     for(const h of holes){ h.age++; h.life--;
       for(const e of all2){ if(e.hp<=0)continue; const dx=h.x-e.x, dy=h.y-e.y, d=Math.hypot(dx,dy)||1;
-        if(d<h.r){ const pull=e.boss ? 0.7 : (2.4 + (1-d/h.r)*4.0); e.x+=dx/d*pull; e.y+=dy/d*pull;
-          if(d<28){ e.hp -= e.boss ? 0.12*h.dmg : h.dmg; burst(e.x,e.y,P.boss,3); if(e.hp<=0)killEnemy(e); } } } }
+        if(d<h.r){ const pull=e.boss ? 1.3 : (5.5 + (1-d/h.r)*7.5); e.x+=dx/d*pull; e.y+=dy/d*pull;   // strong haul-in
+          if(d<44){ e.hp -= e.boss ? 0.16*h.dmg : h.dmg; burst(e.x,e.y,P.boss,3); if(e.hp<=0)killEnemy(e); } } } }
     holes=holes.filter(h=>h.life>0);
   }
   // orbiting helper stars (a passive spinning weapon)
@@ -548,7 +559,7 @@ function drawHero(){ const blink=(invuln>0 && Math.floor(invuln/5)%2===0);
 function cardRect(k){ const w=200,h=240,gap=24, total=3*w+2*gap, x0=(W-total)/2; return { x:x0+k*(w+gap), y:H/2-h/2, w, h }; }
 // Some power-ups now show their new helper artwork on the "Pick one" cards; the rest
 // keep the shared drawn icons.
-const PU_IMG={ orbit:"helper_star", swift:"helper_dog", homing:"helper_bee", heal:"helper_healer", regen:"helper_healer", shield:"helper_healer" };
+const PU_IMG={ orbit:"helper_star", swift:"helper_dog", homing:"helper_bee", heal:"helper_healer" };   // regen/shield use their own drawn icons so no two cards share the same picture (full generated set: Phase 2)
 function drawPUicon(id,x,y){ const key=PU_IMG[id]; if(key && drawAnimSprite(key,x,y,68,{})) return; BR.puIcon(ctx,id,x,y,P); }
 function banner(t,s){ ctx.fillStyle="rgba(5,8,24,.6)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 46px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-8); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
 // wordless how-to-play demo (for kids who can't read): animated hand dragging,
@@ -627,10 +638,17 @@ function draw(){
     if(!drawAnimSprite(L.bossKey, boss.x, boss.y, boss.r*2.5, {fps:4}))
       blob(boss.x,boss.y,boss.r,boss.col,Date.now()/300,true);
     const bw=180; ctx.fillStyle="rgba(0,0,0,.35)";rrect(W/2-bw/2,14,bw,11,6);ctx.fill(); ctx.fillStyle=P.boss;rrect(W/2-bw/2,14,bw*Math.max(0,boss.hp/boss.maxHp),11,6);ctx.fill(); ctx.fillStyle="#fff";ctx.font="bold 13px Fredoka,sans-serif";ctx.textAlign="center";ctx.fillText((L.bossName?L.bossName.toUpperCase():"BOSS"),W/2,33); }
-  // projectiles (twinkly sparkles)
-  for(const p of projs) BR.projectile(ctx,p.x,p.y,p.r,P.spark);
+  // projectiles (twinkly sparkles — turn icy blue while you carry Frost Shot)
+  for(const p of projs) BR.projectile(ctx,p.x,p.y,p.r, stats.frost?"#bfeaff":P.spark);
   // particles
   for(const pt of parts) BR.particle(ctx,pt);
+  // Speedy Boots — a soft motion trail streams behind you so the speed is visible
+  if(stats.swift>0 && (hero.vx||hero.vy)){ const mg=Math.hypot(hero.vx,hero.vy);
+    if(mg>0.4){ for(let i=1;i<=3;i++){ ctx.save(); ctx.globalAlpha=0.16*(1-i/4); ctx.fillStyle=P.visor||"#62d0ff";
+      ctx.beginPath(); ctx.arc(hero.x-hero.vx*i*2.4, hero.y-hero.vy*i*2.4, hero.r*(1-i*0.18), 0, 7); ctx.fill(); ctx.restore(); } } }
+  // Gem Magnet — a faint dashed reach-ring shows how far you now vacuum coins in
+  if(stats.pickupR>BASE.pickupR+1){ ctx.save(); ctx.globalAlpha=0.10; ctx.strokeStyle=P.gem||"#6ff0ff"; ctx.lineWidth=2;
+    ctx.setLineDash([6,9]); ctx.beginPath(); ctx.arc(hero.x,hero.y,Math.min(stats.pickupR,250),0,7); ctx.stroke(); ctx.restore(); }
   // hero
   drawHero();
   // orbiting helper "orbi tools" — the new star / bee / dog sprites spin around the hero

@@ -1,6 +1,47 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-21: Survival — win-shake fix + upgrades you can feel + strong Black Hole (Phase 1, shipped)
+
+Owner feedback on Survival: (1) the screen keeps shaking after you beat a level; (2) the
+power-up art is a weird mix (some real helper sprites, some code-drawn icons) with
+duplicates — Heal / Slow Heal / Bubble Shield all reused the same healer picture;
+(3) upgrades don't change how the game feels, you can't see or feel most of them;
+(4) the Black Hole is random and does very little. This is Phase 1 (all engine code, no
+new art). Phase 2 = a consistent generated icon set from the asset generator.
+
+One file: `public/survival-engine.html`.
+
+- **Win-shake bug fixed.** Beating the boss fires a big explosion that kicks a screen
+  shake, then the game immediately flips to `state="win"`, where `update()` early-returns
+  BEFORE `BM.update(fx)` runs — so `fx.shake` never decays and `BM.shakeOffset()` jitters
+  the gameplay layer forever behind the banner. Fix: the win/lose/title early-return now
+  still advances the FX bag (`if(BM&&fx) BM.update(fx)`), so the shake settles smoothly.
+
+- **Every pick is now felt ("power surge").** `applyChoice()` fires a spark burst around
+  the hero, a screen flash, a small shake, a spark ring, and a floating label of the
+  upgrade's name (`BM.pop`). Turns invisible stat picks into a clear moment.
+
+- **Upgrades made visible / stronger.** Frost: slow deepened (x0.45 -> x0.32) and longer
+  (`90+frost*45`), and your shots turn icy blue while you carry it. Speedy Boots: soft
+  motion trail behind the hero (and +0.35 -> +0.45). Gem Magnet: faint dashed reach-ring
+  around the hero (and +50 -> +70). Faster Sparkles x0.88 -> x0.83 (min 11). Bigger
+  Sparkles projR +2 -> +3.
+
+- **Black Hole reworked into a strong auto-vortex.** Opens far more often
+  (cd `max(80,165-lvl*22)` vs old `max(150,430-lvl*46)`), bigger and longer
+  (`r 155+lvl*34`, `life 160+lvl*34`), and hauls foes in hard (pull `5.5..13` vs `2.4..6.4`)
+  with a wider crush core (`d<44`, full dmg/frame). Opens over the swarm, away from the
+  hero, so it pulls enemies OFF you; bosses only get a gentle tug (pull 1.3, 0.16 dmg) so
+  fights stay fair. Kicks a ring + shake + whoosh on open.
+
+- **Duplicate icon removed** (interim): `PU_IMG` no longer maps regen/shield to the healer
+  sprite, so no two cards show the same picture. Full consistent generated set = Phase 2.
+
+QA: `node qa-survival.mjs` — all checks pass (6/6 isolated wins, 6/6 campaign, render
+smoke incl. post-sim draw of the new trail/ring/frost paths, upgrade-handoff).
+
+
 ## 2026-07-21: Session 7K — Fix in-app nav overlap on Sling & Maze (shipped)
 
 Reported bug: in-app, Sling and Maze re-drew their OWN nav buttons once a level
