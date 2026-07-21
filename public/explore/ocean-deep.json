@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 16,
+  "assetVersion": 17,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -342,6 +342,42 @@
       "artH": 140,
       "habitat": "open",
       "type": "animal"
+    },
+    {
+      "id": "bluetang",
+      "name": "Blue Tang",
+      "zone": "sunlight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "open",
+      "type": "animal",
+      "artH": 72,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/bluetang",
+      "fact": "The blue tang is a bright blue fish with a splash of yellow on its tail. You might know it as Dory from the movies!",
+      "facts": [
+        "The blue tang is a bright blue fish with a splash of yellow on its tail. You might know it as Dory from the movies!",
+        "A blue tang has sharp little spines near its tail that flip out like tiny blades to keep bigger fish away.",
+        "Baby blue tangs are actually bright yellow, and they slowly turn blue as they grow up."
+      ],
+      "stats": [
+        {
+          "label": "Color",
+          "value": "Bright blue"
+        },
+        {
+          "label": "Babies are",
+          "value": "Yellow!"
+        }
+      ],
+      "asks": [
+        "Why is a blue tang called Dory?",
+        "How does a blue tang stay safe?"
+      ],
+      "quiz": [
+        "ocean-bluetang"
+      ],
+      "factAudio": "ocean-deep-bluetang",
+      "source": "NOAA National Ocean Service; Monterey Bay Aquarium"
     },
     {
       "id": "jelly",
@@ -890,42 +926,6 @@
         "ocean-seastar"
       ],
       "factAudio": "ocean-deep-seastar",
-      "source": "NOAA Ocean Service; Monterey Bay Aquarium"
-    },
-    {
-      "id": "kelp",
-      "name": "Kelp",
-      "zone": "sunlight",
-      "shape": "blob",
-      "anim": "a-bob",
-      "habitat": "floor",
-      "type": "plant",
-      "artH": 210,
-      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/kelp",
-      "fact": "Giant kelp is a huge seaweed that grows in underwater forests, and it can grow up to two feet in a single day!",
-      "facts": [
-        "Giant kelp is a huge seaweed that grows in underwater forests, and it can grow up to two feet in a single day!",
-        "Kelp holds onto the rocky sea floor with a root-like grip and floats up toward the sunlight using tiny gas-filled bubbles.",
-        "Kelp forests are home to sea otters, fish, and crabs, like a busy underwater jungle."
-      ],
-      "stats": [
-        {
-          "label": "Grows",
-          "value": "2 feet a day"
-        },
-        {
-          "label": "Makes",
-          "value": "Underwater forests"
-        }
-      ],
-      "asks": [
-        "Is kelp a plant?",
-        "What lives in a kelp forest?"
-      ],
-      "quiz": [
-        "ocean-kelp"
-      ],
-      "factAudio": "ocean-deep-kelp",
       "source": "NOAA Ocean Service; Monterey Bay Aquarium"
     },
     {
