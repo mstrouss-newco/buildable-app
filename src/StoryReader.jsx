@@ -108,6 +108,11 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, gr
   const stAdvRef = useRef(false);                       // storytime: has this page started reading?
   const loggedRef = useRef(false);                      // learning ledger: log the finish once
   const rewardedRef = useRef(false);                    // star coin reward: award once
+  // Repaint is a grown-up tool (a kid re-rolling art burns image gens), so it sits
+  // behind the same quick math check the rest of the app's grown-up controls use.
+  const [repaintGate, setRepaintGate] = useState(null); // null | {a,b,val,err}
+  function openRepaintGate() { setRepaintGate({ a: 3 + Math.floor(Math.random() * 7), b: 3 + Math.floor(Math.random() * 7), val: "", err: false }); }
+  function submitRepaintGate(e) { e.preventDefault(); if (repaintGate && parseInt(repaintGate.val, 10) === repaintGate.a * repaintGate.b) { setRepaintGate(null); repaint(); } else { setRepaintGate((g) => g ? { ...g, err: true } : g); } }
 
   // Defensive clamp: the index can never point past the last page, so paging can
   // never fall into an empty "Page 7 of 6" — the last page routes to The End.
@@ -501,7 +506,19 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, gr
         {starToast && (<div style={s.starToast}><StarIcon filled={true}/> All {starTotal} stars found! +{STAR_REWARD_COINS} coins</div>)}
       </div>
 
-      <button style={s.repaintBtn} onClick={repaint} title="Paint this page again">Repaint this page</button>
+      <button style={s.repaintBtn} onClick={openRepaintGate} title="Grown-ups: paint this page again">Grown-ups: repaint</button>
+      {repaintGate && (
+        <div style={s.gateOverlay} onClick={(e) => { if (e.target === e.currentTarget) setRepaintGate(null); }}>
+          <form style={s.gateCard} onSubmit={submitRepaintGate}>
+            <p style={s.gateTitle}>Grown-ups only</p>
+            <p style={s.gateSub}>Quick check — what is {repaintGate.a} × {repaintGate.b}?</p>
+            <input autoFocus type="number" inputMode="numeric" value={repaintGate.val} onChange={(e) => setRepaintGate((g) => ({ ...g, val: e.target.value }))} placeholder="Type the answer" style={s.gateInput} />
+            {repaintGate.err && <p style={s.gateErr}>Not quite — ask a grown-up.</p>}
+            <button type="submit" style={s.gateGo}>Repaint this page</button>
+            <button type="button" onClick={() => setRepaintGate(null)} style={s.gateCancel}>Cancel</button>
+          </form>
+        </div>
+      )}
 
       <div style={s.textPanel}>
         {pageLines.length > 1
@@ -559,7 +576,15 @@ const s = {
   controls: { display: "flex", alignItems: "center", gap: 14, marginTop: 18 },
   circleBtn: { width: 52, height: 52, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 26, cursor: "pointer", fontFamily: FRED, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 0 },
   readBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b)", color: "#fff", fontSize: 17, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 6px 20px rgba(155,126,221,0.45)" },
-  repaintBtn: { marginTop: 10, padding: "8px 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.07)", color: "#cdd3ff", fontFamily: NUN, fontSize: 13, fontWeight: 700, cursor: "pointer" },
+  repaintBtn: { marginTop: 10, padding: "7px 14px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.05)", color: "rgba(205,211,255,0.75)", fontFamily: NUN, fontSize: 12, fontWeight: 700, cursor: "pointer" },
+  gateOverlay: { position: "fixed", inset: 0, zIndex: 10000, background: "rgba(8,5,18,0.72)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 },
+  gateCard: { background: "#1E1733", borderRadius: 20, padding: 24, width: "100%", maxWidth: 320, textAlign: "center", fontFamily: NUN },
+  gateTitle: { color: "#fff", fontFamily: FRED, fontSize: 20, fontWeight: 700, margin: "0 0 4px" },
+  gateSub: { color: "#B6AED0", fontSize: 14, margin: "0 0 14px" },
+  gateInput: { width: "100%", boxSizing: "border-box", borderRadius: 12, border: "none", padding: "12px 14px", fontSize: 16, fontFamily: NUN, color: "#333" },
+  gateErr: { color: "#ffd7d7", fontSize: 13, margin: "8px 0 0" },
+  gateGo: { width: "100%", marginTop: 12, border: "none", borderRadius: 999, padding: 13, fontFamily: FRED, fontWeight: 700, fontSize: 15, color: "#fff", cursor: "pointer", background: "linear-gradient(90deg,#8A6BFF,#E0578F)" },
+  gateCancel: { width: "100%", marginTop: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: 10, color: "#C9C2E0", fontFamily: NUN, fontSize: 13, cursor: "pointer" },
   pageNum: { fontSize: 14, opacity: 0.65 },
   endRow: { marginTop: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
   saveBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "#fff", color: "#b3477a", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
