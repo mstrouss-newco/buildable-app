@@ -1,4 +1,5 @@
-// /src/StoryMaker.jsx  (v5 — talking story buddy + calming music + faster picker art)
+// /src/StoryMaker.jsx  (v6 — ST4 fewer taps: 3-screen flow, hero shuffle,
+//  Story Dice, name-on-hero popover, More-choices drawer, cream/light theme)
 import { useState, useEffect, useRef } from "react";
 import StoryReader from "./StoryReader";
 import QuizGate from "./QuizGate";
@@ -6,10 +7,17 @@ import { getLearningSettings, gradeToAge } from "./store";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+// Cream/light theme to match the Home screen (session 3E palette).
 const PAGE_BG =
-  "radial-gradient(circle at 12% -10%, rgba(155,126,221,0.28), transparent 42%)," +
-  "radial-gradient(circle at 88% 112%, rgba(214,90,123,0.24), transparent 42%),#0a0a14";
+  "radial-gradient(circle at 10% -8%, rgba(155,126,221,0.16), transparent 42%)," +
+  "radial-gradient(circle at 90% 108%, rgba(240,151,42,0.14), transparent 46%)," +
+  "#FFF8EE";
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
+const INK = "#3A2E4D";
+const SUB = "#8B84A0";
+const CARD = "#FFFFFF";
+const CARD_BORDER = "1px solid rgba(58,46,77,0.10)";
+const SHADOW = "0 8px 22px rgba(58,46,77,0.09)";
 
 const GUIDES = [["builder","Bo the Builder"],["wizard","Milo the Wizard"],["unicorn","Sparkle the Unicorn"],["fox","Pip the Fox"]];
 const STYLES = [["watercolor","Watercolor"],["modern","Modern"],["modern3d","3D Movie"],["papercut","Paper cut-out"]];
@@ -29,6 +37,8 @@ const MOODS = [["cozy","Cozy"],["silly","Silly"],["brave","Brave"],["magical","M
 const ENDINGS = [["happy","Happy"],["surprise","Surprise"],["friendship","Friendship"],["sleepy","Sleepy"]];
 const SPARKS = ["It's my birthday!","I lost my favorite toy","My first day somewhere new","Learning to be brave","A rainy-day adventure","Making a new friend"];
 const DEFAULT_NAME = Object.fromEntries(CHARACTERS);
+const CHAR_LABEL = Object.fromEntries(CHARACTERS);
+const HERO_WINDOW = 6; // hero grid shows 6 at a time (ST4)
 
 function getDeviceId(){try{let id=localStorage.getItem("deviceId");if(!id){id="dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);localStorage.setItem("deviceId",id);}return id;}catch{return "dev_anon";}}
 function getKidProfileId(){try{const k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");return k&&k.id?k.id:null;}catch{return null;}}
@@ -36,30 +46,31 @@ function libImg(kind,slug,style,emo){return "/api/story-library?img="+kind+":"+s
 function iconImg(id){return "/api/game-art?img=story-icons:"+id+"&style=watercolor";}
 const SPARK_ICON={"It's my birthday!":"birthday","I lost my favorite toy":"lost_toy","My first day somewhere new":"first_day","Learning to be brave":"learn_brave","A rainy-day adventure":"rainy_day","Making a new friend":"new_friend"};
 const rand=(a)=>a[Math.floor(Math.random()*a.length)];
+function shuffle(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
-function Chevron({dir}){return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{dir==="up"?<polyline points="6 15 12 9 18 15"/>:<polyline points="6 9 12 15 18 9"/>}</svg>);}
+function Chevron({dir}){return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{dir==="left"?<polyline points="15 18 9 12 15 6"/>:<polyline points="9 18 15 12 9 6"/>}</svg>);}
 
 const kindOf=(k)=> k==="world"?"world":(k==="quest"||k==="mood"||k==="ending")?"icon":"character";
 function tileHue(seed){let h=0;const t=String(seed||"x");for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;return h%360;}
 // Friendly DRAWN placeholder (no emoji, per product law) shown INSTANTLY behind every
-// picker tile so a kid never sees a blank dark box; the real painted art fades in when
-// it loads (and TileImg retries a few times so it upgrades as the art warms in).
+// picker tile so a kid never sees a blank box; the real painted art fades in when it
+// loads (and TileImg retries a few times so it upgrades as the art warms in).
 function TilePlaceholder({kind,hue}){
-  const lite=`hsl(${hue},60%,72%)`;
+  const lite=`hsl(${hue},62%,74%)`;
   return (
     <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%"}}>
-      <defs><linearGradient id={"tg"+hue} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`hsl(${hue},55%,34%)`}/><stop offset="1" stopColor={`hsl(${(hue+38)%360},52%,22%)`}/></linearGradient></defs>
+      <defs><linearGradient id={"tg"+hue} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`hsl(${hue},58%,60%)`}/><stop offset="1" stopColor={`hsl(${(hue+38)%360},54%,48%)`}/></linearGradient></defs>
       <rect width="100" height="100" fill={`url(#tg${hue})`}/>
       {kind==="world" ? (<g>
-        <circle cx="72" cy="26" r="12" fill={lite} opacity="0.85"/>
-        <path d="M0 72 Q28 56 52 68 T100 62 L100 100 L0 100 Z" fill="rgba(0,0,0,0.22)"/>
-        <path d="M0 82 Q30 70 60 80 T100 76 L100 100 L0 100 Z" fill="rgba(0,0,0,0.34)"/>
+        <circle cx="72" cy="26" r="12" fill={lite} opacity="0.9"/>
+        <path d="M0 72 Q28 56 52 68 T100 62 L100 100 L0 100 Z" fill="rgba(255,255,255,0.18)"/>
+        <path d="M0 82 Q30 70 60 80 T100 76 L100 100 L0 100 Z" fill="rgba(0,0,0,0.12)"/>
       </g>) : kind==="icon" ? (
-        <path d="M50 24 l7 16 17 2 -13 12 4 17 -15 -9 -15 9 4 -17 -13 -12 17 -2 Z" fill={lite} opacity="0.9"/>
+        <path d="M50 24 l7 16 17 2 -13 12 4 17 -15 -9 -15 9 4 -17 -13 -12 17 -2 Z" fill={lite} opacity="0.95"/>
       ) : (<g>
         <ellipse cx="38" cy="30" rx="7" ry="12" fill={lite}/><ellipse cx="62" cy="30" rx="7" ry="12" fill={lite}/>
         <ellipse cx="50" cy="62" rx="24" ry="27" fill={lite}/>
-        <circle cx="42" cy="56" r="3" fill="rgba(0,0,0,0.55)"/><circle cx="58" cy="56" r="3" fill="rgba(0,0,0,0.55)"/>
+        <circle cx="42" cy="56" r="3" fill="rgba(0,0,0,0.45)"/><circle cx="58" cy="56" r="3" fill="rgba(0,0,0,0.45)"/>
       </g>)}
     </svg>
   );
@@ -70,7 +81,7 @@ function TileImg({src,alt,kind,seed,fit="contain",box}){
   const hue=tileHue(seed);
   const bust=tries>0?((src.indexOf("?")>=0?"&":"?")+"cb="+tries):"";
   return (
-    <div style={{position:"relative",overflow:"hidden",borderRadius:12,background:`hsl(${hue},52%,24%)`,...(box||{width:"100%",aspectRatio:"1/1"})}}>
+    <div style={{position:"relative",overflow:"hidden",borderRadius:12,background:`hsl(${hue},50%,88%)`,...(box||{width:"100%",aspectRatio:"1/1"})}}>
       {!loaded && <TilePlaceholder kind={kind} hue={hue}/>}
       <img src={src+bust} alt={alt||""} loading="eager" decoding="async"
         onLoad={()=>setLoaded(true)}
@@ -79,11 +90,23 @@ function TileImg({src,alt,kind,seed,fit="contain",box}){
     </div>
   );
 }
+// Real saved-story cover: use the story's own first-page painted art (thumbnail
+// from /api/list-stories); fall back to a soft cream panel if it hasn't painted.
+function SavedCover({src,color}){
+  const [ok,setOk]=useState(!!src);
+  if(src&&ok){
+    return <img src={src} alt="" loading="lazy" decoding="async" onError={()=>setOk(false)}
+      style={{width:"100%",height:"100%",objectFit:"cover"}}/>;
+  }
+  return (<div style={{width:"100%",height:"100%",background:color||"linear-gradient(160deg,#efe6ff,#ffe3ee)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="rgba(58,46,77,0.38)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h7v18H6a2 2 0 0 0-2 2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 1 2 2z"/></svg>
+  </div>);
+}
 
 export default function StoryMaker({ onBack, onHome, playerName, remix = null, onConsumeRemix = null }) {
   const deviceId=getDeviceId(); const kidProfileId=getKidProfileId();
   const [view,setView]=useState("landing");   // landing | pick | generating | reading
-  const [step,setStep]=useState(0);
+  const [step,setStep]=useState(0);            // 0 hero | 1 world | 2 what happens
 
   const [guide,setGuide]=useState("unicorn");
   const [style,setStyle]=useState("watercolor");
@@ -95,6 +118,9 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   const [spark,setSpark]=useState("");
   const [customSpark,setCustomSpark]=useState("");
   const [name,setName]=useState(DEFAULT_NAME["bunny"]);
+  const [heroWin,setHeroWin]=useState(()=>CHARACTERS.slice(0,HERO_WINDOW).map(c=>c[0]));
+  const [drawerOpen,setDrawerOpen]=useState(false);
+  const [dice,setDice]=useState(null);          // null | {phase:"roll"|"land", hero,world,quest}
 
   const [story,setStory]=useState(null);
   const [error,setError]=useState(null);
@@ -108,14 +134,12 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   const [gateNext,setGateNext]=useState(null);              // pending action awaiting a quick question
 
   // --- sound: calming background music + talking story buddy (iPad-safe) ---
-  // The buddy voice uses the SAME ElevenLabs narration the reader uses
-  // (/api/narrate-story-page) — real audio files, which play reliably on iPad.
-  // Browser speech is only a fallback if ElevenLabs isn't configured.
   const [soundOn,setSoundOn]=useState(true);
   const musicRef=useRef(null);      // looping background music
   const voiceRef=useRef(null);      // the buddy's spoken-line player
   const narrCacheRef=useRef({});    // text -> audioUrl ("none" if unavailable)
   const primedRef=useRef(false);
+  const diceCtxRef=useRef(null);    // tiny WebAudio context for the dice tick
 
   async function loadSaved(){try{const r=await fetch("/api/list-stories?deviceId="+encodeURIComponent(deviceId)+(kidProfileId?"&kidProfileId="+encodeURIComponent(kidProfileId):""));const j=await r.json();setSaved(Array.isArray(j.stories)?j.stories:[]);}catch{}}
   useEffect(()=>{loadSaved();},[]);
@@ -127,9 +151,8 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
       body:JSON.stringify({kind:"story",id:st.story_id,deviceId,kidProfileId:getKidProfileId()||undefined,publish:next})}); }catch{}
   }
 
-  // Remix: open the picker pre-filled with the EXACT choices behind another kid's
-  // published story (hero, world, quest, mood, ending, art style), so the kid can
-  // tweak anything and make their own version. Falls back to seeding the idea.
+  // Remix: open pre-filled with the EXACT choices behind another kid's published
+  // story, so the kid can tweak anything and make their own version.
   useEffect(()=>{
     if(!remix) return;
     let alive=true;
@@ -145,7 +168,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
       if(c){
         if(c.guide)setGuide(c.guide);
         setStyle(c.style||"watercolor");
-        if(c.characterSlug)setHero(c.characterSlug);
+        if(c.characterSlug){setHero(c.characterSlug);setHeroWin(makeHeroWindow(c.characterSlug));}
         if(c.worldSlug)setWorld(c.worldSlug);
         if(c.quest)setQuest(c.quest);
         if(c.mood)setMood(c.mood);
@@ -165,10 +188,25 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   function ensureMusic(){ if(!musicRef.current && typeof window!=="undefined"){ const a=new Audio(MUSIC_URL); a.loop=true; a.volume=0.18; a.preload="auto"; musicRef.current=a; } return musicRef.current; }
   function ensureVoice(){ if(!voiceRef.current && typeof window!=="undefined"){ const a=new Audio(); a.preload="auto"; voiceRef.current=a; } return voiceRef.current; }
   function stopVoice(){ try{ if(voiceRef.current){ voiceRef.current.pause(); } }catch{} try{ if(typeof window!=="undefined"&&window.speechSynthesis) window.speechSynthesis.cancel(); }catch{} }
-  // Fetch + cache a spoken line ahead of time (so it plays the instant it's needed).
   function prewarm(text){ if(!text||narrCacheRef.current[text]!==undefined) return; fetch("/api/narrate-story-page",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})}).then(r=>r.json()).then(j=>{ narrCacheRef.current[text]=(j&&j.configured&&j.audioUrl)?j.audioUrl:"none"; }).catch(()=>{}); }
 
-  // The buddy speaks a line via ElevenLabs (cached per-text so repeats are free + instant).
+  // A tiny synthesized "tick" for the dice roll — no audio asset needed.
+  function diceTick(){
+    if(!soundOn||typeof window==="undefined") return;
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+      const ctx=diceCtxRef.current||(diceCtxRef.current=new AC());
+      const o=ctx.createOscillator(); const g=ctx.createGain();
+      o.type="triangle"; o.frequency.value=260+Math.random()*160;
+      o.connect(g); g.connect(ctx.destination);
+      const t=ctx.currentTime;
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.18,t+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);
+      o.start(t); o.stop(t+0.17);
+    }catch{}
+  }
+
   async function say(text){
     if(!soundOn||typeof window==="undefined"||!text) return;
     const v=ensureVoice(); if(!v) return;
@@ -180,8 +218,8 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
         url=(j&&j.configured&&j.audioUrl)?j.audioUrl:"none";
         narrCacheRef.current[text]=url;
       }
-      if(!soundOn) return; // kid may have muted while it loaded
-      if(url==="none"){ // ElevenLabs not configured -> gentle browser-speech fallback
+      if(!soundOn) return;
+      if(url==="none"){
         if(window.speechSynthesis){ try{ window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.rate=0.95; u.pitch=1.12; window.speechSynthesis.speak(u); }catch{} }
         return;
       }
@@ -189,7 +227,6 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
     }catch{}
   }
 
-  // Unlock audio from inside a real tap — required by iOS Safari / iPad.
   function primeSound(){
     if(typeof window==="undefined") return;
     const m=ensureMusic(); if(m&&soundOn){ try{ m.play().catch(()=>{}); }catch{} }
@@ -203,10 +240,25 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   }
   function toggleSound(){ setSoundOn(v=>{ const n=!v; const m=musicRef.current; if(m){ if(n){ m.play().catch(()=>{}); } else { try{m.pause();}catch{} } } if(!n){ stopVoice(); } return n; }); }
 
-  // Stop music + voice when the story maker closes.
   useEffect(()=>()=>{ try{ if(musicRef.current) musicRef.current.pause(); }catch{} stopVoice(); },[]);
 
-  function reset(){setGuide("unicorn");setStyle("watercolor");setHero("bunny");setWorld("enchanted-forest");setQuest("lost_friend");setMood("cozy");setEnding("happy");setSpark("");setCustomSpark("");setName(DEFAULT_NAME["bunny"]);}
+  // A fresh hero window of 6 that always includes the current hero.
+  function makeHeroWindow(keep){
+    const rest=shuffle(CHARACTERS.map(c=>c[0]).filter(id=>id!==keep)).slice(0,HERO_WINDOW-1);
+    return shuffle([keep,...rest]);
+  }
+  function shuffleHeroes(){ primeSound(); setHeroWin(makeHeroWindow(hero)); }
+
+  // New story = fresh smart defaults. Buddy + mood + ending are randomized per
+  // story (ST4 smart defaults); art style stays watercolor (our best-tuned look,
+  // still changeable in More choices).
+  function reset(){
+    setGuide(rand(GUIDES)[0]); setStyle("watercolor");
+    setHero("bunny"); setName(DEFAULT_NAME["bunny"]); setHeroWin(CHARACTERS.slice(0,HERO_WINDOW).map(c=>c[0]));
+    setWorld(rand(WORLDS)[0]); setQuest(rand(QUESTS)[0]);
+    setMood(rand(MOODS)[0]); setEnding(rand(ENDINGS)[0]);
+    setSpark(""); setCustomSpark(""); setDrawerOpen(false);
+  }
   function doStartPicker(){setError(null);reset();setStep(0);setView("pick");}
   function maybeGate(action){
     const ls=getLearningSettings();
@@ -215,51 +267,54 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   }
   function startPicker(){ primeSound(); maybeGate(doStartPicker); }
 
+  // Three core screens. Buddy/style/mood/ending live in the More-choices drawer.
   const STEPS = [
-    { key:"guide",  q:"Who's your story buddy?", opts:GUIDES,     val:guide,  set:setGuide,  img:(id)=>libImg("character",id,"watercolor","happy") },
-    { key:"style",  q:"Pick a look",             opts:STYLES,     val:style,  set:setStyle,  img:(id)=>libImg("character","bunny",id) },
-    { key:"hero",   q:"Who's our hero?",          opts:CHARACTERS, val:hero,   set:(v)=>{setHero(v);setName(DEFAULT_NAME[v]||"");}, img:(id)=>libImg("character",id,"watercolor","happy") },
-    { key:"world",  q:"Where does it happen?",    opts:WORLDS,     val:world,  set:setWorld,  img:(id)=>libImg("world",id,"watercolor") },
-    { key:"quest",  q:"What happens in the story?",opts:QUESTS,    val:quest,  set:setQuest,  img:(id)=>iconImg(id) },
-    { key:"mood",   q:"How should it feel?",      opts:MOODS,      val:mood,   set:setMood,   img:(id)=>iconImg(id) },
-    { key:"ending", q:"How does it end?",         opts:ENDINGS,    val:ending, set:setEnding, img:(id)=>iconImg(id) },
+    { key:"hero",  q:"Who's our hero?",       opts:heroWin.map(id=>[id,CHAR_LABEL[id]||id]), val:hero,  set:(v)=>{setHero(v);setName(DEFAULT_NAME[v]||"");}, img:(id)=>libImg("character",id,"watercolor","happy") },
+    { key:"world", q:"Where does it happen?", opts:WORLDS, val:world, set:setWorld, img:(id)=>libImg("world",id,"watercolor") },
+    { key:"quest", q:"What happens?",          opts:QUESTS, val:quest, set:setQuest, img:(id)=>iconImg(id) },
   ];
   const TOTAL=STEPS.length;
-  const atEnd=step>=TOTAL;
+  const LAST=TOTAL-1;
   const cur=STEPS[step];
 
-  // Background music plays only while building; pause everywhere else.
   useEffect(()=>{ const m=musicRef.current; if(m){ if(soundOn&&view==="pick"){ m.play().catch(()=>{}); } else { try{m.pause();}catch{} } } if(view!=="pick"){ stopVoice(); } },[view,soundOn]);
-  // The story buddy reads each question aloud as the kid moves through the steps.
-  useEffect(()=>{ if(view!=="pick") return; const t=setTimeout(()=>{ if(atEnd){ say("One last thing! Give your hero a name, then tap Make my story!"); } else if(cur){ say(step===0 ? ("Hi! Let's make a magical story together. "+cur.q) : cur.q); } }, 450); return ()=>clearTimeout(t); },[view,step]);
-  // Pre-load the pictures for the current + upcoming steps so tiles appear fast.
-  useEffect(()=>{ if(typeof window==="undefined") return; if(view!=="pick"&&view!=="landing") return; const idxs = view==="landing" ? [0,1,2] : [step,step+1,step+2]; idxs.forEach(i=>{ const st=STEPS[i]; if(!st||!st.img) return; st.opts.forEach(([id])=>{ try{ const im=new Image(); im.decoding="async"; im.src=st.img(id); }catch{} }); }); if(view==="pick"&&soundOn){ const nx=STEPS[step+1]; if(nx) prewarm(nx.q); if(step+1>=TOTAL) prewarm("One last thing! Give your hero a name, then tap Make my story!"); } },[view,step]);
+  // The buddy reads each screen's question aloud as the kid moves through them.
+  useEffect(()=>{ if(view!=="pick") return; const t=setTimeout(()=>{ if(cur){ say(step===0 ? ("Hi! Let's make a magical story together. "+cur.q) : cur.q); } }, 450); return ()=>clearTimeout(t); },[view,step]);
+  // Pre-load the pictures for the current + next screen so tiles appear fast.
+  useEffect(()=>{ if(typeof window==="undefined") return; if(view!=="pick"&&view!=="landing") return; const idxs = view==="landing" ? [0,1] : [step,step+1]; idxs.forEach(i=>{ const st=STEPS[i]; if(!st||!st.img) return; st.opts.forEach(([id])=>{ try{ const im=new Image(); im.decoding="async"; im.src=st.img(id); }catch{} }); }); if(view==="pick"&&soundOn){ const nx=STEPS[step+1]; if(nx) prewarm(nx.q); } },[view,step,heroWin]);
 
-  function labelOf(st){const o=st.opts.find(x=>x[0]===st.val);return o?o[1]:"";}
-  function cycle(st,dir){const i=st.opts.findIndex(o=>o[0]===st.val);const ni=((i<0?0:i)+dir+st.opts.length)%st.opts.length;st.set(st.opts[ni][0]);}
   function pickOpt(st,id){st.set(id);}
-  // Page painting now lives ENTIRELY in StoryReader (one paint owner): it shows the
-  // layered art instantly and crossfades each painted page in as its gen finishes.
+  function cycleVal(list,val,set,dir){const i=list.findIndex(o=>o[0]===val);const ni=((i<0?0:i)+dir+list.length)%list.length;set(list[ni][0]);}
 
-  function next(){setStep(s=>Math.min(TOTAL,s+1));}
-  function back(){ if(atEnd){setStep(TOTAL-1);return;} if(step>0)setStep(step-1); else setView("landing"); }
+  function next(){setStep(s=>Math.min(LAST,s+1));}
+  function back(){ if(step>0)setStep(step-1); else setView("landing"); }
 
-  function doSurprise(){
+  // ---------- STORY DICE (replaces "Surprise me") ----------
+  function doRollDice(){
+    primeSound();
+    const h=rand(CHARACTERS)[0], w=rand(WORLDS)[0], qz=rand(QUESTS)[0];
+    const gd=rand(GUIDES)[0], md=rand(MOODS)[0], en=rand(ENDINGS)[0], sp=rand(SPARKS);
     setError(null);
-    setGuide(rand(GUIDES)[0]); setStyle("watercolor");
-    const h=rand(CHARACTERS)[0];
-    makeStory({ guide:rand(GUIDES)[0], style:"watercolor", characterSlug:h, characterName:DEFAULT_NAME[h], worldSlug:rand(WORLDS)[0],
-      quest:rand(QUESTS)[0], mood:rand(MOODS)[0], ending:rand(ENDINGS)[0], spark:rand(SPARKS) });
+    setDice({phase:"roll",hero:h,world:w,quest:qz});
+    diceTick();
+    const t1=setTimeout(()=>{ diceTick(); }, 380);
+    const t2=setTimeout(()=>{ diceTick(); }, 760);
+    const t3=setTimeout(()=>{ setDice(d=>d?{...d,phase:"land"}:d); diceTick(); }, 1150);
+    const t4=setTimeout(()=>{
+      setDice(null);
+      setGuide(gd); setStyle("watercolor"); setHero(h); setName(DEFAULT_NAME[h]||"");
+      setWorld(w); setQuest(qz); setMood(md); setEnding(en);
+      makeStory({ guide:gd, style:"watercolor", characterSlug:h, characterName:DEFAULT_NAME[h], worldSlug:w, quest:qz, mood:md, ending:en, spark:sp });
+    }, 2000);
+    diceTimersRef.current=[t1,t2,t3,t4];
   }
-  function surprise(){ primeSound(); maybeGate(doSurprise); }
+  const diceTimersRef=useRef([]);
+  useEffect(()=>()=>{ diceTimersRef.current.forEach(clearTimeout); },[]);
+  function storyDice(){ primeSound(); maybeGate(doRollDice); }
 
-  // Open a finished story straight into the reader — no Painting screen. The reader
-  // shows layered art instantly and paints each page in as its gen finishes.
   function openFreshStory(st){ setStory(st); setSavedMsg(""); setCurrentStoryId(null); setJustFinished(true); setView("reading"); }
   async function generateStoryRaw(body){
     try{
-      // Grade-based text length: send the kid's grade (from parent settings) and the
-      // age it maps to, so K-1 stories come back in short 1-2 sentence pages.
       const ls=getLearningSettings()||{}; const grade=ls.grade||"";
       const age=grade?gradeToAge(grade):6;
       const r=await fetch("/api/generate-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...body, grade, age, deviceId, kidProfileId})});
@@ -284,11 +339,11 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   const pickSig=()=>[guide,style,hero,world,quest,mood,ending,(customSpark.trim()||spark)].join("|");
   function pickBody(nm){ return { guide, style, characterSlug:hero, characterName:nm, worldSlug:world, quest, mood, ending, spark:(customSpark.trim()||spark) }; }
 
-  // WRITE-WHILE-NAMING: the moment the naming screen is up, quietly start writing the
-  // story with the hero's DEFAULT name. On Make we swap in the kid's typed name.
-  // Debounced so cycling the chips doesn't spam the writer.
+  // WRITE-WHILE-NAMING (ST1): once the kid is on the final screen (all three core
+  // choices made), quietly start writing with the hero's DEFAULT name. On Make we
+  // swap in the kid's typed name. Debounced so tweaking a drawer chip doesn't spam.
   useEffect(()=>{
-    if(view!=="pick"||!atEnd) return;
+    if(view!=="pick"||step!==LAST) return;
     const sig=pickSig();
     if(prewriteRef.current.sig===sig && prewriteRef.current.promise) return;
     const t=setTimeout(()=>{ const nm=DEFAULT_NAME[hero]||"Hero";
@@ -311,13 +366,9 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
     const body = payload || pickBody(name||DEFAULT_NAME[hero]||"");
     setError(null); setGenMsg("Writing your story"); setView("generating");
     const st=await generateStoryRaw(body);
-    if(!st){ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); return; }
+    if(!st){ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(LAST); return; }
     openFreshStory(st);
   }
-  // "What happens next?" — a true CHAPTER 2 that CONTINUES this story: same hero,
-  // friend, world and art style, plus a recap of the pages so the writer picks up
-  // where it left off (not a repeat). Linked by series_id + chapter so My stories
-  // can show a "Chapter 2" ribbon. Reuses the existing cutouts, so art stays cheap.
   async function continueStory(prev){
     const c=(prev&&prev.created_with)||{};
     const priorPages=Array.isArray(prev&&prev.pages)?prev.pages.map(p=>p&&p.text).filter(Boolean):[];
@@ -344,9 +395,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   async function openSaved(storyId){try{const r=await fetch("/api/list-stories?storyId="+encodeURIComponent(storyId));const j=await r.json();if(j&&j.story&&j.story.story){setStory(j.story.story);setSavedMsg("");setCurrentStoryId(storyId);setView("reading");}}catch{}}
   async function deleteSaved(storyId){try{await fetch("/api/delete-story",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({deviceId,storyId})});setSaved(p=>p.filter(x=>x.story_id!==storyId));}catch{}}
 
-  // Learning gate overlay: when set, show one quick question first, then run the
-  // pending action (start a new story / surprise). Never hard-fails (QuizGate
-  // has Skip + passes through on errors).
+  // Learning gate overlay.
   if (gateNext) {
     const proceed = gateNext;
     return (
@@ -374,76 +423,98 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
     </div>);
   }
 
-  // ---------- PICKER ----------
+  // ---------- PICKER (3 screens) ----------
   if(view==="pick"){
+    const heroChosen=STEPS[0].opts.some(o=>o[0]===hero);
     return (<div style={s.container}>
-      <style>{spin+lock}</style>
+      <style>{spin+diceKf}</style>
       <div style={s.topBar}><button style={s.navBtn} onClick={back}>Back</button><button style={s.navBtn} onClick={toggleSound} aria-label="Turn sound on or off">{soundOn?"Sound on":"Sound off"}</button><button style={s.navBtn} onClick={onHome}>Home</button></div>
-      <div style={s.dots}>{STEPS.map((_,i)=><span key={i} style={{...s.dot,...(i===step?s.dotOn:i<step?s.dotDone:{})}}/>)}<span style={{...s.dot,...(atEnd?s.dotOn:{})}}/></div>
 
-      {!atEnd ? (<>
-        <h2 style={s.qTitle}>{cur.q}</h2>
-        <div style={cur.img?s.grid:s.textGrid}>
-          {cur.opts.map(([id,label])=>{const on=cur.val===id;return (
-            <button key={id} onClick={()=>pickOpt(cur,id)} style={{...(cur.img?s.gTile:s.textTile),...(on?s.tileOn:{})}}>
-              {cur.img && <TileImg src={cur.img(id)} alt={label} kind={kindOf(cur.key)} seed={cur.key+":"+id} fit={cur.key==="world"?"cover":"contain"}/>}
-              <span style={s.gLabel}>{label}</span>
-            </button>);})}
-        </div>
-        <div style={s.wizNav}>
-          <button style={s.skip} onClick={()=>setStep(TOTAL)}>Skip to the end</button>
-          <button style={s.next} onClick={next}>Next</button>
-        </div>
-      </>) : (<>
-        <h2 style={s.qTitle}>One last thing!</h2>
-        <div style={{width:"100%",maxWidth:520,display:"flex",flexDirection:"column",alignItems:"center"}}>
-          <label style={s.fieldLbl}>Name your hero</label>
-          <input style={{...s.bigInput,textAlign:"center",fontFamily:FRED,fontSize:20}} value={name} maxLength={28} onChange={e=>setName(e.target.value)} placeholder="Hero name"/>
-          <label style={{...s.fieldLbl,marginTop:10}}>What's your big idea? (optional)</label>
-          <div style={s.sparkGrid}>
-            {SPARKS.map((txt)=>(<button key={txt} onClick={()=>{setSpark(txt===spark&&!customSpark?"":txt);setCustomSpark("");}} style={{...s.sparkCard,...((spark===txt&&!customSpark)?s.tileOn:{})}}>{SPARK_ICON[txt]&&<TileImg src={iconImg(SPARK_ICON[txt])} kind="icon" seed={"spark:"+txt} fit="contain" box={{width:56,height:56,borderRadius:12}}/>}{txt}</button>))}
-          </div>
-          <input style={s.bigInput} value={customSpark} maxLength={140} placeholder="…or type your own idea" onChange={(e)=>{setCustomSpark(e.target.value);if(e.target.value)setSpark("");}}/>
-          <button style={s.makeBtn} onClick={doMake}>Make my story!</button>
+      <div style={s.dots}>{STEPS.map((_,i)=><span key={i} style={{...s.dot,...(i===step?s.dotOn:i<step?s.dotDone:{})}}/>)}</div>
+      <h2 style={s.qTitle}>{cur.q}</h2>
+
+      <div style={s.grid}>
+        {cur.opts.map(([id,label])=>{const on=cur.val===id;return (
+          <button key={id} onClick={()=>pickOpt(cur,id)} style={{...s.gTile,...(on?s.tileOn:{})}}>
+            <TileImg src={cur.img(id)} alt={label} kind={kindOf(cur.key)} seed={cur.key+":"+id} fit={cur.key==="world"?"cover":"contain"}/>
+            <span style={s.gLabel}>{label}</span>
+          </button>);})}
+      </div>
+
+      {/* HERO screen: Shuffle + name-on-hero popover */}
+      {step===0 && (<>
+        <button style={s.shuffleBtn} onClick={shuffleHeroes} aria-label="Show different heroes">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><path d="M4 20L21 3"/><polyline points="21 16 21 21 16 21"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+          Shuffle heroes
+        </button>
+        <div style={s.namePop}>
+          <label style={s.nameLbl}>{heroChosen?`Name your ${CHAR_LABEL[hero]||"hero"}`:"Name your hero"}</label>
+          <input style={s.nameInput} value={name} maxLength={28} onChange={e=>setName(e.target.value)} placeholder="Hero name"/>
         </div>
       </>)}
 
-      {/* STORY SO FAR — carry choices along; change any inline */}
-      <div style={s.sofarWrap}>
-        <div style={s.sofarHead}>Your story so far — change anything</div>
-        <div style={s.chipStrip}>
-          {STEPS.filter((_,i)=>i<step||atEnd).map((st,i)=>(
-            <div key={st.key} style={s.chip}>
-              <button style={s.chev} onClick={()=>cycle(st,-1)} aria-label={"Change "+st.q}><Chevron dir="up"/></button>
-              {st.img && <TileImg src={st.img(st.val)} kind={kindOf(st.key)} seed={"chip:"+st.key+":"+st.val} fit={st.key==="world"?"cover":"contain"} box={{width:38,height:38,borderRadius:8}}/>}
-              <div style={s.chipVal}>{labelOf(st)}</div>
-              <button style={s.chev} onClick={()=>cycle(st,1)} aria-label={"Change "+st.q}><Chevron dir="down"/></button>
-            </div>))}
+      {/* FINAL screen: More choices drawer + big idea + Make */}
+      {step===LAST && (<div style={{width:"100%",maxWidth:560,display:"flex",flexDirection:"column",alignItems:"center"}}>
+        <button style={s.drawerToggle} onClick={()=>setDrawerOpen(o=>!o)} aria-expanded={drawerOpen}>
+          <span>More choices</span><span style={{transform:drawerOpen?"rotate(90deg)":"none",transition:"transform .18s ease",display:"inline-flex"}}><Chevron dir="right"/></span>
+        </button>
+        {drawerOpen && (<div style={s.drawer}>
+          {DRAWER(guide,setGuide,style,setStyle,mood,setMood,ending,setEnding).map((row)=>(
+            <div key={row.label} style={s.drawerRow}>
+              <span style={s.drawerLbl}>{row.label}</span>
+              <div style={s.drawerCtl}>
+                <button style={s.drawerChev} onClick={()=>cycleVal(row.list,row.val,row.set,-1)} aria-label={"Previous "+row.label}><Chevron dir="left"/></button>
+                <TileImg src={row.img(row.val)} kind={row.kind} seed={"dr:"+row.label+":"+row.val} fit="contain" box={{width:40,height:40,borderRadius:9}}/>
+                <span style={s.drawerVal}>{(row.list.find(o=>o[0]===row.val)||[,""])[1]}</span>
+                <button style={s.drawerChev} onClick={()=>cycleVal(row.list,row.val,row.set,1)} aria-label={"Next "+row.label}><Chevron dir="right"/></button>
+              </div>
+            </div>
+          ))}
+        </div>)}
+
+        <label style={{...s.nameLbl,marginTop:16}}>Add your own idea? (optional)</label>
+        <div style={s.sparkGrid}>
+          {SPARKS.map((txt)=>(<button key={txt} onClick={()=>{setSpark(txt===spark&&!customSpark?"":txt);setCustomSpark("");}} style={{...s.sparkCard,...((spark===txt&&!customSpark)?s.tileOn:{})}}>{SPARK_ICON[txt]&&<TileImg src={iconImg(SPARK_ICON[txt])} kind="icon" seed={"spark:"+txt} fit="contain" box={{width:48,height:48,borderRadius:11}}/>}{txt}</button>))}
         </div>
+        <input style={s.bigInput} value={customSpark} maxLength={140} placeholder="…or type your own idea" onChange={(e)=>{setCustomSpark(e.target.value);if(e.target.value)setSpark("");}}/>
+      </div>)}
+
+      <div style={s.wizNav}>
+        {step<LAST
+          ? <button style={s.next} onClick={next}>Next</button>
+          : <button style={s.makeBtn} onClick={doMake}>Make my story!</button>}
       </div>
+
       {error&&<p style={s.error}>{error}</p>}
     </div>);
   }
 
   // ---------- LANDING ----------
   return (<div style={s.container}>
+    <style>{diceKf}</style>
+    {dice && <DiceOverlay dice={dice} heroImg={libImg("character",dice.hero,"watercolor","happy")} worldImg={libImg("world",dice.world,"watercolor")} questImg={iconImg(dice.quest)} />}
     <div style={s.topBar}><button style={s.navBtn} onClick={onBack||onHome}>Back</button><button style={s.navBtn} onClick={onHome}>Home</button></div>
     <h1 style={s.logo}>Stories</h1>
     <p style={s.tagline}>Make a magical picture book — just tap!</p>
     <button style={s.startBtn} onClick={startPicker}>Make a new story</button>
-    <button style={s.surpriseBtn} onClick={surprise}>Surprise me!</button>
+    <button style={s.diceBtn} onClick={storyDice}>
+      <DiceGlyph/> Roll the Story Dice
+    </button>
 
     {saved.length>0&&(<div style={s.savedWrap}>
       <h3 style={s.sectionTitle}>My stories</h3>
       <div style={s.savedRow}>
         {saved.map((st)=>(<div key={st.story_id} style={s.savedCard}>
           <button style={s.savedOpen} onClick={()=>openSaved(st.story_id)}>
-            <div style={{...s.savedCover,background:st.cover_color||"#7a4a86",position:"relative"}}>
+            <div style={s.savedCover}>
+              <SavedCover src={st.thumbnail} color={st.cover_color}/>
               {Number(st.chapter)>=2 && <span style={s.savedRibbon}>Chapter {Number(st.chapter)}</span>}
             </div>
             <span style={s.savedName}>{st.title}</span></button>
-          <button style={s.savedDel} onClick={()=>deleteSaved(st.story_id)} title="Delete">×</button>
-          <button style={{...s.savedPub,background:st.published?"rgba(61,208,106,0.9)":"rgba(0,0,0,0.6)"}} onClick={()=>publishStory(st)} title={st.published?"Published to Top board — tap to make private":"Publish to the Top board"} aria-label="Publish">
+          <button style={s.savedDel} onClick={()=>deleteSaved(st.story_id)} title="Delete" aria-label="Delete">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+          <button style={{...s.savedPub,background:st.published?"rgba(40,165,75,0.95)":"rgba(58,46,77,0.6)"}} onClick={()=>publishStory(st)} title={st.published?"Published to Top board — tap to make private":"Publish to the Top board"} aria-label="Publish">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>
           </button>
         </div>))}
@@ -452,61 +523,89 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   </div>);
 }
 
+// The four "smart default" choices, tucked in the More-choices drawer.
+function DRAWER(guide,setGuide,style,setStyle,mood,setMood,ending,setEnding){
+  return [
+    {label:"Story buddy", list:GUIDES,  val:guide,  set:setGuide,  img:(id)=>libImg("character",id,"watercolor","happy"), kind:"character"},
+    {label:"Look",        list:STYLES,  val:style,  set:setStyle,  img:(id)=>libImg("character","bunny",id),               kind:"character"},
+    {label:"Mood",        list:MOODS,   val:mood,   set:setMood,   img:(id)=>iconImg(id),                                  kind:"icon"},
+    {label:"How it ends", list:ENDINGS, val:ending, set:setEnding, img:(id)=>iconImg(id),                                  kind:"icon"},
+  ];
+}
+
+function DiceGlyph(){return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/></svg>);}
+
+// Three dice tumble (wobble) then land on hero / world / quest, then off to making.
+function DiceOverlay({dice,heroImg,worldImg,questImg}){
+  const rolling=dice.phase==="roll";
+  const faces=[{img:heroImg,label:"Hero",fit:"contain"},{img:worldImg,label:"Where",fit:"cover"},{img:questImg,label:"Quest",fit:"contain"}];
+  return (<div style={dov.wrap}>
+    <div style={dov.title}>{rolling?"Rolling the Story Dice…":"Your story!"}</div>
+    <div style={dov.row}>
+      {faces.map((f,i)=>(
+        <div key={i} style={{...dov.die, animation: rolling? `bkDiceRoll .5s ease-in-out ${i*0.08}s infinite` : `bkDiceLand .5s ease both ${i*0.09}s`}}>
+          <img src={f.img} alt="" decoding="async" style={{width:"100%",height:"100%",objectFit:f.fit,borderRadius:14}}/>
+          {!rolling && <span style={dov.dieLabel}>{f.label}</span>}
+        </div>
+      ))}
+    </div>
+  </div>);
+}
+
 const spin = "@keyframes bkSpin{0%,80%,100%{transform:scale(.4);opacity:.4}40%{transform:scale(1);opacity:1}}";
-const shimmer = "@keyframes bkShim{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes bkFade{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}";
-const lock = "@keyframes bkLock{0%{transform:scale(1)}55%{transform:scale(1.12);box-shadow:0 0 0 3px rgba(255,224,138,.55)}100%{transform:scale(1)}}";
+const diceKf = "@keyframes bkDiceRoll{0%{transform:rotate(-12deg) translateY(0)}25%{transform:rotate(11deg) translateY(-12px)}50%{transform:rotate(-7deg) translateY(0)}75%{transform:rotate(8deg) translateY(-7px)}100%{transform:rotate(-12deg) translateY(0)}}@keyframes bkDiceLand{0%{transform:scale(1.18) rotate(-4deg)}55%{transform:scale(.92) rotate(2deg)}100%{transform:scale(1) rotate(0)}}";
+
+const dov = {
+  wrap:{position:"fixed",inset:0,zIndex:9000,background:"rgba(255,248,238,0.94)",backdropFilter:"blur(3px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:26,padding:20},
+  title:{fontFamily:FRED,fontSize:"clamp(22px,5vw,30px)",color:INK,fontWeight:800},
+  row:{display:"flex",gap:"clamp(12px,3vw,22px)"},
+  die:{position:"relative",width:"clamp(84px,24vw,120px)",height:"clamp(84px,24vw,120px)",borderRadius:16,background:CARD,border:"1px solid rgba(58,46,77,0.12)",boxShadow:"0 12px 26px rgba(58,46,77,0.18)",padding:8,boxSizing:"border-box"},
+  dieLabel:{position:"absolute",bottom:-22,left:0,right:0,textAlign:"center",fontFamily:FRED,fontWeight:800,fontSize:13,color:SUB},
+};
 
 const s = {
-  container:{minHeight:"100vh",background:PAGE_BG,color:"#fff",fontFamily:NUN,padding:"20px 16px 60px",display:"flex",flexDirection:"column",alignItems:"center"},
-  topBar:{width:"100%",maxWidth:760,display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8},
-  navBtn:{padding:"10px 18px",background:"rgba(255,255,255,0.08)",color:"#fff",border:"1px solid rgba(255,255,255,0.16)",borderRadius:14,fontWeight:700,fontFamily:NUN,cursor:"pointer"},
-  logo:{fontFamily:FRED,fontSize: "clamp(26px, 7vw, 44px)",margin:"30px 0 6px",background:GRAD,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"},
-  tagline:{opacity:.8,marginBottom:26,fontSize:16},
-  startBtn:{padding:"16px 34px",borderRadius:18,border:"none",background:GRAD,color:"#fff",fontSize:19,fontWeight:800,fontFamily:FRED,cursor:"pointer",boxShadow:"0 10px 30px rgba(155,126,221,0.5)"},
-  surpriseBtn:{marginTop:14,padding:"12px 26px",borderRadius:16,border:"1px solid rgba(255,255,255,0.25)",background:"rgba(255,255,255,0.08)",color:"#fff",fontSize:16,fontWeight:800,fontFamily:FRED,cursor:"pointer"},
-  dots:{display:"flex",gap:6,marginTop:6,marginBottom:12,flexWrap:"wrap",justifyContent:"center",maxWidth:320},
-  dot:{width:9,height:9,borderRadius:"50%",background:"#39406e"},dotOn:{background:"#c06b99"},dotDone:{background:"#7aa2ff"},
-  qTitle:{fontFamily:FRED,fontSize:25,margin:"4px 0 18px",textAlign:"center"},
-  grid:{width:"100%",maxWidth:760,display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(135px,1fr))",gap:12},
-  textGrid:{width:"100%",maxWidth:620,display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12},
-  gTile:{borderRadius:16,border:"2px solid rgba(255,255,255,0.12)",background:"rgba(255,255,255,0.06)",color:"#fff",cursor:"pointer",padding:8,display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontFamily:NUN},
-  textTile:{borderRadius:16,border:"2px solid rgba(255,255,255,0.12)",background:"rgba(255,255,255,0.06)",color:"#fff",cursor:"pointer",padding:"20px 12px",fontFamily:FRED,fontSize:16,textAlign:"center"},
-  gImgChar:{width:"100%",aspectRatio:"1/1",objectFit:"contain",borderRadius:12,background:"rgba(255,255,255,0.05)"},
-  gImgWorld:{width:"100%",aspectRatio:"1/1",objectFit:"cover",borderRadius:12},
-  gLabel:{fontSize:13,fontWeight:700,textAlign:"center"},
-  tileOn:{border:"2px solid #ffe08a",boxShadow:"0 0 0 3px rgba(255,224,138,0.3)"},
-  wizNav:{display:"flex",gap:12,justifyContent:"center",marginTop:18,alignItems:"center"},
-  skip:{padding:"12px 20px",borderRadius:14,border:"1px solid rgba(255,255,255,0.2)",background:"transparent",color:"#cdd3ff",fontWeight:700,fontFamily:FRED,cursor:"pointer"},
-  next:{padding:"12px 30px",borderRadius:14,border:"none",background:GRAD,color:"#fff",fontWeight:800,fontFamily:FRED,fontSize:16,cursor:"pointer"},
-  fieldLbl:{fontSize:14,opacity:.85,marginBottom:6,fontFamily:FRED},
-  bigInput:{width:"100%",boxSizing:"border-box",padding:"13px 16px",borderRadius:14,border:"1px solid rgba(255,255,255,0.2)",background:"rgba(255,255,255,0.1)",color:"#fff",fontSize:16,fontFamily:NUN,marginBottom:12},
-  sparkGrid:{width:"100%",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:12},
-  sparkCard:{borderRadius:14,border:"2px solid rgba(255,255,255,0.12)",background:"rgba(255,255,255,0.06)",color:"#fff",cursor:"pointer",padding:"13px 12px",fontFamily:FRED,fontSize:14,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:6},
-  sparkImg:{width:56,height:56,objectFit:"contain"},
-  makeBtn:{marginTop:8,padding:"16px 34px",borderRadius:18,border:"none",background:GRAD,color:"#fff",fontSize:19,fontWeight:800,fontFamily:FRED,cursor:"pointer",boxShadow:"0 10px 30px rgba(155,126,221,0.5)"},
-  makeBtnLock:{opacity:.85,transform:"scale(.98)"},
-  sofarWrap:{width:"100%",maxWidth:760,marginTop:28},
-  sofarHead:{fontSize:13,color:"#b9b9d0",marginBottom:8,fontWeight:700,textAlign:"center"},
-  chipStrip:{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"},
-  chip:{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:14,padding:"6px 8px",minWidth:74},
-  chev:{background:"transparent",border:"none",color:"#9aa0c7",cursor:"pointer",padding:0,lineHeight:0,height:16},
-  chipImg:{width:38,height:38,objectFit:"contain",borderRadius:8},
-  chipVal:{fontSize:11,fontWeight:700,textAlign:"center",maxWidth:80},
-  error:{color:"#ffb0c0",fontSize:14,marginTop:12},
-  genTitle:{fontFamily:FRED,fontSize:26,margin:"18px 0 6px"},genSub:{opacity:.7},
-  paintGrid:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,width:"100%",maxWidth:520,margin:"16px 0 20px"},
-  paintCell:{aspectRatio:"3 / 2",borderRadius:12,overflow:"hidden",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)"},
-  paintImg:{width:"100%",height:"100%",objectFit:"cover",animation:"bkFade .5s ease both"},
-  paintShimmer:{width:"100%",height:"100%",background:"linear-gradient(100deg,rgba(255,255,255,0.05) 30%,rgba(255,255,255,0.20) 50%,rgba(255,255,255,0.05) 70%)",backgroundSize:"200% 100%",animation:"bkShim 1.4s linear infinite"},
+  container:{minHeight:"100vh",background:PAGE_BG,color:INK,fontFamily:NUN,padding:"20px 16px 60px",display:"flex",flexDirection:"column",alignItems:"center"},
+  topBar:{width:"100%",maxWidth:640,display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8},
+  navBtn:{padding:"10px 18px",background:CARD,color:INK,border:CARD_BORDER,borderRadius:14,fontWeight:800,fontFamily:NUN,cursor:"pointer",boxShadow:SHADOW},
+  logo:{fontFamily:FRED,fontSize:"clamp(30px, 8vw, 52px)",margin:"34px 0 6px",background:GRAD,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"},
+  tagline:{color:SUB,marginBottom:30,fontSize:17,fontWeight:600,textAlign:"center"},
+  startBtn:{padding:"17px 40px",borderRadius:20,border:"none",background:GRAD,color:"#fff",fontSize:20,fontWeight:800,fontFamily:FRED,cursor:"pointer",boxShadow:"0 12px 30px rgba(155,126,221,0.4)"},
+  diceBtn:{marginTop:16,padding:"13px 26px",borderRadius:18,border:CARD_BORDER,background:CARD,color:INK,fontSize:17,fontWeight:800,fontFamily:FRED,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:9,boxShadow:SHADOW},
+  dots:{display:"flex",gap:8,marginTop:8,marginBottom:14,justifyContent:"center"},
+  dot:{width:10,height:10,borderRadius:"50%",background:"rgba(58,46,77,0.16)"},dotOn:{background:"#c06b99"},dotDone:{background:"#9b7edd"},
+  qTitle:{fontFamily:FRED,fontSize:"clamp(24px,5.5vw,30px)",margin:"2px 0 20px",textAlign:"center",color:INK,fontWeight:800},
+  grid:{width:"100%",maxWidth:640,display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:14,justifyContent:"center"},
+  gTile:{borderRadius:18,border:CARD_BORDER,background:CARD,color:INK,cursor:"pointer",padding:10,display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:NUN,boxShadow:SHADOW},
+  gLabel:{fontSize:14,fontWeight:800,textAlign:"center",color:INK},
+  tileOn:{border:"2px solid #c06b99",boxShadow:"0 0 0 4px rgba(192,107,153,0.18)"},
+  shuffleBtn:{marginTop:18,padding:"11px 22px",borderRadius:16,border:CARD_BORDER,background:CARD,color:INK,fontWeight:800,fontFamily:FRED,fontSize:15,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8,boxShadow:SHADOW},
+  namePop:{marginTop:16,width:"100%",maxWidth:400,display:"flex",flexDirection:"column",alignItems:"center",background:CARD,border:CARD_BORDER,borderRadius:18,padding:"14px 16px",boxShadow:SHADOW},
+  nameLbl:{fontSize:14,color:SUB,marginBottom:8,fontFamily:FRED,fontWeight:700},
+  nameInput:{width:"100%",boxSizing:"border-box",padding:"13px 16px",borderRadius:14,border:CARD_BORDER,background:"#FFFDFA",color:INK,fontSize:19,fontFamily:FRED,textAlign:"center"},
+  drawerToggle:{marginTop:6,padding:"11px 20px",borderRadius:14,border:CARD_BORDER,background:CARD,color:INK,fontWeight:800,fontFamily:FRED,fontSize:15,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8,boxShadow:SHADOW},
+  drawer:{marginTop:12,width:"100%",background:CARD,border:CARD_BORDER,borderRadius:18,padding:"10px 14px",boxShadow:SHADOW},
+  drawerRow:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 2px",borderBottom:"1px solid rgba(58,46,77,0.07)"},
+  drawerLbl:{fontSize:14,fontWeight:800,color:INK,fontFamily:FRED},
+  drawerCtl:{display:"flex",alignItems:"center",gap:8},
+  drawerChev:{background:"rgba(58,46,77,0.06)",border:"none",color:INK,cursor:"pointer",width:30,height:30,borderRadius:9,display:"inline-flex",alignItems:"center",justifyContent:"center"},
+  drawerVal:{fontSize:12,fontWeight:800,color:INK,minWidth:78,textAlign:"center"},
+  sparkGrid:{width:"100%",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:10,marginBottom:12},
+  sparkCard:{borderRadius:14,border:CARD_BORDER,background:CARD,color:INK,cursor:"pointer",padding:"12px 12px",fontFamily:FRED,fontSize:14,fontWeight:700,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:7,boxShadow:SHADOW},
+  bigInput:{width:"100%",boxSizing:"border-box",padding:"13px 16px",borderRadius:14,border:CARD_BORDER,background:"#FFFDFA",color:INK,fontSize:16,fontFamily:NUN,marginBottom:8},
+  wizNav:{display:"flex",gap:12,justifyContent:"center",marginTop:22,alignItems:"center"},
+  next:{padding:"14px 40px",borderRadius:16,border:"none",background:GRAD,color:"#fff",fontWeight:800,fontFamily:FRED,fontSize:18,cursor:"pointer",boxShadow:"0 10px 26px rgba(155,126,221,0.36)"},
+  makeBtn:{padding:"17px 40px",borderRadius:20,border:"none",background:GRAD,color:"#fff",fontSize:20,fontWeight:800,fontFamily:FRED,cursor:"pointer",boxShadow:"0 12px 30px rgba(155,126,221,0.4)"},
+  error:{color:"#c0396a",fontSize:15,marginTop:14,fontWeight:700},
+  genTitle:{fontFamily:FRED,fontSize:26,margin:"18px 0 6px",color:INK,fontWeight:800},genSub:{color:SUB,fontWeight:600},
   spinDots:{display:"flex",gap:10},spinDot:{width:16,height:16,borderRadius:"50%",background:"#c06b99",animation:"bkSpin 1.2s ease-in-out infinite"},
-  savedWrap:{width:"100%",maxWidth:760,marginTop:40},
-  sectionTitle:{fontFamily:FRED,fontSize:20,marginBottom:12},
-  savedRow:{display:"flex",gap:12,flexWrap:"wrap"},
+  savedWrap:{width:"100%",maxWidth:640,marginTop:44},
+  sectionTitle:{fontFamily:FRED,fontSize:21,marginBottom:14,color:INK,fontWeight:800},
+  savedRow:{display:"flex",gap:14,flexWrap:"wrap"},
   savedCard:{position:"relative"},
-  savedOpen:{width:130,border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6},
-  savedCover:{width:130,height:90,borderRadius:14},
-  savedRibbon:{position:"absolute",top:6,left:6,background:"linear-gradient(135deg,#9b7edd,#d65a7b)",color:"#fff",fontSize:10,fontWeight:800,fontFamily:FRED,padding:"3px 8px",borderRadius:8,boxShadow:"0 2px 8px rgba(0,0,0,0.35)"},
-  savedName:{fontSize:13,fontWeight:700,color:"#fff",textAlign:"center"},
-  savedDel:{position:"absolute",top:-6,right:-6,width:26,height:26,borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.6)",color:"#fff",cursor:"pointer",fontSize:16,lineHeight:1},
-  savedPub:{position:"absolute",bottom:-6,right:-6,width:28,height:28,borderRadius:"50%",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+  savedOpen:{width:140,border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:7,padding:0},
+  savedCover:{width:140,height:98,borderRadius:16,overflow:"hidden",position:"relative",border:CARD_BORDER,boxShadow:SHADOW,background:"#efe6ff"},
+  savedRibbon:{position:"absolute",top:6,left:6,background:"linear-gradient(135deg,#9b7edd,#d65a7b)",color:"#fff",fontSize:10,fontWeight:800,fontFamily:FRED,padding:"3px 8px",borderRadius:8,boxShadow:"0 2px 8px rgba(0,0,0,0.3)"},
+  savedName:{fontSize:13,fontWeight:800,color:INK,textAlign:"center"},
+  savedDel:{position:"absolute",top:-6,right:-6,width:26,height:26,borderRadius:"50%",border:"none",background:"rgba(58,46,77,0.72)",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 3px 8px rgba(58,46,77,0.25)"},
+  savedPub:{position:"absolute",bottom:24,right:-6,width:28,height:28,borderRadius:"50%",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 3px 8px rgba(58,46,77,0.25)"},
 };
