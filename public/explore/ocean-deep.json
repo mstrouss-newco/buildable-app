@@ -4,7 +4,7 @@
   "template": "layers-cutaway",
   "topic": "ocean",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": [
     "ocean-facts",
     "reading"
@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 17,
+  "assetVersion": 18,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -347,7 +347,7 @@
       "id": "bluetang",
       "name": "Blue Tang",
       "zone": "sunlight",
-      "shape": "blob",
+      "shape": "bluetang",
       "anim": "a-bob",
       "habitat": "open",
       "type": "animal",

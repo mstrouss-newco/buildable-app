@@ -270,7 +270,7 @@ const EXHIBIT_CATALOG = [
   { id: "solar-system", title: "Our Solar System", topic: "space", color: "#4C6FE0", heroArt: "explore-solar-system-hero", status: "approved" },
   // Journey to the Deep (layers-cutaway dive template). Stays hidden from kids until
   // Mike fact-checks the roster and flips BOTH this status and ocean-deep.json to "approved".
-  { id: "ocean-deep", title: "Journey to the Deep", topic: "ocean", color: "#1173B4", heroArt: "explore-ocean-deep-hero", status: "in-review" },
+  { id: "ocean-deep", title: "Journey to the Deep", topic: "ocean", color: "#1173B4", heroArt: "/api/asset-studio?asset=explore/scene/ocean-photo/reef", status: "approved" },
   // Make It Rain (weather-lab template, the live weather machine). Approved by Mike 2026-07-21.
   { id: "make-it-rain", title: "Make It Rain", topic: "weather", color: "#37B6F5", heroArt: "explore-make-it-rain-hero", status: "approved" },
 ];
@@ -2915,7 +2915,7 @@ function HomeScreen(props) {
   const ExploreShelfCard = ({ ex }) => (
     <button onClick={() => props.onExplore && props.onExplore(ex.id)} style={shelfCardStyle}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${ex.color}, ${ex.color}99)` }}>
-        <img src={`/api/images?kind=explore&id=${encodeURIComponent(ex.heroArt)}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <img src={/^(\/|https?:)/.test(ex.heroArt) ? ex.heroArt : `/api/images?kind=explore&id=${encodeURIComponent(ex.heroArt)}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       </div>
       <div style={{ padding: "9px 11px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
