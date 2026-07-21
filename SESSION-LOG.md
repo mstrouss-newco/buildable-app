@@ -1,5 +1,38 @@
 # Buildable Kids — Session Log
 
+## 2026-07-20: Music Maker — Session MM2 (Make it a keeper)
+
+Second Music Maker block (requires MM1's flow, which is live). All work is in the Music
+Maker studio and its song APIs; no game engine was touched.
+
+What shipped:
+- Album covers per song: generate-song.js returns a stable, seeded cover URL
+  (/api/images?kind=cover); save-song.js pins it in saved_songs.meta.coverUrl; list-songs.js
+  surfaces it as cover_url; CoverThumb prefers the saved URL (color-square fallback kept).
+  Covers show on the reveal, the My Songs shelf and My Stuff, so the library reads like a
+  real album shelf. Optional db/add-song-cover-url.sql adds a real cover_url column + backfill.
+- Fun waiting show: a drawn "band warming up" SVG+CSS moment (BandWarmup) replaces the
+  spinner; rotating messages kept as spoken flavor. No emojis.
+- Title reveal: instant playful server-side title generator (no AI call/cost); the cover +
+  title reveal like a prize with a Feel Kit celebration before playback; title editable and
+  saved.
+- Make another about...: one-tap remake keeps style + singer, clears the topic. Instrument
+  packs (Brass Band / Strings / World Beats) each unlock 1-2 premium style cards; locked
+  cards show a coin price and buy via the shared wallet + shell loadout store.
+
+Added premium styles brass/swing/orchestral/waltz/samba/afrobeat to generate-song.js briefs
+and images.js style icons (IconImg falls back to a note glyph if an icon misses).
+
+QA: `node qa-music.mjs .` -> ALL PASS (studio contract validates; breaker/survival/sling
+manifests still valid). JSX bundled clean via esbuild; API files pass node --check. Full
+vite build was not run in-session (sandbox disk limit); verified on the Vercel deploy build.
+
+Owner action (optional): run db/add-song-cover-url.sql in Supabase for the tidy cover_url
+column. The app already works without it (cover URL lives in meta).
+
+Remains in the Music Maker phase: nothing outstanding from MM1/MM2 beyond that optional SQL.
+Future polish (real ElevenLabs previews for the new premium styles) is out of scope here.
+
 ## 2026-07-20: Story Maker 2.0 — Session ST2 (Wow: sequels + sharing polish)
 
 Second relaunch block for Stories (still COMING SOON — Mike decides the LIVE flip).

@@ -6,6 +6,26 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Music Maker: covers, title reveal & one-tap remakes (Session MM2, July 20 2026)
+Finished songs now feel like treasures. Building on MM1's no-reading flow, four upgrades to
+`src/MusicMaker.jsx` (plus the song APIs):
+- **Album covers.** Each song gets real cover art (`/api/images?kind=cover`, seeded so it is
+  unique), pinned to the song and shown on the reveal, the My Songs shelf and My Stuff. The
+  URL is stored in `saved_songs.meta.coverUrl` (no schema change needed); an optional
+  `db/add-song-cover-url.sql` adds a real `cover_url` column when convenient. The color
+  square + music-note stays as the fallback so nothing ever breaks.
+- **Waiting show.** The plain spinner is now a drawn "band warming up" scene (bouncing
+  drummer, swaying guitarist, dancing equalizer bars, floating notes), all SVG + CSS, no
+  emojis. The rotating messages stay as spoken/visible flavor.
+- **Title reveal.** A playful kid-safe title is built instantly on the server from the topic
+  + style (no AI call, no wait). The cover + title appear like a PRIZE with a Feel Kit
+  celebration BEFORE playback; the title is tappable to rename and is saved on Save.
+- **Make another about...** After a song, one tap re-opens step 1 with the same style +
+  singer locked in and the topic cleared. The Brass Band / Strings / World Beats instrument
+  packs each unlock 1-2 premium style cards; locked cards show a coin price and buy through
+  the shared wallet (`window.BuildableWallet`) + the shell loadout store.
+QA: `qa-music.mjs` ALL PASS (studio contract intact, no game-manifest regressions).
+
 ## Music Maker: instant + speakable, no reading needed (Session MM1, July 20 2026)
 Rebuilt the Music Maker "Make a Song" flow (`src/MusicMaker.jsx`) so a child who can't
 read can make a song alone. The old seven-question wizard is replaced by three big spoken
