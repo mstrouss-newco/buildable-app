@@ -6,78 +6,22 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
-## Story Maker 2.0 — ST4: fewer taps + light theme (July 21 2026)
-
-Fourth and final planned Stories relaunch block (still COMING SOON; Mike decides the LIVE flip
-after his own device QA — not flipped here). All work is in the story maker/reader; no game
-touched, so no game QA script applies (Stories has no `qa-*.mjs`). **Fewer taps:** the picker
-drops from ~8 screens to **three** — Hero, World, then "What happens?" (the quest). Story
-buddy, art look, mood and ending are no longer separate screens; they get sensible random
-defaults per story (buddy/mood/ending randomized; look stays watercolor, our best-tuned art)
-and sit in a **"More choices" drawer** on the final screen. Generation still fires when the
-last of the three choices is made, so ST1's write-while-naming is preserved and the story is
-usually written before the kid taps Make. The **hero screen shows 6 heroes with a "Shuffle
-heroes" button** (not all 18), and **naming merged onto the hero screen** as a small editable
-name card (no separate final step). **"Story Dice"** replaces "Surprise me" on the landing:
-three dice wobble with a soft synthesized tick (no audio asset), land on hero / world / quest,
-then go straight to making (still runs the learning gate). **Visual refresh:** the whole
-surface is now the app's **cream/light theme** (session 3E palette: `#FFF8EE` ground, white
-cards, `#3A2E4D` ink), centered and scaled up, so Stories no longer reads as a darker, separate
-product. **Repaint moved behind grown-ups:** the reader's "Repaint this page" is now a small
-"Grown-ups: repaint" control gated by the same quick math check the rest of the app uses, so a
-kid can't burn image generations re-rolling art. **Real "My stories" covers:** the Stories
-landing renders each story's real first-page painted art (the `thumbnail` the list API already
-returns) with a soft cream book fallback, replacing the flat purple rectangles; delete/publish
-controls got clearer drawn icons and bigger tap targets. No emojis (drawn SVG throughout). QA:
-`vite build` compiles clean on latest main; esbuild parses both changed files. Files:
-`src/StoryMaker.jsx`, `src/StoryReader.jsx`, `SESSION-LOG.md`, `README.md`.
-
-
-## Story Maker 2.0 — ST3: reading fun (July 21 2026)
-
-Third Stories relaunch block (still COMING SOON; Mike decides the LIVE flip after his own
-ST1 QA — not flipped here). All work is in the story maker/reader + generate-story; no game
-touched. **Storytime mode:** a cover toggle turns the book into a hands-free bedtime movie —
-the reader narrates each page and auto-turns, pausing only at the page-4 choice and stopping
-at The End (reuses the existing `playSequence`; auto-turn keys off the reader's `playing`
-flag; a Stop pill ends it). **Tap surprises:** tapping the art gives the hero a giggle-bounce
-(giggle sfx), and every page hides one tappable star — finding all of them awards a small
-one-time coin reward (20) via the shared wallet (`window.BuildableWallet.awardOnce`, keyed by
-story so re-reads can't farm it); a small found-count sits by the page number. **Grade-based
-length:** `StoryMaker` now sends the kid's grade + mapped age (from parent learning settings)
-to `api/generate-story`, which gives K-1 (age<=6) just 1-2 short sentences per page (~130 char
-cap) and keeps the fuller length for older kids. **Choose-your-path:** page 4 shows two big
-choice buttons; pages 5-6 carry two text versions (`text_a`/`text_b`) produced in the SAME
-original call — text only, reusing the same painted art, so no extra image cost — and forward
-is gated until the kid picks. It's optional and safe: if the model doesn't return both
-branches the validator strips the choice and the story stays linear, and the hard-coded
-fallback ships a working choice so it demos offline. **Learning ledger:** the reader logs one
-reading skill event (`story-reading`/`storytime`) to `/api/log-learning-event` on finish via
-the existing `logSkillEvent` helper (Session 8B). No emojis (drawn SVG star + text). QA:
-`vite build` compiles clean; esbuild parses the changed API; a fallback-mode generate-story
-run confirms the choice + `text_a`/`text_b` shape and the hero-name swap into the branch text.
-Files: `api/generate-story.js`, `src/StoryMaker.jsx`, `src/StoryReader.jsx`, `SESSION-LOG.md`.
-
-
-## Music Maker: covers, title reveal & one-tap remakes (Session MM2, July 20 2026)
-Finished songs now feel like treasures. Building on MM1's no-reading flow, four upgrades to
-`src/MusicMaker.jsx` (plus the song APIs):
-- **Album covers.** Each song gets real cover art (`/api/images?kind=cover`, seeded so it is
-  unique), pinned to the song and shown on the reveal, the My Songs shelf and My Stuff. The
-  URL is stored in `saved_songs.meta.coverUrl` (no schema change needed); an optional
-  `db/add-song-cover-url.sql` adds a real `cover_url` column when convenient. The color
-  square + music-note stays as the fallback so nothing ever breaks.
-- **Waiting show.** The plain spinner is now a drawn "band warming up" scene (bouncing
-  drummer, swaying guitarist, dancing equalizer bars, floating notes), all SVG + CSS, no
-  emojis. The rotating messages stay as spoken/visible flavor.
-- **Title reveal.** A playful kid-safe title is built instantly on the server from the topic
-  + style (no AI call, no wait). The cover + title appear like a PRIZE with a Feel Kit
-  celebration BEFORE playback; the title is tappable to rename and is saved on Save.
-- **Make another about...** After a song, one tap re-opens step 1 with the same style +
-  singer locked in and the topic cleared. The Brass Band / Strings / World Beats instrument
-  packs each unlock 1-2 premium style cards; locked cards show a coin price and buy through
-  the shared wallet (`window.BuildableWallet`) + the shell loadout store.
-QA: `qa-music.mjs` ALL PASS (studio contract intact, no game-manifest regressions).
+## One combined asset library + editor as the create front door (Session AP1, July 20 2026)
+Asset pipeline unification (phase AP), shipped and verified live on production. There is now
+ONE library both the editor and the Browse page read: a new shared reader
+`public/buildable-library.js` (`window.BuildableLibrary`) merges Studio pieces
+(`image_cache` kind=studio) with the community packs (`list-assets` layers+sprites and
+`list-characters`) into one list, every item tagged kind/theme/game/source (routed in
+`vercel.json`). In the editor (`public/editor.html`), the **Library** button opens that
+combined shelf pre-filtered to the slot's kind + current game/theme with a **Show all**
+toggle and a source chip per tile; picking a pack asset imports it into the slot server-side
+so it loads in-game like generated art. **Generate** now works for every game (recipe prompt
+when one exists, else auto-built from game+slot+theme), and games with a recipe get
+**Generate full set**. Backend `api/asset-studio.js` gains an `import` action and stores
+kind tags (no DB migration). Browse (`public/asset-library.html`) shows Studio art in the
+theme/coverage grid with a **Studio** chip. Verified live: 580 assets incl 121 Studio pieces
+merged and chipped. Not yet done (replace-first): retiring the Create tab, pending an
+in-editor Generate check on prod (editor is PIN-gated). See SESSION-LOG.md AP1 entry.
 
 ## Music Maker: instant + speakable, no reading needed (Session MM1, July 20 2026)
 Rebuilt the Music Maker "Make a Song" flow (`src/MusicMaker.jsx`) so a child who can't

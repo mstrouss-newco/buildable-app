@@ -1,127 +1,48 @@
 # Buildable Kids — Session Log
 
-## 2026-07-21: Story Maker 2.0 — Session ST4 (Fewer taps + light theme)
+## 2026-07-20: Session AP1 — One library + editor front door (shipped + live)
 
-Fourth and final planned relaunch block for Stories (STILL COMING SOON — Mike
-decides the LIVE flip after his own device QA; not flipped here). All work is in
-the story maker/reader; no game was touched, so no game QA script applies (Stories
-has no qa-*.mjs). QA: `vite build` compiles clean on latest main; esbuild parses
-both changed files.
-
-Fewer taps — the picker goes from 8 screens to 3:
-- The old 7-question wizard + separate naming screen is now just three screens:
-  Hero, then World, then "What happens?" (the quest). Story buddy, art look, mood
-  and ending are no longer their own screens — they get sensible random defaults
-  per story (buddy/mood/ending randomized; look stays watercolor, our best-tuned
-  art) and live in a "More choices" drawer on the final screen for kids who want
-  to fiddle. Generation still fires the moment the last of the three choices is
-  made (ST1's write-while-naming is preserved), so the story is usually written
-  before the kid taps Make.
-- Hero screen shows 6 heroes at a time with a "Shuffle heroes" button (instead of
-  all 18 at once), and naming merged onto the hero screen as a small name card
-  (default name, editable) — no separate final naming step.
-- "Story Dice" replaces "Surprise me" on the landing: tap it and three dice wobble
-  with a soft tick sound (synthesized, no audio asset), land on hero / world /
-  quest, then go straight to making. Still runs through the learning gate.
-- Remix still prefills everything (hero window is rebuilt to include the remixed
-  hero).
-
-Visual refresh + polish:
-- Cream/light theme to match the Home screen (session 3E palette: #FFF8EE ground,
-  white cards, #3A2E4D ink). Stories no longer looks like a different, darker
-  product. Layout is centered and scaled up.
-- "Repaint this page" moved behind the grown-ups gate in the reader: it's now a
-  small "Grown-ups: repaint" control that opens the same quick math check the rest
-  of the app uses, so a kid can't burn image generations re-rolling art.
-- "My stories" covers on the Stories landing now render each story's real
-  first-page painted art (the `thumbnail` the list API already returns) instead of
-  a flat purple rectangle, with a soft cream book fallback while art warms in. The
-  delete/publish controls got clearer drawn icons and bigger tap targets. (My Stuff
-  already used the thumbnail.)
-
-No emojis anywhere (drawn SVG throughout). Files: `src/StoryMaker.jsx`,
-`src/StoryReader.jsx`.
-
-## 2026-07-21: Story Maker 2.0 — Session ST3 (Reading fun)
-
-Third relaunch block for Stories (still COMING SOON — Mike decides the LIVE flip
-after ST1 QA; not flipped here). All work is inside the story maker/reader +
-generate-story API; no game was touched.
-
-Storytime mode (hands-free):
-- New "Storytime mode" toggle on the book cover. When on, the reader reads each
-  page aloud and auto-turns to the next, like a bedtime movie. It pauses at the
-  page-4 choice so the kid still picks the path, and stops at The End. A "Stop"
-  pill ends it anytime. Reuses the existing narration (playSequence); the auto-turn
-  is driven by the reader's `playing` flag.
-
-Tap surprises:
-- Tapping the page art gives the hero a giggle-bounce (giggle sfx via /api/sfx).
-- One hidden star per page (deterministic position). Finding all of them awards a
-  small one-time coin reward (20) through the shared wallet
-  (window.BuildableWallet.awardOnce, keyed by story so it can't be farmed on
-  re-read). A small "found x/y" counter sits by the page number.
-
-Grade-based text length:
-- StoryMaker sends the kid's grade + the age it maps to (from parent learning
-  settings) to generate-story. K-1 (age<=6) now gets 1-2 short, simple sentences
-  per page (~130 char cap); older kids keep the fuller length. The prompt and the
-  sentence-boundary trimmer both honor the cap.
-
-Choose-your-path (Mike confirmed):
-- On page 4 (the low point) two big buttons let the kid decide what the hero does.
-  Pages 5-6 carry two text versions ("text_a"/"text_b") generated in the SAME
-  original call — text-only, reusing the same painted art, so zero extra image
-  cost. Forward is gated until the kid chooses. The whole feature is optional: if
-  the model doesn't return both branches the story falls back to linear (the
-  choice is stripped in the validator), and the hard-coded fallback story ships a
-  working choice so it demos even offline.
-
-Learning ledger:
-- On finish the reader logs one reading skill event (subject "reading", skill
-  "story-reading" or "storytime") to /api/log-learning-event via the existing
-  logSkillEvent helper, per the Session 8B pattern.
-
-QA: `vite build` compiles clean (StoryMaker + StoryReader); esbuild parses the
-changed API file; a fallback-mode generate-story run confirms page 4 gets a valid
-choice, pages 5-6 get text_a/text_b (text === text_a), and the typed hero name is
-swapped into the branch text + choice prompt. No emojis introduced (drawn SVG star
-+ text). Stories remains COMING SOON (no LIVE flip). Files: api/generate-story.js,
-src/StoryMaker.jsx, src/StoryReader.jsx.
-
-
-## 2026-07-20: Music Maker — Session MM2 (Make it a keeper)
-
-Second Music Maker block (requires MM1's flow, which is live). All work is in the Music
-Maker studio and its song APIs; no game engine was touched.
+Asset pipeline unification, phase AP. Plan approved by Mike 2026-07-20. Shipped to
+production (buildablekids.com) and verified live; deployed via the GitHub web uploader
+because this session had no push access (see note).
 
 What shipped:
-- Album covers per song: generate-song.js returns a stable, seeded cover URL
-  (/api/images?kind=cover); save-song.js pins it in saved_songs.meta.coverUrl; list-songs.js
-  surfaces it as cover_url; CoverThumb prefers the saved URL (color-square fallback kept).
-  Covers show on the reveal, the My Songs shelf and My Stuff, so the library reads like a
-  real album shelf. Optional db/add-song-cover-url.sql adds a real cover_url column + backfill.
-- Fun waiting show: a drawn "band warming up" SVG+CSS moment (BandWarmup) replaces the
-  spinner; rotating messages kept as spoken flavor. No emojis.
-- Title reveal: instant playful server-side title generator (no AI call/cost); the cover +
-  title reveal like a prize with a Feel Kit celebration before playback; title editable and
-  saved.
-- Make another about...: one-tap remake keeps style + singer, clears the topic. Instrument
-  packs (Brass Band / Strings / World Beats) each unlock 1-2 premium style cards; locked
-  cards show a coin price and buy via the shared wallet + shell loadout store.
+- ONE combined library. New shared reader public/buildable-library.js (window.BuildableLibrary)
+  merges Studio pieces (image_cache kind=studio) with the community packs
+  (list-assets layers+sprites and list-characters) into one list tagged kind/theme/game/
+  source. Routed in vercel.json (unrouted paths otherwise fall to landing.html).
+- Editor is the front door. public/editor.html Library button now reads the combined shelf,
+  pre-filtered to the slot's kind + current game/theme, with a Show-all toggle and a source
+  chip per tile. Picking a non-Studio asset imports it into the slot (server-side) so it
+  loads in-game exactly like generated art.
+- Generate for every game. Recipe prompt when the game has one, else the existing auto-built
+  game+slot+theme prompt. New "Generate full set" on games with a recipe (absorbs the
+  Create-tab sheet flow).
+- Backend api/asset-studio.js: new `import` action (copy any url/b64 asset into a slot's
+  studio slug); keep+import tag `kind` and store slug/theme/game/type as JSON in the
+  descriptor (old bare-slug rows still read). Manifest read returns kind/theme/game/type/
+  source. No DB migration.
+- Browse (public/asset-library.html) reads the same combined shelf; Studio art now joins the
+  theme/coverage grid with a "Studio" source chip.
 
-Added premium styles brass/swing/orchestral/waltz/samba/afrobeat to generate-song.js briefs
-and images.js style icons (IconImg falls back to a note glyph if an icon misses).
+Verified: both pages load headless with zero JS errors; qa-breaker + qa-art PASS. Live on
+prod: /buildable-library.js serves (route OK); Browse reads 580 assets incl 121 Studio
+pieces, correctly kind/theme-tagged, with 121 "Studio" chips rendered; Studio ocean-photo/
+ocean-deep art fills the coverage grid.
 
-QA: `node qa-music.mjs .` -> ALL PASS (studio contract validates; breaker/survival/sling
-manifests still valid). JSX bundled clean via esbuild; API files pass node --check. Full
-vite build was not run in-session (sandbox disk limit); verified on the Vercel deploy build.
+Remaining in AP1 (NOT done this session, on purpose):
+- Retire the Create tab (Browse + Build stay). Held back per replace-first: the editor is
+  PIN-gated and the agent does not enter auth PINs, so the in-editor Generate/Library
+  click-through was not confirmed live. Retire once Mike confirms the editor Generate +
+  Library work on prod. The New Game recipe builder lives inside the Create tab; relocate it
+  to Build when retiring so recipe authoring is not lost.
+- Live acceptance click-throughs (behind the editor PIN): generate a piece from a no-recipe
+  game and confirm it appears in Browse; open the editor Library in Breaker and pick a
+  community character.
 
-Owner action (optional): run db/add-song-cover-url.sql in Supabase for the tidy cover_url
-column. The app already works without it (cover URL lives in meta).
-
-Remains in the Music Maker phase: nothing outstanding from MM1/MM2 beyond that optional SQL.
-Future polish (real ElevenLabs previews for the new premium styles) is out of scope here.
+Note: no GitHub push access in this session (proxy: repo not enabled; no GitHub connector).
+Deployed by uploading the changed files through GitHub's web uploader in Chrome; Vercel
+auto-deployed. Patch also saved to the Claude project at claude/AP1-changes.patch.
 
 ## 2026-07-20: Story Maker 2.0 — Session ST2 (Wow: sequels + sharing polish)
 
