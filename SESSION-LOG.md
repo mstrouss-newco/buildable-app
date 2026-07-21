@@ -1,5 +1,53 @@
 # Buildable Kids — Session Log
 
+## 2026-07-21: Story Maker 2.0 — Session ST3 (Reading fun)
+
+Third relaunch block for Stories (still COMING SOON — Mike decides the LIVE flip
+after ST1 QA; not flipped here). All work is inside the story maker/reader +
+generate-story API; no game was touched.
+
+Storytime mode (hands-free):
+- New "Storytime mode" toggle on the book cover. When on, the reader reads each
+  page aloud and auto-turns to the next, like a bedtime movie. It pauses at the
+  page-4 choice so the kid still picks the path, and stops at The End. A "Stop"
+  pill ends it anytime. Reuses the existing narration (playSequence); the auto-turn
+  is driven by the reader's `playing` flag.
+
+Tap surprises:
+- Tapping the page art gives the hero a giggle-bounce (giggle sfx via /api/sfx).
+- One hidden star per page (deterministic position). Finding all of them awards a
+  small one-time coin reward (20) through the shared wallet
+  (window.BuildableWallet.awardOnce, keyed by story so it can't be farmed on
+  re-read). A small "found x/y" counter sits by the page number.
+
+Grade-based text length:
+- StoryMaker sends the kid's grade + the age it maps to (from parent learning
+  settings) to generate-story. K-1 (age<=6) now gets 1-2 short, simple sentences
+  per page (~130 char cap); older kids keep the fuller length. The prompt and the
+  sentence-boundary trimmer both honor the cap.
+
+Choose-your-path (Mike confirmed):
+- On page 4 (the low point) two big buttons let the kid decide what the hero does.
+  Pages 5-6 carry two text versions ("text_a"/"text_b") generated in the SAME
+  original call — text-only, reusing the same painted art, so zero extra image
+  cost. Forward is gated until the kid chooses. The whole feature is optional: if
+  the model doesn't return both branches the story falls back to linear (the
+  choice is stripped in the validator), and the hard-coded fallback story ships a
+  working choice so it demos even offline.
+
+Learning ledger:
+- On finish the reader logs one reading skill event (subject "reading", skill
+  "story-reading" or "storytime") to /api/log-learning-event via the existing
+  logSkillEvent helper, per the Session 8B pattern.
+
+QA: `vite build` compiles clean (StoryMaker + StoryReader); esbuild parses the
+changed API file; a fallback-mode generate-story run confirms page 4 gets a valid
+choice, pages 5-6 get text_a/text_b (text === text_a), and the typed hero name is
+swapped into the branch text + choice prompt. No emojis introduced (drawn SVG star
++ text). Stories remains COMING SOON (no LIVE flip). Files: api/generate-story.js,
+src/StoryMaker.jsx, src/StoryReader.jsx.
+
+
 ## 2026-07-20: Music Maker — Session MM2 (Make it a keeper)
 
 Second Music Maker block (requires MM1's flow, which is live). All work is in the Music

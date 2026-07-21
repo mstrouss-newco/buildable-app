@@ -6,6 +6,32 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Story Maker 2.0 — ST3: reading fun (July 21 2026)
+
+Third Stories relaunch block (still COMING SOON; Mike decides the LIVE flip after his own
+ST1 QA — not flipped here). All work is in the story maker/reader + generate-story; no game
+touched. **Storytime mode:** a cover toggle turns the book into a hands-free bedtime movie —
+the reader narrates each page and auto-turns, pausing only at the page-4 choice and stopping
+at The End (reuses the existing `playSequence`; auto-turn keys off the reader's `playing`
+flag; a Stop pill ends it). **Tap surprises:** tapping the art gives the hero a giggle-bounce
+(giggle sfx), and every page hides one tappable star — finding all of them awards a small
+one-time coin reward (20) via the shared wallet (`window.BuildableWallet.awardOnce`, keyed by
+story so re-reads can't farm it); a small found-count sits by the page number. **Grade-based
+length:** `StoryMaker` now sends the kid's grade + mapped age (from parent learning settings)
+to `api/generate-story`, which gives K-1 (age<=6) just 1-2 short sentences per page (~130 char
+cap) and keeps the fuller length for older kids. **Choose-your-path:** page 4 shows two big
+choice buttons; pages 5-6 carry two text versions (`text_a`/`text_b`) produced in the SAME
+original call — text only, reusing the same painted art, so no extra image cost — and forward
+is gated until the kid picks. It's optional and safe: if the model doesn't return both
+branches the validator strips the choice and the story stays linear, and the hard-coded
+fallback ships a working choice so it demos offline. **Learning ledger:** the reader logs one
+reading skill event (`story-reading`/`storytime`) to `/api/log-learning-event` on finish via
+the existing `logSkillEvent` helper (Session 8B). No emojis (drawn SVG star + text). QA:
+`vite build` compiles clean; esbuild parses the changed API; a fallback-mode generate-story
+run confirms the choice + `text_a`/`text_b` shape and the hero-name swap into the branch text.
+Files: `api/generate-story.js`, `src/StoryMaker.jsx`, `src/StoryReader.jsx`, `SESSION-LOG.md`.
+
+
 ## Music Maker: covers, title reveal & one-tap remakes (Session MM2, July 20 2026)
 Finished songs now feel like treasures. Building on MM1's no-reading flow, four upgrades to
 `src/MusicMaker.jsx` (plus the song APIs):
