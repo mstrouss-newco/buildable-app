@@ -66,7 +66,13 @@ const ICONS = {
             sleepy:"a glowing crescent moon with stars in a deep-blue night sky",
             marching:"a marching-band bass drum with a tall plumed marching hat beside it",
             reggae:"an acoustic guitar painted with red, gold and green stripes",
-            kpop:"a glossy K-pop stage microphone with colorful glowing concert lightsticks and bright neon stage lights" },
+            kpop:"a glossy K-pop stage microphone with colorful glowing concert lightsticks and bright neon stage lights",
+            brass:"a shiny golden brass band trumpet and tuba with a marching-band plume",
+            swing:"a shiny golden saxophone with a vintage big-band microphone",
+            orchestral:"a wooden violin and a conductor's baton over a sweeping film-score sheet",
+            waltz:"an elegant golden harp with a swirl of dancing musical notes",
+            samba:"colorful carnival hand drums with bright feathers and maracas",
+            afrobeat:"a set of colorful African djembe hand drums with warm patterns" },
   world:  { space:"a colorful outer-space scene with planets, stars and a rocket",
             underwater:"a vibrant underwater coral reef with tropical fish and sunbeams",
             castle:"a majestic fairytale castle on a green hill under a bright sky",
@@ -77,17 +83,6 @@ const ICONS = {
   speed:  { slow:"a cute slow tortoise", medium:"a person casually walking",
             fast:"a fast running rabbit", superfast:"a speeding cheetah mid-run",
             groovy:"a colorful shiny bouncing rubber ball" },
-  // Music Maker "What is your song about?" topic chips (Session MM1).
-  topic:  { dog:"a happy cute cartoon puppy dog",
-            cat:"a happy cute cartoon kitten",
-            dinosaur:"a friendly cute green cartoon dinosaur",
-            space:"a colorful cartoon rocket ship flying among planets and stars",
-            pancakes:"a tall stack of fluffy pancakes with syrup and a pat of butter",
-            princess:"a friendly cartoon princess with a crown and a sparkly dress",
-            trucks:"a chunky colorful cartoon dump truck",
-            ocean:"a cheerful cartoon ocean scene with a smiling wave, a fish and a starfish",
-            robots:"a friendly cute cartoon robot with a big smile",
-            family:"a happy cartoon family of little stick-figure people holding hands" },
 };
 
 // Typing-game characters (heroes, baddies, bosses). Transparent cut-outs.

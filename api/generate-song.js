@@ -77,14 +77,47 @@ const VIBES = {
   dance: { tempo: "energetic",color: "#FF6B6B", mood: "danceable, funky, four-on-the-floor" },
 };
 
-function makeTitle(vibe, theme, prompt) {
-  const p = (prompt || "").trim();
-  if (p) {
-    const words = p.split(/\s+/).slice(0, 5).join(" ");
-    return words.charAt(0).toUpperCase() + words.slice(1);
+// MM2 — a fun, kid-safe song title built INSTANTLY from the choices (no AI call,
+// no wait, no cost). We turn the topic into a tidy subject ("a princess" ->
+// "Princess", "outer space" -> "Outer Space") and drop it into a playful
+// template picked by the song's vibe/genre. The kid can always rename it later.
+// Free text is already screened upstream, so the subject is safe here.
+function titleCase(s) {
+  return s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
+}
+function subjectFrom(theme, prompt) {
+  let s = (prompt || theme || "").toString().trim();
+  if (!s) return "";
+  // drop a leading article so "a princess" -> "princess", "the ocean" -> "ocean"
+  s = s.replace(/^(a|an|the|my|some)\s+/i, "");
+  s = s.split(/\s+/).slice(0, 4).join(" ");
+  return titleCase(s);
+}
+// Templates keyed by vibe; {S} = the subject. Chosen for read-aloud punch.
+const TITLE_TEMPLATES = {
+  happy:  ["{S} Party!", "The {S} Song", "Super {S}!", "Hooray for {S}!"],
+  dance:  ["{S} Dance Party!", "Dancing {S}!", "{S} Groove", "Boogie {S}!"],
+  spooky: ["Spooky {S}!", "The {S} Mystery", "{S} in the Dark", "Boo! {S}!"],
+  silly:  ["Silly {S}!", "The Wobbly {S}", "Goofy {S}!", "{S} Giggles"],
+  chill:  ["Sleepy {S}", "Dreamy {S}", "{S} Lullaby", "Gentle {S}"],
+  epic:   ["The Great {S} Adventure!", "Epic {S}!", "{S} Heroes", "Legend of {S}"],
+};
+// A couple of genre nudges so K-pop / reggae feel distinct even at the same vibe.
+const GENRE_TEMPLATES = {
+  kpop:   ["{S} Energy!", "{S} Superstar!", "Shining {S}!"],
+  reggae: ["Chill {S} Vibes", "Island {S}", "Easy {S}"],
+  country:["{S} Hoedown", "Down-Home {S}", "Yeehaw {S}!"],
+  sleepy: ["Sleepy {S}", "Twinkle {S}", "Goodnight {S}"],
+};
+function makeTitle(vibe, theme, prompt, genre) {
+  const S = subjectFrom(theme, prompt);
+  if (!S) {
+    const v = vibe ? titleCase(vibe) : "My";
+    return `My ${v} Song`;
   }
-  const v = vibe ? vibe.charAt(0).toUpperCase() + vibe.slice(1) : "My";
-  return theme ? `${v} ${theme} Song` : `${v} Song`;
+  let pool = GENRE_TEMPLATES[genre] || TITLE_TEMPLATES[vibe] || TITLE_TEMPLATES.happy;
+  const t = pool[Math.floor(Math.random() * pool.length)];
+  return t.replace(/\{S\}/g, S).slice(0, 60);
 }
 
 const GENRE_DESC = {
@@ -92,6 +125,13 @@ const GENRE_DESC = {
   rock: "rock", disco: "funky disco", sleepy: "soft sleepy-time lullaby",
   marching: "marching-band style", reggae: "laid-back reggae",
   kpop: "upbeat K-pop with bright synths and a catchy sing-along hook",
+  // MM2 instrument-pack styles (Brass Band / Strings / World Beats).
+  brass: "a bright brass-band sound full of trumpets and tubas",
+  swing: "a bouncy big-band swing with horns",
+  orchestral: "a sweeping movie-score orchestra with big strings",
+  waltz: "a gentle three-beat waltz with graceful strings and harp",
+  samba: "a lively samba carnival groove with hand percussion",
+  afrobeat: "a warm afrobeat groove with African hand drums",
 };
 const SINGER_DESC = {
   none: "instrumental (no singer)", boy: "a boy singing",
@@ -351,10 +391,23 @@ export default async function handler(req, res) {
     });
   }
 
-  const title = makeTitle(choices.vibe, choices.theme, choices.prompt);
+  const title = makeTitle(choices.vibe, choices.theme, choices.prompt, choices.genre);
   const brief = buildBrief(choices);
   const recipe = makeRecipe(choices);
   const v = VIBES[choices.vibe] || VIBES.happy;
+
+  // MM2 — album cover. The image library (/api/images?kind=cover) is deterministic
+  // per (vibe, theme, seed), so this URL is stable and cache-backed: the same cover
+  // shows on the reveal, the My Songs shelf, and My Stuff. We pin the exact URL so
+  // it travels with the song (stored in meta on save). The theme carries the topic
+  // so the art matches what the song is about; label gives the cover a title cue.
+  const coverTheme = (choices.theme || choices.prompt || "").toString().slice(0, 40);
+  const coverSeed = (title.replace(/[^\w]+/g, "").slice(0, 20) + Math.random().toString(36).slice(2, 6)).toLowerCase();
+  const coverUrl =
+    "/api/images?kind=cover&vibe=" + encodeURIComponent(choices.vibe || "happy") +
+    "&theme=" + encodeURIComponent(coverTheme) +
+    "&seed=" + encodeURIComponent(coverSeed) +
+    "&label=" + encodeURIComponent(title);
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
@@ -374,6 +427,7 @@ export default async function handler(req, res) {
       theme: choices.theme || null,
       prompt: choices.prompt || null,
       coverColor: v.color,
+      coverUrl,
       audioUrl: result.audioUrl,
       durationSec: result.durationSec || null,
       provider: result.provider,
