@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 12,
+  "assetVersion": 13,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -711,6 +711,477 @@
       "habitat": "floor",
       "type": "animal",
       "artH": 55
+    },
+    {
+      "id": "flyingfish",
+      "name": "Flying Fish",
+      "zone": "surface",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "air",
+      "type": "animal",
+      "artH": 70,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/flyingfish",
+      "fact": "A flying fish can leap out of the water and glide through the air on wing-like fins to escape hungry fish below.",
+      "facts": [
+        "A flying fish can leap out of the water and glide through the air on wing-like fins to escape hungry fish below.",
+        "Some flying fish can glide the length of a soccer field before splashing back into the sea.",
+        "They beat their tail super fast underwater to build up speed, then burst out and soar just above the waves."
+      ],
+      "stats": [
+        {
+          "label": "Can glide",
+          "value": "Up to 650 feet"
+        },
+        {
+          "label": "Escapes by",
+          "value": "Flying over the water"
+        }
+      ],
+      "asks": [
+        "How do fish fly?",
+        "What tries to eat a flying fish?"
+      ],
+      "quiz": [
+        "ocean-flyingfish"
+      ],
+      "factAudio": "ocean-deep-flyingfish",
+      "source": "NOAA Fisheries; National Geographic Kids"
+    },
+    {
+      "id": "seahorse",
+      "name": "Seahorse",
+      "zone": "sunlight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "floor",
+      "type": "animal",
+      "artH": 66,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/seahorse",
+      "fact": "A seahorse is a fish, even though it does not look like one! It swims upright and curls its tail around seaweed to hold on.",
+      "facts": [
+        "A seahorse is a fish, even though it does not look like one! It swims upright and curls its tail around seaweed to hold on.",
+        "Seahorse dads are the ones who carry the babies. The mom puts her eggs in the dad's pouch and he gives birth to hundreds of tiny seahorses!",
+        "Seahorses have no teeth and no stomach, so they must eat almost all day long to stay full."
+      ],
+      "stats": [
+        {
+          "label": "Babies carried by",
+          "value": "The dad!"
+        },
+        {
+          "label": "Holds on with",
+          "value": "Its curly tail"
+        }
+      ],
+      "asks": [
+        "Why do seahorse dads have the babies?",
+        "Is a seahorse really a fish?"
+      ],
+      "quiz": [
+        "ocean-seahorse"
+      ],
+      "factAudio": "ocean-deep-seahorse",
+      "source": "NOAA Ocean Service; Monterey Bay Aquarium"
+    },
+    {
+      "id": "octopus",
+      "name": "Octopus",
+      "zone": "sunlight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "floor",
+      "type": "animal",
+      "artH": 98,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/octopus",
+      "fact": "An octopus has eight arms and three hearts, and its blood is blue instead of red!",
+      "facts": [
+        "An octopus has eight arms and three hearts, and its blood is blue instead of red!",
+        "Octopuses are super smart. They can open jars, solve puzzles, and squeeze their soft bodies through a hole the size of a coin.",
+        "An octopus can change the color and even the bumpiness of its skin in a blink to hide from danger."
+      ],
+      "stats": [
+        {
+          "label": "Hearts",
+          "value": "Three"
+        },
+        {
+          "label": "Arms",
+          "value": "Eight"
+        }
+      ],
+      "asks": [
+        "How does an octopus change color?",
+        "Why is octopus blood blue?"
+      ],
+      "quiz": [
+        "ocean-octopus"
+      ],
+      "factAudio": "ocean-deep-octopus",
+      "source": "Monterey Bay Aquarium; National Geographic Kids"
+    },
+    {
+      "id": "moray",
+      "name": "Moray Eel",
+      "zone": "sunlight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "floor",
+      "type": "animal",
+      "artH": 84,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/moray",
+      "fact": "A moray eel hides in reef cracks and opens its mouth wide to breathe, which makes it look fierce, but it is mostly just shy.",
+      "facts": [
+        "A moray eel hides in reef cracks and opens its mouth wide to breathe, which makes it look fierce, but it is mostly just shy.",
+        "Morays have a second set of tiny jaws hidden in their throat that reach forward to grab and pull in their food.",
+        "A moray eel has poor eyesight, so it hunts mostly by smell, sniffing out fish in the dark reef."
+      ],
+      "stats": [
+        {
+          "label": "Hides in",
+          "value": "Reef cracks"
+        },
+        {
+          "label": "Hunts by",
+          "value": "Smell"
+        }
+      ],
+      "asks": [
+        "Why does a moray open its mouth?",
+        "Are moray eels dangerous?"
+      ],
+      "quiz": [
+        "ocean-moray"
+      ],
+      "factAudio": "ocean-deep-moray",
+      "source": "NOAA Ocean Service; Monterey Bay Aquarium"
+    },
+    {
+      "id": "seastar",
+      "name": "Sea Star",
+      "zone": "sunlight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "floor",
+      "type": "animal",
+      "artH": 70,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/seastar",
+      "fact": "A sea star is not a fish at all! It has no brain and no blood, and moves on hundreds of tiny tube feet under its arms.",
+      "facts": [
+        "A sea star is not a fish at all! It has no brain and no blood, and moves on hundreds of tiny tube feet under its arms.",
+        "If a sea star loses an arm, it can grow a whole new one. Some can even grow a new body from a single arm!",
+        "To eat, a sea star pushes its stomach out through its mouth to gobble up food, then pulls it back inside."
+      ],
+      "stats": [
+        {
+          "label": "Grows back",
+          "value": "Lost arms"
+        },
+        {
+          "label": "Moves on",
+          "value": "Tiny tube feet"
+        }
+      ],
+      "asks": [
+        "How does a sea star grow a new arm?",
+        "Does a sea star have a brain?"
+      ],
+      "quiz": [
+        "ocean-seastar"
+      ],
+      "factAudio": "ocean-deep-seastar",
+      "source": "NOAA Ocean Service; Monterey Bay Aquarium"
+    },
+    {
+      "id": "kelp",
+      "name": "Kelp",
+      "zone": "sunlight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "floor",
+      "type": "plant",
+      "artH": 130,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/kelp",
+      "fact": "Giant kelp is a huge seaweed that grows in underwater forests, and it can grow up to two feet in a single day!",
+      "facts": [
+        "Giant kelp is a huge seaweed that grows in underwater forests, and it can grow up to two feet in a single day!",
+        "Kelp holds onto the rocky sea floor with a root-like grip and floats up toward the sunlight using tiny gas-filled bubbles.",
+        "Kelp forests are home to sea otters, fish, and crabs, like a busy underwater jungle."
+      ],
+      "stats": [
+        {
+          "label": "Grows",
+          "value": "2 feet a day"
+        },
+        {
+          "label": "Makes",
+          "value": "Underwater forests"
+        }
+      ],
+      "asks": [
+        "Is kelp a plant?",
+        "What lives in a kelp forest?"
+      ],
+      "quiz": [
+        "ocean-kelp"
+      ],
+      "factAudio": "ocean-deep-kelp",
+      "source": "NOAA Ocean Service; Monterey Bay Aquarium"
+    },
+    {
+      "id": "lanternfish",
+      "name": "Lanternfish",
+      "zone": "twilight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "open",
+      "type": "animal",
+      "artH": 62,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/lanternfish",
+      "fact": "The lanternfish is covered in tiny glowing spots that light up like little lanterns in the dark twilight water.",
+      "facts": [
+        "The lanternfish is covered in tiny glowing spots that light up like little lanterns in the dark twilight water.",
+        "Lanternfish are some of the most common fish in the whole ocean, with billions and billions of them!",
+        "Every night they swim up toward the surface to feed, then sink back down into the dark by morning."
+      ],
+      "stats": [
+        {
+          "label": "Glows with",
+          "value": "Rows of tiny lights"
+        },
+        {
+          "label": "How many",
+          "value": "Billions!"
+        }
+      ],
+      "asks": [
+        "Why does it glow?",
+        "Where do lanternfish go at night?"
+      ],
+      "quiz": [
+        "ocean-lanternfish"
+      ],
+      "factAudio": "ocean-deep-lanternfish",
+      "source": "NOAA Ocean Exploration; Smithsonian Ocean",
+      "glow": true
+    },
+    {
+      "id": "barreleye",
+      "name": "Barreleye Fish",
+      "zone": "twilight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "open",
+      "type": "animal",
+      "artH": 70,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/barreleye",
+      "fact": "The barreleye fish has a see-through head! You can look right through it and see its glowing green eyes inside.",
+      "facts": [
+        "The barreleye fish has a see-through head! You can look right through it and see its glowing green eyes inside.",
+        "Its tube-shaped eyes point straight up to spot food drifting down from above, then swivel forward to eat it.",
+        "The clear dome over its head is filled with jelly that protects its delicate eyes."
+      ],
+      "stats": [
+        {
+          "label": "Head",
+          "value": "See-through!"
+        },
+        {
+          "label": "Eyes",
+          "value": "Glow green, point up"
+        }
+      ],
+      "asks": [
+        "Why is its head clear?",
+        "How does it see its food?"
+      ],
+      "quiz": [
+        "ocean-barreleye"
+      ],
+      "factAudio": "ocean-deep-barreleye",
+      "source": "MBARI; NOAA Ocean Exploration"
+    },
+    {
+      "id": "vampiresquid",
+      "name": "Vampire Squid",
+      "zone": "midnight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "open",
+      "type": "animal",
+      "artH": 90,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/vampiresquid",
+      "fact": "The vampire squid is not really a vampire! It has a dark cloak of webbed arms, but it is gentle and eats bits of marine snow.",
+      "facts": [
+        "The vampire squid is not really a vampire! It has a dark cloak of webbed arms, but it is gentle and eats bits of marine snow.",
+        "When scared, it turns its webbed cloak inside out over its head, showing soft spines to look bigger and spookier.",
+        "It can make its own light with glowing tips on its arms to confuse anything that tries to catch it."
+      ],
+      "stats": [
+        {
+          "label": "Eats",
+          "value": "Marine snow"
+        },
+        {
+          "label": "Cloak",
+          "value": "Webbed arms"
+        }
+      ],
+      "asks": [
+        "Is a vampire squid scary?",
+        "How does it hide in the dark?"
+      ],
+      "quiz": [
+        "ocean-vampiresquid"
+      ],
+      "factAudio": "ocean-deep-vampiresquid",
+      "source": "MBARI; Smithsonian Ocean",
+      "glow": true
+    },
+    {
+      "id": "combjelly",
+      "name": "Comb Jelly",
+      "zone": "midnight",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "open",
+      "type": "animal",
+      "artH": 78,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/combjelly",
+      "fact": "A comb jelly moves with rows of tiny hairs called combs that beat together and shimmer with rainbow colors.",
+      "facts": [
+        "A comb jelly moves with rows of tiny hairs called combs that beat together and shimmer with rainbow colors.",
+        "Comb jellies are not true jellyfish, and they do not sting at all. They catch food with sticky, not stingy, cells.",
+        "Many comb jellies glow in the dark, sparkling blue-green when something bumps into them."
+      ],
+      "stats": [
+        {
+          "label": "Moves with",
+          "value": "Rows of tiny combs"
+        },
+        {
+          "label": "Stings?",
+          "value": "No, not at all"
+        }
+      ],
+      "asks": [
+        "Why does it shimmer like a rainbow?",
+        "Is a comb jelly a jellyfish?"
+      ],
+      "quiz": [
+        "ocean-combjelly"
+      ],
+      "factAudio": "ocean-deep-combjelly",
+      "source": "MBARI; Smithsonian Ocean",
+      "glow": true
+    },
+    {
+      "id": "seapig",
+      "name": "Sea Pig",
+      "zone": "abyss",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "floor",
+      "type": "animal",
+      "artH": 74,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/seapig",
+      "fact": "A sea pig is a chubby, pale-pink sea cucumber that walks along the deep sea floor on little puffy legs.",
+      "facts": [
+        "A sea pig is a chubby, pale-pink sea cucumber that walks along the deep sea floor on little puffy legs.",
+        "Sea pigs are the vacuum cleaners of the deep, slurping up bits of food that sink down into the mud.",
+        "They travel in herds across the abyss, sometimes hundreds together, snuffling through the seabed."
+      ],
+      "stats": [
+        {
+          "label": "Walks on",
+          "value": "Puffy little legs"
+        },
+        {
+          "label": "Eats",
+          "value": "Mud and marine snow"
+        }
+      ],
+      "asks": [
+        "Is a sea pig a real pig?",
+        "What does a sea pig eat?"
+      ],
+      "quiz": [
+        "ocean-seapig"
+      ],
+      "factAudio": "ocean-deep-seapig",
+      "source": "MBARI; NOAA Ocean Exploration"
+    },
+    {
+      "id": "seapen",
+      "name": "Sea Pen",
+      "zone": "abyss",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "floor",
+      "type": "plant",
+      "artH": 110,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/seapen",
+      "fact": "A sea pen looks like an old-fashioned feather pen standing on the sea floor, but it is really a colony of tiny animals!",
+      "facts": [
+        "A sea pen looks like an old-fashioned feather pen standing on the sea floor, but it is really a colony of tiny animals!",
+        "Each sea pen is made of many little creatures called polyps living together, catching food from the water.",
+        "If a sea pen is touched, it can glow with a soft green-blue light rippling along its feather."
+      ],
+      "stats": [
+        {
+          "label": "Looks like",
+          "value": "A feather pen"
+        },
+        {
+          "label": "Really",
+          "value": "Many tiny animals"
+        }
+      ],
+      "asks": [
+        "Is a sea pen a plant?",
+        "Why does it glow when touched?"
+      ],
+      "quiz": [
+        "ocean-seapen"
+      ],
+      "factAudio": "ocean-deep-seapen",
+      "source": "MBARI; NOAA Ocean Exploration"
+    },
+    {
+      "id": "ventcrab",
+      "name": "Vent Crab",
+      "zone": "vents",
+      "shape": "blob",
+      "anim": "a-bob",
+      "habitat": "floor",
+      "type": "animal",
+      "artH": 80,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/ventcrab",
+      "fact": "Vent crabs live right next to the scorching hot hydrothermal vents, scuttling where almost nothing else can survive.",
+      "facts": [
+        "Vent crabs live right next to the scorching hot hydrothermal vents, scuttling where almost nothing else can survive.",
+        "They feast on the mats of bacteria that grow around the vents, and on other little vent animals too.",
+        "Vent crabs are pale and ghostly white because there is no sunlight this deep to give them color."
+      ],
+      "stats": [
+        {
+          "label": "Lives by",
+          "value": "Scorching hot vents"
+        },
+        {
+          "label": "Color",
+          "value": "Ghostly white"
+        }
+      ],
+      "asks": [
+        "How do they stand the heat?",
+        "What do vent crabs eat?"
+      ],
+      "quiz": [
+        "ocean-ventcrab"
+      ],
+      "factAudio": "ocean-deep-ventcrab",
+      "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution"
     }
   ]
 }

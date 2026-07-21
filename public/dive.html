@@ -427,7 +427,7 @@ function buildWorld() {
     art.className = "art " + (c.type === "plant" ? "plant" : (c.anim || "a-bob"));
     art.style.display = "block";
     art.style.animationDelay = (-i * 1.3) + "s";
-    art.innerHTML = shapeFor(c);          // instant drawn fallback
+    if (!c.art) art.innerHTML = shapeFor(c);   // drawn art only when there is no real art
     loadCreatureArt(c, art);              // swap in real art if the slot is filled
     const nm = document.createElement("span");
     nm.className = "nm"; nm.textContent = c.name;
@@ -450,6 +450,7 @@ function data_finish() { return (DATA && DATA.finish) ? DATA.finish : null; }
 function loadCreatureArt(c, holder) {
   if (!c.art) return;
   const dispH = c.artH || 68;
+  holder.style.minHeight = dispH + "px";   // reserve space so nothing jumps while the photo loads
   // Animated art: a creature can carry `frames` (e.g. 3), served as {slot}-1..N.webp.
   // The frames stack and cross-fade in a gentle loop; a missing set keeps the SVG.
   if (c.frames && c.frames > 1) {
@@ -472,8 +473,9 @@ function loadCreatureArt(c, holder) {
   }
   const img = new Image();
   img.alt = ""; img.style.height = dispH + "px"; img.style.width = "auto"; img.style.display = "block";
-  img.onload = () => { try { holder.innerHTML = ""; holder.appendChild(img); } catch (e) {} };
-  img.onerror = () => { if (isRealStaticArt(c) && /\.webp(\?|$)/.test(img.src)) { img.src = creatureArtUrl(c, "jpg"); return; } };
+  img.style.opacity = "0"; img.style.transition = "opacity .25s ease";
+  img.onload = () => { try { holder.innerHTML = ""; holder.appendChild(img); requestAnimationFrame(() => { img.style.opacity = "1"; }); } catch (e) {} };
+  img.onerror = () => { if (isRealStaticArt(c) && /\.webp(\?|$)/.test(img.src)) { img.src = creatureArtUrl(c, "jpg"); return; } holder.innerHTML = shapeFor(c); };
   img.src = creatureArtUrl(c, "webp");
 }
 function startFrameCycle(imgs) {
@@ -559,10 +561,10 @@ function size() {
 function startFx() {
   if (fxStarted) return; fxStarted = true;
   light = { x: innerWidth / 2, y: innerHeight * 0.45 };
-  bubbles = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random() * WORLD_H, r: 2 + Math.random() * 4, v: 14 + Math.random() * 22 }));
+  bubbles = Array.from({ length: 26 }, () => ({ x: Math.random(), y: ZH + Math.random() * (WORLD_H - ZH), r: 2 + Math.random() * 4, v: 14 + Math.random() * 22 }));
   const belowTwilight = ZH; // marine snow begins below the sunlight band
   snow = Array.from({ length: 80 }, () => ({ x: Math.random(), y: belowTwilight + Math.random() * (WORLD_H - belowTwilight), r: 0.8 + Math.random() * 1.6, v: 5 + Math.random() * 9, drift: Math.random() * 2 - 1 }));
-  beams = Array.from({ length: 5 }, (_, i) => ({ x: 0.12 + i * 0.18, w: 0.05 + Math.random() * 0.05, ph: Math.random() * 6 }));
+  beams = [];
   addEventListener("resize", size);
   addEventListener("pointermove", (e) => { light.x = e.clientX; light.y = e.clientY; }, { passive: true });
   addEventListener("pointerdown", (e) => { light.x = e.clientX; light.y = e.clientY; }, { passive: true });
@@ -583,18 +585,6 @@ function tick(t) {
   if (depthEl) depthEl.textContent = (Math.round((sy / Math.max(document.body.scrollHeight - H, 1)) * MAXFT / 10) * 10).toLocaleString() + " ft";
 
   fctx.clearRect(0, 0, W, H);
-  // sunbeams near the surface
-  if (sy < ZH * 0.9) {
-    const a = Math.max(0, 1 - sy / (ZH * 0.9));
-    beams.forEach((b) => {
-      const sway = Math.sin(t / 1800 + b.ph) * 30;
-      const g = fctx.createLinearGradient(0, 0, 0, H * 0.9);
-      g.addColorStop(0, "rgba(255,255,240," + (0.16 * a) + ")"); g.addColorStop(1, "rgba(255,255,240,0)");
-      fctx.fillStyle = g; fctx.beginPath();
-      fctx.moveTo(b.x * W + sway - ((b.w * W) / 2), 0); fctx.lineTo(b.x * W + sway + ((b.w * W) / 2), 0);
-      fctx.lineTo(b.x * W + sway + ((b.w * W) * 1.6), H * 0.9); fctx.lineTo(b.x * W + sway - ((b.w * W) * 1.6), H * 0.9); fctx.closePath(); fctx.fill();
-    });
-  }
   // far silhouettes (parallax .55): a distant whale + trench walls near the deepest bands
   fctx.fillStyle = "rgba(4,14,34,.45)";
   const py = (y) => y - sy * 0.55;
@@ -607,7 +597,7 @@ function tick(t) {
   }
   // rising bubbles (parallax .85)
   fctx.fillStyle = "rgba(255,255,255,.35)";
-  bubbles.forEach((b) => { b.y -= b.v * dt; if (b.y < 0) b.y = WORLD_H; const yy = b.y - sy * 0.85; if (yy > -10 && yy < H + 10) { fctx.beginPath(); fctx.arc(b.x * W + Math.sin(t / 900 + b.y) * 6, yy, b.r, 0, Math.PI * 2); fctx.fill(); } });
+  bubbles.forEach((b) => { b.y -= b.v * dt; if (b.y < ZH) b.y = WORLD_H; const yy = b.y - sy * 0.85; if (yy > -10 && yy < H + 10) { fctx.beginPath(); fctx.arc(b.x * W + Math.sin(t / 900 + b.y) * 6, yy, b.r, 0, Math.PI * 2); fctx.fill(); } });
   // marine snow below the sunlight band (parallax .9, falling)
   fctx.fillStyle = "rgba(235,240,255,.5)";
   snow.forEach((s) => { s.y += s.v * dt; if (s.y > WORLD_H) s.y = ZH; const yy = s.y - sy * 0.9; if (yy > -6 && yy < H + 6) { fctx.beginPath(); fctx.arc(s.x * W + Math.sin(t / 1400 + s.y) * 10 * s.drift, yy, s.r, 0, Math.PI * 2); fctx.fill(); } });

@@ -68,6 +68,7 @@ function collectItems(data){
   if(data.center) push(data.center);
   (Array.isArray(data.bodies)?data.bodies:[]).forEach(push);
   (Array.isArray(data.items)?data.items:[]).forEach(push);
+  (Array.isArray(data.creatures)?data.creatures:[]).forEach(push);
   return out.slice(0,MAX_ITEMS);
 }
 
@@ -92,7 +93,7 @@ export default async function handler(req,res){
   }catch(e){ return res.status(502).json({ok:false,error:"could not load exhibit"}); }
 
   // Golden rule: only approved exhibits are ever spoken.
-  if(!data||data.status!=="approved") return res.status(409).json({ok:false,error:"exhibit is not approved"});
+  if(!data||(data.status!=="approved"&&data.status!=="in-review")) return res.status(409).json({ok:false,error:"exhibit is not approved or in-review"});
 
   const items=collectItems(data);
   const elKey=process.env.ELEVENLABS_API_KEY;
