@@ -678,10 +678,21 @@ function drawPath() {
   const s = S.W.spawn;
   ctx.fillStyle = "rgba(40,30,20,0.25)"; ctx.beginPath(); ctx.ellipse(Math.max(s.x + 6, 26), s.y, 26, 14, 0, 0, 7); ctx.fill();
 }
+// The tree sheet's frame 0 bleeds a sliver of the next frame's tree in on the right
+// (main tree = source cols 33-159; sliver = cols 230-255). Draw only the clean tree.
+function drawTreeClean(cx, groundY, h) {
+  const im = IMG.tree;
+  if (!(im && im.complete && (im.naturalWidth || im.width))) return false;
+  const sx = 33, sy = 46, sw = 126, sh = 200;   // clean single-tree window inside frame 0
+  const w = h * (sw / sh);
+  try { ctx.drawImage(im, sx, sy, sw, sh, cx - w / 2, groundY - h, w, h); } catch (e) { return false; }
+  return true;
+}
 function drawDecor(d) {
   const sway = Math.sin(S ? S.t * 1.2 + d.ph : d.ph) * 2;
-  const shR = d.kind === "tree" ? d.h * 0.28 : d.kind.startsWith("bush") ? d.h * 0.5 : d.h * 0.7;
+  const shR = d.kind === "tree" ? d.h * 0.24 : d.kind.startsWith("bush") ? d.h * 0.5 : d.h * 0.7;
   drawShadow(d.x, d.y + d.h * 0.08, shR, 0.15);
+  if (d.kind === "tree") { if (drawTreeClean(d.x + sway, d.y + d.h * 0.10, d.h)) return; }
   if (!drawSprite(ctx, d.kind, d.x + sway, d.y - d.h * 0.4, d.h, 0, { frame: 0 })) {
     // fallback drawn decor
     if (d.kind === "tree") { ctx.fillStyle = "#3f7a2e"; ctx.beginPath(); ctx.arc(d.x, d.y - d.h * 0.5, d.h * 0.36, 0, 7); ctx.fill(); ctx.fillStyle = "#7a4a25"; ctx.fillRect(d.x - 5, d.y - d.h * 0.2, 10, d.h * 0.3); }
