@@ -2092,6 +2092,30 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-21 (Session WL1: Kidspedia weather-lab template + Make It Rain)
+
+THIRD Kidspedia exhibit template: `weather-lab` (`public/weather.html`), a live weather
+machine built to the two approved mocks. Kids drive three sliders (Sun heat, Air
+temperature, Wind) or six one-tap recipe buttons (Make Rain / Snow / a Storm / Sunny Day /
+a Rainbow / Hail) that visibly glide the sliders; the painted coastal stage (sky x3
+crossfading, sea, headland + lighthouse — all placeholder-painted ART SLOTS overridable
+via the exhibit's `scene` field) runs the simulation: evaporation -> cloud -> rain / snow /
+lightning / hail / rainbow, with wind leaning everything. Eight discovery chips unlock as
+the kid CAUSES each kind of weather; each opens the standard Kidspedia fact card (facts
+cycle, 2 stats, 2 asks, Quick quiz -> shell quizRequest). Full contract wiring per
+EXHIBIT-MANIFEST.md: approved-only gate, pause/resume, factAudio-first read-aloud with
+instant browser-voice fallback, ambient bed + thunder via /api/sfx, Feel.tap. The weather
+brain is a PURE function (`weatherAt`) so QA asserts the physics without the render loop.
+Exhibit: `public/explore/make-it-rain.json` (8 items, 3 sourced kid facts each,
+**status in-review** — hidden from kids until the owner fact-checks and flips BOTH the json
+and EXHIBIT_CATALOG to approved). Wiring: vercel.json routes `/weather.html` +
+`/explore/make-it-rain` -> weather.html BEFORE the orbit catch-all; EXHIBIT_CATALOG entry
+(in-review). QA: NEW `qa-weather.mjs` (contract + real-route + vm runtime + weather-brain
+checks) ALL PASS; qa-dive + qa-explore still green; real-browser smoke of storm / snow /
+rainbow / hail recipes clean (0 page errors). Follow-up (WL2): juice pass, real scene art,
+hero art, narration clips after approval.
+
+---
 ## Session log — 2026-07-20 (Tumble Blocks rename + manifest)
 
 Tumble Blocks is fully off the "tetris" name: engine file, catalog id, screen, and QA

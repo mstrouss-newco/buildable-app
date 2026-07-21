@@ -774,6 +774,14 @@
       "dest": "/dive.html"
     },
     {
+      "src": "/weather.html",
+      "dest": "/weather.html"
+    },
+    {
+      "src": "/explore/make-it-rain",
+      "dest": "/weather.html"
+    },
+    {
       "src": "/explore/(.*)",
       "dest": "/orbit-explorer.html"
     },

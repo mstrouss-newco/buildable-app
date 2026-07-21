@@ -1,5 +1,21 @@
 # Buildable Kids — Session Log
 
+## 2026-07-21: Session WL1 — Kidspedia Weather Lab (template #3 + Make It Rain)
+**Shipped:** `public/weather.html` (NEW weather-lab template: painted coastal stage with
+lighthouse, 3 sliders + 6 recipe buttons, live sim making evaporation/cloud/rain/snow/
+lightning/wind/rainbow/hail, 8 discovery chips -> standard fact cards, full
+EXHIBIT-MANIFEST contract: approved gate, quiz bridge, pause/resume, factAudio read-aloud,
+ambient + thunder, Feel taps); `public/explore/make-it-rain.json` (8 discoveries, 3 kid
+facts each, sourced, **in-review**); vercel.json routes for /weather.html +
+/explore/make-it-rain before the orbit catch-all; EXHIBIT_CATALOG "Make It Rain"
+(in-review); NEW `qa-weather.mjs` born with the template.
+**QA:** qa-weather ALL PASS (contract + real-route + runtime + pure weather-brain);
+qa-dive + qa-explore still green; real-browser recipe smokes (storm/snow/rainbow/hail)
+0 errors. **Remains (WL2):** juice pass, real scene + hero art, narration clips after
+Mike's fact check, then Mike flips BOTH statuses to approved.
+**Flagged:** exhibit stays invisible to kids until approval (golden rule #2) — the live
+route will show the "Not ready yet" gate, which is correct.
+
 ## 2026-07-20: Session AP1 — One library + editor front door (shipped + live)
 
 Asset pipeline unification, phase AP. Plan approved by Mike 2026-07-20. Shipped to

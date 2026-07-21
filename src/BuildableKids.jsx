@@ -271,6 +271,9 @@ const EXHIBIT_CATALOG = [
   // Journey to the Deep (layers-cutaway dive template). Stays hidden from kids until
   // Mike fact-checks the roster and flips BOTH this status and ocean-deep.json to "approved".
   { id: "ocean-deep", title: "Journey to the Deep", topic: "ocean", color: "#1173B4", heroArt: "explore-ocean-deep-hero", status: "in-review" },
+  // Make It Rain (weather-lab template, the live weather machine). Stays hidden from
+  // kids until Mike fact-checks it and flips BOTH this status and make-it-rain.json to "approved".
+  { id: "make-it-rain", title: "Make It Rain", topic: "weather", color: "#37B6F5", heroArt: "explore-make-it-rain-hero", status: "in-review" },
 ];
 
 // Games that support the zero-account "play a friend by link" flow (the grandma flow).

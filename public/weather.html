@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Kidspedia — Explore</title>
+<link rel="icon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0F0E17;--cream:#FDFAF5;--gold:#FFC542;--mint:#2FAE68;--sky:#37B6F5}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{overscroll-behavior:none}
+  body{font-family:'Nunito',sans-serif;background:#101423;color:var(--cream);min-height:100vh}
+
+  .top{display:flex;align-items:center;gap:10px;padding:12px 16px;max-width:648px;margin:0 auto}
+  #back{width:38px;height:38px;border-radius:13px;border:none;background:rgba(255,255,255,.12);color:var(--cream);font-size:17px;font-weight:900;cursor:pointer;font-family:'Nunito'}
+  .top h1{font-family:'Fredoka';font-weight:700;font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top h1 small{display:block;font-family:'Nunito';font-weight:900;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+  .found{display:flex;align-items:center;gap:6px;flex:none;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 11px;font-weight:900;font-size:12.5px;color:var(--cream)}
+  body.in-app #back{display:none}
+  body.in-app .top{padding-left:96px}
+
+  .stagewrap{max-width:620px;margin:0 auto;padding:0 14px 40px}
+  .frame{position:relative;border-radius:22px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+  canvas#stage{width:100%;display:block;background:#2F3A52;touch-action:none}
+  .narr{margin-top:10px;min-height:40px;font-size:13.5px;font-weight:800;line-height:1.45;color:rgba(253,250,245,.9);text-align:center;padding:0 8px}
+
+  .scen{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}
+  .sc{display:flex;align-items:center;justify-content:center;background:var(--c,#37B6F5);border:none;border-radius:16px;
+      padding:12px 6px;color:#fff;font-family:'Nunito';font-weight:900;font-size:12.5px;cursor:pointer;
+      box-shadow:0 5px 0 rgba(0,0,0,.25);transition:transform .1s}
+  .sc:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .sc.running{outline:3px solid #fff;outline-offset:2px}
+
+  .controls{display:flex;gap:10px;margin-top:12px}
+  .ctl{flex:1;background:rgba(255,255,255,.07);border-radius:16px;padding:11px 12px;min-width:0}
+  .ctl label{display:block;font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:rgba(253,250,245,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ctl input[type=range]{width:100%;margin-top:8px;accent-color:var(--gold);height:28px}
+  .ctl .val{font-family:'Fredoka';font-weight:600;font-size:14px;margin-top:2px}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px;min-height:40px}
+  .chip{border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);border-radius:999px;padding:9px 15px;
+        color:var(--cream);font-family:'Nunito';font-weight:900;font-size:12px;cursor:pointer;display:none}
+  .chip.on{display:inline-block;animation:pop .3s ease}
+  @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* fact sheet (same bones as the other Kidspedia templates) */
+  .sheetbg{position:fixed;inset:0;background:rgba(1,3,16,.6);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .sheetbg.open{display:flex}
+  .sheet{background:var(--cream);color:var(--ink);border-radius:24px 24px 0 0;width:100%;max-width:560px;padding:20px 18px 34px}
+  .hd{display:flex;align-items:center;gap:12px}
+  .hd h2{font-family:'Fredoka';font-weight:700;font-size:23px;flex:1;min-width:0}
+  .say{border:none;background:var(--gold);color:var(--ink);width:52px;height:52px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 4px 12px rgba(15,14,23,.18);transition:transform .08s ease,background .15s ease}
+  .say:active{transform:scale(.93)}
+  .say.playing{background:var(--mint);color:#fff}
+  .say svg{width:24px;height:24px}
+  .fact{font-size:15px;font-weight:700;line-height:1.55;margin-top:12px;min-height:70px}
+  .stats{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .stat{background:#F1EDE4;border-radius:14px;padding:10px 14px;flex:1;min-width:120px}
+  .stat small{display:block;font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:rgba(15,14,23,.45)}
+  .stat b{font-family:'Fredoka';font-weight:600;font-size:15px}
+  .more{margin-top:14px}
+  .more small{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,14,23,.45)}
+  .rowb{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .q{border:2px solid rgba(15,14,23,.15);background:none;border-radius:999px;padding:9px 14px;font-family:'Nunito';font-weight:800;font-size:12px;color:var(--ink);cursor:pointer}
+  .q.quiz{background:var(--mint);border-color:var(--mint);color:#fff}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;font-family:'Nunito';font-weight:800;font-size:13px;padding:10px 18px;border-radius:999px;z-index:80;opacity:0;pointer-events:none;transition:opacity .25s ease}
+  .toast.show{opacity:1}
+  .notready{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;flex-direction:column;gap:10px}
+  .notready h2{font-family:'Fredoka';font-size:22px}
+  .notready p{font-size:14px;color:rgba(253,250,245,.7);max-width:280px}
+  .notready button{margin-top:6px;border:none;background:var(--gold);color:var(--ink);font-family:'Nunito';font-weight:900;font-size:14px;padding:11px 20px;border-radius:999px;cursor:pointer}
+  .pauseveil{position:fixed;inset:0;background:rgba(11,10,24,.55);z-index:40;display:none;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:16px}
+  .pauseveil.show{display:flex}
+</style>
+</head>
+<body>
+
+<div id="app" style="display:none">
+  <div class="top">
+    <button id="back">&lsaquo;</button>
+    <h1><small>Kidspedia</small><span id="pageTitle">Loading…</span></h1>
+    <div class="found" id="found" aria-label="Discoveries made">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M17 9a5 5 0 0 0-9.6-1.9A4 4 0 0 0 8 15h9a3 3 0 0 0 0-6Z"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2"/></svg>
+      <span><span id="foundN">0</span>/<span id="foundT">0</span></span>
+    </div>
+  </div>
+
+  <div class="stagewrap">
+    <div class="frame"><canvas id="stage"></canvas></div>
+    <div class="narr" id="narr"></div>
+    <div class="scen" id="scen"></div>
+    <div class="controls">
+      <div class="ctl"><label id="heatLabel">Sun heat</label><input type="range" id="heat" min="0" max="100" value="15"><div class="val" id="heatv"></div></div>
+      <div class="ctl"><label id="tempLabel">Air temperature</label><input type="range" id="temp" min="0" max="100" value="70"><div class="val" id="tempv"></div></div>
+      <div class="ctl"><label id="windLabel">Wind</label><input type="range" id="wind" min="0" max="100" value="10"><div class="val" id="windv"></div></div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="sheetbg" id="sheetbg">
+    <div class="sheet">
+      <div class="hd">
+        <h2 id="cName">&nbsp;</h2>
+        <button class="say" id="sayBtn" type="button" onclick="readAloud()" aria-label="Read to me">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+      </div>
+      <p class="fact" id="cFact"></p>
+      <div class="stats">
+        <div class="stat"><small id="s1l"></small><b id="s1"></b></div>
+        <div class="stat"><small id="s2l"></small><b id="s2"></b></div>
+      </div>
+      <div class="more"><small>Keep exploring</small>
+        <div class="rowb" id="qrow"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="notready" class="notready" style="display:none">
+  <h2 id="notreadyTitle">Not ready yet</h2>
+  <p id="notreadyMsg">This exhibit isn't open yet. Check back soon!</p>
+  <button id="notreadyBtn" type="button">Back to Explore</button>
+</div>
+
+<div class="pauseveil" id="pauseveil">Paused</div>
+<div class="toast" id="toast"></div>
+
+<script src="/buildable-gamenav.js"></script>
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-feel.js"></script>
+<script>
+"use strict";
+// =====================================================================
+// Kidspedia weather-lab template — a live weather machine. Templates are
+// code, exhibits are data (EXHIBIT-MANIFEST.md): this file owns the
+// simulation physics and the painted-placeholder stage; every word a kid
+// reads or hears (facts, chips, recipes, narration) and every art slot
+// comes from the exhibit's JSON. Built to the two approved mocks
+// (kidspedia-weather-lab-mock + look-rain). No emojis (product rule).
+// =====================================================================
+
+function exhibitIdFromLocation() {
+  const m = location.pathname.match(/\/explore\/([a-z0-9-]+)/i);
+  if (m) return m[1];
+  const q = new URLSearchParams(location.search).get("exhibit");
+  return q || "make-it-rain";
+}
+const EXHIBIT_ID = exhibitIdFromLocation();
+
+function iframed() { try { return window.parent && window.parent !== window; } catch (e) { return false; } }
+function postToShell(msg) { if (iframed()) { try { window.parent.postMessage(msg, "*"); } catch (e) {} } }
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+let DATA = null;         // the loaded exhibit file
+let ITEMS = {};          // id -> discovery item, for card lookups
+let RECIPES = [];        // one-tap slider recipes, from the data
+let current = null;      // currently open item id
+let factIdx = 0;
+let paused = false;
+let soundOn = true;
+let audioUnlocked = false;
+let ambientAudio = null;
+let narrAudio = null;
+let speaking = false;
+let sayToken = 0;
+const found = new Set(); // which discoveries the kid has unlocked chips for
+const opened = new Set(); // which discovery cards the kid has actually read
+let allFoundCelebrated = false;
+
+if (iframed()) document.body.classList.add("in-app");
+
+function exitToShell() {
+  postToShell("nav:exit");
+  if (!iframed()) { history.length > 1 ? history.back() : (location.href = "/"); }
+}
+
+function showFallback(kind, msg) {
+  try { document.getElementById("app").style.display = "none"; } catch (e) {}
+  const title = document.getElementById("notreadyTitle");
+  const body = document.getElementById("notreadyMsg");
+  if (kind === "error") {
+    title.textContent = "Oops!";
+    body.textContent = msg || "This exhibit had trouble loading. Let's try again in a moment.";
+  } else {
+    title.textContent = "Not ready yet";
+    body.textContent = msg || "This exhibit isn't open yet. Check back soon!";
+  }
+  document.getElementById("notready").style.display = "flex";
+}
+document.getElementById("notreadyBtn").onclick = exitToShell;
+
+function escapeHtml(s) { return (s || "").replace(/[&<>"\']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "\'": "&#39;" }[c])); }
+
+// ---- narration lines: the template's defaults, overridable per exhibit via data.narration ----
+const NARR_DEFAULTS = {
+  start: "Slide the sun's heat up and watch the water.",
+  vapor: "The sun is warming the sea. Invisible water vapor is rising into the sky!",
+  cloudForming: "The vapor is cooling high up and huddling into a cloud. Keep it coming!",
+  raining: "The drops got heavy. It is RAINING! You made the water cycle happen.",
+  snowing: "It is freezing! The cloud is making SNOW. Six-sided flakes, drifting down.",
+  storm: "The cloud is huge and charged up. A storm is brewing...",
+  hail: "The storm is tossing raindrops up into freezing air. Here comes HAIL!",
+  rainbow: "Sunshine is beaming right through the falling rain. Look, a RAINBOW!",
+  bigCloudWaiting: "A big cloud is waiting. Cool the air down to make it rain.",
+};
+function narrLine(key) { return (DATA && DATA.narration && DATA.narration[key]) || NARR_DEFAULTS[key] || ""; }
+let narrLock = null;
+function narr(t) { if (narrLock && t !== narrLock) return; const el = document.getElementById("narr"); if (el) el.textContent = t; }
+
+// =====================================================================
+// The weather brain — PURE, so QA can assert the physics without running
+// the render loop. heat/temp are 0..1, cloud is the cloud mass (0..260).
+// =====================================================================
+function weatherAt(heat, temp, cloud) {
+  const freezing = temp < 0.18;
+  const precip = cloud > 60 && temp < 0.6;
+  const storm = cloud > 170 && heat > 0.7 && !freezing;
+  return {
+    freezing: freezing,
+    snow: precip && freezing,
+    rain: precip && !freezing,
+    hail: precip && !freezing && cloud > 120 && heat > 0.6 && temp < 0.38,
+    storm: storm,
+    rainbow: precip && !freezing && heat >= 0.7 && temp > 0.48 && cloud < 150 && !storm,
+    clear: !precip && cloud < 15,
+  };
+}
+
+// ---------- boot ----------
+fetch("/explore/" + encodeURIComponent(EXHIBIT_ID) + ".json", { cache: "no-store" })
+  .then((r) => { if (!r.ok) throw new Error("missing"); return r.json(); })
+  .then((data) => {
+    // Golden rule #2: kids only ever see status "approved". No exception.
+    if (!data || data.status !== "approved") { showFallback("notready"); return; }
+    if (data.template !== "weather-lab") { showFallback("error"); return; }
+    DATA = data;
+    boot(data);
+  })
+  .catch(() => { showFallback("error"); });
+
+const heatEl = document.getElementById("heat"), tempEl = document.getElementById("temp"), windEl = document.getElementById("wind");
+const heatWords = ["Off", "Gentle", "Warm", "Hot", "Blazing"];
+const tempWords = ["Freezing", "Cold", "Cool", "Warm", "Hot"];
+const windWords = ["Still", "Breezy", "Windy", "Gusty", "Howling"];
+function sliderVal(el) { const v = Number(el && el.value); return isFinite(v) ? v : 0; }
+function word(v, arr) { return arr[Math.min(arr.length - 1, Math.floor(v / 100 * arr.length))]; }
+function updVals() {
+  document.getElementById("heatv").textContent = word(sliderVal(heatEl), heatWords);
+  document.getElementById("tempv").textContent = word(sliderVal(tempEl), tempWords);
+  document.getElementById("windv").textContent = word(sliderVal(windEl), windWords);
+}
+
+function boot(data) {
+  document.getElementById("app").style.display = "block";
+  document.title = "Kidspedia — " + data.title;
+  document.getElementById("pageTitle").textContent = data.title;
+
+  ITEMS = {};
+  (data.items || []).forEach((it) => { ITEMS[it.id] = it; });
+  RECIPES = data.recipes || [];
+  const ft = document.getElementById("foundT"); if (ft) ft.textContent = String((data.items || []).length);
+  updateFound();
+  buildRecipes();
+  buildChips();
+  if (data.controls) {
+    if (data.controls.heat) document.getElementById("heatLabel").textContent = data.controls.heat;
+    if (data.controls.temp) document.getElementById("tempLabel").textContent = data.controls.temp;
+    if (data.controls.wind) document.getElementById("windLabel").textContent = data.controls.wind;
+  }
+  heatEl.oninput = () => { glide = null; updVals(); };
+  tempEl.oninput = () => { glide = null; updVals(); };
+  windEl.oninput = () => { glide = null; updVals(); };
+  updVals();
+  narr(narrLine("start"));
+  document.getElementById("back").onclick = exitToShell;
+  initAudio(data);
+  loadSceneArt(data);
+
+  // Honor pause/resume from the shell around the quiz gate (CARTRIDGE-CONTRACT.md — mandatory).
+  window.addEventListener("message", (e) => {
+    const d = e && e.data;
+    if (d === "pause" || (d && d.type === "pause")) setPaused(true);
+    else if (d === "resume" || (d && d.type === "resume")) setPaused(false);
+  });
+
+  // Background = silence, iOS-reliably.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { stopAmbient(); stopNarration(); }
+    else if (!paused) { startAmbient(); }
+  });
+
+  document.getElementById("sheetbg").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeSheet(); });
+
+  size();
+  addEventListener("resize", size);
+  requestAnimationFrame(tick);
+}
+
+function setPaused(v) {
+  paused = v;
+  document.getElementById("pauseveil").classList.toggle("show", v);
+  document.body.classList.toggle("paused", v);
+  if (v) { stopAmbient(); stopNarration(); } else { startAmbient(); }
+}
+
+// ---------- recipes: one-tap buttons that glide the sliders (kids SEE the machine work) ----------
+let glide = null;
+function buildRecipes() {
+  const row = document.getElementById("scen"); if (!row) return;
+  row.innerHTML = "";
+  RECIPES.forEach((r) => {
+    const b = document.createElement("button");
+    b.className = "sc"; b.dataset.id = r.id;
+    if (r.color) b.style.setProperty("--c", r.color);
+    b.textContent = r.name;
+    b.onclick = () => { if (!paused) scenario(r.id, b); };
+    row.appendChild(b);
+  });
+}
+function scenario(id, btn) {
+  const r = RECIPES.find((x) => x.id === id); if (!r) return;
+  tapFx();
+  try {
+    document.querySelectorAll(".sc").forEach((b) => b.classList.remove("running"));
+    if (btn) btn.classList.add("running");
+  } catch (e) {}
+  if (r.line) { narrLock = r.line; narr(r.line); setTimeout(() => { narrLock = null; }, 3500); }
+  glide = { h0: sliderVal(heatEl), t0: sliderVal(tempEl), w0: sliderVal(windEl),
+            h1: clamp01n(r.heat), t1: clamp01n(r.temp), w1: clamp01n(r.wind), p: 0 };
+  if (r.clearCloud) cloudMass = Math.max(cloudMass - 80, 0);
+}
+function clamp01n(v) { v = Number(v); if (!isFinite(v)) return 0; return Math.max(0, Math.min(100, v)); }
+function stepGlide(dt) {
+  if (!glide) return;
+  glide.p = Math.min(1, glide.p + dt * 0.7);
+  const e = glide.p < 0.5 ? 2 * glide.p * glide.p : 1 - Math.pow(-2 * glide.p + 2, 2) / 2;
+  heatEl.value = Math.round(glide.h0 + (glide.h1 - glide.h0) * e);
+  tempEl.value = Math.round(glide.t0 + (glide.t1 - glide.t0) * e);
+  windEl.value = Math.round(glide.w0 + (glide.w1 - glide.w0) * e);
+  updVals();
+  if (glide.p >= 1) glide = null;
+}
+
+// ---------- discovery chips: unlock as the kid CAUSES each thing to happen ----------
+function buildChips() {
+  const row = document.getElementById("chips"); if (!row) return;
+  row.innerHTML = "";
+  (DATA.items || []).forEach((it) => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.id = "ch-" + it.id;
+    b.textContent = it.chip || it.name;
+    b.onclick = () => { if (!paused) { tapFx(); open(it.id); } };
+    row.appendChild(b);
+  });
+}
+function trigger(id) {
+  if (found.has(id) || !ITEMS[id]) return;
+  found.add(id);
+  const el = document.getElementById("ch-" + id);
+  if (el) el.classList.add("on");
+  updateFound();
+}
+function updateFound() {
+  const n = document.getElementById("foundN"); if (n) n.textContent = String(found.size);
+  const total = (DATA && DATA.items || []).length;
+  if (total && found.size >= total && !allFoundCelebrated) {
+    allFoundCelebrated = true;
+    showToast("You discovered all " + total + " kinds of weather! Amazing!");
+  }
+}
+
+// ================= fact sheet (same contract as the other templates) =================
+function factsFor(item) { return (item && Array.isArray(item.facts) && item.facts.length) ? item.facts : [(item && item.fact) || ""]; }
+function open(id) {
+  const c = ITEMS[id]; if (!c) return;
+  trigger(id);
+  opened.add(id);
+  current = id; factIdx = 0;
+  document.getElementById("cName").textContent = c.name;
+  const stats = c.stats || [];
+  document.getElementById("s1l").textContent = (stats[0] && stats[0].label) || "";
+  document.getElementById("s1").textContent = (stats[0] && stats[0].value) || "";
+  document.getElementById("s2l").textContent = (stats[1] && stats[1].label) || "";
+  document.getElementById("s2").textContent = (stats[1] && stats[1].value) || "";
+
+  const qr = document.getElementById("qrow"); qr.innerHTML = "";
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "q next"; nextBtn.textContent = "Another fact";
+  nextBtn.onclick = nextFact; qr.appendChild(nextBtn);
+  (c.asks || []).forEach((q) => {
+    const b = document.createElement("button"); b.className = "q"; b.textContent = q;
+    b.onclick = () => showToast("More Kidspedia answers are coming soon!");
+    qr.appendChild(b);
+  });
+  const quizBtn = document.createElement("button");
+  quizBtn.className = "q quiz"; quizBtn.textContent = "Quick quiz";
+  quizBtn.onclick = () => requestQuiz(c); qr.appendChild(quizBtn);
+
+  showFact();
+  document.getElementById("sheetbg").classList.add("open");
+  stopNarration();
+  playItemSound(c);
+}
+function showFact() {
+  const c = ITEMS[current]; if (!c) return;
+  const fs = factsFor(c); if (factIdx >= fs.length) factIdx = 0;
+  document.getElementById("cFact").textContent = fs[factIdx] || "";
+}
+function nextFact() {
+  const c = ITEMS[current]; if (!c) return;
+  const fs = factsFor(c); if (fs.length < 2) return;
+  factIdx = (factIdx + 1) % fs.length;
+  document.getElementById("cFact").textContent = fs[factIdx] || "";
+  stopNarration();
+}
+function closeSheet() { document.getElementById("sheetbg").classList.remove("open"); stopNarration(); }
+
+// ================= sound: tap feedback + soft ambient + per-item clips =================
+function tapFx() { try { if (window.Feel && Feel.tap) Feel.tap(); } catch (e) {} }
+let sfxAudio = null;
+// A discovery may name a `sound` (an /api/sfx clip id) — thunder for lightning,
+// rain for rain. It plays when the kid opens that card. Silent items name none.
+function playItemSound(c) {
+  if (!c || !c.sound || !soundOn) return;
+  try {
+    if (sfxAudio) { try { sfxAudio.pause(); } catch (e) {} }
+    sfxAudio = new Audio("/api/sfx?s=" + encodeURIComponent(c.sound));
+    sfxAudio.volume = 0.55;
+    var p = sfxAudio.play(); if (p && p.catch) p.catch(function () {});
+  } catch (e) {}
+}
+let thunderAt = 0;
+function playThunder() {
+  if (!soundOn || !audioUnlocked) return;
+  const now = Date.now();
+  if (now - thunderAt < 4000) return; // don't stack rumbles
+  thunderAt = now;
+  try {
+    const a = new Audio("/api/sfx?s=thunder"); a.volume = 0.5;
+    var p = a.play(); if (p && p.catch) p.catch(function () {});
+  } catch (e) {}
+}
+function initAudio(data) {
+  try { if (window.Feel && Feel.configure) Feel.configure({ sfxBase: "/api/sfx?s=" }); } catch (e) {}
+  try { soundOn = !(window.BuildableAudio && window.BuildableAudio.muted); } catch (e) { soundOn = true; }
+  try {
+    if (window.BuildableGameNav) BuildableGameNav.register({
+      hide: [],
+      onSound: function () { setSound(!soundOn); },
+      soundOn: function () { return soundOn; },
+      inGame: function () { return true; },
+    });
+  } catch (e) {}
+  var unlock = function () {
+    if (audioUnlocked) return; audioUnlocked = true;
+    try { if (window.Feel && Feel.unlock) Feel.unlock(); } catch (e) {}
+    startAmbient();
+    document.removeEventListener("pointerdown", unlock);
+    document.removeEventListener("touchstart", unlock);
+  };
+  document.addEventListener("pointerdown", unlock, { passive: true });
+  document.addEventListener("touchstart", unlock, { passive: true });
+}
+function startAmbient() {
+  if (!DATA || !DATA.ambient || !audioUnlocked || !soundOn || paused) return;
+  if (!ambientAudio) {
+    try { ambientAudio = new Audio("/api/sfx?s=" + encodeURIComponent(DATA.ambient)); ambientAudio.loop = true; ambientAudio.volume = 0.15; } catch (e) { return; }
+  }
+  try { var p = ambientAudio.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+}
+function stopAmbient() { if (ambientAudio) { try { ambientAudio.pause(); } catch (e) {} } }
+function setSound(on) {
+  soundOn = on;
+  try {
+    if (window.BuildableAudio) {
+      if (on && window.BuildableAudio.muted) window.BuildableAudio.toggleMute();
+      else if (!on && !window.BuildableAudio.muted) window.BuildableAudio.toggleMute();
+    }
+  } catch (e) {}
+  if (on) startAmbient(); else { stopAmbient(); stopNarration(); }
+  try { if (window.BuildableGameNav) BuildableGameNav.update(); } catch (e) {}
+}
+
+// ================= read aloud: narrator clip first, browser voice as fallback =================
+function setSayButton(isPlaying) {
+  const b = document.getElementById("sayBtn"); if (!b) return;
+  b.classList.toggle("playing", !!isPlaying);
+  if (b.setAttribute) b.setAttribute("aria-label", isPlaying ? "Stop reading" : "Read to me");
+  b.innerHTML = isPlaying
+    ? '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+}
+function stopNarration() {
+  sayToken++;
+  try { if (narrAudio) { narrAudio.onended = null; narrAudio.onerror = null; narrAudio.pause(); narrAudio = null; } } catch (e) {}
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+  speaking = false; setSayButton(false);
+}
+function browserVoice(c, text, token) {
+  if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); if (token === sayToken) { speaking = false; setSayButton(false); } return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(c.name + ". " + (text != null ? text : (c.fact || "")));
+    u.rate = 0.92; u.pitch = 1.05;
+    u.onend = function () { if (token === sayToken) { speaking = false; setSayButton(false); } };
+    speechSynthesis.speak(u);
+  } catch (e) { showToast("Couldn't read that aloud right now."); if (token === sayToken) { speaking = false; setSayButton(false); } }
+}
+function readAloud() {
+  if (speaking) { stopNarration(); return; }
+  if (!current) return;
+  const c = ITEMS[current]; if (!c) return;
+  const fs = factsFor(c); const text = fs[Math.min(factIdx, fs.length - 1)] || "";
+  stopNarration();
+  const token = ++sayToken; speaking = true; setSayButton(true);
+  if (factIdx === 0 && c.factAudio) {
+    try {
+      const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(c.factAudio));
+      narrAudio = a;
+      a.onended = function () { if (token === sayToken) { speaking = false; setSayButton(false); } };
+      a.onerror = function () { if (token !== sayToken) return; narrAudio = null; browserVoice(c, text, token); };
+      const pr = a.play();
+      if (pr && pr.catch) pr.catch(function () { if (token !== sayToken) return; narrAudio = null; browserVoice(c, text, token); });
+      return;
+    } catch (e) { /* fall through to browser voice */ }
+  }
+  browserVoice(c, text, token);
+}
+
+// ================= quiz bridge (CARTRIDGE-CONTRACT.md: quizRequest / pause / resume / bk:quizDone) =================
+function requestQuiz(item) {
+  if (!iframed()) { showToast("Open this inside Buildable Kids to take the quiz."); return; }
+  const onDone = (e) => { const d = e && e.data; if (d && d.type === "bk:quizDone") { window.removeEventListener("message", onDone); } };
+  window.addEventListener("message", onDone);
+  postToShell({
+    source: "buildable",
+    kind: "quizRequest",
+    exhibitId: DATA.id,
+    topic: DATA.topic,
+    skills: DATA.skills || [],
+    itemName: item.name,
+    quiz: item.quiz || [],
+  });
+}
+
+// =====================================================================
+// The painted stage + live simulation (from the two approved mocks).
+// The scene layers (sky x3, sea, land) are ART SLOTS: when the exhibit
+// names them, the images draw; until then the painted placeholders do.
+// =====================================================================
+const cv = document.getElementById("stage");
+const ctx = cv.getContext("2d");
+let W = 0, H = 0, seaY = 0;
+let skyC = null, skyColdC = null, skyStormC = null, seaC = null, landC = null;
+const sceneImgs = {}; // slot -> Image, loaded from data.scene
+
+function sceneArtUrl(p) {
+  const v = (DATA && DATA.assetVersion) ? ((p.indexOf("?") !== -1 ? "&" : "?") + "v=" + encodeURIComponent(DATA.assetVersion)) : "";
+  if (/^https?:\/\//.test(p) || p.indexOf("/") === 0) return p + v;
+  return "/" + p + v;
+}
+function loadSceneArt(data) {
+  const slots = (data && data.scene) || {};
+  Object.keys(slots).forEach((k) => {
+    try {
+      const im = new Image();
+      im.src = sceneArtUrl(slots[k]);
+      sceneImgs[k] = im;
+    } catch (e) {}
+  });
+}
+function drawSlot(name, fallbackCanvas, alpha) {
+  const im = sceneImgs[name];
+  if (alpha !== undefined) ctx.globalAlpha = alpha;
+  if (im && im.complete && im.naturalWidth) {
+    // cover-fit the painted art to the stage
+    const s = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+    ctx.drawImage(im, (W - im.naturalWidth * s) / 2, (H - im.naturalHeight * s) / 2, im.naturalWidth * s, im.naturalHeight * s);
+  } else if (fallbackCanvas) {
+    ctx.drawImage(fallbackCanvas, 0, 0, W, H);
+  }
+  if (alpha !== undefined) ctx.globalAlpha = 1;
+}
+
+function makeLayer(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+
+// ---------- painted placeholders (replaced by real art via data.scene slots) ----------
+function paintSkyVariant(top, mid, low, warm) {
+  const c = makeLayer(W, H); const s = c.getContext("2d");
+  const g = s.createLinearGradient(0, 0, 0, seaY * 1.05);
+  g.addColorStop(0, top); g.addColorStop(0.45, mid); g.addColorStop(1, low);
+  s.fillStyle = g; s.fillRect(0, 0, W, H);
+  const bank = [[0.12, 0.34, 0.30, 0.10], [0.42, 0.30, 0.36, 0.11], [0.75, 0.36, 0.30, 0.09], [0.28, 0.42, 0.44, 0.10], [0.62, 0.44, 0.40, 0.09]];
+  bank.forEach((b) => {
+    const bg = s.createRadialGradient(W * b[0], H * b[1], 2, W * b[0], H * b[1], W * b[2] * 0.5);
+    bg.addColorStop(0, "rgba(190,200,212,.28)"); bg.addColorStop(1, "rgba(190,200,212,0)");
+    s.fillStyle = bg; s.beginPath(); s.ellipse(W * b[0], H * b[1], W * b[2] * 0.5, H * b[3], 0, 0, Math.PI * 2); s.fill();
+  });
+  const hz = s.createLinearGradient(0, seaY - H * 0.09, 0, seaY);
+  hz.addColorStop(0, "rgba(233,214,180,0)"); hz.addColorStop(1, "rgba(233,214,180," + warm + ")");
+  s.fillStyle = hz; s.fillRect(0, seaY - H * 0.09, W, H * 0.09);
+  return c;
+}
+function paintSea() {
+  const c = makeLayer(W, H); const s = c.getContext("2d");
+  const g = s.createLinearGradient(0, seaY, 0, H);
+  g.addColorStop(0, "#5F8896"); g.addColorStop(0.28, "#3D6B7C"); g.addColorStop(1, "#16303F");
+  s.fillStyle = g; s.fillRect(0, seaY, W, H - seaY);
+  const rg = s.createLinearGradient(0, seaY, 0, seaY + H * 0.08);
+  rg.addColorStop(0, "rgba(215,224,222,.5)"); rg.addColorStop(1, "rgba(215,224,222,0)");
+  s.fillStyle = rg; s.fillRect(0, seaY, W, H * 0.08);
+  return c;
+}
+function paintLand() {
+  const c = makeLayer(W, H); const s = c.getContext("2d");
+  const baseY = seaY + 2, tipX = W * 0.30;
+  const g = s.createLinearGradient(0, seaY - H * 0.16, 0, baseY);
+  g.addColorStop(0, "#39424A"); g.addColorStop(1, "#20272E");
+  s.fillStyle = g;
+  s.beginPath(); s.moveTo(-4, baseY);
+  s.lineTo(-4, seaY - H * 0.075);
+  s.bezierCurveTo(W * 0.07, seaY - H * 0.12, W * 0.15, seaY - H * 0.045, W * 0.21, seaY - H * 0.065);
+  s.bezierCurveTo(W * 0.26, seaY - H * 0.08, W * 0.29, seaY - H * 0.05, tipX, seaY - H * 0.028);
+  s.quadraticCurveTo(W * 0.315, seaY - H * 0.008, W * 0.325, baseY);
+  s.closePath(); s.fill();
+  s.strokeStyle = "rgba(226,210,180,.28)"; s.lineWidth = 2;
+  s.beginPath(); s.moveTo(-4, seaY - H * 0.075);
+  s.bezierCurveTo(W * 0.07, seaY - H * 0.12, W * 0.15, seaY - H * 0.045, W * 0.21, seaY - H * 0.065);
+  s.bezierCurveTo(W * 0.26, seaY - H * 0.08, W * 0.29, seaY - H * 0.05, tipX, seaY - H * 0.028);
+  s.stroke();
+  // the lighthouse (Mike-approved) on the high point
+  const lx = W * 0.115, groundY = seaY - H * 0.088, th = H * 0.115, tw = W * 0.028;
+  const tg = s.createLinearGradient(lx - tw, 0, lx + tw, 0);
+  tg.addColorStop(0, "#C9C2B4"); tg.addColorStop(0.5, "#F2EBDC"); tg.addColorStop(1, "#A79F91");
+  s.fillStyle = tg;
+  s.beginPath(); s.moveTo(lx - tw * 0.78, groundY); s.lineTo(lx - tw * 0.5, groundY - th); s.lineTo(lx + tw * 0.5, groundY - th); s.lineTo(lx + tw * 0.78, groundY); s.closePath(); s.fill();
+  s.fillStyle = "rgba(140,60,55,.9)"; s.fillRect(lx - tw * 0.62, groundY - th * 0.62, tw * 1.24, th * 0.14);
+  s.fillStyle = "#2A2E34"; s.fillRect(lx - tw * 0.58, groundY - th - H * 0.020, tw * 1.16, H * 0.020);
+  s.fillStyle = "#FFD98A"; s.fillRect(lx - tw * 0.4, groundY - th - H * 0.018, tw * 0.8, H * 0.015);
+  s.fillStyle = "#8C3A36";
+  s.beginPath(); s.moveTo(lx - tw * 0.66, groundY - th - H * 0.020); s.lineTo(lx, groundY - th - H * 0.048); s.lineTo(lx + tw * 0.66, groundY - th - H * 0.020); s.closePath(); s.fill();
+  const lg = s.createRadialGradient(lx, groundY - th - H * 0.010, 1, lx, groundY - th - H * 0.010, W * 0.05);
+  lg.addColorStop(0, "rgba(255,217,138,.55)"); lg.addColorStop(1, "rgba(255,217,138,0)");
+  s.fillStyle = lg; s.beginPath(); s.arc(lx, groundY - th - H * 0.010, W * 0.05, 0, Math.PI * 2); s.fill();
+  return c;
+}
+function repaintLayers() {
+  skyC = paintSkyVariant("#4FA8D8", "#7EC4E8", "#BFE2EC", 0.45);      // clear + warm
+  skyColdC = paintSkyVariant("#8FA6BC", "#B9C9D6", "#E4ECEF", 0.18);  // pale winter cold
+  skyStormC = paintSkyVariant("#2E3950", "#57697F", "#93A5B0", 0.35); // heavy storm slate
+  seaC = paintSea();
+  landC = paintLand();
+}
+
+function size() {
+  const w = cv.clientWidth || 592;
+  const h = Math.min(Math.round(w * 0.72), 430);
+  cv.width = w * devicePixelRatio; cv.height = h * devicePixelRatio; cv.style.height = h + "px";
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  W = w; H = h; seaY = H * 0.68;
+  skyC = null; // repaint lazily on the next frame (keeps boot canvas-free for QA)
+  rain.length = 0; splashes.length = 0; vapor.length = 0; hails.length = 0;
+}
+
+// ---------- simulation state ----------
+const vapor = [], rain = [], hails = [], splashes = [], mists = [];
+for (let i = 0; i < 3; i++) mists.push({ x: Math.random(), y: 0.60 + i * 0.035, w: 0.32 + Math.random() * 0.2, sp: 0.006 + Math.random() * 0.008 });
+let cloudMass = 0, charge = 0, flash = 0, bolt = null, rainbowA = 0, snowLine = 0;
+
+const PUFFS = [
+  { dx: -0.27, dy: 0.01, r: 0.085, c: "118,128,146", a: 0.85 }, { dx: -0.17, dy: -0.012, r: 0.105, c: "128,138,154", a: 0.9 },
+  { dx: -0.06, dy: -0.022, r: 0.115, c: "134,144,160", a: 0.9 }, { dx: 0.05, dy: -0.018, r: 0.11, c: "130,140,156", a: 0.9 },
+  { dx: 0.16, dy: -0.01, r: 0.10, c: "136,146,162", a: 0.88 }, { dx: 0.26, dy: 0, r: 0.085, c: "126,136,152", a: 0.85 },
+  { dx: -0.12, dy: -0.05, r: 0.09, c: "176,186,200", a: 0.5 }, { dx: 0.01, dy: -0.058, r: 0.095, c: "184,194,208", a: 0.5 },
+  { dx: 0.13, dy: -0.046, r: 0.085, c: "178,188,202", a: 0.45 }
+];
+
+let last = 0;
+function tick(t) {
+  requestAnimationFrame(tick);
+  if (!W) { last = t; return; }
+  if (!skyC) { try { repaintLayers(); } catch (e) { last = t; return; } }
+  const dt = paused ? 0 : Math.min((t - last) / 1000, 0.05); last = t;
+  stepGlide(dt);
+  const heat = sliderVal(heatEl) / 100, temp = sliderVal(tempEl) / 100, wind = sliderVal(windEl) / 100;
+  const wx = weatherAt(heat, temp, cloudMass);
+  const slant = (wind - 0.12) * 95; // sideways px/sec for everything that falls
+  if (wind > 0.55) trigger("wind");
+
+  // --- physics step ---
+  // vapor rises from the sea, rate follows heat; wind leans it
+  if (!paused && Math.random() < heat * 0.9) vapor.push({ x: Math.random() * W, y: seaY - 4, v: 24 + heat * 42, w: Math.random() * 6.3 });
+  if (vapor.length && heat > 0.2) trigger("evaporation");
+  for (let i = vapor.length - 1; i >= 0; i--) {
+    const p = vapor[i];
+    p.y -= p.v * dt; p.x += Math.sin(t / 700 + p.w) * 0.5 + slant * 0.35 * dt;
+    if (p.y < H * 0.26) {
+      if (temp < 0.75) { cloudMass = Math.min(cloudMass + 1, 260); trigger("cloud"); }
+      vapor.splice(i, 1);
+    } else if (p.y <= 0) vapor.splice(i, 1);
+  }
+
+  // precipitation: rain, snow, and hail out of a heavy-enough cloud
+  const cy = H * 0.20, cw = Math.min(W * 0.62, 40 + cloudMass * 1.6);
+  if (!paused && (wx.rain || wx.snow) && Math.random() < Math.min(0.9, cloudMass / 140)) {
+    const px = W * 0.46 + (Math.random() - 0.5) * cw * 1.6;
+    if (wx.hail && Math.random() < 0.4) {
+      hails.push({ x: px, y: cy + H * 0.08, vy: 150 + Math.random() * 70, vx: slant, r: 2.5 + Math.random() * 2, bounced: false });
+      trigger("hail");
+    } else {
+      rain.push({ x: px, y: cy + H * 0.08, v: wx.snow ? 34 + Math.random() * 22 : 200 + Math.random() * 90, snow: wx.snow, w: Math.random() * 6.3 });
+      trigger(wx.snow ? "snow" : "rain");
+    }
+    cloudMass -= 0.75; // drain tuned so light rain + strong sun settles below the rainbow ceiling
+  }
+  for (let i = rain.length - 1; i >= 0; i--) {
+    const d = rain[i];
+    d.y += d.v * dt;
+    d.x += d.snow ? (Math.sin(t / 500 + d.w) * 0.8 + slant * 0.5 * dt) : slant * dt;
+    if (d.y >= seaY - 2) {
+      if (!d.snow && Math.random() < 0.5) splashes.push({ x: d.x, y: seaY + Math.random() * (H - seaY) * 0.35, r: 1, life: 1 });
+      if (d.snow) snowLine = Math.min(1, snowLine + 0.01);
+      rain.splice(i, 1);
+    }
+  }
+  for (let i = hails.length - 1; i >= 0; i--) {
+    const hd = hails[i];
+    hd.vy += 130 * dt; hd.y += hd.vy * dt; hd.x += hd.vx * dt;
+    if (hd.y >= seaY - 2 && hd.vy > 0) {
+      if (!hd.bounced) { hd.bounced = true; hd.vy = -hd.vy * 0.45; splashes.push({ x: hd.x, y: seaY + 4, r: 1, life: 1 }); }
+      else hails.splice(i, 1);
+    }
+  }
+  if (!wx.snow) snowLine = Math.max(0, snowLine - dt * 0.1);
+
+  // storm charge: a big hot cloud builds lightning
+  if (wx.storm) { charge += dt; if (charge > 2.2) { charge = 0; flash = 1; playThunder(); bolt = { x: W * 0.46 + (Math.random() - 0.5) * W * 0.3, segs: Array.from({ length: 7 }, () => Math.random() * 40 - 20) }; trigger("lightning"); } }
+  else charge = 0;
+  flash = Math.max(0, flash - dt * 2.4);
+
+  // rainbow: sun beaming through light rain
+  rainbowA = Math.max(0, Math.min(1, rainbowA + (wx.rainbow ? dt * 0.5 : -dt * 0.7)));
+  if (rainbowA > 0.4) trigger("rainbow");
+
+  // --- draw ---
+  const coldness = temp < 0.3 ? Math.min(1, (0.3 - temp) / 0.3) : 0;
+  const gloom = Math.min(0.92, cloudMass / 230 + (wx.storm ? 0.15 : 0));
+  drawSlot("sky", skyC);
+  if (coldness > 0) drawSlot("skyCold", skyColdC, coldness);
+  if (gloom > 0.05) drawSlot("skyStorm", skyStormC, gloom);
+
+  // mist bands above the horizon (appear as the air gets damp)
+  const mistA = Math.min(0.25, cloudMass / 500 + 0.06);
+  mists.forEach((m) => {
+    m.x += (m.sp + wind * 0.03) * dt; if (m.x > 1.3) m.x = -0.4;
+    const mg = ctx.createRadialGradient(W * m.x, H * m.y, 2, W * m.x, H * m.y, W * m.w * 0.5);
+    mg.addColorStop(0, "rgba(205,214,218," + mistA + ")"); mg.addColorStop(1, "rgba(205,214,218,0)");
+    ctx.fillStyle = mg; ctx.beginPath(); ctx.ellipse(W * m.x, H * m.y, W * m.w * 0.5, H * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // the sun: size + glow follow heat, hidden as the cloud thickens
+  const sunA = Math.max(0.12, 1 - gloom * 1.1);
+  const sr = 13 + heat * 18;
+  ctx.globalAlpha = sunA;
+  const sg = ctx.createRadialGradient(W * 0.8, H * 0.17, 2, W * 0.8, H * 0.17, sr * 2.6);
+  sg.addColorStop(0, "rgba(255,224,150,.85)"); sg.addColorStop(0.4, "rgba(255,210,120," + (0.2 + heat * 0.3) + ")"); sg.addColorStop(1, "rgba(255,210,120,0)");
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(W * 0.8, H * 0.17, sr * 2.6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#FFD980"; ctx.beginPath(); ctx.arc(W * 0.8, H * 0.17, sr, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // rainbow arc (behind the cloud, over the sea)
+  if (rainbowA > 0.02) {
+    const bands = ["#E5484D", "#F1903F", "#F5D93A", "#4FBE5C", "#3F8FE8", "#7C5CD6"];
+    ctx.save(); ctx.globalAlpha = rainbowA * 0.55; ctx.lineWidth = Math.max(3, W * 0.011);
+    bands.forEach((col, i) => {
+      ctx.strokeStyle = col; ctx.beginPath();
+      ctx.arc(W * 0.42, seaY + H * 0.30, H * 0.62 - i * ctx.lineWidth, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  // the cloud: soft puffs scaled by mass, darker as it loads up, leaning with the wind
+  if (cloudMass > 4) {
+    const scale = Math.min(1, 0.25 + cloudMass / 220);
+    const cx = W * 0.46 + Math.sin(t / 2600) * W * 0.012 + wind * W * 0.05;
+    const dark = Math.min(1, cloudMass / 230);
+    ctx.save();
+    ctx.translate(cx, cy + H * 0.055); ctx.scale(1, (H * 0.075) / (W * 0.34));
+    const base = ctx.createRadialGradient(0, 0, W * 0.02, 0, 0, W * 0.34 * scale);
+    base.addColorStop(0, "rgba(58,66,86," + (0.9 * dark) + ")"); base.addColorStop(0.6, "rgba(58,66,86," + (0.5 * dark) + ")"); base.addColorStop(1, "rgba(58,66,86,0)");
+    ctx.fillStyle = base; ctx.beginPath(); ctx.arc(0, 0, W * 0.34 * scale, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    PUFFS.forEach((p, i) => {
+      const shade = p.c.split(",").map((n) => Math.round(Number(n) * (1 - dark * 0.35))).join(",");
+      const px = cx + p.dx * W * scale + Math.sin(t / 1400 + i) * 1.8;
+      const py = cy + p.dy * H + Math.cos(t / 1700 + i * 1.3) * 1.4;
+      const pr = p.r * W * scale;
+      if (pr < 3) return;
+      const pg = ctx.createRadialGradient(px, py - pr * 0.25, pr * 0.1, px, py, pr);
+      pg.addColorStop(0, "rgba(" + shade + "," + p.a + ")"); pg.addColorStop(0.72, "rgba(" + shade + "," + (p.a * 0.75) + ")"); pg.addColorStop(1, "rgba(" + shade + ",0)");
+      ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+
+  drawSlot("land", landC);
+  drawSlot("sea", seaC);
+
+  // moving wave strokes, livelier with wind
+  ctx.strokeStyle = "rgba(222,236,238,.30)"; ctx.lineWidth = 1.6;
+  for (let row = 0; row < 4; row++) {
+    const y = seaY + 6 + row * (H - seaY) * 0.2, amp = (2 + row * 1.1) * (1 + wind * 0.8), sp = 600 - row * 80 - wind * 220;
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 12) ctx.lineTo(x, y + Math.sin(x / (30 + row * 10) + t / Math.max(sp, 180)) * amp);
+    ctx.globalAlpha = 0.9 - row * 0.18; ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  if (snowLine > 0.02) { ctx.fillStyle = "rgba(255,255,255," + (0.75 * snowLine) + ")"; ctx.fillRect(0, seaY - 3, W, 4); }
+
+  // vapor particles: soft mist specks, fading as they climb
+  vapor.forEach((p) => {
+    const a = 0.34 * Math.max(0.25, (p.y - H * 0.26) / (seaY - H * 0.26));
+    ctx.fillStyle = "rgba(255,255,255," + a + ")";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 1.9, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // rain / snow
+  rain.forEach((d) => {
+    if (d.snow) { ctx.fillStyle = "rgba(255,255,255,.95)"; ctx.beginPath(); ctx.arc(d.x, d.y, 2.6, 0, Math.PI * 2); ctx.fill(); }
+    else {
+      ctx.strokeStyle = "rgba(210,228,240,.6)"; ctx.lineWidth = 1.7;
+      const len = 11, sx = slant / (d.v || 1) * len;
+      ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - sx, d.y - len); ctx.stroke();
+    }
+  });
+  // hail
+  ctx.fillStyle = "rgba(240,248,252,.95)";
+  hails.forEach((hd) => { ctx.beginPath(); ctx.arc(hd.x, hd.y, hd.r, 0, Math.PI * 2); ctx.fill(); });
+  // splash ripples
+  for (let i = splashes.length - 1; i >= 0; i--) {
+    const s = splashes[i];
+    s.r += 26 * dt; s.life -= dt * 1.6;
+    if (s.life <= 0) { splashes.splice(i, 1); continue; }
+    ctx.strokeStyle = "rgba(225,238,240," + (s.life * 0.4) + ")"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r, s.r * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  // lightning
+  if (flash > 0 && bolt) {
+    ctx.fillStyle = "rgba(255,255,255," + flash * 0.5 + ")"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(255,244,180," + Math.min(1, flash * 1.4) + ")"; ctx.lineWidth = 3; ctx.beginPath();
+    let bx = bolt.x, by = cy + H * 0.09; ctx.moveTo(bx, by);
+    bolt.segs.forEach((sgm) => { bx += sgm; by += (seaY - cy - H * 0.09) / bolt.segs.length; ctx.lineTo(bx, by); });
+    ctx.stroke();
+  }
+
+  // painterly vignette
+  const v = ctx.createRadialGradient(W * 0.5, H * 0.46, H * 0.35, W * 0.5, H * 0.52, H * 0.85);
+  v.addColorStop(0, "rgba(12,16,28,0)"); v.addColorStop(1, "rgba(12,16,28,.2)");
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+
+  // --- live narration (recipe lines take priority via narrLock) ---
+  if (wx.storm && flash > 0.3) narr(narrLine("storm"));
+  else if (wx.hail && hails.length) narr(narrLine("hail"));
+  else if (rainbowA > 0.4) narr(narrLine("rainbow"));
+  else if (wx.snow) narr(narrLine("snowing"));
+  else if (wx.rain) narr(narrLine("raining"));
+  else if (cloudMass >= 60) narr(narrLine("bigCloudWaiting"));
+  else if (cloudMass >= 15) narr(narrLine("cloudForming"));
+  else if (heat >= 0.15) narr(narrLine("vapor"));
+  else narr(narrLine("start"));
+}
+</script>
+</body>
+</html>

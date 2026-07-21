@@ -1,0 +1,188 @@
+{
+  "id": "make-it-rain",
+  "title": "Make It Rain",
+  "template": "weather-lab",
+  "topic": "weather",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["weather-facts", "reading"],
+  "heroArt": "explore-make-it-rain-hero",
+  "sources": [
+    "NOAA SciJinks (scijinks.gov)",
+    "NOAA National Weather Service JetStream school (weather.gov/jetstream)",
+    "NOAA National Severe Storms Laboratory (nssl.noaa.gov)",
+    "NASA Climate Kids and NASA Space Place (climatekids.nasa.gov, spaceplace.nasa.gov)",
+    "UK Met Office learning pages (metoffice.gov.uk)",
+    "National Geographic Kids (kids.nationalgeographic.com)"
+  ],
+  "ambient": "waves",
+  "assetVersion": 1,
+  "controls": { "heat": "Sun heat", "temp": "Air temperature", "wind": "Wind" },
+  "narration": {
+    "start": "Slide the sun's heat up and watch the ocean.",
+    "vapor": "The sun is warming the sea. Invisible water vapor is rising into the sky!",
+    "cloudForming": "The vapor is cooling high up and huddling into a cloud. Keep it coming!",
+    "raining": "The drops got heavy. It is RAINING! You made the water cycle happen.",
+    "snowing": "It is freezing! The cloud is making SNOW. Six-sided flakes, drifting down.",
+    "storm": "The cloud is huge and charged up. A storm is here!",
+    "hail": "The storm is tossing raindrops up into freezing air. Here comes HAIL!",
+    "rainbow": "Sunshine is beaming right through the falling rain. Look, a RAINBOW!",
+    "bigCloudWaiting": "A big cloud is waiting. Cool the air down to make it rain."
+  },
+  "recipes": [
+    { "id": "rain", "name": "Make Rain", "heat": 60, "temp": 40, "wind": 25, "color": "#37B6F5",
+      "line": "Let's MAKE RAIN. Watch: the machine is warming the sun and cooling the sky..." },
+    { "id": "snow", "name": "Make Snow", "heat": 60, "temp": 5, "wind": 15, "color": "#7C9BB8",
+      "line": "Let's MAKE SNOW. Warm sun to lift the water, then freezing cold air..." },
+    { "id": "storm", "name": "Make a Storm", "heat": 95, "temp": 45, "wind": 62, "color": "#5A5FA8",
+      "line": "Let's MAKE A STORM. Blazing heat, a huge cloud... stand by for lightning!" },
+    { "id": "sunny", "name": "Sunny Day", "heat": 15, "temp": 75, "wind": 10, "color": "#FFC542", "clearCloud": true,
+      "line": "Sunny day! Gentle sun, warm air, clear sky. Ahhh." },
+    { "id": "rainbow", "name": "Make a Rainbow", "heat": 72, "temp": 52, "wind": 15, "color": "#B06BC7",
+      "line": "Let's MAKE A RAINBOW. We need sunshine AND light rain at the same time..." },
+    { "id": "hail", "name": "Make Hail", "heat": 85, "temp": 30, "wind": 20, "color": "#5E8FA3",
+      "line": "Let's MAKE HAIL. A big hot storm below, freezing cold air above..." }
+  ],
+  "items": [
+    {
+      "id": "evaporation",
+      "name": "Evaporation",
+      "chip": "What is that rising mist?",
+      "fact": "When the sun warms the ocean, some of the water turns into an invisible gas called water vapor and floats up into the sky. That is called evaporation. You just made it happen!",
+      "facts": [
+        "When the sun warms the ocean, some of the water turns into an invisible gas called water vapor and floats up into the sky. That is called evaporation. You just made it happen!",
+        "Evaporation is happening all around you, all the time. It is why puddles slowly disappear after the rain stops and why wet swimsuits dry in the sun.",
+        "Most of the water floating in our sky came from the ocean. The sun lifts billions of tons of water into the air every single day, one invisible bit at a time."
+      ],
+      "stats": [
+        { "label": "What rises", "value": "Invisible water vapor" },
+        { "label": "Where most comes from", "value": "The ocean" }
+      ],
+      "asks": ["Why can't I see water vapor?", "Where does a puddle go?"],
+      "quiz": ["weather-evaporation"]
+    },
+    {
+      "id": "cloud",
+      "name": "How clouds form",
+      "chip": "How did a cloud form?",
+      "fact": "High in the sky the air is colder. When rising water vapor cools down, it turns back into billions of tiny water droplets that huddle together around specks of dust. That huddle is a cloud!",
+      "facts": [
+        "High in the sky the air is colder. When rising water vapor cools down, it turns back into billions of tiny water droplets that huddle together around specks of dust. That huddle is a cloud!",
+        "Clouds look light and fluffy, but they are heavy! A puffy white cloud can weigh about a million pounds, as much as a whole herd of elephants. It floats because the weight is spread into billions of tiny drops.",
+        "The droplets in a cloud are so small that about a million of them fit in one raindrop. They are so light that the moving air holds them up."
+      ],
+      "stats": [
+        { "label": "A puffy cloud weighs", "value": "About 1 million pounds" },
+        { "label": "Made of", "value": "Billions of tiny droplets" }
+      ],
+      "asks": ["Why don't clouds fall down?", "What are the puffy clouds called?"],
+      "quiz": ["weather-clouds"]
+    },
+    {
+      "id": "rain",
+      "name": "Why rain falls",
+      "chip": "Why does rain fall?",
+      "fact": "Inside a cloud, tiny droplets bump into each other and join into bigger and bigger drops. When a drop gets too heavy for the air to hold up, down it falls. That is rain!",
+      "facts": [
+        "Inside a cloud, tiny droplets bump into each other and join into bigger and bigger drops. When a drop gets too heavy for the air to hold up, down it falls. That is rain!",
+        "Raindrops are not shaped like teardrops. Little ones are round, and big ones flatten out like tiny hamburger buns as they push through the air.",
+        "Big raindrops fall at about 20 miles per hour, as fast as you can ride a bike downhill. The rain that lands on you today may once have floated in the ocean!"
+      ],
+      "stats": [
+        { "label": "Big drops fall at", "value": "About 20 mph" },
+        { "label": "Real drop shape", "value": "Like a hamburger bun" }
+      ],
+      "asks": ["Why does rain feel cold?", "What is drizzle?"],
+      "quiz": ["weather-rain"]
+    },
+    {
+      "id": "snow",
+      "name": "Why snow instead of rain",
+      "chip": "Why snow instead of rain?",
+      "fact": "When the air is freezing cold, the water in clouds does not make drops. It freezes into tiny ice crystals that stick together into snowflakes and drift gently down. Every snowflake has six sides!",
+      "facts": [
+        "When the air is freezing cold, the water in clouds does not make drops. It freezes into tiny ice crystals that stick together into snowflakes and drift gently down. Every snowflake has six sides!",
+        "Snowflakes grow into stars, plates, columns and needles depending on how cold and wet the cloud is. People say no two snowflakes are exactly alike.",
+        "Snow is not actually white! Each tiny crystal is clear like glass. Snow looks white because light bounces around between all the crystals and mixes into white."
+      ],
+      "stats": [
+        { "label": "Sides on a snowflake", "value": "Always six" },
+        { "label": "A crystal's true color", "value": "Clear, like glass" }
+      ],
+      "asks": ["What is sleet?", "Why does snow crunch?"],
+      "quiz": ["weather-snow"]
+    },
+    {
+      "id": "lightning",
+      "name": "Lightning",
+      "chip": "Why does lightning happen?",
+      "sound": "thunder",
+      "fact": "Inside a big storm cloud, bits of ice and water rub past each other and build up electric charge, like shuffling socks on a carpet. When the charge gets huge, ZAP, it jumps as lightning!",
+      "facts": [
+        "Inside a big storm cloud, bits of ice and water rub past each other and build up electric charge, like shuffling socks on a carpet. When the charge gets huge, ZAP, it jumps as lightning!",
+        "A lightning bolt is about five times hotter than the surface of the sun. It heats the air so fast that the air explodes outward, and that boom is thunder.",
+        "You can tell how far away a storm is! Count the seconds between the flash and the thunder, then divide by five. That is about how many miles away the lightning was."
+      ],
+      "stats": [
+        { "label": "How hot", "value": "5x the sun's surface" },
+        { "label": "Thunder is", "value": "The sound of lightning" }
+      ],
+      "asks": ["Is thunder dangerous?", "Where is the safest place in a storm?"],
+      "quiz": ["weather-lightning"]
+    },
+    {
+      "id": "wind",
+      "name": "Wind",
+      "chip": "What makes the wind blow?",
+      "sound": "wind",
+      "fact": "Wind is just air on the move! The sun warms some parts of the world more than others. Warm air rises, cooler air rushes in to take its place, and that rushing air is the wind you feel.",
+      "facts": [
+        "Wind is just air on the move! The sun warms some parts of the world more than others. Warm air rises, cooler air rushes in to take its place, and that rushing air is the wind you feel.",
+        "You cannot see wind, only what it does. Waving trees, rippling water and flying kites are all the invisible air giving itself away.",
+        "The fastest wind gust ever measured on the ground was 253 miles per hour, during a huge cyclone in Australia. That is faster than the fastest race car!"
+      ],
+      "stats": [
+        { "label": "Wind is", "value": "Air on the move" },
+        { "label": "Fastest gust measured", "value": "253 mph" }
+      ],
+      "asks": ["Why is it windy at the beach?", "How do windmills use wind?"],
+      "quiz": ["weather-wind"]
+    },
+    {
+      "id": "rainbow",
+      "name": "Rainbows",
+      "chip": "How did a rainbow appear?",
+      "sound": "sparkle",
+      "fact": "A rainbow happens when sunshine and rain meet. Sunlight looks white, but it is really every color mixed together. When light passes through falling raindrops, each drop bends the light and splits it into all its colors!",
+      "facts": [
+        "A rainbow happens when sunshine and rain meet. Sunlight looks white, but it is really every color mixed together. When light passes through falling raindrops, each drop bends the light and splits it into all its colors!",
+        "To find a rainbow, stand with the sun behind you and the rain in front of you. The colors always line up the same way: red on the outside, then orange, yellow, green, blue and purple.",
+        "A rainbow is really a full circle of color! From the ground we only see the top half. People in airplanes sometimes see the whole ring."
+      ],
+      "stats": [
+        { "label": "The recipe", "value": "Sun + falling rain" },
+        { "label": "Its real shape", "value": "A full circle" }
+      ],
+      "asks": ["Can I touch a rainbow?", "Why is red always on top?"],
+      "quiz": ["weather-rainbow"]
+    },
+    {
+      "id": "hail",
+      "name": "Hail",
+      "chip": "What are those bouncing ice balls?",
+      "sound": "splash",
+      "fact": "Hail is made when a storm's strong winds toss raindrops way up to the freezing top of the cloud. The drops freeze, fall, get tossed up again, and grow a new coat of ice each trip until they are too heavy and tumble down as hailstones!",
+      "facts": [
+        "Hail is made when a storm's strong winds toss raindrops way up to the freezing top of the cloud. The drops freeze, fall, get tossed up again, and grow a new coat of ice each trip until they are too heavy and tumble down as hailstones!",
+        "If you cut a big hailstone in half, you can see rings of ice like the layers of an onion. Each ring is one more trip up to the freezing top of the storm.",
+        "The biggest hailstone ever found in America fell in South Dakota. It was 8 inches across, bigger than a softball, and weighed almost 2 pounds!"
+      ],
+      "stats": [
+        { "label": "Built from", "value": "Layers of ice, like an onion" },
+        { "label": "Biggest US hailstone", "value": "8 inches across" }
+      ],
+      "asks": ["Why does hail fall in summer?", "Can hail break things?"],
+      "quiz": ["weather-hail"]
+    }
+  ]
+}
