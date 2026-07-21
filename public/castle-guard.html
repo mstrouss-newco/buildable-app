@@ -83,10 +83,17 @@ function computeDims() {
 }
 
 /* ---------- content as data ---------- */
+/* Session 9C: four themed worlds. A "world" is only a colour palette (grass + path),
+   so a whole new-looking level costs zero new art — same sprites, recoloured ground. */
+const WORLDS = {
+  meadow: { name: "Green Meadow", grassTop: "#8AD06A", grassBot: "#5DB048", path: "#D8B57A", pathEdge: "#B68A4E" },
+  autumn: { name: "Autumn Woods", grassTop: "#C4A85C", grassBot: "#96783C", path: "#C89660", pathEdge: "#96683C" },
+  snowy:  { name: "Snowy Pass",   grassTop: "#DEE8F0", grassBot: "#B4C6D6", path: "#D2CDC4", pathEdge: "#8F9AA6" },
+  dusk:   { name: "Dusk Keep",    grassTop: "#607896", grassBot: "#3C4A68", path: "#968496", pathEdge: "#60546E" },
+};
 const GAME_CONFIG = window.GAME_CONFIG || {
   theme: "castle",
-  world: { name: "Green Meadow", grassTop: "#8AD06A", grassBot: "#5DB048",
-           path: "#D8B57A", pathEdge: "#B68A4E" },
+  world: WORLDS.meadow,
   spriteBase: "game-assets/tiny-swords/",
   // frame slicing for the Tiny Swords sheets (fw/fh = one frame; n = frames; fps = anim speed, 0 = static frame 0)
   sprites: {
@@ -118,41 +125,101 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   ],
   // baddie kinds (silly goblins). hits = soft bonks before it poofs.
   baddies: {
-    pawn:  { name: "Goblin", sprite: "baddie_run", h: 88,  speed: 46, hits: 4,  reward: 5,  r: 26 },
-    scout: { name: "Scout",  sprite: "baddie_run", h: 66,  speed: 86, hits: 2,  reward: 4,  r: 20, tint: "#8be24a", tintA: 0.5 },
-    brute: { name: "Brute",  sprite: "baddie_run", h: 124, speed: 30, hits: 14, reward: 16, r: 38, tint: "#c9432f", tintA: 0.5 },
-    boss:  { name: "Goblin King", sprite: "baddie_run", h: 156, speed: 26, hits: 44, reward: 60, r: 48, tint: "#8a3fd0", tintA: 0.45, boss: true },
+    pawn:  { name: "Goblin", sprite: "baddie_run", h: 88,  speed: 46, hits: 4,  reward: 5,  r: 26, shadow: "#3a2a18" },
+    scout: { name: "Scout",  sprite: "baddie_run", h: 62,  speed: 86, hits: 2,  reward: 4,  r: 20, tint: "#7be23a", tintA: 0.62, shadow: "#2f6a12" },
+    brute: { name: "Brute",  sprite: "baddie_run", h: 128, speed: 30, hits: 14, reward: 16, r: 38, tint: "#e53a24", tintA: 0.66, shadow: "#7a1c10" },
+    boss:  { name: "Goblin King", sprite: "baddie_run", h: 160, speed: 26, hits: 44, reward: 60, r: 48, tint: "#9a3fe0", tintA: 0.6, shadow: "#4a1a70", boss: true },
   },
   econ: { startCoins: 80, perPoof: 5, waveBonus: 20 },
   build: { slotEvery: 158, slotOffset: 66 },   // build-slot auto-placement along the path
   levels: [
-    { n: 1, name: "First Steps", hearts: 5, startCoins: 85,
-      path: [[0.00,0.32],[0.34,0.32],[0.34,0.66],[0.70,0.66],[0.70,0.38],[1.00,0.38]],
+    /* ---- World 1: Green Meadow (gentle onboarding) ---- */
+    { n: 1, name: "First Steps", world: WORLDS.meadow, hearts: 5, startCoins: 85,
+      path: [[0.00,0.32],[0.34,0.32],[0.34,0.66],[0.70,0.66],[0.70,0.40],[0.90,0.40]],
       waves: [
-        { baddie: "pawn", count: 14, spacingMs: 900, speed: 48 },
-        { groups: [ { baddie: "pawn", count: 12, spacingMs: 750, speed: 52 }, { baddie: "scout", count: 8, spacingMs: 450 } ] },
-        { groups: [ { baddie: "pawn", count: 14, spacingMs: 700, speed: 54 }, { baddie: "brute", count: 2, spacingMs: 700 } ] },
+        { baddie: "pawn", count: 12, spacingMs: 950, speed: 46 },
+        { groups: [ { baddie: "pawn", count: 12, spacingMs: 780, speed: 50 }, { baddie: "scout", count: 6, spacingMs: 480 } ] },
+        { groups: [ { baddie: "pawn", count: 14, spacingMs: 720, speed: 52 }, { baddie: "brute", count: 2, spacingMs: 800 } ] },
       ] },
-    { n: 2, name: "Two by Two", hearts: 5, startCoins: 95,
-      path: [[0.00,0.52],[0.22,0.52],[0.22,0.22],[0.50,0.22],[0.50,0.74],[0.80,0.74],[0.80,0.42],[1.00,0.42]],
+    { n: 2, name: "Two by Two", world: WORLDS.meadow, hearts: 5, startCoins: 95,
+      path: [[0.00,0.52],[0.22,0.52],[0.22,0.24],[0.50,0.24],[0.50,0.72],[0.80,0.72],[0.80,0.44],[0.90,0.44]],
       waves: [
-        { groups: [ { baddie: "pawn", count: 14, spacingMs: 700, speed: 52 }, { baddie: "scout", count: 10, spacingMs: 420 } ] },
-        { groups: [ { baddie: "pawn", count: 16, spacingMs: 650, speed: 54 }, { baddie: "brute", count: 3, spacingMs: 850 } ] },
-        { groups: [ { baddie: "scout", count: 14, spacingMs: 340 }, { baddie: "pawn", count: 14, spacingMs: 600, speed: 56 }, { baddie: "brute", count: 3, spacingMs: 800 } ] },
+        { groups: [ { baddie: "pawn", count: 14, spacingMs: 720, speed: 50 }, { baddie: "scout", count: 9, spacingMs: 440 } ] },
+        { groups: [ { baddie: "pawn", count: 16, spacingMs: 660, speed: 52 }, { baddie: "brute", count: 3, spacingMs: 850 } ] },
+        { groups: [ { baddie: "scout", count: 13, spacingMs: 350 }, { baddie: "pawn", count: 14, spacingMs: 620, speed: 54 }, { baddie: "brute", count: 3, spacingMs: 800 } ] },
       ] },
-    { n: 3, name: "Big Parade", hearts: 5, startCoins: 110,
-      path: [[0.00,0.24],[0.26,0.24],[0.26,0.56],[0.10,0.56],[0.10,0.82],[0.56,0.82],[0.56,0.40],[0.80,0.40],[0.80,0.70],[1.00,0.70]],
+    { n: 3, name: "Big Parade", world: WORLDS.meadow, hearts: 5, startCoins: 110,
+      path: [[0.00,0.24],[0.26,0.24],[0.26,0.56],[0.10,0.56],[0.10,0.82],[0.56,0.82],[0.56,0.40],[0.90,0.40]],
       waves: [
-        { groups: [ { baddie: "pawn", count: 16, spacingMs: 650, speed: 54 }, { baddie: "scout", count: 12, spacingMs: 360 } ] },
-        { groups: [ { baddie: "pawn", count: 16, spacingMs: 600, speed: 56 }, { baddie: "brute", count: 4, spacingMs: 700 } ] },
-        { groups: [ { baddie: "scout", count: 18, spacingMs: 300 }, { baddie: "brute", count: 4, spacingMs: 650 }, { baddie: "pawn", count: 14, spacingMs: 520, speed: 58 } ] },
+        { groups: [ { baddie: "pawn", count: 16, spacingMs: 660, speed: 52 }, { baddie: "scout", count: 12, spacingMs: 360 } ] },
+        { groups: [ { baddie: "pawn", count: 16, spacingMs: 600, speed: 54 }, { baddie: "brute", count: 4, spacingMs: 720 } ] },
+        { groups: [ { baddie: "scout", count: 16, spacingMs: 300 }, { baddie: "brute", count: 4, spacingMs: 680 }, { baddie: "pawn", count: 14, spacingMs: 540, speed: 56 } ] },
       ] },
-    { n: 4, name: "Goblin King", hearts: 5, startCoins: 125,
-      path: [[0.00,0.40],[0.20,0.40],[0.20,0.70],[0.45,0.70],[0.45,0.25],[0.72,0.25],[0.72,0.60],[1.00,0.60]],
+    /* ---- World 2: Autumn Woods (brutes lean in) ---- */
+    { n: 4, name: "Falling Leaves", world: WORLDS.autumn, hearts: 5, startCoins: 120,
+      path: [[0.00,0.40],[0.20,0.40],[0.20,0.70],[0.45,0.70],[0.45,0.25],[0.72,0.25],[0.72,0.60],[0.90,0.60]],
       waves: [
-        { groups: [ { baddie: "scout", count: 14, spacingMs: 340 }, { baddie: "pawn", count: 16, spacingMs: 620, speed: 56 } ] },
-        { groups: [ { baddie: "pawn", count: 18, spacingMs: 520, speed: 58 }, { baddie: "brute", count: 5, spacingMs: 650 } ] },
-        { groups: [ { baddie: "scout", count: 20, spacingMs: 280 }, { baddie: "brute", count: 5, spacingMs: 600 }, { baddie: "pawn", count: 14, spacingMs: 480, speed: 60 }, { baddie: "boss", count: 1, spacingMs: 1500 } ] },
+        { groups: [ { baddie: "scout", count: 13, spacingMs: 340 }, { baddie: "pawn", count: 15, spacingMs: 620, speed: 54 } ] },
+        { groups: [ { baddie: "pawn", count: 16, spacingMs: 560, speed: 56 }, { baddie: "brute", count: 4, spacingMs: 700 } ] },
+        { groups: [ { baddie: "scout", count: 16, spacingMs: 300 }, { baddie: "brute", count: 5, spacingMs: 640 }, { baddie: "pawn", count: 14, spacingMs: 520, speed: 58 } ] },
+      ] },
+    { n: 5, name: "Woodland Wind", world: WORLDS.autumn, hearts: 5, startCoins: 130,
+      path: [[0.00,0.30],[0.18,0.30],[0.18,0.62],[0.40,0.62],[0.40,0.30],[0.62,0.30],[0.62,0.70],[0.90,0.70]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 16, spacingMs: 300 }, { baddie: "pawn", count: 16, spacingMs: 560, speed: 56 } ] },
+        { groups: [ { baddie: "pawn", count: 18, spacingMs: 520, speed: 58 }, { baddie: "brute", count: 5, spacingMs: 640 } ] },
+        { groups: [ { baddie: "scout", count: 18, spacingMs: 270 }, { baddie: "brute", count: 6, spacingMs: 600 }, { baddie: "pawn", count: 14, spacingMs: 500, speed: 60 } ] },
+      ] },
+    { n: 6, name: "Harvest King", world: WORLDS.autumn, hearts: 5, startCoins: 145,
+      path: [[0.00,0.50],[0.14,0.50],[0.14,0.20],[0.40,0.20],[0.40,0.80],[0.66,0.80],[0.66,0.35],[0.90,0.35]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 16, spacingMs: 300 }, { baddie: "pawn", count: 16, spacingMs: 540, speed: 56 } ] },
+        { groups: [ { baddie: "pawn", count: 18, spacingMs: 500, speed: 58 }, { baddie: "brute", count: 6, spacingMs: 620 } ] },
+        { groups: [ { baddie: "scout", count: 18, spacingMs: 260 }, { baddie: "brute", count: 5, spacingMs: 600 }, { baddie: "pawn", count: 14, spacingMs: 480, speed: 60 }, { baddie: "boss", count: 1, spacingMs: 1600 } ] },
+      ] },
+    /* ---- World 3: Snowy Pass (faster, tighter) ---- */
+    { n: 7, name: "First Frost", world: WORLDS.snowy, hearts: 5, startCoins: 140,
+      path: [[0.00,0.36],[0.30,0.36],[0.30,0.64],[0.58,0.64],[0.58,0.34],[0.90,0.34]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 16, spacingMs: 290 }, { baddie: "pawn", count: 16, spacingMs: 560, speed: 56 } ] },
+        { groups: [ { baddie: "pawn", count: 18, spacingMs: 500, speed: 58 }, { baddie: "brute", count: 5, spacingMs: 640 } ] },
+        { groups: [ { baddie: "scout", count: 20, spacingMs: 250 }, { baddie: "brute", count: 6, spacingMs: 600 }, { baddie: "pawn", count: 14, spacingMs: 480, speed: 60 } ] },
+      ] },
+    { n: 8, name: "Icy Bends", world: WORLDS.snowy, hearts: 5, startCoins: 150,
+      path: [[0.00,0.24],[0.24,0.24],[0.24,0.50],[0.12,0.50],[0.12,0.78],[0.50,0.78],[0.50,0.36],[0.74,0.36],[0.74,0.66],[0.90,0.66]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 18, spacingMs: 270 }, { baddie: "pawn", count: 16, spacingMs: 540, speed: 58 } ] },
+        { groups: [ { baddie: "pawn", count: 18, spacingMs: 480, speed: 60 }, { baddie: "brute", count: 6, spacingMs: 620 } ] },
+        { groups: [ { baddie: "scout", count: 22, spacingMs: 240 }, { baddie: "brute", count: 7, spacingMs: 560 }, { baddie: "pawn", count: 14, spacingMs: 460, speed: 62 } ] },
+      ] },
+    { n: 9, name: "Blizzard King", world: WORLDS.snowy, hearts: 5, startCoins: 165,
+      path: [[0.00,0.50],[0.20,0.50],[0.20,0.24],[0.46,0.24],[0.46,0.74],[0.70,0.74],[0.70,0.40],[0.90,0.40]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 18, spacingMs: 260 }, { baddie: "pawn", count: 16, spacingMs: 520, speed: 58 } ] },
+        { groups: [ { baddie: "pawn", count: 20, spacingMs: 460, speed: 60 }, { baddie: "brute", count: 7, spacingMs: 580 } ] },
+        { groups: [ { baddie: "scout", count: 20, spacingMs: 240 }, { baddie: "brute", count: 6, spacingMs: 560 }, { baddie: "pawn", count: 14, spacingMs: 460, speed: 62 }, { baddie: "boss", count: 1, spacingMs: 1600 } ] },
+      ] },
+    /* ---- World 4: Dusk Keep (the grand finale) ---- */
+    { n: 10, name: "Gates of Dusk", world: WORLDS.dusk, hearts: 5, startCoins: 165,
+      path: [[0.00,0.30],[0.22,0.30],[0.22,0.60],[0.46,0.60],[0.46,0.28],[0.70,0.28],[0.70,0.62],[0.90,0.62]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 18, spacingMs: 260 }, { baddie: "pawn", count: 18, spacingMs: 520, speed: 58 } ] },
+        { groups: [ { baddie: "pawn", count: 20, spacingMs: 460, speed: 60 }, { baddie: "brute", count: 7, spacingMs: 580 } ] },
+        { groups: [ { baddie: "scout", count: 22, spacingMs: 230 }, { baddie: "brute", count: 8, spacingMs: 540 }, { baddie: "pawn", count: 14, spacingMs: 440, speed: 62 } ] },
+      ] },
+    { n: 11, name: "The Long March", world: WORLDS.dusk, hearts: 5, startCoins: 180,
+      path: [[0.00,0.20],[0.28,0.20],[0.28,0.50],[0.10,0.50],[0.10,0.80],[0.50,0.80],[0.50,0.34],[0.74,0.34],[0.74,0.68],[0.90,0.68]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 20, spacingMs: 240 }, { baddie: "pawn", count: 18, spacingMs: 500, speed: 60 } ] },
+        { groups: [ { baddie: "pawn", count: 20, spacingMs: 440, speed: 62 }, { baddie: "brute", count: 8, spacingMs: 560 } ] },
+        { groups: [ { baddie: "scout", count: 24, spacingMs: 220 }, { baddie: "brute", count: 8, spacingMs: 520 }, { baddie: "pawn", count: 16, spacingMs: 420, speed: 64 } ] },
+      ] },
+    { n: 12, name: "King's Last Stand", world: WORLDS.dusk, hearts: 5, startCoins: 200,
+      path: [[0.00,0.50],[0.16,0.50],[0.16,0.22],[0.42,0.22],[0.42,0.78],[0.66,0.78],[0.66,0.30],[0.90,0.30]],
+      waves: [
+        { groups: [ { baddie: "scout", count: 20, spacingMs: 240 }, { baddie: "brute", count: 6, spacingMs: 560 }, { baddie: "pawn", count: 16, spacingMs: 480, speed: 60 } ] },
+        { groups: [ { baddie: "pawn", count: 20, spacingMs: 440, speed: 62 }, { baddie: "brute", count: 8, spacingMs: 540 }, { baddie: "boss", count: 1, spacingMs: 1500 } ] },
+        { groups: [ { baddie: "scout", count: 24, spacingMs: 210 }, { baddie: "brute", count: 8, spacingMs: 520 }, { baddie: "pawn", count: 16, spacingMs: 420, speed: 64 }, { baddie: "boss", count: 2, spacingMs: 2200 } ] },
       ] },
   ],
 };
@@ -301,12 +368,16 @@ function buildLevel(idx) {
   const rng = mulberry(1000 + idx * 7);
   const decor = [];
   const kinds = ["tree", "tree", "bush1", "bush2", "rock1", "rock2"];
-  for (let i = 0; i < 16; i++) {
-    const x = 30 + rng() * (LW - 60), y = 120 + rng() * (LH - 150);
-    // keep decor off the path and off slots
-    if (distToPath(segs, total, x, y) < 56) continue;
+  const castlePt = pts[pts.length - 1];
+  const MX = 74;                                   // side margin so full-width trees never clip the edge
+  for (let i = 0; i < 22; i++) {
+    const x = MX + rng() * (LW - MX * 2);
+    const y = 132 + rng() * (LH - 214);            // top clear of the HUD, bottom clear of the guard bar
+    // keep decor off the path, off slots, and away from the castle
+    if (distToPath(segs, total, x, y) < 58) continue;
+    if (Math.hypot(castlePt.x - x, castlePt.y - y) < 130) continue;
     let nearSlot = false;
-    for (const s of slots) if (Math.hypot(s.x - x, s.y - y) < 60) { nearSlot = true; break; }
+    for (const s of slots) if (Math.hypot(s.x - x, s.y - y) < 62) { nearSlot = true; break; }
     if (nearSlot) continue;
     const kind = kinds[(rng() * kinds.length) | 0];
     decor.push({ kind, x, y, h: kind === "tree" ? 120 : kind.startsWith("bush") ? 60 : 40, ph: rng() * 6.28 });
@@ -584,8 +655,9 @@ function render() {
   if (DEMO) cgDemoDrawHand();
 }
 
+function curWorld() { return (S && S.W && S.W.L && S.W.L.world) ? S.W.L.world : GAME_CONFIG.world; }
 function drawWorld() {
-  const w = GAME_CONFIG.world;
+  const w = curWorld();
   const g = ctx.createLinearGradient(0, 0, 0, LH);
   g.addColorStop(0, w.grassTop); g.addColorStop(1, w.grassBot);
   ctx.fillStyle = g; ctx.fillRect(0, 0, LW, LH);
@@ -596,18 +668,20 @@ function drawWorld() {
   if (S) drawPath();
 }
 function drawPath() {
-  const pts = S.W.pts;
+  const pts = S.W.pts, wc = curWorld();
   ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.strokeStyle = GAME_CONFIG.world.pathEdge; ctx.lineWidth = 56;
+  ctx.strokeStyle = wc.pathEdge; ctx.lineWidth = 56;
   ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
-  ctx.strokeStyle = GAME_CONFIG.world.path; ctx.lineWidth = 44;
+  ctx.strokeStyle = wc.path; ctx.lineWidth = 44;
   ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
   // start marker (goblin gate)
   const s = S.W.spawn;
-  ctx.fillStyle = "rgba(40,30,20,0.25)"; ctx.beginPath(); ctx.ellipse(s.x + 6, s.y, 26, 14, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "rgba(40,30,20,0.25)"; ctx.beginPath(); ctx.ellipse(Math.max(s.x + 6, 26), s.y, 26, 14, 0, 0, 7); ctx.fill();
 }
 function drawDecor(d) {
   const sway = Math.sin(S ? S.t * 1.2 + d.ph : d.ph) * 2;
+  const shR = d.kind === "tree" ? d.h * 0.28 : d.kind.startsWith("bush") ? d.h * 0.5 : d.h * 0.7;
+  drawShadow(d.x, d.y + d.h * 0.08, shR, 0.15);
   if (!drawSprite(ctx, d.kind, d.x + sway, d.y - d.h * 0.4, d.h, 0, { frame: 0 })) {
     // fallback drawn decor
     if (d.kind === "tree") { ctx.fillStyle = "#3f7a2e"; ctx.beginPath(); ctx.arc(d.x, d.y - d.h * 0.5, d.h * 0.36, 0, 7); ctx.fill(); ctx.fillStyle = "#7a4a25"; ctx.fillRect(d.x - 5, d.y - d.h * 0.2, 10, d.h * 0.3); }
@@ -615,9 +689,20 @@ function drawDecor(d) {
     else { ctx.fillStyle = "#9aa3a8"; ctx.beginPath(); ctx.arc(d.x, d.y - 10, 14, 0, 7); ctx.fill(); }
   }
 }
+// soft oval ground shadow so sprites feel planted (not floating)
+function drawShadow(cx, cy, rx, alpha) {
+  ctx.save();
+  ctx.fillStyle = "rgba(20,30,15," + (alpha == null ? 0.18 : alpha) + ")";
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx, rx * 0.36, 0, 0, 7); ctx.fill();
+  ctx.restore();
+}
 function drawCastle() {
   const c = S.W.castle;
-  if (!drawSprite(ctx, "castle", c.x - 4, c.y - 34, 150, S.t)) {
+  // keep the whole castle on-screen (art fix: it used to hang off the right edge)
+  const ch = 150, cw = ch * (GAME_CONFIG.sprites.castle.fw / GAME_CONFIG.sprites.castle.fh);
+  const cx = Math.max(cw / 2 + 8, Math.min(LW - cw / 2 - 8, c.x - 4));
+  drawShadow(cx, c.y + 30, cw * 0.34, 0.20);
+  if (!drawSprite(ctx, "castle", cx, c.y - 34, 150, S.t)) {
     ctx.fillStyle = "#9fb6c9"; BR && BR.rrect ? BR.rrect(ctx, c.x - 50, c.y - 70, 100, 90, 10) : ctx.fillRect(c.x - 50, c.y - 70, 100, 90); ctx.fill();
     ctx.fillStyle = "#6f879b"; ctx.fillRect(c.x - 56, c.y - 96, 26, 34); ctx.fillRect(c.x + 30, c.y - 96, 26, 34);
   }
@@ -648,6 +733,7 @@ function drawDefender(g) {
     ctx.beginPath(); ctx.arc(g.x, g.y - 24, g.def.range, 0, 7); ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
   }
+  drawShadow(g.x, g.y + 6, g.def.h * 0.20, 0.20);
   const sprite = (g.shootT > 0 ? g.def.shoot : g.def.idle);
   if (!drawSprite(ctx, sprite, g.x, g.y - g.def.h * 0.32, g.def.h, g.anim, { flip: g.face < 0 })) {
     // fallback drawn archer
@@ -659,6 +745,13 @@ function drawBaddie(b, p) {
   const bob = Math.sin(S.t * 8 + b.bob) * 2;
   const sc = b.poof > 0 ? Math.max(0.1, b.poof / 0.45) : 1;
   const flip = p.dx < 0;
+  // type-coloured ground shadow: a quick read of which goblin this is, even from behind
+  if (b.poof <= 0) {
+    ctx.save();
+    ctx.fillStyle = b.kind.shadow || "#2a2015"; ctx.globalAlpha = 0.30;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 4, (b.r || 24) * 0.9, (b.r || 24) * 0.34, 0, 0, 7); ctx.fill();
+    ctx.restore();
+  }
   if (b.kind.boss && b.poof <= 0) {
     const gr = ctx.createRadialGradient(p.x, p.y - 30, 6, p.x, p.y - 30, b.r * 1.9);
     gr.addColorStop(0, "rgba(185,120,255,0.38)"); gr.addColorStop(1, "rgba(185,120,255,0)");
@@ -807,7 +900,7 @@ function makeThumb(idx) {
   try {
     const L = GAME_CONFIG.levels[idx], W = 320, H = 150, pad = 16;
     const cv2 = document.createElement("canvas"); cv2.width = W; cv2.height = H;
-    const c = cv2.getContext("2d"); const w = GAME_CONFIG.world;
+    const c = cv2.getContext("2d"); const w = (GAME_CONFIG.levels[idx] && GAME_CONFIG.levels[idx].world) || GAME_CONFIG.world;
     const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, w.grassTop); g.addColorStop(1, w.grassBot);
     c.fillStyle = g; c.fillRect(0, 0, W, H);
     const pts = L.path.map(p => ({ x: pad + p[0] * (W - pad * 2), y: pad + p[1] * (H - pad * 2) }));
