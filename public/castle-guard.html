@@ -353,15 +353,23 @@ function buildLevel(idx) {
   // derive build slots: walk the path, drop a slot offset perpendicular, alternating sides
   const slots = [];
   const every = GAME_CONFIG.build.slotEvery, off = GAME_CONFIG.build.slotOffset;
+  const MINPATH = 46;   // a build pad must sit clear of the road, never on it
   let d = every * 0.55, side = 1;
   while (d < total - 12) {
     const p = pointAtRaw(segs, total, d);
     const nx = -p.dy, ny = p.dx;                 // unit normal
-    let sx = p.x + nx * off * side, sy = p.y + ny * off * side;
-    // keep on-screen; if off, flip the side
-    if (sx < 46 || sx > LW - 46 || sy < 60 || sy > LH - 40) { sx = p.x - nx * off * side; sy = p.y - ny * off * side; }
-    sx = Math.max(46, Math.min(LW - 46, sx)); sy = Math.max(64, Math.min(LH - 42, sy));
-    slots.push({ x: sx, y: sy, occupied: false });
+    let placed = null;
+    // step the pad further out (and try either side) until it's on-screen AND off the path
+    for (const o of [off, off + 22, off + 44]) {
+      for (const sgn of [side, -side]) {
+        const sx = p.x + nx * o * sgn, sy = p.y + ny * o * sgn;
+        if (sx < 46 || sx > LW - 46 || sy < 64 || sy > LH - 42) continue;   // off-screen
+        if (distToPath(segs, total, sx, sy) < MINPATH) continue;            // still over the road
+        placed = { x: sx, y: sy, occupied: false }; break;
+      }
+      if (placed) break;
+    }
+    if (placed) slots.push(placed);
     d += every; side *= -1;
   }
   // decorative scatter (separate RNG; never affects gameplay)
