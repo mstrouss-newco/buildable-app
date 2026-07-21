@@ -731,13 +731,29 @@ function paintLand() {
 // stage geometry: with a full-scene painting the exhibit's layout field says where
 // the horizon, the grass line, the cloud, the sun and the lighthouse lamp sit
 function layoutOf() { return (DATA && DATA.layout) || {}; }
-function seaLine() { const L = layoutOf(); return H * (sceneFull() ? (L.seaY || 0.43) : (L.seaY || 0.68)); }
+// Each mood painting can put the horizon/grass/lamp somewhere slightly different,
+// so the geometry BLENDS between the base layout and per-mood overrides using the
+// same weights that crossfade the paintings (moodCold / moodGloom, set each frame).
+let moodCold = 0, moodGloom = 0;
+function moodBlend(pick) {
+  const L = layoutOf();
+  const base = pick(L);
+  if (base == null) return null;
+  let c = moodCold, s = moodGloom;
+  const tot = c + s; if (tot > 1) { c /= tot; s /= tot; }
+  const cv = L.cold ? pick(L.cold) : null, sv = L.storm ? pick(L.storm) : null;
+  return base * (1 - c - s) + (cv == null ? base : cv) * c + (sv == null ? base : sv) * s;
+}
+function seaLine() {
+  const v = moodBlend((o) => o.seaY);
+  return H * (v != null ? v : (sceneFull() ? 0.43 : 0.68));
+}
 // the grassy shore: a foreground bank across the bottom, so hail has ground to
 // bounce on and snow has somewhere to pile up (rain still splashes on the sea)
 function shoreTopAt(x) {
-  const L = layoutOf();
-  if (sceneFull()) return H * (L.shoreTop || 0.86) - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.008;
-  return H * (L.shoreTop || 0.872) - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.022;
+  const v = moodBlend((o) => o.shoreTop);
+  if (sceneFull()) return H * (v != null ? v : 0.86) - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.008;
+  return H * (v != null ? v : 0.872) - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.022;
 }
 function paintShore() {
   const c = makeLayer(W, H); const s = c.getContext("2d");
@@ -798,11 +814,13 @@ function tick(t) {
   if (!W) { last = t; return; }
   if (!skyC) { try { repaintLayers(); } catch (e) { last = t; return; } }
   const dt = paused ? 0 : Math.min((t - last) / 1000, 0.05); last = t;
-  seaY = seaLine();
-  const shoreT = shoreTopAt(W * 0.5);
   stepGlide(dt);
   const heat = sliderVal(heatEl) / 100, temp = sliderVal(tempEl) / 100, wind = sliderVal(windEl) / 100;
   const wx = weatherAt(heat, temp, cloudMass);
+  moodCold = temp < 0.3 ? Math.min(1, (0.3 - temp) / 0.3) : 0;
+  moodGloom = Math.min(0.92, cloudMass / 230 + (wx.storm ? 0.15 : 0));
+  seaY = seaLine();
+  const shoreT = shoreTopAt(W * 0.5);
   const slant = (wind - 0.12) * 95; // sideways px/sec for everything that falls
   if (wind > 0.55) trigger("wind");
   updateAudioMix(wx, wind, rain.length, dt);
@@ -871,8 +889,7 @@ function tick(t) {
   if (rainbowA > 0.4) trigger("rainbow");
 
   // --- draw ---
-  const coldness = temp < 0.3 ? Math.min(1, (0.3 - temp) / 0.3) : 0;
-  const gloom = Math.min(0.92, cloudMass / 230 + (wx.storm ? 0.15 : 0));
+  const coldness = moodCold, gloom = moodGloom;
   drawSlot("sky", skyC);
   if (coldness > 0) drawSlot("skyCold", skyColdC, coldness);
   if (gloom > 0.05) drawSlot("skyStorm", skyStormC, gloom);
@@ -997,7 +1014,8 @@ function tick(t) {
 
   // the lighthouse lamp glows, brighter as the sky darkens (position from the layout)
   if (Ly.lamp) {
-    const lampX = W * Ly.lamp.x, lampY = H * Ly.lamp.y;
+    const lampX = W * (moodBlend((o) => o.lamp && o.lamp.x) || Ly.lamp.x);
+    const lampY = H * (moodBlend((o) => o.lamp && o.lamp.y) || Ly.lamp.y);
     const pulse = 0.7 + 0.3 * Math.sin(t / 900);
     const la = (0.15 + 0.5 * gloom) * pulse;
     const lgg = ctx.createRadialGradient(lampX, lampY, 1, lampX, lampY, W * 0.05);

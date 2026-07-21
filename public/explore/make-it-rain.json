@@ -24,7 +24,12 @@
     "skyStorm": "/api/asset-studio?asset=explore/scene/make-it-rain/storm"
   },
   "cloudPuffs": { "base": "/api/asset-studio?asset=explore/cloud/make-it-rain/", "white": 6, "storm": 8 },
-  "layout": { "seaY": 0.43, "shoreTop": 0.86, "cloudY": 0.16, "sun": { "x": 0.80, "y": 0.13 }, "lamp": { "x": 0.10, "y": 0.30 } },
+  "layout": {
+    "seaY": 0.72, "shoreTop": 0.94, "cloudY": 0.16,
+    "sun": { "x": 0.80, "y": 0.13 }, "lamp": { "x": 0.22, "y": 0.39 },
+    "cold": { "seaY": 0.40, "shoreTop": 0.86, "lamp": { "x": 0.115, "y": 0.28 } },
+    "storm": { "seaY": 0.42, "shoreTop": 0.875, "lamp": { "x": 0.10, "y": 0.33 } }
+  },
   "controls": { "heat": "Sun heat", "temp": "Air temperature", "wind": "Wind" },
   "narration": {
     "start": "Slide the sun's heat up and watch the ocean.",
