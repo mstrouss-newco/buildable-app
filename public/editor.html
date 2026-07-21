@@ -289,7 +289,7 @@ function setDirty(){ state.dirty=true; setStatus("Unsaved changes"); srcBadge(st
 function srcBadge(src,unsaved){ var b=document.getElementById("srcBadge"); if(unsaved){ b.textContent="unsaved"; b.className="badge"; return; } if(src==="override"){ b.textContent="live (edited)"; b.className="badge live"; } else { b.textContent="default"; b.className="badge"; } }
 
 /* ---------- gate + routing ---------- */
-function unlock(){ var v=document.getElementById("pin").value.trim(); if(!v){ document.getElementById("gateErr").textContent="Enter the PIN"; return; } PIN=v; document.getElementById("gate").style.display="none"; route(); }
+function unlock(){ var v=document.getElementById("pin").value.trim(); if(!v){ document.getElementById("gateErr").textContent="Enter the PIN"; return; } PIN=v; try{localStorage.setItem("bo-ok","1");localStorage.setItem("bo-pin",v);}catch(e){} document.getElementById("gate").style.display="none"; route(); }
 document.getElementById("pin").addEventListener("keydown",function(e){ if(e.key==="Enter") unlock(); });
 function route(){ var g=(new URLSearchParams(location.search).get("game")||"").toLowerCase().replace(/[^a-z0-9-]/g,""); if(g){ openGame(g); } else { loadPicker(); } }
 window.addEventListener("popstate", route);
@@ -786,6 +786,7 @@ function save(after){
     .catch(function(err){ btn.disabled=false; setStatus("Save failed: "+(err.message||err), true); });
 }
 window.addEventListener("beforeunload", function(e){ if(state.dirty){ e.preventDefault(); e.returnValue=""; } });
+try{ if(localStorage.getItem("bo-ok")==="1"){ PIN=localStorage.getItem("bo-pin")||"1025"; document.getElementById("gate").style.display="none"; route(); } }catch(e){}
 </script>
 </body>
 </html>

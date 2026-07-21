@@ -314,7 +314,7 @@ let doneExpanded={};
 /* ---- PIN gate ---- */
 function tryPin(){
   const v=document.getElementById("pin").value.trim();
-  if(v===PIN){ try{localStorage.setItem("planner-ok","1");}catch(e){} openApp(); }
+  if(v===PIN){ try{localStorage.setItem("planner-ok","1");localStorage.setItem("bo-ok","1");localStorage.setItem("bo-pin",v);}catch(e){} openApp(); }
   else{ document.getElementById("pinErr").textContent="Nope, try again."; }
 }
 function openApp(){
@@ -995,7 +995,7 @@ async function rmMarkDeployed(){
 document.getElementById("f-desc")&&document.getElementById("f-desc").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))addTask();});
 document.querySelectorAll(".modal-bg").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("show");}));
 setKind("game");
-if(localStorage.getItem("planner-ok")==="1"){ openApp(); } else { document.getElementById("pin").focus(); }
+if(localStorage.getItem("planner-ok")==="1"||localStorage.getItem("bo-ok")==="1"){ openApp(); } else { document.getElementById("pin").focus(); }
 </script>
 </body>
 </html>
