@@ -1,6 +1,37 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-21: Session 7K — Fix in-app nav overlap on Sling & Maze (shipped)
+
+Reported bug: in-app, Sling and Maze re-drew their OWN nav buttons once a level
+started, on top of the shell's Home / Sound / Menu. Sling's "‹ Menu" back button sat
+top-left over the shell Home; Maze's Menu + Sound sat top-right over the shell cluster.
+
+Root cause (both games): the helper that re-shows the game's own buttons when a level
+begins set `display:block` with no in-app guard, so it overrode the nav bridge that had
+already hidden those buttons on `register`. Sling's `showChrome(true)` (from `hideMenu`)
+and Maze's `showInGame(true)` (from `hideMenu`) were the culprits.
+
+Fix — mirror the proven Breaker/Runner pattern (`!inApp()` gate):
+- `public/sling-squad.html`: added an `inApp()` helper; `showChrome` now forces `on=false`
+  when in-app, so muteBtn / helpBtn / backBtn stay hidden and the shell's single nav set
+  drives them. Standalone (opened directly) is unchanged — buttons still work.
+- `public/maze-engine.html`: added an `inApp()` helper; `showInGame` now gates backBtn
+  (Menu) and muteBtn (Sound) on `on && !inApp()`. The dpad is a gameplay control (not
+  nav, and NOT in the bridge's `hide` list), so it still follows `on` and stays visible
+  in-app. Standalone unchanged.
+
+Audit: no other game affected. Breaker, Runner, Tank and Tetris already guard with an
+in-app check; Mahjong is the documented top-right exception (its own Recall/Hint/Mix
+controls). Ref: HUD-AND-NAV-RULES.md.
+
+QA: `qa-sling.mjs` → ALL CHECKS PASS (all 20 levels beatable, render smoke green).
+`qa-maze.mjs` → all 6 worlds + full campaign PASS, render smoke green except the
+pre-existing `BuildableWin is not defined` post-win smoke error, which reproduces
+identically on the untouched file (the headless QA sandbox doesn't load that shared lib)
+and is not caused by this change.
+
+
 ## 2026-07-21: Story art direction samples (prototype endpoint, shipped)
 
 For Mike's art-direction decision: three candidate looks (cinematic dusk, bold
