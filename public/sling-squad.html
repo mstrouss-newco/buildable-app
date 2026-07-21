@@ -792,7 +792,7 @@ function pt(ev){ var r=canvas.getBoundingClientRect();
 function clampDrag(p){ var dx=p.x-AX, dy=p.y-AY, d=Math.hypot(dx,dy);
   if(d>MAXPULL){ var k=MAXPULL/d; dx*=k; dy*=k; } return { x:AX+dx, y:AY+dy }; }
 function onDown(ev){ if(SLING_DEMO) return; if(BA){BA.unlock&&BA.unlock();} ensureMusic();
-  if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else { if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else showMenu(); } return; }  // 7J: last level done + opened from the Journey -> go back to it (not the engine own grid)
+  if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else showMenu(); return; }  // 7J: from the Journey -> bounce back after EVERY level (star already saved); standalone still auto-advances
   if(state==="lose"){ ev.preventDefault&&ev.preventDefault(); startLevel(level); return; }
   if(state==="flying"){ ev.preventDefault&&ev.preventDefault(); tryPower(); return; }  // tap mid-air = fire the power
   if(state==="ready"){ ev.preventDefault&&ev.preventDefault(); state="aiming"; G.drag=clampDrag(pt(ev)); sfx("stretch"); }

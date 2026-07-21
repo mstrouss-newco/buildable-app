@@ -487,7 +487,7 @@ function navUpdate(){ try{ if(typeof window!=="undefined" && window.BuildableGam
 
 function onCanvasTap(){
   if(state==="title" && !bsMounted){ pickWorld(Math.max(1, (PREFS.unlocked||0)+1)); return true; }   // fallback start
-  if(state==="win"){ if(mode==="adventure" && worldIdx<WORLDS.length-1 && PREFS.cleared[worldIdx]) startWorld(worldIdx+1,"adventure"); else { if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else showMenu(); } return true; }  // 7J: last world done + opened from the Journey -> go back to it (not the engine's own grid)
+  if(state==="win"){ if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else if(mode==="adventure" && worldIdx<WORLDS.length-1 && PREFS.cleared[worldIdx]) startWorld(worldIdx+1,"adventure"); else showMenu(); return true; }  // 7J: from the Journey -> bounce back after EVERY world (star already saved); standalone still auto-advances
   if(state==="pause"){ state="play"; setPauseLabel(); return true; }
   return false;
 }
