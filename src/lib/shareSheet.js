@@ -7,13 +7,15 @@
 //   2) On computers (no share sheet) it pops a small menu with Copy link, Email,
 //      Text, WhatsApp, Facebook and X — and copies the link to the clipboard.
 //
-// Links look like:  https://your-site/story.html?id=story_abc   (or /song.html?id=song_abc)
-// They open public/story.html / public/song.html, which render read-only.
+// Links look like:  https://your-site/s/story_abc   (or /p/song_abc)
+// Short /s/:id links are served by api/story-share.js, which injects a rich link
+// preview (title + cover image) then renders the same read-only viewer
+// (public/story.html). Songs use the /p/:id pretty route to song.html.
 
 function shareUrl(kind, id) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const file = kind === "song" ? "/song.html" : "/story.html";
-  return origin + file + "?id=" + encodeURIComponent(id);
+  const path = kind === "song" ? "/p/" : "/s/";
+  return origin + path + encodeURIComponent(id);
 }
 
 function shareText(kind, title) {
@@ -56,12 +58,12 @@ function openFallbackMenu({ url, text }) {
 
   const enc = encodeURIComponent;
   const links = [
-    { label: "📋 Copy link", href: null, action: "copy" },
-    { label: "✉️ Email", href: `mailto:?subject=${enc("A Buildable Kids creation")}&body=${enc(text + "\n\n" + url)}` },
-    { label: "💬 Text message", href: `sms:?&body=${enc(text + " " + url)}` },
-    { label: "🟢 WhatsApp", href: `https://wa.me/?text=${enc(text + " " + url)}` },
-    { label: "🔵 Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
-    { label: "✖️ X", href: `https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}` },
+    { label: "Copy link", href: null, action: "copy" },
+    { label: "Email", href: `mailto:?subject=${enc("A Buildable Kids creation")}&body=${enc(text + "\n\n" + url)}` },
+    { label: "Text message", href: `sms:?&body=${enc(text + " " + url)}` },
+    { label: "WhatsApp", href: `https://wa.me/?text=${enc(text + " " + url)}` },
+    { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
+    { label: "X", href: `https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}` },
   ];
 
   const overlay = document.createElement("div");
@@ -74,7 +76,7 @@ function openFallbackMenu({ url, text }) {
   card.style.cssText =
     "background:#fff;color:#1F2937;border-radius:20px;padding:22px;width:min(360px,92vw);box-shadow:0 24px 70px rgba(0,0,0,.45);";
   card.innerHTML =
-    '<div style="font-weight:900;font-size:19px;margin-bottom:4px;">Share this 🎉</div>' +
+    '<div style="font-weight:900;font-size:19px;margin-bottom:4px;">Share this</div>' +
     '<div style="font-size:13px;color:#6B7280;margin-bottom:14px;word-break:break-all;">' + url + "</div>";
 
   links.forEach((l) => {
@@ -85,7 +87,7 @@ function openFallbackMenu({ url, text }) {
       "display:block;width:100%;text-align:left;box-sizing:border-box;margin:8px 0;padding:13px 16px;border:none;border-radius:14px;background:#F3EFFE;color:#5B21B6;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer;text-decoration:none;";
     b.addEventListener("click", async () => {
       if (l.action === "copy") {
-        try { await navigator.clipboard.writeText(url); b.textContent = "✅ Copied!"; } catch {}
+        try { await navigator.clipboard.writeText(url); b.textContent = "Copied!"; } catch {}
         return;
       }
       setTimeout(() => overlay.remove(), 150);

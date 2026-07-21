@@ -205,7 +205,7 @@
     },
     {
       "src": "/s/([^/]+)",
-      "dest": "/story.html?id=$1"
+      "dest": "/api/story-share?id=$1"
     },
     {
       "src": "/p/([^/]+)",
