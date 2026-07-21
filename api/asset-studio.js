@@ -155,6 +155,28 @@ function sendPng(res, b64) {
 // slug -> safe, predictable cache key. "breaker/bricks/jungle/ice_intact"
 const cleanSlug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9/_-]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
 
+// AP1: map a slot/type name to one of the shared-library "kinds" so every studio
+// piece can be tagged (character | world | element). Backgrounds -> world, actors
+// -> character, everything else -> element. Same intent as the library's KINDS.
+function studioKindFromType(type) {
+  const t = String(type || "").toLowerCase();
+  if (/bg|background|world|sky|scene|backdrop|court|board|land|field|loading|hero|win/.test(t)) return "world";
+  if (/char|hero|player|creature|pet|guy|enemy|boss|piece|avatar|monster|villain|pal|foe|face/.test(t)) return "character";
+  return "element";
+}
+// AP1: a studio row's descriptor now carries the tags as JSON. Old rows stored the
+// bare slug string; this reads both so nothing breaks.
+function studioMeta(slug, descriptor) {
+  let meta = {};
+  try { const d = JSON.parse(descriptor); if (d && typeof d === "object") meta = d; } catch {}
+  const parts = String(slug || "").split("/");
+  const game = meta.game || parts[0] || "";
+  const type = meta.type || parts[1] || "";
+  const theme = meta.theme || parts[2] || "";
+  const kind = meta.kind || studioKindFromType(type);
+  return { game, type, theme, kind };
+}
+
 /* ---------------- handler ---------------- */
 export default async function handler(req, res) {
   const q = req.query || {};
@@ -177,7 +199,10 @@ export default async function handler(req, res) {
       if (q.game) rows = rows.filter((x) => (x.cache_key || "").startsWith("studio:" + cleanSlug(q.game) + "/"));
       const assets = rows.map((x) => {
         const slug = (x.cache_key || "").replace(/^studio:/, "");
-        return { slug, url: "/api/asset-studio?asset=" + slug, descriptor: x.descriptor, created_at: x.created_at };
+        const m = studioMeta(slug, x.descriptor);
+        return { slug, url: "/api/asset-studio?asset=" + slug, source: "Studio",
+          game: m.game, type: m.type, theme: m.theme, kind: m.kind,
+          descriptor: x.descriptor, created_at: x.created_at };
       });
       return res.status(200).json({ assets });
     } catch { return res.status(200).json({ assets: [] }); }
@@ -313,15 +338,56 @@ export default async function handler(req, res) {
     const theme = cleanSlug(body.theme || "default");
     const pieces = Array.isArray(body.pieces) ? body.pieces : [];
     if (!pieces.length) return res.status(400).json({ error: "no_pieces" });
+    const kind = cleanSlug(body.kind || "") || studioKindFromType(type);
     const saved = [];
     for (const p of pieces) {
       const name = cleanSlug(p.slug || p.name || "piece");
       const slug = `${game}/${type}/${theme}/${name}`;
       const key = "studio:" + slug;
-      const ok = await cachePut(key, slug, "studio", stripDataUrl(p.b64));
+      // AP1: descriptor now carries the tags (kind + theme + game + type) as JSON.
+      const descriptor = JSON.stringify({ slug, kind, theme, game, type });
+      const ok = await cachePut(key, descriptor, "studio", stripDataUrl(p.b64));
       if (ok) saved.push({ slug, url: "/api/asset-studio?asset=" + slug });
     }
     return res.status(200).json({ saved, count: saved.length });
+  }
+
+  // --- AP1: import an existing library asset (URL or b64) into a game's slot ---
+  // Copies any Browse/pack asset into the studio store under game/type/theme/name
+  // so the engine loads it exactly like art generated in the editor. This is what
+  // makes "assign any library asset to a fitting slot and go live" work.
+  if (action === "import") {
+    const game = cleanSlug(body.game || "misc");
+    const type = cleanSlug(body.type || "asset");
+    const theme = cleanSlug(body.theme || "library");
+    const name = cleanSlug(body.name || "piece");
+    const kind = cleanSlug(body.kind || "") || studioKindFromType(type);
+    let b64 = null;
+    if (body.b64) {
+      b64 = stripDataUrl(body.b64);
+    } else if (body.url) {
+      let u = String(body.url);
+      if (u.startsWith("data:")) {
+        b64 = stripDataUrl(u);
+      } else {
+        if (u.startsWith("/")) {
+          const host = req.headers["x-forwarded-host"] || req.headers.host;
+          const proto = req.headers["x-forwarded-proto"] || "https";
+          u = proto + "://" + host + u;
+        }
+        try {
+          const r = await fetch(u);
+          if (!r.ok) return res.status(502).json({ error: "fetch_failed", status: r.status });
+          const ab = await r.arrayBuffer();
+          b64 = Buffer.from(ab).toString("base64");
+        } catch { return res.status(502).json({ error: "fetch_error" }); }
+      }
+    }
+    if (!b64) return res.status(400).json({ error: "no_source" });
+    const slug = `${game}/${type}/${theme}/${name}`;
+    const descriptor = JSON.stringify({ slug, kind, theme, game, type, imported: true });
+    const ok = await cachePut("studio:" + slug, descriptor, "studio", b64);
+    return res.status(ok ? 200 : 502).json({ ok, slug, url: "/api/asset-studio?asset=" + slug });
   }
 
   return res.status(400).json({ error: "unknown_action" });
