@@ -124,6 +124,28 @@ async function cacheDel(key) {
   try { await fetch(`${SUPABASE_URL}/rest/v1/narration_cache?cache_key=eq.${key}`, { method: "DELETE", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }); } catch {}
 }
 
+// ---- daily budget brake + cost log (same pattern as images.js / asset-studio) ----
+// Stories previously had NO brake and NO logging; every paint below now checks the
+// shared daily pool first and records what it spent. Fail CLOSED on read errors:
+// if we cannot see the meter, we do not spend.
+const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD || "10");
+const GEN_COST = { base: 0.02, expr: 0.04, scene: 0.05, page: 0.10, dir: 0.02 };
+function todayUTC() { return new Date().toISOString().slice(0, 10); }
+async function underBudget(costNeeded) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return false;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/usage_log?select=cost_usd&date=eq.${todayUTC()}`, { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } });
+    if (!r.ok) return false;
+    const rows = await r.json();
+    const spent = (Array.isArray(rows) ? rows : []).reduce((s, x) => s + parseFloat(x.cost_usd || 0), 0);
+    return spent + (costNeeded || 0) <= DAILY_BUDGET_USD;
+  } catch { return false; }
+}
+async function logCost(cost, kind) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
+  try { await fetch(`${SUPABASE_URL}/rest/v1/usage_log`, { method: "POST", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ date: todayUTC(), cost_usd: cost, kind, model: "gpt-image-1" }) }); } catch {}
+}
+
 async function genImage(prompt, transparent, openaiKey, timeoutMs = 44000) {
   const once = async (b) => {
     const ctrl = new AbortController();
@@ -325,6 +347,7 @@ export default async function handler(req, res) {
     if(!body.force && await cacheGet(k)) return res.status(200).json({ ok:true, cached:true });
     const openaiKey=process.env.OPENAI_API_KEY;
     if(!openaiKey) return res.status(200).json({ ok:true, noKey:true });
+    if(!(await underBudget(GEN_COST.page))) return res.status(200).json({ ok:true, failed:true, overBudget:true });
     // Resolve a character reference for THIS style; lazily make the style's base
     // cutout if it doesn't exist yet (so new styles work without pre-generation).
     let ref = EMOS[emo] ? await cacheGet(exprKey(slug,style,emo)) : null;
@@ -334,7 +357,7 @@ export default async function handler(req, res) {
       if(item){
         const bp = item[2] + ". A single character, centered, full body, simple plain background. " + (STYLES[styleId(style)]||STYLES.watercolor) + ", " + SAFE;
         const nb = await genImage(bp, true, openaiKey);
-        if(nb){ await cachePut(cacheKey("character",slug,styleId(style)), nb); ref = nb; }
+        if(nb){ await cachePut(cacheKey("character",slug,styleId(style)), nb); ref = nb; await logCost(GEN_COST.base, "story-base"); }
       }
     }
     if(!ref) ref = EMOS[emo] ? await cacheGet(exprKey(slug,"watercolor",emo)) : await cacheGet(cacheKey("character",slug,"watercolor"));
@@ -349,7 +372,7 @@ export default async function handler(req, res) {
         if(!companionRef){
           const cbp = ci[2] + ". A single character, centered, full body, simple plain background. " + (STYLES[styleId(style)]||STYLES.watercolor) + ", " + SAFE;
           const cnb = await genImage(cbp, true, openaiKey);
-          if(cnb){ await cachePut(cacheKey("character",companion,styleId(style)), cnb); companionRef=cnb; }
+          if(cnb){ await cachePut(cacheKey("character",companion,styleId(style)), cnb); companionRef=cnb; await logCost(GEN_COST.base, "story-base"); }
         }
         if(!companionRef) companionRef = await cacheGet(cacheKey("character",companion,"watercolor"));
         if(companionRef) compName = nm;
@@ -358,6 +381,7 @@ export default async function handler(req, res) {
     const refs = companionRef ? [ref, companionRef] : [ref];
     const b64=await genScene(refs, pageScenePrompt(action,world,style,i,emo,compName), openaiKey);
     if(!b64) return res.status(200).json({ ok:true, failed:true });
+    await logCost(GEN_COST.page, "story-page");
     if(body.force) await cacheDel(k);
     await cachePut(k,b64);
     return res.status(200).json({ ok:true, generated:true });
@@ -373,8 +397,10 @@ export default async function handler(req, res) {
     if (!q.force && await cacheGet(ck)) return res.status(200).json({ ok: true, key, cached: true });
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
+    if (!(await underBudget(GEN_COST.dir))) return res.status(200).json({ ok: true, key, failed: true, overBudget: true });
     const r = await genArt(DIRECTIONS[key], openaiKey);
     if (!r.b64) return res.status(200).json({ ok: true, key, failed: true, upstream: r.status, why: r.msg || "" });
+    await logCost(GEN_COST.dir, "story-dir");
     if (q.force) await cacheDel(ck);
     await cachePut(ck, r.b64);
     return res.status(200).json({ ok: true, key, generated: true });
@@ -460,8 +486,10 @@ export default async function handler(req, res) {
     if (!base) return res.status(200).json({ ok: true, needBase: true });
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
+    if (!(await underBudget(GEN_COST.scene))) return res.status(200).json({ ok: true, slug, shot, failed: true, overBudget: true });
     const b64 = await genScene(base, scenePrompt(shot, style), openaiKey);
     if (!b64) return res.status(200).json({ ok: true, slug, shot, failed: true });
+    await logCost(GEN_COST.scene, "story-scene");
     if (force) await cacheDel(k);
     await cachePut(k, b64);
     return res.status(200).json({ ok: true, slug, shot, generated: true });
@@ -479,8 +507,10 @@ export default async function handler(req, res) {
     if (!force) { const have = await cacheGet(key); if (have) return res.status(200).json({ ok: true, kind, slug, style, cached: true }); }
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
+    if (!(await underBudget(GEN_COST.base))) return res.status(200).json({ ok: true, kind, slug, style, failed: true, overBudget: true });
     const b64 = await genImage(promptFor(kind, item, style), kind === "character", openaiKey);
     if (!b64) return res.status(200).json({ ok: true, kind, slug, style, failed: true });
+    await logCost(GEN_COST.base, "story-base");
     if (force) await cacheDel(key);
     await cachePut(key, b64);
     return res.status(200).json({ ok: true, kind, slug, style, generated: true });
@@ -500,8 +530,10 @@ export default async function handler(req, res) {
     if (!base) return res.status(200).json({ ok: true, slug, style, emo, needBase: true });
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
+    if (!(await underBudget(GEN_COST.expr))) return res.status(200).json({ ok: true, slug, style, emo, failed: true, overBudget: true });
     const b64 = await genExpression(base, exprPrompt(item, emo), openaiKey);
     if (!b64) return res.status(200).json({ ok: true, slug, style, emo, failed: true });
+    await logCost(GEN_COST.expr, "story-expr");
     if (force) await cacheDel(ekey);
     await cachePut(ekey, b64);
     return res.status(200).json({ ok: true, slug, style, emo, generated: true });

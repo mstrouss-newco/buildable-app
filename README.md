@@ -67,6 +67,17 @@ gameplay control and stays visible). Standalone play unchanged. QA: `qa-sling.mj
 all pass; `qa-maze.mjs` all levels + campaign pass. No other game affected. Ref:
 HUD-AND-NAV-RULES.md.
 
+## Cost meter fixed + story painter gets a spending brake (July 21 2026)
+Root cause of the surprise $7 OpenAI day: usage_log had no `date` column, so every
+cost write AND every daily-budget check (`date=eq.today`) failed silently app-wide.
+The existing brakes (asset-studio, images, songs, levels, creatures) never engaged.
+Fixed: `db/fix-usage-log-date.sql` (applied to prod) adds the column + backfill +
+index, arming all existing brakes. And `api/story-library.js`, which had NO brake
+and NO logging, now checks the shared daily pool before every paint (page scenes,
+cutouts, expressions, prototypes, direction samples), logs each spend by kind
+(story-page 10c, story-expr 4c, story-scene 5c, story-base/story-dir 2c), and
+fails CLOSED if the meter is unreadable. Budget = DAILY_BUDGET_USD env (default $10).
+
 ## Story art direction samples endpoint (July 21 2026)
 Additive prototype for the story-art relaunch: `api/story-library.js` gains
 `?dirSample=dusk|paper|deep` (paints one full sample page in that art direction with

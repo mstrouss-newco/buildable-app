@@ -16,6 +16,20 @@ Owner follow-ups after Phase 1. Files: `public/survival-engine.html`, `public/bu
   freshStats + resets updated; the 14 manifest gear ids are unaffected (power-ups are engine-internal).
 - QA: `qa-survival.mjs` all pass (6/6 isolated, 6/6 campaign, render smoke).
 
+## 2026-07-21: Cost meter fix + story painter budget brake (shipped)
+
+Mike flagged a surprise $7.09 OpenAI day (73 Kidspedia studio images at medium
+quality, evening of Jul 20 PT). Investigation: usage_log table had NO `date`
+column; all logCost writes and all underBudget reads failed silently, so every
+existing daily brake was disarmed. Shipped: (1) prod migration + db/
+fix-usage-log-date.sql adding date column/backfill/index (verified with a live
+insert); (2) api/story-library.js underBudget/logCost on every gen path
+(pageScene, base builds, expressions, scene prototypes, dirSample), fail-closed,
+kinds story-page/expr/scene/base/dir. QA: node --check clean. Remaining from the
+cost plan: single-flight lock (never paint the same key twice concurrently) and
+the cheaper page-2..6 reference mode - both folded into the art relaunch build.
+
+
 ## 2026-07-21: Survival — win-shake fix + upgrades you can feel + strong Black Hole (Phase 1, shipped)
 
 Owner feedback on Survival: (1) the screen keeps shaking after you beat a level; (2) the
