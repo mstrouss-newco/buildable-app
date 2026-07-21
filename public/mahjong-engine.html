@@ -427,7 +427,7 @@ function loadSetArt(set){
   if(headless||typeof Image==="undefined") return;
   for(let i=0;i<set.count;i++){
     const im=new Image(); im.decoding="async";
-    im.src=GAME_CONFIG.base+set.key+"/"+String(i+1).padStart(2,"0")+".png";
+    im.src=GAME_CONFIG.base+set.key+"/"+String(i+1).padStart(2,"0")+".png?v=2";
     FACE_IMG[i]=im;
   }
   applyLibFaces(set);
@@ -910,7 +910,7 @@ function openCustomize(){
   const g=document.getElementById("setGrid"); g.innerHTML="";
   GAME_CONFIG.sets.forEach((s,i)=>{ const b=document.createElement("button");
     b.className="setbtn"+(i===PREFS.setIdx?" on":"");
-    b.innerHTML='<img src="'+GAME_CONFIG.base+s.key+'/01.png" alt=""><span>'+s.name+'</span>';
+    b.innerHTML='<img src="'+GAME_CONFIG.base+s.key+'/01.png?v=2" alt=""><span>'+s.name+'</span>';
     b.onclick=()=>{ PREFS.setIdx=i; openCustomize(); }; g.appendChild(b); });
   const sg=document.getElementById("sceneGrid");
   if(sg){ sg.innerHTML="";
