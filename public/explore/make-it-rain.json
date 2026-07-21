@@ -16,7 +16,7 @@
     "National Geographic Kids (kids.nationalgeographic.com)"
   ],
   "ambient": "waves",
-  "assetVersion": 2,
+  "assetVersion": 3,
   "scene": {
     "full": true,
     "sky": "/api/asset-studio?asset=explore/scene/make-it-rain/clear",
