@@ -36,6 +36,10 @@ page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|
 // Stub the two APIs the flow touches, and capture the manifest writes.
 await page.addInitScript(() => {
   window.__posts = [];
+  // Seed the owner Supabase session the manifest save now requires (token-authed).
+  const b64u = (o) => btoa(JSON.stringify(o)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  const jwt = "h." + b64u({ email:"mstrouss@gmail.com", sub:"1cb8cd9e-fba0-4fcc-850a-5b6afb677b87", exp: 9999999999 }) + ".s";
+  try { localStorage.setItem("bk_parent_session_v1", JSON.stringify({ access_token: jwt, refresh_token: "r" })); } catch (e) {}
   const FAKE_MANIFEST = { id:"breaker", name:"Breaker", type:"game",
     art:{ badge:"breaker/badge/v1", hero:"breaker/hero/v1", music:"audio/breaker/theme-v1" },
     levels:[ { id:"jungle-ruins", name:"Jungle Ruins", difficulty:2,
@@ -114,6 +118,18 @@ const charSlots = await page.$$eval(".uslot .sname", els => els.map(e => e.textC
 const charHasActor = charSlots.some(t => /Paddle|Bricks|Balls|Hero/.test(t));
 const charHasBg = charSlots.some(t => /Background/.test(t));
 if (charHasActor && !charHasBg) ok("Character offers actor slots, never Background"); else fail("character fit wrong -> " + JSON.stringify(charSlots));
+
+// 8) Signed-out: apply surfaces a clear sign-in prompt and writes nothing
+await page.evaluate(() => { document.querySelectorAll(".umodal").forEach(m => m.style.display="none"); window.__posts = []; try { localStorage.removeItem("bk_parent_session_v1"); } catch(e){} });
+await page.click('.useg[data-uid="L1"]');
+await page.waitForSelector(".umodal", { state: "visible" });
+await page.click('.ugames .chip[data-g="breaker"]');
+await page.waitForSelector(".uslot");
+await page.click(".uslot");
+await page.waitForTimeout(200);
+const signedOutMsg = await page.textContent(".usheet");
+const noWrite = (await page.evaluate(() => window.__posts.length)) === 0;
+if (/[Ss]ign in/.test(signedOutMsg) && noWrite) ok("Signed-out apply prompts sign-in and writes nothing"); else fail("signed-out path wrong -> wrote:" + !noWrite);
 
 if (errors.length) fail("JS errors on page: " + JSON.stringify(errors.slice(0,4)));
 else ok("No JS errors on the page");

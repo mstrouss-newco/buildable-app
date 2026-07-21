@@ -16,7 +16,11 @@ What shipped (only `public/asset-library.html`, the Browse page — nothing else
   background; (4) shows a thumbnail of what is currently in each fitting slot.
 - Applying: copies the asset into the slot with AP1's `import` action on
   `api/asset-studio` (so the engine loads it exactly like editor-made art), then writes
-  the manifest with `POST /api/manifest` (pin, same as the editor) so it is LIVE at once.
+  the manifest with `POST /api/manifest` so it is LIVE at once. Note: since AP1, the
+  manifest save switched from a shared PIN to the owner's Supabase login — this page now
+  sends the same `Authorization: Bearer <token>` the editor uses (same `bk_parent_session_v1`
+  session, shared on this origin), refreshing on 401, and shows a "sign in at /app" prompt
+  if the owner isn't logged in. No PIN anywhere.
 - Success toast: "Open game" link (deep-links to `/{game}/play/{levelId}` for a level part,
   else `/{game}`) plus one-tap "Undo" that restores the previous slot value with a second
   live write.

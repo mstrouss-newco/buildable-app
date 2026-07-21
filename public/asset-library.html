@@ -1182,7 +1182,22 @@ async function wlSave(){
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
   function labelOf(k){ return LABELS[k]||(String(k).charAt(0).toUpperCase()+String(k).slice(1)); }
   function slugify(s){ return String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"").slice(0,40)||"piece"; }
-  function pin(){ try{ return localStorage.getItem("bo-pin")||"1025"; }catch(e){ return "1025"; } }
+
+  // Owner sign-in (same parent Supabase session the editor + app use; shared on this
+  // origin via localStorage). Manifest saves are token-authed now, not a shared PIN.
+  var SB_URL="https://fmguhfmfntvohtnccmap.supabase.co";
+  var SB_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtZ3VoZm1mbnR2b2h0bmNjbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzA5NzYsImV4cCI6MjA5Nzg0Njk3Nn0.l75DFac-pr_sU_lK458iNjpgbhL53kV3ioJ0noJLJ5k";
+  function readSession(){ try{ return JSON.parse(localStorage.getItem("bk_parent_session_v1")||"null"); }catch(e){ return null; } }
+  function decodeJwt(t){ try{ return JSON.parse(atob(String(t).split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))); }catch(e){ return null; } }
+  function refreshToken(){ var s=readSession(); if(!s||!s.refresh_token) return Promise.resolve(null);
+    return fetch(SB_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:SB_ANON,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})})
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(d){ if(d&&d.access_token){ try{localStorage.setItem("bk_parent_session_v1",JSON.stringify({access_token:d.access_token,refresh_token:d.refresh_token||s.refresh_token}));}catch(e){} return d.access_token; } return null; })
+      .catch(function(){ return null; }); }
+  function ensureToken(){ var s=readSession(); if(!s||!s.access_token) return Promise.resolve(null);
+    var c=decodeJwt(s.access_token), now=Math.floor(Date.now()/1000);
+    if(c && c.exp && (c.exp-now)<120) return refreshToken();
+    return Promise.resolve(s.access_token); }
 
   // Which asset kinds fit a slot — mirrors the editor's role→kind rule so a
   // background never offers the paddle slot (and vice-versa).
@@ -1254,8 +1269,12 @@ async function wlSave(){
         return save(gid,m).then(function(){ close(); showToast(gid,glabel,m,slot,prev); }); })
       .catch(function(e){ sheet.innerHTML=head()+'<div class="muted">Could not apply: '+esc(e.message||e)+'</div><button class="uback" id="u-back">‹ Games</button>'; wireClose(); var b=sheet.querySelector("#u-back"); if(b) b.onclick=function(){ chooseGame(gid,glabel); }; });
   }
-  function save(gid,m){ return fetch("/api/manifest",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:gid,manifest:m,pin:pin()})})
-    .then(function(r){return r.json();}).then(function(j){ if(!j||!j.ok) throw new Error((j&&(j.error||(j.errors&&j.errors.join(", "))))||"save failed"); return j; }); }
+  function post(gid,m,token,retried){
+    return fetch("/api/manifest",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+(token||"")},body:JSON.stringify({game:gid,manifest:m})})
+      .then(function(r){ return r.json().then(function(d){ return {status:r.status,d:d}; }); })
+      .then(function(res){ if(res.status===401 && !retried) return refreshToken().then(function(t){ if(t) return post(gid,m,t,true); throw new Error("Your sign-in expired — open the kids app (/app), sign in, and try again."); });
+        var d=res.d||{}; if(!d.ok) throw new Error((d.errors&&d.errors.join(", "))||d.error||d.detail||"save failed"); return d; }); }
+  function save(gid,m){ return ensureToken().then(function(token){ if(!token) throw new Error("Sign in to your Buildable owner account first (open the kids app at /app), then come back."); return post(gid,m,token,false); }); }
 
   function showToast(gid,glabel,m,slot,prev){
     toast.innerHTML='<span>Live: '+esc(ASSET.name)+' → '+esc(glabel)+' '+esc(slot.label)+'</span>'
