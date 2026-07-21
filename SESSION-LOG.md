@@ -1,16 +1,6 @@
 # Buildable Kids — Session Log
 
 
-## 2026-07-21: Survival — collectable walk-over power drops (shipped)
-
-Owner ask: upgrades should also be COLLECTABLE — e.g. a magnet that drops mid/late level and grabs
-every coin on screen. Added a drop system in `public/survival-engine.html`. From ~30% into a level a
-glowing token appears now and then (max 2 at once, ~every 760 frames); walk over it for an instant
-effect: **Magnet** banks every coin on screen (awards + XP), **Bomb** clears the foes (999 dmg normal,
-8 chip to a boss) with a big boom, **Freeze** freezes all enemies (+boss) for ~3s, **Heart** full-heals
-(the sustain that Lightning-replacing-regen removed). Tokens draw as pulsing glow discs with the drawn
-`puIcon` glyph for now (artwork upgraded in the generated icon pass). QA: `qa-survival.mjs` all pass.
-
 ## 2026-07-21: Survival — remove in-game demo, Journey uses level art, Lightning replaces Slow Heal (shipped)
 
 Owner follow-ups after Phase 1. Files: `public/survival-engine.html`, `public/buildable-renders.js`.
@@ -66,6 +56,16 @@ One file: `public/survival-engine.html`.
 QA: `node qa-survival.mjs` — all checks pass (6/6 isolated wins, 6/6 campaign, render
 smoke incl. post-sim draw of the new trail/ring/frost paths, upgrade-handoff).
 
+
+## 2026-07-21: Session 7J follow-up — Sling & Tumble bounce back to the Journey (shipped)
+
+Owner asked for bounce-back over auto-advance. Opened from the Journey, Sling and Tumble
+now post `nav:exit` on EVERY win (star/unlock already saved in winLevel/winWorld), so the
+kid lands back on the Journey map and picks the next node there — the Journey is the single
+front door. Standalone play (no `?level=`) keeps the old auto-advance + end menu. One line
+each: `public/sling-squad.html` (win-tap) and `public/tumble-engine.html` (win handler).
+Sling's Session 7K in-app nav guard preserved. QA: qa-sling + qa-tumble pass. Optional
+polish flagged: the win banners still say "tap for the next one" (they now go to the map).
 
 ## 2026-07-21: Session 7J — One level picker per game (kill the double picker) (shipped)
 

@@ -34,6 +34,13 @@ generated power-up icon set). One file: `public/survival-engine.html`.
 QA: `qa-survival.mjs` all pass (6/6 isolated, 6/6 campaign, render smoke). Ref:
 SESSION-LOG.md entry of the same date.
 
+## Journey bounce-back for Sling & Tumble (Session 7J follow-up, July 21 2026)
+Owner's call: opened from the Journey, Sling and Tumble now return to the Journey after
+EVERY level/world (star already saved), instead of gliding straight into the next one.
+The Journey is the single front door; the kid picks the next node from the map. Standalone
+play (no `?level=`) still auto-advances as before. One line each in `public/sling-squad.html`
+and `public/tumble-engine.html`. QA: `qa-sling.mjs` and `qa-tumble.mjs` pass.
+
 ## One level picker per game — kill the double picker (Session 7J, July 21 2026)
 Games opened from the shared Journey used to pop the engine's OWN grid level-picker after
 a win, instead of returning the kid to the Journey they started on — two pickers for one
