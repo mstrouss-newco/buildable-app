@@ -1,6 +1,18 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-21: Cabin quality-tier test (shipped)
+
+Mike judged the cut-paper direction sample "bad AI art" (fair: quality low +
+camera zoom past native pixels + no prop detail requested). Test to settle the
+tier: ?dirSample=cabin-low|cabin-med|cabin-high paint ONE identical prompt (cabin
+interior, fire, story props: red cloak, lantern, coastline map, cocoa, boots,
+cat) at each gpt-image-1 quality; costs logged 2c/7c/19c as story-dir. genArt now
+takes a quality param (timeout 130s for high; auto-quality bare fallback REMOVED
+so nothing silently bills at high). Compare page /story-directions-cabin (+routes).
+TEMPORARY like /story-directions; remove both after the decision.
+
+
 ## 2026-07-21: /story-directions live mock page (shipped)
 
 The chat-preview sandbox blocked the local mock's network calls, so the art

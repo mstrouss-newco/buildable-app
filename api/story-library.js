@@ -263,9 +263,16 @@ async function genScene(refs, prompt, openaiKey, timeoutMs = 44000) {
 const DIRECTIONS = {
   dusk:  "Cinematic children's storybook illustration at dramatic dusk. A small cloaked child holding a glowing lantern stands on a dark grassy cliff at the left edge, seen from behind, looking across a calm darkening sea toward a tall old lighthouse on a rocky point at the far right, its lamp unlit. Deep indigo sky fading to burnt orange at the horizon, the first stars, a huge low moon. Painterly and atmospheric like a still from a prestige animated film, rich shadow, warm rim light from the lantern, high detail. Clear foreground cliff, midground sea, background sky. Wide landscape composition. No text, no words. Wholesome, ages 6-10.",
   paper: "Bold cut-paper collage illustration, wide panorama. A tiny girl in an orange coat and her small dark dog walk a winding cream footpath from the lower left, across huge rolling layered green paper hills, past a light-blue paper river carrying a little folded paper boat in the middle distance, toward an enormous ink-blue castle with warm mustard windows and one golden, slightly open door at the far right. Flat layered construction-paper shapes with visible paper texture and torn edges, limited palette of cream, teal green, burnt orange, mustard and ink blue, strong graphic composition, dramatic scale contrast between the tiny hero and the giant castle. No text, no words. Wholesome, ages 6-10.",
+  // Quality-tier test scene (Mike, 2026-07-21): same cabin interior at low/medium/high
+  // so the owner can pick the story-page quality tier on evidence.
+  "cabin-low":  { quality: "low" },
+  "cabin-med":  { quality: "medium" },
+  "cabin-high": { quality: "high" },
   deep:  "Luminous deep-ocean illustration, near dark and mysterious. In the left third a drifting meadow of softly glowing teal jellyfish. In the center a small round vintage exploration submarine with three lit portholes and one warm headlight beam. In the right third a rocky trench wall with a small glowing golden door carved into it near the sea floor. Bioluminescent particles floating everywhere, faint blue light rays from far above, deep blue-black water, painterly detail, beautiful and calm rather than scary. Wide landscape composition. No text, no words. Wholesome, ages 6-10.",
 };
-async function genArt(prompt, openaiKey, timeoutMs = 44000) {
+const CABIN_PROMPT = "Cinematic children's storybook illustration, interior scene. Inside a cozy log cabin at night deep in a rainy forest: a stone fireplace with a warm crackling fire, a child's rain-soaked red hooded cloak drying over a wooden chair by the hearth, a glowing brass lantern on the table beside a half-unrolled hand-drawn map of a rocky coastline, a steaming mug of cocoa, small muddy boots by the door, rain streaking the dark window, a sleepy grey cat curled on a woven rug. Warm golden firelight, soft deep shadows, rich lived-in detail on every surface, painterly and atmospheric like a still from a prestige animated film. Wide landscape composition with clear foreground, midground and background. No text, no words. Wholesome, ages 6-10.";
+const DIR_COST = { low: 0.02, medium: 0.07, high: 0.19 };
+async function genArt(prompt, openaiKey, quality = "low", timeoutMs = 130000) {
   // Landscape page painting (same model + quality as production story pages).
   // Falls back landscape -> square (like api/images.js) and reports the last
   // upstream status so failures are diagnosable instead of silent.
@@ -297,9 +304,8 @@ async function genArt(prompt, openaiKey, timeoutMs = 44000) {
     return null;
   };
   const b64 =
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1536x1024", quality: "low" })) ||
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "low" })) ||
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024" }));
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1536x1024", quality })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality }));
   return { b64, status: lastStatus, msg: lastMsg };
 }
 function dirKey(k){ return "libdir:" + k + ":v1"; }
@@ -392,15 +398,19 @@ export default async function handler(req, res) {
   if (q.dirSample) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     const key = (q.dirSample || "").toString();
-    if (!DIRECTIONS[key]) return res.status(400).json({ ok: false, error: "unknown direction" });
+    const entry = DIRECTIONS[key];
+    if (!entry) return res.status(400).json({ ok: false, error: "unknown direction" });
+    const prompt = typeof entry === "string" ? entry : CABIN_PROMPT;
+    const quality = typeof entry === "string" ? "low" : entry.quality;
+    const cost = DIR_COST[quality] || 0.02;
     const ck = dirKey(key);
     if (!q.force && await cacheGet(ck)) return res.status(200).json({ ok: true, key, cached: true });
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
-    if (!(await underBudget(GEN_COST.dir))) return res.status(200).json({ ok: true, key, failed: true, overBudget: true });
-    const r = await genArt(DIRECTIONS[key], openaiKey);
+    if (!(await underBudget(cost))) return res.status(200).json({ ok: true, key, failed: true, overBudget: true });
+    const r = await genArt(prompt, openaiKey, quality);
     if (!r.b64) return res.status(200).json({ ok: true, key, failed: true, upstream: r.status, why: r.msg || "" });
-    await logCost(GEN_COST.dir, "story-dir");
+    await logCost(cost, "story-dir");
     if (q.force) await cacheDel(ck);
     await cachePut(ck, r.b64);
     return res.status(200).json({ ok: true, key, generated: true });

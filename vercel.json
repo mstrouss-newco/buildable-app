@@ -57,6 +57,14 @@
       "dest": "/story-directions.html"
     },
     {
+      "src": "/story-directions-cabin.html",
+      "dest": "/story-directions-cabin.html"
+    },
+    {
+      "src": "/story-directions-cabin",
+      "dest": "/story-directions-cabin.html"
+    },
+    {
       "src": "/antcity-art-gallery.html",
       "dest": "/antcity-art-gallery.html"
     },
