@@ -11,6 +11,26 @@ one polite dirSample retry if a painting is ever missing). Three looks, three
 interactions: parallax dusk, camera-walk cut-paper, tap-words glowing deep.
 TEMPORARY page: remove with the ?dirSample branch once Mike picks a direction.
 
+## 2026-07-21: Survival — consistent GENERATED power-up icon set (Phase 2, shipped)
+
+Owner ask: the upgrade card art was a weird mix (some real helper sprites, some code-drawn icons, plus
+duplicates) — make it consistent, generated, not code-drawn. Generated a matched set of 15 glossy 3D
+game-token icons through the Asset Studio (FLUX engine, driven from the browser same-origin since the
+sandbox can't reach the generator): fast, multi, big, pierce, orbit, nova, blackhole, frost, homing,
+swift, magnet, heal, storm, shield, and a bomb (for the drop). Each was generated on a flat background,
+keyed to transparent in-browser (corner-sampled flood-fill so white/gray/dark backgrounds all key out
+cleanly and interior highlights are preserved), auto-cropped, and kept to the Studio store
+(`image_cache` kind=studio) served at `/api/asset-studio?asset=survival/pu/space/<id>`.
+
+Engine wiring (`public/survival-engine.html`): new `puArt(id)` loader + `PU_ART_BASE`
+(`/api/asset-studio?asset=survival/pu/space/<id>&v=1`), all warmed on boot. `drawPUicon()` now draws the
+generated image for every upgrade (falls back to the legacy helper sprite, then the drawn icon, if an
+image isn't ready). The collectable drops reuse the same art (`DROP_ICON` bomb->"bomb"), drawn at 30px.
+No repo image files added — icons are Studio-served. To replace one later: regenerate the same slug and
+bump `PU_ART_V` (`&v=1`) to bust the immutable cache. QA: `qa-survival.mjs` all pass.
+
+## 2026-07-21: Survival — collectable walk-over power drops (shipped)
+
 
 ## 2026-07-21: Survival — remove in-game demo, Journey uses level art, Lightning replaces Slow Heal (shipped)
 

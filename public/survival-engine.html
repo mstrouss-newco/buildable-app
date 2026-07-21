@@ -274,7 +274,7 @@ let runGems=0, runLevelsCleared=0, lockerTab="weapon", novaTimer=0, rings=[], he
 let holes=[], bhTimer=0, bolts=[], stormTimer=0;   // black holes + lightning bolts + their timers
 let drops=[], dropTimer=0;   // collectable walk-over power drops (magnet/bomb/freeze/heart)
 const DROP_COL={magnet:"#6ff0ff",bomb:"#ffb03a",freeze:"#bfeaff",heart:"#ff7aa8"};
-const DROP_ICON={magnet:"magnet",bomb:"nova",freeze:"frost",heart:"heal"};
+const DROP_ICON={magnet:"magnet",bomb:"bomb",freeze:"frost",heart:"heal"};
 
 function makeStars(){ const r=mulberry(9999); stars=[]; for(let i=0;i<90;i++) stars.push({x:r()*W,y:r()*H,s:0.6+r()*1.8,ph:r()*6.28,sp:0.5+r()*1.5}); }
 makeStars();
@@ -583,8 +583,16 @@ function drawHero(){ const blink=(invuln>0 && Math.floor(invuln/5)%2===0);
 function cardRect(k){ const w=200,h=240,gap=24, total=3*w+2*gap, x0=(W-total)/2; return { x:x0+k*(w+gap), y:H/2-h/2, w, h }; }
 // Some power-ups now show their new helper artwork on the "Pick one" cards; the rest
 // keep the shared drawn icons.
-const PU_IMG={ orbit:"helper_star", swift:"helper_dog", homing:"helper_bee", heal:"helper_healer" };   // regen/shield use their own drawn icons so no two cards share the same picture (full generated set: Phase 2)
-function drawPUicon(id,x,y){ const key=PU_IMG[id]; if(key && drawAnimSprite(key,x,y,68,{})) return; BR.puIcon(ctx,id,x,y,P); }
+const PU_IMG={ orbit:"helper_star", swift:"helper_dog", homing:"helper_bee", heal:"helper_healer" };   // legacy helper sprites (fallback only)
+// Generated glossy 3D power-up icons (one per upgrade), made in the Asset Studio and served
+// by slug. These are the consistent card art; drawn icons remain as the last-ditch fallback.
+const PU_ART_BASE="/api/asset-studio?asset=survival/pu/space/", PU_ART_V="&v=1";
+const puArtCache={};
+function puArt(id){ if(!(id in puArtCache)) puArtCache[id]=mkImg(PU_ART_BASE+id+PU_ART_V); return puArtCache[id]; }
+(GAME_CONFIG.powerups||[]).concat(["bomb"]).forEach(puArt);   // warm every icon up front
+function puReady(im){ return im && (im.complete||im.width) && (im.naturalWidth||im.width); }
+function drawPUicon(id,x,y,size){ const s=size||70; const im=puArt(id); if(puReady(im)){ ctx.drawImage(im,x-s/2,y-s/2,s,s); return; }
+  const key=PU_IMG[id]; if(key && drawAnimSprite(key,x,y,s-2,{})) return; BR.puIcon(ctx,id,x,y,P); }
 function banner(t,s){ ctx.fillStyle="rgba(5,8,24,.6)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 46px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-8); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
 // wordless how-to-play demo (for kids who can't read): animated hand dragging,
 // hero following, plus three picture cues, and a pulsing PLAY button.
@@ -657,7 +665,7 @@ function draw(){
     ctx.globalAlpha=0.5*fade; ctx.fillStyle=gg; ctx.beginPath();ctx.arc(dp.x,dp.y,R+12,0,7);ctx.fill();
     ctx.globalAlpha=fade; ctx.fillStyle="#0b1230"; ctx.beginPath();ctx.arc(dp.x,dp.y,R,0,7);ctx.fill();
     ctx.strokeStyle=col; ctx.lineWidth=3; ctx.beginPath();ctx.arc(dp.x,dp.y,R,0,7);ctx.stroke();
-    BR.puIcon(ctx, DROP_ICON[dp.kind], dp.x, dp.y, P); ctx.restore(); }
+    drawPUicon(DROP_ICON[dp.kind], dp.x, dp.y, 30); ctx.restore(); }
   // nova shockwave rings
   for(const rg of rings){ const a=Math.min(0.55,rg.life/22*0.55); ctx.strokeStyle="rgba(255,226,122,"+a.toFixed(2)+")"; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(rg.x,rg.y,rg.r,0,7); ctx.stroke(); }
   // black holes (drawn under the foes so they look like they're being pulled in)
