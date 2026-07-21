@@ -437,6 +437,55 @@ function playItemSound(c) {
     var p = sfxAudio.play(); if (p && p.catch) p.catch(function () {});
   } catch (e) {}
 }
+// ---- the live weather mix: looping beds whose volume follows the simulation ----
+// rain loop swells with how hard it's raining, wind loop follows the Wind slider,
+// a soft hush settles in when it snows. Keys come from the exhibit's weatherSounds
+// (with template defaults), all served by /api/sfx and created for our library.
+const WEATHER_SOUND_DEFAULTS = { rain: "rain", wind: "wind", snowHush: "snowhush", hail: "hailplink" };
+function weatherSound(k) { return (DATA && DATA.weatherSounds && DATA.weatherSounds[k]) || WEATHER_SOUND_DEFAULTS[k]; }
+const loops = {}; // name -> { a: Audio, vol: current, target }
+function loopFor(name) {
+  if (loops[name]) return loops[name];
+  try {
+    const a = new Audio("/api/sfx?s=" + encodeURIComponent(weatherSound(name)));
+    a.loop = true; a.volume = 0;
+    loops[name] = { a: a, vol: 0, target: 0 };
+  } catch (e) { loops[name] = null; }
+  return loops[name];
+}
+function updateAudioMix(wx, wind, rainCount, dt) {
+  if (!audioUnlocked) return;
+  const on = soundOn && !paused;
+  const targets = {
+    rain: on && wx.rain ? Math.min(0.5, 0.12 + rainCount / 260) : 0,
+    wind: on && wind > 0.12 ? Math.min(0.55, (wind - 0.12) * 0.65) : 0,
+    snowHush: on && wx.snow ? 0.3 : 0,
+  };
+  Object.keys(targets).forEach((name) => {
+    const l = loopFor(name); if (!l) return;
+    l.target = targets[name];
+    l.vol += (l.target - l.vol) * Math.min(1, dt * 2.5); // gentle swell/fade
+    if (l.vol < 0.012) {
+      l.vol = Math.max(0, l.vol);
+      if (!l.a.paused) { try { l.a.pause(); } catch (e) {} }
+    } else {
+      try { l.a.volume = Math.min(1, l.vol); } catch (e) {}
+      if (l.a.paused) { try { const p = l.a.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+    }
+  });
+}
+function pauseAllLoops() { Object.keys(loops).forEach((n) => { const l = loops[n]; if (l) { l.vol = 0; try { l.a.pause(); } catch (e) {} } }); }
+let plinkAt = 0;
+function playPlink() {
+  if (!soundOn || !audioUnlocked) return;
+  const now = Date.now();
+  if (now - plinkAt < 130) return;
+  plinkAt = now;
+  try {
+    const a = new Audio("/api/sfx?s=" + encodeURIComponent(weatherSound("hail"))); a.volume = 0.4;
+    var p = a.play(); if (p && p.catch) p.catch(function () {});
+  } catch (e) {}
+}
 let thunderAt = 0;
 function playThunder() {
   if (!soundOn || !audioUnlocked) return;
@@ -476,7 +525,7 @@ function startAmbient() {
   }
   try { var p = ambientAudio.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
 }
-function stopAmbient() { if (ambientAudio) { try { ambientAudio.pause(); } catch (e) {} } }
+function stopAmbient() { if (ambientAudio) { try { ambientAudio.pause(); } catch (e) {} } pauseAllLoops(); }
 function setSound(on) {
   soundOn = on;
   try {
@@ -559,7 +608,7 @@ function requestQuiz(item) {
 const cv = document.getElementById("stage");
 const ctx = cv.getContext("2d");
 let W = 0, H = 0, seaY = 0;
-let skyC = null, skyColdC = null, skyStormC = null, seaC = null, landC = null;
+let skyC = null, skyColdC = null, skyStormC = null, seaC = null, landC = null, shoreC = null;
 const sceneImgs = {}; // slot -> Image, loaded from data.scene
 
 function sceneArtUrl(p) {
@@ -636,8 +685,11 @@ function paintLand() {
   s.bezierCurveTo(W * 0.07, seaY - H * 0.12, W * 0.15, seaY - H * 0.045, W * 0.21, seaY - H * 0.065);
   s.bezierCurveTo(W * 0.26, seaY - H * 0.08, W * 0.29, seaY - H * 0.05, tipX, seaY - H * 0.028);
   s.stroke();
-  // the lighthouse (Mike-approved) on the high point
-  const lx = W * 0.115, groundY = seaY - H * 0.088, th = H * 0.115, tw = W * 0.028;
+  // the lighthouse (Mike-approved) on the high point — base sits ON the ridge
+  // (ridge top at x=0.115W is ~seaY-0.079H; a small rock mound ties the base in)
+  const lx = W * 0.115, groundY = seaY - H * 0.074, th = H * 0.115, tw = W * 0.028;
+  s.fillStyle = "#2B333B";
+  s.beginPath(); s.ellipse(lx, groundY + H * 0.004, tw * 1.5, H * 0.012, 0, 0, Math.PI * 2); s.fill();
   const tg = s.createLinearGradient(lx - tw, 0, lx + tw, 0);
   tg.addColorStop(0, "#C9C2B4"); tg.addColorStop(0.5, "#F2EBDC"); tg.addColorStop(1, "#A79F91");
   s.fillStyle = tg;
@@ -652,12 +704,36 @@ function paintLand() {
   s.fillStyle = lg; s.beginPath(); s.arc(lx, groundY - th - H * 0.010, W * 0.05, 0, Math.PI * 2); s.fill();
   return c;
 }
+// the grassy shore: a foreground bank across the bottom, so hail has ground to
+// bounce on and snow has somewhere to pile up (rain still splashes on the sea)
+function shoreTopAt(x) { return H * 0.872 - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.022; }
+function paintShore() {
+  const c = makeLayer(W, H); const s = c.getContext("2d");
+  const g = s.createLinearGradient(0, H * 0.84, 0, H);
+  g.addColorStop(0, "#55804F"); g.addColorStop(0.4, "#3C5F3E"); g.addColorStop(1, "#22392A");
+  s.fillStyle = g;
+  s.beginPath(); s.moveTo(0, shoreTopAt(0));
+  for (let x = 0; x <= W; x += 10) s.lineTo(x, shoreTopAt(x));
+  s.lineTo(W, H); s.lineTo(0, H); s.closePath(); s.fill();
+  s.strokeStyle = "rgba(226,235,190,.30)"; s.lineWidth = 2;
+  s.beginPath(); s.moveTo(0, shoreTopAt(0));
+  for (let x = 0; x <= W; x += 10) s.lineTo(x, shoreTopAt(x));
+  s.stroke();
+  // grass tufts
+  s.strokeStyle = "rgba(150,190,120,.5)"; s.lineWidth = 1.4;
+  for (let i = 0; i < 26; i++) {
+    const gx = (i + 0.5) / 26 * W + (i % 3 - 1) * 4, gy = shoreTopAt(gx) + 3 + (i % 4);
+    s.beginPath(); s.moveTo(gx, gy); s.lineTo(gx - 2, gy - 6); s.moveTo(gx, gy); s.lineTo(gx + 2.5, gy - 7); s.stroke();
+  }
+  return c;
+}
 function repaintLayers() {
   skyC = paintSkyVariant("#4FA8D8", "#7EC4E8", "#BFE2EC", 0.45);      // clear + warm
   skyColdC = paintSkyVariant("#8FA6BC", "#B9C9D6", "#E4ECEF", 0.18);  // pale winter cold
   skyStormC = paintSkyVariant("#2E3950", "#57697F", "#93A5B0", 0.35); // heavy storm slate
   seaC = paintSea();
   landC = paintLand();
+  shoreC = paintShore();
 }
 
 function size() {
@@ -673,7 +749,7 @@ function size() {
 // ---------- simulation state ----------
 const vapor = [], rain = [], hails = [], splashes = [], mists = [];
 for (let i = 0; i < 3; i++) mists.push({ x: Math.random(), y: 0.60 + i * 0.035, w: 0.32 + Math.random() * 0.2, sp: 0.006 + Math.random() * 0.008 });
-let cloudMass = 0, charge = 0, flash = 0, bolt = null, rainbowA = 0, snowLine = 0;
+let cloudMass = 0, charge = 0, flash = 0, bolt = null, rainbowA = 0, snowCover = 0;
 
 const PUFFS = [
   { dx: -0.27, dy: 0.01, r: 0.085, c: "118,128,146", a: 0.85 }, { dx: -0.17, dy: -0.012, r: 0.105, c: "128,138,154", a: 0.9 },
@@ -694,6 +770,7 @@ function tick(t) {
   const wx = weatherAt(heat, temp, cloudMass);
   const slant = (wind - 0.12) * 95; // sideways px/sec for everything that falls
   if (wind > 0.55) trigger("wind");
+  updateAudioMix(wx, wind, rain.length, dt);
 
   // --- physics step ---
   // vapor rises from the sea, rate follows heat; wind leans it
@@ -713,33 +790,40 @@ function tick(t) {
   if (!paused && (wx.rain || wx.snow) && Math.random() < Math.min(0.9, cloudMass / 140)) {
     const px = W * 0.46 + (Math.random() - 0.5) * cw * 1.6;
     if (wx.hail && Math.random() < 0.4) {
+      // hail is foreground: it falls all the way to the grassy shore and bounces there
       hails.push({ x: px, y: cy + H * 0.08, vy: 150 + Math.random() * 70, vx: slant, r: 2.5 + Math.random() * 2, bounced: false });
       trigger("hail");
     } else {
-      rain.push({ x: px, y: cy + H * 0.08, v: wx.snow ? 34 + Math.random() * 22 : 200 + Math.random() * 90, snow: wx.snow, w: Math.random() * 6.3 });
+      // near drops/flakes reach the foreground shore; far ones end at the sea in the distance
+      rain.push({ x: px, y: cy + H * 0.08, v: wx.snow ? 34 + Math.random() * 22 : 200 + Math.random() * 90, snow: wx.snow, w: Math.random() * 6.3, near: Math.random() < 0.45 });
       trigger(wx.snow ? "snow" : "rain");
     }
     cloudMass -= 0.75; // drain tuned so light rain + strong sun settles below the rainbow ceiling
   }
   for (let i = rain.length - 1; i >= 0; i--) {
     const d = rain[i];
-    d.y += d.v * dt;
+    d.y += d.v * dt * (d.near ? 1.15 : 1);
     d.x += d.snow ? (Math.sin(t / 500 + d.w) * 0.8 + slant * 0.5 * dt) : slant * dt;
-    if (d.y >= seaY - 2) {
-      if (!d.snow && Math.random() < 0.5) splashes.push({ x: d.x, y: seaY + Math.random() * (H - seaY) * 0.35, r: 1, life: 1 });
-      if (d.snow) snowLine = Math.min(1, snowLine + 0.01);
+    const endY = d.near ? shoreTopAt(d.x) : seaY - 2;
+    if (d.y >= endY) {
+      if (!d.snow && Math.random() < 0.5) {
+        if (d.near) splashes.push({ x: d.x, y: endY + 2, r: 1, life: 0.8, grass: true });
+        else splashes.push({ x: d.x, y: seaY + Math.random() * (shoreTopAt(d.x) - seaY) * 0.5, r: 1, life: 1 });
+      }
+      if (d.snow && d.near) snowCover = Math.min(1, snowCover + 0.012);
       rain.splice(i, 1);
     }
   }
   for (let i = hails.length - 1; i >= 0; i--) {
     const hd = hails[i];
     hd.vy += 130 * dt; hd.y += hd.vy * dt; hd.x += hd.vx * dt;
-    if (hd.y >= seaY - 2 && hd.vy > 0) {
-      if (!hd.bounced) { hd.bounced = true; hd.vy = -hd.vy * 0.45; splashes.push({ x: hd.x, y: seaY + 4, r: 1, life: 1 }); }
+    const gy = shoreTopAt(hd.x);
+    if (hd.y >= gy && hd.vy > 0) {
+      if (!hd.bounced) { hd.bounced = true; hd.y = gy; hd.vy = -hd.vy * 0.5; hd.vx *= 0.7; playPlink(); }
       else hails.splice(i, 1);
     }
   }
-  if (!wx.snow) snowLine = Math.max(0, snowLine - dt * 0.1);
+  if (!wx.snow) snowCover = Math.max(0, snowCover - dt * 0.06);
 
   // storm charge: a big hot cloud builds lightning
   if (wx.storm) { charge += dt; if (charge > 2.2) { charge = 0; flash = 1; playThunder(); bolt = { x: W * 0.46 + (Math.random() - 0.5) * W * 0.3, segs: Array.from({ length: 7 }, () => Math.random() * 40 - 20) }; trigger("lightning"); } }
@@ -822,7 +906,16 @@ function tick(t) {
     for (let x = 0; x <= W; x += 12) ctx.lineTo(x, y + Math.sin(x / (30 + row * 10) + t / Math.max(sp, 180)) * amp);
     ctx.globalAlpha = 0.9 - row * 0.18; ctx.stroke(); ctx.globalAlpha = 1;
   }
-  if (snowLine > 0.02) { ctx.fillStyle = "rgba(255,255,255," + (0.75 * snowLine) + ")"; ctx.fillRect(0, seaY - 3, W, 4); }
+
+  // the foreground shore, and its snow blanket when it has been snowing
+  drawSlot("shore", shoreC);
+  if (snowCover > 0.02) {
+    ctx.fillStyle = "rgba(250,252,255," + (0.85 * snowCover) + ")";
+    ctx.beginPath(); ctx.moveTo(0, shoreTopAt(0) - 1);
+    for (let x = 0; x <= W; x += 10) ctx.lineTo(x, shoreTopAt(x) - 1 - snowCover * 4 * (0.7 + 0.3 * Math.sin(x / 37)));
+    for (let x = W; x >= 0; x -= 10) ctx.lineTo(x, shoreTopAt(x) + 6 + snowCover * 3);
+    ctx.closePath(); ctx.fill();
+  }
 
   // vapor particles: soft mist specks, fading as they climb
   vapor.forEach((p) => {
@@ -843,13 +936,19 @@ function tick(t) {
   // hail
   ctx.fillStyle = "rgba(240,248,252,.95)";
   hails.forEach((hd) => { ctx.beginPath(); ctx.arc(hd.x, hd.y, hd.r, 0, Math.PI * 2); ctx.fill(); });
-  // splash ripples
+  // splashes: ripples on the sea, little upward flicks on the grass
   for (let i = splashes.length - 1; i >= 0; i--) {
     const s = splashes[i];
     s.r += 26 * dt; s.life -= dt * 1.6;
     if (s.life <= 0) { splashes.splice(i, 1); continue; }
-    ctx.strokeStyle = "rgba(225,238,240," + (s.life * 0.4) + ")"; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r, s.r * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+    if (s.grass) {
+      ctx.strokeStyle = "rgba(235,244,248," + (s.life * 0.5) + ")"; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - 2 - s.r * 0.2, s.y - 3 - s.r * 0.3);
+      ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + 2 + s.r * 0.2, s.y - 3 - s.r * 0.3); ctx.stroke();
+    } else {
+      ctx.strokeStyle = "rgba(225,238,240," + (s.life * 0.4) + ")"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r, s.r * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+    }
   }
 
   // lightning

@@ -2115,6 +2115,20 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-21 (WL polish 1: shore + lighthouse + live weather audio)
+
+Owner feedback round on the live Weather Lab: (1) grassy foreground SHORE added (painted
+art slot `shore` + `shoreTopAt` ground line) — hail now falls to the grass and bounces
+there with a new icy plink, snow piles into a white blanket on the shore (and no longer
+collects on the sea), near rain splashes on the grass while far rain still dimples the
+sea; (2) lighthouse base seated ON the ridge (was floating) with a rock mound; (3) LIVE
+WEATHER MIX — rain loop volume follows how hard it rains, wind loop follows the Wind
+slider, soft hush when snowing (all /api/sfx loops, exhibit-overridable via
+`weatherSounds`); NEW library sounds `hailplink` + `snowhush` registered in api/sfx.js.
+qa-weather + qa-dive + qa-explore green; browser smokes (storm/snow/rainbow/hail) clean.
+Cloud upgrade options mocked for owner pick (soft blobs / cauliflower / thunderhead).
+
+---
 ## Session log — 2026-07-21 (Session WL1: Kidspedia weather-lab template + Make It Rain)
 
 THIRD Kidspedia exhibit template: `weather-lab` (`public/weather.html`), a live weather

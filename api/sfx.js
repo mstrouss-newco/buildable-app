@@ -16,6 +16,10 @@ const SOUNDS = {
   ocean:   "Calm deep underwater ocean ambience, soft muffled water movement and gentle low swells with faint distant whale song, peaceful and immersive, seamless ambient loop, no music, no voices",
   candy:   "Light whimsical magical sparkle chimes and soft twinkles, cheerful and gentle, seamless ambient loop, no music, no voices",
   rain:    "Gentle soft steady rainfall, soothing calm raindrops, seamless ambient loop, no music, no voices",
+
+  // ---- Kidspedia Weather Lab (live weather mix) ----
+  hailplink: "Short light icy plink, a small hailstone tapping and bouncing off grass, crisp cute tick, single hit, no music, no voices",
+  snowhush:  "Very soft hushed winter snowfall ambience, gentle muffled quiet air with the faintest icy shimmer, extremely calm and peaceful, seamless ambient loop, no music, no voices",
   city:    "Gentle friendly daytime town-square ambience, soft distant footsteps, a faint fountain, a far-off bicycle bell and a few birds, calm and warm, seamless ambient loop, no music, no voices",
 
   // ---- Sunny Town Drive (car runner) ----
@@ -354,6 +358,7 @@ const SOUNDS = {
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
   ocean:15,
+  hailplink:0.5, snowhush:12,
   mm_style_pop:2.0, mm_style_disco:2.0, mm_style_rock:2.0, mm_style_country:2.0, mm_style_sleepy:2.2, mm_style_marching:2.0, mm_style_kpop:2.0, mm_style_reggae:2.0,
   mm_drums_big:1.0, mm_drums_soft:1.0, mm_drums_marching:1.1, mm_drums_bongos:1.0, mm_drums_electro:1.0,
   mm_guitar_electric:1.1, mm_guitar_acoustic:1.1, mm_guitar_twangy:1.1, mm_guitar_bass:1.1,

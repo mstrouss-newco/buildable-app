@@ -44,6 +44,13 @@ Remaining in phase AP (NOT done this session, on purpose — do not start withou
 - Retire the Create tab / relocate the New Game recipe builder to Build (AP1 leftover,
   gated on Mike confirming the editor Generate + Library work live).
 - Optional: let audio assets be assigned to a game's `music` slot from Browse too.
+## 2026-07-21: WL polish 1 — shore, lighthouse fix, live weather audio
+**Shipped:** grassy shore (hail bounces + plinks on grass, snow blanket piles on shore,
+no snow on the sea), lighthouse seated on the ridge, live audio mix (rain/wind/snow-hush
+loops tied to the sim + sliders), new `hailplink` + `snowhush` sounds in api/sfx.js.
+**QA:** qa-weather/qa-dive/qa-explore green, browser smokes clean. **Open:** cloud style
+(3 options with Mike), real scene art, narration clips.
+
 ## 2026-07-21: Session WL1 — Kidspedia Weather Lab (template #3 + Make It Rain)
 **Shipped:** `public/weather.html` (NEW weather-lab template: painted coastal stage with
 lighthouse, 3 sliders + 6 recipe buttons, live sim making evaporation/cloud/rain/snow/
