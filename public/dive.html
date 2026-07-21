@@ -363,13 +363,11 @@ function computePlacements() {
     const g = groups[k];
     const band = HABITAT_BANDS[g[0].habitat || "open"] || HABITAT_BANDS.open;
     const n = g.length, bh = band[1] - band[0];
-    const rows = n <= 2 ? 1 : (n <= 6 ? 2 : 3);     // more creatures -> more vertical rows
     g.forEach((c, i) => {
-      const fx = n === 1 ? 0.5 : (i + 0.5) / n;      // even across the width
-      const row = i % rows;                           // which height row
-      const ry = rows === 1 ? 0.5 : (row + 0.5) / rows;
-      c._x = (c.x != null) ? c.x : Math.round(12 + fx * 76);           // 12%..88%
-      c._y = (c.y != null) ? c.y : Math.round(ZH * (band[0] + ry * bh));
+      const fx = n === 1 ? 0.5 : (i + 0.5) / n;                   // even across the width
+      const fy = n === 1 ? 0.5 : ((i * 0.6180339 + 0.18) % 1);    // unique, well-spread heights (no two align)
+      c._x = (c.x != null) ? c.x : Math.round(12 + fx * 76);      // 12%..88%
+      c._y = (c.y != null) ? c.y : Math.round(ZH * (band[0] + fy * bh));
     });
   });
 }
@@ -401,13 +399,7 @@ function buildWorld() {
     world.appendChild(d);
   });
 
-  // The flashlight hint sits just inside the first dark zone.
-  if (DARK_START < 1e9) {
-    const hint = document.createElement("div");
-    hint.className = "hint"; hint.style.top = (DARK_START + 260) + "px";
-    hint.textContent = "It is dark down here! Move your finger to turn on your flashlight.";
-    world.appendChild(hint);
-  }
+  // (flashlight cue is the fixed top banner #flashHint, so no in-world hint here)
 
   // Bottom card (data-driven finish line).
   const fin = data_finish();
