@@ -6,6 +6,18 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 7K — Sling & Maze in-app nav overlap fixed (July 21 2026)
+In-app, Sling and Maze re-drew their own nav buttons once a level started, on top of
+the shell's Home / Sound / Menu (Sling's "‹ Menu" over the top-left Home; Maze's
+Menu + Sound over the top-right cluster). Root cause: the re-show helpers set
+`display:block` with no in-app guard, overriding the nav bridge that had already
+hidden them. Fix mirrors the proven Breaker/Runner pattern — an `inApp()` guard:
+`public/sling-squad.html` (`showChrome` stays hidden in-app) and
+`public/maze-engine.html` (`showInGame` gates Menu/Sound on `!inApp()`; the dpad is a
+gameplay control and stays visible). Standalone play unchanged. QA: `qa-sling.mjs`
+all pass; `qa-maze.mjs` all levels + campaign pass. No other game affected. Ref:
+HUD-AND-NAV-RULES.md.
+
 ## Story art direction samples endpoint (July 21 2026)
 Additive prototype for the story-art relaunch: `api/story-library.js` gains
 `?dirSample=dusk|paper|deep` (paints one full sample page in that art direction with
