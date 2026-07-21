@@ -319,10 +319,46 @@ const SOUNDS = {
   clay_smoosh: "A short satisfying playdough smoosh, two lumps of soft clay squishing and mushing together with a wet squelchy stretch, tactile and gooey, single hit, no music, no voices",
   clay_splat:  "A short fun soft clay splat, a wet lump of playdough slapping and squashing flat with a bouncy squelch, playful and cute, single hit, no music, no voices",
   clay_pop:    "A short cute soft squishy pop, a little wobbly playdough boop settling with a gentle rubbery bounce, cheerful and light, single hit, no music, no voices",
+
+  // ---- Music Maker (Session MM1) tap-to-hear previews ----
+  // Style cards (~2s musical riffs, keyed by genre so the picker can reuse them).
+  mm_style_pop:      "Short cheerful upbeat pop music riff, bright catchy melody over a bouncy beat, happy kids pop, about 2 seconds, no voices",
+  mm_style_disco:    "Short funky disco dance riff, four-on-the-floor beat with a groovy bass and sparkly synth, fun and danceable, about 2 seconds, no voices",
+  mm_style_rock:     "Short energetic rock riff, punchy electric guitar power chords and drums, bold and fun, about 2 seconds, no voices",
+  mm_style_country:  "Short playful country riff, twangy acoustic guitar over a bouncy shuffle, warm and silly, about 2 seconds, no voices",
+  mm_style_sleepy:   "Short gentle lullaby, soft twinkly music-box melody, slow and dreamy, about 2 seconds, no voices",
+  mm_style_marching: "Short epic cinematic march, bold brass and marching drums, heroic movie feel, about 2 seconds, no voices",
+  mm_style_kpop:     "Short high-energy K-pop riff, bright synths and a punchy dance beat, sparkly and exciting, about 2 seconds, no voices",
+  mm_style_reggae:   "Short chill reggae riff, laid-back offbeat guitar skank and a mellow bassline, sunny and relaxed, about 2 seconds, no voices",
+  // Instrument previews for the optional "Tweak my band" panel (~1s).
+  mm_drums_big:       "Short punchy full drum-kit fill, big bass drum and a crashing cymbal, about 1 second, no music, no voices",
+  mm_drums_soft:      "Short soft brushed-snare drum groove, gentle and light, about 1 second, no music, no voices",
+  mm_drums_marching:  "Short crisp marching snare-drum cadence, about 1 second, no music, no voices",
+  mm_drums_bongos:    "Short lively hand bongo drum pattern, warm wooden tone, about 1 second, no music, no voices",
+  mm_drums_electro:   "Short punchy electronic drum-machine beat, tight and modern, about 1 second, no music, no voices",
+  mm_guitar_electric: "Short bright clean electric guitar riff, catchy, about 1 second, no voices",
+  mm_guitar_acoustic: "Short warm acoustic guitar strum, gentle and pretty, about 1 second, no voices",
+  mm_guitar_twangy:   "Short twangy resonator guitar lick, bright and playful, about 1 second, no voices",
+  mm_guitar_bass:     "Short groovy electric bass guitar riff, deep and bouncy, about 1 second, no voices",
+  mm_strings_violin:    "Short lively violin melody, bright and sweet, about 1 second, no voices",
+  mm_strings_cello:     "Short warm cello melody, deep and smooth, about 1 second, no voices",
+  mm_strings_harp:      "Short sparkling harp glissando, magical and gentle, about 1 second, no voices",
+  mm_strings_orchestra: "Short lush orchestral string swell, rich and grand, about 1 second, no voices",
+  // Singer voice previews (~1s "la la la").
+  mm_sing_boy:   "A young boy happily singing a short cheerful la-la-la melody, about 1 second, no music",
+  mm_sing_girl:  "A young girl happily singing a short cheerful la-la-la melody, about 1 second, no music",
+  mm_sing_group: "A group of happy kids singing a short cheerful la-la-la melody together, about 1 second, no music",
+  mm_sing_both:  "A boy and a girl singing a short cheerful la-la-la melody together, about 1 second, no music",
+  mm_sing_robot: "A friendly cute robot voice singing a short cheerful la-la-la melody in a bouncy synthetic tone, about 1 second",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
   ocean:15,
+  mm_style_pop:2.0, mm_style_disco:2.0, mm_style_rock:2.0, mm_style_country:2.0, mm_style_sleepy:2.2, mm_style_marching:2.0, mm_style_kpop:2.0, mm_style_reggae:2.0,
+  mm_drums_big:1.0, mm_drums_soft:1.0, mm_drums_marching:1.1, mm_drums_bongos:1.0, mm_drums_electro:1.0,
+  mm_guitar_electric:1.1, mm_guitar_acoustic:1.1, mm_guitar_twangy:1.1, mm_guitar_bass:1.1,
+  mm_strings_violin:1.2, mm_strings_cello:1.2, mm_strings_harp:1.2, mm_strings_orchestra:1.3,
+  mm_sing_boy:1.2, mm_sing_girl:1.2, mm_sing_group:1.3, mm_sing_both:1.3, mm_sing_robot:1.2,
   chess_select:0.4, chess_move:0.5, chess_check:0.7, chess_castle:0.7, chess_promote:1.0,
   chess_win:1.6, chess_lose:1.0, chess_yourturn:0.5, chess_capture:0.8,
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,

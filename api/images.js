@@ -77,6 +77,17 @@ const ICONS = {
   speed:  { slow:"a cute slow tortoise", medium:"a person casually walking",
             fast:"a fast running rabbit", superfast:"a speeding cheetah mid-run",
             groovy:"a colorful shiny bouncing rubber ball" },
+  // Music Maker "What is your song about?" topic chips (Session MM1).
+  topic:  { dog:"a happy cute cartoon puppy dog",
+            cat:"a happy cute cartoon kitten",
+            dinosaur:"a friendly cute green cartoon dinosaur",
+            space:"a colorful cartoon rocket ship flying among planets and stars",
+            pancakes:"a tall stack of fluffy pancakes with syrup and a pat of butter",
+            princess:"a friendly cartoon princess with a crown and a sparkly dress",
+            trucks:"a chunky colorful cartoon dump truck",
+            ocean:"a cheerful cartoon ocean scene with a smiling wave, a fish and a starfish",
+            robots:"a friendly cute cartoon robot with a big smile",
+            family:"a happy cartoon family of little stick-figure people holding hands" },
 };
 
 // Typing-game characters (heroes, baddies, bosses). Transparent cut-outs.
