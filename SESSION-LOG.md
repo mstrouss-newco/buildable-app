@@ -1,6 +1,16 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-21: Story art direction samples (prototype endpoint, shipped)
+
+For Mike's art-direction decision: three candidate looks (cinematic dusk, bold
+cut-paper, glowing deep) must be judged on REAL model output. Added to
+`api/story-library.js` only: DIRECTIONS prompt table + `genArt()` (gpt-image-1,
+1536x1024, quality low, same as production pages), `?dirSample=` build branch and
+`?dimg=` serve branch, both CORS-open, cached under `libdir:<key>:v1`. QA: node
+--check clean. Prototype only; delete the branch once a direction is picked.
+
+
 ## 2026-07-21: Stories tile back to Coming soon (shipped)
 
 Mike's call: Stories stays COMING SOON until the story-art relaunch is approved. The

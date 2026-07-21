@@ -234,6 +234,38 @@ async function genScene(refs, prompt, openaiKey, timeoutMs = 44000) {
   return null;
 }
 
+// ---- ART-DIRECTION SAMPLES (prototype for the story-art relaunch) ----
+// Three complete storybook pages in three different looks, painted for real by
+// the same image model that paints story pages. Used by the direction mock so
+// the owner judges actual output, not hand-drawn stand-ins. Additive only.
+const DIRECTIONS = {
+  dusk:  "Cinematic children's storybook illustration at dramatic dusk. A small cloaked child holding a glowing lantern stands on a dark grassy cliff at the left edge, seen from behind, looking across a calm darkening sea toward a tall old lighthouse on a rocky point at the far right, its lamp unlit. Deep indigo sky fading to burnt orange at the horizon, the first stars, a huge low moon. Painterly and atmospheric like a still from a prestige animated film, rich shadow, warm rim light from the lantern, high detail. Clear foreground cliff, midground sea, background sky. Wide landscape composition. No text, no words. Wholesome, ages 6-10.",
+  paper: "Bold cut-paper collage illustration, wide panorama. A tiny girl in an orange coat and her small dark dog walk a winding cream footpath from the lower left, across huge rolling layered green paper hills, past a light-blue paper river carrying a little folded paper boat in the middle distance, toward an enormous ink-blue castle with warm mustard windows and one golden, slightly open door at the far right. Flat layered construction-paper shapes with visible paper texture and torn edges, limited palette of cream, teal green, burnt orange, mustard and ink blue, strong graphic composition, dramatic scale contrast between the tiny hero and the giant castle. No text, no words. Wholesome, ages 6-10.",
+  deep:  "Luminous deep-ocean illustration, near dark and mysterious. In the left third a drifting meadow of softly glowing teal jellyfish. In the center a small round vintage exploration submarine with three lit portholes and one warm headlight beam. In the right third a rocky trench wall with a small glowing golden door carved into it near the sea floor. Bioluminescent particles floating everywhere, faint blue light rays from far above, deep blue-black water, painterly detail, beautiful and calm rather than scary. Wide landscape composition. No text, no words. Wholesome, ages 6-10.",
+};
+async function genArt(prompt, openaiKey, timeoutMs = 44000) {
+  // Landscape page painting (same model + quality as production story pages).
+  const once = async () => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch("https://api.openai.com/v1/images/generations", { method: "POST", headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: "gpt-image-1", prompt, n: 1, size: "1536x1024", quality: "low" }), signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) return { b64: null, status: res.status };
+      const data = await res.json();
+      return { b64: data.data?.[0]?.b64_json || null, status: 200 };
+    } catch { clearTimeout(timer); return { b64: null, status: 0 }; }
+  };
+  for (let t = 0; t < 3; t++) {
+    const r = await once();
+    if (r.b64) return r.b64;
+    if (r.status !== 429) break;
+    await new Promise((res) => setTimeout(res, 4000 + t * 3000));
+  }
+  return null;
+}
+function dirKey(k){ return "libdir:" + k + ":v1"; }
+
 function readBody(req){if(req.body&&typeof req.body==="object")return Promise.resolve(req.body);return new Promise((resolve)=>{let raw="";req.on("data",c=>raw+=c);req.on("end",()=>{try{resolve(JSON.parse(raw||"{}"));}catch{resolve({});}});});}
 const CAM=[
   "Wide establishing shot, the hero small within a big scene.",
@@ -315,6 +347,33 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok:true, generated:true });
   }
   const q = req.query || {};
+
+  // --- build one ART-DIRECTION sample page (idempotent; cached) ---
+  if (q.dirSample) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    const key = (q.dirSample || "").toString();
+    if (!DIRECTIONS[key]) return res.status(400).json({ ok: false, error: "unknown direction" });
+    const ck = dirKey(key);
+    if (!q.force && await cacheGet(ck)) return res.status(200).json({ ok: true, key, cached: true });
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
+    const b64 = await genArt(DIRECTIONS[key], openaiKey);
+    if (!b64) return res.status(200).json({ ok: true, key, failed: true });
+    if (q.force) await cacheDel(ck);
+    await cachePut(ck, b64);
+    return res.status(200).json({ ok: true, key, generated: true });
+  }
+
+  // --- serve an ART-DIRECTION sample page as PNG ---
+  if (q.dimg) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    const b64 = await cacheGet(dirKey((q.dimg || "").toString()));
+    if (!b64) { res.status(404).json({ ok: false, missing: true }); return; }
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=604800");
+    res.status(200).send(Buffer.from(b64, "base64"));
+    return;
+  }
 
   // --- read-only diagnostic: how many story pictures are actually cached? ---
   // Returns COUNTS only (no image data, no secrets). lib: = base cutouts/worlds,

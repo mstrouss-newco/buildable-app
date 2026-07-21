@@ -6,6 +6,14 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Story art direction samples endpoint (July 21 2026)
+Additive prototype for the story-art relaunch: `api/story-library.js` gains
+`?dirSample=dusk|paper|deep` (paints one full sample page in that art direction with
+the real image model, cached in narration_cache under `libdir:` keys) and
+`?dimg=<key>` (serves the cached PNG). CORS open so the direction mock page can call
+it. Nothing in the app uses these yet; the mock drives them. Remove after the art
+direction is chosen.
+
 ## Stories tile back to Coming soon (July 21 2026)
 The Home "Make a story" tile was open to kids after the ST4 rewrite. It now shows
 "Coming soon" and opens the same 1111 preview gate the Play shelf uses, so only the
