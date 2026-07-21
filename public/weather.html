@@ -633,9 +633,10 @@ function drawSlot(name, fallbackCanvas, alpha) {
   if (alpha !== undefined) ctx.globalAlpha = alpha;
   if (im && im.complete && im.naturalWidth) {
     if (sceneFull()) {
-      // full-scene painting: fit the width, align the TOP (the composition puts
-      // sky in the top part; the bottom overflow crops harmlessly below the stage)
-      ctx.drawImage(im, 0, 0, W, W * (im.naturalHeight / im.naturalWidth));
+      // full-scene painting: show the top `crop` fraction of the painting across
+      // the whole stage (a slight vertical squeeze beats cropping off the grass)
+      const crop = layoutOf().crop || 0.72;
+      ctx.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight * crop, 0, 0, W, H);
     } else {
       const s = Math.max(W / im.naturalWidth, H / im.naturalHeight);
       ctx.drawImage(im, (W - im.naturalWidth * s) / 2, (H - im.naturalHeight * s) / 2, im.naturalWidth * s, im.naturalHeight * s);
@@ -751,9 +752,27 @@ function seaLine() {
 // the grassy shore: a foreground bank across the bottom, so hail has ground to
 // bounce on and snow has somewhere to pile up (rain still splashes on the sea)
 function shoreTopAt(x) {
+  // a measured ground polyline (from the actual painting's grass silhouette)
+  // beats any formula: [[xFrac,yFrac],...] left to right, piecewise linear
+  const g = layoutOf().ground;
+  if (g && g.length > 1) {
+    const f = Math.max(0, Math.min(1, x / Math.max(W, 1)));
+    for (let i = 1; i < g.length; i++) {
+      if (f <= g[i][0] || i === g.length - 1) {
+        const t = Math.max(0, Math.min(1, (f - g[i - 1][0]) / Math.max(0.0001, g[i][0] - g[i - 1][0])));
+        return H * (g[i - 1][1] + (g[i][1] - g[i - 1][1]) * t);
+      }
+    }
+  }
   const v = moodBlend((o) => o.shoreTop);
   if (sceneFull()) return H * (v != null ? v : 0.86) - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.008;
   return H * (v != null ? v : 0.872) - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.022;
+}
+// the water area of the painting (stage fractions) — waves, glints, vapor and
+// distant splashes stay inside it so nothing ever draws on the sky or the cliffs
+function seaRect() {
+  const s = layoutOf().sea;
+  return s || { x0: 0, x1: 1, y0: (seaY / Math.max(H, 1)), y1: 0.95 };
 }
 function paintShore() {
   const c = makeLayer(W, H); const s = c.getContext("2d");
@@ -799,6 +818,7 @@ const vapor = [], rain = [], hails = [], splashes = [], mists = [], glints = [];
 for (let i = 0; i < 3; i++) mists.push({ x: Math.random(), y: 0.60 + i * 0.035, w: 0.32 + Math.random() * 0.2, sp: 0.006 + Math.random() * 0.008 });
 for (let i = 0; i < 36; i++) glints.push({ x: Math.random(), yf: Math.random(), ph: Math.random() * 6.3 });
 let cloudMass = 0, charge = 0, flash = 0, bolt = null, rainbowA = 0, snowCover = 0;
+let dispMass = 0; // smoothed cloud mass for DRAWING (raw mass jitters as rain drains, which made the cloud tremble)
 
 const PUFFS = [
   { dx: -0.27, dy: 0.01, r: 0.085, c: "118,128,146", a: 0.85 }, { dx: -0.17, dy: -0.012, r: 0.105, c: "128,138,154", a: 0.9 },
@@ -817,17 +837,19 @@ function tick(t) {
   stepGlide(dt);
   const heat = sliderVal(heatEl) / 100, temp = sliderVal(tempEl) / 100, wind = sliderVal(windEl) / 100;
   const wx = weatherAt(heat, temp, cloudMass);
+  dispMass += (cloudMass - dispMass) * Math.min(1, dt * 1.2);
   moodCold = temp < 0.3 ? Math.min(1, (0.3 - temp) / 0.3) : 0;
-  moodGloom = Math.min(0.92, cloudMass / 230 + (wx.storm ? 0.15 : 0));
+  moodGloom = Math.min(0.92, dispMass / 230 + (wx.storm ? 0.15 : 0));
   seaY = seaLine();
   const shoreT = shoreTopAt(W * 0.5);
+  const srct = seaRect();
   const slant = (wind - 0.12) * 95; // sideways px/sec for everything that falls
   if (wind > 0.55) trigger("wind");
   updateAudioMix(wx, wind, rain.length, dt);
 
   // --- physics step ---
   // vapor rises from the sea, rate follows heat; wind leans it
-  if (!paused && Math.random() < heat * 0.9) vapor.push({ x: Math.random() * W, y: seaY + (shoreT - seaY) * (0.1 + Math.random() * 0.5), v: 24 + heat * 42, w: Math.random() * 6.3 });
+  if (!paused && Math.random() < heat * 0.9) vapor.push({ x: W * (srct.x0 + Math.random() * (srct.x1 - srct.x0)), y: H * (srct.y0 + Math.random() * (srct.y1 - srct.y0) * 0.8), v: 24 + heat * 42, w: Math.random() * 6.3 });
   if (vapor.length && heat > 0.2) trigger("evaporation");
   for (let i = vapor.length - 1; i >= 0; i--) {
     const p = vapor[i];
@@ -848,8 +870,9 @@ function tick(t) {
       trigger("hail");
     } else {
       // near drops/flakes reach the foreground shore; far ones end at the sea in the distance
-      rain.push({ x: px, y: cy + H * 0.08, v: wx.snow ? 34 + Math.random() * 22 : 200 + Math.random() * 90, snow: wx.snow, w: Math.random() * 6.3, near: Math.random() < 0.45,
-        ey: seaY + Math.random() * (shoreT - seaY) * 0.7 });
+      const isNear = Math.random() < 0.45 || px < W * srct.x0 || px > W * srct.x1; // over the cliffs/grass = lands on the ground line
+      rain.push({ x: px, y: cy + H * 0.08, v: wx.snow ? 34 + Math.random() * 22 : 200 + Math.random() * 90, snow: wx.snow, w: Math.random() * 6.3, near: isNear,
+        ey: H * (srct.y0 + (0.25 + Math.random() * 0.6) * (srct.y1 - srct.y0)) });
       trigger(wx.snow ? "snow" : "rain");
     }
     cloudMass -= 0.75; // drain tuned so light rain + strong sun settles below the rainbow ceiling
@@ -891,8 +914,15 @@ function tick(t) {
   // --- draw ---
   const coldness = moodCold, gloom = moodGloom;
   drawSlot("sky", skyC);
-  if (coldness > 0) drawSlot("skyCold", skyColdC, coldness);
-  if (gloom > 0.05) drawSlot("skyStorm", skyStormC, gloom);
+  // mood: if the exhibit ships cold/storm paintings they crossfade; otherwise the
+  // machine paints the mood as color washes over the ONE base painting (no ghosting)
+  if (sceneImgs.skyCold || sceneImgs.skyStorm) {
+    if (coldness > 0) drawSlot("skyCold", skyColdC, coldness);
+    if (gloom > 0.05) drawSlot("skyStorm", skyStormC, gloom);
+  } else {
+    if (coldness > 0.01) { ctx.fillStyle = "rgba(214,224,238," + (coldness * 0.45) + ")"; ctx.fillRect(0, 0, W, H); }
+    if (gloom > 0.03) { ctx.fillStyle = "rgba(28,36,56," + (gloom * 0.5) + ")"; ctx.fillRect(0, 0, W, H); }
+  }
 
   // mist bands above the horizon (appear as the air gets damp)
   const mistA = Math.min(0.25, cloudMass / 500 + 0.06);
@@ -931,11 +961,11 @@ function tick(t) {
     ctx.restore();
   }
 
-  // the cloud: soft puffs scaled by mass, darker as it loads up, leaning with the wind
-  if (cloudMass > 4) {
-    const scale = Math.min(1, 0.25 + cloudMass / 220);
+  // the cloud: soft puffs scaled by SMOOTHED mass, darker as it loads up
+  if (dispMass > 4) {
+    const scale = Math.min(1, 0.25 + dispMass / 220);
     const cx = W * 0.46 + Math.sin(t / 2600) * W * 0.012 + wind * W * 0.05;
-    const dark = Math.min(1, cloudMass / 230);
+    const dark = Math.min(1, dispMass / 230);
     ctx.save();
     ctx.translate(cx, cy + H * 0.055); ctx.scale(1, (H * 0.075) / (W * 0.34));
     const base = ctx.createRadialGradient(0, 0, W * 0.02, 0, 0, W * 0.34 * scale);
@@ -971,24 +1001,26 @@ function tick(t) {
 
   if (!sceneFull()) { drawSlot("land", landC); drawSlot("sea", seaC); }
 
-  // moving wave strokes across the sea band, livelier with wind
+  // moving wave strokes, confined to the painting's actual water area
   ctx.strokeStyle = "rgba(222,236,238,.30)"; ctx.lineWidth = 1.6;
+  const wx0 = W * srct.x0, wx1 = W * srct.x1;
   for (let row = 0; row < 4; row++) {
-    const y = seaY + 5 + (row + 0.5) * (shoreT - seaY) * 0.22, amp = (2 + row * 1.1) * (1 + wind * 0.8), sp = 600 - row * 80 - wind * 220;
+    const y = H * (srct.y0 + (row + 0.7) * (srct.y1 - srct.y0) / 4.6), amp = (1.6 + row * 0.9) * (1 + wind * 0.8), sp = 600 - row * 80 - wind * 220;
     ctx.beginPath();
-    for (let x = 0; x <= W; x += 12) ctx.lineTo(x, y + Math.sin(x / (30 + row * 10) + t / Math.max(sp, 180)) * amp);
-    ctx.globalAlpha = 0.9 - row * 0.18; ctx.stroke(); ctx.globalAlpha = 1;
+    for (let x = wx0; x <= wx1; x += 12) ctx.lineTo(x, y + Math.sin(x / (30 + row * 10) + t / Math.max(sp, 180)) * amp);
+    ctx.globalAlpha = 0.8 - row * 0.16; ctx.stroke(); ctx.globalAlpha = 1;
   }
 
-  // drifting sun glints so the painted sea never freezes over
+  // drifting sun glints so the painted sea never freezes over (water area only)
   glints.forEach((g) => {
-    g.x += (0.004 + wind * 0.02) * dt; if (g.x > 1.02) g.x = -0.02;
+    g.x += (0.006 + wind * 0.03) * dt; if (g.x > 1.01) g.x = -0.01;
     const tw = Math.max(0, Math.sin(t / 700 + g.ph));
     const ga = (0.10 + 0.35 * tw) * (0.35 + heat * 0.65) * Math.max(0.25, 1 - gloom);
     if (ga < 0.03) return;
-    const gy = seaY + 4 + g.yf * (shoreT - seaY) * 0.85;
+    const gx = wx0 + g.x * (wx1 - wx0);
+    const gy = H * (srct.y0 + 0.06 * (srct.y1 - srct.y0) + g.yf * (srct.y1 - srct.y0) * 0.85);
     ctx.strokeStyle = "rgba(255,252,235," + ga + ")"; ctx.lineWidth = 1.3;
-    ctx.beginPath(); ctx.moveTo(W * g.x - 2.5, gy); ctx.lineTo(W * g.x + 2.5, gy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx - 2.5, gy); ctx.lineTo(gx + 2.5, gy); ctx.stroke();
   });
 
   // the foreground shore, and its snow blanket when it has been snowing
