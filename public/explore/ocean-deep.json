@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 5,
+  "assetVersion": 6,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -30,13 +30,15 @@
       "id": "surface",
       "name": "Above the Waves",
       "range": "At the ocean's surface",
-      "blurb": "Sunny open water and sky, where sea birds soar and dive."
+      "blurb": "Sunny open water and sky, where sea birds soar and dive.",
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/sky"
     },
     {
       "id": "sunlight",
       "name": "The Sunlight Zone",
       "range": "0 to 660 feet down",
-      "blurb": "Bright warm water where almost all ocean life lives, including the coral reefs."
+      "blurb": "Bright warm water where almost all ocean life lives, including the coral reefs.",
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/reef"
     },
     {
       "id": "twilight",
@@ -79,10 +81,10 @@
       "name": "Albatross",
       "zone": "surface",
       "x": 18,
-      "y": 440,
+      "y": 230,
       "shape": "albatross",
       "anim": "a-drift",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/albatross",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/albatross",
       "fact": "The wandering albatross has the longest wings of any bird alive, wider than a car is long, so it can glide over the ocean for hours without flapping.",
       "facts": [
         "The wandering albatross has the longest wings of any bird alive, wider than a car is long, so it can glide over the ocean for hours without flapping.",
@@ -108,17 +110,18 @@
       ],
       "factAudio": "ocean-deep-albatross",
       "source": "National Geographic Kids; NOAA Ocean Service",
-      "sound": "bird"
+      "sound": "bird",
+      "artH": 80
     },
     {
       "id": "pelican",
       "name": "Pelican",
       "zone": "surface",
       "x": 64,
-      "y": 780,
+      "y": 470,
       "shape": "pelican",
       "anim": "a-bob",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/pelican",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/pelican",
       "fact": "A pelican scoops up fish in the big stretchy pouch under its beak, like catching them in a net, then tips its head to drain the water out.",
       "facts": [
         "A pelican scoops up fish in the big stretchy pouch under its beak, like catching them in a net, then tips its head to drain the water out.",
@@ -144,7 +147,8 @@
       ],
       "factAudio": "ocean-deep-pelican",
       "source": "Audubon Society; National Geographic Kids",
-      "sound": "bird"
+      "sound": "bird",
+      "artH": 88
     },
     {
       "id": "turtle",
@@ -154,7 +158,7 @@
       "y": 560,
       "shape": "turtle",
       "anim": "a-sway",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/turtle",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/turtle",
       "fact": "Sea turtles can hold their breath for hours while they rest, and they cry salty tears to get rid of extra sea salt.",
       "facts": [
         "Sea turtles can hold their breath for hours while they rest, and they cry salty tears to get rid of extra sea salt.",
@@ -179,7 +183,8 @@
         "ocean-turtle"
       ],
       "factAudio": "ocean-deep-turtle",
-      "source": "NOAA Fisheries; National Geographic Kids"
+      "source": "NOAA Fisheries; National Geographic Kids",
+      "artH": 120
     },
     {
       "id": "dolphin",
@@ -189,7 +194,7 @@
       "y": 860,
       "shape": "dolphin",
       "anim": "a-bob",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/dolphin",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/dolphin",
       "fact": "Dolphins talk with clicks and whistles, and each dolphin has its own special name-whistle!",
       "facts": [
         "Dolphins talk with clicks and whistles, and each dolphin has its own special name-whistle!",
@@ -215,7 +220,8 @@
       ],
       "factAudio": "ocean-deep-dolphin",
       "source": "NOAA Fisheries; Dolphin Communication Project",
-      "sound": "dolphin"
+      "sound": "dolphin",
+      "artH": 118
     },
     {
       "id": "clownfish",
@@ -225,7 +231,7 @@
       "y": 1080,
       "shape": "clownfish",
       "anim": "a-bob",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/clownfish",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/clownfish",
       "fact": "A clownfish lives right inside a stinging sea anemone, which would hurt most fish, but a slimy coat keeps the clownfish safe from the sting.",
       "facts": [
         "A clownfish lives right inside a stinging sea anemone, which would hurt most fish, but a slimy coat keeps the clownfish safe from the sting.",
@@ -250,7 +256,8 @@
         "ocean-clownfish"
       ],
       "factAudio": "ocean-deep-clownfish",
-      "source": "NOAA National Ocean Service; Monterey Bay Aquarium"
+      "source": "NOAA National Ocean Service; Monterey Bay Aquarium",
+      "artH": 96
     },
     {
       "id": "reefshark",
@@ -260,7 +267,7 @@
       "y": 1250,
       "shape": "shark",
       "anim": "a-drift",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/reefshark",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/reefshark",
       "fact": "Reef sharks patrol the coral reef looking for fish, and they help keep the reef healthy by catching the sick and slow ones.",
       "facts": [
         "Reef sharks patrol the coral reef looking for fish, and they help keep the reef healthy by catching the sick and slow ones.",
@@ -285,7 +292,8 @@
         "ocean-reefshark"
       ],
       "factAudio": "ocean-deep-reefshark",
-      "source": "NOAA Fisheries; Monterey Bay Aquarium"
+      "source": "NOAA Fisheries; Monterey Bay Aquarium",
+      "artH": 128
     },
     {
       "id": "jelly",

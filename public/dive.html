@@ -40,6 +40,10 @@
   .zj small{display:block;font-weight:800;font-size:10px;color:rgba(190,235,255,.72);margin-top:1px;text-transform:none;letter-spacing:0}
 
   .world{position:relative;z-index:2;max-width:620px;margin:0 auto}
+  #scenes{position:absolute;top:0;left:0;right:0;z-index:0;pointer-events:none}
+  .scene{position:absolute;left:0;right:0;background-size:cover;background-position:center;
+     -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 6%,#000 88%,transparent 100%);
+     mask-image:linear-gradient(to bottom,transparent 0,#000 6%,#000 88%,transparent 100%)}
   .zone{position:absolute;left:16px;right:16px}
   .zone h2{font-family:'Fredoka';font-weight:700;font-size:21px;text-shadow:0 0 16px rgba(150,220,255,.9),0 0 34px rgba(120,200,255,.55),0 2px 8px rgba(0,0,0,.4)}
   .zone .zr{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:rgba(190,235,255,.8);text-shadow:0 0 12px rgba(150,220,255,.7)}
@@ -116,8 +120,9 @@
 </head>
 <body>
 
-<div id="app" style="display:none">
+<div id="app" style="display:none;position:relative">
   <canvas class="fx" id="fx"></canvas>
+  <div id="scenes"></div>
 
   <div class="top">
     <button id="back">&lsaquo;</button>
@@ -342,10 +347,23 @@ function boot(data) {
   size(); startFx();
 }
 
+function buildScenes() {
+  const layer = document.getElementById("scenes"); if (!layer) return;
+  layer.innerHTML = "";
+  ZONES.forEach((z, i) => {
+    if (!z.scene) return;                 // zones without a scene fall back to the depth gradient
+    const d = document.createElement("div");
+    d.className = "scene";
+    d.style.top = (i * ZH) + "px"; d.style.height = ZH + "px";
+    d.style.backgroundImage = "url('" + z.scene + "')";
+    layer.appendChild(d);
+  });
+}
 function buildWorld() {
   const world = document.getElementById("world");
   world.innerHTML = "";
   world.style.height = WORLD_H + "px";
+  buildScenes();
   ZONE_TOP = {};
   ZONES.forEach((z, i) => {
     ZONE_TOP[z.id] = i * ZH;
