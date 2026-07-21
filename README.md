@@ -6,6 +6,27 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+
+## Story Maker 2.0 — ST1: speed + relaunch QA blockers (July 20 2026)
+
+First relaunch block for Stories (still COMING SOON; Mike decides the LIVE flip after his
+own ST1 QA). Speed: the story is written in the BACKGROUND the moment the naming screen
+appears (hero's default name), and the kid's typed name is swapped in client-side on
+"Make my story!" (never mid-word); the fake 1350ms "Locking it in" delay is gone; and the
+Painting screen is gone — Make jumps straight to the book cover, each page shows layered
+art instantly and the painted scene crossfades in, with the reader as the single paint
+owner (the maker's duplicate paint loop was removed). QA blockers from the July 20
+walkthrough: picker tiles never flash blank — every tile shows a friendly DRAWN no-emoji
+placeholder instantly and the real painted art fades in (with retries so it warms in);
+mid-word truncation fixed (generate-story max_tokens 1700->3200 + sentence-boundary trim);
+The End is reachable and an out-of-range page can't render ("Page 7 of 6" clamp); the emoji
+rabbit/tree fallback placeholders are replaced with SVG. Soundscapes: story-ambience world
+slugs were stale (snowy_forest vs snowy-village) so ambience never played — rekeyed to the
+real slugs (+ alias map), and story.html now colors each page by its world. Removed orphan
+files api/generate-story-art.js, api/story-style-sample.js, api/animate-page.js. `vite
+build` green. Files: src/StoryMaker.jsx, src/StoryReader.jsx, src/lib/storyEffects.jsx,
+api/generate-story.js, api/story-ambience.js, public/story.html, SESSION-LOG.md, README.md.
+
 ## Reload-safe addresses inside the app (Session 2E, July 20 2026)
 Every screen inside `/app` used to share one web address, so a refresh or a shared link
 always bounced you back to the start. The shell (`src/BuildableKids.jsx`) now gives each
