@@ -764,7 +764,7 @@ function renderRoadmap(){
   if(ns) html+='<div class="rm-startnext"><button class="btn green" onclick="startNextSession()">Start next session — '+esc(ns.id)+(ns.name?' '+esc(ns.name):'')+'</button></div>';
   rd.phases.forEach(ph=>{
     const pr=phaseProgress(ph.num);
-    if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true;
+    if(rmOpen[ph.num]===undefined) rmOpen[ph.num] = !(pr.total>0 && pr.done>=pr.total);
     const open=rmOpen[ph.num]?"open":"";
     const ss=rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
     const doneCls=(pr.total&&pr.done>=pr.total)?"s-ready":"s-wait";
