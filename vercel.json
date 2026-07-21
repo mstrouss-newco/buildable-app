@@ -553,6 +553,10 @@
       "dest": "/buildable-manifest.js"
     },
     {
+      "src": "/buildable-library.js",
+      "dest": "/buildable-library.js"
+    },
+    {
       "src": "/buildable-worlds.js",
       "dest": "/buildable-worlds.js"
     },
