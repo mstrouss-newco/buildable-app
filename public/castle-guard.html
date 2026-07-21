@@ -970,7 +970,7 @@ function onTap(clientX, clientY) {
   if (DEMO) return;                    // attract mode: all input ignored
   if (BA) BA.unlock();
   if (state === "retry") { retryWave(); return; }
-  if (state === "win") { showMenu(); return; }
+  if (state === "win") { if (CG_LVL != null) { exitGame(); } else { showMenu(); } return; }  // 7J: opened from the Journey -> go back to it (not the engine's own grid)
   if (state !== "play" && state !== "wavebreak") return;
   const p = toLogical(clientX, clientY);
   // 1) did we tap a defender picker chip? (select, don't place)

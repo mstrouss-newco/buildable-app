@@ -939,7 +939,7 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
   resize(); window.addEventListener("resize",resize); loadBg();
   const onTap=(e)=>{ if(MJ_DEMO) return;
-    if(state==="win"){ if(BA)BA.unlock(); showMenu(); return; }
+    if(state==="win"){ if(BA)BA.unlock(); if(MJ_LEVEL!=null){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else { showMenu(); } return; }  // 7J: opened from the Journey -> go back to it (not the engine's own grid)
     if(state==="lose"){ if(BA)BA.unlock(); build(); return; }
     if(state!=="play") return;
     if(demo) endDemo();

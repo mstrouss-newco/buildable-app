@@ -198,7 +198,7 @@ function cardRect(i){
 
 // ---------- INPUT ----------
 function tapAt(px,py){
-  if(state!=="play") { if(state==="win"){ showMenu(); } return; }
+  if(state!=="play") { if(state==="win"){ if(MEM_LEVEL!=null){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else { showMenu(); } } return; }  // 7J: opened from the Journey -> go back to it (not the engine's own grid)
   if(nowMs<lockUntil) return;
   if(faceUp.length>=2) return;
   for(let i=0;i<deck.length;i++){
