@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 6,
+  "assetVersion": 7,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -31,14 +31,16 @@
       "name": "Above the Waves",
       "range": "At the ocean's surface",
       "blurb": "Sunny open water and sky, where sea birds soar and dive.",
-      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/sky"
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/sky",
+      "scenePos": "center top"
     },
     {
       "id": "sunlight",
       "name": "The Sunlight Zone",
       "range": "0 to 660 feet down",
       "blurb": "Bright warm water where almost all ocean life lives, including the coral reefs.",
-      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/reef"
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/reef",
+      "scenePos": "center"
     },
     {
       "id": "twilight",
@@ -111,7 +113,7 @@
       "factAudio": "ocean-deep-albatross",
       "source": "National Geographic Kids; NOAA Ocean Service",
       "sound": "bird",
-      "artH": 80
+      "artH": 82
     },
     {
       "id": "pelican",
@@ -148,7 +150,7 @@
       "factAudio": "ocean-deep-pelican",
       "source": "Audubon Society; National Geographic Kids",
       "sound": "bird",
-      "artH": 88
+      "artH": 78
     },
     {
       "id": "turtle",
@@ -184,7 +186,7 @@
       ],
       "factAudio": "ocean-deep-turtle",
       "source": "NOAA Fisheries; National Geographic Kids",
-      "artH": 120
+      "artH": 100
     },
     {
       "id": "dolphin",
@@ -221,7 +223,7 @@
       "factAudio": "ocean-deep-dolphin",
       "source": "NOAA Fisheries; Dolphin Communication Project",
       "sound": "dolphin",
-      "artH": 118
+      "artH": 165
     },
     {
       "id": "clownfish",
@@ -257,7 +259,7 @@
       ],
       "factAudio": "ocean-deep-clownfish",
       "source": "NOAA National Ocean Service; Monterey Bay Aquarium",
-      "artH": 96
+      "artH": 60
     },
     {
       "id": "reefshark",
@@ -293,7 +295,7 @@
       ],
       "factAudio": "ocean-deep-reefshark",
       "source": "NOAA Fisheries; Monterey Bay Aquarium",
-      "artH": 128
+      "artH": 140
     },
     {
       "id": "jelly",

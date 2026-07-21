@@ -356,6 +356,7 @@ function buildScenes() {
     d.className = "scene";
     d.style.top = (i * ZH) + "px"; d.style.height = ZH + "px";
     d.style.backgroundImage = "url('" + z.scene + "')";
+    if (z.scenePos) d.style.backgroundPosition = z.scenePos;
     layer.appendChild(d);
   });
 }
