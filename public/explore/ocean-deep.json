@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 10,
+  "assetVersion": 11,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -46,35 +46,45 @@
       "id": "twilight",
       "name": "The Twilight Zone",
       "range": "660 to 3,300 feet down",
-      "blurb": "Only a whisper of blue light. Many animals here make their own glow."
+      "blurb": "Only a whisper of blue light. Many animals here make their own glow.",
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/twilight",
+      "scenePos": "center"
     },
     {
       "id": "midnight",
       "name": "The Midnight Zone",
       "range": "3,300 to 13,000 feet down",
       "blurb": "No sunlight ever reaches here. It is always pitch black.",
-      "dark": true
+      "dark": true,
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/midnight",
+      "scenePos": "center"
     },
     {
       "id": "abyss",
       "name": "The Abyss",
       "range": "13,000 to 20,000 feet down",
       "blurb": "Near-freezing water and crushing pressure.",
-      "dark": true
+      "dark": true,
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/abyss",
+      "scenePos": "center bottom"
     },
     {
       "id": "trench",
       "name": "The Trench",
       "range": "20,000 to 36,000 feet down",
       "blurb": "The deepest cracks in the whole ocean floor.",
-      "dark": true
+      "dark": true,
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/trench",
+      "scenePos": "center"
     },
     {
       "id": "vents",
       "name": "Hydrothermal Vents",
       "range": "On the deepest sea floor",
       "blurb": "Cracks in the sea floor gush water hotter than an oven, and life crowds around them.",
-      "dark": true
+      "dark": true,
+      "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/vents",
+      "scenePos": "center bottom"
     }
   ],
   "creatures": [
@@ -339,7 +349,7 @@
       "zone": "twilight",
       "shape": "jelly",
       "anim": "a-pulse",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/jelly",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/jelly",
       "fact": "Many deep-sea jellyfish glow in the dark, making light with special chemicals, like living lanterns.",
       "facts": [
         "Many deep-sea jellyfish glow in the dark, making light with special chemicals, like living lanterns.",
@@ -367,7 +377,8 @@
       "source": "Monterey Bay Aquarium; NOAA Ocean Exploration",
       "glow": true,
       "habitat": "open",
-      "type": "animal"
+      "type": "animal",
+      "artH": 110
     },
     {
       "id": "hatchetfish",
@@ -375,7 +386,7 @@
       "zone": "twilight",
       "shape": "hatchetfish",
       "anim": "a-bob",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/hatchetfish",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/hatchetfish",
       "fact": "The hatchetfish has rows of tiny lights on its belly that glow softly, so from below it blends into the faint light and hungry fish cannot see its shadow.",
       "facts": [
         "The hatchetfish has rows of tiny lights on its belly that glow softly, so from below it blends into the faint light and hungry fish cannot see its shadow.",
@@ -403,7 +414,8 @@
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
       "glow": true,
       "habitat": "open",
-      "type": "animal"
+      "type": "animal",
+      "artH": 60
     },
     {
       "id": "angler",
@@ -411,7 +423,7 @@
       "zone": "midnight",
       "shape": "angler",
       "anim": "a-drift",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/angler",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/angler",
       "fact": "The anglerfish carries a glowing light above its mouth like a fishing rod. Curious fish swim to the light, and SNAP!",
       "facts": [
         "The anglerfish carries a glowing light above its mouth like a fishing rod. Curious fish swim to the light, and SNAP!",
@@ -440,7 +452,8 @@
       "glow": true,
       "lure": true,
       "habitat": "open",
-      "type": "animal"
+      "type": "animal",
+      "artH": 95
     },
     {
       "id": "squid",
@@ -448,7 +461,7 @@
       "zone": "midnight",
       "shape": "squid",
       "anim": "a-drift",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/squid",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/squid",
       "fact": "The giant squid has the biggest eyes of any animal on Earth, each about the size of a dinner plate.",
       "facts": [
         "The giant squid has the biggest eyes of any animal on Earth, each about the size of a dinner plate.",
@@ -477,7 +490,8 @@
       "glow": true,
       "jet": true,
       "habitat": "open",
-      "type": "animal"
+      "type": "animal",
+      "artH": 150
     },
     {
       "id": "gulpereel",
@@ -485,7 +499,7 @@
       "zone": "midnight",
       "shape": "gulpereel",
       "anim": "a-drift",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/gulpereel",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/gulpereel",
       "fact": "The gulper eel has a giant mouth that opens like a balloon, so it can swallow prey much bigger than itself.",
       "facts": [
         "The gulper eel has a giant mouth that opens like a balloon, so it can swallow prey much bigger than itself.",
@@ -513,7 +527,8 @@
       "source": "NOAA Ocean Exploration; Monterey Bay Aquarium Research Institute",
       "glow": true,
       "habitat": "open",
-      "type": "animal"
+      "type": "animal",
+      "artH": 130
     },
     {
       "id": "dumbo",
@@ -521,7 +536,7 @@
       "zone": "abyss",
       "shape": "dumbo",
       "anim": "a-bob",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/dumbo",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/dumbo",
       "fact": "The dumbo octopus flaps two fins like elephant ears to swim, which is how it got its name.",
       "facts": [
         "The dumbo octopus flaps two fins like elephant ears to swim, which is how it got its name.",
@@ -549,7 +564,8 @@
       "source": "MBARI; NOAA Ocean Exploration",
       "glow": true,
       "habitat": "floor",
-      "type": "animal"
+      "type": "animal",
+      "artH": 90
     },
     {
       "id": "snail",
@@ -557,7 +573,7 @@
       "zone": "trench",
       "shape": "snail",
       "anim": "a-sway",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/snail",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/snail",
       "fact": "The deepest-living fish ever found, seen more than 27,000 feet down, deeper than Mount Everest is tall!",
       "facts": [
         "The deepest-living fish ever found, seen more than 27,000 feet down, deeper than Mount Everest is tall!",
@@ -585,7 +601,8 @@
       "source": "University of Washington; NOAA Ocean Exploration",
       "glow": true,
       "habitat": "floor",
-      "type": "animal"
+      "type": "animal",
+      "artH": 80
     },
     {
       "id": "tubeworm",
@@ -593,7 +610,7 @@
       "zone": "vents",
       "shape": "tubeworm",
       "anim": "a-sway",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/tubeworm",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/tubeworm",
       "fact": "Giant tube worms live in tall white tubes near hot cracks in the sea floor and can grow taller than a grown-up, with no eyes and no mouth at all.",
       "facts": [
         "Giant tube worms live in tall white tubes near hot cracks in the sea floor and can grow taller than a grown-up, with no eyes and no mouth at all.",
@@ -620,7 +637,8 @@
       "factAudio": "ocean-deep-tubeworm",
       "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution",
       "habitat": "floor",
-      "type": "plant"
+      "type": "plant",
+      "artH": 120
     },
     {
       "id": "yeticrab",
@@ -628,7 +646,7 @@
       "zone": "vents",
       "shape": "yeticrab",
       "anim": "a-bob",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/yeticrab",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/yeticrab",
       "fact": "The yeti crab has fuzzy, hairy arms that look like a tiny snow monster, which is how it got its nickname.",
       "facts": [
         "The yeti crab has fuzzy, hairy arms that look like a tiny snow monster, which is how it got its nickname.",
@@ -655,7 +673,8 @@
       "factAudio": "ocean-deep-yeticrab",
       "source": "MBARI; Woods Hole Oceanographic Institution",
       "habitat": "floor",
-      "type": "animal"
+      "type": "animal",
+      "artH": 85
     },
     {
       "id": "ventshrimp",
@@ -663,7 +682,7 @@
       "zone": "vents",
       "shape": "ventshrimp",
       "anim": "a-drift",
-      "art": "/api/asset-studio?asset=explore/creature/ocean-deep/ventshrimp",
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/ventshrimp",
       "fact": "Thousands of vent shrimp swarm over the hot vents, so many that they pile right on top of each other near the warm water.",
       "facts": [
         "Thousands of vent shrimp swarm over the hot vents, so many that they pile right on top of each other near the warm water.",
@@ -690,7 +709,8 @@
       "factAudio": "ocean-deep-ventshrimp",
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
       "habitat": "floor",
-      "type": "animal"
+      "type": "animal",
+      "artH": 55
     }
   ]
 }
