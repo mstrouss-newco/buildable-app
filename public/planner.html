@@ -197,11 +197,11 @@
   <div id="setupBanner"></div>
 
   <div class="maintabs">
-    <button id="mt-log" class="mt on" onclick="switchTab('log')">Log</button>
-    <button id="mt-road" class="mt" onclick="switchTab('roadmap')">Roadmap</button>
+    <button id="mt-log" class="mt" onclick="switchTab('log')">Log</button>
+    <button id="mt-road" class="mt on" onclick="switchTab('roadmap')">Roadmap</button>
   </div>
 
-  <div id="logView">
+  <div id="logView" style="display:none">
 
   <div class="addcard">
     <div class="pickrow">
@@ -227,7 +227,7 @@
   <div id="board"></div>
   </div>
 
-  <div id="roadmapView" style="display:none">
+  <div id="roadmapView">
     <div class="addcard rm-paste-card">
       <label>Paste your roadmap (markdown), then Import. Re-importing keeps your checkmarks, edits, and notes.</label>
       <textarea id="rm-paste" placeholder="## Phase 1 - Speed fix (do first)&#10;Done when: the app feels fast on a phone&#10;- [ ] Session 1A - Compression pass. Compress all images and audio so pages load faster."></textarea>

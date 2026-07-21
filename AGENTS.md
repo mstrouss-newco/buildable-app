@@ -143,6 +143,11 @@ no jargon.
 - **The planner is the source of truth for progress.** `public/planner.html` (live at
   `/planner`) tracks what is done. Do NOT tick roadmap checkboxes yourself — the owner
   checks things off after testing on his own devices.
+- **File planner work under the Roadmap, not the Log.** The owner works from the
+  **Roadmap** tab in `/planner` (phases + sessions). When recording planned or upcoming
+  work in the planner, add it as a session under the right Roadmap phase — never the
+  **Log** (backlog) tab, which is deprioritized. (This is separate from `SESSION-LOG.md`,
+  the end-of-session markdown log, which you still update.)
 - **End every session with a plain-language recap:** what was completed, what remains in
   the phase, and anything surprising — flagged honestly.
 
