@@ -816,7 +816,8 @@ function buildStartCfg(){
 }
 function el(id){ return document.getElementById(id); }
 function show(id,on){ var e=el(id); if(e)e.classList[on?"add":"remove"]("show"); }
-function showChrome(on){ if(SLING_DEMO) on=false; ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
+function inApp(){ try{ return !!(window.parent && window.parent!==window); }catch(e){ return true; } }
+function showChrome(on){ if(SLING_DEMO) on=false; if(inApp()) on=false; /* in-app: shell owns Home/Sound/Menu via nav bridge */ ["muteBtn","helpBtn","backBtn"].forEach(function(id){ var e=el(id); if(e)e.style.display=on?"block":"none"; }); }
 function showMenu(){ state="title"; G=null; show("help",false); showChrome(false);
   var host=el("start"); if(host)host.style.display="block"; if(!BS||!host)return;
   var cb={ onPlay:function(n){ if(BA)BA.unlock&&BA.unlock(); startLevel(n-1); },
