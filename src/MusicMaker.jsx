@@ -1,14 +1,23 @@
 // /src/MusicMaker.jsx
-// Kid-facing "Music Maker" — create, keep, and play up to 10 AI songs.
-// "Make a Song" is a QUIZ WIZARD read aloud for pre-readers: one big illustrated
-// question per screen (6+ options, photoreal icons; Auto/None/Surprise are vector
-// glyphs — no emoji), a Next button, and an always-visible "song so far" strip
-// whose chips cycle (tap ▲▼ or swipe). Render plays a slot-machine lock + glow.
+// Kid-facing "Music Maker" — create, keep, and play AI songs.
+//
+// Session MM1 — INSTANT + SPEAKABLE. A 5-year-old who can't read makes a song in
+// three big spoken steps, zero reading required:
+//   1) WHAT'S IT ABOUT? — picture topic chips that say their name when tapped,
+//      plus a "Put my name in the song" switch (free typing stays optional).
+//   2) PICK YOUR SOUND — one screen of style cards (vibe + genre merged); each
+//      plays a ~2s music preview when tapped.
+//   3) WHO SINGS IT? — singer cards with short voice previews.
+// Then one big GO, or "Surprise me" to fill everything in one tap. The old
+// drums/guitar/strings/speed pickers live behind an optional "Tweak my band".
+// Every option speaks/plays a sound (short ElevenLabs clips from the shared
+// sound library via /api/sfx). Icons preload on open so nothing waits. No emoji:
+// pictures are library art (IconImg) and controls are vector glyphs.
 
 import { useState, useEffect, useRef } from "react";
 import { shareCreation } from "./lib/shareSheet";
 import CoverThumb from "./lib/CoverThumb";
-import IconImg from "./lib/IconImg";
+import IconImg, { preloadIcon } from "./lib/IconImg";
 import SongPlayer from "./lib/SongPlayer";
 import QuizGate from "./QuizGate";
 import { getLearningSettings, effectiveLearning } from "./store";
@@ -16,26 +25,42 @@ import { registerAudio } from './lib/audioUnlock.js';
 
 const MAX_SONGS = 100000; // testing: effectively unlimited (was 10)
 
-const VIBES = [
-  { id: "happy",  label: "Happy",  color: "#FFD93D" },
-  { id: "epic",   label: "Epic",   color: "#5B6CFF" },
-  { id: "spooky", label: "Spooky", color: "#8E44AD" },
-  { id: "silly",  label: "Silly",  color: "#FF8FB1" },
-  { id: "chill",  label: "Chill",  color: "#4FD1C5" },
-  { id: "dance",  label: "Dance",  color: "#FF6B6B" },
+// Song topics — picture chips that speak their name. Reuse library art where it
+// exists (space, ocean); the rest are new "topic" subjects in api/images.js.
+const TOPICS = [
+  { id: "dog",      label: "Dogs",      prompt: "dogs" },
+  { id: "cat",      label: "Cats",      prompt: "cats" },
+  { id: "dinosaur", label: "Dinosaurs", prompt: "dinosaurs" },
+  { id: "space",    label: "Space",     prompt: "outer space" },
+  { id: "pancakes", label: "Pancakes",  prompt: "pancakes" },
+  { id: "princess", label: "Princess",  prompt: "a princess" },
+  { id: "trucks",   label: "Trucks",    prompt: "trucks" },
+  { id: "ocean",    label: "Ocean",     prompt: "the ocean" },
+  { id: "robots",   label: "Robots",    prompt: "robots" },
+  { id: "family",   label: "My Family", prompt: "my family" },
 ];
-const GENRES = [
-  { id: "surprise", label: "Surprise", glyph: "surprise" },
-  { id: "pop", label: "Pop" }, { id: "country", label: "Country" }, { id: "hiphop", label: "Hip Hop" },
-  { id: "rock", label: "Rock" }, { id: "disco", label: "Disco" }, { id: "sleepy", label: "Sleepy Time" },
-  { id: "marching", label: "Marching" }, { id: "reggae", label: "Reggae" },
-  { id: "kpop", label: "K-Pop" },
+
+// Style cards merge a vibe + a genre into one tappable choice. Each maps to the
+// vibe/genre values /api/generate-song already accepts, shows the matching genre
+// icon (cat "style"), and plays a ~2s preview (mm_style_<genre>).
+const STYLE_CARDS = [
+  { id: "happypop",     label: "Happy Pop",     vibe: "happy",  genre: "pop",      color: "#FFD93D" },
+  { id: "danceparty",   label: "Dance Party",   vibe: "dance",  genre: "disco",    color: "#FF6B6B" },
+  { id: "spookyrock",   label: "Spooky Rock",   vibe: "spooky", genre: "rock",     color: "#8E44AD" },
+  { id: "sillycountry", label: "Silly Country", vibe: "silly",  genre: "country",  color: "#FF8FB1" },
+  { id: "sleepylullaby",label: "Sleepy Lullaby",vibe: "chill",  genre: "sleepy",   color: "#4FD1C5" },
+  { id: "epicmovie",    label: "Epic Movie",    vibe: "epic",   genre: "marching", color: "#5B6CFF" },
+  { id: "kpop",         label: "K-Pop Energy",  vibe: "dance",  genre: "kpop",     color: "#FF4FA3" },
+  { id: "chillreggae",  label: "Chill Reggae",  vibe: "chill",  genre: "reggae",   color: "#3DD06A" },
 ];
+
 const SINGERS = [
   { id: "none", label: "No Singer", glyph: "none" },
   { id: "boy", label: "Boy" }, { id: "girl", label: "Girl" }, { id: "group", label: "Group" },
   { id: "both", label: "Both" }, { id: "robot", label: "Robot" },
 ];
+
+// Optional "Tweak my band" pickers (kept from the classic flow, no longer required).
 const DRUMS = [
   { id: "auto", label: "Auto", glyph: "auto" },
   { id: "big", label: "Big Drums" }, { id: "soft", label: "Soft Beat" }, { id: "marching", label: "Marching" },
@@ -58,7 +83,10 @@ const SPEEDS = [
 ];
 
 const LOADER_MSGS = ["Mixing the beats…", "Tuning the guitars…", "Finding the melody…", "Adding some sparkle…", "Almost there…"];
-const QUESTION_PHRASES = ["Pick a vibe","Pick a music style","Who sings?","Pick your drums","Pick a guitar","Add some strings?","How fast should it go?","Last one! What is your song about?","Rendering your song!"];
+const Q_TOPIC = "What is your song about?";
+const Q_STYLE = "Pick your sound!";
+const Q_SINGER = "Who sings it?";
+const QUESTION_PHRASES = [Q_TOPIC, Q_STYLE, Q_SINGER, "Surprise!", "Making your song!"];
 
 function getDeviceId() {
   try { let id = localStorage.getItem("deviceId"); if (!id) { id = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10); localStorage.setItem("deviceId", id); } return id; } catch { return "dev_anon"; }
@@ -66,6 +94,7 @@ function getDeviceId() {
 function getKidProfileId() {
   try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); return k && k.id ? k.id : null; } catch { return null; }
 }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 let kfInjected = false;
 function injectKeyframes() {
@@ -76,7 +105,7 @@ function injectKeyframes() {
   el.textContent =
     "@keyframes mmLock{0%{transform:translateY(-8px) scale(1.07)}55%{transform:translateY(3px) scale(.96)}100%{transform:translateY(0) scale(1)}}" +
     "@keyframes mmGlow{0%{box-shadow:0 0 0 0 rgba(255,217,61,0)}40%{box-shadow:0 0 0 3px rgba(255,217,61,.95),0 0 22px rgba(255,217,61,.8)}100%{box-shadow:0 0 0 2px rgba(255,217,61,.6)}}" +
-    "@keyframes mmHintBob{0%,100%{transform:translateY(0)}50%{transform:translateY(2px)}}" +
+    "@keyframes mmPop{0%{transform:scale(.9)}60%{transform:scale(1.04)}100%{transform:scale(1)}}" +
     "@keyframes mmEq{0%,100%{transform:scaleY(.28)}50%{transform:scaleY(1)}}";
   document.head.appendChild(el);
 }
@@ -126,20 +155,24 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   const deviceId = getDeviceId();
   const kidProfileId = getKidProfileId();
   const [vibe, setVibe] = useState("happy");
-  const [genre, setGenre] = useState("surprise");
+  const [genre, setGenre] = useState("pop");
+  const [styleId, setStyleId] = useState(null);   // chosen style card
   const [singer, setSinger] = useState("none");
   const [drums, setDrums] = useState("auto");
   const [guitar, setGuitar] = useState("auto");
   const [strings, setStrings] = useState("auto");
   const [speed, setSpeed] = useState("auto");
   const [prompt, setPrompt] = useState("");
+  const [topicId, setTopicId] = useState(null);
+  const [useName, setUseName] = useState(true);   // "Put my name in the song"
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState(null);
   const [songs, setSongs] = useState([]);
   const [count, setCount] = useState(0);
   const [status, setStatus] = useState("");
   const [tab, setTab] = useState("make");
-  const [step, setStep] = useState(0);
+  const [mkStep, setMkStep] = useState(0);        // 0 topic, 1 style, 2 singer
+  const [showTweak, setShowTweak] = useState(false);
   const [locking, setLocking] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [msgI, setMsgI] = useState(0);
@@ -149,11 +182,12 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   const audioRef = useRef(null);
   const voiceRef = useRef(true);
   voiceRef.current = voiceOn;
-  const audioElRef = useRef(null);
+  const audioElRef = useRef(null);   // TTS (spoken names/questions)
+  const sfxElRef = useRef(null);     // tap-to-hear previews (/api/sfx)
   const ttsCacheRef = useRef({});
   const speakSeqRef = useRef(0);
 
-  useEffect(() => { injectKeyframes(); refresh(); QUESTION_PHRASES.forEach(preload); }, []);
+  useEffect(() => { injectKeyframes(); refresh(); QUESTION_PHRASES.forEach(preload); preloadAllIcons(); preloadPreviews(); }, []);
 
   // Session 6C — read the studio's own manifest so the learning gate is manifest-
   // driven (features.learning), like every converted game. Parent overrides still
@@ -167,9 +201,39 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     return () => { live = false; };
   }, []);
 
+  // Warm every picker icon the moment the maker opens, so pictures paint instantly.
+  function preloadAllIcons() {
+    try {
+      TOPICS.forEach((t) => preloadIcon("topic", t.id));
+      STYLE_CARDS.forEach((s) => preloadIcon("style", s.genre));
+      SINGERS.forEach((s) => { if (!s.glyph) preloadIcon("singer", s.id); });
+      [["drums", DRUMS], ["guitar", GUITARS], ["strings", STRINGS], ["speed", SPEEDS]]
+        .forEach(([cat, list]) => list.forEach((o) => { if (!o.glyph) preloadIcon(cat, o.id); }));
+    } catch {}
+  }
+  // Warm the tap-to-hear clips on the main path (styles + singers) so the first
+  // tap plays instantly. Instrument previews warm lazily when Tweak opens.
+  function preloadPreviews() {
+    try {
+      const keys = STYLE_CARDS.map((s) => "mm_style_" + s.genre)
+        .concat(SINGERS.filter((s) => !s.glyph).map((s) => "mm_sing_" + s.id));
+      keys.forEach((k) => { fetch("/api/sfx?s=" + k).catch(() => {}); });
+    } catch {}
+  }
+
   function audioEl() {
     if (!audioElRef.current && typeof window !== "undefined") { const a = new Audio(); a.preload = "auto"; registerAudio(a); audioElRef.current = a; }
     return audioElRef.current;
+  }
+  function sfxEl() {
+    if (!sfxElRef.current && typeof window !== "undefined") { const a = new Audio(); a.preload = "auto"; registerAudio(a); sfxElRef.current = a; }
+    return sfxElRef.current;
+  }
+  // Play a short preview clip from the shared sound library. Plays synchronously
+  // on the tap so iOS audio permission holds; silent-fails if a clip is missing.
+  function playSfx(key) {
+    if (!key || typeof window === "undefined") return;
+    try { const a = sfxEl(); a.src = "/api/sfx?s=" + key; const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch {}
   }
   function stopVoice() {
     try { if (audioElRef.current) { audioElRef.current.pause(); audioElRef.current.currentTime = 0; } } catch {}
@@ -232,19 +296,23 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     } catch {}
   }
 
-  // Remix: prefill the wizard from another kid's published song, then clear draft.
+  // Remix: prefill from another kid's published song, then clear draft.
   useEffect(() => {
     if (!remix) return;
     const c = (remix.meta && remix.meta.choices) || {};
-    setVibe(c.vibe || remix.vibe || "happy");
+    const v = c.vibe || remix.vibe || "happy";
+    setVibe(v);
     if (c.genre) setGenre(c.genre);
+    const card = STYLE_CARDS.find((s) => s.vibe === v && s.genre === (c.genre || genre));
+    setStyleId(card ? card.id : null);
     if (c.singer) setSinger(c.singer);
     if (c.drums) setDrums(c.drums);
     if (c.guitar) setGuitar(c.guitar);
     if (c.strings) setStrings(c.strings);
     if (c.speed) setSpeed(c.speed);
     setPrompt(c.prompt || remix.theme || "");
-    setDraft(null); setTab("make"); setStep(0);
+    setTopicId(null);
+    setDraft(null); setTab("make"); setMkStep(0);
     setStatus("Remixing " + (remix.title || "a song") + " — change anything you like!");
     if (onConsumeRemix) onConsumeRemix();
   }, [remix]);
@@ -253,46 +321,59 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
 
   async function makeSong() {
     setBusy(true); setStatus(""); setDraft(null);
+    const nameToUse = (useName && playerName) ? playerName : "";
     try {
-      const r = await fetch("/api/generate-song", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...buildChoices(), kidName: playerName || "" }) });
+      const r = await fetch("/api/generate-song", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...buildChoices(), kidName: nameToUse }) });
       const j = await r.json();
       if (j && j.ok) { setDraft(j); }
       else if (j && j.blocked) {
-        // Kid typed something the server's safety filter blocked (bad language,
-        // scary/violent words, etc). Keep them on the "about your song" screen,
-        // say a friendly line aloud (many users can't read yet), and show a
-        // clear kid-friendly message that those words aren't allowed.
-        setStep(TOTAL);
+        // Kid typed something the server's safety filter blocked. Keep them on the
+        // topic step, say a friendly line aloud (many can't read), and show a
+        // clear kid-friendly message.
+        setMkStep(0);
         speak("Oops! Let's keep it friendly. Try some different words for your song.");
-        setStatus("\uD83C\uDFB5 Oops! Some of those words aren't allowed. Let's keep songs kind and friendly \u2014 try something fun like animals, space, or a silly adventure!");
+        setStatus("Oops! Some of those words aren't allowed. Let's keep songs kind and friendly — try something fun like animals, space, or a silly adventure!");
       }
       else setStatus("Hmm, that didn't work. Try again!");
     } catch { setStatus("Hmm, that didn't work. Try again!"); }
     finally { setBusy(false); }
   }
 
-  function doRender() { if (busy || locking) return; speak("Rendering your song!"); setLocking(true); setTimeout(() => { setLocking(false); makeSong(); }, 1450); }
+  function doRender() { if (busy || locking) return; speak("Making your song!"); setLocking(true); setTimeout(() => { setLocking(false); makeSong(); }, 1200); }
   function startRender() {
-    // Session 6C: the render learning-moment now reads THIS studio's manifest
-    // defaults (features.learning.beforeUnlock) blended with the parent's per-kid
-    // overrides — the same effectiveLearning path games use — instead of the raw
-    // global toggle. Still fully skippable via QuizGate; never traps a kid.
+    // Session 6C: render learning-moment reads THIS studio's manifest defaults
+    // blended with the parent's per-kid overrides (effectiveLearning). Still fully
+    // skippable via QuizGate; never traps a kid.
     const eff = effectiveLearning(mfLearn);
     if (eff.enabled && eff.beforeUnlock) { setJustFinished(false); setGateNext(() => doRender); return; }
     doRender();
   }
 
+  // One-tap "Surprise me" — fill everything randomly and go straight to the song.
+  function surprise() {
+    const t = pick(TOPICS); setTopicId(t.id); setPrompt(t.prompt);
+    const s = pick(STYLE_CARDS); setStyleId(s.id); setVibe(s.vibe); setGenre(s.genre);
+    const sg = pick(SINGERS.filter((x) => x.id !== "none")); setSinger(sg.id);
+    setDrums("auto"); setGuitar("auto"); setStrings("auto"); setSpeed("auto");
+    speak("Surprise!");
+    setTimeout(() => startRender(), 350);
+  }
+
+  function chooseTopic(t) { setTopicId(t.id); setPrompt(t.prompt); speak(t.label); }
+  function chooseStyle(s) { setStyleId(s.id); setVibe(s.vibe); setGenre(s.genre); playSfx("mm_style_" + s.genre); }
+  function chooseSinger(s) { setSinger(s.id); if (s.glyph) speak("No singer"); else playSfx("mm_sing_" + s.id); }
+
   async function keepSong() {
     if (!draft) return;
     if (!kidProfileId) { setStatus("Tap Grown-ups and pick who's playing first, so this song saves to the right kid."); return; }
-    if (count >= MAX_SONGS) { setStatus("You have 10 songs! Delete one in My Songs to make room."); setTab("library"); return; }
+    if (count >= MAX_SONGS) { setStatus("You have lots of songs! Delete one in My Songs to make room."); setTab("library"); return; }
     setStatus("Saving...");
     try {
       const r = await fetch("/api/save-song", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deviceId, kidProfileId, kidName: playerName || "", title: draft.title, audioUrl: draft.audioUrl, vibe: draft.vibe, theme: draft.theme, prompt: draft.prompt, coverColor: draft.coverColor, durationSec: draft.durationSec, provider: draft.provider, meta: { ...(draft.meta || {}), choices: buildChoices() } }) });
       const j = await r.json();
-      if (r.ok && j.ok) { setStatus("Saved to My Songs!"); setDraft(null); setPrompt(""); setStep(0); setJustFinished(true); await refresh(); }
-      else if (r.status === 409) { setStatus(j.message || "You already have 10 songs!"); setTab("library"); }
+      if (r.ok && j.ok) { setStatus("Saved to My Songs!"); setDraft(null); setPrompt(""); setTopicId(null); setStyleId(null); setMkStep(0); setJustFinished(true); await refresh(); }
+      else if (r.status === 409) { setStatus(j.message || "Your song box is full!"); setTab("library"); }
       else setStatus("Couldn't save — " + (j.detail || j.error || ("error " + r.status)));
     } catch (e) { setStatus("Couldn't save — " + ((e && e.message) || "network error")); }
   }
@@ -321,28 +402,18 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     try { await fetch("/api/delete-song", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId, songId }) }); await refresh(); } catch {}
   }
 
-  const vibeObj = VIBES.find((v) => v.id === vibe) || VIBES[0];
-  const accent = vibeObj.color;
+  const styleObj = STYLE_CARDS.find((s) => s.id === styleId) || null;
+  const accent = styleObj ? styleObj.color : "#5B6CFF";
+  const topicObj = TOPICS.find((t) => t.id === topicId) || null;
+  const singerObj = SINGERS.find((s) => s.id === singer) || SINGERS[0];
 
-  const STEPS = [
-    { key: "vibe",    q: "Pick a vibe",            cat: "vibe",    label: "Vibe",    options: VIBES,   value: vibe,    set: setVibe },
-    { key: "genre",   q: "Pick a music style",     cat: "style",   label: "Style",   options: GENRES,  value: genre,   set: setGenre },
-    { key: "singer",  q: "Who sings?",             cat: "singer",  label: "Singer",  options: SINGERS, value: singer,  set: setSinger },
-    { key: "drums",   q: "Pick your drums",        cat: "drums",   label: "Drums",   options: DRUMS,   value: drums,   set: setDrums },
-    { key: "guitar",  q: "Pick a guitar",          cat: "guitar",  label: "Guitar",  options: GUITARS, value: guitar,  set: setGuitar },
-    { key: "strings", q: "Add some strings?",      cat: "strings", label: "Strings", options: STRINGS, value: strings, set: setStrings },
-    { key: "speed",   q: "How fast should it go?", cat: "speed",   label: "Speed",   options: SPEEDS,  value: speed,   set: setSpeed },
-  ];
-  const TOTAL = STEPS.length;
-  const atEnd = step >= TOTAL;
-  const cur = STEPS[step];
-
-  // Read each question aloud as it appears (for kids who can't read yet).
+  // Speak each step's question as it appears (for kids who can't read yet).
   useEffect(() => {
     if (tab !== "make" || busy || draft) return;
-    if (atEnd) speak("Last one! What is your song about?");
-    else if (cur) { speak(cur.q); cur.options.forEach((o) => preload(o.label)); }
-  }, [step, tab, busy, draft]); // eslint-disable-line
+    if (mkStep === 0) speak(Q_TOPIC);
+    else if (mkStep === 1) speak(Q_STYLE);
+    else if (mkStep === 2) speak(Q_SINGER);
+  }, [mkStep, tab, busy, draft]); // eslint-disable-line
 
   // Cycle the loader message while a song is generating.
   useEffect(() => {
@@ -351,45 +422,55 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     return () => clearInterval(t);
   }, [busy]);
 
-  function selectOpt(st, o) { st.set(o.id); speak(o.label); }
-  function next() { setStep((s) => Math.min(TOTAL, s + 1)); }
-  function cycle(st, dir) {
-    const i = st.options.findIndex((o) => o.id === st.value);
-    const ni = ((i < 0 ? 0 : i) + dir + st.options.length) % st.options.length;
-    st.set(st.options[ni].id);
-  }
   function lockStyle(idx) {
-    return locking ? { animation: "mmLock .5s cubic-bezier(.2,.9,.3,1.5) " + (idx * 0.12) + "s both, mmGlow 1s ease " + (idx * 0.12) + "s both", background: "#2e2c1c" } : null;
+    return locking ? { animation: "mmLock .5s cubic-bezier(.2,.9,.3,1.5) " + (idx * 0.1) + "s both, mmGlow 1s ease " + (idx * 0.1) + "s both", background: "#2e2c1c" } : null;
   }
 
-  function Chip({ st, idx }) {
-    const curOpt = st.options.find((o) => o.id === st.value) || st.options[0];
+  // Optional "Tweak my band" — the classic drums/guitar/strings/speed pickers.
+  function TweakRow({ cat, label, options, value, set }) {
     return (
-      <div style={{ ...S.chip, ...(lockStyle(idx) || {}) }}
-        onTouchStart={(e) => { e.currentTarget._sy = e.touches[0].clientY; }}
-        onTouchEnd={(e) => { const dy = e.changedTouches[0].clientY - (e.currentTarget._sy || 0); if (dy < -16) cycle(st, -1); else if (dy > 16) cycle(st, 1); }}>
-        <button style={S.chev} onClick={() => cycle(st, -1)} aria-label={"Change " + st.label}>▲</button>
-        <OptionIcon opt={curOpt} cat={st.cat} size={26} />
-        <div style={S.chipLab}>{st.label}</div>
-        <div style={S.chipVal}>{curOpt.label}</div>
-        <button style={S.chev} onClick={() => cycle(st, 1)} aria-label={"Change " + st.label}>▼</button>
-      </div>
-    );
-  }
-  function SongSoFar() {
-    const answered = STEPS.map((st, i) => ({ st, i })).filter((x) => x.i < step || atEnd);
-    if (!answered.length) return null;
-    return (
-      <div style={S.sofarWrap}>
-        <div style={S.sofarHead}>{locking ? "Locking it in…" : "Your song so far — tap ▲▼ (or swipe) to change anything"}</div>
-        <div style={S.chipStrip}>{answered.map(({ st, i }) => <Chip key={st.key} st={st} idx={i} />)}</div>
+      <div style={S.tweakRow}>
+        <div style={S.tweakLabel}>{label}</div>
+        <div style={S.tweakOpts}>
+          {options.map((o) => {
+            const active = value === o.id;
+            const previewKey = o.glyph ? null : "mm_" + cat + "_" + o.id;
+            return (
+              <button key={o.id} onClick={() => { set(o.id); if (previewKey) playSfx(previewKey); else speak(o.label); }}
+                style={{ ...S.tweakChip, borderColor: active ? accent : "transparent", background: active ? "#2c2c48" : "#23243a" }}>
+                <OptionIcon opt={o} cat={cat} size={26} />
+                <span style={S.tweakChipLab}>{o.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
-  // Learning gate: when a child starts a new song right after finishing one,
-  // show one quick question first. Never hard-fails (QuizGate has Skip + passes
-  // through on errors).
+  // Little read-only recap of what's chosen so far (tap to jump back to a step).
+  function Recap() {
+    const items = [];
+    if (topicObj || prompt) items.push({ key: "t", step: 0, cat: "topic", id: topicObj ? topicObj.id : null, lab: topicObj ? topicObj.label : (prompt || "About") });
+    if (styleObj) items.push({ key: "s", step: 1, cat: "style", id: styleObj.genre, lab: styleObj.label });
+    if (singer !== "none") items.push({ key: "g", step: 2, cat: "singer", id: singerObj.glyph ? null : singerObj.id, lab: singerObj.label });
+    if (!items.length) return null;
+    return (
+      <div style={S.recapWrap}>
+        <div style={S.recapHead}>Your song so far — tap to change</div>
+        <div style={S.recapStrip}>
+          {items.map((it) => (
+            <button key={it.key} style={S.recapChip} onClick={() => setMkStep(it.step)}>
+              {it.id ? <IconImg cat={it.cat} id={it.id} size={22} /> : <Glyph kind="none" size={22} />}
+              <span style={S.recapLab}>{it.lab}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Learning gate: one quick question before rendering (manifest-driven, skippable).
   if (gateNext) {
     const proceed = gateNext;
     return (
@@ -439,50 +520,112 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
                   <span style={S.btnCap}>New one</span>
                 </button>
               </div>
-              <button style={S.tweakBtn} onClick={() => { setDraft(null); setStep(TOTAL); }}>← Tweak my choices</button>
+              <button style={S.tweakBtn} onClick={() => { setDraft(null); setMkStep(1); }}>← Change my song</button>
               {status && <div style={S.status}>{status}</div>}
             </div>
           ) : (
             <div>
-              <div style={S.dots}>
-                {STEPS.map((_, i) => (<span key={i} style={{ ...S.dot, ...(i === step ? S.dotOn : i < step ? S.dotDone : {}) }} />))}
-                <span style={{ ...S.dot, ...(atEnd ? S.dotOn : {}) }} />
+              <div style={S.topRow}>
+                <div style={S.dots}>
+                  {[0, 1, 2].map((i) => (<span key={i} style={{ ...S.dot, ...(i === mkStep ? S.dotOn : i < mkStep ? S.dotDone : {}) }} />))}
+                </div>
+                <button style={S.surpriseBtn} onClick={surprise} disabled={locking}>
+                  <Glyph kind="surprise" size={20} /><span>Surprise me</span>
+                </button>
               </div>
 
-              {!atEnd ? (
+              {mkStep === 0 && (
                 <>
-                  <div style={S.qHead}>{cur.q}</div>
+                  <div style={S.qHead}>{Q_TOPIC}</div>
+                  {playerName ? (
+                    <button style={{ ...S.nameToggle, borderColor: useName ? accent : "#3a3a4a", background: useName ? "#242540" : "#1a1a28" }}
+                      onClick={() => setUseName((v) => !v)} aria-pressed={useName}>
+                      <span style={{ ...S.switch, background: useName ? accent : "#4a4a5e" }}>
+                        <span style={{ ...S.knob, transform: useName ? "translateX(18px)" : "translateX(0)" }} />
+                      </span>
+                      <span style={S.nameToggleLab}>Put my name in the song</span>
+                    </button>
+                  ) : null}
                   <div style={S.tilesGrid}>
-                    {cur.options.map((o) => {
-                      const active = cur.value === o.id;
+                    {TOPICS.map((t) => {
+                      const active = topicId === t.id;
                       return (
-                        <button key={o.id} onClick={() => selectOpt(cur, o)}
+                        <button key={t.id} onClick={() => chooseTopic(t)}
                           style={{ ...S.bigTile, borderColor: active ? accent : "transparent", background: active ? "#2c2c48" : "#23243a", boxShadow: active ? "0 0 0 2px " + accent + "55" : "none" }}>
-                          <OptionIcon opt={o} cat={cur.cat} size={60} />
-                          <span style={S.bigTileLabel}>{o.label}</span>
+                          <IconImg cat="topic" id={t.id} size={58} />
+                          <span style={S.bigTileLabel}>{t.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input style={S.input} placeholder="or type your own idea…" value={topicId ? "" : prompt} maxLength={120}
+                    onChange={(e) => { setTopicId(null); setPrompt(e.target.value); }} />
+                  <div style={S.wizNav}>
+                    <span />
+                    <button style={{ ...S.nextBtn, background: accent }} onClick={() => setMkStep(1)}>Next →</button>
+                  </div>
+                </>
+              )}
+
+              {mkStep === 1 && (
+                <>
+                  <div style={S.qHead}>{Q_STYLE}</div>
+                  <div style={S.styleGrid}>
+                    {STYLE_CARDS.map((s, i) => {
+                      const active = styleId === s.id;
+                      return (
+                        <button key={s.id} onClick={() => chooseStyle(s)}
+                          style={{ ...S.styleCard, ...(lockStyle(i) || {}), borderColor: active ? s.color : "transparent", background: active ? "#2c2c48" : "#23243a", boxShadow: active ? "0 0 0 2px " + s.color + "66" : "none" }}>
+                          <span style={{ ...S.styleDot, background: s.color }} />
+                          <IconImg cat="style" id={s.genre} size={52} />
+                          <span style={S.styleLabel}>{s.label}</span>
                         </button>
                       );
                     })}
                   </div>
                   <div style={S.wizNav}>
-                    {step > 0 ? <button style={S.backBtn} onClick={() => setStep(step - 1)}>← Back</button> : <span />}
-                    <button style={{ ...S.nextBtn, background: accent }} onClick={next}>Next →</button>
+                    <button style={S.backBtn} onClick={() => setMkStep(0)}>← Back</button>
+                    <button style={{ ...S.nextBtn, background: accent }} onClick={() => setMkStep(2)}>Next →</button>
                   </div>
-                  <div style={S.skipRow}><button style={S.skipBtn} onClick={() => setStep(TOTAL)}>Skip to the end</button></div>
-                </>
-              ) : (
-                <>
-                  <div style={S.qHead}>One last thing…</div>
-                  <div style={S.subHead}>What's your song about? (optional)</div>
-                  <input style={S.input} placeholder="a dragon who loves tacos..." value={prompt} maxLength={120} onChange={(e) => setPrompt(e.target.value)} />
-                  <button style={{ ...S.renderBtn, background: accent, opacity: locking ? 0.85 : 1 }} onClick={startRender} disabled={locking}>
-                    {locking ? "Locking it in…" : "Render my song!"}
-                  </button>
-                  <div style={S.skipRow}><button style={S.backBtn} onClick={() => setStep(TOTAL - 1)}>← Back</button></div>
                 </>
               )}
 
-              <SongSoFar />
+              {mkStep === 2 && (
+                <>
+                  <div style={S.qHead}>{Q_SINGER}</div>
+                  <div style={S.tilesGrid}>
+                    {SINGERS.map((s) => {
+                      const active = singer === s.id;
+                      return (
+                        <button key={s.id} onClick={() => chooseSinger(s)}
+                          style={{ ...S.bigTile, borderColor: active ? accent : "transparent", background: active ? "#2c2c48" : "#23243a", boxShadow: active ? "0 0 0 2px " + accent + "55" : "none" }}>
+                          <OptionIcon opt={s} cat="singer" size={58} />
+                          <span style={S.bigTileLabel}>{s.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button style={{ ...S.goBtn, background: accent, opacity: locking ? 0.85 : 1 }} onClick={startRender} disabled={locking}>
+                    {locking ? "Making your song…" : "GO! Make my song"}
+                  </button>
+                  <div style={S.wizNav}>
+                    <button style={S.backBtn} onClick={() => setMkStep(1)}>← Back</button>
+                    <button style={S.tweakLink} onClick={() => { const n = !showTweak; setShowTweak(n); if (n) [ "mm_drums_big","mm_guitar_electric","mm_strings_violin" ].forEach((k)=>fetch("/api/sfx?s="+k).catch(()=>{})); }}>
+                      {showTweak ? "Hide band" : "Tweak my band"}
+                    </button>
+                  </div>
+                  {showTweak && (
+                    <div style={S.tweakPanel}>
+                      <TweakRow cat="drums"   label="Drums"   options={DRUMS}   value={drums}   set={setDrums} />
+                      <TweakRow cat="guitar"  label="Guitar"  options={GUITARS} value={guitar}  set={setGuitar} />
+                      <TweakRow cat="strings" label="Strings" options={STRINGS} value={strings} set={setStrings} />
+                      <TweakRow cat="speed"   label="Speed"   options={SPEEDS}  value={speed}   set={setSpeed} />
+                    </div>
+                  )}
+                </>
+              )}
+
+              <Recap />
               {status && <div style={S.status}>{status}</div>}
             </div>
           )}
@@ -509,7 +652,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
               </div>
             ))}
             {count < MAX_SONGS && (
-              <button style={S.addCard} onClick={() => { setTab("make"); setStep(0); setDraft(null); }} aria-label="Make a new song">
+              <button style={S.addCard} onClick={() => { setTab("make"); setMkStep(0); setDraft(null); }} aria-label="Make a new song">
                 <span style={S.addPlus}>+</span><span style={S.addText}>Make a Song</span>
               </button>
             )}
@@ -531,29 +674,41 @@ const S = {
   tab: { flex: 1, background: "#2a2a3a", color: "#bbb", border: "none", borderRadius: 10, padding: "10px", cursor: "pointer", fontWeight: 600 },
   tabActive: { flex: 1, background: "#5B6CFF", color: "#fff", border: "none", borderRadius: 10, padding: "10px", cursor: "pointer", fontWeight: 700 },
   card: { background: "#1c1c2a", borderRadius: 16, padding: 20 },
-  dots: { display: "flex", gap: 6, justifyContent: "center", marginBottom: 16 },
-  dot: { width: 7, height: 7, borderRadius: "50%", background: "#3a3a4f", transition: "all .15s" },
-  dotOn: { background: "#FFD93D", width: 20, borderRadius: 99 },
+  topRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
+  dots: { display: "flex", gap: 6, alignItems: "center" },
+  dot: { width: 8, height: 8, borderRadius: "50%", background: "#3a3a4f", transition: "all .15s" },
+  dotOn: { background: "#FFD93D", width: 22, borderRadius: 99 },
   dotDone: { background: "#5B6CFF" },
-  qHead: { fontSize: 21, fontWeight: 800, textAlign: "center", margin: "2px 0 16px" },
-  subHead: { fontSize: 14, color: "#b9b9d0", textAlign: "center", marginBottom: 10, fontWeight: 600 },
+  surpriseBtn: { display: "inline-flex", alignItems: "center", gap: 7, background: "#2a2a3a", color: "#e7e7f5", border: "none", borderRadius: 999, padding: "8px 14px", cursor: "pointer", fontWeight: 800, fontSize: 13 },
+  qHead: { fontSize: 22, fontWeight: 900, textAlign: "center", margin: "2px 0 14px" },
+  nameToggle: { display: "flex", alignItems: "center", gap: 12, width: "100%", boxSizing: "border-box", border: "2px solid", borderRadius: 14, padding: "12px 14px", marginBottom: 14, cursor: "pointer", color: "#fff" },
+  switch: { position: "relative", width: 38, height: 22, borderRadius: 999, flexShrink: 0, transition: "background .15s" },
+  knob: { position: "absolute", top: 2, left: 2, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "transform .15s" },
+  nameToggleLab: { fontWeight: 800, fontSize: 15 },
   tilesGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 },
   bigTile: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 108, border: "2px solid transparent", borderRadius: 16, padding: "14px 6px", cursor: "pointer", color: "#fff", fontWeight: 700, transition: "transform .1s, border-color .1s, background .1s" },
   bigTileLabel: { fontSize: 13, fontWeight: 700, textAlign: "center" },
-  wizNav: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 12 },
+  styleGrid: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 },
+  styleCard: { position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 116, border: "2px solid transparent", borderRadius: 16, padding: "16px 8px", cursor: "pointer", color: "#fff", fontWeight: 800, transition: "transform .1s, border-color .1s, background .1s" },
+  styleDot: { position: "absolute", top: 10, right: 10, width: 10, height: 10, borderRadius: "50%" },
+  styleLabel: { fontSize: 15, fontWeight: 800, textAlign: "center" },
+  wizNav: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, gap: 12 },
   backBtn: { background: "transparent", color: "#9a9ac0", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15, padding: "10px 6px" },
   nextBtn: { color: "#1a1a2a", border: "none", borderRadius: 14, padding: "12px 30px", cursor: "pointer", fontWeight: 900, fontSize: 16 },
-  skipRow: { textAlign: "center", marginTop: 6 },
-  skipBtn: { background: "transparent", color: "#6f6f93", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, padding: "6px" },
-  renderBtn: { width: "100%", marginTop: 16, padding: "16px", fontSize: 19, fontWeight: 900, color: "#1a1a2a", border: "none", borderRadius: 16, cursor: "pointer" },
-  sofarWrap: { marginTop: 20, borderTop: "1px solid #2a2a3f", paddingTop: 14 },
-  sofarHead: { fontSize: 12, color: "#9a9ac0", textAlign: "center", marginBottom: 10, fontWeight: 600 },
-  chipStrip: { display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6 },
-  chip: { flex: "0 0 auto", width: 80, background: "#23243a", borderRadius: 14, padding: "4px 4px 8px", textAlign: "center" },
-  chev: { width: "100%", border: "none", background: "transparent", color: "#bdb6ff", cursor: "pointer", fontSize: 11, lineHeight: 1, padding: "3px 0", animation: "mmHintBob 2.4s ease-in-out infinite" },
-  chipLab: { fontSize: 9, color: "#8e8eb5", textTransform: "uppercase", letterSpacing: 0.4, marginTop: 3 },
-  chipVal: { fontSize: 11, fontWeight: 800, minHeight: 14 },
-  input: { width: "100%", boxSizing: "border-box", padding: "12px 14px", fontSize: 16, borderRadius: 12, border: "2px solid #3a3a4a", background: "#11111a", color: "#fff", outline: "none" },
+  goBtn: { width: "100%", marginTop: 16, padding: "18px", fontSize: 21, fontWeight: 900, color: "#1a1a2a", border: "none", borderRadius: 16, cursor: "pointer", animation: "mmPop .25s ease" },
+  tweakLink: { background: "transparent", color: "#9a9ac0", border: "none", cursor: "pointer", fontWeight: 800, fontSize: 14, padding: "10px 6px" },
+  tweakPanel: { marginTop: 14, borderTop: "1px solid #2a2a3f", paddingTop: 12, display: "flex", flexDirection: "column", gap: 12 },
+  tweakRow: {},
+  tweakLabel: { fontSize: 12, color: "#8e8eb5", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 800, marginBottom: 6 },
+  tweakOpts: { display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 },
+  tweakChip: { flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, width: 72, border: "2px solid transparent", borderRadius: 12, padding: "8px 4px", cursor: "pointer", color: "#fff" },
+  tweakChipLab: { fontSize: 11, fontWeight: 700 },
+  input: { width: "100%", boxSizing: "border-box", marginTop: 12, padding: "12px 14px", fontSize: 16, borderRadius: 12, border: "2px solid #3a3a4a", background: "#11111a", color: "#fff", outline: "none" },
+  recapWrap: { marginTop: 20, borderTop: "1px solid #2a2a3f", paddingTop: 14 },
+  recapHead: { fontSize: 12, color: "#9a9ac0", textAlign: "center", marginBottom: 10, fontWeight: 600 },
+  recapStrip: { display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" },
+  recapChip: { display: "inline-flex", alignItems: "center", gap: 7, background: "#23243a", border: "none", borderRadius: 999, padding: "6px 12px 6px 6px", cursor: "pointer", color: "#fff" },
+  recapLab: { fontSize: 12, fontWeight: 800 },
   loaderWrap: { textAlign: "center", padding: "34px 0" },
   eqRow: { display: "flex", gap: 6, justifyContent: "center", alignItems: "flex-end", height: 46, marginBottom: 14 },
   eqBar: { width: 9, height: 46, borderRadius: 5, transformOrigin: "bottom", animation: "mmEq .9s ease-in-out infinite" },
@@ -561,20 +716,17 @@ const S = {
   draft: { padding: 16, borderRadius: 14, border: "2px solid", background: "#11111a" },
   draftTitle: { fontSize: 18, fontWeight: 800, marginBottom: 6 },
   recipe: { fontSize: 13, color: "#b9b9d0", marginBottom: 10, fontWeight: 600 },
-  audio: { width: "100%" },
   draftBtns: { display: "flex", gap: 10, marginTop: 12 },
   keepBtn: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px", fontWeight: 800, color: "#1a1a2a", border: "none", borderRadius: 14, cursor: "pointer" },
   againBtn: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px", fontWeight: 700, color: "#fff", background: "#2a2a3a", border: "none", borderRadius: 14, cursor: "pointer" },
   btnCap: { fontSize: 13, fontWeight: 800 },
   tweakBtn: { display: "block", margin: "12px auto 0", background: "transparent", color: "#9a9ac0", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14 },
   status: { marginTop: 14, textAlign: "center", color: "#FFD93D", fontWeight: 700 },
-  empty: { textAlign: "center", color: "#bbb", padding: "30px 0", fontSize: 16 },
   songGrid: { display: "flex", flexDirection: "column", gap: 12 },
   songCard: { display: "flex", alignItems: "center", gap: 12, background: "#11111a", border: "2px solid", borderRadius: 14, padding: 12 },
   songInfo: { flex: 1, minWidth: 0 },
   songTitle: { fontWeight: 800, fontSize: 15, marginBottom: 2 },
   songMeta: { fontSize: 12, color: "#aaa", marginBottom: 6, textTransform: "capitalize" },
-  audioSmall: { width: "100%", height: 32 },
   shareBtn: { background: "rgba(124,108,255,0.25)", color: "#cfc8ff", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0, fontSize: 16 },
   renameBtn: { background: "#2a2a3a", color: "#e7e7f5", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0, fontSize: 13 },
   deleteBtn: { background: "#2a2a3a", color: "#ff8080", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontWeight: 800, flexShrink: 0 },
