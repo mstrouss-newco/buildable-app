@@ -573,7 +573,7 @@ function whale(ctx, x, y, s) { ctx.beginPath(); ctx.ellipse(x, y, 90 * s, 26 * s
 
 // The darkness amount at a given scroll position — pure, so QA can assert the
 // flashlight zone activates without driving the render loop.
-function darknessAt(sy) { return Math.min(0.72, Math.max(0, (sy - DARK_START) / 600 * 0.72)); }
+function darknessAt(sy) { return Math.min(0.55, Math.max(0, (sy - DARK_START) / 600 * 0.55)); }
 
 function tick(t) {
   requestAnimationFrame(tick);
