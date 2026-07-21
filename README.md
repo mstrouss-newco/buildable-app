@@ -6,6 +6,29 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Use any asset in a game from Browse — assign to a fitting slot, live, with undo (Session AP2, July 21 2026)
+Builds on AP1's one combined library. Every art asset card on the Browse tab of
+`/asset-library` now has a purple **Use in a game** button. It opens a small pop-up that:
+1. lets you pick a game (any converted game that carries a manifest);
+2. loads that game's manifest and shows **only the slots the asset fits** — the same
+   kind→role rule the editor uses, so a background (a `world` asset) is offered scene
+   slots and never the paddle, while a character/element is offered actors (paddle,
+   bricks, pieces, hero) and never a background;
+3. shows a thumbnail of what is currently in each slot.
+
+Tapping a slot copies the asset into it (AP1's `import` action on `api/asset-studio`, so
+the engine loads it exactly like editor-made art) and writes the manifest via
+`POST /api/manifest` — identical to how the editor saves, so the change is **live
+immediately**. A success toast gives an **Open game** link (deep-linked to the exact level
+when the slot is a level part) and a one-tap **Undo** that restores the previous value with
+another live write. Audio assets are skipped by this button (audio is assigned from a
+game's own music picker, not the image `import` path).
+
+Scope: only `public/asset-library.html` changed (the Browse page). No game engine, no
+backend, no database, no manifest schema touched. New headless test `qa-ap2-use-in-game.mjs`
+drives the whole flow (button renders, fit filter both directions, live manifest write,
+Open-game deep link, undo restore) — all pass, plus `qa-breaker` and `qa-art` still pass.
+
 ## One combined asset library + editor as the create front door (Session AP1, July 20 2026)
 Asset pipeline unification (phase AP), shipped and verified live on production. There is now
 ONE library both the editor and the Browse page read: a new shared reader

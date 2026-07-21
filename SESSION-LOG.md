@@ -1,5 +1,45 @@
 # Buildable Kids — Session Log
 
+
+## 2026-07-21: Session AP2 — Use an asset in a game from Browse (shipped)
+
+Asset pipeline unification, phase AP, second block. Plan approved by Mike 2026-07-20.
+Builds directly on AP1's one combined library. Committed to main (Vercel auto-deploys).
+
+What shipped (only `public/asset-library.html`, the Browse page — nothing else touched):
+- Every art asset card on Browse now has a "Use in a game" button.
+- The button opens a self-contained pop-up (`window.BuildableUse`) that: (1) picks a game
+  from the converted-games list; (2) reads that game's manifest via `/api/manifest`; (3)
+  shows ONLY the slots the asset fits — kind→role rule mirrors the editor, so a `world`
+  asset (background) is offered scene/background slots and never paddle/bricks, and a
+  `character`/`element` is offered actor slots (paddle, bricks, pieces, hero) and never a
+  background; (4) shows a thumbnail of what is currently in each fitting slot.
+- Applying: copies the asset into the slot with AP1's `import` action on
+  `api/asset-studio` (so the engine loads it exactly like editor-made art), then writes
+  the manifest with `POST /api/manifest` (pin, same as the editor) so it is LIVE at once.
+- Success toast: "Open game" link (deep-links to `/{game}/play/{levelId}` for a level part,
+  else `/{game}`) plus one-tap "Undo" that restores the previous slot value with a second
+  live write.
+- Slots are read straight from the live manifest: whole-game `art` keys plus each level's
+  string-valued `parts`. Non-asset parts (ints like `bgKey`/`pairs`, arrays like survival
+  `foes`) are skipped, so only real single-asset slots are offered.
+- Audio assets are intentionally excluded from this button (audio is assigned from a game's
+  own music picker, not the image import path). Noted for a later pass if wanted.
+
+Manifest schema, engines, backend, and DB were NOT touched. No new dependency.
+
+Verified: new headless test `qa-ap2-use-in-game.mjs` (Playwright) drives the full flow and
+all 9 checks pass, including the brief's acceptance case — assign a Studio-made background
+to a Breaker level, it writes live into that level's `background`, other slots untouched,
+Open-game deep-links to the level, Undo restores the previous value with another live write,
+and a character is offered actor slots but never Background (reverse invariant). Page loads
+with zero JS errors. Regression: `qa-breaker` (all 8 levels + pong + render) and `qa-art`
+still PASS.
+
+Remaining in phase AP (NOT done this session, on purpose — do not start without a plan):
+- Retire the Create tab / relocate the New Game recipe builder to Build (AP1 leftover,
+  gated on Mike confirming the editor Generate + Library work live).
+- Optional: let audio assets be assigned to a game's `music` slot from Browse too.
 ## 2026-07-21: Session WL1 — Kidspedia Weather Lab (template #3 + Make It Rain)
 **Shipped:** `public/weather.html` (NEW weather-lab template: painted coastal stage with
 lighthouse, 3 sliders + 6 recipe buttons, live sim making evaporation/cloud/rain/snow/
