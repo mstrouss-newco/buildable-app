@@ -308,10 +308,17 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
     if(!st){ setError("Hmm, that didn't work. Try again!"); setView(payload?"landing":"pick"); if(!payload)setStep(TOTAL); return; }
     openFreshStory(st);
   }
-  async function makeSequel(prev){
+  // "What happens next?" — a true CHAPTER 2 that CONTINUES this story: same hero,
+  // friend, world and art style, plus a recap of the pages so the writer picks up
+  // where it left off (not a repeat). Linked by series_id + chapter so My stories
+  // can show a "Chapter 2" ribbon. Reuses the existing cutouts, so art stays cheap.
+  async function continueStory(prev){
     const c=(prev&&prev.created_with)||{};
-    setError(null); setGenMsg("Starting a new adventure"); setView("generating");
-    const st=await generateStoryRaw(c);
+    const priorPages=Array.isArray(prev&&prev.pages)?prev.pages.map(p=>p&&p.text).filter(Boolean):[];
+    const chapter=((prev&&prev.chapter)||1)+1;
+    const seriesId=(prev&&prev.series_id)||null;
+    setError(null); setGenMsg("Writing what happens next"); setView("generating");
+    const st=await generateStoryRaw({ ...c, priorTitle:(prev&&prev.title)||"", priorPages, chapter, seriesId });
     if(!st){ setError("Hmm, that didn't work."); setView("reading"); return; }
     openFreshStory(st);
   }
@@ -349,7 +356,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   // ---------- READING ----------
   if(view==="reading"&&story){
     return <StoryReader story={story} storyId={currentStoryId} deviceId={deviceId} kidProfileId={kidProfileId}
-      onExit={()=>setView("landing")} onSave={saveStory} saving={saving} savedMsg={savedMsg} onNewAdventure={makeSequel} />;
+      onExit={()=>setView("landing")} onSave={saveStory} saving={saving} savedMsg={savedMsg} onContinue={continueStory} />;
   }
   if(view==="generating"){
     return (<div style={{...s.container,justifyContent:"center"}}>
@@ -424,7 +431,9 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
       <div style={s.savedRow}>
         {saved.map((st)=>(<div key={st.story_id} style={s.savedCard}>
           <button style={s.savedOpen} onClick={()=>openSaved(st.story_id)}>
-            <div style={{...s.savedCover,background:st.cover_color||"#7a4a86"}}/>
+            <div style={{...s.savedCover,background:st.cover_color||"#7a4a86",position:"relative"}}>
+              {Number(st.chapter)>=2 && <span style={s.savedRibbon}>Chapter {Number(st.chapter)}</span>}
+            </div>
             <span style={s.savedName}>{st.title}</span></button>
           <button style={s.savedDel} onClick={()=>deleteSaved(st.story_id)} title="Delete">×</button>
           <button style={{...s.savedPub,background:st.published?"rgba(61,208,106,0.9)":"rgba(0,0,0,0.6)"}} onClick={()=>publishStory(st)} title={st.published?"Published to Top board — tap to make private":"Publish to the Top board"} aria-label="Publish">
@@ -489,6 +498,7 @@ const s = {
   savedCard:{position:"relative"},
   savedOpen:{width:130,border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6},
   savedCover:{width:130,height:90,borderRadius:14},
+  savedRibbon:{position:"absolute",top:6,left:6,background:"linear-gradient(135deg,#9b7edd,#d65a7b)",color:"#fff",fontSize:10,fontWeight:800,fontFamily:FRED,padding:"3px 8px",borderRadius:8,boxShadow:"0 2px 8px rgba(0,0,0,0.35)"},
   savedName:{fontSize:13,fontWeight:700,color:"#fff",textAlign:"center"},
   savedDel:{position:"absolute",top:-6,right:-6,width:26,height:26,borderRadius:"50%",border:"none",background:"rgba(0,0,0,0.6)",color:"#fff",cursor:"pointer",fontSize:16,lineHeight:1},
   savedPub:{position:"absolute",bottom:-6,right:-6,width:28,height:28,borderRadius:"50%",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},

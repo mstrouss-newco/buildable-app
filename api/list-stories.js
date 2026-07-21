@@ -26,7 +26,8 @@ export default async function handler(req, res) {
     }
     const filter = kidProfileId ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId) : "device_id=eq." + encodeURIComponent(deviceId);
     const safeCols = "story_id,title,world,cover_color,created_at";
-    const baseCols = safeCols + ",cover_art:story->pages->0->>art_url"; // first-page art as cover
+    // first-page art as cover, plus series info so My stories can show a "Chapter N" ribbon
+    const baseCols = safeCols + ",cover_art:story->pages->0->>art_url,chapter:story->>chapter,series_id:story->>series_id";
     let r = await sb("saved_stories?" + filter + "&select=" + baseCols + ",published,play_count,heart_count&order=created_at.desc&limit=20");
     if (!r.ok) { r = await sb("saved_stories?" + filter + "&select=" + baseCols + "&order=created_at.desc&limit=20"); }
     if (!r.ok) { r = await sb("saved_stories?" + filter + "&select=" + safeCols + "&order=created_at.desc&limit=20"); } // last resort: no cover_art

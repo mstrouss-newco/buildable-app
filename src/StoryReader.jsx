@@ -64,7 +64,7 @@ function ShareIcon(){return(<svg width="18" height="18" viewBox="0 0 24 24" fill
 function SoundIcon({on}){return(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="4 9 8 9 13 4 13 20 8 15 4 15"/>{on?<path d="M16 8a4 4 0 0 1 0 8"/>:<g><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></g>}</svg>);}
 function Chevron({dir}){const pts=dir==="left"?"15 6 9 12 15 18":"9 6 15 12 9 18";return(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points={pts}/></svg>);}
 
-export default function StoryReader({ story, storyId, deviceId, kidProfileId, onExit, onSave, saving, savedMsg, onNewAdventure }) {
+export default function StoryReader({ story, storyId, deviceId, kidProfileId, onExit, onSave, saving, savedMsg, onContinue }) {
   const pages = (story && story.pages) || [];
   const style = (story && (story.style || story.art_style)) || "watercolor";
   const charSlug = (story && story.character_slug) || "bunny";
@@ -349,7 +349,7 @@ export default function StoryReader({ story, storyId, deviceId, kidProfileId, on
         <div style={s.endRow}>
           <button style={s.saveBtn} disabled={saving} onClick={() => onSave(story)}>{saving ? "Saving…" : "Save to my library"}</button>
           <button style={s.againBtn} onClick={() => { setEnded(false); setDir(-1); setIdx(0); }}>Read it again</button>
-          {onNewAdventure && (<button style={s.againBtn} onClick={() => onNewAdventure(story)}>New adventure with {story.character_name || "the same hero"}</button>)}
+          {onContinue && (<button style={s.nextChapterBtn} onClick={() => onContinue(story)}>What happens next?</button>)}
           {savedMsg && <p style={s.savedMsg}>{savedMsg}</p>}
         </div>
       </div>
@@ -429,6 +429,7 @@ const s = {
   saveBtn: { padding: "13px 26px", borderRadius: 16, border: "none", background: "#fff", color: "#b3477a", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
   savedMsg: { fontSize: 14, color: "#bdf5cf", fontWeight: 700 },
   againBtn: { padding: "12px 24px", borderRadius: 16, border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: FRED, cursor: "pointer" },
+  nextChapterBtn: { padding: "13px 28px", borderRadius: 16, border: "none", background: "linear-gradient(135deg,#9b7edd,#c06b99,#d65a7b)", color: "#fff", fontSize: 16, fontWeight: 800, fontFamily: FRED, cursor: "pointer", boxShadow: "0 8px 24px rgba(155,126,221,0.5)" },
   coverOverlay: { position: "absolute", inset: 0, borderRadius: "inherit", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(to top, rgba(10,8,24,0.80), rgba(10,8,24,0.15) 55%, rgba(10,8,24,0.50))", padding: 20, boxSizing: "border-box" },
   coverInner: { textAlign: "center", maxWidth: "88%" },
   coverKicker: { fontFamily: NUN, fontSize: 12, letterSpacing: 3, textTransform: "uppercase", color: "#e9c6ff", margin: "0 0 10px", opacity: 0.9 },

@@ -141,7 +141,24 @@ function normalizeInput(body) {
   const lesson = LESSONS[Math.floor(Math.random() * LESSONS.length)];
   const companionSlug = (CHARACTERS[body.companionSlug] && body.companionSlug !== characterSlug) ? body.companionSlug : pickCompanion(characterSlug);
   const companionName = ((CHARACTERS[companionSlug] && CHARACTERS[companionSlug].name) || "a friend").split(" ")[0];
-  return { style, characterSlug, worldSlug, characterName, quest, mood, ending, spark, favColor, favFood, petName, lesson, companionSlug, companionName };
+
+  // ---- Sequel / "What happens next?" continuation ----
+  // When a sequel is requested we carry the previous chapter forward: the same
+  // hero + friend + world + style, a short recap so the writer CONTINUES instead
+  // of repeating, and series bookkeeping (series_id + chapter number) so My
+  // stories can group them and show a "Chapter 2" ribbon.
+  const chapter = Math.max(1, Math.min(20, parseInt(body.chapter || 1, 10) || 1));
+  const priorTitle = clampText(body.priorTitle, 70);
+  const priorPages = Array.isArray(body.priorPages)
+    ? body.priorPages.map((t) => clampText(t, 320)).filter(Boolean).slice(-6)
+    : [];
+  const isSequel = chapter > 1 && priorPages.length > 0;
+  // A stable id for the whole series. Reuse the one passed in; otherwise mint one
+  // so this chapter (and any later chapters made from it) share the same id.
+  const seriesId = clampText(body.seriesId, 60) ||
+    (isSequel ? "series_" + crypto.createHash("sha1").update((priorTitle || characterName) + "|" + characterSlug).digest("hex").slice(0, 12) : null);
+
+  return { style, characterSlug, worldSlug, characterName, quest, mood, ending, spark, favColor, favFood, petName, lesson, companionSlug, companionName, chapter, priorTitle, priorPages, isSequel, seriesId };
 }
 
 function buildPrompt(inp, age) {
@@ -151,6 +168,8 @@ function buildPrompt(inp, age) {
   return [
     `You are a beloved children's picture-book author writing for a child age ${age}.`,
     `Write a gentle, wholesome, age-appropriate 6-page story. NO violence, scary peril, romance, or anything a parent wouldn't want a young child to hear.`,
+    inp.isSequel ? `THIS IS CHAPTER ${inp.chapter} of an ongoing series${inp.priorTitle ? ` that began with "${inp.priorTitle}"` : ""}. Here is what happened in the previous chapter (a short recap): ${inp.priorPages.join(" ")}` : ``,
+    inp.isSequel ? `CONTINUE the SAME adventure with the SAME hero and friend — pick up where it left off. Do NOT retell or repeat the earlier events. Bring a fresh little problem or discovery for this chapter and resolve it warmly by the end. Give this chapter its own new short title (never "Part 2" or "Chapter 2" — a real title).` : ``,
     `The hero is ${inp.characterName}, ${ch.desc}. The story BEGINS in ${w.name} (${w.desc}).`,
     `${inp.characterName} has a best friend named ${inp.companionName} (${(CHARACTERS[inp.companionSlug]||{}).desc||"a friendly companion"}) who shares the whole adventure. Mention ${inp.companionName} BY NAME on at least 3 of the pages, doing things together with ${inp.characterName} — never leave the friend behind.`,
     `The story may move between these library worlds (use the exact slug): ${worldList}.`,
@@ -198,6 +217,10 @@ function wrap(title, pages, inp) {
     character_slug: inp.characterSlug, character_name: inp.characterName,
     companion_slug: inp.companionSlug, companion_name: inp.companionName,
     start_world: inp.worldSlug, pages,
+    // Series bookkeeping so "What happens next?" chapters can be grouped and the
+    // cover can show a "Chapter N" ribbon. chapter 1 (a normal story) has no series_id.
+    series_id: inp.seriesId || null,
+    chapter: inp.chapter || 1,
     created_with: { style: inp.style, characterSlug: inp.characterSlug, characterName: inp.characterName, companionSlug: inp.companionSlug, worldSlug: inp.worldSlug, quest: inp.quest, mood: inp.mood, ending: inp.ending, spark: inp.spark, favColor: inp.favColor, favFood: inp.favFood, petName: inp.petName },
   };
 }
