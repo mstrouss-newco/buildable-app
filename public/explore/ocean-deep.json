@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 9,
+  "assetVersion": 10,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -112,7 +112,8 @@
       "source": "National Geographic Kids; NOAA Ocean Service",
       "sound": "bird",
       "artH": 82,
-      "habitat": "air"
+      "habitat": "air",
+      "type": "animal"
     },
     {
       "id": "pelican",
@@ -148,7 +149,8 @@
       "source": "Audubon Society; National Geographic Kids",
       "sound": "bird",
       "artH": 78,
-      "habitat": "air"
+      "habitat": "air",
+      "type": "animal"
     },
     {
       "id": "turtle",
@@ -183,7 +185,8 @@
       "factAudio": "ocean-deep-turtle",
       "source": "NOAA Fisheries; National Geographic Kids",
       "artH": 100,
-      "habitat": "open"
+      "habitat": "open",
+      "type": "animal"
     },
     {
       "id": "dolphin",
@@ -219,11 +222,12 @@
       "source": "NOAA Fisheries; Dolphin Communication Project",
       "sound": "dolphin",
       "artH": 165,
-      "habitat": "open"
+      "habitat": "open",
+      "type": "animal"
     },
     {
       "id": "clownfish",
-      "name": "Clownfish and Anemone",
+      "name": "Clownfish",
       "zone": "sunlight",
       "shape": "clownfish",
       "anim": "a-bob",
@@ -253,8 +257,45 @@
       ],
       "factAudio": "ocean-deep-clownfish",
       "source": "NOAA National Ocean Service; Monterey Bay Aquarium",
-      "artH": 60,
-      "habitat": "floor"
+      "artH": 56,
+      "habitat": "floor",
+      "type": "animal"
+    },
+    {
+      "id": "anemone",
+      "name": "Sea Anemone",
+      "zone": "sunlight",
+      "shape": "blob",
+      "anim": "a-sway",
+      "habitat": "floor",
+      "type": "plant",
+      "artH": 92,
+      "art": "/api/asset-studio?asset=explore/creature/ocean-photo/anemone",
+      "fact": "A sea anemone looks like a flower, but it is really an animal! Its soft waving arms are covered in tiny stingers to catch food.",
+      "facts": [
+        "A sea anemone looks like a flower, but it is really an animal! Its soft waving arms are covered in tiny stingers to catch food.",
+        "Clownfish live right inside the anemone's stinging arms. A slimy coat keeps the clownfish safe, so it never gets stung.",
+        "An anemone can slowly creep along on its sticky foot, but mostly it stays put in one cozy spot on the reef."
+      ],
+      "stats": [
+        {
+          "label": "Really a",
+          "value": "Animal, not a plant"
+        },
+        {
+          "label": "Arms",
+          "value": "Covered in tiny stingers"
+        }
+      ],
+      "asks": [
+        "Why doesn't the clownfish get stung?",
+        "Is an anemone a plant or an animal?"
+      ],
+      "quiz": [
+        "ocean-anemone"
+      ],
+      "factAudio": "ocean-deep-anemone",
+      "source": "NOAA National Ocean Service; Monterey Bay Aquarium"
     },
     {
       "id": "reefshark",
@@ -289,7 +330,8 @@
       "factAudio": "ocean-deep-reefshark",
       "source": "NOAA Fisheries; Monterey Bay Aquarium",
       "artH": 140,
-      "habitat": "open"
+      "habitat": "open",
+      "type": "animal"
     },
     {
       "id": "jelly",
@@ -324,7 +366,8 @@
       "factAudio": "ocean-deep-jelly",
       "source": "Monterey Bay Aquarium; NOAA Ocean Exploration",
       "glow": true,
-      "habitat": "open"
+      "habitat": "open",
+      "type": "animal"
     },
     {
       "id": "hatchetfish",
@@ -359,7 +402,8 @@
       "factAudio": "ocean-deep-hatchetfish",
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
       "glow": true,
-      "habitat": "open"
+      "habitat": "open",
+      "type": "animal"
     },
     {
       "id": "angler",
@@ -395,7 +439,8 @@
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
       "glow": true,
       "lure": true,
-      "habitat": "open"
+      "habitat": "open",
+      "type": "animal"
     },
     {
       "id": "squid",
@@ -431,7 +476,8 @@
       "source": "Smithsonian Ocean; NOAA Ocean Exploration",
       "glow": true,
       "jet": true,
-      "habitat": "open"
+      "habitat": "open",
+      "type": "animal"
     },
     {
       "id": "gulpereel",
@@ -466,7 +512,8 @@
       "factAudio": "ocean-deep-gulpereel",
       "source": "NOAA Ocean Exploration; Monterey Bay Aquarium Research Institute",
       "glow": true,
-      "habitat": "open"
+      "habitat": "open",
+      "type": "animal"
     },
     {
       "id": "dumbo",
@@ -501,7 +548,8 @@
       "factAudio": "ocean-deep-dumbo",
       "source": "MBARI; NOAA Ocean Exploration",
       "glow": true,
-      "habitat": "floor"
+      "habitat": "floor",
+      "type": "animal"
     },
     {
       "id": "snail",
@@ -536,7 +584,8 @@
       "factAudio": "ocean-deep-snail",
       "source": "University of Washington; NOAA Ocean Exploration",
       "glow": true,
-      "habitat": "floor"
+      "habitat": "floor",
+      "type": "animal"
     },
     {
       "id": "tubeworm",
@@ -570,7 +619,8 @@
       ],
       "factAudio": "ocean-deep-tubeworm",
       "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution",
-      "habitat": "floor"
+      "habitat": "floor",
+      "type": "plant"
     },
     {
       "id": "yeticrab",
@@ -604,7 +654,8 @@
       ],
       "factAudio": "ocean-deep-yeticrab",
       "source": "MBARI; Woods Hole Oceanographic Institution",
-      "habitat": "floor"
+      "habitat": "floor",
+      "type": "animal"
     },
     {
       "id": "ventshrimp",
@@ -638,7 +689,8 @@
       ],
       "factAudio": "ocean-deep-ventshrimp",
       "source": "NOAA Ocean Exploration; Smithsonian Ocean",
-      "habitat": "floor"
+      "habitat": "floor",
+      "type": "animal"
     }
   ]
 }

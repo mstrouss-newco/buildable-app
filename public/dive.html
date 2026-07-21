@@ -65,6 +65,9 @@
   .a-bob{animation:bob 3.6s ease-in-out infinite}
   .a-pulse{animation:pulse 2.8s ease-in-out infinite}
   .a-drift{animation:drift 7s ease-in-out infinite}
+  @keyframes plantsway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}
+  .cr .art.plant{transform-origin:bottom center;animation:plantsway 5.5s ease-in-out infinite}
+  .paused .cr .art.plant{animation-play-state:paused}
   @keyframes flick{0%,88%,100%{opacity:1}92%{opacity:.25}96%{opacity:.9}}
   .lure{animation:flick 3.2s linear infinite}
   @keyframes jet{0%{transform:translateX(0)}30%{transform:translateX(-46px) rotate(-8deg)}100%{transform:translateX(0)}}
@@ -421,7 +424,7 @@ function buildWorld() {
     if (c.lure) b.dataset.lure = "1";
     if (c.glow) b.dataset.glow = "1";
     const art = document.createElement("span");
-    art.className = "art " + (c.anim || "a-bob");
+    art.className = "art " + (c.type === "plant" ? "plant" : (c.anim || "a-bob"));
     art.style.display = "block";
     art.style.animationDelay = (-i * 1.3) + "s";
     art.innerHTML = shapeFor(c);          // instant drawn fallback
