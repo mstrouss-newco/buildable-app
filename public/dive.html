@@ -308,6 +308,7 @@ fetch("/explore/" + encodeURIComponent(EXHIBIT_ID) + ".json", { cache: "no-store
   .catch(() => { showFallback("error"); });
 
 function boot(data) {
+  DATA = data;                          // self-contained: boot owns DATA (buildScenes needs it)
   document.getElementById("app").style.display = "block";
   document.title = "Kidspedia — " + data.title;
   document.getElementById("pageTitle").textContent = data.title;
