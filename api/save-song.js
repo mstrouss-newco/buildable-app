@@ -43,6 +43,12 @@ export default async function handler(req, res) {
   const kidProfileId = (body.kidProfileId || "").toString().trim() || null;
   const title = (body.title || "").toString().trim().slice(0, 120);
   const audioUrl = (body.audioUrl || "").toString().trim();
+  // MM2 — the album cover URL travels with the song inside meta.coverUrl (no
+  // schema change needed). An optional db/add-song-cover-url.sql migration adds a
+  // real column later for tidiness; the app reads meta.coverUrl either way.
+  const metaIn = body.meta && typeof body.meta === "object" ? { ...body.meta } : {};
+  const coverUrl = (body.coverUrl || metaIn.coverUrl || "").toString().slice(0, 400);
+  if (coverUrl) metaIn.coverUrl = coverUrl;
 
   if (!deviceId) return res.status(400).json({ error: "deviceId is required" });
   if (!title) return res.status(400).json({ error: "title is required" });
@@ -83,7 +89,7 @@ export default async function handler(req, res) {
       cover_color: (body.coverColor || "").toString().slice(0, 20) || null,
       duration_sec: Number.isFinite(+body.durationSec) ? +body.durationSec : null,
       provider: (body.provider || "demo").toString().slice(0, 30),
-      meta: body.meta && typeof body.meta === "object" ? body.meta : null,
+      meta: Object.keys(metaIn).length ? metaIn : null,
     };
 
     const insRes = await sb("saved_songs", {

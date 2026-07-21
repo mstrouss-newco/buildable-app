@@ -11,10 +11,12 @@ function Note({ s }) {
 
 // Generated song cover art (reusable image library, cached). Falls back to the
 // song's color swatch + a vector music note if the cover isn't ready.
-export default function CoverThumb({ vibe, theme, color, size = 48, radius = 10, fill = false, seed = "", label = "" }) {
+export default function CoverThumb({ url = "", vibe, theme, color, size = 48, radius = 10, fill = false, seed = "", label = "" }) {
   const [failed, setFailed] = useState(false);
-  const src = "/api/images?kind=cover&vibe=" + encodeURIComponent(vibe || "happy") + "&theme=" + encodeURIComponent(theme || "") +
-    (seed ? "&seed=" + encodeURIComponent(seed) : "") + (label ? "&label=" + encodeURIComponent(label) : "");
+  // MM2 — prefer the exact cover URL saved with the song so the same art shows
+  // everywhere. Fall back to a deterministic cover derived from the song's choices.
+  const src = url || ("/api/images?kind=cover&vibe=" + encodeURIComponent(vibe || "happy") + "&theme=" + encodeURIComponent(theme || "") +
+    (seed ? "&seed=" + encodeURIComponent(seed) : "") + (label ? "&label=" + encodeURIComponent(label) : ""));
   const box = fill
     ? { width: "100%", aspectRatio: "1", borderRadius: radius, overflow: "hidden", background: color || "#5B6CFF", display: "flex", alignItems: "center", justifyContent: "center" }
     : { width: size, height: size, borderRadius: radius, overflow: "hidden", flexShrink: 0, background: color || "#5B6CFF", display: "flex", alignItems: "center", justifyContent: "center" };

@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     const filter = kidProfileId
       ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId)
       : "device_id=eq." + encodeURIComponent(deviceId);
-    const baseCols = "song_id,title,prompt,vibe,theme,audio_url,cover_color,duration_sec,provider,created_at";
+    const baseCols = "song_id,title,prompt,vibe,theme,audio_url,cover_color,duration_sec,provider,created_at,meta";
     const tail = "&order=created_at.desc&limit=10";
     let r = await sb("saved_songs?" + filter + "&select=" + baseCols + ",published,play_count,heart_count" + tail);
     if (!r.ok) {
@@ -49,7 +49,13 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: "list failed", status: r.status, detail: detail.slice(0, 300) });
     }
     let songs = await r.json();
-    if (Array.isArray(songs)) songs = songs.map((row) => ({ ...row, thumbnail: songCover(row.vibe, row.theme) }));
+    if (Array.isArray(songs)) songs = songs.map((row) => ({
+      ...row,
+      // MM2 — surface the saved album cover (meta.coverUrl, or a real cover_url
+      // column once the optional migration is run) so shelves show real art.
+      cover_url: row.cover_url || (row.meta && row.meta.coverUrl) || null,
+      thumbnail: songCover(row.vibe, row.theme),
+    }));
     return res.status(200).json({
       configured: true,
       songs: Array.isArray(songs) ? songs : [],

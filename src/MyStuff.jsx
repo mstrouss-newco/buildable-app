@@ -270,7 +270,7 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
             <button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button>
             {songs.map((sg) => (
               <div key={sg.song_id} style={s.card}>
-                <CoverThumb vibe={sg.vibe} theme={sg.theme} color={sg.cover_color} fill radius={0} seed={sg.song_id} label={sg.title} />
+                <CoverThumb url={sg.cover_url} vibe={sg.vibe} theme={sg.theme} color={sg.cover_color} fill radius={0} seed={sg.song_id} label={sg.title} />
                 <h3 style={s.cardTitle}>{sg.title}</h3>
                 <p style={s.cardDesc}>{[sg.vibe, sg.theme].filter(Boolean).join(" · ")}</p>
                 <div style={{ padding: "0 14px 12px" }}><SongPlayer src={sg.audio_url} color={sg.cover_color || "#5B6CFF"} size={64} /></div>
