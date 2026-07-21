@@ -24,6 +24,20 @@ generated power-up icon set). One file: `public/survival-engine.html`.
 QA: `qa-survival.mjs` all pass (6/6 isolated, 6/6 campaign, render smoke). Ref:
 SESSION-LOG.md entry of the same date.
 
+## One level picker per game — kill the double picker (Session 7J, July 21 2026)
+Games opened from the shared Journey used to pop the engine's OWN grid level-picker after
+a win, instead of returning the kid to the Journey they started on — two pickers for one
+game. Fixed in the engines only: when launched from the Journey (a `?level=` deep-link is
+present), a win now returns to the shell Journey (with the star just saved) instead of
+calling `showMenu()`. Castle Guard, Mahjong and Memory (grid on every win) now return to
+the Journey; Sling and Tumble keep auto-advancing between levels and only had their
+end-of-run grid replaced with a Journey return (Sling rebuilt on top of Session 7K's
+in-app nav guard so both are preserved). Standalone play (no `?level=`) is unchanged. QA:
+qa-mahjong/memory/sling/tumble pass; qa-castleguard passes gameplay+render (its lone fail
+is the pre-existing manifest-vs-engine level-count mismatch, unrelated). Files:
+`public/castle-guard.html`, `public/mahjong-engine.html`, `public/memory-engine.html`,
+`public/sling-squad.html`, `public/tumble-engine.html`.
+
 ## Session 7K — Sling & Maze in-app nav overlap fixed (July 21 2026)
 In-app, Sling and Maze re-drew their own nav buttons once a level started, on top of
 the shell's Home / Sound / Menu (Sling's "‹ Menu" over the top-left Home; Maze's

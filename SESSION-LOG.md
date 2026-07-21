@@ -42,6 +42,35 @@ QA: `node qa-survival.mjs` — all checks pass (6/6 isolated wins, 6/6 campaign,
 smoke incl. post-sim draw of the new trail/ring/frost paths, upgrade-handoff).
 
 
+## 2026-07-21: Session 7J — One level picker per game (kill the double picker) (shipped)
+
+Fixed the "two different level-pickers for one game" bug. Games opened from the shared
+winding Journey were, on a win, popping the engine's OWN grid level-picker instead of
+returning the kid to the Journey they started from. Root cause: each engine's win path
+called its own `showMenu()` unconditionally.
+
+Fix (engines only, no shell change): when an engine is launched from the Journey (a
+`?level=` deep-link is present), a win now posts `nav:exit` to the shell — which returns
+to the Journey with the star the engine just saved — instead of `showMenu()`. Standalone
+play (no `?level=`) keeps the built-in menu, so nothing changes off the Journey.
+
+- Grid-on-EVERY-win (the loud bug): `castle-guard.html`, `mahjong-engine.html`,
+  `memory-engine.html` — each win-tap now returns to the Journey.
+- Grid-at-the-VERY-END only (milder; they auto-advance level->level like Breaker):
+  `sling-squad.html`, `tumble-engine.html`. Auto-advance unchanged; only the terminal grid
+  is replaced with a Journey return. Per-level bounce-back intentionally NOT added (matches
+  the Breaker chaining model) — flag if you want each Sling/Tumble level to drop back.
+
+Deploy note: shipped via GitHub web upload (no repo push access in that session). Sling's
+first upload accidentally reverted Session 7K's in-app nav guard; caught immediately and
+re-shipped Sling rebuilt on top of 7K, so both 7K (inApp guard) and 7J (Journey-return)
+are live. The other four engines changed by only their single 7J line.
+
+QA: `qa-mahjong`, `qa-memory`, `qa-sling`, `qa-tumble` all pass. `qa-castleguard` passes
+every gameplay + render check (incl. post-win render); its one FAIL — "12 levels line up
+with the engine" — is the PRE-EXISTING manifest(4)-vs-engine(~12) level-count mismatch,
+untouched here. Flagged for a later session.
+
 ## 2026-07-21: Session 7K — Fix in-app nav overlap on Sling & Maze (shipped)
 
 Reported bug: in-app, Sling and Maze re-drew their OWN nav buttons once a level
