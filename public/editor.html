@@ -88,7 +88,9 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
 </style>
 </head>
 <body>
-<div class="gate" id="gate">
+<!-- Editor PIN gate removed at owner's request; kept hidden so shared code that
+     references these elements still works. The editor opens directly (see boot). -->
+<div class="gate" id="gate" style="display:none">
   <div class="box">
     <h1>Editor</h1>
     <div class="hint" style="margin-top:6px;">Enter the editor PIN</div>
@@ -901,7 +903,11 @@ function save(after){
     .catch(function(err){ btn.disabled=false; setStatus("Save failed: "+(err.message||err), true); });
 }
 window.addEventListener("beforeunload", function(e){ if(state.dirty){ e.preventDefault(); e.returnValue=""; } });
-try{ if(localStorage.getItem("bo-ok")==="1"){ PIN=localStorage.getItem("bo-pin")||"1025"; document.getElementById("gate").style.display="none"; route(); } }catch(e){}
+// PIN gate removed at owner's request: open the editor directly. Still send the
+// known PIN with saves so the /api/manifest check keeps passing.
+try{ PIN=localStorage.getItem("bo-pin")||"1025"; }catch(e){ PIN="1025"; }
+var _gate=document.getElementById("gate"); if(_gate) _gate.style.display="none";
+route();
 </script>
 </body>
 </html>
