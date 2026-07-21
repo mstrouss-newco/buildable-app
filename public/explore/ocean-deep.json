@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 8,
+  "assetVersion": 7,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -40,8 +40,7 @@
       "range": "0 to 660 feet down",
       "blurb": "Bright warm water where almost all ocean life lives, including the coral reefs.",
       "scene": "/api/asset-studio?asset=explore/scene/ocean-photo/reef",
-      "scenePos": "center",
-      "caustics": true
+      "scenePos": "center"
     },
     {
       "id": "twilight",
@@ -260,8 +259,7 @@
       ],
       "factAudio": "ocean-deep-clownfish",
       "source": "NOAA National Ocean Service; Monterey Bay Aquarium",
-      "artH": 60,
-      "still": true
+      "artH": 60
     },
     {
       "id": "reefshark",
@@ -658,6 +656,5 @@
       "factAudio": "ocean-deep-ventshrimp",
       "source": "NOAA Ocean Exploration; Smithsonian Ocean"
     }
-  ],
-  "caustics": "/api/asset-studio?asset=explore/fx/ocean-photo/caustics"
+  ]
 }
