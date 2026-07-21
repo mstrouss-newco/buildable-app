@@ -272,7 +272,7 @@ const EXHIBIT_CATALOG = [
   // Mike fact-checks the roster and flips BOTH this status and ocean-deep.json to "approved".
   { id: "ocean-deep", title: "Journey to the Deep", topic: "ocean", color: "#1173B4", heroArt: "/api/asset-studio?asset=explore/scene/ocean-photo/reef", status: "approved" },
   // Make It Rain (weather-lab template, the live weather machine). Approved by Mike 2026-07-21.
-  { id: "make-it-rain", title: "Make It Rain", topic: "weather", color: "#37B6F5", heroArt: "explore-make-it-rain-hero", status: "approved" },
+  { id: "make-it-rain", title: "Weather Lab", topic: "weather", color: "#37B6F5", heroArt: "/api/asset-studio?asset=explore/scene/make-it-rain/hero", status: "approved" },
 ];
 
 // Games that support the zero-account "play a friend by link" flow (the grandma flow).
