@@ -1,5 +1,47 @@
 # Buildable Kids — Session Log
 
+## 2026-07-21: Story Maker 2.0 — Session ST4 (Fewer taps + light theme)
+
+Fourth and final planned relaunch block for Stories (STILL COMING SOON — Mike
+decides the LIVE flip after his own device QA; not flipped here). All work is in
+the story maker/reader; no game was touched, so no game QA script applies (Stories
+has no qa-*.mjs). QA: `vite build` compiles clean on latest main; esbuild parses
+both changed files.
+
+Fewer taps — the picker goes from 8 screens to 3:
+- The old 7-question wizard + separate naming screen is now just three screens:
+  Hero, then World, then "What happens?" (the quest). Story buddy, art look, mood
+  and ending are no longer their own screens — they get sensible random defaults
+  per story (buddy/mood/ending randomized; look stays watercolor, our best-tuned
+  art) and live in a "More choices" drawer on the final screen for kids who want
+  to fiddle. Generation still fires the moment the last of the three choices is
+  made (ST1's write-while-naming is preserved), so the story is usually written
+  before the kid taps Make.
+- Hero screen shows 6 heroes at a time with a "Shuffle heroes" button (instead of
+  all 18 at once), and naming merged onto the hero screen as a small name card
+  (default name, editable) — no separate final naming step.
+- "Story Dice" replaces "Surprise me" on the landing: tap it and three dice wobble
+  with a soft tick sound (synthesized, no audio asset), land on hero / world /
+  quest, then go straight to making. Still runs through the learning gate.
+- Remix still prefills everything (hero window is rebuilt to include the remixed
+  hero).
+
+Visual refresh + polish:
+- Cream/light theme to match the Home screen (session 3E palette: #FFF8EE ground,
+  white cards, #3A2E4D ink). Stories no longer looks like a different, darker
+  product. Layout is centered and scaled up.
+- "Repaint this page" moved behind the grown-ups gate in the reader: it's now a
+  small "Grown-ups: repaint" control that opens the same quick math check the rest
+  of the app uses, so a kid can't burn image generations re-rolling art.
+- "My stories" covers on the Stories landing now render each story's real
+  first-page painted art (the `thumbnail` the list API already returns) instead of
+  a flat purple rectangle, with a soft cream book fallback while art warms in. The
+  delete/publish controls got clearer drawn icons and bigger tap targets. (My Stuff
+  already used the thumbnail.)
+
+No emojis anywhere (drawn SVG throughout). Files: `src/StoryMaker.jsx`,
+`src/StoryReader.jsx`.
+
 ## 2026-07-21: Story Maker 2.0 — Session ST3 (Reading fun)
 
 Third relaunch block for Stories (still COMING SOON — Mike decides the LIVE flip

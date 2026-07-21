@@ -6,6 +6,33 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Story Maker 2.0 — ST4: fewer taps + light theme (July 21 2026)
+
+Fourth and final planned Stories relaunch block (still COMING SOON; Mike decides the LIVE flip
+after his own device QA — not flipped here). All work is in the story maker/reader; no game
+touched, so no game QA script applies (Stories has no `qa-*.mjs`). **Fewer taps:** the picker
+drops from ~8 screens to **three** — Hero, World, then "What happens?" (the quest). Story
+buddy, art look, mood and ending are no longer separate screens; they get sensible random
+defaults per story (buddy/mood/ending randomized; look stays watercolor, our best-tuned art)
+and sit in a **"More choices" drawer** on the final screen. Generation still fires when the
+last of the three choices is made, so ST1's write-while-naming is preserved and the story is
+usually written before the kid taps Make. The **hero screen shows 6 heroes with a "Shuffle
+heroes" button** (not all 18), and **naming merged onto the hero screen** as a small editable
+name card (no separate final step). **"Story Dice"** replaces "Surprise me" on the landing:
+three dice wobble with a soft synthesized tick (no audio asset), land on hero / world / quest,
+then go straight to making (still runs the learning gate). **Visual refresh:** the whole
+surface is now the app's **cream/light theme** (session 3E palette: `#FFF8EE` ground, white
+cards, `#3A2E4D` ink), centered and scaled up, so Stories no longer reads as a darker, separate
+product. **Repaint moved behind grown-ups:** the reader's "Repaint this page" is now a small
+"Grown-ups: repaint" control gated by the same quick math check the rest of the app uses, so a
+kid can't burn image generations re-rolling art. **Real "My stories" covers:** the Stories
+landing renders each story's real first-page painted art (the `thumbnail` the list API already
+returns) with a soft cream book fallback, replacing the flat purple rectangles; delete/publish
+controls got clearer drawn icons and bigger tap targets. No emojis (drawn SVG throughout). QA:
+`vite build` compiles clean on latest main; esbuild parses both changed files. Files:
+`src/StoryMaker.jsx`, `src/StoryReader.jsx`, `SESSION-LOG.md`, `README.md`.
+
+
 ## Story Maker 2.0 — ST3: reading fun (July 21 2026)
 
 Third Stories relaunch block (still COMING SOON; Mike decides the LIVE flip after his own
