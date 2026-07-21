@@ -245,24 +245,35 @@ const DIRECTIONS = {
 };
 async function genArt(prompt, openaiKey, timeoutMs = 44000) {
   // Landscape page painting (same model + quality as production story pages).
-  const once = async () => {
+  // Falls back landscape -> square (like api/images.js) and reports the last
+  // upstream status so failures are diagnosable instead of silent.
+  let lastStatus = null;
+  const once = async (body) => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
-      const res = await fetch("https://api.openai.com/v1/images/generations", { method: "POST", headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: "gpt-image-1", prompt, n: 1, size: "1536x1024", quality: "low" }), signal: ctrl.signal });
+      const res = await fetch("https://api.openai.com/v1/images/generations", { method: "POST", headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" }, body: JSON.stringify(body), signal: ctrl.signal });
       clearTimeout(timer);
       if (!res.ok) return { b64: null, status: res.status };
       const data = await res.json();
       return { b64: data.data?.[0]?.b64_json || null, status: 200 };
     } catch { clearTimeout(timer); return { b64: null, status: 0 }; }
   };
-  for (let t = 0; t < 3; t++) {
-    const r = await once();
-    if (r.b64) return r.b64;
-    if (r.status !== 429) break;
-    await new Promise((res) => setTimeout(res, 4000 + t * 3000));
-  }
-  return null;
+  const attempt = async (body) => {
+    for (let t = 0; t < 3; t++) {
+      const r = await once(body);
+      lastStatus = r.status;
+      if (r.b64) return r.b64;
+      if (r.status !== 429) break;
+      await new Promise((res) => setTimeout(res, 4000 + t * 3000));
+    }
+    return null;
+  };
+  const b64 =
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1536x1024", quality: "low" })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: "low" })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024" }));
+  return { b64, status: lastStatus };
 }
 function dirKey(k){ return "libdir:" + k + ":v1"; }
 
@@ -357,10 +368,10 @@ export default async function handler(req, res) {
     if (!q.force && await cacheGet(ck)) return res.status(200).json({ ok: true, key, cached: true });
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) return res.status(200).json({ ok: true, noKey: true });
-    const b64 = await genArt(DIRECTIONS[key], openaiKey);
-    if (!b64) return res.status(200).json({ ok: true, key, failed: true });
+    const r = await genArt(DIRECTIONS[key], openaiKey);
+    if (!r.b64) return res.status(200).json({ ok: true, key, failed: true, upstream: r.status });
     if (q.force) await cacheDel(ck);
-    await cachePut(ck, b64);
+    await cachePut(ck, r.b64);
     return res.status(200).json({ ok: true, key, generated: true });
   }
 
