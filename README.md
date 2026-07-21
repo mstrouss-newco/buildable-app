@@ -31,6 +31,27 @@ session (sandbox disk limit). Files: `src/MusicMaker.jsx`, `src/lib/IconImg.jsx`
 deploy. Session MM2 (covers, waiting show, title reveal, make-another, pack unlocks) not
 started.
 
+## Story Maker 2.0 — ST2: sequels + sharing polish (July 20 2026)
+
+Second Stories relaunch block (still COMING SOON; Mike decides the LIVE flip). Sequels: the
+reader's End screen now offers "What happens next?" — a true Chapter 2 that CONTINUES the same
+story (same hero, friend, world and art style) by sending a recap of the previous pages to the
+writer so it picks up where it left off instead of repeating, reusing the existing cutouts so
+the art stays cheap. Chapters are linked by a series_id + chapter number stored inside the story
+JSON (no DB change): api/generate-story.js accepts priorPages/priorTitle/chapter/seriesId, mints
+a stable series_id on the first sequel, and tags every story with a chapter number; "My stories"
+covers show a "Chapter N" ribbon (list-stories exposes the chapter). Sharing: links are now the
+short /s/<id> form (stories) and /p/<id> (songs); new api/story-share.js serves /s/:id by
+injecting og:title (story title) + og:image (cover art) then rendering the same viewer, so a
+texted link shows a real card instead of a grey box (vercel.json now routes /s/:id to the
+function); emoji glyphs removed from the desktop share menu; public/story.html refreshed to
+paint the library world background like the real reader (gradient fallback) with plain-text
+play/pause. Draw-your-hero and printable book were CUT by Mike. QA: node --check + esbuild clean,
+vercel.json valid, no emojis; a fallback-mode run confirms sequels get chapter 2 + a series_id
+and normal stories stay chapter 1. Files: api/generate-story.js, api/list-stories.js,
+api/story-share.js, src/StoryMaker.jsx, src/StoryReader.jsx, src/lib/shareSheet.js,
+public/story.html, vercel.json, SESSION-LOG.md, README.md.
+
 ## Story Maker 2.0 — ST1: speed + relaunch QA blockers (July 20 2026)
 
 First relaunch block for Stories (still COMING SOON; Mike decides the LIVE flip after his

@@ -1,5 +1,44 @@
 # Buildable Kids — Session Log
 
+## 2026-07-20: Story Maker 2.0 — Session ST2 (Wow: sequels + sharing polish)
+
+Second relaunch block for Stories (still COMING SOON — Mike decides the LIVE flip).
+All work is inside the story maker/reader + share flow; no game was touched.
+
+Sequels — "What happens next?":
+- The End screen's "New adventure with <hero>" button is replaced (Mike's call) by
+  "What happens next?", a true Chapter 2 that CONTINUES the same story: same hero,
+  friend, world and art style, with a recap of the previous pages sent to the writer so
+  it picks up where it left off instead of repeating. Reuses the existing character
+  cutouts, so the art stays cheap.
+- Chapters are linked by a series_id + chapter number stored INSIDE the story JSON (no
+  database change). api/generate-story.js now accepts priorPages/priorTitle/chapter/
+  seriesId, mints a stable series_id on the first sequel, and tags every story with a
+  chapter number (a normal story is chapter 1, series_id null).
+- "My stories" covers show a "Chapter N" ribbon (api/list-stories.js exposes the chapter
+  from the story JSON).
+
+Sharing polish:
+- Share links are now the short /s/<id> form for stories (and /p/<id> for songs).
+- Rich link previews: new api/story-share.js serves /s/:id — it looks up the story,
+  injects og:title (the story title) and og:image (the cover art) into the viewer, then
+  renders the same public book, so a texted/WhatsApp'd link shows a real card (title +
+  picture) instead of a generic grey box. vercel.json routes /s/:id to the function (was
+  a static rewrite to story.html).
+- Removed the emoji glyphs from the desktop share menu (no-emoji law).
+- public/story.html viewer refreshed toward the real reader look: each page now paints
+  its library WORLD background (like the reader) with the calm gradient as fallback, and
+  the play/pause glyphs were replaced with plain text.
+
+CUT by Mike (2026-07-20): draw-your-hero and printable book — not built.
+
+QA: node --check clean on all changed API/lib files; esbuild parses both JSX files;
+vercel.json valid JSON; no emojis introduced; a fallback-mode generate-story run confirms
+a sequel gets chapter 2 + a minted series_id while a normal story stays chapter 1 / null.
+Stories remains COMING SOON (no LIVE flip). Files: api/generate-story.js,
+api/list-stories.js, api/story-share.js (new), src/StoryMaker.jsx, src/StoryReader.jsx,
+src/lib/shareSheet.js, public/story.html, vercel.json.
+
 ## 2026-07-20: Session MM1 — Music Maker: instant + speakable (no reading needed)
 
 Rebuilt the Music Maker "Make a Song" flow so a child who cannot read can make a
