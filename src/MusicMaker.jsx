@@ -13,6 +13,19 @@
 // Every option speaks/plays a sound (short ElevenLabs clips from the shared
 // sound library via /api/sfx). Icons preload on open so nothing waits. No emoji:
 // pictures are library art (IconImg) and controls are vector glyphs.
+//
+// Session MM2 — MAKE IT A KEEPER. Finished songs feel like treasures:
+//   • ALBUM COVER — real cover art per song (kind=cover), pinned to the song and
+//     shown on the reveal, the My Songs shelf, and My Stuff (color square is the
+//     fallback so nothing ever breaks).
+//   • WAITING SHOW — a drawn "band warming up" moment (SVG + CSS, no emoji)
+//     replaces the plain spinner; the rotating messages stay as spoken flavor.
+//   • TITLE REVEAL — the cover + a playful title appear like a PRIZE (with a Feel
+//     Kit celebration) BEFORE playback; the title is tappable to rename and saved.
+//   • MAKE ANOTHER ABOUT… — one tap re-opens step 1 with the same style + singer
+//     locked in. Instrument packs (Brass Band / Strings / World Beats) unlock
+//     extra premium style cards; locked cards show a coin price and buy through
+//     the shared wallet (window.BuildableWallet) + the shell loadout store.
 
 import { useState, useEffect, useRef } from "react";
 import { shareCreation } from "./lib/shareSheet";
@@ -53,6 +66,42 @@ const STYLE_CARDS = [
   { id: "kpop",         label: "K-Pop Energy",  vibe: "dance",  genre: "kpop",     color: "#FF4FA3" },
   { id: "chillreggae",  label: "Chill Reggae",  vibe: "chill",  genre: "reggae",   color: "#3DD06A" },
 ];
+
+// MM2 — PREMIUM style cards that come with an instrument pack. Each card names
+// the pack (matching public/music-maker/manifest.json's "Instrument packs"
+// options) that unlocks it. Locked cards show a coin price and buy through the
+// shared wallet + loadout store; owning the pack unlocks all of its cards.
+const PACK_STYLE_CARDS = [
+  { id: "marchingbrass", label: "Marching Brass", vibe: "epic",  genre: "brass",      color: "#E6A817", pack: "Brass Band" },
+  { id: "bigbandswing",  label: "Big Band Swing", vibe: "happy", genre: "swing",      color: "#F2C14E", pack: "Brass Band" },
+  { id: "moviestrings",  label: "Movie Strings",  vibe: "epic",  genre: "orchestral", color: "#7C6CFF", pack: "Strings" },
+  { id: "dreamywaltz",   label: "Dreamy Waltz",   vibe: "chill", genre: "waltz",      color: "#8FB7FF", pack: "Strings" },
+  { id: "sambacarnival", label: "Samba Carnival", vibe: "dance", genre: "samba",      color: "#FF7A3D", pack: "World Beats" },
+  { id: "afrogroove",    label: "Afro Groove",    vibe: "dance", genre: "afrobeat",   color: "#3DC98A", pack: "World Beats" },
+];
+const ALL_STYLE_CARDS = STYLE_CARDS.concat(PACK_STYLE_CARDS);
+
+const GAME_ID = "music-maker";
+const PACK_SLOT = "Instrument packs";
+// Reads the shell-owned loadout store for this studio (same key the shell writes)
+// to learn which instrument packs the kid owns. Free option (Starter) is index 0.
+function loadoutKey() {
+  let kid = "";
+  try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); if (k && k.id) kid = "_" + k.id; } catch (e) {}
+  return "bk_loadout_v1_" + GAME_ID + kid;
+}
+function readLoadoutStore() {
+  try { const s = JSON.parse(localStorage.getItem(loadoutKey()) || "null"); if (s && typeof s === "object") return { owned: s.owned || {}, equipped: s.equipped || {} }; } catch (e) {}
+  return { owned: {}, equipped: {} };
+}
+function ownedPackNames(packMap) {
+  // packMap: { "Brass Band": {index, price}, ... }. Returns a Set of owned pack names.
+  const store = readLoadoutStore();
+  const ownedIdx = new Set(store.owned[PACK_SLOT] || []);
+  const names = new Set();
+  Object.keys(packMap || {}).forEach((name) => { if (ownedIdx.has(packMap[name].index)) names.add(name); });
+  return names;
+}
 
 const SINGERS = [
   { id: "none", label: "No Singer", glyph: "none" },
@@ -106,7 +155,13 @@ function injectKeyframes() {
     "@keyframes mmLock{0%{transform:translateY(-8px) scale(1.07)}55%{transform:translateY(3px) scale(.96)}100%{transform:translateY(0) scale(1)}}" +
     "@keyframes mmGlow{0%{box-shadow:0 0 0 0 rgba(255,217,61,0)}40%{box-shadow:0 0 0 3px rgba(255,217,61,.95),0 0 22px rgba(255,217,61,.8)}100%{box-shadow:0 0 0 2px rgba(255,217,61,.6)}}" +
     "@keyframes mmPop{0%{transform:scale(.9)}60%{transform:scale(1.04)}100%{transform:scale(1)}}" +
-    "@keyframes mmEq{0%,100%{transform:scaleY(.28)}50%{transform:scaleY(1)}}";
+    "@keyframes mmEq{0%,100%{transform:scaleY(.28)}50%{transform:scaleY(1)}}" +
+    // MM2 waiting-show + reveal motion (drawn band warming up, prize pop).
+    "@keyframes mmBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}" +
+    "@keyframes mmSway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}" +
+    "@keyframes mmFloat{0%{transform:translateY(6px);opacity:0}30%{opacity:1}100%{transform:translateY(-26px);opacity:0}}" +
+    "@keyframes mmReveal{0%{transform:scale(.6) rotate(-6deg);opacity:0}60%{transform:scale(1.06) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0)}}" +
+    "@keyframes mmSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}";
   document.head.appendChild(el);
 }
 
@@ -151,6 +206,50 @@ function Speaker({ on, size = 22 }) {
   );
 }
 
+// MM2 — the "band warming up" waiting show. All drawn SVG + CSS, no emoji: a
+// little stage with a bouncing drum, a swaying guitar, dancing equalizer bars,
+// and floating music notes while the song generates. `msg` is the spoken/visible
+// flavor line, kept from the old loader.
+function BandWarmup({ accent, msg }) {
+  const bars = [0, 1, 2, 3, 4, 5, 6];
+  return (
+    <div style={S.loaderWrap}>
+      <svg width="220" height="150" viewBox="0 0 220 150" role="img" aria-label="The band is warming up">
+        {/* stage floor */}
+        <ellipse cx="110" cy="132" rx="94" ry="12" fill="rgba(255,255,255,0.06)" />
+        {/* floating notes */}
+        <g fill={accent} opacity="0.9">
+          <g style={{ animation: "mmFloat 2.2s ease-in-out infinite" }}><circle cx="52" cy="40" r="4" /><rect x="55" y="24" width="2.4" height="18" /></g>
+          <g style={{ animation: "mmFloat 2.6s ease-in-out .6s infinite" }}><circle cx="112" cy="34" r="4" /><rect x="115" y="18" width="2.4" height="18" /></g>
+          <g style={{ animation: "mmFloat 2.4s ease-in-out 1.1s infinite" }}><circle cx="170" cy="42" r="4" /><rect x="173" y="26" width="2.4" height="18" /></g>
+        </g>
+        {/* guitar player (swaying) */}
+        <g style={{ transformOrigin: "60px 110px", animation: "mmSway 1.4s ease-in-out infinite" }}>
+          <circle cx="60" cy="74" r="12" fill="#f3c98b" />
+          <rect x="50" y="86" width="20" height="30" rx="8" fill={accent} />
+          <ellipse cx="78" cy="104" rx="12" ry="9" fill="#b5651d" />
+          <rect x="70" y="98" width="26" height="5" rx="2.5" fill="#8a4b16" transform="rotate(-18 70 98)" />
+        </g>
+        {/* drummer (bouncing) */}
+        <g style={{ transformOrigin: "150px 112px", animation: "mmBounce 0.5s ease-in-out infinite" }}>
+          <circle cx="150" cy="76" r="12" fill="#f3c98b" />
+          <rect x="140" y="88" width="20" height="26" rx="8" fill="#5B6CFF" />
+          <ellipse cx="150" cy="120" rx="22" ry="10" fill="#e7e7f5" />
+          <rect x="128" y="112" width="44" height="10" rx="4" fill="#cfd0f5" />
+        </g>
+        {/* equalizer bars */}
+        <g>
+          {bars.map((i) => (
+            <rect key={i} x={14 + i * 9} y="120" width="6" height="22" rx="3" fill={accent}
+              style={{ transformOrigin: "center bottom", animation: "mmEq .9s ease-in-out infinite", animationDelay: (i * 0.1) + "s" }} />
+          ))}
+        </g>
+      </svg>
+      <div style={S.loaderMsg}>{msg}</div>
+    </div>
+  );
+}
+
 export default function MusicMaker({ onBack, onHome, playerName, remix = null, onConsumeRemix = null }) {
   const deviceId = getDeviceId();
   const kidProfileId = getKidProfileId();
@@ -173,6 +272,12 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   const [tab, setTab] = useState("make");
   const [mkStep, setMkStep] = useState(0);        // 0 topic, 1 style, 2 singer
   const [showTweak, setShowTweak] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");   // MM2: editable reveal title
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [revealPlay, setRevealPlay] = useState(false); // MM2: prize revealed → now playing
+  const [coins, setCoins] = useState(0);               // MM2: shared wallet balance
+  const [packMap, setPackMap] = useState({});          // MM2: {packName:{index,price}}
+  const [ownedPacks, setOwnedPacks] = useState(new Set()); // MM2: owned pack names
   const [locking, setLocking] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [msgI, setMsgI] = useState(0);
@@ -196,16 +301,35 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     let live = true;
     fetch("/music-maker/manifest.json?v=" + Date.now())
       .then((r) => r.json())
-      .then((m) => { if (live && m && m.features) setMfLearn(m.features.learning || null); })
+      .then((m) => {
+        if (!live || !m) return;
+        if (m.features) setMfLearn(m.features.learning || null);
+        // MM2 — build the pack price/index map from the manifest customization
+        // so premium style cards unlock through the real instrument-pack slot.
+        const slot = (m.customization || []).find((s) => /instrument/i.test(s.slot || ""));
+        const map = {};
+        if (slot) (slot.options || []).forEach((o, i) => { if (o && o.name) map[o.name] = { index: i, price: o.price || 0 }; });
+        setPackMap(map);
+        setOwnedPacks(ownedPackNames(map));
+      })
       .catch(() => {});
     return () => { live = false; };
+  }, []);
+
+  // MM2 — keep the coin balance live (shell owns the wallet). Refresh on the
+  // shell's bk-wallet event so a purchase updates the price badges immediately.
+  useEffect(() => {
+    const read = () => { try { setCoins((window.BuildableWallet && window.BuildableWallet.balance()) || 0); } catch (e) { setCoins(0); } };
+    read();
+    if (typeof window !== "undefined") window.addEventListener("bk-wallet", read);
+    return () => { if (typeof window !== "undefined") window.removeEventListener("bk-wallet", read); };
   }, []);
 
   // Warm every picker icon the moment the maker opens, so pictures paint instantly.
   function preloadAllIcons() {
     try {
       TOPICS.forEach((t) => preloadIcon("topic", t.id));
-      STYLE_CARDS.forEach((s) => preloadIcon("style", s.genre));
+      ALL_STYLE_CARDS.forEach((s) => preloadIcon("style", s.genre));
       SINGERS.forEach((s) => { if (!s.glyph) preloadIcon("singer", s.id); });
       [["drums", DRUMS], ["guitar", GUITARS], ["strings", STRINGS], ["speed", SPEEDS]]
         .forEach(([cat, list]) => list.forEach((o) => { if (!o.glyph) preloadIcon(cat, o.id); }));
@@ -303,7 +427,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     const v = c.vibe || remix.vibe || "happy";
     setVibe(v);
     if (c.genre) setGenre(c.genre);
-    const card = STYLE_CARDS.find((s) => s.vibe === v && s.genre === (c.genre || genre));
+    const card = ALL_STYLE_CARDS.find((s) => s.vibe === v && s.genre === (c.genre || genre));
     setStyleId(card ? card.id : null);
     if (c.singer) setSinger(c.singer);
     if (c.drums) setDrums(c.drums);
@@ -319,13 +443,60 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
 
   function buildChoices() { return { vibe, genre, singer, drums, guitar, strings, speed, prompt }; }
 
+  // MM2 — Feel Kit celebration (shared, shell-loaded). Falls back to a tap.
+  function feel(fn) { try { const F = window.BuildableFeel; if (F && F[fn]) F[fn](); } catch (e) {} }
+  function celebrate() {
+    try {
+      const F = window.BuildableFeel;
+      if (F && F.celebrate) F.celebrate(window.innerWidth || 360, window.innerHeight || 640);
+      else if (F && F.tap) F.tap();
+    } catch (e) {}
+  }
+
+  // MM2 — buy an instrument pack with the SHARED wallet, then record ownership in
+  // the shell loadout store (so the shell's loadout screen agrees). Unlocks every
+  // premium style card in that pack. Short on coins → a friendly nudge, no charge.
+  function buyPack(packName) {
+    const p = packMap[packName];
+    if (!p) return false;
+    if (coins < (p.price || 0)) {
+      feel("miss");
+      setStatus("The " + packName + " pack costs " + p.price + " coins. Play and practice to earn more!");
+      return false;
+    }
+    let ok = false;
+    try { ok = window.BuildableWallet ? window.BuildableWallet.spend(p.price) : false; } catch (e) { ok = false; }
+    if (!ok) { setStatus("Couldn't open that pack right now — try again in a moment."); return false; }
+    try {
+      const s = readLoadoutStore();
+      const list = (s.owned[PACK_SLOT] || []).slice();
+      if (!list.includes(p.index)) list.push(p.index);
+      s.owned[PACK_SLOT] = list.sort((a, b) => a - b);
+      localStorage.setItem(loadoutKey(), JSON.stringify(s));
+    } catch (e) {}
+    setOwnedPacks(ownedPackNames(packMap));
+    try { setCoins((window.BuildableWallet && window.BuildableWallet.balance()) || 0); } catch (e) {}
+    setStatus("New sounds unlocked — the " + packName + " pack is yours!");
+    celebrate();
+    return true;
+  }
+
+  // MM2 — "Make another about…": keep the same style + singer, clear the topic,
+  // and drop back on step 1 so a kid can binge-make songs about everything.
+  function makeAnother() {
+    setDraft(null); setTitleDraft(""); setRevealPlay(false); setEditingTitle(false);
+    setTopicId(null); setPrompt(""); setStatus("");
+    setTab("make"); setMkStep(0);
+    feel("tap"); speak(Q_TOPIC);
+  }
+
   async function makeSong() {
     setBusy(true); setStatus(""); setDraft(null);
     const nameToUse = (useName && playerName) ? playerName : "";
     try {
       const r = await fetch("/api/generate-song", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...buildChoices(), kidName: nameToUse }) });
       const j = await r.json();
-      if (j && j.ok) { setDraft(j); }
+      if (j && j.ok) { setDraft(j); setTitleDraft(j.title || "My Song"); setRevealPlay(false); setEditingTitle(false); celebrate(); }
       else if (j && j.blocked) {
         // Kid typed something the server's safety filter blocked. Keep them on the
         // topic step, say a friendly line aloud (many can't read), and show a
@@ -352,7 +523,8 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   // One-tap "Surprise me" — fill everything randomly and go straight to the song.
   function surprise() {
     const t = pick(TOPICS); setTopicId(t.id); setPrompt(t.prompt);
-    const s = pick(STYLE_CARDS); setStyleId(s.id); setVibe(s.vibe); setGenre(s.genre);
+    const unlocked = ALL_STYLE_CARDS.filter((c) => !c.pack || ownedPacks.has(c.pack));
+    const s = pick(unlocked.length ? unlocked : STYLE_CARDS); setStyleId(s.id); setVibe(s.vibe); setGenre(s.genre);
     const sg = pick(SINGERS.filter((x) => x.id !== "none")); setSinger(sg.id);
     setDrums("auto"); setGuitar("auto"); setStrings("auto"); setSpeed("auto");
     speak("Surprise!");
@@ -360,7 +532,11 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   }
 
   function chooseTopic(t) { setTopicId(t.id); setPrompt(t.prompt); speak(t.label); }
-  function chooseStyle(s) { setStyleId(s.id); setVibe(s.vibe); setGenre(s.genre); playSfx("mm_style_" + s.genre); }
+  function chooseStyle(s) {
+    // Locked premium card → buy its pack via the shared wallet first.
+    if (s.pack && !ownedPacks.has(s.pack)) { if (!buyPack(s.pack)) return; }
+    setStyleId(s.id); setVibe(s.vibe); setGenre(s.genre); playSfx("mm_style_" + s.genre);
+  }
   function chooseSinger(s) { setSinger(s.id); if (s.glyph) speak("No singer"); else playSfx("mm_sing_" + s.id); }
 
   async function keepSong() {
@@ -370,9 +546,9 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     setStatus("Saving...");
     try {
       const r = await fetch("/api/save-song", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceId, kidProfileId, kidName: playerName || "", title: draft.title, audioUrl: draft.audioUrl, vibe: draft.vibe, theme: draft.theme, prompt: draft.prompt, coverColor: draft.coverColor, durationSec: draft.durationSec, provider: draft.provider, meta: { ...(draft.meta || {}), choices: buildChoices() } }) });
+        body: JSON.stringify({ deviceId, kidProfileId, kidName: playerName || "", title: (titleDraft || draft.title), audioUrl: draft.audioUrl, vibe: draft.vibe, theme: draft.theme, prompt: draft.prompt, coverColor: draft.coverColor, coverUrl: draft.coverUrl, durationSec: draft.durationSec, provider: draft.provider, meta: { ...(draft.meta || {}), coverUrl: draft.coverUrl, choices: buildChoices() } }) });
       const j = await r.json();
-      if (r.ok && j.ok) { setStatus("Saved to My Songs!"); setDraft(null); setPrompt(""); setTopicId(null); setStyleId(null); setMkStep(0); setJustFinished(true); await refresh(); }
+      if (r.ok && j.ok) { setStatus("Saved to My Songs!"); setDraft(null); setTitleDraft(""); setRevealPlay(false); setEditingTitle(false); setPrompt(""); setTopicId(null); setStyleId(null); setMkStep(0); setJustFinished(true); await refresh(); }
       else if (r.status === 409) { setStatus(j.message || "Your song box is full!"); setTab("library"); }
       else setStatus("Couldn't save — " + (j.detail || j.error || ("error " + r.status)));
     } catch (e) { setStatus("Couldn't save — " + ((e && e.message) || "network error")); }
@@ -402,7 +578,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
     try { await fetch("/api/delete-song", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceId, songId }) }); await refresh(); } catch {}
   }
 
-  const styleObj = STYLE_CARDS.find((s) => s.id === styleId) || null;
+  const styleObj = ALL_STYLE_CARDS.find((s) => s.id === styleId) || null;
   const accent = styleObj ? styleObj.color : "#5B6CFF";
   const topicObj = TOPICS.find((t) => t.id === topicId) || null;
   const singerObj = SINGERS.find((s) => s.id === singer) || SINGERS[0];
@@ -501,23 +677,50 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
       {tab === "make" && (
         <div style={S.card}>
           {busy ? (
-            <div style={S.loaderWrap}>
-              <div style={S.eqRow}>{[0, 1, 2, 3, 4].map((i) => (<span key={i} style={{ ...S.eqBar, background: accent, animationDelay: (i * 0.12) + "s" }} />))}</div>
-              <div style={S.loaderMsg}>{LOADER_MSGS[msgI]}</div>
+            <BandWarmup accent={accent} msg={LOADER_MSGS[msgI]} />
+          ) : draft && !revealPlay ? (
+            // MM2 — TITLE REVEAL: cover + title appear like a PRIZE before playback.
+            <div style={S.revealWrap}>
+              <div style={S.revealBadge}>Your new song!</div>
+              <div style={{ ...S.revealCover, borderColor: draft.coverColor }}>
+                <CoverThumb url={draft.coverUrl} vibe={draft.vibe} theme={draft.theme} color={draft.coverColor} fill radius={18} label={titleDraft || draft.title} />
+              </div>
+              {editingTitle ? (
+                <input autoFocus style={{ ...S.titleInput, borderColor: draft.coverColor }} value={titleDraft} maxLength={60}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onBlur={() => setEditingTitle(false)}
+                  onKeyDown={(e) => { if (e.key === "Enter") setEditingTitle(false); }} />
+              ) : (
+                <button style={S.revealTitle} onClick={() => setEditingTitle(true)} title="Tap to rename">
+                  <span>{titleDraft || draft.title}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cfd0f5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                </button>
+              )}
+              <button style={{ ...S.playPrizeBtn, background: draft.coverColor }} onClick={() => { feel("tap"); setRevealPlay(true); }} aria-label="Play my song">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="#15131f" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg>
+                <span>Play my song</span>
+              </button>
+              <button style={S.tweakBtn} onClick={() => { setDraft(null); setMkStep(1); }}>← Change my song</button>
+              {status && <div style={S.status}>{status}</div>}
             </div>
           ) : draft ? (
+            // MM2 — PLAYBACK + one-tap remake keeping style + singer.
             <div style={{ ...S.draft, borderColor: draft.coverColor }}>
-              <div style={S.draftTitle}>{draft.title}</div>
-              {draft.meta && draft.meta.recipe && <div style={S.recipe}>{draft.meta.recipe}</div>}
+              <div style={S.playHead}>
+                <div style={{ ...S.playCover, borderColor: draft.coverColor }}>
+                  <CoverThumb url={draft.coverUrl} vibe={draft.vibe} theme={draft.theme} color={draft.coverColor} size={64} radius={12} label={titleDraft || draft.title} />
+                </div>
+                <div style={S.draftTitle}>{titleDraft || draft.title}</div>
+              </div>
               <SongPlayer src={draft.audioUrl} color={draft.coverColor} autoPlay size={92} />
               <div style={S.draftBtns}>
                 <button style={{ ...S.keepBtn, background: draft.coverColor }} onClick={keepSong} aria-label="Save this song" title="Save">
                   <svg width="34" height="34" viewBox="0 0 24 24" fill="#15131f" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                   <span style={S.btnCap}>Save</span>
                 </button>
-                <button style={S.againBtn} onClick={makeSong} aria-label="Make another one" title="Try again">
+                <button style={S.againBtn} onClick={makeAnother} aria-label="Make another song about something new" title="Make another">
                   <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3 8"/><path d="M3 3.5V8h4.5"/></svg>
-                  <span style={S.btnCap}>New one</span>
+                  <span style={S.btnCap}>Make another about…</span>
                 </button>
               </div>
               <button style={S.tweakBtn} onClick={() => { setDraft(null); setMkStep(1); }}>← Change my song</button>
@@ -571,14 +774,25 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
                 <>
                   <div style={S.qHead}>{Q_STYLE}</div>
                   <div style={S.styleGrid}>
-                    {STYLE_CARDS.map((s, i) => {
+                    {ALL_STYLE_CARDS.map((s, i) => {
                       const active = styleId === s.id;
+                      const locked = !!s.pack && !ownedPacks.has(s.pack);
+                      const price = locked && packMap[s.pack] ? packMap[s.pack].price : 0;
                       return (
-                        <button key={s.id} onClick={() => chooseStyle(s)}
-                          style={{ ...S.styleCard, ...(lockStyle(i) || {}), borderColor: active ? s.color : "transparent", background: active ? "#2c2c48" : "#23243a", boxShadow: active ? "0 0 0 2px " + s.color + "66" : "none" }}>
+                        <button key={s.id} onClick={() => chooseStyle(s)} aria-label={locked ? (s.label + " — costs " + price + " coins") : s.label}
+                          style={{ ...S.styleCard, ...(lockStyle(i) || {}), borderColor: active ? s.color : "transparent", background: active ? "#2c2c48" : "#23243a", boxShadow: active ? "0 0 0 2px " + s.color + "66" : "none", opacity: locked ? 0.92 : 1 }}>
                           <span style={{ ...S.styleDot, background: s.color }} />
-                          <IconImg cat="style" id={s.genre} size={52} />
+                          <div style={{ position: "relative" }}>
+                            <IconImg cat="style" id={s.genre} size={52} />
+                            {locked && <span style={S.lockBadge}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15131f" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>}
+                          </div>
                           <span style={S.styleLabel}>{s.label}</span>
+                          {locked && (
+                            <span style={S.pricePill}>
+                              <span style={{ ...S.coinDot, background: coins >= price ? "#FFD24A" : "#7a7a90" }} />
+                              {price}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -637,7 +851,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
           <div style={S.songGrid}>
             {songs.map((s) => (
               <div key={s.song_id} style={{ ...S.songCard, borderColor: s.cover_color || "#5B6CFF" }}>
-                <CoverThumb vibe={s.vibe} theme={s.theme} color={s.cover_color} size={48} radius={8} seed={s.song_id} label={s.title} />
+                <CoverThumb url={s.cover_url} vibe={s.vibe} theme={s.theme} color={s.cover_color} size={48} radius={8} seed={s.song_id} label={s.title} />
                 <div style={S.songInfo}>
                   <div style={S.songTitle}>{s.title}</div>
                   <div style={S.songMeta}>{(s.vibe || "song")}{s.theme ? " · " + s.theme : ""}</div>
@@ -734,4 +948,17 @@ const S = {
   addCard: { display: "flex", alignItems: "center", justifyContent: "center", gap: 14, background: "rgba(124,108,255,0.10)", border: "2px dashed rgba(124,108,255,0.5)", borderRadius: 14, padding: "18px", cursor: "pointer" },
   addPlus: { fontSize: "clamp(20px, 5vw, 30px)", fontWeight: 900, lineHeight: 1, color: "#cfc8ff" },
   addText: { fontSize: 16, fontWeight: 800, color: "#fff" },
+
+  // MM2 — title reveal ("prize") + playback header + pack lock/price badges.
+  revealWrap: { textAlign: "center", padding: "8px 0 6px", animation: "mmReveal .5s cubic-bezier(.2,.9,.3,1.4) both" },
+  revealBadge: { display: "inline-block", background: "#FFD24A", color: "#5a3d00", fontWeight: 900, fontSize: 13, letterSpacing: 0.4, textTransform: "uppercase", borderRadius: 999, padding: "5px 14px", marginBottom: 12 },
+  revealCover: { width: 200, maxWidth: "72%", margin: "0 auto 14px", aspectRatio: "1", borderRadius: 20, overflow: "hidden", border: "3px solid", boxShadow: "0 16px 40px rgba(0,0,0,.45)" },
+  revealTitle: { display: "inline-flex", alignItems: "center", gap: 8, maxWidth: "100%", background: "transparent", border: "none", color: "#fff", fontSize: 22, fontWeight: 900, cursor: "pointer", padding: "4px 8px", margin: "0 auto 4px" },
+  titleInput: { width: "88%", boxSizing: "border-box", margin: "0 auto 8px", display: "block", padding: "10px 14px", fontSize: 20, fontWeight: 900, textAlign: "center", borderRadius: 12, border: "2px solid", background: "#11111a", color: "#fff", outline: "none" },
+  playPrizeBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", maxWidth: 340, margin: "10px auto 0", padding: "16px", fontSize: 20, fontWeight: 900, color: "#15131f", border: "none", borderRadius: 16, cursor: "pointer", animation: "mmPop .3s ease" },
+  playHead: { display: "flex", alignItems: "center", gap: 12, marginBottom: 12 },
+  playCover: { width: 64, height: 64, flexShrink: 0, borderRadius: 12, overflow: "hidden", border: "2px solid" },
+  lockBadge: { position: "absolute", top: -6, right: -8, width: 22, height: 22, borderRadius: "50%", background: "#FFD24A", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,.4)" },
+  pricePill: { display: "inline-flex", alignItems: "center", gap: 5, marginTop: 4, background: "rgba(0,0,0,0.35)", borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 900, color: "#fff" },
+  coinDot: { width: 10, height: 10, borderRadius: "50%", display: "inline-block" },
 };
