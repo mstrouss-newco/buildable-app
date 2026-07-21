@@ -744,7 +744,6 @@ function drawDefender(g) {
     ctx.beginPath(); ctx.arc(g.x, g.y - 24, g.def.range, 0, 7); ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
   }
-  drawShadow(g.x, g.y + 4, g.def.h * 0.17, 0.17);
   const sprite = (g.shootT > 0 ? g.def.shoot : g.def.idle);
   if (!drawSprite(ctx, sprite, g.x, g.y - g.def.h * 0.32, g.def.h, g.anim, { flip: g.face < 0 })) {
     // fallback drawn archer
@@ -756,9 +755,6 @@ function drawBaddie(b, p) {
   const bob = Math.sin(S.t * 8 + b.bob) * 2;
   const sc = b.poof > 0 ? Math.max(0.1, b.poof / 0.45) : 1;
   const flip = p.dx < 0;
-  // subtle ground shadow, sized to the goblin's feet (small so a tight marching
-  // row doesn't smear into one dark band on the path)
-  if (b.poof <= 0) drawShadow(p.x, p.y + 2, (b.r || 24) * 0.6, 0.15);
   if (b.kind.boss && b.poof <= 0) {
     const gr = ctx.createRadialGradient(p.x, p.y - 30, 6, p.x, p.y - 30, b.r * 1.9);
     gr.addColorStop(0, "rgba(185,120,255,0.38)"); gr.addColorStop(1, "rgba(185,120,255,0)");
