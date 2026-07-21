@@ -92,7 +92,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div class="sub" id="counts" style="margin-bottom:14px">Loading…</div>
 
   <div class="seg" id="tabs" style="margin-bottom:16px">
-    <button data-t="browse" class="on">Browse</button><button data-t="create">Create</button><button data-t="upload">Build</button>
+    <button data-t="browse" class="on">Browse</button><button data-t="upload">Build</button>
   </div>
 
   <div id="browseView">
@@ -118,24 +118,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div id="sections"></div>
   </div><!-- /browseView -->
 
+  <!-- AP1: Create tab retired. Art is now made in the editor (the one create tool).
+       The "New game" recipe builder moved to the Build tab (below). This view is kept
+       in the DOM only so the shared init code has its elements; no tab reaches it. -->
   <div id="createView" style="display:none">
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button id="cs-newgame" class="chip">+ New game</button>
-      <span class="muted" style="align-self:center">add a game once, then it shows in the dropdown like Breaker</span>
-    </div>
-    <div id="cs-builder" class="panel" style="display:none">
-      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
-        <label class="fld">Game name<br><input id="ng-name" placeholder="Match Three"></label>
-        <label class="fld" style="flex:1;min-width:220px">Describe it in one line<br><input id="ng-desc" placeholder="a candy match-3 game with gem sprites and themed worlds" style="width:100%"></label>
-        <button id="ng-suggest" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Auto-suggest assets</button>
-      </div>
-      <div id="ng-status" class="muted" style="margin-top:8px"></div>
-      <div id="ng-assets" style="margin-top:6px"></div>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button id="ng-add" class="chip" style="display:none">+ Add asset</button>
-        <button id="ng-save" class="chip" style="display:none;background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Save game</button>
-      </div>
-    </div>
     <div class="panel">
       <div class="note" style="margin-bottom:12px">Make a whole asset sheet in one go (many bricks / balls on one page), then keep the sliced pieces. No downloading, renaming, or uploading.</div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
@@ -174,6 +160,23 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   </div><!-- /createView -->
 
   <div id="uploadView" style="display:none">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="cs-newgame" class="chip">+ New game</button>
+      <span class="muted" style="align-self:center">add a game once, then it shows in the dropdown like Breaker</span>
+    </div>
+    <div id="cs-builder" class="panel" style="display:none">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <label class="fld">Game name<br><input id="ng-name" placeholder="Match Three"></label>
+        <label class="fld" style="flex:1;min-width:220px">Describe it in one line<br><input id="ng-desc" placeholder="a candy match-3 game with gem sprites and themed worlds" style="width:100%"></label>
+        <button id="ng-suggest" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Auto-suggest assets</button>
+      </div>
+      <div id="ng-status" class="muted" style="margin-top:8px"></div>
+      <div id="ng-assets" style="margin-top:6px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="ng-add" class="chip" style="display:none">+ Add asset</button>
+        <button id="ng-save" class="chip" style="display:none;background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Save game</button>
+      </div>
+    </div>
     <div class="panel">
       <div class="note" style="margin-bottom:12px">Build a world by filling in its parts, then add it to the game. Each part saves on its own, so you can do them in any order and come back later.</div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
