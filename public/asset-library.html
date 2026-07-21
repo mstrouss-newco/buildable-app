@@ -63,6 +63,24 @@
   .fld{font-size:12px;color:var(--mut)}
   .fld select,.fld input{display:block;margin-top:3px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px 8px;font:inherit;min-width:130px}
   .checker{background-color:#ffffff;background-image:linear-gradient(45deg,#e9edf5 25%,transparent 25%),linear-gradient(-45deg,#e9edf5 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9edf5 75%),linear-gradient(-45deg,transparent 75%,#e9edf5 75%);background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}
+  /* Session AP2: "Use in a game" button + assign modal + toast */
+  .useg{margin-top:6px;width:100%;background:var(--acc);color:#fff;border:0;border-radius:8px;font-size:11px;font-weight:600;padding:6px 0;cursor:pointer}
+  .useg:active{transform:scale(.98)}
+  .umodal{display:none;position:fixed;inset:0;background:rgba(8,10,20,.72);z-index:60;align-items:center;justify-content:center;padding:16px}
+  .usheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:560px;width:100%;max-height:86vh;overflow:auto;padding:18px 20px;-webkit-overflow-scrolling:touch}
+  .usheet h3{margin:0;font-size:16px;font-weight:600}
+  .uhead{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  .uthumb{width:54px;height:54px;border-radius:10px;background:var(--panel2) center/contain no-repeat;border:1px solid var(--line);flex:none}
+  .ugames{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}
+  .uslot{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--panel2)}
+  .uslot:hover{border-color:var(--acc)}
+  .uslot .sthumb{width:46px;height:46px;border-radius:8px;background:#fff center/contain no-repeat;border:1px solid var(--line);flex:none;font-size:9px;color:var(--mut);display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:2px}
+  .uslot .sname{font-size:13px;font-weight:600}
+  .uslot .scur{font-size:10px;color:var(--mut);word-break:break-all}
+  .uback{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--mut);font-size:12px;padding:5px 11px;cursor:pointer}
+  .utoast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#151833;color:#fff;border-radius:12px;padding:11px 15px;display:none;z-index:70;box-shadow:0 8px 30px rgba(0,0,0,.35);align-items:center;gap:12px;font-size:13px;max-width:92vw}
+  .utoast .tbtn{background:var(--acc);border:0;border-radius:8px;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;text-decoration:none;white-space:nowrap}
+  .utoast .tundo{background:transparent;border:1px solid #4a4f78}
 </style>
 <script src="/three.min.js?v=r128"></script>
 <script src="/GLTFLoader.js?v=1"></script>
@@ -375,7 +393,7 @@ function tile(a){
     inner='<div class="thumb view3d" data-u="'+a.url+'" data-n="'+a.name+'" style="cursor:pointer">'+ph+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">3D</span><span class="b '+(a.license==="CC0"?"cc0":(a.license==="verify"?"warn":""))+'">'+(a.source||"")+(a.license==="verify"?" · verify license":"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.url+'">copy</button></div></div>';
   }else{
     const t=a.thumb?'<img src="'+a.thumb+'" loading="lazy" alt="" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=ic>▦</span>\'">':'<span class="ic">▦</span>';
-    inner='<div class="thumb">'+t+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b '+(a.source==="Studio"?"studio":(a.source==="story"||a.source==="community"?"src":""))+'">'+(a.source||"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.id+'">copy</button></div></div>';
+    inner='<div class="thumb">'+t+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b '+(a.source==="Studio"?"studio":(a.source==="story"||a.source==="community"?"src":""))+'">'+(a.source||"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.id+'">copy</button></div><button class="useg" data-uid="'+esc(a.id)+'">Use in a game</button></div>';
   }
   return '<div class="card">'+inner+'</div>';
 }
@@ -404,6 +422,7 @@ function render(){
   html+='<div class="grid">'+kpacks.map(pk=>'<div class="card"><div class="thumb '+(pk.dim==="2d"?"fxthumb":"")+'">'+(pk.preview?'<img src="'+pk.preview+'" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain">':'<span class="ic">▦</span>')+'</div><div class="cbody"><div class="cname">'+pk.name+'</div><div class="badges"><span class="b">'+pk.dim.toUpperCase()+'</span><span class="b cc0">CC0</span><span class="b">'+pk.count+' files</span></div></div></div>').join("")+'</div>';
   sec.innerHTML=html;
   sec.querySelectorAll(".copy").forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent="copied";setTimeout(()=>b.textContent="copy",900);});
+  sec.querySelectorAll(".useg").forEach(b=>b.onclick=()=>{ const a=ALL.find(x=>String(x.id)===b.dataset.uid); if(a&&window.BuildableUse) window.BuildableUse.open(a); });
   let cur=null;
   sec.querySelectorAll(".play").forEach(b=>b.onclick=()=>{if(cur)cur.pause();cur=new Audio(b.dataset.u);cur.play().catch(()=>{});b.textContent="❙❙";setTimeout(()=>b.textContent="▶",1500);});
   sec.querySelectorAll(".view3d").forEach(b=>{const card=b.closest(".card")||b;card.style.cursor="pointer";card.onclick=()=>openPreview(b.dataset.u,b.dataset.n);});
@@ -1138,6 +1157,120 @@ async function wlSave(){
     document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));
   });
   csRefreshForm();
+})();
+</script>
+
+<!-- ============================================================================
+  Session AP2 — "Use in a game" from Browse.
+  Assign any fitting Browse asset to a game slot and go live instantly, with undo.
+  Self-contained (window.BuildableUse); reuses AP1's import + /api/manifest write.
+============================================================================ -->
+<script>
+(function(){
+  "use strict";
+  // Converted games that carry a manifest (asset-only packs excluded).
+  var GAMES=[["breaker","Breaker"],["survival","Survival"],["sling","Sling"],["chess","Chess"],
+    ["tictactoe","Tic-Tac-Toe"],["checkers","Checkers"],["connectfour","Connect Four"],["dotsboxes","Dots & Boxes"],
+    ["memory","Memory"],["mahjong","Mahjong"],["tennis","Tennis"],["typing","Typing"],["bubble","Bubble"],
+    ["castleguard","Castle Guard"],["mathcannon","Math Cannon"],["croctot","Croc Tot"],["rileys-garden","Riley's Garden"],
+    ["music-maker","Music Maker"],["stringmatch","String Match"],["tumble","Tumble Blocks"],["bingo","Bingo"],["antcity","Ant City"]];
+  var LABELS={badge:"Badge",hero:"Hero",winCelebration:"Win art",loadingScreen:"Loading screen",music:"Music",
+    background:"Background",bg:"Background",scene:"Background",sky:"Sky",world:"World",bricks:"Bricks",balls:"Balls",
+    paddle:"Paddle",boss:"Boss",opponent:"Opponent",bot:"Opponent",foreground:"Foreground",pieces:"Pieces",
+    disc1:"Player 1 disc",disc2:"Player 2 disc",markx:"Player 1 mark",marko:"Player 2 mark",faces:"Tile faces"};
+
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function labelOf(k){ return LABELS[k]||(String(k).charAt(0).toUpperCase()+String(k).slice(1)); }
+  function slugify(s){ return String(s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"").slice(0,40)||"piece"; }
+  function pin(){ try{ return localStorage.getItem("bo-pin")||"1025"; }catch(e){ return "1025"; } }
+
+  // Which asset kinds fit a slot — mirrors the editor's role→kind rule so a
+  // background never offers the paddle slot (and vice-versa).
+  function isBg(k){ return /^(background|bg|sky|scene|backdrop|world|court|board|land|field|loading|loadingscreen|wincelebration)$/.test(String(k).toLowerCase()); }
+  function acceptedKinds(k){ var s=String(k).toLowerCase(); if(s==="music"||/audio|song|sfx|sound|track/.test(s)) return ["music","sfx"]; return isBg(k)?["world"]:["character","element"]; }
+
+  // Best-effort thumbnail of whatever an asset id currently points at.
+  function thumbFor(id){ if(!id) return ""; var s=String(id);
+    if(s.indexOf("studio:")===0) return "/api/asset-studio?asset="+encodeURI(s.slice(7));
+    if(/^(https?:|data:|\/)/.test(s)) return s; return ""; }
+
+  // Every manifest slot whose current value is a plain asset id (ints/lists skipped).
+  function slotsOf(m){ var out=[]; var art=m.art||{};
+    Object.keys(art).forEach(function(k){ if(typeof art[k]==="string" && art[k]) out.push({scope:"art",key:k,cur:art[k],label:"Game — "+labelOf(k)}); });
+    (m.levels||[]).forEach(function(l,i){ var parts=l.parts||{};
+      Object.keys(parts).forEach(function(k){ if(typeof parts[k]==="string" && parts[k]) out.push({scope:"level",li:i,key:k,cur:parts[k],levelId:l.id,label:"Level "+(i+1)+" ("+(l.name||l.id)+") — "+labelOf(k)}); }); });
+    return out; }
+  function setSlot(m,slot,val){ if(slot.scope==="art"){ (m.art=m.art||{})[slot.key]=val; } else { m.levels[slot.li].parts[slot.key]=val; } }
+  function gameUrl(gid,slot){ return (slot.scope==="level"&&slot.levelId) ? ("/"+gid+"/play/"+slot.levelId) : ("/"+gid); }
+
+  var modal,sheet,toast,ASSET;
+  function ensure(){ if(modal) return;
+    modal=document.createElement("div"); modal.className="umodal";
+    sheet=document.createElement("div"); sheet.className="usheet"; modal.appendChild(sheet); document.body.appendChild(modal);
+    modal.addEventListener("click",function(e){ if(e.target===modal) close(); });
+    toast=document.createElement("div"); toast.className="utoast"; document.body.appendChild(toast); }
+  function close(){ if(modal) modal.style.display="none"; }
+  function open(a){ if(!a) return; if(a.audio||a.kind==="music"||a.kind==="sfx"){ alert("Audio is assigned from the game's own music picker, not here."); return; }
+    ensure(); ASSET=a; pickGame(); modal.style.display="flex"; }
+
+  function head(){ return '<div class="uhead"><div class="uthumb" style="background-image:url(\''+esc(thumbFor(ASSET.url||ASSET.id))+'\')"></div>'
+      +'<div><h3>Use in a game</h3><div class="sub">'+esc(ASSET.name||"asset")+' · <b>'+esc(ASSET.kind)+'</b>'+(ASSET.theme?' · '+esc(ASSET.theme):'')+' · '+esc(ASSET.source||"")+'</div></div>'
+      +'<button class="uback" style="margin-left:auto" id="u-x">Close</button></div>'; }
+  function wireClose(){ var x=sheet.querySelector("#u-x"); if(x) x.onclick=close; }
+
+  function pickGame(){
+    sheet.innerHTML=head()+'<div class="note">Pick a game. You will only see slots this '+esc(ASSET.kind)+' fits.</div>'
+      +'<div class="ugames">'+GAMES.map(function(g){ return '<button class="chip" data-g="'+g[0]+'" data-l="'+esc(g[1])+'">'+esc(g[1])+'</button>'; }).join("")+'</div>';
+    wireClose();
+    sheet.querySelectorAll(".ugames .chip").forEach(function(b){ b.onclick=function(){ chooseGame(b.dataset.g,b.dataset.l); }; });
+  }
+
+  function chooseGame(gid,glabel){
+    sheet.innerHTML=head()+'<div class="note">Loading '+esc(glabel)+'…</div>'; wireClose();
+    fetch("/api/manifest?game="+encodeURIComponent(gid)+"&v="+Date.now()).then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.manifest) throw new Error((d&&d.error)||"no manifest");
+      var m=d.manifest, fit=slotsOf(m).filter(function(s){ return acceptedKinds(s.key).indexOf(ASSET.kind)>=0; });
+      var h=head()+'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><button class="uback" id="u-back">‹ Games</button><b>'+esc(glabel)+'</b><span class="sub" style="margin-left:auto">'+fit.length+' fitting slot(s)</span></div>';
+      if(!fit.length) h+='<div class="muted">No slot in '+esc(glabel)+' fits a '+esc(ASSET.kind)+'. A background fits scene slots; a character or element fits pieces, heroes and paddles.</div>';
+      sheet.innerHTML=h; wireClose();
+      var back=sheet.querySelector("#u-back"); if(back) back.onclick=pickGame;
+      fit.forEach(function(s){ var t=thumbFor(s.cur);
+        var row=document.createElement("div"); row.className="uslot";
+        row.innerHTML='<div class="sthumb" style="'+(t?"background-image:url('"+esc(t)+"')":"")+'">'+(t?"":esc(String(s.cur).split("/").pop()))+'</div>'
+          +'<div style="min-width:0"><div class="sname">'+esc(s.label)+'</div><div class="scur">now: '+esc(String(s.cur))+'</div></div>';
+        row.onclick=function(){ apply(gid,glabel,m,s); };
+        sheet.appendChild(row); });
+    }).catch(function(e){ sheet.innerHTML=head()+'<div class="muted">Could not load '+esc(glabel)+': '+esc(e.message||e)+'</div><button class="uback" id="u-back">‹ Games</button>'; wireClose(); var b=sheet.querySelector("#u-back"); if(b) b.onclick=pickGame; });
+  }
+
+  function apply(gid,glabel,m,slot){
+    sheet.innerHTML=head()+'<div class="note">Adding '+esc(ASSET.name)+' to '+esc(slot.label)+'…</div>'; wireClose();
+    var theme=(ASSET.theme && ASSET.theme!=="default" && ASSET.theme!=="custom") ? slugify(ASSET.theme) : "library";
+    fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"import",game:gid,type:slot.key,theme:theme,name:slugify(ASSET.name||"piece"),url:ASSET.url,kind:ASSET.kind})})
+      .then(function(r){return r.json();})
+      .then(function(j){ if(!j||!j.ok) throw new Error((j&&j.error)||"import failed"); return "studio:"+j.slug; })
+      .then(function(newId){ var prev=slot.cur; setSlot(m,slot,newId);
+        return save(gid,m).then(function(){ close(); showToast(gid,glabel,m,slot,prev); }); })
+      .catch(function(e){ sheet.innerHTML=head()+'<div class="muted">Could not apply: '+esc(e.message||e)+'</div><button class="uback" id="u-back">‹ Games</button>'; wireClose(); var b=sheet.querySelector("#u-back"); if(b) b.onclick=function(){ chooseGame(gid,glabel); }; });
+  }
+  function save(gid,m){ return fetch("/api/manifest",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({game:gid,manifest:m,pin:pin()})})
+    .then(function(r){return r.json();}).then(function(j){ if(!j||!j.ok) throw new Error((j&&(j.error||(j.errors&&j.errors.join(", "))))||"save failed"); return j; }); }
+
+  function showToast(gid,glabel,m,slot,prev){
+    toast.innerHTML='<span>Live: '+esc(ASSET.name)+' → '+esc(glabel)+' '+esc(slot.label)+'</span>'
+      +'<a class="tbtn" href="'+esc(gameUrl(gid,slot))+'" target="_blank" rel="noopener">Open game</a>'
+      +'<button class="tbtn tundo">Undo</button>';
+    toast.style.display="flex";
+    var undo=toast.querySelector(".tundo");
+    undo.onclick=function(){ undo.disabled=true; undo.textContent="Undoing…"; setSlot(m,slot,prev);
+      save(gid,m).then(function(){ toast.innerHTML='<span>Undone — '+esc(slot.label)+' restored.</span>'; clearTimeout(showToast._t); showToast._t=setTimeout(hide,2800); })
+        .catch(function(e){ undo.disabled=false; undo.textContent="Undo"; var sp=toast.querySelector("span"); if(sp) sp.textContent="Undo failed: "+(e.message||e); }); };
+    clearTimeout(showToast._t); showToast._t=setTimeout(hide,10000);
+  }
+  function hide(){ if(toast) toast.style.display="none"; }
+
+  window.BuildableUse={ open:open };
 })();
 </script>
 </body>
