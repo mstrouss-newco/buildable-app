@@ -1,6 +1,21 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-21: Survival — remove in-game demo, Journey uses level art, Lightning replaces Slow Heal (shipped)
+
+Owner follow-ups after Phase 1. Files: `public/survival-engine.html`, `public/buildable-renders.js`.
+- **In-game auto-demo removed:** the pre-level start screen already teaches drag-to-move, so the
+  per-level wordless tutorial was redundant. `startRunAt`/win->next now set `started=true` (level just
+  begins), the help button stays hidden, and `drawTutorial()` only draws if `helpOpen` is manually set.
+- **Journey cards use the level's own world art:** `bsLevels()` `o.img` now points at the level's sky
+  backdrop (`SD+"bg"+bgKey+".webp"`) instead of the boss cutout — same idea as Breaker's level previews.
+- **"Slow Heal" replaced with "Lightning Zap":** the old regen power-up (heal 1 heart on a slow timer)
+  is gone; the `storm` power-up fires bright jagged bolts from the hero to the nearest `1+lvl` foes every
+  `max(26,68-lvl*8)` frames for `2+lvl` dmg (bosses `max(1,lvl)`), with a blue flash. New drawn bolt icon
+  in `buildable-renders.js` (interim until the generated icon set lands). Powerups pool + BOT_PREF +
+  freshStats + resets updated; the 14 manifest gear ids are unaffected (power-ups are engine-internal).
+- QA: `qa-survival.mjs` all pass (6/6 isolated, 6/6 campaign, render smoke).
+
 ## 2026-07-21: Survival — win-shake fix + upgrades you can feel + strong Black Hole (Phase 1, shipped)
 
 Owner feedback on Survival: (1) the screen keeps shaking after you beat a level; (2) the

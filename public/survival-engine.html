@@ -114,7 +114,7 @@ const GAME_CONFIG = window.GAME_CONFIG || {
     { name:"Galaxy Finale",  dur:52, spawnEvery:30, maxAlive:16, eSpeed:1.74, eHp:5, eDmg:1, colors:["#ff9ec4","#a99cff","#ffd27a","#8fd0ff"], foes:["enemy_alien","enemy_octo","enemy_fairy","enemy_rock"], boss:{ hp:104, spd:1.34, dmg:1 }, bossKey:"enemy_alien",  bossName:"The Saucer", bgKey:4 },
   ],
   // power-ups offered when the hero levels up (engine offers 3 random each time)
-  powerups: ["fast","multi","big","pierce","orbit","nova","blackhole","frost","homing","swift","magnet","heal","regen","shield"],
+  powerups: ["fast","multi","big","pierce","orbit","nova","blackhole","frost","homing","swift","magnet","heal","storm","shield"],
 };
 const START_NEED=8, NEED_GROW=1.55;   // first power-up after 8 gems, then ramps up (slower cadence)
 
@@ -259,10 +259,10 @@ const PU={
   swift: { name:"Speedy Boots",    apply:s=>{ s.speed+=0.45; } },
   magnet:{ name:"Gem Magnet",      apply:s=>{ s.pickupR+=70; } },
   heal:  { name:"Heart",           apply:(s,g)=>{ if(g.hearts<g.maxHearts) g.hearts++; else s.shield=true; } },
-  regen: { name:"Slow Heal",       apply:s=>{ s.regen = (s.regen>=1e9) ? 600 : Math.max(240, s.regen-180); } },
+  storm: { name:"Lightning Zap",   apply:s=>{ s.storm=(s.storm||0)+1; } },   // bright bolts leap from you to the nearest foes
   shield:{ name:"Bubble Shield",   apply:s=>{ s.shield=true; } },
 };
-const BOT_PREF=["blackhole","nova","fast","big","homing","multi","frost","pierce","orbit","swift","heal","regen","shield","magnet"];  // QA bot's pick order
+const BOT_PREF=["blackhole","nova","fast","big","homing","multi","frost","pierce","orbit","swift","heal","storm","shield","magnet"];  // QA bot's pick order
 
 // ---- game state ----
 let level, L, stats, hero, enemies, projs, gems, parts, stars;
@@ -271,12 +271,12 @@ let levelFrame, levelDur, spawnTimer, spawnRng, offerRng, dropRng, spawnCount;
 let xp, plvl, xpNeed, invuln, boss, bossSpawned, choices=[];
 let inputDir={x:0,y:0}, orbAngle=0, regenTimer=0;
 let runGems=0, runLevelsCleared=0, lockerTab="weapon", novaTimer=0, rings=[], helpOpen=false;
-let holes=[], bhTimer=0;   // active black holes + its spawn timer
+let holes=[], bhTimer=0, bolts=[], stormTimer=0;   // black holes + lightning bolts + their timers
 
 function makeStars(){ const r=mulberry(9999); stars=[]; for(let i=0;i<90;i++) stars.push({x:r()*W,y:r()*H,s:0.6+r()*1.8,ph:r()*6.28,sp:0.5+r()*1.5}); }
 makeStars();
 
-function freshStats(){ return { speed:BASE.speed, fireCd:BASE.fireCd, projSpeed:BASE.projSpeed, projDmg:BASE.projDmg, projR:BASE.projR, projPerShot:BASE.projPerShot, pierce:BASE.pierce, pickupR:BASE.pickupR, shield:false, orbit:0, regen:1e9, nova:0, blackhole:0, frost:0, homing:0 }; }
+function freshStats(){ return { speed:BASE.speed, fireCd:BASE.fireCd, projSpeed:BASE.projSpeed, projDmg:BASE.projDmg, projR:BASE.projR, projPerShot:BASE.projPerShot, pierce:BASE.pierce, pickupR:BASE.pickupR, shield:false, orbit:0, storm:0, nova:0, blackhole:0, frost:0, homing:0 }; }
 
 // ===== Collectible gear (data). Change names/costs/boosts freely — no code edits. =====
 // boost keys: projDmg, projPerShot, pierce, fire(=lower cooldown), speed, pickupR, hearts, shield
@@ -359,7 +359,7 @@ function startLevel(i, carry){
     for(let k=0;k<grants;k++){ PU[cyc[k%cyc.length]].apply(stats,{hearts:BASE.hearts,maxHearts:BASE.hearts}); plvl++; } }
   const maxH=BASE.hearts+(BASE._bonusHearts||0);
   hero={ x:W/2, y:H/2, r:16, hearts:(carry?Math.min(maxH,prevHearts+1):maxH), maxHearts:maxH, cd:0, aim:0, vx:0, vy:0 };
-  enemies=[]; projs=[]; gems=[]; parts=[]; rings=[]; holes=[]; bhTimer=0;
+  enemies=[]; projs=[]; gems=[]; parts=[]; rings=[]; holes=[]; bhTimer=0; bolts=[]; stormTimer=0;
   levelFrame=0; levelDur=Math.round((L.dur||30)*60); spawnTimer=0; spawnCount=0; orbAngle=0; regenTimer=0; novaTimer=0;
   spawnRng=mulberry(1234+level*101); offerRng=mulberry(5678+level*211); dropRng=mulberry(4242+level*131);
   invuln=0; boss=null; bossSpawned=false; choices=[];
@@ -385,7 +385,7 @@ function readKeys(){ let x=0,y=0; if(held.left||held.a)x-=1; if(held.right||held
 function canvasPt(e){ const r=c.getBoundingClientRect(); return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) }; }
 c.addEventListener('pointerdown',e=>{ e.preventDefault(); if(DEMO) return; if(BA)BA.unlock(); if(helpOpen){ helpOpen=false; return; } const p=canvasPt(e);
   if(state==="title"){ return; }   // the DOM menu handles starting a run
-  if(state==="win"){ runLevelsCleared++; if(level<GAME_CONFIG.levels.length-1){ startLevel(level+1, true); started=false; } else { endRun(true); } return; }
+  if(state==="win"){ runLevelsCleared++; if(level<GAME_CONFIG.levels.length-1){ startLevel(level+1, true); started=true; } else { endRun(true); } return; }
   if(state==="lose"){ endRun(false); return; }
   if(state==="choose"){ for(let k=0;k<choices.length;k++){ const cr=cardRect(k); if(p.x>=cr.x&&p.x<=cr.x+cr.w&&p.y>=cr.y&&p.y<=cr.y+cr.h){ pickByIndex(k); return; } } return; }
   joyOn=true; joyOx=p.x; joyOy=p.y; started=true; inputDir={x:0,y:0};
@@ -512,8 +512,13 @@ function update(){
     for(const e of all2){ if(e.orbCd>0)e.orbCd--; }
     for(let k=0;k<stats.orbit;k++){ const a=orbAngle+k*6.28/stats.orbit, ox=hero.x+Math.cos(a)*OR, oy=hero.y+Math.sin(a)*OR;
       for(const e of all2){ if(e.orbCd>0)continue; if(dist2(ox,oy,e.x,e.y)<(12+e.r)*(12+e.r)){ e.hp-=1; e.orbCd=16; burst(ox,oy,P.spark,4); if(e.hp<=0)killEnemy(e); } } } }
-  // slow heal over time (regen power-up)
-  if(stats.regen<1e9){ regenTimer++; if(regenTimer>=stats.regen){ regenTimer=0; if(hero.hearts<hero.maxHearts){ hero.hearts++; burst(hero.x,hero.y,P.hp,8); } } }
+  // Lightning Zap: every so often bright bolts leap from the hero to the nearest foes
+  if(stats.storm>0){ stormTimer++; const cd=Math.max(26,68-stats.storm*8);
+    if(stormTimer>=cd){ stormTimer=0; const all2=boss?enemies.concat([boss]):enemies;
+      if(all2.length){ const tg=all2.slice().sort((a,b)=>dist2(hero.x,hero.y,a.x,a.y)-dist2(hero.x,hero.y,b.x,b.y)).slice(0,1+stats.storm);
+        for(const e of tg){ e.hp -= e.boss ? Math.max(1,stats.storm) : (2+stats.storm); bolts.push({x1:hero.x,y1:hero.y,x2:e.x,y2:e.y,life:9}); burst(e.x,e.y,"#cfeaff",6); if(e.hp<=0)killEnemy(e); }
+        if(BM&&fx)BM.flash(fx,"#bfe0ff",0.10); sfx("hit"); } } }
+  for(const b of bolts) b.life--; bolts=bolts.filter(b=>b.life>0);
   // gems drift to hero within pickup range, collected when close
   for(const g of gems){ if(g.got)continue; const dx=hero.x-g.x, dy=hero.y-g.y, d=Math.hypot(dx,dy)||1;
     if(d<stats.pickupR){ g.x+=dx/d*Math.min(6,d*0.25); g.y+=dy/d*Math.min(6,d*0.25); }
@@ -642,6 +647,11 @@ function draw(){
   for(const p of projs) BR.projectile(ctx,p.x,p.y,p.r, stats.frost?"#bfeaff":P.spark);
   // particles
   for(const pt of parts) BR.particle(ctx,pt);
+  // Lightning Zap — jagged electric arcs from the hero to the foes it just struck
+  for(const b of bolts){ const a=Math.max(0,b.life/9); ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle="#eaf6ff"; ctx.lineWidth=3.5; ctx.shadowColor="#7fd0ff"; ctx.shadowBlur=10;
+    const seg=5, dx=(b.x2-b.x1)/seg, dy=(b.y2-b.y1)/seg; ctx.beginPath(); ctx.moveTo(b.x1,b.y1);
+    for(let i=1;i<seg;i++){ ctx.lineTo(b.x1+dx*i+(Math.random()-0.5)*14, b.y1+dy*i+(Math.random()-0.5)*14); }
+    ctx.lineTo(b.x2,b.y2); ctx.stroke(); ctx.restore(); }
   // Speedy Boots — a soft motion trail streams behind you so the speed is visible
   if(stats.swift>0 && (hero.vx||hero.vy)){ const mg=Math.hypot(hero.vx,hero.vy);
     if(mg>0.4){ for(let i=1;i<=3;i++){ ctx.save(); ctx.globalAlpha=0.16*(1-i/4); ctx.fillStyle=P.visor||"#62d0ff";
@@ -677,7 +687,7 @@ function draw(){
   if(state==="choose"){ ctx.fillStyle="rgba(5,8,24,.72)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Fredoka,sans-serif";ctx.fillText("Power up! Pick one",W/2,H/2-160);
     for(let k=0;k<choices.length;k++){ const cr=cardRect(k), id=choices[k]; ctx.fillStyle="#1b2350";rrect(cr.x,cr.y,cr.w,cr.h,18);ctx.fill(); ctx.strokeStyle=P.xp;ctx.lineWidth=3;rrect(cr.x,cr.y,cr.w,cr.h,18);ctx.stroke();
       drawPUicon(id,cr.x+cr.w/2,cr.y+86); ctx.fillStyle="#fff";ctx.font="bold 22px Fredoka,sans-serif";ctx.fillText(PU[id].name,cr.x+cr.w/2,cr.y+cr.h-46); ctx.fillStyle="#9fb0ff";ctx.font="16px Fredoka,sans-serif";ctx.fillText("Tap to choose",cr.x+cr.w/2,cr.y+cr.h-22); } }
-  if(state==="play" && (!started || helpOpen)) drawTutorial();
+  if(helpOpen) drawTutorial();   // in-game auto-demo removed (pre-level start screen already teaches it); only shows if help is opened
   if(state==="title"){ ctx.fillStyle="rgba(5,8,24,.55)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 44px Fredoka,sans-serif";ctx.fillText(GAME_CONFIG.name,W/2,H/2-10); ctx.font="22px Fredoka,sans-serif";ctx.fillText("Drag to move · Tap to start",W/2,H/2+30); }
   if(DEMO && state==="play") drawDemoHand();
   if(!DEMO && state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Boss beaten!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked — tap to go on":"Tap to collect your coins"); }
@@ -694,7 +704,7 @@ function heroName(){ const h=GEAR.hero.find(x=>x.id===(CHAR&&CHAR.equipped.hero)
 function bsLevels(){ const unlocked=CHAR?(CHAR.unlocked||0):0;
   return GAME_CONFIG.levels.map((lv,i)=>{ const st = i<unlocked?"done" : i===unlocked?"next" : "locked";
     const o={ n:i+1, name:lv.name, state:st };
-    o.img = SD+(lv.bossKey||"enemy_fairy")+".png";
+    o.img = SD+"bg"+(lv.bgKey||1)+".webp";   // journey card shows the level's OWN world art (like Breaker)
     if(st==="done"){ o.stars=3; o.maxStars=3; }
     return o; }); }
 function bsConfig(){ const unlocked=CHAR?(CHAR.unlocked||0):0; return {
@@ -712,8 +722,8 @@ function showMenu(){ state="title"; show("locker",false); showHelpBtn(false); sh
       onBack:()=>{ try{ window.parent && window.parent!==window && window.parent.postMessage("bk:home","*"); }catch(e){} },
     }); }
   else if(bsScreen){ bsScreen.update(bsConfig()); } }
-function startRunAt(i){ if(BA)BA.unlock(); runGems=0; runLevelsCleared=0; stats=null; startLevel(i,false); state="play"; started=false;
-  const s=el("start"); if(s)s.style.display="none"; show("locker",false); showHelpBtn(true); showMuteBtn(true); }
+function startRunAt(i){ if(BA)BA.unlock(); runGems=0; runLevelsCleared=0; stats=null; startLevel(i,false); state="play"; started=true;
+  const s=el("start"); if(s)s.style.display="none"; show("locker",false); showHelpBtn(false); showMuteBtn(true); }
 function startRun(){ startRunAt(Math.min((CHAR&&CHAR.unlocked)||0, GAME_CONFIG.levels.length-1)); }
 function endRun(won){ if(!CHAR)CHAR=defaultChar();
   CHAR.totalRuns++; if(won)CHAR.totalWins++; CHAR.totalGems+=runGems; CHAR.bestLevel=Math.max(CHAR.bestLevel,runLevelsCleared);

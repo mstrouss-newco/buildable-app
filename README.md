@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Survival — remove in-game demo, Journey uses level art, Lightning replaces Slow Heal (July 21 2026)
+Owner follow-ups. `public/survival-engine.html` + `public/buildable-renders.js`.
+- In-game auto-demo removed (the pre-level start screen already teaches it): levels now just start
+  (`started=true`), help button hidden, `drawTutorial()` only on manual `helpOpen`.
+- Journey level cards show the level's OWN world art (`bg<bgKey>.webp`) instead of the boss cutout,
+  like Breaker's previews.
+- "Slow Heal" replaced by "Lightning Zap" (`storm`): bright jagged bolts leap to the nearest foes on a
+  fast timer; new drawn bolt icon (interim). Manifest gear ids unaffected (power-ups are engine-internal).
+QA: `qa-survival.mjs` all pass. Ref: SESSION-LOG.md same date.
+
 ## Survival — win-shake fix + upgrades you can feel + strong Black Hole (July 21 2026)
 Phase 1 of the Survival upgrade pass (all engine code, no new art; Phase 2 = a consistent
 generated power-up icon set). One file: `public/survival-engine.html`.
