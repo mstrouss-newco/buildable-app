@@ -79,6 +79,12 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
 .lib:hover{ background:#fff; }
 .lib .limg{ width:100%; height:52px; background:center/contain no-repeat; }
 .lib .ln{ font-size:9px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lchips{ display:flex; gap:3px; justify-content:center; flex-wrap:wrap; margin-top:2px; }
+.lchip{ font-size:8px; border-radius:20px; padding:0 5px; border:1px solid var(--line); color:var(--muted); background:#fff; }
+.lchip.studio{ background:#ece9ff; border-color:#d6cffb; color:#5a4fd6; }
+.lchip.pack{ background:#e6f7ef; border-color:#c7ecd9; color:#178a56; }
+.lchip.theme{ background:#fbf1d6; border-color:#f0e2b8; color:#8a6a12; }
+.showall{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); margin:2px 0 8px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -160,6 +166,7 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
 </div></div>
 
 <script src="/buildable-manifest.js?v=1"></script>
+<script src="/buildable-library.js?v=1"></script>
 <script src="/buildable-slicer.js?v=1"></script>
 <script>
 "use strict";
@@ -314,7 +321,7 @@ function load(){
   setStatus("Loading…");
   fetch("/api/manifest?game="+encodeURIComponent(state.game)+"&v="+Date.now())
     .then(function(r){ return r.json(); })
-    .then(function(d){ if(!d||!d.manifest) throw new Error(d&&d.error||"no manifest"); state.manifest=d.manifest; state.source=d.source||""; renderAll(); setStatus(""); srcBadge(state.source); loadLib(); })
+    .then(function(d){ if(!d||!d.manifest) throw new Error(d&&d.error||"no manifest"); state.manifest=d.manifest; state.source=d.source||""; renderAll(); setStatus(""); srcBadge(state.source); loadLib(); loadRecipes().then(renderAll); })
     .catch(function(err){ setStatus("Could not load: "+(err.message||err), true); });
 }
 function reload(){ if(state.dirty && !confirm("Discard unsaved changes and reload?")) return; state.dirty=false; load(); }
@@ -353,6 +360,15 @@ function renderSlots(){
     }
     host.appendChild(assetControl(labelOf(key), function(){return art[key];}, function(v){ art[key]=v; setDirty(); }, specFor(key), "default"));
   });
+  // AP1: whole-game "Generate full set" — only for games that have a recipe.
+  var rec=recipeFor(state.game);
+  if(rec && rec.assets && Object.keys(rec.assets).length){
+    var n=Object.keys(rec.assets).length;
+    host.appendChild(el("div",{class:"fullset", style:"grid-column:1/-1;margin-top:6px;"},[
+      el("button",{class:"btn primary sm", onclick:function(){ fullSetModal(); }},["Generate full set ("+n+" pieces)"]),
+      el("span",{class:"aslot", style:"margin-left:8px;"},["Makes every piece for this game at once, into the one library."])
+    ]));
+  }
 }
 
 function renderLevels(){
@@ -421,7 +437,7 @@ function assetControl(label, getId, setId, spec, theme){
     el("div",{class:"arow"},[
       el("button",{class:"btn sm", onclick:function(){ dropIn(spec, theme, function(newId){ setId(newId); refresh(); }); }},["Drop in art"]),
       (spec.key!=="music" && spec.mode!=="audio") ? el("button",{class:"btn sm", onclick:function(){ genIn(spec, theme, function(newId){ setId(newId); refresh(); }, "slot"); }},["Generate"]) : null,
-      el("button",{class:"btn sm ghost", onclick:function(){ pickLibrary(spec, function(newId){ setId(newId); refresh(); }); }},["Library"])
+      el("button",{class:"btn sm ghost", onclick:function(){ pickLibrary(spec, theme, function(newId){ setId(newId); refresh(); }); }},["Library"])
     ])
   ]);
   wrap.appendChild(thumb); wrap.appendChild(info);
@@ -594,6 +610,18 @@ var ENGINE_NOTES={ openai:"Reliable and follows the prompt closely. Clean, but c
 var QUALITY_NOTES={ auto:"Smart: sharp for backgrounds, standard for small pieces. Recommended.", high:"Sharpest. Best for backgrounds and heroes. Costs a bit more.", medium:"Good detail, cheaper.", low:"Rough draft, cheapest. For quick tries." };
 var GEN={ style:"storybook", engine:"openai", quality:"auto", multi:"pieces" };
 var GENCTX={};
+// AP1: saved asset recipes (from the New Game form). Used to (a) write a better
+// prompt when a game has one, and (b) offer "Generate full set". Games with no
+// recipe still generate fine from the auto-built prompt below.
+var RECIPES={};
+function loadRecipes(){ return fetch("/api/asset-studio?recipes=1&v="+Date.now()).then(function(r){return r.json();}).then(function(j){ RECIPES=(j&&j.recipes)||{}; }).catch(function(){ RECIPES={}; }); }
+function recipeFor(game){
+  if(RECIPES[game]) return RECIPES[game];
+  var g=slugify(game); if(RECIPES[g]) return RECIPES[g];
+  for(var k in RECIPES){ var r=RECIPES[k]; if(r && slugify(r.label||"")===g) return r; }
+  return null;
+}
+function recipeAsset(game, slotKey){ var r=recipeFor(game); if(!r||!r.assets) return null; return r.assets[slotKey]||null; }
 var PIECE_WORDS={ k:"king",q:"queen",r:"rook",b:"bishop",n:"knight",p:"pawn",
   r_man:"red checker piece",r_king:"red king checker",b_man:"black checker piece",b_king:"black king checker",
   disc1:"round game disc",disc2:"round game disc",markx:"X mark",marko:"O mark" };
@@ -641,7 +669,13 @@ function genPrompt(spec, theme){
   var nPieces=(rows.length||1)*nCols;
   var mr=meaningfulNames(rows);
   var subj;
-  if(spec.mode==="sheet" && nPieces>1){
+  // AP1: if this game has a recipe entry for this slot, use its authored subject
+  // (with the {theme} token filled in). Otherwise fall through to the auto-built
+  // description, so Generate always works even with no recipe.
+  var rEntry=recipeAsset(state.game, spec.key);
+  if(rEntry && rEntry.subject){
+    subj=String(rEntry.subject).replace(/\{theme\}/g, look);
+  } else if(spec.mode==="sheet" && nPieces>1){
     if(mr.length===rows.length && nCols===1){
       subj="a set of "+lbl+" for a "+look+" "+game+": "+mr.join(", ")+", each a distinct clear design";
     } else {
@@ -737,24 +771,105 @@ function doGenerate(){
     .catch(function(e){ go.disabled=false; stat.textContent="Could not generate: "+(e.message||e); });
 }
 
-function pickLibrary(spec, cb){
+/* ---------- AP1: Generate full set (the old Create-tab sheet flow, per game) ---------- */
+function fullSetModal(){
+  var rec=recipeFor(state.game); if(!rec||!rec.assets) return;
+  var keys=Object.keys(rec.assets);
+  document.getElementById("mtitle").textContent="Generate full set — "+(state.manifest.name||state.game);
+  document.getElementById("mhint").textContent="Makes all "+keys.length+" pieces from this game's recipe, into the one library.";
+  document.getElementById("mkeep").style.display="none"; document.getElementById("mstat").textContent="";
+  var styleOpts=Object.keys(HOUSE_STYLES).map(function(k){return '<option value="'+k+'"'+(GEN.style===k?' selected':'')+'>'+HOUSE_STYLES[k].label+'</option>';}).join("");
+  var body=document.getElementById("mbody");
+  body.innerHTML=''
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;">'
+    +'<label class="fieldlbl">Set name (theme)<br><input id="fs-theme" value="custom" style="width:150px;"></label>'
+    +'<label class="fieldlbl">Look<br><select id="fs-style">'+styleOpts+'</select></label>'
+    +'<label class="fieldlbl">Art engine<br><select id="fs-engine"><option value="openai"'+(GEN.engine==="openai"?" selected":"")+'>gpt-image-1 (reliable)</option><option value="flux"'+(GEN.engine==="flux"?" selected":"")+'>FLUX (richer)</option></select></label>'
+    +'</div>'
+    +'<div class="aslot">Will make: '+escHtml(keys.map(function(k){return rec.assets[k].label||k;}).join(", "))+'.</div>'
+    +'<div style="margin-top:10px;"><button class="btn primary sm" id="fs-go">Make all '+keys.length+'</button></div>';
+  document.getElementById("fs-style").onchange=function(){ GEN.style=this.value; };
+  document.getElementById("fs-engine").onchange=function(){ GEN.engine=this.value; };
+  document.getElementById("fs-go").onclick=function(){ runFullSet(keys, rec); };
+  openModal();
+}
+function runFullSet(keys, rec){
+  var theme=slugify(document.getElementById("fs-theme").value||"custom");
+  GEN.engine=document.getElementById("fs-engine").value;
+  var go=document.getElementById("fs-go"), stat=document.getElementById("mstat");
+  go.disabled=true; var i=0, made=0;
+  function next(){
+    if(i>=keys.length){ stat.textContent="Done. Made "+made+" of "+keys.length+" pieces into the library."; setDirty(); loadLib(); renderAll(); return; }
+    var key=keys[i], entry=rec.assets[key];
+    var spec={ key:key, mode:(entry.mode==="sheet"?"sheet":"single"), role:(entry.role==="background"?"background":"sprite"), rows:entry.rows||[], cols:entry.cols||[] };
+    stat.textContent="Making "+(i+1)+" of "+keys.length+": "+(entry.label||key)+"…";
+    fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"generate", engine:GEN.engine, prompt:genPrompt(spec, theme), size:genSize(spec), transparent:false, quality:genQuality(spec)})})
+      .then(function(r){ return r.json().then(function(j){return {ok:r.ok,j:j};}); })
+      .then(function(res){ if(!res.ok||!res.j||!res.j.b64) throw new Error((res.j&&res.j.error)||"generate failed"); return BuildableSlicer.loadImage("data:image/png;base64,"+res.j.b64); })
+      .then(function(img){
+        var pcs=BuildableSlicer.sliceSheet(img, spec);
+        var pieces=(pcs||[]).map(function(p){ return {slug:p.name||"piece", b64:p.dataURL}; });
+        if(!pieces.length) pieces=[{slug:"piece", b64:img.src}];
+        return fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({action:"keep", game:state.game, type:key, theme:theme, kind:BuildableLibrary.kindFromType(key), pieces:pieces})})
+          .then(function(r){ return r.json(); });
+      })
+      .then(function(j){ if(j&&j.count){ made++; if(state.manifest.art && (key in state.manifest.art) && j.saved&&j.saved[0]){ state.manifest.art[key]="studio:"+j.saved[0].slug; } } i++; next(); })
+      .catch(function(e){ go.disabled=false; stat.textContent="Stopped at "+(i+1)+": "+(e.message||e); });
+  }
+  next();
+}
+
+function escHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
+
+// AP1: the Library button now opens the ONE combined shelf (Studio pieces + the
+// art packs), pre-filtered to this slot's kind + this game/theme, with Show all.
+function pickLibrary(spec, theme, cb){
   document.getElementById("mtitle").textContent="Library — "+labelOf(spec.key);
-  document.getElementById("mhint").textContent="Loading saved assets…";
-  document.getElementById("mbody").innerHTML=""; document.getElementById("mkeep").style.display="none"; openModal();
-  fetch("/api/asset-studio?manifest=1&game="+encodeURIComponent(state.game)+"&v="+Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(j){
-      var assets=(j&&j.assets)||[];
-      // prefer this slot's assets, but show all for the game
-      var mine=assets.filter(function(a){ return a.slug.indexOf("/"+spec.key+"/")>-1; });
-      var list=mine.length?mine:assets;
-      document.getElementById("mhint").textContent=list.length?(list.length+" saved asset(s). Tap one to use it."):"No saved assets for this game yet. Use Drop in art to add some.";
+  document.getElementById("mhint").textContent="Loading the library…";
+  document.getElementById("mbody").innerHTML=""; document.getElementById("mkeep").style.display="none";
+  document.getElementById("mstat").textContent=""; openModal();
+  var showAll=false;
+  BuildableLibrary.load().then(function(items){
+    function draw(){
+      var list=BuildableLibrary.forSlot(items, spec, state.game, theme, showAll);
+      document.getElementById("mhint").textContent=list.length
+        ? (list.length+" piece(s) that fit "+labelOf(spec.key)+". Tap one to use it live.")
+        : "Nothing fits this slot yet. Use Generate or Drop in art, or turn on Show all.";
+      var body=document.getElementById("mbody"); body.innerHTML="";
+      var chk=el("input",{type:"checkbox"}); chk.checked=showAll;
+      chk.addEventListener("change",function(){ showAll=chk.checked; draw(); });
+      body.appendChild(el("label",{class:"showall"},[ chk, el("span",{},["Show all games & themes"]) ]));
       var grid=el("div",{class:"libgrid"});
-      list.forEach(function(a){ grid.appendChild(el("div",{class:"lib", onclick:function(){ cb("studio:"+a.slug); setDirty(); closeModal(); }},[
-        el("div",{class:"limg", style:"background-image:url('"+a.url+"')"}), el("div",{class:"ln"},[a.slug.split("/").slice(2).join("/")]) ])); });
-      var body=document.getElementById("mbody"); body.innerHTML=""; body.appendChild(grid);
-    })
-    .catch(function(e){ document.getElementById("mhint").textContent="Could not load library: "+(e.message||e); });
+      list.forEach(function(a){
+        var chips=(a.source==="Studio"?'<span class="lchip studio">Studio</span>':'<span class="lchip pack">'+escHtml(a.source||"pack")+'</span>')
+          +(a.theme?'<span class="lchip theme">'+escHtml(a.theme)+'</span>':'');
+        grid.appendChild(el("div",{class:"lib", onclick:function(){ assignFromLibrary(a, spec, theme, cb); }},[
+          el("div",{class:"limg", style:"background-image:url('"+a.url+"')"}),
+          el("div",{class:"ln"},[a.name]),
+          el("div",{class:"lchips", html:chips})
+        ]));
+      });
+      body.appendChild(grid);
+    }
+    draw();
+  }).catch(function(e){ document.getElementById("mhint").textContent="Could not load library: "+(e.message||e); });
+}
+
+// Put the chosen library asset into this slot. If it is already a Studio piece
+// made for this exact game+slot, use it in place. Otherwise copy it into the slot
+// (server-side import) so the game engine loads it exactly like generated art.
+function assignFromLibrary(a, spec, theme, cb){
+  var slotKey=spec.key;
+  var useTheme=(theme && theme!=="default" && theme!=="custom") ? slugify(theme) : (a.theme?slugify(a.theme):"library");
+  if(a.source==="Studio" && a.type===slotKey && a.game===state.game){ cb(a.id); setDirty(); closeModal(); return; }
+  document.getElementById("mstat").textContent="Adding to "+labelOf(slotKey)+"…";
+  fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action:"import", game:state.game, type:slotKey, theme:useTheme, name:slugify(a.name||"piece"), url:a.url, kind:a.kind})})
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(!j||!j.ok) throw new Error((j&&j.error)||"import failed"); cb("studio:"+j.slug); setDirty(); closeModal(); })
+    .catch(function(e){ document.getElementById("mstat").textContent="Could not add: "+(e.message||e); });
 }
 
 /* ---------- level ops ---------- */

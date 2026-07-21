@@ -52,6 +52,7 @@
   .badges{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
   .b{font-size:10px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
   .b.src{background:var(--accbg);border-color:var(--acc);color:var(--acc)}
+  .b.studio{background:#ece9ff;border-color:#6b5cff;color:#5a4fd6;font-weight:600}
   .b.warn{background:var(--warnbg);border-color:var(--warn);color:var(--warn)}
   .b.cc0{background:#16331f;border-color:#3ddc97;color:#7ef0bd}
   .copy{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:6px;font-size:10px;padding:1px 7px;cursor:pointer}
@@ -70,6 +71,7 @@ html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-
 input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 </style>
 <script src="/buildable-slicer.js?v=1"></script>
+<script src="/buildable-library.js?v=1"></script>
 </head>
 <body>
 <div class="wrap">
@@ -288,13 +290,14 @@ async function getJSON(u){try{const r=await fetch(u);if(!r.ok)return null;return
 
 async function load(){
   document.getElementById("counts").textContent="Loading…";
-  const [assets,chars,audio,mf,fxm,kny]=await Promise.all([
+  const [assets,chars,audio,mf,fxm,kny,studio]=await Promise.all([
     getJSON("/api/list-assets"+cb),
     getJSON("/api/list-characters"+cb.replace("?","?limit=60&")),
     getJSON("/api/list-audio"+cb),
     getJSON("/models/manifest.json"+cb),
     getJSON("/fx/manifest.json"+cb),
-    getJSON("/kenney/manifest.json"+cb)
+    getJSON("/kenney/manifest.json"+cb),
+    (window.BuildableLibrary?BuildableLibrary.studioItems():Promise.resolve([]))  // AP1: Studio art joins the grid
   ]);
   KENNEY=(kny&&kny.packs)||[];
 
@@ -306,6 +309,8 @@ async function load(){
   (chars&&chars.characters||[]).forEach(c=>out.push({id:c.id,name:c.name,kind:"character",theme:c.theme||"",dim:"2d",source:c.source||"community",url:c.image,thumb:(c.image&&c.image.indexOf("data:")!==0)?c.image:null}));
   (audio&&audio.music||[]).forEach(m=>out.push({id:m.id,name:m.name,kind:"music",theme:m.theme||"",dim:"any",source:m.source,url:m.url,audio:true}));
   (audio&&audio.sfx||[]).forEach(s=>out.push({id:s.id,name:s.name,kind:"sfx",theme:s.theme||"",dim:"any",source:s.source,url:s.url,audio:true}));
+  // AP1: Studio pieces (made in the editor) join the same grid, tagged source "Studio".
+  (studio||[]).forEach(s=>out.push({id:s.id,name:s.name,kind:s.kind,theme:s.theme||"",dim:"2d",source:"Studio",url:s.url,thumb:s.url,game:s.game}));
   ALL=out.concat(models3d.length?models3d:MODELS_3D,fxAssets,EFFECTS);
   const n2d=ALL.filter(a=>a.dim==="2d").length,n3d=ALL.filter(a=>a.dim==="3d").length;
   document.getElementById("counts").textContent=ALL.length+" assets · "+n2d+" 2D · "+n3d+" 3D · "+(audio?(audio.music.length+audio.sfx.length):0)+" audio · "+KENNEY.length+" Kenney packs";
@@ -367,7 +372,7 @@ function tile(a){
     inner='<div class="thumb view3d" data-u="'+a.url+'" data-n="'+a.name+'" style="cursor:pointer">'+ph+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b">3D</span><span class="b '+(a.license==="CC0"?"cc0":(a.license==="verify"?"warn":""))+'">'+(a.source||"")+(a.license==="verify"?" · verify license":"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.url+'">copy</button></div></div>';
   }else{
     const t=a.thumb?'<img src="'+a.thumb+'" loading="lazy" alt="" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=ic>▦</span>\'">':'<span class="ic">▦</span>';
-    inner='<div class="thumb">'+t+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b '+(a.source==="story"||a.source==="community"?"src":"")+'">'+(a.source||"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.id+'">copy</button></div></div>';
+    inner='<div class="thumb">'+t+'</div><div class="cbody"><div class="cname">'+a.name+'</div><div class="badges"><span class="b '+(a.source==="Studio"?"studio":(a.source==="story"||a.source==="community"?"src":""))+'">'+(a.source||"")+'</span>'+(a.theme?'<span class="b">'+a.theme+'</span>':'')+'<button class="copy" data-c="'+a.id+'">copy</button></div></div>';
   }
   return '<div class="card">'+inner+'</div>';
 }
