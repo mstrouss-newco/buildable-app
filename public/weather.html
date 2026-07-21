@@ -283,6 +283,7 @@ function boot(data) {
   document.getElementById("back").onclick = exitToShell;
   initAudio(data);
   loadSceneArt(data);
+  loadCloudPuffs(data);
 
   // Honor pause/resume from the shell around the quiz gate (CARTRIDGE-CONTRACT.md — mandatory).
   window.addEventListener("message", (e) => {
@@ -626,17 +627,40 @@ function loadSceneArt(data) {
     } catch (e) {}
   });
 }
+function sceneFull() { return !!(DATA && DATA.scene && DATA.scene.full); }
 function drawSlot(name, fallbackCanvas, alpha) {
   const im = sceneImgs[name];
   if (alpha !== undefined) ctx.globalAlpha = alpha;
   if (im && im.complete && im.naturalWidth) {
-    // cover-fit the painted art to the stage
-    const s = Math.max(W / im.naturalWidth, H / im.naturalHeight);
-    ctx.drawImage(im, (W - im.naturalWidth * s) / 2, (H - im.naturalHeight * s) / 2, im.naturalWidth * s, im.naturalHeight * s);
+    if (sceneFull()) {
+      // full-scene painting: fit the width, align the TOP (the composition puts
+      // sky in the top part; the bottom overflow crops harmlessly below the stage)
+      ctx.drawImage(im, 0, 0, W, W * (im.naturalHeight / im.naturalWidth));
+    } else {
+      const s = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+      ctx.drawImage(im, (W - im.naturalWidth * s) / 2, (H - im.naturalHeight * s) / 2, im.naturalWidth * s, im.naturalHeight * s);
+    }
   } else if (fallbackCanvas) {
     ctx.drawImage(fallbackCanvas, 0, 0, W, H);
   }
   if (alpha !== undefined) ctx.globalAlpha = 1;
+}
+
+// ---- real cloud puff art (Asset Studio slots); the gradient puffs stay as fallback ----
+const puffImgs = { white: [], storm: [] };
+function loadCloudPuffs(data) {
+  const cp = data && data.cloudPuffs; if (!cp || !cp.base) return;
+  ["white", "storm"].forEach((mood) => {
+    const n = Number(cp[mood]) || 0;
+    for (let i = 1; i <= n; i++) {
+      try { const im = new Image(); im.src = sceneArtUrl(cp.base + mood + "-" + i); puffImgs[mood].push(im); } catch (e) {}
+    }
+  });
+}
+function puffReady(mood) { return puffImgs[mood].some((im) => im.complete && im.naturalWidth); }
+function puffPick(mood, i) {
+  const arr = puffImgs[mood].filter((im) => im.complete && im.naturalWidth);
+  return arr.length ? arr[i % arr.length] : null;
 }
 
 function makeLayer(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
@@ -704,9 +728,17 @@ function paintLand() {
   s.fillStyle = lg; s.beginPath(); s.arc(lx, groundY - th - H * 0.010, W * 0.05, 0, Math.PI * 2); s.fill();
   return c;
 }
+// stage geometry: with a full-scene painting the exhibit's layout field says where
+// the horizon, the grass line, the cloud, the sun and the lighthouse lamp sit
+function layoutOf() { return (DATA && DATA.layout) || {}; }
+function seaLine() { const L = layoutOf(); return H * (sceneFull() ? (L.seaY || 0.43) : (L.seaY || 0.68)); }
 // the grassy shore: a foreground bank across the bottom, so hail has ground to
 // bounce on and snow has somewhere to pile up (rain still splashes on the sea)
-function shoreTopAt(x) { return H * 0.872 - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.022; }
+function shoreTopAt(x) {
+  const L = layoutOf();
+  if (sceneFull()) return H * (L.shoreTop || 0.86) - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.008;
+  return H * (L.shoreTop || 0.872) - Math.sin((x / Math.max(W, 1)) * Math.PI) * H * 0.022;
+}
 function paintShore() {
   const c = makeLayer(W, H); const s = c.getContext("2d");
   const g = s.createLinearGradient(0, H * 0.84, 0, H);
@@ -741,14 +773,15 @@ function size() {
   const h = Math.min(Math.round(w * 0.72), 430);
   cv.width = w * devicePixelRatio; cv.height = h * devicePixelRatio; cv.style.height = h + "px";
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-  W = w; H = h; seaY = H * 0.68;
+  W = w; H = h; seaY = seaLine();
   skyC = null; // repaint lazily on the next frame (keeps boot canvas-free for QA)
   rain.length = 0; splashes.length = 0; vapor.length = 0; hails.length = 0;
 }
 
 // ---------- simulation state ----------
-const vapor = [], rain = [], hails = [], splashes = [], mists = [];
+const vapor = [], rain = [], hails = [], splashes = [], mists = [], glints = [];
 for (let i = 0; i < 3; i++) mists.push({ x: Math.random(), y: 0.60 + i * 0.035, w: 0.32 + Math.random() * 0.2, sp: 0.006 + Math.random() * 0.008 });
+for (let i = 0; i < 36; i++) glints.push({ x: Math.random(), yf: Math.random(), ph: Math.random() * 6.3 });
 let cloudMass = 0, charge = 0, flash = 0, bolt = null, rainbowA = 0, snowCover = 0;
 
 const PUFFS = [
@@ -765,6 +798,8 @@ function tick(t) {
   if (!W) { last = t; return; }
   if (!skyC) { try { repaintLayers(); } catch (e) { last = t; return; } }
   const dt = paused ? 0 : Math.min((t - last) / 1000, 0.05); last = t;
+  seaY = seaLine();
+  const shoreT = shoreTopAt(W * 0.5);
   stepGlide(dt);
   const heat = sliderVal(heatEl) / 100, temp = sliderVal(tempEl) / 100, wind = sliderVal(windEl) / 100;
   const wx = weatherAt(heat, temp, cloudMass);
@@ -774,7 +809,7 @@ function tick(t) {
 
   // --- physics step ---
   // vapor rises from the sea, rate follows heat; wind leans it
-  if (!paused && Math.random() < heat * 0.9) vapor.push({ x: Math.random() * W, y: seaY - 4, v: 24 + heat * 42, w: Math.random() * 6.3 });
+  if (!paused && Math.random() < heat * 0.9) vapor.push({ x: Math.random() * W, y: seaY + (shoreT - seaY) * (0.1 + Math.random() * 0.5), v: 24 + heat * 42, w: Math.random() * 6.3 });
   if (vapor.length && heat > 0.2) trigger("evaporation");
   for (let i = vapor.length - 1; i >= 0; i--) {
     const p = vapor[i];
@@ -786,7 +821,7 @@ function tick(t) {
   }
 
   // precipitation: rain, snow, and hail out of a heavy-enough cloud
-  const cy = H * 0.20, cw = Math.min(W * 0.62, 40 + cloudMass * 1.6);
+  const cy = H * (layoutOf().cloudY || (sceneFull() ? 0.16 : 0.20)), cw = Math.min(W * 0.62, 40 + cloudMass * 1.6);
   if (!paused && (wx.rain || wx.snow) && Math.random() < Math.min(0.9, cloudMass / 140)) {
     const px = W * 0.46 + (Math.random() - 0.5) * cw * 1.6;
     if (wx.hail && Math.random() < 0.4) {
@@ -795,7 +830,8 @@ function tick(t) {
       trigger("hail");
     } else {
       // near drops/flakes reach the foreground shore; far ones end at the sea in the distance
-      rain.push({ x: px, y: cy + H * 0.08, v: wx.snow ? 34 + Math.random() * 22 : 200 + Math.random() * 90, snow: wx.snow, w: Math.random() * 6.3, near: Math.random() < 0.45 });
+      rain.push({ x: px, y: cy + H * 0.08, v: wx.snow ? 34 + Math.random() * 22 : 200 + Math.random() * 90, snow: wx.snow, w: Math.random() * 6.3, near: Math.random() < 0.45,
+        ey: seaY + Math.random() * (shoreT - seaY) * 0.7 });
       trigger(wx.snow ? "snow" : "rain");
     }
     cloudMass -= 0.75; // drain tuned so light rain + strong sun settles below the rainbow ceiling
@@ -804,11 +840,11 @@ function tick(t) {
     const d = rain[i];
     d.y += d.v * dt * (d.near ? 1.15 : 1);
     d.x += d.snow ? (Math.sin(t / 500 + d.w) * 0.8 + slant * 0.5 * dt) : slant * dt;
-    const endY = d.near ? shoreTopAt(d.x) : seaY - 2;
+    const endY = d.near ? shoreTopAt(d.x) : (d.ey || seaY);
     if (d.y >= endY) {
       if (!d.snow && Math.random() < 0.5) {
         if (d.near) splashes.push({ x: d.x, y: endY + 2, r: 1, life: 0.8, grass: true });
-        else splashes.push({ x: d.x, y: seaY + Math.random() * (shoreTopAt(d.x) - seaY) * 0.5, r: 1, life: 1 });
+        else splashes.push({ x: d.x, y: endY, r: 1, life: 1 });
       }
       if (d.snow && d.near) snowCover = Math.min(1, snowCover + 0.012);
       rain.splice(i, 1);
@@ -845,19 +881,25 @@ function tick(t) {
   const mistA = Math.min(0.25, cloudMass / 500 + 0.06);
   mists.forEach((m) => {
     m.x += (m.sp + wind * 0.03) * dt; if (m.x > 1.3) m.x = -0.4;
-    const mg = ctx.createRadialGradient(W * m.x, H * m.y, 2, W * m.x, H * m.y, W * m.w * 0.5);
+    const my = seaY + (m.y - 0.68) * H; // hug the horizon wherever the layout puts it
+    const rw = W * m.w * 0.5, rh = H * 0.035;
+    ctx.save(); ctx.translate(W * m.x, my); ctx.scale(1, rh / rw);
+    const mg = ctx.createRadialGradient(0, 0, 2, 0, 0, rw);
     mg.addColorStop(0, "rgba(205,214,218," + mistA + ")"); mg.addColorStop(1, "rgba(205,214,218,0)");
-    ctx.fillStyle = mg; ctx.beginPath(); ctx.ellipse(W * m.x, H * m.y, W * m.w * 0.5, H * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(0, 0, rw, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   });
 
   // the sun: size + glow follow heat, hidden as the cloud thickens
+  const Ly = layoutOf();
+  const sunX = W * ((Ly.sun && Ly.sun.x) || 0.8), sunY = H * ((Ly.sun && Ly.sun.y) || (sceneFull() ? 0.13 : 0.17));
   const sunA = Math.max(0.12, 1 - gloom * 1.1);
   const sr = 13 + heat * 18;
   ctx.globalAlpha = sunA;
-  const sg = ctx.createRadialGradient(W * 0.8, H * 0.17, 2, W * 0.8, H * 0.17, sr * 2.6);
+  const sg = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, sr * 2.6);
   sg.addColorStop(0, "rgba(255,224,150,.85)"); sg.addColorStop(0.4, "rgba(255,210,120," + (0.2 + heat * 0.3) + ")"); sg.addColorStop(1, "rgba(255,210,120,0)");
-  ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(W * 0.8, H * 0.17, sr * 2.6, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#FFD980"; ctx.beginPath(); ctx.arc(W * 0.8, H * 0.17, sr, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sunX, sunY, sr * 2.6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#FFD980"; ctx.beginPath(); ctx.arc(sunX, sunY, sr, 0, Math.PI * 2); ctx.fill();
   ctx.globalAlpha = 1;
 
   // rainbow arc (behind the cloud, over the sea)
@@ -883,38 +925,86 @@ function tick(t) {
     base.addColorStop(0, "rgba(58,66,86," + (0.9 * dark) + ")"); base.addColorStop(0.6, "rgba(58,66,86," + (0.5 * dark) + ")"); base.addColorStop(1, "rgba(58,66,86,0)");
     ctx.fillStyle = base; ctx.beginPath(); ctx.arc(0, 0, W * 0.34 * scale, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
+    const useArt = puffReady("white") || puffReady("storm");
     PUFFS.forEach((p, i) => {
-      const shade = p.c.split(",").map((n) => Math.round(Number(n) * (1 - dark * 0.35))).join(",");
       const px = cx + p.dx * W * scale + Math.sin(t / 1400 + i) * 1.8;
       const py = cy + p.dy * H + Math.cos(t / 1700 + i * 1.3) * 1.4;
       const pr = p.r * W * scale;
       if (pr < 3) return;
+      if (useArt) {
+        // real painted puffs from the Asset Studio: white and storm stack and
+        // crossfade as the cloud loads up
+        const drawP = (im, al) => {
+          if (!im || al < 0.03) return;
+          const hh = pr * 2.2, ww = hh * (im.naturalWidth / im.naturalHeight);
+          ctx.globalAlpha = Math.min(1, al) * p.a;
+          ctx.drawImage(im, px - ww / 2, py - hh * 0.55, ww, hh);
+          ctx.globalAlpha = 1;
+        };
+        drawP(puffPick("white", i), 1 - dark * 0.85);
+        drawP(puffPick("storm", i), dark * 1.15);
+        return;
+      }
+      const shade = p.c.split(",").map((n) => Math.round(Number(n) * (1 - dark * 0.35))).join(",");
       const pg = ctx.createRadialGradient(px, py - pr * 0.25, pr * 0.1, px, py, pr);
       pg.addColorStop(0, "rgba(" + shade + "," + p.a + ")"); pg.addColorStop(0.72, "rgba(" + shade + "," + (p.a * 0.75) + ")"); pg.addColorStop(1, "rgba(" + shade + ",0)");
       ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fill();
     });
   }
 
-  drawSlot("land", landC);
-  drawSlot("sea", seaC);
+  if (!sceneFull()) { drawSlot("land", landC); drawSlot("sea", seaC); }
 
-  // moving wave strokes, livelier with wind
+  // moving wave strokes across the sea band, livelier with wind
   ctx.strokeStyle = "rgba(222,236,238,.30)"; ctx.lineWidth = 1.6;
   for (let row = 0; row < 4; row++) {
-    const y = seaY + 6 + row * (H - seaY) * 0.2, amp = (2 + row * 1.1) * (1 + wind * 0.8), sp = 600 - row * 80 - wind * 220;
+    const y = seaY + 5 + (row + 0.5) * (shoreT - seaY) * 0.22, amp = (2 + row * 1.1) * (1 + wind * 0.8), sp = 600 - row * 80 - wind * 220;
     ctx.beginPath();
     for (let x = 0; x <= W; x += 12) ctx.lineTo(x, y + Math.sin(x / (30 + row * 10) + t / Math.max(sp, 180)) * amp);
     ctx.globalAlpha = 0.9 - row * 0.18; ctx.stroke(); ctx.globalAlpha = 1;
   }
 
+  // drifting sun glints so the painted sea never freezes over
+  glints.forEach((g) => {
+    g.x += (0.004 + wind * 0.02) * dt; if (g.x > 1.02) g.x = -0.02;
+    const tw = Math.max(0, Math.sin(t / 700 + g.ph));
+    const ga = (0.10 + 0.35 * tw) * (0.35 + heat * 0.65) * Math.max(0.25, 1 - gloom);
+    if (ga < 0.03) return;
+    const gy = seaY + 4 + g.yf * (shoreT - seaY) * 0.85;
+    ctx.strokeStyle = "rgba(255,252,235," + ga + ")"; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(W * g.x - 2.5, gy); ctx.lineTo(W * g.x + 2.5, gy); ctx.stroke();
+  });
+
   // the foreground shore, and its snow blanket when it has been snowing
-  drawSlot("shore", shoreC);
+  if (!sceneFull()) drawSlot("shore", shoreC);
   if (snowCover > 0.02) {
     ctx.fillStyle = "rgba(250,252,255," + (0.85 * snowCover) + ")";
     ctx.beginPath(); ctx.moveTo(0, shoreTopAt(0) - 1);
     for (let x = 0; x <= W; x += 10) ctx.lineTo(x, shoreTopAt(x) - 1 - snowCover * 4 * (0.7 + 0.3 * Math.sin(x / 37)));
     for (let x = W; x >= 0; x -= 10) ctx.lineTo(x, shoreTopAt(x) + 6 + snowCover * 3);
     ctx.closePath(); ctx.fill();
+  }
+
+  // grass blades along the shore line, leaning with the wind (alive even when calm)
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = snowCover > 0.4 ? "rgba(240,246,250,.75)" : "rgba(104,150,92,.8)";
+  for (let i = 0; i < 20; i++) {
+    const gx = (i + 0.5) / 20 * W + (i % 3 - 1) * 4, gy = shoreTopAt(gx) + 2;
+    const lean = wind * 8 + Math.sin(t / 600 + i) * (1 + wind * 4);
+    ctx.beginPath(); ctx.moveTo(gx, gy);
+    ctx.quadraticCurveTo(gx + lean * 0.4, gy - 6, gx + lean, gy - 10 - (i % 3) * 2.5);
+    ctx.stroke();
+  }
+
+  // the lighthouse lamp glows, brighter as the sky darkens (position from the layout)
+  if (Ly.lamp) {
+    const lampX = W * Ly.lamp.x, lampY = H * Ly.lamp.y;
+    const pulse = 0.7 + 0.3 * Math.sin(t / 900);
+    const la = (0.15 + 0.5 * gloom) * pulse;
+    const lgg = ctx.createRadialGradient(lampX, lampY, 1, lampX, lampY, W * 0.05);
+    lgg.addColorStop(0, "rgba(255,220,140," + la + ")"); lgg.addColorStop(1, "rgba(255,220,140,0)");
+    ctx.fillStyle = lgg; ctx.beginPath(); ctx.arc(lampX, lampY, W * 0.05, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,236,180," + Math.min(1, la * 1.8) + ")";
+    ctx.beginPath(); ctx.arc(lampX, lampY, 2.2, 0, Math.PI * 2); ctx.fill();
   }
 
   // vapor particles: soft mist specks, fading as they climb

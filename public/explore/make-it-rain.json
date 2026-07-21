@@ -16,7 +16,15 @@
     "National Geographic Kids (kids.nationalgeographic.com)"
   ],
   "ambient": "waves",
-  "assetVersion": 1,
+  "assetVersion": 2,
+  "scene": {
+    "full": true,
+    "sky": "/api/asset-studio?asset=explore/scene/make-it-rain/clear",
+    "skyCold": "/api/asset-studio?asset=explore/scene/make-it-rain/cold",
+    "skyStorm": "/api/asset-studio?asset=explore/scene/make-it-rain/storm"
+  },
+  "cloudPuffs": { "base": "/api/asset-studio?asset=explore/cloud/make-it-rain/", "white": 6, "storm": 8 },
+  "layout": { "seaY": 0.43, "shoreTop": 0.86, "cloudY": 0.16, "sun": { "x": 0.80, "y": 0.13 }, "lamp": { "x": 0.10, "y": 0.30 } },
   "controls": { "heat": "Sun heat", "temp": "Air temperature", "wind": "Wind" },
   "narration": {
     "start": "Slide the sun's heat up and watch the ocean.",
