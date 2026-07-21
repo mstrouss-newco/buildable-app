@@ -1,6 +1,17 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-21: Stories tile back to Coming soon (shipped)
+
+Mike's call: Stories stays COMING SOON until the story-art relaunch is approved. The
+Home Make shelf tile had gone live in ST4 by mistake (tile opened the maker directly).
+Fix in `src/BuildableKids.jsx` only: the story tile is `soon` + `gated` — greyed with a
+"Coming soon" sub, tap opens the shared 1111 password gate (same as Play-shelf
+coming-soon games) and unlocks into the maker for owner QA. Make a game tile unchanged
+(still fully disabled). QA: vite build clean. Remaining: "Jump back in" saved-story
+cards still open directly; fine for now (owner-family QA data only).
+
+
 ## 2026-07-21: Session AP2 — Use an asset in a game from Browse (shipped)
 
 Asset pipeline unification, phase AP, second block. Plan approved by Mike 2026-07-20.

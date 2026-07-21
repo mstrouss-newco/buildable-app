@@ -6,6 +6,14 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Stories tile back to Coming soon (July 21 2026)
+The Home "Make a story" tile was open to kids after the ST4 rewrite. It now shows
+"Coming soon" and opens the same 1111 preview gate the Play shelf uses, so only the
+owner can QA Stories while the art relaunch (painted-in pages) finishes. One file:
+`src/BuildableKids.jsx` (MAKE_ITEMS story entry routes through the catalog gate; the
+Make-shelf card learned a `gated` flag so a coming-soon tile can still open the gate).
+Saved stories in "Jump back in" still open for kids who already made one.
+
 ## Use any asset in a game from Browse — assign to a fitting slot, live, with undo (Session AP2, July 21 2026)
 Builds on AP1's one combined library. Every art asset card on the Browse tab of
 `/asset-library` now has a purple **Use in a game** button. It opens a small pop-up that:

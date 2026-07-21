@@ -2891,7 +2891,9 @@ function HomeScreen(props) {
 
   // ---- shelf card (Make): the creation tools this Home already exposes ----
   const MAKE_ITEMS = [
-    { id: "story", title: "Make a story", sub: "A living picture book", grad: "linear-gradient(160deg,#F2789E,#E0578F)", glyph: <BookGlyph />, onClick: onStories },
+    // Stories is COMING SOON while the art relaunch finishes: the tile stays visible
+    // but opens the same 1111 preview gate the Play shelf uses (owner QA only).
+    { id: "story", title: "Make a story", sub: "Coming soon", grad: "linear-gradient(160deg,#F2789E,#E0578F)", glyph: <BookGlyph />, soon: true, gated: true, onClick: () => { setCatalogGate(() => onStories); setCatalogPw(""); setCatalogErr(false); } },
     { id: "song", title: "Make a song", sub: "Sing about anything", grad: "linear-gradient(160deg,#8A6BFF,#6A4FE0)", glyph: <NoteGlyph />, onClick: onMusic },
     { id: "sound", title: "Sound Machine", sub: "Silly sounds & explosions", grad: "linear-gradient(160deg,#FF8FB1,#F0577E)", glyph: <SpeakerGlyph />, onClick: onSounds },
     { id: "art", title: "Make art", sub: "Draw, stamp & mirror", grad: "linear-gradient(160deg,#22B8CF,#1098AD)", glyph: <ArtGlyph />, onClick: onArt },
@@ -2899,9 +2901,9 @@ function HomeScreen(props) {
   ];
   const MakeShelfCard = ({ item }) => (
     <button
-      onClick={item.soon ? undefined : item.onClick}
-      disabled={item.soon}
-      style={{ ...shelfCardStyle, opacity: item.soon ? 0.6 : 1, padding: phone ? "16px 12px 14px" : "20px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center", cursor: item.soon ? "default" : "pointer" }}
+      onClick={item.soon && !item.gated ? undefined : item.onClick}
+      disabled={item.soon && !item.gated}
+      style={{ ...shelfCardStyle, opacity: item.soon ? 0.6 : 1, padding: phone ? "16px 12px 14px" : "20px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center", cursor: item.soon && !item.gated ? "default" : "pointer" }}
     >
       {item.soon && <span style={{ position: "absolute", marginTop: -6, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.10)", color: HOME_INK, alignSelf: "flex-end" }}>Soon</span>}
       <AppIcon grad={item.grad} size={phone ? 62 : 74}>{item.glyph}</AppIcon>
