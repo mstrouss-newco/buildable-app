@@ -353,19 +353,23 @@ function boot(data) {
 // ---- placement rules: a creature's `habitat` puts it in the right vertical band
 // of its zone (air / open water / seafloor), auto-spread so nothing stacks. An
 // explicit x or y on a creature overrides. This is the rule every zone follows.
-const HABITAT_BANDS = { air: [0.12, 0.44], open: [0.18, 0.50], floor: [0.66, 0.88] };
-const SPREAD_X = [58, 28, 72, 42, 34, 64];
+const HABITAT_BANDS = { air: [0.10, 0.44], open: [0.15, 0.56], floor: [0.58, 0.92] };
+// Spread a zone's creatures across the full width and zig-zag their heights within
+// the band, so neighbours never stack. Bigger groups fan wider; explicit x/y wins.
 function computePlacements() {
   const groups = {};
   CREATURES.forEach((c) => { const k = c.zone + "|" + (c.habitat || "open"); (groups[k] = groups[k] || []).push(c); });
   Object.keys(groups).forEach((k) => {
     const g = groups[k];
     const band = HABITAT_BANDS[g[0].habitat || "open"] || HABITAT_BANDS.open;
-    const n = g.length;
+    const n = g.length, bh = band[1] - band[0];
+    const rows = n <= 2 ? 1 : (n <= 6 ? 2 : 3);     // more creatures -> more vertical rows
     g.forEach((c, i) => {
-      const frac = n === 1 ? 0.5 : (i + 0.5) / n;
-      c._y = (c.y != null) ? c.y : Math.round(ZH * (band[0] + frac * (band[1] - band[0])));
-      c._x = (c.x != null) ? c.x : SPREAD_X[i % SPREAD_X.length];
+      const fx = n === 1 ? 0.5 : (i + 0.5) / n;      // even across the width
+      const row = i % rows;                           // which height row
+      const ry = rows === 1 ? 0.5 : (row + 0.5) / rows;
+      c._x = (c.x != null) ? c.x : Math.round(12 + fx * 76);           // 12%..88%
+      c._y = (c.y != null) ? c.y : Math.round(ZH * (band[0] + ry * bh));
     });
   });
 }
