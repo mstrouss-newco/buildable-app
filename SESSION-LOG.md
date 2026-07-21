@@ -43,6 +43,56 @@ Remaining in this phase (Session MM2, NOT started): album covers, a fun waiting 
 title-reveal prize moment, "make another about…", and instrument packs unlocking extra
 style cards.
 
+## 2026-07-20: Story Maker 2.0 — Session ST1 (speed + QA blockers)
+
+First relaunch block for Stories (still COMING SOON — Mike decides the LIVE flip
+after his own ST1 QA). All work is inside the story maker/reader; no other game touched.
+
+Speed:
+- Write-while-naming. The story now starts being written in the background the moment
+  the naming screen appears, using the hero's default name; when the kid taps "Make my
+  story!" we swap in the name they typed (title + every page + dialogue, never mid-word).
+  If they tap before it is done, the normal writing screen shows for the remainder only.
+- Killed the fake 1350ms "Locking it in" delay on Make.
+- Killed the Painting screen. Tapping Make goes straight to the book cover; every page
+  shows its layered art instantly and the painted watercolor scene crossfades in when it
+  finishes. Painting now has ONE owner (the reader) — the maker's duplicate paint loop
+  is gone.
+
+QA blockers from the 2026-07-20 walkthrough:
+- Picker tiles no longer flash as blank dark boxes. Every tile (heroes, worlds, buddies,
+  styles, quests, moods, endings, idea sparks) shows a friendly DRAWN placeholder (no
+  emoji) instantly, and the real painted art fades in when it loads — with a few automatic
+  retries so it upgrades as the shared art cache warms. We kept the real painted art rather
+  than baking static WebP files, which would need the image keys that live in Vercel.
+- Mid-word page-text truncation fixed: generate-story max_tokens raised 1700 -> 3200 and
+  the 260-char hard cut replaced with a sentence-boundary trim (falls back to a whole-word
+  cut, never mid-word).
+- "Page 7 of 6" / unreachable The End: the reader already routed the last page to The End;
+  added a defensive page-index clamp so an out-of-range page can never render again.
+- Emoji placeholder removed. The reader's fallback scene now draws a soft SVG creature +
+  SVG pine trees instead of the old emoji rabbit/tree placeholders (no-emoji law), and the
+  fallback's world checks (which used stale slugs) now match the real worlds.
+
+Soundscapes:
+- World ambience now actually plays. api/story-ambience.js was keyed by old world names
+  (snowy_forest, outer_space...) that never matched the real slugs (snowy-village,
+  space-station...), so it always returned "no ambience". Rekeyed to the real slugs (plus a
+  back-compat alias map). public/story.html palette updated to the real slugs too and now
+  colors each page by its own world.
+
+Housekeeping:
+- Deleted orphaned story API files: api/generate-story-art.js and api/story-style-sample.js
+  (nothing referenced them), plus api/animate-page.js (its only caller was
+  generate-story-art; dead code from the dropped AI-video direction).
+
+QA: `vite build` green (69 modules transformed). There is no story-specific QA script
+(stories are not a game engine, so no qa-*.mjs) — the production build plus the maker/reader
+esbuild pass are the checks. Not done / next: ST2 (wow features) — NOT started; awaiting
+Mike's on-device ST1 check and the LIVE decision.
+
+Commits: 54cda1a, a610219, 9b168b3, 7a80ea7, 906b939, baee042.
+
 ## 2026-07-20: Session 2E — reload-safe addresses everywhere inside /app
 
 Gave the shell real, refresh-safe web addresses. Until now every screen inside
