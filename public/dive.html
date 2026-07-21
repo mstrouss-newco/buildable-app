@@ -353,7 +353,7 @@ function boot(data) {
 // ---- placement rules: a creature's `habitat` puts it in the right vertical band
 // of its zone (air / open water / seafloor), auto-spread so nothing stacks. An
 // explicit x or y on a creature overrides. This is the rule every zone follows.
-const HABITAT_BANDS = { air: [0.10, 0.44], open: [0.15, 0.56], floor: [0.58, 0.92] };
+const HABITAT_BANDS = { air: [0.10, 0.44], open: [0.15, 0.56], floor: [0.66, 0.90] };
 // Spread a zone's creatures across the full width and zig-zag their heights within
 // the band, so neighbours never stack. Bigger groups fan wider; explicit x/y wins.
 function computePlacements() {
@@ -363,11 +363,16 @@ function computePlacements() {
     const g = groups[k];
     const band = HABITAT_BANDS[g[0].habitat || "open"] || HABITAT_BANDS.open;
     const n = g.length, bh = band[1] - band[0];
+    const SEABED = 0.92;                                          // plants root their base here on the sea floor
     g.forEach((c, i) => {
       const fx = n === 1 ? 0.5 : (i + 0.5) / n;                   // even across the width
-      const fy = n === 1 ? 0.5 : ((i * 0.6180339 + 0.18) % 1);    // unique, well-spread heights (no two align)
       c._x = (c.x != null) ? c.x : Math.round(12 + fx * 76);      // 12%..88%
-      c._y = (c.y != null) ? c.y : Math.round(ZH * (band[0] + fy * bh));
+      if (c.type === "plant") {                                   // plants are anchored, rising up from the floor
+        c._y = (c.y != null) ? c.y : Math.round(ZH * SEABED - (c.artH || 120));
+      } else {
+        const fy = n === 1 ? 0.5 : ((i * 0.6180339 + 0.18) % 1);  // unique, well-spread heights (no two align)
+        c._y = (c.y != null) ? c.y : Math.round(ZH * (band[0] + fy * bh));
+      }
     });
   });
 }

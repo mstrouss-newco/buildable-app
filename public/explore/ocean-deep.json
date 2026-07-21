@@ -20,7 +20,7 @@
   ],
   "ambient": "ocean",
   "maxDepthFt": 35876,
-  "assetVersion": 15,
+  "assetVersion": 16,
   "finish": {
     "title": "Challenger Deep",
     "blurb": "You reached the deepest known part of the ocean, about 35,876 feet down in the Mariana Trench. Only a few explorers have ever been this deep. Nice diving!"
@@ -638,7 +638,7 @@
       "source": "NOAA Ocean Exploration; Woods Hole Oceanographic Institution",
       "habitat": "floor",
       "type": "plant",
-      "artH": 120
+      "artH": 140
     },
     {
       "id": "yeticrab",
@@ -900,7 +900,7 @@
       "anim": "a-bob",
       "habitat": "floor",
       "type": "plant",
-      "artH": 130,
+      "artH": 210,
       "art": "/api/asset-studio?asset=explore/creature/ocean-photo/kelp",
       "fact": "Giant kelp is a huge seaweed that grows in underwater forests, and it can grow up to two feet in a single day!",
       "facts": [
@@ -1119,7 +1119,7 @@
       "anim": "a-bob",
       "habitat": "floor",
       "type": "plant",
-      "artH": 110,
+      "artH": 150,
       "art": "/api/asset-studio?asset=explore/creature/ocean-photo/seapen",
       "fact": "A sea pen looks like an old-fashioned feather pen standing on the sea floor, but it is really a colony of tiny animals!",
       "facts": [
