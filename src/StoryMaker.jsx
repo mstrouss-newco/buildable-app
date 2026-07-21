@@ -39,6 +39,47 @@ const rand=(a)=>a[Math.floor(Math.random()*a.length)];
 
 function Chevron({dir}){return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{dir==="up"?<polyline points="6 15 12 9 18 15"/>:<polyline points="6 9 12 15 18 9"/>}</svg>);}
 
+const kindOf=(k)=> k==="world"?"world":(k==="quest"||k==="mood"||k==="ending")?"icon":"character";
+function tileHue(seed){let h=0;const t=String(seed||"x");for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;return h%360;}
+// Friendly DRAWN placeholder (no emoji, per product law) shown INSTANTLY behind every
+// picker tile so a kid never sees a blank dark box; the real painted art fades in when
+// it loads (and TileImg retries a few times so it upgrades as the art warms in).
+function TilePlaceholder({kind,hue}){
+  const lite=`hsl(${hue},60%,72%)`;
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style={{position:"absolute",inset:0,width:"100%",height:"100%"}}>
+      <defs><linearGradient id={"tg"+hue} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={`hsl(${hue},55%,34%)`}/><stop offset="1" stopColor={`hsl(${(hue+38)%360},52%,22%)`}/></linearGradient></defs>
+      <rect width="100" height="100" fill={`url(#tg${hue})`}/>
+      {kind==="world" ? (<g>
+        <circle cx="72" cy="26" r="12" fill={lite} opacity="0.85"/>
+        <path d="M0 72 Q28 56 52 68 T100 62 L100 100 L0 100 Z" fill="rgba(0,0,0,0.22)"/>
+        <path d="M0 82 Q30 70 60 80 T100 76 L100 100 L0 100 Z" fill="rgba(0,0,0,0.34)"/>
+      </g>) : kind==="icon" ? (
+        <path d="M50 24 l7 16 17 2 -13 12 4 17 -15 -9 -15 9 4 -17 -13 -12 17 -2 Z" fill={lite} opacity="0.9"/>
+      ) : (<g>
+        <ellipse cx="38" cy="30" rx="7" ry="12" fill={lite}/><ellipse cx="62" cy="30" rx="7" ry="12" fill={lite}/>
+        <ellipse cx="50" cy="62" rx="24" ry="27" fill={lite}/>
+        <circle cx="42" cy="56" r="3" fill="rgba(0,0,0,0.55)"/><circle cx="58" cy="56" r="3" fill="rgba(0,0,0,0.55)"/>
+      </g>)}
+    </svg>
+  );
+}
+function TileImg({src,alt,kind,seed,fit="contain",box}){
+  const [loaded,setLoaded]=useState(false);
+  const [tries,setTries]=useState(0);
+  const hue=tileHue(seed);
+  const bust=tries>0?((src.indexOf("?")>=0?"&":"?")+"cb="+tries):"";
+  return (
+    <div style={{position:"relative",overflow:"hidden",borderRadius:12,background:`hsl(${hue},52%,24%)`,...(box||{width:"100%",aspectRatio:"1/1"})}}>
+      {!loaded && <TilePlaceholder kind={kind} hue={hue}/>}
+      <img src={src+bust} alt={alt||""} loading="eager" decoding="async"
+        onLoad={()=>setLoaded(true)}
+        onError={()=>{ if(tries<4){ const n=tries+1; setTimeout(()=>setTries(n), 2200*n); } }}
+        style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:fit,opacity:loaded?1:0,transition:"opacity .35s ease"}}/>
+    </div>
+  );
+}
+
 export default function StoryMaker({ onBack, onHome, playerName, remix = null, onConsumeRemix = null }) {
   const deviceId=getDeviceId(); const kidProfileId=getKidProfileId();
   const [view,setView]=useState("landing");   // landing | pick | generating | reading
@@ -331,7 +372,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
         <div style={cur.img?s.grid:s.textGrid}>
           {cur.opts.map(([id,label])=>{const on=cur.val===id;return (
             <button key={id} onClick={()=>pickOpt(cur,id)} style={{...(cur.img?s.gTile:s.textTile),...(on?s.tileOn:{})}}>
-              {cur.img && <img src={cur.img(id)} alt={label} loading="eager" decoding="async" style={cur.key==="world"?s.gImgWorld:s.gImgChar}/>}
+              {cur.img && <TileImg src={cur.img(id)} alt={label} kind={kindOf(cur.key)} seed={cur.key+":"+id} fit={cur.key==="world"?"cover":"contain"}/>}
               <span style={s.gLabel}>{label}</span>
             </button>);})}
         </div>
@@ -346,7 +387,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
           <input style={{...s.bigInput,textAlign:"center",fontFamily:FRED,fontSize:20}} value={name} maxLength={28} onChange={e=>setName(e.target.value)} placeholder="Hero name"/>
           <label style={{...s.fieldLbl,marginTop:10}}>What's your big idea? (optional)</label>
           <div style={s.sparkGrid}>
-            {SPARKS.map((txt)=>(<button key={txt} onClick={()=>{setSpark(txt===spark&&!customSpark?"":txt);setCustomSpark("");}} style={{...s.sparkCard,...((spark===txt&&!customSpark)?s.tileOn:{})}}>{SPARK_ICON[txt]&&<img src={iconImg(SPARK_ICON[txt])} alt="" style={s.sparkImg}/>}{txt}</button>))}
+            {SPARKS.map((txt)=>(<button key={txt} onClick={()=>{setSpark(txt===spark&&!customSpark?"":txt);setCustomSpark("");}} style={{...s.sparkCard,...((spark===txt&&!customSpark)?s.tileOn:{})}}>{SPARK_ICON[txt]&&<TileImg src={iconImg(SPARK_ICON[txt])} kind="icon" seed={"spark:"+txt} fit="contain" box={{width:56,height:56,borderRadius:12}}/>}{txt}</button>))}
           </div>
           <input style={s.bigInput} value={customSpark} maxLength={140} placeholder="…or type your own idea" onChange={(e)=>{setCustomSpark(e.target.value);if(e.target.value)setSpark("");}}/>
           <button style={s.makeBtn} onClick={doMake}>Make my story!</button>
@@ -360,7 +401,7 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
           {STEPS.filter((_,i)=>i<step||atEnd).map((st,i)=>(
             <div key={st.key} style={s.chip}>
               <button style={s.chev} onClick={()=>cycle(st,-1)} aria-label={"Change "+st.q}><Chevron dir="up"/></button>
-              {st.img && <img src={st.img(st.val)} alt="" style={s.chipImg}/>}
+              {st.img && <TileImg src={st.img(st.val)} kind={kindOf(st.key)} seed={"chip:"+st.key+":"+st.val} fit={st.key==="world"?"cover":"contain"} box={{width:38,height:38,borderRadius:8}}/>}
               <div style={s.chipVal}>{labelOf(st)}</div>
               <button style={s.chev} onClick={()=>cycle(st,1)} aria-label={"Change "+st.q}><Chevron dir="down"/></button>
             </div>))}
