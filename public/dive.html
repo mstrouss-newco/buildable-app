@@ -350,7 +350,7 @@ function boot(data) {
 // ---- placement rules: a creature's `habitat` puts it in the right vertical band
 // of its zone (air / open water / seafloor), auto-spread so nothing stacks. An
 // explicit x or y on a creature overrides. This is the rule every zone follows.
-const HABITAT_BANDS = { air: [0.12, 0.44], open: [0.22, 0.60], floor: [0.66, 0.88] };
+const HABITAT_BANDS = { air: [0.12, 0.44], open: [0.18, 0.50], floor: [0.66, 0.88] };
 const SPREAD_X = [58, 28, 72, 42, 34, 64];
 function computePlacements() {
   const groups = {};
