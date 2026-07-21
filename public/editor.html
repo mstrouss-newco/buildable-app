@@ -88,14 +88,13 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
 </style>
 </head>
 <body>
-<!-- Editor PIN gate removed at owner's request; kept hidden so shared code that
-     references these elements still works. The editor opens directly (see boot). -->
+<!-- Owner-only gate: the editor opens only for the owner's Buildable login (the
+     same Google/parent sign-in the app uses). No PIN. -->
 <div class="gate" id="gate" style="display:none">
   <div class="box">
     <h1>Editor</h1>
-    <div class="hint" style="margin-top:6px;">Enter the editor PIN</div>
-    <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" />
-    <button class="btn primary" style="width:100%;" onclick="unlock()">Open</button>
+    <div class="hint" id="gateMsg" style="margin-top:8px;">Checking your sign-in…</div>
+    <button class="btn primary" id="gateBtn" style="width:100%;margin-top:14px;display:none;"></button>
     <div class="hint err" id="gateErr" style="min-height:16px;margin-top:8px;color:#b23b3b;"></div>
   </div>
 </div>
@@ -298,8 +297,7 @@ function setDirty(){ state.dirty=true; setStatus("Unsaved changes"); srcBadge(st
 function srcBadge(src,unsaved){ var b=document.getElementById("srcBadge"); if(unsaved){ b.textContent="unsaved"; b.className="badge"; return; } if(src==="override"){ b.textContent="live (edited)"; b.className="badge live"; } else { b.textContent="default"; b.className="badge"; } }
 
 /* ---------- gate + routing ---------- */
-function unlock(){ var v=document.getElementById("pin").value.trim(); if(!v){ document.getElementById("gateErr").textContent="Enter the PIN"; return; } PIN=v; try{localStorage.setItem("bo-ok","1");localStorage.setItem("bo-pin",v);}catch(e){} document.getElementById("gate").style.display="none"; route(); }
-document.getElementById("pin").addEventListener("keydown",function(e){ if(e.key==="Enter") unlock(); });
+/* PIN gate replaced by the owner sign-in gate (see bootAuth at the bottom). */
 function route(){ var g=(new URLSearchParams(location.search).get("game")||"").toLowerCase().replace(/[^a-z0-9-]/g,""); if(g){ openGame(g); } else { loadPicker(); } }
 window.addEventListener("popstate", route);
 
@@ -897,17 +895,62 @@ function save(after){
   var v=window.BuildableManifest ? window.BuildableManifest.validate(state.manifest) : {ok:true,errors:[]};
   if(!v.ok){ setStatus("Fix first: "+v.errors.join("; "), true); return; }
   var btn=document.getElementById("saveBtn"); btn.disabled=true; setStatus("Saving…");
-  fetch("/api/manifest",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ game:state.game, manifest:state.manifest, pin:PIN }) })
-    .then(function(r){ return r.json(); })
-    .then(function(d){ btn.disabled=false; if(d.ok){ state.dirty=false; state.source="override"; srcBadge("override"); setStatus("Saved — live now."); if(typeof after==="function") after(); } else { setStatus("Save failed: "+((d.errors&&d.errors.join("; "))||d.error||d.detail||"unknown"), true); } })
-    .catch(function(err){ btn.disabled=false; setStatus("Save failed: "+(err.message||err), true); });
+  function doPost(token, isRetry){
+    return fetch("/api/manifest",{ method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+(token||"")}, body:JSON.stringify({ game:state.game, manifest:state.manifest }) })
+      .then(function(r){ return r.json().then(function(d){ return {status:r.status, d:d}; }); })
+      .then(function(res){ if(res.status===401 && !isRetry){ return refreshToken().then(function(t){ if(t) return doPost(t, true); throw new Error("Your sign-in expired. Please sign in again."); }); } return res; });
+  }
+  ensureToken().then(function(token){
+    if(!token){ btn.disabled=false; setStatus("Please sign in to save.", true); gateShow("Sign in to your Buildable account to save.", "Go to sign in", goSignIn); return; }
+    return doPost(token, false).then(function(res){
+      if(!res) return; btn.disabled=false; var d=res.d||{};
+      if(d.ok){ state.dirty=false; state.source="override"; srcBadge("override"); setStatus("Saved — live now."); if(typeof after==="function") after(); }
+      else { setStatus("Save failed: "+((d.errors&&d.errors.join("; "))||d.error||d.detail||"unknown"), true); }
+    });
+  }).catch(function(err){ btn.disabled=false; setStatus("Save failed: "+(err.message||err), true); });
 }
 window.addEventListener("beforeunload", function(e){ if(state.dirty){ e.preventDefault(); e.returnValue=""; } });
-// PIN gate removed at owner's request: open the editor directly. Still send the
-// known PIN with saves so the /api/manifest check keeps passing.
-try{ PIN=localStorage.getItem("bo-pin")||"1025"; }catch(e){ PIN="1025"; }
-var _gate=document.getElementById("gate"); if(_gate) _gate.style.display="none";
-route();
+/* ---------- Owner-only sign-in gate (reuses the app's parent login) ---------- */
+var SB_URL="https://fmguhfmfntvohtnccmap.supabase.co";
+var SB_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtZ3VoZm1mbnR2b2h0bmNjbWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzA5NzYsImV4cCI6MjA5Nzg0Njk3Nn0.l75DFac-pr_sU_lK458iNjpgbhL53kV3ioJ0noJLJ5k";
+var OWNER_EMAILS=["mstrouss@gmail.com"];
+var OWNER_SUBS=["1cb8cd9e-fba0-4fcc-850a-5b6afb677b87"];
+var AUTH={ token:null, email:null };
+function readParentSession(){ try{ return JSON.parse(localStorage.getItem("bk_parent_session_v1")||"null"); }catch(e){ return null; } }
+function decodeJwt(t){ try{ return JSON.parse(atob(String(t).split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))); }catch(e){ return null; } }
+function isOwner(c){ if(!c) return false; var e=String(c.email||"").toLowerCase(); return OWNER_EMAILS.indexOf(e)>=0 || OWNER_SUBS.indexOf(String(c.sub||""))>=0; }
+function gateShow(msg, btnText, btnFn){
+  var g=document.getElementById("gate"); if(g) g.style.display="flex";
+  var m=document.getElementById("gateMsg"); if(m) m.textContent=msg;
+  var b=document.getElementById("gateBtn");
+  if(b){ if(btnText){ b.style.display=""; b.textContent=btnText; b.onclick=btnFn; } else { b.style.display="none"; } }
+}
+function goSignIn(){ location.href="/app"; }
+function switchAccount(){ try{ localStorage.removeItem("bk_parent_session_v1"); }catch(e){} location.href="/app"; }
+function refreshToken(){
+  var s=readParentSession(); if(!s||!s.refresh_token) return Promise.resolve(null);
+  return fetch(SB_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:SB_ANON,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token})})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){ if(d&&d.access_token){ var ns={access_token:d.access_token, refresh_token:d.refresh_token||s.refresh_token}; try{localStorage.setItem("bk_parent_session_v1",JSON.stringify(ns));}catch(e){} AUTH.token=d.access_token; return d.access_token; } return null; })
+    .catch(function(){ return null; });
+}
+// Return a fresh token, refreshing if it is close to expiry. Null if not signed in.
+function ensureToken(){
+  var s=readParentSession(); if(!s||!s.access_token) return Promise.resolve(null);
+  var c=decodeJwt(s.access_token); var now=Math.floor(Date.now()/1000);
+  if(c && c.exp && (c.exp-now)<120){ return refreshToken(); }
+  AUTH.token=s.access_token; return Promise.resolve(s.access_token);
+}
+function bootAuth(){
+  var s=readParentSession();
+  if(!s || !s.access_token){ gateShow("Sign in to your Buildable account to use the editor.", "Go to sign in", goSignIn); return; }
+  var c=decodeJwt(s.access_token);
+  if(!isOwner(c)){ gateShow("This editor is limited to the owner account. You're signed in as "+((c&&c.email)||"another account")+".", "Switch account", switchAccount); return; }
+  AUTH.token=s.access_token; AUTH.email=(c&&c.email)||"";
+  var g=document.getElementById("gate"); if(g) g.style.display="none";
+  route();
+}
+bootAuth();
 </script>
 </body>
 </html>
