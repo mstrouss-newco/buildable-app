@@ -4,7 +4,7 @@
   "template": "weather-lab",
   "topic": "weather",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": ["weather-facts", "reading"],
   "heroArt": "explore-make-it-rain-hero",
   "sources": [
