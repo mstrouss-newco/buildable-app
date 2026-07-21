@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story art directions — three pages, three worlds</title>
+<link rel="icon" href="/favicon.ico?v=4" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=4" />
+<style>
+  html,body{margin:0;background:#0b0d16;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  html{scroll-snap-type:y mandatory}
+  section{position:relative;height:100vh;scroll-snap-align:start;overflow:hidden}
+  .chip{position:absolute;top:18px;left:18px;z-index:40;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:700;letter-spacing:.4px}
+  .chip b{color:#ffd98a;font-weight:800}
+  .hint{position:absolute;top:18px;right:18px;z-index:40;background:rgba(0,0,0,.4);border-radius:999px;padding:8px 14px;font-size:12px;color:rgba(255,255,255,.8)}
+  .scrollcue{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:40;font-size:11.5px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.55);animation:cue 2.4s ease-in-out infinite}
+  @keyframes cue{0%,100%{transform:translate(-50%,0);opacity:.55}50%{transform:translate(-50%,6px);opacity:.9}}
+
+  #intro,#outro{display:flex;align-items:center;justify-content:center;text-align:center;background:radial-gradient(80% 70% at 50% 30%,#1a1f38,#0b0d16)}
+  #intro h1{font-size:clamp(30px,5vw,54px);margin:0 0 14px;font-weight:800;letter-spacing:-.5px}
+  #intro p,#outro p{max-width:600px;margin:0 auto;color:#9aa3c0;font-size:16px;line-height:1.65}
+  #outro h2{font-size:26px;margin:0 0 12px}
+
+  .stage{position:absolute;inset:0}
+  .cam{position:absolute;inset:0;will-change:transform}
+  .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+
+  /* look 1: drift + parallax */
+  #cam1 .art{transform:scale(1.1);transform-origin:50% 55%;animation:kb1 26s ease-in-out infinite alternate}
+  @keyframes kb1{0%{transform:scale(1.1) translate(0,0)}100%{transform:scale(1.18) translate(-1.6%,-1.2%)}}
+  .fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5}
+  .star{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;animation:tw 3s ease-in-out infinite}
+  @keyframes tw{0%,100%{opacity:.15}50%{opacity:.9}}
+  .fly{position:absolute;width:6px;height:6px;border-radius:50%;background:#ffe89a;box-shadow:0 0 12px 4px rgba(255,220,120,.7);animation:fly 7s ease-in-out infinite}
+  @keyframes fly{0%{transform:translate(0,0);opacity:.15}25%{opacity:1}50%{transform:translate(15px,-13px);opacity:.4}75%{opacity:.9}100%{transform:translate(-9px,-24px);opacity:.15}}
+  #p1 .prose{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);width:min(88%,660px);text-align:center;z-index:30}
+  #p1 .prose p{font-family:Georgia,'Times New Roman',serif;font-size:clamp(18px,2.6vw,25px);line-height:1.6;color:#f2ecdc;text-shadow:0 2px 16px rgba(0,0,0,.95);margin:0}
+  .cap{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#e0b878;margin-bottom:10px;text-shadow:0 2px 10px rgba(0,0,0,.9)}
+
+  /* look 2: the camera walks the painting */
+  #p2{background:#141018}
+  #cam2 .art{width:175%;max-width:none;left:0;animation:pan 30s cubic-bezier(.45,.05,.55,.95) infinite alternate}
+  @keyframes pan{0%,12%{transform:translateX(0)}44%,56%{transform:translateX(-37.5%)}88%,100%{transform:translateX(-42.9%)}}
+  .beat{position:absolute;bottom:7%;left:50%;transform:translateX(-50%);width:min(86%,640px);text-align:center;opacity:0;z-index:30}
+  .beat p{font-size:clamp(19px,2.8vw,28px);font-weight:800;letter-spacing:-.3px;color:#fff;margin:0;line-height:1.4;text-shadow:0 3px 18px rgba(0,0,0,.9)}
+  .beat span{color:#ffd98a}
+  #b1{animation:beat1 30s infinite alternate}
+  #b2{animation:beat2 30s infinite alternate}
+  #b3{animation:beat3 30s infinite alternate}
+  @keyframes beat1{0%,10%{opacity:1}16%,100%{opacity:0}}
+  @keyframes beat2{0%,40%{opacity:0}46%,54%{opacity:1}60%,100%{opacity:0}}
+  @keyframes beat3{0%,86%{opacity:0}92%,100%{opacity:1}}
+
+  /* look 3: tap the words */
+  #cam3{transition:transform 1.7s cubic-bezier(.3,.7,.25,1)}
+  #cam3 .art{animation:kb3 28s ease-in-out infinite alternate;transform-origin:50% 50%}
+  @keyframes kb3{0%{transform:scale(1.04)}100%{transform:scale(1.1)}}
+  .mote{position:absolute;width:4px;height:4px;border-radius:50%;background:#7fdcd0;animation:rise 9s linear infinite;opacity:0}
+  @keyframes rise{0%{transform:translateY(30px);opacity:0}18%{opacity:.7}100%{transform:translateY(-240px);opacity:0}}
+  #p3 .prose{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);width:min(90%,700px);text-align:center;z-index:30}
+  #p3 .prose p{font-size:clamp(17px,2.5vw,23px);line-height:1.7;color:#dceff8;margin:0;text-shadow:0 2px 14px rgba(0,0,0,.95)}
+  .hot{color:#6FE3D4;border-bottom:2px dotted rgba(111,227,212,.7);cursor:pointer;font-weight:700;text-shadow:0 0 14px rgba(111,227,212,.55)}
+  .hot:hover{color:#aef7ec}
+  .resetBtn{position:absolute;bottom:6%;right:4%;z-index:31;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#dceff8;border-radius:999px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;opacity:0;transition:opacity .4s}
+  .resetBtn.show{opacity:1}
+</style>
+</head>
+<body>
+
+<section id="intro">
+  <div>
+    <h1>Three pages. Three worlds.<br>Real paint.</h1>
+    <p>Every page below was painted by the same AI painter that will paint the stories, from the exact instructions we would ship. Scroll to step through the three looks.</p>
+    <div class="scrollcue">Scroll</div>
+  </div>
+</section>
+
+<section id="p1">
+  <div class="chip">Look 1 · <b>Cinematic dusk</b> · idea: real depth, the page is a place</div>
+  <div class="hint">Move your mouse (or tilt an iPad)</div>
+  <div class="stage">
+    <div class="cam" id="cam1"><img class="art" src="/api/story-library?dimg=dusk" alt=""></div>
+    <div class="fx" id="fx1"></div>
+  </div>
+  <div class="prose">
+    <div class="cap">The Last Lighthouse · page 3 of 8</div>
+    <p>Juniper had never seen the light go out before. The whole sea was holding its breath. Tonight, she decided, she would climb.</p>
+  </div>
+  <div class="scrollcue">Scroll</div>
+</section>
+
+<section id="p2">
+  <div class="chip">Look 2 · <b>Bold cut-paper</b> · idea: the camera walks the page with the words</div>
+  <div class="hint">Watch: the page travels on its own</div>
+  <div class="stage">
+    <div class="cam" id="cam2"><img class="art" src="/api/story-library?dimg=paper" alt=""></div>
+  </div>
+  <div class="beat" id="b1"><p>On the morning of her ninth birthday, Wren packed one sandwich, one compass, and one extremely brave dog.</p></div>
+  <div class="beat" id="b2"><p>The path was longer than any path had a right to be. <span>Neither of them minded.</span></p></div>
+  <div class="beat" id="b3"><p>And at the end of it stood the castle: taller than a thundercloud, with one golden door, <span>slightly open.</span></p></div>
+  <div class="scrollcue">Scroll</div>
+</section>
+
+<section id="p3">
+  <div class="chip">Look 3 · <b>Glowing deep</b> · idea: tap the glowing words, the page answers</div>
+  <div class="hint">Tap the glowing words below</div>
+  <div class="stage">
+    <div class="cam" id="cam3"><img class="art" src="/api/story-library?dimg=deep" alt="">
+      <div class="fx" id="fx3"></div>
+    </div>
+  </div>
+  <div class="prose" id="prose3">
+    <p>Something was glowing at the bottom of the world. Mira steered past the <span class="hot" data-t="jelly">jellyfish meadow</span>, dimmed the <span class="hot" data-t="sub">submarine's</span> big lamp, and stared. Cut into the trench wall, a hundred miles from anywhere, was a small golden <span class="hot" data-t="door">door</span>.</p>
+  </div>
+  <button class="resetBtn" id="reset3">See the whole page</button>
+  <div class="scrollcue">Scroll</div>
+</section>
+
+<section id="outro">
+  <div style="max-width:640px;text-align:center;padding:0 22px">
+    <h2>Same painter, three voices</h2>
+    <p>In the real thing the story writer picks the look, the shot and the light for each story, page one becomes the reference so every page matches, and the depth, camera and living details ride on top. Tell Claude which look (or which mix) wins.</p>
+  </div>
+</section>
+
+<script>
+  // Look 1: parallax on the painting
+  var p1 = document.getElementById("p1"), cam1 = document.getElementById("cam1");
+  function shift1(x, y){ cam1.style.transform = "translate(" + (-x*22) + "px," + (-y*14) + "px)"; }
+  p1.addEventListener("mousemove", function(e){ var r = p1.getBoundingClientRect(); shift1((e.clientX-r.left)/r.width-.5, (e.clientY-r.top)/r.height-.5); });
+  p1.addEventListener("mouseleave", function(){ shift1(0,0); });
+  window.addEventListener("deviceorientation", function(e){ if (e.gamma!=null) shift1(Math.max(-.5,Math.min(.5,e.gamma/60)), Math.max(-.5,Math.min(.5,(e.beta-40)/80))); });
+  var fx1 = document.getElementById("fx1");
+  for (var i=0;i<10;i++){ var s=document.createElement("span"); s.className="star"; s.style.left=(Math.random()*100)+"%"; s.style.top=(Math.random()*30)+"%"; s.style.animationDelay=(Math.random()*3)+"s"; fx1.appendChild(s); }
+  for (var i=0;i<5;i++){ var f=document.createElement("span"); f.className="fly"; f.style.left=(6+Math.random()*40)+"%"; f.style.top=(48+Math.random()*34)+"%"; f.style.animationDelay=(Math.random()*5)+"s"; fx1.appendChild(f); }
+
+  // Look 3: motes + tap-the-word camera
+  var fx3 = document.getElementById("fx3");
+  for (var i=0;i<12;i++){ var m=document.createElement("span"); m.className="mote"; m.style.left=(Math.random()*100)+"%"; m.style.top=(35+Math.random()*55)+"%"; m.style.animationDelay=(Math.random()*8)+"s"; fx3.appendChild(m); }
+  var cam3 = document.getElementById("cam3"), reset3 = document.getElementById("reset3");
+  var shots = { jelly:{ox:"16%",oy:"42%",s:2.0}, sub:{ox:"50%",oy:"48%",s:1.9}, door:{ox:"84%",oy:"68%",s:2.1} };
+  document.querySelectorAll("#prose3 .hot").forEach(function(el){
+    el.addEventListener("click", function(){
+      var v = shots[el.dataset.t]; if (!v) return;
+      cam3.style.transformOrigin = v.ox + " " + v.oy;
+      cam3.style.transform = "scale(" + v.s + ")";
+      reset3.classList.add("show");
+    });
+  });
+  reset3.addEventListener("click", function(){ cam3.style.transform = "scale(1)"; reset3.classList.remove("show"); });
+
+  // If a painting is somehow missing from the cache, ask the painter once and retry.
+  document.querySelectorAll("img.art").forEach(function(img){
+    img.addEventListener("error", function(){
+      var key = (img.src.split("dimg=")[1] || "").split("&")[0];
+      if (!key || img.dataset.retried) return;
+      img.dataset.retried = "1";
+      fetch("/api/story-library?dirSample=" + key).then(function(){ img.src = "/api/story-library?dimg=" + key + "&cb=" + Date.now(); }).catch(function(){});
+    });
+  });
+</script>
+</body>
+</html>

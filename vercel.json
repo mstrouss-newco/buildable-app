@@ -49,6 +49,14 @@
       "dest": "/api/$1"
     },
     {
+      "src": "/story-directions.html",
+      "dest": "/story-directions.html"
+    },
+    {
+      "src": "/story-directions",
+      "dest": "/story-directions.html"
+    },
+    {
       "src": "/antcity-art-gallery.html",
       "dest": "/antcity-art-gallery.html"
     },
@@ -117,17 +125,23 @@
     {
       "src": "/games-library.html",
       "status": 308,
-      "headers": { "Location": "/app" }
+      "headers": {
+        "Location": "/app"
+      }
     },
     {
       "src": "/games",
       "status": 308,
-      "headers": { "Location": "/app" }
+      "headers": {
+        "Location": "/app"
+      }
     },
     {
       "src": "/library",
       "status": 308,
-      "headers": { "Location": "/app" }
+      "headers": {
+        "Location": "/app"
+      }
     },
     {
       "src": "/croctot.html",

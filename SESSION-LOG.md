@@ -1,6 +1,17 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-21: /story-directions live mock page (shipped)
+
+The chat-preview sandbox blocked the local mock's network calls, so the art
+direction mock now lives ON the site (public/story-directions.html + explicit
+vercel.json routes /story-directions[.html], per the static-routes gotcha).
+Direct <img> tags to the cached ?dimg=dusk|paper|deep paintings (no fetch needed;
+one polite dirSample retry if a painting is ever missing). Three looks, three
+interactions: parallax dusk, camera-walk cut-paper, tap-words glowing deep.
+TEMPORARY page: remove with the ?dirSample branch once Mike picks a direction.
+
+
 ## 2026-07-21: Survival — remove in-game demo, Journey uses level art, Lightning replaces Slow Heal (shipped)
 
 Owner follow-ups after Phase 1. Files: `public/survival-engine.html`, `public/buildable-renders.js`.
