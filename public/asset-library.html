@@ -136,46 +136,6 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div id="sections"></div>
   </div><!-- /browseView -->
 
-  <!-- AP1: Create tab retired. Art is now made in the editor (the one create tool).
-       The "New game" recipe builder moved to the Build tab (below). This view is kept
-       in the DOM only so the shared init code has its elements; no tab reaches it. -->
-  <div id="createView" style="display:none">
-    <div class="panel">
-      <div class="note" style="margin-bottom:12px">Make a whole asset sheet in one go (many bricks / balls on one page), then keep the sliced pieces. No downloading, renaming, or uploading.</div>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
-        <label class="fld">Game<br><select id="cs-game"></select></label>
-        <label class="fld">Asset<br><select id="cs-asset"></select></label>
-        <label class="fld">Theme<br><input type="text" id="cs-theme" list="cs-themes" value="jungle"></label>
-        <datalist id="cs-themes"><option>jungle</option><option>space</option><option>ocean</option><option>candy</option><option>snow</option><option>volcano</option><option>desert</option><option>castle</option></datalist>
-        <label class="fld">Engine<br><select id="cs-engine"><option value="openai">gpt-image-1</option><option value="flux">FLUX (fal.ai)</option></select></label>
-        <label class="fld">Quality<br><select id="cs-quality"><option value="auto">auto (by rules)</option><option value="medium">standard</option><option value="high">high</option><option value="low">draft (cheap)</option></select></label>
-      </div>
-      <div id="cs-layout" class="note" style="margin-top:10px"></div>
-      <div style="margin-top:12px">
-        <div class="lbl">Prompt (auto-filled, editable)</div>
-        <textarea id="cs-prompt" style="width:100%;min-height:210px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:10px;font:inherit;line-height:1.5"></textarea>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-        <button id="cs-gen" class="chip" style="background:var(--acc);color:#fff;font-weight:600;border-color:var(--acc)">Generate preview</button>
-        <span id="cs-status" class="muted"></span>
-      </div>
-    </div>
-
-    <div id="cs-result" style="display:none">
-      <div class="seclbl"><b>Generated sheet</b><span class="muted">check it, tweak names if needed, then keep</span></div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-        <img id="cs-sheet" class="checker" style="max-width:340px;border:1px solid var(--line);border-radius:12px" />
-        <div style="flex:1;min-width:260px">
-          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <button id="cs-keep" class="chip" style="background:var(--teal);color:#08130d;font-weight:600;border-color:var(--teal)">Keep all pieces</button>
-            <button id="cs-download" class="chip">Download files</button>
-            <span id="cs-keepstatus" class="muted"></span>
-          </div>
-          <div id="cs-pieces" class="grid"></div>
-        </div>
-      </div>
-    </div>
-  </div><!-- /createView -->
 
   <div id="uploadView" style="display:none">
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -443,71 +403,9 @@ load();
    adding a recipe block. */
 const STUDIO_STYLE_BREAKER="soft painterly children's-book game art with a glossy polished finish, bright bold saturated colors, thick clean rounded shapes, cute and inviting, child-friendly ages 4-8";
 const STUDIO_STYLE_DETAILED="high-detail polished mobile-game asset art, rich realistic material textures, thick beveled glossy borders, dramatic directional lighting with crisp highlights and soft shadows, vibrant saturated colors, sharp clean professional finish, appealing and colorful for kids but NOT flat, NOT plain, NOT an oversimplified cartoon";
-/* RULES: one place every generation obeys. Change here to change everything. */
-const RULES={
-  globalTail:" No text, no words, no letters, no numbers, no UI, no watermark. Child-friendly ages 4-8.",
-  quality:{ background:"high", sprite:"medium", default:"medium" }, // "auto" picks by role
-  minW:{ background:900, sprite:48 },  // sliced piece narrower than this => "soft" warning badge
-};
-function assetRole(a){ return a.role || (a.mode==="single"&&a.transparent===false ? "background" : "sprite"); }
-function assetQuality(a){ const sel=$("cs-quality").value; if(sel&&sel!=="auto")return sel;
-  if(assetRole(a)==="background")return "high";
-  if(a.mode==="sheet")return "high";   // detailed sheets need the detail to render
-  return RULES.quality.default; }
-function assetSize(a){ if(assetRole(a)==="background")return a.size==="tall"?"tall":"wide"; return a.size||"wide"; } // backgrounds -> biggest supported
-/* Recipes: subject is a string with a {theme} token so built-in and saved recipes are the same shape. */
-const RECIPES={
-  breaker:{
-    label:"Breaker", style:STUDIO_STYLE_BREAKER,
-    assets:{
-      bricks:{ label:"Brick set (sheet)", mode:"sheet", size:"tall", transparent:true, role:"sprite", style:STUDIO_STYLE_DETAILED,
-        rows:["ice","wood","metal","candy","star","bomb"], cols:["intact","hit","cracked","shattered"],
-        subject:"a professional brick-breaker brick sheet for a {theme} themed world. Six rows, each a distinct brick material rendered with rich detailed texture and a thick beveled glossy border: row 1 glassy crystal ice with inner shine, row 2 natural wood planks with visible grain and knots, row 3 riveted brushed metal plate, row 4 glossy striped candy, row 5 a golden brick with a raised star emblem, row 6 a dark heavy bomb brick. Every brick is a rounded rectangle. The FOUR columns are an animation sequence of that same brick, left to right: (1) whole and intact, (2) energized and glowing with a bright light-burst flash right after being hit, (3) badly cracked with dark fracture lines running across it, (4) smashed apart into a small pile of separate broken debris chunks with a little scattered dust" },
-      ball:{ label:"Ball set (sheet)", mode:"sheet", size:"wide", transparent:true, role:"sprite",
-        rows:["classic","beach","soccer","smiley"], cols:["ball"],
-        subject:"a row of round game balls for a {theme} themed brick-breaker: a classic glossy ball, a colorful beach ball, a soccer ball, and a cute smiley-face ball" },
-      paddle:{ label:"Paddle (single)", mode:"single", size:"wide", transparent:true, role:"sprite",
-        subject:"a single horizontal brick-breaker paddle bar for a {theme} themed world, glossy rounded capsule shape, centered, seen straight on" },
-      background:{ label:"World background (single)", mode:"single", size:"tall", transparent:false, role:"background",
-        subject:"a full-screen {theme} themed background scene for a kids brick-breaker game, dreamy and inviting, portrait orientation, plenty of calm open space in the upper area where bricks will sit, no characters" },
-    },
-  },
-};
 const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 
 const $=id=>document.getElementById(id);
-let CS={recipe:null,asset:null,pieces:[]};
-
-function csGame(){ return $("cs-game").value; }
-function csAsset(){ const r=RECIPES[csGame()]; return r?r.assets[$("cs-asset").value]:null; }
-
-function csBuildPrompt(){
-  const r=RECIPES[csGame()], a=csAsset(); if(!r||!a)return "";
-  const theme=($("cs-theme").value||"jungle").trim();
-  let p=String(a.subject||"").replace(/\{theme\}/g,theme)+". "+(a.style||r.style||STUDIO_STYLE_BREAKER)+".";
-  if(a.mode==="sheet"){
-    p+=` Lay them out as a clean evenly-spaced grid of exactly ${(a.cols||[]).length} columns and ${(a.rows||[]).length} rows, every item the same size and centered in its own cell with generous equal margins, none touching or overlapping.`;
-  } else {
-    p+=" A single item, centered, filling the frame.";
-  }
-  if(assetRole(a)==="background"){ p+=" High detail and crisp, suitable for a large tablet screen."; }
-  else { p+=" Place every item on a pure solid plain white background (#ffffff) with clear even white space around each one, nothing touching, no cast shadows, no drop shadows."; }
-  p+= RULES.globalTail;
-  return p;
-}
-function csRefreshForm(){
-  const r=RECIPES[csGame()]; const sel=$("cs-asset");
-  sel.innerHTML=Object.keys(r.assets).map(k=>`<option value="${k}">${r.assets[k].label}</option>`).join("");
-  csRefreshLayout();
-}
-function csRefreshLayout(){
-  const a=csAsset(); if(!a)return;
-  $("cs-layout").textContent = a.mode==="sheet"
-    ? `Sheet: ${a.rows.length} rows x ${a.cols.length} cols = ${a.rows.length*a.cols.length} pieces (${a.rows.join(", ")}).`
-    : "Single image (one piece).";
-  $("cs-prompt").value=csBuildPrompt();
-}
-
 /* ---- image helpers ---- */
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
 function contentBox(ctx,x,y,w,h,transparent){
@@ -560,94 +458,8 @@ function splitBands(occ,n,minOcc){
   } else { cuts=[]; for(let i=1;i<n;i++)cuts.push(Math.round(s+(e-s+1)*i/n)); }
   const bounds=[s,...cuts,e+1],bands=[]; for(let i=0;i<n;i++)bands.push([bounds[i],bounds[i+1]]); return bands;
 }
-async function csSlice(b64,a){
-  const img=await loadImg("data:image/png;base64,"+b64);
-  const W=img.naturalWidth,H=img.naturalHeight;
-  const sc=document.createElement("canvas");sc.width=W;sc.height=H;
-  const sx=sc.getContext("2d",{willReadFrequently:true});sx.drawImage(img,0,0);
-  const key=assetRole(a)!=="background";     // sprites/sheets: drop the white bg
-  if(key) keyOutWhite(sx,W,H);
-  const out=[];
-  if(a.mode==="single"){
-    const box=key?(contentBox(sx,0,0,W,H,true)||{x:0,y:0,w:W,h:H}):{x:0,y:0,w:W,h:H};
-    out.push({name:"main",dataURL:cropFrom(sc,box),w:box.w,h:box.h});
-    return out;
-  }
-  const cols=(a.cols||["x"]).length,rows=(a.rows||["x"]).length;
-  // 1) find the real row bands by the widest empty gaps, then 2) columns within each row
-  const rBands=splitBands(occRows(sx,0,0,W,H),rows,3);
-  for(let r=0;r<rows;r++){
-    const ry0=rBands[r][0], rh=Math.max(1,rBands[r][1]-ry0);
-    const cBands=splitBands(occCols(sx,0,ry0,W,rh),cols,3);
-    for(let c=0;c<cols;c++){
-      const cx0=cBands[c][0], cw=Math.max(1,cBands[c][1]-cx0);
-      const box=contentBox(sx,cx0,ry0,cw,rh,true)||{x:cx0,y:ry0,w:cw,h:rh};
-      const name= cols>1 ? (a.rows[r]+"_"+a.cols[c]) : a.rows[r];
-      out.push({name,dataURL:cropFrom(sc,box),w:box.w,h:box.h});
-    }
-  }
-  return out;
-}
-
-/* ---- render sliced pieces ---- */
-function csRenderPieces(){
-  const a=RECIPES[CS.recipe].assets[CS.asset], role=assetRole(a), minW=RULES.minW[role]||0;
-  $("cs-pieces").innerHTML=CS.pieces.map((p,i)=>{
-    const soft=(p.w||0)<minW;
-    const meta=`<div class="badges" style="margin-top:4px"><span class="b">${p.w}x${p.h}</span>${soft?'<span class="b warn">may look soft</span>':''}</div>`;
-    return `<div class="card"><div class="thumb checker"><img src="${p.dataURL}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain"></div>`+
-    `<div class="cbody"><input class="cs-name" data-i="${i}" value="${esc(p.name)}" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--txt);padding:4px 6px;font:inherit;font-size:12px">${meta}</div></div>`;
-  }).join("");
-  $("cs-pieces").querySelectorAll(".cs-name").forEach(inp=>inp.oninput=()=>{CS.pieces[+inp.dataset.i].name=inp.value;});
-}
-
-/* ---- generate ---- */
-async function csGenerate(){
-  const a=csAsset(); if(!a)return;
-  CS.recipe=csGame(); CS.asset=$("cs-asset").value;
-  const btn=$("cs-gen"); btn.disabled=true;
-  const engine=$("cs-engine").value;
-  $("cs-status").textContent="Generating sheet on "+(engine==="flux"?"FLUX":"gpt-image-1")+"… (10-60s)";
-  $("cs-result").style.display="none";
-  try{
-    const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"generate",engine,prompt:$("cs-prompt").value,size:assetSize(a),transparent:false,quality:assetQuality(a)})});
-    if(!r.ok){ const e=await r.json().catch(()=>({}));
-      $("cs-status").textContent="Could not generate ("+(e.error||r.status)+")."; btn.disabled=false; return; }
-    const j=await r.json();
-    $("cs-sheet").src="data:image/png;base64,"+j.b64;
-    $("cs-sheet").classList.toggle("checker",a.transparent);
-    CS.pieces=await csSlice(j.b64,a);
-    csRenderPieces();
-    $("cs-result").style.display="";
-    $("cs-status").textContent="Done. "+CS.pieces.length+" piece(s) sliced.";
-  }catch(e){ $("cs-status").textContent="Error: "+e.message; }
-  btn.disabled=false;
-}
-
-/* ---- keep + download ---- */
-async function csKeep(){
-  if(!CS.pieces.length)return;
-  const a=RECIPES[CS.recipe].assets[CS.asset];
-  $("cs-keepstatus").textContent="Saving…";
-  const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({action:"keep",game:CS.recipe,type:CS.asset,theme:($("cs-theme").value||"default").trim(),
-      pieces:CS.pieces.map(p=>({slug:p.name,b64:p.dataURL}))})});
-  if(!r.ok){ $("cs-keepstatus").textContent="Save failed."; return; }
-  const j=await r.json();
-  const base=(j.saved&&j.saved[0])?j.saved[0].slug.split("/").slice(0,3).join("/"):"";
-  $("cs-keepstatus").textContent="Kept "+j.count+" piece(s). URL: /api/asset-studio?asset="+base+"/<name>";
-}
-function csDownload(){
-  CS.pieces.forEach(p=>{const a=document.createElement("a");a.href=p.dataURL;a.download=p.name+".png";document.body.appendChild(a);a.click();a.remove();});
-}
-
 /* ============ New Game builder (form + AI auto-suggest) ============ */
 let NG={label:"",assets:[]};
-function csRebuildGameList(sel){
-  const g=$("cs-game"); g.innerHTML=Object.keys(RECIPES).map(k=>`<option value="${k}">${esc(RECIPES[k].label||k)}</option>`).join("");
-  if(sel)g.value=sel;
-}
 function ngFromRecipe(rec){
   NG.label=rec.label||"";
   NG.assets=Object.keys(rec.assets||{}).map(k=>{const a=rec.assets[k];return {
@@ -711,14 +523,8 @@ async function ngSave(){
   const r=await fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({action:"save-recipe",slug,recipe:rec})});
   if(!r.ok){$("ng-status").textContent="Save failed.";return;}
-  RECIPES[slug]=rec; csRebuildGameList(slug); csRefreshForm();
   $("ng-status").textContent='Saved. "'+rec.label+'" is now in the Game dropdown.';
   $("cs-builder").style.display="none";
-}
-async function csLoadRecipes(){
-  try{ const j=await (await fetch("/api/asset-studio?recipes=1")).json();
-    if(j&&j.recipes)Object.keys(j.recipes).forEach(k=>{ if(!RECIPES[k])RECIPES[k]=j.recipes[k]; });
-  }catch(e){}
 }
 
 /* ============ Upload tab (bring your own sheet) ============
@@ -1114,15 +920,6 @@ async function wlSave(){
 
 /* ---- wire up ---- */
 (async function initStudio(){
-  await csLoadRecipes();
-  csRebuildGameList();
-  $("cs-game").onchange=csRefreshForm;
-  $("cs-asset").onchange=csRefreshLayout;
-  $("cs-quality").onchange=()=>{$("cs-prompt").value=csBuildPrompt();};
-  $("cs-theme").oninput=()=>{$("cs-prompt").value=csBuildPrompt();};
-  $("cs-gen").onclick=csGenerate;
-  $("cs-keep").onclick=csKeep;
-  $("cs-download").onclick=csDownload;
   $("cs-newgame").onclick=()=>{const b=$("cs-builder");b.style.display=(b.style.display==="none")?"":"none";};
   $("ng-suggest").onclick=ngSuggest;
   $("ng-add").onclick=()=>{NG.assets.push({key:"asset"+(NG.assets.length+1),label:"New asset",mode:"sheet",size:"wide",transparent:true,role:"",rows:"",cols:"",subject:"{theme} ..."});ngRender();$("ng-save").style.display="";};
@@ -1149,14 +946,12 @@ async function wlSave(){
   document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
     const t=b.dataset.t;
     $("browseView").style.display=t==="browse"?"":"none";
-    $("createView").style.display=t==="create"?"":"none";
     $("uploadView").style.display=t==="upload"?"":"none";
     $("worldsView").style.display=t==="worlds"?"":"none";
     if(t==="upload")wbInit();
     if(t==="worlds")wlLoad();
     document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));
   });
-  csRefreshForm();
 })();
 </script>
 

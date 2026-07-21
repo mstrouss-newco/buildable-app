@@ -40,9 +40,19 @@ and a character is offered actor slots but never Background (reverse invariant).
 with zero JS errors. Regression: `qa-breaker` (all 8 levels + pong + render) and `qa-art`
 still PASS.
 
-Remaining in phase AP (NOT done this session, on purpose — do not start without a plan):
-- Retire the Create tab / relocate the New Game recipe builder to Build (AP1 leftover,
-  gated on Mike confirming the editor Generate + Library work live).
+Retire the Create tab (finished this session, Mike OK'd 2026-07-21): the Create *tab* was
+already gone for users since AP1 (art is made in the editor; the New Game recipe builder
+already lives in the Build tab). This pass removed the leftover HIDDEN `createView` DOM and
+its dead Create-only JS (RULES, assetRole/Size/Quality, RECIPES, CS state, csGame/csAsset/
+csBuildPrompt/csRefreshForm/csRefreshLayout/csSlice/csRenderPieces/csGenerate/csKeep/
+csDownload/csRebuildGameList/csLoadRecipes) plus its init wiring and tab routing. Kept the
+SHARED helpers that live in the same region (`esc`, `$`, the slicer: loadImg/contentBox/
+cropFrom/keyOutWhite/occRows/occCols/splitBands, and STUDIO_STYLE_BREAKER used by the live
+New Game builder). De-wired `ngSave` from the two dead Create helpers it called. Net −205
+lines. QA: qa-ap2 now also asserts the Build tab is intact (no createView, World Builder
+populated, New Game toggles) with zero JS errors — all pass.
+
+Remaining in phase AP:
 - Optional: let audio assets be assigned to a game's `music` slot from Browse too.
 ## 2026-07-21: WL polish 1 — shore, lighthouse fix, live weather audio
 **Shipped:** grassy shore (hail bounces + plinks on grass, snow blanket piles on shore,

@@ -131,6 +131,16 @@ const signedOutMsg = await page.textContent(".usheet");
 const noWrite = (await page.evaluate(() => window.__posts.length)) === 0;
 if (/[Ss]ign in/.test(signedOutMsg) && noWrite) ok("Signed-out apply prompts sign-in and writes nothing"); else fail("signed-out path wrong -> wrote:" + !noWrite);
 
+// 9) Build tab still works after Create-tab retirement (no dead-code regressions)
+await page.evaluate(() => { document.querySelectorAll(".umodal").forEach(m => m.style.display="none"); });
+await page.click('#tabs button[data-t="upload"]');
+await page.waitForSelector("#uploadView", { state: "visible" });
+const hasCreateView = await page.evaluate(() => !!document.getElementById("createView"));
+const wbGameOpts = await page.evaluate(() => (document.getElementById("wb-game")||{}).children?.length || 0);
+await page.click("#cs-newgame");
+const builderShown = await page.evaluate(() => document.getElementById("cs-builder").style.display !== "none");
+if (!hasCreateView && wbGameOpts > 0 && builderShown) ok("Build tab intact: no createView, World Builder populated, New Game toggles"); else fail(`build regression -> createView:${hasCreateView} wbOpts:${wbGameOpts} builder:${builderShown}`);
+
 if (errors.length) fail("JS errors on page: " + JSON.stringify(errors.slice(0,4)));
 else ok("No JS errors on the page");
 
