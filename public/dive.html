@@ -276,7 +276,8 @@ function shapeFor(c) { return SHAPES[c.shape] || SHAPES.blob; }
 // resolved through the shared /api/images pipeline. assetVersion busts the cache.
 function artBaseUrl(art, suffix, ext) {
   const v = (DATA && DATA.assetVersion) ? "?v=" + encodeURIComponent(DATA.assetVersion) : "";
-  if (/^https?:\/\//.test(art)) return art + suffix + "." + (ext || "webp") + v;      // absolute (preview)
+  if (art.indexOf("?") !== -1 || art.indexOf("/api/") === 0) return art;              // ready URL (Asset Studio) — use as-is
+  if (/^https?:\/\//.test(art)) return art + suffix + "." + (ext || "webp") + v;      // absolute base (preview)
   if (art.indexOf("/") !== -1) return "/" + art + suffix + "." + (ext || "webp") + v;    // static slot in public/
   return "/api/images?kind=explore&id=" + encodeURIComponent(art);                        // generative id
 }
