@@ -287,13 +287,37 @@
   .ask .wm .b{-webkit-text-fill-color:#fff;color:#fff;background:none;}
   .ask .wm .k,.ask .wm .p{color:#fff;}
 
+  /* ============ GAMES SHOWCASE ============ */
+  .games-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px;}
+  .gcard{
+    margin:0;background:#fff;border:2px solid var(--cream2);border-radius:22px;overflow:hidden;
+    transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow:0 9px 0 #ECE4F5;
+  }
+  .gcard:hover{transform:translateY(-6px);}
+  .gimg{position:relative;aspect-ratio:16/10;overflow:hidden;background:var(--ink2);}
+  .gimg img{display:block;width:100%;height:100%;object-fit:cover;}
+  .gcat{
+    position:absolute;top:11px;left:11px;font-family:'Nunito',sans-serif;font-weight:800;
+    font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:#fff;
+    padding:4px 10px;border-radius:100px;
+  }
+  .gc-arcade{background:rgba(124,92,252,.92);} .gc-board{background:rgba(245,158,11,.94);}
+  .gc-learn{background:rgba(255,107,107,.94);} .gc-physics{background:rgba(91,33,182,.92);}
+  .gc-action{background:rgba(236,72,153,.92);}
+  .gcard figcaption{padding:14px 18px 18px;}
+  .gcard h4{font-family:'Nunito',sans-serif;font-weight:900;font-size:17px;letter-spacing:-.3px;margin-bottom:3px;}
+  .gcard p{font-size:13px;color:#5b5570;line-height:1.45;}
+  .games-note{margin-top:24px;font-size:15px;color:#5b5570;font-weight:600;max-width:680px;}
+  .games-note b{color:var(--ink);}
+
   /* ---------- Responsive ---------- */
   @media(max-width:840px){
     .factory-grid,.proof,.tiers{grid-template-columns:1fr 1fr;}
+    .games-grid{grid-template-columns:repeat(2,1fr);}
   }
   @media(max-width:720px){
     .slide{padding:72px 22px;}
-    .blocks,.road,.factory-grid,.proof,.tiers{grid-template-columns:1fr;}
+    .blocks,.road,.factory-grid,.proof,.tiers,.games-grid{grid-template-columns:1fr;}
     .block.b2,.block.b4{transform:none;}
     .loop{grid-template-columns:1fr 1fr;gap:28px 10px;}
     .loop-step:not(:last-child)::after{display:none;}
@@ -430,10 +454,48 @@
           </svg>
         </div>
         <h3>Learning built in</h3>
-        <p>A learning layer parents and teachers can <b>switch on or off.</b> Kids answer real, human-reviewed questions to earn coins they spend in any game, and explore museum-grade exhibits like a 3D solar system.</p>
+        <p>A learning layer parents and teachers can <b>switch on or off.</b> Kids answer real, human-reviewed questions to earn coins they spend in any game, and explore museum-grade exhibits like a 3D solar system, an ocean deep-dive, and a weather lab.</p>
       </div>
 
     </div>
+  </div>
+</section>
+
+<!-- ============ 3b. THE GAMES ============ -->
+<section class="slide cream" style="padding-top:20px">
+  <div class="inner">
+    <div class="eyebrow reveal">Real games, live today</div>
+    <h2 class="big reveal d1">Not a pitch of games. A catalog kids <span class="grad-word">play right now</span>.</h2>
+    <p class="lead reveal d2">Every one of these runs in a browser today, each with its own art, all on the same shared engines. A taste of the arcade kids play in and build in.</p>
+
+    <div class="games-grid">
+      <figure class="gcard reveal d1">
+        <div class="gimg"><img src="/landing-shots/breaker-jungle.webp?v=1" alt="Breaker — smash through brick worlds" loading="lazy"><span class="gcat gc-arcade">Arcade</span></div>
+        <figcaption><h4>Breaker</h4><p>Smash through jungle, ocean, and space worlds of bricks.</p></figcaption>
+      </figure>
+      <figure class="gcard reveal d2">
+        <div class="gimg"><img src="/landing-shots/chess.webp?v=1" alt="Buildable Chess on a cosmic board" loading="lazy"><span class="gcat gc-board">Board</span></div>
+        <figcaption><h4>Chess</h4><p>Real chess, made kid-friendly, on a cosmic board.</p></figcaption>
+      </figure>
+      <figure class="gcard reveal d3">
+        <div class="gimg"><img src="/landing-shots/mathcannon.webp?v=1" alt="Math Cannon — pop the balloon with the right answer" loading="lazy"><span class="gcat gc-learn">Learning</span></div>
+        <figcaption><h4>Math Cannon</h4><p>Pop the balloon with the right answer out of the sky.</p></figcaption>
+      </figure>
+      <figure class="gcard reveal d1">
+        <div class="gimg"><img src="/landing-shots/runner.webp?v=1" alt="Runner — dash and dodge down the road" loading="lazy"><span class="gcat gc-arcade">Arcade</span></div>
+        <figcaption><h4>Runner</h4><p>Dash down the road, dodge the rocks, and leap for the score.</p></figcaption>
+      </figure>
+      <figure class="gcard reveal d2">
+        <div class="gimg"><img src="/landing-shots/sling.webp?v=1" alt="Sling Squad — fling your team to topple the tower" loading="lazy"><span class="gcat gc-physics">Physics</span></div>
+        <figcaption><h4>Sling Squad</h4><p>Fling your squad through the air to topple the tower.</p></figcaption>
+      </figure>
+      <figure class="gcard reveal d3">
+        <div class="gimg"><img src="/landing-shots/survival.webp?v=1" alt="Survival — outlast the waves" loading="lazy"><span class="gcat gc-action">Action</span></div>
+        <figcaption><h4>Survival</h4><p>Outlast the waves with power-ups, magnets, and black holes.</p></figcaption>
+      </figure>
+    </div>
+
+    <p class="games-note reveal d3">Six of roughly <b>25 live games and creative tools.</b> Because they share engines, art, and screens, each new one costs a fraction of the last, and every kid can start from any of them and make it their own.</p>
   </div>
 </section>
 
@@ -556,14 +618,18 @@
     <h2 class="big reveal d1">Learning isn't a mode here.<br>It's the <span class="grad-word">economy</span>.</h2>
     <p class="lead reveal d2">Kids earn by learning and spend on play. Real curriculum, human-reviewed, woven through every game, plus a growing museum of interactive exhibits. All of it is live today.</p>
 
-    <div class="reveal d2 edu-shots" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:36px">
+    <div class="reveal d2 edu-shots" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:36px">
       <figure style="margin:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:18px;overflow:hidden">
-        <img src="/landing-shots/orbit.webp?v=1" alt="Kidspedia: Our Solar System — a 3D exhibit kids spin, zoom, and fly through" style="display:block;width:100%;aspect-ratio:16/10;object-fit:cover" loading="lazy">
-        <figcaption style="padding:12px 16px;font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.5"><b style="color:rgba(255,255,255,.85)">Kidspedia: Our Solar System.</b> A real 3D exhibit kids spin, zoom, and fly through. Every fact is NASA-sourced, kid-voiced, and read aloud.</figcaption>
+        <img src="/landing-shots/orbit.webp?v=1" alt="Our Solar System — a 3D exhibit kids spin, zoom, and fly through" style="display:block;width:100%;aspect-ratio:16/10;object-fit:cover" loading="lazy">
+        <figcaption style="padding:12px 16px;font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.5"><b style="color:rgba(255,255,255,.85)">Our Solar System.</b> A real 3D exhibit kids spin, zoom, and fly through. Tap a planet and the camera swoops in with NASA-sourced facts, read aloud.</figcaption>
       </figure>
       <figure style="margin:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:18px;overflow:hidden">
-        <img src="/landing-shots/orbit-saturn.webp?v=1" alt="Tap Saturn and the camera flies in — rings, facts, and read-aloud" style="display:block;width:100%;aspect-ratio:16/10;object-fit:cover" loading="lazy">
-        <figcaption style="padding:12px 16px;font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.5"><b style="color:rgba(255,255,255,.85)">Tap a planet and fly in.</b> The camera swoops to Saturn, facts appear in kid language, and a play button reads them aloud. Every exhibit reports to the learning ledger.</figcaption>
+        <img src="/landing-shots/ocean-deep.webp?v=1" alt="Journey to the Deep — dive from the sunny surface down to the ocean floor" style="display:block;width:100%;aspect-ratio:16/10;object-fit:cover" loading="lazy">
+        <figcaption style="padding:12px 16px;font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.5"><b style="color:rgba(255,255,255,.85)">Journey to the Deep.</b> Kids dive layer by layer from the sunny reef to the pitch-black trench, tapping real sea creatures for kid-voiced facts along the way.</figcaption>
+      </figure>
+      <figure style="margin:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:18px;overflow:hidden">
+        <img src="/landing-shots/weather-lab.webp?v=1" alt="Weather Lab — kids make rain, snow, storms, and rainbows" style="display:block;width:100%;aspect-ratio:16/10;object-fit:cover" loading="lazy">
+        <figcaption style="padding:12px 16px;font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.5"><b style="color:rgba(255,255,255,.85)">Weather Lab.</b> Kids turn the sun, temperature, and wind up and down to make rain, snow, storms, and rainbows, and see the science behind each one.</figcaption>
       </figure>
     </div>
 
@@ -591,7 +657,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="10" ry="4.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(60 12 12)"/></svg>
         </div>
         <h4>Museum-grade exhibits</h4>
-        <p>Kidspedia exhibits are <b>templates plus data, like our games</b>. The 3D solar system is live now, and the atom, the heart, and dinosaurs ship next without an engineering project.</p>
+        <p>Kidspedia exhibits are <b>templates plus data, like our games</b>. A 3D solar system, an ocean deep-dive, and a weather lab are live now, with the atom, the heart, and dinosaurs next, no engineering project required.</p>
       </div>
 
       <div class="fcard reveal d3">
