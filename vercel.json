@@ -816,6 +816,28 @@
       "dest": "/question-review.html"
     },
     {
+      "src": "/lessons/art/(.*)",
+      "dest": "/lessons/art/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/lessons/([A-Za-z0-9_-]+).json",
+      "dest": "/lessons/$1.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/lessons.html",
+      "dest": "/lessons.html"
+    },
+    {
+      "src": "/lessons",
+      "dest": "/lessons.html"
+    },
+    {
       "src": "/sling/(.*)",
       "dest": "/sling/$1",
       "headers": {
