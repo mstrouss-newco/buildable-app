@@ -63,7 +63,7 @@ function collectItems(data){
   const out=[];
   const push=(it)=>{
     if(!it||!it.id||!it.fact) return;
-    out.push({ id:String(it.id), name:String(it.name||""), text:(String(it.name||"")+". "+String(it.fact)).trim().slice(0,MAX_TEXT) });
+    out.push({ id:String(it.id), name:String(it.name||""), text:String(it.fact).trim().slice(0,MAX_TEXT) });
   };
   if(data.center) push(data.center);
   (Array.isArray(data.bodies)?data.bodies:[]).forEach(push);
