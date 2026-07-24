@@ -156,6 +156,16 @@
   .rm-arrow:hover{color:var(--accent);border-color:var(--accent)}
   .rm-manual{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#fff1d9;color:#8a5a00;border:1px solid #f0d9a8;border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:middle}
   .rm-addsess{margin-top:10px}
+  .rm-focus{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 16px 15px;margin-bottom:14px}
+  .rm-focus h2{font-size:16px;margin:0}
+  .rm-focus-sub{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:12px 0 7px}
+  .rm-chips{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px}
+  .rm-chip{background:var(--card);border:1px solid var(--line);color:var(--muted);font-weight:700;font-size:13px;padding:7px 14px;border-radius:999px;cursor:pointer}
+  .rm-chip:hover{color:var(--ink)}
+  .rm-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .rm-hidden-note{font-size:12.5px;color:var(--muted);padding:4px 0 2px;cursor:pointer;font-weight:600}
+  .rm-hidden-note:hover{color:var(--accent)}
+  .rm-paste-card.collapsed{display:none}
 
   /* PIN gate */
   #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60}
@@ -228,7 +238,7 @@
   </div>
 
   <div id="roadmapView">
-    <div class="addcard rm-paste-card">
+    <div class="addcard rm-paste-card collapsed" id="rm-paste-card">
       <label>Paste your roadmap (markdown), then Import. Re-importing keeps your checkmarks, edits, and notes.</label>
       <textarea id="rm-paste" placeholder="## Phase 1 - Speed fix (do first)&#10;Done when: the app feels fast on a phone&#10;- [ ] Session 1A - Compression pass. Compress all images and audio so pages load faster."></textarea>
       <div class="addfoot">
@@ -658,6 +668,7 @@ async function saveSettings(){
 
 /* ================= ROADMAP TAB ================= */
 let rmOpen={}, rmArchOpen=false, rmEditingId=null;
+let rmFilter="todo", rmDoneOpen={}, rmFinOpen=false;
 
 function switchTab(which){
   const log=which!=="roadmap";
@@ -752,47 +763,118 @@ function startNextSession(){
   if(!s){ toast("All sessions are done or parked"); return; }
   openSessionPrompt(s.id);
 }
+function phaseIsDone(num){ const pr=phaseProgress(num); return pr.total>0 && pr.done>=pr.total; }
+function rmAnchor(id){ return "rmc-"+String(id).replace(/[^a-z0-9]+/gi,"-"); }
+function rmVisible(s){
+  if(rmFilter==="all") return true;
+  if(rmFilter==="todo") return !s.done;
+  if(rmFilter==="claude") return !!s.deployed && !s.done;
+  if(rmFilter==="done") return !!s.done;
+  return true;
+}
+function rmShow(s,key){ return rmVisible(s) || !!rmDoneOpen[key]; }
+function rmSetFilter(k){ rmFilter=k; rmDoneOpen={}; renderRoadmap(); window.scrollTo({top:0,behavior:"smooth"}); }
+function rmShowHidden(key){ rmDoneOpen[key]=true; renderRoadmap(); }
+function rmJump(id){
+  const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  if(s.phaseNum){ rmOpen[s.phaseNum]=true; rmDoneOpen[s.phaseNum]=true; if(phaseIsDone(s.phaseNum)) rmFinOpen=true; }
+  renderRoadmap();
+  const el=document.getElementById(rmAnchor(id));
+  if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
+}
+function rmChips(){
+  const rd=rmData(); let todo=0,claude=0,done=0;
+  rd.sessions.forEach(s=>{ if(s.later) return; if(s.done) done++; else { todo++; if(s.deployed) claude++; } });
+  const mk=(k,label,n)=>'<button class="rm-chip '+(rmFilter===k?"on":"")+'" onclick=\'rmSetFilter("'+k+'")\'>'+label+' <span style="opacity:.65">'+n+'</span></button>';
+  return '<div class="rm-chips">'+mk("todo","To do",todo)+mk("claude","With Claude",claude)+mk("done","Done",done)+mk("all","Everything",todo+done)+'</div>';
+}
+function rmMiniCard(s){
+  const isNext=s.id===rmNextId;
+  return '<div class="rm-card '+(s.deployed?"deployed":"")+(isNext?" next":"")+'">'
+    +'<div class="rm-top">'
+    +'<input type="checkbox" onchange=\'rmToggleDone('+JSON.stringify(s.id)+')\'>'
+    +'<span class="rm-id">'+esc(s.id)+'</span><span class="rm-name">'+esc(s.name)+'</span>'
+    +(s.deployed?'<span class="rm-deploy-badge">with Claude</span>':(isNext?'<span class="rm-next-badge">next</span>':''))
+    +'</div>'
+    +(s.desc?'<div class="rm-desc">'+esc(s.desc)+'</div>':'')
+    +'<div class="rm-btns">'
+    +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
+    +'<button class="btn ghost mini" onclick=\'rmJump('+JSON.stringify(s.id)+')\'>Show in phase</button>'
+    +'</div></div>';
+}
+function rmFocusBar(){
+  const rd=rmData();
+  const withClaude=rd.sessions.filter(s=>!s.later&&!s.done&&s.deployed);
+  const queue=[];
+  rd.phases.forEach(ph=>{ rd.sessions.forEach(s=>{ if(s.phaseNum===ph.num&&!s.later&&!s.done&&!s.deployed) queue.push(s); }); });
+  const upNext=queue.slice(0,3);
+  if(!withClaude.length && !upNext.length) return '<div class="rm-focus"><h2>Right now</h2><div class="rm-focus-sub" style="margin-bottom:0">Nothing open. Everything is done or parked.</div></div>';
+  let h='<div class="rm-focus"><h2>Right now</h2>';
+  if(withClaude.length) h+='<div class="rm-focus-sub">With Claude ('+withClaude.length+')</div>'+withClaude.map(rmMiniCard).join("");
+  if(upNext.length) h+='<div class="rm-focus-sub">Up next</div>'+upNext.map(rmMiniCard).join("");
+  h+='</div>';
+  return h;
+}
+function rmPhaseHtml(ph){
+  const rd=rmData();
+  const pr=phaseProgress(ph.num);
+  const open=rmOpen[ph.num]?"open":"";
+  const all=rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
+  const ss=all.filter(s=>rmShow(s,ph.num));
+  const hidden=all.length-ss.length;
+  const doneCls=(pr.total&&pr.done>=pr.total)?"s-ready":"s-wait";
+  const canDel=!!ph.manual;
+  return '<div class="bucket">'
+    +'<div class="bhead" onclick=\'rmToggle('+JSON.stringify(ph.num)+')\'>'
+    +'<h2><span class="rm-reorder">'
+      +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMovePhase('+JSON.stringify(ph.num)+',-1)\'>&#9650;</button>'
+      +'<button class="rm-arrow" title="Move down" onclick=\'event.stopPropagation();rmMovePhase('+JSON.stringify(ph.num)+',1)\'>&#9660;</button>'
+    +'</span>Phase '+esc(ph.num)+' <span style="font-weight:600">'+esc(ph.title)+'</span>'
+    +(canDel?'<span class="rm-manual">yours</span>':'')+'</h2>'
+    +'<span class="status '+doneCls+'">'+pr.done+' of '+pr.total+' done</span>'
+    +(canDel?'<span class="x" title="Delete phase" onclick=\'event.stopPropagation();rmDeletePhase('+JSON.stringify(ph.num)+')\'>&#10005;</span>':'')
+    +'</div>'
+    +'<div class="body '+open+'">'
+    +(ph.doneWhen?'<div class="rm-donewhen">Done when: '+esc(ph.doneWhen)+'</div>':'')
+    +(ss.length?ss.map(s=>rmCard(s,false)).join(""):'<p class="legend" style="padding:4px 0">'+(all.length?'Nothing here matches the filter above.':'No sessions yet.')+'</p>')
+    +(hidden>0?'<div class="rm-hidden-note" onclick=\'event.stopPropagation();rmShowHidden('+JSON.stringify(ph.num)+')\'>'+hidden+' more hidden &mdash; show</div>':'')
+    +'<div class="quickadd rm-addsess"><button class="btn mini" onclick=\'rmAddSession('+JSON.stringify(ph.num)+')\'>+ Add session</button></div>'
+    +'</div></div>';
+}
 function renderRoadmap(){
   const board=document.getElementById("rm-board"); if(!board) return;
   const rd=rmData();
   const ns=nextSession(); rmNextId=ns?ns.id:null;
   if(!rd.sessions.length && !rd.archived.length){
-    board.innerHTML=rmAddBar()+'<div class="empty"><b>No roadmap yet.</b><br>Paste a roadmap above, or tap <b>+ New phase</b> to build one yourself.</div>';
+    board.innerHTML=rmAddBar()+'<div class="empty"><b>No roadmap yet.</b><br>Tap <b>Import roadmap</b> to paste one, or <b>+ New phase</b> to build one yourself.</div>';
     return;
   }
-  let html=rmAddBar();
-  if(ns) html+='<div class="rm-startnext"><button class="btn green" onclick="startNextSession()">Start next session — '+esc(ns.id)+(ns.name?' '+esc(ns.name):'')+'</button></div>';
-  rd.phases.forEach(ph=>{
-    const pr=phaseProgress(ph.num);
-    if(rmOpen[ph.num]===undefined) rmOpen[ph.num] = !(pr.total>0 && pr.done>=pr.total);
-    const open=rmOpen[ph.num]?"open":"";
-    const ss=rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
-    const doneCls=(pr.total&&pr.done>=pr.total)?"s-ready":"s-wait";
-    const canDel=!!ph.manual;
-    html+='<div class="bucket">'
-      +'<div class="bhead" onclick=\'rmToggle('+JSON.stringify(ph.num)+')\'>'
-      +'<h2><span class="rm-reorder">'
-        +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMovePhase('+JSON.stringify(ph.num)+',-1)\'>&#9650;</button>'
-        +'<button class="rm-arrow" title="Move down" onclick=\'event.stopPropagation();rmMovePhase('+JSON.stringify(ph.num)+',1)\'>&#9660;</button>'
-      +'</span>Phase '+esc(ph.num)+' <span style="font-weight:600">'+esc(ph.title)+'</span>'
-      +(canDel?'<span class="rm-manual">yours</span>':'')+'</h2>'
-      +'<span class="status '+doneCls+'">'+pr.done+' of '+pr.total+' done</span>'
-      +(canDel?'<span class="x" title="Delete phase" onclick=\'event.stopPropagation();rmDeletePhase('+JSON.stringify(ph.num)+')\'>✕</span>':'')
-      +'</div>'
-      +'<div class="body '+open+'">'
-      +(ph.doneWhen?'<div class="rm-donewhen">Done when: '+esc(ph.doneWhen)+'</div>':'')
-      +(ss.length?ss.map(s=>rmCard(s,false)).join(""):'<p class="legend" style="padding:4px 0">No sessions yet.</p>')
-      +'<div class="quickadd rm-addsess"><button class="btn mini" onclick=\'rmAddSession('+JSON.stringify(ph.num)+')\'>+ Add session</button></div>'
-      +'</div></div>';
-  });
+  let html=rmAddBar()+rmFocusBar()+rmChips();
+  const live=[], fin=[];
+  rd.phases.forEach(ph=>{ (phaseIsDone(ph.num)?fin:live).push(ph); });
+  live.forEach(ph=>{ if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true; html+=rmPhaseHtml(ph); });
   const phaseNums=new Set(rd.phases.map(p=>p.num));
-  const orphans=rd.sessions.filter(s=>!phaseNums.has(s.phaseNum)&&!s.later);
-  if(orphans.length){
-    html+='<div class="bucket"><div class="bhead"><h2>Other sessions</h2></div><div class="body open">'+orphans.map(s=>rmCard(s,false)).join("")+'</div></div>';
+  const orphansAll=rd.sessions.filter(s=>!phaseNums.has(s.phaseNum)&&!s.later);
+  const orphans=orphansAll.filter(s=>rmShow(s,"__orphan__"));
+  if(orphansAll.length){
+    html+='<div class="bucket"><div class="bhead"><h2>Other sessions <span class="count">'+orphansAll.length+'</span></h2></div><div class="body open">'
+      +(orphans.length?orphans.map(s=>rmCard(s,false)).join(""):'<p class="legend" style="padding:4px 0">Nothing here matches the filter above.</p>')
+      +((orphansAll.length-orphans.length)>0?'<div class="rm-hidden-note" onclick=\'rmShowHidden("__orphan__")\'>'+(orphansAll.length-orphans.length)+' more hidden &mdash; show</div>':'')
+      +'</div></div>';
+  }
+  if(fin.length){
+    const totalDone=fin.reduce((n,ph)=>n+phaseProgress(ph.num).done,0);
+    html+='<div class="bucket">'
+      +'<div class="bhead" onclick="rmFinOpen=!rmFinOpen;renderRoadmap()">'
+      +'<h2>Finished phases <span class="count">'+fin.length+'</span></h2>'
+      +'<span class="status s-ready">'+totalDone+' sessions done</span></div>'
+      +'<div class="body '+(rmFinOpen?"open":"")+'">'
+      +(rmFinOpen?fin.map(ph=>{ if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=false; return rmPhaseHtml(ph); }).join(""):"")
+      +'</div></div>';
   }
   {
     const later=rd.sessions.filter(s=>s.later);
-    if(rmOpen["__later__"]===undefined) rmOpen["__later__"]=later.length>0;
+    if(rmOpen["__later__"]===undefined) rmOpen["__later__"]=false;
     const lopen=rmOpen["__later__"]?"open":"";
     html+='<div class="bucket">'
       +'<div class="bhead" onclick=\'rmToggle("__later__")\'>'
@@ -808,7 +890,7 @@ function renderRoadmap(){
       +'<div class="bhead" onclick="rmArchOpen=!rmArchOpen;renderRoadmap()">'
       +'<h2>Archived <span class="count">'+rd.archived.length+'</span></h2>'
       +'<span class="status s-wait">removed from latest paste</span></div>'
-      +'<div class="body '+(rmArchOpen?"open":"")+'">'+rd.archived.map(s=>rmCard(s,true)).join("")+'</div></div>';
+      +'<div class="body '+(rmArchOpen?"open":"")+'">'+(rmArchOpen?rd.archived.map(s=>rmCard(s,true)).join(""):"")+'</div></div>';
   }
   board.innerHTML=html;
   bindRmNotes();
@@ -829,7 +911,7 @@ function rmCard(s, archived){
   const notesHtml=notes.length?'<div class="rm-notes">'+notes.map((n,i)=>'<div class="rm-note"><span>'+esc(n)+'</span>'+(archived?"":'<span class="x" onclick=\'rmDelNote('+JSON.stringify(s.id)+','+i+')\' title="Remove note">✕</span>')+'</div>').join("")+'</div>':"";
   const isNext=!archived&&s.id===rmNextId;
   const isDeployed=!archived&&!!s.deployed&&!s.done;
-  return '<div class="rm-card '+(s.done?"done":"")+(isNext?" next":"")+(isDeployed?" deployed":"")+'">'
+  return '<div class="rm-card '+(s.done?"done":"")+(isNext?" next":"")+(isDeployed?" deployed":"")+'" id="'+(archived?"":rmAnchor(s.id))+'">'
     +'<div class="rm-top">'
     +(archived?"":'<span class="rm-reorder">'
       +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMoveSession('+JSON.stringify(s.id)+',-1)\'>&#9650;</button>'
@@ -892,8 +974,9 @@ async function rmDelNote(id,i){
 }
 
 function rmAddBar(){
-  return '<div class="rm-addbar"><button class="btn" onclick="rmAddPhase()">+ New phase</button></div>';
+  return '<div class="rm-addbar"><button class="btn" onclick="rmAddPhase()">+ New phase</button> <button class="btn ghost" onclick="rmTogglePaste()">Import roadmap</button></div>';
 }
+function rmTogglePaste(){ const c=document.getElementById("rm-paste-card"); if(c) c.classList.toggle("collapsed"); }
 function nextPhaseNum(){
   const rd=rmData(); let mx=0;
   rd.phases.forEach(p=>{ const n=parseInt(p.num,10); if(!isNaN(n)&&n>mx) mx=n; });
