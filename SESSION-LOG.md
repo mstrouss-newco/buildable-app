@@ -1,6 +1,73 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-24: Session LS1 — Lesson player + first hand-built lesson (shipped)
+
+Phase LS, block LS1 only. Built the school-lesson player and the ONE sample
+lesson it runs, per the approved lessons mock. Nothing kid-facing is switched on:
+there is still no Lessons tile (that is LS2) and the page is reachable only by
+its address, so Mike can review it before any kid sees it.
+
+**What shipped**
+
+- `public/lessons.html` — the five-step lesson screen. Step 1 the buddy names
+  the skill; step 2 three teach cards with painted ten-frames and a "Read to me"
+  button; step 3 try-it-together with a hint on demand, where a wrong tap opens
+  the hint and waits (there is no way to fail it); step 4 six on-your-own
+  questions pulled from the approved question bank for that exact skill; step 5 a
+  five-question star check needing 4 of 5. Mastering shows the painted star and
+  pays 25 coins through the shared wallet (`awardOnce`, so replaying cannot farm
+  coins). Missing shows a gentle re-teach with "Show me again", "Try the star
+  check again" and "Come back later" — the star waits, and there is no shame
+  screen. Cream brand look, drawn SVG icons, no emojis.
+- `public/lessons/g1-making-ten.json` — the hand-built Grade 1 lesson
+  ("Making ten", skill `addition-within-20`), marked `status: approved`,
+  `reviewedBy: mike`. Its shape is deliberately the one the LS3 lesson factory
+  will produce, so the factory will write data and not code. Art is named in the
+  lesson, never hardcoded in the page.
+- `public/lessons/art/*` — real painted art, not drawn shapes: the countable
+  objects are the painted spheres already shipped with Breaker's jungle world
+  (sliced, squared, 128px webp + png fallback, under 11KB each) and the buddy and
+  the mastery star are the painted clay star from Claymatch.
+- `api/lesson-questions.js` — hands the player N distinct questions for ONE exact
+  skill. Reads only `status='approved'` rows on subject + grade + that exact
+  skill and never widens the filter to pad the count. Tops up from the same local
+  generator the rest of the app uses when the bank is short, marked
+  `source:"local"` and NOT written into the reviewed bank.
+- `vercel.json` — routes `/lessons`, `/lessons.html`, `/lessons/*.json`
+  (no-cache) and `/lessons/art/*` (immutable), all before the catch-all.
+- `qa-lessons.mjs` + `qa-lessons-dom.mjs`.
+
+**Learning ledger (8B)** — every single answer is reported: guided, practice and
+star check, tagged `lesson-guided` / `lesson-practice` / `lesson-check` so the 6B
+dashboard can tell teaching from assessment. Inside the shell the page sends the
+cartridge `skill` message and lets the shell relay it with the kid attached;
+opened standalone it POSTs to `/api/log-learning-event` itself. Never both, so
+nothing is double-counted. Bank questions carry their question id through to the
+ledger row.
+
+**QA (ran, not claimed)** — `node qa-lessons.mjs .` ALL CHECKS PASSED (74 checks,
+including solving every hand-written question to prove the answer key is right).
+`node qa-lessons-dom.mjs .` ALL CHECKS PASSED — a real browser played the lesson
+end to end twice, once mastering (5 of 5, star + 25 coins, 13 ledger rows) and
+once deliberately missing every star-check question (0 coins, re-teach shown,
+recorded as an attempt but not mastered, still 13 ledger rows). No existing game
+was touched, so no other game's QA script applies.
+
+**Open for Mike**
+
+- Review the lesson at `/lessons` and say whether the flow and the painted art
+  are right before LS3 generates lessons in this shape.
+- The approved question bank has no Grade 1 addition rows yet, so step 4 is
+  currently served by the built-in generator (honest and on-skill, but not
+  reviewed content). Approving a batch at `/question-review` switches it over
+  with no code change.
+- Still to come in phase LS: LS2 the Lessons tile, subject picker and path map;
+  LS3 the lesson factory, review page and the first Math K-2 batch; LS4 the
+  reading batch, placement check, dashboard tie-in, and Mike flipping the tile
+  from Coming Soon to live.
+
+
 ## 2026-07-21: Cabin quality-tier test (shipped)
 
 Mike judged the cut-paper direction sample "bad AI art" (fair: quality low +

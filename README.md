@@ -55,6 +55,34 @@ is the pre-existing manifest-vs-engine level-count mismatch, unrelated). Files:
 `public/castle-guard.html`, `public/mahjong-engine.html`, `public/memory-engine.html`,
 `public/sling-squad.html`, `public/tumble-engine.html`.
 
+## Session LS1 — Lesson player + first hand-built lesson (July 24 2026)
+Phase LS block LS1 only. New kid-facing page `public/lessons.html`: a five-step
+school lesson — buddy names the skill, three teach cards with painted ten-frames
+and read-aloud, a try-it-together step that cannot be failed (a wrong tap opens
+the hint and waits), six on-your-own questions from the APPROVED question bank
+for that exact skill, then a 4-of-5 star check paying a star and 25 coins through
+`BuildableWallet.awardOnce`. A miss is a gentle re-teach plus another go; the
+star waits and there is no shame screen. Ships with ONE hand-built, Mike-approved
+lesson, `public/lessons/g1-making-ten.json` (Grade 1, skill
+`addition-within-20`), in the exact shape the LS3 lesson factory will produce.
+Painted art only (`public/lessons/art/*`: Breaker jungle spheres as counters,
+the Claymatch clay star as buddy and mastery star, webp + png, named in the
+lesson not hardcoded); no emojis. New `api/lesson-questions.js` serves N distinct
+`status='approved'` questions for ONE exact skill and never widens the skill
+filter to pad the count, topping up from `_quizgen`'s local generator (marked
+`source:"local"`, never written back to the bank) so a kid is never blocked while
+the 8A batches await review. EVERY answer reports to the 8B learning ledger,
+exactly once — cartridge `skill` message inside the shell, direct
+`/api/log-learning-event` POST standalone — tagged `lesson-guided` /
+`lesson-practice` / `lesson-check`. Routes added for `/lessons`, the lesson JSON
+(no-cache) and the art (immutable). NOT yet kid-visible: no Lessons tile until
+LS2, and Mike flips it live in LS4. QA: `qa-lessons.mjs` ALL CHECKS PASSED and
+the optional `qa-lessons-dom.mjs` played the lesson end to end in a real browser
+twice (mastered, and deliberately missed) — ALL CHECKS PASSED. No existing game
+was touched. Files: `public/lessons.html`, `public/lessons/g1-making-ten.json`,
+`public/lessons/art/*`, `api/lesson-questions.js`, `vercel.json`,
+`qa-lessons.mjs`, `qa-lessons-dom.mjs`.
+
 ## Session 7K — Sling & Maze in-app nav overlap fixed (July 21 2026)
 In-app, Sling and Maze re-drew their own nav buttons once a level started, on top of
 the shell's Home / Sound / Menu (Sling's "‹ Menu" over the top-left Home; Maze's
