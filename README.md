@@ -6,6 +6,33 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 7L — Riley's Garden: stuck sound fixed, plus a cleanup pass (July 24 2026)
+`public/rileys-garden.html`, `qa-rileys.mjs`.
+**The reported bug:** the magnet ("Farmer") fanfare replayed over and over. `fruitGot` was never
+spent on activation, so the moment the magnet timed out the next fruit re-armed it and replayed the
+sound; it also pinned the "Farmer?" meter at full forever. Fruit is spent on activation now.
+**Audio rebuild around it:** one master bus (gain -> soft limiter -> speakers) that every sfx, drum,
+note and the bee buzz routes through; per-sound cooldowns (`SFX_GAP`) + a 14-voice budget, because
+the auto-weapon fired a sound every 300-350ms and an area kill could fire `beekill` five times in a
+frame; the bee buzz now tracks and tears down every node it creates (the old `stopBuzz` never
+disconnected the main oscillator); audio sleeps on `visibilitychange`/`pagehide`.
+**Engine bugs found in the once-over:** `mainLoop` scheduled `loop` AND called it, and `loop`
+schedules itself — two rAF chains ran for the whole session (double particle spray, double render
+cost). The title screen never returned after Home because `loop` had no handoff. The boss fight
+rebuilt the entire HUD every frame. Best score was saved but never shown. Two intro-music fades
+could overlap.
+**Cleanup:** two emoji leaked past 7B (the pause glyph and an alarm clock) — now drawn SVG and plain
+words; removed `drawEmoji`, `EMJ`, the empty weapon `e:''` slots and the dead `beeRespawn` counters.
+**Art polish (7B was only the first emoji-to-drawn pass):** shading/highlight/drop shadow on all nine
+pickups, a real apple silhouette (the old one was two circles plus a zero-area path), blueberry
+crowns, seeded sunflower, rose spiral, moonflower glow; the bee gained antennae, a stinger, a collar,
+wing blur and now faces its direction of travel; the snake is one tapered lit body instead of
+flickering circles; sun/crescent moon/hill band in the sky, shaded turf with grass and blossoms.
+Screenshotting every level (headless Chromium) also caught the HUD text running under the Sound and
+Pause buttons, and the Sound button rendering the WORD "Sound" wider than its own circle.
+QA: `qa-rileys.mjs` ALL CHECKS PASSED, with new audio + engine-loop sections; all nine new checks
+mutation-tested (reintroduce the bug, confirm it fails). Ref: SESSION-LOG.md same date.
+
 ## Survival — remove in-game demo, Journey uses level art, Lightning replaces Slow Heal (July 21 2026)
 Owner follow-ups. `public/survival-engine.html` + `public/buildable-renders.js`.
 - In-game auto-demo removed (the pre-level start screen already teaches it): levels now just start

@@ -104,6 +104,94 @@ was touched, so no other game's QA script applies.
   reading batch, placement check, dashboard tie-in, and Mike flipping the tile
   from Coming Soon to live.
 
+## 2026-07-24 — Session 7L: Riley's Garden — sound bug fixed + cleanup pass (shipped)
+
+**The bug Mike reported.** A sound in Riley's Garden kept playing over and over instead of
+firing once. It was the magnet pickup ("Farmer") fanfare. `fruitGot` counted fruit up but was
+never spent, so once you passed the 5-fruit threshold the magnet re-armed on the very next
+piece of fruit the instant it timed out — replaying its five-note fanfare on a loop for the
+rest of the level. The same stuck counter also pinned the "Farmer?" progress meter at full
+forever after the first magnet. Fruit is now spent when the magnet fires, which fixes both.
+
+**Audio rebuilt around it.** Auditing the rest of the sound found three more ways it could
+drone or mush:
+- **One master bus.** Every sfx, drum, music note and the bee buzz now goes through
+  gain -> DynamicsCompressor -> speakers instead of each oscillator wiring itself straight to
+  the output. A bomb that clears the screen can no longer stack raw voices into distortion.
+- **Per-sound cooldowns + a voice budget.** `SFX_GAP` gives each sound a minimum gap and
+  `VOICE_CAP` (14) caps live oscillators. The auto-weapon fires every 300-350ms forever with
+  no gap at all, and an area kill can call `beekill` five times in one frame — those repeats
+  are dropped now instead of layering.
+- **The bee buzz.** It is the only genuinely continuous sound in the game and the old
+  `stopBuzz` only stopped *some* of the nodes it made (it never disconnected the main
+  oscillator). It now keeps every node in one list and tears the whole list down. Added
+  `visibilitychange` + `pagehide` handling so switching tabs or locking the iPad goes silent
+  instead of leaving the buzz droning behind a hidden page.
+
+**Engine bugs found in the once-over.**
+- **Two game loops.** `mainLoop` scheduled `loop` and then also called it, and `loop`
+  schedules itself at the end — so starting a game left TWO animation chains running for the
+  rest of the session. Everything drew twice per frame: double the particle spray, double the
+  render cost on an iPad. One chain now.
+- **Title screen never came back after Home**, because `loop` had no way to hand the frame
+  back. Home showed a blank canvas behind the menu. Fixed with a handoff.
+- **The boss fight rebuilt the whole HUD every frame** — three inline SVG hearts, the collect
+  bar and the weapon row, from scratch, 60 times a second, on the busiest level. Only the boss
+  health bar is touched now.
+- **Best score was saved to the device on every level clear but never displayed anywhere.**
+  Both end screens report it now.
+- Starting a level twice quickly left two intro-music fades fighting over the same volume.
+
+**Cleanup.** Two emoji had leaked past the 7B art pass — the in-game pause button glyph and an
+alarm clock on the "Almost done!" nudge. Both were invisible to QA because the 7B emoji regex
+skipped their character range (see below). Now a drawn SVG icon and plain words. Also removed
+the dead `drawEmoji()` renderer, the empty `EMJ` glyph table, the empty `e:''` slot on all five
+weapons, and the `beeRespawn` counters the wave system replaced.
+
+**Art polish — 7B was only the first emoji-to-drawn pass, this is the second.** Still all drawn
+vector art, no image files added:
+- All nine pickups got shading, a highlight and a soft drop shadow so they read as objects, not
+  flat stickers. The **apple was two overlapping circles plus a path that enclosed no area and
+  therefore drew nothing** — now one solid apple silhouette. Blueberries got their crowns,
+  grapes per-berry shading, the sunflower a seeded centre and a shaded back petal row, the rose
+  its spiral, the moonflower a glow (it is the night-level flower).
+- **The bee** gained antennae, a stinger and a fuzzy collar — the 7B bee was a striped blob that
+  read as a wasp. Its wings draw as two ghosted copies at different beat offsets so they blur
+  like a real wingbeat, it banks as it bobs, and it faces the way it is flying.
+- **The snake** was a row of plain circles flickering between two greens every other segment;
+  now one longer tapered body with a lit back, soft banding and a proper wedge head.
+- **The world**: a sun (crescent moon at night, nothing in the rain) and a rolling hill band
+  behind the play area; the ground went from two flat bars and one row of identical bumps to
+  shaded turf with a soil line, two depths of grass and a scatter of drawn blossoms; clouds got
+  a soft underside.
+
+**Rendering each level headlessly and looking at it** (rather than trusting the code) caught two
+more: the HUD text ran underneath the Sound and Pause buttons on every level, and the Sound
+button rendered the WORD "Sound", which is wider than its own 36px circle and spilled across the
+score. Both fixed; the Sound button is a drawn speaker/mute icon now, matching Pause.
+
+**QA.** `qa-rileys.mjs` — **ALL CHECKS PASSED**. The harness itself needed work:
+- Its emoji regex skipped U+2300-U+25FF, which is exactly how the pause and alarm-clock glyphs
+  survived a "file is 100% emoji-free" PASS. Widened (box-drawing deliberately excluded — those
+  are the comment rules, not product art).
+- It declared the regex `/g` and then used `.test()`, which is stateful and flip-flops. Now
+  rebuilt fresh per call.
+- **`has a screen + render route` had been FAILING since a much earlier session** and was
+  logged as a known pre-existing failure. It was not a real break: it asserted the old
+  `setScreen(SCREEN_RILEYS)` navigation, and the shell moved to landing pages (`openLanding`).
+  It accepts either shape now, so Riley's Garden is genuinely green for the first time in a while.
+- New audio and engine-loop sections. **All nine new checks were mutation-tested** — each bug
+  reintroduced one at a time to confirm the check actually fails. None are vacuous.
+
+Regression sweep (untouched games): croc, survival, breaker, sling, memory, mahjong all PASS.
+`qa-castleguard.mjs` fails on "12 levels line up with the engine" — **pre-existing, verified by
+running it against the commit before this session; unrelated to 7L and left alone.**
+
+**Remains in this phase (7B conversion campaign, not started):** the rest of Mike's keeper list.
+Riley's Garden itself is done for now; open nits are the `beesRespawn` values still sitting in the
+level data with nothing reading them, and the ~107KB base64 intro track still inlined in the HTML
+(moving it to a real file would cut the page nearly in half, but it needs a vercel.json route and
+is its own small job).
 
 ## 2026-07-21: Cabin quality-tier test (shipped)
 
