@@ -144,24 +144,62 @@ const show=id=>$(id).classList.remove('hid'),hide=id=>$(id).classList.add('hid')
 function showScr(id){['ss','lcs','gos','ws','ps'].forEach(s=>hide(s));if(id)show(id);}
 
 // ── Audio context ────────────────────────────────────────────
-let AC=null,muted=false;
+/* Session 7L audio rebuild. Everything that makes a noise now goes through ONE
+   master bus (gain -> limiter -> speakers) instead of each oscillator wiring
+   itself straight to the output. That is what stops a big multi-kill from
+   stacking twenty raw voices into a distorted drone, and it gives us a single
+   place to silence the whole game. */
+let AC=null,AMASTER=null,muted=false;
 const introAudio=$('introAudio')||{paused:true,play:()=>{},pause:()=>{},currentTime:0,volume:1};
 function getAC(){if(!AC)try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}return AC;}
-function resumeAC(){const a=getAC();if(a&&a.state==='suspended')a.resume();return a;}
+function bus(){
+  const a=getAC();if(!a)return null;
+  if(!AMASTER){
+    try{
+      AMASTER=a.createGain();AMASTER.gain.value=0.9;
+      let out=a.destination;
+      if(a.createDynamicsCompressor){                 // soft limiter: no clipping on busy frames
+        const c=a.createDynamicsCompressor();
+        try{c.threshold.value=-14;c.knee.value=22;c.ratio.value=12;c.attack.value=.003;c.release.value=.22;}catch(e){}
+        c.connect(a.destination);out=c;
+      }
+      AMASTER.connect(out);
+    }catch(e){AMASTER=null;}
+  }
+  return AMASTER;
+}
+function resumeAC(){const a=getAC();if(a&&a.state==='suspended')a.resume();bus();return a;}
 function startIntro(){if(muted)return;try{introAudio.currentTime=0;introAudio.volume=0.75;introAudio.play().catch(()=>{});}catch(e){}}
 function stopIntro(){try{introAudio.pause();introAudio.currentTime=0;}catch(e){}}
 
 // ── SFX ──────────────────────────────────────────────────────
+/* Two brakes, both added in 7L:
+   1. PER-SOUND COOLDOWN. The auto-weapon fires every 300-350ms forever, and an
+      area kill can call beekill five times in one frame. Each sound now has a
+      minimum gap; repeats inside that gap are dropped instead of layering.
+   2. VOICE BUDGET. A hard cap on how many oscillators can be alive at once, so
+      a bomb that clears the screen can never turn into a wall of sound. */
+const SFX_GAP={wep0:520,wep1:700,wep2:820,wep3:480,wep4:1200,beekill:90,snakekill:110,bosshit:130,fruit:70,flower:70,orange:70,combo:180,snake:400,sting:500};
+const SFX_LAST={};
+const VOICE_CAP=14;
+let voices=0;
 function sfx(type){
-  if(muted)return;const a=resumeAC();if(!a)return;
-  const t=a.currentTime;
+  if(muted)return;const a=resumeAC(),m=bus();if(!a||!m)return;
+  const t=a.currentTime,gap=SFX_GAP[type];
+  if(gap){                                            // brake 1: per-sound cooldown
+    const prev=SFX_LAST[type]||-1e9;
+    if(t-prev<gap/1000)return;
+    SFX_LAST[type]=t;
+  }
   function tone(f,d,v,wave,delay){
     delay=delay||0;
+    if(voices>=VOICE_CAP)return;                      // brake 2: voice budget
     try{const o=a.createOscillator(),g=a.createGain();
       o.type=wave||'sine';o.frequency.value=f;
       g.gain.setValueAtTime(0,t+delay);g.gain.linearRampToValueAtTime(v||.15,t+delay+.01);
       g.gain.exponentialRampToValueAtTime(.001,t+delay+d);
-      o.connect(g);g.connect(a.destination);o.start(t+delay);o.stop(t+delay+d+.01);
+      o.connect(g);g.connect(m);o.start(t+delay);o.stop(t+delay+d+.01);
+      voices++;o.onended=()=>{voices=Math.max(0,voices-1);try{g.disconnect();}catch(e){}};
     }catch(e){}
   }
   if(type==='flower'){tone(523,.12,.18);tone(784,.12,.12);tone(1047,.15,.10);}
@@ -243,20 +281,22 @@ function startMusic(lv){
 }
 function stopMusic(){if(_mt){clearTimeout(_mt);_mt=null;}}
 function _drum(a,type,t){
+  const mbus=bus();
   try{
-    if(type===1){const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(40,t+0.08);g.gain.setValueAtTime(0.55,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.18);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.2);}
-    else if(type===2){const len=Math.floor(a.sampleRate*0.12),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();f.type='bandpass';f.frequency.value=1800;f.Q.value=0.8;s.buffer=buf;s.connect(f);f.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.28,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.12);s.start(t);s.stop(t+0.14);const o=a.createOscillator(),og=a.createGain();o.type='triangle';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(80,t+0.05);og.gain.setValueAtTime(0.18,t);og.gain.exponentialRampToValueAtTime(0.001,t+0.07);o.connect(og);og.connect(a.destination);o.start(t);o.stop(t+0.08);}
-    else if(type===3){const len=Math.floor(a.sampleRate*0.03),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();f.type='highpass';f.frequency.value=9000;s.buffer=buf;s.connect(f);f.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.11,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.03);s.start(t);s.stop(t+0.04);}
-    else if(type===4){const len=Math.floor(a.sampleRate*0.18),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();f.type='highpass';f.frequency.value=7500;s.buffer=buf;s.connect(f);f.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.09,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.18);s.start(t);s.stop(t+0.2);}
+    if(type===1){const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(40,t+0.08);g.gain.setValueAtTime(0.55,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.18);o.connect(g);g.connect(mbus||a.destination);o.start(t);o.stop(t+0.2);}
+    else if(type===2){const len=Math.floor(a.sampleRate*0.12),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();f.type='bandpass';f.frequency.value=1800;f.Q.value=0.8;s.buffer=buf;s.connect(f);f.connect(g);g.connect(mbus||a.destination);g.gain.setValueAtTime(0.28,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.12);s.start(t);s.stop(t+0.14);const o=a.createOscillator(),og=a.createGain();o.type='triangle';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(80,t+0.05);og.gain.setValueAtTime(0.18,t);og.gain.exponentialRampToValueAtTime(0.001,t+0.07);o.connect(og);og.connect(mbus||a.destination);o.start(t);o.stop(t+0.08);}
+    else if(type===3){const len=Math.floor(a.sampleRate*0.03),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();f.type='highpass';f.frequency.value=9000;s.buffer=buf;s.connect(f);f.connect(g);g.connect(mbus||a.destination);g.gain.setValueAtTime(0.11,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.03);s.start(t);s.stop(t+0.04);}
+    else if(type===4){const len=Math.floor(a.sampleRate*0.18),buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();f.type='highpass';f.frequency.value=7500;s.buffer=buf;s.connect(f);f.connect(g);g.connect(mbus||a.destination);g.gain.setValueAtTime(0.09,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.18);s.start(t);s.stop(t+0.2);}
   }catch(e){}
 }
 function _note(a,freq,vol,wave,t,dur,cut){
   if(!freq||freq<=0)return;
+  const mbus=bus();
   try{const o=a.createOscillator(),g=a.createGain();o.type=wave;o.frequency.value=freq;
     const att=wave==='triangle'?0.03:0.008,rel=Math.max(att+0.02,dur*0.78);
     g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+att);g.gain.exponentialRampToValueAtTime(0.001,t+rel);
     if(cut){const f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=cut;o.connect(f);f.connect(g);}else o.connect(g);
-    g.connect(a.destination);o.start(t);o.stop(t+dur+0.03);}catch(e){}
+    g.connect(mbus||a.destination);o.start(t);o.stop(t+dur+0.03);}catch(e){}
 }
 function _tick(){
   _mt=null;if(muted||GS!=='play')return;
@@ -276,26 +316,33 @@ function _tick(){
 }
 
 // ── Bee buzz ─────────────────────────────────────────────────
-let beeOsc=null,beeGain=null,beeLfo=null;
+/* The buzz is the one genuinely CONTINUOUS sound in the game, so it is also the
+   one that can get stuck droning. 7L keeps every node it creates in one list and
+   tears the whole list down on stop, so nothing can be orphaned and left running
+   (the old version only tracked some of them, and never disconnected the main
+   oscillator at all). */
+let buzzNodes=null;
 function startBuzz(){
-  stopBuzz();if(muted)return;const a=resumeAC();if(!a)return;
+  stopBuzz();if(muted)return;const a=resumeAC(),m=bus();if(!a||!m)return;
   try{
-    beeOsc=a.createOscillator();beeGain=a.createGain();beeLfo=a.createOscillator();
-    const lg=a.createGain();beeLfo.frequency.value=7;lg.gain.value=10;beeLfo.connect(lg);lg.connect(beeOsc.frequency);
-    beeOsc.type='sine';beeOsc.frequency.value=540;beeGain.gain.value=0.012;
-    beeOsc.connect(beeGain);beeGain.connect(a.destination);beeLfo.start();beeOsc.start();
-    const o2=a.createOscillator(),g2=a.createGain();o2.type='sine';o2.frequency.value=810;g2.gain.value=0.006;
-    o2.connect(g2);g2.connect(a.destination);o2.start();beeGain._o2=o2;beeGain._g2=g2;
-  }catch(e){}
+    const nodes=[];
+    const osc=a.createOscillator(),gain=a.createGain(),lfo=a.createOscillator(),lg=a.createGain();
+    lfo.frequency.value=7;lg.gain.value=10;lfo.connect(lg);lg.connect(osc.frequency);
+    osc.type='sine';osc.frequency.value=540;gain.gain.value=0.012;
+    osc.connect(gain);gain.connect(m);
+    const o2=a.createOscillator(),g2=a.createGain();
+    o2.type='sine';o2.frequency.value=810;g2.gain.value=0.006;o2.connect(g2);g2.connect(m);
+    lfo.start();osc.start();o2.start();
+    nodes.push(lfo,osc,o2,lg,gain,g2);
+    buzzNodes=nodes;
+  }catch(e){buzzNodes=null;}
 }
 function stopBuzz(){
-  try{beeGain&&beeGain._o2&&beeGain._o2.stop();}catch(e){}
-  try{beeGain&&beeGain._g2&&beeGain._g2.disconnect();}catch(e){}
-  try{beeOsc&&beeOsc.stop();}catch(e){}
-  try{beeLfo&&beeLfo.stop();}catch(e){}
-  try{beeGain&&beeGain.disconnect();}catch(e){}
-  beeOsc=beeGain=beeLfo=null;
+  const nodes=buzzNodes;buzzNodes=null;                 // null FIRST: a re-entrant call can't double-stop
+  if(!nodes)return;
+  nodes.forEach(n=>{try{if(n.stop)n.stop();}catch(e){}try{n.disconnect();}catch(e){}});
 }
+function buzzing(){return !!buzzNodes;}
 
 // ── Weapons ──────────────────────────────────────────────────
 // Weapons unlocked purely by fruit collected
@@ -791,7 +838,12 @@ function loop(ts){
       else sfx(it.t==='orange'?'orange':isFr?'fruit':'flower');
       if(isFr){glitterBurst(it.x,it.y,'#ff44bb','#ffe066',10,false);pop(it.x,it.y,'+POWER!','#ff44bb');}
       else{glitterBurst(it.x,it.y,'#88ffcc','#ffe066',5);pop(it.x,it.y,'+10','#ffe066');}
-      if(!farmerOn&&fruitGot>=FNEED){farmerOn=true;farmerT=FDUR;sfx('farmer');show('fbar');$('fbar').classList.add('on');}
+      /* 7L THE STUCK-SOUND BUG. fruitGot was never cleared, so the moment the
+         magnet timed out the very next piece of fruit re-armed it and replayed
+         the five-note magnet fanfare - over and over, which is the sound Mike
+         heard looping. Spending the fruit on activation fixes the noise AND the
+         "Farmer?" meter, which used to stick at full once you passed 5. */
+      if(!farmerOn&&fruitGot>=FNEED){farmerOn=true;farmerT=FDUR;fruitGot=0;sfx('farmer');show('fbar');$('fbar').classList.add('on');}
       checkWepUnlock();updHUD();
       checkWinCondition();
       if(items.every(i=>i.col)&&!allItemsHintShown){
@@ -1115,6 +1167,14 @@ $('pb').addEventListener('click',()=>{if(GS==='play'){GS='pause';stopBuzz();stop
 $('rsbtn').addEventListener('click',()=>{showScr(null);last=performance.now();GS='play';startBuzz();startMusic(LI);});
 $('h2btn').addEventListener('click',home);
 $('mb').addEventListener('click',()=>{muted=!muted;$('mb').textContent=muted?'Sound off':'Sound';if(muted){stopBuzz();stopMusic();stopIntro();}else if(GS==='play'){startBuzz();startMusic(LI);}});
+/* 7L: if the kid switches tabs, locks the iPad, or the shell swaps the game out,
+   the buzz and the music used to keep playing with nothing on screen. Silence on
+   hide, pick back up on return - but only if the game is genuinely still in play. */
+function audioSleep(){stopBuzz();stopMusic();stopIntro();}
+function audioWake(){if(muted||GS!=='play')return;startBuzz();startMusic(LI);}
+document.addEventListener('visibilitychange',()=>{document.hidden?audioSleep():audioWake();});
+window.addEventListener('pagehide',audioSleep);
+
 function home(){
   GS='start';stopBuzz();stopMusic();stopIntro();
   hide('hud');hide('cbar');hide('pb');hide('mb');hide('wepbar');hide('timerbar');
