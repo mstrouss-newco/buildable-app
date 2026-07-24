@@ -146,5 +146,26 @@
     } catch (e) {}
   }
 
+  // ---- Auto-music hook (the Buildable music mechanism) ----------------------
+  // Any game/page turns on shared background music with ONE declaration on its
+  // page: <body data-music="castle">  (worlds: jungle ocean space candy castle
+  // desert city). The track is the shared, pre-generated ElevenLabs world music
+  // served and cached by /api/chess-music — no new generation, no per-game wiring.
+  // It auto-starts on the first tap (BA.unlock) and the shared mute button covers
+  // it. Games that set their own music (Breaker, Chess, ...) just omit data-music
+  // and are left completely untouched.
+  function autoMusic() {
+    try {
+      var d = g.document; if (!d) return;
+      var el = d.body || d.documentElement;
+      var w = el && el.getAttribute && el.getAttribute("data-music");
+      if (w && !BA.music) BA.setMusic("/api/chess-music?world=" + encodeURIComponent(w));
+    } catch (e) {}
+  }
+  if (g.document) {
+    if (g.document.readyState === "loading") g.document.addEventListener("DOMContentLoaded", autoMusic);
+    else autoMusic();
+  }
+
   g.BuildableAudio = BA;
 })(typeof window !== "undefined" ? window : globalThis);
