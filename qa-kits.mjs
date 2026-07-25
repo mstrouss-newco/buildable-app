@@ -222,5 +222,15 @@ say(badSprite.length === 0, "every other piece is a cut-out with see-through edg
 say(faint.length === 0, "no piece is so pale it reads as an empty card on the shelf" + (faint.length ? " :: " + faint.join(", ") : ""));
 say(/kenney/i.test(files) === false, "pieces carry kid names, not Kenney file names");
 
+// the two halves of the kit have to land in two different kinds of slot: props on
+// an ordinary art slot, ground squares on a background slot. If terrain were tagged
+// like a prop it would never be offered anywhere it makes sense.
+const props = BL.forSlot(whole, { key: "bush1" }, "castleguard", "default", false).filter((a) => BL.groupOf(a) === "kit");
+const bg = BL.forSlot(whole, { key: "background", mode: "single", role: "background" }, "breaker", "default", false).filter((a) => BL.groupOf(a) === "kit");
+say(props.length >= 40, `a prop slot is offered ${props.length} kit pieces`);
+say(bg.length >= 20, `a background slot is offered ${bg.length} kit pieces (the grounds, roads and plates)`);
+say(props.every((a) => !/^(ground|road|plate)-/.test(a.url.split("/").pop())), "terrain squares are NOT offered as props");
+say(bg.every((a) => /^(ground|road|plate)-/.test(a.url.split("/").pop())), "props are NOT offered as backgrounds");
+
 console.log(ok ? "ALL CHECKS PASS" : "SOME CHECKS FAILED");
 process.exit(ok ? 0 : 1);
