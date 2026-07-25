@@ -6,6 +6,23 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session LS3 — Lesson factory + review gate + first Math K batch (July 25 2026)
+The Lessons section can now be filled without a deploy. New `lesson_bank` table
+(`db/ls3-lesson-bank.sql`, applied) holds whole lessons; `api/generate-lessons.js`
+drafts them against `api/_curriculum.js` in the LS1 player shape and writes them
+`pending`; `/lesson-review` (grown-ups code, mirrors `/question-review`) shows every
+step of a draft with a Play it button and inline word fixes, then Approve or Reject.
+`api/lesson.js` serves ONLY approved lessons to kids (a pending draft answers 404
+without the owner preview code), and `api/lesson-map.js` merges approved rows into
+the path map — so **approving a lesson makes it live immediately, no code push**.
+`public/lessons.html` now plays a lesson from a file OR the bank, and draws SVG
+shapes for the shape lessons. First batch: 10 Kindergarten Math lessons over 3 units
+(a complete K Math path), reusing LS1's painted art, all waiting in the queue —
+kids still see "Coming soon" until Mike approves them. QA ran: `qa-lessons.mjs` ALL
+CHECKS PASSED (187, up from 116, including an independent re-derivation of all 120
+generated answer keys), `qa-lessons-dom.mjs` ALL CHECKS PASSED with a new live run
+that plays a bank-served lesson to mastery and proves the gate. No game touched.
+
 ## Session FL1 — Sky Flyer playable 3D flight mock (July 25 2026)
 New standalone `public/skyflyer-mock.html` (direct address only, not on any picker):
 a playable 3D feel mock for the planned Sky Flyer endless flight game. One endless

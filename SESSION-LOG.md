@@ -1,5 +1,97 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: Session LS3 — Lesson factory + review gate + first Math K batch (shipped; batch waiting for Mike's review)
+
+Phase LS, block LS3 only. LS1 built the player, LS2 built the path. LS3 builds the
+thing that fills the path: a factory that drafts whole lessons, a review page where
+Mike decides, and a serving layer that makes an approved lesson live to kids **with
+no code push**. Nothing kid-facing changed on production until Mike approves a
+lesson — the Lessons tile is still Coming Soon gated (that flip is LS4).
+
+**The decision that shaped the session.** LS2 shipped the lesson map as a FILE
+(`public/lessons/index.json`), which meant approving a lesson would have meant a
+deploy — and Mike cannot push. So lessons now live in a `lesson_bank` table and the
+map is merged live. The file stays the contract and the fallback; LS1's
+`g1-making-ten.json` still serves from disk, untouched (replace first, remove second).
+
+**What shipped**
+
+- **`db/ls3-lesson-bank.sql`** — `lesson_bank` (one row per lesson, whole lesson in
+  `payload`) + `lesson_bank_runs`. Additive, idempotent, no destructive statement.
+  `status` defaults to `pending`, so the review gate is in the schema, not just the
+  code. Applied to the live project via the Supabase connector; the file is in `db/`
+  for review and re-runs.
+- **`api/_lessongen.js`** — the drafter. Two engines, one output shape and one
+  validator: authored plans for K-2 math and shapes (free, instant, deliberate
+  wording), and a Claude path for reading/spelling/grade-3-plus (LS4 uses it). The
+  validator enforces everything LS1 learned the hard way: read-aloud lines under 60
+  characters with no `+` or `=` (api/say silently drops those), no emojis, 3-5 teach
+  cards, 2-3 guided questions with a hint each, exactly 5 check questions, mastery
+  4 of 5, 2-3 choices with a correctIndex that points somewhere real.
+- **`api/generate-lessons.js`** — the factory. Reads the lesson map, skips rows that
+  already ship as a file or are already approved, refuses a skill that is not on the
+  `api/_curriculum.js` map, drafts in waves, writes `pending` rows, logs the run.
+  `?dry=1` to look without writing. It cannot write `approved` — that string does not
+  appear in the file.
+- **`api/review-lessons.js` + `public/lesson-review.html`** — the review gate at
+  `/lesson-review`, behind the same grown-ups code as `/question-review`. One card per
+  lesson showing all five steps and which answer is marked correct, a **Play it**
+  button that opens the real player on the draft, **Fix the words** for inline
+  editing, then Approve or Reject. Edits can only change wording that is already
+  there (no adding or removing steps) and are re-validated before saving; approving
+  re-validates one final time. Rejecting keeps the row — nothing is ever deleted.
+- **`api/lesson.js`** — serves one lesson from the bank. Without the owner preview
+  code it will only ever return `status=approved`; a pending draft answers 404 and is
+  never cached. **The gate is at the serving layer, not just in the UI.**
+- **`api/lesson-map.js`** — the static map with approved rows flipped from `planned`
+  to `approved` and marked `fromBank`. Only ever upgrades a row, never rewrites a row
+  that ships as a reviewed file, and fails soft to the static map if Supabase is down.
+- **`api/_lessonmap.js`** — reads `index.json` from inside a serverless function, with
+  an HTTP fallback, because `public/` is not guaranteed to be on a function's disk.
+- **`public/lessons.html`** — a lesson is playable from a file OR an approved bank row;
+  the player asks the live map first and falls back to the static file; drawn SVG
+  shapes (`show.shapes`) so the shape lessons have real pictures without generating
+  art; an owner-only "Draft — kids cannot see this yet" banner.
+- **First batch: 10 Kindergarten Math lessons across 3 units** — Counting to 10 (4),
+  Adding within 5 (4), Shapes around us (2). That is a complete K Math path. Reuses
+  the painted counters and star LS1 already ships (Mike's call: reuse now, bespoke
+  lesson art stays a separate session). All 10 sit in the queue as `pending`.
+
+**QA ran (not claimed)**
+
+- `qa-lessons.mjs` — **ALL CHECKS PASSED, 187 checks** (was 116). The new checks draft
+  the real K Math batch through the real factory code and then **re-derive the answer
+  key of all 120 generated questions independently of the generator**. Zero wrong.
+  Also caught two real bugs before they shipped: questions repeating between the
+  practice step and the star check, and British spelling in the teach text.
+- `qa-lessons-dom.mjs` — **ALL CHECKS PASSED**, now 5 live browser runs. New run 5: a
+  real browser plays a lesson **served from lesson_bank** end to end to mastery,
+  confirms a pending lesson stays greyed out for a kid, and confirms `/api/lesson`
+  answers 404 for an unapproved lesson but 200 for the owner.
+- `qa-question-bank.mjs` — QA PASSED (the practice step still reads the approved bank).
+- No game touched.
+
+**What remains in phase LS (LS4, do not start unprompted)**
+
+- The Reading/phonics batch (the model engine is built and validated but has not
+  drafted a real batch yet).
+- Mike reviews and approves the Math batch at `/lesson-review`. Until he does, the K
+  Math path still shows "Coming soon" to kids, which is correct.
+- Placement quick-check, parent-dashboard tie-in, and Mike flipping the Lessons tile
+  from Coming Soon to LIVE.
+
+**Flagged honestly**
+
+- The 10 Math lessons were drafted by the authored engine, not by a model call. That
+  is a deliberate trade for K-2 math (free, identical every run, wording chosen on
+  purpose), and the model engine is wired and validated for the subjects where it
+  earns its keep. Worth knowing that "AI drafted" here means the plans were authored
+  in this session rather than generated per-run.
+- No cron was added for the lesson factory. A weekly run would pile up drafts nobody
+  asked for; it runs on demand instead.
+- `OWNER_PREVIEW_CODE` is an optional env var; with it unset the preview code is the
+  same 1025 the planner and `/question-review` already use.
+
 
 ## 2026-07-25: Session FL2 — Sky Flyer becomes a real cartridge (shipped)
 
