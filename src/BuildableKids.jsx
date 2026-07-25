@@ -1422,8 +1422,28 @@ function SkyFlyerScreen({ onHome, level }) {
   // the old one so a kid who already bought a ride keeps it — same index, same
   // price, just a better-looking thing at the end of it.
   const ride = typeof eq.Ride === "number" ? eq.Ride : (typeof eq.Plane === "number" ? eq.Plane : 0);
-  const src = "/skyflyer-engine.html?v=fl3&ride=" + ride + (level != null ? "&level=" + level : "");
-  return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light />;
+  const src = "/skyflyer-engine.html?v=fl4&ride=" + ride + (level != null ? "&level=" + level : "");
+  // FL4 learning moment: the engine asks before the NEXT world unlocks, exactly
+  // like Breaker. The shell is the authority — the parent's Learning Mode toggle
+  // overrides the manifest default, and if it is off we answer "done" instantly
+  // so a kid never notices there was a gate.
+  const [quiz, setQuiz] = useState(null);
+  const onChildMessage = (d, post) => {
+    if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
+    let eff = null;
+    try { eff = effectiveLearning({ beforeUnlock: d.manifestBeforeUnlock, subjects: d.subjects }); } catch (e) {}
+    if (!eff || !eff.enabled || !eff.beforeUnlock) { post({ type: "bk:quizDone" }); return; }
+    post({ type: "pause" });   // cartridge contract: freeze the flight while the gate is up
+    setQuiz({ reply: post, goal: eff.goal });
+  };
+  const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
+  const overlay = quiz ? (
+    <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <QuizGate goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="skyflyer" title="Quick question to unlock the next world!" onPass={finish} />
+    </div>
+  ) : null;
+  return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light
+    onChildMessage={onChildMessage} overlay={overlay} />;
 }
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
 function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
