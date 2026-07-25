@@ -277,10 +277,24 @@ const EXHIBIT_CATALOG = [
   // books: cover + 4 photo pages, every fact carries its own source. They stay
   // hidden from kids until Mike fact-checks each book and flips BOTH this status
   // and the exhibit JSON to "approved".
-  { id: "sharks", title: "Sharks", topic: "ocean", color: "#1173B4", heroArt: "/explore/topic-photos/sharks/sharks-cover.webp", status: "in-review" },
-  { id: "dinosaurs", title: "Dinosaurs", topic: "dinosaurs", color: "#6B8E23", heroArt: "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp", status: "in-review" },
-  { id: "moon", title: "The Moon", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/moon/moon-cover.webp", status: "in-review" },
+  { id: "sharks", title: "Sharks", topic: "ocean", color: "#1173B4", heroArt: "/explore/topic-photos/sharks/sharks-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "dinosaurs", title: "Dinosaurs", topic: "dinosaurs", color: "#6B8E23", heroArt: "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "moon", title: "The Moon", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/moon/moon-cover.webp", status: "in-review", template: "topic-book" },
 ];
+
+// Session TB2 — the bookshelf card. Topic books do NOT each get their own Home
+// card: they live behind ONE "Kidspedia Books" card that opens the bookshelf
+// (/explore/kidspedia), so the Explore row stays short as all 20 books land.
+// The card only exists once a book is actually approved, so a kid never taps
+// through to an empty shelf. The bookshelf re-checks every book's own file, so
+// this list stays a display convenience and never the gate.
+const BOOKSHELF_CARD = { id: "kidspedia", title: "Kidspedia Books", topic: "books", color: "#B8562F", heroArt: "", status: "approved" };
+function exploreShelfItems() {
+  const approvedBooks = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template === "topic-book");
+  const items = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template !== "topic-book");
+  if (approvedBooks.length) items.push({ ...BOOKSHELF_CARD, heroArt: approvedBooks[0].heroArt || "" });
+  return items;
+}
 
 // Games that support the zero-account "play a friend by link" flow (the grandma flow).
 // Maps a catalog id -> the /api/invite game code. Add a game here once play-invite.html
@@ -2920,7 +2934,7 @@ function HomeScreen(props) {
   );
 
   // ---- shelf card (Explore): Kidspedia exhibits, art-slot hero image (Session 8G) ----
-  const approvedExhibits = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved");
+  const approvedExhibits = exploreShelfItems();
   const ExploreShelfCard = ({ ex }) => (
     <button onClick={() => props.onExplore && props.onExplore(ex.id)} style={shelfCardStyle}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${ex.color}, ${ex.color}99)` }}>
@@ -2931,7 +2945,7 @@ function HomeScreen(props) {
           <span style={{ width: 9, height: 9, borderRadius: 3, background: ex.color, flex: "0 0 auto" }} />
           <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.title}</div>
         </div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>Kidspedia</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{ex.id === "kidspedia" ? "Books" : "Kidspedia"}</div>
       </div>
     </button>
   );
