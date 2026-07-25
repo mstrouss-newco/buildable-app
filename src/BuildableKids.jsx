@@ -2947,12 +2947,12 @@ function HomeScreen(props) {
 
   // ---- shelf card (Make): the creation tools this Home already exposes ----
   const MAKE_ITEMS = [
-    // Stories is COMING SOON while the art relaunch finishes: the tile stays visible
-    // but opens the same 1111 preview gate the Play shelf uses (owner QA only).
-    { id: "story", title: "Make a story", sub: "Coming soon", color: "#E0578F", grad: "linear-gradient(160deg,#F2789E,#E0578F)", glyph: <BookGlyph />, soon: true, gated: true, onClick: () => { setCatalogGate(() => onStories); setCatalogPw(""); setCatalogErr(false); } },
     { id: "song", title: "Make a song", sub: "Sing about anything", color: "#6A4FE0", grad: "linear-gradient(160deg,#8A6BFF,#6A4FE0)", glyph: <NoteGlyph />, onClick: onMusic },
     { id: "sound", title: "Sound Machine", sub: "Silly sounds & explosions", color: "#F0577E", grad: "linear-gradient(160deg,#FF8FB1,#F0577E)", glyph: <SpeakerGlyph />, onClick: onSounds },
     { id: "art", title: "Make art", sub: "Draw, stamp & mirror", color: "#1098AD", grad: "linear-gradient(160deg,#22B8CF,#1098AD)", glyph: <ArtGlyph />, onClick: onArt },
+    // Stories is COMING SOON while the art relaunch finishes: the tile stays visible
+    // but opens the same 1111 preview gate the Play shelf uses (owner QA only).
+    { id: "story", title: "Make a story", sub: "Coming soon", color: "#E0578F", grad: "linear-gradient(160deg,#F2789E,#E0578F)", glyph: <BookGlyph />, soon: true, gated: true, onClick: () => { setCatalogGate(() => onStories); setCatalogPw(""); setCatalogErr(false); } },
     { id: "game", title: "Make a game", sub: "Coming soon", color: "#7A4FE0", grad: "linear-gradient(160deg,#A06BFF,#7A4FE0)", glyph: <WandGlyph />, onClick: onMakeGame, soon: true },
   ];
   // Make cards use the SAME shape as the Play shelf: 4:3 key art on top, title +
