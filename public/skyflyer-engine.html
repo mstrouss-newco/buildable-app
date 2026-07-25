@@ -14,12 +14,17 @@
       goal (collect N coins + land M times). Beat the goal and the world is
       marked beaten, the next unlocks, and the kid keeps flying forever.
     - a crash is always a soft bounce. There is no lose state anywhere.
-    - art: the plane ("ride") is chosen in the shell's Make-it-mine hangar and
-      arrives as ?ride=N. The engine only maps the id to a look, never prices it.
+    - art: the RIDE is chosen in the shell's Make-it-mine hangar and arrives as
+      ?ride=N. The engine only maps the id to a look and a feel, never prices it.
+
+  Session FL3 added the hangar for real: the three rides are now three different
+  flying things (a plane, a rescue copter, a jetpack kid) with their own shapes,
+  their own moving parts and their own feel presets. A ride is never power — see
+  THE FL3 LAW above the RIDES table.
 
   URL params (all optional):
     level=<index|id>  which world (default 0)
-    ride=<0..2>       equipped plane from the shell hangar
+    ride=<0..2>       equipped ride from the shell hangar
     screen=demo       attract mode for the landing card (autopilot, no HUD chrome)
     auto=1            autopilot on (the QA robot's handle; proves a world beatable)
     nodraw=1          skip the WebGL renderer entirely (headless QA)
@@ -53,6 +58,10 @@
   #worldName{position:absolute;left:50%;top:calc(14px + env(safe-area-inset-top));
     transform:translateX(-50%);background:rgba(255,252,240,.9);border-radius:999px;
     padding:6px 18px;font-weight:800;font-size:14px;color:#33566e;
+    box-shadow:0 2px 8px rgba(30,60,90,.16);transition:opacity .8s}
+    #rideName{position:absolute;left:50%;top:calc(48px + env(safe-area-inset-top));
+    transform:translateX(-50%);background:rgba(47,183,214,.92);border-radius:999px;
+    padding:5px 16px;font-weight:800;font-size:13px;color:#fff;white-space:nowrap;
     box-shadow:0 2px 8px rgba(30,60,90,.16);transition:opacity .8s}
   #hint{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);
     background:rgba(255,252,240,.94);border-radius:20px;padding:14px 22px;
@@ -107,6 +116,7 @@
   </div>
   <div id="banked">Banked: <span id="bankedN">0</span></div>
   <div id="worldName">Sunny Islands</div>
+  <div id="rideName">Little Puffin</div>
   <div id="goals">
     <div class="chip" id="gCoins">Coins 0/12</div>
     <div class="chip" id="gLand">Landings 0/1</div>
@@ -120,7 +130,7 @@
       <path d="M92 12 L108 23 L92 34 Z" fill="#2FB7D6"/>
     </svg>
     <div>Drag anywhere to fly</div>
-    <div class="sub">Up and down too. The plane flies by itself</div>
+    <div class="sub">Up and down too. Your ride flies by itself</div>
   </div>
   <div id="padmsg">Fly low over the pad to land</div>
   <div id="arrow">
@@ -135,7 +145,8 @@
   <button id="takeoff">TAKE OFF</button>
   <div id="helpCard"><div class="inner">
     <h2>How to fly</h2>
-    <p>Drag anywhere on the screen to steer. Drag up and down too. The plane always flies forward by itself.</p>
+    <p>Drag anywhere on the screen to steer. Drag up and down too. Your ride always flies forward by itself.</p>
+    <p>Pick which ride you fly in the hangar, on the Make it mine screen. Every ride scoops the same coins and lands on the same pads - they just look and feel different.</p>
     <p>Scoop up gold coins in the sky. Bumping into things just gives you a soft bounce, so you can never crash.</p>
     <p>Follow the orange arrow to a landing pad. Fly low over it to land and bank your coins.</p>
     <button id="helpClose">Got it</button>
@@ -205,16 +216,34 @@ function pickWorld(){
 var WI=pickWorld(), world=WORLDS[WI];
 
 // ============================================================================
-//  RIDES — the hangar. The SHELL owns which plane a kid has picked (Make it
-//  mine / the manifest's customization slot) and hands the id in as ?ride=N.
-//  This file only knows what each id LOOKS like, never what it costs.
+//  RIDES — THE HANGAR (Session FL3). The SHELL owns which ride a kid has picked
+//  (Make it mine / the manifest's "Ride" customization slot) and hands the id in
+//  as ?ride=N. This file only knows what each id LOOKS like and how it FEELS —
+//  never what it costs.
+//
+//  THE FL3 LAW: a ride is a LOOK plus a FEEL, never power. Every ride scoops the
+//  same coins, meets the same goals and lands on the same pads. They differ in
+//  cruise speed, how tightly they turn, how far they lean and how much they bob,
+//  and those trade AGAINST each other on purpose: the fast one turns wide, the
+//  nimble one is slow. Turn circle = speed / turn, so:
+//      Little Puffin  34/1.70 = 20 units   the middle, the one everyone starts on
+//      Rescue Copter  27/2.30 = 12 units   slow and nimble, hovers, big bob
+//      Jetpack Kid    41/1.35 = 30 units   quick and swoopy, leans hard, wide arc
+//  No ride is the good ride. Adding one means adding a look + a feel here and a
+//  priced option in the manifest — the engine never learns the price.
 // ============================================================================
 var RIDES=[
-  { id:"puffin",  name:"Little Puffin", body:0xFF6B6B, trim:0xFFF6E3, wing:0xFFF6E3, glass:0x9adcf5, wingSpan:13,  speed:34 },
-  { id:"bluejay", name:"Blue Jay",      body:0x3E8BE0, trim:0xFFFFFF, wing:0xDCEBFF, glass:0xB9E8FF, wingSpan:12,  speed:37 },
-  { id:"sunhawk", name:"Sun Hawk",      body:0xFFC24A, trim:0x5B4A1F, wing:0xFFE9A8, glass:0xFFF2C8, wingSpan:14.5,speed:31 }
+  { id:"puffin",  name:"Little Puffin", build:"plane",
+    body:0xFF6B6B, trim:0xFFF6E3, wing:0xFFF6E3, glass:0x9adcf5, wingSpan:13,
+    speed:34, turn:1.70, bankAmt:0.90, pitchAmt:0.75, bob:0.25, bobRate:2.2 },
+  { id:"copter",  name:"Rescue Copter", build:"copter",
+    body:0xFFC24A, trim:0xE8552F, wing:0xFFF6E3, glass:0xBEE9FF, wingSpan:0,
+    speed:27, turn:2.30, bankAmt:0.50, pitchAmt:0.85, bob:0.55, bobRate:3.6 },
+  { id:"jetpack", name:"Jetpack Kid",  build:"jetpack",
+    body:0x8A63E8, trim:0xFFD24A, wing:0xFFF6E3, glass:0xFFE9A8, wingSpan:0,
+    speed:41, turn:1.35, bankAmt:1.15, pitchAmt:0.70, bob:0.16, bobRate:5.2 }
 ];
-var ride=RIDES[RIDE];
+var ride=RIDES[Math.max(0,Math.min(RIDES.length-1,RIDE))];
 
 // ---------- progress (per kid, the shape the shell's journey reads) ----------
 function kidSuffix(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return (k&&k.id)?("_"+k.id):""; }catch(e){ return ""; } }
@@ -266,7 +295,9 @@ var M={
   cloud:phong(0xFFFFFF,{shininess:0}),
   rideBody:phong(ride.body,{shininess:30}),
   rideTrim:phong(ride.trim,{shininess:20}),
-  rideWing:phong(ride.wing,{shininess:20})
+  rideWing:phong(ride.wing,{shininess:20}),
+  rideTrimShiny:phong(ride.trim,{shininess:60}),
+  rideSkin:phong(0xF2C69B,{shininess:8})
 };
 
 // ---------- ground plane (sea / ice sheet / canyon floor) ----------
@@ -297,9 +328,23 @@ var clouds=[];
   }
 })();
 
-// ---------- the plane (cute low-poly, code-built, colored by the picked ride) ----------
+// ============================================================================
+//  THE RIDE ITSELF — three genuinely different flying things, all code-built
+//  low-poly (no art files: the art rule says no baked-in URLs, and these are
+//  geometry). Each builder fills the shared `plane` group (kept under that name
+//  because the whole engine flies "plane") and RETURNS a little animator for its
+//  own moving parts — a propeller, two rotors, or two jet flames. The draw loop
+//  calls that one function and never has to know which ride is on.
+//
+//  Everything points down +z, the nose direction, same as the original plane.
+// ============================================================================
 var plane=new THREE.Group();
-(function(){
+var rideAnim=function(){};                                   // set by the builder below
+var flameMat=new THREE.MeshBasicMaterial({color:0xFF9A3C,transparent:true,opacity:0.85});
+var flameCore=new THREE.MeshBasicMaterial({color:0xFFF0A8,transparent:true,opacity:0.9});
+
+// ---------- ride 1: Little Puffin, the starter plane (free, always owned) ----------
+function buildPlane(){
   var body=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.5,6.4,8),M.rideBody);
   body.rotation.x=Math.PI/2;plane.add(body);
   var nose=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.15,1.5,8),M.rideTrim);
@@ -321,17 +366,155 @@ var plane=new THREE.Group();
   canopy.scale.set(1,0.8,1.4);canopy.position.set(0,1.05,1.1);plane.add(canopy);
   var hub=new THREE.Mesh(new THREE.SphereGeometry(0.5,8,6),M.gray);
   hub.position.z=4.75;plane.add(hub);
-})();
-var prop=new THREE.Mesh(new THREE.BoxGeometry(0.28,5.2,0.5),M.gray);
-prop.position.z=4.85;plane.add(prop);
-var propDisc=new THREE.Mesh(new THREE.CircleGeometry(2.6,20),
-  new THREE.MeshBasicMaterial({color:0xdddddd,transparent:true,opacity:0.25,side:THREE.DoubleSide}));
-propDisc.position.z=4.9;plane.add(propDisc);
+  var prop=new THREE.Mesh(new THREE.BoxGeometry(0.28,5.2,0.5),M.gray);
+  prop.position.z=4.85;plane.add(prop);
+  var propDisc=new THREE.Mesh(new THREE.CircleGeometry(2.6,20),
+    new THREE.MeshBasicMaterial({color:0xdddddd,transparent:true,opacity:0.25,side:THREE.DoubleSide}));
+  propDisc.position.z=4.9;plane.add(propDisc);
+  var wheelGeo=new THREE.CylinderGeometry(0.55,0.55,0.4,10);wheelGeo.rotateZ(Math.PI/2);
+  [[-1.4,-1.35,1.2],[1.4,-1.35,1.2],[0,-1.15,-3.6]].forEach(function(p){
+    var w=new THREE.Mesh(wheelGeo,M.gray);w.position.set(p[0],p[1],p[2]);plane.add(w);
+  });
+  return function(dt,mode){
+    prop.rotation.z+=dt*(mode==="landed"?2:34);
+    propDisc.material.opacity=(mode==="landed"?0:0.22);
+    propDisc.rotation.z=prop.rotation.z;
+  };
+}
+
+// ---------- ride 2: Rescue Copter (60 coins) — rounded cab, skids, two rotors ----------
+function buildCopter(){
+  var c=new THREE.Group();
+  var cab=new THREE.Mesh(new THREE.SphereGeometry(2.0,10,8),M.rideBody);
+  cab.scale.set(1,0.86,1.6);cab.position.set(0,0.2,0.5);c.add(cab);
+  var glass=new THREE.Mesh(new THREE.SphereGeometry(1.62,10,8),
+    new THREE.MeshPhongMaterial({color:ride.glass,shininess:90,flatShading:true}));
+  glass.scale.set(0.94,0.84,1.0);glass.position.set(0,0.45,2.3);c.add(glass);
+  // the rescue stripe: a band of trim down each flank, drawn geometry not decals
+  [-1,1].forEach(function(sx){
+    var stripe=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.62,4.0),M.rideTrim);
+    stripe.position.set(sx*1.88,-0.25,0.6);c.add(stripe);
+  });
+  var boom=new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.75,7.0,8),M.rideBody);
+  boom.rotation.x=Math.PI/2;boom.position.set(0,0.5,-5.0);c.add(boom);
+  var fin=new THREE.Mesh(new THREE.BoxGeometry(0.3,2.0,1.3),M.rideTrim);
+  fin.position.set(0,1.4,-7.9);c.add(fin);
+  var stab=new THREE.Mesh(new THREE.BoxGeometry(3.0,0.28,1.0),M.rideTrim);
+  stab.position.set(0,0.55,-7.6);c.add(stab);
+  var mast=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.38,1.3,8),M.gray);
+  mast.position.set(0,2.3,0.3);c.add(mast);
+  // main rotor: FOUR blades = two crossed bars (a bar is a blade at each end).
+  var rotor=new THREE.Group();rotor.position.set(0,3.0,0.3);
+  var hub=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.45,8),M.gray);rotor.add(hub);
+  for(var b=0;b<2;b++){
+    var blade=new THREE.Mesh(new THREE.BoxGeometry(12.5,0.16,0.85),M.gray);
+    blade.rotation.y=b*Math.PI/2;rotor.add(blade);
+  }
+  c.add(rotor);
+  var rotorDisc=new THREE.Mesh(new THREE.CircleGeometry(6.3,26),
+    new THREE.MeshBasicMaterial({color:0xdddddd,transparent:true,opacity:0.14,side:THREE.DoubleSide}));
+  rotorDisc.rotation.x=-Math.PI/2;rotorDisc.position.set(0,3.1,0.3);c.add(rotorDisc);
+  // tail rotor: spins about X, off the side of the fin
+  var tail=new THREE.Group();tail.position.set(0.66,1.35,-8.0);
+  for(var t=0;t<2;t++){
+    var tb=new THREE.Mesh(new THREE.BoxGeometry(0.15,2.6,0.36),M.gray);
+    tb.rotation.x=t*Math.PI/2;tail.add(tb);
+  }
+  c.add(tail);
+  // skids, the copter's landing gear
+  [-1,1].forEach(function(sx){
+    var skid=new THREE.Mesh(new THREE.BoxGeometry(0.36,0.32,6.4),M.gray);
+    skid.position.set(sx*1.85,-2.3,0.4);c.add(skid);
+    [1.7,-1.5].forEach(function(sz){
+      var strut=new THREE.Mesh(new THREE.BoxGeometry(0.28,1.9,0.28),M.gray);
+      strut.position.set(sx*1.68,-1.4,sz);strut.rotation.z=sx*0.14;c.add(strut);
+    });
+  });
+  c.scale.set(0.92,0.92,0.92);
+  plane.add(c);
+  return function(dt,mode){
+    var idle=(mode==="landed");
+    rotor.rotation.y+=dt*(idle?3.5:26);
+    tail.rotation.x+=dt*(idle?5:38);
+    rotorDisc.material.opacity=(idle?0.04:0.14);
+  };
+}
+
+// ---------- ride 3: Jetpack Kid (120 coins) — a kid, arms out, two jet flames ----------
+function buildJetpack(){
+  var kid=new THREE.Group();
+  kid.scale.set(1.22,1.22,1.22);   // a kid is small: scale so it reads at camera distance
+  kid.rotation.x=-0.34;            // leaning into the wind, like you'd actually fly one
+  var torso=new THREE.Mesh(new THREE.BoxGeometry(2.0,2.5,1.25),M.rideBody);
+  torso.position.set(0,0.5,0);kid.add(torso);
+  var belt=new THREE.Mesh(new THREE.BoxGeometry(2.1,0.44,1.35),M.rideTrim);
+  belt.position.set(0,-0.6,0);kid.add(belt);
+  var head=new THREE.Mesh(new THREE.SphereGeometry(0.92,10,8),M.rideSkin);
+  head.position.set(0,2.25,0.15);kid.add(head);
+  var helmet=new THREE.Mesh(new THREE.SphereGeometry(1.0,10,8),M.rideTrimShiny);
+  helmet.scale.set(1,0.72,1);helmet.position.set(0,2.55,0.08);kid.add(helmet);
+  var crest=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.5,2.0),M.rideBody);
+  crest.position.set(0,3.0,0.05);kid.add(crest);
+  var goggles=new THREE.Mesh(new THREE.BoxGeometry(1.7,0.5,0.35),
+    new THREE.MeshPhongMaterial({color:ride.glass,shininess:90,flatShading:true}));
+  goggles.position.set(0,2.3,0.9);kid.add(goggles);
+  // arms tucked forward and legs trailing behind: the classic flying pose.
+  // Kept tight to the body on purpose — a chase camera sits right behind, and
+  // anything sticking out sideways reads as a lump rather than a limb.
+  [-1,1].forEach(function(sx){
+    var arm=new THREE.Mesh(new THREE.BoxGeometry(0.5,2.0,0.5),M.rideBody);
+    arm.position.set(sx*1.22,1.1,0.9);arm.rotation.x=-1.25;kid.add(arm);
+    var hand=new THREE.Mesh(new THREE.SphereGeometry(0.33,8,6),M.rideSkin);
+    hand.position.set(sx*1.22,1.5,1.85);kid.add(hand);
+    var leg=new THREE.Mesh(new THREE.BoxGeometry(0.62,2.3,0.62),M.rideBody);
+    leg.position.set(sx*0.6,-1.8,-0.75);leg.rotation.x=0.7;kid.add(leg);
+    var boot=new THREE.Mesh(new THREE.BoxGeometry(0.72,0.5,1.15),M.rideTrim);
+    boot.position.set(sx*0.6,-2.75,-1.95);boot.rotation.x=0.6;kid.add(boot);
+  });
+  // THE JETPACK. From a chase camera this is the thing you actually look at all
+  // day, so it is the hero of the model: a wide silver pack, two fuel tanks in
+  // the ride colour, and two flames streaming back at the screen.
+  var pack=new THREE.Mesh(new THREE.BoxGeometry(2.0,2.2,0.95),M.rideTrimShiny);
+  pack.position.set(0,0.7,-1.15);kid.add(pack);
+  var packTrim=new THREE.Mesh(new THREE.BoxGeometry(2.1,0.4,1.0),M.gray);
+  packTrim.position.set(0,1.6,-1.15);kid.add(packTrim);
+  var sides=[-1,1];
+  sides.forEach(function(sx){
+    var tank=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,1.7,8),M.gray);
+    tank.position.set(sx*0.78,0.55,-1.55);kid.add(tank);
+    var cap=new THREE.Mesh(new THREE.SphereGeometry(0.42,8,6),M.rideBody);
+    cap.position.set(sx*0.78,1.4,-1.55);kid.add(cap);
+    var noz=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.34,0.8,8),M.gray);
+    noz.rotation.x=Math.PI/2;noz.position.set(sx*0.78,-0.5,-1.9);kid.add(noz);
+  });
+  // ...and the flames stream BACKWARD out of it, which is what sells the speed
+  var flames=sides.map(function(sx){
+    var g=new THREE.Group();g.position.set(sx*0.78,-0.55,-2.4);
+    var outer=new THREE.Mesh(new THREE.ConeGeometry(0.52,3.0,8),flameMat);
+    outer.rotation.x=Math.PI/2;outer.position.z=-1.5;g.add(outer);
+    var core=new THREE.Mesh(new THREE.ConeGeometry(0.27,1.8,8),flameCore);
+    core.rotation.x=Math.PI/2;core.position.z=-0.9;g.add(core);
+    kid.add(g);return g;
+  });
+  var scarf={rotation:{z:0}};   // no trailing scarf: it hid the pack from behind
+  plane.add(kid);
+  return function(dt,mode,t){
+    var idle=(mode==="landed");
+    for(var i=0;i<flames.length;i++){
+      var f=flames[i];
+      var flick=idle?0.15:(0.78+Math.sin(t*26+i*2.1)*0.22);
+      f.scale.set(1,1,flick);
+      f.visible=!idle;
+    }
+    flameMat.opacity=idle?0:0.85;
+    scarf.rotation.z=Math.sin(t*4.5)*0.12;
+  };
+}
+
+rideAnim = (ride.build==="copter") ? buildCopter()
+         : (ride.build==="jetpack") ? buildJetpack()
+         : buildPlane();
 scene.add(plane);
-var wheelGeo=new THREE.CylinderGeometry(0.55,0.55,0.4,10);wheelGeo.rotateZ(Math.PI/2);
-[[-1.4,-1.35,1.2],[1.4,-1.35,1.2],[0,-1.15,-3.6]].forEach(function(p){
-  var w=new THREE.Mesh(wheelGeo,M.gray);w.position.set(p[0],p[1],p[2]);plane.add(w);
-});
 
 // ---------- landing pads (this world's, fixed so the arrow can point at them) ----------
 var PAD_R=16, PAD_TOP=10;
@@ -578,11 +761,18 @@ var coinsEl=D.getElementById("coins"),
     gCoinsEl=D.getElementById("gCoins"),
     gLandEl=D.getElementById("gLand"),
     worldNameEl=D.getElementById("worldName"),
+    rideNameEl=D.getElementById("rideName"),
     helpBtn=D.getElementById("helpBtn"),
     helpCard=D.getElementById("helpCard"),
     helpClose=D.getElementById("helpClose");
 worldNameEl.textContent=world.name;
-setTimeout(function(){ try{ worldNameEl.style.opacity=0; }catch(e){} },3200);
+// FL3: name the ride on the way in and again every time we sit on a pad, so
+// "pick your ride" is something a kid can SEE they did, not just a setting.
+rideNameEl.textContent=ride.name;
+if(DEMO) rideNameEl.style.display="none";
+setTimeout(function(){ try{ worldNameEl.style.opacity=0;rideNameEl.style.opacity=0; }catch(e){} },3200);
+function showRideName(){ if(DEMO)return; try{ rideNameEl.style.opacity=1;
+  setTimeout(function(){ try{ rideNameEl.style.opacity=0; }catch(e){} },2600); }catch(e){} }
 setTimeout(function(){ try{ if(!S.hintDone){S.hintDone=true;hintEl.style.opacity=0;} }catch(e){} },7000);
 function toast(t){ toastEl.textContent=t;toastEl.classList.remove("show");
   void toastEl.offsetWidth;toastEl.classList.add("show"); }
@@ -602,6 +792,7 @@ if(DEMO){ // attract mode on the landing card: scenery only, no chrome, no taps
   goalsEl.style.display="none";hintEl.style.display="none";
   D.querySelector(".pill").style.display="none";helpBtn.style.display="none";
   worldNameEl.style.display="none";takeoffBtn.style.display="none";
+  rideNameEl.style.display="none";
 }
 
 // ---------- help ----------
@@ -718,7 +909,8 @@ function finishLanding(){
   markStars(S.beaten?3:1);
   paintGoals();
   checkBeaten();
-  if(!DEMO) takeoffBtn.style.display="block";
+  // sitting on the pad is the "before takeoff" moment: name the ride again here
+  if(!DEMO){ takeoffBtn.style.display="block"; showRideName(); }
 }
 
 // ---------- camera ----------
@@ -764,11 +956,13 @@ function updateArrow(){
 //  anything it proves is something a kid's drag could also do: chase the nearest
 //  coin until the coin goal is met, then line up on a pad, land, take off again.
 // ============================================================================
-// A plane cannot turn on the spot: its turn circle is about 20 units across. So
-// the robot never locks onto a coin that is closer than that AND off to the side
-// (it would orbit it forever, which is exactly how a person flies too). It picks
-// the cheapest coin by distance PLUS a penalty for being off the nose.
-var TURN_R=46;
+// A ride cannot turn on the spot: its turn circle is roughly speed/turn across.
+// So the robot never locks onto a coin that is closer than that AND off to the
+// side (it would orbit it forever, which is exactly how a person flies too). It
+// picks the cheapest coin by distance PLUS a penalty for being off the nose.
+// FL3: this scales with the RIDE, because the copter can cut inside a circle the
+// jetpack has to swing all the way around. 46 was the plane's number at r=20.
+var TURN_R=46*((ride.speed/ride.turn)/20);
 function nearestCoin(){
   var best=null,bs=1e18;
   var hx=-Math.sin(S.yaw), hz=-Math.cos(S.yaw);
@@ -831,10 +1025,12 @@ function stepSim(dt){
   if(S.auto) autoStep(dt);
 
   if(S.mode==="fly"){
-    var turn=S.dx*1.7,pitchT=S.dy*0.75;
+    // FL3: how sharply the ride answers a finger is a FEEL preset, not a power
+    // stat — the ride that turns hardest is also the slowest one.
+    var turn=S.dx*ride.turn,pitchT=S.dy*ride.pitchAmt;
     S.yaw-=turn*dt;
     S.pitch=lerp(S.pitch,-pitchT,1-Math.pow(0.002,dt));
-    S.bank=lerp(S.bank,-S.dx*0.9,1-Math.pow(0.004,dt));
+    S.bank=lerp(S.bank,-S.dx*ride.bankAmt,1-Math.pow(0.004,dt));
     var targetSpeed=ride.speed-S.pitch*10;
     S.speed=lerp(S.speed,clamp(targetSpeed,ride.speed*0.7,ride.speed*1.35),dt*1.5);
     var dir=new THREE.Vector3(-Math.sin(S.yaw),Math.sin(S.pitch),-Math.cos(S.yaw)).normalize();
@@ -880,11 +1076,10 @@ function drawScene(dt){
   plane.rotateY(S.yaw+Math.PI);
   plane.rotateX(-S.pitch);
   plane.rotateZ(S.bank);
-  plane.position.y+=Math.sin(time*2.2)*0.25;
-  var propSpeed=S.mode==="landed"?2:34;
-  prop.rotation.z+=dt*propSpeed;
-  propDisc.material.opacity=S.mode==="landed"?0:0.22;
-  propDisc.rotation.z=prop.rotation.z;
+  // FL3: the bob is part of the ride's feel — the copter hovers, the jetpack
+  // barely wavers — and each ride animates its own moving parts.
+  plane.position.y+=Math.sin(time*ride.bobRate)*ride.bob;
+  rideAnim(dt,S.mode,time);
 
   groundMesh.position.set(S.pos.x,0,S.pos.z);
   for(var i=0;i<gPos.count;i++){
@@ -967,7 +1162,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"FL2",
+  version:"FL3",
   state:S,
   world:world,
   worlds:WORLDS,
