@@ -1,6 +1,24 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-25: Song library cleanup
+
+Small fix, requested directly by Mike (not a planned roadmap session).
+
+- Deleted one saved song titled "Guts" from `saved_songs` (leftover test data
+  under Riley's kid profile, not something meant to stick around).
+- Found and fixed a real bug: `api/list-songs.js` had a hardcoded `limit=10`
+  left over from before the per-kid save cap was raised for testing
+  (`save-song.js`, effectively unlimited). Songs past a kid's 10 most recent
+  saved fine but silently never showed up in My Stuff. Raised the list limit
+  and the reported `max` to match. Riley had ~33 songs saved; only her newest
+  10 were visible before this fix — the rest should reappear in her My Songs
+  tab now.
+- Shipped straight to `main` (commit `3b59bab`) via the GitHub web-upload
+  route since this session can't `git push`. Auto-deploys via Vercel.
+
+**Remaining:** none — this was a self-contained fix, not a phase session.
+
 ## 2026-07-24: Session TB1 — Kidspedia topic-book template + first three books
 
 **Shipped**
