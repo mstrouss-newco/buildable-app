@@ -815,15 +815,15 @@
       }
     },
     {
-      "src": "/explore/sharks",
-      "dest": "/topic.html"
+      "src": "/kidspedia.html",
+      "dest": "/kidspedia.html"
     },
     {
-      "src": "/explore/dinosaurs",
-      "dest": "/topic.html"
+      "src": "/explore/kidspedia",
+      "dest": "/kidspedia.html"
     },
     {
-      "src": "/explore/moon",
+      "src": "/explore/(sharks|big-cats|dinosaurs|penguins|bugs-butterflies|snakes-reptiles|moon|planets|rockets|volcanoes|wild-weather|deep-ocean|rainforest|deserts|plants-grow|your-body|trains|diggers|castles-knights|ancient-egypt)",
       "dest": "/topic.html"
     },
     {

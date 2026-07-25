@@ -70,6 +70,40 @@ for (const f of files) {
   if (data.status === 'approved') approved.push({ file: f, data });
   if (data.status === 'approved' || data.status === 'in-review') candidates.push({ file: f, data });
 }
+// ---- visit-the-exhibit tie-ins (Session TB2) ----
+// Some topics have (or will have) a whole Kidspedia exhibit about the same
+// subject, and the book must offer a way in. This map is the memory: a book on
+// this list whose exhibit ALREADY exists must carry the link, so nobody has to
+// remember it when the remaining books are written. null = that exhibit has not
+// been built yet, so the book only gets a reminder, never a failure.
+const TIE_INS = {
+  'wild-weather': 'make-it-rain',   // the Weather Lab
+  'deep-ocean': 'ocean-deep',       // Journey to the Deep
+  volcanoes: null,                  // planner phase VL
+  rainforest: null,                 // planner phase RT
+  'plants-grow': null,              // planner phase GL
+  'your-body': null,                // planner phase BA
+};
+for (const ex of candidates) {
+  const id = ex.data.id;
+  const t = ex.data.exhibit;
+  const want = Object.prototype.hasOwnProperty.call(TIE_INS, id) ? TIE_INS[id] : undefined;
+  if (t) {
+    if (!t.id || !/^[a-z0-9-]+$/.test(t.id)) fail(`${id}: exhibit.id "${t.id}" must be a plain exhibit id`);
+    else {
+      const target = path.join(exploreDir, t.id + '.json');
+      if (!fs.existsSync(target)) warn(`${id}: links to exhibit "${t.id}", which does not exist yet — the button stays hidden until it does`);
+      else {
+        let td = {}; try { td = JSON.parse(fs.readFileSync(target, 'utf8')); } catch (e) {}
+        if (td.status !== 'approved') warn(`${id}: links to exhibit "${t.id}", which is "${td.status}" — the button stays hidden until it is approved`);
+        else pass(`${id}: visit-the-exhibit link points at approved exhibit "${t.id}"`);
+      }
+    }
+  }
+  if (want && (!t || t.id !== want)) fail(`${id}: must carry a visit-the-exhibit link to "${want}" (that exhibit is live) — add an "exhibit" block to ${id}.json`);
+  if (want === null && !t) warn(`${id}: gets a visit-the-exhibit link once its exhibit is built (planner phase pending)`);
+}
+
 if (!candidates.length) fail('no topic-book exhibits found in public/explore/ — nothing to check');
 if (ok) pass(`${candidates.length} topic book(s) match the contract shape (${approved.length} approved: ${approved.map((a) => a.data.id).join(', ') || 'none — still awaiting fact-check'})`);
 
@@ -168,7 +202,8 @@ for (const ex of candidates) {
 // ---------------- PART C: runtime ----------------
 console.log('--- runtime check: topic.html against each candidate book, through the real route ---');
 
-async function runBook(exhibit) {
+async function runBook(exhibit, opts) {
+  const OPTS = opts || {};
   const registry = {};
   const globalListeners = {};
   const posted = [];
@@ -229,7 +264,7 @@ async function runBook(exhibit) {
     Audio: class { constructor(src) { this.src = src; setImmediate(() => { if (this.onerror) this.onerror(); }); } play() { return { catch() {} }; } pause() {} },
     speechSynthesis: { cancel() {}, speak(u) { spoken.push(u); } },
     SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } },
-    location: { pathname: `/explore/${exhibit.data.id}`, search: '' },
+    location: { pathname: `/explore/${exhibit.data.id}`, search: OPTS.search || '', href: `/explore/${exhibit.data.id}` },
     history: { length: 1, back() {} },
     requestAnimationFrame() {}, cancelAnimationFrame() {},
     setTimeout: (fn) => { return 0; }, clearTimeout() {},
@@ -276,6 +311,18 @@ async function runBook(exhibit) {
     && registry.notready.style.display !== 'flex'
     && !!registry['ft-' + firstPageIdx]
     && registry['ft-' + firstPageIdx].textContent === pages[0].facts[0].text;
+
+  // Session TB2 — arriving from a dog-ear on the bookshelf: the book must open
+  // AT that page (not the cover), and Back must return to the bookshelf.
+  if (OPTS.search) {
+    r.deepLanded = registry.pagecount.textContent === 'Page ' + OPTS.expectPage + ' of ' + pages.length;
+    sandbox.exitToShell();
+    r.backToShelf = sandbox.location.href === '/explore/kidspedia';
+  }
+  // The visit-the-exhibit link only draws once its target is confirmed approved.
+  r.tieIn = !exhibit.data.exhibit
+    || (registry['tiein-finish'] && registry['tiein-finish'].style.display === 'inline-flex'
+        && registry['tiein-cover'] && registry['tiein-cover'].style.display === 'inline-flex');
 
   // Every page renders its fact AND its source line.
   r.pageChecks = pages.map((p, k) => {
@@ -384,6 +431,26 @@ for (const ex of candidates) {
   else pass(`${r.id}: "Quick quiz" opens the shell's quizRequest bridge`);
   if (!r.pauseResume) fail(`${r.id}: pause/resume from the shell was not honored (the book kept turning)`);
   else pass(`${r.id}: honors pause/resume from the shell (CARTRIDGE-CONTRACT.md)`);
+  if (!r.tieIn) fail(`${r.id}: the visit-the-exhibit link never appeared even though its exhibit is approved`);
+  else if (ex.data.exhibit) pass(`${r.id}: the visit-the-exhibit button appears on the cover and the last page`);
+}
+
+// ---- Session TB2: opening a book straight at a dog-eared page ----
+{
+  const ex = candidates[0];
+  const target = (ex.data.pages || [])[1];
+  if (!target) fail('the first book has no second page to deep-link to');
+  else {
+    let r;
+    try { r = await runBook(ex, { search: `?page=${target.id}&from=shelf`, expectPage: 2 }); }
+    catch (e) { fail(`${ex.data.id}: threw on the dog-ear deep link — ${e.message}`); r = null; }
+    if (r) {
+      if (!r.deepLanded) fail(`${ex.data.id}: /explore/${ex.data.id}?page=${target.id} did not open at that page`);
+      else pass(`${ex.data.id}: a dog-ear link opens the book straight at the saved page`);
+      if (!r.backToShelf) fail(`${ex.data.id}: coming from the bookshelf, Back did not return to the bookshelf`);
+      else pass(`${ex.data.id}: arriving from the bookshelf, Back returns to the bookshelf`);
+    }
+  }
 }
 
 // Static source checks for paths the vm cannot flip mid-run.

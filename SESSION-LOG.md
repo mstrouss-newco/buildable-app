@@ -1,6 +1,58 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-25: Session TB2 — the Kidspedia bookshelf, My dog-ears, and visit-the-exhibit links
+
+**Shipped**
+- `public/kidspedia.html` — the bookshelf, served at `/explore/kidspedia`. Every
+  APPROVED topic book's cover on named shelves (Animals / Long, long ago / Out in space /
+  Our wild world / Big machines). Missing cover art paints the titled colour panel, so
+  the shelf is never a row of white holes. No emojis: the shelf, the plank and the fold
+  are drawn SVG.
+- `public/explore/bookshelf.json` — the shelf ORDER, all 20 planned topic ids listed from
+  day one. The page loads each book's own JSON and shows it ONLY when that file says
+  `approved`, so in-review books stay invisible and a book written in TB3/TB4 takes its
+  shelf place the moment it is approved, with nothing else to wire up.
+- **My dog-ears**, across every book: read from `/api/saved-pages` on the kid lane, with
+  the localStorage mirror rendered first so it is instant and works offline. Each card
+  jumps straight to that page (`/explore/{book}?from=shelf&page={pageId}`). Dog-ears
+  pointing at a book that is not approved, or at a page id that no longer exists, are
+  dropped rather than shown as dead links.
+- `public/topic.html`: `?page=` opens the book at that page (unknown id falls back to the
+  cover), `?from=shelf` makes Back and the finish button return to the BOOKSHELF instead
+  of Home, the in-book sheet gained "See all my dog-ears", and a **visit-the-exhibit**
+  button now draws on the cover and last page — but only after the template confirms the
+  target exhibit exists and is approved.
+- Tie-in map (enforced in `qa-topic.mjs`): Wild Weather -> `make-it-rain`, The Deep Ocean
+  -> `ocean-deep`, plus Volcanoes / Rainforest / How Plants Grow / Your Amazing Body once
+  phases VL / RT / GL / BA build their exhibits. `moon.json` links to `solar-system`, the
+  one tie-in whose exhibit is live today.
+- `src/BuildableKids.jsx`: catalog entries carry `template: "topic-book"`, and
+  `exploreShelfItems()` replaces the per-book Home cards with ONE "Kidspedia Books" card
+  that only appears once a book is approved.
+- `vercel.json`: `/explore/kidspedia` -> `kidspedia.html`, and the three per-book routes
+  replaced by ONE alternation route covering all 20 planned ids -> `topic.html`, still
+  before the `/explore/(.*)` catch-all. TB3/TB4 add zero routes.
+- `qa-kidspedia.mjs` — NEW, born with the page (shelf-order contract, real route, vm
+  runtime: approved-only shelf, kid-lane dog-ears, working deep link). `qa-topic.mjs`
+  extended (tie-in map + a second runtime pass for the deep link and Back-to-bookshelf).
+  `qa-explore.mjs` now skips `bookshelf.json`. qa-kidspedia / qa-topic / qa-explore /
+  qa-dive / qa-weather: ALL CHECKS PASS.
+- `EXHIBIT-MANIFEST.md`: the `exhibit` tie-in field and a bookshelf section.
+
+**Flagged / still open in phase TB**
+- 17 of the 20 books are unwritten (TB3 topics 4-12, TB4 topics 13-20). Wild Weather and
+  The Deep Ocean are among them, so their exhibit links exist as slots and will light up
+  by themselves when those books are written.
+- The DALL-E photos are still not in the repo, so every book page AND every shelf cover
+  paints its colour panel. qa-topic still WARNs 5/5 missing photos per book.
+- All three books remain **in-review**: until Mike fact-checks and flips BOTH the json
+  and EXHIBIT_CATALOG, no Kidspedia card appears on Home and the bookshelf is empty.
+- `db/create-saved-pages.sql` still needs running in the Supabase SQL editor before
+  dog-ears actually follow a kid across devices (today they are local-only, silently).
+
+---
+
 ## 2026-07-25: Song library cleanup
 
 Small fix, requested directly by Mike (not a planned roadmap session).
@@ -18,6 +70,7 @@ Small fix, requested directly by Mike (not a planned roadmap session).
   route since this session can't `git push`. Auto-deploys via Vercel.
 
 **Remaining:** none — this was a self-contained fix, not a phase session.
+
 
 ## 2026-07-24: Session TB1 — Kidspedia topic-book template + first three books
 

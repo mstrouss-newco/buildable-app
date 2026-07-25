@@ -2258,6 +2258,63 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-25 (Session TB2: the Kidspedia bookshelf + My dog-ears + visit-the-exhibit links)
+
+THE BOOKSHELF: NEW `public/kidspedia.html`, served at `/explore/kidspedia` — the front
+door to the topic books. Every APPROVED book's cover, grouped onto named shelves
+(Animals / Long, long ago / Out in space / Our wild world / Big machines) with a drawn
+plank under each row. Shelf ORDER is data: NEW `public/explore/bookshelf.json` lists all
+20 planned topic ids from day one; the page loads each id's own `/explore/{id}.json` and
+renders it ONLY when that file says `status: "approved"`. So an in-review book is
+invisible even though its id is listed, and a book written in TB3/TB4 takes its place on
+the right shelf the moment it is approved with nothing else to wire. Missing cover art
+still paints the titled colour panel, so the shelf is never a row of white holes.
+
+MY DOG-EARS (cross-book, cross-device): the bookshelf's top shelf is the pages this kid
+folded a corner on across EVERY book, read from `/api/saved-pages` on the `kid:` lane
+(the same rows `topic.html` writes), with the localStorage mirror rendered first so the
+shelf is never blank for a beat and still works offline. Each card jumps straight to that
+page: `/explore/{book}?from=shelf&page={pageId}`. `topic.html` gained `?page=` (opens at
+that page, unknown id falls back to the cover) and `?from=shelf` (Back and the finish
+button return to the BOOKSHELF instead of all the way Home). A dog-ear whose book is not
+approved, or whose page id no longer exists, is dropped rather than shown as a dead link.
+The in-book dog-ear sheet also gained a "See all my dog-ears" button to the shelf.
+
+VISIT-THE-EXHIBIT TIE-INS: a topic book may name one Kidspedia exhibit about the same
+subject (`"exhibit": { id, title, label }`). The template draws that button on the cover
+and the last page ONLY after confirming the target exhibit exists AND is approved — so
+the six tie-in topics get their link slot now and it lights up by itself later: Wild
+Weather -> Weather Lab (`make-it-rain`), The Deep Ocean -> Journey to the Deep
+(`ocean-deep`), and Volcanoes / The Rainforest / How Plants Grow / Your Amazing Body once
+planner phases VL / RT / GL / BA exist. Those two books are not written yet (they are
+TB3/TB4 topics), so the map lives in `qa-topic.mjs`, which FAILS if a book whose exhibit
+is already live ships without its link. The Moon now links to Our Solar System, the one
+tie-in whose exhibit is live today.
+
+HOME: books no longer each get an Explore card. `EXHIBIT_CATALOG` entries carry
+`template: "topic-book"` and `exploreShelfItems()` swaps them for ONE "Kidspedia Books"
+card that opens the bookshelf — and only once at least one book is approved, so a kid
+never taps into an empty shelf. Routing: `/explore/kidspedia` -> `kidspedia.html`, and the
+three per-book routes were replaced by ONE alternation route covering all 20 planned topic
+ids -> `topic.html`, all still BEFORE the `/explore/(.*)` orbit catch-all (TB3/TB4 now add
+zero routes).
+
+QA: NEW `qa-kidspedia.mjs`, born with the page — shelf-order contract (no duplicates,
+every listed id routes to the template, every book in the repo has a shelf place), real
+route, and a vm runtime pass (only the approved book renders, in-review books stay hidden,
+My dog-ears reads the kid lane, a dog-ear deep-links correctly, an un-approved dog-ear is
+dropped). `qa-topic.mjs` extended with the tie-in map and a second runtime pass for the
+dog-ear deep link + Back-to-bookshelf. `qa-explore.mjs` now skips `bookshelf.json` (it is
+a shelf order, not an exhibit). qa-kidspedia, qa-topic, qa-explore, qa-dive, qa-weather:
+ALL CHECKS PASS.
+
+STILL OPEN in phase TB: 17 of 20 books unwritten (TB3/TB4); the DALL-E photos still are
+not in the repo, so every book and every shelf cover paints its colour panel; all three
+books remain **in-review**, so a kid sees no Kidspedia card on Home until Mike
+fact-checks and flips BOTH the json and EXHIBIT_CATALOG; `db/create-saved-pages.sql`
+still needs running in Supabase before dog-ears sync across devices.
+
+---
 ## Session log — 2026-07-24 (Session TB1: Kidspedia topic-book template + Sharks / Dinosaurs / The Moon)
 
 FOURTH Kidspedia exhibit template: `topic-book` (`public/topic.html`) — a photo-real
