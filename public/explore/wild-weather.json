@@ -1,0 +1,134 @@
+{
+  "id": "wild-weather",
+  "title": "Wild Weather",
+  "template": "topic-book",
+  "topic": "weather",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": [
+    "weather-facts",
+    "reading"
+  ],
+  "heroArt": "/explore/topic-photos/wild-weather/wild-weather-cover.webp",
+  "shelfColor": "#37B6F5",
+  "ambient": "rain",
+  "assetVersion": 1,
+  "exhibit": {
+    "id": "make-it-rain",
+    "title": "Weather Lab",
+    "label": "Visit the Weather Lab"
+  },
+  "sources": [
+    "NOAA National Weather Service (weather.gov)",
+    "NOAA (noaa.gov)",
+    "NOAA National Severe Storms Laboratory (nssl.noaa.gov)",
+    "UCAR Center for Science Education (scied.ucar.edu)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/wild-weather/wild-weather-cover.webp",
+    "artAlt": "A huge thunderstorm cloud towering over golden plains at sunset with a distant lightning bolt",
+    "blurb": "The sky puts on the biggest show on Earth, and it is free every single day. Turn the page and watch."
+  },
+  "pages": [
+    {
+      "id": "lightning",
+      "title": "Flash First, Then the Rumble",
+      "art": "/explore/topic-photos/wild-weather/wild-weather-1.webp",
+      "artAlt": "A single bright bolt of lightning over an empty landscape at dusk",
+      "factAudio": "wild-weather-lightning",
+      "quiz": [
+        "wild-weather-lightning"
+      ],
+      "facts": [
+        {
+          "text": "A lightning bolt is a giant spark of electricity. It heats the air around it to about 50,000 degrees Fahrenheit, hotter than the surface of the sun, and that air puffs outward so fast that the boom it makes is the thunder you hear.",
+          "source": "NOAA National Severe Storms Laboratory (nssl.noaa.gov)"
+        },
+        {
+          "text": "Light reaches your eyes almost instantly, but sound takes its time getting to your ears. Count the seconds between the flash and the rumble, then divide by five, and that is roughly how many miles away the lightning was. Five seconds means about one mile.",
+          "source": "NOAA National Weather Service (weather.gov)"
+        },
+        {
+          "text": "Thunder can usually be heard about 10 miles away. If you can hear it at all, that is the sky telling you to go inside, and the window is the best seat in the house for watching the rest of the storm with a grown-up.",
+          "source": "NOAA National Weather Service (weather.gov)"
+        }
+      ]
+    },
+    {
+      "id": "rainbow",
+      "title": "Sunlight Bent by Raindrops",
+      "art": "/explore/topic-photos/wild-weather/wild-weather-2.webp",
+      "artAlt": "A full rainbow arching over green hills after rain",
+      "factAudio": "wild-weather-rainbow",
+      "quiz": [
+        "wild-weather-rainbow"
+      ],
+      "facts": [
+        {
+          "text": "A rainbow needs two things at the same time: sunshine and raindrops still hanging in the air. White sunlight goes into a droplet, bends inside it, and comes back out split into all of its colours.",
+          "source": "UCAR Center for Science Education (scied.ucar.edu)"
+        },
+        {
+          "text": "You can only see a rainbow with the sun behind you and the rain in front of you. That is why they turn up after a shower when the sun is low, pointing your own shadow straight at the middle of the bow.",
+          "source": "UCAR Center for Science Education (scied.ucar.edu)"
+        },
+        {
+          "text": "The colours always come in the same order: red, orange, yellow, green, blue, indigo, violet. People remember it as a name, ROY G BIV. Look above a bright rainbow and you may spot a fainter second one with its colours the other way round.",
+          "source": "UCAR Center for Science Education (scied.ucar.edu)"
+        }
+      ]
+    },
+    {
+      "id": "hurricane-eye",
+      "title": "The Calm Eye of the Storm",
+      "art": "/explore/topic-photos/wild-weather/wild-weather-3.webp",
+      "artAlt": "A hurricane seen from space as a huge white spiral with a clear round eye in the middle",
+      "factAudio": "wild-weather-hurricane-eye",
+      "quiz": [
+        "wild-weather-hurricane-eye"
+      ],
+      "facts": [
+        {
+          "text": "A hurricane is an enormous spinning pile of thunderstorms. From a satellite up in space it looks like a pinwheel, with curved rainbands of cloud spiralling in toward the middle.",
+          "source": "NOAA (noaa.gov)"
+        },
+        {
+          "text": "The hole in the centre is called the eye, and it is usually about 20 to 40 miles across. Inside it the air sinks, the wind drops to a light breeze, and the sky can be clear enough to see stars straight overhead while the storm turns all around it.",
+          "source": "NOAA (noaa.gov)"
+        },
+        {
+          "text": "Ringing the eye is the eyewall, a circle of very tall thunderstorms where the rain and wind are strongest. Special planes with scientists on board fly right through it to measure the storm, so forecasters can tell everyone what is coming days ahead.",
+          "source": "NOAA (noaa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "snowflakes",
+      "title": "Six Sides, Every Single Time",
+      "art": "/explore/topic-photos/wild-weather/wild-weather-4.webp",
+      "artAlt": "Close-up of tiny snowflakes resting on a dark blue mitten",
+      "factAudio": "wild-weather-snowflakes",
+      "quiz": [
+        "wild-weather-snowflakes"
+      ],
+      "facts": [
+        {
+          "text": "Every snowflake has six sides. As water freezes, its tiny building blocks lock together in a repeating six-sided pattern, and the whole crystal grows outward following that same rule.",
+          "source": "NOAA (noaa.gov)"
+        },
+        {
+          "text": "The temperature decides the shape. Near 23 degrees Fahrenheit crystals grow long and needle-like, and near 5 degrees Fahrenheit they grow flat and plate-like, so one snowstorm can drop several different styles of flake.",
+          "source": "NOAA (noaa.gov)"
+        },
+        {
+          "text": "No two flakes look quite the same because no two take the same trip down. Each one drifts through slightly different air on the way, and every wobble changes how it grows. The six arms on one flake match each other because they travelled together.",
+          "source": "NOAA (noaa.gov)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Wild Weather!",
+    "blurb": "Weather is happening over your head right this second, and now you can read a little more of it. Fold a corner on your favourite page so you can find it again."
+  }
+}

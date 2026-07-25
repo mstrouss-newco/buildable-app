@@ -1,0 +1,136 @@
+{
+  "id": "deep-ocean",
+  "title": "The Deep Ocean",
+  "template": "topic-book",
+  "topic": "ocean",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": [
+    "ocean-facts",
+    "reading"
+  ],
+  "heroArt": "/explore/topic-photos/deep-ocean/deep-ocean-cover.webp",
+  "shelfColor": "#0E4E73",
+  "ambient": "ocean",
+  "assetVersion": 1,
+  "exhibit": {
+    "id": "ocean-deep",
+    "title": "Journey to the Deep",
+    "label": "Visit Journey to the Deep"
+  },
+  "sources": [
+    "NOAA Ocean Exploration (oceanexplorer.noaa.gov)",
+    "NOAA (noaa.gov)",
+    "NOAA Fisheries (fisheries.noaa.gov)",
+    "Woods Hole Oceanographic Institution (whoi.edu)",
+    "Smithsonian Ocean (ocean.si.edu)",
+    "Monterey Bay Aquarium Research Institute (mbari.org)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/deep-ocean/deep-ocean-cover.webp",
+    "artAlt": "A deep-sea submersible with bright headlights shining out into dark blue water",
+    "blurb": "Most of the ocean is deeper than sunlight can reach. Switch on the lights and come down."
+  },
+  "pages": [
+    {
+      "id": "glow",
+      "title": "Animals That Make Their Own Light",
+      "art": "/explore/topic-photos/deep-ocean/deep-ocean-1.webp",
+      "artAlt": "A glowing translucent jellyfish drifting in pitch-black water",
+      "factAudio": "deep-ocean-glow",
+      "quiz": [
+        "deep-ocean-glow"
+      ],
+      "facts": [
+        {
+          "text": "Bioluminescence is light made by a living thing, using a chemical reaction inside its own body. It is cold light, so it never burns, and far down in the sea it is often the only light there is.",
+          "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
+        },
+        {
+          "text": "About 80 out of every 100 animals living between 200 and 1,000 metres down can make their own light. Jellyfish, squid and fish all glow, and scientists are still working out everything they use their light for.",
+          "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
+        },
+        {
+          "text": "The ocean comes in layers. The top 200 metres is the sunlight zone. From 200 down to 1,000 metres is the twilight zone, dim and blue. Below 1,000 metres is the midnight zone, where no sunlight reaches at all.",
+          "source": "NOAA (noaa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "vents",
+      "title": "Hot Springs on the Sea Floor",
+      "art": "/explore/topic-photos/deep-ocean/deep-ocean-2.webp",
+      "artAlt": "Hydrothermal vents on the sea floor puffing out black smoke, with pale tube worms growing around them",
+      "factAudio": "deep-ocean-vents",
+      "quiz": [
+        "deep-ocean-vents"
+      ],
+      "facts": [
+        {
+          "text": "In some places on the sea floor, seawater sinks into cracks near undersea volcanoes, gets heated deep inside the Earth, and shoots straight back out. Scientists have measured that water at about 660 degrees Fahrenheit, more than three times hotter than boiling water.",
+          "source": "Woods Hole Oceanographic Institution (whoi.edu)"
+        },
+        {
+          "text": "The dark plumes are nicknamed black smokers, but that is not smoke. The hot water is packed with dissolved minerals, and when it meets the near-freezing seawater those minerals turn solid in a swirling dark cloud and slowly stack up into rocky chimneys.",
+          "source": "Woods Hole Oceanographic Institution (whoi.edu)"
+        },
+        {
+          "text": "Nothing down here has sunlight to live on, so life runs on chemicals instead. Tiny microbes turn vent chemicals into food, a trick called chemosynthesis. The big pale tube worms have no mouth and no stomach at all, because microbes living inside them do the feeding.",
+          "source": "Smithsonian Ocean (ocean.si.edu)"
+        }
+      ]
+    },
+    {
+      "id": "whale-dive",
+      "title": "The Whale That Dives Deepest",
+      "art": "/explore/topic-photos/deep-ocean/deep-ocean-3.webp",
+      "artAlt": "A sperm whale swimming downward into deep blue water",
+      "factAudio": "deep-ocean-whale-dive",
+      "quiz": [
+        "deep-ocean-whale-dive"
+      ],
+      "facts": [
+        {
+          "text": "A sperm whale looks for its food by diving. It goes down to around 2,000 feet again and again, and one dive can last about 45 minutes, all on the single breath it took at the surface.",
+          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+        },
+        {
+          "text": "Down that deep it is pitch black, so the whale sees with sound. It makes loud clicks and listens for the echoes coming back. The closer it gets to a squid, the faster the clicks come, until they run together into a sound scientists call a buzz.",
+          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+        },
+        {
+          "text": "A male sperm whale can grow to about 52 feet, longer than a school bus. Much of that enormous square head is a sac of waxy oil called spermaceti, which helps the whale aim its clicks into the dark.",
+          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "sea-floor",
+      "title": "The Bottom of the Deep",
+      "art": "/explore/topic-photos/deep-ocean/deep-ocean-4.webp",
+      "artAlt": "The dark sea floor of pale sand with a sea star and a small pale octopus lit by a submersible lamp",
+      "factAudio": "deep-ocean-sea-floor",
+      "quiz": [
+        "deep-ocean-sea-floor"
+      ],
+      "facts": [
+        {
+          "text": "Below about 200 metres the ocean turns cold and heavy. Down deep the average temperature is around 4 degrees Celsius, close to the inside of a fridge, and the water presses down hundreds of times harder than the air does at the beach.",
+          "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
+        },
+        {
+          "text": "Animals really do live on the soft muddy bottom: sea stars, sea cucumbers and pale deep-sea octopuses. Researchers watch them using robot submarines that carry their own lights and cameras, because otherwise there is nothing to see by.",
+          "source": "Monterey Bay Aquarium Research Institute (mbari.org)"
+        },
+        {
+          "text": "We have barely looked. By 2026 about 29 percent of the world's sea floor had been mapped in detail, and explorers have actually laid eyes on less than one thousandth of one percent of the deep sea floor, an area about the size of Rhode Island.",
+          "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished The Deep Ocean!",
+    "blurb": "There is far more of the deep sea left to find than anyone has found so far, and some of it is waiting for you. Fold a corner on your favourite page so you can find it again."
+  }
+}

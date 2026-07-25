@@ -1,0 +1,117 @@
+{
+  "id": "volcanoes",
+  "title": "Volcanoes",
+  "template": "topic-book",
+  "topic": "earth",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["earth-facts", "reading"],
+  "heroArt": "/explore/topic-photos/volcanoes/volcanoes-cover.webp",
+  "shelfColor": "#B8452F",
+  "ambient": "fire",
+  "assetVersion": 1,
+  "sources": [
+    "U.S. Geological Survey (usgs.gov)",
+    "USGS Volcano Hazards Program (usgs.gov)",
+    "National Park Service (nps.gov)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/volcanoes/volcanoes-cover.webp",
+    "artAlt": "A volcano at night seen from far away, with a bright glowing fountain of lava at its top",
+    "blurb": "Deep under your feet, rock gets hot enough to melt. Turn the page and see what happens when it comes up for air."
+  },
+  "pages": [
+    {
+      "id": "lava",
+      "title": "Magma Below, Lava Above",
+      "art": "/explore/topic-photos/volcanoes/volcanoes-1.webp",
+      "artAlt": "A slow river of bright orange lava crawling over black rock at dusk",
+      "factAudio": "volcanoes-lava",
+      "quiz": ["volcanoes-lava"],
+      "facts": [
+        {
+          "text": "Melted rock that is still underground is called magma. The moment it breaks through the surface where you can see it, scientists call it lava. It is the same hot rock with two names, depending on which side of the ground it is on.",
+          "source": "U.S. Geological Survey (usgs.gov)"
+        },
+        {
+          "text": "Lava coming out of a Hawaiian volcano is around 2,000 degrees Fahrenheit. That is more than four times hotter than the hottest setting on a kitchen oven. Scientists can guess how hot a flow is just from its colour, because yellow is hottest, then orange, then red.",
+          "source": "U.S. Geological Survey (usgs.gov)"
+        },
+        {
+          "text": "Most lava does not race anywhere. A flow like this one usually creeps along more slowly than you walk, which is why scientists can stand back at a safe spot and watch the glowing edge move all night long.",
+          "source": "U.S. Geological Survey (usgs.gov)"
+        }
+      ]
+    },
+    {
+      "id": "ash-plume",
+      "title": "The Grey Cloud Above the Crater",
+      "art": "/explore/topic-photos/volcanoes/volcanoes-2.webp",
+      "artAlt": "A tall grey plume of ash and steam rising from the crater of a volcano",
+      "factAudio": "volcanoes-ash-plume",
+      "quiz": ["volcanoes-ash-plume"],
+      "facts": [
+        {
+          "text": "Volcanic ash is nothing like the soft grey ash in a fireplace. It is made of tiny pieces of rock, minerals and volcanic glass that were torn apart and flung into the sky. Every speck is hard and sharp, so it feels gritty between your fingers.",
+          "source": "USGS Volcano Hazards Program (usgs.gov)"
+        },
+        {
+          "text": "Lava is not the only thing that comes out. Ninety nine out of every hundred gas molecules leaving a volcano are water vapour, carbon dioxide and sulfur dioxide. Water vapour is simply steam, so a lot of that pale plume is really just very hot water floating in the air.",
+          "source": "U.S. Geological Survey (usgs.gov)"
+        },
+        {
+          "text": "Ash is light enough to ride the wind for hundreds of miles. Scientists at volcano observatories watch the plumes on satellite pictures and tell pilots which patches of sky to steer around, so planes stay well clear of the grit.",
+          "source": "USGS Volcano Hazards Program (usgs.gov)"
+        }
+      ]
+    },
+    {
+      "id": "shapes",
+      "title": "Cones, Shields and the Ring of Fire",
+      "art": "/explore/topic-photos/volcanoes/volcanoes-3.webp",
+      "artAlt": "A snow-capped cone-shaped volcano rising above a green valley",
+      "factAudio": "volcanoes-shapes",
+      "quiz": ["volcanoes-shapes"],
+      "facts": [
+        {
+          "text": "A tall pointy volcano like this one is called a composite volcano, or a stratovolcano. It builds its neat cone shape in layers, lava on top of ash on top of lava, one eruption at a time, over thousands of years.",
+          "source": "National Park Service (nps.gov)"
+        },
+        {
+          "text": "Not every volcano is a cone. A shield volcano such as Mauna Loa in Hawaii is wide and gently sloping, like a warrior's round shield lying on the ground, because its runny lava spreads far out instead of piling up steeply.",
+          "source": "National Park Service (nps.gov)"
+        },
+        {
+          "text": "The outside of the Earth is cracked into giant slabs called tectonic plates, and most volcanoes sit along the edges where those plates meet. So many of them line up around the Pacific Ocean that the whole loop has a nickname: the Ring of Fire.",
+          "source": "U.S. Geological Survey (usgs.gov)"
+        }
+      ]
+    },
+    {
+      "id": "new-life",
+      "title": "Ferns in the Black Rock",
+      "art": "/explore/topic-photos/volcanoes/volcanoes-4.webp",
+      "artAlt": "Close-up of cooled black volcanic rock with bright green ferns growing out of the cracks",
+      "factAudio": "volcanoes-new-life",
+      "quiz": ["volcanoes-new-life"],
+      "facts": [
+        {
+          "text": "When lava cools it hardens into black rock. Smooth ropy rock is called pahoehoe and rough chunky rock is called aa, and one single flow can make both kinds as different parts of it cool at different speeds.",
+          "source": "National Park Service (nps.gov)"
+        },
+        {
+          "text": "Life comes back through the cracks. Seeds, spores and blown-in leaves gather in the little gaps along with crumbs of broken lava, and tough ferns and ohia trees push their roots down into those pockets.",
+          "source": "U.S. Geological Survey (usgs.gov)"
+        },
+        {
+          "text": "Volcanic rock slowly crumbles into rich dark soil. In a rainy place a bare black lava flow can turn into a green forest in less than 150 years, which is a very short time in the life of a mountain.",
+          "source": "U.S. Geological Survey (usgs.gov)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Volcanoes!",
+    "blurb": "Volcanoes are the Earth showing its work, building brand new islands and brand new soil. Fold a corner on your favourite page so you can find it again."
+  }
+}
