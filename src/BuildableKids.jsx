@@ -2949,22 +2949,33 @@ function HomeScreen(props) {
   const MAKE_ITEMS = [
     // Stories is COMING SOON while the art relaunch finishes: the tile stays visible
     // but opens the same 1111 preview gate the Play shelf uses (owner QA only).
-    { id: "story", title: "Make a story", sub: "Coming soon", grad: "linear-gradient(160deg,#F2789E,#E0578F)", glyph: <BookGlyph />, soon: true, gated: true, onClick: () => { setCatalogGate(() => onStories); setCatalogPw(""); setCatalogErr(false); } },
-    { id: "song", title: "Make a song", sub: "Sing about anything", grad: "linear-gradient(160deg,#8A6BFF,#6A4FE0)", glyph: <NoteGlyph />, onClick: onMusic },
-    { id: "sound", title: "Sound Machine", sub: "Silly sounds & explosions", grad: "linear-gradient(160deg,#FF8FB1,#F0577E)", glyph: <SpeakerGlyph />, onClick: onSounds },
-    { id: "art", title: "Make art", sub: "Draw, stamp & mirror", grad: "linear-gradient(160deg,#22B8CF,#1098AD)", glyph: <ArtGlyph />, onClick: onArt },
-    { id: "game", title: "Make a game", sub: "Coming soon", grad: "linear-gradient(160deg,#A06BFF,#7A4FE0)", glyph: <WandGlyph />, onClick: onMakeGame, soon: true },
+    { id: "story", title: "Make a story", sub: "Coming soon", color: "#E0578F", grad: "linear-gradient(160deg,#F2789E,#E0578F)", glyph: <BookGlyph />, soon: true, gated: true, onClick: () => { setCatalogGate(() => onStories); setCatalogPw(""); setCatalogErr(false); } },
+    { id: "song", title: "Make a song", sub: "Sing about anything", color: "#6A4FE0", grad: "linear-gradient(160deg,#8A6BFF,#6A4FE0)", glyph: <NoteGlyph />, onClick: onMusic },
+    { id: "sound", title: "Sound Machine", sub: "Silly sounds & explosions", color: "#F0577E", grad: "linear-gradient(160deg,#FF8FB1,#F0577E)", glyph: <SpeakerGlyph />, onClick: onSounds },
+    { id: "art", title: "Make art", sub: "Draw, stamp & mirror", color: "#1098AD", grad: "linear-gradient(160deg,#22B8CF,#1098AD)", glyph: <ArtGlyph />, onClick: onArt },
+    { id: "game", title: "Make a game", sub: "Coming soon", color: "#7A4FE0", grad: "linear-gradient(160deg,#A06BFF,#7A4FE0)", glyph: <WandGlyph />, onClick: onMakeGame, soon: true },
   ];
+  // Make cards use the SAME shape as the Play shelf: 4:3 key art on top, title +
+  // one-liner underneath. Art comes from the shared image library (kind=make); the
+  // colored gradient + glyph stay underneath as the instant fallback.
   const MakeShelfCard = ({ item }) => (
     <button
       onClick={item.soon && !item.gated ? undefined : item.onClick}
       disabled={item.soon && !item.gated}
-      style={{ ...shelfCardStyle, opacity: item.soon ? 0.6 : 1, padding: phone ? "16px 12px 14px" : "20px 14px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center", cursor: item.soon && !item.gated ? "default" : "pointer" }}
+      style={{ ...shelfCardStyle, opacity: item.soon ? 0.65 : 1, cursor: item.soon && !item.gated ? "default" : "pointer" }}
     >
-      {item.soon && <span style={{ position: "absolute", marginTop: -6, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.10)", color: HOME_INK, alignSelf: "flex-end" }}>Soon</span>}
-      <AppIcon grad={item.grad} size={phone ? 62 : 74}>{item.glyph}</AppIcon>
-      <div style={{ fontFamily: FRED, fontSize: phone ? 14 : 16, fontWeight: 700 }}>{item.title}</div>
-      <div style={{ fontSize: phone ? 10.5 : 12, color: HOME_SUB }}>{item.sub}</div>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: item.grad, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <AppIcon grad={item.grad} size={54}>{item.glyph}</AppIcon>
+        <img src={`/api/images?kind=make&id=${item.id}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        {item.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
+      </div>
+      <div style={{ padding: "9px 11px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 3, background: item.color, flex: "0 0 auto" }} />
+          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3 }}>{item.sub}</div>
+      </div>
     </button>
   );
 
