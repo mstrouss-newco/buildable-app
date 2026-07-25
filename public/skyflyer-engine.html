@@ -233,6 +233,7 @@
   </div></div>
 </div>
 <script src="/three.min.js"></script>
+<script src="/GLTFLoader.js"></script>
 <script src="/buildable-audio.js"></script>
 <script src="/buildable-feel.js"></script>
 <script src="/buildable-wallet.js"></script>
@@ -719,6 +720,30 @@ PADS.forEach(function(pad){
   g.position.set(pad.x,0,pad.z);
   scene.add(g);
 });
+// AR1: the two landing pads are the only fixed places in an endless world, so
+// they are worth dressing by hand — a dock, a boat and a couple of palms make a
+// pad feel like somewhere a plane would actually land. Nothing here is solid.
+var PAD_DRESS=false;
+function dressPads(){
+  if(!KIT_ON||PAD_DRESS) return; PAD_DRESS=true;
+  PADS.forEach(function(pad,pi){
+    var r=rng(4100+pi*777), g=new THREE.Group();
+    g.position.set(pad.x,0,pad.z);
+    var dk=inst("dock",null,13);
+    if(dk){ dk.position.set(PAD_R+9,0.4,0); dk.rotation.y=Math.PI/2; g.add(dk); }
+    var bt=inst(r()>0.5?"sail":"speed",null,9+r()*4);
+    if(bt){ bt.position.set(PAD_R+21,-0.4,4); bt.rotation.y=r()*6.28;
+      bt.userData.bob=r()*6.28; g.add(bt); floaters.push(bt); }
+    for(var i=0;i<3;i++){
+      var a=2.1+i*0.7, pl=inst(r()>0.5?"palmA":"palmB",8+r()*4);
+      if(pl){ pl.position.set(Math.cos(a)*(PAD_R+11),0.4,Math.sin(a)*(PAD_R+11));
+        pl.rotation.y=r()*6.28; g.add(pl); }
+    }
+    var rk=inst("rockA",null,7);
+    if(rk){ rk.position.set(-(PAD_R+13),0.3,-8); g.add(rk); }
+    scene.add(g);
+  });
+}
 function nearestPad(){
   var best=PADS[0],bd=1e18;
   for(var i=0;i<PADS.length;i++){
@@ -726,6 +751,248 @@ function nearestPad(){
     if(d<bd){bd=d;best=PADS[i];}
   }
   return {pad:best,dist:bd};
+}
+
+// ============================================================================
+//  AR1 — REAL 3D MODELS FOR SUNNY ISLANDS (phase AR).
+//
+//  Everything below is a thin dressing layer on top of the world the engine
+//  already builds. The rules it follows:
+//    - ONLY the islands world is dressed. Snowy Peaks and Sunset Canyon build
+//      exactly as they did before, so nothing else in the game can move.
+//    - the models are ART, never gameplay. The island silhouette (hitR / hitH),
+//      the pads, the coins and the bounce are untouched, so the autopilot flies
+//      the same world it flew yesterday.
+//    - the built-in shapes stay in place as the FALLBACK. They are drawn first
+//      and only hidden once a real model has actually arrived, so a slow phone,
+//      a failed download or a headless QA run still gets a whole world.
+//    - the palette art slot (FL4) still owns the island body colours. Models
+//      carry their own Kenney colours on purpose: they are the "real art".
+//
+//  Models: Kenney (CC0, Pirate Kit + Nature Kit + Watercraft Pack). Licences
+//  ship next to the files in /models/skyflyer/.
+// ============================================================================
+var KIT_BASE="/models/skyflyer/";
+var KIT_FILES={
+  palmA:"pirate/palm-detailed-straight.glb",
+  palmB:"pirate/palm-detailed-bend.glb",
+  rockA:"nature/rock_largeA.glb",
+  rockB:"nature/rock_largeB.glb",
+  stack:"nature/rock_tallA.glb",
+  reefA:"pirate/rocks-sand-a.glb",
+  reefB:"pirate/rocks-sand-b.glb",
+  dock:"pirate/structure-platform-dock.glb",
+  tower:"pirate/tower-watch.glb",
+  grass:"pirate/grass-patch.glb",
+  shipA:"pirate/ship-small.glb",
+  shipB:"pirate/ship-pirate-small.glb",
+  wreck:"pirate/ship-wreck.glb",
+  sail:"watercraft/boat-sail-a.glb",
+  row:"watercraft/boat-row-small.glb",
+  speed:"watercraft/boat-speed-a.glb"
+};
+var KIT={}, KIT_ON=false, KIT_STARTED=false, floaters=[];
+
+// A Kenney model arrives as a little scene of a dozen small meshes. On a phone
+// or an iPad the killer is not triangles, it is DRAW CALLS, so every model is
+// flattened here into one mesh per material BEFORE it is ever cloned. A palm
+// that was three draw calls becomes one, a ship that was fifteen becomes one,
+// and then a hundred of them cost a hundred instead of fifteen hundred.
+function mergeByMaterial(root){
+  root.updateMatrixWorld(true);
+  var buckets={}, order=[], v=new THREE.Vector3(), nm=new THREE.Matrix3();
+  root.traverse(function(o){
+    if(!o.isMesh||!o.geometry||!o.geometry.attributes.position) return;
+    var g=o.geometry, pa=g.attributes.position, na=g.attributes.normal, ua=g.attributes.uv;
+    var key=o.material.uuid, B=buckets[key];
+    if(!B){ B=buckets[key]={mat:o.material,pos:[],nor:[],uv:[],idx:[],base:0}; order.push(key); }
+    nm.getNormalMatrix(o.matrixWorld);
+    for(var i=0;i<pa.count;i++){
+      v.fromBufferAttribute(pa,i).applyMatrix4(o.matrixWorld); B.pos.push(v.x,v.y,v.z);
+      if(na){ v.fromBufferAttribute(na,i).applyMatrix3(nm).normalize(); B.nor.push(v.x,v.y,v.z); }
+      else B.nor.push(0,1,0);
+      B.uv.push(ua?ua.getX(i):0, ua?ua.getY(i):0);
+    }
+    if(g.index){ for(var k=0;k<g.index.count;k++) B.idx.push(g.index.getX(k)+B.base); }
+    else { for(var k2=0;k2<pa.count;k2++) B.idx.push(k2+B.base); }
+    B.base+=pa.count;
+  });
+  var out=new THREE.Group();
+  for(var q=0;q<order.length;q++){
+    var B2=buckets[order[q]], geo=new THREE.BufferGeometry();
+    geo.setAttribute("position",new THREE.Float32BufferAttribute(B2.pos,3));
+    geo.setAttribute("normal",new THREE.Float32BufferAttribute(B2.nor,3));
+    geo.setAttribute("uv",new THREE.Float32BufferAttribute(B2.uv,2));
+    geo.setIndex(B2.idx);
+    out.add(new THREE.Mesh(geo,B2.mat));
+  }
+  return out;
+}
+
+// A Kenney model arrives as a little scene. Make it cheap and predictable:
+// one shared Lambert material per texture (mobile-friendly, matches the toy
+// look), centred on its own footprint, standing on y=0, and remembering how
+// big it is so a caller can ask for "a palm nine units tall" and mean it.
+function prepModel(root){
+  var shared={};
+  root.traverse(function(o){
+    if(!o.isMesh) return;
+    var m=o.material;
+    if(!m||!m.map){
+      // AR1 RULE: a model that carries no texture is a SHAPE, not art, so it
+      // borrows the world's own stone colour. That keeps untextured rock right
+      // in the middle of the island palette AND keeps the FL4 promise that a
+      // colour change in the manifest repaints the world with no code.
+      o.material=M.stone;
+    } else {
+      var key=m.map.uuid;
+      if(!shared[key]) shared[key]=new THREE.MeshLambertMaterial({
+        color:m.color?m.color.clone():new THREE.Color(0xffffff), map:m.map });
+      o.material=shared[key];
+    }
+    o.castShadow=false;o.receiveShadow=false;
+  });
+  var flat;
+  try{ flat=mergeByMaterial(root); }catch(e){ flat=root; }
+  var box=new THREE.Box3().setFromObject(flat);
+  var h=Math.max(0.001,box.max.y-box.min.y);
+  var w=Math.max(0.001,Math.max(box.max.x-box.min.x,box.max.z-box.min.z));
+  flat.position.x-=(box.min.x+box.max.x)/2;
+  flat.position.z-=(box.min.z+box.max.z)/2;
+  flat.position.y-=box.min.y;
+  var wrap=new THREE.Group();wrap.add(flat);
+  wrap.userData.h=h;wrap.userData.w=w;
+  return wrap;
+}
+// Ask for a copy at a real-world size. clone() shares geometry and material,
+// so a hundred palms are still one palm in memory.
+function inst(name,h,w){
+  var proto=KIT[name]; if(!proto) return null;
+  var c=proto.clone(true);
+  var s=h?(h/proto.userData.h):(w/proto.userData.w);
+  c.scale.set(s,s,s);
+  return c;
+}
+function loadKit(){
+  if(KIT_STARTED) return;
+  // headless QA, a dead canvas or a browser with no loader: keep the stand-ins.
+  // The guard comes FIRST so "started" honestly means "models are on the wire".
+  if(world.terrain!=="islands"||!renderer||typeof THREE.GLTFLoader!=="function") return;
+  KIT_STARTED=true;
+  var loader;
+  try{ loader=new THREE.GLTFLoader(); }catch(e){ return; }
+  var names=[],k; for(k in KIT_FILES) names.push(k);
+  var left=names.length, got=0, settled=false;
+  function finish(){
+    if(settled) return; settled=true;
+    if(got<names.length*0.6) return;    // a half-loaded kit is worse than none
+    KIT_ON=true; redressWorld();
+  }
+  // never let a slow network hold the world hostage
+  var timer=setTimeout(function(){ left=0; finish(); },8000);
+  names.forEach(function(n){
+    loader.load(KIT_BASE+KIT_FILES[n],
+      function(g){ try{ KIT[n]=prepModel(g.scene); got++; }catch(e){}
+        if(--left<=0){ clearTimeout(timer); finish(); } },
+      null,
+      function(){ if(--left<=0){ clearTimeout(timer); finish(); } });
+  });
+}
+
+// ---------- dressing an island ----------
+// buildFeature leaves a note behind (userData.dress) saying where the stand-in
+// palms stood and how big the island is. This turns that note into real art.
+function dressIsle(isle){
+  if(!KIT_ON||!isle||isle.userData.dressed) return;
+  var d=isle.userData.dress; if(!d) return;
+  isle.userData.dressed=true;
+  var r=rng(d.seed),i;
+  for(i=0;i<d.mock.length;i++) d.mock[i].visible=false;   // stand-ins step aside
+  var rad=d.rad, hh=d.hh, top=hh*0.96-2;
+  for(i=0;i<d.spots.length;i++){
+    var sp=d.spots[i];
+    var pl=inst(r()>0.5?"palmA":"palmB", 7+r()*6);
+    if(pl){ pl.position.set(sp.x,top,sp.z); pl.rotation.y=r()*Math.PI*2; isle.add(pl); }
+  }
+  // a tuft or two of grass on the crown
+  if(r()>0.45){
+    var gr=inst("grass",null,3+r()*3);
+    if(gr){ gr.position.set((r()-0.5)*rad*0.5,top,(r()-0.5)*rad*0.5); gr.rotation.y=r()*6.28; isle.add(gr); }
+  }
+  // rocks around the shoreline, sitting on the sand skirt
+  var rocks=1+((r()*2.4)|0);
+  for(i=0;i<rocks;i++){
+    var rk=inst(r()>0.5?"rockA":"rockB",null,4+r()*7);
+    if(!rk) continue;
+    var a=r()*Math.PI*2,dd=rad*(0.85+r()*0.35);
+    rk.position.set(Math.cos(a)*dd,0.4,Math.sin(a)*dd);
+    rk.rotation.y=r()*6.28; isle.add(rk);
+  }
+  if(d.big){
+    // big islands earn a landmark: a watchtower, a wrecked ship on the sand,
+    // or a little dock reaching out over the water
+    var pick=r();
+    var ang=r()*Math.PI*2;
+    if(pick<0.34){
+      var tw=inst("tower",7+r()*4);
+      if(tw){ tw.position.set(Math.cos(ang)*rad*0.25,top,Math.sin(ang)*rad*0.25); tw.rotation.y=r()*6.28; isle.add(tw); }
+    } else if(pick<0.67){
+      var wr=inst("wreck",13+r()*6);
+      if(wr){ wr.position.set(Math.cos(ang)*rad*1.05,0.2,Math.sin(ang)*rad*1.05); wr.rotation.y=ang+1.2; wr.rotation.z=0.18; isle.add(wr); }
+    } else {
+      var dk=inst("dock",null,9+r()*5);
+      if(dk){ dk.position.set(Math.cos(ang)*rad*1.15,0.5,Math.sin(ang)*rad*1.15); dk.rotation.y=ang; isle.add(dk); }
+    }
+  }
+  // a sea stack or a reef just off the beach
+  if(r()>0.55){
+    var st=r()>0.5?inst("stack",7+r()*7):inst("reefA",null,10+r()*9);
+    if(st){ var sa=r()*Math.PI*2,sd=rad*(1.5+r()*1.1);
+      st.position.set(Math.cos(sa)*sd,0,Math.sin(sa)*sd); st.rotation.y=r()*6.28; isle.add(st); }
+  }
+}
+
+// ---------- dressing the open water of one chunk ----------
+// Boats and ships are what turn a blue plane into a SEA. They are decoration
+// only: no collision, no coins, nothing to hit.
+function dressChunk(ch){
+  if(!KIT_ON||!ch||ch.dressed) return;
+  ch.dressed=true;
+  for(var i=0;i<ch.isles.length;i++) dressIsle(ch.isles[i]);
+  var r=rng(Math.floor(hash2(ch.cx*13+5,ch.cz*29+11)*100000)+3);
+  var n=(r()>0.55?1:0)+(r()>0.82?1:0);
+  for(var v=0;v<n;v++){
+    var pick=r(), boat;
+    if(pick<0.2)      boat=inst("shipA",22+r()*10);
+    else if(pick<0.36)boat=inst("shipB",22+r()*10);
+    else if(pick<0.6) boat=inst("sail",11+r()*7);
+    else if(pick<0.8) boat=inst("speed",null,9+r()*4);
+    else              boat=inst("row",null,7+r()*3);
+    if(!boat) continue;
+    var bx=(r()-0.5)*CHUNK*0.9, bz=(r()-0.5)*CHUNK*0.9;
+    var wx=ch.cx*CHUNK+bx, wz=ch.cz*CHUNK+bz;
+    if(padTooClose(wx,wz)) continue;
+    boat.position.set(bx,-0.4,bz);
+    boat.rotation.y=r()*Math.PI*2;
+    boat.userData.bob=r()*6.28;
+    ch.group.add(boat); floaters.push(boat);
+  }
+  // a reef in the open water now and then, so the sea is not empty blue
+  if(r()>0.62){
+    var rf=inst(r()>0.5?"reefA":"reefB",null,9+r()*8);
+    if(rf){
+      var rx=(r()-0.5)*CHUNK*0.9, rz=(r()-0.5)*CHUNK*0.9;
+      if(!padTooClose(ch.cx*CHUNK+rx,ch.cz*CHUNK+rz)){
+        rf.position.set(rx,-0.6,rz); rf.rotation.y=r()*6.28; ch.group.add(rf);
+      }
+    }
+  }
+}
+// The models land after the first chunks are already flying past, so when the
+// kit finally arrives every chunk that is already on screen gets dressed too.
+function redressWorld(){
+  for(var key in chunks) dressChunk(chunks[key]);
+  dressPads();
 }
 
 // ---------- endless terrain + coins (chunk grid) ----------
@@ -799,6 +1066,10 @@ function buildFeature(r,big){
   } else { // islands
     rad=big?(16+r()*14):(7+r()*7);
     hh=big?(26+r()*40):(6+r()*8);
+    // AR1: the note the dressing layer reads. Recorded even when no models are
+    // loaded, so the two code paths never drift apart.
+    var note={seed:(Math.floor(rad*7919+hh*104729)%99991)+1,rad:rad,hh:hh,big:!!big,mock:[],spots:[]};
+    g.userData.dress=note;
     var hill=new THREE.Mesh(coneGeo,M.rock);
     hill.scale.set(rad,hh,rad);hill.position.y=hh*0.5-2;g.add(hill);
     var beach=new THREE.Mesh(skirtGeo,M.rock2);
@@ -811,12 +1082,15 @@ function buildFeature(r,big){
       var ang=r()*Math.PI*2,dist=rad*0.35*r();
       pm.position.set(Math.cos(ang)*dist,hh*0.98-2,Math.sin(ang)*dist);
       pm.rotation.y=r()*Math.PI;g.add(pm);
+      note.mock.push(pm);
+      note.spots.push({x:pm.position.x,z:pm.position.z});
     }
   }
   if(r()>0.6){
     var rock=new THREE.Mesh(rockGeo,M.stone);
     var s=1+r()*2;rock.scale.set(s,s,s);
     rock.position.set(rad*0.8,0.5,rad*0.4);g.add(rock);
+    if(g.userData.dress) g.userData.dress.mock.push(rock);
   }
   g.userData.hitR=rad*0.8;g.userData.hitH=hh;
   return g;
@@ -871,6 +1145,7 @@ function buildChunk(cx,cz){
   }
   scene.add(g);
   chunks[key]={group:g,coins:coins,isles:isles,cx:cx,cz:cz};
+  dressChunk(chunks[key]);       // AR1: real models if the kit has arrived
 }
 function updateChunks(px,pz){
   var ccx=Math.round(px/CHUNK),ccz=Math.round(pz/CHUNK);
@@ -1865,6 +2140,15 @@ function drawScene(dt){
     var ch=chunks[key];
     for(var q=0;q<ch.coins.length;q++)ch.coins[q].mesh.rotation.y=spin;
   }
+  // AR1: a moored boat that never moves reads as a sticker. A slow bob and a
+  // half-degree of roll is all it takes to read as floating.
+  if(floaters.length){
+    for(var fb=0;fb<floaters.length;fb++){
+      var fo=floaters[fb], ph=(fo.userData.bob||0)+spin*0.7;
+      fo.position.y=-0.4+Math.sin(ph)*0.45;
+      fo.rotation.z=Math.sin(ph*0.8)*0.05;
+    }
+  }
   for(var s=sparks.length-1;s>=0;s--){
     var sp=sparks[s];
     sp.userData.life-=dt;
@@ -1903,6 +2187,7 @@ updateChunks(0,0);
   openModeCard();
 })();
 
+loadKit();                       // AR1: real art arrives over the stand-ins
 if(!MANUAL&&typeof requestAnimationFrame==="function") requestAnimationFrame(frame);
 
 addEventListener("resize",function(){
@@ -1955,6 +2240,9 @@ window.SKY={
   pads:PADS,
   goals:{coins:world.goalCoins,landings:world.goalLandings},
   tick:function(dt){ stepSim(typeof dt==="number"?dt:1/30); },
+  // AR1: the look harness drives the clock AND the picture, so a before/after
+  // screenshot pair is frame-identical and only the ART can differ.
+  draw:function(dt){ try{ drawScene(typeof dt==="number"?dt:1/30); }catch(e){} },
   autopilot:function(on){ S.auto=(on!==false); if(!S.auto){S.dx=0;S.dy=0;} },
   beaten:function(){ return S.beaten; },
   // ---- FL4 handles, so the robot can prove the polish layer too ----
@@ -1984,6 +2272,31 @@ window.SKY={
     free:!!freeBtn }; }catch(e){ return {up:!!S.picking,jobs:0,free:false}; } },
   openPicker:openModeCard,
   mergeMissions:mergeMissions,
+  // ---- AR1 handles: prove the art layer is real art and a safe fallback ----
+  kit:function(){ var n=[],k; for(k in KIT) n.push(k);
+    return {on:KIT_ON,started:KIT_STARTED,loaded:n,files:KIT_FILES,floaters:floaters.length}; },
+  // What the iPad actually has to draw. AR sessions live or die on this number,
+  // so the harness can assert a budget instead of guessing.
+  perf:function(frames){
+    var o={meshes:0,tris:0,drawMs:0};
+    scene.traverse(function(n){
+      if(!n.isMesh) return; o.meshes++;
+      var g=n.geometry; if(!g) return;
+      o.tris += g.index ? g.index.count/3
+              : (g.attributes&&g.attributes.position ? g.attributes.position.count/3 : 0);
+    });
+    var N=frames||30;
+    if(renderer&&typeof performance!=="undefined"){
+      var t0=performance.now();
+      for(var i=0;i<N;i++) drawScene(1/60);
+      o.drawMs=(performance.now()-t0)/N;
+    }
+    return o;
+  },
+  dressed:function(){ var t=0,d=0,key,i;
+    for(key in chunks){ var c=chunks[key];
+      for(i=0;i<c.isles.length;i++){ t++; if(c.isles[i].userData.dressed) d++; } }
+    return {isles:t,dressed:d}; },
   snapshot:function(){ return {mode:S.mode,x:S.pos.x,y:S.pos.y,z:S.pos.z,coins:S.coins,
     banked:S.banked,worldCoins:S.worldCoins,landings:S.landings,beaten:S.beaten,paused:S.paused}; }
 };
