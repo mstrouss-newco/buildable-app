@@ -236,6 +236,23 @@ function build(q) {
     if (!subject) return null;
     return { descriptor: `soundpack|webp|${id}`, prompt: `${subject}. ${PACK_STYLE}`, transparent: true, quality: "low", format: "webp" };
   }
+  if (kind === "make") {
+    // Home "Make" shelf card art (Session MK1). Same key-art look as the Play shelf
+    // so Home reads as one consistent set of cards; each picture shows the THING
+    // itself (book / mic / soundboard / paints / wand) so a 4-8 year old can tell
+    // at a glance what the tile does.
+    const id = (q.id || "").toString();
+    const MAKE = {
+      story: "A big glowing open storybook floating in the air with its pages fanned, magic pouring out of the pages — a tiny friendly dragon, a little castle, sparkling stars and swirling ribbons of golden light — warm cozy bedtime glow",
+      song: "A shiny chrome studio microphone on a stand with big colorful glossy music notes, sparkles and confetti swirling upward around it, warm stage spotlights, joyful sing-along energy",
+      sound: "A chunky colorful retro boom-box soundboard with big glossy glowing candy-colored buttons, cartoon sound bursts, stars, POOF puffs and music notes exploding out of it in every direction, silly and energetic",
+      art: "A big wooden paint palette with chunky paintbrushes and crayons, thick rainbow splashes and swirls of glossy paint flying up off a bright canvas, colorful happy splatters everywhere",
+      game: "A sparkling magic wand with a glowing star tip building a bright little video-game world out of thin air — floating grassy platforms, shiny gold coins, glowing question blocks and a checkered flag — bursting with sparkles",
+    };
+    const subject = MAKE[id];
+    if (!subject) return null;
+    return { descriptor: `make|${id}`, prompt: `${subject}. ${GAME_STYLE}`, transparent: false, quality: "medium" };
+  }
   if (kind === "game") {
     const id = (q.id || "").toString();
     const GAMES = {
