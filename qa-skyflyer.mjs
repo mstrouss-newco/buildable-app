@@ -291,6 +291,63 @@ chk('the art can never hold the world hostage (the kit load has a timeout)',
 chk('the boats are decoration only — nothing new to crash into',
   !/floaters.*hitR|hitR.*floaters/.test(html));
 
+// ---------------------------------------------------------------------------
+// AR1b) THE LOOK PASS. Sand islands, water with a surface, real buildings and
+// real coins. These checks exist because every one of them was a note from
+// Mike on the first pass, and a note that is only fixed is a note that comes
+// back.
+// ---------------------------------------------------------------------------
+console.log('--- AR1b: sand, water, buildings, coins ---');
+chk('an island is a rounded sand hill, not a cone (the shape is built, not a primitive)',
+  /function makeIslandGeo\(/.test(html) && /ISLE_GEO/.test(html));
+// read the numbers out of the ISLANDS branch only - the other two worlds are
+// allowed their peaks and mesas, and matching the wrong branch would have this
+// check quietly passing on somebody else's terrain
+const isleBranch = (html.split('} else { // islands')[1]||'').slice(0, 1400);
+const isleNums = (() => {
+  const m = isleBranch.match(/rad=big\?\(([\d.]+)\+r\(\)\*([\d.]+)\)[\s\S]{0,80}?hh=big\?\(([\d.]+)\+r\(\)\*([\d.]+)\)/);
+  return m && { radMin:+m[1], radMax:+m[1]+ +m[2], hhMin:+m[3], hhMax:+m[3]+ +m[4] };
+})();
+chk('islands are WIDER than they are tall (a spire is not an island)',
+  !!isleNums && isleNums.hhMax <= isleNums.radMax && isleNums.hhMin <= isleNums.radMin,
+  isleNums ? ('across '+isleNums.radMin+'-'+isleNums.radMax+'  high '+isleNums.hhMin+'-'+isleNums.hhMax)
+           : 'could not read the island numbers');
+chk('the sand carries on below the waterline, so the sea cuts its own beach',
+  /-0\.06\*t\*t/.test(html) && /isleY\(/.test(html));
+chk('nothing planted on an island floats (everything asks the surface height)',
+  /function isleSurf\(/.test(html) &&
+  (html.match(/isleSurf\(/g)||[]).length >= 4);
+chk('the grass crown is small and fitted, not a green hat over the whole island',
+  /var ck=0\.19\+r\(\)\*0\.09/.test(html) && /\(isleY\(0\)-isleY\(ck\)\)\/1\.06/.test(html));
+chk('the sea has a moving surface, painted in code (nothing to download)',
+  /function makeRippleTexture\(/.test(html) && /CanvasTexture/.test(html) &&
+  /M\.ground\.map\.offset\.set/.test(html));
+chk('the ripple sheet is WHITE, so the manifest still owns the sea colour',
+  /x\.fillStyle="#ffffff"; x\.fillRect\(0,0,256,256\)/.test(html));
+chk('only the islands world got the swell and the ripples (other stops cannot move)',
+  /var SEA=\(world\.terrain==="islands"\)/.test(html) && /if\(SEA\) h\+=/.test(html));
+chk('every island sits in a soft lagoon, not a hard-edged disc',
+  /function makeShallowTexture\(/.test(html) && /createRadialGradient/.test(html));
+// the village pieces are picked with ternaries (inst(r()>0.35?"hut":"hutOpen"))
+// so look for the NAME inside a dressIsle inst() call, not a literal prefix
+const dressBody = (html.split('function dressIsle(')[1]||'').split('\nfunction ')[0];
+const village = ['hut','hutOpen','fence','flag','crate','barrel','dock','deck','wreck'];
+const missingVillage = village.filter(k => !new RegExp('"'+k+'"').test(dressBody));
+chk('a big island is somewhere people LIVE (huts, fence, flag, crates, dock, wreck)',
+  missingVillage.length===0, missingVillage.length?('missing '+missingVillage.join(' ')):village.join(' '));
+chk('NO castle art on a tropical beach (the grey towers are gone for good)',
+  !/tower-watch|tower-complete/.test(html) &&
+  !fs.existsSync(dir+'/public/models/skyflyer/pirate/tower-watch.glb'));
+chk('the kit rock clusters that read as mud on sand are gone too',
+  !/rocks-sand/.test(html));
+chk('a coin is a real coin, with the drawn disc still there as the fallback',
+  /inst\("coin"/.test(html) && /if\(!c\) c=new THREE\.Mesh\(coinGeo,M\.gold\)/.test(html));
+chk('coins that swap in late keep their place in the list (never recounted)',
+  /function upgradeCoins\(/.test(html) && /e\.mesh=real/.test(html));
+chk('the landing pad is a place, but the ORANGE RING AND BEAM still rule it',
+  /inst\("buoy"/.test(html) && /padRing/.test(html) &&
+  /beam\.position\.y=110/.test(html));
+
 console.log('--- FLIGHT: autopilot proves every world beatable ---');
 let JSDOM = null;
 try { ({ JSDOM } = await import('jsdom')); } catch (e) { JSDOM = null; }
