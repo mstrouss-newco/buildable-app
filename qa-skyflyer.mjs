@@ -74,7 +74,7 @@ chk('banking happens on a landing (land to keep your coins)', /function finishLa
 chk('honors the shell pause and resume messages', /kind==="pause"/.test(html) && /kind==="resume"/.test(html));
 chk('registers the shared nav chrome (shell draws Home + Sound + Help)', /BuildableGameNav\.register\(/.test(html));
 chk('does NOT offer a second level menu (the shell journey is the picker)', !/onMenu\s*:/.test(html));
-chk('reports buddy moments (win / levelup)', /buddy\("win"\)/.test(html) && /buddy\("levelup"\)/.test(html));
+chk('reports buddy moments (win / levelup)', /buddyMoment\("win","win"/.test(html) && /buddy\("levelup"\)/.test(html));
 chk('reads the world from ?level= (refresh-safe deep link)', /Q\.get\("level"\)/.test(html));
 chk('reads the equipped ride from ?ride= (the shell owns the choice)', /Q\.get\("ride"\)/.test(html));
 chk('has an attract demo for the landing card (?screen=demo)', /Q\.get\("screen"\)==="demo"/.test(html));
@@ -100,6 +100,58 @@ chk('no baked-in art URLs (art rule)', !/https?:\/\/[^"'\s]+\.(png|jpg|jpeg|webp
 chk('no emojis in the engine', !emoji.test(html));
 
 // ---------------------------------------------------------------------------
+// 2b) FL4 POLISH + LEARNING — sound, music, manifest colours, buddy, gate
+// ---------------------------------------------------------------------------
+console.log('--- FL4: Feel Kit sound, music slot, manifest colours, buddy, learning ---');
+const sfxSrc  = read('api/sfx.js');
+const musSrc  = read('api/library-music.js');
+const imgSrc  = read('api/images.js');
+chk('the engine loads the shared Feel Kit + shared audio (no bespoke juice)',
+  /buildable-feel\.js/.test(html) && /buildable-audio\.js/.test(html));
+chk('every sound is a PALETTE NAME through the Kit, never a raw tone (GAME-FEEL law 6)',
+  /FEEL\.sfx\(name,opt\)/.test(html) && !/new Audio\(/.test(html) && !/oscillator/i.test(html));
+chk('the Kit is configured from the manifest feel presets', /FEEL\.configure\(\{/.test(html) && /sfxBase:"\/api\/sfx\?s="/.test(html));
+const skyKeys = (html.match(/"(sky_[a-z]+)"/g)||[]).map(s=>s.replace(/"/g,''));
+chk('Sky Flyer created its OWN sounds (a new engine type grows the library)',
+  skyKeys.length>=6 && skyKeys.every(k=>new RegExp('\\b'+k+':').test(sfxSrc)),
+  [...new Set(skyKeys)].join(', '));
+chk('those sounds are registered in the shared audio catalog for every project to reuse',
+  /sky_coin:\s*"flight"/.test(read('api/list-audio.js')));
+chk('the music bed is a MANIFEST SLOT, not a hardcoded track',
+  !!(manifest.audio && manifest.audio.music) && /audio\.music/.test(html) && /library-music\?name=/.test(html));
+const musicNames = [manifest.audio.music, ...manifest.levels.map(l=>l.music).filter(Boolean)];
+chk('every music track the manifest names really exists in the shared library',
+  musicNames.every(n=>new RegExp('\\b'+n+':\\s*\\{').test(musSrc)), [...new Set(musicNames)].join(', '));
+chk('at least one world picks its own mood (proves the per-level music slot works)',
+  new Set(manifest.levels.map(l=>l.music)).size>1);
+chk('sky and world colours are a manifest art slot on EVERY world',
+  manifest.levels.every(l=>l.palette && l.palette.sky && l.palette.ground && l.palette.rock),
+  manifest.levels.map(l=>l.palette.sky).join(' '));
+chk('the engine repaints itself from that palette (colours editable with no code)',
+  /function applyPalette\(/.test(html) && /fetch\("\/skyflyer\/manifest\.json"\)/.test(html));
+chk('a half-filled palette can never break a world (missing keys keep the built-in colour)',
+  /if\(c==null\|\|!mat\|\|!mat\.color\) return;/.test(html));
+chk('buddy moments are rare and specific, not chatter (once each, floor between them)',
+  /function buddyMoment\(/.test(html) && /buddySaid\[id\]/.test(html) && /\(time-buddyLastAt\)<12/.test(html));
+chk('the win moment goes through the Kit celebration (one shared win everywhere)',
+  /FEEL\.celebrate\(W,H\)/.test(html) && /haptic\("success"\)/.test(html));
+chk('learning: beforeUnlock is declared ON in the manifest', !!(manifest.features.learning||{}).beforeUnlock);
+chk('learning: coinTopUp stays on (practising can always earn coins)', (manifest.features.learning||{}).coinTopUp !== false);
+chk('the engine ASKS the shell before the next world unlocks (parent toggle wins)',
+  /kind:"quizRequest"/.test(html) && /moment:"beforeUnlock"/.test(html) && /gameType:"skyflyer"/.test(html));
+chk('beating a world and unlocking the next are now separate (the gate sits between)',
+  /function markBeaten\(/.test(html) && /function markUnlockNext\(/.test(html) && /kind==="bk:quizDone"/.test(html));
+chk('journey badges are real art URLs on every world (not a colour circle)',
+  manifest.levels.every(l=>/^\/api\/images\?kind=skybadge&id=/.test(l.journeyBadge||'')),
+  manifest.levels.map(l=>l.journeyBadge).join('  '));
+chk('the picker card has badge + hero art wired through the manifest',
+  /^\//.test(manifest.art.badge||'') && /^\//.test(manifest.art.hero||''));
+chk('every badge the manifest asks for has a prompt in the art library',
+  [...manifest.levels.map(l=>l.journeyBadge), manifest.art.badge]
+    .map(u=>(String(u).match(/id=([a-z0-9-]+)/)||[])[1])
+    .every(id=>id && new RegExp('"'+id+'":').test(imgSrc.slice(imgSrc.indexOf('kind === "skybadge"'), imgSrc.indexOf('kind === "explore"')))));
+
+// ---------------------------------------------------------------------------
 // 3) SHELL + ROUTING wiring
 // ---------------------------------------------------------------------------
 console.log('--- SHELL: catalog + landing + journey + routes ---');
@@ -115,6 +167,8 @@ chk('the loadout screen takes its title from the manifest (so it can be a Hangar
   /manifest\.loadoutTitle\) \|\| "Loadout"/.test(jsx) && /manifest\.loadoutBlurb\)/.test(jsx));
 chk('no emojis in the shell hangar previews', !emoji.test(jsx.slice(jsx.indexOf('const SLOT_PREVIEWS'), jsx.indexOf('function SlotPreview'))));
 chk('journey progress reads the default bk_{game}_prefs shape', /bk_"\s*\+\s*id\s*\+\s*"_prefs/.test(jsx));
+chk('the shell hosts the Sky Flyer learning gate (FL4)',
+  /gameType="skyflyer"/.test(jsx) && /skyflyer-engine\.html\?v=fl4/.test(jsx));
 const vercel = JSON.parse(read('vercel.json'));
 const srcs = vercel.routes.map(r=>r.src);
 const catchAll = srcs.indexOf('/(.*)');
@@ -179,6 +233,52 @@ if (!JSDOM) {
   const after = w.SKY.snapshot();
   chk('resume carries on exactly where it stopped', Math.hypot(after.x-during.x, after.z-during.z) > 1);
   w.close();
+  // ------------------------------------------------------------------
+  // THE FL4 PROOF — the polish layer has to actually work, live: the manifest
+  // really repaints a world, the music slot really switches, the buddy really
+  // speaks (and rarely), and the learning gate never traps a kid who has no
+  // parent app around it.
+  // ------------------------------------------------------------------
+  console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
+  {
+    const d4 = fly(0); const w4 = d4.window;
+    chk('engine reports itself as FL4', w4.SKY.version === 'FL4', w4.SKY.version);
+    const before = w4.SKY.paletteNow();
+    const applied = w4.SKY.applyManifest(manifest);
+    const after = w4.SKY.paletteNow();
+    chk('the manifest palette really lands on the world', typeof after.sky === 'number' &&
+      after.ground === parseInt(manifest.levels[0].palette.ground.slice(1),16) &&
+      after.rock === parseInt(manifest.levels[0].palette.rock.slice(1),16),
+      'ground #'+after.ground.toString(16)+'  rock #'+after.rock.toString(16));
+    // change a colour in the manifest ONLY and prove the world follows it
+    const recoloured = JSON.parse(JSON.stringify(manifest));
+    recoloured.levels[0].palette.sky = '#112233';
+    recoloured.levels[0].palette.ground = '#445566';
+    w4.SKY.applyManifest(recoloured);
+    const rec = w4.SKY.paletteNow();
+    chk('changing a colour in the MANIFEST alone recolours the sky (no code change)',
+      rec.sky === 0x112233 && rec.ground === 0x445566,
+      'sky #'+rec.sky.toString(16)+' (was #'+before.sky.toString(16)+')');
+    chk('a broken colour is ignored, not fatal', (()=>{ try{ w4.SKY.applyPalette({sky:'not-a-colour',ground:null}); return true; }catch(e){ return false; } })());
+    chk('the music slot follows the manifest', applied.music === manifest.levels[0].music, 'world 1 plays '+applied.music);
+    const canyon = w4.SKY.applyManifest({ levels:[{ music:'sky_soar_bright' }] });
+    chk('a per-level music override really switches the bed', canyon.music === 'sky_soar_bright');
+    chk('learning defaults come from the manifest', applied.learning.beforeUnlock === true && applied.learning.coinTopUp === true);
+    w4.close();
+  }
+  {
+    // a cold standalone link has no parent app: it must unlock with no gate and
+    // never sit there waiting for a question nobody can answer.
+    const d5 = fly(0); const w5 = d5.window;
+    for (let k=0;k<MAX;k++){ w5.SKY.tick(1/30); if(w5.SKY.beaten()) break; }
+    const g = w5.SKY.gate();
+    chk('a cold standalone link is never trapped by the learning gate', g.pending === false && g.unlocked >= 1,
+      'pending='+g.pending+' unlocked='+g.unlocked);
+    const said = w5.SKY.buddyLog();
+    chk('the buddy spoke on the win, and stayed rare', said.indexOf('win')>-1 && said.length <= 6, said.join(', '));
+    w5.close();
+  }
+
   // ------------------------------------------------------------------
   // THE HANGAR PROOF (Session FL3) — every ride in the hangar has to be a
   // real, flyable, world-beating ride. If a kid spends 120 coins on the
