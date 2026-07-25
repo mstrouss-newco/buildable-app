@@ -539,11 +539,27 @@ function makeRippleTexture(){
     return t;
   }catch(e){ return null; }
 }
+// THE SEABED. This is what makes an island stand IN the water instead of on it.
+// The sea sheet is half transparent, so what you actually see through it is
+// this: dark open ocean far out, and the island's own sand shelf glowing
+// turquoise as it rises. Without a floor underneath, transparent water shows
+// the sky and the ocean goes pale and fake.
+var seabed=null;
 if(SEA){
   var ripple=makeRippleTexture();
   if(ripple){ M.ground.map=ripple; M.ground.needsUpdate=true; }
+  M.ground.transparent=true;
+  M.ground.opacity=0.74;
+  M.ground.depthWrite=false;      // never hide the sand standing in it
+  var deep=new THREE.Color(world.ground).multiplyScalar(0.34);
+  seabed=new THREE.Mesh(new THREE.PlaneGeometry(GROUND_SIZE*1.2,GROUND_SIZE*1.2),
+    new THREE.MeshBasicMaterial({color:deep,fog:true}));
+  seabed.rotateX(-Math.PI/2);
+  seabed.position.y=-46;
+  scene.add(seabed);
 }
 var groundMesh=new THREE.Mesh(groundGeo,M.ground);
+groundMesh.renderOrder=2;         // drawn after the sand it has to reveal
 scene.add(groundMesh);
 var gPos=groundGeo.attributes.position;
 var gBase=gPos.array.slice();
@@ -772,9 +788,15 @@ PADS.forEach(function(pad){
   pole.position.set(PAD_R-2,PAD_TOP+3.5,-(PAD_R-2));g.add(pole);
   var sock=new THREE.Mesh(new THREE.ConeGeometry(1.1,3.4,8),M.padRing);
   sock.rotation.z=Math.PI/2;sock.position.set(PAD_R-3.8,PAD_TOP+6.5,-(PAD_R-2));g.add(sock);
-  var beam=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,220,8,1,true),
-    new THREE.MeshBasicMaterial({color:0xFF8A3C,transparent:true,opacity:0.16,fog:false}));
-  beam.position.y=110;g.add(beam);
+  // The beam is a SIGNAL, so it stays. But with see-through water behind it, an
+  // unfogged column at 0.16 doubled up over the sea and read as a solid pillar.
+  // Fogged, thinner and lighter it still points at the pad from a long way off
+  // without becoming the biggest thing on screen.
+  var beam=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,200,8,1,true),
+    new THREE.MeshBasicMaterial({color:0xFF8A3C,transparent:true,opacity:0.10,
+      depthWrite:false,fog:true}));
+  beam.renderOrder=3;
+  beam.position.y=100;g.add(beam);
   g.position.set(pad.x,0,pad.z);
   scene.add(g);
 });
@@ -800,7 +822,7 @@ function dressPads(){
       bt.userData.bob=r()*6.28; g.add(bt); floaters.push(bt); }
     // buoys ringing the pad, so the approach reads from the air
     for(var b=0;b<5;b++){
-      var ba=b/5*Math.PI*2+0.6, bu=inst("buoy",4.6);
+      var ba=b/5*Math.PI*2+0.6, bu=inst(b%2?"buoy":"buoyB",4.6);
       if(bu){ bu.position.set(Math.cos(ba)*(PAD_R+27),-0.5,Math.sin(ba)*(PAD_R+27));
         bu.rotation.y=r()*6.28; bu.userData.bob=r()*6.28; g.add(bu); floaters.push(bu); }
     }
@@ -816,6 +838,12 @@ function dressPads(){
     if(rk){ rk.position.set(-(PAD_R+13),0.3,-8); g.add(rk); }
     var hut=inst("hutOpen",6);
     if(hut){ hut.position.set(-(PAD_R+10),0.4,10); hut.rotation.y=-0.7; g.add(hut); }
+    var wind=inst("flag",6);
+    if(wind){ wind.position.set(-(PAD_R+4),0.4,-16); g.add(wind); }
+    var crates=inst("crate",1.9);
+    if(crates){ crates.position.set(PAD_R+7,0.5,-6); crates.rotation.y=0.5; g.add(crates); }
+    var bar=inst("barrel",1.9);
+    if(bar){ bar.position.set(PAD_R+9,0.5,-9); g.add(bar); }
     scene.add(g);
   });
 }
@@ -848,35 +876,76 @@ function nearestPad(){
 //  ship next to the files in /models/skyflyer/.
 // ============================================================================
 var KIT_BASE="/models/skyflyer/";
+// The prop shelf. Kenney's kits are big on purpose — a world dressed from three
+// models reads as three models repeated, however good they are. These are the
+// tropical pieces from five kits, and dressIsle picks from the whole shelf.
 var KIT_FILES={
+  // --- palms: six shapes, because one palm repeated IS the giveaway ---
   palmA:"pirate/palm-detailed-straight.glb",
   palmB:"pirate/palm-detailed-bend.glb",
-  rockA:"nature/rock_largeA.glb",
-  rockB:"nature/rock_largeB.glb",
-  stack:"nature/rock_tallA.glb",
-  dock:"pirate/structure-platform-dock.glb",
-  deck:"pirate/structure-platform-small.glb",
-  grass:"pirate/grass-patch.glb",
-  // The village. Kenney's stone towers are castle art and fought the sand, so
-  // Sunny Islands is built from the tropical half of the kit only.
+  palmC:"pirate/palm-straight.glb",
+  palmD:"pirate/palm-bend.glb",
+  palmE:"nature/tree_palmTall.glb",
+  palmF:"nature/tree_palmDetailedTall.glb",
+  palmG:"nature/tree_palmBend.glb",
+  // --- the village ---
   hut:"pirate/structure-roof.glb",
   hutOpen:"pirate/structure.glb",
+  tent:"survival/tent.glb",
+  tentB:"survival/tent-canvas.glb",
   fence:"pirate/structure-fence.glb",
+  fenceB:"pirate/structure-fence-sides.glb",
+  dock:"pirate/structure-platform-dock.glb",
+  deck:"pirate/structure-platform-small.glb",
+  // --- the things that make a place look lived in ---
   crate:"pirate/crate.glb",
+  crateB:"pirate/crate-bottles.glb",
   barrel:"pirate/barrel.glb",
+  box:"survival/box-large.glb",
+  chest:"pirate/chest.glb",
+  cannon:"pirate/cannon.glb",
+  mast:"pirate/mast-ropes.glb",
+  shovel:"pirate/tool-shovel.glb",
+  hole:"pirate/hole.glb",
   flag:"pirate/flag.glb",
-  // The things a kid actually touches. These are the models that matter most:
-  // a coin you fly through should be a coin, not a token.
-  coin:"platformer/coin-gold.glb",
+  flagP:"pirate/flag-pirate.glb",
+  sign:"nature/sign.glb",
+  fire:"survival/campfire-pit.glb",
+  fireB:"nature/campfire_logs.glb",
+  fireC:"nature/campfire_stones.glb",
+  logs:"nature/log_stack.glb",
+  idol:"nature/statue_head.glb",
+  obelisk:"nature/statue_obelisk.glb",
+  // --- greenery ---
+  grass:"pirate/grass-patch.glb",
+  grassB:"pirate/grass-plant.glb",
+  grassC:"nature/grass_large.glb",
+  bush:"nature/plant_bush.glb",
+  flowerY:"nature/flower_yellowA.glb",
+  flowerR:"nature/flower_redA.glb",
+  foliage:"pirate/patch-sand-foliage.glb",
+  // --- rock. these are the ONLY models tinted to the world palette ---
+  rockA:"nature/rock_largeA.glb",
+  rockB:"nature/rock_largeB.glb",
+  rockC:"nature/rock_smallA.glb",
+  stack:"nature/rock_tallA.glb",
+  // --- the sea ---
   buoy:"watercraft/buoy-flag.glb",
-  gate:"watercraft/gate.glb",
+  buoyB:"watercraft/buoy.glb",
   shipA:"pirate/ship-small.glb",
   shipB:"pirate/ship-pirate-small.glb",
   wreck:"pirate/ship-wreck.glb",
   sail:"watercraft/boat-sail-a.glb",
   row:"watercraft/boat-row-small.glb",
-  speed:"watercraft/boat-speed-a.glb"
+  rowB:"pirate/boat-row-large.glb",
+  speed:"watercraft/boat-speed-a.glb",
+  fish:"watercraft/boat-fishing-small.glb",
+  tug:"watercraft/boat-tug-a.glb"
 };
+// A model with no texture carries its OWN material colours — Kenney's palms are
+// green and its flowers are red for a reason. Only ROCK is repainted, so the
+// world palette still reaches the stone without bleaching the plants.
+var KIT_TINT={rockA:1,rockB:1,rockC:1,stack:1};
 var KIT={}, KIT_ON=false, KIT_STARTED=false, floaters=[];
 
 // A Kenney model arrives as a little scene of a dozen small meshes. On a phone
@@ -919,21 +988,21 @@ function mergeByMaterial(root){
 // one shared Lambert material per texture (mobile-friendly, matches the toy
 // look), centred on its own footprint, standing on y=0, and remembering how
 // big it is so a caller can ask for "a palm nine units tall" and mean it.
-function prepModel(root){
+function prepModel(root,name){
   var shared={};
   root.traverse(function(o){
     if(!o.isMesh) return;
     var m=o.material;
-    if(!m||!m.map){
+    if(!m||(!m.map&&KIT_TINT[name])){
       // AR1 RULE: a model that carries no texture is a SHAPE, not art, so it
       // borrows the world's own stone colour. That keeps untextured rock right
       // in the middle of the island palette AND keeps the FL4 promise that a
       // colour change in the manifest repaints the world with no code.
       o.material=M.stone;
     } else {
-      var key=m.map.uuid;
+      var key=(m.map?m.map.uuid:"")+"|"+(m.color?m.color.getHexString():"");
       if(!shared[key]) shared[key]=new THREE.MeshLambertMaterial({
-        color:m.color?m.color.clone():new THREE.Color(0xffffff), map:m.map });
+        color:m.color?m.color.clone():new THREE.Color(0xffffff), map:m.map||null });
       o.material=shared[key];
     }
     o.castShadow=false;o.receiveShadow=false;
@@ -981,7 +1050,7 @@ function loadKit(){
   names.forEach(function(n){
     loader.load(KIT_BASE+KIT_FILES[n],
       function(g){ try{
-          KIT[n]=prepModel(g.scene);
+          KIT[n]=prepModel(g.scene,n);
           // gold has to glow a little or it turns into a brown ring at distance
           if(n==="coin") KIT[n].traverse(function(o){
             if(o.isMesh&&o.material&&o.material.emissive){
@@ -997,12 +1066,23 @@ function loadKit(){
 }
 
 // ---------- dressing an island ----------
-// buildFeature leaves a note behind (userData.dress) saying where the stand-in
-// palms stood and how big the island is. This turns that note into real art.
+// AR1c: the shelf is picked from, not repeated. Every island rolls its own
+// character, so two islands in the same chunk are a fishing camp and a dig site
+// rather than the same three props at different angles.
 //
-// AR1b rule: everything placed here asks isleSurf() how high the sand is where
-// it is standing, so nothing floats and nothing sinks. Nothing here is solid —
-// a kid flies straight through a hut with the same soft bounce as before.
+// Everything asks isleSurf() how high the sand is where it stands, so nothing
+// floats. Nothing here is solid: a kid flies through all of it with the same
+// soft bounce as before.
+var PALMS=["palmA","palmB","palmC","palmD","palmE","palmF","palmG"];
+var CAMPS=[
+  { name:"village", homes:["hut","hutOpen"],       props:["barrel","crate","crateB","logs","sign","fence"] },
+  { name:"castaway",homes:["tent","tentB"],        props:["box","crate","fire","logs","shovel","barrel"] },
+  { name:"digsite", homes:["hutOpen","tentB"],     props:["hole","shovel","chest","crate","box","sign"] },
+  { name:"lookout", homes:["hut","tent"],          props:["mast","cannon","flagP","barrel","crateB","fenceB"] },
+  { name:"idols",   homes:["hutOpen","hut"],       props:["idol","obelisk","fireC","fireB","logs","bush"] }
+];
+function pick(r,list){ return list[(r()*list.length)|0]; }
+
 function dressIsle(isle){
   if(!KIT_ON||!isle||isle.userData.dressed) return;
   var d=isle.userData.dress; if(!d) return;
@@ -1011,76 +1091,87 @@ function dressIsle(isle){
   for(i=0;i<d.mock.length;i++) d.mock[i].visible=false;   // stand-ins step aside
   var rad=d.rad, hh=d.hh;
   function put(o,dist,ang,sink){
+    if(!o) return null;
     o.position.set(Math.cos(ang)*dist, isleSurf(dist,rad,hh)-(sink||0.3), Math.sin(ang)*dist);
     o.rotation.y=r()*Math.PI*2; isle.add(o); return o;
   }
-  // palms where the stand-ins stood, now planted on the real surface
+  // --- palms, each island drawing from the whole set of seven shapes ---
   for(i=0;i<d.spots.length;i++){
     var sp=d.spots[i], sd=Math.hypot(sp.x,sp.z);
-    var pl=inst(r()>0.5?"palmA":"palmB", 7+r()*6);
+    var pl=inst(pick(r,PALMS), 7+r()*6);
     if(pl){ pl.position.set(sp.x,isleSurf(sd,rad,hh)-0.4,sp.z);
       pl.rotation.y=r()*6.28; isle.add(pl); }
   }
-  // grass tufts, only where there is grass to sit in
-  if(hh>11&&r()>0.4){
-    var gr=inst("grass",null,3+r()*3);
-    if(gr) put(gr,rad*0.3*r(),r()*6.28,0.15);
+  // a couple more palms nearer the water, so a beach has a fringe
+  var extra=(r()*3)|0;
+  for(i=0;i<extra;i++)
+    put(inst(pick(r,PALMS),6+r()*5), rad*(0.42+r()*0.26), r()*6.28, 0.4);
+
+  // --- greenery, scaled to how much island there is to grow on ---
+  var green=1+((r()*(hh>19?3.4:1.8))|0);
+  for(i=0;i<green;i++){
+    var gname=pick(r,["grass","grassB","grassC","bush","flowerY","flowerR","foliage"]);
+    var isFlower=(gname==="flowerY"||gname==="flowerR");
+    var gr=isFlower?inst(gname,1.6+r()*1.2):inst(gname,null,2.4+r()*3);
+    put(gr, rad*r()*0.55, r()*6.28, 0.15);
   }
-  // beach boulders: the stone-tinted nature rocks, which take the island's own
-  // sand palette. The kit's rust-brown rock clusters read as mud on a beach, so
-  // they are used offshore only, half sunk, where they read as rock in water.
+
+  // --- beach rock ---
   var rocks=1+((r()*2.4)|0);
   for(i=0;i<rocks;i++){
-    var rk=r()>0.45?inst("stack",2.4+r()*2.6):inst(r()>0.5?"rockA":"rockB",null,2.6+r()*2.4);
-    if(rk) put(rk,rad*(0.68+r()*0.34),r()*Math.PI*2,0.25);
+    var rk=r()>0.5?inst("stack",2.2+r()*2.8):inst(pick(r,["rockA","rockB","rockC"]),null,2.4+r()*2.6);
+    put(rk, rad*(0.62+r()*0.3), r()*Math.PI*2, 0.25);
   }
+
   if(d.big){
-    // A BIG ISLAND IS SOMEWHERE PEOPLE LIVE. Two to four huts in a loose
-    // cluster, a fence, a flag and the crates and barrels that make a place look
-    // used, plus a dock reaching out over the water with a boat tied up.
-    var vAng=r()*Math.PI*2, vDist=rad*(0.30+r()*0.18);
-    var vx=Math.cos(vAng)*vDist, vz=Math.sin(vAng)*vDist;
-    var huts=2+((r()*3)|0);
-    for(i=0;i<huts;i++){
-      var ha=vAng+(r()-0.5)*1.5, hd=vDist+(r()-0.5)*rad*0.34;
-      hd=Math.max(rad*0.1,Math.min(rad*0.7,hd));
-      var hut=inst(r()>0.35?"hut":"hutOpen", 6+r()*3.5);
-      if(hut) put(hut,hd,ha,0.25);
+    // --- A BIG ISLAND IS SOMEBODY'S PLACE. Which kind is rolled per island. ---
+    var camp=CAMPS[(r()*CAMPS.length)|0];
+    var vAng=r()*Math.PI*2, vDist=rad*(0.24+r()*0.16);
+    var homes=2+((r()*3)|0);
+    for(i=0;i<homes;i++){
+      var ha=vAng+(r()-0.5)*1.5, hd=vDist+(r()-0.5)*rad*0.3;
+      hd=Math.max(rad*0.06,Math.min(rad*0.58,hd));
+      put(inst(pick(r,camp.homes), 5.5+r()*3.5), hd, ha, 0.25);
     }
-    if(r()>0.4){ var fn=inst("fence",null,5+r()*2.5);
-      if(fn) put(fn,vDist+rad*0.26,vAng+1.1,0.2); }
-    if(r()>0.35){ var fl=inst("flag",5+r()*2);
-      if(fl) put(fl,vDist+rad*0.2,vAng-1.3,0.15); }
-    var stuff=1+((r()*3)|0);
-    for(i=0;i<stuff;i++){
-      var pr=inst(r()>0.5?"crate":"barrel",1.6+r()*1.1);
-      if(pr) put(pr,vDist+(r()-0.5)*rad*0.4,vAng+(r()-0.5)*1.9,0.1);
+    var props=2+((r()*4)|0);
+    for(i=0;i<props;i++){
+      var pn=pick(r,camp.props);
+      var tall=(pn==="mast"||pn==="idol"||pn==="obelisk"||pn==="sign"||pn==="flagP");
+      var wide=(pn==="fence"||pn==="fenceB"||pn==="hole"||pn==="logs"||pn==="fire"||pn==="fireB"||pn==="fireC");
+      var pr=tall?inst(pn,4+r()*3.5)
+         : wide?inst(pn,null,3.4+r()*2.6)
+         :      inst(pn,1.7+r()*1.3);
+      put(pr, vDist+(r()-0.5)*rad*0.5, vAng+(r()-0.5)*2.2, pn==="hole"?0.05:0.12);
     }
-    // the dock: out past the waterline, sitting ON the water not the sand
+    // a flag or a sign on the high ground, so the camp has a landmark
+    put(inst(r()>0.5?"flag":"flagP", 5+r()*2.5), rad*0.12*r(), r()*6.28, 0.15);
+
+    // --- the waterfront: a dock out over the shelf with something tied up ---
     var da=vAng+Math.PI*(0.6+r()*0.8);
     var dk=inst("dock",null,9+r()*4);
-    if(dk){ dk.position.set(Math.cos(da)*rad*1.12,0.35,Math.sin(da)*rad*1.12);
+    if(dk){ dk.position.set(Math.cos(da)*rad*0.92,0.35,Math.sin(da)*rad*0.92);
       dk.rotation.y=da; isle.add(dk); }
     var dd=inst("deck",null,6+r()*2);
-    if(dd){ dd.position.set(Math.cos(da)*rad*1.34,0.3,Math.sin(da)*rad*1.34);
+    if(dd){ dd.position.set(Math.cos(da)*rad*1.14,0.3,Math.sin(da)*rad*1.14);
       dd.rotation.y=da; isle.add(dd); }
-    if(r()>0.45){
-      var mo=inst(r()>0.5?"row":"speed",null,6+r()*2.5);
-      if(mo){ mo.position.set(Math.cos(da+0.5)*rad*1.3,-0.4,Math.sin(da+0.5)*rad*1.3);
+    if(r()>0.35){
+      var mo=inst(pick(r,["row","rowB","speed","fish"]),null,6+r()*3);
+      if(mo){ mo.position.set(Math.cos(da+0.5)*rad*1.1,-0.4,Math.sin(da+0.5)*rad*1.1);
         mo.rotation.y=da+1.4; mo.userData.bob=r()*6.28; isle.add(mo); floaters.push(mo); }
     }
     // a wreck on the sand, sometimes, because it is a better story than a prop
-    if(r()>0.62){
-      var wa=vAng+Math.PI, wr=inst("wreck",13+r()*6);
-      if(wr){ wr.position.set(Math.cos(wa)*rad*0.95,isleSurf(rad*0.95,rad,hh)-1.2,Math.sin(wa)*rad*0.95);
+    if(r()>0.6){
+      var wa=vAng+Math.PI, wd=rad*0.8;
+      var wr=inst("wreck",13+r()*6);
+      if(wr){ wr.position.set(Math.cos(wa)*wd,isleSurf(wd,rad,hh)-1.2,Math.sin(wa)*wd);
         wr.rotation.y=wa+1.2; wr.rotation.z=0.16; isle.add(wr); }
     }
   }
-  // offshore rock, standing in the water off the beach
-  if(r()>0.5){
+  // --- offshore rock, standing out on the shelf ---
+  if(r()>0.45){
     var st=inst("stack",5+r()*6);
-    if(st){ var sa=r()*Math.PI*2,sd2=rad*(1.5+r()*1.0);
-      st.position.set(Math.cos(sa)*sd2,-0.8,Math.sin(sa)*sd2);
+    if(st){ var sa=r()*Math.PI*2,sd2=rad*(1.2+r()*0.5);
+      st.position.set(Math.cos(sa)*sd2,isleSurf(sd2,rad,hh)-0.4,Math.sin(sa)*sd2);
       st.rotation.y=r()*6.28; isle.add(st); }
   }
 }
@@ -1091,17 +1182,19 @@ function dressIsle(isle){
 function dressChunk(ch){
   if(!KIT_ON||!ch||ch.dressed) return;
   ch.dressed=true;
-  upgradeCoins(ch);
   for(var i=0;i<ch.isles.length;i++) dressIsle(ch.isles[i]);
   var r=rng(Math.floor(hash2(ch.cx*13+5,ch.cz*29+11)*100000)+3);
   var n=(r()>0.55?1:0)+(r()>0.82?1:0);
   for(var v=0;v<n;v++){
-    var pick=r(), boat;
-    if(pick<0.2)      boat=inst("shipA",22+r()*10);
-    else if(pick<0.36)boat=inst("shipB",22+r()*10);
-    else if(pick<0.6) boat=inst("sail",11+r()*7);
-    else if(pick<0.8) boat=inst("speed",null,9+r()*4);
-    else              boat=inst("row",null,7+r()*3);
+    var roll=r(), boat;
+    if(roll<0.16)      boat=inst("shipA",22+r()*10);
+    else if(roll<0.30)boat=inst("shipB",22+r()*10);
+    else if(roll<0.40)boat=inst("tug",null,13+r()*5);
+    else if(roll<0.58)boat=inst("sail",11+r()*7);
+    else if(roll<0.70)boat=inst("fish",null,10+r()*4);
+    else if(roll<0.84)boat=inst("speed",null,9+r()*4);
+    else if(roll<0.93)boat=inst("row",null,7+r()*3);
+    else              boat=inst("rowB",null,8+r()*3);
     if(!boat) continue;
     var bx=(r()-0.5)*CHUNK*0.9, bz=(r()-0.5)*CHUNK*0.9;
     var wx=ch.cx*CHUNK+bx, wz=ch.cz*CHUNK+bz;
@@ -1150,21 +1243,26 @@ var skirtGeo=new THREE.CylinderGeometry(1,1.12,1.2,10);
 // Unit shape: radius ~1, height 1 at the peak, -0.06 at the rim. Callers scale
 // it by (rad, hh, rad), so the silhouette contract (hitR/hitH) is untouched.
 function makeIslandGeo(seed){
-  var RINGS=6, SEGS=16, pos=[], idx=[];
+  var RINGS=8, SEGS=18, pos=[], idx=[];
   var wob1=0.20+((seed*37)%7)/60, wob2=0.10+((seed*53)%5)/70;
   var ph1=(seed%13)*0.48, ph2=(seed%7)*0.9;
   pos.push(0,1,0);                                   // the peak
   for(var ri=1;ri<=RINGS;ri++){
     var t=ri/RINGS;
-    var prof=Math.pow(Math.cos(t*Math.PI/2),1.55);   // rounded, not straight
+    // The dome is only the top two thirds of the shape. Past that the sand keeps
+    // going DOWN and OUT into a shelf, so an island is a hill standing in the
+    // sea rather than a lump resting on top of it. With the water half see
+    // through, that shelf is the entire reason the shallows read as shallow.
+    var prof=Math.pow(Math.cos(Math.min(t/0.68,1)*Math.PI/2),1.55);
     for(var si=0;si<SEGS;si++){
       var a=si/SEGS*Math.PI*2;
       var wob=1+wob1*Math.sin(a*3+ph1)+wob2*Math.sin(a*5-ph2);
-      var rr=t*wob*1.16;
-      var yy=prof*(0.92+0.16*Math.sin(a*4+ph1))-0.06*t*t;
+      var rr=t*wob*1.55;
+      var yy=prof*(0.92+0.16*Math.sin(a*4+ph1))-0.05-0.55*t*t*t;
       pos.push(Math.cos(a)*rr, yy, Math.sin(a)*rr);
     }
   }
+  var GREEN_RINGS=2;                 // where the grass stops and the sand starts
   for(var k=0;k<SEGS;k++) idx.push(0, 1+k, 1+(k+1)%SEGS);
   for(var r2=1;r2<RINGS;r2++){
     var b0=1+(r2-1)*SEGS, b1=1+r2*SEGS;
@@ -1177,6 +1275,12 @@ function makeIslandGeo(seed){
   var g=new THREE.BufferGeometry();
   g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
   g.setIndex(idx); g.computeVertexNormals();
+  // Two groups on ONE continuous surface: the cap up top, the sand below. No
+  // second mesh, so there is nothing to overlap, nothing to z-fight and nothing
+  // to fit by hand — and both halves are still driven by the world palette.
+  var split=SEGS*3+(GREEN_RINGS-1)*SEGS*6;
+  g.addGroup(0,split,0);
+  g.addGroup(split,idx.length-split,1);
   return g;
 }
 // Four shapes, reused everywhere. At flight height four coastlines read as
@@ -1202,18 +1306,51 @@ var haloGeo=new THREE.PlaneGeometry(1,1); haloGeo.rotateX(-Math.PI/2);
 // the island's height. Anything standing on an island asks this, so a palm or a
 // hut sits ON the sand instead of hovering over it.
 function isleY(t){
-  if(t>1) t=1;
-  return Math.pow(Math.cos(t*Math.PI/2),1.55)-0.06*t*t-0.05;
+  if(t<0) t=0; if(t>1) t=1;
+  return Math.pow(Math.cos(Math.min(t/0.68,1)*Math.PI/2),1.55)-0.05-0.55*t*t*t;
 }
 // distance from the middle -> height, in world units
-function isleSurf(dist,rad,hh){ return isleY(dist/(rad*1.16))*hh; }
+function isleSurf(dist,rad,hh){ return isleY(dist/(rad*1.55))*hh; }
 var M_HALO=(function(){
   try{ return new THREE.MeshBasicMaterial({map:makeShallowTexture(),
     transparent:true,depthWrite:false,fog:true}); }
   catch(e){ return new THREE.MeshBasicMaterial({color:0x8FE6F0,transparent:true,
     opacity:0.3,depthWrite:false}); }
 })();
-var coinGeo=new THREE.CylinderGeometry(1.15,1.15,0.34,14);coinGeo.rotateX(Math.PI/2);
+// The Kenney coin is a flat token and it read as one. A coin should be the most
+// wanted thing on screen, so this one is turned on a lathe: flat faces, a
+// rounded rim, and enough segments that the highlight slides round the edge as
+// it spins instead of stepping. Twenty six triangles more than a cylinder.
+function makeCoinGeo(){
+  var R=1.3,T=0.2,V=THREE.Vector2;
+  // A raised middle inside a rim. That STEP is the whole trick: a flat disc has
+  // one normal and lights up like a sticker, while a step gives the coin an
+  // edge that catches the sun and a face that does not, so it reads as metal.
+  // 16 segments, not 24: there are a few hundred coins in the sky at once and a
+  // coin is small on screen. The step in the profile is what sells it, not the
+  // segment count.
+  var g=new THREE.LatheGeometry([
+    new V(0.001,T*1.35), new V(R*0.52,T*1.35), new V(R*0.60,T),
+    new V(R,T*0.34),     new V(R,-T*0.34),     new V(R*0.60,-T),
+    new V(R*0.52,-T*1.35), new V(0.001,-T*1.35)
+  ],16);
+  g.rotateX(Math.PI/2);           // stands on edge, spins about y like a wheel
+  // Paint the rim a deeper gold straight into the mesh. Vertex colour costs no
+  // draw call, so a coin is two-tone for free instead of two objects.
+  var pa=g.attributes.position, col=[];
+  for(var i=0;i<pa.count;i++){
+    var rr=Math.hypot(pa.getX(i),pa.getY(i))/R;
+    var t=Math.min(1,Math.max(0,(rr-0.5)/0.5));
+    col.push(1-0.22*t, 1-0.30*t, 1-0.52*t);
+  }
+  g.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+  return g;
+}
+var coinGeo=makeCoinGeo();
+// bright gold, lit from inside so it still reads as gold in shadow and against
+// a bright sea, with a hot narrow specular for the glint
+var M_COIN=new THREE.MeshPhongMaterial({color:0xFFD54A,emissive:0x6E4A00,
+  specular:0xFFFFF0,shininess:220,vertexColors:true});
 
 function buildPalm(r){
   var g=new THREE.Group();
@@ -1276,29 +1413,21 @@ function buildFeature(r,big){
     hh=big?(15+r()*17):(4+r()*5);
     // AR1b: sand hill, grass only as a soft crown, and two flat rings on the
     // water so the island sits in a turquoise shallow with foam at its edge.
-    var halo=new THREE.Mesh(haloGeo,M_HALO);
-    // sits just clear of the highest swell so the lagoon never blinks out; at
-    // island scale a couple of units of float is invisible from the air
-    halo.scale.set(rad*4.8,1,rad*4.8); halo.position.y=3.1; g.add(halo);
+    // no painted lagoon disc any more: the island's own underwater shelf, seen
+    // through half-transparent water, IS the lagoon
     // AR1: the note the dressing layer reads. Recorded even when no models are
     // loaded, so the two code paths never drift apart.
     var note={seed:(Math.floor(rad*7919+hh*104729)%99991)+1,rad:rad,hh:hh,big:!!big,mock:[],spots:[]};
     g.userData.dress=note;
     var shape=ISLE_GEO[((rad*3+hh)|0)%ISLE_GEO.length];
-    var hill=new THREE.Mesh(shape,M.rock);
-    hill.scale.set(rad,hh,rad);hill.position.y=-hh*0.05;g.add(hill);
+    // Only an island with some height to it grows anything; a low sandbar is
+    // bare sand top to bottom, which is what a sandbar looks like.
+    var topMat=(hh>19)?(r()>0.5?M.cap:M.cap2):M.rock;
+    var hill=new THREE.Mesh(shape,[topMat,M.rock]);
+    hill.scale.set(rad,hh,rad);hill.position.y=0;g.add(hill);
     // The grass crown is the SAME shape shrunk, so its rim lands exactly on the
     // sand instead of hovering. Small islands stay bare sand, which is what a
     // sandbar looks like.
-    if(hh>19){
-      // The crown is FITTED, not guessed: its rim is placed exactly where the
-      // sand dome is that wide, so green never hovers and never buries the
-      // beach. An island is sand with a bit of green on top, not the reverse.
-      var capm=new THREE.Mesh(shape,r()>0.5?M.cap:M.cap2);
-      var ck=0.19+r()*0.09, cm=(isleY(0)-isleY(ck))/1.06;
-      capm.scale.set(rad*ck,hh*cm,rad*ck);
-      capm.position.y=(isleY(ck)+0.06*cm)*hh;g.add(capm);
-    }
     var palms=1+((r()*3)|0);
     for(var k=0;k<palms;k++){
       var pm=buildPalm(r);
@@ -1322,23 +1451,11 @@ function makeCoin(x,y,z,parent,list){
   // AR1b: a real coin when the kit is here, the drawn disc when it is not.
   // Either way it is ONE object in the list with the same position and the same
   // spin, so collecting, counting and banking never learn which one they got.
-  var c=(KIT_ON&&KIT.coin)?inst("coin",2.5):null;
-  if(!c) c=new THREE.Mesh(coinGeo,M.gold);
+  var c=new THREE.Mesh(coinGeo,M_COIN);
   c.position.set(x,y,z);parent.add(c);
-  list.push({mesh:c,taken:false,x:x,y:y,z:z});
-}
-// When the kit lands after a chunk is already built, its coins are swapped for
-// real ones in place — same list entry, same position, nothing recounted.
-function upgradeCoins(ch){
-  if(!KIT_ON||!KIT.coin||!ch||ch.coinsReal) return;
-  ch.coinsReal=true;
-  for(var i=0;i<ch.coins.length;i++){
-    var e=ch.coins[i];
-    if(e.taken) continue;
-    var real=inst("coin",2.5); if(!real) return;
-    real.position.copy(e.mesh.position);
-    ch.group.remove(e.mesh); ch.group.add(real); e.mesh=real;
-  }
+  // every coin gets its own phase so a trail shimmers along its length instead
+  // of flashing in lockstep, which is what made them read as printed dots
+  list.push({mesh:c,taken:false,x:x,y:y,z:z,ph:(Math.abs(x*0.7+z*1.3)%6.283)});
 }
 function padTooClose(wx,wz){
   for(var i=0;i<PADS.length;i++) if(Math.hypot(wx-PADS[i].x,wz-PADS[i].z)<95) return true;
@@ -2470,6 +2587,7 @@ function drawScene(dt){
   rideAnim(dt,S.mode,time);
 
   groundMesh.position.set(S.pos.x,0,S.pos.z);
+  if(seabed) seabed.position.set(S.pos.x,-46,S.pos.z);
   for(var i=0;i<gPos.count;i++){
     var ox=gBase[i*3],oz=gBase[i*3+2];
     var h=Math.sin((ox+S.pos.x)*0.05+time*1.3)+Math.cos((oz+S.pos.z)*0.06+time*0.9);
@@ -2514,7 +2632,11 @@ function drawScene(dt){
   starter.coins.forEach(function(c){c.mesh.rotation.y=spin;});
   for(var key in chunks){
     var ch=chunks[key];
-    for(var q=0;q<ch.coins.length;q++)ch.coins[q].mesh.rotation.y=spin;
+    for(var q=0;q<ch.coins.length;q++){
+      var cc=ch.coins[q];
+      cc.mesh.rotation.y=spin+cc.ph;                  // shimmer along a trail
+      cc.mesh.position.y=cc.y+Math.sin(spin*0.7+cc.ph)*0.5;
+    }
   }
   // AR1: a moored boat that never moves reads as a sticker. A slow bob and a
   // half-degree of roll is all it takes to read as floating.
