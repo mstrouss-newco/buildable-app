@@ -1,5 +1,106 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: Session LS4 — Reading launch + placement (shipped, waiting on Mike's switch)
+
+Phase LS, block LS4 only. LS1 built the lesson player, LS2 the tile and the path
+map, LS3 the lesson factory and the review gate. LS4 is the launch block: the
+reading half of the curriculum, a quick check so a kid starts in the right place
+rather than just their grade, lessons on the parent dashboard, and the switch
+Mike taps to put the whole section in front of kids.
+
+**What shipped**
+
+- **19 hand-written reading and phonics lessons, K through Grade 2**, live and
+  playable: first, last and middle sounds; blending three sounds; word families;
+  sentence clues; what is happening; everyday and tricky sight words; who and
+  what; the main idea; retelling; missing letters; sh/ch and th/wh; adding s and
+  adding es; what happened first; getting to know a character. Drafted through
+  the real factory on production, `inserted: 19`, every one `source: local` —
+  **no AI spend at all**. The model engine stays built and validated for grades
+  the authored plans do not cover yet.
+- **Authored, not model-drafted, and that is the point.** The K math batch set
+  the pattern in LS3: authored plans are free, the wording is deliberate, and
+  the answer keys can be checked by something other than the code that wrote
+  them. 143 of the 247 reading questions now have their marked answer
+  **re-derived from the question text** by rules that live in `qa-lessons.mjs`
+  and nowhere near `_lessongen.js`.
+- **Reading needed its own kind of picture.** A ten frame cannot teach "which
+  sound does map start with", so teach cards and guided questions can now show
+  drawn TYPE: letter tiles with the taught letter lit, word cards with the
+  shared ending lit, or a story card with one word lit. Steps 4 and 5 still
+  render text only (the LS3 rule), so no reading question depends on a picture.
+- **The placement quick check.** `/api/placement` builds one short check out of
+  the **approved lessons themselves** — one question per rung, taken from that
+  lesson's own mastery check. No second body of content to write, nothing extra
+  to review, and it can never drift out of step with the lessons it places a kid
+  into. The ladder runs Kindergarten UP TO the kid's grade, so it can send a
+  Grade 2 reader back a year as easily as forward, and never reaches above their
+  grade. It stops after two misses in a row, and the kid lands straight **after
+  the last rung they got RIGHT** — never on the rung they missed, so one lucky
+  guess cannot vault them over four lessons.
+- **Placed is not mastered.** Lessons the check skips past are marked `placed`:
+  open, no star, a different colour, and never counted as mastered anywhere. A
+  gold star still costs 4 of 5 in a real lesson. Every placement answer goes to
+  the 8B learning ledger tagged `placement`, so the dashboard can tell a check
+  apart from real practice.
+- **Lessons on the grown-ups dashboard.** A "Lessons finished" tile beside the
+  existing three, plus the five most recently mastered lessons by name. It reads
+  the same `bk_lessons_v1` record the path map writes (same origin, no API call,
+  works offline). Only mastered lessons count; lessons the check merely opened
+  are reported separately and in different words.
+- **The live switch, so Mike can actually launch it.** The Lessons tile is in
+  the React shell, so "turn it on" as a code change would need a deploy and Mike
+  cannot push — the same wall LS3 hit with lesson approval, and the same answer.
+  `db/ls4-app-flags.sql` (applied and verified this session) holds one flag,
+  `/api/app-flags` serves it, and **/lesson-review has a plain-language switch at
+  the top**. Mike taps "Make Lessons live for kids" and the tile changes for kids
+  within about a minute. It fails CLOSED: until the flag reads true the tile
+  stays Coming Soon, so a database wobble can hide the tile but can never expose
+  unfinished lessons.
+
+**QA (run, not claimed)**
+
+- `qa-lessons.mjs` **ALL CHECKS PASSED — 261 checks** (was 195). Includes the
+  independent re-derivation above, plus `/api/placement` driven for real against
+  a bank built by the real factory.
+- `qa-lessons-dom.mjs` **ALL CHECKS PASSED**, now six live browser runs. New run
+  6: a robot opens Reading, taps Find my spot, answers two rungs right and two
+  wrong, and we check it landed straight after the last rung it passed, marked
+  those two placed and NOT mastered, logged all four answers to the ledger, and
+  drew letter tiles on the reading teach card.
+- `qa-question-bank.mjs` PASSED. **No game was touched this session**, so no game
+  QA script applied.
+- Verified on production: `/api/app-flags` reads the real table, the reading
+  batch inserted 19, and `/api/placement?subject=reading&grade=2` returns a real
+  eight-rung ladder spanning Kindergarten to Grade 2.
+
+**What is left in phase LS**
+
+- **Mike flips the switch.** Open `/lesson-review`, enter 1025, and tap "Make
+  Lessons live for kids" at the top. That is the last step of LS4 and it is
+  deliberately his, not mine. Until he does, kids still see Coming Soon.
+- Grade 1 and Grade 2 **math** are still `planned` — 18 lessons with no authored
+  plan yet (K math and all of reading are done). Worth its own short session.
+- Prototype mode is still ON (`api/_lessonmode.js`), so drafted lessons are born
+  approved. Unchanged by this session.
+
+**Gotchas found**
+
+- The Kindergarten unit called "Reading pictures" promised something the player
+  cannot deliver: steps 4 and 5 render question text only, so a picture-based
+  practice question is impossible. Renamed the unit to "Reading sentences" and
+  the lesson to "Sentence clues", and taught the same comprehension skill from
+  short sentences instead. The curriculum tag `picture-comprehension` is
+  unchanged, so it now reads a little oddly against the lesson name.
+- Two LS2 QA checks asserted the old lock line verbatim and broke the moment
+  `placed` joined `mastered`. Expect that again for anything touching `walkPath`.
+- `public/lessons/index.json` stores a lesson's file WITHOUT the `.json`
+  extension. `readLessonFile` now accepts either form; it silently returned null
+  before, which quietly dropped the one file-based lesson out of placement.
+- The sandbox Chromium did not match the installed Playwright revision, so the
+  live-DOM harness was skipping rather than failing. `qa-lessons-dom.mjs` now
+  honours `PW_CHROMIUM` so it runs instead of quietly not running.
+
 ## 2026-07-25: Session FL4 — Sky Flyer polish + learning (shipped)
 
 Phase FL, block FL4 only. FL1 was the feel mock, FL2 the real cartridge, FL3 the

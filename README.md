@@ -6,6 +6,27 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session LS4 — Reading launch + placement + the live switch (July 25 2026)
+The launch block for Lessons. **19 hand-written reading and phonics lessons for
+K-2** are live (`READING_PLANS` in `api/_lessongen.js`), drafted through the real
+factory on production (`inserted: 19`, every one `source: local`, **no AI
+spend**). Reading gets its own picture kind — drawn TYPE (letter tiles, word
+cards, a story card) on teach and guided steps only, since steps 4 and 5 render
+text only. **`/api/placement`** builds a quick check out of the approved lessons
+themselves, one question per rung, running Kindergarten UP TO the kid's grade so
+it can send a Grade 2 reader back a year; it stops after two misses and lands the
+kid straight **after the last rung they got right**. Skipped lessons are marked
+`placed` — open, starless, and never counted as mastered. The grown-ups dashboard
+gains a **Lessons finished** tile plus recent lesson names (`lessonsProgress()`
+in `src/store.js`). And because Mike cannot push, turning the section on is a
+database flag, not a code change: `db/ls4-app-flags.sql` (applied + verified),
+`/api/app-flags`, and a **"Make Lessons live for kids" switch at the top of
+/lesson-review**. It fails closed — the tile stays Coming Soon until the flag
+reads true. **Mike still has to tap that switch**; until then kids see Coming
+Soon. QA: `qa-lessons.mjs` 261 PASS (143 reading answer keys independently
+re-derived), `qa-lessons-dom.mjs` PASS (6 live browser runs, new run 6 drives the
+quick check), `qa-question-bank.mjs` PASS. No game touched.
+
 ## Session FL4 — Sky Flyer polish + learning (July 25 2026)
 Sound, music, colour, buddy and the learning gate for the 3D flight game. The
 engine now runs entirely on the shared **Feel Kit** and triggers palette names
