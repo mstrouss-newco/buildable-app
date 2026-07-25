@@ -6,10 +6,13 @@
 //   3. an added kit's pieces reach the ONE shelf as ordinary library items
 //   4. Browse shows added / not added and can only ask for a kit via the planner
 //   5. the editor's Library picker really filters by My Kits
+//   6. (KP2) the Tower Defense curation is the one Mike asked for, and every
+//      piece is a real, visible image of the right shape for its job
 // Run: node qa-kits.mjs [repoDir]
 import fs from "fs";
 import path from "path";
 import vm from "vm";
+import zlib from "zlib";
 
 const dir = process.argv[2] || ".";
 const P = (...p) => path.join(dir, ...p);
@@ -123,6 +126,101 @@ say(/srcchip/.test(ed) && /\.srcchip\.on\{/.test(ed), "the chips are styled, inc
 say(/never offer an empty shelf/.test(ed), "a chip is hidden when its shelf is empty");
 say(/lchip kit/.test(ed), "a kit piece is badged with its kit's name in the grid");
 say(/action:"import"/.test(ed), "assigning a kit piece uses the SAME import road as any other asset");
+
+console.log("--- 6. Session KP2: the Tower Defense curation is what Mike asked for ---");
+// KP2's card: "the best 50-100 pieces ... all towers, enemies, projectiles, key
+// terrain tiles". These checks hold that promise so a later session cannot quietly
+// trim the kit back to a handful of props.
+const TD = "2d-assets__tower-defense";
+const tdKit = JSON.parse(read("public/kenney/kits/" + TD + "/kit.json"));
+const files = tdKit.pieces.map((p) => p.file).join(" ");
+say(tdKit.pieces.length >= 50 && tdKit.pieces.length <= 100,
+  `the kit holds 50-100 curated pieces :: ${tdKit.pieces.length}`);
+const family = (label, re, min) => {
+  const n = tdKit.pieces.filter((p) => re.test(p.file)).length;
+  say(n >= min, `${label}: ${n} piece(s), at least ${min} expected`);
+};
+family("towers and turrets", /^(tower|turret|cannon|rocket-rack|rocket-launcher)/, 8);
+family("units to send in", /^(guard|plane)/, 6);
+family("things that fly at things", /^(rocket|flame)/, 6);
+family("build plates", /^plate-/, 8);
+family("terrain squares", /^(ground|road)-/, 15);
+family("props to scatter", /^(tree|bush|plant|rock|crystal|gem|crate|coin)/, 15);
+
+// Every piece has to be a real, sane image — and has to be VISIBLE on the light
+// library shelf. Three of Kenney's effect sprites were cut in KP2 for failing
+// exactly this: near-white overlays that read as an empty card.
+const png = (f) => fs.readFileSync(P("public/kenney/kits/" + TD + "/" + f));
+const pngSize = (b) => ({ w: b.readUInt32BE(16), h: b.readUInt32BE(20), depth: b[24], type: b[25] });
+function pixels(buf) {                       // minimal PNG reader: 8-bit RGBA/RGB only
+  const { w, h, depth, type } = pngSize(buf);
+  if (depth !== 8 || (type !== 6 && type !== 2)) return null;
+  const bpp = type === 6 ? 4 : 3;
+  let idat = [], i = 8;
+  while (i < buf.length) {
+    const len = buf.readUInt32BE(i), tag = buf.toString("ascii", i + 4, i + 8);
+    if (tag === "IDAT") idat.push(buf.subarray(i + 8, i + 8 + len));
+    i += len + 12;
+  }
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const out = Buffer.alloc(w * h * bpp);
+  const pa = (a, b2) => { const p = a + b2; return p < 256 ? p : p - 256; };
+  for (let y = 0, o = 0; y < h; y++) {
+    const ft = raw[y * (w * bpp + 1)];
+    const line = raw.subarray(y * (w * bpp + 1) + 1, (y + 1) * (w * bpp + 1));
+    for (let x = 0; x < w * bpp; x++) {
+      const a = x >= bpp ? out[o + x - bpp] : 0;
+      const b2 = y > 0 ? out[o - w * bpp + x] : 0;
+      const c = (x >= bpp && y > 0) ? out[o - w * bpp + x - bpp] : 0;
+      let v = line[x];
+      if (ft === 1) v = pa(v, a);
+      else if (ft === 2) v = pa(v, b2);
+      else if (ft === 3) v = pa(v, (a + b2) >> 1);
+      else if (ft === 4) { const p = a + b2 - c, da = Math.abs(p - a), db = Math.abs(p - b2), dc = Math.abs(p - c);
+        v = pa(v, (da <= db && da <= dc) ? a : (db <= dc ? b2 : c)); }
+      out[o + x] = v;
+    }
+    o += w * bpp;
+  }
+  return { w, h, bpp, out };
+}
+// how strongly does this piece stand out against a white card?
+function inkOnWhite(f) {
+  const px = pixels(png(f));
+  if (!px) return 999;
+  let best = 0;
+  for (let i = 0; i < px.out.length; i += px.bpp) {
+    const a = px.bpp === 4 ? px.out[i + 3] / 255 : 1;
+    const d = Math.max(255 - px.out[i], 255 - px.out[i + 1], 255 - px.out[i + 2]);
+    best = Math.max(best, a * d);
+  }
+  return best;
+}
+// a sprite has to have see-through edges (it is a thing sitting on a scene);
+// a ground square must have none (it IS the scene, so it must cover the tile).
+function seeThrough(f) {
+  const px = pixels(png(f));
+  if (!px || px.bpp !== 4) return false;
+  for (let i = 3; i < px.out.length; i += 4) if (px.out[i] < 250) return true;
+  return false;
+}
+let badImg = [], faint = [], badGround = [], badSprite = [];
+for (const p of tdKit.pieces) {
+  const b = png(p.file);
+  const isPng = b.length > 24 && b.readUInt32BE(0) === 0x89504e47;
+  const { w, h } = pngSize(b);
+  if (!isPng || !w || !h || w > 256 || h > 256) { badImg.push(p.file); continue; }
+  const ground = /^(ground|road|plate)-/.test(p.file) || p.file === "plate-green.png";
+  if (ground && (w !== 128 || h !== 128)) badGround.push(p.file);
+  if (!ground && !seeThrough(p.file)) badSprite.push(p.file);
+  if (ground && seeThrough(p.file)) badGround.push(p.file);
+  if (inkOnWhite(p.file) < 40) faint.push(p.file);
+}
+say(badImg.length === 0, "every piece is a real PNG no bigger than a tile" + (badImg.length ? " :: " + badImg.join(", ") : ""));
+say(badGround.length === 0, "every ground, road and plate is a solid, whole 128px square" + (badGround.length ? " :: " + badGround.join(", ") : ""));
+say(badSprite.length === 0, "every other piece is a cut-out with see-through edges" + (badSprite.length ? " :: " + badSprite.join(", ") : ""));
+say(faint.length === 0, "no piece is so pale it reads as an empty card on the shelf" + (faint.length ? " :: " + faint.join(", ") : ""));
+say(/kenney/i.test(files) === false, "pieces carry kid names, not Kenney file names");
 
 console.log(ok ? "ALL CHECKS PASS" : "SOME CHECKS FAILED");
 process.exit(ok ? 0 : 1);

@@ -150,6 +150,37 @@ console.log('--- KP1 dressing: library art can replace props, and can never brea
     say(fs.existsSync(dir + '/public/kenney/kits/' + slug + '/kit.json'), 'art.' + k + ' comes from an ADDED kit (' + slug + ')');
   });
   say(dressed.every(k => !/knight|archer|baddie|goblin/i.test(k)), 'the animated characters are NOT dressed with stills');
+
+  // Session KP2: the kit grew from 38 pieces to 65, so prove the NEW ones dress
+  // too — a whole-tile ground square and a cut-out sprite, into two different
+  // slots, one after the other. Swapping a slot twice must leave it swapped once.
+  const kitDir = dir + '/public/kenney/kits/2d-assets__tower-defense';
+  const kp2 = ['plate-stone.png', 'turret-green.png', 'plane-green.png'];
+  kp2.forEach(f => say(fs.existsSync(kitDir + '/' + f), 'KP2 piece ' + f + ' is in the kit'));
+  const kit = JSON.parse(fs.readFileSync(kitDir + '/kit.json', 'utf8'));
+  say(kit.pieces.length >= 50, 'the kit Castle Guard dresses from holds ' + kit.pieces.length + ' pieces');
+
+  const ground = '/kenney/kits/2d-assets__tower-defense/plate-stone.png';
+  IMGSIM[ground] = [128, 128];
+  dress({ rock1: ground });
+  const r1 = cfg.sprites.rock1;
+  say(!!(r1 && r1.dressed && r1.fw === 128 && r1.fh === 128 && r1.n === 1),
+      'a KP2 ground square dresses a prop slot  :: ' + JSON.stringify(r1));
+  say(sandbox.drawSprite(ctxStub, 'rock1', 0, 0, 60, 0) === true, 'the KP2 ground square draws');
+
+  const turret = '/kenney/kits/2d-assets__tower-defense/turret-green.png';
+  IMGSIM[turret] = [95, 40];
+  dress({ castle: turret });
+  say(!!(cfg.sprites.castle && cfg.sprites.castle.dressed), 'a KP2 sprite dresses a second slot');
+  say(cfg.sprites.rock1 && cfg.sprites.rock1.fw === 128, 'dressing a second slot leaves the first one alone');
+
+  // swapping the same slot again must land on the new piece, not stack up
+  const sprout = '/kenney/kits/2d-assets__tower-defense/plant-sprout.png';
+  IMGSIM[sprout] = [70, 66];
+  dress({ rock1: sprout });
+  say(cfg.sprites.rock1.fw === 70 && cfg.sprites.rock1.n === 1, 'swapping a slot again replaces the piece, it does not stack');
+  dress({ rock1: '' });
+  say(cfg.sprites.rock1.fw === 70, 'clearing a slot in a later call cannot half-undo a swap');
 }
 
 console.log(ok ? 'ALL CHECKS PASS' : 'SOME CHECKS FAILED');
