@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buildable — Lesson Review</title>
+<link rel="icon" href="/favicon.svg">
+<!--
+  Session LS3 — the lesson review gate, grown-ups only.
+  Same shape and styling as /question-review, one lesson per card, every step of
+  the lesson shown so nothing is approved sight-unseen. Approving flips the row
+  in lesson_bank to 'approved', which makes it live on the Lessons path with no
+  code push (api/lesson-map.js merges it in). Nothing here is kid-facing.
+  No emojis anywhere (product rule) - all icons are drawn SVG.
+-->
+<style>
+  :root{
+    --bg:#f5f7fc; --card:#ffffff; --card2:#f1f3fa; --line:#e1e5f0;
+    --ink:#1b1f33; --muted:#5f6785; --accent:#6b4eff; --accent2:#00b488;
+    --warn:#b9770a; --danger:#e0384a; --ready:#00a37a; --chip:#eceffa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%}
+  .wrap{max-width:880px;margin:0 auto;padding:18px 16px 90px}
+  h1{font-size:22px;margin:6px 0 2px}
+  .legend{color:var(--muted);font-size:13px;margin:0}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+  .pill{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--muted)}
+  .pill b{color:var(--ink)}
+  select,.btn,input,textarea{font:inherit}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:9px 14px;cursor:pointer}
+  .btn:hover{background:var(--card2)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.good{background:var(--ready);border-color:var(--ready);color:#fff}
+  .btn.bad{background:var(--danger);border-color:var(--danger);color:#fff}
+  .btn.sm{padding:6px 10px;font-size:13px;border-radius:10px}
+  select{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0;box-shadow:0 1px 2px rgba(20,25,60,.04)}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .tag{font-size:11px;letter-spacing:.3px;text-transform:uppercase;background:var(--chip);border-radius:6px;padding:3px 8px;color:var(--muted)}
+  .tag.subject{background:#e7f0ff;color:#2a5bd7}
+  .tag.grade{background:#e9f8f1;color:#0a8a5f}
+  .tag.edited{background:#fff3dc;color:var(--warn)}
+  .lt{font-size:19px;font-weight:700;margin:2px 0 2px}
+  .unit{font-size:13px;color:var(--muted);margin:0 0 10px}
+  .step{border-top:1px solid var(--line);margin-top:12px;padding-top:11px}
+  .steplabel{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:6px}
+  .h{font-weight:650;font-size:15px;margin:6px 0 2px}
+  .b{font-size:14px;color:#3a4060;margin:2px 0 4px;line-height:1.45}
+  .say{font-size:12.5px;color:var(--muted);font-style:italic;margin:3px 0 0;padding-left:9px;border-left:2px solid var(--line)}
+  .q{font-size:14.5px;font-weight:600;margin:9px 0 5px}
+  .choices{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}
+  .choice{border:1px solid var(--line);border-radius:10px;padding:6px 11px;font-size:13.5px;background:var(--card2)}
+  .choice.correct{border-color:var(--ready);background:#e9f8f1;font-weight:650}
+  .choice .mk{color:var(--ready);font-weight:700;margin-left:6px;font-size:11px;text-transform:uppercase}
+  .hint{font-size:13px;color:var(--warn);margin:2px 0 0}
+  .row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .row .btn{flex:1;min-width:120px}
+  .pic{font-size:12px;color:var(--muted);margin:2px 0 0}
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60}
+  #gate .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;width:min(340px,90vw);text-align:center}
+  #gate input{width:100%;text-align:center;font-size:20px;letter-spacing:4px;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:10px}
+  .empty{text-align:center;color:var(--muted);padding:40px 10px}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s;z-index:50;max-width:88vw;text-align:center}
+  .toast.show{opacity:1}
+  .stickybar{position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:10}
+  .probs{background:#fff3f4;border:1px solid #f6d3d7;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:13.5px;color:#8d2530}
+  .probs ul{margin:6px 0 0;padding-left:18px}
+  /* edit mode */
+  .ed{width:100%;border:1px solid var(--line);border-radius:9px;padding:7px 9px;font-size:14px;background:#fffdf6;margin:3px 0}
+  textarea.ed{min-height:56px;resize:vertical;line-height:1.4}
+  .edlab{font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);margin-top:7px}
+  .correctpick{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:3px 0 0}
+  .correctpick label{font-size:13px;color:var(--muted);display:flex;gap:4px;align-items:center}
+</style>
+</head>
+<body>
+<div id="gate"><div class="box">
+  <h1 style="margin:0">Lesson Review</h1>
+  <p class="legend">Grown-ups only</p>
+  <input id="pin" type="password" inputmode="numeric" placeholder="code" onkeydown="if(event.key==='Enter')tryPin()">
+  <button class="btn primary" style="width:100%" onclick="tryPin()">Open</button>
+  <p id="pinErr" class="legend" style="color:var(--danger);min-height:16px;margin-top:8px"></p>
+</div></div>
+
+<div class="wrap" id="app" style="display:none">
+  <h1>Lesson Review</h1>
+  <p class="legend">Whole lessons the factory drafted are waiting here. Read one, play it if you like, fix any wording, then approve. <b>A kid cannot see a lesson until you approve it</b> — approving puts it straight onto the Lessons path, no waiting for a deploy.</p>
+
+  <div class="stickybar">
+    <div class="bar">
+      <span class="pill">Waiting: <b id="cPending">0</b></span>
+      <span class="pill">Approved: <b id="cApproved">0</b></span>
+      <span class="pill">Rejected: <b id="cRejected">0</b></span>
+    </div>
+    <div class="bar">
+      <label class="legend">Show</label>
+      <select id="fStatus" onchange="load()">
+        <option value="pending">Waiting for you</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <select id="fSubject" onchange="load()">
+        <option value="">All subjects</option>
+        <option value="math">Math</option>
+        <option value="geometry">Shapes</option>
+        <option value="spelling">Spelling</option>
+        <option value="reading">Reading</option>
+      </select>
+      <select id="fGrade" onchange="load()">
+        <option value="">All grades</option>
+        <option value="k">Kindergarten</option>
+        <option value="1">Grade 1</option>
+        <option value="2">Grade 2</option>
+      </select>
+      <button class="btn" onclick="load()">Refresh</button>
+      <button class="btn good" id="approveAll" onclick="approveAllVisible()">Approve all shown</button>
+    </div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+var PIN = "1025";           // light privacy gate, same as the planner
+var CURRENT = [];           // the lessons on screen
+var EDITING = {};           // lesson_key -> true while its editor is open
+
+window.tryPin = function(){
+  var v = document.getElementById('pin').value.trim();
+  if(v === PIN){
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    load();
+  } else { document.getElementById('pinErr').textContent = 'Try again.'; }
+};
+
+function toast(m){ var t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');}, 2600); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function gradeLbl(g){ return g==='k' ? 'Kindergarten' : ('Grade ' + esc(g||'?')); }
+var SUBJ = { math:'Math', geometry:'Shapes', spelling:'Spelling', reading:'Reading' };
+function status(){ return document.getElementById('fStatus').value; }
+
+window.load = function(){
+  var list = document.getElementById('list');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  EDITING = {};
+  var url = '/api/review-lessons?status=' + status() + '&limit=200';
+  var s = document.getElementById('fSubject').value, g = document.getElementById('fGrade').value;
+  if(s) url += '&subject=' + s;
+  if(g) url += '&grade=' + g;
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    if(!d.ok){ list.innerHTML = '<div class="empty">' + esc(d.error || d.hint || 'Not ready yet.') + '</div>'; return; }
+    counts(d.counts);
+    CURRENT = d.lessons || [];
+    document.getElementById('approveAll').style.display = (status()==='pending' && CURRENT.length) ? '' : 'none';
+    if(!CURRENT.length){
+      list.innerHTML = '<div class="empty">Nothing here. When the lesson factory runs, new lessons show up as Waiting for you.</div>';
+      return;
+    }
+    list.innerHTML = CURRENT.map(cardHTML).join('');
+  }).catch(function(){ list.innerHTML = '<div class="empty">Could not load.</div>'; });
+};
+
+function counts(c){
+  if(!c) return;
+  document.getElementById('cPending').textContent = c.pending||0;
+  document.getElementById('cApproved').textContent = c.approved||0;
+  document.getElementById('cRejected').textContent = c.rejected||0;
+}
+
+function sayHTML(say){
+  if(!say || !say.length) return '';
+  return '<p class="say">Reads aloud: ' + esc(say.join(' ')) + '</p>';
+}
+function choicesHTML(q){
+  return '<div class="choices">' + (q.choices||[]).map(function(ch,i){
+    var ok = (i === q.correctIndex);
+    return '<span class="choice' + (ok?' correct':'') + '">' + esc(ch) + (ok?'<span class="mk">correct</span>':'') + '</span>';
+  }).join('') + '</div>';
+}
+
+// The whole lesson, read-only. Every step is shown: nothing gets approved unseen.
+function cardHTML(row){
+  var L = row.payload || {};
+  var k = row.lesson_key;
+  var edited = !!row.updated_at;
+  var teach = (L.teach||[]).map(function(c,i){
+    return '<div class="h">Card ' + (i+1) + ': ' + esc(c.headline) + '</div>'
+      + '<div class="b">' + esc(c.body) + '</div>'
+      + (c.show ? '<p class="pic">Picture: ' + pictureNote(c.show) + '</p>' : '')
+      + sayHTML(c.say);
+  }).join('');
+  var guided = (L.guided||[]).map(function(q){
+    return '<div class="q">' + esc(q.question) + '</div>' + choicesHTML(q)
+      + '<div class="hint">Hint: ' + esc(q.hint) + '</div>';
+  }).join('');
+  var check = (L.check||[]).map(function(q,i){
+    return '<div class="q">' + (i+1) + '. ' + esc(q.question) + '</div>' + choicesHTML(q);
+  }).join('');
+  var fallback = ((L.solo&&L.solo.fallback)||[]).map(function(q,i){
+    return '<div class="q">' + (i+1) + '. ' + esc(q.question) + '</div>' + choicesHTML(q);
+  }).join('');
+
+  var actions = '';
+  if(status() === 'pending'){
+    actions = '<div class="row">'
+      + '<button class="btn good" onclick="decide(\'' + esc(k) + '\',\'approve\')">Approve</button>'
+      + '<button class="btn" onclick="playIt(\'' + esc(k) + '\')">Play it</button>'
+      + '<button class="btn" onclick="openEdit(\'' + esc(k) + '\')">Fix the words</button>'
+      + '<button class="btn bad" onclick="decide(\'' + esc(k) + '\',\'reject\')">Reject</button>'
+      + '</div>';
+  } else if(status() === 'rejected'){
+    actions = '<div class="row"><button class="btn good" onclick="decide(\'' + esc(k) + '\',\'approve\')">Approve after all</button>'
+      + '<button class="btn" onclick="playIt(\'' + esc(k) + '\')">Play it</button></div>';
+  } else {
+    actions = '<div class="row"><button class="btn" onclick="playIt(\'' + esc(k) + '\')">Play it</button>'
+      + '<button class="btn bad" onclick="decide(\'' + esc(k) + '\',\'reject\')">Take it back down</button></div>';
+  }
+
+  return '<div class="card" data-key="' + esc(k) + '">'
+    + '<div class="tags">'
+      + '<span class="tag subject">' + esc(SUBJ[row.subject] || row.subject) + '</span>'
+      + '<span class="tag grade">' + gradeLbl(row.grade) + '</span>'
+      + (row.skill ? '<span class="tag">' + esc(row.skill) + '</span>' : '')
+      + '<span class="tag">' + esc(row.source||'ai') + '</span>'
+      + (edited ? '<span class="tag edited">you edited this</span>' : '')
+    + '</div>'
+    + '<div class="lt">' + esc(row.title) + '</div>'
+    + '<p class="unit">' + esc(row.unit||'') + ' &middot; about ' + esc(row.minutes||5) + ' minutes &middot; ' + esc(k) + '</p>'
+    + '<div class="step"><div class="steplabel">Step 1 &middot; Hello</div>'
+      + '<div class="b">' + esc((L.intro&&L.intro.buddy)||'') + '</div>'
+      + '<div class="h">' + esc((L.intro&&L.intro.headline)||'') + '</div>'
+      + '<div class="b">' + esc((L.intro&&L.intro.body)||'') + '</div>'
+      + sayHTML(L.intro && L.intro.say) + '</div>'
+    + '<div class="step"><div class="steplabel">Step 2 &middot; Learn</div>' + teach + '</div>'
+    + '<div class="step"><div class="steplabel">Step 3 &middot; Try it together (cannot be failed)</div>' + guided + '</div>'
+    + '<div class="step"><div class="steplabel">Step 4 &middot; On your own</div>'
+      + '<p class="pic">Uses your approved question bank for <b>' + esc(row.skill) + '</b> first. These back-ups only appear if the bank runs dry:</p>'
+      + fallback + '</div>'
+    + '<div class="step"><div class="steplabel">Step 5 &middot; Star check (needs 4 of 5)</div>' + check + '</div>'
+    + '<div class="step"><div class="steplabel">If they miss it</div>'
+      + '<div class="b">' + esc((L.reteach&&L.reteach.body)||'') + '</div></div>'
+    + '<div id="ed-' + esc(k) + '"></div>'
+    + actions
+    + '</div>';
+}
+
+function pictureNote(show){
+  if(show.shapes) return esc(show.shapes.join(' and '));
+  var a = show.a||0, b = show.b||0;
+  return b > 0 ? (a + ' counters and ' + b + ' more in the frame') : (a + ' counters in the frame');
+}
+
+window.playIt = function(k){
+  // Opens the real player on this draft. The preview code is what lets the
+  // server hand back a lesson that is not approved yet.
+  window.open('/lessons?lesson=' + encodeURIComponent(k) + '&preview=' + PIN, '_blank');
+};
+
+window.decide = function(k, op){
+  if(op === 'reject' && status() === 'approved' && !confirm('Take this lesson back down? Kids will stop seeing it.')) return;
+  fetch('/api/review-lessons', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ op: op, key: k, reviewer: 'mike' }) })
+  .then(function(r){ return r.json(); }).then(function(d){
+    if(d.ok){
+      var el = document.querySelector('.card[data-key="' + k + '"]');
+      if(el) el.remove();
+      toast(op === 'approve' ? 'Approved. It is on the path now.' : 'Rejected. Nothing lost, the draft is kept.');
+      counts(d.counts);
+    } else if(d.bad && d.bad.length){
+      showProblems(k, d.bad[0].problems || []);
+      toast('That one is not ready to go live.');
+    } else {
+      toast(d.error || 'Something went wrong');
+    }
+  }).catch(function(){ toast('Something went wrong'); });
+};
+
+function showProblems(k, problems){
+  var card = document.querySelector('.card[data-key="' + k + '"]');
+  if(!card) return;
+  var old = card.querySelector('.probs'); if(old) old.remove();
+  var div = document.createElement('div');
+  div.className = 'probs';
+  div.innerHTML = '<b>Needs a fix first:</b><ul>' + problems.map(function(p){ return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
+  card.appendChild(div);
+}
+
+window.approveAllVisible = function(){
+  var keys = CURRENT.map(function(l){ return l.lesson_key; });
+  if(!keys.length) return;
+  if(!confirm('Approve all ' + keys.length + ' lessons shown? Kids will be able to play them straight away.')) return;
+  fetch('/api/review-lessons', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ op:'approve', keys: keys, reviewer:'mike' }) })
+  .then(function(r){ return r.json(); }).then(function(d){
+    if(d.ok){ toast('Approved ' + (d.updated || keys.length) + '. They are on the path now.'); load(); }
+    else if(d.bad && d.bad.length){ toast(d.bad.length + ' lesson(s) need a fix first. Nothing was approved.'); d.bad.forEach(function(b){ showProblems(b.key, b.problems||[]); }); }
+    else toast(d.error || 'Something went wrong');
+  }).catch(function(){ toast('Something went wrong'); });
+};
+
+/* -----------------------------------------------------------------
+   FIX THE WORDS. Everything a grown-up might want to reword, and nothing
+   structural: no adding or removing steps or questions. The server re-checks
+   the read-aloud rules before it saves, so a too-long line is refused with a
+   plain-language reason rather than quietly breaking the lesson.
+   ----------------------------------------------------------------- */
+window.openEdit = function(k){
+  var row = CURRENT.filter(function(l){ return l.lesson_key === k; })[0];
+  if(!row) return;
+  var host = document.getElementById('ed-' + k);
+  if(EDITING[k]){ host.innerHTML = ''; EDITING[k] = false; return; }
+  EDITING[k] = true;
+  var L = row.payload || {};
+  var h = '<div class="step"><div class="steplabel">Fix the words</div>';
+  h += '<div class="edlab">Lesson title</div><input class="ed" id="e-title-' + k + '" value="' + esc(row.title) + '">';
+  h += '<div class="edlab">Step 1 - what the buddy says</div><textarea class="ed" id="e-ibuddy-' + k + '">' + esc(L.intro&&L.intro.buddy) + '</textarea>';
+  h += '<div class="edlab">Step 1 - heading</div><input class="ed" id="e-ihead-' + k + '" value="' + esc(L.intro&&L.intro.headline) + '">';
+  h += '<div class="edlab">Step 1 - words</div><textarea class="ed" id="e-ibody-' + k + '">' + esc(L.intro&&L.intro.body) + '</textarea>';
+
+  (L.teach||[]).forEach(function(c,i){
+    h += '<div class="edlab">Teach card ' + (i+1) + ' - heading</div><input class="ed" id="e-th-' + i + '-' + k + '" value="' + esc(c.headline) + '">';
+    h += '<div class="edlab">Teach card ' + (i+1) + ' - words</div><textarea class="ed" id="e-tb-' + i + '-' + k + '">' + esc(c.body) + '</textarea>';
+    h += '<div class="edlab">Teach card ' + (i+1) + ' - read aloud (one line each, under 60 letters, no plus or equals signs)</div>'
+       + '<textarea class="ed" id="e-ts-' + i + '-' + k + '">' + esc((c.say||[]).join('\n')) + '</textarea>';
+  });
+
+  (L.guided||[]).forEach(function(q,i){
+    h += '<div class="edlab">Try-it question ' + (i+1) + '</div><input class="ed" id="e-gq-' + i + '-' + k + '" value="' + esc(q.question) + '">';
+    h += '<div class="edlab">Its hint</div><input class="ed" id="e-gh-' + i + '-' + k + '" value="' + esc(q.hint) + '">';
+    h += answersEditor('g', i, k, q);
+  });
+
+  (L.check||[]).forEach(function(q,i){
+    h += '<div class="edlab">Star check question ' + (i+1) + '</div><input class="ed" id="e-cq-' + i + '-' + k + '" value="' + esc(q.question) + '">';
+    h += answersEditor('c', i, k, q);
+  });
+
+  h += '<div class="row"><button class="btn primary" onclick="saveEdit(\'' + esc(k) + '\')">Save the changes</button>'
+     + '<button class="btn" onclick="openEdit(\'' + esc(k) + '\')">Cancel</button></div>';
+  h += '</div>';
+  host.innerHTML = h;
+};
+
+function answersEditor(kind, i, k, q){
+  var h = '<div class="edlab">Its answers - tick the right one</div><div class="correctpick">';
+  (q.choices||[]).forEach(function(ch, j){
+    var id = 'e-' + kind + 'a-' + i + '-' + j + '-' + k;
+    h += '<label><input type="radio" name="ok-' + kind + '-' + i + '-' + k + '" value="' + j + '"' + (j===q.correctIndex?' checked':'') + '>'
+       + '<input class="ed" style="width:120px;margin:0" id="' + id + '" value="' + esc(ch) + '"></label>';
+  });
+  return h + '</div>';
+}
+
+function val(id){ var el = document.getElementById(id); return el ? el.value : null; }
+function lines(id){
+  var v = val(id); if(v == null) return null;
+  return v.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+}
+
+window.saveEdit = function(k){
+  var row = CURRENT.filter(function(l){ return l.lesson_key === k; })[0];
+  if(!row) return;
+  var L = row.payload || {};
+  var patch = { title: val('e-title-' + k), intro: {
+    buddy: val('e-ibuddy-' + k), headline: val('e-ihead-' + k), body: val('e-ibody-' + k)
+  }, teach: [], guided: [], check: [] };
+
+  (L.teach||[]).forEach(function(c,i){
+    patch.teach.push({ headline: val('e-th-' + i + '-' + k), body: val('e-tb-' + i + '-' + k), say: lines('e-ts-' + i + '-' + k) });
+  });
+  (L.guided||[]).forEach(function(q,i){
+    patch.guided.push({ question: val('e-gq-' + i + '-' + k), hint: val('e-gh-' + i + '-' + k),
+      choices: (q.choices||[]).map(function(_,j){ return val('e-ga-' + i + '-' + j + '-' + k); }),
+      correctIndex: pickedIndex('g', i, k, q.correctIndex) });
+  });
+  (L.check||[]).forEach(function(q,i){
+    patch.check.push({ question: val('e-cq-' + i + '-' + k),
+      choices: (q.choices||[]).map(function(_,j){ return val('e-ca-' + i + '-' + j + '-' + k); }),
+      correctIndex: pickedIndex('c', i, k, q.correctIndex) });
+  });
+
+  fetch('/api/review-lessons', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ op:'edit', key:k, patch:patch, reviewer:'mike' }) })
+  .then(function(r){ return r.json(); }).then(function(d){
+    if(d.ok){ toast('Saved. Have another read, then approve when you are happy.'); load(); }
+    else if(d.problems){ showProblems(k, d.problems); toast('Those changes need a tweak.'); }
+    else toast(d.error || 'Could not save');
+  }).catch(function(){ toast('Could not save'); });
+};
+
+function pickedIndex(kind, i, k, fallback){
+  var els = document.getElementsByName('ok-' + kind + '-' + i + '-' + k);
+  for(var n=0; n<els.length; n++) if(els[n].checked) return parseInt(els[n].value, 10);
+  return fallback;
+}
+
+document.getElementById('pin').focus();
+})();
+</script>
+</body>
+</html>
