@@ -290,8 +290,8 @@ chk('the page reads the lesson map instead of hardcoding a lesson list', H.inclu
 chk('there is a subject picker', H.includes('function showSubjects') && H.includes('subgrid'));
 chk('there is a unit path map (Subject > Unit > Lesson)',
   H.includes('function showPath') && H.includes('class="unit"') && /var cls = "node"/.test(H) && H.includes('.node{'));
-chk('the path locks a lesson until the one before it is mastered',
-  /if\(approved && !mastered && !blocked\) blocked = true/.test(H) && /locked = approved && blocked/.test(H));
+chk('the path locks a lesson until the one before it is mastered (or the check placed the kid past it)',
+  /if\(approved && !mastered && !placed && !blocked\) blocked = true/.test(H) && /locked = approved && blocked/.test(H));
 chk('lock state comes from real mastery in bk_lessons_v1, never a guess',
   /var prog = readProgress\(\)/.test(H) && /prog\[l\.key\] && prog\[l\.key\]\.mastered/.test(H));
 chk('planned lessons that are not built yet never block the lesson after them',
@@ -300,7 +300,7 @@ const lockedLine = (H.match(/.*cls \+= " locked".*/) || [''])[0];
 const soonLine = (H.match(/.*cls \+= " soon".*/) || [''])[0];
 chk('a locked or coming-soon lesson has no way to be opened',
   !!lockedLine && !!soonLine && !/onclick/.test(lockedLine) && !/onclick/.test(soonLine) &&
-  (H.match(/tap = \x27 onclick="window\.__openLesson/g) || []).length === 2,
+  (H.match(/tap = \x27 onclick="window\.__openLesson/g) || []).length === 3,   // next-up, mastered, placed
   `taps=${(H.match(/tap = \x27 onclick/g) || []).length}`);
 chk('a kid starts on their own grade from their profile', /function startGradeFor/.test(H) && /PROFILE_GRADE/.test(H));
 chk('a kid can run AHEAD of their grade (grade switcher, nothing hidden)',
@@ -551,6 +551,238 @@ chk('the new api endpoints are reachable',
   (firstFor('/api/lesson-map') || {}).dest === '/api/$1' &&
   (firstFor('/api/review-lessons') || {}).dest === '/api/$1' &&
   (firstFor('/api/generate-lessons') || {}).dest === '/api/$1');
+
+
+// ================================================================ LS4
+console.log('\n--- LS4 READING: every lesson drafts, and every answer key re-derived ---');
+const readTargets = fac.targetsFromMap(mapJson).filter((t) => t.pathSubject === 'reading' && !t.hasFile);
+chk('the Reading path has a full K-2 batch to draft', readTargets.length >= 19, 'targets=' + readTargets.length);
+
+const readDrafted = [];
+for (const t of readTargets) {
+  const r = await gen.makeLesson(t, null);   // null key = authored engine, NO model call
+  if (r.ok) readDrafted.push(r.lesson);
+  else chk('drafts ' + t.key, false, r.reason + ' ' + (r.errors || []).join('; '));
+}
+chk('every Reading lesson drafts and passes the validator',
+  readDrafted.length === readTargets.length, readDrafted.length + '/' + readTargets.length);
+chk('every Reading lesson is hand-written, not model output (free, and re-derivable)',
+  readDrafted.every((L) => L.source === 'local'));
+chk('every Reading lesson has 5 star-check questions and a 4-of-5 bar',
+  readDrafted.every((L) => L.check.length === 5 && L.mastery.need === 4 && L.mastery.of === 5));
+chk('every Reading lesson sits on a real curriculum skill for its grade',
+  readDrafted.every((L) => readTargets.some((t) => t.key === L.id && t.skill === L.skill)));
+chk('no emojis anywhere in the Reading batch', !emoji.test(JSON.stringify(readDrafted)));
+
+// A question a kid sees twice in one lesson is a bug the eye does not catch.
+let repeat = null;
+readDrafted.forEach((L) => {
+  const all = [...L.check, ...L.solo.fallback].map((q) => q.question.trim().toLowerCase());
+  if (new Set(all).size !== all.length) repeat = L.id;
+});
+chk('no question repeats between the practice pool and the star check', !repeat, repeat || '');
+
+// THE CHECK THAT MATTERS. Re-derive the marked answer from the question text
+// itself, by a rule written here and nowhere near _lessongen.js. If the factory
+// and this file ever disagree about which choice is right, this fails.
+const PLURAL = (w) => (/(s|x|ch|sh)$/.test(w) ? w + 'es' : w + 's');
+function rederive(q) {
+  const t = q.question;
+  let m;
+  if ((m = /^Which word starts with (\w+)\?$/.exec(t)))
+    return { want: (c) => c.startsWith(m[1]), only: true };
+  if ((m = /^Which word ends with (\w+)\?$/.exec(t)))
+    return { want: (c) => c.endsWith(m[1]), only: true };
+  if ((m = /^Which word has (\w) in the middle\?$/.exec(t)))
+    return { want: (c) => c.length === 3 && c[1] === m[1], only: true };
+  if ((m = /^What is the middle letter of (\w+)\?$/.exec(t)))
+    return { exact: m[1][1] };
+  if ((m = /^([a-z])( - [a-z])+\. What word is that\?$/.exec(t)))
+    return { exact: t.split('.')[0].split(' - ').join('') };
+  if ((m = /^Which word is in the -(\w+) family\?$/.exec(t)))
+    return { want: (c) => c.endsWith(m[1]), only: true };
+  if ((m = /^([a-z_ ]+) spells (\w+)\. Which letter is missing\?$/.exec(t))) {
+    const shown = m[1].trim().split(' '), word = m[2];
+    return { exact: word[shown.indexOf('_')] };
+  }
+  if ((m = /^Which word has (\w{2}) in it\?$/.exec(t)))
+    return { want: (c) => c.includes(m[1]), only: true };
+  if ((m = /^Which two letters start the word (\w+)\?$/.exec(t)))
+    return { exact: m[1].slice(0, 2) };
+  if ((m = /^Which two letters end the word (\w+)\?$/.exec(t)))
+    return { exact: m[1].slice(-2) };
+  if ((m = /^One (\w+), two ___ \. Which spelling is right\?$/.exec(t)))
+    return { exact: PLURAL(m[1]) };
+  if ((m = /^Which one says (\w+)\?$/.exec(t)))
+    return { exact: m[1] };
+  return null;                                  // authored comprehension / sentence fit
+}
+
+let checkedKeys = 0, wrongKeys = [], structural = 0, badStructure = [];
+readDrafted.forEach((L) => {
+  [...L.check, ...L.solo.fallback, ...L.guided].forEach((q) => {
+    const marked = q.choices[q.correctIndex];
+    // Structure holds for EVERY question, derivable or not.
+    const okShape = Array.isArray(q.choices) && q.choices.length >= 2 && q.choices.length <= 3 &&
+      new Set(q.choices).size === q.choices.length &&
+      Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < q.choices.length &&
+      !!q.question;
+    if (okShape) structural++; else badStructure.push(L.id + ': ' + q.question);
+
+    const rule = rederive(q);
+    if (!rule) return;
+    checkedKeys++;
+    if (rule.exact !== undefined) {
+      if (marked !== rule.exact) wrongKeys.push(`${L.id}: "${q.question}" marked "${marked}", should be "${rule.exact}"`);
+      return;
+    }
+    // A "which word" question is only fair if EXACTLY ONE choice fits the rule.
+    const fits = q.choices.filter(rule.want);
+    if (fits.length !== 1) wrongKeys.push(`${L.id}: "${q.question}" has ${fits.length} choices that fit`);
+    else if (fits[0] !== marked) wrongKeys.push(`${L.id}: "${q.question}" marked "${marked}", should be "${fits[0]}"`);
+  });
+});
+chk('every Reading question is well formed (2-3 distinct choices, a real correct answer)',
+  badStructure.length === 0, badStructure.slice(0, 3).join(' | ') || `${structural} checked`);
+// 143 of the 247 reading questions are built by a rule, so their answer can be
+// checked without trusting _lessongen.js at all. The rest are hand-authored
+// comprehension questions, where "what is Ben like" has no mechanical answer -
+// those get the structural check above instead.
+chk('most of the Reading answer keys are re-derived from the question alone, not trusted',
+  checkedKeys >= 140, 'independently re-derived: ' + checkedKeys + ' of ' + structural);
+chk('EVERY re-derivable Reading answer key is correct',
+  wrongKeys.length === 0, wrongKeys.slice(0, 4).join(' | '));
+
+// Same content in, same lesson out - otherwise none of the above proves anything
+// about what a kid will actually be served.
+const twice = await gen.makeLesson(readTargets[0], null);
+chk('drafting is deterministic, so QA is testing what a kid actually gets',
+  JSON.stringify(twice.lesson) === JSON.stringify(readDrafted[0]));
+
+console.log('\n--- LS4 READING: the player can draw a reading lesson ---');
+chk('reading art is drawn TYPE, not counters and not an emoji',
+  /function tiles\(/.test(H) && /function wordCards\(/.test(H) && /function storyCard\(/.test(H));
+chk('all three reading picture kinds go through the one showArt path',
+  /if\(show\.word\) return tiles/.test(H) && /if\(show\.words\) return wordCards/.test(H) &&
+  /if\(show\.sentence\) return storyCard/.test(H));
+chk('a lesson cannot inject markup through the highlighted word',
+  /function litPart/.test(H) && /var w = esc\(String\(word \|\| ""\)\)/.test(H) && /var p = esc\(String\(part \|\| ""\)\)/.test(H));
+chk('no reading question depends on a picture (steps 4 and 5 are text only)',
+  readDrafted.every((L) => [...L.check, ...L.solo.fallback].every((q) => !q.show)));
+
+console.log('\n--- LS4 PLACEMENT: api/placement.js ---');
+chk('the placement endpoint ships', exists('api/placement.js'));
+const PL = read('api/placement.js');
+chk('placement questions come from the approved lessons themselves, not a second content set',
+  /status=eq\.approved/.test(PL) && /lesson\.check/.test(PL) || /questionFor/.test(PL));
+chk('a pending draft is only ever offered to the owner', /status=in\.\(approved,pending\)/.test(PL) && /includePending/.test(PL));
+chk('the ladder never reaches ABOVE the kid\'s own grade', /gi <= upTo/.test(PL));
+chk('it refuses to place anyone off two questions', /playable\.length < 3/.test(PL));
+chk('it is capped so a five year old is not asked twenty questions', /MAX_STEPS = 8/.test(PL));
+chk('no emojis in the placement endpoint', !emoji.test(PL));
+
+// Drive it for real, against a fake bank built by the REAL factory.
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://qa.invalid';
+process.env.SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'qa';
+const bankRows = [];
+for (const t of fac.targetsFromMap(mapJson)) {
+  const r = await gen.makeLesson(t, null);
+  if (r.ok) bankRows.push({ lesson_key: t.key, payload: r.lesson });
+}
+const realFetch = globalThis.fetch;
+globalThis.fetch = async () => ({ ok: true, json: async () => bankRows });
+const place = (await import('./api/placement.js')).default;
+const runPlace = (subject, grade) => new Promise((res) => {
+  place({ query: { subject, grade } }, { setHeader() {}, status() { return this; }, json(b) { res(b); } });
+});
+const pk = await runPlace('reading', 'k');
+const p2 = await runPlace('reading', '2');
+const pmath = await runPlace('math', '1');
+globalThis.fetch = realFetch;
+
+chk('a Kindergarten reader gets a real check', pk.ok && pk.steps.length >= 3, 'steps=' + (pk.steps || []).length);
+chk('a Grade 2 reader is checked from Kindergarten upwards, so it can send them BACK a year',
+  p2.ok && p2.steps.some((s) => s.grade === 'k') && p2.steps.some((s) => s.grade === '2'),
+  (p2.steps || []).map((s) => s.grade).join(','));
+chk('a check never asks about a grade ABOVE the kid', p2.ok && p2.steps.every((s) => ['k', '1', '2'].includes(s.grade)));
+chk('a lesson that ships as a FILE can be a rung too', pmath.ok && pmath.steps.some((s) => s.key === 'g1-math-making-ten'));
+chk('no rung is asked twice', [pk, p2, pmath].every((d) => new Set(d.steps.map((s) => s.key)).size === d.steps.length));
+chk('every placement question has a real correct answer',
+  [pk, p2, pmath].every((d) => d.steps.every((s) =>
+    Array.isArray(s.choices) && s.choices.length >= 2 &&
+    Number.isInteger(s.correctIndex) && s.correctIndex >= 0 && s.correctIndex < s.choices.length && !!s.question)));
+chk('placement questions carry the skill, so an answer can reach the learning ledger',
+  [pk, p2].every((d) => d.steps.every((s) => !!s.skill && !!s.subject)));
+chk('the rungs are in teaching order, never shuffled',
+  [pk, p2, pmath].every((d) => d.steps.every((s, i) => i === 0 || s.at > d.steps[i - 1].at)));
+
+console.log('\n--- LS4 PLACEMENT: what it does to the path ---');
+chk('a placed lesson is a SEPARATE flag from mastered', /var placed = !mastered && !!\(prog\[l\.key\] && prog\[l\.key\]\.placed\)/.test(H));
+chk('placement opens the gate but never writes mastered', /row\.placed = true/.test(H) && !/row\.mastered = true;[\s\S]{0,120}applyPlacement/.test(H));
+chk('a lesson the kid really mastered is never overwritten by a placement', /if\(row\.mastered\) continue/.test(H));
+chk('the kid lands AFTER the last rung they got RIGHT, not on the one they missed',
+  /PLACE\.lastPassed >= 0/.test(H) && /landing = \(at < 0\) \? 0 : at \+ 1/.test(H));
+chk('the check stops early after two misses in a row', /PLACE\.miss >= 2/.test(H));
+chk('every placement answer reaches the learning ledger, tagged as a placement',
+  /logAnswer\(\{ subject:st\.subject, skill:st\.skill, grade:st\.grade \}, right, \{ quizType:"placement" \}\)/.test(H));
+chk('the check is only offered when it can actually help', /playable < 3 \|\| started > 0/.test(H));
+chk('a kid can always decline and start at the beginning', /__skipPlacement/.test(H) && /Start at the beginning/.test(H));
+chk('a placed lesson looks different from a mastered one (no borrowed gold star)',
+  /cls \+= " placed"/.test(H) && /\.node\.placed\{/.test(H) && !/it\.placed[^\n]*STAR_SVG/.test(H));
+
+console.log('\n--- LS4 THE LIVE SWITCH: the owner turns Lessons on himself ---');
+chk('the flags table ships as an idempotent migration', exists('db/ls4-app-flags.sql'));
+const FSQL = read('db/ls4-app-flags.sql');
+chk('the migration is safe to re-run and cannot flip a live switch back off',
+  /create table if not exists app_flags/.test(FSQL) && /on conflict \(key\) do nothing/.test(FSQL));
+chk('shipping the migration changes nothing a kid sees (seeded OFF)', /'lessons_live',\s*\n\s*'false'::jsonb/.test(FSQL));
+chk('the migration never deletes or drops anything', !/\b(drop|delete|truncate)\b/i.test(FSQL.replace(/--.*$/gm, '')));
+
+chk('the flags endpoint ships', exists('api/app-flags.js'));
+const AF = read('api/app-flags.js');
+chk('a write needs the owner code', /code !== OWNER_CODE/.test(AF));
+chk('a write is limited to a fixed allow-list of switches', /if \(!FLAGS\[key\]\) return res\.status\(400\)/.test(AF));
+chk('an unknown key in the database is ignored rather than trusted', /if \(!row \|\| !FLAGS\[row\.key\]\) return/.test(AF));
+chk('it FAILS CLOSED - a database problem hides the tile, it never exposes it',
+  /def: false/.test(AF) && /return \{ flags: out, live: false \}/.test(AF));
+chk('no emojis in the flags endpoint', !emoji.test(AF));
+
+const RP4 = read('public/lesson-review.html');
+chk('the owner gets one plain-language switch, not a settings screen',
+  /Make Lessons live for kids/.test(RP4) && /Put it back to Coming Soon/.test(RP4));
+chk('the switch says what kids can see RIGHT NOW before he touches it',
+  /LIVE for kids/.test(RP4) && /Coming Soon, behind the grown-ups code/.test(RP4));
+chk('a failed save says so plainly and changes nothing', /That did not save\. Nothing changed for kids\./.test(RP4));
+chk('the switch is reversible', /window\.__flipLessons/.test(RP4) && /value: !!next/.test(RP4));
+
+const BK = read('src/BuildableKids.jsx');
+chk('the Home tile reads the switch instead of a hardcoded Coming Soon',
+  /const \[lessonsLive, setLessonsLive\] = useState\(false\)/.test(BK) && /d\.flags\.lessons_live === true/.test(BK));
+chk('the tile FAILS CLOSED: Coming Soon until the switch says otherwise',
+  /useState\(false\)/.test(BK) && /lessonsLive\s*\n?\s*\?/.test(BK));
+chk('when it is live the tile just opens Lessons, with no code gate in the way',
+  /sub: "Math and reading, at your own pace"[\s\S]{0,200}onClick: onLessons/.test(BK));
+chk('when it is not live the 1111 owner gate is still the only way in',
+  /soon: true, gated: true,[\s\S]{0,160}setCatalogGate\(\(\) => onLessons\)/.test(BK));
+
+console.log('\n--- LS4 THE PARENT DASHBOARD: lessons finished ---');
+const ST = read('src/store.js');
+chk('the dashboard reads the same record the path map writes', /bk_lessons_v1/.test(ST) && /export function lessonsProgress/.test(ST));
+chk('ONLY mastered lessons are counted as finished', /if \(row\.mastered\) \{\s*\n\s*out\.finished \+= 1/.test(ST));
+chk('a lesson the placement check merely opened is counted apart, never as finished',
+  /\} else if \(row\.placed\) \{\s*\n\s*out\.opened \+= 1/.test(ST));
+chk('placement bookkeeping is never mistaken for a lesson', /if \(key\.startsWith\("_"\)\) return/.test(ST));
+const GU = read('src/GrownUpScreen.jsx');
+chk('the grown-ups screen shows a Lessons finished number', /Lessons finished/.test(GU) && /lessonsProgress\(\)/.test(GU));
+chk('it names the lessons, so a parent can see WHAT was learned', /lessons\.recent\.map/.test(GU));
+chk('it says plainly when lessons were opened rather than earned',
+  /the quick check opened/i.test(GU));
+chk('the player records the lesson title so the dashboard can name it', /row\.title = lesson\.title \|\| row\.title \|\| ""/.test(H));
+
+console.log('\n--- LS4 ROUTES ---');
+chk('the new endpoints are reachable',
+  (firstFor('/api/placement') || {}).dest === '/api/$1' &&
+  (firstFor('/api/app-flags') || {}).dest === '/api/$1');
 
 console.log('\n' + (ok ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED'));
 process.exit(ok ? 0 : 1);

@@ -54,6 +54,8 @@ const bankQs = [1, 2, 3, 4, 5, 6].map((i) => ({
 // Session LS3 stub state (empty until run 5).
 let BANK_MAP = null;
 let BANK_LESSONS = {};
+// Session LS4 stub state: what /api/placement hands back (null until run 6).
+let PLACEMENT = null;
 
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
@@ -77,6 +79,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'application/json' });
     return res.end(JSON.stringify(BANK_MAP));
   }
+  if (u.pathname === '/api/placement') {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(JSON.stringify(PLACEMENT || { ok: true, subject: '', grade: '', total: 0, steps: [] }));
+  }
   if (u.pathname === '/api/lesson') {
     const key = u.searchParams.get('key');
     const preview = u.searchParams.get('preview');
@@ -99,7 +105,11 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(0, r));
 const base = 'http://127.0.0.1:' + server.address().port;
 
-const browser = await chromium.launch();
+// Some sandboxes ship a Chromium build that does not match the installed
+// Playwright's expected revision. PW_CHROMIUM lets the harness point straight at
+// the browser that IS there, instead of silently not running.
+const PW_EXE = process.env.PW_CHROMIUM || '';
+const browser = await chromium.launch(PW_EXE ? { executablePath: PW_EXE } : {});
 
 async function playLesson({ deliberatelyMiss }) {
   ledger = [];
@@ -443,6 +453,138 @@ console.log('\n--- LIVE RUN 5: a lesson served from the review-approved bank (Se
   await gate.close();
 
   BANK_MAP = null; BANK_LESSONS = {};
+}
+
+
+/* ------------------------------------------------------------------
+   LIVE RUN 6 (Session LS4) - a real kid takes the quick check.
+
+   This is the run that proves placement is safe. A robot opens the Reading
+   path, taps "Find my spot", deliberately answers the first two rungs RIGHT and
+   then gets one WRONG, and we check where it put her: after the last rung she
+   passed, never past the one she missed. Then we check the two things that
+   could quietly corrupt the record - that skipped lessons are marked PLACED and
+   not mastered, and that every placement answer reached the ledger.
+------------------------------------------------------------------- */
+console.log('\n--- LIVE RUN 6: the placement quick check (Session LS4) ---');
+{
+  const gen = await import('./api/_lessongen.js');
+  const fac = await import('./api/generate-lessons.js');
+  const staticMap = JSON.parse(fs.readFileSync(path.join(dir, 'public/lessons/index.json'), 'utf8'));
+  const rTargets = fac.targetsFromMap(staticMap).filter((t) => t.pathSubject === 'reading' && t.grade === 'k');
+
+  const drafts = [];
+  for (const t of rTargets) { const r = await gen.makeLesson(t, null); if (r.ok) drafts.push(r.lesson); }
+  chk('the factory drafted the Kindergarten Reading batch', drafts.length >= 7, 'drafted=' + drafts.length);
+
+  // Every one approved, so the whole K reading path is playable.
+  BANK_LESSONS = {};
+  drafts.forEach((L) => { BANK_LESSONS[L.id] = { status: 'approved', payload: L }; });
+  BANK_MAP = JSON.parse(JSON.stringify(staticMap));
+  for (const p of BANK_MAP.paths) for (const u of p.units) {
+    u.lessons = u.lessons.map((l) => (BANK_LESSONS[l.key] ? { ...l, status: 'approved', fromBank: true } : l));
+  }
+  // The real /api/placement would build these off the same approved rows. The
+  // stub does exactly that, in path order, so the run tests the PLAYER's half.
+  PLACEMENT = {
+    ok: true, subject: 'reading', grade: 'k', total: drafts.length,
+    steps: drafts.map((L, i) => ({
+      key: L.id, title: L.title, grade: 'k', unit: L.unit, subject: L.subject, skill: L.skill, at: i,
+      question: L.check[0].question, choices: L.check[0].choices, correctIndex: L.check[0].correctIndex,
+    })),
+  };
+
+  ledger = [];
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e.message)));
+  await page.addInitScript(() => {
+    localStorage.setItem('bk_active_kid_v1', JSON.stringify({ id: 'qa-kid-6', display_name: 'QA R', grade: 'k' }));
+    localStorage.removeItem('bk_lessons_v1:qa-kid-6');
+    window.speechSynthesis = undefined;
+  });
+  await page.goto(base + '/lessons?subject=reading&grade=k');
+  await page.waitForSelector('.node, .findme', { timeout: 8000 });
+
+  const offer = await page.locator('.findme h3').first().textContent().catch(() => null);
+  chk('a kid with no history is offered the quick check', (offer || '').includes('Find my spot'), offer || 'no card');
+
+  await page.getByRole('button', { name: 'Find my spot' }).click();
+  await page.waitForSelector('.ans button', { timeout: 8000 });
+
+  // Answer rung 1 and 2 right, rung 3 wrong, rung 4 wrong -> stops on two misses.
+  const plan = [true, true, false, false];
+  const asked = [];
+  for (let i = 0; i < plan.length; i++) {
+    const q = await page.locator('.q').first().textContent();
+    asked.push(q);
+    const step = PLACEMENT.steps.find((s) => s.question === q);
+    if (!step) { chk('placement asked a question from a real lesson', false, q); break; }
+    const want = plan[i] ? step.correctIndex : (step.correctIndex + 1) % step.choices.length;
+    await page.locator('.ans button').nth(want).click();
+    await page.waitForTimeout(950);
+    if (await page.locator('.findme h3').count()) break;      // it finished
+  }
+
+  chk('the check asks lessons in teaching order',
+    asked.every((q, i) => i === 0 || PLACEMENT.steps.findIndex((s) => s.question === q) >
+      PLACEMENT.steps.findIndex((s) => s.question === asked[i - 1])));
+  chk('the check stops after two misses in a row rather than grinding on',
+    asked.length === 4, 'asked=' + asked.length);
+
+  const landing = await page.locator('.findme h3').first().textContent();
+  const expected = PLACEMENT.steps[2].title;   // straight after the last rung she PASSED (rung 2)
+  chk('the kid lands straight after the last rung she got RIGHT',
+    (landing || '').includes(expected), `${landing} :: expected ${expected}`);
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('bk_lessons_v1:qa-kid-6') || '{}'));
+  const placedKeys = Object.keys(stored).filter((k) => !k.startsWith('_') && stored[k].placed);
+  chk('the lessons she proved are marked PLACED', placedKeys.length === 2, placedKeys.join(','));
+  chk('placement NEVER writes mastered - a star still has to be earned',
+    Object.keys(stored).every((k) => k.startsWith('_') || !stored[k].mastered),
+    JSON.stringify(stored).slice(0, 160));
+  chk('the landing lesson itself is NOT marked placed', !stored[PLACEMENT.steps[2].key]);
+  chk('the result is remembered, so a kid is not asked again every visit',
+    !!(stored._placement && stored._placement['reading:k'] && stored._placement['reading:k'].at));
+
+  chk('every placement answer reached the learning ledger', ledger.length === 4, 'logged=' + ledger.length);
+  chk('placement answers are tagged so the dashboard can tell them from real practice',
+    ledger.every((e) => e.quizType === 'placement' && e.game === 'lessons'),
+    ledger.map((e) => e.quizType).join(','));
+  chk('placement answers carry the kid and the exact skill',
+    ledger.every((e) => e.kidProfileId === 'qa-kid-6' && !!e.skill));
+
+  // Back on the path: the placed lessons are open but starless, and the landing
+  // lesson is the one being pointed at.
+  await page.getByRole('button', { name: 'See my path' }).click();
+  await page.waitForSelector('.node', { timeout: 8000 });
+  const nodes = await page.evaluate(() => Array.from(document.querySelectorAll('.node')).map((n) => ({
+    cls: n.className, name: (n.querySelector('.nm') || {}).textContent, sub: (n.querySelector('.ds') || {}).textContent,
+    star: !!n.querySelector('svg.end'),
+  })));
+  chk('a placed lesson is open but wears no star', nodes[0] && /placed/.test(nodes[0].cls) && !nodes[0].star,
+    JSON.stringify(nodes[0] || {}));
+  chk('the landing lesson is the kid\'s next step, not locked',
+    nodes[2] && !/locked|soon|placed|done/.test(nodes[2].cls), JSON.stringify(nodes[2] || {}));
+  chk('the quick check is not offered again once it has been answered',
+    (await page.locator('.findme').count()) === 0);
+
+  // And a reading lesson really plays, drawn type and all.
+  await page.locator('.node').nth(2).click();
+  await page.waitForSelector('.q, .card, h2', { timeout: 8000 });
+  await page.getByRole('button', { name: /Let/ }).first().click().catch(() => {});
+  await page.waitForTimeout(400);
+  const artKinds = await page.evaluate(() => ({
+    tiles: document.querySelectorAll('.tiles .tile').length,
+    words: document.querySelectorAll('.wordrow .wordcard').length,
+    story: document.querySelectorAll('.storycard').length,
+  }));
+  chk('a reading teach card draws letters or words, not counters',
+    (artKinds.tiles + artKinds.words + artKinds.story) > 0, JSON.stringify(artKinds));
+  chk('the placement run and the reading lesson threw no javascript errors', errors.length === 0, errors.slice(0, 2).join(' | '));
+
+  await page.close();
+  BANK_MAP = null; BANK_LESSONS = {}; PLACEMENT = null;
 }
 
 await browser.close();
