@@ -30,8 +30,21 @@
     nodraw=1          skip the WebGL renderer entirely (headless QA)
     manual=1          do not self-drive the clock; the QA robot calls SKY.tick(dt)
 
-  No emojis anywhere (repo law). No audio yet: the audio rule is created library
-  sound only, and Sky Flyer's sounds arrive in FL4.
+  Session FL4 added the polish + learning layer:
+    - the FEEL KIT drives every sound and buzz (GAME-FEEL.md law 6: palette names
+      only). Sky Flyer's own created sounds are the sky_* family in /api/sfx and
+      the music bed is a named track from the shared library (/api/library-music).
+    - the SKY AND WORLD COLOURS are no longer baked in: the engine reads its own
+      manifest and repaints every world from that level's "palette" art slot, so
+      a colour can be changed with no code.
+    - BUDDY MOMENTS: rare, specific, event-driven cheers (first coin, a big
+      scoop, a banked landing, one goal short, world beaten).
+    - LEARNING: before the next world unlocks the engine asks the shell for its
+      quiz gate (manifest features.learning.beforeUnlock; the parent's toggle
+      still wins). coinTopUp is shell-side and stays on.
+
+  No emojis anywhere (repo law). Audio rule: created library sound only — the
+  synth in buildable-audio.js is a silent fallback, never the product.
 -->
 <style>
   html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#7ecbff;
@@ -153,6 +166,8 @@
   </div></div>
 </div>
 <script src="/three.min.js"></script>
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-feel.js"></script>
 <script src="/buildable-wallet.js"></script>
 <script src="/buildable-buddy.js"></script>
 <script src="/buildable-gamenav.js"></script>
@@ -251,7 +266,19 @@ function prefsKey(){ return "bk_skyflyer_prefs"+kidSuffix(); }
 function loadPrefs(){ try{ var p=JSON.parse(localStorage.getItem(prefsKey())||"null"); if(!p||typeof p!=="object") p={}; if(typeof p.unlocked!=="number") p.unlocked=0; if(!p.stars||typeof p.stars!=="object") p.stars={}; return p; }catch(e){ return {unlocked:0,stars:{}}; } }
 function savePrefs(p){ try{ localStorage.setItem(prefsKey(), JSON.stringify(p)); }catch(e){} }
 function markStars(n){ if(DEMO) return; var p=loadPrefs(); if((p.stars[WI]||0)<n) p.stars[WI]=n; savePrefs(p); }
-function markBeaten(){ if(DEMO) return; var p=loadPrefs(); p.stars[WI]=3; if(p.unlocked<WI+1) p.unlocked=Math.min(WORLDS.length-1,WI+1); savePrefs(p); }
+// FL4 split these in two: beating a world is earned the moment the goal is met,
+// but UNLOCKING the next one may have to wait for the learning gate, so the two
+// are no longer the same call.
+function markBeaten(){ if(DEMO) return; var p=loadPrefs(); p.stars[WI]=3; savePrefs(p); }
+function markUnlockNext(){
+  if(DEMO) return;
+  var p=loadPrefs(); if(p.unlocked<WI+1) p.unlocked=Math.min(WORLDS.length-1,WI+1); savePrefs(p);
+  if(WI+1<WORLDS.length){
+    buddy("levelup");
+    toast(WORLDS[WI+1].name+" unlocked!");
+    sfx("levelup");
+  }
+}
 
 // ---------- renderer / scene ----------
 var W=(typeof innerWidth==="number"&&innerWidth)||390, H=(typeof innerHeight==="number"&&innerHeight)||780;
@@ -732,6 +759,8 @@ var S={
   yaw:0,pitch:0,bank:0,
   speed:ride.speed,
   coins:0,               // carried, not banked yet
+  combo:0,lastCoinAt:-99,  // FL4: a run of coins scooped in one swoop
+  splashAt:-99,            // FL4: throttle for the sea-skim splash
   banked:0,              // banked this session (also announced to the shell wallet)
   worldCoins:0,          // collected in this world (counts toward the goal)
   landings:0,
@@ -795,6 +824,145 @@ if(DEMO){ // attract mode on the landing card: scenery only, no chrome, no taps
   rideNameEl.style.display="none";
 }
 
+// ============================================================================
+//  FL4 — THE FEEL KIT. Every sound and every buzz in this game comes from the
+//  shared kit (GAME-FEEL.md law 6: a game triggers PALETTE NAMES, never a raw
+//  tone). The names below are the platform's; the sky_* keys they point at are
+//  Sky Flyer's own created sounds in /api/sfx.js, added in FL4 because a new
+//  engine type has to grow the company library rather than borrow from it.
+//  The 3D sparkle burst stays ours (Feel's particle pipeline is 2D-canvas), but
+//  the sound and the haptic on the same frame are the Kit's.
+// ============================================================================
+var FEEL = window.BuildableFeel || null;
+var BA   = window.BuildableAudio || null;
+var SFX_MAP = {
+  select:  "sky_coin",      // a tap / a small yes
+  coin:    "sky_coin",      // one coin scooped
+  collect: "sky_coinrun",   // a whole string of coins in one swoop
+  hit:     "sky_bump",      // the soft bounce off an island (never a crash)
+  pop:     "sky_bump",
+  hurt:    "sky_splash",    // wheels skimming the sea — a giggle, not a fail
+  whoosh:  "sky_takeoff",
+  levelup: "sky_bank",      // coins landing in the bank
+  sparkle: "sky_bank",
+  win:     "sky_win",
+  celebrate:"sky_win"
+};
+// The music BED is a manifest slot, not a hardcoded track: audio.music at the
+// root is the game's default and any level may name its own. Both are names in
+// the SHARED library (/api/library-music), so swapping the mood is a one-word
+// manifest edit and every other game can use the same track.
+var MUSIC_DEFAULT = "sky_open_air";
+var musicTrack = MUSIC_DEFAULT, musicOn = false;
+function sfx(name,opt){ if(!S.sound||DEMO) return; try{ if(FEEL) FEEL.sfx(name,opt); else if(BA) BA.sfx(name,opt); }catch(e){} }
+function haptic(kind){ if(!S.sound||DEMO) return; try{ if(FEEL) FEEL.haptic(kind); }catch(e){} }
+function startMusic(){
+  if(DEMO||!S.sound||musicOn) return;
+  try{
+    var url="/api/library-music?name="+encodeURIComponent(musicTrack);
+    if(FEEL&&FEEL.setMusic){ FEEL.setMusic(url); FEEL.playMusic(); }
+    else if(BA&&BA.setMusic){ BA.setMusic(url); BA.playMusic(); }
+    musicOn=true;
+  }catch(e){}
+}
+function stopMusic(){ musicOn=false; try{ if(FEEL&&FEEL.stopMusic) FEEL.stopMusic(); else if(BA&&BA.stopMusic) BA.stopMusic(); }catch(e){} }
+try{ if(FEEL&&FEEL.configure) FEEL.configure({ accent:"#2FB7D6", sfxBase:"/api/sfx?s=", sfxMap:SFX_MAP,
+      feel:{pace:"calm",celebration:"big",haptics:"on"} }); }catch(e){}
+
+// ============================================================================
+//  FL4 — SKY AND WORLD COLOURS ARE A MANIFEST ART SLOT. The three worlds still
+//  ship built-in colours so a cold standalone link looks right instantly, but
+//  the manifest is the editable truth: each level may carry a "palette" object
+//  and the engine repaints the whole sky from it when the manifest lands. No
+//  code change is needed to recolour a world.
+//    palette keys: sky fog ground rock rock2 cap cap2 trunk leaf stone sun
+//  Anything missing simply keeps the built-in colour, so a half-filled palette
+//  can never break a world.
+// ============================================================================
+function hexNum(v){
+  if(typeof v==="number") return v;
+  if(typeof v!=="string") return null;
+  var s=v.replace("#","").trim();
+  if(!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+  return parseInt(s,16);
+}
+function applyPalette(p){
+  if(!p||typeof p!=="object") return false;
+  var touched=false;
+  function set(mat,key){ var c=hexNum(p[key]); if(c==null||!mat||!mat.color) return; mat.color.setHex(c); touched=true; }
+  set(M.ground,"ground"); set(M.rock,"rock"); set(M.rock2,"rock2");
+  set(M.cap,"cap"); set(M.cap2,"cap2"); set(M.trunk,"trunk");
+  set(M.leaf,"leaf"); set(M.stone,"stone");
+  var sky=hexNum(p.sky);
+  if(sky!=null){ world.sky=sky; touched=true;
+    try{ scene.background.setHex(sky); }catch(e){}
+    try{ document.body.style.background="#"+("000000"+sky.toString(16)).slice(-6); }catch(e){} }
+  var fog=hexNum(p.fog);
+  if(fog!=null&&scene.fog){ world.fog=fog; try{ scene.fog.color.setHex(fog); }catch(e){} touched=true; }
+  var sunc=hexNum(p.sun);
+  if(sunc!=null){ try{ sunDisc.material.color.setHex(sunc); }catch(e){} touched=true; }
+  return touched;
+}
+
+// ---------- read our own manifest (art slots + music + learning defaults) ----------
+var MF=null, MF_LEARN={beforeUnlock:false,coinTopUp:true,subjects:["math"]};
+function readManifest(m){
+  if(!m||typeof m!=="object") return;
+  MF=m;
+  var lv=(Array.isArray(m.levels)&&m.levels[WI])||null;
+  var audio=m.audio||{};
+  var track=(lv&&lv.music)||audio.music;
+  if(typeof track==="string"&&/^[a-z0-9_]+$/.test(track)) musicTrack=track;
+  if(lv&&applyPalette(lv.palette)) { /* repainted from the manifest */ }
+  try{ if(FEEL&&m.feel) FEEL.setFeel(m.feel); }catch(e){}
+  var L=(m.features&&m.features.learning)||{};
+  MF_LEARN={ beforeUnlock:!!L.beforeUnlock,
+             coinTopUp:L.coinTopUp!==false,
+             subjects:(Array.isArray(L.subjects)&&L.subjects.length)?L.subjects:["math"] };
+  if(musicOn){ musicOn=false; startMusic(); }   // a manifest track swap re-beds the music
+}
+try{
+  if(typeof fetch==="function")
+    fetch("/skyflyer/manifest.json").then(function(r){ return r.ok?r.json():null; })
+      .then(function(j){ if(j) readManifest(j); }).catch(function(){});
+}catch(e){}
+
+// ============================================================================
+//  FL4 — BUDDY MOMENTS. Buddy 2.0's rule (roadmap 6E): rare and specific, never
+//  chatter, never mid-manoeuvre nagging. Each moment fires AT MOST ONCE per
+//  flight and there is a hard floor of 12 seconds between any two of them, so a
+//  whole world is a handful of cheers, not a running commentary.
+// ============================================================================
+var buddySaid={}, buddyLastAt=-99;
+function buddyMoment(id,kind,text,force){
+  if(DEMO) return;
+  if(buddySaid[id]&&!force) return;
+  if(!force&&(time-buddyLastAt)<12) return;
+  buddySaid[id]=true; buddyLastAt=time;
+  buddy(kind,text);
+}
+
+// ============================================================================
+//  FL4 — LEARNING: beforeUnlock. When a world is beaten and there is a NEXT one
+//  to unlock, ask the shell for its quiz gate first (Session 6B: the shell is
+//  the authority, because a parent's toggle overrides the manifest default). We
+//  always ASK and pass our manifest default; the shell either shows the gate or
+//  answers bk:quizDone straight away. A cold standalone deep link has no parent
+//  app, so it just unlocks with no gate — expected, same as Breaker.
+// ============================================================================
+function inApp(){ try{ return !!(window.parent&&window.parent!==window); }catch(e){ return false; } }
+var gatePending=false;
+function unlockNextOrGate(){
+  if(WI+1>=WORLDS.length) return;            // last world: nothing to unlock
+  if(gatePending) return;
+  if(!inApp()){ markUnlockNext(); return; }
+  gatePending=true;
+  try{
+    window.parent.postMessage({source:"buildable",kind:"quizRequest",moment:"beforeUnlock",
+      manifestBeforeUnlock:MF_LEARN.beforeUnlock,subjects:MF_LEARN.subjects,gameType:"skyflyer"},"*");
+  }catch(e){ gatePending=false; markUnlockNext(); }
+}
+
 // ---------- help ----------
 function openHelp(){ helpCard.style.display="flex"; }
 function closeHelp(){ helpCard.style.display="none"; }
@@ -804,6 +972,7 @@ helpClose.addEventListener("click",closeHelp);
 // ---------- input: one finger, drag = steer ----------
 var startX=0,startY=0;
 function pdown(x,y){
+  startMusic();                     // audio unlocks on the first touch (iPad rule)
   if(S.mode==="landed"||S.auto||DEMO)return;
   S.dragging=true;startX=x;startY=y;S.dx=0;S.dy=0;
   if(!S.hintDone){S.hintDone=true;hintEl.style.opacity=0;}
@@ -823,6 +992,7 @@ addEventListener("touchstart",function(e){e.preventDefault();},{passive:false});
 function takeOff(){
   if(S.mode!=="landed")return;
   S.mode="takeoff";S.landTimer=0;takeoffBtn.style.display="none";
+  sfx("whoosh");haptic("light");        // Feel law 1: the tap answers on this frame
   toast("Off we go!");
 }
 takeoffBtn.addEventListener("click",takeOff);
@@ -850,6 +1020,8 @@ function featureBounce(){
         S.pos.x=wx+nx*(hr+4);S.pos.z=wz+nz*(hr+4);
         S.pos.y+=2.5;S.speed=Math.max(20,S.speed*0.7);
         burst(S.pos,6);
+        sfx("hit");                        // soft boof, throttled by the Kit
+        buddyMoment("bump","cheer","Bouncy! Nothing can hurt you up here.");
         return;
       }
     }
@@ -868,6 +1040,17 @@ function collectCoins(list,parent){
       S.coins++;S.worldCoins++;S.autoIdle=0;coinsEl.textContent=S.coins;
       paintGoals();
       burst(new THREE.Vector3(wx,wy,wz),5);
+      // Feel law 3: every coin is a gold sparkle + a chime + a light buzz. A
+      // whole STRING of coins scooped in one swoop earns the bigger run sound
+      // instead of the same tick five times.
+      S.combo=(time-S.lastCoinAt<0.85)?(S.combo+1):1;
+      S.lastCoinAt=time;
+      if(S.combo===4) sfx("collect"); else sfx("coin",{tier:S.combo>=6?3:(S.combo>=3?2:1)});
+      haptic("light");
+      if(S.worldCoins===1) buddyMoment("firstcoin","cheer","First coin! Follow the trail.");
+      if(S.combo===6) buddyMoment("bigscoop","cheer","What a scoop! Six in one swoop.");
+      if(!S.beaten&&S.worldCoins===world.goalCoins&&S.landings<world.goalLandings)
+        buddyMoment("coingoal","cheer","Coins done. Now find a landing pad.");
       checkBeaten();
     }
   }
@@ -881,8 +1064,16 @@ function checkBeaten(){
     markBeaten();
     paintGoals();
     toast(world.name+" beaten!");
-    buddy("win");
-    if(WI+1<WORLDS.length) buddy("levelup");
+    // Feel law 2: the win sounds the same everywhere. There is no 2D canvas here
+    // for the Kit's confetti, so the sparkle is our own 3D burst and the sound,
+    // the buzz and the celebration preset are the Kit's.
+    try{ if(FEEL&&FEEL.celebrate&&!DEMO&&S.sound) FEEL.celebrate(W,H); else sfx("win"); }catch(e){ sfx("win"); }
+    haptic("success");
+    burst(S.pos,26);
+    buddyMoment("win","win",null,true);
+    // ...and only NOW does the next world get asked for: the learning gate (if
+    // the parent has it on) stands between beating a world and unlocking one.
+    unlockNextOrGate();
   }
 }
 
@@ -898,6 +1089,7 @@ function tryLand(){
 function finishLanding(){
   S.mode="landed";
   S.landings++;
+  sfx("select");haptic("light");        // the wheels touch down
   if(S.coins>0){
     var n=S.coins;
     S.banked+=n;announceCoins(n);       // -> the ONE shared wallet, via the shell
@@ -905,9 +1097,13 @@ function finishLanding(){
     S.coins=0;coinsEl.textContent=0;
     bankedEl.textContent=S.banked;bankedBox.style.opacity=1;
     burst(new THREE.Vector3(S.targetPad.x,PAD_TOP+4,S.targetPad.z),16);
+    sfx("levelup");haptic("success");   // coins tumbling into the bank
+    buddyMoment("banked","cheer","Landed safe - your coins are in the bank.");
   }else{ toast("Nice landing!"); }
   markStars(S.beaten?3:1);
   paintGoals();
+  if(!S.beaten&&S.worldCoins<world.goalCoins&&S.landings>=world.goalLandings)
+    buddyMoment("landgoal","cheer","Landings done. Just coins to go now.");
   checkBeaten();
   // sitting on the pad is the "before takeoff" moment: name the ride again here
   if(!DEMO){ takeoffBtn.style.display="block"; showRideName(); }
@@ -1036,7 +1232,10 @@ function stepSim(dt){
     var dir=new THREE.Vector3(-Math.sin(S.yaw),Math.sin(S.pitch),-Math.cos(S.yaw)).normalize();
     S.pos.addScaledVector(dir,S.speed*dt);
     if(S.pos.y<3){S.pos.y=3;S.pitch=Math.max(S.pitch,0.12);
-      if(Math.random()<0.3)burst(new THREE.Vector3(S.pos.x,1,S.pos.z),3,splashMat);}
+      if(Math.random()<0.3)burst(new THREE.Vector3(S.pos.x,1,S.pos.z),3,splashMat);
+      // skimming the sea is a giggle, never a fail: a light splash, throttled so
+      // a long low run is an occasional plink and not a stream of noise.
+      if(time-S.splashAt>0.9){ S.splashAt=time; sfx("hurt"); }}
     if(S.pos.y>120){S.pos.y=120;S.pitch=Math.min(S.pitch,0);}
     featureBounce();
     tryLand();
@@ -1142,14 +1341,19 @@ addEventListener("resize",function(){
 addEventListener("message",function(ev){
   var d=ev&&ev.data;
   var kind=(typeof d==="string")?d:(d&&(d.type||d.kind));
-  if(kind==="pause"){ S.paused=true; }
-  else if(kind==="resume"){ S.paused=false; last=(typeof performance!=="undefined"&&performance.now)?performance.now():last; }
+  if(kind==="pause"){ S.paused=true; stopMusic(); }
+  else if(kind==="resume"){ S.paused=false; last=(typeof performance!=="undefined"&&performance.now)?performance.now():last; startMusic(); }
+  // FL4 learning gate: the shell has finished with its question (or decided there
+  // was nothing to ask). Either way the next world may now unlock.
+  else if(kind==="bk:quizDone"){ if(gatePending){ gatePending=false; markUnlockNext(); } }
 });
 try{
   if(window.BuildableGameNav){
     window.BuildableGameNav.register({
       hide:["helpBtn"],
-      onSound:function(){ S.sound=!S.sound; },
+      onSound:function(){ S.sound=!S.sound;
+        try{ if(BA&&BA.toggleMute&&BA.muted!==!S.sound) BA.toggleMute(); }catch(e){}
+        if(S.sound) startMusic(); else stopMusic(); },
       onHelp:function(){ openHelp(); },
       soundOn:function(){ return S.sound; },
       inGame:function(){ return true; }
@@ -1162,7 +1366,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"FL3",
+  version:"FL4",
   state:S,
   world:world,
   worlds:WORLDS,
@@ -1173,6 +1377,18 @@ window.SKY={
   tick:function(dt){ stepSim(typeof dt==="number"?dt:1/30); },
   autopilot:function(on){ S.auto=(on!==false); if(!S.auto){S.dx=0;S.dy=0;} },
   beaten:function(){ return S.beaten; },
+  // ---- FL4 handles, so the robot can prove the polish layer too ----
+  sfxMap:SFX_MAP,
+  music:function(){ return musicTrack; },
+  applyManifest:function(m){ readManifest(m); return {music:musicTrack,learning:MF_LEARN}; },
+  applyPalette:applyPalette,
+  paletteNow:function(){ return { sky:world.sky, fog:world.fog,
+    ground:M.ground.color.getHex(), rock:M.rock.color.getHex(), cap:M.cap.color.getHex(),
+    leaf:M.leaf.color.getHex(), stone:M.stone.color.getHex() }; },
+  learning:function(){ return MF_LEARN; },
+  gate:function(){ return {pending:gatePending,unlocked:loadPrefs().unlocked}; },
+  quizDone:function(){ if(gatePending){ gatePending=false; markUnlockNext(); } },
+  buddyLog:function(){ return Object.keys(buddySaid); },
   snapshot:function(){ return {mode:S.mode,x:S.pos.x,y:S.pos.y,z:S.pos.z,coins:S.coins,
     banked:S.banked,worldCoins:S.worldCoins,landings:S.landings,beaten:S.beaten,paused:S.paused}; }
 };

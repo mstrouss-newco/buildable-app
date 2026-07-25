@@ -17,29 +17,46 @@
     "coins": true,
     "buddy": { "on": true, "personality": "cheerleader" },
     "multiplayer": "off",
-    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": [] }
+    "learning": { "beforeUnlock": true, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
   },
 
   "feel": { "pace": "calm", "celebration": "big", "haptics": "on" },
 
+  "audio": {
+    "music": "sky_open_air",
+    "sfx": ["sky_coin", "sky_coinrun", "sky_bump", "sky_splash", "sky_land", "sky_takeoff", "sky_bank", "sky_win"]
+  },
+
   "art": {
-    "badge": "skyflyer/badge/v1",
-    "hero": "skyflyer/hero/v1",
+    "badge": "/api/images?kind=skybadge&id=skyflyer",
+    "hero": "/api/images?kind=game&id=skyflyer",
     "winCelebration": "shared/win/confetti-v1"
   },
 
   "levels": [
     { "id": "sunny-islands", "name": "Sunny Islands", "difficulty": 1, "unlocked": true,
-      "journeyBadge": "badges/sunny-islands/v1",
+      "journeyBadge": "/api/images?kind=skybadge&id=sunny-islands",
       "colors": ["#7ecbff", "#6FD46F", "#F6D98A"],
+      "music": "sky_open_air",
+      "palette": { "sky": "#7ECBFF", "fog": "#BFE6FF", "ground": "#1B76AC", "sun": "#FFE9A8",
+                   "rock": "#F6D98A", "rock2": "#E9C46A", "cap": "#6FD46F", "cap2": "#4FB85C",
+                   "trunk": "#A9764B", "leaf": "#3FA75B", "stone": "#B9A88F" },
       "parts": { "world": "sunny-islands", "theme": "ocean", "goalCoins": 12, "goalLandings": 1, "pads": 2 } },
     { "id": "snowy-peaks", "name": "Snowy Peaks", "difficulty": 2,
-      "journeyBadge": "badges/snowy-peaks/v1",
+      "journeyBadge": "/api/images?kind=skybadge&id=snowy-peaks",
       "colors": ["#BFE3F5", "#FFFFFF", "#8FA3B4"],
+      "music": "sky_open_air",
+      "palette": { "sky": "#8FC6E8", "fog": "#B9DCEF", "ground": "#E2EFF8", "sun": "#FFFAF0",
+                   "rock": "#7A8FA3", "rock2": "#64798C", "cap": "#F4FAFF", "cap2": "#DCEBF6",
+                   "trunk": "#6B4A33", "leaf": "#2E6B4F", "stone": "#C8D6E0" },
       "parts": { "world": "snowy-peaks", "theme": "snow", "goalCoins": 16, "goalLandings": 2, "pads": 2 } },
     { "id": "sunset-canyon", "name": "Sunset Canyon", "difficulty": 3,
-      "journeyBadge": "badges/sunset-canyon/v1",
+      "journeyBadge": "/api/images?kind=skybadge&id=sunset-canyon",
       "colors": ["#FFB073", "#C8622F", "#E0864A"],
+      "music": "sky_soar_bright",
+      "palette": { "sky": "#FFB073", "fog": "#FFC79B", "ground": "#D98F55", "sun": "#FFD08A",
+                   "rock": "#C8622F", "rock2": "#A84E27", "cap": "#E0864A", "cap2": "#B55A2C",
+                   "trunk": "#8A5A34", "leaf": "#4E9A5A", "stone": "#E0A472" },
       "parts": { "world": "sunset-canyon", "theme": "desert", "goalCoins": 20, "goalLandings": 2, "pads": 2 } }
   ],
 
