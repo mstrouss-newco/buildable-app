@@ -273,6 +273,13 @@ const EXHIBIT_CATALOG = [
   { id: "ocean-deep", title: "Journey to the Deep", topic: "ocean", color: "#1173B4", heroArt: "/api/asset-studio?asset=explore/scene/ocean-photo/reef", status: "approved" },
   // Make It Rain (weather-lab template, the live weather machine). Approved by Mike 2026-07-21.
   { id: "make-it-rain", title: "Weather Lab", topic: "weather", color: "#37B6F5", heroArt: "/api/asset-studio?asset=explore/scene/make-it-rain/hero", status: "approved" },
+  // Kidspedia topic books (Session TB1, topic-book template). Photo-real picture
+  // books: cover + 4 photo pages, every fact carries its own source. They stay
+  // hidden from kids until Mike fact-checks each book and flips BOTH this status
+  // and the exhibit JSON to "approved".
+  { id: "sharks", title: "Sharks", topic: "ocean", color: "#1173B4", heroArt: "/explore/topic-photos/sharks/sharks-cover.webp", status: "in-review" },
+  { id: "dinosaurs", title: "Dinosaurs", topic: "dinosaurs", color: "#6B8E23", heroArt: "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp", status: "in-review" },
+  { id: "moon", title: "The Moon", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/moon/moon-cover.webp", status: "in-review" },
 ];
 
 // Games that support the zero-account "play a friend by link" flow (the grandma flow).
