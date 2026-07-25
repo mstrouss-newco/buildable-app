@@ -11,7 +11,7 @@ import GrownUpScreen from "./GrownUpScreen";
 import StoryMaker from "./StoryMaker";
 import TopBoard from "./TopBoard.jsx";
 import LoadingGames from "./LoadingGames";
-import QuizGate from "./QuizGate";
+import QuickGame from "./QuickGame";
 import FamilyChess from "./FamilyChess";
 import GameLobby from "./GameLobby";
 import GrownUpFriends from "./GrownUpFriends";
@@ -22,11 +22,11 @@ import { listMyMatches } from "./lib/chessMatches";
 import { listInvitesForKid } from "./lib/rtMatch";
 import { startPresence, stopPresence, inboxInvites } from "./lib/friends";
 import { listActiveFriendMatches, roleFor } from "./lib/friendMatches";
-import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings } from "./store";
+import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings, getProgress, dailyLearningProgress, effectiveLearning } from "./store";
 import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken, listKidProfiles } from "./lib/accounts";
 import { registerAudio } from "./lib/audioUnlock";
-import { playVoiceUrl } from "./lib/voiceBus";
-import { setCurrentGame, logGameEvent } from "./lib/gameLog";
+import { playVoiceUrl, stopVoice } from "./lib/voiceBus";
+import { setCurrentGame, logGameEvent, logSkillEvent } from "./lib/gameLog";
 
 // Screens
 const SCREEN_HOME = "home";
@@ -39,23 +39,27 @@ const SCREEN_PLAY = "play";
 const SCREEN_MY_STUFF = "my_stuff";
 const SCREEN_ADMIN = "admin";
 const SCREEN_MUSIC = "music";
+const SCREEN_MUSIC_LANDING = "music_landing"; // Session 6C: studio front door (shell-generated)
+const SCREEN_MUSIC_LOADOUT = "music_loadout"; // Session 6C: studio loadout (instrument packs)
 const SCREEN_GROWNUP = "grownup";
 const SCREEN_STORY = "story";
 const SCREEN_TYPING = "typing";
 const SCREEN_CHESS = "chess";
-const SCREEN_GAME_PICKER = "game_picker";
 const SCREEN_PLATFORMER = "platformer";
 const SCREEN_SURVIVAL = "survival";
+const SCREEN_SURVIVAL_UPGRADES = "survival_upgrades"; // Session 9B: shell gameplay-upgrade store
 const SCREEN_BREAKER = "breaker";
 const SCREEN_BREAKER_LANDING = "breaker_landing";
 const SCREEN_BREAKER_JOURNEY = "breaker_journey";
 const SCREEN_BREAKER_LOADOUT = "breaker_loadout";
 const SCREEN_TANK = "tank";
 const SCREEN_RUNNER = "runner";
-const SCREEN_TETRIS = "tetris";
+const SCREEN_TUMBLE = "tumble";
 const SCREEN_SOUNDS = "sounds";
 const SCREEN_CHESS_FAMILY = "chess_family";
 const SCREEN_CHESS_LOBBY = "chess_lobby";
+const SCREEN_CHESS_LANDING = "chess_landing"; // Session 7E: chess uses the one shell landing (board frame)
+const SCREEN_CHESS_SOLO = "chess_solo";       // Session 7E: board "pick difficulty & play" frame
 const SCREEN_GROWNUP_FRIENDS = "grownup_friends";
 const SCREEN_CHECKERS = "checkers";
 const SCREEN_CHECKERS_FAMILY = "checkers_family";
@@ -68,14 +72,25 @@ const SCREEN_TOWN_FAMILY = "town_family";
 const SCREEN_TICTACTOE = "tictactoe";
 const SCREEN_TTT_LOBBY = "ttt_lobby";
 const SCREEN_CONNECTFOUR = "connectfour";
+const SCREEN_C4_LOBBY = "c4_lobby";
 const SCREEN_DOTSBOXES = "dotsboxes";
+const SCREEN_DOTS_LOBBY = "dots_lobby";
 const SCREEN_CASTLE = "castle";
 const SCREEN_SLING = "sling";
+const SCREEN_SLING_JOURNEY = "sling_journey"; // Sling uses the shared winding Journey picker (like Breaker)
 const SCREEN_CROC = "croc";
+const SCREEN_RILEYS = "rileys";
 const SCREEN_MAHJONG = "mahjong";
 const SCREEN_STRINGMATCH = "stringmatch";
 const SCREEN_BUBBLE = "bubble";
-const SCREEN_SKYFLYER = "skyflyer";
+const SCREEN_MATHCANNON = "mathcannon";
+const SCREEN_SKYFLYER = "skyflyer";   // Session FL2: Sky Flyer, the 3D one-finger flight cartridge
+const SCREEN_GAME_LANDING = "game_landing";   // Session 7F: shared landing as the front door for every keeper
+const SCREEN_GAME_LOADOUT = "game_loadout";   // Session 7F: shared "Make it mine" loadout for the landed game
+const SCREEN_TENNIS_LANDING = "tennis_landing"; // Session 7F: Tennis on the shared landing (mode row + court skins)
+const SCREEN_TENNIS_LOADOUT = "tennis_loadout"; // Session 7F: Tennis court skins in the shared loadout
+const SCREEN_EXPLORE = "explore"; // Session 8G: Kidspedia exhibit viewer (orbit-explorer template)
+const SCREEN_LESSONS = "lessons"; // Session LS2: the Lessons section (subject picker, path map, player)
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
 // log under the base game; SCREEN_PLAY = a generated "Make a game" creation.
@@ -85,7 +100,9 @@ const GAME_SLUGS = {
   [SCREEN_BREAKER]: "breaker",
   [SCREEN_CASTLE]: "castle",
   [SCREEN_CROC]: "croc",
-  [SCREEN_TETRIS]: "tetris",
+  [SCREEN_MATHCANNON]: "mathcannon",
+  [SCREEN_RILEYS]: "rileys",
+  [SCREEN_TUMBLE]: "tumble",
   [SCREEN_CHESS]: "chess",
   [SCREEN_CHESS_FAMILY]: "chess",
   [SCREEN_TYPING]: "typing",
@@ -111,6 +128,54 @@ const SCREEN_MEMORY = "memory";
 const SCREEN_BINGO = "bingo";
 const SCREEN_SNAKES = "snakes";
 const SCREEN_MAZE = "maze";
+const SCREEN_WRAP_JOURNEY = "wrapjourney";   // Session 7I: the ONE shared journey for every wrapped game
+const SCREEN_BOARD_SOLO = "boardsolo";       // Session 7I: the ONE shared board difficulty picker (non-chess)
+
+// Session 7F — shared-landing wrap table. Each keeper's Play launches its existing
+// engine screen (engines untouched); loadout:true means the manifest carries a
+// "Make it mine" slot. Adding a game to the shared front door is one data row here,
+// not new screen code. (Breaker/Chess/Music/Tennis keep their own richer blocks.)
+// Session 7I adds per-game `journey` (Play routes to the shared GameJourney and the
+// engine is deep-linked with ?level=) and `demo` (the landing demo box URL — every
+// engine now has a Breaker-style ?screen=demo attract mode). Games without `demo`
+// show no demo box at all (never an empty box that implies gameplay).
+const LANDING_WRAP = {
+  survival: { play: SCREEN_SURVIVAL, loadout: true, journey: true, demo: "/survival-engine.html?v=9c&screen=demo" },
+  sling: { play: SCREEN_SLING, loadout: true, journey: true, demo: "/sling-squad.html?v=hud3&screen=demo" },
+  tictactoe: { play: SCREEN_TICTACTOE, loadout: true, demo: "/tictactoe-engine.html?v=hud2&screen=demo" },
+  connectfour: { play: SCREEN_CONNECTFOUR, loadout: true, demo: "/connectfour-engine.html?v=hud2&screen=demo" },
+  dotsboxes: { play: SCREEN_DOTSBOXES, loadout: true, demo: "/dotsboxes-engine.html?v=hud2&screen=demo" },
+  checkers: { play: SCREEN_CHECKERS, loadout: true, demo: "/buildable-checkers.html?v=3&screen=demo" },
+  memory: { play: SCREEN_MEMORY, loadout: true, journey: true, demo: "/memory-engine.html?v=hud2&screen=demo" },
+  mahjong: { play: SCREEN_MAHJONG, loadout: true, journey: true, demo: "/mahjong-engine.html?v=hud2&screen=demo" },
+  bingo: { play: SCREEN_BINGO, loadout: true },
+  croctot: { play: SCREEN_CROC, loadout: true, journey: true, demo: "/croctot.html?v=hud2&screen=demo" },
+  stringmatch: { play: SCREEN_STRINGMATCH, journey: true, demo: "/string-match.html?v=2&screen=demo" },
+  bubble: { play: SCREEN_BUBBLE, journey: true, demo: "/bubble-engine.html?v=hud2&screen=demo" },
+  castleguard: { play: SCREEN_CASTLE, journey: true, demo: "/castle-guard.html?v=hud2&screen=demo" },
+  tumble: { play: SCREEN_TUMBLE, journey: true, demo: "/tumble-engine.html?v=1&screen=demo" },
+  "rileys-garden": { play: SCREEN_RILEYS, journey: true, demo: "/rileys-garden.html?v=art2&screen=demo" },
+  typing: { play: SCREEN_TYPING, journey: true, demo: "/typing.html?v=2&screen=demo" },
+  mathcannon: { play: SCREEN_MATHCANNON, journey: true, demo: "/mathcannon-engine.html?v=2&screen=demo" },
+  skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=fl2&screen=demo" },
+  platformer: { play: SCREEN_PLATFORMER },
+  town: { play: SCREEN_TOWN },
+  runner: { play: SCREEN_RUNNER },
+  tank: { play: SCREEN_TANK },
+  maze: { play: SCREEN_MAZE },
+};
+
+// Session 7H — the four board games that get a multiplayer mode row on the shared
+// landing (Solo / Same device / Play a friend), matching Chess and Tennis. Solo and
+// Same device enter the engine's own menu (the Phase-2 ?diff deep-links are not in
+// yet); Play a friend opens the shared GameLobby. TTT + Checkers already had lobbies;
+// Connect Four + Dots use the same board harness online path via gameSpecFor (7H).
+const BOARD_MP_LANDING = {
+  tictactoe:   { play: SCREEN_TICTACTOE,   lobby: SCREEN_TTT_LOBBY },
+  connectfour: { play: SCREEN_CONNECTFOUR, lobby: SCREEN_C4_LOBBY },
+  dotsboxes:   { play: SCREEN_DOTSBOXES,   lobby: SCREEN_DOTS_LOBBY },
+  checkers:    { play: SCREEN_CHECKERS,    lobby: SCREEN_CHECKERS_LOBBY },
+};
 // ---------------------------------------------------------------------------
 // GAME_CATALOG — the picker's manifest/identity layer (Session 3A). Every card on
 // the picker is GENERATED from this list, never hand-placed. Each entry is the
@@ -121,41 +186,176 @@ const SCREEN_MAZE = "maze";
 // callback prop that opens the game; `soon` keeps the coming-soon password gate.
 // ---------------------------------------------------------------------------
 const GAME_CATALOG = [
-  { id: "skyflyer",    name: "Sky Flyer",        category: "Action",   color: "#FF9800", type: "game", imgId: "skyflyer",    handler: "onSkyFlyer",    desc: "Fly 3D endless worlds, find hidden missions!" },
+  { id: "skyflyer",    name: "Sky Flyer",         category: "Action",   color: "#2FB7D6", type: "game", imgId: "skyflyer",    handler: "onSkyFlyer",    desc: "Fly wherever you like, scoop up coins, or take on a flying job!" },
   { id: "breaker",     name: "Breaker",          category: "Arcade",   color: "#FF6B6B", type: "game", imgId: "breaker",     handler: "onBreaker",     desc: "Bounce the ball, smash every brick!" },
-  { id: "chess",       name: "Chess",            category: "Board",    color: "#F0972A", type: "game", imgId: "chess",       handler: "onChess",       desc: "Play solo, 2-player, or with family!" },
+  { id: "music-maker", name: "Music Maker",      category: "Studio",   color: "#37B6F5", type: "studio", imgId: "music",     handler: "onMusicMaker",  desc: "Make your own songs — pick a vibe and press go!" },
+  { id: "chess",       name: "Chess",            category: "Board",    color: "#F0972A", type: "game", imgId: "chess",       handler: "onChess",       desc: "Play solo, 2-player, or with family!", multiplayer: true },
   { id: "sling",       name: "Sling Squad",      category: "Action",   color: "#7BD0FF", type: "game", imgId: "sling",       handler: "onSling",       desc: "Fling your pals, topple every tower!" },
-  { id: "tictactoe",   name: "Tic-Tac-Toe",      category: "Board",    color: "#5B8CFF", type: "game", imgId: "tictactoe",   handler: "onTicTacToe",   desc: "Three in a row — solo or 2 players!" },
+  { id: "tictactoe",   name: "Tic-Tac-Toe",      category: "Classic",  color: "#5B8CFF", type: "game", imgId: "tictactoe",   handler: "onTicTacToe",   desc: "Three in a row — solo or 2 players!", multiplayer: true },
   { id: "survival",    name: "Survival",         category: "Action",   color: "#8A6BFF", type: "game", imgId: "survival",    handler: "onSurvival",    desc: "Dodge the swarm and beat the boss!" },
-  { id: "stringmatch", name: "String Match",     category: "Puzzle",   color: "#57A93F", type: "game", imgId: "stringmatch", handler: "onStringMatch", desc: "Draw a string to connect the matching buddies!" },
+  { id: "stringmatch", name: "String Match",     category: "Classic",  color: "#57A93F", type: "game", imgId: "stringmatch", handler: "onStringMatch", desc: "Draw a string to connect the matching buddies!" },
   { id: "bubble",      name: "Bubble Buddies",   category: "Arcade",   color: "#5BC0EB", type: "game", imgId: "bubble",      handler: "onBubble",      desc: "Aim and pop — match 3 buddies to set them free!" },
-  { id: "tennis",      name: "Tennis",           category: "Sports",   color: "#34D399", type: "game", imgId: "tennis",      handler: "onTennis",      desc: "Bounce it back — solo, 2 players, or family!" },
+  { id: "tennis",      name: "Tennis",           category: "Sports",   color: "#34D399", type: "game", imgId: "tennis",      handler: "onTennis",      desc: "Bounce it back — solo, 2 players, or family!", multiplayer: true },
   { id: "castleguard", name: "Castle Guard",     category: "Strategy", color: "#2E8B57", type: "game", imgId: "castleguard", handler: "onCastle",      desc: "Place archers and knights to stop the silly goblins!" },
-  { id: "tetris",      name: "Tumble Blocks",    category: "Puzzle",   color: "#67C7FF", type: "game", imgId: "tetris",      handler: "onTetris",      desc: "Fill a row and watch it tumble away!" },
+  { id: "tumble",      name: "Tumble Blocks",    category: "Puzzle",   color: "#67C7FF", type: "game", imgId: "tetris",      handler: "onTumble",      desc: "Fill a row and watch it tumble away!" },
   { id: "croctot",     name: "Croc Tot",         category: "Action",   color: "#3AA655", type: "game", imgId: "croctot",     handler: "onCroc",        desc: "Blast the goofy flying snacks and beat the boss!" },
-  { id: "connectfour", name: "Connect Four",     category: "Board",    color: "#FF5A6E", type: "game", imgId: "connectfour", handler: "onConnectFour", desc: "Drop discs, line up four to win!" },
-  { id: "dotsboxes",   name: "Dots and Boxes",   category: "Board",    color: "#36D6C3", type: "game", imgId: "dotsboxes",   handler: "onDotsBoxes",   desc: "Close a box to claim it — most wins!" },
-  { id: "checkers",    name: "Checkers",         category: "Board",    color: "#8E6BFF", type: "game", imgId: "checkers",    handler: "onCheckers",    desc: "Hop, jump and crown your kings!" },
-  { id: "typing",      name: "Typing",           category: "Learn",    color: "#1FA897", type: "game", imgId: "typing",      handler: "onTyping",      desc: "Learn to type — defend the castle!" },
-  { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!" },
-  { id: "mahjong",     name: "Mahjong",          category: "Puzzle",   color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
+  { id: "rileys-garden", name: "Riley's Garden",    category: "Action",   color: "#4CAF50", type: "game", imgId: "rileys",      handler: "onRileys",      desc: "Grow a garden, blast the bees, beat the bear!" },
+  { id: "connectfour", name: "Connect Four",     category: "Classic",  color: "#FF5A6E", type: "game", imgId: "connectfour", handler: "onConnectFour", desc: "Drop discs, line up four to win!", multiplayer: true },
+  { id: "dotsboxes",   name: "Dots and Boxes",   category: "Classic",  color: "#36D6C3", type: "game", imgId: "dotsboxes",   handler: "onDotsBoxes",   desc: "Close a box to claim it — most wins!", multiplayer: true },
+  { id: "checkers",    name: "Checkers",         category: "Classic",  color: "#8E6BFF", type: "game", imgId: "checkers",    handler: "onCheckers",    desc: "Hop, jump and crown your kings!", multiplayer: true },
+  { id: "typing",      name: "Typing",           category: "Classic",  color: "#1FA897", type: "game", imgId: "typing",      handler: "onTyping",      desc: "Learn to type — defend the castle!" },
+  { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!", multiplayer: true },
+  { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
+  { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
-  { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true },
+  { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true, multiplayer: true },
   { id: "runner",      name: "Sunny Town Drive", category: "Arcade",   color: "#FF8FB1", type: "game", imgId: "runner",      handler: "onRunner",      desc: "Drive through town, dodge and grab treats!", soon: true },
   { id: "tank",        name: "Hilltop Tanks",    category: "Action",   color: "#4F9A44", type: "game", imgId: "tank",        handler: "onTank",        desc: "Aim across the hills and knock out the computer tank!", soon: true },
   { id: "maze",        name: "Maze Munchers",    category: "Arcade",   color: "#F0577E", type: "game", imgId: "maze",        handler: "onMaze",        desc: "Gobble the treats, dodge the chasers!", soon: true },
-  { id: "bingo",       name: "Bingo",            category: "Board",    color: "#FFD23F", type: "game", imgId: "bingo",       handler: "onBingo",       desc: "The device calls — daub a line to win, 2-4!", soon: true },
+  { id: "bingo",       name: "Bingo",            category: "Classic",  color: "#FFD23F", type: "game", imgId: "bingo",       handler: "onBingo",       desc: "The device calls — daub a line to win, 2-4!", soon: true },
 ];
+
+// ===========================================================================
+//  Session 2E — reload-safe addresses inside /app. The shell mirrors every
+//  STABLE destination (Home, a game's landing, Kidspedia, Creations) into the
+//  address bar so a refresh restores that spot and the browser Back button steps
+//  back through screens. Transient screens (in-game play, journeys, lobbies, the
+//  make-a-game build flow, grown-ups, admin) get NO address of their own, so a
+//  reload on them falls back to the last stable address — a game's landing, or
+//  Home — never deeper. (Saving mid-build progress is a later job.) Hosting
+//  already routes /app/(.*) to the shell, so no vercel/routing change is needed.
+// ===========================================================================
+const URL_STABLE_LANDINGS = {
+  [SCREEN_BREAKER_LANDING]: "breaker",
+  [SCREEN_BREAKER_JOURNEY]: "breaker/journey",
+  [SCREEN_BREAKER_LOADOUT]: "breaker/loadout",
+  [SCREEN_TENNIS_LANDING]: "tennis",
+  [SCREEN_CHESS_LANDING]: "chess",
+  [SCREEN_MUSIC_LANDING]: "music-maker",
+};
+// screen (+ its params) -> the /app path it should show, or null when the screen
+// is transient (keep the last stable address instead of writing a new one).
+function viewToPath(screen, landingId, exploreId) {
+  if (screen === SCREEN_HOME) return "/app";
+  if (screen === SCREEN_MY_STUFF) return "/app/creations";
+  if (screen === SCREEN_EXPLORE) return "/app/explore" + (exploreId ? "/" + exploreId : "");
+  if (screen === SCREEN_LESSONS) return "/app/lessons";
+  if (URL_STABLE_LANDINGS[screen]) return "/app/" + URL_STABLE_LANDINGS[screen];
+  if (screen === SCREEN_GAME_LANDING && landingId) return "/app/" + landingId;
+  return null;
+}
+// The reverse: an /app path -> which stable screen (+ params) to restore. Returns
+// null for anything outside /app or not a recognized stable address, so the other
+// deep-link paths (?bk=, /admin, OAuth) and every transient screen are left alone.
+function screenForPath(pathname) {
+  if (typeof pathname !== "string" || !/^\/app(\/|$)/.test(pathname)) return null;
+  const seg = pathname.replace(/^\/app\/?/, "").replace(/\/+$/, "");
+  if (!seg) return { screen: SCREEN_HOME };
+  if (seg === "creations") return { screen: SCREEN_MY_STUFF };
+  if (seg === "lessons") return { screen: SCREEN_LESSONS };
+  if (seg === "explore" || seg.indexOf("explore/") === 0) {
+    const id = seg.split("/")[1];
+    return { screen: SCREEN_EXPLORE, exploreId: id || undefined };
+  }
+  if (seg === "breaker") return { screen: SCREEN_BREAKER_LANDING };
+  if (seg === "breaker/journey") return { screen: SCREEN_BREAKER_JOURNEY };
+  if (seg === "breaker/loadout") return { screen: SCREEN_BREAKER_LOADOUT };
+  if (seg === "tennis") return { screen: SCREEN_TENNIS_LANDING };
+  if (seg === "chess") return { screen: SCREEN_CHESS_LANDING };
+  if (seg === "music-maker") return { screen: SCREEN_MUSIC_LANDING };
+  const id = seg.split("/")[0];
+  if (GAME_CATALOG.some((g) => g.id === id) && LANDING_WRAP[id]) return { screen: SCREEN_GAME_LANDING, landingId: id };
+  return null;
+}
+
+// EXHIBIT_CATALOG — Kidspedia exhibits for the Home Explore shelf (Session 8G).
+// Mirrors EXHIBIT-MANIFEST.md's shared fields. Only status:"approved" exhibits ever
+// appear here or are servable at /explore/{id} (the template itself re-checks this
+// against the live JSON file, so this list is a display-only convenience, not the
+// source of truth).
+const EXHIBIT_CATALOG = [
+  { id: "solar-system", title: "Our Solar System", topic: "space", color: "#4C6FE0", heroArt: "explore-solar-system-hero", status: "approved" },
+  // Journey to the Deep (layers-cutaway dive template). Stays hidden from kids until
+  // Mike fact-checks the roster and flips BOTH this status and ocean-deep.json to "approved".
+  { id: "ocean-deep", title: "Journey to the Deep", topic: "ocean", color: "#1173B4", heroArt: "/api/asset-studio?asset=explore/scene/ocean-photo/reef", status: "approved" },
+  // Make It Rain (weather-lab template, the live weather machine). Approved by Mike 2026-07-21.
+  { id: "make-it-rain", title: "Weather Lab", topic: "weather", color: "#37B6F5", heroArt: "/api/asset-studio?asset=explore/scene/make-it-rain/hero", status: "approved" },
+  // Kidspedia topic books (Session TB1, topic-book template). Photo-real picture
+  // books: cover + 4 photo pages, every fact carries its own source. They stay
+  // hidden from kids until Mike fact-checks each book and flips BOTH this status
+  // and the exhibit JSON to "approved".
+  { id: "sharks", title: "Sharks", topic: "ocean", color: "#1173B4", heroArt: "/explore/topic-photos/sharks/sharks-cover.webp", status: "approved", template: "topic-book" },
+  { id: "dinosaurs", title: "Dinosaurs", topic: "dinosaurs", color: "#6B8E23", heroArt: "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp", status: "approved", template: "topic-book" },
+  { id: "moon", title: "The Moon", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/moon/moon-cover.webp", status: "approved", template: "topic-book" },
+  // Session TB3 — topics 4-12. Same rule: in-review until Mike fact-checks the
+  // book and flips BOTH this line and the book's own JSON to "approved".
+  { id: "big-cats", title: "Big Cats", topic: "animals", color: "#C97B2A", heroArt: "/explore/topic-photos/big-cats/big-cats-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "penguins", title: "Penguins & the Frozen Poles", topic: "animals", color: "#3E7CA6", heroArt: "/explore/topic-photos/penguins/penguins-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "bugs-butterflies", title: "Bugs & Butterflies", topic: "animals", color: "#E08A2E", heroArt: "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "snakes-reptiles", title: "Snakes & Reptiles", topic: "animals", color: "#4E8B52", heroArt: "/explore/topic-photos/snakes-reptiles/snakes-reptiles-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "planets", title: "The Planets", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/planets/planets-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "rockets", title: "Rockets & Astronauts", topic: "space", color: "#D2542F", heroArt: "/explore/topic-photos/rockets/rockets-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "volcanoes", title: "Volcanoes", topic: "earth", color: "#B8452F", heroArt: "/explore/topic-photos/volcanoes/volcanoes-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "wild-weather", title: "Wild Weather", topic: "weather", color: "#37B6F5", heroArt: "/explore/topic-photos/wild-weather/wild-weather-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "deep-ocean", title: "The Deep Ocean", topic: "ocean", color: "#0E4E73", heroArt: "/explore/topic-photos/deep-ocean/deep-ocean-cover.webp", status: "in-review", template: "topic-book" },
+  // Session TB4: topics 13-20, the last 8 books. Same rule: in-review until Mike
+  // fact-checks the book and flips BOTH this line and the book's own JSON to "approved".
+  { id: "rainforest", title: "The Rainforest", topic: "nature", color: "#2E7D4F", heroArt: "/explore/topic-photos/rainforest/rainforest-cover.webp", status: "approved", template: "topic-book" },
+  { id: "deserts", title: "Deserts", topic: "nature", color: "#C98A3D", heroArt: "/explore/topic-photos/deserts/deserts-cover.webp", status: "approved", template: "topic-book" },
+  { id: "plants-grow", title: "How Plants Grow", topic: "nature", color: "#5B9E3E", heroArt: "/explore/topic-photos/plants-grow/plants-grow-cover.webp", status: "approved", template: "topic-book" },
+  { id: "your-body", title: "Your Amazing Body", topic: "body", color: "#C75B6E", heroArt: "/explore/topic-photos/your-body/your-body-cover.webp", status: "approved", template: "topic-book" },
+  { id: "trains", title: "Trains", topic: "machines", color: "#4A6FA5", heroArt: "/explore/topic-photos/trains/trains-cover.webp", status: "approved", template: "topic-book" },
+  { id: "diggers", title: "Diggers & Big Machines", topic: "machines", color: "#E0A32E", heroArt: "/explore/topic-photos/diggers/diggers-cover.webp", status: "approved", template: "topic-book" },
+  { id: "castles-knights", title: "Castles & Knights", topic: "history", color: "#7B6FA0", heroArt: "/explore/topic-photos/castles-knights/castles-knights-cover.webp", status: "approved", template: "topic-book" },
+  { id: "ancient-egypt", title: "Ancient Egypt", topic: "history", color: "#C4A24A", heroArt: "/explore/topic-photos/ancient-egypt/ancient-egypt-cover.webp", status: "approved", template: "topic-book" },
+];
+
+// Session TB2 — the bookshelf card. Topic books do NOT each get their own Home
+// card: they live behind ONE "Kidspedia Books" card that opens the bookshelf
+// (/explore/kidspedia), so the Explore row stays short as all 20 books land.
+// The card only exists once a book is actually approved, so a kid never taps
+// through to an empty shelf. The bookshelf re-checks every book's own file, so
+// this list stays a display convenience and never the gate.
+const BOOKSHELF_CARD = { id: "kidspedia", title: "Kidspedia Books", topic: "books", color: "#B8562F", heroArt: "", status: "approved" };
+function exploreShelfItems() {
+  const approvedBooks = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template === "topic-book");
+  const items = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template !== "topic-book");
+  if (approvedBooks.length) items.push({ ...BOOKSHELF_CARD, heroArt: approvedBooks[0].heroArt || "" });
+  return items;
+}
+
+// Games that support the zero-account "play a friend by link" flow (the grandma flow).
+// Maps a catalog id -> the /api/invite game code. Add a game here once play-invite.html
+// speaks its online contract (chess relay + ttt server-referee are wired today).
+const GUEST_SHAREABLE = { chess: "chess", tictactoe: "ttt" };
+
+// Create a guest invite tied to the signed-in kid, then hand this device the host
+// seat on the standalone link page (where the "send link" buttons live).
+async function startGuestLink(catalogId) {
+  const code = GUEST_SHAREABLE[catalogId];
+  if (!code) return;
+  const kid = getActiveKid();
+  let dev = localStorage.getItem("bk_guest_device");
+  if (!dev) { dev = "g_" + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("bk_guest_device", dev); }
+  const name = (kid && kid.display_name) || "Me";
+  localStorage.setItem("bk_guest_name", name);
+  try {
+    const r = await fetch("/api/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", game: code, name, device: dev, world: "jungle", hostKid: kid && kid.id }) });
+    const j = await r.json().catch(() => ({}));
+    if (j && j.token) window.location.href = "/play-invite.html?t=" + encodeURIComponent(j.token) + "&g=" + code;
+  } catch (e) { /* offline: silently no-op */ }
+}
 
 // One picker card, generated entirely from a GAME_CATALOG entry (badge art, name,
 // category, signature color, studio tag). No card is hand-placed anymore.
-function PickerCard({ g, onOpen }) {
+function PickerCard({ g, onOpen, onShare }) {
   const accent = g.color;
   return (
     <button onClick={onOpen} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: `1px solid ${accent}55`, background: CARD_BG, color: "#fff", cursor: "pointer", opacity: g.soon ? 0.6 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px", boxShadow: "0 10px 26px rgba(0,0,0,0.4)" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: `linear-gradient(160deg, ${accent}, ${accent}88)`, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
         {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
         {g.type === "studio" && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999, background: "rgba(12,10,24,0.72)", color: "#fff" }}>Studio</span>}
+        {onShare && !g.soon && <span role="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onShare(); }} style={{ position: "absolute", top: 10, right: 10, fontSize: 11, fontWeight: 900, letterSpacing: "0.3px", padding: "6px 11px", borderRadius: 999, background: "rgba(12,10,24,0.8)", color: "#fff", border: `1px solid ${accent}`, cursor: "pointer" }}>Play a friend</span>}
       </div>
       {g.soon && <span style={{ position: "absolute", top: 28, right: 28, fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 12px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
       <div style={{ padding: "0 8px 6px" }}>
@@ -163,50 +363,16 @@ function PickerCard({ g, onOpen }) {
           <span style={{ width: 11, height: 11, borderRadius: 3, background: accent, flex: "0 0 auto", boxShadow: `0 0 10px ${accent}` }} />
           <div style={{ fontFamily: FRED, fontSize: 26, fontWeight: 700 }}>{g.name}</div>
         </div>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", color: accent, marginTop: 7 }}>{g.category}{g.type === "studio" ? " · Studio" : ""}</div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", color: accent, marginTop: 7 }}>{g.category}{g.type === "studio" && g.category !== "Studio" ? " · Studio" : ""}</div>
         <div style={{ fontSize: 15, color: "#cfc9e6", marginTop: 6 }}>{g.desc}</div>
       </div>
     </button>
   );
 }
 
-// The picker is now a pure map over GAME_CATALOG (the manifest/identity layer).
-// Adding or converting a game means editing the catalog, never this component.
-function GamePicker(props) {
-  const { onHome } = props;
-  // QA gate: coming-soon cards ask for a password (1111) before opening.
-  const [gate, setGate] = useState(null);
-  const [pw, setPw] = useState("");
-  const [err, setErr] = useState(false);
-  const submitPw = () => { if (pw === "1111") { const go = gate; setGate(null); setPw(""); setErr(false); if (go) go(); } else { setErr(true); } };
-  const openGame = (g) => { const go = props[g.handler]; if (!go) return; if (g.soon) { setGate(() => go); setPw(""); setErr(false); } else { go(); } };
-  return (
-    <div style={styles.container}>
-      <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
-        <button onClick={onHome} style={styles.backButton}>Home</button>
-      </div>
-      <h1 style={{ ...styles.logo, marginTop: 8 }}>Games</h1>
-      <p style={styles.tagline}>Pick a game to play!</p>
-      <div style={{ width: "100%", maxWidth: "620px", marginTop: 20, display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        {GAME_CATALOG.map((g) => <PickerCard key={g.id} g={g} onOpen={() => openGame(g)} />)}
-      </div>
-      {gate && (
-        <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,8,24,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 340, background: "#1b1533", border: CARD_BORDER, borderRadius: 24, padding: "26px 22px", fontFamily: NUN, color: "#fff", boxShadow: "0 18px 50px rgba(0,0,0,0.5)" }}>
-            <div style={{ fontFamily: FRED, fontSize: 22, fontWeight: 700, textAlign: "center" }}>Coming soon</div>
-            <div style={{ fontSize: 14, color: "#cfc9e6", textAlign: "center", marginTop: 8 }}>Enter the password to preview this game.</div>
-            <input value={pw} onChange={(e) => { setPw(e.target.value); setErr(false); }} onKeyDown={(e) => { if (e.key === "Enter") submitPw(); }} type="password" inputMode="numeric" autoFocus placeholder="Password" style={{ width: "100%", boxSizing: "border-box", marginTop: 16, padding: "12px 14px", borderRadius: 14, border: err ? "2px solid #FF6B81" : "1px solid rgba(255,255,255,0.2)", background: "#12102a", color: "#fff", fontFamily: NUN, fontSize: 18, textAlign: "center", letterSpacing: "4px" }} />
-            {err && <div style={{ color: "#FF9BAA", fontSize: 13, textAlign: "center", marginTop: 8 }}>Wrong password. Try again.</div>}
-            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-              <button onClick={() => setGate(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.2)", background: "transparent", color: "#cfc9e6", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Cancel</button>
-              <button onClick={submitPw} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "linear-gradient(160deg,#9B7BFF,#67E8F9)", color: "#12102a", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Enter</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+// Legacy GamePicker removed (Session 7G): Home is the single front door (its Play
+// shelf maps the whole GAME_CATALOG). The coming-soon password gate now lives on
+// the Home shelf cards. Nothing renders or routes to the old picker anymore.
 // ---- ONE consistent game frame for every full-screen game/maker ----
 // Home is always top-left; games never draw their own back button (BS showBack:false).
 // Also returns to the hub on a nav:exit message (string, {type:"nav:exit"}, or legacy bk:home).
@@ -236,11 +402,30 @@ function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = 
       const d = e && e.data;
       if (d === "nav:exit" || d === "bk:home" || (d && d.type === "nav:exit")) { onHome(); return; }
       if (d && d.type === "nav:state") setNav({ sound: !!d.sound, hasMenu: !!d.hasMenu, hasHelp: !!d.hasHelp, inGame: d.inGame !== false });
+      // CARTRIDGE-CONTRACT `skill`: any embedded game reports a practiced skill; the
+      // shell relays it into the shared learning_events ledger (one record per kid,
+      // same source the quiz gates write to). Best-effort, never blocks play.
+      if (d && d.source === "buildable" && d.kind === "skill") {
+        try { logSkillEvent({ subject: d.subject, skill: d.skill, correct: d.correct, questionId: d.questionId, quizType: d.quizType, grade: (getLearningSettings() || {}).grade || null, game: d.game }); } catch (e) {}
+      }
       if (onChildMessage) { try { onChildMessage(d, (msg) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage(msg, "*"); } catch (e) {} }); } catch (e) {} }
     };
     window.addEventListener("message", h);
     return () => window.removeEventListener("message", h);
   }, [onHome, onChildMessage]);
+  // Shell-level background pause: when the tab/app is hidden (iOS screen-lock or
+  // app-switch), freeze whatever is embedded via the cartridge pause path so games
+  // stop cleanly; resume on return. Audio is stopped in-frame by the shared audio
+  // system + the exhibit's own visibility handler, so this handler only drives the
+  // freeze/continue contract (CARTRIDGE-CONTRACT.md: pause on tab switches).
+  useEffect(() => {
+    const post = (type) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type }, "*"); } catch (e) {} };
+    const onVis = () => post(document.hidden ? "pause" : "resume");
+    const onHide = () => post("pause");
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", onHide);
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", onHide); };
+  }, []);
   const send = (type) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type }, "*"); } catch (e) {} };
   const homeStyle = light
     ? { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }
@@ -263,30 +448,89 @@ function familyBtn(onFamily) {
   return <button onClick={onFamily} style={{ position: "absolute", top: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Play a sibling</button>;
 }
 
-function SurvivalScreen({ onHome }) { return <GameFrame title="Buildable Survival" src="/survival-engine.html?v=hud1" onHome={onHome} />; }
-function SkyFlyerScreen({ onHome }) { return <GameFrame title="Sky Flyer" src="/skyflyer-engine.html?v=fl5b" onHome={onHome} />; }
-function TennisScreen({ onHome, onPlayFriend }) {
+// Session 9B: hand the kid's equipped GAMEPLAY upgrades to the engine as tiny
+// launch params (the same handoff the loadout uses for looks) — the shell owns the
+// purchases, the engine just reads which power id is equipped and applies its effect.
+// The "Gear up" button opens the shell upgrade store (bottom-right so it clears the
+// engine's own Home / mute / help / hint controls).
+const SURV_TRACK_SLOT = { Weapon: "weapon", Armor: "armor", Boots: "boots", Hero: "hero" };
+function survivalUpParam() {
+  const eq = readEquippedUpgrades("survival");
+  const pairs = Object.keys(SURV_TRACK_SLOT)
+    .map((t) => (eq[t] ? SURV_TRACK_SLOT[t] + ":" + eq[t] : null))
+    .filter(Boolean);
+  return pairs.length ? "&up=" + encodeURIComponent(pairs.join(",")) : "";
+}
+function SurvivalScreen({ onHome, onUpgrades, level }) {
+  const src = "/survival-engine.html?v=9c" + survivalUpParam() + (level != null ? "&level=" + level : "");
+  const right = onUpgrades ? (
+    <button onClick={onUpgrades} style={{ position: "absolute", bottom: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Gear up</button>
+  ) : null;
+  return <GameFrame title="Buildable Survival" src={src} onHome={onHome} right={right} />;
+}
+
+// Kidspedia exhibit viewer (Session 8G). One shell wrapper for every orbit-explorer
+// exhibit: same GameFrame as a game.
+//
+// Session QZ1 — NO QUIZZES IN KIDSPEDIA. Reading and browsing an exhibit is
+// learning already; a pop-up quiz on top of it interrupts the read and (worse)
+// asked a generic AI-generated spelling question that had nothing to do with the
+// page. The "Quick quiz" buttons are gone from topic.html / dive.html /
+// weather.html / orbit-explorer.html. This handler stays only to un-stick any
+// stale cached exhibit that still posts quizRequest: it immediately answers
+// "done" so the page never freezes. Quizzes belong in games and tools, not here.
+function ExploreScreen({ onHome, exhibitId }) {
+  const onChildMessage = (d, post) => {
+    if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
+    post({ type: "resume" });
+    post({ type: "bk:quizDone" });
+  };
+  return <GameFrame title="Kidspedia" src={`/explore/${encodeURIComponent(exhibitId)}`} onHome={onHome} onChildMessage={onChildMessage} bg="#0B0A18" />;
+}
+
+// Session LS2 — the Lessons section. The page owns all three screens (pick a
+// subject, climb the unit path, play the lesson) exactly like the approved mock,
+// so the shell just frames it. Cream page, so the shared nav uses its light
+// treatment. Answers reach the 8B ledger through GameFrame's `skill` relay.
+function LessonsScreen({ onHome }) {
+  return <GameFrame title="Lessons" src="/lessons" onHome={onHome} bg="#FDFAF5" light />;
+}
+// Session 7F: the shared landing hands Tennis its mode ("solo" | "local") and the
+// equipped court from the shared loadout, so the engine skips its own start screen
+// and court picker. TENNIS_COURTS mirrors the manifest "World" slot order. With no
+// mode (opened directly) the engine still falls back to its built-in menu.
+const TENNIS_COURTS = ["beach", "space", "jungle", "ocean", "candy", "snow", "volcano", "city"];
+function TennisScreen({ onHome, onPlayFriend, start }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "tennisPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, [onPlayFriend]);
-  return <GameFrame title="Buildable Tennis" src="/tennis.html?v=hud1" onHome={onHome} />;
+  let src = "/tennis.html?v=7f";
+  if (start) {
+    const court = TENNIS_COURTS[(readEquipped("tennis").World) || 0] || "beach";
+    src += "&mode=" + (start === "local" ? "two" : "solo") + "&world=" + court;
+  }
+  return <GameFrame title="Buildable Tennis" src={src} onHome={onHome} />;
 }
 function BreakerScreen({ onHome, entry = "journey" }) {
   const [quiz, setQuiz] = useState(null); // { reply } while a learning gate is showing
   const onChildMessage = (d, post) => {
     if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
-    let enabled = false;
-    try { enabled = !!getLearningSettings().enabled; } catch (e) {}
-    if (!enabled) { post({ type: "bk:quizDone" }); return; } // Learning Mode off -> parent settings win, no gate
+    // Session 6B: parent settings OVERRIDE the game's manifest default. The
+    // engine passes its manifest default (manifestBeforeUnlock); effectiveLearning
+    // merges the parent's per-kid toggle on top. Nothing gates unless the parent
+    // has Learning Mode on AND the resolved beforeUnlock moment is on.
+    let eff = null;
+    try { eff = effectiveLearning({ beforeUnlock: d.manifestBeforeUnlock, subjects: d.subjects }); } catch (e) {}
+    if (!eff || !eff.enabled || !eff.beforeUnlock) { post({ type: "bk:quizDone" }); return; }
     post({ type: "pause" }); // cartridge contract: freeze the game while the quiz gate is up
-    setQuiz({ reply: post });
+    setQuiz({ reply: post, goal: eff.goal });
   };
   const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
   const overlay = quiz ? (
     <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <QuizGate goal={getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
+      <QuickGame goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="breaker" title="Quick game to unlock the next level!" onPass={finish} />
     </div>
   ) : null;
   // hand the kid's equipped loadout (Session 3C) to the engine as tiny params so
@@ -309,22 +553,52 @@ function BreakerScreen({ onHome, entry = "journey" }) {
 // color). The demo panel embeds the game's own engine in a self-playing "attract"
 // mode (?screen=demo, input disabled). This REPLACES the engine's homemade start
 // screen + Play/Make hub. Generic — any converted game can use it.
-function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
+// ============================================================================
+//  GameLanding — the ONE shell landing every game shows (Sessions 3A, 7E).
+//  Header + demo are the same for all games. The Play area has two shapes:
+//    - single-player (manifest features.multiplayer "off"): one big Play button
+//      (level games open the journey; board games open the pick-difficulty frame)
+//    - multiplayer (turn-based / realtime): a MODE ROW (Solo / Same device /
+//      Play a friend) driven straight off the manifest switch (Session 6A). A
+//      button only appears when the shell was handed its callback, so nothing
+//      per-game is hardcoded here — the router wires each manifest's modes.
+// ============================================================================
+function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multiplayer, onSolo, onSameDevice, onPlayFriend }) {
   const accent = game.color;
+  const modeOn = (multiplayer === "turn-based" || multiplayer === "realtime") && (onSolo || onSameDevice || onPlayFriend);
+  const modeBtnStyle = (primary) => ({
+    flex: 1, minWidth: 0, borderRadius: 16, padding: "14px 8px", cursor: "pointer",
+    fontFamily: NUN, fontWeight: 800, fontSize: 15,
+    color: primary ? "#12102a" : "#fff",
+    background: primary ? `linear-gradient(160deg, #fff, ${accent})` : `linear-gradient(160deg, ${accent}55, ${accent}22)`,
+    border: primary ? "none" : `1px solid ${accent}88`,
+    boxShadow: primary ? `0 10px 24px ${accent}44, 0 5px 14px rgba(0,0,0,0.25)` : "none",
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+  });
   return (
     <div style={{ ...styles.container, justifyContent: "flex-start" }}>
       <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
-        <button onClick={onBack} style={styles.backButton}>Games</button>
+        <button onClick={onBack} style={styles.backButton}>Home</button>
       </div>
       <div style={{ width: "100%", maxWidth: 540, marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>{game.category}{game.type === "studio" ? " \u00b7 Studio" : ""}</div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>{game.category}{game.type === "studio" && game.category !== "Studio" ? " \u00b7 Studio" : ""}</div>
         <h1 style={{ ...styles.logo, margin: "2px 0 0" }}>{game.name}</h1>
         <p style={{ ...styles.tagline, margin: "4px 0 10px" }}>{game.desc}</p>
-        <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4", maxHeight: "50vh", borderRadius: 26, overflow: "hidden", border: `2px solid ${accent}66`, boxShadow: `0 18px 44px rgba(0,0,0,0.5), 0 0 0 4px ${accent}22`, background: `linear-gradient(160deg, ${accent}, ${accent}66)` }}>
+        {demoSrc && <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 4", maxHeight: "50vh", borderRadius: 26, overflow: "hidden", border: `2px solid ${accent}66`, boxShadow: `0 18px 44px rgba(0,0,0,0.5), 0 0 0 4px ${accent}22`, background: `linear-gradient(160deg, ${accent}, ${accent}66)` }}>
           {demoSrc && <iframe title={`${game.name} demo`} src={demoSrc} scrolling="no" style={{ width: "100%", height: "100%", border: "none", display: "block", pointerEvents: "none" }} />}
           <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "5px 11px", borderRadius: 999, background: "rgba(12,10,24,0.66)", color: "#fff" }}>Demo</span>
-        </div>
-        <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play</button>
+        </div>}
+        {!modeOn && <button onClick={onPlay} style={{ marginTop: 18, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "16px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 22, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play</button>}
+        {modeOn && (
+          <div style={{ width: "100%", maxWidth: 360, marginTop: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.5px", textTransform: "uppercase", color: accent, textAlign: "center", marginBottom: 8 }}>Pick a way to play</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              {onSolo && <button onClick={onSolo} style={modeBtnStyle(true)}><span>Solo</span><span style={{ fontSize: 11, fontWeight: 700, opacity: 0.7 }}>vs computer</span></button>}
+              {onSameDevice && <button onClick={onSameDevice} style={modeBtnStyle(false)}><span>Same device</span><span style={{ fontSize: 11, fontWeight: 700, opacity: 0.7 }}>2 players</span></button>}
+              {onPlayFriend && <button onClick={onPlayFriend} style={modeBtnStyle(false)}><span>Play a friend</span><span style={{ fontSize: 11, fontWeight: 700, opacity: 0.7 }}>online</span></button>}
+            </div>
+          </div>
+        )}
         <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 360, marginTop: 12 }}>
           {onLoadout && <button onClick={onLoadout} style={{ flex: 1, borderRadius: 16, padding: "13px 12px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: `linear-gradient(160deg, ${accent}55, ${accent}22)`, border: `1px solid ${accent}88`, cursor: "pointer" }}>Make it mine</button>}
           {onMake && <button onClick={onMake} style={{ flex: 1, borderRadius: 16, padding: "13px 12px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer" }}>Make a level</button>}
@@ -334,7 +608,7 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
   );
 }
 // ============================================================================
-//  BreakerJourney (Session 3B) — the SHELL-generated winding level path.
+//  GameJourney (Session 3B; generalized 7E) — the SHELL-generated winding level path.
 //  Replaces the engine's homemade level menu. Reads /breaker/manifest.json for
 //  the ordered level list; reads the same localStorage the engine writes for
 //  unlock + star progress. Stops show theme art (placeholder badge until the new
@@ -342,15 +616,43 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack }) {
 //  path weaves left/right down a vertical scroll — tight vertical on phones, a
 //  wider wander on iPad/desktop. The current level auto-scrolls into view.
 // ============================================================================
-function readBreakerProgress() {
-  let unlocked = 0, stars = {};
+function readBreakerProgress(gameId) {
+  // Session 7I: the journey mirrors each engine's OWN save (most engines predate the
+  // shared bk_{game}_prefs shape), so nothing a kid could already play ever locks.
   try {
+    const id = gameId || "breaker";
+    // free-choice games: their menus never locked levels, so every stop stays open
+    if (id === "croctot" || id === "memory" || id === "mahjong" || id === "rileys-garden" || id === "typing") return { unlocked: 9999, stars: {} };
+    if (id === "survival") {
+      const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
+      const d = JSON.parse(localStorage.getItem("bk_survival_char" + (k && k.id ? ("_" + k.id) : "")) || "null");
+      return { unlocked: (d && d.unlocked) || 0, stars: {} };
+    }
+    if (id === "stringmatch") {
+      let st = {}; try { st = JSON.parse(localStorage.getItem("sm_stars") || "{}") || {}; } catch (e) {}
+      return { unlocked: parseInt(localStorage.getItem("sm_unlocked") || "0", 10) || 0, stars: st };
+    }
+    if (id === "castleguard") {
+      const d = JSON.parse(localStorage.getItem("castleguard") || "null");
+      return { unlocked: (d && d.unlocked) || 0, stars: (d && d.stars) || {} };
+    }
+    if (id === "tumble") {
+      const d = JSON.parse(localStorage.getItem("tumble_prefs") || "null");
+      const st = {}; if (d && d.cleared) Object.keys(d.cleared).forEach((i) => { if (d.cleared[i]) st[i] = 3; });
+      return { unlocked: (d && d.unlocked) || 0, stars: st };
+    }
+    if (id === "mathcannon") {
+      const d = JSON.parse(localStorage.getItem("bk_mathcannon") || "null");
+      const st = {}; if (d && d.cleared) Object.keys(d.cleared).forEach((i) => { if (d.cleared[i]) st[i] = 3; });
+      return { unlocked: (d && d.unlocked) || 0, stars: st };
+    }
+    // default (breaker, sling, bubble...): the shared bk_{game}_prefs shape
     const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
-    const key = "bk_breaker_prefs" + (k && k.id ? ("_" + k.id) : "");
+    const key = "bk_" + id + "_prefs" + (k && k.id ? ("_" + k.id) : "");
     const s = JSON.parse(localStorage.getItem(key) || "null");
-    if (s) { unlocked = Math.max(0, s.unlocked || 0); if (s.stars && typeof s.stars === "object") stars = s.stars; }
+    if (s) return { unlocked: Math.max(0, s.unlocked || 0), stars: (s.stars && typeof s.stars === "object") ? s.stars : {} };
   } catch (e) {}
-  return { unlocked, stars };
+  return { unlocked: 0, stars: {} };
 }
 function breakerLevelTheme(level) {
   const src = (level.parts && (level.parts.background || level.parts.bricks)) || "";
@@ -366,12 +668,6 @@ function JourneyStar({ filled, size = 15 }) {
     </svg>
   );
 }
-// Badge art with a graceful fallback chain. Tries each src in order; when one
-// fails it advances to the next. When all fail it renders nothing, so the
-// parent's accent chip + big level number shows through (the case that keeps
-// background-less games' stops distinct). A manifest journeyBadge is only used
-// when it's a real path/URL — the placeholder "badges/x/v1" IDs are skipped so
-// we never fire a broken request for art that was never made.
 function JourneyBadgeImg({ srcs }) {
   const [idx, setIdx] = useState(0);
   if (!srcs.length || idx >= srcs.length) return null;
@@ -389,20 +685,29 @@ function JourneyLock({ size = 26 }) {
     </svg>
   );
 }
-function BreakerJourney({ game, onBack, onPlay }) {
+// Session 4A: read a game's manifest through /api/manifest so an editor-saved override shows
+// live in the shell too (journey, loadout); if that endpoint is unreachable, fall back to the
+// static file so screens always load. Resolves to the manifest object.
+function loadGameManifest(id) {
+  const stamp = "?v=" + Date.now();
+  return fetch("/api/manifest?game=" + encodeURIComponent(id) + "&v=" + Date.now())
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((d) => (d && d.manifest ? d.manifest : Promise.reject()))
+    .catch(() => fetch("/" + id + "/manifest.json" + stamp).then((r) => r.json()));
+}
+function GameJourney({ game, gameId = "breaker", onBack, onPlay }) {
   const accent = (game && game.color) || "#FF6B6B";
   const [manifest, setManifest] = useState(null);
-  const [prog, setProg] = useState(() => readBreakerProgress());
+  const [prog, setProg] = useState(() => readBreakerProgress(gameId));
   const currentRef = useRef(null);
   useEffect(() => {
     let live = true;
-    fetch("/breaker/manifest.json?v=" + Date.now())
-      .then((r) => r.json())
+    loadGameManifest(gameId)
       .then((m) => { if (live) setManifest(m); })
       .catch(() => {});
-    setProg(readBreakerProgress()); // re-read on (re)entry so a fresh clear lights the path
+    setProg(readBreakerProgress(gameId)); // re-read on (re)entry so a fresh clear lights the path
     return () => { live = false; };
-  }, []);
+  }, [gameId]);
   const levels = (manifest && Array.isArray(manifest.levels)) ? manifest.levels : [];
   const lastIdx = Math.max(0, levels.length - 1);
   const currentIdx = Math.min(prog.unlocked, lastIdx);
@@ -450,7 +755,7 @@ function BreakerJourney({ game, onBack, onPlay }) {
               const stars = Math.max(0, Math.min(3, prog.stars[i] || 0));
               const badgeSrcs = [];
               if (lv.journeyBadge && /^(https?:|\/)/.test(lv.journeyBadge)) badgeSrcs.push(lv.journeyBadge);
-              badgeSrcs.push(`/breaker/${theme}/bg.webp`);
+              badgeSrcs.push(`/${gameId}/${theme}/bg.webp`);
               const leftPct = xPctAt(i);
               const topPx = i * ROW + ROW / 2;
               return (
@@ -487,6 +792,60 @@ function BreakerJourney({ game, onBack, onPlay }) {
   );
 }
 
+// Difficulty as the 1-5 preset, drawn as five pips (manifest golden rule: nobody
+// edits raw knobs; the level's difficulty 1-5 is the only tuning the kid sees).
+function DiffPips({ n, accent }) {
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i <= n ? accent : "rgba(255,255,255,0.18)" }} />
+      ))}
+    </div>
+  );
+}
+// ============================================================================
+//  BoardSoloFrame (Session 7E) — the "simple mode-and-play frame" for BOARD
+//  games (chess, checkers, tic-tac-toe...). A board game has no journey path;
+//  its manifest "levels" are opponent tiers, so Solo just picks a difficulty
+//  (the existing 1-5 preset) and plays. Reads the tiers straight from the
+//  manifest — no per-game content lives here. onPlay hands the chosen tier
+//  (with its difficulty + parts) back to the shell to launch the engine.
+// ============================================================================
+function BoardSoloFrame({ game, gameId, onBack, onPlay }) {
+  const accent = (game && game.color) || "#F0972A";
+  const [manifest, setManifest] = useState(null);
+  useEffect(() => {
+    let live = true;
+    loadGameManifest(gameId).then((m) => { if (live) setManifest(m); }).catch(() => {});
+    return () => { live = false; };
+  }, [gameId]);
+  const tiers = (manifest && Array.isArray(manifest.levels)) ? manifest.levels : [];
+  return (
+    <div style={{ ...styles.container, justifyContent: "flex-start" }}>
+      <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
+        <button onClick={onBack} style={styles.backButton}>Back</button>
+      </div>
+      <div style={{ width: "100%", maxWidth: 480, marginTop: 6, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Solo</div>
+        <h1 style={{ ...styles.logo, margin: "2px 0 2px" }}>Pick your level</h1>
+        <p style={{ ...styles.tagline, margin: "0 0 14px" }}>How tricky should {(game && game.name) || "the game"} be?</p>
+        {!manifest && <div style={{ opacity: 0.7, marginTop: 20, fontWeight: 700 }}>Loading...</div>}
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+          {tiers.map((lv, i) => (
+            <button key={lv.id || i} onClick={() => onPlay(lv, i)} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%", borderRadius: 16, padding: "14px 16px", cursor: "pointer", color: "#fff", background: `linear-gradient(160deg, ${accent}44, ${accent}18)`, border: `1px solid ${accent}77` }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20 }}>{lv.name}</div>
+                {lv.desc && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 1 }}>{lv.desc}</div>}
+              </div>
+              <DiffPips n={Math.max(1, Math.min(5, lv.difficulty || 1))} accent={accent} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================================
 //  Loadout store (Session 3C) — the kid's owned + equipped customization, owned
 //  by the SHELL (never the engine). Keyed per game + per kid. Options are stored
@@ -517,6 +876,36 @@ function writeLoadout(gameId, store) { try { localStorage.setItem(loadoutKey(gam
 function readEquipped(gameId) { try { const s = JSON.parse(localStorage.getItem(loadoutKey(gameId)) || "null"); return (s && s.equipped) || {}; } catch (e) { return {}; } }
 function walletBalance() { try { return (window.BuildableWallet && window.BuildableWallet.balance()) || 0; } catch (e) { return 0; } }
 
+// ============================================================================
+//  Upgrade store (Session 9B) — the kid's owned + equipped GAMEPLAY upgrades,
+//  owned by the SHELL (never the engine), keyed per game + per kid. Unlike the
+//  cosmetics loadout (which stores by option index), upgrades are stored by the
+//  manifest option's STABLE id, because that id is what the shell hands the engine
+//  so it can apply the power's effect. Coins spend through the shared wallet, the
+//  same one that buys looks (the owner's one-wallet economy — see manifest doc 5c).
+// ============================================================================
+function upgradeKey(gameId) {
+  let kid = "";
+  try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); if (k && k.id) kid = "_" + k.id; } catch (e) {}
+  return "bk_upgrades_v1_" + gameId + kid;
+}
+function readUpgrades(gameId, tracks) {
+  let store = { owned: {}, equipped: {} };
+  try { const s = JSON.parse(localStorage.getItem(upgradeKey(gameId)) || "null"); if (s && typeof s === "object") store = { owned: s.owned || {}, equipped: s.equipped || {} }; } catch (e) {}
+  (tracks || []).forEach((tr) => {
+    const name = tr.track, opts = tr.options || [];
+    const owned = new Set(store.owned[name] || []);
+    opts.forEach((o) => { if (o.id && (o.price || 0) === 0) owned.add(o.id); }); // free power is always owned
+    store.owned[name] = Array.from(owned);
+    if (!store.equipped[name] || !store.owned[name].includes(store.equipped[name])) {
+      store.equipped[name] = store.owned[name].length ? store.owned[name][0] : null; // default-equip first owned
+    }
+  });
+  return store;
+}
+function writeUpgrades(gameId, store) { try { localStorage.setItem(upgradeKey(gameId), JSON.stringify(store)); } catch (e) {} }
+function readEquippedUpgrades(gameId) { try { const s = JSON.parse(localStorage.getItem(upgradeKey(gameId)) || "null"); return (s && s.equipped) || {}; } catch (e) { return {}; } }
+
 function CoinGlyph({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -527,11 +916,135 @@ function CoinGlyph({ size = 16 }) {
   );
 }
 // ============================================================================
-//  BreakerLoadout (Session 3C) — the SHELL-generated customization screen, built
-//  straight from the manifest's `customization` slots. Free looks are owned; priced
-//  looks unlock by spending coins from the shell-owned wallet; a tap equips. The
-//  kid's picks live in the shell loadout store, and are handed to the engine as
-//  tiny equip params when a level launches. Generic enough for any converted game.
+//  TopUpGate (Session 6B) — "short on coins? practice to earn some". Reuses the
+//  QuizGate; the passive top-up rule (every 3rd correct = 10 coins, see
+//  QuizGate/store) does the crediting, so this just presents questions and
+//  celebrates when the shared wallet balance goes up. A Done button always exits.
+// ============================================================================
+function TopUpGate({ onClose }) {
+  const [round, setRound] = useState(0);
+  const [earned, setEarned] = useState(0);
+  const startBal = useRef(walletBalance());
+  useEffect(() => {
+    const onW = () => {
+      const now = walletBalance();
+      if (now > startBal.current) { setEarned(now - startBal.current); }
+    };
+    window.addEventListener("bk-wallet", onW);
+    return () => window.removeEventListener("bk-wallet", onW);
+  }, []);
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ position: "relative", width: "100%", maxWidth: 460 }}>
+        <button onClick={onClose} style={{ position: "absolute", top: -6, right: -6, zIndex: 2, background: "rgba(255,255,255,0.14)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 999, padding: "6px 14px", fontWeight: 800, cursor: "pointer" }}>Done</button>
+        {earned > 0 ? (
+          <div style={{ background: "#1b1b3a", border: "1px solid rgba(255,210,74,0.4)", borderRadius: 20, padding: "28px 22px", textAlign: "center" }}>
+            <div style={{ fontFamily: FRED, fontSize: 24, fontWeight: 900, color: "#FFD98A" }}>You earned {earned} coins!</div>
+            <p style={{ opacity: 0.85, marginTop: 8 }}>Nice practicing. Keep going for more, or tap Done.</p>
+            <button onClick={() => { startBal.current = walletBalance(); setEarned(0); setRound((r) => r + 1); }} style={{ marginTop: 12, background: "#FFD24A", color: "#5a3d00", border: "none", borderRadius: 14, padding: "10px 20px", fontWeight: 900, cursor: "pointer" }}>Keep practicing</button>
+          </div>
+        ) : (
+          <QuickGame key={round} goal={getLearningSettings().goal} gameType="topup" title="Win 3 to earn 10 coins!" onPass={() => setRound((r) => r + 1)} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+//  SLOT PREVIEWS (Session FL3) — a picture of the thing you are buying.
+//
+//  The loadout used to show a coloured rectangle with the option's name written
+//  on it, which is fine for "Sunset bricks" and useless for "pick your ride".
+//  A manifest option can now carry a `preview` id; if we know how to draw it we
+//  draw it, and if we don't we fall back to the old colour block, so every other
+//  game's loadout is untouched. Drawn SVG geometry only — no emojis, no art
+//  files to load, and it stays crisp on any screen.
+//
+//  The colours here match the ride colours inside skyflyer-engine.html, so what
+//  a kid buys is what a kid flies.
+// ============================================================================
+const SLOT_PREVIEWS = {
+  // the starter plane, nose to the right
+  "skyflyer-puffin": (
+    <svg viewBox="0 0 120 54" width="100%" height="100%" aria-hidden="true">
+      <path d="M18 30 h74 a11 11 0 0 0 0 -8 h-74 a5 5 0 0 0 0 8 z" fill="#FF6B6B" />
+      <path d="M92 22 a11 11 0 0 1 0 8 l10 -4 z" fill="#FFF6E3" />
+      <path d="M18 26 l-10 -8 v16 z" fill="#FF6B6B" />
+      <path d="M22 26 l-6 -12 h7 l4 12 z" fill="#FFF6E3" />
+      <path d="M46 26 l-10 14 h13 l6 -14 z" fill="#FFF6E3" />
+      <path d="M52 24 a7 6 0 0 1 12 0 z" fill="#9adcf5" />
+      <line x1="103" y1="10" x2="103" y2="42" stroke="#5E6B77" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="50" cy="40" r="4" fill="#5E6B77" />
+      <circle cx="26" cy="38" r="3" fill="#5E6B77" />
+    </svg>
+  ),
+  // the rescue copter, nose to the right, rotor over the top
+  "skyflyer-copter": (
+    <svg viewBox="0 0 120 54" width="100%" height="100%" aria-hidden="true">
+      <path d="M20 28 h34 v-4 h-34 z" fill="#FFC24A" />
+      <ellipse cx="72" cy="26" rx="26" ry="14" fill="#FFC24A" />
+      <path d="M84 18 a13 13 0 0 1 0 16 a15 15 0 0 0 0 -16 z" fill="#BEE9FF" />
+      <path d="M88 20 a11 11 0 0 1 0 12 l6 -6 z" fill="#BEE9FF" />
+      <rect x="50" y="24" width="44" height="4" rx="2" fill="#E8552F" />
+      <path d="M20 30 l-4 -14 h6 l4 14 z" fill="#E8552F" />
+      <line x1="46" y1="10" x2="104" y2="10" stroke="#5E6B77" strokeWidth="3.5" strokeLinecap="round" />
+      <rect x="70" y="10" width="4" height="6" fill="#5E6B77" />
+      <circle cx="19" cy="20" r="6" fill="none" stroke="#5E6B77" strokeWidth="2.5" />
+      <line x1="56" y1="44" x2="94" y2="44" stroke="#5E6B77" strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="64" y1="38" x2="62" y2="44" stroke="#5E6B77" strokeWidth="3" />
+      <line x1="86" y1="38" x2="88" y2="44" stroke="#5E6B77" strokeWidth="3" />
+    </svg>
+  ),
+  // the jetpack kid, leaning forward, flames out the back
+  "skyflyer-jetpack": (
+    <svg viewBox="0 0 120 54" width="100%" height="100%" aria-hidden="true">
+      <path d="M22 20 L2 27 L22 34 Z" fill="#FF9A3C" />
+      <path d="M20 23 L10 27 L20 31 Z" fill="#FFF0A8" />
+      <rect x="21" y="22" width="9" height="9" rx="3" fill="#5E6B77" />
+      <rect x="29" y="11" width="16" height="24" rx="5" fill="#C7CEDA" />
+      <rect x="29" y="15" width="16" height="5" fill="#FFD24A" />
+      <rect x="31" y="33" width="24" height="8" rx="4" fill="#8A63E8" />
+      <rect x="25" y="33" width="10" height="8" rx="3" fill="#FFD24A" />
+      <rect x="43" y="13" width="30" height="23" rx="10" fill="#8A63E8" />
+      <rect x="63" y="23" width="26" height="7.5" rx="3.75" fill="#8A63E8" />
+      <circle cx="91" cy="26.5" r="4.5" fill="#F2C69B" />
+      <circle cx="83" cy="16" r="10" fill="#F2C69B" />
+      <path d="M73 16 a10 10 0 0 1 20 0 z" fill="#FFD24A" />
+      <rect x="83" y="14" width="12" height="5.5" rx="2.75" fill="#FFE9A8" />
+    </svg>
+  ),
+};
+function SlotPreview({ option, accent, dimmed }) {
+  const art = option && option.preview && SLOT_PREVIEWS[option.preview];
+  const shell = {
+    height: 54, borderRadius: 12, marginBottom: 9, opacity: dimmed ? 0.4 : 1,
+    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+  };
+  if (art) {
+    return (
+      <div style={{ ...shell, background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.12)", padding: "4px 8px" }}>
+        {art}
+      </div>
+    );
+  }
+  return (
+    <div style={{ ...shell, background: `linear-gradient(160deg, ${accent}, ${accent}55)`, fontWeight: 900, color: "#fff", fontSize: 13, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>
+      {option && option.name}
+    </div>
+  );
+}
+
+// ============================================================================
+//  BreakerLoadout (Session 3C; Feel Kit polish Session 7C) — the SHELL-generated
+//  customization screen, built straight from the manifest's `customization` slots.
+//  Free looks are owned; priced looks unlock by spending coins from the shell-owned
+//  wallet; a tap equips. The kid's picks live in the shell loadout store, and are
+//  handed to the engine as tiny equip params when a level launches. Generic enough
+//  for any converted game (Breaker + Music Maker today). Session 7C wired the
+//  shared Feel Kit in: tap feedback on every button, a gentle miss nudge when
+//  short on coins, and a real celebration (particles + sound + haptic + a glow on
+//  the tile) when a look unlocks — see GAME-FEEL.md.
 // ============================================================================
 function BreakerLoadout({ game, onBack, onPlay }) {
   const accent = (game && game.color) || "#FF6B6B";
@@ -540,10 +1053,15 @@ function BreakerLoadout({ game, onBack, onPlay }) {
   const [coins, setCoins] = useState(() => walletBalance());
   const [store, setStore] = useState({ owned: {}, equipped: {} });
   const [flash, setFlash] = useState("");
+  const [topUp, setTopUp] = useState(null); // {slotName,i,price} when offering a practice top-up
+  const [justUnlocked, setJustUnlocked] = useState(null); // "slot|i" — brief glow on the tile just bought
+  const fxCanvasRef = useRef(null);
+  const fxRef = useRef(null);
+  const fxRafRef = useRef(null);
 
   useEffect(() => {
     let live = true;
-    fetch("/breaker/manifest.json?v=" + Date.now()).then((r) => r.json())
+    loadGameManifest(gameId)
       .then((m) => { if (!live) return; setManifest(m); setStore(readLoadout(gameId, m.customization || [])); })
       .catch(() => {});
     const onWallet = () => setCoins(walletBalance());
@@ -552,26 +1070,82 @@ function BreakerLoadout({ game, onBack, onPlay }) {
     return () => { live = false; window.removeEventListener("bk-wallet", onWallet); };
   }, [gameId]);
 
+  // Session 7C: wire the shared Feel Kit into the loadout — the SAME sounds,
+  // haptics and celebration presets every game uses (GAME-FEEL.md), so unlocking
+  // a look here feels like the rest of Buildable, not a bare menu. Every call is
+  // a safe no-op if the Kit isn't loaded (buildable-feel.js degrades gracefully).
+  useEffect(() => {
+    if (!manifest) return;
+    try {
+      const Feel = window.BuildableFeel;
+      if (!Feel) return;
+      Feel.configure({ accent, feel: manifest.feel, sfxBase: "/api/sfx?s=" });
+      if (!fxRef.current) fxRef.current = Feel.makeFx();
+      Feel.setFx(fxRef.current);
+    } catch (e) {}
+  }, [manifest, accent]);
+  useEffect(() => () => { if (fxRafRef.current) cancelAnimationFrame(fxRafRef.current); }, []);
+
+  function feelTap() { try { window.BuildableFeel && window.BuildableFeel.tap(); } catch (e) {} }
+  function feelMiss() { try { window.BuildableFeel && window.BuildableFeel.miss(); } catch (e) {} }
+  // The loadout's one celebration moment: a kid spent coins and got a new look.
+  // Fires from the tile itself — this is the Kit's documented "powerup grab" case
+  // (GAME-FEEL.md), not a bespoke effect, scaled by the manifest's celebration
+  // preset. The canvas overlay runs for a bounded time only, never in the background.
+  function celebrateUnlock(evt, key) {
+    setJustUnlocked(key);
+    setTimeout(() => setJustUnlocked((k) => (k === key ? null : k)), 900);
+    try {
+      const Feel = window.BuildableFeel; const c = fxCanvasRef.current;
+      if (!Feel || !c || !evt || !evt.currentTarget) return;
+      const r = evt.currentTarget.getBoundingClientRect();
+      c.width = window.innerWidth; c.height = window.innerHeight;
+      Feel.explode(r.left + r.width / 2, r.top + r.height / 2, accent, { sound: "powerup", pop: "Unlocked!", popCol: "#fff" });
+      const ctx = c.getContext("2d");
+      let last = performance.now(); const end = last + 1100;
+      if (fxRafRef.current) cancelAnimationFrame(fxRafRef.current);
+      const tick = (ts) => {
+        const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
+        ctx.clearRect(0, 0, c.width, c.height);
+        Feel.update(fxRef.current, dt); Feel.draw(ctx, fxRef.current, { W: c.width, H: c.height });
+        if (ts < end) fxRafRef.current = requestAnimationFrame(tick); else ctx.clearRect(0, 0, c.width, c.height);
+      };
+      fxRafRef.current = requestAnimationFrame(tick);
+    } catch (e) {}
+  }
+
   const slots = (manifest && Array.isArray(manifest.customization)) ? manifest.customization : [];
   function equip(slotName, i) {
+    feelTap();
     setStore((prev) => { const next = { owned: { ...prev.owned }, equipped: { ...prev.equipped, [slotName]: i } }; writeLoadout(gameId, next); return next; });
   }
-  function buy(slotName, i, price) {
+  function buy(slotName, i, price, evt) {
+    // Session 6B: short on coins? If the parent's "Earn coins by practicing"
+    // toggle is on, offer a practice top-up instead of a dead-end message.
+    if (coins < (price || 0)) {
+      let eff = null; try { eff = effectiveLearning({}); } catch (e) {}
+      if (eff && eff.enabled && eff.coinTopUp) { feelTap(); setTopUp({ slotName, i, price }); return; }
+      feelMiss(); setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return;
+    }
     let ok = false;
     try { ok = window.BuildableWallet ? window.BuildableWallet.spend(price) : false; } catch (e) { ok = false; }
-    if (!ok) { setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return; }
+    if (!ok) { feelMiss(); setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return; }
     setStore((prev) => {
       const owned = { ...prev.owned }; const list = (owned[slotName] || []).slice(); if (!list.includes(i)) list.push(i);
       owned[slotName] = list.sort((a, b) => a - b);
       const next = { owned, equipped: { ...prev.equipped, [slotName]: i } }; writeLoadout(gameId, next); return next;
     });
     setCoins(walletBalance());
+    celebrateUnlock(evt, slotName + "|" + i);
   }
 
   return (
     <div style={{ ...styles.container, padding: "18px 14px 44px", justifyContent: "flex-start" }}>
+      <style>{"@keyframes bkUnlockPop{0%{transform:scale(1)}45%{transform:scale(1.08)}100%{transform:scale(1)}}@keyframes bkUnlockGlow{0%{box-shadow:0 0 0 0 rgba(255,217,138,0)}40%{box-shadow:0 0 0 4px rgba(255,217,138,.9),0 0 26px rgba(255,217,138,.75)}100%{box-shadow:0 0 0 2px rgba(255,217,138,.5)}}"}</style>
+      <canvas ref={fxCanvasRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 9990, pointerEvents: "none" }} />
+      {topUp && <TopUpGate onClose={() => { setTopUp(null); setCoins(walletBalance()); }} />}
       <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center", marginBottom: 12, maxWidth: 680 }}>
-        <button onClick={onBack} style={styles.backButton}>Back</button>
+        <button onClick={() => { feelTap(); onBack(); }} style={styles.backButton}>Back</button>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 999, background: "rgba(245,217,118,.16)", border: "1px solid rgba(245,217,118,.4)", fontWeight: 900, color: "#FFE08A" }}>
           <CoinGlyph size={18} /> {coins}
         </div>
@@ -579,12 +1153,15 @@ function BreakerLoadout({ game, onBack, onPlay }) {
 
       <div style={{ width: "100%", maxWidth: 680, textAlign: "center" }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Make it mine</div>
-        <h1 style={{ ...styles.logo, fontSize: "clamp(32px,7vw,52px)", margin: "2px 0 4px" }}>Loadout</h1>
-        <p style={{ ...styles.tagline, fontSize: 15, marginBottom: 16 }}>Spend coins to unlock looks, then tap to equip.</p>
-        {flash && <div style={{ margin: "0 auto 14px", maxWidth: 380, background: "rgba(255,120,120,.14)", border: "1px solid rgba(255,120,120,.4)", color: "#ffc6c6", borderRadius: 12, padding: "9px 14px", fontWeight: 800 }}>{flash}</div>}
+        {/* FL3: a game can name its own customization screen in the manifest —
+            Sky Flyer's is the Hangar, not a "Loadout". Any game without those
+            keys keeps the original wording. */}
+        <h1 style={{ ...styles.logo, fontSize: "clamp(32px,7vw,52px)", margin: "2px 0 4px" }}>{(manifest && manifest.loadoutTitle) || "Loadout"}</h1>
+        <p style={{ ...styles.tagline, fontSize: 15, marginBottom: 16 }}>{(manifest && manifest.loadoutBlurb) || "Spend coins to unlock looks, then tap to equip."}</p>
+        {flash && <div style={{ margin: "0 auto 14px", maxWidth: 380, background: "rgba(255,176,77,.16)", border: "1px solid rgba(255,176,77,.45)", color: "#FFE0B0", borderRadius: 12, padding: "9px 14px", fontWeight: 800 }}>{flash}</div>}
       </div>
 
-      {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>Loading your loadout...</div>}
+      {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>Getting your looks ready...</div>}
 
       <div style={{ width: "100%", maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
         {slots.map((slot) => {
@@ -599,13 +1176,22 @@ function BreakerLoadout({ game, onBack, onPlay }) {
                   const isOwned = owned.has(i) || (o.price || 0) === 0;
                   const isEq = eq === i;
                   const canAfford = coins >= (o.price || 0);
+                  const key = name + "|" + i;
+                  const glowing = justUnlocked === key;
                   return (
                     <div key={i} style={{
                       borderRadius: 16, padding: "12px 12px 10px",
                       background: isEq ? `linear-gradient(160deg, ${accent}44, ${accent}18)` : "rgba(255,255,255,0.05)",
                       border: isEq ? `2px solid ${accent}` : "1px solid rgba(255,255,255,0.14)",
+                      animation: glowing ? "bkUnlockPop .5s ease-out, bkUnlockGlow .9s ease-out" : "none",
                     }}>
-                      <div style={{ height: 54, borderRadius: 12, marginBottom: 9, background: `linear-gradient(160deg, ${accent}, ${accent}55)`, opacity: isOwned ? 1 : 0.4, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 13, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{o.name}</div>
+                      <SlotPreview option={o} accent={accent} dimmed={!isOwned} />
+                      {o.preview && SLOT_PREVIEWS[o.preview] && (
+                        <div style={{ textAlign: "center", marginBottom: 7 }}>
+                          <div style={{ fontWeight: 900, fontSize: 14 }}>{o.name}</div>
+                          {o.blurb && <div style={{ fontSize: 11.5, opacity: 0.72, lineHeight: 1.25, marginTop: 2 }}>{o.blurb}</div>}
+                        </div>
+                      )}
                       {isOwned ? (
                         <button onClick={() => equip(name, i)} disabled={isEq} style={{
                           width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: isEq ? "default" : "pointer",
@@ -613,7 +1199,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
                           background: isEq ? `linear-gradient(160deg,#fff,${accent})` : "rgba(255,255,255,0.1)",
                         }}>{isEq ? "Equipped" : "Equip"}</button>
                       ) : (
-                        <button onClick={() => buy(name, i, o.price || 0)} disabled={!canAfford} style={{
+                        <button onClick={(e) => buy(name, i, o.price || 0, e)} disabled={!canAfford} style={{
                           width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: canAfford ? "pointer" : "not-allowed",
                           border: "none", color: canAfford ? "#12102a" : "#9a97b5",
                           background: canAfford ? "linear-gradient(160deg,#FFE08A,#FFD24A)" : "rgba(255,255,255,0.06)",
@@ -629,13 +1215,181 @@ function BreakerLoadout({ game, onBack, onPlay }) {
         })}
       </div>
 
-      {onPlay && manifest && <button onClick={onPlay} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 8px 0 ${accent}88, 0 14px 28px rgba(0,0,0,0.4)`, cursor: "pointer" }}>Play with this look</button>}
+      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>{(manifest && manifest.loadoutPlayLabel) || "Play with this look"}</button>}
     </div>
   );
 }
 
-function CastleGuardScreen({ onHome }) { return <GameFrame title="Castle Guard" src="/castle-guard.html?v=hud1" onHome={onHome} bg="#2e7d32" />; }
-function TetrisScreen({ onHome }) { return <GameFrame title="Tumble Blocks" src="/tetris-engine.html?v=hud1" onHome={onHome} bg="#0c1230" />; }
+// ============================================================================
+//  UpgradeStore (Session 9B) — the SHELL-generated GAMEPLAY-power store, built
+//  straight from the manifest's `upgrades` tracks. It is the loadout's twin, but
+//  for POWER instead of looks: the shell draws it, spends the SHARED wallet on a
+//  buy, and remembers what each kid owns + has equipped (per game + per kid). The
+//  engine is only handed which id is equipped (as launch params) and owns what the
+//  power actually does — the shell never knows an effect. Same Feel Kit celebration
+//  on unlock and same practice top-up when short on coins as the loadout, so power
+//  shopping feels like the rest of Buildable, not a bare menu.
+// ============================================================================
+function UpgradeStore({ game, onBack, onPlay }) {
+  const accent = (game && game.color) || "#8A6BFF";
+  const gameId = (game && game.id) || "survival";
+  const [manifest, setManifest] = useState(null);
+  const [coins, setCoins] = useState(() => walletBalance());
+  const [store, setStore] = useState({ owned: {}, equipped: {} });
+  const [flash, setFlash] = useState("");
+  const [topUp, setTopUp] = useState(null);
+  const [justUnlocked, setJustUnlocked] = useState(null);
+  const fxCanvasRef = useRef(null);
+  const fxRef = useRef(null);
+  const fxRafRef = useRef(null);
+
+  useEffect(() => {
+    let live = true;
+    loadGameManifest(gameId)
+      .then((m) => { if (!live) return; setManifest(m); setStore(readUpgrades(gameId, m.upgrades || [])); })
+      .catch(() => {});
+    const onWallet = () => setCoins(walletBalance());
+    window.addEventListener("bk-wallet", onWallet);
+    setCoins(walletBalance());
+    return () => { live = false; window.removeEventListener("bk-wallet", onWallet); };
+  }, [gameId]);
+
+  useEffect(() => {
+    if (!manifest) return;
+    try {
+      const Feel = window.BuildableFeel;
+      if (!Feel) return;
+      Feel.configure({ accent, feel: manifest.feel, sfxBase: "/api/sfx?s=" });
+      if (!fxRef.current) fxRef.current = Feel.makeFx();
+      Feel.setFx(fxRef.current);
+    } catch (e) {}
+  }, [manifest, accent]);
+  useEffect(() => () => { if (fxRafRef.current) cancelAnimationFrame(fxRafRef.current); }, []);
+
+  function feelTap() { try { window.BuildableFeel && window.BuildableFeel.tap(); } catch (e) {} }
+  function feelMiss() { try { window.BuildableFeel && window.BuildableFeel.miss(); } catch (e) {} }
+  function celebrateUnlock(evt, key) {
+    setJustUnlocked(key);
+    setTimeout(() => setJustUnlocked((k) => (k === key ? null : k)), 900);
+    try {
+      const Feel = window.BuildableFeel; const c = fxCanvasRef.current;
+      if (!Feel || !c || !evt || !evt.currentTarget) return;
+      const r = evt.currentTarget.getBoundingClientRect();
+      c.width = window.innerWidth; c.height = window.innerHeight;
+      Feel.explode(r.left + r.width / 2, r.top + r.height / 2, accent, { sound: "powerup", pop: "Unlocked!", popCol: "#fff" });
+      const ctx = c.getContext("2d");
+      let last = performance.now(); const end = last + 1100;
+      if (fxRafRef.current) cancelAnimationFrame(fxRafRef.current);
+      const tick = (ts) => {
+        const dt = Math.min(0.05, (ts - last) / 1000); last = ts;
+        ctx.clearRect(0, 0, c.width, c.height);
+        Feel.update(fxRef.current, dt); Feel.draw(ctx, fxRef.current, { W: c.width, H: c.height });
+        if (ts < end) fxRafRef.current = requestAnimationFrame(tick); else ctx.clearRect(0, 0, c.width, c.height);
+      };
+      fxRafRef.current = requestAnimationFrame(tick);
+    } catch (e) {}
+  }
+
+  const tracks = (manifest && Array.isArray(manifest.upgrades)) ? manifest.upgrades : [];
+  function equip(trackName, id) {
+    feelTap();
+    setStore((prev) => { const next = { owned: { ...prev.owned }, equipped: { ...prev.equipped, [trackName]: id } }; writeUpgrades(gameId, next); return next; });
+  }
+  function buy(trackName, id, price, evt) {
+    if (coins < (price || 0)) {
+      let eff = null; try { eff = effectiveLearning({}); } catch (e) {}
+      if (eff && eff.enabled && eff.coinTopUp) { feelTap(); setTopUp({ trackName, id, price }); return; }
+      feelMiss(); setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return;
+    }
+    let ok = false;
+    try { ok = window.BuildableWallet ? window.BuildableWallet.spend(price) : false; } catch (e) { ok = false; }
+    if (!ok) { feelMiss(); setFlash("Not enough coins yet — beat more levels to earn them!"); setTimeout(() => setFlash(""), 2400); return; }
+    setStore((prev) => {
+      const owned = { ...prev.owned }; const list = (owned[trackName] || []).slice(); if (!list.includes(id)) list.push(id);
+      owned[trackName] = list;
+      const next = { owned, equipped: { ...prev.equipped, [trackName]: id } }; writeUpgrades(gameId, next); return next;
+    });
+    setCoins(walletBalance());
+    celebrateUnlock(evt, trackName + "|" + id);
+  }
+
+  return (
+    <div style={{ ...styles.container, padding: "18px 14px 44px", justifyContent: "flex-start" }}>
+      <style>{"@keyframes bkUnlockPop{0%{transform:scale(1)}45%{transform:scale(1.08)}100%{transform:scale(1)}}@keyframes bkUnlockGlow{0%{box-shadow:0 0 0 0 rgba(255,217,138,0)}40%{box-shadow:0 0 0 4px rgba(255,217,138,.9),0 0 26px rgba(255,217,138,.75)}100%{box-shadow:0 0 0 2px rgba(255,217,138,.5)}}"}</style>
+      <canvas ref={fxCanvasRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 9990, pointerEvents: "none" }} />
+      {topUp && <TopUpGate onClose={() => { setTopUp(null); setCoins(walletBalance()); }} />}
+      <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center", marginBottom: 12, maxWidth: 680 }}>
+        <button onClick={() => { feelTap(); onBack(); }} style={styles.backButton}>Back</button>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 999, background: "rgba(245,217,118,.16)", border: "1px solid rgba(245,217,118,.4)", fontWeight: 900, color: "#FFE08A" }}>
+          <CoinGlyph size={18} /> {coins}
+        </div>
+      </div>
+
+      <div style={{ width: "100%", maxWidth: 680, textAlign: "center" }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Power up</div>
+        <h1 style={{ ...styles.logo, fontSize: "clamp(32px,7vw,52px)", margin: "2px 0 4px" }}>Gear Up</h1>
+        <p style={{ ...styles.tagline, fontSize: 15, marginBottom: 16 }}>Spend coins to unlock power, then tap to equip.</p>
+        {flash && <div style={{ margin: "0 auto 14px", maxWidth: 380, background: "rgba(255,176,77,.16)", border: "1px solid rgba(255,176,77,.45)", color: "#FFE0B0", borderRadius: 12, padding: "9px 14px", fontWeight: 800 }}>{flash}</div>}
+      </div>
+
+      {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>Getting your gear ready...</div>}
+      {manifest && !tracks.length && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 30, fontWeight: 700 }}>This game has no gear to buy yet.</div>}
+
+      <div style={{ width: "100%", maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
+        {tracks.map((tr) => {
+          const name = tr.track, opts = tr.options || [];
+          const owned = new Set(store.owned[name] || []);
+          const eq = store.equipped[name];
+          return (
+            <div key={name}>
+              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 20, margin: "0 0 8px" }}>{name}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
+                {opts.map((o) => {
+                  const id = o.id;
+                  const isOwned = owned.has(id) || (o.price || 0) === 0;
+                  const isEq = eq === id;
+                  const canAfford = coins >= (o.price || 0);
+                  const key = name + "|" + id;
+                  const glowing = justUnlocked === key;
+                  return (
+                    <div key={id} style={{
+                      borderRadius: 16, padding: "12px 12px 10px",
+                      background: isEq ? `linear-gradient(160deg, ${accent}44, ${accent}18)` : "rgba(255,255,255,0.05)",
+                      border: isEq ? `2px solid ${accent}` : "1px solid rgba(255,255,255,0.14)",
+                      animation: glowing ? "bkUnlockPop .5s ease-out, bkUnlockGlow .9s ease-out" : "none",
+                    }}>
+                      <div style={{ height: 54, borderRadius: 12, marginBottom: 8, background: `linear-gradient(160deg, ${accent}, ${accent}55)`, opacity: isOwned ? 1 : 0.4, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 13, textAlign: "center", padding: "0 6px", textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{o.name}</div>
+                      {o.desc && <div style={{ fontSize: 11.5, lineHeight: 1.25, opacity: 0.8, minHeight: 30, margin: "0 0 8px" }}>{o.desc}</div>}
+                      {isOwned ? (
+                        <button onClick={() => equip(name, id)} disabled={isEq} style={{
+                          width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: isEq ? "default" : "pointer",
+                          border: "none", color: isEq ? "#12102a" : "#fff",
+                          background: isEq ? `linear-gradient(160deg,#fff,${accent})` : "rgba(255,255,255,0.1)",
+                        }}>{isEq ? "Equipped" : "Equip"}</button>
+                      ) : (
+                        <button onClick={(e) => buy(name, id, o.price || 0, e)} disabled={!canAfford} style={{
+                          width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: canAfford ? "pointer" : "not-allowed",
+                          border: "none", color: canAfford ? "#12102a" : "#9a97b5",
+                          background: canAfford ? "linear-gradient(160deg,#FFE08A,#FFD24A)" : "rgba(255,255,255,0.06)",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                        }}><CoinGlyph size={15} /> {o.price}</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play with this power</button>}
+    </div>
+  );
+}
+
+function CastleGuardScreen({ onHome, level }) { return <GameFrame title="Castle Guard" src={"/castle-guard.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#2e7d32" />; }
+function TumbleScreen({ onHome, level }) { return <GameFrame title="Tumble Blocks" src={"/tumble-engine.html?v=1" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0c1230" />; }
 function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
   useEffect(() => {
     if (!onPlayFriend) return;
@@ -646,16 +1400,54 @@ function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
   return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />;
 }
 function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function SlingScreen({ onHome }) { return <GameFrame title="Sling Squad" src="/sling-squad.html?v=hud1" onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function SlingScreen({ onHome, level }) { const lv = (typeof level === "number") ? `&level=${level}` : ""; return <GameFrame title="Sling Squad" src={`/sling-squad.html?v=hud3${lv}`} onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function CrocScreen({ onHome }) { return <GameFrame title="Croc Tot" src="/croctot.html?v=hud1" onHome={onHome} bg="#7fc7ff" />; }
-function StringMatchScreen({ onHome }) { return <GameFrame title="String Match" src="/string-match.html?v=1" onHome={onHome} bg="#bfe3f5" light />; }
-function BubbleScreen({ onHome }) { return <GameFrame title="Bubble Buddies" src="/bubble-engine.html?v=hud1" onHome={onHome} bg="#0e1830" />; }
+function CrocScreen({ onHome, level }) { return <GameFrame title="Croc Tot" src={"/croctot.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#7fc7ff" />; }
+function MathCannonScreen({ onHome, level }) { return <GameFrame title="Math Cannon" src={"/mathcannon-engine.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#12102a" />; }
+function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Garden" src={"/rileys-garden.html?v=art2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#87CEEB" />; }
+function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
+function BubbleScreen({ onHome, level }) { return <GameFrame title="Bubble Buddies" src={"/bubble-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0e1830" />; }
+// Sky Flyer (FL2). The journey picks the world (?level=), the shell hangar picks the
+// plane (?ride= from the Make-it-mine loadout). The engine reads both on load, so a
+// refresh keeps the same world and the same ride.
+function SkyFlyerScreen({ onHome, level }) {
+  const eq = readEquipped("skyflyer");
+  // FL3 renamed the hangar slot from "Plane" to "Ride" (it holds a copter and a
+  // jetpack kid now, not three planes). Read the new name first and fall back to
+  // the old one so a kid who already bought a ride keeps it — same index, same
+  // price, just a better-looking thing at the end of it.
+  const ride = typeof eq.Ride === "number" ? eq.Ride : (typeof eq.Plane === "number" ? eq.Plane : 0);
+  // FL5: jobs are found out in the world, not offered on a card when you arrive,
+  // so the shell hands over exactly what it always did - a world and a ride. The
+  // shell journey stays the one and only level picker (the 7J double-picker rule).
+  const src = "/skyflyer-engine.html?v=fl5b&ride=" + ride + (level != null ? "&level=" + level : "");
+  // FL4 learning moment: the engine asks before the NEXT world unlocks, exactly
+  // like Breaker. The shell is the authority — the parent's Learning Mode toggle
+  // overrides the manifest default, and if it is off we answer "done" instantly
+  // so a kid never notices there was a gate.
+  const [quiz, setQuiz] = useState(null);
+  const onChildMessage = (d, post) => {
+    if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
+    let eff = null;
+    try { eff = effectiveLearning({ beforeUnlock: d.manifestBeforeUnlock, subjects: d.subjects }); } catch (e) {}
+    if (!eff || !eff.enabled || !eff.beforeUnlock) { post({ type: "bk:quizDone" }); return; }
+    post({ type: "pause" });   // cartridge contract: freeze the flight while the gate is up
+    setQuiz({ reply: post, goal: eff.goal });
+  };
+  const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
+  const overlay = quiz ? (
+    <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <QuickGame goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="skyflyer" title="Quick game to unlock the next world!" onPass={finish} />
+    </div>
+  ) : null;
+  return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light
+    onChildMessage={onChildMessage} overlay={overlay} />;
+}
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
 function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
 function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=2" onHome={onHome} bg="#0b1030" />; }
-function MemoryScreen({ onHome }) { return <GameFrame title="Buildable Memory Match" src="/memory-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
-function MahjongScreen({ onHome }) { return <GameFrame title="Buildable Mahjong" src="/mahjong-engine.html?v=hud1" onHome={onHome} bg="#101a2e" />; }
+function MemoryScreen({ onHome, level }) { return <GameFrame title="Buildable Memory Match" src={"/memory-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#131229" />; }
+function MahjongScreen({ onHome, level }) { return <GameFrame title="Buildable Mahjong" src={"/mahjong-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#101a2e" />; }
 function BingoScreen({ onHome }) { return <GameFrame title="Buildable Bingo" src="/bingo-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
 function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
 function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
@@ -692,8 +1484,10 @@ function GrownUpButton({ onGrownUp, fixed, compact }) {
   function openGate() { setAb({ a: 3 + Math.floor(Math.random() * 7), b: 3 + Math.floor(Math.random() * 7) }); setVal(""); setErr(false); setStep("gate"); }
   function submitGate(e) { e.preventDefault(); if (parseInt(val, 10) === ab.a * ab.b) { setStep("menu"); } else { setErr(true); } }
   function toggleLearning() { try { setLearningSettings({ ...getLearningSettings(), enabled: !on }); } catch (e) {} force((x) => x + 1); }
+  // compact is ONLY used by the Home header (light background), so it gets its
+  // own light chip chrome instead of the dark NAV_ICON_BTN used elsewhere.
   const btnStyle = compact
-    ? NAV_ICON_BTN
+    ? { width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: "#3A2E4D", cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }
     : fixed
     ? { position: "fixed", top: "calc(14px + env(safe-area-inset-top))", right: 14, zIndex: 9998, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(18,12,34,0.9)", color: "#fff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 999, padding: "9px 15px", fontSize: 14, fontWeight: 800, fontFamily: NUN, cursor: "pointer", boxShadow: "0 6px 18px rgba(0,0,0,0.4)" }
     : { ...styles.myStuffButton, display: "inline-flex", alignItems: "center", gap: 6 };
@@ -745,6 +1539,18 @@ function StuffGlyph() {
   );
 }
 
+// Switch-player icon: two heads + a swap arrow. No emoji (drawn SVG geometry).
+function SwitchPlayerGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="8" cy="8" r="3" />
+      <circle cx="16" cy="8" r="3" />
+      <path d="M4.5 19a3.5 3.5 0 017 0" />
+      <path d="M12.5 19a3.5 3.5 0 017 0" />
+    </svg>
+  );
+}
+
 function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendInvites = [], friendTurns = [], onJoinFriendInvite, onOpenFriendMatch, compact }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
@@ -758,7 +1564,10 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
   }, [open]);
 
   const People = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 11a3 3 0 100-6 3 3 0 000 6zm7 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-7 2c-2.7 0-6 1.35-6 4v2h12v-2c0-2.65-3.3-4-6-4zm7 .2c.3 0 .62.02.95.05C18.2 13.9 20 15 20 17v2h1.5v-2c0-2.2-2.6-3.5-5.5-3.8z" /></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 9a6 6 0 10-12 0c0 6-2.5 7.5-2.5 7.5h17S18 15 18 9z" />
+      <path d="M10.5 20a1.7 1.7 0 003 0" />
+    </svg>
   );
   const Chess = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2l1 5h-2l1-5zm-3 7h6l1 11H8L9 9z" /></svg>
@@ -773,6 +1582,19 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
     borderRadius: 14, padding: "11px 22px", fontSize: 15, fontWeight: 800, fontFamily: NUN, cursor: "pointer",
     boxShadow: "0 6px 22px rgba(155,126,221,0.45)",
   };
+  // Compact icon button (Home header only): a light "bell" chip, ink-colored icon
+  // on a soft cream chip so it reads on the light Home background.
+  const compactBtn = {
+    width: 42, height: 42, borderRadius: 13, padding: 0, position: "relative",
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    background: "#fff", border: "1px solid rgba(58,46,77,0.12)",
+    color: "#3A2E4D", cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)",
+  };
+  const compactBadge = {
+    position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 999,
+    padding: "0 5px", display: "inline-flex", alignItems: "center", justifyContent: "center",
+    fontSize: 11, fontWeight: 900, color: "#fff", background: "#E0578F", border: "2px solid #FFF8EE",
+  };
   const badge = {
     minWidth: 20, height: 20, borderRadius: 999, padding: "0 6px", display: "inline-flex",
     alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: "#b3457f",
@@ -784,28 +1606,28 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
   };
   const menu = {
     position: "absolute", top: "calc(100% + 8px)", right: 0, width: 320, zIndex: 9999,
-    background: "#1B1533", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18,
-    boxShadow: "0 24px 60px rgba(0,0,0,0.55)", overflow: "hidden", fontFamily: NUN,
+    background: "#FFFFFF", border: "1px solid rgba(58,46,77,0.10)", borderRadius: 18,
+    boxShadow: "0 24px 60px rgba(58,46,77,0.22)", overflow: "hidden", fontFamily: NUN,
   };
   const rowWrap = { padding: "6px 10px 12px", display: "flex", flexDirection: "column", gap: 8 };
   const row = {
     display: "flex", gap: 11, alignItems: "flex-start", textAlign: "left", width: "100%",
-    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 14, padding: "11px 12px", color: "#fff", cursor: "pointer", fontFamily: NUN,
+    background: "#FFF8EE", border: "1px solid rgba(58,46,77,0.08)",
+    borderRadius: 14, padding: "11px 12px", color: "#3A2E4D", cursor: "pointer", fontFamily: NUN,
   };
   const chip = (bg, fg) => ({ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: bg, color: fg, padding: "2px 7px", borderRadius: 999 });
 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
-      <button onClick={() => setOpen((o) => !o)} aria-label="Friends" style={compact ? NAV_ICON_BTN : pillBtn}>
+      <button onClick={() => setOpen((o) => !o)} aria-label="Notifications" style={compact ? compactBtn : pillBtn}>
         <People />{!compact && "Friends"}
-        {count > 0 && <span style={compact ? NAV_ICON_BADGE : badge}>{count}</span>}
+        {count > 0 && <span style={compact ? compactBadge : badge}>{count}</span>}
         {!compact && (rtInvite || (friendInvites && friendInvites.length > 0)) && <span style={liveDot} />}
       </button>
       {open && (
         <div style={menu}>
           <div style={{ padding: "14px 16px 4px" }}>
-            <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 17, color: "#fff" }}>Friends</span>
+            <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 17, color: "#3A2E4D" }}>Notifications</span>
           </div>
           <div style={rowWrap}>
             {chessTurns > 0 && (
@@ -816,7 +1638,7 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
                     <span style={{ fontWeight: 800, fontSize: 14 }}>Your move in chess</span>
                     <span style={chip("#FFD66B", "#5a3d00")}>Your turn</span>
                   </span>
-                  <span style={{ display: "block", fontSize: 12, color: "#c7bfe0", marginTop: 2 }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</span>
+                  <span style={{ display: "block", fontSize: 12, color: "#8B84A0", marginTop: 2 }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</span>
                 </span>
               </button>
             )}
@@ -828,7 +1650,7 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
                     <span style={{ fontWeight: 800, fontSize: 14 }}>{rtInvite.hostName} wants to play {rtInvite.gameTitle}</span>
                     <span style={chip("rgba(52,211,153,0.20)", "#7CF6B0")}>Invite</span>
                   </span>
-                  <span style={{ display: "block", fontSize: 12, color: "#bfe9d8", marginTop: 2 }}>Tap to join and play together</span>
+                  <span style={{ display: "block", fontSize: 12, color: "#8B84A0", marginTop: 2 }}>Tap to join and play together</span>
                 </span>
               </button>
             )}
@@ -840,7 +1662,7 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
                     <span style={{ fontWeight: 800, fontSize: 14 }}>{iv.fromName} wants to play {FTITLES[iv.game] || "a game"}</span>
                     <span style={chip("rgba(52,211,153,0.20)", "#7CF6B0")}>Join</span>
                   </span>
-                  <span style={{ display: "block", fontSize: 12, color: "#bfe9d8", marginTop: 2 }}>Tap to join and play together</span>
+                  <span style={{ display: "block", fontSize: 12, color: "#8B84A0", marginTop: 2 }}>Tap to join and play together</span>
                 </span>
               </button>
             ))}
@@ -852,12 +1674,12 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
                     <span style={{ fontWeight: 800, fontSize: 14 }}>Your move in {FTITLES[m.game] || "a game"}</span>
                     <span style={chip("#FFD66B", "#5a3d00")}>Your turn</span>
                   </span>
-                  <span style={{ display: "block", fontSize: 12, color: "#c7bfe0", marginTop: 2 }}>A friend is waiting on you</span>
+                  <span style={{ display: "block", fontSize: 12, color: "#8B84A0", marginTop: 2 }}>A friend is waiting on you</span>
                 </span>
               </button>
             ))}
             {count === 0 && (
-              <div style={{ textAlign: "center", color: "#b8b3d0", fontSize: 13, fontWeight: 600, padding: "20px 10px 24px" }}>
+              <div style={{ textAlign: "center", color: "#8B84A0", fontSize: 13, fontWeight: 600, padding: "20px 10px 24px" }}>
                 All caught up — no one's waiting on you right now.
               </div>
             )}
@@ -871,8 +1693,27 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
 // Lobby props for each friend-playable game, keyed by the invite/match `game`.
 // Mirrors the inline specs in the SCREEN_*_LOBBY blocks so a home nudge can open
 // ANY friend game without knowing its screen. Keep url/version in sync with them.
+// ── Multiplayer switch (Session 6A): manifest features.multiplayer -> lane ──
+// A game's multiplayer LANE now comes from its manifest, not a hardcoded string.
+// features.multiplayer: off -> no lane, turn-based -> "turns" (poll-a-row),
+// realtime -> "realtime" (Broadcast). We warm a tiny cache from the manifest at
+// startup so the synchronous gameSpecFor can read it; the hardcoded value stays
+// a fallback so a missing/late manifest never breaks play. This is the one switch
+// the shell reads to open the turn-based lobby vs the realtime lane (MULTIPLAYER.md).
+const MP_TO_TRANSPORT = { "off": null, "turn-based": "turns", "realtime": "realtime" };
+const mpTransportCache = {}; // slug -> "turns" | "realtime" | null (once its manifest is read)
+function mpTransport(slug, fallback) { return (slug in mpTransportCache) ? mpTransportCache[slug] : fallback; }
+function warmMultiplayerSwitch(slug) {
+  return loadGameManifest(slug)
+    .then((m) => {
+      const v = m && m.features && m.features.multiplayer;
+      mpTransportCache[slug] = Object.prototype.hasOwnProperty.call(MP_TO_TRANSPORT, v) ? MP_TO_TRANSPORT[v] : null;
+    })
+    .catch(() => {});
+}
+
 function gameSpecFor(slug) {
-  if (slug === "chess") return { slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=5", transport: "turns" };
+  if (slug === "chess") return { slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=6", transport: "turns" };
   if (slug === "checkers") {
     const b = Array.from({ length: 8 }, () => Array(8).fill(null));
     for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
@@ -880,21 +1721,39 @@ function gameSpecFor(slug) {
       if (r < 3) b[r][c] = { c: "b", k: false };
       else if (r > 4) b[r][c] = { c: "r", k: false };
     }
-    return { slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: { board: b, turn: "r" } };
+    return { slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=3", transport: "turns", msg: "checkers", initialState: { board: b, turn: "r" } };
   }
-  if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
+  if (slug === "tictactoe") return { slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=4", transport: mpTransport("tictactoe", "turns"), msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } };
+  // Session 7H: Connect Four + Dots and Boxes share the buildable-boardgame.js harness
+  // (msg "bg"), so the generic GameLobby drives their online play with no engine edits.
+  // The seed state is each engine's fresh S.init() board (Connect Four: an empty 7x6
+  // grid; Dots and Boxes: the default 3x3 board the engine boots to in online mode).
+  if (slug === "connectfour") return { slug: "connectfour", title: "Buildable Connect Four", url: "/connectfour-engine.html?online=1&v=hud2", transport: "turns", msg: "bg", initialState: { G: { cells: new Array(42).fill(0), fall: {} }, turn: "w" } };
+  if (slug === "dotsboxes") return { slug: "dotsboxes", title: "Buildable Dots and Boxes", url: "/dotsboxes-engine.html?online=1&v=hud2", transport: "turns", msg: "bg", initialState: { G: { cols: 3, rows: 3, NH: 12, NV: 12, total: 9, h: new Array(12).fill(0), v: new Array(12).fill(0), owner: new Array(9).fill(0), scores: [0, 0], last: null }, turn: "w" } };
   if (slug === "tennis") return { slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" };
   return null;
 }
 const FRIEND_GAME_TITLES = { chess: "Chess", checkers: "Checkers", tictactoe: "Tic-Tac-Toe", tennis: "Tennis" };
 
 export default function BuildableKids() {
-  // PROFILE GATE: always start on the "who's playing" picker (inside
-  // GrownUpScreen) so the app never boots straight to Home without an
-  // active kid profile chosen THIS session -- every fresh open re-asks,
-  // even on a device that picked a kid last time. See onBack below for the
-  // matching guard that stops the picker's Back button from leaking to Home.
-  const [screen, setScreen] = useState(SCREEN_GROWNUP);
+  // RETURN EXPERIENCE (Session 6F): a returning visit boots straight to the
+  // last kid's Home -- never re-ask "who's playing?". If a kid was restored
+  // (bk_active_kid_v1, also written for guests), open on Home; otherwise the
+  // first-time flow opens the picker. Switching kids is manual via the Home
+  // header "Switch player" entry. A fresh Google sign-in still routes to the
+  // picker (see the OAuth-redirect effect below).
+  const [screen, setScreen] = useState(getActiveKid() ? SCREEN_HOME : SCREEN_GROWNUP);
+  // Background = silence, for shell-side speech too. The landed audio fix stops game
+  // music and the exhibit read-aloud in-frame, but the Home buddy's spoken lines
+  // (voiceBus) + browser read-aloud play outside any game frame. Stop them when the app
+  // is hidden (screen-lock / app-switch) and never auto-restart them on return.
+  useEffect(() => {
+    const hush = () => { try { stopVoice(); } catch (e) {} try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {} };
+    const onVis = () => { if (document.hidden) hush(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", hush);
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", hush); };
+  }, []);
   // The top-nav "Grown-ups" button already runs its own math check before it
   // opens this area. When it does, mark the visit pre-verified so the Grown-ups
   // screen does NOT ask a SECOND math question (one gate, not two).
@@ -914,6 +1773,14 @@ export default function BuildableKids() {
   const [activeKid, setActiveKidState] = useState(getActiveKid());
   const [returnTo, setReturnTo] = useState(SCREEN_HOME);
   const [breakerEntry, setBreakerEntry] = useState("journey"); // which engine screen the Breaker landing launches into
+  const [chessStart, setChessStart] = useState(null); // Session 7E: deep-link params handed to the chess engine (solo tier / same-device)
+  const [landingId, setLandingId] = useState(null); // Session 7F: which game the shared landing is showing
+  const [tennisStart, setTennisStart] = useState(null); // Session 7F: "solo" | "local" handoff to the Tennis engine
+  const [slingLevel, setSlingLevel] = useState(null); // which level index the Sling Journey launched into
+  const [wrapLevel, setWrapLevel] = useState(null); // Session 7I: level index the shared journey hands to a wrapped engine (?level=)
+  const [boardDiff, setBoardDiff] = useState(null); // Session 7I: manifest tier index the shared board picker hands to a board engine (?diff=)
+  const openLanding = (id) => { setLandingId(id); setScreen(SCREEN_GAME_LANDING); };
+  const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
   const [rtAutoJoin, setRtAutoJoin] = useState(null);
   const [friendAutoJoin, setFriendAutoJoin] = useState(null); // { game, inviteId? , matchId? }
@@ -940,6 +1807,10 @@ export default function BuildableKids() {
   // Keep the signed-in session alive: refresh an expired token on load.
   useEffect(() => { ensureFreshToken(); }, []);
 
+  // Read the multiplayer switch from each manifest-driven game's manifest once,
+  // so gameSpecFor / the lobby open exactly the lane the manifest declares (6A).
+  useEffect(() => { warmMultiplayerSwitch("tictactoe"); }, []);
+
   // ---- APP-WIDE PRESENCE ----------------------------------------------------
   // Stamp kid_profiles.last_seen every ~30s for as long as a kid is active in
   // the app -- ANYWHERE, not just inside a game lobby. This is what makes a
@@ -956,6 +1827,67 @@ export default function BuildableKids() {
       setScreen(SCREEN_ADMIN);
     }
   }, []);
+
+  // Open a Breaker shell screen directly from a shared link. The front-door
+  // Breaker URLs (/breaker, /breaker/journey, /breaker/loadout) 308-redirect to
+  // /app?bk=... (see vercel.json), so a shared link lands straight on the shell
+  // screen with no profile pick required -- the shell now owns these front doors
+  // instead of the engine's old in-game menu (Session 7D). Mirrors the /admin
+  // deep-link above. The engine still serves /breaker/play/{id} (actual play).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let bk = "";
+    try { bk = (new URLSearchParams(window.location.search)).get("bk") || ""; } catch (e) {}
+    if (bk === "journey") setScreen(SCREEN_BREAKER_JOURNEY);
+    else if (bk === "loadout") setScreen(SCREEN_BREAKER_LOADOUT);
+    else if (bk === "landing") setScreen(SCREEN_BREAKER_LANDING);
+  }, []);
+
+  // ---- Session 2E: reload-safe addresses inside /app -------------------------
+  // Mirror every STABLE screen (Home, a game landing, Kidspedia, Creations) into
+  // the address bar; restore that spot on load; let Back step through screens.
+  const urlHydratedRef = useRef(false);   // block the write until we've read the URL
+  const fromPopRef = useRef(false);        // a change caused BY Back/forward must not re-push
+  const firstWriteRef = useRef(true);      // skip the mount write so a deep link isn't clobbered
+
+  // LOAD: restore the stable screen the address points at (shared links + refresh).
+  useEffect(() => {
+    if (typeof window === "undefined") { urlHydratedRef.current = true; return; }
+    try {
+      const parsed = screenForPath(window.location.pathname);
+      if (parsed && parsed.screen !== SCREEN_HOME) {
+        if (parsed.landingId != null) setLandingId(parsed.landingId);
+        if (parsed.exploreId != null) setExploreId(parsed.exploreId);
+        setScreen(parsed.screen);
+      }
+    } catch (e) {}
+    urlHydratedRef.current = true;
+  }, []);
+
+  // BACK / FORWARD: map the address the browser popped back onto a screen.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onPop = () => {
+      const parsed = screenForPath(window.location.pathname) || { screen: SCREEN_HOME };
+      fromPopRef.current = true;
+      if (parsed.landingId != null) setLandingId(parsed.landingId);
+      if (parsed.exploreId != null) setExploreId(parsed.exploreId);
+      setScreen(parsed.screen);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // WRITE: on every stable screen change, push its address. Transient screens
+  // write nothing, so a refresh on them returns to the last stable address.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (firstWriteRef.current) { firstWriteRef.current = false; return; } // URL already matches reality on mount
+    if (fromPopRef.current) { fromPopRef.current = false; return; }       // change came FROM Back/forward
+    const path = viewToPath(screen, landingId, exploreId);
+    if (!path) return;
+    try { if (window.location.pathname !== path) window.history.pushState({ screen }, "", path); } catch (e) {}
+  }, [screen, landingId, exploreId]);
 
   const goHome = () => setScreen(SCREEN_HOME);
 
@@ -1028,7 +1960,9 @@ export default function BuildableKids() {
         onOpenFriends={() => { setFriendsReturn(SCREEN_GROWNUP); setScreen(SCREEN_GROWNUP_FRIENDS); }}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
-          reloadLearningForActiveKid();
+          // Load this kid's learning scope, THEN stamp their onboarding grade so
+          // it drives the learning level (Session 6B). Self-corrects each open.
+          reloadLearningForActiveKid().then(() => { try { if (kid && kid.grade) setLearningSettings({ grade: kid.grade }); } catch (e) {} });
           setScreen(getKidHelper(kid) ? SCREEN_HOME : SCREEN_HELPER);
         }}
       />
@@ -1040,20 +1974,48 @@ export default function BuildableKids() {
         activeKid={activeKid}
         onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
         onTop={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TOP); }}
-        onGames={() => setScreen(SCREEN_GAME_PICKER)}
+        onGames={() => setScreen(SCREEN_HOME)}
         onMakeGame={() => setScreen(SCREEN_INTRO)}
         onSounds={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_SOUNDS); }}
         onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
         onArt={() => setScreen(SCREEN_ART)}
         onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
-        onChess={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
+        onChess={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS_LANDING); }}
+        onChessResume={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
         onMyStuff={() => openMyStuff(SCREEN_HOME)}
         onGrownUp={openGrownups}
+        onSwitchPlayer={() => { setGrownVerified(false); setScreen(SCREEN_GROWNUP); }}
         onAdmin={() => setScreen(SCREEN_ADMIN)}
         onHelper={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_HELPER); }}
         onJoinInvite={(m) => { setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); }}
         onJoinFriendInvite={openFriendInvite}
         onOpenFriendMatch={openFriendMatch}
+        onPlatformer={() => openLanding("platformer")}
+        onSurvival={() => openLanding("survival")}
+        onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)}
+        onTumble={() => openLanding("tumble")}
+        onRunner={() => openLanding("runner")}
+        onCheckers={() => openLanding("checkers")}
+        onTennis={() => { setTennisStart(null); setScreen(SCREEN_TENNIS_LANDING); }}
+        onTown={() => openLanding("town")}
+        onTicTacToe={() => openLanding("tictactoe")}
+        onConnectFour={() => openLanding("connectfour")}
+        onDotsBoxes={() => openLanding("dotsboxes")}
+        onMemory={() => openLanding("memory")}
+        onMahjong={() => openLanding("mahjong")}
+        onBingo={() => openLanding("bingo")}
+        onSnakes={() => setScreen(SCREEN_SNAKES)}
+        onMaze={() => openLanding("maze")}
+        onCastle={() => openLanding("castleguard")}
+        onSling={() => openLanding("sling")}
+        onCroc={() => openLanding("croctot")} onMathCannon={() => openLanding("mathcannon")}
+        onRileys={() => openLanding("rileys-garden")}
+        onStringMatch={() => openLanding("stringmatch")}
+        onTank={() => openLanding("tank")}
+        onBubble={() => openLanding("bubble")}
+        onSkyFlyer={() => openLanding("skyflyer")}
+        onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
+        onLessons={() => setScreen(SCREEN_LESSONS)}
       />
     );
   }
@@ -1167,6 +2129,24 @@ export default function BuildableKids() {
     );
   }
 
+  if (screen === SCREEN_MUSIC_LANDING) {
+    const st = GAME_CATALOG.find((g) => g.id === "music-maker");
+    // Studio front door: same shell landing every converted game uses. No demo
+    // engine (studios have no attract mode) and no "Make a level" — just Play
+    // (open the maker) and "Make it mine" (instrument-pack loadout).
+    return <GameLanding game={st}
+      onPlay={() => { setReturnTo(SCREEN_MUSIC_LANDING); setScreen(SCREEN_MUSIC); }}
+      onLoadout={() => setScreen(SCREEN_MUSIC_LOADOUT)}
+      onBack={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_MUSIC_LOADOUT) {
+    const st = GAME_CATALOG.find((g) => g.id === "music-maker");
+    // Same shell-generated loadout as games; reads the studio manifest's
+    // customization (instrument packs), spends shared-wallet coins to unlock.
+    return <BreakerLoadout game={st}
+      onBack={() => setScreen(SCREEN_MUSIC_LANDING)}
+      onPlay={() => { setReturnTo(SCREEN_MUSIC_LANDING); setScreen(SCREEN_MUSIC); }} />;
+  }
   if (screen === SCREEN_MUSIC) {
     return (
       <MusicMaker
@@ -1192,20 +2172,92 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_TYPING) {
-    return <TypingScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <TypingScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
 
-  if (screen === SCREEN_GAME_PICKER) {
-    return <GamePicker onHome={() => setScreen(SCREEN_HOME)} onSkyFlyer={() => setScreen(SCREEN_SKYFLYER)} onPlatformer={() => setScreen(SCREEN_PLATFORMER)} onSurvival={() => setScreen(SCREEN_SURVIVAL)} onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)} onTetris={() => setScreen(SCREEN_TETRIS)} onRunner={() => setScreen(SCREEN_RUNNER)} onChess={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHESS); }} onCheckers={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_CHECKERS); }} onTyping={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_TYPING); }} onTennis={() => setScreen(SCREEN_TENNIS)} onTown={() => setScreen(SCREEN_TOWN)} onSounds={() => { setReturnTo(SCREEN_GAME_PICKER); setScreen(SCREEN_SOUNDS); }} onTicTacToe={() => setScreen(SCREEN_TICTACTOE)} onConnectFour={() => setScreen(SCREEN_CONNECTFOUR)} onDotsBoxes={() => setScreen(SCREEN_DOTSBOXES)} onMemory={() => setScreen(SCREEN_MEMORY)} onMahjong={() => setScreen(SCREEN_MAHJONG)} onBingo={() => setScreen(SCREEN_BINGO)} onSnakes={() => setScreen(SCREEN_SNAKES)} onMaze={() => setScreen(SCREEN_MAZE)} onCastle={() => setScreen(SCREEN_CASTLE)} onSling={() => setScreen(SCREEN_SLING)} onCroc={() => setScreen(SCREEN_CROC)} onStringMatch={() => setScreen(SCREEN_STRINGMATCH)} onTank={() => setScreen(SCREEN_TANK)} onBubble={() => setScreen(SCREEN_BUBBLE)} />;
+  // ============ SHARED LANDING (Session 7F) ============
+  // Every keeper game now enters through the ONE shell landing (GameLanding) instead
+  // of a bespoke start screen. The engines are untouched -- Play just launches the
+  // existing engine screen (see LANDING_WRAP). "Make it mine" opens the same shared
+  // loadout used by Breaker/Chess/Music, reading the game's manifest customization.
+  if (screen === SCREEN_GAME_LANDING) {
+    const g = GAME_CATALOG.find((x) => x.id === landingId);
+    const cfg = g && LANDING_WRAP[landingId];
+    if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    // Session 7H: board games show the Solo / Same device / Play a friend mode row
+    // (their manifest multiplayer is turn-based). Everyone else keeps one Play button.
+    const mp = BOARD_MP_LANDING[landingId];
+    if (mp) {
+      return <GameLanding game={g} demoSrc={cfg.demo}
+        multiplayer="turn-based"
+        onSolo={() => { setBoardDiff(null); setScreen(SCREEN_BOARD_SOLO); }}
+        onSameDevice={() => { setBoardDiff(null); setScreen(mp.play); }}
+        onPlayFriend={() => setScreen(mp.lobby)}
+        onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
+        onBack={() => setScreen(SCREEN_HOME)} />;
+    }
+    return <GameLanding game={g} demoSrc={cfg.demo}
+      onPlay={() => { if (cfg.journey) { setWrapLevel(null); setScreen(SCREEN_WRAP_JOURNEY); } else setScreen(cfg.play); }}
+      onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
+      onBack={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_GAME_LOADOUT) {
+    const g = GAME_CATALOG.find((x) => x.id === landingId);
+    const cfg = g && LANDING_WRAP[landingId];
+    if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    return <BreakerLoadout game={g}
+      onBack={() => setScreen(SCREEN_GAME_LANDING)}
+      onPlay={() => { if (cfg.journey) { setWrapLevel(null); setScreen(SCREEN_WRAP_JOURNEY); } else setScreen(cfg.play); }} />;
+  }
+  // Session 7I — ONE journey and ONE board picker for every wrapped game. Picking a
+  // stop deep-links the engine (?level= / ?diff=), so the engine's own menu never
+  // shows in-app; it stays reachable standalone as the replace-first fallback.
+  if (screen === SCREEN_WRAP_JOURNEY) {
+    const g = GAME_CATALOG.find((x) => x.id === landingId);
+    const cfg = g && LANDING_WRAP[landingId];
+    if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    return <GameJourney game={g} gameId={landingId}
+      onBack={() => setScreen(SCREEN_GAME_LANDING)}
+      onPlay={(lv, i) => { setWrapLevel(i); setScreen(cfg.play); }} />;
+  }
+  if (screen === SCREEN_BOARD_SOLO) {
+    const g = GAME_CATALOG.find((x) => x.id === landingId);
+    const mp = g && BOARD_MP_LANDING[landingId];
+    if (!g || !mp) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
+    return <BoardSoloFrame game={g} gameId={landingId}
+      onBack={() => setScreen(SCREEN_GAME_LANDING)}
+      onPlay={(tier, i) => { setBoardDiff(i == null ? 0 : i); setScreen(mp.play); }} />;
+  }
+  // Tennis (Session 7F): the shared landing replaces Tennis's own start screen; its
+  // "Choose your court" picker becomes court skins in the shared loadout. multiplayer
+  // is "realtime" so the mode row shows Solo / Same device / Play a friend.
+  if (screen === SCREEN_TENNIS_LANDING) {
+    const tn = GAME_CATALOG.find((g) => g.id === "tennis");
+    return <GameLanding game={tn}
+      multiplayer="realtime"
+      onSolo={() => { setTennisStart("solo"); setScreen(SCREEN_TENNIS); }}
+      onSameDevice={() => { setTennisStart("local"); setScreen(SCREEN_TENNIS); }}
+      onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)}
+      onLoadout={() => setScreen(SCREEN_TENNIS_LOADOUT)}
+      onBack={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_TENNIS_LOADOUT) {
+    const tn = GAME_CATALOG.find((g) => g.id === "tennis");
+    return <BreakerLoadout game={tn}
+      onBack={() => setScreen(SCREEN_TENNIS_LANDING)}
+      onPlay={() => { setTennisStart("solo"); setScreen(SCREEN_TENNIS); }} />;
   }
   if (screen === SCREEN_PLATFORMER) {
-    return <PlatformerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
-  }
-  if (screen === SCREEN_SKYFLYER) {
-    return <SkyFlyerScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <PlatformerScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SURVIVAL) {
-    return <SurvivalScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <SurvivalScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} onUpgrades={() => setScreen(SCREEN_SURVIVAL_UPGRADES)} />;
+  }
+  if (screen === SCREEN_SURVIVAL_UPGRADES) {
+    const sv = GAME_CATALOG.find((g) => g.id === "survival");
+    return <UpgradeStore game={sv}
+      onBack={() => setScreen(SCREEN_SURVIVAL)}
+      onPlay={() => setScreen(SCREEN_SURVIVAL)} />;
   }
   if (screen === SCREEN_BREAKER_LANDING) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
@@ -1213,11 +2265,11 @@ export default function BuildableKids() {
       onPlay={() => setScreen(SCREEN_BREAKER_JOURNEY)}
       onLoadout={() => setScreen(SCREEN_BREAKER_LOADOUT)}
       onMake={() => { setBreakerEntry("maker"); setScreen(SCREEN_BREAKER); }}
-      onBack={() => setScreen(SCREEN_GAME_PICKER)} />;
+      onBack={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_BREAKER_JOURNEY) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
-    return <BreakerJourney game={bk}
+    return <GameJourney game={bk} gameId="breaker"
       onBack={() => setScreen(SCREEN_BREAKER_LANDING)}
       onPlay={(lv) => { setBreakerEntry("play:" + lv.id); setScreen(SCREEN_BREAKER); }} />;
   }
@@ -1231,14 +2283,20 @@ export default function BuildableKids() {
     const backToJourney = typeof breakerEntry === "string" && breakerEntry.indexOf("play:") === 0;
     return <BreakerScreen entry={breakerEntry} onHome={() => setScreen(backToJourney ? SCREEN_BREAKER_JOURNEY : SCREEN_BREAKER_LANDING)} />;
   }
-  if (screen === SCREEN_CASTLE) {
-    return <CastleGuardScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  if (screen === SCREEN_EXPLORE) {
+    return <ExploreScreen exhibitId={exploreId} onHome={() => setScreen(SCREEN_HOME)} />;
   }
-  if (screen === SCREEN_TETRIS) {
-    return <TetrisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+  if (screen === SCREEN_LESSONS) {
+    return <LessonsScreen onHome={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_CASTLE) {
+    return <CastleGuardScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  if (screen === SCREEN_TUMBLE) {
+    return <TumbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src="/tictactoe-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TTT_LOBBY)} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
   }
   if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
     const spec = gameSpecFor(friendAutoJoin.game);
@@ -1258,7 +2316,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_TTT_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "tictactoe", title: "Buildable Tic-Tac-Toe", url: "/tictactoe-engine.html?online=1&v=3", transport: "turns", msg: "bg", initialState: { G: { cells: [0, 0, 0, 0, 0, 0, 0, 0, 0] }, turn: "w" } }}
+        game={gameSpecFor("tictactoe")}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_TICTACTOE)}
@@ -1267,44 +2325,86 @@ export default function BuildableKids() {
     );
   }
 
+  // Session 7H: Connect Four + Dots and Boxes online lobbies. Same shared GameLobby +
+  // board "bg" protocol as Tic-Tac-Toe; opened from the landing's Play a friend button.
+  if (screen === SCREEN_C4_LOBBY) {
+    return (
+      <GameLobby
+        game={gameSpecFor("connectfour")}
+        activeKid={activeKid}
+        entry="friends"
+        onHome={() => setScreen(SCREEN_CONNECTFOUR)}
+        onAddFriend={() => { setFriendsReturn(SCREEN_C4_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
+  }
+  if (screen === SCREEN_DOTS_LOBBY) {
+    return (
+      <GameLobby
+        game={gameSpecFor("dotsboxes")}
+        activeKid={activeKid}
+        entry="friends"
+        onHome={() => setScreen(SCREEN_DOTSBOXES)}
+        onAddFriend={() => { setFriendsReturn(SCREEN_DOTS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
+      />
+    );
+  }
+
   if (screen === SCREEN_CONNECTFOUR) {
-    return <BoardGameScreen title="Buildable Connect Four" src="/connectfour-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BoardGameScreen title="Buildable Connect Four" src={"/connectfour-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_DOTSBOXES) {
-    return <BoardGameScreen title="Buildable Dots and Boxes" src="/dotsboxes-engine.html?v=hud1" onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BoardGameScreen title="Buildable Dots and Boxes" src={"/dotsboxes-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MAZE) {
-    return <MazeScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <MazeScreen onHome={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_SLING_JOURNEY) {
+    const sl = GAME_CATALOG.find((g) => g.id === "sling");
+    return <GameJourney game={sl} gameId="sling"
+      onBack={() => setScreen(SCREEN_GAME_LANDING)}
+      onPlay={(lv, i) => { setSlingLevel(i); setScreen(SCREEN_SLING); }} />;
   }
   if (screen === SCREEN_SLING) {
-    return <SlingScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    const slv = wrapLevel != null ? wrapLevel : slingLevel;
+    return <SlingScreen level={slv}
+      onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : (slingLevel != null ? SCREEN_SLING_JOURNEY : SCREEN_HOME)); }} />;
   }
   if (screen === SCREEN_TANK) {
-    return <TankScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <TankScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CROC) {
-    return <CrocScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <CrocScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  if (screen === SCREEN_MATHCANNON) {
+    return <MathCannonScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  if (screen === SCREEN_SKYFLYER) {
+    return <SkyFlyerScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  if (screen === SCREEN_RILEYS) {
+    return <RileysScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_STRINGMATCH) {
-    return <StringMatchScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <StringMatchScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_BUBBLE) {
-    return <BubbleScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BubbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_RUNNER) {
-    return <SunnyTownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <SunnyTownScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_MEMORY) {
-    return <MemoryScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <MemoryScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MAHJONG) {
-    return <MahjongScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <MahjongScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_BINGO) {
-    return <BingoScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <BingoScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SNAKES) {
-    return <SnakesScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <SnakesScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SOUNDS) {
     return <SoundboardScreen onHome={() => setScreen(returnTo || SCREEN_HOME)} />;
@@ -1313,7 +2413,7 @@ export default function BuildableKids() {
     return <ArtStudioScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TENNIS) {
-    return <TennisScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
+    return <TennisScreen start={tennisStart} onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
   }
   if (screen === SCREEN_TENNIS_LOBBY) {
     return (
@@ -1321,43 +2421,68 @@ export default function BuildableKids() {
         game={{ slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" }}
         activeKid={activeKid}
         entry="friends"
-        onHome={() => setScreen(SCREEN_TENNIS)}
+        onHome={() => setScreen(SCREEN_TENNIS_LANDING)}
         onAddFriend={() => { setFriendsReturn(SCREEN_TENNIS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
       />
     );
   }
 
   if (screen === SCREEN_TENNIS_FAMILY) {
-    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1&v=4", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_GAME_PICKER); }} />;
+    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1&v=4", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TOWN) {
-    return <TownScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
+    return <TownScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
   }
   if (screen === SCREEN_TOWN_FAMILY) {
-    return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_CHESS_LANDING) {
+    // Session 7E: chess enters through the one shell landing. multiplayer is
+    // "turn-based" in its manifest, so the mode row shows Solo / Same device /
+    // Play a friend. Solo opens the board frame (pick difficulty); Same device
+    // launches the engine in pass-and-play; Play a friend opens the lobby.
+    const cg = GAME_CATALOG.find((g) => g.id === "chess");
+    return <GameLanding game={cg}
+      multiplayer="turn-based"
+      onSolo={() => setScreen(SCREEN_CHESS_SOLO)}
+      onSameDevice={() => { setChessStart("start=local"); setScreen(SCREEN_CHESS); }}
+      onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)}
+      onBack={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_CHESS_SOLO) {
+    const cg = GAME_CATALOG.find((g) => g.id === "chess");
+    return <BoardSoloFrame game={cg} gameId="chess"
+      onBack={() => setScreen(SCREEN_CHESS_LANDING)}
+      onPlay={(tier) => {
+        const bot = (tier && tier.parts && tier.parts.opponent) || "medium";
+        const world = (tier && tier.parts && tier.parts.world) || "";
+        setChessStart("start=solo&bot=" + bot + (world ? ("&world=" + world) : ""));
+        setScreen(SCREEN_CHESS);
+      }} />;
   }
   if (screen === SCREEN_CHESS) {
-    return <ChessScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
+    return <ChessScreen start={chessStart} onHome={() => setScreen(SCREEN_CHESS_LANDING)} onPlayFriend={() => setScreen(SCREEN_CHESS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHESS_LOBBY) {
     return (
       <GameLobby
-        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=5", transport: "turns" }}
+        game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=6", transport: "turns" }}
         activeKid={activeKid}
         entry="friends"
-        onHome={() => setScreen(SCREEN_CHESS)}
+        onHome={() => setScreen(SCREEN_CHESS_LANDING)}
+        onGuestLink={() => startGuestLink("chess")}
         onAddFriend={() => { setFriendsReturn(SCREEN_CHESS_LOBBY); setScreen(SCREEN_GROWNUP_FRIENDS); }}
       />
     );
   }
 
   if (screen === SCREEN_CHESS_FAMILY) {
-    return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
   if (screen === SCREEN_CHECKERS) {
-    return <CheckersScreen onHome={() => setScreen(SCREEN_GAME_PICKER)} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
+    return <CheckersScreen diff={boardDiff} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHECKERS_LOBBY) {
@@ -1372,7 +2497,7 @@ export default function BuildableKids() {
     })();
     return (
       <GameLobby
-        game={{ slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=2", transport: "turns", msg: "checkers", initialState: checkersInitial }}
+        game={{ slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=3", transport: "turns", msg: "checkers", initialState: checkersInitial }}
         activeKid={activeKid}
         entry="friends"
         onHome={() => setScreen(SCREEN_CHECKERS)}
@@ -1382,7 +2507,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHECKERS_FAMILY) {
-    return <FamilyCheckers activeKid={activeKid} onHome={() => setScreen(SCREEN_GAME_PICKER)} />;
+    return <FamilyCheckers activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
   if (screen === SCREEN_MY_STUFF) {
@@ -1409,7 +2534,9 @@ export default function BuildableKids() {
         onOpenFriends={() => { setFriendsReturn(SCREEN_GROWNUP); setScreen(SCREEN_GROWNUP_FRIENDS); }}
         onProfileChosen={(kid) => {
           setActiveKidState(kid);
-          reloadLearningForActiveKid();
+          // Load this kid's learning scope, THEN stamp their onboarding grade so
+          // it drives the learning level (Session 6B). Self-corrects each open.
+          reloadLearningForActiveKid().then(() => { try { if (kid && kid.grade) setLearningSettings({ grade: kid.grade }); } catch (e) {} });
           setScreen(getKidHelper(kid) ? SCREEN_HOME : SCREEN_HELPER);
         }}
       />
@@ -1428,7 +2555,7 @@ export default function BuildableKids() {
   return (
     <>
       {__view}
-      {[SCREEN_GAME_PICKER, SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <GrownUpButton onGrownUp={openGrownups} fixed />}
+      {[SCREEN_MY_STUFF, SCREEN_TOP, SCREEN_INTRO].includes(screen) && <GrownUpButton onGrownUp={openGrownups} fixed />}
       {/* App-wide "someone invited you to play" alert. Floats at the top of ANY
           screen (except Home, which already shows invites on its own cards), and
           auto-goes-away if ignored -- or the kid can tap the x to dismiss it. */}
@@ -1571,11 +2698,30 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // ============ HOME HUB COMPONENT ============
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
-function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onMyStuff, onGrownUp, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch }) {
+function HomeScreen(props) {
+  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onChessResume, onMyStuff, onGrownUp, onSwitchPlayer, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch, onLessons } = props;
+  // ---------------------------------------------------------------------------
+  // Session 3E — Home screen redesign. Cream/light theme ONLY on this screen
+  // (no dark mode toggle, no dark palette). Everything below re-presents data
+  // that already existed (turns/invites, jump-back-in, trending) plus three new
+  // pieces: a dismissible "buddy moment" card, a Learning-Mode "Brain Boost"
+  // card, and manifest-driven Play/Make shelves. No emojis — every icon here is
+  // hand-drawn SVG or an art slot (/api/images?kind=...&id=...).
+  // ---------------------------------------------------------------------------
+  const HOME_BG =
+    "radial-gradient(circle at 10% -8%, rgba(155,126,221,0.16), transparent 42%)," +
+    "radial-gradient(circle at 90% 108%, rgba(240,151,42,0.14), transparent 46%)," +
+    "#FFF8EE";
+  const HOME_CARD = "#FFFFFF";
+  const HOME_CARD_BORDER = "1px solid rgba(58,46,77,0.10)";
+  const HOME_SHADOW = "0 8px 22px rgba(58,46,77,0.09)";
+  const HOME_INK = "#3A2E4D";
+  const HOME_SUB = "#8B84A0";
+
   // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
   const AppIcon = ({ grad, size = 76, children }) => (
-    <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(0,0,0,0.4)", overflow: "hidden", flexShrink: 0 }}>
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%)" }} />
+    <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(58,46,77,0.28)", overflow: "hidden", flexShrink: 0 }}>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 55%)" }} />
       <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
     </div>
   );
@@ -1613,14 +2759,6 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
       <rect x="22.8" y="13.2" width="2.4" height="24" rx="1.2" fill="#fff" opacity="0.55" />
     </svg>
   );
-  const KeyboardGlyph = () => (
-    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="6" y="14" width="36" height="22" rx="4.5" fill="#fff" />
-      <rect x="10.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="16.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="22.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="28.5" y="18.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="34.5" y="18.5" width="3" height="4" rx="1" fill="#2F8FD6" />
-      <rect x="10.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="16.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="22.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="28.5" y="24.5" width="4" height="4" rx="1" fill="#2F8FD6" /><rect x="34.5" y="24.5" width="3" height="4" rx="1" fill="#2F8FD6" />
-      <rect x="14.5" y="30.5" width="19" height="3.5" rx="1.5" fill="#2F8FD6" />
-    </svg>
-  );
   const ChessGlyph = () => (
     <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
       <rect x="22.4" y="5" width="3.2" height="9" rx="1" fill="#fff" />
@@ -1636,6 +2774,17 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
       <circle cx="38" cy="11" r="2.4" fill="#fff" /><circle cx="11" cy="35" r="1.8" fill="#fff" />
     </svg>
   );
+  // Session LS2 — the Lessons tile glyph: a drawn schoolhouse (SVG geometry, no emoji).
+  const SchoolGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 6 L41 16 H7 Z" fill="#fff" />
+      <rect x="10" y="18" width="28" height="21" rx="3" fill="#fff" opacity="0.9" />
+      <rect x="20.5" y="26" width="7" height="13" rx="1.6" fill="#8A6BFF" />
+      <rect x="13.5" y="22" width="5" height="5" rx="1.2" fill="#8A6BFF" opacity="0.75" />
+      <rect x="29.5" y="22" width="5" height="5" rx="1.2" fill="#8A6BFF" opacity="0.75" />
+      <rect x="22.8" y="2.5" width="2.4" height="5" rx="1.2" fill="#fff" />
+    </svg>
+  );
   const TrophyGlyph = () => (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M7 4h10v3a5 5 0 0 1-10 0z" /><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3" /><path d="M9 13.5h6M8 20h8M12 13.5V20" />
@@ -1649,6 +2798,25 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
       <path d="M17.5 31 q6.5 6 13 0" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />
     </svg>
   );
+  // Ink-colored glyphs, drawn to sit directly on cream/white cards (not on a
+  // colored badge), so they use currentColor rather than a fixed white fill.
+  const StreakGlyph = ({ size = 15, color = "#F0972A" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true">
+      <path d="M12.3 2c1.1 3.3-2.6 4.6-2.6 8.3a3.4 3.4 0 006.8 0c0-1.2-.4-1.9-.7-2.3.6 2.2-.6 3.5-1.4 3.9.9-3.6-2.2-5.6-2.1-9.9z" />
+      <path d="M8.4 12.8A5.4 5.4 0 0012 21.8a5.4 5.4 0 003.7-9.3c.3 2.9-1.5 4.6-1.5 4.6a2.6 2.6 0 01-4.4-1.9c0-.9.3-1.6.6-2.4z" />
+    </svg>
+  );
+  const HeartGlyph = ({ size = 14, color = "#E0578F" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true">
+      <path d="M12 20.5s-7.6-4.6-10-9.2C.4 7.7 2.6 4 6.3 4c2 0 3.6 1.1 4.5 2.6a1.5 1.5 0 002.4 0C14.1 5.1 15.7 4 17.7 4 21.4 4 23.6 7.7 22 11.3 19.6 15.9 12 20.5 12 20.5z" />
+    </svg>
+  );
+  const BellGlyph = ({ size = 20, color = "#3A2E4D" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 9a6 6 0 10-12 0c0 6-2.5 7.5-2.5 7.5h17S18 15 18 9z" />
+      <path d="M10.5 20a1.7 1.7 0 003 0" />
+    </svg>
+  );
 
   // ---- responsive: phone < 700, tablet 700-1023, desktop >= 1024 ----
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
@@ -1660,7 +2828,6 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
   const phone = vw < 700;
   const tablet = vw >= 700 && vw < 1024;
   const maxW = phone ? "100%" : tablet ? 720 : 940;
-  const makeCols = phone ? 2 : 4;
 
   // Notify on the Chess card when it's this kid's move in a family game.
   const [chessTurns, setChessTurns] = useState(0);
@@ -1772,6 +2939,19 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
     } catch { return "dev_anon"; }
   }
 
+  // ---- coins (shell-owned wallet; see public/buildable-wallet.js) ----
+  const [coins, setCoins] = useState(() => walletBalance());
+  useEffect(() => {
+    const onWallet = () => setCoins(walletBalance());
+    window.addEventListener("bk-wallet", onWallet);
+    setCoins(walletBalance());
+    return () => window.removeEventListener("bk-wallet", onWallet);
+  }, [activeKid]);
+
+  // ---- streak (Learning Mode progress store; safe default when off/empty) ----
+  const progress = (() => { try { return getProgress(); } catch (e) { return null; } })();
+  const streakDays = (progress && progress.streakDays) || 0;
+
   // ---- Jump back in: this kid's most recent creations (songs/stories/games) ----
   const [jumpItems, setJumpItems] = useState([]);
   useEffect(() => {
@@ -1821,12 +3001,12 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
   }, []);
 
   const KIND_TAG = {
-    game: { label: "Game", color: "#bfa6f5", bg: "rgba(155,126,221,0.18)" },
-    song: { label: "Song", color: "#e98fb3", bg: "rgba(214,90,123,0.20)" },
-    story: { label: "Story", color: "#7CF6B0", bg: "rgba(124,246,176,0.16)" },
+    game: { label: "Game", color: "#6A4FE0", bg: "rgba(138,107,255,0.14)" },
+    song: { label: "Song", color: "#C23E72", bg: "rgba(224,87,143,0.14)" },
+    story: { label: "Story", color: "#1C8F5A", bg: "rgba(52,211,153,0.18)" },
   };
 
-  // Favorite game (from per-kid telemetry) -> the helper nudges toward it.
+  // Favorite game (from per-kid telemetry) -> the buddy nudges toward it.
   const [favGame, setFavGame] = useState(null);
   useEffect(() => {
     let alive = true;
@@ -1842,146 +3022,217 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
     : ((GAME_NAMES[favGame.game] || favGame.game) + " is your favorite — want to play it again?")) : null;
 
   const kidName = (activeKid && activeKid.display_name) || "friend";
-  // A pool of friendly default lines so the buddy doesn't say the same thing every time.
-  const HELPER_DEFAULTS = [
-    "What should we make today? Tap a tile and I'll help!",
-    "So many things to make! Pick a tile and let's go.",
-    "Ready for some fun? Tap anything and I'll help you start.",
-    "What are we making today? A game, a song, or a story?",
-    "Let's build something awesome. Tap a tile to begin!",
-    "I'm ready when you are! Pick something and we'll make it.",
-    "Feeling creative? Tap a tile and let's get started.",
-    "Ooh, what should we dream up today? Tap a tile!",
-  ];
-  // Pick one line for this visit and keep it steady, so the bubble and the voice match.
-  const [defaultLine] = useState(() => HELPER_DEFAULTS[Math.floor(Math.random() * HELPER_DEFAULTS.length)]);
-  const helperLine = chessTurns > 0
-    ? `It's your move in ${chessTurns} chess game${chessTurns > 1 ? "s" : ""}. Want to play?`
-    : favLine
-    ? favLine
-    : (jumpItems[0] ? `Want to keep going with “${jumpItems[0].title}”? Or make something new!` : defaultLine);
 
-  // ---- floating helper (bottom-right): the kid's own helper character ----
-  const [helperOpen, setHelperOpen] = useState(false);
-  const [helperHidden, setHelperHidden] = useState(false);
-  const [defaultHelperImg, setDefaultHelperImg] = useState(null);
-  const [localHelper] = useState(() => getKidHelper(activeKid) || (() => { try { return JSON.parse(localStorage.getItem("bk_helper_v1") || "null"); } catch { return null; } })());
-  const helper = (activeKid && activeKid.helper) || localHelper || null;
-  const voiceRef = useRef(null);
-  const playClip = (j) => { if (j && j.configured && j.audioUrl) { playVoiceUrl(j.audioUrl); return true; } return false; };
-  const speakHelper = () => {
-    try {
-      const text = `Hi ${kidName}! ${helperLine}`;
-      const vid = (helper && helper.voice) || null;
-      fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vid ? { text, voiceId: vid } : { text }) })
-        .then((r) => r.json())
-        .then((j) => { if (!playClip(j) && vid) { fetch("/api/narrate-story-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }).then((r) => r.json()).then(playClip).catch(() => {}); } })
-        .catch(() => {});
-    } catch (e) {}
-  };
+  // ---- Today's Brain Boost (Learning Mode only) ----
+  const learningOn = (() => { try { return !!(getLearningSettings() && getLearningSettings().enabled); } catch (e) { return false; } })();
+  const brainBoost = (() => { try { return dailyLearningProgress(); } catch (e) { return { count: 0, goal: 3, done: false, todayKey: "" }; } })();
   useEffect(() => {
-    const COOLDOWN_MS = 30 * 60 * 1000; // only auto-greet once every 30 minutes
-    let last = 0;
-    try { last = parseInt(localStorage.getItem("bk_buddy_last_greet") || "0", 10) || 0; } catch (e) {}
-    if (Date.now() - last < COOLDOWN_MS) return; // greeted recently, stay quiet this visit
-    const t = setTimeout(() => {
-      setHelperOpen(true);
-      speakHelper();
-      try { localStorage.setItem("bk_buddy_last_greet", String(Date.now())); } catch (e) {}
-    }, 900);
-    return () => clearTimeout(t);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Award the daily coin bonus exactly once per day, per kid — awardOnce keys
+    // on "brainboost:<date>" so refreshing the page can't farm it.
+    if (!learningOn || !brainBoost.done || !brainBoost.todayKey) return;
+    try { window.BuildableWallet && window.BuildableWallet.awardOnce("brainboost:" + brainBoost.todayKey, 10); } catch (e) {}
+  }, [learningOn, brainBoost.done, brainBoost.todayKey]);
+
+  // ---- "Buddy moment" card: conditional, dismissible, day-scoped in localStorage ----
+  const todayStr = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const [buddyTick, setBuddyTick] = useState(0);
+  const buddyDismissKey = (id) => `bk_buddy_dismiss_${(activeKid && activeKid.id) || "guest"}_${todayStr()}_${id}`;
+  const isBuddyDismissed = (id) => { try { return localStorage.getItem(buddyDismissKey(id)) === "1"; } catch (e) { return false; } };
+  const dismissBuddy = (id) => { try { localStorage.setItem(buddyDismissKey(id), "1"); } catch (e) {} setBuddyTick((t) => t + 1); };
+  const buddyMoment = (() => {
+    void buddyTick; // read to keep this recomputed after a dismiss
+    const candidates = [];
+    if (learningOn && brainBoost.done) candidates.push({ id: "brainboost-done", text: "You finished today's Brain Boost! Amazing work today." });
+    if (streakDays >= 5 && streakDays % 5 === 0) candidates.push({ id: `streak-${streakDays}`, text: `Wow, ${streakDays} days in a row! You're on fire.` });
+    if (favLine) candidates.push({ id: "fav-" + todayStr(), text: "Welcome back, " + kidName + "! " + favLine });
+    return candidates.find((c) => !isBuddyDismissed(c.id)) || null;
+  })();
+
+  // (Buddy 2.0) The persistent floating helper was removed. In-game moments
+  // now come from the event-driven buddy (HelperReactions + lib/buddy.js);
+  // the Home welcome-back/streak moment is the dismissible card below.
+
+  // ---- Session LS4: is the Lessons section live for kids yet? ----
+  // The tile has been Coming Soon behind the 1111 owner gate since LS2, and the
+  // owner turns it on himself on /lesson-review. That switch is a database flag
+  // (api/app-flags.js) rather than a code change, because he cannot push.
+  //
+  // FAILS CLOSED. Until this call comes back true the tile stays Coming Soon, so
+  // a slow or broken request can hide the tile for a moment but can never open
+  // unfinished lessons to a kid.
+  const [lessonsLive, setLessonsLive] = useState(false);
   useEffect(() => {
-    if (helper && helper.image) return; // already have a real helper image
     let alive = true;
-    fetch("/api/list-characters?limit=1").then((r) => r.json()).then((d) => {
-      const arr = (d && (d.characters || d.items)) || (Array.isArray(d) ? d : []);
-      const img = arr && arr[0] && (arr[0].image_url || arr[0].image);
-      if (alive && img) setDefaultHelperImg(img);
-    }).catch(() => {});
+    fetch("/api/app-flags", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d && d.ok && d.flags) setLessonsLive(d.flags.lessons_live === true); })
+      .catch(() => {});
     return () => { alive = false; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const helperImg = (helper && helper.image) || defaultHelperImg || null;
-  const helperName = (helper && helper.name) || "your buddy";
+  }, []);
 
-  // ---- a "make" tile: colored app-icon + label. 2-player chip sits BELOW the
-  // text (a flow element) so it never overlaps the icon on narrow tiles. ----
-  const MakeTile = ({ grad, glyph, title, sub, tag, soon, onClick }) => (
-    <button
-      onClick={soon ? undefined : onClick}
-      disabled={soon}
-      style={{
-        position: "relative",
-        borderRadius: 20, padding: phone ? "18px 12px 14px" : "22px 14px 16px",
-        border: CARD_BORDER, background: CARD_BG, color: "#fff", cursor: soon ? "default" : "pointer", opacity: soon ? 0.6 : 1, fontFamily: NUN,
-        textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 9,
-        minHeight: phone ? 142 : 172,
-      }}
-    >
-      {soon && <span style={{ position: "absolute", zIndex: 3, top: 10, right: 10, fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 9px", borderRadius: 999, background: "#D8D2EC", color: "#1a1330" }}>Coming soon</span>}
-      <AppIcon grad={grad} size={phone ? 70 : 84}>{glyph}</AppIcon>
-      <div style={{ fontFamily: FRED, fontSize: phone ? 16 : 19, fontWeight: 700 }}>{title}</div>
-      <div style={{ fontSize: phone ? 11.5 : 13, color: "#cfc9e6" }}>{sub}</div>
-      {tag && (
-        <span style={{
-          display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2,
-          fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase",
-          padding: "3px 9px", borderRadius: 999, background: "rgba(155,126,221,0.22)", color: "#cfc1f5",
-        }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="3" /><path d="M2 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1M16 3.5a3 3 0 0 1 0 7M22 21v-1a5 5 0 0 0-4-4.9" /></svg>
-          2-player
-        </span>
-      )}
+  // ---- Play shelf (manifest-driven from GAME_CATALOG) + its coming-soon gate ----
+  const [catalogGate, setCatalogGate] = useState(null);
+  const [catalogPw, setCatalogPw] = useState("");
+  const [catalogErr, setCatalogErr] = useState(false);
+  const openCatalogGame = (g) => {
+    const fn = props[g.handler];
+    if (!fn) { onGames && onGames(); return; }
+    if (g.soon) { setCatalogGate(() => fn); setCatalogPw(""); setCatalogErr(false); return; }
+    fn();
+  };
+  const submitCatalogPw = () => {
+    if (catalogPw === "1111") { const go = catalogGate; setCatalogGate(null); setCatalogPw(""); setCatalogErr(false); if (go) go(); }
+    else setCatalogErr(true);
+  };
+
+  // ---- shelf card (Play): art-slot image from GAME_CATALOG, no hardcoded art ----
+  const shelfCardStyle = {
+    flex: "0 0 auto", width: phone ? 150 : 176, textAlign: "left", padding: 0, borderRadius: 18,
+    border: HOME_CARD_BORDER, background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
+    overflow: "hidden", boxShadow: HOME_SHADOW, scrollSnapAlign: "start",
+  };
+  const PlayShelfCard = ({ g }) => (
+    <button onClick={() => openCatalogGame(g)} style={{ ...shelfCardStyle, opacity: g.soon ? 0.65 : 1 }}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${g.color}, ${g.color}99)` }}>
+        {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        {g.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
+        {g.multiplayer && <span style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>Multiplayer</span>}
+      </div>
+      <div style={{ padding: "9px 11px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 3, background: g.color, flex: "0 0 auto" }} />
+          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{g.category}</div>
+      </div>
     </button>
   );
 
+  // ---- shelf card (Learn): Session LS2, switched on in LS4. Until the owner
+  // flips the Lessons switch on /lesson-review the tile is visible but opens the
+  // same 1111 preview gate the Play shelf and the Stories tile use, so no kid
+  // reaches a lesson before he has approved what is behind it. Once he flips it,
+  // the same tile becomes an ordinary card that opens the section. ----
+  const LEARN_ITEMS = [
+    lessonsLive
+      ? { id: "lessons", title: "Lessons", sub: "Math and reading, at your own pace", grad: "linear-gradient(160deg,#8A6BFF,#FF6B6B)", glyph: <SchoolGlyph />,
+          onClick: onLessons }
+      : { id: "lessons", title: "Lessons", sub: "Coming soon", grad: "linear-gradient(160deg,#8A6BFF,#FF6B6B)", glyph: <SchoolGlyph />, soon: true, gated: true,
+          onClick: () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
+  ];
+
+  // ---- shelf card (Make): the creation tools this Home already exposes ----
+  const MAKE_ITEMS = [
+    { id: "song", title: "Make a song", sub: "Sing about anything", color: "#6A4FE0", grad: "linear-gradient(160deg,#8A6BFF,#6A4FE0)", glyph: <NoteGlyph />, onClick: onMusic },
+    { id: "sound", title: "Sound Machine", sub: "Silly sounds & explosions", color: "#F0577E", grad: "linear-gradient(160deg,#FF8FB1,#F0577E)", glyph: <SpeakerGlyph />, onClick: onSounds },
+    { id: "art", title: "Make art", sub: "Draw, stamp & mirror", color: "#1098AD", grad: "linear-gradient(160deg,#22B8CF,#1098AD)", glyph: <ArtGlyph />, onClick: onArt },
+    // Stories is COMING SOON while the art relaunch finishes: the tile stays visible
+    // but opens the same 1111 preview gate the Play shelf uses (owner QA only).
+    { id: "story", title: "Make a story", sub: "Coming soon", color: "#E0578F", grad: "linear-gradient(160deg,#F2789E,#E0578F)", glyph: <BookGlyph />, soon: true, gated: true, onClick: () => { setCatalogGate(() => onStories); setCatalogPw(""); setCatalogErr(false); } },
+    { id: "game", title: "Make a game", sub: "Coming soon", color: "#7A4FE0", grad: "linear-gradient(160deg,#A06BFF,#7A4FE0)", glyph: <WandGlyph />, onClick: onMakeGame, soon: true },
+  ];
+  // Make cards use the SAME shape as the Play shelf: 4:3 key art on top, title +
+  // one-liner underneath. Art comes from the shared image library (kind=make); the
+  // colored gradient + glyph stay underneath as the instant fallback.
+  const MakeShelfCard = ({ item }) => (
+    <button
+      onClick={item.soon && !item.gated ? undefined : item.onClick}
+      disabled={item.soon && !item.gated}
+      style={{ ...shelfCardStyle, opacity: item.soon ? 0.65 : 1, cursor: item.soon && !item.gated ? "default" : "pointer" }}
+    >
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: item.grad, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <AppIcon grad={item.grad} size={54}>{item.glyph}</AppIcon>
+        <img src={`/api/images?kind=make&id=${item.id}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        {item.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
+      </div>
+      <div style={{ padding: "9px 11px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 3, background: item.color, flex: "0 0 auto" }} />
+          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3 }}>{item.sub}</div>
+      </div>
+    </button>
+  );
+
+  // ---- shelf card (Explore): Kidspedia exhibits, art-slot hero image (Session 8G) ----
+  const approvedExhibits = exploreShelfItems();
+  const ExploreShelfCard = ({ ex }) => (
+    <button onClick={() => props.onExplore && props.onExplore(ex.id)} style={shelfCardStyle}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${ex.color}, ${ex.color}99)` }}>
+        <img src={/^(\/|https?:)/.test(ex.heroArt) ? ex.heroArt : `/api/images?kind=explore&id=${encodeURIComponent(ex.heroArt)}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      </div>
+      <div style={{ padding: "9px 11px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 3, background: ex.color, flex: "0 0 auto" }} />
+          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.title}</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{ex.id === "kidspedia" ? "Books" : "Kidspedia"}</div>
+      </div>
+    </button>
+  );
+
+  const sectionTitle = { fontFamily: FRED, fontWeight: 700, fontSize: 17, color: HOME_INK };
+  const shelfRow = { display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollSnapType: "x proximity", paddingBottom: 6, marginBottom: 26 };
+
   return (
-    <div style={{ ...styles.container, padding: phone ? "16px 14px 90px" : "24px 20px 100px" }}>
+    <div style={{ minHeight: "100vh", background: HOME_BG, padding: phone ? "16px 14px 96px" : "24px 20px 108px", fontFamily: NUN, color: HOME_INK }}>
       <div style={{ width: "100%", maxWidth: maxW, margin: "0 auto" }}>
 
-        {/* top bar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
-          <div>
-            {activeKid && (
-              <span style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)",
-                borderRadius: 999, padding: "7px 14px 7px 7px", fontFamily: NUN, fontWeight: 800,
-                fontSize: 14, color: "#fff",
-              }}>
-                <span style={{
-                  width: 26, height: 26, borderRadius: "50%", background: pillGrad(activeKid.display_name),
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: FRED, fontSize: 13, fontWeight: 700, color: "#fff",
-                }}>{initial(activeKid.display_name)}</span>
-                Playing as {activeKid.display_name}
-              </span>
+        {/* ---- 1. Header: avatar, name, streak, bell (notifications), coins ---- */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+            <span style={{
+              width: 52, height: 52, borderRadius: "50%", background: pillGrad(activeKid && activeKid.display_name),
+              display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              fontFamily: FRED, fontSize: 22, fontWeight: 700, color: "#fff", boxShadow: "0 6px 16px rgba(58,46,77,0.22)",
+            }}>{initial(activeKid && activeKid.display_name)}</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 20 : 24, color: HOME_INK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Hi, {kidName}!</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, fontSize: 13, fontWeight: 700, color: HOME_SUB }}>
+                <StreakGlyph />
+                {streakDays > 0 ? `${streakDays} day streak` : "Start a streak today"}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <button onClick={onHelper} aria-label="Your buddy" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", border: "1px solid rgba(58,46,77,0.12)", cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><BuddyGlyph size={22} /></button>
+            {onSwitchPlayer && (
+              <button onClick={onSwitchPlayer} aria-label="Switch player" title="Switch player" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: HOME_INK, cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><SwitchPlayerGlyph /></button>
             )}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={onMyStuff} aria-label="My Stuff" style={NAV_ICON_BTN}><StuffGlyph /></button>
+            <button onClick={onMyStuff} aria-label="My Stuff" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: HOME_INK, cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><StuffGlyph /></button>
             <GrownUpButton onGrownUp={onGrownUp} compact />
-            <FriendsPill chessTurns={chessTurns} onChess={onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} compact />
+            <FriendsPill chessTurns={chessTurns} onChess={onChessResume || onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} compact />
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 6, background: "#fff",
+              border: "1px solid rgba(240,151,42,0.30)", borderRadius: 999, padding: "9px 14px",
+              fontFamily: NUN, fontWeight: 800, fontSize: 15, color: "#8A5A00", boxShadow: "0 3px 10px rgba(58,46,77,0.08)",
+            }}><CoinGlyph size={18} />{coins}</span>
           </div>
         </div>
 
-        {/* welcome */}
-        <div style={{ marginBottom: 20 }}>
+        {/* ---- 2. Buddy moment: conditional + dismissible, never a permanent fixture ---- */}
+        {buddyMoment && (
           <div style={{
-            fontFamily: FRED, fontWeight: 700, fontSize: phone ? 28 : 36, lineHeight: 1.08,
-            background: "linear-gradient(90deg,#bfa6f5,#e98fb3)", WebkitBackgroundClip: "text",
-            backgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}>Welcome back, {kidName}!</div>
-          <div style={{ fontSize: phone ? 14 : 16, color: "#b8b3d0", fontWeight: 600, marginTop: 4 }}>Let's make something fun today.</div>
-        </div>
+            position: "relative", display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 18,
+            background: "linear-gradient(135deg, rgba(155,126,221,0.10), rgba(224,87,143,0.10))",
+            border: "1px solid rgba(155,126,221,0.28)", borderRadius: 18, padding: "14px 40px 14px 14px",
+          }}>
+            <span style={{ width: 42, height: 42, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", display: "flex", alignItems: "center", justifyContent: "center" }}><BuddyGlyph size={24} /></span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: HOME_INK }}>Hi {kidName}!</div>
+              <div style={{ fontSize: 13, color: "#5C5470", marginTop: 2, lineHeight: 1.4 }}>{buddyMoment.text}</div>
+            </div>
+            <button onClick={() => dismissBuddy(buddyMoment.id)} aria-label="Dismiss" style={{ position: "absolute", top: 10, right: 10, width: 24, height: 24, borderRadius: "50%", border: "none", background: "rgba(58,46,77,0.10)", color: HOME_INK, fontSize: 13, lineHeight: "14px", cursor: "pointer", padding: 0 }}>×</button>
+          </div>
+        )}
 
-        {/* your move card (multiplayer) */}
+        {/* ---- 3. Your move: pending multiplayer turns/invites ---- */}
         {chessTurns > 0 && (
-          <button onClick={onChess} style={{
-            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 18,
+          <button onClick={onChessResume || onChess} style={{
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
             display: "flex", gap: 12, alignItems: "center",
-            background: "linear-gradient(135deg, rgba(255,214,107,0.16), rgba(214,90,123,0.16))",
-            border: "1px solid rgba(255,214,107,0.45)", borderRadius: 16, padding: "12px 14px", color: "#fff", fontFamily: NUN,
+            background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.35)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
           }}>
             <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><ChessGlyph /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -1989,19 +3240,17 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
                 Your move in chess
                 <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#FFD66B", color: "#5a3d00", padding: "2px 7px", borderRadius: 999 }}>Your turn</span>
               </div>
-              <div style={{ fontSize: 12, color: "#d9cfb0" }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</div>
+              <div style={{ fontSize: 12, color: HOME_SUB }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</div>
             </div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Play →</span>
           </button>
         )}
 
-        {/* multiplayer invite alert (someone started a real-time game with this kid) */}
         {rtInvite && onJoinInvite && (
           <button onClick={() => onJoinInvite(rtInvite.match)} style={{
-            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 18,
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
             display: "flex", gap: 12, alignItems: "center",
-            background: "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(14,165,233,0.18))",
-            border: "1px solid rgba(52,211,153,0.5)", borderRadius: 16, padding: "12px 14px", color: "#fff", fontFamily: NUN,
+            background: "#EAFBF3", border: "1px solid rgba(52,211,153,0.4)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
           }}>
             <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><ControllerGlyph /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -2009,19 +3258,17 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
                 {rtInvite.hostName} wants to play {rtInvite.gameTitle}!
                 <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#34D399", color: "#053d2b", padding: "2px 7px", borderRadius: 999 }}>Invite</span>
               </div>
-              <div style={{ fontSize: 12, color: "#bfe9d8" }}>Tap to join and play together</div>
+              <div style={{ fontSize: 12, color: HOME_SUB }}>Tap to join and play together</div>
             </div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#34D399", color: "#053d2b", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Join →</span>
           </button>
         )}
 
-        {/* friend invites (NEW cross-account system) — "X wants to play Y" */}
         {friendInvites && friendInvites.map((iv) => (
           <button key={"fic_" + iv.id} onClick={() => onJoinFriendInvite && onJoinFriendInvite(iv)} style={{
-            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 18,
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
             display: "flex", gap: 12, alignItems: "center",
-            background: "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(14,165,233,0.18))",
-            border: "1px solid rgba(52,211,153,0.5)", borderRadius: 16, padding: "12px 14px", color: "#fff", fontFamily: NUN,
+            background: "#EAFBF3", border: "1px solid rgba(52,211,153,0.4)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
           }}>
             <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><ControllerGlyph /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -2029,19 +3276,17 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
                 {iv.fromName} wants to play {FRIEND_GAME_TITLES[iv.game] || "a game"}!
                 <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#34D399", color: "#053d2b", padding: "2px 7px", borderRadius: 999 }}>Invite</span>
               </div>
-              <div style={{ fontSize: 12, color: "#bfe9d8" }}>Tap to join and play together</div>
+              <div style={{ fontSize: 12, color: HOME_SUB }}>Tap to join and play together</div>
             </div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#34D399", color: "#053d2b", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Join &rarr;</span>
           </button>
         ))}
 
-        {/* friend turn-based "your move" (NEW cross-account system) */}
         {friendTurns && friendTurns.map((m) => (
           <button key={"ftc_" + m.id} onClick={() => onOpenFriendMatch && onOpenFriendMatch(m)} style={{
-            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 18,
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
             display: "flex", gap: 12, alignItems: "center",
-            background: "linear-gradient(135deg, rgba(255,214,107,0.16), rgba(214,90,123,0.16))",
-            border: "1px solid rgba(255,214,107,0.45)", borderRadius: 16, padding: "12px 14px", color: "#fff", fontFamily: NUN,
+            background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.35)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
           }}>
             <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><ChessGlyph /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -2049,32 +3294,32 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
                 Your move in {FRIEND_GAME_TITLES[m.game] || "a game"}
                 <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#FFD66B", color: "#5a3d00", padding: "2px 7px", borderRadius: 999 }}>Your turn</span>
               </div>
-              <div style={{ fontSize: 12, color: "#d9cfb0" }}>A friend is waiting on you</div>
+              <div style={{ fontSize: 12, color: HOME_SUB }}>A friend is waiting on you</div>
             </div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Play &rarr;</span>
           </button>
         ))}
 
-        {/* jump back in */}
+        {/* ---- 4. Jump back in: this kid's most recent creations ---- */}
         {jumpItems.length > 0 && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
-              <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: "#fff" }}>Jump back in</span>
+              <span style={sectionTitle}>Jump back in</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${jumpItems.length}, 1fr)`, gap: 10, marginBottom: 22 }}>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${jumpItems.length}, 1fr)`, gap: 10, marginBottom: 24 }}>
               {jumpItems.map((it) => {
                 const tag = KIND_TAG[it.kind];
                 return (
                   <button key={it.kind + it.id} onClick={it.open} style={{
-                    borderRadius: 15, overflow: "hidden", border: "1px solid rgba(155,126,221,0.22)",
-                    background: "#13111f", cursor: "pointer", textAlign: "left", padding: 0, color: "#fff", fontFamily: NUN,
+                    borderRadius: 15, overflow: "hidden", border: HOME_CARD_BORDER,
+                    background: HOME_CARD, cursor: "pointer", textAlign: "left", padding: 0, color: HOME_INK, fontFamily: NUN, boxShadow: HOME_SHADOW,
                   }}>
                     <div style={{ height: phone ? 64 : 80, position: "relative", background: it.thumbnail ? `center/cover no-repeat url(${it.thumbnail})` : it.color }}>
-                      <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: "rgba(0,0,0,0.45)", padding: "2px 7px", borderRadius: 999 }}>{tag.label}</span>
+                      <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: "#fff", padding: "2px 7px", borderRadius: 999 }}>{tag.label}</span>
                     </div>
                     <div style={{ padding: "8px 10px" }}>
                       <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</div>
-                      <div style={{ fontSize: 11, color: "#8e89a8" }}>Your {it.kind}</div>
+                      <div style={{ fontSize: 11, color: HOME_SUB }}>Your {it.kind}</div>
                     </div>
                   </button>
                 );
@@ -2083,21 +3328,64 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
           </>
         )}
 
-        {/* what do you want to make */}
-        <div style={{ fontFamily: FRED, fontWeight: 600, fontSize: 16, color: "#fff", marginBottom: 11 }}>What do you want to make?</div>
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${makeCols}, 1fr)`, gap: 12, marginBottom: 26 }}>
-          <MakeTile grad="linear-gradient(160deg,#3DD06A,#2BB14F)" glyph={<ControllerGlyph />} title="Play a game" sub="Ready-to-play games" tag onClick={onGames} />
-          <MakeTile grad="linear-gradient(160deg,#F2789E,#E0578F)" glyph={<BookGlyph />} title="Make a story" sub="A living picture book" onClick={onStories} />
-          <MakeTile grad="linear-gradient(160deg,#8A6BFF,#6A4FE0)" glyph={<NoteGlyph />} title="Make a song" sub="Sing about anything" onClick={onMusic} />
-          <MakeTile grad="linear-gradient(160deg,#FF8FB1,#F0577E)" glyph={<SpeakerGlyph />} title="Sound Machine" sub="Silly sounds & explosions" onClick={onSounds} />
-          <MakeTile grad="linear-gradient(160deg,#22B8CF,#1098AD)" glyph={<ArtGlyph />} title="Make art" sub="Draw, stamp & mirror" onClick={onArt} />
-          <MakeTile grad="linear-gradient(160deg,#A06BFF,#7A4FE0)" glyph={<WandGlyph />} title="Make a game" sub="Coming soon" soon onClick={onMakeGame} />
+        {/* ---- 5. Today's Brain Boost: Learning Mode only, "done" state stays visible ---- */}
+        {learningOn && (
+          <div style={{ marginBottom: 26, background: HOME_CARD, border: HOME_CARD_BORDER, borderRadius: 18, padding: "16px 16px 14px", boxShadow: HOME_SHADOW }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#FFC75A,#F0972A)", display: "flex", alignItems: "center", justifyContent: "center" }}><TrophyGlyph /></span>
+                <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: HOME_INK }}>Today's Brain Boost</span>
+              </div>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.3)", borderRadius: 999, padding: "5px 10px", fontWeight: 800, fontSize: 12, color: "#8A5A00" }}>
+                <CoinGlyph size={14} />+10
+              </span>
+            </div>
+            <div style={{ marginTop: 12, height: 10, borderRadius: 999, background: "rgba(58,46,77,0.08)", overflow: "hidden" }}>
+              <div style={{ height: "100%", borderRadius: 999, width: `${Math.min(100, Math.round((brainBoost.count / Math.max(1, brainBoost.goal)) * 100))}%`, background: "linear-gradient(90deg,#F0972A,#FFC75A)", transition: "width 0.3s ease" }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{Math.min(brainBoost.count, brainBoost.goal)} of {brainBoost.goal} questions today</span>
+              {brainBoost.done && <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#DFF6E8", color: "#1C8F5A", padding: "3px 9px", borderRadius: 999 }}>Done for today</span>}
+            </div>
+          </div>
+        )}
+
+        {/* ---- 6. Play shelf: manifest-driven from GAME_CATALOG, side-scrolling ---- */}
+        <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Play</span></div>
+        <div style={shelfRow}>
+          {GAME_CATALOG.filter((g) => g.type === "game").map((g) => <PlayShelfCard key={g.id} g={g} />)}
         </div>
 
-        {/* trending from other kids — always shown */}
+        {/* ---- 7. Make shelf: creation tools, same side-scrolling treatment ---- */}
+        <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Make</span></div>
+        <div style={shelfRow}>
+          {MAKE_ITEMS.map((item) => <MakeShelfCard key={item.id} item={item} />)}
+        </div>
+
+        {/* ---- 7b. Explore shelf: Kidspedia exhibits, only when there is at least one approved ---- */}
+        {approvedExhibits.length > 0 && (
+          <>
+            <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Explore</span></div>
+            <div style={shelfRow}>
+              {approvedExhibits.map((ex) => <ExploreShelfCard key={ex.id} ex={ex} />)}
+            </div>
+          </>
+        )}
+
+        {/* ---- 7c. Learn shelf: the Lessons section (Session LS2) ---- */}
+        {onLessons && (
+          <>
+            <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Learn</span></div>
+            <div style={shelfRow}>
+              {LEARN_ITEMS.map((item) => <MakeShelfCard key={item.id} item={item} />)}
+            </div>
+          </>
+        )}
+
+        {/* ---- 8. Trending from other kids ---- */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: "#fff" }}>Trending from other kids</span>
-          {trending.length > 0 && <button onClick={onTop} style={{ background: "none", border: "none", color: "#bfa6f5", fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all →</button>}
+          <span style={sectionTitle}>Trending from other kids</span>
+          {trending.length > 0 && <button onClick={onTop} style={{ background: "none", border: "none", color: "#6A4FE0", fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all →</button>}
         </div>
         {trending.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2105,64 +3393,50 @@ function HomeScreen({ activeKid, onMusic, onGames, onMakeGame, onStories, onArt,
               const tag = KIND_TAG[it.kind] || KIND_TAG.game;
               return (
                 <button key={it.kind + it.id} onClick={onTop} style={{
-                  display: "flex", alignItems: "center", gap: 11, background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.10)", borderRadius: 13, padding: "9px 11px",
-                  cursor: "pointer", color: "#fff", fontFamily: NUN, textAlign: "left",
+                  display: "flex", alignItems: "center", gap: 11, background: HOME_CARD,
+                  border: HOME_CARD_BORDER, borderRadius: 13, padding: "9px 11px", boxShadow: HOME_SHADOW,
+                  cursor: "pointer", color: HOME_INK, fontFamily: NUN, textAlign: "left",
                 }}>
-                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: "#8e89a8", width: 14, flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: HOME_SUB, width: 14, flexShrink: 0 }}>{i + 1}</span>
                   <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: it.thumbnail ? `center/cover no-repeat url(${it.thumbnail})` : (it.cover_color || tag.bg) }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title || "Untitled"}</div>
-                    <div style={{ fontSize: 11, color: "#8e89a8" }}>by {it.creator || "a kid"}</div>
+                    <div style={{ fontSize: 11, color: HOME_SUB }}>by {it.creator || "a kid"}</div>
                   </div>
                   <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: tag.bg, padding: "3px 8px", borderRadius: 999, flexShrink: 0 }}>{tag.label}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#C23E72" }}><HeartGlyph />{it.heart_count || 0}</span>
                 </button>
               );
             })}
           </div>
         ) : (
           <button onClick={onTop} style={{
-            width: "100%", textAlign: "center", cursor: "pointer", color: "#cfc9e6", fontFamily: NUN,
-            background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(155,126,221,0.35)", borderRadius: 14, padding: "20px 16px",
+            width: "100%", textAlign: "center", cursor: "pointer", color: HOME_SUB, fontFamily: NUN,
+            background: HOME_CARD, border: "1px dashed rgba(58,46,77,0.22)", borderRadius: 14, padding: "20px 16px",
           }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: "#fff", marginBottom: 4 }}>No top projects yet</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: HOME_INK, marginBottom: 4 }}>No top projects yet</div>
             <div style={{ fontSize: 13 }}>Make something and publish it to be the first on the board!</div>
           </button>
         )}
 
       </div>
 
-      {/* floating helper — the kid's own helper character, friendly + floating */}
-      {!helperHidden && (
-        <div style={{ position: "fixed", right: phone ? 14 : 22, bottom: phone ? 14 : 22, zIndex: 9000, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, fontFamily: NUN }}>
-          {helperOpen && (
-            <div style={{ maxWidth: 250, background: "#1b1830", border: "1px solid rgba(155,126,221,0.4)", borderRadius: "16px 16px 4px 16px", padding: "12px 14px", color: "#e9e5f7", boxShadow: "0 12px 34px rgba(0,0,0,0.55)", position: "relative", animation: "bkpop 0.18s ease-out" }}>
-              <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>Hi {kidName}!</div>
-              <div style={{ fontSize: 13, lineHeight: 1.45 }}>{helperLine}</div>
-              <button onClick={onHelper} style={{ marginTop: 9, background: "rgba(155,126,221,0.18)", border: "1px solid rgba(155,126,221,0.4)", color: "#cfc1f5", fontFamily: NUN, fontWeight: 800, fontSize: 12, borderRadius: 999, padding: "6px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 3l2.2 6.3L22 11l-6.8 1.7L13 19l-2.2-6.3L4 11l6.8-1.7z" /><path d="M5 4v3M3.5 5.5h3" /></svg>
-                Helper Lab
-              </button>
+      {/* coming-soon gate for the Play shelf (same 1111 QA gate as the full picker) */}
+      {catalogGate && (
+        <div onClick={() => setCatalogGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(58,46,77,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9500, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 340, background: "#fff", border: HOME_CARD_BORDER, borderRadius: 24, padding: "26px 22px", fontFamily: NUN, color: HOME_INK, boxShadow: "0 18px 50px rgba(58,46,77,0.30)" }}>
+            <div style={{ fontFamily: FRED, fontSize: 22, fontWeight: 700, textAlign: "center" }}>Coming soon</div>
+            <div style={{ fontSize: 14, color: HOME_SUB, textAlign: "center", marginTop: 8 }}>Enter the password to preview this game.</div>
+            <input value={catalogPw} onChange={(e) => { setCatalogPw(e.target.value); setCatalogErr(false); }} onKeyDown={(e) => { if (e.key === "Enter") submitCatalogPw(); }} type="password" inputMode="numeric" autoFocus placeholder="Password" style={{ width: "100%", boxSizing: "border-box", marginTop: 16, padding: "12px 14px", borderRadius: 14, border: catalogErr ? "2px solid #E0578F" : "1px solid rgba(58,46,77,0.2)", background: "#FFF8EE", color: HOME_INK, fontFamily: NUN, fontSize: 18, textAlign: "center", letterSpacing: "4px" }} />
+            {catalogErr && <div style={{ color: "#C23E72", fontSize: 13, textAlign: "center", marginTop: 8 }}>Wrong password. Try again.</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+              <button onClick={() => setCatalogGate(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid rgba(58,46,77,0.2)", background: "transparent", color: HOME_SUB, fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Cancel</button>
+              <button onClick={submitCatalogPw} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "linear-gradient(160deg,#9B7BFF,#67E8F9)", color: "#12102a", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Enter</button>
             </div>
-          )}
-          <div style={{ position: "relative" }}>
-            <button onClick={() => setHelperOpen((o) => { const n = !o; if (n) { speakHelper(); try { localStorage.setItem("bk_buddy_last_greet", String(Date.now())); } catch (e) {} } return n; })} aria-label={"Talk to " + helperName} className="bk-float" style={{
-              display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer",
-              padding: "5px 14px 5px 5px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.22)",
-              background: "rgba(27,24,48,0.92)", boxShadow: "0 8px 22px rgba(0,0,0,0.4)",
-              fontFamily: NUN, fontWeight: 800, fontSize: 13, color: "#e9e5f7",
-            }}>
-              <span style={{
-                width: 34, height: 34, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
-                border: "2px solid rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center",
-                background: helperImg ? `center/cover no-repeat url(${helperImg})` : "linear-gradient(135deg,#9b7edd,#6f5bd6)",
-              }}>{!helperImg && <BuddyGlyph size={20} />}</span>
-              Ask me
-            </button>
-            <button onClick={() => setHelperHidden(true)} aria-label="Hide helper" style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "2px solid #0a0a14", background: "#3a3550", color: "#fff", fontSize: 12, lineHeight: "14px", cursor: "pointer", padding: 0 }}>×</button>
           </div>
         </div>
       )}
+
     </div>
   );
 }
@@ -2188,7 +3462,9 @@ function HelperLabScreen({ activeKid, onHome, onDone }) {
   };
   const finish = () => {
     const helper = { name: (pending && pending.name) || "Buddy", image: (pending && pending.image) || null, description: (pending && pending.description) || "", voice };
-    saveKidHelper(activeKid, helper);
+    // saveKidHelper logs + rethrows a failed DB save so it is visible; the local
+    // copy is already written, so let the UI proceed and just catch the reject.
+    Promise.resolve(saveKidHelper(activeKid, helper)).catch(() => {});
     onDone(activeKid ? { ...activeKid, helper } : null);
   };
   const PlayDot = () => (<svg width="11" height="11" viewBox="0 0 10 10" aria-hidden="true" style={{ marginRight: 4 }}><path d="M2 1 L9 5 L2 9 Z" fill="currentColor" /></svg>);
@@ -2232,16 +3508,16 @@ function HelperLabScreen({ activeKid, onHome, onDone }) {
   );
 }
 
-function TypingScreen({ onHome }) {
+function TypingScreen({ onHome, level }) {
   // Learning Mode: one quick question before the typing game opens. Shows once
   // per entry; Skip/pass both proceed so a kid is never trapped. Off by default.
   const [gate, setGate] = useState(() => getLearningSettings().enabled);
   if (gate) {
     return (
-      <QuizGate
+      <QuickGame
         goal={getLearningSettings().goal}
         gameType="typing"
-        title="One quick question first!"
+        title="One quick game first!"
         onPass={() => setGate(false)}
       />
     );
@@ -2259,14 +3535,14 @@ function TypingScreen({ onHome }) {
       >← Home</button>
       <iframe
         title="Buildable Typing"
-        src="/typing.html"
+        src={"/typing.html?v=2" + (level != null ? "&level=" + level : "")}
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
   );
 }
 
-function ChessScreen({ onHome, onPlayFriend }) {
+function ChessScreen({ onHome, onPlayFriend, start }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "chessPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
@@ -2282,14 +3558,14 @@ function ChessScreen({ onHome, onPlayFriend }) {
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       <iframe
         title="Buildable Chess"
-        src="/buildable-chess.html?v=5"
+        src={"/buildable-chess.html?v=6" + (start ? ("&" + start) : "")}
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
   );
 }
 
-function CheckersScreen({ onHome, onPlayFriend }) {
+function CheckersScreen({ onHome, onPlayFriend, diff }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "checkersPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
@@ -2305,7 +3581,7 @@ function CheckersScreen({ onHome, onPlayFriend }) {
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       <iframe
         title="Buildable Checkers"
-        src="/buildable-checkers.html?v=2"
+        src={"/buildable-checkers.html?v=3" + (diff != null ? "&diff=" + diff : "")}
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>
