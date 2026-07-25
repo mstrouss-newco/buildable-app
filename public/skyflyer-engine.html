@@ -548,9 +548,15 @@ var seabed=null;
 if(SEA){
   var ripple=makeRippleTexture();
   if(ripple){ M.ground.map=ripple; M.ground.needsUpdate=true; }
+  // AR1d — HOW SEE-THROUGH, EXACTLY.
+  // At 0.74 with depth writing off, the sea stopped hiding anything: from a low
+  // angle the flat sand shelf showed through as a pane of glass and ate the near
+  // half of the island, and moored boats sat visibly UNDER the surface. At 0.9
+  // with depth writing back ON the water occludes properly again; what is left
+  // is a hint of the shelf rising, which is all the depth cue it ever needed.
   M.ground.transparent=true;
-  M.ground.opacity=0.74;
-  M.ground.depthWrite=false;      // never hide the sand standing in it
+  M.ground.opacity=0.90;
+  M.ground.depthWrite=true;
   var deep=new THREE.Color(world.ground).multiplyScalar(0.34);
   seabed=new THREE.Mesh(new THREE.PlaneGeometry(GROUND_SIZE*1.2,GROUND_SIZE*1.2),
     new THREE.MeshBasicMaterial({color:deep,fog:true}));
@@ -559,7 +565,6 @@ if(SEA){
   scene.add(seabed);
 }
 var groundMesh=new THREE.Mesh(groundGeo,M.ground);
-groundMesh.renderOrder=2;         // drawn after the sand it has to reveal
 scene.add(groundMesh);
 var gPos=groundGeo.attributes.position;
 var gBase=gPos.array.slice();
@@ -818,12 +823,12 @@ function dressPads(){
     var dk2=inst("deck",null,8);
     if(dk2){ dk2.position.set(PAD_R+19,0.35,0); dk2.rotation.y=Math.PI/2; g.add(dk2); }
     var bt=inst(r()>0.5?"sail":"speed",null,9+r()*4);
-    if(bt){ bt.position.set(PAD_R+21,-0.4,9); bt.rotation.y=r()*6.28;
+    if(bt){ bt.position.set(PAD_R+21,0.55,9); bt.rotation.y=r()*6.28;
       bt.userData.bob=r()*6.28; g.add(bt); floaters.push(bt); }
     // buoys ringing the pad, so the approach reads from the air
     for(var b=0;b<5;b++){
       var ba=b/5*Math.PI*2+0.6, bu=inst(b%2?"buoy":"buoyB",4.6);
-      if(bu){ bu.position.set(Math.cos(ba)*(PAD_R+27),-0.5,Math.sin(ba)*(PAD_R+27));
+      if(bu){ bu.position.set(Math.cos(ba)*(PAD_R+27),0.4,Math.sin(ba)*(PAD_R+27));
         bu.rotation.y=r()*6.28; bu.userData.bob=r()*6.28; g.add(bu); floaters.push(bu); }
     }
     // NO approach arch. It was tried and it read as a croquet hoop dropped in
@@ -1156,7 +1161,7 @@ function dressIsle(isle){
       dd.rotation.y=da; isle.add(dd); }
     if(r()>0.35){
       var mo=inst(pick(r,["row","rowB","speed","fish"]),null,6+r()*3);
-      if(mo){ mo.position.set(Math.cos(da+0.5)*rad*1.1,-0.4,Math.sin(da+0.5)*rad*1.1);
+      if(mo){ mo.position.set(Math.cos(da+0.5)*rad*1.1,0.55,Math.sin(da+0.5)*rad*1.1);
         mo.rotation.y=da+1.4; mo.userData.bob=r()*6.28; isle.add(mo); floaters.push(mo); }
     }
     // a wreck on the sand, sometimes, because it is a better story than a prop
@@ -1199,7 +1204,7 @@ function dressChunk(ch){
     var bx=(r()-0.5)*CHUNK*0.9, bz=(r()-0.5)*CHUNK*0.9;
     var wx=ch.cx*CHUNK+bx, wz=ch.cz*CHUNK+bz;
     if(padTooClose(wx,wz)) continue;
-    boat.position.set(bx,-0.4,bz);
+    boat.position.set(bx,0.55,bz);
     boat.rotation.y=r()*Math.PI*2;
     boat.userData.bob=r()*6.28;
     ch.group.add(boat); floaters.push(boat);
@@ -1293,10 +1298,14 @@ function makeShallowTexture(){
   var c=document.createElement("canvas"); c.width=c.height=128;
   var x=c.getContext("2d");
   var g=x.createRadialGradient(64,64,2,64,64,64);
-  g.addColorStop(0.00,"rgba(255,255,255,0.90)");
-  g.addColorStop(0.34,"rgba(224,252,252,0.72)");
-  g.addColorStop(0.50,"rgba(150,235,244,0.46)");
-  g.addColorStop(0.74,"rgba(120,222,240,0.20)");
+  // Tuned DOWN hard: at full strength this washed a white blob across the
+  // island it was supposed to sit around. A lagoon is a tint on the water, not
+  // a light source. The middle is under the island anyway; only the outer half
+  // is ever seen.
+  g.addColorStop(0.00,"rgba(214,250,252,0.50)");
+  g.addColorStop(0.42,"rgba(186,244,250,0.40)");
+  g.addColorStop(0.60,"rgba(140,230,244,0.24)");
+  g.addColorStop(0.80,"rgba(120,222,240,0.09)");
   g.addColorStop(1.00,"rgba(120,222,240,0)");
   x.fillStyle=g; x.fillRect(0,0,128,128);
   return new THREE.CanvasTexture(c);
@@ -1413,8 +1422,13 @@ function buildFeature(r,big){
     hh=big?(15+r()*17):(4+r()*5);
     // AR1b: sand hill, grass only as a soft crown, and two flat rings on the
     // water so the island sits in a turquoise shallow with foam at its edge.
-    // no painted lagoon disc any more: the island's own underwater shelf, seen
-    // through half-transparent water, IS the lagoon
+    // The lagoon is painted again, because near-opaque water cannot show one on
+    // its own. It rides just clear of the swell and it is a GRADIENT, so it has
+    // no edge to give itself away, and it is keyed to the island's real size so
+    // the shallow ends where the shelf does.
+    var halo=new THREE.Mesh(haloGeo,M_HALO);
+    halo.scale.set(rad*3.6,1,rad*3.6); halo.position.y=2.9;
+    halo.renderOrder=3; g.add(halo);
     // AR1: the note the dressing layer reads. Recorded even when no models are
     // loaded, so the two code paths never drift apart.
     var note={seed:(Math.floor(rad*7919+hh*104729)%99991)+1,rad:rad,hh:hh,big:!!big,mock:[],spots:[]};
@@ -2643,7 +2657,7 @@ function drawScene(dt){
   if(floaters.length){
     for(var fb=0;fb<floaters.length;fb++){
       var fo=floaters[fb], ph=(fo.userData.bob||0)+spin*0.7;
-      fo.position.y=-0.4+Math.sin(ph)*0.45;
+      fo.position.y=0.55+Math.sin(ph)*0.32;   // rides ON the water, never under
       fo.rotation.z=Math.sin(ph*0.8)*0.05;
     }
   }
@@ -2797,6 +2811,15 @@ window.SKY={
     }
     return o;
   },
+  // Where every island actually is, so a harness can fly AT one and prove it
+  // stays on screen the whole way in.
+  isles:function(){ var out=[],key,i;
+    for(key in chunks){ var c=chunks[key];
+      for(i=0;i<c.isles.length;i++){ var o=c.isles[i];
+        out.push({x:c.group.position.x+o.position.x, z:c.group.position.z+o.position.z,
+          r:o.userData.hitR, h:o.userData.hitH, big:!!(o.userData.dress&&o.userData.dress.big),
+          vis:o.visible, kids:o.children.length}); } }
+    return out; },
   dressed:function(){ var t=0,d=0,key,i;
     for(key in chunks){ var c=chunks[key];
       for(i=0;i<c.isles.length;i++){ t++; if(c.isles[i].userData.dressed) d++; } }

@@ -320,9 +320,20 @@ chk('the island is ONE surface, sand below and grass above (no second dome to te
   /new THREE\.Mesh\(shape,\[topMat,M\.rock\]\)/.test(html));
 chk('a low sandbar stays bare sand, only a real island grows anything',
   /var topMat=\(hh>\d+\)\?\(r\(\)>0\.5\?M\.cap:M\.cap2\):M\.rock/.test(html));
-chk('the water is see-through over a real seabed (that is what puts an island IN the sea)',
+chk('the water sits over a real seabed, and hints at the shelf without becoming glass',
   /M\.ground\.transparent=true/.test(html) && /seabed=new THREE\.Mesh/.test(html) &&
-  /M\.ground\.depthWrite=false/.test(html));
+  /M\.ground\.opacity=0\.9/.test(html));
+// The bug Mike hit: at 0.74 with depth writing off the sea stopped occluding, so
+// from a low angle the flat sand shelf showed through and ate the near half of
+// the island. This is the check that keeps it from coming back.
+chk('THE WATER STILL HIDES WHAT IS UNDER IT (depth writing on, or islands vanish up close)',
+  /M\.ground\.depthWrite=true/.test(html) && !/groundMesh\.renderOrder/.test(html));
+chk('nothing that floats is left sitting under the surface',
+  !/position\.set\([^)]*,-0\.4,[^)]*\)/.test(html.split('function dressPads(')[1]||'') &&
+  /fo\.position\.y=0\.55\+/.test(html) && /boat\.position\.set\(bx,0\.55,bz\)/.test(html));
+chk('the lagoon is a soft gradient laid ON the water, keyed to the island size',
+  /halo\.scale\.set\(rad\*3\.6/.test(html) && /halo\.renderOrder=3/.test(html) &&
+  /createRadialGradient/.test(html));
 chk('the sea has a moving surface, painted in code (nothing to download)',
   /function makeRippleTexture\(/.test(html) && /CanvasTexture/.test(html) &&
   /M\.ground\.map\.offset\.set/.test(html));
@@ -331,7 +342,7 @@ chk('the ripple sheet is WHITE, so the manifest still owns the sea colour',
 chk('only the islands world got the swell and the ripples (other stops cannot move)',
   /var SEA=\(world\.terrain==="islands"\)/.test(html) && /if\(SEA\) h\+=/.test(html));
 chk('every island sits in a soft lagoon, not a hard-edged disc',
-  /function makeShallowTexture\(/.test(html) && /createRadialGradient/.test(html));
+  /function makeShallowTexture\(/.test(html));
 // The note that started this pass: "you have the whole kenney kit and we are
 // only using a few of one type." So the shelf SIZE is the check.
 const kitNames = [...html.matchAll(/^\s*(\w+):"([\w\-\/\.]+\.glb)",?$/gm)].map(m=>m[1]);
