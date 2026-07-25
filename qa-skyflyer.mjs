@@ -239,6 +239,45 @@ chk('the shared loader knows the skyflyer level profile', /skyflyer:\s*crocProfi
 // ---------------------------------------------------------------------------
 // 4) THE FLIGHT PROOF — the robot flies all three worlds for real
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// AR1) REAL 3D MODELS — the art layer for Sunny Islands.
+//
+// The rule this half defends: the models are ART SITTING ON TOP of a world that
+// still works without them. Every check below is either "the art really ships"
+// or "the world survives the art not arriving".
+// ---------------------------------------------------------------------------
+console.log('--- AR1: real Kenney models dress Sunny Islands ---');
+const kitFiles = [...html.matchAll(/^\s*(\w+):"([\w\-\/\.]+\.glb)",?$/gm)].map(m=>m[2]);
+chk('the engine names a real model kit (not a placeholder list)', kitFiles.length >= 10,
+  kitFiles.length+' models');
+const missing = kitFiles.filter(f => !fs.existsSync(dir+'/public/models/skyflyer/'+f));
+chk('every model the engine asks for is actually in the repo', missing.length===0, missing.join(' '));
+const kitDirs = [...new Set(kitFiles.map(f=>f.split('/')[0]))];
+chk('every kit ships its CC0 licence next to the models (Kenney terms)',
+  kitDirs.every(d => fs.existsSync(dir+'/public/models/skyflyer/'+d+'/License.txt')), kitDirs.join(', '));
+const texNeeded = kitDirs.filter(d => kitFiles.some(f=>f.startsWith(d+'/')) &&
+  fs.readdirSync(dir+'/public/models/skyflyer/'+d).includes('Textures'));
+chk('a textured kit keeps its OWN colour atlas (kits never share one by accident)',
+  texNeeded.every(d => fs.existsSync(dir+'/public/models/skyflyer/'+d+'/Textures/colormap.png')),
+  texNeeded.join(', '));
+const vercelAR = read('vercel.json');
+chk('the models are actually served in production (/models route, before the catch-all)',
+  /"src":\s*"\/models\/\(\.\*\)"/.test(vercelAR) &&
+  vercelAR.indexOf('"/models/(.*)"') < vercelAR.indexOf('"src": "/(.*)"'));
+chk('the engine loads a GLTF loader to read them', /<script src="\/GLTFLoader\.js"><\/script>/.test(html));
+chk('ONLY the islands world is dressed (the other two journey stops cannot move)',
+  /world\.terrain!=="islands"\|\|!renderer/.test(html));
+chk('the hand-built stand-in shapes are still there as the fallback (replace first, remove second)',
+  /function buildPalm\(/.test(html) && /function buildFeature\(/.test(html) && /d\.mock\[i\]\.visible=false/.test(html));
+chk('models are flattened to one draw call each before they are cloned (iPad budget)',
+  /function mergeByMaterial\(/.test(html) && /flat=mergeByMaterial\(root\)/.test(html));
+chk('an untextured model borrows the world palette, so FL4 recolouring still reaches it',
+  /o\.material=M\.stone;/.test(html));
+chk('the art can never hold the world hostage (the kit load has a timeout)',
+  /setTimeout\(function\(\)\{ left=0; finish\(\); \},\s*\d+\)/.test(html));
+chk('the boats are decoration only — nothing new to crash into',
+  !/floaters.*hitR|hitR.*floaters/.test(html));
+
 console.log('--- FLIGHT: autopilot proves every world beatable ---');
 let JSDOM = null;
 try { ({ JSDOM } = await import('jsdom')); } catch (e) { JSDOM = null; }
@@ -268,6 +307,14 @@ if (!JSDOM) {
     let t = 0;
     for (; t < MAX; t++) { w.SKY.tick(1/30); if (w.SKY.beaten()) break; }
     const s = w.SKY.snapshot();
+    if (i === 0) {
+      // AR1: this DOM has no WebGL at all. The kit must refuse to start and the
+      // island must still be a whole island built from the stand-in shapes.
+      const kit = w.SKY.kit(), dr = w.SKY.dressed();
+      chk('AR1: with no renderer the model kit never starts', kit.started===false && kit.on===false);
+      chk('AR1: the world is still full of islands without a single model loaded',
+        dr.isles > 0 && dr.dressed === 0, dr.isles+' islands, '+dr.dressed+' dressed');
+    }
     chk('world '+i+' "'+name+'" BEATEN by autopilot', s.beaten,
       'goal '+goals.coins+' coins + '+goals.landings+' landings  ->  got '+s.worldCoins+' coins, '+s.landings+' landings in '+(t/30).toFixed(0)+'s of flight');
     chk('world '+i+' banked its coins into the wallet', s.banked>0 && (w.BuildableWallet.balance()>0), 'banked='+s.banked+' wallet='+w.BuildableWallet.balance());
