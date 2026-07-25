@@ -1,6 +1,68 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-25: Session TB3 — Kidspedia topics 4-12 (nine new books, in-review)
+
+Phase TB, block TB3 only. Nine new topic books written on the TB1 `topic-book`
+template, taking the shelf from 3 books to 12 of the planned 20. No template code
+changed, no routes added: TB2 already listed all 20 ids in `public/explore/bookshelf.json`
+and replaced the per-book vercel routes with one alternation route, so a new book is
+now exactly one JSON file plus one `EXHIBIT_CATALOG` line.
+
+**The nine books** (`public/explore/{id}.json`, all `status: "in-review"`)
+
+| id | title | shelf | ambient |
+| --- | --- | --- | --- |
+| big-cats | Big Cats | Animals | forest |
+| penguins | Penguins & the Frozen Poles | Animals | wind |
+| bugs-butterflies | Bugs & Butterflies | Animals | forest |
+| snakes-reptiles | Snakes & Reptiles | Animals | jungle |
+| planets | The Planets | Out in space | space |
+| rockets | Rockets & Astronauts | Out in space | space |
+| volcanoes | Volcanoes | Our wild world | fire |
+| wild-weather | Wild Weather | Our wild world | rain |
+| deep-ocean | The Deep Ocean | Our wild world | ocean |
+
+Each is cover + 4 photo pages + finish spread, 3 facts per page, **36 facts per shelf
+row and 108 facts in this session, every single one carrying its own `source`** naming
+the institution where a grown-up can check it (NASA, JPL, ESA, NOAA / National Weather
+Service / NSSL / Ocean Exploration, USGS, Smithsonian, WHOI, MBARI, San Diego Zoo
+Wildlife Alliance, Australian Antarctic Program, British Antarctic Survey, Natural
+History Museum London, USDA Forest Service, Monarch Joint Venture, National Park
+Service). Facts were researched against those institutions rather than written from
+memory, and two claims were deliberately softened after checking: thunder is given as
+"about 10 miles" (the NWS safety figure) rather than the 25-mile outlier, and deep-sea
+pressure as "hundreds of times" rather than a bracket that undersold the abyssal floor.
+Voice matches sharks.json: picture-book, nothing scary, no emojis, no em dashes.
+
+**Tie-ins that light up on their own.** Wild Weather ships with its
+`"exhibit"` block to the live Weather Lab (`make-it-rain`) and The Deep Ocean with its
+link to Journey to the Deep (`ocean-deep`) — the two tie-ins `qa-topic.mjs` was written
+in TB2 to FAIL on if the book landed without them. Volcanoes carries no link yet and
+warns, as designed, until planner phase VL builds its exhibit.
+
+**Home / catalog.** Nine `EXHIBIT_CATALOG` entries added in `src/BuildableKids.jsx`, all
+`template: "topic-book"` and `status: "in-review"`, so they still collapse into the ONE
+"Kidspedia Books" card and that card still does not appear until a book is approved.
+
+**Art.** Mike generates the photos himself. A TB3 DALL-E prompt pack (45 prompts, shared
+photo-real style line, exact filenames, landscape) was delivered at the START of this
+session as `kidspedia-tb3-prompts.md` in the Buildable MVP folder, before any book was
+written. Images land in `kidspedia-photos/` and get converted to
+`public/explore/topic-photos/{id}/{id}-cover|1..4.webp`.
+
+**QA.** `qa-topic.mjs`, `qa-kidspedia.mjs`, `qa-explore.mjs`: ALL CHECKS PASS. The 13
+warnings are the known missing-WebP ones plus the volcanoes tie-in placeholder. No game
+engine was touched this session, so no game harness applied.
+
+**STILL OPEN in phase TB:** 8 books unwritten (TB4: rainforest, deserts, plants-grow,
+your-body, trains, diggers, castles-knights, ancient-egypt); `kidspedia-photos/` still
+does not exist on the Mac, so all 12 books and all 12 shelf covers paint colour panels;
+`db/create-saved-pages.sql` still needs running in Supabase before dog-ears sync across
+devices; all 12 books remain **in-review** until Mike fact-checks each and flips BOTH the
+json and its EXHIBIT_CATALOG line.
+
+
 ## 2026-07-25: Session FL1 — Sky Flyer playable 3D mock (shipped, awaiting Mike's feel check)
 
 Phase FL, block FL1 only. New `public/skyflyer-mock.html`: a standalone playable 3D
