@@ -981,7 +981,10 @@ function pickLibrary(spec, theme, cb){
         el("div",{class:"km"},[k.pieces+" pieces · "+String(k.dim||"").toUpperCase()]),
         btn
       ]);
-      if(pending) card.appendChild(el("div",{class:"kitnote"},["a card is waiting for the next build session"]));
+      // Asking never blocks: a kit already asked for still says where the real
+      // art lives in the bundle on Mike's Mac, so he can go and look meanwhile.
+      if(pending) card.appendChild(el("div",{class:"kitnote"},[
+        "a card is waiting for the next build session"+(k.folder?" · on your Mac: "+k.folder:"")]));
       return card;
     }
 

@@ -1,5 +1,66 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: Session KP3 — the add-to-app loop, closed where Mike stands
+
+Phase KP, block KP3 only. KP1 built the kit shelf and the catalog of all 241
+Kenney kits; KP2 finished the Tower Defense curation and dressed Castle Guard
+with it. KP3 closes the loop between "I want that kit" and "a session brings it
+in" — and moves the asking to the place Mike is actually standing when he wants
+it: inside a game's editor, in a slot with nothing good in it.
+
+**What shipped**
+
+- **"Add a kit" in the editor's Library picker.** Next to All / Studio / My Kits
+  / Packs there is now a dashed chip that is not a filter: it opens every kit
+  Mike owns but has not added, with the real preview, the piece count, 2D/3D, and
+  a search box over all 241. It is offered even when every other shelf is empty,
+  so a slot with nothing in it still has an honest next step.
+- **Add to app files ONE planner card and does nothing else.** No art moves, no
+  game is saved, no kit is quietly marked added. The card names the kit, tags it
+  `[kit:<slug>]`, points at the source folder in the bundle on Mike's Mac, and
+  carries the recipe so the next session does not have to guess.
+- **Asking never blocks.** The kit stays exactly where it was on the shelf. The
+  button becomes "Asked for", a note says a session is coming and where the real
+  art lives meanwhile, and Mike is told in plain words what just happened. A kit
+  that already has an open card cannot be asked for twice; a card already ticked
+  done stops counting as a request.
+- **One shared road.** `catalogKits`, `kitRequests`, `requestedSlugs` and
+  `requestKit` moved into `public/buildable-library.js`. The editor and the
+  Browse page both call them, so the card's shape cannot drift between the two
+  surfaces. Browse deleted its hand-rolled copy and gained the Mac-folder note.
+- **`KITS.md`** — the loop written down: where every part lives, the session
+  recipe for picking a `[kit:<slug>]` card up (including the SQL to find open
+  cards, since the sandbox cannot reach the live domain), and the five rules that
+  have already bitten someone (the bundle's own index lies; added means files not
+  a flag; one path per slug; pale art reads as an empty card; there is only one
+  import road).
+
+**QA**
+
+- `node qa-kits.mjs .` — **89 checks, ALL PASS.** New section 7 does not grep for
+  strings: it drives the real library functions against a stubbed planner with one
+  open card, one done card and one unrelated card, then inspects the card that
+  comes out as data — tag, name, folder, recipe, and that it survives the
+  planner's 500-character clip.
+- `node qa-kp3-add-a-kit.mjs .` — **new, 19 checks, ALL PASS.** Chromium opens
+  Castle Guard's editor as the owner, taps Library, taps Add a kit, searches, taps
+  Add to app, and the test asserts exactly one POST left the page, that it went to
+  `/api/planner`, that nothing touched `asset-studio` or `save-game`, and that the
+  kit is still on the shelf afterwards.
+- `node qa-castleguard.mjs .` — **one FAIL, pre-existing and untouched.** "12
+  levels line up with the engine": the manifest lists 4 levels, the engine has 12.
+  Verified identical at the previous commit (83e496e), so this session neither
+  caused nor fixed it. Fixing it means adding 8 level entries, which moves the
+  shell journey — Mike's call.
+
+**What remains in phase KP**
+
+- Only one kit (Tower Defense) is added, of 241 browsable. The loop is now the way
+  to grow that, one card at a time.
+- No `[kit:...]` card is open right now — the planner has none, so there is
+  nothing waiting for the next session to import.
+- The Castle Guard level-count FAIL above is still open and still needs a decision.
+
 ## 2026-07-25: Session TB5 — Topic book polish, narration fix, and six books go live
 
 Phase TB, block TB5 only. TB1 built the template, TB2 the bookshelf and

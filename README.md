@@ -6,6 +6,32 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session KP3 — Add a kit from inside the editor (July 25 2026)
+Closes the add-to-app loop where Mike actually stands. **The editor's Library
+picker has a new "Add a kit" shelf**: every Kenney kit he owns but has not added
+yet, with its real preview, its piece count, and a search box over all 241. One
+button — **Add to app** — files ONE planner card for the next build session and
+moves no art. The kit it asked for stays on the shelf, says "Asked for", and
+points at the source folder on his Mac so he can go and look while he waits.
+
+The four moves of the loop (`catalogKits`, `kitRequests`, `requestedSlugs`,
+`requestKit`) now live in `public/buildable-library.js`, so the editor and the
+Browse page file identical cards and can never drift; Browse dropped its
+hand-rolled copy. The card names the kit, tags it `[kit:<slug>]`, points at the
+bundle folder, and carries the recipe. `KITS.md` is the new written-down version
+of that recipe for the session that picks the card up.
+
+Proof: `qa-kits.mjs` gained a section that drives the real functions against a
+stubbed planner and inspects the card as data (89 checks, all pass), and
+`qa-kp3-add-a-kit.mjs` drives Chromium through the whole thing — open a game, tap
+Library, tap Add a kit, search, tap Add to app — and asserts exactly one POST
+went out, to the planner, with nothing else touched.
+
+**Known and NOT fixed:** `qa-castleguard.mjs` still fails its one pre-existing
+check (the manifest lists 4 levels, the engine has 12). Identical before and after
+this session — verified against the previous commit. Fixing it moves the shell
+journey, so it needs Mike's call.
+
 ## Session LS4 — Reading launch + placement + the live switch (July 25 2026)
 The launch block for Lessons. **19 hand-written reading and phonics lessons for
 K-2** are live (`READING_PLANS` in `api/_lessongen.js`), drafted through the real
