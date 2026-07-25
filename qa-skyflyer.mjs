@@ -43,10 +43,22 @@ chk('every world declares a coin goal AND a landing goal (so it is beatable)',
 chk('goals grow world by world', manifest.levels[0].parts.goalCoins < manifest.levels[2].parts.goalCoins);
 chk('coins feature on (shared wallet)', !!(manifest.features && manifest.features.coins));
 chk('single player (multiplayer off)', manifest.features.multiplayer==='off');
+// --- the hangar (Session FL3) ---
+const hangar = (manifest.customization||[])[0] || { options:[] };
+const rideOpts = hangar.options || [];
 chk('the hangar is a manifest customization slot (shell-owned, priced in the shell)',
-  Array.isArray(manifest.customization) && manifest.customization[0].slot==='Plane' && manifest.customization[0].options.length===3,
-  (manifest.customization[0].options||[]).map(o=>o.name+' @'+o.price).join(', '));
-chk('the free plane really is free (a kid can always fly)', manifest.customization[0].options[0].price===0);
+  Array.isArray(manifest.customization) && hangar.slot==='Ride' && rideOpts.length===3,
+  rideOpts.map(o=>o.name+' @'+o.price).join(', '));
+chk('the starter ride really is free (a kid can always fly)', rideOpts[0] && rideOpts[0].price===0);
+chk('the two extra rides cost shared-wallet coins', rideOpts[1] && rideOpts[1].price>0 && rideOpts[2] && rideOpts[2].price>rideOpts[1].price,
+  rideOpts.map(o=>o.price).join(' / '));
+chk('the hangar is three DIFFERENT things, not one thing three colours',
+  /copter/i.test(JSON.stringify(rideOpts)) && /jetpack/i.test(JSON.stringify(rideOpts)),
+  rideOpts.map(o=>o.name).join(', '));
+chk('every ride has a picture to show on its tile (no naked colour blocks)',
+  rideOpts.every(o=>typeof o.preview==='string' && o.preview) && rideOpts.every(o=>typeof o.blurb==='string' && o.blurb),
+  rideOpts.map(o=>o.preview).join(', '));
+chk('the customization screen calls itself the Hangar', manifest.loadoutTitle==='Hangar' && /before takeoff/i.test(manifest.loadoutBlurb||''));
 chk('no emojis in the manifest', !emoji.test(mText));
 const cfg = v.ok ? BM.toEngineConfig(manifest) : { levels:[] };
 chk('loader turns it into 3 engine levels', cfg.levels.length===3);
@@ -70,7 +82,19 @@ chk('autopilot flag for the QA robot (?auto=1)', /Q\.get\("auto"\)==="1"/.test(h
 chk('exposes the SKY handle with tick + autopilot + beaten', /window\.SKY\s*=/.test(html) && /tick:/.test(html) && /autopilot:/.test(html) && /beaten:/.test(html));
 chk('a crash is a SOFT BOUNCE, never a fail state', /soft bounce/.test(html) && !/game over/i.test(html) && !/you lose/i.test(html));
 chk('three worlds are declared in the engine', /sunny-islands/.test(html) && /snowy-peaks/.test(html) && /sunset-canyon/.test(html));
-chk('three rides are declared in the engine (the hangar)', /RIDES=\[/.test(html) && (html.match(/id:"(puffin|bluejay|sunhawk)"/g)||[]).length===3);
+chk('three rides are declared in the engine (the hangar)', /RIDES=\[/.test(html) && (html.match(/id:"(puffin|copter|jetpack)"/g)||[]).length===3);
+chk('each ride has its own body builder, not one mesh recoloured',
+  /function buildPlane\(/.test(html) && /function buildCopter\(/.test(html) && /function buildJetpack\(/.test(html));
+chk('each ride animates its own moving parts (propeller / rotors / jet flames)',
+  /rideAnim\(dt,S\.mode,time\)/.test(html) && /rotor\.rotation\.y/.test(html) && /flameMat/.test(html));
+chk('the ride drives the FEEL (turn, lean, bob), read from the ride not hardcoded',
+  /S\.dx\*ride\.turn/.test(html) && /-S\.dx\*ride\.bankAmt/.test(html) && /Math\.sin\(time\*ride\.bobRate\)\*ride\.bob/.test(html));
+chk('the autopilot turn circle follows the ride (a copter cuts inside a jetpack)',
+  /TURN_R=46\*\(\(ride\.speed\/ride\.turn\)\/20\)/.test(html));
+chk('the engine names the ride on screen (pick your ride, before takeoff)',
+  /rideNameEl\.textContent=ride\.name/.test(html) && /function showRideName\(/.test(html));
+chk('the engine still never learns a price (the shell owns the wallet)',
+  !/price/i.test(html.slice(html.indexOf('var RIDES=['), html.indexOf('var ride=RIDES'))));
 chk('progress saves in the shape the shell journey reads', /bk_skyflyer_prefs/.test(html));
 chk('no baked-in art URLs (art rule)', !/https?:\/\/[^"'\s]+\.(png|jpg|jpeg|webp)/i.test(html));
 chk('no emojis in the engine', !emoji.test(html));
@@ -83,6 +107,13 @@ const jsx = read('src/BuildableKids.jsx');
 chk('Sky Flyer is in the picker catalog', /id:\s*"skyflyer"/.test(jsx));
 chk('routed through the shared landing + journey + loadout', /skyflyer:\s*\{\s*play:\s*SCREEN_SKYFLYER,\s*loadout:\s*true,\s*journey:\s*true/.test(jsx));
 chk('the screen hands the engine the world and the ride', /SkyFlyerScreen/.test(jsx) && /readEquipped\("skyflyer"\)/.test(jsx) && /"&level="/.test(jsx));
+chk('a ride bought before FL3 is not lost when the slot was renamed',
+  /eq\.Ride === "number" \? eq\.Ride : \(typeof eq\.Plane === "number" \? eq\.Plane : 0\)/.test(jsx));
+chk('the hangar tiles draw a real picture of each ride (SVG geometry, no emoji)',
+  /const SLOT_PREVIEWS = \{/.test(jsx) && rideOpts.every(o=>jsx.indexOf('"'+o.preview+'"')>-1) && /function SlotPreview\(/.test(jsx));
+chk('the loadout screen takes its title from the manifest (so it can be a Hangar)',
+  /manifest\.loadoutTitle\) \|\| "Loadout"/.test(jsx) && /manifest\.loadoutBlurb\)/.test(jsx));
+chk('no emojis in the shell hangar previews', !emoji.test(jsx.slice(jsx.indexOf('const SLOT_PREVIEWS'), jsx.indexOf('function SlotPreview'))));
 chk('journey progress reads the default bk_{game}_prefs shape', /bk_"\s*\+\s*id\s*\+\s*"_prefs/.test(jsx));
 const vercel = JSON.parse(read('vercel.json'));
 const srcs = vercel.routes.map(r=>r.src);
@@ -148,13 +179,44 @@ if (!JSDOM) {
   const after = w.SKY.snapshot();
   chk('resume carries on exactly where it stopped', Math.hypot(after.x-during.x, after.z-during.z) > 1);
   w.close();
-  // a different ride still flies (the hangar cannot break the game)
-  const dom2 = fly(0, '&ride=2');
-  const w2 = dom2.window;
-  chk('a hangar ride other than the free one loads', w2.SKY.ride.id==='sunhawk', w2.SKY.ride.name);
-  let t2=0; for (; t2<MAX; t2++){ w2.SKY.tick(1/30); if(w2.SKY.beaten()) break; }
-  chk('world 0 is beatable on the Sun Hawk too', w2.SKY.beaten(), (t2/30).toFixed(0)+'s of flight');
-  w2.close();
+  // ------------------------------------------------------------------
+  // THE HANGAR PROOF (Session FL3) — every ride in the hangar has to be a
+  // real, flyable, world-beating ride. If a kid spends 120 coins on the
+  // Jetpack Kid and it turns too wide to ever meet a coin goal, that is the
+  // worst bug this game could have, so the robot buys each one and flies it.
+  // ------------------------------------------------------------------
+  console.log('--- HANGAR: every ride flies, and no ride is the "good" ride ---');
+  const flown = [];
+  for (let r = 0; r < 3; r++) {
+    const dr = fly(0, '&ride=' + r);
+    const wr = dr.window;
+    if (!wr.SKY) { chk('ride '+r+' booted', false, 'no SKY handle'); continue; }
+    const rd = wr.SKY.ride;
+    chk('ride '+r+' is "'+rd.name+'" and has its own body + feel',
+      rd.id === ['puffin','copter','jetpack'][r] && typeof rd.build === 'string' && typeof rd.turn === 'number',
+      rd.build+'  speed '+rd.speed+'  turn '+rd.turn);
+    chk('ride '+r+' "'+rd.name+'" matches the name the shell sells in the hangar',
+      rideOpts[r] && rideOpts[r].name === rd.name, 'hangar says "'+(rideOpts[r]||{}).name+'"');
+    let tr = 0;
+    for (; tr < MAX; tr++) { wr.SKY.tick(1/30); if (wr.SKY.beaten()) break; }
+    const sr = wr.SKY.snapshot();
+    chk('ride '+r+' "'+rd.name+'" BEATS Sunny Islands (the ride is a look, not a handicap)', sr.beaten,
+      sr.worldCoins+' coins, '+sr.landings+' landings in '+(tr/30).toFixed(0)+'s of flight');
+    chk('ride '+r+' "'+rd.name+'" banks its coins into the SAME shared wallet',
+      sr.banked>0 && wr.BuildableWallet.balance()>0, 'banked='+sr.banked);
+    flown.push({ id: rd.id, name: rd.name, secs: tr/30, circle: rd.speed/rd.turn, coins: sr.worldCoins });
+    wr.close();
+  }
+  // no ride may be strictly better: the fast one must turn wider than the slow one
+  if (flown.length === 3) {
+    const fast = flown.find(f=>f.id==='jetpack'), nimble = flown.find(f=>f.id==='copter');
+    chk('the fast ride pays for it with a wider turn (no pay-to-win ride)',
+      fast && nimble && fast.circle > nimble.circle,
+      flown.map(f=>f.name+' turn circle '+f.circle.toFixed(0)).join('  |  '));
+    const best = Math.min(...flown.map(f=>f.secs)), worst = Math.max(...flown.map(f=>f.secs));
+    chk('no ride is more than 3x faster at the same goal (they are looks, not power)',
+      worst <= best * 3, flown.map(f=>f.name+' '+f.secs.toFixed(0)+'s').join('  |  '));
+  }
 }
 
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
