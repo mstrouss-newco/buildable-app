@@ -283,6 +283,17 @@ const EXHIBIT_CATALOG = [
   { id: "sharks", title: "Sharks", topic: "ocean", color: "#1173B4", heroArt: "/explore/topic-photos/sharks/sharks-cover.webp", status: "in-review", template: "topic-book" },
   { id: "dinosaurs", title: "Dinosaurs", topic: "dinosaurs", color: "#6B8E23", heroArt: "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp", status: "in-review", template: "topic-book" },
   { id: "moon", title: "The Moon", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/moon/moon-cover.webp", status: "in-review", template: "topic-book" },
+  // Session TB3 — topics 4-12. Same rule: in-review until Mike fact-checks the
+  // book and flips BOTH this line and the book's own JSON to "approved".
+  { id: "big-cats", title: "Big Cats", topic: "animals", color: "#C97B2A", heroArt: "/explore/topic-photos/big-cats/big-cats-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "penguins", title: "Penguins & the Frozen Poles", topic: "animals", color: "#3E7CA6", heroArt: "/explore/topic-photos/penguins/penguins-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "bugs-butterflies", title: "Bugs & Butterflies", topic: "animals", color: "#E08A2E", heroArt: "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "snakes-reptiles", title: "Snakes & Reptiles", topic: "animals", color: "#4E8B52", heroArt: "/explore/topic-photos/snakes-reptiles/snakes-reptiles-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "planets", title: "The Planets", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/planets/planets-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "rockets", title: "Rockets & Astronauts", topic: "space", color: "#D2542F", heroArt: "/explore/topic-photos/rockets/rockets-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "volcanoes", title: "Volcanoes", topic: "earth", color: "#B8452F", heroArt: "/explore/topic-photos/volcanoes/volcanoes-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "wild-weather", title: "Wild Weather", topic: "weather", color: "#37B6F5", heroArt: "/explore/topic-photos/wild-weather/wild-weather-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "deep-ocean", title: "The Deep Ocean", topic: "ocean", color: "#0E4E73", heroArt: "/explore/topic-photos/deep-ocean/deep-ocean-cover.webp", status: "in-review", template: "topic-book" },
 ];
 
 // Session TB2 — the bookshelf card. Topic books do NOT each get their own Home
