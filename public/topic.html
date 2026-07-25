@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Kidspedia — Topic Book</title>
+<link rel="icon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0F0E17;--cream:#FDFAF5;--gold:#FFC542;--mint:#2FAE68;--sky:#37B6F5;--paper:#FBF6EC}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{overscroll-behavior:none}
+  body{font-family:'Nunito',sans-serif;background:#101423;color:var(--cream);min-height:100vh}
+
+  .top{display:flex;align-items:center;gap:10px;padding:12px 16px;max-width:648px;margin:0 auto}
+  #back{width:38px;height:38px;border-radius:13px;border:none;background:rgba(255,255,255,.12);color:var(--cream);font-size:17px;font-weight:900;cursor:pointer;font-family:'Nunito'}
+  .top h1{font-family:'Fredoka';font-weight:700;font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top h1 small{display:block;font-family:'Nunito';font-weight:900;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+  .shelfbtn{display:flex;align-items:center;gap:6px;flex:none;background:rgba(255,255,255,.12);border:none;border-radius:999px;padding:7px 12px;font-family:'Nunito';font-weight:900;font-size:12.5px;color:var(--cream);cursor:pointer}
+  .shelfbtn svg{width:14px;height:14px}
+  body.in-app #back{display:none}
+  body.in-app .top{padding-left:96px}
+
+  .bookwrap{max-width:620px;margin:0 auto;padding:0 14px 34px}
+  .book{position:relative;border-radius:22px;overflow:hidden;background:var(--paper);color:var(--ink);box-shadow:0 16px 40px rgba(0,0,0,.45);touch-action:pan-y}
+  .pages{display:flex;transition:transform .32s cubic-bezier(.22,.7,.3,1);will-change:transform}
+  .page{flex:0 0 100%;min-width:100%;position:relative;background:var(--paper)}
+  .page.turning{}
+  .photo{position:relative;width:100%;aspect-ratio:4 / 3;background:linear-gradient(160deg,var(--fill,#2A3550),#141A2B);overflow:hidden}
+  .photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo .painted{position:absolute;inset:0;display:flex;align-items:flex-end;padding:16px;font-family:'Fredoka';font-weight:600;font-size:15px;color:rgba(253,250,245,.82);background:radial-gradient(120% 90% at 30% 20%,rgba(255,255,255,.16),transparent 60%)}
+  .photo .painted span{display:block}
+  .ptitle{font-family:'Fredoka';font-weight:700;font-size:21px;padding:16px 18px 0;line-height:1.2}
+  .pbody{padding:10px 18px 20px}
+  .factbox{margin-top:12px}
+  .facttext{font-size:15.5px;font-weight:700;line-height:1.55}
+  .factsrc{margin-top:7px;font-size:10.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:rgba(15,14,23,.45)}
+  .factnav{display:flex;align-items:center;gap:9px;margin-top:14px;flex-wrap:wrap}
+  .dots{display:flex;gap:5px;flex:1}
+  .dot{width:8px;height:8px;border-radius:50%;background:rgba(15,14,23,.16)}
+  .dot.on{background:var(--ink)}
+  .say{border:none;background:var(--gold);color:var(--ink);width:48px;height:48px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 4px 12px rgba(15,14,23,.18);transition:transform .08s ease,background .15s ease}
+  .say:active{transform:scale(.93)}
+  .say.playing{background:var(--mint);color:#fff}
+  .say svg{width:22px;height:22px}
+  .q{border:2px solid rgba(15,14,23,.15);background:none;border-radius:999px;padding:10px 15px;font-family:'Nunito';font-weight:800;font-size:12.5px;color:var(--ink);cursor:pointer}
+  .q.next{background:var(--ink);border-color:var(--ink);color:#fff}
+  .q.quiz{background:var(--mint);border-color:var(--mint);color:#fff}
+
+  /* cover spread */
+  .page.cover .photo{aspect-ratio:3 / 4;max-height:56vh}
+  .covertitle{font-family:'Fredoka';font-weight:700;font-size:30px;padding:16px 18px 0;line-height:1.1}
+  .coverkicker{font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:rgba(15,14,23,.45);padding:14px 18px 0}
+  .coverblurb{padding:8px 18px 0;font-size:15px;font-weight:700;line-height:1.5;color:rgba(15,14,23,.72)}
+
+  /* finish spread */
+  .page.finish .photo{aspect-ratio:16 / 9}
+
+  /* the dog-ear: a real folded paper corner, drawn, no emoji */
+  .ear{position:absolute;right:0;bottom:0;width:74px;height:74px;border:none;background:none;padding:0;cursor:pointer;z-index:5}
+  .ear svg{width:100%;height:100%;display:block}
+  .ear .fold{fill:rgba(15,14,23,.10);transition:fill .18s ease}
+  .ear .edge{fill:none;stroke:rgba(15,14,23,.22);stroke-width:2.5}
+  .ear.on .fold{fill:var(--gold)}
+  .ear.on .edge{stroke:rgba(15,14,23,.4)}
+  .ear:active{transform:scale(.94)}
+  .earhint{position:absolute;right:8px;bottom:8px;font-size:9.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,14,23,.5);z-index:6;pointer-events:none}
+
+  .turns{display:flex;gap:10px;margin-top:12px;align-items:center}
+  .turn{flex:none;width:52px;height:52px;border-radius:18px;border:none;background:rgba(255,255,255,.1);color:var(--cream);font-family:'Nunito';font-weight:900;font-size:20px;cursor:pointer}
+  .turn:disabled{opacity:.3;cursor:default}
+  .pagecount{flex:1;text-align:center;font-weight:900;font-size:12.5px;color:rgba(253,250,245,.72)}
+
+  /* dog-ear shelf */
+  .sheetbg{position:fixed;inset:0;background:rgba(1,3,16,.6);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .sheetbg.open{display:flex}
+  .sheet{background:var(--cream);color:var(--ink);border-radius:24px 24px 0 0;width:100%;max-width:560px;padding:20px 18px 34px;max-height:78vh;overflow-y:auto}
+  .sheet h2{font-family:'Fredoka';font-weight:700;font-size:23px}
+  .sheet .sub{font-size:12.5px;font-weight:800;color:rgba(15,14,23,.5);margin-top:4px}
+  .earlist{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+  .earrow{display:flex;align-items:center;gap:11px;background:#F1EDE4;border:none;border-radius:16px;padding:10px 12px;cursor:pointer;text-align:left;font-family:'Nunito'}
+  .earrow .thumb{width:52px;height:40px;border-radius:10px;background:#D9D2C4;flex:none;overflow:hidden}
+  .earrow .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .earrow b{font-family:'Fredoka';font-weight:600;font-size:15px;display:block}
+  .earrow small{font-size:11px;font-weight:800;color:rgba(15,14,23,.5)}
+  .closebtn{margin-top:16px;width:100%;border:none;background:var(--ink);color:#fff;font-family:'Nunito';font-weight:900;font-size:14px;padding:13px;border-radius:16px;cursor:pointer}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;font-family:'Nunito';font-weight:800;font-size:13px;padding:10px 18px;border-radius:999px;z-index:80;opacity:0;pointer-events:none;transition:opacity .25s ease}
+  .toast.show{opacity:1}
+  .notready{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;flex-direction:column;gap:10px}
+  .notready h2{font-family:'Fredoka';font-size:22px}
+  .notready p{font-size:14px;color:rgba(253,250,245,.7);max-width:280px}
+  .notready button{margin-top:6px;border:none;background:var(--gold);color:var(--ink);font-family:'Nunito';font-weight:900;font-size:14px;padding:11px 20px;border-radius:999px;cursor:pointer}
+  .pauseveil{position:fixed;inset:0;background:rgba(11,10,24,.55);z-index:40;display:none;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:16px}
+  .pauseveil.show{display:flex}
+</style>
+</head>
+<body>
+
+<div id="app" style="display:none">
+  <div class="top">
+    <button id="back">&lsaquo;</button>
+    <h1><small>Kidspedia</small><span id="pageTitle">Loading…</span></h1>
+    <button class="shelfbtn" id="shelfBtn" type="button" aria-label="My dog-ears">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13l-7-4-7 4Z"/></svg>
+      <span id="earCount">0</span>
+    </button>
+  </div>
+
+  <div class="bookwrap">
+    <div class="book" id="book"><div class="pages" id="pages"></div></div>
+    <div class="turns">
+      <button class="turn" id="prev" type="button" aria-label="Previous page">&lsaquo;</button>
+      <div class="pagecount" id="pagecount"></div>
+      <button class="turn" id="next" type="button" aria-label="Next page">&rsaquo;</button>
+    </div>
+  </div>
+
+  <div class="sheetbg" id="sheetbg">
+    <div class="sheet">
+      <h2>My dog-ears</h2>
+      <div class="sub" id="earSub">Pages you folded a corner on.</div>
+      <div class="earlist" id="earlist"></div>
+      <button class="closebtn" id="closeSheet" type="button">Back to the book</button>
+    </div>
+  </div>
+</div>
+
+<div id="notready" class="notready" style="display:none">
+  <h2 id="notreadyTitle">Not ready yet</h2>
+  <p id="notreadyMsg">This book isn't open yet. Check back soon!</p>
+  <button id="notreadyBtn" type="button">Back to Explore</button>
+</div>
+
+<div class="pauseveil" id="pauseveil">Paused</div>
+<div class="toast" id="toast"></div>
+
+<script src="/buildable-gamenav.js"></script>
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-feel.js"></script>
+<script>
+"use strict";
+// =====================================================================
+// Kidspedia TOPIC-BOOK template (Session TB1).
+//
+// Templates are code, exhibits are data (EXHIBIT-MANIFEST.md). This file
+// owns the picture-book feel — the page-turn, the read-aloud button, the
+// dog-ear corner-fold, the quiz bridge — and NOTHING else. Every word a
+// kid reads, every photo, and every source line comes from the exhibit
+// JSON at /explore/{id}.json.
+//
+// A topic book is: a cover spread, then 4-5 photo pages (one full-width
+// photo-real image + 2-3 fun facts, each fact carrying its own source),
+// then a finish spread.
+//
+// Dog-ears follow the KID, not the device: they are stored in Supabase
+// through /api/saved-pages (localStorage is only a fast local mirror so
+// the fold is instant and still works offline). No emojis (product rule).
+// =====================================================================
+
+function exhibitIdFromLocation() {
+  const m = location.pathname.match(/\/explore\/([a-z0-9-]+)/i);
+  if (m) return m[1];
+  const q = new URLSearchParams(location.search).get("exhibit");
+  return q || "sharks";
+}
+const EXHIBIT_ID = exhibitIdFromLocation();
+
+function iframed() { try { return window.parent && window.parent !== window; } catch (e) { return false; } }
+function postToShell(msg) { if (iframed()) { try { window.parent.postMessage(msg, "*"); } catch (e) {} } }
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+let DATA = null;        // the loaded exhibit file
+let SPREADS = [];       // cover + pages + finish, in reading order
+let pageIdx = 0;        // which spread is showing
+let factIdx = {};       // spread index -> which fact is showing
+let paused = false;
+let soundOn = true;
+let audioUnlocked = false;
+let ambientAudio = null;
+let narrAudio = null;
+let speaking = false;
+let sayToken = 0;
+const ears = new Set(); // page ids the kid has dog-eared in THIS book
+
+if (iframed()) document.body.classList.add("in-app");
+
+function exitToShell() {
+  postToShell("nav:exit");
+  if (!iframed()) { history.length > 1 ? history.back() : (location.href = "/"); }
+}
+
+function showFallback(kind, msg) {
+  try { document.getElementById("app").style.display = "none"; } catch (e) {}
+  const title = document.getElementById("notreadyTitle");
+  const body = document.getElementById("notreadyMsg");
+  if (kind === "error") {
+    title.textContent = "Oops!";
+    body.textContent = msg || "This book had trouble loading. Let's try again in a moment.";
+  } else {
+    title.textContent = "Not ready yet";
+    body.textContent = msg || "This book isn't open yet. Check back soon!";
+  }
+  document.getElementById("notready").style.display = "flex";
+}
+document.getElementById("notreadyBtn").onclick = exitToShell;
+
+// =====================================================================
+// WHO IS READING — the shell keeps the signed-in kid in localStorage
+// (same key every engine uses). Signed in => the kid lane, so dog-ears
+// follow them to any device. Not signed in => a device lane, honest and
+// local-only, never a lie about syncing.
+// =====================================================================
+function activeKidId() {
+  try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); return (k && k.id) ? String(k.id) : null; }
+  catch (e) { return null; }
+}
+function deviceId() {
+  try {
+    let d = localStorage.getItem("bk_guest_device");
+    if (!d) { d = "g_" + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("bk_guest_device", d); }
+    return d;
+  } catch (e) { return "g_local"; }
+}
+function ownerKey() { const k = activeKidId(); return k ? ("kid:" + k) : ("dev:" + deviceId()); }
+function localEarKey() { return "bk_dogears_v1:" + ownerKey(); }
+
+function readLocalEars() {
+  try { const raw = JSON.parse(localStorage.getItem(localEarKey()) || "{}"); return (raw && raw[EXHIBIT_ID]) || []; }
+  catch (e) { return []; }
+}
+function writeLocalEars(list) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(localEarKey()) || "{}");
+    raw[EXHIBIT_ID] = list;
+    localStorage.setItem(localEarKey(), JSON.stringify(raw));
+  } catch (e) {}
+}
+
+// Cloud read: never blocks the book. The page renders from the local
+// mirror instantly and the cloud answer just tops it up when it lands.
+function pullEars() {
+  const url = "/api/saved-pages?owner=" + encodeURIComponent(ownerKey()) + "&exhibitId=" + encodeURIComponent(EXHIBIT_ID);
+  return fetch(url, { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => {
+      if (!j || !j.ok || !Array.isArray(j.pages)) return;
+      ears.clear();
+      j.pages.forEach((p) => { if (p && p.saved !== false && p.pageId) ears.add(p.pageId); });
+      writeLocalEars([...ears]);
+      renderEarUi();
+    })
+    .catch(() => {});
+}
+function pushEar(pageId, saved, title) {
+  return fetch("/api/saved-pages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: ownerKey(), kidProfileId: activeKidId(), deviceId: deviceId(),
+      exhibitId: EXHIBIT_ID, exhibitTitle: (DATA && DATA.title) || EXHIBIT_ID,
+      pageId: pageId, pageTitle: title || "", saved: !!saved,
+    }),
+  }).catch(() => {});
+}
+
+// ---------- boot ----------
+fetch("/explore/" + encodeURIComponent(EXHIBIT_ID) + ".json", { cache: "no-store" })
+  .then((r) => { if (!r.ok) throw new Error("missing"); return r.json(); })
+  .then((data) => {
+    // Golden rule #2: kids only ever see status "approved". No exception.
+    if (!data || data.status !== "approved") { showFallback("notready"); return; }
+    if (data.template !== "topic-book") { showFallback("error"); return; }
+    DATA = data;
+    boot(data);
+  })
+  .catch(() => { showFallback("error"); });
+
+function boot(data) {
+  document.getElementById("app").style.display = "block";
+  document.title = "Kidspedia — " + data.title;
+  document.getElementById("pageTitle").textContent = data.title;
+
+  SPREADS = buildSpreads(data);
+  readLocalEars().forEach((id) => ears.add(id));
+  buildPages();
+  goTo(0, true);
+  renderEarUi();
+  pullEars();
+
+  document.getElementById("back").onclick = exitToShell;
+  document.getElementById("prev").onclick = () => turn(-1);
+  document.getElementById("next").onclick = () => turn(1);
+  document.getElementById("shelfBtn").onclick = openShelf;
+  document.getElementById("closeSheet").onclick = closeShelf;
+  document.getElementById("sheetbg").onclick = (e) => { if (e.target && e.target.id === "sheetbg") closeShelf(); };
+  initSwipe();
+  initAudio(data);
+
+  // Honor pause/resume from the shell around the quiz gate (CARTRIDGE-CONTRACT.md — mandatory).
+  window.addEventListener("message", (e) => {
+    const d = e && e.data;
+    if (d === "pause" || (d && d.type === "pause")) setPaused(true);
+    else if (d === "resume" || (d && d.type === "resume")) setPaused(false);
+  });
+  window.addEventListener("keydown", (e) => {
+    if (!e) return;
+    if (e.key === "ArrowRight") turn(1);
+    else if (e.key === "ArrowLeft") turn(-1);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { stopAmbient(); stopNarration(); }
+    else if (!paused) { startAmbient(); }
+  });
+}
+
+// The reading order: cover, every content page, then the finish spread.
+// Only content pages can be dog-eared (a cover has nothing to remember).
+function buildSpreads(data) {
+  const out = [];
+  const cover = data.cover || {};
+  out.push({ kind: "cover", id: "cover", title: data.title, blurb: cover.blurb || "", art: cover.art || data.heroArt || "", artAlt: cover.artAlt || "", fill: data.shelfColor || "#2A3550" });
+  (data.pages || []).forEach((p) => {
+    out.push({
+      kind: "page", id: p.id, title: p.title || "", art: p.art || "", artAlt: p.artAlt || "",
+      facts: normaliseFacts(p), factAudio: p.factAudio || "", quiz: p.quiz || [], fill: data.shelfColor || "#2A3550",
+    });
+  });
+  const fin = data.finish || {};
+  out.push({ kind: "finish", id: "finish", title: fin.title || ("You finished " + data.title + "!"), blurb: fin.blurb || "", art: cover.art || data.heroArt || "", artAlt: cover.artAlt || "", fill: data.shelfColor || "#2A3550" });
+  return out;
+}
+// Facts are objects {text, source}. A plain string still works (older files).
+function normaliseFacts(p) {
+  const list = Array.isArray(p.facts) ? p.facts : (p.fact ? [p.fact] : []);
+  return list.map((f) => (typeof f === "string" ? { text: f, source: "" } : { text: (f && f.text) || "", source: (f && f.source) || "" }))
+             .filter((f) => f.text);
+}
+
+// ---------- the book itself ----------
+function photoBlock(sp) {
+  const alt = escapeHtml(sp.artAlt || sp.title || "");
+  const painted = '<div class="painted"><span>' + escapeHtml(sp.title || "") + "</span></div>";
+  if (!sp.art) return '<div class="photo" style="--fill:' + escapeHtml(sp.fill) + '">' + painted + "</div>";
+  // The painted block sits UNDER the photo: if the photo is missing or slow,
+  // the kid still sees a finished-looking page instead of a white hole.
+  return '<div class="photo" style="--fill:' + escapeHtml(sp.fill) + '">' + painted +
+    '<img src="' + escapeHtml(sp.art) + '" alt="' + alt + '" loading="lazy" onerror="this.style.display=\'none\'">' + "</div>";
+}
+function earSvg() {
+  return '<svg viewBox="0 0 74 74" aria-hidden="true">' +
+    '<path class="fold" d="M74 22 L74 74 L22 74 Z"/>' +
+    '<path class="edge" d="M74 22 L22 74"/>' +
+    "</svg>";
+}
+function buildPages() {
+  const wrap = document.getElementById("pages");
+  wrap.innerHTML = "";
+  SPREADS.forEach((sp, i) => {
+    const el = document.createElement("div");
+    el.className = "page " + sp.kind;
+    el.id = "sp-" + i;
+    if (sp.kind === "cover") {
+      el.innerHTML = photoBlock(sp) +
+        '<div class="coverkicker">Kidspedia topic book</div>' +
+        '<div class="covertitle">' + escapeHtml(sp.title) + "</div>" +
+        '<div class="coverblurb">' + escapeHtml(sp.blurb) + "</div>" +
+        '<div class="pbody"><div class="factnav"><button class="q next" type="button" id="startBtn">Start reading</button></div></div>';
+    } else if (sp.kind === "finish") {
+      el.innerHTML = photoBlock(sp) +
+        '<div class="ptitle">' + escapeHtml(sp.title) + "</div>" +
+        '<div class="pbody"><div class="facttext">' + escapeHtml(sp.blurb) + "</div>" +
+        '<div class="factnav"><button class="q" type="button" id="againBtn">Read it again</button>' +
+        '<button class="q next" type="button" id="doneBtn">Back to Explore</button></div></div>';
+    } else {
+      el.innerHTML = photoBlock(sp) +
+        '<div class="ptitle">' + escapeHtml(sp.title) + "</div>" +
+        '<div class="pbody">' +
+          '<div class="factbox"><div class="facttext" id="ft-' + i + '"></div><div class="factsrc" id="fs-' + i + '"></div></div>' +
+          '<div class="factnav">' +
+            '<button class="say" type="button" id="say-' + i + '" aria-label="Read to me"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>' +
+            '<div class="dots" id="dots-' + i + '"></div>' +
+          "</div>" +
+          '<div class="factnav">' +
+            '<button class="q" type="button" id="more-' + i + '">Another fact</button>' +
+            '<button class="q quiz" type="button" id="quiz-' + i + '">Quick quiz</button>' +
+          "</div>" +
+        "</div>" +
+        '<span class="earhint">Fold</span>' +
+        '<button class="ear" type="button" id="ear-' + i + '" aria-label="Fold this page corner to save it">' + earSvg() + "</button>";
+    }
+    wrap.appendChild(el);
+  });
+
+  // Wire the buttons after the markup exists.
+  SPREADS.forEach((sp, i) => {
+    if (sp.kind === "cover") { const b = document.getElementById("startBtn"); if (b) b.onclick = () => turn(1); return; }
+    if (sp.kind === "finish") {
+      const a = document.getElementById("againBtn"); if (a) a.onclick = () => goTo(0);
+      const d = document.getElementById("doneBtn"); if (d) d.onclick = exitToShell;
+      return;
+    }
+    factIdx[i] = 0;
+    const say = document.getElementById("say-" + i); if (say) say.onclick = () => readAloud(i);
+    const more = document.getElementById("more-" + i); if (more) more.onclick = () => cycleFact(i);
+    const qz = document.getElementById("quiz-" + i); if (qz) qz.onclick = () => requestQuiz(sp);
+    const ear = document.getElementById("ear-" + i); if (ear) ear.onclick = () => toggleEar(i);
+    renderFact(i);
+  });
+}
+
+function renderFact(i) {
+  const sp = SPREADS[i]; if (!sp || sp.kind !== "page") return;
+  const list = sp.facts || [];
+  const n = Math.min(factIdx[i] || 0, Math.max(0, list.length - 1));
+  const f = list[n] || { text: "", source: "" };
+  const t = document.getElementById("ft-" + i); if (t) t.textContent = f.text;
+  const s = document.getElementById("fs-" + i); if (s) s.textContent = f.source ? ("Source: " + f.source) : "";
+  const dots = document.getElementById("dots-" + i);
+  if (dots) {
+    dots.innerHTML = "";
+    list.forEach((_, k) => { const d = document.createElement("span"); d.className = "dot" + (k === n ? " on" : ""); dots.appendChild(d); });
+  }
+  const more = document.getElementById("more-" + i);
+  if (more) more.style.display = list.length > 1 ? "" : "none";
+}
+function cycleFact(i) {
+  const sp = SPREADS[i]; if (!sp || !sp.facts || sp.facts.length < 2) return;
+  factIdx[i] = ((factIdx[i] || 0) + 1) % sp.facts.length;
+  stopNarration();
+  renderFact(i);
+  try { if (window.Feel && Feel.tap) Feel.tap(); } catch (e) {}
+}
+
+// ---------- turning pages ----------
+function goTo(i, instant) {
+  if (paused) return;
+  const max = SPREADS.length - 1;
+  pageIdx = Math.max(0, Math.min(max, i));
+  const wrap = document.getElementById("pages");
+  if (wrap) {
+    if (instant) wrap.style.transition = "none";
+    wrap.style.transform = "translateX(" + (-100 * pageIdx) + "%)";
+    if (instant) { void wrap.offsetWidth; wrap.style.transition = ""; }
+  }
+  stopNarration();
+  const prev = document.getElementById("prev"); if (prev) prev.disabled = pageIdx === 0;
+  const next = document.getElementById("next"); if (next) next.disabled = pageIdx === max;
+  const pc = document.getElementById("pagecount");
+  if (pc) {
+    const sp = SPREADS[pageIdx];
+    pc.textContent = sp && sp.kind === "cover" ? "Cover"
+      : sp && sp.kind === "finish" ? "The end"
+      : "Page " + pageIdx + " of " + (SPREADS.length - 2);
+  }
+  renderEarUi();
+}
+function turn(dir) {
+  const target = pageIdx + dir;
+  if (target < 0 || target > SPREADS.length - 1) return;
+  goTo(target);
+  try { if (window.Feel && Feel.tap) Feel.tap(); } catch (e) {}
+}
+function initSwipe() {
+  const book = document.getElementById("book"); if (!book) return;
+  let x0 = null, y0 = null;
+  book.addEventListener("touchstart", (e) => {
+    const t = e.touches && e.touches[0]; if (!t) return;
+    x0 = t.clientX; y0 = t.clientY;
+  }, { passive: true });
+  book.addEventListener("touchend", (e) => {
+    if (x0 === null) return;
+    const t = (e.changedTouches && e.changedTouches[0]) || null;
+    if (t) {
+      const dx = t.clientX - x0, dy = t.clientY - y0;
+      // A page turn is a clear sideways flick, so scrolling the page never turns it.
+      if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(dy) * 1.4) turn(dx < 0 ? 1 : -1);
+    }
+    x0 = null; y0 = null;
+  }, { passive: true });
+}
+
+// ---------- the dog-ear ----------
+function toggleEar(i) {
+  const sp = SPREADS[i]; if (!sp || sp.kind !== "page") return;
+  const on = !ears.has(sp.id);
+  if (on) ears.add(sp.id); else ears.delete(sp.id);
+  writeLocalEars([...ears]);
+  renderEarUi();
+  try { if (window.Feel && (on ? Feel.win : Feel.tap)) (on ? (Feel.win || Feel.tap) : Feel.tap)(); } catch (e) {}
+  showToast(on ? "Page saved to My dog-ears." : "Fold undone.");
+  pushEar(sp.id, on, sp.title);
+}
+function renderEarUi() {
+  SPREADS.forEach((sp, i) => {
+    if (sp.kind !== "page") return;
+    const b = document.getElementById("ear-" + i);
+    if (b) {
+      const on = ears.has(sp.id);
+      b.classList.toggle("on", on);
+      if (b.setAttribute) b.setAttribute("aria-label", on ? "Unfold this page corner" : "Fold this page corner to save it");
+    }
+  });
+  const c = document.getElementById("earCount"); if (c) c.textContent = String(ears.size);
+}
+function openShelf() {
+  const list = document.getElementById("earlist"); if (!list) return;
+  list.innerHTML = "";
+  const saved = SPREADS.map((sp, i) => ({ sp, i })).filter((x) => x.sp.kind === "page" && ears.has(x.sp.id));
+  const sub = document.getElementById("earSub");
+  if (sub) sub.textContent = activeKidId()
+    ? "Folded pages follow you to any device you sign in on."
+    : "Sign in on the grown-ups screen to carry these to another device.";
+  if (!saved.length) {
+    const empty = document.createElement("div");
+    empty.className = "sub";
+    empty.textContent = "No folded pages yet. Tap the folded corner on any page to save it.";
+    list.appendChild(empty);
+  } else {
+    saved.forEach(({ sp, i }) => {
+      const b = document.createElement("button");
+      b.className = "earrow"; b.type = "button";
+      b.innerHTML = '<span class="thumb">' + (sp.art ? '<img src="' + escapeHtml(sp.art) + '" alt="" onerror="this.style.display=\'none\'">' : "") + "</span>" +
+        "<span><b>" + escapeHtml(sp.title) + "</b><small>Page " + i + "</small></span>";
+      b.onclick = () => { closeShelf(); goTo(i); };
+      list.appendChild(b);
+    });
+  }
+  document.getElementById("sheetbg").classList.add("open");
+}
+function closeShelf() { document.getElementById("sheetbg").classList.remove("open"); }
+
+// ================= read aloud: narrator clip first, browser voice as fallback =================
+function setSayButton(i, isPlaying) {
+  const b = document.getElementById("say-" + i); if (!b) return;
+  b.classList.toggle("playing", !!isPlaying);
+  if (b.setAttribute) b.setAttribute("aria-label", isPlaying ? "Stop reading" : "Read to me");
+  b.innerHTML = isPlaying
+    ? '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+}
+function stopNarration() {
+  sayToken++;
+  try { if (narrAudio) { narrAudio.onended = null; narrAudio.onerror = null; narrAudio.pause(); narrAudio = null; } } catch (e) {}
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+  speaking = false;
+  SPREADS.forEach((sp, i) => { if (sp.kind === "page") setSayButton(i, false); });
+}
+function browserVoice(i, text, token) {
+  if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); if (token === sayToken) { speaking = false; setSayButton(i, false); } return; }
+  try {
+    speechSynthesis.cancel();
+    const sp = SPREADS[i] || {};
+    const u = new SpeechSynthesisUtterance((sp.title || "") + ". " + (text || ""));
+    u.rate = 0.92; u.pitch = 1.05;
+    u.onend = function () { if (token === sayToken) { speaking = false; setSayButton(i, false); } };
+    speechSynthesis.speak(u);
+  } catch (e) { showToast("Couldn't read that aloud right now."); if (token === sayToken) { speaking = false; setSayButton(i, false); } }
+}
+function readAloud(i) {
+  if (speaking) { stopNarration(); return; }
+  const sp = SPREADS[i]; if (!sp || sp.kind !== "page") return;
+  const list = sp.facts || [];
+  const n = Math.min(factIdx[i] || 0, Math.max(0, list.length - 1));
+  const text = (list[n] && list[n].text) || "";
+  stopNarration();
+  const token = ++sayToken; speaking = true; setSayButton(i, true);
+  // The pre-made narrator clip covers the page's FIRST fact only; anything
+  // else is read by the browser voice, so a kid never waits on a download.
+  if (n === 0 && sp.factAudio) {
+    try {
+      const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(sp.factAudio));
+      narrAudio = a;
+      a.onended = function () { if (token === sayToken) { speaking = false; setSayButton(i, false); } };
+      a.onerror = function () { if (token !== sayToken) return; narrAudio = null; browserVoice(i, text, token); };
+      const pr = a.play();
+      if (pr && pr.catch) pr.catch(function () { if (token !== sayToken) return; narrAudio = null; browserVoice(i, text, token); });
+      return;
+    } catch (e) { /* fall through to browser voice */ }
+  }
+  browserVoice(i, text, token);
+}
+
+// ================= quiz bridge (CARTRIDGE-CONTRACT.md: quizRequest / pause / resume / bk:quizDone) =================
+function requestQuiz(sp) {
+  if (!iframed()) { showToast("Open this inside Buildable Kids to take the quiz."); return; }
+  const onDone = (e) => { const d = e && e.data; if (d && d.type === "bk:quizDone") { window.removeEventListener("message", onDone); } };
+  window.addEventListener("message", onDone);
+  postToShell({
+    source: "buildable",
+    kind: "quizRequest",
+    exhibitId: DATA.id,
+    topic: DATA.topic,
+    skills: DATA.skills || [],
+    itemName: sp.title,
+    quiz: sp.quiz || [],
+  });
+}
+
+// ================= audio bed + shell Sound button =================
+function initAudio(data) {
+  try { if (window.Feel && Feel.configure) Feel.configure({ sfxBase: "/api/sfx?s=" }); } catch (e) {}
+  try { soundOn = !(window.BuildableAudio && window.BuildableAudio.muted); } catch (e) { soundOn = true; }
+  try {
+    if (window.BuildableGameNav) BuildableGameNav.register({
+      hide: [],
+      onSound: function () { setSound(!soundOn); },
+      soundOn: function () { return soundOn; },
+      inGame: function () { return true; },
+    });
+  } catch (e) {}
+  var unlock = function () {
+    if (audioUnlocked) return; audioUnlocked = true;
+    try { if (window.Feel && Feel.unlock) Feel.unlock(); } catch (e) {}
+    startAmbient();
+    document.removeEventListener("pointerdown", unlock);
+    document.removeEventListener("touchstart", unlock);
+  };
+  document.addEventListener("pointerdown", unlock, { passive: true });
+  document.addEventListener("touchstart", unlock, { passive: true });
+}
+function startAmbient() {
+  if (!DATA || !DATA.ambient || !audioUnlocked || !soundOn || paused) return;
+  if (!ambientAudio) {
+    try { ambientAudio = new Audio("/api/sfx?s=" + encodeURIComponent(DATA.ambient)); ambientAudio.loop = true; ambientAudio.volume = 0.13; } catch (e) { return; }
+  }
+  try { var p = ambientAudio.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+}
+function stopAmbient() { if (ambientAudio) { try { ambientAudio.pause(); } catch (e) {} } }
+function setSound(on) {
+  soundOn = on;
+  try { if (window.BuildableAudio) BuildableAudio.muted = !on; } catch (e) {}
+  if (on) startAmbient(); else { stopAmbient(); stopNarration(); }
+}
+function setPaused(on) {
+  paused = !!on;
+  const v = document.getElementById("pauseveil");
+  if (v) v.classList.toggle("show", paused);
+  if (paused) { stopAmbient(); stopNarration(); } else { startAmbient(); }
+}
+</script>
+</body>
+</html>
