@@ -82,6 +82,70 @@ archers and pines are pixel-identical to before.
 **Not in this block** — no second kit added, no 3D kit added (the shelf lists
 them and the picker will carry them, but nothing 3D is curated yet), and no
 "add a kit" automation: adding stays a build-session job on purpose.
+## 2026-07-25: Session AR1b — the Sunny Islands look pass (shipped, waiting on Mike's look)
+
+Mike flew AR1 and sent a screenshot with four words on it: the buildings should
+be buildings, the water needs texture, the islands should look like sand, and it
+needs to be more cohesive and fully baked. He was right, and the diagnosis was
+one thing rather than four: AR1 put real models on top of a world that was still
+obviously placeholder, so the real art only made the placeholder more obvious.
+
+**What changed**
+
+- **An island is not a pyramid.** The body was a cone with a green cone on top,
+  and it was two and a half times taller than it was wide. It is now a rounded
+  sand hill with a wobbly coastline that carries on DOWN past the waterline, so
+  the sea cuts its own beach and every island gets a different, believable one
+  for no extra polygons. Four shapes are built once and reused. Islands are now
+  wide and low: 18-34 across and 15-32 high, against 16-30 across and 26-66 high.
+- **Sand first.** The grass was eating the island. The crown is now small, only
+  on the biggest islands, and FITTED: its rim is placed exactly where the sand
+  dome is that wide, so green never hovers over the beach and never buries it.
+  Everything standing on an island asks `isleSurf()` how high the sand is
+  underneath it, so no palm, hut or crate floats.
+- **Water with a surface.** A ripple sheet is painted in code (nothing to
+  download, works offline), tiled across the sea and drifted against the world so
+  it does not slide with the camera, plus a long rolling swell over the existing
+  chop, because at altitude short chop is invisible and only a slow wave reads as
+  an ocean. The sheet is WHITE with dark ripples on purpose: a multiply map can
+  only darken, so the sea at its brightest is still exactly the colour the
+  manifest asked for. Every island now sits in a soft turquoise lagoon painted as
+  one gradient; the first attempt used a hard-edged ring and it gave away that it
+  was a disc lying on the sea.
+- **Buildings that are buildings.** The grey shapes on the beach were Kenney's
+  CASTLE towers, which is why they read as scenery rather than homes. They are
+  gone, kept back for a future Castle Kingdom stop. A big island is now somewhere
+  people live: two to four tiki huts in a loose cluster, a fence, a flag, the
+  crates and barrels that make a place look used, a dock reaching out over the
+  water with a boat tied to it, and sometimes a wreck on the sand.
+- **The things a kid touches are real too.** Coins are the Kenney gold coin, lit
+  slightly so gold still reads as gold from a long way off, and they swap in
+  place when the kit lands late: same list entry, same position, nothing
+  recounted, so collecting and banking never learn which one they got. The
+  landing pads get a dock, a moored boat, palms, a hut and a ring of buoys. The
+  orange ring, the beam and the windsock are untouched, because those are how a
+  kid knows where to land and art never overrules a signal. An approach arch was
+  tried and cut: it read as a croquet hoop dropped in the sea.
+- **Cohesion.** The kit's rust-brown rock clusters read as mud wherever they
+  touched a beach, so they are gone; beach boulders are the untextured Kenney
+  rock, which takes the island's own sand palette.
+
+**QA:** `node qa-skyflyer.mjs .` — **205/205 PASS** (was 190). Fifteen new checks,
+one for each note, so none of them can quietly come back. Two of the new checks
+failed when first written and the code was right both times: the width check had
+matched Snowy Peaks' numbers instead of the islands', and the village check
+missed pieces chosen by a ternary.
+
+Snowy Peaks and Sunset Canyon are unchanged: the difference between before and
+after is smaller than the screenshot harness's own wall-clock noise, measured
+both ways. Cost at iPad size: 1505 draw calls / 236k triangles / 7.4ms a frame on
+a software rasteriser, against 872 / 41k / 3.4ms for an undressed world.
+
+**Still open in phase AR:** AR2 gives Snowy Peaks and Sunset Canyon the same
+treatment and checks all three on a real iPad. AR3 adds Big City as journey stop
+four. Quaternius animated animals are still not downloaded.
+
+---
 
 ## 2026-07-25: Session FL5 — Missions mode + aircraft jobs (Sky Flyer)
 
