@@ -1,0 +1,118 @@
+{
+  "id": "penguins",
+  "title": "Penguins & the Frozen Poles",
+  "template": "topic-book",
+  "topic": "animals",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["animal-facts", "reading"],
+  "heroArt": "/explore/topic-photos/penguins/penguins-cover.webp",
+  "shelfColor": "#3E7CA6",
+  "ambient": "wind",
+  "assetVersion": 1,
+  "sources": [
+    "Australian Antarctic Program (antarctica.gov.au)",
+    "British Antarctic Survey (bas.ac.uk)",
+    "NOAA Ocean Today (oceantoday.noaa.gov)",
+    "US Antarctic Program, National Science Foundation (usap.gov)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/penguins/penguins-cover.webp",
+    "artAlt": "A group of emperor penguins standing together on bright white Antarctic ice",
+    "blurb": "At the very bottom of the world there is a bird in a smart black and white suit who walks into a blizzard on purpose. Turn the page."
+  },
+  "pages": [
+    {
+      "id": "chick",
+      "title": "A Chick on Dad's Feet",
+      "art": "/explore/topic-photos/penguins/penguins-1.webp",
+      "artAlt": "An adult emperor penguin with a fluffy grey chick tucked on top of its feet",
+      "factAudio": "penguins-chick",
+      "quiz": ["penguins-chick"],
+      "facts": [
+        {
+          "text": "An emperor penguin dad does not build a nest. He balances the egg on top of his own feet, up off the freezing ice, and folds a warm flap of feathery skin down over it. That flap is called a brood pouch, and inside it the egg stays as warm as you are, even when the air outside is far below freezing.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)"
+        },
+        {
+          "text": "He stands there through the dark Antarctic winter for about nine weeks without eating a single thing, living off the fat he stored up in the summer while the mother is away at sea getting food.",
+          "source": "British Antarctic Survey (bas.ac.uk)"
+        },
+        {
+          "text": "A new chick cannot keep itself warm yet, so it rides in the brood pouch too, a little grey ball of fluff sitting on its parent's feet. Only after about seven weeks can it hold its own heat and stand out on the ice with the other chicks.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)"
+        }
+      ]
+    },
+    {
+      "id": "swimming",
+      "title": "Flying, but Underwater",
+      "art": "/explore/topic-photos/penguins/penguins-2.webp",
+      "artAlt": "A penguin shooting through clear blue water leaving a trail of bubbles behind it",
+      "factAudio": "penguins-swimming",
+      "quiz": ["penguins-swimming"],
+      "facts": [
+        {
+          "text": "A penguin is a bird that cannot fly, and it does not mind at all. Its wings are stiff, narrow flippers, and underwater it beats them just the way other birds beat wings in the air. A penguin really is flying. It just does it in the sea.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)"
+        },
+        {
+          "text": "Its body is shaped like a torpedo, smooth and pointed at both ends, and its feet and tail trail behind as rudders for steering. That is why a penguin who waddles slowly and comically on land turns into a rocket the moment it hits the water.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)"
+        },
+        {
+          "text": "Emperor penguins are the deepest divers of all the birds. They can go down more than 500 metres, which is deeper than five football fields laid end to end, holding one breath the whole way.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)"
+        }
+      ]
+    },
+    {
+      "id": "huddle",
+      "title": "Everyone Squeeze In",
+      "art": "/explore/topic-photos/penguins/penguins-3.webp",
+      "artAlt": "Emperor penguins packed tightly together in a huddle while snow blows around them",
+      "factAudio": "penguins-huddle",
+      "quiz": ["penguins-huddle"],
+      "facts": [
+        {
+          "text": "When the wind comes screaming across the ice, emperor penguins pack themselves into a huddle. They stand so close that about ten birds fit into one square metre, and huddling cuts the heat each penguin loses by around half.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)"
+        },
+        {
+          "text": "Inside the huddle it gets surprisingly cosy, as warm as a nice summer afternoon, while a blizzard howls a few birds away. And nobody is stuck out in the cold forever, because the whole huddle shuffles slowly along, so the penguins on the chilly edge get their turn in the middle.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)"
+        },
+        {
+          "text": "Under all that, a penguin wears a coat of short feathers that overlap like tiles on a roof and keep the water out, with a thick layer of fat underneath. Wind and sea simply cannot reach its skin.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)"
+        }
+      ]
+    },
+    {
+      "id": "antarctica",
+      "title": "The Coldest Place on Earth",
+      "art": "/explore/topic-photos/penguins/penguins-4.webp",
+      "artAlt": "A wide view of Antarctic icebergs and sea ice with tiny penguins far off for scale",
+      "factAudio": "penguins-antarctica",
+      "quiz": ["penguins-antarctica"],
+      "facts": [
+        {
+          "text": "Antarctica is a whole continent buried under ice. In places that ice sheet is nearly three miles thick, deep enough to swallow mountains, and it holds most of the fresh water on the entire planet.",
+          "source": "British Antarctic Survey (bas.ac.uk)"
+        },
+        {
+          "text": "It is also the driest place on Earth. So little snow or rain falls there that scientists call Antarctica a desert, a freezing one, and it is the coldest and windiest continent too. Nobody lives there for good, only scientists who visit to study it.",
+          "source": "US Antarctic Program, National Science Foundation (usap.gov)"
+        },
+        {
+          "text": "Here is the one grown ups get wrong. Penguins live in the south and polar bears live way up in the north, inside the Arctic Circle, so the two have never once met. If you spot them together in a picture, somebody made that picture up.",
+          "source": "NOAA Ocean Today (oceantoday.noaa.gov)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Penguins & the Frozen Poles!",
+    "blurb": "A bird that swims instead of flies, in the coldest place there is, keeping warm by standing close to its friends. Fold a corner on your favourite page so you can find it again."
+  }
+}

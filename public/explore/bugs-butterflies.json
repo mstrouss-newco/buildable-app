@@ -1,0 +1,120 @@
+{
+  "id": "bugs-butterflies",
+  "title": "Bugs & Butterflies",
+  "template": "topic-book",
+  "topic": "animals",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["nature-facts", "reading"],
+  "heroArt": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp",
+  "shelfColor": "#E08A2E",
+  "ambient": "forest",
+  "assetVersion": 1,
+  "sources": [
+    "Monarch Joint Venture (monarchjointventure.org)",
+    "USDA Forest Service (fs.usda.gov)",
+    "US Department of Agriculture (usda.gov)",
+    "Natural History Museum, London (nhm.ac.uk)",
+    "Smithsonian Institution (si.edu)",
+    "Smithsonian Tropical Research Institute (stri.si.edu)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp",
+    "artAlt": "A monarch butterfly resting on an orange flower with its wings open wide",
+    "blurb": "The smallest animals in the garden do the strangest things. One of them even rebuilds its whole body. Turn the page."
+  },
+  "pages": [
+    {
+      "id": "caterpillar",
+      "title": "Eat, Grow, Repeat",
+      "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-1.webp",
+      "artAlt": "Close up of a fuzzy striped caterpillar chewing a hole in a green leaf",
+      "factAudio": "bugs-butterflies-caterpillar",
+      "quiz": ["bugs-butterflies-caterpillar"],
+      "facts": [
+        {
+          "text": "A caterpillar has one job, and that job is eating. It chews leaves nearly all day and grows so fast that in about two weeks it can go from shorter than a grain of rice to about the length of your finger.",
+          "source": "USDA Forest Service (fs.usda.gov)"
+        },
+        {
+          "text": "Caterpillar skin does not stretch much, so growing means climbing right out of it. A caterpillar wriggles free of its old skin around five times before it is full size. Each stage in between has its own name, an instar.",
+          "source": "Monarch Joint Venture (monarchjointventure.org)"
+        },
+        {
+          "text": "The old skin does not go to waste either. Once a caterpillar has shed it, it usually turns around and eats it before going back to the leaf.",
+          "source": "Monarch Joint Venture (monarchjointventure.org)"
+        }
+      ]
+    },
+    {
+      "id": "chrysalis",
+      "title": "The Great Rebuild",
+      "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-2.webp",
+      "artAlt": "A see through chrysalis hanging from a stem with butterfly wing patterns showing inside",
+      "factAudio": "bugs-butterflies-chrysalis",
+      "quiz": ["bugs-butterflies-chrysalis"],
+      "facts": [
+        {
+          "text": "When a caterpillar has finished growing it finds a quiet spot, hangs upside down, and splits its skin one last time. What is underneath is not a caterpillar any more. It is a chrysalis, a smooth case with a butterfly being built inside.",
+          "source": "Monarch Joint Venture (monarchjointventure.org)"
+        },
+        {
+          "text": "Inside, the body is rearranged from the inside out. That change is called metamorphosis. Wings grow, flight muscles form, and even the mouth is rebuilt, because a caterpillar chews leaves but a butterfly sips nectar through a long curled straw.",
+          "source": "Monarch Joint Venture (monarchjointventure.org)"
+        },
+        {
+          "text": "Right at the end you can see the finished wings through the case, pattern and colours and all, because the colour only arrives in the last day or two. Soon after that the butterfly climbs out and pumps fluid into its crumpled wings until they are stiff enough to fly.",
+          "source": "USDA Forest Service (fs.usda.gov)"
+        }
+      ]
+    },
+    {
+      "id": "bees",
+      "title": "A Bee Wearing Yellow Dust",
+      "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-3.webp",
+      "artAlt": "A honeybee dusted all over with yellow pollen sitting on a purple flower",
+      "factAudio": "bugs-butterflies-bees",
+      "quiz": ["bugs-butterflies-bees"],
+      "facts": [
+        {
+          "text": "A bee is fuzzy for a reason. Pollen, the yellow dust in the middle of a flower, sticks all over those tiny hairs while the bee is busy drinking nectar. The bee then combs the dust down into little baskets on its back legs, called corbiculae, and carries it home.",
+          "source": "Natural History Museum, London (nhm.ac.uk)"
+        },
+        {
+          "text": "As the bee bumbles from flower to flower it drops some of that pollen off, and that is pollination. It is how a plant makes seeds and fruit. About one bite in every three of the food you eat, apples, blueberries, melons, even chocolate, is there because a pollinator visited a flower first.",
+          "source": "US Department of Agriculture (usda.gov)"
+        },
+        {
+          "text": "Most bees in the world live alone, but honeybees are famous for the opposite. They share one big nest, the hive, where a single queen lays the eggs and thousands of workers fetch food and look after the young.",
+          "source": "Smithsonian Institution (si.edu)"
+        }
+      ]
+    },
+    {
+      "id": "ants",
+      "title": "The Ants Who Grow a Garden",
+      "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-4.webp",
+      "artAlt": "A line of ants marching along carrying cut green pieces of leaf above their heads",
+      "factAudio": "bugs-butterflies-ants",
+      "quiz": ["bugs-butterflies-ants"],
+      "facts": [
+        {
+          "text": "Leafcutter ants snip pieces out of leaves and carry them home along a trail, held up like green sails. Some pieces are so big for the ant that it would be like you carrying a dining table down the street, over your head, the whole way.",
+          "source": "Smithsonian Tropical Research Institute (stri.si.edu)"
+        },
+        {
+          "text": "Here is the surprise: they do not eat the leaves. Underground they chew them into a mush and grow a fungus on it, like a farmer with a vegetable patch, and that fungus is what the ants and their babies actually eat.",
+          "source": "Smithsonian Tropical Research Institute (stri.si.edu)"
+        },
+        {
+          "text": "One leafcutter nest can hold three or four million ants in thousands of little underground rooms, and everybody has a job. Some cut, some carry, some tend the garden, and very tiny ants ride along on the leaf pieces as lookouts for the carriers.",
+          "source": "Smithsonian Tropical Research Institute (stri.si.edu)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Bugs & Butterflies!",
+    "blurb": "Next time you are outside, crouch down and look at a leaf for a whole minute. There is a good chance somebody is already there. Fold a corner on your favourite page so you can find it again."
+  }
+}

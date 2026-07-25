@@ -1,0 +1,116 @@
+{
+  "id": "snakes-reptiles",
+  "title": "Snakes & Reptiles",
+  "template": "topic-book",
+  "topic": "animals",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["animal-facts", "reading"],
+  "heroArt": "/explore/topic-photos/snakes-reptiles/snakes-reptiles-cover.webp",
+  "shelfColor": "#4E8B52",
+  "ambient": "jungle",
+  "assetVersion": 1,
+  "sources": [
+    "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+    "Smithsonian's National Zoo (nationalzoo.si.edu)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/snakes-reptiles/snakes-reptiles-cover.webp",
+    "artAlt": "A bright green tree python coiled in neat loops on a mossy rainforest branch",
+    "blurb": "Scaly skin, no fur, and a favourite warm rock to sit on. Turn the page and meet the reptiles."
+  },
+  "pages": [
+    {
+      "id": "scales",
+      "title": "Scales, and a Brand New Skin",
+      "art": "/explore/topic-photos/snakes-reptiles/snakes-reptiles-1.webp",
+      "artAlt": "A very close view of a snake's colourful diamond-patterned scales filling the whole picture",
+      "factAudio": "snakes-reptiles-scales",
+      "quiz": ["snakes-reptiles-scales"],
+      "facts": [
+        {
+          "text": "A snake is covered in scales, and they are dry, not slimy. They are made of keratin, the same stuff as your fingernails. The wide flat scales along a snake's belly work like the treads on a boot and grip the ground.",
+          "source": "Smithsonian's National Zoo (nationalzoo.si.edu)"
+        },
+        {
+          "text": "A snake's skin does not grow with it, so every so often the whole outer layer comes off in one piece. The snake rubs its head on something rough and crawls out, turning the old skin inside out like a sock. A grown-up snake usually does this two to four times a year.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "No legs, no problem. A single snake can have between about 175 and 400 ribs, with thousands and thousands of tiny muscles joining them together. It squeezes those muscles in waves, pushing its curves against the ground to slide forward.",
+          "source": "Smithsonian's National Zoo (nationalzoo.si.edu)"
+        }
+      ]
+    },
+    {
+      "id": "chameleons",
+      "title": "The Lizard That Changes Colour",
+      "art": "/explore/topic-photos/snakes-reptiles/snakes-reptiles-2.webp",
+      "artAlt": "A chameleon gripping a branch with its tail curled into a spiral and one eye swivelled round",
+      "factAudio": "snakes-reptiles-chameleons",
+      "quiz": ["snakes-reptiles-chameleons"],
+      "facts": [
+        {
+          "text": "Chameleons do not change colour to match the wallpaper. Each kind has its own set of colours and patterns it can show, and it swaps between them depending on how warm it is, how bright the light is, and how it is feeling. A calm chameleon and a cross chameleon are different colours.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "Each of a chameleon's eyes turns and focuses on its own. It can watch a beetle on one side and a branch on the other at the very same moment, and between the two eyes it can see nearly all the way around itself.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "The tongue is the surprise. It shoots out in a blink, and in some chameleons it is longer than the whole body. The tip goes sticky and cup shaped so a beetle comes back with it. Meanwhile that curly tail is wrapped tight round the branch like a spare hand.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        }
+      ]
+    },
+    {
+      "id": "tortoises",
+      "title": "The Tortoise and Its Shell",
+      "art": "/explore/topic-photos/snakes-reptiles/snakes-reptiles-3.webp",
+      "artAlt": "A giant tortoise walking slowly across sunlit green grass",
+      "factAudio": "snakes-reptiles-tortoises",
+      "quiz": ["snakes-reptiles-tortoises"],
+      "facts": [
+        {
+          "text": "A tortoise cannot climb out of its shell, because the shell is part of its skeleton. It is built from about sixty bones joined to the tortoise's backbone and ribs. So a tortoise wears its ribs on the outside.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "The plates on top of the shell are called scutes, and they are made of keratin, just like your fingernails. A tortoise can feel a hand pressing on its shell the way you can feel someone press your nail. Inside, the bone is full of tiny air pockets, which makes the whole shell lighter to carry.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "Giant tortoises are some of the longest lived animals on land. An Aldabra tortoise can pass one hundred years old, and a few have reached over one hundred and fifty. A tortoise plodding across the grass today may have been alive before your great grandparents were born.",
+          "source": "Smithsonian's National Zoo (nationalzoo.si.edu)"
+        }
+      ]
+    },
+    {
+      "id": "sun-warmth",
+      "title": "Warming Up in the Sun",
+      "art": "/explore/topic-photos/snakes-reptiles/snakes-reptiles-4.webp",
+      "artAlt": "A small green lizard resting on a warm sunlit rock",
+      "factAudio": "snakes-reptiles-sun-warmth",
+      "quiz": ["snakes-reptiles-sun-warmth"],
+      "facts": [
+        {
+          "text": "Reptiles are ectothermic, which means their warmth comes from outside them instead of from inside. You make your own heat all day long. A lizard borrows its heat from the sun, so it lies on a warm rock until it is toasty and ready to move.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "That is why a lizard on a rock is not being lazy. It is charging up. Once it is warm it can run, climb and chase insects, and when it gets too hot it slips into the shade to cool down again.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "When the weather turns cold, reptiles go slow and quiet, and some settle into a long sleepy rest called brumation until things warm up. Their scaly skin helps too, because it holds water in, which is how so many reptiles do well in dry, sandy places.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Snakes & Reptiles!",
+    "blurb": "Next sunny morning, look at the top of a wall or a warm stone and see who is already there having a sunbathe. Fold a corner on your favourite page so you can find it again."
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "id": "big-cats",
+  "title": "Big Cats",
+  "template": "topic-book",
+  "topic": "animals",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["animal-facts", "reading"],
+  "heroArt": "/explore/topic-photos/big-cats/big-cats-cover.webp",
+  "shelfColor": "#C97B2A",
+  "ambient": "forest",
+  "assetVersion": 1,
+  "sources": [
+    "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+    "Smithsonian's National Zoo (nationalzoo.si.edu)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/big-cats/big-cats-cover.webp",
+    "artAlt": "A lion standing on a grassy rise with the sunrise glowing behind him",
+    "blurb": "Some cats sleep on your bed. These ones live in tall grass, warm rivers and cold mountains. Turn the page and meet them."
+  },
+  "pages": [
+    {
+      "id": "lions",
+      "title": "A Pride Is a Lion Family",
+      "art": "/explore/topic-photos/big-cats/big-cats-1.webp",
+      "artAlt": "A lioness resting in tall golden grass while two cubs play beside her",
+      "factAudio": "big-cats-lions",
+      "quiz": ["big-cats-lions"],
+      "facts": [
+        {
+          "text": "A group of lions is called a pride, and a pride is mostly family. The lionesses in it are mothers, sisters and cousins who grew up together, and they live with their cubs and a few grown males. A small pride might be three lions. A big one can be thirty.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "Lion cubs come with built in playmates. Cubs born around the same time grow up as one wriggling, pouncing bundle, and a cub can drink milk from any lioness in the pride, not only from its own mother.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "Lions are the most social cats in the world. Almost every other cat lives alone, but lions rest together, raise their young together, and call to each other with a roar that carries for miles across the grass.",
+          "source": "Smithsonian's National Zoo (nationalzoo.si.edu)"
+        }
+      ]
+    },
+    {
+      "id": "cheetah",
+      "title": "Built for One Fast Sprint",
+      "art": "/explore/topic-photos/big-cats/big-cats-2.webp",
+      "artAlt": "A cheetah running at full speed with a cloud of dust kicked up behind it",
+      "factAudio": "big-cats-cheetah",
+      "quiz": ["big-cats-cheetah"],
+      "facts": [
+        {
+          "text": "The cheetah is the fastest runner on land. It can reach about 60 to 70 miles an hour, faster than cars on the highway, and it goes from standing still to highway speed in only a few strides.",
+          "source": "Smithsonian's National Zoo (nationalzoo.si.edu)"
+        },
+        {
+          "text": "All that speed comes from a bendy back. A cheetah's spine curls and stretches like a spring, throwing its front legs far out in front, so one single stride can cover more ground than the length of a car.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "A cheetah's claws do not tuck away like a house cat's. They stay out and bite into the ground like the studs on a running shoe, while that long tail swings behind as a rudder, so the cheetah can turn hard without tumbling over.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        }
+      ]
+    },
+    {
+      "id": "tigers",
+      "title": "The Big Cat That Loves Water",
+      "art": "/explore/topic-photos/big-cats/big-cats-3.webp",
+      "artAlt": "A Bengal tiger wading through shallow water in a green jungle",
+      "factAudio": "big-cats-tigers",
+      "quiz": ["big-cats-tigers"],
+      "facts": [
+        {
+          "text": "Most cats hate getting wet. Tigers are the happy exception. They are strong swimmers with slightly webbed toes, and on a hot day a tiger will wade into a pond or a river and lie there to cool off.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "No two tigers wear the same stripes. Every tiger has its own pattern, so people who study wild tigers can tell one from another just by the markings, the way you know a friend by their face.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "Bengal tigers live in the forests and wetlands of India, Bangladesh, Bhutan and Nepal. Those dark stripes on a pale coat break up the shape of the cat in tall grass and dappled shade, so something enormous can be surprisingly hard to spot.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        }
+      ]
+    },
+    {
+      "id": "snow-leopard",
+      "title": "The Cat With the Cosy Tail",
+      "art": "/explore/topic-photos/big-cats/big-cats-4.webp",
+      "artAlt": "A snow leopard sitting on a snowy rocky ledge with its long tail curled around its body",
+      "factAudio": "big-cats-snow-leopard",
+      "quiz": ["big-cats-snow-leopard"],
+      "facts": [
+        {
+          "text": "A snow leopard's tail is enormous, close to three feet long. Out on a narrow rocky ledge it swings like a tightrope walker's pole to keep the cat balanced, and when the cat curls up to sleep it wraps that thick furry tail around itself like a scarf.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "Snow leopards have huge paws with fur growing on the underside. The fur cushions every step, spreads their weight and grips the snow, so they walk about on built in snowshoes.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        },
+        {
+          "text": "These cats live higher up than almost anything else with fur. In summer they have been seen on mountain slopes as high as 18,000 feet, and their short wide nose has a big roomy space inside that warms each freezing breath before it goes down into their chest.",
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Big Cats!",
+    "blurb": "Grass, jungle, snow. Every one of these cats is a different answer to the same question: how do you live here? Fold a corner on your favourite page so you can find it again."
+  }
+}
