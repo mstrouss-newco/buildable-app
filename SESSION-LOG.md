@@ -1,5 +1,80 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: Session FL4 — Sky Flyer polish + learning (shipped)
+
+Phase FL, block FL4 only. FL1 was the feel mock, FL2 the real cartridge, FL3 the
+hangar. FL4 is the layer that makes it feel like a Buildable game rather than a
+tech demo: sound, music, a buddy who says something worth hearing, world colours
+an editor can change, real journey art, and the learning moment.
+
+**What shipped**
+
+- **Sound, through the shared Feel Kit.** The engine loads `buildable-feel.js`
+  and `buildable-audio.js` and triggers PALETTE NAMES only (GAME-FEEL law 6) —
+  it never makes a tone of its own. Because a new engine type has to GROW the
+  company library rather than borrow from it, Sky Flyer created eight of its own
+  sounds in `api/sfx.js`: `sky_coin`, `sky_coinrun`, `sky_bump`, `sky_splash`,
+  `sky_land`, `sky_takeoff`, `sky_bank`, `sky_win`. They are tagged theme
+  `flight` in `/api/list-audio`, so every other project can reuse them. Coins,
+  the soft island bounce, a sea skim, touchdown, banking, take off and the win
+  all answer on the frame they happen, each with its matching buzz. A run of
+  coins scooped in one swoop earns the bigger `sky_coinrun` instead of the same
+  tick five times.
+- **Music is a manifest SLOT, not a hardcoded track.** `audio.music` at the
+  manifest root names a track in the shared library and any level may override
+  it; Sunset Canyon already flies to a different mood. Two new reusable moods
+  were created in `api/library-music.js`: **Open Skies (Floaty)** and **Soaring
+  (Bright)**, both theme `flight`, both callable by any game by name.
+- **Sky and world colours are a manifest art slot.** Each level carries a
+  `palette` object (sky, fog, ground, rock, rock2, cap, cap2, trunk, leaf,
+  stone, sun). The engine keeps its built-in colours so a cold standalone link
+  looks right instantly, then repaints the whole world when the manifest lands.
+  A missing or malformed colour is ignored, never fatal. **Recolouring a world
+  now needs no code at all** — the QA robot proves it by editing only the
+  manifest and watching the sky change.
+- **Buddy moments, not chatter.** Event-driven and rare: first coin, a six-coin
+  scoop, a banked landing, "coins done, now find a pad", "landings done, just
+  coins to go", the world beaten, the next world unlocked. Each fires at most
+  once per flight with a hard 12-second floor between any two, so a whole world
+  is a handful of cheers. A real flight in QA produced exactly three.
+- **Learning moment: beforeUnlock.** Beating a world and unlocking the next one
+  are now separate steps, and the shell's quiz gate sits between them.
+  `markBeaten()` awards the stars immediately; `markUnlockNext()` only runs once
+  the shell answers. The engine always ASKS (passing its manifest default) and
+  `SkyFlyerScreen` resolves it exactly like Breaker, so a parent's Learning Mode
+  toggle overrides the manifest. A cold standalone deep link has no parent app
+  and unlocks with no gate — proven in QA, so nobody is ever left waiting for a
+  question that can never arrive. `coinTopUp` stays on and is shell-side.
+- **Real journey art.** New `skybadge` kind in `api/images.js`: a round,
+  badge-shaped picture per journey stop plus the picker badge. The manifest
+  points `journeyBadge` and `art.badge` / `art.hero` at real URLs, so the
+  winding path shows the world instead of a coloured circle.
+
+**QA — `node qa-skyflyer.mjs .` → 112/112 PASS** (was 81/81 after FL3; 30 new
+FL4 checks plus the FL3 set re-run). The new half proves the sounds and music
+tracks the manifest names really exist in the shared library, that editing only
+a colour in the manifest recolours the sky, that a broken colour is survivable,
+that the buddy speaks on the win and stays rare, and that a cold link is never
+trapped by the gate. `qa-breaker.mjs` and `qa-music.mjs` re-run clean after the
+shell edit. Both worlds screenshotted in a real browser (swiftshader) with no
+page errors.
+
+**Flagged honestly**
+
+- The four badge pictures generate on their first request (the sandbox cannot
+  reach the live site to warm them). The first open of the Sky Flyer journey
+  will take a few seconds per badge and then they are cached forever; until
+  then the journey falls back to its drawn badge, exactly as before. Roughly
+  five cents of image generation, once.
+- The Feel Kit's confetti pipeline is 2D canvas and Sky Flyer is WebGL, so the
+  win still uses the engine's own 3D sparkle burst. The SOUND, the buzz and the
+  celebration preset are the Kit's, which is the part that has to match across
+  games. If we ever want literal shared confetti here, the fix belongs in the
+  Kit, not in this engine.
+- The tile is still owner-gated (`soon: true`) until Mike flies it and approves.
+
+**What remains in phase FL:** nothing. FL1-FL4 are all shipped.
+
 ## 2026-07-25: Session FL3 — The hangar: pick your ride before takeoff (shipped)
 
 Phase FL, block FL3 only. FL2 had already shipped the *plumbing* for a hangar — a

@@ -6,6 +6,22 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session FL4 — Sky Flyer polish + learning (July 25 2026)
+Sound, music, colour, buddy and the learning gate for the 3D flight game. The
+engine now runs entirely on the shared **Feel Kit** and triggers palette names
+only; Sky Flyer created eight of its own sounds (`sky_*` in `api/sfx.js`) and
+two reusable music moods (`sky_open_air`, `sky_soar_bright` in
+`api/library-music.js`), all tagged theme `flight` so any project can reuse
+them. **Music is a manifest slot** (`audio.music`, overridable per level) and
+**sky/world colours are a per-level `palette` art slot** — the engine repaints
+itself from the manifest, so recolouring a world needs no code. Buddy moments
+are rare and event-driven (at most once each, 12s floor). Beating a world and
+unlocking the next are now separate steps with the shell's **QuizGate**
+(`features.learning.beforeUnlock`) between them; a cold standalone link unlocks
+with no gate. New `skybadge` art kind gives every journey stop a real badge.
+QA: `node qa-skyflyer.mjs .` 112/112 PASS. Commits: 5878f2a, 05f4b82, 4429aec,
+bcd08b0, 2ca3c5a.
+
 ## LS3 follow-up — prototype mode: lessons go live without review (July 25 2026)
 Owner's call: this is a prototype, function over content. New `api/_lessonmode.js`
 holds one switch (`AUTO_APPROVE`, currently ON, overridable by `LESSON_AUTO_APPROVE=0`)
