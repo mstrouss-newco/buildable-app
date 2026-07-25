@@ -126,6 +126,28 @@ The owner is **non-technical**, so all recaps and questions to him use plain lan
 no jargon.
 
 - **Pull latest first.** Always pull `main` before touching any files.
+- **Check you can PUSH before you write a line of code.** In a Cowork cloud session
+  `git push` usually FAILS: the session is given read-only access to this repo and the
+  API answers `403 "GitHub access to this repository is not enabled for this session.
+  Use add_repo"`, with no `add_repo` or GitHub MCP tool present. Run a throwaway
+  `git push --dry-run` (or just try the real push on your first commit) at the START of
+  the session, so you find this out in minute one instead of after four hours of work.
+  Do NOT ask the owner for a personal access token, and refuse one if offered — the
+  no-secrets guardrail above is absolute, and a pasted token has to be revoked.
+  **The route that works: the GitHub web UI, driven through Claude in Chrome.** Per
+  directory, navigate to
+  `github.com/mstrouss-newco/buildable-app/upload/main/<dir>` — the folder MUST be in
+  the URL, because the file input alone keeps only the bare filename and would dump
+  everything in the repo root. Then `find` the "Choose your files" input, `file_upload`
+  with your sandbox paths (the tool streams the files up; nothing needs staging onto the
+  owner's Mac first), type a real commit message, and commit directly to `main`. One
+  commit per directory. Two traps: the message field ignores typing while an upload is
+  still in flight (wait, screenshot, then type), and `main` may have MOVED while you
+  worked — always `git fetch origin main` and rebase before uploading, then verify with
+  `git show origin/main:<file>` diffed against your local copy, or you will silently
+  clobber another session's work. The owner's local clone under
+  `Buildable MVP/buildable-app` is NOT a fallback: it is stale, and `device_bash` cannot
+  read the mounted folder.
 - **For platform-rebuild work, read the plan first:** `buildable-rebuild-roadmap.md` and
   `buildable-manifest-v2.md` in the repo root. If either is missing, stop and say so
   before proceeding.
