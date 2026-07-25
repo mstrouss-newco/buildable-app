@@ -1,0 +1,53 @@
+{
+  "id": "skyflyer",
+  "name": "Sky Flyer",
+  "type": "game",
+  "levelProfile": "croc",
+  "category": "Action",
+  "color": "#2FB7D6",
+  "ageBand": "4-10",
+  "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/skyflyer-engine.html",
+
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": true,
+    "coins": true,
+    "buddy": { "on": true, "personality": "cheerleader" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": [] }
+  },
+
+  "feel": { "pace": "calm", "celebration": "big", "haptics": "on" },
+
+  "art": {
+    "badge": "skyflyer/badge/v1",
+    "hero": "skyflyer/hero/v1",
+    "winCelebration": "shared/win/confetti-v1"
+  },
+
+  "levels": [
+    { "id": "sunny-islands", "name": "Sunny Islands", "difficulty": 1, "unlocked": true,
+      "journeyBadge": "badges/sunny-islands/v1",
+      "colors": ["#7ecbff", "#6FD46F", "#F6D98A"],
+      "parts": { "world": "sunny-islands", "theme": "ocean", "goalCoins": 12, "goalLandings": 1, "pads": 2 } },
+    { "id": "snowy-peaks", "name": "Snowy Peaks", "difficulty": 2,
+      "journeyBadge": "badges/snowy-peaks/v1",
+      "colors": ["#BFE3F5", "#FFFFFF", "#8FA3B4"],
+      "parts": { "world": "snowy-peaks", "theme": "snow", "goalCoins": 16, "goalLandings": 2, "pads": 2 } },
+    { "id": "sunset-canyon", "name": "Sunset Canyon", "difficulty": 3,
+      "journeyBadge": "badges/sunset-canyon/v1",
+      "colors": ["#FFB073", "#C8622F", "#E0864A"],
+      "parts": { "world": "sunset-canyon", "theme": "desert", "goalCoins": 20, "goalLandings": 2, "pads": 2 } }
+  ],
+
+  "customization": [
+    { "slot": "Plane", "options": [
+      { "name": "Little Puffin", "asset": "skyflyer/plane/puffin-v1", "price": 0 },
+      { "name": "Blue Jay", "asset": "skyflyer/plane/bluejay-v1", "price": 60 },
+      { "name": "Sun Hawk", "asset": "skyflyer/plane/sunhawk-v1", "price": 120 }
+    ]}
+  ]
+}

@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Sky Flyer</title>
+<!--
+  Sky Flyer — the real cartridge (Session FL2). Grown from the FL1 feel mock.
+
+  What makes this a cartridge (CARTRIDGE-CONTRACT.md):
+    - the SHELL owns the journey, the wallet and the nav chrome; this file only
+      announces coins up, reports nav state, and honors pause / resume.
+    - three worlds = the three journey stops. Each is an ENDLESS sky with one
+      goal (collect N coins + land M times). Beat the goal and the world is
+      marked beaten, the next unlocks, and the kid keeps flying forever.
+    - a crash is always a soft bounce. There is no lose state anywhere.
+    - art: the plane ("ride") is chosen in the shell's Make-it-mine hangar and
+      arrives as ?ride=N. The engine only maps the id to a look, never prices it.
+
+  URL params (all optional):
+    level=<index|id>  which world (default 0)
+    ride=<0..2>       equipped plane from the shell hangar
+    screen=demo       attract mode for the landing card (autopilot, no HUD chrome)
+    auto=1            autopilot on (the QA robot's handle; proves a world beatable)
+    nodraw=1          skip the WebGL renderer entirely (headless QA)
+    manual=1          do not self-drive the clock; the QA robot calls SKY.tick(dt)
+
+  No emojis anywhere (repo law). No audio yet: the audio rule is created library
+  sound only, and Sky Flyer's sounds arrive in FL4.
+-->
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#7ecbff;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    -webkit-user-select:none;user-select:none;touch-action:none}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none}
+  .pill{position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;
+    background:rgba(255,252,240,.92);border-radius:999px;padding:8px 16px 8px 10px;
+    display:flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(30,60,90,.18);
+    font-weight:800;font-size:20px;color:#5b4a1f}
+  .pill svg{display:block}
+  #banked{position:absolute;top:calc(64px + env(safe-area-inset-top));right:14px;
+    background:rgba(255,252,240,.85);border-radius:999px;padding:5px 14px;
+    font-weight:700;font-size:13px;color:#2b7a4b;box-shadow:0 2px 6px rgba(30,60,90,.15);
+    opacity:0;transition:opacity .4s}
+  #goals{position:absolute;top:calc(12px + env(safe-area-inset-top));left:104px;
+    display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+  .chip{background:rgba(255,252,240,.9);border-radius:999px;padding:6px 14px;
+    font-weight:800;font-size:14px;color:#33566e;box-shadow:0 2px 8px rgba(30,60,90,.16);
+    display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .chip .tick{width:14px;height:14px;flex:0 0 auto}
+  .chip.done{background:rgba(87,208,107,.95);color:#0f3d1c}
+  #worldName{position:absolute;left:50%;top:calc(14px + env(safe-area-inset-top));
+    transform:translateX(-50%);background:rgba(255,252,240,.9);border-radius:999px;
+    padding:6px 18px;font-weight:800;font-size:14px;color:#33566e;
+    box-shadow:0 2px 8px rgba(30,60,90,.16);transition:opacity .8s}
+  #hint{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);
+    background:rgba(255,252,240,.94);border-radius:20px;padding:14px 22px;
+    text-align:center;color:#33566e;font-weight:800;font-size:18px;
+    box-shadow:0 4px 14px rgba(30,60,90,.2);transition:opacity .6s}
+  #hint .sub{font-weight:600;font-size:14px;color:#6b8aa0;margin-top:4px}
+  #padmsg{position:absolute;left:50%;top:22%;transform:translateX(-50%);
+    background:rgba(47,183,214,.95);color:#fff;border-radius:16px;padding:10px 20px;
+    font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(20,80,110,.3);
+    opacity:0;transition:opacity .4s}
+  #takeoff{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);
+    pointer-events:auto;display:none;border:none;cursor:pointer;
+    background:linear-gradient(#57d06b,#2fae4d);color:#fff;font-weight:900;
+    font-size:24px;padding:18px 44px;border-radius:999px;
+    box-shadow:0 6px 0 #1f8038,0 10px 24px rgba(20,90,40,.35);
+    font-family:inherit;letter-spacing:.5px}
+  #takeoff:active{transform:translateX(-50%) translateY(4px);box-shadow:0 2px 0 #1f8038}
+  #arrow{position:absolute;width:52px;height:52px;opacity:0;transition:opacity .3s}
+  #arrow .lbl{position:absolute;top:52px;left:50%;transform:translateX(-50%);
+    background:rgba(255,252,240,.9);border-radius:8px;padding:2px 8px;font-size:11px;
+    font-weight:800;color:#33566e;white-space:nowrap}
+  #toast{position:absolute;left:50%;top:34%;transform:translateX(-50%) scale(.8);
+    color:#fff;font-weight:900;font-size:34px;text-shadow:0 3px 8px rgba(30,60,90,.4);
+    opacity:0;pointer-events:none;text-align:center;width:90%}
+  #toast.show{animation:pop 1.8s ease forwards}
+  @keyframes pop{0%{opacity:0;transform:translateX(-50%) scale(.6)}
+    15%{opacity:1;transform:translateX(-50%) scale(1.08)}
+    30%{transform:translateX(-50%) scale(1)}
+    75%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(1)}}
+  #helpBtn{position:absolute;top:calc(12px + env(safe-area-inset-top));left:56px;
+    pointer-events:auto;width:38px;height:38px;border-radius:999px;border:none;
+    background:rgba(255,252,240,.9);color:#33566e;font-weight:900;font-size:19px;
+    cursor:pointer;box-shadow:0 2px 8px rgba(30,60,90,.18);font-family:inherit}
+  #helpCard{position:absolute;inset:0;background:rgba(18,52,74,.72);display:none;
+    align-items:center;justify-content:center;pointer-events:auto;padding:20px}
+  #helpCard .inner{background:#FFFCF0;border-radius:24px;padding:24px 26px;max-width:360px;
+    color:#33566e;box-shadow:0 12px 40px rgba(10,40,60,.4)}
+  #helpCard h2{font-family:inherit;margin:0 0 10px;font-size:24px}
+  #helpCard p{margin:8px 0;font-size:16px;font-weight:600;line-height:1.45}
+  #helpCard button{margin-top:14px;border:none;border-radius:999px;padding:12px 28px;
+    background:#2FB7D6;color:#fff;font-weight:900;font-size:17px;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div class="pill">
+    <svg width="26" height="26" viewBox="0 0 26 26">
+      <circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>
+      <circle cx="13" cy="13" r="6" fill="none" stroke="#D89B1C" stroke-width="2"/>
+    </svg>
+    <span id="coins">0</span>
+  </div>
+  <div id="banked">Banked: <span id="bankedN">0</span></div>
+  <div id="worldName">Sunny Islands</div>
+  <div id="goals">
+    <div class="chip" id="gCoins">Coins 0/12</div>
+    <div class="chip" id="gLand">Landings 0/1</div>
+  </div>
+  <button id="helpBtn" aria-label="How to fly">?</button>
+  <div id="hint">
+    <svg width="120" height="46" viewBox="0 0 120 46">
+      <circle cx="24" cy="23" r="12" fill="none" stroke="#2FB7D6" stroke-width="4"/>
+      <circle cx="24" cy="23" r="4" fill="#2FB7D6"/>
+      <path d="M46 23 H96" stroke="#2FB7D6" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 9"/>
+      <path d="M92 12 L108 23 L92 34 Z" fill="#2FB7D6"/>
+    </svg>
+    <div>Drag anywhere to fly</div>
+    <div class="sub">Up and down too. The plane flies by itself</div>
+  </div>
+  <div id="padmsg">Fly low over the pad to land</div>
+  <div id="arrow">
+    <svg width="52" height="52" viewBox="0 0 52 52">
+      <g id="arrowRot">
+        <path d="M26 4 L40 30 L26 24 L12 30 Z" fill="#FF8A3C" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+      </g>
+    </svg>
+    <div class="lbl" id="arrowLbl">Landing pad</div>
+  </div>
+  <div id="toast"></div>
+  <button id="takeoff">TAKE OFF</button>
+  <div id="helpCard"><div class="inner">
+    <h2>How to fly</h2>
+    <p>Drag anywhere on the screen to steer. Drag up and down too. The plane always flies forward by itself.</p>
+    <p>Scoop up gold coins in the sky. Bumping into things just gives you a soft bounce, so you can never crash.</p>
+    <p>Follow the orange arrow to a landing pad. Fly low over it to land and bank your coins.</p>
+    <button id="helpClose">Got it</button>
+  </div></div>
+</div>
+<script src="/three.min.js"></script>
+<script src="/buildable-wallet.js"></script>
+<script src="/buildable-buddy.js"></script>
+<script src="/buildable-gamenav.js"></script>
+<script>
+(function(){
+"use strict";
+// ---------- launch params ----------
+var Q; try{ Q=new URLSearchParams(location.search); }catch(e){ Q=new URLSearchParams(""); }
+var NODRAW = Q.get("nodraw")==="1";
+var MANUAL = Q.get("manual")==="1";
+var DEMO   = Q.get("screen")==="demo";
+var AUTO   = Q.get("auto")==="1" || DEMO;
+var RIDE   = Math.max(0, Math.min(2, parseInt(Q.get("ride")||"0",10)||0));
+
+// ---------- tiny helpers ----------
+var clamp=function(v,a,b){return v<a?a:(v>b?b:v);};
+var lerp=function(a,b,t){return a+(b-a)*t;};
+function hash2(x,z){var h=Math.sin(x*127.1+z*311.7)*43758.5453;return h-Math.floor(h);}
+function rng(seed){return function(){seed=(seed*9301+49297)%233280;return seed/233280;};}
+
+// ============================================================================
+//  THE THREE WORLDS. Each journey stop is one of these: a whole endless sky with
+//  its own palette, its own terrain shape, its own pads and its own goal.
+//  Goals are what make a world "beatable" for the QA robot; after the goal the
+//  sky never ends, so a kid can keep flying forever.
+// ============================================================================
+var WORLDS=[
+  { id:"sunny-islands", name:"Sunny Islands", terrain:"islands",
+    sky:0x7ecbff, fog:0xbfe6ff, fogNear:260, fogFar:720,
+    ground:0x1B76AC, groundShine:45, waves:0.7,
+    hemiSky:0xbfe8ff, hemiGround:0x7aa96b, sunColor:0xfff2cf, sunDisc:0xFFE9A8,
+    rock:0xF6D98A, rock2:0xE9C46A, cap:0x6FD46F, cap2:0x4FB85C,
+    trunk:0xA9764B, leaf:0x3FA75B, stone:0xB9A88F,
+    goalCoins:12, goalLandings:1,
+    pads:[{x:0,z:-620},{x:560,z:430}] },
+  { id:"snowy-peaks", name:"Snowy Peaks", terrain:"peaks",
+    sky:0x8FC6E8, fog:0xB9DCEF, fogNear:220, fogFar:660,
+    ground:0xE2EFF8, groundShine:6, waves:0.18,
+    hemiSky:0xCFE7F7, hemiGround:0x7E97A8, sunColor:0xFFF6E8, sunDisc:0xFFFAF0,
+    rock:0x7A8FA3, rock2:0x64798C, cap:0xF4FAFF, cap2:0xDCEBF6,
+    trunk:0x6B4A33, leaf:0x2E6B4F, stone:0xC8D6E0,
+    goalCoins:16, goalLandings:2,
+    pads:[{x:-40,z:-640},{x:600,z:300}] },
+  { id:"sunset-canyon", name:"Sunset Canyon", terrain:"mesas",
+    sky:0xFFB073, fog:0xFFC79B, fogNear:240, fogFar:700,
+    ground:0xD98F55, groundShine:8, waves:0.25,
+    hemiSky:0xFFD9B0, hemiGround:0xC57A48, sunColor:0xFFD9A8, sunDisc:0xFFD08A,
+    rock:0xC8622F, rock2:0xA84E27, cap:0xE0864A, cap2:0xB55A2C,
+    trunk:0x8A5A34, leaf:0x4E9A5A, stone:0xE0A472,
+    goalCoins:20, goalLandings:2,
+    pads:[{x:20,z:-660},{x:-580,z:380}] }
+];
+function pickWorld(){
+  var raw=Q.get("level");
+  if(raw==null||raw==="") return 0;
+  var n=parseInt(raw,10);
+  if(!isNaN(n)&&n>=0&&n<WORLDS.length) return n;
+  for(var i=0;i<WORLDS.length;i++) if(WORLDS[i].id===raw) return i;
+  return 0;
+}
+var WI=pickWorld(), world=WORLDS[WI];
+
+// ============================================================================
+//  RIDES — the hangar. The SHELL owns which plane a kid has picked (Make it
+//  mine / the manifest's customization slot) and hands the id in as ?ride=N.
+//  This file only knows what each id LOOKS like, never what it costs.
+// ============================================================================
+var RIDES=[
+  { id:"puffin",  name:"Little Puffin", body:0xFF6B6B, trim:0xFFF6E3, wing:0xFFF6E3, glass:0x9adcf5, wingSpan:13,  speed:34 },
+  { id:"bluejay", name:"Blue Jay",      body:0x3E8BE0, trim:0xFFFFFF, wing:0xDCEBFF, glass:0xB9E8FF, wingSpan:12,  speed:37 },
+  { id:"sunhawk", name:"Sun Hawk",      body:0xFFC24A, trim:0x5B4A1F, wing:0xFFE9A8, glass:0xFFF2C8, wingSpan:14.5,speed:31 }
+];
+var ride=RIDES[RIDE];
+
+// ---------- progress (per kid, the shape the shell's journey reads) ----------
+function kidSuffix(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return (k&&k.id)?("_"+k.id):""; }catch(e){ return ""; } }
+function prefsKey(){ return "bk_skyflyer_prefs"+kidSuffix(); }
+function loadPrefs(){ try{ var p=JSON.parse(localStorage.getItem(prefsKey())||"null"); if(!p||typeof p!=="object") p={}; if(typeof p.unlocked!=="number") p.unlocked=0; if(!p.stars||typeof p.stars!=="object") p.stars={}; return p; }catch(e){ return {unlocked:0,stars:{}}; } }
+function savePrefs(p){ try{ localStorage.setItem(prefsKey(), JSON.stringify(p)); }catch(e){} }
+function markStars(n){ if(DEMO) return; var p=loadPrefs(); if((p.stars[WI]||0)<n) p.stars[WI]=n; savePrefs(p); }
+function markBeaten(){ if(DEMO) return; var p=loadPrefs(); p.stars[WI]=3; if(p.unlocked<WI+1) p.unlocked=Math.min(WORLDS.length-1,WI+1); savePrefs(p); }
+
+// ---------- renderer / scene ----------
+var W=(typeof innerWidth==="number"&&innerWidth)||390, H=(typeof innerHeight==="number"&&innerHeight)||780;
+var renderer=null;
+if(!NODRAW){
+  try{
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+    renderer.setSize(W,H);
+    document.body.insertBefore(renderer.domElement,document.getElementById('hud'));
+  }catch(e){ renderer=null; }
+}
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(world.sky);
+scene.fog=new THREE.Fog(world.fog,world.fogNear,world.fogFar);
+var camera=new THREE.PerspectiveCamera(62,W/H,0.5,1500);
+try{ document.body.style.background="#"+world.sky.toString(16); }catch(e){}
+
+var hemi=new THREE.HemisphereLight(world.hemiSky,world.hemiGround,0.95);scene.add(hemi);
+var sun=new THREE.DirectionalLight(world.sunColor,1.0);sun.position.set(120,220,60);scene.add(sun);
+var sunDisc=new THREE.Mesh(new THREE.CircleGeometry(38,24),
+  new THREE.MeshBasicMaterial({color:world.sunDisc,fog:false}));
+scene.add(sunDisc);
+
+// ---------- materials (per world) ----------
+function phong(c,extra){ var o={color:c,flatShading:true,shininess:6}; if(extra) for(var k in extra) o[k]=extra[k]; return new THREE.MeshPhongMaterial(o); }
+var M={
+  ground:phong(world.ground,{shininess:world.groundShine}),
+  rock:phong(world.rock,{shininess:8}),
+  rock2:phong(world.rock2,{shininess:8}),
+  cap:phong(world.cap,{shininess:5}),
+  cap2:phong(world.cap2,{shininess:5}),
+  trunk:phong(world.trunk),
+  leaf:phong(world.leaf),
+  stone:phong(world.stone),
+  cream:phong(0xFFF6E3,{shininess:20}),
+  gray:phong(0x5E6B77),
+  gold:phong(0xF7C948,{emissive:0x8a6a10,shininess:90}),
+  padTop:phong(0xFFFFFF),
+  padRing:new THREE.MeshBasicMaterial({color:0xFF8A3C}),
+  cloud:phong(0xFFFFFF,{shininess:0}),
+  rideBody:phong(ride.body,{shininess:30}),
+  rideTrim:phong(ride.trim,{shininess:20}),
+  rideWing:phong(ride.wing,{shininess:20})
+};
+
+// ---------- ground plane (sea / ice sheet / canyon floor) ----------
+var GROUND_SEG=44,GROUND_SIZE=1400;
+var groundGeo=new THREE.PlaneGeometry(GROUND_SIZE,GROUND_SIZE,GROUND_SEG,GROUND_SEG);
+groundGeo.rotateX(-Math.PI/2);
+var groundMesh=new THREE.Mesh(groundGeo,M.ground);
+scene.add(groundMesh);
+var gPos=groundGeo.attributes.position;
+var gBase=gPos.array.slice();
+
+// ---------- clouds ----------
+var clouds=[];
+(function(){
+  var puff=new THREE.SphereGeometry(1,7,5);
+  for(var i=0;i<10;i++){
+    var g=new THREE.Group();
+    var r=rng(i*77+5+WI*13),n=3+((r()*3)|0);
+    for(var j=0;j<n;j++){
+      var m=new THREE.Mesh(puff,M.cloud);
+      var s=6+r()*7;
+      m.scale.set(s,s*0.62,s);
+      m.position.set((j-n/2)*7+r()*4,r()*3,r()*5);
+      g.add(m);
+    }
+    g.position.set((r()-.5)*900,90+r()*70,(r()-.5)*900);
+    scene.add(g);clouds.push(g);
+  }
+})();
+
+// ---------- the plane (cute low-poly, code-built, colored by the picked ride) ----------
+var plane=new THREE.Group();
+(function(){
+  var body=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.5,6.4,8),M.rideBody);
+  body.rotation.x=Math.PI/2;plane.add(body);
+  var nose=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.15,1.5,8),M.rideTrim);
+  nose.rotation.x=Math.PI/2;nose.position.z=3.9;plane.add(nose);
+  var tailTip=new THREE.Mesh(new THREE.CylinderGeometry(0.35,1.05,1.6,8),M.rideBody);
+  tailTip.rotation.x=Math.PI/2;tailTip.position.z=-4.0;plane.add(tailTip);
+  var span=ride.wingSpan;
+  var wing=new THREE.Mesh(new THREE.BoxGeometry(span,0.42,2.6),M.rideWing);
+  wing.position.set(0,0.45,0.6);plane.add(wing);
+  var wingTipL=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.6,2.6),M.rideBody);
+  wingTipL.position.set(-span/2,0.45,0.6);plane.add(wingTipL);
+  var wingTipR=wingTipL.clone();wingTipR.position.x=span/2;plane.add(wingTipR);
+  var tailWing=new THREE.Mesh(new THREE.BoxGeometry(4.6,0.32,1.5),M.rideWing);
+  tailWing.position.set(0,0.3,-3.9);plane.add(tailWing);
+  var fin=new THREE.Mesh(new THREE.BoxGeometry(0.32,2.0,1.6),M.rideBody);
+  fin.position.set(0,1.2,-4.1);plane.add(fin);
+  var canopy=new THREE.Mesh(new THREE.SphereGeometry(0.95,8,6),
+    new THREE.MeshPhongMaterial({color:ride.glass,shininess:90,flatShading:true}));
+  canopy.scale.set(1,0.8,1.4);canopy.position.set(0,1.05,1.1);plane.add(canopy);
+  var hub=new THREE.Mesh(new THREE.SphereGeometry(0.5,8,6),M.gray);
+  hub.position.z=4.75;plane.add(hub);
+})();
+var prop=new THREE.Mesh(new THREE.BoxGeometry(0.28,5.2,0.5),M.gray);
+prop.position.z=4.85;plane.add(prop);
+var propDisc=new THREE.Mesh(new THREE.CircleGeometry(2.6,20),
+  new THREE.MeshBasicMaterial({color:0xdddddd,transparent:true,opacity:0.25,side:THREE.DoubleSide}));
+propDisc.position.z=4.9;plane.add(propDisc);
+scene.add(plane);
+var wheelGeo=new THREE.CylinderGeometry(0.55,0.55,0.4,10);wheelGeo.rotateZ(Math.PI/2);
+[[-1.4,-1.35,1.2],[1.4,-1.35,1.2],[0,-1.15,-3.6]].forEach(function(p){
+  var w=new THREE.Mesh(wheelGeo,M.gray);w.position.set(p[0],p[1],p[2]);plane.add(w);
+});
+
+// ---------- landing pads (this world's, fixed so the arrow can point at them) ----------
+var PAD_R=16, PAD_TOP=10;
+var PADS=world.pads.map(function(p){ return {x:p.x,z:p.z}; });
+PADS.forEach(function(pad){
+  var g=new THREE.Group();
+  var base=new THREE.Mesh(new THREE.CylinderGeometry(24,34,14,10),M.rock);
+  base.position.y=3;g.add(base);
+  var top=new THREE.Mesh(new THREE.CylinderGeometry(PAD_R,PAD_R,1.6,20),M.padTop);
+  top.position.y=PAD_TOP;g.add(top);
+  var ring=new THREE.Mesh(new THREE.TorusGeometry(PAD_R-3.4,0.7,8,26),M.padRing);
+  ring.rotation.x=Math.PI/2;ring.position.y=PAD_TOP+0.85;g.add(ring);
+  var dot=new THREE.Mesh(new THREE.CylinderGeometry(3,3,0.3,14),M.padRing);
+  dot.position.y=PAD_TOP+0.85;g.add(dot);
+  var pole=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,7,6),M.gray);
+  pole.position.set(PAD_R-2,PAD_TOP+3.5,-(PAD_R-2));g.add(pole);
+  var sock=new THREE.Mesh(new THREE.ConeGeometry(1.1,3.4,8),M.padRing);
+  sock.rotation.z=Math.PI/2;sock.position.set(PAD_R-3.8,PAD_TOP+6.5,-(PAD_R-2));g.add(sock);
+  var beam=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,220,8,1,true),
+    new THREE.MeshBasicMaterial({color:0xFF8A3C,transparent:true,opacity:0.16,fog:false}));
+  beam.position.y=110;g.add(beam);
+  g.position.set(pad.x,0,pad.z);
+  scene.add(g);
+});
+function nearestPad(){
+  var best=PADS[0],bd=1e18;
+  for(var i=0;i<PADS.length;i++){
+    var d=Math.hypot(S.pos.x-PADS[i].x,S.pos.z-PADS[i].z);
+    if(d<bd){bd=d;best=PADS[i];}
+  }
+  return {pad:best,dist:bd};
+}
+
+// ---------- endless terrain + coins (chunk grid) ----------
+var CHUNK=340,RANGE=2;
+var chunks={};
+var coneGeo=new THREE.ConeGeometry(1,1,9);
+var cylGeo=new THREE.CylinderGeometry(1,1,1,10);
+var trunkGeo=new THREE.CylinderGeometry(0.25,0.35,1,6);
+var leafGeo=new THREE.ConeGeometry(1.6,2.2,7);
+var pineGeo=new THREE.ConeGeometry(1.5,3.4,7);
+var rockGeo=new THREE.IcosahedronGeometry(1,0);
+var skirtGeo=new THREE.CylinderGeometry(1,1.12,1.2,10);
+var coinGeo=new THREE.CylinderGeometry(1.15,1.15,0.34,14);coinGeo.rotateX(Math.PI/2);
+
+function buildPalm(r){
+  var g=new THREE.Group();
+  var h=3.5+r()*2.5;
+  var t=new THREE.Mesh(trunkGeo,M.trunk);t.scale.set(1,h,1);t.position.y=h/2;g.add(t);
+  var l=new THREE.Mesh(leafGeo,M.leaf);l.position.y=h+0.9;g.add(l);
+  return g;
+}
+function buildPine(r){
+  var g=new THREE.Group();
+  var h=3+r()*3;
+  var t=new THREE.Mesh(trunkGeo,M.trunk);t.scale.set(0.8,h*0.5,0.8);t.position.y=h*0.25;g.add(t);
+  var c=new THREE.Mesh(pineGeo,M.leaf);c.scale.set(1,h*0.4,1);c.position.y=h*0.75;g.add(c);
+  return g;
+}
+function buildCactus(r){
+  var g=new THREE.Group();
+  var h=3+r()*3;
+  var t=new THREE.Mesh(cylGeo,M.leaf);t.scale.set(0.5,h,0.5);t.position.y=h/2;g.add(t);
+  var arm=new THREE.Mesh(cylGeo,M.leaf);arm.scale.set(0.35,h*0.4,0.35);
+  arm.position.set(0.9,h*0.7,0);arm.rotation.z=-0.5;g.add(arm);
+  return g;
+}
+// One terrain feature. Every world uses the same silhouette contract
+// (userData.hitR / hitH) so the bounce and the crown coins never need to know
+// which world they are in.
+function buildFeature(r,big){
+  var g=new THREE.Group();
+  var rad,hh;
+  if(world.terrain==="peaks"){
+    rad=big?(15+r()*13):(7+r()*6);
+    hh=big?(40+r()*46):(10+r()*12);
+    var base=new THREE.Mesh(coneGeo,r()>0.5?M.rock:M.rock2);
+    base.scale.set(rad,hh,rad);base.position.y=hh*0.5-2;g.add(base);
+    var snow=new THREE.Mesh(coneGeo,r()>0.4?M.cap:M.cap2);
+    snow.scale.set(rad*0.5,hh*0.42,rad*0.5);snow.position.y=hh*0.79;g.add(snow);
+    var trees=1+((r()*3)|0);
+    for(var i=0;i<trees;i++){
+      var p=buildPine(r);
+      var a=r()*Math.PI*2,d=rad*0.5*r();
+      p.position.set(Math.cos(a)*d,hh*0.30,Math.sin(a)*d);g.add(p);
+    }
+  } else if(world.terrain==="mesas"){
+    rad=big?(16+r()*15):(8+r()*7);
+    hh=big?(28+r()*36):(7+r()*9);
+    var lower=new THREE.Mesh(cylGeo,M.rock);
+    lower.scale.set(rad,hh*0.7,rad);lower.position.y=hh*0.35-1;g.add(lower);
+    var upper=new THREE.Mesh(cylGeo,r()>0.5?M.cap:M.cap2);
+    upper.scale.set(rad*0.72,hh*0.36,rad*0.72);upper.position.y=hh*0.85;g.add(upper);
+    var skirt=new THREE.Mesh(skirtGeo,M.stone);
+    skirt.scale.set(rad*1.2,1,rad*1.2);skirt.position.y=0.6;g.add(skirt);
+    var cacti=1+((r()*2)|0);
+    for(var c=0;c<cacti;c++){
+      var q=buildCactus(r);
+      var aa=r()*Math.PI*2,dd=rad*0.4*r();
+      q.position.set(Math.cos(aa)*dd,hh*1.02,Math.sin(aa)*dd);g.add(q);
+    }
+  } else { // islands
+    rad=big?(16+r()*14):(7+r()*7);
+    hh=big?(26+r()*40):(6+r()*8);
+    var hill=new THREE.Mesh(coneGeo,M.rock);
+    hill.scale.set(rad,hh,rad);hill.position.y=hh*0.5-2;g.add(hill);
+    var beach=new THREE.Mesh(skirtGeo,M.rock2);
+    beach.scale.set(rad*1.25,1,rad*1.25);beach.position.y=0.6;g.add(beach);
+    var capm=new THREE.Mesh(coneGeo,r()>0.5?M.cap:M.cap2);
+    capm.scale.set(rad*0.55,hh*0.55,rad*0.55);capm.position.y=hh*0.72;g.add(capm);
+    var palms=1+((r()*3)|0);
+    for(var k=0;k<palms;k++){
+      var pm=buildPalm(r);
+      var ang=r()*Math.PI*2,dist=rad*0.35*r();
+      pm.position.set(Math.cos(ang)*dist,hh*0.98-2,Math.sin(ang)*dist);
+      pm.rotation.y=r()*Math.PI;g.add(pm);
+    }
+  }
+  if(r()>0.6){
+    var rock=new THREE.Mesh(rockGeo,M.stone);
+    var s=1+r()*2;rock.scale.set(s,s,s);
+    rock.position.set(rad*0.8,0.5,rad*0.4);g.add(rock);
+  }
+  g.userData.hitR=rad*0.8;g.userData.hitH=hh;
+  return g;
+}
+function makeCoin(x,y,z,parent,list){
+  var c=new THREE.Mesh(coinGeo,M.gold);
+  c.position.set(x,y,z);parent.add(c);
+  list.push({mesh:c,taken:false,x:x,y:y,z:z});
+}
+function padTooClose(wx,wz){
+  for(var i=0;i<PADS.length;i++) if(Math.hypot(wx-PADS[i].x,wz-PADS[i].z)<95) return true;
+  return false;
+}
+function buildChunk(cx,cz){
+  var key=cx+","+cz;
+  if(chunks[key])return;
+  var g=new THREE.Group();
+  g.position.set(cx*CHUNK,0,cz*CHUNK);
+  var r=rng(Math.floor(hash2(cx+WI*37,cz-WI*17)*100000)+7);
+  var coins=[],isles=[];
+  var n=1+((r()*2.4)|0);
+  for(var i=0;i<n;i++){
+    var big=r()>0.62;
+    var isle=buildFeature(r,big);
+    var ix=(r()-.5)*CHUNK*0.86,iz=(r()-.5)*CHUNK*0.86;
+    var wx=cx*CHUNK+ix,wz=cz*CHUNK+iz;
+    if(padTooClose(wx,wz))continue;      // keep every pad approach clear
+    if(Math.hypot(wx,wz)<80)continue;    // keep the spawn clear
+    isle.position.set(ix,0,iz);
+    g.add(isle);isles.push(isle);
+    if(big&&r()>0.35){                   // crown coins on the tall stuff
+      var top=isle.userData.hitH*0.98;
+      for(var k=0;k<5;k++){
+        var a=k/5*Math.PI*2;
+        makeCoin(ix+Math.cos(a)*7,top+6,iz+Math.sin(a)*7,g,coins);
+      }
+    }
+  }
+  var trails=1+((r()*1.8)|0);
+  for(var t=0;t<trails;t++){
+    var sx=(r()-.5)*CHUNK*0.8,sz=(r()-.5)*CHUNK*0.8;
+    var ang=r()*Math.PI*2,len=7+((r()*4)|0);
+    var baseY=14+r()*40,rise=(r()-.5)*18,bend=(r()-.5)*0.5;
+    for(var q=0;q<len;q++){
+      var d=q*9,aa=ang+bend*(q/len);
+      var yy=baseY+Math.sin(q/len*Math.PI)*Math.abs(rise)+(rise<0?-q*0.6:0);
+      makeCoin(sx+Math.cos(aa)*d,clamp(yy,8,95),sz+Math.sin(aa)*d,g,coins);
+    }
+  }
+  scene.add(g);
+  chunks[key]={group:g,coins:coins,isles:isles,cx:cx,cz:cz};
+}
+function updateChunks(px,pz){
+  var ccx=Math.round(px/CHUNK),ccz=Math.round(pz/CHUNK);
+  for(var dx=-RANGE;dx<=RANGE;dx++)for(var dz=-RANGE;dz<=RANGE;dz++)
+    buildChunk(ccx+dx,ccz+dz);
+  for(var key in chunks){
+    var ch=chunks[key];
+    if(Math.abs(ch.cx-ccx)>RANGE+1||Math.abs(ch.cz-ccz)>RANGE+1){
+      scene.remove(ch.group);
+      delete chunks[key];
+    }
+  }
+}
+// starter coin trail: straight ahead so the very first seconds feel good
+var starter={group:new THREE.Group(),coins:[]};
+(function(){
+  for(var i=0;i<10;i++)
+    makeCoin(0,16+Math.sin(i/9*Math.PI)*6,-40-i*11,starter.group,starter.coins);
+  scene.add(starter.group);
+})();
+
+// ---------- sparkles ----------
+var sparks=[];
+var sparkGeo=new THREE.IcosahedronGeometry(0.45,0);
+var sparkMat=new THREE.MeshBasicMaterial({color:0xFFE066});
+var splashMat=new THREE.MeshBasicMaterial({color:0xCFF3FF});
+function burst(pos,n,color){
+  if(NODRAW)return;
+  for(var i=0;i<n;i++){
+    var s=new THREE.Mesh(sparkGeo,color||sparkMat);
+    s.position.copy(pos);
+    s.userData.v=new THREE.Vector3((Math.random()-.5)*14,Math.random()*10+3,(Math.random()-.5)*14);
+    s.userData.life=0.7;
+    scene.add(s);sparks.push(s);
+  }
+}
+
+// ---------- flight state ----------
+var S={
+  mode:"fly",              // fly | landing | landed | takeoff
+  pos:new THREE.Vector3(0,22,40),
+  yaw:0,pitch:0,bank:0,
+  speed:ride.speed,
+  coins:0,               // carried, not banked yet
+  banked:0,              // banked this session (also announced to the shell wallet)
+  worldCoins:0,          // collected in this world (counts toward the goal)
+  landings:0,
+  beaten:false,
+  paused:false,
+  sound:true,
+  auto:AUTO,
+  autoWait:0,autoIdle:0,autoStraight:0,
+  dragging:false,dx:0,dy:0,
+  landTimer:0,hintDone:false,padNear:false,
+  targetPad:null
+};
+
+// ---------- HUD refs ----------
+var D=document;
+var coinsEl=D.getElementById("coins"),
+    bankedBox=D.getElementById("banked"),
+    bankedEl=D.getElementById("bankedN"),
+    hintEl=D.getElementById("hint"),
+    padmsg=D.getElementById("padmsg"),
+    arrowEl=D.getElementById("arrow"),
+    arrowRot=D.getElementById("arrowRot"),
+    arrowLbl=D.getElementById("arrowLbl"),
+    toastEl=D.getElementById("toast"),
+    takeoffBtn=D.getElementById("takeoff"),
+    goalsEl=D.getElementById("goals"),
+    gCoinsEl=D.getElementById("gCoins"),
+    gLandEl=D.getElementById("gLand"),
+    worldNameEl=D.getElementById("worldName"),
+    helpBtn=D.getElementById("helpBtn"),
+    helpCard=D.getElementById("helpCard"),
+    helpClose=D.getElementById("helpClose");
+worldNameEl.textContent=world.name;
+setTimeout(function(){ try{ worldNameEl.style.opacity=0; }catch(e){} },3200);
+setTimeout(function(){ try{ if(!S.hintDone){S.hintDone=true;hintEl.style.opacity=0;} }catch(e){} },7000);
+function toast(t){ toastEl.textContent=t;toastEl.classList.remove("show");
+  void toastEl.offsetWidth;toastEl.classList.add("show"); }
+function paintGoals(){
+  if(S.beaten){
+    gCoinsEl.className="chip done";gCoinsEl.textContent="World beaten - free flight";
+    gLandEl.style.display="none";
+    return;
+  }
+  gCoinsEl.textContent="Coins "+Math.min(S.worldCoins,world.goalCoins)+"/"+world.goalCoins;
+  gCoinsEl.className="chip"+(S.worldCoins>=world.goalCoins?" done":"");
+  gLandEl.textContent="Landings "+Math.min(S.landings,world.goalLandings)+"/"+world.goalLandings;
+  gLandEl.className="chip"+(S.landings>=world.goalLandings?" done":"");
+}
+paintGoals();
+if(DEMO){ // attract mode on the landing card: scenery only, no chrome, no taps
+  goalsEl.style.display="none";hintEl.style.display="none";
+  D.querySelector(".pill").style.display="none";helpBtn.style.display="none";
+  worldNameEl.style.display="none";takeoffBtn.style.display="none";
+}
+
+// ---------- help ----------
+function openHelp(){ helpCard.style.display="flex"; }
+function closeHelp(){ helpCard.style.display="none"; }
+helpBtn.addEventListener("click",openHelp);
+helpClose.addEventListener("click",closeHelp);
+
+// ---------- input: one finger, drag = steer ----------
+var startX=0,startY=0;
+function pdown(x,y){
+  if(S.mode==="landed"||S.auto||DEMO)return;
+  S.dragging=true;startX=x;startY=y;S.dx=0;S.dy=0;
+  if(!S.hintDone){S.hintDone=true;hintEl.style.opacity=0;}
+}
+function pmove(x,y){
+  if(!S.dragging)return;
+  S.dx=clamp((x-startX)/(W*0.28),-1,1);
+  S.dy=clamp((y-startY)/(H*0.28),-1,1);
+}
+function pup(){ if(S.auto)return; S.dragging=false;S.dx=0;S.dy=0; }
+addEventListener("pointerdown",function(e){pdown(e.clientX,e.clientY);});
+addEventListener("pointermove",function(e){pmove(e.clientX,e.clientY);});
+addEventListener("pointerup",pup);
+addEventListener("pointercancel",pup);
+addEventListener("touchstart",function(e){e.preventDefault();},{passive:false});
+
+function takeOff(){
+  if(S.mode!=="landed")return;
+  S.mode="takeoff";S.landTimer=0;takeoffBtn.style.display="none";
+  toast("Off we go!");
+}
+takeoffBtn.addEventListener("click",takeOff);
+
+// ---------- the shared wallet: announce only, never touch shell storage ----------
+function announceCoins(n){
+  if(n<=0||DEMO)return;
+  try{ if(window.BuildableWallet) window.BuildableWallet.add(n); }catch(e){}
+}
+function buddy(kind,text){ try{ if(window.BB) window.BB.send(kind,text||null); }catch(e){} }
+
+// ---------- collisions ----------
+function featureBounce(){
+  for(var key in chunks){
+    var ch=chunks[key];
+    for(var i=0;i<ch.isles.length;i++){
+      var isle=ch.isles[i];
+      var wx=ch.group.position.x+isle.position.x,
+          wz=ch.group.position.z+isle.position.z;
+      var hr=isle.userData.hitR,hh=isle.userData.hitH;
+      var d=Math.hypot(S.pos.x-wx,S.pos.z-wz);
+      if(d<hr+3&&S.pos.y<hh+2){
+        // soft bounce: push out, small pop. NEVER a fail state (kid rule).
+        var nx=(S.pos.x-wx)/(d||1),nz=(S.pos.z-wz)/(d||1);
+        S.pos.x=wx+nx*(hr+4);S.pos.z=wz+nz*(hr+4);
+        S.pos.y+=2.5;S.speed=Math.max(20,S.speed*0.7);
+        burst(S.pos,6);
+        return;
+      }
+    }
+  }
+}
+function collectCoins(list,parent){
+  for(var i=0;i<list.length;i++){
+    var c=list[i];
+    if(c.taken)continue;
+    var wx=parent?parent.position.x+c.x:c.x,
+        wy=c.y,
+        wz=parent?parent.position.z+c.z:c.z;
+    var dx=S.pos.x-wx,dy=S.pos.y-wy,dz=S.pos.z-wz;
+    if(dx*dx+dy*dy+dz*dz<46){   // generous kid-sized magnet
+      c.taken=true;c.mesh.visible=false;
+      S.coins++;S.worldCoins++;S.autoIdle=0;coinsEl.textContent=S.coins;
+      paintGoals();
+      burst(new THREE.Vector3(wx,wy,wz),5);
+      checkBeaten();
+    }
+  }
+}
+
+// ---------- goals: beat the world, then fly forever ----------
+function checkBeaten(){
+  if(S.beaten)return;
+  if(S.worldCoins>=world.goalCoins&&S.landings>=world.goalLandings){
+    S.beaten=true;
+    markBeaten();
+    paintGoals();
+    toast(world.name+" beaten!");
+    buddy("win");
+    if(WI+1<WORLDS.length) buddy("levelup");
+  }
+}
+
+// ---------- landing pads ----------
+function tryLand(){
+  var np=nearestPad();
+  var near=np.dist<120;
+  if(near!==S.padNear){S.padNear=near;padmsg.style.opacity=(near&&S.mode==="fly"&&!DEMO)?1:0;}
+  if(S.mode==="fly"&&np.dist<PAD_R+6&&S.pos.y<PAD_TOP+14){
+    S.mode="landing";S.landTimer=0;S.targetPad=np.pad;padmsg.style.opacity=0;
+  }
+}
+function finishLanding(){
+  S.mode="landed";
+  S.landings++;
+  if(S.coins>0){
+    var n=S.coins;
+    S.banked+=n;announceCoins(n);       // -> the ONE shared wallet, via the shell
+    toast("+"+n+" coins banked!");
+    S.coins=0;coinsEl.textContent=0;
+    bankedEl.textContent=S.banked;bankedBox.style.opacity=1;
+    burst(new THREE.Vector3(S.targetPad.x,PAD_TOP+4,S.targetPad.z),16);
+  }else{ toast("Nice landing!"); }
+  markStars(S.beaten?3:1);
+  paintGoals();
+  checkBeaten();
+  if(!DEMO) takeoffBtn.style.display="block";
+}
+
+// ---------- camera ----------
+var camPos=new THREE.Vector3(0,30,80);
+function updateCamera(dt){
+  var back=new THREE.Vector3(Math.sin(S.yaw)*20, 8.5-S.pitch*6, Math.cos(S.yaw)*20);
+  var target=S.pos.clone().add(back);
+  camPos.lerp(target,1-Math.pow(0.0012,dt));
+  camera.position.copy(camPos);
+  var look=S.pos.clone();look.y+=2.5;
+  look.x-=Math.sin(S.yaw)*14;look.z-=Math.cos(S.yaw)*14;
+  camera.lookAt(look);
+}
+
+// ---------- pad arrow ----------
+var v3=new THREE.Vector3();
+function updateArrow(){
+  if(NODRAW||DEMO)return;
+  if(S.mode!=="fly"){arrowEl.style.opacity=0;return;}
+  var np=nearestPad();
+  if(np.dist<170){arrowEl.style.opacity=0;return;}
+  v3.set(np.pad.x,PAD_TOP,np.pad.z).project(camera);
+  var onScreen=v3.z<1&&v3.x>-0.92&&v3.x<0.92&&v3.y>-0.85&&v3.y<0.85;
+  if(onScreen){
+    var sx=(v3.x*0.5+0.5)*W,sy=(-v3.y*0.5+0.5)*H;
+    arrowEl.style.left=(sx-26)+"px";arrowEl.style.top=(sy-70)+"px";
+    arrowRot.setAttribute("transform","rotate(180 26 26)");
+  }else{
+    var ang=Math.atan2(v3.x,v3.y);
+    if(v3.z>1)ang=Math.PI-ang;
+    var cx=W/2+Math.sin(ang)*(Math.min(W,H)*0.36),
+        cy=H*0.42-Math.cos(ang)*(H*0.30);
+    arrowEl.style.left=(cx-26)+"px";arrowEl.style.top=(cy-26)+"px";
+    arrowRot.setAttribute("transform","rotate("+(ang*180/Math.PI)+" 26 26)");
+  }
+  arrowLbl.textContent="Landing pad "+Math.round(np.dist)+"m";
+  arrowEl.style.opacity=1;
+}
+
+// ============================================================================
+//  AUTOPILOT — the QA robot's handle (and the landing card's attract mode).
+//  It flies the plane with the SAME two numbers a finger produces (dx / dy), so
+//  anything it proves is something a kid's drag could also do: chase the nearest
+//  coin until the coin goal is met, then line up on a pad, land, take off again.
+// ============================================================================
+// A plane cannot turn on the spot: its turn circle is about 20 units across. So
+// the robot never locks onto a coin that is closer than that AND off to the side
+// (it would orbit it forever, which is exactly how a person flies too). It picks
+// the cheapest coin by distance PLUS a penalty for being off the nose.
+var TURN_R=46;
+function nearestCoin(){
+  var best=null,bs=1e18;
+  var hx=-Math.sin(S.yaw), hz=-Math.cos(S.yaw);
+  function scan(list,parent){
+    for(var i=0;i<list.length;i++){
+      var c=list[i];if(c.taken)continue;
+      var wx=parent?parent.position.x+c.x:c.x,
+          wy=c.y,
+          wz=parent?parent.position.z+c.z:c.z;
+      var dx=wx-S.pos.x,dy=wy-S.pos.y,dz=wz-S.pos.z;
+      var d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      var flat=Math.hypot(dx,dz)||1;
+      var ahead=(dx*hx+dz*hz)/flat;           // 1 = dead ahead, -1 = behind us
+      if(d<TURN_R&&ahead<0.2)continue;        // inside the turn circle: unreachable
+      var score=d+(1-ahead)*70;
+      if(score<bs){bs=score;best={x:wx,y:wy,z:wz};}
+    }
+  }
+  scan(starter.coins,null);
+  for(var key in chunks) scan(chunks[key].coins,chunks[key].group);
+  return best;
+}
+function autoStep(dt){
+  if(S.mode==="landed"){
+    S.autoWait+=dt;
+    if(S.autoWait>1.0){ S.autoWait=0; takeOff(); }
+    return;
+  }
+  if(S.mode!=="fly"){ S.dx=0;S.dy=0;return; }
+  // watchdog: if nothing has been picked up for a while the robot is probably
+  // orbiting something. Fly dead straight for a moment to break the circle.
+  S.autoIdle+=dt;
+  if(S.autoIdle>7){ S.autoStraight=2.2; S.autoIdle=0; }
+  if(S.autoStraight>0){ S.autoStraight-=dt; S.dx=0; S.dy=clamp(-(30-S.pos.y)*0.05,-1,1); return; }
+  // coin goal first, then a pad to land on, then free flight (keep scooping coins)
+  var t=null,np;
+  if(!S.beaten && S.worldCoins>=world.goalCoins && S.landings<world.goalLandings){
+    np=nearestPad(); t={x:np.pad.x,y:PAD_TOP+5,z:np.pad.z};
+  }else{
+    t=nearestCoin();
+    if(!t){ np=nearestPad(); t={x:np.pad.x,y:PAD_TOP+5,z:np.pad.z}; }
+  }
+  var gx=t.x-S.pos.x, gz=t.z-S.pos.z, hd=t.y-S.pos.y;
+  var want=Math.atan2(-gx,-gz);
+  var diff=want-S.yaw;
+  while(diff>Math.PI)diff-=Math.PI*2;
+  while(diff<-Math.PI)diff+=Math.PI*2;
+  S.dx=clamp(-diff*1.3,-1,1);
+  S.dy=clamp(-hd*0.07,-1,1);
+}
+
+// ============================================================================
+//  SIM STEP — one slice of flight. Split out from the draw loop so the QA robot
+//  can drive it directly (SKY.tick) with no renderer and no real clock.
+// ============================================================================
+var time=0;
+function stepSim(dt){
+  if(S.paused)return;
+  time+=dt;
+  if(S.auto) autoStep(dt);
+
+  if(S.mode==="fly"){
+    var turn=S.dx*1.7,pitchT=S.dy*0.75;
+    S.yaw-=turn*dt;
+    S.pitch=lerp(S.pitch,-pitchT,1-Math.pow(0.002,dt));
+    S.bank=lerp(S.bank,-S.dx*0.9,1-Math.pow(0.004,dt));
+    var targetSpeed=ride.speed-S.pitch*10;
+    S.speed=lerp(S.speed,clamp(targetSpeed,ride.speed*0.7,ride.speed*1.35),dt*1.5);
+    var dir=new THREE.Vector3(-Math.sin(S.yaw),Math.sin(S.pitch),-Math.cos(S.yaw)).normalize();
+    S.pos.addScaledVector(dir,S.speed*dt);
+    if(S.pos.y<3){S.pos.y=3;S.pitch=Math.max(S.pitch,0.12);
+      if(Math.random()<0.3)burst(new THREE.Vector3(S.pos.x,1,S.pos.z),3,splashMat);}
+    if(S.pos.y>120){S.pos.y=120;S.pitch=Math.min(S.pitch,0);}
+    featureBounce();
+    tryLand();
+  }
+  else if(S.mode==="landing"){
+    var pad=S.targetPad||PADS[0];
+    S.landTimer+=dt;
+    var t=Math.min(S.landTimer/1.6,1),e=t*t*(3-2*t);
+    S.pos.x=lerp(S.pos.x,pad.x,e*0.14);
+    S.pos.z=lerp(S.pos.z,pad.z,e*0.14);
+    S.pos.y=lerp(S.pos.y,PAD_TOP+2.3,e*0.16);
+    S.speed=lerp(S.speed,0,dt*1.4);
+    S.pitch=lerp(S.pitch,0,dt*3);S.bank=lerp(S.bank,0,dt*3);
+    var dir2=new THREE.Vector3(-Math.sin(S.yaw),0,-Math.cos(S.yaw));
+    S.pos.addScaledVector(dir2,S.speed*dt*0.4);
+    if(t>=1&&S.speed<1.5) finishLanding();
+  }
+  else if(S.mode==="takeoff"){
+    S.landTimer+=dt;
+    S.speed=lerp(S.speed,ride.speed*1.1,dt*0.9);
+    var dir3=new THREE.Vector3(-Math.sin(S.yaw),0,-Math.cos(S.yaw));
+    S.pos.addScaledVector(dir3,S.speed*dt);
+    if(S.landTimer>1.1){S.pos.y+=(S.landTimer-1.1)*14*dt*3;S.pitch=lerp(S.pitch,0.28,dt*2);}
+    if(S.pos.y>PAD_TOP+16){S.mode="fly";S.pitch=0.1;}
+  }
+
+  updateChunks(S.pos.x,S.pos.z);
+  collectCoins(starter.coins,null);
+  for(var key in chunks) collectCoins(chunks[key].coins,chunks[key].group);
+}
+
+// ---------- draw ----------
+function drawScene(dt){
+  if(NODRAW||!renderer)return;
+  plane.position.copy(S.pos);
+  plane.rotation.set(0,0,0);
+  plane.rotateY(S.yaw+Math.PI);
+  plane.rotateX(-S.pitch);
+  plane.rotateZ(S.bank);
+  plane.position.y+=Math.sin(time*2.2)*0.25;
+  var propSpeed=S.mode==="landed"?2:34;
+  prop.rotation.z+=dt*propSpeed;
+  propDisc.material.opacity=S.mode==="landed"?0:0.22;
+  propDisc.rotation.z=prop.rotation.z;
+
+  groundMesh.position.set(S.pos.x,0,S.pos.z);
+  for(var i=0;i<gPos.count;i++){
+    var ox=gBase[i*3],oz=gBase[i*3+2];
+    gPos.array[i*3+1]=(Math.sin((ox+S.pos.x)*0.05+time*1.3)+Math.cos((oz+S.pos.z)*0.06+time*0.9))*world.waves;
+  }
+  gPos.needsUpdate=true;
+  sunDisc.position.set(S.pos.x+280,170,S.pos.z-560);
+  sunDisc.lookAt(camera.position);
+  clouds.forEach(function(c,idx){
+    c.position.x+=dt*(1.5+idx*0.2);
+    if(c.position.x-S.pos.x>520)c.position.x-=1040;
+    if(S.pos.x-c.position.x>520)c.position.x+=1040;
+    if(c.position.z-S.pos.z>520)c.position.z-=1040;
+    if(S.pos.z-c.position.z>520)c.position.z+=1040;
+  });
+  var spin=time*3;
+  starter.coins.forEach(function(c){c.mesh.rotation.y=spin;});
+  for(var key in chunks){
+    var ch=chunks[key];
+    for(var q=0;q<ch.coins.length;q++)ch.coins[q].mesh.rotation.y=spin;
+  }
+  for(var s=sparks.length-1;s>=0;s--){
+    var sp=sparks[s];
+    sp.userData.life-=dt;
+    if(sp.userData.life<=0){scene.remove(sp);sparks.splice(s,1);continue;}
+    sp.position.addScaledVector(sp.userData.v,dt);
+    sp.userData.v.y-=30*dt;
+    var sc=sp.userData.life/0.7;sp.scale.set(sc,sc,sc);
+  }
+  updateCamera(dt);
+  updateArrow();
+  renderer.render(scene,camera);
+}
+
+// ---------- main loop ----------
+var last=(typeof performance!=="undefined"&&performance.now)?performance.now():0;
+function frame(now){
+  requestAnimationFrame(frame);
+  var dt=Math.min((now-last)/1000,0.05);last=now;
+  stepSim(dt);
+  drawScene(dt);
+}
+updateChunks(0,0);
+if(!MANUAL&&typeof requestAnimationFrame==="function") requestAnimationFrame(frame);
+
+addEventListener("resize",function(){
+  W=innerWidth;H=innerHeight;
+  camera.aspect=W/H;camera.updateProjectionMatrix();
+  if(renderer) renderer.setSize(W,H);
+});
+
+// ============================================================================
+//  SHELL CONTRACT (CARTRIDGE-CONTRACT.md)
+//   - pause / resume: freeze everything NOW, continue exactly where we left off
+//   - nav:state: report sound + capabilities so the SHELL draws Home / Sound /
+//     Help outside the game. No Menu: the shell's journey IS the level picker,
+//     so offering a second one would double up (the 7J double-picker bug).
+// ============================================================================
+addEventListener("message",function(ev){
+  var d=ev&&ev.data;
+  var kind=(typeof d==="string")?d:(d&&(d.type||d.kind));
+  if(kind==="pause"){ S.paused=true; }
+  else if(kind==="resume"){ S.paused=false; last=(typeof performance!=="undefined"&&performance.now)?performance.now():last; }
+});
+try{
+  if(window.BuildableGameNav){
+    window.BuildableGameNav.register({
+      hide:["helpBtn"],
+      onSound:function(){ S.sound=!S.sound; },
+      onHelp:function(){ openHelp(); },
+      soundOn:function(){ return S.sound; },
+      inGame:function(){ return true; }
+    });
+  }
+}catch(e){}
+
+// ============================================================================
+//  SKY — the QA robot's handle. Everything a harness needs to prove a world is
+//  beatable with no renderer and no real clock.
+// ============================================================================
+window.SKY={
+  version:"FL2",
+  state:S,
+  world:world,
+  worlds:WORLDS,
+  rides:RIDES,
+  ride:ride,
+  pads:PADS,
+  goals:{coins:world.goalCoins,landings:world.goalLandings},
+  tick:function(dt){ stepSim(typeof dt==="number"?dt:1/30); },
+  autopilot:function(on){ S.auto=(on!==false); if(!S.auto){S.dx=0;S.dy=0;} },
+  beaten:function(){ return S.beaten; },
+  snapshot:function(){ return {mode:S.mode,x:S.pos.x,y:S.pos.y,z:S.pos.z,coins:S.coins,
+    banked:S.banked,worldCoins:S.worldCoins,landings:S.landings,beaten:S.beaten,paused:S.paused}; }
+};
+})();
+</script>
+</body>
+</html>
