@@ -69,6 +69,63 @@ for the books that were still coloured panels.
 - **`db/create-saved-pages.sql` still has to be run** in the Supabase SQL editor
   before dog-ears sync across devices. Until then they are local-only, silently.
 
+## 2026-07-25: Session KP2 — First kit: Tower Defense, finished
+
+Phase KP, block KP2 only. KP1 built the shelf and added Tower Defense with 38
+pieces. Mike's KP2 card asked for the best 50-100 of that pack: **all** the
+towers, the units, the projectiles, and the key terrain tiles. This session
+finishes that curation and turns both halves of the promise into QA.
+
+**What shipped**
+
+- **The kit is 65 pieces, up from 38.** Same folder, same shape as KP1
+  (`public/kenney/kits/2d-assets__tower-defense/`) — the card's older wording
+  said `public/packs/kenney-tower-defense/`, but KP1 already shipped the kit
+  road and the editor, Browse and Castle Guard all read it. Adding a second
+  road for the same job would have been the wrong kind of tidy.
+- **The 27 that were missing.** Two planes, so the kit has flying units as well
+  as ground ones. Two side-on gun turrets. The eight build plates — the squares
+  a tower stands on — in green (plain, fix, cross, target, rough) plus dirt,
+  stone and sand. And the terrain Mike asked for: four plain grounds, three
+  bumpy twins, and roads running up and across in all four materials.
+- **Ground squares keep the whole 128px tile; everything else is trimmed.**
+  A ground tile IS the square, so cropping it to its art would be wrong. Every
+  other piece is cut out to its own edges, exactly like KP1's 38.
+- **Three of Kenney's effect sprites were cut back out.** Smoke, dust and blast
+  are near-white overlays meant for a dark game. On the light library shelf they
+  read as empty cards, so they are not in the kit — and QA now fails if any
+  piece is that pale, so the rule outlives this session.
+- **The two halves land in two different kinds of slot.** The 42 cut-outs are
+  tagged `element` / `character` and are offered to ordinary art slots (Castle
+  Guard's bushes and rocks); the 23 grounds, roads and plates are tagged `world`
+  and are offered to background slots. Neither list leaks into the other.
+
+**QA**
+
+- `node qa-kits.mjs .` — ALL CHECKS PASS. New section 6 holds KP2's promise:
+  50-100 pieces, and a floor under each family (towers, units, projectiles,
+  plates, terrain, props). It also opens every PNG with nothing but `zlib` and
+  proves each is a real image, that a ground square covers its tile and is
+  solid, that every other piece is a see-through cut-out, and that nothing is
+  too pale to see on the shelf.
+- `node qa-castleguard.mjs .` — passes everything except the ONE check that was
+  already failing before KP1: the manifest lists 4 levels and the engine has 12,
+  so only the first four can be renamed from the editor. Unchanged by this
+  session, still needs Mike's call (adding 8 level entries moves the journey).
+  The dressing block now also dresses Castle Guard with KP2 pieces: a whole-tile
+  ground square into a prop slot, a cut-out into a second slot, and the same
+  slot swapped twice, to prove a swap replaces rather than stacks.
+- Played end to end in a real browser: Castle Guard level 1 runs with the kit's
+  rocks, bush and sprout on the field, and the editor's Library -> My Kits chip
+  lists the kit pieces by name with their "Tower Defense" badge.
+
+**Not touched on purpose**
+
+- Castle Guard's dressed slots are exactly as KP1 left them (bush1, bush2,
+  rock1, rock2). `tree`, `castle` and `arrow` are still empty on purpose — KP1
+  judged the kit's tree flatter than the drawn pine, and that is Mike's call to
+  change, not a build session's.
+- KP3 (the Add-to-app loop) is untouched.
 
 ## 2026-07-25: Session KP1 — Kit shelf: kit catalog + browse
 
