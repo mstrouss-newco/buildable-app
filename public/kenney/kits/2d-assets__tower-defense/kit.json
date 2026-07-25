@@ -8,8 +8,8 @@
  "dim": "2d",
  "theme": "castle",
  "added": "2026-07-25",
- "addedBy": "Session KP1",
- "note": "Curated slice of the 303-piece Kenney Tower Defense pack: the towers, props and decor a castle game can use. The 260-odd ground/path tiles are deliberately left out of the app - they are map tiles, not library pieces.",
+ "addedBy": "Session KP1 (38 pieces) + Session KP2 (curation finished)",
+ "note": "Curated slice of the 303-piece Kenney Tower Defense pack. KP2 finished the curation Mike asked for: every tower, turret and weapon, the four little units, the projectiles and flames, the coins and crates, the trees, rocks and crystals, the build plates, and the key terrain squares (four grounds, their bumpy twins, and roads running up and across). The rest of the pack is map-edge tiles - hundreds of near-identical corner and transition squares that belong to a map maker, not to a shelf a kid scrolls.",
  "pieces": [
   {
    "file": "tree-bushy.png",
@@ -352,6 +352,168 @@
    "tile": 249,
    "w": 49,
    "h": 56
+  },
+  {
+   "file": "plane-green.png",
+   "name": "Green plane",
+   "kind": "character",
+   "theme": "castle"
+  },
+  {
+   "file": "plane-grey.png",
+   "name": "Grey plane",
+   "kind": "character",
+   "theme": "castle"
+  },
+  {
+   "file": "turret-green.png",
+   "name": "Green turret",
+   "kind": "element",
+   "theme": "castle"
+  },
+  {
+   "file": "turret-sand.png",
+   "name": "Sand turret",
+   "kind": "element",
+   "theme": "castle"
+  },
+  {
+   "file": "plate-green.png",
+   "name": "Green build plate",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "plate-green-wrench.png",
+   "name": "Green fix plate",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "plate-green-cross.png",
+   "name": "Green cross plate",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "plate-green-target.png",
+   "name": "Green target plate",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "plate-green-rough.png",
+   "name": "Rough green plate",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "plate-dirt.png",
+   "name": "Dirt build plate",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "plate-stone.png",
+   "name": "Stone build plate",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "plate-sand.png",
+   "name": "Sand build plate",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "ground-grass.png",
+   "name": "Grass ground",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "ground-dirt.png",
+   "name": "Dirt ground",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "ground-sand.png",
+   "name": "Sand ground",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "ground-stone.png",
+   "name": "Stone ground",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "ground-grass-rough.png",
+   "name": "Bumpy grass ground",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "ground-dirt-rough.png",
+   "name": "Bumpy dirt ground",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "ground-stone-rough.png",
+   "name": "Bumpy stone ground",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "road-grass-up.png",
+   "name": "Grass road up",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "road-dirt-up.png",
+   "name": "Dirt road up",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "road-stone-up.png",
+   "name": "Stone road up",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "road-sand-up.png",
+   "name": "Sand road up",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "road-grass-across.png",
+   "name": "Grass road across",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "road-dirt-across.png",
+   "name": "Dirt road across",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "road-stone-across.png",
+   "name": "Stone road across",
+   "kind": "world",
+   "theme": "castle"
+  },
+  {
+   "file": "road-sand-across.png",
+   "name": "Sand road across",
+   "kind": "world",
+   "theme": "castle"
   }
  ]
 }
