@@ -84,6 +84,11 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
 .lchip.studio{ background:#ece9ff; border-color:#d6cffb; color:#5a4fd6; }
 .lchip.pack{ background:#e6f7ef; border-color:#c7ecd9; color:#178a56; }
 .lchip.theme{ background:#fbf1d6; border-color:#f0e2b8; color:#8a6a12; }
+.lchip.kit{ background:#e9f1ff; border-color:#c9dcfb; color:#2b5fbe; }
+/* KP1: which shelf am I looking at — Studio, My Kits, or the wider packs */
+.srcrow{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 4px; }
+.srcchip{ font-size:11px; border-radius:20px; padding:4px 10px; border:1px solid var(--line); background:#fff; color:var(--muted); cursor:pointer; font-family:inherit; }
+.srcchip.on{ background:#2b5fbe; border-color:#2b5fbe; color:#fff; font-weight:600; }
 .showall{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); margin:2px 0 8px; cursor:pointer; }
 </style>
 </head>
@@ -865,20 +870,36 @@ function pickLibrary(spec, theme, cb){
   document.getElementById("mhint").textContent="Loading the library…";
   document.getElementById("mbody").innerHTML=""; document.getElementById("mkeep").style.display="none";
   document.getElementById("mstat").textContent=""; openModal();
-  var showAll=false;
+  var showAll=false, srcFilter="all";
   BuildableLibrary.load().then(function(items){
+    // KP1: source chips. "My Kits" is the art Mike added from the Kenney shelf;
+    // it only appears when at least one kit is actually added, so the row never
+    // promises a shelf that is empty.
+    var SOURCES=[["all","All"],["studio","Studio"],["kit","My Kits"],["pack","Packs"]];
     function draw(){
-      var list=BuildableLibrary.forSlot(items, spec, state.game, theme, showAll);
+      var all=BuildableLibrary.forSlot(items, spec, state.game, theme, showAll);
+      var list=all.filter(function(a){ return srcFilter==="all" || BuildableLibrary.groupOf(a)===srcFilter; });
       document.getElementById("mhint").textContent=list.length
         ? (list.length+" piece(s) that fit "+labelOf(spec.key)+". Tap one to use it live.")
         : "Nothing fits this slot yet. Use Generate or Drop in art, or turn on Show all.";
       var body=document.getElementById("mbody"); body.innerHTML="";
+      var row=el("div",{class:"srcrow"});
+      SOURCES.forEach(function(s){
+        var n=all.filter(function(a){ return s[0]==="all" || BuildableLibrary.groupOf(a)===s[0]; }).length;
+        if(s[0]!=="all" && !n && s[0]!==srcFilter) return;      // never offer an empty shelf
+        row.appendChild(el("button",{class:"srcchip"+(srcFilter===s[0]?" on":""),
+          onclick:function(){ srcFilter=s[0]; draw(); }},[s[1]+" ("+n+")"]));
+      });
+      body.appendChild(row);
       var chk=el("input",{type:"checkbox"}); chk.checked=showAll;
       chk.addEventListener("change",function(){ showAll=chk.checked; draw(); });
       body.appendChild(el("label",{class:"showall"},[ chk, el("span",{},["Show all games & themes"]) ]));
       var grid=el("div",{class:"libgrid"});
       list.forEach(function(a){
-        var chips=(a.source==="Studio"?'<span class="lchip studio">Studio</span>':'<span class="lchip pack">'+escHtml(a.source||"pack")+'</span>')
+        var g=BuildableLibrary.groupOf(a);
+        var chips=(g==="studio"?'<span class="lchip studio">Studio</span>'
+                  :g==="kit"?'<span class="lchip kit">'+escHtml(a.source||"kit")+'</span>'
+                  :'<span class="lchip pack">'+escHtml(a.source||"pack")+'</span>')
           +(a.theme?'<span class="lchip theme">'+escHtml(a.theme)+'</span>':'');
         grid.appendChild(el("div",{class:"lib", onclick:function(){ assignFromLibrary(a, spec, theme, cb); }},[
           el("div",{class:"limg", style:"background-image:url('"+a.url+"')"}),
