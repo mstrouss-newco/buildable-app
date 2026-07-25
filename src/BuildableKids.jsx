@@ -206,7 +206,7 @@ const GAME_CATALOG = [
   { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!", multiplayer: true },
   { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
   { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
-  { id: "skyflyer",    name: "Sky Flyer",         category: "Action",   color: "#2FB7D6", type: "game", imgId: "skyflyer",    handler: "onSkyFlyer",    desc: "Fly wherever you like, scoop up coins, land on the pads!", soon: true },
+  { id: "skyflyer",    name: "Sky Flyer",         category: "Action",   color: "#2FB7D6", type: "game", imgId: "skyflyer",    handler: "onSkyFlyer",    desc: "Fly wherever you like, scoop up coins, or take on a flying job!", soon: true },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
   { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true, multiplayer: true },
   { id: "runner",      name: "Sunny Town Drive", category: "Arcade",   color: "#FF8FB1", type: "game", imgId: "runner",      handler: "onRunner",      desc: "Drive through town, dodge and grab treats!", soon: true },
@@ -1417,7 +1417,11 @@ function SkyFlyerScreen({ onHome, level }) {
   // the old one so a kid who already bought a ride keeps it — same index, same
   // price, just a better-looking thing at the end of it.
   const ride = typeof eq.Ride === "number" ? eq.Ride : (typeof eq.Plane === "number" ? eq.Plane : 0);
-  const src = "/skyflyer-engine.html?v=fl4&ride=" + ride + (level != null ? "&level=" + level : "");
+  // FL5: arriving at a stop the engine itself asks Free Flight or Jobs. That card
+  // lives INSIDE the cartridge on purpose — the shell journey stays the one and
+  // only level picker (the 7J double-picker rule), and a job is a way of flying a
+  // stop, not a stop of its own.
+  const src = "/skyflyer-engine.html?v=fl5&ride=" + ride + (level != null ? "&level=" + level : "");
   // FL4 learning moment: the engine asks before the NEXT world unlocks, exactly
   // like Breaker. The shell is the authority — the parent's Learning Mode toggle
   // overrides the manifest default, and if it is off we answer "done" instantly
