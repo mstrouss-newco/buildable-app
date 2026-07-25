@@ -1,0 +1,208 @@
+{
+  "schema": 1,
+  "updated": "2026-07-25",
+
+  "_note": "Session LS2 - the lesson map the path screen reads. One row per lesson. status 'approved' means a reviewed lesson file exists at /lessons/{file}.json and a kid may play it; status 'planned' means the lesson is on the road but not built, so it shows greyed and is never tappable. LS3's lesson factory writes lesson FILES and flips a row here from planned to approved - it never changes the page code. 'key' is the lesson's internal id and is the key mastery is stored under in localStorage bk_lessons_v1:<kidId>.",
+
+  "subjects": [
+    { "id": "math",    "title": "Math",    "blurb": "Counting, adding, shapes",  "color": "#7C5CFC" },
+    { "id": "reading", "title": "Reading", "blurb": "Sounds, words, stories",    "color": "#FF6B6B" },
+    { "id": "science", "title": "Science", "blurb": "How the world works",       "color": "#2FAE68" },
+    { "id": "writing", "title": "Writing", "blurb": "Letters and sentences",     "color": "#FFC542" }
+  ],
+
+  "art": { "buddy": "buddy-star", "star": "star-mastered" },
+
+  "grades": [
+    { "id": "k", "title": "Kindergarten", "short": "K" },
+    { "id": "1", "title": "Grade 1",      "short": "1" },
+    { "id": "2", "title": "Grade 2",      "short": "2" }
+  ],
+
+  "paths": [
+    {
+      "subject": "math",
+      "grade": "k",
+      "units": [
+        {
+          "title": "Counting to 10",
+          "lessons": [
+            { "key": "k-math-count-to-5",     "title": "Count to 5",            "minutes": 5, "subject": "math", "skill": "count-to-10",       "status": "planned" },
+            { "key": "k-math-count-to-10",    "title": "Count to 10",           "minutes": 5, "subject": "math", "skill": "count-to-10",       "status": "planned" },
+            { "key": "k-math-count-on",       "title": "Counting on",           "minutes": 5, "subject": "math", "skill": "count-to-10",       "status": "planned" },
+            { "key": "k-math-one-more",       "title": "One more, one less",    "minutes": 5, "subject": "math", "skill": "count-to-10",       "status": "planned" }
+          ]
+        },
+        {
+          "title": "Adding within 5",
+          "lessons": [
+            { "key": "k-math-add-1",          "title": "Adding one",            "minutes": 5, "subject": "math", "skill": "addition-within-5", "status": "planned" },
+            { "key": "k-math-add-2",          "title": "Adding two",            "minutes": 5, "subject": "math", "skill": "addition-within-5", "status": "planned" },
+            { "key": "k-math-make-5",         "title": "Making five",           "minutes": 5, "subject": "math", "skill": "addition-within-5", "status": "planned" },
+            { "key": "k-math-add-any-5",      "title": "Adding within five",    "minutes": 5, "subject": "math", "skill": "addition-within-5", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Shapes around us",
+          "lessons": [
+            { "key": "k-geo-shape-names",     "title": "Shape names",           "minutes": 5, "subject": "geometry", "skill": "shape-names",    "status": "planned" },
+            { "key": "k-geo-shape-hunt",      "title": "Shapes everywhere",     "minutes": 5, "subject": "geometry", "skill": "shape-names",    "status": "planned" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "subject": "math",
+      "grade": "1",
+      "units": [
+        {
+          "title": "Counting to 120",
+          "lessons": [
+            { "key": "g1-math-count-by-ones", "title": "Count by ones",         "minutes": 5, "subject": "math", "skill": "addition-within-20", "status": "planned" },
+            { "key": "g1-math-count-by-tens", "title": "Count by tens",         "minutes": 5, "subject": "math", "skill": "addition-within-20", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Addition within 20",
+          "lessons": [
+            { "key": "g1-math-making-ten",    "file": "g1-making-ten",
+              "title": "Making ten",          "minutes": 5, "subject": "math", "skill": "addition-within-20", "status": "approved", "reviewedBy": "mike", "reviewedAt": "2026-07-24" },
+            { "key": "g1-math-past-ten",      "title": "Adding past ten",       "minutes": 6, "subject": "math", "skill": "addition-within-20", "status": "planned" },
+            { "key": "g1-math-doubles",       "title": "Doubles",               "minutes": 5, "subject": "math", "skill": "addition-within-20", "status": "planned" },
+            { "key": "g1-math-near-doubles",  "title": "Near doubles",          "minutes": 6, "subject": "math", "skill": "addition-within-20", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Subtraction within 20",
+          "lessons": [
+            { "key": "g1-math-take-away",     "title": "Taking away",           "minutes": 5, "subject": "math", "skill": "subtraction-within-20", "status": "planned" },
+            { "key": "g1-math-count-back",    "title": "Counting back",         "minutes": 5, "subject": "math", "skill": "subtraction-within-20", "status": "planned" },
+            { "key": "g1-math-back-to-ten",   "title": "Back down to ten",      "minutes": 6, "subject": "math", "skill": "subtraction-within-20", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Shapes and sides",
+          "lessons": [
+            { "key": "g1-geo-shape-sides",    "title": "Counting sides",        "minutes": 5, "subject": "geometry", "skill": "shape-sides", "status": "planned" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "subject": "math",
+      "grade": "2",
+      "units": [
+        {
+          "title": "Adding within 100",
+          "lessons": [
+            { "key": "g2-math-tens-and-ones", "title": "Tens and ones",         "minutes": 6, "subject": "math", "skill": "addition-within-100", "status": "planned" },
+            { "key": "g2-math-add-tens",      "title": "Adding tens",           "minutes": 5, "subject": "math", "skill": "addition-within-100", "status": "planned" },
+            { "key": "g2-math-add-regroup",   "title": "Adding with regrouping","minutes": 7, "subject": "math", "skill": "addition-within-100", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Subtracting within 100",
+          "lessons": [
+            { "key": "g2-math-sub-tens",      "title": "Subtracting tens",      "minutes": 5, "subject": "math", "skill": "subtraction-within-100", "status": "planned" },
+            { "key": "g2-math-sub-regroup",   "title": "Subtracting with regrouping", "minutes": 7, "subject": "math", "skill": "subtraction-within-100", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Skip counting",
+          "lessons": [
+            { "key": "g2-math-skip-2s",       "title": "Skip count by 2s",      "minutes": 5, "subject": "math", "skill": "skip-counting", "status": "planned" },
+            { "key": "g2-math-skip-5s",       "title": "Skip count by 5s",      "minutes": 5, "subject": "math", "skill": "skip-counting", "status": "planned" },
+            { "key": "g2-math-skip-10s",      "title": "Skip count by 10s",     "minutes": 5, "subject": "math", "skill": "skip-counting", "status": "planned" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "subject": "reading",
+      "grade": "k",
+      "units": [
+        {
+          "title": "Letter sounds",
+          "lessons": [
+            { "key": "k-read-first-sounds",   "title": "First sounds",          "minutes": 5, "subject": "spelling", "skill": "cvc-words", "status": "planned" },
+            { "key": "k-read-last-sounds",    "title": "Last sounds",           "minutes": 5, "subject": "spelling", "skill": "cvc-words", "status": "planned" },
+            { "key": "k-read-middle-sounds",  "title": "Middle sounds",         "minutes": 5, "subject": "spelling", "skill": "cvc-words", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Blending words",
+          "lessons": [
+            { "key": "k-read-blend-cvc",      "title": "Blending three sounds", "minutes": 6, "subject": "spelling", "skill": "cvc-words", "status": "planned" },
+            { "key": "k-read-word-families",  "title": "Word families",         "minutes": 6, "subject": "spelling", "skill": "cvc-words", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Reading pictures",
+          "lessons": [
+            { "key": "k-read-picture-clues",  "title": "Picture clues",         "minutes": 5, "subject": "reading", "skill": "picture-comprehension", "status": "planned" },
+            { "key": "k-read-whats-happening","title": "What is happening?",    "minutes": 5, "subject": "reading", "skill": "picture-comprehension", "status": "planned" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "subject": "reading",
+      "grade": "1",
+      "units": [
+        {
+          "title": "Sight words",
+          "lessons": [
+            { "key": "g1-read-sight-1",       "title": "Everyday words",        "minutes": 5, "subject": "spelling", "skill": "sight-words", "status": "planned" },
+            { "key": "g1-read-sight-2",       "title": "Tricky little words",   "minutes": 5, "subject": "spelling", "skill": "sight-words", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Understanding stories",
+          "lessons": [
+            { "key": "g1-read-who-what",      "title": "Who and what",          "minutes": 6, "subject": "reading", "skill": "reading-comprehension", "status": "planned" },
+            { "key": "g1-read-main-idea",     "title": "The main idea",         "minutes": 6, "subject": "reading", "skill": "main-idea", "status": "planned" },
+            { "key": "g1-read-retell",        "title": "Retelling a story",     "minutes": 6, "subject": "reading", "skill": "reading-comprehension", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Spelling patterns",
+          "lessons": [
+            { "key": "g1-read-spell-fill",    "title": "Missing letters",       "minutes": 5, "subject": "spelling", "skill": "spelling-fill", "status": "planned" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "subject": "reading",
+      "grade": "2",
+      "units": [
+        {
+          "title": "Sounds two letters make",
+          "lessons": [
+            { "key": "g2-read-digraphs-sh",   "title": "sh and ch",             "minutes": 5, "subject": "spelling", "skill": "digraphs", "status": "planned" },
+            { "key": "g2-read-digraphs-th",   "title": "th and wh",             "minutes": 5, "subject": "spelling", "skill": "digraphs", "status": "planned" }
+          ]
+        },
+        {
+          "title": "More than one",
+          "lessons": [
+            { "key": "g2-read-plurals-s",     "title": "Adding s",              "minutes": 5, "subject": "spelling", "skill": "plurals", "status": "planned" },
+            { "key": "g2-read-plurals-es",    "title": "Adding es",             "minutes": 5, "subject": "spelling", "skill": "plurals", "status": "planned" }
+          ]
+        },
+        {
+          "title": "Story sense",
+          "lessons": [
+            { "key": "g2-read-sequence",      "title": "What happened first",   "minutes": 6, "subject": "reading", "skill": "sequence", "status": "planned" },
+            { "key": "g2-read-character",     "title": "Getting to know a character", "minutes": 6, "subject": "reading", "skill": "character", "status": "planned" }
+          ]
+        }
+      ]
+    }
+  ]
+}
