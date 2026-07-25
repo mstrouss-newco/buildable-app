@@ -888,14 +888,16 @@ function loadKit(){
     if(got<names.length*0.6) return;    // a half-loaded kit is worse than none
     KIT_ON=true; redressWorld();
   }
-  // never let a slow network hold the world hostage
-  var timer=setTimeout(function(){ left=0; finish(); },8000);
+  // Never let a slow network hold the world hostage. Named for what it is: a
+  // DOWNLOAD deadline. It is not a gameplay timer, and the FL5 law that nothing
+  // in this file may be failed against a clock still stands.
+  var netDeadline=setTimeout(function(){ left=0; finish(); },8000);
   names.forEach(function(n){
     loader.load(KIT_BASE+KIT_FILES[n],
       function(g){ try{ KIT[n]=prepModel(g.scene); got++; }catch(e){}
-        if(--left<=0){ clearTimeout(timer); finish(); } },
+        if(--left<=0){ clearTimeout(netDeadline); finish(); } },
       null,
-      function(){ if(--left<=0){ clearTimeout(timer); finish(); } });
+      function(){ if(--left<=0){ clearTimeout(netDeadline); finish(); } });
   });
 }
 
