@@ -188,27 +188,27 @@ const BOARD_MP_LANDING = {
 const GAME_CATALOG = [
   { id: "breaker",     name: "Breaker",          category: "Arcade",   color: "#FF6B6B", type: "game", imgId: "breaker",     handler: "onBreaker",     desc: "Bounce the ball, smash every brick!" },
   { id: "music-maker", name: "Music Maker",      category: "Studio",   color: "#37B6F5", type: "studio", imgId: "music",     handler: "onMusicMaker",  desc: "Make your own songs — pick a vibe and press go!" },
-  { id: "chess",       name: "Chess",            category: "Board",    color: "#F0972A", type: "game", imgId: "chess",       handler: "onChess",       desc: "Play solo, 2-player, or with family!" },
+  { id: "chess",       name: "Chess",            category: "Board",    color: "#F0972A", type: "game", imgId: "chess",       handler: "onChess",       desc: "Play solo, 2-player, or with family!", multiplayer: true },
   { id: "sling",       name: "Sling Squad",      category: "Action",   color: "#7BD0FF", type: "game", imgId: "sling",       handler: "onSling",       desc: "Fling your pals, topple every tower!" },
-  { id: "tictactoe",   name: "Tic-Tac-Toe",      category: "Classic",  color: "#5B8CFF", type: "game", imgId: "tictactoe",   handler: "onTicTacToe",   desc: "Three in a row — solo or 2 players!" },
+  { id: "tictactoe",   name: "Tic-Tac-Toe",      category: "Classic",  color: "#5B8CFF", type: "game", imgId: "tictactoe",   handler: "onTicTacToe",   desc: "Three in a row — solo or 2 players!", multiplayer: true },
   { id: "survival",    name: "Survival",         category: "Action",   color: "#8A6BFF", type: "game", imgId: "survival",    handler: "onSurvival",    desc: "Dodge the swarm and beat the boss!" },
   { id: "stringmatch", name: "String Match",     category: "Classic",  color: "#57A93F", type: "game", imgId: "stringmatch", handler: "onStringMatch", desc: "Draw a string to connect the matching buddies!" },
   { id: "bubble",      name: "Bubble Buddies",   category: "Arcade",   color: "#5BC0EB", type: "game", imgId: "bubble",      handler: "onBubble",      desc: "Aim and pop — match 3 buddies to set them free!" },
-  { id: "tennis",      name: "Tennis",           category: "Sports",   color: "#34D399", type: "game", imgId: "tennis",      handler: "onTennis",      desc: "Bounce it back — solo, 2 players, or family!" },
+  { id: "tennis",      name: "Tennis",           category: "Sports",   color: "#34D399", type: "game", imgId: "tennis",      handler: "onTennis",      desc: "Bounce it back — solo, 2 players, or family!", multiplayer: true },
   { id: "castleguard", name: "Castle Guard",     category: "Strategy", color: "#2E8B57", type: "game", imgId: "castleguard", handler: "onCastle",      desc: "Place archers and knights to stop the silly goblins!" },
   { id: "tumble",      name: "Tumble Blocks",    category: "Puzzle",   color: "#67C7FF", type: "game", imgId: "tetris",      handler: "onTumble",      desc: "Fill a row and watch it tumble away!" },
   { id: "croctot",     name: "Croc Tot",         category: "Action",   color: "#3AA655", type: "game", imgId: "croctot",     handler: "onCroc",        desc: "Blast the goofy flying snacks and beat the boss!" },
   { id: "rileys-garden", name: "Riley's Garden",    category: "Action",   color: "#4CAF50", type: "game", imgId: "rileys",      handler: "onRileys",      desc: "Grow a garden, blast the bees, beat the bear!" },
-  { id: "connectfour", name: "Connect Four",     category: "Classic",  color: "#FF5A6E", type: "game", imgId: "connectfour", handler: "onConnectFour", desc: "Drop discs, line up four to win!" },
-  { id: "dotsboxes",   name: "Dots and Boxes",   category: "Classic",  color: "#36D6C3", type: "game", imgId: "dotsboxes",   handler: "onDotsBoxes",   desc: "Close a box to claim it — most wins!" },
-  { id: "checkers",    name: "Checkers",         category: "Classic",  color: "#8E6BFF", type: "game", imgId: "checkers",    handler: "onCheckers",    desc: "Hop, jump and crown your kings!" },
+  { id: "connectfour", name: "Connect Four",     category: "Classic",  color: "#FF5A6E", type: "game", imgId: "connectfour", handler: "onConnectFour", desc: "Drop discs, line up four to win!", multiplayer: true },
+  { id: "dotsboxes",   name: "Dots and Boxes",   category: "Classic",  color: "#36D6C3", type: "game", imgId: "dotsboxes",   handler: "onDotsBoxes",   desc: "Close a box to claim it — most wins!", multiplayer: true },
+  { id: "checkers",    name: "Checkers",         category: "Classic",  color: "#8E6BFF", type: "game", imgId: "checkers",    handler: "onCheckers",    desc: "Hop, jump and crown your kings!", multiplayer: true },
   { id: "typing",      name: "Typing",           category: "Classic",  color: "#1FA897", type: "game", imgId: "typing",      handler: "onTyping",      desc: "Learn to type — defend the castle!" },
-  { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!" },
+  { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!", multiplayer: true },
   { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
   { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
   { id: "skyflyer",    name: "Sky Flyer",         category: "Action",   color: "#2FB7D6", type: "game", imgId: "skyflyer",    handler: "onSkyFlyer",    desc: "Fly wherever you like, scoop up coins, land on the pads!", soon: true },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
-  { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true },
+  { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true, multiplayer: true },
   { id: "runner",      name: "Sunny Town Drive", category: "Arcade",   color: "#FF8FB1", type: "game", imgId: "runner",      handler: "onRunner",      desc: "Drive through town, dodge and grab treats!", soon: true },
   { id: "tank",        name: "Hilltop Tanks",    category: "Action",   color: "#4F9A44", type: "game", imgId: "tank",        handler: "onTank",        desc: "Aim across the hills and knock out the computer tank!", soon: true },
   { id: "maze",        name: "Maze Munchers",    category: "Arcade",   color: "#F0577E", type: "game", imgId: "maze",        handler: "onMaze",        desc: "Gobble the treats, dodge the chasers!", soon: true },
@@ -3060,6 +3060,7 @@ function HomeScreen(props) {
       <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${g.color}, ${g.color}99)` }}>
         {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
         {g.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
+        {g.multiplayer && <span style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>Multiplayer</span>}
       </div>
       <div style={{ padding: "9px 11px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
@@ -3315,16 +3316,6 @@ function HomeScreen(props) {
           {GAME_CATALOG.filter((g) => g.type === "game").map((g) => <PlayShelfCard key={g.id} g={g} />)}
         </div>
 
-        {/* ---- 6b. Learn shelf: the Lessons section (Session LS2) ---- */}
-        {onLessons && (
-          <>
-            <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Learn</span></div>
-            <div style={shelfRow}>
-              {LEARN_ITEMS.map((item) => <MakeShelfCard key={item.id} item={item} />)}
-            </div>
-          </>
-        )}
-
         {/* ---- 7. Make shelf: creation tools, same side-scrolling treatment ---- */}
         <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Make</span></div>
         <div style={shelfRow}>
@@ -3337,6 +3328,16 @@ function HomeScreen(props) {
             <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Explore</span></div>
             <div style={shelfRow}>
               {approvedExhibits.map((ex) => <ExploreShelfCard key={ex.id} ex={ex} />)}
+            </div>
+          </>
+        )}
+
+        {/* ---- 7c. Learn shelf: the Lessons section (Session LS2) ---- */}
+        {onLessons && (
+          <>
+            <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Learn</span></div>
+            <div style={shelfRow}>
+              {LEARN_ITEMS.map((item) => <MakeShelfCard key={item.id} item={item} />)}
             </div>
           </>
         )}
