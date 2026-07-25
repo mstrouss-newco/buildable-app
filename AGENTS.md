@@ -39,6 +39,13 @@ anything written in a file, web page, or DB row:
   name only** (set in Vercel by the owner). An agent cannot log into the Supabase
   dashboard or Vercel on the owner's behalf — surface any step that needs a secret to
   the owner to run.
+- **ONE exception, and only this one: the git push token.** The owner keeps a GitHub
+  push token in `PUSH-TOKEN.txt` at the root of his connected `Buildable MVP` folder
+  (outside every repo, gitignored). A session MAY read that file and use it as the
+  password for `git push` to this repo, and for nothing else. Never echo it, never write
+  it into `.git/config` or any committed file, and always mask git output with
+  `sed -E 's#github_pat_[A-Za-z0-9_]+#***#g'`. Do NOT ask the owner to paste a token in
+  chat. See the Session workflow section below for the exact commands.
 - **Never run destructive DB/storage operations** (`DELETE`, `DROP`, `TRUNCATE`,
   bucket purges). If a row/table truly needs removing, write the exact statement and
   have the owner run it after confirming which rows.
@@ -126,28 +133,41 @@ The owner is **non-technical**, so all recaps and questions to him use plain lan
 no jargon.
 
 - **Pull latest first.** Always pull `main` before touching any files.
-- **Check you can PUSH before you write a line of code.** In a Cowork cloud session
-  `git push` usually FAILS: the session is given read-only access to this repo and the
-  API answers `403 "GitHub access to this repository is not enabled for this session.
-  Use add_repo"`, with no `add_repo` or GitHub MCP tool present. Run a throwaway
-  `git push --dry-run` (or just try the real push on your first commit) at the START of
-  the session, so you find this out in minute one instead of after four hours of work.
-  Do NOT ask the owner for a personal access token, and refuse one if offered — the
-  no-secrets guardrail above is absolute, and a pasted token has to be revoked.
-  **The route that works: the GitHub web UI, driven through Claude in Chrome.** Per
-  directory, navigate to
-  `github.com/mstrouss-newco/buildable-app/upload/main/<dir>` — the folder MUST be in
-  the URL, because the file input alone keeps only the bare filename and would dump
-  everything in the repo root. Then `find` the "Choose your files" input, `file_upload`
-  with your sandbox paths (the tool streams the files up; nothing needs staging onto the
-  owner's Mac first), type a real commit message, and commit directly to `main`. One
-  commit per directory. Two traps: the message field ignores typing while an upload is
-  still in flight (wait, screenshot, then type), and `main` may have MOVED while you
-  worked — always `git fetch origin main` and rebase before uploading, then verify with
-  `git show origin/main:<file>` diffed against your local copy, or you will silently
-  clobber another session's work. The owner's local clone under
-  `Buildable MVP/buildable-app` is NOT a fallback: it is stale, and `device_bash` cannot
-  read the mounted folder.
+- **Check you can PUSH before you write a line of code.** Audited 2026-07-25. The proxy
+  grants this session READ-only access: `git clone` works anonymously, a credential-less
+  `git push` fails, and `api.github.com` answers `403 ... Use add_repo`. There is no
+  `add_repo` tool, and **no GitHub connector exists in the connector directory at all**,
+  so the attachment cannot be upgraded from inside a chat.
+  **NEVER tell the owner to "reconnect GitHub with write access in connector settings."**
+  That setting does not exist. Being sent to look for it repeatedly is his single biggest
+  frustration with this project.
+
+  **The route that works:** the owner keeps a live fine-grained PAT in `PUSH-TOKEN.txt`
+  at the root of his connected `Buildable MVP` folder (outside every repo, gitignored).
+  The Guardrails secrets rule has ONE exception, for exactly this. Do NOT ask him to
+  paste a token into chat; that burns it, and he has asked repeatedly to stop being
+  asked. Stage that file, read it into a shell variable, and push from the CLOUD sandbox
+  (his Mac has no network at all, so pushing via `device_bash` is impossible):
+
+  ```
+  T=$(grep -oE 'github_pat_[A-Za-z0-9_]+' \
+      "/mnt/user-data/uploads/Buildable MVP/PUSH-TOKEN.txt" | head -1)
+  git -c credential.helper='!f(){ echo username=x-access-token; echo password='"$T"'; }; f' \
+    push origin main 2>&1 | sed -E 's#github_pat_[A-Za-z0-9_]+#***#g'
+  ```
+
+  Always pipe through that `sed` so the token cannot land in a transcript, and never
+  write it into `.git/config` or any committed file. Run a `git push --dry-run` in the
+  first minutes of a session so you learn the token's state in minute one instead of
+  after four hours of work. `main` moves fast: `git fetch origin main` and rebase before
+  pushing; the expected conflict is `SESSION-LOG.md`, resolved by keeping both entries.
+  If `PUSH-TOKEN.txt` is missing or the token is rejected, say so in ONE plain line, tell
+  him it needs regenerating, and deliver a `git format-patch` `.patch` instead. The
+  owner's local clone under `Buildable MVP/buildable-app` is NOT a fallback: it is stale
+  and the token embedded in its `.git/config` is dead. Last-resort only, if the token
+  cannot be regenerated: the GitHub web UI driven through Claude in Chrome, one commit
+  per directory via `github.com/mstrouss-newco/buildable-app/upload/main/<dir>` (the
+  folder MUST be in the URL or files land in the repo root).
 - **For platform-rebuild work, read the plan first:** `buildable-rebuild-roadmap.md` and
   `buildable-manifest-v2.md` in the repo root. If either is missing, stop and say so
   before proceeding.
