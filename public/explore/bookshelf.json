@@ -1,0 +1,32 @@
+{
+  "id": "bookshelf",
+  "title": "Kidspedia Books",
+  "note": "Session TB2. The shelf ORDER for every Kidspedia topic book, planned and built. public/kidspedia.html reads this file, loads each book's own /explore/{id}.json, and shows ONLY the books whose status is approved — so an id listed here that has no file yet (or is still in-review) simply does not appear. That is why every one of the 20 planned topics is listed from day one: TB3/TB4 just add the JSON file and the book takes its place on the right shelf with nothing else to remember. Never rename a shipped id: dog-ears are keyed on it.",
+  "shelves": [
+    {
+      "id": "animals",
+      "title": "Animals",
+      "books": ["sharks", "big-cats", "penguins", "bugs-butterflies", "snakes-reptiles"]
+    },
+    {
+      "id": "long-ago",
+      "title": "Long, long ago",
+      "books": ["dinosaurs", "castles-knights", "ancient-egypt"]
+    },
+    {
+      "id": "space",
+      "title": "Out in space",
+      "books": ["moon", "planets", "rockets"]
+    },
+    {
+      "id": "our-world",
+      "title": "Our wild world",
+      "books": ["volcanoes", "wild-weather", "deep-ocean", "rainforest", "deserts", "plants-grow", "your-body"]
+    },
+    {
+      "id": "machines",
+      "title": "Big machines",
+      "books": ["trains", "diggers"]
+    }
+  ]
+}

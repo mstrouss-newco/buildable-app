@@ -10,6 +10,11 @@
   "shelfColor": "#4C6FE0",
   "ambient": "space",
   "assetVersion": 1,
+  "exhibit": {
+    "id": "solar-system",
+    "title": "Our Solar System",
+    "label": "Visit Our Solar System"
+  },
   "sources": [
     "NASA Science, Earth's Moon (science.nasa.gov/moon)",
     "NASA Apollo mission pages (nasa.gov)",
