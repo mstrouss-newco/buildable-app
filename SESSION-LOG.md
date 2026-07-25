@@ -126,6 +126,76 @@ finishes that curation and turns both halves of the promise into QA.
   judged the kit's tree flatter than the drawn pine, and that is Mike's call to
   change, not a build session's.
 - KP3 (the Add-to-app loop) is untouched.
+## 2026-07-25: Session AR1c — Sunny Islands, third look pass (shipped, waiting on Mike)
+
+Mike flew AR1b: "still not there yet. the islands look like they are just in the
+water. not all buildings are using new 3d props, like you have the whole kenney
+kit and we are only using a few of one type. need to fix the ground, and also use
+better coins. they are too block and not good. should be shiny and exciting."
+
+**What changed**
+
+- **The islands really were just in the water,** because they were: a dome that
+  stopped dead at the surface, sitting on an opaque blue sheet. Two changes fix
+  it and neither works alone. The island keeps going now: past the top two thirds
+  the sand turns down and out into a wide shelf, so there is something under the
+  water to see. And the water is see-through over a real seabed plane in a much
+  darker shade of the sea's own colour. Open ocean reads deep and dark; every
+  island glows turquoise where its shelf rises into the light. The shallows are
+  made of geometry now instead of a painted disc, so the gradient halo is gone.
+  An island has a waterline instead of an outline.
+- **The ground was terracing** into rings of green and sand. The grass was a
+  SECOND dome laid over the sand one and the two kept interleaving. There is one
+  surface now with two material groups: grass on the top rings, sand below,
+  sharing a continuous mesh. Nothing to overlap, nothing to z-fight, nothing to
+  fit by hand, and both halves still take their colour from the palette. A low
+  sandbar gets sand for both groups, because that is what a sandbar looks like.
+- **The prop shelf went from a handful to 55 models across five Kenney kits:**
+  seven palm shapes, huts, tents, fences, docks, decks, crates, barrels, boxes,
+  chests, cannons, masts, shovels, dig holes, flags, signs, three campfires, log
+  stacks, tiki idols, obelisks, seven kinds of greenery, four rocks, buoys, and
+  nine boats and ships. A big island now rolls a CHARACTER — a village, a
+  castaway camp, a dig site, a lookout or a ring of idols — each with its own
+  homes and its own clutter, so two islands in the same chunk are two different
+  places rather than the same three props at different angles.
+- **The coin.** Kenney's is a flat token and it read as one. This one is turned
+  on a lathe with a raised middle inside a rim, and that step is the whole trick:
+  a flat disc has one normal and lights up like a sticker, while a step gives the
+  coin an edge that catches the sun and a face that does not. Two-tone by vertex
+  colour so the rim costs no extra draw call, lit from inside with a hot narrow
+  specular so gold still reads as gold against a bright sea, and every coin
+  carries its own phase so a trail shimmers along its length instead of flashing
+  in lockstep.
+- **A bug worth naming:** untextured models were ALL being repainted with the
+  world's stone colour. That was fine while the only untextured models were
+  rocks, and it would have bleached every Kenney plant grey the moment one was
+  used. Only rock is tinted now.
+- **Rock colour was changed through the MANIFEST, not the code** — level 1's
+  `stone` from #B9A88F to #8E8069, because the pale sand-grey made beach boulders
+  look like ice. That is an art-slot edit with no code behind it, which is
+  exactly what FL4 built it for.
+- The pad beam is fogged, thinner and lighter. Unfogged at 0.16 it doubled up
+  over see-through water and read as a solid pillar. It is still the signal that
+  says land here.
+
+**QA:** `node qa-skyflyer.mjs .` — **232/232 PASS** (was 205). Six checks failed
+when the implementation changed under them and the code was right every time, so
+they were rewritten to guard the new shapes rather than relaxed. Twice now a
+check has been written as `inst("name"` and missed a ternary; the pad and village
+checks read the function body for the name instead.
+
+Snowy Peaks and Sunset Canyon keep their own terrain untouched, but they DO get
+the new coin and the calmer beam — those are shared systems and better coins were
+the point. Cost at iPad size: 1745 draw calls / 302k triangles / 9.0ms a frame on
+a software rasteriser. **Draw calls are the number to watch on a real device in
+AR2**; triangles are nowhere near a limit.
+
+**Still open in phase AR:** AR2 gives Snowy Peaks and Sunset Canyon the same
+treatment and checks all three on a real iPad. AR3 adds Big City as journey stop
+four. Note the Sky Flyer tile was opened to all kids earlier today, so the other
+two worlds are live while still placeholder-shaped.
+
+---
 
 ## 2026-07-25: Session KP1 — Kit shelf: kit catalog + browse
 
