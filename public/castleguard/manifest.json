@@ -22,8 +22,17 @@
     "badge": "castleguard/badge/v1",
     "hero": "castleguard/hero/v1",
     "winCelebration": "shared/win/confetti-v1",
-    "loadingScreen": "castleguard/loading/v1"
+    "loadingScreen": "castleguard/loading/v1",
+    "bush1": "/kenney/kits/2d-assets__tower-defense/bush-small.png",
+    "bush2": "/kenney/kits/2d-assets__tower-defense/plant-sprout.png",
+    "rock1": "/kenney/kits/2d-assets__tower-defense/rock-small.png",
+    "rock2": "/kenney/kits/2d-assets__tower-defense/rock.png",
+
+    "tree": "",
+    "castle": "",
+    "arrow": ""
   },
+  "artNote": "Session KP1 — bush1/bush2/rock1/rock2 are dressed from the My Kits shelf (Kenney Tower Defense, CC0); tree/castle/arrow are empty slots waiting for a piece. Each one is an ordinary library asset: fill or swap it in the editor under Library, or clear it to fall back to the built-in art. The tree keeps its own art on purpose (the kit tree reads flatter than the drawn pine), and the knights, archers and goblins are NOT dressable — they are animated sheets, and a still frame would stop them moving.",
 
   "levels": [
     { "id": "first-steps",  "name": "First Steps", "difficulty": 1, "unlocked": true, "journeyBadge": "badges/l1/v1", "parts": { "wave": 1 } },

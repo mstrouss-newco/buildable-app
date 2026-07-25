@@ -233,14 +233,16 @@ const GAME_CONFIG = window.GAME_CONFIG || {
 (function loadCastleManifest(){
   try{
     if(!window.BuildableManifest || typeof window.BuildableManifest.load!=="function") return;
-    window.BuildableManifest.load("castleguard", function(cfg){
+    window.BuildableManifest.load("castleguard", function(cfg, raw){
       try{
         if(cfg && cfg.stages && cfg.stages.length){
           for(var i=0;i<GAME_CONFIG.levels.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) GAME_CONFIG.levels[i].name = cfg.stages[i].name; }
           try{ if(typeof state!=="undefined" && state==="menu" && typeof showMenu==="function") showMenu(); }catch(e){}
         }
+        // KP1: the manifest's art slots may dress the props from the library.
+        try{ if(typeof applyDressing==="function") applyDressing(raw && raw.art); }catch(e){}
       }catch(e){}
-    }, function(){ /* missing/invalid -> keep built-in levels */ });
+    }, function(){ /* missing/invalid -> keep built-in levels and built-in art */ });
   }catch(e){}
 })();
 
@@ -260,6 +262,48 @@ function loadSprites() {
   // once the castle art arrives, rebuild level thumbnails so cards aren't flat
   try { if (IMG.castle && IMG.castle.addEventListener) IMG.castle.addEventListener("load", () => { for (const k in THUMB) delete THUMB[k]; if (state === "menu") showMenu(); }); } catch (e) {}
 }
+/* ---------- Session KP1: dressing, so library art can replace built-in art ----------
+   Every name in DRESSABLE is a slot the manifest can point at a library piece —
+   the SAME slots the editor lists, so "Library -> My Kits -> tap a piece" swaps
+   a bush for good, with no code push. Three rules hold no matter what:
+     - a slot left empty keeps the built-in Tiny Swords art, untouched;
+     - a piece that fails to load keeps it too (nothing is swapped until the
+       image has really arrived and measured);
+     - a dressed piece is a single still frame, so it can never desync an
+       animation. Art can break the LOOK of this game; it can never break it. */
+// (no "tower": the sprite is declared in GAME_CONFIG but nothing draws it, and a
+//  slot that changes nothing has no business being offered.)
+const DRESSABLE = ["castle", "tree", "bush1", "bush2", "rock1", "rock2", "arrow"];
+function dressUrl(id) {
+  if (!id || typeof id !== "string") return null;
+  if (id.indexOf("studio:") === 0) return "/api/asset-studio?asset=" + encodeURI(id.slice(7));
+  if (id.charAt(0) === "/" || /^https?:/i.test(id)) return id;          // kit piece / plain path
+  try { return (window.BuildableManifest && window.BuildableManifest.resolveAsset(id)) || null; } catch (e) { return null; }
+}
+function applyDressing(art) {
+  art = art || {};
+  let asked = 0;
+  DRESSABLE.forEach((slot) => {
+    const url = dressUrl(art[slot]);
+    if (!url) return;
+    asked++;
+    const im = mkImg(url);
+    const swap = () => {
+      const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+      if (!w || !h) return;                                  // never swap in art we cannot measure
+      GAME_CONFIG.sprites[slot] = { file: "", fw: w, fh: h, n: 1, dressed: true };
+      IMG[slot] = im;
+      for (const k in TINT) delete TINT[k];                   // tints were baked off the old sheet
+      for (const k in THUMB) delete THUMB[k];
+      for (const k in THEMETREE) delete THEMETREE[k];          // and so was the themed tree
+      try { if (state === "menu" && typeof showMenu === "function") showMenu(); } catch (e) {}
+    };
+    if (im.complete) swap();
+    try { if (im.addEventListener) im.addEventListener("load", swap); } catch (e) {}
+  });
+  return asked;
+}
+
 // tinted-sheet cache: recolor a whole sprite sheet once (source-atop keeps shading),
 // so one goblin art can read as several enemy kinds (scout / brute / boss).
 const TINT = {};
@@ -291,6 +335,7 @@ function drawSprite(ctx, name, cx, cy, h, t, opt) {
   let src = im;
   if (opt.tint) { const ts = tintedSheet(name, opt.tint, opt.tintA); if (ts) src = ts; }
   const fw = meta.fw, fh = meta.fh, n = meta.n || 1;
+  if (!fw || !fh) return false;                    // unmeasured art draws nothing, never NaN
   let f = 0;
   if (n > 1) f = (meta.fps ? Math.floor((t || 0) * meta.fps) : 0) % n;
   if (opt.frame != null) f = opt.frame % n;
@@ -750,6 +795,11 @@ function themedTree(theme) {
   THEMETREE[theme] = c; return c;
 }
 function drawTreeClean(cx, groundY, h) {
+  // KP1: this path crops a fixed window out of the Tiny Swords tree SHEET and
+  // caches a themed copy of it. A dressed tree is a whole standalone picture, so
+  // that crop would slice it to ribbons — hand it back to the ordinary sprite
+  // path instead, which draws the piece whole.
+  if (GAME_CONFIG.sprites.tree && GAME_CONFIG.sprites.tree.dressed) return false;
   const im = IMG.tree;
   if (!(im && im.complete && (im.naturalWidth || im.width))) return false;
   const sw = 126, sh = 200, w = h * (sw / sh);   // clean single-tree window inside frame 0

@@ -18,7 +18,15 @@ function el(withAppend) {
   if (withAppend) { e.appendChild = noop; e.removeChild = noop; }
   return e;
 }
-class ImageStub { set src(v) { this._src = v; } get src() { return this._src; } addEventListener() {} }
+// KP1: the stub can now "load" an image, but ONLY for sources the test names in
+// IMGSIM. With IMGSIM empty it behaves exactly as before: nothing ever loads.
+const IMGSIM = {};
+class ImageStub {
+  constructor() { this._l = []; this.complete = false; this.naturalWidth = 0; this.naturalHeight = 0; }
+  set src(v) { this._src = v; const s = IMGSIM[v]; if (s) { this.naturalWidth = s[0]; this.naturalHeight = s[1]; this.complete = true; this._l.slice().forEach(f => f()); } }
+  get src() { return this._src; }
+  addEventListener(t, f) { if (t === 'load') { this._l.push(f); if (this.complete) f(); } }
+}
 const documentStub = { getElementById: (id) => id === 'start' ? el(false) : el(true), querySelector: () => el(true), addEventListener: noop, createElement: () => el(true), head: el(true), documentElement: el(true) };
 const sandbox = { document: documentStub, window: {}, Image: ImageStub, requestAnimationFrame: noop, cancelAnimationFrame: noop, addEventListener: noop, removeEventListener: noop, setTimeout: () => 0, clearTimeout: noop, localStorage: { getItem: () => null, setItem: noop }, performance: { now: () => Date.now() }, Date, Math, console };
 sandbox.window = sandbox; sandbox.globalThis = sandbox;
@@ -104,6 +112,45 @@ const lineUp = mcfg.stages.length===n && mcfg.stages.every((s,i)=>s.name===manif
 console.log((lineUp?'PASS':'FAIL')+'  '+n+' levels line up with the engine  ::  '+mcfg.stages.map(s=>s.name).join(', ')); if(!lineUp)ok=false;
 console.log((mcfg.multiplayer==='off'?'PASS':'FAIL')+'  single-player (multiplayer off)'); if(mcfg.multiplayer!=='off')ok=false;
 console.log((/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("castleguard"/.test(html)?'PASS':'FAIL')+'  engine loads the shared manifest'); if(!(/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("castleguard"/.test(html)))ok=false;
+
+console.log('--- KP1 dressing: library art can replace props, and can never break the game ---');
+{
+  const say = (pass, msg) => { console.log((pass ? 'PASS' : 'FAIL') + '  ' + msg); if (!pass) ok = false; };
+  const dress = sandbox.applyDressing;
+  say(typeof dress === 'function', 'the engine exposes applyDressing');
+  const snap = () => JSON.stringify(cfg.sprites);
+  const built = snap();
+  dress(null); dress({}); dress({ tree: '' });
+  say(snap() === built, 'no dressing named -> the built-in art is untouched');
+
+  const missing = '/kenney/kits/nope/not-here.png';
+  dress({ tree: missing });
+  say(snap() === built, 'a piece that never loads -> the built-in art is STILL used');
+
+  const real = '/kenney/kits/2d-assets__tower-defense/tree-bushy.png';
+  IMGSIM[real] = [124, 118];
+  dress({ tree: real });
+  const t = cfg.sprites.tree;
+  say(!!(t && t.dressed && t.fw === 124 && t.fh === 118 && t.n === 1),
+      'a piece that loads -> the slot is dressed, measured, single-frame  :: ' + JSON.stringify(t));
+  say(snap() !== built, 'dressing really changed the sprite table');
+  say(sandbox.drawSprite(ctxStub, 'tree', 0, 0, 60, 0) === true, 'a dressed prop draws');
+  t.fw = 0;
+  say(sandbox.drawSprite(ctxStub, 'tree', 0, 0, 60, 0) === false, 'unmeasured art draws NOTHING rather than NaN');
+
+  // and the real thing: every slot this manifest dresses points at a file that is
+  // actually in the repo, from a kit that is actually added.
+  const art = manifest.art || {};
+  const dressed = Object.keys(art).filter(k => /^\/kenney\/kits\//.test(String(art[k] || '')));
+  say(dressed.length > 0, 'the manifest dresses ' + dressed.length + ' prop(s) from a kit  :: ' + dressed.join(', '));
+  dressed.forEach(k => {
+    const rel = String(art[k]).replace(/^\//, '');
+    say(fs.existsSync(dir + '/public/' + rel), 'art.' + k + ' -> ' + rel + ' exists');
+    const slug = rel.split('/')[2];
+    say(fs.existsSync(dir + '/public/kenney/kits/' + slug + '/kit.json'), 'art.' + k + ' comes from an ADDED kit (' + slug + ')');
+  });
+  say(dressed.every(k => !/knight|archer|baddie|goblin/i.test(k)), 'the animated characters are NOT dressed with stills');
+}
 
 console.log(ok ? 'ALL CHECKS PASS' : 'SOME CHECKS FAILED');
 process.exit(ok ? 0 : 1);
