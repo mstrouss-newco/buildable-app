@@ -1,0 +1,120 @@
+{
+  "id": "trains",
+  "title": "Trains",
+  "template": "topic-book",
+  "topic": "machines",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["machine-facts", "reading"],
+  "heroArt": "/explore/topic-photos/trains/trains-cover.webp",
+  "shelfColor": "#4A6FA5",
+  "ambient": "city",
+  "assetVersion": 1,
+  "sources": [
+    "Central Japan Railway (jr-central.co.jp)",
+    "Central Japan Railway (scmaglev.jr-central-global.com)",
+    "Association of American Railroads (aar.org)",
+    "Federal Railroad Administration (railroads.dot.gov)",
+    "London Transport Museum (ltmuseum.co.uk)",
+    "Scientific American (scientificamerican.com)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/trains/trains-cover.webp",
+    "artAlt": "A gleaming vintage steam locomotive pulling into a station platform with billowing white steam",
+    "blurb": "All aboard! A whistle blows, white steam puffs into the sky, and this big journey is only just beginning, so turn the page and hop on."
+  },
+  "pages": [
+    {
+      "id": "bullet-trains",
+      "title": "Zoom! Bullet Trains",
+      "art": "/explore/topic-photos/trains/trains-1.webp",
+      "artAlt": "A sleek white bullet train races along its track through bright green countryside",
+      "factAudio": "trains-bullet-trains",
+      "quiz": ["trains-bullet-trains"],
+      "facts": [
+        {
+          "text": "Japan's first bullet train line, the Tokaido Shinkansen, opened way back in 1964, and its trains now zip along at up to 285 kilometres per hour. That is so fast the fields and towns outside your window would whoosh past in a green blur.",
+          "source": "Central Japan Railway (jr-central.co.jp)"
+        },
+        {
+          "text": "Japan is building an even faster train called a maglev, and it does not roll on wheels at all. Powerful magnets lift the whole train about 10 centimetres into the air, so it floats above its track while flying along at about 500 kilometres per hour.",
+          "source": "Central Japan Railway (scmaglev.jr-central-global.com)"
+        },
+        {
+          "text": "Bullet trains are famous for almost never being late. On Japan's busiest bullet train line, the average delay for each train is less than two minutes, which is hardly enough time to find your seat and unpack a snack.",
+          "source": "Central Japan Railway (jr-central.co.jp)"
+        }
+      ]
+    },
+    {
+      "id": "freight",
+      "title": "The Mighty Freight Train",
+      "art": "/explore/topic-photos/trains/trains-2.webp",
+      "artAlt": "A long freight train stacked with colourful cargo containers curves around a mountain track",
+      "factAudio": "trains-freight",
+      "quiz": ["trains-freight"],
+      "facts": [
+        {
+          "text": "Freight trains can be astonishingly long. In the United States, a typical big freight train measures more than one and a half kilometres from end to end, and a few giants stretch on for more than four kilometres.",
+          "source": "Association of American Railroads (aar.org)"
+        },
+        {
+          "text": "A modern freight train is like a giant chain of wagons, with about 73 cars on average and the biggest trains pulling 200 or more. If you stood by the track and counted the cars rolling past, you would be waving for a very long time.",
+          "source": "Federal Railroad Administration (railroads.dot.gov)"
+        },
+        {
+          "text": "Those colourful boxes are shipping containers, and freight trains carry almost everything inside them and their other special cars, from food and metals to car parts and toys. Some trains even have refrigerated cars that work like rolling fridges to keep food cold on the journey.",
+          "source": "Federal Railroad Administration (railroads.dot.gov)"
+        }
+      ]
+    },
+    {
+      "id": "subway",
+      "title": "Trains Below Your Feet",
+      "art": "/explore/topic-photos/trains/trains-3.webp",
+      "artAlt": "A bright subway train pulls into a clean underground station platform",
+      "factAudio": "trains-subway",
+      "quiz": ["trains-subway"],
+      "facts": [
+        {
+          "text": "The world's very first underground railway opened in London in 1863, more than 160 years ago. It was called the Metropolitan Railway, and it carried passengers beneath the busy streets between Paddington and Farringdon.",
+          "source": "London Transport Museum (ltmuseum.co.uk)"
+        },
+        {
+          "text": "Builders made that first line by digging a huge trench along the street and then roofing it over again. Once the road went back on top, a whole railway was hiding right under everyone's feet.",
+          "source": "London Transport Museum (ltmuseum.co.uk)"
+        },
+        {
+          "text": "The first underground trains were pulled by steam engines, so the tunnels and stations filled up with smoke and steam. Today's electric trains are far cleaner, which is why a modern subway platform can stay so bright and fresh.",
+          "source": "London Transport Museum (ltmuseum.co.uk)"
+        }
+      ]
+    },
+    {
+      "id": "wheels",
+      "title": "Wheels That Steer Themselves",
+      "art": "/explore/topic-photos/trains/trains-4.webp",
+      "artAlt": "A close-up of a train's big metal wheels rolling along shiny steel rails",
+      "factAudio": "trains-wheels",
+      "quiz": ["trains-wheels"],
+      "facts": [
+        {
+          "text": "Look closely at a train wheel and you will spot a secret: it is not flat like a tin can. Each wheel is slightly cone shaped, and that clever slant is what keeps a speeding train sitting snugly on its rails.",
+          "source": "Scientific American (scientificamerican.com)"
+        },
+        {
+          "text": "The cone shape lets trains steer themselves around curves. On a bend, the outside wheel rolls on its wider part while the inside wheel rolls on its narrower part, so the outside wheel travels further even though both wheels spin at exactly the same speed.",
+          "source": "Scientific American (scientificamerican.com)"
+        },
+        {
+          "text": "Each wheel also has a raised rim called a flange on its inner edge, a bit like a safety lip that stops the train falling off the track. And if the wheels ever slip a little to one side, the cone shape gently nudges them back to the middle all by itself.",
+          "source": "Scientific American (scientificamerican.com)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Trains!",
+    "blurb": "What a ride, from floating bullet trains to wheels that steer themselves. Fold a little corner on your favourite page so you can race straight back to it next time."
+  }
+}

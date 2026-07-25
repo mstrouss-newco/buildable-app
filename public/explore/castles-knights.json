@@ -1,0 +1,119 @@
+{
+  "id": "castles-knights",
+  "title": "Castles & Knights",
+  "template": "topic-book",
+  "topic": "history",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["history-facts", "reading"],
+  "heroArt": "/explore/topic-photos/castles-knights/castles-knights-cover.webp",
+  "shelfColor": "#7B6FA0",
+  "ambient": "fire",
+  "assetVersion": 1,
+  "sources": [
+    "The Metropolitan Museum of Art (metmuseum.org)",
+    "Royal Armouries (royalarmouries.org)",
+    "English Heritage (english-heritage.org.uk)",
+    "Historic Royal Palaces (hrp.org.uk)",
+    "National Trust (nationaltrust.org.uk)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/castles-knights/castles-knights-cover.webp",
+    "artAlt": "A grand stone castle with tall towers glowing warm gold at sunset, framed by a moat and green hills",
+    "blurb": "As the sun sets gold over the moat, this castle is full of stories waiting for you. Turn the page to cross the drawbridge and step inside."
+  },
+  "pages": [
+    {
+      "id": "armour",
+      "title": "A Suit Made of Steel",
+      "art": "/explore/topic-photos/castles-knights/castles-knights-1.webp",
+      "artAlt": "A shining suit of knight's armour stands on display in a museum",
+      "factAudio": "castles-knights-armour",
+      "quiz": ["castles-knights-armour"],
+      "facts": [
+        {
+          "text": "A full suit of battle armour usually weighed about 20 to 25 kilograms, about as heavy as a big holiday suitcase. Because the weight was spread out over the knight's whole body, it felt much lighter than it sounds.",
+          "source": "The Metropolitan Museum of Art (metmuseum.org)"
+        },
+        {
+          "text": "Museum tests with real armour show that a person in a well-fitted suit could run, lie down, get up again and even climb onto a horse without any help. One famous French knight could climb the underside of a ladder using only his hands while wearing full armour.",
+          "source": "The Metropolitan Museum of Art (metmuseum.org)"
+        },
+        {
+          "text": "Future knights started practising young, and boys wore armour during training so they could get used to it. The Royal Armouries museum even looks after a suit of armour made for a six-year-old boy, and two more made for brothers aged eight and ten.",
+          "source": "Royal Armouries (royalarmouries.org)"
+        }
+      ]
+    },
+    {
+      "id": "great-hall",
+      "title": "The Busiest Room in the Castle",
+      "art": "/explore/topic-photos/castles-knights/castles-knights-2.webp",
+      "artAlt": "Inside a castle's great hall, colourful banners hang above a long wooden table",
+      "factAudio": "castles-knights-great-hall",
+      "quiz": ["castles-knights-great-hall"],
+      "facts": [
+        {
+          "text": "The great hall was the heart of the whole castle. The household gathered here to eat together at long tables with benches, because in a castle, mealtimes were something you shared with everyone.",
+          "source": "English Heritage (english-heritage.org.uk)"
+        },
+        {
+          "text": "Where you sat in the hall showed how important you were. The lord and the most special guests sat at the high table, placed at the end of the hall furthest from the kitchen, while everyone else sat in order down the long tables.",
+          "source": "English Heritage (english-heritage.org.uk)"
+        },
+        {
+          "text": "Castle meals were wonderfully slow. Lunch began at about 10 or 11 in the morning and could last two to three hours, with plenty of time for talking, music and second helpings.",
+          "source": "English Heritage (english-heritage.org.uk)"
+        }
+      ]
+    },
+    {
+      "id": "drawbridge",
+      "title": "The Cleverest Front Door",
+      "art": "/explore/topic-photos/castles-knights/castles-knights-3.webp",
+      "artAlt": "A stone castle's drawbridge is lowered over a calm moat",
+      "factAudio": "castles-knights-drawbridge",
+      "quiz": ["castles-knights-drawbridge"],
+      "facts": [
+        {
+          "text": "A castle entrance was a front door with moving parts. The castle's gatekeepers looked after the gate, a heavy sliding grille called a portcullis, and the drawbridge itself. With the bridge pulled up, the moat became a ring of water with no way across.",
+          "source": "English Heritage (english-heritage.org.uk)"
+        },
+        {
+          "text": "Some moats were truly enormous. At the Tower of London, workers began digging a moat right around the castle in the 1240s, and it grew to be at least 50 metres wide, which is about half a football pitch.",
+          "source": "Historic Royal Palaces (hrp.org.uk)"
+        },
+        {
+          "text": "Moats were not just clever, they were full of life. In 1292 King Edward I sent lots of young pike to live in the Tower of London's moat as a fish farm, and archaeologists later found a centuries-old wicker fish trap there with fish skeletons still inside.",
+          "source": "Historic Royal Palaces (hrp.org.uk)"
+        }
+      ]
+    },
+    {
+      "id": "banners",
+      "title": "Pictures That Say Your Name",
+      "art": "/explore/topic-photos/castles-knights/castles-knights-4.webp",
+      "artAlt": "A colourful medieval tapestry and a knight's shield hang on a stone castle wall",
+      "factAudio": "castles-knights-banners",
+      "quiz": ["castles-knights-banners"],
+      "facts": [
+        {
+          "text": "When knights began wearing helmets that covered their faces, nobody could tell who was who. So each knight painted his own special mix of colours, shapes and animals on his shield and banners, a bit like writing your name in pictures.",
+          "source": "English Heritage (english-heritage.org.uk)"
+        },
+        {
+          "text": "Only one person was allowed to use each coat of arms. If you spotted a knight's design at a tournament, you knew exactly who was inside the armour, even if you could not see his face.",
+          "source": "English Heritage (english-heritage.org.uk)"
+        },
+        {
+          "text": "Tapestries were woven from wool and silk threads by craftsmen with amazing skill, and they were the great art of their day. Covering a wall with them showed visitors that the owner was someone very grand indeed.",
+          "source": "National Trust (nationaltrust.org.uk)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Castles & Knights!",
+    "blurb": "You have explored the whole castle, from the shining armour to the banners on the walls. Fold a corner on your favourite page so you can march straight back to it next time."
+  }
+}

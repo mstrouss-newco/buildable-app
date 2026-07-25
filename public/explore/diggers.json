@@ -1,0 +1,121 @@
+{
+  "id": "diggers",
+  "title": "Diggers & Big Machines",
+  "template": "topic-book",
+  "topic": "machines",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["machine-facts", "reading"],
+  "heroArt": "/explore/topic-photos/diggers/diggers-cover.webp",
+  "shelfColor": "#E0A32E",
+  "ambient": "city",
+  "assetVersion": 1,
+  "sources": [
+    "Encyclopaedia Britannica (britannica.com)",
+    "NASA (nasa.gov)",
+    "Samsung C&T (news.samsungcnt.com)",
+    "Caterpillar (cat.com)",
+    "Mining Technology (mining-technology.com)",
+    "National Ready Mixed Concrete Association (nrmca.org)",
+    "American Cement Association (cement.org)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/diggers/diggers-cover.webp",
+    "artAlt": "A bright yellow excavator with its bucket raised high on a sunny construction site",
+    "blurb": "A yellow excavator lifts its bucket high in the air, ready to take a great big scoop. Turn the page to meet the biggest, strongest machines ever built!"
+  },
+  "pages": [
+    {
+      "id": "bulldozer",
+      "title": "The Mighty Pusher",
+      "art": "/explore/topic-photos/diggers/diggers-1.webp",
+      "artAlt": "A yellow bulldozer pushes a big mound of dirt across a construction site",
+      "factAudio": "diggers-bulldozer",
+      "quiz": ["diggers-bulldozer"],
+      "facts": [
+        {
+          "text": "See that wide steel blade on the front? A bulldozer can raise it, lower it and tilt it to dig into the ground or shove a whole pile of soil along. It is brilliant at spreading out dirt that trucks have dumped and making bumpy ground smooth and level.",
+          "source": "Encyclopaedia Britannica (britannica.com)"
+        },
+        {
+          "text": "Instead of wheels, a bulldozer rolls on two metal tracks made of lots of plates joined into endless loops. The tracks spread the machine's weight over more ground, so this heavy giant can grip the earth and cross soft mud without sinking in.",
+          "source": "Encyclopaedia Britannica (britannica.com)"
+        },
+        {
+          "text": "Machines with tracks can grow truly enormous. NASA's crawler-transporter, which has carried rockets to the launch pad for more than 50 years, weighs about as much as 15 Statues of Liberty. It creeps along on its tracks at about one mile per hour, slower than you walk.",
+          "source": "NASA (nasa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "crane",
+      "title": "The Crane That Grows",
+      "art": "/explore/topic-photos/diggers/diggers-2.webp",
+      "artAlt": "A tall construction crane lifts a steel beam high above a partly built building",
+      "factAudio": "diggers-crane",
+      "quiz": ["diggers-crane"],
+      "facts": [
+        {
+          "text": "A tower crane can make itself taller while it works. A special climbing frame lifts the crane's top to open up a gap, and the crane then slots a brand new piece of mast into the space. Bit by bit, the crane grows right alongside the building it is helping to make.",
+          "source": "Samsung C&T (news.samsungcnt.com)"
+        },
+        {
+          "text": "The long arm stretching across the sky is called the jib. Cables run along it and wind around a drum to lift heavy loads like steel beams, and the jib can swing round on its mast to carry each load from side to side across the site.",
+          "source": "Encyclopaedia Britannica (britannica.com)"
+        },
+        {
+          "text": "Lifting something heavy far out on the jib could tip a crane right over. That is why cranes carry special ballast weights that press down on the other side, keeping the whole machine perfectly balanced while it lifts.",
+          "source": "Encyclopaedia Britannica (britannica.com)"
+        }
+      ]
+    },
+    {
+      "id": "dump-truck",
+      "title": "Tip It Out!",
+      "art": "/explore/topic-photos/diggers/diggers-3.webp",
+      "artAlt": "A large dump truck tips its bed up high to pour out a load of gravel",
+      "factAudio": "diggers-dump-truck",
+      "quiz": ["diggers-dump-truck"],
+      "facts": [
+        {
+          "text": "When it is time to unload, a dump truck does not need a single shovel. On the giant Cat 797F mining truck, twin hydraulic cylinders push the huge bed up in about 25 seconds, and the whole load slides out all by itself.",
+          "source": "Caterpillar (cat.com)"
+        },
+        {
+          "text": "The biggest dump trucks of all work in mines, far away from ordinary roads. The very largest, the BelAZ 75710, can carry more than 400 tonnes of rock in one go, more than any other dump truck on Earth.",
+          "source": "Mining Technology (mining-technology.com)"
+        },
+        {
+          "text": "That record-breaking BelAZ is a true giant, about 8 metres tall and more than 20 metres long, roughly the height of a two-storey house. It rolls along on eight enormous tyres, and it even has two engines to help it haul all that rock.",
+          "source": "Mining Technology (mining-technology.com)"
+        }
+      ]
+    },
+    {
+      "id": "mixer",
+      "title": "Round Goes the Drum",
+      "art": "/explore/topic-photos/diggers/diggers-4.webp",
+      "artAlt": "A cement mixer truck turns its big drum while wet concrete flows down the chute",
+      "factAudio": "diggers-mixer",
+      "quiz": ["diggers-mixer"],
+      "facts": [
+        {
+          "text": "Inside the drum, blades curl round and round in a spiral, like a giant corkscrew. When the drum spins one way, the blades stir the concrete to keep it mixed, and when it spins the other way, they push the wet mix out and down the chute.",
+          "source": "National Ready Mixed Concrete Association (nrmca.org)"
+        },
+        {
+          "text": "The drum keeps turning because concrete does not stay runny for long. The moment cement meets water, a chemical reaction called hydration begins, slowly turning the wet mix hard as stone. That is why the truck aims to pour its load within about 90 minutes of mixing.",
+          "source": "National Ready Mixed Concrete Association (nrmca.org)"
+        },
+        {
+          "text": "Here is a secret: the truck we call a cement mixer is really carrying concrete. Cement is just one ingredient, the glue that sticks sand and stone together when water is added. The concrete it makes is the most widely used building material in the whole world.",
+          "source": "American Cement Association (cement.org)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Diggers & Big Machines!",
+    "blurb": "The machines are parked and the building site is quiet for the night. Fold a corner on your favourite page so you can visit that big machine again tomorrow."
+  }
+}
