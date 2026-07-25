@@ -73,8 +73,23 @@ console.log("--- 3. kit pieces reach the ONE shelf as ordinary items ---");
 // Run buildable-library.js with a fetch stub that serves the repo's static files.
 const sb = { console, Math, Date, JSON, Object, Array, String, Promise, Set };
 sb.window = sb; sb.globalThis = sb;
-sb.fetch = (u) => {
+// KP3: a planner with one OPEN kit card, one already-done kit card, and one card
+// that has nothing to do with kits — so "requested" can be shown to be read from
+// real state rather than guessed.
+const PLANNER_FIXTURE = { ok: true, tasks: [
+  { id: 1, target: "Kits", description: 'Add the Kenney "Space Kit" kit [kit:3d-assets__space-kit] — 200 pieces, 3D, CC0.', done: false },
+  { id: 2, target: "Kits", description: 'Add the Kenney "Tower Defense" kit [kit:2d-assets__tower-defense] — 303 pieces, 2D, CC0.', done: true },
+  { id: 3, target: "Breaker", description: "the paddle feels slow on iPad", done: false },
+] };
+const POSTS = [];
+sb.fetch = (u, opts) => {
   const clean = String(u).split("?")[0];
+  if (opts && opts.method === "POST") {
+    let body = null; try { body = JSON.parse(opts.body || "{}"); } catch { body = "unparseable"; }
+    POSTS.push({ url: clean, body });
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, task: { id: 99 } }) });
+  }
+  if (clean === "/api/planner") return Promise.resolve({ ok: true, json: () => Promise.resolve(PLANNER_FIXTURE) });
   if (clean.indexOf("/api/") === 0) return Promise.resolve({ ok: true, json: () => Promise.resolve(null) });
   const f = P("public" + clean);
   if (!fs.existsSync(f)) return Promise.resolve({ ok: false, json: () => Promise.resolve(null) });
@@ -113,8 +128,9 @@ say(/kitsSection/.test(al) && />Kits</.test(al), "Browse has a Kits section");
 say(/\["added","Added"\]/.test(al) && /\["not","Not added"\]/.test(al) && /data-kf=/.test(al),
   "the section filters by Added / Not added");
 say(/Add to app/.test(al), "a not-added kit offers Add to app");
-say(/\/api\/planner/.test(al) && /op:"add"/.test(al), "Add to app files a planner card and does nothing else");
-say(/\[kit:/.test(al), "the card is tagged [kit:<slug>] so the state can be read back");
+say(/BuildableLibrary\.requestKit\(/.test(al), "Add to app goes down the ONE shared road, not its own copy");
+say(!/op:"add"/.test(al), "Browse no longer hand-rolls the planner card");
+say(/BuildableLibrary\.requestedSlugs\(/.test(al), "Browse reads the request state from the shared helper too");
 say(!/Kenney catalog/.test(al), "the old flat Kenney strip is gone, not left duplicating the new one");
 say(/BuildableLibrary\.kitItems\(\)/.test(al), "added pieces join the normal asset grid");
 
@@ -231,6 +247,60 @@ say(props.length >= 40, `a prop slot is offered ${props.length} kit pieces`);
 say(bg.length >= 20, `a background slot is offered ${bg.length} kit pieces (the grounds, roads and plates)`);
 say(props.every((a) => !/^(ground|road|plate)-/.test(a.url.split("/").pop())), "terrain squares are NOT offered as props");
 say(bg.every((a) => /^(ground|road|plate)-/.test(a.url.split("/").pop())), "props are NOT offered as backgrounds");
+
+console.log("--- 7. Session KP3: the add-to-app loop actually runs ---");
+// Not a text search this time: the real functions are driven against a stubbed
+// planner, so the card Mike's tap produces is inspected as data.
+say(["catalogKits", "kitRequests", "requestedSlugs", "requestKit"].every((f) => typeof BL[f] === "function"),
+  "the library owns the whole loop: browse, read back, and ask");
+
+const catalog = await BL.catalogKits();
+say(catalog.length === cat.kits.length, `the shelf can browse all ${catalog.length} kits, added or not`);
+say(catalog.some((k) => !k.added), "kits Mike has not added are still browsable — asking is never a wall");
+say(catalog.every((k) => k.preview && k.folder), "every browsable kit shows a preview and where it lives on Mike's Mac");
+
+const reqs = await BL.kitRequests();
+say(reqs["3d-assets__space-kit"] === true, "an open card reads back as requested");
+say(!reqs["2d-assets__tower-defense"], "a card already ticked done does NOT read back as still requested");
+say(Object.keys(reqs).length === 1, "a card that is not about a kit is ignored :: " + JSON.stringify(Object.keys(reqs)));
+
+const target = catalog.find((k) => !k.added && k.folder);
+POSTS.length = 0;
+const filed = await BL.requestKit(target);
+say(POSTS.length === 1, `asking for a kit files exactly one thing (${POSTS.length})`);
+const card = POSTS[0] || { url: "", body: {} };
+say(card.url === "/api/planner", "the one thing it files is a planner card :: " + card.url);
+say(card.body.op === "add" && card.body.task && card.body.task.target === "Kits" && card.body.task.kind === "platform",
+  "the card is an add, filed under Kits");
+const desc = (card.body.task && card.body.task.description) || "";
+say(desc.indexOf("[kit:" + target.slug + "]") > -1, "the card is tagged [kit:<slug>] so Browse and the editor can read it back");
+say(desc.indexOf(target.name) > -1 && desc.indexOf(String(target.pieces)) > -1, "the card names the kit and its size");
+say(desc.indexOf(target.folder) > -1, "the card points the next session at the source folder on Mike's Mac");
+say(/kit\.json/.test(desc) && /refresh-added/.test(desc) && /KITS\.md/.test(desc), "the card carries the recipe, so the next session need not guess");
+say(desc.length <= 500, `the card survives the planner's 500-char clip (${desc.length})`);
+say(!!filed, "asking resolves only when the planner really stored the card");
+// asking must move NO art and change NO game
+say(!POSTS.some((p) => /asset-studio|save-game|manifest/.test(p.url)), "asking imports no art and touches no game");
+say(BL.requestedSlugs(PLANNER_FIXTURE)["3d-assets__space-kit"] === true, "the read-back helper is the same one Browse uses");
+const afterAsk = await BL.catalogKits();
+say(afterAsk.filter((k) => k.added).length === catalog.filter((k) => k.added).length,
+  "asking does not quietly mark a kit added — only real files do that");
+
+// the editor is where Mike actually stands when he needs a kit
+say(/Add a kit/.test(ed), "the editor's Library picker offers Add a kit");
+say(/drawKitShelf/.test(ed) && /kitCard/.test(ed), "the picker draws the kits Mike owns but has not added");
+say(/BuildableLibrary\.requestKit\(/.test(ed), "the editor's Add to app uses the SAME shared road as Browse");
+say(/BuildableLibrary\.catalogKits\(\)/.test(ed) && /BuildableLibrary\.kitRequests\(\)/.test(ed),
+  "the editor reads the catalog and the open cards, not a hardcoded list");
+say(/srcchip get/.test(ed) && !/if\(s\[0\]==="addkit"\)\s*return/.test(ed),
+  "Add a kit is always offered, even when the slot's shelves are empty");
+say(/Asked for/.test(ed) && /a card is waiting/.test(ed), "a kit already asked for says so instead of asking twice");
+say(!/action:"import"[^]{0,400}addkit/.test(ed), "the Add a kit shelf never imports art by itself");
+
+const kitsDoc = fs.existsSync(P("KITS.md")) ? read("KITS.md") : "";
+say(!!kitsDoc, "KITS.md exists, so the loop is written down");
+say(/refresh-added/.test(kitsDoc) && /kindsForSlot|role:"background"/.test(kitsDoc) && /planner_tasks/.test(kitsDoc),
+  "KITS.md carries the recipe: curate, tag kinds, re-stamp, close the card");
 
 console.log(ok ? "ALL CHECKS PASS" : "SOME CHECKS FAILED");
 process.exit(ok ? 0 : 1);

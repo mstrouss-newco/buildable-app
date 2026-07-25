@@ -90,6 +90,18 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
 .srcchip{ font-size:11px; border-radius:20px; padding:4px 10px; border:1px solid var(--line); background:#fff; color:var(--muted); cursor:pointer; font-family:inherit; }
 .srcchip.on{ background:#2b5fbe; border-color:#2b5fbe; color:#fff; font-weight:600; }
 .showall{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); margin:2px 0 8px; cursor:pointer; }
+/* KP3: the add-a-kit shelf — kits Mike owns but has not added to the app yet */
+.srcchip.get{ border-style:dashed; }
+.kitq{ width:100%; box-sizing:border-box; font-family:inherit; font-size:12px; padding:6px 9px; border:1px solid var(--line); border-radius:8px; background:#fff; margin:6px 0; }
+.kitgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:8px; margin:4px 0; max-height:50vh; overflow:auto; }
+.kitc{ border:1px solid var(--line); border-radius:8px; padding:6px; background:#fbf7ee; text-align:center; }
+.kitc .limg{ width:100%; height:60px; background:center/contain no-repeat; }
+.kitc .kn{ font-size:11px; font-weight:600; margin:3px 0 1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kitc .km{ font-size:9px; color:var(--muted); }
+.kitb{ margin-top:5px; width:100%; font-family:inherit; font-size:11px; font-weight:600; padding:5px 6px; border-radius:7px; border:1px solid #2b5fbe; background:#2b5fbe; color:#fff; cursor:pointer; }
+.kitb[disabled]{ background:#fff; color:var(--muted); border-color:var(--line); cursor:default; font-weight:400; }
+.kitnote{ font-size:9px; color:#8a6a12; margin-top:4px; line-height:1.3; }
+.kithint{ font-size:11px; color:var(--muted); margin:2px 0 6px; line-height:1.4; }
 </style>
 </head>
 <body>
@@ -871,6 +883,7 @@ function pickLibrary(spec, theme, cb){
   document.getElementById("mbody").innerHTML=""; document.getElementById("mkeep").style.display="none";
   document.getElementById("mstat").textContent=""; openModal();
   var showAll=false, srcFilter="all";
+  var kitCat=null, kitReq={}, kitQ="";        // KP3: the add-a-kit shelf
   BuildableLibrary.load().then(function(items){
     // KP1: source chips. "My Kits" is the art Mike added from the Kenney shelf;
     // it only appears when at least one kit is actually added, so the row never
@@ -879,10 +892,12 @@ function pickLibrary(spec, theme, cb){
     function draw(){
       var all=BuildableLibrary.forSlot(items, spec, state.game, theme, showAll);
       var list=all.filter(function(a){ return srcFilter==="all" || BuildableLibrary.groupOf(a)===srcFilter; });
-      document.getElementById("mhint").textContent=list.length
-        ? (list.length+" piece(s) that fit "+labelOf(spec.key)+". Tap one to use it live.")
-        : "Nothing fits this slot yet. Use Generate or Drop in art, or turn on Show all.";
       var body=document.getElementById("mbody"); body.innerHTML="";
+      document.getElementById("mhint").textContent=(srcFilter==="addkit")
+        ? "Kits you already own. Adding one is a job for the next build session — asking takes a second and changes nothing in your game right now."
+        : (list.length
+          ? (list.length+" piece(s) that fit "+labelOf(spec.key)+". Tap one to use it live.")
+          : "Nothing fits this slot yet. Use Generate or Drop in art, or turn on Show all.");
       var row=el("div",{class:"srcrow"});
       SOURCES.forEach(function(s){
         var n=all.filter(function(a){ return s[0]==="all" || BuildableLibrary.groupOf(a)===s[0]; }).length;
@@ -890,7 +905,13 @@ function pickLibrary(spec, theme, cb){
         row.appendChild(el("button",{class:"srcchip"+(srcFilter===s[0]?" on":""),
           onclick:function(){ srcFilter=s[0]; draw(); }},[s[1]+" ("+n+")"]));
       });
+      // KP3: this chip is not a filter on the shelf — it opens the kits Mike owns
+      // but has not added yet. It is always offered, so a slot with nothing in it
+      // still has an honest next step.
+      row.appendChild(el("button",{class:"srcchip get"+(srcFilter==="addkit"?" on":""),
+        onclick:function(){ srcFilter="addkit"; draw(); }},["Add a kit"]));
       body.appendChild(row);
+      if(srcFilter==="addkit"){ drawKitShelf(body); return; }
       var chk=el("input",{type:"checkbox"}); chk.checked=showAll;
       chk.addEventListener("change",function(){ showAll=chk.checked; draw(); });
       body.appendChild(el("label",{class:"showall"},[ chk, el("span",{},["Show all games & themes"]) ]));
@@ -909,6 +930,61 @@ function pickLibrary(spec, theme, cb){
       });
       body.appendChild(grid);
     }
+
+    /* KP3 — the add-to-app loop, from inside the editor.
+       Mike is standing in a slot with nothing good in it. Rather than send him to
+       another page, the picker shows every Kenney kit he already owns that is not
+       in the app yet. "Add to app" files ONE planner card for the next build
+       session and nothing else: no art is imported here, no game changes, and the
+       kit stays browsable (here and in the bundle folder on his Mac) while he
+       waits. A kit that already has an open card says so instead of asking twice. */
+    function drawKitShelf(body){
+      if(!kitCat){
+        body.appendChild(el("div",{class:"kithint"},["Loading your kits…"]));
+        Promise.all([BuildableLibrary.catalogKits(), BuildableLibrary.kitRequests()])
+          .then(function(r){ kitCat=r[0]||[]; kitReq=r[1]||{}; draw(); })
+          .catch(function(){ kitCat=[]; draw(); });
+        return;
+      }
+      var q=el("input",{class:"kitq",type:"search",placeholder:"Search your kits — try tower, space, platformer"});
+      q.value=kitQ;
+      var note=el("div",{class:"kithint"});
+      var grid=el("div",{class:"kitgrid"});
+      function paint(){
+        var s=kitQ.toLowerCase().trim();
+        var list=kitCat.filter(function(k){ return !k.added && (!s||(k.name+" "+k.category).toLowerCase().indexOf(s)>=0); });
+        var added=kitCat.filter(function(k){ return k.added; }).length;
+        note.textContent=added+" of "+kitCat.length+" kits are in the app · "+list.length+" more you could ask for · all CC0, already owned";
+        grid.innerHTML="";
+        if(!list.length){ grid.appendChild(el("div",{class:"kithint"},["No kit matches that."])); return; }
+        list.slice(0,120).forEach(function(k){ grid.appendChild(kitCard(k,paint)); });
+      }
+      q.addEventListener("input",function(){ kitQ=q.value; paint(); });
+      body.appendChild(q); body.appendChild(note); body.appendChild(grid);
+      paint();
+    }
+    function kitCard(k,repaint){
+      var pending=!!kitReq[k.slug];
+      var btn=el("button",{class:"kitb"},[pending?"Asked for":"Add to app"]);
+      if(pending) btn.disabled=true;
+      else btn.addEventListener("click",function(){
+        btn.disabled=true; btn.textContent="Asking…";
+        BuildableLibrary.requestKit(k)
+          .then(function(){ kitReq[k.slug]=true; repaint();
+            document.getElementById("mstat").textContent='Asked for "'+k.name+'" — the card is on the planner for the next build session.'; })
+          .catch(function(e){ btn.disabled=false; btn.textContent="Add to app";
+            document.getElementById("mstat").textContent="Could not file that: "+(e.message||e); });
+      });
+      var card=el("div",{class:"kitc"},[
+        el("div",{class:"limg",style:"background-image:url('"+k.preview+"')"}),
+        el("div",{class:"kn"},[k.name]),
+        el("div",{class:"km"},[k.pieces+" pieces · "+String(k.dim||"").toUpperCase()]),
+        btn
+      ]);
+      if(pending) card.appendChild(el("div",{class:"kitnote"},["a card is waiting for the next build session"]));
+      return card;
+    }
+
     draw();
   }).catch(function(e){ document.getElementById("mhint").textContent="Could not load library: "+(e.message||e); });
 }

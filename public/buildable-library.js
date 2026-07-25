@@ -130,6 +130,57 @@
     // Pieces from every added kit (Browse adds these to the same grid).
     kitItems: loadKits,
 
+    // ---- The add-to-app loop (Session KP3) ---------------------------------
+    // A kit Mike has NOT added yet is still browsable — he can see it here and
+    // on his Mac. The only thing the app does about it is ASK: one planner card
+    // for the next build session. Nothing imports art by itself, and asking
+    // never blocks or hides the kit. Both the editor's Library picker and the
+    // Browse page call these, so the two can never drift apart.
+
+    // The whole Kenney catalog (added and not), straight from the static file.
+    catalogKits: function () {
+      return getJSON("/kenney/kenney-kits.json?" + bust)
+        .then(function (j) { return (j && j.kits) || []; })
+        .catch(function () { return []; });
+    },
+
+    // Which kits already have an open card waiting. Reads whatever /api/planner
+    // returned; a card is "open" until it is ticked done.
+    requestedSlugs: function (planner) {
+      var out = {};
+      (((planner && planner.tasks) || [])).forEach(function (t) {
+        var m = /\[kit:([a-z0-9_-]+)\]/.exec(String((t && t.description) || ""));
+        if (m && !t.done) out[m[1]] = true;
+      });
+      return out;
+    },
+
+    // Read the planner and hand back that map in one call.
+    kitRequests: function () {
+      return getJSON("/api/planner?" + bust).then(BL.requestedSlugs).catch(function () { return {}; });
+    },
+
+    // The card itself. It names the kit, tags it [kit:<slug>] so the state can be
+    // read back, and spells out the recipe so the next session does not have to
+    // guess. Resolves only when the planner really stored it.
+    requestKit: function (kit) {
+      if (!kit || !kit.slug) return Promise.reject(new Error("no kit"));
+      var d = 'Add the Kenney "' + (kit.name || kit.slug) + '" kit [kit:' + kit.slug + '] — '
+        + kit.pieces + ' pieces, ' + String(kit.dim || "").toUpperCase() + ', CC0.'
+        + ' Source folder on Mike\'s Mac: "' + (kit.folder || kit.name) + '".'
+        + ' Curate the good pieces into public/kenney/kits/' + kit.slug + '/ with a kit.json,'
+        + ' add the slug to index.json, run scripts/build-kenney-kits.mjs --refresh-added,'
+        + ' then qa-kits.mjs. Full recipe: KITS.md.';
+      return fetch("/api/planner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ op: "add", task: { kind: "platform", target: "Kits", description: d } }),
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (!j || !j.ok) throw new Error((j && (j.error || j.detail)) || "could not file the card");
+        return j.task || null;
+      });
+    },
+
     // Which shelf a piece came from — the editor's source chips filter on this.
     groupOf: function (a) {
       if (!a) return "pack";

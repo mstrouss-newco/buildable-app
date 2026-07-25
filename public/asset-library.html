@@ -286,8 +286,9 @@ async function load(){
   KITS=(kitcat&&kitcat.kits)||[];
   // A kit shows "Requested" only when a real planner card exists for it — the
   // page never claims a request it cannot point at.
-  KITREQ={};
-  ((planner&&planner.tasks)||[]).forEach(t=>{ const m=/\[kit:([a-z0-9_-]+)\]/.exec(String(t.description||"")); if(m&&!t.done) KITREQ[m[1]]=true; });
+  // KP3: reading the request state and filing a card both live in
+  // buildable-library.js, so Browse and the editor's picker cannot drift apart.
+  KITREQ=(window.BuildableLibrary?BuildableLibrary.requestedSlugs(planner):{});
 
   const models3d=(mf&&mf.models||[]).map(m=>({id:"model:"+m.pack+":"+m.file,name:m.name,kind:"element",theme:m.theme||"",dim:"3d",source:m.source||m.pack,license:m.license||"",url:m.url,thumb:m.thumb||"",icon:"◈"}));
   const fxAssets=(fxm&&fxm.fx||[]).map(f=>({id:"fx:"+f.file,name:f.name,kind:"effect",theme:"",dim:"2d",source:f.source||"kenney",license:f.license||"CC0",url:f.url,thumb:f.url}));
@@ -392,11 +393,14 @@ function kitsSection(){
     const state1=k.added
       ? '<span class="b added">added</span>'
       : (KITREQ[k.slug]?'<span class="b warn">requested</span>':'<span class="b">not added</span>');
+    // KP3: asking never blocks. A kit that is only requested still shows where it
+    // lives in the bundle on Mike's Mac, so he can keep looking at it meanwhile.
+    const where=k.folder?'<div class="note">on your Mac: '+esc(k.folder)+'</div>':'';
     const act=k.added
       ? '<div class="note">in the library · pick it in the editor under My Kits</div>'
       : (KITREQ[k.slug]
-        ? '<div class="note">a planner card is waiting for the next build session</div>'
-        : '<button class="useg addkit" data-k="'+esc(k.slug)+'">Add to app</button>');
+        ? '<div class="note">a planner card is waiting for the next build session</div>'+where
+        : '<button class="useg addkit" data-k="'+esc(k.slug)+'">Add to app</button>'+where);
     return '<div class="card">'+thumb+'<div class="cbody"><div class="cname">'+esc(k.name)+'</div>'
       +'<div class="badges"><span class="b">'+String(k.dim||"").toUpperCase()+'</span><span class="b cc0">CC0</span>'
       +'<span class="b">'+k.pieces+' pieces</span>'+state1+'</div>'+act+'</div></div>';
@@ -408,14 +412,8 @@ function wireKits(sec){
   sec.querySelectorAll(".addkit").forEach(b=>b.onclick=()=>{
     const slug=b.dataset.k, kit=KITS.find(k=>k.slug===slug); if(!kit) return;
     b.disabled=true; b.textContent="Filing…";
-    fetch("/api/planner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"add",task:{
-      kind:"platform", target:"Kits",
-      description:"Add the Kenney \""+kit.name+"\" kit to the app [kit:"+slug+"] — "+kit.pieces+" pieces, "
-        +String(kit.dim||"").toUpperCase()+", CC0. Curate the usable pieces into public/kenney/kits/"+slug+"/ with a kit.json, then re-run scripts/build-kenney-kits.mjs --refresh-added."
-    }})})
-      .then(r=>r.json())
-      .then(j=>{ if(!j||!j.ok) throw new Error((j&&(j.error||j.detail))||"could not file the card");
-        KITREQ[slug]=true; render(); kitToast("Asked for \""+kit.name+"\" — the card is on the planner."); })
+    BuildableLibrary.requestKit(kit)
+      .then(()=>{ KITREQ[slug]=true; render(); kitToast("Asked for \""+kit.name+"\" — the card is on the planner."); })
       .catch(e=>{ b.disabled=false; b.textContent="Add to app"; kitToast("Could not file that: "+(e.message||e)); });
   });
 }
