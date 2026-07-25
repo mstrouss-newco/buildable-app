@@ -25,6 +25,8 @@
   URL params (all optional):
     level=<index|id>  which world (default 0)
     ride=<0..2>       equipped ride from the shell hangar
+    mode=free|jobs    skip the Free Flight / Jobs card and go straight in
+    mission=<id>      start one job by name (deep link, refresh-safe)
     screen=demo       attract mode for the landing card (autopilot, no HUD chrome)
     auto=1            autopilot on (the QA robot's handle; proves a world beatable)
     nodraw=1          skip the WebGL renderer entirely (headless QA)
@@ -42,6 +44,23 @@
     - LEARNING: before the next world unlocks the engine asks the shell for its
       quiz gate (manifest features.learning.beforeUnlock; the parent's toggle
       still wins). coinTopUp is shell-side and stays on.
+
+  Session FL5 added MISSIONS — real aircraft jobs, on top of the same three
+  worlds. Arriving at a journey stop you now choose Free Flight or Jobs.
+
+    - ONE MISSION ENGINE, MANY SMALL RECIPES. A job is data, never code: which
+      world it lives in, what you carry and what that looks like, where you pick
+      it up, where it goes, how close you have to get (a low pass or a hover),
+      what it pays, its badge sticker, and one true fun fact. Adding a job means
+      adding a recipe to MISSIONS (or to the manifest) and nothing else.
+    - THE FL5 LAW: A JOB CAN NEVER BE FAILED. There is no timer, nothing runs
+      out, nothing expires and nothing is ever lost. The depot always has more
+      cargo, a drop point waits forever, and a bump is still a soft bounce. The
+      only two endings are "finished" and "flew off to do something else".
+    - Every job ends the same way: a Did You Know card, coins straight into the
+      ONE shared wallet, and a badge sticker kept per kid.
+    - The controls never change: one finger, drag to steer. A job adds one
+      orange arrow pointing at the next thing to do and nothing else.
 
   No emojis anywhere (repo law). Audio rule: created library sound only — the
   synth in buildable-audio.js is a silent fallback, never the product.
@@ -116,6 +135,33 @@
   #helpCard p{margin:8px 0;font-size:16px;font-weight:600;line-height:1.45}
   #helpCard button{margin-top:14px;border:none;border-radius:999px;padding:12px 28px;
     background:#2FB7D6;color:#fff;font-weight:900;font-size:17px;cursor:pointer;font-family:inherit}
+  /* ---- FL5: the Free Flight / Jobs card, the job chips and the Did You Know card ---- */
+  .sheet{position:absolute;inset:0;background:rgba(18,52,74,.72);display:none;
+    align-items:center;justify-content:center;pointer-events:auto;padding:18px;overflow:auto}
+  .sheet .inner{background:#FFFCF0;border-radius:26px;padding:20px;width:100%;max-width:380px;
+    color:#33566e;box-shadow:0 12px 40px rgba(10,40,60,.4)}
+  .sheet h2{font-family:inherit;margin:0 0 2px;font-size:24px}
+  .sheet .sub{font-weight:700;font-size:14px;color:#6b8aa0;margin-bottom:12px}
+  .bigbtn{width:100%;border:none;border-radius:18px;padding:15px 18px;margin-bottom:10px;
+    background:linear-gradient(#57d06b,#2fae4d);color:#fff;font-weight:900;font-size:20px;
+    cursor:pointer;font-family:inherit;text-align:left;box-shadow:0 4px 0 #1f8038}
+  .bigbtn .b2{display:block;font-weight:700;font-size:13px;opacity:.92;margin-top:2px}
+  .jobbtn{width:100%;border:none;border-radius:18px;padding:13px 16px;margin-bottom:9px;
+    background:#EAF6FB;color:#26506b;font-weight:900;font-size:17px;cursor:pointer;
+    font-family:inherit;text-align:left;display:flex;align-items:center;gap:12px}
+  .jobbtn .b2{display:block;font-weight:700;font-size:13px;color:#5c7f95;margin-top:2px}
+  .jobbtn .got{margin-left:auto;flex:0 0 auto}
+  #factCard .inner{text-align:center}
+  #factCard .sticker{margin:4px auto 8px}
+  #factCard .fact{background:#EAF6FB;border-radius:16px;padding:13px 15px;margin:12px 0;
+    font-weight:700;font-size:15px;line-height:1.45;text-align:left;color:#26506b}
+  #factCard .fact b{display:block;font-size:13px;color:#2FB7D6;margin-bottom:4px;letter-spacing:.4px}
+  #factCard .paid{font-weight:900;font-size:19px;color:#2b7a4b;margin:2px 0 10px}
+  #factCard .row{display:flex;gap:10px}
+  #factCard .row button{flex:1;border:none;border-radius:999px;padding:13px 10px;
+    font-weight:900;font-size:16px;cursor:pointer;font-family:inherit}
+  #factCard .row .a{background:#2FB7D6;color:#fff}
+  #factCard .row .b{background:#EAF6FB;color:#26506b}
 </style>
 </head>
 <body>
@@ -133,6 +179,8 @@
   <div id="goals">
     <div class="chip" id="gCoins">Coins 0/12</div>
     <div class="chip" id="gLand">Landings 0/1</div>
+    <div class="chip" id="gJob" style="display:none">Job</div>
+    <div class="chip" id="gCarry" style="display:none">Carrying 0</div>
   </div>
   <button id="helpBtn" aria-label="How to fly">?</button>
   <div id="hint">
@@ -162,7 +210,26 @@
     <p>Pick which ride you fly in the hangar, on the Make it mine screen. Every ride scoops the same coins and lands on the same pads - they just look and feel different.</p>
     <p>Scoop up gold coins in the sky. Bumping into things just gives you a soft bounce, so you can never crash.</p>
     <p>Follow the orange arrow to a landing pad. Fly low over it to land and bank your coins.</p>
+    <p>Some stops have jobs to do: carry the post, drop food to hungry animals, find a lost explorer, light the lanterns. A job can never go wrong - nothing runs out and nothing is ever lost.</p>
     <button id="helpClose">Got it</button>
+  </div></div>
+  <!-- FL5: what you meet when you arrive at a stop. Free Flight, or a job. -->
+  <div class="sheet" id="modeCard"><div class="inner">
+    <h2 id="mcWorld">Sunny Islands</h2>
+    <div class="sub">What would you like to do here?</div>
+    <button class="bigbtn" id="freeBtn">Free Flight<span class="b2">Fly wherever you like and scoop up coins</span></button>
+    <div id="jobList"></div>
+  </div></div>
+  <!-- FL5: every job ends here - a fact, the coins, and a sticker to keep. -->
+  <div class="sheet" id="factCard"><div class="inner">
+    <div class="sticker" id="fcSticker"></div>
+    <h2 id="fcTitle">Job done!</h2>
+    <div class="paid" id="fcPaid">+15 coins banked</div>
+    <div class="fact"><b>DID YOU KNOW</b><span id="fcFact"></span></div>
+    <div class="row">
+      <button class="a" id="fcAgain">Another job</button>
+      <button class="b" id="fcFree">Free flight</button>
+    </div>
   </div></div>
 </div>
 <script src="/three.min.js"></script>
@@ -181,6 +248,8 @@ var MANUAL = Q.get("manual")==="1";
 var DEMO   = Q.get("screen")==="demo";
 var AUTO   = Q.get("auto")==="1" || DEMO;
 var RIDE   = Math.max(0, Math.min(2, parseInt(Q.get("ride")||"0",10)||0));
+var MODEQ  = (Q.get("mode")||"").toLowerCase();      // free | jobs | missions
+var MISSQ  = Q.get("mission")||"";                   // deep link straight into one job
 
 // ---------- tiny helpers ----------
 var clamp=function(v,a,b){return v<a?a:(v>b?b:v);};
@@ -220,6 +289,76 @@ var WORLDS=[
     goalCoins:20, goalLandings:2,
     pads:[{x:20,z:-660},{x:-580,z:380}] }
 ];
+// ============================================================================
+//  THE JOBS (Session FL5). One mission engine, many small recipes. A recipe is
+//  pure data and answers five questions and no others:
+//     which world?  what do you carry (and what does it look like)?
+//     where do you pick it up?  where does it go?  one true fun fact.
+//  Everything else — the arrow, the chips, the pickup, the drop, the card at the
+//  end, the coins, the sticker — is the shared engine below and is identical for
+//  every job. Adding a job is adding an object here (or in the manifest).
+//
+//  Fields:
+//    id world name blurb          who and where
+//    cargo {name,plural,color}    what you carry; capacity 0 = you carry nothing
+//                                 (a lantern spark, a pair of eyes) and every
+//                                 stop is reached directly
+//    capacity                     how many you can hold at once
+//    depot {x,z,label,style}      where you load up (null = no loading)
+//    targets [{x,z,label}]        where it goes
+//    style                        how a drop point is drawn: house|animal|flare|lantern
+//    radius                       how close counts
+//    ceiling                      how LOW you must be for it to count
+//    hold                         seconds you must stay close (0 = a quick pass)
+//    verb                         the word that flashes on a successful drop
+//    coins badge fact             the ending: paid, kept, learned
+//    palette                      optional world repaint while the job runs
+//
+//  THE FL5 LAW LIVES HERE TOO: no recipe may carry a timer, a life count, a
+//  penalty or an expiry. There is nothing in this shape to fail with.
+// ============================================================================
+var MISSIONS=[
+  { id:"mail-run", world:"sunny-islands", name:"Mail Run",
+    blurb:"Pick up letters at the post dock and drop one at every island house.",
+    cargo:{name:"letter",plural:"letters",color:0xFFF6E3}, capacity:2,
+    depot:{x:0,z:-190,label:"Post Dock",style:"dock"},
+    targets:[{x:-215,z:-330,label:"Blue House"},{x:240,z:-355,label:"Green House"},{x:35,z:-560,label:"Lighthouse Cottage"}],
+    style:"house", radius:30, ceiling:60, hold:0, verb:"Delivered!",
+    coins:15, badge:"Post Pilot",
+    fact:"On some islands the post really does arrive by plane. A seaplane can land right on the water and taxi up to the dock, so the mail steps off onto the jetty.",
+    tip:"Fly low over the dock to load up, then low over each house to drop a letter." },
+
+  { id:"supply-drop", world:"snowy-peaks", name:"Supply Drop",
+    blurb:"Load food bundles at the hut and drop one to every snowed-in animal.",
+    cargo:{name:"bundle",plural:"bundles",color:0xE8A24A}, capacity:2,
+    depot:{x:0,z:-200,label:"Supply Hut",style:"dock"},
+    targets:[{x:-260,z:-345,label:"Two Reindeer"},{x:225,z:-390,label:"Mountain Goat"},{x:-60,z:-565,label:"Snowy Yak"}],
+    style:"animal", radius:32, ceiling:60, hold:0, verb:"Dropped!",
+    coins:18, badge:"Supply Ace",
+    fact:"When deep snow cuts a valley off, pilots really do drop bales of hay from the air so the animals below still get fed. It is called a hay drop.",
+    tip:"Fly low over the hut to load up, then low over each animal to drop a bundle." },
+
+  { id:"lost-explorer", world:"snowy-peaks", name:"Lost Explorer",
+    blurb:"Somebody is lost in the snow. Spot each flare and hover close until they wave.",
+    cargo:null, capacity:0, depot:null,
+    targets:[{x:185,z:-250,label:"Flare on the ridge"},{x:-235,z:-405,label:"Flare in the pass"},{x:60,z:-585,label:"Flare by the cliff"}],
+    style:"flare", radius:52, ceiling:70, hold:2.6, verb:"Found!",
+    coins:20, badge:"Search Light",
+    tip:"Hover close and stay there. A ride that turns tightly can circle a flare without drifting off - the Rescue Copter is made for this.",
+    fact:"A signal flare burns bright enough to be seen for miles, even in daylight, which is why it is still one of the oldest and best ways to say I am here." },
+
+  { id:"lantern-lighter", world:"sunset-canyon", name:"Lantern Lighter",
+    blurb:"Dusk in the canyon. Swoop low over every lantern to light it.",
+    cargo:null, capacity:0, depot:null,
+    targets:[{x:-140,z:-215,label:"First lantern"},{x:150,z:-330,label:"Second lantern"},{x:-60,z:-460,label:"Third lantern"},{x:170,z:-590,label:"Last lantern"}],
+    style:"lantern", radius:30, ceiling:45, hold:0, verb:"Lit!",
+    coins:16, badge:"Lamplighter",
+    tip:"Fly low and slow right over each lantern. The canyon goes dusky while you work.",
+    fact:"Before electric street lights, real lamplighters walked the streets every evening with a long pole and lit each lamp by hand, then came back at dawn to put them out.",
+    palette:{ sky:"#5B3E7A", fog:"#8A5C86", ground:"#7A4A46", sun:"#FFC27A",
+              rock:"#8E4630", rock2:"#6E3524", cap:"#A05B3A", cap2:"#7C4229",
+              trunk:"#5C3B22", leaf:"#3A6B48", stone:"#9A6B52" } }
+];
 function pickWorld(){
   var raw=Q.get("level");
   if(raw==null||raw==="") return 0;
@@ -229,6 +368,17 @@ function pickWorld(){
   return 0;
 }
 var WI=pickWorld(), world=WORLDS[WI];
+// The jobs that belong to THIS stop, and every fixed point they use. The points
+// are collected before the first terrain chunk is built so an island can never
+// grow on top of a post dock — the same rule the landing pads already had.
+var WORLD_JOBS=MISSIONS.filter(function(m){ return m.world===world.id; });
+function jobPoints(m){
+  var pts=m.targets.slice();
+  if(m.depot) pts=pts.concat([m.depot]);
+  return pts;
+}
+var JOB_POINTS=[];
+WORLD_JOBS.forEach(function(m){ JOB_POINTS=JOB_POINTS.concat(jobPoints(m)); });
 
 // ============================================================================
 //  RIDES — THE HANGAR (Session FL3). The SHELL owns which ride a kid has picked
@@ -263,13 +413,16 @@ var ride=RIDES[Math.max(0,Math.min(RIDES.length-1,RIDE))];
 // ---------- progress (per kid, the shape the shell's journey reads) ----------
 function kidSuffix(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return (k&&k.id)?("_"+k.id):""; }catch(e){ return ""; } }
 function prefsKey(){ return "bk_skyflyer_prefs"+kidSuffix(); }
-function loadPrefs(){ try{ var p=JSON.parse(localStorage.getItem(prefsKey())||"null"); if(!p||typeof p!=="object") p={}; if(typeof p.unlocked!=="number") p.unlocked=0; if(!p.stars||typeof p.stars!=="object") p.stars={}; return p; }catch(e){ return {unlocked:0,stars:{}}; } }
+function loadPrefs(){ try{ var p=JSON.parse(localStorage.getItem(prefsKey())||"null"); if(!p||typeof p!=="object") p={}; if(typeof p.unlocked!=="number") p.unlocked=0; if(!p.stars||typeof p.stars!=="object") p.stars={}; if(!p.badges||typeof p.badges!=="object") p.badges={}; return p; }catch(e){ return {unlocked:0,stars:{},badges:{}}; } }
 function savePrefs(p){ try{ localStorage.setItem(prefsKey(), JSON.stringify(p)); }catch(e){} }
 function markStars(n){ if(DEMO) return; var p=loadPrefs(); if((p.stars[WI]||0)<n) p.stars[WI]=n; savePrefs(p); }
 // FL4 split these in two: beating a world is earned the moment the goal is met,
 // but UNLOCKING the next one may have to wait for the learning gate, so the two
 // are no longer the same call.
 function markBeaten(){ if(DEMO) return; var p=loadPrefs(); p.stars[WI]=3; savePrefs(p); }
+// FL5: a finished job leaves a sticker behind, kept per kid alongside the stars.
+function markBadge(id){ if(DEMO) return; var p=loadPrefs(); p.badges[id]=true; savePrefs(p); }
+function hasBadge(id){ try{ return !!loadPrefs().badges[id]; }catch(e){ return false; } }
 function markUnlockNext(){
   if(DEMO) return;
   var p=loadPrefs(); if(p.unlocked<WI+1) p.unlocked=Math.min(WORLDS.length-1,WI+1); savePrefs(p);
@@ -675,6 +828,9 @@ function makeCoin(x,y,z,parent,list){
 }
 function padTooClose(wx,wz){
   for(var i=0;i<PADS.length;i++) if(Math.hypot(wx-PADS[i].x,wz-PADS[i].z)<95) return true;
+  // FL5: every job's dock and drop points get the same clear approach a pad has,
+  // so a mountain can never bury the thing the arrow is pointing at.
+  for(var j=0;j<JOB_POINTS.length;j++) if(Math.hypot(wx-JOB_POINTS[j].x,wz-JOB_POINTS[j].z)<80) return true;
   return false;
 }
 function buildChunk(cx,cz){
@@ -766,6 +922,7 @@ var S={
   landings:0,
   beaten:false,
   paused:false,
+  picking:false,           // FL5: a card is up (choose a job / a job just ended)
   sound:true,
   auto:AUTO,
   autoWait:0,autoIdle:0,autoStraight:0,
@@ -793,7 +950,21 @@ var coinsEl=D.getElementById("coins"),
     rideNameEl=D.getElementById("rideName"),
     helpBtn=D.getElementById("helpBtn"),
     helpCard=D.getElementById("helpCard"),
-    helpClose=D.getElementById("helpClose");
+    helpClose=D.getElementById("helpClose"),
+    // FL5
+    gJobEl=D.getElementById("gJob"),
+    gCarryEl=D.getElementById("gCarry"),
+    modeCard=D.getElementById("modeCard"),
+    mcWorld=D.getElementById("mcWorld"),
+    jobList=D.getElementById("jobList"),
+    freeBtn=D.getElementById("freeBtn"),
+    factCard=D.getElementById("factCard"),
+    fcSticker=D.getElementById("fcSticker"),
+    fcTitle=D.getElementById("fcTitle"),
+    fcPaid=D.getElementById("fcPaid"),
+    fcFact=D.getElementById("fcFact"),
+    fcAgain=D.getElementById("fcAgain"),
+    fcFree=D.getElementById("fcFree");
 worldNameEl.textContent=world.name;
 // FL3: name the ride on the way in and again every time we sit on a pad, so
 // "pick your ride" is something a kid can SEE they did, not just a setting.
@@ -806,11 +977,29 @@ setTimeout(function(){ try{ if(!S.hintDone){S.hintDone=true;hintEl.style.opacity
 function toast(t){ toastEl.textContent=t;toastEl.classList.remove("show");
   void toastEl.offsetWidth;toastEl.classList.add("show"); }
 function paintGoals(){
+  // FL5: on a job the chips talk about the job, not the world goal. The world
+  // goal is still ticking away underneath — coins scooped on a delivery run
+  // still count — it just is not what the kid is being asked for right now.
+  if(typeof MODE!=="undefined" && MODE==="job" && JOB){
+    gCoinsEl.style.display="none"; gLandEl.style.display="none";
+    gJobEl.style.display="flex"; gJobEl.textContent=JOB.name;
+    gCarryEl.style.display="flex";
+    var word=(JOB.verb||"Done").replace("!","");
+    var line=word+" "+JS.done+"/"+JOB.targets.length;
+    if(JOB.capacity>0) line+="   -   Carrying "+JS.carrying;
+    else if(JOB.hold>0&&JS.holdOn>-1&&!JS.complete) line+="   -   Holding steady...";
+    gCarryEl.textContent=line;
+    gCarryEl.className="chip"+(JS.complete?" done":"");
+    gJobEl.className="chip"+(JS.complete?" done":"");
+    return;
+  }
+  gCoinsEl.style.display="flex"; gJobEl.style.display="none"; gCarryEl.style.display="none";
   if(S.beaten){
     gCoinsEl.className="chip done";gCoinsEl.textContent="World beaten - free flight";
     gLandEl.style.display="none";
     return;
   }
+  gLandEl.style.display="flex";
   gCoinsEl.textContent="Coins "+Math.min(S.worldCoins,world.goalCoins)+"/"+world.goalCoins;
   gCoinsEl.className="chip"+(S.worldCoins>=world.goalCoins?" done":"");
   gLandEl.textContent="Landings "+Math.min(S.landings,world.goalLandings)+"/"+world.goalLandings;
@@ -846,7 +1035,12 @@ var SFX_MAP = {
   levelup: "sky_bank",      // coins landing in the bank
   sparkle: "sky_bank",
   win:     "sky_win",
-  celebrate:"sky_win"
+  celebrate:"sky_win",
+  // FL5 grew the shared palette by three: a job has moments a free flight does
+  // not. These are generic names any delivery game can trigger.
+  pickup:  "sky_pickup",    // loading up at the dock
+  deliver: "sky_deliver",   // one drop made
+  mission: "sky_mission"    // the whole job finished
 };
 // The music BED is a manifest slot, not a hardcoded track: audio.music at the
 // root is the game's default and any level may name its own. Both are names in
@@ -904,6 +1098,35 @@ function applyPalette(p){
   return touched;
 }
 
+// ---------- FL5: merge the manifest's job edits onto the built-in recipes ----------
+// A bad or half-written entry can never break a job: unknown keys are ignored and
+// anything missing simply keeps the value the engine shipped with.
+function mergeMissions(list,worldId){
+  if(!Array.isArray(list)) return;
+  var SIMPLE=["name","blurb","tip","fact","badge","verb","style","radius","ceiling","hold","capacity","coins"];
+  list.forEach(function(edit){
+    if(!edit||typeof edit!=="object"||typeof edit.id!=="string") return;
+    var m=findJob(edit.id);
+    if(!m){
+      if(!Array.isArray(edit.targets)||!edit.targets.length) return;   // a new job needs somewhere to go
+      m={ id:edit.id, world:edit.world||worldId, name:edit.id, blurb:"", cargo:null, capacity:0,
+          depot:null, targets:[], style:"house", radius:30, ceiling:60, hold:0, verb:"Done!",
+          coins:10, badge:"Helper", fact:"", tip:"" };
+      MISSIONS.push(m);
+    }
+    SIMPLE.forEach(function(k){ if(edit[k]!=null) m[k]=edit[k]; });
+    if(edit.cargo&&typeof edit.cargo==="object") m.cargo=edit.cargo;
+    if(edit.depot===null) m.depot=null;
+    else if(edit.depot&&typeof edit.depot.x==="number") m.depot=edit.depot;
+    if(Array.isArray(edit.targets)&&edit.targets.length)
+      m.targets=edit.targets.filter(function(t){ return t&&typeof t.x==="number"&&typeof t.z==="number"; });
+    if(edit.palette&&typeof edit.palette==="object") m.palette=edit.palette;
+  });
+  WORLD_JOBS=MISSIONS.filter(function(mm){ return mm.world===world.id; });
+  JOB_POINTS=[];
+  WORLD_JOBS.forEach(function(mm){ JOB_POINTS=JOB_POINTS.concat(jobPoints(mm)); });
+}
+
 // ---------- read our own manifest (art slots + music + learning defaults) ----------
 var MF=null, MF_LEARN={beforeUnlock:false,coinTopUp:true,subjects:["math"]};
 function readManifest(m){
@@ -914,6 +1137,16 @@ function readManifest(m){
   var track=(lv&&lv.music)||audio.music;
   if(typeof track==="string"&&/^[a-z0-9_]+$/.test(track)) musicTrack=track;
   if(lv&&applyPalette(lv.palette)) { /* repainted from the manifest */ }
+  // FL5: JOBS ARE EDITABLE DATA. A level may carry a "missions" array; each entry
+  // is merged onto the built-in recipe with the same id, or added as a whole new
+  // job. So renaming Mail Run, retuning what it pays, moving a house or writing a
+  // better fun fact is a manifest edit and no code change at all.
+  if(lv&&Array.isArray(lv.missions)) mergeMissions(lv.missions,world.id);
+  // The manifest lands a second or two after the page does, so if a job that
+  // repaints the sky is already running (a dusk job opened from a deep link) the
+  // level's daytime palette has just undone it. Put the job's sky back, and
+  // re-snapshot so ending the job still restores the manifest's own colours.
+  if(MODE==="job"&&JOB&&JOB.palette){ paletteBefore=paletteSnapshot(); applyPalette(JOB.palette); }
   try{ if(FEEL&&m.feel) FEEL.setFeel(m.feel); }catch(e){}
   var L=(m.features&&m.features.learning)||{};
   MF_LEARN={ beforeUnlock:!!L.beforeUnlock,
@@ -996,6 +1229,11 @@ function takeOff(){
   toast("Off we go!");
 }
 takeoffBtn.addEventListener("click",takeOff);
+
+// ---------- FL5 card buttons ----------
+freeBtn.addEventListener("click",function(){ endJob(); closeModeCard(); });
+fcAgain.addEventListener("click",function(){ closeFactCard(); endJob(); openModeCard(); });
+fcFree.addEventListener("click",function(){ closeFactCard(); endJob(); });
 
 // ---------- the shared wallet: announce only, never touch shell storage ----------
 function announceCoins(n){
@@ -1109,6 +1347,294 @@ function finishLanding(){
   if(!DEMO){ takeoffBtn.style.display="block"; showRideName(); }
 }
 
+// ============================================================================
+//  FL5 — THE MISSION ENGINE. Everything below is shared by every job; the only
+//  thing that changes between Mail Run and Lantern Lighter is the recipe object.
+//
+//  The loop is always the same three beats:
+//     1. if the job has a depot and your hands are empty, go and load up
+//     2. carry it to the next drop point and get close enough (a low pass, or a
+//        hover if the recipe asks for one)
+//     3. when the last drop point is done: a fact, the coins, and a sticker
+//
+//  NOTHING HERE CAN FAIL. There is no timer and no expiry; the depot never runs
+//  dry (fly away mid-job, come back an hour later, the letters are still there)
+//  and a drop point waits forever. A bump is still the same soft bounce.
+// ============================================================================
+var MODE="free";                 // free | job
+var JOB=null;                    // the recipe being flown
+var JS={carrying:0,done:0,doneMap:[],holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99};
+var jobGroup=null, jobTargets=[], cargoGroup=null, paletteBefore=null;
+
+// ---------- the little things a job puts in the world ----------
+function mound(g,r,col){                       // a patch of land to stand on
+  var b=new THREE.Mesh(cylGeo,col||M.rock); b.scale.set(r,7,r); b.position.y=1.5; g.add(b);
+  var s=new THREE.Mesh(skirtGeo,M.stone); s.scale.set(r*1.25,1,r*1.25); s.position.y=0.6; g.add(s);
+}
+function marker(g,col,tall){                   // ring on the ground + a light column
+  var ringMat=new THREE.MeshBasicMaterial({color:col});
+  var ring=new THREE.Mesh(new THREE.TorusGeometry(13,0.75,8,24),ringMat);
+  ring.rotation.x=Math.PI/2; ring.position.y=6.2; g.add(ring);
+  var beamMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.18,fog:false});
+  var beam=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,tall||200,8,1,true),beamMat);
+  beam.position.y=(tall||200)/2; g.add(beam);
+  return {ring:ring,ringMat:ringMat,beam:beam};
+}
+function buildDock(){                          // post dock / supply hut
+  var g=new THREE.Group();
+  mound(g,17,M.rock2);
+  var hut=new THREE.Mesh(new THREE.BoxGeometry(11,8,9),M.cream);
+  hut.position.y=9; g.add(hut);
+  var roof=new THREE.Mesh(coneGeo,M.padRing);
+  roof.scale.set(9.5,6,9.5); roof.rotation.y=Math.PI/4; roof.position.y=16; g.add(roof);
+  var pole=new THREE.Mesh(cylGeo,M.gray); pole.scale.set(0.5,14,0.5); pole.position.set(8,12,4); g.add(pole);
+  var flag=new THREE.Mesh(new THREE.BoxGeometry(7,4.5,0.4),M.padRing);
+  flag.position.set(11.5,17,4); g.add(flag);
+  var crate=new THREE.Mesh(new THREE.BoxGeometry(4,4,4),M.trunk);
+  crate.position.set(-7,7,-4); g.add(crate);
+  return g;
+}
+function buildHouse(){
+  var g=new THREE.Group(); mound(g,15,M.rock);
+  var b=new THREE.Mesh(new THREE.BoxGeometry(12,10,11),M.cream); b.position.y=10; g.add(b);
+  var roof=new THREE.Mesh(coneGeo,M.cap2); roof.scale.set(11,7,11); roof.rotation.y=Math.PI/4; roof.position.y=18; g.add(roof);
+  var door=new THREE.Mesh(new THREE.BoxGeometry(3.2,5,0.6),M.trunk); door.position.set(0,7.5,5.7); g.add(door);
+  var box=new THREE.Mesh(new THREE.BoxGeometry(2,2,2),M.padRing); box.position.set(7,8,4); g.add(box);
+  return g;
+}
+function buildAnimal(){
+  var g=new THREE.Group(); mound(g,15,M.rock);
+  var body=new THREE.Mesh(new THREE.SphereGeometry(5,10,8),M.trunk);
+  body.scale.set(1.5,1,1); body.position.y=11; g.add(body);
+  var head=new THREE.Mesh(new THREE.SphereGeometry(3.1,9,7),M.trunk); head.position.set(6.5,14,0); g.add(head);
+  var e1=new THREE.Mesh(coneGeo,M.cream); e1.scale.set(1.1,3.6,1.1); e1.position.set(6,18,1.6); g.add(e1);
+  var e2=new THREE.Mesh(coneGeo,M.cream); e2.scale.set(1.1,3.6,1.1); e2.position.set(6,18,-1.6); g.add(e2);
+  [[-3,2.2],[-3,-2.2],[3,2.2],[3,-2.2]].forEach(function(p){
+    var l=new THREE.Mesh(cylGeo,M.gray); l.scale.set(0.9,6,0.9); l.position.set(p[0],8,p[1]); g.add(l); });
+  return g;
+}
+function buildFlare(){
+  var g=new THREE.Group(); mound(g,14,M.rock2);
+  var pole=new THREE.Mesh(cylGeo,M.gray); pole.scale.set(0.6,12,0.6); pole.position.y=11; g.add(pole);
+  var lightMat=new THREE.MeshBasicMaterial({color:0xFF5A3C,fog:false});
+  var ball=new THREE.Mesh(new THREE.SphereGeometry(3.4,10,8),lightMat); ball.position.y=19; g.add(ball);
+  var tent=new THREE.Mesh(coneGeo,M.padRing); tent.scale.set(6,7,6); tent.position.set(-8,8,3); g.add(tent);
+  return {group:g,lamp:lightMat,glow:ball};
+}
+function buildLantern(){
+  var g=new THREE.Group(); mound(g,13,M.rock);
+  var post=new THREE.Mesh(cylGeo,M.gray); post.scale.set(0.7,16,0.7); post.position.y=13; g.add(post);
+  var arm=new THREE.Mesh(cylGeo,M.gray); arm.scale.set(0.5,5,0.5); arm.rotation.z=Math.PI/2; arm.position.set(2.4,21,0); g.add(arm);
+  var lampMat=new THREE.MeshBasicMaterial({color:0x4A3A55,fog:false});   // dark until lit
+  var lamp=new THREE.Mesh(new THREE.BoxGeometry(4.4,5.4,4.4),lampMat); lamp.position.set(4.8,19.2,0); g.add(lamp);
+  var cap=new THREE.Mesh(coneGeo,M.gray); cap.scale.set(3.4,2.4,3.4); cap.position.set(4.8,23,0); g.add(cap);
+  return {group:g,lamp:lampMat,glow:lamp};
+}
+// what YOU look like on a job: the cargo rides under you, and you can see it go
+function buildCargo(col,n){
+  var g=new THREE.Group();
+  var mat=new THREE.MeshPhongMaterial({color:col,flatShading:true,shininess:14});
+  for(var i=0;i<n;i++){
+    var b=new THREE.Mesh(new THREE.BoxGeometry(2.1,1.3,2.7),mat);
+    b.position.set((i-(n-1)/2)*2.6,-3.4,2.6); b.rotation.x=0.12; g.add(b);
+  }
+  return g;
+}
+
+// ---------- palette: a job may repaint the sky, and must put it back ----------
+function paletteSnapshot(){
+  return { sky:world.sky, fog:world.fog, sun:sunDisc.material.color.getHex(),
+    ground:M.ground.color.getHex(), rock:M.rock.color.getHex(), rock2:M.rock2.color.getHex(),
+    cap:M.cap.color.getHex(), cap2:M.cap2.color.getHex(), trunk:M.trunk.color.getHex(),
+    leaf:M.leaf.color.getHex(), stone:M.stone.color.getHex() };
+}
+
+// ---------- start / stop ----------
+function findJob(id){ for(var i=0;i<MISSIONS.length;i++) if(MISSIONS[i].id===id) return MISSIONS[i]; return null; }
+function startJob(m){
+  if(!m) return false;
+  endJob();
+  JOB=m;
+  JS={carrying:0,done:0,doneMap:m.targets.map(function(){return false;}),
+      holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99};
+  jobGroup=new THREE.Group(); jobTargets=[];
+  if(m.depot){
+    var d=buildDock(); d.position.set(m.depot.x,0,m.depot.z);
+    marker(d,0xFFC24A,180); jobGroup.add(d);
+  }
+  m.targets.forEach(function(t){
+    var built,lamp=null,glow=null;
+    if(m.style==="house"){ built=buildHouse(); }
+    else if(m.style==="animal"){ built=buildAnimal(); }
+    else if(m.style==="flare"){ var f=buildFlare(); built=f.group; lamp=f.lamp; glow=f.glow; }
+    else { var l=buildLantern(); built=l.group; lamp=l.lamp; glow=l.glow; }
+    built.position.set(t.x,0,t.z);
+    var mk=marker(built,m.style==="flare"?0xFF5A3C:0x2FB7D6,200);
+    jobGroup.add(built);
+    jobTargets.push({group:built,lamp:lamp,glow:glow,mk:mk});
+  });
+  scene.add(jobGroup);
+  if(m.capacity>0){ cargoGroup=buildCargo(m.cargo.color,m.capacity); cargoGroup.visible=false; plane.add(cargoGroup); }
+  if(m.palette){ paletteBefore=paletteSnapshot(); applyPalette(m.palette); }
+  MODE="job";
+  closeModeCard();
+  // a job does its own guiding (chips + one arrow), so the drag hint steps aside
+  try{ S.hintDone=true; hintEl.style.opacity=0; }catch(e){}
+  paintGoals();
+  toast(m.name);
+  buddyMoment("jobstart","cheer",m.tip||m.blurb,true);
+  return true;
+}
+function endJob(){
+  if(jobGroup){ scene.remove(jobGroup); jobGroup=null; }
+  jobTargets=[];
+  if(cargoGroup){ plane.remove(cargoGroup); cargoGroup=null; }
+  if(paletteBefore){ applyPalette(paletteBefore); paletteBefore=null; }
+  MODE="free"; JOB=null;
+  JS={carrying:0,done:0,doneMap:[],holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99};
+  paintGoals();
+}
+
+// ---------- where the arrow points while a job is on ----------
+function jobObjective(){
+  if(MODE!=="job"||!JOB||JS.complete) return null;
+  if(JOB.capacity>0 && JS.carrying<=0 && JOB.depot && JS.done<JOB.targets.length)
+    return {x:JOB.depot.x,z:JOB.depot.z,label:JOB.depot.label};
+  var best=null,bd=1e18;
+  for(var i=0;i<JOB.targets.length;i++){
+    if(JS.doneMap[i]) continue;
+    var t=JOB.targets[i], d=Math.hypot(S.pos.x-t.x,S.pos.z-t.z);
+    if(d<bd){ bd=d; best={x:t.x,z:t.z,label:t.label}; }
+  }
+  return best;
+}
+
+// ---------- one drop made ----------
+function deliverTo(i){
+  var t=JOB.targets[i];
+  JS.doneMap[i]=true; JS.done++;
+  if(JOB.capacity>0) JS.carrying=Math.max(0,JS.carrying-1);
+  JS.holdOn=-1; JS.holdT=0;
+  var tt=jobTargets[i];
+  if(tt){
+    if(tt.lamp) tt.lamp.color.setHex(0xFFE06B);           // the lantern lights, the flare is answered
+    if(tt.mk){ tt.mk.ringMat.color.setHex(0x57D06B); tt.mk.beam.visible=false; }
+  }
+  burst(new THREE.Vector3(t.x,20,t.z),12);
+  sfx("deliver"); haptic("light");
+  toast(JOB.verb);
+  if(cargoGroup) cargoGroup.visible=JS.carrying>0;
+  if(JS.done===1) buddyMoment("firstdrop","cheer","One down. Follow the arrow to the next one.");
+  paintGoals();
+  if(JS.done>=JOB.targets.length) finishJob();
+}
+
+// ---------- the ending: a fact, the coins, a sticker ----------
+function finishJob(){
+  if(JS.complete) return;
+  JS.complete=true;
+  JS.paid=JOB.coins;
+  announceCoins(JOB.coins);                 // straight into the ONE shared wallet
+  markBadge(JOB.id);
+  sfx("mission"); haptic("success");
+  try{ if(FEEL&&FEEL.celebrate&&!DEMO&&S.sound) FEEL.celebrate(W,H); }catch(e){}
+  burst(S.pos,22);
+  buddyMoment("jobdone","win",null,true);
+  paintGoals();
+  showFactCard();
+}
+function badgeSticker(name){
+  return '<svg width="92" height="86" viewBox="0 0 92 86" aria-hidden="true">'+
+    '<path d="M31 52 L22 82 L38 74 L46 84 L46 52 Z" fill="#2FB7D6"/>'+
+    '<path d="M61 52 L70 82 L54 74 L46 84 L46 52 Z" fill="#1E8FAC"/>'+
+    '<circle cx="46" cy="34" r="27" fill="#FFD86B" stroke="#E0A21C" stroke-width="4"/>'+
+    '<path d="M46 17 l5.2 10.6 11.7 1.7 -8.5 8.2 2 11.6 -10.4-5.5 -10.4 5.5 2-11.6 -8.5-8.2 11.7-1.7 Z" fill="#FFFCF0"/>'+
+    '</svg>'+
+    '<div style="font-weight:900;font-size:15px;color:#33566e;margin-top:-4px">'+name+'</div>';
+}
+function showFactCard(){
+  if(DEMO) return;
+  try{
+    fcSticker.innerHTML=badgeSticker(JOB.badge);
+    fcTitle.textContent=JOB.name+" done!";
+    fcPaid.textContent="+"+JS.paid+" coins banked";
+    fcFact.textContent=JOB.fact;
+    factCard.style.display="flex";
+    S.picking=true;
+  }catch(e){}
+}
+function closeFactCard(){ try{ factCard.style.display="none"; }catch(e){} S.picking=false; }
+
+// ---------- the job step, once per sim frame ----------
+function jobStep(dt){
+  if(MODE!=="job"||!JOB||JS.complete) return;
+  var px=S.pos.x, pz=S.pos.z, py=S.pos.y;
+  // 1) load up. The dock NEVER runs out — that is the no-fail rule made real:
+  //    fly off, come back whenever, there is always more to carry.
+  if(JOB.depot && JOB.capacity>0 && JS.carrying<JOB.capacity){
+    var room=Math.min(JOB.capacity-JS.carrying, JOB.targets.length-JS.done-JS.carrying);
+    if(room>0 && (time-JS.pickAt)>0.6 &&
+       Math.hypot(px-JOB.depot.x,pz-JOB.depot.z)<(JOB.radius+10) && py<(JOB.ceiling+25)){
+      JS.carrying+=room; JS.pickAt=time;
+      if(cargoGroup) cargoGroup.visible=true;
+      sfx("pickup"); haptic("light");
+      toast("Loaded up!");
+      buddyMoment("loaded","cheer","Off you go. The arrow shows the way.");
+      paintGoals();
+    }
+  }
+  // 2) drop it off (or hover close, if this job asks you to)
+  var inside=-1;
+  for(var i=0;i<JOB.targets.length;i++){
+    if(JS.doneMap[i]) continue;
+    var t=JOB.targets[i];
+    if(Math.hypot(px-t.x,pz-t.z)<JOB.radius && py<JOB.ceiling){ inside=i; break; }
+  }
+  if(inside<0){ JS.holdOn=-1; JS.holdT=0; return; }
+  if(JOB.capacity>0 && JS.carrying<=0){
+    buddyMoment("needmore","cheer","Back to the dock for more first.");
+    return;
+  }
+  if(JOB.hold>0){
+    if(JS.holdOn!==inside){ JS.holdOn=inside; JS.holdT=0; }
+    JS.holdT+=dt;
+    paintGoals();
+    if(JS.holdT<JOB.hold) return;
+  }
+  deliverTo(inside);
+}
+
+// ---------- the Free Flight / Jobs card you meet on arrival ----------
+function jobButton(m){
+  var b=document.createElement("button");
+  b.className="jobbtn";
+  b.innerHTML='<span><span>'+m.name+'</span><span class="b2">'+m.blurb+'</span></span>'+
+    (hasBadge(m.id)?'<span class="got"><svg width="26" height="26" viewBox="0 0 26 26">'+
+      '<circle cx="13" cy="13" r="11" fill="#57D06B"/>'+
+      '<path d="M7.5 13.5 L11.5 17.5 L18.5 9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '</svg></span>':'');
+  b.addEventListener("click",function(){ startJob(m); });
+  return b;
+}
+function openModeCard(){
+  if(DEMO) return;
+  try{
+    mcWorld.textContent=world.name;
+    jobList.innerHTML="";
+    WORLD_JOBS.forEach(function(m){ jobList.appendChild(jobButton(m)); });
+    modeCard.style.display="flex";
+    hintEl.style.opacity=0;               // one thing to read at a time
+    S.picking=true;
+  }catch(e){ S.picking=false; }
+}
+function closeModeCard(){
+  try{ modeCard.style.display="none";
+    // choosing Free Flight puts the drag hint back for a kid who has not flown yet
+    if(MODE!=="job"&&!S.hintDone) hintEl.style.opacity=1;
+  }catch(e){}
+  S.picking=false;
+}
+
 // ---------- camera ----------
 var camPos=new THREE.Vector3(0,30,80);
 function updateCamera(dt){
@@ -1126,9 +1652,20 @@ var v3=new THREE.Vector3();
 function updateArrow(){
   if(NODRAW||DEMO)return;
   if(S.mode!=="fly"){arrowEl.style.opacity=0;return;}
-  var np=nearestPad();
-  if(np.dist<170){arrowEl.style.opacity=0;return;}
-  v3.set(np.pad.x,PAD_TOP,np.pad.z).project(camera);
+  // FL5: on a job the one arrow points at the one next thing to do — the dock
+  // when your hands are empty, the nearest drop point when they are full. Off a
+  // job it goes back to pointing at a landing pad, exactly as before.
+  var aim,aimLabel;
+  var ob=jobObjective();
+  if(ob){ aim={x:ob.x,y:22,z:ob.z}; aimLabel=ob.label; }
+  else {
+    var np=nearestPad();
+    if(np.dist<170){arrowEl.style.opacity=0;return;}
+    aim={x:np.pad.x,y:PAD_TOP,z:np.pad.z}; aimLabel="Landing pad";
+  }
+  var adist=Math.hypot(S.pos.x-aim.x,S.pos.z-aim.z);
+  if(ob&&adist<50){arrowEl.style.opacity=0;return;}
+  v3.set(aim.x,aim.y,aim.z).project(camera);
   var onScreen=v3.z<1&&v3.x>-0.92&&v3.x<0.92&&v3.y>-0.85&&v3.y<0.85;
   if(onScreen){
     var sx=(v3.x*0.5+0.5)*W,sy=(-v3.y*0.5+0.5)*H;
@@ -1142,7 +1679,7 @@ function updateArrow(){
     arrowEl.style.left=(cx-26)+"px";arrowEl.style.top=(cy-26)+"px";
     arrowRot.setAttribute("transform","rotate("+(ang*180/Math.PI)+" 26 26)");
   }
-  arrowLbl.textContent="Landing pad "+Math.round(np.dist)+"m";
+  arrowLbl.textContent=aimLabel+" "+Math.round(adist)+"m";
   arrowEl.style.opacity=1;
 }
 
@@ -1193,6 +1730,20 @@ function autoStep(dt){
   S.autoIdle+=dt;
   if(S.autoIdle>7){ S.autoStraight=2.2; S.autoIdle=0; }
   if(S.autoStraight>0){ S.autoStraight-=dt; S.dx=0; S.dy=clamp(-(30-S.pos.y)*0.05,-1,1); return; }
+  // FL5: on a job the robot flies the job — dock, drop, dock, drop — at the low
+  // height a job asks for. Everything else about the way it steers is unchanged,
+  // so a job is still provably flyable with the same two numbers a finger makes.
+  var ob=jobObjective();
+  if(ob){
+    var jgx=ob.x-S.pos.x, jgz=ob.z-S.pos.z;
+    var jwant=Math.atan2(-jgx,-jgz), jdiff=jwant-S.yaw;
+    while(jdiff>Math.PI)jdiff-=Math.PI*2;
+    while(jdiff<-Math.PI)jdiff+=Math.PI*2;
+    var lowY=Math.min(30,(JOB.ceiling||60)-14);
+    S.dx=clamp(-jdiff*1.3,-1,1);
+    S.dy=clamp(-(lowY-S.pos.y)*0.07,-1,1);
+    return;
+  }
   // coin goal first, then a pad to land on, then free flight (keep scooping coins)
   var t=null,np;
   if(!S.beaten && S.worldCoins>=world.goalCoins && S.landings<world.goalLandings){
@@ -1217,6 +1768,8 @@ function autoStep(dt){
 var time=0;
 function stepSim(dt){
   if(S.paused)return;
+  // FL5: a card is up (pick a job / a job just finished). The sky waits.
+  if(S.picking)return;
   time+=dt;
   if(S.auto) autoStep(dt);
 
@@ -1265,6 +1818,7 @@ function stepSim(dt){
   updateChunks(S.pos.x,S.pos.z);
   collectCoins(starter.coins,null);
   for(var key in chunks) collectCoins(chunks[key].coins,chunks[key].group);
+  jobStep(dt);
 }
 
 // ---------- draw ----------
@@ -1296,6 +1850,16 @@ function drawScene(dt){
     if(S.pos.z-c.position.z>520)c.position.z+=1040;
   });
   var spin=time*3;
+  // FL5: a job's markers breathe so they read from a long way off — the flare in
+  // particular has to be spottable across a whole snowfield.
+  if(jobGroup){
+    var pulse=0.5+Math.sin(time*3.2)*0.5;
+    for(var jt=0;jt<jobTargets.length;jt++){
+      var J=jobTargets[jt];
+      if(J.mk&&J.mk.beam.visible) J.mk.beam.material.opacity=0.10+pulse*0.16;
+      if(J.glow&&!JS.doneMap[jt]) J.glow.scale.setScalar(1+pulse*0.22);
+    }
+  }
   starter.coins.forEach(function(c){c.mesh.rotation.y=spin;});
   for(var key in chunks){
     var ch=chunks[key];
@@ -1323,6 +1887,22 @@ function frame(now){
   drawScene(dt);
 }
 updateChunks(0,0);
+
+// ============================================================================
+//  FL5 — WHAT YOU MEET WHEN YOU ARRIVE. Free Flight, or one of this stop's jobs.
+//  A deep link (?mission=mail-run) skips straight in and survives a refresh; the
+//  attract demo and the QA robot always start in free flight so nothing they do
+//  depends on somebody tapping a card.
+// ============================================================================
+(function(){
+  var wanted=MISSQ?findJob(MISSQ):null;
+  if(wanted&&wanted.world===world.id){ startJob(wanted); return; }
+  if(DEMO||AUTO) return;                  // attract mode and the robot fly free
+  if(MODEQ==="free") return;
+  if(!WORLD_JOBS.length) return;          // a stop with no jobs never asks
+  openModeCard();
+})();
+
 if(!MANUAL&&typeof requestAnimationFrame==="function") requestAnimationFrame(frame);
 
 addEventListener("resize",function(){
@@ -1366,7 +1946,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"FL4",
+  version:"FL5",
   state:S,
   world:world,
   worlds:WORLDS,
@@ -1389,6 +1969,21 @@ window.SKY={
   gate:function(){ return {pending:gatePending,unlocked:loadPrefs().unlocked}; },
   quizDone:function(){ if(gatePending){ gatePending=false; markUnlockNext(); } },
   buddyLog:function(){ return Object.keys(buddySaid); },
+  // ---- FL5 handles: the robot picks a job, flies it, and reads the ending ----
+  missions:function(){ return MISSIONS; },
+  worldJobs:function(){ return WORLD_JOBS; },
+  startMission:function(id){ return startJob(findJob(id)); },
+  endMission:function(){ endJob(); },
+  mode:function(){ return MODE; },
+  mission:function(){ return JOB; },
+  job:function(){ return { id:JOB?JOB.id:null, mode:MODE, carrying:JS.carrying, done:JS.done,
+    of:JOB?JOB.targets.length:0, complete:JS.complete, paid:JS.paid, holding:JS.holdT,
+    objective:jobObjective(), factUp:(function(){ try{ return factCard.style.display==="flex"; }catch(e){ return false; } })() }; },
+  badges:function(){ try{ return loadPrefs().badges||{}; }catch(e){ return {}; } },
+  picker:function(){ try{ return { up:!!S.picking, jobs:jobList.children.length,
+    free:!!freeBtn }; }catch(e){ return {up:!!S.picking,jobs:0,free:false}; } },
+  openPicker:openModeCard,
+  mergeMissions:mergeMissions,
   snapshot:function(){ return {mode:S.mode,x:S.pos.x,y:S.pos.y,z:S.pos.z,coins:S.coins,
     banked:S.banked,worldCoins:S.worldCoins,landings:S.landings,beaten:S.beaten,paused:S.paused}; }
 };
