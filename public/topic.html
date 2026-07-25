@@ -46,6 +46,8 @@
   .q{border:2px solid rgba(15,14,23,.15);background:none;border-radius:999px;padding:10px 15px;font-family:'Nunito';font-weight:800;font-size:12.5px;color:var(--ink);cursor:pointer}
   .q.next{background:var(--ink);border-color:var(--ink);color:#fff}
   .q.quiz{background:var(--mint);border-color:var(--mint);color:#fff}
+  .q.tiein{background:var(--sky);border-color:var(--sky);color:#fff;display:inline-flex;align-items:center;gap:7px}
+  .q.tiein svg{width:14px;height:14px;flex:none}
 
   /* cover spread */
   .page.cover .photo{aspect-ratio:3 / 4;max-height:56vh}
@@ -83,7 +85,8 @@
   .earrow .thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .earrow b{font-family:'Fredoka';font-weight:600;font-size:15px;display:block}
   .earrow small{font-size:11px;font-weight:800;color:rgba(15,14,23,.5)}
-  .closebtn{margin-top:16px;width:100%;border:none;background:var(--ink);color:#fff;font-family:'Nunito';font-weight:900;font-size:14px;padding:13px;border-radius:16px;cursor:pointer}
+  .shelflink{margin-top:16px;width:100%;border:2px solid rgba(15,14,23,.15);background:none;color:var(--ink);font-family:'Nunito';font-weight:900;font-size:13.5px;padding:11px;border-radius:16px;cursor:pointer}
+  .closebtn{margin-top:10px;width:100%;border:none;background:var(--ink);color:#fff;font-family:'Nunito';font-weight:900;font-size:14px;padding:13px;border-radius:16px;cursor:pointer}
 
   .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;font-family:'Nunito';font-weight:800;font-size:13px;padding:10px 18px;border-radius:999px;z-index:80;opacity:0;pointer-events:none;transition:opacity .25s ease}
   .toast.show{opacity:1}
@@ -121,6 +124,7 @@
       <h2>My dog-ears</h2>
       <div class="sub" id="earSub">Pages you folded a corner on.</div>
       <div class="earlist" id="earlist"></div>
+      <button class="shelflink" id="allEars" type="button">See all my dog-ears</button>
       <button class="closebtn" id="closeSheet" type="button">Back to the book</button>
     </div>
   </div>
@@ -165,6 +169,13 @@ function exhibitIdFromLocation() {
   return q || "sharks";
 }
 const EXHIBIT_ID = exhibitIdFromLocation();
+// Session TB2. ?page=<pageId> opens the book straight at that page — this is
+// what a dog-ear on the bookshelf clicks. ?from=shelf remembers that the kid
+// arrived from the bookshelf, so Back goes back THERE and not all the way Home.
+const QS = new URLSearchParams(location.search);
+const DEEP_PAGE = (QS.get("page") || "").trim();
+const FROM_SHELF = QS.get("from") === "shelf";
+const BOOKSHELF_URL = "/explore/kidspedia";
 
 function iframed() { try { return window.parent && window.parent !== window; } catch (e) { return false; } }
 function postToShell(msg) { if (iframed()) { try { window.parent.postMessage(msg, "*"); } catch (e) {} } }
@@ -192,9 +203,13 @@ const ears = new Set(); // page ids the kid has dog-eared in THIS book
 if (iframed()) document.body.classList.add("in-app");
 
 function exitToShell() {
+  // Came from the bookshelf? Go back to the bookshelf (inside the shell frame
+  // this is just the next page in the same wrapper, so Home still works).
+  if (FROM_SHELF) { location.href = BOOKSHELF_URL; return; }
   postToShell("nav:exit");
   if (!iframed()) { history.length > 1 ? history.back() : (location.href = "/"); }
 }
+function goToBookshelf() { location.href = BOOKSHELF_URL; }
 
 function showFallback(kind, msg) {
   try { document.getElementById("app").style.display = "none"; } catch (e) {}
@@ -290,15 +305,17 @@ function boot(data) {
   SPREADS = buildSpreads(data);
   readLocalEars().forEach((id) => ears.add(id));
   buildPages();
-  goTo(0, true);
+  goTo(spreadIndexFor(DEEP_PAGE), true);
   renderEarUi();
   pullEars();
+  checkTieIn(data);
 
   document.getElementById("back").onclick = exitToShell;
   document.getElementById("prev").onclick = () => turn(-1);
   document.getElementById("next").onclick = () => turn(1);
   document.getElementById("shelfBtn").onclick = openShelf;
   document.getElementById("closeSheet").onclick = closeShelf;
+  document.getElementById("allEars").onclick = goToBookshelf;
   document.getElementById("sheetbg").onclick = (e) => { if (e.target && e.target.id === "sheetbg") closeShelf(); };
   initSwipe();
   initAudio(data);
@@ -336,6 +353,15 @@ function buildSpreads(data) {
   out.push({ kind: "finish", id: "finish", title: fin.title || ("You finished " + data.title + "!"), blurb: fin.blurb || "", art: cover.art || data.heroArt || "", artAlt: cover.artAlt || "", fill: data.shelfColor || "#2A3550" });
   return out;
 }
+// Which spread a page id lives on (0 when the id is unknown, so a stale
+// dog-ear link opens the cover instead of a blank book).
+function spreadIndexFor(pageId) {
+  if (!pageId) return 0;
+  for (let i = 0; i < SPREADS.length; i++) {
+    if (SPREADS[i].kind === "page" && SPREADS[i].id === pageId) return i;
+  }
+  return 0;
+}
 // Facts are objects {text, source}. A plain string still works (older files).
 function normaliseFacts(p) {
   const list = Array.isArray(p.facts) ? p.facts : (p.fact ? [p.fact] : []);
@@ -371,13 +397,15 @@ function buildPages() {
         '<div class="coverkicker">Kidspedia topic book</div>' +
         '<div class="covertitle">' + escapeHtml(sp.title) + "</div>" +
         '<div class="coverblurb">' + escapeHtml(sp.blurb) + "</div>" +
-        '<div class="pbody"><div class="factnav"><button class="q next" type="button" id="startBtn">Start reading</button></div></div>';
+        '<div class="pbody"><div class="factnav"><button class="q next" type="button" id="startBtn">Start reading</button>' +
+        '<button class="q tiein" type="button" id="tiein-cover" style="display:none"></button></div></div>';
     } else if (sp.kind === "finish") {
       el.innerHTML = photoBlock(sp) +
         '<div class="ptitle">' + escapeHtml(sp.title) + "</div>" +
         '<div class="pbody"><div class="facttext">' + escapeHtml(sp.blurb) + "</div>" +
+        '<div class="factnav"><button class="q tiein" type="button" id="tiein-finish" style="display:none"></button></div>' +
         '<div class="factnav"><button class="q" type="button" id="againBtn">Read it again</button>' +
-        '<button class="q next" type="button" id="doneBtn">Back to Explore</button></div></div>';
+        '<button class="q next" type="button" id="doneBtn">' + (FROM_SHELF ? "Back to the bookshelf" : "Back to Explore") + "</button></div></div>";
     } else {
       el.innerHTML = photoBlock(sp) +
         '<div class="ptitle">' + escapeHtml(sp.title) + "</div>" +
@@ -484,6 +512,38 @@ function initSwipe() {
     }
     x0 = null; y0 = null;
   }, { passive: true });
+}
+
+// ================= visit-the-exhibit tie-in (Session TB2) =================
+// A topic book may name ONE Kidspedia exhibit that brings its subject to life
+// (Wild Weather -> the Weather Lab, The Deep Ocean -> Journey to the Deep).
+// The button is drawn only after we confirm the target exhibit really exists
+// AND is approved, so a book whose exhibit has not been built yet simply keeps
+// its link slot empty — there is never a button that leads to a dead end.
+function tieInSvg() {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+}
+function checkTieIn(data) {
+  const t = data && data.exhibit;
+  if (!t || !t.id || !/^[a-z0-9-]+$/i.test(t.id) || t.id === EXHIBIT_ID) return;
+  fetch("/explore/" + encodeURIComponent(t.id) + ".json", { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((ex) => {
+      if (!ex || ex.status !== "approved") return; // not built yet, or still in review
+      const label = t.label || ("Visit " + (t.title || ex.title || "the exhibit"));
+      ["tiein-cover", "tiein-finish"].forEach((id) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.innerHTML = tieInSvg() + "<span>" + escapeHtml(label) + "</span>";
+        b.style.display = "inline-flex";
+        b.onclick = () => {
+          try { if (window.Feel && Feel.tap) Feel.tap(); } catch (e) {}
+          location.href = "/explore/" + encodeURIComponent(t.id);
+        };
+      });
+    })
+    .catch(() => {});
 }
 
 // ---------- the dog-ear ----------

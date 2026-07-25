@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Kidspedia — Books</title>
+<link rel="icon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0F0E17;--cream:#FDFAF5;--gold:#FFC542;--paper:#FBF6EC}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Nunito',sans-serif;background:#101423;color:var(--cream);min-height:100vh;padding-bottom:40px}
+
+  .top{display:flex;align-items:center;gap:10px;padding:12px 16px;max-width:900px;margin:0 auto}
+  #back{width:38px;height:38px;border-radius:13px;border:none;background:rgba(255,255,255,.12);color:var(--cream);font-size:17px;font-weight:900;cursor:pointer;font-family:'Nunito'}
+  .top h1{font-family:'Fredoka';font-weight:700;font-size:20px;flex:1;min-width:0}
+  .top h1 small{display:block;font-family:'Nunito';font-weight:900;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+  body.in-app #back{display:none}
+  body.in-app .top{padding-left:96px}
+
+  .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+  .sectitle{font-family:'Fredoka';font-weight:700;font-size:17px;margin:22px 0 11px;display:flex;align-items:center;gap:9px}
+  .sectitle .pip{width:9px;height:9px;border-radius:3px;background:var(--gold);flex:none}
+  .sectitle .hint{font-family:'Nunito';font-weight:800;font-size:11px;color:rgba(253,250,245,.5);text-transform:none;letter-spacing:0}
+
+  /* ---- a shelf of books ---- */
+  .shelf{position:relative;margin-bottom:6px}
+  .books{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px;padding-bottom:14px}
+  .bookcard{position:relative;padding:0;border:none;background:none;cursor:pointer;font-family:'Nunito';text-align:left;color:var(--cream);display:block}
+  .cover{position:relative;width:100%;aspect-ratio:3/4;border-radius:5px 13px 13px 5px;overflow:hidden;background:var(--fill,#2A3550);box-shadow:0 12px 24px rgba(0,0,0,.45)}
+  .cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .cover .painted{position:absolute;inset:0;display:flex;align-items:flex-end;padding:11px;font-family:'Fredoka';font-weight:700;font-size:15px;color:rgba(255,255,255,.94);background:linear-gradient(160deg,var(--fill,#2A3550),rgba(15,14,23,.75))}
+  .cover .spine{position:absolute;left:0;top:0;bottom:0;width:9px;background:linear-gradient(90deg,rgba(15,14,23,.45),rgba(15,14,23,0))}
+  .cover .band{position:absolute;left:0;right:0;bottom:0;padding:26px 10px 9px;background:linear-gradient(180deg,rgba(11,10,24,0),rgba(11,10,24,.82));font-family:'Fredoka';font-weight:700;font-size:14.5px;line-height:1.2}
+  .bookcard:active .cover{transform:translateY(2px)}
+  .plank{height:9px;border-radius:4px;background:linear-gradient(180deg,#3A3350,#241F36);box-shadow:0 8px 16px rgba(0,0,0,.4);margin-bottom:20px}
+
+  /* ---- my dog-ears ---- */
+  .ears{display:flex;gap:11px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;margin-bottom:6px}
+  .earcard{flex:none;width:186px;background:var(--paper);color:var(--ink);border:none;border-radius:15px;padding:0;overflow:hidden;cursor:pointer;font-family:'Nunito';text-align:left;box-shadow:0 10px 20px rgba(0,0,0,.35);position:relative}
+  .earcard .pic{position:relative;width:100%;aspect-ratio:16/10;background:var(--fill,#2A3550);overflow:hidden}
+  .earcard .pic img{width:100%;height:100%;object-fit:cover;display:block}
+  .earcard .corner{position:absolute;right:0;top:0;width:26px;height:26px}
+  .earcard .corner svg{width:100%;height:100%;display:block}
+  .earcard .meta{padding:9px 11px 12px}
+  .earcard b{font-family:'Fredoka';font-weight:600;font-size:14px;display:block;line-height:1.22}
+  .earcard small{display:block;margin-top:3px;font-size:10.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:rgba(15,14,23,.5)}
+  .note{font-size:12.5px;font-weight:800;color:rgba(253,250,245,.55);line-height:1.5;max-width:520px}
+
+  .empty{min-height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;flex-direction:column;gap:10px}
+  .empty h2{font-family:'Fredoka';font-size:22px}
+  .empty p{font-size:14px;color:rgba(253,250,245,.7);max-width:300px}
+  .empty button{margin-top:6px;border:none;background:var(--gold);color:var(--ink);font-family:'Nunito';font-weight:900;font-size:14px;padding:11px 20px;border-radius:999px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <button id="back" type="button" aria-label="Back">&lsaquo;</button>
+  <h1><small>Kidspedia</small>The bookshelf</h1>
+</div>
+
+<div class="wrap" id="wrap"></div>
+
+<div id="empty" class="empty" style="display:none">
+  <h2>The bookshelf is being filled</h2>
+  <p>New books are on their way. Check back soon!</p>
+  <button id="emptyBtn" type="button">Back</button>
+</div>
+
+<script src="/buildable-feel.js"></script>
+<script>
+"use strict";
+// =====================================================================
+// Kidspedia BOOKSHELF (Session TB2).
+//
+// The front door to the topic books: every APPROVED book's cover on a
+// themed shelf, plus "My dog-ears" — the pages this kid folded a corner
+// on, across all books, each one jumping straight back to that page.
+//
+// Shelf order is data (`/explore/bookshelf.json`), the books are data
+// (`/explore/{id}.json`), and this page is just the shelf. Golden rule
+// #2 holds: a book only appears here when its OWN file says
+// status "approved", so an in-review book is invisible to kids even
+// though its id is listed in the shelf order from day one.
+//
+// Dog-ears follow the KID: read from /api/saved-pages (the same rows
+// topic.html writes), with the localStorage mirror as an instant,
+// offline-safe fallback. No emojis (product rule) — the fold is drawn.
+// =====================================================================
+
+function iframed() { try { return window.parent && window.parent !== window; } catch (e) { return false; } }
+function postToShell(msg) { if (iframed()) { try { window.parent.postMessage(msg, "*"); } catch (e) {} } }
+function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
+if (iframed()) document.body.classList.add("in-app");
+
+function exitToShell() {
+  postToShell("nav:exit");
+  if (!iframed()) { history.length > 1 ? history.back() : (location.href = "/"); }
+}
+document.getElementById("back").onclick = exitToShell;
+document.getElementById("emptyBtn").onclick = exitToShell;
+
+// ---- who is reading (same lanes as topic.html) ----
+function activeKidId() {
+  try { var k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); return (k && k.id) ? String(k.id) : null; }
+  catch (e) { return null; }
+}
+function deviceId() {
+  try {
+    var d = localStorage.getItem("bk_guest_device");
+    if (!d) { d = "g_" + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("bk_guest_device", d); }
+    return d;
+  } catch (e) { return "g_local"; }
+}
+function ownerKey() { var k = activeKidId(); return k ? ("kid:" + k) : ("dev:" + deviceId()); }
+function readLocalEars() {
+  // { exhibitId: [pageId, ...] } — the mirror topic.html keeps as it folds.
+  try { var raw = JSON.parse(localStorage.getItem("bk_dogears_v1:" + ownerKey()) || "{}"); return (raw && typeof raw === "object") ? raw : {}; }
+  catch (e) { return {}; }
+}
+
+var BOOKS = {};   // id -> approved book JSON
+var ORDER = [];   // shelves, in shelf order, already filtered to approved books
+
+function openBook(id, pageId) {
+  var url = "/explore/" + encodeURIComponent(id) + "?from=shelf";
+  if (pageId) url += "&page=" + encodeURIComponent(pageId);
+  try { if (window.Feel && Feel.tap) Feel.tap(); } catch (e) {}
+  location.href = url;
+}
+
+// ---------- boot ----------
+fetch("/explore/bookshelf.json", { cache: "no-store" })
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (index) {
+    var shelves = (index && Array.isArray(index.shelves)) ? index.shelves : [];
+    var ids = [];
+    shelves.forEach(function (s) { (s.books || []).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); }); });
+    return Promise.all(ids.map(function (id) {
+      return fetch("/explore/" + encodeURIComponent(id) + ".json", { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          // Golden rule #2: only "approved" is ever shown to a kid. A book that
+          // is missing, in-review, or not a topic book simply is not here.
+          if (j && j.status === "approved" && j.template === "topic-book" && j.id) BOOKS[j.id] = j;
+        })
+        .catch(function () {});
+    })).then(function () {
+      ORDER = shelves.map(function (s) {
+        return { title: s.title || "", books: (s.books || []).filter(function (id) { return !!BOOKS[id]; }) };
+      }).filter(function (s) { return s.books.length; });
+      render();
+      loadEars();
+    });
+  })
+  .catch(function () { render(); });
+
+// ---------- the shelves ----------
+function coverHtml(b) {
+  var fill = b.shelfColor || "#2A3550";
+  var art = (b.cover && b.cover.art) || b.heroArt || "";
+  var alt = escapeHtml((b.cover && b.cover.artAlt) || b.title || "");
+  // The painted panel sits UNDER the photo, so a missing or slow cover still
+  // looks like a finished book instead of a white hole.
+  return '<div class="cover" style="--fill:' + escapeHtml(fill) + '">' +
+    '<div class="painted"><span>' + escapeHtml(b.title || "") + "</span></div>" +
+    (art ? '<img src="' + escapeHtml(art) + '" alt="' + alt + '" loading="lazy" onerror="this.style.display=\'none\'">' : "") +
+    '<div class="spine"></div>' +
+    '<div class="band">' + escapeHtml(b.title || "") + "</div>" +
+    "</div>";
+}
+function render() {
+  var wrap = document.getElementById("wrap");
+  if (!ORDER.length) {
+    wrap.innerHTML = "";
+    document.getElementById("empty").style.display = "flex";
+    return;
+  }
+  var html = '<div id="earsec" style="display:none">' +
+      '<div class="sectitle"><span class="pip"></span>My dog-ears<span class="hint" id="earhint"></span></div>' +
+      '<div class="ears" id="ears"></div>' +
+    "</div>";
+  ORDER.forEach(function (s, si) {
+    html += '<div class="shelf">' +
+      '<div class="sectitle"><span class="pip"></span>' + escapeHtml(s.title) + "</div>" +
+      '<div class="books" id="shelf-' + si + '">' +
+        s.books.map(function (id) {
+          return '<button class="bookcard" type="button" data-book="' + escapeHtml(id) + '" aria-label="' +
+            escapeHtml((BOOKS[id] && BOOKS[id].title) || id) + '">' + coverHtml(BOOKS[id]) + "</button>";
+        }).join("") +
+      "</div>" +
+      '<div class="plank"></div>' +
+    "</div>";
+  });
+  wrap.innerHTML = html;
+  Array.prototype.forEach.call(wrap.querySelectorAll(".bookcard"), function (b) {
+    b.onclick = function () { openBook(b.getAttribute("data-book")); };
+  });
+}
+
+// ---------- My dog-ears (across every book) ----------
+function foldSvg() {
+  return '<svg viewBox="0 0 26 26" aria-hidden="true">' +
+    '<path d="M26 0 L26 26 L0 0 Z" fill="#FFC542"/>' +
+    '<path d="M26 0 L0 0 L26 26 Z" fill="rgba(15,14,23,.14)"/>' +
+    "</svg>";
+}
+// A dog-ear row only survives if its book is approved AND the page still
+// exists in that book — a renamed page id can never strand a kid on nothing.
+function resolveEar(exhibitId, pageId) {
+  var b = BOOKS[exhibitId]; if (!b) return null;
+  var pages = b.pages || [];
+  for (var i = 0; i < pages.length; i++) {
+    if (pages[i] && pages[i].id === pageId) {
+      return { exhibitId: exhibitId, pageId: pageId, bookTitle: b.title || exhibitId, pageTitle: pages[i].title || "", art: pages[i].art || "", fill: b.shelfColor || "#2A3550" };
+    }
+  }
+  return null;
+}
+function renderEars(list) {
+  var sec = document.getElementById("earsec"); if (!sec) return;
+  var row = document.getElementById("ears");
+  var hint = document.getElementById("earhint");
+  if (!list.length) { sec.style.display = "none"; return; }
+  if (hint) hint.textContent = activeKidId() ? "Saved pages follow you to any device" : "Saved on this device";
+  row.innerHTML = list.map(function (e) {
+    return '<button class="earcard" type="button" data-b="' + escapeHtml(e.exhibitId) + '" data-p="' + escapeHtml(e.pageId) + '">' +
+      '<span class="pic" style="--fill:' + escapeHtml(e.fill) + '">' +
+        (e.art ? '<img src="' + escapeHtml(e.art) + '" alt="" onerror="this.style.display=\'none\'">' : "") +
+        '<span class="corner">' + foldSvg() + "</span>" +
+      "</span>" +
+      '<span class="meta"><b>' + escapeHtml(e.pageTitle) + "</b><small>" + escapeHtml(e.bookTitle) + "</small></span>" +
+      "</button>";
+  }).join("");
+  Array.prototype.forEach.call(row.querySelectorAll(".earcard"), function (b) {
+    b.onclick = function () { openBook(b.getAttribute("data-b"), b.getAttribute("data-p")); };
+  });
+  sec.style.display = "block";
+}
+function loadEars() {
+  // Local mirror first so the shelf is never empty for a beat, then the cloud
+  // answer (the record) replaces it when it lands. Order: newest fold first.
+  var seen = {}, list = [];
+  var local = readLocalEars();
+  Object.keys(local).forEach(function (ex) {
+    (local[ex] || []).forEach(function (pid) {
+      var r = resolveEar(ex, pid);
+      if (r && !seen[ex + "|" + pid]) { seen[ex + "|" + pid] = 1; list.push(r); }
+    });
+  });
+  renderEars(list);
+
+  fetch("/api/saved-pages?owner=" + encodeURIComponent(ownerKey()), { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      if (!j || !j.ok || !Array.isArray(j.pages)) return; // sync off: keep the local view, no error to a kid
+      var cloud = [], mark = {};
+      j.pages.forEach(function (p) {
+        if (!p || p.saved === false) return;
+        var r = resolveEar(p.exhibitId, p.pageId);
+        if (r && !mark[p.exhibitId + "|" + p.pageId]) { mark[p.exhibitId + "|" + p.pageId] = 1; cloud.push(r); }
+      });
+      renderEars(cloud);
+    })
+    .catch(function () {});
+}
+</script>
+</body>
+</html>
