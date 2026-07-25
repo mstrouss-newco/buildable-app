@@ -69,6 +69,19 @@ function collectItems(data){
   (Array.isArray(data.bodies)?data.bodies:[]).forEach(push);
   (Array.isArray(data.items)?data.items:[]).forEach(push);
   (Array.isArray(data.creatures)?data.creatures:[]).forEach(push);
+  // Topic books (template "topic-book"): every page is one narratable item.
+  // The template plays the clip for the page's FIRST fact only and reads any
+  // other fact with the browser voice, so the clip must say exactly what that
+  // fallback says — "<page title>. <first fact>" — or the narrator and the
+  // robot voice would tell the kid two different things.
+  (Array.isArray(data.pages)?data.pages:[]).forEach((p)=>{
+    if(!p||!p.id) return;
+    const facts=Array.isArray(p.facts)?p.facts:[];
+    const first=facts[0];
+    const text=typeof first==="string"?first:(first&&first.text)||"";
+    if(!text.trim()) return;
+    push({ id:p.id, name:p.title||"", fact:((p.title?p.title+". ":"")+text) });
+  });
   return out.slice(0,MAX_ITEMS);
 }
 

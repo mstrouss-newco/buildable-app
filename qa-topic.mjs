@@ -463,6 +463,18 @@ if (inlineScript && inlineScript.indexOf('status !== "approved"') !== -1)
   pass('approved gate present: a book that is not approved shows the not-ready screen');
 else fail('approved gate missing from topic.html — an unapproved book could reach a kid');
 
+// Session TB5 — the narration generator must actually SEE a topic book. It used
+// to understand only the older exhibit shapes, so running it on a book produced
+// silence with a cheerful "ok" report. It must read pages[] and speak the page
+// title plus its first fact, which is exactly what the browser voice falls back
+// to saying.
+const genPath = path.join(dir, 'api', 'gen-exhibit-audio.js');
+if (fs.existsSync(genPath)) {
+  const gen = fs.readFileSync(genPath, 'utf8');
+  if (/data\.pages/.test(gen) && /p\.title/.test(gen)) pass('gen-exhibit-audio reads topic-book pages, so read-aloud clips can be generated for a book');
+  else fail('api/gen-exhibit-audio.js does not read a topic book\'s pages[] — narration would generate nothing for every book');
+} else fail('api/gen-exhibit-audio.js is missing — no way to generate read-aloud clips');
+
 // The API and its table must exist, or the dog-ear promise is a lie.
 if (fs.existsSync(path.join(dir, 'api', 'saved-pages.js'))) pass('api/saved-pages.js exists (the dog-ear endpoint)');
 else fail('api/saved-pages.js is missing — dog-ears cannot follow a kid across devices');
