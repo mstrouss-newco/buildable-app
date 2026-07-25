@@ -1,7 +1,11 @@
 // /api/list-songs.js
 // Returns the saved songs for one kid/parent profile (by device_id), newest first.
 // Read-only. Used by the kid-facing "My Songs" library and by games that want to
-// reuse a previously created track. The 10-song cap is enforced on save, not here.
+// reuse a previously created track.
+// NOTE: this used to hard-cap the list at 10, left over from before the save-side
+// cap was lifted (see save-song.js). That meant anything past a kid's 10 most
+// recent songs was saved fine but never showed up in their library. Raised to
+// match so older songs aren't stranded.
 
 import { songCover } from "./_thumbs.js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -22,7 +26,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    return res.status(200).json({ configured: false, songs: [], count: 0, max: 10 });
+    return res.status(200).json({ configured: false, songs: [], count: 0, max: 100000 });
   }
 
   const deviceId = (req.query.deviceId || req.query.device_id || "").toString().trim();
@@ -38,7 +42,7 @@ export default async function handler(req, res) {
       ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId)
       : "device_id=eq." + encodeURIComponent(deviceId);
     const baseCols = "song_id,title,prompt,vibe,theme,audio_url,cover_color,duration_sec,provider,created_at,meta";
-    const tail = "&order=created_at.desc&limit=10";
+    const tail = "&order=created_at.desc&limit=200";
     let r = await sb("saved_songs?" + filter + "&select=" + baseCols + ",published,play_count,heart_count" + tail);
     if (!r.ok) {
       // pre-migration fallback: publishing columns may not exist yet
@@ -60,7 +64,7 @@ export default async function handler(req, res) {
       configured: true,
       songs: Array.isArray(songs) ? songs : [],
       count: Array.isArray(songs) ? songs.length : 0,
-      max: 10,
+      max: 100000,
     });
   } catch (e) {
     return res.status(500).json({ error: "server error", detail: String(e && e.message || e).slice(0, 200) });
