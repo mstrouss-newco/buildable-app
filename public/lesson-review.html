@@ -68,6 +68,17 @@
   .modebar{background:#FFF3E2;border:1px solid #F3E2B6;border-radius:12px;padding:11px 13px;margin:10px 0 0;
            font-size:13.5px;color:#8A5A00;line-height:1.45}
   .modebar b{color:#6b4300}
+  /* Session LS4 - the one switch that puts Lessons in front of kids. It is the
+     biggest thing on this page on purpose: the owner cannot push code, so this
+     is how the section goes live. */
+  .golive{border:2px solid var(--line);border-radius:14px;padding:14px 15px;margin:12px 0 0;background:var(--card)}
+  .golive.on{border-color:var(--ready);background:#f2fbf8}
+  .golive h2{margin:0 0 3px;font-size:17px}
+  .golive p{margin:0 0 11px;font-size:13.5px;color:var(--muted);line-height:1.5}
+  .golive .state{font-weight:800}
+  .golive.on .state{color:var(--ready)}
+  .golive .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .golive .when{font-size:12.5px;color:var(--muted)}
   .probs{background:#fff3f4;border:1px solid #f6d3d7;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:13.5px;color:#8d2530}
   .probs ul{margin:6px 0 0;padding-left:18px}
   /* edit mode */
@@ -91,6 +102,7 @@
   <h1>Lesson Review</h1>
   <p class="legend" id="blurb">Whole lessons the factory drafted are waiting here. Read one, play it if you like, fix any wording, then approve.</p>
   <div id="modebar"></div>
+  <div id="golive"></div>
 
   <div class="stickybar">
     <div class="bar">
@@ -140,6 +152,7 @@ window.tryPin = function(){
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     load();
+    loadFlags();   // Session LS4 - the Lessons live switch
   } else { document.getElementById('pinErr').textContent = 'Try again.'; }
 };
 
@@ -190,6 +203,73 @@ function showMode(auto){
     blurb.textContent = 'Whole lessons the factory drafted are waiting here. Read one, play it if you like, fix any wording, then approve.';
   }
 }
+
+/* ---- Session LS4: the Lessons live switch --------------------------------
+   The Lessons tile has been Coming Soon behind the 1111 owner gate since LS2.
+   Turning it on is a flag in the database (db/ls4-app-flags.sql), not a code
+   change, because the owner cannot push. He taps this, the Home tile changes
+   for kids within about a minute, and no deploy happens.                     */
+var FLAGS = { lessons_live:false }, FLAGMETA = {}, FLAGLIVE = false;
+
+function paintGoLive(){
+  var on = !!FLAGS.lessons_live;
+  var meta = FLAGMETA.lessons_live || {};
+  var when = meta.updatedAt ? (' Last changed ' + String(meta.updatedAt).slice(0,10) + '.') : '';
+  var el = document.getElementById('golive');
+  if(!FLAGLIVE){
+    el.innerHTML = '<div class="golive"><h2>Lessons tile</h2>' +
+      '<p>This switch cannot reach the database right now, so the tile stays as it is: Coming Soon, ' +
+      'behind the grown-ups code. Nothing is broken for kids. If this keeps saying so, ' +
+      'db/ls4-app-flags.sql has not been run yet.</p></div>';
+    return;
+  }
+  el.innerHTML =
+    '<div class="golive'+(on ? ' on' : '')+'">' +
+      '<h2>Lessons tile</h2>' +
+      '<p>Right now the Lessons tile on the home screen is <span class="state">' +
+        (on ? 'LIVE for kids' : 'Coming Soon, behind the grown-ups code') + '</span>.' +
+        (on ? ' Any kid on this family account can open Lessons and play anything approved below.'
+            : ' Only you can get in, using the code. Kids see a Coming Soon card.') +
+        esc(when) +
+      '</p>' +
+      '<div class="row">' +
+        '<button class="btn '+(on ? 'bad' : 'good')+'" onclick="window.__flipLessons('+(on ? 'false' : 'true')+')">' +
+          (on ? 'Put it back to Coming Soon' : 'Make Lessons live for kids') +
+        '</button>' +
+        '<span class="when">You can change this back at any time. It takes about a minute to show up.</span>' +
+      '</div>' +
+    '</div>';
+}
+
+function loadFlags(){
+  fetch('/api/app-flags', { cache:'no-cache' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(d && d.ok){ FLAGS = d.flags || FLAGS; FLAGMETA = d.meta || {}; FLAGLIVE = !!d.live; }
+      paintGoLive();
+    })
+    .catch(function(){ paintGoLive(); });
+}
+
+window.__flipLessons = function(next){
+  var el = document.getElementById('golive');
+  el.innerHTML = '<div class="golive"><h2>Lessons tile</h2><p>Saving that now.</p></div>';
+  fetch('/api/app-flags', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ key:'lessons_live', value: !!next, code: PIN })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d && d.ok){ FLAGS = d.flags || FLAGS; FLAGLIVE = true; FLAGMETA.lessons_live = { updatedAt: new Date().toISOString(), updatedBy:'owner' }; paintGoLive(); return; }
+      el.innerHTML = '<div class="golive"><h2>Lessons tile</h2><p>That did not save. ' +
+        'Nothing changed for kids. ' + esc((d && (d.hint || d.error)) || 'Try again in a moment.') + '</p></div>';
+      setTimeout(loadFlags, 2500);
+    })
+    .catch(function(){
+      el.innerHTML = '<div class="golive"><h2>Lessons tile</h2><p>That did not save. Nothing changed for kids.</p></div>';
+      setTimeout(loadFlags, 2500);
+    });
+};
 
 function counts(c){
   if(!c) return;

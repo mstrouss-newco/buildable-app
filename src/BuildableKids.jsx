@@ -3054,6 +3054,24 @@ function HomeScreen(props) {
   // now come from the event-driven buddy (HelperReactions + lib/buddy.js);
   // the Home welcome-back/streak moment is the dismissible card below.
 
+  // ---- Session LS4: is the Lessons section live for kids yet? ----
+  // The tile has been Coming Soon behind the 1111 owner gate since LS2, and the
+  // owner turns it on himself on /lesson-review. That switch is a database flag
+  // (api/app-flags.js) rather than a code change, because he cannot push.
+  //
+  // FAILS CLOSED. Until this call comes back true the tile stays Coming Soon, so
+  // a slow or broken request can hide the tile for a moment but can never open
+  // unfinished lessons to a kid.
+  const [lessonsLive, setLessonsLive] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/app-flags", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d && d.ok && d.flags) setLessonsLive(d.flags.lessons_live === true); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   // ---- Play shelf (manifest-driven from GAME_CATALOG) + its coming-soon gate ----
   const [catalogGate, setCatalogGate] = useState(null);
   const [catalogPw, setCatalogPw] = useState("");
@@ -3092,13 +3110,17 @@ function HomeScreen(props) {
     </button>
   );
 
-  // ---- shelf card (Learn): Session LS2. The Lessons section is COMING SOON until
-  // Mike flips it in LS4: the tile is visible so he can find it, but it opens the
+  // ---- shelf card (Learn): Session LS2, switched on in LS4. Until the owner
+  // flips the Lessons switch on /lesson-review the tile is visible but opens the
   // same 1111 preview gate the Play shelf and the Stories tile use, so no kid
-  // reaches a lesson before he has approved the content behind it. ----
+  // reaches a lesson before he has approved what is behind it. Once he flips it,
+  // the same tile becomes an ordinary card that opens the section. ----
   const LEARN_ITEMS = [
-    { id: "lessons", title: "Lessons", sub: "Coming soon", grad: "linear-gradient(160deg,#8A6BFF,#FF6B6B)", glyph: <SchoolGlyph />, soon: true, gated: true,
-      onClick: () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
+    lessonsLive
+      ? { id: "lessons", title: "Lessons", sub: "Math and reading, at your own pace", grad: "linear-gradient(160deg,#8A6BFF,#FF6B6B)", glyph: <SchoolGlyph />,
+          onClick: onLessons }
+      : { id: "lessons", title: "Lessons", sub: "Coming soon", grad: "linear-gradient(160deg,#8A6BFF,#FF6B6B)", glyph: <SchoolGlyph />, soon: true, gated: true,
+          onClick: () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
   ];
 
   // ---- shelf card (Make): the creation tools this Home already exposes ----
