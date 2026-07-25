@@ -756,9 +756,6 @@ function open(id) {
     b.onclick = () => showToast("More Kidspedia answers are coming soon!");
     qr.appendChild(b);
   });
-  const quizBtn = document.createElement("button");
-  quizBtn.className = "q quiz"; quizBtn.textContent = "Quick quiz";
-  quizBtn.onclick = () => requestQuiz(c); qr.appendChild(quizBtn);
 
   showFact();
   document.getElementById("sheetbg").classList.add("open");

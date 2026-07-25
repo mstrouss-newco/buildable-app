@@ -617,10 +617,6 @@ function pick(id, fly) {
     b.onclick = () => showToast("More Kidspedia answers are coming soon!");
     qr.appendChild(b);
   });
-  const quizBtn = document.createElement("button");
-  quizBtn.className = "q quiz"; quizBtn.textContent = "Quick quiz";
-  quizBtn.onclick = () => requestQuiz(p);
-  qr.appendChild(quizBtn);
 
   haloBase = (p.size || 1) * 1.3; // reticle sits just outside the body
   if (fly) setFocus(id); // interactions fly the camera in; boot's first pick stays wide

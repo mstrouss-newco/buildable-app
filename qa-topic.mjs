@@ -381,10 +381,9 @@ async function runBook(exhibit, opts) {
   // A GET pulled the kid's saved pages on boot (cross-device, not local-only).
   r.pulled = apiCalls.some((c) => c.method === 'GET' && c.url.indexOf('owner=kid%3A') !== -1);
 
-  // Quiz reaches the shell.
-  sandbox.requestQuiz({ title: p1.title, quiz: p1.quiz || [] });
-  const q = posted.find((m) => m && m.kind === 'quizRequest');
-  r.quiz = !!q && q.exhibitId === exhibit.data.id && q.itemName === p1.title;
+  // Session QZ1 — NO QUIZZES WHILE READING. The "Quick quiz" button must be gone
+  // from the book. Reading is already learning; quizzes belong in games and tools.
+  r.quiz = templateHtml.indexOf('Quick quiz') === -1 && templateHtml.indexOf('q quiz') === -1;
 
   // Pause/resume from the shell (CARTRIDGE-CONTRACT.md).
   (globalListeners.message || []).forEach((fn) => fn({ data: 'pause' }));
@@ -427,8 +426,8 @@ for (const ex of candidates) {
   else pass(`${r.id}: on open, the book pulls this kid's saved pages from the server`);
   if (!r.shelfListed) fail(`${r.id}: the "My dog-ears" shelf did not list the folded page`);
   else pass(`${r.id}: the "My dog-ears" shelf lists folded pages and jumps back to them`);
-  if (!r.quiz) fail(`${r.id}: the quiz button did not reach the shell (quizRequest)`);
-  else pass(`${r.id}: "Quick quiz" opens the shell's quizRequest bridge`);
+  if (!r.quiz) fail(`${r.id}: a "Quick quiz" button is still in the book — reading must not be interrupted by quizzes`);
+  else pass(`${r.id}: no quiz button while reading (Session QZ1)`);
   if (!r.pauseResume) fail(`${r.id}: pause/resume from the shell was not honored (the book kept turning)`);
   else pass(`${r.id}: honors pause/resume from the shell (CARTRIDGE-CONTRACT.md)`);
   if (!r.tieIn) fail(`${r.id}: the visit-the-exhibit link never appeared even though its exhibit is approved`);

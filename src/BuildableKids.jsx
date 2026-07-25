@@ -470,27 +470,22 @@ function SurvivalScreen({ onHome, onUpgrades, level }) {
 }
 
 // Kidspedia exhibit viewer (Session 8G). One shell wrapper for every orbit-explorer
-// exhibit: same GameFrame as a game, same quizRequest/pause/resume bridge as Breaker
-// (CARTRIDGE-CONTRACT.md), except the quiz is kid-initiated ("Quick quiz" tap inside
-// the exhibit) rather than a level-unlock gate, so it always shows — no Learning
-// Mode gating check, matching the existing kid-initiated coin top-up quiz flow.
-// Answers log to learning_events (the Session 6B ledger) via QuizGate's existing
-// api/log-learning-event call, tagged gameType="explore" so Kidspedia practice is
-// visible in the parent skills dashboard alongside game quiz gates.
+// exhibit: same GameFrame as a game.
+//
+// Session QZ1 — NO QUIZZES IN KIDSPEDIA. Reading and browsing an exhibit is
+// learning already; a pop-up quiz on top of it interrupts the read and (worse)
+// asked a generic AI-generated spelling question that had nothing to do with the
+// page. The "Quick quiz" buttons are gone from topic.html / dive.html /
+// weather.html / orbit-explorer.html. This handler stays only to un-stick any
+// stale cached exhibit that still posts quizRequest: it immediately answers
+// "done" so the page never freezes. Quizzes belong in games and tools, not here.
 function ExploreScreen({ onHome, exhibitId }) {
-  const [quiz, setQuiz] = useState(null); // { reply, itemName } while the quiz gate is showing
   const onChildMessage = (d, post) => {
     if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
-    post({ type: "pause" }); // cartridge contract: freeze the exhibit while the quiz gate is up
-    setQuiz({ reply: post, itemName: d.itemName });
+    post({ type: "resume" });
+    post({ type: "bk:quizDone" });
   };
-  const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
-  const overlay = quiz ? (
-    <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <QuizGate goal="reading" gameType="explore" title={`Quick quiz: ${quiz.itemName || "Kidspedia"}!`} onPass={finish} />
-    </div>
-  ) : null;
-  return <GameFrame title="Kidspedia" src={`/explore/${encodeURIComponent(exhibitId)}`} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} bg="#0B0A18" />;
+  return <GameFrame title="Kidspedia" src={`/explore/${encodeURIComponent(exhibitId)}`} onHome={onHome} onChildMessage={onChildMessage} bg="#0B0A18" />;
 }
 
 // Session LS2 — the Lessons section. The page owns all three screens (pick a

@@ -417,7 +417,6 @@ function buildPages() {
           "</div>" +
           '<div class="factnav">' +
             '<button class="q" type="button" id="more-' + i + '">Another fact</button>' +
-            '<button class="q quiz" type="button" id="quiz-' + i + '">Quick quiz</button>' +
           "</div>" +
         "</div>" +
         '<span class="earhint">Fold</span>' +
@@ -437,7 +436,6 @@ function buildPages() {
     factIdx[i] = 0;
     const say = document.getElementById("say-" + i); if (say) say.onclick = () => readAloud(i);
     const more = document.getElementById("more-" + i); if (more) more.onclick = () => cycleFact(i);
-    const qz = document.getElementById("quiz-" + i); if (qz) qz.onclick = () => requestQuiz(sp);
     const ear = document.getElementById("ear-" + i); if (ear) ear.onclick = () => toggleEar(i);
     renderFact(i);
   });

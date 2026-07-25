@@ -241,11 +241,8 @@ async function runExhibit(exhibit) {
   await new Promise((res) => setImmediate(res));
   r.readAloudChecked = spoken.length >= 1 && spoken[0].text.length > 0;
 
-  // quiz bridge: "Quick quiz" reaches the shell via quizRequest.
-  const lastC = exhibit.data.creatures[exhibit.data.creatures.length - 1];
-  sandbox.requestQuiz(lastC);
-  const q = postedMessages.find((m) => m && m.kind === 'quizRequest');
-  r.quizChecked = !!q && q.source === 'buildable' && q.itemName === lastC.name && q.exhibitId === exhibit.data.id;
+  // Session QZ1 — no quiz button while reading an exhibit.
+  r.quizChecked = templateHtml.indexOf('Quick quiz') === -1 && templateHtml.indexOf('q quiz') === -1;
 
   // pause/resume honored (CARTRIDGE-CONTRACT.md).
   (globalListeners['message'] || []).forEach((fn) => fn({ data: { type: 'pause' } }));
@@ -284,8 +281,8 @@ for (const exhibit of candidates) {
   else pass(`${r.exhibit}: facts cycle via "Another fact" and the sheet updates`);
   if (!r.readAloudChecked) fail(`${r.exhibit}: read-aloud did not fire`);
   else pass(`${r.exhibit}: read-aloud fires (factAudio clip, then browser-voice fallback)`);
-  if (!r.quizChecked) fail(`${r.exhibit}: quiz button did not reach the shell (quizRequest)`);
-  else pass(`${r.exhibit}: Quick quiz opens the shell's quizRequest bridge`);
+  if (!r.quizChecked) fail(`${r.exhibit}: a "Quick quiz" button is still in the exhibit — reading must not be interrupted by quizzes`);
+  else pass(`${r.exhibit}: no quiz button while reading (Session QZ1)`);
   if (!r.pauseResumeChecked) fail(`${r.exhibit}: pause/resume from the shell was not honored`);
   else pass(`${r.exhibit}: honors pause/resume from the shell (CARTRIDGE-CONTRACT.md)`);
   if (!r.flashlightChecked) fail(`${r.exhibit}: flashlight zone did not activate correctly (dark past the midnight line, clear above it)`);

@@ -287,12 +287,8 @@ async function runExhibit(exhibit) {
     ? spoken[0].text.length > 0 // last-picked item (a body), just confirm something sensible was spoken
     : spoken.length === 1;
 
-  // Quiz opens: tapping "Quick quiz" on the last-picked item must reach the
-  // shell via the quizRequest bridge (CARTRIDGE-CONTRACT.md).
-  const lastItem = allItems[allItems.length - 1];
-  sandbox.requestQuiz(lastItem);
-  const q = postedMessages.find((m) => m && m.kind === 'quizRequest');
-  results.quizChecked = !!q && q.source === 'buildable' && q.itemName === lastItem.name && q.exhibitId === exhibit.data.id;
+  // Session QZ1 — no quiz button while reading an exhibit.
+  results.quizChecked = templateHtml.indexOf('Quick quiz') === -1 && templateHtml.indexOf('q quiz') === -1;
 
   // Honors pause/resume from the shell around the quiz gate (CARTRIDGE-CONTRACT.md).
   // (The in-app back button is hidden by body.in-app CSS and the shell draws Home;
@@ -343,7 +339,7 @@ for (const exhibit of candidates) {
   else pass(`${r.exhibit}: every item (${r.itemChecks.length}) tappable and fact card updates correctly`);
   if (!r.readAloudChecked) fail(`${r.exhibit}: read-aloud did not fire`);
   else pass(`${r.exhibit}: read-aloud fires via speechSynthesis`);
-  if (!r.quizChecked) fail(`${r.exhibit}: quiz button did not reach the shell (quizRequest)`);
+  if (!r.quizChecked) fail(`${r.exhibit}: a "Quick quiz" button is still in the exhibit — reading must not be interrupted by quizzes`);
   else pass(`${r.exhibit}: Quick quiz opens the shell's quizRequest bridge`);
   if (!r.pauseResumeChecked) fail(`${r.exhibit}: pause/resume from the shell was not honored`);
   else pass(`${r.exhibit}: honors pause/resume from the shell (CARTRIDGE-CONTRACT.md)`);
