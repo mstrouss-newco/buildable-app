@@ -1,5 +1,72 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: Session FL3 — The hangar: pick your ride before takeoff (shipped)
+
+Phase FL, block FL3 only. FL2 had already shipped the *plumbing* for a hangar — a
+priced customization slot, a shared-wallet purchase, an equipped index handed to the
+engine as `?ride=` — but all three "rides" were the same plane mesh in three colours,
+and the pick tiles were flat coloured rectangles with a name written on them. FL3 is
+the half that makes it real.
+
+**The rule this session was built around.** A ride is a **look plus a feel, never
+power**. Every ride scoops the same coins, meets the same goals and lands on the same
+pads. What differs is cruise speed, turn rate, lean and bob — and those trade against
+each other on purpose, so no ride is the good ride. Turn circle is `speed / turn`:
+
+| Ride | Price | Speed | Turn circle | Feel |
+|---|---|---|---|---|
+| Little Puffin (plane) | free | 34 | 20 | the steady middle, what everyone starts on |
+| Rescue Copter | 60 | 27 | 12 | slow and nimble, hovers, big bob |
+| Jetpack Kid | 120 | 41 | 30 | quick and swoopy, leans hard, wide arc |
+
+**What shipped**
+
+- **`public/skyflyer-engine.html`** — three real bodies, each its own code-built
+  low-poly model with its own animator: the plane's propeller, the copter's main
+  rotor + tail rotor + hover disc, the jetpack's two flames streaming backward. The
+  flight physics now read `ride.turn`, `ride.bankAmt`, `ride.pitchAmt`, `ride.bob`
+  and `ride.bobRate` instead of hardcoded numbers. The autopilot's coin-targeting
+  radius scales with the ride (`TURN_R = 46 * ((speed/turn)/20)`) because a copter can
+  cut inside a circle the jetpack has to swing all the way around. A ride nameplate
+  shows on the way in and again every time you sit on a pad, so "pick your ride"
+  is something a kid can *see* they did.
+- **`public/skyflyer/manifest.json`** — slot renamed `Plane` -> `Ride`, options are
+  now Little Puffin / Rescue Copter / Jetpack Kid at 0 / 60 / 120, each with a
+  `preview` id and a one-line `blurb`. New optional keys `loadoutTitle`,
+  `loadoutBlurb`, `loadoutPlayLabel` — this screen calls itself the **Hangar** and
+  its button says **Take off**.
+- **`src/BuildableKids.jsx`** — `SLOT_PREVIEWS` + `SlotPreview`: a customization
+  option carrying a `preview` id now shows a **drawn SVG of the actual thing** on its
+  tile. Unknown ids fall back to the old colour block, so Breaker / Music Maker /
+  Chess / Tennis loadouts are byte-for-byte unchanged in behaviour (their QA still
+  passes). Drawn geometry only, no emojis, no art files to load.
+- **Migration, not a break.** A kid who bought a ride before FL3 keeps it:
+  `SkyFlyerScreen` reads `eq.Ride` and falls back to `eq.Plane` — same index, same
+  price, better-looking thing at the end of it.
+
+**QA — `node qa-skyflyer.mjs .` → 81/81 PASS** (was 55). The new hangar half loads
+each of the three rides, checks it has its own body builder and feel preset, checks
+its name matches what the shell sells, and then **actually flies it** until it beats
+Sunny Islands: Little Puffin 23s, Rescue Copter 27s, Jetpack Kid 20s of simulated
+flight, all three banking coins into the shared wallet. It also asserts the trade-off
+holds (the fast ride has the wider turn circle) and that no ride reaches the same
+goal more than 3x faster than another. The full three-world beat run, the pause-drift
+check and the fly-forever check all still pass. `qa-breaker`, `qa-music` and
+`qa-tennis` were re-run because they share the loadout screen: 12/12, 17/17, 9/9.
+
+**Looks were checked, not assumed.** Headless Chromium with swiftshader against a
+local server, one screenshot per ride. Two real bugs came out of it: the copter's
+rotor was drawing 8 arms instead of 4 (four full-length bars at 45 degrees rather
+than two crossed bars), and the jetpack's flames fired *downward* instead of
+streaming backward, with a trailing scarf that hid the whole pack from the chase
+camera. Both fixed before commit.
+
+**What remains in phase FL:** only **FL4** — created sound (ElevenLabs library audio,
+the synth stays a silent fallback), generated art for the rides/worlds/badges, buddy
+celebration polish, journey badges and the learning moments. The Sky Flyer tile is
+still owner-gated (`soon: true`); opening it to kids is one line once Mike has flown
+the three rides and approved the feel.
+
 ## 2026-07-25: LS3 follow-up — prototype mode: lessons skip the review queue
 
 Owner's call, straight after LS3 shipped: *"I dont want to review lessons, this is
@@ -108,7 +175,6 @@ green at the final commit. Warnings are the expected missing-photo WARNs across 
 packs (TB1 + TB3 + TB4 prompt files), run `db/create-saved-pages.sql` in Supabase so
 dog-ears sync across devices, fact-check each book, then flip `approved` in BOTH the
 book's JSON and its `EXHIBIT_CATALOG` line.
-
 ## 2026-07-25: Session LS3 — Lesson factory + review gate + first Math K batch (shipped; batch waiting for Mike's review)
 
 Phase LS, block LS3 only. LS1 built the player, LS2 built the path. LS3 builds the

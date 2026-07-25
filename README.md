@@ -2369,6 +2369,47 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-25 (Session FL3: the hangar — pick your ride before takeoff)
+
+THE HANGAR IS REAL. FL2 shipped the plumbing (a priced customization slot, a
+shared-wallet purchase, `?ride=N` handed to the engine) but all three rides were one
+plane mesh in three colours. FL3 makes them three different flying things.
+
+**Three rides, three bodies, three feels.** `public/skyflyer-engine.html` now has
+`buildPlane()` / `buildCopter()` / `buildJetpack()`, each returning its own per-frame
+animator for its own moving parts (propeller; main rotor + tail rotor + hover disc;
+two jet flames streaming backward). The flight loop reads `ride.turn`, `ride.bankAmt`,
+`ride.pitchAmt`, `ride.bob`, `ride.bobRate` instead of hardcoded constants.
+
+**THE FL3 LAW: a ride is a look plus a feel, NEVER power.** Same coins, same goals,
+same pads for every ride. The feel numbers trade against each other — turn circle is
+`speed / turn`, so Little Puffin is 20 (free, 34 speed), Rescue Copter is 12 (60
+coins, 27 speed — slow but turns on a coin) and Jetpack Kid is 30 (120 coins, 41
+speed — fast but swings wide). The autopilot's coin-targeting radius scales with the
+ride for the same reason: `TURN_R = 46 * ((speed/turn)/20)`.
+
+**The picker got a picture.** `src/BuildableKids.jsx` gains `SLOT_PREVIEWS` +
+`SlotPreview`: a manifest customization option carrying a `preview` id renders a drawn
+SVG of the actual item instead of the old coloured rectangle with its name on it.
+Unknown ids fall back to the old block, so every other game's loadout is unchanged.
+New optional manifest keys `loadoutTitle` / `loadoutBlurb` / `loadoutPlayLabel` let a
+game name its own customization screen — Sky Flyer's is the **Hangar**, button
+**Take off**. Slot renamed `Plane` -> `Ride`; `SkyFlyerScreen` reads `eq.Ride` and
+falls back to `eq.Plane` so a pre-FL3 purchase is not lost.
+
+**QA: `node qa-skyflyer.mjs .` -> 81/81 PASS** (up from 55). The new hangar half buys
+each ride and flies it until Sunny Islands is beaten — Puffin 23s, Copter 27s, Jetpack
+20s — and asserts the fast ride really does pay for it with a wider turn circle.
+`qa-breaker` 12/12, `qa-music` 17/17, `qa-tennis` 9/9 re-run because they share the
+loadout screen. Looks verified with headless Chromium screenshots per ride, which
+caught the copter drawing 8 rotor arms instead of 4 and the jetpack firing its flames
+downward behind a scarf that hid the pack.
+
+**Remaining in phase FL: FL4 only** (created sound, generated art, buddy celebration
+polish, journey badges, learning moments). The tile stays owner-gated until Mike flies
+the three rides.
+
+---
 ## Session log — 2026-07-25 (Session FL2: Sky Flyer becomes a real cartridge — 3 worlds, journey, shared wallet, hangar, autopilot)
 
 THE CARTRIDGE: NEW `public/skyflyer-engine.html` + `public/skyflyer/manifest.json`.
