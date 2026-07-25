@@ -1,0 +1,114 @@
+{
+  "id": "moon",
+  "title": "The Moon",
+  "template": "topic-book",
+  "topic": "space",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["space-facts", "reading"],
+  "heroArt": "/explore/topic-photos/moon/moon-cover.webp",
+  "shelfColor": "#4C6FE0",
+  "ambient": "space",
+  "assetVersion": 1,
+  "sources": [
+    "NASA Science, Earth's Moon (science.nasa.gov/moon)",
+    "NASA Apollo mission pages (nasa.gov)",
+    "Lunar and Planetary Institute (lpi.usra.edu)",
+    "NOAA National Ocean Service, tides (oceanservice.noaa.gov)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/moon/moon-cover.webp",
+    "artAlt": "A giant full moon rising over a calm dark ocean with stars in the sky",
+    "blurb": "It is the only other world people have ever stood on. Turn the page and go there."
+  },
+  "pages": [
+    {
+      "id": "footprints",
+      "title": "Footprints That Never Wash Away",
+      "art": "/explore/topic-photos/moon/moon-1.webp",
+      "artAlt": "A crisp astronaut bootprint pressed into grey moon dust",
+      "factAudio": "moon-footprints",
+      "quiz": ["moon-footprints"],
+      "facts": [
+        {
+          "text": "The bootprints the astronauts left are still up there. The Moon has almost no air, so there is no wind and no rain to blow them away or wash them out.",
+          "source": "NASA Science (science.nasa.gov/moon)"
+        },
+        {
+          "text": "The grey powder they stepped in is called regolith. It is made of rock smashed into dust by billions of years of meteorite strikes, and it is sharp and sticky, not soft like beach sand.",
+          "source": "Lunar and Planetary Institute (lpi.usra.edu)"
+        }
+      ]
+    },
+    {
+      "id": "walking",
+      "title": "Twelve People Have Walked Here",
+      "art": "/explore/topic-photos/moon/moon-2.webp",
+      "artAlt": "An astronaut in a white spacesuit on the grey lunar surface with Earth in the black sky",
+      "factAudio": "moon-walking",
+      "quiz": ["moon-walking"],
+      "facts": [
+        {
+          "text": "Only twelve people have ever walked on the Moon. They all went during the Apollo missions between 1969 and 1972, starting with Neil Armstrong and Buzz Aldrin.",
+          "source": "NASA (nasa.gov)"
+        },
+        {
+          "text": "The Moon's gravity is about one sixth of Earth's. If you can hop a step high here, you could hop about six times higher there, which is why the astronauts bounced instead of walked.",
+          "source": "NASA Science (science.nasa.gov/moon)"
+        },
+        {
+          "text": "The sky above them stayed black even in the middle of the day. Without air to scatter the sunlight, there is no blue sky on the Moon.",
+          "source": "NASA Science (science.nasa.gov/moon)"
+        }
+      ]
+    },
+    {
+      "id": "craters",
+      "title": "A World Full of Craters",
+      "art": "/explore/topic-photos/moon/moon-3.webp",
+      "artAlt": "Close-up of the Moon's surface showing overlapping craters and long shadows",
+      "factAudio": "moon-craters",
+      "quiz": ["moon-craters"],
+      "facts": [
+        {
+          "text": "Every crater is a scar from something crashing in. Earth gets hit too, but our air burns most rocks up and our weather slowly erases the marks. The Moon keeps every single one.",
+          "source": "NASA Science (science.nasa.gov/moon)"
+        },
+        {
+          "text": "The biggest crater is called the South Pole to Aitken basin, and it is so wide it would stretch across most of the United States.",
+          "source": "NASA Science (science.nasa.gov/moon)"
+        },
+        {
+          "text": "The Moon is roughly a quarter as wide as Earth, and it sits about 239,000 miles away. All the other planets in our solar system could fit in the gap between us.",
+          "source": "NASA Science (science.nasa.gov/moon)"
+        }
+      ]
+    },
+    {
+      "id": "rover",
+      "title": "They Drove a Car on the Moon",
+      "art": "/explore/topic-photos/moon/moon-4.webp",
+      "artAlt": "The lunar rover parked on the Moon's surface with an astronaut nearby",
+      "factAudio": "moon-rover",
+      "quiz": ["moon-rover"],
+      "facts": [
+        {
+          "text": "The last three Apollo missions carried a battery-powered buggy called the Lunar Roving Vehicle. It folded up like a deck chair to fit on the lander.",
+          "source": "NASA (nasa.gov)"
+        },
+        {
+          "text": "The rover was not fast, about as quick as a person on a bicycle, but it let the astronauts travel miles from their lander instead of a short walk.",
+          "source": "NASA (nasa.gov)"
+        },
+        {
+          "text": "All three rovers are still parked up there. There was no room to bring them home, so they sit exactly where the astronauts left them.",
+          "source": "NASA (nasa.gov)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished The Moon!",
+    "blurb": "The Moon also pulls on our oceans, and that is what makes the tides go in and out every day. Fold a corner on your favourite page so you can find it again."
+  }
+}

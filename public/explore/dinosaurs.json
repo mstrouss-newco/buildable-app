@@ -1,0 +1,118 @@
+{
+  "id": "dinosaurs",
+  "title": "Dinosaurs",
+  "template": "topic-book",
+  "topic": "dinosaurs",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["dinosaur-facts", "reading"],
+  "heroArt": "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp",
+  "shelfColor": "#6B8E23",
+  "ambient": "forest",
+  "assetVersion": 1,
+  "sources": [
+    "American Museum of Natural History (amnh.org)",
+    "Natural History Museum, London (nhm.ac.uk)",
+    "Smithsonian National Museum of Natural History (naturalhistory.si.edu)",
+    "U.S. National Park Service, Dinosaur National Monument (nps.gov)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp",
+    "artAlt": "A Tyrannosaurus rex standing in a misty prehistoric forest at sunrise",
+    "blurb": "They ruled the Earth for over 160 million years. Turn the page and go back in time."
+  },
+  "pages": [
+    {
+      "id": "triceratops",
+      "title": "Three Horns and a Giant Shield",
+      "art": "/explore/topic-photos/dinosaurs/dinosaurs-1.webp",
+      "artAlt": "A herd of Triceratops grazing on ferns in an open prehistoric plain",
+      "factAudio": "dinosaurs-triceratops",
+      "quiz": ["dinosaurs-triceratops"],
+      "facts": [
+        {
+          "text": "Triceratops means three-horned face. Two long horns grew above its eyes and a shorter one sat on its nose, above a wide bony frill that spread out behind its head.",
+          "source": "Smithsonian National Museum of Natural History (naturalhistory.si.edu)"
+        },
+        {
+          "text": "Its skull was one of the biggest heads any land animal has ever had, longer than a grown-up is tall.",
+          "source": "Natural History Museum, London (nhm.ac.uk)"
+        },
+        {
+          "text": "Triceratops ate only plants. It had hundreds of teeth stacked in tight bundles that worked like scissors, slicing through tough ferns and branches.",
+          "source": "Natural History Museum, London (nhm.ac.uk)"
+        }
+      ]
+    },
+    {
+      "id": "long-necks",
+      "title": "The Long-Necked Giants",
+      "art": "/explore/topic-photos/dinosaurs/dinosaurs-2.webp",
+      "artAlt": "Long-necked Brachiosaurus wading in a calm lake at sunset, reaching into tall trees",
+      "factAudio": "dinosaurs-long-necks",
+      "quiz": ["dinosaurs-long-necks"],
+      "facts": [
+        {
+          "text": "Brachiosaurus had front legs that were longer than its back legs, so its whole body sloped upward and its head was carried very high, like a living crane.",
+          "source": "Natural History Museum, London (nhm.ac.uk)"
+        },
+        {
+          "text": "The long-necked dinosaurs did not chew. They raked leaves off branches with peg-shaped teeth and swallowed them whole, letting their enormous stomachs do the rest of the work.",
+          "source": "American Museum of Natural History (amnh.org)"
+        },
+        {
+          "text": "These giants, called sauropods, were the largest animals that ever walked on land. Some of them were heavier than ten elephants put together.",
+          "source": "American Museum of Natural History (amnh.org)"
+        }
+      ]
+    },
+    {
+      "id": "feathers",
+      "title": "Some Dinosaurs Had Feathers",
+      "art": "/explore/topic-photos/dinosaurs/dinosaurs-3.webp",
+      "artAlt": "A feathered Velociraptor standing alert in tall grass",
+      "factAudio": "dinosaurs-feathers",
+      "quiz": ["dinosaurs-feathers"],
+      "facts": [
+        {
+          "text": "The real Velociraptor was about the size of a turkey, not the tall movie monster. Most of its length was a long, stiff tail it used for balance.",
+          "source": "Natural History Museum, London (nhm.ac.uk)"
+        },
+        {
+          "text": "Fossil arm bones from Velociraptor have small bumps on them called quill knobs. On birds today, those same bumps are where feathers attach, so we know this dinosaur had feathers.",
+          "source": "American Museum of Natural History (amnh.org)"
+        },
+        {
+          "text": "Birds are dinosaurs. Every sparrow and pigeon you see is descended from small feathered dinosaurs, which means one branch of the dinosaur family never went extinct.",
+          "source": "American Museum of Natural History (amnh.org)"
+        }
+      ]
+    },
+    {
+      "id": "fossils",
+      "title": "How We Know Any of This",
+      "art": "/explore/topic-photos/dinosaurs/dinosaurs-4.webp",
+      "artAlt": "A dinosaur skeleton half-uncovered at a fossil dig site in orange desert rock",
+      "factAudio": "dinosaurs-fossils",
+      "quiz": ["dinosaurs-fossils"],
+      "facts": [
+        {
+          "text": "A fossil is not the original bone. When a dinosaur was buried quickly by mud or sand, minerals seeped in over millions of years and slowly turned the bone to stone.",
+          "source": "U.S. National Park Service (nps.gov)"
+        },
+        {
+          "text": "Fossil hunters dig with brushes, dental picks and small hand tools, because a hammer would smash the very thing they came to find. Big bones get wrapped in a plaster jacket for the trip home.",
+          "source": "Natural History Museum, London (nhm.ac.uk)"
+        },
+        {
+          "text": "Dinosaurs lived for over 160 million years. The last of them, apart from birds, died out about 66 million years ago after an enormous asteroid struck the Earth.",
+          "source": "American Museum of Natural History (amnh.org)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Dinosaurs!",
+    "blurb": "Every dinosaur fact started as somebody carefully brushing dirt off a rock. Fold a corner on your favourite page so you can find it again."
+  }
+}

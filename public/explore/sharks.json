@@ -1,0 +1,119 @@
+{
+  "id": "sharks",
+  "title": "Sharks",
+  "template": "topic-book",
+  "topic": "ocean",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["ocean-facts", "reading"],
+  "heroArt": "/explore/topic-photos/sharks/sharks-cover.webp",
+  "shelfColor": "#1173B4",
+  "ambient": "waves",
+  "assetVersion": 1,
+  "sources": [
+    "NOAA Fisheries (fisheries.noaa.gov)",
+    "Smithsonian Ocean (ocean.si.edu)",
+    "Florida Museum of Natural History, International Shark Attack File (floridamuseum.ufl.edu)",
+    "Monterey Bay Aquarium (montereybayaquarium.org)",
+    "Georgia Aquarium (georgiaaquarium.org)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/sharks/sharks-cover.webp",
+    "artAlt": "A great white shark gliding calmly through clear, sunlit blue water",
+    "blurb": "Sharks were swimming here before there were trees. Turn the page and meet them."
+  },
+  "pages": [
+    {
+      "id": "teeth",
+      "title": "Rows and Rows of Teeth",
+      "art": "/explore/topic-photos/sharks/sharks-1.webp",
+      "artAlt": "Close-up of a great white shark swimming peacefully in blue water",
+      "factAudio": "sharks-teeth",
+      "quiz": ["sharks-teeth"],
+      "facts": [
+        {
+          "text": "A shark does not have one row of teeth. It has rows behind rows, like a conveyor belt. When a tooth falls out, the one behind slides forward to take its place, so a shark can go through thousands of teeth in a lifetime.",
+          "source": "Smithsonian Ocean (ocean.si.edu)"
+        },
+        {
+          "text": "A shark's skeleton is not made of bone at all. It is made of cartilage, the same bendy stuff inside the tip of your nose. That makes sharks lighter and helps them turn quickly.",
+          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+        },
+        {
+          "text": "Shark skin is covered in tiny tooth-shaped scales called denticles. Rub it one way and it feels like sandpaper, and those scales help water slide past so the shark swims quietly.",
+          "source": "Smithsonian Ocean (ocean.si.edu)"
+        }
+      ]
+    },
+    {
+      "id": "hammerheads",
+      "title": "The Shark With the Wide, Wide Head",
+      "art": "/explore/topic-photos/sharks/sharks-2.webp",
+      "artAlt": "A school of hammerhead sharks seen from below against the bright ocean surface",
+      "factAudio": "sharks-hammerheads",
+      "quiz": ["sharks-hammerheads"],
+      "facts": [
+        {
+          "text": "A hammerhead's eyes sit at the far ends of its wide head. Spreading them that far apart gives the shark a huge view of the water around it, above and below at the same time.",
+          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+        },
+        {
+          "text": "Scalloped hammerheads gather in big groups called schools, sometimes hundreds of sharks swimming together in slow circles near underwater mountains.",
+          "source": "Monterey Bay Aquarium (montereybayaquarium.org)"
+        },
+        {
+          "text": "That wide head is packed with tiny jelly-filled pores that sense electricity. Every living animal gives off a faint electric signal, so a hammerhead can find a fish hiding under the sand without seeing it.",
+          "source": "Florida Museum of Natural History (floridamuseum.ufl.edu)"
+        }
+      ]
+    },
+    {
+      "id": "whale-shark",
+      "title": "The Biggest Fish in the World",
+      "art": "/explore/topic-photos/sharks/sharks-3.webp",
+      "artAlt": "A giant spotted whale shark swimming slowly with small striped fish alongside it",
+      "factAudio": "sharks-whale-shark",
+      "quiz": ["sharks-whale-shark"],
+      "facts": [
+        {
+          "text": "The whale shark is the largest fish alive today. It can grow longer than a school bus, and it is a shark, not a whale, even though the name says whale.",
+          "source": "Georgia Aquarium (georgiaaquarium.org)"
+        },
+        {
+          "text": "This giant eats some of the smallest food in the sea. It swims with its mouth open and filters out plankton, tiny drifting plants and animals, plus small fish.",
+          "source": "Smithsonian Ocean (ocean.si.edu)"
+        },
+        {
+          "text": "Every whale shark has its own pattern of white spots and stripes. Scientists photograph the patterns and use them like fingerprints to tell one shark from another.",
+          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "nursery",
+      "title": "Where Baby Sharks Grow Up",
+      "art": "/explore/topic-photos/sharks/sharks-4.webp",
+      "artAlt": "A sunny shallow lagoon with several small baby sharks swimming over bright sand",
+      "factAudio": "sharks-nursery",
+      "quiz": ["sharks-nursery"],
+      "facts": [
+        {
+          "text": "A baby shark is called a pup. Many kinds of sharks have their pups in warm, shallow water near mangrove roots and seagrass, a place called a nursery.",
+          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+        },
+        {
+          "text": "Shark pups are on their own from the very first day. Their mother does not stay to feed them, so the shallow nursery keeps them safe from bigger sharks while they grow.",
+          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+        },
+        {
+          "text": "Sharks have been swimming in the ocean for more than 400 million years. That is long before the first dinosaurs, and even before the first trees grew on land.",
+          "source": "Smithsonian Ocean (ocean.si.edu)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Sharks!",
+    "blurb": "Sharks keep the ocean healthy, and most of them want nothing to do with people. Fold a corner on your favourite page so you can find it again."
+  }
+}
