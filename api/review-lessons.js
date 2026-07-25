@@ -24,6 +24,7 @@
 // Env: SUPABASE_URL, SUPABASE_SERVICE_KEY. No emojis.
 // ==================================================================
 import { validateLesson, lessonContentHash } from "./_lessongen.js";
+import { AUTO_APPROVE } from "./_lessonmode.js";
 
 const URL = process.env.SUPABASE_URL;
 const KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -139,7 +140,11 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: false, status: r.status, hint: "run db/ls3-lesson-bank.sql", detail: d.slice(0, 160) });
       }
       const lessons = await r.json();
-      return res.status(200).json({ ok: true, counts: await counts(), lessons });
+      // autoApprove tells the page whether new lessons are arriving live (the
+      // 2026-07-25 prototype setting) or waiting on the owner. The page changes
+      // what it says and which list it opens on, so it can never imply a review
+      // gate that is currently switched off.
+      return res.status(200).json({ ok: true, autoApprove: AUTO_APPROVE, counts: await counts(), lessons });
     }
 
     if (req.method === "POST") {

@@ -20,9 +20,16 @@
 //        already have a pending row (rejected rows are always eligible again)
 //   POST { limit, dry, subject, grade, keys, redraft } -> same, via body
 //
+// PROTOTYPE MODE (2026-07-25): api/_lessonmode.js decides what status a drafted
+// lesson is born with. It is currently AUTO-APPROVE, at the owner's request -
+// this is a prototype and the point is proving the function, not signing off
+// content one lesson at a time. The VALIDATOR still refuses a bad lesson, and
+// api/lesson.js still only serves approved rows. Flip AUTO_APPROVE (or set
+// LESSON_AUTO_APPROVE=0) to put the review gate back; see that file.
+//
 // Safety: dormant (ok:false) if SUPABASE env is unset. If CRON_SECRET is set,
-// callers must send Authorization: Bearer <CRON_SECRET>. Never writes
-// status='approved'. Never deletes or overwrites an approved row. No emojis.
+// callers must send Authorization: Bearer <CRON_SECRET>. Never deletes or
+// overwrites an approved row. No emojis.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_KEY (to write); ANTHROPIC_API_KEY (only
 //      needed for skills with no authored plan, i.e. reading/spelling);
 //      CRON_SECRET (optional).
@@ -30,6 +37,7 @@
 import { SUBJECT_TO_QUIZTYPE, skillsFor } from "./_curriculum.js";
 import { readLessonMap } from "./_lessonmap.js";
 import { makeLesson, lessonContentHash } from "./_lessongen.js";
+import { AUTO_APPROVE, birthStatus, birthReviewer } from "./_lessonmode.js";
 
 const URL = process.env.SUPABASE_URL;
 const KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -154,7 +162,7 @@ export default async function handler(req, res) {
       const st = have[t.key];
       if (!st) return true;
       if (st === "approved") { skipped.push(`${t.key} (already approved)`); return false; }
-      if (st === "pending" && !redraft) { skipped.push(`${t.key} (already waiting for review)`); return false; }
+      if (st === "pending" && !redraft) { skipped.push(`${t.key} (already drafted)`); return false; }
       return true; // rejected, or pending with redraft=1
     });
   }
@@ -201,7 +209,9 @@ export default async function handler(req, res) {
     minutes: m.lesson.minutes,
     payload: m.lesson,
     source: m.source,
-    status: "pending",
+    status: birthStatus(),
+    reviewed_at: AUTO_APPROVE ? new Date().toISOString() : null,
+    reviewed_by: birthReviewer(),
     content_hash: m.hash || lessonContentHash(m.lesson),
   }));
 
@@ -215,6 +225,9 @@ export default async function handler(req, res) {
     ok: true, requested: limit, generated: made.length, inserted,
     bySource, failures, skipped, offCurriculum,
     keys: rows.map((r) => r.lesson_key),
-    next: "Review them at /lesson-review. Nothing reaches a kid until you approve it.",
+    mode: AUTO_APPROVE ? "auto-approve (prototype)" : "review required",
+    next: AUTO_APPROVE
+      ? "Prototype mode: these are already live on the Lessons path. Read or take any of them back down at /lesson-review."
+      : "Review them at /lesson-review. Nothing reaches a kid until you approve it.",
   });
 }

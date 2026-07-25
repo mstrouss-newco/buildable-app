@@ -1,5 +1,49 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: LS3 follow-up — prototype mode: lessons skip the review queue
+
+Owner's call, straight after LS3 shipped: *"I dont want to review lessons, this is
+just a test... tap all to approved, also change the review process for this for now,
+we will go back later, this is just a prototype and its more about function than
+content."*
+
+**What changed**
+
+- All 10 Kindergarten Math lessons flipped to `approved` (`reviewed_by = "mike
+  (prototype mode - auto approved)"`). The complete K Math path is live and playable
+  at `/lessons?subject=math&grade=k` with **no preview code**.
+- **New `api/_lessonmode.js`** — one switch, `AUTO_APPROVE`, currently ON. The factory
+  now stamps a drafted lesson `approved` at birth (credited to `auto (prototype
+  mode)`, never falsely to a human). Overridable by env var `LESSON_AUTO_APPROVE=0`,
+  so the review gate can come back with no code push at all.
+- `api/generate-lessons.js` reports `mode` on every run, so a batch is never
+  ambiguous about whether it went live or went to the queue.
+- `/lesson-review` is now honest about it: an amber "Prototype mode is on" banner
+  explaining that nothing is waiting on Mike, the status filter opens on **Live now**
+  instead of Waiting, and the empty state no longer implies a queue. The page keeps
+  every power it had — read, play, fix the wording, take a lesson back down.
+
+**What deliberately did NOT change (this is what keeps auto-approve honest)**
+
+- **The validator still refuses bad lessons.** A lesson that fails any check
+  (read-aloud lines over 60 chars, a `+` or `=` that /api/say would drop, an emoji, a
+  question whose correctIndex points at nothing, wrong number of steps) is thrown out
+  rather than published. Auto-approve is not "anything goes".
+- **The serving gate still only hands out `approved` rows.** What changed is which
+  status the factory writes, not who is allowed to read what.
+- **The Lessons tile is still Coming Soon** behind the 1111 owner gate, so no kid
+  reaches any of this yet regardless.
+- Flipping the mode back does not pull live lessons down, and the stored lesson
+  payload stays status-neutral so no rewrite is needed either way.
+
+**QA ran (not claimed)**: `qa-lessons.mjs` ALL CHECKS PASSED (now 195) with new checks
+pinning the three invariants above, so a future session cannot quietly widen
+auto-approve into "publish anything". `qa-lessons-dom.mjs` ALL CHECKS PASSED (5 live
+runs). No game touched.
+
+**To go back to real review**: set `AUTO_APPROVE = false` in `api/_lessonmode.js`, or
+`LESSON_AUTO_APPROVE=0` in Vercel. Nothing else to undo.
+
 ## 2026-07-25: Session LS3 — Lesson factory + review gate + first Math K batch (shipped; batch waiting for Mike's review)
 
 Phase LS, block LS3 only. LS1 built the player, LS2 built the path. LS3 builds the

@@ -65,6 +65,9 @@
   .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s;z-index:50;max-width:88vw;text-align:center}
   .toast.show{opacity:1}
   .stickybar{position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:10}
+  .modebar{background:#FFF3E2;border:1px solid #F3E2B6;border-radius:12px;padding:11px 13px;margin:10px 0 0;
+           font-size:13.5px;color:#8A5A00;line-height:1.45}
+  .modebar b{color:#6b4300}
   .probs{background:#fff3f4;border:1px solid #f6d3d7;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:13.5px;color:#8d2530}
   .probs ul{margin:6px 0 0;padding-left:18px}
   /* edit mode */
@@ -86,7 +89,8 @@
 
 <div class="wrap" id="app" style="display:none">
   <h1>Lesson Review</h1>
-  <p class="legend">Whole lessons the factory drafted are waiting here. Read one, play it if you like, fix any wording, then approve. <b>A kid cannot see a lesson until you approve it</b> — approving puts it straight onto the Lessons path, no waiting for a deploy.</p>
+  <p class="legend" id="blurb">Whole lessons the factory drafted are waiting here. Read one, play it if you like, fix any wording, then approve.</p>
+  <div id="modebar"></div>
 
   <div class="stickybar">
     <div class="bar">
@@ -97,9 +101,9 @@
     <div class="bar">
       <label class="legend">Show</label>
       <select id="fStatus" onchange="load()">
+        <option value="approved">Live now</option>
         <option value="pending">Waiting for you</option>
-        <option value="approved">Approved</option>
-        <option value="rejected">Rejected</option>
+        <option value="rejected">Taken down</option>
       </select>
       <select id="fSubject" onchange="load()">
         <option value="">All subjects</option>
@@ -156,15 +160,36 @@ window.load = function(){
   fetch(url).then(function(r){ return r.json(); }).then(function(d){
     if(!d.ok){ list.innerHTML = '<div class="empty">' + esc(d.error || d.hint || 'Not ready yet.') + '</div>'; return; }
     counts(d.counts);
+    showMode(d.autoApprove);
     CURRENT = d.lessons || [];
     document.getElementById('approveAll').style.display = (status()==='pending' && CURRENT.length) ? '' : 'none';
     if(!CURRENT.length){
-      list.innerHTML = '<div class="empty">Nothing here. When the lesson factory runs, new lessons show up as Waiting for you.</div>';
+      list.innerHTML = '<div class="empty">' + (AUTO
+        ? (status() === 'pending'
+            ? 'Nothing waiting, which is expected: prototype mode sends new lessons straight to Live now.'
+            : 'Nothing here yet. Run the lesson factory and lessons will appear under Live now.')
+        : 'Nothing here. When the lesson factory runs, new lessons show up as Waiting for you.') + '</div>';
       return;
     }
     list.innerHTML = CURRENT.map(cardHTML).join('');
   }).catch(function(){ list.innerHTML = '<div class="empty">Could not load.</div>'; });
 };
+
+// Say plainly which mode we are in. If lessons are being auto-approved, this
+// page must NOT imply that anything is waiting on a human.
+var AUTO = null;
+function showMode(auto){
+  AUTO = !!auto;
+  var bar = document.getElementById('modebar');
+  var blurb = document.getElementById('blurb');
+  if(AUTO){
+    bar.innerHTML = '<div class="modebar"><b>Prototype mode is on.</b> New lessons go live on the Lessons path as soon as the factory makes them, so nothing is sitting here waiting for you. They are still checked automatically (read-aloud lines, no emojis, every question has a real correct answer) and any lesson that fails is thrown out rather than published. You can still read anything below, fix the wording, or take a lesson back down. Kids see none of it yet: the Lessons tile is still Coming Soon.</div>';
+    blurb.textContent = 'Every lesson the factory has made. Read one, play it, fix the wording, or take it back down.';
+  } else {
+    bar.innerHTML = '<div class="modebar"><b>Review required.</b> A kid cannot see a lesson until you approve it here.</div>';
+    blurb.textContent = 'Whole lessons the factory drafted are waiting here. Read one, play it if you like, fix any wording, then approve.';
+  }
+}
 
 function counts(c){
   if(!c) return;

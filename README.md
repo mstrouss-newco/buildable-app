@@ -6,6 +6,18 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## LS3 follow-up — prototype mode: lessons go live without review (July 25 2026)
+Owner's call: this is a prototype, function over content. New `api/_lessonmode.js`
+holds one switch (`AUTO_APPROVE`, currently ON, overridable by `LESSON_AUTO_APPROVE=0`)
+and the factory now stamps drafted lessons `approved` at birth, credited to
+`auto (prototype mode)` rather than falsely to a human. All 10 Kindergarten Math
+lessons approved: the complete K Math path is playable at `/lessons?subject=math&grade=k`
+with no preview code. `/lesson-review` gained a "Prototype mode is on" banner, opens on
+**Live now**, and keeps read/play/edit/take-down. Unchanged on purpose: the validator
+still throws out any lesson that fails a check, the serving layer still only hands out
+approved rows, and the Lessons tile is still Coming Soon gated. QA: `qa-lessons.mjs` ALL
+CHECKS PASSED (195), `qa-lessons-dom.mjs` ALL CHECKS PASSED.
+
 ## Session LS3 — Lesson factory + review gate + first Math K batch (July 25 2026)
 The Lessons section can now be filled without a deploy. New `lesson_bank` table
 (`db/ls3-lesson-bank.sql`, applied) holds whole lessons; `api/generate-lessons.js`

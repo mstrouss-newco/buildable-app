@@ -369,6 +369,7 @@ chk('it reuses the painted art LS1 already ships (no new art needed)',
 chk('it hardcodes no art PATH, only art names', !/\/lessons\/art\//.test(GEN));
 chk('no emojis in the drafter', !emoji.test(GEN));
 
+const RPX = () => (exists('public/lesson-review.html') ? read('public/lesson-review.html') : '');
 const gen = await import('./api/_lessongen.js');
 const badSay = gen.validateLesson({});
 chk('the validator refuses an empty lesson', badSay.ok === false && badSay.errors.length > 0);
@@ -382,8 +383,28 @@ chk('the validator catches an emoji in a read-aloud line',
 console.log('\n--- LS3 THE FACTORY: api/generate-lessons.js ---');
 chk('the factory ships', exists('api/generate-lessons.js'));
 const FAC = exists('api/generate-lessons.js') ? read('api/generate-lessons.js') : '';
-chk('it writes rows as pending and NEVER as approved',
-  /status: "pending"/.test(FAC) && !/status: "approved"/.test(FAC));
+chk('what status a new lesson is born with comes from the mode file, not a hardcoded string',
+  /status: birthStatus\(\)/.test(FAC) && !/status: "approved"/.test(FAC));
+
+// PROTOTYPE MODE (owner's call 2026-07-25): lessons are auto-approved. The three
+// things that must survive that switch are checked here, because they are what
+// stops auto-approve from meaning "anything goes".
+const MODE = exists('api/_lessonmode.js') ? read('api/_lessonmode.js') : '';
+chk('the mode file ships and documents how to put the review gate back', !!MODE && /LESSON_AUTO_APPROVE=0/.test(MODE));
+const mode = await import('./api/_lessonmode.js');
+chk('prototype mode is ON, so a drafted lesson goes live immediately',
+  mode.AUTO_APPROVE === true && mode.birthStatus() === 'approved', 'birthStatus=' + mode.birthStatus());
+chk('an auto-approved lesson is honestly credited to the machine, not to a human',
+  /auto \(prototype mode\)/.test(MODE) && mode.birthReviewer() === 'auto (prototype mode)');
+chk('the mode can be flipped back by env var without a code push', /process\.env\.LESSON_AUTO_APPROVE/.test(MODE));
+chk('STILL TRUE under auto-approve: a lesson that fails the validator is never stored',
+  /if \(!v\.ok\) return \{ ok: false, reason: "failed validation"/.test(GEN));
+chk('STILL TRUE under auto-approve: the serving layer only ever hands out approved lessons',
+  /status=eq\.approved/.test(exists('api/lesson.js') ? read('api/lesson.js') : ''));
+chk('the run tells you which mode it ran in, so a batch is never ambiguous',
+  /mode: AUTO_APPROVE \? "auto-approve \(prototype\)"/.test(FAC));
+chk('the review page cannot claim a review gate that is switched off',
+  /function showMode/.test(RPX()) && /Prototype mode is on/.test(RPX()) && /Review required/.test(RPX()));
 chk('it never touches a lesson the owner already approved', /already approved/.test(FAC));
 chk('it leaves LS1\'s reviewed FILE lesson alone (replace first, remove second)',
   /filter\(\(t\) => !t\.hasFile\)/.test(FAC));
@@ -408,7 +429,10 @@ for (const t of kTargets) {
 }
 chk('every Kindergarten Math lesson drafts and passes the validator',
   drafted.length === kTargets.length, drafted.length + '/' + kTargets.length);
-chk('every drafted lesson is marked pending, never approved',
+// The lesson PAYLOAD still says pending - the row's status column is what the
+// mode file decides. Keeping the payload neutral means flipping the mode back
+// does not require rewriting stored lessons.
+chk('the lesson payload itself stays neutral so the mode can be flipped either way',
   drafted.every((L) => L.status === 'pending'));
 chk('every drafted lesson has 5 star-check questions and a 4-of-5 bar',
   drafted.every((L) => L.check.length === 5 && L.mastery.need === 4 && L.mastery.of === 5));
