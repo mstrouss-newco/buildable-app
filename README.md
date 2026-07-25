@@ -6,6 +6,34 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session LS2 — The path: Lessons tile, subject picker, unit path map (July 25 2026)
+Phase LS block LS2 only, built to the approved mock (`lessons-mock.html`). The Lessons
+section is now three screens in ONE page: pick a subject, climb the path, play the lesson.
+New `public/lessons/index.json` is the lesson MAP — subjects, K-2 grades, units and one row
+per lesson (`key`, title, minutes, subject, skill, `status`). A row is `approved` (a reviewed
+lesson file exists and a kid may play it) or `planned` (on the road, greyed, never tappable,
+carries no file). LS3's factory writes lesson FILES and flips rows here; it never touches page
+code. `public/lessons.html` gained the subject picker (a subject only opens when it has a
+ready lesson — the rest say Coming soon rather than promising nothing) and the Journey-style
+unit path map: numbered nodes down a path spine, gold star on a mastered lesson, START pill on
+the kid's next one, padlock on the rest. **A lesson unlocks when every APPROVED lesson before
+it in the path is mastered** (4 of 5 on the star check, read from the same
+`bk_lessons_v1:<kidId>` record LS1 writes), so unbuilt planned rows never block the lesson
+after them. The kid lands on their profile grade and a K / 1 / 2 switcher lets them run ahead
+or drop back — nothing is hidden behind their grade. Reload-safe addresses
+(`/lessons?subject=math&grade=1`, `/lessons?lesson=<id>`), and Back steps lesson → path →
+subjects before leaving. `src/BuildableKids.jsx`: a Learn shelf on Home with a **Lessons tile
+gated Coming soon** behind the same 1111 owner-preview gate the Play shelf and the Stories
+tile use, a `LessonsScreen` that frames `/lessons`, and the `/app/lessons` address. So the
+section is complete but still owner-only: Mike flips it live in LS4. Today the map holds 47
+lesson rows across Math and Reading K-2 with exactly ONE approved lesson (Making ten) — every
+skill checked against `api/_curriculum.js`. QA: `qa-lessons.mjs` ALL CHECKS PASSED (116
+checks) and `qa-lessons-dom.mjs` ALL CHECKS PASSED — a real browser walked picker → path →
+lesson → back, ran the grade switcher, and proved the lock with a doctored two-approved map
+(locked before mastery, unlocked after). No existing game was touched. Files:
+`public/lessons/index.json`, `public/lessons.html`, `src/BuildableKids.jsx`, `qa-lessons.mjs`,
+`qa-lessons-dom.mjs`.
+
 ## AP3 — editor Generate fixed: the slicer file is served now (July 25 2026)
 `vercel.json`, `public/editor.html`, `public/asset-library.html`.
 Generate with AI in the editor failed on every game with "BuildableSlicer is not defined",

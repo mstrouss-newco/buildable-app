@@ -229,5 +229,117 @@ chk('every lessons route comes before the catch-all',
   iCatchAll === -1 || (iLessonsJson !== -1 && iLessonsJson < iCatchAll &&
     srcs.indexOf('/lessons') < iCatchAll && srcs.indexOf('/lessons/art/(.*)') < iCatchAll));
 
+// ---------------------------------------------------------------- 6) LS2: the path
+// The lesson MAP (index.json) plus the two screens in front of the player: pick a
+// subject, then climb Subject > Unit > Lesson with locks. The map is data, so LS3's
+// factory can add lessons without touching page code — these checks hold it to that.
+console.log('\n--- LS2 THE PATH: public/lessons/index.json ---');
+chk('lesson map ships', exists('public/lessons/index.json'));
+let IX = null;
+try { IX = JSON.parse(read('public/lessons/index.json')); } catch (e) { chk('lesson map parses', false, String(e.message)); }
+
+if (IX) {
+  const paths = IX.paths || [];
+  const subjIds = (IX.subjects || []).map((s) => s.id);
+  const gradeIds = (IX.grades || []).map((g) => g.id);
+  const rows = paths.flatMap((p) => (p.units || []).flatMap((u) => (u.lessons || []).map((l) => ({ ...l, subjectPath: p.subject, grade: String(p.grade) }))));
+
+  chk('offers Math and Reading (the launch subjects)', ['math', 'reading'].every((x) => subjIds.includes(x)), subjIds.join(','));
+  chk('covers K, 1 and 2', ['k', '1', '2'].every((g) => gradeIds.includes(g)), gradeIds.join(','));
+  chk('Math and Reading each have a path for every K-2 grade',
+    ['math', 'reading'].every((sub) => ['k', '1', '2'].every((g) => paths.some((p) => p.subject === sub && String(p.grade) === g))));
+  chk('every path points at a subject and a grade the map declares',
+    paths.every((p) => subjIds.includes(p.subject) && gradeIds.includes(String(p.grade))));
+  chk('every unit is named and holds at least one lesson',
+    paths.every((p) => (p.units || []).length > 0 && (p.units || []).every((u) => !!u.title && (u.lessons || []).length > 0)));
+
+  chk('every lesson row carries a key, a title, a skill and a status',
+    rows.length > 0 && rows.every((l) => !!l.key && !!l.title && !!l.skill && !!l.status), 'rows=' + rows.length);
+  chk('a lesson row is either approved or planned — nothing in between',
+    rows.every((l) => l.status === 'approved' || l.status === 'planned'),
+    [...new Set(rows.map((l) => l.status))].join(','));
+  chk('no two lessons share a key (the key is what mastery is stored under)',
+    new Set(rows.map((l) => l.key)).size === rows.length);
+  chk('no emojis in the lesson map', !emoji.test(JSON.stringify(IX)));
+
+  const approvedRows = rows.filter((l) => l.status === 'approved');
+  chk('at least one lesson is approved and playable today', approvedRows.length >= 1, 'approved=' + approvedRows.length);
+  chk('every APPROVED row names a lesson file that really ships',
+    approvedRows.every((l) => !!l.file && exists(`public/lessons/${l.file}.json`)),
+    approvedRows.map((l) => l.file).join(','));
+  chk('every APPROVED row was signed off by a grown-up (no unapproved lesson reaches a kid)',
+    approvedRows.every((l) => !!l.reviewedBy));
+  chk('an approved row matches its lesson file: same id, same skill, same grade, and the file says approved too',
+    approvedRows.every((l) => {
+      const f = JSON.parse(read(`public/lessons/${l.file}.json`));
+      return f.id === l.key && f.skill === l.skill && String(f.grade) === String(l.grade) && f.status === 'approved';
+    }));
+  chk('PLANNED rows carry no lesson file, so nothing half-built can be opened',
+    rows.filter((l) => l.status === 'planned').every((l) => !l.file));
+
+  // The map has to agree with the one curriculum map the rest of the app uses,
+  // or the path would teach skills the question bank has never heard of.
+  const cur = await import(path.resolve(dir, 'api/_curriculum.js'));
+  const offMap = rows.filter((l) => !cur.skillsFor(String(l.grade), l.subject || l.subjectPath).includes(l.skill));
+  chk('every lesson skill exists in api/_curriculum.js for that grade and subject',
+    offMap.length === 0, offMap.map((l) => `${l.grade}/${l.subject || l.subjectPath}/${l.skill}`).join(', '));
+}
+
+console.log('\n--- LS2 THE PATH: the two screens in front of the player ---');
+chk('the page reads the lesson map instead of hardcoding a lesson list', H.includes('/lessons/index.json'));
+chk('there is a subject picker', H.includes('function showSubjects') && H.includes('subgrid'));
+chk('there is a unit path map (Subject > Unit > Lesson)',
+  H.includes('function showPath') && H.includes('class="unit"') && /var cls = "node"/.test(H) && H.includes('.node{'));
+chk('the path locks a lesson until the one before it is mastered',
+  /if\(approved && !mastered && !blocked\) blocked = true/.test(H) && /locked = approved && blocked/.test(H));
+chk('lock state comes from real mastery in bk_lessons_v1, never a guess',
+  /var prog = readProgress\(\)/.test(H) && /prog\[l\.key\] && prog\[l\.key\]\.mastered/.test(H));
+chk('planned lessons that are not built yet never block the lesson after them',
+  /var approved = \(l\.status === "approved"\) && !!l\.file/.test(H));
+const lockedLine = (H.match(/.*cls \+= " locked".*/) || [''])[0];
+const soonLine = (H.match(/.*cls \+= " soon".*/) || [''])[0];
+chk('a locked or coming-soon lesson has no way to be opened',
+  !!lockedLine && !!soonLine && !/onclick/.test(lockedLine) && !/onclick/.test(soonLine) &&
+  (H.match(/tap = \x27 onclick="window\.__openLesson/g) || []).length === 2,
+  `taps=${(H.match(/tap = \x27 onclick/g) || []).length}`);
+chk('a kid starts on their own grade from their profile', /function startGradeFor/.test(H) && /PROFILE_GRADE/.test(H));
+chk('a kid can run AHEAD of their grade (grade switcher, nothing hidden)',
+  H.includes('__pickGrade') && H.includes('class="grades"') && /Learn ahead/.test(H));
+chk('Kindergarten is understood as a grade, not a number',
+  /s === "k" \|\| s === "kindergarten"/.test(H));
+chk('the path and the picker are reload-safe addresses',
+  /setUrl\("subject=" \+/.test(H) && H.includes('history.replaceState'));
+chk('a direct address to one lesson still works (how a grown-up reviews it)',
+  /lessonIdFromUrl/.test(H) && /if\(deep\)\{/.test(H));
+chk('Back steps lesson -> path -> subjects before leaving the section',
+  /function goBack\(\)/.test(H) && /VIEW\.name === "lesson" && FROM_PATH/.test(H) && /VIEW\.name === "path"/.test(H));
+chk('inside the shell the page shows its own Back only when there is somewhere to go back to',
+  H.includes('body.in-app.canback #back{display:flex}'));
+chk('a lost lesson map never leaves a kid on a dead screen',
+  /if\(!IDX\)\{/.test(H) && H.includes('DEFAULT_LESSON'));
+chk('the map names the buddy art rather than the page hardcoding it',
+  /IDX && IDX\.art && IDX\.art\.buddy/.test(H));
+
+console.log('\n--- LS2 THE PATH: the Home tile (Coming Soon gated) ---');
+const SH = exists('src/BuildableKids.jsx') ? read('src/BuildableKids.jsx') : '';
+chk('the shell has a Lessons screen', SH.includes('SCREEN_LESSONS') && SH.includes('function LessonsScreen'));
+chk('the Lessons screen frames the lessons page (one page, three screens)',
+  /GameFrame title="Lessons" src="\/lessons"/.test(SH));
+chk('there is a Lessons tile on Home', /id: "lessons", title: "Lessons"/.test(SH));
+chk('the tile is COMING SOON gated, so no kid reaches a lesson before Mike flips it',
+  /id: "lessons"[\s\S]{0,320}?sub: "Coming soon"[\s\S]{0,320}?soon: true/.test(SH) &&
+  /id: "lessons"[\s\S]{0,400}?setCatalogGate/.test(SH));
+chk('the gate is the same owner preview gate the rest of Home uses', SH.includes('catalogPw === "1111"'));
+chk('/app/lessons is a real reload-safe address',
+  /screen === SCREEN_LESSONS\) return "\/app\/lessons"/.test(SH) && /seg === "lessons"/.test(SH));
+chk('the shell relays the lesson ledger messages it receives', /d\.kind === "skill"/.test(SH));
+
+console.log('\n--- LS2 ROUTES ---');
+chk('the lesson map is served by the lesson-JSON route (not the catch-all)',
+  vjson.routes.some((r) => {
+    if (r.src.indexOf('/lessons/') !== 0 || r.src.indexOf('.json') < 0) return false;
+    try { return new RegExp('^' + r.src + '$').test('/lessons/index.json'); } catch (e) { return false; }
+  }));
+
 console.log('\n' + (ok ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED'));
 process.exit(ok ? 0 : 1);

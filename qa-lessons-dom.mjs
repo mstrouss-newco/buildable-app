@@ -186,6 +186,131 @@ chk('a miss is recorded as an attempt but NOT as mastered',
   JSON.parse(miss.progress)[lesson.id].attempts >= 1, miss.progress);
 chk('the missed answers still reached the ledger', ledger.length === total, `logged=${ledger.length} expected=${total}`);
 
+console.log('\n--- LIVE RUN 3: the path — picker, units, locks, grades (Session LS2) ---');
+{
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e.message)));
+  await page.addInitScript(() => {
+    localStorage.setItem('bk_active_kid_v1', JSON.stringify({ id: 'qa-kid-2', display_name: 'QA Kid', grade: '1' }));
+    localStorage.removeItem('bk_lessons_v1:qa-kid-2');
+    window.speechSynthesis = undefined;
+  });
+  await page.route('**/*', (route) => {
+    const u = route.request().url();
+    return u.startsWith(base) ? route.continue() : route.abort();
+  });
+
+  await page.goto(base + '/lessons', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.subject', { timeout: 15000 });
+  const subs = await page.$$eval('.subject', (els) => els.map((e) => ({
+    t: (e.querySelector('h3') || {}).textContent, soon: e.classList.contains('soon'), disabled: !!e.disabled,
+    tag: ((e.querySelector('.tag') || {}).textContent || ''),
+  })));
+  chk('the front door is the subject picker', subs.length >= 4, subs.map((s) => s.t).join(','));
+  const math = subs.find((s) => s.t === 'Math');
+  chk('Math is open because it has a ready lesson', !!math && !math.soon && /ready|mastered/i.test(math.tag), JSON.stringify(math));
+  chk('subjects with nothing ready are greyed and cannot be opened (no empty promises)',
+    subs.filter((s) => s.t !== 'Math').every((s) => s.soon && s.disabled && /coming soon/i.test(s.tag)));
+
+  await page.locator('.subject', { hasText: 'Math' }).first().click();
+  await page.waitForSelector('.node', { timeout: 10000 });
+  chk('the header names the subject the kid picked', (await page.locator('#title').textContent()) === 'Math');
+  chk('the address is reload-safe', /subject=math&grade=1/.test(page.url()), page.url());
+  chk('the kid landed on their OWN grade from their profile',
+    (await page.locator('.grades button.on').textContent()) === '1');
+  const units = await page.$$eval('.unit', (els) => els.map((e) => e.textContent.trim()));
+  chk('the path is grouped into units', units.length >= 2, units.join(' | '));
+  const nodes = await page.$$eval('.node', (els) => els.map((e) => ({
+    tag: e.tagName, cls: e.className, name: (e.querySelector('.nm') || {}).textContent,
+    sub: (e.querySelector('.ds') || {}).textContent,
+  })));
+  const start = nodes.find((n) => n.name === 'Making ten');
+  chk('the kid\'s next lesson is the tappable one, marked START',
+    !!start && start.tag === 'BUTTON' && /minutes/.test(start.sub), JSON.stringify(start));
+  chk('lessons that are not built yet are greyed and are not buttons at all',
+    nodes.filter((n) => n.name !== 'Making ten').every((n) => n.tag === 'DIV' && /soon|locked/.test(n.cls)));
+
+  // Run ahead: a kid may look at any grade, and an empty grade says so honestly.
+  await page.locator('.grades button', { hasText: 'K' }).first().click();
+  await page.waitForTimeout(200);
+  chk('a kid can run ahead or back to any grade', (await page.locator('.grades button.on').textContent()) === 'K');
+  chk('a grade with nothing ready says so instead of looking broken',
+    /still being written/i.test(await page.locator('main').innerText()));
+  await page.locator('.grades button', { hasText: '1' }).first().click();
+  await page.waitForSelector('button.node', { timeout: 10000 });
+
+  // Into the lesson and back out again.
+  await page.locator('button.node').first().click();
+  await page.waitForSelector('.stepname', { timeout: 15000 });
+  chk('tapping the lesson opens step 1 of the player',
+    /Step 1 of 5/.test(await page.locator('.stepname').first().textContent()));
+  await page.locator('#back').click();
+  await page.waitForSelector('.node', { timeout: 10000 });
+  chk('Back from a lesson returns to the path, not out of the section',
+    (await page.locator('.node').count()) > 1);
+  await page.locator('#back').click();
+  await page.waitForSelector('.subject', { timeout: 10000 });
+  chk('Back from the path returns to the subject picker', (await page.locator('.subject').count()) >= 4);
+  chk('the path screens threw no javascript errors', errors.length === 0, errors.slice(0, 2).join(' | '));
+  await page.close();
+}
+
+console.log('\n--- LIVE RUN 4: the lock really locks (mastery unlocks the next lesson) ---');
+{
+  // The shipped map has ONE approved lesson today, so the lock cannot be seen with
+  // real data yet. Serve a doctored map with two approved lessons (both pointing at
+  // the sample lesson file) and prove the rule: locked until the one before it is
+  // mastered, unlocked the moment it is.
+  const realMap = JSON.parse(fs.readFileSync(path.join(dir, 'public/lessons/index.json'), 'utf8'));
+  const twoApproved = JSON.parse(JSON.stringify(realMap));
+  const g1 = twoApproved.paths.find((p) => p.subject === 'math' && String(p.grade) === '1');
+  const unit = g1.units.find((u) => (u.lessons || []).some((l) => l.status === 'approved'));
+  const first = unit.lessons.find((l) => l.status === 'approved');
+  const second = unit.lessons.find((l) => l.status === 'planned');
+  second.status = 'approved'; second.file = first.file; second.reviewedBy = 'qa';
+
+  async function openPath(mastered) {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.addInitScript((seed) => {
+      localStorage.setItem('bk_active_kid_v1', JSON.stringify({ id: 'qa-kid-3', display_name: 'QA Kid', grade: '1' }));
+      localStorage.setItem('bk_lessons_v1:qa-kid-3', seed);
+      window.speechSynthesis = undefined;
+    }, mastered ? JSON.stringify({ [first.key]: { attempts: 1, best: 5, mastered: true } }) : '{}');
+    await page.route('**/*', (route) => {
+      const u = route.request().url();
+      if (!u.startsWith(base)) return route.abort();
+      if (u.indexOf('/lessons/index.json') >= 0) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(twoApproved) });
+      }
+      return route.continue();
+    });
+    await page.goto(base + '/lessons?subject=math&grade=1', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.node', { timeout: 15000 });
+    const rows = await page.$$eval('.node', (els) => els.map((e) => ({
+      tag: e.tagName, cls: e.className, name: (e.querySelector('.nm') || {}).textContent,
+      sub: (e.querySelector('.ds') || {}).textContent,
+    })));
+    await page.close();
+    return rows;
+  }
+
+  const before = await openPath(false);
+  const b1 = before.find((r) => r.name === first.title);
+  const b2 = before.find((r) => r.name === second.title);
+  chk('with nothing mastered, lesson 1 is open and lesson 2 is LOCKED',
+    b1.tag === 'BUTTON' && b2.tag === 'DIV' && /locked/.test(b2.cls), JSON.stringify([b1, b2]));
+  chk('the lock explains itself in kid words rather than just being dead',
+    /unlock/i.test(b2.sub), b2.sub);
+
+  const after = await openPath(true);
+  const a1 = after.find((r) => r.name === first.title);
+  const a2 = after.find((r) => r.name === second.title);
+  chk('mastering lesson 1 unlocks lesson 2', a2.tag === 'BUTTON' && !/locked/.test(a2.cls), JSON.stringify(a2));
+  chk('the mastered lesson keeps its star and can be played again',
+    /done/.test(a1.cls) && /Mastered/i.test(a1.sub) && a1.tag === 'BUTTON', JSON.stringify(a1));
+}
+
 await browser.close();
 server.close();
 console.log('\n' + (ok ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED'));

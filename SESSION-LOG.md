@@ -1,6 +1,64 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-25: Session LS2 — The path: tile, subject picker, unit path map (shipped)
+
+Phase LS, block LS2 only, built to the mock Mike approved on 2026-07-23. The Lessons
+section is now the three screens from that mock, all in one page: pick a subject,
+climb the path, play the lesson. Still owner-only — the tile is gated Coming soon and
+Mike flips it live in LS4.
+
+**What shipped**
+
+- `public/lessons/index.json` — the lesson MAP. Subjects (Math, Reading, Science,
+  Writing), grades K / 1 / 2, units, and one row per lesson: `key`, `title`,
+  `minutes`, `subject`, `skill`, `status`. A row is `approved` (a reviewed lesson
+  file exists, a kid may play it) or `planned` (on the road, greyed, never tappable,
+  no file). This is the contract for LS3: the factory writes lesson FILES and flips a
+  row here — it never edits page code. 47 rows today, exactly ONE approved.
+- `public/lessons.html` — two screens in front of the LS1 player.
+  *Subject picker*: a subject only opens when it has a lesson ready; the others say
+  Coming soon instead of promising something that is not there. Math shows "1 lesson
+  ready" and turns into "N of M mastered" as stars are earned.
+  *Unit path map*: numbered nodes down a path spine, grouped by unit. Gold star and
+  "Mastered - tap to play again" on a finished lesson, a START pill on the kid's next
+  one, a padlock on everything else. **A lesson unlocks when every APPROVED lesson
+  before it in the path is mastered** — 4 of 5 on the star check, read from the same
+  `bk_lessons_v1:<kidId>` record LS1 writes. Planned rows that are not built yet never
+  block the lesson after them.
+  *Grade*: the kid lands on their profile grade and a K / 1 / 2 switcher lets them run
+  ahead or drop back. Nothing is hidden behind their grade. Kindergarten is understood
+  as a grade, not a number.
+  Reload-safe addresses (`/lessons?subject=math&grade=1`, `/lessons?lesson=<id>`, the
+  LS1 deep link still works), and Back steps lesson -> path -> subjects before it
+  leaves the section. Cream brand look, drawn SVG icons, no emojis.
+- `src/BuildableKids.jsx` — a **Learn** shelf on Home carrying a **Lessons tile marked
+  Coming soon**, behind the same 1111 owner-preview gate the Play shelf and the Stories
+  tile use, so no kid reaches a lesson before Mike approves the content behind it. Plus
+  `LessonsScreen` (frames `/lessons`, cream/light nav) and the `/app/lessons` address.
+  Answers keep reaching the 8B ledger through the shell's existing `skill` relay.
+
+**QA (ran, not claimed)** — `node qa-lessons.mjs .` ALL CHECKS PASSED (116 checks,
+including every lesson skill checked against `api/_curriculum.js` and every approved
+row checked against its lesson file). `node qa-lessons-dom.mjs .` ALL CHECKS PASSED — a
+real browser walked picker -> path -> lesson -> back, ran the grade switcher, and proved
+the lock rule using a doctored two-approved map: lesson 2 locked before lesson 1 was
+mastered, tappable straight after. No existing game was touched, so no other game's QA
+script applies.
+
+**Open for Mike**
+
+- Look at `/lessons` (or the Lessons tile with 1111) and say whether the path reads
+  right before LS3 starts filling it.
+- The path currently shows a long road of greyed Coming soon lessons because only
+  Making ten is built. That was the deliberate choice over hiding them.
+
+**Remaining in phase LS**
+
+- LS3: the lesson factory, the review page, and the first Math K-2 batch.
+- LS4: the Reading batch, a placement quick-check, the parent-dashboard tie-in, and
+  Mike flipping the Lessons tile from Coming soon to LIVE.
+
 ## 2026-07-25: Session AP3 — editor Generate: serve the slicer file + pay-nothing guard
 
 **Shipped**
