@@ -62,6 +62,46 @@ it: inside a game's editor, in a slot with nothing good in it.
   nothing waiting for the next session to import.
 - Castle Guard's long-standing level-count FAIL is gone, fixed by a parallel
   session mid-flight. Phase KP has no known failing check left.
+## 2026-07-25: Session AR1d — islands vanishing up close (shipped)
+
+Mike, flying AR1c: "not there yet, when you get close to an island, it
+disapears."
+
+**It was not culling.** Built a harness that flies AT a known island and shoots
+it from 340m down to 22m, and the island was in the scene the whole way. The
+cause was the see-through water shipped in AR1c: at opacity 0.74 with depth
+writing off, the sea stopped occluding anything, so from a low angle the
+island's own flat sand shelf showed through the surface as a pane of glass and
+ate the near half of the island. Moored boats sat visibly UNDER the water for
+the same reason. The depth cue was real, but the price was the thing the depth
+cue was there for.
+
+- Water back to opacity 0.90 with depth writing ON. What survives is a hint of
+  the shelf rising into the light, which is all the depth this ever needed.
+- The painted lagoon comes back, since near-opaque water cannot show one on its
+  own. Tuned down hard from the AR1b version (peak alpha 0.90 to 0.50, radius
+  5.6x to 3.6x the island) after the first attempt washed a white blob across
+  the island it was supposed to sit around. A lagoon is a tint on the water, not
+  a light source.
+- Everything that floats moved from y=-0.4 up to y=+0.55 with a smaller bob:
+  boats, the pad's moored boat and the buoys were all low enough for the swell to
+  swallow them.
+- New `SKY.isles()` reports every island's world position and size, which is how
+  the approach harness found one to fly at. It stays as an AR handle.
+
+**QA:** 235/235, including three checks that exist purely so this cannot come
+back: the water must still write depth, nothing that floats may sit below the
+surface, and the lagoon is a soft gradient keyed to the island's real size.
+
+**On Quaternius, since Mike asked:** nothing in Sky Flyer uses it. All 56 models
+are Kenney. There ARE Quaternius trees already in the repo at
+`public/models/nature/` from an earlier session, tagged in the model manifest,
+just not wired into this game. The sandbox cannot reach quaternius.com to
+download more, so what they would unlock - ANIMATED animals for the FL6/FL7
+transform quests and for Deep Diver - needs a pack dropped into the Buildable MVP
+folder first.
+
+---
 
 ## 2026-07-25: Session TB5 — Topic book polish, narration fix, and six books go live
 
