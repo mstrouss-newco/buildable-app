@@ -505,6 +505,44 @@ var M={
 var GROUND_SEG=44,GROUND_SIZE=1400;
 var groundGeo=new THREE.PlaneGeometry(GROUND_SIZE,GROUND_SIZE,GROUND_SEG,GROUND_SEG);
 groundGeo.rotateX(-Math.PI/2);
+var SEA=(world.terrain==="islands");
+
+// AR1b — WATER THAT LOOKS LIKE WATER.
+// A flat colour reads as a painted floor from the air. This paints a small
+// ripple sheet IN CODE (nothing to download, no cost, works offline), tiles it
+// across the sea and drifts it. The material's COLOUR is untouched, so the FL4
+// promise holds: the manifest still owns what colour the sea is; this only adds
+// the movement on top of it.
+function makeRippleTexture(){
+  try{
+    var c=document.createElement("canvas"); c.width=c.height=256;
+    var x=c.getContext("2d");
+    // White base on purpose: a multiply map can only ever DARKEN, so the sea at
+    // its brightest is still exactly the colour the manifest asked for and the
+    // ripples are the shadow between the swells.
+    x.fillStyle="#ffffff"; x.fillRect(0,0,256,256);
+    function band(alpha,width,count,light){
+      x.lineWidth=width; x.lineCap="round";
+      x.strokeStyle=(light?"rgba(255,255,255,":"rgba(60,60,60,")+alpha+")";
+      for(var i=0;i<count;i++){
+        var yy=(i/count)*256+Math.sin(i*1.7)*9;
+        x.beginPath();
+        for(var xx=0;xx<=256;xx+=16)
+          x.lineTo(xx, yy+Math.sin(xx*0.045+i*2.1)*5+Math.cos(xx*0.021+i)*4);
+        x.stroke();
+      }
+    }
+    band(0.20,6,9,false); band(0.10,13,6,false); band(0.13,4,7,false);
+    var t=new THREE.CanvasTexture(c);
+    t.wrapS=t.wrapT=THREE.RepeatWrapping;
+    t.repeat.set(26,26);
+    return t;
+  }catch(e){ return null; }
+}
+if(SEA){
+  var ripple=makeRippleTexture();
+  if(ripple){ M.ground.map=ripple; M.ground.needsUpdate=true; }
+}
 var groundMesh=new THREE.Mesh(groundGeo,M.ground);
 scene.add(groundMesh);
 var gPos=groundGeo.attributes.position;
@@ -749,11 +787,26 @@ function dressPads(){
   PADS.forEach(function(pad,pi){
     var r=rng(4100+pi*777), g=new THREE.Group();
     g.position.set(pad.x,0,pad.z);
+    // A PAD IS A PLACE, NOT A DISC. A real dock reaching out to it, a boat tied
+    // up, palms behind it, and a ring of buoys and a gate marking the way in.
+    // The orange ring, the beam and the windsock stay exactly as they are: those
+    // are how a kid knows where to land, and art never overrules a signal.
     var dk=inst("dock",null,13);
     if(dk){ dk.position.set(PAD_R+9,0.4,0); dk.rotation.y=Math.PI/2; g.add(dk); }
+    var dk2=inst("deck",null,8);
+    if(dk2){ dk2.position.set(PAD_R+19,0.35,0); dk2.rotation.y=Math.PI/2; g.add(dk2); }
     var bt=inst(r()>0.5?"sail":"speed",null,9+r()*4);
-    if(bt){ bt.position.set(PAD_R+21,-0.4,4); bt.rotation.y=r()*6.28;
+    if(bt){ bt.position.set(PAD_R+21,-0.4,9); bt.rotation.y=r()*6.28;
       bt.userData.bob=r()*6.28; g.add(bt); floaters.push(bt); }
+    // buoys ringing the pad, so the approach reads from the air
+    for(var b=0;b<5;b++){
+      var ba=b/5*Math.PI*2+0.6, bu=inst("buoy",4.6);
+      if(bu){ bu.position.set(Math.cos(ba)*(PAD_R+27),-0.5,Math.sin(ba)*(PAD_R+27));
+        bu.rotation.y=r()*6.28; bu.userData.bob=r()*6.28; g.add(bu); floaters.push(bu); }
+    }
+    // NO approach arch. It was tried and it read as a croquet hoop dropped in
+    // the sea; the ring of buoys already says "land here" without shouting.
+    // a scrap of land for the pad to belong to
     for(var i=0;i<3;i++){
       var a=2.1+i*0.7, pl=inst(r()>0.5?"palmA":"palmB",8+r()*4);
       if(pl){ pl.position.set(Math.cos(a)*(PAD_R+11),0.4,Math.sin(a)*(PAD_R+11));
@@ -761,6 +814,8 @@ function dressPads(){
     }
     var rk=inst("rockA",null,7);
     if(rk){ rk.position.set(-(PAD_R+13),0.3,-8); g.add(rk); }
+    var hut=inst("hutOpen",6);
+    if(hut){ hut.position.set(-(PAD_R+10),0.4,10); hut.rotation.y=-0.7; g.add(hut); }
     scene.add(g);
   });
 }
@@ -799,11 +854,22 @@ var KIT_FILES={
   rockA:"nature/rock_largeA.glb",
   rockB:"nature/rock_largeB.glb",
   stack:"nature/rock_tallA.glb",
-  reefA:"pirate/rocks-sand-a.glb",
-  reefB:"pirate/rocks-sand-b.glb",
   dock:"pirate/structure-platform-dock.glb",
-  tower:"pirate/tower-watch.glb",
+  deck:"pirate/structure-platform-small.glb",
   grass:"pirate/grass-patch.glb",
+  // The village. Kenney's stone towers are castle art and fought the sand, so
+  // Sunny Islands is built from the tropical half of the kit only.
+  hut:"pirate/structure-roof.glb",
+  hutOpen:"pirate/structure.glb",
+  fence:"pirate/structure-fence.glb",
+  crate:"pirate/crate.glb",
+  barrel:"pirate/barrel.glb",
+  flag:"pirate/flag.glb",
+  // The things a kid actually touches. These are the models that matter most:
+  // a coin you fly through should be a coin, not a token.
+  coin:"platformer/coin-gold.glb",
+  buoy:"watercraft/buoy-flag.glb",
+  gate:"watercraft/gate.glb",
   shipA:"pirate/ship-small.glb",
   shipB:"pirate/ship-pirate-small.glb",
   wreck:"pirate/ship-wreck.glb",
@@ -914,7 +980,16 @@ function loadKit(){
   var netDeadline=setTimeout(function(){ left=0; finish(); },8000);
   names.forEach(function(n){
     loader.load(KIT_BASE+KIT_FILES[n],
-      function(g){ try{ KIT[n]=prepModel(g.scene); got++; }catch(e){}
+      function(g){ try{
+          KIT[n]=prepModel(g.scene);
+          // gold has to glow a little or it turns into a brown ring at distance
+          if(n==="coin") KIT[n].traverse(function(o){
+            if(o.isMesh&&o.material&&o.material.emissive){
+              o.material=o.material.clone();
+              o.material.emissive=new THREE.Color(0x6b4d05);
+            }});
+          got++;
+        }catch(e){}
         if(--left<=0){ clearTimeout(netDeadline); finish(); } },
       null,
       function(){ if(--left<=0){ clearTimeout(netDeadline); finish(); } });
@@ -924,53 +999,89 @@ function loadKit(){
 // ---------- dressing an island ----------
 // buildFeature leaves a note behind (userData.dress) saying where the stand-in
 // palms stood and how big the island is. This turns that note into real art.
+//
+// AR1b rule: everything placed here asks isleSurf() how high the sand is where
+// it is standing, so nothing floats and nothing sinks. Nothing here is solid —
+// a kid flies straight through a hut with the same soft bounce as before.
 function dressIsle(isle){
   if(!KIT_ON||!isle||isle.userData.dressed) return;
   var d=isle.userData.dress; if(!d) return;
   isle.userData.dressed=true;
   var r=rng(d.seed),i;
   for(i=0;i<d.mock.length;i++) d.mock[i].visible=false;   // stand-ins step aside
-  var rad=d.rad, hh=d.hh, top=hh*0.96-2;
+  var rad=d.rad, hh=d.hh;
+  function put(o,dist,ang,sink){
+    o.position.set(Math.cos(ang)*dist, isleSurf(dist,rad,hh)-(sink||0.3), Math.sin(ang)*dist);
+    o.rotation.y=r()*Math.PI*2; isle.add(o); return o;
+  }
+  // palms where the stand-ins stood, now planted on the real surface
   for(i=0;i<d.spots.length;i++){
-    var sp=d.spots[i];
+    var sp=d.spots[i], sd=Math.hypot(sp.x,sp.z);
     var pl=inst(r()>0.5?"palmA":"palmB", 7+r()*6);
-    if(pl){ pl.position.set(sp.x,top,sp.z); pl.rotation.y=r()*Math.PI*2; isle.add(pl); }
+    if(pl){ pl.position.set(sp.x,isleSurf(sd,rad,hh)-0.4,sp.z);
+      pl.rotation.y=r()*6.28; isle.add(pl); }
   }
-  // a tuft or two of grass on the crown
-  if(r()>0.45){
+  // grass tufts, only where there is grass to sit in
+  if(hh>11&&r()>0.4){
     var gr=inst("grass",null,3+r()*3);
-    if(gr){ gr.position.set((r()-0.5)*rad*0.5,top,(r()-0.5)*rad*0.5); gr.rotation.y=r()*6.28; isle.add(gr); }
+    if(gr) put(gr,rad*0.3*r(),r()*6.28,0.15);
   }
-  // rocks around the shoreline, sitting on the sand skirt
+  // beach boulders: the stone-tinted nature rocks, which take the island's own
+  // sand palette. The kit's rust-brown rock clusters read as mud on a beach, so
+  // they are used offshore only, half sunk, where they read as rock in water.
   var rocks=1+((r()*2.4)|0);
   for(i=0;i<rocks;i++){
-    var rk=inst(r()>0.5?"rockA":"rockB",null,4+r()*7);
-    if(!rk) continue;
-    var a=r()*Math.PI*2,dd=rad*(0.85+r()*0.35);
-    rk.position.set(Math.cos(a)*dd,0.4,Math.sin(a)*dd);
-    rk.rotation.y=r()*6.28; isle.add(rk);
+    var rk=r()>0.45?inst("stack",2.4+r()*2.6):inst(r()>0.5?"rockA":"rockB",null,2.6+r()*2.4);
+    if(rk) put(rk,rad*(0.68+r()*0.34),r()*Math.PI*2,0.25);
   }
   if(d.big){
-    // big islands earn a landmark: a watchtower, a wrecked ship on the sand,
-    // or a little dock reaching out over the water
-    var pick=r();
-    var ang=r()*Math.PI*2;
-    if(pick<0.34){
-      var tw=inst("tower",7+r()*4);
-      if(tw){ tw.position.set(Math.cos(ang)*rad*0.25,top,Math.sin(ang)*rad*0.25); tw.rotation.y=r()*6.28; isle.add(tw); }
-    } else if(pick<0.67){
-      var wr=inst("wreck",13+r()*6);
-      if(wr){ wr.position.set(Math.cos(ang)*rad*1.05,0.2,Math.sin(ang)*rad*1.05); wr.rotation.y=ang+1.2; wr.rotation.z=0.18; isle.add(wr); }
-    } else {
-      var dk=inst("dock",null,9+r()*5);
-      if(dk){ dk.position.set(Math.cos(ang)*rad*1.15,0.5,Math.sin(ang)*rad*1.15); dk.rotation.y=ang; isle.add(dk); }
+    // A BIG ISLAND IS SOMEWHERE PEOPLE LIVE. Two to four huts in a loose
+    // cluster, a fence, a flag and the crates and barrels that make a place look
+    // used, plus a dock reaching out over the water with a boat tied up.
+    var vAng=r()*Math.PI*2, vDist=rad*(0.30+r()*0.18);
+    var vx=Math.cos(vAng)*vDist, vz=Math.sin(vAng)*vDist;
+    var huts=2+((r()*3)|0);
+    for(i=0;i<huts;i++){
+      var ha=vAng+(r()-0.5)*1.5, hd=vDist+(r()-0.5)*rad*0.34;
+      hd=Math.max(rad*0.1,Math.min(rad*0.7,hd));
+      var hut=inst(r()>0.35?"hut":"hutOpen", 6+r()*3.5);
+      if(hut) put(hut,hd,ha,0.25);
+    }
+    if(r()>0.4){ var fn=inst("fence",null,5+r()*2.5);
+      if(fn) put(fn,vDist+rad*0.26,vAng+1.1,0.2); }
+    if(r()>0.35){ var fl=inst("flag",5+r()*2);
+      if(fl) put(fl,vDist+rad*0.2,vAng-1.3,0.15); }
+    var stuff=1+((r()*3)|0);
+    for(i=0;i<stuff;i++){
+      var pr=inst(r()>0.5?"crate":"barrel",1.6+r()*1.1);
+      if(pr) put(pr,vDist+(r()-0.5)*rad*0.4,vAng+(r()-0.5)*1.9,0.1);
+    }
+    // the dock: out past the waterline, sitting ON the water not the sand
+    var da=vAng+Math.PI*(0.6+r()*0.8);
+    var dk=inst("dock",null,9+r()*4);
+    if(dk){ dk.position.set(Math.cos(da)*rad*1.12,0.35,Math.sin(da)*rad*1.12);
+      dk.rotation.y=da; isle.add(dk); }
+    var dd=inst("deck",null,6+r()*2);
+    if(dd){ dd.position.set(Math.cos(da)*rad*1.34,0.3,Math.sin(da)*rad*1.34);
+      dd.rotation.y=da; isle.add(dd); }
+    if(r()>0.45){
+      var mo=inst(r()>0.5?"row":"speed",null,6+r()*2.5);
+      if(mo){ mo.position.set(Math.cos(da+0.5)*rad*1.3,-0.4,Math.sin(da+0.5)*rad*1.3);
+        mo.rotation.y=da+1.4; mo.userData.bob=r()*6.28; isle.add(mo); floaters.push(mo); }
+    }
+    // a wreck on the sand, sometimes, because it is a better story than a prop
+    if(r()>0.62){
+      var wa=vAng+Math.PI, wr=inst("wreck",13+r()*6);
+      if(wr){ wr.position.set(Math.cos(wa)*rad*0.95,isleSurf(rad*0.95,rad,hh)-1.2,Math.sin(wa)*rad*0.95);
+        wr.rotation.y=wa+1.2; wr.rotation.z=0.16; isle.add(wr); }
     }
   }
-  // a sea stack or a reef just off the beach
-  if(r()>0.55){
-    var st=r()>0.5?inst("stack",7+r()*7):inst("reefA",null,10+r()*9);
-    if(st){ var sa=r()*Math.PI*2,sd=rad*(1.5+r()*1.1);
-      st.position.set(Math.cos(sa)*sd,0,Math.sin(sa)*sd); st.rotation.y=r()*6.28; isle.add(st); }
+  // offshore rock, standing in the water off the beach
+  if(r()>0.5){
+    var st=inst("stack",5+r()*6);
+    if(st){ var sa=r()*Math.PI*2,sd2=rad*(1.5+r()*1.0);
+      st.position.set(Math.cos(sa)*sd2,-0.8,Math.sin(sa)*sd2);
+      st.rotation.y=r()*6.28; isle.add(st); }
   }
 }
 
@@ -980,6 +1091,7 @@ function dressIsle(isle){
 function dressChunk(ch){
   if(!KIT_ON||!ch||ch.dressed) return;
   ch.dressed=true;
+  upgradeCoins(ch);
   for(var i=0;i<ch.isles.length;i++) dressIsle(ch.isles[i]);
   var r=rng(Math.floor(hash2(ch.cx*13+5,ch.cz*29+11)*100000)+3);
   var n=(r()>0.55?1:0)+(r()>0.82?1:0);
@@ -999,13 +1111,13 @@ function dressChunk(ch){
     boat.userData.bob=r()*6.28;
     ch.group.add(boat); floaters.push(boat);
   }
-  // a reef in the open water now and then, so the sea is not empty blue
+  // a rock in the open water now and then, so the sea is not empty blue
   if(r()>0.62){
-    var rf=inst(r()>0.5?"reefA":"reefB",null,9+r()*8);
+    var rf=inst("stack",5+r()*7);
     if(rf){
       var rx=(r()-0.5)*CHUNK*0.9, rz=(r()-0.5)*CHUNK*0.9;
       if(!padTooClose(ch.cx*CHUNK+rx,ch.cz*CHUNK+rz)){
-        rf.position.set(rx,-0.6,rz); rf.rotation.y=r()*6.28; ch.group.add(rf);
+        rf.position.set(rx,-1.2,rz); rf.rotation.y=r()*6.28; ch.group.add(rf);
       }
     }
   }
@@ -1027,6 +1139,80 @@ var leafGeo=new THREE.ConeGeometry(1.6,2.2,7);
 var pineGeo=new THREE.ConeGeometry(1.5,3.4,7);
 var rockGeo=new THREE.IcosahedronGeometry(1,0);
 var skirtGeo=new THREE.CylinderGeometry(1,1.12,1.2,10);
+
+// AR1b — AN ISLAND IS NOT A PYRAMID.
+// The old island was a cone with a green cone on top: a shape no beach has ever
+// had. This builds a proper one — a rounded sand hill with a wobbly coastline
+// that carries on DOWN past y=0, so the sea plane cuts its own waterline. That
+// is why every island now has a different, believable beach without a single
+// extra polygon spent on drawing one.
+//
+// Unit shape: radius ~1, height 1 at the peak, -0.06 at the rim. Callers scale
+// it by (rad, hh, rad), so the silhouette contract (hitR/hitH) is untouched.
+function makeIslandGeo(seed){
+  var RINGS=6, SEGS=16, pos=[], idx=[];
+  var wob1=0.20+((seed*37)%7)/60, wob2=0.10+((seed*53)%5)/70;
+  var ph1=(seed%13)*0.48, ph2=(seed%7)*0.9;
+  pos.push(0,1,0);                                   // the peak
+  for(var ri=1;ri<=RINGS;ri++){
+    var t=ri/RINGS;
+    var prof=Math.pow(Math.cos(t*Math.PI/2),1.55);   // rounded, not straight
+    for(var si=0;si<SEGS;si++){
+      var a=si/SEGS*Math.PI*2;
+      var wob=1+wob1*Math.sin(a*3+ph1)+wob2*Math.sin(a*5-ph2);
+      var rr=t*wob*1.16;
+      var yy=prof*(0.92+0.16*Math.sin(a*4+ph1))-0.06*t*t;
+      pos.push(Math.cos(a)*rr, yy, Math.sin(a)*rr);
+    }
+  }
+  for(var k=0;k<SEGS;k++) idx.push(0, 1+k, 1+(k+1)%SEGS);
+  for(var r2=1;r2<RINGS;r2++){
+    var b0=1+(r2-1)*SEGS, b1=1+r2*SEGS;
+    for(var q=0;q<SEGS;q++){
+      var n=(q+1)%SEGS;
+      idx.push(b0+q,b1+q,b1+n);
+      idx.push(b0+q,b1+n,b0+n);
+    }
+  }
+  var g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+// Four shapes, reused everywhere. At flight height four coastlines read as
+// "all different" and it costs four geometries instead of fifty.
+var ISLE_GEO=[makeIslandGeo(1),makeIslandGeo(4),makeIslandGeo(9),makeIslandGeo(16)];
+// The shallow water around an island, painted in code as one soft gradient:
+// white foam at the sand, turquoise going out, fading to nothing. A hard-edged
+// ring gives away that it is a disc lying on the sea; a fade does not.
+function makeShallowTexture(){
+  var c=document.createElement("canvas"); c.width=c.height=128;
+  var x=c.getContext("2d");
+  var g=x.createRadialGradient(64,64,2,64,64,64);
+  g.addColorStop(0.00,"rgba(255,255,255,0.90)");
+  g.addColorStop(0.34,"rgba(224,252,252,0.72)");
+  g.addColorStop(0.50,"rgba(150,235,244,0.46)");
+  g.addColorStop(0.74,"rgba(120,222,240,0.20)");
+  g.addColorStop(1.00,"rgba(120,222,240,0)");
+  x.fillStyle=g; x.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+var haloGeo=new THREE.PlaneGeometry(1,1); haloGeo.rotateX(-Math.PI/2);
+// How high the sand is at a given distance from the middle, as a fraction of
+// the island's height. Anything standing on an island asks this, so a palm or a
+// hut sits ON the sand instead of hovering over it.
+function isleY(t){
+  if(t>1) t=1;
+  return Math.pow(Math.cos(t*Math.PI/2),1.55)-0.06*t*t-0.05;
+}
+// distance from the middle -> height, in world units
+function isleSurf(dist,rad,hh){ return isleY(dist/(rad*1.16))*hh; }
+var M_HALO=(function(){
+  try{ return new THREE.MeshBasicMaterial({map:makeShallowTexture(),
+    transparent:true,depthWrite:false,fog:true}); }
+  catch(e){ return new THREE.MeshBasicMaterial({color:0x8FE6F0,transparent:true,
+    opacity:0.3,depthWrite:false}); }
+})();
 var coinGeo=new THREE.CylinderGeometry(1.15,1.15,0.34,14);coinGeo.rotateX(Math.PI/2);
 
 function buildPalm(r){
@@ -1086,23 +1272,38 @@ function buildFeature(r,big){
       q.position.set(Math.cos(aa)*dd,hh*1.02,Math.sin(aa)*dd);g.add(q);
     }
   } else { // islands
-    rad=big?(16+r()*14):(7+r()*7);
-    hh=big?(26+r()*40):(6+r()*8);
+    rad=big?(18+r()*16):(8+r()*8);
+    hh=big?(15+r()*17):(4+r()*5);
+    // AR1b: sand hill, grass only as a soft crown, and two flat rings on the
+    // water so the island sits in a turquoise shallow with foam at its edge.
+    var halo=new THREE.Mesh(haloGeo,M_HALO);
+    // sits just clear of the highest swell so the lagoon never blinks out; at
+    // island scale a couple of units of float is invisible from the air
+    halo.scale.set(rad*4.8,1,rad*4.8); halo.position.y=3.1; g.add(halo);
     // AR1: the note the dressing layer reads. Recorded even when no models are
     // loaded, so the two code paths never drift apart.
     var note={seed:(Math.floor(rad*7919+hh*104729)%99991)+1,rad:rad,hh:hh,big:!!big,mock:[],spots:[]};
     g.userData.dress=note;
-    var hill=new THREE.Mesh(coneGeo,M.rock);
-    hill.scale.set(rad,hh,rad);hill.position.y=hh*0.5-2;g.add(hill);
-    var beach=new THREE.Mesh(skirtGeo,M.rock2);
-    beach.scale.set(rad*1.25,1,rad*1.25);beach.position.y=0.6;g.add(beach);
-    var capm=new THREE.Mesh(coneGeo,r()>0.5?M.cap:M.cap2);
-    capm.scale.set(rad*0.55,hh*0.55,rad*0.55);capm.position.y=hh*0.72;g.add(capm);
+    var shape=ISLE_GEO[((rad*3+hh)|0)%ISLE_GEO.length];
+    var hill=new THREE.Mesh(shape,M.rock);
+    hill.scale.set(rad,hh,rad);hill.position.y=-hh*0.05;g.add(hill);
+    // The grass crown is the SAME shape shrunk, so its rim lands exactly on the
+    // sand instead of hovering. Small islands stay bare sand, which is what a
+    // sandbar looks like.
+    if(hh>19){
+      // The crown is FITTED, not guessed: its rim is placed exactly where the
+      // sand dome is that wide, so green never hovers and never buries the
+      // beach. An island is sand with a bit of green on top, not the reverse.
+      var capm=new THREE.Mesh(shape,r()>0.5?M.cap:M.cap2);
+      var ck=0.19+r()*0.09, cm=(isleY(0)-isleY(ck))/1.06;
+      capm.scale.set(rad*ck,hh*cm,rad*ck);
+      capm.position.y=(isleY(ck)+0.06*cm)*hh;g.add(capm);
+    }
     var palms=1+((r()*3)|0);
     for(var k=0;k<palms;k++){
       var pm=buildPalm(r);
       var ang=r()*Math.PI*2,dist=rad*0.35*r();
-      pm.position.set(Math.cos(ang)*dist,hh*0.98-2,Math.sin(ang)*dist);
+      pm.position.set(Math.cos(ang)*dist,isleSurf(dist,rad,hh)-0.4,Math.sin(ang)*dist);
       pm.rotation.y=r()*Math.PI;g.add(pm);
       note.mock.push(pm);
       note.spots.push({x:pm.position.x,z:pm.position.z});
@@ -1118,9 +1319,26 @@ function buildFeature(r,big){
   return g;
 }
 function makeCoin(x,y,z,parent,list){
-  var c=new THREE.Mesh(coinGeo,M.gold);
+  // AR1b: a real coin when the kit is here, the drawn disc when it is not.
+  // Either way it is ONE object in the list with the same position and the same
+  // spin, so collecting, counting and banking never learn which one they got.
+  var c=(KIT_ON&&KIT.coin)?inst("coin",2.5):null;
+  if(!c) c=new THREE.Mesh(coinGeo,M.gold);
   c.position.set(x,y,z);parent.add(c);
   list.push({mesh:c,taken:false,x:x,y:y,z:z});
+}
+// When the kit lands after a chunk is already built, its coins are swapped for
+// real ones in place — same list entry, same position, nothing recounted.
+function upgradeCoins(ch){
+  if(!KIT_ON||!KIT.coin||!ch||ch.coinsReal) return;
+  ch.coinsReal=true;
+  for(var i=0;i<ch.coins.length;i++){
+    var e=ch.coins[i];
+    if(e.taken) continue;
+    var real=inst("coin",2.5); if(!real) return;
+    real.position.copy(e.mesh.position);
+    ch.group.remove(e.mesh); ch.group.add(real); e.mesh=real;
+  }
 }
 function padTooClose(wx,wz){
   for(var i=0;i<PADS.length;i++) if(Math.hypot(wx-PADS[i].x,wz-PADS[i].z)<95) return true;
@@ -2254,9 +2472,20 @@ function drawScene(dt){
   groundMesh.position.set(S.pos.x,0,S.pos.z);
   for(var i=0;i<gPos.count;i++){
     var ox=gBase[i*3],oz=gBase[i*3+2];
-    gPos.array[i*3+1]=(Math.sin((ox+S.pos.x)*0.05+time*1.3)+Math.cos((oz+S.pos.z)*0.06+time*0.9))*world.waves;
+    var h=Math.sin((ox+S.pos.x)*0.05+time*1.3)+Math.cos((oz+S.pos.z)*0.06+time*0.9);
+    // AR1b: islands get a long rolling swell on top of the chop. At altitude the
+    // short ripples vanish and only a big slow wave reads as a moving ocean.
+    if(SEA) h+=Math.sin((ox+S.pos.x)*0.016+time*0.55)*1.2
+             +Math.cos((oz+S.pos.z)*0.013-time*0.4)*0.9;
+    gPos.array[i*3+1]=h*world.waves;
   }
   gPos.needsUpdate=true;
+  // the sea plane rides under the plane, so the ripples are pinned to the WORLD
+  // and drift on their own instead of sliding along with the camera
+  if(SEA&&M.ground.map){
+    var per=GROUND_SIZE/M.ground.map.repeat.x;
+    M.ground.map.offset.set(S.pos.x/per+time*0.012, -S.pos.z/per+time*0.008);
+  }
   sunDisc.position.set(S.pos.x+280,170,S.pos.z-560);
   sunDisc.lookAt(camera.position);
   clouds.forEach(function(c,idx){
