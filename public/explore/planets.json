@@ -1,0 +1,116 @@
+{
+  "id": "planets",
+  "title": "The Planets",
+  "template": "topic-book",
+  "topic": "space",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["space-facts", "reading"],
+  "heroArt": "/explore/topic-photos/planets/planets-cover.webp",
+  "shelfColor": "#4C6FE0",
+  "ambient": "space",
+  "assetVersion": 1,
+  "sources": [
+    "NASA Science (science.nasa.gov)",
+    "NASA Jet Propulsion Laboratory (jpl.nasa.gov)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/planets/planets-cover.webp",
+    "artAlt": "Saturn hanging in dark space with its wide pale rings tilted towards us",
+    "blurb": "That is Saturn, wearing rings made of billions of chunks of ice and rock. Turn the page and go and meet the other planets."
+  },
+  "pages": [
+    {
+      "id": "jupiter",
+      "title": "The Biggest Planet of All",
+      "art": "/explore/topic-photos/planets/planets-1.webp",
+      "artAlt": "Jupiter filling the picture, striped with cream and orange cloud bands and one huge red oval storm",
+      "factAudio": "planets-jupiter",
+      "quiz": ["planets-jupiter"],
+      "facts": [
+        {
+          "text": "Jupiter is the biggest planet in our solar system. It is about eleven times wider than Earth, and if you could hollow it out you could pour more than a thousand Earths inside. It is bigger than all the other planets put together.",
+          "source": "NASA Science (science.nasa.gov)"
+        },
+        {
+          "text": "That red oval is the Great Red Spot, and it is a storm bigger than our whole planet. People have been watching it through telescopes for more than three hundred years, so it has been swirling away since long before your great great grandparents were born.",
+          "source": "NASA Science (science.nasa.gov)"
+        },
+        {
+          "text": "There is nowhere to stand on Jupiter. It is mostly hydrogen and helium, swirling gas on top and squashed liquid below, with no solid ground anywhere. It also spins faster than any other planet, so one Jupiter day is only about ten hours long.",
+          "source": "NASA Science (science.nasa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "mars",
+      "title": "The Rusty Red Planet",
+      "art": "/explore/topic-photos/planets/planets-2.webp",
+      "artAlt": "The rusty red rocky ground of Mars seen from the surface, with a pale pink sky above",
+      "factAudio": "planets-mars",
+      "quiz": ["planets-mars"],
+      "facts": [
+        {
+          "text": "Mars is red because it is rusty. The dirt and dust are full of iron, and that iron has slowly rusted, the same orange brown you see on an old nail left out in the rain. So much fine dust floats in the thin air that even the sky there looks pink and hazy instead of blue.",
+          "source": "NASA Science (science.nasa.gov)"
+        },
+        {
+          "text": "Mars has the tallest volcano we know of anywhere. It is called Olympus Mons, it stands about seventeen miles high, which is roughly three Mount Everests stacked up, and its base sprawls for hundreds of miles. Walking across the bottom of it would take you weeks.",
+          "source": "NASA Jet Propulsion Laboratory (jpl.nasa.gov)"
+        },
+        {
+          "text": "Nobody has walked on Mars yet, but robots have. Rovers are car sized explorers on wheels that trundle over the rocks taking pictures and testing what the ground is made of, then send it all home to Earth. A day on Mars is about 24.6 hours, so their days are almost the same length as yours.",
+          "source": "NASA Jet Propulsion Laboratory (jpl.nasa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "earth",
+      "title": "Our Blue Home Planet",
+      "art": "/explore/topic-photos/planets/planets-3.webp",
+      "artAlt": "Earth seen from space, blue oceans and swirling white clouds",
+      "factAudio": "planets-earth",
+      "quiz": ["planets-earth"],
+      "facts": [
+        {
+          "text": "Earth is the only place we know of anywhere that has living things on it. Every animal you have ever seen, every tree, every person, and you, all of it is on this one blue ball.",
+          "source": "NASA Science (science.nasa.gov)"
+        },
+        {
+          "text": "Water covers about 71 out of every 100 patches of Earth's surface, which is why it looks so blue from up there. Earth is the only planet in our solar system with liquid water sitting right out on the surface, in oceans and lakes and rivers.",
+          "source": "NASA Science (science.nasa.gov)"
+        },
+        {
+          "text": "Earth also comes wrapped in air. It is about 78 parts nitrogen and 21 parts oxygen, and the oxygen is the part your lungs are after every time you take a breath. That thin blanket of air is what makes the edge of the planet glow blue in photographs.",
+          "source": "NASA Science (science.nasa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "neptune",
+      "title": "Dark, Cold and Very Windy",
+      "art": "/explore/topic-photos/planets/planets-4.webp",
+      "artAlt": "Neptune as a deep blue sphere alone in very dark space",
+      "factAudio": "planets-neptune",
+      "quiz": ["planets-neptune"],
+      "facts": [
+        {
+          "text": "Neptune is the eighth planet and the one furthest from the Sun. It sits about thirty times further out than we do, so sunlight, which reaches us in about eight minutes, takes around four hours to get all the way to Neptune. From there the Sun is just a very bright star.",
+          "source": "NASA Science (science.nasa.gov)"
+        },
+        {
+          "text": "Out that far, a planet has an enormous way to travel to get round the Sun once. One year on Neptune lasts about 165 Earth years. Neptune has only finished one full lap since telescopes first found it in 1846.",
+          "source": "NASA Science (science.nasa.gov)"
+        },
+        {
+          "text": "Neptune is the windiest world we know. Its winds can rip along faster than a thousand miles an hour, far quicker than any storm on Earth, in a place that is dark and deeply, deeply cold.",
+          "source": "NASA Science (science.nasa.gov)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished The Planets!",
+    "blurb": "Eight planets, one Sun, and Saturn's rings shining out in the middle of it all. Fold a corner on your favourite page so you can find it again."
+  }
+}

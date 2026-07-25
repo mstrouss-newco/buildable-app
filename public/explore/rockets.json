@@ -1,0 +1,118 @@
+{
+  "id": "rockets",
+  "title": "Rockets & Astronauts",
+  "template": "topic-book",
+  "topic": "space",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["space-facts", "reading"],
+  "heroArt": "/explore/topic-photos/rockets/rockets-cover.webp",
+  "shelfColor": "#D2542F",
+  "ambient": "space",
+  "assetVersion": 1,
+  "sources": [
+    "NASA (nasa.gov)",
+    "NASA Glenn Research Center (grc.nasa.gov)",
+    "NASA Science (science.nasa.gov)",
+    "European Space Agency (esa.int)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/rockets/rockets-cover.webp",
+    "artAlt": "A rocket lifting off at sunrise in a huge cloud of flame and smoke",
+    "blurb": "Three, two, one. Turn the page and find out how people get all the way up there, and how they get home again."
+  },
+  "pages": [
+    {
+      "id": "launch-pad",
+      "title": "Ready on the Launch Pad",
+      "art": "/explore/topic-photos/rockets/rockets-1.webp",
+      "artAlt": "A tall rocket standing on its launch pad at dawn next to the metal service tower",
+      "factAudio": "rockets-launch-pad",
+      "quiz": ["rockets-launch-pad"],
+      "facts": [
+        {
+          "text": "Most of that tall rocket is not machine at all. Most of a rocket's weight is propellant, the fuel it burns, so what you are really looking at is a giant stack of tanks with engines bolted underneath.",
+          "source": "NASA Glenn Research Center (grc.nasa.gov)"
+        },
+        {
+          "text": "As the fuel burns away, the empty tanks turn into dead weight the rocket is hauling for nothing. So rockets are built in stages. When a stage is empty it lets go and drops away, and the lighter rocket left behind keeps climbing.",
+          "source": "NASA Glenn Research Center (grc.nasa.gov)"
+        },
+        {
+          "text": "All that fuel is for one job: going fast enough. To stay in orbit around Earth a spacecraft travels about 17,500 miles per hour, which is roughly twenty times quicker than a jet plane.",
+          "source": "NASA (nasa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "spacewalk",
+      "title": "Walking Outside in Space",
+      "art": "/explore/topic-photos/rockets/rockets-2.webp",
+      "artAlt": "An astronaut in a white spacesuit working outside a space station with Earth curving below",
+      "factAudio": "rockets-spacewalk",
+      "quiz": ["rockets-spacewalk"],
+      "facts": [
+        {
+          "text": "When an astronaut climbs out of the spacecraft it is called an extravehicular activity, or EVA, and everybody just says spacewalk. One usually lasts somewhere between five and eight hours, so it is a whole working day outside.",
+          "source": "NASA (nasa.gov)"
+        },
+        {
+          "text": "A spacesuit is really a tiny spaceship shaped like a person. It carries oxygen to breathe and water to drink, it keeps the right amount of pressure squeezing gently on the body, and it shields the astronaut from blazing sunshine on one side and freezing shadow on the other.",
+          "source": "NASA (nasa.gov)"
+        },
+        {
+          "text": "Nobody floats off. A tether, which is a strong rope, clips the astronaut to the station, and the tools get clipped on too so they cannot drift away. There is even a backup called SAFER, a small set of jets on the suit that can puff an astronaut back to the spacecraft.",
+          "source": "NASA (nasa.gov)"
+        }
+      ]
+    },
+    {
+      "id": "living-in-space",
+      "title": "Living Inside the Space Station",
+      "art": "/explore/topic-photos/rockets/rockets-3.webp",
+      "artAlt": "Astronauts floating weightless inside a space station module full of equipment",
+      "factAudio": "rockets-living-in-space",
+      "quiz": ["rockets-living-in-space"],
+      "facts": [
+        {
+          "text": "The International Space Station flies about 250 miles above your head at around 17,500 miles per hour, which means it goes all the way round Earth roughly every 90 minutes. While you eat your breakfast, it does a whole lap.",
+          "source": "NASA (nasa.gov)"
+        },
+        {
+          "text": "Going round that fast means the Sun keeps popping up and going down again. Astronauts on the station see about fifteen or sixteen sunrises and sunsets every single day, so they use clocks, not the sky, to decide when it is bedtime.",
+          "source": "NASA Science (science.nasa.gov)"
+        },
+        {
+          "text": "Everything floats up there, including people, so astronauts hook their sleeping bags to a wall before they go to sleep. Otherwise they would drift around in the night and gently bump into things. There is no up or down to sleep the right way round in.",
+          "source": "European Space Agency (esa.int)"
+        }
+      ]
+    },
+    {
+      "id": "coming-home",
+      "title": "Coming Home Under Parachutes",
+      "art": "/explore/topic-photos/rockets/rockets-4.webp",
+      "artAlt": "A space capsule descending under three big red and white parachutes above the ocean",
+      "factAudio": "rockets-coming-home",
+      "quiz": ["rockets-coming-home"],
+      "facts": [
+        {
+          "text": "Coming home from the Moon, NASA's Orion capsule hits the top of the air at nearly 25,000 miles per hour. Squashing the air that hard makes it glow at about 5,000 degrees Fahrenheit, which is around half as hot as the surface of the Sun.",
+          "source": "NASA (nasa.gov)"
+        },
+        {
+          "text": "That is what the heat shield is for. It is a thick protective layer across the bottom of the capsule that takes all the heat and slowly chars away, like the crust on toast, keeping everything inside cool and comfortable.",
+          "source": "NASA (nasa.gov)"
+        },
+        {
+          "text": "Then the parachutes open. Three big main canopies catch the air, and in about twenty minutes the capsule slows from nearly 25,000 miles per hour to about 20, a gentle jogging speed, and splashes down in the ocean where boats are already waiting.",
+          "source": "NASA (nasa.gov)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Rockets & Astronauts!",
+    "blurb": "On a clear evening the space station really does slide across the sky like a slow bright star, with people inside it. Fold a corner on your favourite page so you can find it again."
+  }
+}
