@@ -140,9 +140,9 @@
           ]
         },
         {
-          "title": "Reading pictures",
+          "title": "Reading sentences",
           "lessons": [
-            { "key": "k-read-picture-clues",  "title": "Picture clues",         "minutes": 5, "subject": "reading", "skill": "picture-comprehension", "status": "planned" },
+            { "key": "k-read-picture-clues",  "title": "Sentence clues",         "minutes": 5, "subject": "reading", "skill": "picture-comprehension", "status": "planned" },
             { "key": "k-read-whats-happening","title": "What is happening?",    "minutes": 5, "subject": "reading", "skill": "picture-comprehension", "status": "planned" }
           ]
         }

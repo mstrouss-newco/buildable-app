@@ -80,6 +80,32 @@
   .shape svg{width:78px;height:78px;display:block;animation:drop .3s cubic-bezier(.34,1.4,.64,1) both}
   .shape figcaption{font-family:'Fredoka',sans-serif;font-weight:600;font-size:14px;color:var(--sub)}
 
+  /* Session LS4 - drawn TYPE for the reading lessons. Counters cannot teach a
+     letter sound, so a reading teach card shows the word itself: letter tiles,
+     word cards, or a story card, with the part being taught lit up. This is
+     type, not emojis and not a generated picture. */
+  .tiles{display:flex;gap:8px;justify-content:center;margin:15px 0 6px;flex-wrap:wrap}
+  .tile{width:60px;height:66px;display:flex;align-items:center;justify-content:center;
+        background:#FFFDF8;border:3px solid #E3D8C2;border-radius:14px;
+        font-family:'Fredoka',sans-serif;font-weight:600;font-size:34px;color:var(--ink);
+        animation:drop .3s cubic-bezier(.34,1.4,.64,1) both}
+  .tile.lit{background:#7C5CFC;border-color:#6B4BEB;color:#fff}
+  .wordrow{display:flex;gap:11px;justify-content:center;margin:15px 0 6px;flex-wrap:wrap}
+  .wordcard{background:#FFFDF8;border:3px solid #E3D8C2;border-radius:16px;padding:9px 16px;
+            font-family:'Fredoka',sans-serif;font-weight:600;font-size:27px;color:var(--ink);
+            animation:drop .3s cubic-bezier(.34,1.4,.64,1) both}
+  .wordcard em{font-style:normal;color:#7C5CFC}
+  .storycard{background:#FFFDF8;border:3px solid #E3D8C2;border-radius:18px;padding:14px 18px;
+             margin:15px auto 6px;max-width:430px;font-family:'Fredoka',sans-serif;font-weight:500;
+             font-size:22px;line-height:1.45;color:var(--ink);text-align:center;
+             animation:drop .3s cubic-bezier(.34,1.4,.64,1) both}
+  .storycard em{font-style:normal;color:#7C5CFC;font-weight:600}
+  @media(max-width:430px){
+    .tile{width:50px;height:56px;font-size:28px}
+    .wordcard{font-size:23px;padding:8px 13px}
+    .storycard{font-size:19px}
+  }
+
   /* Session LS3 - owner draft banner. Only ever visible with the preview code,
      never to a kid: without the code the server will not serve a draft at all. */
   .draftbar{background:#FFF3E2;border:2px solid #F3E2B6;border-radius:14px;padding:9px 12px;margin:0 0 12px;
@@ -381,11 +407,50 @@ function shapes(list){
   }
   return '<div class="shaperow">'+html+'</div>';
 }
+/* ---- drawn type (Session LS4, for the reading lessons) ----
+   A ten frame cannot teach "which sound does map start with", so a reading
+   teach card or guided question asks for letters instead:
+     show:{ word:"map", hi:[0] }                  one tile per letter, hi lit
+     show:{ words:["cat","hat"], hi:"at" }        word cards, shared part lit
+     show:{ sentence:"The dog ran.", hi:"dog" }   a story card, one word lit
+   Drawn type in the product font. Never an emoji, never a generated image. */
+function tiles(word, hi){
+  var lit = {}; (hi || []).forEach(function(i){ lit[i] = true; });
+  var ch = String(word || "").split(""), html = "";
+  for(var i=0;i<ch.length;i++){
+    html += '<span class="tile'+(lit[i] ? " lit" : "")+'">'+esc(ch[i])+'</span>';
+  }
+  return '<div class="tiles" role="img" aria-label="'+esc(word)+'">'+html+'</div>';
+}
+/* Light up the shared part of a word without letting a lesson inject markup:
+   everything is escaped first, then the (also escaped) part is wrapped. */
+function litPart(word, part){
+  var w = esc(String(word || ""));
+  var p = esc(String(part || ""));
+  if(!p) return w;
+  var at = w.indexOf(p);
+  if(at < 0) return w;
+  return w.slice(0, at) + '<em>' + p + '</em>' + w.slice(at + p.length);
+}
+function wordCards(list, hi){
+  var words = (list || []).filter(Boolean), html = "";
+  if(!words.length) return "";
+  for(var i=0;i<words.length;i++) html += '<span class="wordcard">'+litPart(words[i], hi)+'</span>';
+  return '<div class="wordrow">'+html+'</div>';
+}
+function storyCard(sentence, hi){
+  if(!sentence) return "";
+  return '<div class="storycard">'+litPart(sentence, hi)+'</div>';
+}
+
 /* One entry point so teach cards and guided questions do not have to care which
    kind of picture a lesson asked for. */
 function showArt(show, art){
   if(!show) return "";
   if(show.shapes) return shapes(show.shapes);
+  if(show.word) return tiles(show.word, show.hi);
+  if(show.words) return wordCards(show.words, show.hi);
+  if(show.sentence) return storyCard(show.sentence, show.hi);
   return frames(show.a||0, show.b||0, art);
 }
 
