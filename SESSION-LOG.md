@@ -1,5 +1,75 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: Session TB5 — Topic book polish, narration fix, and six books go live
+
+Phase TB, block TB5 only. TB1 built the template, TB2 the bookshelf and
+dog-ears, TB3 and TB4 wrote all 20 books, and TB4 photographed eight of them.
+TB5 is the finish pass: how the book *feels*, the narration plumbing, and art
+for the books that were still coloured panels.
+
+**What shipped**
+
+- **The page turn feels like paper.** A light sweep crosses the page in the
+  direction of travel, the book takes one small breath, and every page carries a
+  gutter shadow down its binding edge so it reads as paper bound into a book
+  rather than a flat card. Three new synth sounds live in `buildable-audio.js`
+  (`pageturn`, `fold`, `unfold`) - filtered noise, not UI beeps, and no new asset
+  to fetch. `prefers-reduced-motion` gets the plain slide.
+- **The dog-ear is a real crease.** The corner folds down, a few gold flecks fly
+  off it, the hint underneath changes from Fold to Saved, and folding sounds
+  different from unfolding. Undoing is deliberately quiet: the reward belongs to
+  saving a page, not to changing your mind.
+- **Fit pass, phone to iPad.** Safe-area insets on the header, the dog-ear sheet
+  and the toast; a shallower photo on short phones; **a sideways phone now gets a
+  real two-page spread** - art on the left, words on the right, turn buttons
+  always on screen (the book is capped to the window and the page scrolls inside
+  it); wider page and bigger type on iPad. Checked with headless screenshots at
+  390x844, 375x667, 844x390 and 834x1112. One trap found and fixed: the iPad
+  breakpoint is width-only, so a landscape phone (also 820px wide) was inheriting
+  iPad type sizes - it now carries a height floor.
+- **Narration bug found and fixed (no money spent).** `api/gen-exhibit-audio.js`
+  only understood the older exhibit shapes (center/bodies/items/creatures), so
+  running it on any of the 20 topic books returned a cheerful `ok` and generated
+  **nothing**. It now walks `pages[]` and speaks the page title plus its first
+  fact - word for word what the browser voice falls back to saying - and the
+  generated audio id lands exactly on each page's `factAudio`. Verified against
+  every book's json; clips are not generated yet by choice (Mike deferred the
+  ElevenLabs spend), so read-aloud still falls back to the browser voice.
+- **Thirty new photos, six books live.** Sharks, Dinosaurs, The Moon, Big Cats,
+  Penguins and Bugs & Butterflies now have real photo-real art (5 images each,
+  WebP at 1600px wide, 68-355KB) and are flipped to `approved` in BOTH the book
+  json and the `EXHIBIT_CATALOG` entry. **The bookshelf goes from 8 live books to
+  14.**
+- **A better way to collect generated art.** Previous sessions clicked the share
+  modal then Download, which silently no-ops, drops files under unpredictable
+  ChatGPT timestamp names, and let a wrong image slip through once. This session
+  fetches the image blob in the page and downloads it under the exact filename we
+  want. It is roughly 3x fewer steps, it cannot save the wrong picture, and it
+  survived the blank-render glitch that made the old flow slow. Recorded in
+  memory for the next art session.
+- **QA is honest again.** `qa-kidspedia.mjs` hardcoded `dinosaurs` and `moon` as
+  the books that must stay hidden behind the approved gate, so approving them
+  would have "failed" the gate. It now reads the still-unapproved books out of
+  the repo, so the gate keeps being tested as the remaining books go live.
+  `qa-topic.mjs` gained a check that the narration generator can still read a
+  topic book. Both green.
+
+**What did NOT happen (carries to TB6)**
+
+- **Six books still have no art**: snakes-reptiles, planets, rockets, volcanoes,
+  wild-weather, deep-ocean (30 images). Prompts are ready in
+  `kidspedia-tb3-prompts.md`. Everything else about them is finished.
+- **Read-aloud clips are not generated.** The plumbing is fixed; running
+  `/api/gen-exhibit-audio?exhibit={book}` per book is a browser click away and
+  costs roughly a dollar for all twenty.
+- **The facts are still demo-level, not fact-checked.** Mike's call this session
+  was explicitly "you just approve, this is a demo". The weaker sources flagged
+  in TB4 (diggers, trains, ancient-egypt) are still worth a pass before this is
+  treated as production-accurate.
+- **`db/create-saved-pages.sql` still has to be run** in the Supabase SQL editor
+  before dog-ears sync across devices. Until then they are local-only, silently.
+
+
 ## 2026-07-25: Session KP1 — Kit shelf: kit catalog + browse
 
 Phase KP, block KP1 only. Mike owns the Kenney All-in-1 bundle (CC0, commercial
