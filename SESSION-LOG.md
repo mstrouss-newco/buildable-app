@@ -44,6 +44,71 @@ runs). No game touched.
 **To go back to real review**: set `AUTO_APPROVE = false` in `api/_lessonmode.js`, or
 `LESSON_AUTO_APPROVE=0` in Vercel. Nothing else to undo.
 
+## 2026-07-25: Session TB4 — Kidspedia topics 13-20, the last 8 books (shelf complete, all in-review)
+
+Phase TB, block TB4 only. The final eight topic books written on the TB1 `topic-book`
+template, taking the shelf from 12 books to all 20 planned topics. No template code
+changed, no routes added: TB2's `bookshelf.json` already listed all 20 ids and the
+alternation route already covers them, so each book was exactly one JSON file plus
+one `EXHIBIT_CATALOG` line.
+
+**The eight books** (`public/explore/{id}.json`, all `status: "in-review"`)
+
+| id | title | shelf | ambient |
+| --- | --- | --- | --- |
+| rainforest | The Rainforest | Our wild world | jungle |
+| deserts | Deserts | Our wild world | wind |
+| plants-grow | How Plants Grow | Our wild world | forest |
+| your-body | Your Amazing Body | Our wild world | candy |
+| trains | Trains | Big machines | city |
+| diggers | Diggers & Big Machines | Big machines | city |
+| castles-knights | Castles & Knights | Long, long ago | fire |
+| ancient-egypt | Ancient Egypt | Long, long ago | wind |
+
+Each is cover + 4 photo pages + finish spread, 3 facts per page: **96 facts in this
+session, every single one carrying its own `source`** naming the institution where a
+grown-up can check it (National Park Service, San Diego Zoo Wildlife Alliance and
+Wildlife Explorers, Smithsonian's National Zoo, Smithsonian Environmental Research
+Center, USDA Forest Service and MyPlate, National Geographic Society Education,
+Nevada Department of Wildlife, Penn State / Colorado State / UC Berkeley university
+programmes, JAXA, NEI and NIAMS at the NIH, MedlinePlus, Nemours KidsHealth, Central
+Japan Railway, Association of American Railroads, Federal Railroad Administration,
+London Transport Museum, Scientific American, NASA, Caterpillar, Samsung C&T, Mining
+Technology, NRMCA, American Cement Association, The Metropolitan Museum of Art,
+Royal Armouries, English Heritage, Historic Royal Palaces, National Trust, The
+British Museum, Smithsonian Magazine, Carnegie Museum of Natural History, The
+Egyptian Museum Cairo, Encyclopaedia Britannica). Facts were researched against
+those institutions rather than written from memory, and several claims were
+deliberately softened after checking: the maglev is given as "about 500 kilometres
+per hour" (its levitated operating speed, not the 603 test record), the BelAZ 75710
+as "more than 400 tonnes" (sources differ between 450 and 496), and the sunflower
+page gets the tracking story RIGHT per UC Berkeley: young plants follow the sun,
+mature blooms settle facing east. Voice matches the first twelve books:
+picture-book, nothing scary, no emojis, no em dashes, British spellings.
+
+**Tie-ins.** Rainforest, How Plants Grow and Your Amazing Body carry no `exhibit`
+block and warn in `qa-topic.mjs`, as designed, until planner phases RT / GL / BA
+build their exhibits. No book on the mandatory tie-in list shipped without its link.
+
+**Home / catalog.** Eight `EXHIBIT_CATALOG` entries added in `src/BuildableKids.jsx`,
+all `template: "topic-book"` and `status: "in-review"`, so they collapse into the ONE
+"Kidspedia Books" card, which still does not appear until a book is approved.
+
+**Art.** Mike generates the photos himself. The TB4 DALL-E prompt pack
+(`kidspedia-tb4-prompts.md`, 40 prompts with exact filenames and the shared style
+line) was already in the Buildable MVP folder at session start. All 20 books render
+their painted colour panels until the WebP art lands in
+`public/explore/topic-photos/{id}/`.
+
+**QA.** `qa-topic.mjs` (335 passes), `qa-kidspedia.mjs` and `qa-explore.mjs` all
+green at the final commit. Warnings are the expected missing-photo WARNs across all
+20 books plus the three pending exhibit-link reminders.
+
+**What Mike still does to take the shelf live (TB5 territory):** generate the photo
+packs (TB1 + TB3 + TB4 prompt files), run `db/create-saved-pages.sql` in Supabase so
+dog-ears sync across devices, fact-check each book, then flip `approved` in BOTH the
+book's JSON and its `EXHIBIT_CATALOG` line.
+
 ## 2026-07-25: Session LS3 — Lesson factory + review gate + first Math K batch (shipped; batch waiting for Mike's review)
 
 Phase LS, block LS3 only. LS1 built the player, LS2 built the path. LS3 builds the
