@@ -872,6 +872,14 @@
       }
     },
     {
+      "src": "/skyflyer-mock.html",
+      "dest": "/skyflyer-mock.html"
+    },
+    {
+      "src": "/skyflyer-mock",
+      "dest": "/skyflyer-mock.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
