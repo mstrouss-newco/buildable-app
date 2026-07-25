@@ -292,6 +292,27 @@ function build(q) {
       transparent: false, quality: "medium",
     };
   }
+  // ---- Sky Flyer journey badges + picker badge (Session FL4) ----------------
+  // One round, badge-shaped picture per journey stop, so the winding path shows
+  // the world a kid is about to fly into instead of a coloured circle. The shell
+  // reads these straight out of the manifest (levels[].journeyBadge / art.badge),
+  // so a new world means a new prompt here and one manifest line — no code.
+  if (kind === "skybadge") {
+    const id = (q.id || "").toString();
+    const BADGE_STYLE = "Round circular emblem badge illustration for a children's game level map, " +
+      "the scene painted inside a circle and filling it edge to edge, bright vibrant storybook colors, " +
+      "soft painterly children's-book illustration with a glossy polished finish, cheerful and inviting, " +
+      "no text, no words, no letters, no numbers, no UI elements, child-friendly ages 4-8";
+    const BADGES = {
+      "sunny-islands": "A sunny turquoise sea dotted with small round green palm islands seen from high above, a tiny cheerful red propeller plane banking over them, a sparkle of gold coins in the air and a little white landing pad with an orange ring on one island",
+      "snowy-peaks": "Bright snow-capped mountain peaks under a pale blue winter sky seen from high above, dark green pine trees on the slopes, a tiny cheerful red propeller plane weaving between the peaks, sparkling gold coins in the crisp air and a small white landing pad on a plateau",
+      "sunset-canyon": "A warm orange desert canyon of flat-topped red mesas at golden sunset seen from high above, tall cactuses below, a tiny cheerful red propeller plane soaring between the mesas, gold coins glinting in the warm light and a small white landing pad on one mesa top",
+      "skyflyer": "A cheerful little red propeller plane with a smiling kid pilot soaring upward through fluffy white clouds in a bright blue sky, a curving trail of shiny gold coins arcing behind it, a warm sun and a sense of joyful flight",
+    };
+    const subject = BADGES[id];
+    if (!subject) return null;
+    return { descriptor: `skybadge|${id}`, prompt: `${subject}. ${BADGE_STYLE}`, transparent: false, quality: "medium" };
+  }
   if (kind === "explore") {
     // Kidspedia exhibits (EXHIBIT-MANIFEST.md): one photographic "surface" texture
     // per exhibit item, plus a hero card image for the Explore shelf. Art rule: the
