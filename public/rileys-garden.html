@@ -17,9 +17,9 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:#1a0a2e;display:flex;align-items:center;justify-content:center;height:100dvh;overflow:hidden;font-family:Arial,sans-serif;touch-action:none}
-#gw{position:relative;width:100%;max-width:430px;height:100dvh;overflow:hidden}
+#gw{position:relative;width:100%;max-width:430px;height:100dvh;overflow:hidden;--s:1}
 canvas{display:block;width:100%;height:100%;touch-action:none}
-#uio{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}
+#uio{position:absolute;top:0;left:0;width:calc(100% / var(--s));height:calc(100% / var(--s));transform:scale(var(--s));transform-origin:0 0;pointer-events:none}
 #hud{display:flex;justify-content:space-between;align-items:center;padding:10px 58px 6px 56px;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent);pointer-events:none}
 #hudl{display:flex;flex-direction:column;gap:2px}
 #lvlb{font-size:12px;color:#ffe066;font-weight:700}
@@ -43,7 +43,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #flbl{font-size:12px;color:#ffe066;font-weight:700}
 #ffw{width:80px;height:8px;background:rgba(255,255,255,.2);border-radius:6px;overflow:hidden}
 #fff{height:100%;background:linear-gradient(90deg,#ffe066,#f90);border-radius:6px;width:0%}
-.scr{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;pointer-events:all}
+.scr{position:absolute;top:0;left:0;width:calc(100% / var(--s));height:calc(100% / var(--s));transform:scale(var(--s));transform-origin:0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;pointer-events:all}
 #ss{background:linear-gradient(160deg,#ff6b9d,#ff9a3c 40%,#ffe066)}
 #ss .ttl{font-size:48px;color:#fff;font-weight:900;text-shadow:0 4px 0 rgba(0,0,0,.2);line-height:1.1;margin-bottom:8px}
 #ss .sub{font-size:14px;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:32px;line-height:1.6}
@@ -126,18 +126,29 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script>
 // ── Canvas ──────────────────────────────────────────────────
 const gc=document.getElementById('gc'),ctx=gc.getContext('2d'),gw=document.getElementById('gw');
-let W=400,H=700,DPR=1;
+let W=400,H=700,DPR=1,S=1;
+// Session RG-iPad: the game was hard-capped at a 430px-wide phone column, so on a
+// tablet it played as a narrow strip down the middle. Now the whole game ZOOMS to
+// fit the screen: W/H stay in the phone-tuned design units every sprite, font and
+// speed value was written against, and S multiplies them on the way to the glass.
+// S never drops below 1, so phones render exactly as they did before.
+const DW=430,   // design width the art + tuning assume
+      DH=780,   // design height we want to keep visible
+      MAXAR=1.15; // widest the field may get (w/h) before we letterbox instead
 function rsz(){
   DPR=window.devicePixelRatio||1;
-  const vw=gw.clientWidth||window.innerWidth||400,vh=gw.clientHeight||window.innerHeight||700;
-  W=vw;H=vh;
-  const cw=Math.round(W*DPR),ch=Math.round(H*DPR);
+  const vw=window.innerWidth||400,vh=window.innerHeight||700;
+  S=Math.max(1,Math.min(vw/DW,vh/DH));
+  H=vh/S;W=Math.min(vw/S,H*MAXAR);
+  gw.style.maxWidth='none';gw.style.width=Math.round(W*S)+'px';gw.style.height=vh+'px';
+  gw.style.setProperty('--s',S);
+  const cw=Math.round(W*S*DPR),ch=Math.round(H*S*DPR);
   if(gc.width!==cw||gc.height!==ch){gc.width=cw;gc.height=ch;}
 }
 window.addEventListener('resize',()=>{rsz();if(typeof GS!=='undefined'&&GS==='play')buildLv();});
 rsz();requestAnimationFrame(()=>rsz());
-function scaleCtx(){ctx.setTransform(DPR,0,0,DPR,0,0);}
-function toGame(cx,cy){const r=gc.getBoundingClientRect();return{x:cx-r.left,y:cy-r.top};}
+function scaleCtx(){ctx.setTransform(DPR*S,0,0,DPR*S,0,0);}
+function toGame(cx,cy){const r=gc.getBoundingClientRect();return{x:(cx-r.left)/S,y:(cy-r.top)/S};}
 
 const $=id=>document.getElementById(id);
 const show=id=>$(id).classList.remove('hid'),hide=id=>$(id).classList.add('hid');
@@ -1442,7 +1453,7 @@ function rgHandInit(){
 function rgHandFrame(){
   try{
     const r=gc.getBoundingClientRect();
-    const tx=r.left+PL.tx,ty=r.top+PL.ty;
+    const tx=r.left+PL.tx*S,ty=r.top+PL.ty*S;
     const dx=tx-rgHX,dy=ty-rgHY,d=Math.sqrt(dx*dx+dy*dy),STEP=8;
     if(d>0.5){const f=Math.min(1,STEP/d);rgHX+=dx*f;rgHY+=dy*f;}
     const dip=Math.sin(performance.now()*.004)*3;   // gentle press bob

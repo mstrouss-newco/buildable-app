@@ -16,6 +16,32 @@ button to leave). Soft bounces only, no lose state, no emojis. Deliberately no s
 manifest/wallet wiring — that is FL2, after Mike approves the feel. Verified headless:
 loads clean, steering works, coins collect, scripted flight landed, banked and took
 off. No QA harness yet (comes with FL2's autopilot flag).
+## Riley's Garden fits an iPad now (July 25 2026)
+
+Reported: the game played as a narrow strip down the middle of an iPad. Cause was a
+single line — `#gw` was hard-capped at `max-width:430px`, a phone column. Everything
+else in the engine was already proportional, so the fix is a zoom rather than a
+re-layout: `rsz()` now picks a scale `S = max(1, min(vw/430, vh/780))`, keeps `W`/`H`
+in the phone-tuned design units every sprite size, font and speed was written against,
+and multiplies by `S` on the way to the glass (`setTransform(DPR*S,...)`, taps divided
+back by `S`). The DOM overlay (HUD bars + full-screen menus) rides a
+`transform:scale(var(--s))` off the same number, so buttons and score text grow with
+the art instead of staying phone-sized in a big box.
+
+- **Phones are untouched.** `S` never goes below 1, so a 390x844 phone still renders
+  at 390x844 with `S=1` — proved by a QA check, not by eye.
+- **iPad portrait** (820x1180) fills the width at 1.51x zoom; the field goes from 430
+  to 542 design units wide, so it is a little roomier as well as bigger.
+- **iPad landscape** (1180x820) is capped at a 1.15 width/height ratio and letterboxed
+  rather than stretched into a thin band.
+- `qa-rileys.mjs` gained a SCREEN FIT section that runs the real `rsz()` in a sandbox
+  at three device sizes. All four new checks were mutation-tested against the old file
+  and failed as they should.
+
+Same phone-column cap still sits in `bingo-engine.html` and `memory-engine.html` if
+those get reported next.
+
+---
 
 ## Session LS2 — The path: Lessons tile, subject picker, unit path map (July 25 2026)
 Phase LS block LS2 only, built to the approved mock (`lessons-mock.html`). The Lessons

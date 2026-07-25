@@ -84,6 +84,45 @@ chk('best score is shown, not just saved', /Best so far/.test(html));
 chk('no leftover emoji-era scaffolding', !/drawEmoji|const EMJ=/.test(html));
 
 // 5) manifest through the shared loader
+
+// SCREEN FIT: the game must ZOOM to fit a tablet, not sit in a phone-width strip.
+// Before this pass #gw was capped at 430px, so an iPad showed a narrow column with
+// dead space either side. The engine now keeps its phone-tuned design units (W/H)
+// and multiplies them by S on the way to the screen. These checks run the real
+// rsz() in a sandbox at three real device sizes.
+console.log('--- SCREEN FIT: scales up on a tablet ---');
+{
+  const src = html.match(/const DW=[\s\S]*?\nfunction rsz\(\)\{[\s\S]*?\n\}/);
+  chk('rsz() carries a design size + scale factor', !!src);
+  if (src) {
+    const run = (vw, vh) => {
+      const styles = {}, gwEl = { style: { setProperty:(k,v)=>{styles[k]=v;}, get width(){return styles.width;}, set width(v){styles.width=v;}, set height(v){styles.height=v;}, set maxWidth(v){styles.maxWidth=v;} } };
+      const box = { W:0, H:0, S:1, DPR:1 };
+      const ctxv = {
+        window:{innerWidth:vw,innerHeight:vh,devicePixelRatio:2},
+        Math, gw:gwEl, gc:{width:0,height:0},
+        get W(){return box.W;}, set W(v){box.W=v;},
+        get H(){return box.H;}, set H(v){box.H=v;},
+        get S(){return box.S;}, set S(v){box.S=v;},
+        get DPR(){return box.DPR;}, set DPR(v){box.DPR=v;},
+      };
+      vm.createContext(ctxv);
+      vm.runInContext(src[0] + '\nrsz();', ctxv);
+      return { S:box.S, W:box.W, H:box.H, boxW:parseInt(styles.width,10) };
+    };
+    const phone = run(390, 844), padP = run(820, 1180), padL = run(1180, 820);
+    chk('a phone renders exactly as before (no zoom, full width)',
+        phone.S === 1 && Math.round(phone.W) === 390 && Math.round(phone.H) === 844,
+        JSON.stringify(phone));
+    chk('an iPad in portrait fills the width and zooms in',
+        padP.boxW === 820 && padP.S > 1.3, JSON.stringify(padP));
+    chk('an iPad in landscape stays a sensible shape, not a stretched band',
+        padL.W / padL.H <= 1.25 && padL.boxW <= 1180, JSON.stringify(padL));
+  }
+  chk('drawing is multiplied by the scale', /setTransform\(DPR\*S,0,0,DPR\*S,0,0\)/.test(html));
+  chk('taps are divided back into game units', /\{x:\(cx-r\.left\)\/S,y:\(cy-r\.top\)\/S\}/.test(html));
+  chk('the HUD and menus scale with the game', /transform:scale\(var\(--s\)\)/.test(html));
+}
 console.log('--- MANIFEST ---');
 const bmSb = { console, Math, Date, JSON, Object, Array, String }; bmSb.window = bmSb; bmSb.globalThis = bmSb; vm.createContext(bmSb);
 vm.runInContext(read('public/buildable-manifest.js'), bmSb, { filename:'buildable-manifest' });

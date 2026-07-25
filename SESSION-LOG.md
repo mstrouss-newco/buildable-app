@@ -42,6 +42,38 @@ goals per world, autopilot + QA harness), FL3 hangar (pick your ride) and the ot
 two worlds (Snowy Peaks, Sunset Canyon), FL4 polish/sound/art slots. Next step is
 Mike flying the mock and judging the feel before anything else is built.
 
+## 2026-07-25: Session RG-iPad — Riley's Garden scales to a tablet (shipped)
+
+**Reported by Mike:** "rileys garden needs to work on ipad, right now its very narrow."
+
+**Cause.** `public/rileys-garden.html` styled its wrapper `#gw{...max-width:430px...}`.
+On a tablet that leaves a phone-width column with dead space either side. The engine
+itself was never the problem — positions are already proportional (`H*.17` ground,
+`W/2` centres) — but every SIZE (sprite radii, font px, weapon icons) is a fixed
+number tuned for a ~430px-wide phone, so simply removing the cap would have spread a
+phone-sized game thinly across a big screen.
+
+**Fix — zoom, don't re-layout.** `rsz()` computes
+`S = max(1, min(vw/DW, vh/DH))` with `DW=430`, `DH=780`. `W`/`H` stay in design units;
+`S` is applied once in `scaleCtx()` (`setTransform(DPR*S,...)`) and inverted in
+`toGame()`. `W` is additionally clamped to `H*1.15` so landscape letterboxes instead
+of stretching. `#uio` and `.scr` scale off a `--s` custom property set in the same
+function. The tutorial-hand overlay maps game coords to page pixels, so it got `*S`.
+
+**Why `max(1, ...)`:** it makes the phone path a no-op. Verified: 390x844 -> S=1,
+W=390, H=844, box 390px, byte-for-byte the same rendering as before.
+
+**Measured:** iPad portrait 820x1180 -> S=1.51, W=542, H=780, box fills 820px.
+iPad landscape 1180x820 -> S=1.05, W=897, H=780, box 943px centred.
+
+**QA.** New SCREEN FIT section in `qa-rileys.mjs` runs the real `rsz()` inside a `vm`
+sandbox at phone / iPad-portrait / iPad-landscape and asserts the numbers above, plus
+three source invariants. All four mutation-tested against the pre-change file: all
+four failed, so none is vacuous. Full harness green at the pushed commit.
+
+**Remains:** `bingo-engine.html` and `memory-engine.html` still carry the same
+430px cap and will look narrow on a tablet for the same reason. Not touched — Mike
+only reported Riley's Garden.
 
 ## 2026-07-25: Session LS2 — The path: tile, subject picker, unit path map (shipped)
 
