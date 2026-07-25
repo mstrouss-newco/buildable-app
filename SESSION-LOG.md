@@ -58,9 +58,29 @@ engine was touched this session, so no game harness applied.
 **STILL OPEN in phase TB:** 8 books unwritten (TB4: rainforest, deserts, plants-grow,
 your-body, trains, diggers, castles-knights, ancient-egypt); `kidspedia-photos/` still
 does not exist on the Mac, so all 12 books and all 12 shelf covers paint colour panels;
-`db/create-saved-pages.sql` still needs running in Supabase before dog-ears sync across
-devices; all 12 books remain **in-review** until Mike fact-checks each and flips BOTH the
+all 12 books remain **in-review** until Mike fact-checks each and flips BOTH the
 json and its EXHIBIT_CATALOG line.
+
+**FOLLOW-UP the same day (Supabase access):** a Cowork session turns out to have a
+connected Supabase MCP to the live **Buildable Kids** project, which AGENTS.md did not
+know about. Two things came out of that:
+
+- **`db/create-saved-pages.sql` was APPLIED** (migration `create_saved_pages`), so the
+  `saved_pages` table, its three indexes and its family RLS policy now exist. That file
+  had been sitting unrun since TB1, which meant dog-ears on the live site were silently
+  degrading to localStorage-only and did NOT follow a kid across devices. They do now.
+  Verified against `information_schema`.
+- **AGENTS.md rewritten on this point.** The old rule ("write the SQL, then have the
+  owner run it in the Supabase SQL editor") is replaced by a new "Running SQL yourself"
+  section: still write the idempotent file in `db/`, but apply it in the same session and
+  verify it, and never leave a feature on `main` whose table does not exist. The
+  never-handle-secrets guardrail is clarified (it covers dashboards and credentials, not
+  the authorized MCP) and the destructive-operations guardrail is explicitly NOT loosened.
+  Security advisors stay owner-decided rather than auto-applied.
+
+Flagged to the owner and deliberately not touched: `lesson_bank` and `lesson_bank_runs`
+have RLS disabled, so anyone with the anon key can read or write them. Enabling RLS with
+no policies would lock the lessons factory out of its own tables, so that is his call.
 
 
 ## 2026-07-25: Session FL1 — Sky Flyer playable 3D mock (shipped, awaiting Mike's feel check)
