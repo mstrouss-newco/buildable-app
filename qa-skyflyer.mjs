@@ -312,13 +312,17 @@ chk('islands are WIDER than they are tall (a spire is not an island)',
   !!isleNums && isleNums.hhMax <= isleNums.radMax && isleNums.hhMin <= isleNums.radMin,
   isleNums ? ('across '+isleNums.radMin+'-'+isleNums.radMax+'  high '+isleNums.hhMin+'-'+isleNums.hhMax)
            : 'could not read the island numbers');
-chk('the sand carries on below the waterline, so the sea cuts its own beach',
-  /-0\.06\*t\*t/.test(html) && /isleY\(/.test(html));
-chk('nothing planted on an island floats (everything asks the surface height)',
-  /function isleSurf\(/.test(html) &&
-  (html.match(/isleSurf\(/g)||[]).length >= 4);
-chk('the grass crown is small and fitted, not a green hat over the whole island',
-  /var ck=0\.19\+r\(\)\*0\.09/.test(html) && /\(isleY\(0\)-isleY\(ck\)\)\/1\.06/.test(html));
+chk('the sand carries on below the waterline into a shelf (the sea cuts its own beach)',
+  /-0\.55\*t\*t\*t/.test(html) && /function isleY\(/.test(html) &&
+  /Math\.min\(t\/0\.68,1\)/.test(html));
+chk('the island is ONE surface, sand below and grass above (no second dome to terrace)',
+  /GREEN_RINGS/.test(html) && /g\.addGroup\(0,split,0\)/.test(html) &&
+  /new THREE\.Mesh\(shape,\[topMat,M\.rock\]\)/.test(html));
+chk('a low sandbar stays bare sand, only a real island grows anything',
+  /var topMat=\(hh>\d+\)\?\(r\(\)>0\.5\?M\.cap:M\.cap2\):M\.rock/.test(html));
+chk('the water is see-through over a real seabed (that is what puts an island IN the sea)',
+  /M\.ground\.transparent=true/.test(html) && /seabed=new THREE\.Mesh/.test(html) &&
+  /M\.ground\.depthWrite=false/.test(html));
 chk('the sea has a moving surface, painted in code (nothing to download)',
   /function makeRippleTexture\(/.test(html) && /CanvasTexture/.test(html) &&
   /M\.ground\.map\.offset\.set/.test(html));
@@ -328,25 +332,54 @@ chk('only the islands world got the swell and the ripples (other stops cannot mo
   /var SEA=\(world\.terrain==="islands"\)/.test(html) && /if\(SEA\) h\+=/.test(html));
 chk('every island sits in a soft lagoon, not a hard-edged disc',
   /function makeShallowTexture\(/.test(html) && /createRadialGradient/.test(html));
-// the village pieces are picked with ternaries (inst(r()>0.35?"hut":"hutOpen"))
-// so look for the NAME inside a dressIsle inst() call, not a literal prefix
-const dressBody = (html.split('function dressIsle(')[1]||'').split('\nfunction ')[0];
-const village = ['hut','hutOpen','fence','flag','crate','barrel','dock','deck','wreck'];
-const missingVillage = village.filter(k => !new RegExp('"'+k+'"').test(dressBody));
-chk('a big island is somewhere people LIVE (huts, fence, flag, crates, dock, wreck)',
-  missingVillage.length===0, missingVillage.length?('missing '+missingVillage.join(' ')):village.join(' '));
+// The note that started this pass: "you have the whole kenney kit and we are
+// only using a few of one type." So the shelf SIZE is the check.
+const kitNames = [...html.matchAll(/^\s*(\w+):"([\w\-\/\.]+\.glb)",?$/gm)].map(m=>m[1]);
+const kitPaths = [...html.matchAll(/^\s*(\w+):"([\w\-\/\.]+\.glb)",?$/gm)].map(m=>m[2]);
+const kitsUsed = [...new Set(kitPaths.map(f=>f.split('/')[0]))];
+chk('the prop shelf is DEEP, not three models repeated', kitNames.length >= 40,
+  kitNames.length+' models');
+chk('the shelf draws on several Kenney kits, not one folder', kitsUsed.length >= 4,
+  kitsUsed.join(', '));
+chk('palms alone come in enough shapes that a beach is not one tree copied',
+  kitNames.filter(n=>/^palm/i.test(n)).length >= 5,
+  kitNames.filter(n=>/^palm/i.test(n)).join(' '));
+const camps = (html.match(/var CAMPS=\[[\s\S]*?\n\];/)||[''])[0];
+chk('a big island rolls a CHARACTER, so two islands are not the same camp twice',
+  (camps.match(/name:"/g)||[]).length >= 4 && /homes:\[/.test(camps) && /props:\[/.test(camps),
+  (camps.match(/name:"(\w+)"/g)||[]).join(' '));
+chk('a camp is homes PLUS the clutter that makes a place look used',
+  ['barrel','crate','logs','fire','chest','shovel','idol','mast'].every(k=>camps.indexOf('"'+k+'"')>=0));
+chk('boats on the open water come in many shapes too',
+  ['shipA','shipB','tug','sail','fish','speed','row','rowB'].every(k=>
+    new RegExp('inst\\("'+k+'"').test(html)));
+chk('ONLY rock is repainted by the palette, so Kenney greens and reds survive',
+  /var KIT_TINT=\{rock/.test(html) && /!m\.map&&KIT_TINT\[name\]/.test(html));
 chk('NO castle art on a tropical beach (the grey towers are gone for good)',
   !/tower-watch|tower-complete/.test(html) &&
   !fs.existsSync(dir+'/public/models/skyflyer/pirate/tower-watch.glb'));
 chk('the kit rock clusters that read as mud on sand are gone too',
   !/rocks-sand/.test(html));
-chk('a coin is a real coin, with the drawn disc still there as the fallback',
-  /inst\("coin"/.test(html) && /if\(!c\) c=new THREE\.Mesh\(coinGeo,M\.gold\)/.test(html));
-chk('coins that swap in late keep their place in the list (never recounted)',
-  /function upgradeCoins\(/.test(html) && /e\.mesh=real/.test(html));
-chk('the landing pad is a place, but the ORANGE RING AND BEAM still rule it',
-  /inst\("buoy"/.test(html) && /padRing/.test(html) &&
-  /beam\.position\.y=110/.test(html));
+chk('a coin is turned with a raised middle and a rim, not a flat token',
+  /function makeCoinGeo\(/.test(html) && /LatheGeometry/.test(html) &&
+  /T\*1\.35/.test(html));
+chk('the coin is two-tone for FREE (vertex colour, not a second object)',
+  /g\.setAttribute\("color"/.test(html) && /vertexColors:true/.test(html));
+chk('gold is lit from inside and takes a hot highlight, so it reads as metal',
+  /emissive:0x6E4A00/.test(html) && /shininess:220/.test(html));
+chk('coins shimmer along a trail instead of flashing in lockstep',
+  /ph:\(Math\.abs\(x\*0\.7\+z\*1\.3\)%6\.283\)/.test(html) &&
+  /rotation\.y=spin\+cc\.ph/.test(html));
+// scope to the pad-dressing function: props are picked with ternaries, so a
+// literal inst("name" prefix misses them - this is the SECOND check that got
+// caught by that, hence doing it by function body from here on
+const padBody = (html.split('function dressPads(')[1]||'').split('\nfunction ')[0];
+chk('the landing pad is a place: dock, boat, buoys, palms, a hut and a flag',
+  ['dock','deck','buoy','buoyB','palm','hutOpen','flag','crate','barrel']
+    .every(k => padBody.indexOf(k) >= 0));
+chk('...but the ORANGE RING, THE BEAM AND THE WINDSOCK still outrank the art',
+  /padRing/.test(html) && /beam\.position\.y=100/.test(html) &&
+  /color:0xFF8A3C/.test(html) && /sock\.rotation\.z=Math\.PI\/2/.test(html));
 
 console.log('--- FLIGHT: autopilot proves every world beatable ---');
 let JSDOM = null;
