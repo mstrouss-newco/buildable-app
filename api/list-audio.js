@@ -55,6 +55,9 @@ const SFX_THEME = {
   gulp: "food", chomp: "food", fizz: "food", blender: "food", microwave: "food", popcorn: "food",
   cheersclink: "food", refwhistle: "sports", bounce: "sports", swish: "sports", kick: "sports", batcrack: "sports",
   crowd: "sports", goal: "sports",
+  // Sky Flyer (flight game type, FL4) — reusable "flight" one-shots
+  sky_coin: "flight", sky_coinrun: "flight", sky_bump: "flight", sky_splash: "flight",
+  sky_land: "flight", sky_takeoff: "flight", sky_bank: "flight", sky_win: "flight",
 };
 
 // Canonical shared one-shots (bare names) — reusable UI/game feedback sounds.

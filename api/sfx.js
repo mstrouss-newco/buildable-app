@@ -96,6 +96,18 @@ const SOUNDS = {
   cg_cheer: "Short happy little kids cheer and clap with a sparkle, cheerful wave-cleared celebration, single hit, no music, no voices",
   cg_bonk:  "Short soft friendly cartoon bonk thunk, a knight gently bopping a goblin with a blunt sword, bouncy and not harsh, single hit, no music, no voices",
 
+  // ---- Sky Flyer one-shots (3D flight game type, Session FL4; per BUILDING-A-GAME
+  //      "a new engine type must CREATE fresh sounds"). Warm and rounded, never
+  //      shrill: a kid flies with this in their ears for a long time. ----
+  sky_coin:    "Short bright cheerful gold coin scoop chime with a soft airy whoosh, catching a coin in mid-air, warm and rounded, single hit, no music, no voices",
+  sky_coinrun: "Short happy rising sparkle run of three quick coin chimes, scooping a whole string of coins in one swoop, cheerful and warm, single hit, no music, no voices",
+  sky_bump:    "Short soft puffy cartoon bounce boof, a toy plane gently bumping a cloud and springing away, bouncy and completely un-scary, single hit, no music, no voices",
+  sky_splash:  "Short light playful water skim splash, a toy plane's wheels touching the sea and skipping off, gentle and cute, single hit, no music, no voices",
+  sky_land:    "Short soft satisfying landing touchdown, a gentle wheel chirp and a warm cushioned thud settling down, friendly cartoon, single hit, no music, no voices",
+  sky_takeoff: "Short warm rising engine swell and gentle whoosh as a little toy plane lifts off a pad, hopeful and upbeat, single hit, no music, no voices",
+  sky_bank:    "Short happy cash-in sparkle cascade, coins tumbling warmly into a piggy bank, cheerful and rewarding, single hit, no music, no voices",
+  sky_win:     "Happy short victory fanfare with a soaring warm sparkle, cheerful kids flying game world cleared, warm rounded tones, no voices",
+
   // ---- Sling Squad one-shots (slingshot launcher; per BUILDING-A-GAME "new engine = create new sounds") ----
   sling_stretch: "Short soft stretchy elastic rubber-band pull and creak, a slingshot being drawn back, single hit, no music, no voices",
   sling_release: "Short bouncy cartoon slingshot twang and boing as an elastic snaps forward and launches, playful, single hit, no music, no voices",

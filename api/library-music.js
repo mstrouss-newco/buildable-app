@@ -31,6 +31,19 @@ const MUSIC = {
     theme: "adventure",
     prompt: "Warm playful outdoor adventure music for kids: bouncy mellow marimba and cheerful soft ukulele plucks over warm rounded acoustic bass with a light hand-clap and shaker groove, sunny upbeat and adventurous with a gentle spring in its step, all warm rounded low-mid tones, absolutely no shrill or piercing high notes, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
   },
+  // Added Session FL4 for Sky Flyer, but reusable by ANY game that wants an
+  // open-air, floaty, going-somewhere feel (theme "flight").
+  sky_open_air: {
+    label: "Open Skies (Floaty)",
+    theme: "flight",
+    prompt: "Warm floating open-sky music for kids: soft mellow marimba and warm rounded pads drifting over a gentle acoustic guitar pulse and a light brushed shaker, airy and wide open like flying over sunny islands, calm and quietly joyful, all warm rounded low-mid tones, absolutely no shrill or piercing high notes, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
+  },
+  sky_soar_bright: {
+    label: "Soaring (Bright)",
+    theme: "flight",
+    prompt: "Warm uplifting soaring flight music for kids: gentle glockenspiel and soft mellow marimba over warm cushiony pads with a light optimistic mid-tempo pulse and soft hand percussion, a rising sense of lifting off and gliding, cheerful and warm, warm rounded tones with a touch of soft sparkle but never shrill or piercing, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
+  },
+
   adventure_meadow_soft: {
     label: "Meadow Explore (Soft)",
     theme: "adventure",
