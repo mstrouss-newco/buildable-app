@@ -4,7 +4,7 @@
   "template": "topic-book",
   "topic": "ocean",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": ["ocean-facts", "reading"],
   "heroArt": "/explore/topic-photos/sharks/sharks-cover.webp",
   "shelfColor": "#1173B4",

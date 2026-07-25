@@ -132,6 +132,15 @@ console.log('--- runtime check: the shelf, the approved gate, and My dog-ears --
 // the others stay in-review, which is exactly the gate this check proves.
 const APPROVE = 'sharks';
 const EAR_BOOK = 'sharks';
+// The books that must stay INVISIBLE are read from the repo, not hardcoded: as
+// each book earns its photos and gets approved, this list shrinks on its own
+// instead of turning into a stale failure (Session TB5).
+const exploreDir = path.join(dir, 'public', 'explore');
+const GATED_BOOKS = fs.readdirSync(exploreDir)
+  .filter((f) => f.endsWith('.json'))
+  .map((f) => { try { return JSON.parse(fs.readFileSync(path.join(exploreDir, f), 'utf8')); } catch (e) { return null; } })
+  .filter((d) => d && d.template === 'topic-book' && d.status !== 'approved' && d.id !== APPROVE)
+  .map((d) => d.id);
 
 async function runShelf() {
   const registry = {};
@@ -216,7 +225,7 @@ async function runShelf() {
   const html = registry.wrap.innerHTML || '';
   const r = {};
   r.shelfRendered = html.indexOf('data-book="' + APPROVE + '"') !== -1;
-  r.gated = html.indexOf('data-book="dinosaurs"') === -1 && html.indexOf('data-book="moon"') === -1;
+  r.gated = GATED_BOOKS.every((id) => html.indexOf('data-book="' + id + '"') === -1);
   r.notEmpty = registry.empty.style.display !== 'flex';
   r.earPulled = apiCalls.some((u) => u.indexOf('owner=kid%3A') !== -1);
   // The dog-ear row markup is written into the #ears row inside the shelf.
@@ -237,7 +246,8 @@ if (inlineScript && index) {
     if (!r.shelfRendered || !r.notEmpty) fail('the bookshelf did not render the approved book');
     else pass('the bookshelf renders an approved book cover on its shelf');
     if (!r.gated) fail('an in-review book appeared on the bookshelf — kids must only ever see approved books');
-    else pass('in-review books stay hidden behind the approved gate');
+    else if (GATED_BOOKS.length) pass(`in-review books stay hidden behind the approved gate (${GATED_BOOKS.length} still waiting: ${GATED_BOOKS.join(', ')})`);
+    else pass('the approved gate holds — every topic book in the repo is approved, so nothing is being hidden');
     if (!r.earPulled) fail('the bookshelf never asked /api/saved-pages for this kid\'s dog-ears');
     else pass('My dog-ears reads the kid lane of /api/saved-pages (so saved pages follow the kid)');
     if (!r.earListed) fail('the kid\'s saved page was not listed on the My dog-ears shelf');

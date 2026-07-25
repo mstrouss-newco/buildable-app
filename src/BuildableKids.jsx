@@ -284,9 +284,9 @@ const EXHIBIT_CATALOG = [
   // books: cover + 4 photo pages, every fact carries its own source. They stay
   // hidden from kids until Mike fact-checks each book and flips BOTH this status
   // and the exhibit JSON to "approved".
-  { id: "sharks", title: "Sharks", topic: "ocean", color: "#1173B4", heroArt: "/explore/topic-photos/sharks/sharks-cover.webp", status: "in-review", template: "topic-book" },
-  { id: "dinosaurs", title: "Dinosaurs", topic: "dinosaurs", color: "#6B8E23", heroArt: "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp", status: "in-review", template: "topic-book" },
-  { id: "moon", title: "The Moon", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/moon/moon-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "sharks", title: "Sharks", topic: "ocean", color: "#1173B4", heroArt: "/explore/topic-photos/sharks/sharks-cover.webp", status: "approved", template: "topic-book" },
+  { id: "dinosaurs", title: "Dinosaurs", topic: "dinosaurs", color: "#6B8E23", heroArt: "/explore/topic-photos/dinosaurs/dinosaurs-cover.webp", status: "approved", template: "topic-book" },
+  { id: "moon", title: "The Moon", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/moon/moon-cover.webp", status: "approved", template: "topic-book" },
   // Session TB3 — topics 4-12. Same rule: in-review until Mike fact-checks the
   // book and flips BOTH this line and the book's own JSON to "approved".
   { id: "big-cats", title: "Big Cats", topic: "animals", color: "#C97B2A", heroArt: "/explore/topic-photos/big-cats/big-cats-cover.webp", status: "in-review", template: "topic-book" },
