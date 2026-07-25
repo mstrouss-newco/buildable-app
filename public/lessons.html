@@ -30,7 +30,10 @@
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #back{width:40px;height:40px;flex:none;border-radius:13px;background:#fff;border:2px solid var(--line);
         display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  /* Inside the shell the Home button belongs to the shell, so the page's own Back
+     only appears once there is somewhere to step back TO (a path, a lesson). */
   body.in-app #back{display:none}
+  body.in-app.canback #back{display:flex}
   body.in-app .top{padding-left:96px}
   .coins{background:#fff;border:2px solid var(--line);border-radius:999px;padding:6px 13px;font-size:15px;
          display:flex;align-items:center;gap:7px;flex:none}
@@ -104,6 +107,50 @@
        background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:8px 0}
   .reward{display:inline-flex;align-items:center;gap:8px;background:#FFF7E3;border:2px solid #F3E2B6;border-radius:999px;
           padding:8px 16px;font-size:16px;font-weight:900;color:#9A6A00;margin-top:6px}
+
+  /* ---- Session LS2: subject picker ---- */
+  .subgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:4px}
+  .subject{background:#fff;border:2px solid var(--line);border-radius:22px;padding:16px 13px;text-align:center;
+           cursor:pointer;transition:transform .1s;font:inherit;color:inherit;box-shadow:0 6px 18px rgba(15,14,23,.05)}
+  .subject:active{transform:scale(.97)}
+  .subject.soon{opacity:.55;cursor:default;box-shadow:none}
+  .subject .art{height:70px;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+  .subject h3{font-family:'Fredoka',sans-serif;font-weight:600;margin:0 0 2px;font-size:18px}
+  .subject p{margin:0;font-size:12.5px;color:var(--sub);font-weight:800}
+  .tag{display:inline-block;margin-top:8px;font-size:11px;font-weight:900;color:#fff;background:var(--grad);
+       border-radius:999px;padding:3px 10px}
+  .tag.gray{background:#C9C2D6;color:#3B3550}
+  .tag.gold{background:linear-gradient(90deg,#FFC542,#F2A50C);color:#5A3E00}
+
+  /* ---- Session LS2: grade switcher (run ahead of your grade) ---- */
+  .grades{display:flex;gap:8px;margin:4px 0 2px}
+  .grades button{flex:1;border:2px solid var(--line);background:#fff;border-radius:14px;padding:9px 6px;
+                 font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:var(--sub);cursor:pointer}
+  .grades button.on{background:var(--grad);color:#fff;border-color:transparent}
+  .gradenote{font-size:12.5px;font-weight:800;color:var(--sub);text-align:center;margin:9px 0 0}
+
+  /* ---- Session LS2: the unit path ---- */
+  .unit{margin:20px 0 2px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px;color:var(--sub);
+        display:flex;align-items:center;gap:9px}
+  .unit::after{content:"";flex:1;height:2px;background:var(--line);border-radius:2px}
+  .path{position:relative}
+  .path::before{content:"";position:absolute;left:34px;top:16px;bottom:16px;width:4px;border-radius:2px;background:var(--line)}
+  .node{position:relative;display:flex;align-items:center;gap:12px;background:#fff;border:2px solid var(--line);
+        border-radius:18px;padding:11px 12px;margin:10px 0;width:100%;text-align:left;font:inherit;color:inherit;
+        cursor:pointer;box-shadow:0 5px 14px rgba(15,14,23,.05)}
+  .node:active{transform:scale(.99)}
+  .node.locked,.node.soon{opacity:.52;cursor:default;box-shadow:none}
+  .dot{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+       font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;color:#fff;background:var(--grad)}
+  .node.locked .dot,.node.soon .dot{background:#C9C2D6}
+  .node.done .dot{background:linear-gradient(90deg,#FFC542,#F2A50C)}
+  .nm{font-weight:900;font-size:15.5px}
+  .ds{font-size:12.5px;color:var(--sub);font-weight:800;margin-top:1px}
+  .node .end{margin-left:auto;flex:none}
+  .pill{margin-left:auto;font-size:11px;font-weight:900;background:var(--grad);color:#fff;border-radius:999px;
+        padding:5px 11px;flex:none}
+  .emptyunit{font-size:13.5px;font-weight:800;color:var(--sub);background:#fff;border:2px dashed var(--line);
+             border-radius:18px;padding:16px;text-align:center}
 
   .loading{text-align:center;color:var(--sub);padding:60px 0;font-weight:800}
   @media (min-width:520px){ .wrap{max-width:520px} .card{padding:26px 24px} }
@@ -515,7 +562,7 @@ function finish(score){
         '<p>'+score+' of '+L.check.length+' right on the star check.</p>' +
         (coins > 0 ? '<div class="reward"><span class="coindot"></span>'+coins+' coins</div>'
                    : '<div class="sub">You already earned the coins for this lesson - the star is yours for keeps.</div>') +
-        '<button class="big" type="button" onclick="window.__exit()">Back to my lessons</button>' +
+        '<button class="big" type="button" onclick="window.__back()">Back to my lessons</button>' +
         '<button class="big ghost" type="button" onclick="window.__go(\'teach\',0)">Do it again</button>' +
       '</div>', m.say);
     return;
@@ -530,8 +577,219 @@ function finish(score){
       speakBtn(r.say) +
       '<button class="big" type="button" onclick="window.__go(\'teach\',0)">'+esc(r.cta || "Show me again")+'</button>' +
       '<button class="big ghost" type="button" onclick="window.__go(\'check\',0)">Try the star check again</button>' +
-      '<button class="big ghost" type="button" onclick="window.__exit()">Come back later</button>' +
+      '<button class="big ghost" type="button" onclick="window.__back()">Come back later</button>' +
     '</div>', r.say);
+}
+
+/* =========================================================================
+   SESSION LS2 - THE PATH: subject picker, then Subject > Unit > Lesson.
+   The map lives in /lessons/index.json (data, never code): LS3's lesson
+   factory writes a lesson FILE and flips that row from planned to approved.
+   A lesson unlocks when every APPROVED lesson before it in the path is
+   mastered, so planned rows that are not built yet never block a kid.
+   The kid lands on their profile grade and may tap any other grade to run
+   ahead - nothing is hidden behind their grade.
+   ========================================================================= */
+var IDX = null;                                   // index.json
+var VIEW = { name:"subjects", subject:null, grade:null };
+var FROM_PATH = false;                            // did this lesson start from the path?
+var GRADE_IDS = ["k","1","2"];
+
+function normGrade(g){
+  var s = String(g==null ? "" : g).trim().toLowerCase();
+  if(s === "0" || s === "k" || s === "kindergarten") return "k";
+  var m = /^(?:grade\s*)?([0-9])$/.exec(s);
+  return m ? m[1] : "";
+}
+var PROFILE_GRADE = normGrade(KID_GRADE);
+
+function idxGrades(){ return (IDX && IDX.grades) || []; }
+function gradeTitle(id){
+  var g = idxGrades(); for(var i=0;i<g.length;i++) if(g[i].id === id) return g[i].title;
+  return id === "k" ? "Kindergarten" : ("Grade " + id);
+}
+function gradeShort(id){
+  var g = idxGrades(); for(var i=0;i<g.length;i++) if(g[i].id === id) return g[i].short;
+  return String(id).toUpperCase();
+}
+function subjectMeta(id){
+  var s = (IDX && IDX.subjects) || [];
+  for(var i=0;i<s.length;i++) if(s[i].id === id) return s[i];
+  return { id:id, title:id, blurb:"" };
+}
+function pathFor(subject, grade){
+  var p = (IDX && IDX.paths) || [];
+  for(var i=0;i<p.length;i++) if(p[i].subject === subject && normGrade(p[i].grade) === grade) return p[i];
+  return null;
+}
+/* Flatten a path into ordered lesson rows and work out mastery + locks. */
+function walkPath(p){
+  var prog = readProgress(), out = [], n = 0, blocked = false;
+  var units = (p && p.units) || [];
+  for(var u=0; u<units.length; u++){
+    var rows = units[u].lessons || [];
+    for(var i=0; i<rows.length; i++){
+      var l = rows[i];
+      var mastered = !!(prog[l.key] && prog[l.key].mastered);
+      var approved = (l.status === "approved") && !!l.file;
+      var locked = approved && blocked;
+      if(approved && !mastered && !blocked) blocked = true;  // this one is the kid's next step
+      out.push({ row:l, unit:units[u].title, unitIx:u, n:(++n),
+                 approved:approved, mastered:mastered, locked:locked });
+    }
+  }
+  return out;
+}
+function subjectTally(subject){
+  var ready = 0, mastered = 0;
+  for(var g=0; g<GRADE_IDS.length; g++){
+    var p = pathFor(subject, GRADE_IDS[g]); if(!p) continue;
+    var flat = walkPath(p);
+    for(var i=0;i<flat.length;i++){ if(flat[i].approved){ ready++; if(flat[i].mastered) mastered++; } }
+  }
+  return { ready:ready, mastered:mastered };
+}
+
+/* ---- drawn icons (no emojis anywhere: SVG geometry only) ---- */
+var SUBJ_ART = {
+  math:'<svg width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><rect x="8" y="8" width="54" height="54" rx="15" fill="#7C5CFC"/><path d="M35 18v16M27 26h16" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M25 44h20M25 53h20" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/></svg>',
+  reading:'<svg width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><path d="M10 15 Q22 9 35 17 Q48 9 60 15 V55 Q48 49 35 57 Q22 49 10 55 Z" fill="#FF6B6B"/><path d="M35 17 V57" stroke="#fff" stroke-width="3.4"/><path d="M17 24 H29 M17 32 H29 M41 24 H53 M41 32 H53" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".85"/></svg>',
+  science:'<svg width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><circle cx="35" cy="35" r="26" fill="#2FAE68"/><rect x="28.5" y="14" width="13" height="4" rx="2" fill="#fff"/><path d="M31 19h8v11l9.5 16.5A4.5 4.5 0 0144.6 53H25.4a4.5 4.5 0 01-3.9-6.5L31 30z" fill="#fff"/><circle cx="31" cy="46" r="3" fill="#2FAE68"/><circle cx="39.5" cy="49" r="2.2" fill="#2FAE68"/></svg>',
+  writing:'<svg width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><rect x="10" y="10" width="50" height="50" rx="14" fill="#FFC542"/><path d="M23 46 L35 22 L47 46" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 38 H42" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>'
+};
+function subjArt(id, color){
+  return SUBJ_ART[id] || '<svg width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><rect x="10" y="10" width="50" height="50" rx="14" fill="'+(color||"#7C5CFC")+'"/></svg>';
+}
+var STAR_SVG = '<svg class="end" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.2 6.6.8-4.9 4.6 1.3 6.5L12 16.9 6.1 20l1.3-6.5L2.5 9l6.6-.8z" fill="#FFC542"/></svg>';
+var LOCK_SVG = '<svg class="end" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="3" fill="#C9C2D6"/><path d="M8 10V8a4 4 0 018 0v2" stroke="#C9C2D6" stroke-width="3" fill="none"/></svg>';
+
+/* ---- reload-safe addresses (/lessons?subject=math&grade=1) ---- */
+function setUrl(q){
+  try{ history.replaceState(null, "", location.pathname + (q ? "?" + q : "")); }catch(e){}
+}
+function params(){
+  var out = {}, s = location.search.replace(/^\?/,"");
+  s.split("&").forEach(function(bit){
+    if(!bit) return; var kv = bit.split("="); out[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]||"");
+  });
+  return out;
+}
+function setTitle(t){ document.getElementById("title").textContent = t; }
+function canBack(on){ document.body.classList.toggle("canback", !!on); }
+function idxBuddy(text){
+  var name = (IDX && IDX.art && IDX.art.buddy) || "buddy-star";
+  return '<div class="buddyrow"><img class="buddyart" src="'+ART+name+'.png" alt="Your lesson buddy">' +
+         '<div class="bubble">'+esc(text)+'</div></div>';
+}
+
+/* ---- Screen A: pick a subject ---- */
+function showSubjects(){
+  VIEW = { name:"subjects", subject:null, grade:null };
+  L = null; FROM_PATH = false;
+  bar(-1); canBack(false); setTitle("Lessons"); setUrl("");
+  var subs = (IDX && IDX.subjects) || [], html = "";
+  for(var i=0;i<subs.length;i++){
+    var s = subs[i], t = subjectTally(s.id), open = t.ready > 0;
+    var tag = !open ? '<span class="tag gray">Coming soon</span>'
+            : (t.mastered > 0 ? '<span class="tag gold">'+t.mastered+' of '+t.ready+' mastered</span>'
+                              : '<span class="tag">'+t.ready+' lesson'+(t.ready===1?"":"s")+' ready</span>');
+    html += '<button type="button" class="subject'+(open?"":" soon")+'"'+
+            (open ? ' onclick="window.__pickSubject(\''+esc(s.id)+'\')"' : ' disabled')+'>' +
+              '<div class="art">'+subjArt(s.id, s.color)+'</div>' +
+              '<h3>'+esc(s.title)+'</h3><p>'+esc(s.blurb||"")+'</p>'+tag +
+            '</button>';
+  }
+  render(idxBuddy("Time for school, my way. What should we learn today?") +
+         '<div class="subgrid">'+html+'</div>');
+}
+window.__pickSubject = function(id){
+  var g = startGradeFor(id);
+  showPath(id, g);
+};
+/* Where a kid lands: their own grade. If the profile has no grade yet we land on
+   the first grade that actually has a ready lesson - never a made-up grade. */
+function startGradeFor(subject){
+  if(PROFILE_GRADE && pathFor(subject, PROFILE_GRADE)) return PROFILE_GRADE;
+  for(var i=0;i<GRADE_IDS.length;i++){
+    var p = pathFor(subject, GRADE_IDS[i]); if(!p) continue;
+    var flat = walkPath(p);
+    for(var j=0;j<flat.length;j++) if(flat[j].approved) return GRADE_IDS[i];
+  }
+  return PROFILE_GRADE || GRADE_IDS[0];
+}
+
+/* ---- Screen B: the unit path map ---- */
+function showPath(subject, grade){
+  grade = normGrade(grade) || startGradeFor(subject);
+  VIEW = { name:"path", subject:subject, grade:grade };
+  L = null; FROM_PATH = false;
+  bar(-1); canBack(true);
+  var meta = subjectMeta(subject);
+  setTitle(meta.title);
+  setUrl("subject=" + encodeURIComponent(subject) + "&grade=" + encodeURIComponent(grade));
+
+  var gh = '<div class="grades">';
+  for(var i=0;i<GRADE_IDS.length;i++){
+    var gid = GRADE_IDS[i];
+    gh += '<button type="button" class="'+(gid===grade?"on":"")+'" onclick="window.__pickGrade(\''+gid+'\')">'+
+          esc(gradeShort(gid))+'</button>';
+  }
+  gh += '</div>';
+
+  var p = pathFor(subject, grade), flat = p ? walkPath(p) : [], body = "", ready = 0, lastUnit = -1;
+  for(var k=0;k<flat.length;k++){
+    var it = flat[k], r = it.row;
+    if(it.unitIx !== lastUnit){
+      if(lastUnit !== -1) body += '</div>';
+      body += '<div class="unit">Unit '+(it.unitIx+1)+' &middot; '+esc(it.unit)+'</div><div class="path">';
+      lastUnit = it.unitIx;
+    }
+    var cls = "node", end = "", sub = "", tap = "";
+    if(!it.approved){ cls += " soon"; sub = "Coming soon"; end = LOCK_SVG; }
+    else if(it.mastered){ cls += " done"; sub = "Mastered - tap to play again"; end = STAR_SVG; ready++;
+                          tap = ' onclick="window.__openLesson(\''+esc(r.file)+'\')"'; }
+    else if(it.locked){ cls += " locked"; sub = "Master the lesson before this one to unlock"; end = LOCK_SVG; ready++; }
+    else { sub = (r.minutes||5) + " minutes - earn a star"; end = '<span class="pill">START</span>'; ready++;
+           tap = ' onclick="window.__openLesson(\''+esc(r.file)+'\')"'; }
+    body += '<'+(tap ? "button" : "div")+' class="'+cls+'"'+(tap ? ' type="button"'+tap : "")+'>' +
+              '<span class="dot">'+it.n+'</span>' +
+              '<span><span class="nm">'+esc(r.title)+'</span><span class="ds" style="display:block">'+sub+'</span></span>' +
+              end +
+            '</'+(tap ? "button" : "div")+'>';
+  }
+  if(lastUnit !== -1) body += '</div>';
+  if(!flat.length) body = '<div class="emptyunit">No lessons for this grade yet. Try another grade above.</div>';
+  else if(!ready) body += '<div class="emptyunit">These lessons are still being written. Try another grade above - you can learn ahead any time.</div>';
+
+  var hello = PROFILE_GRADE === grade
+    ? gradeTitle(grade) + " " + meta.title + ". Pick up where you left off."
+    : "You are looking at " + gradeTitle(grade) + " " + meta.title + ". Learn ahead as much as you like.";
+  var note = PROFILE_GRADE
+    ? "You are in " + gradeTitle(PROFILE_GRADE) + ". Tap another grade to jump ahead or go back over something."
+    : "Tap a grade to switch. Grown-ups can set your grade in the grown-ups area.";
+
+  render(idxBuddy(hello) + gh + body + '<p class="gradenote">'+esc(note)+'</p>');
+}
+window.__pickGrade = function(g){ showPath(VIEW.subject, g); };
+
+/* ---- Screen C: hand off to the player ---- */
+window.__openLesson = function(file){
+  FROM_PATH = (VIEW.name === "path");
+  var from = { subject:VIEW.subject, grade:VIEW.grade };
+  loadLesson(file, function(okay){
+    if(!okay) return;
+    VIEW = { name:"lesson", subject:from.subject, grade:from.grade };
+    canBack(true);
+    setUrl("lesson=" + encodeURIComponent(file));
+    stepHello();
+  });
+};
+
+/* ---- Back: lesson -> path -> subjects -> out of the section ---- */
+function goBack(){
+  if(VIEW.name === "lesson" && FROM_PATH) return showPath(VIEW.subject, VIEW.grade);
+  if(VIEW.name === "path" && IDX) return showSubjects();
+  window.__exit();
 }
 
 /* ---- routing ---- */
@@ -547,7 +805,8 @@ window.__exit = function(){
   postToShell("nav:exit");
   if(!IN_SHELL){ if(history.length > 1) history.back(); else location.href = "/app"; }
 };
-document.getElementById("back").addEventListener("click", window.__exit);
+window.__back = function(){ stopSpeech(); goBack(); };
+document.getElementById("back").addEventListener("click", window.__back);
 
 /* shell pause contract: stop the voice when the shell backgrounds us */
 window.addEventListener("message", function(e){
@@ -560,22 +819,41 @@ document.addEventListener("visibilitychange", function(){ if(document.hidden) st
 /* ---- boot ---- */
 function lessonIdFromUrl(){
   var m = /[?&](?:id|lesson)=([A-Za-z0-9_-]{1,64})/.exec(location.search);
-  return m ? m[1] : DEFAULT_LESSON;
+  return m ? m[1] : null;
 }
 function fatal(msg){
   render('<div class="card"><h2>That lesson is not ready yet</h2><p>'+esc(msg)+'</p>' +
-         '<button class="big" type="button" onclick="window.__exit()">Go back</button></div>');
+         '<button class="big" type="button" onclick="window.__back()">Go back</button></div>');
   bar(-1);
 }
 
-(function boot(){
-  var id = lessonIdFromUrl();
-  fetch("/lessons/"+id+".json", { cache:"no-cache" })
+/* Which path (subject + grade) does a lesson file live on? */
+function findLessonPath(file){
+  var p = (IDX && IDX.paths) || [];
+  for(var i=0;i<p.length;i++){
+    var units = p[i].units || [];
+    for(var u=0;u<units.length;u++){
+      var rows = units[u].lessons || [];
+      for(var r=0;r<rows.length;r++) if(rows[r].file === file)
+        return { subject:p[i].subject, grade:normGrade(p[i].grade) };
+    }
+  }
+  return null;
+}
+
+/* Load one lesson file and prime its practice questions. The player itself is
+   unchanged from LS1 - this just became something the path map can call. */
+function loadLesson(file, done){
+  render('<div class="loading">Getting your lesson ready...</div>');
+  bar(-1);
+  soloQs = [];
+  state = { solo:0, soloScore:0, check:0, checkScore:0, attempt:0 };
+  fetch("/lessons/"+file+".json", { cache:"no-cache" })
     .then(function(r){ if(!r.ok) throw new Error("missing"); return r.json(); })
     .then(function(json){
       L = json;
       if(!L || !L.check || !L.teach || !L.mastery) throw new Error("bad lesson");
-      document.getElementById("title").textContent = L.title || "Lesson";
+      setTitle(L.title || "Lesson");
       // Ask for this lesson's practice questions while the kid reads step 1.
       var n = (L.solo && L.solo.count) || 6;
       var url = "/api/lesson-questions?subject="+encodeURIComponent(L.subject)+
@@ -587,9 +865,37 @@ function fatal(msg){
         // Last resort: the reviewed questions written into the lesson itself.
         if(!soloQs.length) soloQs = lessonOwnQuestions();
       });
-      stepHello();
+      done(true);
     })
-    .catch(function(){ fatal("We could not load this lesson. Try again in a moment."); });
+    .catch(function(){ fatal("We could not load this lesson. Try again in a moment."); done(false); });
+}
+
+(function boot(){
+  var q = params(), deep = lessonIdFromUrl();
+  // The lesson map first: the picker and the path both read it, and a deep link
+  // wants it too so Back can land on that lesson's path instead of leaving.
+  fetch("/lessons/index.json", { cache:"no-cache" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){ IDX = (j && j.paths) ? j : null; })
+    .catch(function(){ IDX = null; })
+    .then(function(){
+      if(deep){
+        var home = IDX ? findLessonPath(deep) : null;
+        FROM_PATH = !!home;
+        VIEW = { name:"lesson", subject:home ? home.subject : null, grade:home ? home.grade : null };
+        canBack(true);
+        loadLesson(deep, function(okay){ if(okay) stepHello(); });
+        return;
+      }
+      if(!IDX){
+        // No map: fall back to the one lesson we know ships, never a dead screen.
+        FROM_PATH = false; VIEW = { name:"lesson", subject:null, grade:null };
+        loadLesson(DEFAULT_LESSON, function(okay){ if(okay) stepHello(); });
+        return;
+      }
+      if(q.subject && pathFor(q.subject, normGrade(q.grade))) return showPath(q.subject, q.grade);
+      showSubjects();
+    });
 })();
 
 })();
