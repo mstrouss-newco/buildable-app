@@ -66,6 +66,74 @@ manifest landing a second after the page was undoing the dusk palette, and the
 drag hint sitting on top of the cards.
 
 **Not in this block** — FL6 and FL7 (transform quests) are untouched.
+## 2026-07-25: Session AR1 — Sunny Islands proof (shipped, waiting on Mike's look)
+
+Phase AR, block AR1 only. The plan behind this phase: Mike already owns the
+Kenney All-in-1 3D library (CC0, commercial use, no credit needed), so the flight
+worlds can be dressed with real art at zero art spend. AR1 is the proof — ONE
+world, real models, before and after pictures, and nothing else in the game
+allowed to move.
+
+**What shipped**
+
+- **Sunny Islands is built from real 3D models.** Sixteen Kenney models now dress
+  the first journey stop: palms and grass on the island crowns, rock formations
+  and sea stacks around the shorelines, reefs in the open water, and on the big
+  islands a landmark each — a watchtower, a wrecked ship on the sand, or a little
+  dock reaching out over the water. Ships and boats bob on the sea between the
+  islands, which is what actually turns a blue plane into a sea. Both landing
+  pads got a dock, a moored boat, a palm grove and a rock so a pad reads as
+  somewhere a plane would put down.
+- **Three kits, one folder each.** Pirate Kit (palms, rocks, dock, tower, grass,
+  two ships, a wreck), Nature Kit (three rock formations), Watercraft Pack
+  (sailboat, rowboat, speedboat) — 952KB in `public/models/skyflyer/`, served by
+  the `/models` route that already existed. Each kit keeps its OWN
+  `Textures/colormap.png`: the kits reuse that same relative filename for
+  different colour atlases, so one shared folder would have painted the boats in
+  pirate colours. Kenney's CC0 licence sits beside each kit.
+- **The art is a layer on top, never a replacement.** The hand-built shapes are
+  still drawn first and are only hidden once a real model has actually arrived.
+  No WebGL, no loader, a failed download, or a load that takes longer than eight
+  seconds all leave a kid with a whole world made of the old shapes. The headless
+  QA run proves this rather than assuming it: with no renderer at all the kit
+  refuses to start and all 55 islands are still there.
+- **Nothing else moved, and that is measured, not claimed.** Snowy Peaks and
+  Sunset Canyon are **pixel-identical** before and after (a same-file re-run
+  produces the same tiny wall-clock difference in the HUD, so the two worlds are
+  byte-for-byte the same picture). The autopilot ends a Sunny Islands flight on
+  the exact same coordinates, coins and landings it did before the change — the
+  dressing seed is derived from each island's own size and never drawn from the
+  world's random sequence, so not one island shifted by a metre.
+- **One draw call per model.** A Kenney model arrives as a dozen little meshes,
+  and on an iPad the killer is draw calls, not triangles. `mergeByMaterial()`
+  flattens every model to one mesh per material before it is ever cloned, and
+  `clone()` shares geometry — so a hundred palms cost a hundred draw calls and
+  one palm of memory. Measured at iPad size (1024x768 at 2x, software
+  rasteriser): **1463 draw calls / 170k triangles / 8.3ms a frame**, against
+  893 / 42k / 3.3ms for an undressed world. On a real iPad GPU both are
+  comfortable; the software number is the pessimistic one.
+- **The FL4 colour promise still holds.** A model that carries no texture borrows
+  the world's own `stone` colour, so changing a colour in the manifest still
+  repaints the rock with no code. Textured models keep their Kenney colours on
+  purpose: they are the real art.
+
+**QA:** `node qa-skyflyer.mjs .` — **125/125 PASS** (was 112). Thirteen new AR1
+checks cover the shipped files, the licences, the production route, the
+islands-only guard, the surviving fallback, the draw-call merge, the palette
+reach, the load timeout, and the no-renderer fallback proven live in the flight
+DOM. Screenshot QA ran under Playwright with swiftshader against a local server,
+since the sandbox cannot reach the live site.
+
+**Waiting on Mike:** the before/after pictures. AR1 is a look proposal — if the
+density, the palm size or the amount of pirate brown is wrong, it is a numbers
+change in `dressIsle`, not a rebuild.
+
+**Not done in this session (rest of phase AR):** AR2 dresses Snowy Peaks (Holiday
+Kit + snow nature) and Sunset Canyon (Nature rocks + Train Kit), then checks all
+three on a real iPad. AR3 adds Big City as journey stop four. Quaternius animated
+animals are still not downloaded.
+
+---
 
 ## 2026-07-25: Session LS4 — Reading launch + placement (shipped, waiting on Mike's switch)
 
