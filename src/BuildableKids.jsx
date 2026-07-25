@@ -84,6 +84,7 @@ const SCREEN_MAHJONG = "mahjong";
 const SCREEN_STRINGMATCH = "stringmatch";
 const SCREEN_BUBBLE = "bubble";
 const SCREEN_MATHCANNON = "mathcannon";
+const SCREEN_SKYFLYER = "skyflyer";   // Session FL2: Sky Flyer, the 3D one-finger flight cartridge
 const SCREEN_GAME_LANDING = "game_landing";   // Session 7F: shared landing as the front door for every keeper
 const SCREEN_GAME_LOADOUT = "game_loadout";   // Session 7F: shared "Make it mine" loadout for the landed game
 const SCREEN_TENNIS_LANDING = "tennis_landing"; // Session 7F: Tennis on the shared landing (mode row + court skins)
@@ -117,6 +118,7 @@ const GAME_SLUGS = {
   [SCREEN_MAHJONG]: "mahjong",
   [SCREEN_STRINGMATCH]: "stringmatch",
   [SCREEN_BUBBLE]: "bubble",
+  [SCREEN_SKYFLYER]: "skyflyer",
   [SCREEN_PLAY]: "generated",
 };
 const SCREEN_TOP = "top";
@@ -155,6 +157,7 @@ const LANDING_WRAP = {
   "rileys-garden": { play: SCREEN_RILEYS, journey: true, demo: "/rileys-garden.html?v=art2&screen=demo" },
   typing: { play: SCREEN_TYPING, journey: true, demo: "/typing.html?v=2&screen=demo" },
   mathcannon: { play: SCREEN_MATHCANNON, journey: true, demo: "/mathcannon-engine.html?v=2&screen=demo" },
+  skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=fl2&screen=demo" },
   platformer: { play: SCREEN_PLATFORMER },
   town: { play: SCREEN_TOWN },
   runner: { play: SCREEN_RUNNER },
@@ -203,6 +206,7 @@ const GAME_CATALOG = [
   { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!" },
   { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
   { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
+  { id: "skyflyer",    name: "Sky Flyer",         category: "Action",   color: "#2FB7D6", type: "game", imgId: "skyflyer",    handler: "onSkyFlyer",    desc: "Fly wherever you like, scoop up coins, land on the pads!", soon: true },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
   { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true },
   { id: "runner",      name: "Sunny Town Drive", category: "Arcade",   color: "#FF8FB1", type: "game", imgId: "runner",      handler: "onRunner",      desc: "Drive through town, dodge and grab treats!", soon: true },
@@ -1305,6 +1309,15 @@ function MathCannonScreen({ onHome, level }) { return <GameFrame title="Math Can
 function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Garden" src={"/rileys-garden.html?v=art2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#87CEEB" />; }
 function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
 function BubbleScreen({ onHome, level }) { return <GameFrame title="Bubble Buddies" src={"/bubble-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0e1830" />; }
+// Sky Flyer (FL2). The journey picks the world (?level=), the shell hangar picks the
+// plane (?ride= from the Make-it-mine loadout). The engine reads both on load, so a
+// refresh keeps the same world and the same ride.
+function SkyFlyerScreen({ onHome, level }) {
+  const eq = readEquipped("skyflyer");
+  const ride = typeof eq.Plane === "number" ? eq.Plane : 0;
+  const src = "/skyflyer-engine.html?v=fl2&ride=" + ride + (level != null ? "&level=" + level : "");
+  return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light />;
+}
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
 function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
 function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=2" onHome={onHome} bg="#0b1030" />; }
@@ -1875,6 +1888,7 @@ export default function BuildableKids() {
         onStringMatch={() => openLanding("stringmatch")}
         onTank={() => openLanding("tank")}
         onBubble={() => openLanding("bubble")}
+        onSkyFlyer={() => openLanding("skyflyer")}
         onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
         onLessons={() => setScreen(SCREEN_LESSONS)}
       />
@@ -2239,6 +2253,9 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_MATHCANNON) {
     return <MathCannonScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  if (screen === SCREEN_SKYFLYER) {
+    return <SkyFlyerScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_RILEYS) {
     return <RileysScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;

@@ -872,6 +872,21 @@
       }
     },
     {
+      "src": "/skyflyer/manifest.json",
+      "dest": "/skyflyer/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/skyflyer-engine.html",
+      "dest": "/skyflyer-engine.html"
+    },
+    {
+      "src": "/skyflyer",
+      "dest": "/skyflyer-engine.html"
+    },
+    {
       "src": "/skyflyer-mock.html",
       "dest": "/skyflyer-mock.html"
     },

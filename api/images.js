@@ -281,6 +281,7 @@ function build(q) {
       snakes: "A whimsical snakes-and-ladders board game viewed at a tilt, a winding numbered path climbing a colorful hill with friendly rope ladders going up and silly smiling cartoon snakes sliding down, cute colorful player tokens racing to a golden star at the top",
 
       tank: "Two friendly cartoon tanks on top of separate grassy green mountains under a bright sunny blue sky with fluffy clouds, a cheerful green tank on the left hill lobbing a glowing cannon shell in a high arc across a valley toward a grey tank on the right hill, a dotted aiming arc, small puffs of smoke, colorful and playful storybook style, not scary",
+      skyflyer: "A cheerful little red propeller plane with a smiling kid pilot flying low over a sunny cartoon sea dotted with green palm islands, a curving trail of big shiny gold coins arcing through the sky ahead of it, fluffy white clouds and a bright sun, a small white landing pad with an orange ring on one island below, bright storybook colors, joyful sense of soaring flight",
       sling: "Cute round cartoon animals — a happy blue bird, a chubby brown bear and a little yellow chick — launching joyfully out of a big wooden slingshot and soaring through the air toward a wobbly tower of stacked wooden and stone blocks topped with goofy smiling castle creatures, blocks tumbling and toppling over with bursts of sparkles and a puff of POOF smoke, sunny grassy castle field with blue sky, strong sense of launch and motion",
     };
     const subject = GAMES[id];
