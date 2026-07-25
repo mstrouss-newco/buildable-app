@@ -1,0 +1,6 @@
+{
+ "note": "Kits added to the app. Each entry has a kit.json in the folder of the same name. Generated-catalog state lives in /kenney/kenney-kits.json.",
+ "kits": [
+  "2d-assets__tower-defense"
+ ]
+}

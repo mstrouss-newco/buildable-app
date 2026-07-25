@@ -1,0 +1,357 @@
+{
+ "slug": "2d-assets__tower-defense",
+ "name": "Tower Defense",
+ "shortName": "tower-defense",
+ "source": "Kenney Game Assets All-in-1 3.5.0",
+ "license": "CC0",
+ "licenseNote": "CC0 1.0 Universal \u2014 commercial use allowed, no credit required. Full text in LICENSE.txt.",
+ "dim": "2d",
+ "theme": "castle",
+ "added": "2026-07-25",
+ "addedBy": "Session KP1",
+ "note": "Curated slice of the 303-piece Kenney Tower Defense pack: the towers, props and decor a castle game can use. The 260-odd ground/path tiles are deliberately left out of the app - they are map tiles, not library pieces.",
+ "pieces": [
+  {
+   "file": "tree-bushy.png",
+   "name": "Bushy tree",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 131,
+   "w": 128,
+   "h": 128
+  },
+  {
+   "file": "tree-round.png",
+   "name": "Round tree",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 134,
+   "w": 128,
+   "h": 128
+  },
+  {
+   "file": "bush-small.png",
+   "name": "Small bush",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 132,
+   "w": 62,
+   "h": 62
+  },
+  {
+   "file": "plant-sprout.png",
+   "name": "Sprout",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 133,
+   "w": 90,
+   "h": 78
+  },
+  {
+   "file": "plant-spiky.png",
+   "name": "Spiky plant",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 135,
+   "w": 122,
+   "h": 122
+  },
+  {
+   "file": "rock-small.png",
+   "name": "Small rock",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 136,
+   "w": 70,
+   "h": 68
+  },
+  {
+   "file": "rock.png",
+   "name": "Rock",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 137,
+   "w": 110,
+   "h": 96
+  },
+  {
+   "file": "rock-flat.png",
+   "name": "Flat rock",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 138,
+   "w": 82,
+   "h": 82
+  },
+  {
+   "file": "crystal-blue.png",
+   "name": "Blue crystal",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 181,
+   "w": 104,
+   "h": 104
+  },
+  {
+   "file": "crystal-round.png",
+   "name": "Round crystal",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 182,
+   "w": 104,
+   "h": 104
+  },
+  {
+   "file": "crystal-square.png",
+   "name": "Square crystal",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 183,
+   "w": 104,
+   "h": 104
+  },
+  {
+   "file": "gem.png",
+   "name": "Gem",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 184,
+   "w": 104,
+   "h": 104
+  },
+  {
+   "file": "cannon-single.png",
+   "name": "Single cannon",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 204,
+   "w": 76,
+   "h": 92
+  },
+  {
+   "file": "cannon-double.png",
+   "name": "Double cannon",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 205,
+   "w": 76,
+   "h": 106
+  },
+  {
+   "file": "rocket-rack.png",
+   "name": "Rocket rack",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 206,
+   "w": 92,
+   "h": 80
+  },
+  {
+   "file": "rocket-launcher.png",
+   "name": "Rocket launcher",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 207,
+   "w": 72,
+   "h": 90
+  },
+  {
+   "file": "turret-base-1.png",
+   "name": "Turret base 1",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 227,
+   "w": 76,
+   "h": 92
+  },
+  {
+   "file": "turret-base-2.png",
+   "name": "Turret base 2",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 228,
+   "w": 76,
+   "h": 82
+  },
+  {
+   "file": "turret-base-3.png",
+   "name": "Turret base 3",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 229,
+   "w": 92,
+   "h": 72
+  },
+  {
+   "file": "turret-base-4.png",
+   "name": "Turret base 4",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 230,
+   "w": 72,
+   "h": 72
+  },
+  {
+   "file": "tower-green.png",
+   "name": "Green tower",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 250,
+   "w": 84,
+   "h": 110
+  },
+  {
+   "file": "tower-red.png",
+   "name": "Red tower",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 251,
+   "w": 88,
+   "h": 114
+  },
+  {
+   "file": "rocket-small.png",
+   "name": "Small rocket",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 252,
+   "w": 26,
+   "h": 69
+  },
+  {
+   "file": "rocket.png",
+   "name": "Rocket",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 253,
+   "w": 38,
+   "h": 80
+  },
+  {
+   "file": "crate-green.png",
+   "name": "Green crate",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 269,
+   "w": 105,
+   "h": 76
+  },
+  {
+   "file": "crate-sand.png",
+   "name": "Sand crate",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 270,
+   "w": 108,
+   "h": 72
+  },
+  {
+   "file": "coin-gold.png",
+   "name": "Gold coin",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 273,
+   "w": 32,
+   "h": 32
+  },
+  {
+   "file": "coin-gold-small.png",
+   "name": "Small gold coin",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 274,
+   "w": 32,
+   "h": 32
+  },
+  {
+   "file": "coin-bronze.png",
+   "name": "Bronze coin",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 275,
+   "w": 32,
+   "h": 32
+  },
+  {
+   "file": "coin-silver.png",
+   "name": "Silver coin",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 276,
+   "w": 32,
+   "h": 32
+  },
+  {
+   "file": "flame-small.png",
+   "name": "Small flame",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 296,
+   "w": 34,
+   "h": 56
+  },
+  {
+   "file": "flame.png",
+   "name": "Flame",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 297,
+   "w": 47,
+   "h": 68
+  },
+  {
+   "file": "flame-tall.png",
+   "name": "Tall flame",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 298,
+   "w": 24,
+   "h": 74
+  },
+  {
+   "file": "flame-big.png",
+   "name": "Big flame",
+   "kind": "element",
+   "theme": "castle",
+   "tile": 299,
+   "w": 43,
+   "h": 62
+  },
+  {
+   "file": "guard-green.png",
+   "name": "Green guard",
+   "kind": "character",
+   "theme": "castle",
+   "tile": 246,
+   "w": 49,
+   "h": 56
+  },
+  {
+   "file": "guard-blue.png",
+   "name": "Blue guard",
+   "kind": "character",
+   "theme": "castle",
+   "tile": 247,
+   "w": 49,
+   "h": 56
+  },
+  {
+   "file": "guard-orange.png",
+   "name": "Orange guard",
+   "kind": "character",
+   "theme": "castle",
+   "tile": 248,
+   "w": 49,
+   "h": 56
+  },
+  {
+   "file": "guard-grey.png",
+   "name": "Grey guard",
+   "kind": "character",
+   "theme": "castle",
+   "tile": 249,
+   "w": 49,
+   "h": 56
+  }
+ ]
+}
