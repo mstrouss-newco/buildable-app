@@ -578,11 +578,21 @@ function mKeep(){
   var theme=slugify(document.getElementById("mtheme").value||"custom");
   var spec=MODAL.spec, pieces=MODAL.pieces;
   document.getElementById("mstat").textContent="Saving…"; document.getElementById("mkeep").disabled=true;
-  var keepBody={ action:"keep", game:state.game, type:spec.key, theme:theme, pieces:pieces.map(function(p){ return {slug:p.name, b64:p.dataURL}; }) };
-  fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(keepBody)})
-    .then(function(r){ return r.json(); })
+  var pcs=pieces.map(function(p){ return {slug:p.name, b64:p.dataURL}; });
+  // AP3: save ONE piece per request. One POST carrying every full-size piece
+  // can pass the server's request-size cap (HTTP 413) and then nothing saves.
+  var savedCount=0, pi=0;
+  function saveNext(){
+    if(pi>=pcs.length) return Promise.resolve({count:savedCount});
+    document.getElementById("mstat").textContent="Saving "+(pi+1)+" of "+pcs.length+"…";
+    return fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"keep", game:state.game, type:spec.key, theme:theme, pieces:[pcs[pi]]})})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(!j||!j.count) throw new Error((j&&j.error)||"save failed"); savedCount+=j.count; pi++; return saveNext(); });
+  }
+  saveNext()
     .then(function(j){
-      if(!j || !j.count){ throw new Error((j&&j.error)||"save failed"); }
+      if(!j || !j.count){ throw new Error("save failed"); }
       if(MODAL.mode==="world"){ if(MODAL.lv){ MODAL.lv.parts=MODAL.lv.parts||{}; MODAL.lv.parts.world=theme; } return "world"; }
       // For a sheet an engine runtime-slices, also keep one clean recomposed grid sheet
       // and point the slot at it. For a single, point at the one saved piece.
