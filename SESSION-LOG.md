@@ -1,6 +1,48 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-25: Session FL1 — Sky Flyer playable 3D mock (shipped, awaiting Mike's feel check)
+
+Phase FL, block FL1 only. New `public/skyflyer-mock.html`: a standalone playable 3D
+feel mock for the Sky Flyer endless flight game, on purpose NOT wired into the shell
+(no manifest, no tile, no shared wallet yet — that is FL2). Reachable only by its
+direct address, so no kid can stumble into it.
+
+**What shipped**
+
+- One endless world, Sunny Islands: tropical sea with gentle moving waves, low-poly
+  sand-and-grass islands with palm trees (built endlessly around the plane as it
+  flies, in every direction), drifting clouds, sun, distance haze. All shapes are
+  built in code from the repo's own `three.min.js` — no downloaded art, no emojis.
+- A cute low-poly red plane with cream wings, spinning propeller, canopy and wheels.
+- One-finger drag steering: the plane always flies itself forward; dragging left or
+  right turns and banks it, dragging up or down climbs and dives. Works with mouse
+  too. Letting go levels the plane out. No lose state anywhere: water and islands
+  give a soft bounce with a splash or poof, never a crash.
+- Coin trails: golden spinning coins in arcs through the open air plus crown rings
+  over the taller islands; a generous kid-sized collect radius, sparkle burst on
+  pickup, coin counter pill top-right (drawn SVG coin, no emoji).
+- One landing pad on its own island: an orange beacon pillar visible from far away,
+  plus a screen-edge arrow with the distance when it is off screen. Fly low over the
+  pad and the plane lands itself, coins bank ("+N coins banked!" with a burst, a
+  Banked counter appears), then a big TAKE OFF button rolls you down the pad and
+  back into the sky.
+- Coins and banked totals are mock-local only — the real shared wallet, sounds,
+  goals, and the QA autopilot flag are FL2 by design. `window.SKY` exposes the
+  flight state so the future QA robot has a handle.
+
+**Verified** headless (Playwright + the sandbox Chromium): page loads with zero
+console errors; drag turns and climbs work; coins collect; a scripted flight reached
+the pad, landed, banked 3 coins, showed TAKE OFF, and took off again. No QA script
+exists for this mock yet (the real harness comes with FL2's autopilot flag) — saying
+so plainly per the QA honesty rule.
+
+**Remaining in phase FL**: FL2 cartridge wiring (manifest, shell nav, shared wallet,
+goals per world, autopilot + QA harness), FL3 hangar (pick your ride) and the other
+two worlds (Snowy Peaks, Sunset Canyon), FL4 polish/sound/art slots. Next step is
+Mike flying the mock and judging the feel before anything else is built.
+
+
 ## 2026-07-25: Session LS2 — The path: tile, subject picker, unit path map (shipped)
 
 Phase LS, block LS2 only, built to the mock Mike approved on 2026-07-23. The Lessons

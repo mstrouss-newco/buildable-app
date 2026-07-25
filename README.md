@@ -6,6 +6,17 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session FL1 — Sky Flyer playable 3D flight mock (July 25 2026)
+New standalone `public/skyflyer-mock.html` (direct address only, not on any picker):
+a playable 3D feel mock for the planned Sky Flyer endless flight game. One endless
+Sunny Islands world built in code from the repo's `three.min.js`, cute low-poly plane,
+one-finger drag steering with auto-forward, coin trails with sparkle pickup, and one
+landing pad island (beacon + edge arrow to find it; land to bank coins, TAKE OFF
+button to leave). Soft bounces only, no lose state, no emojis. Deliberately no shell/
+manifest/wallet wiring — that is FL2, after Mike approves the feel. Verified headless:
+loads clean, steering works, coins collect, scripted flight landed, banked and took
+off. No QA harness yet (comes with FL2's autopilot flag).
+
 ## Session LS2 — The path: Lessons tile, subject picker, unit path map (July 25 2026)
 Phase LS block LS2 only, built to the approved mock (`lessons-mock.html`). The Lessons
 section is now three screens in ONE page: pick a subject, climb the path, play the lesson.
