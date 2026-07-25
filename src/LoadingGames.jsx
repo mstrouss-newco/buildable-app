@@ -5,15 +5,15 @@
 // (numbers / memory / pattern) that auto-dismiss when the real render finishes.
 //
 // When Learning Mode is ON (store.getLearningSettings().enabled), the slot
-// shows ONE real question from /api/generate-quiz instead of the mini-games.
-// The question is adaptive: level rises on a correct answer and falls on a
-// wrong one. It still auto-dismisses when the real render completes.
+// shows a QuickGame round instead (Session QZ1: a short GAME, not a
+// multiple-choice question — and no /api/generate-quiz call, so a wait costs
+// nothing). Rounds repeat until the real render completes and dismisses it.
 //
 // No emojis anywhere — shapes/marks are inline SVG or CSS.
 import { useState, useEffect, useRef } from 'react';
 import "./loading-games.css";
-import { getLearningSettings, recordAnswer, getReviewItem, recordMiss, clearMiss, weakestSubject } from "./store";
-import { questionText } from "./QuizGate";
+import { getLearningSettings } from "./store";
+import QuickGame from "./QuickGame";
 
 // ---- small inline marks (no emojis) ----
 function CheckMark({ size = 60 }) {
@@ -26,22 +26,6 @@ function CheckMark({ size = 60 }) {
   );
 }
 
-function typeToSubject(t) {
-  if (t === "geometry") return "geometry";
-  if (t === "spelling") return "spelling";
-  if (t === "reading") return "reading";
-  return "math";
-}
-
-function subjectToQuizType(s){ if(s==="geometry")return "geometry"; if(s==="spelling")return "spelling"; if(s==="reading")return "reading"; return "math"; }
-function goalToQuizType(goal) {
-  if (goal === "reading") return Math.random() < 0.5 ? "reading" : "spelling";
-  if (goal === "mix") {
-    const opts = ["math", "geometry", "spelling", "reading"];
-    return opts[Math.floor(Math.random() * opts.length)];
-  }
-  return Math.random() < 0.25 ? "geometry" : "math";
-}
 
 export default function LoadingGames({ isLoading, onComplete, operationType = 'character', age, gameData }) {
   const [gameType, setGameType] = useState('numbers');
@@ -154,95 +138,23 @@ export default function LoadingGames({ isLoading, onComplete, operationType = 'c
 }
 
 // ============================================================================
-// LEARNING MODE: one real adaptive question (no emojis)
+// LEARNING MODE: one short game while the render finishes (Session QZ1)
 // ============================================================================
+// Was: a generated multiple-choice question per wait, one /api/generate-quiz
+// call each time. Now: a QuickGame round (spell it / make the number / what
+// comes next), inline and repeating, built from hand-written banks so a wait
+// never costs an API call and never blocks on the network.
 function LearningQuestion({ age, goal, operationType }) {
-  const [q, setQ] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [picked, setPicked] = useState(null);
-  const levelRef = useRef(1);
-  const alive = useRef(true);
-
-  async function load() {
-    setLoading(true);
-    setPicked(null);
-    const review = Math.random() < 0.4 ? getReviewItem() : null;
-    if (review) { setQ(review); setLoading(false); return; }
-    const weak = weakestSubject();
-    const quizType = (weak && Math.random() < 0.5) ? subjectToQuizType(weak) : goalToQuizType(goal);
-    try {
-      const r = await fetch("/api/generate-quiz", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ age, level: levelRef.current, gameType: operationType || "creation", quizType }),
-      });
-      const data = await r.json();
-      if (!alive.current) return;
-      if (data && Array.isArray(data.choices) && typeof data.correctIndex === "number") setQ(data);
-      else setQ(null);
-    } catch {
-      if (alive.current) setQ(null);
-    } finally {
-      if (alive.current) setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    alive.current = true;
-    load();
-    return () => { alive.current = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function choose(i) {
-    if (!q || picked === q.correctIndex) return;
-    setPicked(i);
-    const subject = typeToSubject(q.type);
-    if (i === q.correctIndex) {
-      levelRef.current = Math.min(10, levelRef.current + 1);
-      recordAnswer({ subject, correct: true }); // no-op unless Learning Mode on
-      clearMiss(q);
-      setTimeout(() => { if (alive.current) load(); }, 900); // next question while still waiting
-    } else {
-      levelRef.current = Math.max(1, levelRef.current - 1);
-      recordAnswer({ subject, correct: false }); // no-op unless Learning Mode on
-      recordMiss(q);
-      setTimeout(() => { if (alive.current) setPicked(null); }, 900); // let them retry
-    }
-  }
-
   return (
     <div className="game-content">
-      <h3>Quick question</h3>
-      {loading || !q ? (
-        <p className="game-instruction">Getting a question ready…</p>
-      ) : (
-        <>
-          <p className="game-instruction" style={{ fontSize: 17, color: "#fff", fontWeight: 700 }}>
-            {questionText(q)}
-          </p>
-          <div className="numbers-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 360 }}>
-            {q.choices.map((c, i) => {
-              const isCorrect = picked != null && i === q.correctIndex;
-              const isWrong = picked === i && i !== q.correctIndex;
-              return (
-                <button
-                  key={i}
-                  onClick={() => choose(i)}
-                  disabled={picked === q.correctIndex}
-                  className={`number-button ${isCorrect ? 'next' : ''} ${isWrong ? 'done' : ''}`}
-                  style={{ aspectRatio: "auto", padding: "14px 10px", fontSize: 18 }}
-                >
-                  {String(c)}
-                </button>
-              );
-            })}
-          </div>
-          {picked != null && picked !== q.correctIndex && (
-            <p className="game-instruction">Not quite — try again!</p>
-          )}
-        </>
-      )}
+      <QuickGame
+        age={age}
+        goal={goal}
+        gameType={operationType || "loading"}
+        title="While you wait"
+        inline
+        repeat
+      />
     </div>
   );
 }

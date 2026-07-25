@@ -2,7 +2,7 @@
 //  Story Dice, name-on-hero popover, More-choices drawer, cream/light theme)
 import { useState, useEffect, useRef } from "react";
 import StoryReader from "./StoryReader";
-import QuizGate from "./QuizGate";
+import QuickGame from "./QuickGame";
 import { getLearningSettings, gradeToAge } from "./store";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -399,10 +399,10 @@ export default function StoryMaker({ onBack, onHome, playerName, remix = null, o
   if (gateNext) {
     const proceed = gateNext;
     return (
-      <QuizGate
+      <QuickGame
         goal={getLearningSettings().goal}
         gameType="story"
-        title="One quick question first!"
+        title="One quick game first!"
         onPass={() => { setGateNext(null); proceed(); }}
       />
     );

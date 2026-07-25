@@ -4944,3 +4944,29 @@ green at the final commit. Warnings are the expected missing-photo WARNs across 
 packs (TB1 + TB3 + TB4 prompt files), run `db/create-saved-pages.sql` in Supabase so
 dog-ears sync across devices, fact-check each book, then flip `approved` in BOTH the
 book's JSON and its `EXHIBIT_CATALOG` line.
+
+## Quizzes: games and tools only (Session QZ1, 2026-07-25)
+
+**Rule: never interrupt reading with a quiz.** Kidspedia topic books and exhibits have no
+quiz button and no quiz gate. Reading is already learning; a popup on top of it teaches
+nothing. `qa-topic.mjs`, `qa-dive.mjs` and `qa-explore.mjs` fail the build if a "Quick quiz"
+button reappears in `topic.html`, `dive.html`, `weather.html` or `orbit-explorer.html`.
+
+**Everywhere else, it's a short game, not a question.** `src/QuickGame.jsx` (drawing) plus
+`src/quickgame-content.js` (banks and deals) replaced `QuizGate`, which is deleted. Three
+games rotate by goal and age:
+
+| game | what a kid does | ledger subject |
+|---|---|---|
+| Spell it | drawn picture, word with blanks, tap letters in order | spelling |
+| Make the number | tap two cards that add to the target | math |
+| What comes next | continue a repeating shape pattern (no reading needed) | geometry |
+
+Everything is hand-written or plain arithmetic — **no `/api/generate-quiz` call per round**,
+so a gate costs nothing and never blocks on the network. Wrong taps only wiggle; there is
+always a "Skip for now". `recordAnswer`, `/api/log-learning-event`, badges and the practice
+coin top-up all still fire, so the parent skills dashboard is unchanged.
+
+Props are drop-in compatible with the old gate (`age`, `goal`, `onPass`, `gameType`, `title`)
+plus `inline` / `repeat` for loading screens and `kind` to force one game in QA.
+Run `node qa-quickgame.mjs` — it deals 4000 rounds of each game and proves they are winnable.

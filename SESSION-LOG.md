@@ -5687,3 +5687,40 @@ gaps only when they match an even grid, else divide evenly. Fixes the mahjong-st
 fallback. Documented the standard in ASSET-STUDIO.md and added an AGENTS.md rule so agents use
 per-piece Generate + BuildableSlicer and don't hand-roll slicers. Verified 45/45 on the real
 mahjong sheet.
+
+## 2026-07-25 — QZ1: no quizzes while reading, and the quiz popup became a game
+Mike hit a "Quick quiz" popup while reading a Kidspedia book as a signed-in parent and it
+asked "A color like the sky. Which letter completes B_U_?" under the title of the book he was
+reading. Two separate bugs behind one screenshot.
+
+**Why it fired for everyone.** `ExploreScreen` was the only `QuizGate` call site with no gate
+at all — every other one checks `getLearningSettings()/effectiveLearning()` first. There is no
+parent-vs-kid mode anywhere in `src/`, so "logged in as dad" changed nothing.
+
+**Why the question was unrelated.** The exhibit posts `quizRequest` carrying `quiz: [ids]`,
+`topic` and `skills`. The shell kept only `itemName` and threw the rest away, then asked
+`/api/generate-quiz` for a `goal:"reading"` question — which coin-flips to `"spelling"` and
+returns a generic fill-a-letter puzzle from Claude Haiku. Every popup was an AI call.
+
+**Removed from reading.** The "Quick quiz" button is gone from `public/topic.html`,
+`dive.html`, `weather.html` and `orbit-explorer.html`. `ExploreScreen` mounts no gate; it
+answers a stale `quizRequest` with `resume` + `bk:quizDone` so a cached book can't freeze.
+`qa-topic` / `qa-dive` / `qa-explore` now FAIL if a quiz button reappears.
+
+**Replaced everywhere else.** New `src/QuickGame.jsx` + `src/quickgame-content.js` replace
+`QuizGate` (deleted) at all seven call sites: Breaker unlock, Sky Flyer unlock, coin top-up,
+typing entry, creator, music maker, story maker, plus the `LoadingGames` render-wait slot.
+Three short games instead of a multiple-choice question — Spell it (drawn picture, tap letters
+in order), Make the number (tap two cards that add to the target), What comes next (shape
+pattern, needs no reading). All from hand-written banks and plain arithmetic, so **a round
+costs nothing and never waits on the network**. No emojis: every picture is drawn SVG. All the
+old side effects survive — `recordAnswer`, `/api/log-learning-event`, badges and the practice
+coin top-up, so the parent skills dashboard is unchanged.
+
+Content is a separate plain-JS module purely so `qa-quickgame.mjs` can import it and deal
+4000 rounds of each game headlessly, proving every one is winnable: the letter tray always
+holds the letters the word asks for, every number deal has a pair that hits the target, every
+pattern answer really continues the repeat. It also asserts the first letter of a word is
+never blanked (that initial sound is a beginning reader's best handle) and that pattern pieces
+differ in both shape and colour. 8/8 checks pass; qa-topic, qa-dive, qa-explore and
+qa-question-bank stay green.

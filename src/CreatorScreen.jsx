@@ -1,6 +1,6 @@
 // /src/CreatorScreen.jsx
 import { useState, useEffect } from "react";
-import QuizGate from "./QuizGate";
+import QuickGame from "./QuickGame";
 import { getLearningSettings } from "./store";
 
 const GRAD = "linear-gradient(135deg, #9b7edd 0%, #c06b99 50%, #d65a7b 100%)";
@@ -229,10 +229,10 @@ export function LevelCreatorScreen({ onLevelCreated, characterData, initialTheme
 
   if (levelGate) {
     return (
-      <QuizGate
+      <QuickGame
         goal={getLearningSettings().goal}
         gameType="level"
-        title="One quick question before you play!"
+        title="One quick game before you play!"
         onPass={() => { setLevelGate(false); doContinue(); }}
       />
     );

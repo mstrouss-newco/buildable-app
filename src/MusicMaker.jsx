@@ -32,7 +32,7 @@ import { shareCreation } from "./lib/shareSheet";
 import CoverThumb from "./lib/CoverThumb";
 import IconImg, { preloadIcon } from "./lib/IconImg";
 import SongPlayer from "./lib/SongPlayer";
-import QuizGate from "./QuizGate";
+import QuickGame from "./QuickGame";
 import { getLearningSettings, effectiveLearning } from "./store";
 import { registerAudio } from './lib/audioUnlock.js';
 
@@ -514,7 +514,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   function startRender() {
     // Session 6C: render learning-moment reads THIS studio's manifest defaults
     // blended with the parent's per-kid overrides (effectiveLearning). Still fully
-    // skippable via QuizGate; never traps a kid.
+    // skippable via QuickGame; never traps a kid.
     const eff = effectiveLearning(mfLearn);
     if (eff.enabled && eff.beforeUnlock) { setJustFinished(false); setGateNext(() => doRender); return; }
     doRender();
@@ -650,10 +650,10 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   if (gateNext) {
     const proceed = gateNext;
     return (
-      <QuizGate
+      <QuickGame
         goal={effectiveLearning(mfLearn).goal}
         gameType="song"
-        title="One quick question first!"
+        title="One quick game first!"
         onPass={() => { setGateNext(null); proceed(); }}
       />
     );

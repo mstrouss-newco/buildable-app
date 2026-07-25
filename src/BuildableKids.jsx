@@ -11,7 +11,7 @@ import GrownUpScreen from "./GrownUpScreen";
 import StoryMaker from "./StoryMaker";
 import TopBoard from "./TopBoard.jsx";
 import LoadingGames from "./LoadingGames";
-import QuizGate from "./QuizGate";
+import QuickGame from "./QuickGame";
 import FamilyChess from "./FamilyChess";
 import GameLobby from "./GameLobby";
 import GrownUpFriends from "./GrownUpFriends";
@@ -530,7 +530,7 @@ function BreakerScreen({ onHome, entry = "journey" }) {
   const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
   const overlay = quiz ? (
     <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <QuizGate goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="breaker" title="Quick question to unlock the next level!" onPass={finish} />
+      <QuickGame goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="breaker" title="Quick game to unlock the next level!" onPass={finish} />
     </div>
   ) : null;
   // hand the kid's equipped loadout (Session 3C) to the engine as tiny params so
@@ -944,7 +944,7 @@ function TopUpGate({ onClose }) {
             <button onClick={() => { startBal.current = walletBalance(); setEarned(0); setRound((r) => r + 1); }} style={{ marginTop: 12, background: "#FFD24A", color: "#5a3d00", border: "none", borderRadius: 14, padding: "10px 20px", fontWeight: 900, cursor: "pointer" }}>Keep practicing</button>
           </div>
         ) : (
-          <QuizGate key={round} goal={getLearningSettings().goal} gameType="topup" title="Answer 3 to earn 10 coins!" onPass={() => setRound((r) => r + 1)} />
+          <QuickGame key={round} goal={getLearningSettings().goal} gameType="topup" title="Win 3 to earn 10 coins!" onPass={() => setRound((r) => r + 1)} />
         )}
       </div>
     </div>
@@ -1438,7 +1438,7 @@ function SkyFlyerScreen({ onHome, level }) {
   const finish = () => { if (quiz && quiz.reply) { quiz.reply({ type: "resume" }); quiz.reply({ type: "bk:quizDone" }); } setQuiz(null); };
   const overlay = quiz ? (
     <div style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(12,12,30,0.94)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <QuizGate goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="skyflyer" title="Quick question to unlock the next world!" onPass={finish} />
+      <QuickGame goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="skyflyer" title="Quick game to unlock the next world!" onPass={finish} />
     </div>
   ) : null;
   return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light
@@ -3515,10 +3515,10 @@ function TypingScreen({ onHome, level }) {
   const [gate, setGate] = useState(() => getLearningSettings().enabled);
   if (gate) {
     return (
-      <QuizGate
+      <QuickGame
         goal={getLearningSettings().goal}
         gameType="typing"
-        title="One quick question first!"
+        title="One quick game first!"
         onPass={() => setGate(false)}
       />
     );
