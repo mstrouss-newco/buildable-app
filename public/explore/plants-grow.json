@@ -1,0 +1,120 @@
+{
+  "id": "plants-grow",
+  "title": "How Plants Grow",
+  "template": "topic-book",
+  "topic": "nature",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["nature-facts", "reading"],
+  "heroArt": "/explore/topic-photos/plants-grow/plants-grow-cover.webp",
+  "shelfColor": "#5B9E3E",
+  "ambient": "forest",
+  "assetVersion": 1,
+  "sources": [
+    "Penn State Extension (extension.psu.edu)",
+    "Japan Aerospace Exploration Agency (jaxa.jp)",
+    "Encyclopaedia Britannica (britannica.com)",
+    "Smithsonian Environmental Research Center (serc.si.edu)",
+    "Colorado State University Extension (extension.colostate.edu)",
+    "University of California, Berkeley (berkeley.edu)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/plants-grow/plants-grow-cover.webp",
+    "artAlt": "A bright green seedling sprouting from dark soil in morning sunlight, with tiny dew drops on its first leaves",
+    "blurb": "A tiny green sprout is pushing up through the soil, still sparkling with drops of morning dew. Turn the page to discover how one little seed becomes a towering plant."
+  },
+  "pages": [
+    {
+      "id": "seed",
+      "title": "A Seed Wakes Up",
+      "art": "/explore/topic-photos/plants-grow/plants-grow-1.webp",
+      "artAlt": "A close-up of a seed splitting open with a tiny white root poking into dark soil",
+      "factAudio": "plants-grow-seed",
+      "quiz": ["plants-grow-seed"],
+      "facts": [
+        {
+          "text": "Before a seed can grow, it needs a big drink of water. As the seed soaks the water up, its coat swells and softens until it splits open and wakes up. Scientists call this first long drink imbibition.",
+          "source": "Penn State Extension (extension.psu.edu)"
+        },
+        {
+          "text": "The very first part of a plant to push out of a seed is a tiny root. It reaches down into the soil to hold the seed in place and start drinking up water. Gardeners call this little first root the radicle.",
+          "source": "Penn State Extension (extension.psu.edu)"
+        },
+        {
+          "text": "That first root always seems to know which way is down. Special cells in its tip can sense gravity, so the root grows downward into the soil while the shoot heads up toward the light. This clever sense of direction is called gravitropism.",
+          "source": "Japan Aerospace Exploration Agency (jaxa.jp)"
+        }
+      ]
+    },
+    {
+      "id": "seedling",
+      "title": "Reaching for the Sun",
+      "art": "/explore/topic-photos/plants-grow/plants-grow-2.webp",
+      "artAlt": "A young seedling with two little leaves growing in a sunny garden bed",
+      "factAudio": "plants-grow-seedling",
+      "quiz": ["plants-grow-seedling"],
+      "facts": [
+        {
+          "text": "The first two little leaves on a seedling are not quite like the leaves that come later. They are called seed leaves, or cotyledons, and they were tucked inside the seed the whole time. They carry a packed lunch of food and can turn green to help feed the young plant.",
+          "source": "Encyclopaedia Britannica (britannica.com)"
+        },
+        {
+          "text": "Once the leaves open in the sunshine, they get to work like tiny food factories. They catch sunlight and mix it with water and gas from the air to make a sugar the plant can eat. As they do this they give off oxygen, which is part of the air we breathe.",
+          "source": "Smithsonian Environmental Research Center (serc.si.edu)"
+        },
+        {
+          "text": "Have you noticed how a seedling on a windowsill leans toward the glass? Young plants can bend and grow toward the light so their leaves catch as much sunshine as possible. This gentle stretch toward the sun is called phototropism.",
+          "source": "Encyclopaedia Britannica (britannica.com)"
+        }
+      ]
+    },
+    {
+      "id": "roots",
+      "title": "Busy Roots Underground",
+      "art": "/explore/topic-photos/plants-grow/plants-grow-3.webp",
+      "artAlt": "A close-up of delicate white roots spreading through dark soil inside a glass container",
+      "factAudio": "plants-grow-roots",
+      "quiz": ["plants-grow-roots"],
+      "facts": [
+        {
+          "text": "If you look very closely at a root, you might spot fuzzy little threads called root hairs. These tiny, hair-like parts are the main place where a plant drinks up water and takes in the minerals it needs from the soil.",
+          "source": "Colorado State University Extension (extension.colostate.edu)"
+        },
+        {
+          "text": "Roots do much more than drink. They spread out through the soil to anchor the plant and support it, holding it steady so wind and rain cannot easily knock it over.",
+          "source": "Colorado State University Extension (extension.colostate.edu)"
+        },
+        {
+          "text": "Those pale little root hairs are very delicate and can be damaged easily. That is why a plant may droop for a while after it is moved, because some of its tiny root hairs get broken as it settles into a new home.",
+          "source": "Colorado State University Extension (extension.colostate.edu)"
+        }
+      ]
+    },
+    {
+      "id": "flowers",
+      "title": "Sunflowers and the Sun",
+      "art": "/explore/topic-photos/plants-grow/plants-grow-4.webp",
+      "artAlt": "A wide field of tall sunflowers in full bloom all facing the same direction",
+      "factAudio": "plants-grow-flowers",
+      "quiz": ["plants-grow-flowers"],
+      "facts": [
+        {
+          "text": "While a sunflower is still young and growing, it follows the sun across the sky each day. The east side of its stem grows a little more in the daytime to swing the flower to face west by evening, then it slowly turns back again overnight.",
+          "source": "University of California, Berkeley (berkeley.edu)"
+        },
+        {
+          "text": "Here is a surprise. Once a sunflower is fully grown and blooming, it stops following the sun and settles down facing east. So a whole field of open sunflowers greets the sunrise together every morning.",
+          "source": "University of California, Berkeley (berkeley.edu)"
+        },
+        {
+          "text": "Facing east turns out to be a clever trick. The morning sun warms these blooms up quickly, and warm flowers are inviting to bees. Sunflowers that face east attract about five times as many pollinating insects as ones facing the other way.",
+          "source": "University of California, Berkeley (berkeley.edu)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished How Plants Grow!",
+    "blurb": "Which part of a growing plant is your favourite? Fold down the corner of that page so you can find it again whenever you like."
+  }
+}

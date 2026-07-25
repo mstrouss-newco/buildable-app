@@ -1,0 +1,118 @@
+{
+  "id": "rainforest",
+  "title": "The Rainforest",
+  "template": "topic-book",
+  "topic": "nature",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["nature-facts", "reading"],
+  "heroArt": "/explore/topic-photos/rainforest/rainforest-cover.webp",
+  "shelfColor": "#2E7D4F",
+  "ambient": "jungle",
+  "assetVersion": 1,
+  "sources": [
+    "San Diego Zoo Wildlife Explorers (sdzwildlifeexplorers.org)",
+    "National Geographic Society (education.nationalgeographic.org)",
+    "USDA Forest Service (fs.usda.gov)",
+    "Smithsonian's National Zoo and Conservation Biology Institute (nationalzoo.si.edu)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/rainforest/rainforest-cover.webp",
+    "artAlt": "A lush green rainforest canopy in the morning, with mist rising between tall trees and sunbeams breaking through the leaves",
+    "blurb": "High above the ground, where sunbeams slip through the misty green leaves, a whole wonderful world is waiting. Turn the page and let us explore the rainforest together."
+  },
+  "pages": [
+    {
+      "id": "toucan",
+      "title": "A Beak Bigger Than Its Head",
+      "art": "/explore/topic-photos/rainforest/rainforest-1.webp",
+      "artAlt": "A toucan with a huge colourful beak perches on a mossy branch",
+      "factAudio": "rainforest-toucan",
+      "quiz": ["rainforest-toucan"],
+      "facts": [
+        {
+          "text": "The toucan's beak is so big that it can be four times the size of its head and nearly as long as its whole body. Even so, the bird holds it up with ease. It is one of the most colourful beaks in the entire rainforest.",
+          "source": "San Diego Zoo Wildlife Explorers (sdzwildlifeexplorers.org)"
+        },
+        {
+          "text": "You might think such a giant beak would be very heavy, but it is surprisingly light. Inside it has a honeycomb pattern full of tiny air pockets, a bit like a sponge. That clever design lets the toucan flit from tree to tree without getting tired.",
+          "source": "San Diego Zoo Wildlife Explorers (sdzwildlifeexplorers.org)"
+        },
+        {
+          "text": "A toucan loves to snack on juicy fruit, plucking it with the tip of its long beak. As it flies around, seeds travel inside the bird and are dropped in new places. In this way the toucan helps plant fresh trees all across the forest.",
+          "source": "San Diego Zoo Wildlife Explorers (sdzwildlifeexplorers.org)"
+        }
+      ]
+    },
+    {
+      "id": "waterfall",
+      "title": "Where the River Leaps",
+      "art": "/explore/topic-photos/rainforest/rainforest-2.webp",
+      "artAlt": "A rainforest waterfall crashes into a clear pool surrounded by green ferns",
+      "factAudio": "rainforest-waterfall",
+      "quiz": ["rainforest-waterfall"],
+      "facts": [
+        {
+          "text": "A waterfall often begins where a river flows over two kinds of rock, one soft and one hard. The soft rock slowly wears away, leaving a hard ledge for the water to tumble over. Little by little, over a very long time, the leaping water shapes the waterfall you see today.",
+          "source": "National Geographic Society (education.nationalgeographic.org)"
+        },
+        {
+          "text": "At the bottom, the falling water crashes down and swirls around, scooping out a deep dip in the rock. Scientists call this a plunge pool. It is the clear pool where all the tumbling water finally comes to rest.",
+          "source": "National Geographic Society (education.nationalgeographic.org)"
+        },
+        {
+          "text": "The feathery green ferns around the pool adore this damp, misty spot. Instead of growing from seeds like many plants, ferns grow from tiny specks called spores that need a moist place to sprout. That is why you so often find them close to splashing water.",
+          "source": "USDA Forest Service (fs.usda.gov)"
+        }
+      ]
+    },
+    {
+      "id": "tiny-frogs",
+      "title": "The Little Frog in a Bright Coat",
+      "art": "/explore/topic-photos/rainforest/rainforest-3.webp",
+      "artAlt": "A tiny bright red frog sits on a wet green leaf",
+      "factAudio": "rainforest-tiny-frogs",
+      "quiz": ["rainforest-tiny-frogs"],
+      "facts": [
+        {
+          "text": "This little frog is truly tiny, often only about the size of a gummy sweet, or roughly one inch long. Some kinds are even smaller than that. It can sit happily on a single wet leaf with room to spare.",
+          "source": "San Diego Zoo Wildlife Explorers (sdzwildlifeexplorers.org)"
+        },
+        {
+          "text": "Its bright red colour is not only pretty to look at. To other animals the bold colour is like a friendly sign that says please do not eat me. Wearing such cheerful colours is this frog's clever way of staying safe.",
+          "source": "San Diego Zoo Wildlife Explorers (sdzwildlifeexplorers.org)"
+        },
+        {
+          "text": "For dinner this frog hunts very small creatures such as ants, termites and beetles. It flicks out its tongue to catch them one by one. Even a tiny frog can have a big appetite for bugs.",
+          "source": "San Diego Zoo Wildlife Explorers (sdzwildlifeexplorers.org)"
+        }
+      ]
+    },
+    {
+      "id": "treetops",
+      "title": "The Loudest Voice in the Treetops",
+      "art": "/explore/topic-photos/rainforest/rainforest-4.webp",
+      "artAlt": "A howler monkey swings between vines high in the leafy canopy",
+      "factAudio": "rainforest-treetops",
+      "quiz": ["rainforest-treetops"],
+      "facts": [
+        {
+          "text": "The howler monkey has one of the loudest voices of any animal on land. When it calls out, the deep whooping sound can travel about three miles, or nearly five kilometres, through the forest. That is a bit like hearing a friend from right across a whole town.",
+          "source": "Smithsonian's National Zoo and Conservation Biology Institute (nationalzoo.si.edu)"
+        },
+        {
+          "text": "High in the branches, the howler monkey has a special helper, and it is its tail. The underside has no hair and can grip like an extra hand, holding tight to branches and vines. This lets the monkey hang on safely as it moves through the treetops.",
+          "source": "Smithsonian's National Zoo and Conservation Biology Institute (nationalzoo.si.edu)"
+        },
+        {
+          "text": "Howler monkeys are the largest monkeys in the rainforests of Latin America, and they spend nearly all their time up in the trees. They munch mostly on leaves, plucked fresh from the branches around them. Home for a howler is high above the forest floor.",
+          "source": "Smithsonian's National Zoo and Conservation Biology Institute (nationalzoo.si.edu)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished The Rainforest!",
+    "blurb": "What a journey through the treetops and streams! If one page made you smile the most, fold down its corner so you can visit your favourite part of the rainforest again and again."
+  }
+}

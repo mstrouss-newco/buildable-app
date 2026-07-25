@@ -1,0 +1,117 @@
+{
+  "id": "deserts",
+  "title": "Deserts",
+  "template": "topic-book",
+  "topic": "nature",
+  "ageBand": "5-10",
+  "status": "in-review",
+  "skills": ["nature-facts", "reading"],
+  "heroArt": "/explore/topic-photos/deserts/deserts-cover.webp",
+  "shelfColor": "#C98A3D",
+  "ambient": "wind",
+  "assetVersion": 1,
+  "sources": [
+    "National Park Service (nps.gov)",
+    "San Diego Zoo Wildlife Alliance (sandiegozoo.org)",
+    "Nevada Department of Wildlife (ndow.org)"
+  ],
+  "cover": {
+    "art": "/explore/topic-photos/deserts/deserts-cover.webp",
+    "artAlt": "Enormous golden sand dunes at sunset, with rippled sand stretching to the horizon under a warm orange sky",
+    "blurb": "Beyond these golden dunes at sunset, the desert is bursting with surprises. Turn the page to meet the plants and animals that make this sandy world their home."
+  },
+  "pages": [
+    {
+      "id": "cactus",
+      "title": "The Cactus That Blooms at Night",
+      "art": "/explore/topic-photos/deserts/deserts-1.webp",
+      "artAlt": "A tall saguaro cactus in bloom stands in front of red rock mesas",
+      "factAudio": "deserts-cactus",
+      "quiz": ["deserts-cactus"],
+      "facts": [
+        {
+          "text": "The saguaro's large flowers are creamy white and open at night. They give off a strong, sweet scent that helps bats find them in the dark. By morning the blooms are wide open for daytime visitors too.",
+          "source": "National Park Service (nps.gov)"
+        },
+        {
+          "text": "Bats flutter from flower to flower to sip the sugary nectar. As they feed they carry pollen along with them, which helps the cactus grow fruit and seeds. Bats are some of the saguaro's most helpful little friends.",
+          "source": "National Park Service (nps.gov)"
+        },
+        {
+          "text": "A saguaro can grow to about 12 metres tall, higher than a house. It usually does not grow its first arm until it is 50 to 70 years old, and many live for 150 to 175 years. That means some of these giants are older than your great great grandparents.",
+          "source": "National Park Service (nps.gov)"
+        }
+      ]
+    },
+    {
+      "id": "camels",
+      "title": "Ships of the Sandy Sea",
+      "art": "/explore/topic-photos/deserts/deserts-2.webp",
+      "artAlt": "A line of camels walks across a sandy dune while the sun rises behind them",
+      "factAudio": "deserts-camels",
+      "quiz": ["deserts-camels"],
+      "facts": [
+        {
+          "text": "A camel's hump does not hold water like a water bottle. It is actually full of fat, which the camel's body can turn into energy when food is hard to find. A healthy, well fed camel has a nice plump hump.",
+          "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
+        },
+        {
+          "text": "After a long dry spell a thirsty camel can gulp as much as 145 litres of water in one drink, which is a whole lot of buckets. It can also travel a week or more without any water at all. That makes the camel a champion at desert life.",
+          "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
+        },
+        {
+          "text": "Camels are built for blowing sand. They have double rows of long eyelashes, noses they can squeeze shut, and wide padded feet that spread out so they do not sink. All of this helps them stride across the dunes with ease.",
+          "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
+        }
+      ]
+    },
+    {
+      "id": "lizard",
+      "title": "The Little Desert Dragon",
+      "art": "/explore/topic-photos/deserts/deserts-3.webp",
+      "artAlt": "A small spiky horned lizard rests on cracked orange desert ground",
+      "factAudio": "deserts-lizard",
+      "quiz": ["deserts-lizard"],
+      "facts": [
+        {
+          "text": "Horned lizards love to munch on ants. They use a sticky tongue to snap up big harvester ants one at a time. Because ants are such a tiny snack, these lizards need to eat a great many of them.",
+          "source": "Nevada Department of Wildlife (ndow.org)"
+        },
+        {
+          "text": "A horned lizard's skin can be beige, tan, brown or slightly red to match the desert soil around it. This colour trick lets it blend right in with the ground. Sitting still, it can be very tricky to spot.",
+          "source": "Nevada Department of Wildlife (ndow.org)"
+        },
+        {
+          "text": "The pointy spikes give this lizard its name and help keep it safe. When a hungry animal comes close, the lizard can puff up its wide, flat body to look bigger and harder to gobble up. Snakes find these round, spiky lizards a real mouthful.",
+          "source": "Nevada Department of Wildlife (ndow.org)"
+        }
+      ]
+    },
+    {
+      "id": "oasis",
+      "title": "A Green Surprise in the Sand",
+      "art": "/explore/topic-photos/deserts/deserts-4.webp",
+      "artAlt": "Tall palm trees and a pool of water sit in the middle of golden desert sand",
+      "factAudio": "deserts-oasis",
+      "quiz": ["deserts-oasis"],
+      "facts": [
+        {
+          "text": "An oasis appears where hidden underground water reaches the surface. This often happens along cracks in the rock called fault lines, where hard stone pushes the water up. Suddenly there is a cool, wet spot in the dry desert.",
+          "source": "National Park Service (nps.gov)"
+        },
+        {
+          "text": "The tall trees at many desert oases are California fan palms. They have huge fan-shaped leaves that can be as long as you are tall. These leafy giants can grow very tall and live for many years.",
+          "source": "National Park Service (nps.gov)"
+        },
+        {
+          "text": "Animals travel from all around to rest in the cool shade and drink the steady water. Birds such as orioles even build their nests under the palm leaves. An oasis is a busy, happy place in the middle of the sand.",
+          "source": "National Park Service (nps.gov)"
+        }
+      ]
+    }
+  ],
+  "finish": {
+    "title": "You finished Deserts!",
+    "blurb": "Which desert wonder was your favourite of all? Fold down the corner of that page so you can find it again whenever you like."
+  }
+}
