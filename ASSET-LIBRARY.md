@@ -61,6 +61,57 @@ Prefer CC0 packs to avoid any redistribution worry.
 
 ---
 
+## The Kit shelf (Session KP1) — Mike's own Kenney bundle, browsable
+
+Mike owns the **Kenney Game Assets All-in-1** bundle (CC0: commercial use, no
+credit). `public/kenney/kenney-kits.json` is the shelf: **241 kits, 40,521
+pieces**, each with its preview, real piece count and an `added` yes/no.
+
+**Where the numbers come from.** `scripts/build-kenney-kits.mjs` WALKS the real
+folders. The bundle's own `assets.json` skips the loose PNG/model directories —
+Tower Defense reads as 3 files there and really holds 303 — so trusting it would
+put a lie in front of Mike. Retina copies are never counted twice. Re-run it on
+the machine that has the bundle:
+
+```
+node scripts/build-kenney-kits.mjs --kenney "/path/to/Kenney Game Assets All-in-1 3.5.0"
+node scripts/build-kenney-kits.mjs --refresh-added        # after adding a kit
+```
+
+**A kit is either added or it is not.** Added means files, not a flag:
+
+```
+public/kenney/kits/index.json          the added kits, by slug
+public/kenney/kits/<slug>/kit.json     the curated pieces (file, name, kind, theme)
+public/kenney/kits/<slug>/*.png        the pieces themselves
+public/kenney/kits/<slug>/LICENSE.txt  the pack's own licence, kept with the art
+```
+
+`buildable-library.js` reads those files and hands the pieces to the ONE shelf as
+ordinary items (`id: kit:<slug>/<file>`, `group: "kit"`). So a kit piece shows up
+in Browse's grid with the usual **Use in a game** button, and in the editor's
+Library picker under the **My Kits** chip — and assigning one goes down the SAME
+import road as any pack asset. No special case anywhere.
+
+**Adding a kit is a job, not a button.** Browse's *Add to app* on a not-added kit
+files a planner card tagged `[kit:<slug>]` and nothing else. The next build
+session curates the usable pieces (never bulk-copy: Tower Defense ships 303 files
+and only 38 are library pieces — the rest are map tiles), writes `kit.json`, then
+runs `--refresh-added`. Browse reads the planner back on load, so *requested*
+survives a reload and is never a claim the page cannot point at.
+
+**Dressing a game from a kit.** Castle Guard is the worked example: its manifest
+`art` slots name kit pieces for `bush1/bush2/rock1/rock2` and leave
+`tree/castle/arrow` empty for Mike to fill in the editor. The engine hook
+(`applyDressing`) holds three lines nobody may cross — an empty slot keeps the
+built-in art, a piece that never loads keeps it too, and a dressed piece is a
+single still frame so it can never desync an animation. Animated sheets
+(knights, archers, goblins) are not dressable at all.
+
+QA: `node qa-kits.mjs .` and `node qa-castleguard.mjs .`
+
+---
+
 ## Sound rule — unique created sounds only; new game types grow the library
 
 Two firm rules for audio, because sound is part of the brand:
