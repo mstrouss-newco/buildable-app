@@ -957,6 +957,90 @@ function TopUpGate({ onClose }) {
 }
 
 // ============================================================================
+//  SLOT PREVIEWS (Session FL3) — a picture of the thing you are buying.
+//
+//  The loadout used to show a coloured rectangle with the option's name written
+//  on it, which is fine for "Sunset bricks" and useless for "pick your ride".
+//  A manifest option can now carry a `preview` id; if we know how to draw it we
+//  draw it, and if we don't we fall back to the old colour block, so every other
+//  game's loadout is untouched. Drawn SVG geometry only — no emojis, no art
+//  files to load, and it stays crisp on any screen.
+//
+//  The colours here match the ride colours inside skyflyer-engine.html, so what
+//  a kid buys is what a kid flies.
+// ============================================================================
+const SLOT_PREVIEWS = {
+  // the starter plane, nose to the right
+  "skyflyer-puffin": (
+    <svg viewBox="0 0 120 54" width="100%" height="100%" aria-hidden="true">
+      <path d="M18 30 h74 a11 11 0 0 0 0 -8 h-74 a5 5 0 0 0 0 8 z" fill="#FF6B6B" />
+      <path d="M92 22 a11 11 0 0 1 0 8 l10 -4 z" fill="#FFF6E3" />
+      <path d="M18 26 l-10 -8 v16 z" fill="#FF6B6B" />
+      <path d="M22 26 l-6 -12 h7 l4 12 z" fill="#FFF6E3" />
+      <path d="M46 26 l-10 14 h13 l6 -14 z" fill="#FFF6E3" />
+      <path d="M52 24 a7 6 0 0 1 12 0 z" fill="#9adcf5" />
+      <line x1="103" y1="10" x2="103" y2="42" stroke="#5E6B77" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="50" cy="40" r="4" fill="#5E6B77" />
+      <circle cx="26" cy="38" r="3" fill="#5E6B77" />
+    </svg>
+  ),
+  // the rescue copter, nose to the right, rotor over the top
+  "skyflyer-copter": (
+    <svg viewBox="0 0 120 54" width="100%" height="100%" aria-hidden="true">
+      <path d="M20 28 h34 v-4 h-34 z" fill="#FFC24A" />
+      <ellipse cx="72" cy="26" rx="26" ry="14" fill="#FFC24A" />
+      <path d="M84 18 a13 13 0 0 1 0 16 a15 15 0 0 0 0 -16 z" fill="#BEE9FF" />
+      <path d="M88 20 a11 11 0 0 1 0 12 l6 -6 z" fill="#BEE9FF" />
+      <rect x="50" y="24" width="44" height="4" rx="2" fill="#E8552F" />
+      <path d="M20 30 l-4 -14 h6 l4 14 z" fill="#E8552F" />
+      <line x1="46" y1="10" x2="104" y2="10" stroke="#5E6B77" strokeWidth="3.5" strokeLinecap="round" />
+      <rect x="70" y="10" width="4" height="6" fill="#5E6B77" />
+      <circle cx="19" cy="20" r="6" fill="none" stroke="#5E6B77" strokeWidth="2.5" />
+      <line x1="56" y1="44" x2="94" y2="44" stroke="#5E6B77" strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="64" y1="38" x2="62" y2="44" stroke="#5E6B77" strokeWidth="3" />
+      <line x1="86" y1="38" x2="88" y2="44" stroke="#5E6B77" strokeWidth="3" />
+    </svg>
+  ),
+  // the jetpack kid, leaning forward, flames out the back
+  "skyflyer-jetpack": (
+    <svg viewBox="0 0 120 54" width="100%" height="100%" aria-hidden="true">
+      <path d="M22 20 L2 27 L22 34 Z" fill="#FF9A3C" />
+      <path d="M20 23 L10 27 L20 31 Z" fill="#FFF0A8" />
+      <rect x="21" y="22" width="9" height="9" rx="3" fill="#5E6B77" />
+      <rect x="29" y="11" width="16" height="24" rx="5" fill="#C7CEDA" />
+      <rect x="29" y="15" width="16" height="5" fill="#FFD24A" />
+      <rect x="31" y="33" width="24" height="8" rx="4" fill="#8A63E8" />
+      <rect x="25" y="33" width="10" height="8" rx="3" fill="#FFD24A" />
+      <rect x="43" y="13" width="30" height="23" rx="10" fill="#8A63E8" />
+      <rect x="63" y="23" width="26" height="7.5" rx="3.75" fill="#8A63E8" />
+      <circle cx="91" cy="26.5" r="4.5" fill="#F2C69B" />
+      <circle cx="83" cy="16" r="10" fill="#F2C69B" />
+      <path d="M73 16 a10 10 0 0 1 20 0 z" fill="#FFD24A" />
+      <rect x="83" y="14" width="12" height="5.5" rx="2.75" fill="#FFE9A8" />
+    </svg>
+  ),
+};
+function SlotPreview({ option, accent, dimmed }) {
+  const art = option && option.preview && SLOT_PREVIEWS[option.preview];
+  const shell = {
+    height: 54, borderRadius: 12, marginBottom: 9, opacity: dimmed ? 0.4 : 1,
+    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+  };
+  if (art) {
+    return (
+      <div style={{ ...shell, background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.12)", padding: "4px 8px" }}>
+        {art}
+      </div>
+    );
+  }
+  return (
+    <div style={{ ...shell, background: `linear-gradient(160deg, ${accent}, ${accent}55)`, fontWeight: 900, color: "#fff", fontSize: 13, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>
+      {option && option.name}
+    </div>
+  );
+}
+
+// ============================================================================
 //  BreakerLoadout (Session 3C; Feel Kit polish Session 7C) — the SHELL-generated
 //  customization screen, built straight from the manifest's `customization` slots.
 //  Free looks are owned; priced looks unlock by spending coins from the shell-owned
@@ -1074,8 +1158,11 @@ function BreakerLoadout({ game, onBack, onPlay }) {
 
       <div style={{ width: "100%", maxWidth: 680, textAlign: "center" }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: accent }}>Make it mine</div>
-        <h1 style={{ ...styles.logo, fontSize: "clamp(32px,7vw,52px)", margin: "2px 0 4px" }}>Loadout</h1>
-        <p style={{ ...styles.tagline, fontSize: 15, marginBottom: 16 }}>Spend coins to unlock looks, then tap to equip.</p>
+        {/* FL3: a game can name its own customization screen in the manifest —
+            Sky Flyer's is the Hangar, not a "Loadout". Any game without those
+            keys keeps the original wording. */}
+        <h1 style={{ ...styles.logo, fontSize: "clamp(32px,7vw,52px)", margin: "2px 0 4px" }}>{(manifest && manifest.loadoutTitle) || "Loadout"}</h1>
+        <p style={{ ...styles.tagline, fontSize: 15, marginBottom: 16 }}>{(manifest && manifest.loadoutBlurb) || "Spend coins to unlock looks, then tap to equip."}</p>
         {flash && <div style={{ margin: "0 auto 14px", maxWidth: 380, background: "rgba(255,176,77,.16)", border: "1px solid rgba(255,176,77,.45)", color: "#FFE0B0", borderRadius: 12, padding: "9px 14px", fontWeight: 800 }}>{flash}</div>}
       </div>
 
@@ -1103,7 +1190,13 @@ function BreakerLoadout({ game, onBack, onPlay }) {
                       border: isEq ? `2px solid ${accent}` : "1px solid rgba(255,255,255,0.14)",
                       animation: glowing ? "bkUnlockPop .5s ease-out, bkUnlockGlow .9s ease-out" : "none",
                     }}>
-                      <div style={{ height: 54, borderRadius: 12, marginBottom: 9, background: `linear-gradient(160deg, ${accent}, ${accent}55)`, opacity: isOwned ? 1 : 0.4, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 13, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{o.name}</div>
+                      <SlotPreview option={o} accent={accent} dimmed={!isOwned} />
+                      {o.preview && SLOT_PREVIEWS[o.preview] && (
+                        <div style={{ textAlign: "center", marginBottom: 7 }}>
+                          <div style={{ fontWeight: 900, fontSize: 14 }}>{o.name}</div>
+                          {o.blurb && <div style={{ fontSize: 11.5, opacity: 0.72, lineHeight: 1.25, marginTop: 2 }}>{o.blurb}</div>}
+                        </div>
+                      )}
                       {isOwned ? (
                         <button onClick={() => equip(name, i)} disabled={isEq} style={{
                           width: "100%", borderRadius: 11, padding: "9px 0", fontFamily: NUN, fontWeight: 800, fontSize: 14, cursor: isEq ? "default" : "pointer",
@@ -1127,7 +1220,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
         })}
       </div>
 
-      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play with this look</button>}
+      {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>{(manifest && manifest.loadoutPlayLabel) || "Play with this look"}</button>}
     </div>
   );
 }
@@ -1324,8 +1417,12 @@ function BubbleScreen({ onHome, level }) { return <GameFrame title="Bubble Buddi
 // refresh keeps the same world and the same ride.
 function SkyFlyerScreen({ onHome, level }) {
   const eq = readEquipped("skyflyer");
-  const ride = typeof eq.Plane === "number" ? eq.Plane : 0;
-  const src = "/skyflyer-engine.html?v=fl2&ride=" + ride + (level != null ? "&level=" + level : "");
+  // FL3 renamed the hangar slot from "Plane" to "Ride" (it holds a copter and a
+  // jetpack kid now, not three planes). Read the new name first and fall back to
+  // the old one so a kid who already bought a ride keeps it — same index, same
+  // price, just a better-looking thing at the end of it.
+  const ride = typeof eq.Ride === "number" ? eq.Ride : (typeof eq.Plane === "number" ? eq.Plane : 0);
+  const src = "/skyflyer-engine.html?v=fl3&ride=" + ride + (level != null ? "&level=" + level : "");
   return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light />;
 }
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }

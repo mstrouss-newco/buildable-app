@@ -43,11 +43,15 @@
       "parts": { "world": "sunset-canyon", "theme": "desert", "goalCoins": 20, "goalLandings": 2, "pads": 2 } }
   ],
 
+  "loadoutTitle": "Hangar",
+  "loadoutBlurb": "Pick your ride before takeoff. Every ride flies the same skies - they just look and feel different.",
+  "loadoutPlayLabel": "Take off",
+
   "customization": [
-    { "slot": "Plane", "options": [
-      { "name": "Little Puffin", "asset": "skyflyer/plane/puffin-v1", "price": 0 },
-      { "name": "Blue Jay", "asset": "skyflyer/plane/bluejay-v1", "price": 60 },
-      { "name": "Sun Hawk", "asset": "skyflyer/plane/sunhawk-v1", "price": 120 }
+    { "slot": "Ride", "options": [
+      { "name": "Little Puffin", "asset": "skyflyer/ride/puffin-v1", "preview": "skyflyer-puffin", "blurb": "The steady starter plane", "price": 0 },
+      { "name": "Rescue Copter", "asset": "skyflyer/ride/copter-v1", "preview": "skyflyer-copter", "blurb": "Slower, turns on a coin", "price": 60 },
+      { "name": "Jetpack Kid", "asset": "skyflyer/ride/jetpack-v1", "preview": "skyflyer-jetpack", "blurb": "Fast and swoopy, wide turns", "price": 120 }
     ]}
   ]
 }
