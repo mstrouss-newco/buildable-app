@@ -55,4 +55,44 @@ export async function readLessonMap() {
   return j ? JSON.parse(JSON.stringify(j)) : null;
 }
 
-export default { readLessonMap };
+// Session LS4: the same disk-then-HTTP dance for ONE lesson that ships as a
+// FILE (LS1's g1-making-ten.json). api/placement.js needs a question out of it,
+// and public/ has the same "not guaranteed on the function's disk" problem the
+// map has. Returns null rather than throwing; callers skip that lesson.
+const FILE_CACHE = {};
+export async function readLessonFile(file) {
+  // The map stores the file WITHOUT its extension ("g1-making-ten"), the same
+  // way the player builds "/lessons/" + file + ".json". Accept either form.
+  const clean = String(file || "").replace(/[^A-Za-z0-9_.-]/g, "");
+  const name = !clean ? "" : (/\.json$/.test(clean) ? clean : clean + ".json");
+  if (!name || name === ".json") return null;
+  if (FILE_CACHE[name] !== undefined) return FILE_CACHE[name];
+
+  const tries = [
+    path.join(process.cwd(), "public", "lessons", name),
+    path.join(process.cwd(), "lessons", name),
+    path.join(process.cwd(), "..", "public", "lessons", name),
+  ];
+  for (const p of tries) {
+    try {
+      const j = JSON.parse(fs.readFileSync(p, "utf8"));
+      if (j && j.check) { FILE_CACHE[name] = j; return j; }
+    } catch {}
+  }
+
+  const host = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_SITE_HOST || "";
+  if (host) {
+    const base = host.startsWith("http") ? host : `https://${host}`;
+    try {
+      const r = await fetch(`${base}/lessons/${name}`, { headers: { "cache-control": "no-cache" } });
+      if (r.ok) {
+        const j = await r.json();
+        if (j && j.check) { FILE_CACHE[name] = j; return j; }
+      }
+    } catch {}
+  }
+  FILE_CACHE[name] = null;
+  return null;
+}
+
+export default { readLessonMap, readLessonFile };

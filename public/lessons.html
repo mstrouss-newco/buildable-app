@@ -190,6 +190,22 @@
   .emptyunit{font-size:13.5px;font-weight:800;color:var(--sub);background:#fff;border:2px dashed var(--line);
              border-radius:18px;padding:16px;text-align:center}
 
+  /* Session LS4 - the placement check. A placed lesson is open but starless:
+     it must LOOK different from a mastered one, because the kid did not earn
+     it. Muted teal, an OPEN pill, no gold. */
+  .node.placed{border-color:#BFE6D8;background:#F7FDFB}
+  .node.placed .dot{background:linear-gradient(90deg,#5BC9A6,#2FAE68)}
+  .pill.open{background:linear-gradient(90deg,#5BC9A6,#2FAE68)}
+  .findme{background:#fff;border:2px solid var(--line);border-radius:20px;padding:15px 16px;margin:4px 0 2px;
+          box-shadow:0 6px 16px rgba(15,14,23,.06)}
+  .findme h3{margin:0 0 4px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;color:var(--ink)}
+  .findme p{margin:0 0 11px;font-size:13.5px;font-weight:700;color:var(--sub);line-height:1.45}
+  .findme .row{display:flex;gap:9px;flex-wrap:wrap}
+  .findme button{font:inherit;font-weight:900;font-size:13.5px;border-radius:999px;padding:10px 16px;cursor:pointer;
+                 border:2px solid transparent;background:var(--grad);color:#fff}
+  .findme button.ghost{background:#fff;border-color:var(--line);color:var(--sub)}
+  .placenote{font-size:12.5px;font-weight:800;color:var(--sub);text-align:center;margin:2px 0 0}
+
   .loading{text-align:center;color:var(--sub);padding:60px 0;font-weight:800}
   @media (min-width:520px){ .wrap{max-width:520px} .card{padding:26px 24px} }
   @media (prefers-reduced-motion:reduce){ *{animation:none !important} }
@@ -260,6 +276,41 @@ function recordAttempt(lesson, score, mastered){
   row.skill = lesson.skill; row.subject = lesson.subject; row.grade = lesson.grade;
   p[lesson.id] = row; writeProgress(p);
   return row;
+}
+
+/* ---- placement (Session LS4) --------------------------------------------
+   A kid's grade says how old they are, not what they can already do. The quick
+   check finds the right rung and marks everything below it PLACED - which
+   unlocks it without ever claiming the kid mastered it. Mastery is still only
+   ever earned by getting 4 of 5 in a lesson, so the parent dashboard and the
+   gold stars stay honest.                                                    */
+function placeKey(subject, grade){ return String(subject) + ":" + String(grade); }
+function placementFor(subject, grade){
+  var p = readProgress(), all = p._placement || {};
+  return all[placeKey(subject, grade)] || null;
+}
+function savePlacement(subject, grade, info){
+  var p = readProgress();
+  if(!p._placement) p._placement = {};
+  p._placement[placeKey(subject, grade)] = info;
+  writeProgress(p);
+}
+/* Mark every playable lesson BEFORE the landing spot as placed. Never touches a
+   lesson the kid actually mastered, and never writes mastered:true itself. */
+function applyPlacement(flat, landingIx){
+  var p = readProgress(), n = 0;
+  for(var i=0;i<flat.length;i++){
+    if(i >= landingIx) break;
+    var it = flat[i]; if(!it.approved) continue;
+    var row = p[it.row.key] || { attempts:0, best:0, mastered:false };
+    if(row.mastered) continue;
+    row.placed = true;
+    row.placedAt = new Date().toISOString();
+    row.skill = it.row.skill; row.subject = it.row.subject; row.grade = it.row.grade;
+    p[it.row.key] = row; n++;
+  }
+  writeProgress(p);
+  return n;
 }
 
 /* ---- the learning ledger (Session 8B) -----------------------------------
@@ -750,14 +801,19 @@ function walkPath(p){
     for(var i=0; i<rows.length; i++){
       var l = rows[i];
       var mastered = !!(prog[l.key] && prog[l.key].mastered);
+      // Session LS4: PLACED means the quick check put the kid above this lesson.
+      // It opens the gate the same way mastery does, but it is deliberately a
+      // separate flag - a placed lesson gets no star and is never counted as
+      // mastered anywhere.
+      var placed = !mastered && !!(prog[l.key] && prog[l.key].placed);
       // Session LS3: a lesson counts as playable if it ships as a reviewed FILE
       // (LS1's g1-making-ten) OR the owner approved it in lesson_bank, which
       // api/lesson-map.js marks fromBank. Everything else is still "coming soon".
       var approved = (l.status === "approved") && (!!l.file || !!l.fromBank);
       var locked = approved && blocked;
-      if(approved && !mastered && !blocked) blocked = true;  // this one is the kid's next step
+      if(approved && !mastered && !placed && !blocked) blocked = true;  // the kid's next step
       out.push({ row:l, unit:units[u].title, unitIx:u, n:(++n),
-                 approved:approved, mastered:mastered, locked:locked });
+                 approved:approved, mastered:mastered, placed:placed, locked:locked });
     }
   }
   return out;
@@ -873,6 +929,9 @@ function showPath(subject, grade){
     if(!it.approved){ cls += " soon"; sub = "Coming soon"; end = LOCK_SVG; }
     else if(it.mastered){ cls += " done"; sub = "Mastered - tap to play again"; end = STAR_SVG; ready++;
                           tap = ' onclick="window.__openLesson(\''+esc(r.file || r.key)+'\')"'; }
+    else if(it.placed){ cls += " placed"; sub = "Your check says you have this - tap to try it anyway"; ready++;
+                        end = '<span class="pill open">OPEN</span>';
+                        tap = ' onclick="window.__openLesson(\''+esc(r.file || r.key)+'\')"'; }
     else if(it.locked){ cls += " locked"; sub = "Master the lesson before this one to unlock"; end = LOCK_SVG; ready++; }
     else { sub = (r.minutes||5) + " minutes - earn a star"; end = '<span class="pill">START</span>'; ready++;
            tap = ' onclick="window.__openLesson(\''+esc(r.file || r.key)+'\')"'; }
@@ -893,9 +952,181 @@ function showPath(subject, grade){
     ? "You are in " + gradeTitle(PROFILE_GRADE) + ". Tap another grade to jump ahead or go back over something."
     : "Tap a grade to switch. Grown-ups can set your grade in the grown-ups area.";
 
-  render(idxBuddy(hello) + gh + body + '<p class="gradenote">'+esc(note)+'</p>');
+  render(idxBuddy(hello) + gh + findMySpotCard(subject, grade, flat) + body +
+         '<p class="gradenote">'+esc(note)+'</p>');
 }
 window.__pickGrade = function(g){ showPath(VIEW.subject, g); };
+
+/* ---- The quick check offer (Session LS4) --------------------------------
+   Only offered when it can actually help: three or more playable lessons, and
+   the kid has not started this path or answered the check already. A kid who
+   has begun is placed by what they have done, which is better evidence than a
+   quiz, so the card gets out of the way for good.                           */
+function findMySpotCard(subject, grade, flat){
+  var done = placementFor(subject, grade);
+  var playable = 0, started = 0;
+  for(var i=0;i<flat.length;i++){
+    if(!flat[i].approved) continue;
+    playable++;
+    if(flat[i].mastered || flat[i].placed) started++;
+  }
+  if(done){
+    if(done.skipped) return "";
+    return '<p class="placenote">'+esc("Your quick check put you at " + (done.title || "the start") + ". You can play any open lesson.")+'</p>';
+  }
+  if(playable < 3 || started > 0) return "";
+  return '<div class="findme">' +
+           '<h3>Find my spot</h3>' +
+           '<p>Answer a few quick questions and I will start you in the right place. Nothing counts against you, and you can always go back.</p>' +
+           '<div class="row">' +
+             '<button type="button" onclick="window.__startPlacement()">Find my spot</button>' +
+             '<button type="button" class="ghost" onclick="window.__skipPlacement()">Start at the beginning</button>' +
+           '</div>' +
+         '</div>';
+}
+window.__skipPlacement = function(){
+  savePlacement(VIEW.subject, VIEW.grade, { skipped:true, when:new Date().toISOString() });
+  showPath(VIEW.subject, VIEW.grade);
+};
+
+/* ---- The quick check itself (Session LS4) -------------------------------
+   /api/placement hands back one question per rung of the ladder, running from
+   Kindergarten up to this kid's grade, taken from the approved lessons
+   themselves. We walk them in order and stop early after two misses in a row,
+   because a five year old will not sit through eight questions they cannot do.
+
+   WHERE THE KID LANDS: the lesson straight after the last rung they GOT RIGHT,
+   never the rung they missed. Placement should only ever skip what a kid has
+   actually proved, so a lucky guess in the middle cannot vault them over four
+   lessons. Everything below the landing spot is marked placed - open, but with
+   no star and never counted as mastered.                                     */
+var PLACE = null;
+
+/* Every playable lesson from Kindergarten up to this grade, in teaching order.
+   The check spans grades, so placing a kid has to as well. */
+function ladderFlat(subject, uptoGrade){
+  var out = [];
+  for(var i=0;i<GRADE_IDS.length;i++){
+    var p = pathFor(subject, GRADE_IDS[i]);
+    if(p) out = out.concat(walkPath(p));
+    if(GRADE_IDS[i] === uptoGrade) break;
+  }
+  return out;
+}
+
+window.__startPlacement = function(){
+  var subject = VIEW.subject, grade = VIEW.grade;
+  render(idxBuddy("One moment. I am picking some questions for you.") +
+         '<div class="emptyunit">Getting your quick check ready.</div>');
+  var url = "/api/placement?subject=" + encodeURIComponent(subject) + "&grade=" + encodeURIComponent(grade);
+  if(PREVIEW) url += "&preview=" + encodeURIComponent(PREVIEW);
+  fetch(url, { cache:"no-cache" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d || !d.ok || !d.steps || d.steps.length < 3){
+        // Not enough to place anyone honestly. Say so and start at the start.
+        savePlacement(subject, grade, { skipped:true, when:new Date().toISOString() });
+        return showPath(subject, grade);
+      }
+      PLACE = { subject:subject, grade:grade, steps:d.steps, i:0, miss:0, lastPassed:-1 };
+      placeStep();
+    })
+    .catch(function(){
+      savePlacement(subject, grade, { skipped:true, when:new Date().toISOString() });
+      showPath(subject, grade);
+    });
+};
+
+function placeStep(){
+  var st = PLACE.steps[PLACE.i];
+  bar(-1);
+  render(
+    idxBuddy("Quick check. Just do your best - none of this counts against you.") +
+    '<div class="q">'+esc(st.question)+'</div>' +
+    answerGrid(st.choices, "window.__placeAns") +
+    '<div class="sub">Question '+(PLACE.i+1)+' of '+PLACE.steps.length+'</div>',
+    [st.question]
+  );
+}
+
+window.__placeAns = function(ix, el){
+  var st = PLACE.steps[PLACE.i], right = (ix === st.correctIndex);
+  lockGrid(el);
+  // Deliberately gentle: we show the right answer but never a wrong-answer
+  // sting. This is a placement, not a test the kid can fail.
+  markCorrect(el, st.correctIndex);
+  // Every answer goes to the learning ledger like any other, tagged placement
+  // so the parent dashboard can tell a check apart from real practice.
+  logAnswer({ subject:st.subject, skill:st.skill, grade:st.grade }, right, { quizType:"placement" });
+
+  if(right){ PLACE.lastPassed = PLACE.i; PLACE.miss = 0; }
+  else { PLACE.miss++; }
+
+  var stop = (PLACE.miss >= 2) || (PLACE.i + 1 >= PLACE.steps.length);
+  setTimeout(function(){
+    if(stop) return placeFinish();
+    PLACE.i++;
+    placeStep();
+  }, 700);
+};
+
+function placeFinish(){
+  var subject = PLACE.subject, grade = PLACE.grade;
+  var flat = ladderFlat(subject, grade);
+  var indexOfKey = function(key){
+    for(var i=0;i<flat.length;i++) if(flat[i].row.key === key) return i;
+    return -1;
+  };
+
+  // Land straight after the last rung the kid actually got right.
+  var landing = 0;
+  if(PLACE.lastPassed >= 0){
+    var at = indexOfKey(PLACE.steps[PLACE.lastPassed].key);
+    landing = (at < 0) ? 0 : at + 1;
+  }
+  // Walk forward to the next lesson that can actually be played.
+  var target = -1;
+  for(var i=landing;i<flat.length;i++){ if(flat[i].approved){ target = i; break; } }
+  // Aced the whole ladder: land on the last playable lesson rather than nowhere.
+  if(target < 0){
+    for(var j=flat.length-1;j>=0;j--){ if(flat[j].approved){ target = j; break; } }
+  }
+  if(target < 0){ savePlacement(subject, grade, { skipped:true, when:new Date().toISOString() }); return showPath(subject, grade); }
+
+  var opened = applyPlacement(flat, target);
+  var row = flat[target].row, landGrade = normGrade(row.grade || grade);
+  savePlacement(subject, grade, {
+    at: row.key, title: row.title, grade: landGrade, opened: opened,
+    asked: PLACE.i + 1, when: new Date().toISOString()
+  });
+  // The kid's own grade is placed too, so a Grade 2 reader who needs Kindergarten
+  // work does not have to be told to go and change the grade tab themselves.
+  if(landGrade !== grade) savePlacement(subject, landGrade, {
+    at: row.key, title: row.title, grade: landGrade, opened: opened,
+    asked: PLACE.i + 1, when: new Date().toISOString()
+  });
+
+  var line = opened > 0
+    ? "I opened up " + opened + " lesson" + (opened === 1 ? "" : "s") + " you already know. You can still play any of them."
+    : "We will start right at the beginning together.";
+  bar(-1);
+  render(
+    idxBuddy("All done. Thank you for doing that.") +
+    '<div class="findme">' +
+      '<h3>You are starting at ' + esc(row.title) + '</h3>' +
+      '<p>' + esc(line) + '</p>' +
+      '<div class="row">' +
+        '<button type="button" onclick="window.__openLesson(\''+esc(row.file || row.key)+'\')">Start this lesson</button>' +
+        '<button type="button" class="ghost" onclick="window.__afterPlacement()">See my path</button>' +
+      '</div>' +
+    '</div>',
+    ["All done. Thank you for doing that."]
+  );
+  PLACE = { subject:subject, grade:landGrade, steps:[], i:0, miss:0, lastPassed:-1, landed:landGrade };
+}
+window.__afterPlacement = function(){
+  showPath(PLACE ? PLACE.subject : VIEW.subject, (PLACE && PLACE.landed) ? PLACE.landed : VIEW.grade);
+};
 
 /* ---- Screen C: hand off to the player ---- */
 window.__openLesson = function(file){
