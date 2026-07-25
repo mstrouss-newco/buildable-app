@@ -135,7 +135,7 @@
   #helpCard p{margin:8px 0;font-size:16px;font-weight:600;line-height:1.45}
   #helpCard button{margin-top:14px;border:none;border-radius:999px;padding:12px 28px;
     background:#2FB7D6;color:#fff;font-weight:900;font-size:17px;cursor:pointer;font-family:inherit}
-  /* ---- FL5: the Free Flight / Jobs card, the job chips and the Did You Know card ---- */
+  /* ---- FL5: the job offer card, the job chips and the Did You Know card ---- */
   .sheet{position:absolute;inset:0;background:rgba(18,52,74,.72);display:none;
     align-items:center;justify-content:center;pointer-events:auto;padding:18px;overflow:auto}
   .sheet .inner{background:#FFFCF0;border-radius:26px;padding:20px;width:100%;max-width:380px;
@@ -153,15 +153,28 @@
   .jobbtn .got{margin-left:auto;flex:0 0 auto}
   #factCard .inner{text-align:center}
   #factCard .sticker{margin:4px auto 8px}
-  #factCard .fact{background:#EAF6FB;border-radius:16px;padding:13px 15px;margin:12px 0;
+  .sheet .fact{background:#EAF6FB;border-radius:16px;padding:13px 15px;margin:12px 0;
     font-weight:700;font-size:15px;line-height:1.45;text-align:left;color:#26506b}
-  #factCard .fact b{display:block;font-size:13px;color:#2FB7D6;margin-bottom:4px;letter-spacing:.4px}
+  .sheet .fact b{display:block;font-size:13px;color:#2FB7D6;margin-bottom:4px;letter-spacing:.4px}
   #factCard .paid{font-weight:900;font-size:19px;color:#2b7a4b;margin:2px 0 10px}
-  #factCard .row{display:flex;gap:10px}
-  #factCard .row button{flex:1;border:none;border-radius:999px;padding:13px 10px;
+  .sheet .row{display:flex;gap:10px}
+  .sheet .row button{flex:1;border:none;border-radius:999px;padding:13px 10px;
     font-weight:900;font-size:16px;cursor:pointer;font-family:inherit}
-  #factCard .row .a{background:#2FB7D6;color:#fff}
-  #factCard .row .b{background:#EAF6FB;color:#26506b}
+  .sheet .row .a{background:#2FB7D6;color:#fff}
+  .sheet .row .b{background:#EAF6FB;color:#26506b}
+  #offerCard .found{font-weight:900;font-size:13px;color:#2FB7D6;letter-spacing:.5px}
+  #offerCard .done{display:inline-block;font-weight:800;font-size:12px;color:#2b7a4b;
+    background:#DFF5E4;border-radius:999px;padding:3px 10px;margin-top:6px}
+  /* leaving a job is always one tap away, and never costs anything */
+  #leaveJob{pointer-events:auto;border:none;cursor:pointer;font-family:inherit;
+    background:rgba(255,252,240,.9);color:#7a6b8a;border-radius:999px;padding:6px 14px;
+    font-weight:800;font-size:13px;box-shadow:0 2px 8px rgba(30,60,90,.16);display:none}
+  #helpJobs{margin-top:6px}
+  #helpJobs .hj{width:100%;border:none;border-radius:16px;padding:11px 14px;margin-bottom:8px;
+    background:#EAF6FB;color:#26506b;font-weight:900;font-size:16px;cursor:pointer;
+    font-family:inherit;text-align:left;display:flex;align-items:center;gap:10px}
+  #helpJobs .hj .b2{display:block;font-weight:700;font-size:12px;color:#5c7f95;margin-top:2px}
+  #helpJobs .hj .go{margin-left:auto;flex:0 0 auto;color:#2FB7D6;font-weight:900;font-size:13px}
 </style>
 </head>
 <body>
@@ -181,6 +194,7 @@
     <div class="chip" id="gLand">Landings 0/1</div>
     <div class="chip" id="gJob" style="display:none">Job</div>
     <div class="chip" id="gCarry" style="display:none">Carrying 0</div>
+    <button id="leaveJob">Leave this job</button>
   </div>
   <button id="helpBtn" aria-label="How to fly">?</button>
   <div id="hint">
@@ -210,15 +224,21 @@
     <p>Pick which ride you fly in the hangar, on the Make it mine screen. Every ride scoops the same coins and lands on the same pads - they just look and feel different.</p>
     <p>Scoop up gold coins in the sky. Bumping into things just gives you a soft bounce, so you can never crash.</p>
     <p>Follow the orange arrow to a landing pad. Fly low over it to land and bank your coins.</p>
-    <p>Some stops have jobs to do: carry the post, drop food to hungry animals, find a lost explorer, light the lanterns. A job can never go wrong - nothing runs out and nothing is ever lost.</p>
+    <p>There are jobs out there to find. Look for a bright beam of light in the sky, fly down to it and see what it is. You can say no, and you can leave a job whenever you like.</p>
+    <div id="helpJobs"></div>
     <button id="helpClose">Got it</button>
   </div></div>
-  <!-- FL5: what you meet when you arrive at a stop. Free Flight, or a job. -->
-  <div class="sheet" id="modeCard"><div class="inner">
-    <h2 id="mcWorld">Sunny Islands</h2>
-    <div class="sub">What would you like to do here?</div>
-    <button class="bigbtn" id="freeBtn">Free Flight<span class="b2">Fly wherever you like and scoop up coins</span></button>
-    <div id="jobList"></div>
+  <!-- FL5: you found something. Nothing starts until the kid says yes. -->
+  <div class="sheet" id="offerCard"><div class="inner">
+    <div class="found">YOU FOUND SOMETHING</div>
+    <h2 id="ofName">Mail Run</h2>
+    <div class="sub" id="ofBlurb"></div>
+    <div class="fact"><b>HOW IT WORKS</b><span id="ofTip"></span></div>
+    <div id="ofDone"></div>
+    <div class="row">
+      <button class="a" id="ofStart">Do it</button>
+      <button class="b" id="ofNo">Not now</button>
+    </div>
   </div></div>
   <!-- FL5: every job ends here - a fact, the coins, and a sticker to keep. -->
   <div class="sheet" id="factCard"><div class="inner">
@@ -227,8 +247,8 @@
     <div class="paid" id="fcPaid">+15 coins banked</div>
     <div class="fact"><b>DID YOU KNOW</b><span id="fcFact"></span></div>
     <div class="row">
-      <button class="a" id="fcAgain">Another job</button>
-      <button class="b" id="fcFree">Free flight</button>
+      <button class="a" id="fcAgain">Do it again</button>
+      <button class="b" id="fcFree">Keep flying</button>
     </div>
   </div></div>
 </div>
@@ -1231,10 +1251,15 @@ var coinsEl=D.getElementById("coins"),
     // FL5
     gJobEl=D.getElementById("gJob"),
     gCarryEl=D.getElementById("gCarry"),
-    modeCard=D.getElementById("modeCard"),
-    mcWorld=D.getElementById("mcWorld"),
-    jobList=D.getElementById("jobList"),
-    freeBtn=D.getElementById("freeBtn"),
+    leaveJobEl=D.getElementById("leaveJob"),
+    helpJobs=D.getElementById("helpJobs"),
+    offerCard=D.getElementById("offerCard"),
+    ofName=D.getElementById("ofName"),
+    ofBlurb=D.getElementById("ofBlurb"),
+    ofTip=D.getElementById("ofTip"),
+    ofDone=D.getElementById("ofDone"),
+    ofStart=D.getElementById("ofStart"),
+    ofNo=D.getElementById("ofNo"),
     factCard=D.getElementById("factCard"),
     fcSticker=D.getElementById("fcSticker"),
     fcTitle=D.getElementById("fcTitle"),
@@ -1268,9 +1293,11 @@ function paintGoals(){
     gCarryEl.textContent=line;
     gCarryEl.className="chip"+(JS.complete?" done":"");
     gJobEl.className="chip"+(JS.complete?" done":"");
+    leaveJobEl.style.display=JS.complete?"none":"block";
     return;
   }
   gCoinsEl.style.display="flex"; gJobEl.style.display="none"; gCarryEl.style.display="none";
+  try{ leaveJobEl.style.display="none"; }catch(e){}
   if(S.beaten){
     gCoinsEl.className="chip done";gCoinsEl.textContent="World beaten - free flight";
     gLandEl.style.display="none";
@@ -1474,7 +1501,7 @@ function unlockNextOrGate(){
 }
 
 // ---------- help ----------
-function openHelp(){ helpCard.style.display="flex"; }
+function openHelp(){ paintHelpJobs(); helpCard.style.display="flex"; }
 function closeHelp(){ helpCard.style.display="none"; }
 helpBtn.addEventListener("click",openHelp);
 helpClose.addEventListener("click",closeHelp);
@@ -1508,8 +1535,12 @@ function takeOff(){
 takeoffBtn.addEventListener("click",takeOff);
 
 // ---------- FL5 card buttons ----------
-freeBtn.addEventListener("click",function(){ endJob(); closeModeCard(); });
-fcAgain.addEventListener("click",function(){ closeFactCard(); endJob(); openModeCard(); });
+ofStart.addEventListener("click",acceptOffer);
+ofNo.addEventListener("click",declineOffer);
+leaveJobEl.addEventListener("click",leaveJob);
+// after a job: do it again right here, or go back to flying. Either way the
+// other jobs are back out in the world waiting to be found.
+fcAgain.addEventListener("click",function(){ var m=JOB; closeFactCard(); endJob(); if(m) startJob(m); });
 fcFree.addEventListener("click",function(){ closeFactCard(); endJob(); });
 
 // ---------- the shared wallet: announce only, never touch shell storage ----------
@@ -1754,7 +1785,9 @@ function startJob(m){
   if(m.capacity>0){ cargoGroup=buildCargo(m.cargo.color,m.capacity); cargoGroup.visible=false; plane.add(cargoGroup); }
   if(m.palette){ paletteBefore=paletteSnapshot(); applyPalette(m.palette); }
   MODE="job";
-  closeModeCard();
+  guideJob=null;
+  closeOffer();
+  hideScouts();                     // the job builds its own world now
   // a job does its own guiding (chips + one arrow), so the drag hint steps aside
   try{ S.hintDone=true; hintEl.style.opacity=0; }catch(e){}
   paintGoals();
@@ -1769,7 +1802,19 @@ function endJob(){
   if(paletteBefore){ applyPalette(paletteBefore); paletteBefore=null; }
   MODE="free"; JOB=null;
   JS={carrying:0,done:0,doneMap:[],holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99};
+  // the jobs go back out into the world to be found again. Leaving one costs
+  // nothing and keeps nothing: come back to it later and it starts fresh.
+  showScouts();
   paintGoals();
+}
+function leaveJob(){
+  if(MODE!=="job") return false;
+  var was=JOB;
+  declined[was.id]=time;              // do not immediately re-ask on the way out
+  endJob();
+  toast("Job left. Fly free!");
+  sfx("select");
+  return true;
 }
 
 // ---------- where the arrow points while a job is on ----------
@@ -1784,6 +1829,20 @@ function jobObjective(){
     if(d<bd){ bd=d; best={x:t.x,z:t.z,label:t.label}; }
   }
   return best;
+}
+// What the one arrow points at. On a job: the next thing to do. Off a job: a job
+// a kid asked to be shown, and otherwise a landing pad exactly as it always was.
+// Note the AUTOPILOT only ever reads jobObjective(), so "show me" can never drag
+// the QA robot off course.
+function arrowTarget(){
+  var ob=jobObjective();
+  if(ob) return ob;
+  if(guideJob&&MODE!=="job"){
+    var p=jobStartPoint(guideJob);
+    if(Math.hypot(S.pos.x-p.x,S.pos.z-p.z)<70){ guideJob=null; return null; }
+    return {x:p.x,z:p.z,label:guideJob.name};
+  }
+  return null;
 }
 
 // ---------- one drop made ----------
@@ -1881,35 +1940,115 @@ function jobStep(dt){
   deliverTo(inside);
 }
 
-// ---------- the Free Flight / Jobs card you meet on arrival ----------
-function jobButton(m){
-  var b=document.createElement("button");
-  b.className="jobbtn";
-  b.innerHTML='<span><span>'+m.name+'</span><span class="b2">'+m.blurb+'</span></span>'+
-    (hasBadge(m.id)?'<span class="got"><svg width="26" height="26" viewBox="0 0 26 26">'+
-      '<circle cx="13" cy="13" r="11" fill="#57D06B"/>'+
-      '<path d="M7.5 13.5 L11.5 17.5 L18.5 9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+
-      '</svg></span>':'');
-  b.addEventListener("click",function(){ startJob(m); });
-  return b;
+// ============================================================================
+//  FL5 — JOBS ARE THINGS YOU FIND, NOT THINGS YOU ARE OFFERED ON ARRIVAL.
+//  Every job in this world has its start point standing out in the sky from the
+//  moment a kid gets here — the post dock, the supply hut, the first flare, the
+//  first lantern — each under its own beam of light so it can be spotted from a
+//  long way off. Nobody is asked anything. You fly wherever you like, and if you
+//  swoop low over one of them, THEN the game asks whether you fancy it.
+//
+//  Three rules make this safe for a small kid:
+//    - nothing ever starts without a tap. "Not now" is always there, and flying
+//      past by accident can never pull you into anything.
+//    - saying no is remembered for a little while, so circling the same dock is
+//      not nagged at.
+//    - leaving a job is one tap and costs nothing. Come back to it later and it
+//      starts fresh.
+// ============================================================================
+var scoutGroup=null, scouts=[], declined={}, guideJob=null, offered=null;
+function jobStartPoint(m){ return m.depot || m.targets[0]; }
+function buildScoutFor(m){
+  var built;
+  if(m.depot) built=buildDock();
+  else if(m.style==="flare") built=buildFlare().group;
+  else if(m.style==="lantern") built=buildLantern().group;
+  else if(m.style==="animal") built=buildAnimal();
+  else built=buildHouse();
+  var p=jobStartPoint(m);
+  built.position.set(p.x,0,p.z);
+  var mk=marker(built,m.style==="flare"?0xFF5A3C:0xFFC24A,220);
+  return {group:built,mk:mk};
 }
-function openModeCard(){
-  if(DEMO) return;
+function showScouts(){
+  hideScouts();
+  if(DEMO||!WORLD_JOBS.length) return;     // attract mode stays pure scenery
+  scoutGroup=new THREE.Group();
+  WORLD_JOBS.forEach(function(m){
+    var b=buildScoutFor(m);
+    scoutGroup.add(b.group);
+    scouts.push({job:m,group:b.group,mk:b.mk,pt:jobStartPoint(m),near:false});
+  });
+  scene.add(scoutGroup);
+}
+function hideScouts(){
+  if(scoutGroup){ scene.remove(scoutGroup); scoutGroup=null; }
+  scouts=[];
+}
+// ---------- the offer: you found something, do you want it? ----------
+function openOffer(m){
+  if(DEMO||S.auto) return;                 // the attract demo and the robot are not kids
+  offered=m;
   try{
-    mcWorld.textContent=world.name;
-    jobList.innerHTML="";
-    WORLD_JOBS.forEach(function(m){ jobList.appendChild(jobButton(m)); });
-    modeCard.style.display="flex";
-    hintEl.style.opacity=0;               // one thing to read at a time
+    ofName.textContent=m.name;
+    ofBlurb.textContent=m.blurb;
+    ofTip.textContent=m.tip||m.blurb;
+    ofDone.innerHTML=hasBadge(m.id)
+      ? '<span class="done">You have done this one before</span>' : '';
+    offerCard.style.display="flex";
+    hintEl.style.opacity=0;
     S.picking=true;
-  }catch(e){ S.picking=false; }
+  }catch(e){ offered=null; S.picking=false; }
+  sfx("select");
 }
-function closeModeCard(){
-  try{ modeCard.style.display="none";
-    // choosing Free Flight puts the drag hint back for a kid who has not flown yet
+function closeOffer(){
+  try{ offerCard.style.display="none";
     if(MODE!=="job"&&!S.hintDone) hintEl.style.opacity=1;
   }catch(e){}
-  S.picking=false;
+  offered=null; S.picking=false;
+}
+function acceptOffer(){ var m=offered; closeOffer(); if(m) startJob(m); return !!m; }
+function declineOffer(){
+  var m=offered;
+  if(m){ declined[m.id]=time; toast("Maybe later!"); }
+  closeOffer();
+  return !!m;
+}
+// while you are just flying: have we swooped low over a job's start point?
+function scoutStep(){
+  if(MODE==="job"||S.picking||DEMO||S.auto||MODEQ==="free") return;
+  for(var i=0;i<scouts.length;i++){
+    var s=scouts[i], m=s.job;
+    var d=Math.hypot(S.pos.x-s.pt.x,S.pos.z-s.pt.z);
+    if(d>(m.radius+10)||S.pos.y>(m.ceiling+25)){
+      if(s.near) s.near=false;
+      continue;
+    }
+    if(s.near) continue;                                  // already handled this pass
+    s.near=true;
+    if(declined[m.id]!=null&&(time-declined[m.id])<20) continue;   // asked recently, let it be
+    if(guideJob===m) guideJob=null;
+    openOffer(m);
+    return;
+  }
+}
+// ---------- "show me where it is": the quiet list under the help button ----------
+function paintHelpJobs(){
+  try{
+    helpJobs.innerHTML="";
+    if(!WORLD_JOBS.length) return;
+    WORLD_JOBS.forEach(function(m){
+      var b=document.createElement("button");
+      b.className="hj";
+      b.innerHTML='<span><span>'+m.name+'</span><span class="b2">'+m.blurb+'</span></span>'+
+        '<span class="go">Show me</span>';
+      b.addEventListener("click",function(){
+        guideJob=m; closeHelp();
+        toast("Follow the arrow!");
+      });
+      helpJobs.appendChild(b);
+    });
+  }catch(e){}
 }
 
 // ---------- camera ----------
@@ -1933,7 +2072,7 @@ function updateArrow(){
   // when your hands are empty, the nearest drop point when they are full. Off a
   // job it goes back to pointing at a landing pad, exactly as before.
   var aim,aimLabel;
-  var ob=jobObjective();
+  var ob=arrowTarget();
   if(ob){ aim={x:ob.x,y:22,z:ob.z}; aimLabel=ob.label; }
   else {
     var np=nearestPad();
@@ -2096,6 +2235,7 @@ function stepSim(dt){
   collectCoins(starter.coins,null);
   for(var key in chunks) collectCoins(chunks[key].coins,chunks[key].group);
   jobStep(dt);
+  scoutStep();
 }
 
 // ---------- draw ----------
@@ -2129,13 +2269,18 @@ function drawScene(dt){
   var spin=time*3;
   // FL5: a job's markers breathe so they read from a long way off — the flare in
   // particular has to be spottable across a whole snowfield.
+  var pulse=0.5+Math.sin(time*3.2)*0.5;
   if(jobGroup){
-    var pulse=0.5+Math.sin(time*3.2)*0.5;
     for(var jt=0;jt<jobTargets.length;jt++){
       var J=jobTargets[jt];
       if(J.mk&&J.mk.beam.visible) J.mk.beam.material.opacity=0.10+pulse*0.16;
       if(J.glow&&!JS.doneMap[jt]) J.glow.scale.setScalar(1+pulse*0.22);
     }
+  }
+  // the beams a kid is meant to notice from across the world
+  for(var sc=0;sc<scouts.length;sc++){
+    var SC=scouts[sc];
+    if(SC.mk) SC.mk.beam.material.opacity=0.12+pulse*0.20;
   }
   starter.coins.forEach(function(c){c.mesh.rotation.y=spin;});
   for(var key in chunks){
@@ -2175,18 +2320,17 @@ function frame(now){
 updateChunks(0,0);
 
 // ============================================================================
-//  FL5 — WHAT YOU MEET WHEN YOU ARRIVE. Free Flight, or one of this stop's jobs.
-//  A deep link (?mission=mail-run) skips straight in and survives a refresh; the
-//  attract demo and the QA robot always start in free flight so nothing they do
-//  depends on somebody tapping a card.
+//  FL5 — ARRIVING. Nobody is asked anything. You are simply flying, and this
+//  stop's jobs are standing out there under their beams of light waiting to be
+//  found. A deep link (?mission=mail-run) starts one straight away and survives
+//  a refresh; ?mode=free means never offer a job at all this flight, which is
+//  what the attract demo and the free-flight QA runs use.
 // ============================================================================
 (function(){
   var wanted=MISSQ?findJob(MISSQ):null;
   if(wanted&&wanted.world===world.id){ startJob(wanted); return; }
-  if(DEMO||AUTO) return;                  // attract mode and the robot fly free
-  if(MODEQ==="free") return;
-  if(!WORLD_JOBS.length) return;          // a stop with no jobs never asks
-  openModeCard();
+  if(MODEQ==="free") return;              // pure free flight, no jobs in the sky
+  showScouts();
 })();
 
 loadKit();                       // AR1: real art arrives over the stand-ins
@@ -2270,9 +2414,16 @@ window.SKY={
     of:JOB?JOB.targets.length:0, complete:JS.complete, paid:JS.paid, holding:JS.holdT,
     objective:jobObjective(), factUp:(function(){ try{ return factCard.style.display==="flex"; }catch(e){ return false; } })() }; },
   badges:function(){ try{ return loadPrefs().badges||{}; }catch(e){ return {}; } },
-  picker:function(){ try{ return { up:!!S.picking, jobs:jobList.children.length,
-    free:!!freeBtn }; }catch(e){ return {up:!!S.picking,jobs:0,free:false}; } },
-  openPicker:openModeCard,
+  // ---- FL5 discovery handles ----
+  scouts:function(){ return scouts.map(function(s){ return {id:s.job.id,x:s.pt.x,z:s.pt.z}; }); },
+  offer:function(){ try{ return { up:offerCard.style.display==="flex", id:offered?offered.id:null,
+    name:offered?offered.name:null }; }catch(e){ return {up:false,id:null,name:null}; } },
+  acceptOffer:acceptOffer,
+  declineOffer:declineOffer,
+  leaveJob:leaveJob,
+  guide:function(id){ guideJob=id?findJob(id):null; return arrowTarget(); },
+  arrowTarget:arrowTarget,
+  helpJobs:function(){ paintHelpJobs(); try{ return helpJobs.children.length; }catch(e){ return 0; } },
   mergeMissions:mergeMissions,
   // ---- AR1 handles: prove the art layer is real art and a safe fallback ----
   kit:function(){ var n=[],k; for(k in KIT) n.push(k);

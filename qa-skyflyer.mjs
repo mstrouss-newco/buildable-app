@@ -156,10 +156,23 @@ chk('every badge the manifest asks for has a prompt in the art library',
 // ---------------------------------------------------------------------------
 console.log('--- FL5: missions mode, aircraft jobs, no fail state ---');
 const JOB_IDS = ['mail-run','supply-drop','lost-explorer','lantern-lighter'];
-chk('the engine offers Free Flight or Jobs at a stop (the card lives in the cartridge)',
-  /id="modeCard"/.test(html) && /id="freeBtn"/.test(html) && /function openModeCard\(/.test(html));
-chk('choosing a job never adds a second LEVEL picker (the shell journey is still the one)',
+chk('a job is something you FIND: its start point stands in the world under a beam',
+  /function showScouts\(/.test(html) && /function buildScoutFor\(/.test(html) && /function jobStartPoint\(/.test(html));
+chk('nothing starts without a tap - swooping over one only ASKS',
+  /function scoutStep\(/.test(html) && /function openOffer\(/.test(html) && /id="offerCard"/.test(html) &&
+  /id="ofStart"/.test(html) && /id="ofNo"/.test(html));
+chk('there is no card on arrival any more (you are just flying)', !/modeCard|openModeCard/.test(html));
+chk('saying no is remembered for a moment, so the same dock never nags',
+  /declined\[m\.id\]=time/.test(html) && /\(time-declined\[m\.id\]\)<20/.test(html));
+chk('leaving a job is one tap, costs nothing, and puts the jobs back in the world',
+  /function leaveJob\(/.test(html) && /id="leaveJob"/.test(html) && /showScouts\(\);\s*\n\s*paintGoals\(\);/.test(html));
+chk('a job never adds a second LEVEL picker (the shell journey is still the one)',
   !/onMenu\s*:/.test(html));
+chk('a quiet list under the help button can show a kid where a job is',
+  /function paintHelpJobs\(/.test(html) && /id="helpJobs"/.test(html) && /guideJob=m/.test(html));
+chk('being shown a job can never drag the QA robot off course (autopilot ignores it)',
+  /function arrowTarget\(/.test(html) && /var ob=arrowTarget\(\);/.test(html) &&
+  /var ob=jobObjective\(\);\n  if\(ob\)\{\n    var jgx/.test(html));
 chk('there is ONE mission engine, not four little ones',
   /function jobStep\(/.test(html) && /function startJob\(/.test(html) && /function deliverTo\(/.test(html) &&
   (html.match(/function jobStep\(/g)||[]).length===1);
@@ -225,7 +238,7 @@ chk('the loadout screen takes its title from the manifest (so it can be a Hangar
 chk('no emojis in the shell hangar previews', !emoji.test(jsx.slice(jsx.indexOf('const SLOT_PREVIEWS'), jsx.indexOf('function SlotPreview'))));
 chk('journey progress reads the default bk_{game}_prefs shape', /bk_"\s*\+\s*id\s*\+\s*"_prefs/.test(jsx));
 chk('the shell hosts the Sky Flyer learning gate (FL4)',
-  /gameType="skyflyer"/.test(jsx) && /skyflyer-engine\.html\?v=fl5/.test(jsx));
+  /gameType="skyflyer"/.test(jsx) && /skyflyer-engine\.html\?v=fl5b/.test(jsx));
 const vercel = JSON.parse(read('vercel.json'));
 const srcs = vercel.routes.map(r=>r.src);
 const catchAll = srcs.indexOf('/(.*)');
@@ -477,24 +490,66 @@ if (!JSDOM) {
       ww.SKY.job().complete && ww.SKY.job().done===3, 'second run finished in '+(t2/30).toFixed(0)+'s');
     ww.close();
   }
-  // the Free Flight / Jobs card: a kid is asked, the robot and the attract demo never are
+  // DISCOVERY — arriving asks nothing. The jobs are out there to be found, and
+  // flying over one only ever asks.
   {
     const dk = flyKid(0, ''); const wk = dk.window;
-    const pk = wk.SKY.picker();
-    chk('a kid arriving at a stop is asked Free Flight or Jobs', pk.up===true && pk.free===true && pk.jobs>=1, pk.jobs+' job(s) offered');
-    chk('the world waits politely behind the card (nothing flies off while you choose)', wk.SKY.state.picking===true);
+    chk('arriving at a stop asks a kid nothing at all - they are just flying',
+      wk.SKY.mode()==='free' && wk.SKY.offer().up===false && wk.SKY.state.picking===false);
+    const sc = wk.SKY.scouts();
+    chk('this world\'s job is standing out there waiting to be found',
+      sc.length===1 && sc[0].id==='mail-run' && sc[0].x===0 && sc[0].z===-190, JSON.stringify(sc));
+    // fly straight at it, the way a kid who spotted the beam would
+    const S = wk.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
+    let t=0, seen=null;
+    for (; t<600; t++){ wk.SKY.tick(1/30); const o=wk.SKY.offer(); if(o.up){ seen=o; break; } }
+    chk('swooping low over it offers the job by name', !!seen && seen.id==='mail-run',
+      'asked after '+(t/30).toFixed(1)+'s of flying at it');
+    chk('the sky waits while the kid decides', wk.SKY.state.picking===true);
+    chk('"Not now" starts nothing at all', wk.SKY.declineOffer()===true && wk.SKY.mode()==='free' && wk.SKY.state.picking===false);
+    let nagged=false;
+    for (let k=0;k<250;k++){ wk.SKY.tick(1/30); if (wk.SKY.offer().up){ nagged=true; break; } }
+    chk('and the same dock does not nag a kid who said no', nagged===false);
     wk.close();
+  }
+  {
+    // "Do it" -> the job runs -> leaving costs nothing and it starts fresh next time
+    const da = flyKid(0, ''); const wa = da.window;
+    const S = wa.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
+    for (let k=0;k<600;k++){ wa.SKY.tick(1/30); if (wa.SKY.offer().up) break; }
+    chk('"Do it" starts the job the kid found', wa.SKY.acceptOffer()===true && wa.SKY.mode()==='job' && wa.SKY.job().id==='mail-run');
+    chk('once a job is on, its start point is not doubled up in the world', wa.SKY.scouts().length===0);
+    wa.SKY.autopilot(true);
+    for (let k=0;k<900;k++) wa.SKY.tick(1/30);
+    const partway = wa.SKY.job();
+    chk('leaving a job halfway is one tap and goes back to flying',
+      partway.done>0 && wa.SKY.leaveJob()===true && wa.SKY.mode()==='free',
+      'left at '+partway.done+'/'+partway.of);
+    chk('and the job goes back out into the world to be found again', wa.SKY.scouts().length===1);
+    wa.SKY.startMission('mail-run');
+    chk('coming back to it later starts fresh, as agreed', wa.SKY.job().done===0 && wa.SKY.job().carrying===0);
+    wa.close();
+  }
+  {
     const dr = fly(0, '&auto=1'); const wr = dr.window;
-    chk('the QA robot and the attract demo are never blocked by the card', wr.SKY.picker().up===false && wr.SKY.mode()==='free');
+    chk('the QA robot and the attract demo are never interrupted by an offer',
+      wr.SKY.offer().up===false && wr.SKY.mode()==='free');
     wr.close();
     const dd = flyKid(0, '&mission=mail-run'); const wd = dd.window;
-    chk('a job deep link goes straight in and skips the card', wd.SKY.mode()==='job' && wd.SKY.job().id==='mail-run' && wd.SKY.picker().up===false);
+    chk('a job deep link starts straight away and survives a refresh',
+      wd.SKY.mode()==='job' && wd.SKY.job().id==='mail-run' && wd.SKY.offer().up===false);
     wd.close();
     const dfree = flyKid(0, '&mode=free'); const wfree = dfree.window;
-    chk('?mode=free skips the card straight into free flight', wfree.SKY.picker().up===false && wfree.SKY.mode()==='free');
+    chk('?mode=free is pure free flight - no jobs in the sky at all',
+      wfree.SKY.scouts().length===0 && wfree.SKY.mode()==='free');
     wfree.close();
     const df = flyKid(1, ''); const wf = df.window;
-    chk('a stop with two jobs offers two (Snowy Peaks: supply drop AND lost explorer)', wf.SKY.picker().jobs===2);
+    const s2 = wf.SKY.scouts();
+    chk('a world with two jobs has two of them out there (Snowy Peaks)', s2.length===2, s2.map(s=>s.id).join(' + '));
+    chk('the help button lists this world\'s jobs for a kid who cannot find one', wf.SKY.helpJobs()===2);
+    const g = wf.SKY.guide('lost-explorer');
+    chk('"Show me" points the one arrow at that job, without starting it',
+      !!g && g.label==='Lost Explorer' && wf.SKY.mode()==='free', JSON.stringify(g));
     wf.close();
   }
   // jobs are editable data, exactly like the palette and the music bed

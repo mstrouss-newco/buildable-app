@@ -65,6 +65,20 @@ card, the dusk repaint and the ending card. Fixed two things they caught: the
 manifest landing a second after the page was undoing the dusk palette, and the
 drag hint sitting on top of the cards.
 
+**Refinement, same day, after Mike flew it** — the arrival card is gone. Jobs
+are now something you FIND, which is a better game: every job's start point (the
+post dock, the supply hut, the first flare, the first lantern) stands out in the
+world from the moment you arrive, each under its own pulsing beam of light. You
+fly wherever you like, and only if you swoop low over one does the game ask -
+"You found something: Mail Run. Do it / Not now." Nothing ever starts without a
+tap, saying no is remembered for twenty seconds so the same dock never nags, and
+"Leave this job" is a chip in the HUD that costs nothing (the job goes straight
+back out into the world; coming back to it later starts fresh, which is what
+Mike chose). For a kid who cannot find one, the help card now lists this world's
+jobs with a "Show me" that points the one arrow at it without starting anything -
+and the autopilot deliberately ignores that arrow, so it can never drag the QA
+robot off course. Engine cache-bust moved to `?v=fl5b`. QA grew to **193/193**.
+
 **Not in this block** — FL6 and FL7 (transform quests) are untouched.
 ## 2026-07-25: Session AR1 — Sunny Islands proof (shipped, waiting on Mike's look)
 

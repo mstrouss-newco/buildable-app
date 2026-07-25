@@ -1417,11 +1417,10 @@ function SkyFlyerScreen({ onHome, level }) {
   // the old one so a kid who already bought a ride keeps it — same index, same
   // price, just a better-looking thing at the end of it.
   const ride = typeof eq.Ride === "number" ? eq.Ride : (typeof eq.Plane === "number" ? eq.Plane : 0);
-  // FL5: arriving at a stop the engine itself asks Free Flight or Jobs. That card
-  // lives INSIDE the cartridge on purpose — the shell journey stays the one and
-  // only level picker (the 7J double-picker rule), and a job is a way of flying a
-  // stop, not a stop of its own.
-  const src = "/skyflyer-engine.html?v=fl5&ride=" + ride + (level != null ? "&level=" + level : "");
+  // FL5: jobs are found out in the world, not offered on a card when you arrive,
+  // so the shell hands over exactly what it always did - a world and a ride. The
+  // shell journey stays the one and only level picker (the 7J double-picker rule).
+  const src = "/skyflyer-engine.html?v=fl5b&ride=" + ride + (level != null ? "&level=" + level : "");
   // FL4 learning moment: the engine asks before the NEXT world unlocks, exactly
   // like Breaker. The shell is the authority — the parent's Learning Mode toggle
   // overrides the manifest default, and if it is off we answer "done" instantly
