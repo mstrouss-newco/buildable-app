@@ -1,5 +1,72 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: Session FL5 — Missions mode + aircraft jobs (Sky Flyer)
+
+Phase FL, block FL5 only. FL2 built the three endless worlds, FL3 the hangar,
+FL4 the sound, the manifest colours and the learning gate. FL5 gives a kid
+something to *do* in those skies besides fly: real aircraft jobs.
+
+**What shipped**
+
+- **Free Flight or Jobs, at every journey stop.** Arriving at a world the engine
+  now asks: fly wherever you like, or take a job. The card lives inside the
+  cartridge on purpose - the shell journey stays the one and only level picker,
+  so this is not a second one (the 7J double-picker rule).
+- **One mission engine, four recipes.** The whole runtime is shared: load up,
+  carry, get close enough, finish. A job is pure data answering five questions -
+  which world, what you carry and what it looks like, where you pick it up,
+  where it goes, and one true fun fact. Adding a fifth job is a data edit.
+  - **Mail Run** (Sunny Islands) - letters from the post dock to three island
+    houses. Post Pilot badge, 15 coins.
+  - **Supply Drop** (Snowy Peaks) - food bundles from the hut to three
+    snowed-in animals. Supply Ace badge, 18 coins.
+  - **Lost Explorer** (Snowy Peaks) - spot three flares and hover close until
+    they wave. Search Light badge, 20 coins.
+  - **Lantern Lighter** (Sunset Canyon) - the canyon turns dusky and four
+    lanterns light as you swoop over them. Lamplighter badge, 16 coins.
+- **THE FL5 LAW: A JOB CAN NEVER BE FAILED.** There is no timer, no life count,
+  no expiry and nothing to run out of. The dock always has more cargo, a drop
+  point waits forever, a bump is still the same soft bounce. The robot proves it
+  by taking its hands off the controls for thirty seconds mid-job and coming
+  back to finish, then flying the whole job a second time straight after.
+- **Every job ends the same way**: a Did You Know card with one real fact, coins
+  paid straight into the ONE shared wallet, and a badge sticker kept per kid
+  alongside the stars in `bk_skyflyer_prefs`.
+- **The controls never change.** One finger, drag to steer. A job adds exactly
+  one orange arrow pointing at the next thing to do and nothing else.
+- **The hangar choice finally bites.** Lost Explorer asks you to hover, and the
+  wide-turning Jetpack Kid takes noticeably longer at it than the tight-turning
+  Rescue Copter - without any ride being locked out of any job, which the robot
+  checks for all three.
+- **Jobs are editable data, like the palette and the music bed.** Each level in
+  `public/skyflyer/manifest.json` carries a `missions` array; every entry merges
+  onto the built-in recipe by id, or adds a whole new job. Renaming Mail Run,
+  repricing it, moving a house or writing a better fun fact is a manifest edit
+  with no code change. A half-written entry can never break a job.
+- **Three new sounds created, not borrowed**: `sky_pickup`, `sky_deliver`,
+  `sky_mission` in `api/sfx.js`, tagged theme `flight` in `api/list-audio.js`,
+  triggered through the Feel Kit as the palette names `pickup` / `deliver` /
+  `mission` so any future delivery game can reuse all three.
+- **New URL params**: `?mission=<id>` deep-links straight into a job and
+  survives a refresh, `?mode=free` skips the card. The attract demo and the QA
+  robot are never blocked by the card.
+
+**QA** — `node qa-skyflyer.mjs .` **176/176 PASS** (was 112). The FL5 half is
+static checks plus a live autopilot run of all four jobs: finished, paid into
+the wallet, badge kept, fact card up, no timer anywhere; the wander-off and
+fly-it-twice no-fail proofs; the card shown to a kid and never to the robot; a
+manifest-only edit changing a job; the canyon going dusky and coming back; and
+free flight still beating world one exactly as before. Flight half needs
+`npm i --no-save jsdom` (and reinstall it if anything else is npm-installed
+after - that prunes it).
+
+**Look check** — headless chromium screenshots of all four jobs, the picker
+card, the dusk repaint and the ending card. Fixed two things they caught: the
+manifest landing a second after the page was undoing the dusk palette, and the
+drag hint sitting on top of the cards.
+
+**Not in this block** — FL6 and FL7 (transform quests) are untouched.
+
 ## 2026-07-25: Session LS4 — Reading launch + placement (shipped, waiting on Mike's switch)
 
 Phase LS, block LS4 only. LS1 built the lesson player, LS2 the tile and the path
