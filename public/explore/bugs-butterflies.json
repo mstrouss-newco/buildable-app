@@ -4,7 +4,7 @@
   "template": "topic-book",
   "topic": "animals",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": ["nature-facts", "reading"],
   "heroArt": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp",
   "shelfColor": "#E08A2E",

@@ -289,9 +289,9 @@ const EXHIBIT_CATALOG = [
   { id: "moon", title: "The Moon", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/moon/moon-cover.webp", status: "approved", template: "topic-book" },
   // Session TB3 — topics 4-12. Same rule: in-review until Mike fact-checks the
   // book and flips BOTH this line and the book's own JSON to "approved".
-  { id: "big-cats", title: "Big Cats", topic: "animals", color: "#C97B2A", heroArt: "/explore/topic-photos/big-cats/big-cats-cover.webp", status: "in-review", template: "topic-book" },
-  { id: "penguins", title: "Penguins & the Frozen Poles", topic: "animals", color: "#3E7CA6", heroArt: "/explore/topic-photos/penguins/penguins-cover.webp", status: "in-review", template: "topic-book" },
-  { id: "bugs-butterflies", title: "Bugs & Butterflies", topic: "animals", color: "#E08A2E", heroArt: "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "big-cats", title: "Big Cats", topic: "animals", color: "#C97B2A", heroArt: "/explore/topic-photos/big-cats/big-cats-cover.webp", status: "approved", template: "topic-book" },
+  { id: "penguins", title: "Penguins & the Frozen Poles", topic: "animals", color: "#3E7CA6", heroArt: "/explore/topic-photos/penguins/penguins-cover.webp", status: "approved", template: "topic-book" },
+  { id: "bugs-butterflies", title: "Bugs & Butterflies", topic: "animals", color: "#E08A2E", heroArt: "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp", status: "approved", template: "topic-book" },
   { id: "snakes-reptiles", title: "Snakes & Reptiles", topic: "animals", color: "#4E8B52", heroArt: "/explore/topic-photos/snakes-reptiles/snakes-reptiles-cover.webp", status: "in-review", template: "topic-book" },
   { id: "planets", title: "The Planets", topic: "space", color: "#4C6FE0", heroArt: "/explore/topic-photos/planets/planets-cover.webp", status: "in-review", template: "topic-book" },
   { id: "rockets", title: "Rockets & Astronauts", topic: "space", color: "#D2542F", heroArt: "/explore/topic-photos/rockets/rockets-cover.webp", status: "in-review", template: "topic-book" },

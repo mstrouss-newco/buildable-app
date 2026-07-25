@@ -4,7 +4,7 @@
   "template": "topic-book",
   "topic": "animals",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": ["animal-facts", "reading"],
   "heroArt": "/explore/topic-photos/big-cats/big-cats-cover.webp",
   "shelfColor": "#C97B2A",
