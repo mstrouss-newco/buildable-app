@@ -57,7 +57,10 @@ Fix: (1) added the `/buildable-slicer.js` route above the catch-all; (2) AP3 gua
 drop-in paths now stop with a plain message BEFORE any paid generate call if the slicer
 is missing; (3) bumped the script tag to `?v=2` in `editor.html` + `asset-library.html`
 so cached HTML-as-script copies are bypassed. Browse was never affected (it guards and
-falls back). Ref: planner card AP3, SESSION-LOG.md same date.
+falls back). Follow-up found by the live QA: with the slicer finally loading, Keep failed with HTTP 413 —
+one POST carrying six full-size pieces is bigger than the server accepts. `mKeep` now saves one
+piece per request ("Saving 1 of 6…"), so big multi-piece sets save reliably.
+Ref: planner card AP3, SESSION-LOG.md same date.
 
 ## Session 7L — Riley's Garden: stuck sound fixed, plus a cleanup pass (July 24 2026)
 `public/rileys-garden.html`, `qa-rileys.mjs`.

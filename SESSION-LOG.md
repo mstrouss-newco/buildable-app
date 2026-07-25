@@ -114,6 +114,10 @@ script applies.
 - `?v=1` → `?v=2` on the slicer script tag in `editor.html` and `asset-library.html` to
   skip any cached landing-HTML copy.
 
+- Live QA found the NEXT blocker hiding behind the slicer bug: Keep POSTed all six
+  full-size pieces in one request and the server refused it (HTTP 413), so nothing
+  saved. `mKeep` now saves one piece per request with a running "Saving n of 6" note.
+
 **Remains in phase AP**
 - Create-tab retirement (separate AP leftover, per Mike 2026-07-25 — out of scope here).
 
