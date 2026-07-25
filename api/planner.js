@@ -89,6 +89,27 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
 
+      // op:'flagReview' — Claude calls this at the end of a roadmap session to mark it
+      // done-but-needs-Mike's-review, stamped with the SERVER's clock (never trust a
+      // model-guessed timestamp). Read-modify-write on the single meta row's
+      // roadmap.sessions array, matched by session id.
+      if (op === "flagReview") {
+        const id = clip(b.id, 20).trim();
+        if (!id) return res.status(400).json({ ok: false, error: "id required" });
+        const val = b.val !== false;
+        const mr = await fetch(`${URL}/rest/v1/planner_meta?id=eq.1&select=data`, { headers: H });
+        if (!mr.ok) { const d = await mr.text().catch(() => ""); return res.status(200).json({ ok: false, detail: d.slice(0, 160) }); }
+        const rows = await mr.json();
+        const data = (rows[0] && rows[0].data) || {};
+        const sessions = (data.roadmap && Array.isArray(data.roadmap.sessions)) ? data.roadmap.sessions : [];
+        const idx = sessions.findIndex((s) => s.id === id);
+        if (idx === -1) return res.status(200).json({ ok: false, error: "session id not found: " + id });
+        sessions[idx] = { ...sessions[idx], needsReview: val, reviewRequestedAt: val ? new Date().toISOString() : null };
+        const r = await fetch(`${URL}/rest/v1/planner_meta?id=eq.1`, { method: "PATCH", headers: H, body: JSON.stringify({ data }) });
+        if (!r.ok) { const d = await r.text().catch(() => ""); return res.status(200).json({ ok: false, detail: d.slice(0, 160) }); }
+        return res.status(200).json({ ok: true, reviewRequestedAt: sessions[idx].reviewRequestedAt });
+      }
+
       return res.status(400).json({ ok: false, error: "unknown op" });
     }
 

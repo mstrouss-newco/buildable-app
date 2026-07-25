@@ -137,6 +137,9 @@
   .rm-next-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px;white-space:nowrap}
   .rm-deploy-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:var(--warn);color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px;white-space:nowrap}
   .rm-card.deployed{background:#fff8ec;border-color:#f0d9a8}
+  .rm-review-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#2f6fed;color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px;white-space:nowrap}
+  .rm-card.needs-review{background:#eef3ff;border-color:#bcd0f7}
+  .rm-review-when{font-size:11px;color:#2f6fed;font-weight:600;margin-top:2px}
   .rm-startnext{margin:0 0 14px}
   .rm-top{display:flex;align-items:center;gap:9px}
   .rm-top input[type=checkbox]{width:17px;height:17px;flex:0 0 auto}
@@ -724,7 +727,7 @@ function mergeRoadmap(parsed){
   const parsedIds=new Set(parsed.sessions.map(s=>s.id));
   const sessions=parsed.sessions.map(p=>{
     const prev=prevAll[p.id];
-    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, deployed:!!prev.deployed, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false, later:!!prev.later}; }
+    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, deployed:!!prev.deployed, needsReview:!!prev.needsReview, reviewRequestedAt:prev.reviewRequestedAt||null, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false, later:!!prev.later}; }
     return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false, manual:false, later:!!p.later};
   });
   // keep manual sessions not present in the paste
@@ -769,8 +772,13 @@ function rmVisible(s){
   if(rmFilter==="all") return true;
   if(rmFilter==="todo") return !s.done;
   if(rmFilter==="claude") return !!s.deployed && !s.done;
+  if(rmFilter==="review") return !!s.needsReview && !s.done;
   if(rmFilter==="done") return !!s.done;
   return true;
+}
+function fmtWhen(iso){
+  if(!iso) return "";
+  try{ const d=new Date(iso); return d.toLocaleDateString(undefined,{month:"numeric",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }catch(e){ return ""; }
 }
 function rmShow(s,key){ return rmVisible(s) || !!rmDoneOpen[key]; }
 function rmSetFilter(k){ rmFilter=k; rmDoneOpen={}; renderRoadmap(); window.scrollTo({top:0,behavior:"smooth"}); }
@@ -783,19 +791,21 @@ function rmJump(id){
   if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
 }
 function rmChips(){
-  const rd=rmData(); let todo=0,claude=0,done=0;
-  rd.sessions.forEach(s=>{ if(s.later) return; if(s.done) done++; else { todo++; if(s.deployed) claude++; } });
+  const rd=rmData(); let todo=0,claude=0,review=0,done=0;
+  rd.sessions.forEach(s=>{ if(s.later) return; if(s.done) done++; else { todo++; if(s.needsReview) review++; else if(s.deployed) claude++; } });
   const mk=(k,label,n)=>'<button class="rm-chip '+(rmFilter===k?"on":"")+'" onclick=\'rmSetFilter("'+k+'")\'>'+label+' <span style="opacity:.65">'+n+'</span></button>';
-  return '<div class="rm-chips">'+mk("todo","To do",todo)+mk("claude","With Claude",claude)+mk("done","Done",done)+mk("all","Everything",todo+done)+'</div>';
+  return '<div class="rm-chips">'+mk("todo","To do",todo)+mk("claude","With Claude",claude)+mk("review","Needs review",review)+mk("done","Done",done)+mk("all","Everything",todo+done)+'</div>';
 }
 function rmMiniCard(s){
   const isNext=s.id===rmNextId;
-  return '<div class="rm-card '+(s.deployed?"deployed":"")+(isNext?" next":"")+'">'
+  const isReview=!!s.needsReview;
+  return '<div class="rm-card '+(isReview?"needs-review":(s.deployed?"deployed":""))+(isNext?" next":"")+'">'
     +'<div class="rm-top">'
     +'<input type="checkbox" onchange=\'rmToggleDone('+JSON.stringify(s.id)+')\'>'
     +'<span class="rm-id">'+esc(s.id)+'</span><span class="rm-name">'+esc(s.name)+'</span>'
-    +(s.deployed?'<span class="rm-deploy-badge">with Claude</span>':(isNext?'<span class="rm-next-badge">next</span>':''))
+    +(isReview?'<span class="rm-review-badge">needs review</span>':(s.deployed?'<span class="rm-deploy-badge">with Claude</span>':(isNext?'<span class="rm-next-badge">next</span>':'')))
     +'</div>'
+    +(isReview&&s.reviewRequestedAt?'<div class="rm-review-when">flagged '+esc(fmtWhen(s.reviewRequestedAt))+'</div>':'')
     +(s.desc?'<div class="rm-desc">'+esc(s.desc)+'</div>':'')
     +'<div class="rm-btns">'
     +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
@@ -804,12 +814,14 @@ function rmMiniCard(s){
 }
 function rmFocusBar(){
   const rd=rmData();
-  const withClaude=rd.sessions.filter(s=>!s.later&&!s.done&&s.deployed);
+  const needsReview=rd.sessions.filter(s=>!s.later&&!s.done&&s.needsReview);
+  const withClaude=rd.sessions.filter(s=>!s.later&&!s.done&&s.deployed&&!s.needsReview);
   const queue=[];
-  rd.phases.forEach(ph=>{ rd.sessions.forEach(s=>{ if(s.phaseNum===ph.num&&!s.later&&!s.done&&!s.deployed) queue.push(s); }); });
+  rd.phases.forEach(ph=>{ rd.sessions.forEach(s=>{ if(s.phaseNum===ph.num&&!s.later&&!s.done&&!s.deployed&&!s.needsReview) queue.push(s); }); });
   const upNext=queue.slice(0,3);
-  if(!withClaude.length && !upNext.length) return '<div class="rm-focus"><h2>Right now</h2><div class="rm-focus-sub" style="margin-bottom:0">Nothing open. Everything is done or parked.</div></div>';
+  if(!needsReview.length && !withClaude.length && !upNext.length) return '<div class="rm-focus"><h2>Right now</h2><div class="rm-focus-sub" style="margin-bottom:0">Nothing open. Everything is done or parked.</div></div>';
   let h='<div class="rm-focus"><h2>Right now</h2>';
+  if(needsReview.length) h+='<div class="rm-focus-sub">Needs your review ('+needsReview.length+')</div>'+needsReview.map(rmMiniCard).join("");
   if(withClaude.length) h+='<div class="rm-focus-sub">With Claude ('+withClaude.length+')</div>'+withClaude.map(rmMiniCard).join("");
   if(upNext.length) h+='<div class="rm-focus-sub">Up next</div>'+upNext.map(rmMiniCard).join("");
   h+='</div>';
@@ -910,8 +922,9 @@ function rmCard(s, archived){
   const notes=Array.isArray(s.notes)?s.notes:[];
   const notesHtml=notes.length?'<div class="rm-notes">'+notes.map((n,i)=>'<div class="rm-note"><span>'+esc(n)+'</span>'+(archived?"":'<span class="x" onclick=\'rmDelNote('+JSON.stringify(s.id)+','+i+')\' title="Remove note">✕</span>')+'</div>').join("")+'</div>':"";
   const isNext=!archived&&s.id===rmNextId;
-  const isDeployed=!archived&&!!s.deployed&&!s.done;
-  return '<div class="rm-card '+(s.done?"done":"")+(isNext?" next":"")+(isDeployed?" deployed":"")+'" id="'+(archived?"":rmAnchor(s.id))+'">'
+  const isReview=!archived&&!!s.needsReview&&!s.done;
+  const isDeployed=!archived&&!!s.deployed&&!s.done&&!isReview;
+  return '<div class="rm-card '+(s.done?"done":"")+(isNext?" next":"")+(isDeployed?" deployed":"")+(isReview?" needs-review":"")+'" id="'+(archived?"":rmAnchor(s.id))+'">'
     +'<div class="rm-top">'
     +(archived?"":'<span class="rm-reorder">'
       +'<button class="rm-arrow" title="Move up" onclick=\'event.stopPropagation();rmMoveSession('+JSON.stringify(s.id)+',-1)\'>&#9650;</button>'
@@ -921,12 +934,14 @@ function rmCard(s, archived){
     +'<span class="rm-id">'+esc(s.id)+'</span>'
     +'<span class="rm-name">'+esc(s.name)+'</span>'
     +(isNext?'<span class="rm-next-badge">next</span>':'')
-    +(isDeployed?'<span class="rm-deploy-badge">with Claude</span>':'')+'</div>'
+    +(isReview?'<span class="rm-review-badge">needs review</span>':(isDeployed?'<span class="rm-deploy-badge">with Claude</span>':''))+'</div>'
+    +(isReview&&s.reviewRequestedAt?'<div class="rm-review-when">Claude flagged this done &mdash; '+esc(fmtWhen(s.reviewRequestedAt))+'</div>':'')
     +(s.desc?'<div class="rm-desc">'+esc(s.desc)+'</div>':"")
     +notesHtml
     +(archived?"":'<div class="rm-btns">'
       +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
       +(s.done?'':(s.deployed?'<button class="btn ghost mini" onclick=\'rmSetDeployed('+JSON.stringify(s.id)+',false)\'>Undo deploy</button>':'<button class="btn ghost mini" onclick=\'rmSetDeployed('+JSON.stringify(s.id)+',true)\'>Mark deployed</button>'))
+      +(s.done?'':(isReview?'<button class="btn ghost mini" onclick=\'rmSetReview('+JSON.stringify(s.id)+',false)\'>Clear review flag</button>':'<button class="btn ghost mini" onclick=\'rmSetReview('+JSON.stringify(s.id)+',true)\'>Mark needs review</button>'))
       +'<button class="btn ghost mini" onclick=\'rmEdit('+JSON.stringify(s.id)+')\'>Edit</button>'+'<button class="btn ghost mini" onclick=\'rmPark('+JSON.stringify(s.id)+','+(!s.later)+')\'>'+(s.later?'To phases':'Later')+'</button>'+(s.manual?'<button class="btn ghost mini" onclick=\'rmDeleteSession('+JSON.stringify(s.id)+')\'>Delete</button>':'')+'</div>'
       +'<div class="quickadd rm-addnote">'
       +'<input class="qa-input rm-note-input" id="'+rmSlug(s.id)+'" data-id="'+esc(s.id)+'" placeholder="Add a note for this session..." autocomplete="off">'
@@ -944,13 +959,20 @@ function bindRmNotes(){
 
 async function rmToggleDone(id){
   const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
-  s.done=!s.done; if(s.done) s.deployed=false; renderRoadmap(); setSync("saving..."); await saveMetaR();
+  s.done=!s.done; if(s.done){ s.deployed=false; s.needsReview=false; s.reviewRequestedAt=null; } renderRoadmap(); setSync("saving..."); await saveMetaR();
 }
 async function rmSetDeployed(id,val){
   const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
-  s.deployed=!!val; if(s.deployed) s.done=false;
+  s.deployed=!!val; if(s.deployed){ s.done=false; s.needsReview=false; s.reviewRequestedAt=null; }
   renderRoadmap(); setSync("saving..."); await saveMetaR();
   toast(val?"Marked deployed — sent to Claude":"Back to not deployed");
+}
+async function rmSetReview(id,val){
+  const s=rmData().sessions.find(x=>x.id===id); if(!s) return;
+  s.needsReview=!!val;
+  s.reviewRequestedAt=s.needsReview?new Date().toISOString():null;
+  renderRoadmap(); setSync("saving..."); await saveMetaR();
+  toast(val?"Flagged needs review":"Review flag cleared");
 }
 function rmEdit(id){ rmEditingId=id; renderRoadmap(); }
 async function rmSaveEdit(id){
@@ -1056,7 +1078,7 @@ function buildSessionPrompt(s){
   const desc=(s.desc||"").replace(/[.\s]+$/,"");
   let p="Pull the latest from GitHub before touching any files. Read buildable-rebuild-roadmap.md and buildable-manifest-v2.md in the repo root for context. If either doc is missing, tell me before proceeding. Do ONLY Session "+s.id+" — "+name+(desc?": "+desc:"")+".";
   if(doneWhen) p+=" Done when: "+doneWhen.replace(/[.\s]+$/,"")+".";
-  p+=" Commit in logical chunks with clear messages. When finished: run the QA scripts for any games touched, update SESSION-LOG.md, then give me a recap of what was completed and what remains in this phase. Do not start the next session block.";
+  p+=" Commit in logical chunks with clear messages. When finished: run the QA scripts for any games touched, update SESSION-LOG.md, then flag this session for my review by running: curl -s -X POST https://buildablekids.com/api/planner -H \"Content-Type: application/json\" -d '{\"op\":\"flagReview\",\"id\":\""+s.id+"\",\"val\":true}' — this marks it done-needs-review in my planner and time-stamps it automatically, do not set the timestamp yourself. Then give me a recap of what was completed and what remains in this phase. Do not start the next session block.";
   const notes=Array.isArray(s.notes)?s.notes:[];
   if(notes.length) p+="\n\nAlso address these notes: "+notes.join("; ");
   return p;
