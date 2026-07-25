@@ -73,6 +73,18 @@
   @keyframes drop{from{opacity:0;transform:translateY(-14px) scale(.6)}to{opacity:1;transform:none}}
   .count{font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px;color:var(--sub)}
 
+  /* Session LS3 - drawn shapes, for the shape lessons. SVG geometry only. */
+  .shaperow{display:flex;gap:14px;justify-content:center;align-items:flex-end;margin:15px 0 6px;flex-wrap:wrap}
+  .shape{margin:0;background:#FFFDF8;border:3px solid #E3D8C2;border-radius:16px;padding:10px 12px 7px;
+         display:flex;flex-direction:column;align-items:center;gap:5px}
+  .shape svg{width:78px;height:78px;display:block;animation:drop .3s cubic-bezier(.34,1.4,.64,1) both}
+  .shape figcaption{font-family:'Fredoka',sans-serif;font-weight:600;font-size:14px;color:var(--sub)}
+
+  /* Session LS3 - owner draft banner. Only ever visible with the preview code,
+     never to a kid: without the code the server will not serve a draft at all. */
+  .draftbar{background:#FFF3E2;border:2px solid #F3E2B6;border-radius:14px;padding:9px 12px;margin:0 0 12px;
+            font-size:13px;font-weight:800;color:#8A5A00;text-align:center}
+
   /* answers */
   .ans{display:grid;gap:10px;margin-top:15px}
   .ans.c2{grid-template-columns:1fr 1fr}
@@ -188,6 +200,11 @@
 
 var ART = "/lessons/art/";
 var DEFAULT_LESSON = "g1-making-ten";
+/* Session LS3 owner preview. With ?preview=<code> in the address, the map and
+   the player will also serve lessons still WAITING for review, so the owner can
+   walk a draft on /lesson-review before approving it. Without the code, every
+   server call returns approved lessons only - a kid can never see a draft. */
+var PREVIEW = (/[?&]preview=([A-Za-z0-9_-]{1,24})/.exec(location.search) || [])[1] || "";
 
 /* ---- shell awareness (weather.html pattern) ---- */
 function iframed(){ try{ return window.parent && window.parent !== window; }catch(e){ return false; } }
@@ -343,6 +360,35 @@ function frames(a, b, art){
   return '<div class="frames">'+html+'<div class="count">'+label+'</div></div>';
 }
 
+/* ---- drawn shapes (Session LS3, for the shape lessons) ----
+   Counters in a ten frame cannot teach "what is a triangle", so a teach card or
+   guided question may ask for shapes instead: show:{ shapes:["circle","square"] }.
+   Drawn SVG geometry, never emojis, and never a generated image. */
+var SHAPE_SVG = {
+  circle:    '<circle cx="46" cy="46" r="36" fill="#7C5CFC"/>',
+  square:    '<rect x="12" y="12" width="68" height="68" rx="5" fill="#FF6B6B"/>',
+  triangle:  '<path d="M46 10 L84 80 L8 80 Z" fill="#2FAE68"/>',
+  rectangle: '<rect x="4" y="24" width="84" height="44" rx="5" fill="#FFC542"/>',
+  oval:      '<ellipse cx="46" cy="46" rx="40" ry="27" fill="#7C5CFC"/>'
+};
+function shapes(list){
+  var names = (list || []).filter(function(n){ return SHAPE_SVG[n]; });
+  if(!names.length) return "";
+  var html = "";
+  for(var i=0;i<names.length;i++){
+    html += '<figure class="shape"><svg viewBox="0 0 92 92" role="img" aria-label="'+esc(names[i])+'">' +
+            SHAPE_SVG[names[i]] + '</svg><figcaption>'+esc(names[i])+'</figcaption></figure>';
+  }
+  return '<div class="shaperow">'+html+'</div>';
+}
+/* One entry point so teach cards and guided questions do not have to care which
+   kind of picture a lesson asked for. */
+function showArt(show, art){
+  if(!show) return "";
+  if(show.shapes) return shapes(show.shapes);
+  return frames(show.a||0, show.b||0, art);
+}
+
 /* ---- tiny helpers ---- */
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
   return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
@@ -394,10 +440,18 @@ function buddy(text){
 }
 
 /* ---- Step 1: Hello. The buddy names the skill. ---- */
+/* Owner-only note that this lesson has not been approved yet. A kid can never
+   see this, because without the preview code the server refuses to serve a
+   pending lesson at all - the banner is a second belt on top of that. */
+function draftBar(){
+  if(!L || L.status !== "pending") return "";
+  return '<div class="draftbar">Draft - waiting for your review. Kids cannot see this yet.</div>';
+}
 function stepHello(){
   bar(0);
   var i = L.intro;
   render(
+    draftBar() +
     buddy(i.buddy) +
     '<div class="card">' +
       '<div class="stepname">Step 1 of 5 - Hello</div>' +
@@ -417,7 +471,7 @@ function stepTeach(i){
     '<div class="card">' +
       '<div class="stepname">Step 2 of 5 - Learn - card '+(i+1)+' of '+L.teach.length+'</div>' +
       '<h2>'+esc(c.headline)+'</h2>' +
-      (c.show ? frames(c.show.a||0, c.show.b||0, L.art) : "") +
+      (c.show ? showArt(c.show, L.art) : "") +
       '<p>'+esc(c.body)+'</p>' +
       speakBtn(c.say) +
       '<button class="big" type="button" onclick="window.__go(\''+(last?"guided":"teach")+'\','+(last?0:i+1)+')">' +
@@ -436,7 +490,7 @@ function stepGuided(i){
     '<div class="card">' +
       '<div class="stepname">Step 3 of 5 - Try it together</div>' +
       '<h2>'+esc(q.question)+'</h2>' +
-      (q.show ? frames(q.show.a||0, q.show.b||0, L.art) : "") +
+      (q.show ? showArt(q.show, L.art) : "") +
       answerGrid(q.choices, "window.__guidedAns") +
       '<div class="hint" id="hint">'+esc(q.hint)+'</div>' +
       '<button class="big ghost" type="button" onclick="window.__hint()">Give me a hint</button>' +
@@ -631,7 +685,10 @@ function walkPath(p){
     for(var i=0; i<rows.length; i++){
       var l = rows[i];
       var mastered = !!(prog[l.key] && prog[l.key].mastered);
-      var approved = (l.status === "approved") && !!l.file;
+      // Session LS3: a lesson counts as playable if it ships as a reviewed FILE
+      // (LS1's g1-making-ten) OR the owner approved it in lesson_bank, which
+      // api/lesson-map.js marks fromBank. Everything else is still "coming soon".
+      var approved = (l.status === "approved") && (!!l.file || !!l.fromBank);
       var locked = approved && blocked;
       if(approved && !mastered && !blocked) blocked = true;  // this one is the kid's next step
       out.push({ row:l, unit:units[u].title, unitIx:u, n:(++n),
@@ -665,6 +722,9 @@ var LOCK_SVG = '<svg class="end" width="22" height="22" viewBox="0 0 24 24" aria
 
 /* ---- reload-safe addresses (/lessons?subject=math&grade=1) ---- */
 function setUrl(q){
+  // Keep the owner preview code in the address as we move around, otherwise a
+  // refresh mid-draft would bounce the owner back to approved-only lessons.
+  if(PREVIEW) q = (q ? q + "&" : "") + "preview=" + encodeURIComponent(PREVIEW);
   try{ history.replaceState(null, "", location.pathname + (q ? "?" + q : "")); }catch(e){}
 }
 function params(){
@@ -747,10 +807,10 @@ function showPath(subject, grade){
     var cls = "node", end = "", sub = "", tap = "";
     if(!it.approved){ cls += " soon"; sub = "Coming soon"; end = LOCK_SVG; }
     else if(it.mastered){ cls += " done"; sub = "Mastered - tap to play again"; end = STAR_SVG; ready++;
-                          tap = ' onclick="window.__openLesson(\''+esc(r.file)+'\')"'; }
+                          tap = ' onclick="window.__openLesson(\''+esc(r.file || r.key)+'\')"'; }
     else if(it.locked){ cls += " locked"; sub = "Master the lesson before this one to unlock"; end = LOCK_SVG; ready++; }
     else { sub = (r.minutes||5) + " minutes - earn a star"; end = '<span class="pill">START</span>'; ready++;
-           tap = ' onclick="window.__openLesson(\''+esc(r.file)+'\')"'; }
+           tap = ' onclick="window.__openLesson(\''+esc(r.file || r.key)+'\')"'; }
     body += '<'+(tap ? "button" : "div")+' class="'+cls+'"'+(tap ? ' type="button"'+tap : "")+'>' +
               '<span class="dot">'+it.n+'</span>' +
               '<span><span class="nm">'+esc(r.title)+'</span><span class="ds" style="display:block">'+sub+'</span></span>' +
@@ -827,30 +887,58 @@ function fatal(msg){
   bar(-1);
 }
 
-/* Which path (subject + grade) does a lesson file live on? */
-function findLessonPath(file){
+/* Which path (subject + grade) does a lesson live on, and which row is it?
+   A lesson is addressed by its FILE name (LS1 static lessons) or by its KEY
+   (LS3 lessons that live in lesson_bank), so both are matched here. */
+function findLessonRow(ref){
   var p = (IDX && IDX.paths) || [];
   for(var i=0;i<p.length;i++){
     var units = p[i].units || [];
     for(var u=0;u<units.length;u++){
       var rows = units[u].lessons || [];
-      for(var r=0;r<rows.length;r++) if(rows[r].file === file)
-        return { subject:p[i].subject, grade:normGrade(p[i].grade) };
+      for(var r=0;r<rows.length;r++){
+        if(rows[r].file === ref || rows[r].key === ref)
+          return { row:rows[r], subject:p[i].subject, grade:normGrade(p[i].grade) };
+      }
     }
   }
   return null;
 }
+function findLessonPath(ref){
+  var hit = findLessonRow(ref);
+  return hit ? { subject:hit.subject, grade:hit.grade } : null;
+}
 
 /* Load one lesson file and prime its practice questions. The player itself is
    unchanged from LS1 - this just became something the path map can call. */
+/* Where does this lesson's JSON live? Two homes, in this order:
+   1. a reviewed FILE in the repo  -> /lessons/{file}.json      (LS1)
+   2. an APPROVED row in lesson_bank -> /api/lesson?key={key}   (LS3)
+   The API only ever serves approved lessons, unless the owner preview code is
+   present, so a kid can never reach an unreviewed draft. */
+function lessonSources(ref){
+  var hit = findLessonRow(ref), out = [];
+  var api = "/api/lesson?key=" + encodeURIComponent(ref) + (PREVIEW ? "&preview=" + encodeURIComponent(PREVIEW) : "");
+  if(hit && hit.row.file) out.push("/lessons/" + hit.row.file + ".json");
+  else if(hit && hit.row.fromBank) out.push(api);
+  else { out.push("/lessons/" + ref + ".json"); out.push(api); }   // deep link, home unknown
+  return out;
+}
+function fetchFirst(urls, i, done){
+  if(i >= urls.length) return done(null);
+  fetch(urls[i], { cache:"no-cache" })
+    .then(function(r){ if(!r.ok) throw new Error("missing"); return r.json(); })
+    .then(function(j){ if(!j || j.ok === false) throw new Error("dormant"); done(j); })
+    .catch(function(){ fetchFirst(urls, i+1, done); });
+}
 function loadLesson(file, done){
   render('<div class="loading">Getting your lesson ready...</div>');
   bar(-1);
   soloQs = [];
   state = { solo:0, soloScore:0, check:0, checkScore:0, attempt:0 };
-  fetch("/lessons/"+file+".json", { cache:"no-cache" })
-    .then(function(r){ if(!r.ok) throw new Error("missing"); return r.json(); })
-    .then(function(json){
+  fetchFirst(lessonSources(file), 0, function(json){
+    try{
+      if(!json) throw new Error("missing");
       L = json;
       if(!L || !L.check || !L.teach || !L.mastery) throw new Error("bad lesson");
       setTitle(L.title || "Lesson");
@@ -866,18 +954,35 @@ function loadLesson(file, done){
         if(!soloQs.length) soloQs = lessonOwnQuestions();
       });
       done(true);
-    })
-    .catch(function(){ fatal("We could not load this lesson. Try again in a moment."); done(false); });
+    }catch(e){
+      fatal("We could not load this lesson. Try again in a moment.");
+      done(false);
+    }
+  });
 }
 
 (function boot(){
   var q = params(), deep = lessonIdFromUrl();
   // The lesson map first: the picker and the path both read it, and a deep link
   // wants it too so Back can land on that lesson's path instead of leaving.
-  fetch("/lessons/index.json", { cache:"no-cache" })
+  //
+  // SESSION LS3: ask the LIVE map first. /api/lesson-map is the static
+  // index.json with every lesson the owner has APPROVED in lesson_bank flipped
+  // from "planned" to "approved", so an approval reaches kids without a deploy.
+  // If that call is dormant or fails we fall straight back to the static file,
+  // so /lessons can never end up with no map at all.
+  var mapUrl = "/api/lesson-map" + (PREVIEW ? "?preview=" + encodeURIComponent(PREVIEW) : "");
+  fetch(mapUrl, { cache:"no-cache" })
     .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(j){ IDX = (j && j.paths) ? j : null; })
-    .catch(function(){ IDX = null; })
+    .then(function(j){ if(j && j.paths) IDX = j; })
+    .catch(function(){})
+    .then(function(){
+      if(IDX) return null;
+      return fetch("/lessons/index.json", { cache:"no-cache" })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){ IDX = (j && j.paths) ? j : null; })
+        .catch(function(){ IDX = null; });
+    })
     .then(function(){
       if(deep){
         var home = IDX ? findLessonPath(deep) : null;

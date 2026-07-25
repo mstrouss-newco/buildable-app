@@ -843,6 +843,14 @@
       "dest": "/question-review.html"
     },
     {
+      "src": "/lesson-review.html",
+      "dest": "/lesson-review.html"
+    },
+    {
+      "src": "/lesson-review",
+      "dest": "/lesson-review.html"
+    },
+    {
       "src": "/lessons/art/(.*)",
       "dest": "/lessons/art/$1",
       "headers": {
