@@ -94,6 +94,11 @@
       case "win": [523,659,784,1047,1319].forEach((f,i)=>voice("triangle",f,f,t+i*0.1,0.3,0.15)); break;
       case "lose": voice("sawtooth",392,196,t,0.5,0.14); voice("sawtooth",294,147,t+0.12,0.5,0.12); break;
       case "select": voice("sine",740,988,t,0.09,0.11); break;
+      // Paper sounds for the Kidspedia topic book (Session TB5). Filtered noise
+      // only — a page turn should sound like paper, never like a UI beep.
+      case "pageturn": noise(t,0.26,0.075,4200,600); noise(t+0.07,0.20,0.05,2600,420); break;
+      case "fold": noise(t,0.10,0.085,6000,900); voice("sine",300,180,t+0.03,0.10,0.035); break;
+      case "unfold": noise(t,0.09,0.05,3400,800); break;
       default: break;
     }
   }

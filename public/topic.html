@@ -21,11 +21,30 @@
   body.in-app #back{display:none}
   body.in-app .top{padding-left:96px}
 
-  .bookwrap{max-width:620px;margin:0 auto;padding:0 14px 34px}
+  .bookwrap{max-width:620px;margin:0 auto;padding:0 14px calc(34px + env(safe-area-inset-bottom,0px))}
   .book{position:relative;border-radius:22px;overflow:hidden;background:var(--paper);color:var(--ink);box-shadow:0 16px 40px rgba(0,0,0,.45);touch-action:pan-y}
-  .pages{display:flex;transition:transform .32s cubic-bezier(.22,.7,.3,1);will-change:transform}
+  .pages{display:flex;transition:transform .42s cubic-bezier(.2,.74,.24,1);will-change:transform}
   .page{flex:0 0 100%;min-width:100%;position:relative;background:var(--paper)}
-  .page.turning{}
+  /* the gutter: a soft shadow down the binding edge so a page reads as paper
+     bound into a book rather than a flat card. */
+  .page::before{content:"";position:absolute;left:0;top:0;bottom:0;width:24px;z-index:4;pointer-events:none;
+    background:linear-gradient(90deg,rgba(15,14,23,.15),rgba(15,14,23,0))}
+
+  /* Session TB5 — the page turn. A light sweep travels across the paper in the
+     direction of travel, the book gives one small breath, and the paper sound
+     plays. No 3D flip: it must stay smooth on an old iPad. */
+  .curl{position:absolute;inset:0;z-index:7;pointer-events:none;opacity:0;background-size:250% 100%;
+    background-image:linear-gradient(102deg,rgba(15,14,23,0) 36%,rgba(15,14,23,.20) 45%,rgba(255,255,255,.5) 49%,rgba(15,14,23,.14) 54%,rgba(15,14,23,0) 64%)}
+  .book.flipf .curl{animation:sweepf .46s cubic-bezier(.25,.7,.3,1)}
+  .book.flipb .curl{animation:sweepb .46s cubic-bezier(.25,.7,.3,1)}
+  @keyframes sweepf{0%{opacity:0;background-position:100% 0}14%{opacity:1}100%{opacity:0;background-position:-45% 0}}
+  @keyframes sweepb{0%{opacity:0;background-position:-45% 0}14%{opacity:1}100%{opacity:0;background-position:100% 0}}
+  .book.flipf,.book.flipb{animation:booknudge .42s ease}
+  @keyframes booknudge{45%{transform:scale(.993)}100%{transform:scale(1)}}
+  @media (prefers-reduced-motion:reduce){
+    .pages{transition:none}
+    .book.flipf,.book.flipb,.book.flipf .curl,.book.flipb .curl{animation:none}
+  }
   .photo{position:relative;width:100%;aspect-ratio:4 / 3;background:linear-gradient(160deg,var(--fill,#2A3550),#141A2B);overflow:hidden}
   .photo img{width:100%;height:100%;object-fit:cover;display:block}
   .photo .painted{position:absolute;inset:0;display:flex;align-items:flex-end;padding:16px;font-family:'Fredoka';font-weight:600;font-size:15px;color:rgba(253,250,245,.82);background:radial-gradient(120% 90% at 30% 20%,rgba(255,255,255,.16),transparent 60%)}
@@ -66,7 +85,18 @@
   .ear.on .fold{fill:var(--gold)}
   .ear.on .edge{stroke:rgba(15,14,23,.4)}
   .ear:active{transform:scale(.94)}
-  .earhint{position:absolute;right:8px;bottom:8px;font-size:9.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,14,23,.5);z-index:6;pointer-events:none}
+  .earhint{position:absolute;right:8px;bottom:8px;font-size:9.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:rgba(15,14,23,.5);z-index:6;pointer-events:none;transition:color .2s ease}
+  .earhint.on{color:rgba(15,14,23,.72)}
+  /* Session TB5 — the delight: the corner really creases down and throws a few
+     gold flecks, so saving a page feels like folding paper. */
+  .ear.pop svg{animation:earfold .44s cubic-bezier(.3,.8,.28,1)}
+  @keyframes earfold{0%{transform:translate(7px,7px) rotate(-9deg)}55%{transform:translate(-1px,-1px) rotate(2deg)}100%{transform:none}}
+  .sparks{position:absolute;right:30px;bottom:30px;width:0;height:0;z-index:6;pointer-events:none}
+  .sparks i{position:absolute;width:7px;height:7px;border-radius:2px;background:var(--gold);opacity:0;box-shadow:0 1px 4px rgba(15,14,23,.25)}
+  .sparks.go i{animation:sparkfly .62s cubic-bezier(.2,.8,.3,1) forwards}
+  @keyframes sparkfly{0%{opacity:1;transform:translate(0,0) scale(.5) rotate(0)}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.1) rotate(120deg)}}
+  @media (prefers-reduced-motion:reduce){.ear.pop svg,.sparks.go i{animation:none}}
 
   .turns{display:flex;gap:10px;margin-top:12px;align-items:center}
   .turn{flex:none;width:52px;height:52px;border-radius:18px;border:none;background:rgba(255,255,255,.1);color:var(--cream);font-family:'Nunito';font-weight:900;font-size:20px;cursor:pointer}
@@ -96,6 +126,66 @@
   .notready button{margin-top:6px;border:none;background:var(--gold);color:var(--ink);font-family:'Nunito';font-weight:900;font-size:14px;padding:11px 20px;border-radius:999px;cursor:pointer}
   .pauseveil{position:fixed;inset:0;background:rgba(11,10,24,.55);z-index:40;display:none;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:16px}
   .pauseveil.show{display:flex}
+
+  /* ============ Session TB5 — fit check: phone, iPad, and landscape ============
+     The book is one column everywhere; only its measurements change. Notches and
+     home bars are respected so no control ever sits under them. */
+  @supports (height:100dvh){ body{min-height:100dvh} .page.cover .photo{max-height:56dvh} .sheet{max-height:78dvh} }
+  .top{padding-top:calc(12px + env(safe-area-inset-top,0px))}
+  .sheet{padding-bottom:calc(34px + env(safe-area-inset-bottom,0px))}
+  .toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
+
+  /* Short phones (iPhone SE, and any phone with the browser bars showing): a
+     shallower photo keeps the fact and both buttons above the fold. */
+  @media (max-height:700px){
+    .photo{aspect-ratio:16 / 10}
+    .page.cover .photo{aspect-ratio:1 / 1;max-height:42vh}
+    .ptitle{font-size:19px;padding-top:13px}
+    .pbody{padding-bottom:16px}
+  }
+  /* A phone held sideways: the page becomes a real spread — photo on the left,
+     words on the right — so nothing important falls below the screen. */
+  @media (orientation:landscape) and (max-height:560px){
+    .bookwrap{max-width:none;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+    /* keep the turn buttons on screen: the book never outgrows the window */
+    .book{max-height:calc(100vh - 126px)}
+    .page{display:grid;grid-template-columns:44% 1fr;grid-template-rows:auto 1fr;overflow-y:auto}
+    .photo{grid-row:1 / span 2;aspect-ratio:auto;height:100%;max-height:none;min-height:238px}
+    /* the cover is a spread too: art on the left, title and Start on the right */
+    .page.cover{grid-template-rows:min-content min-content min-content 1fr}
+    .page.cover .photo{grid-row:1 / span 4;max-height:none}
+    .coverkicker{padding-top:16px}
+    .ptitle{padding:12px 16px 0;font-size:17.5px}
+    .pbody{padding:6px 16px 14px}
+    .factbox{margin-top:8px}
+    .facttext{font-size:13.5px;line-height:1.45}
+    .factsrc{font-size:9.5px;margin-top:5px}
+    .factnav{margin-top:9px;gap:8px}
+    .say{width:42px;height:42px}
+    .say svg{width:19px;height:19px}
+    .q{padding:8px 13px;font-size:12px}
+    .covertitle{font-size:24px}
+    .turns{margin-top:8px}
+    .turn{width:46px;height:46px}
+    .ear{width:62px;height:62px}
+  }
+  /* iPad and up: a wider page with bigger type, still one comfortable column.
+     The height floor keeps a sideways phone (also wide) out of this block. */
+  @media (min-width:820px) and (min-height:620px){
+    .bookwrap{max-width:760px;padding-bottom:44px}
+    .book{border-radius:26px}
+    .photo{max-height:52vh}
+    .ptitle{font-size:25px;padding:20px 24px 0}
+    .covertitle{font-size:36px;padding:18px 24px 0}
+    .coverkicker,.coverblurb{padding-left:24px;padding-right:24px}
+    .pbody{padding:12px 24px 24px}
+    .facttext{font-size:17.5px}
+    .factsrc{font-size:11.5px}
+    .say{width:54px;height:54px}
+    .q{font-size:13.5px;padding:11px 18px}
+    .ear{width:86px;height:86px}
+    .top{max-width:760px}
+  }
 </style>
 </head>
 <body>
@@ -111,7 +201,7 @@
   </div>
 
   <div class="bookwrap">
-    <div class="book" id="book"><div class="pages" id="pages"></div></div>
+    <div class="book" id="book"><div class="pages" id="pages"></div><div class="curl" id="curl" aria-hidden="true"></div></div>
     <div class="turns">
       <button class="turn" id="prev" type="button" aria-label="Previous page">&lsaquo;</button>
       <div class="pagecount" id="pagecount"></div>
@@ -385,6 +475,14 @@ function earSvg() {
     '<path class="edge" d="M74 22 L22 74"/>' +
     "</svg>";
 }
+// Session TB5 — the flecks of gold that fly off the corner when it creases.
+// Drawn squares, never an emoji, and each one carries its own direction.
+const SPARK_DIRS = [[-46,-14],[-34,-38],[-10,-50],[-58,-30],[-22,-22],[-44,-52]];
+function sparkSvg(i) {
+  return '<span class="sparks" id="sparks-' + i + '" aria-hidden="true">' +
+    SPARK_DIRS.map((d) => '<i style="--dx:' + d[0] + 'px;--dy:' + d[1] + 'px"></i>').join("") +
+    "</span>";
+}
 function buildPages() {
   const wrap = document.getElementById("pages");
   wrap.innerHTML = "";
@@ -419,7 +517,8 @@ function buildPages() {
             '<button class="q" type="button" id="more-' + i + '">Another fact</button>' +
           "</div>" +
         "</div>" +
-        '<span class="earhint">Fold</span>' +
+        '<span class="earhint" id="earhint-' + i + '">Fold</span>' +
+        sparkSvg(i) +
         '<button class="ear" type="button" id="ear-' + i + '" aria-label="Fold this page corner to save it">' + earSvg() + "</button>";
     }
     wrap.appendChild(el);
@@ -487,11 +586,29 @@ function goTo(i, instant) {
   }
   renderEarUi();
 }
+// Session TB5 — what a turned page feels like. The light sweep runs across the
+// paper in the direction of travel, the paper sound plays, and the phone gives
+// the smallest tick. Every piece is optional: if the sound engine or the class
+// list is not there, the page still turns.
+let turnFxTimer = null;
+function playTurnFx(dir) {
+  const b = document.getElementById("book");
+  if (b && b.classList) {
+    b.classList.remove("flipf", "flipb");
+    try { void b.offsetWidth; } catch (e) {}   // restart the sweep on a fast second turn
+    b.classList.add(dir < 0 ? "flipb" : "flipf");
+    if (turnFxTimer) clearTimeout(turnFxTimer);
+    turnFxTimer = setTimeout(() => { try { b.classList.remove("flipf", "flipb"); } catch (e) {} }, 500);
+  }
+  try { if (window.Feel && Feel.sfx) Feel.sfx("pageturn"); } catch (e) {}
+  try { if (window.Feel && Feel.haptic) Feel.haptic("light"); } catch (e) {}
+}
 function turn(dir) {
+  if (paused) return;
   const target = pageIdx + dir;
   if (target < 0 || target > SPREADS.length - 1) return;
   goTo(target);
-  try { if (window.Feel && Feel.tap) Feel.tap(); } catch (e) {}
+  playTurnFx(dir);
 }
 function initSwipe() {
   const book = document.getElementById("book"); if (!book) return;
@@ -551,9 +668,37 @@ function toggleEar(i) {
   if (on) ears.add(sp.id); else ears.delete(sp.id);
   writeLocalEars([...ears]);
   renderEarUi();
-  try { if (window.Feel && (on ? Feel.win : Feel.tap)) (on ? (Feel.win || Feel.tap) : Feel.tap)(); } catch (e) {}
+  playEarFx(i, on);
   showToast(on ? "Page saved to My dog-ears." : "Fold undone.");
   pushEar(sp.id, on, sp.title);
+}
+// Session TB5 — the crease. The corner folds down for real, a few gold flecks
+// fly off it, and a short paper sound plays. Undoing is quieter on purpose: the
+// reward belongs to saving the page, not to changing your mind.
+let earFxTimer = null;
+function playEarFx(i, on) {
+  const b = document.getElementById("ear-" + i);
+  const sk = document.getElementById("sparks-" + i);
+  if (b && b.classList) {
+    b.classList.remove("pop");
+    try { void b.offsetWidth; } catch (e) {}
+    if (on) b.classList.add("pop");
+  }
+  if (sk && sk.classList) {
+    sk.classList.remove("go");
+    try { void sk.offsetWidth; } catch (e) {}
+    if (on) sk.classList.add("go");
+  }
+  if (earFxTimer) clearTimeout(earFxTimer);
+  earFxTimer = setTimeout(() => {
+    try { if (b && b.classList) b.classList.remove("pop"); if (sk && sk.classList) sk.classList.remove("go"); } catch (e) {}
+  }, 700);
+  try {
+    if (window.Feel) {
+      if (Feel.sfx) Feel.sfx(on ? "fold" : "unfold");
+      if (Feel.haptic) Feel.haptic(on ? "medium" : "light");
+    }
+  } catch (e) {}
 }
 function renderEarUi() {
   SPREADS.forEach((sp, i) => {
@@ -564,6 +709,8 @@ function renderEarUi() {
       b.classList.toggle("on", on);
       if (b.setAttribute) b.setAttribute("aria-label", on ? "Unfold this page corner" : "Fold this page corner to save it");
     }
+    const h = document.getElementById("earhint-" + i);
+    if (h) { const on = ears.has(sp.id); h.textContent = on ? "Saved" : "Fold"; if (h.classList) h.classList.toggle("on", on); }
   });
   const c = document.getElementById("earCount"); if (c) c.textContent = String(ears.size);
 }
