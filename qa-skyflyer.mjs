@@ -152,6 +152,63 @@ chk('every badge the manifest asks for has a prompt in the art library',
     .every(id=>id && new RegExp('"'+id+'":').test(imgSrc.slice(imgSrc.indexOf('kind === "skybadge"'), imgSrc.indexOf('kind === "explore"')))));
 
 // ---------------------------------------------------------------------------
+// 2c) FL5 MISSIONS — one engine, four jobs, and a law that nothing can be failed
+// ---------------------------------------------------------------------------
+console.log('--- FL5: missions mode, aircraft jobs, no fail state ---');
+const JOB_IDS = ['mail-run','supply-drop','lost-explorer','lantern-lighter'];
+chk('the engine offers Free Flight or Jobs at a stop (the card lives in the cartridge)',
+  /id="modeCard"/.test(html) && /id="freeBtn"/.test(html) && /function openModeCard\(/.test(html));
+chk('choosing a job never adds a second LEVEL picker (the shell journey is still the one)',
+  !/onMenu\s*:/.test(html));
+chk('there is ONE mission engine, not four little ones',
+  /function jobStep\(/.test(html) && /function startJob\(/.test(html) && /function deliverTo\(/.test(html) &&
+  (html.match(/function jobStep\(/g)||[]).length===1);
+chk('all four aircraft jobs are declared as recipes', JOB_IDS.every(id=>new RegExp('id:"'+id+'"').test(html)), JOB_IDS.join(', '));
+chk('a recipe is DATA, so a new job is a data edit and no new code',
+  /var MISSIONS=\[/.test(html) && /function mergeMissions\(/.test(html));
+chk('every job answers the five questions (world, what you carry, where from, where to, one fact)',
+  /world:"sunny-islands", name:"Mail Run"/.test(html) &&
+  /cargo:\{name:"letter"/.test(html) && /depot:\{x:0,z:-190,label:"Post Dock"/.test(html) &&
+  (html.match(/fact:"/g)||[]).length>=4 && (html.match(/targets:\[/g)||[]).length>=4);
+// Looks for the CODE shapes a fail state needs (a countdown, a life counter, an
+// expiry), not the English words - the file says out loud that it has none of
+// them, and a prose ban would only ban talking about it.
+chk('THE FL5 LAW: no job can be failed - no timer, no lives, no expiry anywhere',
+  !/\b(timeLeft|timeLimit|timer|countdown|lives|attemptsLeft|expiresAt)\s*[:=]/.test(html) &&
+  !/game over/i.test(html) && !/you lose/i.test(html) && /NOTHING HERE CAN FAIL/.test(html));
+chk('dropped things respawn: the depot never runs out, so flying off mid-job costs nothing',
+  /The dock NEVER runs out/.test(html) && /JS\.carrying<JOB\.capacity/.test(html));
+chk('the controls never change (still one finger, drag to steer)',
+  /function pdown\(/.test(html) && !/keydown/.test(html) && /S\.dx=clamp\(/.test(html));
+chk('a job adds exactly one arrow pointing at the next thing to do',
+  /function jobObjective\(/.test(html) && /arrowLbl\.textContent=aimLabel/.test(html));
+chk('one job asks you to hover, and the tight-turning ride is the one it suits',
+  /hold:2\.6/.test(html) && /Rescue Copter is made for this/.test(html));
+chk('every job ends with a Did You Know card, coins to the SHARED wallet and a badge sticker',
+  /function showFactCard\(/.test(html) && /announceCoins\(JOB\.coins\)/.test(html) &&
+  /markBadge\(JOB\.id\)/.test(html) && /function badgeSticker\(/.test(html));
+chk('badges are kept per kid, in the same prefs the journey already reads',
+  /p\.badges\[id\]=true/.test(html) && /bk_skyflyer_prefs/.test(html));
+chk('a job can be deep-linked and survives a refresh (?mission=)', /Q\.get\("mission"\)/.test(html) && /Q\.get\("mode"\)/.test(html));
+chk('the three new job sounds are palette names through the Kit, and really exist',
+  /pickup:\s*"sky_pickup"/.test(html) && /deliver:\s*"sky_deliver"/.test(html) && /mission:\s*"sky_mission"/.test(html) &&
+  ['sky_pickup','sky_deliver','sky_mission'].every(k=>new RegExp('\\b'+k+':').test(sfxSrc)));
+chk('the new sounds are registered in the shared catalog for any delivery game to reuse',
+  /sky_pickup:\s*"flight"/.test(read('api/list-audio.js')) && /sky_deliver:\s*"flight"/.test(read('api/list-audio.js')));
+chk('the manifest declares missions and every world carries its jobs',
+  manifest.features.missions === true && manifest.levels.every(l=>Array.isArray(l.missions) && l.missions.length>0),
+  manifest.levels.map(l=>l.name+': '+l.missions.map(m=>m.id).join('+')).join('  |  '));
+const mfJobs = manifest.levels.flatMap(l=>l.missions);
+chk('every job the manifest names is a real recipe in the engine',
+  mfJobs.every(m=>JOB_IDS.indexOf(m.id)>-1) && mfJobs.length===4, mfJobs.map(m=>m.id).join(', '));
+chk('every job carries a fun fact, a badge and a price in the manifest (all editable with no code)',
+  mfJobs.every(m=>typeof m.fact==='string' && m.fact.length>40 && m.badge && m.coins>0),
+  mfJobs.map(m=>m.badge+' @'+m.coins).join(', '));
+chk('the new job sounds are listed in the manifest audio slot',
+  ['sky_pickup','sky_deliver','sky_mission'].every(s=>manifest.audio.sfx.indexOf(s)>-1));
+chk('no emojis anywhere in the jobs', !emoji.test(mText) && !emoji.test(html));
+
+// ---------------------------------------------------------------------------
 // 3) SHELL + ROUTING wiring
 // ---------------------------------------------------------------------------
 console.log('--- SHELL: catalog + landing + journey + routes ---');
@@ -168,7 +225,7 @@ chk('the loadout screen takes its title from the manifest (so it can be a Hangar
 chk('no emojis in the shell hangar previews', !emoji.test(jsx.slice(jsx.indexOf('const SLOT_PREVIEWS'), jsx.indexOf('function SlotPreview'))));
 chk('journey progress reads the default bk_{game}_prefs shape', /bk_"\s*\+\s*id\s*\+\s*"_prefs/.test(jsx));
 chk('the shell hosts the Sky Flyer learning gate (FL4)',
-  /gameType="skyflyer"/.test(jsx) && /skyflyer-engine\.html\?v=fl4/.test(jsx));
+  /gameType="skyflyer"/.test(jsx) && /skyflyer-engine\.html\?v=fl5/.test(jsx));
 const vercel = JSON.parse(read('vercel.json'));
 const srcs = vercel.routes.map(r=>r.src);
 const catchAll = srcs.indexOf('/(.*)');
@@ -198,6 +255,10 @@ if (!JSDOM) {
       url:'https://buildablekids.com/skyflyer-engine.html?level='+level+'&auto=1&nodraw=1&manual=1'+params });
     return dom;
   };
+  // the same page WITHOUT the robot's autopilot: what a kid actually opens, which
+  // is the only way to see the Free Flight / Jobs card the way they see it.
+  const flyKid = (level, params='') => new JSDOM(page, { runScripts:'dangerously', pretendToBeVisual:false,
+    url:'https://buildablekids.com/skyflyer-engine.html?level='+level+'&nodraw=1&manual=1'+params });
   const MAX = 9000;                       // 300 simulated seconds per world
   for (let i = 0; i < 3; i++) {
     const dom = fly(i);
@@ -242,7 +303,7 @@ if (!JSDOM) {
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as FL4', w4.SKY.version === 'FL4', w4.SKY.version);
+    chk('engine reports itself as FL5', w4.SKY.version === 'FL5', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();
@@ -316,6 +377,132 @@ if (!JSDOM) {
     const best = Math.min(...flown.map(f=>f.secs)), worst = Math.max(...flown.map(f=>f.secs));
     chk('no ride is more than 3x faster at the same goal (they are looks, not power)',
       worst <= best * 3, flown.map(f=>f.name+' '+f.secs.toFixed(0)+'s').join('  |  '));
+  }
+
+  // ------------------------------------------------------------------
+  //  THE FL5 PROOF — the robot does every job for real. A job that cannot be
+  //  finished is worse than no job at all, so every recipe gets flown: loaded
+  //  up, delivered, paid into the shared wallet, badge kept, fact card shown.
+  // ------------------------------------------------------------------
+  console.log('--- FL5 LIVE: the robot does all four aircraft jobs ---');
+  const JOB_WORLD = { 'mail-run':0, 'supply-drop':1, 'lost-explorer':1, 'lantern-lighter':2 };
+  const JOB_MAX = 15000;                      // 500 simulated seconds is a huge allowance
+  for (const id of JOB_IDS) {
+    const dj = fly(JOB_WORLD[id], '&auto=1'); const wj = dj.window;
+    if (!wj.SKY) { chk('job '+id+' booted', false, 'no SKY handle'); continue; }
+    chk('job "'+id+'" starts from the mission engine', wj.SKY.startMission(id) === true && wj.SKY.mode() === 'job');
+    const recipe = wj.SKY.mission();
+    let t = 0;
+    for (; t < JOB_MAX; t++) { wj.SKY.tick(1/30); if (wj.SKY.job().complete) break; }
+    const j = wj.SKY.job();
+    chk('job "'+recipe.name+'" FINISHED by autopilot', j.complete,
+      j.done+'/'+j.of+' '+(recipe.verb||'').replace('!','').toLowerCase()+' in '+(t/30).toFixed(0)+'s of flight');
+    chk('job "'+recipe.name+'" is about a minute of flying, not ten', (t/30) < 120, (t/30).toFixed(0)+'s for the robot');
+    chk('job "'+recipe.name+'" paid its coins into the ONE shared wallet',
+      j.paid === recipe.coins && wj.BuildableWallet.balance() >= recipe.coins, '+'+j.paid+' -> wallet '+wj.BuildableWallet.balance());
+    chk('job "'+recipe.name+'" left a badge sticker behind', wj.SKY.badges()[id] === true, recipe.badge);
+    chk('job "'+recipe.name+'" ends on a Did You Know card with a real fact',
+      j.factUp === true && typeof recipe.fact === 'string' && recipe.fact.length > 40);
+    chk('job "'+recipe.name+'" never asked a kid to hurry (no timer ran at all)',
+      wj.SKY.state.paused === false && !('timeLeft' in wj.SKY.state) && !('lives' in wj.SKY.state));
+    wj.close();
+  }
+  // a job cannot be lost: wander off in the middle of one and the dock is still
+  // loaded and every drop point is still waiting when you come back.
+  {
+    const dw = fly(0, '&auto=1'); const ww = dw.window;
+    ww.SKY.startMission('mail-run');
+    for (let k=0;k<600;k++) ww.SKY.tick(1/30);
+    const mid = ww.SKY.job();
+    ww.SKY.autopilot(false);                             // let go of the controls and drift
+    for (let k=0;k<900;k++) ww.SKY.tick(1/30);
+    const drifted = ww.SKY.job();
+    ww.SKY.autopilot(true);
+    let t=0; for (; t<JOB_MAX; t++){ ww.SKY.tick(1/30); if (ww.SKY.job().complete) break; }
+    chk('flying off in the middle of a job loses nothing at all',
+      mid.done>0 && drifted.done>=mid.done && ww.SKY.job().complete,
+      'delivered '+mid.done+' -> hands off the controls for 30s -> came back and finished');
+    // and the dock genuinely never runs dry: do the whole job a second time in
+    // the same flight and it loads up and finishes exactly the same way.
+    ww.SKY.endMission(); ww.SKY.startMission('mail-run');
+    let t2=0; for (; t2<JOB_MAX; t2++){ ww.SKY.tick(1/30); if (ww.SKY.job().complete) break; }
+    chk('the dock never runs dry (the same job can be flown again straight away)',
+      ww.SKY.job().complete && ww.SKY.job().done===3, 'second run finished in '+(t2/30).toFixed(0)+'s');
+    ww.close();
+  }
+  // the Free Flight / Jobs card: a kid is asked, the robot and the attract demo never are
+  {
+    const dk = flyKid(0, ''); const wk = dk.window;
+    const pk = wk.SKY.picker();
+    chk('a kid arriving at a stop is asked Free Flight or Jobs', pk.up===true && pk.free===true && pk.jobs>=1, pk.jobs+' job(s) offered');
+    chk('the world waits politely behind the card (nothing flies off while you choose)', wk.SKY.state.picking===true);
+    wk.close();
+    const dr = fly(0, '&auto=1'); const wr = dr.window;
+    chk('the QA robot and the attract demo are never blocked by the card', wr.SKY.picker().up===false && wr.SKY.mode()==='free');
+    wr.close();
+    const dd = flyKid(0, '&mission=mail-run'); const wd = dd.window;
+    chk('a job deep link goes straight in and skips the card', wd.SKY.mode()==='job' && wd.SKY.job().id==='mail-run' && wd.SKY.picker().up===false);
+    wd.close();
+    const dfree = flyKid(0, '&mode=free'); const wfree = dfree.window;
+    chk('?mode=free skips the card straight into free flight', wfree.SKY.picker().up===false && wfree.SKY.mode()==='free');
+    wfree.close();
+    const df = flyKid(1, ''); const wf = df.window;
+    chk('a stop with two jobs offers two (Snowy Peaks: supply drop AND lost explorer)', wf.SKY.picker().jobs===2);
+    wf.close();
+  }
+  // jobs are editable data, exactly like the palette and the music bed
+  {
+    const de = flyKid(0, '&mode=free'); const we = de.window;
+    const edited = JSON.parse(JSON.stringify(manifest));
+    edited.levels[0].missions[0].name = 'Island Post';
+    edited.levels[0].missions[0].coins = 99;
+    edited.levels[0].missions[0].fact = 'A brand new fact, written in the manifest and nowhere else at all.';
+    we.SKY.applyManifest(edited);
+    const j = we.SKY.missions().find(m=>m.id==='mail-run');
+    chk('renaming a job, repricing it and rewriting its fact is a MANIFEST edit, no code',
+      j.name==='Island Post' && j.coins===99 && /brand new fact/.test(j.fact));
+    we.SKY.mergeMissions([{ id:'mail-run', coins:'not a number', targets:'broken' }], 'sunny-islands');
+    const j2 = we.SKY.missions().find(m=>m.id==='mail-run');
+    chk('a half-written manifest job can never break a job', Array.isArray(j2.targets) && j2.targets.length===3);
+    we.close();
+  }
+  // a job that repaints the sky has to put it back
+  {
+    const dp = fly(2, '&auto=1'); const wp = dp.window;
+    const before = wp.SKY.paletteNow();
+    wp.SKY.startMission('lantern-lighter');
+    const dusk = wp.SKY.paletteNow();
+    wp.SKY.endMission();
+    const after = wp.SKY.paletteNow();
+    chk('Lantern Lighter really turns the canyon dusky, and puts it back afterwards',
+      dusk.sky !== before.sky && after.sky === before.sky && after.ground === before.ground,
+      'day #'+before.sky.toString(16)+' -> dusk #'+dusk.sky.toString(16)+' -> day #'+after.sky.toString(16));
+    wp.close();
+  }
+  // free flight is exactly what it always was
+  {
+    const dv = fly(0, '&auto=1&mode=free'); const wv = dv.window;
+    let t=0; for(; t<MAX; t++){ wv.SKY.tick(1/30); if (wv.SKY.beaten()) break; }
+    chk('Missions changed nothing about Free Flight (world 1 still beatable the old way)',
+      wv.SKY.beaten() && wv.SKY.mode()==='free', 'beaten in '+(t/30).toFixed(0)+'s');
+    wv.close();
+  }
+  // every ride can do the hover job — a hangar choice may suit it better, never gate it
+  {
+    const times = [];
+    for (let r=0;r<3;r++){
+      const dh = fly(1, '&auto=1&ride='+r); const wh = dh.window;
+      wh.SKY.startMission('lost-explorer');
+      let t=0; for(; t<JOB_MAX; t++){ wh.SKY.tick(1/30); if (wh.SKY.job().complete) break; }
+      chk('ride '+r+' "'+wh.SKY.ride.name+'" can finish the hover job (a ride never locks a job out)',
+        wh.SKY.job().complete, (t/30).toFixed(0)+'s');
+      times.push({ name: wh.SKY.ride.name, circle: wh.SKY.ride.speed/wh.SKY.ride.turn, secs: t/30 });
+      wh.close();
+    }
+    const wide = times.find(x=>/Jetpack/.test(x.name)), tight = times.find(x=>/Copter/.test(x.name));
+    chk('the widest-turning ride pays for it on the hover job (the hangar choice matters)',
+      wide && tight && wide.secs > tight.secs,
+      times.map(x=>x.name+' turn circle '+x.circle.toFixed(0)+' -> '+x.secs.toFixed(0)+'s').join('  |  '));
   }
 }
 
