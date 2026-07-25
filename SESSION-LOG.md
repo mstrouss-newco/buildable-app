@@ -47,11 +47,12 @@ it: inside a game's editor, in a slot with nothing good in it.
   Add to app, and the test asserts exactly one POST left the page, that it went to
   `/api/planner`, that nothing touched `asset-studio` or `save-game`, and that the
   kit is still on the shelf afterwards.
-- `node qa-castleguard.mjs .` — **one FAIL, pre-existing and untouched.** "12
-  levels line up with the engine": the manifest lists 4 levels, the engine has 12.
-  Verified identical at the previous commit (83e496e), so this session neither
-  caused nor fixed it. Fixing it means adding 8 level entries, which moves the
-  shell journey — Mike's call.
+- `node qa-castleguard.mjs .` — **ALL PASS.** Worth recording how: it was failing
+  its long-standing "12 levels line up with the engine" check when this session
+  started, and it still failed on the pre-session commit (83e496e) when checked
+  there, so KP3 did not cause it. While KP3 was being built, a parallel session
+  landed `04eea61 Castle Guard: the manifest now lists all 12 levels, not 4` and
+  fixed it. Re-run after rebasing onto that work: clean.
 
 **What remains in phase KP**
 
@@ -59,7 +60,8 @@ it: inside a game's editor, in a slot with nothing good in it.
   to grow that, one card at a time.
 - No `[kit:...]` card is open right now — the planner has none, so there is
   nothing waiting for the next session to import.
-- The Castle Guard level-count FAIL above is still open and still needs a decision.
+- Castle Guard's long-standing level-count FAIL is gone, fixed by a parallel
+  session mid-flight. Phase KP has no known failing check left.
 
 ## 2026-07-25: Session TB5 — Topic book polish, narration fix, and six books go live
 

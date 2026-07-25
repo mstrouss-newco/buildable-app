@@ -27,10 +27,10 @@ stubbed planner and inspects the card as data (89 checks, all pass), and
 Library, tap Add a kit, search, tap Add to app — and asserts exactly one POST
 went out, to the planner, with nothing else touched.
 
-**Known and NOT fixed:** `qa-castleguard.mjs` still fails its one pre-existing
-check (the manifest lists 4 levels, the engine has 12). Identical before and after
-this session — verified against the previous commit. Fixing it moves the shell
-journey, so it needs Mike's call.
+`qa-castleguard.mjs` is clean too. It was failing its long-standing "12 levels
+line up with the engine" check when this session started (and still failed on the
+pre-session commit, so KP3 did not cause it); a parallel session landed the
+manifest fix mid-flight, and the re-run after rebasing onto it passes.
 
 ## Session LS4 — Reading launch + placement + the live switch (July 25 2026)
 The launch block for Lessons. **19 hand-written reading and phonics lessons for
