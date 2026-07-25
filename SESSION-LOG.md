@@ -1,6 +1,43 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-24: Session TB1 — Kidspedia topic-book template + first three books
+
+**Shipped**
+- `public/topic.html` — the `topic-book` template. Cover spread, 4-5 swipeable photo
+  pages, finish spread. Swipe / arrow keys / big buttons turn the page. Each page shows
+  one full-width photo, 2-3 fun facts one at a time ("Another fact"), and each fact's
+  OWN source line. Read-aloud plays the narrator clip when one exists and falls back to
+  the browser voice instantly. Quick quiz reaches the shell. Approved-only gate,
+  pause/resume, ambient bed, Feel.tap, no emojis.
+- Dog-ears that follow the kid across devices: a folded-corner button on every page,
+  `db/create-saved-pages.sql` (new `saved_pages` table, idempotent) and
+  `api/saved-pages.js`. Kid lane when signed in, honest device lane when not.
+  localStorage is a mirror only. Unfolding sets `saved=false`, never a delete. A
+  "My dog-ears" sheet lists folded pages and jumps back to them.
+- Three books, all **status in-review**: `sharks.json`, `dinosaurs.json`, `moon.json`
+  (4 pages each, 2-3 sourced facts per page).
+- `vercel.json`: `/topic.html`, `/explore/topic-photos/(.*)` (immutable), and the three
+  per-topic routes, all BEFORE the `/explore/(.*)` catch-all.
+- `src/BuildableKids.jsx`: three EXHIBIT_CATALOG entries (in-review, so hidden).
+- `qa-topic.mjs` — born with the template. Contract + real-route + vm runtime. ALL PASS.
+  `qa-explore.mjs` and `qa-dive.mjs` re-run and still green.
+- `EXHIBIT-MANIFEST.md`: the topic-book template, its file shape, the per-fact source
+  rule, the dog-ear storage rule, and the photo pipeline.
+
+**Flagged**
+- The DALL-E photos are NOT in the Buildable MVP folder (there is no `kidspedia-photos/`
+  directory), so nothing could be compressed to WebP or committed. Every book paints a
+  titled colour panel where its photo belongs, and qa-topic WARNs about the missing
+  files instead of quietly passing. Drop the PNGs in and the art step is mechanical.
+- Mike runs `db/create-saved-pages.sql` in the Supabase SQL editor before dog-ear sync
+  works on the live site (it degrades to local-only until then, no errors shown to kids).
+
+**Remaining in phase TB**
+- The 17 other topic books (TB2-TB5), photos for all 20, the Kidspedia bookshelf with a
+  My Dog-ears shelf on Home, narration clips after approval, and Mike's fact-check +
+  approval flip in BOTH the json and EXHIBIT_CATALOG for every book.
+
 ## 2026-07-24: Session LS1 — Lesson player + first hand-built lesson (shipped)
 
 Phase LS, block LS1 only. Built the school-lesson player and the ONE sample

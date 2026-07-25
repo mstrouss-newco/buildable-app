@@ -2231,6 +2231,53 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-24 (Session TB1: Kidspedia topic-book template + Sharks / Dinosaurs / The Moon)
+
+FOURTH Kidspedia exhibit template: `topic-book` (`public/topic.html`) — a photo-real
+picture book. A cover spread, then 4-5 swipeable pages (one full-width photograph plus
+2-3 fun facts), then a finish spread. Page turns by sideways swipe, arrow keys, or the
+big prev/next buttons (a turn needs a clear sideways flick, so scrolling never turns a
+page). Each fact shows its OWN source line under it ("Source: NOAA Fisheries …") — the
+topic-book contract is stricter than the shared exhibit `sources` list on purpose,
+because the promise of these books is that a grown-up can check any line on any page.
+Standard contract wiring per EXHIBIT-MANIFEST.md: approved-only gate, pause/resume,
+factAudio-first read-aloud with instant browser-voice fallback (clip covers facts[0];
+"Another fact" is read by the browser voice so nobody waits), quiz bridge to the shell,
+ambient bed via /api/sfx, Feel.tap on every turn and fold, no emojis (the dog-ear and
+the shelf icon are drawn SVG).
+
+DOG-EARS ACROSS DEVICES: every page has a folded-corner button. Folding it saves that
+page for the KID, not the device — NEW table `saved_pages` (`db/create-saved-pages.sql`,
+idempotent, owner run) plus NEW `api/saved-pages.js`. Signed in => the `kid:<profileId>`
+lane, so the fold follows the kid to any device; not signed in => an honest device lane,
+and the "My dog-ears" sheet says so rather than implying sync. localStorage is only a
+fast mirror so the fold is instant and survives offline; it is never the record.
+Unfolding flips `saved=false` and never deletes a row. A "My dog-ears" sheet in the book
+lists the folded pages and jumps back to them.
+
+Books: `public/explore/sharks.json`, `dinosaurs.json`, `moon.json` — 4 pages each, 2-3
+sourced kid facts per page (NOAA, Smithsonian Ocean, Florida Museum, Monterey Bay
+Aquarium, Georgia Aquarium, AMNH, NHM London, Smithsonian NMNH, NPS, NASA, LPI).
+**All three status in-review** — hidden from kids until Mike fact-checks and flips BOTH
+the json and EXHIBIT_CATALOG to approved. Wiring: vercel.json routes `/topic.html`,
+`/explore/topic-photos/(.*)` (immutable cache) and `/explore/{sharks,dinosaurs,moon}` ->
+topic.html, ALL placed BEFORE the `/explore/(.*)` orbit catch-all; three EXHIBIT_CATALOG
+entries (in-review).
+
+QA: NEW `qa-topic.mjs`, born with the template — contract (4-5 pages, 2-3 facts, every
+fact sourced, unique page ids, root-absolute art paths), real-route order, and a vm
+runtime pass (boots through the real route, pages turn, facts cycle with their source,
+read-aloud falls back to the browser voice, the dog-ear folds and PUSHES to
+/api/saved-pages on the kid lane, unfold is a soft flag, the shelf lists folds, quiz
+bridge, pause/resume freezes the book). ALL CHECKS PASS; qa-explore + qa-dive still green.
+
+FLAGGED / NOT DONE: the DALL-E photos are not in the Buildable MVP folder yet (no
+`kidspedia-photos/` directory), so no WebP art could be compressed or committed. Each
+book currently paints a titled colour panel where its photo goes, and qa-topic reports
+"5/5 photo files not in the repo yet" as a WARN rather than a silent pass. Owner runs
+`db/create-saved-pages.sql` in Supabase before the dog-ear sync works live.
+
+---
 ## Session log — 2026-07-21 (WL polish 1: shore + lighthouse + live weather audio)
 
 Owner feedback round on the live Weather Lab: (1) grassy foreground SHORE added (painted

@@ -804,6 +804,29 @@
       "dest": "/weather.html"
     },
     {
+      "src": "/topic.html",
+      "dest": "/topic.html"
+    },
+    {
+      "src": "/explore/topic-photos/(.*)",
+      "dest": "/explore/topic-photos/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/explore/sharks",
+      "dest": "/topic.html"
+    },
+    {
+      "src": "/explore/dinosaurs",
+      "dest": "/topic.html"
+    },
+    {
+      "src": "/explore/moon",
+      "dest": "/topic.html"
+    },
+    {
       "src": "/explore/(.*)",
       "dest": "/orbit-explorer.html"
     },
