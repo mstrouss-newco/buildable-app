@@ -1,43 +1,158 @@
 {
-  "id": "castleguard",
-  "name": "Castle Guard",
-  "type": "game",
-  "levelProfile": "croc",
-  "category": "Strategy",
-  "color": "#2E8B57",
-  "ageBand": "5-8",
-  "shellVersion": 2,
-
-  "features": {
-    "demoOnLoad": true,
-    "journey": true,
-    "customization": false,
-    "coins": true,
-    "buddy": { "on": true, "personality": "coach" },
-    "multiplayer": "off",
-    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": ["math"] }
+ "id": "castleguard",
+ "name": "Castle Guard",
+ "type": "game",
+ "levelProfile": "croc",
+ "category": "Strategy",
+ "color": "#2E8B57",
+ "ageBand": "5-8",
+ "shellVersion": 2,
+ "features": {
+  "demoOnLoad": true,
+  "journey": true,
+  "customization": false,
+  "coins": true,
+  "buddy": {
+   "on": true,
+   "personality": "coach"
   },
-
-  "art": {
-    "badge": "castleguard/badge/v1",
-    "hero": "castleguard/hero/v1",
-    "winCelebration": "shared/win/confetti-v1",
-    "loadingScreen": "castleguard/loading/v1",
-    "bush1": "/kenney/kits/2d-assets__tower-defense/bush-small.png",
-    "bush2": "/kenney/kits/2d-assets__tower-defense/plant-sprout.png",
-    "rock1": "/kenney/kits/2d-assets__tower-defense/rock-small.png",
-    "rock2": "/kenney/kits/2d-assets__tower-defense/rock.png",
-
-    "tree": "",
-    "castle": "",
-    "arrow": ""
+  "multiplayer": "off",
+  "learning": {
+   "beforeUnlock": false,
+   "coinTopUp": true,
+   "bonusAfterWin": false,
+   "subjects": [
+    "math"
+   ]
+  }
+ },
+ "art": {
+  "badge": "castleguard/badge/v1",
+  "hero": "castleguard/hero/v1",
+  "winCelebration": "shared/win/confetti-v1",
+  "loadingScreen": "castleguard/loading/v1",
+  "bush1": "/kenney/kits/2d-assets__tower-defense/bush-small.png",
+  "bush2": "/kenney/kits/2d-assets__tower-defense/plant-sprout.png",
+  "rock1": "/kenney/kits/2d-assets__tower-defense/rock-small.png",
+  "rock2": "/kenney/kits/2d-assets__tower-defense/rock.png",
+  "tree": "",
+  "castle": "",
+  "arrow": ""
+ },
+ "artNote": "Session KP1 \u2014 bush1/bush2/rock1/rock2 are dressed from the My Kits shelf (Kenney Tower Defense, CC0); tree/castle/arrow are empty slots waiting for a piece. Each one is an ordinary library asset: fill or swap it in the editor under Library, or clear it to fall back to the built-in art. The tree keeps its own art on purpose (the kit tree reads flatter than the drawn pine), and the knights, archers and goblins are NOT dressable \u2014 they are animated sheets, and a still frame would stop them moving. KP2b: the manifest now lists all 12 levels the engine really has, so every one of them can be renamed and re-badged from the editor instead of only the first four.",
+ "levels": [
+  {
+   "id": "first-steps",
+   "name": "First Steps",
+   "difficulty": 1,
+   "unlocked": true,
+   "journeyBadge": "badges/l1/v1",
+   "parts": {
+    "wave": 1
+   }
   },
-  "artNote": "Session KP1 — bush1/bush2/rock1/rock2 are dressed from the My Kits shelf (Kenney Tower Defense, CC0); tree/castle/arrow are empty slots waiting for a piece. Each one is an ordinary library asset: fill or swap it in the editor under Library, or clear it to fall back to the built-in art. The tree keeps its own art on purpose (the kit tree reads flatter than the drawn pine), and the knights, archers and goblins are NOT dressable — they are animated sheets, and a still frame would stop them moving.",
-
-  "levels": [
-    { "id": "first-steps",  "name": "First Steps", "difficulty": 1, "unlocked": true, "journeyBadge": "badges/l1/v1", "parts": { "wave": 1 } },
-    { "id": "two-by-two",   "name": "Two by Two",  "difficulty": 2,                   "journeyBadge": "badges/l2/v1", "parts": { "wave": 2 } },
-    { "id": "big-parade",   "name": "Big Parade",  "difficulty": 4,                   "journeyBadge": "badges/l3/v1", "parts": { "wave": 3 } },
-    { "id": "goblin-king",  "name": "Goblin King", "difficulty": 5,                   "journeyBadge": "badges/l4/v1", "parts": { "wave": 4, "boss": "Goblin King" } }
-  ]
+  {
+   "id": "two-by-two",
+   "name": "Two by Two",
+   "difficulty": 2,
+   "journeyBadge": "badges/l2/v1",
+   "parts": {
+    "wave": 2
+   }
+  },
+  {
+   "id": "big-parade",
+   "name": "Big Parade",
+   "difficulty": 4,
+   "journeyBadge": "badges/l3/v1",
+   "parts": {
+    "wave": 3
+   }
+  },
+  {
+   "id": "goblin-king",
+   "name": "Goblin King",
+   "difficulty": 5,
+   "journeyBadge": "badges/l4/v1",
+   "parts": {
+    "wave": 4,
+    "boss": "Goblin King"
+   }
+  },
+  {
+   "id": "woodland-wind",
+   "name": "Woodland Wind",
+   "difficulty": 3,
+   "journeyBadge": "badges/l5/v1",
+   "parts": {
+    "wave": 5
+   }
+  },
+  {
+   "id": "harvest-king",
+   "name": "Harvest King",
+   "difficulty": 5,
+   "journeyBadge": "badges/l6/v1",
+   "parts": {
+    "wave": 6,
+    "boss": "Goblin King"
+   }
+  },
+  {
+   "id": "first-frost",
+   "name": "First Frost",
+   "difficulty": 3,
+   "journeyBadge": "badges/l7/v1",
+   "parts": {
+    "wave": 7
+   }
+  },
+  {
+   "id": "icy-bends",
+   "name": "Icy Bends",
+   "difficulty": 4,
+   "journeyBadge": "badges/l8/v1",
+   "parts": {
+    "wave": 8
+   }
+  },
+  {
+   "id": "blizzard-king",
+   "name": "Blizzard King",
+   "difficulty": 5,
+   "journeyBadge": "badges/l9/v1",
+   "parts": {
+    "wave": 9,
+    "boss": "Goblin King"
+   }
+  },
+  {
+   "id": "gates-of-dusk",
+   "name": "Gates of Dusk",
+   "difficulty": 4,
+   "journeyBadge": "badges/l10/v1",
+   "parts": {
+    "wave": 10
+   }
+  },
+  {
+   "id": "the-long-march",
+   "name": "The Long March",
+   "difficulty": 4,
+   "journeyBadge": "badges/l11/v1",
+   "parts": {
+    "wave": 11
+   }
+  },
+  {
+   "id": "kings-last-stand",
+   "name": "King's Last Stand",
+   "difficulty": 5,
+   "journeyBadge": "badges/l12/v1",
+   "parts": {
+    "wave": 12,
+    "boss": "Goblin King"
+   }
+  }
+ ]
 }
