@@ -1,6 +1,27 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-25: Session AP3 — editor Generate: serve the slicer file + pay-nothing guard
+
+**Shipped**
+- `vercel.json` — route for `/buildable-slicer.js` above the catch-all (it was the ONE
+  shared `buildable-*.js` with no route, so the catch-all served `landing.html` as the
+  script and `window.BuildableSlicer` never existed).
+- `public/editor.html` — `slicerMissing()` guard in `doGenerate`, `doGeneratePieces`,
+  `runFullSet`, `dropIn`, `dropInWorldKey`: if the slicer file did not load, stop with a
+  plain message BEFORE the paid generate call. No more paying for an image that then
+  fails at slice time.
+- `?v=1` → `?v=2` on the slicer script tag in `editor.html` and `asset-library.html` to
+  skip any cached landing-HTML copy.
+
+**Remains in phase AP**
+- Create-tab retirement (separate AP leftover, per Mike 2026-07-25 — out of scope here).
+
+**QA**
+- Live after deploy: `/buildable-slicer.js` serves JS; editor Generate separate pieces
+  for Bubbles end to end (pieces appear, Keep works). Logged in the session recap.
+
+
 ## 2026-07-25: Session TB2 — the Kidspedia bookshelf, My dog-ears, and visit-the-exhibit links
 
 **Shipped**

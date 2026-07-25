@@ -6,6 +6,20 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AP3 — editor Generate fixed: the slicer file is served now (July 25 2026)
+`vercel.json`, `public/editor.html`, `public/asset-library.html`.
+Generate with AI in the editor failed on every game with "BuildableSlicer is not defined",
+and the paid image was generated BEFORE the failure, so each click burned one image.
+Root cause: `vercel.json` uses an explicit routes list ending in a catch-all to
+`/landing.html`; `/buildable-slicer.js` had no route (missed when the slicer split into
+its own file), so the browser received the landing page HTML instead of the script.
+Fix: (1) added the `/buildable-slicer.js` route above the catch-all; (2) AP3 guard
+`slicerMissing()` in `editor.html` — Generate (single, separate-pieces, full-set) and both
+drop-in paths now stop with a plain message BEFORE any paid generate call if the slicer
+is missing; (3) bumped the script tag to `?v=2` in `editor.html` + `asset-library.html`
+so cached HTML-as-script copies are bypassed. Browse was never affected (it guards and
+falls back). Ref: planner card AP3, SESSION-LOG.md same date.
+
 ## Session 7L — Riley's Garden: stuck sound fixed, plus a cleanup pass (July 24 2026)
 `public/rileys-garden.html`, `qa-rileys.mjs`.
 **The reported bug:** the magnet ("Farmer") fanfare replayed over and over. `fruitGot` was never

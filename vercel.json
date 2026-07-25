@@ -571,6 +571,10 @@
       "dest": "/buildable-renders.js"
     },
     {
+      "src": "/buildable-slicer.js",
+      "dest": "/buildable-slicer.js"
+    },
+    {
       "src": "/buildable-manifest.js",
       "dest": "/buildable-manifest.js"
     },
