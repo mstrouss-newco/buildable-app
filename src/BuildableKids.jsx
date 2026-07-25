@@ -298,6 +298,16 @@ const EXHIBIT_CATALOG = [
   { id: "volcanoes", title: "Volcanoes", topic: "earth", color: "#B8452F", heroArt: "/explore/topic-photos/volcanoes/volcanoes-cover.webp", status: "in-review", template: "topic-book" },
   { id: "wild-weather", title: "Wild Weather", topic: "weather", color: "#37B6F5", heroArt: "/explore/topic-photos/wild-weather/wild-weather-cover.webp", status: "in-review", template: "topic-book" },
   { id: "deep-ocean", title: "The Deep Ocean", topic: "ocean", color: "#0E4E73", heroArt: "/explore/topic-photos/deep-ocean/deep-ocean-cover.webp", status: "in-review", template: "topic-book" },
+  // Session TB4: topics 13-20, the last 8 books. Same rule: in-review until Mike
+  // fact-checks the book and flips BOTH this line and the book's own JSON to "approved".
+  { id: "rainforest", title: "The Rainforest", topic: "nature", color: "#2E7D4F", heroArt: "/explore/topic-photos/rainforest/rainforest-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "deserts", title: "Deserts", topic: "nature", color: "#C98A3D", heroArt: "/explore/topic-photos/deserts/deserts-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "plants-grow", title: "How Plants Grow", topic: "nature", color: "#5B9E3E", heroArt: "/explore/topic-photos/plants-grow/plants-grow-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "your-body", title: "Your Amazing Body", topic: "body", color: "#C75B6E", heroArt: "/explore/topic-photos/your-body/your-body-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "trains", title: "Trains", topic: "machines", color: "#4A6FA5", heroArt: "/explore/topic-photos/trains/trains-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "diggers", title: "Diggers & Big Machines", topic: "machines", color: "#E0A32E", heroArt: "/explore/topic-photos/diggers/diggers-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "castles-knights", title: "Castles & Knights", topic: "history", color: "#7B6FA0", heroArt: "/explore/topic-photos/castles-knights/castles-knights-cover.webp", status: "in-review", template: "topic-book" },
+  { id: "ancient-egypt", title: "Ancient Egypt", topic: "history", color: "#C4A24A", heroArt: "/explore/topic-photos/ancient-egypt/ancient-egypt-cover.webp", status: "in-review", template: "topic-book" },
 ];
 
 // Session TB2 — the bookshelf card. Topic books do NOT each get their own Home
