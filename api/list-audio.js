@@ -58,6 +58,8 @@ const SFX_THEME = {
   // Sky Flyer (flight game type, FL4) — reusable "flight" one-shots
   sky_coin: "flight", sky_coinrun: "flight", sky_bump: "flight", sky_splash: "flight",
   sky_land: "flight", sky_takeoff: "flight", sky_bank: "flight", sky_win: "flight",
+  // FL5 mission one-shots — also reusable by any delivery/job game
+  sky_pickup: "flight", sky_deliver: "flight", sky_mission: "flight",
 };
 
 // Canonical shared one-shots (bare names) — reusable UI/game feedback sounds.

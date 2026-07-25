@@ -107,6 +107,14 @@ const SOUNDS = {
   sky_takeoff: "Short warm rising engine swell and gentle whoosh as a little toy plane lifts off a pad, hopeful and upbeat, single hit, no music, no voices",
   sky_bank:    "Short happy cash-in sparkle cascade, coins tumbling warmly into a piggy bank, cheerful and rewarding, single hit, no music, no voices",
   sky_win:     "Happy short victory fanfare with a soaring warm sparkle, cheerful kids flying game world cleared, warm rounded tones, no voices",
+  // Session FL5 (missions + aircraft jobs). A job has three new moments a free
+  // flight never had — loading up, dropping something off, and finishing the
+  // whole job — so the library grows three new one-shots rather than reusing the
+  // coin chime for all of them. They are generic on purpose (pickup / deliver /
+  // job done), so any future delivery game can trigger the same three.
+  sky_pickup:  "Short soft friendly parcel scoop with a light paper rustle and a small warm chime, picking up a letter or a bundle to carry, gentle cartoon, single hit, no music, no voices",
+  sky_deliver: "Short happy two-note drop-off chime with a soft cushioned thud, a parcel landing safely where it belongs, warm and satisfying, single hit, no music, no voices",
+  sky_mission: "Short warm cheerful job-well-done fanfare, a gentle rising three-note flourish with a soft sparkle tail, finishing a delivery round, kind and encouraging, no voices",
 
   // ---- Sling Squad one-shots (slingshot launcher; per BUILDING-A-GAME "new engine = create new sounds") ----
   sling_stretch: "Short soft stretchy elastic rubber-band pull and creak, a slingshot being drawn back, single hit, no music, no voices",
