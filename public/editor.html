@@ -168,7 +168,7 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
 
 <script src="/buildable-manifest.js?v=1"></script>
 <script src="/buildable-library.js?v=1"></script>
-<script src="/buildable-slicer.js?v=1"></script>
+<script src="/buildable-slicer.js?v=2"></script>
 <script>
 "use strict";
 var PIN = "";
@@ -468,6 +468,7 @@ function worldSlotControl(lv, slot){
 }
 function dropInWorld(lv, slot, refresh){ dropInWorldKey(levelWorld(lv), slot, refresh, lv); }
 function dropInWorldKey(worldKey, slot, refresh, lv){
+  if(slicerMissing(null)) return;
   var inp=el("input",{type:"file", accept:"image/*"});
   inp.addEventListener("change", function(){
     var f=inp.files&&inp.files[0]; if(!f) return;
@@ -544,6 +545,7 @@ function openModal(){ document.getElementById("modal").classList.add("on"); }
 function closeModal(){ document.getElementById("modal").classList.remove("on"); document.getElementById("mkeep").style.display="none"; document.getElementById("mstat").textContent=""; }
 
 function dropIn(spec, theme, cb){
+  if(slicerMissing(null)) return;
   var inp=el("input",{type:"file", accept:"image/*"});
   inp.addEventListener("change", function(){
     var f=inp.files&&inp.files[0]; if(!f) return;
@@ -601,6 +603,13 @@ function mKeep(){
 }
 
 /* ---------- Generate with AI (folds the Create tool into each slot) ---------- */
+// AP3: if /buildable-slicer.js did not load, stop BEFORE any paid generate call.
+function slicerMissing(statEl){
+  if(window.BuildableSlicer) return false;
+  var msg="The art cutter did not load. Refresh this page and try again — nothing was generated or charged.";
+  if(statEl){ statEl.textContent=msg; } else { alert(msg); }
+  return true;
+}
 var HOUSE_STYLES={
   storybook:{label:"Storybook (soft)", str:"soft painterly children's-book game art with a glossy polished finish, bright bold saturated colors, thick clean rounded shapes, cute and inviting, child-friendly ages 4-8", note:"Soft watercolor picture-book look, warm and gentle."},
   detailed:{label:"Extra detailed", str:"high-detail polished mobile-game asset art, rich material textures, thick beveled glossy borders, dramatic lighting with crisp highlights and soft shadows, vibrant saturated colors, sharp clean professional finish, appealing and colorful for kids but NOT flat, NOT plain, NOT oversimplified", note:"Richer textures, lighting and depth. Less flat and plain."},
@@ -649,6 +658,7 @@ function genPromptPiece(spec, theme, name, idx){
 function doGeneratePieces(){
   var spec=GENCTX.spec, list=pieceList(spec);
   var stat=document.getElementById("mstat"), go=document.getElementById("g-go");
+  if(slicerMissing(stat)) return;
   var tplEl=document.getElementById("g-prompt");
   var tpl=(tplEl && tplEl.value) ? tplEl.value : genPromptPieceTemplate(spec, GENCTX.theme);
   go.disabled=true;
@@ -768,6 +778,7 @@ function doGenerate(){
   var spec=GENCTX.spec;
   var prompt=document.getElementById("g-prompt").value;
   var stat=document.getElementById("mstat"), go=document.getElementById("g-go");
+  if(slicerMissing(stat)) return;
   stat.textContent="Generating on "+(GEN.engine==="flux"?"FLUX":"gpt-image-1")+"… (10-60s)"; go.disabled=true;
   fetch("/api/asset-studio",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({action:"generate", engine:GEN.engine, prompt:prompt, size:genSize(spec), transparent:false, quality:genQuality(spec)})})
@@ -810,6 +821,7 @@ function runFullSet(keys, rec){
   var theme=slugify(document.getElementById("fs-theme").value||"custom");
   GEN.engine=document.getElementById("fs-engine").value;
   var go=document.getElementById("fs-go"), stat=document.getElementById("mstat");
+  if(slicerMissing(stat)) return;
   go.disabled=true; var i=0, made=0;
   function next(){
     if(i>=keys.length){ stat.textContent="Done. Made "+made+" of "+keys.length+" pieces into the library."; setDirty(); loadLib(); renderAll(); return; }
