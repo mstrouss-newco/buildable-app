@@ -2340,6 +2340,49 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-25 (Session FL2: Sky Flyer becomes a real cartridge — 3 worlds, journey, shared wallet, hangar, autopilot)
+
+THE CARTRIDGE: NEW `public/skyflyer-engine.html` + `public/skyflyer/manifest.json`.
+The FL1 feel mock (`/skyflyer-mock`, left untouched as the replace-first fallback)
+grows into a full manifest-driven game that talks to the shell only through
+CARTRIDGE-CONTRACT.md messages.
+
+- **Three worlds = three journey stops.** Sunny Islands, Snowy Peaks, Sunset Canyon,
+  each with its own sky/fog/light palette, its own terrain builder (cone islands with
+  palms / snow-capped peaks with pines / flat-topped mesas with cacti), its own two
+  landing pads and its own goal. Every world is ENDLESS: the chunk grid keeps building
+  around the plane in all directions forever.
+- **A world is beaten by a goal, not by an ending**: collect N coins AND land M times
+  (12/1, 16/2, 20/2). Hitting both marks 3 stars, unlocks the next stop and fires the
+  buddy's `win` + `levelup`, and then the kid keeps flying in that world forever.
+- **Coins go to the ONE shared wallet.** Coins are carried until the plane lands; a
+  landing banks them through `BuildableWallet.add`, which is the announcer inside the
+  shell iframe (never shell storage), exactly like every other converted game.
+- **Nav + pause.** `BuildableGameNav.register` reports sound/help so the shell draws
+  Home + Sound + Help outside the game; `pause` / `resume` freeze and continue on the
+  spot. Deliberately NO `onMenu`: the shell journey is the level picker, so offering a
+  second one would recreate the 7J double-picker bug.
+- **The hangar is the shell's Make-it-mine**, not a new screen: the manifest declares a
+  `Plane` customization slot (Little Puffin free, Blue Jay 60, Sun Hawk 120); the shell
+  owns the purchase and the equipped index and hands it in as `?ride=`, and the engine
+  only maps that id to a look and a cruise speed.
+- **Autopilot (`?auto=1`)** steers with the same two numbers a finger produces, so
+  anything it proves a kid can do. It powers the landing card's attract demo
+  (`?screen=demo`) and the QA robot. `?nodraw=1&manual=1` + `window.SKY.tick(dt)` let a
+  harness fly a world with no WebGL and no real clock.
+
+SHELL: catalog tile (owner-gated "Coming soon" until the feel is approved), the
+`LANDING_WRAP` row (shared landing -> journey -> engine deep-linked with `?level=`),
+`SkyFlyerScreen`, `skyflyer: crocProfile` in the shared loader, vercel routes for the
+engine + manifest + short `/skyflyer` link ahead of the landing catch-all, and the
+shelf key-art prompt in `api/images.js`.
+
+QA: NEW `qa-skyflyer.mjs` — 40 static manifest/contract/route checks, then the robot
+FLIES: all three worlds beaten by autopilot (23s, 37s, 56s of simulated flight), coins
+banked into the wallet, the journey stop unlocked, flight continuing long after the
+goal, pause freezing to 0.0000 units of drift, resume continuing, and world 1 beaten
+again on a different ride. 55/55 pass. The flight half needs `npm i jsdom`; without it
+the script FAILS loudly rather than reporting a pass it never earned.
 ## Session log — 2026-07-25 (Session TB3: Kidspedia topics 4-12, nine new books)
 
 Phase TB, block TB3 only. Nine new topic books written on the TB1 `topic-book`

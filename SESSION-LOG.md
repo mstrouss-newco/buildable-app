@@ -1,6 +1,45 @@
 # Buildable Kids — Session Log
 
 
+## 2026-07-25: Session FL2 — Sky Flyer becomes a real cartridge (shipped)
+
+Phase FL, block FL2 only. Sky Flyer stops being a standalone toy and becomes a normal
+Buildable game: manifest, shared landing, winding journey, shared wallet, shared nav,
+the Make-it-mine hangar, and a QA robot that can fly it.
+
+**What shipped**
+
+- `public/skyflyer-engine.html` — the real engine. Three endless worlds (Sunny Islands,
+  Snowy Peaks, Sunset Canyon), each with its own look, terrain, two landing pads and a
+  goal (coins + landings). Beat the goal and the world is marked beaten, the next stop
+  unlocks, and the kid keeps flying forever. A crash is always a soft bounce.
+- `public/skyflyer/manifest.json` — three levels with their goals, and a `Plane`
+  customization slot: the hangar, priced and owned by the shell.
+- Coins bank on landing and are announced up to the ONE shared wallet. `pause` and
+  `resume` are honored. The shell draws Home + Sound + Help; the engine offers no
+  second level menu on purpose.
+- Autopilot flag (`?auto=1`) plus a headless mode (`?nodraw=1&manual=1`, `window.SKY`)
+  — used by the QA robot and by the landing card's attract demo.
+- Shell wiring: catalog tile, LANDING_WRAP row, SkyFlyerScreen (`?level=` + `?ride=`),
+  loader profile, vercel routes, shelf key-art prompt.
+
+**QA** — `node qa-skyflyer.mjs .` : 55/55 PASS, including the autopilot beating all
+three worlds (23s / 37s / 56s of flight), coins reaching the wallet, pause freezing on
+the spot, and a second ride still beating world 1. Also rendered all three worlds in a
+real headless browser to confirm WebGL, art and HUD look right (snow world's palette
+was darkened after the first pass washed out white-on-white).
+
+**Flagged**
+
+- The tile ships behind the owner-only "Coming soon" gate (password `1111`), matching
+  how Lessons shipped, so kids do not see Sky Flyer until Mike approves the feel. One
+  line to open it.
+- No sound yet (audio rule: created library audio only) and no generated art for the
+  planes or worlds — the shelf card will generate its key art on first view. Both are
+  FL4 work.
+
+**Remains in phase FL** — FL3 (hangar polish + any extra worlds), FL4 (sound, art
+slots, celebration polish).
 ## 2026-07-25: Session TB3 — Kidspedia topics 4-12 (nine new books, in-review)
 
 Phase TB, block TB3 only. Nine new topic books written on the TB1 `topic-book`
