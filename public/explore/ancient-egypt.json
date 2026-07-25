@@ -4,7 +4,7 @@
   "template": "topic-book",
   "topic": "history",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": ["history-facts", "reading"],
   "heroArt": "/explore/topic-photos/ancient-egypt/ancient-egypt-cover.webp",
   "shelfColor": "#C4A24A",

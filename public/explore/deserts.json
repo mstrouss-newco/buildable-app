@@ -4,7 +4,7 @@
   "template": "topic-book",
   "topic": "nature",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": ["nature-facts", "reading"],
   "heroArt": "/explore/topic-photos/deserts/deserts-cover.webp",
   "shelfColor": "#C98A3D",

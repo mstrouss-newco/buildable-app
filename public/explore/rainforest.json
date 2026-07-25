@@ -4,7 +4,7 @@
   "template": "topic-book",
   "topic": "nature",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": ["nature-facts", "reading"],
   "heroArt": "/explore/topic-photos/rainforest/rainforest-cover.webp",
   "shelfColor": "#2E7D4F",

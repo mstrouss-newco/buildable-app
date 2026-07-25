@@ -4,7 +4,7 @@
   "template": "topic-book",
   "topic": "history",
   "ageBand": "5-10",
-  "status": "in-review",
+  "status": "approved",
   "skills": ["history-facts", "reading"],
   "heroArt": "/explore/topic-photos/castles-knights/castles-knights-cover.webp",
   "shelfColor": "#7B6FA0",
