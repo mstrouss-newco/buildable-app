@@ -73,7 +73,13 @@ page errors.
   Kit, not in this engine.
 - The tile is still owner-gated (`soon: true`) until Mike flies it and approves.
 
-**What remains in phase FL:** nothing. FL1-FL4 are all shipped.
+**What remains in phase FL:** the game itself is complete and polished, but the
+phase is not. Three blocks are still open on the planner Roadmap and none was
+touched this session: **FL5 Missions mode + aircraft jobs** (Free Flight vs
+Missions at each stop, one mission engine with many small recipes — mail run,
+supply drop), **FL6 Transform quests part 1** (land on a glowing spot and become
+a bee or a puffin parent for a short quest with one fun fact) and **FL7
+Transform quests part 2** (goose squad, owl night flight, hummingbird).
 
 ## 2026-07-25: Session FL3 — The hangar: pick your ride before takeoff (shipped)
 
