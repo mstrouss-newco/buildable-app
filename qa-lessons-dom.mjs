@@ -51,6 +51,10 @@ const bankQs = [1, 2, 3, 4, 5, 6].map((i) => ({
   choices: ['10', '11', '12'], correctIndex: 0, skill: lesson.skill, source: 'bank',
 }));
 
+// Session LS3 stub state (empty until run 5).
+let BANK_MAP = null;
+let BANK_LESSONS = {};
+
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   if (u.pathname === '/api/lesson-questions') {
@@ -64,6 +68,25 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (u.pathname === '/api/say') { res.writeHead(503); return res.end(''); } // force browser-voice fallback
+  // ---- Session LS3: the two endpoints that serve lessons out of lesson_bank.
+  // BANK_MAP / BANK_LESSONS start empty, so runs 1-4 see exactly what they saw
+  // before (a 404 sends the player to the static index.json, as in production
+  // when Supabase is unset). Run 5 fills them to prove the bank path.
+  if (u.pathname === '/api/lesson-map') {
+    if (!BANK_MAP) { res.writeHead(404); return res.end('not found'); }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(JSON.stringify(BANK_MAP));
+  }
+  if (u.pathname === '/api/lesson') {
+    const key = u.searchParams.get('key');
+    const preview = u.searchParams.get('preview');
+    const row = BANK_LESSONS[key];
+    // The real endpoint only serves an approved lesson unless the owner code is
+    // present. The stub enforces the same rule so QA proves the gate, not the UI.
+    if (!row || (row.status !== 'approved' && preview !== '1025')) { res.writeHead(404); return res.end('{"ok":false}'); }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    return res.end(JSON.stringify({ ...row.payload, status: row.status, fromBank: true }));
+  }
   const rel = u.pathname === '/lessons' ? '/lessons.html' : u.pathname;
   const root = path.resolve(dir, 'public');
   const file = path.resolve(root, '.' + rel);
@@ -309,6 +332,117 @@ console.log('\n--- LIVE RUN 4: the lock really locks (mastery unlocks the next l
   chk('mastering lesson 1 unlocks lesson 2', a2.tag === 'BUTTON' && !/locked/.test(a2.cls), JSON.stringify(a2));
   chk('the mastered lesson keeps its star and can be played again',
     /done/.test(a1.cls) && /Mastered/i.test(a1.sub) && a1.tag === 'BUTTON', JSON.stringify(a1));
+}
+
+/* =========================================================================
+   LIVE RUN 5 (Session LS3) — a lesson that lives in lesson_bank, not in a file.
+   This is the whole point of LS3: the owner approves a lesson and it appears on
+   the path and plays, with no code push. So: draft the real Kindergarten batch
+   through the real factory code, serve ONE of them as approved through the
+   stubbed /api/lesson-map + /api/lesson, and play it end to end. Then prove the
+   gate by serving one as PENDING and checking a kid cannot reach it.
+   ========================================================================= */
+console.log('\n--- LIVE RUN 5: a lesson served from the review-approved bank (Session LS3) ---');
+{
+  const gen = await import('./api/_lessongen.js');
+  const fac = await import('./api/generate-lessons.js');
+  const staticMap = JSON.parse(fs.readFileSync(path.join(dir, 'public/lessons/index.json'), 'utf8'));
+  const kTargets = fac.targetsFromMap(staticMap).filter((t) => t.grade === 'k' && t.pathSubject === 'math' && !t.hasFile);
+
+  const drafts = [];
+  for (const t of kTargets) { const r = await gen.makeLesson(t, null); if (r.ok) drafts.push(r.lesson); }
+  chk('the factory drafted the Kindergarten Math batch', drafts.length >= 10, 'drafted=' + drafts.length);
+
+  const approvedL = drafts[0];                 // the owner approved this one
+  const pendingL = drafts[1];                  // this one is still waiting
+  BANK_LESSONS = {
+    [approvedL.id]: { status: 'approved', payload: approvedL },
+    [pendingL.id]: { status: 'pending', payload: pendingL },
+  };
+  // Build the map the real api/lesson-map.js would build: ONLY the approved row
+  // is upgraded, and it carries no file - it must be fetched from the bank.
+  BANK_MAP = JSON.parse(JSON.stringify(staticMap));
+  for (const p of BANK_MAP.paths) for (const u of p.units) {
+    u.lessons = u.lessons.map((l) => (l.key === approvedL.id ? { ...l, status: 'approved', fromBank: true } : l));
+  }
+
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e.message)));
+  await page.addInitScript(() => {
+    localStorage.setItem('bk_active_kid_v1', JSON.stringify({ id: 'qa-kid-5', display_name: 'QA K', grade: 'k' }));
+    localStorage.removeItem('bk_lessons_v1:qa-kid-5');
+    window.speechSynthesis = undefined;
+  });
+  await page.goto(base + '/lessons?subject=math&grade=k', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.node', { timeout: 15000 });
+  const rows = await page.$$eval('.node', (els) => els.map((e) => ({
+    tag: e.tagName, cls: e.className, name: (e.querySelector('.nm') || {}).textContent,
+  })));
+  const approvedRow = rows.find((r) => r.name === approvedL.title);
+  const pendingRow = rows.find((r) => r.name === pendingL.title);
+  chk('an APPROVED bank lesson appears on the path as playable',
+    !!approvedRow && approvedRow.tag === 'BUTTON' && !/soon|locked/.test(approvedRow.cls), JSON.stringify(approvedRow));
+  chk('a lesson still WAITING for review stays greyed out for a kid',
+    !!pendingRow && pendingRow.tag !== 'BUTTON' && /soon/.test(pendingRow.cls), JSON.stringify(pendingRow));
+
+  // Play it: the JSON came from the bank, so this proves the player renders a
+  // bank lesson exactly like a file lesson.
+  await page.click('.node:has-text("' + approvedL.title + '")');
+  await page.waitForSelector('.card h2', { timeout: 15000 });
+  const head = await page.textContent('.card h2');
+  chk('tapping a bank lesson opens step 1 of the player', head.trim() === approvedL.title, head);
+
+  await page.click('.big');                                   // Let's learn
+  for (let i = 0; i < approvedL.teach.length; i++) {
+    await page.waitForSelector('.card h2');
+    const shown = await page.$$eval('.shaperow, .frames', (e) => e.length);
+    if (i === 0) chk('a bank lesson still draws its picture on the teach card', shown >= 1, 'pictures=' + shown);
+    await page.click('.big');
+  }
+  // Guided, then practice, then the star check - always tap the correct answer.
+  const tapCorrect = async (list, ix) => {
+    const q = list[ix];
+    const btns = await page.$$('.ans button');
+    await btns[q.correctIndex].click();
+  };
+  for (let i = 0; i < approvedL.guided.length; i++) {
+    await page.waitForSelector('.ans button');
+    await tapCorrect(approvedL.guided, i);
+    await page.waitForTimeout(750);
+  }
+  // Step 4 is served by the stubbed bank of six; answer index 0 each time.
+  for (let i = 0; i < 6; i++) {
+    await page.waitForSelector('.ans button', { timeout: 10000 });
+    const btns = await page.$$('.ans button');
+    await btns[0].click();
+    await page.waitForTimeout(750);
+  }
+  for (let i = 0; i < approvedL.check.length; i++) {
+    await page.waitForSelector('.ans button', { timeout: 10000 });
+    await tapCorrect(approvedL.check, i);
+    await page.waitForTimeout(700);
+  }
+  await page.waitForSelector('.won', { timeout: 10000 });
+  const won = await page.textContent('.won');
+  chk('a bank lesson can be mastered, star and all', /mastered/i.test(won), won.trim());
+  const prog = await page.evaluate(() => JSON.parse(localStorage.getItem('bk_lessons_v1:qa-kid-5') || '{}'));
+  chk('mastery is stored under the bank lesson\'s key, so the path unlocks the next one',
+    !!(prog[approvedL.id] && prog[approvedL.id].mastered), JSON.stringify(prog));
+  chk('playing a bank lesson threw no javascript errors', errors.length === 0, errors.slice(0, 2).join(' | '));
+  await page.close();
+
+  // THE GATE. A kid asking for the pending lesson by name must be refused.
+  const gate = await browser.newPage();
+  const asKid = await gate.goto(base + '/api/lesson?key=' + pendingL.id);
+  chk('asking for an unapproved lesson without the owner code is refused', asKid.status() === 404, 'status=' + asKid.status());
+  const asOwner = await gate.goto(base + '/api/lesson?key=' + pendingL.id + '&preview=1025');
+  chk('the owner CAN open the same draft to review it', asOwner.status() === 200, 'status=' + asOwner.status());
+  const draftJson = await asOwner.json();
+  chk('the draft is clearly stamped as pending, not approved', draftJson.status === 'pending');
+  await gate.close();
+
+  BANK_MAP = null; BANK_LESSONS = {};
 }
 
 await browser.close();

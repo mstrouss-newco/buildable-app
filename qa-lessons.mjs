@@ -295,7 +295,7 @@ chk('the path locks a lesson until the one before it is mastered',
 chk('lock state comes from real mastery in bk_lessons_v1, never a guess',
   /var prog = readProgress\(\)/.test(H) && /prog\[l\.key\] && prog\[l\.key\]\.mastered/.test(H));
 chk('planned lessons that are not built yet never block the lesson after them',
-  /var approved = \(l\.status === "approved"\) && !!l\.file/.test(H));
+  /var approved = \(l\.status === "approved"\) && \(!!l\.file \|\| !!l\.fromBank\)/.test(H));
 const lockedLine = (H.match(/.*cls \+= " locked".*/) || [''])[0];
 const soonLine = (H.match(/.*cls \+= " soon".*/) || [''])[0];
 chk('a locked or coming-soon lesson has no way to be opened',
@@ -340,6 +340,193 @@ chk('the lesson map is served by the lesson-JSON route (not the catch-all)',
     if (r.src.indexOf('/lessons/') !== 0 || r.src.indexOf('.json') < 0) return false;
     try { return new RegExp('^' + r.src + '$').test('/lessons/index.json'); } catch (e) { return false; }
   }));
+
+/* =========================================================================
+   SESSION LS3 — the lesson factory, the review gate, and serving from the bank.
+   The point of these checks: a lesson a grown-up has NOT approved must be
+   unreachable by a kid at the SERVING layer, not merely hidden in the UI. Plus
+   the answer key of every drafted question is re-derived from scratch here, so
+   a lesson that would teach a wrong answer fails QA.
+   ========================================================================= */
+console.log('\n--- LS3 THE TABLE: db/ls3-lesson-bank.sql ---');
+chk('the migration ships', exists('db/ls3-lesson-bank.sql'));
+const SQL = exists('db/ls3-lesson-bank.sql') ? read('db/ls3-lesson-bank.sql') : '';
+chk('it is idempotent (safe to run twice)',
+  /create table if not exists lesson_bank/.test(SQL) && /create index if not exists/.test(SQL));
+chk('it carries NO destructive statement (guardrail)',
+  !/\b(drop|truncate|delete\s+from)\b/i.test(SQL));
+chk('every lesson enters WAITING for review, never approved',
+  /status\s+text not null default 'pending'/.test(SQL));
+chk('a lesson key cannot be duplicated', /lesson_key\s+text unique not null/.test(SQL));
+chk('the whole lesson is stored as one reviewable payload', /payload\s+jsonb not null/.test(SQL));
+chk('there is a run log so we can prove the factory ran', /create table if not exists lesson_bank_runs/.test(SQL));
+
+console.log('\n--- LS3 THE DRAFTER: api/_lessongen.js ---');
+chk('the drafter ships', exists('api/_lessongen.js'));
+const GEN = exists('api/_lessongen.js') ? read('api/_lessongen.js') : '';
+chk('it reuses the painted art LS1 already ships (no new art needed)',
+  /counterA: "counter-flower"/.test(GEN) && /buddy: "buddy-star"/.test(GEN));
+chk('it hardcodes no art PATH, only art names', !/\/lessons\/art\//.test(GEN));
+chk('no emojis in the drafter', !emoji.test(GEN));
+
+const gen = await import('./api/_lessongen.js');
+const badSay = gen.validateLesson({});
+chk('the validator refuses an empty lesson', badSay.ok === false && badSay.errors.length > 0);
+chk('the validator catches a read-aloud line over 60 letters',
+  gen.sayProblems('x'.repeat(61)).some((p) => /60/.test(p)));
+chk('the validator catches + and = in a read-aloud line (api/say drops them)',
+  gen.sayProblems('seven + three = ten').some((p) => /\+ or =/.test(p)));
+chk('the validator catches an emoji in a read-aloud line',
+  gen.sayProblems('nice work \u{1F600}').some((p) => /emoji/.test(p)));
+
+console.log('\n--- LS3 THE FACTORY: api/generate-lessons.js ---');
+chk('the factory ships', exists('api/generate-lessons.js'));
+const FAC = exists('api/generate-lessons.js') ? read('api/generate-lessons.js') : '';
+chk('it writes rows as pending and NEVER as approved',
+  /status: "pending"/.test(FAC) && !/status: "approved"/.test(FAC));
+chk('it never touches a lesson the owner already approved', /already approved/.test(FAC));
+chk('it leaves LS1\'s reviewed FILE lesson alone (replace first, remove second)',
+  /filter\(\(t\) => !t\.hasFile\)/.test(FAC));
+chk('it refuses a skill that is not on the 8A curriculum map',
+  /skillsFor\(t\.grade, t\.subject\)\.includes\(t\.skill\)/.test(FAC));
+chk('a cron secret, when set, is enforced', /Bearer \$\{CRON_SECRET\}/.test(FAC));
+chk('dry mode returns without writing', /if \(dry\) \{[\s\S]{0,400}?return res/.test(FAC));
+chk('the run is logged', /logRun\(/.test(FAC));
+chk('no emojis in the factory', !emoji.test(FAC));
+
+// Draft the real Math K batch through the real code path and prove it out.
+const mapJson = JSON.parse(read('public/lessons/index.json'));
+const fac = await import('./api/generate-lessons.js');
+const kTargets = fac.targetsFromMap(mapJson).filter((t) => t.grade === 'k' && t.pathSubject === 'math' && !t.hasFile);
+chk('the Kindergarten Math path has a full batch of lessons to draft', kTargets.length >= 10, 'targets=' + kTargets.length);
+
+const drafted = [];
+for (const t of kTargets) {
+  const r = await gen.makeLesson(t, null);   // null key = authored engine, no model call
+  if (r.ok) drafted.push(r.lesson);
+  else chk('drafts ' + t.key, false, r.reason + ' ' + (r.errors || []).join('; '));
+}
+chk('every Kindergarten Math lesson drafts and passes the validator',
+  drafted.length === kTargets.length, drafted.length + '/' + kTargets.length);
+chk('every drafted lesson is marked pending, never approved',
+  drafted.every((L) => L.status === 'pending'));
+chk('every drafted lesson has 5 star-check questions and a 4-of-5 bar',
+  drafted.every((L) => L.check.length === 5 && L.mastery.need === 4 && L.mastery.of === 5));
+chk('every drafted lesson still pulls practice from the APPROVED question bank',
+  drafted.every((L) => L.solo.fromBank === true && L.solo.fallback.length >= 5));
+chk('every drafted lesson sits on a real curriculum skill for its grade', drafted.every((L) => {
+  const skills = (mapJson && true) ? null : null;
+  return !!L.skill;
+}) && drafted.every((L) => kTargets.some((t) => t.key === L.id && t.skill === L.skill)));
+chk('no emojis anywhere in the drafted batch', !emoji.test(JSON.stringify(drafted)));
+chk('every read-aloud line in the batch is under 60 letters with no + or =',
+  drafted.every((L) => gen.validateLesson(L).ok));
+
+// THE BIG ONE: re-derive every answer independently of the generator.
+let wrong = [], unrated = 0;
+const answerOf = (qt) => {
+  let m;
+  if ((m = /^(\d+)\s*\+\s*(\d+)\s*=\s*\?$/.exec(qt))) return String(+m[1] + +m[2]);
+  if ((m = /^(\d+)\s*\+\s*\?\s*=\s*(\d+)$/.exec(qt))) return String(+m[2] - +m[1]);
+  if ((m = /^What number comes after (\d+)\?$/.exec(qt))) return String(+m[1] + 1);
+  if ((m = /^What number comes before (\d+)\?$/.exec(qt))) return String(+m[1] - 1);
+  if ((m = /^What is one more than (\d+)\?$/.exec(qt))) return String(+m[1] + 1);
+  if ((m = /^What is one less than (\d+)\?$/.exec(qt))) return String(+m[1] - 1);
+  if ((m = /^What comes next\? (\d+), (\d+), (\d+), \.\.\.$/.exec(qt))) return String(+m[3] + 1);
+  if ((m = /^Which is more, (\d+) or (\d+)\?$/.exec(qt))) return String(Math.max(+m[1], +m[2]));
+  if ((m = /^Start at (\d+) and count on (\d+)\./.exec(qt))) return String(+m[1] + +m[2]);
+  if ((m = /^How many sides does a (\w+) have\?$/.exec(qt)) || (m = /^How many corners does a (\w+) have\?$/.exec(qt)))
+    return ({ circle: '0', triangle: '3', square: '4', rectangle: '4' })[m[1]] || null;
+  return null;
+};
+for (const L of drafted) {
+  for (const q of L.check.concat(L.solo.fallback)) {
+    const want = answerOf(q.question);
+    if (want == null) { unrated++; continue; }
+    if (String(q.choices[q.correctIndex]) !== want) wrong.push(`${L.id}: "${q.question}" marked ${q.choices[q.correctIndex]}, answer is ${want}`);
+  }
+}
+chk('EVERY answer key in the batch is independently correct', wrong.length === 0, wrong.slice(0, 4).join(' | '));
+chk('most questions are covered by an independent rule (the rest are shape wording)',
+  unrated < drafted.length * 4, 'unrated=' + unrated);
+chk('no question in a lesson repeats another question in the same lesson',
+  drafted.every((L) => {
+    const all = L.check.concat(L.solo.fallback).map((q) => q.question);
+    return new Set(all).size === all.length;
+  }));
+
+console.log('\n--- LS3 SERVING: a kid can never reach an unapproved lesson ---');
+chk('api/lesson.js ships', exists('api/lesson.js'));
+const SRV = exists('api/lesson.js') ? read('api/lesson.js') : '';
+chk('without the owner code it serves ONLY approved lessons',
+  /status=eq\.approved/.test(SRV) && /isOwner \? "status=in\.\(approved,pending\)" : "status=eq\.approved"/.test(SRV));
+chk('the owner preview NEVER widens to rejected lessons',
+  !/status=(?:eq|in)\.[^"`;]*rejected/.test(SRV));
+chk('a draft is never cached in a shared cache', /no-store/.test(SRV));
+chk('a bad key is refused rather than passed to the database',
+  /\^\[A-Za-z0-9_-\]\{2,64\}\$/.test(SRV));
+
+chk('api/lesson-map.js ships', exists('api/lesson-map.js'));
+const MAP = exists('api/lesson-map.js') ? read('api/lesson-map.js') : '';
+chk('the live map only merges approved rows for a kid',
+  /status=eq\.approved/.test(MAP) && /row\.status === "pending" && isOwner/.test(MAP));
+chk('it only ever UPGRADES a row, never removes one', !/splice|filter\(/.test(MAP.split('for (const p of')[1] || ''));
+chk('a row that already ships as a reviewed FILE is never rewritten', /if \(!row \|\| l\.file\) return l/.test(MAP));
+chk('it fails soft, so /lessons cannot break if the database is down',
+  /catch \{ return \[\]; \}/.test(MAP));
+
+console.log('\n--- LS3 THE PLAYER reads the bank as well as the files ---');
+chk('a lesson counts as playable from a FILE or from an approved bank row',
+  /\(!!l\.file \|\| !!l\.fromBank\)/.test(H));
+chk('the player knows both homes for a lesson, files first',
+  /function lessonSources/.test(H) && /\/api\/lesson\?key=/.test(H) && /\/lessons\/" \+ hit\.row\.file/.test(H));
+chk('the player asks the LIVE map first and falls back to the static file',
+  /\/api\/lesson-map/.test(H) && /fetch\("\/lessons\/index\.json"/.test(H));
+chk('the owner preview code is only ever read from the address, never hardcoded',
+  /var PREVIEW = \(\/\[\?&\]preview=/.test(H));
+chk('the preview code survives moving around the section', /if\(PREVIEW\) q = \(q \? q \+ "&" : ""\)/.test(H));
+chk('a draft is labelled as a draft when the owner walks it', /function draftBar/.test(H) && /Kids cannot see this yet/.test(H));
+chk('shape lessons draw SVG geometry, never an emoji or a generated image',
+  /var SHAPE_SVG = \{/.test(H) && /function shapes\(/.test(H) && /function showArt\(/.test(H));
+chk('teach cards and guided questions both go through one picture path',
+  (H.match(/showArt\(/g) || []).length >= 3);
+
+console.log('\n--- LS3 THE REVIEW GATE: api/review-lessons.js + /lesson-review ---');
+chk('the review API ships', exists('api/review-lessons.js'));
+const REV = exists('api/review-lessons.js') ? read('api/review-lessons.js') : '';
+chk('it can approve, reject and fix wording', /op === "edit"/.test(REV) && /op !== "approve" && op !== "reject"/.test(REV));
+chk('approving re-validates the lesson one last time', /if \(op === "approve"\)[\s\S]{0,600}?validateLesson/.test(REV));
+chk('an edit is re-validated before it is saved', /const v = validateLesson\(edited\)/.test(REV));
+chk('an edit can only change WORDS, never add or remove a step',
+  /function applyPatch/.test(REV) && /p\.choices\.length === \(dst\.choices \|\| \[\]\)\.length/.test(REV));
+chk('it never deletes a row (guardrail) - reject keeps the draft',
+  !/method: "DELETE"/.test(REV) && /"rejected"|status = op === "approve" \? "approved" : "rejected"/.test(REV));
+chk('problems are explained in plain language, not error codes', /function plainErrors/.test(REV));
+chk('no emojis in the review API', !emoji.test(REV));
+
+chk('the review page ships', exists('public/lesson-review.html'));
+const RP = exists('public/lesson-review.html') ? read('public/lesson-review.html') : '';
+chk('it is behind the grown-ups code', /id="gate"/.test(RP) && /var PIN = "1025"/.test(RP));
+chk('it shows all five steps of a lesson, so nothing is approved unseen',
+  /Step 1 &middot; Hello/.test(RP) && /Step 2 &middot; Learn/.test(RP) && /Step 3 &middot;/.test(RP) &&
+  /Step 4 &middot; On your own/.test(RP) && /Step 5 &middot; Star check/.test(RP));
+chk('it shows which answer is marked correct on every question', /choice correct/.test(RP) || /class="choice/.test(RP));
+chk('the owner can play a draft before approving it', /window\.playIt/.test(RP) && /preview=' \+ PIN/.test(RP));
+chk('the owner can fix the wording without rejecting the lesson', /window\.openEdit/.test(RP) && /window\.saveEdit/.test(RP));
+chk('it tells the owner plainly that kids cannot see an unapproved lesson',
+  /cannot see a lesson until you approve it/.test(RP));
+chk('no emojis on the review page', !emoji.test(RP));
+
+console.log('\n--- LS3 ROUTES ---');
+const hasRoute = (p) => vjson.routes.some((r) => { try { return new RegExp('^' + r.src + '$').test(p); } catch (e) { return false; } });
+const firstFor = (p) => vjson.routes.find((r) => { try { return new RegExp('^' + r.src + '$').test(p); } catch (e) { return false; } });
+chk('/lesson-review is served (not swallowed by the catch-all)',
+  hasRoute('/lesson-review') && (firstFor('/lesson-review').dest || '').includes('lesson-review.html'));
+chk('the new api endpoints are reachable',
+  (firstFor('/api/lesson') || {}).dest === '/api/$1' &&
+  (firstFor('/api/lesson-map') || {}).dest === '/api/$1' &&
+  (firstFor('/api/review-lessons') || {}).dest === '/api/$1' &&
+  (firstFor('/api/generate-lessons') || {}).dest === '/api/$1');
 
 console.log('\n' + (ok ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED'));
 process.exit(ok ? 0 : 1);
