@@ -658,6 +658,59 @@ export function progressHistory(days = 7) {
   return out;
 }
 
+// ---------------- Lessons finished (Session LS4) ----------------
+// The Lessons section (public/lessons.html) is a plain page inside the shell,
+// so it keeps its own mastery record in localStorage under
+// "bk_lessons_v1:<kidId>" rather than in this store. Same origin, so the parent
+// dashboard can read it directly - no API call, works offline, and there is
+// exactly one writer.
+//
+// HONESTY RULE: only `mastered` counts. A lesson opened by the placement check
+// carries `placed`, which unlocks it but was never earned, so it is reported
+// separately and never added to the finished total.
+const LESSONS_KEY = "bk_lessons_v1";
+
+function prettyLessonName(key) {
+  return String(key || "")
+    .replace(/^(k|g\d)-/, "")
+    .replace(/^(math|read|geo|write)-/, "")
+    .replace(/-/g, " ")
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
+export function lessonsProgress() {
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(`${LESSONS_KEY}:${scopeId()}`) || "null"); } catch { raw = null; }
+  const out = { finished: 0, opened: 0, bySubject: {}, recent: [] };
+  if (!raw || typeof raw !== "object") return out;
+
+  Object.keys(raw).forEach((key) => {
+    if (key.startsWith("_")) return;            // "_placement" is bookkeeping, not a lesson
+    const row = raw[key];
+    if (!row || typeof row !== "object") return;
+    if (row.mastered) {
+      out.finished += 1;
+      const subj = row.subject || "other";
+      out.bySubject[subj] = (out.bySubject[subj] || 0) + 1;
+      out.recent.push({
+        key,
+        title: row.title || prettyLessonName(key),
+        subject: row.subject || null,
+        grade: row.grade || null,
+        at: row.masteredAt || null,
+      });
+    } else if (row.placed) {
+      out.opened += 1;
+    }
+  });
+
+  // Newest first. Rows written before LS4 have no date; they sort to the back
+  // rather than pretending to be recent.
+  out.recent.sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+  out.recent = out.recent.slice(0, 5);
+  return out;
+}
+
 // ---------------- Daily Brain Boost (Home screen) ----------------
 // A tiny daily quota on top of the existing progress store: "answer `goal`
 // questions correctly today". Purely derived from progressCache.dailyCount

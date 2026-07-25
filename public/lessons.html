@@ -274,6 +274,9 @@ function recordAttempt(lesson, score, mastered){
   if(score > row.best) row.best = score;
   if(mastered){ row.mastered = true; row.masteredAt = new Date().toISOString(); }
   row.skill = lesson.skill; row.subject = lesson.subject; row.grade = lesson.grade;
+  // Session LS4: keep the title too. The grown-ups dashboard names the lessons
+  // a kid finished, and it reads this record - it has no lesson map of its own.
+  row.title = lesson.title || row.title || "";
   p[lesson.id] = row; writeProgress(p);
   return row;
 }

@@ -36,7 +36,7 @@ import {
   getFamilyStatus, joinFamilyByCode,
   AVATARS, DEFAULT_AVATAR, kidHasPin, verifyKidPin,
 } from "./lib/accounts";
-import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, learningGradeOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount, subjectMastery, progressHistory } from "./store";
+import { getLearningSettings, setLearningSettings, learningGoalOptions, learningAgeRange, learningGradeOptions, getProgress, BADGES, progressSubjects, weakestSubject, reviewCount, subjectMastery, progressHistory, lessonsProgress } from "./store";
 import { isBuddyEnabled, setBuddyEnabled } from "./lib/buddy";
 
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -991,6 +991,10 @@ function LearningProgressCard() {
   const weak = weakestSubject();
   const queued = reviewCount();
   const masteredCount = skills.filter((k) => k.status === "mastered").length;
+  // Session LS4 - the Lessons section keeps its own mastery record; see
+  // lessonsProgress() in store.js. Only lessons actually MASTERED (4 of 5) are
+  // counted. Lessons the placement check merely opened are reported apart.
+  const lessons = lessonsProgress();
   const SUBJECT_LABEL = { math: "Math", geometry: "Shapes", spelling: "Spelling", reading: "Reading" };
 
   return (
@@ -1010,6 +1014,10 @@ function LearningProgressCard() {
         <div style={LP.stat}>
           <div style={LP.statNum}>{p.totalCorrect}</div>
           <div style={LP.statLabel}>Questions right</div>
+        </div>
+        <div style={LP.stat}>
+          <div style={LP.statNum}>{lessons.finished}</div>
+          <div style={LP.statLabel}>Lessons finished</div>
         </div>
       </div>
 
@@ -1037,6 +1045,35 @@ function LearningProgressCard() {
 
           <div style={LP.trendLabel}>This week</div>
           <TrendBars data={trend} />
+        </>
+      )}
+
+      {(lessons.finished > 0 || lessons.opened > 0) && (
+        <>
+          <div style={LP.trendLabel}>Lessons</div>
+          {lessons.finished === 0 ? (
+            <div style={LP.empty}>
+              The quick check opened {lessons.opened} lesson{lessons.opened === 1 ? "" : "s"} your kid
+              already knows. Nothing has been mastered yet - a lesson counts here once they get 4 of 5.
+            </div>
+          ) : (
+            <>
+              <div style={LP.lessonList}>
+                {lessons.recent.map((l) => (
+                  <div key={l.key} style={LP.lessonRow}>
+                    <span style={LP.lessonName}>{l.title}</span>
+                    <span style={LP.lessonWhen}>{l.at ? String(l.at).slice(0, 10) : ""}</span>
+                  </div>
+                ))}
+              </div>
+              {lessons.opened > 0 && (
+                <div style={LP.lessonNote}>
+                  Plus {lessons.opened} lesson{lessons.opened === 1 ? "" : "s"} the quick check opened
+                  without needing to be taught.
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
 
@@ -1073,6 +1110,14 @@ const LP = {
   statLabel: { fontSize: 11.5, opacity: 0.75, marginTop: 2 },
   empty: { fontSize: 13, opacity: 0.7, lineHeight: 1.45, margin: "12px 0 4px" },
   bars: { display: "flex", flexDirection: "column", gap: 8, margin: "14px 0 4px" },
+  lessonList: { display: "flex", flexDirection: "column", gap: 6, margin: "6px 0 2px" },
+  lessonRow: {
+    display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 10,
+    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
+  },
+  lessonName: { fontSize: 13, fontWeight: 800, color: "#E8E2FA" },
+  lessonWhen: { marginLeft: "auto", fontSize: 11.5, fontWeight: 700, opacity: 0.6 },
+  lessonNote: { fontSize: 12, opacity: 0.7, lineHeight: 1.45, margin: "8px 0 0" },
   barRow: { display: "flex", alignItems: "center", gap: 10 },
   barLabel: { width: 70, fontSize: 13, fontWeight: 700, color: "#D8D2EC", flex: "0 0 auto" },
   barTrack: {
