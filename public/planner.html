@@ -146,6 +146,9 @@
   .rm-id{font-size:11px;font-weight:800;background:#e7eaf6;color:var(--accent);border-radius:999px;padding:2px 9px;white-space:nowrap}
   .rm-name{font-size:14px;font-weight:700}
   .rm-desc{font-size:13px;line-height:1.45;color:var(--ink);margin:7px 0 0;padding-left:2px}
+  .rm-desc.clamped{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;color:var(--muted)}
+  .rm-more{display:inline-block;margin:4px 0 0 2px;font-size:11.5px;font-weight:700;color:var(--accent);background:none;border:0;padding:2px 0;cursor:pointer}
+  .rm-more:hover{text-decoration:underline}
   .rm-notes{margin-top:8px;display:flex;flex-direction:column;gap:4px}
   .rm-note{display:flex;gap:8px;align-items:flex-start;background:#eefaf6;border:1px solid #bfe9dc;border-radius:8px;padding:5px 9px;font-size:12.5px;line-height:1.4}
   .rm-note span:first-child{flex:1}
@@ -672,6 +675,25 @@ async function saveSettings(){
 /* ================= ROADMAP TAB ================= */
 let rmOpen={}, rmArchOpen=false, rmEditingId=null;
 let rmFilter="todo", rmDoneOpen={}, rmFinOpen=false;
+let rmDescOpen={};
+function rmToggleDesc(key){ rmDescOpen[key]=!rmDescOpen[key]; renderRoadmap(); }
+/* collapsed description: one line + a More link. key must be unique per place a card is drawn. */
+function rmDescHtml(s,key){
+  if(!s.desc) return "";
+  const open=!!rmDescOpen[key];
+  return '<div class="rm-desc'+(open?"":" clamped")+'" data-more="'+esc(key)+'">'+esc(s.desc)+'</div>'
+    +'<button class="rm-more" data-morebtn="'+esc(key)+'" onclick=\'event.stopPropagation();rmToggleDesc('+JSON.stringify(key)+')\'>'+(open?"Less":"More")+'</button>';
+}
+/* after drawing: a one-liner that already fits gets no More link */
+function rmTrimDescs(){
+  document.querySelectorAll(".rm-desc.clamped").forEach(d=>{
+    if(d.scrollHeight<=d.clientHeight+2){
+      d.classList.remove("clamped");
+      const b=document.querySelector('[data-morebtn="'+CSS.escape(d.dataset.more||"")+'"]');
+      if(b) b.style.display="none";
+    }
+  });
+}
 
 function switchTab(which){
   const log=which!=="roadmap";
@@ -727,8 +749,8 @@ function mergeRoadmap(parsed){
   const parsedIds=new Set(parsed.sessions.map(s=>s.id));
   const sessions=parsed.sessions.map(p=>{
     const prev=prevAll[p.id];
-    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, deployed:!!prev.deployed, needsReview:!!prev.needsReview, reviewRequestedAt:prev.reviewRequestedAt||null, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false, later:!!prev.later}; }
-    return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, notes:[], edited:false, manual:false, later:!!p.later};
+    if(prev){ return {id:p.id, phaseNum:p.phaseNum, name:prev.edited?prev.name:p.name, desc:prev.edited?prev.desc:p.desc, done:!!prev.done, deployed:!!prev.deployed, needsReview:!!prev.needsReview, reviewRequestedAt:prev.reviewRequestedAt||null, addedAt:prev.addedAt||null, notes:Array.isArray(prev.notes)?prev.notes:[], edited:!!prev.edited, manual:false, later:!!prev.later}; }
+    return {id:p.id, phaseNum:p.phaseNum, name:p.name, desc:p.desc, done:!!p.doneFromPaste, addedAt:new Date().toISOString(), notes:[], edited:false, manual:false, later:!!p.later};
   });
   // keep manual sessions not present in the paste
   (cur.sessions||[]).forEach(s=>{ if(s.manual && !parsedIds.has(s.id)) sessions.push(s); });
@@ -806,7 +828,7 @@ function rmMiniCard(s){
     +(isReview?'<span class="rm-review-badge">needs review</span>':(s.deployed?'<span class="rm-deploy-badge">with Claude</span>':(isNext?'<span class="rm-next-badge">next</span>':'')))
     +'</div>'
     +(isReview&&s.reviewRequestedAt?'<div class="rm-review-when">flagged '+esc(fmtWhen(s.reviewRequestedAt))+'</div>':'')
-    +(s.desc?'<div class="rm-desc">'+esc(s.desc)+'</div>':'')
+    +rmDescHtml(s,"focus:"+s.id)
     +'<div class="rm-btns">'
     +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
     +'<button class="btn ghost mini" onclick=\'rmJump('+JSON.stringify(s.id)+')\'>Show in phase</button>'
@@ -816,14 +838,34 @@ function rmFocusBar(){
   const rd=rmData();
   const needsReview=rd.sessions.filter(s=>!s.later&&!s.done&&s.needsReview);
   const withClaude=rd.sessions.filter(s=>!s.later&&!s.done&&s.deployed&&!s.needsReview);
-  const queue=[];
-  rd.phases.forEach(ph=>{ rd.sessions.forEach(s=>{ if(s.phaseNum===ph.num&&!s.later&&!s.done&&!s.deployed&&!s.needsReview) queue.push(s); }); });
-  const upNext=queue.slice(0,3);
-  if(!needsReview.length && !withClaude.length && !upNext.length) return '<div class="rm-focus"><h2>Right now</h2><div class="rm-focus-sub" style="margin-bottom:0">Nothing open. Everything is done or parked.</div></div>';
+  const shown=new Set([].concat(needsReview,withClaude).map(s=>s.id));
+
+  /* Recently added: the 3 newest sessions by the stamp put on them when they were created. */
+  const recent=rd.sessions.filter(s=>!s.later&&!s.done&&s.addedAt&&!shown.has(s.id))
+    .sort((a,b)=> String(b.addedAt).localeCompare(String(a.addedAt))).slice(0,3);
+  recent.forEach(s=>shown.add(s.id));
+
+  /* Up next: only what follows, inside a phase that already has something in review or with Claude.
+     Nothing in flight anywhere -> fall back to the front of the whole queue so the bar isn't blank. */
+  const openable=s=>!s.later&&!s.done&&!s.deployed&&!s.needsReview&&!shown.has(s.id);
+  const activePhases=[];
+  [].concat(needsReview,withClaude).forEach(s=>{ if(s.phaseNum!=null&&activePhases.indexOf(s.phaseNum)<0) activePhases.push(s.phaseNum); });
+  const upNext=[];
+  if(activePhases.length){
+    rd.phases.forEach(ph=>{
+      if(activePhases.indexOf(ph.num)<0) return;
+      rd.sessions.forEach(s=>{ if(s.phaseNum===ph.num&&openable(s)&&upNext.length<3&&upNext.indexOf(s)<0) upNext.push(s); });
+    });
+  } else {
+    rd.phases.forEach(ph=>{ rd.sessions.forEach(s=>{ if(s.phaseNum===ph.num&&openable(s)&&upNext.length<3) upNext.push(s); }); });
+  }
+
+  if(!needsReview.length && !withClaude.length && !recent.length && !upNext.length) return '<div class="rm-focus"><h2>Right now</h2><div class="rm-focus-sub" style="margin-bottom:0">Nothing open. Everything is done or parked.</div></div>';
   let h='<div class="rm-focus"><h2>Right now</h2>';
   if(needsReview.length) h+='<div class="rm-focus-sub">Needs your review ('+needsReview.length+')</div>'+needsReview.map(rmMiniCard).join("");
   if(withClaude.length) h+='<div class="rm-focus-sub">With Claude ('+withClaude.length+')</div>'+withClaude.map(rmMiniCard).join("");
-  if(upNext.length) h+='<div class="rm-focus-sub">Up next</div>'+upNext.map(rmMiniCard).join("");
+  if(recent.length) h+='<div class="rm-focus-sub">Recently added</div>'+recent.map(rmMiniCard).join("");
+  if(upNext.length) h+='<div class="rm-focus-sub">Up next'+(activePhases.length?' in this phase':'')+'</div>'+upNext.map(rmMiniCard).join("");
   h+='</div>';
   return h;
 }
@@ -906,6 +948,7 @@ function renderRoadmap(){
   }
   board.innerHTML=html;
   bindRmNotes();
+  rmTrimDescs();
 }
 function rmToggle(num){ rmOpen[num]=!rmOpen[num]; renderRoadmap(); }
 
@@ -936,7 +979,7 @@ function rmCard(s, archived){
     +(isNext?'<span class="rm-next-badge">next</span>':'')
     +(isReview?'<span class="rm-review-badge">needs review</span>':(isDeployed?'<span class="rm-deploy-badge">with Claude</span>':''))+'</div>'
     +(isReview&&s.reviewRequestedAt?'<div class="rm-review-when">Claude flagged this done &mdash; '+esc(fmtWhen(s.reviewRequestedAt))+'</div>':'')
-    +(s.desc?'<div class="rm-desc">'+esc(s.desc)+'</div>':"")
+    +rmDescHtml(s,(archived?"arch:":"phase:")+s.id)
     +notesHtml
     +(archived?"":'<div class="rm-btns">'
       +'<button class="btn green mini" onclick=\'openSessionPrompt('+JSON.stringify(s.id)+')\'>Prep prompt</button>'
@@ -1020,7 +1063,7 @@ async function rmAddSession(phaseNum){
   const name=(prompt("Session name:")||"").trim(); if(!name) return;
   const desc=(prompt("Description (optional):")||"").trim();
   const rd=rmData(); const id=genSessionId(phaseNum);
-  rd.sessions.push({id, phaseNum, name, desc, done:false, notes:[], edited:false, manual:true}); rmOpen[phaseNum]=true;
+  rd.sessions.push({id, phaseNum, name, desc, done:false, addedAt:new Date().toISOString(), notes:[], edited:false, manual:true}); rmOpen[phaseNum]=true;
   renderRoadmap(); setSync("saving..."); await saveMetaR(); toast("Added "+id);
 }
 async function rmMovePhase(num,dir){
@@ -1066,7 +1109,7 @@ async function rmAddLater(){
   const name=(prompt("What do you want to park for later?")||"").trim(); if(!name) return;
   const desc=(prompt("Details (optional):")||"").trim();
   const rd=rmData(); const id=genSessionId("L");
-  rd.sessions.push({id, phaseNum:"", name, desc, done:false, notes:[], edited:false, manual:true, later:true});
+  rd.sessions.push({id, phaseNum:"", name, desc, done:false, addedAt:new Date().toISOString(), notes:[], edited:false, manual:true, later:true});
   rmOpen["__later__"]=true;
   renderRoadmap(); setSync("saving..."); await saveMetaR(); toast("Added to Later");
 }
