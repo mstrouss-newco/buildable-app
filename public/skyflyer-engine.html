@@ -1342,8 +1342,14 @@ function landTop(plan,x,z){
 // rather than by luck): the outline shrunk by a margin so nothing straddles an
 // edge.
 function tierPoint(plan,i,ang,frac){
-  var t=plan[i], rr=outlineR(ang,t.r,t.ph)*frac;
-  return {x:Math.cos(ang)*rr, z:Math.sin(ang)*rr, y:t.top};
+  // frac runs across the tier's EXPOSED ring, not across the whole tier. A
+  // fraction of the whole radius lands inside the next terrace up, and the prop
+  // ends up buried in it standing at the lower tier's height — which is exactly
+  // what the flat-ground check caught on the stand-in palms.
+  var outer=outlineR(ang,plan[i].r,plan[i].ph);
+  var inner=(i+1<plan.length)?outlineR(ang,plan[i+1].r,plan[i+1].ph):0;
+  var rr=inner+(outer-inner)*(0.18+frac*0.64);
+  return {x:Math.cos(ang)*rr, z:Math.sin(ang)*rr, y:plan[i].top};
 }
 // One tier: a flat cap and the cut wall under it.
 //  - the cap is read RADIALLY (u = middle -> rim), which is the only mapping in

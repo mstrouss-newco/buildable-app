@@ -391,7 +391,14 @@ chk('the shared loader knows the skyflyer level profile', /skyflyer:\s*crocProfi
 // or "the world survives the art not arriving".
 // ---------------------------------------------------------------------------
 console.log('--- AR1: real Kenney models dress Sunny Islands ---');
-const kitFiles = [...html.matchAll(/^\s*(\w+):"([\w\-\/\.]+\.glb)",?$/gm)].map(m=>m[2]);
+// AR1M: the terrain shelf lives under its own base (kitterrain/), so its names
+// are bare filenames in the source. Fold them in here rather than letting them
+// fall through as "pirate/..." and fail the folder checks for the wrong reason.
+const terraFiles = [...((html.match(/var TERRA_FILES=\{[\s\S]*?\};/)||[''])[0]
+  .matchAll(/"([\w\-\.]+\.glb)"/g))].map(m => 'kitterrain/' + m[1]);
+const kitFiles = [...new Set([
+  ...[...html.matchAll(/^\s*(\w+):"([\w\-\/]+\/[\w\-\.]+\.glb)",?$/gm)].map(m=>m[2]),
+  ...terraFiles])];
 chk('the engine names a real model kit (not a placeholder list)', kitFiles.length >= 10,
   kitFiles.length+' models');
 const missing = kitFiles.filter(f => !fs.existsSync(dir+'/public/models/skyflyer/'+f));
@@ -429,43 +436,113 @@ chk('the boats are decoration only — nothing new to crash into',
 // back.
 // ---------------------------------------------------------------------------
 console.log('--- AR1b: sand, water, buildings, coins ---');
-chk('an island is a rounded sand hill, not a cone (the shape is built, not a primitive)',
-  /function makeIslandGeo\(/.test(html) && /ISLE_GEO/.test(html));
-// read the numbers out of the ISLANDS branch only - the other two worlds are
-// allowed their peaks and mesas, and matching the wrong branch would have this
-// check quietly passing on somebody else's terrain
-const isleBranch = (html.split('} else { // islands')[1]||'').slice(0, 1400);
-const isleNums = (() => {
-  const m = isleBranch.match(/rad=big\?\(([\d.]+)\+r\(\)\*([\d.]+)\)[\s\S]{0,80}?hh=big\?\(([\d.]+)\+r\(\)\*([\d.]+)\)/);
-  return m && { radMin:+m[1], radMax:+m[1]+ +m[2], hhMin:+m[3], hhMax:+m[3]+ +m[4] };
-})();
+// AR1M: THE WOBBLED CONE IS GONE from the islands world. An island is a plan of
+// FLAT TIERS, because a cone has no flat ground and every one of Mike's notes
+// about huts on stilts and camps crowding a summit came out of that one fact.
+// These checks guard the new shape; the old ones guarded a shape that no longer
+// exists and would have passed forever without noticing.
+chk('an island is TERRACED FLAT TIERS, not a cone (the mix Mike picked)',
+  /function tierPlan\(/.test(html) && /function buildTerraces\(/.test(html) &&
+  /function buildTier\(/.test(html) && !/var shape=ISLE_GEO\[/.test(html));
+chk('the coastline is LOW FREQUENCY only, so a thin spur cannot be built',
+  /function outlineR\(a,R,ph\)/.test(html) &&
+  /1\+0\.075\*Math\.sin\(2\*a\+ph\)\+0\.05\*Math\.sin\(3\*a\+ph\*1\.7\+0\.9\)\+0\.028\*Math\.sin\(5\*a\+0\.6\)/.test(html) &&
+  // no high harmonic and no big amplitude anywhere in the outline
+  !/Math\.sin\(([7-9]|1\d)\*a/.test(html));
 chk('islands are WIDER than they are tall (a spire is not an island)',
-  !!isleNums && isleNums.hhMax <= isleNums.radMax && isleNums.hhMin <= isleNums.radMin,
-  isleNums ? ('across '+isleNums.radMin+'-'+isleNums.radMax+'  high '+isleNums.hhMin+'-'+isleNums.hhMax)
-           : 'could not read the island numbers');
-chk('the sand carries on below the waterline into a shelf (the sea cuts its own beach)',
-  /-0\.55\*t\*t\*t/.test(html) && /function isleY\(/.test(html) &&
-  /Math\.min\(t\/0\.68,1\)/.test(html));
-chk('the island is ONE surface in three bands: grass, dry sand, WET sand',
-  /GREEN_RINGS/.test(html) && /WET_RINGS/.test(html) &&
-  /g\.addGroup\(0,gEnd,0\)/.test(html) &&
-  /new THREE\.Mesh\(shape,\[topMat,M\.rock,M\.rock2\]\)/.test(html));
+  /var coast=rad\*1\.10;/.test(html) && /hh=Math\.min\(hh,coast\*0\.52\);/.test(html),
+  'height is capped at 0.52 of the coast radius, so width is at least 3.8x height');
+chk('the land carries on below the waterline into a shelf',
+  /var plan=\[\], prev=-7;/.test(html) && /bottom:prev/.test(html));
+chk('a tier is a flat cap plus a CUT wall, and the beach wall is the wet shelf',
+  /out\.push\(new THREE\.Mesh\(cap,t\.sand\?M\.beach:M\.tier\)\)/.test(html) &&
+  /out\.push\(new THREE\.Mesh\(wall,t\.sand\?M\.rock2:M\.cliff\)\)/.test(html));
+// The two traps the bake-off mock found, both of which look like a colour bug
+// and are actually geometry: walls wound the other way face INWARD and render
+// as khaki back-faces, and smooth normals around a rim average into an olive
+// sheen under the green ground bounce.
+chk('cliff walls are wound OUTWARD (b0,t0,b1 / t0,t1,b1), not inward',
+  /wp\.push\.apply\(wp,b0\); wp\.push\.apply\(wp,q0\); wp\.push\.apply\(wp,b1\);/.test(html) &&
+  /wp\.push\.apply\(wp,q0\); wp\.push\.apply\(wp,q1\); wp\.push\.apply\(wp,b1\);/.test(html));
+chk('cliff walls are FACETED - every segment its own cut face, no shared verts',
+  /wall\.setAttribute\("position"/.test(html) && !/wall\.setIndex/.test(html));
+chk('the cliff has its own palette slot and its OWN map, never the sand grain',
+  /cliff:0xDDAE62/.test(html) && /function cliffTexture\(/.test(html) &&
+  /if\(cliffTex\) M\.cliff\.map=cliffTex/.test(html) &&
+  !/M\.cliff\.map=sandTex/.test(html));
+chk('the tier caps are read RADIALLY, and as RINGS - a fan spirals the map',
+  /var SEG=64, RINGS=7/.test(html) && /Math\.pow\(ri\/RINGS,1\.7\)/.test(html) &&
+  /uv\.push\(f, s\/SEG\*4\)/.test(html));
+chk('the beach carries a TIDE LINE and grain that thickens at the waterline',
+  /function radialTexture\(/.test(html) && /createLinearGradient\(194,0,256,0\)/.test(html) &&
+  /dens=0\.06\+0\.20\*\(gx\/256\)/.test(html));
+chk('the grass tiers carry a worn dirt path',
+  /rgba\(120,96,52,/.test(html));
+chk('every new surface map is WHITE-based, so the manifest still owns the colour',
+  (html.match(/x\.fillStyle="#ffffff"; x\.fillRect\(0,0,(256,256|256,128)\)/g)||[]).length >= 4);
 chk('the land is shaded, not faceted, and carries grain like the models do',
   /function grainTexture\(/.test(html) && /M\.rock\.map=sandTex/.test(html) &&
   /M\.cap\.map=grassTex/.test(html) && /m\.flatShading=false/.test(html));
-chk('the grain sheet is WHITE too, so the palette still owns the land colour',
-  (html.match(/x\.fillStyle="#ffffff"; x\.fillRect\(0,0,256,256\)/g)||[]).length >= 2);
 chk('the island has a coastline, not a silhouette (enough segments to read close up)',
-  /var RINGS=11, SEGS=26/.test(html));
-chk('the landing pad sits on a real island, not a ten-sided cylinder',
-  /baseGeo\?new THREE\.Mesh\(baseGeo,\[M\.rock,M\.rock,M\.rock2\]\)/.test(html));
+  /var SEG=64, RINGS=7/.test(html));
+chk('the landing pad stands on the same terraced land, deck never buried',
+  /var PAD_PLAN=/.test(html) && /\{r:25,ph:1\.9,bottom:1\.6,top:8\.4,sand:false,i:1\}/.test(html) &&
+  /var PAD_R=16, PAD_TOP=10;/.test(html));
+chk('a low sandbar is the beach ring on its own, bare sand',
+  /function tierCount\(rad,hh,big\)\{ return big\?\(hh>=12\?4:3\):\(rad>=12\?2:1\); \}/.test(html) &&
+  /1:\[1\]/.test(html));
+// THE ONE QUESTION EVERY PROP ASKS. It used to be isleSurf() on the cone. If a
+// second way of answering it ever appears, props start floating again.
+chk('there is ONE function that says how high the land is, and it is landTop()',
+  /function landTop\(plan,x,z\)/.test(html) &&
+  !/isleSurf\(/.test(html.split('function dressIsle(')[1]||'') &&
+  !/isleSurf\(/.test((html.split('} else { // islands')[1]||'').slice(0,3000)));
+chk('a prop that lands in the sea is NOT placed, never fudged onto the surface',
+  /var y=landTop\(plan,x,z\);\s*\n\s*if\(y==null\) return null;/.test(html));
+chk('placement measures the outline AT THAT ANGLE, not the nominal radius',
+  /function ringAt\(i,frac,ang\)/.test(html) &&
+  /var outer=outlineR\(ang,plan\[i\]\.r,plan\[i\]\.ph\)/.test(html));
+// AR1M: the Kenney feature blocks. Their carved faces point -Z, so a block that
+// is not turned shows a plain back - that is what the bake-off's debug view was
+// for, and it is worth a check because the mistake is invisible in code review.
+chk('the feature blocks turn their CARVED FACE outward',
+  /p\.rotation\.y=Math\.PI\/2-a\+Math\.PI;/.test(html));
+chk('waterfall, steps and cave are loaded from the repo, not from a stranger',
+  /var TERRA_BASE="\/models\/skyflyer\/kitterrain\/"/.test(html) &&
+  ['cliff_waterfallTop_rock.glb','cliff_steps_rock.glb','cliff_blockCave_rock.glb']
+    .every(f => html.indexOf(f)>=0 && fs.existsSync(dir+'/public/models/skyflyer/kitterrain/'+f)));
+chk('the terrain blocks are remapped in the right ORDER (water first, dirtDark before dirt)',
+  (()=>{ const m=(html.match(/var TERRA_REMAP=\[[\s\S]*?\];/)||[''])[0];
+    return m.indexOf('^water$') >= 0 && m.indexOf('^water$') < m.indexOf('dirtDark')
+        && m.indexOf('dirtDark') < m.lastIndexOf('/dirt/i'); })());
+chk('a feature block costs NO extra draw call - it joins the island buckets',
+  /addIsleFeatures\(d\.raw,plan,r\);/.test(html) &&
+  /var remerged=mergeByMaterial\(d\.raw\);/.test(html));
+// AR1M: the scale ruler, written down in the engine so it stops drifting.
+chk('THE SCALE RULER is in the engine: plane : palm : hut = 10 : 10 : 4.5',
+  /plane : palm : hut = 10 : 10 : 4\.5/.test(html));
+chk('the camp shrank to the ruler (homes 3.2-4.8u, not the 5.5-9u giants)',
+  /inst\(pick\(r,camp\.homes\), 3\.2\+r\(\)\*1\.6\)/.test(html) &&
+  !/inst\(pick\(r,camp\.homes\), 5\.5\+r\(\)\*3\.5\)/.test(html));
+// AR1M: a real sky. Both new slots are OPTIONAL - a world that declares neither
+// gets exactly what it had, which is how Snowy Peaks and Sunset Canyon stay
+// untouched until AR2.
+chk('the sky is a GRADIENT dome with a sun halo, built in code',
+  /function skyGradientTexture\(/.test(html) && /side:THREE\.BackSide/.test(html) &&
+  /THREE\.AdditiveBlending/.test(html));
+chk('the sky colours are MANIFEST SLOTS with safe built-in fallbacks',
+  /skyTop:0x4FA8E8, skyHorizon:0xDCF2FF, sunGlow:0xFFF3CC/.test(html) &&
+  /if\(world\.skyTop==null\) return;/.test(html) &&
+  /var st=hexNum\(p\.skyTop\), sh=hexNum\(p\.skyHorizon\)/.test(html));
+chk('the halo sits BEHIND the disc on the camera ray (coplanar it pinwheels)',
+  /function placeSunGlow\(\)/.test(html) && /vx\/L\*60/.test(html));
+chk('AR2 is still untouched: only the islands world declares a sky dome',
+  (html.match(/skyTop:0x/g)||[]).length === 1);
 chk('the Quaternius models already in the repo are actually USED, not left on a shelf',
   (()=>{ const q=[...html.matchAll(/^\s*(q\w+):"\.\.\/nature\/([\w\-]+\.gltf)"/gm)];
          return q.length>=6 &&
            q.every(m=>fs.existsSync(dir+'/public/models/nature/'+m[2])) &&
            q.some(m=>(html.split('function dressIsle(')[1]||'').indexOf('"'+m[1]+'"')>=0); })());
-chk('a low sandbar stays bare sand, only a real island grows anything',
-  /var topMat=\(hh>\d+\)\?\(r\(\)>0\.5\?M\.cap:M\.cap2\):M\.rock/.test(html));
 // THE ONE THAT KEEPS COMING BACK. See-through water was tried at 0.74 and again
 // at 0.90 and Mike rejected it BOTH times, plus once more before that: at a
 // grazing angle a flat sheet lying across a beach always reads as glass and the
@@ -485,7 +562,7 @@ chk('nothing that floats is left sitting under the surface',
   !/position\.set\([^)]*,-0\.4,[^)]*\)/.test(html.split('function dressPads(')[1]||'') &&
   /fo\.position\.y=0\.30\+/.test(html) && /boat\.position\.set\(bx,0\.55,bz\)/.test(html));
 chk('the lagoon is a soft gradient laid ON the water, keyed to the island size',
-  /halo\.scale\.set\(rad\*3\.6/.test(html) && /halo\.renderOrder=3/.test(html) &&
+  /halo\.scale\.set\(plan\.coast\*4\.26/.test(html) && /halo\.renderOrder=3/.test(html) &&
   /createRadialGradient/.test(html));
 // AR1g: the lagoon is a RING, never a filled disc. A tinted CENTRE glazes the
 // beach from a low camera and the island reads as see-through - that was the
@@ -511,6 +588,12 @@ chk('the sea has a moving surface, painted in code (nothing to download)',
   /M\.ground\.map\.offset\.set/.test(html));
 chk('the ripple sheet is WHITE, so the manifest still owns the sea colour',
   /x\.fillStyle="#ffffff"; x\.fillRect\(0,0,256,256\)/.test(html));
+// AR1M: NO MINT. Kenney's linear colours render turquoise here, and the terrain
+// blocks bring two more named materials in ("grass" is the mint one). If a raw
+// mint value ever appears in this file as a colour, something skipped the remap.
+chk('no mint turquoise is hard-coded anywhere in the engine',
+  !/0x2[0-9A-Fa-f]D9B8|0x2BD9B8|0x2ED9C0|0x3FD9C4/.test(html) &&
+  /\[\/grass\/i,\s*function\(\)\{ return M\.tier;/.test(html));
 chk('only the islands world got the water treatment (other stops cannot move)',
   /var SEA=\(world\.terrain==="islands"\)/.test(html) && /if\(SEA\) h\*=/.test(html) &&
   /^if\(SEA\)\{$/m.test(html));
@@ -601,6 +684,38 @@ if (!JSDOM) {
       chk('AR1: with no renderer the model kit never starts', kit.started===false && kit.on===false);
       chk('AR1: the world is still full of islands without a single model loaded',
         dr.isles > 0 && dr.dressed === 0, dr.isles+' islands, '+dr.dressed+' dressed');
+      // ------------------------------------------------------------------
+      // AR1M LIVE: the three checks the rebuild exists for. These read the
+      // ISLANDS THE ENGINE ACTUALLY BUILT, not the source text, because the
+      // whole point of terraced land is a property of the built shape.
+      // ------------------------------------------------------------------
+      const shapes = [];
+      for (let k = 0; k < 24; k++) { const sh = w.SKY.isleShape(k); if (sh) shapes.push(sh); }
+      chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
+        shapes.length > 0 && shapes.every(sh => sh.tiers >= 1 && sh.tiers <= 4) &&
+        shapes.some(sh => sh.tiers >= 3) && shapes.every(sh => sh.big || sh.tiers <= 2),
+        shapes.length + ' islands, tiers ' + [...new Set(shapes.map(sh=>sh.tiers))].sort().join('/'));
+      chk('AR1M: NEVER TALLER THAN WIDE - measured on the built island, not the roll',
+        shapes.length > 0 && shapes.every(sh => sh.height < sh.widest * 2),
+        'worst height:width is 1:' + Math.min(...shapes.map(sh => sh.widest*2/sh.height)).toFixed(1));
+      // A spur is a place where the coast pinches in far below its own average.
+      // The generator cannot make one, and this proves it on the built outline.
+      chk('AR1M: NO THIN SPUR - the coastline never pinches below 0.8 of its widest',
+        shapes.length > 0 && shapes.every(sh => sh.narrowest / sh.widest > 0.78),
+        'tightest pinch ' + Math.min(...shapes.map(sh => sh.narrowest/sh.widest)).toFixed(2));
+      // FLAT GROUND UNDER EVERY STRUCTURE. This is the note that started the
+      // rebuild: on the cone, huts perched on slopes. Every prop the engine
+      // placed must be standing on the flat top of a tier - or, for the things
+      // that belong there (docks, boats, buoys, offshore rocks), out on the water
+      // on purpose. Nothing may be in between and nothing may hover.
+      const stood = [];
+      for (let k = 0; k < 24; k++) { const st = w.SKY.isleStand(k); if (st) stood.push(...st); }
+      const onLand = stood.filter(o => !o.water);
+      const hovering = onLand.filter(o => Math.abs(o.y - o.land) > 1.6);
+      chk('AR1M: FLAT GROUND UNDER EVERY STRUCTURE - nothing perched, nothing hovering',
+        onLand.length > 0 && hovering.length === 0,
+        onLand.length + ' props on land, ' + hovering.length + ' off the ground, ' +
+        (stood.length - onLand.length) + ' out on the water on purpose');
     }
     chk('world '+i+' "'+name+'" BEATEN by autopilot', s.beaten,
       'goal '+goals.coins+' coins + '+goals.landings+' landings  ->  got '+s.worldCoins+' coins, '+s.landings+' landings in '+(t/30).toFixed(0)+'s of flight');

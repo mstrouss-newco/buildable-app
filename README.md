@@ -6,6 +6,45 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AR1M — Sunny Islands is terraced land now, with a real sky over it (July 26 2026)
+`public/skyflyer-engine.html`, `public/models/skyflyer/kitterrain/`, `qa-skyflyer.mjs`.
+
+THE MIX, the island shape Mike picked in the 2026-07-26 bake-off. Level one only;
+Snowy Peaks and Sunset Canyon are AR2 and are untouched.
+
+The wobbled cone is gone from the islands world. An island is a PLAN of flat
+tiers — beach ring, two or three grass terraces, cut cliff faces between them —
+and the plan is the single source of truth. `landTop(plan,x,z)` is now the one
+question every prop asks, and it answers with a flat tier top or with "that is
+the sea, do not place anything there". A cone has no flat ground, which is the
+whole reason huts perched on slopes and camps crowded summits.
+
+Kenney Nature Kit waterfall / stone steps / cave mouth are set INTO the tier
+walls, carved faces turned outward (`rotY = PI/2 - a + PI`), and merged into the
+island's own material buckets at dress time, so they cost no draw calls. Their
+"grass" material is the mint turquoise trap and is remapped to the palette.
+
+THE SCALE RULER is written into the engine and applied:
+**plane : palm : hut = 10 : 10 : 4.5** (1 unit ~ 0.9m). Camp homes went from
+5.5-9u to 3.2-4.8u — about 40% smaller.
+
+Texture is painted in code on WHITE multiply bases, so the manifest still owns
+every colour: a wet tide line and thickening grain on the beach, a worn path on
+the grass tiers, strata on the cliffs. New palette slot `cliff` (0xDDAE62) with
+its own map — the sand grain rendered cliffs olive.
+
+Sky: a vertical gradient dome and an additive sun halo, as new manifest slots
+`skyTop` / `skyHorizon` / `sunGlow` with built-in fallbacks. A world that
+declares none of them is unchanged, which is how the other two stops stay put.
+
+Engine `?v=` bumped `fl5c -> ar1m` on BOTH links.
+**QA: `node qa-skyflyer.mjs .` -> 339/339 PASS**, with the island checks rewritten
+for the new shape and three new LIVE ones that read the built islands rather than
+the source: flat ground under every structure, no thin spur, never taller than
+wide.
+
+---
+
 ## AP3b — regenerated art stayed invisible: studio pieces now carry a version stamp (July 25 2026)
 `api/asset-studio.js`.
 Mike regenerated the Sunny Meadow bubbles, the editor showed the new art, and the

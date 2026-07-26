@@ -1,5 +1,78 @@
 # Buildable Kids — Session Log
 
+## 2026-07-26: Session AR1M — Sunny Islands rebuilt as THE MIX, plus a real sky
+
+The island Mike picked in the bake-off, built into the real engine. Level one
+only: Snowy Peaks and Sunset Canyon are untouched, which is AR2.
+
+**The land.** The wobbled cone is gone from `terrain==="islands"`. An island is
+now a PLAN of flat tiers — a beach ring at the water, then two or three grass
+terraces with cut cliff faces between them — and the plan is the single source
+of truth. `landTop(plan,x,z)` replaced `isleSurf()` as the one question every
+prop, camp, dock and coin asks, and it answers either with a flat tier top or
+with "that is the sea, do not place anything there". A cone had no flat ground,
+which is why huts perched on slopes and camps crowded the summit; that was a
+design limit, not a tuning problem, and six rounds of tuning proved it.
+
+Ported from the approved mock, traps and all: the coastline is low-frequency
+only (2/3/5 waves), so a thin spur cannot be built; cliff walls are faceted per
+segment and wound b0,t0,b1 / t0,t1,b1, because the other winding faces them
+inward and they render as khaki back-faces; the cliff is a NEW palette slot
+(`cliff` 0xDDAE62) with its own strata map, never the sand grain, which turned
+it olive. The landing pads stand on the same terraced land, with the deck top
+at 10 over a tier that stops at 8.4.
+
+**The Kenney feature blocks.** Waterfall, stone steps and a cave mouth from the
+Nature Kit, set INTO the tier walls with their carved faces turned outward
+(`rotY = PI/2 - a + PI`). They are added to the island's own raw group when the
+kit lands and the whole thing re-merges, so a waterfall costs geometry and no
+draw calls. Their material names are traps — Kenney's "grass" is the mint
+turquoise this renderer makes of his linear colours — so each borrows a palette
+slot, water first and dirtDark before dirt.
+
+**The scale ruler is in the engine now**, written as a comment and applied:
+1 unit ~ 0.9m, plane 10u long / 13u span, palm 8-12u, hut 4.5u, tent 3.2u —
+**plane : palm : hut = 10 : 10 : 4.5**. Camp homes dropped from 5.5-9u to
+3.2-4.8u, about 40 percent smaller, and they finally read as somewhere a person
+lives rather than furniture built for giants.
+
+**Texture**, all painted in code on WHITE bases so the manifest still owns every
+colour and nothing is downloaded: a wet tide line and grain that thickens toward
+the waterline on the beach, a worn dirt path on the grass tiers, horizontal
+strata on the cliffs. The tier caps are read radially, which is the only mapping
+in which a tide line or a path can exist at all.
+
+**Sky and sun.** A vertical gradient dome (deep blue overhead, pale at the
+horizon) and a soft additive halo around the sun. Both are new manifest slots —
+`skyTop`, `skyHorizon`, `sunGlow` — with built-in fallbacks, and a world that
+declares none of them gets exactly what it had before. Only Sunny Islands
+declares them, which is how the other two stops stay untouched.
+
+**Five bugs only a screenshot caught**, every one invisible in code review:
+- the tier caps SPIRALLED — a triangle fan cannot carry a polar map, so every
+  terrace had a whirlpool painted on it. Caps are built as concentric rings now.
+- every summit wore a ROSETTE, where the map squeezes into the middle. The
+  inner 42 percent of each cap map fades to a flat wash.
+- the sun wore a PINWHEEL: the halo was coplanar with the disc and z-fought it.
+  It sits 60 units behind the disc on the camera ray now.
+- huts fell OFF TIER EDGES: placement measured the tier's nominal radius while
+  the coast wanders by up to 15 percent, so props landed on the terrace below.
+  Everything measures the outline at its own angle now.
+- the WATERFALL was silently dropped from every island — its fixed tier was
+  never tall enough once the island had four terraces.
+
+**QA rewritten for the new shape**, because a check that guards a shape which no
+longer exists passes forever without noticing. Three new live checks read the
+islands the engine actually built, not the source text: flat ground under every
+structure (68 props, 0 off the ground), no thin spur (tightest pinch 0.78 of the
+widest), and never taller than wide (worst 1:4.4). Plus a no-mint check and the
+sea-opaque and lagoon-ring checks kept by name. **339/339 passing.**
+
+Cache-bust bumped `fl5c → ar1m` on BOTH engine links.
+
+Pictures from the six bake-off cameras plus four chase distances were rendered
+from the REAL engine and reviewed before anything was pushed.
+
 ## 2026-07-26: Session AR1g — the last three pieces of "the islands are see-through"
 
 Mike re-reported see-through islands on a low approach in Sky Flyer, with a
