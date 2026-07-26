@@ -146,11 +146,33 @@ function readBody(req) {
   });
 }
 const stripDataUrl = (s) => String(s || "").replace(/^data:image\/\w+;base64,/, "");
-function sendPng(res, b64) {
+// AP3b: kept art is REPLACED in place under the same slug (see cachePut), so the
+// URL alone can never tell a browser the picture changed. Serving it as
+// "immutable for a year" meant a regenerated asset stayed invisible forever —
+// the editor showed the new art while the live game kept painting the old one.
+// Now: a request carrying a version stamp (?v=, minted from the row's created_at)
+// is safe to cache hard, because replacing the art mints a new stamp and so a new
+// URL. A request WITHOUT a stamp gets a short cache plus an ETag, so any older
+// caller self-heals within a minute and pays only a 304, not a re-download.
+function sendPng(req, res, b64) {
   const buf = Buffer.from(b64, "base64");
+  const etag = '"' + crypto.createHash("sha1").update(b64).digest("hex").slice(0, 20) + '"';
+  const versioned = !!(req && req.query && req.query.v);
   res.setHeader("Content-Type", "image/png");
-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.setHeader("ETag", etag);
+  res.setHeader("Cache-Control", versioned
+    ? "public, max-age=31536000, immutable"
+    : "public, max-age=60, must-revalidate");
+  const inm = req && req.headers && req.headers["if-none-match"];
+  if (inm && inm.split(",").some((t) => t.trim() === etag)) return res.status(304).end();
   res.status(200).send(buf);
+}
+// AP3b: the public URL for a kept piece, stamped with WHEN that art was stored.
+// Replacing art refreshes created_at (cachePut deletes then re-inserts), so the
+// stamp changes, so every browser and the CDN fetch the new picture immediately.
+function assetUrl(slug, createdAt) {
+  const v = createdAt ? Date.parse(createdAt) : Date.now();
+  return "/api/asset-studio?asset=" + slug + (v ? "&v=" + v : "");
 }
 // slug -> safe, predictable cache key. "breaker/bricks/jungle/ice_intact"
 const cleanSlug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9/_-]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
@@ -186,7 +208,7 @@ export default async function handler(req, res) {
     const key = "studio:" + cleanSlug(q.asset);
     const b64 = await cacheGet(key);
     if (!b64) return res.status(404).json({ error: "not_found" });
-    return sendPng(res, b64);
+    return sendPng(req, res, b64);
   }
 
   // --- manifest: what has been made (optionally for one game) ---
@@ -200,7 +222,7 @@ export default async function handler(req, res) {
       const assets = rows.map((x) => {
         const slug = (x.cache_key || "").replace(/^studio:/, "");
         const m = studioMeta(slug, x.descriptor);
-        return { slug, url: "/api/asset-studio?asset=" + slug, source: "Studio",
+        return { slug, url: assetUrl(slug, x.created_at), source: "Studio",
           game: m.game, type: m.type, theme: m.theme, kind: m.kind,
           descriptor: x.descriptor, created_at: x.created_at };
       });
@@ -347,7 +369,7 @@ export default async function handler(req, res) {
       // AP1: descriptor now carries the tags (kind + theme + game + type) as JSON.
       const descriptor = JSON.stringify({ slug, kind, theme, game, type });
       const ok = await cachePut(key, descriptor, "studio", stripDataUrl(p.b64));
-      if (ok) saved.push({ slug, url: "/api/asset-studio?asset=" + slug });
+      if (ok) saved.push({ slug, url: assetUrl(slug) });
     }
     return res.status(200).json({ saved, count: saved.length });
   }
@@ -387,7 +409,7 @@ export default async function handler(req, res) {
     const slug = `${game}/${type}/${theme}/${name}`;
     const descriptor = JSON.stringify({ slug, kind, theme, game, type, imported: true });
     const ok = await cachePut("studio:" + slug, descriptor, "studio", b64);
-    return res.status(ok ? 200 : 502).json({ ok, slug, url: "/api/asset-studio?asset=" + slug });
+    return res.status(ok ? 200 : 502).json({ ok, slug, url: assetUrl(slug) });
   }
 
   return res.status(400).json({ error: "unknown_action" });
