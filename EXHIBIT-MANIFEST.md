@@ -61,6 +61,48 @@ A topic book replaces the generic `items` list with a book:
 - `shelfColor` — the book's signature colour, used for the painted fallback and the bookshelf card.
 - `exhibit` — (optional, Session TB2) the "visit the exhibit" tie-in: `{ id, title, label }`, naming ONE Kidspedia exhibit about the same subject. The template draws the button on the cover and the last page **only after it confirms the target exhibit exists and is `approved`**, so a book whose exhibit has not been built yet simply keeps an empty link slot — there is never a button to a dead end. The planned tie-ins, enforced by `qa-topic.mjs`, are: Wild Weather → `make-it-rain` (the Weather Lab), The Deep Ocean → `ocean-deep` (Journey to the Deep), and Volcanoes / The Rainforest / How Plants Grow / Your Amazing Body once planner phases VL / RT / GL / BA build their exhibits.
 
+## The richer composed page (Session RP1)
+A topic-book page now comes in two shapes and **the BOOK chooses which**. A page that
+names none of the fields below renders through the original one-photo path, byte for
+byte as before — that is what lets the 19 books still waiting for their upgrade keep
+working while `main` auto-deploys. `qa-topic.mjs` fails if that gate is ever removed.
+
+A page opts into the richer shape by carrying `layout` (or per-fact `art`, or an
+`infographic`). It then shows **three photos and every fact at once**, each fact with
+its own picture, its own source line and its own round speaker button. Nothing hides
+behind "Another fact".
+
+- `layout` — one of `speed`, `long`, `then-now`, `close-up`. **The layout echoes the
+  subject**, it is not decoration: `speed` slants the photo and prints one giant number
+  (fast things), `long` runs a panorama and a dashed track down the page (long things),
+  `then-now` prints a ghost year and sets a sepia THEN beside a bright NOW (history),
+  `close-up` cuts circle crops the words wrap around (small details).
+- `stat` — `{ value, unit }`. The giant number over the photo. `speed` pages only.
+- `ghostYear` — the huge faint year printed behind the words. `then-now` pages only.
+- `facts[].art` / `facts[].artAlt` / `facts[].caption` — that fact's own photo. **If a
+  fact has no `art` of its own the template shows a detail crop of the page photo**
+  rather than a blank hole, and marks it `data-crop="1"` so QA can count how many
+  stand-ins a book still has. Trains is the pilot and is currently all stand-ins.
+- `infographic` — the "Wow chart": a white card with a thick brand border, a small tilt
+  and a "Wow chart" pill. **Picture first.** The entities are pictures (a drawn kid, a
+  photo chip, a football field with its yard lines); bars only ever carry magnitude, and
+  every number is labelled directly. Four kinds, all data-driven:
+  - `compare` — `rows[] = { icon | art, label, value, display }`. Bar width is `value`
+    over the largest `value`; `display` is what a kid reads.
+  - `fields` — `rows[] = { label, count, display }`. Draws `count` football fields (the
+    first ten, then "and N more").
+  - `timeline` — `stops[] = { year, label, icon | art }`. Photo chips over a dashed line.
+  - `diagram` — `name` picks a drawn diagram the template owns (`cone-wheel` today).
+  Every chart carries its own `source`, because a chart is a claim like a fact is.
+  Drawn glyph names: `kid`, `car`, `train`, `bullet`, `maglev`, `freight`, `subway`.
+- **US units and US spellings** in every converted book. `qa-topic.mjs` fails a book
+  that names a `layout` and still says kilometres, or spells it colourful.
+
+Adding a new layout, chart kind, glyph or diagram means adding it to `RICH_LAYOUTS`,
+`GLYPHS` or `DIAGRAMS` in `public/topic.html` **and** to `RP_LAYOUTS` / `RP_CHARTS` /
+`RP_DIAGRAMS` in `qa-topic.mjs`, or the book fails QA rather than silently losing a
+picture.
+
 ## The bookshelf (Session TB2)
 `public/kidspedia.html`, served at `/explore/kidspedia`, is the front door to the books:
 - **The shelves.** `public/explore/bookshelf.json` holds the shelf ORDER — all 20 planned topic ids, grouped into named shelves, listed from day one whether or not their file exists yet. The page loads each id's own `/explore/{id}.json` and shows a cover **only when that file says `status: "approved"`**, so an in-review book is invisible to kids even though its id is on the list, and a new book takes its place on the right shelf the moment it is approved, with nothing else to wire up. Never rename a shipped id: dog-ears are keyed on it. `qa-kidspedia.mjs` fails if a topic book in the repo is missing from the shelf order, or if a listed id would be swallowed by the `/explore/(.*)` catch-all.

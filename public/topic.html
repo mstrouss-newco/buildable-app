@@ -127,6 +127,130 @@
   .pauseveil{position:fixed;inset:0;background:rgba(11,10,24,.55);z-index:40;display:none;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:16px}
   .pauseveil.show{display:flex}
 
+  /* ================= Session RP1 — RICHER COMPOSED PAGES =================
+     A page opts IN by carrying a "layout" (and/or per-fact art, and/or an
+     "infographic" block). A page carrying none of those renders through the
+     original one-photo path, unchanged — that is the replace-first rule, and
+     it is what keeps the other 19 live books exactly as they are today.
+
+     The look, locked across five mock rounds with Mike:
+      - three photos a page: the hero plus one per fact, so no fact is text-only
+      - composed editorial layouts that ECHO THE SUBJECT, never a tidy grid
+      - picture-first "Wow chart" infographics: real things carry the meaning,
+        bars only carry magnitude
+      - read-aloud is a round SPEAKER, floated so the words wrap around it
+      - US units everywhere                                                    */
+  .rp{--bkblue:#4A6FA5;--bkdeep:#33507E;--bkgold:#E8B84B}
+  .page.rich .pbody{padding:0 18px 24px}
+  .facts{position:relative;display:flex;flex-direction:column;gap:18px;margin-top:14px}
+  .fcard{position:relative;z-index:1}
+  .fcard::after{content:"";display:block;clear:both}
+  .fcard .facttext{font-size:15.5px;font-weight:700;line-height:1.55}
+  .fcard .factsrc{margin-top:7px;font-size:10.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:rgba(15,14,23,.45);clear:both}
+  /* The round speaker. FLOATED, never absolutely positioned: an absolute button
+     sat on top of the words (Mike caught it in a screenshot), a float makes the
+     sentence flow around it. */
+  .say.mini{float:right;margin:1px 0 8px 12px;width:42px;height:42px;box-shadow:0 3px 10px rgba(15,14,23,.16)}
+  .say.mini svg{width:20px;height:20px}
+
+  /* Every fact photo is a FRAME with the picture inside it. The frame is what
+     clips: a detail crop is a zoomed image, and without its own clipping box it
+     spills straight out over the page (it did, off the left edge). */
+  .fphoto{position:relative;margin:0 0 11px;border-radius:14px;background:#E7E1D5;aspect-ratio:16 / 10}
+  .fphoto .frame{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
+  .fphoto img{display:block;width:100%;height:100%;object-fit:cover}
+  .fphoto .cap{position:absolute;left:0;right:0;bottom:0;padding:16px 10px 8px;font-size:11px;font-weight:800;line-height:1.35;color:#fff;
+    background:linear-gradient(to top,rgba(15,14,23,.72),rgba(15,14,23,0))}
+  /* a taped-down snapshot: paper, a shadow, a small tilt, caption on the paper */
+  .fphoto.polaroid{background:#fff;padding:8px;border-radius:5px;box-shadow:0 10px 24px rgba(15,14,23,.2);transform:rotate(-2.2deg);aspect-ratio:auto}
+  .fphoto.polaroid .frame{position:static;display:block;aspect-ratio:4 / 3;border-radius:3px}
+  /* the caption sits ON the paper, in the flow — an absolute one climbed back
+     over the photo as soon as it ran to two lines */
+  .fphoto.polaroid .cap{position:static;padding:7px 2px 3px;color:rgba(15,14,23,.62);background:none;font-size:10px;line-height:1.3;text-align:center}
+  .fphoto .tape{position:absolute;top:-9px;left:50%;margin-left:-30px;width:60px;height:19px;border-radius:2px;background:rgba(232,184,75,.6);box-shadow:0 1px 3px rgba(15,14,23,.14)}
+
+  /* --- layout: speed (bullet trains). A slanted photo edge, streaks of speed,
+         one giant number, and a snapshot that overlaps the column. --- */
+  .lay-speed .photo{clip-path:polygon(0 0,100% 0,100% 92%,0 100%)}
+  /* the slants: a hint of motion off the left edge, never a scratched screen */
+  .lay-speed .photo::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(101deg,rgba(255,255,255,.5) 0 2px,rgba(255,255,255,0) 2px 42px);opacity:.22;
+    -webkit-mask-image:linear-gradient(90deg,#000,transparent 46%);mask-image:linear-gradient(90deg,#000,transparent 46%)}
+  .bigstat{position:absolute;right:15px;bottom:11%;z-index:3;text-align:right;font-family:'Fredoka';color:#fff;text-shadow:0 3px 16px rgba(0,0,0,.6);pointer-events:none}
+  .bigstat b{display:block;font-size:52px;line-height:.88;font-weight:700}
+  .bigstat span{font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase}
+  .lay-speed .ptitle{padding-bottom:2px}
+  /* the snapshot is a positioned, rotated element, so it paints OVER the words
+     that flow past it — the gap has to be wide enough to cover the tilt */
+  .lay-speed .fcard.n1 .fphoto{width:40%;float:left;margin:2px 20px 10px 0}
+
+  /* --- layout: long (freight). A wide panorama, then a dashed track running
+         down the page with the facts hung off it like cars. --- */
+  .lay-long .photo{aspect-ratio:21 / 9}
+  .lay-long .facts{padding-left:24px}
+  .lay-long .facts::before{content:"";position:absolute;left:7px;top:4px;bottom:4px;width:0;border-left:3px dashed rgba(74,111,165,.5);z-index:0}
+  .lay-long .fcard::before{content:"";position:absolute;left:-24px;top:9px;width:15px;height:3px;border-radius:2px;background:rgba(74,111,165,.6)}
+  .lay-long .fphoto{aspect-ratio:21 / 9}
+
+  /* --- layout: then-now (the subway). A ghost year behind the words and a
+         sepia THEN beside a bright NOW. --- */
+  /* the ghost year gets its own band under the title: printed faintly behind
+     the page, but never underneath a line a kid is trying to read */
+  .lay-then-now .facts{margin-top:44px}
+  .ghostyear{position:absolute;right:3px;top:-52px;font-family:'Fredoka';font-weight:700;font-size:76px;line-height:1;color:rgba(51,80,126,.13);z-index:0;pointer-events:none;letter-spacing:-.02em}
+  .pairrow{display:grid;grid-template-columns:1fr 1fr;gap:11px;position:relative;z-index:1}
+  .pairrow>div{position:relative}
+  .pairrow .fphoto{margin-bottom:0;aspect-ratio:1 / 1}
+  .pairrow .fphoto.then img{filter:sepia(.6) contrast(.94) brightness(1.02)}
+  .pairtag{position:absolute;top:8px;left:8px;font-size:9.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:rgba(51,80,126,.82);padding:3px 8px;border-radius:999px}
+
+  /* --- layout: close-up (the wheels). Circle crops the words wrap around. --- */
+  .lay-close-up .fphoto{border-radius:50%;width:128px;aspect-ratio:1 / 1;float:left;margin:3px 15px 8px 0;box-shadow:0 6px 16px rgba(15,14,23,.18)}
+  .lay-close-up .fphoto .cap{display:none}
+  .lay-close-up .fcard.n2{padding-left:14px}
+
+  /* --- the Wow chart. White card, thick brand border, a small tilt, and a pill
+         that names it, so a kid learns to look for one. --- */
+  .wow{position:relative;margin-top:22px;background:#fff;border:3px solid #E8B84B;border-radius:18px;padding:14px 14px 13px;
+    box-shadow:0 10px 26px rgba(15,14,23,.15);transform:rotate(-.7deg)}
+  .wow.blue{border-color:#4A6FA5}
+  .wow::before{content:"";position:absolute;inset:0;border-radius:15px;background:linear-gradient(160deg,rgba(232,184,75,.09),rgba(74,111,165,.06));pointer-events:none}
+  .wow>*{position:relative}
+  .wow .pill{display:inline-block;background:#E8B84B;color:#2A2005;font-weight:900;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+  .wow.blue .pill{background:#4A6FA5;color:#fff}
+  .wow h4{font-family:'Fredoka';font-weight:700;font-size:17.5px;line-height:1.2;margin-top:9px;color:#33507E}
+  .wow .cap{margin-top:10px;font-size:11.5px;font-weight:800;line-height:1.45;color:rgba(15,14,23,.62)}
+  .wow .src{margin-top:6px;font-size:9.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:rgba(15,14,23,.4)}
+  .wowrows{margin-top:11px;display:flex;flex-direction:column;gap:11px}
+  .wowrow{display:grid;grid-template-columns:48px 1fr;gap:11px;align-items:center}
+  .glyph{width:48px;height:36px;display:block;border-radius:8px;overflow:hidden}
+  .glyph img{width:100%;height:100%;object-fit:cover;display:block}
+  .barwrap{min-width:0}
+  .lab{font-size:11.5px;font-weight:900;color:rgba(15,14,23,.68);line-height:1.25}
+  .bar{height:13px;border-radius:999px;background:rgba(74,111,165,.15);margin-top:5px;position:relative;overflow:hidden}
+  .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#4A6FA5,#33507E)}
+  .num{font-family:'Fredoka';font-weight:700;font-size:15px;color:#33507E;margin-top:4px}
+  .fieldrow{margin-top:2px}
+  .fieldstrip{display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin-top:6px}
+  .fieldstrip svg{width:27px;height:17px;flex:none}
+  .fieldmore{font-family:'Fredoka';font-weight:700;font-size:14px;color:#33507E;margin-left:5px}
+  /* the timeline: photo chips, the dashed track running under them, then the
+     year and who. Three stops fit a phone; more than three simply scroll. */
+  .tl{margin-top:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tlinner{min-width:100%}
+  .tlgrid{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(84px,1fr);gap:8px}
+  .tlstop{text-align:center}
+  .tlstop .chip{width:100%;height:60px;border-radius:12px;overflow:hidden;background:#E9E3D6;border:2px solid #4A6FA5;display:flex;align-items:center;justify-content:center}
+  .tlstop .chip img{width:100%;height:100%;object-fit:cover;display:block}
+  .tlstop .chip svg{width:46px;height:34px}
+  .tlcap{text-align:center}
+  .tlcap .yr{font-family:'Fredoka';font-weight:700;font-size:15px;color:#33507E}
+  .tlcap .who{font-size:9.5px;font-weight:800;color:rgba(15,14,23,.58);line-height:1.28;margin-top:2px}
+  .tlline{height:3px;margin:9px 0 8px;background:repeating-linear-gradient(90deg,#4A6FA5 0 11px,transparent 11px 19px)}
+  .diag{margin-top:12px}
+  .diag svg{width:100%;height:auto;display:block}
+  @media (prefers-reduced-motion:reduce){.wow,.fphoto.polaroid{transform:none}}
+
   /* ============ Session TB5 — fit check: phone, iPad, and landscape ============
      The book is one column everywhere; only its measurements change. Notches and
      home bars are respected so no control ever sits under them. */
@@ -168,6 +292,22 @@
     .turns{margin-top:8px}
     .turn{width:46px;height:46px}
     .ear{width:62px;height:62px}
+    /* RP1: a sideways phone gets the tall photo column, so the composed page
+       drops its slant and its panorama crop and simply reads down the right. */
+    .lay-speed .photo,.lay-long .photo{clip-path:none}
+    .lay-speed .photo::after{display:none}
+    /* A composed page is TALL, and a full-height photo column would stretch the
+       picture into a slice of sky. Keep it a real photo at the top of the
+       column and let it ride along as the words scroll. */
+    .page.rich .photo{grid-row:1 / span 2;align-self:start;height:auto;min-height:0;aspect-ratio:4 / 3;position:sticky;top:0}
+    .bigstat{bottom:12%}
+    .bigstat b{font-size:38px}
+    .page.rich .pbody{padding:6px 16px 16px}
+    .facts{gap:13px;margin-top:10px}
+    .lay-speed .fcard.n1 .fphoto{width:52%}
+    .lay-close-up .fphoto{width:94px}
+    .wow{margin-top:14px;padding:11px}
+    .ghostyear{font-size:58px;top:-20px}
   }
   /* iPad and up: a wider page with bigger type, still one comfortable column.
      The height floor keeps a sideways phone (also wide) out of this block. */
@@ -185,6 +325,17 @@
     .q{font-size:13.5px;padding:11px 18px}
     .ear{width:86px;height:86px}
     .top{max-width:760px}
+    /* RP1: on an iPad the composed page gets room to breathe. */
+    .page.rich .pbody{padding:0 24px 28px}
+    .fcard .facttext{font-size:17.5px}
+    .fcard .factsrc{font-size:11.5px}
+    .say.mini{width:50px;height:50px}
+    .say.mini svg{width:23px;height:23px}
+    .bigstat b{font-size:68px}
+    .lay-close-up .fphoto{width:168px}
+    .wow h4{font-size:20px}
+    .wow .cap{font-size:12.5px}
+    .ghostyear{font-size:110px;top:-40px}
   }
 </style>
 </head>
@@ -243,9 +394,13 @@
 // kid reads, every photo, and every source line comes from the exhibit
 // JSON at /explore/{id}.json.
 //
-// A topic book is: a cover spread, then 4-5 photo pages (one full-width
-// photo-real image + 2-3 fun facts, each fact carrying its own source),
-// then a finish spread.
+// A topic book is: a cover spread, then 4-5 photo pages, then a finish
+// spread. A page comes in two shapes and the BOOK chooses which:
+//   - the original: one full-width photo + 2-3 facts shown one at a time
+//   - Session RP1's richer page: a composed layout that echoes the subject,
+//     three photos, every fact on screen with its own picture and source,
+//     and a picture-first "Wow chart" at the bottom
+// Each fact always carries its own source, in both shapes.
 //
 // Dog-ears follow the KID, not the device: they are stored in Supabase
 // through /api/saved-pages (localStorage is only a fast local mirror so
@@ -434,9 +589,15 @@ function buildSpreads(data) {
   const cover = data.cover || {};
   out.push({ kind: "cover", id: "cover", title: data.title, blurb: cover.blurb || "", art: cover.art || data.heroArt || "", artAlt: cover.artAlt || "", fill: data.shelfColor || "#2A3550" });
   (data.pages || []).forEach((p) => {
+    const facts = normaliseFacts(p);
     out.push({
       kind: "page", id: p.id, title: p.title || "", art: p.art || "", artAlt: p.artAlt || "",
-      facts: normaliseFacts(p), factAudio: p.factAudio || "", quiz: p.quiz || [], fill: data.shelfColor || "#2A3550",
+      facts: facts, factAudio: p.factAudio || "", quiz: p.quiz || [], fill: data.shelfColor || "#2A3550",
+      // Session RP1 — the richer page. A page is "rich" only when the BOOK asks
+      // for it. Everything else takes the original path, untouched.
+      layout: RICH_LAYOUTS[p.layout] ? p.layout : "",
+      stat: p.stat || null, ghostYear: p.ghostYear || "", infographic: p.infographic || null,
+      rich: !!(RICH_LAYOUTS[p.layout] || p.infographic || facts.some((f) => f.art)),
     });
   });
   const fin = data.finish || {};
@@ -453,21 +614,228 @@ function spreadIndexFor(pageId) {
   return 0;
 }
 // Facts are objects {text, source}. A plain string still works (older files).
+// Session RP1 adds an optional per-fact photo (art / artAlt / caption) so no
+// fact on a richer page is left as bare text.
 function normaliseFacts(p) {
   const list = Array.isArray(p.facts) ? p.facts : (p.fact ? [p.fact] : []);
-  return list.map((f) => (typeof f === "string" ? { text: f, source: "" } : { text: (f && f.text) || "", source: (f && f.source) || "" }))
-             .filter((f) => f.text);
+  return list.map((f) => (typeof f === "string" ? { text: f, source: "", art: "", artAlt: "", caption: "" } : {
+    text: (f && f.text) || "", source: (f && f.source) || "",
+    art: (f && f.art) || "", artAlt: (f && f.artAlt) || "", caption: (f && f.caption) || "",
+  })).filter((f) => f.text);
 }
 
+// =====================================================================
+// Session RP1 — RICHER COMPOSED PAGES
+//
+// The four layouts are named after what they DO, not what they look like,
+// because the rule Mike locked is that the layout must echo the subject:
+//   speed     — a slanted photo, streaks, one giant number   (fast things)
+//   long      — a panorama and a dashed track running down    (long things)
+//   then-now  — a ghost year with a sepia THEN beside a NOW   (history)
+//   close-up  — circle crops the words wrap around            (small details)
+// A page that names none of them renders through the original path.
+// =====================================================================
+const RICH_LAYOUTS = { speed: 1, long: 1, "then-now": 1, "close-up": 1 };
+
+// Where a fact's photo comes from. RP1 is the pilot and ships with the Trains
+// book's existing four photos, so a fact with no art of its own gets a DETAIL
+// CROP of the page photo (a different part of the frame, pushed in) rather than
+// a blank hole. RP2 replaces every one of these with real art; the data-crop
+// flag is what lets QA count how many are still stand-ins.
+const CROP_POS = ["50% 40%", "22% 66%", "80% 30%", "50% 78%"];
+const CROP_ZOOM = [1.15, 1.5, 1.9, 1.35];
+function factPhoto(sp, f, n, cls) {
+  const src = f.art || sp.art;
+  if (!src) return "";
+  const crop = !f.art;
+  const alt = escapeHtml(f.artAlt || sp.artAlt || sp.title || "");
+  const style = "object-position:" + CROP_POS[n % CROP_POS.length] +
+    (crop ? ";transform:scale(" + CROP_ZOOM[n % CROP_ZOOM.length] + ")" : "");
+  const cap = f.caption ? '<figcaption class="cap">' + escapeHtml(f.caption) + "</figcaption>" : "";
+  const tape = cls.indexOf("polaroid") !== -1 ? '<span class="tape"></span>' : "";
+  return '<figure class="fphoto ' + cls + '"' + (crop ? ' data-crop="1"' : "") + ">" + tape +
+    '<span class="frame"><img src="' + escapeHtml(src) + '" alt="' + alt + '" loading="lazy" style="' + style + '" onerror="this.style.display=\'none\'"></span>' +
+    cap + "</figure>";
+}
+// The read-aloud control: a ROUND SPEAKER. It floats, so the sentence wraps
+// around it instead of hiding behind it.
+function speakerSvg() {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M4 9.4h3.3L12 5.3v13.4L7.3 14.6H4Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<path d="M15.9 9.3a3.9 3.9 0 0 1 0 5.4"/><path d="M18.6 6.7a7.5 7.5 0 0 1 0 10.6"/></svg>';
+}
+function stopSvg() { return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>'; }
+function sayId(i, n) { return n ? ("say-" + i + "-" + n) : ("say-" + i); }
+function ftId(i, n) { return n ? ("ft-" + i + "-" + n) : ("ft-" + i); }
+function fsId(i, n) { return n ? ("fs-" + i + "-" + n) : ("fs-" + i); }
+function sayButton(i, n) {
+  return '<button class="say mini" type="button" id="' + sayId(i, n) + '" aria-label="Read this to me">' + speakerSvg() + "</button>";
+}
+function factCard(sp, i, n, photoCls) {
+  const f = sp.facts[n] || { text: "", source: "" };
+  return '<div class="fcard n' + n + '">' +
+    (photoCls === null ? "" : factPhoto(sp, f, n, photoCls)) +
+    sayButton(i, n) +
+    '<div class="facttext" id="' + ftId(i, n) + '">' + escapeHtml(f.text) + "</div>" +
+    '<div class="factsrc" id="' + fsId(i, n) + '">' + (f.source ? "Source: " + escapeHtml(f.source) : "") + "</div>" +
+    "</div>";
+}
+function richBody(sp, i) {
+  const facts = sp.facts || [];
+  let inner = "";
+  if (sp.layout === "then-now" && facts.length >= 3) {
+    // The pair is the whole point of this layout: the old photo and the new one
+    // sit side by side, then each fact speaks under its own picture.
+    inner = factCard(sp, i, 0, null) +
+      '<div class="pairrow">' +
+        '<div>' + factPhoto(sp, facts[1], 1, "then") + '<span class="pairtag">Then</span></div>' +
+        '<div>' + factPhoto(sp, facts[2], 2, "now") + '<span class="pairtag">Now</span></div>' +
+      "</div>" +
+      factCard(sp, i, 1, null) + factCard(sp, i, 2, null);
+  } else {
+    const cls = sp.layout === "speed" ? ["wide", "polaroid", "wide"]
+      : sp.layout === "long" ? ["wide", "wide", "wide"]
+      : sp.layout === "close-up" ? ["round", "round", "round"]
+      : ["wide", "wide", "wide"];
+    inner = facts.map((f, n) => factCard(sp, i, n, n === 0 ? null : cls[n % cls.length])).join("");
+  }
+  const ghost = sp.ghostYear ? '<div class="ghostyear" aria-hidden="true">' + escapeHtml(sp.ghostYear) + "</div>" : "";
+  return '<div class="facts">' + ghost + inner + "</div>" + wowHtml(sp.infographic);
+}
+
+// ---------------- the Wow chart ----------------
+// Picture-first: the ENTITIES are pictures (a drawn kid, a real photo chip, a
+// football field with its yard lines). Bars only ever carry magnitude, and every
+// number is labelled directly. Brand palette only, no emoji anywhere.
+function wowHtml(g) {
+  if (!g || !g.kind) return "";
+  let body = "";
+  if (g.kind === "compare") body = compareRows(g);
+  else if (g.kind === "fields") body = fieldRows(g);
+  else if (g.kind === "timeline") body = timelineHtml(g);
+  else if (g.kind === "diagram") body = diagramHtml(g);
+  else return "";
+  return '<div class="wow' + (g.tone === "blue" ? " blue" : "") + '">' +
+    '<span class="pill">' + escapeHtml(g.pill || "Wow chart") + "</span>" +
+    "<h4>" + escapeHtml(g.title || "") + "</h4>" + body +
+    (g.caption ? '<div class="cap">' + escapeHtml(g.caption) + "</div>" : "") +
+    (g.source ? '<div class="src">Source: ' + escapeHtml(g.source) + "</div>" : "") +
+    "</div>";
+}
+function compareRows(g) {
+  const rows = g.rows || [];
+  const max = Math.max.apply(null, rows.map((r) => Number(r.value) || 0).concat([1]));
+  return '<div class="wowrows">' + rows.map((r) => {
+    const w = Math.max(7, Math.round(((Number(r.value) || 0) / max) * 100));
+    return '<div class="wowrow">' + glyphHtml(r) + '<div class="barwrap">' +
+      '<div class="lab">' + escapeHtml(r.label || "") + "</div>" +
+      '<div class="bar"><i style="width:' + w + '%"></i></div>' +
+      '<div class="num">' + escapeHtml(r.display || "") + "</div></div></div>";
+  }).join("") + "</div>";
+}
+function fieldRows(g) {
+  const rows = g.rows || [];
+  return '<div class="wowrows">' + rows.map((r) => {
+    const n = Math.max(1, Math.round(Number(r.count) || 0));
+    const draw = Math.min(n, 10);
+    let strip = "";
+    for (let k = 0; k < draw; k++) strip += fieldSvg();
+    if (n > draw) strip += '<span class="fieldmore">and ' + (n - draw) + " more</span>";
+    return '<div class="fieldrow"><div class="lab">' + escapeHtml(r.label || "") + "</div>" +
+      '<div class="fieldstrip">' + strip + "</div>" +
+      '<div class="num">' + escapeHtml(r.display || "") + "</div></div>";
+  }).join("") + "</div>";
+}
+function timelineHtml(g) {
+  const stops = g.stops || [];
+  const chips = stops.map((s) => '<div class="tlstop"><div class="chip">' +
+    (s.art ? '<img src="' + escapeHtml(s.art) + '" alt="' + escapeHtml(s.artAlt || "") + '" loading="lazy" onerror="this.style.display=\'none\'">' : glyphSvg(s.icon || "train")) +
+    "</div></div>").join("");
+  const caps = stops.map((s) => '<div class="tlcap"><div class="yr">' + escapeHtml(s.year || "") + "</div>" +
+    '<div class="who">' + escapeHtml(s.label || "") + "</div></div>").join("");
+  return '<div class="tl"><div class="tlinner">' +
+    '<div class="tlgrid">' + chips + "</div>" +
+    '<div class="tlline" aria-hidden="true"></div>' +
+    '<div class="tlgrid">' + caps + "</div>" +
+    "</div></div>";
+}
+function diagramHtml(g) {
+  const d = DIAGRAMS[g.name];
+  return d ? '<div class="diag">' + d() + "</div>" : "";
+}
+function glyphHtml(r) {
+  if (r && r.art) return '<span class="glyph"><img src="' + escapeHtml(r.art) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></span>';
+  return '<span class="glyph">' + glyphSvg((r && r.icon) || "train") + "</span>";
+}
+// Drawn glyphs. Simple shapes a five-year-old reads at a glance, never an emoji.
+const GLYPHS = {
+  kid: '<circle cx="24" cy="9" r="5"/><path d="M24 15c-4 0-6 3-6 7v6h4v8h4v-8h4v-6c0-4-2-7-6-7Z"/>',
+  car: '<path d="M6 22h36v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2Z"/><path d="M11 22 15 12h18l4 10Z"/><circle cx="14" cy="30" r="4"/><circle cx="34" cy="30" r="4"/>',
+  train: '<path d="M9 10h30v14a4 4 0 0 1-4 4H13a4 4 0 0 1-4-4Z"/><rect x="13" y="13" width="8" height="7" rx="1.5" fill="#fff"/><rect x="27" y="13" width="8" height="7" rx="1.5" fill="#fff"/><circle cx="16" cy="31" r="3"/><circle cx="32" cy="31" r="3"/>',
+  bullet: '<path d="M4 26c0-9 9-16 22-16h18v14a4 4 0 0 1-4 4H4Z"/><rect x="26" y="14" width="9" height="6" rx="1.5" fill="#fff"/><rect x="12" y="16" width="8" height="5" rx="2" fill="#fff"/><circle cx="18" cy="31" r="3"/><circle cx="36" cy="31" r="3"/>',
+  maglev: '<path d="M3 22c0-8 9-14 21-14h20v10a4 4 0 0 1-4 4H3Z"/><rect x="26" y="12" width="9" height="5" rx="1.5" fill="#fff"/><path d="M5 29h38" stroke-width="3" stroke-linecap="round"/><path d="M11 26v3M23 26v3M35 26v3" stroke-width="2.4" stroke-linecap="round"/>',
+  freight: '<rect x="4" y="12" width="17" height="13" rx="2"/><rect x="24" y="12" width="17" height="13" rx="2"/><circle cx="9" cy="29" r="3"/><circle cx="17" cy="29" r="3"/><circle cx="29" cy="29" r="3"/><circle cx="37" cy="29" r="3"/>',
+  subway: '<path d="M11 8h26v16a4 4 0 0 1-4 4H15a4 4 0 0 1-4-4Z"/><rect x="15" y="11" width="18" height="7" rx="1.5" fill="#fff"/><path d="M6 32h36" stroke-width="3" stroke-linecap="round"/>',
+};
+function glyphSvg(name) {
+  const body = GLYPHS[name] || GLYPHS.train;
+  return '<svg viewBox="0 0 48 36" fill="#4A6FA5" stroke="#4A6FA5" aria-hidden="true">' + body + "</svg>";
+}
+// One football field, with its end zones and yard lines, so "40 football fields"
+// is something a kid can literally count instead of a number to take on trust.
+function fieldSvg() {
+  return '<svg viewBox="0 0 54 34" aria-hidden="true">' +
+    '<rect x="0" y="0" width="54" height="34" rx="3" fill="#3E8C55"/>' +
+    '<rect x="0" y="0" width="7" height="34" fill="#2F6B41"/><rect x="47" y="0" width="7" height="34" fill="#2F6B41"/>' +
+    '<path d="M15 2v30M23 2v30M31 2v30M39 2v30" stroke="rgba(255,255,255,.75)" stroke-width="1.6"/>' +
+    '<path d="M7 2v30M47 2v30" stroke="#fff" stroke-width="2"/></svg>';
+}
+// Diagrams are allowed where the picture is what teaches. The cone wheel is the
+// whole reason a train stays on its rails, and no bar chart can show it.
+const DIAGRAMS = {
+  // One wheel, cut in half and seen from the side, because that is the only view
+  // where the cone is visible at all. The tread SLOPES: deepest beside the
+  // flange, shallowest at the outer rim. The rail touches somewhere along that
+  // slope, and which part it touches is the whole trick.
+  // The wheel drawn as what it really is: a shallow cone lying on its side. One
+  // end is fatter than the other, and a rail rests somewhere along that slope.
+  // Seen this way a five-year-old can point at the wide end and the narrow end.
+  "cone-wheel": function () {
+    return '<svg viewBox="0 0 320 200" role="img" aria-label="A train wheel drawn as a shallow cone lying on its side. One end is fatter than the other and a rail rests on the sloping surface between them. A raised lip called the flange sits on the fat end and keeps the wheel from sliding off the rail.">' +
+      '<rect x="0" y="0" width="320" height="200" fill="none"/>' +
+      // the flange: the raised lip on the fat end
+      '<ellipse cx="56" cy="102" rx="13" ry="70" fill="#33507E"/>' +
+      // the cone body, fat on the left, narrow on the right
+      '<path d="M64 42 L250 60 L250 144 L64 162 Z" fill="#4A6FA5"/>' +
+      '<ellipse cx="64" cy="102" rx="12" ry="60" fill="#5B80B8"/>' +
+      '<ellipse cx="250" cy="102" rx="11" ry="42" fill="#6E90C4"/>' +
+      '<path d="M64 162 L250 144" stroke="#33507E" stroke-width="4" stroke-linecap="round"/>' +
+      // the rail resting under the slope, drawn going away from you
+      '<path d="M138 152 L176 149 L192 168 L152 171 Z" fill="#98A2AF"/>' +
+      '<path d="M152 171 L192 168 L192 180 L152 183 Z" fill="#C3C9D2"/>' +
+      // pointers
+      '<path d="M40 44 L52 56" stroke="#33507E" stroke-width="3" stroke-linecap="round"/>' +
+      '<text x="8" y="36" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#33507E">Flange</text>' +
+      '<text x="30" y="196" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#33507E">Wide part</text>' +
+      '<text x="212" y="196" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#33507E">Narrow part</text>' +
+      '<path d="M62 178 L62 166" stroke="#33507E" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M252 178 L252 148" stroke="#33507E" stroke-width="3" stroke-linecap="round"/>' +
+      '<text x="196" y="140" font-family="Nunito,sans-serif" font-size="12" font-weight="900" fill="#33507E">rail</text>' +
+      '<path d="M196 144 L182 154" stroke="#33507E" stroke-width="2.5" stroke-linecap="round"/>' +
+      "</svg>";
+  },
+};
+
 // ---------- the book itself ----------
-function photoBlock(sp) {
+function photoBlock(sp, extra) {
   const alt = escapeHtml(sp.artAlt || sp.title || "");
   const painted = '<div class="painted"><span>' + escapeHtml(sp.title || "") + "</span></div>";
-  if (!sp.art) return '<div class="photo" style="--fill:' + escapeHtml(sp.fill) + '">' + painted + "</div>";
+  const more = extra || "";
+  if (!sp.art) return '<div class="photo" style="--fill:' + escapeHtml(sp.fill) + '">' + painted + more + "</div>";
   // The painted block sits UNDER the photo: if the photo is missing or slow,
   // the kid still sees a finished-looking page instead of a white hole.
   return '<div class="photo" style="--fill:' + escapeHtml(sp.fill) + '">' + painted +
-    '<img src="' + escapeHtml(sp.art) + '" alt="' + alt + '" loading="lazy" onerror="this.style.display=\'none\'">' + "</div>";
+    '<img src="' + escapeHtml(sp.art) + '" alt="' + alt + '" loading="lazy" onerror="this.style.display=\'none\'">' + more + "</div>";
 }
 function earSvg() {
   return '<svg viewBox="0 0 74 74" aria-hidden="true">' +
@@ -504,13 +872,25 @@ function buildPages() {
         '<div class="factnav"><button class="q tiein" type="button" id="tiein-finish" style="display:none"></button></div>' +
         '<div class="factnav"><button class="q" type="button" id="againBtn">Read it again</button>' +
         '<button class="q next" type="button" id="doneBtn">' + (FROM_SHELF ? "Back to the bookshelf" : "Back to Explore") + "</button></div></div>";
+    } else if (sp.rich) {
+      // Session RP1 — the composed page. Every fact is on screen at once, each
+      // with its own picture and its own source, and the Wow chart closes it.
+      el.className += " rich rp" + (sp.layout ? " lay-" + sp.layout : "");
+      el.innerHTML = photoBlock(sp, sp.stat
+          ? '<div class="bigstat"><b>' + escapeHtml(sp.stat.value || "") + "</b><span>" + escapeHtml(sp.stat.unit || "") + "</span></div>"
+          : "") +
+        '<div class="ptitle">' + escapeHtml(sp.title) + "</div>" +
+        '<div class="pbody">' + richBody(sp, i) + "</div>" +
+        '<span class="earhint" id="earhint-' + i + '">Fold</span>' +
+        sparkSvg(i) +
+        '<button class="ear" type="button" id="ear-' + i + '" aria-label="Fold this page corner to save it">' + earSvg() + "</button>";
     } else {
       el.innerHTML = photoBlock(sp) +
         '<div class="ptitle">' + escapeHtml(sp.title) + "</div>" +
         '<div class="pbody">' +
           '<div class="factbox"><div class="facttext" id="ft-' + i + '"></div><div class="factsrc" id="fs-' + i + '"></div></div>' +
           '<div class="factnav">' +
-            '<button class="say" type="button" id="say-' + i + '" aria-label="Read to me"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>' +
+            '<button class="say" type="button" id="say-' + i + '" aria-label="Read to me">' + speakerSvg() + "</button>" +
             '<div class="dots" id="dots-' + i + '"></div>' +
           "</div>" +
           '<div class="factnav">' +
@@ -533,9 +913,17 @@ function buildPages() {
       return;
     }
     factIdx[i] = 0;
+    const ear = document.getElementById("ear-" + i); if (ear) ear.onclick = () => toggleEar(i);
+    if (sp.rich) {
+      // One speaker per fact: the fact you are looking at is the one it reads.
+      (sp.facts || []).forEach((f, n) => {
+        const b = document.getElementById(sayId(i, n));
+        if (b) b.onclick = () => readAloud(i, n);
+      });
+      return;
+    }
     const say = document.getElementById("say-" + i); if (say) say.onclick = () => readAloud(i);
     const more = document.getElementById("more-" + i); if (more) more.onclick = () => cycleFact(i);
-    const ear = document.getElementById("ear-" + i); if (ear) ear.onclick = () => toggleEar(i);
     renderFact(i);
   });
 }
@@ -742,54 +1130,59 @@ function openShelf() {
 function closeShelf() { document.getElementById("sheetbg").classList.remove("open"); }
 
 // ================= read aloud: narrator clip first, browser voice as fallback =================
-function setSayButton(i, isPlaying) {
-  const b = document.getElementById("say-" + i); if (!b) return;
+function setSayButton(i, isPlaying, n) {
+  const b = document.getElementById(sayId(i, n || 0)); if (!b) return;
   b.classList.toggle("playing", !!isPlaying);
-  if (b.setAttribute) b.setAttribute("aria-label", isPlaying ? "Stop reading" : "Read to me");
-  b.innerHTML = isPlaying
-    ? '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>'
-    : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+  if (b.setAttribute) b.setAttribute("aria-label", isPlaying ? "Stop reading" : "Read this to me");
+  b.innerHTML = isPlaying ? stopSvg() : speakerSvg();
 }
 function stopNarration() {
   sayToken++;
   try { if (narrAudio) { narrAudio.onended = null; narrAudio.onerror = null; narrAudio.pause(); narrAudio = null; } } catch (e) {}
   try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
   speaking = false;
-  SPREADS.forEach((sp, i) => { if (sp.kind === "page") setSayButton(i, false); });
+  // A composed page has one speaker per fact, so every one of them resets.
+  SPREADS.forEach((sp, i) => {
+    if (sp.kind !== "page") return;
+    if (sp.rich) (sp.facts || []).forEach((f, n) => setSayButton(i, false, n));
+    else setSayButton(i, false, 0);
+  });
 }
-function browserVoice(i, text, token) {
-  if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); if (token === sayToken) { speaking = false; setSayButton(i, false); } return; }
+function browserVoice(i, text, token, n) {
+  if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); if (token === sayToken) { speaking = false; setSayButton(i, false, n); } return; }
   try {
     speechSynthesis.cancel();
     const sp = SPREADS[i] || {};
     const u = new SpeechSynthesisUtterance((sp.title || "") + ". " + (text || ""));
     u.rate = 0.92; u.pitch = 1.05;
-    u.onend = function () { if (token === sayToken) { speaking = false; setSayButton(i, false); } };
+    u.onend = function () { if (token === sayToken) { speaking = false; setSayButton(i, false, n); } };
     speechSynthesis.speak(u);
-  } catch (e) { showToast("Couldn't read that aloud right now."); if (token === sayToken) { speaking = false; setSayButton(i, false); } }
+  } catch (e) { showToast("Couldn't read that aloud right now."); if (token === sayToken) { speaking = false; setSayButton(i, false, n); } }
 }
-function readAloud(i) {
+function readAloud(i, which) {
   if (speaking) { stopNarration(); return; }
   const sp = SPREADS[i]; if (!sp || sp.kind !== "page") return;
   const list = sp.facts || [];
-  const n = Math.min(factIdx[i] || 0, Math.max(0, list.length - 1));
+  const n = (which === undefined || which === null)
+    ? Math.min(factIdx[i] || 0, Math.max(0, list.length - 1))
+    : Math.min(Math.max(0, which), Math.max(0, list.length - 1));
   const text = (list[n] && list[n].text) || "";
   stopNarration();
-  const token = ++sayToken; speaking = true; setSayButton(i, true);
+  const token = ++sayToken; speaking = true; setSayButton(i, true, n);
   // The pre-made narrator clip covers the page's FIRST fact only; anything
   // else is read by the browser voice, so a kid never waits on a download.
   if (n === 0 && sp.factAudio) {
     try {
       const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(sp.factAudio));
       narrAudio = a;
-      a.onended = function () { if (token === sayToken) { speaking = false; setSayButton(i, false); } };
-      a.onerror = function () { if (token !== sayToken) return; narrAudio = null; browserVoice(i, text, token); };
+      a.onended = function () { if (token === sayToken) { speaking = false; setSayButton(i, false, n); } };
+      a.onerror = function () { if (token !== sayToken) return; narrAudio = null; browserVoice(i, text, token, n); };
       const pr = a.play();
-      if (pr && pr.catch) pr.catch(function () { if (token !== sayToken) return; narrAudio = null; browserVoice(i, text, token); });
+      if (pr && pr.catch) pr.catch(function () { if (token !== sayToken) return; narrAudio = null; browserVoice(i, text, token, n); });
       return;
     } catch (e) { /* fall through to browser voice */ }
   }
-  browserVoice(i, text, token);
+  browserVoice(i, text, token, n);
 }
 
 // ================= quiz bridge (CARTRIDGE-CONTRACT.md: quizRequest / pause / resume / bk:quizDone) =================
