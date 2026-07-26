@@ -6,6 +6,23 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AP3b — regenerated art stayed invisible: studio pieces now carry a version stamp (July 25 2026)
+`api/asset-studio.js`.
+Mike regenerated the Sunny Meadow bubbles, the editor showed the new art, and the
+live game kept painting the OLD art. Not a slicing or prompt bug: `keep` REPLACES a
+piece in place under the same slug (`cachePut` deletes then re-inserts), so the URL
+`/api/asset-studio?asset=<slug>` never changes — while `sendPng` was serving every
+piece as `max-age=31536000, immutable`. Once a browser or the Vercel edge had a
+piece, it was pinned for a year and a replacement could never appear.
+Fix: `assetUrl()` stamps the manifest/keep/import URL with the row's `created_at`
+(`&v=<ms>`); replacing art refreshes `created_at`, so the URL changes and every
+cache misses. A request WITH a stamp still gets the year-long immutable cache (fast
+for kids on iPads); a request WITHOUT one now gets `max-age=60, must-revalidate`
+plus an ETag, so the five older `studio:` URL builders (buildable-manifest,
+editor, asset-library, castle-guard) self-heal within a minute and pay a 304, not a
+re-download. The game path (`buildable-library.js` -> `x.url`) picks up the stamped
+URL automatically. Ref: SESSION-LOG.md same date.
+
 ## Session KP3 — Add a kit from inside the editor (July 25 2026)
 Closes the add-to-app loop where Mike actually stands. **The editor's Library
 picker has a new "Add a kit" shelf**: every Kenney kit he owns but has not added

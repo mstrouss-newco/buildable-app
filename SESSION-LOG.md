@@ -1,5 +1,32 @@
 # Buildable Kids — Session Log
 
+## 2026-07-25: Session AP3b — replaced art could never reach a player
+
+**The bug Mike saw**
+Regenerated bubbles looked right in the editor and right when the image URL was
+opened directly, but the live game still drew the first (bad) set. Cause: kept art
+is replaced IN PLACE under the same slug, so its URL is stable, and `sendPng` sent
+`Cache-Control: public, max-age=31536000, immutable`. Browser + CDN pinned the old
+picture for a year. Every "replace this art" in the whole Studio was affected, not
+just bubbles.
+
+**Shipped** (`api/asset-studio.js`)
+- `assetUrl(slug, createdAt)` — the manifest listing, `keep` and `import` now return
+  `?asset=<slug>&v=<created_at ms>`. `cachePut` deletes-then-inserts, so replacing
+  art refreshes `created_at` and mints a new URL. Caches miss, players see it.
+- `sendPng` is now version-aware: stamped request -> immutable for a year (fast);
+  unstamped -> `max-age=60, must-revalidate` + ETag, so the older `studio:` URL
+  builders self-heal in a minute with a cheap 304.
+
+**QA (live)**
+Bubble Buddies at `/app/bubble`: manifest returns stamped URLs, the game paints the
+new plain glossy balls, network shows a fresh 200 for the stamped URL.
+
+**Flagged, not fixed**
+Kept pieces are ~1.3-1.6MB PNGs each (1024px art drawn at ~40px on screen). Six
+bubbles is ~8MB a level for kids on iPads. Worth a downscale-on-keep pass.
+
+
 ## 2026-07-25: Session KP3 — the add-to-app loop, closed where Mike stands
 
 Phase KP, block KP3 only. KP1 built the kit shelf and the catalog of all 241
