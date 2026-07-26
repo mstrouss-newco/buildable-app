@@ -814,6 +814,7 @@ var AR1P_V=new THREE.Vector3();
   var _loadKit=loadKit;
   loadKit=function(){
     _loadKit();
+    if(AR1P_HAS("pets3")) E3_load(function(){ try{ redressWorld(); }catch(e){} });
     if(AR1P_HAS("pets2")){
       // nothing to download: build them, then dress the islands that were
       // already standing before we got here
@@ -876,12 +877,14 @@ window.AR1P={
   glows:function(){ return AR1P_GLOWS.length; },
   // THE STAND. Six animals in a row on a flat patch in front of the camera, all
   // at their real in-game size, so a shape can be judged instead of hunted for.
-  zoo:function(x,y,z){
-    var names=["crab","parrot","monkey","fish","turtle","butterfly"], out=[];
+  zoo:function(x,y,z,list,gap){
+    var names=list||["crab","parrot","monkey","fish","turtle","butterfly"], out=[];
+    gap=gap||3.2;
     for(var i=0;i<names.length;i++){
-      var o=AR1P_HAS("pets2")?AR1P_pet2(names[i]):AR1P_pet(names[i],false);
+      var o=AR1P_HAS("pets3")?E3_get(names[i])
+           :AR1P_HAS("pets2")?AR1P_pet2(names[i]):AR1P_pet(names[i],false);
       if(!o) continue;
-      o.position.set(x+(i-(names.length-1)/2)*3.2, y, z);
+      o.position.set(x+(i-(names.length-1)/2)*gap, y, z);
       o.rotation.y=0.55; scene.add(o); out.push(names[i]);
     }
     return out; },
@@ -891,6 +894,8 @@ window.AR1P={
     w0:WAKES?[WAKES.geometry.attributes.position.getX(0),WAKES.geometry.attributes.position.getY(0),WAKES.geometry.attributes.position.getZ(0)]:null,
     cam:[camera.position.x|0,camera.position.y|0,camera.position.z|0] }; },
   pets2:function(){ var n=[],k; for(k in PETS2) n.push(k); return {built:n,live:PET_LIVE.length}; },
+  pets3:function(){ var n=[],k; for(k in E3) n.push(k); return {on:E3_ON,got:n,want:E3_WANT.length}; },
+  pets3cost:function(list){ var o={},i; for(i=0;i<list.length;i++) o[list[i]]=E3_cost(list[i]); return o; },
   // park the camera FIRST, then run the world's motion, then draw. The gulls
   // keep station on the camera, so settling before the camera moved left the
   // whole flock behind — and an empty sky in every picture.

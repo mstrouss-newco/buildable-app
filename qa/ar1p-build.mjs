@@ -1,7 +1,8 @@
 import fs from 'fs';
 const src=fs.readFileSync('public/skyflyer-engine.html','utf8');
 const pay=fs.readFileSync('qa/ar1p-payload.js','utf8')
-          +'\n'+fs.readFileSync('qa/ar1p-round2.js','utf8');
+          +'\n'+fs.readFileSync('qa/ar1p-round2.js','utf8')
+          +'\n'+fs.readFileSync('qa/ar1p-round3.js','utf8');
 let s=src, n=0;
 function rep(a,b){ if(!s.includes(a)) throw new Error('ANCHOR MISSING: '+a.slice(0,70)); s=s.replace(a,b); n++; }
 
