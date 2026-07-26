@@ -1,5 +1,36 @@
 # Buildable Kids — Session Log
 
+## 2026-07-26: Session AR1g — the last three pieces of "the islands are see-through"
+
+Mike re-reported see-through islands on a low approach in Sky Flyer, with a
+screenshot showing a ghost cyan palm, a glassy beach, and a coin sitting inside
+the lookout's roof. His screenshots were taken three minutes after AR1f's
+opaque-sea deploy went READY, so part of what he photographed was the old build,
+but a headless re-render at HEAD reproduced three real leftovers and this
+session fixed them:
+
+- **Ghost mint palms and plants.** Kenney Nature Kit "leafsGreen"/"grass"
+  material factors render MINT TURQUOISE in this engine (Kenney authors linear
+  PBR factors; the renderer has no sRGB output stage — the repo GLBs are
+  byte-identical to Mike's bundle, so it is a rendering mismatch, not corrupt
+  files). Cure is the same one the rocks already use: named foliage materials
+  borrow `M.leaf`, `woodBark` borrows `M.trunk`, `stone*` borrows `M.stone`, so
+  the manifest owns the colour and every palm matches the crown.
+- **The lagoon glazed the beach.** The shallow-water halo was a filled disc;
+  from a low camera its tinted centre laid a cyan wash over the whole waterline
+  and the sand read as glass. It is now a RING — alpha 0 out to 0.44 of its
+  radius (the waterline sits at a fixed 0.47), foam just off the sand, fading
+  to open sea. Sand-grain wind ripples also softened (0.20/7px → 0.11/4px):
+  at a grazing angle they stretched into wavy bands that read as water on land.
+- **Crown coins threaded through the summit camp.** The ring was a fixed
+  radius 7 with buildings at the summit; it now scales with the island
+  (`max(10, hitR*0.72)`) and circles outside the camp.
+
+Cache-bust bumped `ar1e → ar1g` on BOTH engine links (AR1f edited the engine
+and left the bust unmoved — the no-cache route saved it, but the rule stands).
+QA 246/246: three new checks pin the lagoon ring, the foliage borrow, and the
+coin ring so none of the three regress silently.
+
 ## 2026-07-26: Session RP1 — the richer topic-book page, and Trains as the pilot
 
 Phase RP, block RP1 only. The v5 mock Mike approved after five rounds asked for

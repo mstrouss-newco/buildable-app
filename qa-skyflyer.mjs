@@ -456,6 +456,25 @@ chk('nothing that floats is left sitting under the surface',
 chk('the lagoon is a soft gradient laid ON the water, keyed to the island size',
   /halo\.scale\.set\(rad\*3\.6/.test(html) && /halo\.renderOrder=3/.test(html) &&
   /createRadialGradient/.test(html));
+// AR1g: the lagoon is a RING, never a filled disc. A tinted CENTRE glazes the
+// beach from a low camera and the island reads as see-through - that was the
+// last live piece of Mike's "islands are see through" report after the sea
+// went opaque. The two inner stops must stay at alpha 0.
+chk('the lagoon is a RING - fully clear over the island and the beach',
+  /addColorStop\(0\.00,"rgba\(214,250,252,0\)"\)/.test(html) &&
+  /addColorStop\(0\.44,"rgba\(214,250,252,0\)"\)/.test(html));
+// AR1g: Kenney Nature Kit "leafsGreen"/"grass" factors render MINT TURQUOISE in
+// this renderer (no sRGB output stage) - the ghost cyan palm in Mike's photo.
+// Named foliage borrows the manifest's leaf colour, same cure as the rocks.
+chk('untextured foliage borrows the world leaf colour (no mint palms)',
+  /leafs\?\|grass/.test(html) && /o\.material=M\.leaf/.test(html) &&
+  /woodbark/i.test(html) && /o\.material=M\.trunk/.test(html));
+// AR1g: the crown coin ring used to thread THROUGH the summit camp at a fixed
+// radius 7 - Mike photographed a coin inside the lookout roof. It must scale
+// with the island so it circles outside the buildings.
+chk('crown coins circle OUTSIDE the summit camp, not through it',
+  /var ringR=Math\.max\(10,isle\.userData\.hitR\*0\.72\)/.test(html) &&
+  !/makeCoin\(ix\+Math\.cos\(a\)\*7,/.test(html));
 chk('the sea has a moving surface, painted in code (nothing to download)',
   /function makeRippleTexture\(/.test(html) && /CanvasTexture/.test(html) &&
   /M\.ground\.map\.offset\.set/.test(html));

@@ -605,7 +605,10 @@ function grainTexture(kind){
     function seeded(n){ var v=Math.sin(n*127.1)*43758.5453; return v-Math.floor(v); }
     if(kind==="sand"){
       // soft wind ripples plus a scatter of grains
-      x.strokeStyle="rgba(118,94,50,0.20)"; x.lineWidth=7;
+      // AR1g: at 0.20/7px the wind ripples stretched into long WAVY BANDS at a
+      // grazing angle and the beach read as water. Fainter and thinner keeps
+      // the tooth from the air without drawing waves on the land up close.
+      x.strokeStyle="rgba(118,94,50,0.11)"; x.lineWidth=4;
       for(var i=0;i<14;i++){
         x.beginPath();
         for(var xx=0;xx<=256;xx+=14)
@@ -988,10 +991,17 @@ function makeShallowTexture(){
   // island it was supposed to sit around. A lagoon is a tint on the water, not
   // a light source. The middle is under the island anyway; only the outer half
   // is ever seen.
-  g.addColorStop(0.00,"rgba(214,250,252,0.50)");
-  g.addColorStop(0.42,"rgba(186,244,250,0.40)");
-  g.addColorStop(0.60,"rgba(140,230,244,0.24)");
-  g.addColorStop(0.80,"rgba(120,222,240,0.09)");
+  // AR1g: the inner half is NOT "under the island anyway" — from a LOW camera
+  // the beach sits below the halo plane, so a tinted centre glazes the whole
+  // waterline and the island reads as see-through ("the water is on the land").
+  // The land's waterline sits at a fixed 0.47 of the halo radius (both scale
+  // with rad), so the gradient is a RING: fully clear over the island and the
+  // beach, foam starting just off the sand, fading out to open sea.
+  g.addColorStop(0.00,"rgba(214,250,252,0)");
+  g.addColorStop(0.44,"rgba(214,250,252,0)");
+  g.addColorStop(0.52,"rgba(214,250,252,0.42)");
+  g.addColorStop(0.66,"rgba(140,230,244,0.22)");
+  g.addColorStop(0.85,"rgba(120,222,240,0.08)");
   g.addColorStop(1.00,"rgba(120,222,240,0)");
   x.fillStyle=g; x.fillRect(0,0,128,128);
   return new THREE.CanvasTexture(c);
@@ -1261,6 +1271,17 @@ function prepModel(root,name){
       // in the middle of the island palette AND keeps the FL4 promise that a
       // colour change in the manifest repaints the world with no code.
       o.material=M.stone;
+    } else if(!m.map&&/leafs?|grass/i.test(m.name||"")){
+      // AR1g: the Nature Kit's own "leafsGreen"/"grass" colours render MINT
+      // TURQUOISE in this engine (Kenney authors linear PBR factors; this
+      // renderer has no sRGB output stage) — Mike's "ghost cyan palm". Same
+      // cure as the rocks: a named foliage material borrows the world's leaf
+      // colour, so the manifest owns it and every palm matches the crown.
+      o.material=M.leaf;
+    } else if(!m.map&&/woodbark/i.test(m.name||"")){
+      o.material=M.trunk;                    // washed pale trunks, same story
+    } else if(!m.map&&/^stone/i.test(m.name||"")){
+      o.material=M.stone;                    // icy statue/campfire stone -> world stone
     } else {
       var key=(m.map?m.map.uuid:"")+"|"+(m.color?m.color.getHexString():"");
       if(!shared[key]) shared[key]=new THREE.MeshLambertMaterial({
@@ -1671,9 +1692,13 @@ function buildChunk(cx,cz){
     g.add(isle);isles.push(isle);
     if(big&&r()>0.35){                   // crown coins on the tall stuff
       var top=isle.userData.hitH*0.98;
+      // AR1g: at radius 7 the ring threaded THROUGH the camp on the summit —
+      // Mike photographed a coin sitting inside the lookout's roof. The ring
+      // now scales with the island so it circles OUTSIDE the buildings.
+      var ringR=Math.max(10,isle.userData.hitR*0.72);
       for(var k=0;k<5;k++){
         var a=k/5*Math.PI*2;
-        makeCoin(ix+Math.cos(a)*7,top+6,iz+Math.sin(a)*7,g,coins);
+        makeCoin(ix+Math.cos(a)*ringR,top+6,iz+Math.sin(a)*ringR,g,coins);
       }
     }
   }
