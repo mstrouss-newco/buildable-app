@@ -211,10 +211,9 @@
   .holding{animation:hold 1s ease-in-out infinite}
   @keyframes hold{0%,100%{opacity:1}50%{opacity:.45}}
   /* -- the waypoint chip: pin one thing, fly on, come back to it later -- */
-  #waypoint{position:absolute;left:50%;top:calc(12px + env(safe-area-inset-top));
-    transform:translateX(-50%);background:rgba(47,183,214,.95);color:#fff;border-radius:999px;
-    padding:6px 8px 6px 11px;display:none;align-items:center;gap:8px;font-weight:800;
-    font-size:13px;white-space:nowrap;box-shadow:0 3px 12px rgba(20,80,110,.35);pointer-events:auto}
+  #waypoint{background:rgba(47,183,214,.95);color:#fff;border-radius:999px;
+    padding:5px 6px 5px 11px;display:none;align-items:center;gap:8px;font-weight:800;
+    font-size:14px;white-space:nowrap;box-shadow:0 3px 12px rgba(20,80,110,.35);pointer-events:auto}
   #waypoint svg{display:block}
   #waypoint .wpd{font-weight:900;font-variant-numeric:tabular-nums}
   #wpDrop{width:24px;height:24px;border-radius:999px;border:none;background:rgba(255,255,255,.24);
@@ -222,7 +221,7 @@
     padding:0;pointer-events:auto}
   /* -- the mini-map: a picture of where things are, not a heading to read -- */
   #minimap{position:absolute;top:calc(62px + env(safe-area-inset-top));right:14px;
-    width:104px;height:104px;border-radius:50%;background:rgba(255,252,240,.86);
+    width:104px;height:104px;border-radius:50%;background:rgba(255,252,240,.93);
     box-shadow:0 3px 12px rgba(30,60,90,.22);pointer-events:auto;overflow:hidden;display:none}
   #minimap .mmring{position:absolute;inset:7px;border-radius:50%;border:2px dashed rgba(51,86,110,.18)}
   #minimap .mmme{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
@@ -244,21 +243,24 @@
   <div id="worldName">Sunny Islands</div>
   <div id="rideName">Little Puffin</div>
   <div id="goals">
+    <!-- FL5b: ONE pin at a time, top of the chip stack. Tap a thing and it
+         sticks here with a live distance until you tap the X. It rides ABOVE
+         the goal chips rather than across the middle of the screen, because on
+         a 390px phone the middle already belongs to the world's name. The pin
+         outlives a job. -->
+    <div id="waypoint">
+      <span id="wpIcon"></span>
+      <span id="wpName"></span>
+      <span class="wpd" id="wpDist"></span>
+      <button id="wpDrop" aria-label="Drop the pin">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2 L10 10 M10 2 L2 10" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
     <div class="chip" id="gCoins">Coins 0/12</div>
     <div class="chip" id="gLand">Landings 0/1</div>
     <div class="chip" id="gJob" style="display:none">Job</div>
     <div class="chip" id="gCarry" style="display:none">Carrying 0</div>
     <button id="leaveJob">Leave this job</button>
-  </div>
-  <!-- FL5b: ONE pin at a time. Tap a thing, it sticks up here with a live
-       distance until you tap the X. The pin outlives a job. -->
-  <div id="waypoint">
-    <span id="wpIcon"></span>
-    <span id="wpName"></span>
-    <span class="wpd" id="wpDist"></span>
-    <button id="wpDrop" aria-label="Drop the pin">
-      <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2 L10 10 M10 2 L2 10" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
-    </button>
   </div>
   <!-- FL5b: a MAP, not a compass. You are the triangle in the middle and the
        map turns with you, so up is always where you are pointing. -->
@@ -1842,23 +1844,27 @@ function icoArrowGlyph(n){
 }
 // ---- the places things go, one per recipe style ----
 function icoHouse(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
-  return svgWrap(n,"0 0 26 26",'<path d="M13 3 L24 12 H20 V23 H6 V12 H2 Z" fill="'+f+'" stroke="'+s+'" stroke-width="1.8" stroke-linejoin="round"/>'+(d?doneBadge():'')); }
+  return svgWrap(n,"0 0 26 26",
+    '<rect x="5.5" y="11.5" width="15" height="11.5" rx="1.4" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<path d="M13 2.6 L24 12.4 H2 Z" fill="'+s+'"/>'+
+    '<rect x="11" y="16" width="4" height="7" rx="0.6" fill="'+s+'"/>'+(d?doneBadge():'')); }
 function icoAnimal(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
   return svgWrap(n,"0 0 26 26",
-    '<ellipse cx="11" cy="14" rx="7" ry="4.6" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<circle cx="19.2" cy="10.4" r="3.7" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<path d="M17.7 7.2 L17.1 3.4 M20.9 7.4 L22.4 3.9" stroke="'+s+'" stroke-width="1.8" stroke-linecap="round"/>'+
-    '<path d="M7 18 v4 M11 18.6 v3.4 M15 18 v4" stroke="'+s+'" stroke-width="1.8" stroke-linecap="round"/>'+(d?doneBadge():'')); }
+    '<rect x="3.5" y="10.5" width="13" height="8" rx="3.6" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<circle cx="19" cy="9.6" r="4.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<path d="M17.4 5.8 L16.2 2.8 M21.2 5.6 L22.8 3" stroke="'+s+'" stroke-width="2.2" stroke-linecap="round"/>'+
+    '<path d="M6.5 18.5 v4 M13.5 18.5 v4" stroke="'+s+'" stroke-width="2.6" stroke-linecap="round"/>'+(d?doneBadge():'')); }
 function icoFlare(n,d){ var f=d?ICON_DFILL:"#FFD86B",s=d?ICON_DLINE:"#B9860E";
   return svgWrap(n,"0 0 26 26",
-    '<path d="M13 24 V13.5" stroke="'+(d?ICON_DLINE:ICON_LINE)+'" stroke-width="2.2" stroke-linecap="round"/>'+
-    '<circle cx="13" cy="9" r="5" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<path d="M13 1.4 V3.4 M4.6 9 H2.6 M23.4 9 H21.4 M6.8 2.8 L8.3 4.3 M19.2 2.8 L17.7 4.3" stroke="'+s+'" stroke-width="1.6" stroke-linecap="round"/>'+(d?doneBadge():'')); }
+    '<path d="M13 24 V14" stroke="'+(d?ICON_DLINE:ICON_LINE)+'" stroke-width="2.4" stroke-linecap="round"/>'+
+    '<path d="M8 23.4 h10" stroke="'+(d?ICON_DLINE:ICON_LINE)+'" stroke-width="2.2" stroke-linecap="round"/>'+
+    '<circle cx="13" cy="9.4" r="5.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<path d="M13 1.6 V3.6 M6.8 3.2 L8.3 4.7 M19.2 3.2 L17.7 4.7" stroke="'+s+'" stroke-width="1.8" stroke-linecap="round"/>'+(d?doneBadge():'')); }
 function icoLantern(n,d){ var f=d?ICON_DFILL:"#FFD86B",s=d?ICON_DLINE:ICON_LINE;
   return svgWrap(n,"0 0 26 26",
-    '<path d="M5 24 V4 H12" fill="none" stroke="'+s+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'+
-    '<rect x="9.5" y="7" width="8.6" height="9.4" rx="1.8" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<path d="M8.6 7 L13.8 3.2 L19 7 Z" fill="'+s+'"/>'+(d?doneBadge():'')); }
+    '<path d="M13 2.4 V5.4 M13 19.6 V22.4" stroke="'+s+'" stroke-width="2" stroke-linecap="round"/>'+
+    '<rect x="6.6" y="5.2" width="12.8" height="2.8" rx="1.4" fill="'+s+'"/>'+
+    '<path d="M8.4 8.4 H17.6 L16.2 19.6 H9.8 Z" fill="'+f+'" stroke="'+s+'" stroke-width="1.8" stroke-linejoin="round"/>'+(d?doneBadge():'')); }
 function icoDock(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
   return svgWrap(n,"0 0 26 26",
     '<rect x="4" y="12" width="18" height="9.5" rx="2.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
@@ -1960,8 +1966,6 @@ function paintWaypoint(){
   wpIconEl.innerHTML=wpIcon(WP,20);
   wpNameEl.textContent=WP.label;
   wpDistEl.textContent=Math.round(Math.hypot(S.pos.x-WP.x,S.pos.z-WP.z))+"m";
-  // the intro labels are transient; the pin is not, so it gets the middle
-  try{ worldNameEl.style.opacity=0; rideNameEl.style.opacity=0; }catch(e){}
 }
 
 // ---- THE MINI-MAP, NOT A COMPASS. You are the triangle in the middle and the
@@ -2794,7 +2798,9 @@ function openOffer(m){
     ofName.textContent=m.name;
     // FL5b: the whole job as a picture, before a single word is read. Built
     // from the recipe, so a new job gets its picture for free.
-    ofStoryEl.innerHTML=jobStrip(m,32,null,null,-1);
+    // a job with more places to go draws them a little smaller, so the picture
+    // is always ONE line however many stops a recipe grows to
+    ofStoryEl.innerHTML=jobStrip(m,m.targets.length>3?26:32,null,null,-1);
     ofBlurb.textContent=m.blurb;
     ofTip.textContent=m.tip||m.blurb;
     ofDone.innerHTML=hasBadge(m.id)
@@ -3309,6 +3315,7 @@ window.SKY={
     try{ e.click(); }catch(x){ setWaypoint(e.__pt); } return !!(WP&&WP.id===id); },
   found:function(){ return foundPts; },
   sayLines:saySplit,
+  stripFor:jobStrip,
   // ---- AR1 handles: prove the art layer is real art and a safe fallback ----
   kit:function(){ var n=[],k; for(k in KIT) n.push(k);
     return {on:KIT_ON,started:KIT_STARTED,loaded:n,files:KIT_FILES,floaters:floaters.length}; },

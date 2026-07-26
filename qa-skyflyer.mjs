@@ -257,7 +257,7 @@ chk('THE FL5b LAW: no icon is drawn per job - every picture comes out of the rec
   !/(mail-run|supply-drop|lost-explorer|lantern-lighter)/.test(
     html.slice(html.indexOf('var ICON_FILL='), html.indexOf('function saySplit('))));
 chk('the offer shows the job as ONE picture: what you carry, an arrow, where it goes',
-  /ofStoryEl\.innerHTML=jobStrip\(m,32,null,null,-1\)/.test(html) && /id="ofStory"/.test(html) &&
+  /ofStoryEl\.innerHTML=jobStrip\(m,m\.targets\.length>3\?26:32,null,null,-1\)/.test(html) && /id="ofStory"/.test(html) &&
   /function icoArrowGlyph\(/.test(html));
 chk('every recipe style has a drawing, so a new style is the only thing a new job needs',
   ['animal','flare','lantern','dock'].every(s=>new RegExp('style==="'+s+'"').test(
@@ -776,6 +776,189 @@ if (!JSDOM) {
       !!g && g.label==='Lost Explorer' && wf.SKY.mode()==='free', JSON.stringify(g));
     wf.close();
   }
+  // ------------------------------------------------------------------
+  //  THE FL5b PROOF — the pictures really come out of the recipe, the pin
+  //  really pins, and the map blips really stand where the world says.
+  //  A picture that is right for Mail Run and wrong for Lantern Lighter is a
+  //  drawing, not a system, so every claim here is made against TWO recipes
+  //  with different shapes: one that hands you cargo and one that does not.
+  // ------------------------------------------------------------------
+  console.log('--- FL5b LIVE: pictures, the pin and the map ---');
+  {
+    const dp = flyKid(0, ''); const wp = dp.window;
+    const S = wp.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
+    for (let k=0;k<600;k++){ wp.SKY.tick(1/30); if (wp.SKY.offer().up) break; }
+    chk('the offer that came up is the one a non-reader can answer',
+      wp.SKY.offer().up===true && wp.SKY.offer().id==='mail-run');
+    const a = wp.SKY.answers();
+    chk('the two answers really are a tick and a cross, not the words Do it / Not now',
+      !!a && /ans yes/.test(a.yes) && /ans no/.test(a.no) && a.tick===1 && a.cross===1,
+      JSON.stringify(a));
+    chk('the small word labels are still there underneath, for the grown-up',
+      a.labels === 'Yes pleaseNot now' || a.labels === 'Yes please Not now', a.labels);
+    // THE POINT OF THE WHOLE BLOCK: the strip is COUNTED off the live DOM and
+    // has to match the recipe's own numbers, not a number typed into a drawing.
+    const recipe = wp.SKY.missions().filter(m=>m.id==='mail-run')[0];
+    const strip = wp.SKY.offerStrip();
+    chk('the picture strip is generated from the recipe: one cargo, one icon per target',
+      strip.cargo===1 && strip.targets===recipe.targets.length && strip.arrows===1,
+      strip.cargo+' cargo + '+strip.targets+' targets (recipe says '+recipe.targets.length+')');
+    chk('the tick really is the yes: it starts the job the kid was shown',
+      wp.SKY.acceptOffer()===true && wp.SKY.mode()==='job' && wp.SKY.job().id==='mail-run');
+    // ---- progress as objects, live, as the deliveries actually happen ----
+    const p0 = wp.SKY.progressStrip();
+    chk('progress starts as a ghost cargo and three untouched places',
+      p0.cargo===1 && p0.targets===recipe.targets.length && p0.done===0,
+      JSON.stringify(p0));
+    wp.SKY.autopilot(true);
+    let seenCarry=0, seenDone=0;
+    for (let k=0;k<15000;k++){
+      wp.SKY.tick(1/30);
+      const p = wp.SKY.progressStrip();
+      if (p.cargo>seenCarry) seenCarry=p.cargo;
+      if (p.done>seenDone) seenDone=p.done;
+      if (wp.SKY.job().complete) break;
+    }
+    chk('loading up really puts more than one thing in your hands, as a picture',
+      seenCarry>=2, seenCarry+' cargo icons at the fullest');
+    const pEnd = wp.SKY.progressStrip();
+    chk('every place turns green with a tick as it is done - no reading needed',
+      seenDone===recipe.targets.length && pEnd.done===recipe.targets.length,
+      pEnd.done+'/'+recipe.targets.length+' ticked');
+    chk('...and the words survive underneath for a screen reader',
+      /3\/3/.test(wp.SKY.state ? dp.window.document.getElementById('gCarry').getAttribute('aria-label')||'' : ''),
+      dp.window.document.getElementById('gCarry').getAttribute('aria-label'));
+    wp.close();
+  }
+  {
+    // the SAME code, a recipe with a different shape: nothing to carry, four
+    // lanterns instead of three houses. If the strip were a drawing this breaks.
+    const dl = flyKid(2, ''); const wl = dl.window;
+    const S = wl.SKY.state; const lp = wl.SKY.missions().filter(m=>m.id==='lantern-lighter')[0];
+    const pt = lp.targets[0]; S.pos.x=pt.x; S.pos.z=pt.z+70; S.pos.y=30; S.yaw=0;
+    for (let k=0;k<900;k++){ wl.SKY.tick(1/30); if (wl.SKY.offer().up) break; }
+    const st = wl.SKY.offerStrip();
+    chk('a job with NOTHING to carry draws you as the thing that travels, and all four lanterns',
+      wl.SKY.offer().id==='lantern-lighter' && st.cargo===1 && st.targets===lp.targets.length,
+      st.cargo+' + '+st.targets+' (recipe says '+lp.targets.length+' targets, capacity '+lp.capacity+')');
+    wl.close();
+  }
+  {
+    // ---- THE PIN ----
+    const dw = flyKid(1, ''); const ww = dw.window;
+    chk('nothing is pinned when a kid arrives', ww.SKY.waypoint()===null);
+    const pinned = ww.SKY.pinJob('lost-explorer');
+    const wpNow = ww.SKY.waypoint();
+    const jobPt = ww.SKY.missions().filter(m=>m.id==='lost-explorer')[0].targets[0];
+    chk('pinning a job puts it in the top bar with its real place and a live distance',
+      !!wpNow && wpNow.up===true && wpNow.label==='Lost Explorer' &&
+      wpNow.x===jobPt.x && wpNow.z===jobPt.z && wpNow.dist>0,
+      JSON.stringify(wpNow));
+    chk('and the big orange arrow follows the pin', (()=>{ const t=ww.SKY.arrowTarget();
+      return !!t && t.x===jobPt.x && t.z===jobPt.z && t.label==='Lost Explorer'; })());
+    const second = ww.SKY.pinJob('supply-drop');
+    chk('ONE pin at a time: pinning another replaces it, it does not stack',
+      ww.SKY.waypoint().label==='Supply Drop', JSON.stringify(second&&second.label));
+    chk('the X drops the pin and the arrow goes back to a landing pad',
+      ww.SKY.dropWaypoint()===true && ww.SKY.waypoint()===null && ww.SKY.arrowTarget()===null);
+    // the pin OUTLIVES a job — that is the whole reason it exists
+    ww.SKY.pinJob('lost-explorer');
+    ww.SKY.startMission('supply-drop');
+    const during = ww.SKY.waypoint();
+    chk('starting a DIFFERENT job leaves the pin alone (the job just wins the arrow)',
+      !!during && during.label==='Lost Explorer' && ww.SKY.arrowTarget().label!=='Lost Explorer');
+    ww.SKY.autopilot(true);
+    for (let k=0;k<600;k++) ww.SKY.tick(1/30);
+    ww.SKY.leaveJob();
+    chk('leaving the job hands the arrow straight back to the pin',
+      ww.SKY.waypoint().label==='Lost Explorer' && ww.SKY.arrowTarget().label==='Lost Explorer');
+    // pinning the job you are about to fly is pointless, so it retires itself
+    ww.SKY.pinJob('supply-drop'); ww.SKY.startMission('supply-drop');
+    chk('pinning a job and then doing it retires the pin', ww.SKY.waypoint()===null);
+    ww.close();
+  }
+  {
+    // ---- THE MAP. Every blip has to stand where the WORLD says it stands. ----
+    const dm = flyKid(1, ''); const wm = dm.window;
+    const S = wm.SKY.state; S.pos.x=0; S.pos.z=0; S.pos.y=40; S.yaw=0;
+    const blips = wm.SKY.blips();
+    const pads = wm.SKY.pads, jobs = wm.SKY.worldJobs();
+    chk('the map shows this world\'s landing pads AND both of its jobs',
+      blips.filter(b=>b.kind==='pad').length===pads.length &&
+      blips.filter(b=>b.kind==='job').length===jobs.length,
+      blips.map(b=>b.kind+':'+b.id).join(' '));
+    chk('every blip carries the REAL world coordinate of the thing it stands for',
+      jobs.every(m=>{ const p=m.depot||m.targets[0];
+        const b=blips.filter(x=>x.id==='job:'+m.id)[0];
+        return b && b.x===p.x && b.z===p.z; }) &&
+      pads.every((p,i)=>{ const b=blips.filter(x=>x.id==='pad'+i)[0]; return b && b.x===p.x && b.z===p.z; }));
+    // and it is rotated into the plane's frame: ahead is UP, whichever way you face
+    const SC = 0.055;
+    const ahead = blips.filter(b=>b.z < 0 && !b.edge)[0];
+    chk('with yaw 0, a thing in front of you sits ABOVE the triangle on the dial',
+      !!ahead && ahead.my < 0 && Math.abs(ahead.mx - ahead.x*SC) < 0.01,
+      ahead ? ahead.id+' at map ('+ahead.mx.toFixed(1)+','+ahead.my.toFixed(1)+')' : 'none');
+    S.yaw = Math.PI/2;                                  // now pointing down -X
+    const turned = wm.SKY.blips().filter(b=>b.id===ahead.id)[0];
+    chk('turn the plane and the MAP turns with it, so up is always where you point',
+      Math.abs(turned.mx - (ahead.x*Math.cos(S.yaw) - ahead.z*Math.sin(S.yaw))*SC) < 0.01 &&
+      Math.abs(turned.my - (ahead.x*Math.sin(S.yaw) + ahead.z*Math.cos(S.yaw))*SC) < 0.01,
+      '('+turned.mx.toFixed(1)+','+turned.my.toFixed(1)+')');
+    S.yaw = 0;
+    chk('a job you have not been to yet is a FAINT dot - the map saying there is more out there',
+      wm.SKY.blips().every(b=>b.kind!=='job'||b.found===false));
+    // fly to one and it goes gold
+    const first = jobs[0], fp = first.depot||first.targets[0];
+    S.pos.x=fp.x; S.pos.z=fp.z+200;
+    for (let k=0;k<10;k++) wm.SKY.tick(1/30);
+    chk('...and once you have been near it, it turns gold',
+      wm.SKY.blips().filter(b=>b.id==='job:'+first.id)[0].found===true);
+    chk('tapping a dot on the map pins it, exactly like the offer card and the help list',
+      wm.SKY.tapBlip('job:'+first.id)===true && wm.SKY.waypoint().x===fp.x && wm.SKY.waypoint().z===fp.z);
+    chk('the pinned dot is the one marked on the dial',
+      wm.SKY.blips().filter(b=>b.pinned).length===1);
+    // on a job the map becomes the JOB: the dock and one dot per drop point
+    wm.SKY.startMission('supply-drop');
+    const jb = wm.SKY.blips();
+    const sd = jobs.filter(m=>m.id==='supply-drop')[0];
+    chk('on a job the map shows the dock and one dot per drop point, at their real places',
+      jb.filter(b=>b.kind==='depot').length===1 &&
+      jb.filter(b=>b.kind==='drop').length===sd.targets.length &&
+      sd.targets.every((t,i)=>{ const b=jb.filter(x=>x.id==='t'+i)[0]; return b&&b.x===t.x&&b.z===t.z; }),
+      jb.map(b=>b.kind).join(' '));
+    wm.SKY.autopilot(true);
+    for (let k=0;k<15000;k++){ wm.SKY.tick(1/30); if (wm.SKY.job().done>0) break; }
+    chk('a drop point that is done turns green on the map too',
+      wm.SKY.blips().filter(b=>b.kind==='drop'&&b.done).length===wm.SKY.job().done);
+    wm.close();
+  }
+  {
+    // "Not now" is not "never": it pins the thing so a kid can come back to it
+    const dn = flyKid(0, ''); const wn = dn.window;
+    const S = wn.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
+    for (let k=0;k<600;k++){ wn.SKY.tick(1/30); if (wn.SKY.offer().up) break; }
+    chk('saying no pins it, so "not now" really can mean not now',
+      wn.SKY.declineOffer()===true && wn.SKY.mode()==='free' &&
+      !!wn.SKY.waypoint() && wn.SKY.waypoint().label==='Mail Run');
+    wn.close();
+    const dh = flyKid(1, ''); const wh = dh.window;
+    wh.SKY.helpJobs();
+    dh.window.document.querySelectorAll('#helpJobs .hj')[1].click();
+    chk('"Show me" in the help list pins it too - three doors, one thing behind them',
+      !!wh.SKY.waypoint() && wh.SKY.mode()==='free', JSON.stringify(wh.SKY.waypoint()));
+    wh.close();
+  }
+  {
+    // narration: short enough lines for /api/say, and never a wall of them
+    const dv = flyKid(0, ''); const wv = dv.window;
+    const m = wv.SKY.missions()[0];
+    const lines = wv.SKY.sayLines(m.name+'. '+m.tip);
+    chk('Hear it is chopped into lines the shared narration library will accept',
+      lines.length>1 && lines.every(l=>l.length<=60) && lines.join(' ').indexOf(m.name)===0,
+      lines.length+' lines, longest '+Math.max(...lines.map(l=>l.length)));
+    wv.close();
+  }
+
   // jobs are editable data, exactly like the palette and the music bed
   {
     const de = flyKid(0, '&mode=free'); const we = de.window;
