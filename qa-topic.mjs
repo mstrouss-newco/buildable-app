@@ -32,6 +32,17 @@ const exploreDir = path.join(dir, 'public', 'explore');
 const files = fs.readdirSync(exploreDir).filter((f) => f.endsWith('.json'));
 const approved = [];
 const candidates = []; // approved + in-review — the books runtime QA should exercise
+// ---- Session RP1 vocabulary. These four names are the ONLY layouts and these
+// four charts the ONLY charts the template can draw, so a book naming anything
+// else is caught here rather than by a kid staring at a missing picture.
+const RP_LAYOUTS = ['speed', 'long', 'then-now', 'close-up'];
+const RP_CHARTS = ['compare', 'fields', 'timeline', 'diagram'];
+const RP_DIAGRAMS = ['cone-wheel'];
+const richPages = [];
+// US units, everywhere, in every converted book. The 19 books still waiting for
+// their RP upgrade are metric and are NOT checked — they get this with RP3/RP5.
+const METRIC = /\b(kilometre|kilometer|centimetre|centimeter|metres|meters|kilograms?|kph|km\/h|litres?)\b/i;
+const BRITISH = /\b(colour|colours|colourful|favourite|metre|centre|programme|travelling|kilometres)\b/i;
 for (const f of files) {
   let data;
   try { data = JSON.parse(fs.readFileSync(path.join(exploreDir, f), 'utf8')); }
@@ -64,6 +75,35 @@ for (const f of files) {
     if (p.factAudio && !/^[a-z0-9-]+$/.test(p.factAudio)) fail(`${f} ${label}: factAudio "${p.factAudio}" must be a plain id (used in /api/explore-audio?id=)`);
     if (p.factAudio && p.factAudio !== `${data.id}-${p.id}`) warn(`${f} ${label}: factAudio "${p.factAudio}" is not the conventional "{exhibitId}-{pageId}"`);
     if (typeof p.art === 'string' && !p.art.startsWith('/')) fail(`${f} ${label}: art must be a root-absolute path (a relative path is swallowed by the /explore/(.*) route)`);
+
+    // ---- Session RP1: the richer composed page ----
+    // A page opts in with "layout". Anything it then declares must be something
+    // the template can actually draw, or the page silently loses a piece.
+    if (p.layout !== undefined) {
+      if (!RP_LAYOUTS.includes(p.layout)) fail(`${f} ${label}: layout "${p.layout}" is not one of ${RP_LAYOUTS.join(', ')}`);
+      richPages.push({ file: f, id: data.id, page: p, status: data.status });
+    }
+    if (p.stat && (!p.stat.value || !p.stat.unit)) fail(`${f} ${label}: stat needs both a value and a unit`);
+    (p.facts || []).forEach((fact, k) => {
+      if (fact && fact.art && !String(fact.art).startsWith('/')) fail(`${f} ${label}.facts[${k}]: art must be a root-absolute path`);
+    });
+    const g = p.infographic;
+    if (g) {
+      if (!RP_CHARTS.includes(g.kind)) fail(`${f} ${label}: infographic.kind "${g.kind}" is not one of ${RP_CHARTS.join(', ')}`);
+      if (!g.title) fail(`${f} ${label}: a Wow chart needs a title`);
+      // A chart is a claim about the world, so it carries a source like a fact does.
+      if (!g.source) fail(`${f} ${label}: a Wow chart needs its own source line`);
+      if ((g.kind === 'compare' || g.kind === 'fields') && (!Array.isArray(g.rows) || !g.rows.length)) fail(`${f} ${label}: a ${g.kind} chart needs rows`);
+      (g.rows || []).forEach((r, k) => {
+        if (!r.label) fail(`${f} ${label}: infographic row ${k} has no label (every number is labelled directly)`);
+        if (!r.display) fail(`${f} ${label}: infographic row ${k} has no display number`);
+        if (g.kind === 'compare' && !(Number(r.value) > 0)) fail(`${f} ${label}: infographic row ${k} needs a positive value for its bar`);
+        if (g.kind === 'fields' && !(Number(r.count) > 0)) fail(`${f} ${label}: infographic row ${k} needs a positive count`);
+      });
+      if (g.kind === 'timeline' && (!Array.isArray(g.stops) || g.stops.length < 2)) fail(`${f} ${label}: a timeline chart needs at least 2 stops`);
+      (g.stops || []).forEach((s, k) => { if (!s.year || !s.label) fail(`${f} ${label}: timeline stop ${k} needs a year and a label`); });
+      if (g.kind === 'diagram' && !RP_DIAGRAMS.includes(g.name)) fail(`${f} ${label}: diagram "${g.name}" is not drawn by the template (${RP_DIAGRAMS.join(', ')})`);
+    }
   });
   if (!data.finish || !data.finish.title) warn(f + ': no finish spread title — the template will make one up');
 
@@ -102,6 +142,34 @@ for (const ex of candidates) {
   }
   if (want && (!t || t.id !== want)) fail(`${id}: must carry a visit-the-exhibit link to "${want}" (that exhibit is live) — add an "exhibit" block to ${id}.json`);
   if (want === null && !t) warn(`${id}: gets a visit-the-exhibit link once its exhibit is built (planner phase pending)`);
+}
+
+// ---- Session RP1: US units and US spellings in every CONVERTED book ----
+// Mike reads this app in the United States. A converted book that still says
+// kilometres, or spells it colourful, has not really been converted.
+{
+  const convertedIds = [...new Set(richPages.map((r) => r.id))];
+  for (const id of convertedIds) {
+    const ex = candidates.find((c) => c.data.id === id);
+    if (!ex) continue;
+    const words = [];
+    const eat = (s) => { if (typeof s === 'string' && s.trim()) words.push(s); };
+    eat(ex.data.cover && ex.data.cover.blurb);
+    eat(ex.data.finish && ex.data.finish.blurb);
+    (ex.data.pages || []).forEach((p) => {
+      eat(p.title); eat(p.artAlt);
+      (p.facts || []).forEach((f) => { eat(f.text); eat(f.caption); eat(f.artAlt); });
+      const g = p.infographic;
+      if (g) { eat(g.title); eat(g.caption); (g.rows || []).forEach((r) => { eat(r.label); eat(r.display); }); (g.stops || []).forEach((s) => { eat(s.label); }); }
+    });
+    const metric = words.filter((w) => METRIC.test(w));
+    const british = words.filter((w) => BRITISH.test(w));
+    if (metric.length) fail(`${id}: a converted book still uses metric units — "${metric[0].slice(0, 80)}…"`);
+    if (british.length) fail(`${id}: a converted book still uses a British spelling — "${british[0].slice(0, 80)}…"`);
+    if (!metric.length && !british.length) pass(`${id}: US units and US spellings throughout`);
+  }
+  if (convertedIds.length) pass(`${convertedIds.length} book(s) converted to the richer composed pages: ${convertedIds.join(', ')}`);
+  else warn('no book carries a richer composed page yet — the RP phase has not started');
 }
 
 if (!candidates.length) fail('no topic-book exhibits found in public/explore/ — nothing to check');
@@ -306,11 +374,28 @@ async function runBook(exhibit, opts) {
   const pages = exhibit.data.pages || [];
   const firstPageIdx = 1; // 0 is the cover
 
+  // Session RP1 — a composed page bakes its facts into the page markup instead
+  // of writing them into an element after the fact, so the runtime check reads
+  // the markup the template actually produced.
+  const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pageHtml = (registry.pages.children || []).map((c) => (c && c.innerHTML) || '');
+  const pageCls = (registry.pages.children || []).map((c) => (c && c.className) || '');
+  const isRich = (p) => !!(p.layout || p.infographic || (p.facts || []).some((f) => f && f.art));
+  const factShown = (k, p, n) => {
+    const i = k + 1;
+    if (isRich(p)) {
+      const h = pageHtml[i] || '';
+      return h.indexOf(esc(p.facts[n].text)) !== -1 && h.indexOf('Source: ' + esc(p.facts[n].source)) !== -1;
+    }
+    if (n !== 0) return true; // the old shape shows one fact at a time
+    const t = registry['ft-' + i], s = registry['fs-' + i];
+    return !!t && t.textContent === p.facts[0].text && !!s && s.textContent === 'Source: ' + p.facts[0].source;
+  };
+
   // Booted through the real route: title set, page 1 rendered, no fallback.
   r.booted = registry.pageTitle.textContent === exhibit.data.title
     && registry.notready.style.display !== 'flex'
-    && !!registry['ft-' + firstPageIdx]
-    && registry['ft-' + firstPageIdx].textContent === pages[0].facts[0].text;
+    && factShown(0, pages[0], 0);
 
   // Session TB2 — arriving from a dog-ear on the bookshelf: the book must open
   // AT that page (not the cover), and Back must return to the bookshelf.
@@ -325,11 +410,38 @@ async function runBook(exhibit, opts) {
         && registry['tiein-cover'] && registry['tiein-cover'].style.display === 'inline-flex');
 
   // Every page renders its fact AND its source line.
-  r.pageChecks = pages.map((p, k) => {
+  r.pageChecks = pages.map((p, k) => ({ id: p.id, ok: factShown(k, p, 0) }));
+
+  // ---- Session RP1: what a composed page must actually contain ----
+  r.richChecks = pages.map((p, k) => {
+    if (!isRich(p)) return null;
     const i = k + 1;
-    const t = registry['ft-' + i], s = registry['fs-' + i];
-    return { id: p.id, ok: !!t && t.textContent === p.facts[0].text && !!s && s.textContent === 'Source: ' + p.facts[0].source };
-  });
+    const h = pageHtml[i] || '';
+    const cls = pageCls[i] || '';
+    const facts = p.facts || [];
+    return {
+      id: p.id,
+      // The promise of the richer page: EVERY fact is on screen at once, each
+      // with its own source. Nothing is hidden behind "Another fact".
+      allFacts: facts.every((f, n) => factShown(k, p, n)),
+      noCycler: h.indexOf('Another fact') === -1,
+      // One round speaker per fact, floated so the words wrap around it.
+      speakers: facts.every((f, n) => h.indexOf('id="' + (n ? 'say-' + i + '-' + n : 'say-' + i) + '"') !== -1)
+        && (h.match(/class="say mini"/g) || []).length === facts.length,
+      // Three photos: the hero plus one per fact after the first.
+      photos: (h.match(/class="fphoto/g) || []).length >= Math.max(0, facts.length - 1),
+      layoutClass: !p.layout || cls.indexOf('lay-' + p.layout) !== -1,
+      // The Wow chart drew, with its pill, its title and its own source.
+      chart: !p.infographic || (h.indexOf('class="wow') !== -1 && h.indexOf(esc(p.infographic.title)) !== -1
+        && h.indexOf('Source: ' + esc(p.infographic.source)) !== -1 && h.indexOf('>Wow chart<') !== -1),
+      // A chart that declared rows/stops must have drawn them, not an empty card.
+      chartBody: !p.infographic || (p.infographic.kind === 'compare' ? (h.match(/class="wowrow"/g) || []).length === p.infographic.rows.length
+        : p.infographic.kind === 'fields' ? (h.match(/class="fieldrow"/g) || []).length === p.infographic.rows.length
+        : p.infographic.kind === 'timeline' ? (h.match(/class="tlstop"/g) || []).length === p.infographic.stops.length
+        : h.indexOf('class="diag"') !== -1),
+      crops: (h.match(/data-crop="1"/g) || []).length,
+    };
+  }).filter(Boolean);
 
   // Turning pages moves the book and the counter.
   sandbox.turn(1);
@@ -339,9 +451,11 @@ async function runBook(exhibit, opts) {
   r.turnedTwice = registry.pagecount.textContent === 'Page 2 of ' + pages.length;
   sandbox.goTo(firstPageIdx);
 
-  // "Another fact" cycles the fact AND its source together.
+  // "Another fact" cycles the fact AND its source together. Only the ORIGINAL
+  // page shape has a cycler — a composed page shows every fact at once.
   const p1 = pages[0];
-  if (p1.facts.length > 1) {
+  if (isRich(p1)) r.cycled = true;
+  else if (p1.facts.length > 1) {
     sandbox.cycleFact(firstPageIdx);
     r.cycled = registry['ft-' + firstPageIdx].textContent === p1.facts[1].text
       && registry['fs-' + firstPageIdx].textContent === 'Source: ' + p1.facts[1].source;
@@ -409,7 +523,21 @@ for (const ex of candidates) {
   if (!r.turned || !r.turnedTwice) fail(`${r.id}: page turning did not advance the book`);
   else pass(`${r.id}: pages turn forward and the page counter follows`);
   if (!r.cycled) fail(`${r.id}: "Another fact" did not cycle the fact and its source together`);
-  else pass(`${r.id}: "Another fact" cycles fact and source together`);
+  else pass(`${r.id}: ${(ex.data.pages || []).some((p) => p.layout || p.infographic) ? 'composed pages show every fact at once (no cycler)' : '"Another fact" cycles fact and source together'}`);
+  // ---- Session RP1: the composed pages ----
+  for (const c of (r.richChecks || [])) {
+    if (!c.allFacts) fail(`${r.id} / ${c.id}: the composed page does not show every fact with its own source`);
+    else pass(`${r.id} / ${c.id}: every fact is on the page with its own picture and source`);
+    if (!c.noCycler) fail(`${r.id} / ${c.id}: a composed page still has an "Another fact" button — nothing should be hidden`);
+    if (!c.speakers) fail(`${r.id} / ${c.id}: every fact needs its own round speaker button (one per fact, floated)`);
+    else pass(`${r.id} / ${c.id}: a round speaker sits beside each fact`);
+    if (!c.photos) fail(`${r.id} / ${c.id}: the composed page is missing a photo for one of its facts`);
+    if (!c.layoutClass) fail(`${r.id} / ${c.id}: the page did not get its layout class, so it renders as a plain stack`);
+    if (!c.chart) fail(`${r.id} / ${c.id}: the Wow chart did not draw with its pill, title and source`);
+    else if (!c.chartBody) fail(`${r.id} / ${c.id}: the Wow chart drew an empty card — its rows or stops never rendered`);
+    else pass(`${r.id} / ${c.id}: the Wow chart draws picture-first, with its own source`);
+    if (c.crops) warn(`${r.id} / ${c.id}: ${c.crops} fact photo(s) are still detail crops of the page photo — real art lands in RP2`);
+  }
   if (!r.readAloud) fail(`${r.id}: read-aloud did not fall back to the browser voice when the narrator clip is missing`);
   else pass(`${r.id}: read-aloud plays, falling back to the browser voice with no waiting`);
   if (!r.folded || !r.unfolded) fail(`${r.id}: the dog-ear corner did not fold/unfold`);
@@ -459,6 +587,18 @@ else fail('read-aloud factAudio + browser-voice fallback not found in topic.html
 if (inlineScript && /BuildableGameNav\.register/.test(inlineScript) && inlineScript.indexOf('/api/sfx?s=') !== -1 && /Feel\.tap/.test(inlineScript))
   pass('audio wired: ambient bed (/api/sfx), Feel.tap page-turn feedback, and the shell Sound toggle');
 else fail('audio wiring (ambient / Feel.tap / BuildableGameNav) not found in topic.html');
+// Session RP1 — read-aloud is a ROUND SPEAKER now, not a play triangle, in both
+// page shapes. The old triangle path must be gone from the template entirely.
+if (templateHtml.indexOf('M8 5v14l11-7z') !== -1) fail('topic.html still draws the old play-triangle read-aloud icon — it must be the round speaker');
+else if (/function speakerSvg\(/.test(inlineScript || '') && /class="say mini"/.test(inlineScript || ''))
+  pass('read-aloud is a round speaker icon, floated so the words wrap around it');
+else fail('topic.html: the round speaker read-aloud button was not found');
+// The composed page must be OPT-IN, or the 19 books still waiting for their
+// upgrade would change under Mike overnight.
+if (/rich: !!\(RICH_LAYOUTS\[p\.layout\]/.test(inlineScript || ''))
+  pass('richer pages are opt-in: a book with no layout renders through the original path, unchanged');
+else fail('topic.html: the richer page is not gated on the book asking for it — old books could change shape');
+
 if (inlineScript && inlineScript.indexOf('status !== "approved"') !== -1)
   pass('approved gate present: a book that is not approved shows the not-ready screen');
 else fail('approved gate missing from topic.html — an unapproved book could reach a kid');
