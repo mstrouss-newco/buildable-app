@@ -172,7 +172,10 @@
     },
     {
       "src": "/GLTFLoader.js",
-      "dest": "/GLTFLoader.js"
+      "dest": "/GLTFLoader.js",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
     },
     {
       "src": "/models/(.*)",
@@ -888,19 +891,31 @@
     },
     {
       "src": "/skyflyer-engine.html",
-      "dest": "/skyflyer-engine.html"
+      "dest": "/skyflyer-engine.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
     },
     {
       "src": "/skyflyer",
-      "dest": "/skyflyer-engine.html"
+      "dest": "/skyflyer-engine.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
     },
     {
       "src": "/skyflyer-mock.html",
-      "dest": "/skyflyer-mock.html"
+      "dest": "/skyflyer-mock.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
     },
     {
       "src": "/skyflyer-mock",
-      "dest": "/skyflyer-mock.html"
+      "dest": "/skyflyer-mock.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
     },
     {
       "src": "/(.*)",
