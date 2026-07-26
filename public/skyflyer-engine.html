@@ -182,27 +182,68 @@
      word can still be asked a question, answer it, see how far through they
      are, and find their way back to something. Words are still there, small,
      underneath, for the grown-up sitting next to them. */
-  /* -- the offer answers in pictures: one green tick, one red cross -- */
-  #ofSay{border:none;background:#EAF6FB;border-radius:999px;padding:6px 14px;font-weight:800;
-    font-size:13px;color:#26506b;font-family:inherit;display:inline-flex;align-items:center;
-    gap:7px;cursor:pointer;margin-bottom:2px}
+  /* -- THE OFFER CARD IS A BOTTOM SHEET AND ITS TOP IS THE PICTURE --
+     factCard keeps the centred .sheet look; only the offer becomes a sheet that
+     rises from the bottom, so the world a kid just flew over stays visible. */
+  #offerCard{align-items:flex-end;padding:0;background:rgba(18,52,74,.44)}
+  #offerCard .inner{max-width:none;width:100%;padding:0;border-radius:26px 26px 0 0;
+    overflow:hidden;text-align:center}
+  #offerCard .band{position:relative;height:150px;overflow:hidden}
+  #offerCard .band svg.scene{display:block;width:100%;height:150px}
+  #offerCard .scrim{position:absolute;left:0;right:0;bottom:0;height:84px;pointer-events:none;
+    background:linear-gradient(rgba(10,45,70,0),rgba(10,45,70,.32) 42%,rgba(10,45,70,.74))}
+  #offerCard .bandname{position:absolute;left:16px;bottom:10px;font-size:23px;font-weight:800;
+    color:#fff;text-shadow:0 2px 10px rgba(8,40,62,.7);line-height:1.05;text-align:left}
+  #offerCard .bandname .found{display:block;font-size:10px;font-weight:900;letter-spacing:.7px;
+    color:#DCEEF8;text-shadow:0 1px 6px rgba(8,40,62,.8);margin-bottom:2px}
+  #ofSay{position:absolute;right:12px;top:11px;display:flex;align-items:center;gap:7px;
+    border:none;cursor:pointer;font-family:inherit;background:rgba(255,252,240,.95);
+    color:#26506b;font-weight:900;font-size:13px;border-radius:999px;padding:8px 15px 8px 11px;
+    box-shadow:0 3px 10px rgba(10,40,60,.28)}
   #ofSay svg{display:block}
-  /* the whole job as one picture: what you carry, an arrow, where it goes.
-     Built from the recipe, so a new job gets its picture for free. */
-  .story{background:#EAF6FB;border-radius:18px;padding:14px 10px;margin:11px 0 14px;
-    display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap}
-  .story .grp{display:flex;align-items:center;gap:4px}
-  .story svg{display:block}
-  .answers{display:flex;justify-content:center;gap:34px;margin-top:4px}
-  .ans{width:86px;height:86px;border-radius:50%;border:none;cursor:pointer;font-family:inherit;
-    display:flex;align-items:center;justify-content:center;padding:0}
-  .ans svg{display:block}
-  .ans.yes{background:linear-gradient(#57d06b,#2fae4d);box-shadow:0 6px 0 #1f8038,0 12px 24px rgba(20,90,40,.3)}
-  .ans.no{background:linear-gradient(#ff8a75,#e8552f);box-shadow:0 6px 0 #b93b1b,0 12px 24px rgba(140,50,25,.28)}
-  .ans:active{transform:translateY(4px);box-shadow:none}
-  .anslab{display:flex;justify-content:center;gap:34px;margin-top:8px;font-size:12px;
-    font-weight:800;color:#8fa8b8}
-  .anslab span{width:86px;text-align:center}
+  #offerCard .obody{padding:13px 16px 18px}
+  /* the one-shot picture: the thing you carry walks the line to the first stop */
+  #ofFly{position:absolute;left:0;top:0;pointer-events:none;
+    animation:ofFlyX 1.15s cubic-bezier(.45,0,.35,1) forwards}
+  #ofFly span{display:block;animation:ofFlyY 1.15s ease-in-out forwards}
+  #ofFly svg{display:block}
+  @keyframes ofFlyX{ from{transform:translateX(var(--x0))} to{transform:translateX(var(--x1))} }
+  @keyframes ofFlyY{ 0%{transform:translateY(var(--y0))}
+    50%{transform:translateY(calc(var(--y0) - 26px))}
+    100%{transform:translateY(var(--y0));opacity:0} }
+  /* what you GET for saying yes */
+  .reward{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 13px}
+  .rchip{display:flex;align-items:center;gap:5px;background:#FFF3D4;border-radius:999px;
+    padding:5px 13px 5px 7px;font-weight:900;font-size:16px;color:#8a6410}
+  .rstick{display:flex;align-items:center;gap:7px;font-weight:800;font-size:11.5px;
+    color:#8fa8b8;line-height:1.25;text-align:left}
+  .rchip svg,.rstick svg{display:block}
+  /* THE ANSWER. The green pill is the TAKE OFF button a kid has already pressed
+     on every pad, so its shape already means go, and their own ride is on it.
+     Saying no is a small quiet cloud. Nothing here is red. */
+  .pillrow{display:flex;justify-content:center;align-items:center;gap:14px}
+  #ofStart{border:none;cursor:pointer;font-family:inherit;font-weight:900;letter-spacing:.5px;
+    display:flex;align-items:center;gap:10px;border-radius:999px;padding:16px 24px;font-size:20px;
+    background:linear-gradient(#57d06b,#2fae4d);color:#fff;
+    box-shadow:0 6px 0 #1f8038,0 10px 22px rgba(20,90,40,.3)}
+  #ofStart:active{transform:translateY(5px);box-shadow:none}
+  #ofNo{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:13px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:22px;
+    padding:11px 16px;background:#EAF6FB;color:#7c93a3;box-shadow:0 3px 0 #d5e5ee}
+  #ofNo:active{transform:translateY(3px);box-shadow:none}
+  #ofStart svg,#ofNo svg{display:block}
+  /* the grown-up words, folded away. This is the 190px that used to sit between
+     the picture and the answer and push the kid's half off the bottom. */
+  .drawer{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:13px}
+  .drawer .lbl{font-size:11px;font-weight:800;color:#a8bfcc}
+  #ofInfo{border:none;background:#EAF6FB;color:#5c7f95;width:27px;height:27px;border-radius:999px;
+    font-weight:900;font-size:14px;font-family:inherit;cursor:pointer;padding:0}
+  #ofInfo.open{background:#2FB7D6;color:#fff}
+  #ofWords{display:none;background:#EAF6FB;border-radius:16px;padding:12px 14px;margin-top:11px;
+    font-weight:700;font-size:14px;line-height:1.45;color:#26506b;text-align:left}
+  #ofWords.open{display:block}
+  #ofWords b{display:block;font-size:11.5px;color:#2FB7D6;letter-spacing:.4px;margin:9px 0 3px}
+  #ofWords b:first-child{margin-top:0}
   /* -- progress as objects: things in your hands, then the places they go -- */
   #gCarry .cargoline{display:flex;align-items:center;gap:6px}
   #gCarry .grp{display:flex;align-items:center;gap:3px}
@@ -300,30 +341,39 @@
     <div id="helpJobs"></div>
     <button id="helpClose">Got it</button>
   </div></div>
-  <!-- FL5: you found something. Nothing starts until the kid says yes. -->
+  <!-- FL5: you found something. Nothing starts until the kid says yes.
+       FL5b(2): THE PICTURE IS THE CARD. A bottom sheet, so the world a kid just
+       flew over stays visible behind it. The top of the card is a little map of
+       the job, generated from the recipe. Then what you get for saying yes. Then
+       the answer, which is the same green GO pill a kid has already pressed on
+       every landing pad in the game - never a tick and a cross, because those
+       are interface symbols in a game made of soft objects, and a red cross says
+       you did something wrong when saying no here is free. -->
   <div class="sheet" id="offerCard"><div class="inner">
-    <div class="found">YOU FOUND SOMETHING</div>
-    <h2 id="ofName">Mail Run</h2>
-    <!-- FL5b: a non-reader can hear the whole thing once, through the same
-         narration library every other kid maker speaks with. -->
-    <button id="ofSay">
-      <svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 6 h3 l4-3 v10 l-4-3 H3 Z" fill="#26506b"/><path d="M12 5.5 a3.4 3.4 0 0 1 0 5" stroke="#26506b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
-      Hear it
-    </button>
-    <!-- FL5b: the whole job as ONE picture, generated from the recipe: what you
-         carry, an arrow, and one icon per place it goes. -->
-    <div class="story" id="ofStory"></div>
-    <div class="sub" id="ofBlurb"></div>
-    <div class="fact"><b>HOW IT WORKS</b><span id="ofTip"></span></div>
-    <div id="ofDone"></div>
-    <!-- FL5b: the answer is a picture too. Green circle and a white tick, red
-         circle and a white cross, set far apart so a small finger cannot
-         mis-hit. The words underneath are for the grown-up, not the kid. -->
-    <div class="answers">
-      <button class="ans yes" id="ofStart" aria-label="Yes please"><svg width="44" height="44" viewBox="0 0 42 42"><path d="M10 22 L18 30 L32 13" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button class="ans no" id="ofNo" aria-label="Not now"><svg width="44" height="44" viewBox="0 0 42 42"><path d="M12 12 L30 30 M30 12 L12 30" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/></svg></button>
+    <div class="band" id="ofBand">
+      <div id="ofScene"></div>
+      <div class="scrim"></div>
+      <div class="bandname"><small class="found">YOU FOUND SOMETHING</small><span id="ofName">Mail Run</span></div>
+      <!-- a non-reader can hear the whole thing once, through the same narration
+           library every other kid maker speaks with. For them this button IS the
+           instructions, so it is big and it sits ON the picture. -->
+      <button id="ofSay" aria-label="Hear it">
+        <svg width="15" height="15" viewBox="0 0 16 16"><path d="M3 6 h3 l4-3 v10 l-4-3 H3 Z" fill="#26506b"/><path d="M12 5.5 a3.4 3.4 0 0 1 0 5" stroke="#26506b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+        Hear it
+      </button>
     </div>
-    <div class="anslab"><span>Yes please</span><span>Not now</span></div>
+    <div class="obody">
+      <!-- what you GET. This used to only appear after the job was over, so the
+           offer carried no reason at all to say yes. -->
+      <div class="reward" id="ofReward"></div>
+      <div id="ofDone"></div>
+      <div class="pillrow">
+        <button id="ofStart"><span id="ofRide"></span>LET'S GO</button>
+        <button id="ofNo"><span id="ofCloud"></span>Later</button>
+      </div>
+      <div class="drawer"><span class="lbl">For grown-ups</span><button id="ofInfo" aria-label="What this job is">i</button></div>
+      <div class="words" id="ofWords"><b>WHAT IT IS</b><span id="ofBlurb"></span><b>HOW IT WORKS</b><span id="ofTip"></span></div>
+    </div>
   </div></div>
   <!-- FL5: every job ends here - a fact, the coins, and a sticker to keep. -->
   <div class="sheet" id="factCard"><div class="inner">
@@ -1868,34 +1918,127 @@ function icoArrowGlyph(n){
   return svgWrap(n,"0 0 20 20",'<path d="M4 10 H15 M11 6 L15 10 L11 14" stroke="#5c7f95" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>');
 }
 // ---- the places things go, one per recipe style ----
-function icoHouse(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
-  return svgWrap(n,"0 0 26 26",
-    '<rect x="5.5" y="11.5" width="15" height="11.5" rx="1.4" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<path d="M13 2.6 L24 12.4 H2 Z" fill="'+s+'"/>'+
-    '<rect x="11" y="16" width="4" height="7" rx="0.6" fill="'+s+'"/>'+(d?doneBadge():'')); }
-function icoAnimal(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
-  return svgWrap(n,"0 0 26 26",
-    '<rect x="3.5" y="10.5" width="13" height="8" rx="3.6" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<circle cx="19" cy="9.6" r="4.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<path d="M17.4 5.8 L16.2 2.8 M21.2 5.6 L22.8 3" stroke="'+s+'" stroke-width="2.2" stroke-linecap="round"/>'+
-    '<path d="M6.5 18.5 v4 M13.5 18.5 v4" stroke="'+s+'" stroke-width="2.6" stroke-linecap="round"/>'+(d?doneBadge():'')); }
-function icoFlare(n,d){ var f=d?ICON_DFILL:"#FFD86B",s=d?ICON_DLINE:"#B9860E";
-  return svgWrap(n,"0 0 26 26",
-    '<path d="M13 24 V14" stroke="'+(d?ICON_DLINE:ICON_LINE)+'" stroke-width="2.4" stroke-linecap="round"/>'+
-    '<path d="M8 23.4 h10" stroke="'+(d?ICON_DLINE:ICON_LINE)+'" stroke-width="2.2" stroke-linecap="round"/>'+
-    '<circle cx="13" cy="9.4" r="5.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<path d="M13 1.6 V3.6 M6.8 3.2 L8.3 4.7 M19.2 3.2 L17.7 4.7" stroke="'+s+'" stroke-width="1.8" stroke-linecap="round"/>'+(d?doneBadge():'')); }
-function icoLantern(n,d){ var f=d?ICON_DFILL:"#FFD86B",s=d?ICON_DLINE:ICON_LINE;
-  return svgWrap(n,"0 0 26 26",
-    '<path d="M13 2.4 V5.4 M13 19.6 V22.4" stroke="'+s+'" stroke-width="2" stroke-linecap="round"/>'+
-    '<rect x="6.6" y="5.2" width="12.8" height="2.8" rx="1.4" fill="'+s+'"/>'+
-    '<path d="M8.4 8.4 H17.6 L16.2 19.6 H9.8 Z" fill="'+f+'" stroke="'+s+'" stroke-width="1.8" stroke-linejoin="round"/>'+(d?doneBadge():'')); }
-function icoDock(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
-  return svgWrap(n,"0 0 26 26",
-    '<rect x="4" y="12" width="18" height="9.5" rx="2.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
-    '<path d="M13 3 L21 11.2 H5 Z" fill="#FF8A3C"/>'+
-    '<rect x="11" y="15.5" width="4" height="6" fill="'+s+'"/>'+(d?doneBadge():'')); }
+// Each shape is a BODY (paths only, 26x26) plus a thin wrapper. The body is what
+// lets the offer card's illustrated band reuse the very same drawing at a
+// different size and in different colours - one source of art, per the FL5b law.
+function bHouse(f,s,d){ return '<rect x="5.5" y="11.5" width="15" height="11.5" rx="1.4" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+  '<path d="M13 2.6 L24 12.4 H2 Z" fill="'+s+'"/>'+
+  '<rect x="11" y="16" width="4" height="7" rx="0.6" fill="'+s+'"/>'+(d?doneBadge():''); }
+function bAnimal(f,s,d){ return '<rect x="3.5" y="10.5" width="13" height="8" rx="3.6" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+  '<circle cx="19" cy="9.6" r="4.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+  '<path d="M17.4 5.8 L16.2 2.8 M21.2 5.6 L22.8 3" stroke="'+s+'" stroke-width="2.2" stroke-linecap="round"/>'+
+  '<path d="M6.5 18.5 v4 M13.5 18.5 v4" stroke="'+s+'" stroke-width="2.6" stroke-linecap="round"/>'+(d?doneBadge():''); }
+function bFlare(f,s,d,post){ return '<path d="M13 24 V14" stroke="'+post+'" stroke-width="2.4" stroke-linecap="round"/>'+
+  '<path d="M8 23.4 h10" stroke="'+post+'" stroke-width="2.2" stroke-linecap="round"/>'+
+  '<circle cx="13" cy="9.4" r="5.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+  '<path d="M13 1.6 V3.6 M6.8 3.2 L8.3 4.7 M19.2 3.2 L17.7 4.7" stroke="'+s+'" stroke-width="1.8" stroke-linecap="round"/>'+(d?doneBadge():''); }
+function bLantern(f,s,d){ return '<path d="M13 2.4 V5.4 M13 19.6 V22.4" stroke="'+s+'" stroke-width="2" stroke-linecap="round"/>'+
+  '<rect x="6.6" y="5.2" width="12.8" height="2.8" rx="1.4" fill="'+s+'"/>'+
+  '<path d="M8.4 8.4 H17.6 L16.2 19.6 H9.8 Z" fill="'+f+'" stroke="'+s+'" stroke-width="1.8" stroke-linejoin="round"/>'+(d?doneBadge():''); }
+function bDock(f,s,d){ return '<rect x="4" y="12" width="18" height="9.5" rx="2.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+  '<path d="M13 3 L21 11.2 H5 Z" fill="#FF8A3C"/>'+
+  '<rect x="11" y="15.5" width="4" height="6" fill="'+s+'"/>'+(d?doneBadge():''); }
+// ONE dispatch from a recipe's style name to a drawing. Nothing else may switch
+// on a style, and nothing anywhere may switch on a job id.
+function targetBody(style,f,s,d,post){
+  if(style==="animal") return bAnimal(f,s,d);
+  if(style==="flare")  return bFlare(f,s,d,post||s);
+  if(style==="lantern")return bLantern(f,s,d);
+  if(style==="dock")   return bDock(f,s,d);
+  return bHouse(f,s,d);
+}
+function icoHouse(n,d){ return svgWrap(n,"0 0 26 26",bHouse(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
+function icoAnimal(n,d){ return svgWrap(n,"0 0 26 26",bAnimal(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
+function icoFlare(n,d){ return svgWrap(n,"0 0 26 26",bFlare(d?ICON_DFILL:"#FFD86B",d?ICON_DLINE:"#B9860E",d,d?ICON_DLINE:ICON_LINE)); }
+function icoLantern(n,d){ return svgWrap(n,"0 0 26 26",bLantern(d?ICON_DFILL:"#FFD86B",d?ICON_DLINE:ICON_LINE,d)); }
+function icoDock(n,d){ return svgWrap(n,"0 0 26 26",bDock(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
 function icoPad(n){ return svgWrap(n,"0 0 26 26",'<circle cx="13" cy="13" r="8.6" fill="none" stroke="#FF8A3C" stroke-width="3.2"/>'); }
+// ---- the offer card's furniture: a coin, the sticker you would earn, a cloud,
+// and YOUR ride. All drawn, all from state, none of it per-job. ----
+function icoCoin(n){ return svgWrap(n,"0 0 26 26",
+  '<circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>'+
+  '<circle cx="13" cy="13" r="6" fill="none" stroke="#D89B1C" stroke-width="2"/>'); }
+// grey and dashed until it is yours, gold once it is: the same sticker either way
+function icoSticker(n,earned){
+  var gold=earned?"#FFD86B":"#E3EBF0", edge=earned?"#E0A21C":"#C9D6DE",
+      rib=earned?"#2FB7D6":"#D6E1E8", rib2=earned?"#1E8FAC":"#C6D3DB", star=earned?"#FFFCF0":"#F4F8FA";
+  return '<svg width="'+n+'" height="'+Math.round(n*0.94)+'" viewBox="0 0 92 86" aria-hidden="true">'+
+    '<path d="M31 52 L22 82 L38 74 L46 84 L46 52 Z" fill="'+rib+'"/>'+
+    '<path d="M61 52 L70 82 L54 74 L46 84 L46 52 Z" fill="'+rib2+'"/>'+
+    '<circle cx="46" cy="34" r="27" fill="'+gold+'" stroke="'+edge+'" stroke-width="4"'+(earned?'':' stroke-dasharray="7 5"')+'/>'+
+    '<path d="M46 17 l5.2 10.6 11.7 1.7 -8.5 8.2 2 11.6 -10.4-5.5 -10.4 5.5 2-11.6 -8.5-8.2 11.7-1.7 Z" fill="'+star+'"/></svg>'; }
+// a drifting cloud: what "not now" actually is around here. Never a red cross.
+function icoCloud(n,soft){ var c=soft?"#B9CEDB":"#8FB3C6";
+  return '<svg width="'+n+'" height="'+Math.round(n*0.62)+'" viewBox="0 0 52 32" aria-hidden="true">'+
+    '<path d="M13 27 a8.5 8.5 0 0 1 0-17 a11 11 0 0 1 20.5-3 a8 8 0 0 1 6.5 20 Z" fill="'+c+'"/>'+
+    '<path d="M6 30 h16 M28 30 h13" stroke="'+c+'" stroke-width="3" stroke-linecap="round" opacity=".55"/></svg>'; }
+// THE RIDE THE KID ACTUALLY PICKED, on the go button. Drawn from ride.build, so
+// buying a copter in the hangar changes this button with no code.
+function icoRide(n){
+  var b="#fff", g="rgba(255,255,255,.6)";
+  if(ride.build==="copter")
+    return '<svg width="'+n+'" height="'+Math.round(n*0.62)+'" viewBox="0 0 50 31" aria-hidden="true">'+
+      '<path d="M6 5 h38" stroke="'+b+'" stroke-width="3" stroke-linecap="round"/>'+
+      '<rect x="23.5" y="6" width="3" height="6" fill="'+b+'"/>'+
+      '<ellipse cx="22" cy="18" rx="12" ry="7" fill="'+b+'"/>'+
+      '<path d="M34 18 h13" stroke="'+b+'" stroke-width="3" stroke-linecap="round"/>'+
+      '<circle cx="18" cy="17" r="3.4" fill="'+g+'"/>'+
+      '<path d="M15 25 h12" stroke="'+b+'" stroke-width="2.6" stroke-linecap="round"/></svg>';
+  if(ride.build==="jetpack")
+    return '<svg width="'+n+'" height="'+Math.round(n*0.62)+'" viewBox="0 0 50 31" aria-hidden="true">'+
+      '<circle cx="25" cy="7" r="5.2" fill="'+b+'"/>'+
+      '<rect x="20.2" y="12.4" width="9.6" height="9.6" rx="3.8" fill="'+b+'"/>'+
+      '<rect x="13" y="12" width="5.2" height="7.6" rx="2.6" fill="'+b+'"/>'+
+      '<rect x="31.8" y="12" width="5.2" height="7.6" rx="2.6" fill="'+b+'"/>'+
+      '<path d="M15.6 20.4 L12 31 L19.2 31 Z" fill="'+b+'"/>'+
+      '<path d="M34.4 20.4 L30.8 31 L38 31 Z" fill="'+b+'"/></svg>';
+  return '<svg width="'+n+'" height="'+Math.round(n*0.66)+'" viewBox="0 0 50 33" aria-hidden="true">'+
+    '<path d="M4 21 L18 18 L15 5 h4.5 L27 17 L40 15.5 a4 4 0 0 1 0 8 L27 22 L19.5 33 H15 L18 21 Z" fill="'+b+'"/>'+
+    '<circle cx="34" cy="19.5" r="2.6" fill="'+g+'"/></svg>';
+}
+
+// ============================================================================
+//  THE BAND — the offer card's picture, and the whole reason the card works.
+//  It is a little MAP of the job: the place you load up on the left, a dotted
+//  flight line, and one stop on the right per target in the recipe. Same law as
+//  everything else in FL5b: nothing here knows a job's name. Change a recipe's
+//  targets and the picture follows.
+// ============================================================================
+var SCENE_F="#FFF6E3", SCENE_S="#7d95a5";
+function jobScene(m,W,H){
+  var hz=0.60, y=Math.round(H*hz), i;   // horizon high, so the name below it sits on clear water
+  var n=m.targets.length, gap=Math.min(36,Math.max(26,(W*0.5)/n));
+  var right=W-30, tx=[], first=right-(n-1)*gap;
+  var dx=Math.min(56,Math.max(40,W*0.15));
+  if(first<dx+70){ gap=Math.max(20,(right-dx-70)/Math.max(1,n-1)); first=right-(n-1)*gap; }
+  for(i=0;i<n;i++) tx.push(Math.round(first+i*gap));
+  var arc='M'+(dx+16)+' '+(y-16)+' Q'+Math.round((dx+tx[0])/2)+' '+(y-52)+' '+(tx[0]-13)+' '+(y-18);
+  var s='<svg class="scene" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'+
+    '<defs><linearGradient id="ofsky" x1="0" y1="0" x2="0" y2="1">'+
+    '<stop offset="0" stop-color="#79c7fb"/><stop offset="'+hz+'" stop-color="#b8e3ff"/>'+
+    '<stop offset="'+(hz+0.001)+'" stop-color="#2aa3d8"/><stop offset="1" stop-color="#166A9C"/>'+
+    '</linearGradient></defs>'+
+    '<rect width="'+W+'" height="'+H+'" fill="url(#ofsky)"/>'+
+    '<circle cx="'+Math.round(W*0.55)+'" cy="26" r="19" fill="#FFE9A8" opacity=".95"/>'+
+    '<rect x="24" y="19" width="52" height="14" rx="7" fill="rgba(255,255,255,.9)"/>'+
+    '<rect x="'+Math.round(W*0.34)+'" y="11" width="36" height="11" rx="5.5" fill="rgba(255,255,255,.8)"/>'+
+    '<ellipse cx="'+(dx+2)+'" cy="'+(y+7)+'" rx="34" ry="11" fill="#F6D98A"/>'+
+    '<ellipse cx="'+(dx+2)+'" cy="'+(y+1)+'" rx="30" ry="9" fill="#6FD46F"/>';
+  for(i=0;i<n;i++) s+='<ellipse cx="'+tx[i]+'" cy="'+(y+6)+'" rx="18" ry="8" fill="#F6D98A"/>'+
+    '<ellipse cx="'+tx[i]+'" cy="'+(y+1)+'" rx="15" ry="6" fill="#6FD46F"/>';
+  s+='<path d="'+arc+'" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="3.2" '+
+     'stroke-linecap="round" stroke-dasharray="2 10"/>';
+  // where you start: a depot if the recipe has one, otherwise the first stop is
+  // also where you begin, so the picture is honest about a job with no loading
+  s+='<g transform="translate('+(dx-17)+','+(y-36)+') scale(1.3)">'+
+     (m.depot?bDock(SCENE_F,SCENE_S,false):targetBody(m.style,SCENE_F,SCENE_S,false))+'</g>';
+  for(i=0;i<n;i++) s+='<g transform="translate('+(tx[i]-14)+','+(y-31)+') scale(1.1)">'+
+     targetBody(m.style,SCENE_F,SCENE_S,false)+'</g>';
+  s+='</svg>';
+  // the numbers the one-shot animation needs, so it lands on the real first stop
+  jobScene.last={x0:dx+4,x1:tx[0]-12,y:y-40,n:n};
+  return s;
+}
 // ---- recipe -> picture. The ONLY place a style name becomes a drawing. ----
 function targetIcon(style,n,done){
   if(style==="animal") return icoAnimal(n,done);
@@ -1969,7 +2112,13 @@ var waypointEl=D.getElementById("waypoint"),
     wpDropEl=D.getElementById("wpDrop"),
     minimapEl=D.getElementById("minimap"),
     ofSayEl=D.getElementById("ofSay"),
-    ofStoryEl=D.getElementById("ofStory");
+    ofBandEl=D.getElementById("ofBand"),
+    ofSceneEl=D.getElementById("ofScene"),
+    ofRewardEl=D.getElementById("ofReward"),
+    ofRideEl=D.getElementById("ofRide"),
+    ofCloudEl=D.getElementById("ofCloud"),
+    ofInfoEl=D.getElementById("ofInfo"),
+    ofWordsEl=D.getElementById("ofWords");
 var WP=null, foundPts={};
 function wpIcon(p,n){
   if(p.kind==="pad") return icoPad(n);
@@ -2358,6 +2507,9 @@ ofNo.addEventListener("click",declineOffer);
 leaveJobEl.addEventListener("click",leaveJob);
 // ---------- FL5b: hear it, and drop the pin ----------
 ofSayEl.addEventListener("click",function(e){ e.stopPropagation(); sayJob(offered); });
+ofInfoEl.addEventListener("click",function(e){ e.stopPropagation();
+  if(wordsOpen()) closeWords(); else { openWords(); sfx("select"); } });
+ofBandEl.addEventListener("click",function(e){ if(!e.target.closest("#ofSay")) flyThePicture(); });
 wpDropEl.addEventListener("click",function(e){ e.stopPropagation(); dropWaypoint(); sfx("select"); });
 waypointEl.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
 minimapEl.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
@@ -2821,20 +2973,51 @@ function openOffer(m){
   offered=m;
   try{
     ofName.textContent=m.name;
-    // FL5b: the whole job as a picture, before a single word is read. Built
-    // from the recipe, so a new job gets its picture for free.
-    // a job with more places to go draws them a little smaller, so the picture
-    // is always ONE line however many stops a recipe grows to
-    ofStoryEl.innerHTML=jobStrip(m,m.targets.length>3?26:32,null,null,-1);
+    // THE PICTURE IS THE CARD: a little map of the job across the top, drawn
+    // from the recipe, so a new job gets its picture free and with no new art.
+    ofSceneEl.innerHTML=jobScene(m,Math.max(280,W),150);
+    // WHAT YOU GET. The sticker is gold if this kid already has it, a dashed
+    // grey outline if it is still to be won.
+    ofRewardEl.innerHTML='<span class="rchip">'+icoCoin(21)+'+'+m.coins+'</span>'+
+      '<span class="rstick">'+icoSticker(36,hasBadge(m.id))+
+      '<span>'+m.badge+'<br>sticker to keep</span></span>';
+    // THE ANSWER: their own ride on the go pill, a cloud on the quiet one.
+    ofRideEl.innerHTML=icoRide(44);
+    ofCloudEl.innerHTML=icoCloud(34,true);
     ofBlurb.textContent=m.blurb;
     ofTip.textContent=m.tip||m.blurb;
     ofDone.innerHTML=hasBadge(m.id)
       ? '<span class="done">You have done this one before</span>' : '';
+    closeWords();
     offerCard.style.display="flex";
     hintEl.style.opacity=0;
     S.picking=true;
+    flyThePicture();
   }catch(e){ offered=null; S.picking=false; }
   sfx("select");
+}
+// the words fold away by default. They are for the grown-up sitting next to the
+// kid, and when they sat between the picture and the answer they pushed the
+// kid's half of the card off the bottom of a small phone.
+function openWords(){ try{ ofWordsEl.className="open"; ofInfoEl.className="open"; }catch(e){} }
+function closeWords(){ try{ ofWordsEl.className=""; ofInfoEl.className=""; }catch(e){} }
+function wordsOpen(){ try{ return ofWordsEl.className==="open"; }catch(e){ return false; } }
+// ONE SHOT, no words at all: the thing you carry walks the dotted line to the
+// first stop, then that stop flashes done. Pure CSS once it is placed, so there
+// is no second animation loop running next to the game's.
+function flyThePicture(){
+  if(DEMO||NODRAW||!offered) return;
+  try{
+    var g=jobScene.last; if(!g) return;
+    var old=D.getElementById("ofFly"); if(old&&old.parentNode) old.parentNode.removeChild(old);
+    var f=D.createElement("div");
+    f.id="ofFly";
+    f.style.setProperty("--x0",g.x0+"px");
+    f.style.setProperty("--x1",g.x1+"px");
+    f.innerHTML='<span style="--y0:'+g.y+'px">'+cargoIcon(offered,26)+'</span>';
+    ofBandEl.appendChild(f);
+    setTimeout(function(){ try{ if(f.parentNode) f.parentNode.removeChild(f); }catch(e){} },1250);
+  }catch(e){}
 }
 function closeOffer(){
   try{ offerCard.style.display="none";
@@ -2919,6 +3102,9 @@ var v3=new THREE.Vector3();
 function updateArrow(){
   if(NODRAW||DEMO)return;
   if(S.mode!=="fly"){arrowEl.style.opacity=0;return;}
+  // FL5b(2): a card is up, so nobody is flying. The arrow used to keep drawing
+  // over the top of the offer sheet, which is the stray orange shape Mike saw.
+  if(S.picking){arrowEl.style.opacity=0;return;}
   // FL5: on a job the one arrow points at the one next thing to do — the dock
   // when your hands are empty, the nearest drop point when they are full. Off a
   // job it goes back to pointing at a landing pad, exactly as before.
@@ -3288,6 +3474,33 @@ window.SKY={
   scouts:function(){ return scouts.map(function(s){ return {id:s.job.id,x:s.pt.x,z:s.pt.z}; }); },
   offer:function(){ try{ return { up:offerCard.style.display==="flex", id:offered?offered.id:null,
     name:offered?offered.name:null }; }catch(e){ return {up:false,id:null,name:null}; } },
+  // FL5b(2): what the offer card is actually SHOWING, read off the live DOM, so
+  // the harness proves the band came out of the recipe and that nothing red or
+  // tick-and-cross shaped crept back in.
+  offerCard:function(){
+    try{
+      var sc=ofSceneEl.querySelector("svg.scene");
+      var groups=sc?sc.querySelectorAll("g").length:0;
+      return {
+        sheet:(function(){ try{ return getComputedStyle?null:null; }catch(e){ return null; } })(),
+        sceneGroups:groups,                       // 1 start point + one per target
+        sceneStops:groups-1,
+        go:{ text:ofStart.textContent.replace(/\s+/g," ").trim(),
+             ride:ofRideEl.querySelectorAll("svg").length,
+             rideBuild:ride.build },
+        later:{ text:ofNo.textContent.replace(/\s+/g," ").trim(),
+                cloud:ofCloudEl.querySelectorAll("svg").length },
+        reward:{ coins:ofRewardEl.querySelectorAll(".rchip svg").length,
+                 label:ofRewardEl.textContent.replace(/\s+/g," ").trim(),
+                 stickerEarned:/stroke-dasharray/.test(ofRewardEl.innerHTML)===false },
+        hearOnPicture:!!(ofSayEl.parentNode===ofBandEl),
+        wordsOpen:wordsOpen(),
+        flying:!!D.getElementById("ofFly")
+      };
+    }catch(e){ return null; }
+  },
+  offerWords:function(open){ if(open) openWords(); else closeWords(); return wordsOpen(); },
+  tapInfo:function(){ try{ ofInfoEl.click(); }catch(e){} return wordsOpen(); },
   acceptOffer:acceptOffer,
   declineOffer:declineOffer,
   leaveJob:leaveJob,
@@ -3298,12 +3511,13 @@ window.SKY={
   // ---- FL5b handles: pictures, the pin and the map ----
   // what the offer card is actually SHOWING, counted off the live DOM, so the
   // harness proves the picture came out of the recipe and not out of a drawing
+  // the offer card no longer carries the row-of-symbols strip - its picture is
+  // the illustrated band now - so this reports the band's own numbers instead.
   offerStrip:function(){
     try{
-      var g=ofStoryEl.querySelectorAll(".grp");
-      return { cargo:g[0]?g[0].querySelectorAll("svg").length:0,
-               targets:g[1]?g[1].querySelectorAll("svg").length:0,
-               arrows:ofStoryEl.children.length-2 };
+      var sc=ofSceneEl.querySelector("svg.scene");
+      var g=sc?sc.querySelectorAll("g").length:0;
+      return { cargo:g?1:0, targets:Math.max(0,g-1), arrows:sc?1:0 };
     }catch(e){ return {cargo:0,targets:0,arrows:0}; }
   },
   progressStrip:function(){

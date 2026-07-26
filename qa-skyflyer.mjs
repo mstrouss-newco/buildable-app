@@ -235,16 +235,41 @@ chk('no emojis anywhere in the jobs', !emoji.test(mText) && !emoji.test(html));
 // 2d) FL5b MISSIONS A NON-READER CAN PLAY — pictures instead of words
 // ---------------------------------------------------------------------------
 console.log('--- FL5b: a job a four year old can answer, follow and find ---');
-chk('the offer is answered with a TICK and a CROSS, not with the words "Do it"',
-  /class="ans yes" id="ofStart"/.test(html) && /class="ans no" id="ofNo"/.test(html) &&
-  !/id="ofStart">Do it</.test(html) && !/id="ofNo">Not now</.test(html));
-chk('the two answers are a green circle and a red circle, set far apart from each other',
-  /\.ans\.yes\{background:linear-gradient\(#57d06b/.test(html) &&
-  /\.ans\.no\{background:linear-gradient\(#ff8a75/.test(html) &&
-  /\.answers\{[^}]*gap:34px/.test(html) && /\.ans\{width:86px;height:86px;border-radius:50%/.test(html));
-chk('the words stay underneath, small, for the grown-up and the reader',
-  /class="anslab"><span>Yes please<\/span><span>Not now<\/span>/.test(html) &&
-  /\.anslab\{[^}]*font-size:12px/.test(html));
+chk('THE OFFER IS A BOTTOM SHEET whose top is the picture (the world stays visible)',
+  /#offerCard\{align-items:flex-end/.test(html) &&
+  /#offerCard \.inner\{max-width:none;width:100%;padding:0;border-radius:26px 26px 0 0/.test(html) &&
+  /id="ofBand"/.test(html) && /id="ofScene"/.test(html));
+chk('the answer is the game\'s own GO pill, not a tick and a cross',
+  /id="ofStart"><span id="ofRide"><\/span>LET'S GO<\/button>/.test(html) &&
+  /id="ofNo"><span id="ofCloud"><\/span>Later<\/button>/.test(html) &&
+  // the interface symbols are gone for good
+  !/class="ans yes"|class="ans no"|class="anslab"/.test(html) &&
+  !/M10 22 L18 30 L32 13/.test(html) && !/M12 12 L30 30 M30 12 L12 30/.test(html));
+chk('...and it is the SAME pill shape as TAKE OFF, which a kid has already pressed',
+  (()=>{ const go=html.slice(html.indexOf('#ofStart{'), html.indexOf('#ofStart:active'));
+         const to=html.slice(html.indexOf('#takeoff{'), html.indexOf('#takeoff:active'));
+         return /linear-gradient\(#57d06b,#2fae4d\)/.test(go) && /linear-gradient\(#57d06b,#2fae4d\)/.test(to) &&
+                /border-radius:999px/.test(go) && /box-shadow:0 6px 0 #1f8038/.test(go) && /0 6px 0 #1f8038/.test(to); })());
+chk('NOTHING on the offer is red - saying no is free and must not look like a mistake',
+  (()=>{ const card=html.slice(html.indexOf('/* -- THE OFFER CARD IS A BOTTOM SHEET'), html.indexOf('/* -- progress as objects'));
+         return !/#e8552f|#ff8a75|#b93b1b|#FF5A3C/i.test(card); })());
+chk('saying no is a drifting cloud, which is what "not now" actually is here',
+  /function icoCloud\(/.test(html) && /ofCloudEl\.innerHTML=icoCloud\(/.test(html));
+chk('the go pill carries THE RIDE THE KID PICKED, drawn from ride.build',
+  /function icoRide\(/.test(html) && /ride\.build==="copter"/.test(html) &&
+  /ride\.build==="jetpack"/.test(html) && /ofRideEl\.innerHTML=icoRide\(/.test(html));
+chk('WHAT YOU GET is on the offer now: the coins and the sticker still to win',
+  /id="ofReward"/.test(html) && /function icoCoin\(/.test(html) && /function icoSticker\(/.test(html) &&
+  /icoSticker\(36,hasBadge\(m\.id\)\)/.test(html) && /\+'\+m\.coins\+'/.test(html));
+chk('the 190px of grown-up words folded into a drawer, shut by default',
+  /id="ofWords"/.test(html) && /#ofWords\{display:none/.test(html) &&
+  /id="ofInfo"/.test(html) && /function openWords\(/.test(html) && /function closeWords\(/.test(html) &&
+  /closeWords\(\);\s*\n\s*offerCard\.style\.display="flex"/.test(html));
+chk('the picture walks itself once when the card opens, with no words at all',
+  /function flyThePicture\(/.test(html) && /@keyframes ofFlyX/.test(html) && /@keyframes ofFlyY/.test(html) &&
+  /if\(DEMO\|\|NODRAW\|\|!offered\) return;/.test(html));
+chk('...and it is pure CSS once placed, so no second animation loop runs beside the game\'s',
+  !/requestAnimationFrame/.test(html.slice(html.indexOf('function flyThePicture('), html.indexOf('function closeOffer('))));
 chk('a "Hear it" speaker reads the job through the SHARED narration library',
   /id="ofSay"/.test(html) && /function sayJob\(/.test(html) && /\/api\/say\?t="/.test(html) &&
   /function saySplit\(/.test(html));
@@ -256,9 +281,15 @@ chk('THE FL5b LAW: no icon is drawn per job - every picture comes out of the rec
   // not one mention of a job id anywhere in the drawing code
   !/(mail-run|supply-drop|lost-explorer|lantern-lighter)/.test(
     html.slice(html.indexOf('var ICON_FILL='), html.indexOf('function saySplit('))));
-chk('the offer shows the job as ONE picture: what you carry, an arrow, where it goes',
-  /ofStoryEl\.innerHTML=jobStrip\(m,m\.targets\.length>3\?26:32,null,null,-1\)/.test(html) && /id="ofStory"/.test(html) &&
-  /function icoArrowGlyph\(/.test(html));
+chk('the offer shows the job as ONE picture: a little MAP of it, built from the recipe',
+  /function jobScene\(m,W,H\)/.test(html) && /ofSceneEl\.innerHTML=jobScene\(m,/.test(html) &&
+  /m\.targets\.length/.test(html.slice(html.indexOf('function jobScene('), html.indexOf('var SCENE_F=')+4000)) &&
+  /m\.depot\?bDock\(/.test(html) && /targetBody\(m\.style,SCENE_F,SCENE_S,false\)/.test(html));
+chk('the band and the progress chip share ONE source of art (a body per shape)',
+  ['bHouse','bAnimal','bFlare','bLantern','bDock'].every(f=>new RegExp('function '+f+'\\(').test(html)) &&
+  /function targetBody\(style,f,s,d,post\)/.test(html) &&
+  // the wrappers must delegate, or the drawing has been forked in two
+  /function icoHouse\(n,d\)\{ return svgWrap\(n,"0 0 26 26",bHouse\(/.test(html));
 chk('every recipe style has a drawing, so a new style is the only thing a new job needs',
   ['animal','flare','lantern','dock'].every(s=>new RegExp('style==="'+s+'"').test(
     html.slice(html.indexOf('function targetIcon('), html.indexOf('function cargoIcon(')))) &&
@@ -809,20 +840,28 @@ if (!JSDOM) {
     for (let k=0;k<600;k++){ wp.SKY.tick(1/30); if (wp.SKY.offer().up) break; }
     chk('the offer that came up is the one a non-reader can answer',
       wp.SKY.offer().up===true && wp.SKY.offer().id==='mail-run');
-    const a = wp.SKY.answers();
-    chk('the two answers really are a tick and a cross, not the words Do it / Not now',
-      !!a && /ans yes/.test(a.yes) && /ans no/.test(a.no) && a.tick===1 && a.cross===1,
-      JSON.stringify(a));
-    chk('the small word labels are still there underneath, for the grown-up',
-      a.labels === 'Yes pleaseNot now' || a.labels === 'Yes please Not now', a.labels);
+    const a = wp.SKY.offerCard();
+    chk('the answer really is the GO pill and a quiet cloud, not a tick and a cross',
+      !!a && /LET'S GO/.test(a.go.text) && a.go.ride===1 &&
+      /Later/.test(a.later.text) && a.later.cloud===1,
+      a ? a.go.text+'  /  '+a.later.text : 'no card');
+    chk('the pill carries the ride this kid is actually flying',
+      a.go.rideBuild === wp.SKY.ride.build, a.go.rideBuild);
+    chk('the reward is on the card, and the sticker shows as still-to-win',
+      a.reward.coins===1 && /\+15/.test(a.reward.label) && /Post Pilot/.test(a.reward.label) &&
+      a.reward.stickerEarned===false, a.reward.label);
+    chk('Hear it sits ON the picture, where a non-reader will find it',
+      a.hearOnPicture===true);
+    chk('the grown-up words start folded away, and the i opens them',
+      a.wordsOpen===false && wp.SKY.tapInfo()===true && wp.SKY.tapInfo()===false);
     // THE POINT OF THE WHOLE BLOCK: the strip is COUNTED off the live DOM and
     // has to match the recipe's own numbers, not a number typed into a drawing.
     const recipe = wp.SKY.missions().filter(m=>m.id==='mail-run')[0];
     const strip = wp.SKY.offerStrip();
-    chk('the picture strip is generated from the recipe: one cargo, one icon per target',
+    chk('the picture is generated from the recipe: one start point, one stop per target',
       strip.cargo===1 && strip.targets===recipe.targets.length && strip.arrows===1,
-      strip.cargo+' cargo + '+strip.targets+' targets (recipe says '+recipe.targets.length+')');
-    chk('the tick really is the yes: it starts the job the kid was shown',
+      strip.targets+' stops drawn (recipe says '+recipe.targets.length+')');
+    chk('the GO pill really is the yes: it starts the job the kid was shown',
       wp.SKY.acceptOffer()===true && wp.SKY.mode()==='job' && wp.SKY.job().id==='mail-run');
     // ---- progress as objects, live, as the deliveries actually happen ----
     const p0 = wp.SKY.progressStrip();
@@ -857,7 +896,7 @@ if (!JSDOM) {
     const pt = lp.targets[0]; S.pos.x=pt.x; S.pos.z=pt.z+70; S.pos.y=30; S.yaw=0;
     for (let k=0;k<900;k++){ wl.SKY.tick(1/30); if (wl.SKY.offer().up) break; }
     const st = wl.SKY.offerStrip();
-    chk('a job with NOTHING to carry draws you as the thing that travels, and all four lanterns',
+    chk('a job with NOTHING to carry draws its first stop as the start, and all four lanterns',
       wl.SKY.offer().id==='lantern-lighter' && st.cargo===1 && st.targets===lp.targets.length,
       st.cargo+' + '+st.targets+' (recipe says '+lp.targets.length+' targets, capacity '+lp.capacity+')');
     wl.close();
