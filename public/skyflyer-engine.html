@@ -507,6 +507,60 @@ var groundGeo=new THREE.PlaneGeometry(GROUND_SIZE,GROUND_SIZE,GROUND_SEG,GROUND_
 groundGeo.rotateX(-Math.PI/2);
 var SEA=(world.terrain==="islands");
 
+// AR1e — GRAIN ON THE GROUND.
+// Kenney's models are textured and the terrain was one flat colour, so the land
+// read as plastic beside them. These paint grain in code (nothing to download).
+// WHITE base with darker marks only: a multiply map can never brighten, so the
+// palette still owns the colour and this only adds the tooth.
+function grainTexture(kind){
+  try{
+    var c=document.createElement("canvas"); c.width=c.height=256;
+    var x=c.getContext("2d");
+    x.fillStyle="#ffffff"; x.fillRect(0,0,256,256);
+    function seeded(n){ var v=Math.sin(n*127.1)*43758.5453; return v-Math.floor(v); }
+    if(kind==="sand"){
+      // soft wind ripples plus a scatter of grains
+      x.strokeStyle="rgba(118,94,50,0.20)"; x.lineWidth=7;
+      for(var i=0;i<14;i++){
+        x.beginPath();
+        for(var xx=0;xx<=256;xx+=14)
+          x.lineTo(xx, i*18+Math.sin(xx*0.03+i)*7+Math.cos(xx*0.011+i*2)*5);
+        x.stroke();
+      }
+      for(var g=0;g<900;g++){
+        var a1=seeded(g+1)*256, b1=seeded(g+99)*256, r1=0.7+seeded(g+7)*1.5;
+        x.fillStyle="rgba(118,92,46,"+(0.13+seeded(g+3)*0.20)+")";
+        x.beginPath(); x.arc(a1,b1,r1,0,6.283); x.fill();
+      }
+    } else {
+      // clumpy mottle, the way grass reads from the air
+      for(var k=0;k<260;k++){
+        var a2=seeded(k+11)*256, b2=seeded(k+77)*256, r2=4+seeded(k+5)*12;
+        x.fillStyle="rgba(34,74,24,"+(0.12+seeded(k+13)*0.19)+")";
+        x.beginPath(); x.arc(a2,b2,r2,0,6.283); x.fill();
+      }
+      for(var d=0;d<500;d++){
+        var a3=seeded(d+211)*256, b3=seeded(d+307)*256;
+        x.fillStyle="rgba(26,64,20,"+(0.13+seeded(d+17)*0.20)+")";
+        x.fillRect(a3,b3,1.6,3.2);
+      }
+    }
+    var t=new THREE.CanvasTexture(c);
+    t.wrapS=t.wrapT=THREE.RepeatWrapping;
+    return t;
+  }catch(e){ return null; }
+}
+if(SEA){
+  var sandTex=grainTexture("sand"), grassTex=grainTexture("grass");
+  if(sandTex){ M.rock.map=sandTex; M.rock2.map=sandTex; }
+  if(grassTex){ M.cap.map=grassTex; M.cap2.map=grassTex; }
+  // Flat shading is what made the land read as folded paper next to models that
+  // are shaded smoothly. Islands get real shading; the other two worlds keep
+  // their faceted look, which suits rock and ice.
+  [M.rock,M.rock2,M.cap,M.cap2].forEach(function(m){
+    m.flatShading=false; m.needsUpdate=true; });
+}
+
 // AR1b — WATER THAT LOOKS LIKE WATER.
 // A flat colour reads as a painted floor from the air. This paints a small
 // ripple sheet IN CODE (nothing to download, no cost, works offline), tiles it
@@ -777,12 +831,121 @@ rideAnim = (ride.build==="copter") ? buildCopter()
 scene.add(plane);
 
 // ---------- landing pads (this world's, fixed so the arrow can point at them) ----------
+// The island-shape toolkit lives up here because the LANDING PADS are built
+// from it too - a pad sits on a real sand island, not a cylinder.
+// AR1b — AN ISLAND IS NOT A PYRAMID.
+// The old island was a cone with a green cone on top: a shape no beach has ever
+// had. This builds a proper one — a rounded sand hill with a wobbly coastline
+// that carries on DOWN past y=0, so the sea plane cuts its own waterline. That
+// is why every island now has a different, believable beach without a single
+// extra polygon spent on drawing one.
+//
+// Unit shape: radius ~1, height 1 at the peak, -0.06 at the rim. Callers scale
+// it by (rad, hh, rad), so the silhouette contract (hitR/hitH) is untouched.
+function makeIslandGeo(seed){
+  // AR1e: more rings and segments. The old 8x18 read as a polygon lump from the
+  // cockpit; this is still cheap (one or two draw calls an island) but it has a
+  // coastline instead of a silhouette.
+  var RINGS=11, SEGS=26, pos=[], idx=[], uvs=[0.5,0.5];
+  var wob1=0.20+((seed*37)%7)/60, wob2=0.10+((seed*53)%5)/70;
+  var ph1=(seed%13)*0.48, ph2=(seed%7)*0.9;
+  pos.push(0,1,0);                                   // the peak
+  for(var ri=1;ri<=RINGS;ri++){
+    var t=ri/RINGS;
+    // The dome is only the top two thirds of the shape. Past that the sand keeps
+    // going DOWN and OUT into a shelf, so an island is a hill standing in the
+    // sea rather than a lump resting on top of it. With the water half see
+    // through, that shelf is the entire reason the shallows read as shallow.
+    var prof=Math.pow(Math.cos(Math.min(t/0.68,1)*Math.PI/2),1.55);
+    for(var si=0;si<SEGS;si++){
+      var a=si/SEGS*Math.PI*2;
+      var wob=1+wob1*Math.sin(a*3+ph1)+wob2*Math.sin(a*5-ph2);
+      var rr=t*wob*1.55;
+      var yy=prof*(0.92+0.16*Math.sin(a*4+ph1))-0.05-0.55*t*t*t;
+      var px=Math.cos(a)*rr, pz=Math.sin(a)*rr;
+      pos.push(px, yy, pz);
+      uvs.push(0.5+px*3.4, 0.5+pz*3.4);   // top-down, so sand grain lies flat
+    }
+  }
+  var GREEN_RINGS=3;                 // where the grass stops and the dry sand starts
+  var WET_RINGS=5;                   // and where the sand starts getting wet
+  for(var k=0;k<SEGS;k++) idx.push(0, 1+k, 1+(k+1)%SEGS);
+  for(var r2=1;r2<RINGS;r2++){
+    var b0=1+(r2-1)*SEGS, b1=1+r2*SEGS;
+    for(var q=0;q<SEGS;q++){
+      var n=(q+1)%SEGS;
+      idx.push(b0+q,b1+q,b1+n);
+      idx.push(b0+q,b1+n,b0+n);
+    }
+  }
+  var g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute("uv",new THREE.Float32BufferAttribute(uvs,2));
+  g.setIndex(idx); g.computeVertexNormals();
+  // THREE bands on ONE continuous surface: grass on top, dry sand, then WET SAND
+  // at the waterline. That darker line where the sea has been is most of what
+  // makes a beach look like a beach. No extra meshes, nothing to z-fight, and
+  // every band is still a palette colour the manifest owns.
+  function ringAt(R){ return R<=0?0:(SEGS*3+(R-1)*SEGS*6); }
+  var gEnd=ringAt(GREEN_RINGS), wStart=ringAt(WET_RINGS);
+  g.addGroup(0,gEnd,0);                        // grass
+  g.addGroup(gEnd,wStart-gEnd,1);              // dry sand
+  g.addGroup(wStart,idx.length-wStart,2);      // wet sand, and the shelf below
+  return g;
+}
+// Four shapes, reused everywhere. At flight height four coastlines read as
+// "all different" and it costs four geometries instead of fifty.
+var ISLE_GEO=[makeIslandGeo(1),makeIslandGeo(4),makeIslandGeo(9),makeIslandGeo(16)];
+// The shallow water around an island, painted in code as one soft gradient:
+// white foam at the sand, turquoise going out, fading to nothing. A hard-edged
+// ring gives away that it is a disc lying on the sea; a fade does not.
+function makeShallowTexture(){
+  var c=document.createElement("canvas"); c.width=c.height=128;
+  var x=c.getContext("2d");
+  var g=x.createRadialGradient(64,64,2,64,64,64);
+  // Tuned DOWN hard: at full strength this washed a white blob across the
+  // island it was supposed to sit around. A lagoon is a tint on the water, not
+  // a light source. The middle is under the island anyway; only the outer half
+  // is ever seen.
+  g.addColorStop(0.00,"rgba(214,250,252,0.50)");
+  g.addColorStop(0.42,"rgba(186,244,250,0.40)");
+  g.addColorStop(0.60,"rgba(140,230,244,0.24)");
+  g.addColorStop(0.80,"rgba(120,222,240,0.09)");
+  g.addColorStop(1.00,"rgba(120,222,240,0)");
+  x.fillStyle=g; x.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+var haloGeo=new THREE.PlaneGeometry(1,1); haloGeo.rotateX(-Math.PI/2);
+// How high the sand is at a given distance from the middle, as a fraction of
+// the island's height. Anything standing on an island asks this, so a palm or a
+// hut sits ON the sand instead of hovering over it.
+function isleY(t){
+  if(t<0) t=0; if(t>1) t=1;
+  return Math.pow(Math.cos(Math.min(t/0.68,1)*Math.PI/2),1.55)-0.05-0.55*t*t*t;
+}
+// distance from the middle -> height, in world units
+function isleSurf(dist,rad,hh){ return isleY(dist/(rad*1.55))*hh; }
+var M_HALO=(function(){
+  try{ return new THREE.MeshBasicMaterial({map:makeShallowTexture(),
+    transparent:true,depthWrite:false,fog:true}); }
+  catch(e){ return new THREE.MeshBasicMaterial({color:0x8FE6F0,transparent:true,
+    opacity:0.3,depthWrite:false}); }
+})();
+
 var PAD_R=16, PAD_TOP=10;
 var PADS=world.pads.map(function(p){ return {x:p.x,z:p.z}; });
-PADS.forEach(function(pad){
+PADS.forEach(function(pad,pi){
   var g=new THREE.Group();
-  var base=new THREE.Mesh(new THREE.CylinderGeometry(24,34,14,10),M.rock);
-  base.position.y=3;g.add(base);
+  // AR1e: the pad used to sit on a ten-sided cylinder, which from the cockpit is
+  // a faceted tin lid. It gets a real sand island now, the same shape every other
+  // island in the world is built from, kept just under the pad top so the deck
+  // and its orange ring are never buried.
+  var baseGeo=(typeof ISLE_GEO!=="undefined"&&ISLE_GEO[pi%ISLE_GEO.length])||null;
+  var base=baseGeo?new THREE.Mesh(baseGeo,[M.rock,M.rock,M.rock2])
+                  :new THREE.Mesh(new THREE.CylinderGeometry(24,34,14,10),M.rock);
+  if(baseGeo){ base.scale.set(38,9,38); base.position.y=0; }
+  else base.position.y=3;
+  g.add(base);
   var top=new THREE.Mesh(new THREE.CylinderGeometry(PAD_R,PAD_R,1.6,20),M.padTop);
   top.position.y=PAD_TOP;g.add(top);
   var ring=new THREE.Mesh(new THREE.TorusGeometry(PAD_R-3.4,0.7,8,26),M.padRing);
@@ -929,6 +1092,19 @@ var KIT_FILES={
   flowerY:"nature/flower_yellowA.glb",
   flowerR:"nature/flower_redA.glb",
   foliage:"pirate/patch-sand-foliage.glb",
+  // --- QUATERNIUS (CC0), already in the repo from an earlier session and
+  //     sitting unused. Softer and rounder than Kenney's flat-shaded plants, so
+  //     they carry the undergrowth while Kenney carries the built things. Note
+  //     these are .gltf with side-car .bin and shared textures, not .glb.
+  qBush:"../nature/Bush_Common.gltf",
+  qBushFlower:"../nature/Bush_Common_Flowers.gltf",
+  qFern:"../nature/Fern_1.gltf",
+  qFlowerA:"../nature/Flower_3_Group.gltf",
+  qFlowerB:"../nature/Flower_4_Group.gltf",
+  qGrass:"../nature/Grass_Common_Tall.gltf",
+  qShroom:"../nature/Mushroom_Common.gltf",
+  qRockA:"../nature/Rock_Medium_1.gltf",
+  qRockB:"../nature/Rock_Medium_2.gltf",
   // --- rock. these are the ONLY models tinted to the world palette ---
   rockA:"nature/rock_largeA.glb",
   rockB:"nature/rock_largeB.glb",
@@ -950,7 +1126,7 @@ var KIT_FILES={
 // A model with no texture carries its OWN material colours — Kenney's palms are
 // green and its flowers are red for a reason. Only ROCK is repainted, so the
 // world palette still reaches the stone without bleaching the plants.
-var KIT_TINT={rockA:1,rockB:1,rockC:1,stack:1};
+var KIT_TINT={rockA:1,rockB:1,rockC:1,stack:1,qRockA:1,qRockB:1};
 var KIT={}, KIT_ON=false, KIT_STARTED=false, floaters=[];
 
 // A Kenney model arrives as a little scene of a dozen small meshes. On a phone
@@ -1084,7 +1260,8 @@ var CAMPS=[
   { name:"castaway",homes:["tent","tentB"],        props:["box","crate","fire","logs","shovel","barrel"] },
   { name:"digsite", homes:["hutOpen","tentB"],     props:["hole","shovel","chest","crate","box","sign"] },
   { name:"lookout", homes:["hut","tent"],          props:["mast","cannon","flagP","barrel","crateB","fenceB"] },
-  { name:"idols",   homes:["hutOpen","hut"],       props:["idol","obelisk","fireC","fireB","logs","bush"] }
+  { name:"idols",   homes:["hutOpen","hut"],       props:["idol","obelisk","fireC","fireB","logs","qBush"] },
+  { name:"overgrown",homes:["hutOpen","tentB"],     props:["qFern","qBushFlower","qShroom","logs","qRockA","sign"] }
 ];
 function pick(r,list){ return list[(r()*list.length)|0]; }
 
@@ -1115,16 +1292,18 @@ function dressIsle(isle){
   // --- greenery, scaled to how much island there is to grow on ---
   var green=1+((r()*(hh>19?3.4:1.8))|0);
   for(i=0;i<green;i++){
-    var gname=pick(r,["grass","grassB","grassC","bush","flowerY","flowerR","foliage"]);
-    var isFlower=(gname==="flowerY"||gname==="flowerR");
-    var gr=isFlower?inst(gname,1.6+r()*1.2):inst(gname,null,2.4+r()*3);
+    var gname=pick(r,["grass","grassB","grassC","bush","flowerY","flowerR","foliage",
+                      "qBush","qBushFlower","qFern","qFlowerA","qFlowerB","qGrass","qShroom"]);
+    var isFlower=/^(flowerY|flowerR|qFlowerA|qFlowerB|qShroom)$/.test(gname);
+    var gr=isFlower?inst(gname,1.6+r()*1.4):inst(gname,null,2.4+r()*3);
     put(gr, rad*r()*0.55, r()*6.28, 0.15);
   }
 
   // --- beach rock ---
   var rocks=1+((r()*2.4)|0);
   for(i=0;i<rocks;i++){
-    var rk=r()>0.5?inst("stack",2.2+r()*2.8):inst(pick(r,["rockA","rockB","rockC"]),null,2.4+r()*2.6);
+    var rk=r()>0.5?inst("stack",2.2+r()*2.8)
+                  :inst(pick(r,["rockA","rockB","rockC","qRockA","qRockB"]),null,2.4+r()*2.6);
     put(rk, rad*(0.62+r()*0.3), r()*Math.PI*2, 0.25);
   }
 
@@ -1142,7 +1321,7 @@ function dressIsle(isle){
     for(i=0;i<props;i++){
       var pn=pick(r,camp.props);
       var tall=(pn==="mast"||pn==="idol"||pn==="obelisk"||pn==="sign"||pn==="flagP");
-      var wide=(pn==="fence"||pn==="fenceB"||pn==="hole"||pn==="logs"||pn==="fire"||pn==="fireB"||pn==="fireC");
+      var wide=/^(fence|fenceB|hole|logs|fire|fireB|fireC|qFern|qBushFlower|qBush|qRockA)$/.test(pn);
       var pr=tall?inst(pn,4+r()*3.5)
          : wide?inst(pn,null,3.4+r()*2.6)
          :      inst(pn,1.7+r()*1.3);
@@ -1238,94 +1417,6 @@ var pineGeo=new THREE.ConeGeometry(1.5,3.4,7);
 var rockGeo=new THREE.IcosahedronGeometry(1,0);
 var skirtGeo=new THREE.CylinderGeometry(1,1.12,1.2,10);
 
-// AR1b — AN ISLAND IS NOT A PYRAMID.
-// The old island was a cone with a green cone on top: a shape no beach has ever
-// had. This builds a proper one — a rounded sand hill with a wobbly coastline
-// that carries on DOWN past y=0, so the sea plane cuts its own waterline. That
-// is why every island now has a different, believable beach without a single
-// extra polygon spent on drawing one.
-//
-// Unit shape: radius ~1, height 1 at the peak, -0.06 at the rim. Callers scale
-// it by (rad, hh, rad), so the silhouette contract (hitR/hitH) is untouched.
-function makeIslandGeo(seed){
-  var RINGS=8, SEGS=18, pos=[], idx=[];
-  var wob1=0.20+((seed*37)%7)/60, wob2=0.10+((seed*53)%5)/70;
-  var ph1=(seed%13)*0.48, ph2=(seed%7)*0.9;
-  pos.push(0,1,0);                                   // the peak
-  for(var ri=1;ri<=RINGS;ri++){
-    var t=ri/RINGS;
-    // The dome is only the top two thirds of the shape. Past that the sand keeps
-    // going DOWN and OUT into a shelf, so an island is a hill standing in the
-    // sea rather than a lump resting on top of it. With the water half see
-    // through, that shelf is the entire reason the shallows read as shallow.
-    var prof=Math.pow(Math.cos(Math.min(t/0.68,1)*Math.PI/2),1.55);
-    for(var si=0;si<SEGS;si++){
-      var a=si/SEGS*Math.PI*2;
-      var wob=1+wob1*Math.sin(a*3+ph1)+wob2*Math.sin(a*5-ph2);
-      var rr=t*wob*1.55;
-      var yy=prof*(0.92+0.16*Math.sin(a*4+ph1))-0.05-0.55*t*t*t;
-      pos.push(Math.cos(a)*rr, yy, Math.sin(a)*rr);
-    }
-  }
-  var GREEN_RINGS=2;                 // where the grass stops and the sand starts
-  for(var k=0;k<SEGS;k++) idx.push(0, 1+k, 1+(k+1)%SEGS);
-  for(var r2=1;r2<RINGS;r2++){
-    var b0=1+(r2-1)*SEGS, b1=1+r2*SEGS;
-    for(var q=0;q<SEGS;q++){
-      var n=(q+1)%SEGS;
-      idx.push(b0+q,b1+q,b1+n);
-      idx.push(b0+q,b1+n,b0+n);
-    }
-  }
-  var g=new THREE.BufferGeometry();
-  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
-  g.setIndex(idx); g.computeVertexNormals();
-  // Two groups on ONE continuous surface: the cap up top, the sand below. No
-  // second mesh, so there is nothing to overlap, nothing to z-fight and nothing
-  // to fit by hand — and both halves are still driven by the world palette.
-  var split=SEGS*3+(GREEN_RINGS-1)*SEGS*6;
-  g.addGroup(0,split,0);
-  g.addGroup(split,idx.length-split,1);
-  return g;
-}
-// Four shapes, reused everywhere. At flight height four coastlines read as
-// "all different" and it costs four geometries instead of fifty.
-var ISLE_GEO=[makeIslandGeo(1),makeIslandGeo(4),makeIslandGeo(9),makeIslandGeo(16)];
-// The shallow water around an island, painted in code as one soft gradient:
-// white foam at the sand, turquoise going out, fading to nothing. A hard-edged
-// ring gives away that it is a disc lying on the sea; a fade does not.
-function makeShallowTexture(){
-  var c=document.createElement("canvas"); c.width=c.height=128;
-  var x=c.getContext("2d");
-  var g=x.createRadialGradient(64,64,2,64,64,64);
-  // Tuned DOWN hard: at full strength this washed a white blob across the
-  // island it was supposed to sit around. A lagoon is a tint on the water, not
-  // a light source. The middle is under the island anyway; only the outer half
-  // is ever seen.
-  g.addColorStop(0.00,"rgba(214,250,252,0.50)");
-  g.addColorStop(0.42,"rgba(186,244,250,0.40)");
-  g.addColorStop(0.60,"rgba(140,230,244,0.24)");
-  g.addColorStop(0.80,"rgba(120,222,240,0.09)");
-  g.addColorStop(1.00,"rgba(120,222,240,0)");
-  x.fillStyle=g; x.fillRect(0,0,128,128);
-  return new THREE.CanvasTexture(c);
-}
-var haloGeo=new THREE.PlaneGeometry(1,1); haloGeo.rotateX(-Math.PI/2);
-// How high the sand is at a given distance from the middle, as a fraction of
-// the island's height. Anything standing on an island asks this, so a palm or a
-// hut sits ON the sand instead of hovering over it.
-function isleY(t){
-  if(t<0) t=0; if(t>1) t=1;
-  return Math.pow(Math.cos(Math.min(t/0.68,1)*Math.PI/2),1.55)-0.05-0.55*t*t*t;
-}
-// distance from the middle -> height, in world units
-function isleSurf(dist,rad,hh){ return isleY(dist/(rad*1.55))*hh; }
-var M_HALO=(function(){
-  try{ return new THREE.MeshBasicMaterial({map:makeShallowTexture(),
-    transparent:true,depthWrite:false,fog:true}); }
-  catch(e){ return new THREE.MeshBasicMaterial({color:0x8FE6F0,transparent:true,
-    opacity:0.3,depthWrite:false}); }
-})();
 // The Kenney coin is a flat token and it read as one. A coin should be the most
 // wanted thing on screen, so this one is turned on a lathe: flat faces, a
 // rounded rim, and enough segments that the highlight slides round the edge as
@@ -1358,7 +1449,9 @@ function makeCoinGeo(){
 var coinGeo=makeCoinGeo();
 // bright gold, lit from inside so it still reads as gold in shadow and against
 // a bright sea, with a hot narrow specular for the glint
-var M_COIN=new THREE.MeshPhongMaterial({color:0xFFD54A,emissive:0x6E4A00,
+// Emissive at 0x6E4A00 lifted the whole face and flattened the shading it was
+// meant to show off. Halved, with the specular doing the work instead.
+var M_COIN=new THREE.MeshPhongMaterial({color:0xFFD54A,emissive:0x3A2700,
   specular:0xFFFFF0,shininess:220,vertexColors:true});
 
 function buildPalm(r){
@@ -1437,7 +1530,7 @@ function buildFeature(r,big){
     // Only an island with some height to it grows anything; a low sandbar is
     // bare sand top to bottom, which is what a sandbar looks like.
     var topMat=(hh>19)?(r()>0.5?M.cap:M.cap2):M.rock;
-    var hill=new THREE.Mesh(shape,[topMat,M.rock]);
+    var hill=new THREE.Mesh(shape,[topMat,M.rock,M.rock2]);
     hill.scale.set(rad,hh,rad);hill.position.y=0;g.add(hill);
     // The grass crown is the SAME shape shrunk, so its rim lands exactly on the
     // sand instead of hovering. Small islands stay bare sand, which is what a

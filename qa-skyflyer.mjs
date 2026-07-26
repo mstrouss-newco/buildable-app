@@ -238,7 +238,19 @@ chk('the loadout screen takes its title from the manifest (so it can be a Hangar
 chk('no emojis in the shell hangar previews', !emoji.test(jsx.slice(jsx.indexOf('const SLOT_PREVIEWS'), jsx.indexOf('function SlotPreview'))));
 chk('journey progress reads the default bk_{game}_prefs shape', /bk_"\s*\+\s*id\s*\+\s*"_prefs/.test(jsx));
 chk('the shell hosts the Sky Flyer learning gate (FL4)',
-  /gameType="skyflyer"/.test(jsx) && /skyflyer-engine\.html\?v=fl5b/.test(jsx));
+  /gameType="skyflyer"/.test(jsx) && /skyflyer-engine\.html\?v=\w+/.test(jsx),
+  (jsx.match(/skyflyer-engine\.html\?v=(\w+)/)||[])[1]);
+// AR1e: Mike reported a bug that was already fixed - he was being served a
+// CACHED engine. The bust had not moved since FL5 and the route sent no
+// cache-control at all. Both halves are checked now.
+chk('every link to the engine carries the SAME cache-bust (one stale link is enough)',
+  (()=>{ const v=[...jsx.matchAll(/skyflyer-engine\.html\?v=(\w+)/g)].map(m=>m[1]);
+         return v.length>0 && v.every(x=>x===v[0]); })(),
+  [...new Set([...jsx.matchAll(/skyflyer-engine\.html\?v=(\w+)/g)].map(m=>m[1]))].join(' '));
+chk('the engine route tells the browser to revalidate, so it can never go stale',
+  (()=>{ const r=JSON.parse(read('vercel.json')).routes
+           .find(r=>r.src==='/skyflyer-engine.html');
+         return !!(r&&r.headers&&/no-cache/.test(r.headers['cache-control']||'')); })());
 const vercel = JSON.parse(read('vercel.json'));
 const srcs = vercel.routes.map(r=>r.src);
 const catchAll = srcs.indexOf('/(.*)');
@@ -315,9 +327,24 @@ chk('islands are WIDER than they are tall (a spire is not an island)',
 chk('the sand carries on below the waterline into a shelf (the sea cuts its own beach)',
   /-0\.55\*t\*t\*t/.test(html) && /function isleY\(/.test(html) &&
   /Math\.min\(t\/0\.68,1\)/.test(html));
-chk('the island is ONE surface, sand below and grass above (no second dome to terrace)',
-  /GREEN_RINGS/.test(html) && /g\.addGroup\(0,split,0\)/.test(html) &&
-  /new THREE\.Mesh\(shape,\[topMat,M\.rock\]\)/.test(html));
+chk('the island is ONE surface in three bands: grass, dry sand, WET sand',
+  /GREEN_RINGS/.test(html) && /WET_RINGS/.test(html) &&
+  /g\.addGroup\(0,gEnd,0\)/.test(html) &&
+  /new THREE\.Mesh\(shape,\[topMat,M\.rock,M\.rock2\]\)/.test(html));
+chk('the land is shaded, not faceted, and carries grain like the models do',
+  /function grainTexture\(/.test(html) && /M\.rock\.map=sandTex/.test(html) &&
+  /M\.cap\.map=grassTex/.test(html) && /m\.flatShading=false/.test(html));
+chk('the grain sheet is WHITE too, so the palette still owns the land colour',
+  (html.match(/x\.fillStyle="#ffffff"; x\.fillRect\(0,0,256,256\)/g)||[]).length >= 2);
+chk('the island has a coastline, not a silhouette (enough segments to read close up)',
+  /var RINGS=11, SEGS=26/.test(html));
+chk('the landing pad sits on a real island, not a ten-sided cylinder',
+  /baseGeo\?new THREE\.Mesh\(baseGeo,\[M\.rock,M\.rock,M\.rock2\]\)/.test(html));
+chk('the Quaternius models already in the repo are actually USED, not left on a shelf',
+  (()=>{ const q=[...html.matchAll(/^\s*(q\w+):"\.\.\/nature\/([\w\-]+\.gltf)"/gm)];
+         return q.length>=6 &&
+           q.every(m=>fs.existsSync(dir+'/public/models/nature/'+m[2])) &&
+           q.some(m=>(html.split('function dressIsle(')[1]||'').indexOf('"'+m[1]+'"')>=0); })());
 chk('a low sandbar stays bare sand, only a real island grows anything',
   /var topMat=\(hh>\d+\)\?\(r\(\)>0\.5\?M\.cap:M\.cap2\):M\.rock/.test(html));
 chk('the water sits over a real seabed, and hints at the shelf without becoming glass',
@@ -377,7 +404,7 @@ chk('a coin is turned with a raised middle and a rim, not a flat token',
 chk('the coin is two-tone for FREE (vertex colour, not a second object)',
   /g\.setAttribute\("color"/.test(html) && /vertexColors:true/.test(html));
 chk('gold is lit from inside and takes a hot highlight, so it reads as metal',
-  /emissive:0x6E4A00/.test(html) && /shininess:220/.test(html));
+  /emissive:0x3A2700/.test(html) && /shininess:220/.test(html));
 chk('coins shimmer along a trail instead of flashing in lockstep',
   /ph:\(Math\.abs\(x\*0\.7\+z\*1\.3\)%6\.283\)/.test(html) &&
   /rotation\.y=spin\+cc\.ph/.test(html));
