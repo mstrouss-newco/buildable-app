@@ -13,7 +13,7 @@
   "sources": [
     "Central Japan Railway (jr-central.co.jp)",
     "Central Japan Railway (scmaglev.jr-central-global.com)",
-    "Association of American Railroads (aar.org)",
+    "U.S. Government Accountability Office (gao.gov)",
     "Federal Railroad Administration (railroads.dot.gov)",
     "London Transport Museum (ltmuseum.co.uk)",
     "Scientific American (scientificamerican.com)"
@@ -27,50 +27,81 @@
     {
       "id": "bullet-trains",
       "title": "Zoom! Bullet Trains",
+      "layout": "speed",
       "art": "/explore/topic-photos/trains/trains-1.webp",
       "artAlt": "A sleek white bullet train races along its track through bright green countryside",
+      "stat": { "value": "180", "unit": "miles per hour" },
       "factAudio": "trains-bullet-trains",
       "quiz": ["trains-bullet-trains"],
       "facts": [
         {
-          "text": "Japan's first bullet train line, the Tokaido Shinkansen, opened way back in 1964, and its trains now zip along at up to 285 kilometres per hour. That is so fast the fields and towns outside your window would whoosh past in a green blur.",
+          "text": "Japan's first bullet train line, the Tokaido Shinkansen, opened way back in 1964, and its trains now zip along at up to about 180 miles per hour. That is so fast the fields and towns outside your window would whoosh past in a green blur.",
           "source": "Central Japan Railway (jr-central.co.jp)"
         },
         {
-          "text": "Japan is building an even faster train called a maglev, and it does not roll on wheels at all. Powerful magnets lift the whole train about 10 centimetres into the air, so it floats above its track while flying along at about 500 kilometres per hour.",
-          "source": "Central Japan Railway (scmaglev.jr-central-global.com)"
+          "text": "Japan is building an even faster train called a maglev, and it does not roll on wheels at all. Powerful magnets lift the whole train about 4 inches into the air, so it floats above its track while flying along at about 310 miles per hour.",
+          "source": "Central Japan Railway (scmaglev.jr-central-global.com)",
+          "caption": "The long nose is shaped to slice through the air."
         },
         {
           "text": "Bullet trains are famous for almost never being late. On Japan's busiest bullet train line, the average delay for each train is less than two minutes, which is hardly enough time to find your seat and unpack a snack.",
-          "source": "Central Japan Railway (jr-central.co.jp)"
+          "source": "Central Japan Railway (jr-central.co.jp)",
+          "caption": "The doors stop right on the marks painted on the platform."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "title": "How fast is that, really?",
+        "rows": [
+          { "icon": "kid", "label": "A kid pedaling hard on a bike", "value": 10, "display": "about 10 mph" },
+          { "icon": "car", "label": "A car on the highway", "value": 65, "display": "about 65 mph" },
+          { "icon": "bullet", "label": "Tokaido Shinkansen bullet train", "value": 180, "display": "about 180 mph" },
+          { "icon": "maglev", "label": "Japan's maglev, still being built", "value": 310, "display": "about 310 mph" }
+        ],
+        "caption": "The two train speeds come from the railway that runs them. The bike and the car are ordinary everyday speeds, put here so you have something to measure against.",
+        "source": "Central Japan Railway (jr-central.co.jp)"
+      }
     },
     {
       "id": "freight",
       "title": "The Mighty Freight Train",
+      "layout": "long",
       "art": "/explore/topic-photos/trains/trains-2.webp",
-      "artAlt": "A long freight train stacked with colourful cargo containers curves around a mountain track",
+      "artAlt": "A long freight train stacked with colorful cargo containers curves around a mountain track",
       "factAudio": "trains-freight",
       "quiz": ["trains-freight"],
       "facts": [
         {
-          "text": "Freight trains can be astonishingly long. In the United States, a typical big freight train measures more than one and a half kilometres from end to end, and a few giants stretch on for more than four kilometres.",
-          "source": "Association of American Railroads (aar.org)"
+          "text": "Freight trains can be astonishingly long. In the United States a typical big freight train stretches more than a mile from end to end, and the longest ones roll on for more than two and a half miles.",
+          "source": "U.S. Government Accountability Office (gao.gov)"
         },
         {
-          "text": "A modern freight train is like a giant chain of wagons, with about 73 cars on average and the biggest trains pulling 200 or more. If you stood by the track and counted the cars rolling past, you would be waving for a very long time.",
-          "source": "Federal Railroad Administration (railroads.dot.gov)"
+          "text": "A modern freight train is a giant chain of cars, about 73 of them on an average train, and some railroads run trains of 150 cars or more. If you stood by the track and counted the cars rolling past, you would be waving for a very long time.",
+          "source": "U.S. Government Accountability Office (gao.gov)",
+          "caption": "Every single box is somebody's stuff on its way somewhere."
         },
         {
-          "text": "Those colourful boxes are shipping containers, and freight trains carry almost everything inside them and their other special cars, from food and metals to car parts and toys. Some trains even have refrigerated cars that work like rolling fridges to keep food cold on the journey.",
-          "source": "Federal Railroad Administration (railroads.dot.gov)"
+          "text": "Those colorful boxes are shipping containers, and freight trains carry almost everything inside them and their other special cars, from food and metals to car parts and toys. Some trains even have refrigerated cars that work like rolling fridges to keep food cold on the journey.",
+          "source": "Federal Railroad Administration (railroads.dot.gov)",
+          "caption": "Refrigerated cars keep food cold the whole way."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "fields",
+        "title": "How long is a freight train?",
+        "rows": [
+          { "label": "A typical big freight train, about 1.4 miles", "count": 20, "display": "about 20 football fields" },
+          { "label": "The longest freight trains, about 2.7 miles", "count": 40, "display": "about 40 football fields" }
+        ],
+        "caption": "A football field is 120 yards long once you count both end zones, and that is 360 feet. Line up 40 of them and you have the longest freight trains running today.",
+        "source": "U.S. Government Accountability Office (gao.gov)"
+      }
     },
     {
       "id": "subway",
       "title": "Trains Below Your Feet",
+      "layout": "then-now",
+      "ghostYear": "1863",
       "art": "/explore/topic-photos/trains/trains-3.webp",
       "artAlt": "A bright subway train pulls into a clean underground station platform",
       "factAudio": "trains-subway",
@@ -81,18 +112,33 @@
           "source": "London Transport Museum (ltmuseum.co.uk)"
         },
         {
-          "text": "Builders made that first line by digging a huge trench along the street and then roofing it over again. Once the road went back on top, a whole railway was hiding right under everyone's feet.",
-          "source": "London Transport Museum (ltmuseum.co.uk)"
+          "text": "Those first underground trains were pulled by steam engines, so the tunnels and the stations filled up with smoke. Builders had made the line by digging a huge trench along the street and then roofing it over again, which hid a whole railway right under everyone's feet.",
+          "source": "London Transport Museum (ltmuseum.co.uk)",
+          "caption": "Steam, smoke and gas lamps."
         },
         {
-          "text": "The first underground trains were pulled by steam engines, so the tunnels and stations filled up with smoke and steam. Today's electric trains are far cleaner, which is why a modern subway platform can stay so bright and fresh.",
-          "source": "London Transport Museum (ltmuseum.co.uk)"
+          "text": "In 1890 London opened the world's first electric underground railway, and electric trains have run under cities ever since. They are far cleaner than steam engines, which is why a modern subway platform can stay so bright and fresh.",
+          "source": "London Transport Museum (ltmuseum.co.uk)",
+          "caption": "Electric trains, bright platforms, no smoke."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "timeline",
+        "tone": "blue",
+        "title": "Trains went underground, then went electric",
+        "stops": [
+          { "year": "1863", "label": "The first underground railway opens in London, pulled by steam", "icon": "train" },
+          { "year": "1890", "label": "The first electric underground railway opens in London", "icon": "subway" },
+          { "year": "Today", "label": "Electric trains run under cities all over the world", "icon": "subway" }
+        ],
+        "caption": "The first tunnels were full of steam. Twenty-seven years later the trains went electric and the smoke was gone.",
+        "source": "London Transport Museum (ltmuseum.co.uk)"
+      }
     },
     {
       "id": "wheels",
       "title": "Wheels That Steer Themselves",
+      "layout": "close-up",
       "art": "/explore/topic-photos/trains/trains-4.webp",
       "artAlt": "A close-up of a train's big metal wheels rolling along shiny steel rails",
       "factAudio": "trains-wheels",
@@ -103,18 +149,28 @@
           "source": "Scientific American (scientificamerican.com)"
         },
         {
-          "text": "The cone shape lets trains steer themselves around curves. On a bend, the outside wheel rolls on its wider part while the inside wheel rolls on its narrower part, so the outside wheel travels further even though both wheels spin at exactly the same speed.",
-          "source": "Scientific American (scientificamerican.com)"
+          "text": "The cone shape lets trains steer themselves around curves. On a bend, the outside wheel rolls on its wider part while the inside wheel rolls on its narrower part, so the outside wheel travels farther even though both wheels spin at exactly the same speed.",
+          "source": "Scientific American (scientificamerican.com)",
+          "caption": "The wide part and the narrow part of one wheel."
         },
         {
           "text": "Each wheel also has a raised rim called a flange on its inner edge, a bit like a safety lip that stops the train falling off the track. And if the wheels ever slip a little to one side, the cone shape gently nudges them back to the middle all by itself.",
-          "source": "Scientific American (scientificamerican.com)"
+          "source": "Scientific American (scientificamerican.com)",
+          "caption": "The flange is the lip on the inside edge."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "diagram",
+        "name": "cone-wheel",
+        "tone": "blue",
+        "title": "Why a cone keeps a train on its rails",
+        "caption": "On a bend the outside wheel rides its wide part and the inside wheel rides its narrow part, so the outside wheel travels farther without either wheel having to spin faster.",
+        "source": "Scientific American (scientificamerican.com)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Trains!",
-    "blurb": "What a ride, from floating bullet trains to wheels that steer themselves. Fold a little corner on your favourite page so you can race straight back to it next time."
+    "blurb": "What a ride, from floating bullet trains to wheels that steer themselves. Fold a little corner on your favorite page so you can race straight back to it next time."
   }
 }
