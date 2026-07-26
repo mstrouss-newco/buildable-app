@@ -424,6 +424,15 @@ function AR1P_loadPets(animated,done){
 // about 1.4x life size against the 1u ~ 0.9m ruler so they still read from the
 // air; a true-to-life crab at this camera is four pixels of nothing.
 var PET_SIZE={crab:1.6,parrot:1.9,monkey:2.9,fish:1.9,bee:1.3,pig:2.6,chick:1.5};
+function AR1P_ANYPETS(){ return AR1P_HAS("pets")||AR1P_HAS("petsAnim")||AR1P_HAS("pets2"); }
+// ROUND 2: the hand-built set has different species to the cube set — a
+// butterfly instead of a bee, a turtle instead of the farmyard. The MOTION
+// kinds do not change, so the placement code below never learns which set is on.
+function AR1P_mk(name,an){
+  if(!AR1P_HAS("pets2")) return AR1P_pet(name,an);
+  var map={bee:"butterfly",pig:"turtle",chick:"turtle"};
+  return AR1P_pet2(map[name]||name);
+}
 function AR1P_pet(name,animated){
   var proto=PETS[name]; if(!proto) return null;
   var c=proto.clone(true);
@@ -523,7 +532,25 @@ function AR1P_stepSmoke(dt){
 }
 
 // ---------------------------------------------------- the AR1P wiring itself
-var AR1P_GLOWTEX=null, AR1P_SMOKETEX=null;
+var AR1P_GLOWTEX=null, AR1P_SMOKETEX=null, AR1P_SHADTEX=null, AR1P_WAKETEX=null;
+function AR1P_wakeTex(){
+  var c=document.createElement("canvas"); c.width=c.height=64;
+  var x=c.getContext("2d");
+  // v runs from the transom (bottom) to the far end of the wake (top): bright
+  // and narrow at the boat, wide and gone behind it.
+  var g=x.createLinearGradient(0,64,0,0);
+  g.addColorStop(0,"rgba(255,255,255,0.95)");
+  g.addColorStop(0.35,"rgba(255,255,255,0.5)");
+  g.addColorStop(1,"rgba(255,255,255,0)");
+  x.fillStyle=g; x.fillRect(0,0,64,64);
+  // soften the two long edges so it is a spreading V, not a ruled triangle
+  var e=x.createLinearGradient(0,0,64,0);
+  e.addColorStop(0,"rgba(0,0,0,1)"); e.addColorStop(0.22,"rgba(0,0,0,0)");
+  e.addColorStop(0.78,"rgba(0,0,0,0)"); e.addColorStop(1,"rgba(0,0,0,1)");
+  x.globalCompositeOperation="destination-out"; x.fillStyle=e; x.fillRect(0,0,64,64);
+  x.globalCompositeOperation="source-over";
+  return new THREE.CanvasTexture(c);
+}
 function AR1P_softTex(a){
   var c=document.createElement("canvas"); c.width=c.height=64;
   var x=c.getContext("2d"), gr=x.createRadialGradient(32,32,0,32,32,32);
@@ -555,7 +582,7 @@ function AR1P_softTex(a){
     // ready, which can be BEFORE the pets have landed — and the second pass is
     // refused because the island is already marked dressed. So an island that
     // dressed early is remembered, and gets its animals when they arrive.
-    if((AR1P_HAS("pets")||AR1P_HAS("petsAnim"))&&!PET_ON) PET_PENDING.push(isle);
+    if(AR1P_ANYPETS()&&!PET_ON) PET_PENDING.push(isle);
   };
 })();
 function AR1P_dress(isle){
@@ -589,8 +616,26 @@ function AR1P_dress(isle){
   });
   if(AR1P_HAS("life")) for(i=0;i<palms.length;i++) SWAY.push(palms[i]);
 
-  if((AR1P_HAS("pets")||AR1P_HAS("petsAnim"))&&PET_ON) AR1P_dressPets(isle,plan,r,d,coast,top,ringAt,put);
+  if(AR1P_ANYPETS()&&PET_ON) AR1P_dressPets(isle,plan,r,d,coast,top,ringAt,put);
   if(AR1P_HAS("life")) AR1P_dressLife(isle,plan,r,d,ringAt,put);
+}
+// An island that dressed itself BEFORE the animals existed is remembered and
+// dressed here when they turn up. Both pet sets go through this one door.
+function AR1P_drainPet(isle){
+  var d=isle.userData.dress; if(!d||!d.plan) return;
+  var plan=d.plan, r=rng(d.seed+911), coast=plan.coast, top=plan.length-1;
+  function ringAt(ti,frac,ang){
+    var outer=outlineR(ang,plan[ti].r,plan[ti].ph);
+    var inner=(ti+1<plan.length)?outlineR(ang,plan[ti+1].r,plan[ti+1].ph):0;
+    return inner+(outer-inner)*(0.2+frac*0.58);
+  }
+  function put(o,dist,ang,sink){
+    if(!o) return null;
+    var x=Math.cos(ang)*dist, z=Math.sin(ang)*dist, y=landTop(plan,x,z);
+    if(y==null) return null;
+    o.position.set(x,y-(sink||0.02),z); o.rotation.y=r()*6.283; isle.add(o); return o;
+  }
+  try{ AR1P_dressPets(isle,plan,r,d,coast,top,ringAt,put); }catch(e){}
 }
 function AR1P_dressPets(isle,plan,r,d,coast,top,ringAt,put){
   var i, palms=[];
@@ -605,21 +650,21 @@ function AR1P_dressPets(isle,plan,r,d,coast,top,ringAt,put){
     // crabs down on the SAND (tier 0 is the beach), sidling along a short arc
     var nc=d.big?3:2;
     for(i=0;i<nc;i++){
-      var a=r()*6.283, c=AR1P_pet("crab",an);
+      var a=r()*6.283, c=AR1P_mk("crab",an);
       if(put(c,ringAt(0,0.15+r()*0.5,a),a,0)) PET_LIVE.push({o:c,kind:"crab",isle:isle,plan:plan,
         a:a,r0:c.position.x,ph:r()*6.283,base:c.position.y,ang:a,arc:0.16+r()*0.16,d0:Math.hypot(c.position.x,c.position.z)});
     }
     // parrots UP IN THE PALMS — perched on the real crown of a real palm
     for(i=0;i<Math.min(palms.length,d.big?3:1);i++){
       var P=palms[(r()*palms.length)|0]; if(!P) break;
-      var pr=AR1P_pet("parrot",an); if(!pr) break;
+      var pr=AR1P_mk("parrot",an); if(!pr) break;
       // down INTO the crown, not perched on top of the leaves like an ornament
       pr.position.set(P.x,P.top-1.35,P.z); pr.rotation.y=r()*6.283; isle.add(pr);
       PET_LIVE.push({o:pr,kind:"parrot",base:P.top-1.35,ph:r()*6.283});
     }
     // a monkey on the top ledge
     if(d.big){
-      var ma=r()*6.283, mk=AR1P_pet("monkey",an);
+      var ma=r()*6.283, mk=AR1P_mk("monkey",an);
       if(put(mk,ringAt(top,0.12,ma),ma,0)) PET_LIVE.push({o:mk,kind:"monkey",
         base:mk.position.y,ph:r()*6.283,ang:ma});
     }
@@ -627,7 +672,7 @@ function AR1P_dressPets(isle,plan,r,d,coast,top,ringAt,put){
     // it arcs through y=0 rather than sitting on it
     var nf=d.big?3:2;
     for(i=0;i<nf;i++){
-      var fa=r()*6.283, fd=coast*(1.10+r()*0.22), fs=AR1P_pet("fish",an);
+      var fa=r()*6.283, fd=coast*(1.10+r()*0.22), fs=AR1P_mk("fish",an);
       if(!fs) break;
       fs.position.set(Math.cos(fa)*fd,-3,Math.sin(fa)*fd); isle.add(fs);
       PET_LIVE.push({o:fs,kind:"fish",ph:r()*6.283,t:r()*4,x:fs.position.x,z:fs.position.z,head:fa});
@@ -636,15 +681,15 @@ function AR1P_dressPets(isle,plan,r,d,coast,top,ringAt,put){
     for(i=0;i<(d.big?3:1);i++){
       var ba=r()*6.283, bd=ringAt(Math.min(1,top),0.4+r()*0.3,ba), by=landTop(plan,Math.cos(ba)*bd,Math.sin(ba)*bd);
       if(by==null) continue;
-      var be=AR1P_pet("bee",an); if(!be) break;
+      var be=AR1P_mk("bee",an); if(!be) break;
       be.position.set(Math.cos(ba)*bd,by+1.6,Math.sin(ba)*bd); isle.add(be);
       PET_LIVE.push({o:be,kind:"bee",cx:Math.cos(ba)*bd,cz:Math.sin(ba)*bd,base:by+1.6,ph:r()*6.283});
     }
     // a pig and a chick in the camp
     if(d.big){
-      var ct=plan.length>1?1:0;
+      var ct=AR1P_HAS("pets2")?0:(plan.length>1?1:0);
       [["pig",0.35],["chick",0.55],["chick",0.62]].forEach(function(p){
-        var pa2=r()*6.283, o=AR1P_pet(p[0],an);
+        var pa2=r()*6.283, o=AR1P_mk(p[0],an);
         if(put(o,ringAt(ct,p[1],pa2),pa2,0))
           PET_LIVE.push({o:o,kind:p[0],base:o.position.y,ph:r()*6.283,ang:pa2,
             d0:Math.hypot(o.position.x,o.position.z),plan:plan,arc:0.10+r()*0.10});
@@ -678,6 +723,11 @@ function AR1P_travel(){
   for(var i=0;i<floaters.length;i++){
     var f=floaters[i], d=Math.hypot(f.position.x,f.position.z);
     if(d<8) continue;
+    // it has to be OVER WATER. A boat moored inside the beach ring would orbit
+    // across the sand and drag a wake over it.
+    var pp=f.parent&&f.parent.userData&&f.parent.userData.dress;
+    if(pp&&pp.plan&&landTop(pp.plan,f.position.x,f.position.z)!=null) continue;
+    if(pp&&pp.plan&&d<pp.plan.coast*1.25) continue;
     TRAVEL.push({o:f,r:d,a:Math.atan2(f.position.z,f.position.x),
       sp:(0.035+Math.random()*0.05)*(Math.random()<0.5?-1:1)});
   }
@@ -720,6 +770,7 @@ function AR1P_step(dt,t){
       o.rotation.y=-a1;
     }
   }
+  if(AR1P_HAS("life2")){ AR1P_stepShadows(dt,t); AR1P_stepWakes(); }
   if(!AR1P_HAS("life")) return;
   AR1P_stepGulls(dt,t); AR1P_stepSmoke(dt);
   // palms sway, and bend HARDER when the plane comes in low over them
@@ -745,7 +796,7 @@ function AR1P_step(dt,t){
   for(i=0;i<TRAVEL.length;i++){
     var T=TRAVEL[i]; T.a+=dt*T.sp*0.25;
     T.o.position.x=Math.cos(T.a)*T.r; T.o.position.z=Math.sin(T.a)*T.r;
-    T.o.rotation.y=-T.a+(T.sp>0?-1.57:1.57);
+    T.o.rotation.y=(T.sp>0)?-T.a:(-T.a+Math.PI);
   }
 }
 var AR1P_V=new THREE.Vector3();
@@ -763,32 +814,26 @@ var AR1P_V=new THREE.Vector3();
   var _loadKit=loadKit;
   loadKit=function(){
     _loadKit();
+    if(AR1P_HAS("pets2")){
+      // nothing to download: build them, then dress the islands that were
+      // already standing before we got here
+      AR1P_buildPets2();
+      for(var z=0;z<PET_PENDING.length;z++) AR1P_drainPet(PET_PENDING[z]);
+      PET_PENDING.length=0;
+      try{ redressWorld(); }catch(e){}
+    }
     if(AR1P_HAS("pets")||AR1P_HAS("petsAnim"))
       AR1P_loadPets(AR1P_HAS("petsAnim"),function(){
-        // drain the islands that dressed before the animals arrived
-        for(var q=0;q<PET_PENDING.length;q++){
-          var isle=PET_PENDING[q], dd=isle.userData.dress; if(!dd||!dd.plan) continue;
-          (function(isle,d){
-            var plan=d.plan, r=rng(d.seed+911), coast=plan.coast, top=plan.length-1;
-            function ringAt(ti,frac,ang){
-              var outer=outlineR(ang,plan[ti].r,plan[ti].ph);
-              var inner=(ti+1<plan.length)?outlineR(ang,plan[ti+1].r,plan[ti+1].ph):0;
-              return inner+(outer-inner)*(0.2+frac*0.58);
-            }
-            function put(o,dist,ang,sink){
-              if(!o) return null;
-              var x=Math.cos(ang)*dist, z=Math.sin(ang)*dist, y=landTop(plan,x,z);
-              if(y==null) return null;
-              o.position.set(x,y-(sink||0.02),z); o.rotation.y=r()*6.283; isle.add(o); return o;
-            }
-            try{ AR1P_dressPets(isle,plan,r,d,coast,top,ringAt,put); }catch(e){}
-          })(isle,dd);
-        }
+        for(var q=0;q<PET_PENDING.length;q++) AR1P_drainPet(PET_PENDING[q]);
         PET_PENDING.length=0;
         try{ redressWorld(); }catch(e){}
       });
     if(AR1P_HAS("coinB")) AR1P_addGlow(starter.group,starter.coins);
+    if(AR1P_HAS("life2")){ AR1P_SHADTEX=AR1P_softTex(1.0); AR1P_WAKETEX=AR1P_wakeTex();
+      AR1P_buildShadows(); AR1P_buildWakes(); }
     if(AR1P_HAS("life")){ AR1P_buildGulls(); AR1P_buildSmoke();
+      setTimeout(AR1P_travel,1200); setTimeout(AR1P_travel,4000); }
+    if(AR1P_HAS("life2")&&!AR1P_HAS("life")){
       setTimeout(AR1P_travel,1200); setTimeout(AR1P_travel,4000); }
   };
 })();
@@ -829,6 +874,23 @@ window.AR1P={
   life:function(){ return {gulls:GULL_N,fires:FIRES.length,sway:SWAY.length,
     flags:WAVERS.length,surf:SURF.length,travel:TRAVEL.length}; },
   glows:function(){ return AR1P_GLOWS.length; },
+  // THE STAND. Six animals in a row on a flat patch in front of the camera, all
+  // at their real in-game size, so a shape can be judged instead of hunted for.
+  zoo:function(x,y,z){
+    var names=["crab","parrot","monkey","fish","turtle","butterfly"], out=[];
+    for(var i=0;i<names.length;i++){
+      var o=AR1P_HAS("pets2")?AR1P_pet2(names[i]):AR1P_pet(names[i],false);
+      if(!o) continue;
+      o.position.set(x+(i-(names.length-1)/2)*3.2, y, z);
+      o.rotation.y=0.55; scene.add(o); out.push(names[i]);
+    }
+    return out; },
+  life2:function(){ return {shadows:!!SHADOWS, wakes:!!WAKES, travel:TRAVEL.length,
+    shadTex:!!AR1P_SHADTEX, wakeTex:!!AR1P_WAKETEX,
+    s0:SHADOWS?[SHADOWS.geometry.attributes.position.getX(1),SHADOWS.geometry.attributes.position.getY(1),SHADOWS.geometry.attributes.position.getZ(1)]:null,
+    w0:WAKES?[WAKES.geometry.attributes.position.getX(0),WAKES.geometry.attributes.position.getY(0),WAKES.geometry.attributes.position.getZ(0)]:null,
+    cam:[camera.position.x|0,camera.position.y|0,camera.position.z|0] }; },
+  pets2:function(){ var n=[],k; for(k in PETS2) n.push(k); return {built:n,live:PET_LIVE.length}; },
   // park the camera FIRST, then run the world's motion, then draw. The gulls
   // keep station on the camera, so settling before the camera moved left the
   // whole flock behind — and an empty sky in every picture.

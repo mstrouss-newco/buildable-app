@@ -1,6 +1,7 @@
 import fs from 'fs';
 const src=fs.readFileSync('public/skyflyer-engine.html','utf8');
-const pay=fs.readFileSync('qa/ar1p-payload.js','utf8');
+const pay=fs.readFileSync('qa/ar1p-payload.js','utf8')
+          +'\n'+fs.readFileSync('qa/ar1p-round2.js','utf8');
 let s=src, n=0;
 function rep(a,b){ if(!s.includes(a)) throw new Error('ANCHOR MISSING: '+a.slice(0,70)); s=s.replace(a,b); n++; }
 
@@ -14,7 +15,8 @@ var plane=new THREE.Group();`);
 rep(`rideAnim = (ride.build==="copter") ? buildCopter()
          : (ride.build==="jetpack") ? buildJetpack()
          : buildPlane();`,
-`rideAnim = AR1P_HAS("planeA") ? AR1P_planeA()
+`rideAnim = AR1P_HAS("planeB2") ? AR1P_planeB2()
+         : AR1P_HAS("planeA") ? AR1P_planeA()
          : AR1P_HAS("planeB") ? AR1P_planeB()
          : AR1P_HAS("planeC") ? AR1P_planeC()
          : (ride.build==="copter") ? buildCopter()

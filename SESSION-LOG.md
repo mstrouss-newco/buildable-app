@@ -167,6 +167,51 @@ kit lands, which can be before the animals have, and the second pass is refused
 because the island is already marked dressed — early islands are remembered and
 dressed when the animals arrive.
 
+### AR1P round 2 — Mike's picks and what changed
+
+He picked **plane B** and **coin B**, said the animals were "block like and dont
+work" and wanted more options, and called the world life "kinda lame, but
+acceptable". Three answers, still mocks, still nothing pushed:
+
+**The seaplane keeps its shape and loses its floats.** His reason is the right
+one: floats say "land me on the water" and nothing in this game lets you. B2 is
+plane B from the wing up, on faired legs and wheels with a tail wheel. 29 meshes,
+2,050 triangles, +14 draw calls on the chase cam.
+
+**Round animals, built the same way the plane is.** Kenney ships exactly one
+animal set in the whole 52-kit bundle and it is Cube Pets, which are cubes on
+purpose — so there was no second set to switch to. These are hand-built from
+lathes and lofts: crab, parrot, monkey, fish, turtle, butterfly. Every one is
+BAKED into a single geometry with its colours painted into the vertices, and all
+six share ONE material, so an animal is still one draw call and there is no
+texture and no download anywhere in it. Measured on the same island: bare 232
+calls, cube pets 291, round pets 292. Identical price, and no network fetch at
+all. Triangles are the trade: 72k against the cube set's 36k on a full island.
+
+**Two more world-life wins, +2 to +3 draw calls for the whole world.** Cloud
+shadows drifting across the sea, which is what stops the water reading as a
+bedsheet from altitude; and a spreading wake behind every travelling boat, which
+is what stops a moving boat reading as a sticker that slides.
+
+Bugs only a picture caught, round two:
+- A LATHE PROFILE MUST RUN UP THE AXIS. Ordered downwards it winds inside out and
+  the whole body vanishes into back-face culling — the turtle shell and the crab
+  dome were both simply gone.
+- SAME TRAP AGAIN, twice more: a flat fan or quad built in the XZ plane faces
+  DOWN and is culled from every camera above the water. Both cloud shadows and
+  wakes were invisible until they were made double-sided.
+- A pale blue shadow at 0.20 opacity over a pale blue sea is nothing at all.
+- The wake texture built pixel by pixel came out fully transparent; the canvas
+  gradients the glow and smoke already use work first time.
+- The travelling boats were steering 90 degrees off their own course. To face
+  (dx,dz) the yaw is atan2(dx,dz), and the orbit tangent is exactly -a; the extra
+  quarter turn was a guess. The wake is what made it obvious.
+- A boat moored inside the beach ring orbited across the SAND and dragged its
+  wake over it. Only boats that are actually over water travel now.
+- The parrot's wings stuck straight out sideways like a second pair of aircraft
+  wings until they were folded down the flank; the monkey read as a TEDDY BEAR
+  until it got flat ears on the sides of its head and a curled tail.
+
 QA: no game was touched, so no game QA was run. `public/skyflyer-engine.html` is
 byte-identical to `951caf3`.
 
