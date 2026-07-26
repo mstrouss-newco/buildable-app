@@ -1,5 +1,97 @@
 # Buildable Kids — Session Log
 
+## 2026-07-26: Session RP1 — the richer topic-book page, and Trains as the pilot
+
+Phase RP, block RP1 only. The v5 mock Mike approved after five rounds asked for
+a Kidspedia page that reads like a magazine spread instead of a caption under a
+photo. RP1 teaches the template that page and converts ONE book to prove it.
+
+**The rule that shaped everything.** 19 books are live and `main` auto-deploys,
+so the richer page had to be strictly opt-in. A page carrying no `layout` (and no
+per-fact art, and no chart) still renders through the original one-photo path,
+byte for byte. `qa-topic.mjs` now FAILS if that gate is ever removed, because
+losing it would change 19 live books overnight.
+
+**Shipped**
+- `public/topic.html` — the composed page. Three photos, and **every fact on
+  screen at once** with its own picture and its own source line. Nothing hides
+  behind "Another fact" any more (on a converted page; the old shape keeps its
+  cycler). Four layouts, each echoing its subject: `speed` (slanted photo edge,
+  a hint of motion streaks, one giant number over the picture), `long` (a 21:9
+  panorama with a dashed track running down the page and each fact hung off it),
+  `then-now` (a huge faint year printed behind the words, a sepia THEN beside a
+  bright NOW), `close-up` (circle crops the words wrap around).
+- **Read-aloud is a round speaker now**, in BOTH page shapes, and it FLOATS
+  right before the fact text so the sentence wraps around it. The old play
+  triangle is gone from the file; QA fails if it comes back. A composed page
+  gets one speaker per fact — the fact you are looking at is the one it reads.
+- **The Wow chart.** Picture-first infographics on a white card with a thick
+  brand border, a small tilt and a "Wow chart" pill. Four data-driven kinds:
+  `compare` (drawn glyphs with magnitude bars), `fields` (football fields drawn
+  with their end zones and yard lines, ten of them then "and N more"), `timeline`
+  (photo chips over a dashed line), `diagram` (a drawn picture the template owns
+  — `cone-wheel` today). Entities are pictures, bars carry magnitude only, every
+  number is labelled directly, brand palette only, no emoji. **Every chart
+  carries its own source**, because a chart is a claim like a fact is.
+- `public/explore/trains.json` — the pilot, converted, in US units, with a chart
+  on every page. It uses its EXISTING four photos: a fact with no art of its own
+  gets a detail crop of the page photo (different position, different zoom) and
+  is tagged `data-crop="1"`, so QA counts the stand-ins instead of hiding them.
+  Eight real fact photos land in RP2.
+- `qa-topic.mjs` — the contract for all of it, plus the two regression guards.
+- `EXHIBIT-MANIFEST.md` — the whole richer-page shape written down, including
+  the rule that a new layout, glyph, chart kind or diagram must be added to the
+  template AND to the QA vocabulary or the book fails rather than losing a
+  picture silently.
+
+**The fact-check (this was not a rubber stamp)**
+- `285 km/h` → **about 180 mph** (177.1 exactly; rounded, and the source line is
+  unchanged). `10 cm` → **about 4 inches** (3.94). `500 km/h` → **about 310 mph**
+  (310.7). All Central Japan Railway.
+- **40 football fields is now anchored to the LONGEST freight trains, not a
+  typical one.** GAO records one railroad running a 12,000 ft train daily and
+  another a 16,000 ft train twice weekly; 40 fields counted with their end zones
+  (120 yards = 360 ft each) is 14,400 ft ≈ 2.7 miles, which sits inside that
+  range. A typical big train is about 1.4 miles ≈ 20 fields. The chart now says
+  which is which, and the caption states the 120-yard definition rather than
+  leaving a kid to guess which kind of "football field" is meant.
+- **1890 confirmed.** London's City & South London Railway was the world's first
+  electric underground railway (opened by the Prince of Wales 4 Nov 1890, public
+  service 18 Dec 1890; London Transport Museum holds its 1890 locomotive and
+  coach as "the only surviving vehicles from the first electric underground
+  railway in the world"). The book only said "today's trains are electric" — the
+  1890 fact is now IN the book, not only in the chart.
+- Freight facts **re-sourced from AAR to GAO**, which is where the figures I
+  could actually verify live. Car counts corrected from "200 or more" to "150 or
+  more" (GAO/FRA). British spellings out: colourful, favourite, kilometres,
+  further.
+
+**Looked at, not just tested.** Every page was rendered headless at phone, iPad
+and landscape-phone sizes and eyeballed, which caught five things QA could never
+have: the giant stat rendering at the bottom of the whole page instead of on the
+photo, a zoomed detail crop spilling straight off the left edge of the page (a
+fact photo needs its own clipping frame — the figure's padding is not one), the
+polaroid caption climbing back over its photo the moment it ran to two lines, the
+timeline's third chip falling off the right edge of a phone, and the landscape
+phone stretching a composed page's photo into a slice of sky.
+
+**QA:** `qa-topic` ALL CHECKS PASS (14 WARNs, all of them either the known
+photo-less books or the Trains fact-photo stand-ins). `qa-kidspedia`,
+`qa-explore`, `qa-dive` re-run and still green. No game engine was touched.
+
+**NOT done, on purpose (this was RP1 only)**
+- 19 books still render the old one-photo page. RP3 converts the seven other TB4
+  photo books, RP5 the twelve photo-less ones.
+- Trains' eight real fact photos and its chart chip art are RP2. Until then every
+  fact photo is a crop of that page's own picture.
+- Narration clips are still browser-voice everywhere (RP7). The speaker icon
+  makes that gap louder, as expected.
+- Mike has not flipped the converted book live in the sense of reviewing it: the
+  book was already `approved`, so this ships as a change to a live book. He
+  reviews it at `/explore/trains`.
+- Still owner-action from TB5: `db/create-saved-pages.sql` in the Supabase SQL
+  editor, or dog-ears stay local-only and silently so.
+
 ## 2026-07-26: Session FL5b — jobs a non-reader can play
 
 Phase FL, block FL5b only. FL5 built the mission engine and made jobs things you
