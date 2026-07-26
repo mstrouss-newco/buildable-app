@@ -347,17 +347,24 @@ chk('the Quaternius models already in the repo are actually USED, not left on a 
            q.some(m=>(html.split('function dressIsle(')[1]||'').indexOf('"'+m[1]+'"')>=0); })());
 chk('a low sandbar stays bare sand, only a real island grows anything',
   /var topMat=\(hh>\d+\)\?\(r\(\)>0\.5\?M\.cap:M\.cap2\):M\.rock/.test(html));
-chk('the water sits over a real seabed, and hints at the shelf without becoming glass',
-  /M\.ground\.transparent=true/.test(html) && /seabed=new THREE\.Mesh/.test(html) &&
-  /M\.ground\.opacity=0\.9/.test(html));
-// The bug Mike hit: at 0.74 with depth writing off the sea stopped occluding, so
-// from a low angle the flat sand shelf showed through and ate the near half of
-// the island. This is the check that keeps it from coming back.
-chk('THE WATER STILL HIDES WHAT IS UNDER IT (depth writing on, or islands vanish up close)',
+// THE ONE THAT KEEPS COMING BACK. See-through water was tried at 0.74 and again
+// at 0.90 and Mike rejected it BOTH times, plus once more before that: at a
+// grazing angle a flat sheet lying across a beach always reads as glass and the
+// land looks like it dissolves. There is no opacity that fixes it. The sea is
+// opaque, and this check exists so no future session re-litigates it.
+chk('THE SEA IS OPAQUE (see-through water was rejected three times)',
+  /M\.ground\.transparent=false/.test(html) && /M\.ground\.opacity=1/.test(html) &&
   /M\.ground\.depthWrite=true/.test(html) && !/groundMesh\.renderOrder/.test(html));
+// And the other half of the same complaint - "the water is on the land and
+// coming up". A tall swell has nothing to stop it at a beach, so it climbs the
+// sand. The sea moves by TEXTURE now, which has no height and cannot flood.
+chk('the swell is too small to climb a beach (the texture carries the movement)',
+  /if\(SEA\) h\*=0\.34;/.test(html) && /M\.ground\.map\.offset\.set/.test(html));
+chk('the lagoon lies ON a calm surface, not floating clear of a swell',
+  /halo\.position\.y=0\.45/.test(html));
 chk('nothing that floats is left sitting under the surface',
   !/position\.set\([^)]*,-0\.4,[^)]*\)/.test(html.split('function dressPads(')[1]||'') &&
-  /fo\.position\.y=0\.55\+/.test(html) && /boat\.position\.set\(bx,0\.55,bz\)/.test(html));
+  /fo\.position\.y=0\.30\+/.test(html) && /boat\.position\.set\(bx,0\.55,bz\)/.test(html));
 chk('the lagoon is a soft gradient laid ON the water, keyed to the island size',
   /halo\.scale\.set\(rad\*3\.6/.test(html) && /halo\.renderOrder=3/.test(html) &&
   /createRadialGradient/.test(html));
@@ -366,8 +373,9 @@ chk('the sea has a moving surface, painted in code (nothing to download)',
   /M\.ground\.map\.offset\.set/.test(html));
 chk('the ripple sheet is WHITE, so the manifest still owns the sea colour',
   /x\.fillStyle="#ffffff"; x\.fillRect\(0,0,256,256\)/.test(html));
-chk('only the islands world got the swell and the ripples (other stops cannot move)',
-  /var SEA=\(world\.terrain==="islands"\)/.test(html) && /if\(SEA\) h\+=/.test(html));
+chk('only the islands world got the water treatment (other stops cannot move)',
+  /var SEA=\(world\.terrain==="islands"\)/.test(html) && /if\(SEA\) h\*=/.test(html) &&
+  /^if\(SEA\)\{$/m.test(html));
 chk('every island sits in a soft lagoon, not a hard-edged disc',
   /function makeShallowTexture\(/.test(html));
 // The note that started this pass: "you have the whole kenney kit and we are

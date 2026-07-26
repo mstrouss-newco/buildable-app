@@ -593,30 +593,26 @@ function makeRippleTexture(){
     return t;
   }catch(e){ return null; }
 }
-// THE SEABED. This is what makes an island stand IN the water instead of on it.
-// The sea sheet is half transparent, so what you actually see through it is
-// this: dark open ocean far out, and the island's own sand shelf glowing
-// turquoise as it rises. Without a floor underneath, transparent water shows
-// the sky and the ocean goes pale and fake.
+// AR1f — THE SEA IS OPAQUE. FULL STOP.
+//
+// See-through water was my idea and it was wrong three times running. At 0.74
+// the sand shelf showed through as a pane of glass and ate the near half of an
+// island. At 0.90 it STILL read as translucent up close and the land still
+// seemed to dissolve into it. There is no opacity that makes a flat sheet lying
+// across a beach look right at a grazing angle.
+//
+// So: no transparency, no seabed under it, nothing to see through. Depth now
+// comes entirely from things that sit ON the surface, where they belong - the
+// painted lagoon around each island, the wet-sand band at the waterline, and the
+// island's own crooked coastline. If a future session is tempted to make this
+// see-through again: it has been tried, and Mike rejected it three times.
 var seabed=null;
 if(SEA){
   var ripple=makeRippleTexture();
   if(ripple){ M.ground.map=ripple; M.ground.needsUpdate=true; }
-  // AR1d — HOW SEE-THROUGH, EXACTLY.
-  // At 0.74 with depth writing off, the sea stopped hiding anything: from a low
-  // angle the flat sand shelf showed through as a pane of glass and ate the near
-  // half of the island, and moored boats sat visibly UNDER the surface. At 0.9
-  // with depth writing back ON the water occludes properly again; what is left
-  // is a hint of the shelf rising, which is all the depth cue it ever needed.
-  M.ground.transparent=true;
-  M.ground.opacity=0.90;
+  M.ground.transparent=false;
+  M.ground.opacity=1;
   M.ground.depthWrite=true;
-  var deep=new THREE.Color(world.ground).multiplyScalar(0.34);
-  seabed=new THREE.Mesh(new THREE.PlaneGeometry(GROUND_SIZE*1.2,GROUND_SIZE*1.2),
-    new THREE.MeshBasicMaterial({color:deep,fog:true}));
-  seabed.rotateX(-Math.PI/2);
-  seabed.position.y=-46;
-  scene.add(seabed);
 }
 var groundMesh=new THREE.Mesh(groundGeo,M.ground);
 scene.add(groundMesh);
@@ -1520,7 +1516,7 @@ function buildFeature(r,big){
     // no edge to give itself away, and it is keyed to the island's real size so
     // the shallow ends where the shelf does.
     var halo=new THREE.Mesh(haloGeo,M_HALO);
-    halo.scale.set(rad*3.6,1,rad*3.6); halo.position.y=2.9;
+    halo.scale.set(rad*3.6,1,rad*3.6); halo.position.y=0.45;
     halo.renderOrder=3; g.add(halo);
     // AR1: the note the dressing layer reads. Recorded even when no models are
     // loaded, so the two code paths never drift apart.
@@ -2694,14 +2690,15 @@ function drawScene(dt){
   rideAnim(dt,S.mode,time);
 
   groundMesh.position.set(S.pos.x,0,S.pos.z);
-  if(seabed) seabed.position.set(S.pos.x,-46,S.pos.z);
+  
   for(var i=0;i<gPos.count;i++){
     var ox=gBase[i*3],oz=gBase[i*3+2];
     var h=Math.sin((ox+S.pos.x)*0.05+time*1.3)+Math.cos((oz+S.pos.z)*0.06+time*0.9);
-    // AR1b: islands get a long rolling swell on top of the chop. At altitude the
-    // short ripples vanish and only a big slow wave reads as a moving ocean.
-    if(SEA) h+=Math.sin((ox+S.pos.x)*0.016+time*0.55)*1.2
-             +Math.cos((oz+S.pos.z)*0.013-time*0.4)*0.9;
+    // AR1f: the swell is now a RIPPLE, not a wave. A tall crest has nothing to
+    // stop it where the sea meets a beach, so it climbs the sand and the water
+    // ends up sitting on the land. The scrolling texture carries the movement
+    // instead - it cannot flood anything because it has no height.
+    if(SEA) h*=0.34;
     gPos.array[i*3+1]=h*world.waves;
   }
   gPos.needsUpdate=true;
@@ -2750,7 +2747,7 @@ function drawScene(dt){
   if(floaters.length){
     for(var fb=0;fb<floaters.length;fb++){
       var fo=floaters[fb], ph=(fo.userData.bob||0)+spin*0.7;
-      fo.position.y=0.55+Math.sin(ph)*0.32;   // rides ON the water, never under
+      fo.position.y=0.30+Math.sin(ph)*0.14;   // rides ON the water, never under
       fo.rotation.z=Math.sin(ph*0.8)*0.05;
     }
   }
