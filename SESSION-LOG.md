@@ -1,5 +1,53 @@
 # Buildable Kids — Session Log
 
+## 2026-07-26: Planner — the Right now bar stops being a wall of text
+
+Two complaints from Mike, both about the Roadmap tab's "Right now" bar at the
+top of `/planner`.
+
+**1. The session description ate the screen.** Every card printed its full
+description, so four open sessions filled a laptop screen and pushed the rest of
+the board below the fold. Descriptions now clamp to ONE line (`-webkit-line-clamp`)
+with a small **More / Less** link. The link is not decided by a character count —
+`rmTrimDescs()` runs after every render, compares `scrollHeight` to `clientHeight`
+on each clamped block, and removes the clamp plus hides the link when the text
+already fits. That is why a one-line description shows no "More" at all on a wide
+window but does on a phone. Expanded state lives in `rmDescOpen`, keyed
+`focus:<id>` vs `phase:<id>` so the same session can be open in the focus bar and
+collapsed down in its phase, and it resets on reload by design.
+
+**2. Section order and what "Up next" means.** The bar is now: Needs your review,
+With Claude, **Recently added** (new), Up next.
+
+- *Recently added* = the 3 newest sessions by a new `addedAt` ISO stamp, written
+  in `rmAddSession`, `rmAddLater` and in `mergeRoadmap` for ids that were not in
+  the roadmap before. `mergeRoadmap` carries `addedAt` across re-imports the same
+  way it carries `deployed` / `needsReview`. **Sessions that existed before this
+  change have no stamp, so the section starts empty and fills as work is added.**
+  Deliberate: back-filling would have flagged all 40-odd existing sessions as new.
+- *Up next* used to be the first 3 open sessions in global roadmap order, which
+  surfaced backlog Mike is not working on. It now only pulls from phases that
+  already have something in review or with Claude — the heading reads "Up next in
+  this phase" in that case. With nothing in flight anywhere it falls back to the
+  old global-queue behaviour so the bar is never blank.
+
+Every section de-dupes against the ones above it, so a session cannot appear
+twice in the bar.
+
+**Push route.** `git push` was blocked again (`api.github.com` → `403 ... Use
+add_repo`, no such tool) and the first commit went in through the Claude-in-Chrome
+web-UI route documented in AGENTS.md, at
+`github.com/mstrouss-newco/buildable-app/upload/main/public` — commit `db46cd9`,
+verified byte-identical to the local build with `git diff origin/main`. The
+`PUSH-TOKEN.txt` route was confirmed working afterwards and used for this log
+entry. Note for future sessions: `file_upload` in Claude in Chrome will NOT accept
+a path under the connected Mac folder — it only reads container paths, so copy the
+file to `/mnt/user-data/outputs/` first.
+
+No QA script covers the planner (it is a standalone page, not a game). Verified
+instead with a headless Chromium render of the focus bar against fake roadmap
+data, checking both the collapsed and expanded states and the section ordering.
+
 ## 2026-07-26: Session AR1M — Sunny Islands rebuilt as THE MIX, plus a real sky
 
 The island Mike picked in the bake-off, built into the real engine. Level one

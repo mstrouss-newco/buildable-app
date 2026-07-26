@@ -2488,6 +2488,19 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-07-26 (Planner: the Right now bar stops being a wall of text)
+
+Roadmap tab of `/planner` (`public/planner.html`). Session descriptions on the
+cards now clamp to one line with a **More / Less** link, decided by measuring real
+overflow after render (`rmTrimDescs`) rather than by a character count, so a
+description that already fits shows no link. The "Right now" bar order is now
+Needs your review → With Claude → **Recently added** → Up next. Recently added is
+the 3 newest sessions by a new `addedAt` stamp (sessions created before this
+change carry no stamp, so it starts empty and fills as work is added). Up next now
+only pulls sessions from phases that already have something in review or with
+Claude, instead of the front of the global backlog. Full detail in `SESSION-LOG.md`.
+
+---
 ## Session log — 2026-07-25 (Session FL3: the hangar — pick your ride before takeoff)
 
 THE HANGAR IS REAL. FL2 shipped the plumbing (a priced customization slot, a
