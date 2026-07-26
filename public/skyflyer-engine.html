@@ -3902,13 +3902,15 @@ function drawScene(dt){
     var SC=scouts[sc];
     if(SC.mk) SC.mk.beam.material.opacity=0.12+pulse*0.20;
   }
-  starter.coins.forEach(function(c){c.mesh.rotation.y=spin;});
+  starter.coins.forEach(function(c){if(!c.taken)c.mesh.rotation.y=spin;});
   for(var key in chunks){
     var ch=chunks[key];
     for(var q=0;q<ch.coins.length;q++){
       var cc=ch.coins[q];
-      cc.mesh.rotation.y=spin+cc.ph;                  // shimmer along a trail
-      cc.mesh.position.y=cc.y+Math.sin(spin*0.7+cc.ph)*0.5;
+      if(!cc.taken){
+        cc.mesh.rotation.y=spin+cc.ph;                  // shimmer along a trail
+        cc.mesh.position.y=cc.y+Math.sin(spin*0.7+cc.ph)*0.5;
+      }
     }
   }
   // AR1: a moored boat that never moves reads as a sticker. A slow bob and a
