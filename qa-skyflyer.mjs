@@ -108,8 +108,18 @@ const musSrc  = read('api/library-music.js');
 const imgSrc  = read('api/images.js');
 chk('the engine loads the shared Feel Kit + shared audio (no bespoke juice)',
   /buildable-feel\.js/.test(html) && /buildable-audio\.js/.test(html));
-chk('every sound is a PALETTE NAME through the Kit, never a raw tone (GAME-FEEL law 6)',
-  /FEEL\.sfx\(name,opt\)/.test(html) && !/new Audio\(/.test(html) && !/oscillator/i.test(html));
+// GAME-FEEL law 6 is about SOUND EFFECTS: a game triggers palette names and
+// never synthesises a tone. FL5b added SPOKEN WORDS, which are a different
+// thing and belong to the shared narration library (/api/say), exactly as
+// Castle Guard and Bingo already play it — through one <audio> element. So the
+// ban stays absolute for effects, and the ONE audio element allowed has to be
+// the narration one and nothing else.
+chk('every sound EFFECT is a PALETTE NAME through the Kit, never a raw tone (GAME-FEEL law 6)',
+  /FEEL\.sfx\(name,opt\)/.test(html) && !/oscillator/i.test(html) &&
+  !/new Audio\(\)[^]{0,400}?\/api\/sfx/.test(html));
+chk('the only raw audio element in the file is the shared narration library',
+  (html.match(/new Audio\(/g)||[]).length===1 && /_sayEl=new Audio\(\)/.test(html) &&
+  /_sayEl\.src="\/api\/say\?t="/.test(html));
 chk('the Kit is configured from the manifest feel presets', /FEEL\.configure\(\{/.test(html) && /sfxBase:"\/api\/sfx\?s="/.test(html));
 const skyKeys = (html.match(/"(sky_[a-z]+)"/g)||[]).map(s=>s.replace(/"/g,''));
 chk('Sky Flyer created its OWN sounds (a new engine type grows the library)',
@@ -220,6 +230,84 @@ chk('every job carries a fun fact, a badge and a price in the manifest (all edit
 chk('the new job sounds are listed in the manifest audio slot',
   ['sky_pickup','sky_deliver','sky_mission'].every(s=>manifest.audio.sfx.indexOf(s)>-1));
 chk('no emojis anywhere in the jobs', !emoji.test(mText) && !emoji.test(html));
+
+// ---------------------------------------------------------------------------
+// 2d) FL5b MISSIONS A NON-READER CAN PLAY — pictures instead of words
+// ---------------------------------------------------------------------------
+console.log('--- FL5b: a job a four year old can answer, follow and find ---');
+chk('the offer is answered with a TICK and a CROSS, not with the words "Do it"',
+  /class="ans yes" id="ofStart"/.test(html) && /class="ans no" id="ofNo"/.test(html) &&
+  !/id="ofStart">Do it</.test(html) && !/id="ofNo">Not now</.test(html));
+chk('the two answers are a green circle and a red circle, set far apart from each other',
+  /\.ans\.yes\{background:linear-gradient\(#57d06b/.test(html) &&
+  /\.ans\.no\{background:linear-gradient\(#ff8a75/.test(html) &&
+  /\.answers\{[^}]*gap:34px/.test(html) && /\.ans\{width:86px;height:86px;border-radius:50%/.test(html));
+chk('the words stay underneath, small, for the grown-up and the reader',
+  /class="anslab"><span>Yes please<\/span><span>Not now<\/span>/.test(html) &&
+  /\.anslab\{[^}]*font-size:12px/.test(html));
+chk('a "Hear it" speaker reads the job through the SHARED narration library',
+  /id="ofSay"/.test(html) && /function sayJob\(/.test(html) && /\/api\/say\?t="/.test(html) &&
+  /function saySplit\(/.test(html));
+chk('...and it is split into short lines, because /api/say caps one at 60 characters',
+  /\(cur\+" "\+w\)\.length>52/.test(html) && /\.slice\(0,5\)/.test(html));
+chk('THE FL5b LAW: no icon is drawn per job - every picture comes out of the recipe',
+  /function jobStrip\(/.test(html) && /function targetIcon\(style,n,done\)/.test(html) &&
+  /function cargoIcon\(m,n,ghost\)/.test(html) &&
+  // not one mention of a job id anywhere in the drawing code
+  !/(mail-run|supply-drop|lost-explorer|lantern-lighter)/.test(
+    html.slice(html.indexOf('var ICON_FILL='), html.indexOf('function saySplit('))));
+chk('the offer shows the job as ONE picture: what you carry, an arrow, where it goes',
+  /ofStoryEl\.innerHTML=jobStrip\(m,32,null,null,-1\)/.test(html) && /id="ofStory"/.test(html) &&
+  /function icoArrowGlyph\(/.test(html));
+chk('every recipe style has a drawing, so a new style is the only thing a new job needs',
+  ['animal','flare','lantern','dock'].every(s=>new RegExp('style==="'+s+'"').test(
+    html.slice(html.indexOf('function targetIcon('), html.indexOf('function cargoIcon(')))) &&
+  ['icoHouse','icoAnimal','icoFlare','icoLantern','icoDock'].every(f=>new RegExp('function '+f+'\\(').test(html)));
+chk('PROGRESS IS OBJECTS, NOT TEXT: "Delivered 1/3 - Carrying 2" is gone',
+  /gCarryEl\.innerHTML=/.test(html) && !/line=word\+" "\+JS\.done/.test(html) &&
+  !/Carrying "\+JS\.carrying;/.test(html) && /jobStrip\(JOB,18,JS\.carrying,JS\.doneMap/.test(html));
+chk('...but the same words survive for a screen reader and a grown-up',
+  /gCarryEl\.setAttribute\("aria-label"/.test(html));
+chk('a finished drop turns green and gets a tick, so "what is left" needs no reading',
+  /function doneBadge\(/.test(html) && /ICON_DFILL="#57D06B"/.test(html));
+chk('the job name chip is untouched, exactly as agreed',
+  /gJobEl\.textContent=JOB\.name/.test(html));
+chk('THE WAYPOINT: one pin at a time, in the top bar, with a live distance and an X',
+  /id="waypoint"/.test(html) && /id="wpDist"/.test(html) && /id="wpDrop"/.test(html) &&
+  /var WP=null/.test(html) && /function setWaypoint\(p\)/.test(html) && /function dropWaypoint\(/.test(html));
+chk('the big orange arrow follows the pin when there is no job on',
+  /if\(WP&&MODE!=="job"\) return \{x:WP\.x,z:WP\.z,label:WP\.label\};/.test(html));
+chk('the offer card, the mini-map and the help list all set the pin the SAME way',
+  /function pinJob\(m\)/.test(html) &&
+  (html.match(/pinJob\(m\)/g)||[]).length>=3 &&          // declaration + decline + help list
+  /setWaypoint\(this\.__pt\)/.test(html));
+chk('nothing but the X and arriving ever takes the pin away (it survives leaving a job)',
+  /if\(WP && Math\.hypot\(S\.pos\.x-WP\.x,S\.pos\.z-WP\.z\)<45\) dropWaypoint\(\)/.test(html) &&
+  !/function endJob\(\)[^]{0,900}dropWaypoint/.test(html) &&
+  !/function leaveJob\(\)[^]{0,400}dropWaypoint/.test(html));
+chk('A MAP, NOT A COMPASS: you are a triangle in the middle and the map turns with you',
+  /id="minimap"/.test(html) && /class="mmme"/.test(html) && /function paintMinimap\(/.test(html) &&
+  /var mx=\(dx\*cy-dz\*sy\)\*MM_SCALE, my=\(dx\*sy\+dz\*cy\)\*MM_SCALE;/.test(html));
+// The compass ribbon was in the mock for comparison and was DROPPED: a compass
+// asks a child to understand a heading, which is abstract. Nothing that reads a
+// heading off a tape may creep back in.
+chk('the compass ribbon really was dropped (no heading tape anywhere)',
+  !/id="compass"|class="compass"|id="tape"|\.compass\s*\{/.test(html));
+chk('gold dot = a job you found, faint dot = something out there you have not been to',
+  /function blipIcon\(p\)/.test(html) && /#F7C948/.test(html) && /rgba\(51,86,110,\.26\)/.test(html) &&
+  /if\(d<260\) foundPts\[m\.id\]=true;/.test(html));
+chk('orange ring = a landing pad, and every blip is tappable to pin it',
+  /stroke="#FF8A3C" stroke-width="2\.6"/.test(html) && /el\.addEventListener\("click"/.test(html));
+chk('the map never steals a drag from the one-finger controls',
+  /minimapEl\.addEventListener\("pointerdown",function\(e\)\{ e\.stopPropagation\(\); \}\)/.test(html) &&
+  /el\.addEventListener\("pointerdown",function\(e\)\{ e\.stopPropagation\(\); \}\)/.test(html));
+chk('the attract demo is still pure scenery - no map, no pin',
+  /minimapEl\.style\.display="none";waypointEl\.style\.display="none";/.test(html));
+chk('the getting-warmer chime speeds up as you close on a job you have not found',
+  /function warmerStep\(/.test(html) && /var gap=0\.26\+\(Math\.min\(best,620\)\/620\)\*1\.5/.test(html) &&
+  /if\(foundPts\[scouts\[i\]\.job\.id\]\) continue;/.test(html));
+chk('the buddy says the job out loud once when it starts', /sayJob\(m\);\s+\/\/ FL5b/.test(html));
+chk('every FL5b picture is drawn SVG - still not one emoji anywhere', !emoji.test(html));
 
 // ---------------------------------------------------------------------------
 // 3) SHELL + ROUTING wiring
@@ -499,7 +587,7 @@ if (!JSDOM) {
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as FL5', w4.SKY.version === 'FL5', w4.SKY.version);
+    chk('engine reports itself as FL5b', w4.SKY.version === 'FL5b', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();

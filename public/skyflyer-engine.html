@@ -76,7 +76,9 @@
     display:flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(30,60,90,.18);
     font-weight:800;font-size:20px;color:#5b4a1f}
   .pill svg{display:block}
-  #banked{position:absolute;top:calc(64px + env(safe-area-inset-top));right:14px;
+  /* FL5b: the mini-map now sits under the coin pill, so the banked flash moved
+     down to clear it. */
+  #banked{position:absolute;top:calc(174px + env(safe-area-inset-top));right:14px;
     background:rgba(255,252,240,.85);border-radius:999px;padding:5px 14px;
     font-weight:700;font-size:13px;color:#2b7a4b;box-shadow:0 2px 6px rgba(30,60,90,.15);
     opacity:0;transition:opacity .4s}
@@ -175,6 +177,58 @@
     font-family:inherit;text-align:left;display:flex;align-items:center;gap:10px}
   #helpJobs .hj .b2{display:block;font-weight:700;font-size:12px;color:#5c7f95;margin-top:2px}
   #helpJobs .hj .go{margin-left:auto;flex:0 0 auto;color:#2FB7D6;font-weight:900;font-size:13px}
+  /* ==== FL5b: a job a NON-READER can answer, follow and find ================
+     Everything below exists so that a four year old who cannot read a single
+     word can still be asked a question, answer it, see how far through they
+     are, and find their way back to something. Words are still there, small,
+     underneath, for the grown-up sitting next to them. */
+  /* -- the offer answers in pictures: one green tick, one red cross -- */
+  #ofSay{border:none;background:#EAF6FB;border-radius:999px;padding:6px 14px;font-weight:800;
+    font-size:13px;color:#26506b;font-family:inherit;display:inline-flex;align-items:center;
+    gap:7px;cursor:pointer;margin-bottom:2px}
+  #ofSay svg{display:block}
+  /* the whole job as one picture: what you carry, an arrow, where it goes.
+     Built from the recipe, so a new job gets its picture for free. */
+  .story{background:#EAF6FB;border-radius:18px;padding:14px 10px;margin:11px 0 14px;
+    display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap}
+  .story .grp{display:flex;align-items:center;gap:4px}
+  .story svg{display:block}
+  .answers{display:flex;justify-content:center;gap:34px;margin-top:4px}
+  .ans{width:86px;height:86px;border-radius:50%;border:none;cursor:pointer;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;padding:0}
+  .ans svg{display:block}
+  .ans.yes{background:linear-gradient(#57d06b,#2fae4d);box-shadow:0 6px 0 #1f8038,0 12px 24px rgba(20,90,40,.3)}
+  .ans.no{background:linear-gradient(#ff8a75,#e8552f);box-shadow:0 6px 0 #b93b1b,0 12px 24px rgba(140,50,25,.28)}
+  .ans:active{transform:translateY(4px);box-shadow:none}
+  .anslab{display:flex;justify-content:center;gap:34px;margin-top:8px;font-size:12px;
+    font-weight:800;color:#8fa8b8}
+  .anslab span{width:86px;text-align:center}
+  /* -- progress as objects: things in your hands, then the places they go -- */
+  #gCarry .cargoline{display:flex;align-items:center;gap:6px}
+  #gCarry .grp{display:flex;align-items:center;gap:3px}
+  #gCarry svg{display:block}
+  .grp .tgt{display:inline-flex}
+  .holding{animation:hold 1s ease-in-out infinite}
+  @keyframes hold{0%,100%{opacity:1}50%{opacity:.45}}
+  /* -- the waypoint chip: pin one thing, fly on, come back to it later -- */
+  #waypoint{position:absolute;left:50%;top:calc(12px + env(safe-area-inset-top));
+    transform:translateX(-50%);background:rgba(47,183,214,.95);color:#fff;border-radius:999px;
+    padding:6px 8px 6px 11px;display:none;align-items:center;gap:8px;font-weight:800;
+    font-size:13px;white-space:nowrap;box-shadow:0 3px 12px rgba(20,80,110,.35);pointer-events:auto}
+  #waypoint svg{display:block}
+  #waypoint .wpd{font-weight:900;font-variant-numeric:tabular-nums}
+  #wpDrop{width:24px;height:24px;border-radius:999px;border:none;background:rgba(255,255,255,.24);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;
+    padding:0;pointer-events:auto}
+  /* -- the mini-map: a picture of where things are, not a heading to read -- */
+  #minimap{position:absolute;top:calc(62px + env(safe-area-inset-top));right:14px;
+    width:104px;height:104px;border-radius:50%;background:rgba(255,252,240,.86);
+    box-shadow:0 3px 12px rgba(30,60,90,.22);pointer-events:auto;overflow:hidden;display:none}
+  #minimap .mmring{position:absolute;inset:7px;border-radius:50%;border:2px dashed rgba(51,86,110,.18)}
+  #minimap .mmme{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+  #minimap .blip{position:absolute;transform:translate(-50%,-50%);cursor:pointer;
+    width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+  #minimap .blip svg{display:block;pointer-events:none}
 </style>
 </head>
 <body>
@@ -195,6 +249,22 @@
     <div class="chip" id="gJob" style="display:none">Job</div>
     <div class="chip" id="gCarry" style="display:none">Carrying 0</div>
     <button id="leaveJob">Leave this job</button>
+  </div>
+  <!-- FL5b: ONE pin at a time. Tap a thing, it sticks up here with a live
+       distance until you tap the X. The pin outlives a job. -->
+  <div id="waypoint">
+    <span id="wpIcon"></span>
+    <span id="wpName"></span>
+    <span class="wpd" id="wpDist"></span>
+    <button id="wpDrop" aria-label="Drop the pin">
+      <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2 L10 10 M10 2 L2 10" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <!-- FL5b: a MAP, not a compass. You are the triangle in the middle and the
+       map turns with you, so up is always where you are pointing. -->
+  <div id="minimap" aria-label="Map">
+    <div class="mmring"></div>
+    <svg class="mmme" width="19" height="19" viewBox="0 0 18 18"><path d="M9 1 L15 16 L9 12.5 L3 16 Z" fill="#33566e"/></svg>
   </div>
   <button id="helpBtn" aria-label="How to fly">?</button>
   <div id="hint">
@@ -232,13 +302,26 @@
   <div class="sheet" id="offerCard"><div class="inner">
     <div class="found">YOU FOUND SOMETHING</div>
     <h2 id="ofName">Mail Run</h2>
+    <!-- FL5b: a non-reader can hear the whole thing once, through the same
+         narration library every other kid maker speaks with. -->
+    <button id="ofSay">
+      <svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 6 h3 l4-3 v10 l-4-3 H3 Z" fill="#26506b"/><path d="M12 5.5 a3.4 3.4 0 0 1 0 5" stroke="#26506b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+      Hear it
+    </button>
+    <!-- FL5b: the whole job as ONE picture, generated from the recipe: what you
+         carry, an arrow, and one icon per place it goes. -->
+    <div class="story" id="ofStory"></div>
     <div class="sub" id="ofBlurb"></div>
     <div class="fact"><b>HOW IT WORKS</b><span id="ofTip"></span></div>
     <div id="ofDone"></div>
-    <div class="row">
-      <button class="a" id="ofStart">Do it</button>
-      <button class="b" id="ofNo">Not now</button>
+    <!-- FL5b: the answer is a picture too. Green circle and a white tick, red
+         circle and a white cross, set far apart so a small finger cannot
+         mis-hit. The words underneath are for the grown-up, not the kid. -->
+    <div class="answers">
+      <button class="ans yes" id="ofStart" aria-label="Yes please"><svg width="44" height="44" viewBox="0 0 42 42"><path d="M10 22 L18 30 L32 13" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="ans no" id="ofNo" aria-label="Not now"><svg width="44" height="44" viewBox="0 0 42 42"><path d="M12 12 L30 30 M30 12 L12 30" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/></svg></button>
     </div>
+    <div class="anslab"><span>Yes please</span><span>Not now</span></div>
   </div></div>
   <!-- FL5: every job ends here - a fact, the coins, and a sticker to keep. -->
   <div class="sheet" id="factCard"><div class="inner">
@@ -1716,6 +1799,267 @@ function showRideName(){ if(DEMO)return; try{ rideNameEl.style.opacity=1;
 setTimeout(function(){ try{ if(!S.hintDone){S.hintDone=true;hintEl.style.opacity=0;} }catch(e){} },7000);
 function toast(t){ toastEl.textContent=t;toastEl.classList.remove("show");
   void toastEl.offsetWidth;toastEl.classList.add("show"); }
+
+// ============================================================================
+//  FL5b — A JOB A NON-READER CAN PLAY.
+//
+//  A four year old cannot read "Do it" or "Delivered 1/3". Everything in this
+//  block replaces a word with a picture, and never the other way round: the
+//  words all stay, small, underneath, for the grown-up sitting next to them.
+//
+//  THE FL5b LAW: NO ICON IS DRAWN PER JOB. Every picture below is generated
+//  from the recipe — the cargo it names, the style of its drop points, how many
+//  targets it has. Add a job to MISSIONS and its picture, its progress row, its
+//  offer strip and its map blips all come out for free with no new art and no
+//  new code. If you ever find yourself writing "if job is mail-run", stop.
+// ============================================================================
+var ICON_FILL="#FFF6E3", ICON_LINE="#8fa8b8",
+    ICON_DFILL="#57D06B", ICON_DLINE="#2b7a4b";
+function svgWrap(n,vb,body){ return '<svg width="'+n+'" height="'+n+'" viewBox="'+vb+'" aria-hidden="true">'+body+'</svg>'; }
+// one green tick badge, in the corner of ANY 26x26 icon, so "done" looks the
+// same on a house, an animal, a flare and a lantern without four drawings of it
+function doneBadge(){
+  return '<circle cx="20.5" cy="20.5" r="5.2" fill="#2b7a4b"/>'+
+    '<path d="M18 20.6 L19.9 22.5 L23.1 19" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>';
+}
+// ---- the things you carry ----
+function icoLetter(n,col,ghost){
+  return '<svg width="'+n+'" height="'+Math.round(n*0.72)+'" viewBox="0 0 25 18" aria-hidden="true"'+(ghost?' opacity=".35"':'')+'>'+
+    '<rect x="1" y="1" width="23" height="16" rx="3" fill="'+(col||ICON_FILL)+'" stroke="#C9AE7E" stroke-width="1.7"/>'+
+    '<path d="M2 3 L12.5 11 L23 3" fill="none" stroke="#C9AE7E" stroke-width="1.7"/></svg>';
+}
+function icoParcel(n,col,ghost){
+  return '<svg width="'+n+'" height="'+Math.round(n*0.82)+'" viewBox="0 0 24 20" aria-hidden="true"'+(ghost?' opacity=".35"':'')+'>'+
+    '<rect x="2" y="4" width="20" height="14" rx="2.4" fill="'+(col||ICON_FILL)+'" stroke="#8a6a3a" stroke-width="1.7"/>'+
+    '<path d="M2 9.6 H22 M12 4 V18" stroke="#8a6a3a" stroke-width="1.7"/></svg>';
+}
+// when a job hands you nothing to carry, the thing that travels is YOU
+function icoMe(n){
+  return svgWrap(n,"0 0 18 18",'<path d="M9 1 L15 16 L9 12.5 L3 16 Z" fill="#2FB7D6"/>');
+}
+function icoArrowGlyph(n){
+  return svgWrap(n,"0 0 20 20",'<path d="M4 10 H15 M11 6 L15 10 L11 14" stroke="#5c7f95" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>');
+}
+// ---- the places things go, one per recipe style ----
+function icoHouse(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
+  return svgWrap(n,"0 0 26 26",'<path d="M13 3 L24 12 H20 V23 H6 V12 H2 Z" fill="'+f+'" stroke="'+s+'" stroke-width="1.8" stroke-linejoin="round"/>'+(d?doneBadge():'')); }
+function icoAnimal(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
+  return svgWrap(n,"0 0 26 26",
+    '<ellipse cx="11" cy="14" rx="7" ry="4.6" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<circle cx="19.2" cy="10.4" r="3.7" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<path d="M17.7 7.2 L17.1 3.4 M20.9 7.4 L22.4 3.9" stroke="'+s+'" stroke-width="1.8" stroke-linecap="round"/>'+
+    '<path d="M7 18 v4 M11 18.6 v3.4 M15 18 v4" stroke="'+s+'" stroke-width="1.8" stroke-linecap="round"/>'+(d?doneBadge():'')); }
+function icoFlare(n,d){ var f=d?ICON_DFILL:"#FFD86B",s=d?ICON_DLINE:"#B9860E";
+  return svgWrap(n,"0 0 26 26",
+    '<path d="M13 24 V13.5" stroke="'+(d?ICON_DLINE:ICON_LINE)+'" stroke-width="2.2" stroke-linecap="round"/>'+
+    '<circle cx="13" cy="9" r="5" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<path d="M13 1.4 V3.4 M4.6 9 H2.6 M23.4 9 H21.4 M6.8 2.8 L8.3 4.3 M19.2 2.8 L17.7 4.3" stroke="'+s+'" stroke-width="1.6" stroke-linecap="round"/>'+(d?doneBadge():'')); }
+function icoLantern(n,d){ var f=d?ICON_DFILL:"#FFD86B",s=d?ICON_DLINE:ICON_LINE;
+  return svgWrap(n,"0 0 26 26",
+    '<path d="M5 24 V4 H12" fill="none" stroke="'+s+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'+
+    '<rect x="9.5" y="7" width="8.6" height="9.4" rx="1.8" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<path d="M8.6 7 L13.8 3.2 L19 7 Z" fill="'+s+'"/>'+(d?doneBadge():'')); }
+function icoDock(n,d){ var f=d?ICON_DFILL:ICON_FILL,s=d?ICON_DLINE:ICON_LINE;
+  return svgWrap(n,"0 0 26 26",
+    '<rect x="4" y="12" width="18" height="9.5" rx="2.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
+    '<path d="M13 3 L21 11.2 H5 Z" fill="#FF8A3C"/>'+
+    '<rect x="11" y="15.5" width="4" height="6" fill="'+s+'"/>'+(d?doneBadge():'')); }
+function icoPad(n){ return svgWrap(n,"0 0 26 26",'<circle cx="13" cy="13" r="8.6" fill="none" stroke="#FF8A3C" stroke-width="3.2"/>'); }
+// ---- recipe -> picture. The ONLY place a style name becomes a drawing. ----
+function targetIcon(style,n,done){
+  if(style==="animal") return icoAnimal(n,done);
+  if(style==="flare")  return icoFlare(n,done);
+  if(style==="lantern")return icoLantern(n,done);
+  if(style==="dock")   return icoDock(n,done);
+  return icoHouse(n,done);
+}
+function cargoIcon(m,n,ghost){
+  if(!m||!m.cargo) return icoMe(n);
+  var col="#"+("000000"+(m.cargo.color||0xFFF6E3).toString(16)).slice(-6);
+  return /letter|mail|card/i.test(m.cargo.name||"") ? icoLetter(n,col,ghost) : icoParcel(n,col,ghost);
+}
+// THE PICTURE OF A WHOLE JOB: what you carry, an arrow, one icon per place it
+// goes. The offer card shows it empty; the progress chip shows it live.
+function jobStrip(m,n,carrying,doneMap,holdOn){
+  if(!m) return "";
+  var i,cargo="";
+  if(m.capacity>0){
+    // the offer card (carrying==null) says "you carry THIS, take it to THESE",
+    // so it shows the cargo ONCE. The live chip shows what is really in hand.
+    var have=(carrying==null)?1:carrying;
+    if(have<=0) cargo=cargoIcon(m,n,true);            // hands empty: go and load up
+    else for(i=0;i<have;i++) cargo+=cargoIcon(m,n);
+  } else cargo=icoMe(n);
+  var tg="";
+  for(i=0;i<m.targets.length;i++){
+    var done=!!(doneMap&&doneMap[i]);
+    var hold=(holdOn===i&&!done);
+    tg+='<span class="tgt'+(hold?' holding':'')+'">'+targetIcon(m.style,n,done)+'</span>';
+  }
+  return '<span class="grp">'+cargo+'</span>'+icoArrowGlyph(Math.round(n*0.8))+'<span class="grp">'+tg+'</span>';
+}
+
+// ---- HEAR IT: the same narration library every other kid maker speaks with.
+// /api/say caps a line at 60 characters, so a job name plus its tip is split
+// into short lines and played one after the other. ----
+var _sayEl=null, _sayQ=[];
+function saySplit(t){
+  t=String(t||"").replace(/[^A-Za-z0-9 ,.!?'-]/g," ").replace(/\s+/g," ").trim();
+  var out=[],cur="";
+  t.split(" ").forEach(function(w){
+    if(cur && (cur+" "+w).length>52){ out.push(cur); cur=w; }
+    else cur=cur?cur+" "+w:w;
+  });
+  if(cur) out.push(cur);
+  return out.slice(0,5);
+}
+function sayNext(){
+  if(!_sayQ.length) return;
+  var line=_sayQ.shift();
+  try{
+    if(!_sayEl){ _sayEl=new Audio(); _sayEl.addEventListener("ended",sayNext); }
+    _sayEl.src="/api/say?t="+encodeURIComponent(line);
+    var pr=_sayEl.play(); if(pr&&pr["catch"]) pr["catch"](function(){ _sayQ=[]; });
+  }catch(e){ _sayQ=[]; }
+}
+// NODRAW is the headless harness: no speakers there, and no point burning a
+// narration call to prove one happened.
+function sayText(t){ if(DEMO||NODRAW||!S.sound) return; _sayQ=saySplit(t); sayNext(); }
+function sayJob(m){ if(m) sayText(m.name+". "+(m.tip||m.blurb||"")); }
+
+// ---- THE WAYPOINT PIN. One at a time. Tap a thing on the map, in the offer or
+// in the help list and it pins to the top bar with a live distance until the X.
+// The pin outlives a job, which is what lets a kid find something, carry on
+// flying, and come back to it later. ----
+var waypointEl=D.getElementById("waypoint"),
+    wpIconEl=D.getElementById("wpIcon"),
+    wpNameEl=D.getElementById("wpName"),
+    wpDistEl=D.getElementById("wpDist"),
+    wpDropEl=D.getElementById("wpDrop"),
+    minimapEl=D.getElementById("minimap"),
+    ofSayEl=D.getElementById("ofSay"),
+    ofStoryEl=D.getElementById("ofStory");
+var WP=null, foundPts={};
+function wpIcon(p,n){
+  if(p.kind==="pad") return icoPad(n);
+  if(p.kind==="job"||p.kind==="depot") return icoDock(n,false);
+  return targetIcon(p.style,n,!!p.done);
+}
+function setWaypoint(p){
+  if(!p){ WP=null; }
+  else WP={id:p.id||p.label,kind:p.kind||"drop",style:p.style||null,
+           x:p.x,z:p.z,label:p.label||"Waypoint"};
+  paintWaypoint();
+  return WP;
+}
+function dropWaypoint(){ var had=!!WP; WP=null; paintWaypoint(); return had; }
+function paintWaypoint(){
+  if(!waypointEl) return;
+  if(DEMO||!WP){ waypointEl.style.display="none"; return; }
+  waypointEl.style.display="flex";
+  wpIconEl.innerHTML=wpIcon(WP,20);
+  wpNameEl.textContent=WP.label;
+  wpDistEl.textContent=Math.round(Math.hypot(S.pos.x-WP.x,S.pos.z-WP.z))+"m";
+  // the intro labels are transient; the pin is not, so it gets the middle
+  try{ worldNameEl.style.opacity=0; rideNameEl.style.opacity=0; }catch(e){}
+}
+
+// ---- THE MINI-MAP, NOT A COMPASS. You are the triangle in the middle and the
+// map turns with you, so up is always where you are pointing. A compass asks a
+// child to understand a heading, which is abstract; a map is spatial and does
+// the one thing a single arrow cannot, which is show that there is MORE OUT
+// THERE. That matters now that jobs are found rather than listed. ----
+var MM_R=45, MM_SCALE=0.055, mmEls={};
+function mapPoints(){
+  var out=[],i;
+  for(i=0;i<PADS.length;i++)
+    out.push({id:"pad"+i,kind:"pad",x:PADS[i].x,z:PADS[i].z,label:"Landing pad",found:true});
+  if(typeof MODE!=="undefined" && MODE==="job" && JOB){
+    if(JOB.depot) out.push({id:"depot",kind:"depot",style:"dock",x:JOB.depot.x,z:JOB.depot.z,
+      label:JOB.depot.label,found:true,done:false});
+    for(i=0;i<JOB.targets.length;i++)
+      out.push({id:"t"+i,kind:"drop",style:JOB.style,x:JOB.targets[i].x,z:JOB.targets[i].z,
+        label:JOB.targets[i].label,found:true,done:!!JS.doneMap[i]});
+  } else if(typeof scouts!=="undefined"){
+    for(i=0;i<scouts.length;i++){
+      var s=scouts[i];
+      out.push({id:"job:"+s.job.id,kind:"job",style:s.job.depot?"dock":s.job.style,
+        x:s.pt.x,z:s.pt.z,label:s.job.name,found:!!foundPts[s.job.id]});
+    }
+  }
+  return out;
+}
+function blipIcon(p){
+  var pinned=WP&&WP.id===p.id;
+  var ring=pinned?'<circle cx="7" cy="7" r="6.4" fill="none" stroke="#fff" stroke-width="1.8"/>':'';
+  if(p.kind==="pad")
+    return '<svg width="13" height="13" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.8" fill="none" stroke="#FF8A3C" stroke-width="2.6"/>'+ring+'</svg>';
+  if(p.kind==="job"||p.kind==="depot")
+    return '<svg width="14" height="14" viewBox="0 0 14 14">'+(p.found||p.kind==="depot"
+      ? '<circle cx="7" cy="7" r="5.2" fill="#F7C948" stroke="#B9860E" stroke-width="1.8"/>'
+      : '<circle cx="7" cy="7" r="5" fill="rgba(51,86,110,.26)"/>')+ring+'</svg>';
+  return '<svg width="13" height="13" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.6" fill="'+(p.done?"#57D06B":"#2FB7D6")+'"/>'+ring+'</svg>';
+}
+function paintMinimap(){
+  if(DEMO||!minimapEl) return;
+  var pts=mapPoints(), live={}, i;
+  // forward is UP: rotate every offset into the plane's own frame. yaw 0 points
+  // down -Z, so a thing ahead has a negative dz and lands above the triangle.
+  var sy=Math.sin(S.yaw), cy=Math.cos(S.yaw);
+  for(i=0;i<pts.length;i++){
+    var p=pts[i]; live[p.id]=true;
+    var el=mmEls[p.id];
+    if(!el){
+      el=D.createElement("div"); el.className="blip";
+      el.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
+      el.addEventListener("click",function(e){
+        e.stopPropagation();
+        if(this.__pt){ setWaypoint(this.__pt); sfx("select"); haptic("light"); }
+      });
+      minimapEl.appendChild(el); mmEls[p.id]=el;
+    }
+    el.__pt=p;
+    var dx=p.x-S.pos.x, dz=p.z-S.pos.z;
+    var mx=(dx*cy-dz*sy)*MM_SCALE, my=(dx*sy+dz*cy)*MM_SCALE;
+    var d=Math.hypot(mx,my), edge=false;
+    if(d>MM_R){ mx=mx/d*MM_R; my=my/d*MM_R; edge=true; }
+    el.style.left=(52+mx)+"px"; el.style.top=(52+my)+"px";
+    el.style.opacity=edge?"0.5":"1";
+    el.innerHTML=blipIcon(p);
+    el.__mx=mx; el.__my=my; el.__edge=edge;
+  }
+  for(var k in mmEls){ if(!live[k]){ try{ minimapEl.removeChild(mmEls[k]); }catch(e){} delete mmEls[k]; } }
+  minimapEl.style.display="block";
+}
+// the slow half of the HUD: the pin's distance, the map, and the getting-warmer
+// chime. Ten times a second is plenty and keeps it off the render budget.
+var hudSlowT=0, warmT=0, warmAt=-99;
+function hudSlow(dt){
+  hudSlowT+=dt;
+  if(hudSlowT<0.1) return;
+  hudSlowT=0;
+  paintWaypoint();
+  paintMinimap();
+  // arriving at the pin retires it: a pin that has done its job stops nagging
+  if(WP && Math.hypot(S.pos.x-WP.x,S.pos.z-WP.z)<45) dropWaypoint();
+}
+// GETTING WARMER. A chime that speeds up as you close on a job you have not
+// found yet. It works with no words at all, which is the whole point of FL5b.
+function warmerStep(dt){
+  if(DEMO||S.auto||NODRAW||!S.sound) return;
+  if(typeof MODE==="undefined"||MODE==="job"||S.picking||typeof scouts==="undefined") return;
+  var best=1e9;
+  for(var i=0;i<scouts.length;i++){
+    if(foundPts[scouts[i].job.id]) continue;
+    var d=Math.hypot(S.pos.x-scouts[i].pt.x,S.pos.z-scouts[i].pt.z);
+    if(d<best) best=d;
+  }
+  if(best>620) return;
+  var gap=0.26+(Math.min(best,620)/620)*1.5;      // near = fast, far = slow
+  if((time-warmAt)<gap) return;
+  warmAt=time; sfx("select",{vol:0.18});
+}
+
 function paintGoals(){
   // FL5: on a job the chips talk about the job, not the world goal. The world
   // goal is still ticking away underneath — coins scooped on a delivery run
@@ -1724,11 +2068,16 @@ function paintGoals(){
     gCoinsEl.style.display="none"; gLandEl.style.display="none";
     gJobEl.style.display="flex"; gJobEl.textContent=JOB.name;
     gCarryEl.style.display="flex";
-    var word=(JOB.verb||"Done").replace("!","");
-    var line=word+" "+JS.done+"/"+JOB.targets.length;
-    if(JOB.capacity>0) line+="   -   Carrying "+JS.carrying;
-    else if(JOB.hold>0&&JS.holdOn>-1&&!JS.complete) line+="   -   Holding steady...";
-    gCarryEl.textContent=line;
+    // FL5b: PROGRESS AS OBJECTS, NOT TEXT. "Delivered 1/3 - Carrying 2" is
+    // unreadable at four. The same facts as a picture: the things actually in
+    // your hands, an arrow, then one place per drop that turns green with a
+    // tick as it is done. A kid can see exactly what is left without reading a
+    // word. The strip is generated from the recipe, same as the offer card's.
+    gCarryEl.innerHTML='<span class="cargoline">'+
+      jobStrip(JOB,18,JS.carrying,JS.doneMap,(JOB.hold>0&&!JS.complete)?JS.holdOn:-1)+'</span>';
+    gCarryEl.setAttribute("aria-label",
+      (JOB.verb||"Done").replace("!","")+" "+JS.done+"/"+JOB.targets.length+
+      (JOB.capacity>0?", carrying "+JS.carrying:""));
     gCarryEl.className="chip"+(JS.complete?" done":"");
     gJobEl.className="chip"+(JS.complete?" done":"");
     leaveJobEl.style.display=JS.complete?"none":"block";
@@ -1753,6 +2102,8 @@ if(DEMO){ // attract mode on the landing card: scenery only, no chrome, no taps
   D.querySelector(".pill").style.display="none";helpBtn.style.display="none";
   worldNameEl.style.display="none";takeoffBtn.style.display="none";
   rideNameEl.style.display="none";
+  // FL5b: the attract loop is pure scenery — no map, no pin, no chrome at all
+  minimapEl.style.display="none";waypointEl.style.display="none";
 }
 
 // ============================================================================
@@ -1976,6 +2327,11 @@ takeoffBtn.addEventListener("click",takeOff);
 ofStart.addEventListener("click",acceptOffer);
 ofNo.addEventListener("click",declineOffer);
 leaveJobEl.addEventListener("click",leaveJob);
+// ---------- FL5b: hear it, and drop the pin ----------
+ofSayEl.addEventListener("click",function(e){ e.stopPropagation(); sayJob(offered); });
+wpDropEl.addEventListener("click",function(e){ e.stopPropagation(); dropWaypoint(); sfx("select"); });
+waypointEl.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
+minimapEl.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
 // after a job: do it again right here, or go back to flying. Either way the
 // other jobs are back out in the world waiting to be found.
 fcAgain.addEventListener("click",function(){ var m=JOB; closeFactCard(); endJob(); if(m) startJob(m); });
@@ -2228,9 +2584,12 @@ function startJob(m){
   hideScouts();                     // the job builds its own world now
   // a job does its own guiding (chips + one arrow), so the drag hint steps aside
   try{ S.hintDone=true; hintEl.style.opacity=0; }catch(e){}
+  // FL5b: a pin pointing at the job you just started has done its job
+  if(WP&&WP.id==="job:"+m.id) dropWaypoint();
   paintGoals();
   toast(m.name);
   buddyMoment("jobstart","cheer",m.tip||m.blurb,true);
+  sayJob(m);                        // FL5b: said out loud once, for a non-reader
   return true;
 }
 function endJob(){
@@ -2275,6 +2634,10 @@ function jobObjective(){
 function arrowTarget(){
   var ob=jobObjective();
   if(ob) return ob;
+  // FL5b: off a job, the big orange arrow follows the PIN. On a job the job
+  // still wins — the pin waits underneath, which is exactly why it survives
+  // leaving one.
+  if(WP&&MODE!=="job") return {x:WP.x,z:WP.z,label:WP.label};
   if(guideJob&&MODE!=="job"){
     var p=jobStartPoint(guideJob);
     if(Math.hypot(S.pos.x-p.x,S.pos.z-p.z)<70){ guideJob=null; return null; }
@@ -2429,6 +2792,9 @@ function openOffer(m){
   offered=m;
   try{
     ofName.textContent=m.name;
+    // FL5b: the whole job as a picture, before a single word is read. Built
+    // from the recipe, so a new job gets its picture for free.
+    ofStoryEl.innerHTML=jobStrip(m,32,null,null,-1);
     ofBlurb.textContent=m.blurb;
     ofTip.textContent=m.tip||m.blurb;
     ofDone.innerHTML=hasBadge(m.id)
@@ -2448,9 +2814,19 @@ function closeOffer(){
 function acceptOffer(){ var m=offered; closeOffer(); if(m) startJob(m); return !!m; }
 function declineOffer(){
   var m=offered;
-  if(m){ declined[m.id]=time; toast("Maybe later!"); }
+  // FL5b: saying no PINS it. "Not now" should mean "not now", not "never find
+  // this again" — the pin is how a kid comes back to it in their own time.
+  if(m){ declined[m.id]=time; pinJob(m); toast("Maybe later!"); }
   closeOffer();
   return !!m;
+}
+// the one way a job becomes a pin, shared by the offer card, the mini-map and
+// the help list, so all three really do the same thing
+function pinJob(m){
+  if(!m) return null;
+  var p=jobStartPoint(m);
+  return setWaypoint({id:"job:"+m.id,kind:"job",style:m.depot?"dock":m.style,
+    x:p.x,z:p.z,label:m.name});
 }
 // while you are just flying: have we swooped low over a job's start point?
 function scoutStep(){
@@ -2458,6 +2834,10 @@ function scoutStep(){
   for(var i=0;i<scouts.length;i++){
     var s=scouts[i], m=s.job;
     var d=Math.hypot(S.pos.x-s.pt.x,S.pos.z-s.pt.z);
+    // FL5b: having BEEN somewhere is what turns its map dot from faint to gold.
+    // A faint dot is the map saying "there is more out there" — the one thing a
+    // single arrow can never say.
+    if(d<260) foundPts[m.id]=true;
     if(d>(m.radius+10)||S.pos.y>(m.ceiling+25)){
       if(s.near) s.near=false;
       continue;
@@ -2481,7 +2861,9 @@ function paintHelpJobs(){
       b.innerHTML='<span><span>'+m.name+'</span><span class="b2">'+m.blurb+'</span></span>'+
         '<span class="go">Show me</span>';
       b.addEventListener("click",function(){
-        guideJob=m; closeHelp();
+        // FL5b: "Show me" pins it, exactly like tapping its dot on the map or
+        // saying "not now" to its offer. Three doors, one thing behind them.
+        guideJob=m; pinJob(m); closeHelp();
         toast("Follow the arrow!");
       });
       helpJobs.appendChild(b);
@@ -2674,6 +3056,8 @@ function stepSim(dt){
   for(var key in chunks) collectCoins(chunks[key].coins,chunks[key].group);
   jobStep(dt);
   scoutStep();
+  hudSlow(dt);
+  warmerStep(dt);
 }
 
 // ---------- draw ----------
@@ -2832,7 +3216,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"FL5",
+  version:"FL5b",
   state:S,
   world:world,
   worlds:WORLDS,
@@ -2880,6 +3264,51 @@ window.SKY={
   arrowTarget:arrowTarget,
   helpJobs:function(){ paintHelpJobs(); try{ return helpJobs.children.length; }catch(e){ return 0; } },
   mergeMissions:mergeMissions,
+  // ---- FL5b handles: pictures, the pin and the map ----
+  // what the offer card is actually SHOWING, counted off the live DOM, so the
+  // harness proves the picture came out of the recipe and not out of a drawing
+  offerStrip:function(){
+    try{
+      var g=ofStoryEl.querySelectorAll(".grp");
+      return { cargo:g[0]?g[0].querySelectorAll("svg").length:0,
+               targets:g[1]?g[1].querySelectorAll("svg").length:0,
+               arrows:ofStoryEl.children.length-2 };
+    }catch(e){ return {cargo:0,targets:0,arrows:0}; }
+  },
+  progressStrip:function(){
+    try{
+      var g=gCarryEl.querySelectorAll(".grp");
+      return { cargo:g[0]?g[0].querySelectorAll("svg").length:0,
+               targets:g[1]?g[1].querySelectorAll("svg").length:0,
+               done:gCarryEl.querySelectorAll(".grp .tgt svg circle[fill='#2b7a4b']").length,
+               holding:gCarryEl.querySelectorAll(".holding").length };
+    }catch(e){ return {cargo:0,targets:0,done:0,holding:0}; }
+  },
+  answers:function(){
+    try{ return { yes:ofStart.className, no:ofNo.className,
+      tick:ofStart.querySelectorAll("svg path").length, cross:ofNo.querySelectorAll("svg path").length,
+      labels:D.querySelector(".anslab").textContent.replace(/\s+/g," ").trim() }; }catch(e){ return null; }
+  },
+  waypoint:function(){ return WP?{id:WP.id,kind:WP.kind,x:WP.x,z:WP.z,label:WP.label,
+    up:(function(){ try{ return waypointEl.style.display==="flex"; }catch(e){ return false; } })(),
+    dist:Math.round(Math.hypot(S.pos.x-WP.x,S.pos.z-WP.z)) }:null; },
+  setWaypoint:setWaypoint,
+  pinJob:function(id){ return pinJob(findJob(id)); },
+  dropWaypoint:function(){ try{ wpDropEl.click(); }catch(e){ dropWaypoint(); } return WP===null; },
+  // every blip, with the REAL world coordinate it stands for and where it
+  // landed on the dial, so the harness can prove the map is not decoration
+  blips:function(){
+    paintMinimap();
+    var out=[],k;
+    for(k in mmEls){ var e=mmEls[k], p=e.__pt;
+      out.push({id:p.id,kind:p.kind,found:!!p.found,done:!!p.done,x:p.x,z:p.z,
+        mx:e.__mx,my:e.__my,edge:!!e.__edge,pinned:!!(WP&&WP.id===p.id)}); }
+    return out;
+  },
+  tapBlip:function(id){ var e=mmEls[id]; if(!e) return false;
+    try{ e.click(); }catch(x){ setWaypoint(e.__pt); } return !!(WP&&WP.id===id); },
+  found:function(){ return foundPts; },
+  sayLines:saySplit,
   // ---- AR1 handles: prove the art layer is real art and a safe fallback ----
   kit:function(){ var n=[],k; for(k in KIT) n.push(k);
     return {on:KIT_ON,started:KIT_STARTED,loaded:n,files:KIT_FILES,floaters:floaters.length}; },
