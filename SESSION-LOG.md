@@ -1,5 +1,62 @@
 # Buildable Kids — Session Log
 
+## 2026-07-26: Session RP2 — Trains gets its real pictures
+
+Phase RP, block RP2 only. RP1 taught the template the richer composed pages and
+converted Trains as the pilot, but every fact photo on those pages was a **detail
+crop of the page photo standing in for art that did not exist yet**. This session
+generates that art. Nothing about the template changed: two files carry the whole
+session, `public/explore/trains.json` and the twelve new WebP files beside it.
+
+**Twelve pictures, generated one prompt at a time (never batched — a batch returns
+a collage).** Eight are the second and third fact photos on each of the four pages,
+four are chart chips:
+
+- `trains-1a` the maglev's long nose, `trains-1b` a bullet train stopped with its
+  doors on the platform marks
+- `trains-2a` a wall of stacked shipping containers, `trains-2b` a white
+  refrigerated car
+- `trains-3a` a sepia 1863 steam tunnel (the THEN half), `trains-3b` a bright
+  modern electric platform (the NOW half)
+- `trains-4a` a wheel's cone-shaped tread on the rail, `trains-4b` the flange lip
+  from track level
+- `trains-chart-maglev` for the speed chart's top row, and `trains-chart-1863`,
+  `-1890`, `-today` for the three timeline stops
+
+**Trains is now 0/8 stand-ins, down from 8/8.** `qa-topic.mjs` counted the detail
+crops as WARNs so the backlog stayed visible; that warning is gone for trains and
+`ALL CHECKS PASS` (the remaining WARNs are the five photo-less books and the four
+pending exhibit links).
+
+**Fact photos are 1200px wide, chart chips are 700px** — a chip renders about 84px
+across, so a 1600px chip is 200KB of nothing. The whole batch is 665KB.
+
+**Three things only a screenshot caught** (rendered at 390x844, 900x1200 and
+844x390, as RP1's law requires):
+
+1. **The polaroid center-crops, so a wide shot loses its subject.** `trains-1a`
+   started as the full maglev-along-a-guideway frame; the small taped polaroid
+   cover-cropped its middle and showed nothing but concrete. The file is now cropped
+   tight around the nose (roughly square) so the crop the template takes still has
+   the train in it. **Any art destined for a polaroid or a circle must be near-square
+   in the file, not in the layout.**
+2. **The two historical timeline chips were too dark to read at chip size.** The 1863
+   and 1890 tunnels are genuinely dim scenes; brightened 1.28x / 1.22x with a touch
+   of contrast on the way to WebP, and they now read as trains rather than smudges.
+3. **A photo chip sitting among drawn glyphs.** The speed chart's maglev row is the
+   one photo among three flat blue glyphs. Checked at size and kept: the pale sky
+   sits happily beside the glyphs and the row that says "still being built" is the
+   one worth showing for real.
+
+**One caption changed to match its picture.** Page one's third fact said the doors
+stop on the marks painted on the platform; the generated photo shows the doors open
+at the platform but no marks, so the caption now reads "The doors line up with the
+platform every single time." The fact text and its source are untouched.
+
+**Still open in phase RP:** RP3 (richer layouts for the other 7 photo books), RP4
+(their art), RP5 (the 12 books with no photos at all), RP6 (fact-check every chart
+number and unit across all 20, Mike flips the rest live), RP7 (real narration audio).
+
 ## 2026-07-26: Planner — the Right now bar stops being a wall of text
 
 Two complaints from Mike, both about the Roadmap tab's "Right now" bar at the
