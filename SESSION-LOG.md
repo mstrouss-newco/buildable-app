@@ -1,5 +1,3 @@
-# Buildable Kids — Session Log
-
 ## 2026-07-26: Session RP2 — Trains gets its real pictures
 
 Phase RP, block RP2 only. RP1 taught the template the richer composed pages and
@@ -104,6 +102,73 @@ file to `/mnt/user-data/outputs/` first.
 No QA script covers the planner (it is a standalone page, not a game). Verified
 instead with a headless Chromium render of the focus bar against fake roadmap
 data, checking both the collapsed and expanded states and the section ordering.
+
+## 2026-07-26: Session AR1P — polish pass MOCKS: the plane, the coins, life
+
+**Nothing was pushed and no engine file was edited.** Mike put a picture gate in
+front of this work on purpose: the island took six rounds because sessions built
+before he looked. This session renders options and stops. AR1Q builds the picks.
+
+The mocks are a GENERATED COPY of the engine, `public/ar1p-mock.html`, built by
+`qa/ar1p-build.mjs` injecting `qa/ar1p-payload.js` at five anchors. Every picture
+is therefore the real renderer, the real opaque sea, the real terraced island and
+the real chase camera — only the thing being judged differs. Flags are a comma
+list on `?ar1p=`: `planeA|planeB|planeC`, `nopilot`, `coinA|coinB`,
+`pets|petsAnim`, `life`.
+
+**The plane.** Three shapes, all replacing the eight boxes and cylinders of
+`buildPlane()` with turned lathe bodies and lofted aerofoil wings — a BoxGeometry
+wing physically cannot taper, sweep or thin at the tip, which is most of the
+boxiness. A = turned and tapered; B = the same body on floats; C = the chunky
+toy. All three keep the ride palette slots, `wingSpan`, the prop-spin animate
+contract and the 10u x 13u scale ruler. All three carry a pilot and control
+surfaces that deflect with bank, turn and pitch. Cost: about +15 draw calls
+whichever wins (207 -> 222 on the chase cam), 2.1k-3.1k triangles against the
+62k already on screen. Price is not the deciding factor; looks are.
+
+**The coins.** A = a real ring (TorusGeometry, hot emissive, spinning about its
+vertical axis so it flashes thin then wide) for ZERO extra draw calls. B = the
+hand-turned coin kept per LOOK RULE 13, made bigger and hotter, with an additive
+halo behind every coin. The halo is a POINT CLOUD, one `THREE.Points` per chunk,
+so the whole world's glow costs +26 to +34 calls; a glow sprite per coin would
+have added 337 and doubled the most expensive thing in the sky.
+
+**The animals — and the finding that decides them.** Cube Pets DO carry
+animation: 8 clips each (static/idle/walk/run/eat/dance/gesture x2), node
+transforms, no skinning. Measured on one dressed island from a low close camera:
+bare 232 calls, animals MERGED FLAT with motion written in code 291 (+59),
+animals with their own clips and an AnimationMixer 570 (+338). From the top tier
+it is +284 against +915. Merging is what kills the hierarchy, so an animated
+animal stays 5-7 meshes forever. **Went merged.** Crabs on the sand, parrots down
+in the crowns of the palms the island actually built, a monkey on the top ledge,
+fish arcing out of the lagoon with a splash both ways, bees on a figure of eight,
+a pig and chicks in the camp. All of it through the AR1M placement law: ask
+`landTop`, and anything that lands in the sea is not placed.
+
+**World life, ranked by life per draw call.** The whole set costs +5 to +9 calls
+for the entire world. Palms that sway and bend harder when you fly low, flags
+that wave, boats that TRAVEL (each floater orbits at the radius it was moored at,
+so it can never sail onto land) and a shore that breathes are all FREE — they
+move things already on the screen. Campfire smoke is one point cloud for every
+fire in the world (+1). Gulls are ONE mesh for the whole flock, vertices
+rewritten each frame (+1). Cloud shadows are written up at about +1 and not
+mocked.
+
+**Seven bugs only a screenshot caught, again.** Propeller blades that were
+paddles; wingtip spheres that read as red lumps floating off the wing; control
+surfaces cream on a red fin, reading as glued-on windows; a pilot sitting ON the
+roof instead of in the plane; a seaplane cabin buried under its own high wing;
+gulls invisible for two separate reasons (station-keeping on the PLANE, which had
+flown miles from the island being photographed, and flat wings that read as white
+dashes rather than birds until they got a V and a bank); and smoke that fell to a
+soot smudge because a vertex colour fading to black under normal blending is
+soot, not smoke. Plus an ordering trap: an island dresses the moment the Kenney
+kit lands, which can be before the animals have, and the second pass is refused
+because the island is already marked dressed — early islands are remembered and
+dressed when the animals arrive.
+
+QA: no game was touched, so no game QA was run. `public/skyflyer-engine.html` is
+byte-identical to `951caf3`.
 
 ## 2026-07-26: Session AR1M — Sunny Islands rebuilt as THE MIX, plus a real sky
 
