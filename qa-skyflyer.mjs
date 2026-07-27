@@ -632,8 +632,17 @@ chk('a coin is turned with a raised middle and a rim, not a flat token',
   /T\*1\.35/.test(html));
 chk('the coin is two-tone for FREE (vertex colour, not a second object)',
   /g\.setAttribute\("color"/.test(html) && /vertexColors:true/.test(html));
+// AR1Q: Mike asked for Sonic-bright, so the coin got bigger and hotter and the
+// SHINE now comes from an additive halo. Guarding the new shape, not the old
+// numbers - a check that guards a shape which no longer exists passes forever.
 chk('gold is lit from inside and takes a hot highlight, so it reads as metal',
-  /emissive:0x3A2700/.test(html) && /shininess:220/.test(html));
+  /emissive:0x6A4600/.test(html) && /shininess:300/.test(html));
+chk('AR1Q: the coin SHINES - an additive halo behind every one of them',
+  /function coinGlow\(/.test(html) && /AdditiveBlending/.test(html) &&
+  /COIN_GLOWTEX/.test(html));
+chk('...and the halo is ONE point cloud per chunk, never a sprite per coin',
+  /new THREE\.Points\(g,new THREE\.PointsMaterial\(\{size:[\d.]+,map:COIN_GLOWTEX/.test(html) &&
+  /coinGlow\(g,coins\)/.test(html));
 chk('coins shimmer along a trail instead of flashing in lockstep',
   /ph:\(Math\.abs\(x\*0\.7\+z\*1\.3\)%6\.283\)/.test(html) &&
   /rotation\.y=spin\+cc\.ph/.test(html));
@@ -691,7 +700,58 @@ if (!JSDOM) {
       // ------------------------------------------------------------------
       const shapes = [];
       for (let k = 0; k < 24; k++) { const sh = w.SKY.isleShape(k); if (sh) shapes.push(sh); }
-      chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
+      // ===================== AR1Q - THE LIVING ISLAND =====================
+chk('AR1Q: the plane is TURNED AND LOFTED - not one box left in the starter ride',
+  /function turnedBody\(/.test(html) && /function wingLoft\(/.test(html) &&
+  /function loftRibs\(/.test(html) &&
+  !/new THREE\.BoxGeometry\(span,0\.42,2\.6\)/.test(html));
+chk('...and it still fits the scale ruler: 10u long, 13u across',
+  /\[0\.02,-4\.9\]/.test(html) && /\[0\.02,4\.82\]/.test(html) &&
+  /wingSpan:13/.test(html));
+chk('...and the kid in the cockpit is a real face on the screen',
+  /function kidPilot\(/.test(html) && /kidPilot\(0\.96,2\.05,0\.92\)/.test(html));
+chk('...and the control surfaces move with the stick, so it reads as FLYING',
+  /surf\.ailL\.rotation\.x= bank\*0\.9/.test(html) &&
+  /surf\.rud\.rotation\.y = -bank\*0\.55/.test(html));
+chk('AR1Q: WHEELS, not floats - nothing may promise a water landing',
+  /THE UNDERCARRIAGE|WHEELS\. Spats in the WING colour/.test(html) === false ||
+  (/tWheel/.test(html) && !/float|pontoon/i.test(html.split('function buildPlane(')[1].split('function buildCopter(')[0])));
+chk('AR1Q: the animals are ONE draw call each - merged, and the colour survives',
+  /function anmMerge\(/.test(html) && /g\.attributes\.color/.test(html) &&
+  /vertexColors:true/.test(html));
+chk('...the kit has no crab, parrot or fish, so those three are built in code',
+  /HB_BUILD=\{[\s\S]{0,400}crab:/.test(html) && /parrot:function/.test(html) &&
+  /fish:function/.test(html));
+chk('AR1Q: nothing has a skeleton, so the legs are bent HERE - five gaits',
+  ['walk','hop','crawl','plod','flap'].every(g => new RegExp(g+':function\\(R,t,pa').test(html)));
+chk('...and the leg-bending is BUDGETED, because vertices are CPU not draw calls',
+  /PUP_BUDGET=\d+/.test(html) && /slice\(0,PUP_BUDGET\)/.test(html));
+chk('...and a puppeted animal gets its OWN geometry or the species moves in lockstep',
+  /mesh\.geometry=mesh\.geometry\.clone\(\)/.test(html));
+chk('AR1Q: every animal is placed by landTop, exactly like every other prop',
+  (() => { const b=(html.split('function dressAnimals(')[1]||'').split('\nfunction dressLiving')[0];
+    return /y=landTop\(plan,x,z\)/.test(b) && /if\(y==null\) return null/.test(b); })());
+chk('AR1Q: the far animals are hidden, or forty-five islands of them would show up',
+  /PET_SEE2/.test(html) && /if\(!near\)\{ if\(o\.visible\) o\.visible=false; continue; \}/.test(html));
+chk('AR1Q: the flock is ONE mesh and all the smoke in the world is ONE mesh',
+  /GULLS=new THREE\.Mesh/.test(html) && /SMOKE=new THREE\.Points/.test(html));
+chk('...and a gull is a V that BANKS into its turn, or it reads as a white dash',
+  /var flap=0\.62\+Math\.sin/.test(html) && /var bk=\(G\.sp>0\?-0\.42:0\.42\)/.test(html));
+chk('AR1Q: flat meshes on the water are DOUBLE SIDED, or they face down and vanish',
+  (() => { const sh=(html.split('function buildShadows(')[1]||'').split('\nfunction ')[0];
+    const wk=(html.split('function buildWakes(')[1]||'').split('\nfunction ')[0];
+    return /side:THREE\.DoubleSide/.test(sh) && /side:THREE\.DoubleSide/.test(wk); })());
+chk('AR1Q: a travelling boat never sails onto its own island',
+  (() => { const b=(html.split('function startTravel(')[1]||'').split('\nfunction ')[0];
+    return /landTop\(pp\.plan,f\.position\.x,f\.position\.z\)!=null\) continue/.test(b) &&
+           /d<pp\.plan\.coast\*1\.25\) continue/.test(b); })());
+chk('AR1Q: the sway, the flags and the surf are FREE - they move what is already there',
+  /SWAY\.push/.test(html) && /WAVERS\.push/.test(html) && /SURF\.push/.test(html) &&
+  /o\.material===M_HALO/.test(html));
+chk('AR1Q: the living layer is SUNNY ISLANDS ONLY - the other two worlds are AR2',
+  /function stepIslandLife\(dt,t\)\{\s*\n?\s*if\(world\.terrain!=="islands"\) return;/.test(html) &&
+  /function startLife\(\)\{\s*\n?\s*if\(world\.terrain!=="islands"/.test(html));
+chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
         shapes.length > 0 && shapes.every(sh => sh.tiers >= 1 && sh.tiers <= 4) &&
         shapes.some(sh => sh.tiers >= 3) && shapes.every(sh => sh.big || sh.tiers <= 2),
         shapes.length + ' islands, tiers ' + [...new Set(shapes.map(sh=>sh.tiers))].sort().join('/'));
