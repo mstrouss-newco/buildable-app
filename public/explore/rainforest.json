@@ -180,7 +180,7 @@
       "artAlt": "A howler monkey swings between vines high in the leafy canopy",
       "stat": {
         "value": "3",
-        "unit": "miles you can hear it"
+        "unit": "miles away"
       },
       "factAudio": "rainforest-treetops",
       "quiz": [

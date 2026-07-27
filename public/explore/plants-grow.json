@@ -102,6 +102,7 @@
       ],
       "infographic": {
         "kind": "diagram",
+        "tone": "book",
         "title": "A leaf is a little food factory",
         "name": "leaf-factory",
         "caption": "Leaves catch sunlight and mix it with water and a gas from the air to make a sugar the plant can eat. The oxygen they give off is part of the air we breathe.",
@@ -134,6 +135,7 @@
       ],
       "infographic": {
         "kind": "diagram",
+        "tone": "book",
         "title": "Where a plant actually drinks",
         "name": "root-hairs",
         "caption": "Root hairs are so small you would need a magnifying glass to see them, and they are the main place a plant takes in water and minerals. They break easily, which is why a plant droops for a while after it is moved.",

@@ -52,6 +52,7 @@
       ],
       "infographic": {
         "kind": "diagram",
+        "tone": "book",
         "title": "The same eye, twice",
         "name": "pupil-light",
         "caption": "The iris opens and closes the pupil to let in just the right amount of light. In bright sunshine the pupil shrinks, and in a dim room it opens wide.",

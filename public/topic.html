@@ -217,12 +217,14 @@
   .lay-tall .photo{aspect-ratio:4 / 5}
   /* the ruler lives INSIDE the photo box, so it scales with the photo instead
      of drifting off it the way an absolutely-placed .bigstat once did */
-  .ruler{position:absolute;left:13px;top:9%;bottom:15%;width:30px;z-index:3;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
-  .ruler i{display:block;width:12px;height:3px;border-radius:2px;background:rgba(255,255,255,.9);box-shadow:0 1px 5px rgba(0,0,0,.45)}
+  .ruler{position:absolute;left:13px;top:8%;bottom:22%;width:30px;z-index:3;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+  .ruler i{display:block;width:12px;height:3px;border-radius:2px;background:rgba(255,255,255,.94);box-shadow:0 0 0 1px rgba(15,14,23,.28),0 1px 6px rgba(15,14,23,.6)}
   .ruler i:nth-child(odd){width:22px}
-  .ruler::before{content:"";position:absolute;left:0;top:-2px;bottom:-2px;width:3px;border-radius:2px;background:rgba(255,255,255,.75);box-shadow:0 1px 5px rgba(0,0,0,.45)}
-  .scalekid{position:absolute;left:9px;bottom:3.5%;z-index:3;width:38px;height:29px;pointer-events:none;
-    filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}
+  .ruler::before{content:"";position:absolute;left:0;top:-2px;bottom:-2px;width:3px;border-radius:2px;background:rgba(255,255,255,.85);box-shadow:0 0 0 1px rgba(15,14,23,.28),0 1px 6px rgba(15,14,23,.6)}
+  /* the kid stands at the FOOT of the ruler, not at the foot of the photo —
+     the painted page title lives down there and they collided */
+  .scalekid{position:absolute;left:5px;bottom:calc(22% - 30px);z-index:3;width:36px;height:28px;pointer-events:none;
+    filter:drop-shadow(0 1px 2px rgba(15,14,23,.85)) drop-shadow(0 3px 7px rgba(15,14,23,.55))}
   .scalekid svg{width:100%;height:100%;display:block;fill:#fff;stroke:#fff}
   .lay-tall .bigstat{bottom:auto;top:8%}
   /* a standing photo beside the words: portrait, floated, and given a wide
@@ -329,8 +331,8 @@
     /* RP3: sideways, the tall page's photo joins the same 4/3 column as the
        rest, so the ruler shortens with it rather than running off the frame. */
     .lay-tall .fphoto.standing{width:50%}
-    .ruler{top:8%;bottom:18%;width:24px}
-    .scalekid{width:30px;height:23px}
+    .ruler{top:7%;bottom:24%;width:24px}
+    .scalekid{width:29px;height:22px;bottom:calc(24% - 24px)}
     .lay-tall .bigstat{top:6%}
     .wow{margin-top:14px;padding:11px}
     .ghostyear{font-size:58px;top:-20px}
@@ -362,7 +364,7 @@
     .lay-tall .fphoto.standing{width:38%}
     .ruler{width:40px}
     .ruler i{height:4px}
-    .scalekid{width:52px;height:40px;left:12px}
+    .scalekid{width:48px;height:37px;left:8px;bottom:calc(22% - 40px)}
     .wow h4{font-size:20px}
     .wow .cap{font-size:12.5px}
     .ghostyear{font-size:110px;top:-40px}
@@ -841,17 +843,17 @@ const GLYPHS = {
   hand: '<rect x="13" y="17" width="23" height="19" rx="6.5"/><rect x="15.5" y="6" width="4.6" height="14" rx="2.3"/><rect x="21.5" y="3" width="4.6" height="17" rx="2.3"/><rect x="27.5" y="5" width="4.6" height="15" rx="2.3"/><rect x="33.5" y="10" width="4.6" height="10" rx="2.3"/><rect x="6" y="16" width="9" height="4.6" rx="2.3"/>',
   palmleaf: '<path d="M23 36V21h2.6v15Z"/><path d="M24 22C10 22 3.6 13.6 6 5c8.4 0 14.4 4.4 18 11 3.6-6.6 9.6-11 18-11 2.4 8.6-4 17-18 17Z"/>',
   palm: '<path d="M22.6 36V13h3.4v23Z"/><path d="M24 14C15 14 7 10 5 3.6c8.4-2.2 15.6 1 19 7 3.4-6 10.6-9.2 19-7C41 10 33 14 24 14Z"/><circle cx="24" cy="13" r="3.4"/>',
-  toucanhead: '<circle cx="24" cy="18" r="12"/><circle cx="19.5" cy="14" r="2.8" fill="#fff"/>',
+  toucanhead: '<circle cx="24" cy="18" r="14"/><circle cx="19" cy="13.5" r="3" fill="#fff"/>',
   beak: '<path d="M3 18 L45 8 L45 28 Z"/><path d="M6 18 L44 18" stroke="#fff" stroke-width="2" fill="none"/>',
   river: '<path d="M2 27c8-11 14 6 22-2s14 5 22-4" fill="none" stroke-width="5.4" stroke-linecap="round"/><path d="M2 16c8-11 14 6 22-2" fill="none" stroke-width="3" stroke-linecap="round" opacity=".55"/>',
-  ledge: '<path d="M4 7h20v13h20v16H4Z"/><path d="M25 21c0 6 5 10 11 12" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>',
+  ledge: '<path d="M4 5h18v12.6h22V36H4Z"/><path d="M25 19v16M30 19v16M35 19v16M40 19v16" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
   pool: '<ellipse cx="24" cy="25" rx="18" ry="9"/><path d="M18 11c0 4.4 6 6 6 10" fill="none" stroke-width="3.4" stroke-linecap="round"/><path d="M31 9c0 5.4-4.6 8.6-4.6 12" fill="none" stroke-width="3.4" stroke-linecap="round"/>',
   frog: '<ellipse cx="24" cy="25" rx="14" ry="9"/><circle cx="17" cy="13" r="5.4"/><circle cx="31" cy="13" r="5.4"/><circle cx="17" cy="13" r="2.2" fill="#fff"/><circle cx="31" cy="13" r="2.2" fill="#fff"/><path d="M10 31l-5.5 4M38 31l5.5 4" stroke-width="3" stroke-linecap="round" fill="none"/>',
   battery: '<rect x="15" y="5" width="18" height="30" rx="3"/><rect x="20" y="1" width="8" height="5" rx="1.5"/><rect x="18" y="13" width="12" height="4.4" fill="#fff"/>',
   drop: '<path d="M24 2c7.4 10.4 11.4 14.6 11.4 20.6A11.4 11.4 0 0 1 12.6 22.6C12.6 16.6 16.6 12.4 24 2Z"/>',
   sprout: '<path d="M22.6 36V16h3.4v20Z"/><path d="M23 20C14 20 8.6 15 8.6 7.6c8.4 0 14.4 4.6 14.4 12.4Z"/><path d="M26 22c0-8 6-12.4 14.4-12.4C40.4 17 34.4 22 26 22Z"/>',
   arrowdown: '<path d="M20 2h8v21h8L24 36 12 23h8Z"/>',
-  sunflower: '<circle cx="24" cy="18" r="7.4"/><path d="M24 1.5v8M24 26.5v8M6.5 18h8M33.5 18h8M12 6l5.5 5.5M36 6l-5.5 5.5M12 30l5.5-5.5M36 30l-5.5-5.5" stroke-width="4.6" stroke-linecap="round" fill="none"/>',
+  sunflower: '<circle cx="24" cy="18" r="9"/><path d="M24 2.4v6M24 27.6v6M8.4 18h6M33.6 18h6M13 7l4.4 4.4M35 7l-4.4 4.4M13 29l4.4-4.4M35 29l-4.4-4.4" stroke-width="4.8" stroke-linecap="round" fill="none"/>',
   baby: '<circle cx="24" cy="11" r="7.4"/><path d="M24 20c-6.4 0-9.4 4-9.4 9.4V36h18.8v-6.6c0-5.4-3-9.4-9.4-9.4Z"/><circle cx="21" cy="10" r="1.6" fill="#fff"/><circle cx="27" cy="10" r="1.6" fill="#fff"/>',
   person: '<circle cx="24" cy="6.5" r="5"/><path d="M24 12.5c-5 0-7.4 3-7.4 7v6.5h3V36h8.8V26h3v-6.5c0-4-2.4-7-7.4-7Z"/>',
   veg: '<path d="M17 14h14l-4.6 20.4a2.4 2.4 0 0 1-4.8 0Z"/><path d="M24 14c0-6.4 3.4-10.4 8.6-11.4C33.6 9 30 13 24 14Z"/><path d="M20 19h8M21 25h6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>',
@@ -862,26 +864,26 @@ const GLYPHS = {
   bus: '<path d="M3 9h42v17a3.4 3.4 0 0 1-3.4 3.4H6.4A3.4 3.4 0 0 1 3 26Z"/><rect x="7" y="12.5" width="9" height="7" rx="1.5" fill="#fff"/><rect x="19.5" y="12.5" width="9" height="7" rx="1.5" fill="#fff"/><rect x="32" y="12.5" width="9" height="7" rx="1.5" fill="#fff"/><circle cx="13" cy="31" r="4"/><circle cx="35" cy="31" r="4"/>',
   statue: '<path d="M19.4 36h9.2V16h-9.2Z"/><circle cx="24" cy="10" r="4.4"/><path d="M28 14.5 34.6 3.6l2.4 1.2-5.6 11.6Z"/><path d="M13 36h22v-3.4H13Z"/><path d="M20 7.2 17.4 3M28 7.2 30.6 3" stroke-width="2" stroke-linecap="round" fill="none"/>',
   crawler: '<rect x="4" y="11" width="40" height="10" rx="2"/><rect x="4" y="23" width="17" height="9.4" rx="4.7"/><rect x="27" y="23" width="17" height="9.4" rx="4.7"/><circle cx="9.5" cy="27.7" r="2.4" fill="#fff"/><circle cx="15.5" cy="27.7" r="2.4" fill="#fff"/><circle cx="32.5" cy="27.7" r="2.4" fill="#fff"/><circle cx="38.5" cy="27.7" r="2.4" fill="#fff"/>',
-  crane: '<path d="M20 36V5h4v31Z"/><path d="M4 3h40v4.4H4Z"/><path d="M35 7.4v9.6h3.2V7.4Z"/><path d="M36.6 17 33 22h7.2Z"/><path d="M12 36h20v-3.4H12Z"/>',
+  crane: '<path d="M18 36V7h5v29Z"/><path d="M3 3.4h42V8H3Z"/><path d="M39 8v12" stroke-width="2.8" fill="none" stroke-linecap="round"/><path d="M35.4 20h7.2l-3.6 6.4Z"/><path d="M9 36h23v-3.4H9Z"/>',
   mast: '<rect x="15" y="4" width="18" height="28" rx="2" fill="none" stroke-width="3.4"/><path d="M15 4l18 28M33 4 15 32" stroke-width="2.6" fill="none"/>',
   building: '<rect x="10" y="4" width="28" height="32" rx="2"/><rect x="14.5" y="9" width="7" height="7" fill="#fff"/><rect x="26.5" y="9" width="7" height="7" fill="#fff"/><rect x="14.5" y="20" width="7" height="7" fill="#fff"/><rect x="26.5" y="20" width="7" height="7" fill="#fff"/>',
   elephant: '<path d="M7 33V20.4C7 13.4 13.6 8 22 8s15 5.4 15 12.4V33h-6.4v-8.4h-4V33h-8.2v-8.4h-4V33Z"/><path d="M36.6 18.6c4.2 0 6.4 3 6.4 7.2s-3.2 7.2-6.4 5" fill="none" stroke-width="3.4" stroke-linecap="round"/><circle cx="16" cy="17" r="2.2" fill="#fff"/>',
   dumptruck: '<path d="M4 25h27v6.4H4Z"/><path d="M6 11h21l4.4 12H6Z"/><circle cx="12" cy="32" r="4.2"/><circle cx="25" cy="32" r="4.2"/><path d="M33.6 17H43v14.4h-9.4Z"/><circle cx="39" cy="32" r="4.2"/>',
-  drum: '<path d="M13 7h22l4.4 11-4.4 11H13L8.6 18Z"/><path d="M17 11.4 31 24.6M31 11.4 17 24.6" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+  drum: '<path d="M12 8.6h20l6.4 9.4-6.4 9.4H12L5.6 18Z"/><path d="M14 12c6 4 12 4 18 0M14 18c6 4 12 4 18 0M14 24c6 4 12 4 18 0" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
   clock: '<circle cx="24" cy="19" r="15"/><circle cx="24" cy="19" r="11.4" fill="#fff"/><path d="M24 10.6V19l6.4 4.4" stroke-width="3" stroke-linecap="round" fill="none"/>',
   backpack: '<path d="M11 15a13 13 0 0 1 26 0v18.6a2.4 2.4 0 0 1-2.4 2.4H13.4a2.4 2.4 0 0 1-2.4-2.4Z"/><rect x="17.5" y="21" width="13" height="9.4" rx="2.2" fill="#fff"/><path d="M19.6 12.6a4.4 4.4 0 0 1 8.8 0" fill="none" stroke-width="2.8"/>',
-  armor: '<path d="M13 13h22v13.4C35 33 30 36.4 24 36.4S13 33 13 26.4Z"/><path d="M16.6 2h14.8v9.4H16.6Z"/><rect x="20" y="5" width="8" height="3.4" fill="#fff"/><path d="M24 15v18" stroke="#fff" stroke-width="2.4" fill="none"/>',
+  armor: '<path d="M10 10.4 18 5l6 4 6-4 8 5.4V19c0 9-6 15.6-14 17.4C16 34.6 10 28 10 19Z"/><path d="M24 13v20" stroke="#fff" stroke-width="2.4" fill="none"/><path d="M14.5 19h19" stroke="#fff" stroke-width="2.4" fill="none"/>',
   suitcase: '<rect x="5" y="11" width="38" height="23" rx="3.4"/><path d="M18 11V7.4A3.4 3.4 0 0 1 21.4 4h5.2A3.4 3.4 0 0 1 30 7.4V11" fill="none" stroke-width="3"/><rect x="22" y="11" width="4" height="23" fill="#fff"/>',
   hall: '<path d="M5 35V15L24 4l19 11v20Z"/><rect x="13" y="22" width="8.4" height="13" fill="#fff"/><rect x="26.6" y="22" width="8.4" height="13" fill="#fff"/>',
   moat: '<path d="M14 12h20v14H14Z"/><path d="M14 12V5.6h4V9h4V5.6h4V9h4V5.6h4V12Z"/><path d="M2 31c5-4.4 9 4.4 14 0s9 4.4 14 0 9 4.4 14 0" fill="none" stroke-width="4" stroke-linecap="round"/>',
-  field: '<rect x="3" y="7" width="42" height="22" rx="2"/><rect x="3" y="7" width="6.4" height="22" fill="rgba(255,255,255,.5)"/><rect x="38.6" y="7" width="6.4" height="22" fill="rgba(255,255,255,.5)"/><path d="M17 7v22M24 7v22M31 7v22" stroke="#fff" stroke-width="1.8" fill="none"/>',
-  helmet: '<path d="M12 16a12 12 0 0 1 24 0v14.6a3.4 3.4 0 0 1-3.4 3.4H15.4a3.4 3.4 0 0 1-3.4-3.4Z"/><rect x="14" y="17.6" width="20" height="3.4" fill="#fff"/><rect x="14" y="24.6" width="20" height="3.4" fill="#fff"/>',
+  field: '<rect x="3" y="7" width="42" height="22" rx="2" fill="#3E8C55" stroke="#3E8C55"/><rect x="3" y="7" width="6.4" height="22" fill="#2F6B41" stroke="none"/><rect x="38.6" y="7" width="6.4" height="22" fill="#2F6B41" stroke="none"/><path d="M17 7v22M24 7v22M31 7v22" stroke="#fff" stroke-width="1.8" fill="none"/>',
+  helmet: '<path d="M13 14.5a11 11 0 0 1 22 0V27a5 5 0 0 1-5 5H18a5 5 0 0 1-5-5Z"/><rect x="15" y="16" width="18" height="3.8" fill="#fff"/><path d="M22 22.5h4V31h-4Z" fill="#fff"/><path d="M24 2.5v6" stroke-width="2.6" stroke-linecap="round" fill="none"/>',
   shield: '<path d="M24 2.4 40 7.6v11.6c0 9-7 15.4-16 17.4-9-2-16-8.4-16-17.4V7.6Z"/><path d="M24 9v22" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M9.4 19h29.2" stroke="#fff" stroke-width="2.6" fill="none"/>',
   banner: '<path d="M12 2.4h24V29l-12-7-12 7Z"/><path d="M24 9.4l3.4 5.6-3.4 5.6-3.4-5.6Z" fill="#fff"/>',
   sphinx: '<path d="M3 35V27c0-4 4-6.4 8.4-6.4H24V35Z"/><path d="M26 35V16h8v19Z"/><path d="M23 16h13l2.4 6H23Z"/><circle cx="30" cy="9.6" r="6.4"/><path d="M23.6 4h13v4.4h-13Z"/>',
   chisel: '<path d="M7 35l14.6-14.6 6 6L13 41Z"/><path d="M24 14l8.4-8.4L43 16.2 34.6 24.6Z"/>',
   stone: '<path d="M12 4.6h24V35H12Z"/><path d="M16 11h16M16 18h16M16 25h11" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
-  scroll: '<path d="M10 4.6h24a4.4 4.4 0 0 1 0 8.8H14.4V32a4.4 4.4 0 0 1-8.8 0V9a4.4 4.4 0 0 1 4.4-4.4Z"/><path d="M19 18h14M19 25h14" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+  scroll: '<rect x="5" y="7" width="7.4" height="22" rx="3.7"/><rect x="35.6" y="7" width="7.4" height="22" rx="3.7"/><path d="M12.4 9.4h23.2v17.2H12.4Z"/><path d="M17 14.6h14M17 21h14" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
   lamp: '<path d="M18 3.6h12V9H18Z"/><path d="M13 9h22l3 21.6a3.4 3.4 0 0 1-3.4 3.8H13.4A3.4 3.4 0 0 1 10 30.6Z"/><circle cx="24" cy="21" r="5.4" fill="#fff"/>',
   mask: '<path d="M12 8c0-3.4 5.4-5.4 12-5.4S36 4.6 36 8v10.6c0 8.4-5.4 16.4-12 16.4S12 27 12 18.6Z"/><circle cx="19" cy="15" r="2.6" fill="#fff"/><circle cx="29" cy="15" r="2.6" fill="#fff"/><path d="M18.6 24.6h10.8" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
   museum: '<path d="M3.6 14 24 3.6 44.4 14v3.4H3.6Z"/><path d="M9 20.6h4.4V32H9ZM21.8 20.6h4.4V32h-4.4ZM34.6 20.6H39V32h-4.4Z"/><path d="M4.6 34.6h38.8V38H4.6Z"/>',
@@ -1031,11 +1033,13 @@ const DIAGRAMS = {
       '<path d="M204 88c0-14 5-21 5-21s5 7 5 21Z"/><path d="M222 88c0-12 5-18 5-18s5 6 5 18Z"/>' +
       "</g>" +
       // sun over the desert
-      '<circle cx="286" cy="34" r="14" fill="#E8B84B"/>' +
+      '<circle cx="288" cy="30" r="12" fill="#E8B84B"/>' +
+      '<path d="M288 8v7M288 45v7M266 30h7M303 30h7M272 14l5 5M304 14l-5 5" stroke="#E8B84B" stroke-width="4" stroke-linecap="round"/>' +
       '<text x="10" y="42" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#8A6A34">Dry desert</text>' +
       '<text x="160" y="30" text-anchor="middle" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#2E6E9E">The Nile</text>' +
       '<path d="M160 36v34" stroke="#2E6E9E" stroke-width="3" stroke-linecap="round"/>' +
-      '<text x="72" y="192" font-family="Nunito,sans-serif" font-size="13" font-weight="900" fill="#fff">Rich dark silt the flood leaves behind</text>' +
+      // the silt label has to FIT the dark band it names, or it slides off the card
+      '<text x="160" y="188" text-anchor="middle" font-family="Nunito,sans-serif" font-size="13" font-weight="900" fill="#fff">Rich dark silt</text>' +
       "</svg>";
   },
 };

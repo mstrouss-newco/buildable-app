@@ -50,7 +50,7 @@
           "source": "Smithsonian Magazine (smithsonianmag.com)"
         },
         {
-          "text": "This gentle giant is about 66 feet tall and more than 240 feet long, which is longer than half a football field. Even lying down, it towers over the visitors who come to say hello.",
+          "text": "This gentle giant is about 66 feet tall and about 240 feet long, which is longer than half a football field. Even lying down, it towers over the visitors who come to say hello.",
           "source": "Smithsonian Magazine (smithsonianmag.com)"
         }
       ],
@@ -69,7 +69,7 @@
             "icon": "sphinx",
             "label": "The Great Sphinx",
             "value": 240,
-            "display": "more than 240 feet long"
+            "display": "about 240 feet long"
           },
           {
             "icon": "field",
@@ -157,6 +157,7 @@
       ],
       "infographic": {
         "kind": "diagram",
+        "tone": "book",
         "title": "Why everyone lived beside the river",
         "name": "nile-flood",
         "caption": "Every year the flood left a band of rich dark silt along the banks. Crops grew there and almost nowhere else, which is why Ancient Egypt was a thin green ribbon in a huge desert.",
