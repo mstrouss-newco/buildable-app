@@ -182,26 +182,39 @@
      word can still be asked a question, answer it, see how far through they
      are, and find their way back to something. Words are still there, small,
      underneath, for the grown-up sitting next to them. */
-  /* -- THE OFFER CARD IS A BOTTOM SHEET AND ITS TOP IS THE PICTURE --
-     factCard keeps the centred .sheet look; only the offer becomes a sheet that
-     rises from the bottom, so the world a kid just flew over stays visible. */
-  #offerCard{align-items:flex-end;padding:0;background:rgba(18,52,74,.44)}
-  #offerCard .inner{max-width:none;width:100%;padding:0;border-radius:26px 26px 0 0;
+  /* -- AR1R: THE OFFER CARD IS A FLOATING POP-UP, AND ITS TOP IS THE PICTURE --
+     FL5c made it a bottom sheet so the world a kid just flew over stayed visible
+     behind it. The sheet went too far: MEASURED on the live build it was 100% of
+     the screen width and 290px tall, which is 41% of a 704px viewport, welded to
+     the bottom edge with square corners at the sides. Mike: "the card for
+     missions doesnt need to take over the whole screen, should be a pop-up."
+     So it is now a card that FLOATS: capped at OF_MAXW, centred with a real
+     margin all round, rounded on ALL FOUR corners, and a lighter scrim so the
+     world reads through properly. The factCard is already a centred pop-up and
+     this now matches it rather than inventing a third look.
+     EVERYTHING FL5c WON STAYS: the picture IS the card, Hear it is big and sits
+     ON the picture because for a non-reader that button is the instructions, the
+     reward is visible BEFORE you say yes, and the grown-up words stay folded in
+     the drawer. Do not put a wall of text back on this card.
+     THE BAND HEIGHT IS OF_BANDH AND IS ALSO A NUMBER IN THE SCRIPT (OF_BANDH) —
+     jobScene draws to it, so the two must move together. */
+  #offerCard{align-items:center;padding:18px;background:rgba(18,52,74,.30)}
+  #offerCard .inner{max-width:340px;width:100%;padding:0;border-radius:26px;
     overflow:hidden;text-align:center}
-  #offerCard .band{position:relative;height:150px;overflow:hidden}
-  #offerCard .band svg.scene{display:block;width:100%;height:150px}
-  #offerCard .scrim{position:absolute;left:0;right:0;bottom:0;height:84px;pointer-events:none;
-    background:linear-gradient(rgba(10,45,70,0),rgba(10,45,70,.32) 42%,rgba(10,45,70,.74))}
-  #offerCard .bandname{position:absolute;left:16px;bottom:10px;font-size:23px;font-weight:800;
+  #offerCard .band{position:relative;height:110px;overflow:hidden}
+  #offerCard .band svg.scene{display:block;width:100%;height:110px}
+  #offerCard .scrim{position:absolute;left:0;right:0;bottom:0;height:62px;pointer-events:none;
+    background:linear-gradient(rgba(10,45,70,0),rgba(10,45,70,.30) 42%,rgba(10,45,70,.72))}
+  #offerCard .bandname{position:absolute;left:14px;bottom:7px;font-size:19px;font-weight:800;
     color:#fff;text-shadow:0 2px 10px rgba(8,40,62,.7);line-height:1.05;text-align:left}
-  #offerCard .bandname .found{display:block;font-size:10px;font-weight:900;letter-spacing:.7px;
+  #offerCard .bandname .found{display:block;font-size:9px;font-weight:900;letter-spacing:.6px;
     color:#DCEEF8;text-shadow:0 1px 6px rgba(8,40,62,.8);margin-bottom:2px}
-  #ofSay{position:absolute;right:12px;top:11px;display:flex;align-items:center;gap:7px;
+  #ofSay{position:absolute;right:10px;top:9px;display:flex;align-items:center;gap:7px;
     border:none;cursor:pointer;font-family:inherit;background:rgba(255,252,240,.95);
-    color:#26506b;font-weight:900;font-size:13px;border-radius:999px;padding:8px 15px 8px 11px;
+    color:#26506b;font-weight:900;font-size:12.5px;border-radius:999px;padding:7px 13px 7px 10px;
     box-shadow:0 3px 10px rgba(10,40,60,.28)}
   #ofSay svg{display:block}
-  #offerCard .obody{padding:13px 16px 18px}
+  #offerCard .obody{padding:12px 15px 15px}
   /* the one-shot picture: the thing you carry walks the line to the first stop */
   #ofFly{position:absolute;left:0;top:0;pointer-events:none;
     animation:ofFlyX 1.15s cubic-bezier(.45,0,.35,1) forwards}
@@ -209,10 +222,10 @@
   #ofFly svg{display:block}
   @keyframes ofFlyX{ from{transform:translateX(var(--x0))} to{transform:translateX(var(--x1))} }
   @keyframes ofFlyY{ 0%{transform:translateY(var(--y0))}
-    50%{transform:translateY(calc(var(--y0) - 26px))}
+    50%{transform:translateY(calc(var(--y0) - var(--hop)))}
     100%{transform:translateY(var(--y0));opacity:0} }
   /* what you GET for saying yes */
-  .reward{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 13px}
+  .reward{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 11px}
   .rchip{display:flex;align-items:center;gap:5px;background:#FFF3D4;border-radius:999px;
     padding:5px 13px 5px 7px;font-weight:900;font-size:16px;color:#8a6410}
   .rstick{display:flex;align-items:center;gap:7px;font-weight:800;font-size:11.5px;
@@ -223,7 +236,7 @@
      Saying no is a small quiet cloud. Nothing here is red. */
   .pillrow{display:flex;justify-content:center;align-items:center;gap:14px}
   #ofStart{border:none;cursor:pointer;font-family:inherit;font-weight:900;letter-spacing:.5px;
-    display:flex;align-items:center;gap:10px;border-radius:999px;padding:16px 24px;font-size:20px;
+    display:flex;align-items:center;gap:9px;border-radius:999px;padding:14px 21px;font-size:19px;
     background:linear-gradient(#57d06b,#2fae4d);color:#fff;
     box-shadow:0 6px 0 #1f8038,0 10px 22px rgba(20,90,40,.3)}
   #ofStart:active{transform:translateY(5px);box-shadow:none}
@@ -234,7 +247,7 @@
   #ofStart svg,#ofNo svg{display:block}
   /* the grown-up words, folded away. This is the 190px that used to sit between
      the picture and the answer and push the kid's half off the bottom. */
-  .drawer{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:13px}
+  .drawer{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:11px}
   .drawer .lbl{font-size:11px;font-weight:800;color:#a8bfcc}
   #ofInfo{border:none;background:#EAF6FB;color:#5c7f95;width:27px;height:27px;border-radius:999px;
     font-weight:900;font-size:14px;font-family:inherit;cursor:pointer;padding:0}
@@ -2741,38 +2754,55 @@ function icoRide(n){
 //  targets and the picture follows.
 // ============================================================================
 var SCENE_F="#FFF6E3", SCENE_S="#7d95a5";
+// AR1R: the pop-up card's two numbers, kept HERE and mirrored in the CSS above
+// (#offerCard .inner max-width, #offerCard .band height). The picture is drawn
+// to these, so a card that is 340 wide gets a 340-wide drawing instead of a
+// screen-wide drawing squashed into it. offerBandW() is the width the band
+// really gets: the cap, or the screen minus the .sheet padding on a tiny phone.
+var OF_MAXW=340, OF_BANDH=110;
+function offerBandW(){ return Math.max(240,Math.min(OF_MAXW,W-36)); }
+// AR1R: the band is drawn to the CARD's width and the CARD's height, not the
+// screen's. It used to be handed the whole viewport width and a fixed 150, which
+// was right while the card was a full-width bottom sheet; a pop-up capped at
+// OF_MAXW would have squashed that picture sideways, because the svg is
+// preserveAspectRatio="none". Everything the sky is furnished with (sun, clouds,
+// the buildings, the sand) now scales with SK so a shorter band is the same
+// picture smaller, and not the same picture with its middle cut out.
 function jobScene(m,W,H){
-  var hz=0.60, y=Math.round(H*hz), i;   // horizon high, so the name below it sits on clear water
+  var hz=0.52, y=Math.round(H*hz), i;   // horizon high, so the name below it sits on clear water
+  var SK=Math.max(0.55,Math.min(1,H/150)), R=function(v){ return Math.round(v*SK); };
   var n=m.targets.length, gap=Math.min(36,Math.max(26,(W*0.5)/n));
   var right=W-30, tx=[], first=right-(n-1)*gap;
   var dx=Math.min(56,Math.max(40,W*0.15));
   if(first<dx+70){ gap=Math.max(20,(right-dx-70)/Math.max(1,n-1)); first=right-(n-1)*gap; }
   for(i=0;i<n;i++) tx.push(Math.round(first+i*gap));
-  var arc='M'+(dx+16)+' '+(y-16)+' Q'+Math.round((dx+tx[0])/2)+' '+(y-52)+' '+(tx[0]-13)+' '+(y-18);
+  var dsc=1.3*SK, tsc=1.1*SK;                       // depot body, stop body
+  var dTop=y-R(26*1.3)-R(4), tTop=y-R(26*1.1)-R(3); // both stand ON the horizon
+  var arc='M'+(dx+16)+' '+(y-R(16))+' Q'+Math.round((dx+tx[0])/2)+' '+(y-R(52))+' '+(tx[0]-13)+' '+(y-R(18));
   var s='<svg class="scene" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'+
     '<defs><linearGradient id="ofsky" x1="0" y1="0" x2="0" y2="1">'+
     '<stop offset="0" stop-color="#79c7fb"/><stop offset="'+hz+'" stop-color="#b8e3ff"/>'+
     '<stop offset="'+(hz+0.001)+'" stop-color="#2aa3d8"/><stop offset="1" stop-color="#166A9C"/>'+
     '</linearGradient></defs>'+
     '<rect width="'+W+'" height="'+H+'" fill="url(#ofsky)"/>'+
-    '<circle cx="'+Math.round(W*0.55)+'" cy="26" r="19" fill="#FFE9A8" opacity=".95"/>'+
-    '<rect x="24" y="19" width="52" height="14" rx="7" fill="rgba(255,255,255,.9)"/>'+
-    '<rect x="'+Math.round(W*0.34)+'" y="11" width="36" height="11" rx="5.5" fill="rgba(255,255,255,.8)"/>'+
-    '<ellipse cx="'+(dx+2)+'" cy="'+(y+7)+'" rx="34" ry="11" fill="#F6D98A"/>'+
-    '<ellipse cx="'+(dx+2)+'" cy="'+(y+1)+'" rx="30" ry="9" fill="#6FD46F"/>';
-  for(i=0;i<n;i++) s+='<ellipse cx="'+tx[i]+'" cy="'+(y+6)+'" rx="18" ry="8" fill="#F6D98A"/>'+
-    '<ellipse cx="'+tx[i]+'" cy="'+(y+1)+'" rx="15" ry="6" fill="#6FD46F"/>';
+    '<circle cx="'+Math.round(W*0.55)+'" cy="'+R(26)+'" r="'+R(19)+'" fill="#FFE9A8" opacity=".95"/>'+
+    '<rect x="20" y="'+R(19)+'" width="'+R(52)+'" height="'+R(14)+'" rx="'+R(7)+'" fill="rgba(255,255,255,.9)"/>'+
+    '<rect x="'+Math.round(W*0.34)+'" y="'+R(11)+'" width="'+R(36)+'" height="'+R(11)+'" rx="'+R(5.5)+'" fill="rgba(255,255,255,.8)"/>'+
+    '<ellipse cx="'+(dx+2)+'" cy="'+(y+R(7))+'" rx="'+R(34)+'" ry="'+R(11)+'" fill="#F6D98A"/>'+
+    '<ellipse cx="'+(dx+2)+'" cy="'+(y+R(1))+'" rx="'+R(30)+'" ry="'+R(9)+'" fill="#6FD46F"/>';
+  for(i=0;i<n;i++) s+='<ellipse cx="'+tx[i]+'" cy="'+(y+R(6))+'" rx="'+R(18)+'" ry="'+R(8)+'" fill="#F6D98A"/>'+
+    '<ellipse cx="'+tx[i]+'" cy="'+(y+R(1))+'" rx="'+R(15)+'" ry="'+R(6)+'" fill="#6FD46F"/>';
   s+='<path d="'+arc+'" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="3.2" '+
      'stroke-linecap="round" stroke-dasharray="2 10"/>';
   // where you start: a depot if the recipe has one, otherwise the first stop is
   // also where you begin, so the picture is honest about a job with no loading
-  s+='<g transform="translate('+(dx-17)+','+(y-36)+') scale(1.3)">'+
+  s+='<g transform="translate('+(dx-R(17))+','+dTop+') scale('+dsc.toFixed(3)+')">'+
      (m.depot?bDock(SCENE_F,SCENE_S,false):targetBody(m.style,SCENE_F,SCENE_S,false))+'</g>';
-  for(i=0;i<n;i++) s+='<g transform="translate('+(tx[i]-14)+','+(y-31)+') scale(1.1)">'+
+  for(i=0;i<n;i++) s+='<g transform="translate('+(tx[i]-R(14))+','+tTop+') scale('+tsc.toFixed(3)+')">'+
      targetBody(m.style,SCENE_F,SCENE_S,false)+'</g>';
   s+='</svg>';
   // the numbers the one-shot animation needs, so it lands on the real first stop
-  jobScene.last={x0:dx+4,x1:tx[0]-12,y:y-40,n:n};
+  jobScene.last={x0:dx+4,x1:tx[0]-12,y:y-R(34),hop:R(26),n:n};
   return s;
 }
 // ---- recipe -> picture. The ONLY place a style name becomes a drawing. ----
@@ -3727,7 +3757,7 @@ function openOffer(m){
     ofName.textContent=m.name;
     // THE PICTURE IS THE CARD: a little map of the job across the top, drawn
     // from the recipe, so a new job gets its picture free and with no new art.
-    ofSceneEl.innerHTML=jobScene(m,Math.max(280,W),150);
+    ofSceneEl.innerHTML=jobScene(m,offerBandW(),OF_BANDH);
     // WHAT YOU GET. The sticker is gold if this kid already has it, a dashed
     // grey outline if it is still to be won.
     ofRewardEl.innerHTML='<span class="rchip">'+icoCoin(21)+'+'+m.coins+'</span>'+
@@ -3766,6 +3796,7 @@ function flyThePicture(){
     f.id="ofFly";
     f.style.setProperty("--x0",g.x0+"px");
     f.style.setProperty("--x1",g.x1+"px");
+    f.style.setProperty("--hop",(g.hop||26)+"px");
     f.innerHTML='<span style="--y0:'+g.y+'px">'+cargoIcon(offered,26)+'</span>';
     ofBandEl.appendChild(f);
     setTimeout(function(){ try{ if(f.parentNode) f.parentNode.removeChild(f); }catch(e){} },1250);
@@ -4501,7 +4532,7 @@ function stepPets(dt,t){
 // Everything below moves things that are ALREADY on the screen, which is why
 // the whole layer costs single-digit draw calls for the entire world.
 var SWAY=[], WAVERS=[], SURF=[], TRAVEL=[], FIRES=[];
-var GULLS=null, GULL_N=14, GULL_ST=[], SMOKE=null, SMOKE_P=[];
+var SMOKE=null, SMOKE_P=[];
 var SHADOWS=null, SHAD_ST=[], SHAD_N=16, WAKES=null;
 var LIFE_V=new THREE.Vector3();
 
@@ -4529,50 +4560,22 @@ function wakeTex(){
   x.globalCompositeOperation="source-over";
   return new THREE.CanvasTexture(c);
 }
-// THE FLOCK IS ONE MESH. Fourteen birds, four vertices each, rewritten every
-// frame. A gull needs a permanent V *and* a bank into its turn, or from above it
-// reads as a white dash rather than a bird.
-function buildGulls(){
-  var pos=[],idx=[],i;
-  for(i=0;i<GULL_N;i++){
-    pos.push(0,0,0, 0,0,0, 0,0,0, 0,0,0);
-    var b=i*4; idx.push(b,b+1,b+2, b+3,b+2,b+1);
-    GULL_ST.push({cx:(Math.random()-0.5)*150,cz:(Math.random()-0.5)*150,
-      r:18+Math.random()*40, y:16+Math.random()*30, a:Math.random()*6.283,
-      sp:0.32+Math.random()*0.30, fl:Math.random()*6.283, sc:0.9+Math.random()*0.7});
-  }
-  var g=new THREE.BufferGeometry();
-  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
-  g.setIndex(idx); g.computeVertexNormals();
-  GULLS=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xFFFFFF,side:THREE.DoubleSide}));
-  GULLS.frustumCulled=false; scene.add(GULLS);
-}
-function stepGulls(dt,t){
-  if(!GULLS) return;
-  // station-keeping is on the CAMERA, not the plane: the camera decides what is
-  // on screen, and in the game it sits right behind the plane anyway
-  var pa=GULLS.geometry.attributes.position, i,
-      px=camera.position.x, pz=camera.position.z;
-  for(i=0;i<GULL_N;i++){
-    var G=GULL_ST[i];
-    if(G.cx-px>150) G.cx-=300; if(px-G.cx>150) G.cx+=300;
-    if(G.cz-pz>150) G.cz-=300; if(pz-G.cz>150) G.cz+=300;
-    G.a+=dt*G.sp;
-    var x=G.cx+Math.cos(G.a)*G.r, z=G.cz+Math.sin(G.a)*G.r, y=G.y+Math.sin(t*0.7+G.fl)*2.2;
-    // ...and the flock WHEELS AWAY when you fly through it
-    var dx=x-S.pos.x, dz=z-S.pos.z, d=Math.hypot(dx,dz);
-    if(d<70){ var push=(70-d)*0.55; x+=dx/(d||1)*push; z+=dz/(d||1)*push; y+=(70-d)*0.24; }
-    var head=G.a+Math.PI/2, cs=Math.cos(head), sn=Math.sin(head), s=G.sc;
-    var flap=0.62+Math.sin(t*7.5+G.fl)*0.42;
-    var bk=(G.sp>0?-0.42:0.42), cb=Math.cos(bk), sb=Math.sin(bk);
-    function set(k,lx,ly,lz){
-      var rx=lx*cb-ly*sb, ry=lx*sb+ly*cb;
-      pa.setXYZ(i*4+k, x+(rx*cs-lz*sn)*s, y+ry*s, z+(rx*sn+lz*cs)*s);
-    }
-    set(0,-1.75,flap,-0.30); set(1,0,0,0.80); set(2,0,-0.06,-0.90); set(3,1.75,flap,-0.30);
-  }
-  pa.needsUpdate=true;
-}
+// ---- AR1R: THE FLOCK IS GONE, AND HERE IS WHY --------------------------------
+// There used to be fourteen gulls here, drawn as ONE mesh of four vertices each:
+// two triangles making a V. Mike played the live AR1Q build and said "the birds
+// look like flying triangles, remove for now", and he was right — that shape has
+// no body, no head and no tail, so at any distance where a kid can actually SEE
+// one it is a triangle, not a bird. The one-mesh-for-the-whole-flock trick is
+// exactly what forces that shape, so no amount of tuning fixes it.
+//
+// DO NOT RE-ADD THE FOUR-VERTEX FLOCK. If birds come back, the honest version is
+// a real model flown on the same circling path with the existing code `flap`
+// gait — the animal library already has Gull, Dove, Swallow, Crow and
+// Hummingbird at about 1,500 triangles each. But note the cost: that is ONE DRAW
+// CALL PER BIRD instead of one for the whole flock, so it is a real decision and
+// not a free one. Everything else in this layer stayed: smoke, cloud shadows,
+// wakes, sway, flags, travelling boats and breathing surf.
+// -----------------------------------------------------------------------------
 // ALL the smoke in the world is one point cloud. It fades toward the SKY colour,
 // not toward black — fading a vertex colour to black under normal blending is
 // soot, not smoke.
@@ -4715,7 +4718,7 @@ function noteLife(isle,r){
   });
 }
 function stepLife(dt,t){
-  stepGulls(dt,t); stepSmoke(dt); stepShadows(dt); stepWakes();
+  stepSmoke(dt); stepShadows(dt); stepWakes();
   var i;
   for(i=0;i<SWAY.length;i++){
     var W=SWAY[i], gust=0;
@@ -4745,7 +4748,7 @@ function stepLife(dt,t){
 function startLife(){
   if(world.terrain!=="islands"||!renderer) return;
   buildHandMade(); loadAnimals();
-  buildGulls(); buildSmoke(); buildShadows(); buildWakes();
+  buildSmoke(); buildShadows(); buildWakes();
 }
 // ONE call from the draw loop. Islands only; the other two worlds are AR2.
 function stepIslandLife(dt,t){
@@ -4937,7 +4940,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"FL5b",
+  version:"AR1R",
   state:S,
   world:world,
   worlds:WORLDS,
@@ -4985,8 +4988,23 @@ window.SKY={
     try{
       var sc=ofSceneEl.querySelector("svg.scene");
       var groups=sc?sc.querySelectorAll("g").length:0;
+      // AR1R: the SHAPE, measured off the live card. The bottom sheet was only
+      // caught because Mike measured it by playing; this hands the same numbers
+      // to a screenshot run so a card that grows back is caught before he sees
+      // it. In a layout-less DOM (jsdom) every number is 0 and callers must say
+      // so rather than reading a 0 as a pass.
+      var box=null;
+      try{
+        var el=offerCard.querySelector(".inner"), b=el.getBoundingClientRect(),
+            vw=(window.innerWidth||0), vh=(window.innerHeight||0);
+        box={ w:Math.round(b.width), h:Math.round(b.height), vw:vw, vh:vh,
+              left:Math.round(b.left), right:Math.round(vw-b.right),
+              top:Math.round(b.top), bottom:Math.round(vh-b.bottom),
+              radius:getComputedStyle(el).borderRadius,
+              measured:b.width>0&&vw>0 };
+      }catch(e){ box=null; }
       return {
-        sheet:(function(){ try{ return getComputedStyle?null:null; }catch(e){ return null; } })(),
+        shape:box,
         sceneGroups:groups,                       // 1 start point + one per target
         sceneStops:groups-1,
         go:{ text:ofStart.textContent.replace(/\s+/g," ").trim(),
@@ -5122,7 +5140,7 @@ window.SKY={
   life:function(){
     var k,n=0; for(k in ANM) n++;
     return {animals:n, animalsOn:ANM_ON, placed:PETS.length, puppets:PUP.length,
-            budget:PUP_BUDGET, gulls:GULL_N, fires:FIRES.length, sway:SWAY.length,
+            budget:PUP_BUDGET, fires:FIRES.length, sway:SWAY.length,
             flags:WAVERS.length, surf:SURF.length, travel:TRAVEL.length,
             shadows:!!SHADOWS, wakes:!!WAKES, smoke:!!SMOKE, coinGlows:COIN_GLOWS.length}; },
   // every animal's world position and what it is standing on, so the flat-ground

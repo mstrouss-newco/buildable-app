@@ -235,10 +235,43 @@ chk('no emojis anywhere in the jobs', !emoji.test(mText) && !emoji.test(html));
 // 2d) FL5b MISSIONS A NON-READER CAN PLAY — pictures instead of words
 // ---------------------------------------------------------------------------
 console.log('--- FL5b: a job a four year old can answer, follow and find ---');
-chk('THE OFFER IS A BOTTOM SHEET whose top is the picture (the world stays visible)',
-  /#offerCard\{align-items:flex-end/.test(html) &&
-  /#offerCard \.inner\{max-width:none;width:100%;padding:0;border-radius:26px 26px 0 0/.test(html) &&
+// AR1R — REWRITTEN, NOT DELETED. This used to pin the FL5b/FL5c bottom sheet:
+// align-items:flex-end, full width, square corners at the sides. Mike measured
+// the live card at 100% of the screen width and 290px tall (41% of a 704px
+// viewport) and asked for a pop-up. A check guarding a shape that no longer
+// exists passes forever, so it now pins the SHAPE HE ASKED FOR instead.
+chk('AR1R: THE OFFER IS A FLOATING POP-UP - centred, capped, rounded all round',
+  /#offerCard\{align-items:center;padding:18px/.test(html) &&
+  /#offerCard \.inner\{max-width:340px;width:100%;padding:0;border-radius:26px;/.test(html) &&
+  // no square-cornered welded-to-the-bottom sheet may come back
+  !/#offerCard\{align-items:flex-end/.test(html) &&
+  !/border-radius:26px 26px 0 0/.test(html) &&
   /id="ofBand"/.test(html) && /id="ofScene"/.test(html));
+chk('...and it matches the factCard pop-up rather than being a third look',
+  (()=>{ const sheet=html.slice(html.indexOf('.sheet{position:absolute'), html.indexOf('.sheet h2'));
+         return /align-items:center/.test(sheet) && /max-width:380px/.test(sheet); })());
+chk('AR1R: the picture band came DOWN from 150px, and the scrim lightened',
+  /#offerCard \.band\{position:relative;height:110px/.test(html) &&
+  /#offerCard \.band svg\.scene\{display:block;width:100%;height:110px/.test(html) &&
+  /#offerCard\{align-items:center;padding:18px;background:rgba\(18,52,74,\.30\)/.test(html) &&
+  !/height:150px/.test(html));
+chk('AR1R: the band is drawn to the CARD width, not the screen width',
+  /var OF_MAXW=340, OF_BANDH=110;/.test(html) &&
+  /function offerBandW\(\)/.test(html) &&
+  /ofSceneEl\.innerHTML=jobScene\(m,offerBandW\(\),OF_BANDH\)/.test(html) &&
+  // a 340-wide card handed the whole viewport width would squash the drawing
+  !/jobScene\(m,Math\.max\(280,W\),150\)/.test(html));
+chk('...and the picture SCALES with the band, so a shorter band is not a cropped one',
+  (()=>{ const b=html.slice(html.indexOf('function jobScene(m,W,H)'), html.indexOf('// ---- recipe -> picture'));
+         return /var SK=Math\.max\(0\.55,Math\.min\(1,H\/150\)\)/.test(b) &&
+                /R=function\(v\)\{ return Math\.round\(v\*SK\); \}/.test(b) &&
+                /scale\('\+dsc\.toFixed\(3\)\+'\)/.test(b) && /hop:R\(26\)/.test(b); })());
+chk('...and the one-shot hop follows the band height instead of a fixed 26px',
+  /--hop/.test(html) && /translateY\(calc\(var\(--y0\) - var\(--hop\)\)\)/.test(html) &&
+  /f\.style\.setProperty\("--hop"/.test(html));
+chk('AR1R: the card reports its own measured SHAPE, so it cannot quietly grow back',
+  /shape:box/.test(html) && /getBoundingClientRect\(\)/.test(html) &&
+  /measured:b\.width>0&&vw>0/.test(html));
 chk('the answer is the game\'s own GO pill, not a tick and a cross',
   /id="ofStart"><span id="ofRide"><\/span>LET'S GO<\/button>/.test(html) &&
   /id="ofNo"><span id="ofCloud"><\/span>Later<\/button>/.test(html) &&
@@ -251,7 +284,7 @@ chk('...and it is the SAME pill shape as TAKE OFF, which a kid has already press
          return /linear-gradient\(#57d06b,#2fae4d\)/.test(go) && /linear-gradient\(#57d06b,#2fae4d\)/.test(to) &&
                 /border-radius:999px/.test(go) && /box-shadow:0 6px 0 #1f8038/.test(go) && /0 6px 0 #1f8038/.test(to); })());
 chk('NOTHING on the offer is red - saying no is free and must not look like a mistake',
-  (()=>{ const card=html.slice(html.indexOf('/* -- THE OFFER CARD IS A BOTTOM SHEET'), html.indexOf('/* -- progress as objects'));
+  (()=>{ const card=html.slice(html.indexOf('/* -- AR1R: THE OFFER CARD IS A FLOATING POP-UP'), html.indexOf('/* -- progress as objects'));
          return !/#e8552f|#ff8a75|#b93b1b|#FF5A3C/i.test(card); })());
 chk('saying no is a drifting cloud, which is what "not now" actually is here',
   /function icoCloud\(/.test(html) && /ofCloudEl\.innerHTML=icoCloud\(/.test(html));
@@ -733,10 +766,26 @@ chk('AR1Q: every animal is placed by landTop, exactly like every other prop',
     return /y=landTop\(plan,x,z\)/.test(b) && /if\(y==null\) return null/.test(b); })());
 chk('AR1Q: the far animals are hidden, or forty-five islands of them would show up',
   /PET_SEE2/.test(html) && /if\(!near\)\{ if\(o\.visible\) o\.visible=false; continue; \}/.test(html));
-chk('AR1Q: the flock is ONE mesh and all the smoke in the world is ONE mesh',
-  /GULLS=new THREE\.Mesh/.test(html) && /SMOKE=new THREE\.Points/.test(html));
-chk('...and a gull is a V that BANKS into its turn, or it reads as a white dash',
-  /var flap=0\.62\+Math\.sin/.test(html) && /var bk=\(G\.sp>0\?-0\.42:0\.42\)/.test(html));
+chk('AR1Q: all the smoke in the world is ONE mesh',
+  /SMOKE=new THREE\.Points/.test(html));
+// AR1R — THE FLOCK IS GONE AND MUST NOT COME BACK AS TRIANGLES. The old pair of
+// checks pinned the shape of a four-vertex gull; a check guarding a shape that
+// no longer exists passes forever, so they are REWRITTEN into their opposite.
+// Mike played AR1Q and said the birds looked like flying triangles, which is
+// exactly what four vertices are. If birds return they have to be real models.
+chk('AR1R: the four-vertex triangle flock is GONE, in the code and in the loop',
+  !/GULLS/.test(html) && !/GULL_N|GULL_ST/.test(html) &&
+  !/function buildGulls\(/.test(html) && !/function stepGulls\(/.test(html) &&
+  !/stepGulls\(dt,t\)/.test(html) && !/buildGulls\(\);/.test(html));
+chk('...and the reason is WRITTEN DOWN, so nobody re-adds a flock of Vs blind',
+  /AR1R: THE FLOCK IS GONE, AND HERE IS WHY/.test(html) &&
+  /DO NOT RE-ADD THE FOUR-VERTEX FLOCK/.test(html) &&
+  /ONE DRAW/.test(html) && /CALL PER BIRD/.test(html));
+chk('...and the rest of the world-life layer is untouched by the bird removal',
+  /stepSmoke\(dt\); stepShadows\(dt\); stepWakes\(\);/.test(html) &&
+  /buildSmoke\(\); buildShadows\(\); buildWakes\(\);/.test(html) &&
+  /SWAY\.push/.test(html) && /WAVERS\.push/.test(html) && /SURF\.push/.test(html) &&
+  /function startTravel\(/.test(html));
 chk('AR1Q: flat meshes on the water are DOUBLE SIDED, or they face down and vanish',
   (() => { const sh=(html.split('function buildShadows(')[1]||'').split('\nfunction ')[0];
     const wk=(html.split('function buildWakes(')[1]||'').split('\nfunction ')[0];
@@ -812,7 +861,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as FL5b', w4.SKY.version === 'FL5b', w4.SKY.version);
+    chk('engine reports itself as AR1R', w4.SKY.version === 'AR1R', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();

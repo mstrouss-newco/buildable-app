@@ -6,6 +6,48 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AR1R — the triangle birds go, the mission card becomes a pop-up (July 27 2026)
+`public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`,
+`qa-skyflyer-look.mjs`. Sunny Islands and the Sky Flyer shell only.
+
+**The flock is gone.** It was one mesh of fourteen birds at four vertices each —
+two triangles making a V, no body, no head, no tail — so at any distance where a
+kid could see one it was a flying triangle. `buildGulls` / `stepGulls` / `GULLS`
+/ `GULL_N` / `GULL_ST` are deleted and a comment in their place says **do not
+re-add the four-vertex flock**: if birds come back they have to be real models,
+which costs one draw call each instead of one for the whole flock. Smoke, cloud
+shadows, wakes, sway, flags, travelling boats and breathing surf all stayed.
+
+**The offer card floats.** It was 100% of screen width and 290px tall (41% of a
+704px viewport) welded to the bottom with square side corners. It is now
+`max-width:340px`, centred, `border-radius:26px` on all four corners, 18px of
+margin all round, picture band 150px -> 110px, backdrop scrim `.44` -> `.30`.
+Measured after: 340x281 on every width — 87% / 41% / 27% of a phone, tablet and
+desktop viewport. Everything FL5c won is untouched: the picture is the card,
+Hear it is big and sits on the picture, the reward shows before you say yes, the
+grown-up words stay in the drawer. It matches the `factCard` pop-up now.
+
+`jobScene` draws to the CARD's width and height (`offerBandW()` / `OF_BANDH`),
+not the screen's — the svg is `preserveAspectRatio="none"`, so a screen-wide
+drawing squeezed into a 340px card would have been squashed sideways.
+
+**New look gate: `qa-skyflyer-look.mjs`.** Both AR1Q rejections were things no
+screenshot had ever shown, because every QA camera used `mode=free` and
+`mode=free` suppresses the offer. This forces the card open in real Chromium at
+three widths, with the drawer shut and open, and prints the measured shape.
+`SKY.offerCard()` now returns that shape off `getBoundingClientRect()`.
+
+```
+npm i --no-save playwright-core
+(cd public && python3 -m http.server 8899) &
+node qa-skyflyer-look.mjs          # writes /tmp/shots/offer-*.png
+node qa-skyflyer.mjs .             # 367 checks, all green
+```
+
+Engine `SKY.version` `FL5b` -> `AR1R`; cache-bust `ar1q` -> `ar1r` on both links.
+
+---
+
 ## AR1M — Sunny Islands is terraced land now, with a real sky over it (July 26 2026)
 `public/skyflyer-engine.html`, `public/models/skyflyer/kitterrain/`, `qa-skyflyer.mjs`.
 

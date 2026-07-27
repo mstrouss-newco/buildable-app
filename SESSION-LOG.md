@@ -1,5 +1,76 @@
 # Buildable Kids — Session Log
 
+## 2026-07-27: Session AR1R — the triangle birds go, the mission card becomes a pop-up
+
+Two things Mike asked for after playing the live AR1Q build. Sunny Islands and
+the Sky Flyer shell only; Snowy Peaks and Sunset Canyon are still AR2.
+
+### 1. The birds are gone, and the reason is written into the file
+The flock was ONE mesh of fourteen birds at four vertices each — two triangles
+making a V, with no body, no head and no tail. Mike: *"the birds look like
+flying triangles, remove for now."* He is right, and the one-mesh-for-the-whole-
+flock trick is exactly what forces that shape, so no amount of tuning fixes it.
+`buildGulls`, `stepGulls`, `GULLS`, `GULL_N`, `GULL_ST`, the `scene.add` and the
+`gulls:` field on `SKY.life()` are all deleted, and a block comment in their
+place says **do not re-add the four-vertex flock**. If birds ever come back the
+honest version is a real model (the library has Gull, Dove, Swallow, Crow and
+Hummingbird at ~1,500 tris) flown on the same circling path with the existing
+code `flap` gait — but that is ONE DRAW CALL PER BIRD instead of one for the
+whole flock, so it is a real decision and not a free one.
+
+Everything else in the world-life layer is untouched and still measured on the
+live engine: 18 animals, 325 placed, 261 puppets, 13 fires, 201 sway, 20 flags,
+45 surf, 16 travelling boats, shadows, wakes, smoke, 26 coin glows.
+
+The two QA checks that guarded the flock were **rewritten, not deleted** — a
+check guarding a shape that no longer exists passes forever. They now assert the
+flock is gone from both the code and the loop, that the reason is written down,
+and that the rest of the life layer survived the removal.
+
+### 2. The mission offer card is a floating pop-up
+MEASURED on the live AR1Q build: the offer card was 100% of the screen width and
+290px tall, which is 41% of a 704px viewport, welded to the bottom edge with
+square corners at the sides. Mike: *"the card for missions doesnt need to take
+over the whole screen, should be a pop-up."* FL5c made it a bottom sheet on
+purpose so the world stayed visible behind it; the sheet just went too far.
+
+Now: `align-items:center`, `max-width:340px`, `border-radius:26px` on all four
+corners, 18px of padding all round, picture band **150px -> 110px**, and the
+backdrop scrim lightened from `.44` to `.30` so the world reads through.
+Measured after the change, same three widths a kid actually holds:
+
+| width | card | of viewport | margins |
+|---|---|---|---|
+| phone 390x704 | 340x281 | 87% wide / 40% tall | 25 / 25 / 212 / 212 |
+| tablet 820x1024 | 340x281 | 41% wide / 27% tall | 240 / 240 / 372 / 372 |
+| desktop 1280x800 | 340x281 | 27% wide / 35% tall | 470 / 470 / 260 / 260 |
+
+**Everything FL5c won is untouched**: the picture IS the card, Hear it stays big
+and sits ON the picture because for a non-reader that button is the
+instructions, the reward is visible BEFORE you say yes, and the grown-up words
+stay folded in the drawer. There is no text wall. The card now matches the
+`factCard` end-of-job pop-up instead of being a third look.
+
+**The one real trap.** `jobScene` was handed the whole viewport width and a
+fixed 150, which was correct while the card was full-width. The svg is
+`preserveAspectRatio="none"`, so a screen-wide drawing dropped into a 340px card
+would have been squashed sideways. The band is now drawn to `offerBandW()` and
+`OF_BANDH`, and every piece of sky furniture (sun, clouds, buildings, sand,
+the one-shot hop) scales with `SK = H/150`, so a shorter band is the same
+picture smaller rather than the same picture with its middle cut out.
+
+### The look gate — new file `qa-skyflyer-look.mjs`
+The AR1Q lesson was that both rejections came from things a screenshot had never
+shown: **the offer card had never been opened by any QA camera**, because every
+one of them used `mode=free` and `mode=free` suppresses the offer. This script
+forces the card open in a real Chromium at phone, tablet and desktop widths,
+shoots it with the drawer shut and open, and prints the measured shape next to
+each picture. `SKY.offerCard()` now returns a `shape` block read off
+`getBoundingClientRect()` so the card cannot quietly grow back.
+
+Engine `SKY.version` `FL5b` -> `AR1R`; cache-bust `ar1q` -> `ar1r` on both links
+in `BuildableKids.jsx`. `node qa-skyflyer.mjs .` all green (367 checks).
+
 ## 2026-07-26: Session AR1Q — level one comes alive
 
 Everything Mike picked out of the AR1P mocks, built into the real engine.
