@@ -1,3 +1,91 @@
+# Buildable Kids — Session Log
+
+## 2026-07-26: Session AR1Q — level one comes alive
+
+Everything Mike picked out of the AR1P mocks, built into the real engine.
+**Sunny Islands only** — Snowy Peaks and Sunset Canyon are still AR2, and every
+part of this is gated on `world.terrain==="islands"` except the plane and the
+coin, which are the ride and the pickup rather than scenery.
+
+**The plane.** `buildPlane()` was eight boxes and cylinders, and a `BoxGeometry`
+wing physically cannot taper, sweep or thin at the tip, which was most of the
+boxiness Mike was pointing at. It is a turned lathe body now with a real lofted
+aerofoil wing, a cabin with a kid visible inside it, and ailerons, a rudder and
+an elevator that move with the stick — a model becomes a thing that is FLYING the
+moment a surface moves. On WHEELS: Mike killed the floats, and his reason is the
+one worth keeping, that floats promise a water landing this game does not have
+and a kid would try it once. Scale ruler unchanged, 10u long and 13u across.
+
+**The coins.** Bigger, hotter, and the shine is an additive halo behind every
+one. **The halo is a POINT CLOUD** — one `THREE.Points` per chunk, not a sprite
+per coin. Coins are already one draw call EACH and there are a few hundred in
+the sky, so the obvious way round would have doubled the most expensive thing in
+the world; this way the whole world's glow is about 26 calls, and they are
+frustum-culled, computed once because a taken coin parks at y -9999 and would
+ruin a recomputed bounding sphere.
+
+**The animals.** Eighteen models out of Mike's EverythingLibrary download, cut
+from a 178-animal FBX into one 630KB glb, plus a hand-built crab, parrot and
+fish because that library is a LAND library and has none of those three — the
+three most island-y things there are. Every animal is merged to a single mesh
+through a merge that carries `COLOR_0`: the engine's own `mergeByMaterial()`
+copies position, normal and uv, and these models have no texture at all, so
+merging them the normal way gives eighteen perfectly-shaped BLACK animals. Sized
+by their LONGEST dimension, never by height, or a gull with its wings out comes
+out bigger than the hut it is flying over. Placed through `landTop()` like every
+other prop since AR1M: 178 ground animals live, none of them off the land.
+
+**And they move.** Not one model carries a skeleton, so the legs are bent in the
+engine. Every vertex is sorted ONCE into a band by where it sits in the model's
+own bounding box — bottom 42% front and back are the four legs, nose end is the
+head, far end is the tail — and each frame the bands are pushed around. Diagonal
+legs swing together, the body bobs twice a stride, the head nods, the tail
+sways. Five gaits so nothing is asked to sell a motion its shape cannot do:
+`walk`, `hop` (which hides short legs entirely), `crawl`, `plod`, `flap`, plus
+`sidle` for the crab and `swim` for the fish. **That is a real walk cycle on a
+boneless model and it is still one draw call.** A puppeted animal needs its OWN
+geometry copy or every pig in the world walks in lockstep.
+
+**Two budgets, because this one is CPU not draw calls.** Only the nearest EIGHT
+animals are puppeted, and anything past 165u is hidden outright — forty-five
+islands of animals would otherwise all draw. That second one is worth 300 draw
+calls on the wide camera on its own.
+
+**World life.** Gulls that wheel away as you fly through them and campfire smoke,
+one mesh each for the entire world. Cloud shadows drifting on the sea and a wake
+behind every travelling boat, one mesh each. Palms that sway and bend harder when
+you fly low over them, flags that wave, boats that travel, a shore that breathes:
+all free, because they move things that are already on the screen.
+
+**Measured, same cameras, before and after:**
+
+| camera | before | after |
+|---|---|---|
+| low and close on an island | 232 calls | 253 |
+| the wide one, most islands in frame | 544 | 585 |
+| out over the sea | 250 | 270 |
+| the chase cam | 348 | 387 |
+
+**Bugs this session.** The living layer decides what is visible from the CAMERA,
+and `SKY.look()` parks the camera without running the loop — so every screenshot
+came back with no animals in it, holding the visibility the plane's own view had
+decided from miles away. `look()` steps the layer for the camera it just parked.
+The travelling boats never sailed at all, because `startTravel()` ran on a timer
+1.2s after boot and floaters only exist once the kit has landed and a chunk has
+dressed itself, which is later; it runs from `dressChunk` now. And `dressChunk`
+returned early on its second pass, so an island that dressed before the animal
+models arrived never got a second look.
+
+QA: **359 checks green**, twenty of them new. The coin check was REWRITTEN rather
+than deleted — it pinned the old emissive and shininess, and a check guarding a
+shape that no longer exists passes forever. New checks guard the placement law,
+the colour-carrying merge, the five gaits, both budgets, the double-sided flat
+meshes, that a travelling boat can never sail onto its own island, and that the
+whole layer stays Sunny Islands only.
+
+Cache-bust `ar1m` -> `ar1q` on both engine links. Rebased onto a parallel
+session's coin-jitter fix, which is preserved.
+
 ## 2026-07-26: Session RP2 — Trains gets its real pictures
 
 Phase RP, block RP2 only. RP1 taught the template the richer composed pages and
@@ -6261,94 +6349,6 @@ element is drawn with shapes, so nothing new to generate). New level recipe knob
     Transparent cut-outs, medium quality, cached in `image_cache` like covers/icons.
 - Art is generate-on-first-request + cached (emoji placeholder shows until the PNG loads).
   No new env vars or SQL — reuses OPENAI_API_KEY + image_cache already in place.
-
-# Buildable Kids — Session Log
-
-## 2026-07-26: Session AR1Q — level one comes alive
-
-Everything Mike picked out of the AR1P mocks, built into the real engine.
-**Sunny Islands only** — Snowy Peaks and Sunset Canyon are still AR2, and every
-part of this is gated on `world.terrain==="islands"` except the plane and the
-coin, which are the ride and the pickup rather than scenery.
-
-**The plane.** `buildPlane()` was eight boxes and cylinders, and a `BoxGeometry`
-wing physically cannot taper, sweep or thin at the tip, which was most of the
-boxiness Mike was pointing at. It is a turned lathe body now with a real lofted
-aerofoil wing, a cabin with a kid visible inside it, and ailerons, a rudder and
-an elevator that move with the stick — a model becomes a thing that is FLYING the
-moment a surface moves. On WHEELS: Mike killed the floats, and his reason is the
-one worth keeping, that floats promise a water landing this game does not have
-and a kid would try it once. Scale ruler unchanged, 10u long and 13u across.
-
-**The coins.** Bigger, hotter, and the shine is an additive halo behind every
-one. **The halo is a POINT CLOUD** — one `THREE.Points` per chunk, not a sprite
-per coin. Coins are already one draw call EACH and there are a few hundred in
-the sky, so the obvious way round would have doubled the most expensive thing in
-the world; this way the whole world's glow is about 26 calls, and they are
-frustum-culled, computed once because a taken coin parks at y -9999 and would
-ruin a recomputed bounding sphere.
-
-**The animals.** Eighteen models out of Mike's EverythingLibrary download, cut
-from a 178-animal FBX into one 630KB glb, plus a hand-built crab, parrot and
-fish because that library is a LAND library and has none of those three — the
-three most island-y things there are. Every animal is merged to a single mesh
-through a merge that carries `COLOR_0`: the engine's own `mergeByMaterial()`
-copies position, normal and uv, and these models have no texture at all, so
-merging them the normal way gives eighteen perfectly-shaped BLACK animals. Sized
-by their LONGEST dimension, never by height, or a gull with its wings out comes
-out bigger than the hut it is flying over. Placed through `landTop()` like every
-other prop since AR1M: 178 ground animals live, none of them off the land.
-
-**And they move.** Not one model carries a skeleton, so the legs are bent in the
-engine. Every vertex is sorted ONCE into a band by where it sits in the model's
-own bounding box — bottom 42% front and back are the four legs, nose end is the
-head, far end is the tail — and each frame the bands are pushed around. Diagonal
-legs swing together, the body bobs twice a stride, the head nods, the tail
-sways. Five gaits so nothing is asked to sell a motion its shape cannot do:
-`walk`, `hop` (which hides short legs entirely), `crawl`, `plod`, `flap`, plus
-`sidle` for the crab and `swim` for the fish. **That is a real walk cycle on a
-boneless model and it is still one draw call.** A puppeted animal needs its OWN
-geometry copy or every pig in the world walks in lockstep.
-
-**Two budgets, because this one is CPU not draw calls.** Only the nearest EIGHT
-animals are puppeted, and anything past 165u is hidden outright — forty-five
-islands of animals would otherwise all draw. That second one is worth 300 draw
-calls on the wide camera on its own.
-
-**World life.** Gulls that wheel away as you fly through them and campfire smoke,
-one mesh each for the entire world. Cloud shadows drifting on the sea and a wake
-behind every travelling boat, one mesh each. Palms that sway and bend harder when
-you fly low over them, flags that wave, boats that travel, a shore that breathes:
-all free, because they move things that are already on the screen.
-
-**Measured, same cameras, before and after:**
-
-| camera | before | after |
-|---|---|---|
-| low and close on an island | 232 calls | 253 |
-| the wide one, most islands in frame | 544 | 585 |
-| out over the sea | 250 | 270 |
-| the chase cam | 348 | 387 |
-
-**Bugs this session.** The living layer decides what is visible from the CAMERA,
-and `SKY.look()` parks the camera without running the loop — so every screenshot
-came back with no animals in it, holding the visibility the plane's own view had
-decided from miles away. `look()` steps the layer for the camera it just parked.
-The travelling boats never sailed at all, because `startTravel()` ran on a timer
-1.2s after boot and floaters only exist once the kit has landed and a chunk has
-dressed itself, which is later; it runs from `dressChunk` now. And `dressChunk`
-returned early on its second pass, so an island that dressed before the animal
-models arrived never got a second look.
-
-QA: **359 checks green**, twenty of them new. The coin check was REWRITTEN rather
-than deleted — it pinned the old emissive and shininess, and a check guarding a
-shape that no longer exists passes forever. New checks guard the placement law,
-the colour-carrying merge, the five gaits, both budgets, the double-sided flat
-meshes, that a travelling boat can never sail onto its own island, and that the
-whole layer stays Sunny Islands only.
-
-Cache-bust `ar1m` -> `ar1q` on both engine links. Rebased onto a parallel
-session's coin-jitter fix, which is preserved.
 
 ## 2026-07-09: Session 8K - Saturn's rings, the Moon, sun glow removed
 
