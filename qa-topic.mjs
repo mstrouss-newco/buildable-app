@@ -35,14 +35,26 @@ const candidates = []; // approved + in-review — the books runtime QA should e
 // ---- Session RP1 vocabulary. These four names are the ONLY layouts and these
 // four charts the ONLY charts the template can draw, so a book naming anything
 // else is caught here rather than by a kid staring at a missing picture.
-const RP_LAYOUTS = ['speed', 'long', 'then-now', 'close-up'];
+const RP_LAYOUTS = ['speed', 'long', 'then-now', 'close-up', 'tall'];
 const RP_CHARTS = ['compare', 'fields', 'timeline', 'diagram'];
-const RP_DIAGRAMS = ['cone-wheel'];
+const RP_DIAGRAMS = ['cone-wheel', 'pupil-light', 'leaf-factory', 'root-hairs', 'nile-flood'];
+// Session RP3 — the drawn glyphs the template owns. An unknown name does NOT
+// break the page, it silently falls back to the train, which is how a desert
+// book ends up with a locomotive next to a camel. Caught here instead.
+const RP_GLYPHS = [
+  'kid', 'car', 'train', 'bullet', 'maglev', 'freight', 'subway',
+  'door', 'giraffe', 'cactus', 'bottle', 'bucket', 'camel', 'bathtub', 'ant', 'lizard', 'hand',
+  'palmleaf', 'palm', 'toucanhead', 'beak', 'river', 'ledge', 'pool', 'frog', 'battery',
+  'drop', 'sprout', 'arrowdown', 'sunflower', 'baby', 'person', 'veg', 'grain', 'protein', 'milk',
+  'print', 'bus', 'statue', 'crawler', 'crane', 'mast', 'building', 'elephant', 'dumptruck',
+  'drum', 'clock', 'backpack', 'armor', 'suitcase', 'hall', 'moat', 'field', 'helmet', 'shield',
+  'banner', 'sphinx', 'chisel', 'stone', 'scroll', 'lamp', 'mask', 'museum',
+];
 const richPages = [];
 // US units, everywhere, in every converted book. The 19 books still waiting for
 // their RP upgrade are metric and are NOT checked — they get this with RP3/RP5.
-const METRIC = /\b(kilometre|kilometer|centimetre|centimeter|metres|meters|kilograms?|kph|km\/h|litres?)\b/i;
-const BRITISH = /\b(colour|colours|colourful|favourite|metre|centre|programme|travelling|kilometres)\b/i;
+const METRIC = /\b(kilometre|kilometer|centimetre|centimeter|millimetre|millimeter|metres|meters|kilograms?|tonnes?|hectares?|kph|km\/h|km|litres?|liters?)\b/i;
+const BRITISH = /\b(colour|colours|colourful|favourite|metre|centre|programme|travelling|kilometres|armour|honour|neighbour|marvellous|practising|practise|tyres?|storey|storeys|jewellery|defence|chiselled|labelled|grey|whilst|aluminium)\b|football pitch/i;
 for (const f of files) {
   let data;
   try { data = JSON.parse(fs.readFileSync(path.join(exploreDir, f), 'utf8')); }
@@ -103,6 +115,11 @@ for (const f of files) {
       if (g.kind === 'timeline' && (!Array.isArray(g.stops) || g.stops.length < 2)) fail(`${f} ${label}: a timeline chart needs at least 2 stops`);
       (g.stops || []).forEach((s, k) => { if (!s.year || !s.label) fail(`${f} ${label}: timeline stop ${k} needs a year and a label`); });
       if (g.kind === 'diagram' && !RP_DIAGRAMS.includes(g.name)) fail(`${f} ${label}: diagram "${g.name}" is not drawn by the template (${RP_DIAGRAMS.join(', ')})`);
+      // Session RP3: a glyph name the template does not own falls back to the
+      // train silently, so it has to fail here.
+      [...(g.rows || []), ...(g.stops || [])].forEach((r, k) => {
+        if (r && r.icon && !RP_GLYPHS.includes(r.icon)) fail(`${f} ${label}: glyph "${r.icon}" is not drawn by the template (see GLYPHS in public/topic.html)`);
+      });
     }
   });
   if (!data.finish || !data.finish.title) warn(f + ': no finish spread title — the template will make one up');
@@ -283,7 +300,10 @@ async function runBook(exhibit, opts) {
     let _id = '';
     const el = {
       tagName: tag, className: '', textContent: '', innerHTML: '', disabled: false, type: '',
-      onclick: null, src: '', children: [], style: {}, dataset: {}, offsetWidth: 620,
+      // Session RP3: the template sets a CSS variable (--book) so every book
+      // paints its charts in its own colour, so the stub has to speak
+      // setProperty and REMEMBER what was set — that is a real check below.
+      onclick: null, src: '', children: [], style: { setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; }, getPropertyValue(k) { return this[k]; } }, dataset: {}, offsetWidth: 620,
       classList: {
         add(c) { if (!el.className.split(' ').includes(c)) el.className = (el.className + ' ' + c).trim(); },
         remove(c) { el.className = el.className.split(' ').filter((x) => x && x !== c).join(' '); },
@@ -305,6 +325,7 @@ async function runBook(exhibit, opts) {
 
   const documentStub = {
     body: makeEl('body'),
+    documentElement: makeEl('html'),
     // Auto-registering lookup: the template builds pages with innerHTML then asks
     // for the ids inside, so the first ask creates and remembers the stub.
     getElementById: (id) => registry[id] || (() => { const e = makeEl('div'); e.id = id; return e; })(),
@@ -507,6 +528,10 @@ async function runBook(exhibit, opts) {
   const frozen = registry.pagecount.textContent === counterBefore;
   (globalListeners.message || []).forEach((fn) => fn({ data: 'resume' }));
   r.pauseResume = pausedVeil && frozen && !registry.pauseveil.classList.contains('show');
+
+  // Session RP3 — the book's own colour reached the page (a blue camel on a
+  // gold desert page is what this stops).
+  r.bookColor = documentStub.documentElement.style['--book'];
 
   r.navRegistered = !!(sandbox.BuildableGameNav && sandbox.BuildableGameNav._registered !== undefined) || typeof sandbox.BuildableGameNav === 'object';
   return r;

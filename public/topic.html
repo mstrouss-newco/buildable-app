@@ -209,15 +209,35 @@
   .lay-close-up .fphoto .cap{display:none}
   .lay-close-up .fcard.n2{padding-left:14px}
 
+  /* --- layout: tall (Session RP3). For pages whose whole point is HOW TALL a
+         thing is: a standing-up photo with a height ruler measured down its
+         side, a little drawn kid at the foot of the ruler for scale, and the
+         giant number reading as the height. Six pages across four books asked
+         for this shape and none of the first four fitted it. --- */
+  .lay-tall .photo{aspect-ratio:4 / 5}
+  /* the ruler lives INSIDE the photo box, so it scales with the photo instead
+     of drifting off it the way an absolutely-placed .bigstat once did */
+  .ruler{position:absolute;left:13px;top:9%;bottom:15%;width:30px;z-index:3;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+  .ruler i{display:block;width:12px;height:3px;border-radius:2px;background:rgba(255,255,255,.9);box-shadow:0 1px 5px rgba(0,0,0,.45)}
+  .ruler i:nth-child(odd){width:22px}
+  .ruler::before{content:"";position:absolute;left:0;top:-2px;bottom:-2px;width:3px;border-radius:2px;background:rgba(255,255,255,.75);box-shadow:0 1px 5px rgba(0,0,0,.45)}
+  .scalekid{position:absolute;left:9px;bottom:3.5%;z-index:3;width:38px;height:29px;pointer-events:none;
+    filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}
+  .scalekid svg{width:100%;height:100%;display:block;fill:#fff;stroke:#fff}
+  .lay-tall .bigstat{bottom:auto;top:8%}
+  /* a standing photo beside the words: portrait, floated, and given a wide
+     enough margin that the text never crowds it */
+  .lay-tall .fphoto.standing{width:42%;aspect-ratio:3 / 4;float:right;margin:2px 0 10px 18px}
+
   /* --- the Wow chart. White card, thick brand border, a small tilt, and a pill
          that names it, so a kid learns to look for one. --- */
   .wow{position:relative;margin-top:22px;background:#fff;border:3px solid #E8B84B;border-radius:18px;padding:14px 14px 13px;
     box-shadow:0 10px 26px rgba(15,14,23,.15);transform:rotate(-.7deg)}
-  .wow.blue{border-color:#4A6FA5}
+  .wow.blue{border-color:var(--book,#4A6FA5)}
   .wow::before{content:"";position:absolute;inset:0;border-radius:15px;background:linear-gradient(160deg,rgba(232,184,75,.09),rgba(74,111,165,.06));pointer-events:none}
   .wow>*{position:relative}
   .wow .pill{display:inline-block;background:#E8B84B;color:#2A2005;font-weight:900;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
-  .wow.blue .pill{background:#4A6FA5;color:#fff}
+  .wow.blue .pill{background:var(--book,#4A6FA5);color:#fff}
   .wow h4{font-family:'Fredoka';font-weight:700;font-size:17.5px;line-height:1.2;margin-top:9px;color:#33507E}
   .wow .cap{margin-top:10px;font-size:11.5px;font-weight:800;line-height:1.45;color:rgba(15,14,23,.62)}
   .wow .src{margin-top:6px;font-size:9.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:rgba(15,14,23,.4)}
@@ -227,8 +247,8 @@
   .glyph img{width:100%;height:100%;object-fit:cover;display:block}
   .barwrap{min-width:0}
   .lab{font-size:11.5px;font-weight:900;color:rgba(15,14,23,.68);line-height:1.25}
-  .bar{height:13px;border-radius:999px;background:rgba(74,111,165,.15);margin-top:5px;position:relative;overflow:hidden}
-  .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#4A6FA5,#33507E)}
+  .bar{height:13px;border-radius:999px;background:rgba(15,14,23,.11);margin-top:5px;position:relative;overflow:hidden}
+  .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,var(--book,#4A6FA5),rgba(15,14,23,.45))}
   .num{font-family:'Fredoka';font-weight:700;font-size:15px;color:#33507E;margin-top:4px}
   .fieldrow{margin-top:2px}
   .fieldstrip{display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin-top:6px}
@@ -306,6 +326,12 @@
     .facts{gap:13px;margin-top:10px}
     .lay-speed .fcard.n1 .fphoto{width:52%}
     .lay-close-up .fphoto{width:94px}
+    /* RP3: sideways, the tall page's photo joins the same 4/3 column as the
+       rest, so the ruler shortens with it rather than running off the frame. */
+    .lay-tall .fphoto.standing{width:50%}
+    .ruler{top:8%;bottom:18%;width:24px}
+    .scalekid{width:30px;height:23px}
+    .lay-tall .bigstat{top:6%}
     .wow{margin-top:14px;padding:11px}
     .ghostyear{font-size:58px;top:-20px}
   }
@@ -333,6 +359,10 @@
     .say.mini svg{width:23px;height:23px}
     .bigstat b{font-size:68px}
     .lay-close-up .fphoto{width:168px}
+    .lay-tall .fphoto.standing{width:38%}
+    .ruler{width:40px}
+    .ruler i{height:4px}
+    .scalekid{width:52px;height:40px;left:12px}
     .wow h4{font-size:20px}
     .wow .cap{font-size:12.5px}
     .ghostyear{font-size:110px;top:-40px}
@@ -587,6 +617,11 @@ function boot(data) {
 function buildSpreads(data) {
   const out = [];
   const cover = data.cover || {};
+  // Session RP3 — every book paints its own charts. The drawn glyphs and the
+  // Wow chart border used to be hardcoded to the Trains blue, which made a
+  // blue camel on a gold desert page. One variable, set from the shelf colour
+  // the book already declares, and a book never looks borrowed again.
+  document.documentElement.style.setProperty("--book", data.shelfColor || "#4A6FA5");
   out.push({ kind: "cover", id: "cover", title: data.title, blurb: cover.blurb || "", art: cover.art || data.heroArt || "", artAlt: cover.artAlt || "", fill: data.shelfColor || "#2A3550" });
   (data.pages || []).forEach((p) => {
     const facts = normaliseFacts(p);
@@ -635,7 +670,8 @@ function normaliseFacts(p) {
 //   close-up  — circle crops the words wrap around            (small details)
 // A page that names none of them renders through the original path.
 // =====================================================================
-const RICH_LAYOUTS = { speed: 1, long: 1, "then-now": 1, "close-up": 1 };
+//   tall      — a standing photo, a height ruler and a kid for scale (RP3)
+const RICH_LAYOUTS = { speed: 1, long: 1, "then-now": 1, "close-up": 1, tall: 1 };
 
 // Where a fact's photo comes from. RP1 is the pilot and ships with the Trains
 // book's existing four photos, so a fact with no art of its own gets a DETAIL
@@ -696,11 +732,25 @@ function richBody(sp, i) {
     const cls = sp.layout === "speed" ? ["wide", "polaroid", "wide"]
       : sp.layout === "long" ? ["wide", "wide", "wide"]
       : sp.layout === "close-up" ? ["round", "round", "round"]
+      : sp.layout === "tall" ? ["wide", "standing", "wide"]
       : ["wide", "wide", "wide"];
     inner = facts.map((f, n) => factCard(sp, i, n, n === 0 ? null : cls[n % cls.length])).join("");
   }
   const ghost = sp.ghostYear ? '<div class="ghostyear" aria-hidden="true">' + escapeHtml(sp.ghostYear) + "</div>" : "";
   return '<div class="facts">' + ghost + inner + "</div>" + wowHtml(sp.infographic);
+}
+
+// Session RP3 — the tall page's measuring stick. Ticks down the side of the
+// photo and a drawn kid standing at the bottom of them, so "40 feet" is a
+// thing a kid can see against something their own size instead of a number.
+// It goes INSIDE the photo box (passed to photoBlock) for the same reason the
+// giant stat had to: an absolutely-placed overlay drifts off the picture.
+function rulerHtml(sp) {
+  if (sp.layout !== "tall") return "";
+  let ticks = "";
+  for (let k = 0; k < 9; k++) ticks += "<i></i>";
+  return '<div class="ruler" aria-hidden="true">' + ticks + "</div>" +
+    '<div class="scalekid" aria-hidden="true">' + glyphSvg("kid", "#fff") + "</div>";
 }
 
 // ---------------- the Wow chart ----------------
@@ -715,7 +765,7 @@ function wowHtml(g) {
   else if (g.kind === "timeline") body = timelineHtml(g);
   else if (g.kind === "diagram") body = diagramHtml(g);
   else return "";
-  return '<div class="wow' + (g.tone === "blue" ? " blue" : "") + '">' +
+  return '<div class="wow' + (g.tone === "blue" || g.tone === "book" ? " blue" : "") + '">' +
     '<span class="pill">' + escapeHtml(g.pill || "Wow chart") + "</span>" +
     "<h4>" + escapeHtml(g.title || "") + "</h4>" + body +
     (g.caption ? '<div class="cap">' + escapeHtml(g.caption) + "</div>" : "") +
@@ -776,10 +826,70 @@ const GLYPHS = {
   maglev: '<path d="M3 22c0-8 9-14 21-14h20v10a4 4 0 0 1-4 4H3Z"/><rect x="26" y="12" width="9" height="5" rx="1.5" fill="#fff"/><path d="M5 29h38" stroke-width="3" stroke-linecap="round"/><path d="M11 26v3M23 26v3M35 26v3" stroke-width="2.4" stroke-linecap="round"/>',
   freight: '<rect x="4" y="12" width="17" height="13" rx="2"/><rect x="24" y="12" width="17" height="13" rx="2"/><circle cx="9" cy="29" r="3"/><circle cx="17" cy="29" r="3"/><circle cx="29" cy="29" r="3"/><circle cx="37" cy="29" r="3"/>',
   subway: '<path d="M11 8h26v16a4 4 0 0 1-4 4H15a4 4 0 0 1-4-4Z"/><rect x="15" y="11" width="18" height="7" rx="1.5" fill="#fff"/><path d="M6 32h36" stroke-width="3" stroke-linecap="round"/>',
+  // ---- Session RP3. One glyph per real thing the other seven books measure
+  // against. They are drawn in the BOOK's colour (see --book), never emoji, and
+  // every one is a silhouette a five-year-old reads without a caption.
+  door: '<rect x="13" y="3" width="22" height="33" rx="2"/><circle cx="30" cy="21" r="2" fill="#fff"/><rect x="17" y="8" width="14" height="9" rx="1.5" fill="#fff"/>',
+  giraffe: '<rect x="19" y="16" width="17" height="11" rx="4"/><path d="M23 27v8M33 27v8" stroke-width="3.2" stroke-linecap="round"/><path d="M23 19 L17 7" stroke-width="5.5" stroke-linecap="round"/><circle cx="15" cy="6" r="4.4"/><path d="M12 2v3M18 2v3" stroke-width="2" stroke-linecap="round"/>',
+  cactus: '<path d="M21 36V6a3 3 0 0 1 6 0v30Z"/><path d="M11 18a3.4 3.4 0 0 1 6.8 0v5H21v6.6h-6.6A3.4 3.4 0 0 1 11 26Z"/><path d="M37 13a3.4 3.4 0 0 0-6.8 0v8H27v6.6h6.6A3.4 3.4 0 0 0 37 24Z"/>',
+  bottle: '<rect x="18" y="10" width="12" height="25" rx="3.5"/><rect x="20.5" y="3" width="7" height="7" rx="2"/><rect x="18" y="18" width="12" height="5" fill="#fff"/>',
+  bucket: '<path d="M11 13h26l-3.4 22H14.4Z"/><path d="M14 13a10 10 0 0 1 20 0" fill="none" stroke-width="2.8"/>',
+  camel: '<path d="M9 27c0-3.4 1.8-5.4 4.4-6.4l3.6-6 3.6 6h4.8l3.6-6 3.6 6c2.8 1 4.4 3 4.4 6.4v1.6H9Z"/><path d="M13 29v6.4M20 29v6.4M30 29v6.4M36 29v6.4" stroke-width="2.6" stroke-linecap="round"/><path d="M36.4 24 L39 13" stroke-width="4.4" stroke-linecap="round"/><path d="M37 8h7l1.4 5h-8Z"/>',
+  bathtub: '<path d="M5 17h38v7a8 8 0 0 1-8 8H13a8 8 0 0 1-8-8Z"/><path d="M10 17v-6a4.4 4.4 0 0 1 8.8 0" fill="none" stroke-width="2.8"/><path d="M12 32v3.4M36 32v3.4" stroke-width="2.6" stroke-linecap="round"/>',
+  ant: '<circle cx="13" cy="19" r="5"/><circle cx="24" cy="19" r="4.2"/><ellipse cx="37" cy="19" rx="7.4" ry="6.2"/><path d="M11 15 L7 8M15.5 15 L19 8" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M22 23l-3 6M26.5 23l3 6M24 15v-5" stroke-width="2" stroke-linecap="round" fill="none"/>',
+  lizard: '<ellipse cx="23" cy="19" rx="12" ry="8"/><circle cx="9" cy="17" r="5.4"/><path d="M35 19 L46 23" stroke-width="3.4" stroke-linecap="round" fill="none"/><path d="M14 11l2.6-5 2.6 5ZM24 10l2.6-5 2.6 5Z"/><path d="M16 27v6M30 27v6" stroke-width="2.6" stroke-linecap="round" fill="none"/>',
+  hand: '<rect x="13" y="17" width="23" height="19" rx="6.5"/><rect x="15.5" y="6" width="4.6" height="14" rx="2.3"/><rect x="21.5" y="3" width="4.6" height="17" rx="2.3"/><rect x="27.5" y="5" width="4.6" height="15" rx="2.3"/><rect x="33.5" y="10" width="4.6" height="10" rx="2.3"/><rect x="6" y="16" width="9" height="4.6" rx="2.3"/>',
+  palmleaf: '<path d="M23 36V21h2.6v15Z"/><path d="M24 22C10 22 3.6 13.6 6 5c8.4 0 14.4 4.4 18 11 3.6-6.6 9.6-11 18-11 2.4 8.6-4 17-18 17Z"/>',
+  palm: '<path d="M22.6 36V13h3.4v23Z"/><path d="M24 14C15 14 7 10 5 3.6c8.4-2.2 15.6 1 19 7 3.4-6 10.6-9.2 19-7C41 10 33 14 24 14Z"/><circle cx="24" cy="13" r="3.4"/>',
+  toucanhead: '<circle cx="24" cy="18" r="12"/><circle cx="19.5" cy="14" r="2.8" fill="#fff"/>',
+  beak: '<path d="M3 18 L45 8 L45 28 Z"/><path d="M6 18 L44 18" stroke="#fff" stroke-width="2" fill="none"/>',
+  river: '<path d="M2 27c8-11 14 6 22-2s14 5 22-4" fill="none" stroke-width="5.4" stroke-linecap="round"/><path d="M2 16c8-11 14 6 22-2" fill="none" stroke-width="3" stroke-linecap="round" opacity=".55"/>',
+  ledge: '<path d="M4 7h20v13h20v16H4Z"/><path d="M25 21c0 6 5 10 11 12" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>',
+  pool: '<ellipse cx="24" cy="25" rx="18" ry="9"/><path d="M18 11c0 4.4 6 6 6 10" fill="none" stroke-width="3.4" stroke-linecap="round"/><path d="M31 9c0 5.4-4.6 8.6-4.6 12" fill="none" stroke-width="3.4" stroke-linecap="round"/>',
+  frog: '<ellipse cx="24" cy="25" rx="14" ry="9"/><circle cx="17" cy="13" r="5.4"/><circle cx="31" cy="13" r="5.4"/><circle cx="17" cy="13" r="2.2" fill="#fff"/><circle cx="31" cy="13" r="2.2" fill="#fff"/><path d="M10 31l-5.5 4M38 31l5.5 4" stroke-width="3" stroke-linecap="round" fill="none"/>',
+  battery: '<rect x="15" y="5" width="18" height="30" rx="3"/><rect x="20" y="1" width="8" height="5" rx="1.5"/><rect x="18" y="13" width="12" height="4.4" fill="#fff"/>',
+  drop: '<path d="M24 2c7.4 10.4 11.4 14.6 11.4 20.6A11.4 11.4 0 0 1 12.6 22.6C12.6 16.6 16.6 12.4 24 2Z"/>',
+  sprout: '<path d="M22.6 36V16h3.4v20Z"/><path d="M23 20C14 20 8.6 15 8.6 7.6c8.4 0 14.4 4.6 14.4 12.4Z"/><path d="M26 22c0-8 6-12.4 14.4-12.4C40.4 17 34.4 22 26 22Z"/>',
+  arrowdown: '<path d="M20 2h8v21h8L24 36 12 23h8Z"/>',
+  sunflower: '<circle cx="24" cy="18" r="7.4"/><path d="M24 1.5v8M24 26.5v8M6.5 18h8M33.5 18h8M12 6l5.5 5.5M36 6l-5.5 5.5M12 30l5.5-5.5M36 30l-5.5-5.5" stroke-width="4.6" stroke-linecap="round" fill="none"/>',
+  baby: '<circle cx="24" cy="11" r="7.4"/><path d="M24 20c-6.4 0-9.4 4-9.4 9.4V36h18.8v-6.6c0-5.4-3-9.4-9.4-9.4Z"/><circle cx="21" cy="10" r="1.6" fill="#fff"/><circle cx="27" cy="10" r="1.6" fill="#fff"/>',
+  person: '<circle cx="24" cy="6.5" r="5"/><path d="M24 12.5c-5 0-7.4 3-7.4 7v6.5h3V36h8.8V26h3v-6.5c0-4-2.4-7-7.4-7Z"/>',
+  veg: '<path d="M17 14h14l-4.6 20.4a2.4 2.4 0 0 1-4.8 0Z"/><path d="M24 14c0-6.4 3.4-10.4 8.6-11.4C33.6 9 30 13 24 14Z"/><path d="M20 19h8M21 25h6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  grain: '<path d="M22.6 36V13h3.4v23Z"/><path d="M24 3c4 3 5 7.4 3 10.6-4-1-5.4-6.4-3-10.6Z"/><path d="M24 12c4 3 5 7.4 3 10.6-4-1-5.4-6.4-3-10.6ZM24 12c-4 3-5 7.4-3 10.6 4-1 5.4-6.4 3-10.6Z"/><path d="M24 21c4 3 5 7.4 3 10.6-4-1-5.4-6.4-3-10.6ZM24 21c-4 3-5 7.4-3 10.6 4-1 5.4-6.4 3-10.6Z"/>',
+  protein: '<path d="M5 18c8-10.4 21-10.4 29 0-8 10.4-21 10.4-29 0Z"/><path d="M34 18l9-7.4v14.8Z"/><circle cx="14" cy="15.6" r="2.2" fill="#fff"/>',
+  milk: '<path d="M17 14h14v18.4a2.6 2.6 0 0 1-2.6 2.6h-8.8a2.6 2.6 0 0 1-2.6-2.6Z"/><path d="M19.4 14 24 4.6 28.6 14Z"/><rect x="19.5" y="21" width="9" height="6" rx="1.4" fill="#fff"/>',
+  print: '<path d="M24 34c-8.4 0-13.4-7-13.4-15.4S15.6 3.2 24 3.2s13.4 7 13.4 15.4" fill="none" stroke-width="3.2" stroke-linecap="round"/><path d="M24 30c-6 0-9.2-5-9.2-11.4S18.6 8.2 24 8.2s9.2 4 9.2 10.4" fill="none" stroke-width="3.2" stroke-linecap="round"/><path d="M24 26c-3.8 0-5.2-3.8-5.2-7.4s2-5.2 5.2-5.2 5.2 2 5.2 5.2" fill="none" stroke-width="3.2" stroke-linecap="round"/>',
+  bus: '<path d="M3 9h42v17a3.4 3.4 0 0 1-3.4 3.4H6.4A3.4 3.4 0 0 1 3 26Z"/><rect x="7" y="12.5" width="9" height="7" rx="1.5" fill="#fff"/><rect x="19.5" y="12.5" width="9" height="7" rx="1.5" fill="#fff"/><rect x="32" y="12.5" width="9" height="7" rx="1.5" fill="#fff"/><circle cx="13" cy="31" r="4"/><circle cx="35" cy="31" r="4"/>',
+  statue: '<path d="M19.4 36h9.2V16h-9.2Z"/><circle cx="24" cy="10" r="4.4"/><path d="M28 14.5 34.6 3.6l2.4 1.2-5.6 11.6Z"/><path d="M13 36h22v-3.4H13Z"/><path d="M20 7.2 17.4 3M28 7.2 30.6 3" stroke-width="2" stroke-linecap="round" fill="none"/>',
+  crawler: '<rect x="4" y="11" width="40" height="10" rx="2"/><rect x="4" y="23" width="17" height="9.4" rx="4.7"/><rect x="27" y="23" width="17" height="9.4" rx="4.7"/><circle cx="9.5" cy="27.7" r="2.4" fill="#fff"/><circle cx="15.5" cy="27.7" r="2.4" fill="#fff"/><circle cx="32.5" cy="27.7" r="2.4" fill="#fff"/><circle cx="38.5" cy="27.7" r="2.4" fill="#fff"/>',
+  crane: '<path d="M20 36V5h4v31Z"/><path d="M4 3h40v4.4H4Z"/><path d="M35 7.4v9.6h3.2V7.4Z"/><path d="M36.6 17 33 22h7.2Z"/><path d="M12 36h20v-3.4H12Z"/>',
+  mast: '<rect x="15" y="4" width="18" height="28" rx="2" fill="none" stroke-width="3.4"/><path d="M15 4l18 28M33 4 15 32" stroke-width="2.6" fill="none"/>',
+  building: '<rect x="10" y="4" width="28" height="32" rx="2"/><rect x="14.5" y="9" width="7" height="7" fill="#fff"/><rect x="26.5" y="9" width="7" height="7" fill="#fff"/><rect x="14.5" y="20" width="7" height="7" fill="#fff"/><rect x="26.5" y="20" width="7" height="7" fill="#fff"/>',
+  elephant: '<path d="M7 33V20.4C7 13.4 13.6 8 22 8s15 5.4 15 12.4V33h-6.4v-8.4h-4V33h-8.2v-8.4h-4V33Z"/><path d="M36.6 18.6c4.2 0 6.4 3 6.4 7.2s-3.2 7.2-6.4 5" fill="none" stroke-width="3.4" stroke-linecap="round"/><circle cx="16" cy="17" r="2.2" fill="#fff"/>',
+  dumptruck: '<path d="M4 25h27v6.4H4Z"/><path d="M6 11h21l4.4 12H6Z"/><circle cx="12" cy="32" r="4.2"/><circle cx="25" cy="32" r="4.2"/><path d="M33.6 17H43v14.4h-9.4Z"/><circle cx="39" cy="32" r="4.2"/>',
+  drum: '<path d="M13 7h22l4.4 11-4.4 11H13L8.6 18Z"/><path d="M17 11.4 31 24.6M31 11.4 17 24.6" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+  clock: '<circle cx="24" cy="19" r="15"/><circle cx="24" cy="19" r="11.4" fill="#fff"/><path d="M24 10.6V19l6.4 4.4" stroke-width="3" stroke-linecap="round" fill="none"/>',
+  backpack: '<path d="M11 15a13 13 0 0 1 26 0v18.6a2.4 2.4 0 0 1-2.4 2.4H13.4a2.4 2.4 0 0 1-2.4-2.4Z"/><rect x="17.5" y="21" width="13" height="9.4" rx="2.2" fill="#fff"/><path d="M19.6 12.6a4.4 4.4 0 0 1 8.8 0" fill="none" stroke-width="2.8"/>',
+  armor: '<path d="M13 13h22v13.4C35 33 30 36.4 24 36.4S13 33 13 26.4Z"/><path d="M16.6 2h14.8v9.4H16.6Z"/><rect x="20" y="5" width="8" height="3.4" fill="#fff"/><path d="M24 15v18" stroke="#fff" stroke-width="2.4" fill="none"/>',
+  suitcase: '<rect x="5" y="11" width="38" height="23" rx="3.4"/><path d="M18 11V7.4A3.4 3.4 0 0 1 21.4 4h5.2A3.4 3.4 0 0 1 30 7.4V11" fill="none" stroke-width="3"/><rect x="22" y="11" width="4" height="23" fill="#fff"/>',
+  hall: '<path d="M5 35V15L24 4l19 11v20Z"/><rect x="13" y="22" width="8.4" height="13" fill="#fff"/><rect x="26.6" y="22" width="8.4" height="13" fill="#fff"/>',
+  moat: '<path d="M14 12h20v14H14Z"/><path d="M14 12V5.6h4V9h4V5.6h4V9h4V5.6h4V12Z"/><path d="M2 31c5-4.4 9 4.4 14 0s9 4.4 14 0 9 4.4 14 0" fill="none" stroke-width="4" stroke-linecap="round"/>',
+  field: '<rect x="3" y="7" width="42" height="22" rx="2"/><rect x="3" y="7" width="6.4" height="22" fill="rgba(255,255,255,.5)"/><rect x="38.6" y="7" width="6.4" height="22" fill="rgba(255,255,255,.5)"/><path d="M17 7v22M24 7v22M31 7v22" stroke="#fff" stroke-width="1.8" fill="none"/>',
+  helmet: '<path d="M12 16a12 12 0 0 1 24 0v14.6a3.4 3.4 0 0 1-3.4 3.4H15.4a3.4 3.4 0 0 1-3.4-3.4Z"/><rect x="14" y="17.6" width="20" height="3.4" fill="#fff"/><rect x="14" y="24.6" width="20" height="3.4" fill="#fff"/>',
+  shield: '<path d="M24 2.4 40 7.6v11.6c0 9-7 15.4-16 17.4-9-2-16-8.4-16-17.4V7.6Z"/><path d="M24 9v22" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M9.4 19h29.2" stroke="#fff" stroke-width="2.6" fill="none"/>',
+  banner: '<path d="M12 2.4h24V29l-12-7-12 7Z"/><path d="M24 9.4l3.4 5.6-3.4 5.6-3.4-5.6Z" fill="#fff"/>',
+  sphinx: '<path d="M3 35V27c0-4 4-6.4 8.4-6.4H24V35Z"/><path d="M26 35V16h8v19Z"/><path d="M23 16h13l2.4 6H23Z"/><circle cx="30" cy="9.6" r="6.4"/><path d="M23.6 4h13v4.4h-13Z"/>',
+  chisel: '<path d="M7 35l14.6-14.6 6 6L13 41Z"/><path d="M24 14l8.4-8.4L43 16.2 34.6 24.6Z"/>',
+  stone: '<path d="M12 4.6h24V35H12Z"/><path d="M16 11h16M16 18h16M16 25h11" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+  scroll: '<path d="M10 4.6h24a4.4 4.4 0 0 1 0 8.8H14.4V32a4.4 4.4 0 0 1-8.8 0V9a4.4 4.4 0 0 1 4.4-4.4Z"/><path d="M19 18h14M19 25h14" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+  lamp: '<path d="M18 3.6h12V9H18Z"/><path d="M13 9h22l3 21.6a3.4 3.4 0 0 1-3.4 3.8H13.4A3.4 3.4 0 0 1 10 30.6Z"/><circle cx="24" cy="21" r="5.4" fill="#fff"/>',
+  mask: '<path d="M12 8c0-3.4 5.4-5.4 12-5.4S36 4.6 36 8v10.6c0 8.4-5.4 16.4-12 16.4S12 27 12 18.6Z"/><circle cx="19" cy="15" r="2.6" fill="#fff"/><circle cx="29" cy="15" r="2.6" fill="#fff"/><path d="M18.6 24.6h10.8" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
+  museum: '<path d="M3.6 14 24 3.6 44.4 14v3.4H3.6Z"/><path d="M9 20.6h4.4V32H9ZM21.8 20.6h4.4V32h-4.4ZM34.6 20.6H39V32h-4.4Z"/><path d="M4.6 34.6h38.8V38H4.6Z"/>',
 };
-function glyphSvg(name) {
+function glyphSvg(name, color) {
   const body = GLYPHS[name] || GLYPHS.train;
-  return '<svg viewBox="0 0 48 36" fill="#4A6FA5" stroke="#4A6FA5" aria-hidden="true">' + body + "</svg>";
+  const c = color || "var(--book,#4A6FA5)";
+  return '<svg viewBox="0 0 48 36" fill="' + c + '" stroke="' + c + '" aria-hidden="true">' + body + "</svg>";
 }
 // One football field, with its end zones and yard lines, so "40 football fields"
 // is something a kid can literally count instead of a number to take on trust.
@@ -822,6 +932,110 @@ const DIAGRAMS = {
       '<path d="M252 178 L252 148" stroke="#33507E" stroke-width="3" stroke-linecap="round"/>' +
       '<text x="196" y="140" font-family="Nunito,sans-serif" font-size="12" font-weight="900" fill="#33507E">rail</text>' +
       '<path d="M196 144 L182 154" stroke="#33507E" stroke-width="2.5" stroke-linecap="round"/>' +
+      "</svg>";
+  },
+  // ---- Session RP3 diagrams. Four pages where the picture IS the lesson and a
+  // bar chart would only restate the sentence above it. Each one draws in the
+  // book's own colour through --book, and every label is a word, not a key.
+  //
+  // Two eyes side by side, because the pupil only makes sense as a COMPARISON:
+  // the same eye in bright light and in a dim room.
+  "pupil-light": function () {
+    const eye = (cx, pr, tint) =>
+      '<ellipse cx="' + cx + '" cy="108" rx="62" ry="38" fill="#fff" stroke="var(--book,#4A6FA5)" stroke-width="5"/>' +
+      '<circle cx="' + cx + '" cy="108" r="30" fill="' + tint + '"/>' +
+      '<circle cx="' + cx + '" cy="108" r="' + pr + '" fill="#181622"/>' +
+      '<circle cx="' + (cx - 9) + '" cy="' + (108 - 11) + '" r="6" fill="#fff" opacity=".85"/>';
+    return '<svg viewBox="0 0 320 200" role="img" aria-label="The same eye drawn twice. In bright sunshine the dark circle in the middle, the pupil, is small. In a dim room the same pupil has opened up wide to let more light in.">' +
+      // the sun over the left eye
+      '<circle cx="82" cy="34" r="15" fill="#E8B84B"/>' +
+      '<path d="M82 8v8M82 52v8M56 34h8M100 34h8M64 16l6 6M100 16l-6 6M64 52l6-6M100 52l-6-6" stroke="#E8B84B" stroke-width="4.5" stroke-linecap="round"/>' +
+      // the dim room over the right eye
+      '<path d="M245 20a15 15 0 1 0 14 20 12 12 0 0 1-14-20Z" fill="#7C86A0"/>' +
+      eye(82, 11, "var(--book,#4A6FA5)") +
+      eye(238, 24, "var(--book,#4A6FA5)") +
+      '<text x="82" y="176" text-anchor="middle" font-family="Nunito,sans-serif" font-size="16" font-weight="900" fill="#33507E">Bright light</text>' +
+      '<text x="82" y="194" text-anchor="middle" font-family="Nunito,sans-serif" font-size="13" font-weight="800" fill="rgba(15,14,23,.55)">small pupil</text>' +
+      '<text x="238" y="176" text-anchor="middle" font-family="Nunito,sans-serif" font-size="16" font-weight="900" fill="#33507E">Dim room</text>' +
+      '<text x="238" y="194" text-anchor="middle" font-family="Nunito,sans-serif" font-size="13" font-weight="800" fill="rgba(15,14,23,.55)">wide open pupil</text>' +
+      "</svg>";
+  },
+  // What goes IN a leaf and what comes OUT of it. Arrows in on the left,
+  // arrows out on the right, so the leaf reads as the little factory it is.
+  "leaf-factory": function () {
+    return '<svg viewBox="0 0 320 200" role="img" aria-label="A leaf drawn as a little factory. Sunlight, water and gas from the air go in on one side. Sugar for the plant to eat and oxygen for us to breathe come out on the other.">' +
+      '<circle cx="34" cy="30" r="13" fill="#E8B84B"/>' +
+      '<path d="M34 8v7M34 45v7M12 30h7M49 30h7M18 14l5 5M50 14l-5 5" stroke="#E8B84B" stroke-width="4" stroke-linecap="round"/>' +
+      // the leaf
+      '<path d="M160 30c48 0 74 30 74 68s-30 66-74 66-74-28-74-66 26-68 74-68Z" fill="var(--book,#4A6FA5)" opacity=".92"/>' +
+      '<path d="M160 34v130" stroke="#fff" stroke-width="6" stroke-linecap="round"/>' +
+      '<path d="M160 66 122 52M160 66l38-14M160 100l-44-16M160 100l44-16M160 134l-40-14M160 134l40-14" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' +
+      // in
+      '<path d="M56 52 L88 76" stroke="#33507E" stroke-width="5" stroke-linecap="round"/><path d="M88 76 L74 74 L79 62Z" fill="#33507E"/>' +
+      '<path d="M22 108 L84 108" stroke="#33507E" stroke-width="5" stroke-linecap="round"/><path d="M84 108 L70 101 L70 115Z" fill="#33507E"/>' +
+      '<path d="M40 158 L86 134" stroke="#33507E" stroke-width="5" stroke-linecap="round"/><path d="M86 134 L72 136 L78 148Z" fill="#33507E"/>' +
+      '<text x="8" y="72" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="#33507E">Sunlight</text>' +
+      '<text x="8" y="100" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="#33507E">Water</text>' +
+      '<text x="8" y="176" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="#33507E">Gas from</text>' +
+      '<text x="8" y="192" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="#33507E">the air</text>' +
+      // out
+      '<path d="M236 78 L292 60" stroke="#3E8C55" stroke-width="5" stroke-linecap="round"/><path d="M292 60 L278 57 L282 71Z" fill="#3E8C55"/>' +
+      '<path d="M236 128 L292 146" stroke="#3E8C55" stroke-width="5" stroke-linecap="round"/><path d="M292 146 L278 149 L282 135Z" fill="#3E8C55"/>' +
+      '<text x="246" y="42" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="#2C6B41">Sugar to</text>' +
+      '<text x="246" y="58" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="#2C6B41">eat</text>' +
+      '<text x="246" y="176" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="#2C6B41">Oxygen to</text>' +
+      '<text x="246" y="192" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="#2C6B41">breathe</text>' +
+      "</svg>";
+  },
+  // A root tip blown up big, because root hairs are invisible at real size and
+  // they are where nearly all the drinking actually happens.
+  "root-hairs": function () {
+    let hairs = "";
+    for (let k = 0; k < 13; k++) {
+      const y = 40 + k * 10;
+      const len = 26 + (k % 3) * 9;
+      hairs += '<path d="M126 ' + y + " L" + (126 - len) + " " + (y - 7) + '" stroke="var(--book,#4A6FA5)" stroke-width="3" stroke-linecap="round"/>';
+      hairs += '<path d="M186 ' + y + " L" + (186 + len) + " " + (y - 7) + '" stroke="var(--book,#4A6FA5)" stroke-width="3" stroke-linecap="round"/>';
+    }
+    return '<svg viewBox="0 0 320 200" role="img" aria-label="One root tip drawn very large. Fuzzy little threads called root hairs stick out all around it, and water drops in the soil are moving in through them.">' +
+      '<rect x="0" y="0" width="320" height="200" rx="14" fill="#EFE7D8"/>' +
+      hairs +
+      '<path d="M126 24h60v128c0 18-13 30-30 30s-30-12-30-30Z" fill="var(--book,#4A6FA5)"/>' +
+      '<path d="M156 40v120" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".55"/>' +
+      // water drops arriving
+      '<g fill="#5FA8D8">' +
+      '<path d="M62 46c5 7 8 10 8 14a8 8 0 0 1-16 0c0-4 3-7 8-14Z"/>' +
+      '<path d="M44 108c5 7 8 10 8 14a8 8 0 0 1-16 0c0-4 3-7 8-14Z"/>' +
+      '<path d="M262 62c5 7 8 10 8 14a8 8 0 0 1-16 0c0-4 3-7 8-14Z"/>' +
+      '<path d="M276 126c5 7 8 10 8 14a8 8 0 0 1-16 0c0-4 3-7 8-14Z"/>' +
+      "</g>" +
+      '<text x="10" y="22" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#33507E">Root hairs drink here</text>' +
+      '<text x="196" y="192" font-family="Nunito,sans-serif" font-size="14" font-weight="900" fill="rgba(15,14,23,.55)">the root tip</text>' +
+      "</svg>";
+  },
+  // A slice through the valley: the river in the middle, a dark band of silt on
+  // each bank, green fields on top of it, and tan desert past that. It is the
+  // whole reason Ancient Egypt lived in a thin green ribbon.
+  "nile-flood": function () {
+    return '<svg viewBox="0 0 320 200" role="img" aria-label="A slice through the Nile valley. The river runs down the middle, a band of rich dark silt sits on each bank with green fields growing on it, and dry tan desert stretches away on both sides.">' +
+      '<rect x="0" y="60" width="320" height="140" rx="12" fill="#DFCBA2"/>' +
+      // silt bands
+      '<path d="M74 96h172v104H74Z" fill="#5A4632"/>' +
+      // the river
+      '<path d="M132 78h56v122h-56Z" fill="#5FA8D8"/>' +
+      '<path d="M138 100c14 8 28-8 44 0M138 132c14 8 28-8 44 0M138 164c14 8 28-8 44 0" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity=".7"/>' +
+      // green fields on the silt
+      '<path d="M74 88h58v14H74ZM188 88h58v14h-58Z" fill="#3E8C55"/>' +
+      '<g fill="#3E8C55">' +
+      '<path d="M92 88c0-12 5-18 5-18s5 6 5 18Z"/><path d="M110 88c0-14 5-21 5-21s5 7 5 21Z"/>' +
+      '<path d="M204 88c0-14 5-21 5-21s5 7 5 21Z"/><path d="M222 88c0-12 5-18 5-18s5 6 5 18Z"/>' +
+      "</g>" +
+      // sun over the desert
+      '<circle cx="286" cy="34" r="14" fill="#E8B84B"/>' +
+      '<text x="10" y="42" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#8A6A34">Dry desert</text>' +
+      '<text x="160" y="30" text-anchor="middle" font-family="Nunito,sans-serif" font-size="15" font-weight="900" fill="#2E6E9E">The Nile</text>' +
+      '<path d="M160 36v34" stroke="#2E6E9E" stroke-width="3" stroke-linecap="round"/>' +
+      '<text x="72" y="192" font-family="Nunito,sans-serif" font-size="13" font-weight="900" fill="#fff">Rich dark silt the flood leaves behind</text>' +
       "</svg>";
   },
 };
@@ -876,9 +1090,9 @@ function buildPages() {
       // Session RP1 — the composed page. Every fact is on screen at once, each
       // with its own picture and its own source, and the Wow chart closes it.
       el.className += " rich rp" + (sp.layout ? " lay-" + sp.layout : "");
-      el.innerHTML = photoBlock(sp, sp.stat
+      el.innerHTML = photoBlock(sp, (sp.stat
           ? '<div class="bigstat"><b>' + escapeHtml(sp.stat.value || "") + "</b><span>" + escapeHtml(sp.stat.unit || "") + "</span></div>"
-          : "") +
+          : "") + rulerHtml(sp)) +
         '<div class="ptitle">' + escapeHtml(sp.title) + "</div>" +
         '<div class="pbody">' + richBody(sp, i) + "</div>" +
         '<span class="earhint" id="earhint-' + i + '">Fold</span>' +
