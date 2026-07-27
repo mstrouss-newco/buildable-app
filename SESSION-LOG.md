@@ -104,6 +104,148 @@ at phone 390x844, iPad 900x1200 and landscape phone 844x390 and looked at.
 ### QA
 `node qa-topic.mjs` — ALL CHECKS PASS (8 books converted). `node qa-kidspedia.mjs`
 — ALL CHECKS PASS. No game engine was touched this session.
+## 2026-07-27: Session FL6 — transform quests, part 1
+
+Three quests that turn a kid into the animal, built on FL5's shapes. Most of it
+is data, exactly as planned: two new fields on a mission recipe and one new
+flow. The engine work is the body itself.
+
+### What a transform is
+The FL3 hangar pattern with a different owner. A builder fills the same group
+the whole game flies, returns one animator, and carries its own five feel
+numbers. The draw loop calls that animator without knowing what it is flying,
+which is the same contract the plane, the copter and the jetpack already sign.
+
+The FL3 law — a ride is a look plus a feel, never power — is *easier* to keep
+here than it was for rides, because a body only exists inside its own quest and
+so cannot make anything else in the game easier. They still trade against each
+other on purpose:
+
+| body | speed | turns in | camera | quest |
+|---|---|---|---|---|
+| Bee | 19 | 7u | 9u back | Busy Bee |
+| Puffin | 31 | 22u | 13u back | Puffin Parent |
+| Hummingbird | 17 | 5u | 8.5u back | Hummingbird |
+
+The camera distance belongs to the body. A plane is 13 units across and wants
+20 units of room; a bee is 4 and would be a speck at that distance, which is
+the entire reason a transform reads at all.
+
+Every one of the five feel numbers now goes through `FEEL_NOW`, which IS `ride`
+until a quest lends you something. QA asserts the flight model reads *nothing*
+off `ride` any more — if it did, a transform would be a costume with the
+plane's handling underneath it.
+
+### The bodies are real models, and here is why that was not optional
+AR1R deleted a whole flock of birds for reading as flying triangles. A quest
+body is seen from an arm's length behind for its whole length, which is far too
+close to fake, so Bee, Hummingbird and Gull come out of the same 178-animal
+library the islands are dressed with — ~1,500 tris and one draw call each, cut
+down to a 165KB three-body glb by the new `scripts/cut-animal-subset.mjs`. The
+colour on these models is entirely in `COLOR_0`, so the cutter copies vertex
+attributes verbatim; anything that drops them renders all 178 solid black.
+
+**The wingbeat is written in code**, because nothing in the file has a bone.
+Same vertex banding as the AR1Q walk cycle, but the wing is *rotated* about the
+body's fore-aft axis rather than lifted, so it hinges at the shoulder instead of
+bending in the middle. A bee really beats about 200 times a second and a
+hummingbird about 50; drawn honestly on a 60Hz screen both are a still
+photograph, so the fast ones flap at a rate the eye can follow and wear a
+translucent blur — the same trick the starter plane's propeller has always used.
+
+**There is no puffin in the library.** Sixteen birds and not one of them. The
+Gull has the right seabird build, so it is repainted into a puffin by which way
+each face points — dark on top, pale underneath, which is the oldest rule in
+nature and the only thing that reads from twelve units back. Its wings are
+pulled in 45%, because a gull's wings are two and a half times its body length
+and a puffin's are more like one and a half, and that stubbiness is most of what
+makes a puffin look like a puffin. Then it is given the beak, which is what its
+fun fact is about, and its row of fish rides *in* that beak.
+
+The kid's chosen ride is not wiped out: its palette slots come along as a scarf,
+two thin tails streaming back along the flanks. The ride itself is HIDDEN, never
+rebuilt, so leaving and rejoining a quest ten times costs nothing.
+
+### The gathering flow — one new mechanic, used twice
+Every job before this loaded up at ONE place and delivered to MANY. A bee
+visits many flowers and brings it all back to one hive; a puffin does the same
+with fish and a nest. So `gather:true` plus a `dropAt` turns the flow around,
+and the arrow has exactly two things to say: go and get some more, or take what
+you have home. Hummingbird needed none of it — it reuses the Lost Explorer
+hover completely untouched.
+
+A delivery and a pick-up share one piece of code for going green, which is on
+purpose: from the outside they should look identical.
+
+**The FL5 law holds everywhere.** No timer, no expiry, nothing that runs out,
+nothing to fail at. A flower waits forever, the hive waits forever, your hands
+keep what is in them if you fly off, and leaving is one tap that costs nothing
+and starts fresh next time. QA greps the whole gathering step for the words.
+
+### Found like a job, never gated by a landing
+A quest stands out under its own beam and offers itself on a low swoop, through
+the exact `scoutStep` that has always run on radius plus ceiling. The only
+difference is the colour: **violet for a quest, amber for a job**, so the two
+kinds of light say two different things from a long way off without a word of
+writing. Landing is completely untouched — still how you bank coins, and QA
+lands mid-quest to prove it neither ends nor blocks one.
+
+### The spacing rule — a world must not turn into an airport
+`BEAM_GAP` is 240 units and `beamSpacing()` measures it, so this is a number
+rather than a good intention. Measured live in all three worlds:
+
+- Sunny Islands: 3 beams, closest pair **422** units apart
+- Snowy Peaks: 2 beams, **364**
+- Sunset Canyon: 2 beams, **441**
+
+Snowy Peaks failed it before this session: the Supply Hut stood **192 units**
+from the first flare, close enough that both columns of light sat in one view
+and a kid had to choose between them before they knew what either was. The hut
+moved west. The flares did not move — the hover job's whole shape is tuned
+around them, and QA proves the nimble ride still beats the fast one on it.
+
+And a beam over something already earned drops to a third of its height and a
+sixth of its glow, so the sky genuinely thins out as a kid works through a stop.
+
+### QA
+`qa-skyflyer.mjs` — **ALL CHECKS PASSED**. The robot starts each quest, is
+handed the body (proved by the feel numbers changing, not by a flag), flies it
+to the end, banks the coins, keeps the badge and reads the fact card:
+
+- Busy Bee, 4/4 in 65s, +16
+- Puffin Parent, 4/4 in 36s, +18
+- Hummingbird, 4/4 in 55s, +17
+
+`qa-skyflyer-look.mjs` — extended to force each quest's offer card open and
+photograph each body from the chase camera. The card measures 340x281px at 26px
+radius, centred, unchanged from AR1R.
+
+### Two bugs only a picture found
+1. **Everything bolted onto a body was sized off the model's longest dimension,
+   which on a bird IS THE WINGSPAN.** The puffin's beak came out floating a
+   wingspan in front of its face and the scarf landed on the hummingbird's
+   forehead. Body parts belong to the BODY: `tbPrep` now hands back real
+   dimensions and everything is placed off `lenZ`.
+2. **The creature on the GO pill was drawn head-on with its wings spread** —
+   a lovely shape at 200px and an indistinct white blob at 44. On a green button
+   the bee read as the cloud on the button beside it. Redrawn side-on as
+   silhouettes, matching the plane, copter and jetpack glyphs it sits among.
+
+A third, caught the same way: what you carry hangs off a 10-unit aeroplane, and
+left alone on a 4-unit bee the boxes were bigger than the bee. The load now
+scales with the body, and a recipe may move it.
+
+### Checks rewritten rather than deleted
+Per the AR1Q rule that a check guarding a shape that no longer exists passes
+forever: the ride-count check now counts inside the RIDES block only (TRANSFORMS
+also carries `id:"puffin"`), the feel checks pin `FEEL_NOW` *and* additionally
+prove nothing reads off `ride`, and the offer-picture check was sliced forward
+to a string declared behind it — its middle clause had always been the empty
+string.
+
+### Not done, and deliberately
+Part 1 was three quests. There is no sticker book, no shell-side surfacing of
+which bodies a kid has flown, and Snowy Peaks has no transform quest of its own.
 
 ## 2026-07-27: Session AR1R — the triangle birds go, the mission card becomes a pop-up
 

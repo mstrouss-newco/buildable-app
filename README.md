@@ -41,6 +41,39 @@ the train), on tonnes/km/litres, and on more British spellings; its DOM stub gai
 **Still stand-ins.** No fact photos exist yet for these seven — every fact after
 the first shows a detail crop of its page photo. `kidspedia-rp4-art-list.md` lists
 the 56 photos RP4 needs, with the crop shape each slot demands.
+## FL6 — transform quests: you ARE the bee (July 27 2026)
+`public/skyflyer-engine.html`, `scripts/cut-animal-subset.mjs`,
+`public/models/skyflyer/animals/flyer-bodies.glb`, `qa-skyflyer.mjs`,
+`qa-skyflyer-look.mjs`, `src/BuildableKids.jsx`.
+
+Three quests that lend a kid a body: **Busy Bee** and **Puffin Parent** in Sunny
+Islands, **Hummingbird** in Sunset Canyon. A transform is the FL3 hangar pattern
+with a different owner — a builder fills the group the whole game flies, returns
+one animator, and carries its own speed, turn, lean and bob — wrapped in an FL5
+recipe. The FL3 law is easier to keep here than for rides, because a body only
+exists inside its own quest.
+
+The bodies are **real models** (Bee, Hummingbird, Gull at ~1,500 tris) cut out of
+the 178-animal library into a 165KB glb, per AR1R's lesson that a bird seen from
+an arm's length behind cannot be faked. The wingbeat is written in code because
+nothing in the file has a bone; the fast wings wear a blur because 50 beats a
+second on a 60Hz screen is a still photograph. There is no puffin in the library,
+so the Gull is repainted by face direction, has its wings pulled in 45%, and is
+given the beak its fun fact is about.
+
+One new mechanic: **gather** — collect from the many, take it all to the one,
+which is backwards from every job so far. Used by two of the three; the
+hummingbird reuses the Lost Explorer hover untouched.
+
+**The spacing rule:** `BEAM_GAP` = 240 units, measured by `beamSpacing()` in
+every world (islands 422, peaks 364, canyon 441). Snowy Peaks failed it before
+this session at 192, so the Supply Hut moved west. A beam over something already
+earned drops to a third of its height and a sixth of its glow.
+
+Landing is untouched and never gates a quest. Nothing starts without a tap,
+leaving is free and starts fresh, no timer, no fail state. QA: all checks pass,
+the robot flies all three quests, and the look gate photographs every body.
+Engine cache-bust `ar1r` -> `fl6`.
 
 ## AR1R — the triangle birds go, the mission card becomes a pop-up (July 27 2026)
 `public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`,
