@@ -5,7 +5,10 @@
   "topic": "body",
   "ageBand": "5-10",
   "status": "approved",
-  "skills": ["body-facts", "reading"],
+  "skills": [
+    "body-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/your-body/your-body-cover.webp",
   "shelfColor": "#C75B6E",
   "ambient": "candy",
@@ -25,33 +28,50 @@
   "pages": [
     {
       "id": "eyes",
-      "title": "The Colourful Windows You See Through",
+      "title": "The Colorful Windows You See Through",
+      "layout": "close-up",
       "art": "/explore/topic-photos/your-body/your-body-1.webp",
-      "artAlt": "An extreme close-up of a child's eye showing the colourful, detailed pattern of the iris",
+      "artAlt": "An extreme close-up of a child's eye showing the colorful, detailed pattern of the iris",
       "factAudio": "your-body-eyes",
-      "quiz": ["your-body-eyes"],
+      "quiz": [
+        "your-body-eyes"
+      ],
       "facts": [
         {
-          "text": "The colourful ring in this photo is called the iris, and it is doing a clever job. It opens and closes the little dark circle in the middle, called the pupil, to let in just the right amount of light. In bright sunshine your pupil gets smaller, and in a dim room it grows bigger so you can still see.",
+          "text": "The colorful ring in this photo is called the iris, and it is doing a clever job. It opens and closes the little dark circle in the middle, called the pupil, to let in just the right amount of light. In bright sunshine your pupil gets smaller, and in a dim room it grows bigger so you can still see.",
           "source": "National Eye Institute (nei.nih.gov)"
         },
         {
-          "text": "Your iris gets its colour from a substance called melanin, and the more you have the browner your eyes look. Eye colour runs along a smooth range, from the palest blue all the way to deep brown, with lots of greens and hazels in between. Many different genes work together to paint it, so the colour you see in the mirror is truly your own.",
+          "text": "Your iris gets its color from a substance called melanin, and the more you have the browner your eyes look. Eye color runs along a smooth range, from the palest blue all the way to deep brown, with lots of greens and hazels in between. Many different genes work together to paint it, so the color you see in the mirror is truly your own.",
           "source": "U.S. National Library of Medicine (medlineplus.gov)"
         },
         {
           "text": "Behind that pretty iris, light lands on a special layer at the back of the eye called the retina. Tiny cells there turn the light into little electrical signals and send them along a nerve to your brain. Your brain reads the signals and turns them into the picture you are looking at right now.",
           "source": "National Eye Institute (nei.nih.gov)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "diagram",
+        "title": "The same eye, twice",
+        "name": "pupil-light",
+        "caption": "The iris opens and closes the pupil to let in just the right amount of light. In bright sunshine the pupil shrinks, and in a dim room it opens wide.",
+        "source": "National Eye Institute (nei.nih.gov)"
+      }
     },
     {
       "id": "bones",
-      "title": "Meet Your Marvellous Skeleton",
+      "title": "Meet Your Marvelous Skeleton",
+      "layout": "tall",
       "art": "/explore/topic-photos/your-body/your-body-2.webp",
       "artAlt": "A friendly classroom skeleton model standing beside an anatomy poster",
+      "stat": {
+        "value": "206",
+        "unit": "bones in a grown-up"
+      },
       "factAudio": "your-body-bones",
-      "quiz": ["your-body-bones"],
+      "quiz": [
+        "your-body-bones"
+      ],
       "facts": [
         {
           "text": "A friendly model like this one shows the 206 bones that grown-ups have. Here is the lovely surprise though, a baby is born with about 300 bones. As you grow, some of those little bones slowly join together, which is how 300 becomes 206.",
@@ -65,37 +85,103 @@
           "text": "Deep inside many of your bones is a soft jelly called bone marrow, and it has the busy job of making blood cells for your whole body. Bones also store a mineral called calcium that helps keep them hard and strong. So your skeleton holds you up tall and helps make blood at the very same time.",
           "source": "National Institute of Arthritis and Musculoskeletal and Skin Diseases (niams.nih.gov)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How many bones?",
+        "rows": [
+          {
+            "icon": "baby",
+            "label": "A newborn baby",
+            "value": 300,
+            "display": "about 300 bones"
+          },
+          {
+            "icon": "person",
+            "label": "A grown-up",
+            "value": 206,
+            "display": "206 bones"
+          },
+          {
+            "icon": "hand",
+            "label": "Just your hand and wrist",
+            "value": 27,
+            "display": "27 bones"
+          }
+        ],
+        "caption": "All three numbers come from Nemours KidsHealth. A baby's extra bones do not disappear, they slowly join together as you grow.",
+        "source": "Nemours KidsHealth (kidshealth.org)"
+      }
     },
     {
       "id": "food-fuel",
       "title": "Fuel Up Your Amazing Body",
+      "layout": "long",
       "art": "/explore/topic-photos/your-body/your-body-3.webp",
-      "artAlt": "A colourful plate of healthy foods including fruits, vegetables and whole grains",
+      "artAlt": "A colorful plate of healthy foods including fruits, vegetables and whole grains",
       "factAudio": "your-body-food-fuel",
-      "quiz": ["your-body-food-fuel"],
+      "quiz": [
+        "your-body-food-fuel"
+      ],
       "facts": [
         {
-          "text": "The food on a plate like this is fuel that gives your body energy to run, jump and think. Grains such as bread, oats and brown rice are full of energy your body can use. Whole grains keep the whole grain kernel, so they also give you extra fibre and helpful vitamins.",
+          "text": "The food on a plate like this is fuel that gives your body energy to run, jump and think. Grains such as bread, oats and brown rice are full of energy your body can use. Whole grains keep the whole grain kernel, so they also give you extra fiber and helpful vitamins.",
           "source": "U.S. Department of Agriculture (myplate.gov)"
         },
         {
-          "text": "Vegetables come in a whole rainbow of colours, and eating lots of different ones is a brilliant idea. They are even sorted into groups like dark green, and red and orange. Each colour brings its own helpful vitamins, fibre and a mineral called potassium.",
+          "text": "Vegetables come in a whole rainbow of colors, and eating lots of different ones is a brilliant idea. They are even sorted into groups like dark green, and red and orange. Each color brings its own helpful vitamins, fiber and a mineral called potassium.",
           "source": "U.S. Department of Agriculture (myplate.gov)"
         },
         {
-          "text": "Fruit is the naturally sweet part of your plate, and it adds fibre and potassium to help your body work well. You can enjoy it fresh, frozen or dried, whole or cut into pieces. Trying lots of different fruits means lots of different good things for you.",
+          "text": "Fruit is the naturally sweet part of your plate, and it adds fiber and potassium to help your body work well. You can enjoy it fresh, frozen or dried, whole or cut into pieces. Trying lots of different fruits means lots of different good things for you.",
           "source": "U.S. Department of Agriculture (myplate.gov)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "What goes on a healthy plate",
+        "rows": [
+          {
+            "icon": "veg",
+            "label": "Fruits and vegetables",
+            "value": 50,
+            "display": "half your plate"
+          },
+          {
+            "icon": "grain",
+            "label": "Grains like bread, oats and brown rice",
+            "value": 25,
+            "display": "about a quarter"
+          },
+          {
+            "icon": "protein",
+            "label": "Protein foods",
+            "value": 25,
+            "display": "about a quarter"
+          },
+          {
+            "icon": "milk",
+            "label": "Dairy, on the side",
+            "value": 12,
+            "display": "a glass or a cup alongside"
+          }
+        ],
+        "caption": "This is the U.S. Department of Agriculture's own MyPlate advice: make half your plate fruits and vegetables, and add a serving of dairy on the side.",
+        "source": "U.S. Department of Agriculture (myplate.gov)"
+      }
     },
     {
       "id": "fingerprints",
       "title": "The Secret Swirls on Your Hands",
+      "layout": "close-up",
       "art": "/explore/topic-photos/your-body/your-body-4.webp",
       "artAlt": "A close-up of a child's cupped hands with the fine ridges of their fingerprints visible",
       "factAudio": "your-body-fingerprints",
-      "quiz": ["your-body-fingerprints"],
+      "quiz": [
+        "your-body-fingerprints"
+      ],
       "facts": [
         {
           "text": "Look closely at your fingertips and you will spot tiny curved lines. These little ridges formed before you were even born, starting around the third month of growing and finished by about the sixth. You have carried the very same pattern with you ever since.",
@@ -109,11 +195,35 @@
           "text": "Fingerprints come in a few main shapes with lovely names: arches, loops and whorls. Your genes set the basic size and spacing, and the tiny details were shaped as you grew before birth. That teamwork is why your prints turned out completely your own.",
           "source": "U.S. National Library of Medicine (medlineplus.gov)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "When your fingerprints were made",
+        "stops": [
+          {
+            "year": "Month 3",
+            "label": "The tiny ridges start to form on your fingertips",
+            "icon": "print"
+          },
+          {
+            "year": "Month 6",
+            "label": "The whole pattern is finished and set",
+            "icon": "print"
+          },
+          {
+            "year": "Today",
+            "label": "The very same swirls are still on your hands",
+            "icon": "print"
+          }
+        ],
+        "caption": "Your prints were finished before you were ever born, and they have not changed since.",
+        "source": "U.S. National Library of Medicine (medlineplus.gov)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Your Amazing Body!",
-    "blurb": "You just explored some of the wonders hiding inside you every single day. Fold down the corner of your favourite page so you can find it again whenever you want to remember how amazing your body is."
+    "blurb": "You just explored some of the wonders hiding inside you every single day. Fold down the corner of your favorite page so you can find it again whenever you want to remember how amazing your body is."
   }
 }

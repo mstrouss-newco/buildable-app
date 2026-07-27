@@ -5,7 +5,10 @@
   "topic": "nature",
   "ageBand": "5-10",
   "status": "approved",
-  "skills": ["nature-facts", "reading"],
+  "skills": [
+    "nature-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/deserts/deserts-cover.webp",
   "shelfColor": "#C98A3D",
   "ambient": "wind",
@@ -24,10 +27,17 @@
     {
       "id": "cactus",
       "title": "The Cactus That Blooms at Night",
+      "layout": "tall",
       "art": "/explore/topic-photos/deserts/deserts-1.webp",
       "artAlt": "A tall saguaro cactus in bloom stands in front of red rock mesas",
+      "stat": {
+        "value": "40",
+        "unit": "feet tall"
+      },
       "factAudio": "deserts-cactus",
-      "quiz": ["deserts-cactus"],
+      "quiz": [
+        "deserts-cactus"
+      ],
       "facts": [
         {
           "text": "The saguaro's large flowers are creamy white and open at night. They give off a strong, sweet scent that helps bats find them in the dark. By morning the blooms are wide open for daytime visitors too.",
@@ -38,62 +48,164 @@
           "source": "National Park Service (nps.gov)"
         },
         {
-          "text": "A saguaro can grow to about 12 metres tall, higher than a house. It usually does not grow its first arm until it is 50 to 70 years old, and many live for 150 to 175 years. That means some of these giants are older than your great great grandparents.",
+          "text": "A saguaro can grow to about 40 feet tall, higher than a house. It usually does not grow its first arm until it is 50 to 70 years old, and many live for 150 to 175 years. That means some of these giants are older than your great great grandparents.",
           "source": "National Park Service (nps.gov)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How tall is a saguaro?",
+        "rows": [
+          {
+            "icon": "kid",
+            "label": "A kid your age",
+            "value": 4,
+            "display": "about 4 feet"
+          },
+          {
+            "icon": "door",
+            "label": "A front door",
+            "value": 7,
+            "display": "about 7 feet"
+          },
+          {
+            "icon": "giraffe",
+            "label": "A giraffe",
+            "value": 18,
+            "display": "about 18 feet"
+          },
+          {
+            "icon": "cactus",
+            "label": "A big saguaro cactus",
+            "value": 40,
+            "display": "about 40 feet"
+          }
+        ],
+        "caption": "The saguaro's height comes from the National Park Service. The everyday sizes are here only so you have something to measure against.",
+        "source": "National Park Service (nps.gov)"
+      }
     },
     {
       "id": "camels",
       "title": "Ships of the Sandy Sea",
+      "layout": "long",
       "art": "/explore/topic-photos/deserts/deserts-2.webp",
       "artAlt": "A line of camels walks across a sandy dune while the sun rises behind them",
       "factAudio": "deserts-camels",
-      "quiz": ["deserts-camels"],
+      "quiz": [
+        "deserts-camels"
+      ],
       "facts": [
         {
           "text": "A camel's hump does not hold water like a water bottle. It is actually full of fat, which the camel's body can turn into energy when food is hard to find. A healthy, well fed camel has a nice plump hump.",
           "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
         },
         {
-          "text": "After a long dry spell a thirsty camel can gulp as much as 145 litres of water in one drink, which is a whole lot of buckets. It can also travel a week or more without any water at all. That makes the camel a champion at desert life.",
+          "text": "After a long dry spell a thirsty camel can gulp as much as 38 gallons of water in one drink, which is a whole lot of buckets. It can also travel a week or more without any water at all. That makes the camel a champion at desert life.",
           "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
         },
         {
           "text": "Camels are built for blowing sand. They have double rows of long eyelashes, noses they can squeeze shut, and wide padded feet that spread out so they do not sink. All of this helps them stride across the dunes with ease.",
           "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How much can a camel drink?",
+        "rows": [
+          {
+            "icon": "bottle",
+            "label": "A kid's water bottle",
+            "value": 0.2,
+            "display": "about a quarter of a gallon"
+          },
+          {
+            "icon": "bucket",
+            "label": "A mopping bucket",
+            "value": 2.5,
+            "display": "about 2 and a half gallons"
+          },
+          {
+            "icon": "camel",
+            "label": "A thirsty camel, in one drink",
+            "value": 38,
+            "display": "about 38 gallons"
+          },
+          {
+            "icon": "bathtub",
+            "label": "A full bathtub",
+            "value": 40,
+            "display": "about 40 gallons"
+          }
+        ],
+        "caption": "The camel's big drink comes from the San Diego Zoo Wildlife Alliance. The bottle, the bucket and the bathtub are everyday sizes, and they show that a thirsty camel can drink almost a whole bathtub in one go.",
+        "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
+      }
     },
     {
       "id": "lizard",
       "title": "The Little Desert Dragon",
+      "layout": "close-up",
       "art": "/explore/topic-photos/deserts/deserts-3.webp",
       "artAlt": "A small spiky horned lizard rests on cracked orange desert ground",
       "factAudio": "deserts-lizard",
-      "quiz": ["deserts-lizard"],
+      "quiz": [
+        "deserts-lizard"
+      ],
       "facts": [
         {
           "text": "Horned lizards love to munch on ants. They use a sticky tongue to snap up big harvester ants one at a time. Because ants are such a tiny snack, these lizards need to eat a great many of them.",
           "source": "Nevada Department of Wildlife (ndow.org)"
         },
         {
-          "text": "A horned lizard's skin can be beige, tan, brown or slightly red to match the desert soil around it. This colour trick lets it blend right in with the ground. Sitting still, it can be very tricky to spot.",
+          "text": "A horned lizard's skin can be beige, tan, brown or slightly red to match the desert soil around it. This color trick lets it blend right in with the ground. Sitting still, it can be very tricky to spot.",
           "source": "Nevada Department of Wildlife (ndow.org)"
         },
         {
           "text": "The pointy spikes give this lizard its name and help keep it safe. When a hungry animal comes close, the lizard can puff up its wide, flat body to look bigger and harder to gobble up. Snakes find these round, spiky lizards a real mouthful.",
           "source": "Nevada Department of Wildlife (ndow.org)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How tiny is a desert dragon?",
+        "rows": [
+          {
+            "icon": "ant",
+            "label": "A harvester ant",
+            "value": 0.5,
+            "display": "about half an inch"
+          },
+          {
+            "icon": "lizard",
+            "label": "A horned lizard",
+            "value": 4,
+            "display": "about 4 inches"
+          },
+          {
+            "icon": "hand",
+            "label": "Your hand",
+            "value": 6,
+            "display": "about 6 inches"
+          }
+        ],
+        "caption": "The lizard's length comes from the Nevada Department of Wildlife. The everyday sizes are here only so you have something to measure against.",
+        "source": "Nevada Department of Wildlife (ndow.org)"
+      }
     },
     {
       "id": "oasis",
       "title": "A Green Surprise in the Sand",
+      "layout": "close-up",
       "art": "/explore/topic-photos/deserts/deserts-4.webp",
       "artAlt": "Tall palm trees and a pool of water sit in the middle of golden desert sand",
       "factAudio": "deserts-oasis",
-      "quiz": ["deserts-oasis"],
+      "quiz": [
+        "deserts-oasis"
+      ],
       "facts": [
         {
           "text": "An oasis appears where hidden underground water reaches the surface. This often happens along cracks in the rock called fault lines, where hard stone pushes the water up. Suddenly there is a cool, wet spot in the dry desert.",
@@ -107,11 +219,35 @@
           "text": "Animals travel from all around to rest in the cool shade and drink the steady water. Birds such as orioles even build their nests under the palm leaves. An oasis is a busy, happy place in the middle of the sand.",
           "source": "National Park Service (nps.gov)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "How an oasis appears in the sand",
+        "stops": [
+          {
+            "year": "First",
+            "label": "Rain soaks into the ground far away and sinks deep underground",
+            "icon": "drop"
+          },
+          {
+            "year": "Then",
+            "label": "The water creeps sideways through the rock, hidden under the desert",
+            "icon": "arrowdown"
+          },
+          {
+            "year": "At last",
+            "label": "Hard rock along a crack pushes it back up, and a pool appears",
+            "icon": "pool"
+          }
+        ],
+        "caption": "It can take a very long time for water to travel underground before it finally reaches the light.",
+        "source": "National Park Service (nps.gov)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Deserts!",
-    "blurb": "Which desert wonder was your favourite of all? Fold down the corner of that page so you can find it again whenever you like."
+    "blurb": "Which desert wonder was your favorite of all? Fold down the corner of that page so you can find it again whenever you like."
   }
 }

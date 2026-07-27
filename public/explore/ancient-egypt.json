@@ -5,7 +5,10 @@
   "topic": "history",
   "ageBand": "5-10",
   "status": "approved",
-  "skills": ["history-facts", "reading"],
+  "skills": [
+    "history-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/ancient-egypt/ancient-egypt-cover.webp",
   "shelfColor": "#C4A24A",
   "ambient": "wind",
@@ -26,10 +29,17 @@
     {
       "id": "sphinx",
       "title": "The Lion with a Human Face",
+      "layout": "tall",
       "art": "/explore/topic-photos/ancient-egypt/ancient-egypt-1.webp",
       "artAlt": "A close-up of the Great Sphinx's stone face glowing in warm afternoon light",
+      "stat": {
+        "value": "66",
+        "unit": "feet tall"
+      },
       "factAudio": "ancient-egypt-sphinx",
-      "quiz": ["ancient-egypt-sphinx"],
+      "quiz": [
+        "ancient-egypt-sphinx"
+      ],
       "facts": [
         {
           "text": "The Great Sphinx was not built from blocks like a wall. Long ago, workers dug a huge horseshoe shaped quarry and carved the whole statue from one single mass of limestone rock. That makes it one of the largest and oldest statues ever carved from a single piece of stone.",
@@ -40,40 +50,97 @@
           "source": "Smithsonian Magazine (smithsonianmag.com)"
         },
         {
-          "text": "This gentle giant is about 20 metres tall and more than 70 metres long, which is longer than half a football pitch. Even lying down, it towers over the visitors who come to say hello.",
+          "text": "This gentle giant is about 66 feet tall and more than 240 feet long, which is longer than half a football field. Even lying down, it towers over the visitors who come to say hello.",
           "source": "Smithsonian Magazine (smithsonianmag.com)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How big is the Great Sphinx?",
+        "rows": [
+          {
+            "icon": "bus",
+            "label": "A school bus",
+            "value": 40,
+            "display": "about 40 feet long"
+          },
+          {
+            "icon": "sphinx",
+            "label": "The Great Sphinx",
+            "value": 240,
+            "display": "more than 240 feet long"
+          },
+          {
+            "icon": "field",
+            "label": "A football field with its end zones",
+            "value": 360,
+            "display": "360 feet long"
+          }
+        ],
+        "caption": "The Sphinx's size comes from Smithsonian Magazine. A football field is 360 feet long once you count both end zones, so the Sphinx is about two thirds of one, lying down.",
+        "source": "Smithsonian Magazine (smithsonianmag.com)"
+      }
     },
     {
       "id": "hieroglyphs",
       "title": "Secrets in the Stone",
+      "layout": "close-up",
       "art": "/explore/topic-photos/ancient-egypt/ancient-egypt-2.webp",
       "artAlt": "Rows of hieroglyphs carved into a sandstone temple wall",
       "factAudio": "ancient-egypt-hieroglyphs",
-      "quiz": ["ancient-egypt-hieroglyphs"],
+      "quiz": [
+        "ancient-egypt-hieroglyphs"
+      ],
       "facts": [
         {
           "text": "Hieroglyphs are a kind of picture writing. Each sign shows something from the real world, such as a person, an animal or a plant. The ancient Egyptians used these beautiful little pictures to write down their spoken language.",
           "source": "The British Museum (britishmuseum.org)"
         },
         {
-          "text": "The word hieroglyph means sacred carving. Stone workers chiselled hieroglyphs into temples and monuments for nearly 3,000 years. Later on, writers also used reed pens and ink to write them on papyrus.",
+          "text": "The word hieroglyph means sacred carving. Stone workers chiseled hieroglyphs into temples and monuments for nearly 3,000 years. Later on, writers also used reed pens and ink to write them on papyrus.",
           "source": "The British Museum (britishmuseum.org)"
         },
         {
           "text": "For hundreds of years nobody could read hieroglyphs, until soldiers found the Rosetta Stone in 1799. It carries the same message in three different scripts, and one of them was Ancient Greek, which scholars could still read. Using that clue, Jean-Francois Champollion cracked the hieroglyphic code in 1822.",
           "source": "The British Museum (britishmuseum.org)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "The writing nobody could read",
+        "stops": [
+          {
+            "year": "For 3,000 years",
+            "label": "Stone workers carve hieroglyphs into temples and monuments",
+            "icon": "chisel"
+          },
+          {
+            "year": "1799",
+            "label": "Soldiers find the Rosetta Stone, the same message in three scripts",
+            "icon": "stone"
+          },
+          {
+            "year": "1822",
+            "label": "Jean-Francois Champollion cracks the code",
+            "icon": "scroll"
+          }
+        ],
+        "caption": "Hieroglyphs were carved for nearly 3,000 years, then went unread for centuries until one stone gave the game away.",
+        "source": "The British Museum (britishmuseum.org)"
+      }
     },
     {
       "id": "the-nile",
       "title": "The River Road",
+      "layout": "long",
       "art": "/explore/topic-photos/ancient-egypt/ancient-egypt-3.webp",
       "artAlt": "A traditional wooden sailboat drifts past reeds on the Nile at golden hour",
       "factAudio": "ancient-egypt-the-nile",
-      "quiz": ["ancient-egypt-the-nile"],
+      "quiz": [
+        "ancient-egypt-the-nile"
+      ],
       "facts": [
         {
           "text": "Every year the Nile rose and flooded the land beside it, leaving behind water and rich dark silt. That soft soil was perfect for growing food, so farms and villages grew up all along the riverbanks. The Egyptians even planned their whole calendar around the flood, the growing season and the harvest.",
@@ -87,18 +154,29 @@
           "text": "Astronauts looking down from space can spot the Nile easily. Its dark green ribbon of fields and trees stands out sharply against the light tan desert all around. At night the valley glows too, because so many towns light up along the water.",
           "source": "NASA (nasa.gov)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "diagram",
+        "title": "Why everyone lived beside the river",
+        "name": "nile-flood",
+        "caption": "Every year the flood left a band of rich dark silt along the banks. Crops grew there and almost nowhere else, which is why Ancient Egypt was a thin green ribbon in a huge desert.",
+        "source": "Carnegie Museum of Natural History (carnegiemnh.org)"
+      }
     },
     {
       "id": "pharaoh-mask",
       "title": "A Face of Gold",
+      "layout": "then-now",
+      "ghostYear": "1922",
       "art": "/explore/topic-photos/ancient-egypt/ancient-egypt-4.webp",
       "artAlt": "A golden pharaoh's mask shines softly in a museum display",
       "factAudio": "ancient-egypt-pharaoh-mask",
-      "quiz": ["ancient-egypt-pharaoh-mask"],
+      "quiz": [
+        "ancient-egypt-pharaoh-mask"
+      ],
       "facts": [
         {
-          "text": "Ancient goldsmiths made this mask by heating and hammering sheets of gold until they joined together. The eyes are made of shiny obsidian and quartz, and the eyebrows are inlaid with a deep blue stone called lapis lazuli. Around the shoulders, a broad collar sparkles with coloured glass and precious stones.",
+          "text": "Ancient goldsmiths made this mask by heating and hammering sheets of gold until they joined together. The eyes are made of shiny obsidian and quartz, and the eyebrows are inlaid with a deep blue stone called lapis lazuli. Around the shoulders, a broad collar sparkles with colored glass and precious stones.",
           "source": "The Egyptian Museum, Cairo (globalegyptianmuseum.org)"
         },
         {
@@ -109,11 +187,35 @@
           "text": "Today the golden mask has a shiny new home at the Grand Egyptian Museum, near the pyramids of Giza. There it joins thousands of other treasures from Tutankhamun, displayed together for the first time. Every one of them helps us discover how clever and creative ancient Egyptian makers really were.",
           "source": "Smithsonian Magazine (smithsonianmag.com)"
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "The mask's journey",
+        "stops": [
+          {
+            "year": "1922",
+            "label": "Howard Carter opens a room closed for thousands of years",
+            "icon": "lamp"
+          },
+          {
+            "year": "Then",
+            "label": "The treasures go on show at the Egyptian Museum in Cairo",
+            "icon": "mask"
+          },
+          {
+            "year": "Today",
+            "label": "The mask is at the Grand Egyptian Museum, near the pyramids",
+            "icon": "museum"
+          }
+        ],
+        "caption": "More than 5,000 objects came out of that one small room, and the golden mask is the most famous of all of them.",
+        "source": "Smithsonian Magazine (smithsonianmag.com)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Ancient Egypt!",
-    "blurb": "You have sailed the Nile, cracked a secret code and met a golden king. Fold a corner on your favourite page so you can visit ancient Egypt again whenever you like."
+    "blurb": "You have sailed the Nile, cracked a secret code and met a golden king. Fold a corner on your favorite page so you can visit ancient Egypt again whenever you like."
   }
 }
