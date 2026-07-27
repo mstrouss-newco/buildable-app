@@ -508,7 +508,13 @@ var MISSIONS=[
   { id:"supply-drop", world:"snowy-peaks", name:"Supply Drop",
     blurb:"Load food bundles at the hut and drop one to every snowed-in animal.",
     cargo:{name:"bundle",plural:"bundles",color:0xE8A24A}, capacity:2,
-    depot:{x:0,z:-200,label:"Supply Hut",style:"dock"},
+    // FL6 SPACING RULE: the hut used to stand at (0,-200), which is 192 units
+    // from the first flare's beam — close enough that both columns of light sat
+    // in one view and a kid had to choose between them before they knew what
+    // either was. Moved WEST to 364 units apart. The hut is the free variable
+    // here: the flares are where the hover job's whole shape is tuned around, so
+    // this is the point that moves and they are not.
+    depot:{x:-170,z:-170,label:"Supply Hut",style:"dock"},
     targets:[{x:-260,z:-345,label:"Two Reindeer"},{x:225,z:-390,label:"Mountain Goat"},{x:-60,z:-565,label:"Snowy Yak"}],
     style:"animal", radius:32, ceiling:60, hold:0, verb:"Dropped!",
     coins:18, badge:"Supply Ace",
@@ -534,7 +540,56 @@ var MISSIONS=[
     fact:"Before electric street lights, real lamplighters walked the streets every evening with a long pole and lit each lamp by hand, then came back at dawn to put them out.",
     palette:{ sky:"#5B3E7A", fog:"#8A5C86", ground:"#7A4A46", sun:"#FFC27A",
               rock:"#8E4630", rock2:"#6E3524", cap:"#A05B3A", cap2:"#7C4229",
-              trunk:"#5C3B22", leaf:"#3A6B48", stone:"#9A6B52" } }
+              trunk:"#5C3B22", leaf:"#3A6B48", stone:"#9A6B52" } },
+
+  // ==========================================================================
+  //  FL6 — THE TRANSFORM QUESTS. Still recipes, still data. Two new fields do
+  //  all the work:
+  //     transform   which body in TRANSFORMS you are lent for the length of it
+  //     gather      run it the other way round: collect from the many targets,
+  //                 take it all to the one dropAt
+  //  Everything else is the same five questions every job before them answered,
+  //  which is the whole reason these three cost data instead of code.
+  // ==========================================================================
+  { id:"busy-bee", world:"sunny-islands", name:"Busy Bee", transform:"bee",
+    blurb:"Be a bee. Visit the flowers to fill up with pollen, then take it home to the hive.",
+    cargo:{name:"pollen",plural:"pollen",color:0xF6C744}, capacity:3,
+    gather:true, depot:null,
+    dropAt:{x:-420,z:-150,label:"The Hive"}, dropStyle:"hive",
+    targets:[{x:-320,z:-60,label:"Pink flowers"},{x:-540,z:-90,label:"Yellow flowers"},
+             {x:-570,z:-260,label:"Flowers by the rocks"},{x:-330,z:-300,label:"Last flower patch"}],
+    style:"flower", radius:28, ceiling:34, hold:0.8,
+    verb:"Pollen!", dropVerb:"Into the hive!",
+    coins:16, badge:"Busy Bee",
+    tip:"Fly low and slow over a flower patch and hold still a moment to fill up. When your hands are full, follow the arrow home to the hive.",
+    fact:"When a bee finds a good patch of flowers she flies home and dances. She walks a little figure of eight in the dark of the hive and waggles as she crosses the middle, and the angle she waggles at tells every other bee which way to fly and how far. It is called the waggle dance." },
+
+  { id:"puffin-parent", world:"sunny-islands", name:"Puffin Parent", transform:"puffin",
+    blurb:"Be a puffin with chicks to feed. Dip down to the water to catch fish, then fly them up to the nest.",
+    cargo:{name:"fish",plural:"fish",color:0xBFE9F5}, capacity:4,
+    gather:true, depot:null,
+    dropAt:{x:430,z:-120,label:"The Cliff Nest"}, dropStyle:"nest",
+    targets:[{x:600,z:-60,label:"Fish near the rocks"},{x:640,z:-230,label:"Fish out deep"},
+             {x:450,z:-320,label:"Fish in the shallows"},{x:300,z:-230,label:"Last shoal"}],
+    style:"fish", radius:30, ceiling:24, hold:0,
+    verb:"Caught one!", dropVerb:"Fed the chicks!",
+    coins:18, badge:"Puffin Parent",
+    tip:"Dip right down to the water where the fish are flashing. You can carry four at once, so fill your beak before you head back up to the nest.",
+    fact:"A puffin can carry a whole row of fish home at once, held crossways in its beak. Tiny backward-pointing spines on the roof of its mouth hold the fish it has already caught while it opens up to grab the next one." },
+
+  // id is "hummingbird-hover", not "hummingbird": the BODY is called hummingbird
+  // and its glyph is drawn by name, so a quest id that was a substring of it
+  // would make the FL5b law ("no drawing knows a job by name") impossible to
+  // check honestly. The quest is named after what a kid does in it.
+  { id:"hummingbird-hover", world:"sunset-canyon", name:"Hummingbird", transform:"hummingbird",
+    blurb:"Be a hummingbird. Hover at each cactus flower and stay still while you sip the nectar.",
+    cargo:null, capacity:0, depot:null,
+    targets:[{x:300,z:-180,label:"First cactus flower"},{x:420,z:-330,label:"Flower on the ledge"},
+             {x:250,z:-430,label:"Flower in the shade"},{x:400,z:-540,label:"Last cactus flower"}],
+    style:"cactusflower", radius:42, ceiling:48, hold:2.2, verb:"Sipped!",
+    coins:17, badge:"Hummingbird",
+    tip:"Get right up to a flower and hold still. A hummingbird turns on the spot, so you can hang there as long as you like.",
+    fact:"A hummingbird is the only bird in the world that can fly backwards. Its wings beat about fifty times every single second, which is far too fast for anyone to see - all you ever get is the blur." }
 ];
 function pickWorld(){
   var raw=Q.get("level");
@@ -552,6 +607,7 @@ var WORLD_JOBS=MISSIONS.filter(function(m){ return m.world===world.id; });
 function jobPoints(m){
   var pts=m.targets.slice();
   if(m.depot) pts=pts.concat([m.depot]);
+  if(m.dropAt) pts=pts.concat([m.dropAt]);      // FL6: the hive, the nest
   return pts;
 }
 var JOB_POINTS=[];
@@ -586,6 +642,76 @@ var RIDES=[
     speed:41, turn:1.35, bankAmt:1.15, pitchAmt:0.70, bob:0.16, bobRate:5.2 }
 ];
 var ride=RIDES[Math.max(0,Math.min(RIDES.length-1,RIDE))];
+
+// ============================================================================
+//  TRANSFORMS — THE BODIES A QUEST TURNS YOU INTO (Session FL6).
+//
+//  A transform is the RIDES table above, in every respect that matters: a LOOK
+//  plus a FEEL. Same five feel numbers, same contract — a builder fills a group,
+//  returns one animator, and the draw loop calls it without knowing what it is
+//  flying. The only differences from a ride are that nobody buys one and nobody
+//  picks one in the hangar: you are lent this body for the length of one quest
+//  and handed your own ride back the moment it ends.
+//
+//  THE FL3 LAW STILL HOLDS, and is easier to keep here than it was for rides: a
+//  transform is only ever alive inside its own quest, so its numbers cannot make
+//  anything else in the game easier. Coins are still coins, pads are still pads,
+//  and the world goal ticks along underneath exactly as before.
+//
+//  THE BODY IS A REAL MODEL. AR1R deleted a flock of birds for reading as flying
+//  triangles, and the lesson written down there is the reason these are not
+//  built from primitives the way the three rides are: a chase camera sits about
+//  an arm's length behind this thing for the whole quest, which is far too close
+//  to fake. Bee, Hummingbird and Gull come out of the same animal library the
+//  islands are dressed with (~1,500 tris, one draw call, colour in COLOR_0),
+//  cut down to just these three by scripts/cut-animal-subset.mjs.
+//
+//    model     the node name in flyer-bodies.glb
+//    size      longest dimension in world units (plane is 13 across, for scale)
+//    wing      wingbeats per second-ish; the whole gait is this one number
+//    paint     optional recolour rule applied to COLOR_0 (see tbRepaint)
+//    extras    optional hand-built parts, for what the library does not carry
+//    glyph     which drawn creature goes on the offer card's GO pill
+//    trim      whether the kid's own ride colours ride along as a scarf
+// ============================================================================
+//    wing      wingbeats a second the EYE can read, not the real number. A bee
+//              really beats 200 times a second and a hummingbird about 50; drawn
+//              honestly on a 60Hz screen both strobe into a still photograph. So
+//              the fast ones flap at a readable rate and wear a blur, which is
+//              the same trick the propeller on the starter plane already uses.
+//    camBack   how far behind the body the chase camera sits. A ride is 20 units
+//              back because a plane is 13 across; a bee needs the camera pulled
+//              right in or a kid is flying a speck.
+var TRANSFORMS=[
+  // Small, slow and turns on a sixpence — a bee's whole job is stopping at
+  // flowers, so it is the most forgiving thing in the game to steer.
+  { id:"bee", name:"Bee", model:"Bee", size:4.5, glyph:"bee", trim:true,
+    wing:15, wingAmp:0.55, blur:true, camBack:9, camUp:4.0,
+    speed:19, turn:2.9, bankAmt:0.45, pitchAmt:0.85, bob:0.55, bobRate:6.4 },
+  // A puffin is a heavy little bird that flies FAST and straight and turns
+  // badly, which is exactly what makes a fishing run feel like flying a puffin.
+  // No puffin in the library, so the Gull is repainted into one and given the
+  // beak, which is the whole point of its fun fact.
+  { id:"puffin", name:"Puffin", model:"Gull", size:7.0, glyph:"seabird", trim:true,
+    paint:"puffin", extras:"puffinBeak",
+    wingShort:0.45, cargoAt:[2.6,1.9],
+    wing:6, wingAmp:0.70, blur:false, camBack:13, camUp:5.5,
+    speed:31, turn:1.40, bankAmt:1.00, pitchAmt:0.70, bob:0.20, bobRate:3.0 },
+  // The hover specialist. Slowest of the three and the nimblest by a mile,
+  // because the quest is holding still at a flower, not getting anywhere.
+  { id:"hummingbird", name:"Hummingbird", model:"Hummingbird", size:4.0,
+    glyph:"hummingbird", trim:true,
+    wing:18, wingAmp:0.40, blur:true, camBack:8.5, camUp:3.6,
+    speed:17, turn:3.2, bankAmt:0.38, pitchAmt:0.90, bob:0.32, bobRate:7.8 }
+];
+function findTransform(id){
+  for(var i=0;i<TRANSFORMS.length;i++) if(TRANSFORMS[i].id===id) return TRANSFORMS[i];
+  return null;
+}
+// WHAT IS FLYING RIGHT NOW. Every line of the flight model reads its five feel
+// numbers through this and never off `ride` directly, so a transform is a body
+// swap and not a second flight model to keep in step with the first.
+var FEEL_NOW=ride;
 
 // ---------- progress (per kid, the shape the shell's journey reads) ----------
 function kidSuffix(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return (k&&k.id)?("_"+k.id):""; }catch(e){ return ""; } }
@@ -1305,6 +1431,12 @@ rideAnim = (ride.build==="copter") ? buildCopter()
          : (ride.build==="jetpack") ? buildJetpack()
          : buildPlane();
 scene.add(plane);
+// FL6: exactly which children of `plane` ARE the ride, captured the moment it is
+// finished and never guessed at again. A transform hides these and shows a
+// creature in their place; anything a JOB later hangs off the plane (the cargo
+// under your belly, which becomes the fish in a puffin's beak) is not in this
+// list and so is never hidden by mistake.
+var RIDE_PARTS=plane.children.slice();
 
 // ---------- landing pads (this world's, fixed so the arrow can point at them) ----------
 // The island-shape toolkit lives up here because the LANDING PADS are built
@@ -2687,6 +2819,42 @@ function bLantern(f,s,d){ return '<path d="M13 2.4 V5.4 M13 19.6 V22.4" stroke="
 function bDock(f,s,d){ return '<rect x="4" y="12" width="18" height="9.5" rx="2.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.8"/>'+
   '<path d="M13 3 L21 11.2 H5 Z" fill="#FF8A3C"/>'+
   '<rect x="11" y="15.5" width="4" height="6" fill="'+s+'"/>'+(d?doneBadge():''); }
+// ---- FL6: five more places, drawn to the same recipe as the five above ----
+// A quest is still just a recipe, so adding one adds a STYLE, never a job icon.
+// bFlower and bCactusFlower are what a bee and a hummingbird stop at; bFish is a
+// flash of silver in the water; bHive and bNest are the one place a gathering
+// quest takes everything back to.
+function bFlower(f,s,d){ var pet=d?ICON_DFILL:"#FF7EB6";
+  return '<path d="M13 22.6 V13" stroke="'+(d?ICON_DLINE:"#3E9457")+'" stroke-width="2.2" stroke-linecap="round"/>'+
+  '<path d="M13 18.4 C9.4 18.4 7.6 16.4 7.6 14.6 C10.8 14.6 12.4 16.2 13 18.4 Z" fill="'+(d?ICON_DLINE:"#3E9457")+'"/>'+
+  '<circle cx="13" cy="6.2" r="3.5" fill="'+pet+'"/><circle cx="7.6" cy="10.2" r="3.5" fill="'+pet+'"/>'+
+  '<circle cx="18.4" cy="10.2" r="3.5" fill="'+pet+'"/><circle cx="9.9" cy="15.2" r="3.1" fill="'+pet+'"/>'+
+  '<circle cx="16.1" cy="15.2" r="3.1" fill="'+pet+'"/>'+
+  '<circle cx="13" cy="11" r="3.4" fill="'+(d?ICON_DLINE:"#F7C948")+'" stroke="'+s+'" stroke-width="1.4"/>'+(d?doneBadge():''); }
+function bCactusFlower(f,s,d){ var arm=d?ICON_DFILL:"#4E9A5A";
+  return '<rect x="10.4" y="7" width="5.2" height="16" rx="2.6" fill="'+arm+'" stroke="'+s+'" stroke-width="1.5"/>'+
+  '<path d="M10.4 15 H7.2 a1.8 1.8 0 0 0-1.8 1.8 V19" fill="none" stroke="'+arm+'" stroke-width="3.6" stroke-linecap="round"/>'+
+  '<path d="M15.6 17 H18.6 a1.8 1.8 0 0 1 1.8 1.8 V20.4" fill="none" stroke="'+arm+'" stroke-width="3.6" stroke-linecap="round"/>'+
+  '<circle cx="13" cy="4.6" r="3.5" fill="'+(d?ICON_DLINE:"#FF6B6B")+'"/>'+
+  '<circle cx="13" cy="4.6" r="1.4" fill="#FFF6E3"/>'+(d?doneBadge():''); }
+function bFish(f,s,d){ var sc=d?ICON_DFILL:"#9FE3F2";
+  return '<path d="M4 20.5 q4-2.4 9-2.4 t9 2.4" fill="none" stroke="'+(d?ICON_DLINE:"#7FC3DC")+'" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>'+
+  '<path d="M17.4 11.6 c0 3.4-3.4 5.6-7 5.6 -3.2 0-5.8-2.2-5.8-5.6 0-3.4 2.6-5.6 5.8-5.6 3.6 0 7 2.2 7 5.6 Z" fill="'+sc+'" stroke="'+s+'" stroke-width="1.6"/>'+
+  '<path d="M17.4 11.6 L22.6 7.6 V15.6 Z" fill="'+sc+'" stroke="'+s+'" stroke-width="1.6" stroke-linejoin="round"/>'+
+  '<circle cx="8.6" cy="10.4" r="1.3" fill="'+s+'"/>'+(d?doneBadge():''); }
+function bHive(f,s,d){ var w=d?ICON_DFILL:"#F0B94A";
+  return '<path d="M13 2.6 V5" stroke="'+s+'" stroke-width="1.8" stroke-linecap="round"/>'+
+  '<rect x="5.6" y="5" width="14.8" height="4.2" rx="2.1" fill="'+w+'" stroke="'+s+'" stroke-width="1.5"/>'+
+  '<rect x="4.2" y="9.6" width="17.6" height="4.2" rx="2.1" fill="'+w+'" stroke="'+s+'" stroke-width="1.5"/>'+
+  '<rect x="5.2" y="14.2" width="15.6" height="4.2" rx="2.1" fill="'+w+'" stroke="'+s+'" stroke-width="1.5"/>'+
+  '<rect x="7.4" y="18.8" width="11.2" height="4.2" rx="2.1" fill="'+w+'" stroke="'+s+'" stroke-width="1.5"/>'+
+  '<ellipse cx="13" cy="20.6" rx="2.4" ry="1.8" fill="'+s+'"/>'+(d?doneBadge():''); }
+function bNest(f,s,d){ var tw=d?ICON_DFILL:"#B98A54";
+  return '<path d="M4.6 14 h16.8 a1 1 0 0 1 .9 1.3 l-1.6 6.2 a1.4 1.4 0 0 1-1.4 1H6.7 a1.4 1.4 0 0 1-1.4-1 L3.7 15.3 A1 1 0 0 1 4.6 14 Z" fill="'+tw+'" stroke="'+s+'" stroke-width="1.6" stroke-linejoin="round"/>'+
+  '<path d="M4.2 16.4 h17.6 M5.2 19.2 h15.6" stroke="'+s+'" stroke-width="1.2" opacity=".55"/>'+
+  '<circle cx="9.4" cy="10.6" r="3.5" fill="'+f+'" stroke="'+s+'" stroke-width="1.5"/>'+
+  '<circle cx="16.6" cy="10.6" r="3.5" fill="'+f+'" stroke="'+s+'" stroke-width="1.5"/>'+
+  '<path d="M9.4 12.4 l-1.5 1.4 h3 Z M16.6 12.4 l-1.5 1.4 h3 Z" fill="#F07E1E"/>'+(d?doneBadge():''); }
 // ONE dispatch from a recipe's style name to a drawing. Nothing else may switch
 // on a style, and nothing anywhere may switch on a job id.
 function targetBody(style,f,s,d,post){
@@ -2694,6 +2862,11 @@ function targetBody(style,f,s,d,post){
   if(style==="flare")  return bFlare(f,s,d,post||s);
   if(style==="lantern")return bLantern(f,s,d);
   if(style==="dock")   return bDock(f,s,d);
+  if(style==="flower") return bFlower(f,s,d);
+  if(style==="cactusflower") return bCactusFlower(f,s,d);
+  if(style==="fish")   return bFish(f,s,d);
+  if(style==="hive")   return bHive(f,s,d);
+  if(style==="nest")   return bNest(f,s,d);
   return bHouse(f,s,d);
 }
 function icoHouse(n,d){ return svgWrap(n,"0 0 26 26",bHouse(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
@@ -2702,6 +2875,11 @@ function icoFlare(n,d){ return svgWrap(n,"0 0 26 26",bFlare(d?ICON_DFILL:"#FFD86
 function icoLantern(n,d){ return svgWrap(n,"0 0 26 26",bLantern(d?ICON_DFILL:"#FFD86B",d?ICON_DLINE:ICON_LINE,d)); }
 function icoDock(n,d){ return svgWrap(n,"0 0 26 26",bDock(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
 function icoPad(n){ return svgWrap(n,"0 0 26 26",'<circle cx="13" cy="13" r="8.6" fill="none" stroke="#FF8A3C" stroke-width="3.2"/>'); }
+function icoFlower(n,d){ return svgWrap(n,"0 0 26 26",bFlower(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
+function icoCactusFlower(n,d){ return svgWrap(n,"0 0 26 26",bCactusFlower(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
+function icoFish(n,d){ return svgWrap(n,"0 0 26 26",bFish(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
+function icoHive(n,d){ return svgWrap(n,"0 0 26 26",bHive(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
+function icoNest(n,d){ return svgWrap(n,"0 0 26 26",bNest(d?ICON_DFILL:ICON_FILL,d?ICON_DLINE:ICON_LINE,d)); }
 // ---- the offer card's furniture: a coin, the sticker you would earn, a cloud,
 // and YOUR ride. All drawn, all from state, none of it per-job. ----
 function icoCoin(n){ return svgWrap(n,"0 0 26 26",
@@ -2746,6 +2924,51 @@ function icoRide(n){
     '<circle cx="34" cy="19.5" r="2.6" fill="'+g+'"/></svg>';
 }
 
+// FL6: WHAT YOU ARE ABOUT TO BECOME, on the GO pill. A quest that turns a kid
+// into a bee has to answer "what am I saying yes to?" in the picture, not in the
+// words, and the answer is not their aeroplane. Per body, never per quest — two
+// quests sharing a body share this drawing, exactly like the rides do.
+function icoCreature(n,glyph){
+  var b="#fff", g="rgba(255,255,255,.62)", d="rgba(0,0,0,.22)";
+  // SIDE ON AND FACING RIGHT, the same as the plane, the copter and the jetpack
+  // above. The first cut drew all three head-on with their wings spread, which
+  // is a lovely shape at 200px and an indistinct white blob at 44 — on a green
+  // button the bee came out looking like the cloud on the button beside it. At
+  // this size a silhouette is the only thing that reads.
+  if(glyph==="bee")
+    return '<svg width="'+n+'" height="'+Math.round(n*0.62)+'" viewBox="0 0 50 31" aria-hidden="true">'+
+      '<ellipse cx="20" cy="9.5" rx="10" ry="4.6" fill="'+g+'" transform="rotate(-14 20 9.5)"/>'+
+      '<ellipse cx="14" cy="11" rx="7.5" ry="3.6" fill="'+g+'" transform="rotate(-26 14 11)"/>'+
+      '<ellipse cx="22" cy="20" rx="13" ry="7.6" fill="'+b+'"/>'+
+      '<path d="M18 13.4 v13.2 M24 13.6 v12.8 M29.6 15.2 v9.6" stroke="'+d+'" stroke-width="3" stroke-linecap="round"/>'+
+      '<circle cx="37" cy="18.4" r="5.4" fill="'+b+'"/>'+
+      '<path d="M39.4 13.6 L42.6 9.4 M35.6 13.2 L36.2 8.6" stroke="'+b+'" stroke-width="1.9" stroke-linecap="round"/>'+
+      '<path d="M13 27.4 L10 30.6 M20 27.6 L18.6 30.8" stroke="'+b+'" stroke-width="1.9" stroke-linecap="round"/></svg>';
+  if(glyph==="hummingbird")
+    return '<svg width="'+n+'" height="'+Math.round(n*0.62)+'" viewBox="0 0 50 31" aria-hidden="true">'+
+      '<ellipse cx="19" cy="8" rx="11" ry="3.6" fill="'+g+'" transform="rotate(-12 19 8)"/>'+
+      '<ellipse cx="19" cy="24" rx="11" ry="3.6" fill="'+g+'" transform="rotate(12 19 24)"/>'+
+      '<path d="M4 11.6 L14 15.5 L4 19.4 Z" fill="'+b+'"/>'+
+      '<ellipse cx="22" cy="15.8" rx="10" ry="5.6" fill="'+b+'"/>'+
+      '<circle cx="31.4" cy="14" r="4.4" fill="'+b+'"/>'+
+      '<path d="M35 13.4 L48 12" stroke="'+b+'" stroke-width="2.2" stroke-linecap="round"/>'+
+      '<circle cx="32.6" cy="12.6" r="1.3" fill="'+d+'"/></svg>';
+  // a seabird: the puffin, and anything else with a blade of a beak
+  return '<svg width="'+n+'" height="'+Math.round(n*0.62)+'" viewBox="0 0 50 31" aria-hidden="true">'+
+    '<path d="M20 15 L11 3 q-4 7 1 12 Z" fill="'+g+'"/>'+
+    '<path d="M3 12.6 L14 17 L3 21.4 q-1.6-4.4 0-8.8 Z" fill="'+b+'"/>'+
+    '<ellipse cx="21" cy="18.6" rx="11.5" ry="6.4" fill="'+b+'"/>'+
+    '<circle cx="32.6" cy="14.6" r="5.2" fill="'+b+'"/>'+
+    '<path d="M36.4 11.6 L48 14.6 L36.4 18.4 Z" fill="'+b+'"/>'+
+    '<path d="M40 14.4 L44.6 15.6" stroke="'+d+'" stroke-width="1.6" stroke-linecap="round"/>'+
+    '<circle cx="34" cy="13" r="1.3" fill="'+d+'"/>'+
+    '<path d="M16 24.4 L13.4 28.6 M22 24.8 L20 29" stroke="'+b+'" stroke-width="2" stroke-linecap="round"/></svg>';
+}
+// the one dispatch: your own ride, unless this offer is going to lend you a body
+function icoGo(n,m){
+  var t=(m&&m.transform)?findTransform(m.transform):null;
+  return t?icoCreature(n,t.glyph):icoRide(n);
+}
 // ============================================================================
 //  THE BAND — the offer card's picture, and the whole reason the card works.
 //  It is a little MAP of the job: the place you load up on the left, a dotted
@@ -2761,6 +2984,61 @@ var SCENE_F="#FFF6E3", SCENE_S="#7d95a5";
 // really gets: the cap, or the screen minus the .sheet padding on a tiny phone.
 var OF_MAXW=340, OF_BANDH=110;
 function offerBandW(){ return Math.max(240,Math.min(OF_MAXW,W-36)); }
+// The sky, the sun and two clouds, shared by both pictures below so there is one
+// copy of them and not two that drift apart. Byte for byte what the FL5b/AR1R
+// card has always opened with.
+function sceneSky(W,H,hz,R){
+  return '<svg class="scene" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'+
+    '<defs><linearGradient id="ofsky" x1="0" y1="0" x2="0" y2="1">'+
+    '<stop offset="0" stop-color="#79c7fb"/><stop offset="'+hz+'" stop-color="#b8e3ff"/>'+
+    '<stop offset="'+(hz+0.001)+'" stop-color="#2aa3d8"/><stop offset="1" stop-color="#166A9C"/>'+
+    '</linearGradient></defs>'+
+    '<rect width="'+W+'" height="'+H+'" fill="url(#ofsky)"/>'+
+    '<circle cx="'+Math.round(W*0.55)+'" cy="'+R(26)+'" r="'+R(19)+'" fill="#FFE9A8" opacity=".95"/>'+
+    '<rect x="20" y="'+R(19)+'" width="'+R(52)+'" height="'+R(14)+'" rx="'+R(7)+'" fill="rgba(255,255,255,.9)"/>'+
+    '<rect x="'+Math.round(W*0.34)+'" y="'+R(11)+'" width="'+R(36)+'" height="'+R(11)+'" rx="'+R(5.5)+'" fill="rgba(255,255,255,.8)"/>';
+}
+// ============================================================================
+//  FL6 — THE GATHERING PICTURE. The card's whole trick is that it is a little
+//  MAP of the quest, so a quest that runs the other way round has to draw the
+//  other way round too: the many places you collect from spread out on the LEFT,
+//  and the one place it all goes home to standing on the RIGHT. Draw it the
+//  normal way and the picture would be telling a four year old the exact
+//  opposite of what the job is.
+//  Same law as everywhere else in FL5b: nothing here knows a quest's name. It
+//  reads targets, dropStyle and style off the recipe and nothing else.
+// ============================================================================
+function gatherScene(m,W,H){
+  var hz=0.52, y=Math.round(H*hz), i;
+  var SK=Math.max(0.55,Math.min(1,H/150)), R=function(v){ return Math.round(v*SK); };
+  var n=m.targets.length;
+  var lx=30, sx=W-Math.min(56,Math.max(40,W*0.15));      // mirror of the normal card's depot inset
+  var gap=Math.min(34,Math.max(22,(W*0.5)/n));
+  if(lx+(n-1)*gap>sx-64) gap=Math.max(16,(sx-64-lx)/Math.max(1,n-1));
+  var tx=[];
+  for(i=0;i<n;i++) tx.push(Math.round(lx+i*gap));
+  var dsc=1.3*SK, tsc=1.05*SK;
+  var dTop=y-R(26*1.3)-R(4), tTop=y-R(26*1.05)-R(3);
+  var lastT=tx[n-1];
+  var arc='M'+(lastT+13)+' '+(y-R(18))+' Q'+Math.round((lastT+sx)/2)+' '+(y-R(52))+' '+(sx-16)+' '+(y-R(16));
+  var s=sceneSky(W,H,hz,R);
+  // the one place it all goes back to gets the bigger patch of land
+  s+='<ellipse cx="'+(sx+2)+'" cy="'+(y+R(7))+'" rx="'+R(34)+'" ry="'+R(11)+'" fill="#F6D98A"/>'+
+     '<ellipse cx="'+(sx+2)+'" cy="'+(y+R(1))+'" rx="'+R(30)+'" ry="'+R(9)+'" fill="#6FD46F"/>';
+  for(i=0;i<n;i++) s+='<ellipse cx="'+tx[i]+'" cy="'+(y+R(6))+'" rx="'+R(17)+'" ry="'+R(8)+'" fill="#F6D98A"/>'+
+    '<ellipse cx="'+tx[i]+'" cy="'+(y+R(1))+'" rx="'+R(14)+'" ry="'+R(6)+'" fill="#6FD46F"/>';
+  s+='<path d="'+arc+'" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="3.2" '+
+     'stroke-linecap="round" stroke-dasharray="2 10"/>';
+  for(i=0;i<n;i++) s+='<g transform="translate('+(tx[i]-R(13))+','+tTop+') scale('+tsc.toFixed(3)+')">'+
+     targetBody(m.style,SCENE_F,SCENE_S,false)+'</g>';
+  s+='<g transform="translate('+(sx-R(17))+','+dTop+') scale('+dsc.toFixed(3)+')">'+
+     targetBody(m.dropStyle||"hive",SCENE_F,SCENE_S,false)+'</g>';
+  s+='</svg>';
+  // the one-shot animation carries the pollen FROM a flower TO the hive, which
+  // is the direction the whole quest goes
+  jobScene.last={x0:lastT+4,x1:sx-12,y:y-R(34),hop:R(26),n:n};
+  return s;
+}
 // AR1R: the band is drawn to the CARD's width and the CARD's height, not the
 // screen's. It used to be handed the whole viewport width and a fixed 150, which
 // was right while the card was a full-width bottom sheet; a pop-up capped at
@@ -2769,6 +3047,7 @@ function offerBandW(){ return Math.max(240,Math.min(OF_MAXW,W-36)); }
 // the buildings, the sand) now scales with SK so a shorter band is the same
 // picture smaller, and not the same picture with its middle cut out.
 function jobScene(m,W,H){
+  if(m.gather&&m.dropAt) return gatherScene(m,W,H);   // FL6: collect-many, deliver-one
   var hz=0.52, y=Math.round(H*hz), i;   // horizon high, so the name below it sits on clear water
   var SK=Math.max(0.55,Math.min(1,H/150)), R=function(v){ return Math.round(v*SK); };
   var n=m.targets.length, gap=Math.min(36,Math.max(26,(W*0.5)/n));
@@ -2779,15 +3058,7 @@ function jobScene(m,W,H){
   var dsc=1.3*SK, tsc=1.1*SK;                       // depot body, stop body
   var dTop=y-R(26*1.3)-R(4), tTop=y-R(26*1.1)-R(3); // both stand ON the horizon
   var arc='M'+(dx+16)+' '+(y-R(16))+' Q'+Math.round((dx+tx[0])/2)+' '+(y-R(52))+' '+(tx[0]-13)+' '+(y-R(18));
-  var s='<svg class="scene" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'+
-    '<defs><linearGradient id="ofsky" x1="0" y1="0" x2="0" y2="1">'+
-    '<stop offset="0" stop-color="#79c7fb"/><stop offset="'+hz+'" stop-color="#b8e3ff"/>'+
-    '<stop offset="'+(hz+0.001)+'" stop-color="#2aa3d8"/><stop offset="1" stop-color="#166A9C"/>'+
-    '</linearGradient></defs>'+
-    '<rect width="'+W+'" height="'+H+'" fill="url(#ofsky)"/>'+
-    '<circle cx="'+Math.round(W*0.55)+'" cy="'+R(26)+'" r="'+R(19)+'" fill="#FFE9A8" opacity=".95"/>'+
-    '<rect x="20" y="'+R(19)+'" width="'+R(52)+'" height="'+R(14)+'" rx="'+R(7)+'" fill="rgba(255,255,255,.9)"/>'+
-    '<rect x="'+Math.round(W*0.34)+'" y="'+R(11)+'" width="'+R(36)+'" height="'+R(11)+'" rx="'+R(5.5)+'" fill="rgba(255,255,255,.8)"/>'+
+  var s=sceneSky(W,H,hz,R)+
     '<ellipse cx="'+(dx+2)+'" cy="'+(y+R(7))+'" rx="'+R(34)+'" ry="'+R(11)+'" fill="#F6D98A"/>'+
     '<ellipse cx="'+(dx+2)+'" cy="'+(y+R(1))+'" rx="'+R(30)+'" ry="'+R(9)+'" fill="#6FD46F"/>';
   for(i=0;i<n;i++) s+='<ellipse cx="'+tx[i]+'" cy="'+(y+R(6))+'" rx="'+R(18)+'" ry="'+R(8)+'" fill="#F6D98A"/>'+
@@ -2811,12 +3082,30 @@ function targetIcon(style,n,done){
   if(style==="flare")  return icoFlare(n,done);
   if(style==="lantern")return icoLantern(n,done);
   if(style==="dock")   return icoDock(n,done);
+  if(style==="flower") return icoFlower(n,done);
+  if(style==="cactusflower") return icoCactusFlower(n,done);
+  if(style==="fish")   return icoFish(n,done);
+  if(style==="hive")   return icoHive(n,done);
+  if(style==="nest")   return icoNest(n,done);
   return icoHouse(n,done);
 }
 function cargoIcon(m,n,ghost){
   if(!m||!m.cargo) return icoMe(n);
   var col="#"+("000000"+(m.cargo.color||0xFFF6E3).toString(16)).slice(-6);
-  return /letter|mail|card/i.test(m.cargo.name||"") ? icoLetter(n,col,ghost) : icoParcel(n,col,ghost);
+  var nm=m.cargo.name||"";
+  if(/letter|mail|card/i.test(nm)) return icoLetter(n,col,ghost);
+  // FL6: what a bee and a puffin carry are things in their own right, not
+  // parcels. Still keyed off the CARGO's name, so it is per cargo and not per
+  // quest, exactly like the letter has always been.
+  if(/pollen|nectar/i.test(nm)) return icoPollen(n,col,ghost);
+  if(/fish/i.test(nm)) return '<span'+(ghost?' style="opacity:.35"':'')+'>'+icoFish(n,false)+'</span>';
+  return icoParcel(n,col,ghost);
+}
+function icoPollen(n,col,ghost){
+  return '<svg width="'+n+'" height="'+n+'" viewBox="0 0 22 22" aria-hidden="true"'+(ghost?' opacity=".35"':'')+'>'+
+    '<circle cx="11" cy="13" r="7" fill="'+(col||"#F6C744")+'" stroke="#C79A18" stroke-width="1.6"/>'+
+    '<circle cx="8.4" cy="10.6" r="1.5" fill="#FFF6E3" opacity=".8"/>'+
+    '<circle cx="16" cy="6.4" r="3.4" fill="'+(col||"#F6C744")+'" stroke="#C79A18" stroke-width="1.5"/></svg>';
 }
 // THE PICTURE OF A WHOLE JOB: what you carry, an arrow, one icon per place it
 // goes. The offer card shows it empty; the progress chip shows it live.
@@ -2835,6 +3124,13 @@ function jobStrip(m,n,carrying,doneMap,holdOn){
     var done=!!(doneMap&&doneMap[i]);
     var hold=(holdOn===i&&!done);
     tg+='<span class="tgt'+(hold?' holding':'')+'">'+targetIcon(m.style,n,done)+'</span>';
+  }
+  // FL6: a gathering quest ends somewhere, and leaving the hive off the row made
+  // the last trip home look like it did not count. It ticks when everything is in.
+  if(m.gather&&m.dropAt){
+    var allIn=!!(doneMap&&doneMap.length&&doneMap.every(function(d){return d;})&&!carrying);
+    tg+=icoArrowGlyph(Math.round(n*0.8))+
+        '<span class="tgt">'+targetIcon(m.dropStyle||"hive",n,allIn)+'</span>';
   }
   return '<span class="grp">'+cargo+'</span>'+icoArrowGlyph(Math.round(n*0.8))+'<span class="grp">'+tg+'</span>';
 }
@@ -3156,7 +3452,11 @@ function applyPalette(p){
 // anything missing simply keeps the value the engine shipped with.
 function mergeMissions(list,worldId){
   if(!Array.isArray(list)) return;
-  var SIMPLE=["name","blurb","tip","fact","badge","verb","style","radius","ceiling","hold","capacity","coins"];
+  // FL6 adds five: which body a quest lends you, whether it runs the other way
+  // round, what the one place it all goes back to is called and looks like, and
+  // the word that flashes when a load goes in. A manifest can now move a hive.
+  var SIMPLE=["name","blurb","tip","fact","badge","verb","style","radius","ceiling","hold","capacity","coins",
+              "transform","gather","dropStyle","dropVerb","dropRadius","dropCeiling"];
   list.forEach(function(edit){
     if(!edit||typeof edit!=="object"||typeof edit.id!=="string") return;
     var m=findJob(edit.id);
@@ -3174,6 +3474,11 @@ function mergeMissions(list,worldId){
     if(Array.isArray(edit.targets)&&edit.targets.length)
       m.targets=edit.targets.filter(function(t){ return t&&typeof t.x==="number"&&typeof t.z==="number"; });
     if(edit.palette&&typeof edit.palette==="object") m.palette=edit.palette;
+    if(edit.dropAt===null) m.dropAt=null;
+    else if(edit.dropAt&&typeof edit.dropAt.x==="number") m.dropAt=edit.dropAt;
+    // a quest naming a body that does not exist is simply a job with no body,
+    // never a broken level
+    if(m.transform&&!findTransform(m.transform)) m.transform=null;
   });
   WORLD_JOBS=MISSIONS.filter(function(mm){ return mm.world===world.id; });
   JOB_POINTS=[];
@@ -3428,22 +3733,29 @@ function finishLanding(){
 // ============================================================================
 var MODE="free";                 // free | job
 var JOB=null;                    // the recipe being flown
-var JS={carrying:0,done:0,doneMap:[],holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99};
-var jobGroup=null, jobTargets=[], cargoGroup=null, paletteBefore=null;
+var JS={carrying:0,done:0,doneMap:[],holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99,banked:0};
+var jobGroup=null, jobTargets=[], jobDrop=null, cargoGroup=null, paletteBefore=null;
 
 // ---------- the little things a job puts in the world ----------
 function mound(g,r,col){                       // a patch of land to stand on
   var b=new THREE.Mesh(cylGeo,col||M.rock); b.scale.set(r,7,r); b.position.y=1.5; g.add(b);
   var s=new THREE.Mesh(skirtGeo,M.stone); s.scale.set(r*1.25,1,r*1.25); s.position.y=0.6; g.add(s);
 }
-function marker(g,col,tall){                   // ring on the ground + a light column
-  var ringMat=new THREE.MeshBasicMaterial({color:col});
+// FL6: `dim` is THE SPACING RULE'S other half. A world must not turn into an
+// airport, and the cheapest way to keep it from becoming one is that the sky
+// THINS OUT as a kid works through it: a beam over something already finished
+// drops to a third of its height and a sixth of its glow, so it is still there
+// to go back to and no longer shouting.
+function marker(g,col,tall,dim){                // ring on the ground + a light column
+  var ringMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:dim?0.34:1});
   var ring=new THREE.Mesh(new THREE.TorusGeometry(13,0.75,8,24),ringMat);
   ring.rotation.x=Math.PI/2; ring.position.y=6.2; g.add(ring);
-  var beamMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.18,fog:false});
-  var beam=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,tall||200,8,1,true),beamMat);
-  beam.position.y=(tall||200)/2; g.add(beam);
-  return {ring:ring,ringMat:ringMat,beam:beam};
+  var h=(tall||200)*(dim?0.34:1);
+  var beamMat=new THREE.MeshBasicMaterial({color:col,transparent:true,
+    opacity:dim?0.03:0.18,fog:false});
+  var beam=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,h,8,1,true),beamMat);
+  beam.position.y=h/2; g.add(beam);
+  return {ring:ring,ringMat:ringMat,beam:beam,dim:!!dim};
 }
 function buildDock(){                          // post dock / supply hut
   var g=new THREE.Group();
@@ -3495,6 +3807,132 @@ function buildLantern(){
   var cap=new THREE.Mesh(coneGeo,M.gray); cap.scale.set(3.4,2.4,3.4); cap.position.set(4.8,23,0); g.add(cap);
   return {group:g,lamp:lampMat,glow:lamp};
 }
+// ---- FL6: the five places a transform quest visits ----
+// Same rule as everything above: these are STYLES, not jobs. Any recipe may ask
+// for a flower patch or a hive, and adding a quest that does costs nothing here.
+var FL6_MATS=null;
+function fl6mats(){
+  if(FL6_MATS) return FL6_MATS;
+  FL6_MATS={
+    petal:phong(0xFF7EB6,{shininess:14}), petal2:phong(0xFFD24A,{shininess:14}),
+    stem:phong(0x3E9457,{shininess:6}),
+    wax:phong(0xE8A83C,{shininess:18}), waxDark:phong(0xC2822A,{shininess:12}),
+    scale:phong(0xBFE9F5,{shininess:70}), chick:phong(0x4B4F58,{shininess:10}),
+    bill:phong(0xF07E1E,{shininess:30}), twig:phong(0x9C7448,{shininess:6}),
+    cactus:phong(0x4E9A5A,{shininess:8}), bloom:phong(0xFF6B6B,{shininess:16})
+  };
+  return FL6_MATS;
+}
+// A FLOWER PATCH, not one flower: a bee stops at a patch, and one stem alone is
+// invisible from the air. Five blooms on a green mound, two colours.
+function buildFlower(){
+  var g=new THREE.Group(), F=fl6mats();
+  mound(g,14,M.cap);
+  [[0,0,3.4],[-6,4,2.6],[6,-3,2.6],[3,6,2.2],[-4,-6,2.2]].forEach(function(p,i){
+    var stem=new THREE.Mesh(cylGeo,F.stem);
+    stem.scale.set(0.55,10*p[2]/3.4,0.55); stem.position.set(p[0],7+5*p[2]/3.4,p[1]); g.add(stem);
+    var top=7+10*p[2]/3.4;
+    var mid=new THREE.Mesh(new THREE.SphereGeometry(p[2]*0.55,8,6),F.petal2);
+    mid.position.set(p[0],top,p[1]); g.add(mid);
+    for(var k=0;k<5;k++){
+      var a=k/5*Math.PI*2;
+      var pet=new THREE.Mesh(new THREE.SphereGeometry(p[2]*0.62,7,5),(i%2)?F.petal2:F.petal);
+      pet.scale.set(1,0.34,1);
+      pet.position.set(p[0]+Math.cos(a)*p[2]*0.9, top-0.3, p[1]+Math.sin(a)*p[2]*0.9);
+      g.add(pet);
+    }
+  });
+  return g;
+}
+// THE HIVE. Stacked straw rings on a stump, with a dark doorway you aim at.
+function buildHive(){
+  var g=new THREE.Group(), F=fl6mats();
+  mound(g,16,M.cap);
+  var stump=new THREE.Mesh(cylGeo,M.trunk); stump.scale.set(3.2,9,3.2); stump.position.y=8; g.add(stump);
+  [[9.5,13],[10.6,17.6],[9.6,22],[7.4,25.8]].forEach(function(r){
+    var ring=new THREE.Mesh(cylGeo,F.wax); ring.scale.set(r[0],4.2,r[0]); ring.position.y=r[1]; g.add(ring);
+    var lip=new THREE.Mesh(cylGeo,F.waxDark); lip.scale.set(r[0]*1.03,0.7,r[0]*1.03); lip.position.y=r[1]-2.2; g.add(lip);
+  });
+  var cap=new THREE.Mesh(coneGeo,F.wax); cap.scale.set(6.4,3.2,6.4); cap.position.y=29; g.add(cap);
+  var door=new THREE.Mesh(new THREE.SphereGeometry(2.4,9,7),M.gray);
+  door.scale.set(1,0.7,0.6); door.position.set(0,13.6,9.6); g.add(door);
+  return g;
+}
+// A FISHING SPOT, which sits on open water and so has NO mound: a ripple ring on
+// the sea and three fish flashing just under it. A mound here would be an island
+// growing in the middle of the ocean.
+function buildFish(){
+  var g=new THREE.Group(), F=fl6mats();
+  var ring=new THREE.Mesh(new THREE.TorusGeometry(11,0.8,7,22),M.foam);
+  ring.rotation.x=Math.PI/2; ring.position.y=1.2; g.add(ring);
+  var ring2=new THREE.Mesh(new THREE.TorusGeometry(6.2,0.55,7,20),M.foam);
+  ring2.rotation.x=Math.PI/2; ring2.position.y=1.0; g.add(ring2);
+  [[0,0,0.5],[-6,4,-0.3],[5,-5,0.2]].forEach(function(p,i){
+    var f=new THREE.Group();
+    var body=new THREE.Mesh(new THREE.SphereGeometry(2.4,9,7),F.scale);
+    body.scale.set(0.5,0.8,1.7); f.add(body);
+    var tail=new THREE.Mesh(coneGeo,F.scale);
+    tail.scale.set(1.7,2.6,0.4); tail.rotation.x=-Math.PI/2; tail.position.z=-4.4; f.add(tail);
+    f.position.set(p[0],3.2+p[2],p[1]); f.rotation.y=i*2.1; g.add(f);
+  });
+  return g;
+}
+// THE CLIFF NEST. A rock stack with a twig bowl on top and two chicks in it —
+// the reason a puffin quest has any urgency at all, and the thing the whole run
+// comes back to.
+function buildNest(){
+  var g=new THREE.Group(), F=fl6mats();
+  mound(g,15,M.rock2);
+  var stack=new THREE.Mesh(cylGeo,M.stone); stack.scale.set(8,17,8); stack.position.y=13; g.add(stack);
+  var ledge=new THREE.Mesh(cylGeo,M.rock); ledge.scale.set(10.5,2.4,10.5); ledge.position.y=22; g.add(ledge);
+  var bowl=new THREE.Mesh(new THREE.TorusGeometry(6.2,2.1,7,18),F.twig);
+  bowl.rotation.x=Math.PI/2; bowl.position.y=24.4; g.add(bowl);
+  [-3.1,3.1].forEach(function(sx){
+    var b=new THREE.Mesh(new THREE.SphereGeometry(2.7,9,7),F.chick);
+    b.scale.set(1,1.15,1); b.position.set(sx,26.4,0); g.add(b);
+    var h=new THREE.Mesh(new THREE.SphereGeometry(1.7,8,6),F.chick);
+    h.position.set(sx,29.4,0.5); g.add(h);
+    var bk=new THREE.Mesh(coneGeo,F.bill);
+    bk.scale.set(0.9,2.2,0.9); bk.rotation.x=Math.PI/2; bk.position.set(sx,29.2,2.4); g.add(bk);
+  });
+  return g;
+}
+// A SAGUARO IN BLOOM. Sunset Canyon's version of a flower: a tall cactus with
+// two arms and one red bloom on top, which is what a hummingbird sips at.
+function buildCactusFlower(){
+  var g=new THREE.Group(), F=fl6mats();
+  mound(g,13,M.rock);
+  var trunk=new THREE.Mesh(cylGeo,F.cactus); trunk.scale.set(3.4,26,3.4); trunk.position.y=19; g.add(trunk);
+  var crown=new THREE.Mesh(new THREE.SphereGeometry(3.4,9,7),F.cactus); crown.position.y=32; g.add(crown);
+  [[-1,-8,15],[1,9,19]].forEach(function(a){
+    var arm=new THREE.Mesh(cylGeo,F.cactus);
+    arm.scale.set(2.3,9,2.3); arm.rotation.z=a[0]*Math.PI/2; arm.position.set(a[0]*5.5,a[2],0); g.add(arm);
+    var up=new THREE.Mesh(cylGeo,F.cactus);
+    up.scale.set(2.3,9,2.3); up.position.set(a[0]*9.4,a[2]+4.5,0); g.add(up);
+    var tip=new THREE.Mesh(new THREE.SphereGeometry(2.3,8,6),F.cactus);
+    tip.position.set(a[0]*9.4,a[2]+9,0); g.add(tip);
+  });
+  var bloom=new THREE.Mesh(new THREE.SphereGeometry(3.2,9,7),F.bloom);
+  bloom.scale.set(1,0.62,1); bloom.position.y=35.4; g.add(bloom);
+  var eye=new THREE.Mesh(new THREE.SphereGeometry(1.5,8,6),M.cream);
+  eye.scale.set(1,0.5,1); eye.position.y=36.4; g.add(eye);
+  return g;
+}
+// ONE dispatch from a style name to a thing standing in the world. Same law as
+// targetBody above: this is the only place a style becomes 3D geometry.
+function styleBody(style){
+  if(style==="house")  return buildHouse();
+  if(style==="animal") return buildAnimal();
+  if(style==="flare")  return buildFlare();          // {group,lamp,glow}
+  if(style==="lantern")return buildLantern();        // {group,lamp,glow}
+  if(style==="dock")   return buildDock();
+  if(style==="flower") return buildFlower();
+  if(style==="cactusflower") return buildCactusFlower();
+  if(style==="fish")   return buildFish();
+  if(style==="hive")   return buildHive();
+  if(style==="nest")   return buildNest();
+  return buildHouse();
+}
 // what YOU look like on a job: the cargo rides under you, and you can see it go
 function buildCargo(col,n){
   var g=new THREE.Group();
@@ -3521,25 +3959,37 @@ function startJob(m){
   endJob();
   JOB=m;
   JS={carrying:0,done:0,doneMap:m.targets.map(function(){return false;}),
-      holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99};
-  jobGroup=new THREE.Group(); jobTargets=[];
+      holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99,banked:0};
+  jobGroup=new THREE.Group(); jobTargets=[]; jobDrop=null;
   if(m.depot){
     var d=buildDock(); d.position.set(m.depot.x,0,m.depot.z);
     marker(d,0xFFC24A,180); jobGroup.add(d);
   }
   m.targets.forEach(function(t){
-    var built,lamp=null,glow=null;
-    if(m.style==="house"){ built=buildHouse(); }
-    else if(m.style==="animal"){ built=buildAnimal(); }
-    else if(m.style==="flare"){ var f=buildFlare(); built=f.group; lamp=f.lamp; glow=f.glow; }
-    else { var l=buildLantern(); built=l.group; lamp=l.lamp; glow=l.glow; }
+    var made=styleBody(m.style), built, lamp=null, glow=null;
+    if(made&&made.group){ built=made.group; lamp=made.lamp; glow=made.glow; } else built=made;
     built.position.set(t.x,0,t.z);
     var mk=marker(built,m.style==="flare"?0xFF5A3C:0x2FB7D6,200);
     jobGroup.add(built);
     jobTargets.push({group:built,lamp:lamp,glow:glow,mk:mk});
   });
+  // FL6: a GATHERING quest runs the other way round from every job before it —
+  // many places to collect from, ONE place it all goes back to. That one place
+  // is built here and gets a beam of its own in the quest's own gold.
+  if(m.gather&&m.dropAt){
+    var dr=styleBody(m.dropStyle||"hive");
+    if(dr&&dr.group) dr=dr.group;
+    dr.position.set(m.dropAt.x,0,m.dropAt.z);
+    var dmk=marker(dr,0xFFC24A,220);
+    jobGroup.add(dr);
+    jobDrop={group:dr,mk:dmk};
+  }
   scene.add(jobGroup);
   if(m.capacity>0){ cargoGroup=buildCargo(m.cargo.color,m.capacity); cargoGroup.visible=false; plane.add(cargoGroup); }
+  // FL6: and now you ARE the thing. Done after the cargo is hung on the plane,
+  // so what you are carrying rides along on the creature instead of vanishing
+  // with the ride.
+  if(m.transform) becomeCreature(findTransform(m.transform));
   if(m.palette){ paletteBefore=paletteSnapshot(); applyPalette(m.palette); }
   MODE="job";
   guideJob=null;
@@ -3557,11 +4007,12 @@ function startJob(m){
 }
 function endJob(){
   if(jobGroup){ scene.remove(jobGroup); jobGroup=null; }
-  jobTargets=[];
+  jobTargets=[]; jobDrop=null;
   if(cargoGroup){ plane.remove(cargoGroup); cargoGroup=null; }
   if(paletteBefore){ applyPalette(paletteBefore); paletteBefore=null; }
+  restoreRide();                    // FL6: your own ride back, every single time
   MODE="free"; JOB=null;
-  JS={carrying:0,done:0,doneMap:[],holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99};
+  JS={carrying:0,done:0,doneMap:[],holdT:0,holdOn:-1,complete:false,paid:0,pickAt:-99,banked:0};
   // the jobs go back out into the world to be found again. Leaving one costs
   // nothing and keeps nothing: come back to it later and it starts fresh.
   showScouts();
@@ -3577,11 +4028,327 @@ function leaveJob(){
   return true;
 }
 
+
+// ============================================================================
+//  FL6 — BECOMING THE ANIMAL.
+//
+//  A transform quest lends you a body. Everything below is how that body gets
+//  made, painted, animated and handed back, and it is deliberately the SAME
+//  contract the three hangar rides sign (FL3): fill a group, return one
+//  animator, and let the draw loop call it without knowing what it is flying.
+//
+//  Three things are load-bearing and were each learned the hard way:
+//
+//  1. THE COLOUR IS IN THE VERTICES. These models ship no textures at all —
+//     every stripe on the bee lives in COLOR_0 — so they are drawn with ONE
+//     shared MeshLambertMaterial({vertexColors:true}) and any merge that drops
+//     that attribute renders them solid BLACK. anmMerge (AR1Q) already carries
+//     it; nothing here may go around it.
+//  2. A CLONE SHARES ITS BUFFER. The wings are bent by moving vertices, so the
+//     body gets its own copy of the geometry or every bee in the library flaps
+//     with it.
+//  3. THE MODEL IS ALREADY POINTING THE RIGHT WAY. Bee, Hummingbird and Gull all
+//     face +z with their wings across x, which is the same convention the plane
+//     uses ("everything points down +z, the nose direction"). Verified from a
+//     chase-camera screenshot, not from reading the file.
+// ============================================================================
+var TB_URL="/models/skyflyer/animals/flyer-bodies.glb";
+var TB={}, TB_ON=false, TB_MAT=null, TB_WAIT=null;
+var TB_GROUP=null, TB_ANIM=null, TB_NOW=null;
+function loadFlyerBodies(){
+  if(!renderer||typeof THREE.GLTFLoader!=="function") return;
+  var loader; try{ loader=new THREE.GLTFLoader(); }catch(e){ return; }
+  TB_MAT=new THREE.MeshLambertMaterial({vertexColors:true});
+  loader.load(TB_URL,function(gl){
+    gl.scene.children.slice().forEach(function(o){ if(o.name) TB[o.name]=o; });
+    TB_ON=true;
+    // a quest that started before the file landed gets its body the moment it
+    // does, so a cold link into a deep-linked quest is never left as a plane
+    if(TB_WAIT){ var w=TB_WAIT; TB_WAIT=null; becomeCreature(w); }
+  },null,function(){});
+}
+
+// ---------- the model, merged, centred and sized ----------
+// anmPrep (AR1Q) stands an animal ON THE GROUND, which is right for scenery and
+// wrong for something flying: a body must hang off the middle of the group the
+// whole game flies, or the creature swims around above the plane's own position.
+// So this is anmPrep's sibling: same colour-carrying merge, centred on all three
+// axes instead of two, and sized by the LONGEST dimension (a gull with its wings
+// out is barely taller than a snail — sizing on height made every bird enormous).
+//
+// It hands back the body's REAL DIMENSIONS as well, and everything bolted on
+// afterwards is placed off those. The first cut of this sized the beak and the
+// scarf off the longest dimension instead, which on a bird IS THE WINGSPAN — so
+// the puffin's beak came out floating a wingspan in front of its face and the
+// scarf landed on the hummingbird's forehead. A body part belongs to the BODY.
+function tbPrep(node,size,wingShort){
+  var g=new THREE.Group(); g.add(node.clone(true)); g.updateMatrixWorld(true);
+  var flat=anmMerge(g);
+  flat.material=TB_MAT;
+  flat.geometry=flat.geometry.clone();            // its own buffer: the wings move
+  if(wingShort) tbShortenWings(flat.geometry,wingShort);
+  var box=new THREE.Box3().setFromObject(flat);
+  flat.position.set(-(box.min.x+box.max.x)/2,-(box.min.y+box.max.y)/2,-(box.min.z+box.max.z)/2);
+  var span=Math.max(box.max.x-box.min.x,box.max.y-box.min.y,box.max.z-box.min.z);
+  var k=(size||4)/Math.max(0.001,span);
+  var wrap=new THREE.Group(); wrap.add(flat);
+  wrap.scale.setScalar(k);
+  // measured in MODEL units, and already centred, which is the frame everything
+  // bolted on below is placed in
+  var cx=(box.min.x+box.max.x)/2, cy=(box.min.y+box.max.y)/2, cz=(box.min.z+box.max.z)/2;
+  wrap.userData.mesh=flat;
+  wrap.userData.dims={
+    halfX:Math.max(0.001,(box.max.x-box.min.x)/2),
+    lenZ:Math.max(0.001,box.max.z-box.min.z),
+    h:Math.max(0.001,box.max.y-box.min.y),
+    minY:box.min.y-cy, maxY:box.max.y-cy,
+    minZ:box.min.z-cz, maxZ:box.max.z-cz
+  };
+  return wrap;
+}
+// A GULL IS NOT A PUFFIN'S SHAPE, QUITE. A gull's wings are two and a half times
+// its body length; a puffin's are more like one and a half, and that stubbiness
+// is most of why a puffin looks like a puffin and a gull looks like a glider.
+// So the wing band — the same "how far out along the wing" weight the flap uses
+// — is pulled in towards the body, leaving the body itself untouched. Done ONCE,
+// baked into the buffer, so it costs nothing per frame.
+function tbShortenWings(geo,amount){
+  var pa=geo.attributes.position;
+  geo.computeBoundingBox();
+  var halfX=Math.max(0.001,Math.max(Math.abs(geo.boundingBox.min.x),Math.abs(geo.boundingBox.max.x)));
+  for(var i=0;i<pa.count;i++){
+    var x=pa.getX(i), w=clamp((Math.abs(x)/halfX-0.24)/0.76,0,1);
+    pa.setX(i,x*(1-amount*w));
+  }
+  pa.needsUpdate=true;
+  geo.computeBoundingBox();
+}
+
+// ---------- repainting a gull into a puffin ----------
+// The library is a LAND-animal library with sixteen birds in it and no puffin,
+// and a puffin is not a shape problem once the wings are pulled in — a gull
+// already has the right seabird build. It is a COLOUR problem plus a beak. So
+// the vertex colours are rewritten by WHICH WAY EACH FACE POINTS, which is the
+// oldest rule in nature: dark on top, pale underneath. One pass over the buffer,
+// once, at quest start.
+//   anything facing up, plus the tail and both wings  -> near-black
+//   anything facing down, plus the face patch          -> off-white
+// From twelve units behind, that countershading IS the bird. Anything subtler is
+// invisible; the first cut keyed off height instead of facing and left a puffin
+// with a white back, because a bird with its wings out is almost flat.
+function tbRepaint(mesh,rule){
+  if(rule!=="puffin") return;
+  var g=mesh.geometry, pa=g.attributes.position, na=g.attributes.normal, ca=g.attributes.color;
+  if(!pa||!ca||!na) return;
+  g.computeBoundingBox();
+  var bb=g.boundingBox;
+  var halfX=Math.max(0.001,Math.max(Math.abs(bb.min.x),Math.abs(bb.max.x)));
+  var lenZ=Math.max(0.001,bb.max.z-bb.min.z);
+  var DARK=new THREE.Color(0x23262C), PALE=new THREE.Color(0xF3F1E7);
+  for(var i=0;i<pa.count;i++){
+    var x=pa.getX(i), z=pa.getZ(i);
+    var xf=Math.abs(x)/halfX, zf=(z-bb.min.z)/lenZ, ny=na.getY(i);
+    var dark;
+    if(xf>0.26)      dark=true;                 // both wings, top and underside
+    else if(zf<0.16) dark=true;                 // the tail
+    else if(zf>0.86) dark=false;                // the white face, right at the front
+    else             dark=(ny>0.0);             // black back, white breast
+    var c=dark?DARK:PALE;
+    ca.setXYZ(i,c.r,c.g,c.b);
+  }
+  ca.needsUpdate=true;
+}
+
+// ---------- the parts the library does not carry ----------
+// A PUFFIN IS ITS BEAK. The fun fact this quest ends on is about that beak
+// carrying a whole row of fish, so it has to be big enough to see from behind
+// and coloured the way the real one is: blue-grey at the face, a yellow band,
+// then the orange blade. Built with the same turned-and-baked toolkit the crab,
+// parrot and fish use (AR1Q), so it costs one extra draw call and no art file.
+// Everything here is sized off D.lenZ — the body's own length — for the reason
+// written above tbPrep.
+function tbExtras(kind,D){
+  if(kind!=="puffinBeak") return null;
+  var L=D.lenZ, parts=[];
+  var y=D.minY+D.h*0.62;                        // the height the head sits at
+  var z=D.maxZ;                                 // the model's own beak tip
+  // the blade: a cone laid on its side and squashed flat, the way a real one is
+  parts.push(hbCone(L*0.13,L*0.34,0xF07E1E,{r:[Math.PI/2,0,0],s:[1,1,0.52],p:[0,y,z+L*0.10]},10));
+  parts.push(hbCone(L*0.135,L*0.09,0xF6D33B,{r:[Math.PI/2,0,0],s:[1,1,0.52],p:[0,y,z-L*0.07]},10));
+  parts.push(hbCone(L*0.14,L*0.08,0x6E7C8C,{r:[Math.PI/2,0,0],s:[1,1,0.52],p:[0,y,z-L*0.13]},10));
+  // two orange feet, tucked back the way a bird carries them in flight
+  [-1,1].forEach(function(sx){
+    parts.push(hbBall(L*0.055,0xF07E1E,{s:[1,0.45,1.9],p:[sx*L*0.075,D.minY+D.h*0.16,D.minZ+L*0.22]},8));
+  });
+  var geo=hbBake(parts);
+  if(!geo) return null;
+  return new THREE.Mesh(geo,TB_MAT);
+}
+
+// ---------- the kid's own ride, still on show ----------
+// A transform must not wipe out the thing the kid chose in the hangar, so the
+// ride's palette slots come along as a SCARF: knotted under the chin where
+// nobody can see it, with two thin tails streaming back along the flanks in the
+// ride's colours. It is the same scarf the pilot in the cockpit wears, which is
+// exactly the point — under the feathers it is still them.
+// It is TWO THIN TAILS and nothing else on purpose. The first cut was a band
+// across the shoulders, and at the size a chase camera sees a body from, a band
+// on a back does not read as clothing at all: on the bee it read as a plaster
+// stuck to it. Anything laid across a creature has to be small enough to be an
+// accessory or it becomes an injury.
+function tbTrim(D){
+  var g=new THREE.Group(), L=D.lenZ;
+  var bodyMat=new THREE.MeshPhongMaterial({color:ride.body,flatShading:true,shininess:14});
+  var trimMat=new THREE.MeshPhongMaterial({color:ride.trim,flatShading:true,shininess:14});
+  var y=D.minY+D.h*0.74, z0=D.maxZ-L*0.34;
+  [-1,1].forEach(function(sx){
+    var tail=new THREE.Mesh(new THREE.BoxGeometry(L*0.045,L*0.022,L*0.34),bodyMat);
+    tail.position.set(sx*L*0.075,y,z0-L*0.17); tail.rotation.y=sx*0.10; g.add(tail);
+    var tip=new THREE.Mesh(new THREE.BoxGeometry(L*0.045,L*0.022,L*0.10),trimMat);
+    tip.position.set(sx*L*0.082,y,z0-L*0.39); tip.rotation.y=sx*0.10; g.add(tip);
+    if(sx>0) g.userData.scarf=tail;
+  });
+  return g;
+}
+
+// ---------- the wingbeat, written in code because nothing here has a bone ----------
+// Same principle as the AR1Q walk cycle: sort every vertex ONCE by where it sits
+// in the model's own box, then push the bands about each frame. Here there is
+// only one band that matters — how far out along the wing a vertex is — and the
+// wing is ROTATED about the body's fore-aft axis rather than lifted, because a
+// lifted wing bends in the middle and a rotated one hinges at the shoulder.
+// Still one draw call, and one pass over a ~1,500 vertex buffer per frame.
+function tbRig(mesh){
+  var g=mesh.geometry, pa=g.attributes.position;
+  g.computeBoundingBox();
+  var bb=g.boundingBox;
+  var halfX=Math.max(0.001,Math.max(Math.abs(bb.min.x),Math.abs(bb.max.x)));
+  var base=new Float32Array(pa.count*3), w=new Float32Array(pa.count), i;
+  for(i=0;i<pa.count;i++){
+    var x=pa.getX(i);
+    base[i*3]=x; base[i*3+1]=pa.getY(i); base[i*3+2]=pa.getZ(i);
+    // no hinge at all until 24% out, then all the way to the tip
+    w[i]=clamp((Math.abs(x)/halfX-0.24)/0.76,0,1);
+  }
+  return {pos:pa,base:base,w:w,y0:(bb.min.y+bb.max.y)/2,
+          h:bb.max.y-bb.min.y,halfX:halfX};
+}
+function tbBeat(R,amp,t){
+  var pa=R.pos, base=R.base, w=R.w, y0=R.y0, i;
+  var s=Math.sin(t), body=-s*R.h*0.10;
+  for(i=0;i<pa.count;i++){
+    var x=base[i*3], y=base[i*3+1], z=base[i*3+2];
+    var wi=w[i];
+    if(wi<=0){ pa.setXYZ(i,x,y+body,z); continue; }
+    var a=s*amp*wi*(x<0?-1:1), ca=Math.cos(a), sa=Math.sin(a), dy=y-y0;
+    pa.setXYZ(i, x*ca-dy*sa, y0+dy*ca+x*sa, z);
+  }
+  pa.needsUpdate=true;
+}
+// The fast wings. A bee really beats about 200 times a second and a hummingbird
+// about 50 — draw either honestly at 60 frames a second and you get a strobing
+// still. So the wing flaps at a rate the eye can follow and a translucent disc
+// carries the speed, which is exactly what the plane's propeller does.
+function tbBlur(D){
+  var g=new THREE.Group();
+  var mat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.20,
+    side:THREE.DoubleSide,depthWrite:false});
+  [-1,1].forEach(function(sx){
+    var e=new THREE.Mesh(new THREE.CircleGeometry(D.halfX*0.62,16),mat);
+    e.rotation.x=-Math.PI/2; e.scale.set(1,1,0.52);
+    e.position.set(sx*D.halfX*0.60,D.minY+D.h*0.72,D.maxZ-D.lenZ*0.45);
+    g.add(e);
+  });
+  g.userData.mat=mat;
+  return g;
+}
+
+// ---------- become it, and hand the ride back ----------
+// THE RIDE IS NEVER DESTROYED, only hidden. Rebuilding a plane on the way out of
+// a quest would mean the hangar's whole build path runs twice, and a kid who
+// leaves and rejoins a quest ten times would pay for it ten times.
+function buildCreature(t){
+  var proto=TB[t.model];
+  if(!proto) return null;
+  var wrap=tbPrep(proto,t.size,t.wingShort);
+  var mesh=wrap.userData.mesh, D=wrap.userData.dims;
+  tbRepaint(mesh,t.paint);
+  var R=tbRig(mesh);
+  // everything bolted on is placed in the CENTRED frame, so it shares the merged
+  // mesh's own offset and a beak lands on the face rather than out in front of
+  // where the face used to be
+  var ex=tbExtras(t.extras,D);
+  if(ex){ ex.position.copy(mesh.position); wrap.add(ex); }
+  var trim=t.trim?tbTrim(D):null;
+  if(trim){ trim.position.copy(mesh.position); wrap.add(trim); }
+  var blur=t.blur?tbBlur(D):null;
+  if(blur){ blur.position.copy(mesh.position); wrap.add(blur); }
+  // tbBeat takes radians, so the readable wingbeats-per-second becomes a rate
+  var amp=(t.wingAmp!=null?t.wingAmp:0.7), rate=(t.wing||8)*Math.PI*2;
+  return { group:wrap, anim:function(dt,mode,tt){
+    var idle=(mode==="landed");                 // sitting on a pad: wings folded, all but still
+    tbBeat(R, idle?amp*0.16:amp, tt*(idle?1.8:rate));
+    if(blur) blur.userData.mat.opacity=idle?0:0.20;
+    if(trim&&trim.userData.scarf) trim.userData.scarf.rotation.y=Math.sin(tt*7)*0.20;
+  } };
+}
+function becomeCreature(t){
+  if(!t) return false;
+  restoreRide();
+  FEEL_NOW=t; TB_NOW=t;
+  if(!renderer){ return true; }                 // headless QA: the feel swap is the whole thing
+  if(!TB_ON){ TB_WAIT=t; return true; }         // the file is still on its way; catch it on arrival
+  var built=buildCreature(t);
+  if(!built) return true;                       // a missing model must never block a quest
+  TB_GROUP=built.group; TB_ANIM=built.anim;
+  plane.add(TB_GROUP);
+  // WHAT YOU ARE CARRYING BELONGS TO THE BODY NOW. buildCargo hangs its row of
+  // boxes off a 10-unit aeroplane; left alone on a 4-unit bee they were bigger
+  // than the bee and floating out beside it. The row scales with the body, and a
+  // recipe may move it — the puffin's fish ride in the BEAK, crossways, which is
+  // the whole point of the fact that quest ends on.
+  if(cargoGroup){
+    var k=t.size/10;
+    cargoGroup.scale.setScalar(k);
+    var at=t.cargoAt||[0,0];
+    cargoGroup.position.set(0,at[0],at[1]);
+  }
+  // the pill that names what you are flying is the right place to say it, and it
+  // is already the thing a kid sees every time they sit on a pad
+  try{ rideNameEl.textContent="You are a "+t.name+"!"; showRideName(); }catch(e){}
+  // hide the ride's own parts, and ONLY those
+  for(var i=0;i<RIDE_PARTS.length;i++) RIDE_PARTS[i].visible=false;
+  return true;
+}
+function restoreRide(){
+  FEEL_NOW=ride; TB_NOW=null; TB_ANIM=null;
+  try{ rideNameEl.textContent=ride.name; }catch(e){}
+  if(!TB_GROUP) return;
+  plane.remove(TB_GROUP);
+  for(var i=0;i<RIDE_PARTS.length;i++) RIDE_PARTS[i].visible=true;
+  if(cargoGroup){ cargoGroup.scale.setScalar(1); cargoGroup.position.set(0,0,0); }
+  TB_GROUP=null;
+}
+function flyingNow(){ return TB_NOW||ride; }
+
 // ---------- where the arrow points while a job is on ----------
 function jobObjective(){
   if(MODE!=="job"||!JOB||JS.complete) return null;
+  // FL6 — A GATHERING QUEST IS THE ORDINARY JOB TURNED AROUND. Every job before
+  // this one loaded up at ONE place and delivered to MANY; a bee visits many
+  // flowers and brings it all back to one hive, and a puffin does the same with
+  // fish and a nest. So the arrow has exactly two things to say: go and get some
+  // more, or take what you have home.
+  if(JOB.gather&&JOB.dropAt){
+    var room=(JS.carrying<JOB.capacity), left=(JS.done<JOB.targets.length);
+    if(!(room&&left)) return {x:JOB.dropAt.x,z:JOB.dropAt.z,label:JOB.dropAt.label};
+    return nearestUndone();
+  }
   if(JOB.capacity>0 && JS.carrying<=0 && JOB.depot && JS.done<JOB.targets.length)
     return {x:JOB.depot.x,z:JOB.depot.z,label:JOB.depot.label};
+  return nearestUndone();
+}
+function nearestUndone(){
   var best=null,bd=1e18;
   for(var i=0;i<JOB.targets.length;i++){
     if(JS.doneMap[i]) continue;
@@ -3609,11 +4376,14 @@ function arrowTarget(){
   return null;
 }
 
-// ---------- one drop made ----------
-function deliverTo(i){
+// ---------- one stop finished ----------
+// A DELIVERY AND A PICK-UP LOOK THE SAME FROM THE OUTSIDE, and that is on
+// purpose: the place goes green, its beam goes out, something bursts, the same
+// word flashes. Only what happens to your hands differs, which is the one line
+// of difference below.
+function markStop(i){
   var t=JOB.targets[i];
   JS.doneMap[i]=true; JS.done++;
-  if(JOB.capacity>0) JS.carrying=Math.max(0,JS.carrying-1);
   JS.holdOn=-1; JS.holdT=0;
   var tt=jobTargets[i];
   if(tt){
@@ -3626,7 +4396,35 @@ function deliverTo(i){
   if(cargoGroup) cargoGroup.visible=JS.carrying>0;
   if(JS.done===1) buddyMoment("firstdrop","cheer","One down. Follow the arrow to the next one.");
   paintGoals();
+}
+function deliverTo(i){
+  if(JOB.capacity>0) JS.carrying=Math.max(0,JS.carrying-1);
+  markStop(i);
   if(JS.done>=JOB.targets.length) finishJob();
+}
+// FL6: a flower gives up its pollen, a shoal gives up a fish. Your hands FILL
+// instead of emptying, and nothing is finished until it is all back at the hive.
+function gatherFrom(i){
+  JS.carrying=Math.min(JOB.capacity,JS.carrying+1);
+  markStop(i);
+  if(JS.done>=JOB.targets.length&&JS.carrying<=0) finishJob();
+}
+// FL6: everything in your hands goes into the hive at once. A puffin really does
+// carry a whole row of fish home in one trip, which is the fun fact this quest
+// ends on, so it would be a shame to make a kid do them one at a time.
+function dropLoad(){
+  if(JS.carrying<=0) return false;
+  JS.banked+=JS.carrying; JS.carrying=0;
+  if(cargoGroup) cargoGroup.visible=false;
+  if(jobDrop&&jobDrop.mk&&JS.done>=JOB.targets.length){
+    jobDrop.mk.ringMat.color.setHex(0x57D06B); jobDrop.mk.beam.visible=false;
+  }
+  burst(new THREE.Vector3(JOB.dropAt.x,26,JOB.dropAt.z),14);
+  sfx("deliver"); haptic("light");
+  toast(JOB.dropVerb||"Home!");
+  paintGoals();
+  if(JS.done>=JOB.targets.length) finishJob();
+  return true;
 }
 
 // ---------- the ending: a fact, the coins, a sticker ----------
@@ -3669,6 +4467,7 @@ function closeFactCard(){ try{ factCard.style.display="none"; }catch(e){} S.pick
 function jobStep(dt){
   if(MODE!=="job"||!JOB||JS.complete) return;
   var px=S.pos.x, pz=S.pos.z, py=S.pos.y;
+  if(JOB.gather){ gatherStep(dt,px,pz,py); return; }
   // 1) load up. The dock NEVER runs out — that is the no-fail rule made real:
   //    fly off, come back whenever, there is always more to carry.
   if(JOB.depot && JOB.capacity>0 && JS.carrying<JOB.capacity){
@@ -3704,6 +4503,36 @@ function jobStep(dt){
   deliverTo(inside);
 }
 
+// ---------- the gathering step: collect from many, take it to one ----------
+// THE FL5 LAW HOLDS HERE UNCHANGED. A flower never runs out of patience, the
+// hive waits forever, your hands keep what is in them if you fly off to do
+// something else, and there is nothing anywhere in this function to fail at.
+function gatherStep(dt,px,pz,py){
+  // 1) the hive first, so arriving home full always counts even if a flower
+  //    happens to be sitting on top of it
+  if(JS.carrying>0 && JOB.dropAt &&
+     Math.hypot(px-JOB.dropAt.x,pz-JOB.dropAt.z)<((JOB.dropRadius||JOB.radius)+10) &&
+     py<((JOB.dropCeiling||JOB.ceiling)+25)){
+    if(dropLoad()) return;
+  }
+  if(JS.carrying>=JOB.capacity){ JS.holdOn=-1; JS.holdT=0; return; }   // hands full: go home
+  // 2) collect. Same low pass, same radius, same hold as any other stop.
+  var inside=-1;
+  for(var i=0;i<JOB.targets.length;i++){
+    if(JS.doneMap[i]) continue;
+    var t=JOB.targets[i];
+    if(Math.hypot(px-t.x,pz-t.z)<JOB.radius && py<JOB.ceiling){ inside=i; break; }
+  }
+  if(inside<0){ JS.holdOn=-1; JS.holdT=0; return; }
+  if(JOB.hold>0){
+    if(JS.holdOn!==inside){ JS.holdOn=inside; JS.holdT=0; }
+    JS.holdT+=dt;
+    paintGoals();
+    if(JS.holdT<JOB.hold) return;
+  }
+  gatherFrom(inside);
+}
+
 // ============================================================================
 //  FL5 — JOBS ARE THINGS YOU FIND, NOT THINGS YOU ARE OFFERED ON ARRIVAL.
 //  Every job in this world has its start point standing out in the sky from the
@@ -3721,18 +4550,51 @@ function jobStep(dt){
 //      starts fresh.
 // ============================================================================
 var scoutGroup=null, scouts=[], declined={}, guideJob=null, offered=null;
-function jobStartPoint(m){ return m.depot || m.targets[0]; }
+// Where a job announces itself from. For a delivery run that is the dock you
+// load at; for a gathering quest it is the HIVE or the NEST, because that is the
+// landmark — the flowers are scattered and the hive is the thing you can see
+// from a long way off and the thing the whole quest is about.
+function jobStartPoint(m){ return (m.gather&&m.dropAt) || m.depot || m.targets[0]; }
+function scoutStyle(m){
+  if(m.gather&&m.dropAt) return m.dropStyle||"hive";
+  if(m.depot) return "dock";
+  return m.style;
+}
+// FL6: a quest that turns you into something glows a soft violet instead of the
+// jobs' amber, so the two kinds of beam are telling a kid two different things
+// from a long way off without a word of writing.
+function scoutColor(m){
+  if(m.transform) return 0x9B7BE8;
+  return m.style==="flare"?0xFF5A3C:0xFFC24A;
+}
 function buildScoutFor(m){
-  var built;
-  if(m.depot) built=buildDock();
-  else if(m.style==="flare") built=buildFlare().group;
-  else if(m.style==="lantern") built=buildLantern().group;
-  else if(m.style==="animal") built=buildAnimal();
-  else built=buildHouse();
+  var made=styleBody(scoutStyle(m));
+  var built=(made&&made.group)?made.group:made;
   var p=jobStartPoint(m);
   built.position.set(p.x,0,p.z);
-  var mk=marker(built,m.style==="flare"?0xFF5A3C:0xFFC24A,220);
+  // THE SPACING RULE'S OTHER HALF: something already earned keeps its place in
+  // the world but stops shouting, so the sky genuinely thins out as a kid works
+  // through a stop instead of staying an airport forever.
+  var mk=marker(built,scoutColor(m),220,hasBadge(m.id));
   return {group:built,mk:mk};
+}
+// ============================================================================
+//  THE SPACING RULE (FL6) — A WORLD MUST NOT TURN INTO AN AIRPORT.
+//  Every beam in a world stands at least BEAM_GAP apart from every other one, so
+//  no two of them are ever in the same view and a kid is never picking between
+//  three glowing things at once. It is asserted in QA rather than left as good
+//  intentions, because the failure mode is the next session quietly adding a
+//  fourth quest on top of an existing one.
+// ============================================================================
+var BEAM_GAP=240;
+function beamSpacing(){
+  var pts=WORLD_JOBS.map(jobStartPoint), worst=1e9, a, b;
+  for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
+    var d=Math.hypot(pts[i].x-pts[j].x,pts[i].z-pts[j].z);
+    if(d<worst){ worst=d; a=WORLD_JOBS[i].id; b=WORLD_JOBS[j].id; }
+  }
+  return { min:(pts.length<2?Infinity:Math.round(worst)), gap:BEAM_GAP,
+           ok:(pts.length<2||worst>=BEAM_GAP), closest:[a,b], beams:pts.length };
 }
 function showScouts(){
   hideScouts();
@@ -3764,7 +4626,7 @@ function openOffer(m){
       '<span class="rstick">'+icoSticker(36,hasBadge(m.id))+
       '<span>'+m.badge+'<br>sticker to keep</span></span>';
     // THE ANSWER: their own ride on the go pill, a cloud on the quiet one.
-    ofRideEl.innerHTML=icoRide(44);
+    ofRideEl.innerHTML=icoGo(44,m);
     ofCloudEl.innerHTML=icoCloud(34,true);
     ofBlurb.textContent=m.blurb;
     ofTip.textContent=m.tip||m.blurb;
@@ -3822,7 +4684,7 @@ function declineOffer(){
 function pinJob(m){
   if(!m) return null;
   var p=jobStartPoint(m);
-  return setWaypoint({id:"job:"+m.id,kind:"job",style:m.depot?"dock":m.style,
+  return setWaypoint({id:"job:"+m.id,kind:"job",style:scoutStyle(m),
     x:p.x,z:p.z,label:m.name});
 }
 // while you are just flying: have we swooped low over a job's start point?
@@ -3871,12 +4733,16 @@ function paintHelpJobs(){
 // ---------- camera ----------
 var camPos=new THREE.Vector3(0,30,80);
 function updateCamera(dt){
-  var back=new THREE.Vector3(Math.sin(S.yaw)*20, 8.5-S.pitch*6, Math.cos(S.yaw)*20);
+  // FL6: how far back the camera sits belongs to the BODY, not to the game. A
+  // plane is 13 units across and wants 20 units of room; a bee is 4 and would be
+  // a speck at that distance, which is the whole reason a transform reads at all.
+  var cb=FEEL_NOW.camBack||20, cu=(FEEL_NOW.camUp!=null?FEEL_NOW.camUp:8.5);
+  var back=new THREE.Vector3(Math.sin(S.yaw)*cb, cu-S.pitch*6, Math.cos(S.yaw)*cb);
   var target=S.pos.clone().add(back);
   camPos.lerp(target,1-Math.pow(0.0012,dt));
   camera.position.copy(camPos);
-  var look=S.pos.clone();look.y+=2.5;
-  look.x-=Math.sin(S.yaw)*14;look.z-=Math.cos(S.yaw)*14;
+  var look=S.pos.clone();look.y+=cu*0.29;
+  look.x-=Math.sin(S.yaw)*cb*0.7;look.z-=Math.cos(S.yaw)*cb*0.7;
   camera.lookAt(look);
 }
 
@@ -3931,9 +4797,9 @@ function updateArrow(){
 // picks the cheapest coin by distance PLUS a penalty for being off the nose.
 // FL3: this scales with the RIDE, because the copter can cut inside a circle the
 // jetpack has to swing all the way around. 46 was the plane's number at r=20.
-var TURN_R=46*((ride.speed/ride.turn)/20);
+function turnR(){ return 46*((FEEL_NOW.speed/FEEL_NOW.turn)/20); }
 function nearestCoin(){
-  var best=null,bs=1e18;
+  var best=null,bs=1e18,TR=turnR();
   var hx=-Math.sin(S.yaw), hz=-Math.cos(S.yaw);
   function scan(list,parent){
     for(var i=0;i<list.length;i++){
@@ -3945,7 +4811,7 @@ function nearestCoin(){
       var d=Math.sqrt(dx*dx+dy*dy+dz*dz);
       var flat=Math.hypot(dx,dz)||1;
       var ahead=(dx*hx+dz*hz)/flat;           // 1 = dead ahead, -1 = behind us
-      if(d<TURN_R&&ahead<0.2)continue;        // inside the turn circle: unreachable
+      if(d<TR&&ahead<0.2)continue;        // inside the turn circle: unreachable
       var score=d+(1-ahead)*70;
       if(score<bs){bs=score;best={x:wx,y:wy,z:wz};}
     }
@@ -4012,12 +4878,12 @@ function stepSim(dt){
   if(S.mode==="fly"){
     // FL3: how sharply the ride answers a finger is a FEEL preset, not a power
     // stat — the ride that turns hardest is also the slowest one.
-    var turn=S.dx*ride.turn,pitchT=S.dy*ride.pitchAmt;
+    var turn=S.dx*FEEL_NOW.turn,pitchT=S.dy*FEEL_NOW.pitchAmt;
     S.yaw-=turn*dt;
     S.pitch=lerp(S.pitch,-pitchT,1-Math.pow(0.002,dt));
-    S.bank=lerp(S.bank,-S.dx*ride.bankAmt,1-Math.pow(0.004,dt));
-    var targetSpeed=ride.speed-S.pitch*10;
-    S.speed=lerp(S.speed,clamp(targetSpeed,ride.speed*0.7,ride.speed*1.35),dt*1.5);
+    S.bank=lerp(S.bank,-S.dx*FEEL_NOW.bankAmt,1-Math.pow(0.004,dt));
+    var targetSpeed=FEEL_NOW.speed-S.pitch*10;
+    S.speed=lerp(S.speed,clamp(targetSpeed,FEEL_NOW.speed*0.7,FEEL_NOW.speed*1.35),dt*1.5);
     var dir=new THREE.Vector3(-Math.sin(S.yaw),Math.sin(S.pitch),-Math.cos(S.yaw)).normalize();
     S.pos.addScaledVector(dir,S.speed*dt);
     if(S.pos.y<3){S.pos.y=3;S.pitch=Math.max(S.pitch,0.12);
@@ -4044,7 +4910,7 @@ function stepSim(dt){
   }
   else if(S.mode==="takeoff"){
     S.landTimer+=dt;
-    S.speed=lerp(S.speed,ride.speed*1.1,dt*0.9);
+    S.speed=lerp(S.speed,FEEL_NOW.speed*1.1,dt*0.9);
     var dir3=new THREE.Vector3(-Math.sin(S.yaw),0,-Math.cos(S.yaw));
     S.pos.addScaledVector(dir3,S.speed*dt);
     if(S.landTimer>1.1){S.pos.y+=(S.landTimer-1.1)*14*dt*3;S.pitch=lerp(S.pitch,0.28,dt*2);}
@@ -4765,8 +5631,12 @@ function drawScene(dt){
   plane.rotateZ(S.bank);
   // FL3: the bob is part of the ride's feel — the copter hovers, the jetpack
   // barely wavers — and each ride animates its own moving parts.
-  plane.position.y+=Math.sin(time*ride.bobRate)*ride.bob;
+  plane.position.y+=Math.sin(time*FEEL_NOW.bobRate)*FEEL_NOW.bob;
   rideAnim(dt,S.mode,time);
+  // FL6: while a quest has lent you a body, the creature animates itself. The
+  // ride's own animator keeps running underneath on a hidden group, which costs
+  // nothing and means there is no second code path to get out of step.
+  if(TB_ANIM) TB_ANIM(dt,S.mode,time);
 
   groundMesh.position.set(S.pos.x,0,S.pos.z);
   
@@ -4897,6 +5767,7 @@ updateChunks(0,0);
 
 loadKit();                       // AR1: real art arrives over the stand-ins
 startLife();                     // AR1Q: the animals and the world life
+loadFlyerBodies();               // FL6: the bodies a transform quest lends you
 if(!MANUAL&&typeof requestAnimationFrame==="function") requestAnimationFrame(frame);
 
 addEventListener("resize",function(){
@@ -4940,7 +5811,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"AR1R",
+  version:"FL6",
   state:S,
   world:world,
   worlds:WORLDS,
@@ -4977,6 +5848,34 @@ window.SKY={
     of:JOB?JOB.targets.length:0, complete:JS.complete, paid:JS.paid, holding:JS.holdT,
     objective:jobObjective(), factUp:(function(){ try{ return factCard.style.display==="flex"; }catch(e){ return false; } })() }; },
   badges:function(){ try{ return loadPrefs().badges||{}; }catch(e){ return {}; } },
+  // ---- FL6 handles: the bodies, the gathering flow and the spacing rule ----
+  transforms:function(){ return TRANSFORMS; },
+  // WHAT IS ACTUALLY FLYING, and whether the model really arrived. `parts` is
+  // how a robot proves the ride was hidden rather than left inside the creature.
+  flying:function(){
+    var f=flyingNow();
+    return { id:f.id, name:f.name, isTransform:!!TB_NOW, model:TB_NOW?TB_NOW.model:null,
+             loaded:TB_ON, bodyUp:!!TB_GROUP, animator:!!TB_ANIM,
+             ridePartsHidden:(function(){ var n=0;
+               for(var i=0;i<RIDE_PARTS.length;i++) if(RIDE_PARTS[i].visible===false) n++;
+               return n; })(), rideParts:RIDE_PARTS.length,
+             feel:{ speed:f.speed, turn:f.turn, bank:f.bankAmt, bob:f.bob,
+                    camBack:f.camBack||20, circle:Math.round(f.speed/f.turn) } };
+  },
+  // the gathering quest's own numbers: in your hands, picked, banked at the hive
+  gather:function(){ return JOB&&JOB.gather
+    ? { on:true, carrying:JS.carrying, of:JOB.capacity, picked:JS.done,
+        stops:JOB.targets.length, banked:JS.banked, complete:JS.complete,
+        drop:JOB.dropAt||null }
+    : { on:false }; },
+  // THE SPACING RULE, measured rather than promised. A world must not turn into
+  // an airport, and this is the number that says whether it has.
+  spacing:beamSpacing,
+  // every beam in this world, with whether it has been dimmed for being done
+  beams:function(){ return scouts.map(function(s){
+    return { id:s.job.id, x:s.pt.x, z:s.pt.z, transform:s.job.transform||null,
+             dim:!!(s.mk&&s.mk.dim), beamH:(s.mk&&s.mk.beam)?s.mk.beam.geometry.parameters.height:0,
+             opacity:(s.mk&&s.mk.beam)?s.mk.beam.material.opacity:0 }; }); },
   // ---- FL5 discovery handles ----
   scouts:function(){ return scouts.map(function(s){ return {id:s.job.id,x:s.pt.x,z:s.pt.z}; }); },
   offer:function(){ try{ return { up:offerCard.style.display==="flex", id:offered?offered.id:null,
