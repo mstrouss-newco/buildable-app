@@ -56,11 +56,22 @@
   }
   BA.preload = function () { const seen = {}; const eat = (key) => { if (key && !seen[key]) { seen[key] = 1; load(key); } }; for (const k in BA.map) eat(BA.map[k]); for (const k in DEFAULTS) eat(DEFAULTS[k]); };
 
-  function playBuf(b, rate, vol) {
+  function playBuf(b, rate, vol, cutAt) {
     const ac = ctx(); if (!ac) return;
     const src = ac.createBufferSource(); src.buffer = b; src.playbackRate.value = rate || 1;
     const gn = ac.createGain(); gn.gain.value = vol == null ? 1 : vol;
-    src.connect(gn); gn.connect(BA.master); src.start();
+    src.connect(gn); gn.connect(BA.master);
+    const t = ac.currentTime;
+    if (cutAt) {
+      // Cut the tail short so a quick scoop is one crisp hit, not a ringing
+      // decay - matters most for "coin", which can fire many times a second.
+      const fadeStart = t + Math.max(0.01, cutAt - 0.03);
+      gn.gain.setValueAtTime(gn.gain.value, fadeStart);
+      gn.gain.linearRampToValueAtTime(0.0001, t + cutAt);
+      src.start(t); src.stop(t + cutAt + 0.02);
+    } else {
+      src.start(t);
+    }
   }
 
   // ---- synth fallback (only when a real sound isn't available yet) ----
@@ -116,13 +127,16 @@
 
   // throttle rapid repeats; "hit" is throttled hard + played soft so a stream of
   // impacts becomes an occasional gentle tick, never a beep-per-bullet.
-  const THROTTLE = { shoot:0.07, explode:0.04, coin:0.03, boom:0.12, hit:0.16 };
+  const THROTTLE = { shoot:0.07, explode:0.04, coin:0.06, boom:0.12, hit:0.16 };
   const VOL = { hit:0.5 };
+  // Coin scoops should feel like one clean "ting" per coin, never a ringing
+  // wall of sound when several are grabbed in a row - cut the tail short.
+  const CUTOFF = { coin:0.15 };
   BA.sfx = function (name, opt) {
     if (BA.muted) return; const ac = ctx(); if (!ac) return; if (!BA._unlocked) BA.unlock();
     const now = ac.currentTime, th = THROTTLE[name]; if (th && now - (BA._last[name]||0) < th) return; BA._last[name] = now;
     const key = BA.map[name] || DEFAULTS[name], b = key && BA.buffers[key];
-    if (b) { const tier = (opt && opt.tier) || 1; const rate = name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0; playBuf(b, rate, VOL[name]||1); }
+    if (b) { const tier = (opt && opt.tier) || 1; const rate = name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0; playBuf(b, rate, VOL[name]||1, CUTOFF[name]); }
     else { synth(name, opt); if (key) load(key); }   // real sound not ready -> synth now, fetch for next time
   };
 
