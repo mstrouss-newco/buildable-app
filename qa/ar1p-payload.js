@@ -734,6 +734,7 @@ function AR1P_travel(){
 }
 
 function AR1P_step(dt,t){
+  if(AR1P_HAS("move")) AR1P_stepPuppets(t);
   if(AR1P_HAS("coinB")) AR1P_stepGlow(t);
   var i;
   for(i=0;i<PET_MIX.length;i++) PET_MIX[i].update(dt);
@@ -886,6 +887,8 @@ window.AR1P={
       if(!o) continue;
       o.position.set(x+(i-(names.length-1)/2)*gap, y, z);
       o.rotation.y=0.55; scene.add(o); out.push(names[i]);
+      if(AR1P_HAS("move")) AR1P_puppet(o, GAIT_OF[names[i]]||"walk",
+        (GAIT_OF[names[i]]==="plod")?1.7:(GAIT_OF[names[i]]==="flap")?6.8:3.4);
     }
     return out; },
   life2:function(){ return {shadows:!!SHADOWS, wakes:!!WAKES, travel:TRAVEL.length,
@@ -894,6 +897,12 @@ window.AR1P={
     w0:WAKES?[WAKES.geometry.attributes.position.getX(0),WAKES.geometry.attributes.position.getY(0),WAKES.geometry.attributes.position.getZ(0)]:null,
     cam:[camera.position.x|0,camera.position.y|0,camera.position.z|0] }; },
   pets2:function(){ var n=[],k; for(k in PETS2) n.push(k); return {built:n,live:PET_LIVE.length}; },
+  // step the world forward by dt and draw ONE frame from a parked camera, over
+  // and over: that is how the motion gets filmed instead of described.
+  film:function(pos,at,dt){
+    AR1P_step(dt||0.05,(window.__ft=(window.__ft||0)+(dt||0.05)));
+    return SKY.look(pos,at);
+  },
   pets3:function(){ var n=[],k; for(k in E3) n.push(k); return {on:E3_ON,got:n,want:E3_WANT.length}; },
   pets3cost:function(list){ var o={},i; for(i=0;i<list.length;i++) o[list[i]]=E3_cost(list[i]); return o; },
   // park the camera FIRST, then run the world's motion, then draw. The gulls
