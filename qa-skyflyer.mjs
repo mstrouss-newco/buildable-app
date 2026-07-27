@@ -82,15 +82,30 @@ chk('autopilot flag for the QA robot (?auto=1)', /Q\.get\("auto"\)==="1"/.test(h
 chk('exposes the SKY handle with tick + autopilot + beaten', /window\.SKY\s*=/.test(html) && /tick:/.test(html) && /autopilot:/.test(html) && /beaten:/.test(html));
 chk('a crash is a SOFT BOUNCE, never a fail state', /soft bounce/.test(html) && !/game over/i.test(html) && !/you lose/i.test(html));
 chk('three worlds are declared in the engine', /sunny-islands/.test(html) && /snowy-peaks/.test(html) && /sunset-canyon/.test(html));
-chk('three rides are declared in the engine (the hangar)', /RIDES=\[/.test(html) && (html.match(/id:"(puffin|copter|jetpack)"/g)||[]).length===3);
+// FL6 rewrote this rather than deleting it: TRANSFORMS also carries id:"puffin",
+// so counting ids across the whole file now finds four and would have passed on
+// a hangar that had lost a ride. Count inside the RIDES block only.
+const RIDES_SRC = html.slice(html.indexOf('var RIDES=['), html.indexOf('var ride=RIDES['));
+chk('three rides are declared in the engine (the hangar)',
+  /var RIDES=\[/.test(html) && (RIDES_SRC.match(/id:"(puffin|copter|jetpack)"/g)||[]).length===3,
+  (RIDES_SRC.match(/id:"[a-z]+"/g)||[]).join(' '));
 chk('each ride has its own body builder, not one mesh recoloured',
   /function buildPlane\(/.test(html) && /function buildCopter\(/.test(html) && /function buildJetpack\(/.test(html));
 chk('each ride animates its own moving parts (propeller / rotors / jet flames)',
   /rideAnim\(dt,S\.mode,time\)/.test(html) && /rotor\.rotation\.y/.test(html) && /flameMat/.test(html));
-chk('the ride drives the FEEL (turn, lean, bob), read from the ride not hardcoded',
-  /S\.dx\*ride\.turn/.test(html) && /-S\.dx\*ride\.bankAmt/.test(html) && /Math\.sin\(time\*ride\.bobRate\)\*ride\.bob/.test(html));
-chk('the autopilot turn circle follows the ride (a copter cuts inside a jetpack)',
-  /TURN_R=46\*\(\(ride\.speed\/ride\.turn\)\/20\)/.test(html));
+// FL6: the five feel numbers are now read through FEEL_NOW, which IS the ride
+// until a quest lends you a body. Rewritten to pin the new name AND to prove the
+// flight model no longer reads `ride` directly — if it did, a transform would be
+// a costume with the plane's handling underneath it.
+chk('the ride drives the FEEL (turn, lean, bob), read from what is flying, not hardcoded',
+  /S\.dx\*FEEL_NOW\.turn/.test(html) && /-S\.dx\*FEEL_NOW\.bankAmt/.test(html) &&
+  /Math\.sin\(time\*FEEL_NOW\.bobRate\)\*FEEL_NOW\.bob/.test(html) &&
+  /var FEEL_NOW=ride;/.test(html));
+chk('...and the flight model reads NOTHING off `ride` any more (or a body swap is a costume)',
+  (function(){ const step = html.slice(html.indexOf('function stepSim(dt){'), html.indexOf('updateChunks(S.pos.x,S.pos.z);'));
+    return !/\bride\.(speed|turn|bankAmt|pitchAmt|bob|bobRate)\b/.test(step); })());
+chk('the autopilot turn circle follows what is flying (a copter cuts inside a jetpack)',
+  /function turnR\(\)\{ return 46\*\(\(FEEL_NOW\.speed\/FEEL_NOW\.turn\)\/20\); \}/.test(html));
 chk('the engine names the ride on screen (pick your ride, before takeoff)',
   /rideNameEl\.textContent=ride\.name/.test(html) && /function showRideName\(/.test(html));
 chk('the engine still never learns a price (the shell owns the wallet)',
@@ -166,6 +181,11 @@ chk('every badge the manifest asks for has a prompt in the art library',
 // ---------------------------------------------------------------------------
 console.log('--- FL5: missions mode, aircraft jobs, no fail state ---');
 const JOB_IDS = ['mail-run','supply-drop','lost-explorer','lantern-lighter'];
+// FL6: a transform quest is a job with a body, so it lives in the same table and
+// is proved by the same harness. Kept as its own list only because the extra
+// things worth checking about one (the body, the feel swap, the gathering flow)
+// do not apply to a plain job.
+const QUEST_IDS = ['busy-bee','puffin-parent','hummingbird-hover'];
 chk('a job is something you FIND: its start point stands in the world under a beam',
   /function showScouts\(/.test(html) && /function buildScoutFor\(/.test(html) && /function jobStartPoint\(/.test(html));
 chk('nothing starts without a tap - swooping over one only ASKS',
@@ -234,6 +254,110 @@ chk('no emojis anywhere in the jobs', !emoji.test(mText) && !emoji.test(html));
 // ---------------------------------------------------------------------------
 // 2d) FL5b MISSIONS A NON-READER CAN PLAY — pictures instead of words
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  FL6 STATIC — the transform bodies and the quests that lend them out
+// ---------------------------------------------------------------------------
+console.log('--- FL6: transform quests (a body + a recipe) ---');
+chk('three bodies are declared, separately from the three rides',
+  /var TRANSFORMS=\[/.test(html) &&
+  (function(){ const T = html.slice(html.indexOf('var TRANSFORMS=['), html.indexOf('function findTransform('));
+    return ['bee','puffin','hummingbird'].every(id=>new RegExp('id:"'+id+'"').test(T)); })());
+chk('a body signs the SAME FL3 contract a ride does (a look plus a feel, never power)',
+  (function(){ const T = html.slice(html.indexOf('var TRANSFORMS=['), html.indexOf('function findTransform('));
+    return ['speed','turn','bankAmt','pitchAmt','bob','bobRate'].every(k=>
+      (T.match(new RegExp(k+':','g'))||[]).length === 3); })());
+chk('no body is THE good body: the fast one turns wide and the nimble one is slow',
+  (function(){ const T = html.slice(html.indexOf('var TRANSFORMS=['), html.indexOf('function findTransform('));
+    const sp = (T.match(/speed:(\d+)/g)||[]).map(x=>+x.split(':')[1]);
+    const tn = (T.match(/turn:([\d.]+)/g)||[]).map(x=>+x.split(':')[1]);
+    if (sp.length!==3) return false;
+    const fast = sp.indexOf(Math.max(...sp)), nimble = tn.indexOf(Math.max(...tn));
+    return fast !== nimble; })());
+// AR1R's lesson, made a rule: a bird a kid is INSIDE, seen from an arm's length
+// behind, cannot be four vertices in a V. These are real models.
+chk('the bodies are REAL MODELS out of the animal library, not primitives in a V',
+  fs.existsSync(dir+'/public/models/skyflyer/animals/flyer-bodies.glb') &&
+  /TB_URL="\/models\/skyflyer\/animals\/flyer-bodies\.glb"/.test(html) &&
+  /model:"Bee"/.test(html) && /model:"Hummingbird"/.test(html) && /model:"Gull"/.test(html));
+chk('...and the little glb really carries Bee, Hummingbird and Gull with COLOR_0 on each',
+  (function(){
+    const d = fs.readFileSync(dir+'/public/models/skyflyer/animals/flyer-bodies.glb');
+    const len = d.readUInt32LE(12);
+    const j = JSON.parse(d.subarray(20, 20+len).toString('utf8'));
+    const names = j.nodes.map(n=>n.name);
+    const everyPrimHasColour = j.meshes.every(m=>m.primitives.every(p=>p.attributes.COLOR_0!=null));
+    return ['Bee','Hummingbird','Gull'].every(n=>names.includes(n)) && everyPrimHasColour &&
+      d.length < 400000;              // a body kit, never the 12.8MB library
+  })(),
+  (fs.statSync(dir+'/public/models/skyflyer/animals/flyer-bodies.glb').size/1024).toFixed(0)+'KB');
+chk('the cut is a script in the repo, so the next body is one command away',
+  fs.existsSync(dir+'/scripts/cut-animal-subset.mjs') &&
+  /COLOR_0/.test(read('scripts/cut-animal-subset.mjs')));
+chk('the wingbeat is written in CODE, because nothing in the file has a bone',
+  /function tbRig\(mesh\)/.test(html) && /function tbBeat\(R,amp,t\)/.test(html) &&
+  /if\(TB_ANIM\) TB_ANIM\(dt,S\.mode,time\)/.test(html));
+chk('...and the body gets its OWN geometry, or every bee in the world flaps with it',
+  /flat\.geometry=flat\.geometry\.clone\(\);/.test(html));
+chk('the fast wings wear a blur, the way the propeller does (50 beats a second cannot be drawn)',
+  /function tbBlur\(/.test(html) && /blur:true/.test(html) && /blur:false/.test(html));
+chk('there is no puffin in the library, so the gull is REPAINTED into one and given the beak',
+  /function tbRepaint\(mesh,rule\)/.test(html) && /rule!=="puffin"/.test(html) &&
+  /puffinBeak/.test(html) && /function tbExtras\(kind,D\)/.test(html) &&
+  /function tbShortenWings\(geo,amount\)/.test(html) && /wingShort:0\.45/.test(html));
+// The trap this cost an afternoon to find: everything bolted on used to be sized
+// off the model's LONGEST dimension, which on a bird IS THE WINGSPAN, so the
+// beak came out floating a wingspan in front of the face.
+chk('...and a beak, a scarf and a wing blur are all sized off the BODY, never the wingspan',
+  /wrap\.userData\.dims=\{/.test(html) &&
+  (function(){ const parts = html.slice(html.indexOf('function tbExtras(kind,D){'), html.indexOf('function tbRig(mesh){'));
+    return /D\.lenZ/.test(parts) && !/D\.halfX/.test(parts.slice(0, parts.indexOf('function tbBlur'))); })());
+chk('the kid\'s own ride is still on show under the feathers (its palette slots come along)',
+  /function tbTrim\(D\)/.test(html) && /color:ride\.body/.test(html) && /color:ride\.trim/.test(html));
+chk('what you are carrying is scaled to the BODY, not left at aeroplane size',
+  /cargoGroup\.scale\.setScalar\(k\);/.test(html) && /var k=t\.size\/10;/.test(html) &&
+  /cargoAt:\[2\.6,1\.9\]/.test(html));    // the puffin's row of fish rides in the beak
+chk('the creature on the GO pill is drawn SIDE ON, like every ride glyph beside it',
+  (function(){ const g = html.slice(html.indexOf('function icoCreature(n,glyph){'), html.indexOf('function icoGo(n,m){'));
+    return /viewBox="0 0 50 31"/.test(g) && (g.match(/viewBox="0 0 50 31"/g)||[]).length===3; })());
+chk('the ride is HIDDEN, never rebuilt, so leaving and rejoining a quest costs nothing',
+  /var RIDE_PARTS=plane\.children\.slice\(\);/.test(html) &&
+  /RIDE_PARTS\[i\]\.visible=false/.test(html) && /RIDE_PARTS\[i\]\.visible=true/.test(html));
+
+chk('all three transform quests are declared as recipes', QUEST_IDS.every(id=>new RegExp('id:"'+id+'"').test(html)), QUEST_IDS.join(', '));
+chk('each one lends a body, and the body it names really exists',
+  (function(){ const M = html.slice(html.indexOf('var MISSIONS=['), html.indexOf('function pickWorld('));
+    return /transform:"bee"/.test(M) && /transform:"puffin"/.test(M) && /transform:"hummingbird"/.test(M); })());
+chk('a quest is FOUND exactly like a job: a beam, and a LOW SWOOP, never a landing',
+  /function scoutColor\(m\)/.test(html) && /if\(m\.transform\) return 0x9B7BE8;/.test(html) &&
+  // the offer still comes from the same scoutStep that has always run on radius
+  // plus ceiling, and nothing anywhere waits for S.mode==="landed" to offer
+  /d>\(m\.radius\+10\)\|\|S\.pos\.y>\(m\.ceiling\+25\)/.test(html) &&
+  !/mode==="landed"[^\n]*openOffer/.test(html));
+chk('THE FL5 LAW STILL HOLDS: nothing in a quest can be failed, run out or expire',
+  (function(){ const g = html.slice(html.indexOf('function gatherStep(dt,px,pz,py){'), html.indexOf('//  FL5 — JOBS ARE THINGS YOU FIND'));
+    return !/timer|expire|lives|fail|lose|penalt/i.test(g); })());
+chk('a gathering quest runs the OTHER WAY ROUND: many to collect from, one to go home to',
+  /function gatherStep\(dt,px,pz,py\)/.test(html) && /function gatherFrom\(i\)/.test(html) &&
+  /function dropLoad\(\)/.test(html) && /if\(JOB\.gather\)\{ gatherStep\(dt,px,pz,py\); return; \}/.test(html));
+chk('...and a delivery and a pick-up share ONE piece of code for going green',
+  /function markStop\(i\)/.test(html) &&
+  (html.match(/markStop\(i\);/g)||[]).length === 2);
+chk('THE FL5b LAW HOLDS FOR THE NEW ART TOO: no drawing anywhere knows a quest by name',
+  !new RegExp('(' + QUEST_IDS.join('|') + ')').test(
+    html.slice(html.indexOf('var ICON_FILL='), html.indexOf('function saySplit('))));
+chk('the five new places are STYLES, drawn once and used by the picture and the world',
+  ['bFlower','bCactusFlower','bFish','bHive','bNest'].every(f=>new RegExp('function '+f+'\\(').test(html)) &&
+  /function styleBody\(style\)/.test(html) &&
+  ['flower','cactusflower','fish','hive','nest'].every(st=>
+    new RegExp('style==="'+st+'"').test(html.slice(html.indexOf('function styleBody(style){')))));
+chk('the manifest can edit a quest too (a hive is a slot, not a number in the code)',
+  /"transform","gather","dropStyle","dropVerb"/.test(html) &&
+  /if\(edit\.dropAt&&typeof edit\.dropAt\.x==="number"\) m\.dropAt=edit\.dropAt;/.test(html) &&
+  /if\(m\.transform&&!findTransform\(m\.transform\)\) m\.transform=null;/.test(html));
+chk('THE SPACING RULE is a number in the engine, not a good intention in a comment',
+  /var BEAM_GAP=240;/.test(html) && /function beamSpacing\(\)/.test(html) &&
+  /marker\(built,scoutColor\(m\),220,hasBadge\(m\.id\)\)/.test(html));
+
 console.log('--- FL5b: a job a four year old can answer, follow and find ---');
 // AR1R — REWRITTEN, NOT DELETED. This used to pin the FL5b/FL5c bottom sheet:
 // align-items:flex-end, full width, square corners at the sides. Mike measured
@@ -288,9 +412,17 @@ chk('NOTHING on the offer is red - saying no is free and must not look like a mi
          return !/#e8552f|#ff8a75|#b93b1b|#FF5A3C/i.test(card); })());
 chk('saying no is a drifting cloud, which is what "not now" actually is here',
   /function icoCloud\(/.test(html) && /ofCloudEl\.innerHTML=icoCloud\(/.test(html));
+// FL6: the pill still carries the kid's own ride, UNLESS the offer is going to
+// lend them a body — in which case it has to show the creature, because that is
+// what they are actually saying yes to. One dispatch, icoGo, and it is keyed off
+// the BODY (per glyph) and never off a quest id.
 chk('the go pill carries THE RIDE THE KID PICKED, drawn from ride.build',
   /function icoRide\(/.test(html) && /ride\.build==="copter"/.test(html) &&
-  /ride\.build==="jetpack"/.test(html) && /ofRideEl\.innerHTML=icoRide\(/.test(html));
+  /ride\.build==="jetpack"/.test(html) && /ofRideEl\.innerHTML=icoGo\(44,m\)/.test(html) &&
+  /return t\?icoCreature\(n,t\.glyph\):icoRide\(n\);/.test(html));
+chk('...and a quest that lends you a body puts THAT on the pill instead',
+  /function icoCreature\(n,glyph\)/.test(html) && /glyph==="bee"/.test(html) &&
+  /glyph==="hummingbird"/.test(html));
 chk('WHAT YOU GET is on the offer now: the coins and the sticker still to win',
   /id="ofReward"/.test(html) && /function icoCoin\(/.test(html) && /function icoSticker\(/.test(html) &&
   /icoSticker\(36,hasBadge\(m\.id\)\)/.test(html) && /\+'\+m\.coins\+'/.test(html));
@@ -314,10 +446,26 @@ chk('THE FL5b LAW: no icon is drawn per job - every picture comes out of the rec
   // not one mention of a job id anywhere in the drawing code
   !/(mail-run|supply-drop|lost-explorer|lantern-lighter)/.test(
     html.slice(html.indexOf('var ICON_FILL='), html.indexOf('function saySplit('))));
+// FL6 fixed a check that could not fail: it sliced from jobScene FORWARD to
+// SCENE_F, which is declared BEFORE it, so the slice was the empty string and
+// that clause was always false-y in a way that happened to still pass. Sliced
+// properly now, and extended to the gathering picture.
 chk('the offer shows the job as ONE picture: a little MAP of it, built from the recipe',
-  /function jobScene\(m,W,H\)/.test(html) && /ofSceneEl\.innerHTML=jobScene\(m,/.test(html) &&
-  /m\.targets\.length/.test(html.slice(html.indexOf('function jobScene('), html.indexOf('var SCENE_F=')+4000)) &&
-  /m\.depot\?bDock\(/.test(html) && /targetBody\(m\.style,SCENE_F,SCENE_S,false\)/.test(html));
+  (function(){ const scene = html.slice(html.indexOf('function jobScene(m,W,H){'),
+                                        html.indexOf('// ---- recipe -> picture.'));
+    return /function jobScene\(m,W,H\)/.test(html) && /ofSceneEl\.innerHTML=jobScene\(m,/.test(html) &&
+      /m\.targets\.length/.test(scene) && /m\.depot\?bDock\(/.test(scene) &&
+      /targetBody\(m\.style,SCENE_F,SCENE_S,false\)/.test(scene); })());
+chk('FL6: a gathering quest draws the OTHER WAY ROUND - the many left, the one place right',
+  (function(){ const g = html.slice(html.indexOf('function gatherScene(m,W,H){'),
+                                    html.indexOf('function jobScene(m,W,H){'));
+    return /if\(m\.gather&&m\.dropAt\) return gatherScene\(m,W,H\);/.test(html) &&
+      /targetBody\(m\.dropStyle\|\|"hive",SCENE_F,SCENE_S,false\)/.test(g) &&
+      /jobScene\.last=\{x0:lastT\+4,x1:sx-12/.test(g) &&        // pollen flies flower -> hive
+      !/(busy-bee|puffin-parent|hummingbird)/.test(g); })());
+chk('...and both pictures share ONE sky, so they cannot drift apart',
+  /function sceneSky\(W,H,hz,R\)/.test(html) &&
+  (html.match(/sceneSky\(W,H,hz,R\)/g)||[]).length===3);
 chk('the band and the progress chip share ONE source of art (a body per shape)',
   ['bHouse','bAnimal','bFlare','bLantern','bDock'].every(f=>new RegExp('function '+f+'\\(').test(html)) &&
   /function targetBody\(style,f,s,d,post\)/.test(html) &&
@@ -861,7 +1009,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as AR1R', w4.SKY.version === 'AR1R', w4.SKY.version);
+    chk('engine reports itself as FL6', w4.SKY.version === 'FL6', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();
@@ -995,8 +1143,12 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
     chk('arriving at a stop asks a kid nothing at all - they are just flying',
       wk.SKY.mode()==='free' && wk.SKY.offer().up===false && wk.SKY.state.picking===false);
     const sc = wk.SKY.scouts();
-    chk('this world\'s job is standing out there waiting to be found',
-      sc.length===1 && sc[0].id==='mail-run' && sc[0].x===0 && sc[0].z===-190, JSON.stringify(sc));
+    // FL6: this stop now has THREE things standing out there, not one — the mail
+    // dock, the hive and the cliff nest — so the check moved from "is it the one"
+    // to "is it among them, and are they far enough apart to not be an airport".
+    chk('this world\'s jobs are standing out there waiting to be found',
+      sc.length===3 && sc.some(s=>s.id==='mail-run'&&s.x===0&&s.z===-190) &&
+      sc.some(s=>s.id==='busy-bee') && sc.some(s=>s.id==='puffin-parent'), JSON.stringify(sc));
     // fly straight at it, the way a kid who spotted the beam would
     const S = wk.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
     let t=0, seen=null;
@@ -1023,7 +1175,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
     chk('leaving a job halfway is one tap and goes back to flying',
       partway.done>0 && wa.SKY.leaveJob()===true && wa.SKY.mode()==='free',
       'left at '+partway.done+'/'+partway.of);
-    chk('and the job goes back out into the world to be found again', wa.SKY.scouts().length===1);
+    chk('and the job goes back out into the world to be found again', wa.SKY.scouts().length===3);
     wa.SKY.startMission('mail-run');
     chk('coming back to it later starts fresh, as agreed', wa.SKY.job().done===0 && wa.SKY.job().carrying===0);
     wa.close();
@@ -1295,6 +1447,116 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
       wide && tight && wide.secs > tight.secs,
       times.map(x=>x.name+' turn circle '+x.circle.toFixed(0)+' -> '+x.secs.toFixed(0)+'s').join('  |  '));
   }
+
+// ------------------------------------------------------------------
+//  FL6 — TRANSFORM QUESTS. A quest is a body plus a recipe, so it gets
+//  proved in both halves: the STATIC half checks the body really is a real
+//  model wired to the FL3 contract, and the LIVE half flies all three with
+//  the robot and then leaves one halfway to prove the ride comes back.
+// ------------------------------------------------------------------
+console.log('--- FL6 LIVE: the robot flies all three transform quests ---');
+{
+  const QUEST_WORLD = { 'busy-bee':0, 'puffin-parent':0, 'hummingbird-hover':2 };
+  for (const id of QUEST_IDS) {
+    const dq = fly(QUEST_WORLD[id], '&auto=1'); const wq = dq.window;
+    if (!wq.SKY) { chk('quest '+id+' booted', false, 'no SKY handle'); continue; }
+    const before = wq.SKY.flying();
+    chk('quest "'+id+'" starts from the mission engine',
+      wq.SKY.startMission(id) === true && wq.SKY.mode() === 'job');
+    const recipe = wq.SKY.mission(), body = wq.SKY.flying();
+    // THE BODY SWAP IS A FEEL SWAP, not a costume: if these numbers were still
+    // the plane's, a kid would be flying an aeroplane wearing a bee.
+    chk('quest "'+recipe.name+'" LENDS you a body, and its feel comes with it',
+      body.isTransform === true && body.id === recipe.transform &&
+      body.feel.speed !== before.feel.speed && body.feel.turn !== before.feel.turn,
+      before.name+' (turns in '+before.feel.circle+') -> '+body.name+' (turns in '+body.feel.circle+')');
+    chk('...and the chase camera comes in close enough to see it',
+      body.feel.camBack < before.feel.camBack, before.feel.camBack+' -> '+body.feel.camBack+' units back');
+    let t = 0;
+    for (; t < JOB_MAX; t++) { wq.SKY.tick(1/30); if (wq.SKY.job().complete) break; }
+    const j = wq.SKY.job();
+    chk('quest "'+recipe.name+'" FINISHED by autopilot', j.complete,
+      j.done+'/'+j.of+' in '+(t/30).toFixed(0)+'s of flight');
+    chk('quest "'+recipe.name+'" is about a minute of flying, not ten', (t/30) < 150, (t/30).toFixed(0)+'s');
+    chk('quest "'+recipe.name+'" paid into the ONE shared wallet',
+      j.paid === recipe.coins && wq.BuildableWallet.balance() >= recipe.coins,
+      '+'+j.paid+' -> wallet '+wq.BuildableWallet.balance());
+    chk('quest "'+recipe.name+'" left a badge sticker behind', wq.SKY.badges()[id] === true, recipe.badge);
+    chk('quest "'+recipe.name+'" ends on ONE TRUE FUN FACT', j.factUp === true && recipe.fact.length > 60);
+    // and everything a gathering quest picked up really did get home
+    if (recipe.gather) {
+      const g = wq.SKY.gather();
+      chk('gathering quest "'+recipe.name+'" took every last one home to the '+recipe.dropAt.label,
+        g.on && g.picked === g.stops && g.banked === g.stops && g.carrying === 0,
+        'picked '+g.picked+'/'+g.stops+', banked '+g.banked+', still holding '+g.carrying);
+    }
+    wq.close();
+  }
+}
+{
+  // LEAVING IS FREE, AND YOU GET YOUR OWN RIDE BACK. The one thing that would
+  // really hurt is a kid stuck as a bee on the way home from a quest they left.
+  const dl = fly(0, '&auto=1'); const wl = dl.window;
+  wl.SKY.startMission('busy-bee');
+  for (let k=0;k<600;k++) wl.SKY.tick(1/30);
+  const mid = wl.SKY.job(), asBee = wl.SKY.flying();
+  chk('a quest can be left halfway, exactly like a job', mid.done > 0 && wl.SKY.leaveJob() === true);
+  const after = wl.SKY.flying();
+  chk('...and you get YOUR OWN RIDE back the moment you do',
+    asBee.isTransform === true && after.isTransform === false &&
+    after.id === wl.SKY.ride.id && after.ridePartsHidden === 0,
+    asBee.name+' -> '+after.name);
+  chk('coming back to it later starts fresh, as agreed',
+    wl.SKY.startMission('busy-bee') === true && wl.SKY.gather().picked === 0 && wl.SKY.gather().carrying === 0);
+  // LANDING MUST NEVER GATE A QUEST. It is how coins are banked and it has to
+  // stay exactly what it has always been. The autopilot is switched OFF for this
+  // one, because on a quest the robot flies the QUEST — which is itself the
+  // proof that a quest never sends a kid to a pad to get on with it.
+  const S = wl.SKY.state;
+  const pad = wl.SKY.pads[0];
+  wl.SKY.autopilot(false);
+  S.pos.x = pad.x; S.pos.z = pad.z; S.pos.y = 12; S.coins = 5; S.dx = 0; S.dy = 0;
+  const wallet0 = wl.BuildableWallet.balance();
+  let landed = false;
+  for (let k=0;k<900;k++){
+    S.pos.x = pad.x; S.pos.z = pad.z;            // hold it over the pad, as a finger would
+    wl.SKY.tick(1/30);
+    if (S.mode === 'landed'){ landed = true; break; }
+  }
+  chk('you can still land and bank coins in the middle of a quest',
+    landed && wl.SKY.mode() === 'job' && wl.BuildableWallet.balance() > wallet0,
+    landed ? ('landed as a bee, +'+(wl.BuildableWallet.balance()-wallet0)+' banked, quest still on')
+           : 'never reached a pad');
+  chk('...and the quest is still running when you take off again', wl.SKY.job().complete === false);
+  wl.close();
+}
+{
+  // THE SPACING RULE, measured in every world rather than promised in a comment.
+  for (let i=0;i<3;i++){
+    const ds = flyKid(i, ''); const ws = ds.window;
+    const sp = ws.SKY.spacing();
+    chk('world '+i+' ('+ws.SKY.world.name+') is not an airport: every beam stands well clear',
+      sp.ok, sp.beams+' beams, closest pair '+sp.min+' units apart (rule: '+sp.gap+')');
+    ws.close();
+  }
+  // and a beam over something already earned STOPS SHOUTING, so the sky thins
+  // out as a kid works through a stop
+  const dd = flyKid(0, ''); const wd = dd.window;
+  const bright = wd.SKY.beams();
+  wd.SKY.startMission('busy-bee'); wd.SKY.autopilot(true);
+  for (let k=0;k<JOB_MAX;k++){ wd.SKY.tick(1/30); if (wd.SKY.job().complete) break; }
+  wd.SKY.endMission();
+  const after = wd.SKY.beams();
+  const beeBefore = bright.find(b=>b.id==='busy-bee'), beeAfter = after.find(b=>b.id==='busy-bee');
+  const otherAfter = after.find(b=>b.id==='mail-run');
+  chk('a beam over something already done goes dim, so the sky thins out',
+    beeBefore && beeAfter && beeBefore.dim === false && beeAfter.dim === true &&
+    beeAfter.beamH < beeBefore.beamH && beeAfter.opacity < beeBefore.opacity,
+    beeBefore ? (beeBefore.beamH+'u at '+beeBefore.opacity+' -> '+beeAfter.beamH+'u at '+beeAfter.opacity) : 'no bee beam');
+  chk('...and the ones still to do are as bright as they ever were',
+    otherAfter && otherAfter.dim === false, otherAfter ? 'mail-run still full height' : 'mail-run beam missing');
+  wd.close();
+}
 }
 
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
