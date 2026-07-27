@@ -1,5 +1,110 @@
 # Buildable Kids — Session Log
 
+## 2026-07-27: Session RP3 — richer layouts for the other seven photo books
+
+Phase RP, session 3 of 7. RP1 built the composed page and piloted it on Trains;
+RP2 gave Trains its real art. RP3 converts the seven remaining books that already
+have photos. **Eight of the twenty books are now on the richer page.**
+
+### What shipped
+`2efaf9a` template + QA · `c767b57` the seven books · `016da5a` screenshot pass +
+fact-check.
+
+**A fifth layout.** Reading all 28 pages, six of them are really about HOW TALL a
+thing is — the saguaro, the waterfall, the seedling, the classroom skeleton, the
+crane that grows, a hanging tapestry, the Sphinx. None of RP1's four layouts fitted
+any of them, so Mike approved a fifth: `tall` is a standing photo (4/5) with a
+height ruler measured down its side, a drawn kid standing at the foot of the ruler
+for scale, and the giant stat reading as the height.
+
+**Layouts chosen per page, not per book.** A book repeats a layout where repeating
+is honest (two close-ups in Deserts, because the horned lizard page and the oasis
+page are both about small things you have to lean in to see):
+
+| Book | p1 | p2 | p3 | p4 |
+|---|---|---|---|---|
+| Deserts | tall (40 ft) | long | close-up | close-up |
+| Rainforest | long | tall | close-up | speed (3) |
+| How Plants Grow | close-up | tall | close-up | long |
+| Your Body | close-up | tall (206) | long | close-up |
+| Diggers | long | tall | speed (25) | close-up |
+| Castles and Knights | close-up | long | then-now (1240) | tall |
+| Ancient Egypt | tall (66) | close-up | long | then-now (1922) |
+
+**A book paints its own charts now.** The drawn glyphs, the bar fill and the Wow
+border were all hardcoded to the Trains blue, which put a blue camel on a gold
+desert page. `--book` is set once from the `shelfColor` the book already declares.
+`tone: "book"` is the new alias; `tone: "blue"` still works, so Trains renders
+byte-identically (its shelf colour IS that blue — checked by re-rendering it).
+
+**56 new glyphs, 4 new diagrams.** The diagrams are for the four pages where the
+picture is the lesson and a bar chart would only restate the sentence above it:
+`pupil-light` (the same eye in bright light and in a dim room), `leaf-factory`
+(what goes into a leaf and what comes out), `root-hairs` (one root tip blown up
+huge), `nile-flood` (a slice through the valley: river, silt, fields, desert).
+
+### The screenshot law earned its keep again
+QA passed the entire time these six were live. All 28 pages were rendered headless
+at phone 390x844, iPad 900x1200 and landscape phone 844x390 and looked at.
+
+1. **The scale kid stood exactly where the painted page title lives** — on all
+   seven tall pages at once. `.painted` is bottom-aligned with 16px of padding and
+   the kid was at `bottom:3.5%`. It now stands at the FOOT OF THE RULER
+   (`bottom: calc(22% - 30px)`), not the foot of the photo.
+2. **White ruler ticks vanished on a bright photo.** The classroom-skeleton page is
+   nearly white; the ticks disappeared into it. They carry a dark hairline
+   (`box-shadow: 0 0 0 1px`) plus a deeper shadow now.
+3. **A `diagram` chart kept the default gold border** while its compare and timeline
+   neighbours went book-coloured, so two pages in a row looked mismatched. The
+   `C()` helper was skipping `tone` for diagrams.
+4. **"3 / MILES YOU CAN HEAR IT" crowded the frame edge.** A giant stat's unit line
+   is one short phrase, not a sentence. Now "3 / MILES AWAY".
+5. **The nile-flood diagram's silt caption ran off the right of the card** (it was
+   left-anchored at x=72 in a 320-wide box) and its sun was a bare gold dot.
+6. **Nine glyphs read as the wrong object at chip size.** `armor` and `helmet` were
+   the same pill; `drum` read as a cancel X; `scroll` and `ledge` were unreadable
+   L-shapes; `crane` was a bare T with no hook; `toucanhead` and `sunflower` were
+   too small to see; `field` is now green like the football fields it echoes.
+
+### Fact-check
+- **NASA crawler-transporter**: the NASA fact sheet says 6.65 million lb *and makes
+  the 15-Statues-of-Liberty comparison itself*, so about 3,300 tons and about 225
+  tons each. Both confirmed. It also confirms the 1 mph loaded speed already in the
+  book.
+- **Saguaro**: NPS says "commonly reaching 40 feet", first arms at 50-70 years,
+  150-175 year life. All three confirmed against the page the book already cites.
+- **Sphinx**: 73 m (240 ft) long, 20 m (66 ft) high. The converted text said "more
+  than 240 feet", which claims more than the source — corrected to "about 240 feet"
+  in the fact and in the chart.
+- **Tower of London moat**: "at least 50 m" is 164 ft, so "at least 165 feet" also
+  overclaimed. Corrected to "about 165 feet" in both places.
+- Everyday comparators (a front door, a school bus, a bathtub, a backpack) are
+  labelled as everyday sizes in every chart caption, the way RP1 did it.
+
+### Traps worth remembering
+- **Never rename a page id.** A blanket `armour → armor` regex on
+  `castles-knights.json` renamed the page id, its `factAudio` and its quiz id.
+  Dog-ears are keyed on the page id. Caught and reverted; the id is still `armour`
+  even though every word of the text now says armor.
+- **`Royal Armouries` is a museum, not a spelling mistake.** The BRITISH regex uses
+  `\barmour\b`, so `Armouries` does not match — but a plain string replace would
+  have mangled it.
+- **The QA DOM stub had `style: {}`** with no `setProperty`, so the moment the
+  template set a CSS variable every book threw. The stub now records what was set,
+  which turned an accommodation into a real assertion about the book colour.
+
+### What remains in phase RP
+- **RP4** — the 56 fact photos these seven still need. `kidspedia-rp4-art-list.md`
+  lists every filename with the crop shape its slot demands, plus 42 optional chart
+  chips.
+- **RP5** — the 12 books with no photos at all.
+- **RP6** — fact-check every chart number across all 20 and flip live.
+- **RP7** — real narration audio.
+
+### QA
+`node qa-topic.mjs` — ALL CHECKS PASS (8 books converted). `node qa-kidspedia.mjs`
+— ALL CHECKS PASS. No game engine was touched this session.
+
 ## 2026-07-27: Session AR1R — the triangle birds go, the mission card becomes a pop-up
 
 Two things Mike asked for after playing the live AR1Q build. Sunny Islands and

@@ -6,6 +6,42 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## RP3 — the other seven photo books get richer pages (July 27 2026)
+
+Deserts, Rainforest, How Plants Grow, Your Body, Diggers, Castles and Knights and
+Ancient Egypt now use the composed page that Trains piloted in RP1: every fact on
+screen at once with its own picture, its own source and its own round speaker,
+then a picture-first Wow chart. Eight of the twenty books are now converted.
+
+**A fifth layout, `tall`.** Six pages across four books are really about how tall
+a thing is, and none of RP1's four layouts fitted. `tall` is a standing photo with
+a height ruler measured down its side, a drawn kid at the foot of the ruler for
+scale, and the giant stat reading as the height. Layout choices per page are in
+`SESSION-LOG.md`.
+
+**Charts paint in the book's own colour.** `--book` is set from the `shelfColor`
+each book already declares, so glyphs, bar fills and the Wow border stop being
+Trains blue on a gold desert page. `tone: "book"` is the new alias for `tone:
+"blue"`. Trains is byte-identical because its shelf colour is that blue.
+
+**56 new drawn glyphs and 4 new diagrams** (`pupil-light`, `leaf-factory`,
+`root-hairs`, `nile-flood`) — silhouettes and drawn pictures only, never emoji.
+
+**US units everywhere in the seven**: 12 m saguaro to 40 ft, 145 L camel drink to
+38 gal, 400 tonnes to 440 tons, 8 m / 20 m mining truck to 26 ft / 65 ft, 20-25 kg
+armour to 45-55 lb, 50 m moat to about 165 ft, 20 m / 70 m Sphinx to 66 ft /
+about 240 ft. British spellings gone. Page ids, factAudio ids and quiz ids are
+untouched — dog-ears key on them.
+
+`qa-topic.mjs` now fails on an unknown glyph name (it used to fall back silently to
+the train), on tonnes/km/litres, and on more British spellings; its DOM stub gained
+`documentElement` so the book colour is a real assertion. `qa-topic` and
+`qa-kidspedia` both pass.
+
+**Still stand-ins.** No fact photos exist yet for these seven — every fact after
+the first shows a detail crop of its page photo. `kidspedia-rp4-art-list.md` lists
+the 56 photos RP4 needs, with the crop shape each slot demands.
+
 ## AR1R — the triangle birds go, the mission card becomes a pop-up (July 27 2026)
 `public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`,
 `qa-skyflyer-look.mjs`. Sunny Islands and the Sky Flyer shell only.
