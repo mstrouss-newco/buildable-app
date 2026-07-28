@@ -863,6 +863,44 @@ chk('FL8b: the halo went WIDE AND FAINT - same light, spread out',
   /var GA=world\.sunGlowStrength!=null\?world\.sunGlowStrength:0\.50;/.test(html) &&
   /var GS=world\.sunGlowSize!=null\?world\.sunGlowSize:320;/.test(html) &&
   /new THREE\.PlaneGeometry\(GS,GS\)/.test(html));
+// ==========================================================================
+//  FL8c - THE SEA GETS DEPTH. Same complaint as the sky, other half of the
+//  screen. The colour has to live in the VERTICES because a multiply map can
+//  only darken (look rule 9) and a shallow has to be BRIGHTER than the sea.
+// ==========================================================================
+chk('FL8c: the sea colour lives in the VERTICES, and the material is held WHITE',
+  /M\.ground\.vertexColors=true/.test(html) &&
+  /groundGeo\.setAttribute\("color"/.test(html) &&
+  /M\.ground\.color\.setHex\(0xFFFFFF\)/.test(html));
+// The trap that cost a render: applyPalette writes the sea colour back onto the
+// MATERIAL about a second after load, and material x vertex multiplies the sea
+// by itself. If this guard goes, the whole ocean turns navy on the live site
+// and looks fine in every screenshot taken before the manifest lands.
+chk('FL8c: the double-multiply guard is there (material x vertex = navy ocean)',
+  /if\(M\.ground\.color\.getHex\(\)!==0xFFFFFF\)\{/.test(html) &&
+  /seaRange\(M\.ground\.color\.getHex\(\)\)/.test(html));
+chk('FL8c: the manifest still owns the sea - every shade is derived from ONE slot',
+  /function seaRange\(midHex\)\{/.test(html) &&
+  /SEA_MID\.getHSL\(h\)/.test(html) &&
+  /SEA_DEEP\.setHSL\(/.test(html) && /SEA_SHAL\.setHSL\(/.test(html) &&
+  /seaRange\(world\.ground\)/.test(html) &&
+  /world\.seaDeep!=null/.test(html) && /world\.seaShallow!=null/.test(html));
+chk('FL8c: the range goes BOTH WAYS round the manifest colour, or the sea goes navy',
+  /if\(n<0\.5\) _seaC\.copy\(SEA_DEEP\)\.lerp\(SEA_MID,n\*2\);/.test(html) &&
+  /else\s+_seaC\.copy\(SEA_MID\)\.lerp\(SEA_LIGHT,\(n-0\.5\)\*2\);/.test(html));
+chk('FL8c: the depth patches are pinned to the WORLD, not to the camera',
+  /var wx=gBase\[i\*3\]\+S\.pos\.x, wz=gBase\[i\*3\+2\]\+S\.pos\.z;/.test(html) &&
+  /function seaNoise\(x,z\)\{ return seaVN\(x\/230,z\/230\)/.test(html));
+chk('FL8c: the island list is on a slow tick, not per vertex per frame',
+  /if\(\(_seaTick\+\+ % 30\)===0\) seaIsleList\(\)/.test(html) &&
+  /if\(dx\*dx\+dz\*dz>820\*820\) continue;/.test(html));
+chk('FL8c: only the islands world gets it (AR2 untouched)',
+  /if\(!SEA\|\|!groundGeo\.attributes\.color\) return;/.test(html) &&
+  /^if\(SEA\)\{\n  seaRange\(world\.ground\);/m.test(html));
+chk('FL8c: a parked camera recolours the sea too, or the shot is a frame stale',
+  (()=>{ const l=html.slice(html.indexOf('look:function(pos,at)'),html.indexOf('release:function()'));
+         return /stepSeaColour\(\)/.test(l); })());
+
 chk('FL8b: repainting the sky feeds the WHOLE world to the gradient, not two colours',
   /function skyGradientTexture\(w\)\{/.test(html) &&
   /skyGradientTexture\(world\)/.test(html) &&
@@ -1091,6 +1129,13 @@ if (!JSDOM) {
     else chk('FL8b ['+name+']: AR2 untouched - no ladder, halo size left at the default',
       sky0.bands === 0 && sky0.glowSize === 320,
       sky0.bands+' rungs, halo '+sky0.glowSize);
+    // FL8c: the sea. seaFlat true would mean the material is carrying a colour
+    // again, which is the navy-ocean bug about to happen.
+    if (i === 0) chk('FL8c [islands]: the sea is vertex-coloured and not double-multiplied',
+      sky0.seaVerts > 1000 && sky0.seaFlat === false,
+      sky0.seaVerts+' sea points, material white: '+(!sky0.seaFlat));
+    else chk('FL8c ['+name+']: AR2 untouched - no vertex-coloured water',
+      sky0.seaVerts === 0, sky0.seaVerts+' sea points');
     if (canvas2d) {
       chk('FL8 ['+name+']: every cloud in the sky is one mesh', sky0.cloudMeshes === 1);
       if (i === 0) {
@@ -1259,7 +1304,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as FL8b', w4.SKY.version === 'FL8b', w4.SKY.version);
+    chk('engine reports itself as FL8c', w4.SKY.version === 'FL8c', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();
