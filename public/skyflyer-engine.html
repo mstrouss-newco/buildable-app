@@ -440,7 +440,11 @@ var WORLDS=[
     // AR1M: a real sky is not one flat colour. skyTop is the deep blue overhead,
     // skyHorizon the pale band where the sea meets it. Both are manifest slots
     // with these built-ins as the fallback, so a cold link still looks right.
-    skyTop:0x4FA8E8, skyHorizon:0xDCF2FF, sunGlow:0xFFF3CC,
+    // FL8 adds the last two sky slots: the colour the shafts of light are, and
+    // the body colour of a cloud. Both optional, both fall back to what the sky
+    // shipped with, so the other two worlds are untouched until AR2.
+    skyTop:0x4FA8E8, skyHorizon:0xDCF2FF, sunGlow:0xFFE39C,
+    sunRays:0xFFDF96, cloud:0xFFFFFF,
     rock:0xF6D98A, rock2:0xE9C46A, cap:0x6FD46F, cap2:0x4FB85C,
     // AR1M: the cut face of a terrace. Warm dry sandstone, darker than the beach
     // so the tiers read as cut land instead of concrete. NO sand grain map on it
@@ -872,7 +876,45 @@ function skyGradientTexture(topHex,horHex){
     return t;
   }catch(e){ return null; }
 }
-var SKY_DOME=null, SUN_GLOW=null;
+// FL8 — the ray field, computed one pixel at a time so the spokes have no edges
+// anywhere. `s` is a sum of three cosines of the angle: a smooth function can
+// only make smooth spokes, and the odd harmonics (7, 11, 3) never line up, so
+// the fan is irregular the way real light through haze is. The radial term is
+// deliberately ZERO at the very middle — the sun disc and its halo already own
+// that, and stacking a third bright thing there just blows out to a white blob.
+function sunRayTexture(hex){
+ try{
+  var N=192, c=document.createElement("canvas"); c.width=c.height=N;
+  var x=c.getContext("2d"), img=x.createImageData(N,N), d=img.data;
+  var cr=(hex>>16)&255, cg=(hex>>8)&255, cb=hex&255, i, j;
+  for(j=0;j<N;j++) for(i=0;i<N;i++){
+    var ux=(i+0.5)/N*2-1, uy=(j+0.5)/N*2-1;
+    var r=Math.sqrt(ux*ux+uy*uy), k=(j*N+i)*4;
+    var a=0;
+    if(r<1){
+      var ang=Math.atan2(uy,ux);
+      // MANY fine shafts, not a few fat ones. The first build used 7/11/3 and a
+      // hard power and came back as a comic-book starburst — the give-away that
+      // you are looking at a flare and not at air. High harmonics plus a gentle
+      // power makes a fan you have to look for, which is the whole point.
+      var v=0.44*Math.cos(ang*17+0.7)+0.32*Math.cos(ang*23+2.1)
+           +0.24*Math.cos(ang*9-1.2);
+      var s=0.5+0.5*v; if(s<0)s=0;
+      s=0.34+0.66*Math.pow(s,1.5);                         // never fully dark between shafts
+      // hollow middle, eased in — the disc and the halo already own the centre
+      var near=(r-0.06)/0.30; if(near<0)near=0; if(near>1)near=1;
+      near=near*near*(3-2*near);
+      a=0.150*s*near*Math.pow(1-r,2.4);
+    }
+    d[k]=cr; d[k+1]=cg; d[k+2]=cb; d[k+3]=Math.round(a*255);
+  }
+  x.putImageData(img,0,0);
+  var t=new THREE.CanvasTexture(c);
+  t.center.set(0.5,0.5);                                   // so the fan can turn
+  return t;
+ }catch(e){ return null; }
+}
+var SKY_DOME=null, SUN_GLOW=null, SUN_RAYS=null;
 (function(){
   if(world.skyTop==null) return;                 // islands only, on purpose
   try{
@@ -904,6 +946,22 @@ var SKY_DOME=null, SUN_GLOW=null;
     SUN_GLOW.renderOrder=-9;
     scene.add(SUN_GLOW);
   }catch(e){ SUN_GLOW=null; }
+  // FL8 — SUN RAYS. The halo says "there is air around the sun"; the rays say
+  // "the air is thick and the light is coming through it". Built per-pixel
+  // instead of as drawn triangles ON PURPOSE: a fan of canvas triangles has
+  // hard edges and comes out as a pinwheel, which is the exact look AR1M spent
+  // a bug fixing. A smooth angular function can only ever be soft.
+  try{
+    var rtex=sunRayTexture(world.sunRays!=null?world.sunRays:
+          (world.sunGlow!=null?world.sunGlow:0xFFF3CC));
+    if(!rtex) throw 0;                       // no picture, no rays. Never a white square.
+    SUN_RAYS=new THREE.Mesh(new THREE.PlaneGeometry(640,640),
+      new THREE.MeshBasicMaterial({ map:rtex,
+        transparent:true, depthWrite:false, fog:false,
+        blending:THREE.AdditiveBlending, opacity:0.9 }));
+    SUN_RAYS.renderOrder=-9;
+    scene.add(SUN_RAYS);
+  }catch(e){ SUN_RAYS=null; }
 })();
 
 // ---------- materials (per world) ----------
@@ -932,7 +990,6 @@ var M={
   gold:phong(0xF7C948,{emissive:0x8a6a10,shininess:90}),
   padTop:phong(0xFFFFFF),
   padRing:new THREE.MeshBasicMaterial({color:0xFF8A3C}),
-  cloud:phong(0xFFFFFF,{shininess:0}),
   rideBody:phong(ride.body,{shininess:30}),
   rideTrim:phong(ride.trim,{shininess:20}),
   rideWing:phong(ride.wing,{shininess:20}),
@@ -1189,24 +1246,144 @@ scene.add(groundMesh);
 var gPos=groundGeo.attributes.position;
 var gBase=gPos.array.slice();
 
-// ---------- clouds ----------
-var clouds=[];
-(function(){
-  var puff=new THREE.SphereGeometry(1,7,5);
-  for(var i=0;i<10;i++){
-    var g=new THREE.Group();
-    var r=rng(i*77+5+WI*13),n=3+((r()*3)|0);
-    for(var j=0;j<n;j++){
-      var m=new THREE.Mesh(puff,M.cloud);
-      var s=6+r()*7;
-      m.scale.set(s,s*0.62,s);
-      m.position.set((j-n/2)*7+r()*4,r()*3,r()*5);
-      g.add(m);
-    }
-    g.position.set((r()-.5)*900,90+r()*70,(r()-.5)*900);
-    scene.add(g);clouds.push(g);
+// ============================================================================
+//  FL8 — SOFT CLOUDS. What was here before was ten clusters of hard-shaded
+//  SPHERES: from the plane they read as bags of marbles, and flat shading gave
+//  every one of them a visible faceted rim. A cloud has no edge at all, so the
+//  honest shape is not geometry, it is a soft picture — a lump of vapour lit
+//  from above, drawn on a card that always turns to face you.
+//
+//  THREE THINGS MAKE IT LOOK VOLUMETRIC AND NONE OF THEM ARE EXPENSIVE:
+//    1. many small overlapping puffs, not one big one, so the silhouette is
+//       lumpy and never repeats;
+//    2. the LIGHT is baked into the puff picture — bright crown, cool blue-grey
+//       underside — so a flat card reads as a round lump;
+//    3. the puffs are laid out as a flat-bottomed loaf (dome on top, cut off
+//       underneath), which is the actual shape of a fair-weather cloud.
+//
+//  COST: every cloud in the sky is ONE mesh and ONE draw call, down from about
+//  forty. Rule 21 says a glow is a point cloud and never a sprite each; this is
+//  the same law applied to vapour. It is NOT a THREE.Points, though, because
+//  gl_PointSize is clamped by the GPU and a close cloud puff is far bigger than
+//  that ceiling on an iPad — so these are real quads, turned to face the camera
+//  on the CPU each frame exactly the way the wakes and cloud shadows already are.
+// ============================================================================
+// Returns NULL if this page has no 2D canvas (the headless harness has none).
+// Nothing downstream may fall back to an untextured cloud: a MeshBasicMaterial
+// with no map is a SOLID WHITE SQUARE, so "no picture" has to mean "no cloud".
+function cloudPuffTexture(){
+ try{
+  var N=128, c=document.createElement("canvas"); c.width=c.height=N;
+  var x=c.getContext("2d"), img=x.createImageData(N,N), d=img.data, i, j;
+  for(j=0;j<N;j++) for(i=0;i<N;i++){
+    var ux=(i+0.5)/N*2-1, uy=(j+0.5)/N*2-1;
+    var r=Math.sqrt(ux*ux+uy*uy), k=(j*N+i)*4;
+    // a soft ball with NO rim — pow shapes the falloff so the middle stays
+    // solid while the outside disappears into nothing
+    var a=r>=1?0:Math.pow(1-r,1.9);
+    // lit from up and slightly left. Never let the underside go fully dark:
+    // a grey-bottomed cloud is a rain cloud and this is a sunny day.
+    var lit=0.5-uy*0.62-ux*0.18; if(lit<0)lit=0; if(lit>1)lit=1;
+    lit=0.34+lit*0.66;
+    d[k]  =Math.round(255*(0.82+0.18*lit));
+    d[k+1]=Math.round(255*(0.87+0.13*lit));
+    d[k+2]=Math.round(255*(0.94+0.06*lit));
+    d[k+3]=Math.round(a*255);
   }
-})();
+  x.putImageData(img,0,0);
+  return new THREE.CanvasTexture(c);
+ }catch(e){ return null; }
+}
+// The wind. Cloud shadows already drifted at this speed; now the clouds that
+// cast them drift at the SAME speed, so the sky and the sea finally agree.
+var WIND={x:3.2,z:1.1};
+var CLOUDS=null, CLUMPS=[], PUFFS=[];
+function buildClouds(){
+  var CL=18, PER=24, i, j;
+  var tint=new THREE.Color(world.cloud!=null?world.cloud:0xFFFFFF);
+  var pos=[],uv=[],col=[],idx=[],n=0;
+  for(i=0;i<CL;i++){
+    var r=rng(i*131+7+WI*29);
+    var C={x:(r()-0.5)*1040, y:76+r()*88, z:(r()-0.5)*1040,
+           len:44+r()*62, sp:0.72+r()*0.62};
+    CLUMPS.push(C);
+    for(j=0;j<PER;j++){
+      // u = how far out of the core this puff is. Core puffs are big, opaque
+      // and low; outer puffs are small, faint and ride up on the crown. One
+      // number drives size, opacity, height and spread, which is why the shape
+      // holds together instead of looking like scattered dots.
+      var u=Math.pow(r(),0.8);
+      var ang=r()*6.283, rr=Math.pow(u,0.55);
+      var crown=1-rr*0.80;
+      var P={ c:i,
+        ox:Math.cos(ang)*rr*C.len,
+        oz:Math.sin(ang)*rr*C.len*0.58,
+        oy:r()*crown*C.len*0.40,
+        s:(0.42-0.24*u)*C.len*(0.82+r()*0.44) };
+      PUFFS.push(P);
+      var b=n*4;
+      pos.push(0,0,0, 0,0,0, 0,0,0, 0,0,0);
+      uv.push(0,1, 1,1, 0,0, 1,0);
+      // faint at the edges, and a touch brighter the higher the puff sits
+      var al=0.94-0.56*u, hi=0.94+0.06*(P.oy/(C.len*0.40+0.001));
+      for(var q=0;q<4;q++) col.push(tint.r*hi,tint.g*hi,tint.b*hi,al);
+      idx.push(b,b+2,b+1, b+1,b+2,b+3);
+      n++;
+    }
+  }
+  // The cloudscape STATE is built either way: the wind, the wrap and the cloud
+  // shadows all read CLUMPS, and none of them need a picture. Only the mesh does.
+  var ctex=cloudPuffTexture();
+  if(!ctex) return;
+  var g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute("uv",new THREE.Float32BufferAttribute(uv,2));
+  g.setAttribute("color",new THREE.Float32BufferAttribute(col,4));  // 4 = per-puff alpha
+  g.setIndex(idx);
+  CLOUDS=new THREE.Mesh(g,new THREE.MeshBasicMaterial({
+    map:ctex, transparent:true, depthWrite:false,
+    vertexColors:true, side:THREE.DoubleSide, fog:true }));
+  CLOUDS.renderOrder=-8;          // after the dome and the sun, before the world
+  CLOUDS.frustumCulled=false;
+  scene.add(CLOUDS);
+}
+// THE WIND IS SIMULATION, THE BILLBOARD IS DRAWING, and they are two functions
+// on purpose. driftClouds runs in stepSim, so the sky keeps moving and keeps
+// wrapping even on a frame that never draws (the headless harness draws nothing
+// at all, and it still has to be able to prove the sky follows the kid).
+function driftClouds(dt){
+  var px=S.pos.x, pz=S.pos.z, i;
+  for(i=0;i<CLUMPS.length;i++){
+    var C=CLUMPS[i];
+    C.x+=dt*WIND.x*C.sp; C.z+=dt*WIND.z*C.sp;
+    // the sky is endless, so it wraps around the kid — fly forever and there
+    // are always clouds, never an empty box you have left behind
+    if(C.x-px>560) C.x-=1120; if(px-C.x>560) C.x+=1120;
+    if(C.z-pz>560) C.z-=1120; if(pz-C.z>560) C.z+=1120;
+  }
+}
+// Turn every puff to face the camera. The billboard basis is the camera's own
+// right and up vectors, read once per frame.
+function stepClouds(dt){
+  if(!CLOUDS) return;
+  camera.updateMatrixWorld();
+  var e=camera.matrixWorld.elements;
+  var rx=e[0],ry=e[1],rz=e[2], ux=e[4],uy=e[5],uz=e[6];
+  var pa=CLOUDS.geometry.attributes.position;
+  var i;
+  for(i=0;i<PUFFS.length;i++){
+    var P=PUFFS[i], K=CLUMPS[P.c], s=P.s;
+    var cx=K.x+P.ox, cy=K.y+P.oy, cz=K.z+P.oz;
+    var ax=rx*s, ay=ry*s, az=rz*s, bx=ux*s, by=uy*s, bz=uz*s;
+    var k=i*4;
+    pa.setXYZ(k,   cx-ax+bx, cy-ay+by, cz-az+bz);
+    pa.setXYZ(k+1, cx+ax+bx, cy+ay+by, cz+az+bz);
+    pa.setXYZ(k+2, cx-ax-bx, cy-ay-by, cz-az-bz);
+    pa.setXYZ(k+3, cx+ax-bx, cy+ay-by, cz+az-bz);
+  }
+  pa.needsUpdate=true;
+}
+buildClouds();
 
 // ============================================================================
 //  THE RIDE ITSELF — three genuinely different flying things, all code-built
@@ -3596,6 +3773,26 @@ function applyPalette(p){
         world.skyTop=nt; world.skyHorizon=nh; touched=true; }
     }catch(e){}
   }
+  // FL8: the two new sky slots. Repainting the rays rebuilds one 192px picture;
+  // repainting the clouds only multiplies the vertex colours already there, so
+  // neither costs a rebuild of anything the kid is flying through.
+  var sr=hexNum(p.sunRays);
+  if(sr!=null&&SUN_RAYS){
+    try{ if(SUN_RAYS.material.map) SUN_RAYS.material.map.dispose();
+      SUN_RAYS.material.map=sunRayTexture(sr); SUN_RAYS.material.needsUpdate=true;
+      world.sunRays=sr; touched=true; }catch(e){}
+  }
+  var cl=hexNum(p.cloud);
+  if(cl!=null&&CLOUDS){
+    try{
+      var tc=new THREE.Color(cl), ca=CLOUDS.geometry.attributes.color, ci;
+      for(ci=0;ci<PUFFS.length;ci++){
+        var hi=0.94+0.06*(PUFFS[ci].oy/(CLUMPS[PUFFS[ci].c].len*0.40+0.001)), q;
+        for(q=0;q<4;q++) ca.setX(ci*4+q,tc.r*hi),ca.setY(ci*4+q,tc.g*hi),ca.setZ(ci*4+q,tc.b*hi);
+      }
+      ca.needsUpdate=true; world.cloud=cl; touched=true;
+    }catch(e){}
+  }
   var sky=hexNum(p.sky);
   if(sky!=null){ world.sky=sky; touched=true;
     try{ scene.background.setHex(sky); }catch(e){}
@@ -5206,6 +5403,7 @@ function stepSim(dt){
   // FL5: a card is up (pick a job / a job just finished). The sky waits.
   if(S.picking)return;
   time+=dt;
+  driftClouds(dt);           // FL8: the wind blows whether or not anyone is looking
   if(S.auto) autoStep(dt);
 
   if(S.mode==="fly"){
@@ -5732,7 +5930,7 @@ function stepPets(dt,t){
 // the whole layer costs single-digit draw calls for the entire world.
 var SWAY=[], WAVERS=[], SURF=[], TRAVEL=[], FIRES=[];
 var SMOKE=null, SMOKE_P=[];
-var SHADOWS=null, SHAD_ST=[], SHAD_N=16, WAKES=null;
+var SHADOWS=null, SHAD_ST=[], SHAD_N=16, WAKES=null;   // SHAD_N is re-read from the cloudscape in buildShadows
 var LIFE_V=new THREE.Vector3();
 
 function softTex(a){
@@ -5810,21 +6008,29 @@ function stepSmoke(dt){
 // it read as a bedsheet. A FLAT FAN BUILT IN THE XZ PLANE FACES DOWN and is
 // culled from every camera above the water, hence DoubleSide.
 function buildShadows(){
+  // FL8: ONE SHADOW PER CLOUD. Before this they were unrelated — a scatter of
+  // dark patches drifting under a scatter of clouds that had nothing to do with
+  // them. Now shadow i belongs to clump i, is sized off that clump, and is
+  // dropped STRAIGHT DOWN. A true shadow would land a couple of hundred units
+  // downsun of its cloud, which is correct and reads as a mistake; straight
+  // down is the stylised version a kid can actually connect to the cloud above.
+  SHAD_N=CLUMPS.length||16;
   var pos=[],uv=[],idx=[],i,j,SEG=10;
   for(i=0;i<SHAD_N;i++){
     var b=i*(SEG+1);
     pos.push(0,0,0); uv.push(0.5,0.5);
     for(j=0;j<SEG;j++){ pos.push(0,0,0); uv.push(0,0); }
     for(j=0;j<SEG;j++) idx.push(b, b+1+j, b+1+(j+1)%SEG);
-    SHAD_ST.push({x:(Math.random()-0.5)*420,z:(Math.random()-0.5)*420,
-      r:26+Math.random()*40, sq:0.55+Math.random()*0.5, ph:Math.random()*6.283});
+    var src=CLUMPS[i]||null;
+    SHAD_ST.push({src:src, x:src?src.x:(Math.random()-0.5)*420, z:src?src.z:(Math.random()-0.5)*420,
+      r:src?src.len*0.82:(26+Math.random()*40), sq:0.55+Math.random()*0.5, ph:Math.random()*6.283});
   }
   var g=new THREE.BufferGeometry();
   g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
   g.setAttribute("uv",new THREE.Float32BufferAttribute(uv,2));
   g.setIndex(idx);
   SHADOWS=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x0C3A63,map:softTex(1.0),
-    transparent:true,opacity:0.42,depthWrite:false,side:THREE.DoubleSide}));
+    transparent:true,opacity:0.28,depthWrite:false,side:THREE.DoubleSide}));
   SHADOWS.renderOrder=2; SHADOWS.frustumCulled=false; scene.add(SHADOWS);
 }
 function stepShadows(dt){
@@ -5833,9 +6039,12 @@ function stepShadows(dt){
   var SEG=10,i,j, px=camera.position.x, pz=camera.position.z;
   for(i=0;i<SHAD_N;i++){
     var C=SHAD_ST[i];
-    C.x+=dt*3.2; C.z+=dt*1.1;                        // drift with the clouds
-    if(C.x-px>260) C.x-=520; if(px-C.x>260) C.x+=520;
-    if(C.z-pz>260) C.z-=520; if(pz-C.z>260) C.z+=520;
+    if(C.src){ C.x=C.src.x; C.z=C.src.z; }     // FL8: sit under your own cloud
+    else {
+      C.x+=dt*WIND.x; C.z+=dt*WIND.z;
+      if(C.x-px>260) C.x-=520; if(px-C.x>260) C.x+=520;
+      if(C.z-pz>260) C.z-=520; if(pz-C.z>260) C.z+=520;
+    }
     var b=i*(SEG+1);
     pa.setXYZ(b,C.x,0.74,C.z); ua.setXY(b,0.5,0.5);
     for(j=0;j<SEG;j++){
@@ -5998,13 +6207,8 @@ function drawScene(dt){
   // The halo sits BEHIND the disc, not on it. Coplanar they z-fight, and the
   // first render came back with a pinwheel painted across the sun.
   if(SUN_GLOW) placeSunGlow();
-  clouds.forEach(function(c,idx){
-    c.position.x+=dt*(1.5+idx*0.2);
-    if(c.position.x-S.pos.x>520)c.position.x-=1040;
-    if(S.pos.x-c.position.x>520)c.position.x+=1040;
-    if(c.position.z-S.pos.z>520)c.position.z-=1040;
-    if(S.pos.z-c.position.z>520)c.position.z+=1040;
-  });
+  if(SUN_RAYS) placeSunRays(time);
+  stepClouds(dt);
   var spin=time*3;
   // FL5: a job's markers breathe so they read from a long way off — the flare in
   // particular has to be spottable across a whole snowfield.
@@ -6075,6 +6279,20 @@ function placeSunGlow(){
   SUN_GLOW.position.set(d.x+vx/L*60, d.y+vy/L*60, d.z+vz/L*60);
   SUN_GLOW.lookAt(camera.position);
 }
+// FL8 — the rays sit BEHIND the halo which sits BEHIND the disc, all three on
+// the same camera ray. This is the AR1M pinwheel trap and it is not optional:
+// anything coplanar with the sun z-fights into spokes from every camera that is
+// not the plane's. 60 for the halo, 95 for the rays. The fan turns by rotating
+// the TEXTURE, because lookAt owns the mesh's own rotation and would undo it.
+function placeSunRays(t){
+  if(!SUN_RAYS) return;
+  var d=sunDisc.position;
+  var vx=d.x-camera.position.x, vy=d.y-camera.position.y, vz=d.z-camera.position.z;
+  var L=Math.sqrt(vx*vx+vy*vy+vz*vz)||1;
+  SUN_RAYS.position.set(d.x+vx/L*95, d.y+vy/L*95, d.z+vz/L*95);
+  SUN_RAYS.lookAt(camera.position);
+  if(SUN_RAYS.material.map) SUN_RAYS.material.map.rotation=t*0.035;
+}
 function frame(now){
   requestAnimationFrame(frame);
   var dt=Math.min((now-last)/1000,0.05);last=now;
@@ -6144,7 +6362,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"FL6",
+  version:"FL8",
   state:S,
   world:world,
   worlds:WORLDS,
@@ -6340,6 +6558,11 @@ window.SKY={
       camera.lookAt(at[0],at[1],at[2]);
       if(SKY_DOME) SKY_DOME.position.set(camera.position.x,0,camera.position.z);
       if(SUN_GLOW) placeSunGlow();
+      if(SUN_RAYS) placeSunRays(time);
+      // FL8: the clouds are billboards, so they face whichever camera last
+      // looked at them. A parked frame that skipped this comes back with every
+      // cloud edge-on and the sky looks empty. (AR1Q's lesson, new layer.)
+      stepClouds(0);
       // The living layer decides what is visible from the CAMERA, and the loop
       // is frozen, so it has to be stepped once for the camera we just parked.
       try{ stepIslandLife(1/60,time); }catch(e){}
@@ -6367,6 +6590,28 @@ window.SKY={
              widest:wide, narrowest:thin, height:tops[tops.length-1],
              hitR:o.userData.hitR, hitH:o.userData.hitH };
   },
+  // FL8 — what the SKY actually built, measured on the built scene so QA can
+  // guard the shape instead of the source text. `raySep`/`glowSep` are the
+  // distances the rays and the halo sit BEHIND the sun disc along the camera
+  // ray: if either ever comes back at 0 the pinwheel is back.
+  sky:function(){
+    function sep(o){
+      if(!o) return null;
+      var d=sunDisc.position, cp=camera.position;
+      var vx=d.x-cp.x, vy=d.y-cp.y, vz=d.z-cp.z;
+      var L=Math.sqrt(vx*vx+vy*vy+vz*vz)||1;
+      return Math.round(((o.position.x-d.x)*vx+(o.position.y-d.y)*vy+(o.position.z-d.z)*vz)/L);
+    }
+    var near=1e9,i;
+    for(i=0;i<CLUMPS.length;i++){
+      var dx=CLUMPS[i].x-S.pos.x, dz=CLUMPS[i].z-S.pos.z;
+      var dd=Math.sqrt(dx*dx+dz*dz); if(dd<near) near=dd;
+    }
+    return { dome:!!SKY_DOME, glow:!!SUN_GLOW, rays:!!SUN_RAYS,
+             glowSep:sep(SUN_GLOW), raySep:sep(SUN_RAYS),
+             clumps:CLUMPS.length, puffs:PUFFS.length,
+             cloudMeshes:CLOUDS?1:0, nearestCloud:Math.round(near),
+             wind:[WIND.x,WIND.z] }; },
   // AR1Q — what the living layer actually built, so QA asserts the world and
   // not the source. Draw calls are unchanged by all of it except the coin glow.
   life:function(){
