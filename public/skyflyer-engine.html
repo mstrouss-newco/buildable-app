@@ -440,10 +440,16 @@ var WORLDS=[
     // AR1M: a real sky is not one flat colour. skyTop is the deep blue overhead,
     // skyHorizon the pale band where the sea meets it. Both are manifest slots
     // with these built-ins as the fallback, so a cold link still looks right.
-    // FL8 adds the last two sky slots: the colour the shafts of light are, and
-    // the body colour of a cloud. Both optional, both fall back to what the sky
-    // shipped with, so the other two worlds are untouched until AR2.
-    skyTop:0x4FA8E8, skyHorizon:0xDCF2FF, sunGlow:0xFFE39C,
+    // FL8b - THE SKY LADDER Mike picked. Six rungs from straight overhead down
+    // to the waterline: deep blue, blue, lighter blue, pale, almost-white, then
+    // a warm cream strip where the sky meets the sea. Every one of them is a
+    // manifest slot and every one of them is optional.
+    skyTop:0x2C7BCE, skyHigh:0x3E9AE0, skyMid:0x5FB6EC,
+    skyLow:0x9FD8F2, skyPale:0xE2F3F0, skyHorizon:0xFFE6C6,
+    // ...and the second half of his pick: the sun's halo goes WIDE and gentle,
+    // so the warmth spreads across the sun's half of the sky instead of sitting
+    // in a tight ring. Bigger and FAINTER - the same total light, spread out.
+    sunGlow:0xFFD9A0, sunGlowSize:700, sunGlowStrength:0.30,
     sunRays:0xFFDF96, cloud:0xFFFFFF,
     rock:0xF6D98A, rock2:0xE9C46A, cap:0x6FD46F, cap2:0x4FB85C,
     // AR1M: the cut face of a terrace. Warm dry sandstone, darker than the beach
@@ -860,20 +866,54 @@ scene.add(sunDisc);
 //  A world that declares none of them (Snowy Peaks, Sunset Canyon) gets exactly
 //  what it had before — no dome, no halo, nothing to go wrong. That is AR2.
 // ============================================================================
-function skyGradientTexture(topHex,horHex){
+// ============================================================================
+//  FL8b — THE SKY IS A LADDER, AND EVERY RUNG MUST SIT ABOVE THE WATERLINE.
+//
+//  Mike's note was "how can we make the sky less monochrome?", and the cause
+//  turned out to be arithmetic, not taste. On the dome, v = 0.5 IS the horizon:
+//  everything a kid can see is squeezed into the FIRST HALF of this gradient.
+//  The original stops were 0.46 and 0.78, so the pale horizon colour was painted
+//  UNDER THE SEA and the whole visible sky was one flat blue. It was a two
+//  colour gradient of which only one colour was ever on screen.
+//
+//  So: six named rungs, ALL of them below 0.50, and each one is its own manifest
+//  slot. A world that declares only the two original slots still gets a simple
+//  ramp - with the stops corrected - so nothing has to be rewritten for AR2.
+//  QA asserts no rung ever drifts past the waterline again.
+// ============================================================================
+var SKY_BANDS=[
+  ["skyTop",     0.000],    // straight overhead
+  ["skyHigh",    0.300],
+  ["skyMid",     0.440],
+  ["skyLow",     0.472],
+  ["skyPale",    0.490],
+  ["skyHorizon", 0.500]     // the waterline itself
+];
+function skyGradientTexture(w){
   try{
     var c=document.createElement("canvas"); c.width=4; c.height=256;
     var x=c.getContext("2d");
     function hx(h){ return "#"+("000000"+(h>>>0).toString(16)).slice(-6); }
-    var g=x.createLinearGradient(0,0,0,256);
-    g.addColorStop(0.00,hx(topHex));
-    g.addColorStop(0.46,hx(topHex));
-    g.addColorStop(0.78,hx(horHex));
-    g.addColorStop(1.00,hx(horHex));
+    var g=x.createLinearGradient(0,0,0,256), i, last=null;
+    if(w.skyHigh!=null){
+      for(i=0;i<SKY_BANDS.length;i++){
+        var v=w[SKY_BANDS[i][0]];
+        if(v==null) continue;
+        g.addColorStop(SKY_BANDS[i][1],hx(v)); last=v;
+      }
+      // below the waterline nothing changes - it is under the sea
+      g.addColorStop(1.00,hx(last!=null?last:w.skyTop));
+    }else{
+      var t=w.skyTop, h=(w.skyHorizon!=null)?w.skyHorizon:w.sky;
+      g.addColorStop(0.00,hx(t));
+      g.addColorStop(0.42,hx(t));
+      g.addColorStop(0.50,hx(h));
+      g.addColorStop(1.00,hx(h));
+    }
     x.fillStyle=g; x.fillRect(0,0,4,256);
-    var t=new THREE.CanvasTexture(c);
-    t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;
-    return t;
+    var t2=new THREE.CanvasTexture(c);
+    t2.wrapS=t2.wrapT=THREE.ClampToEdgeWrapping;
+    return t2;
   }catch(e){ return null; }
 }
 // FL8 — the ray field, computed one pixel at a time so the spokes have no edges
@@ -918,7 +958,7 @@ var SKY_DOME=null, SUN_GLOW=null, SUN_RAYS=null;
 (function(){
   if(world.skyTop==null) return;                 // islands only, on purpose
   try{
-    var tex=skyGradientTexture(world.skyTop,world.skyHorizon!=null?world.skyHorizon:world.sky);
+    var tex=skyGradientTexture(world);
     if(!tex) return;
     // The dome sits INSIDE the far plane and outside the fog, so the land still
     // fades into the horizon band while the sky itself stays clean.
@@ -932,14 +972,16 @@ var SKY_DOME=null, SUN_GLOW=null, SUN_RAYS=null;
     var cg=document.createElement("canvas"); cg.width=cg.height=128;
     var gx=cg.getContext("2d");
     var col=world.sunGlow!=null?world.sunGlow:0xFFF3CC;
+    var GA=world.sunGlowStrength!=null?world.sunGlowStrength:0.50;
+    var GS=world.sunGlowSize!=null?world.sunGlowSize:320;
     var cr=(col>>16)&255, cg2=(col>>8)&255, cb=col&255;
     var rad=gx.createRadialGradient(64,64,2,64,64,64);
-    rad.addColorStop(0.00,"rgba("+cr+","+cg2+","+cb+",0.50)");
-    rad.addColorStop(0.24,"rgba("+cr+","+cg2+","+cb+",0.30)");
-    rad.addColorStop(0.55,"rgba("+cr+","+cg2+","+cb+",0.11)");
+    rad.addColorStop(0.00,"rgba("+cr+","+cg2+","+cb+","+GA+")");
+    rad.addColorStop(0.24,"rgba("+cr+","+cg2+","+cb+","+(GA*0.60)+")");
+    rad.addColorStop(0.55,"rgba("+cr+","+cg2+","+cb+","+(GA*0.22)+")");
     rad.addColorStop(1.00,"rgba("+cr+","+cg2+","+cb+",0)");
     gx.fillStyle=rad; gx.fillRect(0,0,128,128);
-    SUN_GLOW=new THREE.Mesh(new THREE.PlaneGeometry(320,320),
+    SUN_GLOW=new THREE.Mesh(new THREE.PlaneGeometry(GS,GS),
       new THREE.MeshBasicMaterial({ map:new THREE.CanvasTexture(cg),
         transparent:true, depthWrite:false, fog:false,
         blending:THREE.AdditiveBlending }));
@@ -3762,15 +3804,16 @@ function applyPalette(p){
   // the grass. The cut cliff face gets its own slot.
   set(M.beach,"rock"); set(M.tier,"cap"); set(M.cliff,"cliff");
   // and the two new sky slots repaint the gradient dome and the sun's halo.
-  var st=hexNum(p.skyTop), sh=hexNum(p.skyHorizon);
-  if((st!=null||sh!=null)&&SKY_DOME){
+  var skyHit=false, sbi;
+  for(sbi=0;sbi<SKY_BANDS.length;sbi++){
+    var sv=hexNum(p[SKY_BANDS[sbi][0]]);
+    if(sv!=null){ world[SKY_BANDS[sbi][0]]=sv; skyHit=true; }
+  }
+  if(skyHit&&SKY_DOME){
     try{
-      var nt=st!=null?st:(world.skyTop!=null?world.skyTop:world.sky);
-      var nh=sh!=null?sh:(world.skyHorizon!=null?world.skyHorizon:world.sky);
-      var ntex=skyGradientTexture(nt,nh);
+      var ntex=skyGradientTexture(world);
       if(ntex){ if(SKY_DOME.material.map) SKY_DOME.material.map.dispose();
-        SKY_DOME.material.map=ntex; SKY_DOME.material.needsUpdate=true;
-        world.skyTop=nt; world.skyHorizon=nh; touched=true; }
+        SKY_DOME.material.map=ntex; SKY_DOME.material.needsUpdate=true; touched=true; }
     }catch(e){}
   }
   // FL8: the two new sky slots. Repainting the rays rebuilds one 192px picture;
@@ -6362,7 +6405,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"FL8",
+  version:"FL8b",
   state:S,
   world:world,
   worlds:WORLDS,
@@ -6607,7 +6650,10 @@ window.SKY={
       var dx=CLUMPS[i].x-S.pos.x, dz=CLUMPS[i].z-S.pos.z;
       var dd=Math.sqrt(dx*dx+dz*dz); if(dd<near) near=dd;
     }
-    return { dome:!!SKY_DOME, glow:!!SUN_GLOW, rays:!!SUN_RAYS,
+    var bands=0,bi;
+    for(bi=0;bi<SKY_BANDS.length;bi++) if(world[SKY_BANDS[bi][0]]!=null) bands++;
+    return { dome:!!SKY_DOME, glow:!!SUN_GLOW, rays:!!SUN_RAYS, bands:bands,
+             glowSize:world.sunGlowSize!=null?world.sunGlowSize:320,
              glowSep:sep(SUN_GLOW), raySep:sep(SUN_RAYS),
              clumps:CLUMPS.length, puffs:PUFFS.length,
              cloudMeshes:CLOUDS?1:0, nearestCloud:Math.round(near),
