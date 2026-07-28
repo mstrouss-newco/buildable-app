@@ -823,12 +823,50 @@ chk('the sky is a GRADIENT dome with a sun halo, built in code',
   /THREE\.AdditiveBlending/.test(html));
 // FL8 rewrote the halo colour: 0xFFF3CC has a full blue channel, and an ADDITIVE
 // blend onto a sky that is already at full blue can only push the result cyan,
-// which is why the sun read as a cold flashbulb. Pulling the blue down is the
-// whole fix, and it is a manifest slot so it stays a one-value decision.
+// which is why the sun read as a cold flashbulb. FL8b then went further on
+// Mike's pick - warmer still, and WIDE AND FAINT so the warmth spreads across
+// the sun's half of the sky instead of sitting in a tight ring.
 chk('the sky colours are MANIFEST SLOTS with safe built-in fallbacks',
-  /skyTop:0x4FA8E8, skyHorizon:0xDCF2FF, sunGlow:0xFFE39C/.test(html) &&
+  /skyTop:0x2C7BCE, skyHigh:0x3E9AE0, skyMid:0x5FB6EC/.test(html) &&
+  /skyLow:0x9FD8F2, skyPale:0xE2F3F0, skyHorizon:0xFFE6C6/.test(html) &&
+  /sunGlow:0xFFD9A0, sunGlowSize:700, sunGlowStrength:0\.30/.test(html) &&
   /if\(world\.skyTop==null\) return;/.test(html) &&
-  /var st=hexNum\(p\.skyTop\), sh=hexNum\(p\.skyHorizon\)/.test(html));
+  /for\(sbi=0;sbi<SKY_BANDS\.length;sbi\+\+\)\{\s*\n\s*var sv=hexNum\(p\[SKY_BANDS\[sbi\]\[0\]\]\)/.test(html));
+
+// ==========================================================================
+//  FL8b - THE SKY IS A LADDER, AND EVERY RUNG SITS ABOVE THE WATERLINE.
+//  This is the check that exists because of a real bug, not a preference.
+//  On the dome v=0.5 IS the horizon, so a gradient stop past 0.50 is painted
+//  UNDER THE SEA. The original two stops were at 0.46 and 0.78, which meant
+//  the only colour a kid ever saw was the first one - the sky was literally a
+//  one-colour gradient. If a rung ever drifts past 0.50 again, that is back.
+// ==========================================================================
+const SKY_BAND_POS = [...html.matchAll(/\["(sky\w+)",\s*([0-9.]+)\]/g)]
+  .map(m => [m[1], parseFloat(m[2])]);
+chk('FL8b: the sky ladder has six named rungs',
+  SKY_BAND_POS.length === 6 &&
+  ['skyTop','skyHigh','skyMid','skyLow','skyPale','skyHorizon']
+    .every((k,i) => SKY_BAND_POS[i] && SKY_BAND_POS[i][0] === k),
+  SKY_BAND_POS.map(b=>b[0]+'@'+b[1]).join(' '));
+chk('FL8b: EVERY rung is above the waterline (past 0.50 is under the sea)',
+  SKY_BAND_POS.length > 0 && SKY_BAND_POS.every(b => b[1] <= 0.50),
+  'lowest rung at ' + Math.max(...SKY_BAND_POS.map(b=>b[1])));
+chk('FL8b: the rungs climb, and they are spread rather than bunched',
+  SKY_BAND_POS.every((b,i) => i === 0 || b[1] > SKY_BAND_POS[i-1][1]) &&
+  SKY_BAND_POS.filter(b => b[1] < 0.50).length >= 5);
+chk('FL8b: the two-slot fallback ramp was fixed too, so AR2 cannot inherit it',
+  !/g\.addColorStop\(0\.46,/.test(html) && !/g\.addColorStop\(0\.78,/.test(html) &&
+  /g\.addColorStop\(0\.42,hx\(t\)\)/.test(html) &&
+  /g\.addColorStop\(0\.50,hx\(h\)\)/.test(html));
+chk('FL8b: the halo went WIDE AND FAINT - same light, spread out',
+  /sunGlowSize:700/.test(html) && /sunGlowStrength:0\.30/.test(html) &&
+  /var GA=world\.sunGlowStrength!=null\?world\.sunGlowStrength:0\.50;/.test(html) &&
+  /var GS=world\.sunGlowSize!=null\?world\.sunGlowSize:320;/.test(html) &&
+  /new THREE\.PlaneGeometry\(GS,GS\)/.test(html));
+chk('FL8b: repainting the sky feeds the WHOLE world to the gradient, not two colours',
+  /function skyGradientTexture\(w\)\{/.test(html) &&
+  /skyGradientTexture\(world\)/.test(html) &&
+  !/skyGradientTexture\(nt,nh\)/.test(html));
 chk('the halo sits BEHIND the disc on the camera ray (coplanar it pinwheels)',
   /function placeSunGlow\(\)/.test(html) && /vx\/L\*60/.test(html));
 chk('AR2 is still untouched: only the islands world declares a sky dome',
@@ -1045,6 +1083,14 @@ if (!JSDOM) {
     chk('FL8 ['+name+']: the cloudscape carries a real number of puffs',
       sky0.clumps >= 14 && sky0.puffs >= 300,
       sky0.clumps+' clouds, '+sky0.puffs+' puffs, '+sky0.cloudMeshes+' mesh');
+    // the ladder and the halo size are world VALUES, not pictures, so they are
+    // readable even in a harness that cannot paint anything
+    if (i === 0) chk('FL8b [islands]: the sky declares all six rungs and the wide halo',
+      sky0.bands === 6 && sky0.glowSize === 700,
+      sky0.bands+' rungs, halo '+sky0.glowSize);
+    else chk('FL8b ['+name+']: AR2 untouched - no ladder, halo size left at the default',
+      sky0.bands === 0 && sky0.glowSize === 320,
+      sky0.bands+' rungs, halo '+sky0.glowSize);
     if (canvas2d) {
       chk('FL8 ['+name+']: every cloud in the sky is one mesh', sky0.cloudMeshes === 1);
       if (i === 0) {
@@ -1213,7 +1259,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as FL8', w4.SKY.version === 'FL8', w4.SKY.version);
+    chk('engine reports itself as FL8b', w4.SKY.version === 'FL8b', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();
