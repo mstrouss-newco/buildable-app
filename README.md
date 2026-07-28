@@ -134,6 +134,32 @@ flower where the world held a hive — present since FL6, one line, both read fr
 QA: all checks pass, the robot flies all six transform quests end to end, and the
 look gate photographs the new cards and bodies. Engine cache-bust `fl6` -> `fl7`.
 
+## RP4 — the other seven photo books get their real art (July 28 2026)
+
+RP3 gave seven books the composed page but left every fact after the first showing
+a **detail crop of that page's own photo**. RP4 is the 56 photographs that finish
+them, two per page across 28 pages. Deserts, Rainforest, How Plants Grow, Your
+Body, Diggers, Castles and Knights and Ancient Egypt are complete, so with Trains
+that is **8 of 20 books fully illustrated** and `qa-topic.mjs` reports zero
+remaining detail crops.
+
+Every picture is cropped to its slot shape IN THE FILE before conversion, because
+all four slots centre-crop and none of them goes hunting for the subject: circle
+and Then/Now at 1:1 (800px, q74), standing at 3:4 (1000px), polaroid at 4:3 and
+the wide band at 16:10 (1200px, q80). 1200px squares were the first attempt and
+came out heavier than the 1600px hero photos for a picture that renders at 128px.
+
+Three bugs got through green QA and were caught only by rendering each page at
+phone, iPad and landscape phone and looking at it: a fingertip macro whose ridges
+vanished at circle size, a row of three inked fingerprints whose outer two fell
+outside the circle, and the Rosetta Stone rendering as an unreadable dark disc.
+All three were fixed by re-cropping tighter and lifting contrast.
+
+`kidspedia-rp4-prompts.md` (repo root) is the pack the art was generated from.
+The 42 optional chart chips in `kidspedia-rp4-art-list.md` were deliberately not
+shipped — most are silhouettes of everyday things where the drawn glyph is already
+honest and already in the book's own colour.
+
 ## RP3 — the other seven photo books get richer pages (July 27 2026)
 
 Deserts, Rainforest, How Plants Grow, Your Body, Diggers, Castles and Knights and

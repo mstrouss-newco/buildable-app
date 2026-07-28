@@ -1,5 +1,71 @@
 # Buildable Kids — Session Log
 
+## 2026-07-28: Session RP4 — the other seven photo books get their real art
+
+Phase RP, session 4. RP3 converted seven books to the richer composed page but
+left every fact after the first showing a **detail crop of that page's own
+photo** — nothing was a white hole, but nothing was its own picture either.
+RP4 is the 56 photographs that finish them: two per page across 28 pages.
+Deserts, The Rainforest, How Plants Grow, Your Amazing Body, Diggers & Big
+Machines, Castles & Knights and Ancient Egypt are now complete. Together with
+Trains (RP2) that is **8 of 20 books fully illustrated**, and `qa-topic.mjs`
+reports zero remaining detail crops.
+
+### What shipped
+56 new WebP files under `public/explore/topic-photos/{book}/`, `art` + `artAlt`
++ `caption` on facts 2 and 3 of all 28 converted pages, and a new
+`kidspedia-rp4-prompts.md` in the repo root — the pack the art was generated
+from, beside the `kidspedia-rp4-art-list.md` RP3 left behind.
+
+### Crop for the slot, in the file
+The composed page has four picture shapes and every one of them **centre-crops**:
+a circle at about 128px, a 3:4 standing slot, a 4:3 polaroid, a 16:10 band.
+ChatGPT returns 4:3 for "wide landscape" and 4:5 for "tall portrait" and never
+the slot ratio, so each photo is cropped to its slot BEFORE conversion. The
+sizes that came out of that:
+
+| slot | ratio | longest edge | quality | typical file |
+|---|---|---|---|---|
+| circle / Then-Now | 1:1 | 800 | 74 | 35-215KB |
+| standing | 3:4 | 1000 | 80 | 50-210KB |
+| polaroid | 4:3 | 1200 | 80 | ~110-185KB |
+| wide | 16:10 | 1200 | 80 | 27-254KB |
+
+1200px squares were the first attempt and came out 250-500KB — **heavier than
+the 1600px hero photos** for a picture that renders at 128px. 800 is plenty.
+
+### Three bugs that only a rendered page could show
+QA was green through all of them. Every page was rendered headless at phone
+(390x844), iPad (900x1200) and landscape phone (844x390) and looked at.
+
+1. **A fine texture disappears at 128px.** The fingertip macro — the whole point
+   of which is the ridges — rendered as a plain patch of skin. Fixed by cropping
+   to the centre 38% and pushing contrast 1.5 / sharpness 2.0. If the subject IS
+   the texture, the texture has to fill the file.
+2. **A circle clips the corners, so a row of three subjects loses the outer two.**
+   The three inked fingerprints had to be scaled to 74% on a matching pale canvas
+   before all three sat inside the inscribed circle.
+3. **A dark subject becomes a dark disc.** The Rosetta Stone was an unreadable
+   brown circle. Re-cropped to the inscribed face at 1.55 brightness / 1.35
+   contrast, and now all three bands of script read at circle size — which is
+   what its caption claims.
+
+### Notes for RP5
+- `qa-topic.mjs` checks the new `artAlt` and `caption` text for British spellings
+  and metric units too. "colour" cost a round trip; `tyres`, `storey` and `grey`
+  are also on the list.
+- `json.dump(doc, indent=2, ensure_ascii=False) + "\n"` round-trips these book
+  files byte-identical, so wiring 8 photos into a book is a 32-line diff.
+- The 42 optional chart chips from the art list were **not** shipped. Most are
+  silhouettes of everyday things — a kid, a door, a giraffe — where the drawn
+  glyph is already honest and already in the book's colour. That is the bar RP2
+  set, and RP4 kept it.
+- The art was generated one prompt at a time in Mike's own Chrome. A background
+  loop driving a queue is NOT reliable — it completed one book and then stalled
+  silently on every later one. Count images **per conversation turn**, not per
+  `<img>`: one generation can render as two different srcs and shift every later
+  index.
+
 ## 2026-07-28: Session FL8c - the sea gets depth
 
 Mike, after picking the sky: give the sea some colour range too. Same complaint,
