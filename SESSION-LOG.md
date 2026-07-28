@@ -1,5 +1,109 @@
 # Buildable Kids — Session Log
 
+## 2026-07-28: Session FL7 — transform quests, part 2
+
+Phase FL, session 7. FL6 built the transform machinery and three easy bodies;
+FL7 adds the three harder ones and the one piece of genuinely new code the
+block was scoped around. **Sky Flyer now has six transform quests across all
+three worlds.**
+
+### What shipped
+`e747b7d` the body kit · `7b7faf1` the quests and the flock · `e66e5ba` QA.
+
+| quest | world | body | what a kid does |
+|---|---|---|---|
+| Goose Squad | Snowy Peaks | Goose | gather seeds home to the roost, flying in a V |
+| Owl Night Flight | Snowy Peaks | SnowyOwl | hold still over rings of sound, under a night sky |
+| Eagle Glider | Sunset Canyon | Eagle | hang inside a column of rising warm air |
+
+All three keep FL6's shape exactly: found in the world under their own violet
+beam, offered on a low swoop, nothing starts without a tap, leaving is free and
+starts fresh, no timer, no fail state, no landing gate.
+
+### The flock, and the decision the whole feature turned on
+**The kid flies at the BACK of the V, not at the tip.** The obvious build has
+the player leading, and it is worthless: the chase camera sits twelve units
+*behind* the body, so every companion would be behind the camera and a kid would
+fly the whole quest having never seen a goose. At the back, the formation is
+spread across the screen the entire time. It is also the truer thing, and it is
+what the quest's fun fact is about: the bird at the tip works hardest and the
+ones behind it get carried.
+
+Five real models, each with its **own** geometry and its **own** wingbeat phase,
+because five birds beating in unison read as a decal rather than a flock. Asked
+for by `flock:true` on the body, never by checking which body it is, so giving
+any future body a flock costs one word.
+
+The formation is written in world units and hangs off a body that `tbPrep` has
+already scaled, so the group undoes the parent's scale on the way in. Left
+alone, a 34-unit gap comes out multiplied by 4.25 and the flock is over the next
+mountain. Measured in a live render, not reasoned about: player and companion
+wingspans both 7.23 units, lead bird 35.4 units ahead.
+
+### The wingbeat numbers go the other way round now
+FL6's three were all **faster** than the eye — a bee at 200 beats a second, a
+hummingbird at 50 — so their numbers are a readable lie with a blur over the top.
+These three are the opposite problem. A goose really beats about 3 times a
+second, an owl slower, and a soaring eagle can go a full minute without a single
+flap. All perfectly watchable, so the numbers here are close to honest and
+**none of the three wears a blur**. The slow beat is the character of a big bird.
+
+The first cut had the goose at 12 beats a second and the eagle at 8, which is a
+hummingbird's idea of a big bird.
+
+### Three things only a picture caught
+1. **A thermal drawn in warm amber is invisible in Sunset Canyon**, whose sky is
+   amber. The columns washed into the background and the marker beam was doing
+   more work than the target. Nearly white now: brighter than the sky it stands
+   in, and the warmth reads from the shape instead of the hue.
+2. **The library has no `Owl`.** One owl in all 178 and it is named `SnowyOwl`.
+   A body naming a model the file does not carry loads nothing and hands a kid
+   an invisible bird, silently. QA now checks every model name against the glb.
+3. **The three new bodies really do face +z**, like the Gull. Checked by
+   rendering all six side-on and looking, after a geometry heuristic confidently
+   reported the *known-good* Gull as backwards.
+
+### The four-place rule, nearly missed
+A new style has to be wired into **four** places: the world in 3D, the offer
+card drawing, the checklist icon, and the dispatch. The first pass wrote the
+three card drawings and none of the other nine wirings, which is invisible in
+review and shows up as a kid staring at a blank square. Asserted now.
+
+### Spacing
+Two failures against the engine's own `BEAM_GAP` of 240, both caught by QA
+rather than by eye: the owl's beam stood **141** units off the Lost Explorer's
+flare, and the eagle's stood **28** off the Hummingbird's cactus — effectively
+one beam. Both moved. Snowy Peaks now carries four quests with its closest pair
+at 251; Sunset Canyon three at 336.
+
+### Found on the way past
+A gathering quest's **map blip drew the wrong picture**: it used the quest's
+target style, so the map showed a flower patch (now a seed patch) where the
+world actually holds a hive, a nest or a roost. A kid steering by the map was
+looking for something that was not there. Both the blip and the beam read from
+`scoutStyle()` now. Present since FL6; it affected Busy Bee and Puffin Parent
+too, and both are fixed by the same line.
+
+### QA
+`node qa-skyflyer.mjs .` — **all checks pass.** The robot flies all six
+transform quests end to end: Goose Squad 58s (4/4 gathered and all four banked
+home), Owl Night Flight 55s, Eagle Glider 48s, each paying into the one shared
+wallet and leaving its badge. The look gate photographs the three new offer
+cards and the three new bodies from the chase camera.
+
+Six FL6-era assertions failed the moment FL7 landed, every one on a hardcoded
+`3` rather than on the thing it guarded. They count the bodies now, and two got
+stricter on the way past: no body may top both the speed and the turn lists, and
+every glyph a body names must actually be drawn — a missing glyph falls back
+silently to the seabird, which is how a goose would have shipped looking like a
+puffin.
+
+Engine cache-bust `fl6` -> `fl7`.
+
+### What remains in phase FL
+Nothing in this block. Not started, and not touched: whatever the roadmap has
+after FL7. Flagged for Mike's review in the planner.
+
 ## 2026-07-27: Session RP3 — richer layouts for the other seven photo books
 
 Phase RP, session 3 of 7. RP1 built the composed page and piloted it on Trains;

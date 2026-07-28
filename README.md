@@ -6,6 +6,41 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## FL7 — the harder transforms, and a flock that flies with you (July 28 2026)
+`public/skyflyer-engine.html`, `public/models/skyflyer/animals/flyer-bodies.glb`,
+`qa-skyflyer.mjs`, `qa-skyflyer-look.mjs`, `src/BuildableKids.jsx`.
+
+Three more transform quests, all in FL6's shape: **Goose Squad** and **Owl Night
+Flight** in Snowy Peaks, **Eagle Glider** in Sunset Canyon. Six bodies now, cut
+out of the same 178-animal library into a 323KB kit. The library has exactly one
+owl and it is called `SnowyOwl`, so a body naming `Owl` loads nothing and hands a
+kid an invisible bird — every model name is checked against the glb now.
+
+**The flock is the new code, and the kid flies at the BACK of the V.** Leading it
+is worthless: the chase camera sits twelve units behind the body, so a flock in
+front of the kid is a flock behind the camera. At the back the whole formation is
+on screen the whole quest, which is also what the fun fact is about. Five real
+models, five independent wingbeat phases, asked for by `flock:true` on the body
+rather than by checking which body it is.
+
+**The wingbeats run the other way from FL6.** Those three were faster than the eye
+and wore a blur; a goose beats about 3 times a second and a soaring eagle can go a
+minute without one, so these numbers are near-honest and none of them blurs.
+
+Three things only a render caught: a thermal drawn in warm amber is invisible in
+Sunset Canyon's amber sky (nearly white now), the three new bodies really do face
++z like the Gull, and a new style needs wiring into **four** places (world, offer
+card, checklist, dispatch) — the first pass did one of the four.
+
+Two `BEAM_GAP` failures fixed (owl 141 units off the flare, eagle 28 off the
+cactus); Snowy Peaks runs four quests at a closest 251. Also fixed on the way
+past: a gathering quest's map blip drew its target style, so the map showed a
+flower where the world held a hive — present since FL6, one line, both read from
+`scoutStyle()` now.
+
+QA: all checks pass, the robot flies all six transform quests end to end, and the
+look gate photographs the new cards and bodies. Engine cache-bust `fl6` -> `fl7`.
+
 ## RP3 — the other seven photo books get richer pages (July 27 2026)
 
 Deserts, Rainforest, How Plants Grow, Your Body, Diggers, Castles and Knights and
