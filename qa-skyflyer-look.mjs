@@ -31,7 +31,7 @@ const browser = await chromium.launch({
 for (const S of SIZES) {
   const page = await browser.newPage({ viewport: { width: S.w, height: S.h } });
   page.on('pageerror', e => console.log('  PAGE ERROR', S.name, e.message));
-  await page.goto(BASE + '/skyflyer-engine.html?v=fl6&level=0', { waitUntil: 'load' });
+  await page.goto(BASE + '/skyflyer-engine.html?v=fl7&level=0', { waitUntil: 'load' });
   await page.waitForFunction('window.SKY && SKY.state', null, { timeout: 30000 });
   // park the plane where a job is waiting to be found, and let the game's own
   // loop do the offering — the card must come up the way a kid gets it
@@ -66,11 +66,16 @@ const QUESTS = [
   { id:'busy-bee',          level:0, at:{ x:-420, z:-90  } },
   { id:'puffin-parent',     level:0, at:{ x: 430, z:-60  } },
   { id:'hummingbird-hover', level:2, at:{ x: 300, z:-120 } },
+  // FL7. Each `at` is that quest's own start point, which for a gathering quest
+  // is where it goes HOME to, not where it starts collecting.
+  { id:'goose-squad',       level:1, at:{ x: -80, z:-490 } },
+  { id:'owl-night-flight',  level:1, at:{ x:-300, z:-370 } },
+  { id:'eagle-glider',      level:2, at:{ x: 100, z:-420 } },
 ];
 for (const Q of QUESTS) {
   const page = await browser.newPage({ viewport: { width: 390, height: 704 } });
   page.on('pageerror', e => console.log('  PAGE ERROR', Q.id, e.message));
-  await page.goto(`${BASE}/skyflyer-engine.html?v=fl6&level=${Q.level}`, { waitUntil: 'load' });
+  await page.goto(`${BASE}/skyflyer-engine.html?v=fl7&level=${Q.level}`, { waitUntil: 'load' });
   await page.waitForFunction('window.SKY && SKY.state', null, { timeout: 30000 });
   // park where the quest's beam is and let the game's own loop do the offering
   await page.evaluate(a => { const s = SKY.state; s.pos.x=a.x; s.pos.z=a.z; s.pos.y=20; s.yaw=0; }, Q.at);
@@ -89,7 +94,7 @@ for (const Q of QUESTS) {
 for (const Q of QUESTS) {
   const page = await browser.newPage({ viewport: { width: 760, height: 520 } });
   page.on('pageerror', e => console.log('  PAGE ERROR', Q.id, e.message));
-  await page.goto(`${BASE}/skyflyer-engine.html?v=fl6&level=${Q.level}&mode=free&manual=1`, { waitUntil: 'load' });
+  await page.goto(`${BASE}/skyflyer-engine.html?v=fl7&level=${Q.level}&mode=free&manual=1`, { waitUntil: 'load' });
   await page.waitForFunction('SKY.flying().loaded===true', null, { timeout: 30000 })
     .catch(() => console.log('  BODY GLB NEVER LOADED', Q.id));
   await page.evaluate(id => SKY.startMission(id), Q.id);

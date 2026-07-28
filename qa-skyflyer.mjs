@@ -185,7 +185,16 @@ const JOB_IDS = ['mail-run','supply-drop','lost-explorer','lantern-lighter'];
 // is proved by the same harness. Kept as its own list only because the extra
 // things worth checking about one (the body, the feel swap, the gathering flow)
 // do not apply to a plain job.
-const QUEST_IDS = ['busy-bee','puffin-parent','hummingbird-hover'];
+const FL6_QUEST_IDS = ['busy-bee','puffin-parent','hummingbird-hover'];
+const FL7_QUEST_IDS = ['goose-squad','owl-night-flight','eagle-glider'];
+const QUEST_IDS = FL6_QUEST_IDS.concat(FL7_QUEST_IDS);
+// How many bodies the engine declares. Every per-body assertion below counts
+// THIS rather than the 3 it was born with — FL7 added three more and every one
+// of those checks failed on the number instead of on the thing it was guarding.
+const BODY_IDS = (function(){
+  const T = html.slice(html.indexOf('var TRANSFORMS=['), html.indexOf('function findTransform('));
+  return (T.match(/id:"[a-z-]+"/g)||[]).map(x=>x.slice(4,-1));
+})();
 chk('a job is something you FIND: its start point stands in the world under a beam',
   /function showScouts\(/.test(html) && /function buildScoutFor\(/.test(html) && /function jobStartPoint\(/.test(html));
 chk('nothing starts without a tap - swooping over one only ASKS',
@@ -264,15 +273,20 @@ chk('three bodies are declared, separately from the three rides',
     return ['bee','puffin','hummingbird'].every(id=>new RegExp('id:"'+id+'"').test(T)); })());
 chk('a body signs the SAME FL3 contract a ride does (a look plus a feel, never power)',
   (function(){ const T = html.slice(html.indexOf('var TRANSFORMS=['), html.indexOf('function findTransform('));
-    return ['speed','turn','bankAmt','pitchAmt','bob','bobRate'].every(k=>
-      (T.match(new RegExp(k+':','g'))||[]).length === 3); })());
+    return BODY_IDS.length >= 3 && ['speed','turn','bankAmt','pitchAmt','bob','bobRate'].every(k=>
+      (T.match(new RegExp(k+':','g'))||[]).length === BODY_IDS.length); })(),
+  BODY_IDS.length+' bodies, each signing all six feel numbers');
 chk('no body is THE good body: the fast one turns wide and the nimble one is slow',
   (function(){ const T = html.slice(html.indexOf('var TRANSFORMS=['), html.indexOf('function findTransform('));
     const sp = (T.match(/speed:(\d+)/g)||[]).map(x=>+x.split(':')[1]);
     const tn = (T.match(/turn:([\d.]+)/g)||[]).map(x=>+x.split(':')[1]);
-    if (sp.length!==3) return false;
+    if (sp.length!==BODY_IDS.length) return false;
     const fast = sp.indexOf(Math.max(...sp)), nimble = tn.indexOf(Math.max(...tn));
-    return fast !== nimble; })());
+    // and the real anti-dominance claim, now that there are six: NOBODY is top
+    // of both lists, and the fastest body is in the slowest half for turning.
+    const rank = [...tn].sort((a,b)=>b-a).indexOf(tn[fast]);
+    return fast !== nimble && rank >= Math.floor(BODY_IDS.length/2); })(),
+  BODY_IDS.length+' bodies: fastest is '+BODY_IDS[(function(){const T=html.slice(html.indexOf('var TRANSFORMS=['),html.indexOf('function findTransform('));const sp=(T.match(/speed:(\d+)/g)||[]).map(x=>+x.split(':')[1]);return sp.indexOf(Math.max(...sp));})()]);
 // AR1R's lesson, made a rule: a bird a kid is INSIDE, seen from an arm's length
 // behind, cannot be four vertices in a V. These are real models.
 chk('the bodies are REAL MODELS out of the animal library, not primitives in a V',
@@ -318,15 +332,23 @@ chk('what you are carrying is scaled to the BODY, not left at aeroplane size',
   /cargoAt:\[2\.6,1\.9\]/.test(html));    // the puffin's row of fish rides in the beak
 chk('the creature on the GO pill is drawn SIDE ON, like every ride glyph beside it',
   (function(){ const g = html.slice(html.indexOf('function icoCreature(n,glyph){'), html.indexOf('function icoGo(n,m){'));
-    return /viewBox="0 0 50 31"/.test(g) && (g.match(/viewBox="0 0 50 31"/g)||[]).length===3; })());
+    const boxes = g.match(/viewBox="[^"]+"/g)||[];
+    // EVERY glyph in there is side-on, and there is one for every body that asks
+    // for one by name — a body whose glyph is not drawn silently falls back to
+    // the seabird, which is how a goose would have ended up looking like a puffin.
+    const glyphs = [...new Set((html.slice(html.indexOf('var TRANSFORMS=['), html.indexOf('function findTransform(')).match(/glyph:"[a-z]+"/g)||[]).map(x=>x.slice(7,-1)))];
+    return boxes.length >= glyphs.length && boxes.every(b=>b==='viewBox="0 0 50 31"') &&
+      glyphs.every(gl=>new RegExp('glyph==="'+gl+'"').test(g) || gl==='seabird'); })(),
+  'all side-on');
 chk('the ride is HIDDEN, never rebuilt, so leaving and rejoining a quest costs nothing',
   /var RIDE_PARTS=plane\.children\.slice\(\);/.test(html) &&
   /RIDE_PARTS\[i\]\.visible=false/.test(html) && /RIDE_PARTS\[i\]\.visible=true/.test(html));
 
-chk('all three transform quests are declared as recipes', QUEST_IDS.every(id=>new RegExp('id:"'+id+'"').test(html)), QUEST_IDS.join(', '));
+chk('every transform quest is declared as a recipe', QUEST_IDS.every(id=>new RegExp('id:"'+id+'"').test(html)), QUEST_IDS.join(', '));
 chk('each one lends a body, and the body it names really exists',
   (function(){ const M = html.slice(html.indexOf('var MISSIONS=['), html.indexOf('function pickWorld('));
-    return /transform:"bee"/.test(M) && /transform:"puffin"/.test(M) && /transform:"hummingbird"/.test(M); })());
+    return BODY_IDS.every(id=>new RegExp('transform:"'+id+'"').test(M)); })(),
+  BODY_IDS.join(', '));
 chk('a quest is FOUND exactly like a job: a beam, and a LOW SWOOP, never a landing',
   /function scoutColor\(m\)/.test(html) && /if\(m\.transform\) return 0x9B7BE8;/.test(html) &&
   // the offer still comes from the same scoutStep that has always run on radius
@@ -357,6 +379,94 @@ chk('the manifest can edit a quest too (a hive is a slot, not a number in the co
 chk('THE SPACING RULE is a number in the engine, not a good intention in a comment',
   /var BEAM_GAP=240;/.test(html) && /function beamSpacing\(\)/.test(html) &&
   /marker\(built,scoutColor\(m\),220,hasBadge\(m\.id\)\)/.test(html));
+
+// ---------------------------------------------------------------------------
+//  FL7 STATIC — three harder bodies, three new places, and the flock
+// ---------------------------------------------------------------------------
+console.log('--- FL7: the harder transforms (goose, owl, eagle) ---');
+chk('the three FL7 quests are declared, in the two worlds that were asked for',
+  (function(){ const M = html.slice(html.indexOf('var MISSIONS=['), html.indexOf('function pickWorld('));
+    return /id:"goose-squad"[\s\S]{0,80}world:"snowy-peaks"/.test(M) &&
+           /id:"owl-night-flight"[\s\S]{0,80}world:"snowy-peaks"/.test(M) &&
+           /id:"eagle-glider"[\s\S]{0,80}world:"sunset-canyon"/.test(M); })());
+chk('...and the glb really carries Goose, SnowyOwl and Eagle, still with COLOR_0 on every one',
+  (function(){
+    const d = fs.readFileSync(dir+'/public/models/skyflyer/animals/flyer-bodies.glb');
+    const j = JSON.parse(d.subarray(20, 20+d.readUInt32LE(12)).toString('utf8'));
+    const names = j.nodes.map(n=>n.name);
+    return ['Goose','SnowyOwl','Eagle'].every(n=>names.includes(n)) &&
+      j.meshes.every(m=>m.primitives.every(p=>p.attributes.COLOR_0!=null)) &&
+      d.length < 400000; })(),
+  'six bodies in '+(fs.statSync(dir+'/public/models/skyflyer/animals/flyer-bodies.glb').size/1024).toFixed(0)+'KB');
+// THE LIBRARY HAS NO "Owl". It has a SnowyOwl and nothing else with the word in
+// it, so a body asking for model:"Owl" loads nothing and the quest silently
+// hands a kid an invisible bird. Every model name is checked against the file.
+chk('every body names a model the file actually contains',
+  (function(){
+    const d = fs.readFileSync(dir+'/public/models/skyflyer/animals/flyer-bodies.glb');
+    const j = JSON.parse(d.subarray(20, 20+d.readUInt32LE(12)).toString('utf8'));
+    const names = j.nodes.map(n=>n.name);
+    const T = html.slice(html.indexOf('var TRANSFORMS=['), html.indexOf('function findTransform('));
+    const want = (T.match(/model:"[A-Za-z]+"/g)||[]).map(x=>x.slice(7,-1));
+    return want.length === BODY_IDS.length && want.every(n=>names.includes(n)); })());
+// THE FOUR-PLACE RULE. A new style has to be wired into the world (3D), the
+// offer card (a drawing), the checklist (an icon) AND the dispatch, and missing
+// any one of the four is invisible until a kid is looking at a blank square.
+chk('each new place is wired into ALL FOUR of the places a style has to exist',
+  ['seed','mousering','thermal'].every(st => {
+    const cap = st.charAt(0).toUpperCase()+st.slice(1).replace('ring','Ring');
+    const B = {seed:'bSeed',mousering:'bMouseRing',thermal:'bThermal'}[st];
+    const I = {seed:'icoSeed',mousering:'icoMouseRing',thermal:'icoThermal'}[st];
+    const W = {seed:'buildSeedPatch',mousering:'buildMouseRing',thermal:'buildThermal'}[st];
+    return new RegExp('function '+B+'\\(').test(html) &&
+           new RegExp('function '+I+'\\(').test(html) &&
+           new RegExp('function '+W+'\\(').test(html) &&
+           new RegExp('style==="'+st+'"[^\\n]*'+B).test(html) &&
+           new RegExp('style==="'+st+'"[^\\n]*'+I).test(html) &&
+           new RegExp('style==="'+st+'"[^\\n]*'+W).test(html); }),
+  'seed, mousering, thermal');
+chk('a sound and a column of warm air stay VISIBLE when the night palette drops',
+  (function(){ const F = html.slice(html.indexOf('function fl7mats(){'), html.indexOf('function buildSeedPatch('));
+    return (F.match(/fog:false/g)||[]).length >= 3; })());
+// THE FLOCK. Two claims, and the second one is the whole feature.
+chk('the flock is asked for by a FLAG ON THE BODY, never by checking which body it is',
+  /var companions=t\.flock\?buildCompanionGeese\(t\):null;/.test(html) &&
+  /flock:true/.test(html) &&
+  !/t\.id==="goose"/.test(html) &&
+  /if\(!TB\[t\.model\]\) return null;/.test(html));
+// The bug this is here to stop coming back: the chase camera sits BEHIND the
+// body, so a flock placed behind it is a flock nobody ever sees.
+chk('every companion flies AHEAD of the kid, where the chase camera can see it',
+  (function(){ const F = html.slice(html.indexOf('function buildCompanionGeese(t){'), html.indexOf('// ---------- become it'));
+    const dz = (F.match(/dz:\s*(-?[\d.]+)/g)||[]).map(x=>+x.split(':')[1]);
+    const dx = (F.match(/dx:\s*(-?[\d.]+)/g)||[]).map(x=>+x.split(':')[1]);
+    const back = (html.match(/camBack:12,/)||[]).length;   // the goose's camera
+    return dz.length === 5 && dz.every(v=>v > 0) &&
+      // and inside the picture: nothing further off to the side than it is ahead
+      dx.every((v,i)=>Math.abs(v) < dz[i]) && back === 1; })(),
+  'five birds, all in front');
+chk('...and each one has its OWN geometry and its OWN wingbeat, or the V is a decal',
+  (function(){ const F = html.slice(html.indexOf('function buildCompanionGeese(t){'), html.indexOf('// ---------- become it'));
+    return /tbPrep\(TB\[t\.model\],t\.size\)/.test(F) && /tbRig\(wrap\.userData\.mesh\)/.test(F) &&
+      /ph:0\.00/.test(F) && (F.match(/ph:[\d.]+/g)||[]).length === 5 &&
+      new Set((F.match(/ph:[\d.]+/g)||[])).size === 5 &&      // no two in phase
+      /tbBeat\(g\.userData\.rig/.test(F); })());
+// The formation is placed in world units but hangs off a body tbPrep has scaled.
+chk('the formation undoes the body\'s scaling, or a 34-unit gap comes out miles wide',
+  /group\.userData\.fix=function\(k\)/.test(html) &&
+  /companions\.group\.userData\.fix\(wrap\.scale\.x\);/.test(html));
+chk('a map blip is the SAME PICTURE as the thing standing under the beam',
+  /style:scoutStyle\(s\.job\)/.test(html) && !/style:s\.job\.depot\?"dock":s\.job\.style/.test(html));
+chk('the FL5b law holds for the FL7 art too: no drawing knows a quest by name',
+  !new RegExp('(' + FL7_QUEST_IDS.join('|') + ')').test(
+    html.slice(html.indexOf('var ICON_FILL='), html.indexOf('function saySplit('))));
+chk('every FL7 quest still ends on one true fun fact a grown-up would not know',
+  (function(){ const M = html.slice(html.indexOf('var MISSIONS=['), html.indexOf('function pickWorld('));
+    return FL7_QUEST_IDS.every(id=>{
+      const at = M.indexOf('id:"'+id+'"'); const nxt = M.indexOf('{ id:"', at+5);
+      const blk = M.slice(at, nxt<0?M.length:nxt);
+      const f = blk.match(/fact:"([^"]+)"/);
+      return f && f[1].length > 60; }); })());
 
 console.log('--- FL5b: a job a four year old can answer, follow and find ---');
 // AR1R — REWRITTEN, NOT DELETED. This used to pin the FL5b/FL5c bottom sheet:
@@ -1195,8 +1305,8 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
     wfree.close();
     const df = flyKid(1, ''); const wf = df.window;
     const s2 = wf.SKY.scouts();
-    chk('a world with two jobs has two of them out there (Snowy Peaks)', s2.length===2, s2.map(s=>s.id).join(' + '));
-    chk('the help button lists this world\'s jobs for a kid who cannot find one', wf.SKY.helpJobs()===2);
+    chk('every job in a world is out there to be found (Snowy Peaks)', s2.length===4, s2.map(s=>s.id).join(' + '));
+    chk('the help button lists this world\'s jobs for a kid who cannot find one', wf.SKY.helpJobs()===4, wf.SKY.helpJobs()+' listed');
     const g = wf.SKY.guide('lost-explorer');
     chk('"Show me" points the one arrow at that job, without starting it',
       !!g && g.label==='Lost Explorer' && wf.SKY.mode()==='free', JSON.stringify(g));
@@ -1322,7 +1432,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
       blips.filter(b=>b.kind==='job').length===jobs.length,
       blips.map(b=>b.kind+':'+b.id).join(' '));
     chk('every blip carries the REAL world coordinate of the thing it stands for',
-      jobs.every(m=>{ const p=m.depot||m.targets[0];
+      jobs.every(m=>{ const p=(m.gather&&m.dropAt)||m.depot||m.targets[0];
         const b=blips.filter(x=>x.id==='job:'+m.id)[0];
         return b && b.x===p.x && b.z===p.z; }) &&
       pads.every((p,i)=>{ const b=blips.filter(x=>x.id==='pad'+i)[0]; return b && b.x===p.x && b.z===p.z; }));
@@ -1454,9 +1564,10 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
 //  model wired to the FL3 contract, and the LIVE half flies all three with
 //  the robot and then leaves one halfway to prove the ride comes back.
 // ------------------------------------------------------------------
-console.log('--- FL6 LIVE: the robot flies all three transform quests ---');
+console.log('--- FL6 + FL7 LIVE: the robot flies every transform quest ---');
 {
-  const QUEST_WORLD = { 'busy-bee':0, 'puffin-parent':0, 'hummingbird-hover':2 };
+  const QUEST_WORLD = { 'busy-bee':0, 'puffin-parent':0, 'hummingbird-hover':2,
+                        'goose-squad':1, 'owl-night-flight':1, 'eagle-glider':2 };
   for (const id of QUEST_IDS) {
     const dq = fly(QUEST_WORLD[id], '&auto=1'); const wq = dq.window;
     if (!wq.SKY) { chk('quest '+id+' booted', false, 'no SKY handle'); continue; }
