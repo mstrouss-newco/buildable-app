@@ -6,6 +6,32 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## FL8b - the sky stops being one blue (July 28 2026)
+`public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
+Sunny Islands only.
+
+Mike's note on FL8 was "how can we make the sky less monochrome?", and the cause
+turned out to be arithmetic rather than taste. **On the sky dome, v = 0.5 IS the
+horizon** - everything a kid can see is squeezed into the first half of the
+gradient. The stops were at 0.46 and 0.78, so the pale horizon colour was painted
+UNDER THE SEA. It was a two-colour gradient of which exactly one colour was ever
+on screen, which is why it read as a flat slab.
+
+**The sky is a ladder now.** Six named rungs from straight overhead down to the
+waterline - `skyTop`, `skyHigh`, `skyMid`, `skyLow`, `skyPale`, `skyHorizon` -
+all of them above 0.50, all of them optional manifest slots. QA asserts no rung
+ever drifts past the waterline again, and the two-slot fallback ramp was fixed at
+the same time so AR2's worlds cannot inherit the bug.
+
+**And the sun's halo went wide and faint.** Same total light, spread across the
+sun's half of the sky instead of sitting in a tight ring: `sunGlowSize` 320 to
+700, `sunGlowStrength` 0.50 to 0.30. Both are world values with the old numbers
+as the fallback.
+
+Four skies were rendered and Mike picked this one from pictures. Snowy Peaks and
+Sunset Canyon are untouched - the whole thing is still gated on a world
+declaring `skyTop`. Cache-bust `fl8` -> `fl8b`. QA 501 checks, all green.
+
 ## FL8 — soft clouds and sun rays (July 28 2026)
 `public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`,
 `qa-skyflyer-sky.mjs` (new). Sunny Islands and the shared cloudscape only.

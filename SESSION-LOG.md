@@ -1,5 +1,69 @@
 # Buildable Kids — Session Log
 
+## 2026-07-28: Session FL8b - the sky stops being one blue
+
+Mike looked at FL8 live: **"i like the clouds, the sun is better, how can we
+make the sky less monochrome?"**
+
+### The cause was arithmetic, not taste
+**On the sky dome, v = 0.5 IS the horizon.** Everything a kid can see is squeezed
+into the FIRST HALF of the gradient. AR1M's stops were at 0.46 and 0.78, so the
+pale horizon colour was painted UNDER THE SEA and never appeared on screen. It
+was a two-colour gradient of which exactly one colour was ever visible. That is
+the whole reason the sky read as a flat blue slab, and no amount of choosing
+nicer colours would have fixed it.
+
+**This was found by rendering, not by reading.** The first bake-off round moved
+the warm colours around and every option came back looking identical to the
+control, which is the symptom that says the change is landing somewhere the
+camera cannot see.
+
+### The sky is a ladder
+Six named rungs from straight overhead down to the waterline, all of them above
+0.50, every one an optional manifest slot:
+
+| slot | position | islands |
+|---|---|---|
+| `skyTop` | 0.000 | 0x2C7BCE |
+| `skyHigh` | 0.300 | 0x3E9AE0 |
+| `skyMid` | 0.440 | 0x5FB6EC |
+| `skyLow` | 0.472 | 0x9FD8F2 |
+| `skyPale` | 0.490 | 0xE2F3F0 |
+| `skyHorizon` | 0.500 | 0xFFE6C6 |
+
+A world that declares only the two original slots still gets a simple ramp, and
+**that fallback's stops were corrected too** (0.46/0.78 -> 0.42/0.50) so AR2's
+worlds cannot inherit the bug. `applyPalette` now hands the whole world to the
+gradient builder rather than two colours, so all six repaint live.
+
+### The halo went WIDE AND FAINT
+The second half of Mike's pick. Same total light, spread across the sun's half of
+the sky instead of sitting in a tight ring: `sunGlowSize` 320 -> 700,
+`sunGlowStrength` 0.50 -> 0.30, colour 0xFFE39C -> 0xFFD9A0. Both new numbers are
+world values with the old ones as the fallback, so the other two worlds are
+unchanged. Colour now comes from WHERE THE LIGHT IS, which is the part that
+stops the sky reading as one wash.
+
+### How the choice was made
+Four skies (control, gentle, bold ladder, gentle + sun wash) rendered from three
+cameras each in a throwaway copy of the engine driven by `?look=`, stitched into
+comparison sheets. Mike picked the fourth. Two calibration rounds were needed
+first: the initial numbers bleached the whole frame, because a LOW camera only
+ever sees the bottom of the ladder - roughly f 0.36 to 0.50 - so the ladder has
+to hold its blue until about 0.44 and do the warm turn in the last 0.03.
+
+### QA
+`node qa-skyflyer.mjs .` - **501 checks, all green** (492 after FL8). The rung
+positions are PARSED OUT OF THE SOURCE and asserted to be above the waterline,
+which is the check the bug earns. Plus the six-slot declaration, the fixed
+fallback ramp, the halo knobs, and a live check per world that islands has six
+rungs and a 700 halo while the other two have none and the 320 default. Two FL8
+checks rewritten rather than left passing on values that moved.
+
+Cache-bust `fl8` -> `fl8b`, `SKY.version` "FL8" -> "FL8b".
+
+---
+
 ## 2026-07-28: Session FL8 — soft clouds and sun rays
 
 Phase FL, session 8. The card was **half done already**: AR1M shipped the
