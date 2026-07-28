@@ -1,5 +1,64 @@
 # Buildable Kids — Session Log
 
+## 2026-07-28: Session FL8c - the sea gets depth
+
+Mike, after picking the sky: give the sea some colour range too. Same complaint,
+other half of the screen - the water was ONE FLAT BLUE across roughly half of
+every frame, so fixing only the sky would have left the picture half solved.
+
+### What varies the water
+Two things, both pinned to the WORLD so they slide past you as you fly instead
+of travelling with the camera:
+
+1. **Depth patches** - two octaves of value noise at 230u and 82u, smoothstepped.
+   Open water is never one value again.
+2. **Shallows** - every island stands in a turquoise flat that fades out over
+   118u past its coast, at 0.58 strength. An island now sits IN the water rather
+   than on it, and the archipelago reads as an archipelago.
+
+### The colour had to move into the vertices
+A multiply map can only ever DARKEN (look rule 9), and a shallow has to be
+BRIGHTER than the open sea. So the material is held at white and the colour
+lives in a vertex attribute on the sea grid.
+
+**The manifest still owns every colour.** `seaRange(midHex)` takes one colour in
+and produces four out - deep, mid, light and shallow - by shifting it in HSL, so
+recolouring the sea is still a single manifest value. Optional `seaDeep` and
+`seaShallow` override the derivation for a world that wants to be specific.
+
+### THE DOUBLE-MULTIPLY TRAP
+The bug this session earned its QA check for. The manifest lands about a second
+after load and `applyPalette` writes the sea colour back onto the MATERIAL.
+Material colour times vertex colour then multiplies the sea by itself, and the
+whole ocean goes navy. Worse, it is invisible in any screenshot taken before the
+manifest arrives, so it would have shipped looking correct locally. The material
+is held at white now and any colour written to it is taken as the new MIDDLE of
+the range - which makes the guard self-healing rather than a rule someone has to
+remember.
+
+### And the other calibration lesson, again
+The first build lerped deep..mid across the noise, which moves the AVERAGE sea
+darker - every option came back navy. The range has to go BOTH WAYS around the
+manifest's own colour so the average is unchanged and only the spread is new.
+That is the same shape of mistake as FL8b's gradient stops: the change was real,
+it was just centred in the wrong place.
+
+### Cost
+The sea grid is 45x45 = 2,025 points, already rewritten every frame for the
+swell, so the colour rides along with it. The island list is the only thing that
+would otherwise be points x islands x frames, so it is refreshed on a 30-frame
+tick and culled past 820u. Draw calls unchanged: 415-623 across the six cameras.
+
+### QA
+`node qa-skyflyer.mjs .` - **512 checks, all green** (501 after FL8b). Eight new
+static checks including the double-multiply guard and the both-ways range, plus a
+live check per world that islands has 2,025 vertex-coloured sea points with a
+white material and the other two worlds have none.
+
+Cache-bust `fl8b` -> `fl8c`, `SKY.version` "FL8b" -> "FL8c".
+
+---
+
 ## 2026-07-28: Session FL8b - the sky stops being one blue
 
 Mike looked at FL8 live: **"i like the clouds, the sun is better, how can we

@@ -6,6 +6,33 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## FL8c - the sea gets depth (July 28 2026)
+`public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
+Sunny Islands only.
+
+The other half of "less monochrome": the water was one flat blue across half the
+screen. Two things vary it now, both pinned to the WORLD so they slide past you
+as you fly rather than travelling with the camera. **Depth patches** - large soft
+slow noise at 230u and 82u, so open water is never one value. **Shallows** -
+every island stands in a turquoise flat that fades out over 118u past its coast,
+so an island sits IN the water instead of on it.
+
+**The colour lives in the vertices, not the material.** A multiply map can only
+ever darken (look rule 9) and a shallow has to be BRIGHTER than the sea. The
+manifest still owns every colour: deep, light and shallow are all derived in HSL
+from the one `ground` slot, so recolouring the sea is still a single value.
+Optional `seaDeep` / `seaShallow` override the derivation.
+
+**The trap, and it cost a render to find.** The manifest lands about a second
+after load and `applyPalette` writes the sea colour back onto the MATERIAL.
+Material colour times vertex colour then multiplies the sea by itself and the
+whole ocean goes navy - and it looks perfect in any screenshot taken before the
+manifest arrives. The material is held at white now, and any colour written to
+it is taken as the new middle of the range.
+
+Snowy Peaks and Sunset Canyon are untouched. QA 512 checks, all green.
+Cache-bust `fl8b` -> `fl8c`.
+
 ## FL8b - the sky stops being one blue (July 28 2026)
 `public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
 Sunny Islands only.
