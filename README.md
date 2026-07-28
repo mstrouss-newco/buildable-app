@@ -6,6 +6,46 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## FL8 — soft clouds and sun rays (July 28 2026)
+`public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`,
+`qa-skyflyer-sky.mjs` (new). Sunny Islands and the shared cloudscape only.
+
+The other half of the sky card. AR1M had already shipped the gradient dome and
+the sun's halo; what it never did was the clouds or any rays.
+
+**A cloud is not geometry.** What was there was ten clusters of flat-shaded
+spheres — bags of marbles with a visible faceted rim on every one. A cloud has
+no edge at all, so the honest version is a soft picture: many small overlapping
+puffs, the light baked into the picture (bright crown, cool underside), laid out
+as a flat-bottomed loaf with a dome on top. Every cloud in the sky is now **one
+mesh and one draw call**, down from about forty. They are quads turned to face
+the camera on the CPU — not `THREE.Points`, because `gl_PointSize` is clamped by
+the GPU and a close puff is far bigger than that ceiling on an iPad.
+
+**Sun rays are a smooth angular function, never drawn triangles.** The first
+build drew a canvas triangle fan and came back as a comic-book starburst. The
+shipped version computes the fan one pixel at a time from three cosine harmonics
+that never line up, so it can only be soft. It sits **95 units behind the sun
+disc** along the camera ray — the halo is at 60 — because anything coplanar with
+the sun z-fights into a pinwheel from every camera that is not the plane's.
+
+**Three smaller things the pictures forced.** A close cloud shaded as hard as the
+first pass read as smog, so a fair-weather cloud is now nearly white. The halo's
+`0xFFF3CC` has a full blue channel and additive blending onto a full-blue sky can
+only go cyan, so the sun read as a cold flashbulb — it is warmer now. And the
+cloud shadows on the sea belonged to nothing: there is one wind now, and one
+shadow per cloud, sitting under the cloud that casts it.
+
+Snowy Peaks and Sunset Canyon are still untouched by the dome, the halo and the
+rays — all three are gated on a world declaring `skyTop`, which is AR2's job.
+Two new optional palette slots, `sunRays` and `cloud`.
+
+```
+(cd public && python3 -m http.server 8899)
+node qa-skyflyer-sky.mjs           # writes /tmp/shots/sky-<world>-*.png
+node qa-skyflyer.mjs .             # 492 checks, all green
+```
+
 ## FL7 — the harder transforms, and a flock that flies with you (July 28 2026)
 `public/skyflyer-engine.html`, `public/models/skyflyer/animals/flyer-bodies.glb`,
 `qa-skyflyer.mjs`, `qa-skyflyer-look.mjs`, `src/BuildableKids.jsx`.

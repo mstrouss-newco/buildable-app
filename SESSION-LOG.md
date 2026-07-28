@@ -1,5 +1,109 @@
 # Buildable Kids — Session Log
 
+## 2026-07-28: Session FL8 — soft clouds and sun rays
+
+Phase FL, session 8. The card was **half done already**: AR1M shipped the
+gradient sky dome and the sun's halo, and both have been live in Sunny Islands
+since. What it never did was the clouds or any rays, and the card asked whether
+that leftover half was worth a session or should fold into AR2. **It was worth
+its own session.** Clouds are the thing a kid flies past for the entire game,
+they were the weakest art left in the sky, and AR2 is already two whole worlds.
+Declaring the sky slots for Snowy Peaks and Sunset Canyon still belongs to AR2.
+
+### What shipped
+`public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`, and a
+new look gate `qa-skyflyer-sky.mjs`. Engine cache-bust `?v=fl7` -> `?v=fl8`,
+`SKY.version` "FL6" -> "FL8" (it had been stale since FL6).
+
+### A cloud is not geometry
+The old clouds were ten clusters of `SphereGeometry` under flat shading: bags of
+marbles, each marble with a visible faceted rim. A cloud has no edge anywhere, so
+geometry is the wrong tool. Three things make the new ones read as vapour and
+none of them is expensive:
+
+1. **many small overlapping puffs**, so the silhouette is lumpy and never repeats;
+2. **the light is baked into the puff picture** — bright crown, cool underside —
+   which is what makes a flat card read as a round lump;
+3. **a flat-bottomed loaf**, dome on top and cut off underneath, which is the
+   actual shape of a fair-weather cloud.
+
+One number per puff (`u`, how far out of the core it sits) drives its size, its
+opacity, its height and its spread together, which is why the clump holds
+together instead of looking like scattered dots.
+
+**Cost: every cloud in the sky is ONE mesh and ONE draw call**, down from about
+forty. Rule 21 ("a glow is a point cloud, never a sprite each") applied to
+vapour — but deliberately NOT a `THREE.Points`: `gl_PointSize` is clamped by the
+GPU, commonly at 255 or 511, and a nearby cloud puff wants several hundred pixels
+on an iPad. So these are real quads, turned to face the camera on the CPU each
+frame exactly the way the wakes and the cloud shadows already were.
+
+**The wind is simulation, the billboard is drawing, and they are two functions.**
+`driftClouds` runs in `stepSim`, so the sky keeps moving and keeps wrapping on a
+frame that never draws — which is the only reason the headless harness can prove
+the sky follows the kid across an endless world.
+
+### Sun rays: a smooth function, never drawn triangles
+The first build drew a canvas triangle fan and came back as a comic-book
+starburst — hard-edged cyan spokes, the exact look AR1M spent a bug fixing. The
+shipped version computes the fan **one pixel at a time** from three cosine
+harmonics of the angle (17, 11-ish and 9, which never line up), so a smooth
+function can only make smooth spokes. Hollow in the middle, because the disc and
+the halo already own the centre and a third bright thing there just blows out.
+
+**It sits 95 units BEHIND the disc along the camera ray; the halo is at 60.** The
+pinwheel trap, one layer further out. It turns by rotating its TEXTURE, because
+`lookAt` owns the mesh's own rotation and would undo it.
+
+### Three things only a picture caught
+1. **A close cloud read as smog.** The first puff picture shaded the underside to
+   0.63/0.71/0.83 and a clump near the camera came back as a brown-grey wash over
+   the sea. A fair-weather cloud is nearly white; the underside is 0.82/0.87/0.94.
+2. **The sun was a cold flashbulb.** AR1M's halo colour `0xFFF3CC` has a full blue
+   channel, and an ADDITIVE blend onto a sky already at full blue can only push
+   the result cyan. Warmed to `0xFFE39C` — a manifest slot, so it stays a
+   one-value decision.
+3. **The cloud shadows belonged to nothing.** Sixteen dark patches drifting under
+   eighteen clouds that had nothing to do with them. There is ONE wind now
+   (`WIND`, which the shadows already used as a hard-coded 3.2/1.1), and one
+   shadow per cloud, sitting under its own cloud. Straight down, not downsun: a
+   true shadow lands a couple of hundred units away from its cloud, which is
+   correct and reads as a mistake. Shadow opacity came down 0.42 -> 0.28.
+
+### AR2 is still untouched
+The dome, the halo and the rays are all gated on a world declaring `skyTop`, and
+only Sunny Islands does. Snowy Peaks and Sunset Canyon get the new clouds (which
+were always shared by all three worlds) and nothing else. QA asserts the count of
+`skyTop:0x` and `sunRays:0x` in the file is exactly one apiece.
+
+Two new optional palette slots: **`sunRays`** and **`cloud`**, both wired through
+`applyPalette` so a world can be recoloured with no code.
+
+### The trap this session added
+**No picture must ever mean no sky.** A `MeshBasicMaterial` with a null map is a
+SOLID WHITE SQUARE, and an additive one is a solid white square that glows. The
+headless harness has no 2D canvas at all, so every sky texture builder returns
+null there — and the first version of `cloudPuffTexture` was not wrapped, threw,
+and killed the whole engine before `SKY` existed (all three world runs failed
+with "no SKY handle"). Every sky picture builder now returns null safely and
+every consumer refuses to build the mesh without one. The cloudscape STATE is
+still built either way, because the wind, the wrap and the shadows all read it
+and none of them needs a picture. QA asserts that degradation directly.
+
+### QA
+`node qa-skyflyer.mjs .` — **492 checks, all green** (was 367 after AR1R). 14 new
+static checks and 3 new live ones per world, all reading `SKY.sky()`, which is a
+new handle reporting what the sky ACTUALLY built: dome/halo/rays presence, the
+separations along the camera ray, the clump and puff counts, and the distance to
+the nearest cloud after flying 600+ units out.
+
+New look gate `qa-skyflyer-sky.mjs`: six parked cameras per world (low close,
+into the sun, cruise, level with the cloud band, above it, away from the sun),
+shot in the sandbox because a parked frame does not survive the Chrome bridge.
+All three worlds shot; whole-world cost unchanged at 415-624 draw calls.
+
+---
+
 ## 2026-07-28: Session FL7 — transform quests, part 2
 
 Phase FL, session 7. FL6 built the transform machinery and three easy bodies;
