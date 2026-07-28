@@ -1283,6 +1283,103 @@ if(SEA){
   M.ground.opacity=1;
   M.ground.depthWrite=true;
 }
+// ============================================================================
+//  FL8c — THE SEA GETS DEPTH. It was ONE FLAT BLUE across half the screen, which
+//  is the other half of "less monochrome". Two things vary it, both pinned to
+//  the WORLD so they slide past you as you fly rather than travelling with you:
+//
+//    1. DEPTH PATCHES - large, soft, slow noise, so open water is never one
+//       value. Two octaves at 230u and 82u.
+//    2. SHALLOWS - every island stands in a turquoise flat that fades out over
+//       118u past its coast, so an island sits IN the water instead of on it.
+//
+//  Colour lives in the VERTICES, not the material, because a multiply map can
+//  only ever darken (look rule 9) and shallows have to be BRIGHTER than the sea.
+//  The manifest still owns every colour: deep, light and shallow are all derived
+//  from the one `ground` slot in HSL, so recolouring the sea is still one value.
+//  Optional `seaDeep` / `seaShallow` override the derivation.
+//
+//  THE DOUBLE-MULTIPLY TRAP, and it cost a render to find: the manifest lands
+//  about a second after load and applyPalette writes the sea colour back onto
+//  the MATERIAL. Material colour times vertex colour then multiplies the sea by
+//  itself and the whole ocean goes navy. So the material is held at WHITE and
+//  any colour written to it is taken as the new MIDDLE of the range instead.
+// ============================================================================
+var SEA_DEEP=new THREE.Color(), SEA_MID=new THREE.Color(),
+    SEA_LIGHT=new THREE.Color(), SEA_SHAL=new THREE.Color();
+var SEA_ISLES=[], _seaTick=0, _seaV=new THREE.Vector3(), _seaC=new THREE.Color();
+function seaHash(a,b){ var v=Math.sin(a*127.1+b*311.7)*43758.5453; return v-Math.floor(v); }
+function seaVN(x,z){
+  var xi=Math.floor(x), zi=Math.floor(z), xf=x-xi, zf=z-zi;
+  var u=xf*xf*(3-2*xf), v=zf*zf*(3-2*zf);
+  var a=seaHash(xi,zi), b=seaHash(xi+1,zi), c=seaHash(xi,zi+1), d=seaHash(xi+1,zi+1);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+function seaNoise(x,z){ return seaVN(x/230,z/230)*0.68 + seaVN(x/82,z/82)*0.32; }
+// One colour in, four out. Everything is a shift of the manifest's own sea, so
+// the palette cannot be contradicted by a hard-coded blue hiding in here.
+function seaRange(midHex){
+  SEA_MID.setHex(midHex);
+  var h={}; SEA_MID.getHSL(h);
+  if(world.seaDeep!=null) SEA_DEEP.setHex(world.seaDeep);
+  else SEA_DEEP.setHSL(h.h+0.010, Math.min(1,h.s*1.05), h.l*0.74);
+  SEA_LIGHT.setHSL(h.h-0.016, Math.min(1,h.s*0.94), Math.min(0.92,h.l*1.34));
+  if(world.seaShallow!=null) SEA_SHAL.setHex(world.seaShallow);
+  else SEA_SHAL.setHSL(h.h-0.032, Math.min(1,h.s*0.86), Math.min(0.90,h.l*1.60));
+}
+// Which islands are near enough to stand in their own shallows. Refreshed on a
+// slow tick, not per vertex - the sea grid is 2,025 points and this is the only
+// thing in the loop that would otherwise be O(points x islands x frames).
+function seaIsleList(){
+  SEA_ISLES.length=0;
+  var key,k;
+  for(key in chunks){ var c=chunks[key];
+    for(k=0;k<c.isles.length;k++){
+      var o=c.isles[k]; if(!o.userData||!o.userData.hitR) continue;
+      o.getWorldPosition(_seaV);
+      var dx=_seaV.x-S.pos.x, dz=_seaV.z-S.pos.z;
+      if(dx*dx+dz*dz>820*820) continue;          // past the fog, nobody sees it
+      SEA_ISLES.push(_seaV.x,_seaV.z,o.userData.hitR/0.92);
+    } }
+}
+function stepSeaColour(){
+  if(!SEA||!groundGeo.attributes.color) return;
+  if(M.ground.color.getHex()!==0xFFFFFF){        // the double-multiply trap
+    seaRange(M.ground.color.getHex());
+    M.ground.color.setHex(0xFFFFFF); M.ground.needsUpdate=true;
+  }
+  var ca=groundGeo.attributes.color, pa=groundGeo.attributes.position, i;
+  if((_seaTick++ % 30)===0) seaIsleList();
+  for(i=0;i<pa.count;i++){
+    var wx=gBase[i*3]+S.pos.x, wz=gBase[i*3+2]+S.pos.z;
+    var n=seaNoise(wx,wz); if(n<0)n=0; if(n>1)n=1;
+    n=n*n*(3-2*n);
+    // vary BOTH ways around the manifest's colour, so the average sea is
+    // unchanged and only the RANGE is new. Lerping deep..mid instead simply
+    // turns the whole ocean navy, which is what the first build did.
+    if(n<0.5) _seaC.copy(SEA_DEEP).lerp(SEA_MID,n*2);
+    else      _seaC.copy(SEA_MID).lerp(SEA_LIGHT,(n-0.5)*2);
+    if(SEA_ISLES.length){
+      var sh=0,j;
+      for(j=0;j<SEA_ISLES.length;j+=3){
+        var dx=wx-SEA_ISLES[j], dz=wz-SEA_ISLES[j+1];
+        var d=Math.sqrt(dx*dx+dz*dz)-SEA_ISLES[j+2];
+        var t=1-d/118; if(t>1)t=1; if(t>sh)sh=t;
+      }
+      if(sh>0){ sh=sh*sh*(3-2*sh); _seaC.lerp(SEA_SHAL,sh*0.58); }
+    }
+    ca.setXYZ(i,_seaC.r,_seaC.g,_seaC.b);
+  }
+  ca.needsUpdate=true;
+}
+if(SEA){
+  seaRange(world.ground);
+  M.ground.color.setHex(0xFFFFFF);
+  M.ground.vertexColors=true;
+  M.ground.needsUpdate=true;
+  groundGeo.setAttribute("color",
+    new THREE.Float32BufferAttribute(new Float32Array(groundGeo.attributes.position.count*3),3));
+}
 var groundMesh=new THREE.Mesh(groundGeo,M.ground);
 scene.add(groundMesh);
 var gPos=groundGeo.attributes.position;
@@ -6236,6 +6333,7 @@ function drawScene(dt){
     gPos.array[i*3+1]=h*world.waves;
   }
   gPos.needsUpdate=true;
+  stepSeaColour();
   // the sea plane rides under the plane, so the ripples are pinned to the WORLD
   // and drift on their own instead of sliding along with the camera
   if(SEA&&M.ground.map){
@@ -6405,7 +6503,7 @@ try{
 //  beatable with no renderer and no real clock.
 // ============================================================================
 window.SKY={
-  version:"FL8b",
+  version:"FL8c",
   state:S,
   world:world,
   worlds:WORLDS,
@@ -6606,6 +6704,7 @@ window.SKY={
       // looked at them. A parked frame that skipped this comes back with every
       // cloud edge-on and the sky looks empty. (AR1Q's lesson, new layer.)
       stepClouds(0);
+      try{ stepSeaColour(); }catch(e){}   // FL8c: same reason - the sea is coloured per frame
       // The living layer decides what is visible from the CAMERA, and the loop
       // is frozen, so it has to be stepped once for the camera we just parked.
       try{ stepIslandLife(1/60,time); }catch(e){}
@@ -6656,6 +6755,8 @@ window.SKY={
              glowSize:world.sunGlowSize!=null?world.sunGlowSize:320,
              glowSep:sep(SUN_GLOW), raySep:sep(SUN_RAYS),
              clumps:CLUMPS.length, puffs:PUFFS.length,
+             seaVerts:(SEA&&groundGeo.attributes.color)?groundGeo.attributes.color.count:0,
+             seaShelves:SEA_ISLES.length/3, seaFlat:(M.ground.color.getHex()===0xFFFFFF)?false:true,
              cloudMeshes:CLOUDS?1:0, nearestCloud:Math.round(near),
              wind:[WIND.x,WIND.z] }; },
   // AR1Q — what the living layer actually built, so QA asserts the world and
