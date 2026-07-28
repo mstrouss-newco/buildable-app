@@ -821,14 +821,75 @@ chk('the camp shrank to the ruler (homes 3.2-4.8u, not the 5.5-9u giants)',
 chk('the sky is a GRADIENT dome with a sun halo, built in code',
   /function skyGradientTexture\(/.test(html) && /side:THREE\.BackSide/.test(html) &&
   /THREE\.AdditiveBlending/.test(html));
+// FL8 rewrote the halo colour: 0xFFF3CC has a full blue channel, and an ADDITIVE
+// blend onto a sky that is already at full blue can only push the result cyan,
+// which is why the sun read as a cold flashbulb. Pulling the blue down is the
+// whole fix, and it is a manifest slot so it stays a one-value decision.
 chk('the sky colours are MANIFEST SLOTS with safe built-in fallbacks',
-  /skyTop:0x4FA8E8, skyHorizon:0xDCF2FF, sunGlow:0xFFF3CC/.test(html) &&
+  /skyTop:0x4FA8E8, skyHorizon:0xDCF2FF, sunGlow:0xFFE39C/.test(html) &&
   /if\(world\.skyTop==null\) return;/.test(html) &&
   /var st=hexNum\(p\.skyTop\), sh=hexNum\(p\.skyHorizon\)/.test(html));
 chk('the halo sits BEHIND the disc on the camera ray (coplanar it pinwheels)',
   /function placeSunGlow\(\)/.test(html) && /vx\/L\*60/.test(html));
 chk('AR2 is still untouched: only the islands world declares a sky dome',
   (html.match(/skyTop:0x/g)||[]).length === 1);
+
+// ==========================================================================
+//  FL8 - SOFT CLOUDS AND SUN RAYS. AR1M did the dome and the halo; this is the
+//  half it did not do. Everything here is guarded on the SHAPE of the fix, not
+//  on the words in the comment, because a check that guards a shape which no
+//  longer exists passes forever.
+// ==========================================================================
+chk('FL8: a cloud is no longer a bag of hard SPHERES',
+  /function buildClouds\(/.test(html) && /function cloudPuffTexture\(/.test(html) &&
+  !/var puff=new THREE\.SphereGeometry\(1,7,5\)/.test(html) &&
+  !/clouds\.push\(g\)/.test(html));
+chk('FL8: every cloud in the sky is ONE mesh and ONE draw call',
+  (()=>{ const b=html.slice(html.indexOf('function buildClouds('),html.indexOf('function driftClouds('));
+         return (b.match(/new THREE\.Mesh\(/g)||[]).length===1 &&
+                /scene\.add\(CLOUDS\)/.test(b) &&
+                (html.match(/scene\.add\(CLOUDS\)/g)||[]).length===1; })());
+chk('FL8: the puffs are QUADS turned to face the camera, not gl_PointSize',
+  /function stepClouds\(/.test(html) && /camera\.matrixWorld\.elements/.test(html) &&
+  !/CLOUDS=new THREE\.Points\(/.test(html));
+chk('FL8: the LIGHT is baked into the puff picture - that is what gives it volume',
+  (()=>{ const t=html.slice(html.indexOf('function cloudPuffTexture('),html.indexOf('// The wind.'));
+         return /createImageData/.test(t) && /var lit=/.test(t) && /Math\.pow\(1-r,/.test(t); })());
+chk('FL8: a fair-weather cloud is nearly white (a dark underside reads as smog)',
+  /d\[k\]  =Math\.round\(255\*\(0\.82\+0\.18\*lit\)\)/.test(html));
+chk('FL8: the sky wraps around the kid, so an endless world never runs out of clouds',
+  /function driftClouds\(/.test(html) && /driftClouds\(dt\);/.test(html) &&
+  /if\(C\.x-px>560\) C\.x-=1120/.test(html));
+chk('FL8: the wind is ONE number, so a shadow and the cloud casting it agree',
+  /var WIND=\{x:3\.2,z:1\.1\}/.test(html) &&
+  /C\.x\+=dt\*WIND\.x\*C\.sp/.test(html) &&
+  (html.match(/C\.x\+=dt\*3\.2/g)||[]).length===0);
+chk('FL8: ONE SHADOW PER CLOUD - a shadow now belongs to something',
+  /SHAD_N=CLUMPS\.length\|\|16/.test(html) &&
+  /if\(C\.src\)\{ C\.x=C\.src\.x; C\.z=C\.src\.z; \}/.test(html));
+// The AR1M pinwheel trap, one layer further out. Coplanar with the sun disc,
+// anything additive z-fights into spokes from every camera that is not the
+// plane's. The halo sits 60 behind; the rays have to sit BEHIND THE HALO.
+chk('FL8: the rays sit behind the disc AND behind the halo on the camera ray',
+  /function placeSunRays\(/.test(html) && /vx\/L\*95/.test(html) &&
+  /vx\/L\*60/.test(html));
+chk('FL8: the ray fan is a smooth angular function, never drawn triangles',
+  (()=>{ const t=html.slice(html.indexOf('function sunRayTexture('),html.indexOf('var SKY_DOME='));
+         return /Math\.atan2\(uy,ux\)/.test(t) && /Math\.cos\(ang\*17/.test(t) &&
+                !/lineTo/.test(t) && !/moveTo/.test(t); })());
+chk('FL8: the fan TURNS by rotating the picture, because lookAt owns the mesh',
+  /t\.center\.set\(0\.5,0\.5\)/.test(html) &&
+  /SUN_RAYS\.material\.map\.rotation=t\*0\.035/.test(html));
+chk('FL8: the two new colours are optional manifest slots, wired to repaint live',
+  /sunRays:0xFFDF96, cloud:0xFFFFFF/.test(html) &&
+  /world\.sunRays!=null\?world\.sunRays:/.test(html) &&
+  /world\.cloud!=null\?world\.cloud:0xFFFFFF/.test(html) &&
+  /var sr=hexNum\(p\.sunRays\)/.test(html) && /var cl=hexNum\(p\.cloud\)/.test(html));
+chk('FL8: AR2 is STILL untouched - only the islands world gets rays',
+  (html.match(/sunRays:0x/g)||[]).length === 1);
+chk('FL8: a parked camera re-faces the billboards, or every screenshot is empty',
+  (()=>{ const l=html.slice(html.indexOf('look:function(pos,at)'),html.indexOf('release:function()'));
+         return /stepClouds\(0\)/.test(l) && /placeSunRays\(time\)/.test(l); })());
 chk('the Quaternius models already in the repo are actually USED, not left on a shelf',
   (()=>{ const q=[...html.matchAll(/^\s*(q\w+):"\.\.\/nature\/([\w\-]+\.gltf)"/gm)];
          return q.length>=6 &&
@@ -974,8 +1035,41 @@ if (!JSDOM) {
     const w = dom.window;
     if (!w.SKY) { chk('world '+i+' engine booted', false, 'no SKY handle'); continue; }
     const name = w.SKY.world.name, goals = w.SKY.goals;
+    // ---------- FL8 LIVE: the sky the engine ACTUALLY BUILT ----------
+    // This harness has NO 2D canvas, so none of the sky PICTURES can be painted.
+    // That is worth asserting in its own right: the correct behaviour with no
+    // picture is nothing at all, because an untextured additive plane or an
+    // untextured dome is a solid white shape swallowing the screen.
+    const canvas2d = !!(w.document.createElement('canvas').getContext('2d'));
+    const sky0 = w.SKY.sky();
+    chk('FL8 ['+name+']: the cloudscape carries a real number of puffs',
+      sky0.clumps >= 14 && sky0.puffs >= 300,
+      sky0.clumps+' clouds, '+sky0.puffs+' puffs, '+sky0.cloudMeshes+' mesh');
+    if (canvas2d) {
+      chk('FL8 ['+name+']: every cloud in the sky is one mesh', sky0.cloudMeshes === 1);
+      if (i === 0) {
+        chk('FL8 [islands]: dome, halo and rays are all there',
+          sky0.dome === true && sky0.glow === true && sky0.rays === true);
+        chk('FL8 [islands]: rays sit BEHIND the halo which sits BEHIND the disc',
+          sky0.raySep > sky0.glowSep && sky0.glowSep > 0,
+          'disc 0 < halo '+sky0.glowSep+' < rays '+sky0.raySep);
+      } else {
+        chk('FL8 ['+name+']: AR2 untouched - no dome, no halo, no rays',
+          sky0.dome === false && sky0.glow === false && sky0.rays === false);
+      }
+    } else {
+      chk('FL8 ['+name+']: with no 2D canvas the sky draws NOTHING (never a white ball)',
+        sky0.cloudMeshes === 0 && sky0.dome === false && sky0.glow === false && sky0.rays === false);
+    }
     let t = 0;
     for (; t < MAX; t++) { w.SKY.tick(1/30); if (w.SKY.beaten()) break; }
+    // Fly a very long way and the sky has to still be overhead. Before FL8 the
+    // clouds sat in a fixed box the kid could simply leave behind.
+    const s1 = w.SKY.snapshot();
+    const sky1 = w.SKY.sky();
+    chk('FL8 ['+name+']: the sky follows the kid across an endless world',
+      sky1.nearestCloud < 620 && Math.hypot(s1.x, s1.z) > 200,
+      'flew '+Math.round(Math.hypot(s1.x,s1.z))+'u out, nearest cloud '+sky1.nearestCloud+'u');
     const s = w.SKY.snapshot();
     if (i === 0) {
       // AR1: this DOM has no WebGL at all. The kit must refuse to start and the
@@ -1119,7 +1213,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as FL6', w4.SKY.version === 'FL6', w4.SKY.version);
+    chk('engine reports itself as FL8', w4.SKY.version === 'FL8', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();
