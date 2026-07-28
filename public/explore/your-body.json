@@ -43,11 +43,17 @@
         },
         {
           "text": "Your iris gets its color from a substance called melanin, and the more you have the browner your eyes look. Eye color runs along a smooth range, from the palest blue all the way to deep brown, with lots of greens and hazels in between. Many different genes work together to paint it, so the color you see in the mirror is truly your own.",
-          "source": "U.S. National Library of Medicine (medlineplus.gov)"
+          "source": "U.S. National Library of Medicine (medlineplus.gov)",
+          "art": "/explore/topic-photos/your-body/your-body-1a.webp",
+          "artAlt": "An extreme close-up of a brown iris filling the frame, its fine fibres and flecks in sharp detail",
+          "caption": "Melanin is what makes an iris look brown."
         },
         {
           "text": "Behind that pretty iris, light lands on a special layer at the back of the eye called the retina. Tiny cells there turn the light into little electrical signals and send them along a nerve to your brain. Your brain reads the signals and turns them into the picture you are looking at right now.",
-          "source": "National Eye Institute (nei.nih.gov)"
+          "source": "National Eye Institute (nei.nih.gov)",
+          "art": "/explore/topic-photos/your-body/your-body-1b.webp",
+          "artAlt": "An extreme close-up of a blue-green eye with the dark round pupil open in the middle",
+          "caption": "Light goes in through the dark pupil to the back of the eye."
         }
       ],
       "infographic": {
@@ -80,11 +86,17 @@
         },
         {
           "text": "A skeleton model in a classroom stays perfectly still, but the bones inside you are very much alive. They are growing and changing all the time, just like the rest of you. Because they are living, they can even mend themselves and grow strong again after a break.",
-          "source": "Nemours KidsHealth (kidshealth.org)"
+          "source": "Nemours KidsHealth (kidshealth.org)",
+          "art": "/explore/topic-photos/your-body/your-body-2a.webp",
+          "artAlt": "A full-height skeleton model stands in a bright classroom beside a smiling child",
+          "caption": "The model stands still, but your own bones are alive."
         },
         {
           "text": "Deep inside many of your bones is a soft jelly called bone marrow, and it has the busy job of making blood cells for your whole body. Bones also store a mineral called calcium that helps keep them hard and strong. So your skeleton holds you up tall and helps make blood at the very same time.",
-          "source": "National Institute of Arthritis and Musculoskeletal and Skin Diseases (niams.nih.gov)"
+          "source": "National Institute of Arthritis and Musculoskeletal and Skin Diseases (niams.nih.gov)",
+          "art": "/explore/topic-photos/your-body/your-body-2b.webp",
+          "artAlt": "A cut-away model of a long bone showing the hard outer shell and the soft spongy center",
+          "caption": "Cut a bone open and the soft marrow is inside."
         }
       ],
       "infographic": {
@@ -132,11 +144,17 @@
         },
         {
           "text": "Vegetables come in a whole rainbow of colors, and eating lots of different ones is a brilliant idea. They are even sorted into groups like dark green, and red and orange. Each color brings its own helpful vitamins, fiber and a mineral called potassium.",
-          "source": "U.S. Department of Agriculture (myplate.gov)"
+          "source": "U.S. Department of Agriculture (myplate.gov)",
+          "art": "/explore/topic-photos/your-body/your-body-3a.webp",
+          "artAlt": "Many kinds of fresh vegetables laid out in color groups on a table, seen from above",
+          "caption": "Vegetables sorted by color, the way the food groups do it."
         },
         {
           "text": "Fruit is the naturally sweet part of your plate, and it adds fiber and potassium to help your body work well. You can enjoy it fresh, frozen or dried, whole or cut into pieces. Trying lots of different fruits means lots of different good things for you.",
-          "source": "U.S. Department of Agriculture (myplate.gov)"
+          "source": "U.S. Department of Agriculture (myplate.gov)",
+          "art": "/explore/topic-photos/your-body/your-body-3b.webp",
+          "artAlt": "An assortment of fruit on a table, whole fruit, cut pieces in bowls and dried fruit, seen from above",
+          "caption": "Fruit whole, cut and dried, all on one table."
         }
       ],
       "infographic": {
@@ -190,11 +208,17 @@
         },
         {
           "text": "Your fingerprints belong only to you, and nobody else in the whole world has the same ones. Even identical twins, who share the same DNA, have fingerprints that are different. That makes the swirls on your hands a one of a kind pattern.",
-          "source": "U.S. National Library of Medicine (medlineplus.gov)"
+          "source": "U.S. National Library of Medicine (medlineplus.gov)",
+          "art": "/explore/topic-photos/your-body/your-body-4a.webp",
+          "artAlt": "An extreme close-up of a fingertip showing the fine ridges of a fingerprint",
+          "caption": "The fine ridges on one fingertip, up close."
         },
         {
           "text": "Fingerprints come in a few main shapes with lovely names: arches, loops and whorls. Your genes set the basic size and spacing, and the tiny details were shaped as you grew before birth. That teamwork is why your prints turned out completely your own.",
-          "source": "U.S. National Library of Medicine (medlineplus.gov)"
+          "source": "U.S. National Library of Medicine (medlineplus.gov)",
+          "art": "/explore/topic-photos/your-body/your-body-4b.webp",
+          "artAlt": "Three inked fingerprints side by side on white paper, each a different pattern",
+          "caption": "Three prints, and no two patterns are the same."
         }
       ],
       "infographic": {
