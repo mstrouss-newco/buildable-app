@@ -589,7 +589,49 @@ var MISSIONS=[
     style:"cactusflower", radius:42, ceiling:48, hold:2.2, verb:"Sipped!",
     coins:17, badge:"Hummingbird",
     tip:"Get right up to a flower and hold still. A hummingbird turns on the spot, so you can hang there as long as you like.",
-    fact:"A hummingbird is the only bird in the world that can fly backwards. Its wings beat about fifty times every single second, which is far too fast for anyone to see - all you ever get is the blur." }
+    fact:"A hummingbird is the only bird in the world that can fly backwards. Its wings beat about fifty times every single second, which is far too fast for anyone to see - all you ever get is the blur." },
+
+  // ==========================================================================
+  //  FL7 — THE THREE HARDER TRANSFORMS. Same pattern as FL6: found in the world,
+  //  low swoop to offer, nothing starts without a tap, leaving is free and starts
+  //  fresh, no timer, no fail state, beams kept well spread out.
+  //  The companion geese for Goose Squad are the only NEW code piece in FL7.
+  // ==========================================================================
+
+  { id:"goose-squad", world:"snowy-peaks", name:"Goose Squad", transform:"goose",
+    blurb:"Be a goose. Fly in V formation with your flock and gather seeds to bring home.",
+    cargo:{name:"seed",plural:"seeds",color:0xD4B86A}, capacity:3,
+    gather:true, depot:null,
+    dropAt:{x:-80,z:-520,label:"The Roosting Spot"}, dropStyle:"nest",
+    targets:[{x:150,z:-150,label:"Seeds by the rocks"},{x:-300,z:-200,label:"Seeds by the trees"},
+             {x:0,z:-380,label:"Seeds in the open"},{x:-200,z:-480,label:"Last seed patch"}],
+    style:"seed", radius:35, ceiling:40, hold:0.6,
+    verb:"Gathered!", dropVerb:"Roosted!",
+    coins:19, badge:"Goose Squad",
+    tip:"Fly low and slow over the seed patches. Your flock flies with you, so watch out for them when you turn - they are real birds with their own wings.",
+    fact:"Wild geese fly in a V formation because each bird rides the air pushed up by the one ahead. The bird in front works hardest, so they take turns at the tip, and the flock can fly farther together than any one bird could alone." },
+
+  { id:"owl-night-flight", world:"snowy-peaks", name:"Owl Night Flight", transform:"owl",
+    blurb:"Be an owl. Fly silently through the night and listen for mice under the snow.",
+    cargo:null, capacity:0, depot:null,
+    targets:[{x:130,z:-120,label:"First mouse sound"},{x:-190,z:-280,label:"Second mouse sound"},
+             {x:60,z:-420,label:"Third mouse sound"},{x:-250,z:-510,label:"Last mouse sound"}],
+    style:"mousering", radius:38, ceiling:50, hold:1.8, verb:"Found!",
+    coins:18, badge:"Owl Night Flight",
+    tip:"Listen for the sound rings and fly low to each one. An owl's ears work so well it can hunt in total darkness, hearing a mouse moving under the snow.",
+    palette:{ sky:"#2B1B3D", fog:"#3D2555", ground:"#2F2F3F", sun:"#1C1C2E",
+              rock:"#3A3A4A", rock2:"#2A2A3A", cap:"#4A3A4A", cap2:"#3A2A3A",
+              trunk:"#2A2A3A", leaf:"#2B4A2B", stone:"#4A4A5A" } },
+
+  { id:"eagle-glider", world:"sunset-canyon", name:"Eagle Glider", transform:"eagle",
+    blurb:"Be an eagle. Find columns of rising warm air and soar without flapping.",
+    cargo:null, capacity:0, depot:null,
+    targets:[{x:280,z:-160,label:"First thermal"},{x:-240,z:-310,label:"Second thermal"},
+             {x:100,z:-450,label:"Third thermal"},{x:-180,z:-580,label:"Last thermal"}],
+    style:"thermal", radius:45, ceiling:55, hold:1.5, verb:"Soared!",
+    coins:20, badge:"Eagle Glider",
+    tip:"Find the shimmering columns of warm air and hover inside them. An eagle can climb for hours using thermals, riding the warm air up without moving its wings once.",
+    fact:"A thermal is a column of warm air rising from the ground. Eagles have learned to find them by watching other birds and following the wind patterns, so they can circle up and up without ever flapping." }
 ];
 function pickWorld(){
   var raw=Q.get("level");
@@ -702,7 +744,26 @@ var TRANSFORMS=[
   { id:"hummingbird", name:"Hummingbird", model:"Hummingbird", size:4.0,
     glyph:"hummingbird", trim:true,
     wing:18, wingAmp:0.40, blur:true, camBack:8.5, camUp:3.6,
-    speed:17, turn:3.2, bankAmt:0.38, pitchAmt:0.90, bob:0.32, bobRate:7.8 }
+    speed:17, turn:3.2, bankAmt:0.38, pitchAmt:0.90, bob:0.32, bobRate:7.8 },
+
+  // FL7 — THE THREE HARDER TRANSFORMS.
+  // A goose flying in formation: medium speed, medium turning, steady wingbeat.
+  // Runs the only genuinely new code in FL7: companion geese alongside.
+  { id:"goose", name:"Goose", model:"Goose", size:5.8, glyph:"goose", trim:true,
+    wing:12, wingAmp:0.65, blur:false, camBack:11, camUp:4.2,
+    speed:28, turn:1.65, bankAmt:0.75, pitchAmt:0.80, bob:0.28, bobRate:3.2 },
+
+  // An owl hunting at night: very quiet wings, excellent hearing instead of speed.
+  // The night palette repaints the world the same way Lantern Lighter does.
+  { id:"owl", name:"Owl", model:"Owl", size:4.2, glyph:"owl", trim:true,
+    wing:14, wingAmp:0.50, blur:false, camBack:9, camUp:3.8,
+    speed:22, turn:2.5, bankAmt:0.55, pitchAmt:0.85, bob:0.25, bobRate:5.4 },
+
+  // An eagle soaring: slow and high-turning, built to find and stay in thermals.
+  // The body is long and lean like a real eagle built for gliding.
+  { id:"eagle", name:"Eagle", model:"Eagle", size:6.5, glyph:"eagle", trim:true,
+    wing:8, wingAmp:0.40, blur:false, camBack:12, camUp:4.5,
+    speed:24, turn:1.9, bankAmt:0.65, pitchAmt:0.75, bob:0.20, bobRate:4.0 }
 ];
 function findTransform(id){
   for(var i=0;i<TRANSFORMS.length;i++) if(TRANSFORMS[i].id===id) return TRANSFORMS[i];
@@ -2855,6 +2916,22 @@ function bNest(f,s,d){ var tw=d?ICON_DFILL:"#B98A54";
   '<circle cx="9.4" cy="10.6" r="3.5" fill="'+f+'" stroke="'+s+'" stroke-width="1.5"/>'+
   '<circle cx="16.6" cy="10.6" r="3.5" fill="'+f+'" stroke="'+s+'" stroke-width="1.5"/>'+
   '<path d="M9.4 12.4 l-1.5 1.4 h3 Z M16.6 12.4 l-1.5 1.4 h3 Z" fill="#F07E1E"/>'+(d?doneBadge():''); }
+// FL7: three more icon styles for the harder quests
+function bSeed(f,s,d){ var stem=d?ICON_DLINE:"#5B8C3A";
+  return '<path d="M13 22 V11" stroke="'+stem+'" stroke-width="2.2" stroke-linecap="round"/>'+
+  '<circle cx="13" cy="5.5" r="4.2" fill="'+f+'" stroke="'+s+'" stroke-width="1.6"/>'+
+  '<path d="M10 5.5 L8 2 M16 5.5 L18 2" stroke="'+stem+'" stroke-width="2" stroke-linecap="round"/>'+
+  '<path d="M11.6 8.2 Q9 9 9 11 M14.4 8.2 Q17 9 17 11" fill="none" stroke="'+stem+'" stroke-width="1.5" stroke-linecap="round"/>'+(d?doneBadge():''); }
+function bMouseRing(f,s,d){ var wave=d?ICON_DFILL:"#7FD4FF";
+  return '<circle cx="13" cy="13" r="8.5" fill="'+wave+'" stroke="'+s+'" stroke-width="1.5"/>'+
+  '<circle cx="13" cy="13" r="12.5" fill="none" stroke="'+wave+'" stroke-width="1.5" opacity=".4"/>'+
+  '<circle cx="13" cy="13" r="4" fill="'+s+'" stroke="'+s+'" stroke-width="1.2"/>'+
+  '<path d="M13 13 V8" stroke="'+s+'" stroke-width="1.2"/>'+(d?doneBadge():''); }
+function bThermal(f,s,d){ var warm=d?ICON_DFILL:"#FFCC66";
+  return '<circle cx="13" cy="14" r="7" fill="none" stroke="'+warm+'" stroke-width="2.2" opacity=".7"/>'+
+  '<circle cx="13" cy="14" r="10.5" fill="none" stroke="'+warm+'" stroke-width="1.5" opacity=".4"/>'+
+  '<path d="M13 2 L18 8 L13 14 L8 8 Z" fill="'+f+'" stroke="'+s+'" stroke-width="1.6"/>'+
+  '<path d="M13 8 L15.5 11 M13 8 L10.5 11" stroke="'+s+'" stroke-width="1.6" stroke-linecap="round"/>'+(d?doneBadge():''); }
 // ONE dispatch from a recipe's style name to a drawing. Nothing else may switch
 // on a style, and nothing anywhere may switch on a job id.
 function targetBody(style,f,s,d,post){
@@ -4263,6 +4340,48 @@ function tbBlur(D){
   return g;
 }
 
+// ---------- FL7: companion geese for the Goose Squad quest ----------
+// EVERY BIRD IN A V IS A REAL MODEL WITH ITS OWN WINGBEAT. This is the only
+// new code in FL7. Each companion flies its own gait synchronized to the main
+// player, updated every frame to keep the V shape. Five companions make a six-
+// bird flock: four in the V wings, one off the tail, one off the lead.
+function buildCompanionGeese(){
+  if(!TB["Goose"]) return null;           // goose model not loaded yet
+  var group=new THREE.Group(), geese=[], rigs=[];
+  // V formation: left and right wings, with depth offsets
+  var positions=[
+    {dx:-10, dz:-12, label:"left-back"},
+    {dx:-18, dz:-22, label:"left-mid"},
+    {dx:10,  dz:-12, label:"right-back"},
+    {dx:18,  dz:-22, label:"right-mid"},
+    {dx:0,   dz:-32, label:"tail"}
+  ];
+  positions.forEach(function(p){
+    var wrap=tbPrep(TB["Goose"],5.8);       // same size as the player goose
+    var mesh=wrap.userData.mesh, D=wrap.userData.dims;
+    var rig=tbRig(mesh);                    // set up wingbeat
+    wrap.userData.dx=p.dx;
+    wrap.userData.dz=p.dz;
+    wrap.userData.rig=rig;
+    group.add(wrap);
+    geese.push(wrap);
+    rigs.push(rig);
+  });
+  // return the group and an animator that updates each frame
+  return {
+    group:group, geese:geese, rigs:rigs,
+    anim:function(dt,mode,tt){
+      var rate=12*Math.PI*2;              // same wingbeat as the player
+      var amp=0.65;
+      for(var i=0;i<geese.length;i++){
+        var g=geese[i];
+        g.position.set(g.userData.dx,2+Math.sin(tt*5)*0.5,g.userData.dz);  // bob slightly
+        tbBeat(rigs[i],amp,tt*rate);      // wingbeat in sync
+      }
+    }
+  };
+}
+
 // ---------- become it, and hand the ride back ----------
 // THE RIDE IS NEVER DESTROYED, only hidden. Rebuilding a plane on the way out of
 // a quest would mean the hangar's whole build path runs twice, and a kid who
@@ -4285,11 +4404,19 @@ function buildCreature(t){
   if(blur){ blur.position.copy(mesh.position); wrap.add(blur); }
   // tbBeat takes radians, so the readable wingbeats-per-second becomes a rate
   var amp=(t.wingAmp!=null?t.wingAmp:0.7), rate=(t.wing||8)*Math.PI*2;
+  // FL7: add companion geese for the goose transform
+  var companions=null;
+  if(t.id==="goose"){
+    companions=buildCompanionGeese();
+    if(companions) wrap.add(companions.group);
+  }
   return { group:wrap, anim:function(dt,mode,tt){
     var idle=(mode==="landed");                 // sitting on a pad: wings folded, all but still
     tbBeat(R, idle?amp*0.16:amp, tt*(idle?1.8:rate));
     if(blur) blur.userData.mat.opacity=idle?0:0.20;
     if(trim&&trim.userData.scarf) trim.userData.scarf.rotation.y=Math.sin(tt*7)*0.20;
+    // FL7: update the companion geese
+    if(companions&&companions.anim) companions.anim(dt,mode,tt);
   } };
 }
 function becomeCreature(t){
