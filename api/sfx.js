@@ -150,6 +150,18 @@ const SOUNDS = {
   spk_win:     "Happy short victory fanfare with a bright cosmic sparkle, cheerful kids game win, no voices",
   spk_lose:    "Gentle soft descending wah-wah with a little twinkle, friendly cartoon lose, short, no music, no voices",
 
+  // ---- Octo (myocto.co) — calm, zen one-shot UI sounds ----
+  zen_bowl:    "A single small Tibetan singing bowl struck softly, warm bloom with a long calm shimmering fade, meditative and minimal, no music, no voices",
+  zen_chime:   "One soft wind chime tube touched gently, warm airy resonance fading slowly, calm and spacious, no music, no voices",
+  zen_marimba: "Two soft warm wooden marimba notes rising gently, mellow and rounded, calm, no music, no voices",
+  zen_drop:    "A single soft water droplet falling into a still pool, round warm plink with gentle resonance, calm, no music, no voices",
+  zen_tap:     "A soft muted wooden tap on a hollow wood block, warm and low, single gentle hit, calm, no music, no voices",
+  zen_pluck:   "A single soft koto string plucked gently, warm mellow tone fading out, calm and minimal, no music, no voices",
+  zen_bell:    "One small brass meditation bell tapped lightly, clear soft ding with a smooth long decay, calm, no music, no voices",
+  zen_pebble:  "A small smooth pebble dropped into shallow still water, soft plip with a gentle ripple, calm, no music, no voices",
+  zen_swish:   "A soft brush sweeping once across paper, quiet airy swish fading away, calm and gentle, no music, no voices",
+  zen_breath:  "A soft low airy exhale of wind passing by and settling, very quiet and calm, no music, no voices",
+
   // ---- Croc Tot (food side-shooter game type) — bespoke SFX ----
   croc_hit:    "Short soft squishy splat tick, a food pellet bonking a flying snack, gentle cartoon, single hit, no music, no voices",
   croc_pop:    "Short cute cartoon food splat pop, a flying snack bursting into crumbs, single hit, no music, no voices",
@@ -403,6 +415,7 @@ const DURATIONS = {
   sling_stretch:0.5, sling_release:0.5, sling_thud:0.6, sling_poof:0.5, sling_win:1.6,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_hit:0.5, spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
+  zen_bowl:2.2, zen_chime:1.8, zen_marimba:1.2, zen_drop:0.9, zen_tap:0.6, zen_pluck:1.1, zen_bell:1.6, zen_pebble:0.9, zen_swish:0.7, zen_breath:1.0,
   croc_hit:0.5, croc_pop:0.5, croc_coin:0.5, croc_power:1.0, croc_hurt:0.5, croc_boom:0.9, croc_win:1.6, croc_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   giggle:0.9, roar:1.0, robot:0.8, splat:0.5, cash:0.7, drumroll:1.3, gong:1.4,
