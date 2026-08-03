@@ -1,5 +1,32 @@
 # Buildable Kids — Session Log
 
+## 2026-08-03: Session LP1 — Sling Squad level cards show the real tower
+
+Phase LP, session 1. The Sling Squad journey picker showed 20 identical flat
+blue cards, so a kid could not tell "Wobbly Gate" from "Grand Finale" without
+playing them. LP1 gives every card a drawn picture of the level it opens.
+
+### What shipped
+- **New `towers` painter in `public/buildable-levelthumb.js` (BLT)** — draws a
+  level from its real data: the same `blocks` (wood, or stone for the long
+  beams and walls), the same `targets` as goofy round critters, the slingshot
+  with a pal loaded, a themed sky and ground band and two far hills for depth.
+  The world slice it paints is x 110-940 / y 300-570 of the 960x600 play area,
+  which keeps the towers and the ground inside the card's safe strip (the card
+  crops roughly 20px off the top and bottom).
+- **`public/sling-squad.html` wired** — loads `buildable-levelthumb.js?v=2`,
+  new `SCENE_PAL` + `palFor(i)` so a card can be painted before the backdrop
+  art finishes loading (`themeFor` waits on `BG_IMGS`), and `buildStartCfg`
+  now passes `img:` for EVERY level including locked ones (the shared start
+  screen dims locked cards itself). Guarded — no BLT means the old flat colour.
+- No route change needed: `/buildable-levelthumb.js` is already in vercel.json.
+
+### Checks
+- `node qa-sling.mjs .` — ALL CHECKS PASS (manifest valid, 20/20 levels, bot
+  clears every level 5x with slings to spare, render smoke green).
+- Headless Chromium screenshot of the real picker: 20 of 20 cards carry a
+  data-URL thumbnail, all 20 pictures are distinct, locked cards stay readable.
+
 ## 2026-07-28: Session RP4 — the other seven photo books get their real art
 
 Phase RP, session 4. RP3 converted seven books to the richer composed page but

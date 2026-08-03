@@ -155,6 +155,63 @@
       g.fillStyle=shade(c,30); g.font="900 26px Nunito,sans-serif"; g.textAlign="center"; g.textBaseline="middle";
       g.fillText((d.laps||2)+" laps", CW/2, CH/2); },
 
+    // SLING SQUAD — the level's REAL tower: same blocks, same targets, same
+    // slingshot, drawn from the 960x600 world into the card. The visible slice is
+    // world x 110..940 / y 300..570, which puts the ground band and every tower
+    // inside the card's safe strip (the card crops ~20px top and bottom).
+    towers: function(g, d){
+      var S = CW / 830;                                   // world -> card scale
+      function tx(x){ return (x - 110) * S; }
+      function ty(y){ return 20 + (y - 300) * S; }
+      var GY = ty(548), AX = tx(168), AY = ty(360);       // ground line, sling fork
+      var sky = d.sky || ["#8fd0ff", "#eaf8ff"];
+      var g0 = d.g0 || "#73c364", g1 = d.g1 || "#4e9a45", top = d.top || "#86d172";
+      grad(g, sky[0], sky[1]);
+      // far hills for depth
+      g.fillStyle = shade(g0, 46); g.beginPath(); g.moveTo(-10, GY);
+      g.quadraticCurveTo(CW * 0.22, GY - 34, CW * 0.48, GY); g.closePath(); g.fill();
+      g.fillStyle = shade(g0, 28); g.beginPath(); g.moveTo(CW * 0.40, GY);
+      g.quadraticCurveTo(CW * 0.70, GY - 44, CW + 10, GY); g.closePath(); g.fill();
+      // ground band
+      g.fillStyle = g1; g.fillRect(0, GY, CW, CH - GY);
+      g.fillStyle = top; g.fillRect(0, GY, CW, 6);
+      g.fillStyle = shade(g1, -18);
+      for (var t = 0; t < 7; t++) g.fillRect(t * 44 + 9, GY + 12, 13, 3);
+      // slingshot (matches the engine's drawn fallback shape)
+      g.strokeStyle = "#7a4a25"; g.lineCap = "round";
+      g.lineWidth = 5; g.beginPath(); g.moveTo(AX, GY + 3); g.lineTo(AX, AY + 6); g.stroke();
+      g.lineWidth = 4;
+      g.beginPath(); g.moveTo(AX, AY + 9); g.lineTo(AX - 7, AY - 4); g.stroke();
+      g.beginPath(); g.moveTo(AX, AY + 9); g.lineTo(AX + 7, AY - 4); g.stroke();
+      g.strokeStyle = "rgba(60,34,16,.75)"; g.lineWidth = 1.6;
+      g.beginPath(); g.moveTo(AX - 7, AY - 4); g.lineTo(AX + 7, AY - 4); g.stroke();
+      disc(g, AX, AY - 2, 4.2, "#e08a4a");                // a pal loaded and ready
+      disc(g, AX - 1.4, AY - 3.2, 1.5, "#fff"); disc(g, AX + 1.4, AY - 3.2, 1.5, "#fff");
+      // the tower — every block the kid will actually knock over
+      (d.blocks || []).forEach(function (b) {
+        var w = b.w * S, h = b.h * S, x = tx(b.x) - w / 2, y = ty(b.y) - h / 2;
+        var stone = (b.w >= 100 || b.h >= 90);            // beams and long walls read as stone
+        g.fillStyle = "rgba(0,0,0,.16)"; rr(g, x + 1.5, y + 2, w, h, 2.5); g.fill();
+        g.fillStyle = stone ? "#b9bcc4" : "#caa46a"; rr(g, x, y, w, h, 2.5); g.fill();
+        g.strokeStyle = stone ? "#71747d" : "#7d5c2e"; g.lineWidth = 1.5; g.stroke();
+        g.fillStyle = "rgba(255,255,255,.30)"; g.fillRect(x + 1.4, y + 1.4, Math.max(0, w - 2.8), 1.4);
+        g.fillStyle = "rgba(0,0,0,.14)"; g.fillRect(x + 1.4, y + h - 2.6, Math.max(0, w - 2.8), 1.4);
+      });
+      // the goofy critters you have to pop
+      var cols = ["#8fd66a", "#f0a35e", "#c98fe0", "#6fc9e6", "#f2779a"];
+      (d.targets || []).forEach(function (p, i) {
+        var x = tx(p.x), y = ty(p.y), r = 7.2, c = cols[i % cols.length];
+        g.fillStyle = "rgba(0,0,0,.16)"; g.beginPath(); g.ellipse(x, y + r * 0.95, r * 0.9, r * 0.3, 0, 0, 6.2832); g.fill();
+        disc(g, x, y, r, c);
+        disc(g, x - r * 0.34, y - r * 0.18, r * 0.28, "#fff");
+        disc(g, x + r * 0.34, y - r * 0.18, r * 0.28, "#fff");
+        disc(g, x - r * 0.30, y - r * 0.14, r * 0.13, "#2a2340");
+        disc(g, x + r * 0.38, y - r * 0.14, r * 0.13, "#2a2340");
+        g.strokeStyle = shade(c, -60); g.lineWidth = 1.3; g.lineCap = "round";
+        g.beginPath(); g.arc(x, y + r * 0.16, r * 0.42, 0.35, Math.PI - 0.35); g.stroke();
+      });
+    },
+
     // MAHJONG — a stacked tile pyramid
     tiles: function(g, d){ grad(g, "#1c3b2e", "#0e2018");
       var layers = d.layers || [[6,4],[4,3]]; var tileFace = d.face || "#f3ead2", edge = d.edge || "#cdbf9a";

@@ -58,6 +58,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js?v=2"></script>
 <script src="buildable-gamenav.js"></script>
 <script src="matter.min.js"></script>
 <script src="buildable-manifest.js?v=1"></script>
@@ -142,6 +143,12 @@ function themeFor(i){                              // per-level backdrop + palet
       g0:L.g0||"#73c364", g1:L.g1||"#4e9a45", top:L.top||"#86d172" };
   return BG_THEMES[i % BG_THEMES.length];
 }
+// Scene name -> palette, so a level card can be painted before the scene art loads
+// (themeFor waits on BG_IMGS; the level picker draws long before that).
+var SCENE_PAL = { grass:BG_THEMES[0], desert:BG_THEMES[1], forest:BG_THEMES[2],
+                  fall:BG_THEMES[3], castles:BG_THEMES[4], desert2:BG_THEMES[1],
+                  forest2:BG_THEMES[2], empty:BG_THEMES[0] };
+function palFor(i){ var L=(GAME_CONFIG.levels[i]||{}); return SCENE_PAL[L.bg] || BG_THEMES[i % BG_THEMES.length]; }
 var BG_T0 = (typeof Date!=="undefined") ? Date.now() : 0;  // clock for cloud drift
 
 // ============================================================================
@@ -808,9 +815,16 @@ function onUp(ev){ if(SLING_DEMO) return; if(state==="aiming"){ ev.preventDefaul
 // ============================================================================
 var startScreen=null;
 function buildStartCfg(){
+  var BLT = (typeof window!=="undefined") ? window.BuildableLevelThumb : null;
   var levels=GAME_CONFIG.levels.map(function(l,i){ var unlocked=PREFS.unlocked||0;
     var st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
-    return { n:i+1, name:l.name, color:"#3b6ea5", maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
+    // LP1: the card shows THIS level's real tower, critters and slingshot.
+    // Locked levels get the picture too — the start screen dims them itself.
+    var p = palFor(i), img = "";
+    try{ if(BLT && BLT.make) img = BLT.make("towers",
+      { blocks:l.blocks, targets:l.targets, sky:p.sky, g0:p.g0, g1:p.g1, top:p.top, n:i+1 },
+      (l.id||l.name||i)+"|"+i+"|v1"); }catch(e){}
+    return { n:i+1, name:l.name, color:"#3b6ea5", img:img||undefined, maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
   return { title:"Sling Squad", subtitle:"Fling your friends and topple every tower! Stars: "+totalStars()+" of "+maxStars(),
            coins:totalStars(), sound:!(BA&&BA.muted), showBack:false, hideSound:true, levels:levels };
 }
