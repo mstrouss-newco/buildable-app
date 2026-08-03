@@ -162,6 +162,18 @@ const SOUNDS = {
   zen_swish:   "A soft brush sweeping once across paper, quiet airy swish fading away, calm and gentle, no music, no voices",
   zen_breath:  "A soft low airy exhale of wind passing by and settling, very quiet and calm, no music, no voices",
 
+  // ---- Octo, round 2: more long/resonant and plucked options ----
+  zen_bowl_low: "A large deep Tibetan singing bowl struck very softly, low warm hum blooming and fading very slowly, deeply meditative, no music, no voices",
+  zen_glass:    "A finger circling the rim of a crystal wine glass, pure soft sustained shimmer swelling and fading, delicate and calm, no music, no voices",
+  zen_handpan:  "A single soft handpan note struck gently with the fingertips, warm metallic bloom with long rich resonance, calm and grounded, no music, no voices",
+  zen_gong:     "A small soft gong tapped very lightly, warm shimmering swell with a long calm decay, meditative, no music, no voices",
+  zen_harp:     "A single harp string plucked softly, warm resonant tone ringing out and fading gently, calm and clean, no music, no voices",
+  zen_kalimba:  "A single soft kalimba thumb piano note plucked gently, warm round metallic tone with a sweet natural fade, calm, no music, no voices",
+  zen_guzheng:  "A single guzheng string plucked softly with a gentle bend, warm resonant Asian string tone fading slowly, calm and spacious, no music, no voices",
+  zen_nylon:    "A single nylon classical guitar string plucked softly, low warm round tone with a gentle natural decay, calm, no music, no voices",
+  zen_koto2:    "Two soft koto strings plucked gently one after the other, warm mellow tone with airy resonance, calm and minimal, no music, no voices",
+  zen_rhodes:   "A single soft electric piano note played gently, warm bell like tone with a long smooth decay, calm and dreamy, no music, no voices",
+
   // ---- Croc Tot (food side-shooter game type) — bespoke SFX ----
   croc_hit:    "Short soft squishy splat tick, a food pellet bonking a flying snack, gentle cartoon, single hit, no music, no voices",
   croc_pop:    "Short cute cartoon food splat pop, a flying snack bursting into crumbs, single hit, no music, no voices",
@@ -416,6 +428,7 @@ const DURATIONS = {
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_hit:0.5, spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   zen_bowl:2.2, zen_chime:1.8, zen_marimba:1.2, zen_drop:0.9, zen_tap:0.6, zen_pluck:1.1, zen_bell:1.6, zen_pebble:0.9, zen_swish:0.7, zen_breath:1.0,
+  zen_bowl_low:2.8, zen_glass:2.2, zen_handpan:2.0, zen_gong:2.4, zen_harp:1.6, zen_kalimba:1.4, zen_guzheng:1.8, zen_nylon:1.4, zen_koto2:1.6, zen_rhodes:1.8,
   croc_hit:0.5, croc_pop:0.5, croc_coin:0.5, croc_power:1.0, croc_hurt:0.5, croc_boom:0.9, croc_win:1.6, croc_lose:1.0,
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   giggle:0.9, roar:1.0, robot:0.8, splat:0.5, cash:0.7, drumroll:1.3, gong:1.4,
