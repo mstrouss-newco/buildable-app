@@ -5,7 +5,10 @@
   "topic": "earth",
   "ageBand": "5-10",
   "status": "in-review",
-  "skills": ["earth-facts", "reading"],
+  "skills": [
+    "earth-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/volcanoes/volcanoes-cover.webp",
   "shelfColor": "#B8452F",
   "ambient": "fire",
@@ -24,54 +27,143 @@
     {
       "id": "lava",
       "title": "Magma Below, Lava Above",
+      "layout": "speed",
       "art": "/explore/topic-photos/volcanoes/volcanoes-1.webp",
       "artAlt": "A slow river of bright orange lava crawling over black rock at dusk",
+      "stat": {
+        "value": "1",
+        "unit": "foot a second"
+      },
       "factAudio": "volcanoes-lava",
-      "quiz": ["volcanoes-lava"],
+      "quiz": [
+        "volcanoes-lava"
+      ],
       "facts": [
         {
           "text": "Melted rock that is still underground is called magma. The moment it breaks through the surface where you can see it, scientists call it lava. It is the same hot rock with two names, depending on which side of the ground it is on.",
           "source": "U.S. Geological Survey (usgs.gov)"
         },
         {
-          "text": "Lava coming out of a Hawaiian volcano is around 2,000 degrees Fahrenheit. That is more than four times hotter than the hottest setting on a kitchen oven. Scientists can guess how hot a flow is just from its colour, because yellow is hottest, then orange, then red.",
-          "source": "U.S. Geological Survey (usgs.gov)"
+          "text": "Lava coming out of a Hawaiian volcano is around 2,000 degrees Fahrenheit. That is about four times hotter than the hottest setting on a kitchen oven. Scientists can guess how hot a flow is just from its color, because yellow is hottest, then orange, then red.",
+          "source": "U.S. Geological Survey (usgs.gov)",
+          "art": "/explore/topic-photos/volcanoes/volcanoes-1a.webp",
+          "artAlt": "A close look at a crack in a lava flow, glowing bright yellow in the middle and fading to orange and dark red at the edges",
+          "caption": "Yellow is the hottest part, then orange, then red."
         },
         {
           "text": "Most lava does not race anywhere. A flow like this one usually creeps along more slowly than you walk, which is why scientists can stand back at a safe spot and watch the glowing edge move all night long.",
-          "source": "U.S. Geological Survey (usgs.gov)"
+          "source": "U.S. Geological Survey (usgs.gov)",
+          "art": "/explore/topic-photos/volcanoes/volcanoes-1b.webp",
+          "artAlt": "Two scientists in helmets and heavy boots stand on cooled black rock, watching the glowing edge of a lava flow inch toward them",
+          "caption": "Scientists watch the glowing edge creep along, one slow step at a time."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How fast does lava move?",
+        "rows": [
+          {
+            "icon": "drop",
+            "label": "Lava creeping over flat ground",
+            "value": 0.6,
+            "display": "less than 1 mile an hour"
+          },
+          {
+            "icon": "kid",
+            "label": "You, walking",
+            "value": 3,
+            "display": "about 3 miles an hour"
+          },
+          {
+            "icon": "flame",
+            "label": "Lava running down a steep hill",
+            "value": 6,
+            "display": "about 6 miles an hour"
+          },
+          {
+            "icon": "river",
+            "label": "Lava rushing down a steep rocky channel",
+            "value": 19,
+            "display": "more than 19 miles an hour"
+          }
+        ],
+        "caption": "All three lava speeds come from the USGS. Your walking speed is an everyday one, here only so you have something to measure against.",
+        "source": "U.S. Geological Survey (usgs.gov)"
+      }
     },
     {
       "id": "ash-plume",
-      "title": "The Grey Cloud Above the Crater",
+      "title": "The Gray Cloud Above the Crater",
+      "layout": "tall",
       "art": "/explore/topic-photos/volcanoes/volcanoes-2.webp",
-      "artAlt": "A tall grey plume of ash and steam rising from the crater of a volcano",
+      "artAlt": "A tall gray plume of ash and steam rising from the crater of a volcano",
+      "stat": {
+        "value": "80,000",
+        "unit": "feet high"
+      },
       "factAudio": "volcanoes-ash-plume",
-      "quiz": ["volcanoes-ash-plume"],
+      "quiz": [
+        "volcanoes-ash-plume"
+      ],
       "facts": [
         {
-          "text": "Volcanic ash is nothing like the soft grey ash in a fireplace. It is made of tiny pieces of rock, minerals and volcanic glass that were torn apart and flung into the sky. Every speck is hard and sharp, so it feels gritty between your fingers.",
+          "text": "Volcanic ash is nothing like the soft gray ash in a fireplace. It is made of tiny pieces of rock, minerals and volcanic glass that were torn apart and flung into the sky. Every speck is hard and sharp, so it feels gritty between your fingers.",
           "source": "USGS Volcano Hazards Program (usgs.gov)"
         },
         {
-          "text": "Lava is not the only thing that comes out. Ninety nine out of every hundred gas molecules leaving a volcano are water vapour, carbon dioxide and sulfur dioxide. Water vapour is simply steam, so a lot of that pale plume is really just very hot water floating in the air.",
-          "source": "U.S. Geological Survey (usgs.gov)"
+          "text": "Lava is not the only thing that comes out. Ninety nine out of every hundred gas molecules drifting out of Kilauea in Hawaii are water vapor, carbon dioxide and sulfur dioxide. Water vapor is simply steam, so a lot of that pale plume is really just very hot water floating in the air.",
+          "source": "U.S. Geological Survey (usgs.gov)",
+          "art": "/explore/topic-photos/volcanoes/volcanoes-2a.webp",
+          "artAlt": "White steam and pale gas puffing out of cracks around a crater rim, with yellow sulfur crusted on the rocks",
+          "caption": "Most of that pale puff is steam, which is very hot water in the air."
         },
         {
           "text": "Ash is light enough to ride the wind for hundreds of miles. Scientists at volcano observatories watch the plumes on satellite pictures and tell pilots which patches of sky to steer around, so planes stay well clear of the grit.",
-          "source": "USGS Volcano Hazards Program (usgs.gov)"
+          "source": "USGS Volcano Hazards Program (usgs.gov)",
+          "art": "/explore/topic-photos/volcanoes/volcanoes-2b.webp",
+          "artAlt": "A satellite picture from space showing a long brown and gray ash plume streaming away from a volcano out over the ocean",
+          "caption": "From space, scientists watch which way the ash is blowing."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How high can an ash cloud climb?",
+        "rows": [
+          {
+            "icon": "building",
+            "label": "A tall city skyscraper",
+            "value": 1000,
+            "display": "about 1,000 feet"
+          },
+          {
+            "icon": "plane",
+            "label": "A jet plane crossing the sky",
+            "value": 35000,
+            "display": "about 35,000 feet"
+          },
+          {
+            "icon": "cloud",
+            "label": "The Mount St. Helens ash cloud in 1980",
+            "value": 80000,
+            "display": "about 80,000 feet"
+          }
+        ],
+        "caption": "The ash cloud height comes from the USGS, which timed it climbing that far in under 15 minutes. The skyscraper and the plane are everyday heights, here only so you have something to measure against.",
+        "source": "U.S. Geological Survey (usgs.gov)"
+      }
     },
     {
       "id": "shapes",
       "title": "Cones, Shields and the Ring of Fire",
+      "layout": "long",
       "art": "/explore/topic-photos/volcanoes/volcanoes-3.webp",
       "artAlt": "A snow-capped cone-shaped volcano rising above a green valley",
       "factAudio": "volcanoes-shapes",
-      "quiz": ["volcanoes-shapes"],
+      "quiz": [
+        "volcanoes-shapes"
+      ],
       "facts": [
         {
           "text": "A tall pointy volcano like this one is called a composite volcano, or a stratovolcano. It builds its neat cone shape in layers, lava on top of ash on top of lava, one eruption at a time, over thousands of years.",
@@ -79,21 +171,57 @@
         },
         {
           "text": "Not every volcano is a cone. A shield volcano such as Mauna Loa in Hawaii is wide and gently sloping, like a warrior's round shield lying on the ground, because its runny lava spreads far out instead of piling up steeply.",
-          "source": "National Park Service (nps.gov)"
+          "source": "National Park Service (nps.gov)",
+          "art": "/explore/topic-photos/volcanoes/volcanoes-3a.webp",
+          "artAlt": "The long low profile of Mauna Loa, a wide shield volcano with very gentle slopes, stretching all the way across the horizon",
+          "caption": "Mauna Loa slopes so gently that it can look more like a hill than a mountain."
         },
         {
           "text": "The outside of the Earth is cracked into giant slabs called tectonic plates, and most volcanoes sit along the edges where those plates meet. So many of them line up around the Pacific Ocean that the whole loop has a nickname: the Ring of Fire.",
-          "source": "U.S. Geological Survey (usgs.gov)"
+          "source": "U.S. Geological Survey (usgs.gov)",
+          "art": "/explore/topic-photos/volcanoes/volcanoes-3b.webp",
+          "artAlt": "A snow-capped volcano rising behind a small fishing harbor on the Pacific coast, with boats tied up in front of it",
+          "caption": "Volcanoes like this one stand all the way around the Pacific Ocean."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How wide is a volcano at the bottom?",
+        "rows": [
+          {
+            "icon": "mountain",
+            "label": "Mount Rainier, a pointy cone volcano",
+            "value": 10,
+            "display": "about 10 miles across"
+          },
+          {
+            "icon": "car",
+            "label": "An hour of driving on the highway",
+            "value": 60,
+            "display": "about 60 miles"
+          },
+          {
+            "icon": "volcano",
+            "label": "Mauna Loa, a wide shield volcano",
+            "value": 100,
+            "display": "about 100 miles across"
+          }
+        ],
+        "caption": "Both volcano widths come from the National Park Service. The hour of driving is an everyday distance, here only so you have something to measure against.",
+        "source": "National Park Service (nps.gov)"
+      }
     },
     {
       "id": "new-life",
       "title": "Ferns in the Black Rock",
+      "layout": "close-up",
       "art": "/explore/topic-photos/volcanoes/volcanoes-4.webp",
       "artAlt": "Close-up of cooled black volcanic rock with bright green ferns growing out of the cracks",
       "factAudio": "volcanoes-new-life",
-      "quiz": ["volcanoes-new-life"],
+      "quiz": [
+        "volcanoes-new-life"
+      ],
       "facts": [
         {
           "text": "When lava cools it hardens into black rock. Smooth ropy rock is called pahoehoe and rough chunky rock is called aa, and one single flow can make both kinds as different parts of it cool at different speeds.",
@@ -101,17 +229,52 @@
         },
         {
           "text": "Life comes back through the cracks. Seeds, spores and blown-in leaves gather in the little gaps along with crumbs of broken lava, and tough ferns and ohia trees push their roots down into those pockets.",
-          "source": "U.S. Geological Survey (usgs.gov)"
+          "source": "U.S. Geological Survey (usgs.gov)",
+          "art": "/explore/topic-photos/volcanoes/volcanoes-4a.webp",
+          "artAlt": "A single small green fern uncurling from a narrow crack in shiny black lava rock",
+          "caption": "One fern, rooted in a crack no wider than your finger."
         },
         {
           "text": "Volcanic rock slowly crumbles into rich dark soil. In a rainy place a bare black lava flow can turn into a green forest in less than 150 years, which is a very short time in the life of a mountain.",
-          "source": "U.S. Geological Survey (usgs.gov)"
+          "source": "U.S. Geological Survey (usgs.gov)",
+          "art": "/explore/topic-photos/volcanoes/volcanoes-4b.webp",
+          "artAlt": "A young ohia tree with bright red blossoms growing among ferns at the edge of an old black lava flow",
+          "caption": "An old lava flow, slowly turning into a young forest."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "How black rock turns green",
+        "stops": [
+          {
+            "year": "First",
+            "label": "A lava flow cools and hardens into bare black rock",
+            "icon": "stone"
+          },
+          {
+            "year": "Then",
+            "label": "Seeds and spores blow in and settle in the cracks with crumbs of broken lava",
+            "icon": "sprout"
+          },
+          {
+            "year": "Soon",
+            "label": "Hardy ferns and ohia trees push their roots into those little pockets",
+            "icon": "fern"
+          },
+          {
+            "year": "Under 150 years",
+            "label": "In a rainy place the bare flow has become a green forest",
+            "icon": "leaf"
+          }
+        ],
+        "caption": "The USGS has watched this happen on real flows: in a wet place a forest can grow in less than 150 years.",
+        "source": "U.S. Geological Survey (usgs.gov)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Volcanoes!",
-    "blurb": "Volcanoes are the Earth showing its work, building brand new islands and brand new soil. Fold a corner on your favourite page so you can find it again."
+    "blurb": "Volcanoes are the Earth showing its work, building brand new islands and brand new soil. Fold a corner on your favorite page so you can find it again."
   }
 }

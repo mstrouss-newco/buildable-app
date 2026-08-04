@@ -22,7 +22,8 @@
     "NOAA National Weather Service (weather.gov)",
     "NOAA (noaa.gov)",
     "NOAA National Severe Storms Laboratory (nssl.noaa.gov)",
-    "UCAR Center for Science Education (scied.ucar.edu)"
+    "UCAR Center for Science Education (scied.ucar.edu)",
+    "National Snow and Ice Data Center (nsidc.org)"
   ],
   "cover": {
     "art": "/explore/topic-photos/wild-weather/wild-weather-cover.webp",
@@ -41,18 +42,56 @@
       ],
       "facts": [
         {
-          "text": "A lightning bolt is a giant spark of electricity. It heats the air around it to about 50,000 degrees Fahrenheit, hotter than the surface of the sun, and that air puffs outward so fast that the boom it makes is the thunder you hear.",
+          "text": "A lightning bolt is a giant spark of electricity. It heats the air around it to about 50,000 degrees Fahrenheit, about five times hotter than the surface of the sun, and that air puffs outward so fast that the boom it makes is the thunder you hear.",
           "source": "NOAA National Severe Storms Laboratory (nssl.noaa.gov)"
         },
         {
           "text": "Light reaches your eyes almost instantly, but sound takes its time getting to your ears. Count the seconds between the flash and the rumble, then divide by five, and that is roughly how many miles away the lightning was. Five seconds means about one mile.",
-          "source": "NOAA National Weather Service (weather.gov)"
+          "source": "NOAA National Weather Service (weather.gov)",
+          "art": "/explore/topic-photos/wild-weather/wild-weather-1a.webp",
+          "artAlt": "A child at a window counts on their fingers while a bolt of lightning flashes over the houses outside",
+          "caption": "Count the seconds from the flash to the rumble, then divide by five."
         },
         {
-          "text": "Thunder can usually be heard about 10 miles away. If you can hear it at all, that is the sky telling you to go inside, and the window is the best seat in the house for watching the rest of the storm with a grown-up.",
-          "source": "NOAA National Weather Service (weather.gov)"
+          "text": "Thunder can usually be heard about 10 miles away. If you can hear it at all, that is the sky telling you to get inside a building, and once you are in, stay back from the windows and doors and wait with a grown-up until it has been quiet for a good half hour.",
+          "source": "NOAA National Weather Service (weather.gov)",
+          "art": "/explore/topic-photos/wild-weather/wild-weather-1b.webp",
+          "artAlt": "A tall dark storm cloud far off across open fields, with a curtain of rain falling beneath it and sunlit grass in the foreground",
+          "caption": "A storm this far off can still be loud enough to hear."
         }
-      ]
+      ],
+      "layout": "speed",
+      "stat": {
+        "value": "5",
+        "unit": "seconds to a mile"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How hot is a lightning bolt?",
+        "rows": [
+          {
+            "icon": "oven",
+            "label": "A very hot kitchen oven",
+            "value": 500,
+            "display": "about 500 degrees"
+          },
+          {
+            "icon": "sun",
+            "label": "The surface of the sun",
+            "value": 10000,
+            "display": "about 10,000 degrees"
+          },
+          {
+            "icon": "lightning",
+            "label": "The air inside a lightning bolt",
+            "value": 50000,
+            "display": "about 50,000 degrees"
+          }
+        ],
+        "caption": "Every number here is in degrees Fahrenheit. The bolt and the sun come from the National Weather Service, which says lightning heats the air about five times hotter than the sun's surface. The kitchen oven is an everyday hot thing, here only so you have something to measure against.",
+        "source": "NOAA National Weather Service (weather.gov)"
+      }
     },
     {
       "id": "rainbow",
@@ -65,18 +104,49 @@
       ],
       "facts": [
         {
-          "text": "A rainbow needs two things at the same time: sunshine and raindrops still hanging in the air. White sunlight goes into a droplet, bends inside it, and comes back out split into all of its colours.",
+          "text": "A rainbow needs two things at the same time: sunshine and raindrops still hanging in the air. White sunlight goes into a droplet, bends inside it, and comes back out split into all of its colors.",
           "source": "UCAR Center for Science Education (scied.ucar.edu)"
         },
         {
           "text": "You can only see a rainbow with the sun behind you and the rain in front of you. That is why they turn up after a shower when the sun is low, pointing your own shadow straight at the middle of the bow.",
-          "source": "UCAR Center for Science Education (scied.ucar.edu)"
+          "source": "UCAR Center for Science Education (scied.ucar.edu)",
+          "art": "/explore/topic-photos/wild-weather/wild-weather-2a.webp",
+          "artAlt": "A person stands with their back to the low evening sun, their long shadow stretching toward a rainbow in the rainy sky ahead of them",
+          "caption": "Sun behind you, rain in front of you, shadow pointing at the bow."
         },
         {
-          "text": "The colours always come in the same order: red, orange, yellow, green, blue, indigo, violet. People remember it as a name, ROY G BIV. Look above a bright rainbow and you may spot a fainter second one with its colours the other way round.",
-          "source": "UCAR Center for Science Education (scied.ucar.edu)"
+          "text": "The colors always come in the same order: red, orange, yellow, green, blue, indigo, violet. People remember it as a name, ROY G BIV. Look above a bright rainbow and you may spot a fainter second one with its colors in the opposite order.",
+          "source": "UCAR Center for Science Education (scied.ucar.edu)",
+          "art": "/explore/topic-photos/wild-weather/wild-weather-2b.webp",
+          "artAlt": "A double rainbow over wet fields, the bright lower bow with red on the outside and a fainter second bow above it with its colors flipped",
+          "caption": "The fainter upper bow wears its colors the other way around."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "How a rainbow gets made",
+        "stops": [
+          {
+            "year": "First",
+            "label": "The sun shines low behind you while rain is still falling in front of you",
+            "icon": "sun"
+          },
+          {
+            "year": "Then",
+            "label": "Sunlight goes into a raindrop, bends, bounces off the back, and bends again coming out",
+            "icon": "drop"
+          },
+          {
+            "year": "At last",
+            "label": "The bent light spreads into all its colors and paints a bow across the sky",
+            "icon": "rainbow"
+          }
+        ],
+        "caption": "No numbers in this one, just the three things that have to happen, in order. The steps come from the UCAR Center for Science Education.",
+        "source": "UCAR Center for Science Education (scied.ucar.edu)"
+      }
     },
     {
       "id": "hurricane-eye",
@@ -89,18 +159,52 @@
       ],
       "facts": [
         {
-          "text": "A hurricane is an enormous spinning pile of thunderstorms. From a satellite up in space it looks like a pinwheel, with curved rainbands of cloud spiralling in toward the middle.",
+          "text": "A hurricane is an enormous spinning pile of thunderstorms. From a satellite up in space it looks like a pinwheel, with curved rainbands of cloud spiraling in toward the middle.",
           "source": "NOAA (noaa.gov)"
         },
         {
-          "text": "The hole in the centre is called the eye, and it is usually about 20 to 40 miles across. Inside it the air sinks, the wind drops to a light breeze, and the sky can be clear enough to see stars straight overhead while the storm turns all around it.",
-          "source": "NOAA (noaa.gov)"
+          "text": "The hole in the center is called the eye, and it is usually about 20 to 40 miles across. Inside it the air sinks, the wind drops to a light breeze, and the sky can be clear enough to see stars straight overhead while the storm turns all around it.",
+          "source": "NOAA (noaa.gov)",
+          "art": "/explore/topic-photos/wild-weather/wild-weather-3a.webp",
+          "artAlt": "A close satellite view of a hurricane's round eye, a clear dark hole ringed by towering white walls of cloud",
+          "caption": "Inside the eye the wind drops and the sky can open right up."
         },
         {
           "text": "Ringing the eye is the eyewall, a circle of very tall thunderstorms where the rain and wind are strongest. Special planes with scientists on board fly right through it to measure the storm, so forecasters can tell everyone what is coming days ahead.",
-          "source": "NOAA (noaa.gov)"
+          "source": "NOAA (noaa.gov)",
+          "art": "/explore/topic-photos/wild-weather/wild-weather-3b.webp",
+          "artAlt": "A four-engine hurricane hunter airplane flying in front of a huge dark wall of storm cloud",
+          "caption": "Hurricane hunter planes fly straight through the eyewall to measure the storm."
         }
-      ]
+      ],
+      "layout": "long",
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How wide is the eye of a hurricane?",
+        "rows": [
+          {
+            "icon": "hurricane",
+            "label": "The calm eye in the middle",
+            "value": 30,
+            "display": "about 20 to 40 miles across"
+          },
+          {
+            "icon": "car",
+            "label": "An hour of driving on the highway",
+            "value": 60,
+            "display": "about 60 miles"
+          },
+          {
+            "icon": "cloud",
+            "label": "The whole spinning storm",
+            "value": 300,
+            "display": "about 300 miles across"
+          }
+        ],
+        "caption": "The eye and the whole storm are measured by NOAA. The hour of driving is an everyday distance, here only so you have something to measure against.",
+        "source": "NOAA (noaa.gov)"
+      }
     },
     {
       "id": "snowflakes",
@@ -118,17 +222,51 @@
         },
         {
           "text": "The temperature decides the shape. Near 23 degrees Fahrenheit crystals grow long and needle-like, and near 5 degrees Fahrenheit they grow flat and plate-like, so one snowstorm can drop several different styles of flake.",
-          "source": "NOAA (noaa.gov)"
+          "source": "NOAA (noaa.gov)",
+          "art": "/explore/topic-photos/wild-weather/wild-weather-4a.webp",
+          "artAlt": "Magnified snow crystals on dark cloth, thin needle-shaped ones lying beside flat six-sided plate-shaped ones",
+          "caption": "Colder air or warmer air grows a whole different shape of flake."
         },
         {
-          "text": "No two flakes look quite the same because no two take the same trip down. Each one drifts through slightly different air on the way, and every wobble changes how it grows. The six arms on one flake match each other because they travelled together.",
-          "source": "NOAA (noaa.gov)"
+          "text": "No two flakes look quite the same because no two take the same trip down. Each one drifts through slightly different air on the way, and every wobble changes how it grows. The six arms on one flake match each other because they traveled together.",
+          "source": "NOAA (noaa.gov)",
+          "art": "/explore/topic-photos/wild-weather/wild-weather-4b.webp",
+          "artAlt": "An extreme close-up of one snow crystal on a dark wool mitten, its six feathery arms matching each other exactly",
+          "caption": "Six arms, one trip down, all growing to match."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How tiny is one snow crystal?",
+        "rows": [
+          {
+            "icon": "drop",
+            "label": "One raindrop",
+            "value": 0.08,
+            "display": "just under a tenth of an inch"
+          },
+          {
+            "icon": "snowflake",
+            "label": "One six-sided snow crystal",
+            "value": 0.5,
+            "display": "usually under half an inch"
+          },
+          {
+            "icon": "hand",
+            "label": "Your hand",
+            "value": 6,
+            "display": "about 6 inches"
+          }
+        ],
+        "caption": "The snow crystal size comes from the National Snow and Ice Data Center and the raindrop size from the UCAR Center for Science Education. Your hand is here only so you have something to measure against.",
+        "source": "National Snow and Ice Data Center (nsidc.org)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Wild Weather!",
-    "blurb": "Weather is happening over your head right this second, and now you can read a little more of it. Fold a corner on your favourite page so you can find it again."
+    "blurb": "Weather is happening over your head right this second, and now you can read a little more of it. Fold a corner on your favorite page so you can find it again."
   }
 }

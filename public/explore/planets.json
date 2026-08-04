@@ -5,18 +5,22 @@
   "topic": "space",
   "ageBand": "5-10",
   "status": "in-review",
-  "skills": ["space-facts", "reading"],
+  "skills": [
+    "space-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/planets/planets-cover.webp",
   "shelfColor": "#4C6FE0",
   "ambient": "space",
   "assetVersion": 1,
   "sources": [
     "NASA Science (science.nasa.gov)",
-    "NASA Jet Propulsion Laboratory (jpl.nasa.gov)"
+    "NASA Jet Propulsion Laboratory (jpl.nasa.gov)",
+    "NOAA National Hurricane Center (nhc.noaa.gov)"
   ],
   "cover": {
     "art": "/explore/topic-photos/planets/planets-cover.webp",
-    "artAlt": "Saturn hanging in dark space with its wide pale rings tilted towards us",
+    "artAlt": "Saturn hanging in dark space with its wide pale rings tilted toward us",
     "blurb": "That is Saturn, wearing rings made of billions of chunks of ice and rock. Turn the page and go and meet the other planets."
   },
   "pages": [
@@ -26,43 +30,119 @@
       "art": "/explore/topic-photos/planets/planets-1.webp",
       "artAlt": "Jupiter filling the picture, striped with cream and orange cloud bands and one huge red oval storm",
       "factAudio": "planets-jupiter",
-      "quiz": ["planets-jupiter"],
+      "quiz": [
+        "planets-jupiter"
+      ],
       "facts": [
         {
-          "text": "Jupiter is the biggest planet in our solar system. It is about eleven times wider than Earth, and if you could hollow it out you could pour more than a thousand Earths inside. It is bigger than all the other planets put together.",
+          "text": "Jupiter is the biggest planet in our solar system. It is about eleven times wider than Earth, and if you could hollow it out you could pour about a thousand Earths inside. It is bigger than all the other planets put together.",
           "source": "NASA Science (science.nasa.gov)"
         },
         {
-          "text": "That red oval is the Great Red Spot, and it is a storm bigger than our whole planet. People have been watching it through telescopes for more than three hundred years, so it has been swirling away since long before your great great grandparents were born.",
-          "source": "NASA Science (science.nasa.gov)"
+          "text": "That red oval is the Great Red Spot, and it is a storm wider than our whole planet. People have been watching it through telescopes for at least a hundred and fifty years, so it has been swirling away since long before your great great grandparents were born.",
+          "source": "NASA Science (science.nasa.gov)",
+          "art": "/explore/topic-photos/planets/planets-1a.webp",
+          "artAlt": "A close view of Jupiter's Great Red Spot, a huge oval storm swirling inside cream and orange cloud bands",
+          "caption": "The Great Red Spot: one storm wider than the whole Earth."
         },
         {
           "text": "There is nowhere to stand on Jupiter. It is mostly hydrogen and helium, swirling gas on top and squashed liquid below, with no solid ground anywhere. It also spins faster than any other planet, so one Jupiter day is only about ten hours long.",
-          "source": "NASA Science (science.nasa.gov)"
+          "source": "NASA Science (science.nasa.gov)",
+          "art": "/explore/topic-photos/planets/planets-1b.webp",
+          "artAlt": "Jupiter's cloud tops seen up close, curling ribbons of cream, orange and white with no ground anywhere below them",
+          "caption": "Cloud on top of cloud. There is nowhere on Jupiter to put your feet."
         }
-      ]
+      ],
+      "layout": "long",
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How wide is Jupiter?",
+        "rows": [
+          {
+            "icon": "moon",
+            "label": "Our Moon",
+            "value": 2200,
+            "display": "about 2,200 miles across"
+          },
+          {
+            "icon": "earth",
+            "label": "Earth",
+            "value": 7900,
+            "display": "about 7,900 miles across"
+          },
+          {
+            "icon": "planet",
+            "label": "Jupiter",
+            "value": 87000,
+            "display": "about 87,000 miles across"
+          }
+        ],
+        "caption": "All three widths come from NASA. Nothing here is a stand-in, and that is the surprise: Earth's bar has to shrink to almost nothing before Jupiter's will fit on the page.",
+        "source": "NASA Science (science.nasa.gov)"
+      }
     },
     {
       "id": "mars",
-      "title": "The Rusty Red Planet",
+      "title": "Rusty Red, with a Giant Volcano",
       "art": "/explore/topic-photos/planets/planets-2.webp",
       "artAlt": "The rusty red rocky ground of Mars seen from the surface, with a pale pink sky above",
       "factAudio": "planets-mars",
-      "quiz": ["planets-mars"],
+      "quiz": [
+        "planets-mars"
+      ],
       "facts": [
         {
           "text": "Mars is red because it is rusty. The dirt and dust are full of iron, and that iron has slowly rusted, the same orange brown you see on an old nail left out in the rain. So much fine dust floats in the thin air that even the sky there looks pink and hazy instead of blue.",
           "source": "NASA Science (science.nasa.gov)"
         },
         {
-          "text": "Mars has the tallest volcano we know of anywhere. It is called Olympus Mons, it stands about seventeen miles high, which is roughly three Mount Everests stacked up, and its base sprawls for hundreds of miles. Walking across the bottom of it would take you weeks.",
-          "source": "NASA Jet Propulsion Laboratory (jpl.nasa.gov)"
+          "text": "Mars has the tallest volcano we know of anywhere. It is called Olympus Mons, and it stands more than 25 miles tall from its base to its top, which is more than four Mount Everests stacked on top of each other. Its base sprawls so far that it would cover a whole state. Walking across the bottom of it would take you weeks.",
+          "source": "NASA Jet Propulsion Laboratory (jpl.nasa.gov)",
+          "art": "/explore/topic-photos/planets/planets-2a.webp",
+          "artAlt": "Olympus Mons seen from orbit, an enormous rusty volcano with a wide flat top and steep cliffs all around its edge",
+          "caption": "Olympus Mons from space. Its base alone would cover a whole state."
         },
         {
           "text": "Nobody has walked on Mars yet, but robots have. Rovers are car sized explorers on wheels that trundle over the rocks taking pictures and testing what the ground is made of, then send it all home to Earth. A day on Mars is about 24.6 hours, so their days are almost the same length as yours.",
-          "source": "NASA Jet Propulsion Laboratory (jpl.nasa.gov)"
+          "source": "NASA Jet Propulsion Laboratory (jpl.nasa.gov)",
+          "art": "/explore/topic-photos/planets/planets-2b.webp",
+          "artAlt": "A six wheeled Mars rover parked on rusty red gravel, its camera mast pointing up and fresh wheel tracks behind it",
+          "caption": "A rover on the red gravel, leaving fresh tracks behind it."
         }
-      ]
+      ],
+      "layout": "tall",
+      "stat": {
+        "value": "25",
+        "unit": "miles tall"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How tall is the biggest volcano?",
+        "rows": [
+          {
+            "icon": "mountain",
+            "label": "Mount Everest, the tallest mountain on Earth",
+            "value": 5.5,
+            "display": "about 5 and a half miles"
+          },
+          {
+            "icon": "plane",
+            "label": "A jet plane far above the clouds",
+            "value": 6.6,
+            "display": "about 6 and a half miles up"
+          },
+          {
+            "icon": "volcano",
+            "label": "Olympus Mons on Mars",
+            "value": 25,
+            "display": "more than 25 miles"
+          }
+        ],
+        "caption": "Olympus Mons and Mount Everest both come from NASA. The jet plane is an everyday height, here only so you have something to measure against.",
+        "source": "NASA Science (science.nasa.gov)"
+      }
     },
     {
       "id": "earth",
@@ -70,7 +150,9 @@
       "art": "/explore/topic-photos/planets/planets-3.webp",
       "artAlt": "Earth seen from space, blue oceans and swirling white clouds",
       "factAudio": "planets-earth",
-      "quiz": ["planets-earth"],
+      "quiz": [
+        "planets-earth"
+      ],
       "facts": [
         {
           "text": "Earth is the only place we know of anywhere that has living things on it. Every animal you have ever seen, every tree, every person, and you, all of it is on this one blue ball.",
@@ -78,13 +160,47 @@
         },
         {
           "text": "Water covers about 71 out of every 100 patches of Earth's surface, which is why it looks so blue from up there. Earth is the only planet in our solar system with liquid water sitting right out on the surface, in oceans and lakes and rivers.",
-          "source": "NASA Science (science.nasa.gov)"
+          "source": "NASA Science (science.nasa.gov)",
+          "art": "/explore/topic-photos/planets/planets-3a.webp",
+          "artAlt": "Earth seen from space with the wide blue Pacific Ocean filling almost the whole picture and only a sliver of land at the edge",
+          "caption": "Turn Earth this way and it is almost all water."
         },
         {
           "text": "Earth also comes wrapped in air. It is about 78 parts nitrogen and 21 parts oxygen, and the oxygen is the part your lungs are after every time you take a breath. That thin blanket of air is what makes the edge of the planet glow blue in photographs.",
-          "source": "NASA Science (science.nasa.gov)"
+          "source": "NASA Science (science.nasa.gov)",
+          "art": "/explore/topic-photos/planets/planets-3b.webp",
+          "artAlt": "The curved edge of Earth photographed from orbit, with a thin glowing blue band of air sitting on top of the dark planet",
+          "caption": "That thin blue band on the edge is all the air there is."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "What is one breath of air made of?",
+        "rows": [
+          {
+            "icon": "cloud",
+            "label": "Nitrogen, which you breathe straight back out",
+            "value": 78,
+            "display": "78 out of every 100"
+          },
+          {
+            "icon": "sprout",
+            "label": "Oxygen, the part your lungs are after",
+            "value": 21,
+            "display": "21 out of every 100"
+          },
+          {
+            "icon": "drop",
+            "label": "Everything else, a tiny pinch of other gases",
+            "value": 1,
+            "display": "about 1 out of every 100"
+          }
+        ],
+        "caption": "All three numbers come from NASA. There are no everyday stand-ins in this one: that really is what a breath of air near the ground is made of.",
+        "source": "NASA Science (science.nasa.gov)"
+      }
     },
     {
       "id": "neptune",
@@ -92,7 +208,9 @@
       "art": "/explore/topic-photos/planets/planets-4.webp",
       "artAlt": "Neptune as a deep blue sphere alone in very dark space",
       "factAudio": "planets-neptune",
-      "quiz": ["planets-neptune"],
+      "quiz": [
+        "planets-neptune"
+      ],
       "facts": [
         {
           "text": "Neptune is the eighth planet and the one furthest from the Sun. It sits about thirty times further out than we do, so sunlight, which reaches us in about eight minutes, takes around four hours to get all the way to Neptune. From there the Sun is just a very bright star.",
@@ -100,17 +218,55 @@
         },
         {
           "text": "Out that far, a planet has an enormous way to travel to get round the Sun once. One year on Neptune lasts about 165 Earth years. Neptune has only finished one full lap since telescopes first found it in 1846.",
-          "source": "NASA Science (science.nasa.gov)"
+          "source": "NASA Science (science.nasa.gov)",
+          "art": "/explore/topic-photos/planets/planets-4a.webp",
+          "artAlt": "Neptune as a small deep blue ball in black space, the Sun only a tiny bright point far away behind it",
+          "caption": "Way out here, one lap around the Sun takes 165 Earth years."
         },
         {
-          "text": "Neptune is the windiest world we know. Its winds can rip along faster than a thousand miles an hour, far quicker than any storm on Earth, in a place that is dark and deeply, deeply cold.",
-          "source": "NASA Science (science.nasa.gov)"
+          "text": "Neptune is the windiest world we know. Its winds can rip along at more than 1,200 miles an hour, far quicker than any storm on Earth, in a place that is dark and deeply, deeply cold.",
+          "source": "NASA Science (science.nasa.gov)",
+          "art": "/explore/topic-photos/planets/planets-4b.webp",
+          "artAlt": "A close view of Neptune's blue clouds, with pale white streaks of cloud stretched out sideways by the wind",
+          "caption": "White clouds smeared sideways by the fastest winds we know of."
         }
-      ]
+      ],
+      "layout": "speed",
+      "stat": {
+        "value": "1,200",
+        "unit": "miles an hour"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How fast is the wind on Neptune?",
+        "rows": [
+          {
+            "icon": "car",
+            "label": "A car on the highway",
+            "value": 60,
+            "display": "about 60 miles an hour"
+          },
+          {
+            "icon": "hurricane",
+            "label": "The strongest kind of hurricane on Earth",
+            "value": 157,
+            "display": "157 miles an hour and up"
+          },
+          {
+            "icon": "planet",
+            "label": "The wind on Neptune",
+            "value": 1200,
+            "display": "more than 1,200 miles an hour"
+          }
+        ],
+        "caption": "Neptune's wind comes from NASA and the hurricane wind from the National Hurricane Center. The car is an everyday speed, here only so you have something to measure against.",
+        "source": "NASA Science (science.nasa.gov) and NOAA National Hurricane Center (nhc.noaa.gov)"
+      }
     }
   ],
   "finish": {
     "title": "You finished The Planets!",
-    "blurb": "Eight planets, one Sun, and Saturn's rings shining out in the middle of it all. Fold a corner on your favourite page so you can find it again."
+    "blurb": "Eight planets, one Sun, and Saturn's rings shining out in the middle of it all. Fold a corner on your favorite page so you can find it again."
   }
 }

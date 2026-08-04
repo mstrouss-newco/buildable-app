@@ -47,14 +47,58 @@
           "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
         },
         {
-          "text": "About 80 out of every 100 animals living between 200 and 1,000 metres down can make their own light. Jellyfish, squid and fish all glow, and scientists are still working out everything they use their light for.",
-          "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
+          "text": "About 80 out of every 100 animals living between about 660 and 3,300 feet down can make their own light. Jellyfish, squid and fish all glow, and scientists are still working out everything they use their light for.",
+          "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)",
+          "art": "/explore/topic-photos/deep-ocean/deep-ocean-1a.webp",
+          "artAlt": "A glowing deep-sea squid hanging upright in black water, lines of blue-green light running along its body and arms",
+          "caption": "A squid switches on its own blue-green light in the dark."
         },
         {
-          "text": "The ocean comes in layers. The top 200 metres is the sunlight zone. From 200 down to 1,000 metres is the twilight zone, dim and blue. Below 1,000 metres is the midnight zone, where no sunlight reaches at all.",
-          "source": "NOAA (noaa.gov)"
+          "text": "The ocean comes in layers. The top 660 feet is the sunlight zone. From 660 feet down to 3,300 feet is the twilight zone, dim and blue. Below 3,300 feet is the midnight zone, where no sunlight reaches at all.",
+          "source": "NOAA (noaa.gov)",
+          "art": "/explore/topic-photos/deep-ocean/deep-ocean-1b.webp",
+          "artAlt": "Looking up from deep underwater, pale shafts of sunlight fade from bright blue near the surface into darkness below",
+          "caption": "Looking up from the twilight zone, the sunlight is nearly gone."
         }
-      ]
+      ],
+      "layout": "tall",
+      "stat": {
+        "value": "3,300",
+        "unit": "feet down"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How far down do the ocean's layers go?",
+        "rows": [
+          {
+            "icon": "statue",
+            "label": "The Statue of Liberty, ground to torch",
+            "value": 305,
+            "display": "about 305 feet"
+          },
+          {
+            "icon": "sun",
+            "label": "The bottom of the sunlight zone",
+            "value": 660,
+            "display": "about 660 feet down"
+          },
+          {
+            "icon": "jelly",
+            "label": "The bottom of the twilight zone",
+            "value": 3300,
+            "display": "about 3,300 feet down"
+          },
+          {
+            "icon": "sub",
+            "label": "The bottom of the midnight zone",
+            "value": 13100,
+            "display": "about 13,100 feet down"
+          }
+        ],
+        "caption": "The three layer depths come from NOAA. The Statue of Liberty is 305 feet from the ground to her torch, and she is here only so you have something to measure against. Almost every glowing animal lives in the middle band.",
+        "source": "NOAA (noaa.gov)"
+      }
     },
     {
       "id": "vents",
@@ -67,18 +111,62 @@
       ],
       "facts": [
         {
-          "text": "In some places on the sea floor, seawater sinks into cracks near undersea volcanoes, gets heated deep inside the Earth, and shoots straight back out. Scientists have measured that water at about 660 degrees Fahrenheit, more than three times hotter than boiling water.",
+          "text": "In some places on the sea floor, seawater sinks into cracks near undersea volcanoes, gets heated deep inside the Earth, and shoots straight back out. Scientists have measured that water at about 750 degrees Fahrenheit, more than three times hotter than boiling water.",
           "source": "Woods Hole Oceanographic Institution (whoi.edu)"
         },
         {
           "text": "The dark plumes are nicknamed black smokers, but that is not smoke. The hot water is packed with dissolved minerals, and when it meets the near-freezing seawater those minerals turn solid in a swirling dark cloud and slowly stack up into rocky chimneys.",
-          "source": "Woods Hole Oceanographic Institution (whoi.edu)"
+          "source": "Woods Hole Oceanographic Institution (whoi.edu)",
+          "art": "/explore/topic-photos/deep-ocean/deep-ocean-2a.webp",
+          "artAlt": "A close view of a black smoker vent, a thick dark plume of mineral-filled water gushing out of the top of a craggy rock chimney",
+          "caption": "That dark cloud is not smoke. It is minerals turning solid in the cold."
         },
         {
           "text": "Nothing down here has sunlight to live on, so life runs on chemicals instead. Tiny microbes turn vent chemicals into food, a trick called chemosynthesis. The big pale tube worms have no mouth and no stomach at all, because microbes living inside them do the feeding.",
-          "source": "Smithsonian Ocean (ocean.si.edu)"
+          "source": "Smithsonian Ocean (ocean.si.edu)",
+          "art": "/explore/topic-photos/deep-ocean/deep-ocean-2b.webp",
+          "artAlt": "A close view of a bunch of tube worms, tall pale tubes with bright red feathery tips, packed together on the rock beside a vent",
+          "caption": "Tube worms crowd around a vent, red tips waving in the water."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "stat": {
+        "value": "750",
+        "unit": "degrees Fahrenheit"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How hot is the water coming out?",
+        "rows": [
+          {
+            "icon": "bathtub",
+            "label": "A warm bath",
+            "value": 100,
+            "display": "about 100 degrees"
+          },
+          {
+            "icon": "drop",
+            "label": "Boiling water in a pot",
+            "value": 212,
+            "display": "212 degrees"
+          },
+          {
+            "icon": "oven",
+            "label": "A very hot kitchen oven",
+            "value": 500,
+            "display": "about 500 degrees"
+          },
+          {
+            "icon": "volcano",
+            "label": "Water shooting out of a vent",
+            "value": 750,
+            "display": "about 750 degrees"
+          }
+        ],
+        "caption": "The vent temperature comes from the Woods Hole Oceanographic Institution. The bath, the pot and the oven are everyday temperatures, here only so you have something to measure against. Every number is in degrees Fahrenheit.",
+        "source": "Woods Hole Oceanographic Institution (whoi.edu)"
+      }
     },
     {
       "id": "whale-dive",
@@ -96,13 +184,51 @@
         },
         {
           "text": "Down that deep it is pitch black, so the whale sees with sound. It makes loud clicks and listens for the echoes coming back. The closer it gets to a squid, the faster the clicks come, until they run together into a sound scientists call a buzz.",
-          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+          "source": "NOAA Fisheries (fisheries.noaa.gov)",
+          "art": "/explore/topic-photos/deep-ocean/deep-ocean-3a.webp",
+          "artAlt": "A sperm whale hanging head down in deep blue water, its huge square head pointing into the dark below",
+          "caption": "Head down in the dark, the whale listens for its own echoes."
         },
         {
           "text": "A male sperm whale can grow to about 52 feet, longer than a school bus. Much of that enormous square head is a sac of waxy oil called spermaceti, which helps the whale aim its clicks into the dark.",
-          "source": "NOAA Fisheries (fisheries.noaa.gov)"
+          "source": "NOAA Fisheries (fisheries.noaa.gov)",
+          "art": "/explore/topic-photos/deep-ocean/deep-ocean-3b.webp",
+          "artAlt": "A whole sperm whale seen from the side in open blue water, blunt square head at one end, wrinkled gray body and wide tail at the other",
+          "caption": "From square head to tail, a big male is longer than a school bus."
         }
-      ]
+      ],
+      "layout": "tall",
+      "stat": {
+        "value": "2,000",
+        "unit": "feet down"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How long is a sperm whale?",
+        "rows": [
+          {
+            "icon": "kid",
+            "label": "A kid your age",
+            "value": 4,
+            "display": "about 4 feet"
+          },
+          {
+            "icon": "bus",
+            "label": "A school bus",
+            "value": 40,
+            "display": "about 40 feet"
+          },
+          {
+            "icon": "whale",
+            "label": "A grown male sperm whale",
+            "value": 52,
+            "display": "about 52 feet"
+          }
+        ],
+        "caption": "The whale's length comes from NOAA Fisheries. The kid and the school bus are everyday sizes, here only so you have something to measure against.",
+        "source": "NOAA Fisheries (fisheries.noaa.gov)"
+      }
     },
     {
       "id": "sea-floor",
@@ -115,22 +241,53 @@
       ],
       "facts": [
         {
-          "text": "Below about 200 metres the ocean turns cold and heavy. Down deep the average temperature is around 4 degrees Celsius, close to the inside of a fridge, and the water presses down hundreds of times harder than the air does at the beach.",
+          "text": "Below about 660 feet the ocean turns cold and heavy. Down deep the average temperature is around 39 degrees Fahrenheit, close to the inside of a fridge, and the water presses down hundreds of times harder than the air does at the beach.",
           "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
         },
         {
           "text": "Animals really do live on the soft muddy bottom: sea stars, sea cucumbers and pale deep-sea octopuses. Researchers watch them using robot submarines that carry their own lights and cameras, because otherwise there is nothing to see by.",
-          "source": "Monterey Bay Aquarium Research Institute (mbari.org)"
+          "source": "Monterey Bay Aquarium Research Institute (mbari.org)",
+          "art": "/explore/topic-photos/deep-ocean/deep-ocean-4a.webp",
+          "artAlt": "A pale deep-sea octopus and a bright red sea star sitting on soft gray mud, lit by the lamps of a robot submarine",
+          "caption": "A robot submarine's lamps light up one small patch of the muddy bottom."
         },
         {
           "text": "We have barely looked. By 2026 about 29 percent of the world's sea floor had been mapped in detail, and explorers have actually laid eyes on less than one thousandth of one percent of the deep sea floor, an area about the size of Rhode Island.",
-          "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
+          "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)",
+          "art": "/explore/topic-photos/deep-ocean/deep-ocean-4b.webp",
+          "artAlt": "A screen on a research ship showing a colorful sonar map of ridges and valleys on the sea floor",
+          "caption": "Sound sent down from a ship draws a map of the bottom."
         }
-      ]
+      ],
+      "layout": "long",
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "How we found out what the bottom looks like",
+        "stops": [
+          {
+            "year": "First",
+            "label": "Ships lower a heavy weight on a very long rope, over and over, just to feel where the bottom is",
+            "icon": "boat"
+          },
+          {
+            "year": "Then",
+            "label": "Ships send sound down instead and listen for the echo, which draws a map. That is how about 29 percent of the sea floor has been mapped",
+            "icon": "earth"
+          },
+          {
+            "year": "Today",
+            "label": "Robot submarines swim down carrying their own lights, and even now less than one thousandth of one percent of the deep sea floor has been seen with our own eyes",
+            "icon": "sub"
+          }
+        ],
+        "caption": "The mapping and exploring numbers come from NOAA Ocean Exploration. The steps show how the tools changed, not how long each one took.",
+        "source": "NOAA Ocean Exploration (oceanexplorer.noaa.gov)"
+      }
     }
   ],
   "finish": {
     "title": "You finished The Deep Ocean!",
-    "blurb": "There is far more of the deep sea left to find than anyone has found so far, and some of it is waiting for you. Fold a corner on your favourite page so you can find it again."
+    "blurb": "There is far more of the deep sea left to find than anyone has found so far, and some of it is waiting for you. Fold a corner on your favorite page so you can find it again."
   }
 }

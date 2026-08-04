@@ -5,7 +5,10 @@
   "topic": "space",
   "ageBand": "5-10",
   "status": "in-review",
-  "skills": ["space-facts", "reading"],
+  "skills": [
+    "space-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/rockets/rockets-cover.webp",
   "shelfColor": "#D2542F",
   "ambient": "space",
@@ -14,7 +17,9 @@
     "NASA (nasa.gov)",
     "NASA Glenn Research Center (grc.nasa.gov)",
     "NASA Science (science.nasa.gov)",
-    "European Space Agency (esa.int)"
+    "European Space Agency (esa.int)",
+    "NOAA (noaa.gov)",
+    "Boeing (boeing.com)"
   ],
   "cover": {
     "art": "/explore/topic-photos/rockets/rockets-cover.webp",
@@ -25,10 +30,17 @@
     {
       "id": "launch-pad",
       "title": "Ready on the Launch Pad",
+      "layout": "speed",
       "art": "/explore/topic-photos/rockets/rockets-1.webp",
       "artAlt": "A tall rocket standing on its launch pad at dawn next to the metal service tower",
+      "stat": {
+        "value": "17,500",
+        "unit": "miles per hour"
+      },
       "factAudio": "rockets-launch-pad",
-      "quiz": ["rockets-launch-pad"],
+      "quiz": [
+        "rockets-launch-pad"
+      ],
       "facts": [
         {
           "text": "Most of that tall rocket is not machine at all. Most of a rocket's weight is propellant, the fuel it burns, so what you are really looking at is a giant stack of tanks with engines bolted underneath.",
@@ -36,21 +48,57 @@
         },
         {
           "text": "As the fuel burns away, the empty tanks turn into dead weight the rocket is hauling for nothing. So rockets are built in stages. When a stage is empty it lets go and drops away, and the lighter rocket left behind keeps climbing.",
-          "source": "NASA Glenn Research Center (grc.nasa.gov)"
+          "source": "NASA Glenn Research Center (grc.nasa.gov)",
+          "art": "/explore/topic-photos/rockets/rockets-1a.webp",
+          "artAlt": "An empty rocket stage falling away below the still-climbing rocket, high above the blue curve of Earth",
+          "caption": "An empty stage lets go and drops away, and the rest keeps climbing."
         },
         {
-          "text": "All that fuel is for one job: going fast enough. To stay in orbit around Earth a spacecraft travels about 17,500 miles per hour, which is roughly twenty times quicker than a jet plane.",
-          "source": "NASA (nasa.gov)"
+          "text": "All that fuel is for one job: going fast enough. To stay in orbit around Earth a spacecraft travels about 17,500 miles per hour, which is nearly thirty times quicker than a jet plane.",
+          "source": "NASA (nasa.gov)",
+          "art": "/explore/topic-photos/rockets/rockets-1b.webp",
+          "artAlt": "A rocket streaking upward through a clear blue sky on a long straight tail of orange flame and white smoke",
+          "caption": "Faster and faster, all the way up to orbit speed."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How fast is fast enough?",
+        "rows": [
+          {
+            "icon": "car",
+            "label": "A car on the highway",
+            "value": 60,
+            "display": "about 60 miles per hour"
+          },
+          {
+            "icon": "plane",
+            "label": "A jet plane",
+            "value": 600,
+            "display": "about 600 miles per hour"
+          },
+          {
+            "icon": "rocket",
+            "label": "A rocket reaching orbit",
+            "value": 17500,
+            "display": "about 17,500 miles per hour"
+          }
+        ],
+        "caption": "The orbit speed comes from NASA and the jet plane's speed from Boeing. The highway car is an everyday speed, here only so you have something to measure against.",
+        "source": "NASA (nasa.gov)"
+      }
     },
     {
       "id": "spacewalk",
       "title": "Walking Outside in Space",
+      "layout": "close-up",
       "art": "/explore/topic-photos/rockets/rockets-2.webp",
       "artAlt": "An astronaut in a white spacesuit working outside a space station with Earth curving below",
       "factAudio": "rockets-spacewalk",
-      "quiz": ["rockets-spacewalk"],
+      "quiz": [
+        "rockets-spacewalk"
+      ],
       "facts": [
         {
           "text": "When an astronaut climbs out of the spacecraft it is called an extravehicular activity, or EVA, and everybody just says spacewalk. One usually lasts somewhere between five and eight hours, so it is a whole working day outside.",
@@ -58,21 +106,67 @@
         },
         {
           "text": "A spacesuit is really a tiny spaceship shaped like a person. It carries oxygen to breathe and water to drink, it keeps the right amount of pressure squeezing gently on the body, and it shields the astronaut from blazing sunshine on one side and freezing shadow on the other.",
-          "source": "NASA (nasa.gov)"
+          "source": "NASA (nasa.gov)",
+          "art": "/explore/topic-photos/rockets/rockets-2a.webp",
+          "artAlt": "A close view of a white spacesuit helmet, the gold visor down and the astronaut's gloved hands lifted in front of it",
+          "caption": "A spacesuit up close: helmet, gold visor, thick padded gloves."
         },
         {
           "text": "Nobody floats off. A tether, which is a strong rope, clips the astronaut to the station, and the tools get clipped on too so they cannot drift away. There is even a backup called SAFER, a small set of jets on the suit that can puff an astronaut back to the spacecraft.",
-          "source": "NASA (nasa.gov)"
+          "source": "NASA (nasa.gov)",
+          "art": "/explore/topic-photos/rockets/rockets-2b.webp",
+          "artAlt": "A close view of a metal safety hook on the end of a bright yellow tether, clipped tight around a handrail on the outside of the space station",
+          "caption": "One strong clip is all that keeps an astronaut from floating off."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How long is a spacewalk?",
+        "rows": [
+          {
+            "icon": "clock",
+            "label": "A movie at home",
+            "value": 2,
+            "display": "about 2 hours"
+          },
+          {
+            "icon": "astronaut",
+            "label": "One spacewalk",
+            "value": 6.5,
+            "display": "usually 5 to 8 hours"
+          },
+          {
+            "icon": "backpack",
+            "label": "A whole school day",
+            "value": 7,
+            "display": "about 7 hours"
+          },
+          {
+            "icon": "star",
+            "label": "The longest spacewalk ever",
+            "value": 8.93,
+            "display": "8 hours and 56 minutes"
+          }
+        ],
+        "caption": "The spacewalk hours and the record both come from NASA. The movie and the school day are everyday lengths, here only so you have something to measure against.",
+        "source": "NASA (nasa.gov)"
+      }
     },
     {
       "id": "living-in-space",
       "title": "Living Inside the Space Station",
+      "layout": "tall",
       "art": "/explore/topic-photos/rockets/rockets-3.webp",
       "artAlt": "Astronauts floating weightless inside a space station module full of equipment",
+      "stat": {
+        "value": "250",
+        "unit": "miles up"
+      },
       "factAudio": "rockets-living-in-space",
-      "quiz": ["rockets-living-in-space"],
+      "quiz": [
+        "rockets-living-in-space"
+      ],
       "facts": [
         {
           "text": "The International Space Station flies about 250 miles above your head at around 17,500 miles per hour, which means it goes all the way round Earth roughly every 90 minutes. While you eat your breakfast, it does a whole lap.",
@@ -80,21 +174,57 @@
         },
         {
           "text": "Going round that fast means the Sun keeps popping up and going down again. Astronauts on the station see about fifteen or sixteen sunrises and sunsets every single day, so they use clocks, not the sky, to decide when it is bedtime.",
-          "source": "NASA Science (science.nasa.gov)"
+          "source": "NASA Science (science.nasa.gov)",
+          "art": "/explore/topic-photos/rockets/rockets-3a.webp",
+          "artAlt": "Sunrise seen from a space station window, a thin band of bright orange light along the curved dark edge of Earth",
+          "caption": "Another sunrise, about ninety minutes after the last one."
         },
         {
           "text": "Everything floats up there, including people, so astronauts hook their sleeping bags to a wall before they go to sleep. Otherwise they would drift around in the night and gently bump into things. There is no up or down to sleep the right way round in.",
-          "source": "European Space Agency (esa.int)"
+          "source": "European Space Agency (esa.int)",
+          "art": "/explore/topic-photos/rockets/rockets-3b.webp",
+          "artAlt": "A sleeping bag strapped upright to the wall of a small crew cabin on the space station, with a pillow clipped inside",
+          "caption": "A bed on the wall, because there is no up or down."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How high is the space station?",
+        "rows": [
+          {
+            "icon": "mountain",
+            "label": "The top of Mount Everest",
+            "value": 5.5,
+            "display": "about 5 and a half miles up"
+          },
+          {
+            "icon": "plane",
+            "label": "A jet plane flying",
+            "value": 7,
+            "display": "about 7 miles up"
+          },
+          {
+            "icon": "satellite",
+            "label": "The space station",
+            "value": 250,
+            "display": "about 250 miles up"
+          }
+        ],
+        "caption": "The station's height comes from NASA, the mountain from NASA too, and the flying plane from NOAA. The mountain and the plane are here so you can see just how much higher the station goes.",
+        "source": "NASA (nasa.gov) and NOAA (noaa.gov)"
+      }
     },
     {
       "id": "coming-home",
       "title": "Coming Home Under Parachutes",
+      "layout": "long",
       "art": "/explore/topic-photos/rockets/rockets-4.webp",
       "artAlt": "A space capsule descending under three big red and white parachutes above the ocean",
       "factAudio": "rockets-coming-home",
-      "quiz": ["rockets-coming-home"],
+      "quiz": [
+        "rockets-coming-home"
+      ],
       "facts": [
         {
           "text": "Coming home from the Moon, NASA's Orion capsule hits the top of the air at nearly 25,000 miles per hour. Squashing the air that hard makes it glow at about 5,000 degrees Fahrenheit, which is around half as hot as the surface of the Sun.",
@@ -102,17 +232,52 @@
         },
         {
           "text": "That is what the heat shield is for. It is a thick protective layer across the bottom of the capsule that takes all the heat and slowly chars away, like the crust on toast, keeping everything inside cool and comfortable.",
-          "source": "NASA (nasa.gov)"
+          "source": "NASA (nasa.gov)",
+          "art": "/explore/topic-photos/rockets/rockets-4a.webp",
+          "artAlt": "The wide round bottom of a space capsule after landing, its heat shield burnt black and rough all over",
+          "caption": "The heat shield after the trip home, charred black like burnt toast."
         },
         {
-          "text": "Then the parachutes open. Three big main canopies catch the air, and in about twenty minutes the capsule slows from nearly 25,000 miles per hour to about 20, a gentle jogging speed, and splashes down in the ocean where boats are already waiting.",
-          "source": "NASA (nasa.gov)"
+          "text": "Then the parachutes open. Three big main canopies catch the air, and in about twenty minutes the capsule slows from nearly 25,000 miles per hour to about 17, slower than a car on a quiet street, and splashes down in the ocean where boats are already waiting.",
+          "source": "NASA (nasa.gov)",
+          "art": "/explore/topic-photos/rockets/rockets-4b.webp",
+          "artAlt": "Three huge red and white striped parachutes fully open above a small dark space capsule against a bright blue sky",
+          "caption": "Three main parachutes, and the last few miles are gentle."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "The long way home",
+        "stops": [
+          {
+            "year": "First",
+            "label": "The capsule hits the top of the air at nearly 25,000 miles per hour and begins to glow",
+            "icon": "flame"
+          },
+          {
+            "year": "Then",
+            "label": "The heat shield takes about 5,000 degrees Fahrenheit and slowly chars away",
+            "icon": "shield"
+          },
+          {
+            "year": "Next",
+            "label": "Three big parachutes open and slow the capsule to about 17 miles per hour",
+            "icon": "parachute"
+          },
+          {
+            "year": "At last",
+            "label": "Splashdown in the ocean, where the recovery boats are already waiting",
+            "icon": "boat"
+          }
+        ],
+        "caption": "Every number here is from NASA, measured on Orion, the capsule built to bring astronauts home from the Moon.",
+        "source": "NASA (nasa.gov)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Rockets & Astronauts!",
-    "blurb": "On a clear evening the space station really does slide across the sky like a slow bright star, with people inside it. Fold a corner on your favourite page so you can find it again."
+    "blurb": "On a clear evening the space station really does slide across the sky like a slow bright star, with people inside it. Fold a corner on your favorite page so you can find it again."
   }
 }
