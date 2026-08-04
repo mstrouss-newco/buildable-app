@@ -5,7 +5,10 @@
   "topic": "animals",
   "ageBand": "5-10",
   "status": "approved",
-  "skills": ["nature-facts", "reading"],
+  "skills": [
+    "nature-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp",
   "shelfColor": "#E08A2E",
   "ambient": "forest",
@@ -16,7 +19,8 @@
     "US Department of Agriculture (usda.gov)",
     "Natural History Museum, London (nhm.ac.uk)",
     "Smithsonian Institution (si.edu)",
-    "Smithsonian Tropical Research Institute (stri.si.edu)"
+    "Smithsonian Tropical Research Institute (stri.si.edu)",
+    "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
   ],
   "cover": {
     "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-cover.webp",
@@ -30,7 +34,9 @@
       "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-1.webp",
       "artAlt": "Close up of a fuzzy striped caterpillar chewing a hole in a green leaf",
       "factAudio": "bugs-butterflies-caterpillar",
-      "quiz": ["bugs-butterflies-caterpillar"],
+      "quiz": [
+        "bugs-butterflies-caterpillar"
+      ],
       "facts": [
         {
           "text": "A caterpillar has one job, and that job is eating. It chews leaves nearly all day and grows so fast that in about two weeks it can go from shorter than a grain of rice to about the length of your finger.",
@@ -38,13 +44,57 @@
         },
         {
           "text": "Caterpillar skin does not stretch much, so growing means climbing right out of it. A caterpillar wriggles free of its old skin around five times before it is full size. Each stage in between has its own name, an instar.",
-          "source": "Monarch Joint Venture (monarchjointventure.org)"
+          "source": "Monarch Joint Venture (monarchjointventure.org)",
+          "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-1a.webp",
+          "artAlt": "A striped monarch caterpillar halfway out of its old skin on a milkweed leaf, the wrinkled empty skin still stuck to the leaf behind it",
+          "caption": "Climbing out of a skin that got too small."
         },
         {
           "text": "The old skin does not go to waste either. Once a caterpillar has shed it, it usually turns around and eats it before going back to the leaf.",
-          "source": "Monarch Joint Venture (monarchjointventure.org)"
+          "source": "Monarch Joint Venture (monarchjointventure.org)",
+          "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-1b.webp",
+          "artAlt": "A striped caterpillar curled back on itself, chewing the crumpled old skin it has just wriggled out of",
+          "caption": "Nothing goes to waste: the old skin is a snack."
         }
-      ]
+      ],
+      "layout": "speed",
+      "stat": {
+        "value": "2 weeks",
+        "unit": "from speck to full grown"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How much does a caterpillar grow?",
+        "rows": [
+          {
+            "icon": "caterpillar",
+            "label": "A monarch caterpillar the day it hatches",
+            "value": 0.1,
+            "display": "about a tenth of an inch"
+          },
+          {
+            "icon": "grain",
+            "label": "A grain of rice",
+            "value": 0.25,
+            "display": "about a quarter inch"
+          },
+          {
+            "icon": "caterpillar",
+            "label": "A full grown monarch caterpillar",
+            "value": 1.75,
+            "display": "up to about 1 and three quarter inches"
+          },
+          {
+            "icon": "hand",
+            "label": "Your finger",
+            "value": 2.5,
+            "display": "about 2 and a half inches"
+          }
+        ],
+        "caption": "Both caterpillar sizes come from the Monarch Joint Venture, which also says a caterpillar ends up almost 2,000 times heavier than the day it hatched. The rice and the finger are everyday sizes, here only so you have something to measure against.",
+        "source": "Monarch Joint Venture (monarchjointventure.org)"
+      }
     },
     {
       "id": "chrysalis",
@@ -52,7 +102,9 @@
       "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-2.webp",
       "artAlt": "A see through chrysalis hanging from a stem with butterfly wing patterns showing inside",
       "factAudio": "bugs-butterflies-chrysalis",
-      "quiz": ["bugs-butterflies-chrysalis"],
+      "quiz": [
+        "bugs-butterflies-chrysalis"
+      ],
       "facts": [
         {
           "text": "When a caterpillar has finished growing it finds a quiet spot, hangs upside down, and splits its skin one last time. What is underneath is not a caterpillar any more. It is a chrysalis, a smooth case with a butterfly being built inside.",
@@ -60,13 +112,47 @@
         },
         {
           "text": "Inside, the body is rearranged from the inside out. That change is called metamorphosis. Wings grow, flight muscles form, and even the mouth is rebuilt, because a caterpillar chews leaves but a butterfly sips nectar through a long curled straw.",
-          "source": "Monarch Joint Venture (monarchjointventure.org)"
+          "source": "Monarch Joint Venture (monarchjointventure.org)",
+          "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-2a.webp",
+          "artAlt": "A smooth green monarch chrysalis hanging from a twig, ringed with a line of tiny gold dots",
+          "caption": "Still on the outside, a whole rebuild inside."
         },
         {
-          "text": "Right at the end you can see the finished wings through the case, pattern and colours and all, because the colour only arrives in the last day or two. Soon after that the butterfly climbs out and pumps fluid into its crumpled wings until they are stiff enough to fly.",
-          "source": "USDA Forest Service (fs.usda.gov)"
+          "text": "Right at the end you can see the finished wings through the case, pattern and colors and all, because the color only arrives in the last day or two. Soon after that the butterfly climbs out and pumps fluid into its crumpled wings until they are stiff enough to fly.",
+          "source": "USDA Forest Service (fs.usda.gov)",
+          "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-2b.webp",
+          "artAlt": "A just hatched monarch butterfly gripping its empty see through case, its wings still small and crumpled",
+          "caption": "Just out, with wings still crumpled and soft."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How long does each part take?",
+        "rows": [
+          {
+            "icon": "egg",
+            "label": "An egg on a milkweed leaf",
+            "value": 4,
+            "display": "3 to 5 days"
+          },
+          {
+            "icon": "caterpillar",
+            "label": "A caterpillar, eating and growing",
+            "value": 12,
+            "display": "9 to 14 days"
+          },
+          {
+            "icon": "clock",
+            "label": "Inside the chrysalis, being rebuilt",
+            "value": 11,
+            "display": "8 to 15 days"
+          }
+        ],
+        "caption": "All three lengths of time come from the Monarch Joint Venture, and all three are summer times. A warm week makes every part quicker and a cool one slower.",
+        "source": "Monarch Joint Venture (monarchjointventure.org)"
+      }
     },
     {
       "id": "bees",
@@ -74,7 +160,9 @@
       "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-3.webp",
       "artAlt": "A honeybee dusted all over with yellow pollen sitting on a purple flower",
       "factAudio": "bugs-butterflies-bees",
-      "quiz": ["bugs-butterflies-bees"],
+      "quiz": [
+        "bugs-butterflies-bees"
+      ],
       "facts": [
         {
           "text": "A bee is fuzzy for a reason. Pollen, the yellow dust in the middle of a flower, sticks all over those tiny hairs while the bee is busy drinking nectar. The bee then combs the dust down into little baskets on its back legs, called corbiculae, and carries it home.",
@@ -82,13 +170,49 @@
         },
         {
           "text": "As the bee bumbles from flower to flower it drops some of that pollen off, and that is pollination. It is how a plant makes seeds and fruit. About one bite in every three of the food you eat, apples, blueberries, melons, even chocolate, is there because a pollinator visited a flower first.",
-          "source": "US Department of Agriculture (usda.gov)"
+          "source": "US Department of Agriculture (usda.gov)",
+          "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-3a.webp",
+          "artAlt": "A honeybee standing in the middle of a white apple blossom, with small green apples growing on the branch behind it",
+          "caption": "Visit a blossom, and later there is an apple."
         },
         {
           "text": "Most bees in the world live alone, but honeybees are famous for the opposite. They share one big nest, the hive, where a single queen lays the eggs and thousands of workers fetch food and look after the young.",
-          "source": "Smithsonian Institution (si.edu)"
+          "source": "Smithsonian Institution (si.edu)",
+          "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-3b.webp",
+          "artAlt": "Hundreds of honeybees crowded over a wax honeycomb inside a hive, with the longer queen bee in the middle of them",
+          "caption": "One queen, thousands of workers, one busy hive."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "How a bee turns a flower into your dinner",
+        "stops": [
+          {
+            "year": "First",
+            "label": "Yellow pollen dust sticks all over the bee's fuzzy hairs while she drinks nectar",
+            "icon": "bee"
+          },
+          {
+            "year": "Then",
+            "label": "Some of that dust brushes off on the next flower she lands on, and that is pollination",
+            "icon": "sunflower"
+          },
+          {
+            "year": "Next",
+            "label": "Now that flower can make seeds, and seeds are how you get fruit",
+            "icon": "sprout"
+          },
+          {
+            "year": "Last",
+            "label": "About one bite in every three that you eat began with a pollinator at a flower",
+            "icon": "veg"
+          }
+        ],
+        "caption": "The one bite in every three comes from the US Department of Agriculture. The rest of the chart is the trip a single speck of pollen takes.",
+        "source": "US Department of Agriculture (usda.gov)"
+      }
     },
     {
       "id": "ants",
@@ -96,7 +220,9 @@
       "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-4.webp",
       "artAlt": "A line of ants marching along carrying cut green pieces of leaf above their heads",
       "factAudio": "bugs-butterflies-ants",
-      "quiz": ["bugs-butterflies-ants"],
+      "quiz": [
+        "bugs-butterflies-ants"
+      ],
       "facts": [
         {
           "text": "Leafcutter ants snip pieces out of leaves and carry them home along a trail, held up like green sails. Some pieces are so big for the ant that it would be like you carrying a dining table down the street, over your head, the whole way.",
@@ -104,17 +230,55 @@
         },
         {
           "text": "Here is the surprise: they do not eat the leaves. Underground they chew them into a mush and grow a fungus on it, like a farmer with a vegetable patch, and that fungus is what the ants and their babies actually eat.",
-          "source": "Smithsonian Tropical Research Institute (stri.si.edu)"
+          "source": "Smithsonian Tropical Research Institute (stri.si.edu)",
+          "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-4a.webp",
+          "artAlt": "A pale gray white fungus garden inside a leafcutter nest, spongy like a sponge, with small ants moving over it",
+          "caption": "The underground garden the ants actually eat."
         },
         {
           "text": "One leafcutter nest can hold three or four million ants in thousands of little underground rooms, and everybody has a job. Some cut, some carry, some tend the garden, and very tiny ants ride along on the leaf pieces as lookouts for the carriers.",
-          "source": "Smithsonian Tropical Research Institute (stri.si.edu)"
+          "source": "Smithsonian Tropical Research Institute (stri.si.edu)",
+          "art": "/explore/topic-photos/bugs-butterflies/bugs-butterflies-4b.webp",
+          "artAlt": "A close view of one leafcutter ant holding a green leaf piece over its head, with a much tinier ant riding on top of the leaf",
+          "caption": "A tiny lookout hitches a ride on the leaf."
         }
-      ]
+      ],
+      "layout": "long",
+      "stat": {
+        "value": "2,000",
+        "unit": "feet of ant trail"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How long is an ant highway?",
+        "rows": [
+          {
+            "icon": "bus",
+            "label": "A school bus",
+            "value": 40,
+            "display": "about 40 feet"
+          },
+          {
+            "icon": "field",
+            "label": "A football field, end zone to end zone",
+            "value": 360,
+            "display": "about 360 feet"
+          },
+          {
+            "icon": "ant",
+            "label": "One leafcutter ant trail",
+            "value": 2000,
+            "display": "more than 2,000 feet"
+          }
+        ],
+        "caption": "The trail comes from the San Diego Zoo Wildlife Alliance, which has measured leafcutter trails longer than 2,000 feet, kept clear for months. The bus and the football field are everyday sizes, here only so you have something to measure against.",
+        "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Bugs & Butterflies!",
-    "blurb": "Next time you are outside, crouch down and look at a leaf for a whole minute. There is a good chance somebody is already there. Fold a corner on your favourite page so you can find it again."
+    "blurb": "Next time you are outside, crouch down and look at a leaf for a whole minute. There is a good chance somebody is already there. Fold a corner on your favorite page so you can find it again."
   }
 }

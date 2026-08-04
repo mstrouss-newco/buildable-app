@@ -5,7 +5,10 @@
   "topic": "space",
   "ageBand": "5-10",
   "status": "approved",
-  "skills": ["space-facts", "reading"],
+  "skills": [
+    "space-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/moon/moon-cover.webp",
   "shelfColor": "#4C6FE0",
   "ambient": "space",
@@ -19,7 +22,9 @@
     "NASA Science, Earth's Moon (science.nasa.gov/moon)",
     "NASA Apollo mission pages (nasa.gov)",
     "Lunar and Planetary Institute (lpi.usra.edu)",
-    "NOAA National Ocean Service, tides (oceanservice.noaa.gov)"
+    "NOAA National Ocean Service, tides (oceanservice.noaa.gov)",
+    "NASA, What Is Lunar Regolith? (nasa.gov)",
+    "NASA Astronomy Picture of the Day, Apollo 17's Lunar Rover (apod.nasa.gov)"
   ],
   "cover": {
     "art": "/explore/topic-photos/moon/moon-cover.webp",
@@ -30,28 +35,65 @@
     {
       "id": "footprints",
       "title": "Footprints That Never Wash Away",
+      "layout": "close-up",
       "art": "/explore/topic-photos/moon/moon-1.webp",
-      "artAlt": "A crisp astronaut bootprint pressed into grey moon dust",
+      "artAlt": "A crisp astronaut bootprint pressed into gray moon dust",
       "factAudio": "moon-footprints",
-      "quiz": ["moon-footprints"],
+      "quiz": [
+        "moon-footprints"
+      ],
       "facts": [
         {
           "text": "The bootprints the astronauts left are still up there. The Moon has almost no air, so there is no wind and no rain to blow them away or wash them out.",
           "source": "NASA Science (science.nasa.gov/moon)"
         },
         {
-          "text": "The grey powder they stepped in is called regolith. It is made of rock smashed into dust by billions of years of meteorite strikes, and it is sharp and sticky, not soft like beach sand.",
-          "source": "Lunar and Planetary Institute (lpi.usra.edu)"
+          "text": "The gray powder they stepped in is called regolith. It is rock that meteorites smashed into dust, and up close every speck is rough and jagged, like a tiny chip of broken glass. It clings to boots and gloves instead of brushing off like beach sand.",
+          "source": "Lunar and Planetary Institute (lpi.usra.edu)",
+          "art": "/explore/topic-photos/moon/moon-1a.webp",
+          "artAlt": "A close view of a gloved astronaut hand holding a scoop of fine gray moon dust, with grains clinging all over the white glove",
+          "caption": "Moon dust clings to everything it touches."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "How the Moon got its dust",
+        "stops": [
+          {
+            "year": "First",
+            "label": "Space rocks crash into the Moon, over and over, for a very long time",
+            "icon": "stone"
+          },
+          {
+            "year": "Then",
+            "label": "The crashes break the ground into a fine powder full of sharp, jagged bits",
+            "icon": "moon"
+          },
+          {
+            "year": "Today",
+            "label": "A boot presses in, and with no wind or rain to wipe it away the print just stays",
+            "icon": "print"
+          }
+        ],
+        "caption": "There are no numbers to check on this one. It is the story NASA tells of how the Moon's dust was made and why a footprint stays put.",
+        "source": "NASA, What Is Lunar Regolith? (nasa.gov)"
+      }
     },
     {
       "id": "walking",
       "title": "Twelve People Have Walked Here",
+      "layout": "tall",
       "art": "/explore/topic-photos/moon/moon-2.webp",
-      "artAlt": "An astronaut in a white spacesuit on the grey lunar surface with Earth in the black sky",
+      "artAlt": "An astronaut in a white spacesuit on the gray lunar surface with Earth in the black sky",
+      "stat": {
+        "value": "6",
+        "unit": "times higher"
+      },
       "factAudio": "moon-walking",
-      "quiz": ["moon-walking"],
+      "quiz": [
+        "moon-walking"
+      ],
       "facts": [
         {
           "text": "Only twelve people have ever walked on the Moon. They all went during the Apollo missions between 1969 and 1972, starting with Neil Armstrong and Buzz Aldrin.",
@@ -59,61 +101,174 @@
         },
         {
           "text": "The Moon's gravity is about one sixth of Earth's. If you can hop a step high here, you could hop about six times higher there, which is why the astronauts bounced instead of walked.",
-          "source": "NASA Science (science.nasa.gov/moon)"
+          "source": "NASA Science (science.nasa.gov/moon)",
+          "art": "/explore/topic-photos/moon/moon-2a.webp",
+          "artAlt": "An astronaut in a white spacesuit caught in the middle of a bounce above the gray lunar ground, both boots up off the surface",
+          "caption": "One little push, and up you go."
         },
         {
           "text": "The sky above them stayed black even in the middle of the day. Without air to scatter the sunlight, there is no blue sky on the Moon.",
-          "source": "NASA Science (science.nasa.gov/moon)"
+          "source": "NASA Science (science.nasa.gov/moon)",
+          "art": "/explore/topic-photos/moon/moon-2b.webp",
+          "artAlt": "An astronaut standing in bright white sunlight on the Moon with a completely black sky behind, sharp shadows on the ground",
+          "caption": "Bright sunshine, and the sky is still black."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How high could you hop on the Moon?",
+        "rows": [
+          {
+            "icon": "kid",
+            "label": "Your best hop here on Earth",
+            "value": 1,
+            "display": "about 1 foot"
+          },
+          {
+            "icon": "astronaut",
+            "label": "That same hop on the Moon",
+            "value": 6,
+            "display": "about 6 feet"
+          },
+          {
+            "icon": "door",
+            "label": "A front door",
+            "value": 7,
+            "display": "about 7 feet"
+          }
+        ],
+        "caption": "The Moon's gravity, one sixth of Earth's, comes from NASA, and that is what makes the hop six times higher. The hop and the door are everyday sizes, here only so you have something to measure against.",
+        "source": "NASA Science, Earth's Moon (science.nasa.gov/moon)"
+      }
     },
     {
       "id": "craters",
       "title": "A World Full of Craters",
+      "layout": "long",
       "art": "/explore/topic-photos/moon/moon-3.webp",
       "artAlt": "Close-up of the Moon's surface showing overlapping craters and long shadows",
+      "stat": {
+        "value": "239,000",
+        "unit": "miles away"
+      },
       "factAudio": "moon-craters",
-      "quiz": ["moon-craters"],
+      "quiz": [
+        "moon-craters"
+      ],
       "facts": [
         {
           "text": "Every crater is a scar from something crashing in. Earth gets hit too, but our air burns most rocks up and our weather slowly erases the marks. The Moon keeps every single one.",
           "source": "NASA Science (science.nasa.gov/moon)"
         },
         {
-          "text": "The biggest crater is called the South Pole to Aitken basin, and it is so wide it would stretch across most of the United States.",
-          "source": "NASA Science (science.nasa.gov/moon)"
+          "text": "The biggest one is called the South Pole to Aitken basin, and it is more than 1,550 miles across. That is about the distance from Waco, Texas all the way to Washington, DC.",
+          "source": "NASA Science (science.nasa.gov/moon)",
+          "art": "/explore/topic-photos/moon/moon-3a.webp",
+          "artAlt": "The far side of the Moon seen from space, with the huge shallow bowl of the South Pole to Aitken basin darkening the bottom of the disk",
+          "caption": "The far side of the Moon, with its giant basin across the bottom."
         },
         {
-          "text": "The Moon is roughly a quarter as wide as Earth, and it sits about 239,000 miles away. All the other planets in our solar system could fit in the gap between us.",
-          "source": "NASA Science (science.nasa.gov/moon)"
+          "text": "The Moon is roughly a quarter as wide as Earth, and it sits about 239,000 miles away. You could line up about thirty Earths side by side in the gap between us.",
+          "source": "NASA Science (science.nasa.gov/moon)",
+          "art": "/explore/topic-photos/moon/moon-3b.webp",
+          "artAlt": "Earth and the Moon photographed together from far out in space, a big blue and white Earth beside a small gray Moon with black space between them",
+          "caption": "Earth and the Moon, with all that empty space in between."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How wide is the biggest crater?",
+        "rows": [
+          {
+            "icon": "car",
+            "label": "A drive across the United States",
+            "value": 2800,
+            "display": "about 2,800 miles"
+          },
+          {
+            "icon": "moon",
+            "label": "The whole Moon, all the way across",
+            "value": 2160,
+            "display": "about 2,160 miles"
+          },
+          {
+            "icon": "stone",
+            "label": "The South Pole to Aitken basin",
+            "value": 1550,
+            "display": "more than 1,550 miles"
+          }
+        ],
+        "caption": "The Moon's width and the crater's width both come from NASA. The drive across the country is an everyday distance, here only so you have something to measure against, and it shows that one crater is most of the Moon wide.",
+        "source": "NASA Science, Earth's Moon (science.nasa.gov/moon)"
+      }
     },
     {
       "id": "rover",
       "title": "They Drove a Car on the Moon",
+      "layout": "speed",
       "art": "/explore/topic-photos/moon/moon-4.webp",
       "artAlt": "The lunar rover parked on the Moon's surface with an astronaut nearby",
+      "stat": {
+        "value": "8",
+        "unit": "miles an hour"
+      },
       "factAudio": "moon-rover",
-      "quiz": ["moon-rover"],
+      "quiz": [
+        "moon-rover"
+      ],
       "facts": [
         {
           "text": "The last three Apollo missions carried a battery-powered buggy called the Lunar Roving Vehicle. It folded up like a deck chair to fit on the lander.",
           "source": "NASA (nasa.gov)"
         },
         {
-          "text": "The rover was not fast, about as quick as a person on a bicycle, but it let the astronauts travel miles from their lander instead of a short walk.",
-          "source": "NASA (nasa.gov)"
+          "text": "The rover was not fast. Its top speed was about 8 miles an hour, roughly the pace of a kid on a bicycle, but it still let the astronauts travel miles from their lander instead of a short walk.",
+          "source": "NASA (nasa.gov)",
+          "art": "/explore/topic-photos/moon/moon-4a.webp",
+          "artAlt": "An astronaut sitting in the lunar rover driving across the Moon, with two curling arcs of gray dust flying up behind the wheels",
+          "caption": "The buggy throws up two curling arcs of dust as it rolls."
         },
         {
           "text": "All three rovers are still parked up there. There was no room to bring them home, so they sit exactly where the astronauts left them.",
-          "source": "NASA (nasa.gov)"
+          "source": "NASA (nasa.gov)",
+          "art": "/explore/topic-photos/moon/moon-4b.webp",
+          "artAlt": "The empty lunar rover standing alone on the gray Moon, with wheel tracks leading away across the dust and no one in sight",
+          "caption": "Still parked, right where the astronauts left it."
         }
-      ]
+      ],
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How fast was the Moon buggy?",
+        "rows": [
+          {
+            "icon": "kid",
+            "label": "A kid walking",
+            "value": 3,
+            "display": "about 3 miles an hour"
+          },
+          {
+            "icon": "rover",
+            "label": "The Moon buggy at full speed",
+            "value": 8,
+            "display": "about 8 miles an hour"
+          },
+          {
+            "icon": "car",
+            "label": "A car on a town street",
+            "value": 25,
+            "display": "about 25 miles an hour"
+          }
+        ],
+        "caption": "The buggy's top speed comes from NASA. The walk and the car are everyday speeds, here only so you have something to measure against.",
+        "source": "NASA Astronomy Picture of the Day, Apollo 17's Lunar Rover (apod.nasa.gov)"
+      }
     }
   ],
   "finish": {
     "title": "You finished The Moon!",
-    "blurb": "The Moon also pulls on our oceans, and that is what makes the tides go in and out every day. Fold a corner on your favourite page so you can find it again."
+    "blurb": "The Moon also pulls on our oceans, and that is what makes the tides go in and out every day. Fold a corner on your favorite page so you can find it again."
   }
 }

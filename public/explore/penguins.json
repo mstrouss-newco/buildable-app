@@ -5,7 +5,10 @@
   "topic": "animals",
   "ageBand": "5-10",
   "status": "approved",
-  "skills": ["animal-facts", "reading"],
+  "skills": [
+    "animal-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/penguins/penguins-cover.webp",
   "shelfColor": "#3E7CA6",
   "ambient": "wind",
@@ -14,7 +17,8 @@
     "Australian Antarctic Program (antarctica.gov.au)",
     "British Antarctic Survey (bas.ac.uk)",
     "NOAA Ocean Today (oceantoday.noaa.gov)",
-    "US Antarctic Program, National Science Foundation (usap.gov)"
+    "US Antarctic Program, National Science Foundation (usap.gov)",
+    "US Geological Survey (usgs.gov)"
   ],
   "cover": {
     "art": "/explore/topic-photos/penguins/penguins-cover.webp",
@@ -26,9 +30,11 @@
       "id": "chick",
       "title": "A Chick on Dad's Feet",
       "art": "/explore/topic-photos/penguins/penguins-1.webp",
-      "artAlt": "An adult emperor penguin with a fluffy grey chick tucked on top of its feet",
+      "artAlt": "An adult emperor penguin with a fluffy gray chick tucked on top of its feet",
       "factAudio": "penguins-chick",
-      "quiz": ["penguins-chick"],
+      "quiz": [
+        "penguins-chick"
+      ],
       "facts": [
         {
           "text": "An emperor penguin dad does not build a nest. He balances the egg on top of his own feet, up off the freezing ice, and folds a warm flap of feathery skin down over it. That flap is called a brood pouch, and inside it the egg stays as warm as you are, even when the air outside is far below freezing.",
@@ -36,13 +42,47 @@
         },
         {
           "text": "He stands there through the dark Antarctic winter for about nine weeks without eating a single thing, living off the fat he stored up in the summer while the mother is away at sea getting food.",
-          "source": "British Antarctic Survey (bas.ac.uk)"
+          "source": "British Antarctic Survey (bas.ac.uk)",
+          "art": "/explore/topic-photos/penguins/penguins-1a.webp",
+          "artAlt": "A lone emperor penguin father standing still in blowing snow in the dim winter light, his belly feathers hanging down over his feet to hide the egg",
+          "caption": "Dad stands in the winter wind with the egg hidden under his feathers."
         },
         {
-          "text": "A new chick cannot keep itself warm yet, so it rides in the brood pouch too, a little grey ball of fluff sitting on its parent's feet. Only after about seven weeks can it hold its own heat and stand out on the ice with the other chicks.",
-          "source": "Australian Antarctic Program (antarctica.gov.au)"
+          "text": "A new chick cannot keep itself warm yet, so it rides in the brood pouch too, a little gray ball of fluff sitting on its parent's feet. Only after about seven weeks can it hold its own heat and stand out on the ice with the other chicks.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)",
+          "art": "/explore/topic-photos/penguins/penguins-1b.webp",
+          "artAlt": "A close view of a fluffy gray emperor penguin chick peeking out from the warm flap of skin on its parent's belly, sitting on the parent's feet",
+          "caption": "A gray ball of fluff, riding on its parent's feet."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How long does Dad stand on the egg?",
+        "rows": [
+          {
+            "icon": "clock",
+            "label": "One week of school",
+            "value": 5,
+            "display": "5 days"
+          },
+          {
+            "icon": "moon",
+            "label": "A whole month",
+            "value": 30,
+            "display": "about 30 days"
+          },
+          {
+            "icon": "penguin",
+            "label": "A penguin dad on the egg, eating nothing",
+            "value": 65,
+            "display": "about 65 days"
+          }
+        ],
+        "caption": "The 65 days a father emperor penguin keeps the egg warm without a single meal is measured by the Australian Antarctic Program. The school week and the month are everyday lengths of time, here only so you have something to measure against.",
+        "source": "Australian Antarctic Program (antarctica.gov.au)"
+      }
     },
     {
       "id": "swimming",
@@ -50,7 +90,9 @@
       "art": "/explore/topic-photos/penguins/penguins-2.webp",
       "artAlt": "A penguin shooting through clear blue water leaving a trail of bubbles behind it",
       "factAudio": "penguins-swimming",
-      "quiz": ["penguins-swimming"],
+      "quiz": [
+        "penguins-swimming"
+      ],
       "facts": [
         {
           "text": "A penguin is a bird that cannot fly, and it does not mind at all. Its wings are stiff, narrow flippers, and underwater it beats them just the way other birds beat wings in the air. A penguin really is flying. It just does it in the sea.",
@@ -58,13 +100,57 @@
         },
         {
           "text": "Its body is shaped like a torpedo, smooth and pointed at both ends, and its feet and tail trail behind as rudders for steering. That is why a penguin who waddles slowly and comically on land turns into a rocket the moment it hits the water.",
-          "source": "Australian Antarctic Program (antarctica.gov.au)"
+          "source": "Australian Antarctic Program (antarctica.gov.au)",
+          "art": "/explore/topic-photos/penguins/penguins-2a.webp",
+          "artAlt": "A penguin seen from the side underwater, its body smooth and pointed like a torpedo, flippers out and feet and tail held straight behind it",
+          "caption": "Flippers for wings, feet and tail for steering."
         },
         {
-          "text": "Emperor penguins are the deepest divers of all the birds. They can go down more than 500 metres, which is deeper than five football fields laid end to end, holding one breath the whole way.",
-          "source": "Australian Antarctic Program (antarctica.gov.au)"
+          "text": "Emperor penguins are the deepest divers of all the birds. They can go down more than 1,600 feet, deeper than the Empire State Building is tall, holding one breath the whole way. The deepest dive anyone has ever measured went about 1,850 feet down.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)",
+          "art": "/explore/topic-photos/penguins/penguins-2b.webp",
+          "artAlt": "A penguin swimming straight down away from the bright surface into deep dark blue water, growing small in the gloom",
+          "caption": "Down and down, on one single breath."
         }
-      ]
+      ],
+      "layout": "tall",
+      "stat": {
+        "value": "1,850",
+        "unit": "feet deep"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How deep can an emperor penguin dive?",
+        "rows": [
+          {
+            "icon": "pool",
+            "label": "The deep end of a swimming pool",
+            "value": 12,
+            "display": "about 12 feet"
+          },
+          {
+            "icon": "person",
+            "label": "As deep as scuba divers are allowed to go",
+            "value": 130,
+            "display": "about 130 feet"
+          },
+          {
+            "icon": "building",
+            "label": "The Empire State Building, ground to tip",
+            "value": 1454,
+            "display": "1,454 feet"
+          },
+          {
+            "icon": "penguin",
+            "label": "The deepest penguin dive ever measured",
+            "value": 1854,
+            "display": "about 1,850 feet"
+          }
+        ],
+        "caption": "The record dive is measured by the Australian Antarctic Program, and the scuba diving limit comes from NOAA. The swimming pool and the Empire State Building are everyday sizes, here only so you have something to measure against.",
+        "source": "Australian Antarctic Program (antarctica.gov.au)"
+      }
     },
     {
       "id": "huddle",
@@ -72,21 +158,54 @@
       "art": "/explore/topic-photos/penguins/penguins-3.webp",
       "artAlt": "Emperor penguins packed tightly together in a huddle while snow blows around them",
       "factAudio": "penguins-huddle",
-      "quiz": ["penguins-huddle"],
+      "quiz": [
+        "penguins-huddle"
+      ],
       "facts": [
         {
-          "text": "When the wind comes screaming across the ice, emperor penguins pack themselves into a huddle. They stand so close that about ten birds fit into one square metre, and huddling cuts the heat each penguin loses by around half.",
+          "text": "When the wind comes screaming across the ice, emperor penguins pack themselves into a huddle. They stand so close that as many as ten birds squeeze into a square just over three feet across, and huddling cuts the heat each penguin loses by as much as half.",
           "source": "Australian Antarctic Program (antarctica.gov.au)"
         },
         {
-          "text": "Inside the huddle it gets surprisingly cosy, as warm as a nice summer afternoon, while a blizzard howls a few birds away. And nobody is stuck out in the cold forever, because the whole huddle shuffles slowly along, so the penguins on the chilly edge get their turn in the middle.",
-          "source": "Australian Antarctic Program (antarctica.gov.au)"
+          "text": "Inside the huddle it gets surprisingly cozy, about 75 degrees, as warm as a nice summer afternoon, while a blizzard howls a few birds away. And nobody is stuck out in the cold forever, because the whole huddle shuffles slowly along, so the penguins on the chilly edge get their turn in the middle.",
+          "source": "Australian Antarctic Program (antarctica.gov.au)",
+          "art": "/explore/topic-photos/penguins/penguins-3a.webp",
+          "artAlt": "A view down into the middle of a penguin huddle, backs and heads pressed together with a faint wisp of warm air rising off them",
+          "caption": "Warm air rises off the middle of the huddle."
         },
         {
           "text": "Under all that, a penguin wears a coat of short feathers that overlap like tiles on a roof and keep the water out, with a thick layer of fat underneath. Wind and sea simply cannot reach its skin.",
-          "source": "Australian Antarctic Program (antarctica.gov.au)"
+          "source": "Australian Antarctic Program (antarctica.gov.au)",
+          "art": "/explore/topic-photos/penguins/penguins-3b.webp",
+          "artAlt": "An extreme close view of a penguin's back showing short stiff feathers overlapping like tiles on a roof, with beads of water sitting on top",
+          "caption": "Short feathers overlap like roof tiles and shed the water."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "How a huddle keeps everyone warm",
+        "stops": [
+          {
+            "year": "First",
+            "label": "The wind gets up, and the penguins shuffle in until they are shoulder to shoulder",
+            "icon": "snowflake"
+          },
+          {
+            "year": "Then",
+            "label": "As many as ten birds squeeze into a square just over three feet across, and each one loses up to half as much heat",
+            "icon": "penguin"
+          },
+          {
+            "year": "At last",
+            "label": "The whole huddle creeps slowly along, so the birds on the cold outside get their turn in the middle",
+            "icon": "clock"
+          }
+        ],
+        "caption": "The ten packed birds and the halved heat loss are both measured by the Australian Antarctic Program, which has also recorded the middle of a huddle at about 75 degrees.",
+        "source": "Australian Antarctic Program (antarctica.gov.au)"
+      }
     },
     {
       "id": "antarctica",
@@ -94,25 +213,61 @@
       "art": "/explore/topic-photos/penguins/penguins-4.webp",
       "artAlt": "A wide view of Antarctic icebergs and sea ice with tiny penguins far off for scale",
       "factAudio": "penguins-antarctica",
-      "quiz": ["penguins-antarctica"],
+      "quiz": [
+        "penguins-antarctica"
+      ],
       "facts": [
         {
           "text": "Antarctica is a whole continent buried under ice. In places that ice sheet is nearly three miles thick, deep enough to swallow mountains, and it holds most of the fresh water on the entire planet.",
           "source": "British Antarctic Survey (bas.ac.uk)"
         },
         {
-          "text": "It is also the driest place on Earth. So little snow or rain falls there that scientists call Antarctica a desert, a freezing one, and it is the coldest and windiest continent too. Nobody lives there for good, only scientists who visit to study it.",
-          "source": "US Antarctic Program, National Science Foundation (usap.gov)"
+          "text": "It is also the driest place on Earth. Only about two inches of snow and rain fall there in a whole year, so little that scientists call Antarctica a desert, a freezing one, and it is the coldest and windiest continent too. Nobody lives there for good, only scientists who visit to study it.",
+          "source": "US Antarctic Program, National Science Foundation (usap.gov)",
+          "art": "/explore/topic-photos/penguins/penguins-4a.webp",
+          "artAlt": "A bare, windswept Antarctic valley of dry brown rock and bare ice with no snow lying on it at all, under a hard blue sky",
+          "caption": "A frozen desert: bare rock and ice, and almost no snowfall."
         },
         {
           "text": "Here is the one grown ups get wrong. Penguins live in the south and polar bears live way up in the north, inside the Arctic Circle, so the two have never once met. If you spot them together in a picture, somebody made that picture up.",
-          "source": "NOAA Ocean Today (oceantoday.noaa.gov)"
+          "source": "NOAA Ocean Today (oceantoday.noaa.gov)",
+          "art": "/explore/topic-photos/penguins/penguins-4b.webp",
+          "artAlt": "A polar bear walking across floating sea ice in the Arctic, far away at the top of the world, with no penguins anywhere near it",
+          "caption": "Polar bears live at the other end of the world, in the Arctic."
         }
-      ]
+      ],
+      "layout": "long",
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How thick is Antarctica's ice?",
+        "rows": [
+          {
+            "icon": "building",
+            "label": "One World Trade Center in New York",
+            "value": 1776,
+            "display": "1,776 feet"
+          },
+          {
+            "icon": "iceberg",
+            "label": "Antarctica's ice at its very thickest",
+            "value": 15669,
+            "display": "about 15,700 feet, nearly 3 miles"
+          },
+          {
+            "icon": "mountain",
+            "label": "Denali, the tallest mountain in America",
+            "value": 20310,
+            "display": "20,310 feet"
+          }
+        ],
+        "caption": "The thickest ice ever found in Antarctica is measured by the Australian Antarctic Program, and Denali's height by the US Geological Survey. The skyscraper is an everyday size, here only so you have something to measure against.",
+        "source": "Australian Antarctic Program (antarctica.gov.au)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Penguins & the Frozen Poles!",
-    "blurb": "A bird that swims instead of flies, in the coldest place there is, keeping warm by standing close to its friends. Fold a corner on your favourite page so you can find it again."
+    "blurb": "A bird that swims instead of flies, in the coldest place there is, keeping warm by standing close to its friends. Fold a corner on your favorite page so you can find it again."
   }
 }

@@ -5,7 +5,10 @@
   "topic": "animals",
   "ageBand": "5-10",
   "status": "approved",
-  "skills": ["animal-facts", "reading"],
+  "skills": [
+    "animal-facts",
+    "reading"
+  ],
   "heroArt": "/explore/topic-photos/big-cats/big-cats-cover.webp",
   "shelfColor": "#C97B2A",
   "ambient": "forest",
@@ -26,7 +29,9 @@
       "art": "/explore/topic-photos/big-cats/big-cats-1.webp",
       "artAlt": "A lioness resting in tall golden grass while two cubs play beside her",
       "factAudio": "big-cats-lions",
-      "quiz": ["big-cats-lions"],
+      "quiz": [
+        "big-cats-lions"
+      ],
       "facts": [
         {
           "text": "A group of lions is called a pride, and a pride is mostly family. The lionesses in it are mothers, sisters and cousins who grew up together, and they live with their cubs and a few grown males. A small pride might be three lions. A big one can be thirty.",
@@ -34,13 +39,49 @@
         },
         {
           "text": "Lion cubs come with built in playmates. Cubs born around the same time grow up as one wriggling, pouncing bundle, and a cub can drink milk from any lioness in the pride, not only from its own mother.",
-          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+          "art": "/explore/topic-photos/big-cats/big-cats-1a.webp",
+          "artAlt": "Four lion cubs about the same age tumbling over each other in a pouncing, wriggling pile in short grass",
+          "caption": "Cubs born around the same time grow up as one wriggling bundle."
         },
         {
           "text": "Lions are the most social cats in the world. Almost every other cat lives alone, but lions rest together, raise their young together, and call to each other with a roar that carries for miles across the grass.",
-          "source": "Smithsonian's National Zoo (nationalzoo.si.edu)"
+          "source": "Smithsonian's National Zoo (nationalzoo.si.edu)",
+          "art": "/explore/topic-photos/big-cats/big-cats-1b.webp",
+          "artAlt": "A whole pride of lions lying together in a long row across open golden grassland at sunset, some heads up, some asleep",
+          "caption": "The whole pride rests together, stretched out across the grass."
         }
-      ]
+      ],
+      "layout": "long",
+      "infographic": {
+        "kind": "timeline",
+        "tone": "book",
+        "title": "How a lion cub grows up in the pride",
+        "stops": [
+          {
+            "year": "First",
+            "label": "A lioness hides her newborn cubs away from everyone for four to six weeks",
+            "icon": "lion"
+          },
+          {
+            "year": "Then",
+            "label": "She brings them back to the pride, where any lioness may feed them",
+            "icon": "pawprint"
+          },
+          {
+            "year": "By six months",
+            "label": "The cubs are done with milk and eating meat with the rest of the family",
+            "icon": "protein"
+          },
+          {
+            "year": "At about one",
+            "label": "A young male grows the first fuzz of the mane he will have one day",
+            "icon": "lion"
+          }
+        ],
+        "caption": "Every one of these timings comes from the San Diego Zoo Wildlife Alliance. There are no everyday comparisons on this chart.",
+        "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+      }
     },
     {
       "id": "cheetah",
@@ -48,7 +89,9 @@
       "art": "/explore/topic-photos/big-cats/big-cats-2.webp",
       "artAlt": "A cheetah running at full speed with a cloud of dust kicked up behind it",
       "factAudio": "big-cats-cheetah",
-      "quiz": ["big-cats-cheetah"],
+      "quiz": [
+        "big-cats-cheetah"
+      ],
       "facts": [
         {
           "text": "The cheetah is the fastest runner on land. It can reach about 60 to 70 miles an hour, faster than cars on the highway, and it goes from standing still to highway speed in only a few strides.",
@@ -56,13 +99,57 @@
         },
         {
           "text": "All that speed comes from a bendy back. A cheetah's spine curls and stretches like a spring, throwing its front legs far out in front, so one single stride can cover more ground than the length of a car.",
-          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+          "art": "/explore/topic-photos/big-cats/big-cats-2a.webp",
+          "artAlt": "A cheetah at full stretch in mid-stride, its back curled and its front legs thrown far out in front, all four feet off the ground",
+          "caption": "At full speed a cheetah spends more time in the air than on the ground."
         },
         {
           "text": "A cheetah's claws do not tuck away like a house cat's. They stay out and bite into the ground like the studs on a running shoe, while that long tail swings behind as a rudder, so the cheetah can turn hard without tumbling over.",
-          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+          "art": "/explore/topic-photos/big-cats/big-cats-2b.webp",
+          "artAlt": "A close view of a running cheetah's front foot, its blunt claws digging into dry ground, with its long tail streaming out behind",
+          "caption": "Claws that never tuck away, gripping the ground like running spikes."
         }
-      ]
+      ],
+      "layout": "speed",
+      "stat": {
+        "value": "70",
+        "unit": "miles an hour"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How fast is a cheetah?",
+        "rows": [
+          {
+            "icon": "kid",
+            "label": "A kid running hard",
+            "value": 10,
+            "display": "about 10 miles an hour"
+          },
+          {
+            "icon": "bus",
+            "label": "A school bus in town",
+            "value": 30,
+            "display": "about 30 miles an hour"
+          },
+          {
+            "icon": "car",
+            "label": "A car on the highway",
+            "value": 65,
+            "display": "about 65 miles an hour"
+          },
+          {
+            "icon": "bigcat",
+            "label": "A cheetah at full speed",
+            "value": 70,
+            "display": "60 to 70 miles an hour"
+          }
+        ],
+        "caption": "The cheetah's speed comes from Smithsonian's National Zoo. The kid, the bus and the car are everyday speeds, here only so you have something to measure against.",
+        "source": "Smithsonian's National Zoo (nationalzoo.si.edu)"
+      }
     },
     {
       "id": "tigers",
@@ -70,7 +157,9 @@
       "art": "/explore/topic-photos/big-cats/big-cats-3.webp",
       "artAlt": "A Bengal tiger wading through shallow water in a green jungle",
       "factAudio": "big-cats-tigers",
-      "quiz": ["big-cats-tigers"],
+      "quiz": [
+        "big-cats-tigers"
+      ],
       "facts": [
         {
           "text": "Most cats hate getting wet. Tigers are the happy exception. They are strong swimmers with slightly webbed toes, and on a hot day a tiger will wade into a pond or a river and lie there to cool off.",
@@ -78,21 +167,63 @@
         },
         {
           "text": "No two tigers wear the same stripes. Every tiger has its own pattern, so people who study wild tigers can tell one from another just by the markings, the way you know a friend by their face.",
-          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+          "art": "/explore/topic-photos/big-cats/big-cats-3a.webp",
+          "artAlt": "A close view of a tiger's face and shoulder, showing the exact pattern of black stripes across its orange and white fur",
+          "caption": "No other tiger in the world wears this exact pattern."
         },
         {
           "text": "Bengal tigers live in the forests and wetlands of India, Bangladesh, Bhutan and Nepal. Those dark stripes on a pale coat break up the shape of the cat in tall grass and dappled shade, so something enormous can be surprisingly hard to spot.",
-          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+          "art": "/explore/topic-photos/big-cats/big-cats-3b.webp",
+          "artAlt": "A Bengal tiger half hidden in tall dry grass and dappled shade, its stripes breaking its outline into patches",
+          "caption": "Standing in tall grass, an enormous cat almost disappears."
         }
-      ]
+      ],
+      "layout": "close-up",
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How heavy is a Bengal tiger?",
+        "rows": [
+          {
+            "icon": "housecat",
+            "label": "Your pet cat",
+            "value": 10,
+            "display": "about 10 pounds"
+          },
+          {
+            "icon": "kid",
+            "label": "A kid your age",
+            "value": 60,
+            "display": "about 60 pounds"
+          },
+          {
+            "icon": "person",
+            "label": "A grown-up",
+            "value": 180,
+            "display": "about 180 pounds"
+          },
+          {
+            "icon": "bigcat",
+            "label": "A big male Bengal tiger",
+            "value": 650,
+            "display": "up to 650 pounds"
+          }
+        ],
+        "caption": "The tiger's weight comes from the San Diego Zoo Wildlife Alliance. The pet cat, the kid and the grown-up are everyday weights, here only so you have something to measure against.",
+        "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+      }
     },
     {
       "id": "snow-leopard",
-      "title": "The Cat With the Cosy Tail",
+      "title": "The Cat With the Cozy Tail",
       "art": "/explore/topic-photos/big-cats/big-cats-4.webp",
       "artAlt": "A snow leopard sitting on a snowy rocky ledge with its long tail curled around its body",
       "factAudio": "big-cats-snow-leopard",
-      "quiz": ["big-cats-snow-leopard"],
+      "quiz": [
+        "big-cats-snow-leopard"
+      ],
       "facts": [
         {
           "text": "A snow leopard's tail is enormous, close to three feet long. Out on a narrow rocky ledge it swings like a tightrope walker's pole to keep the cat balanced, and when the cat curls up to sleep it wraps that thick furry tail around itself like a scarf.",
@@ -100,17 +231,55 @@
         },
         {
           "text": "Snow leopards have huge paws with fur growing on the underside. The fur cushions every step, spreads their weight and grips the snow, so they walk about on built in snowshoes.",
-          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+          "art": "/explore/topic-photos/big-cats/big-cats-4a.webp",
+          "artAlt": "A close view of a snow leopard's wide paw pressing into fresh snow, thick fur showing between its toes",
+          "caption": "Fur grows on the bottom of every paw, like built in snowshoes."
         },
         {
           "text": "These cats live higher up than almost anything else with fur. In summer they have been seen on mountain slopes as high as 18,000 feet, and their short wide nose has a big roomy space inside that warms each freezing breath before it goes down into their chest.",
-          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+          "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)",
+          "art": "/explore/topic-photos/big-cats/big-cats-4b.webp",
+          "artAlt": "A snow leopard standing on a bare rocky ridge high above the clouds, with snowy mountain peaks stretching away behind it",
+          "caption": "Almost nothing else with fur lives this high up."
         }
-      ]
+      ],
+      "layout": "tall",
+      "stat": {
+        "value": "18,000",
+        "unit": "feet high"
+      },
+      "infographic": {
+        "kind": "compare",
+        "tone": "book",
+        "title": "How high up do snow leopards go?",
+        "rows": [
+          {
+            "icon": "building",
+            "label": "The top of the tallest building on earth",
+            "value": 2716,
+            "display": "about 2,700 feet"
+          },
+          {
+            "icon": "bigcat",
+            "label": "Snow leopards in summer",
+            "value": 18000,
+            "display": "as high as 18,000 feet"
+          },
+          {
+            "icon": "mountain",
+            "label": "The very top of Mount Everest",
+            "value": 29032,
+            "display": "about 29,000 feet"
+          }
+        ],
+        "caption": "The snow leopard's height comes from the San Diego Zoo Wildlife Alliance. The tallest building and the top of Everest are famous heights, here only so you have something to measure against.",
+        "source": "San Diego Zoo Wildlife Alliance (animals.sandiegozoo.org)"
+      }
     }
   ],
   "finish": {
     "title": "You finished Big Cats!",
-    "blurb": "Grass, jungle, snow. Every one of these cats is a different answer to the same question: how do you live here? Fold a corner on your favourite page so you can find it again."
+    "blurb": "Grass, jungle, snow. Every one of these cats is a different answer to the same question: how do you live here? Fold a corner on your favorite page so you can find it again."
   }
 }
