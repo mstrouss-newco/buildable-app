@@ -6,6 +6,19 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## LP2 — Croc Tot and Math Cannon level cards show the level (August 4 2026)
+`public/buildable-levelthumb.js`, `public/croctot.html`, `public/mathcannon-engine.html`.
+Two new painters in the one shared level-thumb helper: `snacks` (stage sky and
+ground tint, the three flying snacks that stage actually sends, the croc's open
+jaw at the bottom) and `cannon` (sky/ground straight from the engine's `THEMES`,
+a star field on the space stage, the cannon, and the maths signs that stage
+practises). Both games now pass an `img:` per level card, locked stages included.
+Everything the painters draw sits between y 24 and y 116, the slice a 60px-tall
+card shows. Guarded: no helper means the old flat colour, never a break.
+`node qa-croc.mjs .` and `node qa-mathcannon.mjs .` — ALL CHECKS PASSED;
+`qa-sling.mjs` still all-pass. Verified by headless screenshot: 5 of 5 cards in
+each game carry a drawn thumbnail, no JS errors.
+
 ## FL8c - the sea gets depth (July 28 2026)
 `public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
 Sunny Islands only.

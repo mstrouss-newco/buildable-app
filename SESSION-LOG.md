@@ -1,5 +1,52 @@
 # Buildable Kids — Session Log
 
+## 2026-08-04: Session LP2 — Croc Tot and Math Cannon level pictures
+
+Phase LP, session 2. Both games showed five flat coloured cards, so a kid
+picking a level was guessing. LP2 gives each card a drawn picture of the stage
+it opens, from the same one shared helper LP1 used.
+
+### What shipped
+- **New `snacks` painter in `public/buildable-levelthumb.js` (BLT)** — the
+  stage's own sky gradient and ground tint, the three flying snacks that stage
+  actually sends (read from the engine's `LV_ENE` roster; a 15-type vocabulary
+  drawn as plain geometry — broccoli, snake, gator, fork, eggplant, pepper,
+  puffer, seaweed, clam, flytrap, corn, crab, tomato — no emoji anywhere), and
+  the croc's jaw open at the bottom-left ready to blast.
+- **New `cannon` painter in the same file** — the stage's sky and ground read
+  straight from the engine's own `THEMES` table so a card and the stage it
+  opens are the same place, a star field on the `space` stage, the cannon with
+  its accent-coloured wheel, and the maths signs that stage practises (+ − ×)
+  on the same white banner the game uses in play.
+- **`public/croctot.html` wired** — loads `buildable-levelthumb.js?v=7`, new
+  `CROC_PAL` table mirroring `drawBgSky` / `Kitchen` / `Underwater` / `Jungle`
+  / `Island`, and the level list now passes `img:` per card.
+- **`public/mathcannon-engine.html` wired** — `buildStartCfg` paints each card
+  from that stage's `THEMES` entry and its `ops` list, locked stages included
+  (the shared start screen dims locked cards itself).
+- Both calls are try/guarded — if BLT is missing the cards fall back to the old
+  flat colour, never a break. No route change needed:
+  `/buildable-levelthumb.js` is already in `vercel.json`.
+
+### The trap worth remembering
+The card thumb is **60px tall with `background-size:cover`**, so a 300x140
+canvas is shown as roughly a 300x87 slice, centre-cropped. The first pass put
+the ground band and a snack below the fold — invisible on the card. **Anything
+that must be seen has to live between y 24 and y 116.** The Play pill sits
+bottom-right and the lock icon top-right, so keep those corners clear too.
+
+### Checks
+- `node qa-croc.mjs .` — ALL CHECKS PASSED.
+- `node qa-mathcannon.mjs .` — ALL CHECKS PASSED.
+- `node qa-sling.mjs .` — still ALL CHECKS PASS (shared file was touched).
+- Headless Chromium screenshot of both real pickers: 5 of 5 cards in each game
+  carry a data-URL thumbnail, every stage looks different from its neighbours,
+  no JS errors on either page.
+
+### What remains in phase LP
+Every other live game with a journey level picker still needs its painter.
+Not started, and not started here on purpose.
+
 ## 2026-08-03: Session LP1 — Sling Squad level cards show the real tower
 
 Phase LP, session 1. The Sling Squad journey picker showed 20 identical flat
