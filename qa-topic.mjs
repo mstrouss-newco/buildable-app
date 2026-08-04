@@ -57,6 +57,7 @@ const RP_GLYPHS = [
   'plane', 'planet', 'rainbow', 'rocket', 'rover', 'satellite', 'sauropod',
   'shark', 'snake', 'snowflake', 'star', 'sub', 'sun', 'thermometer',
   'tooth', 'tortoise', 'trex', 'volcano', 'whale',
+  'triceratops',
 ];
 const richPages = [];
 // US units, everywhere, in every converted book. The 19 books still waiting for

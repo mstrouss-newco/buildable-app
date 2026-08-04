@@ -77,7 +77,7 @@
             "display": "about 15 feet"
           },
           {
-            "icon": "shield",
+            "icon": "triceratops",
             "label": "Triceratops, nose to tail",
             "value": 30,
             "display": "about 30 feet"
@@ -256,7 +256,7 @@
           {
             "year": "Ever since",
             "label": "Mud and sand press down on the buried bones and turn them to stone",
-            "icon": "stone"
+            "icon": "mountain"
           },
           {
             "year": "Today",

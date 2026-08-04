@@ -197,7 +197,11 @@
   /* the ghost year gets its own band under the title: printed faintly behind
      the page, but never underneath a line a kid is trying to read */
   .lay-then-now .facts{margin-top:44px}
-  .ghostyear{position:absolute;right:3px;top:-52px;font-family:'Fredoka';font-weight:700;font-size:76px;line-height:1;color:rgba(51,80,126,.13);z-index:0;pointer-events:none;letter-spacing:-.02em}
+  /* Session RP5. The ghost year was written for "1240" and "1922". Dinosaurs
+     needed "74 million years ago", which at 76px wrapped straight across the
+     paragraph and made both hard to read. It is now right-aligned inside its
+     own column and its size comes down as the string gets longer. */
+  .ghostyear{position:absolute;right:3px;top:-52px;max-width:64%;text-align:right;font-family:'Fredoka';font-weight:700;font-size:76px;line-height:.98;color:rgba(51,80,126,.13);z-index:0;pointer-events:none;letter-spacing:-.02em}
   .pairrow{display:grid;grid-template-columns:1fr 1fr;gap:11px;position:relative;z-index:1}
   .pairrow>div{position:relative}
   .pairrow .fphoto{margin-bottom:0;aspect-ratio:1 / 1}
@@ -258,9 +262,15 @@
   .fieldmore{font-family:'Fredoka';font-weight:700;font-size:14px;color:#33507E;margin-left:5px}
   /* the timeline: photo chips, the dashed track running under them, then the
      year and who. Three stops fit a phone; more than three simply scroll. */
-  .tl{margin-top:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .tlinner{min-width:100%}
-  .tlgrid{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(84px,1fr);gap:8px}
+  .tl{margin-top:12px}
+  .tlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:4px 8px}
+  /* Session RP5. A stop used to be split across two grids with the dashed track
+     between them, which meant a fourth stop could only scroll sideways — and on
+     a page a kid SWIPES, a sideways scroll just reads as a chart cut off at the
+     edge. Eight of the new pages have four stops. Each stop is now one column
+     that carries its own chip, its own piece of track and its own caption, so a
+     row that does not fit WRAPS instead of clipping. */
+  .tl.four .tlgrid{grid-template-columns:repeat(2,1fr)}
   .tlstop{text-align:center}
   .tlstop .chip{width:100%;height:60px;border-radius:12px;overflow:hidden;background:#E9E3D6;border:2px solid #4A6FA5;display:flex;align-items:center;justify-content:center}
   .tlstop .chip img{width:100%;height:100%;object-fit:cover;display:block}
@@ -268,7 +278,7 @@
   .tlcap{text-align:center}
   .tlcap .yr{font-family:'Fredoka';font-weight:700;font-size:15px;color:#33507E}
   .tlcap .who{font-size:9.5px;font-weight:800;color:rgba(15,14,23,.58);line-height:1.28;margin-top:2px}
-  .tlline{height:3px;margin:9px 0 8px;background:repeating-linear-gradient(90deg,#4A6FA5 0 11px,transparent 11px 19px)}
+  .tlline{height:3px;margin:9px -5px 8px;background:repeating-linear-gradient(90deg,#4A6FA5 0 11px,transparent 11px 19px)}
   .diag{margin-top:12px}
   .diag svg{width:100%;height:auto;display:block}
   @media (prefers-reduced-motion:reduce){.wow,.fphoto.polaroid{transform:none}}
@@ -340,6 +350,7 @@
   /* iPad and up: a wider page with bigger type, still one comfortable column.
      The height floor keeps a sideways phone (also wide) out of this block. */
   @media (min-width:820px) and (min-height:620px){
+    .tl.four .tlgrid{grid-template-columns:repeat(4,1fr)}
     .bookwrap{max-width:760px;padding-bottom:44px}
     .book{border-radius:26px}
     .photo{max-height:52vh}
@@ -760,7 +771,9 @@ function richBody(sp, i) {
       : ["wide", "wide", "wide"];
     inner = facts.map((f, n) => factCard(sp, i, n, n === 0 ? null : cls[n % cls.length])).join("");
   }
-  const ghost = sp.ghostYear ? '<div class="ghostyear" aria-hidden="true">' + escapeHtml(sp.ghostYear) + "</div>" : "";
+  const gy = sp.ghostYear || "";
+  const gsize = gy.length > 6 ? " style=\"font-size:" + Math.max(30, Math.round(640 / gy.length)) + "px\"" : "";
+  const ghost = gy ? '<div class="ghostyear"' + gsize + ' aria-hidden="true">' + escapeHtml(gy) + "</div>" : "";
   return '<div class="facts">' + ghost + inner + "</div>" + wowHtml(sp.infographic);
 }
 
@@ -822,16 +835,14 @@ function fieldRows(g) {
 }
 function timelineHtml(g) {
   const stops = g.stops || [];
-  const chips = stops.map((s) => '<div class="tlstop"><div class="chip">' +
+  const chips = stops.map((s) => '<div class="chip">' +
     (s.art ? '<img src="' + escapeHtml(s.art) + '" alt="' + escapeHtml(s.artAlt || "") + '" loading="lazy" onerror="this.style.display=\'none\'">' : glyphSvg(s.icon || "train")) +
-    "</div></div>").join("");
+    "</div>");
   const caps = stops.map((s) => '<div class="tlcap"><div class="yr">' + escapeHtml(s.year || "") + "</div>" +
-    '<div class="who">' + escapeHtml(s.label || "") + "</div></div>").join("");
-  return '<div class="tl"><div class="tlinner">' +
-    '<div class="tlgrid">' + chips + "</div>" +
-    '<div class="tlline" aria-hidden="true"></div>' +
-    '<div class="tlgrid">' + caps + "</div>" +
-    "</div></div>";
+    '<div class="who">' + escapeHtml(s.label || "") + "</div></div>");
+  const cells = stops.map((s, i) => '<div class="tlstop">' + chips[i] +
+    '<div class="tlline" aria-hidden="true"></div>' + caps[i] + "</div>").join("");
+  return '<div class="tl' + (stops.length > 3 ? " four" : "") + '"><div class="tlgrid">' + cells + "</div></div>";
 }
 function diagramHtml(g) {
   const d = DIAGRAMS[g.name];
@@ -958,6 +969,7 @@ const GLYPHS = {
   thermometer: '<rect x="20" y="1.6" width="8" height="25" rx="4"/><circle cx="24" cy="29" r="6.6"/><rect x="22.4" y="6" width="3.2" height="15" rx="1.6" fill="#fff"/><path d="M30 8h5.4M30 13h4M30 18h5.4" stroke-width="2" stroke-linecap="round" fill="none"/>',
   tooth: '<path d="M24 2c7 0 13 5 13 12 0 5-2 9-3 14-.6 3-2 6-4 6s-3-3-3.6-6L24 22l-2.4 6c-.6 3-1.6 6-3.6 6s-3.4-3-4-6c-1-5-3-9-3-14C11 7 17 2 24 2Z"/>',
   tortoise: '<path d="M9 26.4a15 12.4 0 0 1 30 0Z"/><path d="M24 14.4v12M17.6 16l-2.4 10.4M30.4 16l2.4 10.4M13.4 21.4h21.2" stroke="#fff" stroke-width="2" fill="none"/><circle cx="42.4" cy="24" r="4.4"/><circle cx="43.4" cy="23" r="1.4" fill="#fff"/><path d="M12 26.4h4.4v6.4H12ZM31.6 26.4H36v6.4h-4.4Z"/>',
+  triceratops: '<ellipse cx="19" cy="21" rx="13" ry="8"/><path d="M25 19.4c0-6.4 4-11 9.6-11 3 0 5.4 1.2 7 3l5.4-1.4-2.6 4.4 2.6 4.4-5.4-1.4c-1.6 1.8-4 3-7 3-5.6 0-9.6-4.6-9.6-11Z"/><path d="M39.4 8.6 41.6 3M45 11.2 47.4 7.4" stroke-width="2.8" stroke-linecap="round" fill="none"/><circle cx="37" cy="16" r="1.6" fill="#fff"/><path d="M8 21 1.6 16.4" stroke-width="3.4" stroke-linecap="round" fill="none"/><path d="M13 27.6v7M19 28.2v6.4M25 27.4v7" stroke-width="3" stroke-linecap="round" fill="none"/>',
   trex: '<ellipse cx="23" cy="20" rx="11" ry="8"/><path d="M29.6 15.4 35.4 8.6" stroke-width="6.6" stroke-linecap="round" fill="none"/><path d="M31 3.2h13c1.6 0 2.8 1.2 2.8 2.8s-1.2 2.8-2.8 2.8h-4.2l-1.8 3.2c-1.4 2.4-4.2 3.2-6.4 1.8-2.4-1.4-3-4.4-1.4-6.6Z"/><path d="M37.4 6.8h7.6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="34.2" cy="6.2" r="1.5" fill="#fff"/><path d="M12.6 21 2 28.6" stroke-width="4.8" stroke-linecap="round" fill="none"/><path d="M19 27.4l-2.6 4.6 3.6 3M27.4 27.4l1 4.8 4.2 2.8" fill="none" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M28.4 17.6c2.4.4 3.2 2 2.6 3.8" fill="none" stroke-width="2.4" stroke-linecap="round"/>',
   volcano: '<path d="M2.6 34 17 12h14l14.4 22Z"/><path d="M19 12h10l-2.4 3.6h-5.2Z" fill="#fff"/><path d="M24 9.4c-3 0-5.4-2-5.4-4.2S21 1 24 1s5.4 1.8 5.4 4.2-2.4 4.2-5.4 4.2Z"/><path d="M32 9.4c-2.4 0-4.2-1.4-4.2-3.2s1.8-3.2 4.2-3.2 4.2 1.4 4.2 3.2-1.8 3.2-4.2 3.2Z"/>',
   whale: '<path d="M45.4 10.6v14.8c0 1.2-1 2-2.2 2-8.4.8-17.4-.4-24.2-3.4l-7 5.4 2.2-7.6-3.2-2.4 3.2-2.4-2.2-7.6 7 5.4c6.8-3 15.8-4.2 24.2-3.4 1.2 0 2.2.8 2.2 2Z"/><circle cx="39" cy="14.6" r="1.8" fill="#fff"/><path d="M39.6 8.6c0-3.2 1.8-5.4 4.4-6.4" fill="none" stroke-width="2.4" stroke-linecap="round"/><path d="M24 26.6l1.6 6.6 7.2-5.6Z"/>',
