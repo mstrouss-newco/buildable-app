@@ -212,6 +212,202 @@
       });
     },
 
+    // CROC TOT — the stage sky and ground, the flying snacks that stage sends
+    // at you, and the little croc's jaw open at the bottom edge.
+    // d = { sky:[c1,c2], ground, groundTop, snacks:[etype,...], n }
+    snacks: function(g, d){
+      // The card shows a 300x87 slice of this canvas (thumb is 60px tall, cover),
+      // so everything that matters lives between y 24 and y 116.
+      var sky = d.sky || ["#123a92", "#7bbdff"];
+      var gndY = 96, gnd = d.ground || "#3b8420", gtop = d.groundTop || "#4a9e2f";
+      grad(g, sky[0], sky[1]);
+      // ground band + a strip of light along its lip
+      g.fillStyle = gnd; g.fillRect(0, gndY, CW, CH - gndY);
+      g.fillStyle = gtop; g.fillRect(0, gndY, CW, 5);
+      g.fillStyle = "rgba(0,0,0,.13)";
+      for (var t = 0; t < 8; t++) g.fillRect(t * 40 + 14, gndY + 9, 15, 3);
+
+      // ---- one flying snack ----
+      function eyes(x, y, r, look){
+        var o = (look == null) ? 0.34 : look;
+        disc(g, x + r * o, y - r * 0.22, r * 0.30, "#fff");
+        disc(g, x + r * o + r * 0.08, y - r * 0.22, r * 0.16, "#111");
+      }
+      function snack(kind, x, y, r){
+        g.fillStyle = "rgba(0,0,0,.14)";
+        g.beginPath(); g.ellipse(x, y + r * 1.15, r * 0.85, r * 0.26, 0, 0, 6.2832); g.fill();
+        var i;
+        if (kind === "broccoli"){
+          g.fillStyle = "#228B22"; rr(g, x - r * 0.20, y, r * 0.40, r * 1.0, r * 0.16); g.fill();
+          disc(g, x, y - r * 0.42, r * 0.52, "#1a6a1a");
+          disc(g, x - r * 0.52, y - r * 0.16, r * 0.38, "#2b9b2b");
+          disc(g, x + r * 0.52, y - r * 0.16, r * 0.38, "#2b9b2b");
+          eyes(x, y - r * 0.30, r * 0.9, -0.34); eyes(x, y - r * 0.30, r * 0.9, 0.20); return;
+        }
+        if (kind === "snake"){
+          g.strokeStyle = "#6dbf3e"; g.lineWidth = r * 0.52; g.lineCap = "round";
+          g.beginPath(); g.moveTo(x - r, y + r * 0.35);
+          g.bezierCurveTo(x - r * 0.2, y - r * 0.7, x + r * 0.3, y + r * 0.8, x + r, y - r * 0.25); g.stroke();
+          disc(g, x + r, y - r * 0.25, r * 0.40, "#8ad557"); eyes(x + r, y - r * 0.32, r * 0.8, 0.18); return;
+        }
+        if (kind === "gator"){
+          g.fillStyle = "#3A9A3A"; rr(g, x - r * 0.95, y - r * 0.42, r * 1.7, r * 0.86, r * 0.26); g.fill();
+          g.fillStyle = "#2D7A2D";
+          g.beginPath(); g.moveTo(x + r * 0.7, y - r * 0.35); g.lineTo(x + r * 1.35, y);
+          g.lineTo(x + r * 0.7, y + r * 0.35); g.closePath(); g.fill();
+          g.fillStyle = "#fff";
+          for (i = 0; i < 3; i++){ g.beginPath(); g.moveTo(x - r * 0.6 + i * r * 0.4, y + r * 0.16);
+            g.lineTo(x - r * 0.45 + i * r * 0.4, y + r * 0.52); g.lineTo(x - r * 0.3 + i * r * 0.4, y + r * 0.16); g.fill(); }
+          disc(g, x - r * 0.15, y - r * 0.62, r * 0.34, "#4DB84D"); eyes(x - r * 0.15, y - r * 0.62, r * 0.7, 0); return;
+        }
+        if (kind === "fork"){
+          g.fillStyle = "#c9ccd4"; rr(g, x - r * 0.18, y - r * 0.2, r * 0.36, r * 1.2, r * 0.14); g.fill();
+          for (i = 0; i < 4; i++){ g.fillStyle = "#e2e5ec"; rr(g, x - r * 0.62 + i * r * 0.34, y - r, r * 0.20, r * 0.8, r * 0.08); g.fill(); }
+          eyes(x, y + r * 0.15, r * 0.8, 0); return;
+        }
+        if (kind === "eggplant"){
+          g.fillStyle = "#5b2d8e"; g.beginPath(); g.ellipse(x, y + r * 0.12, r * 0.72, r * 0.95, 0, 0, 6.2832); g.fill();
+          g.fillStyle = "#7b3dbe"; g.beginPath(); g.ellipse(x - r * 0.18, y - r * 0.1, r * 0.44, r * 0.6, 0, 0, 6.2832); g.fill();
+          g.fillStyle = "#228B22"; rr(g, x - r * 0.2, y - r * 1.1, r * 0.4, r * 0.5, r * 0.12); g.fill();
+          eyes(x, y, r * 0.9, -0.3); eyes(x, y, r * 0.9, 0.3); return;
+        }
+        if (kind === "pepper"){
+          g.fillStyle = "#dd1111"; g.beginPath(); g.moveTo(x, y + r);
+          g.bezierCurveTo(x + r * 0.95, y + r * 0.2, x + r * 0.85, y - r * 0.7, x, y - r * 0.75);
+          g.bezierCurveTo(x - r * 0.85, y - r * 0.7, x - r * 0.95, y + r * 0.2, x, y + r); g.fill();
+          g.fillStyle = "#228B22"; rr(g, x - r * 0.16, y - r * 1.15, r * 0.32, r * 0.45, r * 0.1); g.fill();
+          eyes(x, y - r * 0.1, r * 0.85, -0.28); return;
+        }
+        if (kind === "puffer"){
+          disc(g, x, y, r * 0.8, "#ffaa00");
+          g.fillStyle = "#ff6600";
+          for (i = 0; i < 8; i++){ var a = i / 8 * 6.2832;
+            disc(g, x + Math.cos(a) * r * 0.82, y + Math.sin(a) * r * 0.82, r * 0.17, "#ff6600"); }
+          disc(g, x, y, r * 0.52, "#cc8800"); eyes(x, y, r * 0.85, -0.3); return;
+        }
+        if (kind === "seaweed"){
+          g.strokeStyle = "#228B22"; g.lineWidth = r * 0.42; g.lineCap = "round";
+          g.beginPath(); g.moveTo(x - r * 0.3, y + r);
+          g.bezierCurveTo(x + r * 0.5, y + r * 0.2, x - r * 0.5, y - r * 0.4, x + r * 0.2, y - r); g.stroke();
+          disc(g, x - r * 0.35, y + r * 0.15, r * 0.28, "#33aa33");
+          disc(g, x + r * 0.42, y - r * 0.45, r * 0.26, "#33aa33");
+          eyes(x + r * 0.2, y - r * 0.95, r * 0.7, 0); return;
+        }
+        if (kind === "clam"){
+          g.fillStyle = "#cc8866"; g.beginPath(); g.ellipse(x, y - r * 0.12, r * 0.9, r * 0.55, 0, 0, 6.2832); g.fill();
+          g.fillStyle = "#aaddff"; g.beginPath(); g.ellipse(x, y + r * 0.42, r * 0.9, r * 0.5, 0, 0, 6.2832); g.fill();
+          disc(g, x, y + r * 0.12, r * 0.30, "#ffddcc"); eyes(x, y + r * 0.08, r * 0.8, -0.3); return;
+        }
+        if (kind === "flytrap"){
+          g.fillStyle = "#228B22"; rr(g, x - r * 0.16, y + r * 0.2, r * 0.32, r * 0.9, r * 0.1); g.fill();
+          g.fillStyle = "#cc2200"; g.beginPath(); g.ellipse(x, y - r * 0.5, r * 0.85, r * 0.42, 0, 0, 6.2832); g.fill();
+          g.beginPath(); g.ellipse(x, y + r * 0.16, r * 0.85, r * 0.38, 0, 0, 6.2832); g.fill();
+          g.fillStyle = "#fff";
+          for (i = 0; i < 4; i++) disc(g, x - r * 0.5 + i * r * 0.33, y - r * 0.16, r * 0.11, "#fff");
+          eyes(x, y - r * 0.6, r * 0.8, -0.3); return;
+        }
+        if (kind === "corn"){
+          g.fillStyle = "#ffcc00"; g.beginPath(); g.ellipse(x, y, r * 0.62, r * 0.95, 0, 0, 6.2832); g.fill();
+          g.fillStyle = "#ffaa00";
+          for (var ry = 0; ry < 5; ry++) for (var cx2 = 0; cx2 < 3; cx2++)
+            disc(g, x - r * 0.3 + cx2 * r * 0.3, y - r * 0.62 + ry * r * 0.32, r * 0.11, "#ffaa00");
+          g.fillStyle = "#228B22";
+          g.beginPath(); g.moveTo(x, y - r * 0.85); g.quadraticCurveTo(x + r * 0.9, y - r * 1.4, x + r * 0.25, y - r * 0.6); g.fill();
+          eyes(x, y - r * 0.35, r * 0.8, -0.28); return;
+        }
+        if (kind === "crab"){
+          g.fillStyle = "#dd4400"; g.beginPath(); g.ellipse(x, y, r * 0.78, r * 0.58, 0, 0, 6.2832); g.fill();
+          g.fillStyle = "#ff5500";
+          g.beginPath(); g.ellipse(x - r * 0.85, y - r * 0.1, r * 0.3, r * 0.22, -0.5, 0, 6.2832); g.fill();
+          g.beginPath(); g.ellipse(x + r * 0.85, y - r * 0.1, r * 0.3, r * 0.22, 0.5, 0, 6.2832); g.fill();
+          g.strokeStyle = "#cc3300"; g.lineWidth = r * 0.13;
+          for (i = 0; i < 3; i++){ var ly = y - r * 0.2 + i * r * 0.3;
+            g.beginPath(); g.moveTo(x - r * 0.5, ly); g.lineTo(x - r * 0.95, ly + r * 0.22); g.stroke();
+            g.beginPath(); g.moveTo(x + r * 0.5, ly); g.lineTo(x + r * 0.95, ly + r * 0.22); g.stroke(); }
+          eyes(x, y - r * 0.15, r * 0.8, -0.32); eyes(x, y - r * 0.15, r * 0.8, 0.32); return;
+        }
+        // tomato (default)
+        disc(g, x, y, r * 0.78, "#cc1111"); disc(g, x - r * 0.2, y - r * 0.2, r * 0.5, "#ee3333");
+        g.fillStyle = "#228B22";
+        for (i = 0; i < 4; i++){ g.save(); g.translate(x, y - r * 0.7); g.rotate(i * 1.5708 + 0.7854);
+          g.beginPath(); g.ellipse(0, -r * 0.18, r * 0.13, r * 0.3, 0, 0, 6.2832); g.fill(); g.restore(); }
+        eyes(x, y, r * 0.85, -0.3); eyes(x, y, r * 0.85, 0.3);
+      }
+
+      // the snacks THIS stage throws at you, spread across the sky
+      var KIND = { croc:"gator", broccroc:"broccoli", aspsnake:"snake", fork:"fork",
+        eggplant:"eggplant", pepgator:"pepper", puffer:"puffer", seaweed:"seaweed",
+        clam:"clam", flytrap:"flytrap", cornsnake:"corn", pepper:"pepper",
+        crab:"crab", tomatoad:"tomato", tomato:"tomato" };
+      var list = d.snacks || ["croc"];
+      var spots = [[122, 48], [188, 42], [250, 54]];
+      for (var s = 0; s < spots.length; s++){
+        var kd = KIND[list[s % list.length]] || "tomato";
+        snack(kd, spots[s][0], spots[s][1], 14);
+      }
+
+      // the croc's jaw, open at the bottom-left, ready to blast
+      var jx = 46, jy = gndY - 9;            // jy = the line the mouth closes on
+      g.fillStyle = "rgba(0,0,0,.18)";
+      g.beginPath(); g.ellipse(jx, gndY + 3, 32, 5, 0, 0, 6.2832); g.fill();
+      g.fillStyle = "#5a1414";                // the dark inside of the mouth
+      rr(g, jx - 30, jy - 15, 62, 20, 4); g.fill();
+      g.fillStyle = "#2D7A2D"; rr(g, jx - 32, jy + 1, 66, 11, 5); g.fill();         // lower jaw
+      g.fillStyle = "#fff";
+      for (var k = 0; k < 4; k++){ g.beginPath(); g.moveTo(jx - 28 + k * 16, jy + 2);
+        g.lineTo(jx - 20 + k * 16, jy - 7); g.lineTo(jx - 12 + k * 16, jy + 2); g.fill(); }
+      g.fillStyle = "#3A9A3A"; rr(g, jx - 34, jy - 32, 70, 18, 6); g.fill();        // upper jaw
+      g.fillStyle = "#4DB84D"; rr(g, jx - 32, jy - 30, 66, 7, 3); g.fill();
+      g.fillStyle = "#fff";
+      for (var k2 = 0; k2 < 4; k2++){ g.beginPath(); g.moveTo(jx - 29 + k2 * 16, jy - 15);
+        g.lineTo(jx - 21 + k2 * 16, jy - 6); g.lineTo(jx - 13 + k2 * 16, jy - 15); g.fill(); }
+      disc(g, jx + 15, jy - 38, 9.5, "#4DB84D");                                     // eye bump
+      disc(g, jx + 16.5, jy - 39.5, 4, "#fff"); disc(g, jx + 17.8, jy - 39.5, 2.2, "#111");
+      disc(g, jx - 24, jy - 35, 3.6, "#2D7A2D"); disc(g, jx - 16, jy - 36, 3.6, "#2D7A2D");  // snout bumps
+    },
+
+    // MATH CANNON — the stage's own sky and ground, the cannon, and the sums
+    // this stage practises shown as real maths signs.
+    // d = { sky:[c1,c2], ground, accent, ops:["+","-"], stars:bool, n }
+    cannon: function(g, d){
+      // Same visible slice as the snacks painter: keep it all between y 24 and 116.
+      var sky = d.sky || ["#bfe9ff", "#eafbf0"];
+      var gndY = 96, gnd = d.ground || "#7ec46a", acc = d.accent || "#2f8f4e";
+      grad(g, sky[0], sky[1]);
+      if (d.stars){                                  // space stages get their star field
+        var rand = rng(4242);
+        for (var s = 0; s < 30; s++){
+          disc(g, rand() * CW, 8 + rand() * (gndY - 20),
+               rand() < 0.25 ? 1.8 : 1.05, "rgba(255,255,255,.85)");
+        }
+      }
+      g.fillStyle = gnd; g.fillRect(0, gndY, CW, CH - gndY);
+      g.fillStyle = acc; g.fillRect(0, gndY, CW, 5);
+
+      // the maths sign(s) this stage practises, on the same white banner the game uses
+      var ops = (d.ops && d.ops.length) ? d.ops.slice(0, 3) : ["+"];
+      var GL = { "+": "+", "-": "−", "x": "×", "*": "×", "÷": "÷" };
+      var txt = ops.map(function (o){ return GL[o] || o; }).join(" ");
+      g.font = "800 40px 'Baloo 2',Nunito,sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+      var bw = Math.max(72, g.measureText(txt).width + 40), bh = 52, bx = CW * 0.60 - bw / 2, by = 26;
+      g.fillStyle = "rgba(0,0,0,.14)"; rr(g, bx + 2, by + 3, bw, bh, 16); g.fill();
+      g.fillStyle = "rgba(255,255,255,.94)"; rr(g, bx, by, bw, bh, 16); g.fill();
+      g.strokeStyle = acc; g.lineWidth = 4; rr(g, bx, by, bw, bh, 16); g.stroke();
+      g.fillStyle = "#2a2450"; g.fillText(txt, bx + bw / 2, by + bh / 2 + 2);
+
+      // the cannon, aimed up at the sign
+      var cx = 54, cy = gndY - 16;
+      g.fillStyle = "rgba(0,0,0,.16)";
+      g.beginPath(); g.ellipse(cx, gndY + 3, 30, 5, 0, 0, 6.2832); g.fill();
+      g.save(); g.translate(cx, cy); g.rotate(-0.72);
+      g.fillStyle = "#3a3550"; rr(g, 0, -11, 52, 22, 10); g.fill();
+      g.fillStyle = "#565073"; rr(g, 34, -11, 14, 22, 6); g.fill();
+      g.restore();
+      disc(g, cx, cy, 24, "#2a2540");
+      disc(g, cx, cy, 16, acc);
+      disc(g, cx, cy, 5.8, "#2a2540");
+    },
+
     // MAHJONG — a stacked tile pyramid
     tiles: function(g, d){ grad(g, "#1c3b2e", "#0e2018");
       var layers = d.layers || [[6,4],[4,3]]; var tileFace = d.face || "#f3ead2", edge = d.edge || "#cdbf9a";
