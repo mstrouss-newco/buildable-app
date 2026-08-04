@@ -49,6 +49,14 @@ const RP_GLYPHS = [
   'print', 'bus', 'statue', 'crawler', 'crane', 'mast', 'building', 'elephant', 'dumptruck',
   'drum', 'clock', 'backpack', 'armor', 'suitcase', 'hall', 'moat', 'field', 'helmet', 'shield',
   'banner', 'sphinx', 'chisel', 'stone', 'scroll', 'lamp', 'mask', 'museum',
+  // Session RP5 — the last twelve books.
+  'astronaut', 'bee', 'bigcat', 'bird', 'boat', 'bone', 'caterpillar',
+  'chameleon', 'cloud', 'earth', 'egg', 'feather', 'fern', 'fish',
+  'flame', 'housecat', 'hurricane', 'iceberg', 'jelly', 'leaf', 'lightning',
+  'lion', 'moon', 'mountain', 'oven', 'parachute', 'pawprint', 'penguin',
+  'plane', 'planet', 'rainbow', 'rocket', 'rover', 'satellite', 'sauropod',
+  'shark', 'snake', 'snowflake', 'star', 'sub', 'sun', 'thermometer',
+  'tooth', 'tortoise', 'trex', 'volcano', 'whale',
 ];
 const richPages = [];
 // US units, everywhere, in every converted book. The 19 books still waiting for
@@ -623,6 +631,14 @@ else fail('topic.html: the round speaker read-aloud button was not found');
 if (/rich: !!\(RICH_LAYOUTS\[p\.layout\]/.test(inlineScript || ''))
   pass('richer pages are opt-in: a book with no layout renders through the original path, unchanged');
 else fail('topic.html: the richer page is not gated on the book asking for it — old books could change shape');
+// Session RP5 — twelve books named their fact photos before the photos existed.
+// A named-but-missing fact photo MUST fall back to the RP1 detail crop of the
+// page photo, never to a grey hole, or a live book regresses the day its layout
+// ships and the day its art ships are not the same day.
+if (/function factPhotoFallback\(/.test(inlineScript || '') && /data-crop-src=/.test(inlineScript || '') &&
+    /onerror="factPhotoFallback\(this\)"/.test(inlineScript || ''))
+  pass('a fact photo that has not been generated yet falls back to the page detail crop, not a hole');
+else fail('topic.html: factPhotoFallback is gone — a book whose art has not landed would show grey holes');
 
 if (inlineScript && inlineScript.indexOf('status !== "approved"') !== -1)
   pass('approved gate present: a book that is not approved shows the not-ready screen');

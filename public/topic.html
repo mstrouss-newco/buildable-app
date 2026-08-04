@@ -682,17 +682,39 @@ const RICH_LAYOUTS = { speed: 1, long: 1, "then-now": 1, "close-up": 1, tall: 1 
 // flag is what lets QA count how many are still stand-ins.
 const CROP_POS = ["50% 40%", "22% 66%", "80% 30%", "50% 78%"];
 const CROP_ZOOM = [1.15, 1.5, 1.9, 1.35];
+// Session RP5. A book may now name its fact photos BEFORE the photos exist —
+// twelve books got their richer layout in one session and their art pack lands
+// book by book after it. So a named-but-missing fact photo falls back to the
+// same RP1 detail crop of the page photo instead of leaving a grey hole, and it
+// picks up data-crop on the way down so QA still counts it as a stand-in.
+function factPhotoFallback(img) {
+  const back = img.getAttribute("data-crop-src");
+  if (back && !img.getAttribute("data-fell")) {
+    img.setAttribute("data-fell", "1");
+    img.setAttribute("style", img.getAttribute("data-crop-style") || "");
+    const fig = img.parentNode && img.parentNode.parentNode;
+    if (fig && fig.setAttribute) fig.setAttribute("data-crop", "1");
+    img.src = back;
+    return;
+  }
+  img.style.display = "none";
+}
 function factPhoto(sp, f, n, cls) {
   const src = f.art || sp.art;
   if (!src) return "";
   const crop = !f.art;
   const alt = escapeHtml(f.artAlt || sp.artAlt || sp.title || "");
-  const style = "object-position:" + CROP_POS[n % CROP_POS.length] +
-    (crop ? ";transform:scale(" + CROP_ZOOM[n % CROP_ZOOM.length] + ")" : "");
+  const pos = "object-position:" + CROP_POS[n % CROP_POS.length];
+  const cropStyle = pos + ";transform:scale(" + CROP_ZOOM[n % CROP_ZOOM.length] + ")";
+  const style = crop ? cropStyle : pos;
+  const back = !crop && sp.art && sp.art !== src
+    ? ' data-crop-src="' + escapeHtml(sp.art) + '" data-crop-style="' + escapeHtml(cropStyle) + '"'
+    : "";
   const cap = f.caption ? '<figcaption class="cap">' + escapeHtml(f.caption) + "</figcaption>" : "";
   const tape = cls.indexOf("polaroid") !== -1 ? '<span class="tape"></span>' : "";
   return '<figure class="fphoto ' + cls + '"' + (crop ? ' data-crop="1"' : "") + ">" + tape +
-    '<span class="frame"><img src="' + escapeHtml(src) + '" alt="' + alt + '" loading="lazy" style="' + style + '" onerror="this.style.display=\'none\'"></span>' +
+    '<span class="frame"><img src="' + escapeHtml(src) + '" alt="' + alt + '" loading="lazy" style="' + style + '"' +
+    back + ' onerror="factPhotoFallback(this)"></span>' +
     cap + "</figure>";
 }
 // The read-aloud control: a ROUND SPEAKER. It floats, so the sentence wraps
@@ -887,6 +909,58 @@ const GLYPHS = {
   lamp: '<path d="M18 3.6h12V9H18Z"/><path d="M13 9h22l3 21.6a3.4 3.4 0 0 1-3.4 3.8H13.4A3.4 3.4 0 0 1 10 30.6Z"/><circle cx="24" cy="21" r="5.4" fill="#fff"/>',
   mask: '<path d="M12 8c0-3.4 5.4-5.4 12-5.4S36 4.6 36 8v10.6c0 8.4-5.4 16.4-12 16.4S12 27 12 18.6Z"/><circle cx="19" cy="15" r="2.6" fill="#fff"/><circle cx="29" cy="15" r="2.6" fill="#fff"/><path d="M18.6 24.6h10.8" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
   museum: '<path d="M3.6 14 24 3.6 44.4 14v3.4H3.6Z"/><path d="M9 20.6h4.4V32H9ZM21.8 20.6h4.4V32h-4.4ZM34.6 20.6H39V32h-4.4Z"/><path d="M4.6 34.6h38.8V38H4.6Z"/>',
+
+  // ---- Session RP5. The last twelve books: sharks, dinosaurs, the moon, big
+  // cats, penguins, bugs, snakes, planets, rockets, volcanoes, weather and the
+  // deep. Same rule as RP3 — a silhouette a five-year-old reads at 48x36 with
+  // no caption, drawn in the BOOK's colour, never an emoji.
+  astronaut: '<path d="M10.6 35v-3.4c0-6.4 6-10.4 13.4-10.4s13.4 4 13.4 10.4V35Z"/><circle cx="24" cy="13.4" r="12.4"/><path d="M15.4 11.6a8.6 7 0 0 1 17.2 0v3a8.6 8 0 0 1-17.2 0Z" fill="#fff"/><path d="M20 26.4h8v3.4h-8Z" fill="#fff"/>',
+  bee: '<ellipse cx="16" cy="10.4" rx="8" ry="4.6" transform="rotate(-28 16 10.4)"/><ellipse cx="32" cy="10.4" rx="8" ry="4.6" transform="rotate(28 32 10.4)"/><ellipse cx="24" cy="25" rx="12" ry="8.4"/><path d="M20.4 17.6v15M27 17.2v15.8" stroke="#fff" stroke-width="3.2" fill="none"/><circle cx="24" cy="15" r="5.4"/><circle cx="21.8" cy="14" r="1.5" fill="#fff"/><circle cx="26.2" cy="14" r="1.5" fill="#fff"/>',
+  bigcat: '<ellipse cx="21" cy="19.4" rx="14" ry="7"/><circle cx="37.4" cy="14" r="6.2"/><path d="M34 9.4 32 3.4l5.4 3ZM41 9.4l2-6-5.4 3Z"/><path d="M7.4 19 1.6 8.6" stroke-width="3.4" stroke-linecap="round" fill="none"/><path d="M13 25.4v9M19 26.4v8M26 26.4v8M31 25.4v9" stroke-width="2.8" stroke-linecap="round" fill="none"/><circle cx="39.4" cy="13" r="1.6" fill="#fff"/>',
+  bird: '<ellipse cx="21" cy="21" rx="12" ry="9"/><circle cx="33" cy="12" r="6.2"/><path d="M39 10.4 47.4 13 39 15.6Z"/><path d="M9 21 1.6 15.6v10.8Z"/><circle cx="35" cy="10.4" r="1.6" fill="#fff"/><path d="M19 30v5M26 30v5" stroke-width="2.4" stroke-linecap="round" fill="none"/>',
+  boat: '<path d="M3.6 24h40.8l-6 9.4H9.6Z"/><rect x="16" y="11.6" width="16" height="12.4" rx="1.6"/><rect x="19" y="14.6" width="4.4" height="4.4" fill="#fff"/><rect x="25.6" y="14.6" width="4.4" height="4.4" fill="#fff"/><path d="M24 11.6V4.6" stroke-width="2.4" stroke-linecap="round" fill="none"/>',
+  bone: '<rect x="11" y="14" width="26" height="8" rx="4"/><circle cx="11" cy="13" r="5"/><circle cx="11" cy="23" r="5"/><circle cx="37" cy="13" r="5"/><circle cx="37" cy="23" r="5"/>',
+  caterpillar: '<circle cx="9.6" cy="22.4" r="6"/><circle cx="19.6" cy="20.4" r="6.4"/><circle cx="29.6" cy="21.4" r="6.4"/><circle cx="39" cy="19" r="6.8"/><circle cx="41.4" cy="17" r="1.8" fill="#fff"/><path d="M39.6 11.6 41.6 5.6M43.6 13 47.4 8.4" stroke-width="2" stroke-linecap="round" fill="none"/>',
+  chameleon: '<path d="M14 20c0-6 5.4-10.4 12.4-10.4 6 0 10.4 3 12.4 7l6-2-4 5.4 4 4-6-1c-2 4-6.4 7-12.4 7C19.4 30 14 26 14 20Z"/><circle cx="35.4" cy="16.4" r="4.2" fill="#fff"/><circle cx="35.4" cy="16.4" r="1.8"/><path d="M14.4 22.4c-6 0-9.4 4-9.4 8.4 0 3 2.4 4.6 4.6 4.6 2 0 3.4-1.6 3.4-3.6s-1.4-3-2.6-3" fill="none" stroke-width="3" stroke-linecap="round"/><path d="M20 30v4.6M28 30v4.6" stroke-width="2.6" stroke-linecap="round" fill="none"/>',
+  cloud: '<path d="M13 30.4a8.6 8.6 0 0 1 .6-17.2 11.6 11.6 0 0 1 21.6 2.6A7.6 7.6 0 0 1 36 30.4Z"/>',
+  earth: '<circle cx="24" cy="18" r="16"/><path d="M13.4 9.6c4-1 7.4 1 7.4 4.4 0 3-3.4 4-5.4 6s-1 5-4.4 5c-2-3-3-6-3-8.4 0-3.4 2.4-6 5.4-7Z" fill="#fff"/><path d="M28.4 6.4c3.4 0 6.4 2 7.4 5.4 1 3.4-3 5-3 8s3 4 2 7c-1 2.4-4.4 4-6.4 2.6-2-2-1-5-3-7.4s-4-4-3-7.4c1-3.6 3-8.2 6-8.2Z" fill="#fff"/>',
+  egg: '<path d="M24 1.6c7 0 13.4 9.6 13.4 19A13.4 13.4 0 0 1 10.6 20.6C10.6 11.2 17 1.6 24 1.6Z"/>',
+  feather: '<path d="M37.4 1.6C26 6 17.6 14 13.6 23.4l-2.6 6.2 6.4-2.6C27 23 34.4 14.6 37.4 1.6Z"/><path d="M36.4 2.6 10.4 30.4" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M31.6 6.4 24.4 8.6M33.4 11.4 26 13.6M31.6 16.6 24.4 18.8M28.6 21.4 21.6 23.6M24.6 25.6 18.4 27.4" stroke="#fff" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="M10.6 30.2 4.6 35.4" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+  fern: '<path d="M24 35C24 18 28 8 40.4 2.6" fill="none" stroke-width="3" stroke-linecap="round"/><path d="M26.6 26.4c-4.4 1-7.6-1-8.6-4.4 4.4-1 7.6 1 8.6 4.4ZM29 20.4c-4.4 1-7.6-1-8.6-4.4 4.4-1 7.6 1 8.6 4.4ZM32 14c-4.4 1-7.6-1-8.6-4.4 4.4-1 7.6 1 8.6 4.4ZM27.6 25.4c4.4-1 8-4.4 8-8.6-4.4 0-8 4.4-8 8.6ZM30 19c4.4-1 8-4.4 8-8.6-4.4 0-8 4.4-8 8.6ZM33 12.6c4-1 7.4-4.4 7.4-8.6-4.4 0-7.4 4.4-7.4 8.6Z"/>',
+  fish: '<ellipse cx="27" cy="18" rx="15" ry="8"/><path d="M12 18 3 9v18Z"/><path d="M26 10.4 29.4 3.6l4.6 7Z"/><circle cx="36" cy="15.6" r="1.8" fill="#fff"/>',
+  flame: '<path d="M27.4 1c-1 5.4-5 7.2-8.8 11.6-3.4 4.2-5.4 8-5.4 12.4a10.8 10.8 0 0 0 21.6 0c0-3.6-1.2-6.6-2.8-9.4-.4 2.4-1.6 3.8-3.2 4.2C31 13 30.4 6.6 27.4 1Z"/><path d="M24 19.4c1.2 3.2-2 4.4-2.8 7.2a4 4 0 0 0 7 1.8c0-2.8-2-5-4.2-9Z" fill="#fff"/>',
+  housecat: '<path d="M15 35V22.4a9 9 0 0 1 18 0V35Z"/><circle cx="24" cy="13.4" r="9"/><path d="M16.4 7.4 15.4 1.4l6 3ZM31.6 7.4l1-6-6 3Z"/><circle cx="20.6" cy="12.4" r="1.7" fill="#fff"/><circle cx="27.4" cy="12.4" r="1.7" fill="#fff"/><path d="M22 16h4l-2 2.4Z" fill="#fff"/><path d="M33 34.6c6.4 0 8.6-4.4 8.6-9.6" fill="none" stroke-width="3" stroke-linecap="round"/>',
+  hurricane: '<path d="M24 3c-9 0-15.6 4.6-15.6 11 0 4.6 3.4 7.8 7.8 7.8 3 0 5.4-1.8 5.4-4.4 0-1.8-1.2-3-2.8-3" fill="none" stroke-width="5" stroke-linecap="round"/><path d="M24 33c9 0 15.6-4.6 15.6-11 0-4.6-3.4-7.8-7.8-7.8-3 0-5.4 1.8-5.4 4.4 0 1.8 1.2 3 2.8 3" fill="none" stroke-width="5" stroke-linecap="round"/>',
+  iceberg: '<path d="M24 1.6 39.6 15.6H8.4Z"/><path d="M2.6 20.4h42.8l-6.8 14.2H9.4Z"/>',
+  jelly: '<path d="M8 21a16 15 0 0 1 32 0Z"/><path d="M13 22c0 6-3 8-3 13M20 22c0 7-2 9-2 13M28 22c0 7 2 9 2 13M35 22c0 6 3 8 3 13" fill="none" stroke-width="2.6" stroke-linecap="round"/>',
+  leaf: '<path d="M40.4 3.6C22 3.6 8 12.6 8 25.6c0 3 .6 5.4 1.6 7.4C24 32 40.4 21.4 40.4 3.6Z"/><path d="M39.4 4.6 10.6 33" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+  lightning: '<path d="M29.4 1 11.6 20.6h9.6l-4.6 14.4L36.4 15h-10Z"/>',
+  lion: '<circle cx="35" cy="18" r="5.4"/><circle cx="32.9" cy="24.5" r="5.4"/><circle cx="27.4" cy="28.5" r="5.4"/><circle cx="20.6" cy="28.5" r="5.4"/><circle cx="15.1" cy="24.5" r="5.4"/><circle cx="13" cy="18" r="5.4"/><circle cx="15.1" cy="11.5" r="5.4"/><circle cx="20.6" cy="7.5" r="5.4"/><circle cx="27.4" cy="7.5" r="5.4"/><circle cx="32.9" cy="11.5" r="5.4"/><circle cx="24" cy="18" r="10.6"/><circle cx="20.2" cy="15.4" r="1.9" fill="#fff"/><circle cx="27.8" cy="15.4" r="1.9" fill="#fff"/><path d="M21 20.6h6L24 24.4Z" fill="#fff"/><path d="M13.8 19.4h4.6M29.6 19.4h4.6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+  moon: '<circle cx="24" cy="18" r="16"/><circle cx="18" cy="11.6" r="4.2" fill="#fff"/><circle cx="30.4" cy="21.6" r="5.2" fill="#fff"/><circle cx="16.6" cy="25.4" r="2.6" fill="#fff"/>',
+  mountain: '<path d="M1.6 33.4 18 6.6l9 14 5-7 14.4 19.8Z"/><path d="M18 6.6 24.4 17l-4.4 1-2-2.4-2.6 2.6Z" fill="#fff"/>',
+  oven: '<rect x="7" y="5.6" width="34" height="28.4" rx="3"/><rect x="11" y="15" width="26" height="15.4" rx="2" fill="#fff"/><circle cx="13.4" cy="10.4" r="2" fill="#fff"/><circle cx="20.4" cy="10.4" r="2" fill="#fff"/><rect x="14" y="18" width="20" height="2.6" rx="1.3"/>',
+  parachute: '<path d="M4 17.4a20 14.4 0 0 1 40 0Z"/><path d="M4 17.4 21.4 27.4M17.4 17.4 22 27.4M30.6 17.4 26 27.4M44 17.4 26.6 27.4" fill="none" stroke-width="2" stroke-linecap="round"/><rect x="19" y="27.4" width="10" height="7.6" rx="2"/>',
+  pawprint: '<ellipse cx="24" cy="27" rx="10.4" ry="7.6"/><ellipse cx="10.6" cy="17.4" rx="4.2" ry="5.4"/><ellipse cx="19" cy="10" rx="4.2" ry="5.6"/><ellipse cx="29" cy="10" rx="4.2" ry="5.6"/><ellipse cx="37.4" cy="17.4" rx="4.2" ry="5.4"/>',
+  penguin: '<path d="M24 1.6c8 0 12.4 7 12.4 16.4 0 10-4.4 17-12.4 17s-12.4-7-12.4-17C11.6 8.6 16 1.6 24 1.6Z"/><path d="M24 13.6c4 0 6.2 4 6.2 9.2s-2.2 9.2-6.2 9.2-6.2-4-6.2-9.2 2.2-9.2 6.2-9.2Z" fill="#fff"/><circle cx="20.4" cy="9" r="1.8" fill="#fff"/><circle cx="27.6" cy="9" r="1.8" fill="#fff"/><path d="M21.4 12.4h5.2L24 16.6Z" fill="#fff"/><path d="M15.4 35h6.2L18.6 31.6ZM26.4 35h6.2L29.4 31.6Z"/>',
+  plane: '<path d="M45.4 18c0 1.6-1.4 3-3 3l-11.4.6-6 12.4h-4l3.4-12.4-8.4.4-3 4h-3l1.6-8-1.6-8h3l3 4 8.4.4L21 2.4h4l6 12.4L42.4 15c1.6 0 3 1.4 3 3Z"/>',
+  planet: '<ellipse cx="24" cy="18" rx="22" ry="6.6" fill="none" stroke-width="3.2"/><circle cx="24" cy="18" r="11"/>',
+  rainbow: '<path d="M5 32a19 19 0 0 1 38 0" fill="none" stroke-width="5" stroke-linecap="round"/><path d="M12 32a12 12 0 0 1 24 0" fill="none" stroke-width="5" stroke-linecap="round" opacity=".6"/><path d="M19 32a5 5 0 0 1 10 0" fill="none" stroke-width="5" stroke-linecap="round" opacity=".32"/>',
+  rocket: '<path d="M24 1c6 6 9.4 13 9.4 21H14.6C14.6 14 18 7 24 1Z"/><path d="M14.6 16 7.6 24.4v6.6l7-5Z"/><path d="M33.4 16l7 8.4v6.6l-7-5Z"/><circle cx="24" cy="13.6" r="4.2" fill="#fff"/><path d="M19 26.4h10L24 35.4Z"/>',
+  rover: '<rect x="8" y="15" width="30" height="8" rx="2"/><path d="M16 15v-4.4h12V15Z"/><circle cx="13" cy="27.4" r="5"/><circle cx="33" cy="27.4" r="5"/><circle cx="13" cy="27.4" r="1.8" fill="#fff"/><circle cx="33" cy="27.4" r="1.8" fill="#fff"/><path d="M37 15 41.6 8" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M36.6 8a5.4 5.4 0 0 1 10.8 0Z"/>',
+  satellite: '<rect x="19" y="12" width="10" height="12" rx="2"/><rect x="1.4" y="13" width="15" height="10" rx="1.6"/><rect x="31.6" y="13" width="15" height="10" rx="1.6"/><path d="M6.4 13v10M11.4 13v10M36.6 13v10M41.6 13v10" stroke="#fff" stroke-width="1.8" fill="none"/><path d="M24 12V7.4" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="24" cy="5" r="2.8"/>',
+  sauropod: '<ellipse cx="24" cy="21" rx="13" ry="7"/><path d="M16.5 20 L9.5 7" stroke-width="4.6" stroke-linecap="round" fill="none"/><circle cx="8.4" cy="5.4" r="3.8"/><path d="M36.6 20 L46 15" stroke-width="3.4" stroke-linecap="round" fill="none"/><path d="M17 27v8M23 27.6v8M29 27.6v8M34 26.4v8" stroke-width="3" stroke-linecap="round" fill="none"/>',
+  shark: '<path d="M45.4 19.4c-4 5-12 8-21.4 8-6.6 0-12-1.4-15.4-3.6l-6 5.4 2.4-8.4-2.4-8.4 6 5.4c3.4-2.2 8.8-3.6 15.4-3.6 9.4 0 17.4 3 21.4 5.2Z"/><path d="M19.6 12.6 24.4 1.6l4.8 10.4Z"/><path d="M17.6 26l1.4 7.6 7.8-6.2Z"/><circle cx="38.6" cy="17" r="1.7" fill="#fff"/><path d="M31 14.8c-.6 2.4-.6 5 0 7.2M34.4 14.6c-.6 2.6-.6 5.2 0 7.8" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>',
+  snake: '<path d="M6 30c8.4 0 8.4-8 16.8-8s8.4-8 16.8-8" fill="none" stroke-width="6" stroke-linecap="round"/><circle cx="40" cy="12" r="4.8"/><path d="M44.4 10.6 48 9.4l-3.6-1" fill="none" stroke-width="1.8" stroke-linecap="round"/><circle cx="41" cy="10.4" r="1.5" fill="#fff"/>',
+  snowflake: '<path d="M24 2v32M10.2 10 37.8 26M37.8 10 10.2 26" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M24 9.4 19.6 5M24 9.4 28.4 5M24 26.6 19.6 31M24 26.6 28.4 31M15.6 14 9.6 13.4M15.6 14 15 8M32.4 22 38.4 22.6M32.4 22 33 28M32.4 14 38.4 13.4M32.4 14 33 8M15.6 22 9.6 22.6M15.6 22 15 28" stroke-width="2.4" stroke-linecap="round" fill="none"/>',
+  star: '<path d="M24 1.6 29.6 13.4 42.6 15.3l-9.4 9.2 2.2 12.9L24 31.3 12.6 37.4l2.2-12.9-9.4-9.2 13-1.9Z"/>',
+  sub: '<rect x="8" y="13" width="32" height="14" rx="7"/><path d="M20 13V7.4h8V13Z"/><path d="M8 20 2.4 14.6v10.8Z"/><circle cx="32" cy="20" r="3.6" fill="#fff"/><path d="M24 7.4V3" stroke-width="2.4" stroke-linecap="round" fill="none"/>',
+  sun: '<circle cx="24" cy="18" r="9"/><path d="M24 1v5.4M24 29.6V35M7 18h5.4M35.6 18H41M11 5l3.6 3.6M37 5l-3.6 3.6M11 31l3.6-3.6M37 31l-3.6-3.6" stroke-width="3.4" stroke-linecap="round" fill="none"/>',
+  thermometer: '<rect x="20" y="1.6" width="8" height="25" rx="4"/><circle cx="24" cy="29" r="6.6"/><rect x="22.4" y="6" width="3.2" height="15" rx="1.6" fill="#fff"/><path d="M30 8h5.4M30 13h4M30 18h5.4" stroke-width="2" stroke-linecap="round" fill="none"/>',
+  tooth: '<path d="M24 2c7 0 13 5 13 12 0 5-2 9-3 14-.6 3-2 6-4 6s-3-3-3.6-6L24 22l-2.4 6c-.6 3-1.6 6-3.6 6s-3.4-3-4-6c-1-5-3-9-3-14C11 7 17 2 24 2Z"/>',
+  tortoise: '<path d="M9 26.4a15 12.4 0 0 1 30 0Z"/><path d="M24 14.4v12M17.6 16l-2.4 10.4M30.4 16l2.4 10.4M13.4 21.4h21.2" stroke="#fff" stroke-width="2" fill="none"/><circle cx="42.4" cy="24" r="4.4"/><circle cx="43.4" cy="23" r="1.4" fill="#fff"/><path d="M12 26.4h4.4v6.4H12ZM31.6 26.4H36v6.4h-4.4Z"/>',
+  trex: '<ellipse cx="23" cy="20" rx="11" ry="8"/><path d="M29.6 15.4 35.4 8.6" stroke-width="6.6" stroke-linecap="round" fill="none"/><path d="M31 3.2h13c1.6 0 2.8 1.2 2.8 2.8s-1.2 2.8-2.8 2.8h-4.2l-1.8 3.2c-1.4 2.4-4.2 3.2-6.4 1.8-2.4-1.4-3-4.4-1.4-6.6Z"/><path d="M37.4 6.8h7.6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="34.2" cy="6.2" r="1.5" fill="#fff"/><path d="M12.6 21 2 28.6" stroke-width="4.8" stroke-linecap="round" fill="none"/><path d="M19 27.4l-2.6 4.6 3.6 3M27.4 27.4l1 4.8 4.2 2.8" fill="none" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M28.4 17.6c2.4.4 3.2 2 2.6 3.8" fill="none" stroke-width="2.4" stroke-linecap="round"/>',
+  volcano: '<path d="M2.6 34 17 12h14l14.4 22Z"/><path d="M19 12h10l-2.4 3.6h-5.2Z" fill="#fff"/><path d="M24 9.4c-3 0-5.4-2-5.4-4.2S21 1 24 1s5.4 1.8 5.4 4.2-2.4 4.2-5.4 4.2Z"/><path d="M32 9.4c-2.4 0-4.2-1.4-4.2-3.2s1.8-3.2 4.2-3.2 4.2 1.4 4.2 3.2-1.8 3.2-4.2 3.2Z"/>',
+  whale: '<path d="M45.4 10.6v14.8c0 1.2-1 2-2.2 2-8.4.8-17.4-.4-24.2-3.4l-7 5.4 2.2-7.6-3.2-2.4 3.2-2.4-2.2-7.6 7 5.4c6.8-3 15.8-4.2 24.2-3.4 1.2 0 2.2.8 2.2 2Z"/><circle cx="39" cy="14.6" r="1.8" fill="#fff"/><path d="M39.6 8.6c0-3.2 1.8-5.4 4.4-6.4" fill="none" stroke-width="2.4" stroke-linecap="round"/><path d="M24 26.6l1.6 6.6 7.2-5.6Z"/>',
 };
 function glyphSvg(name, color) {
   const body = GLYPHS[name] || GLYPHS.train;
