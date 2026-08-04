@@ -192,6 +192,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <!-- Shared Buildable game building-blocks (same as Breaker): one loading screen,
      one in-game HUD, one shell-owned nav. -->
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js?v=7"></script>
 <script src="buildable-manifest.js"></script>
 <script src="buildable-wincard.js"></script>
 <script src="buildable-hud.js?v=1"></script>
@@ -245,6 +246,17 @@ const DIFFS=[
   {key:"spicy", name:"Spicy",      lives:3, note:"3 lives · for brave crocs"},
 ];
 let LEVEL_NAMES=["Backyard","Kitchen","Night Sky","Jungle","Volcano"];
+/* LP2: the level-select card shows a little picture of THAT stage — its own sky
+   and ground, the snacks it sends at you, and the croc's jaw at the bottom.
+   Colours mirror drawBgSky / Kitchen / Underwater / Jungle / Island below, so a
+   card and the stage it opens always look like the same place. */
+const CROC_PAL=[
+  { sky:["#123a92","#7bbdff"], ground:"#2d6a18", top:"#4a9e2f" },   // 1 backyard
+  { sky:["#f5ddb0","#e8c885"], ground:"#6B4F10", top:"#a07820" },   // 2 kitchen
+  { sky:["#001844","#004499"], ground:"#907020", top:"#c8a040" },   // 3 underwater
+  { sky:["#0a1a0a","#123c12"], ground:"#0a1e04", top:"#1a3a0a" },   // 4 jungle
+  { sky:["#6a1a66","#ee8833"], ground:"#0a1a44", top:"#2a5aa0" }    // 5 island
+];
 /* Session 7B: stage names for the level-select can come from /croctot/manifest.json, FULL fallback. */
 (function loadCrocManifest(){
   try{
@@ -289,8 +301,16 @@ function showStart(){
     subtitle:"Blast the flying snacks — beat the boss!",
     sound:!MUTED, showBack:false, hideSound:true,
     customizeLabel:"Make it mine",
-    levels: LEVEL_NAMES.map((nm,i)=>({ n:i+1, name:nm,
-      color:["#3a7d3a","#7d5a3a","#2b3b6b","#2f6b3a","#7d2f2f"][i], state:"ready" })),
+    levels: LEVEL_NAMES.map((nm,i)=>{
+      // LP2: a drawn picture of this stage instead of a flat colour.
+      const BLT=window.BuildableLevelThumb, p=CROC_PAL[i]||CROC_PAL[0];
+      let img="";
+      try{ if(BLT&&BLT.make) img=BLT.make("snacks",
+        { sky:p.sky, ground:p.ground, groundTop:p.top, snacks:LV_ENE[i+1]||["croc"], n:i+1 },
+        "croctot|"+i+"|v4"); }catch(e){}
+      return { n:i+1, name:nm, img:img||undefined,
+        color:["#3a7d3a","#7d5a3a","#2b3b6b","#2f6b3a","#7d2f2f"][i], state:"ready" };
+    }),
   };
   const cb={ onPlay:(n)=>{ G.startLevel=n; hideStart(); startGame(); }, onCustomize:showCustomize };
   if(_startScreen){ _startScreen.update(cfg); } else if(BS){ _startScreen=BS.mount(host,cfg,cb); }

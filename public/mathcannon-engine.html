@@ -40,6 +40,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
 <script src="buildable-audio.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js?v=7"></script>
 <script src="buildable-manifest.js"></script>
 <script src="buildable-hud.js?v=1"></script>
 <script src="buildable-gamenav.js"></script>
@@ -442,10 +443,18 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
   // ---------- start screen (level select) ----------
   function buildStartCfg(){
+    var BLT = (typeof window!=="undefined") ? window.BuildableLevelThumb : null;
     var levels = STAGES.map(function(l, i){
       var st = i <= PREFS.unlocked ? (PREFS.cleared[i] ? "done" : "next") : "locked";
       var th = THEMES[l.theme] || THEMES.meadow;
-      return { n:i+1, name:l.name, color:th.accent, state:st, maxStars:1, stars: PREFS.cleared[i]?1:undefined };
+      // LP2: the card shows THIS stage — its own sky and ground, the cannon, and
+      // the maths sign it practises. Locked cards get it too (the start screen dims them).
+      var img = "";
+      try{ if(BLT && BLT.make) img = BLT.make("cannon",
+        { sky:th.sky, ground:th.ground, accent:th.accent, ops:l.ops,
+          stars:(l.theme === "space"), n:i+1 },
+        (l.id||l.name||i)+"|"+i+"|v4"); }catch(e){}
+      return { n:i+1, name:l.name, color:th.accent, img:img||undefined, state:st, maxStars:1, stars: PREFS.cleared[i]?1:undefined };
     });
     return { title:"Math Cannon", subtitle:"Solve the problem, tap the right answer, fire!", sound:!BA.muted, showBack:false, levels:levels };
   }
