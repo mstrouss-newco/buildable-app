@@ -1,5 +1,79 @@
 # Buildable Kids — Session Log
 
+## 2026-08-04: Session RP5 — the last twelve books become richer pages
+
+**Phase RP, session RP5.** Sharks, Dinosaurs, The Moon, Big Cats, Penguins,
+Bugs & Butterflies, Snakes & Reptiles, The Planets, Rockets & Astronauts,
+Volcanoes, Wild Weather and The Deep Ocean. 48 pages. **All 20 books now use the
+richer composed page.** Pushed to main, `qa-topic.mjs` 613 checks green,
+`qa-kidspedia.mjs` green.
+
+### What each of the 48 pages got
+A `layout` chosen to echo its own subject (no book repeats a layout more than
+twice), a Wow chart carrying its own source, US units and US spellings
+throughout, and its two fact photos named with `artAlt` and `caption`.
+
+### 47 new drawn glyphs (+1)
+The RP3 set had never had to draw a shark, a whale, a T-rex, the Moon, a rocket,
+a volcano, a hurricane or a snowflake. Every one was rendered at its real 48x36
+and looked at. **Eight failed that read and were redrawn**: the astronaut was a
+donut, the T-rex read as a bird, the feather was indistinguishable from the leaf,
+the flame was the raindrop, the lion was a smiley face, the shark was the fish,
+the iceberg had no waterline, the hurricane had no eye. A `triceratops` was added
+afterwards when a screenshot showed a size chart for one using a knight's shield.
+
+### Six factual errors that were already live
+Every chart number was checked against a named source instead of being carried
+over on trust, and six claims did not survive:
+
+1. **wild-weather/lightning told kids the window is the best seat in the house**
+   for watching a storm. NWS says stay away from windows and doors and wait 30
+   minutes after the last thunder. Rewritten.
+2. **moon/craters** said all the other planets fit in the Earth-Moon gap. NASA's
+   own diameters sum to about 387,900 km against a mean distance of 384,400.
+   They do not. Now thirty Earths side by side.
+3. **planets/mars** had Olympus Mons at 17 miles, three Everests. NASA and JPL
+   both say more than 25 miles, more than four Everests.
+4. **planets/jupiter** claimed 300 years of watching the Great Red Spot. NASA
+   supports at least 150; the 1600s Permanent Spot is probably a different storm.
+5. **penguins/swimming** called a 500 m dive deeper than five football fields.
+   It is 4.5. Now the Empire State Building, plus the sourced 1,850 ft record.
+6. **volcanoes/ash-plume** claimed a USGS measurement of Kilauea for every
+   volcano on Earth. Also dinosaurs/long-necks ("heavier than ten elephants"
+   where AMNH says equal to ten), deep-ocean/vents (660 F where its own cited
+   source says 750), rockets/coming-home (17 mph called a jogging speed).
+
+### Three bugs only a screenshot found, with QA green through all of them
+- **A four-stop timeline was cut off at the phone's edge.** The chart was two
+  grids — all chips, the track, all captions — so it could only ever be one row
+  and a fourth stop was left to scroll sideways. On a page a kid SWIPES, nobody
+  makes that gesture; it just reads as a chart with a piece missing. Eight of the
+  new pages have four stops. Each stop is now one column carrying its own chip,
+  its own piece of track and its own caption, so a row that will not fit WRAPS.
+- **The ghost year waded through the paragraph.** `then-now` was written for
+  "1240". Dinosaurs needed "74 million years ago", which at 76px wrapped across
+  the page. Now right-aligned in its own 64% column, sized down as it gets longer.
+- **A Triceratops size chart used a knight's shield** (see glyphs above).
+
+### `factPhotoFallback` — new
+RP5 gives twelve books their richer layout in one pass, but the art packs land
+book by book afterwards, so a page can name a fact photo that does not exist yet.
+That used to hide the `img` and leave a grey hole on a LIVE book. It now drops to
+the same RP1 detail crop of the page photo and takes `data-crop` with it, so QA
+still counts it as a stand-in. Guarded by a new check.
+
+### The metric was mostly hiding in one book
+The Deep Ocean was written entirely in metres and Celsius. Its zones are now
+660 / 3,300 / 13,100 feet and 39 degrees Fahrenheit, using NOAA's own conversions
+so the book agrees with its source rather than with a calculator. Snakes &
+Reptiles had British spelling in a page TITLE.
+
+### Still open
+`kidspedia-rp5-art-list.md` and `kidspedia-rp5-prompts.md` name all **125
+photographs** these books still need (8 fact photos each for the six live books;
+cover + 4 page + 8 fact photos each for the six that have no art at all). The six
+art-less books stay `in-review` until theirs land.
+
 ## 2026-08-04: Session LP2 — Croc Tot and Math Cannon level pictures
 
 Phase LP, session 2. Both games showed five flat coloured cards, so a kid
