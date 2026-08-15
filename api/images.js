@@ -394,19 +394,27 @@ function build(q) {
       k:"a tall chess KING wearing a crown topped with a small cross, on a round pedestal base",
     };
     const NAME = {p:"pawn",n:"knight",b:"bishop",r:"rook",q:"queen",k:"king"};
+    // Theme = materials and motifs only. The team colour below owns every colour in the
+    // piece, so the two armies can never come back in the same shade (Session 7M).
     const THEME = {
-      ocean:"made of coral, pearl and seashells, gentle underwater sea theme, aqua and teal accents",
-      jungle:"covered in leaves, vines and little flowers, lush green jungle theme",
-      space:"glowing cosmic theme with a metallic sheen, tiny stars and nebula colors, purples and blues",
-      candy:"made of candy, frosting and sprinkles, sweet pastel theme",
+      ocean:"made of coral, pearl and seashells, gentle underwater sea theme",
+      jungle:"covered in leaves, vines and little flowers, lush jungle theme",
+      space:"glowing cosmic theme with a metallic sheen and tiny stars",
+      candy:"made of candy, frosting and sprinkles, sweet theme",
       castle:"classic medieval theme of carved stone with gold trim",
       desert:"warm desert theme of carved sandstone with little cactus and sun motifs",
     };
+    // Two teams, two unmistakable colours. Blue vs orange also survives colour-blindness.
+    const SIDE = {
+      w:"BOLD BRIGHT BLUE: the whole piece — its body, its base and all of its decorations — is painted in a strong vivid royal blue",
+      b:"BOLD BRIGHT ORANGE: the whole piece — its body, its base and all of its decorations — is painted in a strong vivid pumpkin orange",
+    };
     const piece=(q.piece||"").toString(); const world=(q.world||"").toString();
-    if(!PIECE[piece]||!THEME[world]) return null;
+    const side=(q.side||"w").toString();
+    if(!PIECE[piece]||!THEME[world]||!SIDE[side]) return null;
     return {
-      descriptor:`chesspiece|${world}|${piece}`,
-      prompt:`${PIECE[piece]}, ${THEME[world]}. The overall silhouette must clearly read as a chess ${NAME[piece]}. Cute kawaii character with two big friendly eyes and a little smile, thick clean outlines, bold soft 3D cartoon style, a single piece standing upright and centered, full body, soft studio lighting, child-friendly ages 4-8, no text, no words, no letters, transparent background`,
+      descriptor:`chesspiece|${world}|${piece}|${side}`,
+      prompt:`${PIECE[piece]}, ${THEME[world]}. Color: ${SIDE[side]}; the color must be obvious at a glance even when the piece is very small. The overall silhouette must clearly read as a chess ${NAME[piece]}. Cute kawaii character with two big friendly eyes and a little smile, thick clean outlines, bold soft 3D cartoon style, a single piece standing upright and centered, full body, soft studio lighting, child-friendly ages 4-8, no text, no words, no letters, transparent background`,
       transparent:true, quality:"medium",
     };
   }
