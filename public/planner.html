@@ -985,7 +985,7 @@ function renderAutorun(){
     html+='<div style="padding:10px 14px;border-radius:12px;font-size:14px;background:#fff7e6;border:1px solid #f0d9a8">'
       +'<b>Waiting for a lane:</b> '
       +waiting.map(q=>'<b>Phase '+esc(q.phase)+'</b> <span class="x" style="cursor:pointer;opacity:.5" title="Drop this one" onclick="rmCancelRun('+JSON.stringify(q.phase)+')">&#10005;</span>').join(" &nbsp; ")
-      +'<div style="opacity:.6;font-size:13px;margin-top:4px">Open another "Work the roadmap" window and it will take one of these.</div>'
+      +'<div style="opacity:.6;font-size:13px;margin-top:4px">A free lane will take these on its own. If nothing moves for a few minutes, the background runners may be off &mdash; double-click "Run in the background" on your Mac.</div>'
       +'</div>';
   }
   if(rmReports.length){
