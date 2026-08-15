@@ -36,6 +36,7 @@ const SCREEN_GAME_TYPE = "game_type";
 const SCREEN_CHARACTER_CREATOR = "character_creator";
 const SCREEN_LEVEL_CREATOR = "level_creator";
 const SCREEN_PLAY = "play";
+const SCREEN_PLAY_HUB = "play_hub"; // NV1: the full-page Play grid + category chips (bottom-bar Play tab)
 const SCREEN_MY_STUFF = "my_stuff";
 const SCREEN_ADMIN = "admin";
 const SCREEN_MUSIC = "music";
@@ -237,6 +238,7 @@ const URL_STABLE_LANDINGS = {
 // is transient (keep the last stable address instead of writing a new one).
 function viewToPath(screen, landingId, exploreId) {
   if (screen === SCREEN_HOME) return "/app";
+  if (screen === SCREEN_PLAY_HUB) return "/app/play"; // NV1
   if (screen === SCREEN_MY_STUFF) return "/app/creations";
   if (screen === SCREEN_EXPLORE) return "/app/explore" + (exploreId ? "/" + exploreId : "");
   if (screen === SCREEN_LESSONS) return "/app/lessons";
@@ -251,6 +253,7 @@ function screenForPath(pathname) {
   if (typeof pathname !== "string" || !/^\/app(\/|$)/.test(pathname)) return null;
   const seg = pathname.replace(/^\/app\/?/, "").replace(/\/+$/, "");
   if (!seg) return { screen: SCREEN_HOME };
+  if (seg === "play") return { screen: SCREEN_PLAY_HUB };
   if (seg === "creations") return { screen: SCREEN_MY_STUFF };
   if (seg === "lessons") return { screen: SCREEN_LESSONS };
   if (seg === "explore" || seg.indexOf("explore/") === 0) {
@@ -1968,55 +1971,106 @@ export default function BuildableKids() {
       />
     );
   }
+  // NV1 — the shell handlers for the bottom-bar tabs. Home + Play are their own
+  // screens; Make / Explore / Me route to the closest existing destination until
+  // NV3 ships the dedicated pages, so the bar is honest either way.
+  const bottomBarProps = {
+    activeKid,
+    onHome: () => setScreen(SCREEN_HOME),
+    onPlay: () => setScreen(SCREEN_PLAY_HUB),
+    onMake: () => setScreen(SCREEN_HOME),
+    onExplore: () => { setExploreId("kidspedia"); setScreen(SCREEN_EXPLORE); },
+    onMe: () => openMyStuff(SCREEN_HOME),
+  };
   if (screen === SCREEN_HOME) {
     return (
-      <HomeScreen
-        activeKid={activeKid}
-        onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
-        onTop={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TOP); }}
-        onGames={() => setScreen(SCREEN_HOME)}
-        onMakeGame={() => setScreen(SCREEN_INTRO)}
-        onSounds={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_SOUNDS); }}
-        onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
-        onArt={() => setScreen(SCREEN_ART)}
-        onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
-        onChess={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS_LANDING); }}
-        onChessResume={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
-        onMyStuff={() => openMyStuff(SCREEN_HOME)}
-        onGrownUp={openGrownups}
-        onSwitchPlayer={() => { setGrownVerified(false); setScreen(SCREEN_GROWNUP); }}
-        onAdmin={() => setScreen(SCREEN_ADMIN)}
-        onHelper={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_HELPER); }}
-        onJoinInvite={(m) => { setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); }}
-        onJoinFriendInvite={openFriendInvite}
-        onOpenFriendMatch={openFriendMatch}
-        onPlatformer={() => openLanding("platformer")}
-        onSurvival={() => openLanding("survival")}
-        onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)}
-        onTumble={() => openLanding("tumble")}
-        onRunner={() => openLanding("runner")}
-        onCheckers={() => openLanding("checkers")}
-        onTennis={() => { setTennisStart(null); setScreen(SCREEN_TENNIS_LANDING); }}
-        onTown={() => openLanding("town")}
-        onTicTacToe={() => openLanding("tictactoe")}
-        onConnectFour={() => openLanding("connectfour")}
-        onDotsBoxes={() => openLanding("dotsboxes")}
-        onMemory={() => openLanding("memory")}
-        onMahjong={() => openLanding("mahjong")}
-        onBingo={() => openLanding("bingo")}
-        onSnakes={() => setScreen(SCREEN_SNAKES)}
-        onMaze={() => openLanding("maze")}
-        onCastle={() => openLanding("castleguard")}
-        onSling={() => openLanding("sling")}
-        onCroc={() => openLanding("croctot")} onMathCannon={() => openLanding("mathcannon")}
-        onRileys={() => openLanding("rileys-garden")}
-        onStringMatch={() => openLanding("stringmatch")}
-        onTank={() => openLanding("tank")}
-        onBubble={() => openLanding("bubble")}
-        onSkyFlyer={() => openLanding("skyflyer")}
-        onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
-        onLessons={() => setScreen(SCREEN_LESSONS)}
-      />
+      <>
+        <HomeScreen
+          activeKid={activeKid}
+          onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
+          onTop={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TOP); }}
+          onGames={() => setScreen(SCREEN_PLAY_HUB)}
+          onMakeGame={() => setScreen(SCREEN_INTRO)}
+          onSounds={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_SOUNDS); }}
+          onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
+          onArt={() => setScreen(SCREEN_ART)}
+          onTyping={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TYPING); }}
+          onChess={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS_LANDING); }}
+          onChessResume={() => { setChessStart(null); setReturnTo(SCREEN_HOME); setScreen(SCREEN_CHESS); }}
+          onMyStuff={() => openMyStuff(SCREEN_HOME)}
+          onGrownUp={openGrownups}
+          onSwitchPlayer={() => { setGrownVerified(false); setScreen(SCREEN_GROWNUP); }}
+          onAdmin={() => setScreen(SCREEN_ADMIN)}
+          onHelper={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_HELPER); }}
+          onJoinInvite={(m) => { setRtAutoJoin(m.id); setReturnTo(SCREEN_HOME); setScreen(m.game === "town" ? SCREEN_TOWN_FAMILY : SCREEN_TENNIS_FAMILY); }}
+          onJoinFriendInvite={openFriendInvite}
+          onOpenFriendMatch={openFriendMatch}
+          onPlatformer={() => openLanding("platformer")}
+          onSurvival={() => openLanding("survival")}
+          onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)}
+          onTumble={() => openLanding("tumble")}
+          onRunner={() => openLanding("runner")}
+          onCheckers={() => openLanding("checkers")}
+          onTennis={() => { setTennisStart(null); setScreen(SCREEN_TENNIS_LANDING); }}
+          onTown={() => openLanding("town")}
+          onTicTacToe={() => openLanding("tictactoe")}
+          onConnectFour={() => openLanding("connectfour")}
+          onDotsBoxes={() => openLanding("dotsboxes")}
+          onMemory={() => openLanding("memory")}
+          onMahjong={() => openLanding("mahjong")}
+          onBingo={() => openLanding("bingo")}
+          onSnakes={() => setScreen(SCREEN_SNAKES)}
+          onMaze={() => openLanding("maze")}
+          onCastle={() => openLanding("castleguard")}
+          onSling={() => openLanding("sling")}
+          onCroc={() => openLanding("croctot")} onMathCannon={() => openLanding("mathcannon")}
+          onRileys={() => openLanding("rileys-garden")}
+          onStringMatch={() => openLanding("stringmatch")}
+          onTank={() => openLanding("tank")}
+          onBubble={() => openLanding("bubble")}
+          onSkyFlyer={() => openLanding("skyflyer")}
+          onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
+          onLessons={() => setScreen(SCREEN_LESSONS)}
+        />
+        <BottomBar current="home" {...bottomBarProps} />
+      </>
+    );
+  }
+  if (screen === SCREEN_PLAY_HUB) {
+    return (
+      <>
+        <PlayScreen
+          activeKid={activeKid}
+          onBreaker={() => setScreen(SCREEN_BREAKER_LANDING)}
+          onMusicMaker={() => setScreen(SCREEN_MUSIC_LANDING)}
+          onChess={() => { setChessStart(null); setReturnTo(SCREEN_PLAY_HUB); setScreen(SCREEN_CHESS_LANDING); }}
+          onSling={() => openLanding("sling")}
+          onTicTacToe={() => openLanding("tictactoe")}
+          onSurvival={() => openLanding("survival")}
+          onStringMatch={() => openLanding("stringmatch")}
+          onBubble={() => openLanding("bubble")}
+          onTennis={() => { setTennisStart(null); setScreen(SCREEN_TENNIS_LANDING); }}
+          onCastle={() => openLanding("castleguard")}
+          onTumble={() => openLanding("tumble")}
+          onCroc={() => openLanding("croctot")}
+          onRileys={() => openLanding("rileys-garden")}
+          onConnectFour={() => openLanding("connectfour")}
+          onDotsBoxes={() => openLanding("dotsboxes")}
+          onCheckers={() => openLanding("checkers")}
+          onTyping={() => { setReturnTo(SCREEN_PLAY_HUB); setScreen(SCREEN_TYPING); }}
+          onMemory={() => openLanding("memory")}
+          onMahjong={() => openLanding("mahjong")}
+          onMathCannon={() => openLanding("mathcannon")}
+          onSkyFlyer={() => openLanding("skyflyer")}
+          onPlatformer={() => openLanding("platformer")}
+          onTown={() => openLanding("town")}
+          onRunner={() => openLanding("runner")}
+          onTank={() => openLanding("tank")}
+          onMaze={() => openLanding("maze")}
+          onBingo={() => openLanding("bingo")}
+        />
+        <BottomBar current="play" {...bottomBarProps} />
+      </>
     );
   }
 
@@ -3437,6 +3491,247 @@ function HomeScreen(props) {
         </div>
       )}
 
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NV1 — the always-visible 5-tab bottom bar (Home / Play / Make / Explore / Me).
+// Set A chunky solid-shape glyphs in Set C brand colours. Resting: coloured glyph
+// on a soft tint of its own colour (NEVER grey). Selected: solid colour pill,
+// glyph flips white. Word always under the icon. Me uses the kid's own initial +
+// gradient avatar so switching player on a shared tablet is obvious.
+// NV1 wires ONLY Home + Play as dedicated pages. Make / Explore / Me route to
+// their closest existing destination until NV3 ships the dedicated pages —
+// bar stays present and honest either way.
+// ---------------------------------------------------------------------------
+const NAV_TAB_COLORS = { home: "#F0972A", play: "#2FB7D6", make: "#E0578F", explore: "#2E7D4F", me: "#6A4FE0" };
+const NAV_AVATAR_GRADS = [
+  "linear-gradient(160deg,#8A6BFF,#6A4FE0)",
+  "linear-gradient(160deg,#F2789E,#E0578F)",
+  "linear-gradient(160deg,#4FA6E8,#2F8FD6)",
+  "linear-gradient(160deg,#3DD06A,#2BB14F)",
+  "linear-gradient(160deg,#FFC75A,#F0972A)",
+  "linear-gradient(160deg,#46D7C0,#1FA897)",
+];
+function navPillGrad(name) {
+  let h = 0; const s = name || "?";
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return NAV_AVATAR_GRADS[h % NAV_AVATAR_GRADS.length];
+}
+function navInitial(name) { const n = (name || "").trim(); return n ? n[0].toUpperCase() : "?"; }
+// Chunky solid-shape glyphs — one filled path each so "flip to white" is one
+// colour swap and never fights an inner stroke.
+const NavHomeGlyph = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L21 11 L21 20 A1 1 0 0 1 20 21 L14.5 21 L14.5 14.5 L9.5 14.5 L9.5 21 L4 21 A1 1 0 0 1 3 20 L3 11 Z" fill="currentColor" /></svg>
+);
+const NavPlayGlyph = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.6 L20 12 L7 19.4 Z" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" /></svg>
+);
+const NavMakeGlyph = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L14.4 9.6 L22 12 L14.4 14.4 L12 22 L9.6 14.4 L2 12 L9.6 9.6 Z" fill="currentColor" /></svg>
+);
+const NavExploreGlyph = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" clipRule="evenodd" d="M12 2 A10 10 0 1 0 12 22 A10 10 0 1 0 12 2 Z M12 7 L15 12 L12 17 L9 12 Z" fill="currentColor" /></svg>
+);
+function BottomBar({ current, activeKid, onHome, onPlay, onMake, onExplore, onMe }) {
+  const kidName = activeKid && activeKid.display_name;
+  const kidGrad = navPillGrad(kidName);
+  const kidInit = navInitial(kidName);
+  const TABS = [
+    { id: "home", label: "Home", on: onHome, glyph: <NavHomeGlyph /> },
+    { id: "play", label: "Play", on: onPlay, glyph: <NavPlayGlyph /> },
+    { id: "make", label: "Make", on: onMake, glyph: <NavMakeGlyph /> },
+    { id: "explore", label: "Explore", on: onExplore, glyph: <NavExploreGlyph /> },
+    { id: "me", label: "Me", on: onMe, glyph: null },
+  ];
+  return (
+    <nav data-nv1-bottom-bar aria-label="Sections" style={{
+      position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 3200,
+      display: "flex", justifyContent: "space-around", alignItems: "stretch", gap: 4,
+      padding: "8px 8px calc(env(safe-area-inset-bottom, 0px) + 8px)",
+      background: "rgba(255,248,238,0.96)", backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)", borderTop: "1px solid rgba(58,46,77,0.10)",
+      boxShadow: "0 -6px 18px rgba(58,46,77,0.08)", fontFamily: NUN,
+    }}>
+      {TABS.map((t) => {
+        const color = NAV_TAB_COLORS[t.id];
+        const sel = current === t.id;
+        const bg = sel ? color : color + "26"; // ~15% alpha, always the tab colour, never grey
+        const fg = sel ? "#FFFFFF" : color;
+        const isMe = t.id === "me";
+        return (
+          <button key={t.id} onClick={t.on} type="button" aria-label={t.label}
+            data-tab={t.id} data-selected={sel ? "1" : "0"}
+            aria-current={sel ? "page" : undefined}
+            style={{
+              flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 3,
+              padding: "8px 4px 6px", borderRadius: 18, border: "none",
+              background: bg, color: fg, cursor: "pointer", fontFamily: NUN,
+              transition: "background 0.15s ease, color 0.15s ease",
+            }}
+          >
+            <span style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              {isMe ? (
+                <span data-me-avatar style={{
+                  width: 26, height: 26, borderRadius: "50%", background: kidGrad,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: FRED, fontWeight: 700, fontSize: 13, color: "#fff",
+                  border: sel ? "2px solid #fff" : "2px solid transparent",
+                  boxShadow: sel ? "0 0 0 1px rgba(255,255,255,0.35)" : "none",
+                }}>{kidInit}</span>
+              ) : t.glyph}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.2px" }}>{t.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NV1 — the Play page. The 27-card side-scrolling Play shelf on Home becomes a
+// full page: filter chips across the top, wrapping 2-column grid of every game
+// in GAME_CATALOG (type === "game"). Live games first, sorted by this kid's own
+// play count (most-played first, from /api/kid-game-stats); Coming Soon always
+// last. The card face reuses the SAME 4:3 art tile + colour pill + name/category
+// treatment as the Home shelf, so a game reads identically in both places.
+// The Coming Soon 1111 preview gate is duplicated locally so this page never
+// depends on being reached through Home.
+// ---------------------------------------------------------------------------
+function PlayScreen(props) {
+  const { activeKid } = props;
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  useEffect(() => { const on = () => setVw(window.innerWidth); window.addEventListener("resize", on); return () => window.removeEventListener("resize", on); }, []);
+  const phone = vw < 700;
+  const tablet = vw >= 700 && vw < 1024;
+  const maxW = phone ? "100%" : tablet ? 720 : 940;
+  const cols = phone ? 2 : tablet ? 3 : 4;
+
+  const HOME_BG =
+    "radial-gradient(circle at 10% -8%, rgba(155,126,221,0.16), transparent 42%)," +
+    "radial-gradient(circle at 90% 108%, rgba(240,151,42,0.14), transparent 46%)," +
+    "#FFF8EE";
+  const HOME_CARD = "#FFFFFF";
+  const HOME_CARD_BORDER = "1px solid rgba(58,46,77,0.10)";
+  const HOME_SHADOW = "0 8px 22px rgba(58,46,77,0.09)";
+  const HOME_INK = "#3A2E4D";
+  const HOME_SUB = "#8B84A0";
+
+  // ---- most-played-first sort — best-effort per-kid stats, never blocking ----
+  const [playCount, setPlayCount] = useState({});
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const kid = activeKid;
+        const q = kid && kid.id ? "?kidProfileId=" + encodeURIComponent(kid.id) : "";
+        if (!q) { if (alive) setPlayCount({}); return; }
+        const r = await fetch("/api/kid-game-stats" + q);
+        const d = await r.json();
+        if (!alive || !d || !d.ok) return;
+        const map = {};
+        (d.games || []).forEach((g) => { if (g.game) map[g.game] = g.plays || 0; });
+        setPlayCount(map);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { alive = false; };
+  }, [activeKid]);
+
+  // ---- category chips: All + every category that appears among live games ----
+  const GAMES = GAME_CATALOG.filter((g) => g.type === "game");
+  const CATS = ["All"].concat(Array.from(new Set(GAMES.map((g) => g.category))));
+  const [cat, setCat] = useState("All");
+  const shown = cat === "All" ? GAMES : GAMES.filter((g) => g.category === cat);
+  // Live first, then Coming Soon LAST. Within live, most-played first (per this
+  // kid); within a tie, catalog order stays (stable sort keeps ordering natural).
+  const catalogIndex = new Map(GAMES.map((g, i) => [g.id, i]));
+  const sorted = shown.slice().sort((a, b) => {
+    if (!!a.soon !== !!b.soon) return a.soon ? 1 : -1;
+    const pa = playCount[a.id] || 0, pb = playCount[b.id] || 0;
+    if (pa !== pb) return pb - pa;
+    return catalogIndex.get(a.id) - catalogIndex.get(b.id);
+  });
+
+  // ---- Coming Soon 1111 gate (same as Home) ----
+  const [gate, setGate] = useState(null);
+  const [pw, setPw] = useState("");
+  const [pwErr, setPwErr] = useState(false);
+  const openGame = (g) => {
+    const fn = props[g.handler];
+    if (!fn) return;
+    if (g.soon) { setGate(() => fn); setPw(""); setPwErr(false); return; }
+    fn();
+  };
+  const submitPw = () => {
+    if (pw === "1111") { const go = gate; setGate(null); setPw(""); setPwErr(false); if (go) go(); }
+    else setPwErr(true);
+  };
+
+  const cardStyle = {
+    textAlign: "left", padding: 0, borderRadius: 18, border: HOME_CARD_BORDER,
+    background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
+    overflow: "hidden", boxShadow: HOME_SHADOW, width: "100%",
+  };
+  const PlayGridCard = ({ g }) => (
+    <button data-game-id={g.id} data-soon={g.soon ? "1" : "0"} onClick={() => openGame(g)} style={{ ...cardStyle, opacity: g.soon ? 0.72 : 1 }}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${g.color}, ${g.color}99)` }}>
+        {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        {g.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
+        {g.multiplayer && <span style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>Multiplayer</span>}
+      </div>
+      <div style={{ padding: "9px 11px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 3, background: g.color, flex: "0 0 auto" }} />
+          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{g.category}</div>
+      </div>
+    </button>
+  );
+
+  return (
+    <div data-nv1-play-page style={{ minHeight: "100vh", background: HOME_BG, padding: phone ? "16px 14px 108px" : "24px 20px 120px", fontFamily: NUN, color: HOME_INK }}>
+      <div style={{ width: "100%", maxWidth: maxW, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+          <h1 style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 26 : 32, color: HOME_INK, margin: 0 }}>Play</h1>
+          <span style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{GAMES.filter((g) => !g.soon).length} games</span>
+        </div>
+        <div data-nv1-chips style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8, marginBottom: 16 }}>
+          {CATS.map((c) => {
+            const on = c === cat;
+            return (
+              <button key={c} data-chip={c} data-on={on ? "1" : "0"} onClick={() => setCat(c)} type="button" style={{
+                flex: "0 0 auto", padding: "9px 15px", borderRadius: 999, border: "none",
+                background: on ? NAV_TAB_COLORS.play : "#fff",
+                color: on ? "#fff" : HOME_INK,
+                fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer",
+                boxShadow: HOME_SHADOW, whiteSpace: "nowrap",
+              }}>{c}</button>
+            );
+          })}
+        </div>
+        <div data-nv1-grid style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
+          {sorted.map((g) => <PlayGridCard key={g.id} g={g} />)}
+        </div>
+      </div>
+
+      {gate && (
+        <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(58,46,77,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9500, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 340, background: "#fff", border: HOME_CARD_BORDER, borderRadius: 24, padding: "26px 22px", fontFamily: NUN, color: HOME_INK, boxShadow: "0 18px 50px rgba(58,46,77,0.30)" }}>
+            <div style={{ fontFamily: FRED, fontSize: 22, fontWeight: 700, textAlign: "center" }}>Coming soon</div>
+            <div style={{ fontSize: 14, color: HOME_SUB, textAlign: "center", marginTop: 8 }}>Enter the password to preview this game.</div>
+            <input value={pw} onChange={(e) => { setPw(e.target.value); setPwErr(false); }} onKeyDown={(e) => { if (e.key === "Enter") submitPw(); }} type="password" inputMode="numeric" autoFocus placeholder="Password" style={{ width: "100%", boxSizing: "border-box", marginTop: 16, padding: "12px 14px", borderRadius: 14, border: pwErr ? "2px solid #E0578F" : "1px solid rgba(58,46,77,0.2)", background: "#FFF8EE", color: HOME_INK, fontFamily: NUN, fontSize: 18, textAlign: "center", letterSpacing: "4px" }} />
+            {pwErr && <div style={{ color: "#C23E72", fontSize: 13, textAlign: "center", marginTop: 8 }}>Wrong password. Try again.</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+              <button onClick={() => setGate(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid rgba(58,46,77,0.2)", background: "transparent", color: HOME_SUB, fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Cancel</button>
+              <button onClick={submitPw} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "linear-gradient(160deg,#9B7BFF,#67E8F9)", color: "#12102a", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Enter</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

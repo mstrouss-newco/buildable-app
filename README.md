@@ -16,6 +16,22 @@ lanes cannot take the same phase. Plus `Run in the background.command`: launchd 
 lane, RunAtLoad + KeepAlive, logs in `runner-logs/`, and double-clicking it again turns them
 off. No windows to keep open.
 
+## Bottom bar + the Play page (August 15 2026)
+`src/BuildableKids.jsx`, `qa-nv1.mjs`.
+Kid app finally has a real navigation shell — five always-visible tabs pinned
+to the bottom of Home and the new Play page (Home orange, Play blue, Make pink,
+Explore green, Me purple). Set A chunky solid-shape glyphs in Set C colours;
+resting tab keeps its own colour on a soft tint (never grey); selected fills
+the pill and flips the glyph white; word always under the icon. The Me tab uses
+the kid's own initial + their gradient, so on a shared tablet the current
+player is obvious and switch-player is one tap away. The 27-card side-scrolling
+Play shelf on Home is now a real full page at `/app/play`: category filter chips
+across the top (All + every catalog category), a wrapping 2-column grid on
+phone (3 on tablet, 4 on desktop), and a per-kid sort — live games first,
+ranked by this kid's own play count, Coming Soon LAST. The card face reuses
+the exact Home-shelf treatment so a game reads identically in both places.
+The Home "Games" tile now opens the new Play page (used to no-op).
+
 ## Sky Flyer: the world notices you (August 15 2026)
 `public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
 Fly ten feet over a beach full of animals and something happens now. ONE rule,

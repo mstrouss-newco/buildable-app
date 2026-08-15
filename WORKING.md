@@ -40,6 +40,7 @@ Global / app-wide:
 - Dark brand styling (gradient `buildablekids.` wordmark, Fredoka), no emoji.
 
 ## In flight (claim your area here)
+- **NV1 (main)** — 2026-08-15 — bottom-bar + Play page. Touches `src/BuildableKids.jsx` (top-level SCREEN constants, URL routing, shell render for `SCREEN_HOME`, plus new `BottomBar` and `PlayScreen` components). Adds new file `qa-nv1.mjs`. High-collision file — kept edits scoped to the top constants block, viewToPath/screenForPath, and a new shell branch for `SCREEN_PLAY_HUB`.
 - **claude/games-castle-guard** — NEW **Castle Guard** kid tower-defense Track B engine.
   Owns NEW files: `public/castle-guard.html`, `qa-castleguard.mjs`,
   `public/game-assets/tiny-swords/*` (curated Pixel Frog sprites + LICENSE.txt),

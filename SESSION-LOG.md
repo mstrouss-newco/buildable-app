@@ -34,6 +34,48 @@ logging to `Buildable MVP/runner-logs/laneN.log`. Two lanes by default. It is it
 switch: double-click again and it removes the agents. After this Mike never opens a window —
 he taps "Run this phase" in the planner and that is the whole interface.
 
+## 2026-08-15 (NV1): bottom bar + the Play page
+
+The kid app finally has a real navigation shell. Five always-visible tabs pinned
+to the bottom of Home and the new Play page: **Home** (orange F0972A), **Play**
+(blue 2FB7D6), **Make** (pink E0578F), **Explore** (green 2E7D4F), **Me**
+(purple 6A4FE0). Set A chunky solid-shape glyphs in Set C brand colours — one
+filled path per icon, so "flip to white on selected" is one colour swap and
+never fights an inner stroke. Resting tab keeps its own colour on a soft tint
+(~15% alpha), NEVER grey. Selected fills the pill and flips the glyph white.
+Word always sits under the icon. The Me tab uses the kid's own initial + their
+own gradient (from `navPillGrad(kidName)`), so on a shared tablet the current
+player is obvious and switch-player is one tap away.
+
+The 27-card side-scrolling Play shelf on Home is now a real full page at
+`/app/play`: category filter chips across the top (All + every category that
+appears in `GAME_CATALOG`), a wrapping 2-column grid on phone (3 on tablet, 4
+on desktop), and a per-kid sort — live games first, ranked by this kid's own
+play count from `/api/kid-game-stats`, Coming Soon LAST in catalog order. The
+card face reuses the exact 4:3 art tile + colour pill + name / category
+treatment as the Home shelf, so a game reads identically in both places. The
+Coming Soon 1111 preview gate is duplicated locally so this page never depends
+on being reached through Home. The Home "Games" tile now also opens the new
+Play page (used to no-op back to Home).
+
+Files: `src/BuildableKids.jsx` (top-level `SCREEN_PLAY_HUB` constant, `/app/play`
+URL routing, new `BottomBar` and `PlayScreen` components at module scope, and
+the shell branch that renders each — no HomeScreen internals touched),
+`qa-nv1.mjs` (new headless QA — 46 checks, all green: tab colours match Set C
+verbatim, resting bg is soft tint of the tab colour never grey, selected fills
+the pill and flips the glyph white, Me tab uses the kid gradient not a face
+glyph, Play page has chips + 2-column grid, sort puts Coming Soon last, shell
+renders BottomBar on both Home and Play, no emoji in the NV1 additions).
+
+**Calls I made without Mike:** NV3 will ship dedicated pages for Make / Explore
+/ Me — until then those three tabs route to their closest existing destination
+so the bar is honest either way. Make → Home (Home has a Make shelf), Explore
+→ the Kidspedia bookshelf (`SCREEN_EXPLORE` with `"kidspedia"`), Me → My Stuff.
+The bar itself only appears on Home and Play for NV1 (NV3 turns Make / Explore
+/ Me into full pages of their own, and the bar becomes always-on there too).
+The Play page's active-chip and Play tab both use the same blue (2FB7D6) so
+the chip reads as "you are on Play, filtered by X" without needing a legend.
+
 ## 2026-08-15 (FL13): the world notices you — one rule, three reactions
 
 Sky Flyer used to be a diorama: fly ten feet over a beach full of animals
