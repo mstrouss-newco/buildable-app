@@ -9,7 +9,10 @@
 <style>
   :root{--ink:#0F0E17;--cream:#FDFAF5;--gold:#FFC542;--mint:#2FAE68}
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{overscroll-behavior:none}
+  /* The dive is a VERTICAL descent: it must never offer a sideways scroll. The
+     real fix is that no creature is drawn wider than the world (see fitArtWidth),
+     but this is the guard that makes a stray wide element impossible to feel. */
+  html,body{overscroll-behavior:none;overflow-x:hidden;width:100%}
   body{font-family:'Nunito',sans-serif;color:var(--cream);min-height:100vh;
        background:linear-gradient(#8FDAF2 0%, #37AEDD 5%, #1173B4 14%, #0B4E8C 26%, #082F62 38%, #061D46 52%, #040E2C 66%, #02061A 80%, #01030E 100%);}
 
@@ -49,7 +52,11 @@
   .zone .zr{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:rgba(190,235,255,.8);text-shadow:0 0 12px rgba(150,220,255,.7)}
   .zone p{font-size:12.5px;font-weight:700;line-height:1.45;color:rgba(253,250,245,.85);margin-top:6px;max-width:420px}
 
-  .cr{position:absolute;border:none;background:none;cursor:pointer;z-index:2;padding:6px}
+  /* `left` is the creature's CENTRE, not its left edge — the placement rules
+     spread creatures evenly across the width, so they have to grow both ways
+     from their anchor instead of only rightwards off the screen. */
+  .cr{position:absolute;border:none;background:none;cursor:pointer;z-index:2;padding:6px;transform:translateX(-50%);max-width:100%}
+  .cr .art img,.cr .art svg{max-width:100%}
   .cr .nm{display:block;text-align:center;font-family:'Nunito';font-weight:900;font-size:10.5px;color:rgba(253,250,245,.85);
           letter-spacing:.05em;margin-top:2px;text-shadow:0 1px 4px rgba(0,0,0,.5)}
   .cr .art{display:block;margin:0 auto}
@@ -381,6 +388,74 @@ function computePlacements() {
     });
   });
 }
+// ---- keeping the dive inside the screen ---------------------------------
+// Creature art is sized by HEIGHT and keeps its own aspect ratio, so a wide
+// animal drew far wider than a phone: the reef shark (999x360) at artH 145 came
+// out 400px across on a 390px screen and dragged the whole page 244px sideways.
+// Two rules end that for good — art may never be wider than the world, and a
+// creature's box is nudged in from the edge until both sides sit inside it.
+const EDGE_GUTTER = 8;
+function worldWidth() {
+  const w = document.getElementById("world");
+  const n = w ? w.clientWidth : 0;
+  return n || Math.min(innerWidth || 390, 620);
+}
+// Shrink by height so the aspect ratio is never touched — a squashed shark is
+// worse than a small one.
+function fitArtWidth(img, dispH) {
+  const nw = img.naturalWidth || 0, nh = img.naturalHeight || 0;
+  let h = dispH;
+  if (nw && nh) {
+    const maxW = Math.max(40, worldWidth() - EDGE_GUTTER * 2);
+    if (dispH * (nw / nh) > maxW) h = Math.max(24, Math.round(maxW * (nh / nw)));
+  }
+  img.style.height = h + "px"; img.style.width = "auto";
+}
+// Clamp the centre so the creature cannot hang off either edge. Falls through
+// harmlessly when the box has not been laid out yet (or in the QA sandbox).
+function placeCreature(b) {
+  const w = b.offsetWidth || 0; if (!w) return;
+  const WW = worldWidth(), half = w / 2;
+  const pct = parseFloat(b.dataset.cx);
+  if (!isFinite(pct)) return;
+  const lo = half + EDGE_GUTTER, hi = WW - half - EDGE_GUTTER;
+  const cx = (lo > hi) ? WW / 2 : Math.min(Math.max(pct / 100 * WW, lo), hi);
+  b.style.left = Math.round(cx) + "px";
+}
+function refitCreatures() {
+  const list = document.querySelectorAll(".cr");
+  Array.prototype.forEach.call(list, (b) => {
+    const img = b.querySelector ? b.querySelector(".art img") : null;
+    if (img && img.dataset && img.dataset.dispH) fitArtWidth(img, +img.dataset.dispH);
+    placeCreature(b);
+  });
+}
+
+// ---- load art where the diver actually is --------------------------------
+// The descent is seven zones and about 10,500px tall, but a phone shows one
+// screen of it. Loading every backdrop and all thirty creatures up front meant
+// roughly 22MB of PNGs (16MB of that the seven backdrops) before the surface
+// was even usable. Each picture now loads when the diver comes within about a
+// screen of it. No IntersectionObserver (old browser, QA sandbox) means load
+// everything, exactly as before — this can only ever make the page lighter.
+const LAZY_MARGIN = "700px 0px 900px 0px";   // biased downward: we mostly descend
+let lazyObserver = null;
+function whenNear(el, load) {
+  if (typeof IntersectionObserver === "undefined" || !el || !el.getBoundingClientRect) { load(); return; }
+  if (!lazyObserver) {
+    lazyObserver = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        lazyObserver.unobserve(en.target);
+        const fn = en.target._loadArt;
+        if (fn) { en.target._loadArt = null; fn(); }
+      });
+    }, { rootMargin: LAZY_MARGIN });
+  }
+  el._loadArt = load;
+  try { lazyObserver.observe(el); } catch (e) { load(); }
+}
+
 function buildScenes() {
   const layer = document.getElementById("scenes"); if (!layer) return;
   layer.innerHTML = "";
@@ -389,8 +464,11 @@ function buildScenes() {
     const d = document.createElement("div");
     d.className = "scene";
     d.style.top = (i * ZH) + "px"; d.style.height = ZH + "px";
-    d.style.backgroundImage = "url('" + z.scene + (DATA && DATA.assetVersion ? "&v=" + DATA.assetVersion : "") + "')";
     if (z.scenePos) d.style.backgroundPosition = z.scenePos;
+    const url = z.scene + (DATA && DATA.assetVersion ? "&v=" + DATA.assetVersion : "");
+    // The gradient behind it already reads as water, so a backdrop that has not
+    // arrived yet looks like depth, never like a hole.
+    whenNear(d, () => { d.style.backgroundImage = "url('" + url + "')"; });
     layer.appendChild(d);
   });
 }
@@ -424,7 +502,9 @@ function buildWorld() {
     const top = (ZONE_TOP[c.zone] || 0) + (c._y != null ? c._y : 300);
     const b = document.createElement("button");
     b.className = "cr " + (c.glow ? "glow" : "");
-    b.style.left = (c._x != null ? c._x : 40) + "%";
+    const cx = (c._x != null ? c._x : 40);
+    b.dataset.cx = String(cx);            // the anchor, as a percentage of the world
+    b.style.left = cx + "%";              // refined to a clamped pixel centre once measured
     b.style.top = top + "px";
     b.dataset.id = c.id;
     if (c.lure) b.dataset.lure = "1";
@@ -434,10 +514,14 @@ function buildWorld() {
     art.style.display = "block";
     art.style.animationDelay = (-i * 1.3) + "s";
     if (!c.art) art.innerHTML = shapeFor(c);   // drawn art only when there is no real art
-    loadCreatureArt(c, art);              // swap in real art if the slot is filled
+    // Reserve the art's height NOW (not when it loads) so a creature holds its
+    // place in the layout while its picture is still below the horizon.
+    if (c.art) art.style.minHeight = (c.artH || 68) + "px";
+    whenNear(b, () => loadCreatureArt(c, art));  // swap in real art if the slot is filled
     const nm = document.createElement("span");
     nm.className = "nm"; nm.textContent = c.name;
     b.appendChild(art); b.appendChild(nm);
+    b._place = () => placeCreature(b);
     b.onclick = () => {
       if (paused) return;
       tapFx();
@@ -447,6 +531,9 @@ function buildWorld() {
     };
     world.appendChild(b);
   });
+  // First placement pass once the buttons are in the document: drawn-SVG
+  // creatures are final here, photo creatures re-place themselves on load.
+  refitCreatures();
 }
 function data_finish() { return (DATA && DATA.finish) ? DATA.finish : null; }
 
@@ -467,9 +554,20 @@ function loadCreatureArt(c, holder) {
       (function (i) {
         const im = new Image();
         im.alt = ""; im.style.height = dispH + "px"; im.style.width = "auto"; im.style.display = "block";
+        if (im.dataset) im.dataset.dispH = String(dispH);
         im.style.transition = "opacity .12s linear";
         if (i > 1) { im.style.position = "absolute"; im.style.left = "0"; im.style.top = "0"; im.style.opacity = "0"; }
-        im.onload = () => { if (!shown && !failed) { shown = true; try { holder.innerHTML = ""; holder.appendChild(wrap); } catch (e) {} startFrameCycle(imgs); } };
+        im.onload = () => {
+          imgs.forEach((x) => fitArtWidth(x, dispH));   // every frame shares one fitted size
+          if (shown || failed) return;
+          shown = true;
+          try {
+            holder.innerHTML = ""; holder.appendChild(wrap);
+            const btn = holder.parentNode;
+            if (btn && btn._place) btn._place();
+          } catch (e) {}
+          startFrameCycle(imgs);
+        };
         im.onerror = () => { if (/\.webp(\?|$)/.test(im.src)) { im.src = frameUrl(c, i, "jpg"); return; } failed = true; };
         im.src = frameUrl(c, i, "webp");
         imgs.push(im); wrap.appendChild(im);
@@ -479,8 +577,17 @@ function loadCreatureArt(c, holder) {
   }
   const img = new Image();
   img.alt = ""; img.style.height = dispH + "px"; img.style.width = "auto"; img.style.display = "block";
+  if (img.dataset) img.dataset.dispH = String(dispH);   // remembered so a resize can re-fit it
   img.style.opacity = "0"; img.style.transition = "opacity .25s ease";
-  img.onload = () => { try { holder.innerHTML = ""; holder.appendChild(img); requestAnimationFrame(() => { img.style.opacity = "1"; }); } catch (e) {} };
+  img.onload = () => {
+    try {
+      fitArtWidth(img, dispH);          // never wider than the world
+      holder.innerHTML = ""; holder.appendChild(img);
+      const btn = holder.parentNode;    // now that it has a real size, settle its position
+      if (btn && btn._place) btn._place();
+      requestAnimationFrame(() => { img.style.opacity = "1"; });
+    } catch (e) {}
+  };
   img.onerror = () => { if (isRealStaticArt(c) && /\.webp(\?|$)/.test(img.src)) { img.src = creatureArtUrl(c, "jpg"); return; } holder.innerHTML = shapeFor(c); };
   img.src = creatureArtUrl(c, "webp");
 }
@@ -571,7 +678,9 @@ function startFx() {
   const belowTwilight = ZH; // marine snow begins below the sunlight band
   snow = Array.from({ length: 80 }, () => ({ x: Math.random(), y: belowTwilight + Math.random() * (WORLD_H - belowTwilight), r: 0.8 + Math.random() * 1.6, v: 5 + Math.random() * 9, drift: Math.random() * 2 - 1 }));
   beams = [];
-  addEventListener("resize", size);
+  // Rotating the phone changes the world's width, so every creature re-fits and
+  // re-clamps against the new one.
+  addEventListener("resize", () => { size(); refitCreatures(); });
   addEventListener("pointermove", (e) => { light.x = e.clientX; light.y = e.clientY; }, { passive: true });
   addEventListener("pointerdown", (e) => { light.x = e.clientX; light.y = e.clientY; }, { passive: true });
   requestAnimationFrame(tick);
