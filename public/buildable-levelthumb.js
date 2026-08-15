@@ -177,6 +177,37 @@
       g.fillStyle = top; g.fillRect(0, GY, CW, 6);
       g.fillStyle = shade(g1, -18);
       for (var t = 0; t < 7; t++) g.fillRect(t * 44 + 9, GY + 12, 13, 3);
+      // SD3 TERRAIN — the ground is no longer one flat line, so the card cannot
+      // draw one. A hill or a plinth is the same polygon the engine collides
+      // with (terrainPoly in sling-squad.html, mirrored here); a pit is a hole
+      // cut back out of the ground band. Without this the picture would promise
+      // a flat yard and the level would open on a mountain.
+      (d.terrain || []).forEach(function (t) {
+        var half = t.w / 2;
+        if (t.k === "pit") {
+          var px0 = tx(t.x - half), px1 = tx(t.x + half), fl = ty(548 + t.d);
+          g.fillStyle = "#553920"; g.fillRect(px0, GY, px1 - px0, CH - GY);
+          g.fillStyle = g1; g.fillRect(px0, fl, px1 - px0, CH - fl);
+          g.fillStyle = top; g.fillRect(px0, fl, px1 - px0, 3);
+          g.fillStyle = "rgba(0,0,0,.30)"; g.fillRect(px0, GY, 2.5, fl - GY + 3); g.fillRect(px1 - 2.5, GY, 2.5, fl - GY + 3);
+          return;
+        }
+        var poly = (t.k === "hill")
+          ? [[t.x - half, 548], [t.x - half * 0.52, 548 - t.h], [t.x + half * 0.52, 548 - t.h], [t.x + half, 548]]
+          : (t.k === "ledge")
+            ? [[t.x - half, 548], [t.x - half + 5, 548 - t.h], [t.x + half - 5, 548 - t.h], [t.x + half, 548]]
+            : null;
+        if (!poly) return;
+        g.beginPath(); g.moveTo(tx(poly[0][0]), ty(poly[0][1]));
+        for (var k = 1; k < poly.length; k++) g.lineTo(tx(poly[k][0]), ty(poly[k][1]));
+        g.closePath();
+        g.fillStyle = shade(g1, 10); g.fill();
+        g.strokeStyle = "rgba(0,0,0,.20)"; g.lineWidth = 1.4; g.stroke();
+        g.save(); g.clip();
+        g.fillStyle = top;
+        g.fillRect(tx(poly[1][0]) - 6, ty(poly[1][1]), tx(poly[2][0]) - tx(poly[1][0]) + 12, 4);
+        g.restore();
+      });
       // slingshot (matches the engine's drawn fallback shape)
       g.strokeStyle = "#7a4a25"; g.lineCap = "round";
       g.lineWidth = 5; g.beginPath(); g.moveTo(AX, GY + 3); g.lineTo(AX, AY + 6); g.stroke();
