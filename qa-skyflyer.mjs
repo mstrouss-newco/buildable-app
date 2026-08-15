@@ -2307,5 +2307,96 @@ chk('FL13: nothing here can be hit, nothing chases, no lose state',
     return !/\b(lives|timeLeft|timeLimit|damage|attackR|chaseR|expiresAt|attemptsLeft)\b/.test(r);
   })());
 
+// ==========================================================================
+//  FM1 — THE FARM CORNER (public/skyflyer-farm.html). Same engine style, but
+//  a separate self-contained scene: fenced field of dirt patches, seed picker
+//  pop-up in the AR1R shape, three crops made from the AR1P recipe, growth
+//  through sprout/mid/ready stages, harvest by walking through them, and THE
+//  STACK — no cap, whip-lag and amplitude scaling with height, never falls.
+//  This block is STATIC only (structure + laws in the file); a look-gate
+//  screenshot pass is a follow-up because the farm scene doesn't ship a
+//  jsdom-safe autopilot.
+// ==========================================================================
+console.log('\n--- FM1 STATIC: the farm scene is built to the recipe ---');
+const farm = read('public/skyflyer-farm.html');
+chk('FM1: the farm scene ships as its own file next to the engine',
+  farm.length > 4000 && /FM1 — the farm corner of Sunny Islands/.test(farm));
+chk('FM1: no emojis anywhere in the farm scene (repo law)',
+  !emoji.test(farm));
+chk('FM1: uses the repo three.min.js — same library as the flying engine',
+  /src="\/three\.min\.js"/.test(farm));
+chk('FM1: hand-built models per the AR1P recipe (lathes + lofts + balls, one shared vertexColors material)',
+  /function hbTurn\(profile,c,tf,sg\)\{/.test(farm) &&
+  /function hbBall\(r,c,tf,sg\)\{/.test(farm) &&
+  /function hbTube\(r1,r2,h,c,tf,sg\)\{/.test(farm) &&
+  /function hbBake\(parts\)\{/.test(farm) &&
+  /MeshPhongMaterial\(\{vertexColors:true/.test(farm));
+chk('FM1: no textures (no ImageLoader / TextureLoader / .jpg / .png loaded in-page)',
+  !/TextureLoader|ImageLoader|loadTexture/.test(farm));
+chk('FM1: three crop recipes — corn, carrot, wheat, no fourth crop',
+  /CROP_RECIPES\s*=\s*\{[\s\S]*?corn:[\s\S]*?carrot:[\s\S]*?wheat:/.test(farm) &&
+  (farm.match(/^\s{2}(corn|carrot|wheat|potato|tomato|apple|berry):\s*\{/gm)||[]).length === 3);
+chk('FM1: each crop has a coin price and a coin reward',
+  /price:\s*\d+/.test(farm) && /reward:\s*\d+/.test(farm));
+chk('FM1: growth is 30-60 seconds max per the card',
+  (function(){
+    var m = farm.match(/growSec:\s*(\d+)/g) || [];
+    if(m.length!==3) return false;
+    return m.every(function(s){
+      var n = parseInt(s.replace(/[^0-9]/g,''),10);
+      return n>=30 && n<=60;
+    });
+  })());
+chk('FM1: FL5b law — the icon comes from the same recipe as the 3D crop (one source of art)',
+  /parts:function\(s\)\{/.test(farm) && /svg:function\(size\)\{/.test(farm));
+chk('FM1: seed picker card matches the AR1R offer-card shape (floating, max 340px, rounded)',
+  (function(){
+    var m = farm.match(/#seedCard\s*\{[^}]*\}/);
+    if(!m) return false;
+    var css = m[0];
+    return /max-width:\s*340px/.test(css) && /border-radius:\s*\d+px/.test(css) &&
+           /left:\s*50%/.test(css) && /top:\s*50%/.test(css) &&
+           !/bottom:\s*0/.test(css);
+  })());
+chk('FM1: seed picker has three picture buttons and each button has a coin price chip',
+  /className\s*=\s*"seed"/.test(farm) && /class="price"/.test(farm) && /class="art"/.test(farm));
+chk('FM1: empty patches show a dashed glowing ring (the tap affordance)',
+  /function buildDashRing\(\)/.test(farm) && /P\.ring\.rotation\.y \+= dt/.test(farm));
+chk('FM1: ready crops wobble and sparkle',
+  /state="ready"/.test(farm) && /wob = Math\.sin/.test(farm) &&
+  /!P\.halo/.test(farm) && /TorusGeometry/.test(farm));
+chk('FM1: harvest is by walking through the crop (kid position vs patch position)',
+  /kd=Math\.hypot\(kid\.position\.x-P\.x, kid\.position\.z-P\.z\)/.test(farm) &&
+  /pushOntoStack\(P\.seed/.test(farm));
+chk('FM1: THE STACK has no cap — a plain array push, never a length gate',
+  /stack\.push\(it\)/.test(farm) &&
+  !/stack\.length\s*[<>]\s*\d+/.test(farm.slice(farm.indexOf('pushOntoStack'), farm.indexOf('function sampleHistory'))));
+chk('FM1: the stack whip-lags (each item follows a delayed sample of the kid position)',
+  /STACK_HISTORY/.test(farm) && /sampleHistory\(delaySec, now\)/.test(farm) &&
+  /it\.userData\.tOffset\s*=\s*STACK_LAG_PER\s*\*\s*stack\.length/.test(farm));
+chk('FM1: the wobble amplitude scales with height (a tall stack sways more than a short one)',
+  /heightScale\s*=\s*Math\.sqrt\(i\+1\)\s*\*\s*0\.06/.test(farm));
+chk('FM1: the stack never falls — items lerp toward their target Y every frame, no gravity term',
+  /it\.position\.y = lerp\(it\.position\.y, targetY,/.test(farm) &&
+  !/it\.position\.y \-= .*gravity|GRAVITY|it\.vel\.y/.test(farm));
+chk('FM1: harvest = a bounce onto the stack (arc from ground to head-top)',
+  /hopT/.test(farm) && /Math\.sin\(u\*Math\.PI\) \* 1\.6/.test(farm));
+chk('FM1: the field is fenced (posts + rails around a 3x3 dirt-patch grid)',
+  /function buildFencePost\(\)/.test(farm) && /function buildFenceRail\(len\)/.test(farm) &&
+  /for\(j=-1;j<=1;j\+\+\)\{\s*for\(i=-1;i<=1;i\+\+\)\{/.test(farm));
+chk('FM1: hand-built kid character (head + torso + arms + legs, all baked to one draw call)',
+  /function buildKid\(\)/.test(farm) && /kid\.userData\.headTopY/.test(farm));
+chk('FM1: a QA handle (window.FARM) exposes patches, stack and seed picker so a robot can play it',
+  /window\.FARM\s*=\s*\{/.test(farm) &&
+  /patches:\s*function\(\)/.test(farm) &&
+  /stack:\s*function\(\)/.test(farm) &&
+  /openSeedPicker:\s*function/.test(farm));
+chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fm1)',
+  (function(){
+    const jsx = read('src/BuildableKids.jsx');
+    const hits = jsx.match(/skyflyer-engine\.html\?v=fm1/g) || [];
+    return hits.length >= 2 && !/skyflyer-engine\.html\?v=fl13/.test(jsx);
+  })());
+
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
 process.exit(ok?0:1);

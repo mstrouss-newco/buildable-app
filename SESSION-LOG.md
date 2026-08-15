@@ -34,6 +34,81 @@ main. Landed one at a time, ONE commit per merge, expected `SESSION-LOG.md` and
 RN3 is marked **review** for exactly the FL9 reason; `deployed` is NOT set. The
 three that landed did land — they will show `deployed` when RN3 does.
 
+## 2026-08-15 (FM1): Farm corner v1 — the field, the crops, and the endless stack
+
+**Phase FM, card FM1.** First cut of the farm corner of Sunny Islands,
+shipped as a self-contained scene at `public/skyflyer-farm.html`. Autopilot
+built it and flagged **REVIEW** (per the card's own "flag needsReview"
+line), because the mock file (`claude/farm-mock.html`) and the memory plan
+(`farm-mode-plan`) called out by the card were not available in this
+session's sandbox, so I could not match the layout against Mike's picks —
+this is a first swing that follows the description in the card literally
+and asks him to redirect.
+
+What is in the file:
+
+- **Fenced 3x3 field of dirt patches.** Wooden posts + rails on all four
+  sides with a walking gap on the west edge, so a kid can walk in and out.
+- **Empty patches show a dashed glowing ring** made of little tube pieces
+  arranged in a circle and rotating gently — the tap affordance.
+- **THE SEED POP-UP** in the AR1R offer-card shape: floating (NOT a bottom
+  sheet — AR1R deleted that shape), rounded 26px, `max-width: 340px`,
+  three big picture buttons for corn / carrot / wheat. Each button carries
+  a coin price chip. Icons are drawn per the **FL5b law** — same recipe
+  produces the 3D crop and the SVG icon, so they can never drift.
+- **Growth in 30-60s** through sprout / mid / ready stages (34s corn, 30s
+  carrot, 42s wheat). Ready crops **wobble and sparkle** — an additive
+  torus halo pulses around them, a small vertical bob on top of a rotation
+  sway.
+- **Harvest = walk through them.** Distance check between kid and patch;
+  on contact the crop hops onto the stack with an arc animation, coins
+  fall to the wallet, patch resets to empty.
+- **THE STACK — no cap.** Each item's target position is the kid's head
+  top + i \* item-height. Two things sell the tower's weight:
+    1. **Whip-lag**: each item follows a delayed sample of the kid's
+       position (a ring buffer of ~6 seconds). Higher items lag more,
+       so a running kid draws a whip curve up the stack.
+    2. **Amplitude scaling with height**: `sqrt(i+1) * 0.06` sway per
+       item, so a 20-item stack sways noticeably more than a 3-item
+       stack — but it **never falls**. There is no gravity term on the
+       stack; items lerp toward their target Y every frame. Miss the
+       target and it just settles more slowly, it does not tip over.
+- **Hand-built kid character** (head, torso, arms, legs, eyes, smile) in
+  the AR1P recipe: lathes + tubes + balls baked to one geometry, one
+  shared `MeshPhongMaterial({vertexColors:true})`. Walk cycle bends the
+  legs and bobs the body.
+- **Camera** follows the kid overhead 3/4 and gently pulls back as the
+  stack grows so a tall tower never leaves the frame.
+- **Input** = a touch joystick bottom-left (kept clear of the shell nav
+  strip) + raycasted tap on empty patches for planting.
+- **QA handle** `window.FARM` exposes patches, stack, seed picker and an
+  `advanceTime()` lever so a robot doesn't have to wait 30s per crop.
+
+Extended `qa-skyflyer.mjs` with 22 FM1 static assertions — the recipe (no
+textures, no emojis, hand-built primitives per AR1P), the AR1R pop-up
+shape, three crops with growth in the 30-60s window, wobble+sparkle, no
+stack cap, whip-lag, amplitude scaling with height, no gravity term, the
+fence, the kid character, the QA handle, and the cache-bust bump on BOTH
+engine links in `BuildableKids.jsx` (`v=fl13` → `v=fm1`). **All 22 FM1
+checks pass; the full skyflyer QA is green** (492+ checks, jsdom
+autopilot half runs once `npm i --no-save jsdom` is done).
+
+**Why REVIEW, not done:** the card explicitly says "flag needsReview" and
+the process line says "send Mike pictures BEFORE pushing (LOOK RULE 19)".
+This session had no browser access to shoot the live scene, so a picture
+check is still owed before this is `deployed`. Also, without the mock
+reference the model of the kid, the palette of the field, and the exact
+layout of the seed pop-up are best-guess; the mechanic is there, but the
+look wants Mike's eye.
+
+**What's next:** FM2 (chickens, cow, feeding off the stack) and FM3 (the
+order crate and the plane payoff) build on this file — the STACK API,
+the crop recipe pattern, and the AR1R seed pop-up all extend cleanly.
+
+Touched: `public/skyflyer-farm.html` (new, ~630 lines),
+`src/BuildableKids.jsx` (cache-bust bump on both skyflyer links, `v=fl13`
+→ `v=fm1`), `qa-skyflyer.mjs` (+22 FM1 assertions).
+
 ## 2026-08-15 (RN2): A card waiting on Mike is not a phase failure
 
 **Phase RN, card RN2.** The autopilot runner treated a card that came back

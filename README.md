@@ -6,6 +6,33 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Farm corner v1 — the field, the crops, and the endless stack (August 15 2026)
+`public/skyflyer-farm.html` (new), `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
+Phase **FM**, card **FM1**. First cut of the farm corner of Sunny Islands:
+a fenced 3x3 field of dirt patches, a floating seed pop-up (AR1R shape,
+340px max, three picture buttons for corn / carrot / wheat with coin
+prices), crops that grow 30-60s through sprout / mid / ready stages and
+wobble+sparkle when ready, and — the heart of it — **THE STACK**: harvest
+by walking through a ready crop, the crop hops onto a carried tower over
+the kid's head, and the tower has no cap. Whip-lag (each item follows a
+delayed sample of the kid's position, so a running kid draws a whip curve
+up the stack) and amplitude scaling with height (`sqrt(i+1)`) make a tall
+tower sway visibly, but it **never falls** — no gravity term on the stack,
+items lerp toward their target Y every frame. All models are hand-built
+per the AR1P recipe (lathes + tubes + balls baked to one geometry, one
+shared vertex-colours material, no textures, no AI art, no emojis), and
+the seed-button icons come from the SAME recipe as the 3D crop (FL5b law:
+one source of art). Cache-bust on both engine links in `BuildableKids.jsx`
+bumped `v=fl13` → `v=fm1`. `qa-skyflyer.mjs` gained 22 FM1 static checks;
+the full skyflyer QA is green. **Marked REVIEW** (not `done`): the card's
+own line says "flag needsReview" and asks for a picture check before
+`deployed`; this session had no browser access to shoot the live scene,
+and the reference mock (`claude/farm-mock.html`) and memory plan
+(`farm-mode-plan`) called out by the card were not available in this
+sandbox, so the model of the kid, the palette, and the exact pop-up
+layout are best-guess and want Mike's eye. Play it at
+`/skyflyer-farm.html`. FM2 and FM3 build on this file.
+
 ## Three of the four stranded cards landed (RN3, August 15 2026)
 `public/buildable-chess.html`, `api/images.js`, `qa-chess.mjs`, `public/editor.html`,
 `api/manifest.js`, `api/manifest-qa.js` (new), `api/_editorAuth.js` (new),

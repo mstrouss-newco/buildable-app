@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Sky Flyer — Farm corner (FM1)</title>
+<!--
+  FM1 — the farm corner of Sunny Islands, built in the Sky Flyer engine style.
+  Standalone scene: same three.min.js, same hand-built vertex-colored models
+  (AR1P recipe: lathes + lofts + balls baked into one geometry, one shared
+  MeshPhong vertexColors material, no textures, no AI art). No emojis anywhere.
+
+  What is here:
+    - a fenced field of dirt patches
+    - THE STACK (the heart of the mode): crops hop onto a carried tower over
+      the kid's head; no cap; leans and wobbles more the taller it gets
+      (whip-lag on x/z, amplitude scaling with height) and never falls
+    - tap an empty patch to open a floating seed pop-up (max 340px, AR1R
+      shape, rounded), pick corn / carrot / wheat, pay coins, plant
+    - crops grow through sprout / mid / ready in 30-60 seconds; ready crops
+      wobble and sparkle
+    - harvest = walk through them; each hops onto the stack with a bounce
+
+  FM2 (chickens/cow) and FM3 (order crate/plane) build on this file.
+-->
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#B3E58C;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    -webkit-user-select:none;user-select:none;touch-action:none;color:#33566e}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none}
+  .pill{position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;
+    background:rgba(255,252,240,.92);border-radius:999px;padding:8px 16px 8px 10px;
+    display:flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(30,60,90,.18);
+    font-weight:800;font-size:20px;color:#5b4a1f}
+  .pill svg{display:block}
+  #titlePill{position:absolute;top:calc(12px + env(safe-area-inset-top));
+    left:calc(96px + env(safe-area-inset-left));
+    background:rgba(255,252,240,.92);border-radius:999px;padding:8px 16px;
+    font-weight:800;font-size:14px;color:#33566e;box-shadow:0 3px 10px rgba(30,60,90,.18)}
+  #hint{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);
+    background:rgba(255,252,240,.94);border-radius:20px;padding:12px 22px;
+    text-align:center;color:#33566e;font-weight:800;font-size:16px;
+    box-shadow:0 4px 14px rgba(30,60,90,.2);transition:opacity .5s;
+    max-width:80%}
+  #hint .sub{font-weight:600;font-size:13px;color:#6b8aa0;margin-top:4px}
+  #toast{position:absolute;left:50%;top:26%;transform:translateX(-50%) scale(.8);
+    color:#fff;font-weight:900;font-size:28px;text-shadow:0 3px 8px rgba(30,60,90,.4);
+    opacity:0;pointer-events:none}
+  #toast.show{animation:pop 1.6s ease forwards}
+  @keyframes pop{0%{opacity:0;transform:translateX(-50%) scale(.6)}
+    15%{opacity:1;transform:translateX(-50%) scale(1.08)}
+    30%{transform:translateX(-50%) scale(1)}
+    75%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(1)}}
+
+  /* AR1R offer-card shape, adopted here for the seed picker: floating (not a
+     bottom sheet), rounded, capped at 340px wide, three big picture buttons,
+     no emojis. */
+  #seedCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
+    background:#fffef7;border-radius:26px;padding:14px 14px 18px;
+    box-shadow:0 12px 40px rgba(30,60,90,.35),0 2px 0 #d9c99a inset;
+    width:min(340px,92vw);max-width:340px;pointer-events:auto;
+    opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;
+    z-index:10}
+  #seedCard.up{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+  #seedCard .title{text-align:center;font-weight:900;font-size:17px;color:#5b4a1f;
+    padding:2px 0 10px;letter-spacing:.3px}
+  #seedCard .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  #seedCard .seed{background:#f6efd6;border:2px solid #e7d9a4;border-radius:18px;
+    padding:8px 6px 10px;text-align:center;cursor:pointer;transition:transform .08s;
+    user-select:none;-webkit-tap-highlight-color:transparent}
+  #seedCard .seed:active{transform:translateY(2px)}
+  #seedCard .seed.locked{opacity:.42;cursor:not-allowed}
+  #seedCard .seed .art{height:82px;display:flex;align-items:flex-end;justify-content:center}
+  #seedCard .seed .name{font-weight:800;font-size:13px;color:#5b4a1f;margin-top:4px}
+  #seedCard .seed .price{display:inline-flex;align-items:center;gap:4px;
+    background:#fff7d6;border-radius:999px;padding:2px 8px;margin-top:4px;
+    font-weight:800;font-size:13px;color:#8a6a12}
+  #seedCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
+    border:none;background:transparent;cursor:pointer}
+  #seedCard .close svg{display:block}
+
+  /* Joystick — a soft touch pad kids can use, and drag-anywhere on the world
+     also works. Kept clear of the top strip (HUD-AND-NAV rules). */
+  #stick{position:absolute;left:calc(20px + env(safe-area-inset-left));
+    bottom:calc(24px + env(safe-area-inset-bottom));width:130px;height:130px;
+    border-radius:50%;background:rgba(255,252,240,.35);
+    border:3px solid rgba(255,252,240,.7);pointer-events:auto;touch-action:none}
+  #stick .nub{position:absolute;left:50%;top:50%;width:64px;height:64px;
+    border-radius:50%;background:rgba(255,252,240,.9);
+    box-shadow:0 4px 10px rgba(30,60,90,.25);
+    transform:translate(-50%,-50%);transition:opacity .2s}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div class="pill" title="coins">
+    <svg width="26" height="26" viewBox="0 0 26 26">
+      <circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>
+      <circle cx="13" cy="13" r="6" fill="none" stroke="#D89B1C" stroke-width="2"/>
+    </svg>
+    <span id="coins">50</span>
+  </div>
+  <div id="titlePill">The Farm</div>
+  <div id="hint">
+    Tap a dirt patch to plant a seed
+    <div class="sub">Then walk through the crop when it is ready</div>
+  </div>
+  <div id="toast"></div>
+  <div id="stick"><div class="nub"></div></div>
+
+  <!-- SEED POPUP (AR1R shape: floating, 340px max, rounded). No emojis: each
+       button holds an SVG grown from the SAME shapes as the 3D crop, per FL5b
+       (icons are drawn in code from the crop recipe). -->
+  <div id="seedCard" role="dialog" aria-label="Pick a seed">
+    <button class="close" id="seedClose" aria-label="Close">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path d="M6 6 L18 18 M18 6 L6 18" stroke="#8a7a4a" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="title">Plant a seed</div>
+    <div class="row" id="seedRow"><!-- three .seed cells injected --></div>
+  </div>
+</div>
+<script src="/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+// -------------------------------------------------------------------------
+// FM1 — tiny helpers, in the engine's style
+// -------------------------------------------------------------------------
+var clamp=function(v,a,b){return v<a?a:(v>b?b:v);};
+var lerp=function(a,b,t){return a+(b-a)*t;};
+var Q=(function(){try{return new URLSearchParams(location.search);}catch(e){return new URLSearchParams("");}})();
+var NODRAW=Q.get("nodraw")==="1";
+
+// -------------------------------------------------------------------------
+// Renderer / scene / camera. 3/4 overhead, so you see the field and the
+// stack over the kid's head at the same time.
+// -------------------------------------------------------------------------
+var W=innerWidth,H=innerHeight;
+var renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setSize(W,H);
+document.body.insertBefore(renderer.domElement,document.getElementById('hud'));
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x7ecbff);
+scene.fog=new THREE.Fog(0xbfe6ff,60,150);
+var camera=new THREE.PerspectiveCamera(46,W/H,0.1,400);
+camera.position.set(0,26,32); camera.lookAt(0,0,0);
+window.addEventListener("resize",function(){
+  W=innerWidth;H=innerHeight;renderer.setSize(W,H);camera.aspect=W/H;camera.updateProjectionMatrix();
+});
+
+// -------------------------------------------------------------------------
+// Lighting — hemi + a warm sun, matches the Sunny Islands palette.
+// -------------------------------------------------------------------------
+scene.add(new THREE.HemisphereLight(0xbfe8ff,0x7aa96b,0.85));
+var sun=new THREE.DirectionalLight(0xFFEFC6,0.95);
+sun.position.set(20,40,18); scene.add(sun);
+
+// -------------------------------------------------------------------------
+// AR1P recipe helpers (lathes, lofts, balls, cones), baked to one mesh with
+// vertex colours. Straight from the engine's hbBuild pattern — the point is
+// the crops and the kid come from the SAME primitives as the engine's crab /
+// parrot / fish, so the whole world reads as one hand.
+// -------------------------------------------------------------------------
+var HB_MAT=new THREE.MeshPhongMaterial({vertexColors:true,shininess:22,specular:0x222222,flatShading:false});
+
+function hbPaint(geo,hex,tf){
+  if(tf){
+    if(tf.s) geo.scale(tf.s[0],tf.s[1],tf.s[2]);
+    if(tf.r){ if(tf.r[0])geo.rotateX(tf.r[0]); if(tf.r[1])geo.rotateY(tf.r[1]); if(tf.r[2])geo.rotateZ(tf.r[2]); }
+    if(tf.p) geo.translate(tf.p[0],tf.p[1],tf.p[2]);
+  }
+  var c=new THREE.Color(hex), n=geo.attributes.position.count, col=new Float32Array(n*3),i;
+  for(i=0;i<n;i++){ col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b; }
+  geo.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+  return geo;
+}
+function hbBake(parts){
+  var pos=[],nor=[],col=[],idx=[],base=0,i,k;
+  for(k=0;k<parts.length;k++){
+    var g=parts[k]; if(!g||!g.attributes.position) continue;
+    if(!g.attributes.normal) g.computeVertexNormals();
+    var pa=g.attributes.position,na=g.attributes.normal,ca=g.attributes.color;
+    for(i=0;i<pa.count;i++){
+      pos.push(pa.getX(i),pa.getY(i),pa.getZ(i));
+      nor.push(na.getX(i),na.getY(i),na.getZ(i));
+      col.push(ca.getX(i),ca.getY(i),ca.getZ(i));
+    }
+    if(g.index){ for(i=0;i<g.index.count;i++) idx.push(g.index.getX(i)+base); }
+    else { for(i=0;i<pa.count;i++) idx.push(i+base); }
+    base+=pa.count;
+  }
+  var o=new THREE.BufferGeometry();
+  o.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  o.setAttribute("normal",new THREE.Float32BufferAttribute(nor,3));
+  o.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+  o.setIndex(idx); return o;
+}
+function hbBall(r,c,tf,sg){ return hbPaint(new THREE.SphereGeometry(r,sg||10,(sg||10)-2),c,tf); }
+function hbTube(r1,r2,h,c,tf,sg){ return hbPaint(new THREE.CylinderGeometry(r1,r2,h,sg||10),c,tf); }
+function hbCone(r,h,c,tf,sg){ return hbPaint(new THREE.ConeGeometry(r,h,sg||10),c,tf); }
+function hbBox(w,h,d,c,tf){ return hbPaint(new THREE.BoxGeometry(w,h,d),c,tf); }
+// LATHE PROFILE MUST RUN UP THE AXIS.
+function hbTurn(profile,c,tf,sg){
+  var pts=profile.map(function(p){ return new THREE.Vector2(Math.max(0.001,p[0]),p[1]); });
+  return hbPaint(new THREE.LatheGeometry(pts,sg||12),c,tf);
+}
+function hbMesh(geo){ return new THREE.Mesh(geo,HB_MAT); }
+
+// -------------------------------------------------------------------------
+// Grass ground, big enough that a walking kid never sees the edge on iPad.
+// -------------------------------------------------------------------------
+(function ground(){
+  var g=new THREE.PlaneGeometry(220,220,1,1);
+  g.rotateX(-Math.PI/2);
+  hbPaint(g,0x93D667,null); // fresh grass — brighter than sky-flyer islands so the field pops
+  scene.add(hbMesh(g));
+  // a soft "sunny islands" ring of sea beyond the grass — one big flat disc
+  var s=new THREE.RingGeometry(110,300,48,1);
+  s.rotateX(-Math.PI/2);
+  hbPaint(s,0x2794C2,null);
+  var m=hbMesh(s); m.position.y=-0.02; scene.add(m);
+})();
+
+// -------------------------------------------------------------------------
+// The field: a 3x3 grid of dirt patches inside a wooden fence, on the +z
+// half of the world (the "farm corner").
+// -------------------------------------------------------------------------
+var FIELD_CX=0, FIELD_CZ=0;
+var PATCH_R=1.4;     // patch radius (world units)
+var PATCH_STEP=3.6;  // spacing centre-to-centre
+var PATCHES=[];      // {mesh, x, z, ring, state, seed, plantedAt, sparkle}
+
+function buildDirtDisc(){
+  var parts=[];
+  // dark top disc
+  parts.push(hbTurn([[PATCH_R,0],[PATCH_R*0.95,0.06],[0,0.08]],0x6B4E2E,null,20));
+  // rim - a slightly darker crumbly edge
+  parts.push(hbTurn([[PATCH_R*1.02,-0.08],[PATCH_R*1.02,0.02],[PATCH_R*0.9,0.06]],0x513A20,null,20));
+  return hbMesh(hbBake(parts));
+}
+
+// A dashed glow ring above an empty patch: THREE line dashes are not supported
+// on plain lines without a shader, so we make it out of many small tube pieces
+// arranged in a circle. Rotates gently. Reads as "tap me".
+function buildDashRing(){
+  var g=new THREE.Group();
+  var seg=14, R=PATCH_R+0.18, tubeR=0.09, tubeH=0.42;
+  for(var i=0;i<seg;i++){
+    var a=(i/seg)*Math.PI*2;
+    var t=hbPaint(new THREE.BoxGeometry(tubeH,0.05,tubeR*1.6),0xFFF7B0,{
+      r:[0,-a,0], p:[Math.cos(a)*R, 0.08, Math.sin(a)*R]
+    });
+    g.add(hbMesh(t));
+  }
+  return g;
+}
+
+function buildFencePost(){
+  var parts=[];
+  parts.push(hbTube(0.14,0.14,1.15,0xE0D2A6,{p:[0,0.6,0]},8));
+  parts.push(hbCone(0.20,0.22,0xC7B579,{p:[0,1.22,0]},8));
+  return hbMesh(hbBake(parts));
+}
+function buildFenceRail(len){
+  var g=hbBox(len,0.10,0.14,0xEDDDA8,null);
+  return hbMesh(g);
+}
+
+function buildField(){
+  var group=new THREE.Group();
+  var i,j;
+  // 3x3 patches
+  for(j=-1;j<=1;j++){
+    for(i=-1;i<=1;i++){
+      var x=FIELD_CX + i*PATCH_STEP;
+      var z=FIELD_CZ + j*PATCH_STEP;
+      var patch=buildDirtDisc();
+      patch.position.set(x,0.001,z);
+      group.add(patch);
+      var ring=buildDashRing();
+      ring.position.set(x,0.001,z);
+      group.add(ring);
+      PATCHES.push({
+        mesh:patch, ring:ring,
+        x:x, z:z,
+        state:"empty",     // empty | growing | ready
+        seed:null,          // "corn" | "carrot" | "wheat"
+        plantedAt:0,
+        crop:null,          // THREE.Group with the 3D crop when growing/ready
+        sparkleT:0
+      });
+    }
+  }
+  // fence around the whole field
+  var half=(1*PATCH_STEP)+PATCH_R+0.8;
+  var side=half*2;
+  // posts at 4 corners + midpoints
+  var postXs=[-half,0,half], postZs=[-half,0,half];
+  for(i=0;i<postXs.length;i++){
+    for(j=0;j<postZs.length;j++){
+      if(i===1 && j===1) continue; // don't put a post in the middle
+      var p=buildFencePost(); p.position.set(FIELD_CX+postXs[i],0,FIELD_CZ+postZs[j]); group.add(p);
+    }
+  }
+  // rails N/S/E/W
+  var rail;
+  // N
+  rail=buildFenceRail(side); rail.position.set(FIELD_CX,0.55,FIELD_CZ+half); group.add(rail);
+  rail=buildFenceRail(side); rail.position.set(FIELD_CX,0.9,FIELD_CZ+half); group.add(rail);
+  // S
+  rail=buildFenceRail(side); rail.position.set(FIELD_CX,0.55,FIELD_CZ-half); group.add(rail);
+  rail=buildFenceRail(side); rail.position.set(FIELD_CX,0.9,FIELD_CZ-half); group.add(rail);
+  // E
+  rail=buildFenceRail(side); rail.rotation.y=Math.PI/2; rail.position.set(FIELD_CX+half,0.55,FIELD_CZ); group.add(rail);
+  rail=buildFenceRail(side); rail.rotation.y=Math.PI/2; rail.position.set(FIELD_CX+half,0.9,FIELD_CZ); group.add(rail);
+  // W — leave a GAP for the kid to walk in and out
+  var half2=half*0.55;
+  rail=buildFenceRail(half2); rail.rotation.y=Math.PI/2;
+  rail.position.set(FIELD_CX-half,0.55,FIELD_CZ+(half-half2/2)); group.add(rail);
+  rail=buildFenceRail(half2); rail.rotation.y=Math.PI/2;
+  rail.position.set(FIELD_CX-half,0.9,FIELD_CZ+(half-half2/2)); group.add(rail);
+  rail=buildFenceRail(half2); rail.rotation.y=Math.PI/2;
+  rail.position.set(FIELD_CX-half,0.55,FIELD_CZ-(half-half2/2)); group.add(rail);
+  rail=buildFenceRail(half2); rail.rotation.y=Math.PI/2;
+  rail.position.set(FIELD_CX-half,0.9,FIELD_CZ-(half-half2/2)); group.add(rail);
+  return group;
+}
+scene.add(buildField());
+
+// -------------------------------------------------------------------------
+// The CROPS. Each is built from primitive parts so the SAME parts (in SVG)
+// draw the icon on the seed-picker button — per the FL5b law: one source of
+// art, one recipe, so a 3D crop and its picture can never drift.
+//
+// Each recipe returns an object with:
+//   parts(scale)   -> array of Geometry parts for the 3D model at given scale
+//   svg(size)      -> a string of <svg>...</svg> for the picker button
+//   colors         -> {main, accent, stem} used by both
+// -------------------------------------------------------------------------
+var CROP_RECIPES = {
+  corn: {
+    price: 10,
+    reward: 8,
+    growSec: 34,
+    colors: {main:0xF6C64A, accent:0xE0A82E, stem:0x4FB05B},
+    parts:function(s){
+      var C=this.colors, p=[];
+      // tall stalk
+      p.push(hbTube(0.11*s,0.09*s,1.2*s,C.stem,{p:[0, 0.6*s, 0]}));
+      // ear (lathe) — kernel body
+      p.push(hbTurn([
+        [0.001, -0.42*s],[0.28*s,-0.28*s],[0.32*s,0.05*s],
+        [0.28*s,0.32*s],[0.001,0.44*s]
+      ], C.main, {p:[0, 0.95*s, 0]}, 14));
+      // husk leaves peeling back at the top
+      p.push(hbCone(0.30*s, 0.55*s, C.stem, {r:[0,0,0.35], p:[-0.20*s, 1.15*s, 0]}, 10));
+      p.push(hbCone(0.30*s, 0.55*s, C.stem, {r:[0,0,-0.35], p:[0.20*s, 1.15*s, 0]}, 10));
+      // a bright kernel accent band
+      p.push(hbTurn([
+        [0.001, -0.10*s],[0.32*s,-0.05*s],[0.32*s,0.05*s],[0.001,0.10*s]
+      ], C.accent, {p:[0, 0.95*s, 0]}, 12));
+      return p;
+    },
+    // Icon = the same shape family (an ear plus two husk leaves), drawn flat.
+    // Fits inside a 82x82 box. No emojis.
+    svg:function(size){
+      size = size || 82;
+      return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+        // ear body (oval)
+        '<ellipse cx="41" cy="44" rx="17" ry="26" fill="#F6C64A" stroke="#B88718" stroke-width="2.5"/>'+
+        // kernel dots
+        '<g fill="#B88718">'+
+          '<circle cx="34" cy="30" r="2"/><circle cx="41" cy="28" r="2"/><circle cx="48" cy="30" r="2"/>'+
+          '<circle cx="34" cy="40" r="2"/><circle cx="41" cy="40" r="2"/><circle cx="48" cy="40" r="2"/>'+
+          '<circle cx="34" cy="50" r="2"/><circle cx="41" cy="52" r="2"/><circle cx="48" cy="50" r="2"/>'+
+          '<circle cx="34" cy="60" r="2"/><circle cx="41" cy="62" r="2"/><circle cx="48" cy="60" r="2"/>'+
+        '</g>'+
+        // husk leaves peeling back
+        '<path d="M28 18 Q22 30 30 44 Q22 30 28 18 Z" fill="#4FB05B" stroke="#2E7A3A" stroke-width="2"/>'+
+        '<path d="M54 18 Q60 30 52 44 Q60 30 54 18 Z" fill="#4FB05B" stroke="#2E7A3A" stroke-width="2"/>'+
+        '</svg>';
+    }
+  },
+  carrot: {
+    price: 6,
+    reward: 5,
+    growSec: 30,
+    colors: {main:0xF08A2E, accent:0xC66220, stem:0x4FB05B},
+    parts:function(s){
+      var C=this.colors, p=[];
+      // orange root — cone pointing DOWN, hidden mostly, top peeking up
+      p.push(hbCone(0.35*s, 1.10*s, C.main, {r:[Math.PI,0,0], p:[0, 0.55*s, 0]}, 14));
+      // accent ring near the top
+      p.push(hbTurn([[0.34*s,-0.03*s],[0.36*s,0.02*s],[0.30*s,0.07*s]], C.accent, {p:[0, 0.98*s, 0]}, 12));
+      // green tuft: three blades splayed
+      var i,tf;
+      for(i=0;i<3;i++){
+        var a=(i-1)*0.45;
+        tf={r:[a,0, a*0.4], p:[Math.sin(a)*0.06*s, 1.15*s, 0]};
+        p.push(hbCone(0.10*s, 0.75*s, C.stem, tf, 8));
+      }
+      return p;
+    },
+    svg:function(size){
+      size = size || 82;
+      return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+        // root
+        '<path d="M25 34 L57 34 L45 76 Q41 82 37 76 Z" fill="#F08A2E" stroke="#8A4818" stroke-width="2.5"/>'+
+        // accent segments
+        '<line x1="28" y1="44" x2="54" y2="44" stroke="#C66220" stroke-width="1.5"/>'+
+        '<line x1="30" y1="54" x2="52" y2="54" stroke="#C66220" stroke-width="1.5"/>'+
+        '<line x1="33" y1="64" x2="49" y2="64" stroke="#C66220" stroke-width="1.5"/>'+
+        // tuft
+        '<path d="M32 34 Q30 12 22 8"  fill="none" stroke="#4FB05B" stroke-width="4" stroke-linecap="round"/>'+
+        '<path d="M41 34 Q41 10 39 4"  fill="none" stroke="#4FB05B" stroke-width="4" stroke-linecap="round"/>'+
+        '<path d="M50 34 Q52 12 60 8"  fill="none" stroke="#4FB05B" stroke-width="4" stroke-linecap="round"/>'+
+        '</svg>';
+    }
+  },
+  wheat: {
+    price: 4,
+    reward: 3,
+    growSec: 42,
+    colors: {main:0xE0C25A, accent:0xB48A26, stem:0xC7B15C},
+    parts:function(s){
+      var C=this.colors, p=[];
+      // slender stem
+      p.push(hbTube(0.06*s, 0.05*s, 1.15*s, C.stem, {p:[0, 0.575*s, 0]}));
+      // head — a lofted oval
+      p.push(hbTurn([
+        [0.001,-0.32*s],[0.16*s,-0.20*s],[0.20*s,0.0],[0.16*s,0.20*s],[0.001,0.32*s]
+      ], C.main, {p:[0, 1.05*s, 0]}, 12));
+      // four rows of bristly grains sticking out
+      var i,j;
+      for(i=0;i<4;i++){
+        var y = 0.90*s + i*0.15*s;
+        for(j=0;j<4;j++){
+          var a=(j/4)*Math.PI*2;
+          p.push(hbCone(0.04*s, 0.20*s, C.accent, {
+            r:[0,0, Math.PI/2 + Math.sin(a)*0.3],
+            p:[Math.cos(a)*0.20*s, y, Math.sin(a)*0.20*s]
+          }, 6));
+        }
+      }
+      return p;
+    },
+    svg:function(size){
+      size = size || 82;
+      return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+        // stem
+        '<line x1="41" y1="18" x2="41" y2="78" stroke="#C7B15C" stroke-width="3" stroke-linecap="round"/>'+
+        // grains (bristly head), drawn as pairs on each side, no emojis
+        '<g fill="#E0C25A" stroke="#8A6A1A" stroke-width="1.5">'+
+          '<ellipse cx="32" cy="26" rx="6" ry="4"/><ellipse cx="50" cy="26" rx="6" ry="4"/>'+
+          '<ellipse cx="30" cy="38" rx="7" ry="4.5"/><ellipse cx="52" cy="38" rx="7" ry="4.5"/>'+
+          '<ellipse cx="30" cy="50" rx="7" ry="4.5"/><ellipse cx="52" cy="50" rx="7" ry="4.5"/>'+
+          '<ellipse cx="34" cy="62" rx="5.5" ry="4"/><ellipse cx="48" cy="62" rx="5.5" ry="4"/>'+
+        '</g>'+
+        // bristles
+        '<g stroke="#8A6A1A" stroke-width="1.6" stroke-linecap="round">'+
+          '<line x1="24" y1="20" x2="18" y2="10"/><line x1="58" y1="20" x2="64" y2="10"/>'+
+          '<line x1="24" y1="46" x2="18" y2="42"/><line x1="58" y1="46" x2="64" y2="42"/>'+
+        '</g>'+
+        '</svg>';
+    }
+  }
+};
+
+// Build the mesh for one crop at the given growth stage: 0=sprout, 1=mid, 2=ready.
+function buildCrop(kind, stage){
+  var r=CROP_RECIPES[kind]; if(!r) return null;
+  var s = (stage===0)?0.35 : (stage===1)?0.68 : 1.0;
+  var mesh = hbMesh(hbBake(r.parts(s)));
+  var wrap = new THREE.Group(); wrap.add(mesh);
+  wrap.userData.kind = kind; wrap.userData.stage = stage;
+  return wrap;
+}
+
+// -------------------------------------------------------------------------
+// The KID. Hand-built the same way. A ball head, a lathe torso, tube limbs.
+// The stack rides above the head.
+// -------------------------------------------------------------------------
+var SKIN=0xF3C89B, HAIR=0x5B3F2A, SHIRT=0x4A8FE5, PANTS=0x2F5F8E, SHOE=0x3C2A18;
+function buildKid(){
+  var g=new THREE.Group();
+  // legs
+  var legL=hbMesh(hbBake([
+    hbTube(0.16,0.14,0.90,PANTS,{p:[0,0.45,0]}),
+    hbBox(0.30,0.14,0.44,SHOE,{p:[0,0.07,0.08]})
+  ]));
+  legL.position.set(-0.20,0,0); g.add(legL);
+  var legR=hbMesh(hbBake([
+    hbTube(0.16,0.14,0.90,PANTS,{p:[0,0.45,0]}),
+    hbBox(0.30,0.14,0.44,SHOE,{p:[0,0.07,0.08]})
+  ]));
+  legR.position.set(0.20,0,0); g.add(legR);
+  // body: torso + head-and-arms baked together so it's one draw call
+  var body=hbMesh(hbBake([
+    // torso — a lathe
+    hbTurn([[0.001,-0.45],[0.32,-0.42],[0.36,-0.15],[0.34,0.28],[0.001,0.45]], SHIRT, {p:[0,1.30,0]}, 14),
+    // arms
+    hbTube(0.13,0.11,0.78,SHIRT,{r:[0,0,0.18], p:[-0.42,1.20,0]}),
+    hbTube(0.13,0.11,0.78,SHIRT,{r:[0,0,-0.18], p:[0.42,1.20,0]}),
+    // hands (skin balls at arm tips)
+    hbBall(0.12,SKIN,{p:[-0.55,0.82,0]},8),
+    hbBall(0.12,SKIN,{p:[0.55,0.82,0]},8),
+    // neck
+    hbTube(0.14,0.14,0.10,SKIN,{p:[0,1.82,0]},8),
+    // head
+    hbBall(0.36,SKIN,{p:[0,2.14,0]},14),
+    // hair cap (upper half sphere shifted)
+    hbBall(0.38,HAIR,{s:[1,0.6,1], p:[0,2.28,-0.02]},14),
+    // eyes — two tiny dark balls
+    hbBall(0.045,0x1E1E24,{p:[-0.13,2.16,0.32]},6),
+    hbBall(0.045,0x1E1E24,{p:[0.13,2.16,0.32]},6),
+    // a little smile — a slim dark box, curved by rotation, close to real
+    hbBox(0.14,0.02,0.02,0x5A3A20,{p:[0,2.02,0.35]})
+  ]));
+  g.add(body);
+  // remember the head-top for stack anchoring
+  g.userData.headTopY = 2.50;
+  g.userData.legL=legL; g.userData.legR=legR;
+  g.userData.body=body;
+  return g;
+}
+var kid=buildKid();
+scene.add(kid);
+// start OUTSIDE the field (west gap)
+kid.position.set(-8, 0, 0);
+var kidState={
+  pos:new THREE.Vector3(-8,0,0),
+  vel:new THREE.Vector3(),
+  facing:0,        // yaw
+  walkT:0,         // walk cycle phase
+  moving:false
+};
+
+// -------------------------------------------------------------------------
+// THE STACK — the heart of the mode. No cap. Each item lerps toward its
+// target above the kid's head. Whip-lag: each item follows a delayed sample
+// of the kid's position, so the tall stack curves and sways as the kid
+// turns. It NEVER falls: the highest item just stays visible above the head.
+// -------------------------------------------------------------------------
+var STACK_ITEM_H = 0.42;          // vertical spacing between stacked items
+var STACK_LAG_PER = 0.055;        // seconds of delay added per item up the stack
+var STACK_HISTORY = [];           // ring buffer of {t,x,z,yaw}
+var STACK_HISTORY_MAX_SEC = 6;    // enough for a huge stack
+var stack = [];                   // array of {kind, group, tOffset, phase}
+
+// A stack item's model is the same crop recipe at stage=2 (ready), but a bit
+// smaller so a tall stack still fits under the camera and reads clearly.
+function buildStackItem(kind){
+  var r=CROP_RECIPES[kind]; if(!r) return null;
+  var s=0.72;
+  var geo=hbBake(r.parts(s));
+  var m=hbMesh(geo);
+  var wrap=new THREE.Group(); wrap.add(m);
+  wrap.userData.kind=kind;
+  wrap.userData.phase=Math.random()*Math.PI*2;
+  return wrap;
+}
+
+function pushOntoStack(kind, worldPos){
+  var it=buildStackItem(kind); if(!it) return;
+  // start where the crop is on the ground, so we can animate it bouncing UP.
+  it.position.copy(worldPos);
+  it.userData.hopFrom=worldPos.clone();
+  it.userData.hopT=0;        // 0..1 animation for the initial bounce
+  it.userData.tOffset = STACK_LAG_PER * stack.length;   // whip-lag amount
+  it.userData.stackIndex = stack.length;
+  scene.add(it);
+  stack.push(it);
+}
+
+function sampleHistory(delaySec, now){
+  // find the sample from ~delaySec ago; linear scan from newest backwards
+  var i, t=now-delaySec;
+  for(i=STACK_HISTORY.length-1;i>=0;i--){
+    if(STACK_HISTORY[i].t<=t){
+      var a=STACK_HISTORY[i], b=STACK_HISTORY[Math.min(i+1,STACK_HISTORY.length-1)];
+      var span=Math.max(0.0001,b.t-a.t);
+      var u=clamp((t-a.t)/span, 0, 1);
+      return { x: lerp(a.x,b.x,u), z: lerp(a.z,b.z,u), yaw: lerp(a.yaw,b.yaw,u) };
+    }
+  }
+  return STACK_HISTORY[0] || {x:kid.position.x, z:kid.position.z, yaw:kidState.facing};
+}
+
+function updateStack(dt, now){
+  // record the kid's current position for whip-lag lookups
+  STACK_HISTORY.push({t:now, x:kid.position.x, z:kid.position.z, yaw:kidState.facing});
+  // prune old samples
+  var cutoff=now-STACK_HISTORY_MAX_SEC;
+  while(STACK_HISTORY.length>4 && STACK_HISTORY[0].t<cutoff) STACK_HISTORY.shift();
+
+  var count = stack.length;
+  for(var i=0;i<count;i++){
+    var it=stack[i];
+    // wobble scales with height. sqrt so a 20-item stack still reads.
+    var heightScale = Math.sqrt(i+1) * 0.06;   // amplitude in world units
+    var samp = sampleHistory(it.userData.tOffset, now);
+    var targetY = kid.userData.headTopY + i*STACK_ITEM_H + STACK_ITEM_H*0.5;
+    // sinusoidal sway on top of the whip-lag position
+    var sway = Math.sin(now*2.2 + it.userData.phase) * heightScale * 0.6;
+    var swayZ = Math.cos(now*1.7 + it.userData.phase*1.3) * heightScale * 0.5;
+    var tx = samp.x + sway;
+    var tz = samp.z + swayZ;
+
+    if(it.userData.hopT < 1){
+      // initial bounce from the ground onto the stack
+      it.userData.hopT = Math.min(1, it.userData.hopT + dt*3.4);
+      var u = it.userData.hopT;
+      // ease: y goes ballistic then settles
+      var arc = Math.sin(u*Math.PI) * 1.6;   // peak of the hop
+      var yNow = lerp(it.userData.hopFrom.y+arc, targetY, u);
+      var xNow = lerp(it.userData.hopFrom.x, tx, u);
+      var zNow = lerp(it.userData.hopFrom.z, tz, u);
+      it.position.set(xNow, yNow, zNow);
+      it.rotation.y = kidState.facing + Math.sin(u*Math.PI*2)*0.4;
+    } else {
+      // settle — pull toward target every frame
+      it.position.x = lerp(it.position.x, tx, 1 - Math.pow(0.001, dt));
+      it.position.z = lerp(it.position.z, tz, 1 - Math.pow(0.001, dt));
+      it.position.y = lerp(it.position.y, targetY, 1 - Math.pow(0.0006, dt));
+      // slight rotation with the sway — reads like weight up there
+      it.rotation.y = kidState.facing + Math.sin(now*1.5+it.userData.phase)*0.12;
+      it.rotation.z = -sway * 0.35;   // lean opposite to the sway
+      it.rotation.x = swayZ * 0.35;
+    }
+  }
+}
+
+// -------------------------------------------------------------------------
+// SEED PICKER POPUP (AR1R shape). Filled from the CROP_RECIPES so the icons
+// are drawn from the same source of art as the 3D crops. No emojis.
+// -------------------------------------------------------------------------
+var seedCardEl=document.getElementById("seedCard");
+var seedRowEl=document.getElementById("seedRow");
+var seedCloseEl=document.getElementById("seedClose");
+var openPatch=null;
+
+function buildSeedPicker(){
+  var kinds=["corn","carrot","wheat"];
+  seedRowEl.innerHTML="";
+  kinds.forEach(function(k){
+    var r=CROP_RECIPES[k];
+    var el=document.createElement("div");
+    el.className="seed"; el.dataset.kind=k;
+    el.innerHTML =
+      '<div class="art">'+r.svg(74)+'</div>'+
+      '<div class="name">'+k.charAt(0).toUpperCase()+k.slice(1)+'</div>'+
+      '<div class="price">'+
+        '<svg width="14" height="14" viewBox="0 0 26 26">'+
+          '<circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>'+
+        '</svg>'+r.price+
+      '</div>';
+    el.addEventListener("click",function(){ tryPlant(k); });
+    seedRowEl.appendChild(el);
+  });
+}
+buildSeedPicker();
+
+function openSeedPicker(patch){
+  openPatch=patch;
+  updateSeedAffordability();
+  seedCardEl.classList.add("up");
+}
+function closeSeedPicker(){
+  openPatch=null;
+  seedCardEl.classList.remove("up");
+}
+seedCloseEl.addEventListener("click",closeSeedPicker);
+seedCardEl.addEventListener("click",function(e){ if(e.target===seedCardEl) closeSeedPicker(); });
+
+function updateSeedAffordability(){
+  var kids=seedRowEl.querySelectorAll(".seed");
+  kids.forEach(function(el){
+    var k=el.dataset.kind, r=CROP_RECIPES[k];
+    if(coins < r.price) el.classList.add("locked"); else el.classList.remove("locked");
+  });
+}
+
+function tryPlant(kind){
+  if(!openPatch) return;
+  var r=CROP_RECIPES[kind]; if(!r) return;
+  if(coins < r.price){ flashToast("Not enough coins"); return; }
+  addCoins(-r.price);
+  openPatch.state="growing";
+  openPatch.seed=kind;
+  openPatch.plantedAt=performance.now()/1000;
+  // hide the dashed ring, add the sprout
+  openPatch.ring.visible=false;
+  var sprout=buildCrop(kind,0);
+  sprout.position.set(openPatch.x, 0.06, openPatch.z);
+  openPatch.crop=sprout;
+  scene.add(sprout);
+  closeSeedPicker();
+}
+
+// -------------------------------------------------------------------------
+// Coins + toasts
+// -------------------------------------------------------------------------
+var coins=50;
+var coinsEl=document.getElementById("coins");
+var toastEl=document.getElementById("toast");
+var hintEl=document.getElementById("hint");
+var hintHidden=false;
+function addCoins(n){
+  coins=Math.max(0,coins+n);
+  coinsEl.textContent=coins;
+  updateSeedAffordability();
+}
+function flashToast(text){
+  toastEl.textContent=text;
+  toastEl.classList.remove("show");
+  // reflow to restart animation
+  void toastEl.offsetWidth;
+  toastEl.classList.add("show");
+}
+function hideHint(){ if(!hintHidden){ hintHidden=true; hintEl.style.opacity=0; }}
+
+// -------------------------------------------------------------------------
+// INPUT — a touch joystick + tap-to-plant on empty patches
+// -------------------------------------------------------------------------
+var stickEl=document.getElementById("stick");
+var stickNub=stickEl.querySelector(".nub");
+var stickCenter={x:0,y:0}, stickActive=false, stickVec={x:0,y:0};
+
+function stickReset(){
+  stickActive=false; stickVec.x=0; stickVec.y=0;
+  stickNub.style.transform="translate(-50%,-50%)";
+}
+function stickMove(clientX,clientY){
+  var r=stickEl.getBoundingClientRect();
+  var cx=r.left+r.width/2, cy=r.top+r.height/2;
+  var dx=clientX-cx, dy=clientY-cy, R=r.width/2 - 12;
+  var d=Math.hypot(dx,dy);
+  if(d>R){ dx=dx*R/d; dy=dy*R/d; }
+  stickVec.x=dx/R; stickVec.y=dy/R;
+  stickNub.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px))";
+}
+stickEl.addEventListener("pointerdown",function(e){
+  stickActive=true; stickEl.setPointerCapture(e.pointerId); stickMove(e.clientX,e.clientY);
+  hideHint(); e.preventDefault();
+});
+stickEl.addEventListener("pointermove",function(e){ if(!stickActive) return; stickMove(e.clientX,e.clientY); });
+stickEl.addEventListener("pointerup",function(e){ stickReset(); });
+stickEl.addEventListener("pointercancel",function(e){ stickReset(); });
+
+// Raycast tap for patches. Fires only if we didn't drag much.
+var ray=new THREE.Raycaster();
+var _mouse=new THREE.Vector2();
+var canvas=renderer.domElement;
+var downXY=null, downAt=0;
+
+canvas.addEventListener("pointerdown",function(e){
+  if(seedCardEl.classList.contains("up")) return;
+  downXY={x:e.clientX,y:e.clientY}; downAt=performance.now();
+});
+canvas.addEventListener("pointerup",function(e){
+  if(!downXY) return;
+  var dx=e.clientX-downXY.x, dy=e.clientY-downXY.y, t=performance.now()-downAt;
+  downXY=null;
+  if(Math.hypot(dx,dy)>10 || t>380) return;   // it was a drag, not a tap
+  handleTap(e.clientX,e.clientY);
+});
+function handleTap(x,y){
+  _mouse.x=(x/W)*2 - 1;
+  _mouse.y=-(y/H)*2 + 1;
+  ray.setFromCamera(_mouse,camera);
+  // We want the point where the ray hits Y=0 (the ground plane)
+  var dir=ray.ray.direction, org=ray.ray.origin;
+  if(Math.abs(dir.y)<1e-4) return;
+  var t=-org.y/dir.y; if(t<0) return;
+  var hx=org.x+dir.x*t, hz=org.z+dir.z*t;
+  // find the nearest empty patch within reach
+  var best=null, bestD=PATCH_R*1.4;
+  for(var i=0;i<PATCHES.length;i++){
+    var P=PATCHES[i]; if(P.state!=="empty") continue;
+    var d=Math.hypot(hx-P.x, hz-P.z);
+    if(d<bestD){ best=P; bestD=d; }
+  }
+  if(best){ hideHint(); openSeedPicker(best); }
+}
+
+// -------------------------------------------------------------------------
+// MAIN LOOP — growth, harvest collision, walk, camera follow, draw
+// -------------------------------------------------------------------------
+var last=performance.now()/1000;
+var speed=6.4;   // world units per second
+function step(){
+  var now=performance.now()/1000, dt=Math.min(0.05, now-last); last=now;
+
+  // walk from joystick vector. Y axis on screen is Z axis in world (into
+  // screen is -Z), so up on the stick moves you forward.
+  var mv=stickVec, mag=Math.hypot(mv.x,mv.y);
+  kidState.moving = mag > 0.08;
+  if(kidState.moving){
+    var mx = mv.x, mz = mv.y;
+    // Screen-relative move against camera facing (camera looks down -Z).
+    kid.position.x += mx * speed * dt;
+    kid.position.z += mz * speed * dt;
+    kidState.facing = Math.atan2(mx, mz);   // face where we're going (radians)
+    kid.rotation.y = kidState.facing + Math.PI;   // model's front faces +Z
+    kidState.walkT += dt*speed*1.4;
+    // walk-cycle: legs swing
+    var ang = Math.sin(kidState.walkT) * 0.55;
+    kid.userData.legL.rotation.x = ang;
+    kid.userData.legR.rotation.x = -ang;
+    // body bob
+    kid.userData.body.position.y = Math.abs(Math.sin(kidState.walkT))*0.08;
+  } else {
+    kid.userData.legL.rotation.x *= 0.85;
+    kid.userData.legR.rotation.x *= 0.85;
+    kid.userData.body.position.y *= 0.85;
+  }
+  // clamp so the kid can't run off the map
+  kid.position.x = clamp(kid.position.x, -70, 70);
+  kid.position.z = clamp(kid.position.z, -70, 70);
+
+  // camera follows the kid, offset overhead 3/4
+  var camTargetX = kid.position.x;
+  var camTargetZ = kid.position.z + 22;
+  camera.position.x = lerp(camera.position.x, camTargetX, 1 - Math.pow(0.001, dt));
+  camera.position.z = lerp(camera.position.z, camTargetZ, 1 - Math.pow(0.001, dt));
+  camera.position.y = 22 + Math.min(6, stack.length*0.28);  // pull back a bit as stack grows
+  camera.lookAt(kid.position.x, 1.0 + Math.min(5, stack.length*0.22), kid.position.z);
+
+  // growth + wobble/sparkle for ready + harvest collision
+  for(var i=0;i<PATCHES.length;i++){
+    var P=PATCHES[i];
+    // rotate empty rings gently so the "tap me" affordance reads
+    if(P.state==="empty"){
+      P.ring.rotation.y += dt*0.6;
+      // pulse the ring's brightness by tilting its scale
+      var s=1+Math.sin(now*2.4+i*0.7)*0.04;
+      P.ring.scale.set(s,1,s);
+      continue;
+    }
+    if(P.state==="growing"){
+      var r=CROP_RECIPES[P.seed]; if(!r) continue;
+      var age=now-P.plantedAt, u=clamp(age/r.growSec, 0, 1);
+      // stage 0 -> 1 at 40%, 1 -> 2 at 100%
+      var wantStage = u<0.4 ? 0 : (u<1 ? 1 : 2);
+      if(!P.crop || P.crop.userData.stage !== wantStage){
+        if(P.crop){ scene.remove(P.crop); }
+        var c=buildCrop(P.seed, wantStage);
+        c.position.set(P.x, 0.06, P.z);
+        P.crop=c;
+        scene.add(c);
+      }
+      // sub-stage jiggle so the crop always looks alive
+      P.crop.rotation.y = Math.sin(now*1.3+i*0.4)*0.06;
+      if(wantStage===2) P.state="ready";
+      continue;
+    }
+    if(P.state==="ready"){
+      // WOBBLE + SPARKLE — invite the walk-through
+      P.sparkleT += dt;
+      var wob = Math.sin(now*4.4+i*0.9);
+      P.crop.rotation.z = wob*0.10;
+      P.crop.rotation.x = Math.cos(now*3.7+i*1.1)*0.08;
+      var bob = 0.06 + Math.max(0,wob)*0.06;
+      P.crop.position.y = 0.06 + bob;
+      // sparkle: temporary spinning halo tube added once
+      if(!P.halo){
+        var halo=hbPaint(new THREE.TorusGeometry(PATCH_R*0.9, 0.05, 6, 20), 0xFFF6A8, {r:[Math.PI/2,0,0]});
+        var mh=new THREE.Mesh(halo, new THREE.MeshBasicMaterial({color:0xFFF6A8, transparent:true, opacity:0.65}));
+        mh.position.set(P.x, 0.10, P.z);
+        scene.add(mh); P.halo=mh;
+      }
+      P.halo.rotation.z += dt*2.2;
+      P.halo.material.opacity = 0.35 + 0.35*Math.abs(Math.sin(now*3+i));
+
+      // harvest? kid within pickup radius of this patch
+      var kd=Math.hypot(kid.position.x-P.x, kid.position.z-P.z);
+      if(kd < PATCH_R*0.95){
+        // pay and add to the stack
+        var rr=CROP_RECIPES[P.seed];
+        addCoins(rr.reward);
+        flashToast("+"+rr.reward);
+        pushOntoStack(P.seed, new THREE.Vector3(P.x, 0.9, P.z));
+        // clear the patch back to empty
+        scene.remove(P.crop); P.crop=null;
+        if(P.halo){ scene.remove(P.halo); P.halo=null; }
+        P.state="empty"; P.seed=null; P.ring.visible=true;
+      }
+    }
+  }
+
+  // stack update
+  updateStack(dt, now);
+
+  if(!NODRAW) renderer.render(scene,camera);
+  requestAnimationFrame(step);
+}
+requestAnimationFrame(step);
+
+// -------------------------------------------------------------------------
+// FM1 handle — a QA harness can read the state and prove the mechanic works.
+// -------------------------------------------------------------------------
+window.FARM = {
+  version: "fm1",
+  coins: function(){ return coins; },
+  addCoins: addCoins,
+  patches: function(){ return PATCHES.map(function(P){
+    return { x:P.x, z:P.z, state:P.state, seed:P.seed };
+  }); },
+  openSeedPicker: function(index){ if(PATCHES[index]) openSeedPicker(PATCHES[index]); },
+  closeSeedPicker: closeSeedPicker,
+  cardUp: function(){ return seedCardEl.classList.contains("up"); },
+  seedButtons: function(){
+    return Array.prototype.slice.call(seedRowEl.querySelectorAll(".seed")).map(function(el){
+      return { kind:el.dataset.kind, locked:el.classList.contains("locked") };
+    });
+  },
+  plant: function(index, kind){
+    if(!PATCHES[index]) return false;
+    openSeedPicker(PATCHES[index]); tryPlant(kind); return true;
+  },
+  // Fast-forward growth: advance all growing patches by seconds. Purely a
+  // testing lever so QA doesn't have to wait 30s per crop.
+  advanceTime: function(sec){
+    for(var i=0;i<PATCHES.length;i++){
+      var P=PATCHES[i]; if(P.state==="growing"||P.state==="ready") P.plantedAt -= sec;
+    }
+  },
+  kid: function(){ return { x:kid.position.x, y:kid.position.y, z:kid.position.z, facing:kidState.facing }; },
+  moveKidTo: function(x,z){ kid.position.x=x; kid.position.z=z; kidState.pos.set(x,0,z); },
+  stack: function(){ return stack.map(function(it,i){
+    return { i:i, kind:it.userData.kind,
+             x:+it.position.x.toFixed(3), y:+it.position.y.toFixed(3), z:+it.position.z.toFixed(3),
+             lag:it.userData.tOffset };
+  }); },
+  stackHeight: function(){ return stack.length; },
+  cropRecipes: function(){ var out={}; for(var k in CROP_RECIPES){
+    out[k]={price:CROP_RECIPES[k].price, reward:CROP_RECIPES[k].reward, growSec:CROP_RECIPES[k].growSec};
+  } return out; }
+};
+})();
+</script>
+</body>
+</html>
