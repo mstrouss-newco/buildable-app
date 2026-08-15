@@ -1,5 +1,28 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (FL10 rerun): finishing a quest just puts you back in the sky
+
+Sky Flyer: finishing a side quest used to pop a modal with two buttons — **Do it
+again** and **Keep flying**. Two nearly-identical choices on top of a small win is
+noise for a four-year-old, so the choice is gone. The reward beat still plays
+(sticker, coins, DID YOU KNOW), then the card fades on its own after ~4.5s and
+drops straight back into free flight. A tap anywhere on the card skips the beat.
+
+Files: `public/skyflyer-engine.html`, `qa-skyflyer.mjs`.
+
+- **HTML** — removed the two-button row from the fact card and the now-dead
+  `.sheet .row` CSS. Title stayed on-brand ("Quest done!").
+- **JS** — `showFactCard` now starts a `FACT_BEAT_MS=4500` timer that calls a new
+  `endFactCard()` helper. `endFactCard` clears the timer, sets
+  `declined[JOB.id]=time` so standing on top of the just-finished quest does not
+  re-offer the instant the card closes (you have to fly back to it, exactly like
+  finding it the first time), then calls `closeFactCard()` + `endJob()`.
+- **Quest tile stays standing** — `endJob()` already calls `showScouts()`, which
+  rebuilds every scout from `WORLD_JOBS`, so the completed quest's beam is back
+  in the sky the moment the card closes. Verified by a new QA check.
+- **QA** — added four FL10 checks to `qa-skyflyer.mjs` (no menu; auto-close beat;
+  tap-to-skip; quest still there). All 516 checks pass with `jsdom` installed.
+
 ## 2026-08-15 (fifth pass): more than one phase, and the report lives in the planner
 
 Mike: "I need to be able to run more than one phase" and "put the doc in the planner, I want

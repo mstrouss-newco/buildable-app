@@ -6,6 +6,18 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sky Flyer: finishing a quest just puts you back in the sky (August 15 2026)
+`public/skyflyer-engine.html`, `qa-skyflyer.mjs`. Finishing a side quest used to
+pop a modal with two buttons — Do it again and Keep flying — and asking a small
+kid to pick between them mid-celebration was noise. The choice is gone. The
+reward beat still plays (sticker, coins, DID YOU KNOW), then the card fades on
+its own after ~4.5s and drops straight back into free flight. A tap skips the
+beat. The quest is still standing in the world (`endJob()` rebuilds every scout
+from `WORLD_JOBS`), so playing it again is finding its beam and saying yes —
+exactly like finding it the first time. A small `declined[]` nudge stops the
+offer from re-firing the instant the card closes if you happen to still be
+standing on the pad.
+
 ## Queue several phases, and read the run report in the planner (August 15 2026)
 `api/planner.js`, `public/planner.html`, `scripts/autopilot.mjs`, `scripts/planner.mjs`.
 Tapping "Run this phase" while something is running now lines the new phase up behind it

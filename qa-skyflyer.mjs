@@ -239,6 +239,27 @@ chk('one job asks you to hover, and the tight-turning ride is the one it suits',
 chk('every job ends with a Did You Know card, coins to the SHARED wallet and a badge sticker',
   /function showFactCard\(/.test(html) && /announceCoins\(JOB\.coins\)/.test(html) &&
   /markBadge\(JOB\.id\)/.test(html) && /function badgeSticker\(/.test(html));
+// FL10: the do-it-again / keep-flying MENU is gone. A four-year-old cannot pick
+// between two nearly-identical buttons at the end of a small win, so the reward
+// beat plays and then drops back to free flight on its own. The quest is still
+// standing in the world; playing it again is finding it and saying yes, exactly
+// like finding it the first time. The card is a beat, not a decision.
+chk('FL10: no end-of-quest menu - no Do it again, no Keep flying buttons',
+  !/Do it again/.test(html) && !/Keep flying/.test(html) &&
+  !/id="fcAgain"/.test(html) && !/id="fcFree"/.test(html) &&
+  !/fcAgain\s*=\s*D\.getElementById/.test(html) && !/fcFree\s*=\s*D\.getElementById/.test(html));
+chk('FL10: the reward card closes on its own after a beat, then drops back into free flight',
+  /function endFactCard\(/.test(html) && /setTimeout\(endFactCard,\s*FACT_BEAT_MS\)/.test(html) &&
+  // endFactCard is the single close path: it clears the timer, marks the quest
+  // as asked-recently and calls endJob so the world is free-flight again.
+  /endFactCard[\s\S]{0,180}closeFactCard\(\);\s*endJob\(\)/.test(html));
+chk('FL10: a tap on the reward card skips the beat (in case the grown-up is done)',
+  /factCard\.addEventListener\("click",\s*function\(\)\{\s*endFactCard\(\)/.test(html));
+chk('FL10: the just-finished quest is still there to be found again',
+  // endJob rebuilds every scout from WORLD_JOBS - the quest that just finished
+  // is one of them, so the beam is back in the sky the moment the card closes.
+  /function endJob\([\s\S]{0,1200}showScouts\(\)/.test(html) &&
+  /function showScouts\([\s\S]{0,600}WORLD_JOBS\.forEach/.test(html));
 chk('badges are kept per kid, in the same prefs the journey already reads',
   /p\.badges\[id\]=true/.test(html) && /bk_skyflyer_prefs/.test(html));
 chk('a job can be deep-linked and survives a refresh (?mission=)', /Q\.get\("mission"\)/.test(html) && /Q\.get\("mode"\)/.test(html));

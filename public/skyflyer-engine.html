@@ -159,11 +159,6 @@
     font-weight:700;font-size:15px;line-height:1.45;text-align:left;color:#26506b}
   .sheet .fact b{display:block;font-size:13px;color:#2FB7D6;margin-bottom:4px;letter-spacing:.4px}
   #factCard .paid{font-weight:900;font-size:19px;color:#2b7a4b;margin:2px 0 10px}
-  .sheet .row{display:flex;gap:10px}
-  .sheet .row button{flex:1;border:none;border-radius:999px;padding:13px 10px;
-    font-weight:900;font-size:16px;cursor:pointer;font-family:inherit}
-  .sheet .row .a{background:#2FB7D6;color:#fff}
-  .sheet .row .b{background:#EAF6FB;color:#26506b}
   #offerCard .found{font-weight:900;font-size:13px;color:#2FB7D6;letter-spacing:.5px}
   #offerCard .done{display:inline-block;font-weight:800;font-size:12px;color:#2b7a4b;
     background:#DFF5E4;border-radius:999px;padding:3px 10px;margin-top:6px}
@@ -388,16 +383,15 @@
       <div class="words" id="ofWords"><b>WHAT IT IS</b><span id="ofBlurb"></span><b>HOW IT WORKS</b><span id="ofTip"></span></div>
     </div>
   </div></div>
-  <!-- FL5: every job ends here - a fact, the coins, and a sticker to keep. -->
+  <!-- FL5: every quest ends here - a fact, the coins, and a sticker to keep.
+       FL10: no menu. The reward is shown; then it closes on its own and drops
+       back into free flight. The quest is still standing in the world, so
+       playing it again is finding it and saying yes, like the first time. -->
   <div class="sheet" id="factCard"><div class="inner">
     <div class="sticker" id="fcSticker"></div>
-    <h2 id="fcTitle">Job done!</h2>
+    <h2 id="fcTitle">Quest done!</h2>
     <div class="paid" id="fcPaid">+15 coins banked</div>
     <div class="fact"><b>DID YOU KNOW</b><span id="fcFact"></span></div>
-    <div class="row">
-      <button class="a" id="fcAgain">Do it again</button>
-      <button class="b" id="fcFree">Keep flying</button>
-    </div>
   </div></div>
 </div>
 <script src="/three.min.js"></script>
@@ -3147,9 +3141,7 @@ var coinsEl=D.getElementById("coins"),
     fcSticker=D.getElementById("fcSticker"),
     fcTitle=D.getElementById("fcTitle"),
     fcPaid=D.getElementById("fcPaid"),
-    fcFact=D.getElementById("fcFact"),
-    fcAgain=D.getElementById("fcAgain"),
-    fcFree=D.getElementById("fcFree");
+    fcFact=D.getElementById("fcFact");
 worldNameEl.textContent=world.name;
 // FL3: name the ride on the way in and again every time we sit on a pad, so
 // "pick your ride" is something a kid can SEE they did, not just a setting.
@@ -4097,10 +4089,13 @@ ofBandEl.addEventListener("click",function(e){ if(!e.target.closest("#ofSay")) f
 wpDropEl.addEventListener("click",function(e){ e.stopPropagation(); dropWaypoint(); sfx("select"); });
 waypointEl.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
 minimapEl.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
-// after a job: do it again right here, or go back to flying. Either way the
-// other jobs are back out in the world waiting to be found.
-fcAgain.addEventListener("click",function(){ var m=JOB; closeFactCard(); endJob(); if(m) startJob(m); });
-fcFree.addEventListener("click",function(){ closeFactCard(); endJob(); });
+// FL10: after a quest, the reward card closes on its own after a beat and
+// drops back into free flight. No do-it-again / keep-flying menu — that
+// choice was confusing for a little kid, and the quest is still standing in
+// the world so playing it again is just flying back and saying yes. A tap
+// anywhere on the reward card skips the beat, in case the grown-up wants to
+// keep moving.
+factCard.addEventListener("click",function(){ endFactCard(); });
 
 // ---------- the shared wallet: announce only, never touch shell storage ----------
 function announceCoins(n){
@@ -5120,6 +5115,10 @@ function badgeSticker(name){
     '</svg>'+
     '<div style="font-weight:900;font-size:15px;color:#33566e;margin-top:-4px">'+name+'</div>';
 }
+// FL10: the reward beat is timed. Long enough for a grown-up to read the
+// DID YOU KNOW line aloud and for the coins-and-sticker moment to land, short
+// enough that the kid does not sit staring at a modal. A tap skips it.
+var FACT_BEAT_MS=4500, factCardTimer=null;
 function showFactCard(){
   if(DEMO) return;
   try{
@@ -5129,9 +5128,26 @@ function showFactCard(){
     fcFact.textContent=JOB.fact;
     factCard.style.display="flex";
     S.picking=true;
+    if(factCardTimer){ clearTimeout(factCardTimer); factCardTimer=null; }
+    factCardTimer=setTimeout(endFactCard,FACT_BEAT_MS);
   }catch(e){}
 }
-function closeFactCard(){ try{ factCard.style.display="none"; }catch(e){} S.picking=false; }
+// FL10: the one place the reward card ends. Nudges the just-finished quest
+// onto the "asked recently" list so standing on top of it does not re-offer
+// the instant the card closes — you have to fly back to it, exactly like the
+// first time.
+function endFactCard(){
+  if(factCardTimer){ clearTimeout(factCardTimer); factCardTimer=null; }
+  var jobId=JOB&&JOB.id;
+  if(jobId!=null) declined[jobId]=time;
+  closeFactCard();
+  endJob();
+}
+function closeFactCard(){
+  if(factCardTimer){ clearTimeout(factCardTimer); factCardTimer=null; }
+  try{ factCard.style.display="none"; }catch(e){}
+  S.picking=false;
+}
 
 // ---------- the job step, once per sim frame ----------
 function jobStep(dt){
