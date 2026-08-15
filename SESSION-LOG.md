@@ -34,6 +34,59 @@ logging to `Buildable MVP/runner-logs/laneN.log`. Two lanes by default. It is it
 switch: double-click again and it removes the agents. After this Mike never opens a window —
 he taps "Run this phase" in the planner and that is the whole interface.
 
+## 2026-08-15 (FL13): the world notices you — one rule, three reactions
+
+Sky Flyer used to be a diorama: fly ten feet over a beach full of animals
+and nothing happened. Fixed with ONE rule, not a list of special spots.
+`noticed(x, z)` asks the same three questions of every thing alive — how
+close is the plane, how fast is it going, how low is it — and behaviour
+falls out of the answer. No hand-placed triggers, no per-animal special
+cases, no drawing code that knows a reaction by name.
+
+Files: `public/skyflyer-engine.html`, `src/BuildableKids.jsx` (cache-bust),
+`qa-skyflyer.mjs`.
+
+- **FISH JUMP.** The whoa moment the game was missing. Fly low over open
+  water and a fish arcs out of the sea behind you. Six reactive fish sit
+  in a pool that recycles across the whole world; a spawn wakes one, it
+  runs one arc-and-out cycle (never a loop), and drops back into the pool.
+  Reuses the FL11 hand-built fish — one model, two places.
+- **ANIMALS SCATTER.** Ground animals in the notice ring turn their heads
+  toward the plane; if it comes lower they trot AWAY along their orbit
+  arc. `startle` is a small offset on their existing `ang` that decays
+  back to zero in a couple of seconds. Reuses the AR1Q walk cycle, adds
+  no puppet slots, and every animal is still pinned to its own terrace.
+- **DUST AND SPRAY.** A small puff off the ground when you skim over
+  it low — sand-coloured by default, off-white if a bright world palette
+  ever ships. Throttled to ~3 puffs a second. Never fires over water
+  (the existing sea-skim splash already covers that).
+- **BIRDS LIFT OFF — deliberately skipped.** The animal library has a real
+  Gull model, but every takeoff is one draw call per bird and the AR1Q
+  rule stands: puppet only the nearest 8 things, reactions ride in the
+  same 8. Shipping 1-3 clean beats shipping 4 and busting the budget. The
+  AR1R ban on the four-vertex triangle flock is still guarded by QA.
+
+- **The ONE RULE:** `noticed(x, z)` returns `{ d, alt, look, react, speed }`.
+  `look` is a 0..1 that says "the plane is close and low enough to be
+  noticed at all" (within 90u, under 60u altitude). `react` is a 0..1 that
+  says "the plane is SO close and low the thing actually moves" (within
+  40u, under 30u altitude). Speed factor is bounded to [0.5, 1.4] so a
+  spike cannot cause runaway startle.
+- **The palette grew by ONE key:** `react` -> `sky_splash`. One shared
+  reaction sound the world uses. Never a sound per animal.
+- **Islands-only.** `stepReactions` early-returns on any other terrain, so
+  Snowy Peaks and Sunset Canyon are untouched until AR2 dresses them.
+- **The LAWS hold.** Nothing chases, nothing hurts, nothing can be hit.
+  Reactions are scenery with feelings; the no-lose rule is untouched.
+- **QA guards it.** 14 new checks: the ONE rule is the only dispatch;
+  the reactive fish is one arc and out (else the pool jams); FISH JUMP
+  never spawns over land (`landUnder()` is the gate); ground animals read
+  `startle` in their existing orbit; DUST fires only over land and is
+  throttled; the pool of 6 rides inside the 8-puppet ceiling; the AR1R
+  triangle-flock ban is still enforced. Live checks fly the plane low
+  over water and prove the reactions really fire; fly high and prove they
+  stay cold; land on a pad and prove they never fire out of `fly` mode.
+
 ## 2026-08-15 (FL12): sky trails — lines of rings to fly through
 
 Sky Flyer: every world now carries two or three sky trails — lines of rings

@@ -16,6 +16,35 @@ lanes cannot take the same phase. Plus `Run in the background.command`: launchd 
 lane, RunAtLoad + KeepAlive, logs in `runner-logs/`, and double-clicking it again turns them
 off. No windows to keep open.
 
+## Sky Flyer: the world notices you (August 15 2026)
+`public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
+Fly ten feet over a beach full of animals and something happens now. ONE rule,
+not a list of special spots: `noticed(x, z)` asks the same three questions of
+every thing alive — how close is the plane, how fast is it going, how low is
+it — and behaviour falls out of the answer. No hand-placed triggers, no
+per-animal special cases, no drawing code that knows a reaction by name.
+Three reactions shipped: **FISH JUMP** (fly low over open water and a fish
+arcs out of the sea behind you — six pooled reactive fish, one arc-and-out
+per spawn, never a loop; reuses the FL11 hand-built fish so one model covers
+both the puffin quest and this), **ANIMALS SCATTER** (ground animals in the
+notice ring turn their heads toward the plane; if it comes lower they trot
+away along their orbit arc — reuses the AR1Q walk cycle, adds no puppet slots,
+each animal still pinned to its own terrace), and **DUST AND SPRAY** (a small
+puff off the ground when you skim over it low, throttled to ~3 puffs a second,
+never over water where the wakes already exist). The palette grew by ONE
+key — `react` → `sky_splash` — for one shared reaction sound the whole world
+uses; never a sound per animal. **BIRDS LIFT OFF** was deliberately skipped:
+a real Gull model exists but every takeoff is one draw call per bird and the
+AR1Q rule stands (puppet only the nearest 8, reactions ride in the same 8).
+The AR1R ban on the four-vertex triangle flock is still guarded. Islands-only;
+Snowy Peaks and Sunset Canyon are untouched until AR2. LAWS held: nothing
+chases, nothing hurts, nothing can be hit — reactions are scenery with
+feelings. QA guards it (14 new checks): the ONE rule is the only dispatch;
+FISH JUMP never spawns over land (`landUnder()` is the gate); DUST fires only
+over land; the pool of 6 rides inside the 8-puppet ceiling; live checks fly
+the plane low and prove reactions fire, fly high and prove they stay cold,
+land on a pad and prove they never fire out of `fly` mode.
+
 ## Sky Flyer: sky trails — rings to fly through (August 15 2026)
 `public/skyflyer-engine.html`, `public/buildable-audio.js`, `qa-skyflyer.mjs`.
 Each world now carries two or three lines of rings hanging in the air, chased

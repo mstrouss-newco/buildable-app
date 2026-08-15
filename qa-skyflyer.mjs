@@ -2121,7 +2121,191 @@ console.log('--- FL12 LIVE: rings are placed, flying through them lights and pay
     (()=>{ const t = wp.SKY.arrowTarget(); return !!t && t.x === trs[0].x && t.z === trs[0].z; })());
   wp.close();
 }
+
+// ==========================================================================
+//  FL13 LIVE — the plane flies low, the world reacts. Each check drives the
+//  sim into a specific STATE (low over water, high overhead, still on a pad)
+//  and reads what actually fired through SKY.reactions() / SKY.noticed().
+// ==========================================================================
+console.log('--- FL13 LIVE: one rule, three reactions, real numbers ---');
+{
+  // ---- THE ONE RULE holds for every point in every world ----
+  const d = new JSDOM(page, { runScripts:'dangerously', pretendToBeVisual:false,
+    url:'https://buildablekids.com/skyflyer-engine.html?level=0&auto=0&nodraw=1&manual=1' });
+  const w = d.window;
+  // Drop the plane at 8 units above (0,0) - very low over the origin.
+  w.SKY.state.pos.x = 0; w.SKY.state.pos.y = 8; w.SKY.state.pos.z = 0;
+  const near = w.SKY.noticed(0, 0);
+  chk('FL13: right under a low pass, look AND react are both hot',
+    near.look > 0.6 && near.react > 0.6 && near.d < 1 && near.alt < 20,
+    'd='+near.d.toFixed(1)+' alt='+near.alt.toFixed(1)+' look='+near.look.toFixed(2)+' react='+near.react.toFixed(2));
+  // A thing 200 units away hears nothing at all
+  const far = w.SKY.noticed(200, 200);
+  chk('FL13: 200 units away, the ONE RULE gives zero for both signals (no ambient jitter)',
+    far.look === 0 && far.react === 0);
+  // A high pass right overhead notices the least - this is the "how low"
+  // question, and it must actually gate the reactions.
+  w.SKY.state.pos.y = 100;
+  const high = w.SKY.noticed(0, 0);
+  chk('FL13: high overhead (100u), the same point notices nothing - low matters',
+    high.look === 0 && high.react === 0,
+    'alt='+high.alt.toFixed(0)+' look='+high.look.toFixed(2)+' react='+high.react.toFixed(2));
+  // Speed factor is inside the sensible band [0.5..1.4]
+  chk('FL13: the speed factor is bounded (no runaway startle when the plane spikes)',
+    near.speed >= 0.5 && near.speed <= 1.4, 'speed='+near.speed.toFixed(2));
+  w.close();
 }
+{
+  // ---- A LOW PASS OVER OPEN WATER: fish spawn behind the plane ----
+  const d = fly(0, '');            // Sunny Islands, autopilot ON
+  const w = d.window;
+  w.SKY.autopilot(false);
+  const S = w.SKY.state;
+  // Put the plane over open water, off the spawn - the water at (400,400)
+  // is well away from every island, so a fish spawn there proves the rule
+  // works far from any hand-placed spot.
+  S.pos.x = 400; S.pos.z = 400; S.pos.y = 12; S.yaw = 0; S.speed = 22;
+  for (let k = 0; k < 1400; k++) {
+    // keep the plane pinned low over water
+    S.pos.x = 400 + Math.sin(k*0.02) * 60;
+    S.pos.z = 400 + Math.cos(k*0.02) * 60;
+    S.pos.y = 12; S.speed = 22;
+    w.SKY.tick(1/30);
+    const rs = w.SKY.reactions();
+    if (rs.fish >= 3) break;
+  }
+  const rs = w.SKY.reactions();
+  chk('FL13: a low pass over open water woke reactive fish up',
+    rs.fish >= 3, rs.fish+' fish reactions in a 40s low pass');
+  // Throttle really works: the counter has NOT run away.
+  chk('FL13: fish jumps are throttled - a 40s pass is a scatter, not a torrent',
+    rs.fish <= 60, rs.fish+' spawns in 1400 ticks (~40s)');
+  w.close();
+}
+{
+  // ---- A HIGH PASS: nothing happens (the ONE rule is the gate) ----
+  const d = fly(0, '');
+  const w = d.window;
+  w.SKY.autopilot(false);
+  const S = w.SKY.state;
+  S.pos.x = 400; S.pos.z = 400; S.pos.y = 100; S.yaw = 0; S.speed = 18;
+  for (let k = 0; k < 900; k++){
+    S.pos.x = 400 + Math.sin(k*0.02) * 60;
+    S.pos.z = 400 + Math.cos(k*0.02) * 60;
+    S.pos.y = 100;
+    w.SKY.tick(1/30);
+  }
+  const rs = w.SKY.reactions();
+  chk('FL13: high overhead, THE ONE RULE stays cold - no fish, no dust',
+    rs.fish === 0 && rs.dust === 0,
+    'fish='+rs.fish+' dust='+rs.dust);
+  w.close();
+}
+{
+  // ---- LANDED ON A PAD: no reactions at all (S.mode is not fly) ----
+  const d = fly(0, '');
+  const w = d.window;
+  w.SKY.autopilot(false);
+  w.SKY.state.mode = 'landed';
+  w.SKY.state.pos.x = 400; w.SKY.state.pos.z = 400; w.SKY.state.pos.y = 10;
+  for (let k = 0; k < 300; k++) w.SKY.tick(1/30);
+  const rs = w.SKY.reactions();
+  chk('FL13: parked on the ground, nothing fires - reactions are for FLYING only',
+    rs.fish === 0 && rs.dust === 0,
+    'fish='+rs.fish+' dust='+rs.dust);
+  w.close();
+}
+{
+  // ---- SANITY: the handle wires up and reports numbers for every field ----
+  const d = fly(0, '');
+  const w = d.window;
+  w.SKY.autopilot(true);
+  for (let k = 0; k < 300; k++) w.SKY.tick(1/30);
+  const rs = w.SKY.reactions();
+  chk('FL13: the reactions handle answers with real numbers in every field',
+    typeof rs.fish === 'number' && typeof rs.dust === 'number' &&
+    typeof rs.scatter === 'number' && typeof rs.look === 'number' &&
+    typeof rs.poolSize === 'number' && typeof rs.poolActive === 'number',
+    JSON.stringify(rs));
+  w.close();
+}
+}
+
+// ==========================================================================
+//  FL13 — THE WORLD NOTICES YOU. The static half locks in the ONE RULE: every
+//  reaction reads it through the same noticed(x,z), and the drawing code never
+//  learns a reaction by name. The live half proves each reaction really fires
+//  when the plane is low and close, and never when it is high and far.
+// ==========================================================================
+console.log('--- FL13 STATIC: one rule, three reactions, no hand-placed triggers ---');
+chk('FL13: THE ONE RULE is one function everyone reads (close + fast + low)',
+  /function noticed\(x, z\)\{/.test(html) &&
+  /var d\s*=\s*Math\.sqrt\(dx\*dx \+ dz\*dz\)/.test(html) &&
+  /alt\s*=\s*Math\.max\(0,\s*S\.pos\.y\)/.test(html) &&
+  /return \{ d:d,\s*alt:alt,\s*look:look,\s*react:react,\s*speed:speedK \}/.test(html));
+chk('FL13: nothing in a reaction has a special-case zone - drawing dispatches only on noticed()',
+  // Strip comments first (they are notes, not code). Then guard that no
+  // reaction CODE ever hardcodes an island id, a job id, or a place id.
+  (function(){
+    var r = html.slice(html.indexOf('FL13 — THE WORLD NOTICES YOU'),
+                      html.indexOf('function stepReactions'));
+    r = r.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+    return !/"sunny-islands"|"snowy-peaks"|"sunset-canyon"|"mail-run"|"puffin-parent"|"busy-bee"|"hummingbird-hover"/.test(r);
+  })());
+chk('FL13: the ONE reaction sound is a palette name, never a per-animal call',
+  /react:\s+"sky_splash"/.test(html) &&
+  // only ONE sfx("react") call in the whole engine, and it lives in the reaction block
+  (html.match(/sfx\("react"/g)||[]).length === 1);
+chk('FL13: FISH JUMP reuses the FL11 hand-built fish, one draw call each, pooled and recycled',
+  /function reactBuildFishPool\(\)/.test(html) &&
+  /hbGet\("fish"\)/.test(html.slice(html.indexOf('function reactBuildFishPool'), html.indexOf('function reactFishStep'))) &&
+  /puppet\(f,\s*"fish"\)/.test(html.slice(html.indexOf('function reactBuildFishPool'), html.indexOf('function reactFishStep'))) &&
+  /var REACT_FISH_POOL_SIZE\s*=\s*\d+/.test(html));
+chk('FL13: a reactive fish is ONE ARC AND OUT, never a loop (else the pool would jam)',
+  /kind==="reactJump"/.test(html) &&
+  /if\(!P\.active\)\{ if\(o\.visible\) o\.visible=false; continue; \}/.test(html) &&
+  /\} else \{ o\.visible=false; P\.active=false; P\.spl=0; \}/.test(html));
+chk('FL13: FISH JUMP never spawns over land - landUnder() is the gate',
+  /function landUnder\(x, z\)/.test(html) &&
+  /if\(landUnder\(bx, bz\) != null\) return/.test(html));
+chk('FL13: ANIMALS SCATTER reuses the AR1Q ground orbit; startle offsets its ang, then decays',
+  /P\.startle = \(P\.startle \|\| 0\) \+ sign \* push \* dt \* 6/.test(html) &&
+  /P\.startle \*= Math\.pow\(0\.35, dt\)/.test(html) &&
+  // the ground loop reads startle
+  /var startle = P\.startle \|\| 0/.test(html) &&
+  /P\.ang\+Math\.sin\(t\*0\.5\+P\.ph\)\*P\.arc \+ startle/.test(html));
+chk('FL13: LAND animals look UP toward the plane while noticed (a look, not a chase)',
+  /var toward = 0/.test(html) &&
+  /toward = Math\.atan2\(dzp, dxp\)/.test(html) &&
+  /toward = toward \* Math\.min\(0\.35, look \* 0\.7\)/.test(html));
+chk('FL13: DUST fires only over land, throttled to a few puffs a second, never a fog bank',
+  /function reactDustStep\(dt, t\)/.test(html) &&
+  /if\(S\.pos\.y > 22\) return/.test(html) &&
+  /if\(t - REACT\.lastDust < 0\.28\) return/.test(html) &&
+  /var y = landUnder\(S\.pos\.x, S\.pos\.z\)/.test(html) &&
+  /if\(y == null\) return/.test(html));
+chk('FL13: THE BUDGET IS HELD - pool of 6 reactive fish rides inside the 8-puppet ceiling',
+  /var REACT_FISH_POOL_SIZE\s*=\s*6/.test(html) && /PUP_BUDGET=8/.test(html));
+chk('FL13: BIRDS LIFT OFF is skipped deliberately, and the AR1R triangle-flock ban still holds',
+  // No new bird PET kind, no re-added GULLS/gulls flock system
+  !/GULLS|GULL_N|function buildGulls|function stepGulls/.test(html) &&
+  // the reaction block has a note explaining why #4 is not shipping
+  /BIRDS LIFT OFF — SKIPPED/.test(html));
+chk('FL13: reactions run in the SIM (stepSim), so a headless QA sees them fire',
+  /function stepReactions\(dt, t\)\{[\s\S]{0,400}reactFishStep\(dt, t\);[\s\S]{0,400}reactDustStep\(dt, t\);[\s\S]{0,400}reactScatterStep\(dt, t\);/.test(html) &&
+  /stepReactions\(dt, time\)/.test(html.slice(html.indexOf('function stepSim'), html.indexOf('function stepIslandLife'))));
+chk('FL13: reactions are ISLANDS-ONLY, so AR2 stays untouched',
+  /function stepReactions\(dt, t\)\{\s*\n\s*if\(world\.terrain !== "islands"\) return;/.test(html));
+chk('FL13: nothing here can be hit, nothing chases, no lose state',
+  // Strip comments before scanning. The check guards CODE (no life counter,
+  // no chase target, no attack radius, no expiry field), not the English
+  // words in a note about the LAWS.
+  (function(){
+    var r = html.slice(html.indexOf('FL13 — THE WORLD NOTICES YOU'),
+                       html.indexOf('function drawScene'));
+    r = r.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+    return !/\b(lives|timeLeft|timeLimit|damage|attackR|chaseR|expiresAt|attemptsLeft)\b/.test(r);
+  })());
 
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
 process.exit(ok?0:1);

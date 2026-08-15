@@ -3910,7 +3910,11 @@ var SFX_MAP = {
   // not. These are generic names any delivery game can trigger.
   pickup:  "sky_pickup",    // loading up at the dock
   deliver: "sky_deliver",   // one drop made
-  mission: "sky_mission"    // the whole job finished
+  mission: "sky_mission",   // the whole job finished
+  // FL13: ONE shared reaction sound the world uses. Never a sound per animal —
+  // a low pass over a beach cannot become a wall of noise. Reuses sky_splash
+  // because a soft, watery attention noise is what a splash already is.
+  react:   "sky_splash"
 };
 // The music BED is a manifest slot, not a hardcoded track: audio.music at the
 // root is the game's default and any level may name its own. Both are names in
@@ -6012,6 +6016,10 @@ function stepSim(dt){
   wiggleCargo();
   scoutStep();
   trailStep();
+  // FL13: the world reacts to the plane. Runs in the sim so the state advances
+  // in a headless QA harness too; the visual side inside each reaction gates
+  // itself on the renderer.
+  stepReactions(dt, time);
   hudSlow(dt);
   warmerStep(dt);
 }
@@ -6470,14 +6478,30 @@ function stepPets(dt,t){
     o.getWorldPosition(LIFE_V);
     var near=LIFE_V.distanceToSquared(cam)<PET_SEE2;
     if(!near){ if(o.visible) o.visible=false; continue; }
-    if(P.kind!=="jump"&&!o.visible) o.visible=true;
+    // FL13: reactive fish visibility is driven by its own arc; nothing else
+    // shows or hides it here.
+    if(P.kind!=="jump" && P.kind!=="reactJump" && !o.visible) o.visible=true;
     if(P.kind==="ground"){
       // a short arc at a FIXED distance from the middle, so nothing can ever
-      // wander off its own terrace
-      var na=P.ang+Math.sin(t*0.5+P.ph)*P.arc;
+      // wander off its own terrace. FL13: `startle` shifts that arc AWAY from
+      // the plane briefly, so a low pass makes ground animals trot aside.
+      var startle = P.startle || 0;
+      var na=P.ang+Math.sin(t*0.5+P.ph)*P.arc + startle;
       var x=Math.cos(na)*P.d0, z=Math.sin(na)*P.d0, y=landTop(P.plan,x,z);
       if(y!=null) o.position.set(x,y,z);
-      o.rotation.y=-na+P.turn+Math.cos(t*0.5+P.ph)*0.25;
+      // FL13: a small head-turn toward the plane while noticed — a look-up,
+      // not a chase. Sign is chosen so the head twitches TOWARD the plane.
+      var look = P.look || 0;
+      var toward = 0;
+      if(look > 0){
+        var dxp = S.pos.x - LIFE_V.x, dzp = S.pos.z - LIFE_V.z;
+        toward = Math.atan2(dzp, dxp) - (-na + P.turn);
+        // wrap to (-pi, pi) so a tiny sway doesn't spin the animal
+        while(toward >  Math.PI) toward -= Math.PI*2;
+        while(toward < -Math.PI) toward += Math.PI*2;
+        toward = toward * Math.min(0.35, look * 0.7);
+      }
+      o.rotation.y=-na+P.turn+Math.cos(t*0.5+P.ph)*0.25 + toward;
     } else if(P.kind==="perch"){
       o.position.y=P.base+Math.sin(t*1.6+P.ph)*0.16;
       o.rotation.y+=dt*(Math.sin(t*0.5+P.ph)>0.86?2.2:0);
@@ -6489,6 +6513,17 @@ function stepPets(dt,t){
         if(!P.spl&&j>0.06&&j<0.14){ P.spl=1; burst(new THREE.Vector3(P.x,0.4,P.z),7,splashMat); }
         if(P.spl===1&&j>0.86){ P.spl=2; burst(new THREE.Vector3(P.x,0.4,P.z),7,splashMat); }
       } else { o.visible=false; P.spl=0; }
+    } else if(P.kind==="reactJump"){
+      // FL13: ONE arc and out — never a loop. When done, hides itself and goes
+      // back in the pool for the next reaction to grab.
+      if(!P.active){ if(o.visible) o.visible=false; continue; }
+      P.t+=dt; var ru=P.t/1.4;                // one arc in ~1.4s
+      if(ru<1){ o.visible=true;
+        o.position.set(P.x,-1.2+Math.sin(ru*Math.PI)*3.4,P.z);
+        o.rotation.z=Math.cos(ru*Math.PI)*1.1; o.rotation.y=P.head+1.57;
+        if(!P.spl&&ru>0.06&&ru<0.14){ P.spl=1; burst(new THREE.Vector3(P.x,0.4,P.z),7,splashMat); }
+        if(P.spl===1&&ru>0.86){ P.spl=2; burst(new THREE.Vector3(P.x,0.4,P.z),7,splashMat); }
+      } else { o.visible=false; P.active=false; P.spl=0; }
     } else if(P.kind==="hover"){
       var a1=t*1.5+P.ph;
       o.position.set(P.cx+Math.sin(a1)*2.4, P.base+Math.sin(a1*2)*0.7, P.cz+Math.sin(a1*2)*1.6);
@@ -6729,11 +6764,224 @@ function startLife(){
   if(world.terrain!=="islands"||!renderer) return;
   buildHandMade(); loadAnimals();
   buildSmoke(); buildShadows(); buildWakes();
+  // FL13: the pool of reactive fish is built ONCE, right after the hand-built
+  // fish exists. Six of them recycle across the whole world; nothing new is
+  // allocated when a low pass triggers a jump.
+  reactBuildFishPool();
 }
 // ONE call from the draw loop. Islands only; the other two worlds are AR2.
 function stepIslandLife(dt,t){
   if(world.terrain!=="islands") return;
   stepPuppets(t); stepPets(dt,t); stepLife(dt,t);
+}
+
+// ============================================================================
+//  FL13 — THE WORLD NOTICES YOU
+//
+//  Today you can fly ten feet over a beach full of animals and nothing happens.
+//  Fix that with ONE rule, never a list of special spots: everything alive asks
+//  the SAME THREE QUESTIONS — how close is the plane, how fast is it going,
+//  how low is it — and behaviour falls out of the answer. No hand-placed
+//  triggers anywhere in this file.
+//
+//  Four reactions, cheapest first:
+//    1) FISH JUMP    — fly low over water and fish arc out of the sea behind
+//                      you. Reuses the FL11 hand-built fish, one draw call each,
+//                      pool of six recycled across the whole world.
+//    2) ANIMALS SCATTER — ground animals in the notice ring look up; if you
+//                         come lower they trot away from you and settle back.
+//                         Reuses the AR1Q walk cycle already in code.
+//    3) DUST AND SPRAY — a puff off sand or snow when you fly low over land,
+//                        on top of the wakes that already exist.
+//    4) BIRDS LIFT OFF — SKIPPED for now. Real bird models exist (Gull, in the
+//                        animal library), but every takeoff is one draw call
+//                        per bird and the AR1Q rule stands: eight puppets max,
+//                        reactions ride in the same eight. Ship 1-3 clean and
+//                        leave a note; do NOT re-add the four-vertex flock.
+//
+//  LAWS (do not break, ever):
+//    • Nothing chases, nothing hurts, nothing can be hit.
+//    • Reactions are scenery with feelings. The no-lose rule is untouched.
+//    • ONE shared reaction sound in the palette (`react`), never one per animal.
+// ============================================================================
+var REACT = {
+  // counters QA can read - a reaction happened at all in a headless run
+  fish:0, dust:0, scatter:0, look:0,
+  // throttles, so a long low pass is a scatter of events not a stream
+  lastFish:-99, lastDust:-99, lastReactSfx:-99,
+  // the pool of reactive fish; sized so a low pass never runs it dry
+  pool:[]
+};
+var REACT_FISH_POOL_SIZE = 6;
+var REACT_V = new THREE.Vector3();
+
+// The ONE RULE. Given a point (x,z) in the world, how much does the plane
+// bother it right now? Returns a shape whose numbers everything alive reads
+// the same way, so nothing is ever a special case.
+//   look  0..1  — the plane is close and low enough to be noticed at all
+//   react 0..1  — the plane is SO close and low it actually moves
+//   speed factor — a plane going faster startles more per pass
+// The rings are big enough that a fast low pass sweeps a good chunk of a
+// small island; small enough that a lazy circle at 70u overhead does nothing.
+function noticed(x, z){
+  var dx = S.pos.x - x, dz = S.pos.z - z;
+  var d  = Math.sqrt(dx*dx + dz*dz);
+  var alt = Math.max(0, S.pos.y);
+  var look = 0, react = 0;
+  if(d < 90 && alt < 60) look  = (1 - d/90)  * (1 - alt/60);
+  if(d < 40 && alt < 30) react = (1 - d/40) * (1 - alt/30);
+  var sp = Math.abs(S.speed || FEEL_NOW.speed || 18);
+  var speedK = Math.min(1.4, Math.max(0.5, sp / 22));
+  return { d:d, alt:alt, look:look, react:react, speed:speedK };
+}
+
+// Cheap "is there any land here?" check, scoped to isles in nearby chunks.
+// Returns the land top y, or null over water. Reuses the existing landTop
+// per-plan test; nothing new is being sampled.
+function landUnder(x, z){
+  var key, c, isles, isle, i, wx, wz, ly;
+  for(key in chunks){ c = chunks[key]; isles = c.isles;
+    for(i=0; i<isles.length; i++){
+      isle = isles[i];
+      if(!isle.userData.dress || !isle.userData.dress.plan) continue;
+      wx = c.group.position.x + isle.position.x;
+      wz = c.group.position.z + isle.position.z;
+      // rough gate first: nothing off the isle's own outline can be over its land
+      var gd = Math.hypot(x - wx, z - wz);
+      if(gd > (isle.userData.hitR || 0) + 8) continue;
+      ly = landTop(isle.userData.dress.plan, x - wx, z - wz);
+      if(ly != null) return ly;
+    }
+  }
+  return null;
+}
+
+// The fish pool is built ONCE, at world start, from the shared FL11 fish. Each
+// one is a puppeted mesh sitting hidden below the sea; a reaction wakes one up,
+// it arcs, splashes, and hides itself again. That is ONE arc-and-out cycle, so
+// PET kind is "reactJump" instead of "jump" (which loops forever).
+function reactBuildFishPool(){
+  if(!renderer || world.terrain !== "islands") return;
+  if(REACT.pool.length) return;
+  for(var i=0; i<REACT_FISH_POOL_SIZE; i++){
+    var f = hbGet("fish"); if(!f) break;
+    f.visible = false; scene.add(f);
+    puppet(f, "fish");
+    // The reactive fish reuses the "jump" step in stepPets but as ONE arc, not
+    // a loop. `active:false` means it is dormant and the arc is not stepped.
+    var P = {o:f, kind:"reactJump", active:false, t:0,
+             x:0, z:0, head:0, spl:0};
+    REACT.pool.push(P);
+    PETS.push(P);       // stepPets sees it and animates it while active
+  }
+}
+
+// A fish decides to jump BEHIND the plane over open water. This is the whoa
+// moment the game was missing. Throttled so a slow low run is a scatter of
+// jumps not a wall of them. Never fires over land.
+function reactFishStep(dt, t){
+  // Fish only jump in "fly" mode. On a pad they are as still as the water is.
+  if(S.mode !== "fly") return;
+  if(S.pos.y > 45) return;             // too high — nothing notices
+  if(t - REACT.lastFish < 0.8) return; // one every ~1s of low pass max
+  // Behind the plane, some distance back, with a sideways jitter. `back` is
+  // (sin(yaw), cos(yaw)) — the opposite of the forward vector on line 5975.
+  var back = 42 + Math.random()*36;
+  var side = (Math.random() - 0.5) * 34;
+  var bx = S.pos.x + Math.sin(S.yaw)*back + Math.cos(S.yaw)*side;
+  var bz = S.pos.z + Math.cos(S.yaw)*back - Math.sin(S.yaw)*side;
+  // Never spawn a fish over LAND. A fish arcing out of grass is a bug, not
+  // a feature. This is the ONE water check for FISH JUMP.
+  if(landUnder(bx, bz) != null) return;
+  // The rule has fired — count it. This runs even in a headless harness with
+  // no pool, so QA can prove the ONE RULE reached the world.
+  REACT.fish++; REACT.lastFish = t;
+  // ONE shared reaction sound, throttled at the palette level too
+  if(t - REACT.lastReactSfx > 0.6){
+    REACT.lastReactSfx = t; sfx("react", {vol: 0.35 + Math.random()*0.2});
+  }
+  // find the first dormant fish and wake it up (visual side; the pool only
+  // exists when there is a renderer)
+  for(var i=0; i<REACT.pool.length; i++){
+    var P = REACT.pool[i]; if(P.active) continue;
+    P.active = true; P.t = 0; P.spl = 0;
+    P.x = bx; P.z = bz;
+    // point the fish AT the plane, so a kid sees it arc toward them
+    P.head = Math.atan2(S.pos.x - bx, S.pos.z - bz);
+    P.o.position.set(bx, -1.2, bz); P.o.visible = false;
+    return;
+  }
+}
+
+// Dust and spray: a puff off the ground when you skim over it low. Rides the
+// existing burst() particles — one call per puff, throttled so a low run over
+// a big island is not a fog bank. Sand-coloured over the beach, off-white
+// otherwise (there is no snow on the islands world, so this is spray+dust in
+// practice). Never fires over water — the sea-skim splash already covers that.
+var REACT_DUST_MAT = new THREE.MeshBasicMaterial({color:0xE9D6A8});
+var REACT_SPRAY_MAT = new THREE.MeshBasicMaterial({color:0xF6F0DE});
+function reactDustStep(dt, t){
+  if(S.mode !== "fly") return;
+  if(S.pos.y > 22) return;              // low pass only
+  if(t - REACT.lastDust < 0.28) return; // ~3 puffs a second max
+  var y = landUnder(S.pos.x, S.pos.z);
+  if(y == null) return;                 // over sea — the wakes already handle it
+  // A puff behind and just above the ground the plane just cleared. Colour
+  // picks the world palette leaf-vs-cap so a snowy world (AR2) inherits the
+  // right colour if this ever ships to peaks: the mat colour is read once,
+  // never per particle, so the palette rule holds.
+  var back = 18 + Math.random()*10;
+  var bx = S.pos.x + Math.sin(S.yaw)*back;
+  var bz = S.pos.z + Math.cos(S.yaw)*back;
+  var mat = (world.cap != null && (world.cap & 0xFFFFFF) > 0xC0C0C0) ? REACT_SPRAY_MAT : REACT_DUST_MAT;
+  REACT_V.set(bx, y + 0.4, bz);
+  burst(REACT_V, 4, mat);
+  REACT.dust++; REACT.lastDust = t;
+}
+
+// Animals scatter: fold into the ground-pet loop already running in stepPets.
+// This function only maintains the STARTLE STATE — the actual position tweak
+// happens where the ground orbit already runs, so a scattered animal never
+// falls off its own terrace.
+function reactScatterStep(dt, t){
+  for(var i=0; i<PETS.length; i++){
+    var P = PETS[i]; if(P.kind !== "ground") continue;
+    P.o.getWorldPosition(REACT_V);
+    var n = noticed(REACT_V.x, REACT_V.z);
+    // The lookup is the cheap side: a look-up flag drives a small head-turn
+    // where the ground pets already breathe (in stepPets).
+    P.look = n.look;
+    if(n.react > 0.08){
+      // Push the animal's orbit angle AWAY from the plane, decaying back over
+      // a few seconds. Sign is chosen so it slides along the tier away from
+      // where the plane is, never toward it.
+      var awayX = REACT_V.x - S.pos.x, awayZ = REACT_V.z - S.pos.z;
+      var awayAng = Math.atan2(awayZ, awayX);
+      // startle is a small offset on the pet's own `ang`, capped so it can
+      // never wrap all the way round the isle
+      var push = 0.35 * n.react * n.speed;
+      var sign = (Math.sin(awayAng - P.ang) >= 0) ? 1 : -1;
+      P.startle = (P.startle || 0) + sign * push * dt * 6;
+      // clamp so a slow long pass cannot push forever
+      if(P.startle > 0.9) P.startle = 0.9;
+      if(P.startle < -0.9) P.startle = -0.9;
+      REACT.scatter++;
+    } else if(P.startle){
+      // decay back to zero — the animal settles into its arc again
+      P.startle *= Math.pow(0.35, dt);
+      if(Math.abs(P.startle) < 0.002) P.startle = 0;
+    }
+    if(n.look > 0) REACT.look++;
+  }
+}
+
+// ONE call from the sim, so the state advances whether or not there is a
+// renderer. Runs on the islands world only; AR2 stays untouched.
+function stepReactions(dt, t){
+  if(world.terrain !== "islands") return;
+  reactFishStep(dt, t);
+  reactDustStep(dt, t);
+  reactScatterStep(dt, t);
 }
 
 function drawScene(dt){
@@ -7226,6 +7474,24 @@ window.SKY={
             budget:PUP_BUDGET, fires:FIRES.length, sway:SWAY.length,
             flags:WAVERS.length, surf:SURF.length, travel:TRAVEL.length,
             shadows:!!SHADOWS, wakes:!!WAKES, smoke:!!SMOKE, coinGlows:COIN_GLOWS.length}; },
+  // FL13 — the ONE RULE, exposed for a harness to prove against any point.
+  // A test can drop the plane at a chosen altitude, ask for (x,z) on the
+  // beach, and check the three numbers grow the way the card says.
+  noticed:function(x,z){ return noticed(x,z); },
+  reactions:function(){
+    // scattered-animals count is what stepPets is doing right now — read it
+    // fresh so a QA harness that has just flown a pass sees the truth.
+    var scattered = 0, looking = 0, i;
+    for(i=0;i<PETS.length;i++){
+      var P=PETS[i]; if(P.kind!=="ground") continue;
+      if(P.startle && Math.abs(P.startle) > 0.01) scattered++;
+      if(P.look && P.look > 0.02) looking++;
+    }
+    var poolActive = 0;
+    for(i=0;i<REACT.pool.length;i++) if(REACT.pool[i].active) poolActive++;
+    return { fish:REACT.fish, dust:REACT.dust, scatter:REACT.scatter,
+             look:REACT.look, poolSize:REACT.pool.length,
+             poolActive:poolActive, groundNow:scattered, lookingNow:looking }; },
   // every animal's world position and what it is standing on, so the flat-ground
   // law can be checked on the BUILT world exactly like isleStand does for props
   zooStand:function(){
