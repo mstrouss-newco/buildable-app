@@ -1,3 +1,5 @@
 node_modules
 dist
 PUSH-TOKEN.txt
+
+.autopilot-heartbeat

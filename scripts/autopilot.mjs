@@ -22,6 +22,7 @@
 // not marked done afterwards. That is deliberate. A chain that ploughs past a
 // half-finished card builds the next card on top of broken work.
 import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 
 const API = process.env.PLANNER_URL || 'https://www.buildablekids.com/api/planner';
 // Permission baseline for each spawned session. `acceptEdits` auto-approves file
@@ -52,11 +53,28 @@ const POLL_SECONDS = 20;
 let PHASE = val('phase', null);
 let MAX = Math.max(1, parseInt(val('max', DEFAULT_MAX), 10) || DEFAULT_MAX);
 
-async function roadmap() {
-  const r = await fetch(API + '?scope=roadmap', { headers: { 'Cache-Control': 'no-store' } });
-  const j = await r.json().catch(() => ({}));
-  if (!j.ok) die('could not read the planner (' + (j.error || r.status) + ')');
-  return j;
+// `soft` returns null instead of exiting. The watch loop must never be killed by
+// one flaky read: die() calls process.exit, which no try/catch can catch.
+async function roadmap(soft) {
+  try {
+    const r = await fetch(API + '?scope=roadmap', { headers: { 'Cache-Control': 'no-store' } });
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'http ' + r.status);
+    return j;
+  } catch (e) {
+    if (soft) return null;
+    die('could not read the planner (' + (e.message || e) + ')');
+  }
+}
+
+// A file the watcher touches every poll, so "is it actually running?" can be
+// answered by looking rather than by asking. Gitignored.
+function heartbeat(state) {
+  try {
+    writeFileSync('.autopilot-heartbeat', JSON.stringify({
+      at: new Date().toISOString(), pid: process.pid, state,
+    }) + '\n');
+  } catch { /* a read-only checkout should not stop the run */ }
 }
 async function fullCard(id) {
   const r = await fetch(API, { headers: { 'Cache-Control': 'no-store' } });
@@ -218,11 +236,20 @@ if (MANUAL) {
 } else if (WATCH) {
   say('Waiting for a phase. Open the planner and tap "Run this phase" on any phase.');
   say('Close this window to stop.\n');
-  let idle = true;
+  let ticks = 0;
   for (;;) {
-    let ar = null;
-    try { ar = (await roadmap()).autorun; } catch { /* offline; try again shortly */ }
+    const rm = await roadmap(true);
+    const ar = rm && rm.autorun;
+    heartbeat(ar && ar.status === 'waiting' ? 'picking-up' : rm ? 'waiting' : 'planner-unreachable');
+    if (!rm) {
+      say(`[${new Date().toLocaleTimeString()}] cannot reach the planner. Still trying.`);
+    } else if (!ar || ar.status !== 'waiting') {
+      // A visible pulse, so a waiting window never looks like a dead one.
+      ticks++;
+      if (ticks === 1 || ticks % 6 === 0) say(`[${new Date().toLocaleTimeString()}] waiting. Nothing queued yet.`);
+    }
     if (ar && ar.status === 'waiting') {
+      ticks = 0;
       PHASE = String(ar.phase);
       MAX = Math.max(1, parseInt(ar.max, 10) || DEFAULT_MAX);
       say(`\nPicked up phase ${PHASE} from the planner (up to ${MAX} card${MAX === 1 ? '' : 's'}).`);
@@ -231,9 +258,6 @@ if (MANUAL) {
       await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
         r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason);
       say('\nBack to waiting. Tap another phase in the planner when you are ready.\n');
-      idle = true;
-    } else if (idle) {
-      idle = false; // say nothing further until something actually happens
     }
     await new Promise((r) => setTimeout(r, POLL_SECONDS * 1000));
   }

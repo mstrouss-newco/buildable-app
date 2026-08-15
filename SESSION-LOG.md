@@ -1,5 +1,27 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (third pass): the watcher could die silently
+
+Mike tapped "Run this phase" on FL and nothing happened. The planner side was perfect —
+`autorun` recorded, six open cards, status still `waiting`, which by definition means no
+runner was listening. Two things made that far harder to diagnose than it should have been,
+and both are now fixed.
+
+### A single flaky read killed the watcher
+`roadmap()` called `die()` on any bad response, and `die()` is `process.exit(1)`, which **no
+try/catch can catch**. The watch loop wrapped the call in `try/catch` and believed it was
+safe. It was not: one blip from the planner and the window went quiet forever, looking
+exactly like a window that was still waiting. `roadmap(soft)` now returns null instead, the
+loop reports "cannot reach the planner. Still trying." and carries on. Verified by killing
+the planner under a live watcher and restarting it — the watcher survived, recovered, and
+picked up the next queued phase.
+
+### A waiting window and a dead window looked identical
+The watcher now prints a timestamped pulse (first poll, then every sixth) and writes
+`.autopilot-heartbeat` (gitignored) with a timestamp, pid and state on every poll. So
+"is it actually running?" is now answered by looking at a file rather than by asking Mike
+to describe his screen.
+
 ## 2026-08-15 (later): the planner drives the runner
 
 Follow-on from the autopilot runner. Two problems with the first version, both found by
