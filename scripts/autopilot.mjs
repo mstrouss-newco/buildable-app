@@ -9,6 +9,8 @@
 //
 //   npm run cards -- --watch       WAIT for a phase to be queued from the planner,
 //                                  work it, then go back to waiting. Leave it open.
+//   npm run cards -- --watch --lane 2   a second lane, in its OWN clone of the repo.
+//                                  The server hands each phase to exactly one lane.
 //   npm run cards                  work whatever the planner has queued, then stop
 //   npm run cards -- --phase LP    ignore the planner, work phase LP now
 //   npm run cards -- --card LP4    one named card
@@ -54,6 +56,7 @@ if ((process.env.CLAUDECODE || process.env.CLAUDE_CODE_ENTRYPOINT) && !has('forc
 const ONLY = val('card', null);
 const TURNS = val('turns', null);
 const WATCH = has('watch');
+const LANE = String(val('lane', process.env.AUTOPILOT_LANE || '1'));
 const POLL_SECONDS = 20;
 // --phase / --card are manual overrides. Everything else comes from the planner.
 let PHASE = val('phase', null);
@@ -183,7 +186,7 @@ function runSession(prompt) {
 async function setStatus(status, extra) {
   try {
     await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ op: 'queueStatus', status, phase: PHASE, ...(extra || {}) }) });
+      body: JSON.stringify({ op: 'queueStatus', status, lane: LANE, phase: PHASE, ...(extra || {}) }) });
   } catch { /* the run matters more than the status light */ }
 }
 
@@ -251,7 +254,7 @@ async function workRun() {
       if (existsSync('AUTOPILOT-REPORT.md')) {
         const text = readFileSync('AUTOPILOT-REPORT.md', 'utf8').slice(0, 6000);
         await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ op: 'report', card: card.id, phase: PHASE || card.phaseNum, text }) });
+          body: JSON.stringify({ op: 'report', card: card.id, phase: PHASE || card.phaseNum, lane: LANE, text }) });
       }
     } catch { /* a missing report is not a reason to stop */ }
     await setStatus('running', { note: `${card.id} finished`, card: '', cardName: '', startedAt: null, done: doneCount, total, finished });
@@ -282,68 +285,54 @@ if (MANUAL) {
   report(await workRun());
 
 } else if (WATCH) {
-  say('Waiting for a phase. Open the planner and tap "Run this phase" on any phase.');
+  say(`Lane ${LANE} is waiting. Open the planner and tap "Run this phase" on any phase.`);
   say('Close this window to stop.\n');
   let ticks = 0;
   for (;;) {
-    const rm = await roadmap(true);
-    const ar = rm && rm.autorun;
-    heartbeat(ar && ar.status === 'waiting' ? 'picking-up' : rm ? 'waiting' : 'planner-unreachable');
-    if (!rm) {
+    // Claiming is the ONLY way a lane starts a phase, and the server hands each
+    // phase to exactly one lane. That is what makes several lanes safe: they can
+    // poll at the same instant and still never take the same work.
+    let next = null, reachable = true;
+    try {
+      next = (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'claim', lane: LANE }) }).then((x) => x.json())).next;
+    } catch { reachable = false; }
+
+    heartbeat(next ? 'claimed ' + next.phase : reachable ? 'waiting' : 'planner-unreachable');
+    if (!reachable) {
       say(`[${new Date().toLocaleTimeString()}] cannot reach the planner. Still trying.`);
-    } else if (!ar || ar.status !== 'waiting') {
-      // A visible pulse, so a waiting window never looks like a dead one.
+    } else if (!next) {
       ticks++;
-      if (ticks === 1 || ticks % 6 === 0) say(`[${new Date().toLocaleTimeString()}] waiting. Nothing queued yet.`);
-    }
-    if (ar && ar.status === 'waiting') {
+      if (ticks === 1 || ticks % 6 === 0) say(`[${new Date().toLocaleTimeString()}] lane ${LANE} waiting. Nothing queued yet.`);
+    } else {
       ticks = 0;
-      PHASE = String(ar.phase);
-      MAX = Math.max(1, parseInt(ar.max, 10) || DEFAULT_MAX);
-      say(`\nPicked up phase ${PHASE} from the planner (up to ${MAX} card${MAX === 1 ? '' : 's'}).`);
-      let r = await workRun();
+      PHASE = String(next.phase);
+      MAX = Math.max(1, parseInt(next.max, 10) || DEFAULT_MAX);
+      say(`\nLane ${LANE} took phase ${PHASE} (up to ${MAX} card${MAX === 1 ? '' : 's'}).`);
+      const r = await workRun();
       report(r);
       await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
         { note: r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason,
           card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
-
-      // More than one phase can be lined up. Only carry on to the next one if this
-      // phase actually finished — a stop means something wants looking at, and the
-      // rest of the queue waits rather than piling more work on top of a problem.
-      while (r.reason === 'finished') {
-        let nxt = null;
-        try {
-          nxt = (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ op: 'nextPhase' }) }).then((x) => x.json())).next;
-        } catch { break; }
-        if (!nxt) break;
-        PHASE = String(nxt.phase);
-        MAX = Math.max(1, parseInt(nxt.max, 10) || DEFAULT_MAX);
-        say(`\nNext phase in the queue: ${PHASE} (up to ${MAX}).`);
-        r = await workRun();
-        report(r);
-        await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
-          { note: r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason,
-            card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
-      }
-      if (r.reason !== 'finished') say('\nStopped, so anything else lined up is left alone until you look.');
-      say('\nBack to waiting. Tap another phase in the planner when you are ready.\n');
+      say(`\nLane ${LANE} back to waiting.\n`);
+      continue;   // claim again straight away rather than sleeping on an idle queue
     }
     await new Promise((r) => setTimeout(r, POLL_SECONDS * 1000));
   }
 
 } else {
-  // One shot: work whatever the planner already has queued, then stop.
-  const ar = (await roadmap()).autorun;
-  if (!ar || !ar.phase || ar.status === 'done' || ar.status === 'stopped') {
+  // One shot: take whatever is queued, work it, stop.
+  const next = (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'claim', lane: LANE }) }).then((x) => x.json()).catch(() => ({}))).next;
+  if (!next) {
     say('Nothing queued in the planner.\n');
     say('Open the planner, tap "Run this phase" on the phase you want worked, then run');
     say('this again. Or leave it running with --watch and it will pick phases up for you.');
     process.exit(0);
   }
-  PHASE = String(ar.phase);
-  MAX = Math.max(1, parseInt(ar.max, 10) || DEFAULT_MAX);
-  say(`Phase ${PHASE} from the planner (up to ${MAX} card${MAX === 1 ? '' : 's'}).`);
+  PHASE = String(next.phase);
+  MAX = Math.max(1, parseInt(next.max, 10) || DEFAULT_MAX);
+  say(`Lane ${LANE} took phase ${PHASE} (up to ${MAX} card${MAX === 1 ? '' : 's'}).`);
   const r = await workRun();
   report(r);
   await setStatus(r.reason === 'finished' ? 'done' : 'stopped',

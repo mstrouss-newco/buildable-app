@@ -916,10 +916,10 @@ async function rmRunPhase(num){
     return;
   }
   rmAutorun=r.autorun; rmReports=rmReports; renderAutorun(); rmAutorunPoll();
-  if(r.queuedBehind) alert("A run is already going, so phase "+num+" is lined up behind it. It will start on its own.");
+  if(r.waiting) alert("Phase "+num+" is queued. A free lane will take it within about half a minute.\n\nNo lane running? Double-click \"Work the roadmap\" on your Mac. Double-click it again for a second lane.");
 }
-async function rmCancelRun(phase){
-  const r=await apiPost(phase?{op:"unqueue",phase:phase}:{op:"unqueue"});
+async function rmCancelRun(phase,lane){
+  const r=await apiPost(lane?{op:"unqueue",lane:lane}:(phase?{op:"unqueue",phase:phase}:{op:"unqueue"}));
   if(r.ok){ rmAutorun=r.autorun||null; renderAutorun(); }
 }
 
@@ -950,56 +950,49 @@ function ago(iso){
 function renderAutorun(){
   const el=document.getElementById("autorun-bar"); if(!el) return;
   const a=rmAutorun;
-  if(!a||!a.phase){ el.innerHTML=""; return; }
+  const lanes=a&&a.lanes?Object.keys(a.lanes).sort():[];
+  const waiting=a&&a.queued?a.queued:[];
+  if(!lanes.length&&!waiting.length){ el.innerHTML=""; return; }
 
-  const finished=(a.finished||[]);
-  const inPhase=rmAutorunCards.filter(c=>String(c.phaseNum)===String(a.phase));
-  const upNext=inPhase.filter(c=>c.state==="open"&&c.id!==a.card);
-  const later=(a.queued||[]);
-  const laterLine=later.length?line("Then", later.map((q,i)=>'<b>Phase '+esc(q.phase)+'</b> <span class="x" style="cursor:pointer;opacity:.5" title="Drop this one" onclick="rmCancelRun('+JSON.stringify(q.phase)+')">&#10005;</span>').join(" &nbsp; ")):"";
-  const reportLine=rmReports.length?line("Report", rmReports.slice(0,4).map((r,i)=>'<a href="#" onclick="openReport('+i+');return false" style="color:#4a5fd0">'+esc(r.card||"run")+'</a>').join(" &nbsp; ")+' <span style="opacity:.5;font-size:12px">what the session wrote for you</span>'):"";
   const cardOf=id=>rmAutorunCards.find(c=>c.id===id);
   const line=(label,body)=>'<div style="display:flex;gap:10px;margin-top:6px"><span style="flex:0 0 62px;opacity:.65">'+label+'</span><span style="flex:1">'+body+'</span></div>';
 
-  if(a.status==="done"||a.status==="stopped"){
-    const good=a.status==="done";
-    el.innerHTML='<div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;'
-      +'background:'+(good?"#eaf7ef":"#fdeeee")+';border:1px solid '+(good?"#bde5cb":"#f3c9c9")+'">'
-      +'<b>Phase '+esc(a.phase)+' '+(good?"finished":"stopped")+'.</b> '+esc(a.note||"")
-      +'<button class="btn mini" style="float:right" onclick="rmCancelRun()">Clear</button>'
-      +(finished.length?line("Shipped", finished.map(id=>{const c=cardOf(id);return '<b>'+esc(id)+'</b> '+esc(c?c.name:"");}).join("<br>")):"")
-      +reportLine
+  /* One block per lane that is actually working, then whatever is still waiting. */
+  let html='<div style="margin-bottom:14px">';
+  for(const k of lanes){
+    const L=a.lanes[k];
+    const stale=L.lastSeen&&(Date.now()-new Date(L.lastSeen).getTime())>3*60*1000;
+    const done=(L.status==="done"||L.status==="stopped");
+    const good=L.status==="done";
+    const bg=done?(good?"#eaf7ef":"#fdeeee"):(stale?"#fdeeee":"#eef3ff");
+    const bd=done?(good?"#bde5cb":"#f3c9c9"):(stale?"#f3c9c9":"#c6d4f5");
+    const inPhase=rmAutorunCards.filter(c=>String(c.phaseNum)===String(L.phase));
+    const upNext=inPhase.filter(c=>c.state==="open"&&c.id!==L.card);
+    const fin=(L.finished||[]);
+    const cur=cardOf(L.card);
+    html+='<div style="padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;margin-bottom:8px;background:'+bg+';border:1px solid '+bd+'">'
+      +'<b>Lane '+esc(k)+' &middot; phase '+esc(L.phase)+'</b>'
+      +(done?' <b>'+(good?"finished":"stopped")+'.</b> '+esc(L.note||""):' <span style="opacity:.7">'+(L.done||0)+' done this run</span>')
+      +'<button class="btn mini" style="float:right" onclick="rmCancelRun(null,'+JSON.stringify(k)+')">'+(done?"Clear":"Stop after this card")+'</button>'
+      +(done?"":line("Now", L.card?('<b>'+esc(L.card)+'</b> '+esc(cur?cur.name:L.cardName||"")+' <span style="opacity:.6">&middot; '+ago(L.startedAt)+'</span>'):esc(L.note||"starting…")))
+      +(done?"":(upNext.length?line("Next", upNext.slice(0,5).map(c=>esc(c.id)).join(" &middot; ")):line("Next","nothing else open in this phase")))
+      +(fin.length?line("Done", fin.map(id=>{const c=cardOf(id);return '<b>'+esc(id)+'</b> '+esc(c&&c.lastNote?c.lastNote:(c?c.name:""));}).join("<br>")):"")
+      +(done?"":(stale?line('<span style="color:#b23">!</span>','<span style="color:#b23">Lane '+esc(k)+' has not checked in for '+ago(L.lastSeen)+'. Its window may have been closed.</span>')
+                     :line("",'<span style="opacity:.55;font-size:13px">checked in '+ago(L.lastSeen)+' ago</span>')))
       +'</div>';
-    return;
   }
-
-  if(a.status==="waiting"){
-    el.innerHTML='<div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;'
-      +'background:#fff7e6;border:1px solid #f0d9a8">'
-      +'<b>Phase '+esc(a.phase)+' is queued.</b> Waiting for a runner &mdash; open “Work the roadmap” on your Mac.'
-      +'<button class="btn mini" style="float:right" onclick="rmCancelRun()">Cancel</button>'
-      +(upNext.length?line("Will do", upNext.slice(0,6).map(c=>'<b>'+esc(c.id)+'</b> '+esc(c.name)).join("<br>")):"")
-      +laterLine
+  if(waiting.length){
+    html+='<div style="padding:10px 14px;border-radius:12px;font-size:14px;background:#fff7e6;border:1px solid #f0d9a8">'
+      +'<b>Waiting for a lane:</b> '
+      +waiting.map(q=>'<b>Phase '+esc(q.phase)+'</b> <span class="x" style="cursor:pointer;opacity:.5" title="Drop this one" onclick="rmCancelRun('+JSON.stringify(q.phase)+')">&#10005;</span>').join(" &nbsp; ")
+      +'<div style="opacity:.6;font-size:13px;margin-top:4px">Open another "Work the roadmap" window and it will take one of these.</div>'
       +'</div>';
-    return;
   }
-
-  /* running */
-  const stale=a.lastSeen&&(Date.now()-new Date(a.lastSeen).getTime())>3*60*1000;
-  const cur=cardOf(a.card);
-  el.innerHTML='<div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;'
-    +'background:'+(stale?"#fdeeee":"#eef3ff")+';border:1px solid '+(stale?"#f3c9c9":"#c6d4f5")+'">'
-    +'<b>Working phase '+esc(a.phase)+'</b>'
-    +' <span style="opacity:.7">'+(a.done||0)+' of '+(a.total||inPhase.filter(c=>c.state!=="later").length)+' done this run</span>'
-    +'<button class="btn mini" style="float:right" onclick="rmCancelRun()">Stop after this card</button>'
-    +line("Now", a.card?('<b>'+esc(a.card)+'</b> '+esc(cur?cur.name:a.cardName||"")+' <span style="opacity:.6">&middot; '+ago(a.startedAt)+'</span>'):esc(a.note||"starting…"))
-    +(upNext.length?line("Next", upNext.slice(0,5).map(c=>esc(c.id)).join(" &middot; ")):line("Next","nothing else open in this phase"))
-    +laterLine
-    +(finished.length?line("Done", finished.map(id=>{const c=cardOf(id);return '<b>'+esc(id)+'</b> '+esc(c&&c.lastNote?c.lastNote:(c?c.name:""));}).join("<br>")):"")
-    +reportLine
-    +(stale?line("<span style=\"color:#b23\">!</span>",'<span style="color:#b23">The runner has not checked in for '+ago(a.lastSeen)+'. Its window may have been closed.</span>')
-           :line("",'<span style="opacity:.55;font-size:13px">runner checked in '+ago(a.lastSeen)+' ago</span>'))
-    +'</div>';
+  if(rmReports.length){
+    html+='<div style="font-size:13px;opacity:.75;margin-top:6px">Reports: '
+      +rmReports.slice(0,5).map((r,i)=>'<a href="#" onclick="openReport('+i+');return false" style="color:#4a5fd0">'+esc(r.card||"run")+'</a>').join(" &nbsp; ")+'</div>';
+  }
+  el.innerHTML=html+'</div>';
 }
 async function rmAutorunPoll(){
   try{

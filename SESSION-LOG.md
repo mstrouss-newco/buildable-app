@@ -133,6 +133,51 @@ Files: `public/skyflyer-engine.html`, `qa-skyflyer.mjs`.
 - **QA** — added four FL10 checks to `qa-skyflyer.mjs` (no menu; auto-close beat;
   tap-to-skip; quest still there). All 516 checks pass with `jsdom` installed.
 
+## 2026-08-15 (sixth pass): parallel lanes, each in its own clone
+
+Mike opened FOUR runner windows at once, in the SAME folder, and three of them claimed
+different phases and started building. That was seconds away from a real mess: every
+session runs `git add -A` before committing, so one lane would have scooped up another
+lane's half-finished edits and pushed them inside its own commit, and they would have
+fought over `.git/index.lock` continuously. Told him to close three immediately.
+
+**The problem was never the runner, it was the folder.** So lanes now get their own.
+
+### The shape
+`autorun = { queued:[{phase,max}], lanes:{ "1":{phase,card,...}, "2":{...} } }`.
+Tapping "Run this phase" only ever appends to `queued`. A lane starts work by calling
+`op:'claim'`, which pops one phase and assigns it to that lane **server-side**. That
+atomicity is the whole safety story: two lanes polling in the same instant cannot walk away
+with the same phase. Verified with a simultaneous `Promise.all` of two claims — lane 1 got
+LP, lane 2 got 7, lane 3 got null.
+
+`op:'queueStatus'` and `op:'report'` now carry a `lane`, and a report for a phase the lane
+no longer holds is ignored rather than overwriting a newer one. `op:'unqueue'` takes a
+`lane` (release just that lane), a `phase` (drop it wherever it is), or nothing (clear all).
+Old single-phase records are folded into lane "1" by `normAutorun` so nothing live was lost.
+
+### The launcher finds its own lane
+Double-click it again and it opens the NEXT lane, up to four. It picks the first lane whose
+`.autopilot-lane.lock` does not name a live process (`kill -0`), and for lanes 2+ it clones
+the repo into `buildable-lane2/3/4` on first use — a local clone, so it hardlinks objects
+and costs little. The lock is released by a `trap` on EXIT/INT/TERM, so a closed window
+frees its lane. If all four are busy it says so instead of piling on.
+
+Clones rather than `git worktree`, deliberately: worktrees refuse to check out `main` twice,
+and every workaround (detached HEAD, per-lane branches) changes what `git push` means inside
+a session. A clone behaves exactly like the original, so sessions need to know nothing.
+
+### The panel is per lane
+One block per working lane — its phase, the card it is on with a ticking clock, what is next
+in that phase, what it has finished, and its check-in age — plus a "Waiting for a lane" row
+for queued phases with an x each, and the report links underneath.
+
+### Verified
+Two watchers started, two phases queued a moment later, each lane took a different one and
+worked it to completion without touching the other. Plus the simultaneous-claim race,
+lane-scoped status updates, stale-report rejection, and releasing one lane leaving the
+other alone.
+
 ## 2026-08-15 (fifth pass): more than one phase, and the report lives in the planner
 
 Mike: "I need to be able to run more than one phase" and "put the doc in the planner, I want

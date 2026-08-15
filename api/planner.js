@@ -12,8 +12,8 @@
 // POST { op:'addCard', card }      -> add a card to a phase
 // POST { op:'flagReview', id, val } -> older alias for fields:{needsReview}
 // POST { op:'queue', phase, max }  -> "run this phase" (the planner page's button)
-// POST { op:'unqueue', phase? }    -> drop one queued phase, or all of them
-// POST { op:'nextPhase' }          -> runner promotes the next lined-up phase
+// POST { op:'unqueue', phase?/lane? } -> drop one phase, one lane, or everything
+// POST { op:'claim', lane }        -> a lane taking the next queued phase (atomic)
 // POST { op:'report', card, text } -> a finished session's plain-language write-up
 // GET ?scope=report&n=0            -> read one stored report
 // POST { op:'queueStatus', status } -> the runner reporting waiting/running/done/stopped
@@ -47,6 +47,16 @@ async function writeMeta(data) {
   const r = await fetch(`${URL}/rest/v1/planner_meta?id=eq.1`, { method: "PATCH", headers: H, body: JSON.stringify({ data }) });
   if (!r.ok) throw new Error("meta write " + r.status + " " + (await r.text().catch(() => "")).slice(0, 120));
 }
+// Older records were a single {phase,max,status,...}. Fold them into lane "1" so a
+// run that was live when this shipped is not lost.
+function normAutorun(a) {
+  if (!a) return { queued: [], lanes: {} };
+  if (a.lanes || a.queued) return { queued: a.queued || [], lanes: a.lanes || {} };
+  const lanes = {};
+  if (a.phase && (a.status === "running" || a.status === "waiting")) lanes["1"] = { ...a, status: "running" };
+  return { queued: [], lanes };
+}
+const liveOrNull = (a) => (a.queued.length || Object.keys(a.lanes).length ? a : null);
 const cardsOf = (d) => (d.roadmap && Array.isArray(d.roadmap.sessions) ? d.roadmap.sessions : null);
 
 export default async function handler(req, res) {
@@ -218,70 +228,61 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, id, notes: c.notes.length });
       }
 
-      // op:'queue' — "run this phase". The planner page writes it, scripts/autopilot.mjs
-      // reads it and starts working. Pass phase:null (or op:'unqueue') to cancel.
-      // Kept OUT of data.roadmap so a queue never touches the card blob.
-      // op:'queue' — "run this phase". More than one can be lined up: if a runner is
-      // already working, the new phase joins the back of the queue rather than
-      // hijacking the live one (which is what produced "Phase NV stopped. FL10 did
-      // not finish"). op:'unqueue' with a phase drops that one; with none, clears all.
-      if (op === "queue" || op === "unqueue") {
+      // ---- the run queue, and the lanes that work it -------------------------
+      // Shape: autorun = { queued:[{phase,max}], lanes:{ "1":{phase,...}, "2":{...} } }
+      // Several lanes can run at once, each in its OWN clone of the repo. The claim
+      // below is the thing that keeps them apart: a phase is handed to exactly one
+      // lane, server-side, so two lanes can never build the same card.
+      if (op === "queue" || op === "unqueue" || op === "claim" || op === "nextPhase") {
         const d = await readMeta();
-        const a = d.autorun || null;
+        const a = normAutorun(d.autorun);
 
         if (op === "unqueue") {
           const drop = clip(b.phase, 12).trim();
-          if (!drop || !a) { d.autorun = null; await writeMeta(d); return res.status(200).json({ ok: true, autorun: null }); }
-          if (String(a.phase) === drop) {
-            // Dropping the live one: promote the next queued phase if there is one.
-            const rest = (a.queued || []).slice();
-            const nxt = rest.shift();
-            d.autorun = nxt
-              ? { phase: nxt.phase, max: nxt.max, status: "waiting", requestedAt: new Date().toISOString(), note: "", queued: rest, finished: [], done: 0, total: 0 }
-              : null;
-          } else {
-            d.autorun = { ...a, queued: (a.queued || []).filter((q) => String(q.phase) !== drop) };
-          }
+          const lane = clip(b.lane, 8).trim();
+          if (lane) { delete a.lanes[lane]; }
+          else if (drop) {
+            a.queued = a.queued.filter((q) => String(q.phase) !== drop);
+            for (const k of Object.keys(a.lanes)) if (String(a.lanes[k].phase) === drop) delete a.lanes[k];
+          } else { a.queued = []; a.lanes = {}; }
+          d.autorun = liveOrNull(a);
           await writeMeta(d);
           return res.status(200).json({ ok: true, autorun: d.autorun });
         }
 
-        const phase = clip(b.phase, 12).trim();
-        if (!phase) return res.status(400).json({ ok: false, error: "phase required" });
-        const phases = (d.roadmap && Array.isArray(d.roadmap.phases)) ? d.roadmap.phases : [];
-        if (phases.length && !phases.some((p) => String(p.num) === phase)) {
-          return res.status(200).json({ ok: false, error: "no phase " + phase, phases: phases.map((p) => p.num) });
-        }
-        const max = Math.min(10, Math.max(1, parseInt(b.max, 10) || 4));
-        const open = ((d.roadmap && d.roadmap.sessions) || [])
-          .filter((s) => String(s.phaseNum) === phase && !s.done && !s.later).length;
-
-        const busy = a && (a.status === "waiting" || a.status === "running");
-        if (busy) {
-          if (String(a.phase) === phase || (a.queued || []).some((q) => String(q.phase) === phase)) {
-            return res.status(200).json({ ok: false, error: "phase " + phase + " is already lined up", autorun: a });
+        if (op === "queue") {
+          const phase = clip(b.phase, 12).trim();
+          if (!phase) return res.status(400).json({ ok: false, error: "phase required" });
+          const phases = (d.roadmap && Array.isArray(d.roadmap.phases)) ? d.roadmap.phases : [];
+          if (phases.length && !phases.some((p) => String(p.num) === phase)) {
+            return res.status(200).json({ ok: false, error: "no phase " + phase, phases: phases.map((p) => p.num) });
           }
-          d.autorun = { ...a, queued: (a.queued || []).concat([{ phase, max }]).slice(0, 10) };
+          const max = Math.min(10, Math.max(1, parseInt(b.max, 10) || 4));
+          const open = ((d.roadmap && d.roadmap.sessions) || [])
+            .filter((s) => String(s.phaseNum) === phase && !s.done && !s.later).length;
+          const already = a.queued.some((q) => String(q.phase) === phase) ||
+            Object.values(a.lanes).some((L) => String(L.phase) === phase);
+          if (already) return res.status(200).json({ ok: false, error: "phase " + phase + " is already lined up", autorun: liveOrNull(a) });
+          a.queued.push({ phase, max });
+          d.autorun = a;
           await writeMeta(d);
-          return res.status(200).json({ ok: true, queuedBehind: d.autorun.queued.length, autorun: d.autorun, open });
+          return res.status(200).json({ ok: true, autorun: a, open, waiting: a.queued.length });
         }
 
-        d.autorun = { phase, max, status: "waiting", requestedAt: new Date().toISOString(), note: "", queued: [], finished: [], done: 0, total: 0 };
+        // op:'claim' — a lane asking for work. This is the ONLY way a lane starts a
+        // phase, and it is atomic here, so two lanes polling at the same moment
+        // cannot both walk away with the same one.
+        const lane = clip(b.lane, 8).trim() || "1";
+        const nxt = a.queued.shift();
+        if (!nxt) { d.autorun = liveOrNull(a); await writeMeta(d); return res.status(200).json({ ok: true, next: null }); }
+        a.lanes[lane] = {
+          phase: nxt.phase, max: nxt.max, status: "running", note: "", card: "", cardName: "",
+          startedAt: null, done: 0, total: 0, finished: [], lastSeen: new Date().toISOString(),
+          claimedAt: new Date().toISOString(),
+        };
+        d.autorun = a;
         await writeMeta(d);
-        return res.status(200).json({ ok: true, autorun: d.autorun, open });
-      }
-
-      // op:'nextPhase' — the runner asking for the next lined-up phase once it has
-      // finished the current one. Promoting server-side keeps it atomic.
-      if (op === "nextPhase") {
-        const d = await readMeta();
-        const a = d.autorun;
-        const rest = (a && a.queued ? a.queued.slice() : []);
-        const nxt = rest.shift();
-        if (!nxt) { d.autorun = a ? { ...a, queued: [] } : null; await writeMeta(d); return res.status(200).json({ ok: true, next: null }); }
-        d.autorun = { phase: nxt.phase, max: nxt.max, status: "waiting", requestedAt: new Date().toISOString(), note: "", queued: rest, finished: [], done: 0, total: 0 };
-        await writeMeta(d);
-        return res.status(200).json({ ok: true, next: { phase: nxt.phase, max: nxt.max }, autorun: d.autorun });
+        return res.status(200).json({ ok: true, next: { phase: nxt.phase, max: nxt.max }, autorun: a });
       }
 
       // op:'report' — the plain-language write-up a finished session leaves. Kept on
@@ -300,33 +301,33 @@ export default async function handler(req, res) {
       // what is happening without the runner having to touch the card blob.
       if (op === "queueStatus") {
         const d = await readMeta();
-        if (!d.autorun) return res.status(200).json({ ok: true, autorun: null });
-        // A runner only reports on the phase it actually picked up. If the queue has
-        // moved on to something else, its report is stale and must not overwrite.
-        if (b.phase && String(b.phase) !== String(d.autorun.phase)) {
-          return res.status(200).json({ ok: true, ignored: "stale: runner is on " + b.phase + ", queue is on " + d.autorun.phase, autorun: d.autorun });
+        const a = normAutorun(d.autorun);
+        const lane = clip(b.lane, 8).trim() || "1";
+        const L = a.lanes[lane];
+        if (!L) return res.status(200).json({ ok: true, ignored: "lane " + lane + " holds nothing", autorun: liveOrNull(a) });
+        // A lane only reports on the phase it actually claimed. Anything else is a
+        // stale report from a run that has since been cancelled or replaced.
+        if (b.phase && String(b.phase) !== String(L.phase)) {
+          return res.status(200).json({ ok: true, ignored: "stale: lane " + lane + " is on " + L.phase, autorun: liveOrNull(a) });
         }
-        const status = ["waiting", "running", "done", "stopped"].includes(b.status) ? b.status : "running";
+        const status = ["running", "done", "stopped"].includes(b.status) ? b.status : "running";
         const now = new Date().toISOString();
-        d.autorun = {
-          ...d.autorun,
-          status,
+        a.lanes[lane] = {
+          ...L, status,
           note: clip(b.note, 300),
-          // What the status bar draws. startedAt is the CARD's start, so the page can
-          // tick the clock itself and the runner only has to check in occasionally.
-          card: b.card == null ? d.autorun.card || "" : clip(b.card, 20),
-          cardName: b.cardName == null ? d.autorun.cardName || "" : clip(b.cardName, 120),
-          startedAt: b.startedAt || d.autorun.startedAt || null,
-          done: Number.isFinite(+b.done) ? +b.done : (d.autorun.done || 0),
-          total: Number.isFinite(+b.total) ? +b.total : (d.autorun.total || 0),
-          finished: Array.isArray(b.finished) ? b.finished.slice(0, 20).map((x) => clip(x, 20)) : (d.autorun.finished || []),
-          // lastSeen is how the page knows the runner is still alive. A bar that
-          // says "working" for an hour with no check-in is a dead runner, not work.
-          lastSeen: now,
-          updatedAt: now,
+          card: b.card == null ? L.card : clip(b.card, 20),
+          cardName: b.cardName == null ? L.cardName : clip(b.cardName, 120),
+          startedAt: b.startedAt === undefined ? L.startedAt : b.startedAt,
+          done: Number.isFinite(+b.done) ? +b.done : (L.done || 0),
+          total: Number.isFinite(+b.total) ? +b.total : (L.total || 0),
+          finished: Array.isArray(b.finished) ? b.finished.slice(0, 20).map((x) => clip(x, 20)) : (L.finished || []),
+          lastSeen: now, updatedAt: now,
         };
+        // A lane that has finished or stopped is reported once and then released, so
+        // the panel shows what happened without the lane looking permanently busy.
+        d.autorun = a;
         await writeMeta(d);
-        return res.status(200).json({ ok: true, autorun: d.autorun });
+        return res.status(200).json({ ok: true, autorun: a });
       }
 
       // op:'addCard' — add a card to an existing phase. Refuses a duplicate id and

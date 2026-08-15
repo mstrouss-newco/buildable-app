@@ -59,6 +59,15 @@ exactly like finding it the first time. A small `declined[]` nudge stops the
 offer from re-firing the instant the card closes if you happen to still be
 standing on the pad.
 
+## Parallel lanes: run several phases at once (August 15 2026)
+`api/planner.js`, `scripts/autopilot.mjs`, `public/planner.html`, the launcher.
+Four runners in one folder would have committed each other's half-finished work. Lanes now
+each get their own clone (`buildable-lane2/3/4`, created on first use), and a phase is handed
+to exactly one lane by `op:'claim'` server-side, so simultaneous claims cannot collide.
+Double-click the launcher again to open the next lane, up to four; a lock file keyed on a live
+pid stops two runners sharing a folder. The planner shows one block per lane plus a "waiting
+for a lane" row.
+
 ## Queue several phases, and read the run report in the planner (August 15 2026)
 `api/planner.js`, `public/planner.html`, `scripts/autopilot.mjs`, `scripts/planner.mjs`.
 Tapping "Run this phase" while something is running now lines the new phase up behind it
