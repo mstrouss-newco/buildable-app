@@ -1480,7 +1480,8 @@ window.BUILDABLE_GAME = {
   _mats:function(){ return BLOCK_MATS; },
   _blocks:function(){ if(!G) return []; return G.blocks.map(function(b){
     return { m:b._mat||null, hp:b._hp!=null?Math.round(b._hp*10)/10:null, hp0:b._hp0!=null?Math.round(b._hp0*10)/10:null,
-             cracked:!!b._cracked, w:b._w, h:b._h }; }); },
+             cracked:!!b._cracked, w:b._w, h:b._h,
+             x:Math.round(b.position.x), y:Math.round(b.position.y) }; }); },
   _smashed:function(){ return G?G.smashed:0; },
   _hitBlock:function(i,spd,weight){ if(!G||!G.blocks[i]) return null;
     var b=G.blocks[i]; damageBlock(b, spd, { mass:(weight||1)*AMMO_MASS_REF, isStatic:false });
@@ -1514,8 +1515,15 @@ window.BUILDABLE_GAME = {
       if(Math.abs(b.position.x-c.x)>0.01 || Math.abs(b.position.y-c.y)>0.01 || Math.abs(b.angle)>0.001) return false; }
     return true; },
   _floorY:function(x){ return floorY(x); },
-  _loft:function(ti){ if(!G||!G.targets[ti]) return null; var t=G.targets[ti];
-    var pl=planShot(t.position.x, t.position.y); return pl.good ? pl.T : null; },
+  // Pass ignoreTerrain to ask the same question of a level standing on a flat
+  // floor. The DIFFERENCE between the two answers is the whole phase in one
+  // number: how much steeper a kid has to throw because of the ground.
+  _loft:function(ti, ignoreTerrain){ if(!G||!G.targets[ti]) return null; var t=G.targets[ti];
+    var keep=null;
+    if(ignoreTerrain){ keep=G.terrainBodies; G.terrainBodies=[]; }
+    var pl; try{ pl=planShot(t.position.x, t.position.y); }
+    finally{ if(ignoreTerrain) G.terrainBodies=keep; }
+    return pl.good ? pl.T : null; },
   // one level with the bot; returns whether it cleared + launches used
   sim:function(idx,maxFrames){ botMode=true; startLevel(idx); state="ready"; started=true;
     var f=0, cap=maxFrames||20000; while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }

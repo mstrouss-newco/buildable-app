@@ -310,17 +310,19 @@
     // SD3 — the whole keep now stands on a plinth, so the tower a kid already
     // knows starts 86px higher than their eye line and the arc that used to clear
     // it falls short. Same building, brand new aim.
-    tallgrand:{ terrain:[ {k:"ledge",x:770,w:230,h:86} ],
-                blocks:[ {x:730,y:435,w:30,h:54,m:"stone"},{x:810,y:435,w:30,h:54,m:"stone"},{x:770,y:396,w:120,h:24,m:"wood"},
-                         {x:742,y:362,w:26,h:44,m:"wood"},{x:798,y:362,w:26,h:44,m:"wood"},{x:770,y:329,w:90,h:22,m:"wood"},{x:770,y:298,w:24,h:40,m:"glass"} ],
-              targets:[ {x:770,y:261},{x:860,y:445},{x:560,y:531},{x:470,y:531} ] },
+    tallgrand:{ terrain:[ {k:"ledge",x:690,w:110,h:86},{k:"ledge",x:880,w:110,h:86} ],
+                blocks:[ {x:700,y:435,w:18,h:54,m:"wood"},{x:870,y:435,w:18,h:54,m:"wood"},
+                         {x:785,y:396,w:220,h:24,m:"stone"},
+                         {x:750,y:357,w:28,h:54,m:"wood"},{x:820,y:357,w:28,h:54,m:"wood"},
+                         {x:785,y:318,w:110,h:24,m:"wood"},{x:785,y:286,w:24,h:40,m:"glass"} ],
+              targets:[ {x:785,y:249},{x:905,y:445},{x:560,y:531},{x:470,y:531} ] },
     // SD3 — two mounds with a narrow valley between them. Nothing here is behind
     // a wall you can break: the shots have to be threaded, one into the valley,
     // one clean over the far mound, and the ground critters read completely
     // differently depending on which side of a hill they stand on.
     gauntlet:{ terrain:[ {k:"hill",x:540,w:160,h:96},{k:"hill",x:845,w:150,h:104} ],
-              blocks:[ {x:700,y:518,w:24,h:60,m:"wood"} ],
-              targets:[ {x:700,y:471},{x:540,y:435},{x:845,y:427},{x:390,y:531} ] },
+              blocks:[ {x:660,y:518,w:24,h:60,m:"wood"} ],
+              targets:[ {x:660,y:471},{x:735,y:531},{x:845,y:427},{x:390,y:531} ] },
     // SD3 — the pit splits the yard in two. The critter in the hole is the
     // problem: a tower stands either side of it, and the way in is to bring one
     // of them down on top of it rather than to shoot into a slot.
