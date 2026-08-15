@@ -264,6 +264,36 @@ async function runExhibit(exhibit) {
     r.flashlightChecked = atSurface === 0 && beforeDark === 0 && inDark > 0;
   } else { r.flashlightChecked = false; }
 
+  // Session RP8 — the dive must never scroll sideways on a phone. Creature art
+  // is sized by HEIGHT and keeps its aspect ratio, so a wide animal used to grow
+  // off the right edge (the reef shark, 999x360 at artH 145, drew 400px across a
+  // 390px screen and dragged the document 245px sideways). Two rules stop it,
+  // and both are exercised here against a phone-width world.
+  registry.world.clientWidth = 390;
+  const mkImg = (nw, nh) => ({ naturalWidth: nw, naturalHeight: nh, style: {}, dataset: {} });
+  // 1. art is never drawn wider than the world, and shrinks by height so the
+  //    aspect ratio is untouched.
+  const shark = mkImg(999, 360);
+  sandbox.fitArtWidth(shark, 145);
+  const sharkH = parseFloat(shark.style.height);
+  const sharkW = sharkH * (999 / 360);
+  const narrow = mkImg(199, 340);            // a jelly: already fits, must not be touched
+  sandbox.fitArtWidth(narrow, 90);
+  r.artFitChecked = sharkW <= 390 && sharkH < 145 && sharkH > 0 && parseFloat(narrow.style.height) === 90;
+
+  // 2. a creature's centre is clamped so neither edge can leave the screen.
+  const mkBtn = (cx, w) => ({ dataset: { cx: String(cx) }, offsetWidth: w, style: {} });
+  const wide = mkBtn(88, 374), left = mkBtn(12, 300), ok = mkBtn(50, 60);
+  [wide, left, ok].forEach((b) => sandbox.placeCreature(b));
+  const edges = (b) => { const c = parseFloat(b.style.left); return [c - b.offsetWidth / 2, c + b.offsetWidth / 2]; };
+  r.clampChecked = [wide, left, ok].every((b) => { const [l, rt] = edges(b); return l >= 0 && rt <= 390; });
+  // an untouched creature (comfortably inside) keeps its natural anchor
+  r.clampKeepsPlace = Math.round(parseFloat(ok.style.left)) === Math.round(0.5 * 390);
+
+  // 3. art loads where the diver is, not all at once.
+  r.lazyChecked = /function whenNear\(/.test(inlineScript) && inlineScript.indexOf('IntersectionObserver') !== -1
+    && /whenNear\(b,/.test(inlineScript) && /whenNear\(d,/.test(inlineScript);
+
   return r;
 }
 
@@ -287,6 +317,14 @@ for (const exhibit of candidates) {
   else pass(`${r.exhibit}: honors pause/resume from the shell (CARTRIDGE-CONTRACT.md)`);
   if (!r.flashlightChecked) fail(`${r.exhibit}: flashlight zone did not activate correctly (dark past the midnight line, clear above it)`);
   else pass(`${r.exhibit}: flashlight zone activates past the midnight line (dark below, clear above)`);
+  if (!r.artFitChecked) fail(`${r.exhibit}: wide creature art is not capped to the world width (RP8 — sideways scroll)`);
+  else pass(`${r.exhibit}: wide creature art is capped to the world width, aspect ratio kept (RP8)`);
+  if (!r.clampChecked) fail(`${r.exhibit}: a creature can still hang off the screen edge (RP8 — sideways scroll)`);
+  else pass(`${r.exhibit}: every creature is clamped inside the screen, both edges (RP8)`);
+  if (!r.clampKeepsPlace) fail(`${r.exhibit}: clamping moved a creature that already fitted`);
+  else pass(`${r.exhibit}: a creature that already fits keeps its placement`);
+  if (!r.lazyChecked) fail(`${r.exhibit}: zone backdrops and creatures are not lazily loaded (RP8 — load time)`);
+  else pass(`${r.exhibit}: backdrops and creatures load as the diver reaches them (RP8)`);
 }
 
 // Static source checks (mirrors qa-explore.mjs): art-slot fallback, read-aloud, audio wiring.
@@ -303,6 +341,12 @@ else fail('audio wiring (ambient / Feel.tap / Sound toggle) not found in source'
 if (inlineScript && /function scrollToZone\(/.test(inlineScript) && /function buildZoneJump\(/.test(inlineScript) && /function updateFound\(/.test(inlineScript))
   pass('navigation: depth-gauge zone jump + creatures-found counter present (scrollToZone / buildZoneJump / updateFound)');
 else fail('depth-gauge zone jump / found counter not found in source');
+
+// Session RP8 — the belt-and-braces guard behind the geometry: the descent is
+// vertical, so a sideways scrollbar must be impossible even if new art misbehaves.
+if (/html,body\{[^}]*overflow-x:hidden/.test(templateHtml) && /\.cr\{[^}]*translateX\(-50%\)/.test(templateHtml))
+  pass('layout: page locked to the screen width and creatures anchored by their centre (RP8)');
+else fail('RP8 layout guard missing (html,body overflow-x:hidden + .cr centre anchor)');
 
 console.log(ok ? 'ALL CHECKS PASS' : 'SOME CHECKS FAILED');
 process.exit(ok ? 0 : 1);
