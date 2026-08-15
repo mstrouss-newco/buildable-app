@@ -1,5 +1,61 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15: Session 7M — Chess piece colours
+
+**Phase 7, session 7M.** The two sides in chess now look nothing like each
+other. `qa-chess.mjs` green (20 checks, five of them new), `qa-art.mjs` green
+because the shared art API was touched. Pushed to `claude/chess-piece-colors-we000n`.
+
+### Why the pieces were hard to tell apart
+It was not the palette. Every world's piece art is generated once per piece
+**type** — `/api/images?kind=chesspiece&world=jungle&piece=r` — and **both sides
+loaded that same picture**. A kid was looking at two identical armies. The only
+thing separating them was a small blurred glow under each piece, which is
+invisible on a phone. The drawn fallback heroes did have team colours (purple
+and coral), but they are only on screen for the moment before the real art
+loads, so in practice nobody ever saw them.
+
+### What shipped
+1. **The art library generates each side its own picture.** The request carries
+   `&side=`, and the prompt paints the whole piece in that side's colour. World
+   themes keep their materials and motifs (coral and pearl, leaves and vines,
+   carved stone) but no longer name colours of their own, so nothing competes.
+2. **Every piece carries its colour whatever art loads.** A solid team pad,
+   ringed in white, under its feet, and a thick sticker outline in the side's
+   colour traced around the artwork itself. This is the belt-and-braces part: if
+   the art library is ever down, over budget, or serving one shared image, the
+   armies still cannot be confused.
+3. **Blue vs orange, replacing purple vs coral.** The old pair sat on top of the
+   candy and castle boards, and it is the first pair colour-blind kids lose.
+   Blue and orange also differ in brightness, so they stay apart in greyscale.
+4. **A white halo** on every piece, so blue lifts off the space board and orange
+   lifts off the desert board.
+5. **The game says the colours out loud.** "You are Blue" when a game starts,
+   and with two kids on one screen the turn pill reads "Riley's turn (Orange)".
+   Online, where the shell decides which side a kid gets, it says so on arrival.
+
+### A bug the screenshots found
+Rendering the board at 390px showed the **Pause button pushed off the right edge
+of the card**, unreachable on a phone. It was already broken before this session
+— the HUD lays the turn pill and five buttons out in one line — but naming the
+colour in the pill made the pill wider, so it was fixed here. The row wraps now:
+on a phone the buttons drop to their own line, on tablet and desktop nothing
+moves. Checked at 360, 390 and 820 wide.
+
+### Checked by looking, not by assuming
+All six worlds were rendered in both art paths: with the shared-sculpt art
+loading (the worst case — one identical image for both armies) and with the art
+failing so the drawn heroes show. Both read clearly on every board, including
+the two hard ones, blue on space and orange on desert.
+
+### What is not proven yet
+The new per-side art has **not been seen** — generating it needs the live art
+key, so the first kid into each world will see the drawn heroes for a moment
+while the real art warms in the background, exactly as new art has always
+behaved. Worth a look on the live site once each world has been opened: 36 new
+images, six per world. If any come back the wrong colour, the pad and outline
+still keep the sides apart.
+
 ## 2026-08-04: Session RP5 — the last twelve books become richer pages
 
 **Phase RP, session RP5.** Sharks, Dinosaurs, The Moon, Big Cats, Penguins,
