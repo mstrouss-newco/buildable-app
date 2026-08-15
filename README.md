@@ -6,6 +6,25 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## A card waiting on Mike is not a phase failure (August 15 2026)
+`scripts/autopilot.mjs`, `public/planner.html`. Phase **RN**, card **RN2**.
+The runner used to report a card that came back in `review` as `<id> did
+not finish` and stop the whole phase — SD4 was the receipt (built,
+pushed, QA green, just wanting Mike's yes), and lane 2 sat idle for an
+hour with 21 SD cards still open because of it. Now the autopilot
+verification block splits three cases: `done` (count it, run the git
+gate, keep going), `review` (log `"<id> is waiting on you"`, add to a
+new `waiting[]`, keep going — the phase is not failing), and anything
+else (missing card, stuck on `open`, non-zero exit — real error, stop
+the lane). `workRun()` returns `{ done, reason, finished, waiting }`
+and end-of-run status stays `done` when work got finished even if
+something is waiting; the note reads `"3 cards finished, 1 card waiting
+on you: SD4"`. On the planner page, a lane whose phase ended with
+waiting cards now paints amber (`#fff5e6` / `#f0d9a8`, the same palette
+as the "Waiting for a lane" banner) and reads `"phase SD finished, 1
+card waiting on you: SD4."` instead of the red "stopped" banner. Green
+(all done) and red (real error) are unchanged.
+
 ## Done now means "in the app" — the planner refuses false greens (August 15 2026)
 `scripts/git-gate.mjs`, `scripts/planner.mjs`, `scripts/autopilot.mjs`,
 `qa-rn1.mjs`. Phase **RN**, card **RN1**. Ticking a card done was a claim,

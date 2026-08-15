@@ -197,6 +197,7 @@ async function setStatus(status, extra) {
 async function workRun() {
   let doneCount = 0;
   const finished = [];   // card ids shipped this run, for the planner's live feed
+  const waiting = [];    // cards that came back as 'review' — waiting on Mike, not failures
   for (let n = 1; n <= MAX; n++) {
     const rm = await roadmap();
     const { queue, skipped } = pickQueue(rm);
@@ -206,7 +207,7 @@ async function workRun() {
     }
     if (!summary) {
       say('\nNothing open' + (PHASE ? ' in phase ' + PHASE : '') + '.');
-      return { done: doneCount, reason: 'finished', finished };
+      return { done: doneCount, reason: 'finished', finished, waiting };
     }
     if (n === 1 && queue.length > 1) say('queue: ' + queue.slice(0, MAX).map((c) => c.id).join(' -> '));
 
@@ -218,7 +219,7 @@ async function workRun() {
       say('--- the prompt a fresh session would receive ---\n');
       say(prompt);
       say('\n--- nothing was run (--dry) ---');
-      return { done: 0, reason: 'dry', finished };
+      return { done: 0, reason: 'dry', finished, waiting };
     }
 
     say(`\n${'='.repeat(70)}\ncard ${n} of at most ${MAX}: ${card.id} — ${card.name}\nphase ${card.phaseNum}${phaseTitle ? ' — ' + phaseTitle : ''}\npermissions: ${PERM}\n${'='.repeat(70)}\n`);
@@ -238,14 +239,34 @@ async function workRun() {
     if (code === 'missing') die('could not find the `claude` command on this machine.');
     if (code !== 0) {
       say(`\nthe session for ${card.id} exited with code ${code}.`);
-      return { done: doneCount, reason: `${card.id} errored (exit ${code})`, finished };
+      return { done: doneCount, reason: `${card.id} errored (exit ${code})`, finished, waiting };
     }
 
     // The verification gate: believe the planner, not the session's own summary.
+    // 'review' is its own outcome — the session finished cleanly and left the card
+    // waiting on Mike (built, pushed, QA green, just wants his yes). That is not a
+    // failure and it does not stop the lane. Log it, list it separately, keep going.
+    // Only a genuine error (missing card, session exited non-zero, state stuck on
+    // 'open') stops the phase.
     const after = (await roadmap()).cards.find((c) => c.id === card.id);
-    if (!after || after.state !== 'done') {
-      say(`\ncard ${card.id} came back as "${after ? after.state : 'missing'}", not done.`);
-      return { done: doneCount, reason: `${card.id} did not finish`, finished };
+    if (!after) {
+      say(`\ncard ${card.id} came back missing.`);
+      return { done: doneCount, reason: `${card.id} did not finish`, finished, waiting };
+    }
+    if (after.state === 'review') {
+      waiting.push(card.id);
+      say(`\n${card.id} is waiting on you.`);
+      await setStatus('running', {
+        note: `${card.id} waiting on you`,
+        card: '', cardName: '', startedAt: null,
+        done: doneCount, total, finished,
+      });
+      if (ONLY) break;   // --card is a single-card manual run; do not re-pick it
+      continue;
+    }
+    if (after.state !== 'done') {
+      say(`\ncard ${card.id} came back as "${after.state}", not done.`);
+      return { done: doneCount, reason: `${card.id} did not finish`, finished, waiting };
     }
     // Second gate (RN1): even if the planner says done, the work has to be in main.
     // A session that ticked done through some other route — a direct API call, an
@@ -264,7 +285,7 @@ async function workRun() {
           body: JSON.stringify({ op: 'card', id: card.id,
             fields: { done: false, needsReview: true } }) });
       } catch { /* if we cannot reach the planner to unwind, still stop */ }
-      return { done: doneCount, reason: `${card.id} was ticked done but work is stranded — ${gate.note}`, finished };
+      return { done: doneCount, reason: `${card.id} was ticked done but work is stranded — ${gate.note}`, finished, waiting };
     }
     doneCount++;
     finished.push(card.id);
@@ -281,11 +302,25 @@ async function workRun() {
     say(`\n${card.id} is done${after.deployed ? ' and live' : ' (not flagged live yet)'}.`);
     if (ONLY) break;
   }
-  return { done: doneCount, reason: 'finished', finished };
+  return { done: doneCount, reason: 'finished', finished, waiting };
 }
 
-function report({ done, reason }) {
-  say(`\n${done} card${done === 1 ? '' : 's'} finished. ${reason === 'finished' ? '' : 'Stopped: ' + reason}`);
+function report({ done, reason, waiting }) {
+  const w = (waiting || []).length
+    ? ` ${(waiting || []).length} waiting on you (${(waiting || []).join(', ')}).`
+    : '';
+  say(`\n${done} card${done === 1 ? '' : 's'} finished.${w} ${reason === 'finished' ? '' : 'Stopped: ' + reason}`);
+}
+
+// End-of-run note the planner banner reads. 'done' with a waiting list is not
+// the same as 'done' with an empty one — the amber banner tells Mike he owes an
+// answer on a specific card, not that a phase failed.
+function endNote(r) {
+  if (r.reason !== 'finished') return r.reason;
+  const w = (r.waiting || []).length;
+  const base = `${r.done} card${r.done === 1 ? '' : 's'} finished`;
+  if (!w) return base;
+  return `${base}, ${w} card${w === 1 ? '' : 's'} waiting on you: ${r.waiting.join(', ')}`;
 }
 
 // ---- how the run gets started ----------------------------------------------
@@ -341,7 +376,7 @@ if (MANUAL) {
       const r = await workRun();
       report(r);
       await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
-        { note: r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason,
+        { note: endNote(r),
           card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
       say(`\nLane ${LANE} back to waiting.\n`);
       continue;   // claim again straight away rather than sleeping on an idle queue
@@ -365,6 +400,6 @@ if (MANUAL) {
   const r = await workRun();
   report(r);
   await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
-    { note: r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason,
+    { note: endNote(r),
       card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
 }

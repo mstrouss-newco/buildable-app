@@ -1,5 +1,49 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (RN2): A card waiting on Mike is not a phase failure
+
+**Phase RN, card RN2.** The autopilot runner treated a card that came back
+in `review` as `<id> did not finish` and stopped the whole phase. SD4 is
+the receipt: built, pushed, QA green, just wanting Mike's yes — and lane 2
+sat idle for an hour with 21 SD cards still open because that one card was
+"unfinished".
+
+`scripts/autopilot.mjs` now treats `review` as its own outcome. The
+verification block splits the three cases:
+
+- `state === 'done'` — count it, run the git-gate, continue.
+- `state === 'review'` — log `"<id> is waiting on you"`, add to a new
+  `waiting[]`, keep the phase going. Not a failure.
+- anything else (missing, still `open`, non-zero exit) — real error, stop
+  the lane. That is what should stop a chain.
+
+`workRun()` now returns `{ done, reason, finished, waiting }`. End-of-run
+status is `done` whenever `reason === 'finished'` even if cards are
+waiting; the note now reads `"3 cards finished, 1 card waiting on you:
+SD4"` so the planner banner can render it directly. A new `endNote()`
+helper keeps the WATCH loop and one-shot path in lockstep.
+
+`public/planner.html` `renderAutorun()` picks up the amber case from the
+roadmap cards themselves — no schema change. It computes
+`waitingCards = inPhase.filter(c => c.state === 'review')`; if the lane's
+run is `done` and `waitingCards.length > 0`, the lane block paints amber
+(`#fff5e6` / `#f0d9a8`, the same palette as the "Waiting for a lane"
+banner) and the header reads
+`"phase SD finished, 1 card waiting on you: SD4."` instead of red
+`"stopped."`. Green (all done, nothing waiting) and red (real stop) are
+unchanged.
+
+Verified with three simulated `workRun()` scenarios (done/review/done
+sequence continues and reports both; review-then-error still stops with
+`waiting = ['Y1']`; a single-card manual `--card` run breaks after review
+so it does not re-pick itself) and three UI states (green / amber / red)
+rendered from mock data. Live planner data confirms SD4 is currently in
+`state: 'review'` — after this ships the SD lane's end-banner will say so
+in plain English instead of looking like a phase collapse.
+
+Touched: `scripts/autopilot.mjs`, `public/planner.html`. No game QA to
+run (infra + UI only); node syntax-checked both.
+
 ## 2026-08-15 (RN1): Done means "in the app" — the planner refuses false greens
 
 **Phase RN, card RN1.** Ticking a card done was a claim, not a check. Four

@@ -964,15 +964,23 @@ function renderAutorun(){
     const stale=L.lastSeen&&(Date.now()-new Date(L.lastSeen).getTime())>3*60*1000;
     const done=(L.status==="done"||L.status==="stopped");
     const good=L.status==="done";
-    const bg=done?(good?"#eaf7ef":"#fdeeee"):(stale?"#fdeeee":"#eef3ff");
-    const bd=done?(good?"#bde5cb":"#f3c9c9"):(stale?"#f3c9c9":"#c6d4f5");
     const inPhase=rmAutorunCards.filter(c=>String(c.phaseNum)===String(L.phase));
+    /* Cards left in 'review' in this phase are waiting on Mike. A phase can end
+       with work shipped AND cards waiting — that is amber, not red. Only a real
+       failure (status==='stopped') gets the red banner. */
+    const waitingCards=inPhase.filter(c=>c.state==="review");
+    const amber=done&&good&&waitingCards.length>0;
+    const bg=done?(amber?"#fff5e6":(good?"#eaf7ef":"#fdeeee")):(stale?"#fdeeee":"#eef3ff");
+    const bd=done?(amber?"#f0d9a8":(good?"#bde5cb":"#f3c9c9")):(stale?"#f3c9c9":"#c6d4f5");
     const upNext=inPhase.filter(c=>c.state==="open"&&c.id!==L.card);
     const fin=(L.finished||[]);
     const cur=cardOf(L.card);
+    const headerDone=amber
+      ? ' <b>phase '+esc(L.phase)+' finished, '+waitingCards.length+' card'+(waitingCards.length===1?'':'s')+' waiting on you: '+waitingCards.map(c=>esc(c.id)).join(", ")+'.</b>'
+      : ' <b>'+(good?"finished":"stopped")+'.</b> '+esc(L.note||"");
     html+='<div style="padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;margin-bottom:8px;background:'+bg+';border:1px solid '+bd+'">'
       +'<b>Lane '+esc(k)+' &middot; phase '+esc(L.phase)+'</b>'
-      +(done?' <b>'+(good?"finished":"stopped")+'.</b> '+esc(L.note||""):' <span style="opacity:.7">'+(L.done||0)+' done this run</span>')
+      +(done?headerDone:' <span style="opacity:.7">'+(L.done||0)+' done this run</span>')
       +'<button class="btn mini" style="float:right" onclick="rmCancelRun(null,'+JSON.stringify(k)+')">'+(done?"Clear":"Stop after this card")+'</button>'
       +(done?"":line("Now", L.card?('<b>'+esc(L.card)+'</b> '+esc(cur?cur.name:L.cardName||"")+' <span style="opacity:.6">&middot; '+ago(L.startedAt)+'</span>'):esc(L.note||"starting…")))
       +(done?"":(upNext.length?line("Next", upNext.slice(0,5).map(c=>esc(c.id)).join(" &middot; ")):line("Next","nothing else open in this phase")))
