@@ -235,6 +235,58 @@ function ensureMusic(){ try{ if(SLING_DEMO) return; if(!BA||!BA.setMusic)return;
 var engine=null, world=null;
 function mat(opts){ return Object.assign({ friction:0.62, frictionStatic:0.9, restitution:0.06, density:0.0026 }, opts||{}); }
 
+// ============================================================================
+//  SD1 — BLOCK MATERIALS + HEALTH.  Before this, a block could only wobble, so
+//  every level was the same shove. Now a layout may give a block a material and
+//  it takes real damage from whatever hits it:
+//    glass — shatters on almost any hit and disappears
+//    wood  — cracks, then breaks after a few good hits
+//    stone — barely breaks at all; you have to topple it instead
+//  DAMAGE COMES FROM SPEED: how fast the thing that hit it was moving relative
+//  to the block, scaled by how heavy that thing was (a flung pal hurts far more
+//  than a tumbling plank; a heavy-power pal hurts most).
+//  A block with NO material is the OLD indestructible block, byte-for-byte the
+//  same weight, grip and look — which is what keeps levels 1-6 exactly as they
+//  were. There is deliberately no default material.
+// ============================================================================
+var BLOCK_MATS = {
+  glass: { hp:6,   minSpd:1.6, perSpd:5.0, density:0.0016, friction:0.30, frictionStatic:0.50, restitution:0.10,
+           fill:"#bfe9f7", edge:"#7fbfd6", crack:"rgba(255,255,255,.95)", fx:"#cdeffb", sound:"shatter", seeThrough:true },
+  wood:  { hp:100, minSpd:3.0, perSpd:2.4, density:0.0022, friction:0.62, frictionStatic:0.90, restitution:0.06,
+           fill:"#caa46a", edge:"#9b7741", crack:"rgba(60,36,12,.85)",   fx:"#c9964f", sound:"shatter" },
+  stone: { hp:420, minSpd:11,  perSpd:2.0, density:0.0034, friction:0.72, frictionStatic:0.95, restitution:0.04,
+           fill:"#b9bcc4", edge:"#71747d", crack:"rgba(40,44,54,.80)",   fx:"#aeb2bb", sound:"shatter" }
+};
+var AMMO_MASS_REF = 20;        // a plain flung pal weighs about this much
+var CRACKED_AT = 0.62;         // below this share of health the block LOOKS cracked
+function matOf(b){ return (b && b._mat) ? BLOCK_MATS[b._mat] : null; }
+// How much a body hurts what it lands on, relative to a plain flung pal.
+function hitWeight(o){ if(!o || o.isStatic) return 1; return Math.max(0.35, Math.min(2.2, (o.mass||0)/AMMO_MASS_REF)); }
+// One impact -> health off a breakable block. Returns true if this broke it.
+function damageBlock(blk, spd, hitter){
+  var M0 = matOf(blk); if(!M0 || blk._broken) return false;
+  if(spd <= M0.minSpd) return false;
+  blk._hp -= (spd - M0.minSpd) * M0.perSpd * hitWeight(hitter);
+  if(blk._hp <= 0){ blk._hp = 0; blk._broken = true; return true; }   // swept out after the physics step
+  if(!blk._cracked && blk._hp < blk._hp0 * CRACKED_AT){ blk._cracked = true; blk._crackAt = nowMs();
+    var t=nowMs(); if(t-(G._crackSfxAt||0)>110){ G._crackSfxAt=t; sfx("crack"); } }   // one crack sound per moment, not a pile-up
+  return false;
+}
+// Blocks marked _broken during collision callbacks are removed HERE, after
+// M.Engine.update has returned — never mid-step, which would corrupt the world.
+function sweepBrokenBlocks(){
+  if(!G || !G.blocks) return;
+  for(var i=G.blocks.length-1;i>=0;i--){ var b=G.blocks[i]; if(!b._broken) continue;
+    var M0 = matOf(b) || BLOCK_MATS.wood;
+    G.blocks.splice(i,1); G.smashed++;
+    try{ M.Composite.remove(world, b); }catch(e){}
+    G.shards.push({ x:b.position.x, y:b.position.y, w:b._w, h:b._h, a:b.angle, m:b._mat, t0:nowMs() });
+    if(G.shards.length>18) G.shards.shift();
+    if(fx&&BM) BM.explode(fx, b.position.x, b.position.y, M0.fx, { n:14, sfx:null });
+    sfx(M0.sound);
+  }
+}
+
 // Auto-calibrate effective per-frame gravity so the aim predictor matches Matter.
 (function calibrate(){
   try{
@@ -259,8 +311,15 @@ function buildWorld(idx){
 
   var blocks = [];
   (L.blocks||[]).forEach(function(b){
-    var body = M.Bodies.rectangle(b.x, b.y, b.w, b.h, mat({ density:0.0022 }));
-    body._kind="block"; body._w=b.w; body._h=b.h; blocks.push(body); M.Composite.add(world, body);
+    var M0 = b.m ? BLOCK_MATS[b.m] : null;      // no material named = the old block, untouched
+    var body = M.Bodies.rectangle(b.x, b.y, b.w, b.h, M0
+      ? mat({ density:M0.density, friction:M0.friction, frictionStatic:M0.frictionStatic, restitution:M0.restitution })
+      : mat({ density:0.0022 }));
+    body._kind="block"; body._w=b.w; body._h=b.h;
+    if(M0){ var size=(b.w*b.h)/1800;            // a 30x60 post is the reference brick
+      body._mat=b.m; body._hp0=M0.hp*Math.max(0.55,Math.min(2.0,size)); body._hp=body._hp0;
+      body._cracked=false; body._broken=false; }
+    blocks.push(body); M.Composite.add(world, body);
   });
   var targets = [];
   (L.targets||[]).forEach(function(t,ti){
@@ -271,7 +330,8 @@ function buildWorld(idx){
 
   G = { L:L, blocks:blocks, targets:targets, ammo:null, ammoBody:null, ammoBodies:[], slingIdx:0,
         launchesLeft:L.launches, launchesUsed:0, restFrames:0, flyFrames:0, reload:0,
-        popped:0, totalTargets:targets.length, drag:null, armed:false, powerUsed:false, winDelay:0, poofs:[] };
+        popped:0, totalTargets:targets.length, drag:null, armed:false, powerUsed:false, winDelay:0,
+        poofs:[], shards:[], smashed:0 };
 
   // pop a target on a solid bonk from the flung ammo (direct hit always counts)
   M.Events.on(engine, "collisionStart", function(ev){
@@ -287,6 +347,13 @@ function buildWorld(idx){
       // flag a flung raccoon that just bonked something (drives the IMPACT pose)
       var am = a._kind==="ammo"?a:(b._kind==="ammo"?b:null);
       if(am){ var asp=Math.hypot(am.velocity.x,am.velocity.y); if(asp>3) am._hitT=nowMs(); }
+      // SD1: breakable blocks take damage from how hard the OTHER thing was
+      // moving relative to them. Both sides of a block-on-block bonk get hurt,
+      // and a static hit (the ground, a wall) counts too — so knocking a leg out
+      // and letting a glass roof fall really does shatter it.
+      var rel = Math.hypot(a.velocity.x-b.velocity.x, a.velocity.y-b.velocity.y);
+      if(a._mat) damageBlock(a, rel, b.isStatic?a:b);
+      if(b._mat) damageBlock(b, rel, a.isStatic?b:a);
     }
   });
   // PRE-SETTLE: let blocks + targets find their rest pose with pops disabled,
@@ -427,6 +494,10 @@ function tracePath(vx,vy,tx,ty){
 function blocksHit(x,y){
   if(!G||!G.blocks) return false;
   for(var i=0;i<G.blocks.length;i++){ var b=G.blocks[i]; if(b.position.y>GY+160) continue;
+    // SD1: glass is not cover. A flung pal smashes straight through it, so the
+    // aim predictor must not call a shot "blocked" just because glass is in the
+    // way — otherwise the bot (and the kid's dotted line) would lie.
+    if(b._mat==="glass") continue;
     var bd=b.bounds; if(x>bd.min.x-1&&x<bd.max.x+1&&y>bd.min.y-1&&y<bd.max.y+1) return true; }
   return false;
 }
@@ -466,6 +537,7 @@ function update(){
   if(!G || state==="title") return;
   if(state==="win" || state==="lose"){ if(fx&&BM)BM.update(fx,1/60); return; }
   M.Engine.update(engine, 1000/60);
+  sweepBrokenBlocks();          // SD1: remove blocks that died this step (never mid-step)
   // pop checks (generous: displaced OR knocked OR fell off) — only once armed
   if(G.armed){ for(var i=0;i<G.targets.length;i++){ var t=G.targets[i]; if(!t._alive) continue;
     var dd=Math.hypot(t.position.x-t._sx, t.position.y-t._sy);
@@ -718,21 +790,76 @@ function drawTarget(b){
 }
 // pick a Kenney physics texture by shape: wide plank / tall pillar / square,
 // and material: tall-ish -> stone (castle pillars), else wood (beams).
-function blockImgFor(w,h){
-  var matl=(h>w*1.15)?"stone":"wood";
+// Pick a Kenney physics texture. A block that NAMES a material uses that
+// material's texture; a plain block still guesses from its shape exactly as
+// before (tall-ish -> stone pillar, else wood beam), so nothing about the
+// levels 1-6 look changes. Glass has no photo texture — it is drawn.
+function blockImgFor(w,h,matName){
+  var matl = matName || ((h>w*1.15)?"stone":"wood");
+  if(matl==="glass") return null;
   var shape=(w>h*1.35)?"W":(h>w*1.35?"T":"S");
   return BLK_IMGS[matl+shape];
 }
+// The middle state between whole and gone: a few crack lines whose count and
+// darkness grow as the block's health falls.
+function drawCracks(w,h,dmg,color){
+  var n = 2 + Math.round(dmg*4);
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.2,Math.min(w,h)*0.07); ctx.lineCap="round";
+  ctx.globalAlpha = 0.35 + 0.55*dmg;
+  for(var i=0;i<n;i++){
+    var f=(i+1)/(n+1), sx=-w/2+w*f, sy=-h/2, jx=w*0.16*((i%2)?1:-1);
+    ctx.beginPath(); ctx.moveTo(sx, sy);
+    ctx.lineTo(sx+jx, sy+h*0.38); ctx.lineTo(sx-jx*0.6, sy+h*0.72); ctx.lineTo(sx+jx*0.3, sy+h);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawBlock(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
-  var w=b._w,h=b._h;
-  var bim=blockImgFor(w,h);
-  if(bim&&(bim.naturalWidth||bim.width)){ playShadowOn(); ctx.drawImage(bim,-w/2,-h/2,w,h); ctx.restore(); return; }
-  ctx.fillStyle="#caa46a"; BR? BR.rrect(ctx,-w/2,-h/2,w,h,5):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
-  ctx.strokeStyle="#9b7741"; ctx.lineWidth=3; ctx.stroke();
+  var w=b._w,h=b._h, M0=matOf(b);
+  var dmg = (M0 && b._hp0) ? Math.max(0,Math.min(1, 1-(b._hp/b._hp0))) : 0;
+  var bim=blockImgFor(w,h,b._mat);
+  if(bim&&(bim.naturalWidth||bim.width)){
+    playShadowOn(); ctx.drawImage(bim,-w/2,-h/2,w,h); ctx.shadowColor="transparent";
+    if(b._cracked) drawCracks(w,h,dmg,M0.crack);
+    ctx.restore(); return;
+  }
+  if(M0 && b._mat==="glass"){                       // a see-through pane with a shine
+    ctx.save(); playShadowOn(); ctx.globalAlpha=0.55;
+    ctx.fillStyle=M0.fill; BR? BR.rrect(ctx,-w/2,-h/2,w,h,4):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle=M0.edge; ctx.lineWidth=2.4; BR? BR.rrect(ctx,-w/2,-h/2,w,h,4):ctx.strokeRect(-w/2,-h/2,w,h); ctx.stroke();
+    ctx.save(); ctx.globalAlpha=0.55; ctx.strokeStyle="#fff"; ctx.lineWidth=Math.max(1.5,w*0.10); ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(-w*0.22,h*0.34); ctx.lineTo(w*0.24,-h*0.36); ctx.stroke(); ctx.restore();
+    if(b._cracked) drawCracks(w,h,dmg,M0.crack);
+    ctx.restore(); return;
+  }
+  var fillC=(M0?M0.fill:"#caa46a"), edgeC=(M0?M0.edge:"#9b7741");
+  ctx.fillStyle=fillC; BR? BR.rrect(ctx,-w/2,-h/2,w,h,5):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
+  ctx.strokeStyle=edgeC; ctx.lineWidth=3; ctx.stroke();
   ctx.strokeStyle="rgba(155,119,65,.6)"; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(-w/2+4,0); ctx.lineTo(w/2-4,0); ctx.stroke();
+  if(M0 && b._cracked) drawCracks(w,h,dmg,M0.crack);
   ctx.restore();
+}
+// The shatter poof: the block's own outline blows apart into four fading shards.
+function drawShards(){
+  if(!G.shards || !G.shards.length) return;
+  var t=nowMs();
+  for(var i=G.shards.length-1;i>=0;i--){ var s=G.shards[i], age=(t-s.t0)/460;
+    if(age>=1){ G.shards.splice(i,1); continue; }
+    var M0=BLOCK_MATS[s.m]||BLOCK_MATS.wood, spread=1+age*1.5;
+    ctx.save(); ctx.translate(s.x,s.y); ctx.rotate((s.a||0)+age*0.5);
+    ctx.globalAlpha=Math.max(0,1-age*age);
+    ctx.fillStyle=M0.fill; ctx.strokeStyle=M0.edge; ctx.lineWidth=1.6;
+    [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(q){
+      var qw=s.w*0.42, qh=s.h*0.42, cx=q[0]*s.w*0.26*spread, cy=q[1]*s.h*0.26*spread;
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(q[0]*q[1]*age*1.2);
+      ctx.beginPath(); ctx.moveTo(-qw/2,-qh/2); ctx.lineTo(qw/2,-qh*0.28); ctx.lineTo(qw*0.3,qh/2); ctx.lineTo(-qw/2,qh*0.34);
+      ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+    });
+    ctx.restore();
+  }
 }
 function hudIcon(x,y,sq){ drawSquadFace(x,y,11,sq,{icon:true}); }
 function draw(){
@@ -741,6 +868,7 @@ function draw(){
   ctx.save(); if(fx&&BM){ var sh=BM.shakeOffset(fx); ctx.translate(sh.x,sh.y); }
   drawBg();
   for(var i=0;i<G.blocks.length;i++) drawBlock(G.blocks[i]);
+  drawShards();                                   // SD1 shatter poof
   for(var j=0;j<G.targets.length;j++){ if(G.targets[j]._alive) drawTarget(G.targets[j]); }
   if(G.poofs && G.poofs.length){ var _np=nowMs();
     for(var pi=G.poofs.length-1;pi>=0;pi--){ var pf=G.poofs[pi], age=(_np-pf.t0)/500;
@@ -863,6 +991,7 @@ if(BN&&BN.register){ BN.register({ hide:["muteBtn","helpBtn","backBtn"],
 // created sounds (ElevenLabs via /api/sfx); BA synth stays a silent fallback only
 if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   stretch:"sling_stretch", launch:"sling_release", thud:"sling_thud", poof:"sling_poof",
+  crack:"sling_crack", shatter:"sling_shatter",     // SD1: a block cracking, and a block going to bits
   explode:"explode", win:"sling_win", lose:"tennis_lose" } }); }
 
 function frame(){ update(); if(SLING_DEMO) demoTick(); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requestAnimationFrame(frame); }
@@ -988,7 +1117,19 @@ window.BUILDABLE_GAME = {
   state:function(){ return state; },
   effG:function(){ return EFF_G; },
   dbg:function(){ return { level:level, state:state, launchesLeft:G&&G.launchesLeft, used:G&&G.launchesUsed,
-    targets:G?G.totalTargets:0, popped:G?G.popped:0 }; },
+    targets:G?G.totalTargets:0, popped:G?G.popped:0, smashed:G?G.smashed:0 }; },
+  // SD1 hooks: what every standing block is made of and how healthy it is,
+  // plus a way to hit one block with a known speed so QA can prove the
+  // glass/wood/stone difference instead of trusting the numbers.
+  _mats:function(){ return BLOCK_MATS; },
+  _blocks:function(){ if(!G) return []; return G.blocks.map(function(b){
+    return { m:b._mat||null, hp:b._hp!=null?Math.round(b._hp*10)/10:null, hp0:b._hp0!=null?Math.round(b._hp0*10)/10:null,
+             cracked:!!b._cracked, w:b._w, h:b._h }; }); },
+  _smashed:function(){ return G?G.smashed:0; },
+  _hitBlock:function(i,spd,weight){ if(!G||!G.blocks[i]) return null;
+    var b=G.blocks[i]; damageBlock(b, spd, { mass:(weight||1)*AMMO_MASS_REF, isStatic:false });
+    var out={ m:b._mat||null, hp:b._hp!=null?Math.round(b._hp*10)/10:null, cracked:!!b._cracked, broken:!!b._broken };
+    sweepBrokenBlocks(); return out; },
   // one level with the bot; returns whether it cleared + launches used
   sim:function(idx,maxFrames){ botMode=true; startLevel(idx); state="ready"; started=true;
     var f=0, cap=maxFrames||20000; while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }
