@@ -114,6 +114,191 @@ only after checking the live site, and never `op:'meta'` by hand.
 Every op exercised against a local fake PostgREST with the real handler mounted in
 front of it: 7 writes, blob intact afterwards (2 phases, 4 cards, no ids lost), and
 all five error paths refuse cleanly with a non-zero exit.
+## 2026-08-15: Session SD2 — Critters you cannot hit directly
+
+**Phase SD, session SD2.** The second of five sessions fixing the problem Mike
+found on 2026-08-15: his six year old cleared all 20 Sling Squad levels in about
+five minutes. Of the four causes found by reading the code, SD1 fixed
+indestructible blocks. SD2 fixes two more — the 24px pop rule, and the fact that
+every critter sat out in the open where one vague shove could reach it. Terrain
+(SD3) and the level-by-level rebuild plus tighter shot counts (SD4) were **not**
+touched.
+
+### What shipped
+
+**The pop rule has teeth.** A critter used to fall over if anything so much as
+leaned on it: 24px of drift or 5.4 of speed and it was gone. It now carries a
+little squish health, and only three things empty it:
+
+| how it goes down | what it takes |
+|---|---|
+| a real hit | damage from the **closing** speed of whatever arrived, scaled by its weight. A pal that has nearly stopped, or a plank the critter is already riding down, leaves it standing |
+| a real crush | something heavy comes to rest on its head and presses. This is what makes a sealed critter beatable at all |
+| thrown | shoved right off its spot (52px, was 24), launched (9.0, was 5.4), or dropped off the world |
+
+Every pop now records **why** it happened. That is not decoration — it is the
+thing that lets QA prove a sealed critter is only ever reached by the collapse
+its layout was designed around.
+
+**Six layouts hide a critter where no arc can reach it.** A critter marked `s`
+sits inside a shell of wood or stone. Glass is never used as a wall, because a
+pal smashes straight through it — glass is a weak point, never cover. The way in
+is always structural, and deliberately not the same move twice:
+
+| level | layout | the way in |
+|---|---|---|
+| 11 Bunker | `bunker` | break a wood leg, the stone roof drops in — the teaching seal |
+| 12 Split Keep | `twinkeep` | the pen is fine; smash the glass stalk holding it up |
+| 14 Hideout | `hideout` | a stone box you cannot break — snap the wood shelf and the stone block on it drops *inside* |
+| 15 Fortress | `fort` | a tall stone screen kills the flat shot; the wood column only takes a high lob dropping in behind |
+| 19 Citadel | `citadel` | two sealed critters, and the same move does not open both |
+| 20 Grand Finale | `finale` | both seals in one yard with three loose critters between, so no single shot does it all |
+
+**The QA bot learned the move.** A bot that only ever flings at critters cannot
+clear a sealed level, so "the bot passes" would have meant nothing. When nothing
+can be hit directly it now does what a kid does: it shoots whatever is holding
+the roof up, choosing by rough hits-to-break and by how close that support sits
+to a critter still standing. It also waits for a collapse to finish before
+spending the next pal instead of firing into a falling tower.
+
+**Level cards tell the truth.** A sealed critter is painted *before* the blocks,
+so its cage covers it and the card shows it as out of reach. Card version bumped
+so the old pictures are replaced.
+
+### Two rules these shapes obey, learned by building ones that did not work
+- **The crusher must be narrower than the pen it has to fall into.** A 130-wide
+  stone roof over a 66-wide pen does not crush anything: it wedges on the wall
+  tops and the critter sits underneath untouched. Every crusher in these six is
+  sized to drop through.
+- **The roof must start clear of the critter's head.** Rest it on the critter and
+  the new crush rule kills it during the settle, before the kid has taken a shot.
+
+### One thing found along the way
+**The first arc sweep was lying, in the game's favour.** It checked "did this arc
+touch the critter" before "is the pal even allowed to be here", and stepped a
+whole frame at a time — up to 27px. That let an arc jump a leg and land inside a
+critter it was actually wedged beside, and three seals came back reachable that
+were not. Fixed by walking each frame in short hops and killing the arc the
+moment its centre enters a grown obstacle. Rebuilt on a stamped grid, because the
+honest version was taking 15 to 22 seconds a level.
+
+### QA
+`node qa-sling.mjs .` — **ALL CHECKS PASS**, about 90 seconds. All 20 levels
+still clear on 5 runs each with slings to spare; levels 1-6 clear with three or
+four spare. New checks prove SD2 rather than assert it: a nudge survives, a graze
+survives, a real hit pops, the old thresholds are gone, at least six levels hide
+a critter, and for each of those levels — the arc sweep finds no launch that
+touches the sealed critter, an ordinary critter in the same level comes back
+**reachable** as a control (or the sweep would be answering "no" to everything
+and proving nothing), across five bot runs no sealed critter ever dies by a
+direct hit, and all five runs still clear.
+
+Two shared libs changed (`buildable-manifest.js`, `buildable-levelthumb.js`), so
+all 44 other QA scripts were re-run. 8 fail; all 8 fail **identically** on the
+SD1 baseline commit (verified by running them from a clean worktree at `f2ef7d7`)
+because jsdom and Playwright are not installed in this container. None is caused
+by this work.
+
+### What remains in phase SD
+SD3 (terrain: hills, pits, floating platforms — and teaching the level-card
+painter to draw it), SD4 (rebuild levels 7-20 as real puzzles, cut shots to about
+one spare, rename and redescribe each level), SD5 (prove she cannot brute force
+it, on a real device).
+
+### Flagged
+- **Shot counts are still SD4's job and were left alone.** They are still the
+  generous `max(3+difficulty, targets+2)`, so the back half still hands out 7 or
+  8 slings where the bot needs 1 to 4. The phase goal of "about one spare shot"
+  is not met yet and cannot be met without SD4's rebuild.
+- **Levels 1 to 6 are no longer byte-for-byte what they were.** SD1 kept them
+  identical; SD2 could not, because the pop rule is global and tightening it was
+  the explicit ask. Their layouts are untouched and a clean direct hit still pops
+  in one shot, but a graze that used to count no longer does. The bot's worst run
+  on level 6 went from 1 sling to 3 out of 6. Worth watching on a real device.
+- **Only 6 of levels 7-20 currently ask for a genuinely different move.** The
+  other eight are still SD1-era towers. "Levels 7 to 20 each ask for a different
+  way to win" is SD4's deliverable, not this one.
+- **The sealed critters were proved by geometry and by bot play, not by a child.**
+  The stray-critter trap from July is exactly this shape of risk. SD5's real-device
+  session is still the one that decides whether these six are puzzles or walls.
+
+## 2026-08-15: Session SD1 — Blocks that actually break
+
+**Phase SD, session SD1.** The first of five sessions fixing the problem Mike
+found on 2026-08-15: his six year old cleared all 20 Sling Squad levels in about
+five minutes. Reading the code turned up four causes — every layout is a small
+stack on flat ground, blocks are indestructible, the pop rule fires on a 24px
+nudge, and shots are handed out as `max(3+difficulty, targets+2)`. SD1 fixes the
+second one. The other three belong to SD2, SD3 and SD4 and were **not** touched.
+
+### What shipped
+
+**Blocks are made of something now.** A layout can give a block a material:
+
+| material | behaviour | proof from qa-sling |
+|---|---|---|
+| glass | shatters on almost any hit and disappears | dies to a soft tap (speed 4) |
+| wood | cracks, then breaks after a few good hits | cracked on hit 1, broke on hit 3, survives a soft tap |
+| stone | barely breaks — has to be toppled instead | 26 good hits to break |
+
+**Damage comes from speed.** On every impact the engine takes the speed of the
+hitter *relative to the block* and scales it by how heavy the hitter was against
+a plain flung pal. A pal at full stretch does about 40 damage to wood; a plank
+tumbling off a tower does a fraction of that; the heavy power does the most.
+Static hits count too, so knocking a leg out and letting a glass roof fall on the
+ground really does shatter it. Blocks that die inside a collision callback are
+marked and swept out **after** the physics step, never mid-step.
+
+**The look and the sound.** Between whole and gone there is a cracked state whose
+crack count and darkness track the damage. Breaking spawns a shatter poof — four
+shards tumbling apart and fading — plus particles in the material's colour. Two
+new created sounds were registered in the shared library: `sling_crack` and
+`sling_shatter`. Glass is drawn as a see-through pane with a shine; wood and
+stone use their existing textures, now chosen by material rather than guessed
+from the block's shape.
+
+**Levels 1 to 6 are byte-for-byte unchanged.** Material is optional on a block
+and has **no default**. A block that names none gets the old weight, grip,
+restitution and look. The six layouts levels 1-6 use — gate, post, tower, double,
+hut, keep — carry no materials at all, and qa-sling now fails if that ever stops
+being true. Levels 7-20 all gained materials; `trio` (level 8) is deliberately
+one post of each, side by side, as the teaching moment.
+
+### Two things found along the way
+- **The `ledge` layout had a glass nub hanging off its deck edge.** It toppled on
+  its own during the settle. Invisible while blocks were indestructible; now it
+  would have shattered before the kid took a shot. Moved fully onto the deck.
+- **Glass was making the aim predictor lie.** `blocksHit` counted any block as
+  cover, so a clean shot through a pane read as blocked — for the kid's dotted
+  line and for the QA bot. Glass is now transparent to the predictor, which is
+  the truth: a flung pal smashes straight through it.
+
+### QA
+`node qa-sling.mjs .` — **ALL CHECKS PASS.** All 20 levels still clear on 5 runs
+each with slings to spare. Six new checks were added to the harness so the
+materials are proved rather than asserted: the three materials behave
+differently under identical hits, levels 1-6 carry no material, every level 7-20
+has breakable blocks, no tower self-damages over 300 idle frames, blocks really
+do smash in ordinary bot play (11 of 14 back-half levels), and the cracked look
+and shatter poof both paint without throwing.
+
+The changed files include three shared libs (`buildable-manifest.js`,
+`buildable-levelthumb.js`, `api/sfx.js`), so all 19 other games with a QA script
+covering them were re-run: **all green.** `qa-skyflyer.mjs` fails in this
+container because jsdom is not installed — verified pre-existing by stashing the
+changes and re-running, so it is not caused by this work.
+
+### What remains in phase SD
+SD2 (critters sealed where no arc can reach, plus tightening the 24px pop rule),
+SD3 (terrain: hills, pits, floating platforms — and teaching the level-card
+painter to draw it), SD4 (rebuild levels 7-20 as real puzzles and cut shots to
+about one spare), SD5 (prove she cannot brute force it, on a real device).
+
+### Flagged
+The shot counts are still the old generous `max(3+difficulty, targets+2)` — the
+bot clears most back-half levels in 1 or 2 slings out of 7 or 8. That is SD4's
+job and was left alone on purpose. Materials on their own do not make the back
+half hard; they are the ingredient SD2 and SD4 need.
 
 ## 2026-08-04: Session RP5 — the last twelve books become richer pages
 

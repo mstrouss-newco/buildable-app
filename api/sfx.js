@@ -122,6 +122,8 @@ const SOUNDS = {
   sling_thud:    "Short soft wooden thud and clatter, friendly cartoon blocks getting bonked and tumbling, single hit, no music, no voices",
   sling_poof:    "Short cute puffy pop and poof, a goofy character popping into a little puff of air, playful cartoon, single hit, no music, no voices",
   sling_win:     "Happy short victory fanfare with a sparkly cheer, cheerful kids slingshot level cleared, no voices",
+  sling_crack:   "Short dry woody crack and splinter, a toy building block starting to split under a bonk, friendly cartoon, not harsh or scary, single hit, no music, no voices",
+  sling_shatter: "Short bright cartoon shatter and tinkle, a little glass pane breaking into sparkly pieces that scatter, playful and light, not harsh or scary, single hit, no music, no voices",
 
   // ---- Story narrative one-shots (door opens, thunder, etc.) ----
   door:      "Short wooden door creaking slowly open with a soft latch click, single hit, no music, no voices",
@@ -425,6 +427,7 @@ const DURATIONS = {
   cg_place:0.45, cg_twang:0.4, cg_poof:0.55, cg_coin:0.5, cg_oops:0.6, cg_cheer:1.3,
   cg_bonk:0.4,
   sling_stretch:0.5, sling_release:0.5, sling_thud:0.6, sling_poof:0.5, sling_win:1.6,
+  sling_crack:0.5, sling_shatter:0.7,
   door:1.3, knock:1.0, thunder:1.8, firewhoosh:1.2, splash:0.8, magic:1.1, pop:0.5, whoosh:0.6, footsteps:1.2, bell:0.8, rustle:0.9, sparkle:1.0,
   spk_hit:0.5, spk_shoot:0.5, spk_coin:0.5, spk_coinbig:0.8, spk_levelup:1.0, spk_hurt:0.5, spk_pop:0.5, spk_boom:0.9, spk_boss:0.8, spk_win:1.6, spk_lose:1.0,
   zen_bowl:2.2, zen_chime:1.8, zen_marimba:1.2, zen_drop:0.9, zen_tap:0.6, zen_pluck:1.1, zen_bell:1.6, zen_pebble:0.9, zen_swish:0.7, zen_breath:1.0,

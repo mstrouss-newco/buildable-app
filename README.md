@@ -33,6 +33,53 @@ them. Three new server-side card ops (`card`, `note`, `addCard`) plus a compact
 from any machine, with no key and no browser. The read-modify-write stays on the
 server so a caller can never wipe the roadmap. AGENTS.md now tells every session to
 update the planner at the end, with gates: `done` only when pushed and QA green.
+## SD2 — Sling critters you cannot hit directly (August 15 2026)
+`public/sling-squad.html`, `public/buildable-manifest.js`,
+`public/buildable-levelthumb.js`, `qa-sling.mjs`. Two changes. **The pop rule
+got teeth:** a critter used to fall over on a 24px nudge or 5.4 of speed, which
+is why landing anywhere near a small tower cleared a level. It now carries
+squish health that only a real hit (damage from the *closing* speed of whatever
+arrived), a real crush (something heavy coming to rest on its head) or being
+thrown right off its spot (52px / 9.0) can empty. Every pop records **why**.
+**Six layouts now hide a critter where no shot can touch it** — `bunker`
+(break a wood leg, the stone roof drops in), `twinkeep` (smash the glass stalk
+under the pen), `hideout` (snap the wood shelf, the stone block drops *inside*
+a stone box), `fort` (a stone screen kills the flat shot, so lob in behind),
+`citadel` and `finale` (two seals that need different moves). Sealed critters
+are marked `s` in `SLING_LAYOUTS`; glass is never used as a wall because a pal
+smashes through it. The QA bot learned to shoot the thing holding the roof up
+when it cannot reach a critter, and to wait for a collapse to finish before
+spending the next pal. Level cards paint a sealed critter *behind* its cage.
+`node qa-sling.mjs .` — ALL CHECKS PASS (about 90 seconds). Each seal is proved
+twice: an arc sweep over every launch the slingshot can make finds none that
+touches it, with an ordinary critter in the same level as a reachable control,
+and across five bot runs no sealed critter ever dies by a direct hit. All 20
+levels still clear with slings to spare; levels 1-6 still clear with three or
+four. The other 44 QA scripts re-ran: 8 fail for reasons that are identical on
+the SD1 baseline (jsdom/Playwright missing in this container), unchanged by
+this work.
+
+## SD1 — Sling blocks that actually break (August 15 2026)
+`public/buildable-manifest.js`, `public/sling-squad.html`, `public/buildable-levelthumb.js`,
+`api/sfx.js`, `qa-sling.mjs`. A block used to be indestructible — it could only
+wobble — so every level was the same shove. Blocks now have a **material** and a
+**health bar**: glass shatters on almost any hit and vanishes, wood cracks then
+breaks after about three good hits, stone needs 26 and has to be toppled instead.
+Damage comes from how fast the thing that hit it was moving relative to it,
+scaled by how heavy that thing was, so a flung pal hurts far more than a tumbling
+plank and the heavy power hurts most. Between whole and gone there is a cracked
+look, and breaking spawns a shatter poof of four tumbling shards plus two new
+created sounds (`sling_crack`, `sling_shatter`). Materials live on the blocks in
+`SLING_LAYOUTS`, are optional, and have **no default** — a block that names none
+is the old block exactly, which is how levels 1-6 stay untouched (their six
+layouts carry no materials at all). The aim predictor no longer treats glass as
+cover. Level cards paint each block in its real material so they stop lying.
+`node qa-sling.mjs .` — ALL CHECKS PASS, all 20 levels still clear with slings to
+spare, plus new checks that prove the three materials differ, that no tower
+self-damages before the kid shoots, and that blocks really smash in play (11 of
+14 back-half levels). The 19 other games sharing the changed libs all re-ran
+green; `qa-skyflyer.mjs` fails in this container for a pre-existing reason
+(jsdom not installed), unchanged by this work.
 
 ## LP2 — Croc Tot and Math Cannon level cards show the level (August 4 2026)
 `public/buildable-levelthumb.js`, `public/croctot.html`, `public/mathcannon-engine.html`.

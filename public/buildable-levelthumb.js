@@ -187,19 +187,11 @@
       g.beginPath(); g.moveTo(AX - 7, AY - 4); g.lineTo(AX + 7, AY - 4); g.stroke();
       disc(g, AX, AY - 2, 4.2, "#e08a4a");                // a pal loaded and ready
       disc(g, AX - 1.4, AY - 3.2, 1.5, "#fff"); disc(g, AX + 1.4, AY - 3.2, 1.5, "#fff");
-      // the tower — every block the kid will actually knock over
-      (d.blocks || []).forEach(function (b) {
-        var w = b.w * S, h = b.h * S, x = tx(b.x) - w / 2, y = ty(b.y) - h / 2;
-        var stone = (b.w >= 100 || b.h >= 90);            // beams and long walls read as stone
-        g.fillStyle = "rgba(0,0,0,.16)"; rr(g, x + 1.5, y + 2, w, h, 2.5); g.fill();
-        g.fillStyle = stone ? "#b9bcc4" : "#caa46a"; rr(g, x, y, w, h, 2.5); g.fill();
-        g.strokeStyle = stone ? "#71747d" : "#7d5c2e"; g.lineWidth = 1.5; g.stroke();
-        g.fillStyle = "rgba(255,255,255,.30)"; g.fillRect(x + 1.4, y + 1.4, Math.max(0, w - 2.8), 1.4);
-        g.fillStyle = "rgba(0,0,0,.14)"; g.fillRect(x + 1.4, y + h - 2.6, Math.max(0, w - 2.8), 1.4);
-      });
-      // the goofy critters you have to pop
+      // the goofy critters you have to pop. SD2: a SEALED critter goes down
+      // FIRST, so its cage paints over the top of it and the card tells the
+      // truth — that one is behind the stonework, not standing in front of it.
       var cols = ["#8fd66a", "#f0a35e", "#c98fe0", "#6fc9e6", "#f2779a"];
-      (d.targets || []).forEach(function (p, i) {
+      function critter(p, i){
         var x = tx(p.x), y = ty(p.y), r = 7.2, c = cols[i % cols.length];
         g.fillStyle = "rgba(0,0,0,.16)"; g.beginPath(); g.ellipse(x, y + r * 0.95, r * 0.9, r * 0.3, 0, 0, 6.2832); g.fill();
         disc(g, x, y, r, c);
@@ -209,7 +201,26 @@
         disc(g, x + r * 0.38, y - r * 0.14, r * 0.13, "#2a2340");
         g.strokeStyle = shade(c, -60); g.lineWidth = 1.3; g.lineCap = "round";
         g.beginPath(); g.arc(x, y + r * 0.16, r * 0.42, 0.35, Math.PI - 0.35); g.stroke();
+      }
+      (d.targets || []).forEach(function (p, i) { if (p.s) critter(p, i); });
+      // the tower — every block the kid will actually knock over
+      (d.blocks || []).forEach(function (b) {
+        var w = b.w * S, h = b.h * S, x = tx(b.x) - w / 2, y = ty(b.y) - h / 2;
+        // A block that names a material (SD1) is painted as that material, so the
+        // card tells the truth about what the kid is about to smash. A block with
+        // no material keeps the old guess: beams and long walls read as stone.
+        var m = b.m || ((b.w >= 100 || b.h >= 90) ? "stone" : "wood");
+        var FILL = { glass: "#bfe9f7", wood: "#caa46a", stone: "#b9bcc4" };
+        var EDGE = { glass: "#7fbfd6", wood: "#7d5c2e", stone: "#71747d" };
+        g.fillStyle = "rgba(0,0,0,.16)"; rr(g, x + 1.5, y + 2, w, h, 2.5); g.fill();
+        g.globalAlpha = (m === "glass") ? 0.6 : 1;
+        g.fillStyle = FILL[m] || FILL.wood; rr(g, x, y, w, h, 2.5); g.fill();
+        g.globalAlpha = 1;
+        g.strokeStyle = EDGE[m] || EDGE.wood; g.lineWidth = 1.5; g.stroke();
+        g.fillStyle = "rgba(255,255,255,.30)"; g.fillRect(x + 1.4, y + 1.4, Math.max(0, w - 2.8), 1.4);
+        g.fillStyle = "rgba(0,0,0,.14)"; g.fillRect(x + 1.4, y + h - 2.6, Math.max(0, w - 2.8), 1.4);
       });
+      (d.targets || []).forEach(function (p, i) { if (!p.s) critter(p, i); });
     },
 
     // CROC TOT — the stage sky and ground, the flying snacks that stage sends

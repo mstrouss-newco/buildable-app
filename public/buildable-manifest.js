@@ -195,6 +195,15 @@
   // tunable is difficulty 1-5, which DERIVES how many slings the kid gets; the
   // floor keeps it at (targets + 2) so the sensible-aim bot always clears with a
   // sling to spare. Art (which backdrop scene) is declared per level in `parts`.
+  //
+  // Session SD1 — a block may name a MATERIAL with `m`:
+  //   "glass" shatters on almost any hit and vanishes
+  //   "wood"  cracks, then breaks after a few good hits
+  //   "stone" barely breaks at all — it has to be toppled instead
+  // `m` is OPTIONAL and there is no default: a block with no `m` is the old
+  // indestructible block, unchanged in weight, grip and look. That is why the
+  // six layouts levels 1-6 use (gate/post/tower/double/hut/keep) carry no
+  // materials at all — the on-ramp plays exactly as it did before.
   var SLING_LAYOUTS = {
     gate:   { blocks:[ {x:705,y:520,w:30,h:60},{x:775,y:520,w:30,h:60},{x:740,y:476,w:120,h:26} ],
               targets:[ {x:740,y:445} ] },
@@ -204,7 +213,9 @@
               targets:[ {x:620,y:444},{x:820,y:444} ] },
     keep:   { blocks:[ {x:660,y:520,w:30,h:60},{x:740,y:520,w:30,h:60},{x:700,y:476,w:130,h:26},{x:672,y:440,w:30,h:46},{x:728,y:440,w:30,h:46},{x:700,y:408,w:90,h:24} ],
               targets:[ {x:700,y:378},{x:560,y:530},{x:840,y:530} ] },
-    grand:  { blocks:[ {x:700,y:520,w:34,h:60},{x:780,y:520,w:34,h:60},{x:740,y:476,w:128,h:26},{x:712,y:440,w:30,h:46},{x:768,y:440,w:30,h:46},{x:740,y:408,w:96,h:24},{x:740,y:376,w:30,h:42} ],
+    // grand is level 9 (back half), so it carries materials; the five layouts
+    // above it are the levels 1-6 on-ramp and stay material-free on purpose.
+    grand:  { blocks:[ {x:700,y:520,w:34,h:60,m:"stone"},{x:780,y:520,w:34,h:60,m:"stone"},{x:740,y:476,w:128,h:26,m:"wood"},{x:712,y:440,w:30,h:46,m:"wood"},{x:768,y:440,w:30,h:46,m:"wood"},{x:740,y:408,w:96,h:24,m:"wood"},{x:740,y:376,w:30,h:42,m:"glass"} ],
               targets:[ {x:740,y:337},{x:600,y:530},{x:860,y:530} ] },
     // --- expansion layouts (Session: 20-level ramp). Each keeps at least one
     // clearly-reachable arc per target so the sensible-aim QA bot clears them all.
@@ -212,37 +223,84 @@
               targets:[ {x:740,y:432} ] },
     hut:    { blocks:[ {x:700,y:520,w:30,h:60},{x:780,y:520,w:30,h:60},{x:740,y:478,w:112,h:24} ],
               targets:[ {x:740,y:452},{x:560,y:530} ] },
-    ledge:  { blocks:[ {x:640,y:520,w:30,h:60},{x:700,y:520,w:30,h:60},{x:670,y:478,w:92,h:22},{x:626,y:452,w:16,h:34} ],
+    // the glass nub sits ON the deck (x 624..716), not overhanging its edge — off
+    // the edge it used to topple and, now that glass breaks, would shatter itself
+    // before the kid had taken a single shot.
+    ledge:  { blocks:[ {x:640,y:520,w:30,h:60,m:"wood"},{x:700,y:520,w:30,h:60,m:"wood"},{x:670,y:478,w:92,h:22,m:"wood"},{x:642,y:450,w:16,h:34,m:"glass"} ],
               targets:[ {x:686,y:452},{x:820,y:530},{x:540,y:530} ] },
-    trio:   { blocks:[ {x:600,y:520,w:26,h:60},{x:740,y:520,w:26,h:60},{x:860,y:520,w:26,h:60} ],
+    // trio is the teaching level: one post of each material, side by side.
+    trio:   { blocks:[ {x:600,y:520,w:26,h:60,m:"glass"},{x:740,y:520,w:26,h:60,m:"wood"},{x:860,y:520,w:26,h:60,m:"stone"} ],
               targets:[ {x:600,y:478},{x:740,y:478},{x:860,y:478} ] },
-    wall:   { blocks:[ {x:650,y:500,w:34,h:100},{x:650,y:436,w:34,h:34} ],
+    wall:   { blocks:[ {x:650,y:500,w:34,h:100,m:"stone"},{x:650,y:436,w:34,h:34,m:"glass"} ],
               targets:[ {x:740,y:530},{x:800,y:530},{x:870,y:530} ] },
-    bunker: { blocks:[ {x:660,y:512,w:20,h:72},{x:840,y:512,w:20,h:72},{x:750,y:520,w:30,h:60} ],
-              targets:[ {x:705,y:530},{x:795,y:530},{x:750,y:470} ] },
-    twinkeep:{ blocks:[ {x:600,y:520,w:28,h:60},{x:660,y:520,w:28,h:60},{x:630,y:478,w:80,h:22},
-                        {x:800,y:520,w:28,h:60},{x:860,y:520,w:28,h:60},{x:830,y:478,w:80,h:22} ],
-              targets:[ {x:630,y:452},{x:830,y:452},{x:715,y:530},{x:540,y:530} ] },
-    spire:  { blocks:[ {x:740,y:520,w:40,h:60},{x:740,y:474,w:30,h:44},{x:740,y:436,w:22,h:44} ],
+    // ===================================================================
+    //  SD2 — SEALED LAYOUTS. A critter marked `s` sits inside a shell no
+    //  arc in the game can reach: the walls beside it and the roof over it
+    //  are wood or stone, and glass never covers it (a pal smashes straight
+    //  through glass, so glass is a weak point, never a wall). The way in is
+    //  always structural — break the leg and let the roof fall on it, or
+    //  smash the stalk and let the whole pen come down. qa-sling proves both
+    //  halves of that claim: it sweeps every arc the slingshot can make to
+    //  show the critter is untouchable, then shows the bot still clears it.
+    //
+    //  Two rules these shapes obey, learned the hard way:
+    //   - the crusher must be NARROWER than the pen it has to fall into, or
+    //     it just wedges on the wall tops and nothing happens;
+    //   - the roof must start clear of the critter's head, or it is already
+    //     crushing it before the kid has taken a shot.
+    // ===================================================================
+    // bunker — the teaching seal: break a wood leg, the stone roof drops in.
+    bunker: { blocks:[ {x:706,y:518,w:16,h:60,m:"wood"},{x:774,y:518,w:16,h:60,m:"wood"},
+                       {x:740,y:474,w:124,h:26,m:"stone"} ],
+              targets:[ {x:740,y:531,s:true},{x:560,y:531},{x:880,y:531} ] },
+    // twinkeep — the pen is fine; the glass stalk holding it up is not.
+    twinkeep:{ blocks:[ {x:740,y:516,w:76,h:64,m:"stone"},{x:740,y:450,w:28,h:68,m:"glass"},
+                        {x:740,y:404,w:140,h:24,m:"wood"},
+                        {x:710,y:370,w:14,h:44,m:"wood"},{x:770,y:370,w:14,h:44,m:"wood"},
+                        {x:740,y:330,w:104,h:22,m:"stone"} ],
+              targets:[ {x:740,y:375,s:true},{x:600,y:531},{x:880,y:531},{x:500,y:531} ] },
+    spire:  { blocks:[ {x:740,y:520,w:40,h:60,m:"stone"},{x:740,y:474,w:30,h:44,m:"wood"},{x:740,y:436,w:22,h:44,m:"wood"} ],
               targets:[ {x:740,y:398},{x:600,y:530},{x:860,y:530} ] },
-    fort:   { blocks:[ {x:620,y:512,w:24,h:72},{x:860,y:512,w:24,h:72},{x:740,y:520,w:30,h:60},{x:690,y:478,w:120,h:20} ],
-              targets:[ {x:665,y:530},{x:815,y:530},{x:740,y:452},{x:560,y:530} ] },
-    hideout:{ blocks:[ {x:680,y:500,w:22,h:100},{x:800,y:500,w:22,h:100} ],
-              targets:[ {x:740,y:530},{x:600,y:530},{x:870,y:530} ] },
-    tallgrand:{ blocks:[ {x:710,y:520,w:34,h:60},{x:790,y:520,w:34,h:60},{x:750,y:476,w:120,h:24},
-                         {x:722,y:440,w:28,h:48},{x:778,y:440,w:28,h:48},{x:750,y:406,w:88,h:22},{x:750,y:372,w:24,h:46} ],
+    // fort — the flat shot is dead: a tall stone screen covers the low line, so
+    // the only way at the wood column is a high lob dropping into the gap
+    // behind the screen. (Or bowl the screen over onto the tower and let that
+    // do it for you.)
+    fort:   { blocks:[ {x:600,y:490,w:24,h:116,m:"stone"},
+                       {x:700,y:512,w:18,h:72,m:"wood"},{x:782,y:512,w:18,h:72,m:"wood"},
+                       {x:740,y:462,w:134,h:28,m:"stone"} ],
+              targets:[ {x:740,y:531,s:true},{x:500,y:531},{x:870,y:531},{x:920,y:531} ] },
+    // hideout — a stone box you cannot break. Snap the wood shelf across the
+    // top and the stone block resting on it drops INSIDE, onto the critter.
+    hideout:{ blocks:[ {x:704,y:516,w:14,h:64,m:"stone"},{x:776,y:516,w:14,h:64,m:"stone"},
+                       {x:740,y:474,w:104,h:12,m:"wood"},{x:740,y:455,w:50,h:26,m:"stone"} ],
+              targets:[ {x:740,y:531,s:true},{x:590,y:531},{x:880,y:531} ] },
+    tallgrand:{ blocks:[ {x:710,y:520,w:34,h:60,m:"stone"},{x:790,y:520,w:34,h:60,m:"stone"},{x:750,y:476,w:120,h:24,m:"wood"},
+                         {x:722,y:440,w:28,h:48,m:"wood"},{x:778,y:440,w:28,h:48,m:"wood"},{x:750,y:406,w:88,h:22,m:"wood"},{x:750,y:372,w:24,h:46,m:"glass"} ],
               targets:[ {x:750,y:334},{x:600,y:530},{x:900,y:530},{x:540,y:530} ] },
-    gauntlet:{ blocks:[ {x:560,y:500,w:24,h:96},{x:720,y:500,w:24,h:96},{x:880,y:500,w:24,h:96} ],
+    gauntlet:{ blocks:[ {x:560,y:500,w:24,h:96,m:"glass"},{x:720,y:500,w:24,h:96,m:"wood"},{x:880,y:500,w:24,h:96,m:"stone"} ],
               targets:[ {x:640,y:534},{x:800,y:534},{x:900,y:534},{x:490,y:534} ] },
-    twintower:{ blocks:[ {x:640,y:520,w:36,h:60},{x:640,y:474,w:28,h:44},{x:640,y:436,w:20,h:44},
-                         {x:840,y:520,w:36,h:60},{x:840,y:474,w:28,h:44},{x:840,y:436,w:20,h:44} ],
+    twintower:{ blocks:[ {x:640,y:520,w:36,h:60,m:"stone"},{x:640,y:474,w:28,h:44,m:"wood"},{x:640,y:436,w:20,h:44,m:"glass"},
+                         {x:840,y:520,w:36,h:60,m:"stone"},{x:840,y:474,w:28,h:44,m:"wood"},{x:840,y:436,w:20,h:44,m:"glass"} ],
               targets:[ {x:640,y:398},{x:840,y:398},{x:740,y:530},{x:540,y:530} ] },
-    citadel:{ blocks:[ {x:600,y:512,w:24,h:72},{x:880,y:512,w:24,h:72},
-                       {x:700,y:520,w:28,h:60},{x:780,y:520,w:28,h:60},{x:740,y:476,w:120,h:22} ],
-              targets:[ {x:740,y:450},{x:640,y:534},{x:840,y:534},{x:520,y:534},{x:900,y:534} ] },
-    finale: { blocks:[ {x:560,y:508,w:24,h:80},{x:900,y:508,w:24,h:80},
-                       {x:730,y:520,w:36,h:60},{x:730,y:474,w:28,h:44},{x:730,y:436,w:20,h:44} ],
-              targets:[ {x:730,y:398},{x:640,y:534},{x:820,y:534},{x:500,y:534},{x:900,y:452} ] }
+    // citadel — two sealed critters at once, and the same move does not open
+    // both: the left keep wants a leg broken, the right one wants its stalk gone.
+    citadel:{ blocks:[ {x:600,y:518,w:16,h:60,m:"wood"},{x:668,y:518,w:16,h:60,m:"wood"},
+                       {x:634,y:474,w:120,h:26,m:"stone"},
+                       {x:850,y:516,w:64,h:64,m:"stone"},{x:850,y:450,w:26,h:68,m:"glass"},
+                       {x:850,y:404,w:120,h:22,m:"wood"},
+                       {x:822,y:372,w:14,h:42,m:"wood"},{x:878,y:372,w:14,h:42,m:"wood"},
+                       {x:850,y:334,w:92,h:20,m:"stone"} ],
+              targets:[ {x:634,y:531,s:true},{x:850,y:377,s:true},{x:740,y:531},{x:500,y:531} ] },
+    // finale — every seal in the game in one yard: drop a block through a stone
+    // box, and take a pedestal out from under a pen, with three loose critters
+    // in between so there is no single shot that does it all.
+    finale: { blocks:[ {x:704,y:516,w:14,h:64,m:"stone"},{x:776,y:516,w:14,h:64,m:"stone"},
+                       {x:740,y:474,w:104,h:12,m:"wood"},{x:740,y:455,w:50,h:26,m:"stone"},
+                       {x:890,y:516,w:60,h:64,m:"stone"},{x:890,y:450,w:24,h:68,m:"glass"},
+                       {x:890,y:404,w:116,h:22,m:"wood"},
+                       {x:864,y:372,w:14,h:42,m:"wood"},{x:916,y:372,w:14,h:42,m:"wood"},
+                       {x:890,y:334,w:88,h:20,m:"stone"} ],
+              targets:[ {x:740,y:531,s:true},{x:890,y:377,s:true},{x:560,y:531},{x:640,y:531},{x:480,y:531} ] }
   };
   function slingLaunches(d, tCount){ d=clamp(d,1,5); return Math.max(3+d, tCount+2); }
   var slingProfile = {
@@ -253,8 +311,13 @@
     toLevel: function(lv){
       var d = clamp(lv.difficulty,1,5);
       var geo = SLING_LAYOUTS[lv.layout] || SLING_LAYOUTS.gate;
-      var blocks  = geo.blocks.map(function(b){ return { x:b.x, y:b.y, w:b.w, h:b.h }; });
-      var targets = geo.targets.map(function(t){ return { x:t.x, y:t.y }; });
+      // `m` (SD1 material) rides along only when the layout sets one; a block with
+      // no material reaches the engine exactly as it always did.
+      var blocks  = geo.blocks.map(function(b){ var o={ x:b.x, y:b.y, w:b.w, h:b.h }; if(b.m) o.m=b.m; return o; });
+      // `s` (SD2 sealed) rides along the same way `m` does: it marks a critter
+      // the layout promises no arc can touch, so the engine and QA both know
+      // which ones have to be reached by collapsing the building instead.
+      var targets = geo.targets.map(function(t){ var o={ x:t.x, y:t.y }; if(t.s) o.s=true; return o; });
       var parts = lv.parts || {};
       return {
         id: lv.id, name: lv.name, difficulty: d,
