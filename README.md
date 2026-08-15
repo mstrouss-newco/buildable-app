@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Lanes get their own tables, and the runners go background (August 15 2026)
+`api/planner.js`, `scripts/lane-run.sh`, db migration `planner_lanes_and_queue`.
+The queue and lanes were in the one planner_meta JSON blob, so overlapping writes silently
+lost each other — a working lane disappeared from the display while a phase was being queued.
+They now live in `planner_queue` and `planner_lanes`, one row each, and claiming is the SQL
+function `planner_claim()` (DELETE ... FOR UPDATE SKIP LOCKED RETURNING + upsert), so two
+lanes cannot take the same phase. Plus `Run in the background.command`: launchd agents per
+lane, RunAtLoad + KeepAlive, logs in `runner-logs/`, and double-clicking it again turns them
+off. No windows to keep open.
+
 ## Sky Flyer: sky trails — rings to fly through (August 15 2026)
 `public/skyflyer-engine.html`, `public/buildable-audio.js`, `qa-skyflyer.mjs`.
 Each world now carries two or three lines of rings hanging in the air, chased

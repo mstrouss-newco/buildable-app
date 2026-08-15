@@ -1,5 +1,39 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (seventh pass): lanes get their own tables, and it runs in the background
+
+### The bug Mike's screenshot caught
+The banner said FL and RP were waiting for a lane, and showed **no lane at all** — while
+Lane 1 was right there working NV1. Lane 1's record had been wiped.
+
+Cause: every part of this did read-modify-write on the ONE `planner_meta` JSON blob. Mike
+tapped FL and RP at about the moment Lane 1 claimed NV, and one write landed on top of the
+other. With several lanes checking in every 60 seconds plus the page saving, that is not a
+rare race, it is the normal case.
+
+**Fix: the queue and the lanes moved out of the blob into their own tables.**
+`planner_queue` (one row per waiting phase) and `planner_lanes` (one row per lane, PK on
+lane). A lane's check-in is now `PATCH planner_lanes?lane=eq.2` — it touches its own row and
+nothing else can overwrite it.
+
+Claiming became a SQL function, `planner_claim(p_lane)`: a single
+`DELETE ... WHERE id = (SELECT ... ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *`
+followed by an upsert of the lane row. Two lanes calling it in the same instant cannot get
+the same phase, and now that is guaranteed by the database rather than by luck.
+
+`autorunView()` assembles the same shape the page already drew, so nothing in the planner UI
+had to change.
+
+### No windows
+`scripts/lane-run.sh` holds the bring-up a lane needs (make its clone, clear stale git
+locks, park stray edits, pull, hand over to the runner), so the double-click launcher and
+the background agents share one copy of it.
+
+`Run in the background.command` writes a launchd agent per lane, `RunAtLoad` + `KeepAlive`,
+logging to `Buildable MVP/runner-logs/laneN.log`. Two lanes by default. It is its own off
+switch: double-click again and it removes the agents. After this Mike never opens a window —
+he taps "Run this phase" in the planner and that is the whole interface.
+
 ## 2026-08-15 (FL12): sky trails — lines of rings to fly through
 
 Sky Flyer: every world now carries two or three sky trails — lines of rings
