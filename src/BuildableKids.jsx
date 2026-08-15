@@ -258,7 +258,9 @@ function viewToPath(screen, landingId, exploreId) {
   if (screen === SCREEN_PLAY_HUB) return "/app/play"; // NV1
   if (screen === SCREEN_MAKE_HUB) return "/app/make"; // NV3
   if (screen === SCREEN_EXPLORE_HUB) return "/app/explore"; // NV3 — /app/explore (no id) is the hub
-  if (screen === SCREEN_MY_STUFF) return "/app/creations";
+  // NV4 — Me tab writes /app/me so every bottom-bar tab has an /app/<tab> address
+  // matching its label. /app/creations still resolves back to Me for old bookmarks.
+  if (screen === SCREEN_MY_STUFF) return "/app/me";
   if (screen === SCREEN_EXPLORE) return "/app/explore" + (exploreId ? "/" + exploreId : "");
   if (screen === SCREEN_LESSONS) return "/app/lessons";
   if (URL_STABLE_LANDINGS[screen]) return "/app/" + URL_STABLE_LANDINGS[screen];
@@ -274,7 +276,8 @@ function screenForPath(pathname) {
   if (!seg) return { screen: SCREEN_HOME };
   if (seg === "play") return { screen: SCREEN_PLAY_HUB };
   if (seg === "make") return { screen: SCREEN_MAKE_HUB }; // NV3
-  if (seg === "creations") return { screen: SCREEN_MY_STUFF };
+  if (seg === "me") return { screen: SCREEN_MY_STUFF }; // NV4 — /app/me matches the Me tab label
+  if (seg === "creations") return { screen: SCREEN_MY_STUFF }; // NV4 — kept as an alias for old links
   if (seg === "lessons") return { screen: SCREEN_LESSONS };
   if (seg === "explore") return { screen: SCREEN_EXPLORE_HUB }; // NV3 — the section page
   if (seg.indexOf("explore/") === 0) {
@@ -3600,6 +3603,19 @@ function BottomBar({ current, activeKid, onHome, onPlay, onMake, onExplore, onMe
     { id: "explore", label: "Explore", on: onExplore, glyph: <NavExploreGlyph /> },
     { id: "me", label: "Me", on: onMe, glyph: null },
   ];
+  // NV4 — every tab press gets the same juice every game gets: a "select" tap
+  // sound + a light haptic through the shared Feel Kit, and a brief squash on
+  // the pressed pill so the tap has a visual pulse to match the sound. The
+  // squash is state-driven (not just :active) so it survives touch->click on
+  // iOS and works the same on a mouse. Feel is a safe no-op when the Kit is
+  // not loaded, so headless QA and cold offline hits never crash.
+  const [pressed, setPressed] = useState(null);
+  const pressTab = (t) => {
+    setPressed(t.id);
+    try { window.BuildableFeel && window.BuildableFeel.tap(); } catch (e) {}
+    setTimeout(() => setPressed((p) => (p === t.id ? null : p)), 140);
+    if (t.on) t.on();
+  };
   return (
     <nav data-nv1-bottom-bar aria-label="Sections" style={{
       position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 3200,
@@ -3615,16 +3631,19 @@ function BottomBar({ current, activeKid, onHome, onPlay, onMake, onExplore, onMe
         const bg = sel ? color : color + "26"; // ~15% alpha, always the tab colour, never grey
         const fg = sel ? "#FFFFFF" : color;
         const isMe = t.id === "me";
+        const isPressed = pressed === t.id;
         return (
-          <button key={t.id} onClick={t.on} type="button" aria-label={t.label}
+          <button key={t.id} onClick={() => pressTab(t)} type="button" aria-label={t.label}
             data-tab={t.id} data-selected={sel ? "1" : "0"}
+            data-pressed={isPressed ? "1" : "0"}
             aria-current={sel ? "page" : undefined}
             style={{
               flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center", gap: 3,
               padding: "8px 4px 6px", borderRadius: 18, border: "none",
               background: bg, color: fg, cursor: "pointer", fontFamily: NUN,
-              transition: "background 0.15s ease, color 0.15s ease",
+              transform: isPressed ? "scale(0.88)" : "scale(1)",
+              transition: "background 0.15s ease, color 0.15s ease, transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1)",
             }}
           >
             <span style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>

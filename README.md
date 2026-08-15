@@ -3092,6 +3092,28 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-08-15 (NV4: Nav polish — tap sound + squash on every tab, and Me gets its own /app address)
+
+**Phase NV, session NV4.** Every bottom-bar tab press now fires the shared Feel
+Kit (`Feel.tap()` — the same "select" sound + light haptic every game uses) and
+squashes the pressed pill (`transform: scale(0.88)` with a spring transition),
+so a tap feels like something happened even before the next screen paints. The
+squash is state-driven so it survives the iOS touch->click gap and works the
+same on a mouse. Feel is a safe no-op when the Kit isn't loaded, so headless QA
+and cold offline hits still can't crash. The Me tab now writes `/app/me`
+(matching the tab label) instead of `/app/creations` — every one of the five
+tabs now has its own `/app/<tab>` address, so reload lands on the same section
+and browser Back cycles through them (extends session 2E). `/app/creations` is
+kept as an alias on the read side so an older bookmark still opens Me.
+`qa-nv4.mjs` (45 checks) green; `qa-nv4-dom.mjs` is the optional live-DOM sweep
+that boots the built app at 390x844 and asserts no page scrolls sideways, every
+page has a bottom cut-off cue, no soon tile above a real one, and no shelf
+longer than 8 before a See All. It skips loudly when Playwright isn't installed
+so this session (running in the autopilot loop with no Playwright) doesn't
+claim a green it can't see; the source harness is the one that must pass. NV1-3
+QAs still green.
+
+---
 ## Session log — 2026-07-26 (Planner: the Right now bar stops being a wall of text)
 
 Roadmap tab of `/planner` (`public/planner.html`). Session descriptions on the

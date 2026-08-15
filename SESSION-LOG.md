@@ -1,5 +1,27 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (NV4): Nav polish — tap sound + squash on every tab, and the Me tab now has its own address
+
+**Phase NV, session NV4.** Every bottom-bar tab press now fires the shared
+Feel Kit (`Feel.tap()` — the same "select" sound + light haptic every game
+uses) and squashes the pressed pill (`transform: scale(0.88)` with a spring
+transition), so a tap feels like something happened even before the next
+screen paints. The squash is state-driven so it survives the iOS
+touch->click gap and works the same on a mouse. Feel is a safe no-op when
+the Kit isn't loaded, so headless QA and cold offline hits still can't
+crash. The Me tab now writes `/app/me` (matching the tab label) instead of
+`/app/creations` — every one of the five tabs now has its own `/app/<tab>`
+address, so reload lands on the same section and browser Back cycles
+through them (extends session 2E). `/app/creations` is kept as an alias on
+the read side so an older bookmark still opens Me. `qa-nv4.mjs` (45 checks)
+green; `qa-nv4-dom.mjs` is the optional live-DOM sweep — boots the built
+app at 390x844, asserts no page scrolls sideways, every page has a bottom
+cut-off cue, no soon tile above a real one, and no shelf longer than 8
+before a See All. It skips loudly when Playwright isn't installed so this
+session (running in the autopilot loop with no Playwright) doesn't claim a
+green it can't see; the source harness is the one that must pass. NV1-3
+QAs still green.
+
 ## 2026-08-15 (NV3): Make and Explore now have their own section pages, and Me lights up the bottom bar
 
 **Phase NV, session NV3.** Every bottom-bar tab now takes a kid to a real
