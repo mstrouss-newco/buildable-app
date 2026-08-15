@@ -285,6 +285,15 @@ if (MANUAL) {
   report(await workRun());
 
 } else if (WATCH) {
+  // Hand back anything this lane was still holding from a previous life. A lane
+  // killed mid-card (restart, crash, the background runners switched off) used to
+  // take its phase with it, and the phase looked like it had silently stopped.
+  try {
+    const rel = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: 'release', lane: LANE }) }).then((x) => x.json());
+    if (rel && rel.requeued) say(`Put phase ${rel.requeued} back in the queue — this lane was stopped part-way through it.`);
+  } catch { /* the planner will sweep it after 10 minutes anyway */ }
+
   say(`Lane ${LANE} is waiting. Open the planner and tap "Run this phase" on any phase.`);
   say('Close this window to stop.\n');
   let ticks = 0;

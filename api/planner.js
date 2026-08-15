@@ -289,6 +289,19 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, autorun: await autorunView() });
       }
 
+      // op:'release' — a lane handing back whatever it was still holding. Called at
+      // startup, because a lane that was killed mid-card (a restart, a crash, the
+      // background runners being switched off) otherwise takes its phase with it and
+      // the phase looks like it silently stopped. Requeued at the FRONT: a phase that
+      // is already part-built should be finished before new work starts.
+      if (op === "release") {
+        const lane = clip(b.lane, 8).trim() || "1";
+        const r = await fetch(`${URL}/rest/v1/rpc/planner_release`, { method: "POST", headers: H, body: JSON.stringify({ p_lane: lane }) });
+        if (!r.ok) { const t = await r.text().catch(() => ""); return res.status(200).json({ ok: false, detail: t.slice(0, 200) }); }
+        const rows = await r.json();
+        return res.status(200).json({ ok: true, requeued: (rows && rows[0] && rows[0].phase) || null });
+      }
+
       // op:'claim' — one SQL function pops the oldest queued phase and assigns it to
       // this lane. Two lanes calling at the same instant cannot get the same phase.
       if (op === "claim") {
