@@ -1,5 +1,90 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15: Session 9E — Editor async QA gate
+
+**Phase 9, session 9E.** The editor now play-tests what it publishes. Saving still
+goes live instantly; a robot then plays every level of the change and tells you in
+the editor whether anyone can still finish it — with a one-click way back if not.
+
+### The gap this closes
+Save already ran a **structure** check: does this manifest make sense, are the level
+ids unique, is every difficulty a number between 1 and 5. That check cannot tell you
+whether a level is **beatable**. Setting a level's difficulty from 2 to 5 passes
+every structural rule and can still produce a level no child can finish — and
+difficulty is the single thing the editor exists to change. Only a robot that
+actually plays the game knows. That robot already existed for every game
+(`qa-breaker.mjs` and friends); it had simply never been wired to the editor.
+
+### How it works now
+1. You save. **It goes live immediately, exactly as before** — you never wait on a
+   robot. Before publishing, the version that was live is stashed as a revert point.
+2. The save asks GitHub to run the play-test for that game.
+3. The robot fetches **what is actually live** (your saved version, not the copy of
+   the manifest that ships in the repo — that is the whole point), plays every
+   level, and posts the verdict back to the site.
+4. The editor shows it: amber while it plays, green when every level was still
+   beatable, red with the failing lines and a **Put it back** button when one was
+   not. If you close the tab, the verdict is waiting next time you open that game.
+5. If the robot fails, GitHub's own failure email reaches you as well.
+
+**A failing play-test does NOT roll the site back on its own.** The change stays
+live and you are told. A robot having a bad day should not be able to revert the
+live site unattended — that call stays yours, and it is one click.
+
+### Honesty, deliberately
+A game with no robot, or a save that could not start one, is reported as **"not
+play-tested"** in neutral grey. It is never dressed up as a pass. A verdict that
+arrives after a newer save has landed is recorded as stale and thrown away, so an
+old result can never describe a manifest that is no longer live.
+
+### What shipped
+- `qa/qa-map.mjs` — which robot belongs to which game. All **21** games in the
+  editor's catalogue are covered.
+- `scripts/editor-qa-run.mjs` — the runner: fetch the live manifest, play it, report.
+- `.github/workflows/editor-qa.yml` — fires on a save, by hand from the Actions tab,
+  and **nightly** over every game with an editor save as a safety net.
+- `api/manifest.js` — stashes the revert point, stamps a save id, starts the robot.
+- `api/manifest-qa.js` — takes the verdict, serves it to the editor, does the revert.
+- `api/_editorAuth.js` — the owner sign-in check, shared by both endpoints.
+- `public/editor.html` — the panel, the polling, Put it back, Check it again.
+
+No database migration: this rides in `image_cache` like the rest of the editor.
+
+### QA run this session
+- `node qa-breaker.mjs .` — ALL CHECKS PASS (8 levels, 5 runs each)
+- `node qa-survival.mjs .` — ALL CHECKS PASS
+- `node qa-sling.mjs .` — ALL CHECKS PASS
+- `node qa-tictactoe.mjs .` — ALL CHECKS PASS
+- Runner exercised end to end against a stand-in site: a passing game reported
+  `pass`; a deliberately broken manifest reported `fail` with the failing lines and
+  exited non-zero (so the Action goes red); a superseded save id was skipped as
+  stale; a game with no robot reported `no-robot`.
+- All five editor states driven in a real browser, including pressing **Put it
+  back** and confirming it calls the revert endpoint.
+
+### One thing needs you (about five minutes, both are dashboard steps)
+The gate is built and safe to deploy as is — until these exist it simply says "not
+play-tested" instead of pretending. To switch the robot on:
+
+1. **Make up a long random password.** Any long random string. Call it the robot
+   password. Do not send it to me.
+2. **In GitHub** → this repo → Settings → Secrets and variables → Actions → New
+   repository secret. Name it `QA_REPORT_SECRET`, paste the robot password.
+3. **In GitHub** → Settings → Developer settings → fine-grained token with
+   permission to start Actions on this repo. Copy it.
+4. **In Vercel** → this project → Settings → Environment Variables, add two:
+   `QA_REPORT_SECRET` (the same robot password) and `GITHUB_QA_TOKEN` (the token
+   from step 3). Redeploy.
+
+I cannot do steps 1–4 myself: they need a dashboard login and they hand out
+credentials, which agents on this repo never touch. After that, save anything in
+the editor and the panel should go amber then green.
+
+### Also worth knowing
+`buildable-rebuild-roadmap.md` listed only 9A–9C under Phase 9 while the planner
+has 9A–9E. I added 9D and 9E to the roadmap file as unticked reference lines so the
+two agree. I did not tick anything — that stays yours after you test.
+
 ## 2026-08-04: Session RP5 — the last twelve books become richer pages
 
 **Phase RP, session RP5.** Sharks, Dinosaurs, The Moon, Big Cats, Penguins,

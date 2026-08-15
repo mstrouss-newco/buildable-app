@@ -6,6 +6,31 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Session 9E — the editor's async QA gate (August 15 2026)
+`api/manifest.js`, `api/manifest-qa.js` (new), `api/_editorAuth.js` (new),
+`qa/qa-map.mjs` (new), `scripts/editor-qa-run.mjs` (new),
+`.github/workflows/editor-qa.yml` (new), `public/editor.html`.
+The editor's save already ran a structure check; it could not tell you whether a
+level was still **beatable**, which is exactly what a difficulty change breaks.
+Now saving still publishes immediately, then a GitHub Action play-tests what went
+live: the runner fetches the **saved override** (not the repo's copy of the
+manifest), writes it where the robot reads it, runs that game's `qa-*.mjs`, and
+posts the verdict to `/api/manifest-qa`. The editor shows amber → green, or red
+with the failing lines and a one-click **Put it back**; every save stashes the
+previous manifest as the revert point. A late verdict whose `saveId` no longer
+matches the live save is recorded as stale and discarded. `qa/qa-map.mjs` maps all
+21 editor games to their robot; a game without one is reported as "not
+play-tested", never as a pass. A nightly `schedule` re-checks every game that has
+an editor save. Storage reuses `image_cache` — **no migration**.
+Verified: runner exercised end to end against a stand-in site (pass, fail with
+exit 1, stale-save, no-robot); all five editor panel states driven in Chromium,
+including that Put it back calls the revert endpoint. `qa-breaker.mjs`,
+`qa-survival.mjs`, `qa-sling.mjs`, `qa-tictactoe.mjs` all green.
+**Needs the owner once:** repo secret `QA_REPORT_SECRET`, and Vercel env
+`GITHUB_QA_TOKEN` + `QA_REPORT_SECRET` (see SESSION-LOG for the plain version).
+Until those exist the editor says "not play-tested" rather than implying a check
+that never ran.
+
 ## LP2 — Croc Tot and Math Cannon level cards show the level (August 4 2026)
 `public/buildable-levelthumb.js`, `public/croctot.html`, `public/mathcannon-engine.html`.
 Two new painters in the one shared level-thumb helper: `snacks` (stage sky and
