@@ -112,6 +112,59 @@ for(let i=6;i<n;i++){ SG.sim(i,20000); if(SG._smashed()>0) smashedSomewhere++; }
 console.log(`${smashedSomewhere>0?'PASS':'FAIL'}  blocks actually smash in real play (${smashedSomewhere}/${n-6} back-half levels)`);
 if(!smashedSomewhere) ok=false;
 
+// --- 3c) SD2: critters you cannot hit directly, and a pop rule with teeth ---
+// The claim this phase makes is a strong one, so it gets checked twice over:
+// once geometrically (no arc the slingshot can produce touches the critter) and
+// once in real play (over five bot runs, that critter never dies by a direct
+// hit — only by being crushed, thrown or dropped). A control target in the same
+// level has to come back REACHABLE, or the sweep is just answering "no" to
+// everything and proving nothing.
+console.log('--- SD2: critters you cannot hit directly ---');
+const rule = SG._popRule();
+console.log(`pop rule: shoved ${rule.POP_MOVE}px or launched ${rule.POP_SPD} pops; squish ${rule.TGT_HP}, nudges under ${rule.TGT_MIN_SPD} do nothing`);
+
+// a barely-nudged critter has to survive, and a real hit has to finish it
+SG._begin(0);
+const nudge = SG._nudge(0, rule.TGT_MIN_SPD, 1);          // right on the floor = nothing
+SG._begin(0); const graze = SG._nudge(0, 5, 1);           // a pal that has nearly stopped
+SG._begin(0); const solid = SG._nudge(0, 16, 1);          // a pal arriving properly
+const popOk = nudge.alive && graze.alive && !solid.alive;
+console.log(`${popOk?'PASS':'FAIL'}  a nudge survives, a graze survives, a real hit pops (nudge:${nudge.alive?'stands':'popped'} graze:${graze.alive?'stands':'popped'} hit:${solid.alive?'stands':'popped'})`);
+if(!popOk) ok=false;
+// and the old thresholds are genuinely gone
+const tightened = rule.POP_MOVE>24 && rule.POP_SPD>5.4;
+console.log(`${tightened?'PASS':'FAIL'}  pop thresholds tightened from 24 / 5.4`);
+if(!tightened) ok=false;
+
+// which levels hide a critter, and does the layout's promise hold
+const sealedLevels=[];
+for(let i=0;i<n;i++){ if((cfg.levels[i].targets||[]).some(t=>t.s)) sealedLevels.push(i); }
+console.log(`${sealedLevels.length>=6?'PASS':'FAIL'}  at least six levels hide a critter (${sealedLevels.length}: ${sealedLevels.map(i=>'L'+(i+1)+' '+cfg.levels[i].name).join(', ')})`);
+if(sealedLevels.length<6) ok=false;
+
+for(const i of sealedLevels){
+  SG._begin(i);
+  const ts=SG._targets();
+  const sealed=ts.filter(t=>t.sealed), open=ts.filter(t=>!t.sealed);
+  // 1) geometry: no arc in the game touches a sealed critter...
+  const reachable = sealed.filter(t=>SG._reach(t.i));
+  // 2) ...but an ordinary critter in the same level is plainly reachable, which
+  //    is what stops this from being a sweep that says "no" to everything.
+  const control = open.length ? open.some(t=>SG._reach(t.i)) : null;
+  // 3) real play: five bot runs, and no sealed critter may ever die by "hit"
+  let byHit=[], cleared=0;
+  for(let r=0;r<5;r++){ const res=SG.sim(i,20000); if(res.result==='win') cleared++;
+    for(const t of SG._targets()) if(t.sealed && t.why==='hit') byHit.push(t.i); }
+  const good = reachable.length===0 && control!==false && byHit.length===0 && cleared===5;
+  console.log(`${good?'PASS':'FAIL'}  L${i+1} ${cfg.levels[i].name.padEnd(14)} sealed=${sealed.length} unreachable=${sealed.length-reachable.length}/${sealed.length} controlReachable=${control===null?'n/a':control} neverHitInPlay=${byHit.length===0} clears=${cleared}/5`);
+  if(!good) ok=false;
+}
+
+// the on-ramp must NOT be sealed — levels 1-6 stay the confident easy start
+const onrampSealed = cfg.levels.slice(0,6).some(l=>(l.targets||[]).some(t=>t.s));
+console.log(`${!onrampSealed?'PASS':'FAIL'}  levels 1-6 hide nothing (on-ramp still a straight shot)`);
+if(onrampSealed) ok=false;
+
 console.log('--- a clean run earns stars ---');
 const s=SG.sim(0,20000); console.log(`stars(L1)=${s.stars}`);
 
