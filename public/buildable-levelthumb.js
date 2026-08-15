@@ -190,10 +190,17 @@
       // the tower — every block the kid will actually knock over
       (d.blocks || []).forEach(function (b) {
         var w = b.w * S, h = b.h * S, x = tx(b.x) - w / 2, y = ty(b.y) - h / 2;
-        var stone = (b.w >= 100 || b.h >= 90);            // beams and long walls read as stone
+        // A block that names a material (SD1) is painted as that material, so the
+        // card tells the truth about what the kid is about to smash. A block with
+        // no material keeps the old guess: beams and long walls read as stone.
+        var m = b.m || ((b.w >= 100 || b.h >= 90) ? "stone" : "wood");
+        var FILL = { glass: "#bfe9f7", wood: "#caa46a", stone: "#b9bcc4" };
+        var EDGE = { glass: "#7fbfd6", wood: "#7d5c2e", stone: "#71747d" };
         g.fillStyle = "rgba(0,0,0,.16)"; rr(g, x + 1.5, y + 2, w, h, 2.5); g.fill();
-        g.fillStyle = stone ? "#b9bcc4" : "#caa46a"; rr(g, x, y, w, h, 2.5); g.fill();
-        g.strokeStyle = stone ? "#71747d" : "#7d5c2e"; g.lineWidth = 1.5; g.stroke();
+        g.globalAlpha = (m === "glass") ? 0.6 : 1;
+        g.fillStyle = FILL[m] || FILL.wood; rr(g, x, y, w, h, 2.5); g.fill();
+        g.globalAlpha = 1;
+        g.strokeStyle = EDGE[m] || EDGE.wood; g.lineWidth = 1.5; g.stroke();
         g.fillStyle = "rgba(255,255,255,.30)"; g.fillRect(x + 1.4, y + 1.4, Math.max(0, w - 2.8), 1.4);
         g.fillStyle = "rgba(0,0,0,.14)"; g.fillRect(x + 1.4, y + h - 2.6, Math.max(0, w - 2.8), 1.4);
       });
