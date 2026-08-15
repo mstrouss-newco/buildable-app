@@ -108,7 +108,7 @@
           "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
         },
         {
-          "text": "After a long dry spell a thirsty camel can gulp as much as 38 gallons of water in one drink, which is a whole lot of buckets. It can also travel a week or more without any water at all. That makes the camel a champion at desert life.",
+          "text": "After a long dry spell a thirsty camel can gulp as much as 32 gallons of water in one drink, which is a whole lot of buckets. It can also travel a week or more without any water at all. That makes the camel a champion at desert life.",
           "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)",
           "art": "/explore/topic-photos/deserts/deserts-2a.webp",
           "artAlt": "A camel drinks from a trough of clear water at a desert well, water dripping from its muzzle",
@@ -142,8 +142,8 @@
           {
             "icon": "camel",
             "label": "A thirsty camel, in one drink",
-            "value": 38,
-            "display": "about 38 gallons"
+            "value": 32,
+            "display": "about 32 gallons"
           },
           {
             "icon": "bathtub",
@@ -152,7 +152,7 @@
             "display": "about 40 gallons"
           }
         ],
-        "caption": "The camel's big drink comes from the San Diego Zoo Wildlife Alliance. The bottle, the bucket and the bathtub are everyday sizes, and they show that a thirsty camel can drink almost a whole bathtub in one go.",
+        "caption": "The camel's big drink comes from the San Diego Zoo Wildlife Alliance. The bottle, the bucket and the bathtub are everyday sizes, and they show that a thirsty camel can drink most of a bathtub in one go.",
         "source": "San Diego Zoo Wildlife Alliance (sandiegozoo.org)"
       }
     },

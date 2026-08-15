@@ -97,7 +97,7 @@
           "source": "NASA Science (science.nasa.gov)"
         },
         {
-          "text": "Mars has the tallest volcano we know of anywhere. It is called Olympus Mons, and it stands more than 25 miles tall from its base to its top, which is more than four Mount Everests stacked on top of each other. Its base sprawls so far that it would cover a whole state. Walking across the bottom of it would take you weeks.",
+          "text": "Mars has the tallest volcano we know of anywhere. It is called Olympus Mons, and it stands about 16 miles tall from its base to its top, which is close to three Mount Everests stacked on top of each other. Its base sprawls so far that it would cover a whole state. Walking across the bottom of it would take you weeks.",
           "source": "NASA Jet Propulsion Laboratory (jpl.nasa.gov)",
           "art": "/explore/topic-photos/planets/planets-2a.webp",
           "artAlt": "Olympus Mons seen from orbit, an enormous rusty volcano with a wide flat top and steep cliffs all around its edge",
@@ -113,7 +113,7 @@
       ],
       "layout": "tall",
       "stat": {
-        "value": "25",
+        "value": "16",
         "unit": "miles tall"
       },
       "infographic": {
@@ -136,8 +136,8 @@
           {
             "icon": "volcano",
             "label": "Olympus Mons on Mars",
-            "value": 25,
-            "display": "more than 25 miles"
+            "value": 16,
+            "display": "about 16 miles"
           }
         ],
         "caption": "Olympus Mons and Mount Everest both come from NASA. The jet plane is an everyday height, here only so you have something to measure against.",
