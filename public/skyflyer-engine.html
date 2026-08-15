@@ -102,7 +102,12 @@
     text-align:center;color:#33566e;font-weight:800;font-size:18px;
     box-shadow:0 4px 14px rgba(30,60,90,.2);transition:opacity .6s}
   #hint .sub{font-weight:600;font-size:14px;color:#6b8aa0;margin-top:4px}
-  #padmsg{position:absolute;left:50%;top:22%;transform:translateX(-50%);
+  /* FL9: centred in the space that is NOT the right-hand column, not in the
+     whole screen. The coin pill and the map own the last 118px of every width,
+     so a card centred on the screen ran under the map on a 320px phone even
+     before the shell's buttons were in the picture. */
+  #padmsg{position:absolute;left:calc(50% - 59px);top:22%;transform:translateX(-50%);
+    max-width:calc(100% - 190px);box-sizing:border-box;
     background:rgba(47,183,214,.95);color:#fff;border-radius:16px;padding:10px 20px;
     font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(20,80,110,.3);
     opacity:0;transition:opacity .4s}
@@ -282,6 +287,30 @@
   #minimap .blip{position:absolute;transform:translate(-50%,-50%);cursor:pointer;
     width:18px;height:18px;display:flex;align-items:center;justify-content:center}
   #minimap .blip svg{display:block;pointer-events:none}
+  /* ==== FL9: the shell's buttons and this HUD stop sharing a corner ==========
+     In the app the SHELL draws Home (top-left) and a column of round buttons
+     down the top-right — Sound, then Help — floating OVER this game. Measured
+     at 320, 390 and 820 wide, the shell Sound button sat exactly on the coin
+     count and the shell Help button sat on the mini-map, on every one. A kid
+     tapping their coins muted the game.
+
+     buildable-gamenav.js marks the page .bk-inshell in the app only and
+     publishes the strip the shell reserves, so the whole right-hand column
+     (coins, map, banked flash) drops BELOW the shell's buttons and keeps the
+     right edge it has always had. On a 320px phone there is no room to put the
+     column beside the buttons instead — the map alone is 104px wide and the
+     goal chips already start at 104px from the left — so down is the only
+     honest answer, and it is the same answer at every width.
+
+     The offsets below are the standalone gaps (12 / 62 / 174) re-hung off the
+     bottom of the shell's strip, so the column keeps its own spacing. No
+     env(safe-area-inset-top) here on purpose: --bk-nav-bottom is already a
+     position in the shell's coordinate space, which is the same space this
+     iframe fills, so adding the inset again would push the column lower than
+     it needs to go. Standalone none of this applies. */
+  .bk-inshell .pill   {top:calc(var(--bk-nav-bottom,96px) + 10px)}
+  .bk-inshell #minimap{top:calc(var(--bk-nav-bottom,96px) + 60px)}
+  .bk-inshell #banked {top:calc(var(--bk-nav-bottom,96px) + 172px)}
 </style>
 </head>
 <body>

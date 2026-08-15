@@ -19,6 +19,32 @@ When a game runs inside the app (an iframe in the React shell, `GameFrame`), the
 Everything the shell draws sits at `z-index:3`. Keep gameplay HUD and buttons out
 of the top ~52px on the left and right edges so nothing lands under the shell nav.
 
+**Hiding a game's own buttons is only half the job (Session FL9).** The shell's
+buttons still float over the game, so a HUD that keeps drawing in those corners
+ends up *underneath* a control the kid can't see — Sky Flyer's coin count sat
+under the shell Sound button and its mini-map under the shell Help button, at
+every phone width. So in-app `buildable-gamenav.js` marks the page
+`.bk-inshell` and publishes the strip the shell reserves:
+
+| variable | value | means |
+| --- | --- | --- |
+| `--bk-nav-left` | `104px` | clear of the Home pill |
+| `--bk-nav-right` | `64px` | clear of the top-right button column |
+| `--bk-nav-bottom` | `52` / `96` / `140px` | how deep that column goes, for the buttons *this* engine asked for |
+
+A game's own stylesheet uses them under `.bk-inshell`, and nothing changes when
+the page is opened standalone:
+
+```css
+.bk-inshell .pill { top: calc(var(--bk-nav-bottom, 96px) + 10px) }
+```
+
+Do **not** add `env(safe-area-inset-top)` to those rules: `--bk-nav-bottom` is
+already a position in the shell's coordinate space, which is the same space the
+game's iframe fills, so adding the inset again pushes the HUD lower than it
+needs to go. The numbers are mirrored from `GameFrame`/`NavBtn` in
+`src/BuildableKids.jsx` — move one and you must move the other.
+
 ## Rule 1 — Route every game's nav through the shared bridge
 
 Games do **not** invent their own in-app nav. They keep their own buttons (for when

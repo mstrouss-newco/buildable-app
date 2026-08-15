@@ -157,7 +157,7 @@ const LANDING_WRAP = {
   "rileys-garden": { play: SCREEN_RILEYS, journey: true, demo: "/rileys-garden.html?v=art2&screen=demo" },
   typing: { play: SCREEN_TYPING, journey: true, demo: "/typing.html?v=2&screen=demo" },
   mathcannon: { play: SCREEN_MATHCANNON, journey: true, demo: "/mathcannon-engine.html?v=2&screen=demo" },
-  skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=fl8c&screen=demo" },
+  skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=fl9&screen=demo" },
   platformer: { play: SCREEN_PLATFORMER },
   town: { play: SCREEN_TOWN },
   runner: { play: SCREEN_RUNNER },
@@ -376,6 +376,12 @@ function PickerCard({ g, onOpen, onShare }) {
 // ---- ONE consistent game frame for every full-screen game/maker ----
 // Home is always top-left; games never draw their own back button (BS showBack:false).
 // Also returns to the hub on a nav:exit message (string, {type:"nav:exit"}, or legacy bk:home).
+// GEOMETRY IS MIRRORED IN public/buildable-gamenav.js (Session FL9): 38px round
+// buttons at right:14 stacked at top 14 / 58 / 102, Home pill at top:14 left:14.
+// The bridge publishes that strip into the game as --bk-nav-left/right/bottom so
+// an engine's HUD can lay itself out around chrome it does not draw. Move these
+// numbers and you must move the ones in that file too, or a HUD will drift back
+// under a button. qa-skyflyer-hud.mjs fails if the two ever disagree.
 function NavBtn({ kind, muted, top, onClick }) {
   const sv = { stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", fill: "none" };
   let icon = null;
@@ -1420,7 +1426,7 @@ function SkyFlyerScreen({ onHome, level }) {
   // FL5: jobs are found out in the world, not offered on a card when you arrive,
   // so the shell hands over exactly what it always did - a world and a ride. The
   // shell journey stays the one and only level picker (the 7J double-picker rule).
-  const src = "/skyflyer-engine.html?v=fl8c&ride=" + ride + (level != null ? "&level=" + level : "");
+  const src = "/skyflyer-engine.html?v=fl9&ride=" + ride + (level != null ? "&level=" + level : "");
   // FL4 learning moment: the engine asks before the NEXT world unlocks, exactly
   // like Breaker. The shell is the authority — the parent's Learning Mode toggle
   // overrides the manifest default, and if it is off we answer "done" instantly
