@@ -216,6 +216,19 @@ const GAME_CATALOG = [
   { id: "bingo",       name: "Bingo",            category: "Classic",  color: "#FFD23F", type: "game", imgId: "bingo",       handler: "onBingo",       desc: "The device calls — daub a line to win, 2-4!", soon: true },
 ];
 
+// NV2 — MAKE_CATALOG lives at module scope so the Home "Make" door can count
+// live studios without rendering the shelf. `handlerName` names the shell prop
+// that opens the studio; `soon` gates the coming-soon 1111 preview. Removing a
+// `soon` flag here is the whole change needed to promote a studio to a live
+// count on the Home door.
+const MAKE_CATALOG = [
+  { id: "song",  name: "Make a song",     sub: "Sing about anything",         color: "#6A4FE0", handlerName: "onMusic" },
+  { id: "sound", name: "Sound Machine",   sub: "Silly sounds & explosions",   color: "#F0577E", handlerName: "onSounds" },
+  { id: "art",   name: "Make art",        sub: "Draw, stamp & mirror",        color: "#1098AD", handlerName: "onArt" },
+  { id: "story", name: "Make a story",    sub: "Coming soon",                 color: "#E0578F", handlerName: "onStories", soon: true, gated: true },
+  { id: "game",  name: "Make a game",     sub: "Coming soon",                 color: "#7A4FE0", handlerName: "onMakeGame", soon: true },
+];
+
 // ===========================================================================
 //  Session 2E — reload-safe addresses inside /app. The shell mirrors every
 //  STABLE destination (Home, a game's landing, Kidspedia, Creations) into the
@@ -2772,45 +2785,11 @@ function HomeScreen(props) {
   const HOME_INK = "#3A2E4D";
   const HOME_SUB = "#8B84A0";
 
-  // App-icon tiles: a colored squircle + a clean white glyph (no emoji).
-  const AppIcon = ({ grad, size = 76, children }) => (
-    <div style={{ position: "relative", width: size, height: size, borderRadius: Math.round(size * 0.26), background: grad, boxShadow: "0 8px 18px rgba(58,46,77,0.28)", overflow: "hidden", flexShrink: 0 }}>
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 55%)" }} />
-      <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
-    </div>
-  );
-  const SpeakerGlyph = () => (
-    <svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 19h6l9-7v24l-9-7H9z" fill="#fff" stroke="#fff" strokeLinejoin="round" />
-      <path d="M30 18c3 2.4 3 9.6 0 12M35 13c5 4 5 18 0 22" />
-    </svg>
-  );
-  const NoteGlyph = () => (
-    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
-      <ellipse cx="17" cy="33" rx="7" ry="5.2" transform="rotate(-20 17 33)" fill="#fff" />
-      <rect x="22.6" y="11" width="3.2" height="22.5" fill="#fff" />
-      <path d="M25.8 11 q11 3 8.5 15 q.5 -8 -8.5 -9 z" fill="#fff" />
-    </svg>
-  );
-  const ArtGlyph = () => (
-    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="27" y="9" width="6.5" height="20" rx="3" transform="rotate(38 30 19)" fill="#fff" />
-      <path d="M18 30 q-3 2 -4 7 q5 -1 7 -4 z" fill="#fff" />
-      <circle cx="14" cy="14" r="3.4" fill="#fff" /><circle cx="22" cy="11" r="2.4" fill="#fff" opacity="0.8" />
-    </svg>
-  );
   const ControllerGlyph = () => (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M6 11h4M8 9v4" />
       <line x1="15" y1="11" x2="15.01" y2="11" /><line x1="17.5" y1="13.5" x2="17.51" y2="13.5" />
       <path d="M5 16a4 4 0 0 1-1.3-3.6l.8-4.2A3.5 3.5 0 0 1 7.9 5.5h8.2a3.5 3.5 0 0 1 3.4 2.7l.8 4.2A4 4 0 0 1 16.5 16c-1 0-1.8-.5-2.3-1.3l-.5-.7h-3.4l-.5.7C9.3 15.5 8.5 16 7.5 16z" />
-    </svg>
-  );
-  const BookGlyph = () => (
-    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M24 14 C18.5 10.5 12 10.5 8 12.3 V35.5 C12 33.7 18.5 33.7 24 37.2 Z" fill="#fff" />
-      <path d="M24 14 C29.5 10.5 36 10.5 40 12.3 V35.5 C36 33.7 29.5 33.7 24 37.2 Z" fill="#fff" opacity="0.82" />
-      <rect x="22.8" y="13.2" width="2.4" height="24" rx="1.2" fill="#fff" opacity="0.55" />
     </svg>
   );
   const ChessGlyph = () => (
@@ -2820,12 +2799,6 @@ function HomeScreen(props) {
       <circle cx="24" cy="18" r="5" fill="#fff" />
       <path d="M16.5 22 h15 l-2.5 12 h-10 z" fill="#fff" />
       <rect x="13" y="33" width="22" height="6" rx="3" fill="#fff" />
-    </svg>
-  );
-  const WandGlyph = () => (
-    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M24 9 l3.6 9.8 L37.4 22 l-9.8 3.6 L24 35 l-3.6-9.4 L11 22 l9.8-3.2 Z" fill="#fff" />
-      <circle cx="38" cy="11" r="2.4" fill="#fff" /><circle cx="11" cy="35" r="1.8" fill="#fff" />
     </svg>
   );
   // Session LS2 — the Lessons tile glyph: a drawn schoolhouse (SVG geometry, no emoji).
@@ -2863,12 +2836,6 @@ function HomeScreen(props) {
   const HeartGlyph = ({ size = 14, color = "#E0578F" }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true">
       <path d="M12 20.5s-7.6-4.6-10-9.2C.4 7.7 2.6 4 6.3 4c2 0 3.6 1.1 4.5 2.6a1.5 1.5 0 002.4 0C14.1 5.1 15.7 4 17.7 4 21.4 4 23.6 7.7 22 11.3 19.6 15.9 12 20.5 12 20.5z" />
-    </svg>
-  );
-  const BellGlyph = ({ size = 20, color = "#3A2E4D" }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M18 9a6 6 0 10-12 0c0 6-2.5 7.5-2.5 7.5h17S18 15 18 9z" />
-      <path d="M10.5 20a1.7 1.7 0 003 0" />
     </svg>
   );
 
@@ -3139,307 +3106,338 @@ function HomeScreen(props) {
     else setCatalogErr(true);
   };
 
-  // ---- shelf card (Play): art-slot image from GAME_CATALOG, no hardcoded art ----
-  const shelfCardStyle = {
-    flex: "0 0 auto", width: phone ? 150 : 176, textAlign: "left", padding: 0, borderRadius: 18,
-    border: HOME_CARD_BORDER, background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
-    overflow: "hidden", boxShadow: HOME_SHADOW, scrollSnapAlign: "start",
-  };
-  const PlayShelfCard = ({ g }) => (
-    <button onClick={() => openCatalogGame(g)} style={{ ...shelfCardStyle, opacity: g.soon ? 0.65 : 1 }}>
-      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${g.color}, ${g.color}99)` }}>
-        {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
-        {g.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
-        {g.multiplayer && <span style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>Multiplayer</span>}
-      </div>
-      <div style={{ padding: "9px 11px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <span style={{ width: 9, height: 9, borderRadius: 3, background: g.color, flex: "0 0 auto" }} />
-          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</div>
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{g.category}</div>
-      </div>
-    </button>
-  );
-
-  // ---- shelf card (Learn): Session LS2, switched on in LS4. Until the owner
-  // flips the Lessons switch on /lesson-review the tile is visible but opens the
-  // same 1111 preview gate the Play shelf and the Stories tile use, so no kid
-  // reaches a lesson before he has approved what is behind it. Once he flips it,
-  // the same tile becomes an ordinary card that opens the section. ----
-  const LEARN_ITEMS = [
-    lessonsLive
-      ? { id: "lessons", title: "Lessons", sub: "Math and reading, at your own pace", grad: "linear-gradient(160deg,#8A6BFF,#FF6B6B)", glyph: <SchoolGlyph />,
-          onClick: onLessons }
-      : { id: "lessons", title: "Lessons", sub: "Coming soon", grad: "linear-gradient(160deg,#8A6BFF,#FF6B6B)", glyph: <SchoolGlyph />, soon: true, gated: true,
-          onClick: () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
-  ];
-
-  // ---- shelf card (Make): the creation tools this Home already exposes ----
-  const MAKE_ITEMS = [
-    { id: "song", title: "Make a song", sub: "Sing about anything", color: "#6A4FE0", grad: "linear-gradient(160deg,#8A6BFF,#6A4FE0)", glyph: <NoteGlyph />, onClick: onMusic },
-    { id: "sound", title: "Sound Machine", sub: "Silly sounds & explosions", color: "#F0577E", grad: "linear-gradient(160deg,#FF8FB1,#F0577E)", glyph: <SpeakerGlyph />, onClick: onSounds },
-    { id: "art", title: "Make art", sub: "Draw, stamp & mirror", color: "#1098AD", grad: "linear-gradient(160deg,#22B8CF,#1098AD)", glyph: <ArtGlyph />, onClick: onArt },
-    // Stories is COMING SOON while the art relaunch finishes: the tile stays visible
-    // but opens the same 1111 preview gate the Play shelf uses (owner QA only).
-    { id: "story", title: "Make a story", sub: "Coming soon", color: "#E0578F", grad: "linear-gradient(160deg,#F2789E,#E0578F)", glyph: <BookGlyph />, soon: true, gated: true, onClick: () => { setCatalogGate(() => onStories); setCatalogPw(""); setCatalogErr(false); } },
-    { id: "game", title: "Make a game", sub: "Coming soon", color: "#7A4FE0", grad: "linear-gradient(160deg,#A06BFF,#7A4FE0)", glyph: <WandGlyph />, onClick: onMakeGame, soon: true },
-  ];
-  // Make cards use the SAME shape as the Play shelf: 4:3 key art on top, title +
-  // one-liner underneath. Art comes from the shared image library (kind=make); the
-  // colored gradient + glyph stay underneath as the instant fallback.
-  const MakeShelfCard = ({ item }) => (
-    <button
-      onClick={item.soon && !item.gated ? undefined : item.onClick}
-      disabled={item.soon && !item.gated}
-      style={{ ...shelfCardStyle, opacity: item.soon ? 0.65 : 1, cursor: item.soon && !item.gated ? "default" : "pointer" }}
-    >
-      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: item.grad, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <AppIcon grad={item.grad} size={54}>{item.glyph}</AppIcon>
-        <img src={`/api/images?kind=make&id=${item.id}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-        {item.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
-      </div>
-      <div style={{ padding: "9px 11px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <span style={{ width: 9, height: 9, borderRadius: 3, background: item.color, flex: "0 0 auto" }} />
-          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</div>
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3 }}>{item.sub}</div>
-      </div>
-    </button>
-  );
-
-  // ---- shelf card (Explore): Kidspedia exhibits, art-slot hero image (Session 8G) ----
-  const approvedExhibits = exploreShelfItems();
-  const ExploreShelfCard = ({ ex }) => (
-    <button onClick={() => props.onExplore && props.onExplore(ex.id)} style={shelfCardStyle}>
-      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${ex.color}, ${ex.color}99)` }}>
-        <img src={/^(\/|https?:)/.test(ex.heroArt) ? ex.heroArt : `/api/images?kind=explore&id=${encodeURIComponent(ex.heroArt)}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-      </div>
-      <div style={{ padding: "9px 11px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <span style={{ width: 9, height: 9, borderRadius: 3, background: ex.color, flex: "0 0 auto" }} />
-          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.title}</div>
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{ex.id === "kidspedia" ? "Books" : "Kidspedia"}</div>
-      </div>
-    </button>
-  );
-
   const sectionTitle = { fontFamily: FRED, fontWeight: 700, fontSize: 17, color: HOME_INK };
-  const shelfRow = { display: "flex", gap: 12, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollSnapType: "x proximity", paddingBottom: 6, marginBottom: 26 };
+
+  // -------------------------------------------------------------------------
+  // NV2 — the new above-the-fold layout: slim header, one big Keep-playing
+  // card, five picture doors with LIVE counts (Play/Make/Explore/Learn/My
+  // Stuff), then four suggested games deliberately clipped by the right edge
+  // as the scroll cue. Counts come from the catalogs and RESPECT the soon
+  // flag — never hardcoded — so a game or a book flipping from "soon" or
+  // "in-review" to live updates the door count without a code change.
+  // -------------------------------------------------------------------------
+  // Every count is derived, never typed. If you move a game out of soon in
+  // GAME_CATALOG (or a studio out of MAKE_CATALOG, or an exhibit's status flips
+  // to "approved"), the door on Home updates on the next render.
+  const nv2LiveGames = GAME_CATALOG.filter((g) => g.type === "game" && !g.soon).length;
+  const nv2LiveStudios = MAKE_CATALOG.filter((m) => !m.soon).length;
+  const nv2ApprovedLabs = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template !== "topic-book").length;
+  const nv2ApprovedBooks = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template === "topic-book").length;
+
+  // Per-kid play stats for the "for you" suggested-games row + Keep-playing
+  // favourite pick. Best-effort — never blocks render, catalog order is the
+  // stable fallback.
+  const [nv2PlayCount, setNv2PlayCount] = useState({});
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const kid = getActiveKid();
+        if (!kid || !kid.id) { if (alive) setNv2PlayCount({}); return; }
+        const r = await fetch("/api/kid-game-stats?kidProfileId=" + encodeURIComponent(kid.id));
+        const d = await r.json();
+        if (!alive || !d || !d.ok) return;
+        const map = {};
+        (d.games || []).forEach((g) => { if (g.game) map[g.game] = g.plays || 0; });
+        setNv2PlayCount(map);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { alive = false; };
+  }, [activeKid]);
+
+  // Keep-playing target: real notifications win first (they cost the kid the
+  // most if missed), then the last thing this kid made, then their favourite
+  // game, then the first live game as a friendly default. Every branch names
+  // the destination so the QA can grep the priority order.
+  const keepPlaying = (() => {
+    if (chessTurns > 0) {
+      return { kind: "chess-turn", title: "Your move in chess", sub: chessTurns + " game" + (chessTurns > 1 ? "s" : "") + " waiting on you", cta: "Play", tint: "#FFF6E9", accent: "#F0972A", grad: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", glyph: <ChessGlyph />, onClick: onChessResume || onChess };
+    }
+    if (friendTurns && friendTurns.length) {
+      const m = friendTurns[0];
+      const t = FRIEND_GAME_TITLES[m.game] || "a game";
+      return { kind: "friend-turn", title: "Your move in " + t, sub: "A friend is waiting on you", cta: "Play", tint: "#FFF6E9", accent: "#F0972A", grad: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", glyph: <ChessGlyph />, onClick: () => onOpenFriendMatch && onOpenFriendMatch(m) };
+    }
+    if (friendInvites && friendInvites.length) {
+      const iv = friendInvites[0];
+      const t = FRIEND_GAME_TITLES[iv.game] || "a game";
+      return { kind: "friend-invite", title: (iv.fromName || "A friend") + " wants to play " + t, sub: "Tap to join and play together", cta: "Join", tint: "#EAFBF3", accent: "#34D399", grad: "linear-gradient(135deg,#34D399,#0EA5E9)", glyph: <ControllerGlyph />, onClick: () => onJoinFriendInvite && onJoinFriendInvite(iv) };
+    }
+    if (rtInvite && onJoinInvite) {
+      return { kind: "rt-invite", title: rtInvite.hostName + " wants to play " + rtInvite.gameTitle + "!", sub: "Tap to join and play together", cta: "Join", tint: "#EAFBF3", accent: "#34D399", grad: "linear-gradient(135deg,#34D399,#0EA5E9)", glyph: <ControllerGlyph />, onClick: () => onJoinInvite(rtInvite.match) };
+    }
+    if (jumpItems && jumpItems.length > 0) {
+      const it = jumpItems[0];
+      const tag = KIND_TAG[it.kind] || KIND_TAG.game;
+      return { kind: "recent-" + it.kind, title: it.title, sub: "Pick up where you left off", cta: it.kind === "song" ? "Play" : "Open", tint: "#FFF8EE", accent: tag.color, grad: "linear-gradient(160deg," + tag.color + "," + tag.color + "99)", thumb: it.thumbnail || null, onClick: it.open };
+    }
+    if (favGame && favGame.game && favGame.game !== "generated") {
+      const g = GAME_CATALOG.find((x) => x.id === favGame.game) || GAME_CATALOG.find((x) => x.handler && x.handler.toLowerCase() === "on" + favGame.game.toLowerCase());
+      if (g && !g.soon) {
+        return { kind: "favourite-game", title: g.name, sub: "Your favourite — play again?", cta: "Play", tint: "#FFF8EE", accent: g.color, grad: "linear-gradient(160deg," + g.color + "," + g.color + "99)", imgId: g.imgId, gameId: g.id, onClick: props[g.handler] || onGames };
+      }
+    }
+    const first = GAME_CATALOG.find((g) => g.type === "game" && !g.soon);
+    return first ? { kind: "discover", title: first.name, sub: "Try today's game!", cta: "Play", tint: "#FFF8EE", accent: first.color, grad: "linear-gradient(160deg," + first.color + "," + first.color + "99)", imgId: first.imgId, gameId: first.id, onClick: props[first.handler] || onGames } : null;
+  })();
+
+  // The suggested-games row is exactly four live games — most-played first for
+  // this kid, then catalog order as a stable tiebreaker. The game currently
+  // shown in the Keep-playing card is excluded so a kid never sees the same
+  // door twice next to each other.
+  const nv2Suggested = (() => {
+    const live = GAME_CATALOG.filter((g) => g.type === "game" && !g.soon);
+    const idx = new Map(live.map((g, i) => [g.id, i]));
+    const excludeId = keepPlaying && keepPlaying.gameId;
+    return live
+      .filter((g) => g.id !== excludeId)
+      .slice()
+      .sort((a, b) => {
+        const pa = nv2PlayCount[a.id] || 0, pb = nv2PlayCount[b.id] || 0;
+        if (pa !== pb) return pb - pa;
+        return (idx.get(a.id) || 0) - (idx.get(b.id) || 0);
+      })
+      .slice(0, 4);
+  })();
+
+  // The five picture doors. Colours mirror the bottom-bar NAV_TAB_COLORS so a
+  // door and its tab are unmistakably the same section (Home orange keeps a
+  // slightly different accent since Home IS the door). Each door carries a
+  // LIVE count line pulled from the catalogs above.
+  const NV2_DOORS = [
+    { id: "play",    label: "Play",     count: nv2LiveGames + " games", color: NAV_TAB_COLORS.play,     grad: "linear-gradient(160deg,#5BC8E4,#2FB7D6)", glyph: <NavPlayGlyph />,     onClick: onGames },
+    { id: "make",    label: "Make",     count: nv2LiveStudios + " studios", color: NAV_TAB_COLORS.make, grad: "linear-gradient(160deg,#F489B2,#E0578F)", glyph: <NavMakeGlyph />,     onClick: onMusic },
+    { id: "explore", label: "Explore",  count: nv2ApprovedLabs + " labs + " + nv2ApprovedBooks + " books", color: NAV_TAB_COLORS.explore, grad: "linear-gradient(160deg,#4CAE6E,#2E7D4F)", glyph: <NavExploreGlyph />, onClick: () => props.onExplore && props.onExplore("kidspedia") },
+    { id: "learn",   label: "Learn",    count: lessonsLive ? "Math & reading" : "Coming soon", color: "#8A6BFF", grad: "linear-gradient(160deg,#B197FF,#8A6BFF)", glyph: <SchoolGlyph />, soon: !lessonsLive, onClick: lessonsLive ? onLessons : () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
+    { id: "mystuff", label: "My Stuff", count: (jumpItems.length ? jumpItems.length + " recent" : "Your creations"), color: NAV_TAB_COLORS.me, grad: "linear-gradient(160deg,#9F86FF,#6A4FE0)", glyph: <StuffGlyph />, onClick: onMyStuff },
+  ];
+
+  // Door tile: a colored key panel with the section glyph, name and LIVE count
+  // — sits inside a 6-col grid so on phone the first three doors take 2 cols
+  // each (top row) and the last two take 3 cols each (bottom row), and on
+  // tablet/desktop all five sit in one row.
+  const DoorTile = ({ d }) => (
+    <button
+      data-nv2-door={d.id}
+      data-soon={d.soon ? "1" : "0"}
+      onClick={d.onClick}
+      style={{
+        gridColumn: phone ? (d.id === "learn" || d.id === "mystuff" ? "span 3" : "span 2") : "span 1",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: 6, padding: phone ? "12px 8px 10px" : "16px 10px 12px",
+        borderRadius: 18, border: "none", background: d.grad, color: "#fff",
+        cursor: "pointer", fontFamily: NUN, textAlign: "center",
+        boxShadow: "0 8px 18px rgba(58,46,77,0.16)", opacity: d.soon ? 0.85 : 1,
+        minHeight: phone ? 96 : 108, position: "relative", overflow: "hidden",
+      }}
+    >
+      <span style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0) 55%)", pointerEvents: "none" }} />
+      <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,0.18)" }}>{d.glyph}</span>
+      <span style={{ position: "relative", fontFamily: FRED, fontWeight: 700, fontSize: phone ? 15 : 16, lineHeight: 1, marginTop: 2 }}>{d.label}</span>
+      <span style={{ position: "relative", fontSize: 11, fontWeight: 700, opacity: 0.92, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{d.count}</span>
+      {d.soon && <span style={{ position: "absolute", top: 6, right: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "2px 6px", borderRadius: 999, background: "rgba(58,46,77,0.68)", color: "#fff" }}>Soon</span>}
+    </button>
+  );
 
   return (
-    <div style={{ minHeight: "100vh", background: HOME_BG, padding: phone ? "16px 14px 96px" : "24px 20px 108px", fontFamily: NUN, color: HOME_INK }}>
+    <div data-nv2-home style={{ minHeight: "100vh", background: HOME_BG, padding: phone ? "12px 14px 96px" : "20px 20px 108px", fontFamily: NUN, color: HOME_INK }}>
       <div style={{ width: "100%", maxWidth: maxW, margin: "0 auto" }}>
 
-        {/* ---- 1. Header: avatar, name, streak, bell (notifications), coins ---- */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        {/* ---- NV2 A. Slim header: avatar + name/streak, then coins + Grown-ups ---- */}
+        <div data-nv2-header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <span style={{
-              width: 52, height: 52, borderRadius: "50%", background: pillGrad(activeKid && activeKid.display_name),
+              width: 38, height: 38, borderRadius: "50%", background: pillGrad(activeKid && activeKid.display_name),
               display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              fontFamily: FRED, fontSize: 22, fontWeight: 700, color: "#fff", boxShadow: "0 6px 16px rgba(58,46,77,0.22)",
+              fontFamily: FRED, fontSize: 17, fontWeight: 700, color: "#fff", boxShadow: "0 4px 10px rgba(58,46,77,0.18)",
             }}>{initial(activeKid && activeKid.display_name)}</span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 20 : 24, color: HOME_INK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Hi, {kidName}!</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2, fontSize: 13, fontWeight: 700, color: HOME_SUB }}>
-                <StreakGlyph />
-                {streakDays > 0 ? `${streakDays} day streak` : "Start a streak today"}
+              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 16 : 18, color: HOME_INK, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Hi, {kidName}!</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11, fontWeight: 700, color: HOME_SUB }}>
+                <StreakGlyph size={12} />
+                {streakDays > 0 ? (streakDays + " day streak") : "Start a streak today"}
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <button onClick={onHelper} aria-label="Your buddy" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", border: "1px solid rgba(58,46,77,0.12)", cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><BuddyGlyph size={22} /></button>
-            {onSwitchPlayer && (
-              <button onClick={onSwitchPlayer} aria-label="Switch player" title="Switch player" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: HOME_INK, cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><SwitchPlayerGlyph /></button>
-            )}
-            <button onClick={onMyStuff} aria-label="My Stuff" style={{ width: 42, height: 42, borderRadius: 13, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid rgba(58,46,77,0.12)", color: HOME_INK, cursor: "pointer", boxShadow: "0 3px 10px rgba(58,46,77,0.08)" }}><StuffGlyph /></button>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <span aria-label="Coins" style={{
+              display: "inline-flex", alignItems: "center", gap: 5, background: "#fff",
+              border: "1px solid rgba(240,151,42,0.30)", borderRadius: 999, padding: "6px 10px",
+              fontFamily: NUN, fontWeight: 800, fontSize: 13, color: "#8A5A00", boxShadow: "0 2px 7px rgba(58,46,77,0.06)",
+            }}><CoinGlyph size={14} />{coins}</span>
             <GrownUpButton onGrownUp={onGrownUp} compact />
-            <FriendsPill chessTurns={chessTurns} onChess={onChessResume || onChess} rtInvite={rtInvite} onJoinInvite={onJoinInvite} friendInvites={friendInvites} friendTurns={friendTurns} onJoinFriendInvite={onJoinFriendInvite} onOpenFriendMatch={onOpenFriendMatch} compact />
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 6, background: "#fff",
-              border: "1px solid rgba(240,151,42,0.30)", borderRadius: 999, padding: "9px 14px",
-              fontFamily: NUN, fontWeight: 800, fontSize: 15, color: "#8A5A00", boxShadow: "0 3px 10px rgba(58,46,77,0.08)",
-            }}><CoinGlyph size={18} />{coins}</span>
           </div>
         </div>
 
-        {/* ---- 2. Buddy moment: conditional + dismissible, never a permanent fixture ---- */}
+        {/* ---- NV2 B. Keep playing: one big card. Real notifications first
+                 (chess turn / friend turn / friend invite / rt invite), then the
+                 kid's most recent creation, then favourite, then a friendly
+                 default. Everything derived — no hardcoded titles. ---- */}
+        {keepPlaying && (
+          <button data-nv2-keep data-nv2-keep-kind={keepPlaying.kind} onClick={keepPlaying.onClick} style={{
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
+            display: "flex", alignItems: "stretch", gap: 0,
+            background: HOME_CARD, border: HOME_CARD_BORDER, borderRadius: 20, overflow: "hidden",
+            boxShadow: HOME_SHADOW, color: HOME_INK, fontFamily: NUN, padding: 0,
+          }}>
+            <div style={{ position: "relative", width: phone ? 110 : 140, flexShrink: 0, background: keepPlaying.grad, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+              {keepPlaying.imgId && <img src={"/api/images?kind=game&id=" + keepPlaying.imgId} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+              {keepPlaying.thumb && <img src={keepPlaying.thumb} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+              {!keepPlaying.imgId && !keepPlaying.thumb && keepPlaying.glyph && (
+                <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 48, height: 48, borderRadius: 14, background: "rgba(255,255,255,0.20)", color: "#fff" }}>{keepPlaying.glyph}</span>
+              )}
+            </div>
+            <div style={{ flex: 1, minWidth: 0, padding: phone ? "12px 12px 12px 14px" : "16px 16px 16px 18px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: keepPlaying.accent }}>Keep playing</div>
+              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 17 : 20, color: HOME_INK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{keepPlaying.title}</div>
+              <div style={{ fontSize: 12, color: HOME_SUB, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{keepPlaying.sub}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", padding: phone ? "0 12px 0 4px" : "0 16px 0 4px" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: keepPlaying.accent, color: "#fff", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 14px", whiteSpace: "nowrap" }}>{keepPlaying.cta} &rarr;</span>
+            </div>
+          </button>
+        )}
+
+        {/* ---- NV2 C. Five picture doors with LIVE counts. Counts come from
+                 the catalogs and respect the soon flag — never hardcoded. ---- */}
+        <div data-nv2-doors style={{ display: "grid", gridTemplateColumns: phone ? "repeat(6, 1fr)" : "repeat(5, 1fr)", gap: 10, marginBottom: 18 }}>
+          {NV2_DOORS.map((d) => <DoorTile key={d.id} d={d} />)}
+        </div>
+
+        {/* ---- NV2 D. Four suggested games. The row overflows the viewport by
+                 design so the fourth card is clipped by the right edge as the
+                 scroll cue — a kid learns to swipe here first. ---- */}
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+          <span style={sectionTitle}>For you</span>
+          <button onClick={onGames} style={{ background: "none", border: "none", color: NAV_TAB_COLORS.play, fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all &rarr;</button>
+        </div>
+        <div data-nv2-suggested style={{
+          display: "flex", gap: 10, overflowX: "auto", WebkitOverflowScrolling: "touch",
+          scrollSnapType: "x proximity", paddingBottom: 6,
+          // Pull past the right padding so the fourth card is clipped by the
+          // viewport instead of the page container (marginRight in the negative
+          // + a matching paddingRight makes the row bleed cleanly into the edge).
+          marginLeft: 0, marginRight: phone ? -14 : -20, paddingRight: phone ? 8 : 14, marginBottom: 22,
+        }}>
+          {nv2Suggested.map((g) => (
+            <button key={"nv2s_" + g.id} data-nv2-sug={g.id} onClick={() => openCatalogGame(g)} style={{
+              flex: "0 0 auto", width: phone ? 132 : 168, textAlign: "left", padding: 0, borderRadius: 16,
+              border: HOME_CARD_BORDER, background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
+              overflow: "hidden", boxShadow: HOME_SHADOW, scrollSnapAlign: "start",
+            }}>
+              <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "linear-gradient(160deg, " + g.color + ", " + g.color + "99)" }}>
+                {g.imgId && <img src={"/api/images?kind=game&id=" + g.imgId} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+                {g.multiplayer && <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "2px 7px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>Multi</span>}
+              </div>
+              <div style={{ padding: "8px 10px 10px" }}>
+                <div style={{ fontFamily: FRED, fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: HOME_SUB, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.3px" }}>{g.category}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* ---- NV2 E. Below the fold — the pieces the doors can't yet show,
+                 kept so no live feature is silently dropped ahead of NV3's
+                 dedicated section pages. Buddy moment (dismissible), extra
+                 turn/invite banners that the Keep-playing card didn't already
+                 surface, Brain Boost (Learning Mode only), and Trending. ---- */}
+
         {buddyMoment && (
           <div style={{
-            position: "relative", display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 18,
+            position: "relative", display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 14,
             background: "linear-gradient(135deg, rgba(155,126,221,0.10), rgba(224,87,143,0.10))",
-            border: "1px solid rgba(155,126,221,0.28)", borderRadius: 18, padding: "14px 40px 14px 14px",
+            border: "1px solid rgba(155,126,221,0.28)", borderRadius: 18, padding: "12px 36px 12px 12px",
           }}>
-            <span style={{ width: 42, height: 42, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", display: "flex", alignItems: "center", justifyContent: "center" }}><BuddyGlyph size={24} /></span>
+            <span style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#9b7edd,#6f5bd6)", display: "flex", alignItems: "center", justifyContent: "center" }}><BuddyGlyph size={22} /></span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: HOME_INK }}>Hi {kidName}!</div>
-              <div style={{ fontSize: 13, color: "#5C5470", marginTop: 2, lineHeight: 1.4 }}>{buddyMoment.text}</div>
+              <div style={{ fontFamily: FRED, fontWeight: 700, fontSize: 13, color: HOME_INK }}>Hi {kidName}!</div>
+              <div style={{ fontSize: 12, color: "#5C5470", marginTop: 2, lineHeight: 1.4 }}>{buddyMoment.text}</div>
             </div>
-            <button onClick={() => dismissBuddy(buddyMoment.id)} aria-label="Dismiss" style={{ position: "absolute", top: 10, right: 10, width: 24, height: 24, borderRadius: "50%", border: "none", background: "rgba(58,46,77,0.10)", color: HOME_INK, fontSize: 13, lineHeight: "14px", cursor: "pointer", padding: 0 }}>×</button>
+            <button onClick={() => dismissBuddy(buddyMoment.id)} aria-label="Dismiss" style={{ position: "absolute", top: 8, right: 8, width: 22, height: 22, borderRadius: "50%", border: "none", background: "rgba(58,46,77,0.10)", color: HOME_INK, fontSize: 12, lineHeight: "12px", cursor: "pointer", padding: 0 }}>×</button>
           </div>
         )}
 
-        {/* ---- 3. Your move: pending multiplayer turns/invites ---- */}
-        {chessTurns > 0 && (
+        {/* Extra turn/invite banners. Only render the ones the Keep-playing
+             card didn't already promote to the top, so a kid never sees the
+             same nudge twice on one screen. */}
+        {chessTurns > 0 && keepPlaying && keepPlaying.kind !== "chess-turn" && (
           <button onClick={onChessResume || onChess} style={{
-            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
-            display: "flex", gap: 12, alignItems: "center",
-            background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.35)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
+            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 10,
+            display: "flex", gap: 10, alignItems: "center",
+            background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.35)", borderRadius: 14, padding: "10px 12px", color: HOME_INK, fontFamily: NUN,
           }}>
-            <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><ChessGlyph /></span>
+            <span style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><ChessGlyph /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                Your move in chess
-                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#FFD66B", color: "#5a3d00", padding: "2px 7px", borderRadius: 999 }}>Your turn</span>
-              </div>
-              <div style={{ fontSize: 12, color: HOME_SUB }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</div>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>Your move in chess</div>
+              <div style={{ fontSize: 11, color: HOME_SUB }}>{chessTurns} game{chessTurns > 1 ? "s" : ""} waiting on you</div>
             </div>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Play →</span>
+            <span style={{ background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 12, borderRadius: 999, padding: "6px 11px", flexShrink: 0 }}>Play &rarr;</span>
           </button>
         )}
 
-        {rtInvite && onJoinInvite && (
-          <button onClick={() => onJoinInvite(rtInvite.match)} style={{
-            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
-            display: "flex", gap: 12, alignItems: "center",
-            background: "#EAFBF3", border: "1px solid rgba(52,211,153,0.4)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
-          }}>
-            <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><ControllerGlyph /></span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                {rtInvite.hostName} wants to play {rtInvite.gameTitle}!
-                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#34D399", color: "#053d2b", padding: "2px 7px", borderRadius: 999 }}>Invite</span>
+        {friendInvites && friendInvites.map((iv, i) => {
+          const alreadyShown = keepPlaying && keepPlaying.kind === "friend-invite" && i === 0;
+          if (alreadyShown) return null;
+          return (
+            <button key={"fic_" + iv.id} onClick={() => onJoinFriendInvite && onJoinFriendInvite(iv)} style={{
+              width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 10,
+              display: "flex", gap: 10, alignItems: "center",
+              background: "#EAFBF3", border: "1px solid rgba(52,211,153,0.4)", borderRadius: 14, padding: "10px 12px", color: HOME_INK, fontFamily: NUN,
+            }}>
+              <span style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><ControllerGlyph /></span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 14 }}>{iv.fromName} wants to play {FRIEND_GAME_TITLES[iv.game] || "a game"}!</div>
+                <div style={{ fontSize: 11, color: HOME_SUB }}>Tap to join and play together</div>
               </div>
-              <div style={{ fontSize: 12, color: HOME_SUB }}>Tap to join and play together</div>
-            </div>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#34D399", color: "#053d2b", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Join →</span>
-          </button>
-        )}
+              <span style={{ background: "#34D399", color: "#053d2b", fontWeight: 800, fontSize: 12, borderRadius: 999, padding: "6px 11px", flexShrink: 0 }}>Join &rarr;</span>
+            </button>
+          );
+        })}
 
-        {friendInvites && friendInvites.map((iv) => (
-          <button key={"fic_" + iv.id} onClick={() => onJoinFriendInvite && onJoinFriendInvite(iv)} style={{
-            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
-            display: "flex", gap: 12, alignItems: "center",
-            background: "#EAFBF3", border: "1px solid rgba(52,211,153,0.4)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
-          }}>
-            <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#34D399,#0EA5E9)", display: "flex", alignItems: "center", justifyContent: "center" }}><ControllerGlyph /></span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                {iv.fromName} wants to play {FRIEND_GAME_TITLES[iv.game] || "a game"}!
-                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#34D399", color: "#053d2b", padding: "2px 7px", borderRadius: 999 }}>Invite</span>
+        {friendTurns && friendTurns.map((m, i) => {
+          const alreadyShown = keepPlaying && keepPlaying.kind === "friend-turn" && i === 0;
+          if (alreadyShown) return null;
+          return (
+            <button key={"ftc_" + m.id} onClick={() => onOpenFriendMatch && onOpenFriendMatch(m)} style={{
+              width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 10,
+              display: "flex", gap: 10, alignItems: "center",
+              background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.35)", borderRadius: 14, padding: "10px 12px", color: HOME_INK, fontFamily: NUN,
+            }}>
+              <span style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><ChessGlyph /></span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 14 }}>Your move in {FRIEND_GAME_TITLES[m.game] || "a game"}</div>
+                <div style={{ fontSize: 11, color: HOME_SUB }}>A friend is waiting on you</div>
               </div>
-              <div style={{ fontSize: 12, color: HOME_SUB }}>Tap to join and play together</div>
-            </div>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#34D399", color: "#053d2b", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Join &rarr;</span>
-          </button>
-        ))}
+              <span style={{ background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 12, borderRadius: 999, padding: "6px 11px", flexShrink: 0 }}>Play &rarr;</span>
+            </button>
+          );
+        })}
 
-        {friendTurns && friendTurns.map((m) => (
-          <button key={"ftc_" + m.id} onClick={() => onOpenFriendMatch && onOpenFriendMatch(m)} style={{
-            width: "100%", textAlign: "left", cursor: "pointer", marginBottom: 14,
-            display: "flex", gap: 12, alignItems: "center",
-            background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.35)", borderRadius: 16, padding: "12px 14px", color: HOME_INK, fontFamily: NUN,
-          }}>
-            <span style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", display: "flex", alignItems: "center", justifyContent: "center" }}><ChessGlyph /></span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: 15, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                Your move in {FRIEND_GAME_TITLES[m.game] || "a game"}
-                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#FFD66B", color: "#5a3d00", padding: "2px 7px", borderRadius: 999 }}>Your turn</span>
-              </div>
-              <div style={{ fontSize: 12, color: HOME_SUB }}>A friend is waiting on you</div>
-            </div>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFD66B", color: "#5a3d00", fontWeight: 800, fontSize: 13, borderRadius: 999, padding: "8px 13px", flexShrink: 0 }}>Play &rarr;</span>
-          </button>
-        ))}
-
-        {/* ---- 4. Jump back in: this kid's most recent creations ---- */}
-        {jumpItems.length > 0 && (
-          <>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
-              <span style={sectionTitle}>Jump back in</span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${jumpItems.length}, 1fr)`, gap: 10, marginBottom: 24 }}>
-              {jumpItems.map((it) => {
-                const tag = KIND_TAG[it.kind];
-                return (
-                  <button key={it.kind + it.id} onClick={it.open} style={{
-                    borderRadius: 15, overflow: "hidden", border: HOME_CARD_BORDER,
-                    background: HOME_CARD, cursor: "pointer", textAlign: "left", padding: 0, color: HOME_INK, fontFamily: NUN, boxShadow: HOME_SHADOW,
-                  }}>
-                    <div style={{ height: phone ? 64 : 80, position: "relative", background: it.thumbnail ? `center/cover no-repeat url(${it.thumbnail})` : it.color }}>
-                      <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: "#fff", padding: "2px 7px", borderRadius: 999 }}>{tag.label}</span>
-                    </div>
-                    <div style={{ padding: "8px 10px" }}>
-                      <div style={{ fontWeight: 800, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</div>
-                      <div style={{ fontSize: 11, color: HOME_SUB }}>Your {it.kind}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* ---- 5. Today's Brain Boost: Learning Mode only, "done" state stays visible ---- */}
         {learningOn && (
-          <div style={{ marginBottom: 26, background: HOME_CARD, border: HOME_CARD_BORDER, borderRadius: 18, padding: "16px 16px 14px", boxShadow: HOME_SHADOW }}>
+          <div style={{ marginTop: 8, marginBottom: 18, background: HOME_CARD, border: HOME_CARD_BORDER, borderRadius: 16, padding: "14px 14px 12px", boxShadow: HOME_SHADOW }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: "linear-gradient(135deg,#FFC75A,#F0972A)", display: "flex", alignItems: "center", justifyContent: "center" }}><TrophyGlyph /></span>
-                <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 16, color: HOME_INK }}>Today's Brain Boost</span>
+                <span style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: "linear-gradient(135deg,#FFC75A,#F0972A)", display: "flex", alignItems: "center", justifyContent: "center" }}><TrophyGlyph /></span>
+                <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 15, color: HOME_INK }}>Today's Brain Boost</span>
               </div>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.3)", borderRadius: 999, padding: "5px 10px", fontWeight: 800, fontSize: 12, color: "#8A5A00" }}>
-                <CoinGlyph size={14} />+10
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFF6E9", border: "1px solid rgba(240,151,42,0.3)", borderRadius: 999, padding: "5px 9px", fontWeight: 800, fontSize: 11, color: "#8A5A00" }}>
+                <CoinGlyph size={13} />+10
               </span>
             </div>
-            <div style={{ marginTop: 12, height: 10, borderRadius: 999, background: "rgba(58,46,77,0.08)", overflow: "hidden" }}>
-              <div style={{ height: "100%", borderRadius: 999, width: `${Math.min(100, Math.round((brainBoost.count / Math.max(1, brainBoost.goal)) * 100))}%`, background: "linear-gradient(90deg,#F0972A,#FFC75A)", transition: "width 0.3s ease" }} />
+            <div style={{ marginTop: 10, height: 8, borderRadius: 999, background: "rgba(58,46,77,0.08)", overflow: "hidden" }}>
+              <div style={{ height: "100%", borderRadius: 999, width: (Math.min(100, Math.round((brainBoost.count / Math.max(1, brainBoost.goal)) * 100))) + "%", background: "linear-gradient(90deg,#F0972A,#FFC75A)", transition: "width 0.3s ease" }} />
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{Math.min(brainBoost.count, brainBoost.goal)} of {brainBoost.goal} questions today</span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB }}>{Math.min(brainBoost.count, brainBoost.goal)} of {brainBoost.goal} questions today</span>
               {brainBoost.done && <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", background: "#DFF6E8", color: "#1C8F5A", padding: "3px 9px", borderRadius: 999 }}>Done for today</span>}
             </div>
           </div>
         )}
 
-        {/* ---- 6. Play shelf: manifest-driven from GAME_CATALOG, side-scrolling ---- */}
-        <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Play</span></div>
-        <div style={shelfRow}>
-          {GAME_CATALOG.filter((g) => g.type === "game").map((g) => <PlayShelfCard key={g.id} g={g} />)}
-        </div>
-
-        {/* ---- 7. Make shelf: creation tools, same side-scrolling treatment ---- */}
-        <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Make</span></div>
-        <div style={shelfRow}>
-          {MAKE_ITEMS.map((item) => <MakeShelfCard key={item.id} item={item} />)}
-        </div>
-
-        {/* ---- 7b. Explore shelf: Kidspedia exhibits, only when there is at least one approved ---- */}
-        {approvedExhibits.length > 0 && (
-          <>
-            <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Explore</span></div>
-            <div style={shelfRow}>
-              {approvedExhibits.map((ex) => <ExploreShelfCard key={ex.id} ex={ex} />)}
-            </div>
-          </>
-        )}
-
-        {/* ---- 7c. Learn shelf: the Lessons section (Session LS2) ---- */}
-        {onLessons && (
-          <>
-            <div style={{ marginBottom: 12 }}><span style={sectionTitle}>Learn</span></div>
-            <div style={shelfRow}>
-              {LEARN_ITEMS.map((item) => <MakeShelfCard key={item.id} item={item} />)}
-            </div>
-          </>
-        )}
-
-        {/* ---- 8. Trending from other kids ---- */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <span style={sectionTitle}>Trending from other kids</span>
-          {trending.length > 0 && <button onClick={onTop} style={{ background: "none", border: "none", color: "#6A4FE0", fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all →</button>}
+          {trending.length > 0 && <button onClick={onTop} style={{ background: "none", border: "none", color: "#6A4FE0", fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all &rarr;</button>}
         </div>
         {trending.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -3452,7 +3450,7 @@ function HomeScreen(props) {
                   cursor: "pointer", color: HOME_INK, fontFamily: NUN, textAlign: "left",
                 }}>
                   <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: HOME_SUB, width: 14, flexShrink: 0 }}>{i + 1}</span>
-                  <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: it.thumbnail ? `center/cover no-repeat url(${it.thumbnail})` : (it.cover_color || tag.bg) }} />
+                  <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: it.thumbnail ? ("center/cover no-repeat url(" + it.thumbnail + ")") : (it.cover_color || tag.bg) }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title || "Untitled"}</div>
                     <div style={{ fontSize: 11, color: HOME_SUB }}>by {it.creator || "a kid"}</div>
@@ -3466,7 +3464,7 @@ function HomeScreen(props) {
         ) : (
           <button onClick={onTop} style={{
             width: "100%", textAlign: "center", cursor: "pointer", color: HOME_SUB, fontFamily: NUN,
-            background: HOME_CARD, border: "1px dashed rgba(58,46,77,0.22)", borderRadius: 14, padding: "20px 16px",
+            background: HOME_CARD, border: "1px dashed rgba(58,46,77,0.22)", borderRadius: 14, padding: "18px 16px",
           }}>
             <div style={{ fontWeight: 800, fontSize: 14, color: HOME_INK, marginBottom: 4 }}>No top projects yet</div>
             <div style={{ fontSize: 13 }}>Make something and publish it to be the first on the board!</div>

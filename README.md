@@ -6,6 +6,25 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## The new Home is one screen wide (August 15 2026)
+`src/BuildableKids.jsx`, `qa-nv2.mjs`. Rebuilt HomeScreen so a kid sees the
+whole app on the first phone view. Slim header (avatar + Hi + streak, then
+coins + Grown-ups), one big Keep-playing card that names what to do next in
+priority order (a real chess turn > a friend turn > a friend invite > a family
+real-time invite > this kid's most-recent creation > their favourite game > a
+friendly default), five picture doors with **LIVE counts** — Play 20 games,
+Make 3 studios, Explore 3 labs + 14 books, Learn, My Stuff — and four
+suggested games with a deliberate right-edge scroll cue. Counts come from
+`GAME_CATALOG`, a new module-scope `MAKE_CATALOG`, and `EXHIBIT_CATALOG`
+(labs vs approved topic-books), and every one of them respects the `soon` /
+`status` flag, so promoting a game or a book is a one-line flip that updates
+its door count on the next render. Learn door respects `lessons_live`: until
+the flag flips, "Coming soon" plus the 1111 preview gate; after it, an
+ordinary section open. Below the fold the buddy moment, extra turn/invite
+banners the Keep-playing card didn't already surface, Brain Boost and Trending
+stay live so no feature is silently dropped before NV3 lands the dedicated
+Make / Explore / Learn / Me pages.
+
 ## SD4 — Sling levels 7-20 rebuilt as real puzzles (August 15 2026)
 `public/sling/manifest.json` (renames), plus the SD1+SD2+SD3 branch merged onto main
 (`public/buildable-manifest.js`, `public/sling-squad.html`, `public/buildable-levelthumb.js`,

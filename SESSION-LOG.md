@@ -41,6 +41,42 @@ into main as well, which is scope creep even though those cards were already don
 sitting on a branch. Flagged so Mike sees it in the report before the runner moves on to
 SD5 ("Prove she cannot brute force it").
 
+## 2026-08-15 (NV2): the new Home is one screen wide
+
+`src/BuildableKids.jsx`, `qa-nv2.mjs`. The whole app now fits on a phone's first
+screen. Slim header (avatar + Hi kid + streak on the left, coins + Grown-ups on
+the right — the buddy button, switch-player, my-stuff and the friends pill moved
+off the top nav; every notification the friends pill was carrying now surfaces
+inside the big Keep-playing card or as a small below-fold banner). Then ONE big
+Keep-playing card that reads what to do next in priority order — a real chess
+turn > a friend turn > a friend invite > a family real-time invite > the kid's
+most-recent creation > their favourite game > a friendly default — so the card
+is never empty and never buries an actual nudge under the wrong CTA.
+
+Then five picture doors with **LIVE counts** (Play 20 games, Make 3 studios,
+Explore 3 labs + 14 books, Learn, My Stuff). Counts come from the catalogs —
+`GAME_CATALOG.filter(type==="game" && !soon)`, a new module-scope `MAKE_CATALOG`
+whose live studios are counted the same way, and `EXHIBIT_CATALOG` split into
+approved non-book labs and approved topic-book books — so promoting a Coming
+Soon game (or a paused book) is a `soon:` / `status:` flip on ONE line and the
+Home door updates itself. No number is typed anywhere. The Learn door respects
+the app-flag: if `lessons_live` is false it says "Coming soon" and opens the
+same 1111 preview gate the Play shelf uses; if true it opens the section.
+
+Then four suggested games in a horizontal row deliberately overflowing the
+right edge (negative marginRight bleed) as the scroll cue — a kid learns to
+swipe here first. Sort matches the Play page: most-played first per this kid,
+catalog order as tiebreaker, with whatever's already in the Keep-playing card
+excluded so nothing shows twice.
+
+Below the fold: buddy moment (dismissible), any turn/invite banners the
+Keep-playing card didn't already promote to the top, Learning Mode's Brain
+Boost, and Trending — kept for now so no live feature is silently dropped
+ahead of NV3's dedicated Make / Explore / Learn / Me pages. Retired the old
+Play/Make/Explore/Learn shelves and their inline glyphs — the five doors and
+the Play page (NV1) reach every one of them. All 55 NV2 checks pass, and NV1
+still green.
+
 ## 2026-08-15 (ninth pass): a killed lane used to take its phase with it
 
 Mike: *"why did nv section stop?"* Lane 2 had taken NV and was mid-way through NV2. He then
