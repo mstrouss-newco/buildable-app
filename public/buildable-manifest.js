@@ -195,6 +195,15 @@
   // tunable is difficulty 1-5, which DERIVES how many slings the kid gets; the
   // floor keeps it at (targets + 2) so the sensible-aim bot always clears with a
   // sling to spare. Art (which backdrop scene) is declared per level in `parts`.
+  //
+  // Session SD1 — a block may name a MATERIAL with `m`:
+  //   "glass" shatters on almost any hit and vanishes
+  //   "wood"  cracks, then breaks after a few good hits
+  //   "stone" barely breaks at all — it has to be toppled instead
+  // `m` is OPTIONAL and there is no default: a block with no `m` is the old
+  // indestructible block, unchanged in weight, grip and look. That is why the
+  // six layouts levels 1-6 use (gate/post/tower/double/hut/keep) carry no
+  // materials at all — the on-ramp plays exactly as it did before.
   var SLING_LAYOUTS = {
     gate:   { blocks:[ {x:705,y:520,w:30,h:60},{x:775,y:520,w:30,h:60},{x:740,y:476,w:120,h:26} ],
               targets:[ {x:740,y:445} ] },
@@ -204,7 +213,9 @@
               targets:[ {x:620,y:444},{x:820,y:444} ] },
     keep:   { blocks:[ {x:660,y:520,w:30,h:60},{x:740,y:520,w:30,h:60},{x:700,y:476,w:130,h:26},{x:672,y:440,w:30,h:46},{x:728,y:440,w:30,h:46},{x:700,y:408,w:90,h:24} ],
               targets:[ {x:700,y:378},{x:560,y:530},{x:840,y:530} ] },
-    grand:  { blocks:[ {x:700,y:520,w:34,h:60},{x:780,y:520,w:34,h:60},{x:740,y:476,w:128,h:26},{x:712,y:440,w:30,h:46},{x:768,y:440,w:30,h:46},{x:740,y:408,w:96,h:24},{x:740,y:376,w:30,h:42} ],
+    // grand is level 9 (back half), so it carries materials; the five layouts
+    // above it are the levels 1-6 on-ramp and stay material-free on purpose.
+    grand:  { blocks:[ {x:700,y:520,w:34,h:60,m:"stone"},{x:780,y:520,w:34,h:60,m:"stone"},{x:740,y:476,w:128,h:26,m:"wood"},{x:712,y:440,w:30,h:46,m:"wood"},{x:768,y:440,w:30,h:46,m:"wood"},{x:740,y:408,w:96,h:24,m:"wood"},{x:740,y:376,w:30,h:42,m:"glass"} ],
               targets:[ {x:740,y:337},{x:600,y:530},{x:860,y:530} ] },
     // --- expansion layouts (Session: 20-level ramp). Each keeps at least one
     // clearly-reachable arc per target so the sensible-aim QA bot clears them all.
@@ -212,36 +223,41 @@
               targets:[ {x:740,y:432} ] },
     hut:    { blocks:[ {x:700,y:520,w:30,h:60},{x:780,y:520,w:30,h:60},{x:740,y:478,w:112,h:24} ],
               targets:[ {x:740,y:452},{x:560,y:530} ] },
-    ledge:  { blocks:[ {x:640,y:520,w:30,h:60},{x:700,y:520,w:30,h:60},{x:670,y:478,w:92,h:22},{x:626,y:452,w:16,h:34} ],
+    // the glass nub sits ON the deck (x 624..716), not overhanging its edge — off
+    // the edge it used to topple and, now that glass breaks, would shatter itself
+    // before the kid had taken a single shot.
+    ledge:  { blocks:[ {x:640,y:520,w:30,h:60,m:"wood"},{x:700,y:520,w:30,h:60,m:"wood"},{x:670,y:478,w:92,h:22,m:"wood"},{x:642,y:450,w:16,h:34,m:"glass"} ],
               targets:[ {x:686,y:452},{x:820,y:530},{x:540,y:530} ] },
-    trio:   { blocks:[ {x:600,y:520,w:26,h:60},{x:740,y:520,w:26,h:60},{x:860,y:520,w:26,h:60} ],
+    // trio is the teaching level: one post of each material, side by side.
+    trio:   { blocks:[ {x:600,y:520,w:26,h:60,m:"glass"},{x:740,y:520,w:26,h:60,m:"wood"},{x:860,y:520,w:26,h:60,m:"stone"} ],
               targets:[ {x:600,y:478},{x:740,y:478},{x:860,y:478} ] },
-    wall:   { blocks:[ {x:650,y:500,w:34,h:100},{x:650,y:436,w:34,h:34} ],
+    wall:   { blocks:[ {x:650,y:500,w:34,h:100,m:"stone"},{x:650,y:436,w:34,h:34,m:"glass"} ],
               targets:[ {x:740,y:530},{x:800,y:530},{x:870,y:530} ] },
-    bunker: { blocks:[ {x:660,y:512,w:20,h:72},{x:840,y:512,w:20,h:72},{x:750,y:520,w:30,h:60} ],
+    bunker: { blocks:[ {x:660,y:512,w:20,h:72,m:"stone"},{x:840,y:512,w:20,h:72,m:"stone"},{x:750,y:520,w:30,h:60,m:"wood"} ],
               targets:[ {x:705,y:530},{x:795,y:530},{x:750,y:470} ] },
-    twinkeep:{ blocks:[ {x:600,y:520,w:28,h:60},{x:660,y:520,w:28,h:60},{x:630,y:478,w:80,h:22},
-                        {x:800,y:520,w:28,h:60},{x:860,y:520,w:28,h:60},{x:830,y:478,w:80,h:22} ],
+    twinkeep:{ blocks:[ {x:600,y:520,w:28,h:60,m:"wood"},{x:660,y:520,w:28,h:60,m:"wood"},{x:630,y:478,w:80,h:22,m:"glass"},
+                        {x:800,y:520,w:28,h:60,m:"wood"},{x:860,y:520,w:28,h:60,m:"wood"},{x:830,y:478,w:80,h:22,m:"glass"} ],
               targets:[ {x:630,y:452},{x:830,y:452},{x:715,y:530},{x:540,y:530} ] },
-    spire:  { blocks:[ {x:740,y:520,w:40,h:60},{x:740,y:474,w:30,h:44},{x:740,y:436,w:22,h:44} ],
+    spire:  { blocks:[ {x:740,y:520,w:40,h:60,m:"stone"},{x:740,y:474,w:30,h:44,m:"wood"},{x:740,y:436,w:22,h:44,m:"wood"} ],
               targets:[ {x:740,y:398},{x:600,y:530},{x:860,y:530} ] },
-    fort:   { blocks:[ {x:620,y:512,w:24,h:72},{x:860,y:512,w:24,h:72},{x:740,y:520,w:30,h:60},{x:690,y:478,w:120,h:20} ],
+    fort:   { blocks:[ {x:620,y:512,w:24,h:72,m:"stone"},{x:860,y:512,w:24,h:72,m:"stone"},{x:740,y:520,w:30,h:60,m:"glass"},{x:690,y:478,w:120,h:20,m:"wood"} ],
               targets:[ {x:665,y:530},{x:815,y:530},{x:740,y:452},{x:560,y:530} ] },
-    hideout:{ blocks:[ {x:680,y:500,w:22,h:100},{x:800,y:500,w:22,h:100} ],
+    // hideout: two glass panes the kid can smash straight through.
+    hideout:{ blocks:[ {x:680,y:500,w:22,h:100,m:"glass"},{x:800,y:500,w:22,h:100,m:"glass"} ],
               targets:[ {x:740,y:530},{x:600,y:530},{x:870,y:530} ] },
-    tallgrand:{ blocks:[ {x:710,y:520,w:34,h:60},{x:790,y:520,w:34,h:60},{x:750,y:476,w:120,h:24},
-                         {x:722,y:440,w:28,h:48},{x:778,y:440,w:28,h:48},{x:750,y:406,w:88,h:22},{x:750,y:372,w:24,h:46} ],
+    tallgrand:{ blocks:[ {x:710,y:520,w:34,h:60,m:"stone"},{x:790,y:520,w:34,h:60,m:"stone"},{x:750,y:476,w:120,h:24,m:"wood"},
+                         {x:722,y:440,w:28,h:48,m:"wood"},{x:778,y:440,w:28,h:48,m:"wood"},{x:750,y:406,w:88,h:22,m:"wood"},{x:750,y:372,w:24,h:46,m:"glass"} ],
               targets:[ {x:750,y:334},{x:600,y:530},{x:900,y:530},{x:540,y:530} ] },
-    gauntlet:{ blocks:[ {x:560,y:500,w:24,h:96},{x:720,y:500,w:24,h:96},{x:880,y:500,w:24,h:96} ],
+    gauntlet:{ blocks:[ {x:560,y:500,w:24,h:96,m:"glass"},{x:720,y:500,w:24,h:96,m:"wood"},{x:880,y:500,w:24,h:96,m:"stone"} ],
               targets:[ {x:640,y:534},{x:800,y:534},{x:900,y:534},{x:490,y:534} ] },
-    twintower:{ blocks:[ {x:640,y:520,w:36,h:60},{x:640,y:474,w:28,h:44},{x:640,y:436,w:20,h:44},
-                         {x:840,y:520,w:36,h:60},{x:840,y:474,w:28,h:44},{x:840,y:436,w:20,h:44} ],
+    twintower:{ blocks:[ {x:640,y:520,w:36,h:60,m:"stone"},{x:640,y:474,w:28,h:44,m:"wood"},{x:640,y:436,w:20,h:44,m:"glass"},
+                         {x:840,y:520,w:36,h:60,m:"stone"},{x:840,y:474,w:28,h:44,m:"wood"},{x:840,y:436,w:20,h:44,m:"glass"} ],
               targets:[ {x:640,y:398},{x:840,y:398},{x:740,y:530},{x:540,y:530} ] },
-    citadel:{ blocks:[ {x:600,y:512,w:24,h:72},{x:880,y:512,w:24,h:72},
-                       {x:700,y:520,w:28,h:60},{x:780,y:520,w:28,h:60},{x:740,y:476,w:120,h:22} ],
+    citadel:{ blocks:[ {x:600,y:512,w:24,h:72,m:"stone"},{x:880,y:512,w:24,h:72,m:"stone"},
+                       {x:700,y:520,w:28,h:60,m:"wood"},{x:780,y:520,w:28,h:60,m:"wood"},{x:740,y:476,w:120,h:22,m:"glass"} ],
               targets:[ {x:740,y:450},{x:640,y:534},{x:840,y:534},{x:520,y:534},{x:900,y:534} ] },
-    finale: { blocks:[ {x:560,y:508,w:24,h:80},{x:900,y:508,w:24,h:80},
-                       {x:730,y:520,w:36,h:60},{x:730,y:474,w:28,h:44},{x:730,y:436,w:20,h:44} ],
+    finale: { blocks:[ {x:560,y:508,w:24,h:80,m:"stone"},{x:900,y:508,w:24,h:80,m:"stone"},
+                       {x:730,y:520,w:36,h:60,m:"stone"},{x:730,y:474,w:28,h:44,m:"wood"},{x:730,y:436,w:20,h:44,m:"glass"} ],
               targets:[ {x:730,y:398},{x:640,y:534},{x:820,y:534},{x:500,y:534},{x:900,y:452} ] }
   };
   function slingLaunches(d, tCount){ d=clamp(d,1,5); return Math.max(3+d, tCount+2); }
@@ -253,7 +269,9 @@
     toLevel: function(lv){
       var d = clamp(lv.difficulty,1,5);
       var geo = SLING_LAYOUTS[lv.layout] || SLING_LAYOUTS.gate;
-      var blocks  = geo.blocks.map(function(b){ return { x:b.x, y:b.y, w:b.w, h:b.h }; });
+      // `m` (SD1 material) rides along only when the layout sets one; a block with
+      // no material reaches the engine exactly as it always did.
+      var blocks  = geo.blocks.map(function(b){ var o={ x:b.x, y:b.y, w:b.w, h:b.h }; if(b.m) o.m=b.m; return o; });
       var targets = geo.targets.map(function(t){ return { x:t.x, y:t.y }; });
       var parts = lv.parts || {};
       return {
