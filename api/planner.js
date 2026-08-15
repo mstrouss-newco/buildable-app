@@ -67,6 +67,9 @@ export default async function handler(req, res) {
             id: s.id, name: s.name, phaseNum: s.phaseNum,
             state: s.done ? "done" : s.needsReview ? "review" : s.later ? "later" : "open",
             deployed: !!s.deployed, notes: (s.notes || []).length,
+            // The last note is what a finishing session said it shipped — the live
+            // feed shows it, so a run reads as a story rather than a list of ticks.
+            lastNote: (s.notes && s.notes.length) ? String(s.notes[s.notes.length - 1]).slice(0, 200) : "",
           })),
         });
       }
@@ -236,7 +239,24 @@ export default async function handler(req, res) {
         const d = await readMeta();
         if (!d.autorun) return res.status(200).json({ ok: true, autorun: null });
         const status = ["waiting", "running", "done", "stopped"].includes(b.status) ? b.status : "running";
-        d.autorun = { ...d.autorun, status, note: clip(b.note, 300), updatedAt: new Date().toISOString() };
+        const now = new Date().toISOString();
+        d.autorun = {
+          ...d.autorun,
+          status,
+          note: clip(b.note, 300),
+          // What the status bar draws. startedAt is the CARD's start, so the page can
+          // tick the clock itself and the runner only has to check in occasionally.
+          card: b.card == null ? d.autorun.card || "" : clip(b.card, 20),
+          cardName: b.cardName == null ? d.autorun.cardName || "" : clip(b.cardName, 120),
+          startedAt: b.startedAt || d.autorun.startedAt || null,
+          done: Number.isFinite(+b.done) ? +b.done : (d.autorun.done || 0),
+          total: Number.isFinite(+b.total) ? +b.total : (d.autorun.total || 0),
+          finished: Array.isArray(b.finished) ? b.finished.slice(0, 20).map((x) => clip(x, 20)) : (d.autorun.finished || []),
+          // lastSeen is how the page knows the runner is still alive. A bar that
+          // says "working" for an hour with no check-in is a dead runner, not work.
+          lastSeen: now,
+          updatedAt: now,
+        };
         await writeMeta(d);
         return res.status(200).json({ ok: true, autorun: d.autorun });
       }

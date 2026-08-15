@@ -25,10 +25,16 @@ import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
 const API = process.env.PLANNER_URL || 'https://www.buildablekids.com/api/planner';
-// Permission baseline for each spawned session. `acceptEdits` auto-approves file
-// edits but still asks before anything riskier — safe, but it CAN pause the chain
-// waiting for an answer. Set CLAUDE_PERMISSION_MODE to widen it if that bites.
-const PERM = process.env.CLAUDE_PERMISSION_MODE || 'acceptEdits';
+// Permission baseline for each spawned session. `dontAsk` runs whatever is on the
+// allow list in .claude/settings.json and DENIES everything else — a headless run
+// cannot answer a prompt, so there is nothing to hang on.
+//
+// This started as `acceptEdits`, which covers file edits but NOT Bash. The first
+// real run therefore edited the engine, then could not run its QA, could not commit
+// and could not tick its own card. The work was stranded, uncommitted, and the chain
+// stopped. If a session ever reports "node was blocked", it is this list that is
+// short, not the session that is broken.
+const PERM = process.env.CLAUDE_PERMISSION_MODE || 'dontAsk';
 const DEFAULT_MAX = 4;   // AUTOPILOT.md's "keep a stack to about four cards"
 
 const argv = process.argv.slice(2);
@@ -151,21 +157,33 @@ the chain STOPS. That is the correct outcome for unfinished work. Do NOT mark it
 to keep the chain moving — a false green here poisons every card built on top of it.`;
 }
 
+// BILLING. Claude Code prefers ANTHROPIC_API_KEY over a Claude subscription login,
+// so a stray key in the environment silently moves every session onto pay-per-token
+// API billing. These runs are long, so that is an expensive accident. Strip it from
+// the child unless someone opts in on purpose.
+const STRAY_KEY = !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+const USE_API_KEY = process.env.AUTOPILOT_ALLOW_API_KEY === '1';
+function childEnv() {
+  const env = { ...process.env };
+  if (STRAY_KEY && !USE_API_KEY) { delete env.ANTHROPIC_API_KEY; delete env.ANTHROPIC_AUTH_TOKEN; }
+  return env;
+}
+
 function runSession(prompt) {
   const args = ['-p', prompt, '--permission-mode', PERM];
   if (TURNS) args.push('--max-turns', String(TURNS));
   return new Promise((resolve) => {
-    const p = spawn('claude', args, { stdio: 'inherit' });
+    const p = spawn('claude', args, { stdio: 'inherit', env: childEnv() });
     p.on('error', (e) => resolve(e.code === 'ENOENT' ? 'missing' : 'error'));
     p.on('close', (code) => resolve(code));
   });
 }
 
 // ---- talking back to the planner -------------------------------------------
-async function setStatus(status, note) {
+async function setStatus(status, extra) {
   try {
     await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ op: 'queueStatus', status, note: note || '' }) });
+      body: JSON.stringify({ op: 'queueStatus', status, ...(extra || {}) }) });
   } catch { /* the run matters more than the status light */ }
 }
 
@@ -174,6 +192,7 @@ async function setStatus(status, note) {
 // early and nothing further should be started.
 async function workRun() {
   let doneCount = 0;
+  const finished = [];   // card ids shipped this run, for the planner's live feed
   for (let n = 1; n <= MAX; n++) {
     const rm = await roadmap();
     const { queue, skipped } = pickQueue(rm);
@@ -183,7 +202,7 @@ async function workRun() {
     }
     if (!summary) {
       say('\nNothing open' + (PHASE ? ' in phase ' + PHASE : '') + '.');
-      return { done: doneCount, reason: 'finished' };
+      return { done: doneCount, reason: 'finished', finished };
     }
     if (n === 1 && queue.length > 1) say('queue: ' + queue.slice(0, MAX).map((c) => c.id).join(' -> '));
 
@@ -195,31 +214,42 @@ async function workRun() {
       say('--- the prompt a fresh session would receive ---\n');
       say(prompt);
       say('\n--- nothing was run (--dry) ---');
-      return { done: 0, reason: 'dry' };
+      return { done: 0, reason: 'dry', finished };
     }
 
     say(`\n${'='.repeat(70)}\ncard ${n} of at most ${MAX}: ${card.id} — ${card.name}\nphase ${card.phaseNum}${phaseTitle ? ' — ' + phaseTitle : ''}\npermissions: ${PERM}\n${'='.repeat(70)}\n`);
     await countdown(card);
-    await setStatus('running', `working ${card.id} — ${card.name}`);
+
+    const startedAt = new Date().toISOString();
+    const total = queue.length + finished.length;
+    const detail = { note: `${card.id} — ${card.name}`, card: card.id, cardName: card.name, startedAt, done: finished.length, total, finished };
+    await setStatus('running', detail);
+    heartbeat('working ' + card.id);
+    // Check in while the session runs, so the planner's live feed can tell a long
+    // card apart from a dead runner. The elapsed clock ticks in the browser.
+    const keepalive = setInterval(() => { setStatus('running', detail); heartbeat('working ' + card.id); }, 60000);
 
     const code = await runSession(prompt);
+    clearInterval(keepalive);
     if (code === 'missing') die('could not find the `claude` command on this machine.');
     if (code !== 0) {
       say(`\nthe session for ${card.id} exited with code ${code}.`);
-      return { done: doneCount, reason: `${card.id} errored (exit ${code})` };
+      return { done: doneCount, reason: `${card.id} errored (exit ${code})`, finished };
     }
 
     // The verification gate: believe the planner, not the session's own summary.
     const after = (await roadmap()).cards.find((c) => c.id === card.id);
     if (!after || after.state !== 'done') {
       say(`\ncard ${card.id} came back as "${after ? after.state : 'missing'}", not done.`);
-      return { done: doneCount, reason: `${card.id} did not finish` };
+      return { done: doneCount, reason: `${card.id} did not finish`, finished };
     }
     doneCount++;
+    finished.push(card.id);
+    await setStatus('running', { note: `${card.id} finished`, card: '', cardName: '', startedAt: null, done: doneCount, total, finished });
     say(`\n${card.id} is done${after.deployed ? ' and live' : ' (not flagged live yet)'}.`);
     if (ONLY) break;
   }
-  return { done: doneCount, reason: 'finished' };
+  return { done: doneCount, reason: 'finished', finished };
 }
 
 function report({ done, reason }) {
@@ -227,6 +257,15 @@ function report({ done, reason }) {
 }
 
 // ---- how the run gets started ----------------------------------------------
+if (STRAY_KEY && !USE_API_KEY) {
+  say('note: an Anthropic API key was found in this environment. Claude Code would');
+  say('      prefer it over your subscription and bill every session per token, so it');
+  say('      has been hidden from these runs. They will use your normal Claude login.');
+  say('      Set AUTOPILOT_ALLOW_API_KEY=1 if you actually want API billing.\n');
+} else if (USE_API_KEY) {
+  say('note: AUTOPILOT_ALLOW_API_KEY=1 — these sessions will bill the Anthropic API per token.\n');
+}
+
 const MANUAL = ONLY || val('phase', null) || has('dry');
 
 if (MANUAL) {
@@ -256,7 +295,8 @@ if (MANUAL) {
       const r = await workRun();
       report(r);
       await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
-        r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason);
+        { note: r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason,
+          card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
       say('\nBack to waiting. Tap another phase in the planner when you are ready.\n');
     }
     await new Promise((r) => setTimeout(r, POLL_SECONDS * 1000));
@@ -277,5 +317,6 @@ if (MANUAL) {
   const r = await workRun();
   report(r);
   await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
-    r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason);
+    { note: r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason,
+      card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
 }

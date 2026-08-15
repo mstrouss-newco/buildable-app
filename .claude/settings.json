@@ -1,0 +1,60 @@
+{
+  "_comment": [
+    "What an unattended build session is allowed to do. scripts/autopilot.mjs spawns",
+    "`claude -p --permission-mode dontAsk`, which auto-DENIES anything not listed here.",
+    "That is the point: a headless run cannot answer a permission prompt, so without",
+    "this list a session can edit files but cannot run its QA, cannot commit and cannot",
+    "tick its own card — which is exactly what happened on the first FL10 run.",
+    "",
+    "Compound commands are checked per subcommand: `node qa.mjs | tail -5` needs BOTH",
+    "`node *` and `tail *`. That is why the ordinary shell plumbing is listed.",
+    "",
+    "defaultMode is deliberately NOT set here, so interactive sessions keep their",
+    "normal behaviour. Only the runner opts into dontAsk, on the command line."
+  ],
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(git *)",
+      "Bash(python3 *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(find *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(diff *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(mkdir *)",
+      "Bash(chmod *)",
+      "Bash(touch *)",
+      "Bash(which *)",
+      "Bash(echo *)",
+      "Bash(pwd)",
+      "Bash(date *)",
+      "Bash(curl *)",
+      "Bash(open *)"
+    ],
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(rm -rf /*)",
+      "Bash(shutdown *)"
+    ]
+  }
+}

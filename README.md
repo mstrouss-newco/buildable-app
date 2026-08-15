@@ -6,6 +6,17 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Autopilot live feed + the permission fix that unblocks it (August 15 2026)
+`.claude/settings.json`, `scripts/autopilot.mjs`, `api/planner.js`, `public/planner.html`.
+The first real unattended card (FL10) wrote good code and then could not test, commit or tick
+itself: `acceptEdits` covers edits but not Bash, and a headless run cannot answer a prompt.
+New `.claude/settings.json` allow-list + `--permission-mode dontAsk` fixes it (note: compound
+commands are checked per subcommand, so `node x.mjs | tail -5` needs both rules). The planner
+now shows a live panel at the top of the page: Now (card + elapsed), Next, Done (with each
+session's note), and a check-in age that turns red if the runner goes quiet for 3 minutes.
+The runner also strips a stray ANTHROPIC_API_KEY so these long runs use the subscription
+login rather than silently billing per token.
+
 ## "Run this phase": the planner drives the runner (August 15 2026)
 `public/planner.html`, `api/planner.js`, `scripts/autopilot.mjs`, `scripts/planner.mjs`.
 Every unfinished phase gets a **Run this phase** button. It records the request on the meta

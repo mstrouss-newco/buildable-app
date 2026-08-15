@@ -1,5 +1,46 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (fourth pass): the live feed, and why FL10 could not finish
+
+### The first real card revealed the actual blocker
+FL10 ran, did good work on `public/skyflyer-engine.html`, wrote a proper
+`AUTOPILOT-REPORT.md`, and then **correctly refused to tick its own card** because it
+could not prove anything: *"the QA scripts did NOT run in this sandbox — node was blocked
+end-to-end."* The honesty gate worked exactly as designed. But the cause was mine.
+
+`--permission-mode acceptEdits` auto-approves file edits and **nothing else**. A headless
+`-p` run cannot answer a permission prompt, so every Bash call was denied: no QA, no
+`git commit`, no `git push`, no `scripts/planner.mjs done`. The session could write code and
+then could not do a single thing with it. Its work was left uncommitted in the working tree.
+
+**Fix:** new `.claude/settings.json` with an explicit `permissions.allow` list (node, npm,
+git, python3 and the ordinary shell plumbing, plus Read/Edit/Write/Glob/Grep), and the
+runner now spawns with `--permission-mode dontAsk`, which runs what is on the list and
+denies the rest. `defaultMode` is deliberately NOT set in the file, so interactive sessions
+keep their normal behaviour; only the runner opts in, on the command line.
+
+**Gotcha worth keeping:** compound commands are permission-checked per subcommand, so
+`node qa.mjs | tail -5` needs BOTH `node *` and `tail *`. That is why the plumbing is listed.
+
+### The live feed
+The queue record now carries `card`, `cardName`, `startedAt`, `done`, `total`, `finished[]`
+and `lastSeen`, and `?scope=roadmap` returns each card's `lastNote`. The runner check-ins
+every 60s while a card runs. The planner draws a panel at the very top of the page (above
+the tabs, so it shows on both) with **Now** (card, name, elapsed, ticking locally),
+**Next** (what is queued behind it), **Done** (each finished card with the note its session
+left), and a check-in age. If the runner has not checked in for 3 minutes the panel turns
+red and says so, because "working" for an hour with no check-in is a dead runner, not work.
+
+### Billing guard
+Claude Code prefers `ANTHROPIC_API_KEY` over a subscription login, so a stray key in the
+environment would silently move every one of these long runs onto pay-per-token API
+billing. The runner now strips `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` from the child
+environment and says so. `AUTOPILOT_ALLOW_API_KEY=1` opts back in.
+
+### Also
+The launcher now lists what it is parking before it stashes, since sessions produce real
+work now and a silent stash of a session's output would be alarming.
+
 ## 2026-08-15 (third pass): the watcher could die silently
 
 Mike tapped "Run this phase" on FL and nothing happened. The planner side was perfect —
