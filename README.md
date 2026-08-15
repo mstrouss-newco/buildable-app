@@ -6,6 +6,37 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Done now means "in the app" — the planner refuses false greens (August 15 2026)
+`scripts/git-gate.mjs`, `scripts/planner.mjs`, `scripts/autopilot.mjs`,
+`qa-rn1.mjs`. Phase **RN**, card **RN1**. Ticking a card done was a claim,
+not a check — four cards (7M, 9E, FL9, RP8) had been marked done while
+their work sat on branches that never reached main, so kids never saw any
+of it. Now `planner.mjs done` runs a three-part gate first, in the folder
+it's called from: (1) `git status` is clean, (2) after a `git fetch`,
+`HEAD` is an ancestor of `origin/main`. If either check fails, the card is
+flipped to **needsReview** instead, a note is auto-attached naming the
+branch, how many commits are stranded and which files they touch, and one
+plain-English line tells the next session how to land it. The same
+`gateCheck()` runs at `autopilot.mjs`'s post-session verification, so a
+session cannot bypass the planner by ticking `done` through any other
+route — if it does, autopilot flips it back to needsReview and stops the
+chain. Outside a git checkout (Mike's phone, PLANNER_URL stubs) the whole
+gate short-circuits to `skipped:true` and does not fail. New command
+`node scripts/planner.mjs stranded` lists every branch on origin carrying
+commits main does not have — ignoring branches whose only unmerged files
+are `SESSION-LOG.md` / `README.md` / `AUTOPILOT-REPORT.md`, and any branch
+whose head commit message says `NOT for main`. First run of `stranded`
+found 20+ real branches with unmerged work (`claude/friends-lobby`,
+`claude/games-family-town`, `claude/games-sling-squad`, `claude/photo-booth`,
+`feature/game-builder`, `stories-coming-soon`, etc.) — exactly the mess
+this gate is meant to prevent from happening again. QA: `node qa-rn1.mjs`
+(29 checks, ALL PASSED) covers gate wiring in both scripts, the
+subprocess "skipped outside git" path, dirty-tree blocking, stranded-HEAD
+blocking, and the `stranded` command's filters. RN1 is the prerequisite
+for RN3.
+
+---
+
 ## Make and Explore now have their own section pages (August 15 2026)
 `src/BuildableKids.jsx`, `qa-nv3.mjs`. Every bottom-bar tab now takes a kid
 to a real section page shaped like Play — back arrow, count, filter chips,

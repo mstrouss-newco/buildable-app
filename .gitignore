@@ -6,3 +6,8 @@ PUSH-TOKEN.txt
 .autopilot-lane.lock
 
 runner-logs/
+
+# Session debris the RN1 gate would otherwise catch: git format-patch output
+# and one-off live-bundle snapshots that agents leave lying around.
+*.patch
+live-bundle.js

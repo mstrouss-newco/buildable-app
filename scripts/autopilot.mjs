@@ -25,6 +25,7 @@
 // half-finished card builds the next card on top of broken work.
 import { spawn } from 'node:child_process';
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { gateCheck } from './git-gate.mjs';
 
 const API = process.env.PLANNER_URL || 'https://www.buildablekids.com/api/planner';
 // Permission baseline for each spawned session. `dontAsk` runs whatever is on the
@@ -245,6 +246,25 @@ async function workRun() {
     if (!after || after.state !== 'done') {
       say(`\ncard ${card.id} came back as "${after ? after.state : 'missing'}", not done.`);
       return { done: doneCount, reason: `${card.id} did not finish`, finished };
+    }
+    // Second gate (RN1): even if the planner says done, the work has to be in main.
+    // A session that ticked done through some other route — a direct API call, an
+    // older planner.mjs without the gate — does not get past this. If it fails,
+    // flip the card back to needsReview so the chain stops on the right card.
+    const gate = gateCheck();
+    if (!gate.ok) {
+      say(`\ncard ${card.id} was ticked done but the work is not in main:`);
+      say('  ' + gate.note);
+      say('  ' + gate.hint);
+      try {
+        await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'note', id: card.id,
+            text: `[autopilot gate] reverted from done — ${gate.note}` }) });
+        await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'card', id: card.id,
+            fields: { done: false, needsReview: true } }) });
+      } catch { /* if we cannot reach the planner to unwind, still stop */ }
+      return { done: doneCount, reason: `${card.id} was ticked done but work is stranded — ${gate.note}`, finished };
     }
     doneCount++;
     finished.push(card.id);

@@ -17,8 +17,14 @@
 //   node scripts/planner.mjs note LP3 "text"      add one session note
 //   node scripts/planner.mjs add LP4 LP "Title" "Body"   new card in phase LP
 //   node scripts/planner.mjs reword LP3 --name "..." --desc "..."
+//   node scripts/planner.mjs stranded             branches on origin whose work is not in main
+//
+// `done` runs a git gate first: working tree clean, HEAD in origin/main. If not,
+// the card is flagged for review with a note naming what is stranded, and the
+// command exits non-zero rather than silently ticking a false green. See RN1.
 //
 // Override the target with PLANNER_URL for a preview deploy or a local dev server.
+import { gateCheck, strandedBranches } from './git-gate.mjs';
 const API = process.env.PLANNER_URL || "https://buildablekids.com/api/planner";
 
 const die = (m) => { console.error("planner: " + m); process.exit(1); };
@@ -92,6 +98,17 @@ switch (cmd) {
 
   case "done": {
     if (!id) die("which card?");
+    const gate = gateCheck();
+    if (!gate.ok) {
+      const stamp = new Date().toISOString().slice(0, 10);
+      await post({ op: "note", id, text: `[${stamp} gate] not marked done — ${gate.note}` });
+      await post({ op: "card", id, fields: { needsReview: true } });
+      console.log("HOLD: " + id + " flagged for review, not done.");
+      console.log("Why: " + gate.note);
+      console.log("Next session: " + gate.hint);
+      process.exit(2);
+    }
+    if (gate.skipped) console.log("(gate skipped — not inside a git checkout)");
     if (args[1]) await post({ op: "note", id, text: args[1] });
     const { card } = await post({ op: "card", id, fields: { done: true } });
     console.log("done: " + card.id + " " + card.name);
@@ -146,6 +163,27 @@ switch (cmd) {
     console.log("reworded: " + card.id + " " + card.name);
     break;
   }
+
+  case "stranded": {
+    const r = strandedBranches();
+    if (r.skipped) { console.log("stranded: run this inside a git checkout of the repo."); break; }
+    if (!r.branches.length) {
+      console.log("No stranded branches on origin — every branch's real work is in main.");
+      break;
+    }
+    console.log(r.branches.length + " branch" + (r.branches.length === 1 ? '' : 'es') +
+      " on origin carrying commits main does not have:\n");
+    for (const b of r.branches) {
+      console.log("  " + b.branch);
+      console.log("    " + b.count + " commit" + (b.count === 1 ? '' : 's') + " ahead of main");
+      console.log("    files: " + b.files.slice(0, 8).join(', ') + (b.files.length > 8 ? '…' : ''));
+      console.log("");
+    }
+    console.log("Doc-only churn (SESSION-LOG.md, README.md, AUTOPILOT-REPORT.md) and any");
+    console.log("branch whose head commit says 'NOT for main' are ignored.");
+    break;
+  }
+
   default:
-    die("unknown command '" + cmd + "'. Try: list, show, done, open, review, deployed, note, add, reword");
+    die("unknown command '" + cmd + "'. Try: list, show, done, open, review, deployed, note, add, reword, stranded");
 }

@@ -1,5 +1,63 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (RN1): Done means "in the app" — the planner refuses false greens
+
+**Phase RN, card RN1.** Ticking a card done was a claim, not a check. Four
+cards (7M, 9E, FL9, RP8) had been marked done while their work sat on
+branches that never reached main — kids never saw any of it. This card
+makes done a CHECK.
+
+New shared module `scripts/git-gate.mjs` exports `gateCheck()`, which
+verifies, in the folder it is called from: (1) `git status` is clean,
+(2) after `git fetch origin main`, `HEAD` is an ancestor of `origin/main`.
+`scripts/planner.mjs done` now runs the gate before the card is ticked; if
+it fails, the card is flipped to **needsReview** instead, a `[YYYY-MM-DD
+gate]` note is auto-attached naming the branch, how many commits are
+stranded and which files, and one plain-English line tells the next
+session how to land it (e.g. "push 'claude/foo' and merge it into main").
+Outside a git checkout the whole gate returns `{ ok:true, skipped:true }`
+so PLANNER_URL stubs and Mike's phone still work.
+
+`scripts/autopilot.mjs` runs the SAME `gateCheck()` at its post-session
+verification step — right after checking the planner says done. A session
+that ticked done through any other route (a direct API call, an older
+planner.mjs without the gate) is caught here: autopilot flips the card
+back to needsReview with a "[autopilot gate] reverted from done" note and
+stops the chain. That is the correct outcome for stranded work — a false
+green here would poison every card built on top of it.
+
+New CLI: `node scripts/planner.mjs stranded` lists every branch on origin
+carrying commits main does not have — filtering out branches whose only
+unmerged files are `SESSION-LOG.md` / `README.md` / `AUTOPILOT-REPORT.md`
+(doc churn is not a stranded feature) and any branch whose head commit
+message says `NOT for main` (explicit throwaways). First run turned up
+20+ real branches with unmerged product code, including
+`claude/friends-lobby`, `claude/games-family-town`, `claude/games-sling-squad`,
+`claude/photo-booth`, `feature/game-builder`, `stories-coming-soon` — the
+receipts for the mess this gate exists to stop.
+
+Also: `.gitignore` now excludes `*.patch` and `live-bundle.js` — session
+artifacts that would otherwise trip the gate. Two such files were sitting
+untracked in the repo root when this session started.
+
+**QA:** `node qa-rn1.mjs` — 29 checks, ALL PASSED. Covers: three source
+files parse; `gateCheck()` returns `{ok:true, skipped:true}` outside git
+(subprocess in a `mkdtemp` non-git dir); dirty-tree blocked (seeded a
+throwaway repo with an untracked file, got `ok:false` with a hint);
+stranded HEAD blocked (seeded a repo with a local commit past a bare
+origin/main, got a "N commits not in origin/main" note); `strandedBranches()`
+returns the real branch and filters out doc-only + `NOT for main` heads;
+`planner.mjs stranded` runs and prints; `planner.mjs done` reaches the
+gate code path; `autopilot.mjs` imports and calls `gateCheck()` after the
+planner-state check. RN3 depends on this card.
+
+Small bug fixed during QA: the first draft of the `for-each-ref
+--format=%(refname:short)` call in `git-gate.mjs` was silently returning
+`[]` because `execSync` shells out to `/bin/sh -c` and unquoted parens
+opened a subshell. Fixed by single-quoting the format string — same trap
+that will bite the next agent that reaches for `execSync` with a
+`%(...)` format.
+
 ## 2026-08-15 (NV4): Nav polish — tap sound + squash on every tab, and the Me tab now has its own address
 
 **Phase NV, session NV4.** Every bottom-bar tab press now fires the shared
