@@ -183,7 +183,7 @@ function runSession(prompt) {
 async function setStatus(status, extra) {
   try {
     await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ op: 'queueStatus', status, ...(extra || {}) }) });
+      body: JSON.stringify({ op: 'queueStatus', status, phase: PHASE, ...(extra || {}) }) });
   } catch { /* the run matters more than the status light */ }
 }
 

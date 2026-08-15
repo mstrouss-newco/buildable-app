@@ -216,6 +216,19 @@ export default async function handler(req, res) {
           return res.status(200).json({ ok: true, autorun: null });
         }
         const phase = clip(b.phase, 12).trim();
+        // Queueing on top of a live run silently hijacked it: the phase changed under
+        // the runner, and its end-of-run report then landed on the wrong phase
+        // ("Phase NV stopped. FL10 did not finish"). Refuse while a runner is alive.
+        const cur = d.autorun;
+        const alive = cur && cur.status === "running" && cur.lastSeen &&
+          (Date.now() - new Date(cur.lastSeen).getTime()) < 5 * 60 * 1000;
+        if (alive && !b.force) {
+          return res.status(200).json({
+            ok: false,
+            error: "phase " + cur.phase + " is already running" + (cur.card ? " (on " + cur.card + ")" : "") + ". Cancel it first, or it will finish and you can queue then.",
+            autorun: cur,
+          });
+        }
         const phases = (d.roadmap && Array.isArray(d.roadmap.phases)) ? d.roadmap.phases : [];
         if (phases.length && !phases.some((p) => String(p.num) === phase)) {
           return res.status(200).json({ ok: false, error: "no phase " + phase, phases: phases.map((p) => p.num) });
@@ -238,6 +251,11 @@ export default async function handler(req, res) {
       if (op === "queueStatus") {
         const d = await readMeta();
         if (!d.autorun) return res.status(200).json({ ok: true, autorun: null });
+        // A runner only reports on the phase it actually picked up. If the queue has
+        // moved on to something else, its report is stale and must not overwrite.
+        if (b.phase && String(b.phase) !== String(d.autorun.phase)) {
+          return res.status(200).json({ ok: true, ignored: "stale: runner is on " + b.phase + ", queue is on " + d.autorun.phase, autorun: d.autorun });
+        }
         const status = ["waiting", "running", "done", "stopped"].includes(b.status) ? b.status : "running";
         const now = new Date().toISOString();
         d.autorun = {

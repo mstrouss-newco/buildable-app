@@ -908,7 +908,12 @@ async function rmRunPhase(num){
   const btns=document.querySelectorAll(".rm-runphase"); btns.forEach(b=>b.disabled=true);
   const r=await apiPost({op:"queue", phase:num, max:4});
   btns.forEach(b=>b.disabled=false);
-  if(!r.ok){ alert("Could not queue that phase: "+(r.error||"unknown")); return; }
+  if(!r.ok){
+    /* Most likely: a run is already going. Say so plainly rather than "unknown". */
+    if(r.autorun){ rmAutorun=r.autorun; renderAutorun(); }
+    alert(r.error||"Could not queue that phase.");
+    return;
+  }
   rmAutorun=r.autorun; renderAutorun(); rmAutorunPoll(true);
 }
 async function rmCancelRun(){
