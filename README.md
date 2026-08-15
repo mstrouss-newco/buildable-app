@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## One card, one session: the autopilot runner (August 15 2026)
+`scripts/autopilot.mjs`, `AUTOPILOT.md`, `AGENTS.md`, `package.json`.
+`npm run cards` works the roadmap by starting a BRAND NEW Claude Code session per card and
+reading the planner between them to decide whether to carry on. Fresh context each time, so
+card four costs the same as card one. The verification gate is the planner: if a card is not
+marked done when its session exits, the chain stops. Guards: `--max` ceiling (default 4),
+stop on non-zero exit, `later` cards never auto-picked, and it refuses to run from inside a
+Claude Code session so sessions cannot nest. `--dry` prints the prompt without running it.
+AUTOPILOT.md (written in July, never pushed) is now in the repo and rewritten for this model.
+
 ## Planner is now writable from the command line (August 15 2026)
 `api/planner.js`, `scripts/planner.mjs`, `AGENTS.md`.
 The roadmap's cards live in one JSON blob in Supabase, so no file edit could reach

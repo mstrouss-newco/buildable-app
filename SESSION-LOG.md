@@ -1,5 +1,49 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15: one card, one session — the autopilot runner
+
+**Tooling, no phase.** Mike asked whether a session could finish a card, verify it, and
+then hand off to a genuinely NEW session rather than carrying on in the same one. It can.
+
+### `scripts/autopilot.mjs` (`npm run cards`)
+Asks the planner for the next open card, builds the prompt from that card, starts a fresh
+`claude -p` session, waits, then **re-reads the planner** to decide whether to continue.
+Flags: `--max N` (default 4), `--card ID`, `--phase XX`, `--dry` (print the prompt, run
+nothing), `--turns N`, `--force`.
+
+**The gate is the planner, not the session's own summary.** If the card is not `done` when
+the session exits, the chain stops. The prompt says so out loud, and tells the session not
+to tick a card early to keep the chain moving, because a false green poisons every card
+built on top of it.
+
+**Why fresh sessions.** A session running for hours carries everything it has ever read
+into every reply, so card four costs several times card one. `claude -p` starts empty. The
+cost is re-reading AGENTS.md and the repo each time (~15-30k tokens), so it wins from about
+the third card on.
+
+**Runaway guards, because Claude Code documents none.** A hard `--max` ceiling; stop on any
+non-zero exit; stop on any card that comes back not-done; `later` cards never picked
+automatically; and a refusal to run at all from inside a Claude Code session (checks
+CLAUDECODE / CLAUDE_CODE_ENTRYPOINT) so sessions cannot nest inside each other.
+
+### AUTOPILOT.md is finally in the repo
+It was written in July, lived only in Mike's local folder, and never landed because the
+push was broken at the time. Rewritten for the one-card-one-session model. Two of its old
+rules are explicitly marked superseded: "branch, never main" (his standing rule is merge to
+main and QA the live deploy) and "do not tick roadmap checkboxes" (ticking is now the
+mechanism the runner reads).
+
+### Verified
+Against a local fake planner with a stand-in `claude`: two cards chained, a session exiting
+non-zero, a session that finishes without ticking its card, an already-done card, a phase
+with nothing open, a parked `later` card correctly skipped, and a missing `claude` binary.
+All six stop conditions refuse cleanly with a non-zero exit. A real nested `claude -p` also
+ran during testing and stalled asking permission — the gate caught it and stopped the chain,
+which is exactly the designed behaviour.
+
+**Known rough edge:** the default `acceptEdits` permission mode can pause a session waiting
+for an answer, which stalls the chain. `CLAUDE_PERMISSION_MODE` widens it.
+
 ## 2026-08-15: Claude Code can now update the planner itself
 
 **Tooling, no phase.** The roadmap's 107 cards live in one JSON blob in the single
