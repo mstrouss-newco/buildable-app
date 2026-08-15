@@ -1,5 +1,26 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (NV3): Make and Explore now have their own section pages, and Me lights up the bottom bar
+
+**Phase NV, session NV3.** Every bottom-bar tab now takes a kid to a real
+section page shaped like Play — back arrow, count, filter chips, wrapping
+grid. **Make** (new: `/app/make`) shows every entry in `MAKE_CATALOG` with
+category chips derived from a new `category` field (Music, Sound, Art,
+Stories, Games), Live studios first, Coming Soon last, and the same 1111
+preview gate the Home shelf uses. **Explore** (new: `/app/explore` for the
+hub; `/app/explore/<id>` still opens the existing viewer) splits into "Labs
+you can play with" (Weather Lab, Journey to the Deep, Solar System — three
+approved non-book exhibits) and "Picture books" filtered by topic chips
+derived from the approved topic-books' own `topic` field. **Me** = the
+existing My Stuff, now wrapped in the shared BottomBar so the Me tab lights
+up whether a kid entered from the bottom bar or from a game's TopNav.
+**Learn** stays as the existing lessons path (card wording: "Learn = the
+lessons path"). Home's Make + Explore doors now open the new hubs instead of
+jumping straight into a single studio or exhibit — a kid learns the pattern
+once and it works everywhere. `qa-nv3.mjs` (55 checks) green;
+`qa-nv1.mjs` refreshed to match (Me still on My Stuff, no more temporary
+"until NV3" fallback assertions); `qa-nv2.mjs` still green.
+
 ## 2026-08-15 (SD4): Sling levels 7-20 rebuilt as real puzzles, and their names now tell you what to try
 
 **Phase SD, session SD4.** Levels 1-6 (the confident on-ramp — Wobbly Gate through Castle

@@ -91,6 +91,8 @@ const SCREEN_GAME_LOADOUT = "game_loadout";   // Session 7F: shared "Make it min
 const SCREEN_TENNIS_LANDING = "tennis_landing"; // Session 7F: Tennis on the shared landing (mode row + court skins)
 const SCREEN_TENNIS_LOADOUT = "tennis_loadout"; // Session 7F: Tennis court skins in the shared loadout
 const SCREEN_EXPLORE = "explore"; // Session 8G: Kidspedia exhibit viewer (orbit-explorer template)
+const SCREEN_EXPLORE_HUB = "explore_hub"; // NV3: the Explore section page (Labs + Picture books grid with topic chips)
+const SCREEN_MAKE_HUB = "make_hub"; // NV3: the Make section page (studios + coming-soon, same shape as Play)
 const SCREEN_LESSONS = "lessons"; // Session LS2: the Lessons section (subject picker, path map, player)
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
@@ -220,13 +222,15 @@ const GAME_CATALOG = [
 // live studios without rendering the shelf. `handlerName` names the shell prop
 // that opens the studio; `soon` gates the coming-soon 1111 preview. Removing a
 // `soon` flag here is the whole change needed to promote a studio to a live
-// count on the Home door.
+// count on the Home door. NV3 — `category` drives the chip filter on the Make
+// section page (same shape as Play), so a new studio only has to name its own
+// category to appear as its own chip.
 const MAKE_CATALOG = [
-  { id: "song",  name: "Make a song",     sub: "Sing about anything",         color: "#6A4FE0", handlerName: "onMusic" },
-  { id: "sound", name: "Sound Machine",   sub: "Silly sounds & explosions",   color: "#F0577E", handlerName: "onSounds" },
-  { id: "art",   name: "Make art",        sub: "Draw, stamp & mirror",        color: "#1098AD", handlerName: "onArt" },
-  { id: "story", name: "Make a story",    sub: "Coming soon",                 color: "#E0578F", handlerName: "onStories", soon: true, gated: true },
-  { id: "game",  name: "Make a game",     sub: "Coming soon",                 color: "#7A4FE0", handlerName: "onMakeGame", soon: true },
+  { id: "song",  name: "Make a song",     sub: "Sing about anything",         category: "Music",   color: "#6A4FE0", handlerName: "onMusic" },
+  { id: "sound", name: "Sound Machine",   sub: "Silly sounds & explosions",   category: "Sound",   color: "#F0577E", handlerName: "onSounds" },
+  { id: "art",   name: "Make art",        sub: "Draw, stamp & mirror",        category: "Art",     color: "#1098AD", handlerName: "onArt" },
+  { id: "story", name: "Make a story",    sub: "Coming soon",                 category: "Stories", color: "#E0578F", handlerName: "onStories", soon: true, gated: true },
+  { id: "game",  name: "Make a game",     sub: "Coming soon",                 category: "Games",   color: "#7A4FE0", handlerName: "onMakeGame", soon: true },
 ];
 
 // ===========================================================================
@@ -252,6 +256,8 @@ const URL_STABLE_LANDINGS = {
 function viewToPath(screen, landingId, exploreId) {
   if (screen === SCREEN_HOME) return "/app";
   if (screen === SCREEN_PLAY_HUB) return "/app/play"; // NV1
+  if (screen === SCREEN_MAKE_HUB) return "/app/make"; // NV3
+  if (screen === SCREEN_EXPLORE_HUB) return "/app/explore"; // NV3 — /app/explore (no id) is the hub
   if (screen === SCREEN_MY_STUFF) return "/app/creations";
   if (screen === SCREEN_EXPLORE) return "/app/explore" + (exploreId ? "/" + exploreId : "");
   if (screen === SCREEN_LESSONS) return "/app/lessons";
@@ -267,9 +273,11 @@ function screenForPath(pathname) {
   const seg = pathname.replace(/^\/app\/?/, "").replace(/\/+$/, "");
   if (!seg) return { screen: SCREEN_HOME };
   if (seg === "play") return { screen: SCREEN_PLAY_HUB };
+  if (seg === "make") return { screen: SCREEN_MAKE_HUB }; // NV3
   if (seg === "creations") return { screen: SCREEN_MY_STUFF };
   if (seg === "lessons") return { screen: SCREEN_LESSONS };
-  if (seg === "explore" || seg.indexOf("explore/") === 0) {
+  if (seg === "explore") return { screen: SCREEN_EXPLORE_HUB }; // NV3 — the section page
+  if (seg.indexOf("explore/") === 0) {
     const id = seg.split("/")[1];
     return { screen: SCREEN_EXPLORE, exploreId: id || undefined };
   }
@@ -1984,15 +1992,16 @@ export default function BuildableKids() {
       />
     );
   }
-  // NV1 — the shell handlers for the bottom-bar tabs. Home + Play are their own
-  // screens; Make / Explore / Me route to the closest existing destination until
-  // NV3 ships the dedicated pages, so the bar is honest either way.
+  // NV1 → NV3 — the shell handlers for the bottom-bar tabs. Every tab now has
+  // its own dedicated section page (Home, Play, Make, Explore, Me = My Stuff),
+  // so the bar takes a kid to a real section every time, not a "closest existing
+  // destination" fallback.
   const bottomBarProps = {
     activeKid,
     onHome: () => setScreen(SCREEN_HOME),
     onPlay: () => setScreen(SCREEN_PLAY_HUB),
-    onMake: () => setScreen(SCREEN_HOME),
-    onExplore: () => { setExploreId("kidspedia"); setScreen(SCREEN_EXPLORE); },
+    onMake: () => setScreen(SCREEN_MAKE_HUB),
+    onExplore: () => setScreen(SCREEN_EXPLORE_HUB),
     onMe: () => openMyStuff(SCREEN_HOME),
   };
   if (screen === SCREEN_HOME) {
@@ -2043,6 +2052,8 @@ export default function BuildableKids() {
           onBubble={() => openLanding("bubble")}
           onSkyFlyer={() => openLanding("skyflyer")}
           onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
+          onExploreHub={() => setScreen(SCREEN_EXPLORE_HUB)}
+          onMakeHub={() => setScreen(SCREEN_MAKE_HUB)}
           onLessons={() => setScreen(SCREEN_LESSONS)}
         />
         <BottomBar current="home" {...bottomBarProps} />
@@ -2083,6 +2094,41 @@ export default function BuildableKids() {
           onBingo={() => openLanding("bingo")}
         />
         <BottomBar current="play" {...bottomBarProps} />
+      </>
+    );
+  }
+  // NV3 — the Make section page. Same shape as Play (back arrow, count, filter
+  // chips, wrapping grid). Every studio in MAKE_CATALOG appears; Coming Soon
+  // items sort last with the same 1111 preview gate the Home shelf uses.
+  if (screen === SCREEN_MAKE_HUB) {
+    return (
+      <>
+        <MakeScreen
+          activeKid={activeKid}
+          onHome={() => setScreen(SCREEN_HOME)}
+          onMusic={() => { setReturnTo(SCREEN_MAKE_HUB); setScreen(SCREEN_MUSIC); }}
+          onSounds={() => { setReturnTo(SCREEN_MAKE_HUB); setScreen(SCREEN_SOUNDS); }}
+          onArt={() => setScreen(SCREEN_ART)}
+          onStories={() => { setReturnTo(SCREEN_MAKE_HUB); setScreen(SCREEN_STORY); }}
+          onMakeGame={() => setScreen(SCREEN_INTRO)}
+        />
+        <BottomBar current="make" {...bottomBarProps} />
+      </>
+    );
+  }
+  // NV3 — the Explore section page. Splits into "Labs you can play with" (the
+  // approved non-book exhibits: Weather Lab, Journey to the Deep, Solar System)
+  // and "Picture books" filtered by topic chips (Kidspedia topic-books). Each
+  // tile opens the existing /explore/<id> viewer.
+  if (screen === SCREEN_EXPLORE_HUB) {
+    return (
+      <>
+        <ExploreHubScreen
+          activeKid={activeKid}
+          onHome={() => setScreen(SCREEN_HOME)}
+          onOpenExhibit={(id) => { setExploreId(id); setScreen(SCREEN_EXPLORE); }}
+        />
+        <BottomBar current="explore" {...bottomBarProps} />
       </>
     );
   }
@@ -2578,7 +2624,15 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_MY_STUFF) {
-    return <MyStuffScreen {...myStuffNav} />;
+    // NV3 — Me = the existing My Stuff. Wrap with the shared BottomBar so the
+    // Me tab lights up when a kid taps in from anywhere. My Stuff keeps its own
+    // in-page nav (back / home) for kids who came in via a game's TopNav.
+    return (
+      <>
+        <MyStuffScreen {...myStuffNav} />
+        <BottomBar current="me" {...bottomBarProps} />
+      </>
+    );
   }
 
   // ============ ADMIN DASHBOARD ============
@@ -2766,7 +2820,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
 function HomeScreen(props) {
-  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onChessResume, onMyStuff, onGrownUp, onSwitchPlayer, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch, onLessons } = props;
+  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onChessResume, onMyStuff, onGrownUp, onSwitchPlayer, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch, onLessons, onMakeHub, onExploreHub } = props;
   // ---------------------------------------------------------------------------
   // Session 3E — Home screen redesign. Cream/light theme ONLY on this screen
   // (no dark mode toggle, no dark palette). Everything below re-presents data
@@ -3206,8 +3260,11 @@ function HomeScreen(props) {
   // LIVE count line pulled from the catalogs above.
   const NV2_DOORS = [
     { id: "play",    label: "Play",     count: nv2LiveGames + " games", color: NAV_TAB_COLORS.play,     grad: "linear-gradient(160deg,#5BC8E4,#2FB7D6)", glyph: <NavPlayGlyph />,     onClick: onGames },
-    { id: "make",    label: "Make",     count: nv2LiveStudios + " studios", color: NAV_TAB_COLORS.make, grad: "linear-gradient(160deg,#F489B2,#E0578F)", glyph: <NavMakeGlyph />,     onClick: onMusic },
-    { id: "explore", label: "Explore",  count: nv2ApprovedLabs + " labs + " + nv2ApprovedBooks + " books", color: NAV_TAB_COLORS.explore, grad: "linear-gradient(160deg,#4CAE6E,#2E7D4F)", glyph: <NavExploreGlyph />, onClick: () => props.onExplore && props.onExplore("kidspedia") },
+    // NV3 — Make + Explore doors now open the dedicated section hubs (matching
+    // the bottom-bar tabs), instead of jumping straight to a single studio or
+    // exhibit. A kid learns the pattern once and it works everywhere.
+    { id: "make",    label: "Make",     count: nv2LiveStudios + " studios", color: NAV_TAB_COLORS.make, grad: "linear-gradient(160deg,#F489B2,#E0578F)", glyph: <NavMakeGlyph />,     onClick: onMakeHub || onMusic },
+    { id: "explore", label: "Explore",  count: nv2ApprovedLabs + " labs + " + nv2ApprovedBooks + " books", color: NAV_TAB_COLORS.explore, grad: "linear-gradient(160deg,#4CAE6E,#2E7D4F)", glyph: <NavExploreGlyph />, onClick: onExploreHub || (() => props.onExplore && props.onExplore("kidspedia")) },
     { id: "learn",   label: "Learn",    count: lessonsLive ? "Math & reading" : "Coming soon", color: "#8A6BFF", grad: "linear-gradient(160deg,#B197FF,#8A6BFF)", glyph: <SchoolGlyph />, soon: !lessonsLive, onClick: lessonsLive ? onLessons : () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
     { id: "mystuff", label: "My Stuff", count: (jumpItems.length ? jumpItems.length + " recent" : "Your creations"), color: NAV_TAB_COLORS.me, grad: "linear-gradient(160deg,#9F86FF,#6A4FE0)", glyph: <StuffGlyph />, onClick: onMyStuff },
   ];
@@ -3730,6 +3787,270 @@ function PlayScreen(props) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NV3 — the Make section page. Same page shape as Play: back arrow to Home,
+// count of live studios, category filter chips across the top, wrapping grid
+// of every studio in MAKE_CATALOG. Live studios first, Coming Soon last, with
+// the same 1111 preview gate the Home shelf uses. The tile face mirrors the
+// Play grid (colored panel with a drawn white glyph, name + subtitle), so a
+// kid reads a studio and a game the same way.
+// ---------------------------------------------------------------------------
+// Drawn glyphs (no emoji anywhere — product guardrail). Each renders in white
+// on the tile's colored gradient panel, exactly like the Play grid's art tile.
+const MakeGlyphSong = () => (
+  <svg width="42" height="42" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v10.55A4 4 0 1 0 11 17V7h7V3H9z" fill="#fff" /></svg>
+);
+const MakeGlyphSound = () => (
+  <svg width="42" height="42" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9v6h4l5 4V5L9 9H5z" fill="#fff" /><path d="M16.5 8.5c1.7 1.5 1.7 5.5 0 7M19 6c3 2.5 3 9.5 0 12" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" /></svg>
+);
+const MakeGlyphArt = () => (
+  <svg width="42" height="42" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.6-1.4-.4-.4-.6-.9-.6-1.4 0-1.1.9-2 2-2h2.4A3.2 3.2 0 0 0 20.4 11 8.5 8.5 0 0 0 12 3zM6.5 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM9 7.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM15 7.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM17.5 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#fff" /></svg>
+);
+const MakeGlyphStory = () => (
+  <svg width="42" height="42" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v16H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm16 0h-7v16h7a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z" fill="#fff" /></svg>
+);
+const MakeGlyphGame = () => (
+  <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 11h4M8 9v4" /><line x1="15" y1="11" x2="15.01" y2="11" /><line x1="17.5" y1="13.5" x2="17.51" y2="13.5" /><path d="M5 16a4 4 0 0 1-1.3-3.6l.8-4.2A3.5 3.5 0 0 1 7.9 5.5h8.2a3.5 3.5 0 0 1 3.4 2.7l.8 4.2A4 4 0 0 1 16.5 16c-1 0-1.8-.5-2.3-1.3l-.5-.7h-3.4l-.5.7C9.3 15.5 8.5 16 7.5 16z" /></svg>
+);
+const MAKE_GLYPH = { song: <MakeGlyphSong />, sound: <MakeGlyphSound />, art: <MakeGlyphArt />, story: <MakeGlyphStory />, game: <MakeGlyphGame /> };
+
+function MakeScreen(props) {
+  const { onHome } = props;
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  useEffect(() => { const on = () => setVw(window.innerWidth); window.addEventListener("resize", on); return () => window.removeEventListener("resize", on); }, []);
+  const phone = vw < 700;
+  const tablet = vw >= 700 && vw < 1024;
+  const maxW = phone ? "100%" : tablet ? 720 : 940;
+  const cols = phone ? 2 : tablet ? 3 : 4;
+
+  const HOME_BG =
+    "radial-gradient(circle at 10% -8%, rgba(155,126,221,0.16), transparent 42%)," +
+    "radial-gradient(circle at 90% 108%, rgba(240,151,42,0.14), transparent 46%)," +
+    "#FFF8EE";
+  const HOME_CARD = "#FFFFFF";
+  const HOME_CARD_BORDER = "1px solid rgba(58,46,77,0.10)";
+  const HOME_SHADOW = "0 8px 22px rgba(58,46,77,0.09)";
+  const HOME_INK = "#3A2E4D";
+  const HOME_SUB = "#8B84A0";
+
+  // Chips derive from MAKE_CATALOG's category field, exactly like Play does
+  // from GAME_CATALOG. Adding a studio with a new category is one row and no
+  // chip-list change.
+  const CATS = ["All"].concat(Array.from(new Set(MAKE_CATALOG.map((m) => m.category))));
+  const [cat, setCat] = useState("All");
+  const shown = cat === "All" ? MAKE_CATALOG : MAKE_CATALOG.filter((m) => m.category === cat);
+  // Live first, Coming Soon LAST — same sort rule as Play so soon items never
+  // land above a real one.
+  const catalogIndex = new Map(MAKE_CATALOG.map((m, i) => [m.id, i]));
+  const sorted = shown.slice().sort((a, b) => {
+    if (!!a.soon !== !!b.soon) return a.soon ? 1 : -1;
+    return catalogIndex.get(a.id) - catalogIndex.get(b.id);
+  });
+
+  const liveStudios = MAKE_CATALOG.filter((m) => !m.soon).length;
+
+  // ---- Coming Soon 1111 gate (same 1111 as Home + Play) ----
+  const [gate, setGate] = useState(null);
+  const [pw, setPw] = useState("");
+  const [pwErr, setPwErr] = useState(false);
+  const openStudio = (m) => {
+    const fn = props[m.handlerName];
+    if (!fn) return;
+    if (m.soon) { setGate(() => fn); setPw(""); setPwErr(false); return; }
+    fn();
+  };
+  const submitPw = () => {
+    if (pw === "1111") { const go = gate; setGate(null); setPw(""); setPwErr(false); if (go) go(); }
+    else setPwErr(true);
+  };
+
+  const cardStyle = {
+    textAlign: "left", padding: 0, borderRadius: 18, border: HOME_CARD_BORDER,
+    background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
+    overflow: "hidden", boxShadow: HOME_SHADOW, width: "100%",
+  };
+  const MakeGridCard = ({ m }) => (
+    <button data-make-id={m.id} data-soon={m.soon ? "1" : "0"} onClick={() => openStudio(m)} style={{ ...cardStyle, opacity: m.soon ? 0.72 : 1 }}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${m.color}, ${m.color}99)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 62, height: 62, borderRadius: 18, background: "rgba(255,255,255,0.18)" }}>{MAKE_GLYPH[m.id] || <MakeGlyphSong />}</span>
+        {m.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
+      </div>
+      <div style={{ padding: "9px 11px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 3, background: m.color, flex: "0 0 auto" }} />
+          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{m.category}</div>
+      </div>
+    </button>
+  );
+
+  return (
+    <div data-nv3-make-page style={{ minHeight: "100vh", background: HOME_BG, padding: phone ? "16px 14px 108px" : "24px 20px 120px", fontFamily: NUN, color: HOME_INK }}>
+      <div style={{ width: "100%", maxWidth: maxW, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <button onClick={onHome} data-nv3-back aria-label="Home" style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 40, height: 40, borderRadius: "50%", border: "none",
+            background: "#fff", color: HOME_INK, cursor: "pointer", boxShadow: HOME_SHADOW,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+          <h1 style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 26 : 32, color: HOME_INK, margin: 0 }}>Make</h1>
+          <span style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{liveStudios} studios</span>
+        </div>
+        <div data-nv3-make-chips style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8, marginBottom: 16 }}>
+          {CATS.map((c) => {
+            const on = c === cat;
+            return (
+              <button key={c} data-chip={c} data-on={on ? "1" : "0"} onClick={() => setCat(c)} type="button" style={{
+                flex: "0 0 auto", padding: "9px 15px", borderRadius: 999, border: "none",
+                background: on ? NAV_TAB_COLORS.make : "#fff",
+                color: on ? "#fff" : HOME_INK,
+                fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer",
+                boxShadow: HOME_SHADOW, whiteSpace: "nowrap",
+              }}>{c}</button>
+            );
+          })}
+        </div>
+        <div data-nv3-make-grid style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
+          {sorted.map((m) => <MakeGridCard key={m.id} m={m} />)}
+        </div>
+      </div>
+
+      {gate && (
+        <div onClick={() => setGate(null)} style={{ position: "fixed", inset: 0, background: "rgba(58,46,77,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9500, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 340, background: "#fff", border: HOME_CARD_BORDER, borderRadius: 24, padding: "26px 22px", fontFamily: NUN, color: HOME_INK, boxShadow: "0 18px 50px rgba(58,46,77,0.30)" }}>
+            <div style={{ fontFamily: FRED, fontSize: 22, fontWeight: 700, textAlign: "center" }}>Coming soon</div>
+            <div style={{ fontSize: 14, color: HOME_SUB, textAlign: "center", marginTop: 8 }}>Enter the password to preview this studio.</div>
+            <input value={pw} onChange={(e) => { setPw(e.target.value); setPwErr(false); }} onKeyDown={(e) => { if (e.key === "Enter") submitPw(); }} type="password" inputMode="numeric" autoFocus placeholder="Password" style={{ width: "100%", boxSizing: "border-box", marginTop: 16, padding: "12px 14px", borderRadius: 14, border: pwErr ? "2px solid #E0578F" : "1px solid rgba(58,46,77,0.2)", background: "#FFF8EE", color: HOME_INK, fontFamily: NUN, fontSize: 18, textAlign: "center", letterSpacing: "4px" }} />
+            {pwErr && <div style={{ color: "#C23E72", fontSize: 13, textAlign: "center", marginTop: 8 }}>Wrong password. Try again.</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+              <button onClick={() => setGate(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid rgba(58,46,77,0.2)", background: "transparent", color: HOME_SUB, fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Cancel</button>
+              <button onClick={submitPw} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "linear-gradient(160deg,#9B7BFF,#67E8F9)", color: "#12102a", fontFamily: NUN, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Enter</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NV3 — the Explore section page. Splits into two sections that share the Play
+// page shape: "Labs you can play with" (the approved non-book EXHIBIT_CATALOG
+// entries: Weather Lab, Journey to the Deep, Solar System — no chips because
+// there are only three today) and "Picture books" (the approved topic-book
+// entries, filtered by TOPIC chips: All / space / ocean / animals / ...). Each
+// tile opens the existing /explore/<id> viewer via onOpenExhibit.
+// ---------------------------------------------------------------------------
+function ExploreHubScreen({ onHome, onOpenExhibit }) {
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  useEffect(() => { const on = () => setVw(window.innerWidth); window.addEventListener("resize", on); return () => window.removeEventListener("resize", on); }, []);
+  const phone = vw < 700;
+  const tablet = vw >= 700 && vw < 1024;
+  const maxW = phone ? "100%" : tablet ? 720 : 940;
+  const cols = phone ? 2 : tablet ? 3 : 4;
+
+  const HOME_BG =
+    "radial-gradient(circle at 10% -8%, rgba(155,126,221,0.16), transparent 42%)," +
+    "radial-gradient(circle at 90% 108%, rgba(240,151,42,0.14), transparent 46%)," +
+    "#FFF8EE";
+  const HOME_CARD = "#FFFFFF";
+  const HOME_CARD_BORDER = "1px solid rgba(58,46,77,0.10)";
+  const HOME_SHADOW = "0 8px 22px rgba(58,46,77,0.09)";
+  const HOME_INK = "#3A2E4D";
+  const HOME_SUB = "#8B84A0";
+
+  // Data. Only approved exhibits are ever shown here (mirrors the Home doors
+  // rule — a book "in-review" never appears to a kid).
+  const labs = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template !== "topic-book");
+  const books = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template === "topic-book");
+
+  // Topic chips for the books row. Derived from the approved books' `topic`
+  // field so adding a topic is one row and no chip-list change.
+  const TOPICS = ["All"].concat(Array.from(new Set(books.map((b) => b.topic))));
+  const [topic, setTopic] = useState("All");
+  const shownBooks = topic === "All" ? books : books.filter((b) => b.topic === topic);
+
+  const cardStyle = {
+    textAlign: "left", padding: 0, borderRadius: 18, border: HOME_CARD_BORDER,
+    background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
+    overflow: "hidden", boxShadow: HOME_SHADOW, width: "100%",
+  };
+  // heroArt is either a URL (starts with "/" or "http") or an art-slot id. If
+  // it looks like a URL, render it directly; otherwise fall back to the color
+  // panel with the title on top so a missing image never leaves an empty tile.
+  const isUrl = (s) => typeof s === "string" && (s.charAt(0) === "/" || s.indexOf("http") === 0);
+  const ExhibitCard = ({ ex, kind }) => (
+    <button data-explore-id={ex.id} data-explore-kind={kind} onClick={() => onOpenExhibit && onOpenExhibit(ex.id)} style={cardStyle}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${ex.color}, ${ex.color}99)`, overflow: "hidden" }}>
+        {isUrl(ex.heroArt) && <img src={ex.heroArt} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+      </div>
+      <div style={{ padding: "9px 11px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ width: 9, height: 9, borderRadius: 3, background: ex.color, flex: "0 0 auto" }} />
+          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.title}</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{ex.topic}</div>
+      </div>
+    </button>
+  );
+
+  const sectionTitle = { fontFamily: FRED, fontWeight: 700, fontSize: phone ? 17 : 19, color: HOME_INK, margin: 0 };
+
+  return (
+    <div data-nv3-explore-page style={{ minHeight: "100vh", background: HOME_BG, padding: phone ? "16px 14px 108px" : "24px 20px 120px", fontFamily: NUN, color: HOME_INK }}>
+      <div style={{ width: "100%", maxWidth: maxW, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <button onClick={onHome} data-nv3-back aria-label="Home" style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 40, height: 40, borderRadius: "50%", border: "none",
+            background: "#fff", color: HOME_INK, cursor: "pointer", boxShadow: HOME_SHADOW,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+          <h1 style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 26 : 32, color: HOME_INK, margin: 0 }}>Explore</h1>
+          <span style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{labs.length} labs + {books.length} books</span>
+        </div>
+
+        {/* ---- Section 1: Labs you can play with. Three today (Weather Lab,
+                 Journey to the Deep, Solar System) — a small enough set to sit
+                 in one wrapping grid without its own chip filter. ---- */}
+        <h2 data-nv3-labs-heading style={{ ...sectionTitle, marginBottom: 10 }}>Labs you can play with</h2>
+        <div data-nv3-labs-grid style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12, marginBottom: 22 }}>
+          {labs.map((ex) => <ExhibitCard key={"lab_" + ex.id} ex={ex} kind="lab" />)}
+        </div>
+
+        {/* ---- Section 2: Picture books, filtered by topic chips. Every chip
+                 is a real topic name from the approved book set. ---- */}
+        <h2 data-nv3-books-heading style={{ ...sectionTitle, marginBottom: 10 }}>Picture books</h2>
+        <div data-nv3-book-chips style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8, marginBottom: 12 }}>
+          {TOPICS.map((t) => {
+            const on = t === topic;
+            return (
+              <button key={t} data-chip={t} data-on={on ? "1" : "0"} onClick={() => setTopic(t)} type="button" style={{
+                flex: "0 0 auto", padding: "9px 15px", borderRadius: 999, border: "none",
+                background: on ? NAV_TAB_COLORS.explore : "#fff",
+                color: on ? "#fff" : HOME_INK,
+                fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer",
+                boxShadow: HOME_SHADOW, whiteSpace: "nowrap", textTransform: "capitalize",
+              }}>{t}</button>
+            );
+          })}
+        </div>
+        <div data-nv3-books-grid style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
+          {shownBooks.map((ex) => <ExhibitCard key={"book_" + ex.id} ex={ex} kind="book" />)}
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,27 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Make and Explore now have their own section pages (August 15 2026)
+`src/BuildableKids.jsx`, `qa-nv3.mjs`. Every bottom-bar tab now takes a kid
+to a real section page shaped like Play — back arrow, count, filter chips,
+wrapping grid. **Make** (`/app/make`) shows every entry in `MAKE_CATALOG`
+with chips derived from a new `category` field (Music, Sound, Art, Stories,
+Games); Live studios first, Coming Soon last, same 1111 preview gate the
+Home shelf uses. **Explore** (`/app/explore` hub; `/app/explore/<id>`
+still opens the existing viewer) splits into "Labs you can play with"
+(Weather Lab, Journey to the Deep, Solar System — the three approved
+non-book exhibits) and "Picture books" filtered by topic chips derived from
+the approved topic-books' own `topic` field. **Me** wraps My Stuff in the
+shared BottomBar so the tab lights up wherever a kid entered from. **Learn**
+stays as the existing lessons path (card wording: "Learn = the lessons
+path"). Home's Make + Explore doors now open the new hubs instead of
+jumping straight into a single studio or exhibit — a kid learns the pattern
+once and it works everywhere. NV3 QA: `node qa-nv3.mjs .` ALL CHECKS PASS
+(55 checks). NV1 refreshed to drop the temporary "until NV3" fallback
+assertions; NV2 still green.
+
+---
+
 ## The new Home is one screen wide (August 15 2026)
 `src/BuildableKids.jsx`, `qa-nv2.mjs`. Rebuilt HomeScreen so a kid sees the
 whole app on the first phone view. Slim header (avatar + Hi + streak, then

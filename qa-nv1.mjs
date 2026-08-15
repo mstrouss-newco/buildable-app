@@ -122,11 +122,10 @@ chk('bottomBarProps carries activeKid (Me tab needs the kid gradient)',
   /const\s+bottomBarProps\s*=\s*\{[\s\S]{0,400}activeKid,/.test(S));
 chk('Home tab wires to SCREEN_HOME',       /onHome:\s*\(\)\s*=>\s*setScreen\(SCREEN_HOME\)/.test(S));
 chk('Play tab wires to SCREEN_PLAY_HUB',   /onPlay:\s*\(\)\s*=>\s*setScreen\(SCREEN_PLAY_HUB\)/.test(S));
-// NV3 will ship dedicated Make / Explore / Me pages. Until then the tabs route
-// to the closest live destination so the bar is honest either way.
-chk('Explore tab routes to Kidspedia (SCREEN_EXPLORE) until NV3',
-  /onExplore:[^,]*setScreen\(SCREEN_EXPLORE\)/.test(S));
-chk('Me tab routes to My Stuff until NV3', /onMe:[^,]*openMyStuff/.test(S));
+// NV3 shipped dedicated Make / Explore hubs. The Me tab still opens My Stuff
+// (that IS the "Me" page). qa-nv3.mjs owns the assertions for the new hubs;
+// this file just proves the Me + non-Kidspedia routing didn't regress.
+chk('Me tab routes to My Stuff', /onMe:[^,]*openMyStuff/.test(S));
 // The Home "Games" tile used to no-op (setScreen SCREEN_HOME); redirect it to
 // the new Play page so the entry point is consistent with the bottom-bar tab.
 chk('Home Games tile now opens the new Play page',
