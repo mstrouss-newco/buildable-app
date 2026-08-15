@@ -1,5 +1,39 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (RN3): Three of the four stranded cards landed; FL9 needs a human
+
+**Phase RN, card RN3.** RN1 built the gate that catches false greens; this card was
+the receipt — four cards (7M chess, 9E editor, FL9 Sky Flyer HUD, RP8 Journey to
+the Deep) were marked done while their work sat on branches that never reached
+main. Landed one at a time, ONE commit per merge, expected `SESSION-LOG.md` and
+`README.md` conflicts resolved as a plain union (both entries kept).
+
+- **7M chess** — `claude/chess-piece-colors-we000n` merged to main (commit `3b5b588`).
+  `qa-chess.mjs` green, 20 checks including the five new ones that prove the two
+  armies stay tellable apart. Live verified: `/buildable-chess.html` now serves the
+  `&side=` art request.
+- **9E editor** — `claude/editor-async-qa-gate-cd7iwe` merged to main (commit
+  `43225c6`). `qa/qa-map.mjs` clean, all 21 mapped qa scripts exist on disk, and
+  `api/manifest.js`, `api/manifest-qa.js`, `api/_editorAuth.js`, and
+  `scripts/editor-qa-run.mjs` all pass `node --check`. Live verified: `/editor.html`
+  now serves the qa-panel wiring (`manifest-qa`, `Put it back`).
+- **RP8 dive** — `claude/kidspedia-mobile-scroll-load-d1i5mb` merged to main (commit
+  `ff17689`). `qa-dive.mjs` ALL CHECKS PASS including the four RP8 additions
+  (aspect-ratio kept, both edges clamped, load-when-in-view, page locked to screen
+  width). Live verified: `/dive.html` now serves the `overflow-x`, `IntersectionObserver`
+  and `artW` guards.
+- **FL9 HUD — NOT landed, needs a human.** Merge produced a code-level conflict
+  in `src/BuildableKids.jsx` (two hunks, both cache-buster strings: HEAD is on
+  `v=fl13`, the branch is on `v=fl9`). Resolution is trivial — keep HEAD's newer
+  `v=fl13` and take the FL9 changes to `skyflyer-engine.html`,
+  `public/buildable-gamenav.js`, `HUD-AND-NAV-RULES.md` and `qa-skyflyer-hud.mjs`
+  — but the RN3 rules say STOP on any conflict beyond doc files, so the merge was
+  aborted and the branch is left as it was. `claude/fl10-first-attempt` was left
+  alone too, per the card's own "NOT for main" note.
+
+RN3 is marked **review** for exactly the FL9 reason; `deployed` is NOT set. The
+three that landed did land — they will show `deployed` when RN3 does.
+
 ## 2026-08-15 (RN2): A card waiting on Mike is not a phase failure
 
 **Phase RN, card RN2.** The autopilot runner treated a card that came back

@@ -6,6 +6,34 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Three of the four stranded cards landed (RN3, August 15 2026)
+`public/buildable-chess.html`, `api/images.js`, `qa-chess.mjs`, `public/editor.html`,
+`api/manifest.js`, `api/manifest-qa.js` (new), `api/_editorAuth.js` (new),
+`qa/qa-map.mjs` (new), `scripts/editor-qa-run.mjs` (new),
+`.github/workflows/editor-qa.yml` (new), `public/dive.html`, `qa-dive.mjs`.
+Phase **RN**, card **RN3.** RN1's gate found that four "done" cards had never
+reached main — this card is the receipt. Landed one branch at a time, one commit
+per merge: **7M** chess piece colours + phone Pause fix
+(`claude/chess-piece-colors-we000n` → `3b5b588`), **9E** the editor's async
+play-test robot and Put it back (`claude/editor-async-qa-gate-cd7iwe` → `43225c6`),
+**RP8** dive locked to phone width with art loading where the diver is
+(`claude/kidspedia-mobile-scroll-load-d1i5mb` → `ff17689`). Expected
+`SESSION-LOG.md` / `README.md` conflicts resolved as plain union. QA green for
+each: `qa-chess.mjs` 20 checks, `qa/qa-map.mjs` (all 21 mapped scripts exist),
+`qa-dive.mjs` all checks pass. Live verified: `/buildable-chess.html` serves the
+new `&side=` art request, `/editor.html` serves the qa-panel + Put it back,
+`/dive.html` serves the width lock + `IntersectionObserver` lazy loader.
+**FL9 Sky Flyer HUD did NOT land.** Merging
+`claude/nav-hud-overlap-mobile-hd7qte` produced a code-level conflict in
+`src/BuildableKids.jsx` (two hunks, both cache-buster strings — HEAD is on
+`v=fl13`, the branch is on `v=fl9`, because FL10–FL13 shipped without FL9
+landing). Trivial to resolve by hand (keep HEAD's `v=fl13`, take the FL9 changes
+to `skyflyer-engine.html`, `public/buildable-gamenav.js`, `HUD-AND-NAV-RULES.md`,
+`qa-skyflyer-hud.mjs`), but RN3's rules said STOP on any conflict beyond doc
+files, so the merge was aborted. `claude/fl10-first-attempt` was left alone per
+its own "NOT for main" note. RN3 is therefore marked **review** (three landed,
+one waiting on a human) and `deployed` is not set.
+
 ## A card waiting on Mike is not a phase failure (August 15 2026)
 `scripts/autopilot.mjs`, `public/planner.html`. Phase **RN**, card **RN2**.
 The runner used to report a card that came back in `review` as `<id> did
