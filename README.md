@@ -6,6 +6,24 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## SD4 — Sling levels 7-20 rebuilt as real puzzles (August 15 2026)
+`public/sling/manifest.json` (renames), plus the SD1+SD2+SD3 branch merged onto main
+(`public/buildable-manifest.js`, `public/sling-squad.html`, `public/buildable-levelthumb.js`,
+`qa-sling.mjs`, `api/sfx.js`). The SD1/SD2/SD3 cards had been marked done by the runner
+but their branch (`claude/sd3-terrain-level-design-ei1eai`) never landed on main — the
+same lane-parallelism issue that stranded FL13/RP6/NV1 (fixed in the "eighth pass" log
+entry). Merged the branch first (SD1+SD2+SD3 features: block materials with real health,
+sealed critters that need a structural move, and terrain that is not one flat floor —
+hills, pits, floating ledges), then landed SD4 on top: **every one of levels 7-20 now
+asks for a different move** (10 distinct asks across 14 levels — knock a leg out, drop
+a roof, break the glass stalk, lob a hill, thread a valley, chain-collapse a keep),
+shot budget cut so d3+ hands out exactly ONE spare sling, and the picker names now read
+like a journey ("The Floating Deck", "Over the Hill", "Drop the Roof", "The Glass Stalk",
+"Snap the Shelf", "The High Keep", "Two Ways In", "Grand Finale") — a kid can read the
+name and know what the puzzle wants. Levels 1-6 (Wobbly Gate → Castle Keep) untouched
+so the on-ramp still forgives two or three bad shots. `node qa-sling.mjs .` — ALL CHECKS
+PASS, 68+ checks, bot clears every level with a sling in hand.
+
 ## RP6 second-pass fact-check: Mauna Loa (August 15 2026)
 `public/explore/volcanoes.json`.
 Independent second-pass audit of every Wow chart number and US-unit conversion

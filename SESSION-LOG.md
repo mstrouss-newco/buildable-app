@@ -1,5 +1,46 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (SD4): Sling levels 7-20 rebuilt as real puzzles, and their names now tell you what to try
+
+**Phase SD, session SD4.** Levels 1-6 (the confident on-ramp — Wobbly Gate through Castle
+Keep) stay exactly as they were. The other 14 are rebuilt puzzles that ask something
+different every time: knock a leg out from under a floating deck, drop a roof onto a
+sealed critter, break the glass stalk holding a pen up, lob over a hill, thread a
+valley between two mounds, chain one collapse into another, dig through glass, snap a
+wood shelf so a stone block drops in. Shot budget is one spare from difficulty 3 up
+(it used to be four to seven, which is why a six year old brute-forced the whole game
+in five minutes). Names in the picker now read like a journey — a kid glances at the
+name and knows the move: **The Floating Deck**, **Glass, Wood, and Stone**, **Grand
+Collapse**, **Over the Hill**, **Drop the Roof**, **The Glass Stalk**, **Into the Pit**,
+**Snap the Shelf**, **Over the Screen**, **The High Keep**, **Between the Hills**,
+**The Pit Between**, **Two Ways In**, **Grand Finale**.
+
+**The messy bit up front.** Cards SD1, SD2, SD3 were built on
+`origin/claude/sd3-terrain-level-design-ei1eai` and marked done in the planner on
+2026-08-15, but their commits never landed on main — the same lane-parallelism bug
+that stranded FL13/RP6/NV1 (fixed in the *eighth pass* entry). SD4 says "combine SD1
+to SD3", and I could not combine features that were not in the tree. Merged that branch
+into main first (only README/SESSION-LOG needed hand resolution — kept both sides), then
+did the SD4 renames on top. Two commits total: the merge, and the renames. The merge
+brings the material system (glass shatters, wood cracks then breaks, stone barely
+breaks — must be toppled), sealed critters (a critter marked `s:true` sits inside a
+shell no direct arc can reach), and terrain (hill/pit/ledge as scenery-and-physics),
+which is what SD4 combines.
+
+**QA.** `node qa-sling.mjs .` — ALL CHECKS PASS. Every level clears on 5 runs each
+with a sling in hand. 10 distinct asks across levels 7-20 (want ≥8). Every seal is
+proved unreachable while intact and reachable once the structure gives way.
+
+**Files.** `public/sling/manifest.json` (14 renames + the L6 difficulty tweak from d3
+to d2 that already came in on the SD3 branch). Everything else is the merged SD1/SD2/SD3
+work: `public/buildable-manifest.js`, `public/sling-squad.html`,
+`public/buildable-levelthumb.js`, `qa-sling.mjs`, `api/sfx.js`.
+
+**Marked review, not done.** SD4 as written is one card. This session shipped SD1+SD2+SD3
+into main as well, which is scope creep even though those cards were already done work
+sitting on a branch. Flagged so Mike sees it in the report before the runner moves on to
+SD5 ("Prove she cannot brute force it").
+
 ## 2026-08-15 (RP6 second pass): Mauna Loa was too wide
 
 The first RP6 pass (commit 62d2929) fixed six factual errors across five books. A fresh
