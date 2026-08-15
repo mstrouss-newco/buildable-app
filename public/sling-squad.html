@@ -84,7 +84,9 @@ var BGART={};                              // painted parallax layers: hills/tre
 var SLING_DW=129, SLING_TOP=307;           // slingshot image draw box (centered on AX)
 var FORKLX=117, FORKLY=317, FORKRX=216, FORKRY=317;  // elastic-band attach points (fork tips)
 var MAXPULL = 132, MAXV = 27;              // very forgiving: big pull, strong launch
-var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced OR knocked)
+// SD2 — a critter has to be THROWN off its spot, not nudged (was 24 / 5.4, which
+// is why a vague shove near a small tower cleared almost every level).
+var POP_MOVE = 52, POP_SPD = 9.0;          // shoved right off its spot OR really launched
 
 // ---- the SQUAD: 4 friendly ANIMALS you fling, each with a tap-to-trigger POWER.
 //  (Kenney "Animal Pack Remastered" art dresses these when served; drawn fallback
@@ -287,6 +289,49 @@ function sweepBrokenBlocks(){
   }
 }
 
+// ============================================================================
+//  SD2 — CRITTERS THAT DO NOT POP FROM A NUDGE.
+//  Before this a critter fell over if anything so much as leaned on it: 24px of
+//  drift or 5.4 of speed and it was gone. That is why every level died to the
+//  same vague shove. Now a critter carries a little squish health, and only
+//  three things empty it:
+//    a REAL HIT   — a pal (or a flying block) arrives hard. Damage comes from
+//                   the CLOSING speed, so a graze leaves it standing.
+//    a REAL CRUSH — something heavy comes to rest on top of it and presses down.
+//                   This is what makes a sealed critter beatable: knock the legs
+//                   out and the stone roof does the work.
+//    getting THROWN — shoved right off its spot, launched, or dropped off the
+//                   world (POP_MOVE / POP_SPD above).
+//  Every pop records WHY, which is what lets QA prove that a sealed critter is
+//  never reached by a direct hit — only by the collapse it was designed around.
+// ============================================================================
+var TGT_HP      = 100;    // squish health every critter starts with
+var TGT_MIN_SPD = 2.6;    // closing speed at or below this is a nudge, not a hit
+var TGT_PER_SPD = 26;     // squish per unit of closing speed above that floor
+var CRUSH_MIN_M = 1.8;    // resting mass under this is something leaning, not a crush
+var CRUSH_PER_M = 0.75;   // squish per frame per unit of resting mass
+var CRUSH_MAX_M = 24;     // cap, so a whole tower cannot squash one in a single frame
+
+// Take squish off a critter. Returns true if that finished it.
+function hurtTarget(t, dmg, why){
+  if(!t || !t._alive || !(dmg>0)) return false;
+  t._hp -= dmg; t._hitAt = nowMs();          // _hitAt drives the bad-guy BONKED pose
+  if(t._hp<=0){ t._hp=0; popTarget(t, why); return true; }
+  var n=nowMs(); if(n-(G._owSfxAt||0)>140){ G._owSfxAt=n; sfx("thud"); }   // one ow per moment
+  return false;
+}
+// How much block is resting ON this critter right now. Only bodies whose lowest
+// point is level with the critter's head count — something standing beside it,
+// or a roof still held up above it, presses on nothing.
+function crushLoad(t){
+  var load=0, tb=t.bounds;
+  for(var i=0;i<G.blocks.length;i++){ var b=G.blocks[i], bb=b.bounds;
+    if(bb.max.y > tb.min.y+6 || bb.max.y < tb.min.y-10) continue;   // must be touching its head
+    if(bb.max.x < tb.min.x+5 || bb.min.x > tb.max.x-5) continue;    // and genuinely overhead
+    load += (b.mass||0); }
+  return load;
+}
+
 // Auto-calibrate effective per-frame gravity so the aim predictor matches Matter.
 (function calibrate(){
   try{
@@ -325,6 +370,8 @@ function buildWorld(idx){
   (L.targets||[]).forEach(function(t,ti){
     var s=34; var body = M.Bodies.rectangle(t.x, t.y, s, s, mat({ density:0.0016, chamfer:{radius:9} }));
     body._kind="target"; body._w=s; body._h=s; body._alive=true; body._sx=t.x; body._sy=t.y; body._ti=ti;
+    // SD2: `s` marks a SEALED critter — one the layout promises no arc can touch.
+    body._sealed=!!t.s; body._hp0=TGT_HP; body._hp=TGT_HP; body._why=null;
     targets.push(body); M.Composite.add(world, body);
   });
 
@@ -339,10 +386,14 @@ function buildWorld(idx){
     for(var i=0;i<ev.pairs.length;i++){ var p=ev.pairs[i], a=p.bodyA, b=p.bodyB;
       var t = a._kind==="target"?a:(b._kind==="target"?b:null);
       var o = (t===a)?b:a;
+      // SD2: a bonk no longer pops a critter on its own. What lands on it has to
+      // be CLOSING fast — so a pal that has all but stopped, or a plank the
+      // critter is already riding down, leaves it standing.
       if(t && t._alive && (o._kind==="ammo" || o._kind==="block")){
-        t._hitAt=nowMs();                         // drives the bad-guy BONKED pose
-        var spd = Math.hypot(o.velocity.x,o.velocity.y);
-        if(o._kind==="ammo" || spd>2.2) popTarget(t);
+        var closing = Math.hypot(t.velocity.x-o.velocity.x, t.velocity.y-o.velocity.y);
+        if(closing > TGT_MIN_SPD)
+          hurtTarget(t, (closing-TGT_MIN_SPD)*TGT_PER_SPD*hitWeight(o), o._kind==="ammo"?"hit":"crush");
+        else t._hitAt=nowMs();
       }
       // flag a flung raccoon that just bonked something (drives the IMPACT pose)
       var am = a._kind==="ammo"?a:(b._kind==="ammo"?b:null);
@@ -371,8 +422,11 @@ function loadAmmo(){
   G.ammoBody = null; G.ammoBodies=[]; G.powerUsed=false; G.drag=null; state = "ready";
 }
 
-function popTarget(t){
-  if(!t._alive) return; t._alive=false; G.popped++;
+// `why` records how it went down — "hit" (something arrived hard), "crush"
+// (something heavy settled on it), "thrown" (shoved clean off its spot) or
+// "fell" (off the world). QA reads it to prove a sealed critter is never "hit".
+function popTarget(t, why){
+  if(!t._alive) return; t._alive=false; t._why=why||"hit"; G.popped++;
   if(TARGETS_ART.length){ var _ms=TARGETS_ART[(t._ti||0)%TARGETS_ART.length];
     if(_ms&&_ms.poof){ G.poofs.push({x:t.position.x,y:t.position.y,w:t._w,h:t._h,art:_ms.poof,t0:nowMs()});
       if(G.poofs.length>24) G.poofs.shift(); } }
@@ -538,11 +592,14 @@ function update(){
   if(state==="win" || state==="lose"){ if(fx&&BM)BM.update(fx,1/60); return; }
   M.Engine.update(engine, 1000/60);
   sweepBrokenBlocks();          // SD1: remove blocks that died this step (never mid-step)
-  // pop checks (generous: displaced OR knocked OR fell off) — only once armed
+  // SD2 pop checks — thrown off its spot, dropped off the world, or slowly
+  // squashed by whatever came to rest on its head. Only once armed.
   if(G.armed){ for(var i=0;i<G.targets.length;i++){ var t=G.targets[i]; if(!t._alive) continue;
     var dd=Math.hypot(t.position.x-t._sx, t.position.y-t._sy);
     var sp=Math.hypot(t.velocity.x,t.velocity.y);
-    if(dd>POP_MOVE || sp>POP_SPD || t.position.y>GY+24 || t.position.x<-30 || t.position.x>W+30) popTarget(t);
+    if(t.position.y>GY+24 || t.position.x<-30 || t.position.x>W+30) popTarget(t,"fell");
+    else if(dd>POP_MOVE || sp>POP_SPD) popTarget(t,"thrown");
+    else { var load=crushLoad(t); if(load>CRUSH_MIN_M) hurtTarget(t, Math.min(load,CRUSH_MAX_M)*CRUSH_PER_M, "crush"); }
   } }
   // "clearing" = last target down; keep the physics rolling for a beat, then win.
   if(state==="clearing"){ if(fx&&BM) BM.update(fx,1/60); if(--G.winDelay<=0) winLevel(); return; }
