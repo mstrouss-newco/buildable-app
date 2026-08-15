@@ -6,6 +6,15 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Planner is now writable from the command line (August 15 2026)
+`api/planner.js`, `scripts/planner.mjs`, `AGENTS.md`.
+The roadmap's cards live in one JSON blob in Supabase, so no file edit could reach
+them. Three new server-side card ops (`card`, `note`, `addCard`) plus a compact
+`GET ?scope=roadmap` now let `node scripts/planner.mjs done LP3 "what shipped"` do it
+from any machine, with no key and no browser. The read-modify-write stays on the
+server so a caller can never wipe the roadmap. AGENTS.md now tells every session to
+update the planner at the end, with gates: `done` only when pushed and QA green.
+
 ## LP2 — Croc Tot and Math Cannon level cards show the level (August 4 2026)
 `public/buildable-levelthumb.js`, `public/croctot.html`, `public/mathcannon-engine.html`.
 Two new painters in the one shared level-thumb helper: `snacks` (stage sky and

@@ -1,5 +1,41 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15: Claude Code can now update the planner itself
+
+**Tooling, no phase.** The roadmap's 107 cards live in one JSON blob in the single
+`planner_meta` row, so nothing in the repo could touch them and every planner update
+had to go through the page in a signed-in browser. It now goes through the command
+line instead.
+
+### Three card ops on `/api/planner`
+`card` (done / deployed / needsReview / later / name / desc on one card by id), `note`
+(append one session note, kept to the last 20 so a long-lived card cannot grow the blob
+without limit) and `addCard` (refuses a duplicate id and refuses a phase that does not
+exist). Plus `GET ?scope=roadmap`, a compact list of id / name / phase / state, because
+the full blob is ~10KB of prose and a build session only needs the list.
+
+**The read-modify-write stays on the server.** The ops take a card id and named fields;
+the caller never holds the blob. A caller that posted the whole roadmap back would be
+one bad serialisation away from wiping all 107 cards. `op:'flagReview'` still works and
+is now just an alias for `card` with `needsReview`.
+
+### `scripts/planner.mjs`
+`list`, `show`, `done`, `open`, `review`, `deployed`, `note`, `add`, `reword`. **No key,
+no browser and nobody signed in** — `/api/planner` already carries the service key
+server-side, so the tool needs nothing but internet. Works from Claude Code on any
+machine and from unattended runs. `PLANNER_URL` retargets it at a preview deploy.
+
+### AGENTS.md changed its mind
+The old rule was "do NOT tick roadmap checkboxes yourself". It now says update the
+planner at the end of every session, with the gates that make that safe: `done` only
+when pushed to main and QA green, `review` when anything is half-finished, `deployed`
+only after checking the live site, and never `op:'meta'` by hand.
+
+### Verified
+Every op exercised against a local fake PostgREST with the real handler mounted in
+front of it: 7 writes, blob intact afterwards (2 phases, 4 cards, no ids lost), and
+all five error paths refuse cleanly with a non-zero exit.
+
 ## 2026-08-04: Session RP5 — the last twelve books become richer pages
 
 **Phase RP, session RP5.** Sharks, Dinosaurs, The Moon, Big Cats, Penguins,

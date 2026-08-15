@@ -216,8 +216,26 @@ no jargon.
   what remains, anything flagged. (This is in addition to the dated README log entry
   noted at the top of this file.)
 - **The planner is the source of truth for progress.** `public/planner.html` (live at
-  `/planner`) tracks what is done. Do NOT tick roadmap checkboxes yourself — the owner
-  checks things off after testing on his own devices.
+  `/planner`) tracks what is done. **Update it yourself at the end of every session**
+  with `scripts/planner.mjs`. No key, no browser and nobody signed in: it talks to
+  `/api/planner`, which carries the service key server-side.
+
+  ```
+  node scripts/planner.mjs list                      # what is open
+  node scripts/planner.mjs done LP3 "what shipped"   # tick it off, with a note
+  node scripts/planner.mjs review LP3                # finished but wants a look first
+  node scripts/planner.mjs deployed LP3              # only once it is actually live
+  node scripts/planner.mjs add LP4 LP "Title" "Body" # new card in an existing phase
+  node scripts/planner.mjs reword LP3 --desc "..."   # the work proved the wording wrong
+  ```
+
+  Rules: only tick `done` when the work is **pushed to main and QA is green**. If
+  anything is half-finished, use `review` instead and say why in a note. Only set
+  `deployed` once you have checked the live site, never on the strength of a push.
+  Notes are for what a future session would need, one or two lines, not essays. If the
+  work invalidated the wording of a *later* card, reword it directly and list what you
+  changed in your recap. Never post `op:'meta'` to rebuild the roadmap blob by hand:
+  that is how 107 cards get wiped. The card ops exist so the server does it safely.
 - **File planner work under the Roadmap, not the Log.** The owner works from the
   **Roadmap** tab in `/planner` (phases + sessions). When recording planned or upcoming
   work in the planner, add it as a session under the right Roadmap phase — never the
