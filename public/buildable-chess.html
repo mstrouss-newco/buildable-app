@@ -87,11 +87,14 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 .switch.on i{left:27px}
 
 /* HUD */
-.hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+/* The pill can carry a long name plus a colour word, so on a narrow phone the buttons
+   drop to their own row instead of being pushed off the card (the Pause button was
+   already sliding off the right edge at 390px before the pill grew). */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .turn-pill{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
-  border-radius:100px;padding:8px 16px 8px 8px;font-weight:700;font-size:15px}
+  border-radius:100px;padding:8px 16px 8px 8px;font-weight:700;font-size:15px;flex:1 1 200px;min-width:0}
 .turn-pill .dot{width:26px;height:26px;border-radius:50%;border:2px solid rgba(0,0,0,.25);box-shadow:0 0 12px currentColor,inset 0 0 0 2px rgba(255,255,255,.55)}
-.hud-btns{display:flex;gap:8px}
+.hud-btns{display:flex;gap:8px;flex:0 0 auto;margin-left:auto}
 .iconbtn{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
   cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,transform .12s}
 .iconbtn:hover{background:rgba(255,255,255,.13)}.iconbtn:active{transform:scale(.92)}
