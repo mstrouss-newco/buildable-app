@@ -6,6 +6,32 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## SD2 — Sling critters you cannot hit directly (August 15 2026)
+`public/sling-squad.html`, `public/buildable-manifest.js`,
+`public/buildable-levelthumb.js`, `qa-sling.mjs`. Two changes. **The pop rule
+got teeth:** a critter used to fall over on a 24px nudge or 5.4 of speed, which
+is why landing anywhere near a small tower cleared a level. It now carries
+squish health that only a real hit (damage from the *closing* speed of whatever
+arrived), a real crush (something heavy coming to rest on its head) or being
+thrown right off its spot (52px / 9.0) can empty. Every pop records **why**.
+**Six layouts now hide a critter where no shot can touch it** — `bunker`
+(break a wood leg, the stone roof drops in), `twinkeep` (smash the glass stalk
+under the pen), `hideout` (snap the wood shelf, the stone block drops *inside*
+a stone box), `fort` (a stone screen kills the flat shot, so lob in behind),
+`citadel` and `finale` (two seals that need different moves). Sealed critters
+are marked `s` in `SLING_LAYOUTS`; glass is never used as a wall because a pal
+smashes through it. The QA bot learned to shoot the thing holding the roof up
+when it cannot reach a critter, and to wait for a collapse to finish before
+spending the next pal. Level cards paint a sealed critter *behind* its cage.
+`node qa-sling.mjs .` — ALL CHECKS PASS (about 90 seconds). Each seal is proved
+twice: an arc sweep over every launch the slingshot can make finds none that
+touches it, with an ordinary critter in the same level as a reachable control,
+and across five bot runs no sealed critter ever dies by a direct hit. All 20
+levels still clear with slings to spare; levels 1-6 still clear with three or
+four. The other 44 QA scripts re-ran: 8 fail for reasons that are identical on
+the SD1 baseline (jsdom/Playwright missing in this container), unchanged by
+this work.
+
 ## SD1 — Sling blocks that actually break (August 15 2026)
 `public/buildable-manifest.js`, `public/sling-squad.html`, `public/buildable-levelthumb.js`,
 `api/sfx.js`, `qa-sling.mjs`. A block used to be indestructible — it could only
