@@ -6,6 +6,28 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## SD1 — Sling blocks that actually break (August 15 2026)
+`public/buildable-manifest.js`, `public/sling-squad.html`, `public/buildable-levelthumb.js`,
+`api/sfx.js`, `qa-sling.mjs`. A block used to be indestructible — it could only
+wobble — so every level was the same shove. Blocks now have a **material** and a
+**health bar**: glass shatters on almost any hit and vanishes, wood cracks then
+breaks after about three good hits, stone needs 26 and has to be toppled instead.
+Damage comes from how fast the thing that hit it was moving relative to it,
+scaled by how heavy that thing was, so a flung pal hurts far more than a tumbling
+plank and the heavy power hurts most. Between whole and gone there is a cracked
+look, and breaking spawns a shatter poof of four tumbling shards plus two new
+created sounds (`sling_crack`, `sling_shatter`). Materials live on the blocks in
+`SLING_LAYOUTS`, are optional, and have **no default** — a block that names none
+is the old block exactly, which is how levels 1-6 stay untouched (their six
+layouts carry no materials at all). The aim predictor no longer treats glass as
+cover. Level cards paint each block in its real material so they stop lying.
+`node qa-sling.mjs .` — ALL CHECKS PASS, all 20 levels still clear with slings to
+spare, plus new checks that prove the three materials differ, that no tower
+self-damages before the kid shoots, and that blocks really smash in play (11 of
+14 back-half levels). The 19 other games sharing the changed libs all re-ran
+green; `qa-skyflyer.mjs` fails in this container for a pre-existing reason
+(jsdom not installed), unchanged by this work.
+
 ## LP2 — Croc Tot and Math Cannon level cards show the level (August 4 2026)
 `public/buildable-levelthumb.js`, `public/croctot.html`, `public/mathcannon-engine.html`.
 Two new painters in the one shared level-thumb helper: `snacks` (stage sky and

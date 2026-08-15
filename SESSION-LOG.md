@@ -1,5 +1,83 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15: Session SD1 — Blocks that actually break
+
+**Phase SD, session SD1.** The first of five sessions fixing the problem Mike
+found on 2026-08-15: his six year old cleared all 20 Sling Squad levels in about
+five minutes. Reading the code turned up four causes — every layout is a small
+stack on flat ground, blocks are indestructible, the pop rule fires on a 24px
+nudge, and shots are handed out as `max(3+difficulty, targets+2)`. SD1 fixes the
+second one. The other three belong to SD2, SD3 and SD4 and were **not** touched.
+
+### What shipped
+
+**Blocks are made of something now.** A layout can give a block a material:
+
+| material | behaviour | proof from qa-sling |
+|---|---|---|
+| glass | shatters on almost any hit and disappears | dies to a soft tap (speed 4) |
+| wood | cracks, then breaks after a few good hits | cracked on hit 1, broke on hit 3, survives a soft tap |
+| stone | barely breaks — has to be toppled instead | 26 good hits to break |
+
+**Damage comes from speed.** On every impact the engine takes the speed of the
+hitter *relative to the block* and scales it by how heavy the hitter was against
+a plain flung pal. A pal at full stretch does about 40 damage to wood; a plank
+tumbling off a tower does a fraction of that; the heavy power does the most.
+Static hits count too, so knocking a leg out and letting a glass roof fall on the
+ground really does shatter it. Blocks that die inside a collision callback are
+marked and swept out **after** the physics step, never mid-step.
+
+**The look and the sound.** Between whole and gone there is a cracked state whose
+crack count and darkness track the damage. Breaking spawns a shatter poof — four
+shards tumbling apart and fading — plus particles in the material's colour. Two
+new created sounds were registered in the shared library: `sling_crack` and
+`sling_shatter`. Glass is drawn as a see-through pane with a shine; wood and
+stone use their existing textures, now chosen by material rather than guessed
+from the block's shape.
+
+**Levels 1 to 6 are byte-for-byte unchanged.** Material is optional on a block
+and has **no default**. A block that names none gets the old weight, grip,
+restitution and look. The six layouts levels 1-6 use — gate, post, tower, double,
+hut, keep — carry no materials at all, and qa-sling now fails if that ever stops
+being true. Levels 7-20 all gained materials; `trio` (level 8) is deliberately
+one post of each, side by side, as the teaching moment.
+
+### Two things found along the way
+- **The `ledge` layout had a glass nub hanging off its deck edge.** It toppled on
+  its own during the settle. Invisible while blocks were indestructible; now it
+  would have shattered before the kid took a shot. Moved fully onto the deck.
+- **Glass was making the aim predictor lie.** `blocksHit` counted any block as
+  cover, so a clean shot through a pane read as blocked — for the kid's dotted
+  line and for the QA bot. Glass is now transparent to the predictor, which is
+  the truth: a flung pal smashes straight through it.
+
+### QA
+`node qa-sling.mjs .` — **ALL CHECKS PASS.** All 20 levels still clear on 5 runs
+each with slings to spare. Six new checks were added to the harness so the
+materials are proved rather than asserted: the three materials behave
+differently under identical hits, levels 1-6 carry no material, every level 7-20
+has breakable blocks, no tower self-damages over 300 idle frames, blocks really
+do smash in ordinary bot play (11 of 14 back-half levels), and the cracked look
+and shatter poof both paint without throwing.
+
+The changed files include three shared libs (`buildable-manifest.js`,
+`buildable-levelthumb.js`, `api/sfx.js`), so all 19 other games with a QA script
+covering them were re-run: **all green.** `qa-skyflyer.mjs` fails in this
+container because jsdom is not installed — verified pre-existing by stashing the
+changes and re-running, so it is not caused by this work.
+
+### What remains in phase SD
+SD2 (critters sealed where no arc can reach, plus tightening the 24px pop rule),
+SD3 (terrain: hills, pits, floating platforms — and teaching the level-card
+painter to draw it), SD4 (rebuild levels 7-20 as real puzzles and cut shots to
+about one spare), SD5 (prove she cannot brute force it, on a real device).
+
+### Flagged
+The shot counts are still the old generous `max(3+difficulty, targets+2)` — the
+bot clears most back-half levels in 1 or 2 slings out of 7 or 8. That is SD4's
+job and was left alone on purpose. Materials on their own do not make the back
+half hard; they are the ingredient SD2 and SD4 need.
+
 ## 2026-08-04: Session RP5 — the last twelve books become richer pages
 
 **Phase RP, session RP5.** Sharks, Dinosaurs, The Moon, Big Cats, Penguins,
