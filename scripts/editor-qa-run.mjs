@@ -11,7 +11,7 @@
 //      whole point is to test what the kid will actually play.
 //   2. Write it over public/<game>/manifest.json, because every manifest-driven QA
 //      robot reads that path.
-//   3. Run that game's robot (qa/qa-map.json says which one) and capture the output.
+//   3. Run that game's robot (qa/qa-map.mjs says which one) and capture the output.
 //   4. Report pass/fail back to /api/manifest-qa so the editor can show the owner a
 //      banner and a one-click "Put it back".
 //   5. Exit non-zero when a robot fails, so the GitHub Action goes red and GitHub's
@@ -32,6 +32,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
+import { GAME_QA } from "../qa/qa-map.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = (process.env.QA_SITE_URL || "https://buildablekids.com").replace(/\/+$/, "");
@@ -46,11 +47,6 @@ function arg(name) {
 }
 const wants = (name) => process.argv.includes("--" + name);
 const slug = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
-
-function qaMap() {
-  const j = JSON.parse(fs.readFileSync(path.join(ROOT, "qa", "qa-map.json"), "utf8"));
-  return j.games || {};
-}
 
 async function getJson(url) {
   const r = await fetch(url, { headers: { "Cache-Control": "no-store" } });
@@ -102,13 +98,12 @@ async function report(body) {
 
 // Test one game. Returns "pass" | "fail" | "skipped".
 async function checkGame(game, expectedSaveId) {
-  const map = qaMap();
-  const script = map[game];
+  const script = GAME_QA[game];
   console.log(`\n===== ${game} =====`);
 
   if (!script || !fs.existsSync(path.join(ROOT, script))) {
     console.log(`[runner] no play-test robot for ${game} — reporting that honestly, not as a pass.`);
-    await report({ game, saveId: expectedSaveId || null, status: "unavailable",
+    await report({ game, saveId: expectedSaveId || null, status: "no-robot",
       summary: `There is no play-test robot for ${game} yet, so this change was not play-tested.` });
     return "skipped";
   }
@@ -165,7 +160,7 @@ async function main() {
   const results = {};
   if (wants("all")) {
     // Nightly safety net: re-test every game that has an editor save live.
-    const games = Object.keys(qaMap());
+    const games = Object.keys(GAME_QA);
     console.log(`[runner] nightly sweep over ${games.length} game(s) against ${SITE}`);
     for (const g of games) {
       try { results[g] = await checkGame(g, null); }
