@@ -652,6 +652,40 @@ var MISSIONS=[
     tip:"Fly into a shimmering column of warm air and hold still inside it. An eagle does not flap in a thermal - it just opens its wings and lets the air do the lifting.",
     fact:"A thermal is a column of warm air rising from the ground. Eagles have learned to find them by watching other birds and following the wind patterns, so they can circle up and up without ever flapping." }
 ];
+
+// ============================================================================
+//  FL12 — SKY TRAILS. Lines of rings hanging in the air, chased for the
+//  chasing. Nothing to read, nothing to fail: the first ring of a trail stands
+//  under a soft beam, flying through it lights the whole trail up, and every
+//  ring hit plays one note of a rising tune. A full trail is the tune, then a
+//  sparkle cascade and a sticker.
+//
+//  FOUR SHAPES, all generated from data:
+//     ribbon  a gentle S at cruise height (the one every kid meets first)
+//     dipper  swoops toward the ground and pulls back up (teaches diving)
+//     arch    threaded through something real (arches over a nearby landmark)
+//     climb   a staircase up to a view (rising rings)
+//
+//  THE FL12 LAW (same as FL5b for jobs): NOTHING IN THE DRAWING CODE MAY CHECK
+//  A TRAIL BY ID. Every drawing dispatches on `shape`, the same way styleBody
+//  dispatches on `style`. Add a shape to add a look; add a data row here to
+//  add a trail. QA counts trail ids in the ring-drawing block and fails if one
+//  appears.
+//
+//  Two or three per world; anchors are chosen out of the pad approach zones so
+//  a low-tier ring can never bury a landing pad. Rings sample ground height at
+//  placement (Traps), so a dipper's low arc rises when it crosses an island.
+// ============================================================================
+var TRAILS_SPEC = [
+  { id:"si-ribbon", world:"sunny-islands", shape:"ribbon", seed:11,  anchor:{x: 340, z:-150} },
+  { id:"si-dipper", world:"sunny-islands", shape:"dipper", seed:23,  anchor:{x:-320, z:  60} },
+  { id:"sp-ribbon", world:"snowy-peaks",   shape:"ribbon", seed:31,  anchor:{x: 260, z:-140} },
+  { id:"sp-arch",   world:"snowy-peaks",   shape:"arch",   seed:43,  anchor:{x:-300, z: 200} },
+  { id:"sp-climb",  world:"snowy-peaks",   shape:"climb",  seed:57,  anchor:{x:  80, z: 260} },
+  { id:"sc-arch",   world:"sunset-canyon", shape:"arch",   seed:29,  anchor:{x: 300, z:-180} },
+  { id:"sc-dipper", world:"sunset-canyon", shape:"dipper", seed:37,  anchor:{x:-280, z: 160} }
+];
+
 function pickWorld(){
   var raw=Q.get("level");
   if(raw==null||raw==="") return 0;
@@ -673,6 +707,12 @@ function jobPoints(m){
 }
 var JOB_POINTS=[];
 WORLD_JOBS.forEach(function(m){ JOB_POINTS=JOB_POINTS.concat(jobPoints(m)); });
+// FL12: this world's trail recipes. The RING positions are generated later,
+// once the first chunk has been built and the ground can be sampled — a low
+// dipper needs the real land under it, not a guess. The anchor is enough to
+// keep chunks off it here, so a first ring can never end up inside an island.
+var WORLD_TRAILS = TRAILS_SPEC.filter(function(t){ return t.world === world.id; });
+WORLD_TRAILS.forEach(function(t){ JOB_POINTS.push({x:t.anchor.x, z:t.anchor.z}); });
 
 // ============================================================================
 //  RIDES — THE HANGAR (Session FL3). The SHELL owns which ride a kid has picked
@@ -3647,9 +3687,17 @@ var waypointEl=D.getElementById("waypoint"),
     ofInfoEl=D.getElementById("ofInfo"),
     ofWordsEl=D.getElementById("ofWords");
 var WP=null, foundPts={};
+// FL12: a small ring glyph for a sky trail — same "SVG generated from the
+// kind, no per-thing drawing" rule the other icons follow.
+function icoRingGlyph(n,done){
+  var col = done ? "#57D06B" : "#2FB7D6";
+  return '<svg width="'+n+'" height="'+n+'" viewBox="0 0 26 26" aria-hidden="true">'+
+    '<circle cx="13" cy="13" r="9" fill="none" stroke="'+col+'" stroke-width="3"/></svg>';
+}
 function wpIcon(p,n){
   if(p.kind==="pad") return icoPad(n);
   if(p.kind==="job"||p.kind==="depot") return icoDock(n,false);
+  if(p.kind==="trail") return icoRingGlyph(n,!!p.done);
   return targetIcon(p.style,n,!!p.done);
 }
 function setWaypoint(p){
@@ -3699,6 +3747,16 @@ function mapPoints(){
         x:s.pt.x,z:s.pt.z,label:s.job.name,found:!!foundPts[s.job.id]});
     }
   }
+  // FL12: trails ride the same map as the jobs. Off a job, every trail in the
+  // world gets a small ring blip at its first ring's coordinates — faint until
+  // you have lit it, green once you have. On a job the map belongs to the job.
+  if((typeof MODE==="undefined" || MODE!=="job") && typeof TRAILS!=="undefined") {
+    for(i=0;i<TRAILS.length;i++){
+      var tr=TRAILS[i];
+      out.push({id:"trail:"+tr.id,kind:"trail",x:tr.pt.x,z:tr.pt.z,
+        label:"Sky trail",found:!!tr.found,done:!!tr.done});
+    }
+  }
   return out;
 }
 function blipIcon(p){
@@ -3710,6 +3768,13 @@ function blipIcon(p){
     return '<svg width="14" height="14" viewBox="0 0 14 14">'+(p.found||p.kind==="depot"
       ? '<circle cx="7" cy="7" r="5.2" fill="#F7C948" stroke="#B9860E" stroke-width="1.8"/>'
       : '<circle cx="7" cy="7" r="5" fill="rgba(51,86,110,.26)"/>')+ring+'</svg>';
+  // FL12: trail blips are little rings themselves — a green ring for a trail
+  // already lit, a soft blue for one still to fly, faint until you have found
+  // the first ring exactly the way an unfound job dot is faint.
+  if(p.kind==="trail"){
+    var stroke = p.done ? "#57D06B" : (p.found ? "#2FB7D6" : "rgba(47,183,214,.55)");
+    return '<svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.6" fill="none" stroke="'+stroke+'" stroke-width="2.2"/>'+ring+'</svg>';
+  }
   return '<svg width="13" height="13" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.6" fill="'+(p.done?"#57D06B":"#2FB7D6")+'"/>'+ring+'</svg>';
 }
 function paintMinimap(){
@@ -3976,6 +4041,9 @@ function mergeMissions(list,worldId){
   WORLD_JOBS=MISSIONS.filter(function(mm){ return mm.world===world.id; });
   JOB_POINTS=[];
   WORLD_JOBS.forEach(function(mm){ JOB_POINTS=JOB_POINTS.concat(jobPoints(mm)); });
+  // FL12: keep the trail anchors in the no-grow list so a manifest edit that
+  // rebuilds JOB_POINTS never lets a chunk swallow a first ring.
+  WORLD_TRAILS.forEach(function(t){ JOB_POINTS.push({x:t.anchor.x, z:t.anchor.z}); });
 }
 
 // ---------- read our own manifest (art slots + music + learning defaults) ----------
@@ -4529,6 +4597,271 @@ function styleBody(style){
   if(style==="thermal")   return buildThermal();     // {group,glow}
   return buildHouse();
 }
+
+// ============================================================================
+//  FL12 — RINGS. The fat-and-soft variant Mike picked at the look gate over
+//  the thin-and-glowing hoop and the hoop-of-little-flags one. From the low
+//  close camera a thin torus seen edge on is an invisible line; a tube big
+//  enough to catch the light stays a HOOP at every angle, which is the whole
+//  point. The colour comes from the level palette (world.cap / world.cap2),
+//  so every world is different for free with no new art. One geometry, cloned.
+//
+//  THE FL12 LAW: nothing in this block or in any of the trail builders below
+//  may switch on a trail id — the dispatch is on `shape`, exactly the way
+//  styleBody dispatches on `style`. QA counts trail ids in the ring code and
+//  fails if one appears.
+// ============================================================================
+var TR_RING_MAJOR = 6.5;
+var TR_RING_TUBE  = 0.9;      // fat: reads as a hoop from every angle at phone size
+var TR_RING_MAGNET = 8.5;     // generous kid-sized "flew through it"
+var TR_RING_GEO = new THREE.TorusGeometry(TR_RING_MAJOR, TR_RING_TUBE, 8, 22);
+var TR_RING_GLOW_GEO = new THREE.TorusGeometry(TR_RING_MAJOR + 0.4, TR_RING_TUBE * 1.9, 6, 20);
+
+function trailPaletteFor(){
+  // Two colours out of the level palette: the ring's own tone and a softer
+  // wash for its halo. Nothing hardcoded, so recolouring a world in the
+  // manifest recolours the trails without touching this file.
+  // Snowy Peaks' `cap` is nearly white (that's the snow) — using it would
+  // hide the rings against the sky, so on that world the ring borrows `leaf`
+  // (dark evergreen), which always contrasts. Same palette slots either way,
+  // never a hardcoded RGB.
+  var core = (world.terrain==="peaks") ? world.leaf : world.cap;
+  if (core == null) core = 0x57D06B;
+  var glow = (world.cap2 != null) ? world.cap2 : (world.leaf != null ? world.leaf : 0x9FE8FF);
+  return { core: core, glow: glow };
+}
+function buildRing(colorCore, colorGlow){
+  var g = new THREE.Group();
+  var mat = new THREE.MeshPhongMaterial({
+    color: colorCore, emissive: colorCore, emissiveIntensity: 0.18,
+    shininess: 90, specular: 0xFFFFFF });
+  var core = new THREE.Mesh(TR_RING_GEO, mat);
+  g.add(core);
+  var glowMat = new THREE.MeshBasicMaterial({
+    color: colorGlow, transparent: true, opacity: 0.22,
+    blending: THREE.AdditiveBlending, depthWrite: false, fog: true });
+  var glow = new THREE.Mesh(TR_RING_GLOW_GEO, glowMat);
+  g.add(glow);
+  g.userData = { mat: mat, glowMat: glowMat };
+  return g;
+}
+// Where the land is under (x,z), read off the CHUNKS the engine has already
+// built — never guessed. Islands / peaks / mesas all use the same hitR/hitH
+// silhouette contract, so one estimator covers every world. A trail that
+// crosses solid land gets its ring lifted above it instead of buried in it.
+function trailGroundSample(x, z){
+  var top = 0;
+  for (var key in chunks) {
+    var ch = chunks[key];
+    for (var i = 0; i < ch.isles.length; i++) {
+      var isle = ch.isles[i];
+      var wx = ch.group.position.x + isle.position.x;
+      var wz = ch.group.position.z + isle.position.z;
+      var d = Math.hypot(x - wx, z - wz);
+      if (d < isle.userData.hitR) {
+        var h = isle.userData.hitH * (1 - Math.pow(d / isle.userData.hitR, 1.4));
+        if (h > top) top = h;
+      }
+    }
+  }
+  return top;
+}
+// The tallest THING near an anchor (used by arch): a real landmark to arch
+// over rather than empty air. Falls back to a modest apex so an anchor that
+// happens to sit over open water still gets a shape.
+function trailPickLandmark(anchor, within){
+  var best = null, bestH = 0, W = within || 180;
+  for (var key in chunks) {
+    var ch = chunks[key];
+    for (var i = 0; i < ch.isles.length; i++) {
+      var isle = ch.isles[i];
+      var wx = ch.group.position.x + isle.position.x;
+      var wz = ch.group.position.z + isle.position.z;
+      var d = Math.hypot(anchor.x - wx, anchor.z - wz);
+      if (d < W && isle.userData.hitH > bestH) {
+        bestH = isle.userData.hitH; best = { x: wx, z: wz, h: bestH };
+      }
+    }
+  }
+  return best || { x: anchor.x, z: anchor.z, h: 22 };
+}
+// ---- the four shapes. Every function returns points[{x,y,z,tangent}]. ----
+// Rings sample the ground at their (x,z) and never sit lower than a small
+// clearance above it. That is the "rings must sample ground height at
+// placement or they end up buried in a hill" trap, written into the code.
+function trailShapeRibbon(anchor, seed, sample){
+  var r = rng(seed), n = 5, dir = r()*Math.PI*2;
+  var dx = Math.cos(dir), dz = Math.sin(dir), perpx = -dz, perpz = dx;
+  var pts = [], step = 26, baseY = 34;
+  for (var i = 0; i < n; i++) {
+    var t = i / (n - 1);
+    var s = Math.sin(t * Math.PI * 1.4) * 14;           // a gentle S
+    var x = anchor.x + dx*step*i + perpx*s;
+    var z = anchor.z + dz*step*i + perpz*s;
+    var g = sample ? sample(x, z) : 0;
+    pts.push({ x:x, y:Math.max(baseY, g + 8), z:z, tangent:{x:dx, z:dz} });
+  }
+  return pts;
+}
+function trailShapeDipper(anchor, seed, sample){
+  var r = rng(seed), n = 5, dir = r()*Math.PI*2;
+  var dx = Math.cos(dir), dz = Math.sin(dir);
+  var pts = [], step = 24, hi = 42, lo = 14;
+  for (var i = 0; i < n; i++) {
+    var t = i / (n - 1);
+    // U-shape: high, dip low in the middle, high again — the dive
+    var y = hi - (hi - lo) * Math.sin(t * Math.PI);
+    var x = anchor.x + dx * step * i;
+    var z = anchor.z + dz * step * i;
+    var g = sample ? sample(x, z) : 0;
+    pts.push({ x:x, y:Math.max(y, g + 6), z:z, tangent:{x:dx, z:dz} });
+  }
+  return pts;
+}
+function trailShapeArch(anchor, seed, sample){
+  var r = rng(seed), n = 5, dir = r()*Math.PI*2;
+  var dx = Math.cos(dir), dz = Math.sin(dir);
+  var peak = trailPickLandmark(anchor, 200);
+  var span = 84, apex = peak.h + 14, ends = Math.max(24, peak.h * 0.5);
+  var pts = [];
+  for (var i = 0; i < n; i++) {
+    var t = i / (n - 1), rise = Math.sin(t * Math.PI);   // 0 at ends, 1 at apex
+    var y = ends + (apex - ends) * rise;
+    var x = peak.x + (t - 0.5) * span * dx;
+    var z = peak.z + (t - 0.5) * span * dz;
+    var g = sample ? sample(x, z) : 0;
+    pts.push({ x:x, y:Math.max(y, g + 6), z:z, tangent:{x:dx, z:dz} });
+  }
+  return pts;
+}
+function trailShapeClimb(anchor, seed, sample){
+  var r = rng(seed), n = 6, dir = r()*Math.PI*2;
+  var dx = Math.cos(dir), dz = Math.sin(dir);
+  var pts = [], step = 20, y0 = 18, dy = 9;
+  for (var i = 0; i < n; i++) {
+    var x = anchor.x + dx * step * i;
+    var z = anchor.z + dz * step * i;
+    var y = y0 + i * dy;
+    var g = sample ? sample(x, z) : 0;
+    pts.push({ x:x, y:Math.max(y, g + 6), z:z, tangent:{x:dx, z:dz} });
+  }
+  return pts;
+}
+// ONE dispatch from shape to points. Same law as styleBody / targetBody:
+// nothing else, anywhere, may switch on a trail id.
+function trailShape(shape, anchor, seed, sample){
+  if (shape === "ribbon") return trailShapeRibbon(anchor, seed, sample);
+  if (shape === "dipper") return trailShapeDipper(anchor, seed, sample);
+  if (shape === "arch")   return trailShapeArch(anchor, seed, sample);
+  if (shape === "climb")  return trailShapeClimb(anchor, seed, sample);
+  return trailShapeRibbon(anchor, seed, sample);
+}
+
+// ---- the trail state, the beam, and the step that lights rings up ----
+var TRAILS = [], trailsGroup = null;
+
+function brightenTrail(tr){
+  for (var i = 0; i < tr.rings.length; i++) {
+    var ud = tr.rings[i].mesh.userData;
+    if (ud.mat)    ud.mat.emissiveIntensity = 0.55;
+    if (ud.glowMat) ud.glowMat.opacity = 0.44;
+  }
+}
+function dimTrail(tr){
+  for (var i = 0; i < tr.rings.length; i++) {
+    var ud = tr.rings[i].mesh.userData;
+    if (ud.mat)    ud.mat.emissiveIntensity = 0.18;
+    if (ud.glowMat) ud.glowMat.opacity = 0.22;
+  }
+}
+function showTrails(){
+  hideTrails();
+  if (DEMO || !WORLD_TRAILS.length) return;
+  trailsGroup = new THREE.Group();
+  var pal = trailPaletteFor();
+  WORLD_TRAILS.forEach(function(recipe){
+    var pts = trailShape(recipe.shape, recipe.anchor, recipe.seed, trailGroundSample);
+    var rings = [];
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i];
+      var ring = buildRing(pal.core, pal.glow);
+      ring.position.set(p.x, p.y, p.z);
+      // rings STAND UP like hoops: torus normal is +Y flat, so a rotateX
+      // stands it vertical, and the yaw follows the tangent along the trail
+      // so you fly THROUGH the hoop rather than past its edge.
+      var yaw = Math.atan2(p.tangent.x, p.tangent.z);
+      ring.rotation.set(Math.PI/2, yaw, 0);
+      trailsGroup.add(ring);
+      rings.push({ pos: new THREE.Vector3(p.x, p.y, p.z), mesh: ring, lit: false });
+    }
+    // discovery beam on the FIRST ring only — it stands under a soft column
+    // of the trail's own colour, exactly like the job scouts stand under one
+    // of the jobs' amber. Flying through the first ring puts it out.
+    var first = rings[0];
+    var beamMat = new THREE.MeshBasicMaterial({
+      color: pal.core, transparent: true, opacity: 0.18, fog: false, depthWrite: false });
+    var beam = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 220, 8, 1, true), beamMat);
+    beam.position.set(first.pos.x, 110, first.pos.z);
+    trailsGroup.add(beam);
+    var known = hasBadge(recipe.id);
+    var tr = { id: recipe.id, shape: recipe.shape, rings: rings,
+               found: known, lit: 0, done: known,
+               beam: beam, beamMat: beamMat, pt: {x:first.pos.x, z:first.pos.z},
+               label: "Sky trail" };
+    // A trail already earned still stands in the world, but its beam goes
+    // quiet — same "sky thins out as you work through it" rule the FL6
+    // spacing law added for job beams.
+    if (known) { beam.visible = false; brightenTrail(tr); }
+    TRAILS.push(tr);
+  });
+  scene.add(trailsGroup);
+}
+function hideTrails(){
+  if (trailsGroup) { scene.remove(trailsGroup); trailsGroup = null; }
+  TRAILS = [];
+}
+function trailStep(){
+  if (DEMO || !TRAILS.length) return;
+  for (var t = 0; t < TRAILS.length; t++) {
+    var tr = TRAILS[t];
+    for (var i = 0; i < tr.rings.length; i++) {
+      var r = tr.rings[i];
+      if (r.lit) continue;
+      var dx = S.pos.x - r.pos.x, dy = S.pos.y - r.pos.y, dz = S.pos.z - r.pos.z;
+      var d2 = dx*dx + dy*dy + dz*dz;
+      if (d2 > TR_RING_MAGNET * TR_RING_MAGNET) continue;
+      r.lit = true;
+      tr.lit++;
+      // First ring lit: the beam goes out and every ring on the trail
+      // brightens together, so a kid sees they lit the whole line.
+      if (!tr.found) {
+        tr.found = true;
+        if (tr.beam) tr.beam.visible = false;
+        brightenTrail(tr);
+        // The waypoint pin retires itself the moment its trail lights up,
+        // exactly the way a job pin retires when the job starts.
+        if (WP && WP.id === "trail:" + tr.id) dropWaypoint();
+      }
+      // Rising tune: one note per ring, pitched by the ring's index so a
+      // full trail comes out as a little ladder. Missing a ring simply
+      // misses a note; the trail waits.
+      sfx("coin", { rate: 1.0 + i * 0.07 });
+      burst(r.pos, 4);
+      haptic("light");
+      // Last ring: the coin burst, the sparkle cascade and a sticker kept
+      // per kid — same pattern a finished job uses.
+      if (tr.lit >= tr.rings.length && !tr.done) {
+        tr.done = true;
+        sfx("collect");
+        burst(r.pos, 18);
+        markBadge(tr.id);
+        toast("Sky trail!");
+        buddyMoment("trail:" + tr.id, "cheer", "You lit up the whole trail!");
+      }
+    }
+  }
+}
+
 // what YOU look like on a job: the cargo rides under you, and you can see it go.
 // FL11: the SHAPE comes from cargo.carry (a style name), NEVER the quest id — the
 // same FL5b law that keeps every drawing above from checking which job it is. Any
@@ -5434,6 +5767,13 @@ function pinJob(m){
   return setWaypoint({id:"job:"+m.id,kind:"job",style:scoutStyle(m),
     x:p.x,z:p.z,label:m.name});
 }
+// FL12: pinning a trail works the same way. The pin is the first ring, which
+// is also where the beam stands, so following the arrow gets you there.
+function pinTrail(tr){
+  if(!tr) return null;
+  return setWaypoint({id:"trail:"+tr.id,kind:"trail",
+    x:tr.pt.x,z:tr.pt.z,label:tr.label||"Sky trail",done:!!tr.done});
+}
 // while you are just flying: have we swooped low over a job's start point?
 function scoutStep(){
   if(MODE==="job"||S.picking||DEMO||S.auto||MODEQ==="free") return;
@@ -5671,6 +6011,7 @@ function stepSim(dt){
   jobStep(dt);
   wiggleCargo();
   scoutStep();
+  trailStep();
   hudSlow(dt);
   warmerStep(dt);
 }
@@ -6457,6 +6798,14 @@ function drawScene(dt){
     var SC=scouts[sc];
     if(SC.mk) SC.mk.beam.material.opacity=0.12+pulse*0.20;
   }
+  // FL12: the trail beam (first ring only) breathes with the same pulse the
+  // job beams use, so it reads from a long way off. A lit trail's beam is
+  // hidden already; this only touches the ones still to be found.
+  for(var tb=0;tb<TRAILS.length;tb++){
+    var TR=TRAILS[tb];
+    if(TR.beam&&TR.beam.visible&&TR.beamMat)
+      TR.beamMat.opacity=0.14+pulse*0.20;
+  }
   starter.coins.forEach(function(c){if(!c.taken)c.mesh.rotation.y=spin;});
   for(var key in chunks){
     var ch=chunks[key];
@@ -6533,6 +6882,11 @@ function frame(now){
   drawScene(dt);
 }
 updateChunks(0,0);
+// FL12: the trails go up here, AFTER the first chunks are built, so a ring
+// can sample the real ground under it (rings that guess end up buried in a
+// hill). They live through both modes — job or free — because they are just
+// scenery you can chase; they never gate anything and never fail.
+showTrails();
 
 // ============================================================================
 //  FL5 — ARRIVING. Nobody is asked anything. You are simply flying, and this
@@ -6743,6 +7097,20 @@ window.SKY={
     dist:Math.round(Math.hypot(S.pos.x-WP.x,S.pos.z-WP.z)) }:null; },
   setWaypoint:setWaypoint,
   pinJob:function(id){ return pinJob(findJob(id)); },
+  // FL12 — the trails on this world, and the ring positions the recipe grew
+  // out of. What a harness needs to prove a trail was placed on the real
+  // landscape (never a fixed coordinate), lights up ring by ring and pays out
+  // once at the end.
+  trails:function(){ return TRAILS.map(function(t){
+    return { id:t.id, shape:t.shape, x:t.pt.x, z:t.pt.z, label:t.label,
+             rings:t.rings.length, found:!!t.found, lit:t.lit, done:!!t.done,
+             beamVisible:!!(t.beam&&t.beam.visible),
+             ringPts:t.rings.map(function(r){ return {x:r.pos.x,y:r.pos.y,z:r.pos.z,lit:!!r.lit}; }) };
+  }); },
+  pinTrail:function(id){ for(var i=0;i<TRAILS.length;i++) if(TRAILS[i].id===id) return pinTrail(TRAILS[i]); return null; },
+  // Ring the plane really is inside RIGHT NOW, so the harness can drive the
+  // plane onto a ring and prove it lit up without racing the physics loop.
+  ringMagnet:function(){ return TR_RING_MAGNET; },
   dropWaypoint:function(){ try{ wpDropEl.click(); }catch(e){ dropWaypoint(); } return WP===null; },
   // every blip, with the REAL world coordinate it stands for and where it
   // landed on the dial, so the harness can prove the map is not decoration

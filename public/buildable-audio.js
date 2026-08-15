@@ -136,7 +136,15 @@
     if (BA.muted) return; const ac = ctx(); if (!ac) return; if (!BA._unlocked) BA.unlock();
     const now = ac.currentTime, th = THROTTLE[name]; if (th && now - (BA._last[name]||0) < th) return; BA._last[name] = now;
     const key = BA.map[name] || DEFAULTS[name], b = key && BA.buffers[key];
-    if (b) { const tier = (opt && opt.tier) || 1; const rate = name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0; playBuf(b, rate, VOL[name]||1, CUTOFF[name]); }
+    if (b) {
+      const tier = (opt && opt.tier) || 1;
+      // FL12: opt.rate is an explicit pitch override, used by trails that play a
+      // rising tune ring by ring. Any caller may pass one; nothing regressed
+      // when they don't (tier still owns the coin-combo scale below).
+      const rate = (opt && typeof opt.rate === "number" && opt.rate > 0) ? opt.rate
+                   : (name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0);
+      playBuf(b, rate, VOL[name]||1, CUTOFF[name]);
+    }
     else { synth(name, opt); if (key) load(key); }   // real sound not ready -> synth now, fetch for next time
   };
 

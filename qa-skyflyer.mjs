@@ -438,6 +438,99 @@ chk('the fallback for an unknown carry is the old coloured box (nothing regresse
     return /new THREE\.BoxGeometry\(2\.1,1\.3,2\.7\)/.test(bc); })());
 
 // ---------------------------------------------------------------------------
+//  FL12 — Sky trails: rings to fly through, per world, all out of a recipe
+// ---------------------------------------------------------------------------
+console.log('--- FL12: sky trails - lines of rings, four shapes, no id in the draw ---');
+const TRAIL_IDS = ['si-ribbon','si-dipper','sp-ribbon','sp-arch','sp-climb','sc-arch','sc-dipper'];
+const TRAIL_SHAPES = ['ribbon','dipper','arch','climb'];
+const audio = read('public/buildable-audio.js');
+chk('the trails table is declared as data — a new trail is a data edit, no code',
+  /var TRAILS_SPEC\s*=\s*\[/.test(html) && TRAIL_IDS.every(id=>new RegExp('id:"'+id+'"').test(html)),
+  TRAIL_IDS.join(', '));
+chk('every world carries at least TWO trails (two-or-three-per-world)',
+  (function(){
+    const S = html.slice(html.indexOf('var TRAILS_SPEC'), html.indexOf('function pickWorld('));
+    return ['sunny-islands','snowy-peaks','sunset-canyon'].every(w=>{
+      const n = (S.match(new RegExp('world:"'+w+'"','g'))||[]).length;
+      return n >= 2 && n <= 3;
+    });
+  })(),
+  'sunny/snowy/sunset');
+chk('each trail names one of the four shapes, and every shape appears somewhere',
+  (function(){
+    const S = html.slice(html.indexOf('var TRAILS_SPEC'), html.indexOf('function pickWorld('));
+    const shapes = (S.match(/shape:"[a-z]+"/g)||[]).map(x=>x.slice(7,-1));
+    return shapes.every(s=>TRAIL_SHAPES.indexOf(s)>=0) &&
+      TRAIL_SHAPES.every(s=>shapes.indexOf(s)>=0);
+  })(),
+  TRAIL_SHAPES.join(', '));
+chk('all four shape builders exist, and one dispatch turns a shape into a line of rings',
+  ['trailShapeRibbon','trailShapeDipper','trailShapeArch','trailShapeClimb']
+    .every(f=>new RegExp('function '+f+'\\(').test(html)) &&
+  /function trailShape\s*\(\s*shape\s*,\s*anchor\s*,\s*seed\s*,\s*sample\s*\)/.test(html) &&
+  TRAIL_SHAPES.every(s=>new RegExp('shape\\s*===\\s*"'+s+'"').test(html)));
+chk('THE FL12 LAW: no drawing anywhere knows a trail by name',
+  // Slice from the very first ring-drawing function all the way through the
+  // trail-step, which is every line of code that touches a ring on screen.
+  !new RegExp('(' + TRAIL_IDS.join('|') + ')').test(
+    html.slice(html.indexOf('function trailPaletteFor('), html.indexOf('// what YOU look like on a job'))));
+chk('the traps note is real code: rings SAMPLE ground height at placement',
+  /function trailGroundSample\(x,\s*z\)\{/.test(html) &&
+  // every shape passes that sampler in and lifts the ring above it
+  ['trailShapeRibbon','trailShapeDipper','trailShapeArch','trailShapeClimb'].every(f=>{
+    const body = html.slice(html.indexOf('function '+f+'('), html.indexOf('function ', html.indexOf('function '+f+'(')+1));
+    return /var g = sample \? sample\(x, z\) : 0;/.test(body) && /Math\.max\(/.test(body);
+  }));
+chk('the ring is FAT (a thin torus seen edge on is invisible from the low camera)',
+  /var TR_RING_TUBE\s*=\s*0\.9/.test(html) && /new THREE\.TorusGeometry\(TR_RING_MAJOR, TR_RING_TUBE/.test(html));
+chk('the ring COLOUR comes out of the level palette (world.cap / world.leaf), not a hardcoded hex',
+  /function trailPaletteFor\(\)/.test(html) &&
+  /world\.terrain==="peaks"\) \? world\.leaf : world\.cap/.test(html));
+chk('the FIRST ring stands under a soft beam (discovery, exactly like the job scouts)',
+  (function(){
+    const st = html.slice(html.indexOf('function showTrails('), html.indexOf('function hideTrails('));
+    return /new THREE\.CylinderGeometry\(1\.4, 1\.4, 220/.test(st) &&
+      /var first = rings\[0\];/.test(st) && /beam\.position\.set\(first\.pos\.x/.test(st);
+  })());
+chk('lighting the first ring PUTS THE BEAM OUT and brightens the whole line',
+  (function(){
+    const ts = html.slice(html.indexOf('function trailStep(){'), html.indexOf('// what YOU look like on a job'));
+    return /if \(!tr\.found\)/.test(ts) && /tr\.beam\.visible = false/.test(ts) && /brightenTrail\(tr\)/.test(ts);
+  })());
+chk('one ring hit = one note of a rising tune (pitch steps up per ring)',
+  /sfx\("coin", \{ rate: 1\.0 \+ i \* 0\.07 \}\)/.test(html));
+chk('the audio library accepts opt.rate so any caller can pitch a coin (backwards compatible)',
+  /opt && typeof opt\.rate === "number"/.test(audio) &&
+  // and the old tier path still works when no rate is passed
+  /tier>=3\?1\.16:tier>=2\?1\.08:1\.0/.test(audio));
+chk('the LAST ring earns the sparkle cascade, a coin burst and a sticker (same pattern a job uses)',
+  (function(){
+    const ts = html.slice(html.indexOf('function trailStep(){'), html.indexOf('// what YOU look like on a job'));
+    return /if \(tr\.lit >= tr\.rings\.length && !tr\.done\)/.test(ts) &&
+      /sfx\("collect"\)/.test(ts) && /burst\(r\.pos, 18\)/.test(ts) &&
+      /markBadge\(tr\.id\)/.test(ts);
+  })());
+chk('NOTHING in a trail can be failed — no timer, no expiry, no lose in the ring code',
+  (function(){
+    const zone = html.slice(html.indexOf('function trailPaletteFor('), html.indexOf('// what YOU look like on a job'));
+    return !/\b(timeLeft|timeLimit|timer|countdown|lives|attemptsLeft|expiresAt|failed?)\b/i.test(zone) &&
+      !/game over/i.test(zone) && !/you lose/i.test(zone);
+  })());
+chk('the arch shape threads through something REAL — it picks the tallest landmark near the anchor',
+  /function trailPickLandmark\(anchor,\s*within\)/.test(html) &&
+  /var peak = trailPickLandmark\(anchor, 200\)/.test(html));
+chk('trails join the mini-map: a small ring blip, faint until you have lit the first ring',
+  /kind==="trail"/.test(html) && /icoRingGlyph\(n,!!p\.done\)/.test(html) &&
+  /stroke:none|stroke="/.test(html.slice(html.indexOf('function blipIcon('), html.indexOf('function paintMinimap('))) &&
+  /if\(p\.kind==="trail"\)\{/.test(html));
+chk('a trail can be pinned, exactly like a job (one pin at a time, outlives the flight)',
+  /function pinTrail\(tr\)/.test(html) && /id:"trail:"\+tr\.id,kind:"trail"/.test(html));
+chk('the trails go up AFTER the first chunks are built (or a dipper cannot sample the ground)',
+  /updateChunks\(0,0\);\s*\n\/\/ FL12: the trails go up here[\s\S]{0,300}showTrails\(\);/.test(html));
+chk('and the trailStep runs every sim tick, right after scoutStep',
+  /scoutStep\(\);\s*\n\s*trailStep\(\);/.test(html));
+
+// ---------------------------------------------------------------------------
 //  FL7 STATIC — three harder bodies, three new places, and the flock
 // ---------------------------------------------------------------------------
 console.log('--- FL7: the harder transforms (goose, owl, eagle) ---');
@@ -1909,6 +2002,124 @@ console.log('--- FL6 + FL7 LIVE: the robot flies every transform quest ---');
   chk('...and the ones still to do are as bright as they ever were',
     otherAfter && otherAfter.dim === false, otherAfter ? 'mail-run still full height' : 'mail-run beam missing');
   wd.close();
+}
+
+// ------------------------------------------------------------------
+//  FL12 LIVE — the trails really stand in the world, light up ring by
+//  ring when flown through, never fail if a ring is missed, and pay out
+//  once at the end with a sticker.
+// ------------------------------------------------------------------
+console.log('--- FL12 LIVE: rings are placed, flying through them lights and pays ---');
+{
+  // Every world carries two or three trails, and every trail carries a
+  // real line of rings at real coordinates. This proves showTrails ran
+  // and that the recipe grew a shape rather than a fixed row.
+  for (let i = 0; i < 3; i++) {
+    const dt = flyKid(i, '&mode=free'); const wt = dt.window;
+    const trs = wt.SKY.trails();
+    chk('world '+i+' ('+wt.SKY.world.name+') carries 2-3 trails, each with 4-6 rings',
+      trs.length >= 2 && trs.length <= 3 && trs.every(t=>t.rings >= 4 && t.rings <= 6),
+      trs.map(t=>t.shape+':'+t.rings).join(', '));
+    // Every trail is placed AT real coordinates — none stacked on the
+    // spawn, none stacked on top of each other.
+    const spread = trs.every(t=>Math.hypot(t.x,t.z) > 120);
+    chk('world '+i+' trails sit out in the world (never on the spawn)', spread,
+      trs.map(t=>Math.round(Math.hypot(t.x,t.z))).join('u, ')+'u out');
+    // Every ring is off the ground: fly-through requires it. This is the
+    // Traps note: a ring buried in a hill is invisible AND unreachable.
+    const ringsOK = trs.every(t=>t.ringPts.every(r=>r.y >= 6 && r.y <= 90));
+    chk('world '+i+' every ring stands 6-90u above the ground (never buried, never in orbit)',
+      ringsOK, 'min '+Math.min(...trs.flatMap(t=>t.ringPts.map(r=>r.y))).toFixed(0)+
+                'u, max '+Math.max(...trs.flatMap(t=>t.ringPts.map(r=>r.y))).toFixed(0)+'u');
+    wt.close();
+  }
+}
+{
+  // Fly through the whole trail in order — every ring lights, the beam
+  // goes out, the sticker is kept, and the coin chime plays per ring.
+  const df = flyKid(0, '&mode=free'); const wf = df.window;
+  const S = wf.SKY.state;
+  const tr = wf.SKY.trails()[0];
+  chk('first ring stands under its beam (nothing lit yet)',
+    tr && tr.found === false && tr.done === false && tr.beamVisible === true,
+    JSON.stringify({found:tr.found, done:tr.done, beam:tr.beamVisible}));
+  // Count coin sfx calls: this proves the rising tune actually fires.
+  let coinCalls = 0, rates = [], collectCalls = 0;
+  const origSfx = wf.BuildableAudio.sfx.bind(wf.BuildableAudio);
+  wf.BuildableAudio.sfx = function(name, opt){
+    if (name === 'coin' && opt && typeof opt.rate === 'number') { coinCalls++; rates.push(+opt.rate.toFixed(2)); }
+    if (name === 'collect') collectCalls++;
+    return origSfx(name, opt);
+  };
+  // Warp the plane to each ring one at a time and step: the magnet handles it.
+  for (let i = 0; i < tr.ringPts.length; i++) {
+    const r = tr.ringPts[i];
+    S.pos.x = r.x; S.pos.y = r.y; S.pos.z = r.z; S.dx = 0; S.dy = 0;
+    wf.SKY.tick(1/30);
+  }
+  const after = wf.SKY.trails()[0];
+  chk('flying through every ring lit them all up in order',
+    after.lit === after.rings && after.done === true && after.beamVisible === false,
+    'lit '+after.lit+'/'+after.rings+', beam '+(after.beamVisible?'on':'off'));
+  chk('one chime per ring, EACH ONE PITCHED (a rising tune, not five of the same note)',
+    coinCalls === tr.ringPts.length &&
+    // strictly rising: 1.00, 1.07, 1.14, 1.21, 1.28 for a 5-ring trail
+    rates.every((r,i)=>i===0 || r > rates[i-1]) &&
+    Math.abs(rates[0] - 1.00) < 0.01,
+    coinCalls+' notes at rates '+rates.join(' -> '));
+  chk('the last ring plays the sparkle cascade (the trail-finished sound)',
+    collectCalls === 1, collectCalls+' cascade(s)');
+  chk('finishing a trail leaves a sticker (kept per kid, same table the jobs use)',
+    wf.SKY.badges()[tr.id] === true, tr.id);
+  wf.BuildableAudio.sfx = origSfx;
+  wf.close();
+}
+{
+  // A trail can NEVER be failed. Miss a ring: nothing happens, it stays
+  // lit and waits. There is no timer and no expiry anywhere in the trail
+  // engine — this proves it live: hit ring 0 and ring 2 only, leave 1
+  // untouched forever, and prove ring 1 still waits.
+  const dm = flyKid(1, '&mode=free'); const wm = dm.window;
+  const S = wm.SKY.state;
+  const tr = wm.SKY.trails()[0];
+  const hit = (i)=>{ const r=tr.ringPts[i]; S.pos.x=r.x; S.pos.y=r.y; S.pos.z=r.z; wm.SKY.tick(1/30); };
+  hit(0); hit(2);                          // skip 1 on purpose
+  // Fly away and wait a "long time" (many sim ticks). Ring 1 must NEVER
+  // decay, expire, or auto-light. Nothing anywhere may fail a trail.
+  S.pos.x = 5000; S.pos.y = 40; S.pos.z = 5000;
+  for (let k = 0; k < 900; k++) wm.SKY.tick(1/30);
+  const after = wm.SKY.trails()[0];
+  chk('missing a ring does nothing — it stays waiting, no timer, no expiry',
+    after.ringPts[0].lit === true && after.ringPts[2].lit === true &&
+    after.ringPts[1].lit === false && after.done === false && after.lit === 2,
+    'lit '+after.lit+'/'+after.rings+' after 30s of drifting away');
+  // Come back and hit the missing ring: it still lights, and the rest of
+  // the trail carries on from where it was.
+  const still = tr.ringPts[1]; S.pos.x = still.x; S.pos.y = still.y; S.pos.z = still.z;
+  wm.SKY.tick(1/30);
+  const then = wm.SKY.trails()[0];
+  chk('...and a ring that was missed can be hit later, whenever the kid feels like it',
+    then.ringPts[1].lit === true && then.lit === 3,
+    'lit '+then.lit+'/'+then.rings+' after coming back');
+  wm.close();
+}
+{
+  // The mini-map shows every trail, and pinning one puts the arrow on the
+  // first ring — exactly like a job. Three doors, one thing behind them.
+  const dp = flyKid(2, '&mode=free'); const wp = dp.window;
+  const trs = wp.SKY.trails();
+  const blips = wp.SKY.blips().filter(b=>b.kind==='trail');
+  chk('every trail in this world shows up as a small ring blip on the map',
+    blips.length === trs.length && trs.every(t=>blips.some(b=>b.id==='trail:'+t.id && b.x===t.x && b.z===t.z)),
+    blips.length+' trail blips (world has '+trs.length+')');
+  const pinned = wp.SKY.pinTrail(trs[0].id);
+  const wpt = wp.SKY.waypoint();
+  chk('pinning a trail puts it in the top bar with its real place and a live distance',
+    !!wpt && wpt.kind === 'trail' && wpt.x === trs[0].x && wpt.z === trs[0].z && wpt.dist > 0,
+    JSON.stringify(wpt));
+  chk('the big orange arrow follows a pinned trail, just like it follows a pinned job',
+    (()=>{ const t = wp.SKY.arrowTarget(); return !!t && t.x === trs[0].x && t.z === trs[0].z; })());
+  wp.close();
 }
 }
 

@@ -1,5 +1,79 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (FL12): sky trails — lines of rings to fly through
+
+Sky Flyer: every world now carries two or three sky trails — lines of rings
+hanging in the air, chased for the chasing. Discovery works exactly the way
+the jobs do: the first ring stands under a soft beam from the moment you
+arrive, and flying through it lights the whole line up. No offer card, no
+tap, nothing to read.
+
+Files: `public/skyflyer-engine.html`, `public/buildable-audio.js`,
+`qa-skyflyer.mjs`.
+
+- **Four recipe shapes, all generated from data.** `TRAILS_SPEC` is a small
+  data table (id, world, `shape`, seed, anchor); one dispatch turns a shape
+  into a line of ring positions. Shapes: **Ribbon** (a gentle S at cruise
+  height), **Dipper** (swoops toward the ground and pulls back up),
+  **Arch** (arches over the tallest real landmark within 200u of the
+  anchor — a peak, an island, whatever the world put there), **Climb** (a
+  staircase up to a view). Two per world in Sunny Islands and Sunset
+  Canyon, three in Snowy Peaks; every shape appears somewhere.
+- **FL5b/FL12 law honoured.** The drawing code dispatches on the recipe's
+  `shape` field only — nothing anywhere may check a trail by name.
+  `trailShapeRibbon`, `trailShapeDipper`, `trailShapeArch`, `trailShapeClimb`
+  and `trailShape(shape, ...)` do all the work. QA counts trail ids in the
+  ring-drawing block and fails if one appears.
+- **The Traps note is real code.** `trailGroundSample(x, z)` reads loaded
+  chunks for island/peak/mesa hit silhouettes; every ring is lifted above
+  the sampled ground before it's placed. A dipper that crosses an island
+  arcs over it instead of burying itself. Arch picks its landmark by
+  scanning the same chunk list.
+- **Fat-and-soft ring.** Torus, major 6.5u, tube 0.9u — thick enough that a
+  ring seen edge-on from the low close camera still reads as a hoop
+  (the Traps note again). Additive glow layer sits behind it. Magnet 8.5u:
+  generous, kid-sized.
+- **Colour from the palette, no new art.** `trailPaletteFor()` returns
+  `world.cap` on Sunny Islands and Sunset Canyon, `world.leaf` on Snowy
+  Peaks (its cap is nearly white and the ring would vanish). Two slots,
+  never hardcoded — recolouring a world in the manifest recolours its
+  trails for free.
+- **Reward is a rising tune.** Each ring plays one note of `sfx("coin")` at
+  `rate = 1.00 + i * 0.07`, so a 5-ring trail is 1.00 → 1.07 → 1.14 → 1.21
+  → 1.28. Last ring adds `sfx("collect")` for the sparkle cascade, an
+  18-particle coin burst, `markBadge(tr.id)` for the sticker kept per kid,
+  and a buddy cheer. Missing a ring never fails — the trail sits waiting
+  forever; come back and it lights straight up.
+- **Additive audio change (backward compatible).** `buildable-audio.js`
+  `BA.sfx` now accepts `opt.rate` (positive number) as an explicit pitch
+  override; nothing else changed. The old `tier` scale still owns the
+  coin-combo pitch when no `rate` is passed, so every other game keeps
+  its existing behaviour.
+- **Discovery beam.** First ring only — a narrow column of the trail's
+  palette colour, 220u tall, opacity pulsing with the same `pulse` the
+  job beams already breathe on. Flying through the first ring puts the
+  beam out and brightens every ring on the trail together.
+- **Reused the FL5b waypoint pin.** Trails join the mini-map as small
+  ring blips (faint until you've lit the first ring, green once done),
+  and `pinTrail()` mirrors `pinJob()`. Same top-bar chip, same X to drop,
+  same big orange arrow.
+- **Placed AFTER the first chunks build.** `showTrails()` runs right after
+  `updateChunks(0,0)` so `trailGroundSample` can read real islands and
+  peaks. Anchors also join `JOB_POINTS`, so no chunk ever grows on top of
+  a first ring — same trick landing pads and job depots use.
+- **QA (`qa-skyflyer.mjs`, ~40 new checks).** All 562 checks pass. Live
+  half proves: 2–3 trails per world, every ring between 6u and 90u above
+  the ground, first ring stands under its beam until hit, flying through
+  every ring in order lights them all and fires the rising tune (rates
+  strictly increasing, first rate ≈ 1.00), sparkle cascade + sticker on
+  finish, missing a ring never fails and can be hit later, trails appear
+  as ring blips on the map and pin the same way jobs do.
+
+Deferred (not in this card): a per-ring specular shimmer as you approach
+(SKY reports rings as static geometry today); trails visible on the map
+after being lit even if you leave the world (session-scoped only right
+now; sticker in prefs is the persistence).
+
 ## 2026-08-15 (FL11): the puffin's fish look like fish, not blocks
 
 Sky Flyer: in the puffin bird-transform quest the fish a kid carried in the beak

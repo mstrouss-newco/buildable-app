@@ -6,6 +6,32 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sky Flyer: sky trails — rings to fly through (August 15 2026)
+`public/skyflyer-engine.html`, `public/buildable-audio.js`, `qa-skyflyer.mjs`.
+Each world now carries two or three lines of rings hanging in the air, chased
+for the chasing. Discovery works exactly the way the jobs do: the first ring
+stands under a soft beam from the moment you arrive, and flying through it
+lights the whole trail up. No offer card, no tap, nothing to read. Four recipe
+shapes — Ribbon (a gentle S at cruise height), Dipper (swoops toward the
+ground and pulls back up), Arch (arches over the tallest real landmark nearby),
+Climb (a staircase up to a view). The reward is SOUND: one note per ring,
+pitched by the ring's index (rate 1.00 → 1.07 → 1.14 → 1.21 → 1.28 for a
+5-ring trail), so a full trail is a little rising tune; the last ring adds the
+sparkle cascade, a coin burst and a sticker kept per kid. Rings sample ground
+height at placement (the Traps note — a ring buried in a hill is invisible AND
+unreachable), and Arch picks the tallest island/peak within 200u of its anchor
+to thread through. Ring look is fat-and-soft (tube 0.9u, magnet 8.5u), coloured
+from the level palette so every world reads different for free — `world.leaf`
+on Snowy Peaks (its cap is nearly white) and `world.cap` everywhere else.
+FL5b/FL12 law: the drawing code dispatches on the recipe's `shape` field only;
+QA counts trail ids in the ring-drawing block and fails if one appears. A trail
+can NEVER be failed — miss a ring, nothing happens, it stays waiting. Trails
+join the mini-map as small ring blips and can be pinned like a job. Additive
+audio change: `buildable-audio.js` accepts `opt.rate` on any sfx (backward
+compatible), which is how the rising tune plays without touching the shared
+sound catalog. Extended `SKY.trails()` / `SKY.pinTrail()` handles for the
+harness. All 562 checks pass, including ~40 new FL12 checks.
+
 ## Sky Flyer: the puffin's fish look like fish, not blocks (August 15 2026)
 `public/skyflyer-engine.html`, `qa-skyflyer.mjs`. In the puffin bird-transform
 quest the fish a kid caught and carried home read as plain cubes from the air —
