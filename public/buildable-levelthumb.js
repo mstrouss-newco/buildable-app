@@ -178,35 +178,36 @@
       g.fillStyle = shade(g1, -18);
       for (var t = 0; t < 7; t++) g.fillRect(t * 44 + 9, GY + 12, 13, 3);
       // SD3 TERRAIN — the ground is no longer one flat line, so the card cannot
-      // draw one. A hill or a plinth is the same polygon the engine collides
-      // with (terrainPoly in sling-squad.html, mirrored here); a pit is a hole
-      // cut back out of the ground band. Without this the picture would promise
-      // a flat yard and the level would open on a mountain.
+      // draw one, or it would promise a flat yard for a level that opens on a
+      // mountain. A hill or a plinth arrives as `poly`: the very points the
+      // engine collides with (BuildableManifest.slingTerrainPoly), so the card
+      // cannot drift out of step with the level. A pit is a hole cut back out
+      // of the ground band. Painted like the engine paints them — earth body,
+      // grass over the top — so the card reads as the same place.
       (d.terrain || []).forEach(function (t) {
-        var half = t.w / 2;
+        var half = t.w / 2, k;
         if (t.k === "pit") {
           var px0 = tx(t.x - half), px1 = tx(t.x + half), fl = ty(548 + t.d);
-          g.fillStyle = "#553920"; g.fillRect(px0, GY, px1 - px0, CH - GY);
-          g.fillStyle = g1; g.fillRect(px0, fl, px1 - px0, CH - fl);
-          g.fillStyle = top; g.fillRect(px0, fl, px1 - px0, 3);
-          g.fillStyle = "rgba(0,0,0,.30)"; g.fillRect(px0, GY, 2.5, fl - GY + 3); g.fillRect(px1 - 2.5, GY, 2.5, fl - GY + 3);
+          g.fillStyle = "#2d1806"; g.fillRect(px0, GY - 2, px1 - px0, CH - GY + 2);
+          g.fillStyle = "#6d4512"; g.fillRect(px0, fl, px1 - px0, CH - fl);
+          g.fillStyle = "rgba(0,0,0,.45)"; g.fillRect(px0, GY - 2, 3, fl - GY + 4); g.fillRect(px1 - 3, GY - 2, 3, fl - GY + 4);
+          g.fillStyle = top; g.fillRect(px0 - 4, GY - 4, 7, 6); g.fillRect(px1 - 3, GY - 4, 7, 6);
           return;
         }
-        var poly = (t.k === "hill")
-          ? [[t.x - half, 548], [t.x - half * 0.52, 548 - t.h], [t.x + half * 0.52, 548 - t.h], [t.x + half, 548]]
-          : (t.k === "ledge")
-            ? [[t.x - half, 548], [t.x - half + 5, 548 - t.h], [t.x + half - 5, 548 - t.h], [t.x + half, 548]]
-            : null;
-        if (!poly) return;
-        g.beginPath(); g.moveTo(tx(poly[0][0]), ty(poly[0][1]));
-        for (var k = 1; k < poly.length; k++) g.lineTo(tx(poly[k][0]), ty(poly[k][1]));
+        var poly = t.poly;
+        if (!poly || !poly.length) return;
+        var lo = poly[0].y, hi = poly[0].y;
+        for (k = 1; k < poly.length; k++) { if (poly[k].y < lo) lo = poly[k].y; if (poly[k].y > hi) hi = poly[k].y; }
+        var cLo = ty(lo), cHi = ty(hi);
+        g.beginPath(); g.moveTo(tx(poly[0].x), ty(poly[0].y));
+        for (k = 1; k < poly.length; k++) g.lineTo(tx(poly[k].x), ty(poly[k].y));
         g.closePath();
-        g.fillStyle = shade(g1, 10); g.fill();
-        g.strokeStyle = "rgba(0,0,0,.20)"; g.lineWidth = 1.4; g.stroke();
+        g.fillStyle = "#8a5214"; g.fill();
         g.save(); g.clip();
-        g.fillStyle = top;
-        g.fillRect(tx(poly[1][0]) - 6, ty(poly[1][1]), tx(poly[2][0]) - tx(poly[1][0]) + 12, 4);
+        g.fillStyle = top; g.fillRect(0, cLo - 1, CW, Math.max(4, (cHi - cLo) * 0.24));
+        g.fillStyle = "rgba(0,0,0,.16)"; g.fillRect(tx(t.x), cLo, CW, cHi - cLo);
         g.restore();
+        g.strokeStyle = "rgba(58,34,8,.42)"; g.lineWidth = 1.4; g.stroke();
       });
       // slingshot (matches the engine's drawn fallback shape)
       g.strokeStyle = "#7a4a25"; g.lineCap = "round";

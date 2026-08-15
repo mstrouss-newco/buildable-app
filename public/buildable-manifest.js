@@ -291,9 +291,9 @@
     // in the floor: below the rim, so no shot along the flat can see it, and the
     // hole is too narrow to make a steep drop easy. The tall stack beside it is
     // the answer — topple it and let it fall in.
-    spire:  { terrain:[ {k:"pit",x:790,w:120,d:38} ],
+    spire:  { terrain:[ {k:"pit",x:790,w:120,d:32} ],
               blocks:[ {x:690,y:520,w:40,h:56,m:"stone"},{x:690,y:470,w:30,h:44,m:"wood"},{x:690,y:426,w:22,h:44,m:"wood"} ],
-              targets:[ {x:690,y:387},{x:790,y:569},{x:910,y:531} ] },
+              targets:[ {x:690,y:387},{x:790,y:563},{x:910,y:531} ] },
     // fort — the flat shot is dead: a tall stone screen covers the low line, so
     // the only way at the wood column is a high lob dropping into the gap
     // behind the screen. (Or bowl the screen over onto the tower and let that
@@ -320,16 +320,16 @@
     // a wall you can break: the shots have to be threaded, one into the valley,
     // one clean over the far mound, and the ground critters read completely
     // differently depending on which side of a hill they stand on.
-    gauntlet:{ terrain:[ {k:"hill",x:540,w:160,h:96},{k:"hill",x:845,w:150,h:104} ],
+    gauntlet:{ terrain:[ {k:"hill",x:540,w:170,h:124},{k:"hill",x:845,w:150,h:104} ],
               blocks:[ {x:660,y:518,w:24,h:60,m:"wood"} ],
               targets:[ {x:660,y:471},{x:735,y:531},{x:845,y:427},{x:390,y:531} ] },
     // SD3 — the pit splits the yard in two. The critter in the hole is the
     // problem: a tower stands either side of it, and the way in is to bring one
     // of them down on top of it rather than to shoot into a slot.
-    twintower:{ terrain:[ {k:"pit",x:750,w:132,d:38} ],
+    twintower:{ terrain:[ {k:"pit",x:750,w:132,d:32} ],
                 blocks:[ {x:648,y:520,w:36,h:56,m:"stone"},{x:648,y:470,w:28,h:44,m:"wood"},{x:648,y:426,w:20,h:44,m:"glass"},
                          {x:855,y:520,w:36,h:56,m:"stone"},{x:855,y:470,w:28,h:44,m:"wood"},{x:855,y:426,w:20,h:44,m:"glass"} ],
-              targets:[ {x:648,y:387},{x:855,y:387},{x:750,y:569},{x:450,y:531} ] },
+              targets:[ {x:648,y:387},{x:855,y:387},{x:750,y:563},{x:450,y:531} ] },
     // citadel — two sealed critters at once, and the same move does not open
     // both: the left keep wants a leg broken, the right one wants its stalk gone.
     citadel:{ blocks:[ {x:600,y:518,w:16,h:60,m:"wood"},{x:668,y:518,w:16,h:60,m:"wood"},
@@ -350,6 +350,35 @@
                        {x:890,y:334,w:88,h:20,m:"stone"} ],
               targets:[ {x:740,y:531,s:true},{x:890,y:377,s:true},{x:560,y:531},{x:640,y:531},{x:480,y:531} ] }
   };
+  // SD3 — the SHAPE of a piece of terrain, defined once for everybody. The
+  // engine builds its physics body from these exact points and paints them; the
+  // level-card painter draws the same points. Nobody re-derives the maths, so a
+  // card can never quietly drift out of step with the level it advertises.
+  // SLING_GY is the sling engine's ground line (`GY` in sling-squad.html).
+  var SLING_GY = 548;
+  function slingTerrainPoly(t){
+    var half = t.w/2;
+    if(t.k === "hill"){
+      // a rounded mound with a flat crest wide enough to stand a critter on:
+      // elliptical shoulders either side, which keeps the shape convex so it
+      // builds as one clean physics body.
+      var flat = half*0.30, sh = half-flat, N = 6, pts = [], i, a;
+      pts.push({ x:t.x-half, y:SLING_GY });
+      for(i=1;i<=N;i++){ a=(Math.PI/2)*(i/N);
+        pts.push({ x:t.x-half+sh*(1-Math.cos(a)), y:SLING_GY-t.h*Math.sin(a) }); }
+      pts.push({ x:t.x+flat, y:SLING_GY-t.h });
+      for(i=N-1;i>=1;i--){ a=(Math.PI/2)*(i/N);
+        pts.push({ x:t.x+half-sh*(1-Math.cos(a)), y:SLING_GY-t.h*Math.sin(a) }); }
+      pts.push({ x:t.x+half, y:SLING_GY });
+      return pts;
+    }
+    if(t.k === "ledge"){                       // a plinth: straight sides, slight batter
+      var lt = SLING_GY-t.h;
+      return [ {x:t.x-half,y:SLING_GY}, {x:t.x-half+5,y:lt}, {x:t.x+half-5,y:lt}, {x:t.x+half,y:SLING_GY} ];
+    }
+    return null;                               // a pit is a hole in the floor, not a shape
+  }
+
   // How many slings a level hands out. Still derived from difficulty 1-5 and the
   // number of critters — never a raw number in a manifest.
   // SD3 — the SPARE is what difficulty now buys. It used to be four to seven
@@ -713,7 +742,7 @@
       .catch(fromStatic);
   }
 
-  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind };
+  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));

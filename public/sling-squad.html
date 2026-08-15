@@ -346,19 +346,17 @@ function crushLoad(t){
 //  terrain builds the ONE flat slab it always did, which is what keeps levels
 //  1-6 playing exactly as they were.
 //
-//  ONE polygon drives everything. terrainPoly() is the shape; the physics body
-//  is built from those exact points (fromVertices placed at the polygon's own
-//  centroid leaves them untouched), the engine paints those points, and the
-//  level-card painter in buildable-levelthumb.js mirrors the same maths — so
-//  what a kid sees, what the card promises, and what the pal hits are one shape.
+//  ONE polygon drives everything, and it is defined in ONE place — the shared
+//  loader's BuildableManifest.slingTerrainPoly. The physics body is built from
+//  those exact points (fromVertices placed at the polygon's own centroid leaves
+//  them untouched), the engine paints those points, and the level-card painter
+//  is handed the very same points rather than re-deriving them. So what a kid
+//  sees, what the card promises, and what the pal hits cannot drift apart.
 // ============================================================================
 function terrainPoly(t){
-  var half=t.w/2;
-  if(t.k==="hill"){  var tp=GY-t.h;
-    return [ {x:t.x-half,y:GY}, {x:t.x-half*0.52,y:tp}, {x:t.x+half*0.52,y:tp}, {x:t.x+half,y:GY} ]; }
-  if(t.k==="ledge"){ var lt=GY-t.h;
-    return [ {x:t.x-half,y:GY}, {x:t.x-half+5,y:lt}, {x:t.x+half-5,y:lt}, {x:t.x+half,y:GY} ]; }
-  return null;                                  // a pit is a hole in the floor, not a shape
+  try{ if(window.BuildableManifest && window.BuildableManifest.slingTerrainPoly)
+    return window.BuildableManifest.slingTerrainPoly(t); }catch(e){}
+  return null;   // no loader = no manifest = no terrain to draw (built-in levels are flat)
 }
 function polyCentroid(p){
   var a=0,cx=0,cy=0;
@@ -976,28 +974,93 @@ function drawBg(){
 // ---- SD3: the terrain, painted from the very polygons the pals collide with.
 // Drawn on top of the flat ground band, so a pit reads as a hole cut into it and
 // a hill as a mound sitting on it, whichever backdrop the level is using.
-function drawTerrainShape(poly, th){
-  var lo=poly[0].y, hi=poly[0].y;
-  for(var i=1;i<poly.length;i++){ if(poly[i].y<lo) lo=poly[i].y; if(poly[i].y>hi) hi=poly[i].y; }
-  var g=ctx.createLinearGradient(0,lo,0,hi); g.addColorStop(0,th.top); g.addColorStop(1,th.g1);
+// Painted to sit in the same world as the rest of the scene: an earth body, a
+// band of grass over the top, a soft shadow and a few tufts on the skyline. The
+// path is the collision polygon itself, so however it is dressed the silhouette
+// a kid reads is exactly the silhouette a pal hits.
+function terrainPath(poly){
   ctx.beginPath(); ctx.moveTo(poly[0].x,poly[0].y);
   for(var k=1;k<poly.length;k++) ctx.lineTo(poly[k].x,poly[k].y);
   ctx.closePath();
-  ctx.save(); playShadowOn(); ctx.fillStyle=g; ctx.fill(); ctx.restore();
-  ctx.strokeStyle="rgba(0,0,0,.16)"; ctx.lineWidth=2; ctx.stroke();
-  // a lip of bright grass along the top edge so the shape reads as ground
-  ctx.save(); ctx.clip();
-  ctx.fillStyle=th.top; ctx.fillRect(poly[1].x-14, lo, (poly[2].x-poly[1].x)+28, 7);
+}
+// Measure the shape rather than assume its corners: a plinth is four points and
+// a mound is fourteen, so the crest and the footprint are read off the polygon.
+function polyExtent(poly){
+  var e={ lo:poly[0].y, hi:poly[0].y, xMin:poly[0].x, xMax:poly[0].x, crestL:poly[0].x, crestR:poly[0].x };
+  var i;
+  for(i=1;i<poly.length;i++){ var p=poly[i];
+    if(p.y<e.lo)e.lo=p.y; if(p.y>e.hi)e.hi=p.y;
+    if(p.x<e.xMin)e.xMin=p.x; if(p.x>e.xMax)e.xMax=p.x; }
+  e.crestL=e.xMax; e.crestR=e.xMin;
+  for(i=0;i<poly.length;i++){ if(poly[i].y<=e.lo+0.5){
+    if(poly[i].x<e.crestL)e.crestL=poly[i].x; if(poly[i].x>e.crestR)e.crestR=poly[i].x; } }
+  return e;
+}
+function drawTerrainShape(poly, th){
+  var e=polyExtent(poly), w=e.xMax-e.xMin, h=e.hi-e.lo;
+  var capH=Math.max(12, Math.min(28, h*0.26));
+  // earth body
+  ctx.save(); playShadowOn();
+  var earth=ctx.createLinearGradient(0,e.lo,0,e.hi);
+  earth.addColorStop(0,"#a0641c"); earth.addColorStop(0.55,"#8a5214"); earth.addColorStop(1,"#6d3f0d");
+  terrainPath(poly); ctx.fillStyle=earth; ctx.fill();
   ctx.restore();
+  ctx.save(); terrainPath(poly); ctx.clip();
+  // grass over the top, clipped to the shape so it follows the slope down
+  var grass=ctx.createLinearGradient(0,e.lo-3,0,e.lo+capH+8);
+  grass.addColorStop(0,th.top); grass.addColorStop(0.7,th.g1); grass.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=grass; ctx.fillRect(e.xMin-8, e.lo-3, w+16, capH+8);
+  ctx.fillStyle="rgba(255,255,255,.16)"; ctx.fillRect(e.xMin-8, e.lo-3, w+16, 3);
+  // volume: light down the near slope, shadow gathering on the far one, so it
+  // reads as round earth rather than a flat cut-out
+  var lit=ctx.createLinearGradient(e.xMin,0,e.xMax,0);
+  lit.addColorStop(0,"rgba(255,214,150,.18)"); lit.addColorStop(0.42,"rgba(255,214,150,0)");
+  lit.addColorStop(0.70,"rgba(40,20,2,.12)"); lit.addColorStop(1,"rgba(40,20,2,.34)");
+  ctx.fillStyle=lit; ctx.fillRect(e.xMin-8, e.lo-3, w+16, h+10);
+  ctx.restore();
+  ctx.strokeStyle="rgba(58,34,8,.42)"; ctx.lineWidth=2; terrainPath(poly); ctx.stroke();
+  // tufts along the crest
+  ctx.fillStyle=th.top;
+  var n=Math.max(2, Math.round((e.crestR-e.crestL)/32));
+  for(var t=0;t<=n;t++){ var cx2=e.crestL+(e.crestR-e.crestL)*(t/n);
+    ctx.beginPath(); ctx.moveTo(cx2-5, e.lo+2); ctx.quadraticCurveTo(cx2, e.lo-9, cx2+5, e.lo+2); ctx.fill(); }
+}
+// Where the ground SURFACE is on screen. The painted backdrop lays its grass
+// strip about thirty pixels above the physics floor (blocks stand at GY with
+// their feet tucked into the fringe), so a hole cut from GY down would read as
+// a window in the dirt band rather than a hole in the ground. A pit is drawn
+// from whichever surface the level is actually showing.
+function groundVisualTop(){
+  var gd=BGART.ground;
+  return (gd && (gd.naturalWidth||gd.width)) ? 518 : GY;
 }
 function drawPit(p, th){
-  var x0=p.x-p.w/2, x1=p.x+p.w/2, fl=GY+p.d;
+  var x0=p.x-p.w/2, x1=p.x+p.w/2, fl=GY+p.d, mouth=groundVisualTop();
   ctx.save();
-  var g=ctx.createLinearGradient(0,GY,0,fl+14); g.addColorStop(0,"#4a3218"); g.addColorStop(1,"#6b4a26");
-  ctx.fillStyle=g; ctx.fillRect(x0, GY, x1-x0, (H-GY));      // the earth walls of the hole
-  ctx.fillStyle=th.g1; ctx.fillRect(x0, fl, x1-x0, H-fl);    // the floor the critter sits on
-  ctx.fillStyle=th.top; ctx.fillRect(x0, fl, x1-x0, 5);
-  ctx.fillStyle="rgba(0,0,0,.28)"; ctx.fillRect(x0, GY, 5, fl-GY+5); ctx.fillRect(x1-5, GY, 5, fl-GY+5);
+  // the hole: much darker than the dirt around it, or it reads as a box painted
+  // onto the ground rather than a hole dug into it
+  var g=ctx.createLinearGradient(0,mouth,0,fl);
+  g.addColorStop(0,"#1d0f03"); g.addColorStop(0.55,"#361f07"); g.addColorStop(1,"#54330f");
+  ctx.fillStyle=g; ctx.fillRect(x0, mouth, x1-x0, H-mouth);
+  // the floor it sits on, in earth rather than bright grass
+  ctx.fillStyle="#6d4512"; ctx.fillRect(x0, fl, x1-x0, H-fl);
+  ctx.fillStyle="#7d5218"; ctx.fillRect(x0, fl, x1-x0, 4);
+  // inner shadow down both walls, so the mouth has real depth
+  var lsh=ctx.createLinearGradient(x0,0,x0+18,0);
+  lsh.addColorStop(0,"rgba(0,0,0,.60)"); lsh.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=lsh; ctx.fillRect(x0, mouth, 18, H-mouth);
+  var rsh=ctx.createLinearGradient(x1,0,x1-18,0);
+  rsh.addColorStop(0,"rgba(0,0,0,.60)"); rsh.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=rsh; ctx.fillRect(x1-18, mouth, 18, H-mouth);
+  // and a shadow across the mouth, so the near rim overhangs it
+  var top=ctx.createLinearGradient(0,mouth,0,mouth+22);
+  top.addColorStop(0,"rgba(0,0,0,.55)"); top.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=top; ctx.fillRect(x0, mouth, x1-x0, 22);
+  // grassy lips overhanging each rim
+  ctx.fillStyle=th.top;
+  ctx.fillRect(x0-11, mouth-5, 16, 11); ctx.fillRect(x1-5, mouth-5, 16, 11);
+  ctx.fillStyle=th.g1;
+  ctx.fillRect(x0-11, mouth+6, 16, 5); ctx.fillRect(x1-5, mouth+6, 16, 5);
   ctx.restore();
 }
 function drawTerrain(){
@@ -1305,8 +1368,12 @@ function buildStartCfg(){
     // LP1: the card shows THIS level's real tower, critters and slingshot.
     // Locked levels get the picture too — the start screen dims them itself.
     var p = palFor(i), img = "";
+    // SD3: the card is handed the terrain's real polygons, not its numbers, so
+    // it draws the shape the level actually has instead of guessing at one.
+    var terr = (l.terrain||[]).map(function(t){
+      var o={ k:t.k, x:t.x, w:t.w, d:t.d }; o.poly=terrainPoly(t); return o; });
     try{ if(BLT && BLT.make) img = BLT.make("towers",
-      { blocks:l.blocks, targets:l.targets, terrain:l.terrain, sky:p.sky, g0:p.g0, g1:p.g1, top:p.top, n:i+1 },
+      { blocks:l.blocks, targets:l.targets, terrain:terr, sky:p.sky, g0:p.g0, g1:p.g1, top:p.top, n:i+1 },
       (l.id||l.name||i)+"|"+i+"|v3"); }catch(e){}   // v3: SD3 terrain repaints the cards
     return { n:i+1, name:l.name, color:"#3b6ea5", img:img||undefined, maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
   return { title:"Sling Squad", subtitle:"Fling your friends and topple every tower! Stars: "+totalStars()+" of "+maxStars(),

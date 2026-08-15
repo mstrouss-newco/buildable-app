@@ -222,14 +222,21 @@ for(const i of hillLv){ SG._begin(i);
 }
 if(!hillOk) ok=false;
 
-// A PIT hides a critter under the rim: its whole body sits below the ground
-// line, so no shot along the flat can see it however hard it is thrown.
+// A PIT sits a critter down under the rim, where nothing thrown along the flat
+// can reach it however hard it is thrown. Checked both ways: the critter's
+// middle is below the ground line, AND actually reaching it costs far more loft
+// than the easiest critter standing in the open in the same level.
 let pitHides = pitLv.length>0;
 for(const i of pitLv){ SG._begin(i);
   const rim = SG._floorY(10);
-  const down = SG._targets().filter(t=>t.y-17 > rim);
-  const good = down.length>0; if(!good) pitHides=false;
-  console.log(`${good?'PASS':'FAIL'}  L${i+1} ${cfg.levels[i].name.padEnd(14)} ${down.length} critter${down.length===1?'':'s'} sitting below the rim (ground y=${rim})`);
+  const ts = SG._targets();
+  const down = ts.filter(t=>t.y > rim);
+  const openLofts = ts.filter(t=>t.y<=rim).map(t=>SG._loft(t.i)).filter(v=>v!=null);
+  const easiest = openLofts.length?Math.min(...openLofts):null;
+  const deepest = down.map(t=>SG._loft(t.i));
+  const steep = down.length>0 && deepest.every(v=>v==null || (easiest!=null && v>=easiest*2));
+  const good = down.length>0 && steep; if(!good) pitHides=false;
+  console.log(`${good?'PASS':'FAIL'}  L${i+1} ${cfg.levels[i].name.padEnd(14)} ${down.length} critter under the rim (y=${down.map(t=>t.y)} vs ground ${rim}); reaching it costs loft ${deepest.map(v=>v==null?'unreachable':v)} against ${easiest} out in the open`);
 }
 if(!pitHides) ok=false;
 
@@ -328,8 +335,10 @@ console.log('--- SD3: level cards paint the terrain ---');
     for(const i of withTerrain){
       const l=cfg.levels[i];
       const base={ blocks:l.blocks, targets:l.targets, sky:['#8fd0ff','#eaf8ff'], g0:'#73c364', g1:'#4e9a45', top:'#86d172', n:i+1 };
+      // the card is handed the engine's own polygons, exactly as the game does
+      const withPoly = l.terrain.map(t=>Object.assign({}, t, { poly:BM.slingTerrainPoly(t) }));
       let withT, without, threw=null;
-      try{ const a=rec(); P.towers(a, Object.assign({}, base, { terrain:l.terrain })); withT=a.calls.length;
+      try{ const a=rec(); P.towers(a, Object.assign({}, base, { terrain:withPoly })); withT=a.calls.length;
            const b=rec(); P.towers(b, base);                                        without=b.calls.length; }
       catch(e){ threw=e.message; }
       const good = !threw && withT>without;
