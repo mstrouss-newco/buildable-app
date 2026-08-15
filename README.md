@@ -2766,6 +2766,33 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-08-15 (Session FL9: the nav bar and the HUD stop sharing a corner)
+
+On a phone the app's Sound button sat on top of Sky Flyer's coin count and its
+Help button sat on top of the mini-map — measured at 320, 390, 704 and 820 wide,
+so not an edge case. Hiding a game's own nav buttons in the app was never the
+whole job: the app's buttons still float over the game's iframe.
+
+`public/buildable-gamenav.js` now marks the page `.bk-inshell` **in-app only**
+and publishes the strip the shell reserves as CSS variables
+(`--bk-nav-left` 104px, `--bk-nav-right` 64px, `--bk-nav-bottom` 52/96/140px
+sized to the buttons that engine actually registered), so any engine can lay its
+HUD out around chrome it does not draw. Documented in `HUD-AND-NAV-RULES.md`;
+the geometry is mirrored from `GameFrame`/`NavBtn` in `src/BuildableKids.jsx`
+and both sides carry a comment saying so.
+
+Sky Flyer's right-hand column (coins, map, banked flash) drops below that strip
+and keeps its right edge — sideways does not fit on a 320px phone. Its pad
+message is now centred in the space that is not the right-hand column, so moving
+the map down did not trade one overlap for another. Standalone the engine is
+unchanged. Engine cache-buster `?v=fl8c` → `?v=fl9`.
+
+New gate `qa-skyflyer-hud.mjs` draws the shell's real chrome around the real
+engine and measures every HUD box against every button box at four widths
+(playwright-core + a served-from-memory shell mock). Verified it fails without
+the fix. Full detail in `SESSION-LOG.md`.
+
+---
 ## Session log — 2026-07-26 (Planner: the Right now bar stops being a wall of text)
 
 Roadmap tab of `/planner` (`public/planner.html`). Session descriptions on the
