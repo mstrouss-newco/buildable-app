@@ -1,5 +1,26 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (eighth pass): --ff-only was the wrong pull, and five commits were stranded
+
+The background installer refused with *"Not possible to fast-forward, aborting."* His clone
+had **five commits that were never pushed**: FL13, RP6, and three from NV1. Sessions had
+built the work, committed it, and their push had not landed, so local `main` had diverged.
+`git pull --ff-only` will not touch a diverged branch, so every launcher then refused too and
+the work sat there invisibly.
+
+**Rescued them** by `git format-patch origin/main..main --binary` on his Mac, staging the
+five patches, `git am --3way` here, union-resolving the SESSION-LOG/README conflicts, and
+pushing. FL13, RP6 and NV1 are on main now.
+
+**Fixed the cause:** every launcher and `scripts/lane-run.sh` now use
+`git pull --rebase --autostash`, which replays local commits on top of the download instead
+of refusing. On failure it aborts the rebase cleanly and shows git's real words. Note the
+exit code has to be captured into a variable first — `if [ $? -ne 0 ]` twice in a row reads
+the exit of the previous `if`, not of the pull.
+
+**Also:** the background installer no longer tells him to go open a different window first
+to fetch code. It fetches its own.
+
 ## 2026-08-15 (seventh pass): lanes get their own tables, and it runs in the background
 
 ### The bug Mike's screenshot caught

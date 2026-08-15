@@ -52,8 +52,12 @@ fi
 
 echo "Getting the latest code..."
 git checkout main >/dev/null 2>&1
-PULL_OUT=$(git pull --ff-only 2>&1)
-if [ $? -ne 0 ]; then
+# --rebase, not --ff-only: a session that committed but could not push leaves local
+# commits behind, and --ff-only just refuses. This replays them on top instead.
+PULL_OUT=$(git pull --rebase --autostash 2>&1)
+PULL_RC=$?
+if [ $PULL_RC -ne 0 ]; then git rebase --abort >/dev/null 2>&1; fi
+if [ $PULL_RC -ne 0 ]; then
   echo "Could not download the latest code:"
   echo "$PULL_OUT"
   exit 1
