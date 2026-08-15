@@ -27,6 +27,24 @@ h1{ font-size:20px; margin:0; font-weight:700; }
 .btn.danger{ color:#b23b3b; }
 .status{ font-size:13px; color:var(--muted); min-height:18px; }
 .status.err{ color:#b23b3b; }
+/* Session 9E — the play-test robot's verdict on the change that just went live. */
+.qa{ display:none; margin:10px 2px 0; border:1px solid var(--line); border-left-width:4px; border-radius:12px; padding:10px 13px; background:var(--card); }
+.qa.show{ display:block; }
+.qa.pending{ border-left-color:#c9a227; }
+.qa.pass{ border-left-color:#1f7a42; }
+.qa.fail{ border-left-color:#b23b3b; background:#fdf2f2; }
+.qa.idle{ border-left-color:#b8b2a6; }
+.qa .qh{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:14px; font-weight:700; }
+.qa .qlamp{ width:11px; height:11px; border-radius:999px; background:#b8b2a6; flex:none; }
+.qa.pending .qlamp{ background:#c9a227; animation:qpulse 1.2s ease-in-out infinite; }
+.qa.pass .qlamp{ background:#1f7a42; }
+.qa.fail .qlamp{ background:#b23b3b; }
+@keyframes qpulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+.qa .qs{ font-size:13px; color:var(--muted); margin-top:4px; line-height:1.45; }
+.qa.fail .qs{ color:#7d2d2d; }
+.qa .qlist{ margin:7px 0 0; padding-left:17px; font-size:12px; color:#7d2d2d; line-height:1.5; max-height:150px; overflow:auto; }
+.qa .qacts{ display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; align-items:center; }
+.qa .qlink{ font-size:12px; color:var(--muted); text-decoration:underline; }
 .section-label{ font-size:13px; color:var(--muted); margin:18px 2px 8px; }
 .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
 .slots{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
@@ -157,6 +175,14 @@ input:focus,select:focus{ outline:2px solid #ffd0d0; border-color:var(--accent);
     <button class="btn primary" id="saveBtn" onclick="save()">Save (goes live)</button>
   </div>
   <div class="hint" id="banner" style="margin:8px 2px 0;"></div>
+
+  <!-- Session 9E: what the play-test robot found in the change that just went live. -->
+  <div class="qa" id="qa">
+    <div class="qh"><span class="qlamp" id="qaLamp"></span><span id="qaTitle"></span></div>
+    <div class="qs" id="qaSummary"></div>
+    <ul class="qlist" id="qaList" style="display:none;"></ul>
+    <div class="qacts" id="qaActs"></div>
+  </div>
 
   <div class="section-label">Whole-game art (badges, menus, music)</div>
   <div class="card"><div class="slots" id="slots"></div></div>
@@ -330,7 +356,7 @@ function loadPicker(){
   });
   document.getElementById("pstatus").textContent="";
 }
-function backToPicker(){ if(state.dirty && !confirm("Discard unsaved changes and leave?")) return; state.dirty=false; history.pushState({}, "", location.pathname); loadPicker(); }
+function backToPicker(){ if(state.dirty && !confirm("Discard unsaved changes and leave?")) return; state.dirty=false; qaHide(); history.pushState({}, "", location.pathname); loadPicker(); }
 function openGame(g){ state.game=g; state.board=!!BOARD[g]; history.pushState({}, "", location.pathname+"?game="+encodeURIComponent(g)); document.getElementById("picker").style.display="none"; document.getElementById("app").style.display="block"; load(); }
 
 /* ---------- load / render ---------- */
@@ -338,7 +364,11 @@ function load(){
   setStatus("Loading…");
   fetch("/api/manifest?game="+encodeURIComponent(state.game)+"&v="+Date.now())
     .then(function(r){ return r.json(); })
-    .then(function(d){ if(!d||!d.manifest) throw new Error(d&&d.error||"no manifest"); state.manifest=d.manifest; state.source=d.source||""; renderAll(); setStatus(""); srcBadge(state.source); loadLib(); loadRecipes().then(renderAll); })
+    .then(function(d){ if(!d||!d.manifest) throw new Error(d&&d.error||"no manifest"); state.manifest=d.manifest; state.source=d.source||""; renderAll(); setStatus(""); srcBadge(state.source);
+      // 9E: surface a verdict left over from an earlier session — a failed play-test
+      // must not go unnoticed just because the tab was closed. Keep watching a pending one.
+      qaHide(); QA.tries=0; qaFetch().then(function(r){ if(r && r.qa && r.qa.status==="pending") qaPoll(); });
+      loadLib(); loadRecipes().then(renderAll); })
     .catch(function(err){ setStatus("Could not load: "+(err.message||err), true); });
 }
 function reload(){ if(state.dirty && !confirm("Discard unsaved changes and reload?")) return; state.dirty=false; load(); }
@@ -347,7 +377,7 @@ function renderAll(){
   var m=state.manifest;
   document.getElementById("gname").textContent=(m.name||state.game)+" — Editor";
   document.getElementById("dot").style.background=m.color||"var(--accent)";
-  document.getElementById("banner").textContent="Save runs the built-in checks (structure + every rule the game loader enforces) before it goes live. The full play-test robot (test-plays every level) is the next step in this phase.";
+  document.getElementById("banner").textContent="Save runs the built-in checks (structure + every rule the game loader enforces) and goes live straight away. The play-test robot then plays every level in the background and tells you here — if it finds a level nobody can finish, you can put the old version back in one click.";
   renderSlots();
   var levelBased = !state.board && Array.isArray(m.levels) && m.levels.length;
   document.getElementById("levelsLabel").style.display = levelBased?"":"none";
@@ -1019,6 +1049,131 @@ function addLevel(){
 function testLevel(lv){ if(state.dirty){ if(!confirm("Save first so Test plays your latest change? (Cancel = test the last saved version)")){ openTest(lv); return; } save(function(){ openTest(lv); }); return; } openTest(lv); }
 function openTest(lv){ window.open("/"+state.game+"/play/"+encodeURIComponent(lv.id), "_blank"); }
 
+/* ---------- Session 9E: the play-test robot ----------
+   Save publishes straight away — you never wait on a robot. A moment later the robot
+   plays every level of what just went live and the answer lands here. If a level turns
+   out to be impossible (the usual cause: a difficulty pushed too far), this panel says
+   so and Put it back restores the previous version in one click. */
+var QA = { timer:null, tries:0, game:null };
+var QA_POLL_MS = 5000, QA_MAX_TRIES = 150;   // give up watching after ~12 minutes
+
+var QA_TITLES = {
+  pending:    "Play-testing your change…",
+  pass:       "Play-tested — every level is still beatable",
+  fail:       "A level could not be finished",
+  error:      "The robot could not finish its check",
+  "no-robot": "Not play-tested",
+  "not-queued": "Not play-tested",
+  reverted:   "Put back"
+};
+// Which colour band each status gets. Anything that is not a clean pass or a clear
+// failure is "idle" — neutral, because it means nobody checked, not that it is fine.
+var QA_TONE = { pending:"pending", pass:"pass", fail:"fail", error:"fail",
+                "no-robot":"idle", "not-queued":"idle", reverted:"idle" };
+
+function qaStop(){ if(QA.timer){ clearTimeout(QA.timer); QA.timer=null; } }
+function qaHide(){ qaStop(); var p=document.getElementById("qa"); if(p) p.className="qa"; }
+
+function qaRender(qa, revert){
+  var p=document.getElementById("qa"); if(!p) return;
+  if(!qa || !qa.status){ p.className="qa"; return; }
+  var tone=QA_TONE[qa.status]||"idle";
+  p.className="qa show "+tone;
+  document.getElementById("qaTitle").textContent = QA_TITLES[qa.status] || "Play-test";
+  document.getElementById("qaSummary").textContent = qa.summary || "";
+
+  var list=document.getElementById("qaList"); list.innerHTML="";
+  var fails=(qa.failures||[]).slice(0,12);
+  list.style.display = fails.length ? "" : "none";
+  fails.forEach(function(f){ list.appendChild(el("li",{},[f])); });
+
+  var acts=document.getElementById("qaActs"); acts.innerHTML="";
+  var canRevert = revert && revert.available && qa.status!=="pending";
+  if(canRevert && (qa.status==="fail" || qa.status==="error")){
+    acts.appendChild(el("button",{class:"btn danger sm", onclick:qaRevert},["Put it back"]));
+  }
+  if(qa.status!=="pending" && qa.hasRobot!==false){
+    acts.appendChild(el("button",{class:"btn ghost sm", onclick:qaRecheck},["Check it again"]));
+  }
+  if(canRevert && qa.status!=="fail" && qa.status!=="error"){
+    acts.appendChild(el("button",{class:"btn ghost sm", onclick:qaRevert},["Undo this save"]));
+  }
+  if(revert && revert.available && revert.to){
+    acts.appendChild(el("span",{class:"qlink",style:"text-decoration:none"},["Goes back to "+revert.to+"."]));
+  }
+  if(qa.runUrl){ acts.appendChild(el("a",{class:"qlink",href:qa.runUrl,target:"_blank",rel:"noopener"},["See the robot's full run"])); }
+}
+
+// Ask the site how the play-test went. Resolves to null when we could not ask.
+function qaFetch(){
+  var game=state.game;
+  return ensureToken().then(function(token){
+    if(!token) return null;
+    return fetch("/api/manifest-qa?game="+encodeURIComponent(game)+"&v="+Date.now(),
+      { headers:{ "Authorization":"Bearer "+token } })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d || !d.ok || game!==state.game) return null;   // game switched under us
+        qaRender(d.qa, d.revert);
+        return d;
+      });
+  }).catch(function(){ return null; });
+}
+
+// Watch a pending run until it settles. Stops on its own; never spins forever.
+function qaPoll(){
+  qaStop();
+  QA.timer=setTimeout(function(){
+    QA.timer=null;
+    qaFetch().then(function(d){
+      if(!d || !d.qa) return;
+      if(d.qa.status==="pending"){
+        QA.tries++;
+        if(QA.tries<QA_MAX_TRIES) qaPoll();
+        else qaRender({ status:"error", hasRobot:true,
+          summary:"The robot has been going for a while with no answer. Open the run to see where it got to, or check it again." , runUrl:d.qa.runUrl }, d.revert);
+      }
+    });
+  }, QA_POLL_MS);
+}
+
+function qaWatch(qa){ QA.tries=0; qaRender(qa, null); if(qa && qa.status==="pending") qaPoll(); else qaFetch(); }
+
+function qaRevert(){
+  if(!confirm("Put the previous version back and make it live now?")) return;
+  qaStop();
+  setStatus("Putting it back…");
+  ensureToken().then(function(token){
+    if(!token){ setStatus("Please sign in.", true); return; }
+    return fetch("/api/manifest-qa",{ method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+      body:JSON.stringify({ action:"revert", game:state.game }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d || !d.ok){ setStatus("Could not put it back: "+((d&&d.error)||"unknown"), true); return; }
+        qaRender(d.qa, d.revert);
+        state.dirty=false;
+        setStatus("Put back — live now.");
+        load();                                   // reload so the editor shows what is live
+      });
+  }).catch(function(err){ setStatus("Could not put it back: "+(err.message||err), true); });
+}
+
+function qaRecheck(){
+  qaStop();
+  ensureToken().then(function(token){
+    if(!token){ setStatus("Please sign in.", true); return; }
+    return fetch("/api/manifest-qa",{ method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+      body:JSON.stringify({ action:"recheck", game:state.game }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d || !d.ok){ setStatus("Could not start the robot: "+((d&&d.error)||"unknown"), true); return; }
+        qaWatch(d.qa);
+      });
+  }).catch(function(err){ setStatus("Could not start the robot: "+(err.message||err), true); });
+}
+
 /* ---------- save ---------- */
 function ensureInvariants(){
   var L=state.manifest.levels; if(!Array.isArray(L)) return;
@@ -1039,7 +1194,7 @@ function save(after){
     if(!token){ btn.disabled=false; setStatus("Please sign in to save.", true); gateShow("Sign in to your Buildable account to save.", "Go to sign in", goSignIn); return; }
     return doPost(token, false).then(function(res){
       if(!res) return; btn.disabled=false; var d=res.d||{};
-      if(d.ok){ state.dirty=false; state.source="override"; srcBadge("override"); setStatus("Saved — live now."); if(typeof after==="function") after(); }
+      if(d.ok){ state.dirty=false; state.source="override"; srcBadge("override"); setStatus("Saved — live now."); qaWatch(d.qa); if(typeof after==="function") after(); }
       else { setStatus("Save failed: "+((d.errors&&d.errors.join("; "))||d.error||d.detail||"unknown"), true); }
     });
   }).catch(function(err){ btn.disabled=false; setStatus("Save failed: "+(err.message||err), true); });

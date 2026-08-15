@@ -1,0 +1,71 @@
+# Session 9E — the editor's async QA gate.
+#
+# Saving in the game editor publishes immediately (that stays true — the owner should
+# never wait on a robot). A moment later this Action play-tests what he just published
+# and tells the editor whether every level is still beatable. If it is not, the editor
+# shows a red banner with a one-click "Put it back", and GitHub's own failure email
+# lands in the owner's inbox.
+#
+# Three ways in:
+#   1. repository_dispatch  — fired by /api/manifest.js the instant a save goes live.
+#   2. workflow_dispatch    — run it by hand from the Actions tab for one game or all.
+#   3. schedule             — a nightly sweep of every game that has an editor save,
+#                             so a change is never left un-play-tested just because the
+#                             dispatch did not fire.
+#
+# Setup the owner does once (see SESSION-LOG.md for the plain-language version):
+#   - repo secret   QA_REPORT_SECRET  — any long random string; the same value goes in
+#                                       Vercel so the site trusts this Action's verdict.
+#   - repo variable QA_SITE_URL       — optional; defaults to the live site.
+
+name: Editor QA gate
+
+on:
+  repository_dispatch:
+    types: [editor-qa]
+  workflow_dispatch:
+    inputs:
+      game:
+        description: 'Game id to play-test (leave blank to sweep every edited game)'
+        required: false
+        default: ''
+  schedule:
+    # 03:20 UTC nightly — quiet hours, and well clear of the existing Vercel crons.
+    - cron: '20 3 * * *'
+
+# Two saves in a row should not race each other onto the same game.
+concurrency:
+  group: editor-qa-${{ github.event.client_payload.game || inputs.game || 'sweep' }}
+  cancel-in-progress: false
+
+jobs:
+  play-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Play-test the live manifest
+        env:
+          QA_SITE_URL: ${{ vars.QA_SITE_URL || 'https://buildablekids.com' }}
+          QA_REPORT_SECRET: ${{ secrets.QA_REPORT_SECRET }}
+          QA_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GAME: ${{ github.event.client_payload.game || inputs.game }}
+          SAVE_ID: ${{ github.event.client_payload.saveId }}
+        run: |
+          set -o pipefail
+          if [ -n "$GAME" ]; then
+            if [ -n "$SAVE_ID" ]; then
+              node scripts/editor-qa-run.mjs --game "$GAME" --save-id "$SAVE_ID"
+            else
+              node scripts/editor-qa-run.mjs --game "$GAME"
+            fi
+          else
+            node scripts/editor-qa-run.mjs --all
+          fi
