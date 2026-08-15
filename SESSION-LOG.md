@@ -1,5 +1,31 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (ninth pass): a killed lane used to take its phase with it
+
+Mike: *"why did nv section stop?"* Lane 2 had taken NV and was mid-way through NV2. He then
+toggled the background lanes off and on to raise the lane count from 2 to 4. That killed the
+NV2 session outright. On restart `repo-sync.sh` did its job and tidied the folder for a clean
+start, which stashed NV2's half-finished work — and the NV phase, already claimed and
+therefore no longer in the queue, was simply gone. The lane picked up SD instead and NV
+looked like it had silently stopped.
+
+**Two ways a phase now comes back:**
+
+- `planner_release(lane)` — a lane calls it as it starts and hands back anything it was still
+  holding from a previous life.
+- `planner_claim(lane)` — before handing out work, sweeps any lane that has not checked in
+  for **10 minutes** and requeues its phase, so a lane that dies and never returns does not
+  strand one either. Ten minutes is comfortably longer than the 60s check-in, so a slow card
+  is never mistaken for a dead lane.
+
+Requeued phases go to the **front** of the queue (negative id), because a phase that is
+already part-built should be finished before new work starts. Both guard against
+double-queueing by checking the phase is not already waiting.
+
+**For the record, the other two stops were correct.** FL14 and RP6 both came back as
+`review`, not `done`, so their lanes stopped on purpose and left the cards for Mike. That is
+the gate working, not a failure.
+
 ## 2026-08-15 (RP6 second pass): Mauna Loa was too wide
 
 The first RP6 pass (commit 62d2929) fixed six factual errors across five books. A fresh

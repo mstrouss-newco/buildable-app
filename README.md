@@ -6,6 +6,14 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## A killed lane no longer loses its phase (August 15 2026)
+`api/planner.js`, `scripts/autopilot.mjs`, db migration `planner_lane_recovery`.
+Switching the background lanes off and on killed a lane mid-card, and its claimed phase — no
+longer in the queue — vanished. Now `planner_release(lane)` hands back whatever a lane still
+holds when it starts, and `planner_claim()` sweeps lanes silent for 10 minutes and requeues
+them. Requeued phases go to the FRONT, since part-built work should finish before new work
+starts.
+
 ## RP6 second-pass fact-check: Mauna Loa (August 15 2026)
 `public/explore/volcanoes.json`.
 Independent second-pass audit of every Wow chart number and US-unit conversion
