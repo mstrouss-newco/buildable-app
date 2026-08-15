@@ -74,4 +74,4 @@ Done when: a level's bricks can be changed and difficulty set to 4 with zero cod
 ---
 
 ## Punch List (refinements — add freely, clear in surgical sessions)
-- (add items as testing surfaces them)
+- **Kidspedia exhibit art is PNG at generation size** (surfaced in RP8). `image_cache` holds 21MB of exhibit scene art across 11 files and 8.5MB of creature art across 46 — photographic backdrops stored as PNG at ~1024px+, while creatures are drawn 56-165px tall. RP8's lazy loading fixed *when* the bytes arrive; this is *how many*. Re-encoding to WebP at display size is the biggest remaining Kidspedia load win, but it rewrites live art in the database, so it needs Mike's go-ahead and a replace-first check that the editor and every exhibit still resolve. Consider doing it in the serving layer (`/api/asset-studio`) rather than in place, so the stored original is never lost.

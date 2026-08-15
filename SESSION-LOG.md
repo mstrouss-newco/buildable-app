@@ -1,5 +1,81 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15: Session RP8 — the dive stops sliding sideways, and stops asking for 22MB
+
+**Phase RP, session RP8.** Mike reported that on a phone, Journey to the Deep
+scrolls sideways off the screen and takes a long time to open. Both were real,
+both were measured, both are fixed. `qa-dive.mjs` green (four new checks),
+`qa-kidspedia.mjs`, `qa-topic.mjs` and `qa-explore.mjs` green.
+
+### The sideways scroll: `left` meant the wrong edge
+Creature art is sized by **height** and keeps its own aspect ratio, while `left`
+was being read as the box's **left edge**. So a wide animal grew rightwards, off
+the screen. The reef shark is 999x360 and is drawn at `artH` 145 — 400px across
+on a 390px phone, anchored at 60%. Measured in headless Chromium at 390x844
+against the real asset dimensions:
+
+| | before | after |
+|---|---|---|
+| document scrollWidth | **635px** (390px screen) | 390px |
+| creatures hanging off the edge | **7** | 0 |
+
+The seven were reefshark, dolphin, bluetang, moray, seastar, barreleye, ventcrab.
+
+Three rules fix it. `left` is now the creature's **centre**, which is what the
+placement rules always meant by "spread evenly across the width". Art is never
+drawn wider than the world, and shrinks **by height** so the aspect ratio is
+never touched — a squashed shark is worse than a small one. And each creature's
+centre is clamped so neither side can pass the gutter, re-run on rotate. Behind
+all three, `html,body{overflow-x:hidden}` so a future wide asset can never be
+*felt* even if it slips past the geometry.
+
+Checked at 320, 390, 430 and 768px: locked at every one, nothing off screen, and
+a creature that already fitted is never moved.
+
+### The load: everything, at full size, before the surface was usable
+The descent is seven zones and ~10,500px tall; a phone shows one screen of it.
+The page was requesting **all** of it on first paint — 37 pictures, each one a
+serverless invocation that reads a base64 PNG out of `image_cache`:
+
+- 7 zone backdrops — **16.3MB** (reef 3.1MB, sky 2.6MB, abyss 2.4MB…)
+- 30 creatures — **5.9MB**
+- **22.2MB total, before a kid saw the surface.**
+
+Each picture now loads when the diver comes within about a screen of it.
+**First paint asks for 5 pictures instead of 37**; the full descent still ends
+up with all 37. No `IntersectionObserver` (old browser, QA sandbox) means load
+everything exactly as before — the change can only ever make the page lighter.
+
+### Still slow, and NOT fixed here — the art is PNG
+Lazy loading fixes *when* the bytes arrive, not how many there are. Scrolling
+into a zone still pulls a 2-3MB PNG. Across all Kidspedia exhibit art in
+`image_cache`: **21MB of scene art in 11 files**, 8.5MB of creature art in 46.
+These are photographic backdrops stored as PNG, which is roughly 5-10x what the
+same picture costs as WebP, and they are stored at generation size (~1024px+)
+while creatures are drawn 56-165px tall.
+
+Re-encoding them is the single biggest remaining win, but it **rewrites live art
+in the database**, so it is Mike's call, not this session's. Left as a punch-list
+item with the numbers attached.
+
+Also noted, not changed: a depth-gauge jump smooth-scrolls through every zone
+between here and there, so those zones load on the way past. No worse than the
+old behaviour, and only on an explicit jump.
+
+### The sweep: every Kidspedia surface, not just the one reported
+All 24 at 390x844 — the bookshelf, all four exhibit templates (dive, Weather
+Lab, orbit, topic) and all 20 books. **Every one locked to 390px.** Only the
+dive was ever broken; `orbit-explorer.html` already had the guard, and
+`topic.html` already lazy-loads its photos as static WebP with immutable cache
+headers, which is why the books were never the complaint.
+
+### Scope note
+RP8 was only the scroll and the load. The phase's "done when" (all 20 books
+live, fact-checked, flipped by Mike) still needs **RP6** (fact-check + flip) and
+**RP7** (narration audio); six books are still `in-review` and the RP5 art pack
+has not fully landed — `qa-topic.mjs` still warns that 6 books are rendering
+painted fallbacks.
+
 ## 2026-08-04: Session RP5 — the last twelve books become richer pages
 
 **Phase RP, session RP5.** Sharks, Dinosaurs, The Moon, Big Cats, Penguins,
