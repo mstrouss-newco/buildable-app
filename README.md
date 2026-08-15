@@ -6,6 +6,21 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Sky Flyer: the puffin's fish look like fish, not blocks (August 15 2026)
+`public/skyflyer-engine.html`, `qa-skyflyer.mjs`. In the puffin bird-transform
+quest the fish a kid caught and carried home read as plain cubes from the air —
+a placeholder that had never been replaced. They are now the AR1Q hand-built
+fish (the same model that arcs out of the island lagoons), sized up for
+spotability, silvery-blue against the puffin's red belly, and wiggling in the
+beak (a small y-sway + z-roll, staggered per fish) so a kid can see they are
+alive. FL5b law respected: the shape comes from `cargo:{carry:"fish"}` in the
+recipe, not from anything in the drawing code that knows this is the puffin
+quest — adding a fish carriable to another quest costs one recipe field.
+`buildCargo` widened from `(color, n)` to `(cargo, n)` and dispatches on
+`cargo.carry`; a new `cargoFishMat` overrides the shared HB material with a
+shiny silvery-blue phong so the specular highlight travels across each fish as
+the bird banks. FL13's jumping-fish reaction can reuse the same model.
+
 ## Sky Flyer: finishing a quest just puts you back in the sky (August 15 2026)
 `public/skyflyer-engine.html`, `qa-skyflyer.mjs`. Finishing a side quest used to
 pop a modal with two buttons — Do it again and Keep flying — and asking a small

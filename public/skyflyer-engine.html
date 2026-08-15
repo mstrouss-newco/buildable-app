@@ -570,7 +570,11 @@ var MISSIONS=[
 
   { id:"puffin-parent", world:"sunny-islands", name:"Puffin Parent", transform:"puffin",
     blurb:"Be a puffin with chicks to feed. Dip down to the water to catch fish, then fly them up to the nest.",
-    cargo:{name:"fish",plural:"fish",color:0xBFE9F5}, capacity:4,
+    // FL11: `carry` names the SHAPE of what is in your hands, exactly like `style`
+    // names the shape of a place. buildCargo dispatches on it; nothing anywhere
+    // checks the quest id. The fish model is the AR1Q hand-built one already used
+    // by the island lagoons — one fish, both places.
+    cargo:{name:"fish",plural:"fish",color:0xBFE9F5,carry:"fish"}, capacity:4,
     gather:true, depot:null,
     dropAt:{x:430,z:-120,label:"The Cliff Nest"}, dropStyle:"nest",
     targets:[{x:600,z:-60,label:"Fish near the rocks"},{x:640,z:-230,label:"Fish out deep"},
@@ -4525,14 +4529,71 @@ function styleBody(style){
   if(style==="thermal")   return buildThermal();     // {group,glow}
   return buildHouse();
 }
-// what YOU look like on a job: the cargo rides under you, and you can see it go
-function buildCargo(col,n){
+// what YOU look like on a job: the cargo rides under you, and you can see it go.
+// FL11: the SHAPE comes from cargo.carry (a style name), NEVER the quest id — the
+// same FL5b law that keeps every drawing above from checking which job it is. Any
+// cargo that names a carry shape gets a real body; anything else still gets the
+// old parcel box. Fish reuse the AR1Q hand-built fish so the island lagoons and
+// the bird carrying them home show the same animal.
+var CARGO_FISH_MAT_CACHE={};
+function cargoFishMat(hex){
+  if(CARGO_FISH_MAT_CACHE[hex]) return CARGO_FISH_MAT_CACHE[hex];
+  // A silvery-blue that reads against a bright body and stays visible at 30
+  // units up. Shine well above HB_MAT's 22 so a kid sees the specular highlight
+  // travel across each fish as the bird banks — that is the "alive" signal from
+  // the air.
+  var m=new THREE.MeshPhongMaterial({
+    color:hex, specular:0xFFFFFF, shininess:110,
+    emissive:hex, emissiveIntensity:0.18
+  });
+  CARGO_FISH_MAT_CACHE[hex]=m; return m;
+}
+function buildCargoFishOne(hex){
+  var wrap=hbGet("fish");
+  if(!wrap) return null;
+  var mat=cargoFishMat(hex);
+  wrap.traverse(function(o){ if(o&&o.isMesh) o.material=mat; });
+  return wrap;
+}
+function buildCargo(cargo,n){
   var g=new THREE.Group();
-  var mat=new THREE.MeshPhongMaterial({color:col,flatShading:true,shininess:14});
-  for(var i=0;i<n;i++){
-    var b=new THREE.Mesh(new THREE.BoxGeometry(2.1,1.3,2.7),mat);
-    b.position.set((i-(n-1)/2)*2.6,-3.4,2.6); b.rotation.x=0.12; g.add(b);
+  var col=(cargo&&cargo.color!=null)?cargo.color:0xFFF6E3;
+  var carry=cargo&&cargo.carry||null;
+  var carries=[], i;
+  if(carry==="fish"){
+    for(i=0;i<n;i++){
+      var f=buildCargoFishOne(col);
+      // fallback: if the hand-built kit has not baked yet, drop a coloured box
+      // so a kid still sees something rather than nothing at all
+      if(!f){
+        var mat=new THREE.MeshPhongMaterial({color:col,flatShading:true,shininess:14});
+        f=new THREE.Mesh(new THREE.BoxGeometry(2.1,1.3,2.7),mat);
+      } else {
+        // scale up so a fish reads from a chase camera; the row runs CROSSWAYS
+        // (perpendicular to the flight direction), which is how a fish is
+        // carried in a beak in real life
+        f.scale.multiplyScalar(1.65);
+      }
+      var baseY=Math.PI/2;
+      f.rotation.y=baseY;
+      f.position.set((i-(n-1)/2)*2.35,-3.4,2.6);
+      g.add(f);
+      carries.push({obj:f, phase:i*1.15, baseY:baseY});
+    }
+  } else {
+    // the letter/pollen/seed carriables still come out as coloured boxes: FL11
+    // was scoped to the fish and this is the "left alone" branch, not the "gone"
+    // branch. A future card can hand any of them a shape name and it will drop
+    // through the same gate above.
+    var mat2=new THREE.MeshPhongMaterial({color:col,flatShading:true,shininess:14});
+    for(i=0;i<n;i++){
+      var b=new THREE.Mesh(new THREE.BoxGeometry(2.1,1.3,2.7),mat2);
+      b.position.set((i-(n-1)/2)*2.6,-3.4,2.6); b.rotation.x=0.12; g.add(b);
+      carries.push({obj:b, phase:i*1.15, baseY:0});
+    }
   }
+  g.userData.carries=carries;
+  g.userData.wiggle=(carry==="fish");
   return g;
 }
 
@@ -4577,7 +4638,7 @@ function startJob(m){
     jobDrop={group:dr,mk:dmk};
   }
   scene.add(jobGroup);
-  if(m.capacity>0){ cargoGroup=buildCargo(m.cargo.color,m.capacity); cargoGroup.visible=false; plane.add(cargoGroup); }
+  if(m.capacity>0){ cargoGroup=buildCargo(m.cargo,m.capacity); cargoGroup.visible=false; plane.add(cargoGroup); }
   // FL6: and now you ARE the thing. Done after the cargo is hung on the plane,
   // so what you are carrying rides along on the creature instead of vanishing
   // with the ride.
@@ -5608,9 +5669,23 @@ function stepSim(dt){
   collectCoins(starter.coins,null);
   for(var key in chunks) collectCoins(chunks[key].coins,chunks[key].group);
   jobStep(dt);
+  wiggleCargo();
   scoutStep();
   hudSlow(dt);
   warmerStep(dt);
+}
+// FL11: what is in your beak is alive. Wag every carried thing that asked for it
+// when buildCargo made it — a small y-sway (the tail sweep) and a small z-roll
+// (the flop of a fish held sideways). Wave is staggered per fish so the row
+// ripples, not shudders. Boxes never wiggle, because they never asked.
+function wiggleCargo(){
+  if(!cargoGroup||!cargoGroup.userData||!cargoGroup.userData.wiggle) return;
+  var cs=cargoGroup.userData.carries; if(!cs) return;
+  for(var i=0;i<cs.length;i++){
+    var c=cs[i];
+    c.obj.rotation.y=c.baseY + Math.sin(time*5.0 + c.phase)*0.28;
+    c.obj.rotation.z=Math.cos(time*4.6 + c.phase)*0.12;
+  }
 }
 
 // ---------- draw ----------

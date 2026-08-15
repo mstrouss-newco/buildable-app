@@ -402,6 +402,42 @@ chk('THE SPACING RULE is a number in the engine, not a good intention in a comme
   /marker\(built,scoutColor\(m\),220,hasBadge\(m\.id\)\)/.test(html));
 
 // ---------------------------------------------------------------------------
+//  FL11 — the puffin's fish look like fish, not cubes
+// ---------------------------------------------------------------------------
+console.log('--- FL11: what a puffin carries is a fish ---');
+// The recipe names the SHAPE, not a piece of drawing code — same law as `style`
+// picks a target body. That means a future card can hand any cargo a shape and
+// buildCargo will draw it without touching the engine.
+chk('the puffin quest cargo names a carry SHAPE the engine can look up',
+  /cargo:\{name:"fish",plural:"fish",color:0xBFE9F5,carry:"fish"\}/.test(html));
+chk('buildCargo dispatches on cargo.carry (not on which quest this is)',
+  (function(){ const bc = html.slice(html.indexOf('function buildCargo('), html.indexOf('function paletteSnapshot('));
+    return /var carry=cargo&&cargo\.carry/.test(bc) &&
+           /if\(carry==="fish"\)/.test(bc) &&
+           // FL5b: no drawing anywhere may know a quest by name
+           !new RegExp('(' + QUEST_IDS.join('|') + ')').test(bc); })());
+chk('the AR1Q hand-built fish is what a puffin carries — one fish, both places',
+  /function buildCargoFishOne\(hex\)\{[\s\S]*?hbGet\("fish"\)/.test(html) &&
+  /f=buildCargoFishOne\(col\)/.test(html));
+chk('the cargo fish has its OWN shiny material so a kid can spot it from the air',
+  /function cargoFishMat\(hex\)/.test(html) &&
+  /shininess:110/.test(html) && /specular:0xFFFFFF/.test(html) &&
+  /emissive:hex/.test(html));
+chk('what is in your beak is ALIVE: a tail-wiggle runs every sim step',
+  /function wiggleCargo\(\)/.test(html) &&
+  /wiggleCargo\(\);/.test(html.slice(html.indexOf('function stepSim'), html.indexOf('function wiggleCargo'))) &&
+  /cargoGroup\.userData\.wiggle/.test(html) &&
+  /rotation\.y=c\.baseY \+ Math\.sin\(time\*5\.0/.test(html));
+chk('boxes NEVER wiggle — only what asked for it in buildCargo does',
+  (function(){ const w = html.slice(html.indexOf('function wiggleCargo(){'), html.indexOf('function wiggleCargo(')+400);
+    return /!cargoGroup\.userData\.wiggle/.test(w); })());
+chk('buildCargo is CALLED with the full cargo recipe, not just a colour',
+  /cargoGroup=buildCargo\(m\.cargo,m\.capacity\)/.test(html));
+chk('the fallback for an unknown carry is the old coloured box (nothing regressed)',
+  (function(){ const bc = html.slice(html.indexOf('function buildCargo('), html.indexOf('function paletteSnapshot('));
+    return /new THREE\.BoxGeometry\(2\.1,1\.3,2\.7\)/.test(bc); })());
+
+// ---------------------------------------------------------------------------
 //  FL7 STATIC — three harder bodies, three new places, and the flock
 // ---------------------------------------------------------------------------
 console.log('--- FL7: the harder transforms (goose, owl, eagle) ---');

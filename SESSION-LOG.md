@@ -1,5 +1,41 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (FL11): the puffin's fish look like fish, not blocks
+
+Sky Flyer: in the puffin bird-transform quest the fish a kid carried in the beak
+read as plain cubes from the air — a placeholder that had never been replaced.
+They are now the AR1Q hand-built fish (the same model that arcs out of the
+island lagoons), sized up for spotability, silvery-blue against the puffin's
+red belly, shiny (specular:110, mild emissive so the highlight moves as the
+bird banks), and wiggling in the beak so a kid can see they are alive.
+
+Files: `public/skyflyer-engine.html`, `qa-skyflyer.mjs`.
+
+- **Recipe drives shape (FL5b law).** The puffin quest's cargo now names
+  `carry:"fish"` — a style name the engine dispatches on, exactly like a
+  target's `style:"fish"`. `buildCargo` was widened from `(color, n)` to
+  `(cargo, n)` and now switches on `cargo.carry`. Nothing in the drawing code
+  learned the word "puffin-parent"; adding a fish carriable to another quest
+  costs one recipe field.
+- **One fish, both places.** The cargo fish is a clone of `hbGet("fish")` (the
+  AR1Q hand-built model), so the fish leaping out of a lagoon and the fish
+  being carried home are the SAME animal. FL13's jumping-fish reaction can
+  reuse this without a second model.
+- **A fish is alive in the beak.** New `wiggleCargo()` runs every sim step —
+  a small y-sway (the tail sweep) and a small z-roll (the flop of a fish held
+  sideways), staggered per-fish so the row ripples rather than shudders. Only
+  cargo that asked for it (`cargoGroup.userData.wiggle`) moves; boxes never do.
+- **Shine so it reads from the air.** New `cargoFishMat` overrides the shared
+  HB vertex-colour material with a shiny silvery-blue phong (shininess 110,
+  emissive at 0.18) — bright enough that a kid sees the highlight travel as
+  the puffin banks.
+- **Everything else in the quest checked** for placeholder cubes: fish is the
+  only carriable. The pollen/seed/letter fallback branch of `buildCargo` is
+  untouched — a future card can hand any of them a `carry` name and it drops
+  through the same gate.
+- **QA** — added 8 FL11 checks to `qa-skyflyer.mjs`. All 524 checks pass with
+  `jsdom` installed.
+
 ## 2026-08-15 (FL10 rerun): finishing a quest just puts you back in the sky
 
 Sky Flyer: finishing a side quest used to pop a modal with two buttons — **Do it
