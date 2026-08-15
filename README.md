@@ -382,6 +382,23 @@ self-damages before the kid shoots, and that blocks really smash in play (11 of
 green; `qa-skyflyer.mjs` fails in this container for a pre-existing reason
 (jsdom not installed), unchanged by this work.
 
+## 7M — chess: the two armies stop looking identical (August 15 2026)
+`public/buildable-chess.html`, `api/images.js`, `qa-chess.mjs`.
+The pieces were impossible to tell apart because the art is generated once per
+piece TYPE and both sides loaded the same URL — two identical armies, separated
+only by a faint blurred glow. `/api/images?kind=chesspiece` now takes `&side=`
+and paints the whole piece in that side's colour, and the engine asks for its
+own picture per side. Regardless of what art loads, every piece also carries a
+solid team pad under its feet and a thick sticker outline in its colour, plus a
+white halo so it lifts off busy world art. Teams are blue vs orange (was purple
+vs coral, which sat on the candy and castle boards and is the first pair
+colour-blind kids lose), and the game names them out loud: "You are Blue",
+"Riley's turn (Orange)". Also fixed while screenshotting at 390px: the Pause
+button was already sliding off the card edge on a phone; the HUD row wraps now.
+`qa-chess.mjs` gained five checks that keep the sides distinguishable — all 20
+pass. Old cached art rows are untouched; a miss falls back to the drawn heroes,
+which are themselves blue and orange.
+
 ## LP2 — Croc Tot and Math Cannon level cards show the level (August 4 2026)
 `public/buildable-levelthumb.js`, `public/croctot.html`, `public/mathcannon-engine.html`.
 Two new painters in the one shared level-thumb helper: `snacks` (stage sky and

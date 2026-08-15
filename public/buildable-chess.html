@@ -20,6 +20,10 @@
   --ink:#0F0E17; --purple:#7C5CFC; --purple2:#A78BFF; --coral:#FF6B6B; --coral2:#FF9898;
   --cream:#FDFAF5; --mint:#00C48C; --gold:#F59E0B;
   --light:#E8DCC8; --dark:#B59B73; --pageA:#1a1830; --pageB:#0F0E17;
+  /* The two sides (Session 7M). Blue vs orange is the pair that stays telling-apart-able
+     for colour-blind kids AND in greyscale, and neither one blends into any of the six
+     boards the way the old purple-vs-coral did on the candy and castle worlds. */
+  --teamA:#2E7BFF; --teamA-edge:#12439E; --teamB:#FF8A1F; --teamB-edge:#B34A05;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -83,11 +87,14 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 .switch.on i{left:27px}
 
 /* HUD */
-.hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+/* The pill can carry a long name plus a colour word, so on a narrow phone the buttons
+   drop to their own row instead of being pushed off the card (the Pause button was
+   already sliding off the right edge at 390px before the pill grew). */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .turn-pill{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
-  border-radius:100px;padding:8px 16px 8px 8px;font-weight:700;font-size:15px}
-.turn-pill .dot{width:26px;height:26px;border-radius:50%;box-shadow:0 0 12px currentColor}
-.hud-btns{display:flex;gap:8px}
+  border-radius:100px;padding:8px 16px 8px 8px;font-weight:700;font-size:15px;flex:1 1 200px;min-width:0}
+.turn-pill .dot{width:26px;height:26px;border-radius:50%;border:2px solid rgba(0,0,0,.25);box-shadow:0 0 12px currentColor,inset 0 0 0 2px rgba(255,255,255,.55)}
+.hud-btns{display:flex;gap:8px;flex:0 0 auto;margin-left:auto}
 .iconbtn{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
   cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,transform .12s}
 .iconbtn:hover{background:rgba(255,255,255,.13)}.iconbtn:active{transform:scale(.92)}
@@ -115,13 +122,28 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 
 .piece{position:absolute;width:12.5%;height:12.5%;cursor:pointer;pointer-events:auto;transition:left .28s cubic-bezier(.34,1.4,.5,1),top .28s cubic-bezier(.34,1.4,.5,1);
   display:flex;align-items:center;justify-content:center;will-change:left,top}
-.piece svg{width:84%;height:84%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.32));transform-origin:50% 82%;animation:bob 3s ease-in-out infinite}
+/* Every piece carries its side's colour: --team paints the base pad and the sticker
+   outline, so a kid can tell the armies apart at a glance on any of the six boards. */
+.piece.team-w{--team:var(--teamA);--team-edge:var(--teamA-edge)}
+.piece.team-b{--team:var(--teamB);--team-edge:var(--teamB-edge)}
+/* A white halo before the soft ground shadow: it lifts a piece off busy world art
+   (blue on the space board, orange on the desert board) without changing its colours. */
+.piece svg{width:84%;height:84%;filter:drop-shadow(0 0 2.5px rgba(255,255,255,.95)) drop-shadow(0 4px 4px rgba(0,0,0,.32));transform-origin:50% 82%;animation:bob 3s ease-in-out infinite}
 .piece.lift svg{animation:none}
-.piece .pbase{position:absolute;left:16%;bottom:4%;width:68%;height:16%;border-radius:50%;z-index:0;filter:blur(1px)}
-.piece .pbase.tw{background:radial-gradient(ellipse at center,rgba(139,108,255,.95),rgba(139,108,255,0) 70%)}
-.piece .pbase.tb{background:radial-gradient(ellipse at center,rgba(255,122,107,.95),rgba(255,122,107,0) 70%)}
+/* The team pad the hero stands on. Solid, ringed in white, never blurred away. It is
+   for world art only — the drawn fallback pieces are team-coloured head to toe and
+   carry their own shadow, so the pad fades in with the artwork it belongs to. */
+.piece .pbase{position:absolute;left:15%;bottom:3%;width:70%;height:15%;border-radius:50%;z-index:0;opacity:0;transition:opacity .5s;
+  background:var(--team);border:2px solid rgba(255,255,255,.92);box-shadow:0 2px 7px rgba(0,0,0,.4),inset 0 -2px 4px var(--team-edge)}
+.piece.img-on .pbase{opacity:1}
 .piece .pfallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .4s;z-index:1}
-.piece img.paimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .5s;filter:drop-shadow(0 4px 4px rgba(0,0,0,.34));transform-origin:50% 82%;z-index:2}
+/* World art is drawn once per piece and shared by both armies, so the team colour has
+   to come from here: four flat drop-shadows trace the artwork's own silhouette into a
+   thick sticker outline in the side's colour, then the white halo and ground shadow. */
+.piece img.paimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .5s;
+  filter:drop-shadow(2px 0 0 var(--team)) drop-shadow(-2px 0 0 var(--team)) drop-shadow(0 2px 0 var(--team)) drop-shadow(0 -2px 0 var(--team))
+         drop-shadow(0 0 2.5px rgba(255,255,255,.95)) drop-shadow(0 4px 4px rgba(0,0,0,.34));
+  transform-origin:50% 82%;z-index:2}
 .piece.img-on img.paimg{opacity:1}
 .piece.img-on .pfallback{opacity:0}
 .piece.lift{transform:scale(1.14);z-index:6;filter:drop-shadow(0 8px 10px rgba(0,0,0,.4))}
@@ -299,7 +321,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     <!-- GAME -->
     <section class="screen" id="s-game">
       <div class="hud">
-        <div class="turn-pill"><span class="dot" id="turn-dot"></span><span id="turn-label">Purple's turn</span></div>
+        <div class="turn-pill"><span class="dot" id="turn-dot"></span><span id="turn-label">Blue's turn</span></div>
         <div class="hud-btns">
           <div class="iconbtn active" id="hint-btn" title="Show moves"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 4v2M12 18v2M4 12h2M18 12h2"/></svg></div>
           <div class="iconbtn active" id="sound-btn" title="Sound effects"><svg viewBox="0 0 24 24" fill="#fff"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8c1.5 1 1.5 7 0 8" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
@@ -334,7 +356,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
 <!-- Game over modal -->
 <div class="modal" id="over-modal"><div class="box">
-  <h2 id="over-title">Purple Wins!</h2><p id="over-sub">What a game!</p>
+  <h2 id="over-title">Blue Wins!</h2><p id="over-sub">What a game!</p>
   <div class="over-record" id="over-record"></div>
   <div class="btn-row">
     <button class="btn btn-primary" id="btn-rematch">Play Again</button>
@@ -481,10 +503,14 @@ function botMove(s,level){
 }
 
 /* ================= HERO ART (SVG) ================= */
+/* The two teams. `name` is what the game calls each side out loud, so the words on
+   screen always match the colour a kid is looking at. Keep these in step with the
+   --teamA / --teamB custom properties at the top of the file. */
 const TEAMS={
-  w:{main:'#8B6CFF',dark:'#5B3FD6',lite:'#B9A6FF'},
-  b:{main:'#FF7A6B',dark:'#D63E32',lite:'#FFB3A8'}
+  w:{name:'Blue',  main:'#2E7BFF',dark:'#12439E',lite:'#A9CBFF'},
+  b:{name:'Orange',main:'#FF8A1F',dark:'#B34A05',lite:'#FFC97F'}
 };
+const teamName=c=>TEAMS[c].name;
 const EYES='<circle cx="42" cy="50" r="5.5" fill="#fff"/><circle cx="58" cy="50" r="5.5" fill="#fff"/><circle cx="43" cy="51" r="2.6" fill="#2A2540"/><circle cx="59" cy="51" r="2.6" fill="#2A2540"/>';
 const SMILE='<path d="M44 60 Q50 66 56 60" stroke="#2A2540" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
 function eyesAt(y){return '<circle cx="43" cy="'+y+'" r="5" fill="#fff"/><circle cx="57" cy="'+y+'" r="5" fill="#fff"/><circle cx="44" cy="'+(y+1)+'" r="2.4" fill="#2A2540"/><circle cx="58" cy="'+(y+1)+'" r="2.4" fill="#2A2540"/>';}
@@ -762,13 +788,15 @@ function renderPieces(){
     const p=S.board[r][c];if(!p)continue;
     const d=disp(r,c);
     const el=document.createElement('div');
-    el.className='piece';el.style.left=pct(d.dc);el.style.top=pct(d.dr);
-    var _pc=null; try{ if(CHESS_PACK && CHESS_PACK.hasWorld && CHESS_PACK.hasWorld(sceneKey)){ var _pp=CHESS_PACK.piece('pieces', p.t, sceneKey); if(_pp && _pp.src) _pc=_pp.src; } }catch(e){}
+    el.className='piece team-'+p.c;   // team-w / team-b feed --team to the pad + outline
+    el.style.left=pct(d.dc);el.style.top=pct(d.dr);
+    // Drop-in library art may ship one image per side ("p_w"); fall back to the shared one.
+    var _pc=null; try{ if(CHESS_PACK && CHESS_PACK.hasWorld && CHESS_PACK.hasWorld(sceneKey)){ var _pp=CHESS_PACK.piece('pieces', p.t+'_'+p.c, sceneKey)||CHESS_PACK.piece('pieces', p.t, sceneKey); if(_pp && _pp.src) _pc=_pp.src; } }catch(e){}
     if(_pc || AIWORLDS[sceneKey]){
-      const url=_pc || ('/api/images?kind=chesspiece&world='+sceneKey+'&piece='+p.t);
-      el.innerHTML='<div class="pbase '+(p.c==='w'?'tw':'tb')+'"></div><div class="pfallback">'+withBadge(pieceSVG(p.t,p.c,sceneKey),p.t)+'</div><img class="paimg" alt="" onload="this.parentNode.classList.add(\'img-on\')" src="'+url+'">';
+      const url=_pc || ('/api/images?kind=chesspiece&world='+sceneKey+'&piece='+p.t+'&side='+p.c);
+      el.innerHTML='<div class="pbase"></div><div class="pfallback">'+withBadge(pieceSVG(p.t,p.c,sceneKey),p.t)+'</div><img class="paimg" alt="" onload="this.parentNode.classList.add(\'img-on\')" src="'+url+'">';
     } else {
-      el.innerHTML=withBadge(pieceSVG(p.t,p.c,sceneKey),p.t);
+      el.innerHTML=withBadge(pieceSVG(p.t,p.c,sceneKey),p.t);   // drawn hero: already team-coloured
     }
     if(aliveOn){const _v=ALIVE[Math.floor(Math.random()*ALIVE.length)];const _d=(2.6+Math.random()*2.2).toFixed(2)+'s ease-in-out '+(-Math.random()*3).toFixed(2)+'s infinite';el.querySelectorAll('svg,img.paimg').forEach(a=>a.style.animation=_v+' '+_d);}
     else{el.querySelectorAll('svg,img.paimg').forEach(a=>a.style.animation='none');}
@@ -806,12 +834,16 @@ function refresh(){clearHighlights();paintLast();paintCheck();paintHints();}
 function updateTurnUI(){
   const dot=document.getElementById('turn-dot');
   const isW=S.turn==='w';
-  dot.style.color=isW?'var(--purple)':'var(--coral)';
-  dot.style.background=isW?'#8B6CFF':'#FF7A6B';
+  const t=TEAMS[S.turn];
+  dot.style.color=t.main;              // the pill's glow follows the side to move
+  dot.style.background=t.main;
+  dot.style.borderColor=t.dark;
   let label;
   if(mode==='online')label=(S.turn===humanColor)?'Your turn':(oppName+' is thinking...');
   else if(mode==='solo')label=(S.turn===humanColor)?'Your turn':'Robot thinking...';
   else label=(isW?pName:pName2)+"'s turn";
+  // Two kids on one screen is where sides get muddled, so the pill says the colour too.
+  if(mode==='two')label+=' ('+t.name+')';
   document.getElementById('turn-label').textContent=label;
 }
 
@@ -1213,7 +1245,7 @@ function startGame(){
   document.getElementById('react-bar').classList.remove('on'); // reactions are online-only
   show('s-game');
   buildSquares();renderPieces();updateTurnUI();refresh();
-  setTip(mode==='two'?'Purple goes first. Tap a hero to begin!':'You are Purple. Tap a hero to begin!');
+  setTip(mode==='two'?(teamName('w')+' goes first. Tap a hero to begin!'):('You are '+teamName('w')+'. Tap a hero to begin!'));
 }
 
 /* in-game buttons */
@@ -1300,7 +1332,8 @@ function startOnlineGame(d){
   playWorldMusic(sceneKey);
   show('s-game');buildSquares();renderPieces();updateTurnUI();refresh();
   document.getElementById('react-bar').classList.add('on');buildReactionBar();setReactionReady(true);
-  setTip(S.turn===humanColor?'Your turn — tap a hero!':('Waiting for '+oppName+'...'));
+  // Online, the shell decides which side this kid gets, so say it out loud.
+  setTip('You are '+teamName(humanColor)+'. '+(S.turn===humanColor?'Your turn — tap a hero!':('Waiting for '+oppName+'...')));
 }
 window.addEventListener('message',function(e){
   const d=e.data||{};

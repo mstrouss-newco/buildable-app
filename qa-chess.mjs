@@ -72,6 +72,33 @@ for(const lvl of ['easy','medium','hard']){
   chk('tier "'+lvl+'" plays only legal moves to a natural end', !r.illegal && (r.over || r.cap), JSON.stringify(r));
 }
 
+// --- 5b) the two sides are clearly different colours (Session 7M) ---
+// The world art is drawn once per piece and shared by both armies, so the side's
+// colour has to come from the engine: a named team palette, a per-side art request,
+// and the CSS pad + outline that carry the colour onto whatever artwork loads.
+console.log('--- SIDES: telling the two armies apart ---');
+const teamBlock = (html.match(/const TEAMS=\{[\s\S]*?\};/)||[''])[0];
+const hexes = (teamBlock.match(/#[0-9A-Fa-f]{6}/g)||[]).map(h=>h.toLowerCase());
+const teamNames = (teamBlock.match(/name:'([A-Za-z]+)'/g)||[]).map(s=>s.slice(6,-1));
+chk('both teams declare a colour and a name kids can say', teamNames.length===2 && hexes.length>=6, teamNames.join(' vs '));
+function hueOf(hex){
+  const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+  if(!d) return 0;
+  let h = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4;
+  return (h*60+360)%360;
+}
+// main colours are the 1st hex of each team's { name, main, dark, lite } block
+const mains = [hexes[0], hexes[3]];
+const apart = Math.abs(((hueOf(mains[0])-hueOf(mains[1]))+540)%360-180);
+chk('the two team colours are far apart on the colour wheel (>=90 degrees)', apart>=90,
+    mains.join(' / ')+' -> '+Math.round(apart)+' degrees');
+chk('each side asks for its own piece art (&side=)', /kind=chesspiece[\s\S]{0,120}?&side='\+p\.c/.test(html));
+chk('the art API paints each side its own colour', /chesspiece\|\$\{world\}\|\$\{piece\}\|\$\{side\}/.test(read('api/images.js')));
+chk('pieces carry their side onto shared art (team class + pad + outline)',
+    /el\.className='piece team-'\+p\.c/.test(html) && /\.piece\.team-w\{--team:/.test(html) && /\.piece\.team-b\{--team:/.test(html)
+    && /drop-shadow\(2px 0 0 var\(--team\)\)/.test(html));
+
 // --- 6) shell contract wiring is present in the shipped engine file ---
 console.log('--- CONTRACT: manifest loader + multiplayer relay wired ---');
 chk('engine includes the shared manifest loader', /buildable-manifest\.js/.test(html) && /BuildableManifest\.load\('chess'/.test(html));
