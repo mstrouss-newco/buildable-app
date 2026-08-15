@@ -199,6 +199,7 @@
     <a href="/app" style="margin-left:auto;color:#8388b5;font-size:13px;text-decoration:none">Kids app &rarr;</a>
   </div>
   <div id="autorun-bar"></div>
+  <div id="reportModal"></div>
   <header>
     <div>
       <h1>Update Planner</h1>
@@ -914,12 +915,30 @@ async function rmRunPhase(num){
     alert(r.error||"Could not queue that phase.");
     return;
   }
-  rmAutorun=r.autorun; renderAutorun(); rmAutorunPoll(true);
+  rmAutorun=r.autorun; rmReports=rmReports; renderAutorun(); rmAutorunPoll();
+  if(r.queuedBehind) alert("A run is already going, so phase "+num+" is lined up behind it. It will start on its own.");
 }
-async function rmCancelRun(){
-  const r=await apiPost({op:"unqueue"});
-  if(r.ok){ rmAutorun=null; renderAutorun(); }
+async function rmCancelRun(phase){
+  const r=await apiPost(phase?{op:"unqueue",phase:phase}:{op:"unqueue"});
+  if(r.ok){ rmAutorun=r.autorun||null; renderAutorun(); }
 }
+
+/* The report a finished session wrote for Mike, read here rather than on GitHub. */
+let rmReports=[];
+async function openReport(n){
+  const r=await fetch("/api/planner?scope=report&n="+n,{cache:"no-store"}).then(x=>x.json()).catch(()=>null);
+  const rep=r&&r.report;
+  const box=document.getElementById("reportModal");
+  box.innerHTML='<div style="position:fixed;inset:0;background:rgba(10,12,30,.55);z-index:90;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto" onclick="if(event.target===this)closeReport()">'
+    +'<div style="background:#fff;max-width:760px;width:100%;border-radius:14px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+    +'<b style="font-size:16px">'+(rep?esc(rep.card||"Run")+" report":"No report")+'</b>'
+    +'<span style="opacity:.55;font-size:13px">'+(rep?esc(new Date(rep.at).toLocaleString()):"")+'</span>'
+    +'<button class="btn mini" style="margin-left:auto" onclick="closeReport()">Close</button></div>'
+    +'<div style="white-space:pre-wrap;font-size:14px;line-height:1.55">'+esc(rep?rep.text:"Nothing stored yet. A report appears here after a session finishes a card.")+'</div>'
+    +'</div></div>';
+}
+function closeReport(){ const b=document.getElementById("reportModal"); if(b) b.innerHTML=""; }
 let rmAutorunCards=[], rmClock=null;
 function ago(iso){
   if(!iso) return "";
@@ -936,6 +955,9 @@ function renderAutorun(){
   const finished=(a.finished||[]);
   const inPhase=rmAutorunCards.filter(c=>String(c.phaseNum)===String(a.phase));
   const upNext=inPhase.filter(c=>c.state==="open"&&c.id!==a.card);
+  const later=(a.queued||[]);
+  const laterLine=later.length?line("Then", later.map((q,i)=>'<b>Phase '+esc(q.phase)+'</b> <span class="x" style="cursor:pointer;opacity:.5" title="Drop this one" onclick="rmCancelRun('+JSON.stringify(q.phase)+')">&#10005;</span>').join(" &nbsp; ")):"";
+  const reportLine=rmReports.length?line("Report", rmReports.slice(0,4).map((r,i)=>'<a href="#" onclick="openReport('+i+');return false" style="color:#4a5fd0">'+esc(r.card||"run")+'</a>').join(" &nbsp; ")+' <span style="opacity:.5;font-size:12px">what the session wrote for you</span>'):"";
   const cardOf=id=>rmAutorunCards.find(c=>c.id===id);
   const line=(label,body)=>'<div style="display:flex;gap:10px;margin-top:6px"><span style="flex:0 0 62px;opacity:.65">'+label+'</span><span style="flex:1">'+body+'</span></div>';
 
@@ -946,6 +968,7 @@ function renderAutorun(){
       +'<b>Phase '+esc(a.phase)+' '+(good?"finished":"stopped")+'.</b> '+esc(a.note||"")
       +'<button class="btn mini" style="float:right" onclick="rmCancelRun()">Clear</button>'
       +(finished.length?line("Shipped", finished.map(id=>{const c=cardOf(id);return '<b>'+esc(id)+'</b> '+esc(c?c.name:"");}).join("<br>")):"")
+      +reportLine
       +'</div>';
     return;
   }
@@ -956,6 +979,7 @@ function renderAutorun(){
       +'<b>Phase '+esc(a.phase)+' is queued.</b> Waiting for a runner &mdash; open “Work the roadmap” on your Mac.'
       +'<button class="btn mini" style="float:right" onclick="rmCancelRun()">Cancel</button>'
       +(upNext.length?line("Will do", upNext.slice(0,6).map(c=>'<b>'+esc(c.id)+'</b> '+esc(c.name)).join("<br>")):"")
+      +laterLine
       +'</div>';
     return;
   }
@@ -970,7 +994,9 @@ function renderAutorun(){
     +'<button class="btn mini" style="float:right" onclick="rmCancelRun()">Stop after this card</button>'
     +line("Now", a.card?('<b>'+esc(a.card)+'</b> '+esc(cur?cur.name:a.cardName||"")+' <span style="opacity:.6">&middot; '+ago(a.startedAt)+'</span>'):esc(a.note||"starting…"))
     +(upNext.length?line("Next", upNext.slice(0,5).map(c=>esc(c.id)).join(" &middot; ")):line("Next","nothing else open in this phase"))
+    +laterLine
     +(finished.length?line("Done", finished.map(id=>{const c=cardOf(id);return '<b>'+esc(id)+'</b> '+esc(c&&c.lastNote?c.lastNote:(c?c.name:""));}).join("<br>")):"")
+    +reportLine
     +(stale?line("<span style=\"color:#b23\">!</span>",'<span style="color:#b23">The runner has not checked in for '+ago(a.lastSeen)+'. Its window may have been closed.</span>')
            :line("",'<span style="opacity:.55;font-size:13px">runner checked in '+ago(a.lastSeen)+' ago</span>'))
     +'</div>';
@@ -980,7 +1006,7 @@ async function rmAutorunPoll(){
     const r=await fetch("/api/planner?scope=roadmap",{cache:"no-store"}).then(x=>x.json());
     if(r&&r.ok){
       const wasCard=rmAutorun&&rmAutorun.card, wasStatus=rmAutorun&&rmAutorun.status;
-      rmAutorun=r.autorun||null; rmAutorunCards=r.cards||[]; renderAutorun();
+      rmAutorun=r.autorun||null; rmAutorunCards=r.cards||[]; rmReports=r.reports||[]; renderAutorun();
       /* A card finishing changes the board, so refresh it when the run moves on. */
       if(rmAutorun&&(rmAutorun.card!==wasCard||rmAutorun.status!==wasStatus)&&wasStatus) load(false);
     }

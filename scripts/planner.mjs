@@ -126,7 +126,8 @@ switch (cmd) {
     // Same request the planner page's "Run this phase" button makes.
     if (!id) die('usage: queue <phase> [max]');
     const r = await post({ op: "queue", phase: id, max: args[1] });
-    console.log("phase " + r.autorun.phase + " queued (up to " + r.autorun.max + " cards, " + r.open + " open). A watching runner will pick it up.");
+    if (r.queuedBehind) console.log("phase " + id + " is lined up behind " + r.autorun.phase + " (" + r.open + " open). It will start on its own.");
+    else console.log("phase " + id + " queued (up to " + r.autorun.max + " cards, " + r.open + " open). A watching runner will pick it up.");
     break;
   }
   case "unqueue":

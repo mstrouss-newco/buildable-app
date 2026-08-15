@@ -22,7 +22,7 @@
 // not marked done afterwards. That is deliberate. A chain that ploughs past a
 // half-finished card builds the next card on top of broken work.
 import { spawn } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 
 const API = process.env.PLANNER_URL || 'https://www.buildablekids.com/api/planner';
 // Permission baseline for each spawned session. `dontAsk` runs whatever is on the
@@ -245,6 +245,15 @@ async function workRun() {
     }
     doneCount++;
     finished.push(card.id);
+    // Hand the session's own plain-language write-up to the planner, so Mike never
+    // has to open GitHub to find out what a run actually did.
+    try {
+      if (existsSync('AUTOPILOT-REPORT.md')) {
+        const text = readFileSync('AUTOPILOT-REPORT.md', 'utf8').slice(0, 6000);
+        await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'report', card: card.id, phase: PHASE || card.phaseNum, text }) });
+      }
+    } catch { /* a missing report is not a reason to stop */ }
     await setStatus('running', { note: `${card.id} finished`, card: '', cardName: '', startedAt: null, done: doneCount, total, finished });
     say(`\n${card.id} is done${after.deployed ? ' and live' : ' (not flagged live yet)'}.`);
     if (ONLY) break;
@@ -292,11 +301,32 @@ if (MANUAL) {
       PHASE = String(ar.phase);
       MAX = Math.max(1, parseInt(ar.max, 10) || DEFAULT_MAX);
       say(`\nPicked up phase ${PHASE} from the planner (up to ${MAX} card${MAX === 1 ? '' : 's'}).`);
-      const r = await workRun();
+      let r = await workRun();
       report(r);
       await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
         { note: r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason,
           card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
+
+      // More than one phase can be lined up. Only carry on to the next one if this
+      // phase actually finished — a stop means something wants looking at, and the
+      // rest of the queue waits rather than piling more work on top of a problem.
+      while (r.reason === 'finished') {
+        let nxt = null;
+        try {
+          nxt = (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ op: 'nextPhase' }) }).then((x) => x.json())).next;
+        } catch { break; }
+        if (!nxt) break;
+        PHASE = String(nxt.phase);
+        MAX = Math.max(1, parseInt(nxt.max, 10) || DEFAULT_MAX);
+        say(`\nNext phase in the queue: ${PHASE} (up to ${MAX}).`);
+        r = await workRun();
+        report(r);
+        await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
+          { note: r.reason === 'finished' ? `${r.done} card${r.done === 1 ? '' : 's'} finished` : r.reason,
+            card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
+      }
+      if (r.reason !== 'finished') say('\nStopped, so anything else lined up is left alone until you look.');
       say('\nBack to waiting. Tap another phase in the planner when you are ready.\n');
     }
     await new Promise((r) => setTimeout(r, POLL_SECONDS * 1000));

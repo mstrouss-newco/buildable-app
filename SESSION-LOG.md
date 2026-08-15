@@ -1,5 +1,38 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (fifth pass): more than one phase, and the report lives in the planner
+
+Mike: "I need to be able to run more than one phase" and "put the doc in the planner, I want
+one stop shopping."
+
+### A queue of phases, not one phase
+`autorun` now carries `queued: [{phase,max}]` behind the live one. Tapping **Run this phase**
+while something is running **adds to the back of the queue** instead of being refused (which
+was the previous pass's fix) or hijacking the live run (which was the bug before that). The
+runner asks the server for `op:'nextPhase'` when a phase finishes — promoting server-side
+keeps it atomic — and carries straight on.
+
+**It only carries on if the phase actually FINISHED.** A stop means something wants looking
+at, so the rest of the queue is left alone rather than piling more work on a problem. The
+window says so.
+
+`op:'unqueue'` with a phase drops just that one; dropping the live phase promotes the next.
+Without a phase it clears everything. The panel shows a **Then** row with an x per queued
+phase.
+
+### The report is in the planner now
+A finished session's `AUTOPILOT-REPORT.md` is posted to the planner (`op:'report'`, last 12
+kept) and read in a panel on the page. `?scope=roadmap` lists which reports exist;
+`?scope=report&n=` fetches one, so the list stays small and the text is only pulled when
+opened. No GitHub, no leaving the planner. That is the "one stop shopping" ask: queue work,
+watch it, read what it did, all in one place.
+
+### Verified
+Two phases queued back to back, worked in order by one watcher, each leaving its report:
+`LP -> LP3 done -> next phase 7 -> 7A done -> back to waiting`, two reports stored. Plus:
+queueing an already-lined-up phase is refused by name, dropping a queued phase leaves the
+live one alone, and `nextPhase` on an empty queue returns null rather than looping.
+
 ## 2026-08-15 (fourth pass): the live feed, and why FL10 could not finish
 
 ### The first real card revealed the actual blocker

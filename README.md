@@ -6,6 +6,14 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Queue several phases, and read the run report in the planner (August 15 2026)
+`api/planner.js`, `public/planner.html`, `scripts/autopilot.mjs`, `scripts/planner.mjs`.
+Tapping "Run this phase" while something is running now lines the new phase up behind it
+(`autorun.queued`), and the runner promotes the next one with `op:'nextPhase'` when a phase
+finishes — but only if it FINISHED; a stop leaves the rest of the queue alone. Each finished
+session's AUTOPILOT-REPORT.md is posted to the planner and read in a panel there, so the
+planner is the one place to queue work, watch it, and read what it did.
+
 ## Autopilot live feed + the permission fix that unblocks it (August 15 2026)
 `.claude/settings.json`, `scripts/autopilot.mjs`, `api/planner.js`, `public/planner.html`.
 The first real unattended card (FL10) wrote good code and then could not test, commit or tick

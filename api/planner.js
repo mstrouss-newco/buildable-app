@@ -12,7 +12,10 @@
 // POST { op:'addCard', card }      -> add a card to a phase
 // POST { op:'flagReview', id, val } -> older alias for fields:{needsReview}
 // POST { op:'queue', phase, max }  -> "run this phase" (the planner page's button)
-// POST { op:'unqueue' }            -> cancel it
+// POST { op:'unqueue', phase? }    -> drop one queued phase, or all of them
+// POST { op:'nextPhase' }          -> runner promotes the next lined-up phase
+// POST { op:'report', card, text } -> a finished session's plain-language write-up
+// GET ?scope=report&n=0            -> read one stored report
 // POST { op:'queueStatus', status } -> the runner reporting waiting/running/done/stopped
 // Tester adds pass source:'tester' + author; tester edit/delete pass author so
 // PostgREST filters restrict them to their OWN feedback rows (edit-your-own).
@@ -62,6 +65,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           autorun: d.autorun || null,
+          reports: (d.reports || []).map((r) => ({ card: r.card, phase: r.phase, at: r.at })),
           phases: phases.map((p) => ({ num: p.num, title: p.title || p.name || "" })),
           cards: cards.map((s) => ({
             id: s.id, name: s.name, phaseNum: s.phaseNum,
@@ -72,6 +76,15 @@ export default async function handler(req, res) {
             lastNote: (s.notes && s.notes.length) ? String(s.notes[s.notes.length - 1]).slice(0, 200) : "",
           })),
         });
+      }
+      // One stored report, by position (0 = most recent). Kept out of scope=roadmap
+      // so the list stays small; the planner fetches a report only when it is opened.
+      const rm = /(?:^|&)scope=report(?:&|$)/.exec(_qs);
+      if (rm) {
+        const d = await readMeta();
+        const n = Math.max(0, parseInt((/(?:^|&)n=(\d+)/.exec(_qs) || [])[1] || "0", 10));
+        const rep = (d.reports || [])[n] || null;
+        return res.status(200).json({ ok: true, report: rep });
       }
       const scope = /(?:^|&)scope=tester(?:&|$)/.test(_qs) ? "tester" : "";
       const tFilter = scope === "tester" ? "select=*&source=eq.tester&order=created_at.asc" : "select=*&order=created_at.asc";
@@ -208,42 +221,79 @@ export default async function handler(req, res) {
       // op:'queue' — "run this phase". The planner page writes it, scripts/autopilot.mjs
       // reads it and starts working. Pass phase:null (or op:'unqueue') to cancel.
       // Kept OUT of data.roadmap so a queue never touches the card blob.
+      // op:'queue' — "run this phase". More than one can be lined up: if a runner is
+      // already working, the new phase joins the back of the queue rather than
+      // hijacking the live one (which is what produced "Phase NV stopped. FL10 did
+      // not finish"). op:'unqueue' with a phase drops that one; with none, clears all.
       if (op === "queue" || op === "unqueue") {
         const d = await readMeta();
-        if (op === "unqueue" || b.phase == null || b.phase === "") {
-          d.autorun = null;
+        const a = d.autorun || null;
+
+        if (op === "unqueue") {
+          const drop = clip(b.phase, 12).trim();
+          if (!drop || !a) { d.autorun = null; await writeMeta(d); return res.status(200).json({ ok: true, autorun: null }); }
+          if (String(a.phase) === drop) {
+            // Dropping the live one: promote the next queued phase if there is one.
+            const rest = (a.queued || []).slice();
+            const nxt = rest.shift();
+            d.autorun = nxt
+              ? { phase: nxt.phase, max: nxt.max, status: "waiting", requestedAt: new Date().toISOString(), note: "", queued: rest, finished: [], done: 0, total: 0 }
+              : null;
+          } else {
+            d.autorun = { ...a, queued: (a.queued || []).filter((q) => String(q.phase) !== drop) };
+          }
           await writeMeta(d);
-          return res.status(200).json({ ok: true, autorun: null });
+          return res.status(200).json({ ok: true, autorun: d.autorun });
         }
+
         const phase = clip(b.phase, 12).trim();
-        // Queueing on top of a live run silently hijacked it: the phase changed under
-        // the runner, and its end-of-run report then landed on the wrong phase
-        // ("Phase NV stopped. FL10 did not finish"). Refuse while a runner is alive.
-        const cur = d.autorun;
-        const alive = cur && cur.status === "running" && cur.lastSeen &&
-          (Date.now() - new Date(cur.lastSeen).getTime()) < 5 * 60 * 1000;
-        if (alive && !b.force) {
-          return res.status(200).json({
-            ok: false,
-            error: "phase " + cur.phase + " is already running" + (cur.card ? " (on " + cur.card + ")" : "") + ". Cancel it first, or it will finish and you can queue then.",
-            autorun: cur,
-          });
-        }
+        if (!phase) return res.status(400).json({ ok: false, error: "phase required" });
         const phases = (d.roadmap && Array.isArray(d.roadmap.phases)) ? d.roadmap.phases : [];
         if (phases.length && !phases.some((p) => String(p.num) === phase)) {
           return res.status(200).json({ ok: false, error: "no phase " + phase, phases: phases.map((p) => p.num) });
         }
+        const max = Math.min(10, Math.max(1, parseInt(b.max, 10) || 4));
         const open = ((d.roadmap && d.roadmap.sessions) || [])
           .filter((s) => String(s.phaseNum) === phase && !s.done && !s.later).length;
-        d.autorun = {
-          phase,
-          max: Math.min(10, Math.max(1, parseInt(b.max, 10) || 4)),
-          status: "waiting",
-          requestedAt: new Date().toISOString(),
-          note: "",
-        };
+
+        const busy = a && (a.status === "waiting" || a.status === "running");
+        if (busy) {
+          if (String(a.phase) === phase || (a.queued || []).some((q) => String(q.phase) === phase)) {
+            return res.status(200).json({ ok: false, error: "phase " + phase + " is already lined up", autorun: a });
+          }
+          d.autorun = { ...a, queued: (a.queued || []).concat([{ phase, max }]).slice(0, 10) };
+          await writeMeta(d);
+          return res.status(200).json({ ok: true, queuedBehind: d.autorun.queued.length, autorun: d.autorun, open });
+        }
+
+        d.autorun = { phase, max, status: "waiting", requestedAt: new Date().toISOString(), note: "", queued: [], finished: [], done: 0, total: 0 };
         await writeMeta(d);
         return res.status(200).json({ ok: true, autorun: d.autorun, open });
+      }
+
+      // op:'nextPhase' — the runner asking for the next lined-up phase once it has
+      // finished the current one. Promoting server-side keeps it atomic.
+      if (op === "nextPhase") {
+        const d = await readMeta();
+        const a = d.autorun;
+        const rest = (a && a.queued ? a.queued.slice() : []);
+        const nxt = rest.shift();
+        if (!nxt) { d.autorun = a ? { ...a, queued: [] } : null; await writeMeta(d); return res.status(200).json({ ok: true, next: null }); }
+        d.autorun = { phase: nxt.phase, max: nxt.max, status: "waiting", requestedAt: new Date().toISOString(), note: "", queued: rest, finished: [], done: 0, total: 0 };
+        await writeMeta(d);
+        return res.status(200).json({ ok: true, next: { phase: nxt.phase, max: nxt.max }, autorun: d.autorun });
+      }
+
+      // op:'report' — the plain-language write-up a finished session leaves. Kept on
+      // the planner so Mike never has to open GitHub to find out what happened.
+      if (op === "report") {
+        const d = await readMeta();
+        const text = clip(b.text, 6000).trim();
+        if (!text) return res.status(400).json({ ok: false, error: "text required" });
+        d.reports = [{ card: clip(b.card, 20), phase: clip(b.phase, 12), at: new Date().toISOString(), text }]
+          .concat(d.reports || []).slice(0, 12);
+        await writeMeta(d);
+        return res.status(200).json({ ok: true, reports: d.reports.length });
       }
 
       // op:'queueStatus' — the runner reporting back, so the planner page can show
