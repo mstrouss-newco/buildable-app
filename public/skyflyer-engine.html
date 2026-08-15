@@ -388,16 +388,16 @@
       <div class="words" id="ofWords"><b>WHAT IT IS</b><span id="ofBlurb"></span><b>HOW IT WORKS</b><span id="ofTip"></span></div>
     </div>
   </div></div>
-  <!-- FL5: every job ends here - a fact, the coins, and a sticker to keep. -->
+  <!-- FL5: every job ends here - a fact, the coins, and a sticker to keep.
+       FL10: no buttons. The reward moment shows for a beat and the card drops
+       you straight back into free flight on its own. The quest stays standing
+       in the world, so playing it again is finding it and saying yes again -
+       same rule as FL5's "no arrival card": discovery is the menu. -->
   <div class="sheet" id="factCard"><div class="inner">
     <div class="sticker" id="fcSticker"></div>
     <h2 id="fcTitle">Job done!</h2>
     <div class="paid" id="fcPaid">+15 coins banked</div>
     <div class="fact"><b>DID YOU KNOW</b><span id="fcFact"></span></div>
-    <div class="row">
-      <button class="a" id="fcAgain">Do it again</button>
-      <button class="b" id="fcFree">Keep flying</button>
-    </div>
   </div></div>
 </div>
 <script src="/three.min.js"></script>
@@ -3147,9 +3147,7 @@ var coinsEl=D.getElementById("coins"),
     fcSticker=D.getElementById("fcSticker"),
     fcTitle=D.getElementById("fcTitle"),
     fcPaid=D.getElementById("fcPaid"),
-    fcFact=D.getElementById("fcFact"),
-    fcAgain=D.getElementById("fcAgain"),
-    fcFree=D.getElementById("fcFree");
+    fcFact=D.getElementById("fcFact");
 worldNameEl.textContent=world.name;
 // FL3: name the ride on the way in and again every time we sit on a pad, so
 // "pick your ride" is something a kid can SEE they did, not just a setting.
@@ -4097,10 +4095,9 @@ ofBandEl.addEventListener("click",function(e){ if(!e.target.closest("#ofSay")) f
 wpDropEl.addEventListener("click",function(e){ e.stopPropagation(); dropWaypoint(); sfx("select"); });
 waypointEl.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
 minimapEl.addEventListener("pointerdown",function(e){ e.stopPropagation(); });
-// after a job: do it again right here, or go back to flying. Either way the
-// other jobs are back out in the world waiting to be found.
-fcAgain.addEventListener("click",function(){ var m=JOB; closeFactCard(); endJob(); if(m) startJob(m); });
-fcFree.addEventListener("click",function(){ closeFactCard(); endJob(); });
+// FL10: no end-of-quest menu. showFactCard schedules its own auto-close after
+// the reward moment and drops the kid back into free flight - a tap here would
+// only be a hurry-up, so there is nothing to tap.
 
 // ---------- the shared wallet: announce only, never touch shell storage ----------
 function announceCoins(n){
@@ -5120,6 +5117,12 @@ function badgeSticker(name){
     '</svg>'+
     '<div style="font-weight:900;font-size:15px;color:#33566e;margin-top:-4px">'+name+'</div>';
 }
+// FL10: the reward moment shows on its own and drops you back into free flight
+// on its own. FACT_HOLD_MS is the beat - long enough to see the sticker, hear
+// the coins land and read the fact, short enough that a four year old is never
+// stuck staring at a menu they did not ask for.
+var FACT_HOLD_MS=4600;
+var factTimer=null;
 function showFactCard(){
   if(DEMO) return;
   try{
@@ -5129,9 +5132,23 @@ function showFactCard(){
     fcFact.textContent=JOB.fact;
     factCard.style.display="flex";
     S.picking=true;
+    if(factTimer){ clearTimeout(factTimer); factTimer=null; }
+    factTimer=setTimeout(function(){
+      factTimer=null;
+      // if something else already put the world back into play (a startMission
+      // from the QA harness, a pause the kid never resumed), there is nothing
+      // left to drop back to - just close the card and get out of the way.
+      var stillShowing=false;
+      try{ stillShowing=(factCard.style.display==="flex"); }catch(e){}
+      closeFactCard();
+      if(stillShowing && MODE==="job") endJob();
+    },FACT_HOLD_MS);
   }catch(e){}
 }
-function closeFactCard(){ try{ factCard.style.display="none"; }catch(e){} S.picking=false; }
+function closeFactCard(){
+  if(factTimer){ clearTimeout(factTimer); factTimer=null; }
+  try{ factCard.style.display="none"; }catch(e){} S.picking=false;
+}
 
 // ---------- the job step, once per sim frame ----------
 function jobStep(dt){
