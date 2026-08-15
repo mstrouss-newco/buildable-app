@@ -1,5 +1,110 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15: Session SD3 — Ground that is not one flat line
+
+**Phase SD, session SD3.** The third of five sessions fixing the problem Mike
+found on 2026-08-15: his six year old cleared all 20 Sling Squad levels in about
+five minutes. SD1 made blocks breakable, SD2 hid critters where a direct hit
+cannot reach. Both were true of the *buildings*; every level still happened on
+the same flat floor at the same height, so every shot was the same arc and she
+never had to think about aim. SD3 gives the levels ground. The level-by-level
+rebuild of the remaining layouts (SD4) was **not** touched.
+
+### A note before anything else
+SD1 and SD2 shipped on branches that were never merged to `main`, and SD3's whole
+brief builds on both (it is scored on blocks breaking by material and on six
+levels hiding a critter). This branch therefore starts from SD1+SD2's combined
+history merged onto current `main`, so the three sessions land together. If SD1
+or SD2 is merged separately first, expect the usual `SESSION-LOG.md` conflict and
+keep both entries.
+
+### Terrain
+A layout may now declare `terrain` beside its blocks and targets, exactly the way
+SD1 added materials and SD2 added seals. Three kinds, each with a job:
+
+- **hill** — a rounded mound. It cannot be smashed, so the flat shot dies in the
+  slope and the only way at what is behind it is over the top.
+- **pit** — a dip in the floor. A critter sitting down inside one is under the
+  rim, where nothing thrown along the flat can reach it.
+- **ledge** — a raised plinth. Two of them with a gap between make a floating
+  deck: knock a leg out and the whole thing comes down.
+
+Terrain is static — it never moves and never breaks. `terrain` is optional and
+has **no default**, so a layout that declares none builds the one flat slab it
+always did. That is what keeps levels 1-6 untouched, and QA checks it.
+
+The shape is defined **once**, in the shared loader (`slingTerrainPoly`). The
+engine builds its physics body from those exact points and paints those exact
+points, and the level card is handed the same points rather than re-deriving
+them. That mattered immediately: rounding the hills off broke a four-corner
+assumption that had been copied into two painters.
+
+A pit is not carved out of the ground, it *splits* it — a slab either side plus a
+lower floor between them — and the inner faces of those slabs become the pit
+walls for free. Everything that used to assume a floor at `GY` now asks where the
+floor actually is: the aim predictor, SD2's arc sweep, and the fell-off-the-world
+check (a critter sitting quietly in a hole is not "fell").
+
+### Six levels rebuilt around it
+L7 Balcony (deck over a gap), L10 The Wall (the teaching hill — the old stone
+wall is now a mound), L13 Tall Timbers (the teaching pit), L16 Sky High (the
+whole keep up on stilts over a gap), L17 The Gauntlet (two mounds and a valley),
+L18 Twin Towers (a pit between the towers, and the way in is to bring a tower
+down on top of it). SD2's six sealed levels were left alone.
+
+### Three honesty fixes fell out of it
+- **The winning sling now counts as spent.** It used to be forgotten: the pal was
+  still in the air when the last critter went, so it was never swept and never
+  counted. Every level was quietly flattered by one shot, which made "how many
+  spare slings does this really give?" unanswerable.
+- **The planner measures terrain at a pal's width, not as a point.** A
+  point-perfect arc that ploughs into a slope is a lie, and the bot spent five
+  slings re-learning it. It also now prefers a shot with room over one that
+  shaves the hilltop, which is how a person aims.
+- **A seal claims the level AS IT STANDS.** SD2's arc sweep can only ever prove
+  something about the untouched layout. A pal reaching a sealed critter now only
+  counts against the seal while the building is still the one the sweep measured
+  — once a kid has toppled the screen out of the way, getting in is the reward
+  for solving it. (This surfaced on Fortress, where nothing was broken but the
+  stone screen had been bowled over.)
+
+### About one spare shot
+Difficulty now buys the **spare** rather than a flat allowance: 3 spare at
+difficulty 1, 2 at difficulty 2, and exactly **1** from difficulty 3 up. The back
+half used to hand out four to seven spare slings, which is why it could be
+brute-forced. Castle Keep (L6) drops to difficulty 2 so the on-ramp keeps its
+slack. Levels 1-6 now give 4-5 slings for 1-3 critters; levels 7-20 give critters
+plus one.
+
+### Verified
+`node qa-sling.mjs .` — **ALL CHECKS PASS** (68 checks, about 105 seconds). All 20
+levels clear on 5 runs each **with a sling still in hand**, not on the last one.
+New SD3 checks, each kind held to its own promise rather than one blunt number:
+a hill is asked what it costs (the loft to reach a critter is measured twice,
+once with the hill and once pretending the ground is flat — The Wall +38 flight
+time, The Gauntlet +24); a pit has to hold a critter under the rim that costs far
+more loft than one in the open (82 vs 20, 74 vs 18); a ledge's promise is made to
+happen — break one wood leg, touch nothing else, and the critter riding the deck
+has to come down with it (both do, popped in the collapse). Also proved: terrain
+never moves or breaks, levels 1-6 are still one flat floor, levels 7-20 hold ten
+distinct asks with none repeated more than three times, and every level's budget
+is critters plus the spare its difficulty buys.
+
+**The level-card painter got its first coverage anywhere.** It is run for real
+against a recording context: a terrain level has to paint more than the same
+level with its ground removed, and a flat level's card has to come out
+byte-identical. Checked by eye in a real browser too (Chromium via
+playwright-core, installed unsaved) — six terrain levels and the level-select
+grid, no page errors.
+
+The other 44 QA scripts re-ran: the same 8 fail, for the same reasons, as they do
+on the pre-SD3 baseline (playwright and jsdom are not installed in this
+container; `qa-maze` and `qa-snakes` fail there too). Nothing regressed.
+
+### What remains in phase SD
+SD4 — the level-by-level rebuild of the layouts SD3 did not touch, and a final
+pass on shot counts once all 20 have been through it.
+
 ## 2026-08-15 (later): the planner drives the runner
 
 Follow-on from the autopilot runner. Two problems with the first version, both found by
@@ -114,6 +219,7 @@ only after checking the live site, and never `op:'meta'` by hand.
 Every op exercised against a local fake PostgREST with the real handler mounted in
 front of it: 7 writes, blob intact afterwards (2 phases, 4 cards, no ids lost), and
 all five error paths refuse cleanly with a non-zero exit.
+
 ## 2026-08-15: Session SD2 — Critters you cannot hit directly
 
 **Phase SD, session SD2.** The second of five sessions fixing the problem Mike

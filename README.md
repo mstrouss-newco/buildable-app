@@ -6,6 +6,41 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## SD3 — Sling ground that is not one flat line (August 15 2026)
+`public/buildable-manifest.js`, `public/sling-squad.html`,
+`public/buildable-levelthumb.js`, `public/sling/manifest.json`, `qa-sling.mjs`.
+Every level used to happen on the same flat floor at the same height, so every
+shot was the same arc and a six year old never had to think about aim. A layout
+may now declare **terrain** beside its blocks and targets — scenery and fixed
+physics both: a **hill** that kills the straight line so the only way past is a
+lob, a **pit** a critter sits down inside where nothing along the flat can reach
+it, and a **ledge** plinth that, in pairs with a gap between, makes a floating
+deck you bring down by knocking one leg out. Terrain is optional with no default,
+so a layout declaring none builds the flat slab it always did — which is what
+keeps levels 1-6 untouched. The shape is defined once, in the shared loader; the
+engine collides with and paints those exact points and the level card is handed
+the same points, so a card can never drift from the level it advertises. A pit
+splits the ground slab rather than carving it, and the slabs either side become
+its walls. Six back-half levels rebuilt around it (Balcony, The Wall, Tall
+Timbers, Sky High, The Gauntlet, Twin Towers); SD2's six sealed levels untouched.
+**The sling budget is retuned:** difficulty now buys the *spare* — three at
+difficulty 1, two at 2, exactly one from 3 up — where the back half used to hand
+out four to seven, which is why it could be brute-forced.
+`node qa-sling.mjs .` — ALL CHECKS PASS (68 checks, ~105s). Every level clears on
+5 runs each with a sling still in hand. Each kind of terrain is held to its own
+promise: a hill's cost is measured by asking for the loft twice, once with it and
+once pretending the ground is flat (+38 and +24 flight time); a pit must hold a
+critter under the rim costing far more loft than one in the open (82 vs 20, 74 vs
+18); a ledge is made to prove itself — break one leg and the deck's critter has
+to come down. The level-card painter got its first coverage anywhere. Three
+honesty fixes fell out: the winning sling now counts as spent (it used to be
+forgotten mid-air, flattering every level by one shot), the planner measures
+terrain at a pal's width rather than as a point, and an SD2 seal now claims the
+level *as it stands* — a pal getting in after the kid has shoved the building
+open is the reward, not a hole in the seal. The other 44 QA scripts re-ran: the
+same 8 fail as on the pre-SD3 baseline (playwright/jsdom missing in this
+container), unchanged by this work.
+
 ## "Run this phase": the planner drives the runner (August 15 2026)
 `public/planner.html`, `api/planner.js`, `scripts/autopilot.mjs`, `scripts/planner.mjs`.
 Every unfinished phase gets a **Run this phase** button. It records the request on the meta
