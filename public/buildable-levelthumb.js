@@ -187,6 +187,22 @@
       g.beginPath(); g.moveTo(AX - 7, AY - 4); g.lineTo(AX + 7, AY - 4); g.stroke();
       disc(g, AX, AY - 2, 4.2, "#e08a4a");                // a pal loaded and ready
       disc(g, AX - 1.4, AY - 3.2, 1.5, "#fff"); disc(g, AX + 1.4, AY - 3.2, 1.5, "#fff");
+      // the goofy critters you have to pop. SD2: a SEALED critter goes down
+      // FIRST, so its cage paints over the top of it and the card tells the
+      // truth — that one is behind the stonework, not standing in front of it.
+      var cols = ["#8fd66a", "#f0a35e", "#c98fe0", "#6fc9e6", "#f2779a"];
+      function critter(p, i){
+        var x = tx(p.x), y = ty(p.y), r = 7.2, c = cols[i % cols.length];
+        g.fillStyle = "rgba(0,0,0,.16)"; g.beginPath(); g.ellipse(x, y + r * 0.95, r * 0.9, r * 0.3, 0, 0, 6.2832); g.fill();
+        disc(g, x, y, r, c);
+        disc(g, x - r * 0.34, y - r * 0.18, r * 0.28, "#fff");
+        disc(g, x + r * 0.34, y - r * 0.18, r * 0.28, "#fff");
+        disc(g, x - r * 0.30, y - r * 0.14, r * 0.13, "#2a2340");
+        disc(g, x + r * 0.38, y - r * 0.14, r * 0.13, "#2a2340");
+        g.strokeStyle = shade(c, -60); g.lineWidth = 1.3; g.lineCap = "round";
+        g.beginPath(); g.arc(x, y + r * 0.16, r * 0.42, 0.35, Math.PI - 0.35); g.stroke();
+      }
+      (d.targets || []).forEach(function (p, i) { if (p.s) critter(p, i); });
       // the tower — every block the kid will actually knock over
       (d.blocks || []).forEach(function (b) {
         var w = b.w * S, h = b.h * S, x = tx(b.x) - w / 2, y = ty(b.y) - h / 2;
@@ -204,19 +220,7 @@
         g.fillStyle = "rgba(255,255,255,.30)"; g.fillRect(x + 1.4, y + 1.4, Math.max(0, w - 2.8), 1.4);
         g.fillStyle = "rgba(0,0,0,.14)"; g.fillRect(x + 1.4, y + h - 2.6, Math.max(0, w - 2.8), 1.4);
       });
-      // the goofy critters you have to pop
-      var cols = ["#8fd66a", "#f0a35e", "#c98fe0", "#6fc9e6", "#f2779a"];
-      (d.targets || []).forEach(function (p, i) {
-        var x = tx(p.x), y = ty(p.y), r = 7.2, c = cols[i % cols.length];
-        g.fillStyle = "rgba(0,0,0,.16)"; g.beginPath(); g.ellipse(x, y + r * 0.95, r * 0.9, r * 0.3, 0, 0, 6.2832); g.fill();
-        disc(g, x, y, r, c);
-        disc(g, x - r * 0.34, y - r * 0.18, r * 0.28, "#fff");
-        disc(g, x + r * 0.34, y - r * 0.18, r * 0.28, "#fff");
-        disc(g, x - r * 0.30, y - r * 0.14, r * 0.13, "#2a2340");
-        disc(g, x + r * 0.38, y - r * 0.14, r * 0.13, "#2a2340");
-        g.strokeStyle = shade(c, -60); g.lineWidth = 1.3; g.lineCap = "round";
-        g.beginPath(); g.arc(x, y + r * 0.16, r * 0.42, 0.35, Math.PI - 0.35); g.stroke();
-      });
+      (d.targets || []).forEach(function (p, i) { if (!p.s) critter(p, i); });
     },
 
     // CROC TOT — the stage sky and ground, the flying snacks that stage sends

@@ -1112,7 +1112,7 @@ function buildStartCfg(){
     var p = palFor(i), img = "";
     try{ if(BLT && BLT.make) img = BLT.make("towers",
       { blocks:l.blocks, targets:l.targets, sky:p.sky, g0:p.g0, g1:p.g1, top:p.top, n:i+1 },
-      (l.id||l.name||i)+"|"+i+"|v1"); }catch(e){}
+      (l.id||l.name||i)+"|"+i+"|v2"); }catch(e){}   // v2: SD2 seals repaint the cards
     return { n:i+1, name:l.name, color:"#3b6ea5", img:img||undefined, maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
   return { title:"Sling Squad", subtitle:"Fling your friends and topple every tower! Stars: "+totalStars()+" of "+maxStars(),
            coins:totalStars(), sound:!(BA&&BA.muted), showBack:false, hideSound:true, levels:levels };
